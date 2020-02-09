@@ -99,7 +99,7 @@ void HCallbackI::main() // Called at each node...
         catch(IloException& e)
         {
             env->output->outputError(
-                "Error when setting primal solution as starting point in heuristic callback:", e.getMessage());
+                "        Error when setting primal solution as starting point in heuristic callback:", e.getMessage());
         }
 
         tmpVals.end();
@@ -189,8 +189,8 @@ void InfoCallbackI::main() // Called at each node...
 
     if(env->results->isRelativeObjectiveGapToleranceMet())
     {
-        env->output->outputCritical(
-            "     Terminated by relative objective gap tolerance in info callback: " + Utilities::toString(relObjGap)
+        env->output->outputInfo(
+            "        Terminated by relative objective gap tolerance in info callback: " + Utilities::toString(relObjGap)
             + " < " + Utilities::toString(env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination")));
 
         this->abort();
@@ -198,8 +198,8 @@ void InfoCallbackI::main() // Called at each node...
     }
     else if(env->results->isAbsoluteObjectiveGapToleranceMet())
     {
-        env->output->outputCritical(
-            "     Terminated by absolute objective gap tolerance in info callback: " + Utilities::toString(absObjGap)
+        env->output->outputInfo(
+            "        Terminated by absolute objective gap tolerance in info callback: " + Utilities::toString(absObjGap)
             + " < " + Utilities::toString(env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination")));
 
         this->abort();
@@ -207,14 +207,14 @@ void InfoCallbackI::main() // Called at each node...
     }
     else if(checkIterationLimit())
     {
-        env->output->outputCritical("     Terminated since iteration limit reached in info callback.");
+        env->output->outputInfo("        Terminated since iteration limit reached in info callback.");
 
         this->abort();
         return;
     }
     else if(checkUserTermination())
     {
-        env->output->outputCritical("     Terminated due to termination by user.");
+        env->output->outputInfo("        Terminated due to termination by user.");
 
         this->abort();
         return;
@@ -387,7 +387,7 @@ void CtCallbackI::main()
 
     if(env->results->isAbsoluteObjectiveGapToleranceMet())
     {
-        env->output->outputCritical("     Terminated by absolute objective gap tolerance in lazy callback");
+        env->output->outputInfo("        Terminated by absolute objective gap tolerance in lazy callback");
 
         solution.clear();
         abort();
@@ -396,7 +396,7 @@ void CtCallbackI::main()
 
     if(env->results->isRelativeObjectiveGapToleranceMet())
     {
-        env->output->outputCritical("     Terminated by relative objective gap tolerance in lazy callback");
+        env->output->outputInfo("        Terminated by relative objective gap tolerance in lazy callback");
 
         solution.clear();
         abort();
@@ -405,7 +405,7 @@ void CtCallbackI::main()
 
     if(checkIterationLimit())
     {
-        env->output->outputCritical("     Terminated by iteration limit in lazy callback");
+        env->output->outputInfo("        Terminated by iteration limit in lazy callback");
 
         solution.clear();
         abort();
@@ -414,7 +414,7 @@ void CtCallbackI::main()
 
     if(checkUserTermination())
     {
-        env->output->outputCritical("     Terminated by user in lazy callback");
+        env->output->outputInfo("        Terminated by user in lazy callback");
 
         solution.clear();
         abort();
@@ -438,7 +438,7 @@ void CtCallbackI::main()
 
         if(env->results->isAbsoluteObjectiveGapToleranceMet())
         {
-            env->output->outputCritical("     Terminated by absolute objective gap tolerance in lazy callback");
+            env->output->outputInfo("        Terminated by absolute objective gap tolerance in lazy callback");
 
             solution.clear();
             abort();
@@ -447,7 +447,7 @@ void CtCallbackI::main()
 
         if(env->results->isRelativeObjectiveGapToleranceMet())
         {
-            env->output->outputCritical("     Terminated by relative objective gap tolerance in lazy callback");
+            env->output->outputInfo("        Terminated by relative objective gap tolerance in lazy callback");
 
             solution.clear();
             abort();
@@ -521,7 +521,8 @@ bool CtCallbackI::createHyperplane(Hyperplane hyperplane)
     {
         if(E.second != E.second) // Check for NaN
         {
-            env->output->outputError("     Warning: hyperplane not generated, NaN found in linear terms for variable "
+            env->output->outputError(
+                "        Warning: hyperplane not generated, NaN found in linear terms for variable "
                 + env->problem->getVariable(E.first)->name);
             return (false);
         }
@@ -631,7 +632,7 @@ void MIPSolverCplexSingleTreeLegacy::initializeSolverSettings()
     }
     catch(IloException& e)
     {
-        env->output->outputError("Cplex error when initializing parameters for linear solver", e.getMessage());
+        env->output->outputError("        Cplex error when initializing parameters for linear solver", e.getMessage());
     }
 }
 
@@ -714,7 +715,7 @@ E_ProblemSolutionStatus MIPSolverCplexSingleTreeLegacy::solveProblem()
     }
     catch(IloException& e)
     {
-        env->output->outputError("Error when solving MIP/LP problem", e.getMessage());
+        env->output->outputError("        Error when solving MIP/LP problem", e.getMessage());
         MIPSolutionStatus = E_ProblemSolutionStatus::Error;
     }
 
@@ -732,7 +733,7 @@ int MIPSolverCplexSingleTreeLegacy::increaseSolutionLimit(int increment)
     }
     catch(IloException& e)
     {
-        env->output->outputError("Error when increasing solution limit", e.getMessage());
+        env->output->outputError("        Error when increasing solution limit", e.getMessage());
     }
 
     return (sollim);
@@ -746,7 +747,7 @@ void MIPSolverCplexSingleTreeLegacy::setSolutionLimit(long limit)
     }
     catch(IloException& e)
     {
-        env->output->outputError("Error when setting solution limit", e.getMessage());
+        env->output->outputError("        Error when setting solution limit", e.getMessage());
     }
 }
 
@@ -761,7 +762,7 @@ int MIPSolverCplexSingleTreeLegacy::getSolutionLimit()
     catch(IloException& e)
     {
 
-        env->output->outputError("Error when obtaining solution limit", e.getMessage());
+        env->output->outputError("        Error when obtaining solution limit", e.getMessage());
     }
 
     return (solLim);

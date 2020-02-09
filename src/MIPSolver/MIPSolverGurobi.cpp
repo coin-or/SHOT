@@ -590,7 +590,7 @@ void MIPSolverGurobi::activateDiscreteVariables(bool activate)
     }
     else
     {
-        env->output->outputDebug("        Activating LP strategy.");
+        env->output->outputDebug(" Activating LP strategy.");
         for(int i = 0; i < numberOfVariables; i++)
         {
             if(variableTypes.at(i) == E_VariableType::Integer || variableTypes.at(i) == E_VariableType::Binary)
@@ -950,15 +950,14 @@ void MIPSolverGurobi::setCutOff(double cutOff)
         if(isMinimizationProblem)
         {
             gurobiModel->getEnv().set(GRB_DoubleParam_Cutoff, cutOff + cutOffTol);
-
             env->output->outputDebug(
-                "        Setting cutoff value to " + std::to_string(cutOff) + " for minimization.");
+                fmt::format("        Setting cutoff value to  {} for maximization.", cutOff + cutOffTol));
         }
         else
         {
             gurobiModel->getEnv().set(GRB_DoubleParam_Cutoff, cutOff - cutOffTol);
             env->output->outputDebug(
-                "        Setting cutoff value to " + std::to_string(cutOff) + " for maximization.");
+                fmt::format("        Setting cutoff value to  {} for maximization.", cutOff - cutOffTol));
         }
     }
     catch(GRBException& e)
@@ -1115,7 +1114,8 @@ double MIPSolverGurobi::getObjectiveValue(int solIdx)
     catch(GRBException& e)
     {
         env->output->outputError(
-            "Error when obtaining objective value for solution index " + std::to_string(solIdx), e.getMessage());
+            "        Error when obtaining objective value for solution index " + std::to_string(solIdx),
+            e.getMessage());
     }
 
     return (objVal);
@@ -1162,7 +1162,8 @@ void MIPSolverGurobi::updateVariableBound(int varIndex, double lowerBound, doubl
     catch(GRBException& e)
     {
         env->output->outputError(
-            "Error when updating variable bounds for variable index" + std::to_string(varIndex), e.getMessage());
+            "        Error when updating variable bounds for variable index" + std::to_string(varIndex),
+            e.getMessage());
     }
 }
 
@@ -1184,7 +1185,8 @@ void MIPSolverGurobi::updateVariableLowerBound(int varIndex, double lowerBound)
     catch(GRBException& e)
     {
         env->output->outputError(
-            "Error when updating variable bounds for variable index" + std::to_string(varIndex), e.getMessage());
+            "        Error when updating variable bounds for variable index" + std::to_string(varIndex),
+            e.getMessage());
     }
 }
 
@@ -1206,7 +1208,8 @@ void MIPSolverGurobi::updateVariableUpperBound(int varIndex, double upperBound)
     catch(GRBException& e)
     {
         env->output->outputError(
-            "Error when updating variable bounds for variable index" + std::to_string(varIndex), e.getMessage());
+            "        Error when updating variable bounds for variable index" + std::to_string(varIndex),
+            e.getMessage());
     }
 }
 
@@ -1224,7 +1227,8 @@ PairDouble MIPSolverGurobi::getCurrentVariableBounds(int varIndex)
     catch(GRBException& e)
     {
         env->output->outputError(
-            "Error when obtaining variable bounds for variable index" + std::to_string(varIndex), e.getMessage());
+            "        Error when obtaining variable bounds for variable index" + std::to_string(varIndex),
+            e.getMessage());
     }
 
     return (tmpBounds);

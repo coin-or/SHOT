@@ -66,7 +66,7 @@ NLPSolverCuttingPlaneMinimax::NLPSolverCuttingPlaneMinimax(EnvironmentPtr envPtr
     if(solver == ES_MIPSolver::Cplex)
     {
         LPSolver = std::make_unique<MIPSolverCplex>(env);
-        env->output->outputDebug("Cplex selected as MIP solver for minimax solver.");
+        env->output->outputDebug(" Cplex selected as MIP solver for minimax solver.");
     }
 #endif
 
@@ -74,7 +74,7 @@ NLPSolverCuttingPlaneMinimax::NLPSolverCuttingPlaneMinimax(EnvironmentPtr envPtr
     if(solver == ES_MIPSolver::Gurobi)
     {
         LPSolver = std::make_unique<MIPSolverGurobi>(env);
-        env->output->outputDebug("Gurobi selected as MIP solver for minimax solver.");
+        env->output->outputDebug(" Gurobi selected as MIP solver for minimax solver.");
     }
 #endif
 
@@ -82,13 +82,13 @@ NLPSolverCuttingPlaneMinimax::NLPSolverCuttingPlaneMinimax(EnvironmentPtr envPtr
     if(solver == ES_MIPSolver::Cbc)
     {
         LPSolver = std::make_unique<MIPSolverCbc>(env);
-        env->output->outputDebug("Cbc selected as MIP solver for minimax solver.");
+        env->output->outputDebug(" Cbc selected as MIP solver for minimax solver.");
     }
 #endif
 
-    env->output->outputDebug("Creating LP problem for minimax solver");
+    env->output->outputDebug(" Creating LP problem for minimax solver");
     createProblem(LPSolver.get(), sourceProblem);
-    env->output->outputDebug("LP problem for minimax solver created");
+    env->output->outputDebug(" LP problem for minimax solver created");
 
     LPSolver->activateDiscreteVariables(false);
     LPSolver->initializeSolverSettings();
@@ -291,7 +291,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
                 constant /= scalingFactor;
 
                 env->output->outputWarning(
-                    "     Large values found in RHS of cut, you might want to consider reducing the "
+                    "        Large values found in RHS of cut, you might want to consider reducing the "
                     "bounds of the nonlinear variables.");
             }
 
@@ -302,7 +302,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
                 if(E.second != E.second || std::isinf(E.second)) // Check for NaN or inf
                 {
                     env->output->outputWarning(
-                        fmt::format("       Hyperplane for constraint {}  not generated,  NaN or "
+                        fmt::format("        Hyperplane for constraint {}  not generated,  NaN or "
                                     "inf found in linear terms for {} = {}",
                             NCV.constraint->name, env->reformulatedProblem->getVariable(E.first)->name,
                             std::to_string(currSol.at(E.first))));

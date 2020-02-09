@@ -153,7 +153,7 @@ bool MIPSolverBase::createHyperplane(Hyperplane hyperplane)
 
         tmpPair.second /= scalingFactor;
 
-        env->output->outputWarning("     Large values found in RHS of cut, you might want to consider reducing the "
+        env->output->outputWarning("        Large values found in RHS of cut, you might want to consider reducing the "
                                    "bounds of the nonlinear variables.");
     }
 
@@ -199,7 +199,7 @@ std::optional<std::pair<std::map<int, double>, double>> MIPSolverBase::createHyp
 
         elements.emplace(dualAuxiliaryObjectiveVariableIndex, -1.0);
 
-        env->output->outputTrace("     HP point generated for objective function with "
+        env->output->outputTrace("        HP point generated for objective function with "
             + std::to_string(gradient.size()) + " elements and constant " + std::to_string(constant));
     }
     else
@@ -239,7 +239,7 @@ std::optional<std::pair<std::map<int, double>, double>> MIPSolverBase::createHyp
             env->output->outputDebug("        All gradients nonzero, adding tolerance.");
         }
 
-        env->output->outputTrace("     HP point generated for constraint index "
+        env->output->outputTrace("        HP point generated for constraint index "
             + std::to_string(hyperplane.sourceConstraintIndex) + " with " + std::to_string(gradient.size())
             + " elements.");
     }
@@ -259,7 +259,7 @@ std::optional<std::pair<std::map<int, double>, double>> MIPSolverBase::createHyp
 
         constant += signFactor * (-G.second) * hyperplane.generatedPoint.at(variableIndex);
 
-        env->output->outputTrace("     Gradient for variable " + G.first->name + " in point "
+        env->output->outputTrace("         Gradient for variable " + G.first->name + " in point "
             + std::to_string(hyperplane.generatedPoint.at(variableIndex)) + ": " + std::to_string(coefficient));
     }
 
@@ -364,7 +364,7 @@ void MIPSolverBase::presolveAndUpdateBounds()
         if(newLB)
         {
             env->reformulatedProblem->getVariable(i)->lowerBound = newBounds.first.at(i);
-            env->output->outputDebug("     Lower bound for variable (" + std::to_string(i) + ") updated from "
+            env->output->outputDebug("        Lower bound for variable (" + std::to_string(i) + ") updated from "
                 + Utilities::toString(currBounds.first) + " to " + Utilities::toString(newBounds.first.at(i)));
 
             if(!env->reformulatedProblem->allVariables[i]->properties.hasLowerBoundBeenTightened)
@@ -377,7 +377,7 @@ void MIPSolverBase::presolveAndUpdateBounds()
         if(newUB)
         {
             env->reformulatedProblem->getVariable(i)->upperBound = newBounds.second.at(i);
-            env->output->outputDebug("     Upper bound for variable (" + std::to_string(i) + ") updated from "
+            env->output->outputDebug("        Upper bound for variable (" + std::to_string(i) + ") updated from "
                 + Utilities::toString(currBounds.second) + " to " + Utilities::toString(newBounds.second.at(i)));
 
             if(!env->reformulatedProblem->allVariables[i]->properties.hasUpperBoundBeenTightened)
@@ -390,7 +390,7 @@ void MIPSolverBase::presolveAndUpdateBounds()
         if(env->settings->getSetting<bool>("MIP.Presolve.UpdateObtainedBounds", "Dual") && (newLB || newUB))
         {
             updateVariableBound(i, newBounds.first.at(i), newBounds.second.at(i));
-            env->output->outputDebug("     Bounds updated also in MIP problem");
+            env->output->outputDebug("        Bounds updated also in MIP problem");
         }
     }
 }

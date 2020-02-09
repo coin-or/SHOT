@@ -87,7 +87,6 @@ void Report::outputIterationDetail(int iterationNumber, std::string iterationDes
         if(!firstIterationHeaderPrinted)
         {
             this->outputIterationDetailHeader();
-            firstIterationHeaderPrinted = true;
         }
 
         if(iterationPrintoutsSinceLastHeader > 75)
@@ -164,19 +163,28 @@ void Report::outputIterationDetail(int iterationNumber, std::string iterationDes
         {
             auto tmpLine = fmt::format("{:>6d}: {:<10s}{:^10.2f}{:^13s}{:>27s}{:>19s}{:<32s}", iterationNumber,
                 iterationDesc, totalTime, combDualCuts, "", "", "");
+
+            env->output->outputDebug("");
             env->output->outputInfo(tmpLine);
+            env->output->outputDebug("");
         }
         else if(lineType == E_IterationLineType::DualReductionCut)
         {
             auto tmpLine = fmt::format("{:>6d}: {:<10s}{:^10.2f}{:>13s}{:>27s}{:>19s}{:<32s}", iterationNumber,
                 iterationDesc, totalTime, "", combObjectiveValue, "", "");
+
+            env->output->outputDebug("");
             env->output->outputInfo(tmpLine);
+            env->output->outputDebug("");
         }
         else
         {
             auto tmpLine = fmt::format("{:>6d}: {:<10s}{:^10.2f}{:>13s}{:>27s}{:>19s}{:<32s}", iterationNumber,
                 iterationDesc, totalTime, combDualCuts, combObjectiveValue, combObjectiveGap, combCurrSol);
+
+            env->output->outputDebug("");
             env->output->outputInfo(tmpLine);
+            env->output->outputDebug("");
         }
 
         std::stringstream nodes;
@@ -194,13 +202,11 @@ void Report::outputIterationDetail(int iterationNumber, std::string iterationDes
             nodes << " Open nodes: " << env->results->getCurrentIteration()->numberOfOpenNodes << ".";
         }
 
-        nodes << "\r\n";
-
         env->output->outputDebug(nodes.str());
     }
     catch(...)
     {
-        env->output->outputError("Cannot write iteration solution report!");
+        env->output->outputError("        Cannot write iteration solution report!");
     }
 }
 
@@ -258,6 +264,8 @@ void Report::outputIterationDetailMinimax(int iterationNumber, std::string itera
 
 void Report::outputIterationDetailHeader()
 {
+    firstIterationHeaderPrinted = true;
+
     std::stringstream header;
 
     header << "\r\n";

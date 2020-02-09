@@ -93,7 +93,7 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool u
         {
             env->dualSolver->MIPSolver = MIPSolverPtr(std::make_shared<MIPSolverCplex>(env));
             env->results->usedMIPSolver = ES_MIPSolver::Cplex;
-            env->output->outputDebug("Cplex selected as MIP solver.");
+            env->output->outputDebug(" Cplex selected as MIP solver.");
             solverSelected = true;
         }
 #endif
@@ -103,7 +103,7 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool u
         {
             env->dualSolver->MIPSolver = MIPSolverPtr(std::make_shared<MIPSolverGurobi>(env));
             env->results->usedMIPSolver = ES_MIPSolver::Gurobi;
-            env->output->outputDebug("Gurobi selected as MIP solver.");
+            env->output->outputDebug(" Gurobi selected as MIP solver.");
             solverSelected = true;
         }
 #endif
@@ -113,7 +113,7 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool u
         {
             env->dualSolver->MIPSolver = MIPSolverPtr(std::make_shared<MIPSolverCbc>(env));
             env->results->usedMIPSolver = ES_MIPSolver::Cbc;
-            env->output->outputDebug("Cbc selected as MIP solver.");
+            env->output->outputDebug(" Cbc selected as MIP solver.");
             solverSelected = true;
         }
 #endif

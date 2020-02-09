@@ -115,13 +115,13 @@ std::pair<VectorDouble, VectorDouble> RootsearchMethodBoost::findZero(const Vect
 {
     if(ptA.size() != ptB.size())
     {
-        env->output->outputError("     Root search error: sizes of points vary: " + std::to_string(ptA.size())
+        env->output->outputError("        Root search error: sizes of points vary: " + std::to_string(ptA.size())
             + " != " + std::to_string(ptB.size()));
     }
 
     if(constraints.size() == 0)
     {
-        env->output->outputError("     No constraints selected for root search");
+        env->output->outputError("        No constraints selected for root search");
     }
 
     if(auto sharedProblem = constraints[0]->ownerProblem.lock())
@@ -183,11 +183,11 @@ std::pair<VectorDouble, VectorDouble> RootsearchMethodBoost::findZero(const Vect
     if((int)max_iter == Nmax)
     {
         env->output->outputDebug(
-            "     Warning, number of line search iterations " + std::to_string(max_iter) + " reached!");
+            "        Warning, number of line search iterations " + std::to_string(max_iter) + " reached!");
     }
     else
     {
-        env->output->outputTrace("     Line search iterations: " + std::to_string(max_iter)
+        env->output->outputTrace("        Line search iterations: " + std::to_string(max_iter)
             + ". Function evaluations: " + std::to_string(resFVals));
     }
 
@@ -256,11 +256,11 @@ std::pair<double, double> RootsearchMethodBoost::findZero(const VectorDouble& pt
     if((int)max_iter == Nmax)
     {
         env->output->outputDebug(
-            "     Warning, number of line search iterations " + std::to_string(max_iter) + " reached!");
+            "        Warning, number of line search iterations " + std::to_string(max_iter) + " reached!");
     }
     else
     {
-        env->output->outputTrace("     Line search iterations: " + std::to_string(max_iter)
+        env->output->outputTrace("        Line search iterations: " + std::to_string(max_iter)
             + ". Function evaluations: " + std::to_string(resFVals));
     }
 

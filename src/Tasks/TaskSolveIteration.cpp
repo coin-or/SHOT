@@ -13,6 +13,7 @@
 #include "../DualSolver.h"
 #include "../Iteration.h"
 #include "../Output.h"
+#include "../Report.h"
 #include "../Results.h"
 #include "../Settings.h"
 #include "../Timing.h"
@@ -40,6 +41,9 @@ TaskSolveIteration::~TaskSolveIteration() = default;
 
 void TaskSolveIteration::run()
 {
+    if(!env->report->firstIterationHeaderPrinted)
+        env->report->outputIterationDetailHeader();
+
     env->timing->startTimer("DualStrategy");
     auto currIter = env->results->getCurrentIteration();
 
@@ -62,7 +66,7 @@ void TaskSolveIteration::run()
             env->dualSolver->useCutOff = true;
             env->dualSolver->cutOffToUse = env->settings->getSetting<double>("MIP.CutOff.InitialValue", "Dual");
             env->output->outputDebug(
-                fmt::format(" Setting user-provided cutoff value to {}.", env->dualSolver->cutOffToUse));
+                fmt::format("        Setting user-provided cutoff value to {}.", env->dualSolver->cutOffToUse));
         }
 
         if(isMinimization)
@@ -98,8 +102,8 @@ void TaskSolveIteration::run()
         {
             env->dualSolver->MIPSolver->updateVariableBound(
                 env->dualSolver->MIPSolver->getDualAuxiliaryObjectiveVariableIndex(), newLB, newUB);
-            env->output->outputDebug("     Bounds for nonlinear objective function updated to "
-                + Utilities::toString(newLB) + " and " + Utilities::toString(newUB));
+            env->output->outputDebug(
+                fmt::format("        Bounds for nonlinear objective function updated to {} and {}", newLB, newUB));
         }
     }
 
@@ -124,9 +128,8 @@ void TaskSolveIteration::run()
         env->dualSolver->MIPSolver->setSolutionLimit(2100000000);
     }
 
-    env->output->outputDebug("     Solving dual problem.");
+    env->output->outputDebug("        Solving dual problem.");
     auto solStatus = env->dualSolver->MIPSolver->solveProblem();
-    env->output->outputDebug("     Dual problem solved.");
 
     // Must update the pointer to the current iteration if we use the lazy
     // strategy since new iterations have been created when solving
@@ -144,13 +147,14 @@ void TaskSolveIteration::run()
     }
 
     currIter->solutionStatus = solStatus;
-    env->output->outputDebug("     Dual problem return code: " + std::to_string((int)solStatus));
+
+    env->output->outputDebug(fmt::format("        Dual problem solved with return code: {}", (int)solStatus));
 
     auto sols = env->dualSolver->MIPSolver->getAllVariableSolutions();
 
     if(sols.size() > 0)
     {
-        env->output->outputDebug("        Number of solutions in solution pool: " + std::to_string(sols.size()));
+        env->output->outputDebug(fmt::format("        Number of solutions in solution pool: {} ", sols.size()));
 
         if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
         {

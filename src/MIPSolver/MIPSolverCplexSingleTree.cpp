@@ -359,7 +359,8 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
             catch(IloException& e)
             {
                 env->output->outputError(
-                    "Error when setting primal solution as starting point in heuristic callback:", e.getMessage());
+                    "        Error when setting primal solution as starting point in heuristic callback:",
+                    e.getMessage());
             }
 
             tmpVals.end();
@@ -394,7 +395,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
     }
     catch(IloException& e)
     {
-        env->output->outputError("Cplex error when invoking general callback", e.getMessage());
+        env->output->outputError("        Cplex error when invoking general callback", e.getMessage());
     }
 }
 
@@ -417,7 +418,8 @@ bool CplexCallback::createHyperplane(Hyperplane hyperplane, const IloCplex::Call
     {
         if(E.second != E.second) // Check for NaN
         {
-            env->output->outputError("     Warning: hyperplane not generated, NaN found in linear terms for variable "
+            env->output->outputError(
+                "        Warning: hyperplane not generated, NaN found in linear terms for variable "
                 + env->problem->getVariable(E.first)->name);
             return (false);
         }
@@ -527,7 +529,7 @@ void CplexCallback::addLazyConstraint(
     }
     catch(IloException& e)
     {
-        env->output->outputError("Cplex error when invoking general lazy callback", e.getMessage());
+        env->output->outputError("        Cplex error when invoking general lazy callback", e.getMessage());
     }
 }
 
@@ -560,7 +562,7 @@ void MIPSolverCplexSingleTree::initializeSolverSettings()
     }
     catch(IloException& e)
     {
-        env->output->outputError("Cplex error when initializing parameters for linear solver", e.getMessage());
+        env->output->outputError("        Cplex error when initializing parameters for linear solver", e.getMessage());
     }
 }
 
@@ -654,7 +656,7 @@ E_ProblemSolutionStatus MIPSolverCplexSingleTree::solveProblem()
     }
     catch(IloException& e)
     {
-        env->output->outputError("Error when solving MIP/LP problem", e.getMessage());
+        env->output->outputError("        Error when solving MIP/LP problem", e.getMessage());
         MIPSolutionStatus = E_ProblemSolutionStatus::Error;
     }
 
@@ -672,7 +674,7 @@ int MIPSolverCplexSingleTree::increaseSolutionLimit(int increment)
     }
     catch(IloException& e)
     {
-        env->output->outputError("Error when increasing solution limit", e.getMessage());
+        env->output->outputError("        Error when increasing solution limit", e.getMessage());
     }
 
     return (sollim);
@@ -686,7 +688,7 @@ void MIPSolverCplexSingleTree::setSolutionLimit(long limit)
     }
     catch(IloException& e)
     {
-        env->output->outputError("Error when setting solution limit", e.getMessage());
+        env->output->outputError("        Error when setting solution limit", e.getMessage());
     }
 }
 
@@ -701,7 +703,7 @@ int MIPSolverCplexSingleTree::getSolutionLimit()
     catch(IloException& e)
     {
 
-        env->output->outputError("Error when obtaining solution limit", e.getMessage());
+        env->output->outputError("        Error when obtaining solution limit", e.getMessage());
     }
 
     return (solLim);

@@ -513,7 +513,7 @@ void MIPSolverCplex::activateDiscreteVariables(bool activate)
 
         if(activate)
         {
-            env->output->outputDebug("        Activating MIP strategy.");
+            env->output->outputDebug(" Activating MIP strategy.");
 
             for(int i = 0; i < numberOfVariables; i++)
             {
@@ -537,7 +537,7 @@ void MIPSolverCplex::activateDiscreteVariables(bool activate)
         }
         else
         {
-            env->output->outputDebug("        Activating LP strategy.");
+            env->output->outputDebug(" Activating LP strategy.");
             for(int i = 0; i < numberOfVariables; i++)
             {
                 if(variableTypes.at(i) == E_VariableType::Integer || variableTypes.at(i) == E_VariableType::Binary)
@@ -1034,14 +1034,12 @@ void MIPSolverCplex::setCutOff(double cutOff)
         if(isMinimizationProblem)
         {
             cplexInstance.setParam(IloCplex::CutUp, cutOff);
-            env->output->outputDebug(
-                "        Setting cutoff value to " + Utilities::toString(cutOff) + " for minimization.");
+            env->output->outputDebug(fmt::format("        Setting cutoff value to  {} for minimization.", cutOff));
         }
         else
         {
             cplexInstance.setParam(IloCplex::CutLo, cutOff);
-            env->output->outputDebug(
-                "        Setting cutoff value to " + Utilities::toString(cutOff) + " for maximization.");
+            env->output->outputDebug(fmt::format("        Setting cutoff value to  {} for maximization.", cutOff));
         }
     }
     catch(IloException& e)

@@ -77,14 +77,14 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
             >= env->settings->getSetting<int>("FixedInteger.Frequency.Iteration", "Primal"))
         {
             env->output->outputDebug(
-                "     Activating fixed NLP primal strategy since max iterations since last call has been reached.");
+                "        Activating fixed NLP primal strategy since max iterations since last call has been reached.");
             callNLPSolver = true;
         }
         else if(env->timing->getElapsedTime("Total") - env->solutionStatistics.timeLastFixedNLPCall
             > env->settings->getSetting<double>("FixedInteger.Frequency.Time", "Primal"))
         {
             env->output->outputDebug(
-                "     Activating fixed NLP primal strategy since max time limit since last call has been reached.");
+                "        Activating fixed NLP primal strategy since max time limit since last call has been reached.");
             callNLPSolver = true;
         }
     }

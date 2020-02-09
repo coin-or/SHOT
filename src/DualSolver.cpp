@@ -101,8 +101,7 @@ void DualSolver::checkDualSolutionCandidates()
                 break;
             }
 
-            auto tmpLine = "     New dual bound " + std::to_string(C.objValue) + "(" + sourceDesc + ") ";
-            env->output->outputDebug(tmpLine);
+            env->output->outputDebug(fmt::format("        New dual bound {}, source: {}", C.objValue, sourceDesc));
         }
     }
 
@@ -176,21 +175,23 @@ void DualSolver::addGeneratedHyperplane(const Hyperplane& hyperplane)
 
     if(!genHyperplane.isSourceConvex)
     {
+        if(env->results->solutionIsGlobal)
+            env->output->outputDebug("        Solution is no longer global");
+
         env->results->solutionIsGlobal = false;
-        env->output->outputDebug("     Solution is no longer global");
     }
 
     genHyperplane.pointHash = Utilities::calculateHash(hyperplane.generatedPoint);
 
     if(hasHyperplaneBeenAdded(genHyperplane.pointHash, genHyperplane.sourceConstraintIndex))
     {
-        env->output->outputTrace(fmt::format("     Not added hyperplane with hash {} to constraint {}",
+        env->output->outputTrace(fmt::format("        Not added hyperplane with hash {} to constraint {}",
             genHyperplane.pointHash, genHyperplane.sourceConstraintIndex));
         return;
     }
 
-    env->output->outputTrace(fmt::format("     Added hyperplane with hash {} to constraint {}", genHyperplane.pointHash,
-        genHyperplane.sourceConstraintIndex));
+    env->output->outputTrace(fmt::format("        Added hyperplane with hash {} to constraint {}",
+        genHyperplane.pointHash, genHyperplane.sourceConstraintIndex));
 
     generatedHyperplanes.push_back(genHyperplane);
 
@@ -199,7 +200,7 @@ void DualSolver::addGeneratedHyperplane(const Hyperplane& hyperplane)
     currentIteration->totNumHyperplanes++;
     env->solutionStatistics.iterationLastDualCutAdded = currentIteration->iterationNumber;
 
-    env->output->outputTrace("     Hyperplane generated from: " + source);
+    env->output->outputTrace("        Hyperplane generated from: " + source);
 }
 
 bool DualSolver::hasHyperplaneBeenAdded(double hash, int constraintIndex)

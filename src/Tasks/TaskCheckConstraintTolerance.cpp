@@ -50,14 +50,14 @@ void TaskCheckConstraintTolerance::run()
         && objectiveValueDifference > constraintTolerance)
     {
         env->output->outputDebug(
-            fmt::format("       Nonlinear objective termination tolerance not fulfilled. Deviation {} > {}.",
+            fmt::format("        Nonlinear objective termination tolerance not fulfilled. Deviation {} > {}.",
                 objectiveValueDifference, constraintTolerance));
         return;
     }
     else
     {
         env->output->outputDebug(
-            fmt::format("       Nonlinear objective termination tolerance fulfilled. Deviation {} <= {}.",
+            fmt::format("        Nonlinear objective termination tolerance fulfilled. Deviation {} <= {}.",
                 objectiveValueDifference, constraintTolerance));
     }
 
