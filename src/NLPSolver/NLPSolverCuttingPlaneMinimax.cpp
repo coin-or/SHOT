@@ -295,10 +295,27 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
                     "bounds of the nonlinear variables.");
             }
 
+            bool cutHasNoNaNsorInfs = true;
+
+            for(auto& E : elements)
+            {
+                if(E.second != E.second || std::isinf(E.second)) // Check for NaN or inf
+                {
+                    env->output->outputWarning(
+                        fmt::format("       Hyperplane for constraint {}  not generated,  NaN or "
+                                    "inf found in linear terms for {} = {}",
+                            NCV.constraint->name, env->reformulatedProblem->getVariable(E.first)->name,
+                            std::to_string(currSol.at(E.first))));
+                }
+
+                cutHasNoNaNsorInfs = false;
+            }
+
             // Adds the linear constraint
-            if(LPSolver->addLinearConstraint(elements, constant,
-                   "minimax_" + std::to_string(NCV.constraint->index) + "_" + std::to_string(numHyperTot))
-                >= 0)
+            if(cutHasNoNaNsorInfs
+                && LPSolver->addLinearConstraint(elements, constant,
+                       "minimax_" + std::to_string(NCV.constraint->index) + "_" + std::to_string(numHyperTot))
+                    >= 0)
             {
                 numHyperTot++;
                 numHyperAdded++;
