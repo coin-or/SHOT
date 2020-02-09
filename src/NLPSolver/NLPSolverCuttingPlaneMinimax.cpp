@@ -131,8 +131,11 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 
     int numHyperAdded = 0;
     int numHyperTot = 0;
+
     for(int i = 0; i <= maxIter; i++)
     {
+        bool NaNWarningPrinted = false;
+
         boost::uintmax_t maxIterSubsolverTmp = maxIterSubsolver;
 
         // Saves the LP problem to file if in debug mode
@@ -290,9 +293,12 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 
                 constant /= scalingFactor;
 
-                env->output->outputWarning(
-                    "        Large values found in RHS of cut, you might want to consider reducing the "
-                    "bounds of the nonlinear variables.");
+                if(!NaNWarningPrinted)
+                    env->output->outputWarning(
+                        "        Large values found in RHS of cut, you might want to consider reducing the "
+                        "bounds of the nonlinear variables.");
+
+                NaNWarningPrinted = true;
             }
 
             bool cutHasNoNaNsorInfs = true;
