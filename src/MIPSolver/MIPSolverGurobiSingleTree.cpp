@@ -36,7 +36,7 @@ MIPSolverGurobiSingleTree::MIPSolverGurobiSingleTree(EnvironmentPtr envPtr)
     }
     catch(GRBException& e)
     {
-        env->output->outputError("Error when initializing Gurobi:", e.getMessage());
+        env->output->outputError("        Error when initializing Gurobi:", e.getMessage());
         return;
     }
 
@@ -56,7 +56,7 @@ void MIPSolverGurobiSingleTree::initializeSolverSettings()
     }
     catch(GRBException& e)
     {
-        env->output->outputError("Error when initializing parameters for linear solver", e.getMessage());
+        env->output->outputError("        Error when initializing parameters for linear solver", e.getMessage());
     }
 }
 
@@ -102,7 +102,7 @@ E_ProblemSolutionStatus MIPSolverGurobiSingleTree::solveProblem()
     }
     catch(GRBException& e)
     {
-        env->output->outputError("Error when solving MIP/LP problem", e.getMessage());
+        env->output->outputError("        Error when solving MIP/LP problem", e.getMessage());
         MIPSolutionStatus = E_ProblemSolutionStatus::Error;
     }
 
@@ -475,7 +475,7 @@ void GurobiCallback::callback()
     }
     catch(GRBException& e)
     {
-        env->output->outputError("Gurobi error when running main callback method", e.getMessage());
+        env->output->outputError("        Gurobi error when running main callback method", e.getMessage());
     }
 }
 
@@ -497,12 +497,28 @@ bool GurobiCallback::createHyperplane(Hyperplane hyperplane)
         {
             if(E.second != E.second) // Check for NaN
             {
-                env->output->outputError("     Warning: hyperplane for constraint "
+                env->output->outputError("        Warning: hyperplane for constraint "
                     + std::to_string(hyperplane.sourceConstraint->index)
                     + " not generated, NaN found in linear terms for variable "
                     + env->problem->getVariable(E.first)->name);
                 return (false);
             }
+        }
+
+        // Small fix to fix badly scaled cuts.
+        // TODO: this should be made so it also takes into account small/large coefficients of the linear terms
+        if(abs(tmpPair.second) > 1e15)
+        {
+            double scalingFactor = abs(tmpPair.second) - 1e15;
+
+            for(auto& E : tmpPair.first)
+                E.second /= scalingFactor;
+
+            tmpPair.second /= scalingFactor;
+
+            env->output->outputWarning(
+                "        Large values found in RHS of cut, you might want to consider reducing the "
+                "bounds of the nonlinear variables.");
         }
 
         GRBLinExpr expr = 0;
@@ -518,7 +534,7 @@ bool GurobiCallback::createHyperplane(Hyperplane hyperplane)
     }
     catch(GRBException& e)
     {
-        env->output->outputError("Gurobi error when creating lazy hyperplane", e.getMessage());
+        env->output->outputError("        Gurobi error when creating lazy hyperplane", e.getMessage());
         return (false);
     }
 
@@ -591,7 +607,7 @@ bool GurobiCallback::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorIn
     }
     catch(GRBException& e)
     {
-        env->output->outputError("Gurobi error when adding lazy integer cut", e.getMessage());
+        env->output->outputError("        Gurobi error when adding lazy integer cut", e.getMessage());
         return (false);
     }
 
@@ -632,7 +648,7 @@ void GurobiCallback::addLazyConstraint(std::vector<SolutionPoint> candidatePoint
     }
     catch(GRBException& e)
     {
-        env->output->outputError("Gurobi error when invoking adding lazy constraint", e.getMessage());
+        env->output->outputError("        Gurobi error when invoking adding lazy constraint", e.getMessage());
     }
 }
 } // namespace SHOT

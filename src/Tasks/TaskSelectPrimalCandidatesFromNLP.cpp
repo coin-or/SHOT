@@ -157,6 +157,8 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
 
     std::vector<PrimalFixedNLPCandidate> testPts;
 
+    env->output->outputDebug("        Solving fixed NLP problem:");
+
     // Check if integer value combination has been tested before
     if(testedPoints.size() > 0)
     {
@@ -202,13 +204,11 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
 
                 if(V->properties.hasUpperBoundBeenTightened)
                 {
-                    std::cout << "updated UB in NLP\n";
                     NLPSolver->updateVariableUpperBound(V->index, V->upperBound);
                 }
 
                 if(V->properties.hasLowerBoundBeenTightened)
                 {
-                    std::cout << "updated LB in NLP\n";
                     NLPSolver->updateVariableLowerBound(V->index, V->upperBound);
                 }
             }
@@ -465,8 +465,8 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
                 if(interval < 10 * this->originalTimeFrequency)
                     env->settings->updateSetting("FixedInteger.Frequency.Time", "Primal", interval);
 
-                env->output->outputDebug("     Duration:  " + std::to_string(timeEnd - timeStart)
-                    + " s. New interval: " + std::to_string(interval) + " s or " + std::to_string(iters) + " iters.");
+                env->output->outputDebug(fmt::format("        Duration: {} s. New interval: {} s or {} iterations.",
+                    timeEnd - timeStart, interval, iters));
             }
 
             // Add integer cut.

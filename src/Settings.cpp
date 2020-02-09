@@ -27,7 +27,7 @@ void Settings::createBaseSetting(
     std::string name, std::string category, T value, std::string description, bool isPrivate)
 {
     // Check that setting is of the correct type
-    using value_type[[maybe_unused]] = typename std::enable_if<std::is_same<std::string, T>::value
+    using value_type [[maybe_unused]] = typename std::enable_if<std::is_same<std::string, T>::value
             || std::is_same<double, T>::value || std::is_same<int, T>::value || std::is_same<bool, T>::value,
         T>::type;
 
@@ -40,28 +40,28 @@ void Settings::createBaseSetting(
         stringSettings[key] = value;
         settingTypes[key] = E_SettingType::String;
         tempValue = Utilities::trim(value);
-        output->outputTrace("String setting " + category + "." + name + " = " + tempValue + " created.");
+        output->outputTrace(" String setting " + category + "." + name + " = " + tempValue + " created.");
     }
     else if constexpr(std::is_same_v<T, int>)
     {
         integerSettings[key] = value;
         settingTypes[key] = E_SettingType::Integer;
         tempValue = std::to_string(value);
-        output->outputTrace("Integer setting " + category + "." + name + " = " + tempValue + " created.");
+        output->outputTrace(" Integer setting " + category + "." + name + " = " + tempValue + " created.");
     }
     else if constexpr(std::is_same_v<T, double>)
     {
         doubleSettings[key] = value;
         settingTypes[key] = E_SettingType::Double;
         tempValue = std::to_string(value);
-        output->outputTrace("Double setting " + category + "." + name + " = " + tempValue + " created.");
+        output->outputTrace(" Double setting " + category + "." + name + " = " + tempValue + " created.");
     }
     else if constexpr(std::is_same_v<T, bool>)
     {
         booleanSettings[key] = value;
         settingTypes[key] = E_SettingType::Boolean;
         tempValue = std::to_string(value);
-        output->outputTrace("Boolean " + category + "." + name + " = " + tempValue + " created.");
+        output->outputTrace(" Boolean " + category + "." + name + " = " + tempValue + " created.");
     }
 
     settingDescriptions[key] = description;
@@ -77,7 +77,7 @@ template void Settings::updateSetting(std::string name, std::string category, bo
 template <typename T> void Settings::updateSetting(std::string name, std::string category, T value)
 {
     // Check that setting is of the correct type
-    using value_type[[maybe_unused]] = typename std::enable_if<std::is_same<std::string, T>::value
+    using value_type [[maybe_unused]] = typename std::enable_if<std::is_same<std::string, T>::value
             || std::is_same<double, T>::value || std::is_same<int, T>::value || std::is_same<bool, T>::value,
         T>::type;
 
@@ -95,7 +95,7 @@ template <typename T> void Settings::updateSetting(std::string name, std::string
     {
         if(settingBounds[key].first > value || settingBounds[key].second < value)
         {
-            output->outputError("Cannot update setting " + category + "." + name + ": Not in interval ["
+            output->outputError(" Cannot update setting " + category + "." + name + ": Not in interval ["
                 + std::to_string(settingBounds[key].first) + "," + std::to_string(settingBounds[key].second) + "].");
 
             throw SettingOutsideBoundsException(
@@ -109,7 +109,7 @@ template <typename T> void Settings::updateSetting(std::string name, std::string
     {
         if(settingBounds[key].first > value || settingBounds[key].second < value)
         {
-            output->outputError("Cannot update setting " + category + "." + name + ": Not in interval ["
+            output->outputError(" Cannot update setting " + category + "." + name + ": Not in interval ["
                 + std::to_string(settingBounds[key].first) + "," + std::to_string(settingBounds[key].second) + "].");
 
             throw SettingOutsideBoundsException(
@@ -137,7 +137,7 @@ template <typename T> void Settings::updateSetting(std::string name, std::string
         if(Utilities::trim(oldValue->second) == Utilities::trim(value))
         {
             output->outputTrace(
-                "Setting " + key.first + "." + key.second + " not updated since the same value was given.");
+                " Setting " + key.first + "." + key.second + " not updated since the same value was given.");
             return;
         }
     }
@@ -146,7 +146,7 @@ template <typename T> void Settings::updateSetting(std::string name, std::string
         if(oldValue->second == value)
         {
             output->outputTrace(
-                "Setting " + key.first + "." + key.second + " not updated since the same value was given.");
+                " Setting " + key.first + "." + key.second + " not updated since the same value was given.");
             return;
         }
     }
@@ -155,28 +155,28 @@ template <typename T> void Settings::updateSetting(std::string name, std::string
     {
         stringSettings[key] = Utilities::trim(value);
 
-        output->outputTrace("Setting " + key.first + "." + key.second + " updated. New value = " + value + ".");
+        output->outputTrace(" Setting " + key.first + "." + key.second + " updated. New value = " + value + ".");
     }
     else if constexpr(std::is_same_v<T, int>)
     {
         integerSettings[key] = value;
 
         output->outputTrace(
-            "Setting " + key.first + "." + key.second + " updated. New value = " + std::to_string(value) + ".");
+            " Setting " + key.first + "." + key.second + " updated. New value = " + std::to_string(value) + ".");
     }
     else if constexpr(std::is_same_v<T, double>)
     {
         doubleSettings[key] = value;
 
         output->outputTrace(
-            "Setting " + key.first + "." + key.second + " = updated. New value = " + std::to_string(value) + ".");
+            " Setting " + key.first + "." + key.second + " updated. New value = " + std::to_string(value) + ".");
     }
     else if constexpr(std::is_same_v<T, bool>)
     {
         booleanSettings[key] = value;
 
         output->outputTrace(
-            "Setting " + key.first + "." + key.second + " = updated. New value = " + std::to_string(value) + ".");
+            " Setting " + key.first + "." + key.second + " updated. New value = " + std::to_string(value) + ".");
     }
 
     settingIsDefaultValue[key] = false;
@@ -600,7 +600,7 @@ bool Settings::readSettingsFromOSoL(std::string osol)
 {
     using namespace tinyxml2;
 
-    output->outputTrace("Starting conversion of settings from OSoL.");
+    output->outputTrace(" Starting conversion of settings from OSoL.");
 
     XMLDocument osolDocument;
 
@@ -608,7 +608,7 @@ bool Settings::readSettingsFromOSoL(std::string osol)
 
     if(result != XML_SUCCESS)
     {
-        output->outputError("Could not parse options in OSoL-format.", std::to_string(result));
+        output->outputError("  Could not parse options in OSoL-format.", std::to_string(result));
         return (false);
     }
 
@@ -617,7 +617,7 @@ bool Settings::readSettingsFromOSoL(std::string osol)
 
     if(osolNode == nullptr)
     {
-        output->outputError("No solver options specified in OSoL-file.");
+        output->outputError("  No solver options specified in OSoL-file.");
         return (false);
     }
 
@@ -645,7 +645,7 @@ bool Settings::readSettingsFromOSoL(std::string osol)
             if(settingTypes.find(key) == settingTypes.end())
             {
                 output->outputError(
-                    "Cannot update setting <" + category + "," + name + "> since it has not been defined.");
+                    "  Cannot update setting <" + category + "," + name + "> since it has not been defined.");
 
                 return (false);
             }
@@ -665,7 +665,7 @@ bool Settings::readSettingsFromOSoL(std::string osol)
                 }
                 catch(...)
                 {
-                    output->outputError("Cannot update setting <" + category + "," + name
+                    output->outputError("  Cannot update setting <" + category + "," + name
                         + "> since the value is of the wrong format.");
                 }
                 break;
@@ -682,7 +682,7 @@ bool Settings::readSettingsFromOSoL(std::string osol)
                 }
                 catch(...)
                 {
-                    output->outputError("Cannot update setting <" + category + "," + name
+                    output->outputError("  Cannot update setting <" + category + "," + name
                         + "> since the value is of the wrong format.");
                 }
                 break;
@@ -692,11 +692,11 @@ bool Settings::readSettingsFromOSoL(std::string osol)
 
             if(convertedChars != value.length())
                 output->outputError(
-                    "Cannot update setting <" + name + "," + category + "> since it is of the wrong type.");
+                    "  Cannot update setting <" + name + "," + category + "> since it is of the wrong type.");
         }
         catch(std::exception& e)
         {
-            output->outputError("Error when reading OSoL line " + std::to_string(N->GetLineNum()));
+            output->outputError("  Error when reading OSoL line " + std::to_string(N->GetLineNum()));
             return (false);
         }
     }
@@ -706,7 +706,7 @@ bool Settings::readSettingsFromOSoL(std::string osol)
 
 bool Settings::readSettingsFromString(std::string options)
 {
-    output->outputTrace("Starting conversion of settings from GAMS options format.");
+    output->outputTrace(" Starting conversion of settings from GAMS options format.");
 
     std::istringstream f(options);
     std::string line;
@@ -731,7 +731,7 @@ bool Settings::readSettingsFromString(std::string options)
 
         if(key == "" || value == "")
         {
-            output->outputError("Error when reading line \"" + line + "\" in the options file; ignoring the option.");
+            output->outputError("  Error when reading line \"" + line + "\" in the options file; ignoring the option.");
             continue;
         }
 
@@ -743,7 +743,8 @@ bool Settings::readSettingsFromString(std::string options)
 
         if(settingTypes.find(keyPair) == settingTypes.end())
         {
-            output->outputError("Cannot update setting <" + name + "," + category + "> since it has not been defined.");
+            output->outputError(
+                "  Cannot update setting <" + name + "," + category + "> since it has not been defined.");
 
             return (false);
         }
@@ -764,7 +765,7 @@ bool Settings::readSettingsFromString(std::string options)
             catch(...)
             {
                 output->outputError(
-                    "Cannot update setting <" + category + "," + name + "> since the value is of the wrong format.");
+                    "  Cannot update setting <" + category + "," + name + "> since the value is of the wrong format.");
             }
             break;
         case E_SettingType::Boolean:
@@ -781,7 +782,7 @@ bool Settings::readSettingsFromString(std::string options)
             catch(...)
             {
                 output->outputError(
-                    "Cannot update setting <" + category + "," + name + "> since the value is of the wrong format.");
+                    "  Cannot update setting <" + category + "," + name + "> since the value is of the wrong format.");
             }
             break;
         default:
@@ -789,7 +790,8 @@ bool Settings::readSettingsFromString(std::string options)
         }
 
         if(convertedChars != value.length())
-            output->outputError("Cannot update setting <" + name + "," + category + "> since it is of the wrong type.");
+            output->outputError(
+                "  Cannot update setting <" + name + "," + category + "> since it is of the wrong type.");
     }
 
     return (true);

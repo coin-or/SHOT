@@ -66,7 +66,7 @@ NLPSolverCuttingPlaneMinimax::NLPSolverCuttingPlaneMinimax(EnvironmentPtr envPtr
     if(solver == ES_MIPSolver::Cplex)
     {
         LPSolver = std::make_unique<MIPSolverCplex>(env);
-        env->output->outputDebug("Cplex selected as MIP solver for minimax solver.");
+        env->output->outputDebug(" Cplex selected as MIP solver for minimax solver.");
     }
 #endif
 
@@ -74,7 +74,7 @@ NLPSolverCuttingPlaneMinimax::NLPSolverCuttingPlaneMinimax(EnvironmentPtr envPtr
     if(solver == ES_MIPSolver::Gurobi)
     {
         LPSolver = std::make_unique<MIPSolverGurobi>(env);
-        env->output->outputDebug("Gurobi selected as MIP solver for minimax solver.");
+        env->output->outputDebug(" Gurobi selected as MIP solver for minimax solver.");
     }
 #endif
 
@@ -82,13 +82,13 @@ NLPSolverCuttingPlaneMinimax::NLPSolverCuttingPlaneMinimax(EnvironmentPtr envPtr
     if(solver == ES_MIPSolver::Cbc)
     {
         LPSolver = std::make_unique<MIPSolverCbc>(env);
-        env->output->outputDebug("Cbc selected as MIP solver for minimax solver.");
+        env->output->outputDebug(" Cbc selected as MIP solver for minimax solver.");
     }
 #endif
 
-    env->output->outputDebug("Creating LP problem for minimax solver");
+    env->output->outputDebug(" Creating LP problem for minimax solver");
     createProblem(LPSolver.get(), sourceProblem);
-    env->output->outputDebug("LP problem for minimax solver created");
+    env->output->outputDebug(" LP problem for minimax solver created");
 
     LPSolver->activateDiscreteVariables(false);
     LPSolver->initializeSolverSettings();
@@ -131,8 +131,11 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 
     int numHyperAdded = 0;
     int numHyperTot = 0;
+
     for(int i = 0; i <= maxIter; i++)
     {
+        bool NaNWarningPrinted = false;
+
         boost::uintmax_t maxIterSubsolverTmp = maxIterSubsolver;
 
         // Saves the LP problem to file if in debug mode
@@ -280,10 +283,45 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             // Adding the objective term
             elements.emplace(numVar, -1.0);
 
+            // Small fix to fix badly scaled cuts.
+            // TODO: this should be made so it also takes into account small/large coefficients of the linear terms
+            if(abs(constant) > 1e15)
+            {
+                double scalingFactor = abs(constant) - 1e15;
+                for(auto& E : elements)
+                    E.second /= scalingFactor;
+
+                constant /= scalingFactor;
+
+                if(!NaNWarningPrinted)
+                    env->output->outputWarning(
+                        "        Large values found in RHS of cut, you might want to consider reducing the "
+                        "bounds of the nonlinear variables.");
+
+                NaNWarningPrinted = true;
+            }
+
+            bool cutHasNoNaNsorInfs = true;
+
+            for(auto& E : elements)
+            {
+                if(E.second != E.second || std::isinf(E.second)) // Check for NaN or inf
+                {
+                    env->output->outputWarning(
+                        fmt::format("        Hyperplane for constraint {}  not generated,  NaN or "
+                                    "inf found in linear terms for {} = {}",
+                            NCV.constraint->name, env->reformulatedProblem->getVariable(E.first)->name,
+                            std::to_string(currSol.at(E.first))));
+
+                    cutHasNoNaNsorInfs = false;
+                }
+            }
+
             // Adds the linear constraint
-            if(LPSolver->addLinearConstraint(elements, constant,
-                   "minimax_" + std::to_string(NCV.constraint->index) + "_" + std::to_string(numHyperTot))
-                >= 0)
+            if(cutHasNoNaNsorInfs
+                && LPSolver->addLinearConstraint(elements, constant,
+                       "minimax_" + std::to_string(NCV.constraint->index) + "_" + std::to_string(numHyperTot))
+                    >= 0)
             {
                 numHyperTot++;
                 numHyperAdded++;

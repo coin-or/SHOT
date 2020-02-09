@@ -74,7 +74,7 @@ void TaskExecuteSolutionLimitStrategy::run()
             temporaryOptLimitUsed = true;
             currIter->MIPSolutionLimitUpdated = true;
             env->output->outputDebug(
-                "     Forced optimal iteration since too many iterations since last dual bound update");
+                "        Forced optimal iteration since too many iterations since last dual bound update");
 
             env->timing->stopTimer("DualStrategy");
             return;
@@ -89,7 +89,7 @@ void TaskExecuteSolutionLimitStrategy::run()
             temporaryOptLimitUsed = true;
             currIter->MIPSolutionLimitUpdated = true;
             env->output->outputCritical(
-                "     Forced optimal iteration since too long time since last dual bound update");
+                "        Forced optimal iteration since too long time since last dual bound update");
 
             env->timing->stopTimer("DualStrategy");
             return;
@@ -103,7 +103,7 @@ void TaskExecuteSolutionLimitStrategy::run()
             temporaryOptLimitUsed = true;
             currIter->MIPSolutionLimitUpdated = true;
             env->output->outputDebug(
-                "     Forced optimal iteration since difference between MIP solution and primal is small");
+                "        Forced optimal iteration since difference between MIP solution and primal is small");
 
             env->timing->stopTimer("DualStrategy");
             return;

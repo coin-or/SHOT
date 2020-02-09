@@ -49,6 +49,8 @@ public:
 
     void outputSolutionReport();
 
+    bool firstIterationHeaderPrinted = false;
+
 private:
     EnvironmentPtr env;
 
@@ -59,6 +61,5 @@ private:
     double lastIterationOutputTimeStamp = 0.0;
     int iterationsWithoutPrintoutCounter = 0;
     int iterationPrintoutsSinceLastHeader = 0;
-    bool firstIterationHeaderPrinted = false;
 };
 } // namespace SHOT

@@ -41,7 +41,7 @@ void TaskFindInteriorPoint::run()
 
     env->report->outputInteriorPointPreReport();
 
-    env->output->outputDebug("Initializing NLP solver");
+    env->output->outputDebug(" Initializing NLP solver");
 
     auto solver
         = static_cast<ES_InteriorPointStrategy>(env->settings->getSetting<int>("ESH.InteriorPoint.Solver", "Dual"));
@@ -50,7 +50,7 @@ void TaskFindInteriorPoint::run()
     {
         NLPSolvers.emplace_back(std::make_unique<NLPSolverCuttingPlaneMinimax>(env, env->reformulatedProblem));
 
-        env->output->outputDebug("Cutting plane minimax selected as NLP solver.");
+        env->output->outputDebug(" Cutting plane minimax selected as NLP solver.");
     }
     else
     {
@@ -96,8 +96,8 @@ void TaskFindInteriorPoint::run()
 
         if(maxDev.normalizedValue >= 0)
         {
-            env->output->outputWarning("\n        Maximum deviation in interior point is too large: "
-                + Utilities::toString(maxDev.normalizedValue));
+            env->output->outputWarning(
+                "\n Maximum deviation in interior point is too large: " + Utilities::toString(maxDev.normalizedValue));
 
             if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
             {
@@ -133,13 +133,13 @@ void TaskFindInteriorPoint::run()
 
     if(!foundNLPPoint)
     {
-        env->output->outputError("\n        No interior point found!                            ");
+        env->output->outputError("\n No interior point found!                            ");
         env->timing->stopTimer("InteriorPointSearch");
 
         return;
     }
 
-    env->output->outputDebug("     Finished solving NLP problem.");
+    env->output->outputDebug(" Finished solving NLP problem.");
 
     env->solutionStatistics.numberOfOriginalInteriorPoints = env->dualSolver->interiorPts.size();
 

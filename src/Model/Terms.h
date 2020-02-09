@@ -793,7 +793,12 @@ public:
         if(power == 2.0)
             interval = sqrt(bound);
         else if(power == -1.0)
+        {
             interval = 1 / bound;
+
+            if(interval.l() < 1e-8 && interval.u() > 1e-8)
+                interval.l(1e-8);
+        }
         else
             interval = pow(bound, 1.0 / power);
 

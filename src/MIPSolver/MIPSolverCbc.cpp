@@ -95,7 +95,7 @@ bool MIPSolverCbc::addVariable(std::string name, E_VariableType type, double low
     }
     catch(std::exception& e)
     {
-        env->output->outputError("Cbc exception caught when adding variable to model: ", e.what());
+        env->output->outputError("        Cbc exception caught when adding variable to model: ", e.what());
         return (false);
     }
 
@@ -122,7 +122,7 @@ bool MIPSolverCbc::addLinearTermToObjective(double coefficient, int variableInde
     }
     catch(std::exception& e)
     {
-        env->output->outputError("Cbc exception caught when adding linear term to objective: ", e.what());
+        env->output->outputError("        Cbc exception caught when adding linear term to objective: ", e.what());
         return (false);
     }
 
@@ -163,7 +163,7 @@ bool MIPSolverCbc::finalizeObjective(bool isMinimize, double constant)
     }
     catch(std::exception& e)
     {
-        env->output->outputError("Cbc exception caught when adding objective function to model: ", e.what());
+        env->output->outputError("        Cbc exception caught when adding objective function to model: ", e.what());
         return (false);
     }
 
@@ -184,7 +184,7 @@ bool MIPSolverCbc::addLinearTermToConstraint(double coefficient, int variableInd
     }
     catch(std::exception& e)
     {
-        env->output->outputError("Cbc exception caught when adding linear term to constraint: ", e.what());
+        env->output->outputError("        Cbc exception caught when adding linear term to constraint: ", e.what());
         return (false);
     }
 
@@ -216,7 +216,7 @@ bool MIPSolverCbc::finalizeConstraint(std::string name, double valueLHS, double 
     }
     catch(std::exception& e)
     {
-        env->output->outputError("Cbc exception caught when adding constraint to model: ", e.what());
+        env->output->outputError("        Cbc exception caught when adding constraint to model: ", e.what());
         return (false);
     }
 
@@ -242,7 +242,7 @@ bool MIPSolverCbc::finalizeProblem()
     }
     catch(std::exception& e)
     {
-        env->output->outputError("Cbc exception caught when finalizing model", e.what());
+        env->output->outputError("        Cbc exception caught when finalizing model", e.what());
         return (false);
     }
 
@@ -283,27 +283,33 @@ int MIPSolverCbc::addLinearConstraint(
 
         // Adds the cutting plane
         if(isGreaterThan)
+        {
             osiInterface->addRow(cut, -constant, osiInterface->getInfinity(), name);
+            assert(osiInterface->getRowLower()[osiInterface->getNumRows() - 1] == -constant);
+        }
         else
+        {
             osiInterface->addRow(cut, -osiInterface->getInfinity(), -constant, name);
+            assert(osiInterface->getRowUpper()[osiInterface->getNumRows() - 1] == -constant);
+        }
 
         if(osiInterface->getNumRows() > numConstraintsBefore)
         {
         }
         else
         {
-            env->output->outputInfo("        Hyperplane not added by Cbc");
+            env->output->outputInfo("        Linear constraint  not added by Cbc");
             return (-1);
         }
     }
     catch(std::exception& e)
     {
-        env->output->outputError("Error when adding term to linear constraint in Cbc: ", e.what());
+        env->output->outputError("        Error when adding term to linear constraint in Cbc: ", e.what());
         return (-1);
     }
     catch(CoinError& e)
     {
-        env->output->outputError("Error when adding term to linear constraint in Cbc: ", e.message());
+        env->output->outputError("        Error when adding term to linear constraint in Cbc: ", e.message());
         return (-1);
     }
 
@@ -314,13 +320,14 @@ void MIPSolverCbc::activateDiscreteVariables(bool activate)
 {
     if(activate)
     {
-        env->output->outputDebug("Activating MIP strategy");
+        env->output->outputDebug(" Activating MIP strategy");
 
         for(int i = 0; i < numberOfVariables; i++)
         {
             if(variableTypes.at(i) == E_VariableType::Integer || variableTypes.at(i) == E_VariableType::Binary)
             {
                 osiInterface->setInteger(i);
+                assert(osiInterface->isInteger(i));
             }
         }
 
@@ -328,12 +335,13 @@ void MIPSolverCbc::activateDiscreteVariables(bool activate)
     }
     else
     {
-        env->output->outputDebug("Activating LP strategy");
+        env->output->outputDebug(" Activating LP strategy");
         for(int i = 0; i < numberOfVariables; i++)
         {
             if(variableTypes.at(i) == E_VariableType::Integer || variableTypes.at(i) == E_VariableType::Binary)
             {
                 osiInterface->setContinuous(i);
+                assert(osiInterface->isContinuous(i));
             }
         }
 
@@ -385,7 +393,8 @@ E_ProblemSolutionStatus MIPSolverCbc::getSolutionStatus()
     {
         auto status = cbcModel->status();
         MIPSolutionStatus = E_ProblemSolutionStatus::Error;
-        env->output->outputError(fmt::format("MIP solver return status unknown (Cbc returned status {}).", status));
+        env->output->outputError(
+            fmt::format("        MIP solver return status unknown (Cbc returned status {}).", status));
     }
 
     return (MIPSolutionStatus);
@@ -450,7 +459,7 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
         }
         catch(std::exception& e)
         {
-            env->output->outputError("Error when adding MIP start to Cbc", e.what());
+            env->output->outputError("        Error when adding MIP start to Cbc", e.what());
         }
 
         CbcMain0(*cbcModel);
@@ -467,7 +476,7 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
     }
     catch(std::exception& e)
     {
-        env->output->outputError("Error when solving subproblem with Cbc", e.what());
+        env->output->outputError("        Error when solving subproblem with Cbc", e.what());
         MIPSolutionStatus = E_ProblemSolutionStatus::Error;
     }
 
@@ -548,7 +557,8 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
             }
             catch(std::exception& e)
             {
-                env->output->outputError("Error when saving relaxed infesibility model to file in Cbc", e.what());
+                env->output->outputError(
+                    "        Error when saving relaxed infesibility model to file in Cbc", e.what());
             }
         }
 
@@ -571,7 +581,10 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
             MIPSolutionStatus = getSolutionStatus();
 
             for(auto& P : originalObjectiveCoefficients)
+            {
                 osiInterface->setObjCoeff(P.index, P.value);
+                assert(osiInterface->getObjCoefficients()[P.index] == P.value);
+            }
 
             env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed = true;
         }
@@ -670,7 +683,8 @@ bool MIPSolverCbc::repairInfeasibility()
             }
             catch(std::exception& e)
             {
-                env->output->outputError("Error when saving relaxed infesibility model to file in Cbc", e.what());
+                env->output->outputError(
+                    "        Error when saving relaxed infesibility model to file in Cbc", e.what());
             }
         }
 
@@ -814,14 +828,13 @@ void MIPSolverCbc::setCutOff(double cutOff)
     {
         this->cutOff = cutOff + cutOffTol;
 
-        env->output->outputDebug("     Setting cutoff value to " + std::to_string(this->cutOff) + " for minimization.");
+        env->output->outputDebug(fmt::format("        Setting cutoff value to  {} for minimization.", this->cutOff));
     }
     else
     {
         this->cutOff = -1 * (cutOff + cutOffTol);
 
-        env->output->outputDebug(
-            "     Setting cutoff value to " + std::to_string(cutOff + cutOffTol) + " for maximization.");
+        env->output->outputDebug(fmt::format("        Setting cutoff value to  {} for maximization.", this->cutOff));
     }
 }
 
@@ -867,7 +880,7 @@ void MIPSolverCbc::setCutOffAsConstraint([[maybe_unused]] double cutOff)
     }
     catch(std::exception& e)
     {
-        env->output->outputError("Error when setting cut off constraint value", e.what());
+        env->output->outputError("        Error when setting cut off constraint value", e.what());
     }
 }
 
@@ -920,7 +933,7 @@ void MIPSolverCbc::writeProblemToFile(std::string filename)
     }
     catch(std::exception& e)
     {
-        env->output->outputError("Error when saving model to file in Cbc", e.what());
+        env->output->outputError("        Error when saving model to file in Cbc", e.what());
     }
 }
 
@@ -930,8 +943,8 @@ double MIPSolverCbc::getObjectiveValue(int solIdx)
 
     if(!isMIP && solIdx > 0) // LP problems only have one solution!
     {
-        env->output->outputError(
-            "Cannot obtain solution with index " + std::to_string(solIdx) + " in Cbc since the problem is LP/QP!");
+        env->output->outputError("        Cannot obtain solution with index " + std::to_string(solIdx)
+            + " in Cbc since the problem is LP/QP!");
 
         return (NAN);
     }
@@ -955,7 +968,8 @@ double MIPSolverCbc::getObjectiveValue(int solIdx)
     catch(std::exception& e)
     {
         env->output->outputError(
-            "Error when obtaining objective value for solution index " + std::to_string(solIdx) + " in Cbc", e.what());
+            "        Error when obtaining objective value for solution index " + std::to_string(solIdx) + " in Cbc",
+            e.what());
     }
 
     return (objectiveValue);
@@ -996,12 +1010,12 @@ bool MIPSolverCbc::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInte
     }
     catch(CoinError& e)
     {
-        env->output->outputError("Error when adding term to integer cut in Cbc: ", e.message());
+        env->output->outputError("        Error when adding term to integer cut in Cbc: ", e.message());
         return (false);
     }
     catch(std::exception& e)
     {
-        env->output->outputError("Error when adding term to integer cut in Cbc: ", e.what());
+        env->output->outputError("        Error when adding term to integer cut in Cbc: ", e.what());
         return (false);
     }
 
@@ -1037,7 +1051,7 @@ VectorDouble MIPSolverCbc::getVariableSolution(int solIdx)
     catch(std::exception& e)
     {
         env->output->outputError(
-            "Error when reading solution with index " + std::to_string(solIdx) + " in Cbc", e.what());
+            "        Error when reading solution with index " + std::to_string(solIdx) + " in Cbc", e.what());
     }
     return (solution);
 }
@@ -1052,7 +1066,7 @@ int MIPSolverCbc::getNumberOfSolutions()
     }
     catch(std::exception& e)
     {
-        env->output->outputError("Error when obtaining number of solutions in Cbc", e.what());
+        env->output->outputError("        Error when obtaining number of solutions in Cbc", e.what());
     }
 
     return (numSols);
@@ -1070,11 +1084,14 @@ void MIPSolverCbc::updateVariableBound(int varIndex, double lowerBound, double u
     try
     {
         osiInterface->setColBounds(varIndex, lowerBound, upperBound);
+        assert(osiInterface->getColLower()[varIndex] == lowerBound);
+        assert(osiInterface->getColUpper()[varIndex] == upperBound);
     }
     catch(std::exception& e)
     {
         env->output->outputError(
-            "Error when updating variable bounds for variable index" + std::to_string(varIndex) + " in Cbc", e.what());
+            "        Error when updating variable bounds for variable index" + std::to_string(varIndex) + " in Cbc",
+            e.what());
     }
 }
 
@@ -1088,11 +1105,13 @@ void MIPSolverCbc::updateVariableLowerBound(int varIndex, double lowerBound)
     try
     {
         osiInterface->setColLower(varIndex, lowerBound);
+        assert(osiInterface->getColLower()[varIndex] == lowerBound);
     }
     catch(std::exception& e)
     {
         env->output->outputError(
-            "Error when updating variable bounds for variable index" + std::to_string(varIndex) + " in Cbc", e.what());
+            "        Error when updating variable bounds for variable index" + std::to_string(varIndex) + " in Cbc",
+            e.what());
     }
 }
 
@@ -1106,11 +1125,13 @@ void MIPSolverCbc::updateVariableUpperBound(int varIndex, double upperBound)
     try
     {
         osiInterface->setColUpper(varIndex, upperBound);
+        assert(osiInterface->getColUpper()[varIndex] == upperBound);
     }
     catch(std::exception& e)
     {
         env->output->outputError(
-            "Error when updating variable bounds for variable index" + std::to_string(varIndex) + " in Cbc", e.what());
+            "        Error when updating variable bounds for variable index" + std::to_string(varIndex) + " in Cbc",
+            e.what());
     }
 }
 
@@ -1126,7 +1147,8 @@ PairDouble MIPSolverCbc::getCurrentVariableBounds(int varIndex)
     catch(std::exception& e)
     {
         env->output->outputError(
-            "Error when obtaining variable bounds for variable index" + std::to_string(varIndex) + " in Cbc", e.what());
+            "        Error when obtaining variable bounds for variable index" + std::to_string(varIndex) + " in Cbc",
+            e.what());
     }
 
     return (tmpBounds);
@@ -1158,7 +1180,7 @@ double MIPSolverCbc::getDualObjectiveValue()
     }
     catch(std::exception& e)
     {
-        env->output->outputError("Error when obtaining dual objective value in Cbc", e.what());
+        env->output->outputError("        Error when obtaining dual objective value in Cbc", e.what());
     }
 
     return (objVal);
@@ -1194,7 +1216,7 @@ int MIPSolverCbc::getNumberOfExploredNodes()
     }
     catch(std::exception& e)
     {
-        env->output->outputError("Error when getting number of explored nodes", e.what());
+        env->output->outputError("        Error when getting number of explored nodes", e.what());
         return 0;
     }
 }

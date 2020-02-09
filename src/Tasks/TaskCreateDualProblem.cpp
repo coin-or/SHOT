@@ -24,7 +24,7 @@ TaskCreateDualProblem::TaskCreateDualProblem(EnvironmentPtr envPtr) : TaskBase(e
 {
     env->timing->startTimer("DualStrategy");
 
-    env->output->outputDebug("Creating dual problem");
+    env->output->outputDebug(" Creating dual problem");
 
     createProblem(env->dualSolver->MIPSolver, env->reformulatedProblem);
 
@@ -38,7 +38,7 @@ TaskCreateDualProblem::TaskCreateDualProblem(EnvironmentPtr envPtr) : TaskBase(e
             env->settings->getSetting<std::string>("Debug.Path", "Output") + "/lp0.lp");
     }
 
-    env->output->outputDebug("Dual problem created");
+    env->output->outputDebug(" Dual problem created");
     env->timing->stopTimer("DualStrategy");
 }
 
@@ -51,7 +51,7 @@ void TaskCreateDualProblem::run()
     {
         env->timing->startTimer("DualStrategy");
 
-        env->output->outputDebug("Recreating dual problem");
+        env->output->outputDebug("        Recreating dual problem");
 
         createProblem(env->dualSolver->MIPSolver, env->reformulatedProblem);
 
@@ -65,7 +65,7 @@ void TaskCreateDualProblem::run()
                 env->settings->getSetting<std::string>("Debug.Path", "Output") + "/lp0.lp");
         }
 
-        env->output->outputDebug("Dual problem recreated");
+        env->output->outputDebug("        Dual problem recreated");
         env->timing->stopTimer("DualStrategy");
     }
 }

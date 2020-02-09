@@ -38,10 +38,12 @@ void TaskSelectHyperplanePointsByObjectiveRootsearch::run()
 
 void TaskSelectHyperplanePointsByObjectiveRootsearch::run(std::vector<SolutionPoint> sourcePoints)
 {
-    env->timing->startTimer("DualObjectiveRootSearch");
-
     if(sourcePoints.size() == 0)
         return;
+
+    env->timing->startTimer("DualObjectiveRootSearch");
+
+    env->output->outputDebug("        Selecting separating hyperplanes for objective function:");
 
     bool useRootsearch = false;
 
@@ -77,9 +79,9 @@ void TaskSelectHyperplanePointsByObjectiveRootsearch::run(std::vector<SolutionPo
             }
             catch(std::exception& e)
             {
-                env->output->outputCritical(
-                    "     Cannot find solution with root search for generating objective supporting hyperplane:");
-                env->output->outputCritical(e.what());
+                env->output->outputWarning(
+                    "         Cannot find solution with root search for generating objective supporting hyperplane:");
+                env->output->outputWarning(e.what());
             }
         }
     }
@@ -100,7 +102,7 @@ void TaskSelectHyperplanePointsByObjectiveRootsearch::run(std::vector<SolutionPo
 
             env->dualSolver->hyperplaneWaitingList.push_back(hyperplane);
 
-            env->output->outputWarning("        Adding objective cutting plane since the dual has stagnated.");
+            env->output->outputWarning("         Adding objective cutting plane since the dual has stagnated.");
         }
 
         bool isConvex = env->reformulatedProblem->objectiveFunction->properties.convexity == E_Convexity::Linear
@@ -113,12 +115,12 @@ void TaskSelectHyperplanePointsByObjectiveRootsearch::run(std::vector<SolutionPo
         if(!isConvex && env->results->getCurrentIteration()->numHyperplanesAdded > 0)
         {
             // Nonconvex objective function, do not add a cut if not necessary
-            env->output->outputTrace("        No need to add cut to nonconvex objective function.");
+            env->output->outputDebug("         No need to add cut to nonconvex objective function.");
             return;
         }
         else
         {
-            env->output->outputTrace("        Adding cut to nonconvex objective function.");
+            env->output->outputDebug("         Adding cut to nonconvex objective function.");
         }
 
         for(auto& SOLPT : sourcePoints)
