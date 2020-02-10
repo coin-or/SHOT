@@ -400,6 +400,12 @@ file(TO_CMAKE_PATH "${SOURCES}" SOURCES)
 # Creates the SHOT library that is linked to the executable
 add_library(SHOTSolver SHARED ${SOURCES})
 
+# Build and link spdlog
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+add_subdirectory(${SPDLOG_DIR}/spdlog)
+list(APPEND CMAKE_MODULE_PATH "${SPDLOG_DIR}/spdlog/cmake")
+target_link_libraries(SHOTSolver spdlog::spdlog)
+
 # Link the standard library required for std::filesystem (if needed)
 target_link_libraries(SHOTSolver CXX::Filesystem)
 
