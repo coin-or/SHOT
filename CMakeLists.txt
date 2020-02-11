@@ -390,21 +390,30 @@ include_directories(SYSTEM "${EIGEN_DIR}")
 include_directories(SYSTEM "${MCPP_DIR}/include")
 include_directories(SYSTEM "${MCPP_DIR}/3rdparty/cpplapack/include")
 include_directories(SYSTEM "${MCPP_DIR}/3rdparty/fadbad++")
-include_directories(SYSTEM "${SPDLOG_DIR}")
 include_directories(SYSTEM "${TINYXML2_DIR}/")
 
 file(TO_CMAKE_PATH "${SOURCES}" SOURCES)
 
-# set(THREADS_PREFER_PTHREAD_FLAG ON) find_package(Threads REQUIRED)
+#[[
+ set(THREADS_PREFER_PTHREAD_FLAG ON)
+ find_package(Threads REQUIRED)
+ ]]
 
 # Creates the SHOT library that is linked to the executable
 add_library(SHOTSolver SHARED ${SOURCES})
 
-# Build and link spdlog
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-add_subdirectory(${SPDLOG_DIR}/spdlog)
-list(APPEND CMAKE_MODULE_PATH "${SPDLOG_DIR}/spdlog/cmake")
-target_link_libraries(SHOTSolver spdlog::spdlog)
+# Will use spdlog as a static library on non-Windows systems
+if(NOT (MSVC OR MSYS OR MINGW))
+  set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+  add_subdirectory(${SPDLOG_DIR}/spdlog)
+  list(APPEND CMAKE_MODULE_PATH "${SPDLOG_DIR}/spdlog/cmake")
+  target_link_libraries(SHOTSolver spdlog::spdlog)
+endif()
+
+# Will use spdlog as a header-only library on Windows
+if(MSVC OR MSYS OR MINGW)
+  include_directories(SYSTEM "${SPDLOG_DIR}/spdlog/include")
+endif()
 
 # Link the standard library required for std::filesystem (if needed)
 target_link_libraries(SHOTSolver CXX::Filesystem)
