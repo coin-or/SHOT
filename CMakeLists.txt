@@ -219,8 +219,7 @@ file(GLOB_RECURSE
      "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverCuttingPlaneMinimax.cpp"
      "${PROJECT_SOURCE_DIR}/src/SolutionStrategy/*.cpp"
      "${PROJECT_SOURCE_DIR}/src/Tasks/*.cpp"
-     "${PROJECT_SOURCE_DIR}/src/Settings.cpp"
-     "${TINYXML2_DIR}/tinyxml2.cpp")
+     "${PROJECT_SOURCE_DIR}/src/Settings.cpp")
 
 # Adding header files
 file(GLOB_RECURSE
@@ -390,7 +389,6 @@ include_directories(SYSTEM "${EIGEN_DIR}")
 include_directories(SYSTEM "${MCPP_DIR}/include")
 include_directories(SYSTEM "${MCPP_DIR}/3rdparty/cpplapack/include")
 include_directories(SYSTEM "${MCPP_DIR}/3rdparty/fadbad++")
-include_directories(SYSTEM "${TINYXML2_DIR}/")
 
 file(TO_CMAKE_PATH "${SOURCES}" SOURCES)
 
@@ -414,6 +412,11 @@ endif()
 if(MSVC OR MSYS OR MINGW)
   include_directories(SYSTEM "${SPDLOG_DIR}/spdlog/include")
 endif()
+
+# Will use tinyxml2 as a static library
+add_library(tinyxml2 STATIC ${TINYXML2_DIR}/tinyxml2.h
+                            ${TINYXML2_DIR}/tinyxml2.cpp)
+target_link_libraries(SHOTSolver tinyxml2)
 
 # Link the standard library required for std::filesystem (if needed)
 target_link_libraries(SHOTSolver CXX::Filesystem)
