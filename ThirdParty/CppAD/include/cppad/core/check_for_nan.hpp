@@ -1,7 +1,7 @@
 # ifndef CPPAD_CORE_CHECK_FOR_NAN_HPP
 # define CPPAD_CORE_CHECK_FOR_NAN_HPP
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-18 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-19 Bradley M. Bell
 
 CppAD is distributed under the terms of the
              Eclipse Public License Version 2.0.
@@ -55,11 +55,11 @@ This argument or result has prototype
 $codei%
     bool %b%
 %$$
-Future calls to $icode%f%.Forward%$$ will (will not) check for $code nan$$.
-depending on if $icode b$$ is true (false).
+If $icode b$$ is true (false),
+future calls to $icode%f%.Forward%$$ will (will not) check for $code nan$$.
 
 $head Default$$
-The value for this setting after construction of $icode f$$) is true.
+The value for this setting after construction of $icode f$$ is true.
 The value of this setting is not affected by calling
 $cref Dependent$$ for this function object.
 
@@ -189,7 +189,11 @@ void put_check_for_nan(const CppAD::vector<Base>& vec, std::string& file_name)
     char pattern[] = "/tmp/fileXXXXXX";
     int fd = mkstemp(pattern);
     file_name = pattern;
-    write(fd, char_ptr, char_size);
+    ssize_t flag = write(fd, char_ptr, char_size);
+    if( flag < 0 )
+    {   std::cerr << "put_check_nan: write error\n";
+        std::exit(1);
+    }
     close(fd);
 # else
 # if CPPAD_HAS_TMPNAM_S

@@ -1,5 +1,5 @@
-# ifndef CPPAD_LOCAL_JSON_LEXER_HPP
-# define CPPAD_LOCAL_JSON_LEXER_HPP
+# ifndef CPPAD_LOCAL_GRAPH_JSON_LEXER_HPP
+# define CPPAD_LOCAL_GRAPH_JSON_LEXER_HPP
 /* --------------------------------------------------------------------------
 CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-19 Bradley M. Bell
 
@@ -15,11 +15,11 @@ CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-19 Bradley M. Bell
 # include <string>
 # include <cppad/core/cppad_assert.hpp>
 
-// BEGIN_NAMESPACE_CPPAD_LOCAL_JSON
-namespace CppAD { namespace local { namespace json {
+// BEGIN_NAMESPACE_CPPAD_LOCAL_GRAPH
+namespace CppAD { namespace local { namespace graph {
 
 // ===========================================================================
-class lexer {
+class json_lexer {
 // ===========================================================================
 
 /*
@@ -72,7 +72,7 @@ sets the value of $code function_name_$$.
 $head Source Code$$
 $srccode%hpp% */
 private:
-    const std::string& graph_;
+    const std::string& json_;
     size_t             index_;
     size_t             line_number_;
     size_t             char_number_;
@@ -101,7 +101,7 @@ $codei%
 %$$
 
 $head json_lexer$$
-is a $code local::json::lexer$$ object.
+is a $code local::graph::json_lexer$$ object.
 
 $head expected$$
 is the token that is expected.
@@ -111,7 +111,7 @@ is the token or text that was found.
 
 $head Report$$
 The current CppAD $cref ErrorHandler$$ is used to report
-an error parsing this Json graph.
+an error parsing this Json AD graph.
 
 $head Prototype$$
 $srccode%hpp% */
@@ -134,12 +134,12 @@ $codei%
 %$$
 
 $head json_lexer$$
-is a $code local::json::lexer$$ object.
+is a $code local::graph::json_lexer$$ object.
 
 $head index_$$
 The input value of $code index_$$ is increased by one.
 It is an error to call this routine when the input value
-of $code index_$$ is greater than or equal $code graph_.size()$$.
+of $code index_$$ is greater than or equal $code json_.size()$$.
 
 $head line_number_$$
 If the previous character, before  the call, was a new line,
@@ -176,7 +176,7 @@ is a json lexer object.
 $head Discussion$$
 This member functions is used to increase $code index_$$ until either
 a non-white space character is found or $code index_$$ is equal
-to $code graph_.size()$$.
+to $code json_.size()$$.
 
 $head Prototype$$
 $srccode%hpp% */
@@ -198,23 +198,23 @@ $section json lexer: Constructor$$
 
 $head Syntax$$
 $codei%
-    local::json::lexer %json_lexer%(%graph%)
+    local::graph::lexer %json_lexer%(%json%)
 %$$
 
-$head graph$$
-The argument $icode graph$$ is an $cref json_ad_graph$$
-and it is assumed that $icode graph$$ does not change
+$head json$$
+The argument $icode json$$ is an $cref json_ad_graph$$
+and it is assumed that $icode json$$ does not change
 for as long as $icode json_lexer$$ exists.
 
 $head Initialization$$
 The current token, index, line number, and character number
-are set to the first non white space character in $code graph_$$.
+are set to the first non white space character in $code json_$$.
 If this is not a left brace character $code '{'$$,
 the error is reported and the constructor does not return.
 
 $head Side Effect$$
-If $code local::json::op_name2enum.size() == 0$$,
-the routine $cref/set_operator_info/json_operator/set_operator_info/$$
+If $code local::graph::op_name2enum.size() == 0$$,
+the routine $cref/set_operator_info/cpp_graph_op/set_operator_info/$$
 is called to initialize
 $code op_enum2fixed_n_arg$$,
 $code op_enum2name$$, and
@@ -225,7 +225,7 @@ $cref/parallel mode/ta_in_parallel/$$.
 $head Prototype$$
 $srccode%hpp% */
 public:
-    lexer(const std::string& graph);
+    json_lexer(const std::string& json);
 /* %$$
 $end
 -------------------------------------------------------------------------------
@@ -383,7 +383,7 @@ $end
 // ==========================================================================
 
 
-} } } // END_NAMESPACE_CPPAD_LOCAL_JSON
+} } } // END_NAMESPACE_CPPAD_LOCAL_GRAPH
 
 
 # endif

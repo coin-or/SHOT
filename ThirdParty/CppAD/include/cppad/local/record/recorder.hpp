@@ -1,7 +1,7 @@
 # ifndef CPPAD_LOCAL_RECORD_RECORDER_HPP
 # define CPPAD_LOCAL_RECORD_RECORDER_HPP
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-19 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-20 Bradley M. Bell
 
 CppAD is distributed under the terms of the
              Eclipse Public License Version 2.0.
@@ -49,13 +49,14 @@ private:
     size_t num_dynamic_ind_;
 
     /// Number vecad load operations (LdpOp or LdvOp) currently in recording.
-    size_t num_load_op_rec_;
+    size_t num_var_load_rec_;
 
     /// The operators in the recording.
     pod_vector<opcode_t> op_vec_;
 
     /// The VecAD indices in the recording.
-    pod_vector<addr_t> vecad_ind_vec_;
+    pod_vector<addr_t> all_dyn_vecad_ind_;
+    pod_vector<addr_t> all_var_vecad_ind_;
 
     /// The argument indices in the recording
     pod_vector<addr_t> arg_vec_;
@@ -86,7 +87,7 @@ public:
     recorder(void) :
     num_var_rec_(0)                          ,
     num_dynamic_ind_(0)                      ,
-    num_load_op_rec_(0)                      ,
+    num_var_load_rec_(0)                      ,
     par_hash_table_( CPPAD_HASH_TABLE_SIZE )
     {   record_compare_ = true;
         abort_op_index_ = 0;
@@ -127,17 +128,20 @@ public:
     { }
 
     /// Put a dynamic parameter in all_par_vec_.
-    addr_t put_dyn_par(const Base &par, op_code_dyn op
+    addr_t put_dyn_par(
+        const Base &par, op_code_dyn op
     );
-    addr_t put_dyn_par(const Base &par, op_code_dyn op,
-        addr_t arg0
+    addr_t put_dyn_par(
+        const Base &par, op_code_dyn op, addr_t arg0
     );
-    addr_t put_dyn_par(const Base &par, op_code_dyn op,
-        addr_t arg0, addr_t arg1
+    addr_t put_dyn_par(
+        const Base &par, op_code_dyn op, addr_t arg0, addr_t arg1
     );
-    addr_t put_dyn_cond_exp(const Base &par, CompareOp cop,
+    addr_t put_dyn_cond_exp(
+        const Base &par, CompareOp cop,
         addr_t left, addr_t right, addr_t if_true, addr_t if_false
     );
+
     /// Put a vector of dynamic parameter arguments at end of tape
     void put_dyn_arg_vec(const pod_vector<addr_t>& arg);
 
@@ -145,8 +149,11 @@ public:
     addr_t PutOp(OpCode op);
     /// Put a vecad load operator in the operation sequence (special case)
     addr_t PutLoadOp(OpCode op);
-    /// Add a value to the end of the current vector of VecAD indices.
-    addr_t PutVecInd(addr_t vec_ind);
+
+    // VecAD operations
+    addr_t put_var_vecad_ind(addr_t vec_ind);
+    addr_t put_var_vecad(size_t length, const pod_vector<addr_t>& taddr);
+
     /// Find or add a constant parameter to the vector of all parameters.
     addr_t put_con_par(const Base &par);
     /// Put one operation argument index in the recording
@@ -242,9 +249,9 @@ public:
     size_t num_var_rec(void) const
     {   return num_var_rec_; }
 
-    /// Number of LdpOp and LdvOp operations currently in the recording.
-    size_t num_load_op_rec(void) const
-    {   return num_load_op_rec_; }
+    /// Number LdpOp, LdvOp, and load_dyn operations currently in recording
+    size_t num_var_load_rec(void) const
+    {   return num_var_load_rec_; }
 
     /// Number of operators currently stored in the recording.
     size_t num_op_rec(void) const
@@ -257,7 +264,8 @@ public:
     /// Approximate amount of memory used by the recording
     size_t Memory(void) const
     {   return op_vec_.capacity()        * sizeof(opcode_t)
-             + vecad_ind_vec_.capacity() * sizeof(size_t)
+             + all_dyn_vecad_ind_.capacity() * sizeof(addr_t)
+             + all_var_vecad_ind_.capacity() * sizeof(addr_t)
              + arg_vec_.capacity()       * sizeof(addr_t)
              + all_par_vec_.capacity()   * sizeof(Base)
              + text_vec_.capacity()      * sizeof(char);
@@ -343,8 +351,8 @@ the return index increases by the number of variables corresponding
 to this call to the call.
 This index starts at zero after the default constructor.
 
-\par num_load_op_rec()
-The return value for <code>num_load_op_rec()</code>
+\par num_var_load_rec()
+The return value for <code>num_var_load_rec()</code>
 increases by one after each call to this function.
 */
 template <class Base>
@@ -364,7 +372,7 @@ addr_t recorder<Base>::PutLoadOp(OpCode op)
     CPPAD_ASSERT_UNKNOWN( num_var_rec_ > 0 );
 
     // count this vecad load operation
-    num_load_op_rec_++;
+    num_var_load_rec_++;
 
     // index of last variable corresponding to this operation
     // (if NumRes(op) > 0)
@@ -374,40 +382,6 @@ addr_t recorder<Base>::PutLoadOp(OpCode op)
     )
     return static_cast<addr_t>( num_var_rec_ - 1 );
 }
-
-/*!
-Add a value to the end of the current vector of VecAD indices.
-
-For each VecAD vector, this routine is used to store the length
-of the vector followed by the parameter index corresponding to each
-value in the vector.
-This value for the elements of the VecAD vector corresponds to the
-beginning of the operation sequence.
-
-\param vec_ind
-is the index to be palced at the end of the vector of VecAD indices.
-
-\return
-is the index in the vector of VecAD indices corresponding to this value.
-This index starts at zero after the recorder default constructor.
-It increments by one for each call to PutVecInd..
-*/
-template <class Base>
-addr_t recorder<Base>::PutVecInd(addr_t vec_ind)
-{   size_t i          = vecad_ind_vec_.extend(1);
-    CPPAD_ASSERT_UNKNOWN(
-        std::numeric_limits<addr_t>::max() >= vec_ind
-    );
-    vecad_ind_vec_[i] = vec_ind;
-    CPPAD_ASSERT_UNKNOWN( vecad_ind_vec_.size() == i + 1 );
-
-    CPPAD_ASSERT_KNOWN(
-        size_t( std::numeric_limits<addr_t>::max() ) >= i,
-        "cppad_tape_addr_type maximum value has been exceeded"
-    );
-    return static_cast<addr_t>( i );
-}
-
 
 /*!
 Put a dynamic parameter at the end of the vector for all parameters.
@@ -426,7 +400,7 @@ template <class Base>
 addr_t recorder<Base>::put_dyn_par(const Base &par, op_code_dyn op)
 {   // independent parameters come first
     CPPAD_ASSERT_UNKNOWN(
-        op == ind_dyn || op == result_dyn || op == call_dyn
+        op == ind_dyn || op == result_dyn || op == atom_dyn
     );
     CPPAD_ASSERT_UNKNOWN( num_arg_dyn(op) == 0 );
     all_par_vec_.push_back( par );
@@ -506,7 +480,7 @@ at the end of the vector for all parameters.
 is value of dynamic parameter to be placed at the end of the vector.
 
 \param cop
-is the operator comparision operator; i.e., Lt, Le, Eq, Ge, Gt, Ne.
+is the operator comparison operator; i.e., Lt, Le, Eq, Ge, Gt, Ne.
 
 \param left
 is the left argument in conditional expression (which is a parameter).
@@ -865,6 +839,7 @@ addr_t recorder<Base>::PutTxt(const char *text)
 
 // ----------------------------------------------------------------------------
 // member function implementations
+# include <cppad/local/record/put_var_vecad.hpp>
 # include <cppad/local/record/put_dyn_atomic.hpp>
 # include <cppad/local/record/put_var_atomic.hpp>
 # include <cppad/local/record/cond_exp.hpp>

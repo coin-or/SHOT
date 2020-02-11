@@ -1,7 +1,7 @@
 # ifndef CPPAD_LOCAL_OPTIMIZE_GET_OP_USAGE_HPP
 # define CPPAD_LOCAL_OPTIMIZE_GET_OP_USAGE_HPP
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-19 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-20 Bradley M. Bell
 
 CppAD is distributed under the terms of the
              Eclipse Public License Version 2.0.
@@ -59,7 +59,7 @@ Increase Argument Usage and Propagate cexp_set From Result to Argument
 $$
 
 $head Prototype$$
-$srcfile%include/cppad/local/optimize/get_op_usage.hpp%
+$srcthisfile%
     0%// BEGIN_OP_INC_ARG_USAGE%// END_PROTOTYPE%1
 %$$
 
@@ -174,7 +174,7 @@ Use Reverse Activity Analysis to Get Usage Information for Each Operator
 $$
 
 $head Prototype$$
-$srcfile%include/cppad/local/optimize/get_op_usage.hpp%
+$srcthisfile%
     0%// BEGIN_GET_OP_USAGE%// END_PROTOTYPE%1
 %$$
 
@@ -231,7 +231,7 @@ Note that j indexes the CExpOp operators in the operation sequence.
 $head vecad_used$$
 The input size of this vector must be zero.
 Upon return it has size equal to the number of VecAD vectors
-in the operations sequences; i.e., play->num_vecad_vec_rec().
+in the operations sequences; i.e., play->num_var_vecad_rec().
 The VecAD vectors are indexed in the order that their indices appear
 in the one large play->GetVecInd that holds all the VecAD vectors.
 
@@ -301,8 +301,8 @@ void get_op_usage(
     const Base* parameter = play->GetPar();
     // -----------------------------------------------------------------------
     // vecad information
-    size_t num_vecad      = play->num_vecad_vec_rec();
-    size_t num_vecad_ind  = play->num_vec_ind_rec();
+    size_t num_vecad      = play->num_var_vecad_rec();
+    size_t num_vecad_ind  = play->num_var_vecad_ind_rec();
     //
     vecad_used.resize(num_vecad);
     for(size_t i = 0; i < num_vecad; i++)

@@ -1,7 +1,7 @@
 # ifndef CPPAD_CORE_ABS_NORMAL_FUN_HPP
 # define CPPAD_CORE_ABS_NORMAL_FUN_HPP
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-19 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-20 Bradley M. Bell
 
 CppAD is distributed under the terms of the
              Eclipse Public License Version 2.0.
@@ -257,13 +257,15 @@ y( x , a(x ) ) & = & b + J x + Y |z( x , a(x ) )|
 \end{array}
 \] $$
 This is Equation (2) of the
-$cref/reference/abs_normal/Reference/$$.
+$cref/reference/example_abs_normal/Reference/$$.
 
-$children%example/abs_normal/get_started.cpp
+$children%example/abs_normal/abs_normal.omh
 %$$
 $head Example$$
 The file $cref abs_get_started.cpp$$ contains
 an example and test using this operation.
+The section $cref example_abs_normal$$
+has a links to all the abs normal examples.
 
 $end
 -------------------------------------------------------------------------------
@@ -361,6 +363,11 @@ void ADFun<Base,RecBase>::abs_normal_fun(ADFun& g, ADFun& a) const
         else
         {   // operator for this dynamic parameter
             op_code_dyn op_dyn = op_code_dyn( dyn_par_op[i_dyn] );
+            CPPAD_ASSERT_KNOWN(
+                op_dyn != local::atom_dyn,
+                "abs_normal_fun: not yet implemented for "
+                "atomic dynamic parameter functions"
+            );
             //
             // number of arguments for this dynamic parameter
             size_t n_arg = num_arg_dyn(op_dyn);
@@ -696,7 +703,7 @@ void ADFun<Base,RecBase>::abs_normal_fun(ADFun& g, ADFun& a) const
             case LdpOp:
             CPPAD_ASSERT_NARG_NRES(op, 3, 1);
             new_arg[0] = arg[0];
-            new_arg[1] = arg[1];
+            new_arg[1] = arg[1]; // parameter
             new_arg[2] = arg[2];
             rec.PutArg(
                 new_arg[0],
@@ -828,7 +835,7 @@ void ADFun<Base,RecBase>::abs_normal_fun(ADFun& g, ADFun& a) const
     // Check a few expected results
     CPPAD_ASSERT_UNKNOWN( rec.num_op_rec() == play_.num_op_rec() );
     CPPAD_ASSERT_UNKNOWN( rec.num_var_rec() == play_.num_var_rec() );
-    CPPAD_ASSERT_UNKNOWN( rec.num_load_op_rec() == play_.num_load_op_rec() );
+    CPPAD_ASSERT_UNKNOWN( rec.num_var_load_rec() == play_.num_var_load_rec() );
 
     // -----------------------------------------------------------------------
     // Use rec to create the function g

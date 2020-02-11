@@ -104,8 +104,8 @@ If cskip_op[i] is true, the operator with index i
 does not affect any of the dependent variable (given the value
 of the independent variables).
 
-\param var_by_load_op
-is a vector with size play->num_load_op_rec().
+\param load_op2var
+is a vector with size play->num_var_load_rec().
 It is the variable index corresponding to each the
 load instruction.
 In the case where the index is zero,
@@ -126,7 +126,7 @@ void forward2(
     const size_t                J,
     Base*                       taylor,
     const bool*                 cskip_op,
-    const pod_vector<Addr>&     var_by_load_op,
+    const pod_vector<Addr>&     load_op2var,
     const RecBase&              not_used_rec_base
 )
 {
@@ -394,7 +394,7 @@ void forward2(
                 J,
                 i_var,
                 arg,
-                var_by_load_op.data(),
+                load_op2var.data(),
                 taylor
             );
             break;

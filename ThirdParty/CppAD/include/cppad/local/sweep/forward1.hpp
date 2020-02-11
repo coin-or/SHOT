@@ -1,7 +1,7 @@
 # ifndef CPPAD_LOCAL_SWEEP_FORWARD1_HPP
 # define CPPAD_LOCAL_SWEEP_FORWARD1_HPP
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-19 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-20 Bradley M. Bell
 
 CppAD is distributed under the terms of the
              Eclipse Public License Version 2.0.
@@ -87,8 +87,8 @@ does not affect any of the dependent variable
 In this case cskip_op is not modified and has the same meaning
 as its return value above.
 
-\param var_by_load_op
-is a vector with size play->num_load_op_rec().
+\param load_op2var
+is a vector with size play->num_var_load_rec().
 \n
 \n
 <tt>p == 0</tt>
@@ -104,7 +104,7 @@ Note that the is no variable with index zero on the tape.
 \n
 <tt>p > 0</tt>
 \n
-In this case var_by_load_op is not modified and has the meaning
+In this case load_op2var is not modified and has the meaning
 as its return value above.
 
 \param p
@@ -149,7 +149,7 @@ zero order foward mode.
 \param compare_change_number
 If p is non-zero, this value is not changed, otherwise:
 If compare_change_count is zero, this value is set to zero, otherwise:
-this value is set to the number of comparision operations
+this value is set to the number of comparison operations
 that have a different result from when the information in
 play was recorded.
 
@@ -157,7 +157,7 @@ play was recorded.
 if p is non-zero, this value is not changed, otherwise:
 If compare_change_count is zero, this value is set to zero.
 Otherwise it is the operator index (see forward_next) for the count-th
-comparision operation that has a different result from when the information in
+comparison operation that has a different result from when the information in
 play was recorded.
 
 \param not_used_rec_base
@@ -176,7 +176,7 @@ void forward1(
     const size_t               J,
     Base*                      taylor,
     bool*                      cskip_op,
-    pod_vector<Addr>&          var_by_load_op,
+    pod_vector<Addr>&          load_op2var,
     size_t                     compare_change_count,
     size_t&                    compare_change_number,
     size_t&                    compare_change_op_index,
@@ -194,26 +194,26 @@ void forward1(
     <!-- replace forward0sweep_code_define -->
     */
 
-    // initialize the comparision operator counter
+    // initialize the comparison operator counter
     if( p == 0 )
     {   compare_change_number   = 0;
         compare_change_op_index = 0;
     }
 
     // If this includes a zero calculation, initialize this information
-    pod_vector<bool>   isvar_by_ind;
-    pod_vector<size_t> index_by_ind;
+    pod_vector<bool>   vec_ad2isvar;
+    pod_vector<size_t> vec_ad2index;
     if( p == 0 )
     {   size_t i;
 
         // this includes order zero calculation, initialize vector indices
-        size_t num = play->num_vec_ind_rec();
+        size_t num = play->num_var_vecad_ind_rec();
         if( num > 0 )
-        {   isvar_by_ind.extend(num);
-            index_by_ind.extend(num);
+        {   vec_ad2isvar.extend(num);
+            vec_ad2index.extend(num);
             for(i = 0; i < num; i++)
-            {   index_by_ind[i] = play->GetVecInd(i);
-                isvar_by_ind[i] = false;
+            {   vec_ad2index[i] = play->GetVecInd(i);
+                vec_ad2isvar[i] = false;
             }
         }
         // includes zero order, so initialize conditional skip flags
@@ -523,9 +523,9 @@ void forward1(
                     parameter,
                     J,
                     taylor,
-                    isvar_by_ind.data(),
-                    index_by_ind.data(),
-                    var_by_load_op.data()
+                    vec_ad2isvar.data(),
+                    vec_ad2index.data(),
+                    load_op2var.data()
                 );
                 if( p < q ) forward_load_op(
                     play,
@@ -536,7 +536,7 @@ void forward1(
                     J,
                     i_var,
                     arg,
-                    var_by_load_op.data(),
+                    load_op2var.data(),
                     taylor
                 );
             }
@@ -550,7 +550,7 @@ void forward1(
                 J,
                 i_var,
                 arg,
-                var_by_load_op.data(),
+                load_op2var.data(),
                 taylor
             );
             break;
@@ -565,9 +565,9 @@ void forward1(
                     parameter,
                     J,
                     taylor,
-                    isvar_by_ind.data(),
-                    index_by_ind.data(),
-                    var_by_load_op.data()
+                    vec_ad2isvar.data(),
+                    vec_ad2index.data(),
+                    load_op2var.data()
                 );
                 if( p < q ) forward_load_op(
                     play,
@@ -578,7 +578,7 @@ void forward1(
                     J,
                     i_var,
                     arg,
-                    var_by_load_op.data(),
+                    load_op2var.data(),
                     taylor
                 );
             }
@@ -592,7 +592,7 @@ void forward1(
                 J,
                 i_var,
                 arg,
-                var_by_load_op.data(),
+                load_op2var.data(),
                 taylor
             );
             break;
@@ -814,10 +814,11 @@ void forward1(
                     i_var,
                     arg,
                     num_par,
+                    parameter,
                     J,
                     taylor,
-                    isvar_by_ind.data(),
-                    index_by_ind.data()
+                    vec_ad2isvar.data(),
+                    vec_ad2index.data()
                 );
             }
             break;
@@ -829,10 +830,11 @@ void forward1(
                     i_var,
                     arg,
                     num_par,
+                    parameter,
                     J,
                     taylor,
-                    isvar_by_ind.data(),
-                    index_by_ind.data()
+                    vec_ad2isvar.data(),
+                    vec_ad2index.data()
                 );
             }
             break;
@@ -846,8 +848,8 @@ void forward1(
                     num_par,
                     J,
                     taylor,
-                    isvar_by_ind.data(),
-                    index_by_ind.data()
+                    vec_ad2isvar.data(),
+                    vec_ad2index.data()
                 );
             }
             break;
@@ -861,8 +863,8 @@ void forward1(
                     num_par,
                     J,
                     taylor,
-                    isvar_by_ind.data(),
-                    index_by_ind.data()
+                    vec_ad2isvar.data(),
+                    vec_ad2index.data()
                 );
             }
             break;

@@ -1,7 +1,7 @@
-# ifndef CPPAD_CORE_JSON_FROM_JSON_HPP
-# define CPPAD_CORE_JSON_FROM_JSON_HPP
+# ifndef CPPAD_CORE_GRAPH_FROM_GRAPH_HPP
+# define CPPAD_CORE_GRAPH_FROM_GRAPH_HPP
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-19 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-20 Bradley M. Bell
 
 CppAD is distributed under the terms of the
              Eclipse Public License Version 2.0.
@@ -14,33 +14,37 @@ in the Eclipse Public License, Version 2.0 are satisfied:
 
 # include <cppad/core/ad_fun.hpp>
 # include <cppad/core/ad_type.hpp>
-# include <cppad/local/json/parser.hpp>
+# include <cppad/core/discrete/discrete.hpp>
 
+namespace CppAD { // BEGIN_CPPAD_NAMESPACE
 /*
-$begin from_json$$
+$begin from_graph$$
 $spell
-    Json
+    CppAD
+    ind
+    vec
+    arg
+    obj
+    op_enum
+    dyn2var
 $$
 
-$section ADFun Object Corresponding to a Json AD Graph$$
-
-$head Under Construction$$
-This routine is under construction and subject to
-change without backward compatibility.
+$section ADFun Object Corresponding to a CppAD Graph$$
 
 $head Syntax$$
 $codei%
     ADFun<%Base%> %fun%
-    %fun%.from_json(%graph%)
+    %fun%.from_graph(%graph_obj%)
+    %fun%.from_graph(%graph_obj%, %dyn2var%, %var2dyn%)
 %$$
 
 $head Prototype$$
-$srcfile%include/cppad/core/json/from_json.hpp%
-    0%// BEGIN_PROTOTYPE%// END_PROTOTYPE%1
+$srcthisfile%
+    0%// BEGIN_ONE_ARGUMENT%// END_ONE_ARGUMENT%1
 %$$
-
-$head graph$$
-is a $cref json_ad_graph$$.
+$srcthisfile%
+    0%// BEGIN_WITH_IS_DYNAMIC%// END_WITH_IS_DYNAMIC%1
+%$$
 
 $head Base$$
 is the type corresponding to this $cref/ADFun/adfun/$$ object;
@@ -49,64 +53,194 @@ i.e., its calculations are done using the type $icode Base$$.
 $head RecBase$$
 in the prototype above, $icode RecBase$$ is the same type as $icode Base$$.
 
+$head graph_obj$$
+is a $cref cpp_ad_graph$$ representation of this function.
+
+$head dyn2var$$
+is a vector with size equal to the number of independent dynamic parameters
+in the graph; i.e., the size of $cref/p/cpp_ad_graph/Node Indices/p/$$.
+It specifies which independent dynamic parameters in the graph are
+independent variables in the function $icode fun$$.
+
+$head var2dyn$$
+is a vector with size equal to the number of independent variables
+in the graph; i.e., the size of $cref/x/cpp_ad_graph/Node Indices/x/$$.
+It specifies which independent variables in the graph are
+independent dynamic parameters in the function $icode fun$$.
+
+$head fun$$
+It $icode dyn2var$$ and $icode var2dyn$$ are not present,
+the independent dynamic parameters and independent variables in $icode fun$$
+are the same as for the graph.
+Otherwise, they are described below.
+
+$subhead m_true, m_false$$
+Let $icode m_true$$ ($icode m_false$$) be the number of true (false)
+elements of $icode dyn2var$$.
+
+$subhead n_true, n_false$$
+Let $icode n_true$$ ($icode n_false$$) be the number of true (false)
+elements of $icode var2dyn$$.
+
+$subhead Independent Dynamic Parameters$$
+The first $icode m_false$$ independent dynamic parameters in $icode fun$$
+correspond to the false components of $icode dyn2var$$
+and have the same order as in the graph.
+The next $icode n_true$$ independent dynamic parameters in $icode fun$$
+correspond to the true components of $icode var2dyn$$
+and have the same order as in the graph.
+
+$subhead Independent Variables$$
+The first $icode m_true$$ independent variables in $icode fun$$
+correspond to the true components of $icode dyn2var$$
+and have the same order as in the graph.
+The next $icode n_false$$ independent variables in $icode fun$$
+correspond to the false components of $icode var2dyn$$
+and have the same order as in the graph.
+
 $children%
-    example/json/from_json.cpp
+    example/graph/switch_var_dyn.cpp
 %$$
-$head Example$$
-The file $cref from_json.cpp$$ is an example and test of this operation.
+$head Examples$$
+The file $cref switch_var_dyn.cpp$$ contains an example and test
+of this routine.
+For simpler examples, that do not change the dynamic parameters and variables;
+see $cref/graph_op_enum examples/graph_op_enum/Examples/$$.
 
 $end
 */
-// BEGIN_PROTOTYPE
+// BEGIN_WITH_IS_DYNAMIC
 template <class Base, class RecBase>
-void CppAD::ADFun<Base,RecBase>::from_json(const std::string& graph)
-// END_PROTOTYPE
-{   typedef local::json::json_op_struct json_op_struct;
-    using CppAD::isnan;
+void CppAD::ADFun<Base,RecBase>::from_graph(
+        const CppAD::cpp_graph& graph_obj     ,
+        const CppAD::vector<bool>& dyn2var    ,
+        const CppAD::vector<bool>& var2dyn    )
+// END_WITH_IS_DYNAMIC
+{   using CppAD::isnan;
+    using namespace CppAD::graph;
     //
-    // json parser return values
-    std::string                function_name;
-    size_t                     n_dynamic_ind;
-    size_t                     n_independent;
-    vector<std::string>        atomic_name_vec;
-    vector<double>             constant_vec;
-    vector<json_op_struct>     operator_vec;
-    vector<size_t>             operator_arg;
-    vector<size_t>             dependent_vec;
+    // some sizes
+    const std::string function_name  = graph_obj.function_name_get();
+    const size_t n_dynamic_ind       = graph_obj.n_dynamic_ind_get();
+    const size_t n_variable_ind      = graph_obj.n_variable_ind_get();
+    const size_t n_constant          = graph_obj.constant_vec_size();
+    const size_t n_usage             = graph_obj.operator_vec_size();
+    const size_t n_dependent         = graph_obj.dependent_vec_size();
     //
-    // call json parser
-    local::json::parser(
-        graph,
-        function_name,
-        n_dynamic_ind,
-        n_independent,
-        atomic_name_vec,
-        constant_vec,
-        operator_vec,
-        operator_arg,
-        dependent_vec
+    // n_dynamic_ind_fun
+    // n_variable_ind_fun
+    CPPAD_ASSERT_KNOWN(
+        n_variable_ind == var2dyn.size(),
+        "from_graph: size of var2dyn not equal "
+        "number of independent variables in graph"
     );
-    size_t n_constant  = constant_vec.size();
-    size_t n_usage     = operator_vec.size();
-    size_t n_dependent = dependent_vec.size();
+    CPPAD_ASSERT_KNOWN(
+        n_dynamic_ind == dyn2var.size(),
+        "from_graph: size of dyn2val not equal "
+        "number of independent dynamic parameters in graph"
+    );
+    size_t n_dynamic_ind_fun  = 0;
+    size_t n_variable_ind_fun = 0;
+    for(size_t i = 0; i < n_dynamic_ind; ++i)
+    {   if( dyn2var[i] )
+            ++n_variable_ind_fun;
+        else
+            ++n_dynamic_ind_fun;
+    }
+    for(size_t i = 0; i < n_variable_ind; ++i)
+    {   if( var2dyn[i] )
+            ++n_dynamic_ind_fun;
+        else
+            ++n_variable_ind_fun;
+    }
     //
     // Start of node indices
     size_t start_dynamic_ind = 1;
     size_t start_independent = start_dynamic_ind + n_dynamic_ind;
-    size_t start_constant    = start_independent + n_independent;
+    size_t start_constant    = start_independent + n_variable_ind;
     size_t start_operator    = start_constant    + n_constant;
     //
-    // number of nodes in the graph
-    size_t n_node = start_operator;
-    for(size_t i = 0; i < n_usage; ++i)
-        n_node += operator_vec[i].n_result;
+    // initialize mappings from node index as empty
+    // (there is no node zero)
+    vector<ad_type_enum>        node_type( 1 );
+    local::pod_vector<addr_t>   node2fun( 1 );
+    node_type[0] = number_ad_type_enum; // invalid value
+    node2fun[0]  = 0;                   // invalid value
     //
-    // initialize mapping from node index in graph to index in function
-    vector<ad_type_enum>        node_type( n_node );
-    local::pod_vector<addr_t>   node2fun( n_node );
-    for(size_t i = 0; i < n_node; ++i)
-    {   node_type[i] = number_ad_type_enum; // invalid value
-        node2fun[i]  = 0;                   // invalid value
+    // discrete_index
+    // mapping from index in discrete_name_vec to discrete index
+    size_t n_list_discrete  = discrete<Base>::list_size();
+    size_t n_graph_discrete = graph_obj.discrete_name_vec_size();
+    vector<size_t> discrete_index( n_graph_discrete );
+    for(size_t i = 0; i < n_graph_discrete; ++i)
+        discrete_index[i] = n_list_discrete; // invalid discrete index
+    for(size_t index = 0; index < n_list_discrete; ++index)
+    {   const char* name( discrete<Base>::name(index) );
+        size_t graph_index = graph_obj.discrete_name_vec_find(name);
+        if( graph_index != n_graph_discrete )
+        {   if( discrete_index[graph_index] != n_list_discrete )
+            {   std::string msg = "from_graph: error in call to ";
+                msg += name;
+                msg += ".\nThere is mor than one discrete ";
+                msg += "function with this name";
+                //
+                // use this source code as point of detection
+                bool known       = true;
+                int  line        = __LINE__;
+                const char* file = __FILE__;
+                const char* exp  = "discrete_index[i] == n_list_discrete";
+                //
+                // CppAD error handler
+                ErrorHandler::Call( known, line, file, exp, msg.c_str() );
+            }
+            discrete_index[graph_index] = index;
+        }
+    }
+    //
+    // atomic_three_index
+    // mapping from index in atomic_name_vec to atomic three index
+    size_t n_graph_atomic = graph_obj.atomic_name_vec_size();
+    vector<size_t> atomic_three_index( n_graph_atomic );
+    for(size_t index = 0; index < n_graph_atomic; ++index)
+        atomic_three_index[index] = 0; // invalid atomic index
+
+    {   bool        set_null = true;
+        size_t      index_in = 0;
+        size_t      type;
+        std::string name;
+        void*       ptr;
+        size_t n_atomic = CppAD::local::atomic_index<RecBase>(
+            set_null, index_in, type, &name, ptr
+        );
+        set_null = false;
+        for(index_in = 1; index_in <= n_atomic; ++index_in)
+        {   CppAD::local::atomic_index<RecBase>(
+                set_null, index_in, type, &name, ptr
+            );
+            if( type == 3 )
+            {   size_t graph_index = graph_obj.atomic_name_vec_find(name);
+                if( graph_index != n_graph_atomic )
+                {   if( atomic_three_index[graph_index] != 0 )
+                    {   std::string msg = "from_graph: error in call to ";
+                        msg += name + ".\n";
+                        msg += "There is more than one atomic_three ";
+                        msg + "function with this name";
+                        //
+                        // use this source code as point of detection
+                        bool known       = true;
+                        int  line        = __LINE__;
+                        const char* file = __FILE__;
+                        const char* exp  = "atomic_index[index] == 0";
+                        //
+                        // CppAD error handler
+                        ErrorHandler::Call(
+                            known, line, file, exp, msg.c_str()
+                        );
+                    }
+                    atomic_three_index[graph_index] = index_in;
+                }
+            }
+        }
     }
     // ----------------------------------------------------------------------
     // Create a recording for this function
@@ -115,98 +249,130 @@ void CppAD::ADFun<Base,RecBase>::from_json(const std::string& graph)
     // start a recording
     local::recorder<Base> rec;
     CPPAD_ASSERT_UNKNOWN( rec.num_op_rec() == 0 );
-    rec.set_num_dynamic_ind(n_dynamic_ind);
+    rec.set_num_dynamic_ind(n_dynamic_ind_fun);
     rec.set_abort_op_index(0);
     rec.set_record_compare(false);
+
+    // rec_text_index
+    // mapping from print_text_vec index to recording index
+    vector<addr_t> rec_text_index( graph_obj.print_text_vec_size() );
+    for(size_t i = 0; i < graph_obj.print_text_vec_size(); ++i)
+    {   const std::string& text = graph_obj.print_text_vec_get(i);
+        rec_text_index[i]       = rec.PutTxt( text.c_str() );
+    }
 
     // nan
     Base nan = CppAD::numeric_limits<Base>::quiet_NaN();
 
     // Place the parameter with index 0 in the tape
-    const local::pod_vector_maybe<Base>& parameter( rec.all_par_vec() );
+    const local::pod_vector_maybe<Base>& parameter( rec.all_par_vec());
+    CPPAD_ASSERT_UNKNOWN( parameter.size() == 0 );
     addr_t i_par = rec.put_con_par(nan);
-    CPPAD_ASSERT_UNKNOWN( isnan( parameter[0] ) );
+    CPPAD_ASSERT_UNKNOWN( i_par == 0 );
+    CPPAD_ASSERT_UNKNOWN( isnan( parameter[i_par] ) );
     //
     // Place the variable with index 0 in the tape
     CPPAD_ASSERT_NARG_NRES(local::BeginOp, 1, 1);
     rec.PutOp(local::BeginOp);
     rec.PutArg(0);
     //
-    // Next come the independent dynamic parameters in the recording
+    // Next come the independent dynamic parameters in the graph
+    addr_t i_var = 0;
     for(size_t i = 0; i < n_dynamic_ind; ++i)
-    {   i_par = rec.put_dyn_par(nan, local::ind_dyn );
-        CPPAD_ASSERT_UNKNOWN( isnan( parameter[start_dynamic_ind + i] ) );
-        //
-        node_type[start_dynamic_ind + i ] = dynamic_enum;
-        node2fun[ start_dynamic_ind + i ] = i_par;
-        CPPAD_ASSERT_UNKNOWN( i + 1 == size_t(i_par) );
+    {
+        if( dyn2var[i] )
+        {   i_var = rec.PutOp( local::InvOp );
+            node_type.push_back(variable_enum);;
+            node2fun.push_back(i_var);
+        }
+       else
+        {   i_par = rec.put_dyn_par(nan, local::ind_dyn );
+            CPPAD_ASSERT_UNKNOWN( isnan( parameter[i_par] ) );
+            node_type.push_back(dynamic_enum);
+            node2fun.push_back(i_par);
+        }
     }
 
-    // Next come the independent variables
+    // Next come the independent variables in the graph
     CPPAD_ASSERT_NARG_NRES(local::InvOp, 0, 1);
-    for(size_t i = 0; i < n_independent; ++i)
-    {   addr_t i_var = rec.PutOp( local::InvOp );
-        node_type[start_independent + i ] = variable_enum;;
-        node2fun[ start_independent + i ]  = i_var;
-        CPPAD_ASSERT_UNKNOWN( i + 1 == size_t(i_var) );
+    for(size_t i = 0; i < n_variable_ind; ++i)
+    {   if( var2dyn[i] )
+        {   i_par = rec.put_dyn_par(nan, local::ind_dyn );
+            CPPAD_ASSERT_UNKNOWN( isnan( parameter[i_par] ) );
+            node_type.push_back(dynamic_enum);
+            node2fun.push_back(i_par);
+        }
+        else
+        {   i_var = rec.PutOp( local::InvOp );
+            node_type.push_back(variable_enum);;
+            node2fun.push_back(i_var);
+        }
     }
+    CPPAD_ASSERT_UNKNOWN( size_t( i_par ) == n_dynamic_ind_fun );
+    CPPAD_ASSERT_UNKNOWN( size_t( i_var ) == n_variable_ind_fun );
 
     // Next come the constant parameters
     for(size_t i = 0; i < n_constant; ++i)
-    {   Base par = Base( constant_vec[i] );
+    {   Base par = Base( graph_obj.constant_vec_get(i) );
         i_par = rec.put_con_par(par);
         CPPAD_ASSERT_UNKNOWN( parameter[i_par] == par );
         //
-        node_type[start_constant + i ] = constant_enum;;
-        node2fun[ start_constant + i ] = i_par;
+        node_type.push_back(constant_enum);;
+        node2fun.push_back(i_par);
     }
 
     //
     // local arrays used to avoid reallocating memory
-    local::pod_vector<addr_t>       arg;
-    vector<ad_type_enum>            type_x;
     local::pod_vector<addr_t>       temporary;
+    vector<ad_type_enum>            type_x;
+    vector<addr_t>                  arg;
+    vector<size_t>                  arg_node;
     //
-    // arrays only used by atom_json_op
+    // arrays only used by atom_graph_op
     vector<Base>                    parameter_x, taylor_y;
     vector<ad_type_enum>            type_y;
     vector< AD<Base> >              ax, ay;
     //
+    // define here because not using as loop index
+    cpp_graph::const_iterator       graph_itr;
+    //
     // loop over operators in the recording
     size_t start_result = start_operator;
-    for(size_t i_json = 0; i_json < n_usage; ++i_json)
-    {   // information for this operator usage
-        const json_op_struct&     json_op = operator_vec[i_json];
-        local::json::json_op_enum op_enum = json_op.op_enum;
-        size_t n_arg        = json_op.n_arg;
-        size_t n_result     = json_op.n_result;
-        size_t start_arg    = json_op.start_arg;
+    for(size_t op_index = 0; op_index < n_usage; ++op_index)
+    {   // op_enum, str_index, n_result, arg_node
+        if( op_index == 0 )
+            graph_itr = graph_obj.begin();
+        else
+            ++graph_itr;
+        cpp_graph::const_iterator::value_type itr_value = *graph_itr;
+        const vector<size_t>& str_index(*itr_value.str_index_ptr );
+        graph_op_enum op_enum    = itr_value.op_enum;
+        size_t        n_result   = itr_value.n_result;
+        size_t        n_arg      = itr_value.arg_node_ptr->size();
+        arg.resize(n_arg);
         //
-        if( n_arg > arg.size() )
-        {   arg.resize( n_arg );
-            type_x.resize(n_arg);
-        }
+        // make sure type_x is large enough
+        type_x.resize(n_arg);
 # ifndef NDEBUG
-        addr_t n_con_arg  = 0;
+        addr_t n_con_arg      = 0;
 # endif
-        addr_t n_dyn_arg  = 0;
-        addr_t n_var_arg  = 0;
+        addr_t n_dyn_arg      = 0;
+        addr_t n_var_arg      = 0;
         for(size_t j = 0; j < n_arg; ++j)
-        {   //
+        {   size_t node_index = (*itr_value.arg_node_ptr)[j];
+            //
             // argument to graph operator
-            arg[j]  = addr_t( operator_arg[start_arg + j] );
-            CPPAD_ASSERT_KNOWN( size_t(arg[j]) < start_result,
-                "from_json graph op argument index is less than\n"
+            CPPAD_ASSERT_KNOWN( node_index < start_result,
+                "from_graph op argument index is greater or equal\n"
                 "the starting index for the next result"
             );
-            CPPAD_ASSERT_UNKNOWN( node2fun[ arg[j] ] != 0 );
             //
             // type of argument
-            type_x[j] = node_type[ arg[j] ];
-            CPPAD_ASSERT_UNKNOWN( type_x[j] != string_enum );
+            type_x[j] = node_type[ node_index ];
             //
             // argument to function operator
-            arg[j]  = node2fun[ arg[j] ];
+            arg[j]  = node2fun[ node_index ];
+            CPPAD_ASSERT_UNKNOWN( arg[j] != 0 );
             //
             // count number of arguments of different types
 # ifndef NDEBUG
@@ -223,15 +389,15 @@ void CppAD::ADFun<Base,RecBase>::from_json(const std::string& graph)
         // -------------------------------------------------------------------
         // conditional expressions
         // -------------------------------------------------------------------
-        if( op_enum == local::json::cexp_eq_json_op ||
-            op_enum == local::json::cexp_le_json_op ||
-            op_enum == local::json::cexp_lt_json_op )
+        if( op_enum == cexp_eq_graph_op ||
+            op_enum == cexp_le_graph_op ||
+            op_enum == cexp_lt_graph_op )
         {   CPPAD_ASSERT_UNKNOWN( n_result == 1 && n_arg == 4 );
             // cop
             CompareOp cop;
-            if( op_enum == local::json::cexp_eq_json_op )
+            if( op_enum == cexp_eq_graph_op )
                 cop = CompareEq;
-            else if ( op_enum == local::json::cexp_le_json_op )
+            else if ( op_enum == cexp_le_graph_op )
                 cop = CompareLe;
             else
                 cop = CompareLt;
@@ -271,10 +437,10 @@ void CppAD::ADFun<Base,RecBase>::from_json(const std::string& graph)
         // compare operators
         // -------------------------------------------------------------------
         else if(
-            op_enum == local::json::comp_eq_json_op ||
-            op_enum == local::json::comp_le_json_op ||
-            op_enum == local::json::comp_lt_json_op ||
-            op_enum == local::json::comp_ne_json_op )
+            op_enum == comp_eq_graph_op ||
+            op_enum == comp_le_graph_op ||
+            op_enum == comp_lt_graph_op ||
+            op_enum == comp_ne_graph_op )
         {   CPPAD_ASSERT_UNKNOWN( n_result == 0 && n_arg == 2 );
             //
             bool var_left  = type_x[0] == variable_enum;
@@ -297,28 +463,28 @@ void CppAD::ADFun<Base,RecBase>::from_json(const std::string& graph)
             bool result;
             switch( op_enum )
             {
-                case local::json::comp_eq_json_op:
+                case comp_eq_graph_op:
                 result = true;
                 rec.comp_eq(
                 var_left, var_right, dyn_left, dyn_right, ax[0], ax[1], result
                 );
                 break;
 
-                case local::json::comp_le_json_op:
+                case comp_le_graph_op:
                 result = true;
                 rec.comp_le(
                 var_left, var_right, dyn_left, dyn_right, ax[0], ax[1], result
                 );
                 break;
 
-                case local::json::comp_lt_json_op:
+                case comp_lt_graph_op:
                 result = true;
                 rec.comp_lt(
                 var_left, var_right, dyn_left, dyn_right, ax[0], ax[1], result
                 );
                 break;
 
-                case local::json::comp_ne_json_op:
+                case comp_ne_graph_op:
                 result = false;
                 rec.comp_eq(
                 var_left, var_right, dyn_left, dyn_right, ax[0], ax[1], result
@@ -333,10 +499,10 @@ void CppAD::ADFun<Base,RecBase>::from_json(const std::string& graph)
         // -------------------------------------------------------------------
         // sum operator
         // -------------------------------------------------------------------
-        else if( op_enum == local::json::sum_json_op )
+        else if( op_enum == sum_graph_op )
         {
             CPPAD_ASSERT_KNOWN( n_result == 1 ,
-                "Json: sum operator: n_result is not 1"
+                "AD graph sum operator: n_result is not 1"
             );
             if( n_var_arg == 0 )
             {   // result of the sum is a parameter
@@ -397,19 +563,106 @@ void CppAD::ADFun<Base,RecBase>::from_json(const std::string& graph)
             }
         }
         // -------------------------------------------------------------------
+        // print operator
+        // -------------------------------------------------------------------
+        else if( op_enum == print_graph_op )
+        {   CPPAD_ASSERT_UNKNOWN( n_arg == 2 && n_result == 0 );
+            //
+            // before
+            size_t before_graph = str_index[0];
+            addr_t before_rec   = rec_text_index[before_graph];
+            //
+            // after
+            size_t after_graph  = str_index[1];
+            addr_t after_rec    = rec_text_index[after_graph];
+            //
+            // base 2 representation of [ Var(notpos), Var(value) ]
+            addr_t is_var = 0;
+            if( type_x[0] == variable_enum )
+                is_var += 1;
+            if( type_x[1] == variable_enum )
+                is_var += 2;
+            //
+            // record this print operator
+            addr_t notpos = arg[0];
+            addr_t value  = arg[1];
+            rec.PutOp(local::PriOp);
+            rec.PutArg(is_var, notpos, before_rec, value, after_rec);
+        }
+        // -------------------------------------------------------------------
+        // discrete operator
+        // -------------------------------------------------------------------
+        else if( op_enum == discrete_graph_op )
+        {   CPPAD_ASSERT_UNKNOWN( n_arg == 1 && n_result == 1 );
+            size_t name_index = str_index[0];
+            size_t function_index = discrete_index[name_index];
+            if( function_index == n_list_discrete )
+            {   std::string msg = "from_graph: error in call to ";
+                msg += graph_obj.discrete_name_vec_get(name_index);
+                msg += ".\nNo previously defined discrete function ";
+                msg += "has this name";
+                //
+                // use this source code as point of detection
+                bool known       = true;
+                int  line        = __LINE__;
+                const char* file = __FILE__;
+                const char* exp  =
+                    "discrete_index[name_index] != n_list_discrete";
+                //
+                // CppAD error handler
+                ErrorHandler::Call(known, line, file, exp, msg.c_str());
+            }
+            if( type_x[0] == variable_enum )
+            {   CPPAD_ASSERT_NARG_NRES(local::DisOp, 2, 1);
+                i_result = rec.PutOp(local::DisOp);
+                rec.PutArg( addr_t(function_index) );
+                rec.PutArg( arg[0] );
+            }
+            else if( type_x[0] == dynamic_enum )
+            {   i_result = rec.put_dyn_par(
+                    nan, local::dis_dyn, addr_t(function_index), arg[0]
+                );
+            }
+            else
+            {   Base result = discrete<Base>::eval(
+                    function_index, parameter[ arg[0] ]
+                );
+                i_result = rec.put_con_par(result);
+                CPPAD_ASSERT_UNKNOWN( parameter[i_result] == result );
+            }
+        }
+        // -------------------------------------------------------------------
         // atomic operator
         // -------------------------------------------------------------------
-        else if( op_enum == local::json::atom_json_op )
-        {   //
+        else if( op_enum == atom_graph_op )
+        {   size_t name_index = str_index[0];
+            //
             // atomic_index
-            size_t atomic_index = json_op.extra;
+            CPPAD_ASSERT_UNKNOWN( name_index < atomic_three_index.size() );
+            size_t atomic_index = atomic_three_index[name_index];
+            if( atomic_index == 0 )
+            {   std::string msg = "from_graph: error in call to ";
+                msg += graph_obj.atomic_name_vec_get(name_index);
+                msg += ".\n";
+                msg += "No previously defined atomic_three function ";
+                msg + "has this name";
+                //
+                // use this source code as point of detection
+                bool known       = true;
+                int  line        = __LINE__;
+                const char* file = __FILE__;
+                const char* exp  = "atomic_index != 0";
+                //
+                // CppAD error handler
+                ErrorHandler::Call(known, line, file, exp, msg.c_str());
+            }
             //
             // afun
             bool         set_null = false;
             size_t       type;
             std::string* name = CPPAD_NULL;
             void*        v_ptr;
-            CppAD::local::atomic_index<double>(
+            CppAD::local::atomic_index<RecBase>(
                 set_null, atomic_index, type, name, v_ptr
             );
             CPPAD_ASSERT_UNKNOWN( type == 3 );
@@ -480,15 +733,15 @@ void CppAD::ADFun<Base,RecBase>::from_json(const std::string& graph)
             //
             // node_type, node2fun
             for(size_t i = 0; i < n_result; ++i)
-            {   node_type[start_result + i] = type_y[i];
+            {   node_type.push_back(type_y[i]);
                  switch( type_y[i] )
                 {   case constant_enum:
-                    node2fun[start_result + i] = rec.put_con_par( taylor_y[i] );
+                    node2fun.push_back(rec.put_con_par(taylor_y[i]));
                     break;
 
                     case dynamic_enum:
                     case variable_enum:
-                    node2fun[start_result + i] = ay[i].taddr_;
+                    node2fun.push_back(ay[i].taddr_);
                     break;
 
                     default:
@@ -505,31 +758,31 @@ void CppAD::ADFun<Base,RecBase>::from_json(const std::string& graph)
             Base result; // used in cases argument is a constant
             if( type_x[0] == variable_enum ) switch( op_enum )
             {
-                case local::json::abs_json_op:
+                case abs_graph_op:
                 i_result = rec.PutOp(local::AbsOp);
                 rec.PutArg( arg[0] );
                 CPPAD_ASSERT_UNKNOWN( NumArg(local::AbsOp) == 1 );
                 break;
 
-                case local::json::acosh_json_op:
+                case acosh_graph_op:
                 i_result = rec.PutOp(local::AcoshOp);
                 rec.PutArg( arg[0] );
                 CPPAD_ASSERT_UNKNOWN( NumArg(local::AcoshOp) == 1 );
                 break;
 
-                case local::json::asinh_json_op:
+                case asinh_graph_op:
                 i_result = rec.PutOp(local::AsinhOp);
                 rec.PutArg( arg[0] );
                 CPPAD_ASSERT_UNKNOWN( NumArg(local::AsinhOp) == 1 );
                 break;
 
-                case local::json::atanh_json_op:
+                case atanh_graph_op:
                 i_result = rec.PutOp(local::AtanhOp);
                 rec.PutArg( arg[0] );
                 CPPAD_ASSERT_UNKNOWN( NumArg(local::AtanhOp) == 1 );
                 break;
 
-                case local::json::erf_json_op:
+                case erf_graph_op:
                 i_result = rec.PutOp(local::ErfOp);
                 CPPAD_ASSERT_UNKNOWN( NumArg(local::ErfOp) == 3 );
                 //
@@ -548,7 +801,7 @@ void CppAD::ADFun<Base,RecBase>::from_json(const std::string& graph)
                 //
                 break;
 
-                case local::json::erfc_json_op:
+                case erfc_graph_op:
                 i_result = rec.PutOp(local::ErfcOp);
                 CPPAD_ASSERT_UNKNOWN( NumArg(local::ErfcOp) == 3 );
                 //
@@ -567,91 +820,91 @@ void CppAD::ADFun<Base,RecBase>::from_json(const std::string& graph)
                 //
                 break;
 
-                case local::json::expm1_json_op:
+                case expm1_graph_op:
                 i_result = rec.PutOp(local::Expm1Op);
                 rec.PutArg( arg[0] );
                 CPPAD_ASSERT_UNKNOWN( NumArg(local::Expm1Op) == 1 );
                 break;
 
-                case local::json::log1p_json_op:
+                case log1p_graph_op:
                 i_result = rec.PutOp(local::Log1pOp);
                 rec.PutArg( arg[0] );
                 CPPAD_ASSERT_UNKNOWN( NumArg(local::Log1pOp) == 1 );
                 break;
 
-                case local::json::acos_json_op:
+                case acos_graph_op:
                 i_result = rec.PutOp(local::AcosOp);
                 rec.PutArg( arg[0] );
                 CPPAD_ASSERT_UNKNOWN( NumArg(local::AcosOp) == 1 );
                 break;
 
-                case local::json::asin_json_op:
+                case asin_graph_op:
                 i_result = rec.PutOp(local::AsinOp);
                 rec.PutArg( arg[0] );
                 CPPAD_ASSERT_UNKNOWN( NumArg(local::AsinOp) == 1 );
                 break;
 
-                case local::json::atan_json_op:
+                case atan_graph_op:
                 i_result = rec.PutOp(local::AtanOp);
                 rec.PutArg( arg[0] );
                 CPPAD_ASSERT_UNKNOWN( NumArg(local::AtanOp) == 1 );
                 break;
 
-                case local::json::cosh_json_op:
+                case cosh_graph_op:
                 i_result = rec.PutOp(local::CoshOp);
                 rec.PutArg( arg[0] );
                 CPPAD_ASSERT_UNKNOWN( NumArg(local::CoshOp) == 1 );
                 break;
 
-                case local::json::cos_json_op:
+                case cos_graph_op:
                 i_result = rec.PutOp(local::CosOp);
                 rec.PutArg( arg[0] );
                 CPPAD_ASSERT_UNKNOWN( NumArg(local::CosOp) == 1 );
                 break;
 
-                case local::json::exp_json_op:
+                case exp_graph_op:
                 i_result = rec.PutOp(local::ExpOp);
                 rec.PutArg( arg[0] );
                 CPPAD_ASSERT_UNKNOWN( NumArg(local::ExpOp) == 1 );
                 break;
 
-                case local::json::log_json_op:
+                case log_graph_op:
                 i_result = rec.PutOp(local::LogOp);
                 rec.PutArg( arg[0] );
                 CPPAD_ASSERT_UNKNOWN( NumArg(local::LogOp) == 1 );
                 break;
 
-                case local::json::sign_json_op:
+                case sign_graph_op:
                 i_result = rec.PutOp(local::SignOp);
                 rec.PutArg( arg[0] );
                 CPPAD_ASSERT_UNKNOWN( NumArg(local::SignOp) == 1 );
                 break;
 
-                case local::json::sinh_json_op:
+                case sinh_graph_op:
                 i_result = rec.PutOp(local::SinhOp);
                 rec.PutArg( arg[0] );
                 CPPAD_ASSERT_UNKNOWN( NumArg(local::SinhOp) == 1 );
                 break;
 
-                case local::json::sin_json_op:
+                case sin_graph_op:
                 i_result = rec.PutOp(local::SinOp);
                 rec.PutArg( arg[0] );
                 CPPAD_ASSERT_UNKNOWN( NumArg(local::SinOp) == 1 );
                 break;
 
-                case local::json::sqrt_json_op:
+                case sqrt_graph_op:
                 i_result = rec.PutOp(local::SqrtOp);
                 rec.PutArg( arg[0] );
                 CPPAD_ASSERT_UNKNOWN( NumArg(local::SqrtOp) == 1 );
                 break;
 
-                case local::json::tanh_json_op:
+                case tanh_graph_op:
                 i_result = rec.PutOp(local::TanhOp);
                 rec.PutArg( arg[0] );
                 CPPAD_ASSERT_UNKNOWN( NumArg(local::TanhOp) == 1 );
                 break;
 
-                case local::json::tan_json_op:
+                case tan_graph_op:
                 i_result = rec.PutOp(local::TanOp);
                 rec.PutArg( arg[0] );
                 CPPAD_ASSERT_UNKNOWN( NumArg(local::TanOp) == 1 );
@@ -663,107 +916,107 @@ void CppAD::ADFun<Base,RecBase>::from_json(const std::string& graph)
             }
             else if( type_x[0] == dynamic_enum ) switch( op_enum )
             {
-                case local::json::abs_json_op:
+                case abs_graph_op:
                 i_result = rec.put_dyn_par(nan, local::abs_dyn, arg[0] );
                 CPPAD_ASSERT_UNKNOWN( isnan( parameter[i_result] ) );
                 break;
 
-                case local::json::acosh_json_op:
+                case acosh_graph_op:
                 i_result = rec.put_dyn_par(nan, local::acosh_dyn, arg[0] );
                 CPPAD_ASSERT_UNKNOWN( isnan( parameter[i_result] ) );
                 break;
 
-                case local::json::asinh_json_op:
+                case asinh_graph_op:
                 i_result = rec.put_dyn_par(nan, local::asinh_dyn, arg[0] );
                 CPPAD_ASSERT_UNKNOWN( isnan( parameter[i_result] ) );
                 break;
 
-                case local::json::atanh_json_op:
+                case atanh_graph_op:
                 i_result = rec.put_dyn_par(nan, local::atanh_dyn, arg[0] );
                 CPPAD_ASSERT_UNKNOWN( isnan( parameter[i_result] ) );
                 break;
 
-                case local::json::erf_json_op:
+                case erf_graph_op:
                 i_result = rec.put_dyn_par(nan, local::erf_dyn, arg[0] );
                 CPPAD_ASSERT_UNKNOWN( isnan( parameter[i_result] ) );
                 break;
 
-                case local::json::erfc_json_op:
+                case erfc_graph_op:
                 i_result = rec.put_dyn_par(nan, local::erfc_dyn, arg[0] );
                 CPPAD_ASSERT_UNKNOWN( isnan( parameter[i_result] ) );
                 break;
 
-                case local::json::expm1_json_op:
+                case expm1_graph_op:
                 i_result = rec.put_dyn_par(nan, local::expm1_dyn, arg[0] );
                 CPPAD_ASSERT_UNKNOWN( isnan( parameter[i_result] ) );
                 break;
 
-                case local::json::log1p_json_op:
+                case log1p_graph_op:
                 i_result = rec.put_dyn_par(nan, local::log1p_dyn, arg[0] );
                 CPPAD_ASSERT_UNKNOWN( isnan( parameter[i_result] ) );
                 break;
 
-                case local::json::acos_json_op:
+                case acos_graph_op:
                 i_result = rec.put_dyn_par(nan, local::acos_dyn, arg[0] );
                 CPPAD_ASSERT_UNKNOWN( isnan( parameter[i_result] ) );
                 break;
 
-                case local::json::asin_json_op:
+                case asin_graph_op:
                 i_result = rec.put_dyn_par(nan, local::asin_dyn, arg[0] );
                 CPPAD_ASSERT_UNKNOWN( isnan( parameter[i_result] ) );
                 break;
 
-                case local::json::atan_json_op:
+                case atan_graph_op:
                 i_result = rec.put_dyn_par(nan, local::atan_dyn, arg[0] );
                 CPPAD_ASSERT_UNKNOWN( isnan( parameter[i_result] ) );
                 break;
 
-                case local::json::cosh_json_op:
+                case cosh_graph_op:
                 i_result = rec.put_dyn_par(nan, local::cosh_dyn, arg[0] );
                 CPPAD_ASSERT_UNKNOWN( isnan( parameter[i_result] ) );
                 break;
 
-                case local::json::cos_json_op:
+                case cos_graph_op:
                 i_result = rec.put_dyn_par(nan, local::cos_dyn, arg[0] );
                 CPPAD_ASSERT_UNKNOWN( isnan( parameter[i_result] ) );
                 break;
 
-                case local::json::exp_json_op:
+                case exp_graph_op:
                 i_result = rec.put_dyn_par(nan, local::exp_dyn, arg[0] );
                 CPPAD_ASSERT_UNKNOWN( isnan( parameter[i_result] ) );
                 break;
 
-                case local::json::log_json_op:
+                case log_graph_op:
                 i_result = rec.put_dyn_par(nan, local::log_dyn, arg[0] );
                 CPPAD_ASSERT_UNKNOWN( isnan( parameter[i_result] ) );
                 break;
 
-                case local::json::sign_json_op:
+                case sign_graph_op:
                 i_result = rec.put_dyn_par(nan, local::sign_dyn, arg[0] );
                 CPPAD_ASSERT_UNKNOWN( isnan( parameter[i_result] ) );
                 break;
 
-                case local::json::sinh_json_op:
+                case sinh_graph_op:
                 i_result = rec.put_dyn_par(nan, local::sinh_dyn, arg[0] );
                 CPPAD_ASSERT_UNKNOWN( isnan( parameter[i_result] ) );
                 break;
 
-                case local::json::sin_json_op:
+                case sin_graph_op:
                 i_result = rec.put_dyn_par(nan, local::sin_dyn, arg[0] );
                 CPPAD_ASSERT_UNKNOWN( isnan( parameter[i_result] ) );
                 break;
 
-                case local::json::sqrt_json_op:
+                case sqrt_graph_op:
                 i_result = rec.put_dyn_par(nan, local::sqrt_dyn, arg[0] );
                 CPPAD_ASSERT_UNKNOWN( isnan( parameter[i_result] ) );
                 break;
 
-                case local::json::tanh_json_op:
+                case tanh_graph_op:
                 i_result = rec.put_dyn_par(nan, local::tanh_dyn, arg[0] );
                 CPPAD_ASSERT_UNKNOWN( isnan( parameter[i_result] ) );
                 break;
 
-                case local::json::tan_json_op:
+                case tan_graph_op:
                 i_result = rec.put_dyn_par(nan, local::tan_dyn, arg[0] );
                 CPPAD_ASSERT_UNKNOWN( isnan( parameter[i_result] ) );
                 break;
@@ -774,127 +1027,127 @@ void CppAD::ADFun<Base,RecBase>::from_json(const std::string& graph)
             }
             else switch( op_enum )
             {
-                case local::json::abs_json_op:
+                case abs_graph_op:
                 result    = CppAD::abs( parameter[ arg[0] ] );
                 i_result  = rec.put_con_par(result);
                 CPPAD_ASSERT_UNKNOWN( parameter[i_result] == result );
                 break;
 
-                case local::json::acosh_json_op:
+                case acosh_graph_op:
                 result    = CppAD::acosh( parameter[ arg[0] ] );
                 i_result  = rec.put_con_par(result);
                 CPPAD_ASSERT_UNKNOWN( parameter[i_result] == result );
                 break;
 
-                case local::json::asinh_json_op:
+                case asinh_graph_op:
                 result    = CppAD::asinh( parameter[ arg[0] ] );
                 i_result  = rec.put_con_par(result);
                 CPPAD_ASSERT_UNKNOWN( parameter[i_result] == result );
                 break;
 
-                case local::json::atanh_json_op:
+                case atanh_graph_op:
                 result    = CppAD::atanh( parameter[ arg[0] ] );
                 i_result  = rec.put_con_par(result);
                 CPPAD_ASSERT_UNKNOWN( parameter[i_result] == result );
                 break;
 
-                case local::json::erf_json_op:
+                case erf_graph_op:
                 result    = CppAD::erf( parameter[ arg[0] ] );
                 i_result  = rec.put_con_par(result);
                 CPPAD_ASSERT_UNKNOWN( parameter[i_result] == result );
                 break;
 
-                case local::json::erfc_json_op:
+                case erfc_graph_op:
                 result    = CppAD::erfc( parameter[ arg[0] ] );
                 i_result  = rec.put_con_par(result);
                 CPPAD_ASSERT_UNKNOWN( parameter[i_result] == result );
                 break;
 
-                case local::json::expm1_json_op:
+                case expm1_graph_op:
                 result    = CppAD::expm1( parameter[ arg[0] ] );
                 i_result  = rec.put_con_par(result);
                 CPPAD_ASSERT_UNKNOWN( parameter[i_result] == result );
                 break;
 
-                case local::json::log1p_json_op:
+                case log1p_graph_op:
                 result    = CppAD::log1p( parameter[ arg[0] ] );
                 i_result  = rec.put_con_par(result);
                 CPPAD_ASSERT_UNKNOWN( parameter[i_result] == result );
                 break;
 
-                case local::json::acos_json_op:
+                case acos_graph_op:
                 result    = CppAD::acos( parameter[ arg[0] ] );
                 i_result  = rec.put_con_par(result);
                 CPPAD_ASSERT_UNKNOWN( parameter[i_result] == result );
                 break;
 
-                case local::json::asin_json_op:
+                case asin_graph_op:
                 result    = CppAD::asin( parameter[ arg[0] ] );
                 i_result  = rec.put_con_par(result);
                 CPPAD_ASSERT_UNKNOWN( parameter[i_result] == result );
                 break;
 
-                case local::json::atan_json_op:
+                case atan_graph_op:
                 result    = CppAD::atan( parameter[ arg[0] ] );
                 i_result  = rec.put_con_par(result);
                 CPPAD_ASSERT_UNKNOWN( parameter[i_result] == result );
                 break;
 
-                case local::json::cosh_json_op:
+                case cosh_graph_op:
                 result    = CppAD::cosh( parameter[ arg[0] ] );
                 i_result  = rec.put_con_par(result);
                 CPPAD_ASSERT_UNKNOWN( parameter[i_result] == result );
                 break;
 
-                case local::json::cos_json_op:
+                case cos_graph_op:
                 result    = CppAD::cos( parameter[ arg[0] ] );
                 i_result  = rec.put_con_par(result);
                 CPPAD_ASSERT_UNKNOWN( parameter[i_result] == result );
                 break;
 
-                case local::json::exp_json_op:
+                case exp_graph_op:
                 result    = CppAD::exp( parameter[ arg[0] ] );
                 i_result  = rec.put_con_par(result);
                 CPPAD_ASSERT_UNKNOWN( parameter[i_result] == result );
                 break;
 
-                case local::json::log_json_op:
+                case log_graph_op:
                 result    = CppAD::log( parameter[ arg[0] ] );
                 i_result  = rec.put_con_par(result);
                 CPPAD_ASSERT_UNKNOWN( parameter[i_result] == result );
                 break;
 
-                case local::json::sign_json_op:
+                case sign_graph_op:
                 result    = CppAD::sign( parameter[ arg[0] ] );
                 i_result  = rec.put_con_par(result);
                 CPPAD_ASSERT_UNKNOWN( parameter[i_result] == result );
                 break;
 
-                case local::json::sinh_json_op:
+                case sinh_graph_op:
                 result    = CppAD::sinh( parameter[ arg[0] ] );
                 i_result  = rec.put_con_par(result);
                 CPPAD_ASSERT_UNKNOWN( parameter[i_result] == result );
                 break;
 
-                case local::json::sin_json_op:
+                case sin_graph_op:
                 result    = CppAD::sin( parameter[ arg[0] ] );
                 i_result  = rec.put_con_par(result);
                 CPPAD_ASSERT_UNKNOWN( parameter[i_result] == result );
                 break;
 
-                case local::json::sqrt_json_op:
+                case sqrt_graph_op:
                 result    = CppAD::sqrt( parameter[ arg[0] ] );
                 i_result  = rec.put_con_par(result);
                 CPPAD_ASSERT_UNKNOWN( parameter[i_result] == result );
                 break;
 
-                case local::json::tanh_json_op:
+                case tanh_graph_op:
                 result    = CppAD::tanh( parameter[ arg[0] ] );
                 i_result  = rec.put_con_par(result);
                 CPPAD_ASSERT_UNKNOWN( parameter[i_result] == result );
                 break;
 
-                case local::json::tan_json_op:
+                case tan_graph_op:
                 result    = CppAD::tan( parameter[ arg[0] ] );
                 i_result  = rec.put_con_par(result);
                 CPPAD_ASSERT_UNKNOWN( parameter[i_result] == result );
@@ -914,28 +1167,40 @@ void CppAD::ADFun<Base,RecBase>::from_json(const std::string& graph)
             if( type_x[0] == variable_enum && type_x[1] == variable_enum )
             switch( op_enum )
             {
-                case local::json::add_json_op:
+                case add_graph_op:
                 i_result = rec.PutOp(local::AddvvOp);
                 rec.PutArg( arg[0], arg[1] );
-                CPPAD_ASSERT_NARG_NRES(local::AddvvOp, 2, 1);
+                CPPAD_ASSERT_UNKNOWN( NumArg(local::AddvvOp) == 2 );
                 break;
 
-                case local::json::mul_json_op:
-                i_result = rec.PutOp(local::MulvvOp);
+                case azmul_graph_op:
+                i_result = rec.PutOp(local::ZmulvvOp);
                 rec.PutArg( arg[0], arg[1] );
-                CPPAD_ASSERT_NARG_NRES(local::MulvvOp, 2, 1);
+                CPPAD_ASSERT_UNKNOWN( NumArg(local::ZmulvvOp) == 2 );
                 break;
 
-                case local::json::sub_json_op:
-                i_result = rec.PutOp(local::SubvvOp);
-                rec.PutArg( arg[0], arg[1] );
-                CPPAD_ASSERT_NARG_NRES(local::SubvvOp, 2, 1);
-                break;
-
-                case local::json::div_json_op:
+                case div_graph_op:
                 i_result = rec.PutOp(local::DivvvOp);
                 rec.PutArg( arg[0], arg[1] );
-                CPPAD_ASSERT_NARG_NRES(local::DivvvOp, 2, 1);
+                CPPAD_ASSERT_UNKNOWN( NumArg(local::DivvvOp) == 2 );
+                break;
+
+                case mul_graph_op:
+                i_result = rec.PutOp(local::MulvvOp);
+                rec.PutArg( arg[0], arg[1] );
+                CPPAD_ASSERT_UNKNOWN( NumArg(local::MulvvOp) == 2 );
+                break;
+
+                case pow_graph_op:
+                i_result = rec.PutOp(local::PowvvOp);
+                rec.PutArg( arg[0], arg[1] );
+                CPPAD_ASSERT_UNKNOWN( NumArg(local::PowvvOp) == 2 );
+                break;
+
+                case sub_graph_op:
+                i_result = rec.PutOp(local::SubvvOp);
+                rec.PutArg( arg[0], arg[1] );
+                CPPAD_ASSERT_UNKNOWN( NumArg(local::SubvvOp) == 2 );
                 break;
 
                 default:
@@ -945,29 +1210,41 @@ void CppAD::ADFun<Base,RecBase>::from_json(const std::string& graph)
             else if( type_x[0] == variable_enum ) switch( op_enum )
             {
                 // addition is communitative, so use Addpv
-                case local::json::add_json_op:
+                case add_graph_op:
                 i_result = rec.PutOp(local::AddpvOp);
                 rec.PutArg( arg[1], arg[0] );
-                CPPAD_ASSERT_NARG_NRES(local::AddpvOp, 2, 1);
+                CPPAD_ASSERT_UNKNOWN( NumArg(local::AddpvOp) == 2 );
+                break;
+
+                case azmul_graph_op:
+                i_result = rec.PutOp(local::ZmulvpOp);
+                rec.PutArg( arg[0], arg[1] );
+                CPPAD_ASSERT_UNKNOWN( NumArg(local::ZmulvpOp) == 2 );
+                break;
+
+                case div_graph_op:
+                i_result = rec.PutOp(local::DivvpOp);
+                rec.PutArg( arg[0], arg[1] );
+                CPPAD_ASSERT_UNKNOWN( NumArg(local::DivvpOp) == 2 );
                 break;
 
                 // multiplication is communitative, so use Mulpv
-                case local::json::mul_json_op:
+                case mul_graph_op:
                 i_result = rec.PutOp(local::MulpvOp);
                 rec.PutArg( arg[1], arg[0] );
-                CPPAD_ASSERT_NARG_NRES(local::MulpvOp, 2, 1);
+                CPPAD_ASSERT_UNKNOWN( NumArg(local::MulpvOp) == 2 );
                 break;
 
-                case local::json::sub_json_op:
+                case pow_graph_op:
+                i_result = rec.PutOp(local::PowvpOp);
+                rec.PutArg( arg[0], arg[1] );
+                CPPAD_ASSERT_UNKNOWN( NumArg(local::PowvpOp) == 2 );
+                break;
+
+                case sub_graph_op:
                 i_result = rec.PutOp(local::SubvpOp);
                 rec.PutArg( arg[0], arg[1] );
-                CPPAD_ASSERT_NARG_NRES(local::SubvpOp, 2, 1);
-                break;
-
-                case local::json::div_json_op:
-                i_result = rec.PutOp(local::DivvpOp);
-                rec.PutArg( arg[0], arg[1] );
-                CPPAD_ASSERT_NARG_NRES(local::DivvpOp, 2, 1);
+                CPPAD_ASSERT_UNKNOWN( NumArg(local::SubvpOp) == 2 );
                 break;
 
                 default:
@@ -976,28 +1253,40 @@ void CppAD::ADFun<Base,RecBase>::from_json(const std::string& graph)
             }
             else if( type_x[1] == variable_enum ) switch( op_enum )
             {
-                case local::json::add_json_op:
+                case add_graph_op:
                 i_result = rec.PutOp(local::AddpvOp);
                 rec.PutArg( arg[0], arg[1] );
-                CPPAD_ASSERT_NARG_NRES(local::AddpvOp, 2, 1);
+                CPPAD_ASSERT_UNKNOWN( NumArg(local::AddpvOp) == 2 );
                 break;
 
-                case local::json::mul_json_op:
-                i_result = rec.PutOp(local::MulpvOp);
+                case azmul_graph_op:
+                i_result = rec.PutOp(local::ZmulpvOp);
                 rec.PutArg( arg[0], arg[1] );
-                CPPAD_ASSERT_NARG_NRES(local::MulpvOp, 2, 1);
+                CPPAD_ASSERT_UNKNOWN( NumArg(local::ZmulpvOp) == 2 );
                 break;
 
-                case local::json::sub_json_op:
-                i_result = rec.PutOp(local::SubpvOp);
-                rec.PutArg( arg[0], arg[1] );
-                CPPAD_ASSERT_NARG_NRES(local::SubpvOp, 2, 1);
-                break;
-
-                case local::json::div_json_op:
+                case div_graph_op:
                 i_result = rec.PutOp(local::DivpvOp);
                 rec.PutArg( arg[0], arg[1] );
-                CPPAD_ASSERT_NARG_NRES(local::DivpvOp, 2, 1);
+                CPPAD_ASSERT_UNKNOWN( NumArg(local::DivpvOp) == 2 );
+                break;
+
+                case mul_graph_op:
+                i_result = rec.PutOp(local::MulpvOp);
+                rec.PutArg( arg[0], arg[1] );
+                CPPAD_ASSERT_UNKNOWN( NumArg(local::MulpvOp) == 2 );
+                break;
+
+                case pow_graph_op:
+                i_result = rec.PutOp(local::PowpvOp);
+                rec.PutArg( arg[0], arg[1] );
+                CPPAD_ASSERT_UNKNOWN( NumArg(local::PowpvOp) == 2 );
+                break;
+
+                case sub_graph_op:
+                i_result = rec.PutOp(local::SubpvOp);
+                rec.PutArg( arg[0], arg[1] );
+                CPPAD_ASSERT_UNKNOWN( NumArg(local::SubpvOp) == 2 );
                 break;
 
                 default:
@@ -1007,23 +1296,38 @@ void CppAD::ADFun<Base,RecBase>::from_json(const std::string& graph)
             else if( type_x[0] == dynamic_enum || type_x[1] == dynamic_enum )
             switch( op_enum )
             {
-                case local::json::add_json_op:
-                i_result = rec.put_dyn_par(nan, local::add_dyn, arg[0], arg[1]);
+                case add_graph_op:
+                i_result =
+                    rec.put_dyn_par(nan, local::add_dyn, arg[0], arg[1]);
                 CPPAD_ASSERT_UNKNOWN( isnan( parameter[i_result] ) );
                 break;
 
-                case local::json::mul_json_op:
-                i_result = rec.put_dyn_par(nan, local::mul_dyn, arg[0], arg[1]);
+                case azmul_graph_op:
+                i_result =
+                    rec.put_dyn_par(nan, local::zmul_dyn, arg[0], arg[1]);
                 CPPAD_ASSERT_UNKNOWN( isnan( parameter[i_result] ) );
                 break;
 
-                case local::json::sub_json_op:
-                i_result = rec.put_dyn_par(nan, local::sub_dyn, arg[0], arg[1]);
+                case div_graph_op:
+                i_result =
+                    rec.put_dyn_par(nan, local::div_dyn, arg[0], arg[1]);
                 CPPAD_ASSERT_UNKNOWN( isnan( parameter[i_result] ) );
                 break;
 
-                case local::json::div_json_op:
-                i_result = rec.put_dyn_par(nan, local::div_dyn, arg[0], arg[1]);
+                case mul_graph_op:
+                i_result =
+                    rec.put_dyn_par(nan, local::mul_dyn, arg[0], arg[1]);
+                break;
+
+                case pow_graph_op:
+                i_result =
+                    rec.put_dyn_par(nan, local::pow_dyn, arg[0], arg[1]);
+                CPPAD_ASSERT_UNKNOWN( isnan( parameter[i_result] ) );
+                break;
+
+                case sub_graph_op:
+                i_result =
+                    rec.put_dyn_par(nan, local::sub_dyn, arg[0], arg[1]);
                 CPPAD_ASSERT_UNKNOWN( isnan( parameter[i_result] ) );
                 break;
 
@@ -1033,26 +1337,38 @@ void CppAD::ADFun<Base,RecBase>::from_json(const std::string& graph)
             }
             else switch( op_enum )
             {
-                case local::json::add_json_op:
+                case add_graph_op:
                 result = parameter[ arg[0] ] + parameter[ arg[1] ];
                 i_result = rec.put_con_par(result);
                 CPPAD_ASSERT_UNKNOWN( parameter[i_result] == result );
                 break;
 
-                case local::json::mul_json_op:
+                case azmul_graph_op:
+                result = azmul( parameter[ arg[0] ] , parameter[ arg[1] ] );
+                i_result = rec.put_con_par(result);
+                CPPAD_ASSERT_UNKNOWN( parameter[i_result] == result );
+                break;
+
+                case div_graph_op:
+                result = parameter[ arg[0] ] / parameter[ arg[1] ];
+                i_result = rec.put_con_par(result);
+                CPPAD_ASSERT_UNKNOWN( parameter[i_result] == result );
+                break;
+
+                case mul_graph_op:
                 result = parameter[ arg[0] ] * parameter[ arg[1] ];
                 i_result = rec.put_con_par(result);
                 CPPAD_ASSERT_UNKNOWN( parameter[i_result] == result );
                 break;
 
-                case local::json::sub_json_op:
-                result = parameter[ arg[0] ] - parameter[ arg[1] ];
+                case pow_graph_op:
+                result = pow( parameter[ arg[0] ],  parameter[ arg[1] ] );
                 i_result = rec.put_con_par(result);
                 CPPAD_ASSERT_UNKNOWN( parameter[i_result] == result );
                 break;
 
-                case local::json::div_json_op:
-                result = parameter[ arg[0] ] / parameter[ arg[1] ];
+                case sub_graph_op:
+                result = parameter[ arg[0] ] - parameter[ arg[1] ];
                 i_result = rec.put_con_par(result);
                 CPPAD_ASSERT_UNKNOWN( parameter[i_result] == result );
                 break;
@@ -1064,21 +1380,23 @@ void CppAD::ADFun<Base,RecBase>::from_json(const std::string& graph)
             }
         }
         // case where node_type and node2fun for the results are set above
-        if( op_enum != local::json::atom_json_op && n_result != 0 )
+        if( op_enum != atom_graph_op && n_result != 0 )
         {   // set node_type and node2fun for result
             //
             CPPAD_ASSERT_UNKNOWN( i_result != 0 );
             CPPAD_ASSERT_UNKNOWN( n_result == 1 );
             if( n_var_arg > 0 )
-                node_type[start_result] = variable_enum;
+                node_type.push_back(variable_enum);
             else if( n_dyn_arg > 0 )
-                node_type[start_result] = dynamic_enum;
+                node_type.push_back(dynamic_enum);
             else
-                node_type[start_result] = constant_enum;
-            node2fun[start_result] = i_result;
+                node_type.push_back(constant_enum);
+            node2fun.push_back(i_result);
         }
         //
         start_result          += n_result;
+        CPPAD_ASSERT_UNKNOWN( node2fun.size() == start_result );
+        CPPAD_ASSERT_UNKNOWN( node_type.size() == start_result );
     }
     // set this->dep_parameter_, set this->dep_taddr_
     //
@@ -1086,21 +1404,18 @@ void CppAD::ADFun<Base,RecBase>::from_json(const std::string& graph)
     dep_parameter_.resize( n_dependent );
     dep_taddr_.resize( n_dependent );
     for(size_t i = 0; i < n_dependent; ++i)
-    {   CPPAD_ASSERT_KNOWN(
-            node_type[ dependent_vec[i] ] != string_enum,
-            "Json AD graph dependent variable node is a string"
-        );
+    {
         CPPAD_ASSERT_UNKNOWN(
-            node_type[ dependent_vec[i] ] != number_ad_type_enum
+            node_type[ graph_obj.dependent_vec_get(i) ] != number_ad_type_enum
         );
-        if( node_type[ dependent_vec[i] ] == variable_enum )
+        if( node_type[ graph_obj.dependent_vec_get(i) ] == variable_enum )
         {   dep_parameter_[i] = false;
-            dep_taddr_[i]     = size_t( node2fun[ dependent_vec[i] ] );
+            dep_taddr_[i]     = size_t( node2fun[ graph_obj.dependent_vec_get(i) ] );
         }
         else
         {   dep_parameter_[i] = true;
             dep_taddr_[i]     = size_t( rec.PutOp(local::ParOp) );
-            rec.PutArg( node2fun[ dependent_vec[i] ] );
+            rec.PutArg( node2fun[ graph_obj.dependent_vec_get(i) ] );
         }
     }
     rec.PutOp(local::EndOp);
@@ -1128,20 +1443,20 @@ void CppAD::ADFun<Base,RecBase>::from_json(const std::string& graph)
     // cskip_op_
     cskip_op_.resize( rec.num_op_rec() );
     //
-    // load_op_
-    load_op_.resize( rec.num_load_op_rec() );
+    // load_op2var_
+    load_op2var_.resize( rec.num_var_load_rec() );
     //
     // play_
     // Now that each dependent variable has a place in the recording,
     // and there is a EndOp at the end of the record, we can transfer the
     // recording to the player and and erase the recording.
-    play_.get_recording(rec, n_independent);
+    play_.get_recording(rec, n_variable_ind_fun);
     //
     // ind_taddr_
     // Note that play_ has been set, we can use it to check operators
-    ind_taddr_.resize(n_independent);
-    CPPAD_ASSERT_UNKNOWN( n_independent < num_var_tape_);
-    for(size_t j = 0; j < n_independent; j++)
+    ind_taddr_.resize(n_variable_ind_fun);
+    CPPAD_ASSERT_UNKNOWN( n_variable_ind_fun < num_var_tape_);
+    for(size_t j = 0; j < n_variable_ind_fun; j++)
     {   CPPAD_ASSERT_UNKNOWN( play_.GetOp(j+1) == local::InvOp );
         ind_taddr_[j] = j+1;
     }
@@ -1163,5 +1478,22 @@ void CppAD::ADFun<Base,RecBase>::from_json(const std::string& graph)
     //
     return;
 }
+// BEGIN_ONE_ARGUMENT
+template <class Base, class RecBase>
+void CppAD::ADFun<Base,RecBase>::from_graph(
+    const CppAD::cpp_graph& graph_obj     )
+// END_ONE_ARGUMENT
+{   size_t n_variable_ind = graph_obj.n_variable_ind_get();
+    size_t n_dynamic_ind  = graph_obj.n_dynamic_ind_get();
+    CppAD::vector<bool> dyn2var(n_dynamic_ind), var2dyn(n_variable_ind);
+    for(size_t j = 0; j < n_dynamic_ind; ++j)
+        dyn2var[j] = false;
+    for(size_t j = 0; j < n_variable_ind; ++j)
+        var2dyn[j] = false;
+    //
+    from_graph(graph_obj, dyn2var, var2dyn);
+}
+
+} // END_CPPAD_NAMESPACE
 
 # endif
