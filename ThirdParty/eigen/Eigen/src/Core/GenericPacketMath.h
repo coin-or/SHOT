@@ -83,8 +83,8 @@ struct default_packet_traits
     HasPolygamma = 0,
     HasErf = 0,
     HasErfc = 0,
-    HasI0e = 0,
-    HasI1e = 0,
+    HasNdtri = 0,
+    HasBessel = 0,
     HasIGamma = 0,
     HasIGammaDerA = 0,
     HasGammaSampleDerAlpha = 0,
@@ -92,6 +92,7 @@ struct default_packet_traits
     HasBetaInc = 0,
 
     HasRound  = 0,
+    HasRint   = 0,
     HasFloor  = 0,
     HasCeil   = 0,
 
@@ -244,23 +245,52 @@ pshiftleft(const long int& a) { return a << N; }
 /** \internal \returns the significant and exponent of the underlying floating point numbers
   * See https://en.cppreference.com/w/cpp/numeric/math/frexp
   */
-template<typename Packet> EIGEN_DEVICE_FUNC inline Packet
-pfrexp(const Packet &a, Packet &exponent) { return std::frexp(a,&exponent); }
+template <typename Packet>
+EIGEN_DEVICE_FUNC inline Packet pfrexp(const Packet& a, Packet& exponent) {
+  int exp;
+  EIGEN_USING_STD_MATH(frexp);
+  Packet result = frexp(a, &exp);
+  exponent = static_cast<Packet>(exp);
+  return result;
+}
 
 /** \internal \returns a * 2^exponent
   * See https://en.cppreference.com/w/cpp/numeric/math/ldexp
   */
 template<typename Packet> EIGEN_DEVICE_FUNC inline Packet
-pldexp(const Packet &a, const Packet &exponent) { return std::ldexp(a,exponent); }
+pldexp(const Packet &a, const Packet &exponent) {
+  EIGEN_USING_STD_MATH(ldexp);
+  return ldexp(a, static_cast<int>(exponent));
+}
 
 /** \internal \returns zeros */
 template<typename Packet> EIGEN_DEVICE_FUNC inline Packet
 pzero(const Packet& a) { return pxor(a,a); }
 
+template<> EIGEN_DEVICE_FUNC inline float pzero<float>(const float& a) {
+  EIGEN_UNUSED_VARIABLE(a);
+  return 0.f;
+}
+
+template<> EIGEN_DEVICE_FUNC inline double pzero<double>(const double& a) {
+  EIGEN_UNUSED_VARIABLE(a);
+  return 0.;
+}
+
 /** \internal \returns bits of \a or \b according to the input bit mask \a mask */
 template<typename Packet> EIGEN_DEVICE_FUNC inline Packet
 pselect(const Packet& mask, const Packet& a, const Packet& b) {
   return por(pand(a,mask),pandnot(b,mask));
+}
+
+template<> EIGEN_DEVICE_FUNC inline float pselect<float>(
+    const float& mask, const float& a, const float&b) {
+  return numext::equal_strict(mask,0.f) ? b : a;
+}
+
+template<> EIGEN_DEVICE_FUNC inline double pselect<double>(
+    const double& mask, const double& a, const double& b) {
+  return numext::equal_strict(mask,0.) ? b : a;
 }
 
 /** \internal \returns a <= b as a bit mask */
@@ -286,6 +316,14 @@ pload(const typename unpacket_traits<Packet>::type* from) { return *from; }
 /** \internal \returns a packet version of \a *from, (un-aligned load) */
 template<typename Packet> EIGEN_DEVICE_FUNC inline Packet
 ploadu(const typename unpacket_traits<Packet>::type* from) { return *from; }
+
+/** \internal \returns a packet version of \a *from, (un-aligned masked load)
+ * There is no generic implementation. We only have implementations for specialized
+ * cases. Generic case should not be called.
+ */
+template<typename Packet> EIGEN_DEVICE_FUNC inline
+typename enable_if<unpacket_traits<Packet>::masked_load_available, Packet>::type
+ploadu(const typename unpacket_traits<Packet>::type* from, typename unpacket_traits<Packet>::mask_t umask);
 
 /** \internal \returns a packet with constant coefficients \a a, e.g.: (a,a,a,a) */
 template<typename Packet> EIGEN_DEVICE_FUNC inline Packet
@@ -362,6 +400,15 @@ template<typename Scalar, typename Packet> EIGEN_DEVICE_FUNC inline void pstore(
 /** \internal copy the packet \a from to \a *to, (un-aligned store) */
 template<typename Scalar, typename Packet> EIGEN_DEVICE_FUNC inline void pstoreu(Scalar* to, const Packet& from)
 {  (*to) = from; }
+
+/** \internal copy the packet \a from to \a *to, (un-aligned store with a mask)
+ * There is no generic implementation. We only have implementations for specialized
+ * cases. Generic case should not be called.
+ */
+template<typename Scalar, typename Packet>
+EIGEN_DEVICE_FUNC inline
+typename enable_if<unpacket_traits<Packet>::masked_store_available, void>::type
+pstoreu(Scalar* to, const Packet& from, typename unpacket_traits<Packet>::mask_t umask);
 
  template<typename Scalar, typename Packet> EIGEN_DEVICE_FUNC inline Packet pgather(const Scalar* from, Index /*stride*/)
  { return ploadu<Packet>(from); }
@@ -448,10 +495,7 @@ template<typename Packet> EIGEN_DEVICE_FUNC inline Packet preverse(const Packet&
 /** \internal \returns \a a with real and imaginary part flipped (for complex type only) */
 template<typename Packet> EIGEN_DEVICE_FUNC inline Packet pcplxflip(const Packet& a)
 {
-  // FIXME: uncomment the following in case we drop the internal imag and real functions.
-//   using std::imag;
-//   using std::real;
-  return Packet(imag(a),real(a));
+  return Packet(numext::imag(a),numext::real(a));
 }
 
 /**************************
@@ -460,43 +504,43 @@ template<typename Packet> EIGEN_DEVICE_FUNC inline Packet pcplxflip(const Packet
 
 /** \internal \returns the sine of \a a (coeff-wise) */
 template<typename Packet> EIGEN_DECLARE_FUNCTION_ALLOWING_MULTIPLE_DEFINITIONS
-Packet psin(const Packet& a) { using std::sin; return sin(a); }
+Packet psin(const Packet& a) { EIGEN_USING_STD_MATH(sin); return sin(a); }
 
 /** \internal \returns the cosine of \a a (coeff-wise) */
 template<typename Packet> EIGEN_DECLARE_FUNCTION_ALLOWING_MULTIPLE_DEFINITIONS
-Packet pcos(const Packet& a) { using std::cos; return cos(a); }
+Packet pcos(const Packet& a) { EIGEN_USING_STD_MATH(cos); return cos(a); }
 
 /** \internal \returns the tan of \a a (coeff-wise) */
 template<typename Packet> EIGEN_DECLARE_FUNCTION_ALLOWING_MULTIPLE_DEFINITIONS
-Packet ptan(const Packet& a) { using std::tan; return tan(a); }
+Packet ptan(const Packet& a) { EIGEN_USING_STD_MATH(tan); return tan(a); }
 
 /** \internal \returns the arc sine of \a a (coeff-wise) */
 template<typename Packet> EIGEN_DECLARE_FUNCTION_ALLOWING_MULTIPLE_DEFINITIONS
-Packet pasin(const Packet& a) { using std::asin; return asin(a); }
+Packet pasin(const Packet& a) { EIGEN_USING_STD_MATH(asin); return asin(a); }
 
 /** \internal \returns the arc cosine of \a a (coeff-wise) */
 template<typename Packet> EIGEN_DECLARE_FUNCTION_ALLOWING_MULTIPLE_DEFINITIONS
-Packet pacos(const Packet& a) { using std::acos; return acos(a); }
+Packet pacos(const Packet& a) { EIGEN_USING_STD_MATH(acos); return acos(a); }
 
 /** \internal \returns the arc tangent of \a a (coeff-wise) */
 template<typename Packet> EIGEN_DECLARE_FUNCTION_ALLOWING_MULTIPLE_DEFINITIONS
-Packet patan(const Packet& a) { using std::atan; return atan(a); }
+Packet patan(const Packet& a) { EIGEN_USING_STD_MATH(atan); return atan(a); }
 
 /** \internal \returns the hyperbolic sine of \a a (coeff-wise) */
 template<typename Packet> EIGEN_DECLARE_FUNCTION_ALLOWING_MULTIPLE_DEFINITIONS
-Packet psinh(const Packet& a) { using std::sinh; return sinh(a); }
+Packet psinh(const Packet& a) { EIGEN_USING_STD_MATH(sinh); return sinh(a); }
 
 /** \internal \returns the hyperbolic cosine of \a a (coeff-wise) */
 template<typename Packet> EIGEN_DECLARE_FUNCTION_ALLOWING_MULTIPLE_DEFINITIONS
-Packet pcosh(const Packet& a) { using std::cosh; return cosh(a); }
+Packet pcosh(const Packet& a) { EIGEN_USING_STD_MATH(cosh); return cosh(a); }
 
 /** \internal \returns the hyperbolic tan of \a a (coeff-wise) */
 template<typename Packet> EIGEN_DECLARE_FUNCTION_ALLOWING_MULTIPLE_DEFINITIONS
-Packet ptanh(const Packet& a) { using std::tanh; return tanh(a); }
+Packet ptanh(const Packet& a) { EIGEN_USING_STD_MATH(tanh); return tanh(a); }
 
 /** \internal \returns the exp of \a a (coeff-wise) */
 template<typename Packet> EIGEN_DECLARE_FUNCTION_ALLOWING_MULTIPLE_DEFINITIONS
-Packet pexp(const Packet& a) { using std::exp; return exp(a); }
+Packet pexp(const Packet& a) { EIGEN_USING_STD_MATH(exp); return exp(a); }
 
 /** \internal \returns the expm1 of \a a (coeff-wise) */
 template<typename Packet> EIGEN_DECLARE_FUNCTION_ALLOWING_MULTIPLE_DEFINITIONS
@@ -504,7 +548,7 @@ Packet pexpm1(const Packet& a) { return numext::expm1(a); }
 
 /** \internal \returns the log of \a a (coeff-wise) */
 template<typename Packet> EIGEN_DECLARE_FUNCTION_ALLOWING_MULTIPLE_DEFINITIONS
-Packet plog(const Packet& a) { using std::log; return log(a); }
+Packet plog(const Packet& a) { EIGEN_USING_STD_MATH(log); return log(a); }
 
 /** \internal \returns the log1p of \a a (coeff-wise) */
 template<typename Packet> EIGEN_DECLARE_FUNCTION_ALLOWING_MULTIPLE_DEFINITIONS
@@ -512,11 +556,11 @@ Packet plog1p(const Packet& a) { return numext::log1p(a); }
 
 /** \internal \returns the log10 of \a a (coeff-wise) */
 template<typename Packet> EIGEN_DECLARE_FUNCTION_ALLOWING_MULTIPLE_DEFINITIONS
-Packet plog10(const Packet& a) { using std::log10; return log10(a); }
+Packet plog10(const Packet& a) { EIGEN_USING_STD_MATH(log10); return log10(a); }
 
 /** \internal \returns the square-root of \a a (coeff-wise) */
 template<typename Packet> EIGEN_DECLARE_FUNCTION_ALLOWING_MULTIPLE_DEFINITIONS
-Packet psqrt(const Packet& a) { using std::sqrt; return sqrt(a); }
+Packet psqrt(const Packet& a) { EIGEN_USING_STD_MATH(sqrt); return sqrt(a); }
 
 /** \internal \returns the reciprocal square-root of \a a (coeff-wise) */
 template<typename Packet> EIGEN_DECLARE_FUNCTION_ALLOWING_MULTIPLE_DEFINITIONS
@@ -531,6 +575,11 @@ Packet pround(const Packet& a) { using numext::round; return round(a); }
 /** \internal \returns the floor of \a a (coeff-wise) */
 template<typename Packet> EIGEN_DECLARE_FUNCTION_ALLOWING_MULTIPLE_DEFINITIONS
 Packet pfloor(const Packet& a) { using numext::floor; return floor(a); }
+
+/** \internal \returns the rounded value of \a a (coeff-wise) with current
+ * rounding mode */
+template<typename Packet> EIGEN_DECLARE_FUNCTION_ALLOWING_MULTIPLE_DEFINITIONS
+Packet print(const Packet& a) { using numext::rint; return rint(a); }
 
 /** \internal \returns the ceil of \a a (coeff-wise) */
 template<typename Packet> EIGEN_DECLARE_FUNCTION_ALLOWING_MULTIPLE_DEFINITIONS
@@ -625,10 +674,10 @@ inline void palign(PacketType& first, const PacketType& second)
 #if !defined(EIGEN_GPUCC)
 
 template<> inline std::complex<float> pmul(const std::complex<float>& a, const std::complex<float>& b)
-{ return std::complex<float>(real(a)*real(b) - imag(a)*imag(b), imag(a)*real(b) + real(a)*imag(b)); }
+{ return std::complex<float>(a.real()*b.real() - a.imag()*b.imag(), a.imag()*b.real() + a.real()*b.imag()); }
 
 template<> inline std::complex<double> pmul(const std::complex<double>& a, const std::complex<double>& b)
-{ return std::complex<double>(real(a)*real(b) - imag(a)*imag(b), imag(a)*real(b) + real(a)*imag(b)); }
+{ return std::complex<double>(a.real()*b.real() - a.imag()*b.imag(), a.imag()*b.real() + a.real()*b.imag()); }
 
 #endif
 

@@ -51,7 +51,9 @@ template<> struct unpacket_traits<Packet8cf> {
   enum {
     size = 8,
     alignment=unpacket_traits<Packet16f>::alignment,
-    vectorizable=true
+    vectorizable=true,
+    masked_load_available=false,
+    masked_store_available=false
   };
   typedef Packet4cf half;
 };
@@ -247,7 +249,9 @@ template<> struct unpacket_traits<Packet4cd> {
   enum {
     size = 4,
     alignment = unpacket_traits<Packet8d>::alignment,
-    vectorizable=true
+    vectorizable=true,
+    masked_load_available=false,
+    masked_store_available=false
   };
   typedef Packet2cd half;
 };

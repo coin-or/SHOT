@@ -15,13 +15,13 @@ namespace Eigen {
 
 namespace internal {
 
-enum PacketSizeType {
-  PacketFull = 0,
-  PacketHalf,
-  PacketQuarter
+enum GEBPPacketSizeType {
+  GEBPPacketFull = 0,
+  GEBPPacketHalf,
+  GEBPPacketQuarter
 };
 
-template<typename _LhsScalar, typename _RhsScalar, bool _ConjLhs=false, bool _ConjRhs=false, int Arch=Architecture::Target, int _PacketSize=PacketFull>
+template<typename _LhsScalar, typename _RhsScalar, bool _ConjLhs=false, bool _ConjRhs=false, int Arch=Architecture::Target, int _PacketSize=GEBPPacketFull>
 class gebp_traits;
 
 
@@ -35,6 +35,10 @@ inline std::ptrdiff_t manage_caching_sizes_helper(std::ptrdiff_t a, std::ptrdiff
 const std::ptrdiff_t defaultL1CacheSize = 32*1024;
 const std::ptrdiff_t defaultL2CacheSize = 256*1024;
 const std::ptrdiff_t defaultL3CacheSize = 2*1024*1024;
+#elif EIGEN_ARCH_PPC
+const std::ptrdiff_t defaultL1CacheSize = 64*1024;
+const std::ptrdiff_t defaultL2CacheSize = 512*1024;
+const std::ptrdiff_t defaultL3CacheSize = 4*1024*1024;
 #else
 const std::ptrdiff_t defaultL1CacheSize = 16*1024;
 const std::ptrdiff_t defaultL2CacheSize = 512*1024;
@@ -375,10 +379,10 @@ template <int N, typename T1, typename T2, typename T3>
 struct packet_conditional { typedef T3 type; };
 
 template <typename T1, typename T2, typename T3>
-struct packet_conditional<PacketFull, T1, T2, T3> { typedef T1 type; };
+struct packet_conditional<GEBPPacketFull, T1, T2, T3> { typedef T1 type; };
 
 template <typename T1, typename T2, typename T3>
-struct packet_conditional<PacketHalf, T1, T2, T3> { typedef T2 type; };
+struct packet_conditional<GEBPPacketHalf, T1, T2, T3> { typedef T2 type; };
 
 #define PACKET_DECL_COND_PREFIX(prefix, name, packet_size)         \
   typedef typename packet_conditional<packet_size,                 \
@@ -729,8 +733,8 @@ template<typename Scalar, typename RealPacket>
 void loadQuadToDoublePacket(const Scalar* b, DoublePacket<RealPacket>& dest,
                             typename enable_if<unpacket_traits<RealPacket>::size<=8>::type* = 0)
 {
-  dest.first  = pset1<RealPacket>(real(*b));
-  dest.second = pset1<RealPacket>(imag(*b));
+  dest.first  = pset1<RealPacket>(numext::real(*b));
+  dest.second = pset1<RealPacket>(numext::imag(*b));
 }
 
 template<typename Scalar, typename RealPacket>
@@ -739,8 +743,8 @@ void loadQuadToDoublePacket(const Scalar* b, DoublePacket<RealPacket>& dest,
 {
   // yes, that's pretty hackish too :(
   typedef typename NumTraits<Scalar>::Real RealScalar;
-  RealScalar r[4] = {real(b[0]), real(b[0]), real(b[1]), real(b[1])};
-  RealScalar i[4] = {imag(b[0]), imag(b[0]), imag(b[1]), imag(b[1])};
+  RealScalar r[4] = {numext::real(b[0]), numext::real(b[0]), numext::real(b[1]), numext::real(b[1])};
+  RealScalar i[4] = {numext::imag(b[0]), numext::imag(b[0]), numext::imag(b[1]), numext::imag(b[1])};
   dest.first  = ploadquad<RealPacket>(r);
   dest.second = ploadquad<RealPacket>(i);
 }
@@ -820,8 +824,8 @@ public:
   template<typename RealPacketType>
   EIGEN_STRONG_INLINE void loadRhs(const RhsScalar* b, DoublePacket<RealPacketType>& dest) const
   {
-    dest.first  = pset1<RealPacketType>(real(*b));
-    dest.second = pset1<RealPacketType>(imag(*b));
+    dest.first  = pset1<RealPacketType>(numext::real(*b));
+    dest.second = pset1<RealPacketType>(numext::imag(*b));
   }
 
   EIGEN_STRONG_INLINE void loadRhs(const RhsScalar* b, RhsPacketx4& dest) const
@@ -1054,8 +1058,8 @@ protected:
 #if EIGEN_ARCH_ARM64 && defined EIGEN_VECTORIZE_NEON
 
 template<>
-struct gebp_traits <float, float, false, false,Architecture::NEON,PacketFull>
- : gebp_traits<float,float,false,false,Architecture::Generic,PacketFull>
+struct gebp_traits <float, float, false, false,Architecture::NEON,GEBPPacketFull>
+ : gebp_traits<float,float,false,false,Architecture::Generic,GEBPPacketFull>
 {
   typedef float RhsPacket;
 
@@ -1203,8 +1207,8 @@ template<typename LhsScalar, typename RhsScalar, typename Index, typename DataMa
 struct gebp_kernel
 {
   typedef gebp_traits<LhsScalar,RhsScalar,ConjugateLhs,ConjugateRhs,Architecture::Target> Traits;
-  typedef gebp_traits<LhsScalar,RhsScalar,ConjugateLhs,ConjugateRhs,Architecture::Target,PacketHalf> HalfTraits;
-  typedef gebp_traits<LhsScalar,RhsScalar,ConjugateLhs,ConjugateRhs,Architecture::Target,PacketQuarter> QuarterTraits;
+  typedef gebp_traits<LhsScalar,RhsScalar,ConjugateLhs,ConjugateRhs,Architecture::Target,GEBPPacketHalf> HalfTraits;
+  typedef gebp_traits<LhsScalar,RhsScalar,ConjugateLhs,ConjugateRhs,Architecture::Target,GEBPPacketQuarter> QuarterTraits;
   
   typedef typename Traits::ResScalar ResScalar;
   typedef typename Traits::LhsPacket LhsPacket;
