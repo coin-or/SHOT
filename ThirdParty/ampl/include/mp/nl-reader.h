@@ -1031,7 +1031,6 @@ class ReaderBase {
 #ifdef FMTOLD_LOCALE
 typedef fmtold::Locale Locale;
 #else
-# warning "Parsing is locale-dependent"
 struct Locale {
   double strtod(const char *&str) const {
     char *end = 0;
