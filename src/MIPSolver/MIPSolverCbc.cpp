@@ -424,22 +424,33 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
     arg = "-strategy=" + std::to_string(env->settings->getSetting<int>("Cbc.Strategy", "Subsolver"));
     argv[4] = strdup(arg.c_str());
 
-    // Cbc runs in deterministic mode if number of threads > 100
-    if(env->settings->getSetting<bool>("Cbc.DeterministicParallelMode", "Subsolver"))
-        arg = "-threads=" + std::to_string(env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual") + 100);
-    else
-        arg = "-threads=" + std::to_string(env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual"));
-
+    arg = "-cutoff=" + std::to_string(this->cutOff);
     argv[5] = strdup(arg.c_str());
 
-    arg = "-cutoff=" + std::to_string(this->cutOff);
+    arg = "-sec=" + std::to_string(this->timeLimit);
     argv[6] = strdup(arg.c_str());
 
-    arg = "-sec=" + std::to_string(this->timeLimit);
-    argv[7] = strdup(arg.c_str());
+    if(cbcModel->haveMultiThreadSupport())
+    {
+        // Cbc runs in deterministic mode if number of threads > 100
+        if(env->settings->getSetting<bool>("Cbc.DeterministicParallelMode", "Subsolver"))
+            arg = "-threads=" + std::to_string(env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual") + 100);
+        else
+            arg = "-threads=" + std::to_string(env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual"));
 
-    argv[8] = strdup("-solve");
-    argv[9] = strdup("-quit");
+        argv[7] = strdup(arg.c_str());
+
+        argv[8] = strdup("-solve");
+        argv[9] = strdup("-quit");
+    }
+    else
+    {
+        arg = "";
+
+        argv[7] = strdup("-solve");
+        argv[8] = strdup("-quit");
+        argv[9] = strdup("");
+    }
 
     try
     {
@@ -721,13 +732,27 @@ bool MIPSolverCbc::repairInfeasibility()
         arg = "-strategy=" + std::to_string(env->settings->getSetting<int>("Cbc.Strategy", "Subsolver"));
         argv[4] = strdup(arg.c_str());
 
-        // Cbc runs in deterministic mode if number of threads > 100
-        if(env->settings->getSetting<bool>("Cbc.DeterministicParallelMode", "Subsolver"))
-            arg = "-threads=" + std::to_string(env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual") + 100);
-        else
-            arg = "-threads=" + std::to_string(env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual"));
+        if(cbcModel->haveMultiThreadSupport())
+        {
+            // Cbc runs in deterministic mode if number of threads > 100
+            if(env->settings->getSetting<bool>("Cbc.DeterministicParallelMode", "Subsolver"))
+                arg = "-threads=" + std::to_string(env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual") + 100);
+            else
+                arg = "-threads=" + std::to_string(env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual"));
 
-        argv[5] = strdup(arg.c_str());
+            argv[7] = strdup(arg.c_str());
+
+            argv[8] = strdup("-solve");
+            argv[9] = strdup("-quit");
+        }
+        else
+        {
+            arg = "";
+
+            argv[7] = strdup("-solve");
+            argv[8] = strdup("-quit");
+            argv[9] = strdup("");
+        }
 
         arg = "-cutoff=" + std::to_string(this->cutOff);
         argv[6] = strdup(arg.c_str());
