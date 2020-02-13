@@ -63,7 +63,7 @@ bool SolveProblem(std::string filename)
         passed = false;
     }
 
-    if(passed = false)
+    if(passed == false)
         return passed;
 
     solver->solveProblem();

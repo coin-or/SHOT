@@ -44,7 +44,7 @@ template<typename T> struct is_valid_index_type
     internal::is_integral<T>::value || __is_enum(T)
 #else
     // without C++11, we use is_convertible to Index instead of is_integral in order to treat enums as Index.
-    internal::is_convertible<T,Index>::value
+    internal::is_convertible<T,Index>::value && !internal::is_same<T,float>::value && !is_same<T,double>::value
 #endif
   };
 };
@@ -110,6 +110,9 @@ class no_assignment_operator
 {
   private:
     no_assignment_operator& operator=(const no_assignment_operator&);
+  protected:
+    EIGEN_DEFAULT_COPY_CONSTRUCTOR(no_assignment_operator)
+    EIGEN_DEFAULT_EMPTY_CONSTRUCTOR_AND_DESTRUCTOR(no_assignment_operator)
 };
 
 /** \internal return the index type with the largest number of bits */
@@ -185,12 +188,38 @@ template<typename T> struct unpacket_traits
   {
     size = 1,
     alignment = 1,
-    vectorizable = false
+    vectorizable = false,
+    masked_load_available=false,
+    masked_store_available=false
   };
 };
 
+// If we vectorize regardless of alignment, pick the full-sized packet if:
+// * The size is large enough;
+// * Picking it will result in less operations than picking the half size.
+//   Consider the case where the size is 12, the full packet is 8, and the
+//   half packet is 4. If we pick the full packet we'd have 1 + 4 operations,
+//   but only 3 operations if we pick the half-packet.
+//
+// Otherwise, pick the packet size we know is going to work with the alignment
+// of the given data. See
+// <https://gitlab.com/libeigen/eigen/merge_requests/46#note_270578113> for more
+// information.
+#if EIGEN_UNALIGNED_VECTORIZE
+template<int Size, typename PacketType,
+         bool Stop =
+           Size==Dynamic ||
+           (Size >= unpacket_traits<PacketType>::size &&
+             // If the packet size is 1 we're always good -- it will always divide things perfectly.
+             // We have this check since otherwise 1/2 would be 0 in the division below.
+             (unpacket_traits<PacketType>::size == 1 ||
+               (Size/unpacket_traits<PacketType>::size + Size%unpacket_traits<PacketType>::size) <=
+               (Size/(unpacket_traits<PacketType>::size/2) + Size%(unpacket_traits<PacketType>::size/2)))) ||
+           is_same<PacketType,typename unpacket_traits<PacketType>::half>::value>
+#else
 template<int Size, typename PacketType,
          bool Stop = Size==Dynamic || (Size%unpacket_traits<PacketType>::size)==0 || is_same<PacketType,typename unpacket_traits<PacketType>::half>::value>
+#endif
 struct find_best_packet_helper;
 
 template< int Size, typename PacketType>

@@ -17,7 +17,7 @@
 #include "palmcc.h"
 
 #include "spdlog/spdlog.h"
-#include "spdlog/sinks/basic_file_sink.h"
+#include "spdlog/sinks/base_sink.h"
 
 #include <memory>
 #include <string>
@@ -108,8 +108,8 @@ public:
 
         // If needed (very likely but not mandatory), the sink formats the message before sending it to its final
         // destination:
-        fmt::memory_buffer formatted;
-        sink::formatter_->format(msg, formatted);
+        spdlog::memory_buf_t formatted;
+        base_sink<std::mutex>::formatter_->format(msg, formatted);
 
         if(msg.level <= spdlog::level::warn)
             gevLogStatPChar(gev, fmt::to_string(formatted).c_str());

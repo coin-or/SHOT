@@ -101,13 +101,23 @@
   #include <intrin.h>
 #endif
 
-#if defined(__SYCL_DEVICE_ONLY__)
+#if defined(EIGEN_USE_SYCL)
   #undef min
   #undef max
   #undef isnan
   #undef isinf
   #undef isfinite
   #include <SYCL/sycl.hpp>
+  #include <map>
+  #include <memory>
+  #include <utility>
+  #include <thread>
+  #ifndef EIGEN_SYCL_LOCAL_THREAD_DIM0
+  #define EIGEN_SYCL_LOCAL_THREAD_DIM0 16
+  #endif
+  #ifndef EIGEN_SYCL_LOCAL_THREAD_DIM1
+  #define EIGEN_SYCL_LOCAL_THREAD_DIM1 16
+  #endif
 #endif
 
 
@@ -150,6 +160,10 @@ using std::ptrdiff_t;
 #include "src/Core/GenericPacketMath.h"
 #include "src/Core/MathFunctionsImpl.h"
 #include "src/Core/arch/Default/ConjHelper.h"
+// Generic half float support
+#include "src/Core/arch/Default/Half.h"
+#include "src/Core/arch/Default/TypeCasting.h"
+#include "src/Core/arch/Default/GenericPacketMathFunctionsFwd.h"
 
 #if defined EIGEN_VECTORIZE_AVX512
   #include "src/Core/arch/SSE/PacketMath.h"
@@ -159,6 +173,7 @@ using std::ptrdiff_t;
   #include "src/Core/arch/AVX/TypeCasting.h"
   #include "src/Core/arch/AVX/Complex.h"
   #include "src/Core/arch/AVX512/PacketMath.h"
+  #include "src/Core/arch/AVX512/TypeCasting.h"
   #include "src/Core/arch/AVX512/Complex.h"
   #include "src/Core/arch/SSE/MathFunctions.h"
   #include "src/Core/arch/AVX/MathFunctions.h"
@@ -197,23 +212,25 @@ using std::ptrdiff_t;
   #include "src/Core/arch/MSA/Complex.h"
 #endif
 
-// Half float support
-#include "src/Core/arch/GPU/Half.h"
-#include "src/Core/arch/GPU/PacketMathHalf.h"
-#include "src/Core/arch/GPU/TypeCasting.h"
-
 #if defined EIGEN_VECTORIZE_GPU
   #include "src/Core/arch/GPU/PacketMath.h"
   #include "src/Core/arch/GPU/MathFunctions.h"
+  #include "src/Core/arch/GPU/TypeCasting.h"
 #endif
 
-#if defined EIGEN_VECTORIZE_SYCL
+#if defined(EIGEN_USE_SYCL)
+  #include "src/Core/arch/SYCL/SyclMemoryModel.h"
   #include "src/Core/arch/SYCL/InteropHeaders.h"
+#if !defined(EIGEN_DONT_VECTORIZE_SYCL)
   #include "src/Core/arch/SYCL/PacketMath.h"
   #include "src/Core/arch/SYCL/MathFunctions.h"
   #include "src/Core/arch/SYCL/TypeCasting.h"
 #endif
+#endif
+
 #include "src/Core/arch/Default/Settings.h"
+// This file provides generic implementations valid for scalar as well
+#include "src/Core/arch/Default/GenericPacketMathFunctions.h"
 
 #include "src/Core/functors/TernaryFunctors.h"
 #include "src/Core/functors/BinaryFunctors.h"

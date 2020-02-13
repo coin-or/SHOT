@@ -1,7 +1,7 @@
 # ifndef CPPAD_LOCAL_ATOMIC_INDEX_HPP
 # define CPPAD_LOCAL_ATOMIC_INDEX_HPP
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-19 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-20 Bradley M. Bell
 
 CppAD is distributed under the terms of the
              Eclipse Public License Version 2.0.
@@ -25,7 +25,7 @@ $icode%index_out% = local::atomic_index<%Base%>(
 )%$$
 
 $head Prototype$$
-$srcfile%include/cppad/local/atomic_index.hpp%
+$srcthisfile%
     0%// BEGIN_ATOMIC_INDEX%// END_PROTOTYPE%1
 %$$
 
@@ -56,8 +56,8 @@ The value $icode index_in$$ should only be zero
 during a call to an atomic function constructor.
 In this case, a copy of the input value of
 $icode type$$, $codei%*%name%$$, and $icode ptr$$ are stored.
-The value $code index_out$$
-is the $code index_in$$ value corresponding to these input values.
+The value $icode index_out$$
+is the $icode index_in$$ value corresponding to these input values.
 
 $subhead non-zero$$
 If $icode index_in$$ is non-zero,
@@ -98,6 +98,7 @@ Otherwise, $index_out$$ is zero.
 $end
 */
 # include <vector>
+# include <cppad/utility/thread_alloc.hpp>
 
 namespace CppAD { namespace local { // BEGIN_CPPAD_LOCAL_NAMESPACE
 

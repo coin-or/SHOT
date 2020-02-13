@@ -1,7 +1,7 @@
 # ifndef CPPAD_LOCAL_SWEEP_FOR_HES_HPP
 # define CPPAD_LOCAL_SWEEP_FOR_HES_HPP
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-19 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-20 Bradley M. Bell
 
 CppAD is distributed under the terms of the
              Eclipse Public License Version 2.0.
@@ -41,7 +41,7 @@ $codei%local::sweep::for_hes(
 )%$$
 
 $head Prototype$$
-$srcfile%include/cppad/local/sweep/for_hes.hpp%
+$srcthisfile%
     0%// BEGIN PROTOTYPE%// END PROTOTYPE%1
 %$$
 
@@ -170,8 +170,8 @@ void for_hes(
     // vecad_sparsity contains a sparsity pattern for each VecAD object.
     // vecad_ind maps a VecAD index (beginning of the VecAD object)
     // to the index for the corresponding set in vecad_sparsity.
-    size_t num_vecad_ind   = play->num_vec_ind_rec();
-    size_t num_vecad_vec   = play->num_vecad_vec_rec();
+    size_t num_vecad_ind   = play->num_var_vecad_ind_rec();
+    size_t num_vecad_vec   = play->num_var_vecad_rec();
     SetVector vecad_sparse;
     pod_vector<size_t> vecad_ind;
     pod_vector<bool>   vecad_jac;
@@ -194,7 +194,7 @@ void for_hes(
             // initialize this vector's reverse jacobian value
             vecad_jac[i] = false;
         }
-        CPPAD_ASSERT_UNKNOWN( j == play->num_vec_ind_rec() );
+        CPPAD_ASSERT_UNKNOWN( j == play->num_var_vecad_ind_rec() );
     }
     // ------------------------------------------------------------------------
     // work space used by AFunOp.
@@ -393,7 +393,7 @@ void for_hes(
             // -------------------------------------------------
 
             // -------------------------------------------------
-            // logical comparision operators
+            // logical comparison operators
             case EqppOp:
             case EqpvOp:
             case EqvvOp:

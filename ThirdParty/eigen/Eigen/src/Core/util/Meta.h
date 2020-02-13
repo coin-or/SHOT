@@ -63,14 +63,20 @@ typedef std::size_t UIntPtr;
 struct true_type {  enum { value = 1 }; };
 struct false_type { enum { value = 0 }; };
 
+template<bool Condition>
+struct bool_constant;
+
+template<>
+struct bool_constant<true> : true_type {};
+
+template<>
+struct bool_constant<false> : false_type {};
+
 template<bool Condition, typename Then, typename Else>
 struct conditional { typedef Then type; };
 
 template<typename Then, typename Else>
 struct conditional <false, Then, Else> { typedef Else type; };
-
-template<typename T, typename U> struct is_same { enum { value = 0 }; };
-template<typename T> struct is_same<T,T> { enum { value = 1 }; };
 
 template<typename T> struct remove_reference { typedef T type; };
 template<typename T> struct remove_reference<T&> { typedef T type; };
@@ -105,6 +111,12 @@ template<> struct is_arithmetic<signed int>    { enum { value = true }; };
 template<> struct is_arithmetic<unsigned int>  { enum { value = true }; };
 template<> struct is_arithmetic<signed long>   { enum { value = true }; };
 template<> struct is_arithmetic<unsigned long> { enum { value = true }; };
+
+template<typename T, typename U> struct is_same { enum { value = 0 }; };
+template<typename T> struct is_same<T,T> { enum { value = 1 }; };
+
+template< class T >
+struct is_void : is_same<void, typename remove_const<T>::type> {};
 
 #if EIGEN_HAS_CXX11
 template<> struct is_arithmetic<signed long long>   { enum { value = true }; };
@@ -162,6 +174,11 @@ template<typename T> struct add_const_on_value_type<T*>        { typedef T const
 template<typename T> struct add_const_on_value_type<T* const>  { typedef T const* const type; };
 template<typename T> struct add_const_on_value_type<T const* const>  { typedef T const* const type; };
 
+#if EIGEN_HAS_CXX11
+
+using std::is_convertible;
+
+#else
 
 template<typename From, typename To>
 struct is_convertible_impl
@@ -198,6 +215,14 @@ struct is_convertible
 {
   enum { value = is_convertible_impl<From,To>::value };
 };
+
+template<typename T>
+struct is_convertible<T,T&> { enum { value = false }; };
+
+template<typename T>
+struct is_convertible<const T,const T&> { enum { value = true }; };
+
+#endif
 
 /** \internal Allows to enable/disable an overload
   * according to a compile time condition.
@@ -587,6 +612,16 @@ template<typename T, typename U> struct scalar_product_traits
 // typedef typename scalar_product_traits<typename remove_all<ArgType0>::type, typename remove_all<ArgType1>::type>::ReturnType type;
 // };
 
+/** \internal Obtains a POD type suitable to use as storage for an object of a size
+  * of at most Len bytes, aligned as specified by \c Align.
+  */
+template<unsigned Len, unsigned Align>
+struct aligned_storage {
+  struct type {
+    EIGEN_ALIGN_TO_BOUNDARY(Align) unsigned char data[Len];
+  };
+};
+
 } // end namespace internal
 
 namespace numext {
@@ -653,6 +688,10 @@ inline unsigned int as_uint(float x)
 #include <cstdint>
 namespace Eigen {
 namespace numext {
+typedef std::uint8_t  uint8_t;
+typedef std::int8_t   int8_t;
+typedef std::uint16_t uint16_t;
+typedef std::int16_t  int16_t;
 typedef std::uint32_t uint32_t;
 typedef std::int32_t  int32_t;
 typedef std::uint64_t uint64_t;
@@ -665,6 +704,10 @@ typedef std::int64_t  int64_t;
 #include <stdint.h>
 namespace Eigen {
 namespace numext {
+typedef ::uint8_t  uint8_t;
+typedef ::int8_t   int8_t;
+typedef ::uint16_t uint16_t;
+typedef ::int16_t  int16_t;
 typedef ::uint32_t uint32_t;
 typedef ::int32_t  int32_t;
 typedef ::uint64_t uint64_t;

@@ -83,15 +83,6 @@ static Packet4i p4i_COUNTDOWN = { 0, 1, 2, 3 };
 static Packet16uc p16uc_REVERSE32 = { 12,13,14,15, 8,9,10,11, 4,5,6,7, 0,1,2,3 };
 static Packet16uc p16uc_DUPLICATE32_HI = { 0,1,2,3, 0,1,2,3, 4,5,6,7, 4,5,6,7 };
 
-// Mask alignment
-#ifdef __PPC64__
-#define _EIGEN_MASK_ALIGNMENT	0xfffffffffffffff0
-#else
-#define _EIGEN_MASK_ALIGNMENT	0xfffffff0
-#endif
-
-#define _EIGEN_ALIGNED_PTR(x)	((std::ptrdiff_t)(x) & _EIGEN_MASK_ALIGNMENT)
-
 // Handle endianness properly while loading constants
 // Define global static constants:
 #ifdef _BIG_ENDIAN
@@ -129,27 +120,27 @@ static Packet16uc p16uc_COMPLEX32_REV2 = vec_sld(p16uc_PSET64_HI, p16uc_PSET64_L
   #define EIGEN_PPC_PREFETCH(ADDR) asm( "   dcbt [%[addr]]\n" :: [addr] "r" (ADDR) : "cc" );
 #endif
 
-template<> struct packet_traits<float>  : default_packet_traits
-{
+template <>
+struct packet_traits<float> : default_packet_traits {
   typedef Packet4f type;
   typedef Packet4f half;
   enum {
     Vectorizable = 1,
     AlignedOnScalar = 1,
-    size=4,
+    size = 4,
     HasHalfPacket = 1,
 
-    HasAdd  = 1,
-    HasSub  = 1,
-    HasMul  = 1,
-    HasDiv  = 1,
-    HasMin  = 1,
-    HasMax  = 1,
-    HasAbs  = 1,
-    HasSin  = EIGEN_FAST_MATH,
-    HasCos  = EIGEN_FAST_MATH,
-    HasLog  = 1,
-    HasExp  = 1,
+    HasAdd = 1,
+    HasSub = 1,
+    HasMul = 1,
+    HasDiv = 1,
+    HasMin = 1,
+    HasMax = 1,
+    HasAbs = 1,
+    HasSin = EIGEN_FAST_MATH,
+    HasCos = EIGEN_FAST_MATH,
+    HasLog = 1,
+    HasExp = 1,
 #ifdef __VSX__
     HasSqrt = 1,
 #if !EIGEN_COMP_CLANG
@@ -160,6 +151,8 @@ template<> struct packet_traits<float>  : default_packet_traits
 #else
     HasSqrt = 0,
     HasRsqrt = 0,
+    HasTanh = EIGEN_FAST_MATH,
+    HasErf = EIGEN_FAST_MATH,
 #endif
     HasRound = 1,
     HasFloor = 1,
@@ -168,8 +161,8 @@ template<> struct packet_traits<float>  : default_packet_traits
     HasBlend = 1
   };
 };
-template<> struct packet_traits<int>    : default_packet_traits
-{
+template <>
+struct packet_traits<int> : default_packet_traits {
   typedef Packet4i type;
   typedef Packet4i half;
   enum {
@@ -186,19 +179,18 @@ template<> struct packet_traits<int>    : default_packet_traits
   };
 };
 
-
 template<> struct unpacket_traits<Packet4f>
 {
   typedef float     type;
   typedef Packet4f  half;
   typedef Packet4i  integer_packet;
-  enum {size=4, alignment=Aligned16, vectorizable=true};
+  enum {size=4, alignment=Aligned16, vectorizable=true, masked_load_available=false, masked_store_available=false};
 };
 template<> struct unpacket_traits<Packet4i>
 {
   typedef int       type;
   typedef Packet4i  half;
-  enum {size=4, alignment=Aligned16, vectorizable=false};
+  enum {size=4, alignment=Aligned16, vectorizable=true, masked_load_available=false, masked_store_available=false};
 };
 
 inline std::ostream & operator <<(std::ostream & s, const Packet16uc & v)
@@ -249,42 +241,38 @@ inline std::ostream & operator <<(std::ostream & s, const Packet4ui & v)
 // Need to define them first or we get specialization after instantiation errors
 template<> EIGEN_STRONG_INLINE Packet4f pload<Packet4f>(const float* from)
 {
+  // some versions of GCC throw "unused-but-set-parameter".
+  // ignoring these warnings for now.
+  EIGEN_UNUSED_VARIABLE(from);
   EIGEN_DEBUG_ALIGNED_LOAD
-#ifdef __VSX__
-  return vec_vsx_ld(0, from);
-#else
   return vec_ld(0, from);
-#endif
 }
 
 template<> EIGEN_STRONG_INLINE Packet4i pload<Packet4i>(const int*     from)
 {
+  // some versions of GCC throw "unused-but-set-parameter".
+  // ignoring these warnings for now.
+  EIGEN_UNUSED_VARIABLE(from);
   EIGEN_DEBUG_ALIGNED_LOAD
-#ifdef __VSX__
-  return vec_vsx_ld(0, from);
-#else
   return vec_ld(0, from);
-#endif
 }
 
 template<> EIGEN_STRONG_INLINE void pstore<float>(float*   to, const Packet4f& from)
 {
+  // some versions of GCC throw "unused-but-set-parameter" (float *to).
+  // ignoring these warnings for now.
+  EIGEN_UNUSED_VARIABLE(to);
   EIGEN_DEBUG_ALIGNED_STORE
-#ifdef __VSX__
-  vec_vsx_st(from, 0, to);
-#else
   vec_st(from, 0, to);
-#endif
 }
 
 template<> EIGEN_STRONG_INLINE void pstore<int>(int*       to, const Packet4i& from)
 {
+  // some versions of GCC throw "unused-but-set-parameter" (float *to).
+  // ignoring these warnings for now.
+  EIGEN_UNUSED_VARIABLE(to);
   EIGEN_DEBUG_ALIGNED_STORE
-#ifdef __VSX__
-  vec_vsx_st(from, 0, to);
-#else
   vec_st(from, 0, to);
-#endif
 }
 
 template<> EIGEN_STRONG_INLINE Packet4f pset1<Packet4f>(const float&  from) {
@@ -452,7 +440,7 @@ template<> EIGEN_STRONG_INLINE Packet4f pandnot<Packet4f>(const Packet4f& a, con
 template<> EIGEN_STRONG_INLINE Packet4i pandnot<Packet4i>(const Packet4i& a, const Packet4i& b) { return vec_and(a, vec_nor(b, b)); }
 
 template<> EIGEN_STRONG_INLINE Packet4f pselect(const Packet4f& mask, const Packet4f& a, const Packet4f& b) {
-  return vec_sel(b, a, mask);
+  return vec_sel(b, a, reinterpret_cast<Packet4ui>(mask));
 }
 
 template<> EIGEN_STRONG_INLINE Packet4f pround<Packet4f>(const Packet4f& a) { return vec_round(a); }
@@ -487,12 +475,12 @@ template<> EIGEN_STRONG_INLINE Packet4i ploadu<Packet4i>(const int* from)
 template<> EIGEN_STRONG_INLINE Packet4i ploadu<Packet4i>(const int* from)
 {
   EIGEN_DEBUG_UNALIGNED_LOAD
-  return (Packet4i) vec_vsx_ld((long)from & 15, (const int*) _EIGEN_ALIGNED_PTR(from));
+  return vec_vsx_ld(0, from);
 }
 template<> EIGEN_STRONG_INLINE Packet4f ploadu<Packet4f>(const float* from)
 {
   EIGEN_DEBUG_UNALIGNED_LOAD
-  return (Packet4f) vec_vsx_ld((long)from & 15, (const float*) _EIGEN_ALIGNED_PTR(from));
+  return vec_vsx_ld(0, from);
 }
 #endif
 
@@ -552,13 +540,13 @@ template<> EIGEN_STRONG_INLINE void pstoreu<int>(int*      to, const Packet4i& f
 // We also need to redefine little endian loading of Packet4i/Packet4f using VSX
 template<> EIGEN_STRONG_INLINE void pstoreu<int>(int*       to, const Packet4i& from)
 {
-  EIGEN_DEBUG_ALIGNED_STORE
-  vec_vsx_st(from, (long)to & 15, (int*) _EIGEN_ALIGNED_PTR(to));
+  EIGEN_DEBUG_UNALIGNED_STORE
+  vec_vsx_st(from, 0, to);
 }
 template<> EIGEN_STRONG_INLINE void pstoreu<float>(float*   to, const Packet4f& from)
 {
-  EIGEN_DEBUG_ALIGNED_STORE
-  vec_vsx_st(from, (long)to & 15, (float*) _EIGEN_ALIGNED_PTR(to));
+  EIGEN_DEBUG_UNALIGNED_STORE
+  vec_vsx_st(from, 0, to);
 }
 #endif
 
@@ -921,7 +909,7 @@ template<> struct packet_traits<double> : default_packet_traits
   };
 };
 
-template<> struct unpacket_traits<Packet2d> { typedef double type; enum {size=2, alignment=Aligned16, vectorizable=true}; typedef Packet2d half; };
+template<> struct unpacket_traits<Packet2d> { typedef double type; enum {size=2, alignment=Aligned16, vectorizable=true, masked_load_available=false, masked_store_available=false}; typedef Packet2d half; };
 
 inline std::ostream & operator <<(std::ostream & s, const Packet2l & v)
 {
@@ -949,21 +937,13 @@ inline std::ostream & operator <<(std::ostream & s, const Packet2d & v)
 template<> EIGEN_STRONG_INLINE Packet2d pload<Packet2d>(const double* from)
 {
   EIGEN_DEBUG_ALIGNED_LOAD
-#ifdef __VSX__
-  return vec_vsx_ld(0, from);
-#else
-  return vec_ld(0, from);
-#endif
+  return vec_xl(0, const_cast<double *>(from)); // cast needed by Clang
 }
 
 template<> EIGEN_STRONG_INLINE void pstore<double>(double*   to, const Packet2d& from)
 {
   EIGEN_DEBUG_ALIGNED_STORE
-#ifdef __VSX__
-  vec_vsx_st(from, 0, to);
-#else
-  vec_st(from, 0, to);
-#endif
+  vec_xst(from, 0, to);
 }
 
 template<> EIGEN_STRONG_INLINE Packet2d pset1<Packet2d>(const double&  from) {
@@ -1030,6 +1010,14 @@ template<> EIGEN_STRONG_INLINE Packet2d pmax<Packet2d>(const Packet2d& a, const 
   return ret;
 }
 
+template<> EIGEN_STRONG_INLINE Packet2d pcmp_le(const Packet2d& a, const Packet2d& b) { return reinterpret_cast<Packet2d>(vec_cmple(a,b)); }
+template<> EIGEN_STRONG_INLINE Packet2d pcmp_lt(const Packet2d& a, const Packet2d& b) { return reinterpret_cast<Packet2d>(vec_cmplt(a,b)); }
+template<> EIGEN_STRONG_INLINE Packet2d pcmp_eq(const Packet2d& a, const Packet2d& b) { return reinterpret_cast<Packet2d>(vec_cmpeq(a,b)); }
+template<> EIGEN_STRONG_INLINE Packet2d pcmp_lt_or_nan(const Packet2d& a, const Packet2d& b) {
+  Packet2d c = reinterpret_cast<Packet2d>(vec_cmpge(a,b));
+  return vec_nor(c,c);
+}
+
 template<> EIGEN_STRONG_INLINE Packet2d pand<Packet2d>(const Packet2d& a, const Packet2d& b) { return vec_and(a, b); }
 
 template<> EIGEN_STRONG_INLINE Packet2d por<Packet2d>(const Packet2d& a, const Packet2d& b) { return vec_or(a, b); }
@@ -1044,8 +1032,8 @@ template<> EIGEN_STRONG_INLINE Packet2d pfloor<Packet2d>(const Packet2d& a) { re
 
 template<> EIGEN_STRONG_INLINE Packet2d ploadu<Packet2d>(const double* from)
 {
-  EIGEN_DEBUG_ALIGNED_LOAD
-  return (Packet2d) vec_vsx_ld((long)from & 15, (const double*) _EIGEN_ALIGNED_PTR(from));
+  EIGEN_DEBUG_UNALIGNED_LOAD
+  return vec_vsx_ld(0, from);
 }
 
 template<> EIGEN_STRONG_INLINE Packet2d ploaddup<Packet2d>(const double*   from)
@@ -1058,8 +1046,8 @@ template<> EIGEN_STRONG_INLINE Packet2d ploaddup<Packet2d>(const double*   from)
 
 template<> EIGEN_STRONG_INLINE void pstoreu<double>(double*  to, const Packet2d& from)
 {
-  EIGEN_DEBUG_ALIGNED_STORE
-  vec_vsx_st((Packet4f)from, (long)to & 15, (float*) _EIGEN_ALIGNED_PTR(to));
+  EIGEN_DEBUG_UNALIGNED_STORE
+  vec_vsx_st(from, 0, to);
 }
 
 template<> EIGEN_STRONG_INLINE void prefetch<double>(const double* addr) { EIGEN_PPC_PREFETCH(addr); }

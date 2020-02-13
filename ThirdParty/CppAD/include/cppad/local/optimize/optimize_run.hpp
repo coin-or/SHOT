@@ -1,7 +1,7 @@
 # ifndef CPPAD_LOCAL_OPTIMIZE_OPTIMIZE_RUN_HPP
 # define CPPAD_LOCAL_OPTIMIZE_OPTIMIZE_RUN_HPP
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-19 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-20 Bradley M. Bell
 
 CppAD is distributed under the terms of the
              Eclipse Public License Version 2.0.
@@ -48,7 +48,7 @@ $codei%local::optimize::optimize_run(
 )%$$
 
 $head Prototype$$
-$srcfile%include/cppad/local/optimize/optimize_run.hpp%
+$srcthisfile%
     0%// BEGIN_PROTOTYPE%// END_PROTOTYPE%1
 %$$
 
@@ -165,10 +165,10 @@ void optimize_run(
     const size_t num_par = play->num_par_rec();
 
     // number of  VecAD indices
-    size_t num_vecad_ind   = play->num_vec_ind_rec();
+    size_t num_vecad_ind   = play->num_var_vecad_ind_rec();
 
     // number of VecAD vectors
-    size_t num_vecad_vec   = play->num_vecad_vec_rec();
+    size_t num_vecad_vec   = play->num_var_vecad_rec();
 
     // number of independent dynamic parameters
     size_t num_dynamic_ind = play->num_dynamic_ind();
@@ -342,7 +342,7 @@ void optimize_run(
         // number of dynamic parameter results for this operator
         size_t n_dyn   = 1;
         //
-        if( op == call_dyn )
+        if( op == atom_dyn )
         {   size_t atom_index = size_t( dyn_par_arg[i_arg + 0]  );
             size_t atom_n     = size_t( dyn_par_arg[i_arg + 1]  );
             size_t atom_m     = size_t( dyn_par_arg[i_arg + 2]  );
@@ -393,7 +393,7 @@ void optimize_run(
                     {   Base par = play->GetPar( size_t(res_i) );
                         if( first_dynamic_result )
                         {   first_dynamic_result = false;
-                            new_par[res_i] = rec->put_dyn_par(par, call_dyn);
+                            new_par[res_i] = rec->put_dyn_par(par, atom_dyn);
                         }
                         else
                             new_par[res_i] = rec->put_dyn_par(par, result_dyn);
@@ -450,6 +450,7 @@ void optimize_run(
                 }
                 else if( n_arg == 1 )
                 {   // cases with one argument
+                    CPPAD_ASSERT_UNKNOWN( num_non_par_arg_dyn(op) == 0 );
                     CPPAD_ASSERT_UNKNOWN( num_dynamic_ind <= i_par );
                     new_par[i_par] = rec->put_dyn_par( par, op,
                         new_par[ dyn_par_arg[i_arg + 0] ]
@@ -458,6 +459,7 @@ void optimize_run(
                 else if( n_arg == 2 )
                 {   // cases with two arguments
                     CPPAD_ASSERT_UNKNOWN( num_dynamic_ind <= i_par );
+                    CPPAD_ASSERT_UNKNOWN( num_non_par_arg_dyn(op) == 0 );
                     new_par[i_par] = rec->put_dyn_par( par, op,
                         new_par[ dyn_par_arg[i_arg + 0] ],
                         new_par[ dyn_par_arg[i_arg + 1] ]
@@ -494,9 +496,9 @@ void optimize_run(
             if( vecad_used[i] )
             {   // Put this VecAD vector in new recording
                 CPPAD_ASSERT_UNKNOWN(length < num_vecad_ind);
-                new_vecad_ind[j] = rec->PutVecInd( addr_t(length) );
+                new_vecad_ind[j] = rec->put_var_vecad_ind( addr_t(length) );
                 for(size_t k = 1; k <= length; k++) new_vecad_ind[j+k] =
-                    rec->PutVecInd(
+                    rec->put_var_vecad_ind(
                         new_par[ play->GetVecInd(j+k) ]
                 );
             }
@@ -998,11 +1000,11 @@ void optimize_run(
             CPPAD_ASSERT_UNKNOWN( previous == 0 );
             CPPAD_ASSERT_NARG_NRES(op, 3, 1);
             new_arg[0] = new_vecad_ind[ arg[0] ];
-            new_arg[1] = arg[1];
+            new_arg[1] = new_par[ arg[1] ];
             CPPAD_ASSERT_UNKNOWN(
-                size_t( std::numeric_limits<addr_t>::max() ) >= rec->num_load_op_rec()
+                size_t( std::numeric_limits<addr_t>::max() ) >= rec->num_var_load_rec()
             );
-            new_arg[2] = addr_t( rec->num_load_op_rec() );
+            new_arg[2] = addr_t( rec->num_var_load_rec() );
             CPPAD_ASSERT_UNKNOWN( size_t(new_arg[0]) < num_vecad_ind );
             rec->PutArg(
                 new_arg[0],
@@ -1020,9 +1022,9 @@ void optimize_run(
             new_arg[0] = new_vecad_ind[ arg[0] ];
             new_arg[1] = new_var[ random_itr.var2op(size_t(arg[1])) ];
             CPPAD_ASSERT_UNKNOWN(
-                size_t( std::numeric_limits<addr_t>::max() ) >= rec->num_load_op_rec()
+                size_t( std::numeric_limits<addr_t>::max() ) >= rec->num_var_load_rec()
             );
-            new_arg[2] = addr_t( rec->num_load_op_rec() );
+            new_arg[2] = addr_t( rec->num_var_load_rec() );
             CPPAD_ASSERT_UNKNOWN( size_t(new_arg[0]) < num_vecad_ind );
             CPPAD_ASSERT_UNKNOWN( size_t(new_arg[1]) < num_var );
             rec->PutArg(

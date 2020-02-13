@@ -1,7 +1,7 @@
 # ifndef CPPAD_LOCAL_RECORD_PUT_DYN_ATOMIC_HPP
 # define CPPAD_LOCAL_RECORD_PUT_DYN_ATOMIC_HPP
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-19 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-20 Bradley M. Bell
 
 CppAD is distributed under the terms of the
              Eclipse Public License Version 2.0.
@@ -31,7 +31,7 @@ $icode%rec%.put_dyn_atomic(
 )%$$
 
 $head Prototype$$
-$srcfile%include/cppad/local/record/put_dyn_atomic.hpp%
+$srcthisfile%
     0%// BEGIN_PUT_DYN_ATOMIC%// END_PROTOTYPE%1
 %$$
 
@@ -143,7 +143,7 @@ void recorder<Base>::put_dyn_atomic(
             // one operator for each dynamic parameter result
             // so number of operators is equal number of dynamic parameters
             if( first_dynamic_result )
-                arg = put_dyn_par(ay[i].value_, call_dyn );    // call_dyn
+                arg = put_dyn_par(ay[i].value_, atom_dyn );    // atom_dyn
             else
                 arg = put_dyn_par(ay[i].value_, result_dyn );  // result_dyn
             ay[i].ad_type_ = dynamic_enum;

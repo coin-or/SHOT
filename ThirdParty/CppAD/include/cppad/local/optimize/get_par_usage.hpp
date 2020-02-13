@@ -1,7 +1,7 @@
 # ifndef CPPAD_LOCAL_OPTIMIZE_GET_PAR_USAGE_HPP
 # define CPPAD_LOCAL_OPTIMIZE_GET_PAR_USAGE_HPP
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-19 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-20 Bradley M. Bell
 
 CppAD is distributed under the terms of the
              Eclipse Public License Version 2.0.
@@ -37,7 +37,7 @@ $$
 $section Use Reverse Activity Analysis to Get Usage for Each Parameter$$
 
 $head Prototype$$
-$srcfile%include/cppad/local/optimize/get_par_usage.hpp%
+$srcthisfile%
     0%// BEGIN_GET_PAR_USAGE%// END_PROTOTYPE%1
 %$$
 
@@ -63,7 +63,7 @@ the i-th operator in the operation sequence.
 
 $head vecad_used$$
 This argument has size equal to the number of VecAD vectors
-in the operations sequences; i.e., play->num_vecad_vec_rec().
+in the operations sequences; i.e., play->num_var_vecad_rec().
 The VecAD vectors are indexed in the order that their indices appear
 in the one large play->GetVecInd that holds all the VecAD vectors.
 
@@ -106,7 +106,7 @@ void get_par_usage(
     size_t num_dynamic_ind = play->num_dynamic_ind();
     //
     // number of VecAD vectors
-    size_t num_vecad_vec = play->num_vecad_vec_rec();
+    size_t num_vecad_vec = play->num_var_vecad_rec();
     //
     // dynamic parameter information
     const pod_vector<bool>&        dyn_par_is( play->dyn_par_is() );
@@ -143,7 +143,7 @@ void get_par_usage(
         }
         start_this_vector += length + 1;
     }
-    CPPAD_ASSERT_UNKNOWN( start_this_vector == play->num_vec_ind_rec() );
+    CPPAD_ASSERT_UNKNOWN( start_this_vector == play->num_var_vecad_ind_rec() );
     //
     // -----------------------------------------------------------------------
     // forward pass to mark which parameters are used by necessary operators
@@ -227,7 +227,6 @@ void get_par_usage(
             case ExpOp:
             case Expm1Op:
             case InvOp:
-            case LdpOp:
             case LdvOp:
             case LevvOp:
             case LogOp:
@@ -240,7 +239,6 @@ void get_par_usage(
             case SinOp:
             case SinhOp:
             case SqrtOp:
-            case StpvOp:
             case StvvOp:
             case SubvvOp:
             case TanOp:
@@ -277,16 +275,27 @@ void get_par_usage(
             // cases where only second argument is a parameter
             case DivvpOp:
             case LevpOp:
+            case LdpOp:
             case LtvpOp:
             case PowvpOp:
+            case StpvOp:
             case ZmulvpOp:
             CPPAD_ASSERT_UNKNOWN( 2 <= NumArg(op) )
             par_usage[arg[1]] = true;
             break;
 
-            // cases where only third argument is a parameter
+            // cases where second and thrid arguments are parameters
+            case ErfOp:
+            case ErfcOp:
             case StppOp:
+            CPPAD_ASSERT_UNKNOWN( 3 <= NumArg(op) )
+            par_usage[arg[1]] = true;
+            par_usage[arg[2]] = true;
+            break;
+
+            // cases where only third argument is a parameter
             case StvpOp:
+            CPPAD_ASSERT_UNKNOWN( 3 <= NumArg(op) )
             par_usage[arg[2]] = true;
             break;
 
@@ -301,14 +310,6 @@ void get_par_usage(
                 par_usage[arg[4]] = true;
             if( (arg[1] & 8) == 0 )
                 par_usage[arg[5]] = true;
-            break;
-
-            // erf function is special
-            case ErfOp:
-            case ErfcOp:
-            CPPAD_ASSERT_UNKNOWN( 3 == NumArg(op) )
-            par_usage[arg[1]] = true;
-            par_usage[arg[2]] = true;
             break;
 
             // print function
@@ -422,9 +423,9 @@ void get_par_usage(
         while( op == result_dyn )
         {   --i_dyn;
             op = op_code_dyn( dyn_par_op[i_dyn] );
-            CPPAD_ASSERT_UNKNOWN( op == result_dyn || op == call_dyn );
+            CPPAD_ASSERT_UNKNOWN( op == result_dyn || op == atom_dyn );
         }
-        if( op == call_dyn )
+        if( op == atom_dyn )
         {   // number of arguments for this operator
             size_t n_arg = size_t( dyn_par_arg[i_arg - 1] );
             //
@@ -483,21 +484,15 @@ void get_par_usage(
             size_t n_arg = num_arg_dyn(op);
             //
             // index of first argument for this operator
+            CPPAD_ASSERT_UNKNOWN( op != atom_dyn );
             i_arg -= n_arg;
             //
             // if this dynamic parameter is needed
             if( par_usage[i_par] )
-            {   // neeed dynamic parameters that are used to generate this one
-                if( op == cond_exp_dyn )
-                {   // special case
-                    CPPAD_ASSERT_UNKNOWN( n_arg == 5 );
-                    for(size_t i = 1; i < 5; ++i)
-                        par_usage[ dyn_par_arg[i_arg + i] ] = true;
-                }
-                else
-                {   for(size_t i = 0; i < n_arg; ++i)
+            {   // need dynamic parameters that are used to generate this one
+                size_t offset = num_non_par_arg_dyn(op);
+                for(size_t i = offset; i < n_arg; ++i)
                     par_usage[ dyn_par_arg[i_arg + i] ] = true;
-                }
             }
         }
     }
