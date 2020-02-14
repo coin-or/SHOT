@@ -146,6 +146,16 @@ public:
         return (value->second);
     }
 
+    std::string getSettingDescription(std::string name, std::string category)
+    {
+       return settingDescriptions.at(PairString(category, name));
+    }
+
+    PairDouble getSettingBounds(std::string name, std::string category)
+    {
+       return settingBounds.at(PairString(category, name));
+    }
+
     void createSetting(
         std::string name, std::string category, std::string value, std::string description, bool isPrivate = false);
 
@@ -166,9 +176,14 @@ public:
         settingGroupDescriptions.emplace(make_pair(mainLevel, subLevel), make_pair(header, description));
     }
 
+    PairString getCategoryDescription(std::string category)
+    {
+       return settingGroupDescriptions.at(PairString(category, ""));
+    }
+
     std::string getEnumDescriptionList(std::string name, std::string category);
     std::string getEnumDescriptionListMarkup(std::string name, std::string category);
-    std::string getEnumDescription(std::string name, std::string category);
+    std::vector<std::pair<int, std::string> > getEnumDescription(std::string name, std::string category);
 
     std::string getSettingsAsOSoL();
     std::string getSettingsAsString(bool showUnchanged, bool showDescriptions);
@@ -176,6 +191,7 @@ public:
 
     VectorString getChangedSettings();
     VectorString getSettingIdentifiers(E_SettingType type);
+    VectorPairString getSettingSplitIdentifiers(E_SettingType type);
 
     bool readSettingsFromOSoL(std::string osol);
     bool readSettingsFromString(std::string options);

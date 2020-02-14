@@ -264,6 +264,21 @@ std::string Settings::getEnumDescriptionListMarkup(std::string name, std::string
     return desc.str();
 }
 
+std::vector<std::pair<int, std::string> > Settings::getEnumDescription(std::string name, std::string category)
+{
+   std::vector<std::pair<int, std::string> > r;
+
+   for(auto& E : enumDescriptions)
+   {
+       if(name == std::get<1>(E.first) && category == std::get<0>(E.first))
+       {
+          r.push_back(std::pair<int, std::string>(std::get<2>(E.first), E.second));
+       }
+   }
+
+   return r;
+}
+
 // General methods ================================================================
 
 std::string Settings::getSettingsAsOSoL()
@@ -694,6 +709,26 @@ VectorString Settings::getSettingIdentifiers(E_SettingType type)
     }
 
     return (names);
+}
+
+VectorPairString Settings::getSettingSplitIdentifiers(E_SettingType type)
+{
+   VectorPairString names;
+
+   for(auto& T : settingTypes)
+   {
+       auto key = T.first;
+       std::string name = T.first.second;
+       std::string category = T.first.first;
+
+       if(settingIsPrivate[key])
+           continue; // Do not include an internal setting
+
+       if(T.second == type)
+           names.push_back(T.first);
+   }
+
+   return (names);
 }
 
 bool Settings::readSettingsFromOSoL(std::string osol)
