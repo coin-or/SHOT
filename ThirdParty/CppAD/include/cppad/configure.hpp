@@ -206,7 +206,9 @@ $srccode%hpp% */
 $head CPPAD_HAS_MKSTEMP$$
 It true, mkstemp works in C++ on this system.
 $srccode%hpp% */
+#ifndef _MSC_VER
 # define CPPAD_HAS_MKSTEMP 1
+#endif
 /* %$$
 
 $head CPPAD_HAS_TMPNAM_S$$
