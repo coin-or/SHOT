@@ -13,6 +13,7 @@
 #include <map>
 #include <memory>
 #include <vector>
+#include <optional>
 
 #include "Environment.h"
 #include "Iteration.h"
