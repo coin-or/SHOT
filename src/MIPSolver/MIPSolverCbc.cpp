@@ -25,6 +25,7 @@
 #include "CoinModel.hpp"
 #include "CoinPragma.hpp"
 #include "CbcModel.hpp"
+#include "CbcSolver.hpp"
 #include "OsiClpSolverInterface.hpp"
 
 namespace SHOT
