@@ -1106,8 +1106,8 @@ void Solver::initializeSettings()
     enumPrimalBoundNLPProblemSource.push_back("Reformulated problem");
     enumPrimalBoundNLPProblemSource.push_back("Both");
     env->settings->createSetting("FixedInteger.SourceProblem", "Primal",
-        static_cast<int>(ES_PrimalNLPProblemSource::Both), "Which problem formulation to use for NLP problem",
-        enumPrimalBoundNLPProblemSource);
+        static_cast<int>(ES_PrimalNLPProblemSource::OriginalProblem),
+        "Which problem formulation to use for NLP problem", enumPrimalBoundNLPProblemSource);
     enumPrimalBoundNLPProblemSource.clear();
 
     env->settings->createSetting(
