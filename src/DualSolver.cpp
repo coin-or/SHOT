@@ -17,6 +17,7 @@
 #include "Timing.h"
 #include "Problem.h"
 #include "ObjectiveFunction.h"
+#include "MIPSolver/IMIPSolver.h"
 
 namespace SHOT
 {
@@ -106,6 +107,12 @@ void DualSolver::checkDualSolutionCandidates()
     }
 
     this->dualSolutionCandidates.clear();
+}
+
+void DualSolver::addHyperplane(Hyperplane& hyperplane)
+{
+    assert(hyperplane.generatedPoint.size() == env->reformulatedProblem->properties.numberOfVariables);
+    this->hyperplaneWaitingList.push_back(hyperplane);
 }
 
 void DualSolver::addGeneratedHyperplane(const Hyperplane& hyperplane)

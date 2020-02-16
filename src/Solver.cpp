@@ -218,7 +218,7 @@ bool Solver::setProblem(std::string fileName)
             fs::filesystem::path debugPath(fs::filesystem::current_path());
             debugPath /= ("debug" / problemName);
 
-                      env->settings->updateSetting("Debug.Path", "Output", debugPath.string());
+            env->settings->updateSetting("Debug.Path", "Output", debugPath.string());
         }
         else
         {
@@ -1101,6 +1101,15 @@ void Solver::initializeSettings()
         enumPrimalBoundNLPStartingPoint);
     enumPrimalBoundNLPStartingPoint.clear();
 
+    VectorString enumPrimalBoundNLPProblemSource;
+    enumPrimalBoundNLPProblemSource.push_back("Original problem");
+    enumPrimalBoundNLPProblemSource.push_back("Reformulated problem");
+    enumPrimalBoundNLPProblemSource.push_back("Both");
+    env->settings->createSetting("FixedInteger.SourceProblem", "Primal",
+        static_cast<int>(ES_PrimalNLPProblemSource::Both), "Which problem formulation to use for NLP problem",
+        enumPrimalBoundNLPProblemSource);
+    enumPrimalBoundNLPProblemSource.clear();
+
     env->settings->createSetting(
         "FixedInteger.TimeLimit", "Primal", 10.0, "Time limit (s) per NLP problem", 0, SHOT_DBL_MAX);
 
@@ -1108,6 +1117,8 @@ void Solver::initializeSettings()
 
     env->settings->createSetting("FixedInteger.UsePresolveBounds", "Primal", false,
         "Use variable bounds from MIP in NLP problems. Warning! Does not seem to work", true);
+
+    env->settings->createSetting("FixedInteger.ProblemSource", "Primal", true, "Use the fixed integer primal strategy");
 
     env->settings->createSetting("FixedInteger.Warmstart", "Primal", true, "Warm start the NLP solver");
 
@@ -1385,10 +1396,11 @@ void Solver::initializeDebugMode()
         }
     }
 
-    fs::filesystem::path source(fs::filesystem::canonical( env->settings->getSetting<std::string>("ProblemFile", "Input")));
+    fs::filesystem::path source(
+        fs::filesystem::canonical(env->settings->getSetting<std::string>("ProblemFile", "Input")));
 
-    fs::filesystem::copy_file(source.string(), (debugDir / source.filename()).string(),
-        fs::filesystem::copy_options::overwrite_existing);
+    fs::filesystem::copy_file(
+        source.string(), (debugDir / source.filename()).string(), fs::filesystem::copy_options::overwrite_existing);
 }
 
 void Solver::verifySettings()
@@ -1415,6 +1427,20 @@ void Solver::verifySettings()
     {
         env->output->outputWarning(" SHOT has not been compiled with support for GAMS NLP solvers.");
         NLPSolverDefined = false;
+    }
+#endif
+
+#ifdef HAS_GAMS
+    if((static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("FixedInteger.Solver", "Primal"))
+           == ES_PrimalNLPSolver::GAMS)
+        && (static_cast<ES_PrimalNLPProblemSource>(
+                env->settings->getSetting<int>("FixedInteger.SourceProblem", "Primal"))
+               != ES_PrimalNLPProblemSource::OriginalProblem))
+    {
+        env->output->outputWarning(" Cannot use GAMS NLP solvers when solving fixed NLP problems based on the "
+                                   "reformulated model. Use Ipopt instead!");
+        env->settings->updateSetting(
+            "FixedInteger.SourceProblem", "Primal", static_cast<int>(ES_PrimalNLPProblemSource::OriginalProblem));
     }
 #endif
 

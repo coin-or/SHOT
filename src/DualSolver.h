@@ -27,6 +27,7 @@ public:
     void addDualSolutionCandidate(DualSolution solution);
     void checkDualSolutionCandidates();
 
+    void addHyperplane(Hyperplane& hyperplane);
     void addGeneratedHyperplane(const Hyperplane& hyperplane);
     bool hasHyperplaneBeenAdded(double hash, int constraintIndex);
 

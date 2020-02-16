@@ -134,6 +134,8 @@ public:
     int getNumberOfExploredNodes() override;
     int getNumberOfOpenNodes() override;
 
+    int getNumberOfVariables() override { return (MIPSolverBase::getNumberOfVariables()); }
+
     bool hasDualAuxiliaryObjectiveVariable() override { return (MIPSolverBase::hasDualAuxiliaryObjectiveVariable()); }
 
     int getDualAuxiliaryObjectiveVariableIndex() override

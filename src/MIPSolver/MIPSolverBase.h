@@ -92,6 +92,8 @@ public:
     virtual int getNumberOfExploredNodes() = 0;
     virtual int getNumberOfOpenNodes();
 
+    virtual int getNumberOfVariables() { return numberOfVariables; }
+
     virtual bool hasDualAuxiliaryObjectiveVariable() { return dualAuxiliaryObjectiveVariableDefined; };
     virtual int getDualAuxiliaryObjectiveVariableIndex() { return dualAuxiliaryObjectiveVariableIndex; };
 

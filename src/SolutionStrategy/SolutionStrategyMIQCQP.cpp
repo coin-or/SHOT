@@ -56,6 +56,7 @@
 #include "../Tasks/TaskSelectPrimalCandidatesFromRootsearch.h"
 #include "../Tasks/TaskSelectPrimalCandidatesFromNLP.h"
 #include "../Tasks/TaskSelectPrimalFixedNLPPointsFromSolutionPool.h"
+#include "../Tasks/TaskClearFixedPrimalCandidates.h"
 
 #include "../Tasks/TaskSelectHyperplanePointsByObjectiveRootsearch.h"
 #include "../Tasks/TaskSolveFixedDualProblem.h"
@@ -114,9 +115,28 @@ SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(EnvironmentPtr envPtr)
         env->tasks->addTask(tSelectPrimFixedNLPSolPool, "SelectPrimFixedNLPSolPool");
         std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tSelectPrimFixedNLPSolPool);
 
-        auto tSelectPrimNLPCheck = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env);
-        env->tasks->addTask(tSelectPrimNLPCheck, "SelectPrimNLPCheck");
-        std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tSelectPrimNLPCheck);
+        auto NLPProblemSource
+            = static_cast<ES_PrimalNLPProblemSource>(env->settings->getSetting<int>("FixedInteger.Source", "Primal"));
+
+        if(NLPProblemSource == ES_PrimalNLPProblemSource::Both
+            || NLPProblemSource == ES_PrimalNLPProblemSource::OriginalProblem)
+        {
+            auto tSelectPrimNLPCheck = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env, false);
+            env->tasks->addTask(tSelectPrimNLPCheck, "SelectPrimNLPCheckOriginal");
+            std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tSelectPrimNLPCheck);
+        }
+
+        if(NLPProblemSource == ES_PrimalNLPProblemSource::Both
+            || NLPProblemSource == ES_PrimalNLPProblemSource::ReformulatedProblem)
+        {
+            auto tSelectPrimNLPCheck = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env, true);
+            env->tasks->addTask(tSelectPrimNLPCheck, "SelectPrimNLPCheckReformulated");
+            std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tSelectPrimNLPCheck);
+        }
+
+        auto tClearPrimNLPCands = std::make_shared<TaskClearFixedPrimalCandidates>(env);
+        env->tasks->addTask(tClearPrimNLPCands, "SelectClearNLPCandidates");
+        std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tClearPrimNLPCands);
 
         auto tCheckAbsGap2 = std::make_shared<TaskCheckAbsoluteGap>(env, "FinalizeSolution");
         env->tasks->addTask(tCheckAbsGap, "CheckAbsGap2");

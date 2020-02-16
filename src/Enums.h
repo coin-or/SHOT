@@ -328,6 +328,13 @@ enum class ES_PrimalNLPFixedPoint
     SmallestDeviationSolution
 };
 
+enum class ES_PrimalNLPProblemSource
+{
+   OriginalProblem,
+   ReformulatedProblem,
+   Both
+};
+
 enum class ES_PrimalNLPSolver
 {
     Ipopt,

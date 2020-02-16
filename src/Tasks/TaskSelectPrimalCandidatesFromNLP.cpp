@@ -38,7 +38,8 @@
 namespace SHOT
 {
 
-TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(EnvironmentPtr envPtr) : TaskBase(envPtr)
+TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(EnvironmentPtr envPtr, bool useReformulatedProblem)
+    : TaskBase(envPtr)
 {
     env->timing->startTimer("PrimalStrategy");
     env->timing->startTimer("PrimalBoundStrategyNLP");
@@ -52,8 +53,19 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(Environment
 #ifdef HAS_IPOPT
     case(ES_PrimalNLPSolver::Ipopt):
     {
+        if(useReformulatedProblem)
+        {
+            sourceProblem = env->reformulatedProblem;
+            sourceIsReformulatedProblem = true;
+        }
+        else
+        {
+            sourceProblem = env->problem;
+            sourceIsReformulatedProblem = false;
+        }
+
         env->results->usedPrimalNLPSolver = ES_PrimalNLPSolver::Ipopt;
-        NLPSolver = std::make_shared<NLPSolverIpoptRelaxed>(env, env->problem);
+        NLPSolver = std::make_shared<NLPSolverIpoptRelaxed>(env, sourceProblem);
         env->results->usedPrimalNLPSolverVersion = NLPSolver->getSolverVersion();
         break;
     }
@@ -62,6 +74,10 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(Environment
 #ifdef HAS_GAMS
     case(ES_PrimalNLPSolver::GAMS):
     {
+        // GAMS only has the original problem model
+        sourceProblem = env->problem;
+        sourceIsReformulatedProblem = false;
+
         env->results->usedPrimalNLPSolver = ES_PrimalNLPSolver::GAMS;
         NLPSolver = std::make_shared<NLPSolverGAMS>(
             env, (std::dynamic_pointer_cast<ModelingSystemGAMS>(env->modelingSystem))->modelingObject);
@@ -90,25 +106,25 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(Environment
     this->originalIterFrequency = env->settings->getSetting<int>("FixedInteger.Frequency.Iteration", "Primal");
     this->originalTimeFrequency = env->settings->getSetting<double>("FixedInteger.Frequency.Time", "Primal");
 
-    for(auto& V : env->problem->binaryVariables)
+    for(auto& V : sourceProblem->binaryVariables)
     {
         discreteVariableIndexes.push_back(V->index);
     }
 
-    for(auto& V : env->problem->integerVariables)
+    for(auto& V : sourceProblem->integerVariables)
     {
         discreteVariableIndexes.push_back(V->index);
     }
 
     if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
     {
-        for(auto& V : env->problem->allVariables)
+        for(auto& V : sourceProblem->allVariables)
         {
             variableNames.push_back(V->name);
         }
     }
 
-    for(auto& V : env->problem->allVariables)
+    for(auto& V : sourceProblem->allVariables)
     {
         NLPSolver->updateVariableLowerBound(V->index, V->lowerBound);
         NLPSolver->updateVariableUpperBound(V->index, V->upperBound);
@@ -192,7 +208,7 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
         double timeStart = env->timing->getElapsedTime("Total");
         VectorDouble fixedVariableValues(discreteVariableIndexes.size());
 
-        int sizeOfVariableVector = env->problem->properties.numberOfVariables;
+        int sizeOfVariableVector = sourceProblem->properties.numberOfVariables;
 
         // TODO: remove?
         if(env->settings->getSetting<bool>("FixedInteger.UsePresolveBounds", "Primal"))
@@ -236,7 +252,7 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
 
         if(env->settings->getSetting<bool>("FixedInteger.Warmstart", "Primal"))
         {
-            for(auto& V : env->problem->realVariables)
+            for(auto& V : sourceProblem->realVariables)
             {
                 startingPointIndexes.at(V->index) = V->index;
                 startingPointValues.at(V->index) = testPts.at(j).point.at(V->index);
@@ -271,23 +287,25 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
 
         double timeEnd = env->timing->getElapsedTime("Total");
 
+        std::string source = (sourceIsReformulatedProblem) ? "R" : "O";
+
         std::string sourceDesc;
         switch(testPts.at(j).sourceType)
         {
         case E_PrimalNLPSource::FirstSolution:
-            sourceDesc = "SOLPT ";
+            sourceDesc = "SOLPT-" + source;
             break;
         case E_PrimalNLPSource::FeasibleSolution:
-            sourceDesc = "FEASPT";
+            sourceDesc = "FEASPT-" + source;
             break;
         case E_PrimalNLPSource::InfeasibleSolution:
-            sourceDesc = "UNFEAS";
+            sourceDesc = "UNFEAS-" + source;
             break;
         case E_PrimalNLPSource::SmallestDeviationSolution:
-            sourceDesc = "SMADEV";
+            sourceDesc = "SMADEV-" + source;
             break;
         case E_PrimalNLPSource::FirstSolutionNewDualBound:
-            sourceDesc = "NEWDB";
+            sourceDesc = "NEWDB-" + source;
             break;
         default:
             break;
@@ -317,10 +335,10 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
             env->primalSolver->addPrimalSolutionCandidate(
                 variableSolution, E_PrimalSolutionSource::NLPFixedIntegers, currIter->iterationNumber);
 
-            if(env->problem->properties.numberOfNonlinearConstraints > 0)
+            if(sourceProblem->properties.numberOfNonlinearConstraints > 0)
             {
-                auto mostDevConstr
-                    = env->problem->getMaxNumericConstraintValue(variableSolution, env->problem->nonlinearConstraints);
+                auto mostDevConstr = sourceProblem->getMaxNumericConstraintValue(
+                    variableSolution, sourceProblem->nonlinearConstraints);
 
                 env->report->outputIterationDetail(env->solutionStatistics.numberOfProblemsFixedNLP,
                     ("NLP" + sourceDesc), env->timing->getElapsedTime("Total"), currIter->numHyperplanesAdded,
@@ -343,12 +361,12 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
 
             // Add integer cut.
             if(env->settings->getSetting<bool>("HyperplaneCuts.UseIntegerCuts", "Dual")
-                && env->problem->properties.numberOfBinaryVariables > 0
-                && env->problem->properties.numberOfIntegerVariables == 0)
+                && sourceProblem->properties.numberOfBinaryVariables > 0
+                && sourceProblem->properties.numberOfIntegerVariables == 0)
             {
                 VectorInteger ones;
                 VectorInteger zeroes;
-                for(auto& V : env->problem->binaryVariables)
+                for(auto& V : sourceProblem->binaryVariables)
                 {
                     if(testPts.at(j).point.at(V->index) > 0.9999)
                     {
@@ -367,18 +385,21 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
             {
                 SolutionPoint tmpSolPt;
                 tmpSolPt.point = variableSolution;
-                tmpSolPt.objectiveValue = env->problem->objectiveFunction->calculateValue(variableSolution);
+                tmpSolPt.objectiveValue = sourceProblem->objectiveFunction->calculateValue(variableSolution);
                 tmpSolPt.iterFound = env->results->getCurrentIteration()->iterationNumber;
 
-                for(auto& V : env->reformulatedProblem->auxiliaryVariables)
+                if(!sourceIsReformulatedProblem) // Need to calculate values for the auxiliary variables in this case
                 {
-                    tmpSolPt.point.push_back(V->calculate(variableSolution));
-                }
+                    for(auto& V : env->reformulatedProblem->auxiliaryVariables)
+                    {
+                        tmpSolPt.point.push_back(V->calculate(variableSolution));
+                    }
 
-                if(env->reformulatedProblem->auxiliaryObjectiveVariable)
-                {
-                    tmpSolPt.point.push_back(
-                        env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(variableSolution));
+                    if(env->reformulatedProblem->auxiliaryObjectiveVariable)
+                    {
+                        tmpSolPt.point.push_back(
+                            env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(variableSolution));
+                    }
                 }
 
                 std::vector<SolutionPoint> solutionPoints(1);
@@ -395,34 +416,44 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
                 }
             }
         }
-        else if(env->problem->properties.numberOfNonlinearConstraints > 0)
+        else if(sourceProblem->properties.numberOfNonlinearConstraints > 0)
         {
             double tmpObj = NLPSolver->getObjectiveValue();
 
             // Utilize the solution point for adding a cutting plane / supporting hyperplane
-            std::vector<SolutionPoint> solutionPoints(1);
 
             auto variableSolution = NLPSolver->getSolution();
 
             if(variableSolution.size() > 0)
             {
-                auto mostDevConstr
-                    = env->problem->getMaxNumericConstraintValue(variableSolution, env->problem->nonlinearConstraints);
+                auto mostDevConstr = sourceProblem->getMaxNumericConstraintValue(
+                    variableSolution, sourceProblem->nonlinearConstraints);
 
                 if(env->settings->getSetting<bool>("FixedInteger.CreateInfeasibilityCut", "Primal"))
                 {
                     SolutionPoint tmpSolPt;
                     tmpSolPt.point = variableSolution;
-                    tmpSolPt.objectiveValue = env->problem->objectiveFunction->calculateValue(variableSolution);
+                    tmpSolPt.objectiveValue = sourceProblem->objectiveFunction->calculateValue(variableSolution);
                     tmpSolPt.iterFound = env->results->getCurrentIteration()->iterationNumber;
                     tmpSolPt.maxDeviation
                         = PairIndexValue(mostDevConstr.constraint->index, mostDevConstr.normalizedValue);
 
-                    for(auto& V : env->reformulatedProblem->auxiliaryVariables)
+                    if(!sourceIsReformulatedProblem) // Need to calculate values for the auxiliary variables in this
+                                                     // case
                     {
-                        tmpSolPt.point.push_back(V->calculate(variableSolution));
+                        for(auto& V : env->reformulatedProblem->auxiliaryVariables)
+                        {
+                            tmpSolPt.point.push_back(V->calculate(variableSolution));
+                        }
+
+                        if(env->reformulatedProblem->auxiliaryObjectiveVariable)
+                        {
+                            tmpSolPt.point.push_back(
+                                env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(variableSolution));
+                        }
                     }
 
+                    std::vector<SolutionPoint> solutionPoints(1);
                     solutionPoints.at(0) = tmpSolPt;
 
                     if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
@@ -471,12 +502,12 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
 
             // Add integer cut.
             if(env->settings->getSetting<bool>("HyperplaneCuts.UseIntegerCuts", "Dual")
-                && env->problem->properties.numberOfBinaryVariables > 0
-                && env->problem->properties.numberOfIntegerVariables == 0)
+                && sourceProblem->properties.numberOfBinaryVariables > 0
+                && sourceProblem->properties.numberOfIntegerVariables == 0)
             {
                 VectorInteger ones;
                 VectorInteger zeroes;
-                for(auto& V : env->problem->binaryVariables)
+                for(auto& V : sourceProblem->binaryVariables)
                 {
                     if(testPts.at(j).point.at(V->index) > 0.9999)
                     {
@@ -503,8 +534,6 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
         env->solutionStatistics.numberOfIterationsWithoutNLPCallMIP = 0;
         env->solutionStatistics.timeLastFixedNLPCall = env->timing->getElapsedTime("Total");
     }
-
-    env->primalSolver->fixedPrimalNLPCandidates.clear();
 
     return (true);
 }

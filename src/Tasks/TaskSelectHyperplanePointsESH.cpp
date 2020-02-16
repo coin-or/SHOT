@@ -218,7 +218,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
                 hyperplane.source = E_HyperplaneSource::LPRelaxedRootsearch;
             }
 
-            env->dualSolver->hyperplaneWaitingList.push_back(hyperplane);
+            env->dualSolver->addHyperplane(hyperplane);
 
             hyperplaneAddedToConstraint.at(externalConstraintValue.constraint->index) = true;
 
@@ -312,7 +312,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
                     hyperplane.source = E_HyperplaneSource::LPRelaxedRootsearch;
                 }
 
-                env->dualSolver->hyperplaneWaitingList.push_back(hyperplane);
+                env->dualSolver->addHyperplane(hyperplane);
                 addedHyperplanes++;
 
                 hyperplaneAddedToConstraint.at(externalConstraintValue.constraint->index) = true;
@@ -411,7 +411,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
                     hyperplane.source = E_HyperplaneSource::LPRelaxedRootsearch;
                 }
 
-                env->dualSolver->hyperplaneWaitingList.push_back(hyperplane);
+                env->dualSolver->addHyperplane(hyperplane);
                 addedHyperplanes++;
 
                 hyperplaneAddedToConstraint.at(externalConstraintValue.constraint->index) = true;
@@ -443,7 +443,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
 
                 if(!cutsAwayPrimalSolution)
                 {
-                    env->dualSolver->hyperplaneWaitingList.push_back(hyperplane);
+                    env->dualSolver->addHyperplane(hyperplane);
                     hyperplaneAddedToConstraint.at(NCV.constraint->index) = true;
                     addedHyperplanes++;
                 }
@@ -472,7 +472,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
                 continue;
             }
 
-            env->dualSolver->hyperplaneWaitingList.push_back(HP.first);
+            env->dualSolver->addHyperplane(HP.first);
             hyperplaneAddedToConstraint.at(HP.first.sourceConstraint->index) = true;
             addedHyperplanes++;
             env->output->outputDebug(fmt::format("         Selected hyperplane cut for constraint {} that cuts away "

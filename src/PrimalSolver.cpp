@@ -420,11 +420,24 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
 void PrimalSolver::addFixedNLPCandidate(
     VectorDouble pt, E_PrimalNLPSource source, double objVal, int iter, PairIndexValue maxConstrDev)
 {
-    assert((int)pt.size() >= env->problem->properties.numberOfVariables);
+    if(pt.size() < env->reformulatedProblem->properties.numberOfVariables)
+    {
+        for(auto& V : env->reformulatedProblem->auxiliaryVariables)
+        {
+            pt.push_back(V->calculate(pt));
+        }
 
-    fixedPrimalNLPCandidates.push_back(
-        PrimalFixedNLPCandidate { VectorDouble(pt.begin(), pt.begin() + env->problem->properties.numberOfVariables),
-            source, objVal, iter, maxConstrDev });
+        if(env->reformulatedProblem->auxiliaryObjectiveVariable)
+        {
+            pt.push_back(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(pt));
+        }
+    }
+
+    assert((int)pt.size() == env->reformulatedProblem->properties.numberOfVariables);
+
+    fixedPrimalNLPCandidates.push_back(PrimalFixedNLPCandidate {
+        VectorDouble(pt.begin(), pt.begin() + env->reformulatedProblem->properties.numberOfVariables), source, objVal,
+        iter, maxConstrDev });
 }
 
 } // namespace SHOT

@@ -75,7 +75,7 @@ void TaskSelectHyperplanePointsByObjectiveRootsearch::run(std::vector<SolutionPo
                 hyperplane.generatedPoint = SOLPT.point;
                 hyperplane.objectiveFunctionValue = rootBound.second;
 
-                env->dualSolver->hyperplaneWaitingList.push_back(hyperplane);
+                env->dualSolver->addHyperplane(hyperplane);
             }
             catch(std::exception& e)
             {
@@ -100,7 +100,7 @@ void TaskSelectHyperplanePointsByObjectiveRootsearch::run(std::vector<SolutionPo
             hyperplane.objectiveFunctionValue = 0.0;
             /*= env->reformulatedProblem->objectiveFunction->calculateValue(hyperplane.generatedPoint) - 0.01;*/
 
-            env->dualSolver->hyperplaneWaitingList.push_back(hyperplane);
+            env->dualSolver->addHyperplane(hyperplane);
 
             env->output->outputWarning("         Adding objective cutting plane since the dual has stagnated.");
         }
@@ -134,7 +134,7 @@ void TaskSelectHyperplanePointsByObjectiveRootsearch::run(std::vector<SolutionPo
             hyperplane.objectiveFunctionValue
                 = env->reformulatedProblem->objectiveFunction->calculateValue(hyperplane.generatedPoint);
 
-            env->dualSolver->hyperplaneWaitingList.push_back(hyperplane);
+            env->dualSolver->addHyperplane(hyperplane);
         }
     }
 
