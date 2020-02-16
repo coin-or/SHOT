@@ -114,6 +114,8 @@ public:
     virtual int getNumberOfExploredNodes() = 0;
     virtual int getNumberOfOpenNodes() = 0;
 
+    virtual int getNumberOfVariables() = 0;
+
     virtual bool hasDualAuxiliaryObjectiveVariable() = 0;
     virtual int getDualAuxiliaryObjectiveVariableIndex() = 0;
     virtual void setDualAuxiliaryObjectiveVariableIndex(int index) = 0;

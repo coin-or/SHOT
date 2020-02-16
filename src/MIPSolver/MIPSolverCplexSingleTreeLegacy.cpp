@@ -248,7 +248,20 @@ CtCallbackI::CtCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx
         }
     }
 
-    tSelectPrimNLP = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env);
+    auto NLPProblemSource = static_cast<ES_PrimalNLPProblemSource>(
+        env->settings->getSetting<int>("FixedInteger.SourceProblem", "Primal"));
+
+    if(NLPProblemSource == ES_PrimalNLPProblemSource::Both
+        || NLPProblemSource == ES_PrimalNLPProblemSource::OriginalProblem)
+    {
+        taskSelectPrimNLPOriginal = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env, false);
+    }
+
+    if(NLPProblemSource == ES_PrimalNLPProblemSource::Both
+        || NLPProblemSource == ES_PrimalNLPProblemSource::ReformulatedProblem)
+    {
+        taskSelectPrimNLPReformulated = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env, true);
+    }
 
     if(env->reformulatedProblem->objectiveFunction->properties.classification
         > E_ObjectiveFunctionClassification::Quadratic)
@@ -432,7 +445,16 @@ void CtCallbackI::main()
         env->primalSolver->addFixedNLPCandidate(solution, E_PrimalNLPSource::FirstSolution, this->getObjValue(),
             env->results->getCurrentIteration()->iterationNumber, solutionCandidate.maxDeviation);
 
-        tSelectPrimNLP.get()->run();
+        if(taskSelectPrimNLPOriginal)
+            taskSelectPrimNLPOriginal->run();
+
+        env->primalSolver->addFixedNLPCandidate(solution, E_PrimalNLPSource::FirstSolution, this->getObjValue(),
+            env->results->getCurrentIteration()->iterationNumber, solutionCandidate.maxDeviation);
+
+        if(taskSelectPrimNLPReformulated)
+            taskSelectPrimNLPReformulated->run();
+
+        env->primalSolver->fixedPrimalNLPCandidates.clear();
 
         env->primalSolver->checkPrimalSolutionCandidates();
 

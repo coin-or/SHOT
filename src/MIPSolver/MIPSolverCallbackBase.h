@@ -40,7 +40,8 @@ protected:
     double lastSummaryTimeStamp = 0.0;
     int lastHeaderIter = 0;
 
-    std::shared_ptr<TaskSelectPrimalCandidatesFromNLP> tSelectPrimNLP;
+    std::shared_ptr<TaskSelectPrimalCandidatesFromNLP> taskSelectPrimNLPOriginal;
+    std::shared_ptr<TaskSelectPrimalCandidatesFromNLP> taskSelectPrimNLPReformulated;
     std::shared_ptr<TaskBase> taskSelectHPPts;
     std::shared_ptr<TaskSelectHyperplanePointsByObjectiveRootsearch> taskSelectHPPtsByObjectiveRootsearch;
     std::shared_ptr<TaskSelectPrimalCandidatesFromRootsearch> taskSelectPrimalSolutionFromRootsearch;

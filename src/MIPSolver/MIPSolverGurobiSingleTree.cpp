@@ -388,7 +388,18 @@ void GurobiCallback::callback()
                     getDoubleInfo(GRB_CB_MIPSOL_OBJ), env->results->getCurrentIteration()->iterationNumber,
                     candidatePoints.at(0).maxDeviation);
 
-                tSelectPrimNLP.get()->run();
+                if(taskSelectPrimNLPOriginal)
+                    taskSelectPrimNLPOriginal->run();
+
+                env->primalSolver->addFixedNLPCandidate(candidatePoints.at(0).point, E_PrimalNLPSource::FirstSolution,
+                    getDoubleInfo(GRB_CB_MIPSOL_OBJ), env->results->getCurrentIteration()->iterationNumber,
+                    candidatePoints.at(0).maxDeviation);
+
+                if(taskSelectPrimNLPReformulated)
+                    taskSelectPrimNLPReformulated->run();
+
+                env->primalSolver->fixedPrimalNLPCandidates.clear();
+
                 env->primalSolver->checkPrimalSolutionCandidates();
             }
 
@@ -566,7 +577,20 @@ GurobiCallback::GurobiCallback(GRBVar* xvars, EnvironmentPtr envPtr)
         }
     }
 
-    tSelectPrimNLP = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env);
+    auto NLPProblemSource = static_cast<ES_PrimalNLPProblemSource>(
+        env->settings->getSetting<int>("FixedInteger.SourceProblem", "Primal"));
+
+    if(NLPProblemSource == ES_PrimalNLPProblemSource::Both
+        || NLPProblemSource == ES_PrimalNLPProblemSource::OriginalProblem)
+    {
+        taskSelectPrimNLPOriginal = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env, false);
+    }
+
+    if(NLPProblemSource == ES_PrimalNLPProblemSource::Both
+        || NLPProblemSource == ES_PrimalNLPProblemSource::ReformulatedProblem)
+    {
+        taskSelectPrimNLPReformulated = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env, true);
+    }
 
     if(env->reformulatedProblem->objectiveFunction->properties.classification
         > E_ObjectiveFunctionClassification::Quadratic)

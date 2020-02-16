@@ -24,7 +24,7 @@ class INLPSolver;
 class TaskSelectPrimalCandidatesFromNLP : public TaskBase
 {
 public:
-    TaskSelectPrimalCandidatesFromNLP(EnvironmentPtr envPtr);
+    TaskSelectPrimalCandidatesFromNLP(EnvironmentPtr envPtr, bool useReformulatedProblem);
     ~TaskSelectPrimalCandidatesFromNLP() override;
     void run() override;
     std::string getType() override;
@@ -50,5 +50,8 @@ private:
 
     int originalIterFrequency;
     double originalTimeFrequency;
+
+    ProblemPtr sourceProblem;
+    bool sourceIsReformulatedProblem = false;
 };
 } // namespace SHOT

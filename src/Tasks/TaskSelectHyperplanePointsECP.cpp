@@ -137,7 +137,7 @@ void TaskSelectHyperplanePointsECP::run(std::vector<SolutionPoint> solPoints)
             hyperplane.source = E_HyperplaneSource::LPRelaxedSolutionPoint;
         }
 
-        env->dualSolver->hyperplaneWaitingList.push_back(hyperplane);
+        env->dualSolver->addHyperplane(hyperplane);
 
         addedHyperplanes++;
         hyperplaneAddedToConstraint.at(NCV.constraint->index) = true;
@@ -212,7 +212,7 @@ void TaskSelectHyperplanePointsECP::run(std::vector<SolutionPoint> solPoints)
                     fmt::format("         Added hyperplane for constraint {} to waiting list with deviation {}",
                         NCV.constraint->name, NCV.error));
 
-                env->dualSolver->hyperplaneWaitingList.push_back(hyperplane);
+                env->dualSolver->addHyperplane(hyperplane);
                 hyperplaneAddedToConstraint.at(NCV.constraint->index) = true;
                 addedHyperplanes++;
             }
@@ -226,7 +226,7 @@ void TaskSelectHyperplanePointsECP::run(std::vector<SolutionPoint> solPoints)
 
         for(auto& HP : hyperplanesCuttingAwayPrimals)
         {
-            env->dualSolver->hyperplaneWaitingList.push_back(HP.first);
+            env->dualSolver->addHyperplane(HP.first);
             hyperplaneAddedToConstraint.at(HP.first.sourceConstraint->index) = true;
             addedHyperplanes++;
             env->output->outputDebug(fmt::format("         Selected hyperplane cut for constraint {} that cuts away "

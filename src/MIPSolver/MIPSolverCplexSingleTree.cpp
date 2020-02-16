@@ -52,7 +52,20 @@ CplexCallback::CplexCallback(EnvironmentPtr envPtr, const IloNumVarArray& vars, 
         taskSelectHPPtsByObjectiveRootsearch = std::make_shared<TaskSelectHyperplanePointsByObjectiveRootsearch>(env);
     }
 
-    tSelectPrimNLP = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env);
+    auto NLPProblemSource = static_cast<ES_PrimalNLPProblemSource>(
+        env->settings->getSetting<int>("FixedInteger.SourceProblem", "Primal"));
+
+    if(NLPProblemSource == ES_PrimalNLPProblemSource::Both
+        || NLPProblemSource == ES_PrimalNLPProblemSource::OriginalProblem)
+    {
+        taskSelectPrimNLPOriginal = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env, false);
+    }
+
+    if(NLPProblemSource == ES_PrimalNLPProblemSource::Both
+        || NLPProblemSource == ES_PrimalNLPProblemSource::ReformulatedProblem)
+    {
+        taskSelectPrimNLPReformulated = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env, true);
+    }
 
     if(env->settings->getSetting<bool>("Rootsearch.Use", "Primal")
         && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
@@ -306,7 +319,18 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
                     context.getCandidateObjective(), env->results->getCurrentIteration()->iterationNumber,
                     candidatePoints.at(0).maxDeviation);
 
-                tSelectPrimNLP.get()->run();
+                if(taskSelectPrimNLPOriginal)
+                    taskSelectPrimNLPOriginal->run();
+
+                env->primalSolver->addFixedNLPCandidate(candidatePoints.at(0).point, E_PrimalNLPSource::FirstSolution,
+                    context.getCandidateObjective(), env->results->getCurrentIteration()->iterationNumber,
+                    candidatePoints.at(0).maxDeviation);
+
+                if(taskSelectPrimNLPReformulated)
+                    taskSelectPrimNLPReformulated->run();
+
+                env->primalSolver->fixedPrimalNLPCandidates.clear();
+
                 env->primalSolver->checkPrimalSolutionCandidates();
             }
 
