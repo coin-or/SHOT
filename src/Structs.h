@@ -103,6 +103,7 @@ using PairString = std::pair<std::string, std::string>;
 using VectorDouble = std::vector<double>;
 using VectorInteger = std::vector<int>;
 using VectorString = std::vector<std::string>;
+using VectorPairString = std::vector<PairString>;
 
 struct PairIndexValue
 {
