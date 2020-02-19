@@ -86,8 +86,14 @@ NLPSolverCuttingPlaneMinimax::NLPSolverCuttingPlaneMinimax(EnvironmentPtr envPtr
     }
 #endif
 
+    if(!LPSolver || !LPSolver->initializeProblem())
+        throw Exception("Cannot initialize MIP solver for minimax solver.");
+
     env->output->outputDebug(" Creating LP problem for minimax solver");
-    createProblem(LPSolver.get(), sourceProblem);
+
+    if(!createProblem(LPSolver.get(), sourceProblem))
+        throw Exception("Could not create minimax problem.");
+
     env->output->outputDebug(" LP problem for minimax solver created");
 
     LPSolver->activateDiscreteVariables(false);

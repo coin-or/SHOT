@@ -29,13 +29,7 @@ MIPSolverGurobi::MIPSolverGurobi()
     // Should not be called
 }
 
-MIPSolverGurobi::MIPSolverGurobi(EnvironmentPtr envPtr)
-{
-    env = envPtr;
-
-    initializeProblem();
-    checkParameters();
-}
+MIPSolverGurobi::MIPSolverGurobi(EnvironmentPtr envPtr) { env = envPtr; }
 
 MIPSolverGurobi::~MIPSolverGurobi()
 {
@@ -74,6 +68,8 @@ bool MIPSolverGurobi::initializeProblem()
 
     cachedSolutionHasChanged = true;
     isVariablesFixed = false;
+
+    checkParameters();
 
     return (true);
 }

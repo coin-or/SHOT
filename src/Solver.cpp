@@ -369,9 +369,7 @@ bool Solver::setProblem(std::string fileName)
     verifySettings();
     setConvexityBasedSettings();
 
-    this->selectStrategy();
-
-    return (true);
+    return (this->selectStrategy());
 }
 
 bool Solver::setProblem(SHOT::ProblemPtr problem, SHOT::ModelingSystemPtr modelingSystem)
@@ -431,115 +429,119 @@ bool Solver::setProblem(SHOT::ProblemPtr problem, SHOT::ModelingSystemPtr modeli
     verifySettings();
     setConvexityBasedSettings();
 
-    this->selectStrategy();
-
-    return (true);
+    return (this->selectStrategy());
 }
 
 bool Solver::selectStrategy()
 {
-    if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Cbc)
+    try
     {
-        if(env->problem->properties.numberOfDiscreteVariables == 0)
+        if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Cbc)
         {
-            env->output->outputDebug(" Using continuous problem solution strategy.");
-            solutionStrategy = std::make_unique<SolutionStrategyNLP>(env);
+            if(env->problem->properties.numberOfDiscreteVariables == 0)
+            {
+                env->output->outputDebug(" Using continuous problem solution strategy.");
+                solutionStrategy = std::make_unique<SolutionStrategyNLP>(env);
+                env->results->usedSolutionStrategy = E_SolutionStrategy::NLP;
+            }
+            else
+            {
+                solutionStrategy = std::make_unique<SolutionStrategyMultiTree>(env);
+                isProblemInitialized = true;
+                env->results->usedSolutionStrategy = E_SolutionStrategy::MultiTree;
+            }
 
+            return (true);
+        }
+
+        auto quadraticStrategy = static_cast<ES_QuadraticProblemStrategy>(
+            env->settings->getSetting<int>("Reformulation.Quadratics.Strategy", "Model"));
+        bool useQuadraticConstraints
+            = (quadraticStrategy >= ES_QuadraticProblemStrategy::ConvexQuadraticallyConstrained);
+        bool useQuadraticObjective
+            = (useQuadraticConstraints || quadraticStrategy == ES_QuadraticProblemStrategy::QuadraticObjective);
+
+        bool isConvex = env->reformulatedProblem->properties.convexity == E_ProblemConvexity::Convex;
+
+        if(isConvex && (useQuadraticObjective || useQuadraticConstraints) && env->problem->properties.isMIQPProblem)
+        // Convex MIQP problem
+        {
+            env->output->outputDebug(" Using convex MIQP solution strategy.");
+            solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
+            env->results->usedSolutionStrategy = E_SolutionStrategy::MIQP;
+        }
+        else if(isConvex && (useQuadraticObjective || useQuadraticConstraints) && env->problem->properties.isQPProblem)
+        // Convex QP problem
+        {
+            env->output->outputDebug(" Using convex QP solution strategy.");
+            solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
+            env->results->usedSolutionStrategy = E_SolutionStrategy::MIQP;
+        }
+        // Convex MIQCQP problem
+        else if(isConvex && useQuadraticConstraints && env->problem->properties.isMIQCQPProblem)
+        {
+            env->output->outputDebug(" Using convex MIQCQP solution strategy.");
+            solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
+            env->results->usedSolutionStrategy = E_SolutionStrategy::MIQCQP;
+        }
+        // Convex QCQP problem
+        else if(isConvex && (useQuadraticConstraints || useQuadraticConstraints)
+            && env->problem->properties.isQCQPProblem)
+        {
+            env->output->outputDebug(" Using convex QCQP solution strategy.");
+            solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
+            env->results->usedSolutionStrategy = E_SolutionStrategy::MIQCQP;
+        }
+        // MILP problem
+        else if(env->problem->properties.isMILPProblem || env->problem->properties.isLPProblem)
+        {
+            env->output->outputDebug(" Using MILP solution strategy.");
+            solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
+            env->results->usedSolutionStrategy = E_SolutionStrategy::MIQP;
+        }
+        // NLP problem
+        else if(isConvex && (env->problem->properties.isNLPProblem))
+        {
+            env->output->outputDebug(" Using continous solution strategy.");
+            solutionStrategy = std::make_unique<SolutionStrategyNLP>(env);
             env->results->usedSolutionStrategy = E_SolutionStrategy::NLP;
         }
         else
         {
-            solutionStrategy = std::make_unique<SolutionStrategyMultiTree>(env);
-            isProblemInitialized = true;
-
-            env->results->usedSolutionStrategy = E_SolutionStrategy::MultiTree;
-        }
-
-        return (true);
-    }
-
-    auto quadraticStrategy = static_cast<ES_QuadraticProblemStrategy>(
-        env->settings->getSetting<int>("Reformulation.Quadratics.Strategy", "Model"));
-    bool useQuadraticConstraints = (quadraticStrategy >= ES_QuadraticProblemStrategy::ConvexQuadraticallyConstrained);
-    bool useQuadraticObjective
-        = (useQuadraticConstraints || quadraticStrategy == ES_QuadraticProblemStrategy::QuadraticObjective);
-
-    bool isConvex = env->reformulatedProblem->properties.convexity == E_ProblemConvexity::Convex;
-
-    if(isConvex && (useQuadraticObjective || useQuadraticConstraints) && env->problem->properties.isMIQPProblem)
-    // Convex MIQP problem
-    {
-        env->output->outputDebug(" Using convex MIQP solution strategy.");
-        solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
-        env->results->usedSolutionStrategy = E_SolutionStrategy::MIQP;
-    }
-    else if(isConvex && (useQuadraticObjective || useQuadraticConstraints) && env->problem->properties.isQPProblem)
-    // Convex QP problem
-    {
-        env->output->outputDebug(" Using convex QP solution strategy.");
-        solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
-        env->results->usedSolutionStrategy = E_SolutionStrategy::MIQP;
-    }
-    // Convex MIQCQP problem
-    else if(isConvex && useQuadraticConstraints && env->problem->properties.isMIQCQPProblem)
-    {
-        env->output->outputDebug(" Using convex MIQCQP solution strategy.");
-
-        solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
-        env->results->usedSolutionStrategy = E_SolutionStrategy::MIQCQP;
-    }
-    // Convex QCQP problem
-    else if(isConvex && (useQuadraticConstraints || useQuadraticConstraints) && env->problem->properties.isQCQPProblem)
-    {
-        env->output->outputDebug(" Using convex QCQP solution strategy.");
-
-        solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
-        env->results->usedSolutionStrategy = E_SolutionStrategy::MIQCQP;
-    }
-    // MILP problem
-    else if(env->problem->properties.isMILPProblem || env->problem->properties.isLPProblem)
-    {
-        env->output->outputDebug(" Using MILP solution strategy.");
-        solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
-        env->results->usedSolutionStrategy = E_SolutionStrategy::MIQP;
-    }
-    // NLP problem
-    else if(isConvex && (env->problem->properties.isNLPProblem))
-    {
-        env->output->outputDebug(" Using continous solution strategy.");
-        solutionStrategy = std::make_unique<SolutionStrategyNLP>(env);
-        env->results->usedSolutionStrategy = E_SolutionStrategy::NLP;
-    }
-    else
-    {
-        if(!env->problem->properties.isDiscrete)
-        {
-            env->output->outputDebug(" Using multi-tree solution strategy.");
-            solutionStrategy = std::make_unique<SolutionStrategyMultiTree>(env);
-            env->results->usedSolutionStrategy = E_SolutionStrategy::MultiTree;
-        }
-        else
-        {
-            switch(static_cast<ES_TreeStrategy>(env->settings->getSetting<int>("TreeStrategy", "Dual")))
+            if(!env->problem->properties.isDiscrete)
             {
-            case(ES_TreeStrategy::SingleTree):
-                env->output->outputDebug(" Using single-tree solution strategy.");
-                solutionStrategy = std::make_unique<SolutionStrategySingleTree>(env);
-                env->results->usedSolutionStrategy = E_SolutionStrategy::SingleTree;
-                env->dualSolver->isSingleTree = true;
-                break;
-            case(ES_TreeStrategy::MultiTree):
                 env->output->outputDebug(" Using multi-tree solution strategy.");
                 solutionStrategy = std::make_unique<SolutionStrategyMultiTree>(env);
                 env->results->usedSolutionStrategy = E_SolutionStrategy::MultiTree;
-                break;
-            default:
-                break;
+            }
+            else
+            {
+                switch(static_cast<ES_TreeStrategy>(env->settings->getSetting<int>("TreeStrategy", "Dual")))
+                {
+                case(ES_TreeStrategy::SingleTree):
+                    env->output->outputDebug(" Using single-tree solution strategy.");
+                    solutionStrategy = std::make_unique<SolutionStrategySingleTree>(env);
+                    env->results->usedSolutionStrategy = E_SolutionStrategy::SingleTree;
+                    env->dualSolver->isSingleTree = true;
+                    break;
+                case(ES_TreeStrategy::MultiTree):
+                    env->output->outputDebug(" Using multi-tree solution strategy.");
+                    solutionStrategy = std::make_unique<SolutionStrategyMultiTree>(env);
+                    env->results->usedSolutionStrategy = E_SolutionStrategy::MultiTree;
+                    break;
+                default:
+                    break;
+                }
             }
         }
-    }
 
-    isProblemInitialized = true;
+        isProblemInitialized = true;
+    }
+    catch(Exception& e)
+    {
+        env->output->outputCritical(fmt::format(" Cannot initialize solver: {}", e.what()));
+        return (false);
+    }
 
     return (true);
 }

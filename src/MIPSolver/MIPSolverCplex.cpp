@@ -28,13 +28,7 @@ MIPSolverCplex::MIPSolverCplex()
     // Should not be called
 }
 
-MIPSolverCplex::MIPSolverCplex(EnvironmentPtr envPtr)
-{
-    env = envPtr;
-
-    initializeProblem();
-    checkParameters();
-}
+MIPSolverCplex::MIPSolverCplex(EnvironmentPtr envPtr) { env = envPtr; }
 
 MIPSolverCplex::~MIPSolverCplex()
 {
@@ -80,6 +74,8 @@ bool MIPSolverCplex::initializeProblem()
     cachedSolutionHasChanged = true;
     isVariablesFixed = false;
     modelUpdated = false;
+
+    checkParameters();
 
     return (true);
 }
