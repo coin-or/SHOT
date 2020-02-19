@@ -318,12 +318,13 @@ void Report::outputSolverHeader()
 {
     std::stringstream header;
 
-    header << "\r\n";
-    header << "╶ Supporting Hyperplane Optimization Toolkit (SHOT) ";
-
 #ifdef SIMPLE_OUTPUT_CHARS
+    header << "\r\n";
+    header << "- Supporting Hyperplane Optimization Toolkit (SHOT) ";
     header << "-------------------------------------------------------------------\r\n";
 #else
+    header << "\r\n";
+    header << "╶ Supporting Hyperplane Optimization Toolkit (SHOT) ";
     header << "──────────────────────────────────────────────────────────────────╴\r\n";
 #endif
 
@@ -369,12 +370,13 @@ void Report::outputOptionsReport()
     std::stringstream report;
 
     report << "\r\n";
-    report << "╶ Options ";
 
 #ifdef SIMPLE_OUTPUT_CHARS
+    report << "- Options ";
     report << "--------------------------------------------------------------------------------------------------------"
               "-----\r\n";
 #else
+    report << "╶ Options ";
     report << "────────────────────────────────────────────────────────────────────────────────────────────────────────"
               "────╴\r\n";
 #endif
@@ -576,12 +578,12 @@ void Report::outputModelingSystemHeader(ES_SourceFormat source, std::string file
 {
     std::stringstream report;
 
-    report << "╶ Modeling system ";
-
 #ifdef SIMPLE_OUTPUT_CHARS
+    report << "- Modeling system ";
     report << "-----------------------------------------------------------------------------------------------------"
               "\r\n";
 #else
+    report << "╶ Modeling system ";
     report << "────────────────────────────────────────────────────────────────────────────────────────────────────╴"
               "\r\n";
 #endif
@@ -623,12 +625,12 @@ void Report::outputProblemInstanceReport()
 
     bool isReformulated = (env->problem == env->reformulatedProblem) ? false : true;
 
-    report << "\r\n╶ Problem instance ";
-
 #ifdef SIMPLE_OUTPUT_CHARS
+    report << "\r\n- Problem instance ";
     report << "----------------------------------------------------------------------------------------------------"
               "\r\n";
 #else
+    report << "\r\n╶ Problem instance ";
     report << "───────────────────────────────────────────────────────────────────────────────────────────────────╴"
               "\r\n";
 #endif
@@ -986,12 +988,13 @@ void Report::outputSolutionReport()
     std::stringstream report;
 
     report << "\r\n\r\n";
-    report << "╶ Solution report ";
 
 #ifdef SIMPLE_OUTPUT_CHARS
+    report << "- Solution report ";
     report
         << "-----------------------------------------------------------------------------------------------------\r\n";
 #else
+    report << "╶ Solution report ";
     report
         << "────────────────────────────────────────────────────────────────────────────────────────────────────╴\r\n";
 #endif
@@ -1334,12 +1337,13 @@ void Report::outputInteriorPointPreReport()
 {
     std::stringstream report;
 
-    report << "\r\n";
-    report << "╶ Interior point search ";
-
 #ifdef SIMPLE_OUTPUT_CHARS
+    report << "\r\n";
+    report << "- Interior point search ";
     report << "-----------------------------------------------------------------------------------------------\r\n";
 #else
+    report << "\r\n";
+    report << "╶ Interior point search ";
     report << "──────────────────────────────────────────────────────────────────────────────────────────────╴\r\n";
 #endif
 
