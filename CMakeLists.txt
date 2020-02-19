@@ -34,6 +34,7 @@ if(NOT CMAKE_BUILD_TYPE MATCHES Debug)
 endif()
 
 option(COMPILE_TESTS "Should the automated tests be compiled" OFF)
+option(SIMPLE_OUTPUT_CHARS "Whether to avoid using special characters in the console output (for example on MinGW)" OFF)
 
 # Activates extra functionality, note that corresponding libraries may be needed
 
@@ -593,6 +594,11 @@ if(MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++17")
     add_definitions(-D_USE_MATH_DEFINES)
 endif(MSVC)
+
+# Extra flags for MinGW
+if (MINGW)
+    add_definitions(-DSIMPLE_OUTPUT_CHARS)
+endif(MINGW)
 
 # Set compiler warnings levels
 if(MSVC)

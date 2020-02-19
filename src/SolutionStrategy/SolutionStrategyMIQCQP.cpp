@@ -174,9 +174,15 @@ bool SolutionStrategyMIQCQP::solveProblem()
 
     while(env->tasks->getNextTask(nextTask))
     {
+#ifdef SIMPLE_OUTPUT_CHARS
+        env->output->outputTrace("---- Started task:  " + nextTask->getType());
+        nextTask->run();
+        env->output->outputTrace("---- Finished task: " + nextTask->getType());
+#else
         env->output->outputTrace("┌─── Started task:  " + nextTask->getType());
         nextTask->run();
         env->output->outputTrace("└─── Finished task: " + nextTask->getType());
+#endif
     }
 
     return (true);
