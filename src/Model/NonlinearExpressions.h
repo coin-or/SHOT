@@ -2305,7 +2305,7 @@ public:
                     return (false);
             }
         }
-        catch(const mc::Interval::Exceptions& e)
+        catch(const mc::Interval::Exceptions&)
         {
             return (false);
         }

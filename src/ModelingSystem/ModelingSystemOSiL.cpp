@@ -181,7 +181,7 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
             }
         }
     }
-    catch(const std::exception& e)
+    catch(const std::exception&)
     {
         env->output->outputError(fmt::format("Error when parsing quadratic terms."));
         return (E_ProblemCreationStatus::ErrorInConstraints);
@@ -207,7 +207,7 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
             }
         }
     }
-    catch(const std::exception& e)
+    catch(const std::exception&)
     {
         env->output->outputError(fmt::format("Error when parsing nonlinear expressions."));
         return (E_ProblemCreationStatus::ErrorInConstraints);
@@ -243,7 +243,7 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
             constraintCounter++;
         }
     }
-    catch(const std::exception& e)
+    catch(const std::exception&)
     {
         env->output->outputError(fmt::format("Error when parsing constraints."));
         return (E_ProblemCreationStatus::ErrorInConstraints);
@@ -298,7 +298,7 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
                 ->add(std::make_shared<LinearTerm>(coefficient, problem->allVariables[index]));
         }
     }
-    catch(const std::exception& e)
+    catch(const std::exception&)
     {
         env->output->outputError(fmt::format("Error when parsing objective function."));
         return (E_ProblemCreationStatus::ErrorInObjective);
@@ -330,7 +330,7 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
             }
         }
     }
-    catch(const std::exception& e)
+    catch(const std::exception&)
     {
         env->output->outputError(fmt::format("Error when parsing quadratic terms."));
         return (E_ProblemCreationStatus::ErrorInConstraints);
@@ -426,7 +426,7 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
             }
         }
     }
-    catch(const std::exception& e)
+    catch(const std::exception&)
     {
         env->output->outputError(fmt::format("Error when parsing linear terms in constraints."));
         return (E_ProblemCreationStatus::ErrorInConstraints);
