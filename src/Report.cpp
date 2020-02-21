@@ -250,6 +250,26 @@ void Report::outputIterationDetailHeader()
     header << "\r\n";
     header << "                                                                                     \n";
 
+#ifdef SIMPLE_OUTPUT_CHARS
+    header << "    Iteration     |  Time  |  Dual cuts  |     Objective value     |   Objective gap   |     Current "
+              "solution\r\n";
+
+    if(env->problem->objectiveFunction->properties.isMinimize)
+    {
+        header
+            << "     #: type      |  tot.  |   + | tot.  |       dual | primal     |    abs. | rel.    |    obj.fn. | "
+               "max.err.\r\n";
+    }
+    else
+    {
+        header
+            << "     #: type      |  tot.  |   + | tot.  |     primal | dual       |    abs. | rel.    |    obj.fn. | "
+               "max.err.\r\n";
+    }
+
+    header << "----------------------------------------------------------------------------------------------------"
+              "----------------";
+#else
     header << "    Iteration     │  Time  │  Dual cuts  │     Objective value     │   Objective gap   │     Current "
               "solution\r\n";
 
@@ -265,9 +285,11 @@ void Report::outputIterationDetailHeader()
             << "     #: type      │  tot.  │   + | tot.  │     primal | dual       │    abs. | rel.    │    obj.fn. | "
                "max.err.\r\n";
     }
+
     header << "╶─────────────────┴────────┴─────────────┴─────────────────────────┴───────────────────┴────────────"
-              "────"
-              "───────────╴\r\n";
+              "───────────────╴";
+#endif
+
     header << "\r\n";
 
     env->output->outputInfo(header.str());
@@ -279,9 +301,15 @@ void Report::outputIterationDetailHeaderMinimax()
     std::stringstream header;
     header << "                                                                                     \n";
 
+#ifdef SIMPLE_OUTPUT_CHARS
+    header << "    Iteration      |  Time  |    Cuts     |     Objective value     |  Objective diff.   \r\n";
+    header << "     #: type       |  tot.  |   + | tot.  |    problem | line srch  |    abs. | rel.    \r\n";
+    header << "---------------------------------------------------------------------------------------\r\n";
+#else
     header << "    Iteration     │  Time  │    Cuts     │     Objective value     │  Objective diff.   \r\n";
     header << "     #: type      │  tot.  │   + | tot.  │    problem | line srch  │    abs. | rel.    \r\n";
     header << "╶─────────────────┴────────┴─────────────┴─────────────────────────┴──────────────────╴\r\n";
+#endif
 
     env->output->outputInfo(header.str());
 }
@@ -290,9 +318,16 @@ void Report::outputSolverHeader()
 {
     std::stringstream header;
 
+#ifdef SIMPLE_OUTPUT_CHARS
     header << "\r\n";
-    header << "╶ Supporting Hyperplane Optimization Toolkit (SHOT) "
-              "──────────────────────────────────────────────────────────────────╴\r\n";
+    header << "- Supporting Hyperplane Optimization Toolkit (SHOT) ";
+    header << "-------------------------------------------------------------------\r\n";
+#else
+    header << "\r\n";
+    header << "╶ Supporting Hyperplane Optimization Toolkit (SHOT) ";
+    header << "──────────────────────────────────────────────────────────────────╴\r\n";
+#endif
+
     header << "\r\n";
 
     header << " Andreas Lundell and Jan Kronqvist, Åbo Akademi University, Finland.\r\n";
@@ -335,9 +370,17 @@ void Report::outputOptionsReport()
     std::stringstream report;
 
     report << "\r\n";
-    report << "╶ Options "
-              "────────────────────────────────────────────────────────────────────────────────────────────────────────"
+
+#ifdef SIMPLE_OUTPUT_CHARS
+    report << "- Options ";
+    report << "--------------------------------------------------------------------------------------------------------"
+              "-----\r\n";
+#else
+    report << "╶ Options ";
+    report << "────────────────────────────────────────────────────────────────────────────────────────────────────────"
               "────╴\r\n";
+#endif
+
     report << "\r\n";
 
     auto optionsFile = env->settings->getSetting<std::string>("OptionsFile", "Input");
@@ -535,9 +578,16 @@ void Report::outputModelingSystemHeader(ES_SourceFormat source, std::string file
 {
     std::stringstream report;
 
-    report << "╶ Modeling system "
-              "────────────────────────────────────────────────────────────────────────────────────────────────────╴"
+#ifdef SIMPLE_OUTPUT_CHARS
+    report << "- Modeling system ";
+    report << "-----------------------------------------------------------------------------------------------------"
               "\r\n";
+#else
+    report << "╶ Modeling system ";
+    report << "────────────────────────────────────────────────────────────────────────────────────────────────────╴"
+              "\r\n";
+#endif
+
     report << "\r\n";
 
     switch(source)
@@ -575,9 +625,16 @@ void Report::outputProblemInstanceReport()
 
     bool isReformulated = (env->problem == env->reformulatedProblem) ? false : true;
 
-    report << "\r\n╶ Problem instance "
-              "───────────────────────────────────────────────────────────────────────────────────────────────────╴"
+#ifdef SIMPLE_OUTPUT_CHARS
+    report << "\r\n- Problem instance ";
+    report << "----------------------------------------------------------------------------------------------------"
               "\r\n";
+#else
+    report << "\r\n╶ Problem instance ";
+    report << "───────────────────────────────────────────────────────────────────────────────────────────────────╴"
+              "\r\n";
+#endif
+
     report << "\r\n";
 
     if(isReformulated)
@@ -931,9 +988,17 @@ void Report::outputSolutionReport()
     std::stringstream report;
 
     report << "\r\n\r\n";
-    report << "╶ Solution report "
-              "────────────────────────────────────────────────────────────────────────────────────────────────────"
-              "╴\r\n";
+
+#ifdef SIMPLE_OUTPUT_CHARS
+    report << "- Solution report ";
+    report
+        << "-----------------------------------------------------------------------------------------------------\r\n";
+#else
+    report << "╶ Solution report ";
+    report
+        << "────────────────────────────────────────────────────────────────────────────────────────────────────╴\r\n";
+#endif
+
     report << "\r\n";
 
     bool primalSolutionFound = env->results->hasPrimalSolution();
@@ -1272,9 +1337,16 @@ void Report::outputInteriorPointPreReport()
 {
     std::stringstream report;
 
+#ifdef SIMPLE_OUTPUT_CHARS
     report << "\r\n";
-    report << "╶ Interior point search "
-              "──────────────────────────────────────────────────────────────────────────────────────────────╴\r\n";
+    report << "- Interior point search ";
+    report << "-----------------------------------------------------------------------------------------------\r\n";
+#else
+    report << "\r\n";
+    report << "╶ Interior point search ";
+    report << "──────────────────────────────────────────────────────────────────────────────────────────────╴\r\n";
+#endif
+
     report << "\r\n";
 
     report << " Strategy selected:          ";

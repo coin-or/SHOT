@@ -68,8 +68,13 @@ int main(int argc, char* argv[])
 
     if(cmdl["--help"])
     {
+#ifdef SIMPLE_OUTPUT_CHARS
+        env->output->outputInfo("-----------------------------------------------------------------------------------"
+                                "-----------------------------------\r\n");
+#else
         env->output->outputInfo("╶──────────────────────────────────────────────────────────────────────────────────"
                                 "───────────────────────────────────╴\r\n");
+#endif
 
         env->output->outputCritical(" Usage: SHOT PROBLEMFILE [ARGUMENTS] [OPTIONS]");
         env->output->outputCritical("");
@@ -238,7 +243,7 @@ int main(int argc, char* argv[])
             static_cast<E_LogLevel>(env->settings->getSetting<int>("File.LogLevel", "Output")));
     }
 
-    // Reads options specified in the command line arguments
+// Reads options specified in the command line arguments
 #if HAS_AMPL
     if(cmdl["--AMPL"])
     {
@@ -539,8 +544,13 @@ int main(int argc, char* argv[])
 
     env->report->outputSolutionReport();
 
+#ifdef SIMPLE_OUTPUT_CHARS
+    env->output->outputInfo("-----------------------------------------------------------------------------------"
+                            "-----------------------------------\r\n");
+#else
     env->output->outputInfo("╶──────────────────────────────────────────────────────────────────────────────────"
                             "───────────────────────────────────╴\r\n");
+#endif
 
     std::string osrl = solver.getResultsOSrL();
 
