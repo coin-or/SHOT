@@ -493,7 +493,6 @@ int main(int argc, char* argv[])
 
     if(!solver.setProblem(filename))
     {
-        env->output->outputCritical(fmt::format(" SHOT could not read problem from file {}", filename));
         return (0);
     }
 
@@ -535,7 +534,6 @@ int main(int argc, char* argv[])
 
     if(!solver.solveProblem()) // Solve the problem
     {
-        env->output->outputCritical(" Error when solving problem.");
         return (0);
     }
 

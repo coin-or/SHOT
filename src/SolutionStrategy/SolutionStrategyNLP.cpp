@@ -221,12 +221,19 @@ SolutionStrategyNLP::~SolutionStrategyNLP() = default;
 bool SolutionStrategyNLP::solveProblem()
 {
     TaskPtr nextTask;
-
-    while(env->tasks->getNextTask(nextTask))
+    try
     {
-        env->output->outputTrace("┌─── Started task:  " + nextTask->getType());
-        nextTask->run();
-        env->output->outputTrace("└─── Finished task: " + nextTask->getType());
+        while(env->tasks->getNextTask(nextTask))
+        {
+            env->output->outputTrace("┌─── Started task:  " + nextTask->getType());
+            nextTask->run();
+            env->output->outputTrace("└─── Finished task: " + nextTask->getType());
+        }
+    }
+    catch(Exception& e)
+    {
+        env->output->outputCritical(fmt::format(" Cannot solve problem:  {}", e.what()));
+        return (false);
     }
 
     return (true);

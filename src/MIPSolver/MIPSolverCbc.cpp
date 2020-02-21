@@ -31,13 +31,7 @@
 namespace SHOT
 {
 
-MIPSolverCbc::MIPSolverCbc(EnvironmentPtr envPtr)
-{
-    env = envPtr;
-
-    initializeProblem();
-    checkParameters();
-}
+MIPSolverCbc::MIPSolverCbc(EnvironmentPtr envPtr) { env = envPtr; }
 
 MIPSolverCbc::~MIPSolverCbc() = default;
 
@@ -52,6 +46,9 @@ bool MIPSolverCbc::initializeProblem()
 
     cachedSolutionHasChanged = true;
     isVariablesFixed = false;
+
+    checkParameters();
+
     return (true);
 }
 
