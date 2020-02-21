@@ -596,9 +596,9 @@ if(MSVC)
 endif(MSVC)
 
 # Extra flags for MinGW
-if (MINGW)
+if (MSVC OR MSYS OR MINGW)
     add_definitions(-DSIMPLE_OUTPUT_CHARS)
-endif(MINGW)
+endif()
 
 # Set compiler warnings levels
 if(MSVC)
