@@ -1293,7 +1293,7 @@ double MIPSolverCplex::getDualObjectiveValue()
             objVal = cplexInstance.getObjValue();
         }
     }
-    catch(IloException& e)
+    catch(IloException&)
     {
         // Happens for infeasible LP
     }

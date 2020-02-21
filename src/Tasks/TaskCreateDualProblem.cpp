@@ -99,7 +99,7 @@ bool TaskCreateDualProblem::createProblem(MIPSolverPtr destination, ProblemPtr s
         {
             objectiveBound = sourceProblem->objectiveFunction->getBounds();
         }
-        catch(mc::Interval::Exceptions& e)
+        catch(mc::Interval::Exceptions&)
         {
             objectiveBound = Interval(-objVarBound, objVarBound);
         }

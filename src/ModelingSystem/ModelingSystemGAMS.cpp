@@ -805,7 +805,7 @@ bool ModelingSystemGAMS::copyObjectiveFunction(ProblemPtr destination)
                 (std::static_pointer_cast<LinearObjectiveFunction>(objectiveFunction))
                     ->add(std::make_shared<LinearTerm>(coefficients[i], variable));
             }
-            catch(const VariableNotFoundException& e)
+            catch(const VariableNotFoundException&)
             {
                 delete[] variableIndexes;
                 delete[] coefficients;
@@ -936,14 +936,14 @@ bool ModelingSystemGAMS::copyLinearTerms(ProblemPtr destination)
                     std::make_shared<LinearTerm>(linearCoefficients[j], destination->getVariable(variableIndexes[j])));
             }
         }
-        catch(const VariableNotFoundException& e)
+        catch(const VariableNotFoundException&)
         {
             delete[] linearCoefficients;
             delete[] variableIndexes;
             delete[] nonlinearFlags;
             return (false);
         }
-        catch(const ConstraintNotFoundException& e)
+        catch(const ConstraintNotFoundException&)
         {
             delete[] linearCoefficients;
             delete[] variableIndexes;
@@ -989,7 +989,7 @@ bool ModelingSystemGAMS::copyQuadraticTerms(ProblemPtr destination)
                 (std::static_pointer_cast<QuadraticObjectiveFunction>(destination->objectiveFunction))
                     ->add(std::make_shared<QuadraticTerm>(quadraticCoefficients[j], firstVariable, secondVariable));
             }
-            catch(const VariableNotFoundException& e)
+            catch(const VariableNotFoundException&)
             {
                 delete[] variableOneIndexes;
                 delete[] variableTwoIndexes;
@@ -1035,7 +1035,7 @@ bool ModelingSystemGAMS::copyQuadraticTerms(ProblemPtr destination)
                     constraint->add(
                         std::make_shared<QuadraticTerm>(quadraticCoefficients[j], firstVariable, secondVariable));
                 }
-                catch(const VariableNotFoundException& e)
+                catch(const VariableNotFoundException&)
                 {
                     delete[] variableOneIndexes;
                     delete[] variableTwoIndexes;
@@ -1043,7 +1043,7 @@ bool ModelingSystemGAMS::copyQuadraticTerms(ProblemPtr destination)
 
                     return (false);
                 }
-                catch(const ConstraintNotFoundException& e)
+                catch(const ConstraintNotFoundException&)
                 {
                     delete[] variableOneIndexes;
                     delete[] variableTwoIndexes;
@@ -1100,7 +1100,7 @@ bool ModelingSystemGAMS::copyNonlinearExpressions(ProblemPtr destination)
                 objective->add(std::move(destinationExpression));
             }
         }
-        catch(const ConstraintNotFoundException& e)
+        catch(const ConstraintNotFoundException&)
         {
             delete[] opcodes;
             delete[] fields;
@@ -1125,7 +1125,7 @@ bool ModelingSystemGAMS::copyNonlinearExpressions(ProblemPtr destination)
                 auto constraint = std::dynamic_pointer_cast<NonlinearConstraint>(destination->getConstraint(i));
                 constraint->add(std::move(destinationExpression));
             }
-            catch(const ConstraintNotFoundException& e)
+            catch(const ConstraintNotFoundException&)
             {
                 delete[] opcodes;
                 delete[] fields;

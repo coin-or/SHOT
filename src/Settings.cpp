@@ -829,7 +829,7 @@ bool Settings::readSettingsFromOSoL(std::string osol)
                 output->outputError(
                     "  Cannot update setting <" + name + "," + category + "> since it is of the wrong type.");
         }
-        catch(std::exception& e)
+        catch(std::exception&)
         {
             output->outputError("  Error when reading OSoL line " + std::to_string(N->GetLineNum()));
             return (false);
