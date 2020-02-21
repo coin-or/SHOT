@@ -571,6 +571,7 @@ bool Solver::solveProblem()
         env->results->setPrimalBound(SHOT_DBL_MIN);
     }
 
+    assert(solutionStrategy != nullptr);  /* would be NULL if setProblem failed */
     isProblemSolved = solutionStrategy->solveProblem();
 
     return (isProblemSolved);

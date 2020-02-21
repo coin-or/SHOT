@@ -193,7 +193,13 @@ extern "C"
                         env->tasks->terminate();
                 });
 
-            solver.setProblem(problem, modelingSystem);
+            if( !solver.setProblem(problem, modelingSystem) )
+            {
+               env->output->outputError(" Error when initializing problem.");
+               gmoSolveStatSet(gs->gmo, gmoSolveStat_SetupErr);
+               gmoModelStatSet(gs->gmo, gmoModelStat_ErrorNoSolution);
+               return 0;
+            }
 
             env->report->outputProblemInstanceReport();
             env->report->outputOptionsReport();
