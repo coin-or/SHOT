@@ -36,7 +36,7 @@ MIPSolverGurobiSingleTree::MIPSolverGurobiSingleTree(EnvironmentPtr envPtr)
     }
     catch(GRBException& e)
     {
-        env->output->outputError("        Error when initializing Gurobi:", e.getMessage());
+        env->output->outputError(" Error when initializing Gurobi: ", e.getMessage());
         return;
     }
 
@@ -56,7 +56,7 @@ void MIPSolverGurobiSingleTree::initializeSolverSettings()
     }
     catch(GRBException& e)
     {
-        env->output->outputError("        Error when initializing parameters for linear solver", e.getMessage());
+        env->output->outputError(" Error when initializing Gurobi parameters: ", e.getMessage());
     }
 }
 

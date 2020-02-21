@@ -539,7 +539,7 @@ bool Solver::selectStrategy()
     }
     catch(Exception& e)
     {
-        env->output->outputCritical(fmt::format(" Cannot initialize solver: {}", e.what()));
+        env->output->outputCritical(e.what());
         return (false);
     }
 

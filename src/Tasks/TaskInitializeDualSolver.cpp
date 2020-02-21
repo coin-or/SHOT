@@ -141,7 +141,7 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool u
     }
 
     if(!env->dualSolver->MIPSolver->initializeProblem())
-        throw Exception("Cannot initialize selected MIP solver.");
+        throw Exception(" Cannot initialize selected MIP solver.");
 
     env->timing->stopTimer("DualStrategy");
 }

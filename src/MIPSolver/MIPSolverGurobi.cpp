@@ -62,7 +62,7 @@ bool MIPSolverGurobi::initializeProblem()
     }
     catch(GRBException& e)
     {
-        env->output->outputError("        Error when initializing problem:", e.getMessage());
+        env->output->outputError(" Error when initializing Gurobi:", e.getMessage());
         return (false);
     }
 
@@ -420,7 +420,7 @@ void MIPSolverGurobi::initializeSolverSettings()
     catch(GRBException& e)
     {
         {
-            env->output->outputError("        Error when initializing parameters for linear solver", e.getMessage());
+            env->output->outputError(" Error when initializing Gurobi parameters: ", e.getMessage());
         }
     }
 }
