@@ -111,7 +111,7 @@ void DualSolver::checkDualSolutionCandidates()
 
 void DualSolver::addHyperplane(Hyperplane& hyperplane)
 {
-    assert(hyperplane.generatedPoint.size() == env->reformulatedProblem->properties.numberOfVariables);
+    assert((int)hyperplane.generatedPoint.size() == env->reformulatedProblem->properties.numberOfVariables);
     this->hyperplaneWaitingList.push_back(hyperplane);
 }
 

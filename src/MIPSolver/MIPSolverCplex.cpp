@@ -28,13 +28,7 @@ MIPSolverCplex::MIPSolverCplex()
     // Should not be called
 }
 
-MIPSolverCplex::MIPSolverCplex(EnvironmentPtr envPtr)
-{
-    env = envPtr;
-
-    initializeProblem();
-    checkParameters();
-}
+MIPSolverCplex::MIPSolverCplex(EnvironmentPtr envPtr) { env = envPtr; }
 
 MIPSolverCplex::~MIPSolverCplex()
 {
@@ -80,6 +74,8 @@ bool MIPSolverCplex::initializeProblem()
     cachedSolutionHasChanged = true;
     isVariablesFixed = false;
     modelUpdated = false;
+
+    checkParameters();
 
     return (true);
 }
@@ -431,7 +427,7 @@ void MIPSolverCplex::initializeSolverSettings()
     }
     catch(IloException& e)
     {
-        env->output->outputError("        Cplex error when initializing parameters for linear solver", e.getMessage());
+        env->output->outputError(" Error when initializing Cplex parameters: ", e.getMessage());
     }
 }
 
@@ -1293,7 +1289,7 @@ double MIPSolverCplex::getDualObjectiveValue()
             objVal = cplexInstance.getObjValue();
         }
     }
-    catch(IloException& e)
+    catch(IloException&)
     {
         // Happens for infeasible LP
     }

@@ -294,4 +294,5 @@ class UnsolvedProblemException : public Exception
 public:
     UnsolvedProblemException(std::string message) : Exception(message) {}
 };
+
 } // namespace SHOT

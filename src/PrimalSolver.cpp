@@ -420,7 +420,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
 void PrimalSolver::addFixedNLPCandidate(
     VectorDouble pt, E_PrimalNLPSource source, double objVal, int iter, PairIndexValue maxConstrDev)
 {
-    if(pt.size() < env->reformulatedProblem->properties.numberOfVariables)
+    if((int)pt.size() < env->reformulatedProblem->properties.numberOfVariables)
     {
         for(auto& V : env->reformulatedProblem->auxiliaryVariables)
         {

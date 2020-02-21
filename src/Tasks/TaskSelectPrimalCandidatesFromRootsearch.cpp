@@ -91,7 +91,7 @@ void TaskSelectPrimalCandidatesFromRootsearch::run(std::vector<SolutionPoint> so
                         env->primalSolver->addPrimalSolutionCandidate(xNewc.first, E_PrimalSolutionSource::Rootsearch,
                             env->results->getCurrentIteration()->iterationNumber);
                     }
-                    catch(std::exception& e)
+                    catch(std::exception&)
                     {
                         env->output->outputDebug("        Cannot find solution with primal rootsearch.");
                     }

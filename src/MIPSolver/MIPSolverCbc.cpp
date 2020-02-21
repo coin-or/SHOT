@@ -31,13 +31,7 @@
 namespace SHOT
 {
 
-MIPSolverCbc::MIPSolverCbc(EnvironmentPtr envPtr)
-{
-    env = envPtr;
-
-    initializeProblem();
-    checkParameters();
-}
+MIPSolverCbc::MIPSolverCbc(EnvironmentPtr envPtr) { env = envPtr; }
 
 MIPSolverCbc::~MIPSolverCbc() = default;
 
@@ -52,6 +46,9 @@ bool MIPSolverCbc::initializeProblem()
 
     cachedSolutionHasChanged = true;
     isVariablesFixed = false;
+
+    checkParameters();
+
     return (true);
 }
 
@@ -406,51 +403,56 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
     E_ProblemSolutionStatus MIPSolutionStatus;
     cachedSolutionHasChanged = true;
 
-    const int numArguments = 10;
+    const int numArguments = 17;
     char* argv[numArguments];
     std::string arg;
 
     argv[0] = strdup("");
+    argv[1] = strdup("-autoscale");
     if(env->settings->getSetting<bool>("Cbc.AutoScale", "Subsolver"))
-        argv[1] = strdup("-autoscale=on");
+        argv[2] = strdup("on");
     else
-        argv[1] = strdup("-autoscale=off");
+        argv[2] = strdup("off");
 
-    arg = "-nodestrategy=" + env->settings->getSetting<std::string>("Cbc.NodeStrategy", "Subsolver");
-    argv[2] = strdup(arg.c_str());
-
-    arg = "-scaling=" + env->settings->getSetting<std::string>("Cbc.Scaling", "Subsolver");
-    argv[3] = strdup(arg.c_str());
-
-    arg = "-strategy=" + std::to_string(env->settings->getSetting<int>("Cbc.Strategy", "Subsolver"));
+    argv[3] = strdup("-nodestrategy");
+    arg = env->settings->getSetting<std::string>("Cbc.NodeStrategy", "Subsolver");
     argv[4] = strdup(arg.c_str());
 
-    arg = "-cutoff=" + std::to_string(this->cutOff);
-    argv[5] = strdup(arg.c_str());
-
-    arg = "-sec=" + std::to_string(this->timeLimit);
+    argv[5] = strdup("-scaling");
+    arg = env->settings->getSetting<std::string>("Cbc.Scaling", "Subsolver");
     argv[6] = strdup(arg.c_str());
+
+    argv[7] = strdup("-strategy");
+    arg = std::to_string(env->settings->getSetting<int>("Cbc.Strategy", "Subsolver"));
+    argv[8] = strdup(arg.c_str());
+
+    argv[9] = strdup("-cutoff");
+    arg = std::to_string(this->cutOff);
+    argv[10] = strdup(arg.c_str());
+
+    argv[11] = strdup("-sec");
+    arg = std::to_string(this->timeLimit);  // FIXME this->timeLimit has not been initialized
+    argv[12] = strdup(arg.c_str());
 
     if(cbcModel->haveMultiThreadSupport())
     {
         // Cbc runs in deterministic mode if number of threads > 100
+        argv[13] = strdup("-threads");
         if(env->settings->getSetting<bool>("Cbc.DeterministicParallelMode", "Subsolver"))
-            arg = "-threads=" + std::to_string(env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual") + 100);
+            arg = std::to_string(env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual") + 100);
         else
-            arg = "-threads=" + std::to_string(env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual"));
+            arg = std::to_string(env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual"));
+        argv[14] = strdup(arg.c_str());
 
-        argv[7] = strdup(arg.c_str());
-
-        argv[8] = strdup("-solve");
-        argv[9] = strdup("-quit");
+        argv[15] = strdup("-solve");
+        argv[16] = strdup("-quit");
     }
     else
     {
-        arg = "";
-
-        argv[7] = strdup("-solve");
-        argv[8] = strdup("-quit");
-        argv[9] = strdup("");
+        argv[13] = strdup("-solve");
+        argv[14] = strdup("-quit");
+        argv[15] = nullptr;
+        argv[16] = nullptr;
     }
 
     try
@@ -714,55 +716,57 @@ bool MIPSolverCbc::repairInfeasibility()
 
         cachedSolutionHasChanged = true;
 
-        const int numArguments = 10;
+        const int numArguments = 17;
         char* argv[numArguments];
         std::string arg;
 
         argv[0] = strdup("");
+        argv[1] = strdup("-autoscale");
         if(env->settings->getSetting<bool>("Cbc.AutoScale", "Subsolver"))
-            argv[1] = strdup("-autoscale=on");
+            argv[2] = strdup("on");
         else
-            argv[1] = strdup("-autoscale=off");
+            argv[2] = strdup("off");
 
-        arg = "-nodestrategy=" + env->settings->getSetting<std::string>("Cbc.NodeStrategy", "Subsolver");
-        argv[2] = strdup(arg.c_str());
-
-        arg = "-scaling=" + env->settings->getSetting<std::string>("Cbc.Scaling", "Subsolver");
-        argv[3] = strdup(arg.c_str());
-
-        arg = "-strategy=" + std::to_string(env->settings->getSetting<int>("Cbc.Strategy", "Subsolver"));
+        argv[3] = strdup("-nodestrategy");
+        arg = env->settings->getSetting<std::string>("Cbc.NodeStrategy", "Subsolver");
         argv[4] = strdup(arg.c_str());
+
+        argv[5] = strdup("-scaling");
+        arg = env->settings->getSetting<std::string>("Cbc.Scaling", "Subsolver");
+        argv[6] = strdup(arg.c_str());
+
+        argv[7] = strdup("-strategy");
+        arg = std::to_string(env->settings->getSetting<int>("Cbc.Strategy", "Subsolver"));
+        argv[8] = strdup(arg.c_str());
+
+        argv[9] = strdup("-cutoff");
+        arg = std::to_string(this->cutOff);
+        argv[10] = strdup(arg.c_str());
+
+        argv[11] = strdup("-sec");
+        arg = std::to_string(this->timeLimit);  // FIXME this->timeLimit has not been initialized
+        argv[12] = strdup(arg.c_str());
 
         if(cbcModel->haveMultiThreadSupport())
         {
             // Cbc runs in deterministic mode if number of threads > 100
+            argv[13] = strdup("-threads");
             if(env->settings->getSetting<bool>("Cbc.DeterministicParallelMode", "Subsolver"))
-                arg = "-threads=" + std::to_string(env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual") + 100);
+                arg = std::to_string(env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual") + 100);
             else
-                arg = "-threads=" + std::to_string(env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual"));
+                arg = std::to_string(env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual"));
+            argv[14] = strdup(arg.c_str());
 
-            argv[7] = strdup(arg.c_str());
-
-            argv[8] = strdup("-solve");
-            argv[9] = strdup("-quit");
+            argv[15] = strdup("-solve");
+            argv[16] = strdup("-quit");
         }
         else
         {
-            arg = "";
-
-            argv[7] = strdup("-solve");
-            argv[8] = strdup("-quit");
-            argv[9] = strdup("");
+            argv[13] = strdup("-solve");
+            argv[14] = strdup("-quit");
+            argv[15] = NULL;
+            argv[16] = NULL;
         }
-
-        arg = "-cutoff=" + std::to_string(this->cutOff);
-        argv[6] = strdup(arg.c_str());
-
-        arg = "-sec=" + std::to_string(this->timeLimit);
-        argv[7] = strdup(arg.c_str());
-
-        argv[8] = strdup("-solve");
-        argv[9] = strdup("-quit");
 
         CbcMain1(numArguments, const_cast<const char**>(argv), *cbcModel);
 

@@ -669,7 +669,7 @@ void MIPSolverCplexSingleTreeLegacy::initializeSolverSettings()
     }
     catch(IloException& e)
     {
-        env->output->outputError("        Cplex error when initializing parameters for linear solver", e.getMessage());
+        env->output->outputError(" Error when initializing Cplex parameters: ", e.getMessage());
     }
 }
 

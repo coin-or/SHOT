@@ -14,6 +14,7 @@
 #include <iostream>
 #include <limits>
 #include <random>
+#include <numeric>
 
 #include "Utilities.h"
 

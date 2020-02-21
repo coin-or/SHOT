@@ -29,13 +29,7 @@ MIPSolverGurobi::MIPSolverGurobi()
     // Should not be called
 }
 
-MIPSolverGurobi::MIPSolverGurobi(EnvironmentPtr envPtr)
-{
-    env = envPtr;
-
-    initializeProblem();
-    checkParameters();
-}
+MIPSolverGurobi::MIPSolverGurobi(EnvironmentPtr envPtr) { env = envPtr; }
 
 MIPSolverGurobi::~MIPSolverGurobi()
 {
@@ -68,12 +62,14 @@ bool MIPSolverGurobi::initializeProblem()
     }
     catch(GRBException& e)
     {
-        env->output->outputError("        Error when initializing problem:", e.getMessage());
+        env->output->outputError(" Error when initializing Gurobi:", e.getMessage());
         return (false);
     }
 
     cachedSolutionHasChanged = true;
     isVariablesFixed = false;
+
+    checkParameters();
 
     return (true);
 }
@@ -424,7 +420,7 @@ void MIPSolverGurobi::initializeSolverSettings()
     catch(GRBException& e)
     {
         {
-            env->output->outputError("        Error when initializing parameters for linear solver", e.getMessage());
+            env->output->outputError(" Error when initializing Gurobi parameters: ", e.getMessage());
         }
     }
 }

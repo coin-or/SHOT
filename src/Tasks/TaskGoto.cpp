@@ -26,7 +26,7 @@ void TaskGoto::run()
     {
         env->tasks->setNextTask(gotoTaskID);
     }
-    catch(TaskExceptionNotFound& e)
+    catch(TaskExceptionNotFound&)
     {
         env->output->outputError("Could not find task: " + gotoTaskID);
     }

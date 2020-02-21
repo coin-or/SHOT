@@ -175,7 +175,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
             internalPoint = xNewc.first;
             externalPoint = xNewc.second;
         }
-        catch(std::exception& e)
+        catch(std::exception&)
         {
             env->timing->stopTimer("DualCutGenerationRootSearch");
             externalPoint = solPoints.at(i).point;
@@ -267,7 +267,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
                 internalPoint = xNewc.first;
                 externalPoint = xNewc.second;
             }
-            catch(std::exception& e)
+            catch(std::exception&)
             {
                 env->timing->stopTimer("DualCutGenerationRootSearch");
                 externalPoint = solPoints.at(i).point;
@@ -366,7 +366,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
                 internalPoint = xNewc.first;
                 externalPoint = xNewc.second;
             }
-            catch(std::exception& e)
+            catch(std::exception&)
             {
                 env->timing->stopTimer("DualCutGenerationRootSearch");
                 externalPoint = solPoints.at(i).point;
