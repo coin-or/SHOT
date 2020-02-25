@@ -29,8 +29,8 @@ NLPSolverGAMS::NLPSolverGAMS(EnvironmentPtr envPtr, gmoHandle_t modelingObject)
 {
     modelingEnvironment = (gevHandle_t)gmoEnvironment(modelingObject);
 
-    strcpy(nlpsolver, env->settings->getSetting<std::string>("GAMS.NLP.Solver", "Subsolver").c_str());
-    strcpy(nlpsolveropt, env->settings->getSetting<std::string>("GAMS.NLP.OptionsFilename", "Subsolver").c_str());
+    nlpsolver = env->settings->getSetting<std::string>("GAMS.NLP.Solver", "Subsolver");
+    nlpsolveropt = env->settings->getSetting<std::string>("GAMS.NLP.OptionsFilename", "Subsolver");
 
     timelimit = env->settings->getSetting<double>("FixedInteger.TimeLimit", "Primal");
     iterlimit = env->settings->getSetting<int>("FixedInteger.IterationLimit", "Primal");
@@ -96,10 +96,10 @@ E_NLPSolutionStatus NLPSolverGAMS::solveProblemInstance()
     char msg[GMS_SSSIZE];
 
     /* set which options file to use */
-    if(*nlpsolveropt)
+    if(!nlpsolveropt.empty())
     {
         gmoOptFileSet(modelingObject, 1);
-        gmoNameOptFileSet(modelingObject, nlpsolveropt);
+        gmoNameOptFileSet(modelingObject, nlpsolveropt.c_str());
     }
     else
     {
@@ -110,7 +110,7 @@ E_NLPSolutionStatus NLPSolverGAMS::solveProblemInstance()
     gmoAltBoundsSet(modelingObject, 1); /* use alternative bounds */
     gmoForceContSet(modelingObject, 1);
 
-    if(gevCallSolver(modelingEnvironment, modelingObject, "", nlpsolver, gevSolveLinkLoadLibrary,
+    if(gevCallSolver(modelingEnvironment, modelingObject, "", nlpsolver.c_str(), gevSolveLinkLoadLibrary,
            showlog ? gevSolverSameStreams : gevSolverQuiet, nullptr, nullptr, timelimit, iterlimit, 0, 0.0, 0.0,
            nullptr, msg)
         != 0)

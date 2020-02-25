@@ -22,8 +22,8 @@ private:
     gmoHandle_t modelingObject;
     gevHandle_t modelingEnvironment;
 
-    char nlpsolver[GMS_SSSIZE];
-    char nlpsolveropt[GMS_SSSIZE];
+    std::string nlpsolver;
+    std::string nlpsolveropt;
     double timelimit;
     int iterlimit;
     bool showlog;
