@@ -50,6 +50,7 @@ ModelingSystemGAMS::ModelingSystemGAMS(EnvironmentPtr envPtr)
     : IModelingSystem(envPtr)
     , modelingObject(nullptr)
     , modelingEnvironment(nullptr)
+    , auditLicensing(nullptr)
     , createdtmpdir(false)
     , createdgmo(false)
 {
@@ -59,6 +60,8 @@ void ModelingSystemGAMS::setModelingObject(gmoHandle_t gmo)
 {
     modelingObject = gmo;
     modelingEnvironment = (gevHandle_t)gmoEnvironment(gmo);
+
+    createAuditLicensing();
 }
 
 ModelingSystemGAMS::~ModelingSystemGAMS()
@@ -69,22 +72,22 @@ ModelingSystemGAMS::~ModelingSystemGAMS()
     {
         gmoLibraryUnload();
         gevLibraryUnload();
+        palLibraryUnload();
     }
 }
 
 void ModelingSystemGAMS::augmentSettings([[maybe_unused]] SettingsPtr settings) {}
 
-void ModelingSystemGAMS::updateSettings(SettingsPtr settings, [[maybe_unused]] palHandle_t pal)
+void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
 {
     assert(modelingEnvironment != nullptr);
     assert(modelingObject != nullptr);
 
 #ifdef GAMS_BUILD
-    assert(pal != nullptr);
-    GAMSinitLicensing(modelingObject, pal);
+    assert(auditLicensing != nullptr);
 
     /* if IPOPTH is licensed, use MA27, otherwise Mumps */
-    if(GAMSHSLInit(modelingObject, pal))
+    if(GAMSHSLInit(modelingObject, auditLicensing))
         env->settings->updateSetting("Ipopt.LinearSolver", "Subsolver", static_cast<int>(ES_IpoptSolver::ma27));
     else
         env->settings->updateSetting("Ipopt.LinearSolver", "Subsolver", static_cast<int>(ES_IpoptSolver::mumps));
@@ -165,7 +168,7 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings, [[maybe_unused]] p
     if(env->settings->getSetting<int>("MIP.Solver", "Dual") == (int)ES_MIPSolver::Cplex)
     {
         /* sometimes we would also allow a solver if demo-sized problem, but we don't know how large the MIPs will be */
-        if(!GAMScheckCPLEXLicense(pal, true))
+        if(!GAMScheckCPLEXLicense(auditLicensing, true))
         {
             env->output->outputInfo(
                 " CPLEX chosen as MIP solver, but no GAMS/CPLEX license available. Changing to CBC.");
@@ -174,7 +177,6 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings, [[maybe_unused]] p
     }
 #endif
 }
-
 E_ProblemCreationStatus ModelingSystemGAMS::createProblem(
     ProblemPtr& problem, const std::string& filename, const E_GAMSInputSource& inputSource)
 {
@@ -465,6 +467,32 @@ void ModelingSystemGAMS::createModelFromGAMSModel(const std::string& filename)
         gevFree(&modelingEnvironment);
         throw std::logic_error("Could not load model data.");
     }
+
+    createAuditLicensing();
+}
+
+void ModelingSystemGAMS::createAuditLicensing()
+{
+    assert(auditLicensing == nullptr);
+
+    char msg[GMS_SSSIZE];
+#ifdef GAMSDIR
+    if(!palCreateD(&auditLicensing, GAMSDIR, msg, sizeof(msg)))
+#else
+    if(!palCreate(&auditLicensing, msg, sizeof(msg)))
+#endif
+        throw std::logic_error(msg);
+
+    char buf[80];
+    palLicenseRegisterGAMS(auditLicensing, 1, gevGetStrOpt(modelingEnvironment, "License1", buf));
+    palLicenseRegisterGAMS(auditLicensing, 2, gevGetStrOpt(modelingEnvironment, "License2", buf));
+    palLicenseRegisterGAMS(auditLicensing, 3, gevGetStrOpt(modelingEnvironment, "License3", buf));
+    palLicenseRegisterGAMS(auditLicensing, 4, gevGetStrOpt(modelingEnvironment, "License4", buf));
+    palLicenseRegisterGAMS(auditLicensing, 5, gevGetStrOpt(modelingEnvironment, "License5", buf));
+    palLicenseRegisterGAMS(auditLicensing, 6, gevGetStrOpt(modelingEnvironment, "License6", buf));
+    palLicenseRegisterGAMSDone(auditLicensing);
+
+    palLicenseCheck(auditLicensing, gmoM(modelingObject), gmoN(modelingObject), gmoNZ(modelingObject), gmoNLNZ(modelingObject), gmoNDisc(modelingObject));
 }
 
 void ModelingSystemGAMS::finalizeSolution()
@@ -589,6 +617,12 @@ void ModelingSystemGAMS::clearGAMSObjects()
         assert(modelingEnvironment != nullptr);
         gevFree(&modelingEnvironment);
         modelingEnvironment = nullptr;
+    }
+
+    if(auditLicensing != nullptr)
+    {
+        palFree(&auditLicensing);
+        auditLicensing = nullptr;
     }
 
     /* remove temporary directory content (should have only files) and directory itself) */

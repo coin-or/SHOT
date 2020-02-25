@@ -46,8 +46,7 @@ public:
     void augmentSettings(SettingsPtr settings) override;
 
     // Get specific settings from modeling system
-    void updateSettings(SettingsPtr settings) override { updateSettings(settings, NULL); }
-    void updateSettings(SettingsPtr settings, palHandle_t pal);
+    void updateSettings(SettingsPtr settings) override;
 
     // Create the optimization problem by filename either directly from a gms-file or from a compiled GAMS model
     E_ProblemCreationStatus createProblem(
@@ -61,6 +60,7 @@ public:
 
     gmoHandle_t modelingObject;
     gevHandle_t modelingEnvironment;
+    palHandle_t auditLicensing;
 
 private:
     bool createdtmpdir;
@@ -70,6 +70,7 @@ private:
 
     void createModelFromProblemFile(const std::string& filename);
     void createModelFromGAMSModel(const std::string& filename);
+    void createAuditLicensing();
 
     void clearGAMSObjects();
 
