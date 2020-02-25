@@ -13,6 +13,7 @@
 
 #include "gmomcc.h"
 #include "gevmcc.h"
+#include "palmcc.h"
 
 namespace SHOT
 {
@@ -29,7 +30,7 @@ private:
     bool showlog;
 
 public:
-    NLPSolverGAMS(EnvironmentPtr envPtr, gmoHandle_t modelingObject);
+    NLPSolverGAMS(EnvironmentPtr envPtr, gmoHandle_t modelingObject, palHandle_t auditLicensing);
 
     ~NLPSolverGAMS() override;
 

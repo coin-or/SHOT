@@ -80,7 +80,7 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(Environment
 
         env->results->usedPrimalNLPSolver = ES_PrimalNLPSolver::GAMS;
         NLPSolver = std::make_shared<NLPSolverGAMS>(
-            env, (std::dynamic_pointer_cast<ModelingSystemGAMS>(env->modelingSystem))->modelingObject);
+            env, (std::dynamic_pointer_cast<ModelingSystemGAMS>(env->modelingSystem))->modelingObject, (std::dynamic_pointer_cast<ModelingSystemGAMS>(env->modelingSystem))->auditLicensing);
         break;
     }
 #endif
