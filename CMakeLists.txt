@@ -566,7 +566,8 @@ target_link_libraries(SHOTSolver SHOTResults)
 target_link_libraries(SHOTSolver SHOTDualStrategy)
 target_link_libraries(SHOTSolver SHOTPrimalStrategy)
 target_link_libraries(SHOTSolver SHOTTasks)
-target_link_libraries(SHOTSolver SHOTModelingInterfaces)
+# need these whole-archive flags to ensure that EntryPointGAMS symbols will be present in library
+target_link_libraries(SHOTSolver "-Wl,--whole-archive" SHOTModelingInterfaces "-Wl,--no-whole-archive")
 target_link_libraries(SHOTSolver SHOTSolutionStrategies)
 
 # Link the standard library required for std::filesystem (if needed)
