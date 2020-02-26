@@ -22,7 +22,7 @@ class IRootsearchMethod
 {
 public:
     IRootsearchMethod() = default;
-    IRootsearchMethod(EnvironmentPtr envPtr[[maybe_unused]]){};
+    IRootsearchMethod(EnvironmentPtr envPtr [[maybe_unused]]) {};
     virtual ~IRootsearchMethod() = default;
 
     virtual std::pair<VectorDouble, VectorDouble> findZero(const VectorDouble& ptA, const VectorDouble& ptB, int Nmax,
@@ -34,7 +34,7 @@ public:
         = 0;
 
     virtual std::pair<double, double> findZero(const VectorDouble& pt, double objectiveLB, double objectiveUB, int Nmax,
-        double lambdaTol, double constrTol, const NonlinearObjectiveFunction* objectiveFunction)
+        double lambdaTol, double constrTol, ObjectiveFunctionPtr objectiveFunction)
         = 0;
 
 protected:
