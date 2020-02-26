@@ -12,12 +12,12 @@ matrix:
 before_script:
   - git clone https://github.com/coin-or/coinbrew
   - cd coinbrew
-  - bash ./coinbrew build Ipopt:stable/3.13 --prefix=$HOME/SHOT/ThirdParty/Ipopt --no-prompt --build-dir=ipopt-build --tests none
+  - bash ./coinbrew build Ipopt:stable/3.13 --prefix=$HOME/build/coin-or/SHOT/ThirdParty/Ipopt --no-prompt --build-dir=ipopt-build --tests none
   - bash ./coinbrew install Ipopt
-  - bash ./coinbrew build Cbc:stable/2.10 --prefix=$HOME/SHOT/ThirdParty/Cbc --no-prompt --build-dir=cbc-build --tests none
+  - bash ./coinbrew build Cbc:stable/2.10 --prefix=$HOME/build/coin-or/SHOT/ThirdParty/Cbc --no-prompt --build-dir=cbc-build --tests none
   - bash ./coinbrew install Cbc
   - mkdir ~/SHOT/build
-  - cd ~/SHOT/build
+  - cd ~/build/coin-or/SHOT/build
   - cmake .. -DCBC_DIR=../ThirdParty/Cbc -DIPOPT_DIR=../ThirdParty/Ipopt -DHAS_GAMS=off -DHAS_CPLEX=off -DHAS_GUROBI=off -DCOMPILE_TESTS=on
 
 script:
