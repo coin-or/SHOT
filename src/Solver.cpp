@@ -1267,8 +1267,8 @@ void Solver::initializeSettings()
     env->settings->createSetting(
         "GAMS.NLP.OptionsFilename", "Subsolver", optfile, "Options file for the NLP solver in GAMS");
 
-    std::string solver = "conopt";
-    env->settings->createSetting("GAMS.NLP.Solver", "Subsolver", solver, "NLP solver to use in GAMS");
+    std::string solver = "auto";
+    env->settings->createSetting("GAMS.NLP.Solver", "Subsolver", solver, "NLP solver to use in GAMS (auto: SHOT chooses)");
 
 #endif
 

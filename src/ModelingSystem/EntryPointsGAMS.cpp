@@ -39,7 +39,6 @@ extern "C"
     {
         gmoHandle_t gmo;
         optHandle_t opt;
-        palHandle_t pal;
     } gamsshot;
 
     DllExport void STDCALL shtInitialize(void);
@@ -101,9 +100,6 @@ extern "C"
         assert(Cptr != nullptr);
         assert(*Cptr != nullptr);
 
-        if(((gamsshot*)*Cptr)->pal != NULL)
-            palFree(&((gamsshot*)*Cptr)->pal);
-
         free(*Cptr);
         *Cptr = nullptr;
 
@@ -117,7 +113,6 @@ extern "C"
     {
         gamsshot* gs;
         gevHandle_t gev;
-        char msg[256];
 
         assert(Cptr != nullptr);
         assert(Gptr != nullptr);
@@ -127,21 +122,6 @@ extern "C"
         gs->opt = Optr;
         gev = (gevHandle_t)gmoEnvironment(Gptr);
 
-        if(!palCreate(&gs->pal, msg, sizeof(msg)))
-        {
-            gevLogStat(gev, msg);
-            return 1;
-        }
-
-#if PALAPIVERSION >= 3
-        /* print auditline */
-        palSetSystemName(gs->pal, "SHOT");
-        palGetAuditLine(gs->pal, msg);
-        gevLogStat(gev, "");
-        gevLogStat(gev, msg);
-        gevStatAudit(gev, msg);
-#endif
-
         return 0;
     }
 
@@ -149,6 +129,7 @@ extern "C"
     DllExport int STDCALL shtCallSolver(void* Cptr)
     {
         gamsshot* gs;
+        char msg[GMS_SSSIZE];
 
         assert(Cptr != nullptr);
         gs = (gamsshot*)Cptr;
@@ -166,7 +147,17 @@ extern "C"
 
             std::shared_ptr<ModelingSystemGAMS> modelingSystem = std::make_shared<SHOT::ModelingSystemGAMS>(env);
             modelingSystem->setModelingObject(gs->gmo);
-            modelingSystem->updateSettings(env->settings, gs->pal);
+
+#if PALAPIVERSION >= 3
+            /* print auditline */
+            palSetSystemName(modelingSystem->auditLicensing, "SHOT");
+            palGetAuditLine(modelingSystem->auditLicensing, msg);
+            gevLogStat(gev, "");
+            gevLogStat(gev, msg);
+            gevStatAudit(gev, msg);
+#endif
+
+            modelingSystem->updateSettings(env->settings);
 
             env->timing->startTimer("ProblemInitialization");
             SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);

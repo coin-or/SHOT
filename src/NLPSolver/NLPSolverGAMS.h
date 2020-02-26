@@ -13,6 +13,7 @@
 
 #include "gmomcc.h"
 #include "gevmcc.h"
+#include "palmcc.h"
 
 namespace SHOT
 {
@@ -22,14 +23,14 @@ private:
     gmoHandle_t modelingObject;
     gevHandle_t modelingEnvironment;
 
-    char nlpsolver[GMS_SSSIZE];
-    char nlpsolveropt[GMS_SSSIZE];
+    std::string nlpsolver;
+    std::string nlpsolveropt;
     double timelimit;
     int iterlimit;
     bool showlog;
 
 public:
-    NLPSolverGAMS(EnvironmentPtr envPtr, gmoHandle_t modelingObject);
+    NLPSolverGAMS(EnvironmentPtr envPtr, gmoHandle_t modelingObject, palHandle_t auditLicensing);
 
     ~NLPSolverGAMS() override;
 
