@@ -571,7 +571,7 @@ bool Solver::solveProblem()
         env->results->setPrimalBound(SHOT_DBL_MIN);
     }
 
-    assert(solutionStrategy != nullptr);  /* would be NULL if setProblem failed */
+    assert(solutionStrategy != nullptr); /* would be NULL if setProblem failed */
     isProblemSolved = solutionStrategy->solveProblem();
 
     return (isProblemSolved);
@@ -729,6 +729,15 @@ void Solver::initializeSettings()
 
     env->settings->createSetting("HyperplaneCuts.UseIntegerCuts", "Dual", false,
         "Add integer cuts for infeasible integer-combinations for binary problems");
+
+    VectorString enumObjectiveRootsearch;
+    enumObjectiveRootsearch.push_back("Always");
+    enumObjectiveRootsearch.push_back("IfConvex");
+    enumObjectiveRootsearch.push_back("Never");
+    env->settings->createSetting("HyperplaneCuts.ObjectiveRootSearch", "Dual",
+        static_cast<int>(ES_ObjectiveRootsearch::IfConvex), "When to use the objective root search",
+        enumObjectiveRootsearch);
+    enumObjectiveRootsearch.clear();
 
     // TODO: activate
     // env->settings->createSetting(
@@ -1268,7 +1277,8 @@ void Solver::initializeSettings()
         "GAMS.NLP.OptionsFilename", "Subsolver", optfile, "Options file for the NLP solver in GAMS");
 
     std::string solver = "auto";
-    env->settings->createSetting("GAMS.NLP.Solver", "Subsolver", solver, "NLP solver to use in GAMS (auto: SHOT chooses)");
+    env->settings->createSetting(
+        "GAMS.NLP.Solver", "Subsolver", solver, "NLP solver to use in GAMS (auto: SHOT chooses)");
 
 #endif
 

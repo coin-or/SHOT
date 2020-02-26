@@ -41,32 +41,91 @@ void TaskSelectHyperplanePointsByObjectiveRootsearch::run(std::vector<SolutionPo
     if(sourcePoints.size() == 0)
         return;
 
-    env->timing->startTimer("DualObjectiveRootSearch");
+    int numHyperplaneAdded = 0;
 
-    env->output->outputDebug("        Selecting separating hyperplanes for objective function:");
+    // Add cutting plane if the dual has stagnated
+    if(env->solutionStatistics.numberOfIterationsWithDualStagnation > 2
+        && env->reformulatedProblem->properties.convexity == E_ProblemConvexity::Convex)
+    {
+        Hyperplane hyperplane;
+        hyperplane.isObjectiveHyperplane = true;
+        hyperplane.sourceConstraintIndex = -1;
+        hyperplane.generatedPoint = sourcePoints[0].point;
+        hyperplane.source = E_HyperplaneSource::ObjectiveRootsearch;
+        hyperplane.objectiveFunctionValue = 0.0;
 
-    bool useRootsearch = false;
+        env->dualSolver->addHyperplane(hyperplane);
+        numHyperplaneAdded++;
+
+        env->output->outputWarning("         Adding objective cutting plane since the dual has stagnated.");
+    }
+
+    bool isConvex = env->reformulatedProblem->objectiveFunction->properties.convexity == E_Convexity::Linear
+        || ((env->reformulatedProblem->objectiveFunction->properties.isMinimize
+                && env->reformulatedProblem->objectiveFunction->properties.convexity == E_Convexity::Convex)
+               || (env->reformulatedProblem->objectiveFunction->properties.isMaximize
+                      && env->reformulatedProblem->objectiveFunction->properties.convexity == E_Convexity::Concave));
+
+    if(!isConvex && (env->results->getCurrentIteration()->numHyperplanesAdded > 0 || numHyperplaneAdded > 0))
+    {
+        // Nonconvex objective function, do not add a cut if not necessary
+        env->output->outputDebug("         No need to add cut to nonconvex objective function.");
+        return;
+    }
+    else if(!isConvex)
+    {
+        env->output->outputDebug("         Will add cut to nonconvex objective function.");
+    }
+
+    auto strategy = static_cast<ES_ObjectiveRootsearch>(
+        env->settings->getSetting<int>("HyperplaneCuts.ObjectiveRootSearch", "Dual"));
+
+    bool useRootsearch = true;
+
+    if(strategy == ES_ObjectiveRootsearch::Never)
+        useRootsearch = false;
+    else if(strategy == ES_ObjectiveRootsearch::IfConvex
+        && env->reformulatedProblem->properties.convexity > E_ProblemConvexity::Convex)
+        useRootsearch = false;
 
     if(useRootsearch)
     {
+        env->timing->startTimer("DualObjectiveRootSearch");
+
         for(auto& SOLPT : sourcePoints)
         {
             double objectiveLinearizationError = std::abs(
                 env->reformulatedProblem->objectiveFunction->calculateValue(SOLPT.point) - SOLPT.objectiveValue);
 
-            double objectiveLB = SOLPT.objectiveValue;
-            double objectiveUB = (1 + std::min(0.01, 1 / std::abs(SOLPT.objectiveValue))) * objectiveLinearizationError;
-
-            if(objectiveLinearizationError == 0)
+            if(objectiveLinearizationError < 1e-7)
                 continue;
+
+            auto exactValue = env->reformulatedProblem->objectiveFunction->calculateValue(SOLPT.point);
+
+            double factor = std::min(0.01, 1 / std::abs(SOLPT.objectiveValue));
+            double objectiveLB = SOLPT.objectiveValue;
+            double objectiveUB = (exactValue < 0)
+                ? (1 - factor) * env->reformulatedProblem->objectiveFunction->calculateValue(SOLPT.point)
+                : (1 + factor) * env->reformulatedProblem->objectiveFunction->calculateValue(SOLPT.point);
 
             try
             {
-                auto rootBound = env->rootsearchMethod->findZero(SOLPT.point, objectiveLB, objectiveUB,
-                    env->settings->getSetting<int>("Rootsearch.MaxIterations", "Subsolver"),
-                    env->settings->getSetting<double>("Rootsearch.TerminationTolerance", "Subsolver"), 0,
-                    std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                        .get());
+                PairDouble rootBound;
+
+                if(env->reformulatedProblem->objectiveFunction->properties.isMinimize)
+                {
+                    rootBound = env->rootsearchMethod->findZero(SOLPT.point, objectiveLB, objectiveUB,
+                        env->settings->getSetting<int>("Rootsearch.MaxIterations", "Subsolver"),
+                        env->settings->getSetting<double>("Rootsearch.TerminationTolerance", "Subsolver"), 0,
+                        env->reformulatedProblem->objectiveFunction);
+                }
+                else
+                {
+                    rootBound = env->rootsearchMethod->findZero(SOLPT.point, objectiveUB, objectiveLB,
+                        env->settings->getSetting<int>("Rootsearch.MaxIterations", "Subsolver"),
+                        env->settings->getSetting<double>("Rootsearch.TerminationTolerance", "Subsolver"), 0,
+                        env->reformulatedProblem->objectiveFunction);
+                }
 
                 Hyperplane hyperplane;
                 hyperplane.isObjectiveHyperplane = true;
@@ -76,53 +135,26 @@ void TaskSelectHyperplanePointsByObjectiveRootsearch::run(std::vector<SolutionPo
                 hyperplane.objectiveFunctionValue = rootBound.second;
 
                 env->dualSolver->addHyperplane(hyperplane);
+                numHyperplaneAdded++;
             }
             catch(std::exception& e)
             {
                 env->output->outputWarning(
-                    "         Cannot find solution with root search for generating objective supporting hyperplane:");
-                env->output->outputWarning(e.what());
+                    "        Cannot find solution with root search for generating supporting objective hyperplane.");
+                env->output->outputDebug(fmt::format("        {}", e.what()));
             }
         }
+
+        env->timing->stopTimer("DualObjectiveRootSearch");
+    }
+
+    if(numHyperplaneAdded > 0)
+    {
+        env->output->outputDebug(fmt::format(
+            "        Added {} separating hyperplanes for objective function to waiting list.", numHyperplaneAdded));
     }
     else
     {
-
-        if(env->solutionStatistics.numberOfIterationsWithDualStagnation > 2
-            && env->reformulatedProblem->properties.convexity == E_ProblemConvexity::Convex)
-        {
-            Hyperplane hyperplane;
-            hyperplane.isObjectiveHyperplane = true;
-            hyperplane.sourceConstraintIndex = -1;
-            hyperplane.generatedPoint = sourcePoints[0].point;
-            hyperplane.source = E_HyperplaneSource::ObjectiveRootsearch;
-
-            hyperplane.objectiveFunctionValue = 0.0;
-            /*= env->reformulatedProblem->objectiveFunction->calculateValue(hyperplane.generatedPoint) - 0.01;*/
-
-            env->dualSolver->addHyperplane(hyperplane);
-
-            env->output->outputWarning("         Adding objective cutting plane since the dual has stagnated.");
-        }
-
-        bool isConvex = env->reformulatedProblem->objectiveFunction->properties.convexity == E_Convexity::Linear
-            || ((env->reformulatedProblem->objectiveFunction->properties.isMinimize
-                    && env->reformulatedProblem->objectiveFunction->properties.convexity == E_Convexity::Convex)
-                   || (env->reformulatedProblem->objectiveFunction->properties.isMaximize
-                          && env->reformulatedProblem->objectiveFunction->properties.convexity
-                              == E_Convexity::Concave));
-
-        if(!isConvex && env->results->getCurrentIteration()->numHyperplanesAdded > 0)
-        {
-            // Nonconvex objective function, do not add a cut if not necessary
-            env->output->outputDebug("         No need to add cut to nonconvex objective function.");
-            return;
-        }
-        else
-        {
-            env->output->outputDebug("         Adding cut to nonconvex objective function.");
-        }
-
         for(auto& SOLPT : sourcePoints)
         {
             Hyperplane hyperplane;
@@ -136,9 +168,10 @@ void TaskSelectHyperplanePointsByObjectiveRootsearch::run(std::vector<SolutionPo
 
             env->dualSolver->addHyperplane(hyperplane);
         }
-    }
 
-    env->timing->stopTimer("DualObjectiveRootSearch");
+        env->output->outputDebug(
+            fmt::format("        Added {} cutting planes for objective function to waiting list.", numHyperplaneAdded));
+    }
 }
 
 std::string TaskSelectHyperplanePointsByObjectiveRootsearch::getType()
