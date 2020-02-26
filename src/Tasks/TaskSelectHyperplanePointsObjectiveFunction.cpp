@@ -8,7 +8,7 @@
    Please see the README and LICENSE files for more information.
 */
 
-#include "TaskSelectHyperplanePointsByObjectiveRootsearch.h"
+#include "TaskSelectHyperplanePointsObjectiveFunction.h"
 
 #include "../DualSolver.h"
 #include "../Output.h"
@@ -24,19 +24,19 @@
 namespace SHOT
 {
 
-TaskSelectHyperplanePointsByObjectiveRootsearch::TaskSelectHyperplanePointsByObjectiveRootsearch(EnvironmentPtr envPtr)
+TaskSelectHyperplanePointsObjectiveFunction::TaskSelectHyperplanePointsObjectiveFunction(EnvironmentPtr envPtr)
     : TaskBase(envPtr)
 {
 }
 
-TaskSelectHyperplanePointsByObjectiveRootsearch::~TaskSelectHyperplanePointsByObjectiveRootsearch() = default;
+TaskSelectHyperplanePointsObjectiveFunction::~TaskSelectHyperplanePointsObjectiveFunction() = default;
 
-void TaskSelectHyperplanePointsByObjectiveRootsearch::run()
+void TaskSelectHyperplanePointsObjectiveFunction::run()
 {
     this->run(env->results->getPreviousIteration()->solutionPoints);
 }
 
-void TaskSelectHyperplanePointsByObjectiveRootsearch::run(std::vector<SolutionPoint> sourcePoints)
+void TaskSelectHyperplanePointsObjectiveFunction::run(std::vector<SolutionPoint> sourcePoints)
 {
     if(sourcePoints.size() == 0)
         return;
@@ -174,7 +174,7 @@ void TaskSelectHyperplanePointsByObjectiveRootsearch::run(std::vector<SolutionPo
     }
 }
 
-std::string TaskSelectHyperplanePointsByObjectiveRootsearch::getType()
+std::string TaskSelectHyperplanePointsObjectiveFunction::getType()
 {
     std::string type = typeid(this).name();
     return (type);
