@@ -1,0 +1,30 @@
+language: cpp
+matrix:
+  include:
+    - os: linux
+      dist: bionic
+      addons:
+        apt:
+          packages:
+            - gfortran
+            - liblapack-dev
+
+before_script:
+  - git clone https://github.com/coin-or/coinbrew
+  - cd coinbrew
+  - mkdir /home/travis/build/coin-or/SHOT/ThirdParty/Ipopt
+  - bash ./coinbrew build Ipopt:stable/3.13 --prefix=/home/travis/build/coin-or/SHOT/ThirdParty/Ipopt --no-prompt --tests none
+  - bash ./coinbrew install Ipopt --debug
+  - rm build -rf
+  - mkdir /home/travis/build/coin-or/SHOT/ThirdParty/Cbc
+  - bash ./coinbrew build Cbc:stable/2.10 --prefix=/home/travis/build/coin-or/SHOT/ThirdParty/Cbc --no-prompt --tests none
+  - bash ./coinbrew install Cbc --debug
+  - mkdir /home/travis/build/coin-or/SHOT/build
+  - cd /home/travis/build/coin-or/SHOT/build
+  - cmake .. -DCBC_DIR=/home/travis/build/coin-or/SHOT/ThirdParty/Cbc -DIPOPT_DIR=/home/travis/build/coin-or/SHOT/ThirdParty/Ipopt -DHAS_GAMS=off -DHAS_CPLEX=off -DHAS_GUROBI=off -DCOMPILE_TESTS=on -DSPDLOG_STATIC=off
+
+script:
+  - make -j5
+  - make test
+
+after_script:
