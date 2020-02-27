@@ -21,7 +21,7 @@ before_script:
   - bash ./coinbrew install Cbc --debug
   - mkdir /home/travis/build/coin-or/SHOT/build
   - cd /home/travis/build/coin-or/SHOT/build
-  - cmake .. -DCBC_DIR=/home/travis/build/coin-or/SHOT/ThirdParty/Cbc -DIPOPT_DIR=/home/travis/build/coin-or/SHOT/ThirdParty/Ipopt -DHAS_GAMS=off -DHAS_CPLEX=off -DHAS_GUROBI=off -DCOMPILE_TESTS=on
+  - cmake .. -DCBC_DIR=/home/travis/build/coin-or/SHOT/ThirdParty/Cbc -DIPOPT_DIR=/home/travis/build/coin-or/SHOT/ThirdParty/Ipopt -DHAS_GAMS=off -DHAS_CPLEX=off -DHAS_GUROBI=off -DCOMPILE_TESTS=on -DSPDLOG_STATIC=off
 
 script:
   - make -j5
