@@ -225,16 +225,13 @@ std::pair<VectorDouble, VectorDouble> RootsearchMethodBoost::findZero(const Vect
 
 std::pair<double, double> RootsearchMethodBoost::findZero(const VectorDouble& pt, double objectiveLB,
     double objectiveUB, int Nmax, double lambdaTol, [[maybe_unused]] double constrTol,
-    const NonlinearObjectiveFunction* objectiveFunction)
+    ObjectiveFunctionPtr objectiveFunction)
 {
     testObjective->solutionPoint = pt;
     testObjective->firstPt = objectiveLB;
     testObjective->secondPt = objectiveUB;
 
-    if(auto sharedProblem = objectiveFunction->ownerProblem.lock())
-    {
-        testObjective->cachedObjectiveValue = sharedProblem->objectiveFunction->calculateValue(pt);
-    }
+    testObjective->cachedObjectiveValue = objectiveFunction->calculateValue(pt);
 
     boost::uintmax_t max_iter = Nmax;
 

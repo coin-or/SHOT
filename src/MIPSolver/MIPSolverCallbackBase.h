@@ -12,7 +12,7 @@
 
 #include "../Environment.h"
 
-#include "../Tasks/TaskSelectHyperplanePointsByObjectiveRootsearch.h"
+#include "../Tasks/TaskSelectHyperplanePointsObjectiveFunction.h"
 #include "../Tasks/TaskSelectPrimalCandidatesFromRootsearch.h"
 #include "../Tasks/TaskSelectPrimalCandidatesFromNLP.h"
 #include "../Tasks/TaskSelectHyperplanePointsESH.h"
@@ -43,7 +43,7 @@ protected:
     std::shared_ptr<TaskSelectPrimalCandidatesFromNLP> taskSelectPrimNLPOriginal;
     std::shared_ptr<TaskSelectPrimalCandidatesFromNLP> taskSelectPrimNLPReformulated;
     std::shared_ptr<TaskBase> taskSelectHPPts;
-    std::shared_ptr<TaskSelectHyperplanePointsByObjectiveRootsearch> taskSelectHPPtsByObjectiveRootsearch;
+    std::shared_ptr<TaskSelectHyperplanePointsObjectiveFunction> taskSelectHPPtsByObjectiveRootsearch;
     std::shared_ptr<TaskSelectPrimalCandidatesFromRootsearch> taskSelectPrimalSolutionFromRootsearch;
     std::shared_ptr<TaskUpdateInteriorPoint> tUpdateInteriorPoint;
 

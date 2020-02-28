@@ -62,7 +62,7 @@
 
 #include "../Tasks/TaskUpdateInteriorPoint.h"
 
-#include "../Tasks/TaskSelectHyperplanePointsByObjectiveRootsearch.h"
+#include "../Tasks/TaskSelectHyperplanePointsObjectiveFunction.h"
 #include "../Tasks/TaskSolveFixedDualProblem.h"
 
 #include "../Tasks/TaskAddIntegerCuts.h"
@@ -252,7 +252,7 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
     if(env->reformulatedProblem->objectiveFunction->properties.classification
         > E_ObjectiveFunctionClassification::Quadratic)
     {
-        auto tSelectObjectiveHPPts = std::make_shared<TaskSelectHyperplanePointsByObjectiveRootsearch>(env);
+        auto tSelectObjectiveHPPts = std::make_shared<TaskSelectHyperplanePointsObjectiveFunction>(env);
         env->tasks->addTask(tSelectObjectiveHPPts, "SelectObjectiveHPPts");
     }
 
