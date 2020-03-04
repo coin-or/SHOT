@@ -826,11 +826,22 @@ void Problem::finalize()
     updateFactorableFunctions();
     assert(verifyOwnership());
 
-    // Do not do bound tightening on problems solved by MIP solver
-    if(this->properties.numberOfNonlinearConstraints > 0
-        || this->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic)
+    if(env->settings->getSetting<bool>("BoundTightening.FeasibilityBased.Use", "Model"))
     {
-        if(env->settings->getSetting<bool>("BoundTightening.FeasibilityBased.Use", "Model"))
+        bool performBoundTightening = true;
+
+        auto quadraticStrategy = static_cast<ES_QuadraticProblemStrategy>(
+            env->settings->getSetting<int>("Reformulation.Quadratics.Strategy", "Model"));
+
+        // Do not do bound tightening on problems solved by MIP solver
+        if(this->properties.isLPProblem || this->properties.isMILPProblem)
+            performBoundTightening = false;
+        else if(this->properties.isMIQPProblem && quadraticStrategy != ES_QuadraticProblemStrategy::Nonlinear)
+            performBoundTightening = false;
+        else if(this->properties.isMIQCQPProblem && quadraticStrategy != ES_QuadraticProblemStrategy::Nonlinear)
+            performBoundTightening = false;
+
+        if(performBoundTightening)
             doFBBT();
     }
 
@@ -1643,6 +1654,9 @@ void Problem::doFBBT()
     }
 
     int numberOfIterations = env->settings->getSetting<int>("BoundTightening.FeasibilityBased.MaxIterations", "Model");
+    double timeLimit = env->settings->getSetting<double>("BoundTightening.FeasibilityBased.TimeLimit", "Model");
+    bool useNonlinearBoundTightening
+        = env->settings->getSetting<bool>("BoundTightening.FeasibilityBased.UseNonlinear", "Model");
 
     bool stopTightening = false;
 
@@ -1654,14 +1668,13 @@ void Problem::doFBBT()
 
         for(auto& C : linearConstraints)
         {
-            if(env->timing->getElapsedTime("BoundTightening") - startTime
-                > env->settings->getSetting<double>("BoundTightening.FeasibilityBased.TimeLimit", "Model"))
+            if(env->timing->getElapsedTime("BoundTightening") - startTime > timeLimit)
             {
                 stopTightening = true;
                 break;
             }
 
-            boundsUpdated = doFBBTOnConstraint(C) || boundsUpdated;
+            boundsUpdated = doFBBTOnConstraint(C, timeLimit + startTime) || boundsUpdated;
         }
 
         if(stopTightening)
@@ -1669,31 +1682,29 @@ void Problem::doFBBT()
 
         for(auto& C : quadraticConstraints)
         {
-            if(env->timing->getElapsedTime("BoundTightening") - startTime
-                > env->settings->getSetting<double>("BoundTightening.FeasibilityBased.TimeLimit", "Model"))
+            if(env->timing->getElapsedTime("BoundTightening") - startTime > timeLimit)
             {
                 stopTightening = true;
                 break;
             }
 
-            boundsUpdated = doFBBTOnConstraint(C) || boundsUpdated;
+            boundsUpdated = doFBBTOnConstraint(C, timeLimit + startTime) || boundsUpdated;
         }
 
         if(stopTightening)
             break;
 
-        if(env->settings->getSetting<bool>("BoundTightening.FeasibilityBased.UseNonlinear", "Model"))
+        if(useNonlinearBoundTightening)
         {
             for(auto& C : nonlinearConstraints)
             {
-                if(env->timing->getElapsedTime("BoundTightening") - startTime
-                    > env->settings->getSetting<double>("BoundTightening.FeasibilityBased.TimeLimit", "Model"))
+                if(env->timing->getElapsedTime("BoundTightening") - startTime > timeLimit)
                 {
                     stopTightening = true;
                     break;
                 }
 
-                boundsUpdated = doFBBTOnConstraint(C) || boundsUpdated;
+                boundsUpdated = doFBBTOnConstraint(C, timeLimit + startTime) || boundsUpdated;
             }
         }
 
@@ -1720,7 +1731,7 @@ void Problem::doFBBT()
     env->timing->stopTimer("BoundTightening");
 }
 
-bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint)
+bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint, double timeLimit)
 {
     bool boundsUpdated = false;
 
@@ -1750,6 +1761,9 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint)
 
             for(auto& T : terms)
             {
+                if(env->timing->getElapsedTime("BoundTightening") > timeLimit)
+                    break;
+
                 if(T->coefficient == 0.0)
                     continue;
 
@@ -1775,7 +1789,7 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint)
             }
         }
 
-        if(constraint->properties.hasQuadraticTerms)
+        if(constraint->properties.hasQuadraticTerms && env->timing->getElapsedTime("BoundTightening") < timeLimit)
         {
             Interval otherTermsBound(constraint->constant);
 
@@ -1798,6 +1812,9 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint)
 
             for(auto& T : terms)
             {
+                if(env->timing->getElapsedTime("BoundTightening") > timeLimit)
+                    break;
+
                 if(T->coefficient == 0.0)
                     continue;
 
@@ -1850,7 +1867,7 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint)
             }
         }
 
-        if(constraint->properties.hasMonomialTerms)
+        if(constraint->properties.hasMonomialTerms && env->timing->getElapsedTime("BoundTightening") < timeLimit)
         {
             Interval otherTermsBound(constraint->constant);
 
@@ -1873,6 +1890,9 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint)
 
             for(auto& T : terms)
             {
+                if(env->timing->getElapsedTime("BoundTightening") > timeLimit)
+                    break;
+
                 if(T->coefficient == 0.0)
                     continue;
 
@@ -1917,7 +1937,7 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint)
             }
         }
 
-        if(constraint->properties.hasSignomialTerms)
+        if(constraint->properties.hasSignomialTerms && env->timing->getElapsedTime("BoundTightening") < timeLimit)
         {
             Interval otherTermsBound(constraint->constant);
 
@@ -1940,6 +1960,9 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint)
 
             for(auto& T : terms)
             {
+                if(env->timing->getElapsedTime("BoundTightening") > timeLimit)
+                    break;
+
                 if(T->coefficient == 0.0)
                     continue;
 
@@ -1985,7 +2008,7 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint)
             }
         }
 
-        if(constraint->properties.hasNonlinearExpression)
+        if(constraint->properties.hasNonlinearExpression && env->timing->getElapsedTime("BoundTightening") < timeLimit)
         {
             Interval otherTermsBound(constraint->constant);
 

@@ -235,7 +235,7 @@ public:
     void saveProblemToFile(std::string filename);
 
     void doFBBT();
-    bool doFBBTOnConstraint(NumericConstraintPtr constraint);
+    bool doFBBTOnConstraint(NumericConstraintPtr constraint, double timeLimit);
 
     friend std::ostream& operator<<(std::ostream& stream, const Problem& problem);
 };
