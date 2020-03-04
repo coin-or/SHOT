@@ -112,7 +112,6 @@ extern "C"
     DllExport int STDCALL shtReadyAPI(void* Cptr, gmoHandle_t Gptr, optHandle_t Optr)
     {
         gamsshot* gs;
-        gevHandle_t gev;
 
         assert(Cptr != nullptr);
         assert(Gptr != nullptr);
@@ -120,7 +119,6 @@ extern "C"
         gs = (gamsshot*)Cptr;
         gs->gmo = Gptr;
         gs->opt = Optr;
-        gev = (gevHandle_t)gmoEnvironment(Gptr);
 
         return 0;
     }
@@ -143,8 +141,6 @@ extern "C"
 
         try
         {
-            env->report->outputSolverHeader();
-
             std::shared_ptr<ModelingSystemGAMS> modelingSystem = std::make_shared<SHOT::ModelingSystemGAMS>(env);
             modelingSystem->setModelingObject(gs->gmo);
 
@@ -152,10 +148,12 @@ extern "C"
             /* print auditline */
             palSetSystemName(modelingSystem->auditLicensing, "SHOT");
             palGetAuditLine(modelingSystem->auditLicensing, msg);
-            gevLogStat(gev, "");
-            gevLogStat(gev, msg);
-            gevStatAudit(gev, msg);
+            env->output->outputInfo("");
+            env->output->outputInfo(msg);
+            gevStatAudit(modelingSystem->modelingEnvironment, msg);
 #endif
+
+            env->report->outputSolverHeader();
 
             modelingSystem->updateSettings(env->settings);
 

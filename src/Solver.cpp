@@ -730,6 +730,15 @@ void Solver::initializeSettings()
     env->settings->createSetting("HyperplaneCuts.UseIntegerCuts", "Dual", false,
         "Add integer cuts for infeasible integer-combinations for binary problems");
 
+    VectorString enumObjectiveRootsearch;
+    enumObjectiveRootsearch.push_back("Always");
+    enumObjectiveRootsearch.push_back("IfConvex");
+    enumObjectiveRootsearch.push_back("Never");
+    env->settings->createSetting("HyperplaneCuts.ObjectiveRootSearch", "Dual",
+        static_cast<int>(ES_ObjectiveRootsearch::IfConvex), "When to use the objective root search",
+        enumObjectiveRootsearch);
+    enumObjectiveRootsearch.clear();
+
     // TODO: activate
     // env->settings->createSetting(
     //    "HyperplaneCuts.UsePrimalObjectiveCut", "Dual", true, "Add an objective cut in the primal solution");

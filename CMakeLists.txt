@@ -65,6 +65,8 @@ set(IPOPT_DIR "/opt/ipopt" CACHE STRING "The base directory where Ipopt is locat
 option(GENERATE_EXE "Should the SHOT executable be generated (requires at least that either OS or GAMS is available)"
        ON)
 
+option(SPDLOG_STATIC "Should Spdlog be compiled statically" ON)
+
 # External libraries; these are included in SHOT's source tree, and should not need to be modified
 set(AMPL_DIR "ThirdParty/ampl")
 set(ARGH_DIR "ThirdParty/argh")
@@ -344,11 +346,17 @@ file(TO_CMAKE_PATH "${PRIMAL_SOURCES}" PRIMAL_SOURCES)
 file(TO_CMAKE_PATH "${MODELING_SOURCES}" MODELING_SOURCES)
 
 # Will use spdlog as a static library on non-Windows systems
-if(NOT (MSVC OR MSYS OR MINGW))
-    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+if(MSVC OR MSYS OR MINGW)
+    set(SPDLOG_STATIC OFF)
+endif()
+
+if(SPDLOG_STATIC)
     add_subdirectory(${SPDLOG_DIR}/spdlog)
     list(APPEND CMAKE_MODULE_PATH "${SPDLOG_DIR}/spdlog/cmake")
 endif()
+
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 
 # Will use tinyxml2 as a static library
 add_library(tinyxml2 STATIC ${TINYXML2_DIR}/tinyxml2.h ${TINYXML2_DIR}/tinyxml2.cpp)
@@ -371,11 +379,10 @@ add_library(
 )
 target_link_libraries(SHOTHelper tinyxml2)
 
-# Will use spdlog as a header-only library on Windows
-if(MSVC OR MSYS OR MINGW)
-    target_include_directories(SHOTHelper PUBLIC "${SPDLOG_DIR}/spdlog/include")
-else()
+if(SPDLOG_STATIC)
     target_link_libraries(SHOTHelper spdlog::spdlog)
+else()
+    target_include_directories(SHOTHelper PUBLIC "${SPDLOG_DIR}/spdlog/include")
 endif()
 
 # Creates the model library

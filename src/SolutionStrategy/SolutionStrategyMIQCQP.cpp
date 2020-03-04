@@ -58,7 +58,7 @@
 #include "../Tasks/TaskSelectPrimalFixedNLPPointsFromSolutionPool.h"
 #include "../Tasks/TaskClearFixedPrimalCandidates.h"
 
-#include "../Tasks/TaskSelectHyperplanePointsByObjectiveRootsearch.h"
+#include "../Tasks/TaskSelectHyperplanePointsObjectiveFunction.h"
 #include "../Tasks/TaskSolveFixedDualProblem.h"
 
 #include "../Tasks/TaskAddIntegerCuts.h"

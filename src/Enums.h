@@ -285,6 +285,13 @@ enum class ES_IterationOutputDetail
     ObjectiveGapUpdatesAndNLPCalls
 };
 
+enum class ES_ObjectiveRootsearch
+{
+    Always,
+    IfConvex,
+    Never
+};
+
 enum class ES_RootsearchConstraintStrategy
 {
     AllAsMaxFunct,
@@ -330,9 +337,9 @@ enum class ES_PrimalNLPFixedPoint
 
 enum class ES_PrimalNLPProblemSource
 {
-   OriginalProblem,
-   ReformulatedProblem,
-   Both
+    OriginalProblem,
+    ReformulatedProblem,
+    Both
 };
 
 enum class ES_PrimalNLPSolver

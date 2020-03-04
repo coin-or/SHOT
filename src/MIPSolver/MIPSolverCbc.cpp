@@ -451,8 +451,8 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
     {
         argv[13] = strdup("-solve");
         argv[14] = strdup("-quit");
-        argv[15] = nullptr;
-        argv[16] = nullptr;
+        argv[15] = strdup("");
+        argv[16] = strdup("");
     }
 
     try
@@ -764,8 +764,8 @@ bool MIPSolverCbc::repairInfeasibility()
         {
             argv[13] = strdup("-solve");
             argv[14] = strdup("-quit");
-            argv[15] = NULL;
-            argv[16] = NULL;
+            argv[15] = strdup("");
+            argv[16] = strdup("");
         }
 
         CbcMain1(numArguments, const_cast<const char**>(argv), *cbcModel);
