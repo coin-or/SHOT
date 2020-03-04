@@ -806,6 +806,8 @@ std::string Results::getResultsTrace()
     switch(this->terminationReason)
     {
     case E_TerminationReason::IterationLimit:
+    case E_TerminationReason::ObjectiveStagnation:
+    case E_TerminationReason::NoDualCutsAdded:
         solverStatus = "2";
         break;
     case E_TerminationReason::TimeLimit:
@@ -820,10 +822,6 @@ std::string Results::getResultsTrace()
     case E_TerminationReason::AbsoluteGap:
     case E_TerminationReason::RelativeGap:
         solverStatus = "1";
-        break;
-    case E_TerminationReason::ObjectiveStagnation:
-    case E_TerminationReason::NoDualCutsAdded:
-        solverStatus = "4";
         break;
     case E_TerminationReason::Error:
     case E_TerminationReason::NumericIssues:
