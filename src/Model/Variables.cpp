@@ -113,7 +113,7 @@ bool Variable::isDualUnbounded()
             maxUB = 1e50;
         }
 
-        if(lowerBound >= minLB && upperBound <= maxUB)
+        if(lowerBound > minLB && upperBound < maxUB)
             return false;
     }
 
