@@ -1593,6 +1593,8 @@ void Solver::setConvexityBasedSettings()
 
             env->settings->updateSetting("Rootsearch.Use", "Primal", false);
 
+            env->settings->updateSetting("BoundTightening.FeasibilityBased.TimeLimit", "Model", 10.0);
+
 #ifdef HAS_CPLEX
 
             if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Cplex)
