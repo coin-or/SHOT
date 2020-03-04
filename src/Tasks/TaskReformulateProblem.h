@@ -53,6 +53,8 @@ private:
     bool extractQuadraticTermsFromNonconvexExpressions = false;
     bool extractQuadraticTermsFromConvexExpressions = false;
 
+    int maxBilinearIntegerReformulationDomain = 2;
+
     void reformulateObjectiveFunction();
     void createEpigraphConstraint();
 

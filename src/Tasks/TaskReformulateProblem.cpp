@@ -60,6 +60,9 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
         break;
     }
 
+    maxBilinearIntegerReformulationDomain
+        = env->settings->getSetting<int>("Reformulation.Bilinear.IntegerFormulation.MaxVariableDomain", "Model");
+
     extractQuadraticTermsFromNonconvexExpressions
         = (env->settings->getSetting<int>("Reformulation.Quadratics.ExtractStrategy", "Model")
             == static_cast<int>(ES_QuadraticTermsExtractStrategy::ExtractToEqualityConstraintIfNonconvex));
@@ -1387,9 +1390,13 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
             auto [auxVariable, newVariable] = getBilinearAuxiliaryVariable(firstVariable, secondVariable);
             resultLinearTerms.add(std::make_shared<LinearTerm>(signfactor * T->coefficient, auxVariable));
         }
-        else if(T->isBilinear
-            && (T->firstVariable->properties.type == E_VariableType::Integer
-                   || T->secondVariable->properties.type == E_VariableType::Integer))
+        else if(T->isBilinear && partitionNonBinaryTerms
+            && ((T->firstVariable->properties.type == E_VariableType::Integer
+                    && (T->firstVariable->upperBound - T->firstVariable->lowerBound
+                           < maxBilinearIntegerReformulationDomain))
+                   || (T->secondVariable->properties.type == E_VariableType::Integer
+                          && (T->secondVariable->upperBound - T->secondVariable->lowerBound
+                                 < maxBilinearIntegerReformulationDomain))))
         // bilinear term i1*i2 or i1*x2
         {
             auto [auxVariable, newVariable] = getBilinearAuxiliaryVariable(T->firstVariable, T->secondVariable);

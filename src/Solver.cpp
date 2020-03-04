@@ -271,6 +271,15 @@ bool Solver::setProblem(std::string fileName)
     }
 #endif
 
+#ifdef HAS_CBC
+    // TODO: figure out a better way to do this
+    if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Cbc)
+    {
+        env->settings->updateSetting(
+            "Reformulation.Quadratics.Strategy", "Model", (int)ES_QuadraticProblemStrategy::Nonlinear);
+    }
+#endif
+
     try
     {
         if(problemExtension == ".osil" || problemExtension == ".xml")
@@ -334,15 +343,6 @@ bool Solver::setProblem(std::string fileName)
 
         if(env->problem->name == "")
             env->problem->name = problemName.string();
-
-#ifdef HAS_CBC
-        // TODO: figure out a better way to do this
-        if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Cbc)
-        {
-            env->settings->updateSetting(
-                "Reformulation.Quadratics.Strategy", "Model", (int)ES_QuadraticProblemStrategy::Nonlinear);
-        }
-#endif
 
         auto taskReformulateProblem = std::make_unique<TaskReformulateProblem>(env);
         taskReformulateProblem->run();
@@ -571,7 +571,7 @@ bool Solver::solveProblem()
         env->results->setPrimalBound(SHOT_DBL_MIN);
     }
 
-    assert(solutionStrategy != nullptr);  /* would be NULL if setProblem failed */
+    assert(solutionStrategy != nullptr); /* would be NULL if setProblem failed */
     isProblemSolved = solutionStrategy->solveProblem();
 
     return (isProblemSolved);
@@ -925,6 +925,11 @@ void Solver::initializeSettings()
         "How to reformulate integer bilinear terms", enumBilinearIntegerReformulation);
     enumBilinearIntegerReformulation.clear();
 
+    env->settings->createSetting("Reformulation.Bilinear.IntegerFormulation.MaxVariableDomain", "Model", 100,
+        "Do not reformulate integer variables in bilinear terms which can assume more than this number of discrete "
+        "values",
+        2, SHOT_INT_MAX);
+
     // Reformulations for constraints
     VectorString enumNonlinearTermPartitioning;
     enumNonlinearTermPartitioning.push_back("Always");
@@ -1268,7 +1273,8 @@ void Solver::initializeSettings()
         "GAMS.NLP.OptionsFilename", "Subsolver", optfile, "Options file for the NLP solver in GAMS");
 
     std::string solver = "auto";
-    env->settings->createSetting("GAMS.NLP.Solver", "Subsolver", solver, "NLP solver to use in GAMS (auto: SHOT chooses)");
+    env->settings->createSetting(
+        "GAMS.NLP.Solver", "Subsolver", solver, "NLP solver to use in GAMS (auto: SHOT chooses)");
 
 #endif
 
