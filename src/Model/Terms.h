@@ -387,11 +387,11 @@ inline std::ostream& operator<<(std::ostream& stream, QuadraticTermPtr term)
     }
     else if(term->coefficient > 0)
     {
-        stream << " +" << term->coefficient;
+        stream << " +" << term->coefficient << '*';
     }
     else
     {
-        stream << " " << term->coefficient;
+        stream << " " << term->coefficient << '*';
     }
 
     if(term->firstVariable == term->secondVariable)
