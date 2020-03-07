@@ -39,7 +39,7 @@ bool MIPSolverCbc::initializeProblem()
 {
     discreteVariablesActivated = true;
 
-    this->cutOff = SHOT_DBL_MAX;
+    this->cutOff = 1e100;
 
     osiInterface = std::make_unique<OsiClpSolverInterface>();
     coinModel = std::make_unique<CoinModel>();
@@ -427,11 +427,18 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
     argv[8] = strdup(arg.c_str());
 
     argv[9] = strdup("-cutoff");
-    arg = std::to_string(this->cutOff);
+
+    if(this->cutOff > 1e100)
+        arg = "1e100";
+    else if(this->cutOff < -1e100)
+        arg = "-1e100";
+    else
+        arg = fmt::format("{}", this->cutOff);
+
     argv[10] = strdup(arg.c_str());
 
     argv[11] = strdup("-sec");
-    arg = std::to_string(this->timeLimit); // FIXME this->timeLimit has not been initialized
+    arg = fmt::format("{}", this->timeLimit);
     argv[12] = strdup(arg.c_str());
 
     if(cbcModel->haveMultiThreadSupport())
@@ -740,11 +747,18 @@ bool MIPSolverCbc::repairInfeasibility()
         argv[8] = strdup(arg.c_str());
 
         argv[9] = strdup("-cutoff");
-        arg = std::to_string(this->cutOff);
+
+        if(this->cutOff > 1e100)
+            arg = "1e100";
+        else if(this->cutOff < -1e100)
+            arg = "-1e100";
+        else
+            arg = fmt::format("{}", this->cutOff);
+
         argv[10] = strdup(arg.c_str());
 
         argv[11] = strdup("-sec");
-        arg = std::to_string(this->timeLimit); // FIXME this->timeLimit has not been initialized
+        arg = fmt::format("{}", this->timeLimit);
         argv[12] = strdup(arg.c_str());
 
         if(cbcModel->haveMultiThreadSupport())
@@ -845,7 +859,13 @@ void MIPSolverCbc::setSolutionLimit(long int limit) { this->solLimit = limit; }
 
 int MIPSolverCbc::getSolutionLimit() { return (this->solLimit); }
 
-void MIPSolverCbc::setTimeLimit(double seconds) { timeLimit = seconds; }
+void MIPSolverCbc::setTimeLimit(double seconds)
+{
+    if(seconds > 1e100)
+        timeLimit = 1e100;
+    else
+        timeLimit = seconds;
+}
 
 void MIPSolverCbc::setCutOff(double cutOff)
 {

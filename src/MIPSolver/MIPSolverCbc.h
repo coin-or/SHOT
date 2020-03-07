@@ -157,7 +157,7 @@ private:
     CoinPackedVector objectiveLinearExpression;
 
     long int solLimit;
-    double timeLimit;
+    double timeLimit = 1e100;
     double cutOff;
 
     std::vector<std::vector<std::pair<std::string, double>>> MIPStarts;
