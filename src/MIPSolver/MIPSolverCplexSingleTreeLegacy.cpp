@@ -767,7 +767,7 @@ int MIPSolverCplexSingleTreeLegacy::increaseSolutionLimit(int increment)
     {
         cplexInstance.setParam(IloCplex::Param::MIP::Limits::Solutions,
             cplexInstance.getParam(IloCplex::Param::MIP::Limits::Solutions) + increment);
-        sollim = cplexInstance.getParam(cplexInstance.IntSolLim);
+        sollim = cplexInstance.getParam(IloCplex::Param::MIP::Limits::Solutions);
     }
     catch(IloException& e)
     {
@@ -795,7 +795,7 @@ int MIPSolverCplexSingleTreeLegacy::getSolutionLimit()
 
     try
     {
-        solLim = cplexInstance.getParam(cplexInstance.IntSolLim);
+        solLim = cplexInstance.getParam(IloCplex::Param::MIP::Limits::Solutions);
     }
     catch(IloException& e)
     {
