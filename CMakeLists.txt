@@ -351,12 +351,10 @@ if(MSVC OR MSYS OR MINGW)
 endif()
 
 if(SPDLOG_STATIC)
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
     add_subdirectory(${SPDLOG_DIR}/spdlog)
     list(APPEND CMAKE_MODULE_PATH "${SPDLOG_DIR}/spdlog/cmake")
 endif()
-
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-
 
 # Will use tinyxml2 as a static library
 add_library(tinyxml2 STATIC ${TINYXML2_DIR}/tinyxml2.h ${TINYXML2_DIR}/tinyxml2.cpp)
