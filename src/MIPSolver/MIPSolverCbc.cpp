@@ -431,7 +431,7 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
     argv[10] = strdup(arg.c_str());
 
     argv[11] = strdup("-sec");
-    arg = std::to_string(this->timeLimit);  // FIXME this->timeLimit has not been initialized
+    arg = std::to_string(this->timeLimit); // FIXME this->timeLimit has not been initialized
     argv[12] = strdup(arg.c_str());
 
     if(cbcModel->haveMultiThreadSupport())
@@ -744,7 +744,7 @@ bool MIPSolverCbc::repairInfeasibility()
         argv[10] = strdup(arg.c_str());
 
         argv[11] = strdup("-sec");
-        arg = std::to_string(this->timeLimit);  // FIXME this->timeLimit has not been initialized
+        arg = std::to_string(this->timeLimit); // FIXME this->timeLimit has not been initialized
         argv[12] = strdup(arg.c_str());
 
         if(cbcModel->haveMultiThreadSupport())
@@ -1236,6 +1236,10 @@ void MIPSolverCbc::checkParameters()
 
     // For stability
     env->settings->updateSetting("Tolerance.TrustLinearConstraintValues", "Primal", false);
+
+    // Show solver output for problems that are normally solved in one iteration
+    if(env->reformulatedProblem->properties.numberOfNonlinearConstraints == 0)
+        env->settings->updateSetting("Console.DualSolver.Show", "Output", true);
 }
 
 int MIPSolverCbc::getNumberOfExploredNodes()
