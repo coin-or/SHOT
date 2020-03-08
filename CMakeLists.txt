@@ -350,8 +350,9 @@ if(MSVC OR MSYS OR MINGW)
     set(SPDLOG_STATIC OFF)
 endif()
 
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 if(SPDLOG_STATIC)
-    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
     add_subdirectory(${SPDLOG_DIR}/spdlog)
     list(APPEND CMAKE_MODULE_PATH "${SPDLOG_DIR}/spdlog/cmake")
 endif()
