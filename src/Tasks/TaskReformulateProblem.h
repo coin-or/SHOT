@@ -102,6 +102,8 @@ private:
     std::pair<AuxiliaryVariablePtr, bool> getBilinearAuxiliaryVariable(
         VariablePtr firstVariable, VariablePtr secondVariable);
 
+    std::pair<AuxiliaryVariablePtr, bool> getAbsoluteValueAuxiliaryVariable(std::shared_ptr<ExpressionAbs> source);
+
     void createBilinearReformulations();
 
     void reformulateBinaryBilinearTerm(
@@ -122,6 +124,8 @@ private:
     std::map<VariablePtr, Variables> integerAuxiliaryBinaryVariables;
 
     std::map<std::tuple<VariablePtr, VariablePtr>, AuxiliaryVariablePtr> bilinearAuxVariables;
+
+    std::map<std::string, AuxiliaryVariablePtr> absoluteExpressionsAuxVariables;
 
     ProblemPtr reformulatedProblem;
 };
