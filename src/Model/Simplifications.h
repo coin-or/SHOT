@@ -217,6 +217,12 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionLog> 
         return (std::dynamic_pointer_cast<ExpressionExp>(child)->child);
     }
 
+    if(child->getType() == E_NonlinearExpressionTypes::Constant
+        && std::dynamic_pointer_cast<ExpressionConstant>(child)->constant == 1.0)
+    {
+        return (std::make_shared<ExpressionConstant>(0));
+    }
+
     expression->child = child;
     return expression;
 }
