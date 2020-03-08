@@ -1365,6 +1365,9 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
     }
     else if(expression->getType() == E_NonlinearExpressionTypes::Sum)
     {
+        NonlinearExpressions children;
+
+        // Extracts the child expressions of the sum
         for(auto& C : std::dynamic_pointer_cast<ExpressionSum>(expression)->children)
         {
             auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression,
@@ -1377,15 +1380,8 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
             signomialTerms.add(tmpSignomialTerms);
             constant += tmpConstant;
 
-            C = tmpNonlinearExpression;
-        }
-
-        NonlinearExpressions children;
-
-        for(auto& C : std::dynamic_pointer_cast<ExpressionSum>(expression)->children)
-        {
-            if(C != nullptr)
-                children.push_back(C);
+            if(tmpNonlinearExpression != nullptr)
+                children.push_back(tmpNonlinearExpression);
         }
 
         if(children.size() == 0)
