@@ -226,6 +226,10 @@ public:
         case mp::expr::LOG:
             return std::make_shared<ExpressionLog>(child);
 
+        case mp::expr::LOG10:
+            return std::make_shared<ExpressionProduct>(
+                std::make_shared<ExpressionConstant>(1.0 / log(10.0)), std::make_shared<ExpressionLog>(child));
+
         case mp::expr::EXP:
             return std::make_shared<ExpressionExp>(child);
 
