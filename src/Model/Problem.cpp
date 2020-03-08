@@ -365,7 +365,7 @@ void Problem::updateVariableBounds()
     for(size_t i = 0; i < numVariables; i++)
     {
         if(allVariables[i]->properties.type == E_VariableType::Integer && allVariables[i]->lowerBound > -1
-            && allVariables[i]->upperBound < 2)
+            && allVariables[i]->upperBound < 2 && allVariables[i]->lowerBound != allVariables[i]->upperBound)
         {
             allVariables[i]->properties.type = E_VariableType::Binary;
             allVariables[i]->lowerBound = 0.0;
