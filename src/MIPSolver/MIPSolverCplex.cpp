@@ -368,53 +368,57 @@ void MIPSolverCplex::initializeSolverSettings()
         if(env->settings->getSetting<bool>("TreeStrategy.Multi.Reinitialize", "Dual"))
         {
             if(env->results->getNumberOfIterations() == 0)
-                cplexInstance.setParam(
-                    IloCplex::IntSolLim, env->settings->getSetting<int>("MIP.SolutionLimit.Initial", "Dual"));
+                cplexInstance.setParam(IloCplex::Param::MIP::Limits::Solutions,
+                    env->settings->getSetting<int>("MIP.SolutionLimit.Initial", "Dual"));
         }
         else
         {
-            cplexInstance.setParam(IloCplex::IntSolLim, 21000000);
+            cplexInstance.setParam(IloCplex::Param::MIP::Limits::Solutions, 21000000);
         }
 
-        cplexInstance.setParam(IloCplex::SolnPoolIntensity,
-            env->settings->getSetting<int>("Cplex.SolnPoolIntensity", "Subsolver")); // Don't use 3 with heuristics
+        cplexInstance.setParam(IloCplex::Param::MIP::Pool::Intensity,
+            env->settings->getSetting<int>("Cplex.SolutionPoolIntensity", "Subsolver")); // Don't use 3 with heuristics
+        cplexInstance.setParam(IloCplex::Param::MIP::Pool::Replace,
+            env->settings->getSetting<int>("Cplex.SolutionPoolReplace", "Subsolver"));
+        cplexInstance.setParam(IloCplex::Param::MIP::Pool::RelGap,
+            env->settings->getSetting<double>("Cplex.SolutionPoolGap", "Subsolver"));
         cplexInstance.setParam(
-            IloCplex::SolnPoolReplace, env->settings->getSetting<int>("Cplex.SolnPoolReplace", "Subsolver"));
-        cplexInstance.setParam(
-            IloCplex::SolnPoolGap, env->settings->getSetting<double>("Cplex.SolnPoolGap", "Subsolver"));
-        cplexInstance.setParam(
-            IloCplex::SolnPoolCapacity, env->settings->getSetting<int>("MIP.SolutionPool.Capacity", "Dual"));
-
-        cplexInstance.setParam(IloCplex::Probe, env->settings->getSetting<int>("Cplex.Probe", "Subsolver"));
-        cplexInstance.setParam(IloCplex::MIPEmphasis, env->settings->getSetting<int>("Cplex.MIPEmphasis", "Subsolver"));
+            IloCplex::Param::MIP::Pool::Capacity, env->settings->getSetting<int>("MIP.SolutionPool.Capacity", "Dual"));
 
         cplexInstance.setParam(
-            IloCplex::ParallelMode, env->settings->getSetting<int>("Cplex.ParallelMode", "Subsolver"));
-        cplexInstance.setParam(IloCplex::Threads, env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual"));
+            IloCplex::Param::MIP::Strategy::Probe, env->settings->getSetting<int>("Cplex.Probe", "Subsolver"));
+        cplexInstance.setParam(
+            IloCplex::Param::Emphasis::MIP, env->settings->getSetting<int>("Cplex.MIPEmphasis", "Subsolver"));
 
         cplexInstance.setParam(
-            IloCplex::NumericalEmphasis, env->settings->getSetting<int>("Cplex.NumericalEmphasis", "Subsolver"));
+            IloCplex::Param::Parallel, env->settings->getSetting<int>("Cplex.ParallelMode", "Subsolver"));
+        cplexInstance.setParam(IloCplex::Param::Threads, env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual"));
+
+        cplexInstance.setParam(IloCplex::Param::Emphasis::Numerical,
+            env->settings->getSetting<int>("Cplex.NumericalEmphasis", "Subsolver"));
         cplexInstance.setParam(
-            IloCplex::MemoryEmphasis, env->settings->getSetting<int>("Cplex.MemoryEmphasis", "Subsolver"));
+            IloCplex::Param::Emphasis::Memory, env->settings->getSetting<int>("Cplex.MemoryEmphasis", "Subsolver"));
 
         // Sets whether CPLEX allows nonconvex quadratic functions
         cplexInstance.setParam(
             IloCplex::Param::OptimalityTarget, env->settings->getSetting<int>("Cplex.OptimalityTarget", "Subsolver"));
 
         // Options for using swap file
-        auto workdir = env->settings->getSetting<std::string>("Cplex.WorkDir", "Subsolver");
+        auto workdir = env->settings->getSetting<std::string>("Cplex.WorkDirectory", "Subsolver");
 
         if(workdir != "")
-            cplexInstance.setParam(IloCplex::WorkDir, workdir.c_str());
+            cplexInstance.setParam(IloCplex::Param::WorkDir, workdir.c_str());
 
-        auto workmem = env->settings->getSetting<double>("Cplex.WorkMem", "Subsolver");
+        auto workmem = env->settings->getSetting<double>("Cplex.WorkMemory", "Subsolver");
 
         if(workmem > 0)
-            cplexInstance.setParam(IloCplex::WorkMem, workmem);
+            cplexInstance.setParam(IloCplex::Param::WorkMem, workmem);
 
-        cplexInstance.setParam(IloCplex::NodeFileInd, env->settings->getSetting<int>("Cplex.NodeFileInd", "Subsolver"));
+        cplexInstance.setParam(
+            IloCplex::Param::MIP::Strategy::File, env->settings->getSetting<int>("Cplex.NodeFile", "Subsolver"));
 
-        cplexInstance.setParam(IloCplex::FeasOptMode, env->settings->getSetting<int>("Cplex.FeasOptMode", "Subsolver"));
+        cplexInstance.setParam(
+            IloCplex::Param::Feasopt::Mode, env->settings->getSetting<int>("Cplex.FeasOptMode", "Subsolver"));
 
         // Adds a user-provided node limit
         if(env->settings->getSetting<double>("MIP.NodeLimit", "Dual") > 0)
@@ -422,7 +426,7 @@ void MIPSolverCplex::initializeSolverSettings()
             auto nodeLimit = env->settings->getSetting<double>("MIP.NodeLimit", "Dual");
 
             if(nodeLimit > CPX_BIGINT)
-                cplexInstance.setParam(IloCplex::NodeLim, CPX_BIGINT);
+                cplexInstance.setParam(IloCplex::Param::MIP::Limits::Nodes, CPX_BIGINT);
         }
     }
     catch(IloException& e)
@@ -858,8 +862,9 @@ int MIPSolverCplex::increaseSolutionLimit(int increment)
 
     try
     {
-        cplexInstance.setParam(IloCplex::IntSolLim, cplexInstance.getParam(cplexInstance.IntSolLim) + increment);
-        sollim = cplexInstance.getParam(cplexInstance.IntSolLim);
+        cplexInstance.setParam(IloCplex::Param::MIP::Limits::Solutions,
+            cplexInstance.getParam(IloCplex::Param::MIP::Limits::Solutions) + increment);
+        sollim = cplexInstance.getParam(IloCplex::Param::MIP::Limits::Solutions);
     }
     catch(IloException& e)
     {
@@ -876,7 +881,7 @@ void MIPSolverCplex::setSolutionLimit(long limit)
 
     try
     {
-        cplexInstance.setParam(IloCplex::IntSolLim, limit);
+        cplexInstance.setParam(IloCplex::Param::MIP::Limits::Solutions, limit);
     }
     catch(IloException& e)
     {
@@ -890,7 +895,7 @@ int MIPSolverCplex::getSolutionLimit()
 
     try
     {
-        solLim = cplexInstance.getParam(cplexInstance.IntSolLim);
+        solLim = cplexInstance.getParam(IloCplex::Param::MIP::Limits::Solutions);
     }
     catch(IloException& e)
     {
@@ -1010,11 +1015,11 @@ void MIPSolverCplex::setTimeLimit(double seconds)
         }
         else if(seconds > 0)
         {
-            cplexInstance.setParam(IloCplex::TiLim, seconds);
+            cplexInstance.setParam(IloCplex::Param::TimeLimit, seconds);
         }
         else
         {
-            cplexInstance.setParam(IloCplex::TiLim, 0.01);
+            cplexInstance.setParam(IloCplex::Param::TimeLimit, 0.01);
         }
     }
     catch(IloException& e)
@@ -1029,12 +1034,12 @@ void MIPSolverCplex::setCutOff(double cutOff)
     {
         if(isMinimizationProblem)
         {
-            cplexInstance.setParam(IloCplex::CutUp, cutOff);
+            cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::UpperCutoff, cutOff);
             env->output->outputDebug(fmt::format("        Setting cutoff value to  {} for minimization.", cutOff));
         }
         else
         {
-            cplexInstance.setParam(IloCplex::CutLo, cutOff);
+            cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::LowerCutoff, cutOff);
             env->output->outputDebug(fmt::format("        Setting cutoff value to  {} for maximization.", cutOff));
         }
     }
@@ -1377,7 +1382,12 @@ void MIPSolverCplex::writePresolvedToFile([[maybe_unused]] std::string filename)
     }
 }
 
-void MIPSolverCplex::checkParameters() {}
+void MIPSolverCplex::checkParameters()
+{
+    // Show solver output for problems that are normally solved in one iteration
+    if(env->reformulatedProblem->properties.numberOfNonlinearConstraints == 0)
+        env->settings->updateSetting("Console.DualSolver.Show", "Output", true);
+}
 
 bool MIPSolverCplex::createHyperplane(
     Hyperplane hyperplane, std::function<IloConstraint(IloRange)> addConstraintFunction)

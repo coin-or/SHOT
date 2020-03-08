@@ -400,7 +400,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
         if(isMinimization)
         {
             (static_cast<MIPSolverCplexSingleTree*>(env->dualSolver->MIPSolver.get()))
-                ->cplexInstance.setParam(IloCplex::CutUp, primalBound + cutOffTol);
+                ->cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::UpperCutoff, primalBound + cutOffTol);
 
             env->output->outputDebug(
                 "     Setting cutoff value to " + std::to_string(primalBound + cutOffTol) + " for
@@ -409,7 +409,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
         else
         {
             (static_cast<MIPSolverCplexSingleTree*>(env->dualSolver->MIPSolver.get()))
-                ->cplexInstance.setParam(IloCplex::CutLo, primalBound - cutOffTol);
+                ->cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::LowerCutoff, primalBound - cutOffTol);
 
             env->output->outputDebug(
                 "     Setting cutoff value to " + std::to_string(primalBound - cutOffTol) + " for
@@ -708,8 +708,9 @@ int MIPSolverCplexSingleTree::increaseSolutionLimit(int increment)
 
     try
     {
-        cplexInstance.setParam(IloCplex::IntSolLim, cplexInstance.getParam(cplexInstance.IntSolLim) + increment);
-        sollim = cplexInstance.getParam(cplexInstance.IntSolLim);
+        cplexInstance.setParam(IloCplex::Param::MIP::Limits::Solutions,
+            cplexInstance.getParam(IloCplex::Param::MIP::Limits::Solutions) + increment);
+        sollim = cplexInstance.getParam(IloCplex::Param::MIP::Limits::Solutions);
     }
     catch(IloException& e)
     {
@@ -723,7 +724,7 @@ void MIPSolverCplexSingleTree::setSolutionLimit(long limit)
 {
     try
     {
-        cplexInstance.setParam(IloCplex::IntSolLim, limit);
+        cplexInstance.setParam(IloCplex::Param::MIP::Limits::Solutions, limit);
     }
     catch(IloException& e)
     {
@@ -737,7 +738,7 @@ int MIPSolverCplexSingleTree::getSolutionLimit()
 
     try
     {
-        solLim = cplexInstance.getParam(cplexInstance.IntSolLim);
+        solLim = cplexInstance.getParam(IloCplex::Param::MIP::Limits::Solutions);
     }
     catch(IloException& e)
     {

@@ -1183,18 +1183,29 @@ void Solver::initializeSettings()
     env->settings->createSetting("Cplex.AddRelaxedLazyConstraintsAsLocal", "Subsolver", false,
         "Whether to add lazy constraints generated in relaxed points as local or global");
 
-    env->settings->createSetting(
-        "Cplex.OptimalityTarget", "Subsolver", 0, "Specifies how CPLEX treats nonconvex quadratics", 0, 3);
+    env->settings->createSetting("Cplex.OptimalityTarget", "Subsolver", 0,
+        "Specifies how CPLEX treats nonconvex quadratics: 0. Automatic. 1. Searches for a globally optimal solution to "
+        "a convex model. 2. Searches for a solution that satisfies first-order optimality "
+        "conditions, but is not necessarily globally optimal. 3. Searches for a globally "
+        "optimal solution to a nonconvex model; changes problem type to MIQP if necessary.",
+        0, 3);
 
-    env->settings->createSetting(
-        "Cplex.FeasOptMode", "Subsolver", 0, "Strategy to use for the feasibility repair", 0, 5);
+    env->settings->createSetting("Cplex.FeasOptMode", "Subsolver", 0,
+        "Strategy to use for the feasibility repair: 0. Minimize the sum of all required relaxations in first phase "
+        "only. 1. Minimize the sum of all required relaxations in first phase and execute second phase to find optimum "
+        "among minimal relaxations. 2. Minimize the number of constraints and bounds requiring relaxation in first "
+        "phase only. 3. Minimize the number of constraints and bounds requiring relaxation in first phase and execute "
+        "second phase to find optimum among minimal relaxations. 4. Minimize the sum of squares of required "
+        "relaxations in first phase only. 5. Minimize the sum of squares of required relaxations in first phase and "
+        "execute second phase to find optimum among minimal relaxations",
+        0, 5);
 
     env->settings->createSetting("Cplex.MemoryEmphasis", "Subsolver", 0, "Try to conserve memory when possible", 0, 1);
 
     env->settings->createSetting("Cplex.MIPEmphasis", "Subsolver", 0,
         "Sets the MIP emphasis: 0: Balanced. 1: Feasibility. 2: Optimality. 3: Best bound. 4: Hidden feasible", 0, 4);
 
-    env->settings->createSetting("Cplex.NodeFileInd", "Subsolver", 1,
+    env->settings->createSetting("Cplex.NodeFile", "Subsolver", 1,
         "Where to store the node file: 0: No file. 1: Compressed in memory. 2: On disk. 3: Compressed on disk.", 0, 3);
 
     env->settings->createSetting("Cplex.NumericalEmphasis", "Subsolver", 0, "Emphasis on numerical stability", 0, 1);
@@ -1206,16 +1217,16 @@ void Solver::initializeSettings()
         "Sets the MIP probing level: -1: No probing. 0: Automatic. 1: Moderate. 2: Aggressive. 3: Very aggressive", -1,
         3);
 
-    env->settings->createSetting("Cplex.SolnPoolGap", "Subsolver", 1.0e+75,
+    env->settings->createSetting("Cplex.SolutionPoolGap", "Subsolver", 1.0e+75,
         "Sets the relative gap filter on objective values in the solution pool", 0, 1.0e+75);
 
-    env->settings->createSetting("Cplex.SolnPoolIntensity", "Subsolver", 0,
+    env->settings->createSetting("Cplex.SolutionPoolIntensity", "Subsolver", 0,
         "Controls how much time and memory should be used when filling the solution pool: 0: Automatic. 1: Mild. "
         "2: "
         "Moderate. 3: Aggressive. 4: Very aggressive",
         0, 4);
 
-    env->settings->createSetting("Cplex.SolnPoolReplace", "Subsolver", 1,
+    env->settings->createSetting("Cplex.SolutionPoolReplace", "Subsolver", 1,
         "How to replace solutions in the solution pool when full: 0: Replace oldest. 1: Replace worst. 2: Find "
         "diverse.",
         0, 2);
@@ -1224,10 +1235,10 @@ void Solver::initializeSettings()
         "Use the new generic callback (vers. >12.8) in the single-tree strategy (experimental)");
 
     std::string workdir = "";
-    env->settings->createSetting("Cplex.WorkDir", "Subsolver", workdir, "Directory for swap file");
+    env->settings->createSetting("Cplex.WorkDirectory", "Subsolver", workdir, "Directory for swap file");
 
     env->settings->createSetting(
-        "Cplex.WorkMem", "Subsolver", 0.0, "Memory limit for when to start swapping to disk", 0.0, 1.0e+75);
+        "Cplex.WorkMemory", "Subsolver", 0.0, "Memory limit for when to start swapping to disk", 0.0, 1.0e+75);
 
 #endif
 
@@ -1574,7 +1585,7 @@ void Solver::setConvexityBasedSettings()
             env->settings->updateSetting("ESH.Rootsearch.UniqueConstraints", "Dual", false);
 
             env->settings->updateSetting("HyperplaneCuts.ConstraintSelectionFactor", "Dual", 1.0);
-            env->settings->updateSetting("HyperplaneCuts.UseIntegerCuts", "Dual", true);
+            // env->settings->updateSetting("HyperplaneCuts.UseIntegerCuts", "Dual", true);
             env->settings->updateSetting("HyperplaneCuts.MaxPerIteration", "Dual", 5);
 
             env->settings->updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::MultiTree));
@@ -1611,7 +1622,7 @@ void Solver::setConvexityBasedSettings()
                 env->settings->updateSetting("Cplex.MIPEmphasis", "Subsolver", 4);
                 env->settings->updateSetting("Cplex.NumericalEmphasis", "Subsolver", 1);
                 env->settings->updateSetting("Cplex.Probe", "Subsolver", 3);
-                env->settings->updateSetting("Cplex.SolnPoolIntensity", "Subsolver", 4);
+                env->settings->updateSetting("Cplex.SolutionPoolIntensity", "Subsolver", 4);
 
                 if(env->reformulatedProblem->objectiveFunction->properties.classification
                         == E_ObjectiveFunctionClassification::Quadratic

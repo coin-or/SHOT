@@ -1262,7 +1262,12 @@ double MIPSolverGurobi::getDualObjectiveValue()
 
 void MIPSolverGurobi::writePresolvedToFile([[maybe_unused]] std::string filename) {}
 
-void MIPSolverGurobi::checkParameters() {}
+void MIPSolverGurobi::checkParameters()
+{
+    // Show solver output for problems that are normally solved in one iteration
+    if(env->reformulatedProblem->properties.numberOfNonlinearConstraints == 0)
+        env->settings->updateSetting("Console.DualSolver.Show", "Output", true);
+}
 
 std::pair<VectorDouble, VectorDouble> MIPSolverGurobi::presolveAndGetNewBounds()
 {

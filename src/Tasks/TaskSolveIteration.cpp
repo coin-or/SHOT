@@ -241,6 +241,10 @@ void TaskSolveIteration::run()
             }
         }
     }
+    else
+    {
+        env->output->outputDebug("        Dual solver reports no solutions found.");
+    }
 
     currIter->usedMIPSolutionLimit = env->dualSolver->MIPSolver->getSolutionLimit();
 

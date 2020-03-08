@@ -217,6 +217,12 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionLog> 
         return (std::dynamic_pointer_cast<ExpressionExp>(child)->child);
     }
 
+    if(child->getType() == E_NonlinearExpressionTypes::Constant
+        && std::dynamic_pointer_cast<ExpressionConstant>(child)->constant == 1.0)
+    {
+        return (std::make_shared<ExpressionConstant>(0));
+    }
+
     expression->child = child;
     return expression;
 }
@@ -569,7 +575,7 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionSum> 
     if(constant != 0.0)
         sum->children.add(std::make_shared<ExpressionConstant>(constant));
 
-    if(children.size() == 0) // Everything has been simplified away
+    if(children.size() == 0 && constant == 0.0) // Everything has been simplified away
         return (std::make_shared<ExpressionConstant>(0.0));
 
     for(auto& C : children)
@@ -1365,6 +1371,9 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
     }
     else if(expression->getType() == E_NonlinearExpressionTypes::Sum)
     {
+        NonlinearExpressions children;
+
+        // Extracts the child expressions of the sum
         for(auto& C : std::dynamic_pointer_cast<ExpressionSum>(expression)->children)
         {
             auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression,
@@ -1377,15 +1386,8 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
             signomialTerms.add(tmpSignomialTerms);
             constant += tmpConstant;
 
-            C = tmpNonlinearExpression;
-        }
-
-        NonlinearExpressions children;
-
-        for(auto& C : std::dynamic_pointer_cast<ExpressionSum>(expression)->children)
-        {
-            if(C != nullptr)
-                children.push_back(C);
+            if(tmpNonlinearExpression != nullptr)
+                children.push_back(tmpNonlinearExpression);
         }
 
         if(children.size() == 0)

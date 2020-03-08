@@ -1802,6 +1802,11 @@ NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(No
 
 NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(std::shared_ptr<ExpressionAbs> source)
 {
+    auto [auxVariable, added] = getAbsoluteValueAuxiliaryVariable(source);
+
+    if(!added) // Have already created the auxiliary constraints
+        return (std::make_shared<ExpressionVariable>(auxVariable));
+
     auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression, tmpConstant]
         = extractTermsAndConstant(source->child, true, true, true, true);
 
@@ -1826,32 +1831,26 @@ NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(st
     {
         auxConstraint1 = std::make_shared<QuadraticConstraint>(
             auxConstraintCounter, "s_cabs_" + std::to_string(auxConstraintCounter) + "_1", SHOT_DBL_MIN, 0.0);
-        auxConstraint1->properties.classification = E_ConstraintClassification::Nonlinear;
+        auxConstraint1->properties.classification = E_ConstraintClassification::Quadratic;
         auxConstraintCounter++;
 
         auxConstraint2 = std::make_shared<QuadraticConstraint>(
             auxConstraintCounter, "s_cabs_" + std::to_string(auxConstraintCounter) + "_2", SHOT_DBL_MIN, 0.0);
-        auxConstraint2->properties.classification = E_ConstraintClassification::Nonlinear;
+        auxConstraint2->properties.classification = E_ConstraintClassification::Quadratic;
         auxConstraintCounter++;
     }
     else
     {
         auxConstraint1 = std::make_shared<LinearConstraint>(
             auxConstraintCounter, "s_cabs_" + std::to_string(auxConstraintCounter) + "_1", SHOT_DBL_MIN, 0.0);
-        auxConstraint1->properties.classification = E_ConstraintClassification::Nonlinear;
+        auxConstraint1->properties.classification = E_ConstraintClassification::Linear;
         auxConstraintCounter++;
 
         auxConstraint2 = std::make_shared<LinearConstraint>(
             auxConstraintCounter, "s_cabs_" + std::to_string(auxConstraintCounter) + "_2", SHOT_DBL_MIN, 0.0);
-        auxConstraint2->properties.classification = E_ConstraintClassification::Nonlinear;
+        auxConstraint2->properties.classification = E_ConstraintClassification::Linear;
         auxConstraintCounter++;
     }
-
-    // The child is nonlinear
-    auto auxVariable = std::make_shared<AuxiliaryVariable>("s_abs_" + std::to_string(auxVariableCounter + 1),
-        auxVariableCounter, E_VariableType::Real, bounds.l(), bounds.u());
-    auxVariable->properties.auxiliaryType = E_AuxiliaryVariableType::AbsoluteValue;
-    auxVariableCounter++;
 
     if(tmpConstant > 0)
     {
@@ -1859,7 +1858,13 @@ NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(st
         std::dynamic_pointer_cast<LinearConstraint>(auxConstraint1)->constant = -tmpConstant;
     }
 
-    if(tmpLinearTerms.size() > 0)
+    if(tmpLinearTerms.size() == 1)
+    {
+        std::dynamic_pointer_cast<LinearConstraint>(auxConstraint1)->add(tmpLinearTerms);
+
+        copyLinearTermsToConstraint(tmpLinearTerms, std::dynamic_pointer_cast<LinearConstraint>(auxConstraint2), true);
+    }
+    else if(tmpLinearTerms.size() > 1)
     {
         std::dynamic_pointer_cast<LinearConstraint>(auxConstraint1)->add(tmpLinearTerms);
 
@@ -1902,9 +1907,6 @@ NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(st
     std::dynamic_pointer_cast<LinearConstraint>(auxConstraint1)->add(std::make_shared<LinearTerm>(-1.0, auxVariable));
     std::dynamic_pointer_cast<LinearConstraint>(auxConstraint2)->add(std::make_shared<LinearTerm>(-1.0, auxVariable));
 
-    auxVariable->nonlinearExpression = copyNonlinearExpression(source.get(), reformulatedProblem);
-
-    reformulatedProblem->add(auxVariable);
     reformulatedProblem->add(auxConstraint1);
     reformulatedProblem->add(auxConstraint2);
 
@@ -2015,6 +2017,39 @@ std::pair<AuxiliaryVariablePtr, bool> TaskReformulateProblem::getBilinearAuxilia
     reformulatedProblem->add((auxVariable));
     auxVariable->quadraticTerms.add(std::make_shared<QuadraticTerm>(1.0, firstVariable, secondVariable));
     bilinearAuxVariables.emplace(key, auxVariable);
+
+    return (std::make_pair(auxVariable, true));
+}
+
+std::pair<AuxiliaryVariablePtr, bool> TaskReformulateProblem::getAbsoluteValueAuxiliaryVariable(
+    std::shared_ptr<ExpressionAbs> source)
+{
+    std::stringstream expression;
+    expression << source->child;
+
+    auto key = expression.str();
+
+    auto auxVariableIterator = absoluteExpressionsAuxVariables.find(key);
+
+    if(auxVariableIterator != absoluteExpressionsAuxVariables.end())
+        return (std::make_pair(auxVariableIterator->second, false));
+
+    // Create a new variable
+
+    // Get the max bound
+    auto bounds = source->getBounds();
+    double lowerBound = bounds.l();
+    double upperBounds = bounds.u();
+
+    auto auxVariable = std::make_shared<AuxiliaryVariable>("s_abs_" + std::to_string(auxVariableCounter + 1),
+        auxVariableCounter, E_VariableType::Real, bounds.l(), bounds.u());
+    auxVariable->properties.auxiliaryType = E_AuxiliaryVariableType::AbsoluteValue;
+    auxVariableCounter++;
+
+    reformulatedProblem->add(auxVariable);
+    auxVariable->nonlinearExpression = copyNonlinearExpression(source->child.get(), reformulatedProblem);
+
+    absoluteExpressionsAuxVariables.emplace(key, auxVariable);
 
     return (std::make_pair(auxVariable, true));
 }

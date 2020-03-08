@@ -1021,19 +1021,19 @@ void Results::setPrimalBound(double value)
     // In case we have crossover
     if(env->problem->objectiveFunction->direction == E_ObjectiveFunctionDirection::Minimize)
     {
-        if(value < this->globalDualBound)
+        if(value < this->globalDualBound && this->solutionIsGlobal)
             this->globalDualBound = value;
 
         if(value < this->currentDualBound)
-            this->currentDualBound = this->globalDualBound;
+            this->currentDualBound = value;
     }
     else
     {
-        if(value > this->globalDualBound)
+        if(value > this->globalDualBound && this->solutionIsGlobal)
             this->globalDualBound = value;
 
         if(value > this->currentDualBound)
-            this->currentDualBound = this->globalDualBound;
+            this->currentDualBound = value;
     }
 
     env->dualSolver->cutOffToUse = value;
