@@ -1390,7 +1390,7 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
             auto [auxVariable, newVariable] = getBilinearAuxiliaryVariable(firstVariable, secondVariable);
             resultLinearTerms.add(std::make_shared<LinearTerm>(signfactor * T->coefficient, auxVariable));
         }
-        else if(T->isBilinear && partitionNonBinaryTerms
+        else if(T->isBilinear
             && ((T->firstVariable->properties.type == E_VariableType::Integer
                     && (T->firstVariable->upperBound - T->firstVariable->lowerBound
                            < maxBilinearIntegerReformulationDomain))
@@ -1404,6 +1404,11 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
         }
         else if(partitionNonBinaryTerms) // Square term x1^2 or general bilinear term x1*x2 will be
                                          // partitioned into multiple constraints
+        {
+            auto [auxVariable, newVariable] = getBilinearAuxiliaryVariable(firstVariable, secondVariable);
+            resultLinearTerms.add(std::make_shared<LinearTerm>(signfactor * T->coefficient, auxVariable));
+        }
+        else if(partitionNonBinaryTerms) // continuous term x1*x2
         {
             auto [auxVariable, newVariable] = getBilinearAuxiliaryVariable(firstVariable, secondVariable);
             resultLinearTerms.add(std::make_shared<LinearTerm>(signfactor * T->coefficient, auxVariable));
@@ -2010,8 +2015,22 @@ std::pair<AuxiliaryVariablePtr, bool> TaskReformulateProblem::getBilinearAuxilia
     double lowerBound = std::min(valueList);
     double upperBound = std::max(valueList);
 
+    auto variableType = E_VariableType::Real;
+
+    if(firstVariable->properties.type == E_VariableType::Binary
+        && secondVariable->properties.type == E_VariableType::Binary)
+        variableType = E_VariableType::Binary;
+    else if(firstVariable->properties.type == E_VariableType::Integer
+        && secondVariable->properties.type == E_VariableType::Integer)
+        variableType = E_VariableType::Integer;
+    else if((firstVariable->properties.type == E_VariableType::Binary
+                && secondVariable->properties.type == E_VariableType::Integer)
+        || (firstVariable->properties.type == E_VariableType::Integer
+               && secondVariable->properties.type == E_VariableType::Binary))
+        variableType = E_VariableType::Integer;
+
     auto auxVariable = std::make_shared<AuxiliaryVariable>("s_bl_" + firstVariable->name + "_" + secondVariable->name,
-        auxVariableCounter, E_VariableType::Real, lowerBound, upperBound);
+        auxVariableCounter, variableType, lowerBound, upperBound);
     auxVariableCounter++;
 
     reformulatedProblem->add((auxVariable));
@@ -2308,8 +2327,7 @@ void TaskReformulateProblem::reformulateRealBilinearTerm(
 
         reformulatedProblem->add(std::move(auxConstraint));
 
-        if(env->settings->getSetting<bool>("Reformulation.Bilinear.AddConvexEnvelope",
-               "Model")) // Also adds the McCormick envelopes to the dual model
+        if(env->settings->getSetting<bool>("Reformulation.Bilinear.AddConvexEnvelope", "Model"))
         {
             addBilinearMcCormickEnvelope(auxVariable, firstVariable, secondVariable);
         }
