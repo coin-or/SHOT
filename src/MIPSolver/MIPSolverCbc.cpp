@@ -1065,7 +1065,9 @@ bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
         }
         else // Integer cut for problem with general integers
         {
-            size_t index = 0;
+            return false;
+            // TODO: disabled for now...
+            /*size_t index = 0;
             CoinPackedVector cut;
             double sumLB = 0.0;
             double sumUB = 0.0;
@@ -1105,25 +1107,25 @@ bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
                     cut1a.insert(VAR->index, 1.0);
                     cut1a.insert(wIndex, 1.0);
                     osiInterface->addRow(cut1a, variableValue, osiInterface->getInfinity(), "ic1a"
-                        /*fmt::format("IC_{}_1a", env->solutionStatistics.numberOfIntegerCuts)*/);
+                        fmt::format("IC_{}_1a", env->solutionStatistics.numberOfIntegerCuts));
 
                     cut1b.insert(VAR->index, 1.0);
                     cut1b.insert(wIndex, -1.0);
                     osiInterface->addRow(cut1b, -osiInterface->getInfinity(), variableValue, "ic1b"
-                        /* fmt::format("IC_{}_1b", env->solutionStatistics.numberOfIntegerCuts)*/
+                       fmt::format("IC_{}_1b", env->solutionStatistics.numberOfIntegerCuts)
                     );
 
                     cut2.insert(wIndex, 1.0);
                     cut2.insert(VAR->index, -1.0);
                     cut2.insert(vIndex, M1);
                     osiInterface->addRow(cut2, -osiInterface->getInfinity(), -variableValue + M1, "ic2"
-                        /*fmt::format("IC_{}_2", env->solutionStatistics.numberOfIntegerCuts)*/);
+                        fmt::format("IC_{}_2", env->solutionStatistics.numberOfIntegerCuts));
 
                     cut3.insert(wIndex, 1.0);
                     cut3.insert(VAR->index, 1.0);
                     cut3.insert(vIndex, -M2);
                     osiInterface->addRow(cut3, -osiInterface->getInfinity(), variableValue,
-                        "ic3" /*fmt::format("IC_{}_3", env->solutionStatistics.numberOfIntegerCuts)*/);
+                        fmt::format("IC_{}_3", env->solutionStatistics.numberOfIntegerCuts));
 
                     osiInterface->setColumnType(wIndex, 'C');
                     osiInterface->setColumnType(vIndex, 'B');
@@ -1134,8 +1136,9 @@ bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
                 index++;
             }
 
-            osiInterface->addRow(cut, -osiInterface->getInfinity(), integerCut.variableValues.size() - 1.0, "ic4"
-                /*fmt::format("IC_{}", integerCut.variableValues.size())*/);
+            osiInterface->addRow(cut, -osiInterface->getInfinity(), integerCut.variableValues.size() - 1.0,
+                fmt::format("IC_{}", integerCut.variableValues.size()));
+            */
         }
 
         if(osiInterface->getNumRows() > numConstraintsBefore)
