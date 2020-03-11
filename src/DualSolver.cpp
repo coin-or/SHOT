@@ -183,7 +183,8 @@ void DualSolver::addGeneratedHyperplane(const Hyperplane& hyperplane)
     if(!genHyperplane.isSourceConvex)
     {
         if(env->results->solutionIsGlobal)
-            env->output->outputDebug("        Solution is no longer global");
+            env->output->outputDebug("        Solution is no longer global since hyperplane has been added to "
+                                     "nonconvex objective or constraint.");
 
         env->results->solutionIsGlobal = false;
     }
@@ -215,6 +216,74 @@ bool DualSolver::hasHyperplaneBeenAdded(double hash, int constraintIndex)
     for(auto& H : generatedHyperplanes)
     {
         if(H.sourceConstraintIndex == constraintIndex && Utilities::isAlmostEqual(H.pointHash, hash, 1e-8))
+        {
+            return (true);
+        }
+    }
+
+    return (false);
+}
+
+void DualSolver::addIntegerCut(IntegerCut integerCut)
+{
+    assert((int)integerCut.variableValues.size() == env->reformulatedProblem->properties.numberOfDiscreteVariables);
+
+    if(env->reformulatedProblem->properties.numberOfIntegerVariables > 0)
+        integerCut.areAllVariablesBinary = false;
+    else
+    {
+        integerCut.areAllVariablesBinary = true;
+    }
+
+    integerCut.pointHash = Utilities::calculateHash(integerCut.variableValues);
+
+    if(!hasIntegerCutBeenAdded(integerCut.pointHash))
+        this->integerCutWaitingList.push_back(integerCut);
+    else
+        env->output->outputInfo(
+            fmt::format("        Integer cut with hash {} has been added already.", integerCut.pointHash));
+}
+
+void DualSolver::addGeneratedIntegerCut(IntegerCut integerCut)
+{
+    std::string source = "";
+
+    switch(integerCut.source)
+    {
+    case E_IntegerCutSource::NLPFixedInteger:
+        source = "NLP fixed integer";
+        break;
+
+    default:
+        break;
+    }
+
+    integerCut.iterationGenerated = env->results->getCurrentIteration()->iterationNumber;
+
+    if(env->results->solutionIsGlobal && env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex)
+    {
+        env->results->solutionIsGlobal = false;
+        env->output->outputInfo("        Solution is no longer global since integer cut has been added.");
+    }
+
+    env->output->outputInfo(fmt::format("        Added integer cut with hash {}", integerCut.pointHash));
+
+    generatedIntegerCuts.push_back(integerCut);
+
+    auto currentIteration = env->results->getCurrentIteration();
+    currentIteration->numHyperplanesAdded++;
+    currentIteration->totNumHyperplanes++;
+
+    env->solutionStatistics.numberOfIntegerCuts++;
+
+    env->output->outputDebug("        Integer cut generated from: " + source);
+}
+
+bool DualSolver::hasIntegerCutBeenAdded(double hash)
+{
+    for(auto& IC : generatedIntegerCuts)
+    {
+        if(Utilities::isAlmostEqual(IC.pointHash, hash, 1e-8))
         {
             return (true);
         }

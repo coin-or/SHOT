@@ -471,36 +471,105 @@ int MIPSolverGurobi::addLinearConstraint(
     return (gurobiModel->get(GRB_IntAttr_NumConstrs) - 1);
 }
 
-bool MIPSolverGurobi::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes)
+bool MIPSolverGurobi::createIntegerCut(IntegerCut& integerCut)
 {
     try
     {
         int numConstraintsBefore = gurobiModel->get(GRB_IntAttr_NumConstrs);
         GRBLinExpr expr = 0;
+        size_t index = 0;
 
-        for(int I : binaryIndexesOnes)
+        for(auto& VAR : env->reformulatedProblem->allVariables)
         {
-            auto variable = gurobiModel->getVar(I);
-            expr += 1.0 * variable;
+            if(!(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer))
+                continue;
+
+            int variableValue = integerCut.variableValues[index];
+            auto variable = gurobiModel->getVar(VAR->index);
+
+            if(variableValue == VAR->upperBound)
+            {
+                expr += (variableValue - variable);
+            }
+            else if(variableValue == VAR->lowerBound)
+            {
+                expr += variable;
+            }
+            else
+            {
+                int wIndex = numberOfVariables;
+                int vIndex = numberOfVariables + 1;
+                numberOfVariables += 2;
+
+                auto w = gurobiModel->addVar(0, getUnboundedVariableBoundValue(), 0.0, GRB_CONTINUOUS,
+                    fmt::format("wIC{}_{}", env->solutionStatistics.numberOfIntegerCuts, index));
+                auto v = gurobiModel->addVar(
+                    0, 1, 0.0, GRB_BINARY, fmt::format("vIC{}_{}", env->solutionStatistics.numberOfIntegerCuts, index));
+                gurobiModel->update();
+
+                expr += 1.0 * w;
+
+                double M1 = 2 * (variableValue - VAR->lowerBound);
+                double M2 = 2 * (VAR->upperBound - variableValue);
+
+                int tmpNumConstraints = gurobiModel->get(GRB_IntAttr_NumConstrs);
+                gurobiModel->addConstr(-w <= variable - variableValue,
+                    fmt::format("IC{}_{}_1a", env->solutionStatistics.numberOfIntegerCuts, index));
+                gurobiModel->update();
+
+                if(gurobiModel->get(GRB_IntAttr_NumConstrs) > tmpNumConstraints)
+                {
+                    integerCuts.push_back(numConstraintsBefore + index);
+                }
+
+                tmpNumConstraints = gurobiModel->get(GRB_IntAttr_NumConstrs);
+                gurobiModel->addConstr(variable - variableValue <= w,
+                    fmt::format("IC{}_{}_1b", env->solutionStatistics.numberOfIntegerCuts, index));
+                gurobiModel->update();
+
+                if(gurobiModel->get(GRB_IntAttr_NumConstrs) > tmpNumConstraints)
+                {
+                    integerCuts.push_back(numConstraintsBefore + index);
+                }
+
+                tmpNumConstraints = gurobiModel->get(GRB_IntAttr_NumConstrs);
+                gurobiModel->addConstr(w <= variable - variableValue + M1 * (1 - v),
+                    fmt::format("IC{}_{}_2", env->solutionStatistics.numberOfIntegerCuts, index));
+                gurobiModel->update();
+
+                if(gurobiModel->get(GRB_IntAttr_NumConstrs) > tmpNumConstraints)
+                {
+                    integerCuts.push_back(numConstraintsBefore + index);
+                }
+
+                tmpNumConstraints = gurobiModel->get(GRB_IntAttr_NumConstrs);
+                gurobiModel->addConstr(w <= variableValue - variable + M2 * v,
+                    fmt::format("IC{}_{}_3", env->solutionStatistics.numberOfIntegerCuts, index));
+                gurobiModel->update();
+
+                if(gurobiModel->get(GRB_IntAttr_NumConstrs) > tmpNumConstraints)
+                {
+                    integerCuts.push_back(numConstraintsBefore + index);
+                }
+            }
+
+            index++;
         }
 
-        for(int I : binaryIndexesZeroes)
-        {
-            auto variable = gurobiModel->getVar(I);
-            expr += (1.0 - 1.0 * variable);
-        }
+        int tmpNumConstraints = gurobiModel->get(GRB_IntAttr_NumConstrs);
+        gurobiModel->addConstr(expr >= 1, fmt::format("IC{}_4", env->solutionStatistics.numberOfIntegerCuts));
+        gurobiModel->update();
 
-        gurobiModel->addConstr(expr <= binaryIndexesOnes.size() + binaryIndexesZeroes.size() - 1.0,
-            fmt::format("IC_{}", integerCuts.size()));
+        if(gurobiModel->get(GRB_IntAttr_NumConstrs) > tmpNumConstraints)
+        {
+            integerCuts.push_back(numConstraintsBefore + index);
+        }
 
         gurobiModel->update();
 
-        if(gurobiModel->get(GRB_IntAttr_NumConstrs) > numConstraintsBefore)
-        {
-            integerCuts.push_back(gurobiModel->get(GRB_IntAttr_NumConstrs) - 1);
-            env->solutionStatistics.numberOfIntegerCuts++;
-        }
-        else
+        auto addedConstraints = gurobiModel->get(GRB_IntAttr_NumConstrs) - numConstraintsBefore;
+
+        if(addedConstraints == 0)
         {
             env->output->outputInfo("        Integer cut not added by Gurobi");
             return (false);
@@ -508,7 +577,7 @@ bool MIPSolverGurobi::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorI
     }
     catch(GRBException& e)
     {
-        env->output->outputError("        Gurobi error when adding lazy integer cut", e.getMessage());
+        env->output->outputError("        Gurobi error when adding integer cut", e.getMessage());
         return (false);
     }
 

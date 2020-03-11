@@ -59,7 +59,7 @@ public:
 
     bool createHyperplane(Hyperplane hyperplane) override { return (MIPSolverBase::createHyperplane(hyperplane)); }
 
-    bool createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes) override;
+    bool createIntegerCut(IntegerCut& integerCut) override;
 
     bool createInteriorHyperplane(Hyperplane hyperplane) override
     {

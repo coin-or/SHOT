@@ -161,6 +161,7 @@ struct PrimalFixedNLPCandidate
     double objValue;
     int iterFound;
     PairIndexValue maxDevatingConstraint;
+    double discreteVariablePointHash;
 };
 
 struct DualSolution
@@ -190,7 +191,15 @@ struct GeneratedHyperplane
     bool isRemoved = false;
     bool isSourceConvex = false;
     int iterationGenerated = -1;
+    double pointHash;
+};
 
+struct IntegerCut
+{
+    VectorInteger variableValues;
+    E_IntegerCutSource source = E_IntegerCutSource::None;
+    bool areAllVariablesBinary = false;
+    int iterationGenerated = -1;
     double pointHash;
 };
 

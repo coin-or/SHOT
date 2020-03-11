@@ -1027,30 +1027,120 @@ double MIPSolverCbc::getObjectiveValue(int solIdx)
 
 void MIPSolverCbc::deleteMIPStarts() { MIPStarts.clear(); }
 
-bool MIPSolverCbc::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes)
+bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
 {
+    assert(integerCut.variableValues.size() == env->reformulatedProblem->properties.numberOfDiscreteVariables);
+
     try
     {
         int numConstraintsBefore = osiInterface->getNumRows();
-        CoinPackedVector cut;
 
-        for(int I : binaryIndexesOnes)
+        if(integerCut.areAllVariablesBinary) // Integer cut for problem with binary variables only
         {
-            cut.insert(I, 1.0);
-        }
+            size_t index = 0;
+            CoinPackedVector cut;
 
-        for(int I : binaryIndexesZeroes)
+            for(auto& VAR : env->reformulatedProblem->allVariables)
+            {
+                if(!(VAR->properties.type == E_VariableType::Binary && VAR->properties.type == E_VariableType::Integer))
+                    continue;
+
+                int variableValue = integerCut.variableValues[index];
+
+                if(variableValue == 1.0)
+                    cut.insert(VAR->index, 1.0);
+                else if(variableValue == 0.0)
+                    cut.insert(VAR->index, -1.0);
+                else
+                {
+                    env->output->outputInfo("        Integer cut not added by Cbc ");
+                    return (false);
+                }
+
+                index++;
+            }
+
+            osiInterface->addRow(cut, -osiInterface->getInfinity(), integerCut.variableValues.size() - 1.0,
+                fmt::format("IC_{}", env->solutionStatistics.numberOfIntegerCuts));
+        }
+        else // Integer cut for problem with general integers
         {
-            cut.insert(I, -1.0);
-        }
+            size_t index = 0;
+            CoinPackedVector cut;
+            double sumLB = 0.0;
+            double sumUB = 0.0;
 
-        osiInterface->addRow(cut, -osiInterface->getInfinity(), binaryIndexesOnes.size() - 1.0,
-            fmt::format("IC_{}", integerCuts.size()));
+            for(auto& VAR : env->reformulatedProblem->allVariables)
+            {
+                if(!(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer))
+                    continue;
+
+                int variableValue = integerCut.variableValues[index];
+
+                if(variableValue == VAR->upperBound)
+                {
+                    sumUB += VAR->upperBound;
+                    cut.insert(VAR->index, -1.0);
+                }
+                else if(variableValue == VAR->lowerBound)
+                {
+                    sumLB += VAR->lowerBound;
+                    cut.insert(VAR->index, 1.0);
+                }
+                else
+                {
+                    int wIndex = numberOfVariables;
+                    int vIndex = numberOfVariables + 1;
+                    numberOfVariables += 2;
+
+                    std::cout << "add IC with " << VAR->name << std::endl;
+
+                    double M1 = 2 * (variableValue - VAR->lowerBound);
+                    double M2 = 2 * (VAR->upperBound - variableValue);
+
+                    cut.insert(wIndex, 1.0);
+
+                    CoinPackedVector cut1a, cut1b, cut2, cut3;
+
+                    cut1a.insert(VAR->index, 1.0);
+                    cut1a.insert(wIndex, 1.0);
+                    osiInterface->addRow(cut1a, variableValue, osiInterface->getInfinity(), "ic1a"
+                        /*fmt::format("IC_{}_1a", env->solutionStatistics.numberOfIntegerCuts)*/);
+
+                    cut1b.insert(VAR->index, 1.0);
+                    cut1b.insert(wIndex, -1.0);
+                    osiInterface->addRow(cut1b, -osiInterface->getInfinity(), variableValue, "ic1b"
+                        /* fmt::format("IC_{}_1b", env->solutionStatistics.numberOfIntegerCuts)*/
+                    );
+
+                    cut2.insert(wIndex, 1.0);
+                    cut2.insert(VAR->index, -1.0);
+                    cut2.insert(vIndex, M1);
+                    osiInterface->addRow(cut2, -osiInterface->getInfinity(), -variableValue + M1, "ic2"
+                        /*fmt::format("IC_{}_2", env->solutionStatistics.numberOfIntegerCuts)*/);
+
+                    cut3.insert(wIndex, 1.0);
+                    cut3.insert(VAR->index, 1.0);
+                    cut3.insert(vIndex, -M2);
+                    osiInterface->addRow(cut3, -osiInterface->getInfinity(), variableValue,
+                        "ic3" /*fmt::format("IC_{}_3", env->solutionStatistics.numberOfIntegerCuts)*/);
+
+                    osiInterface->setColumnType(wIndex, 'C');
+                    osiInterface->setColumnType(vIndex, 'B');
+
+                    osiInterface->setColLower(wIndex, 0);
+                }
+
+                index++;
+            }
+
+            osiInterface->addRow(cut, -osiInterface->getInfinity(), integerCut.variableValues.size() - 1.0, "ic4"
+                /*fmt::format("IC_{}", integerCut.variableValues.size())*/);
+        }
 
         if(osiInterface->getNumRows() > numConstraintsBefore)
         {
             integerCuts.push_back(osiInterface->getNumRows() - 1);
-            env->solutionStatistics.numberOfIntegerCuts++;
         }
         else
         {

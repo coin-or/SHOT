@@ -62,7 +62,7 @@ public:
 
     bool createHyperplane(Hyperplane hyperplane) override { return (MIPSolverBase::createHyperplane(hyperplane)); }
 
-    bool createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes) override;
+    bool createIntegerCut(IntegerCut& integerCut) override;
 
     virtual bool createHyperplane(Hyperplane hyperplane, std::function<IloConstraint(IloRange)> addConstraintFunction);
 

@@ -67,6 +67,12 @@ enum class E_HyperplaneSource
     ObjectiveRootsearch
 };
 
+enum class E_IntegerCutSource
+{
+    None,
+    NLPFixedInteger
+};
+
 enum class E_IterationLineType
 {
     DualSolution,

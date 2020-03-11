@@ -32,7 +32,7 @@ private:
 
     bool createHyperplane(Hyperplane hyperplane);
 
-    virtual bool createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes);
+    virtual bool createIntegerCut(IntegerCut& integerCut);
 
     void addLazyConstraint(std::vector<SolutionPoint> candidatePoints);
 };
