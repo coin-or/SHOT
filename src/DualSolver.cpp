@@ -242,8 +242,6 @@ bool DualSolver::hasHyperplaneBeenAdded(double hash, int constraintIndex)
 
 void DualSolver::addIntegerCut(IntegerCut integerCut)
 {
-    assert((int)integerCut.variableValues.size() == env->reformulatedProblem->properties.numberOfDiscreteVariables);
-
     if(env->reformulatedProblem->properties.numberOfIntegerVariables > 0)
         integerCut.areAllVariablesBinary = false;
     else
