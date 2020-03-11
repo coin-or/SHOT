@@ -176,16 +176,18 @@ struct DualSolution
 struct Hyperplane
 {
     NumericConstraintPtr sourceConstraint;
-    int sourceConstraintIndex; // TODO remove
+    int sourceConstraintIndex; // -1 if objective function
     VectorDouble generatedPoint;
     double objectiveFunctionValue; // Used for the objective cuts only
     E_HyperplaneSource source;
     bool isObjectiveHyperplane = false;
+    double pointHash;
 };
 
 struct GeneratedHyperplane
 {
-    int sourceConstraintIndex;
+    NumericConstraintPtr sourceConstraint;
+    int sourceConstraintIndex; // -1 if objective function
     E_HyperplaneSource source = E_HyperplaneSource::None;
     bool isLazy = false;
     bool isRemoved = false;

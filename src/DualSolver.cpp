@@ -112,7 +112,21 @@ void DualSolver::checkDualSolutionCandidates()
 void DualSolver::addHyperplane(Hyperplane& hyperplane)
 {
     assert((int)hyperplane.generatedPoint.size() == env->reformulatedProblem->properties.numberOfVariables);
-    this->hyperplaneWaitingList.push_back(hyperplane);
+
+    hyperplane.pointHash = Utilities::calculateHash(hyperplane.generatedPoint);
+
+    if((hyperplane.source == E_HyperplaneSource::ObjectiveRootsearch
+           && !hasHyperplaneBeenAdded(hyperplane.pointHash, -1))
+        || (hyperplane.source != E_HyperplaneSource::ObjectiveRootsearch
+               && (!hasHyperplaneBeenAdded(hyperplane.pointHash, hyperplane.sourceConstraint->index))))
+    {
+        this->hyperplaneWaitingList.push_back(hyperplane);
+    }
+    else
+    {
+        env->output->outputInfo(
+            fmt::format("        Hyperplane with hash {} has been added already.", hyperplane.pointHash));
+    }
 }
 
 void DualSolver::addGeneratedHyperplane(const Hyperplane& hyperplane)
@@ -160,10 +174,12 @@ void DualSolver::addGeneratedHyperplane(const Hyperplane& hyperplane)
 
     GeneratedHyperplane genHyperplane;
 
-    genHyperplane.sourceConstraintIndex = hyperplane.sourceConstraintIndex;
     genHyperplane.source = hyperplane.source;
+    if(hyperplane.sourceConstraint)
+        genHyperplane.sourceConstraint = hyperplane.sourceConstraint;
     genHyperplane.iterationGenerated = env->results->getCurrentIteration()->iterationNumber;
     genHyperplane.isLazy = false;
+    genHyperplane.pointHash = hyperplane.pointHash;
 
     if(hyperplane.sourceConstraint)
     {
