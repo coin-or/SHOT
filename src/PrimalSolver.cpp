@@ -435,9 +435,39 @@ void PrimalSolver::addFixedNLPCandidate(
 
     assert((int)pt.size() == env->reformulatedProblem->properties.numberOfVariables);
 
-    fixedPrimalNLPCandidates.push_back(PrimalFixedNLPCandidate {
-        VectorDouble(pt.begin(), pt.begin() + env->reformulatedProblem->properties.numberOfVariables), source, objVal,
-        iter, maxConstrDev });
+    VectorInteger discretVariableValues;
+    discretVariableValues.reserve(env->reformulatedProblem->properties.numberOfDiscreteVariables);
+
+    for(auto& VAR : env->reformulatedProblem->allVariables)
+    {
+        if(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer)
+            discretVariableValues.push_back(pt[VAR->index]);
+    }
+
+    double pointHash = Utilities::calculateHash(discretVariableValues);
+
+    if(!hasFixedNLPCandidateBeenTested(pointHash))
+    {
+        fixedPrimalNLPCandidates.push_back(PrimalFixedNLPCandidate {
+            VectorDouble(pt.begin(), pt.begin() + env->reformulatedProblem->properties.numberOfVariables), source,
+            objVal, iter, maxConstrDev, pointHash });
+    }
+    else
+        env->output->outputInfo(
+            fmt::format("        Candidate for fixed integer search with hash {} has been used already.", pointHash));
+}
+
+bool PrimalSolver::hasFixedNLPCandidateBeenTested(double hash)
+{
+    for(auto& IC : usedPrimalNLPCandidates)
+    {
+        if(Utilities::isAlmostEqual(IC.discreteVariablePointHash, hash, 1e-8))
+        {
+            return (true);
+        }
+    }
+
+    return (false);
 }
 
 } // namespace SHOT

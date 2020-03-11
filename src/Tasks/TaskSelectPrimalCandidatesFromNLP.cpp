@@ -79,8 +79,9 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(Environment
         sourceIsReformulatedProblem = false;
 
         env->results->usedPrimalNLPSolver = ES_PrimalNLPSolver::GAMS;
-        NLPSolver = std::make_shared<NLPSolverGAMS>(
-            env, (std::dynamic_pointer_cast<ModelingSystemGAMS>(env->modelingSystem))->modelingObject, (std::dynamic_pointer_cast<ModelingSystemGAMS>(env->modelingSystem))->auditLicensing);
+        NLPSolver = std::make_shared<NLPSolverGAMS>(env,
+            (std::dynamic_pointer_cast<ModelingSystemGAMS>(env->modelingSystem))->modelingObject,
+            (std::dynamic_pointer_cast<ModelingSystemGAMS>(env->modelingSystem))->auditLicensing);
         break;
     }
 #endif
@@ -175,35 +176,15 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
 
     env->output->outputDebug("        Solving fixed NLP problem:");
 
-    // Check if integer value combination has been tested before
-    if(testedPoints.size() > 0)
-    {
-        for(auto& C : env->primalSolver->fixedPrimalNLPCandidates)
-        {
-            for(auto& P : testedPoints)
-            {
-                if(Utilities::isDifferentRoundedSelectedElements(C.point, P, discreteVariableIndexes))
-                {
-                    testPts.push_back(C);
-                    testedPoints.push_back(C.point);
-                    break;
-                }
-            }
-        }
-    }
-    else
-    {
-        testPts.push_back(env->primalSolver->fixedPrimalNLPCandidates.at(0));
-        testedPoints.push_back(env->primalSolver->fixedPrimalNLPCandidates.at(0).point);
-    }
-
-    if(testPts.size() == 0)
+    if(env->primalSolver->fixedPrimalNLPCandidates.size() == 0)
     {
         env->solutionStatistics.numberOfIterationsWithoutNLPCallMIP++;
         return (false);
     }
 
-    for(size_t j = 0; j < testPts.size(); j++)
+    int counter = 0;
+
+    for(auto& CAND : env->primalSolver->fixedPrimalNLPCandidates)
     {
         double timeStart = env->timing->getElapsedTime("Total");
         VectorDouble fixedVariableValues(discreteVariableIndexes.size());
@@ -238,7 +219,7 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
         {
             int currVarIndex = discreteVariableIndexes.at(k);
 
-            auto tmpSolPt = std::round(testPts.at(j).point.at(currVarIndex));
+            auto tmpSolPt = std::round(CAND.point.at(currVarIndex));
 
             fixedVariableValues.at(k) = tmpSolPt;
 
@@ -255,13 +236,13 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
             for(auto& V : sourceProblem->realVariables)
             {
                 startingPointIndexes.at(V->index) = V->index;
-                startingPointValues.at(V->index) = testPts.at(j).point.at(V->index);
+                startingPointValues.at(V->index) = CAND.point.at(V->index);
             }
 
             if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
             {
                 std::string filename = env->settings->getSetting<std::string>("Debug.Path", "Output")
-                    + "/primalnlp_warmstart" + std::to_string(currIter->iterationNumber) + "_" + std::to_string(j)
+                    + "/primalnlp_warmstart" + std::to_string(currIter->iterationNumber) + "_" + std::to_string(counter)
                     + ".txt";
 
                 Utilities::saveVariablePointVectorToFile(startingPointValues, variableNames, filename);
@@ -275,7 +256,7 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
         if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
         {
             std::string filename = env->settings->getSetting<std::string>("Debug.Path", "Output") + "/primalnlp"
-                + std::to_string(currIter->iterationNumber) + "_" + std::to_string(j);
+                + std::to_string(currIter->iterationNumber) + "_" + std::to_string(counter);
             NLPSolver->saveProblemToFile(filename + ".txt");
             NLPSolver->saveOptionsToFile(filename + ".osrl");
         }
@@ -290,19 +271,19 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
         std::string source = (sourceIsReformulatedProblem) ? "R" : "O";
 
         std::string sourceDesc;
-        switch(testPts.at(j).sourceType)
+        switch(CAND.sourceType)
         {
         case E_PrimalNLPSource::FirstSolution:
             sourceDesc = "SOLPT-" + source;
             break;
         case E_PrimalNLPSource::FeasibleSolution:
-            sourceDesc = "FEASPT-" + source;
+            sourceDesc = "FEASP-" + source;
             break;
         case E_PrimalNLPSource::InfeasibleSolution:
-            sourceDesc = "UNFEAS-" + source;
+            sourceDesc = "UNFEA-" + source;
             break;
         case E_PrimalNLPSource::SmallestDeviationSolution:
-            sourceDesc = "SMADEV-" + source;
+            sourceDesc = "SMDEV-" + source;
             break;
         case E_PrimalNLPSource::FirstSolutionNewDualBound:
             sourceDesc = "NEWDB-" + source;
@@ -361,24 +342,16 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
 
             // Add integer cut.
             if(env->settings->getSetting<bool>("HyperplaneCuts.UseIntegerCuts", "Dual")
-                && sourceProblem->properties.numberOfBinaryVariables > 0
-                && sourceProblem->properties.numberOfIntegerVariables == 0)
+                && sourceProblem->properties.numberOfDiscreteVariables > 0)
             {
-                VectorInteger ones;
-                VectorInteger zeroes;
-                for(auto& V : sourceProblem->binaryVariables)
-                {
-                    if(testPts.at(j).point.at(V->index) > 0.9999)
-                    {
-                        ones.push_back(V->index);
-                    }
-                    else
-                    {
-                        zeroes.push_back(V->index);
-                    }
-                }
+                IntegerCut integerCut;
+                integerCut.source = E_IntegerCutSource::NLPFixedInteger;
+                integerCut.variableValues.reserve(discreteVariableIndexes.size());
 
-                env->dualSolver->integerCutWaitingList.emplace_back(ones, zeroes);
+                for(auto& I : discreteVariableIndexes)
+                    integerCut.variableValues.push_back(std::abs(round(CAND.point.at(I))));
+
+                env->dualSolver->addIntegerCut(integerCut);
             }
 
             if(env->settings->getSetting<bool>("FixedInteger.CreateInfeasibilityCut", "Primal"))
@@ -388,7 +361,8 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
                 tmpSolPt.objectiveValue = sourceProblem->objectiveFunction->calculateValue(variableSolution);
                 tmpSolPt.iterFound = env->results->getCurrentIteration()->iterationNumber;
 
-                if(!sourceIsReformulatedProblem) // Need to calculate values for the auxiliary variables in this case
+                if(!sourceIsReformulatedProblem) // Need to calculate values for the auxiliary variables in this
+                                                 // case
                 {
                     for(auto& V : env->reformulatedProblem->auxiliaryVariables)
                     {
@@ -502,24 +476,16 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
 
             // Add integer cut.
             if(env->settings->getSetting<bool>("HyperplaneCuts.UseIntegerCuts", "Dual")
-                && sourceProblem->properties.numberOfBinaryVariables > 0
-                && sourceProblem->properties.numberOfIntegerVariables == 0)
+                && sourceProblem->properties.numberOfDiscreteVariables > 0)
             {
-                VectorInteger ones;
-                VectorInteger zeroes;
-                for(auto& V : sourceProblem->binaryVariables)
-                {
-                    if(testPts.at(j).point.at(V->index) > 0.9999)
-                    {
-                        ones.push_back(V->index);
-                    }
-                    else
-                    {
-                        zeroes.push_back(V->index);
-                    }
-                }
+                IntegerCut integerCut;
+                integerCut.source = E_IntegerCutSource::NLPFixedInteger;
+                integerCut.variableValues.reserve(discreteVariableIndexes.size());
 
-                env->dualSolver->integerCutWaitingList.emplace_back(ones, zeroes);
+                for(auto& I : discreteVariableIndexes)
+                    integerCut.variableValues.push_back(std::abs(round(CAND.point.at(I))));
+
+                env->dualSolver->addIntegerCut(integerCut);
             }
         }
         else
@@ -533,6 +499,9 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
 
         env->solutionStatistics.numberOfIterationsWithoutNLPCallMIP = 0;
         env->solutionStatistics.timeLastFixedNLPCall = env->timing->getElapsedTime("Total");
+        counter++;
+
+        env->primalSolver->usedPrimalNLPCandidates.push_back(CAND);
     }
 
     return (true);
