@@ -1099,6 +1099,10 @@ void Solver::initializeSettings()
     env->settings->createSetting(
         "FixedInteger.IterationLimit", "Primal", 10000000, "Max number of iterations per call", 0, SHOT_INT_MAX);
 
+    env->settings->createSetting("FixedInteger.OnlyUniqueIntegerCombinations", "Primal", true,
+        "Whether to resolve with the same integer combination, e.g. for nonconvex problems with different continuous "
+        "variable starting points");
+
     VectorString enumPrimalNLPSolver;
     enumPrimalNLPSolver.push_back("Ipopt");
     enumPrimalNLPSolver.push_back("GAMS");
@@ -1610,6 +1614,8 @@ void Solver::setConvexityBasedSettings()
             env->settings->updateSetting("FixedInteger.CreateInfeasibilityCut", "Primal", true);
             env->settings->updateSetting("FixedInteger.Source", "Primal", 0);
             env->settings->updateSetting("FixedInteger.Warmstart", "Primal", false);
+
+            env->settings->updateSetting("FixedInteger.OnlyUniqueIntegerCombinations", "Primal", false);
 
             env->settings->updateSetting("Rootsearch.Use", "Primal", false);
 
