@@ -309,6 +309,7 @@ bool Solver::setProblem(std::string fileName)
             ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
 
             if(modelingSystem->createProblem(problem, fileName) != E_ProblemCreationStatus::NormalCompletion)
+
             {
                 return (false);
             }
@@ -1589,16 +1590,14 @@ void Solver::setConvexityBasedSettings()
             env->settings->updateSetting("ESH.Rootsearch.UniqueConstraints", "Dual", false);
 
             env->settings->updateSetting("HyperplaneCuts.ConstraintSelectionFactor", "Dual", 1.0);
-            // env->settings->updateSetting("HyperplaneCuts.UseIntegerCuts", "Dual", true);
-            env->settings->updateSetting("HyperplaneCuts.MaxPerIteration", "Dual", 5);
+            env->settings->updateSetting("HyperplaneCuts.UseIntegerCuts", "Dual", true);
 
             env->settings->updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::MultiTree));
 
             env->settings->updateSetting("MIP.Presolve.UpdateObtainedBounds", "Dual", false);
+            env->settings->updateSetting("MIP.SolutionLimit.Initial", "Dual", SHOT_INT_MAX);
 
             env->settings->updateSetting("Relaxation.Use", "Dual", false);
-
-            env->settings->updateSetting("Reformulation.Bilinear.AddConvexEnvelope", "Model", true);
 
             env->settings->updateSetting(
                 "Reformulation.Constraint.PartitionNonlinearTerms", "Model", (int)ES_PartitionNonlinearSums::Always);
@@ -1611,25 +1610,25 @@ void Solver::setConvexityBasedSettings()
             // env->settings->updateSetting("Reformulation.Quadratics.Strategy", "Model", 0);
 
             env->settings->updateSetting("FixedInteger.CallStrategy", "Primal", 0);
-            env->settings->updateSetting("FixedInteger.CreateInfeasibilityCut", "Primal", true);
+            env->settings->updateSetting("FixedInteger.CreateInfeasibilityCut", "Primal", false);
             env->settings->updateSetting("FixedInteger.Source", "Primal", 0);
-            env->settings->updateSetting("FixedInteger.Warmstart", "Primal", false);
+            env->settings->updateSetting("FixedInteger.Warmstart", "Primal", true);
 
             env->settings->updateSetting("FixedInteger.OnlyUniqueIntegerCombinations", "Primal", false);
 
-            env->settings->updateSetting("Rootsearch.Use", "Primal", false);
+            env->settings->updateSetting("Rootsearch.Use", "Primal", true);
 
-            env->settings->updateSetting("BoundTightening.FeasibilityBased.TimeLimit", "Model", 10.0);
+            env->settings->updateSetting("BoundTightening.FeasibilityBased.TimeLimit", "Model", 5.0);
 
 #ifdef HAS_CPLEX
 
             if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Cplex)
             {
-                env->settings->updateSetting("Cplex.MIPEmphasis", "Subsolver", 4);
+                /*env->settings->updateSetting("Cplex.MIPEmphasis", "Subsolver", 4);
                 env->settings->updateSetting("Cplex.NumericalEmphasis", "Subsolver", 1);
                 env->settings->updateSetting("Cplex.Probe", "Subsolver", 3);
                 env->settings->updateSetting("Cplex.SolutionPoolIntensity", "Subsolver", 4);
-
+*/
                 if(env->reformulatedProblem->objectiveFunction->properties.classification
                         == E_ObjectiveFunctionClassification::Quadratic
                     || env->reformulatedProblem->properties.numberOfQuadraticConstraints > 0)
