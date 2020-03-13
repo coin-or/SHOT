@@ -30,38 +30,82 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
     auto quadraticStrategy = static_cast<ES_QuadraticProblemStrategy>(
         env->settings->getSetting<int>("Reformulation.Quadratics.Strategy", "Model"));
 
-    switch(quadraticStrategy)
+    if(env->settings->getSetting<int>("MIP.Solver", "Dual") == (int)ES_MIPSolver::Cplex)
     {
-    case(ES_QuadraticProblemStrategy::Nonlinear):
+        switch(quadraticStrategy)
+        {
+        case(ES_QuadraticProblemStrategy::Nonlinear):
+            useConvexQuadraticConstraints = false;
+            useNonconvexQuadraticConstraints = false;
+            useConvexQuadraticObjective = false;
+            useNonconvexQuadraticObjective = false;
+            break;
+        case(ES_QuadraticProblemStrategy::QuadraticObjective):
+            useConvexQuadraticConstraints = false;
+            useNonconvexQuadraticConstraints = false;
+            useConvexQuadraticObjective = true;
+            useNonconvexQuadraticObjective = false;
+            break;
+        case(ES_QuadraticProblemStrategy::ConvexQuadraticallyConstrained):
+            useConvexQuadraticConstraints = true;
+            useNonconvexQuadraticConstraints = false;
+            useConvexQuadraticObjective = true;
+            useNonconvexQuadraticObjective = false;
+            break;
+        case(ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained):
+            useConvexQuadraticConstraints = true;
+            useNonconvexQuadraticConstraints = false; // No support in Cplex
+            useConvexQuadraticObjective = true;
+            useNonconvexQuadraticObjective = true;
+            break;
+        default:
+            break;
+        }
+    }
+    else if(env->settings->getSetting<int>("MIP.Solver", "Dual") == (int)ES_MIPSolver::Gurobi)
+    {
+        switch(quadraticStrategy)
+        {
+        case(ES_QuadraticProblemStrategy::Nonlinear):
+            useConvexQuadraticConstraints = false;
+            useNonconvexQuadraticConstraints = false;
+            useConvexQuadraticObjective = false;
+            useNonconvexQuadraticObjective = false;
+            break;
+        case(ES_QuadraticProblemStrategy::QuadraticObjective):
+            useConvexQuadraticConstraints = false;
+            useNonconvexQuadraticConstraints = false;
+            useConvexQuadraticObjective = true;
+            useNonconvexQuadraticObjective = false;
+            break;
+        case(ES_QuadraticProblemStrategy::ConvexQuadraticallyConstrained):
+            useConvexQuadraticConstraints = true;
+            useNonconvexQuadraticConstraints = false;
+            useConvexQuadraticObjective = true;
+            useNonconvexQuadraticObjective = false;
+            break;
+        case(ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained):
+            useConvexQuadraticConstraints = true;
+            useNonconvexQuadraticConstraints = true;
+            useConvexQuadraticObjective = true;
+            useNonconvexQuadraticObjective = true;
+            break;
+        default:
+            break;
+        }
+    }
+    else if(env->settings->getSetting<int>("MIP.Solver", "Dual") == (int)ES_MIPSolver::Cbc)
+    {
+        // Cbc does not support quadratic terms
         useConvexQuadraticConstraints = false;
         useNonconvexQuadraticConstraints = false;
         useConvexQuadraticObjective = false;
         useNonconvexQuadraticObjective = false;
-        break;
-    case(ES_QuadraticProblemStrategy::QuadraticObjective):
-        useConvexQuadraticConstraints = false;
-        useNonconvexQuadraticConstraints = false;
-        useConvexQuadraticObjective = true;
-        useNonconvexQuadraticObjective = false;
-        break;
-    case(ES_QuadraticProblemStrategy::ConvexQuadraticallyConstrained):
-        useConvexQuadraticConstraints = true;
-        useNonconvexQuadraticConstraints = false;
-        useConvexQuadraticObjective = true;
-        useNonconvexQuadraticObjective = false;
-        break;
-    case(ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained):
-        useConvexQuadraticConstraints = true;
-        useNonconvexQuadraticConstraints = true;
-        useConvexQuadraticObjective = true;
-        useNonconvexQuadraticObjective = true;
-        break;
-    default:
-        break;
     }
-
-    maxBilinearIntegerReformulationDomain
-        = env->settings->getSetting<int>("Reformulation.Bilinear.IntegerFormulation.MaxVariableDomain", "Model");
+    else
+    {
+        // Will not happen
+    }
 
     extractQuadraticTermsFromNonconvexExpressions
         = (env->settings->getSetting<int>("Reformulation.Quadratics.ExtractStrategy", "Model")
@@ -70,6 +114,9 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
     extractQuadraticTermsFromConvexExpressions
         = (env->settings->getSetting<int>("Reformulation.Quadratics.ExtractStrategy", "Model")
             == static_cast<int>(ES_QuadraticTermsExtractStrategy::ExtractToEqualityConstraintAlways));
+
+    maxBilinearIntegerReformulationDomain
+        = env->settings->getSetting<int>("Reformulation.Bilinear.IntegerFormulation.MaxVariableDomain", "Model");
 
     auxVariableCounter = env->problem->properties.numberOfVariables;
     auxConstraintCounter = env->problem->properties.numberOfNumericConstraints;
@@ -1412,13 +1459,16 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
             auto [auxVariable, newVariable] = getBilinearAuxiliaryVariable(T->firstVariable, T->secondVariable);
             resultLinearTerms.add(std::make_shared<LinearTerm>(signfactor * T->coefficient, auxVariable));
         }
-        else if(partitionNonBinaryTerms) // Square term x1^2 or general bilinear term x1*x2 will be
-                                         // partitioned into multiple constraints
+        else if(partitionNonBinaryTerms && T->getConvexity() == E_Convexity::Nonconvex
+            && extractQuadraticTermsFromNonconvexExpressions) // Bilinear term +x1*x2 which will be extracted to
+                                                              // equality constraint
         {
             auto [auxVariable, newVariable] = getBilinearAuxiliaryVariable(firstVariable, secondVariable);
             resultLinearTerms.add(std::make_shared<LinearTerm>(signfactor * T->coefficient, auxVariable));
         }
-        else if(partitionNonBinaryTerms) // continuous term x1*x2
+        else if(partitionNonBinaryTerms && T->getConvexity() == E_Convexity::Convex
+            && extractQuadraticTermsFromConvexExpressions) // Bilinear term +x1*x1 which will be extracted to equality
+                                                           // constraint
         {
             auto [auxVariable, newVariable] = getBilinearAuxiliaryVariable(firstVariable, secondVariable);
             resultLinearTerms.add(std::make_shared<LinearTerm>(signfactor * T->coefficient, auxVariable));

@@ -46,6 +46,10 @@ namespace fs = std;
 namespace fs = std::experimental;
 #endif
 
+#ifdef HAS_GUROBI
+#include "gurobi_c++.h"
+#endif
+
 namespace SHOT
 {
 
@@ -344,6 +348,8 @@ bool Solver::setProblem(std::string fileName)
         if(env->problem->name == "")
             env->problem->name = problemName.string();
 
+        verifySettings();
+
         auto taskReformulateProblem = std::make_unique<TaskReformulateProblem>(env);
         taskReformulateProblem->run();
 
@@ -423,10 +429,11 @@ bool Solver::setProblem(SHOT::ProblemPtr problem, SHOT::ModelingSystemPtr modeli
     }
 #endif
 
+    verifySettings();
+
     auto taskReformulateProblem = std::make_unique<TaskReformulateProblem>(env);
     taskReformulateProblem->run();
 
-    verifySettings();
     setConvexityBasedSettings();
 
     return (this->selectStrategy());
@@ -1513,6 +1520,11 @@ void Solver::verifySettings()
     {
         MIPSolverDefined = true;
         unboundedVariableBound = 1e20;
+
+        if(env->settings->getSetting<int>("Reformulation.Quadratics.ExtractStrategy", "Model")
+            > (int)ES_QuadraticTermsExtractStrategy::ExtractTermsToSame)
+            env->settings->updateSetting("Reformulation.Quadratics.ExtractStrategy", "Model",
+                (int)ES_QuadraticTermsExtractStrategy::ExtractTermsToSame);
     }
 #endif
 
@@ -1521,6 +1533,20 @@ void Solver::verifySettings()
     {
         MIPSolverDefined = true;
         unboundedVariableBound = 1e20;
+
+#if GRB_VERSION_MAJOR < 9
+        if(env->settings->getSetting<int>("Reformulation.Quadratics.ExtractStrategy", "Model")
+            > (int)ES_QuadraticTermsExtractStrategy::ExtractTermsToSame)
+            env->settings->updateSetting("Reformulation.Quadratics.ExtractStrategy", "Model",
+                (int)ES_QuadraticTermsExtractStrategy::ExtractTermsToSame);
+#endif
+
+#if GRB_VERSION_MAJOR >= 9
+        if(env->settings->getSetting<int>("Reformulation.Quadratics.ExtractStrategy", "Model")
+            > (int)ES_QuadraticTermsExtractStrategy::ExtractTermsToSame)
+            env->settings->updateSetting("Reformulation.Quadratics.Strategy", "Model",
+                (int)ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained);
+#endif
     }
 #endif
 
@@ -1534,6 +1560,8 @@ void Solver::verifySettings()
         env->settings->updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::MultiTree));
         env->settings->updateSetting(
             "Reformulation.Quadratics.Strategy", "Model", static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear));
+        env->settings->updateSetting(
+            "Reformulation.Quadratics.Strategy", "Model", (int)ES_QuadraticTermsExtractStrategy::DoNotExtract);
     }
 #endif
 
