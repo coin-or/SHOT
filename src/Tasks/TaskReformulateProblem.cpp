@@ -458,6 +458,7 @@ void TaskReformulateProblem::createEpigraphConstraint()
     auto objectiveVariable = std::make_shared<AuxiliaryVariable>(
         "shot_objvar", auxVariableCounter, E_VariableType::Real, objectiveBound.l(), objectiveBound.u());
     objectiveVariable->properties.auxiliaryType = E_AuxiliaryVariableType::NonlinearObjectiveFunction;
+    env->results->increaseAuxiliaryVariableCounter(E_AuxiliaryVariableType::NonlinearObjectiveFunction);
 
     if(env->problem->objectiveFunction->properties.hasLinearTerms)
     {
@@ -867,6 +868,8 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
 
                     auxVariable->properties.auxiliaryType = E_AuxiliaryVariableType::NonlinearExpressionPartitioning;
                     auxVariableCounter++;
+                    env->results->increaseAuxiliaryVariableCounter(
+                        E_AuxiliaryVariableType::NonlinearExpressionPartitioning);
 
                     reformulatedProblem->add(auxVariable);
                     destinationLinearTerms.add(std::make_shared<LinearTerm>(1.0, auxVariable));
@@ -915,6 +918,8 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
 
                     auxVariable->properties.auxiliaryType = E_AuxiliaryVariableType::NonlinearExpressionPartitioning;
                     auxVariableCounter++;
+                    env->results->increaseAuxiliaryVariableCounter(
+                        E_AuxiliaryVariableType::NonlinearExpressionPartitioning);
 
                     reformulatedProblem->add(auxVariable);
 
@@ -945,6 +950,8 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
 
                 auxVariable->properties.auxiliaryType = E_AuxiliaryVariableType::NonlinearExpressionPartitioning;
                 auxVariableCounter++;
+                env->results->increaseAuxiliaryVariableCounter(
+                    E_AuxiliaryVariableType::NonlinearExpressionPartitioning);
 
                 reformulatedProblem->add(auxVariable);
 
@@ -1127,6 +1134,7 @@ LinearTerms TaskReformulateProblem::partitionNonlinearSum(
                 auxVariableCounter, E_VariableType::Real, bounds.l(), bounds.u());
             auxVariable->properties.auxiliaryType = E_AuxiliaryVariableType::NonlinearExpressionPartitioning;
             auxVariableCounter++;
+            env->results->increaseAuxiliaryVariableCounter(E_AuxiliaryVariableType::NonlinearExpressionPartitioning);
 
             resultLinearTerms.add(std::make_shared<LinearTerm>(1.0, auxVariable));
 
@@ -1245,6 +1253,7 @@ LinearTerms TaskReformulateProblem::partitionMonomialTerms(const MonomialTerms s
             auxVariableCounter, E_VariableType::Real, bounds.l(), bounds.u());
         auxVariable->properties.auxiliaryType = E_AuxiliaryVariableType::MonomialTermsPartitioning;
         auxVariableCounter++;
+        env->results->increaseAuxiliaryVariableCounter(E_AuxiliaryVariableType::MonomialTermsPartitioning);
 
         resultLinearTerms.add(std::make_shared<LinearTerm>(1.0, auxVariable));
 
@@ -1298,6 +1307,7 @@ LinearTerms TaskReformulateProblem::partitionSignomialTerms(const SignomialTerms
             auxVariableCounter, E_VariableType::Real, bounds.l(), bounds.u());
         auxVariable->properties.auxiliaryType = E_AuxiliaryVariableType::SignomialTermsPartitioning;
         auxVariableCounter++;
+        env->results->increaseAuxiliaryVariableCounter(E_AuxiliaryVariableType::SignomialTermsPartitioning);
 
         resultLinearTerms.add(std::make_shared<LinearTerm>(coefficient, auxVariable));
 
@@ -1466,6 +1476,8 @@ std::tuple<LinearTerms, MonomialTerms> TaskReformulateProblem::reformulateMonomi
             auto auxbVar = std::make_shared<AuxiliaryVariable>("s_monb" + std::to_string(auxVariableCounter + 1),
                 auxVariableCounter, E_VariableType::Binary, 0.0, 1.0);
             auxVariableCounter++;
+            auxbVar->properties.auxiliaryType = E_AuxiliaryVariableType::BinaryMonomial;
+            env->results->increaseAuxiliaryVariableCounter(E_AuxiliaryVariableType::BinaryMonomial);
 
             auxbVar->monomialTerms.add(T);
 
@@ -1505,6 +1517,7 @@ std::tuple<LinearTerms, MonomialTerms> TaskReformulateProblem::reformulateMonomi
                     = std::make_shared<AuxiliaryVariable>("s_monlam" + std::to_string(auxVariableCounter + 1),
                         auxVariableCounter + variableOffset, E_VariableType::Real, 0.0, 1.0);
                 auxLambda->constant = 1.0 / numLambdas;
+                auxLambda->properties.auxiliaryType = E_AuxiliaryVariableType::BinaryMonomial;
 
                 auxLambdaSum->add(std::make_shared<LinearTerm>(1.0, auxLambda));
                 lambdas.push_back(auxLambda);
@@ -1519,6 +1532,8 @@ std::tuple<LinearTerms, MonomialTerms> TaskReformulateProblem::reformulateMonomi
             auxwVar->constant = 1.0 / ((double)numLambdas);
             auxVariableCounter++;
             variableOffset++;
+            auxwVar->properties.auxiliaryType = E_AuxiliaryVariableType::BinaryMonomial;
+            env->results->increaseAuxiliaryVariableCounter(E_AuxiliaryVariableType::BinaryMonomial);
 
             auto auxwSum = std::make_shared<LinearConstraint>(
                 auxConstraintCounter, "s_monw" + std::to_string(auxConstraintCounter), 0.0, 0.0);
@@ -2015,23 +2030,40 @@ std::pair<AuxiliaryVariablePtr, bool> TaskReformulateProblem::getBilinearAuxilia
     double lowerBound = std::min(valueList);
     double upperBound = std::max(valueList);
 
-    auto variableType = E_VariableType::Real;
+    E_VariableType variableType;
+    E_AuxiliaryVariableType auxVariableType;
 
     if(firstVariable->properties.type == E_VariableType::Binary
         && secondVariable->properties.type == E_VariableType::Binary)
+    {
         variableType = E_VariableType::Binary;
+        auxVariableType = E_AuxiliaryVariableType::BinaryBilinear;
+    }
     else if(firstVariable->properties.type == E_VariableType::Integer
         && secondVariable->properties.type == E_VariableType::Integer)
+    {
         variableType = E_VariableType::Integer;
+        auxVariableType = E_AuxiliaryVariableType::IntegerBilinear;
+    }
     else if((firstVariable->properties.type == E_VariableType::Binary
                 && secondVariable->properties.type == E_VariableType::Integer)
         || (firstVariable->properties.type == E_VariableType::Integer
                && secondVariable->properties.type == E_VariableType::Binary))
+    {
         variableType = E_VariableType::Integer;
+        auxVariableType = E_AuxiliaryVariableType::IntegerBilinear;
+    }
+    else
+    {
+        variableType = E_VariableType::Real;
+        auxVariableType = E_AuxiliaryVariableType::ContinuousBilinear;
+    }
 
     auto auxVariable = std::make_shared<AuxiliaryVariable>("s_bl_" + firstVariable->name + "_" + secondVariable->name,
         auxVariableCounter, variableType, lowerBound, upperBound);
     auxVariableCounter++;
+    auxVariable->properties.auxiliaryType = auxVariableType;
+    env->results->increaseAuxiliaryVariableCounter(auxVariableType);
 
     reformulatedProblem->add((auxVariable));
     auxVariable->quadraticTerms.add(std::make_shared<QuadraticTerm>(1.0, firstVariable, secondVariable));
@@ -2064,6 +2096,7 @@ std::pair<AuxiliaryVariablePtr, bool> TaskReformulateProblem::getAbsoluteValueAu
         auxVariableCounter, E_VariableType::Real, bounds.l(), bounds.u());
     auxVariable->properties.auxiliaryType = E_AuxiliaryVariableType::AbsoluteValue;
     auxVariableCounter++;
+    env->results->increaseAuxiliaryVariableCounter(E_AuxiliaryVariableType::AbsoluteValue);
 
     reformulatedProblem->add(auxVariable);
     auxVariable->nonlinearExpression = copyNonlinearExpression(source->child.get(), reformulatedProblem);

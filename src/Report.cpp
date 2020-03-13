@@ -980,6 +980,56 @@ void Report::outputProblemInstanceReport()
                    << "\r\n";
     }
 
+    if(env->results->auxiliaryVariablesIntroduced.size() > 0)
+    {
+        int totalNumberOfTransformations = 0;
+
+        for(auto& AUXVAR : env->results->auxiliaryVariablesIntroduced)
+            totalNumberOfTransformations += AUXVAR.second;
+
+        if(env->problem->properties.numberOfVariables > 0)
+            report << '\n';
+        report << fmt::format(" {:56s}{:d}", "Number of transformations performed:", totalNumberOfTransformations)
+               << "\r\n";
+
+        if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::NonlinearObjectiveFunction);
+            value > 0)
+            report << fmt::format(" {:56s}{:d}", "- epigraph:", "", value) << "\r\n";
+
+        if(auto value
+            = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::NonlinearExpressionPartitioning);
+            value > 0)
+            report << fmt::format(" {:56s}{:d}", "- nonlinear expression partitioning:", value) << "\r\n";
+
+        if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::MonomialTermsPartitioning);
+            value > 0)
+            report << fmt::format(" {:56s}{:d}", "- monomial terms partitioning:", value) << "\r\n";
+
+        if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::SignomialTermsPartitioning);
+            value > 0)
+            report << fmt::format(" {:56s}{:d}", "- signomial terms partitioning:", value) << "\r\n";
+
+        if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::ContinuousBilinear);
+            value > 0)
+            report << fmt::format(" {:56s}{:d}", "- continuous bilinear term extraction:", value) << "\r\n";
+
+        if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::BinaryBilinear); value > 0)
+            report << fmt::format(" {:56s}{:d}", "- binary bilinear term reformulation:", value) << "\r\n";
+
+        if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::BinaryContinuousBilinear);
+            value > 0)
+            report << fmt::format(" {:56s}{:d}", "- binary/continuous bilinear term reformulation:", value) << "\r\n";
+
+        if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::IntegerBilinear); value > 0)
+            report << fmt::format(" {:56s}{:d}", "- integer bilinear term reformulation:", value) << "\r\n";
+
+        if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::BinaryMonomial); value > 0)
+            report << fmt::format(" {:56s}{:d}", "- binary monomial term reformulation:", value) << "\r\n";
+
+        if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::AbsoluteValue); value > 0)
+            report << fmt::format(" {:56s}{:d}", "-absolute value reformulation:", value) << "\r\n";
+    }
+
     env->output->outputInfo(report.str());
 }
 

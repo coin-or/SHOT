@@ -24,6 +24,7 @@ enum class E_AuxiliaryVariableType
     BinaryBilinear, // From linearizing a bilinear term b1 * b2 where b1 and b2 are binary
     BinaryContinuousBilinear, // From linearizing a bilinear term b1 * x2 where b1 is binary and x2 is continuous
     IntegerBilinear, // From linearizing a bilinear term i1 * x2, where i1 is integer and x2 is continuous or discrete
+    BinaryMonomial, // Fram linearizing a monomial term b1 * b2 * ... * bn, where bi are binary
     AbsoluteValue // From rewriting an absolute value
 };
 
