@@ -1214,7 +1214,7 @@ void Solver::initializeSettings()
 
     env->settings->createSetting("Cplex.MemoryEmphasis", "Subsolver", 0, "Try to conserve memory when possible", 0, 1);
 
-    env->settings->createSetting("Cplex.MIPEmphasis", "Subsolver", 0,
+    env->settings->createSetting("Cplex.MIPEmphasis", "Subsolver", 1,
         "Sets the MIP emphasis: 0: Balanced. 1: Feasibility. 2: Optimality. 3: Best bound. 4: Hidden feasible", 0, 4);
 
     env->settings->createSetting("Cplex.NodeFile", "Subsolver", 1,
@@ -1263,7 +1263,7 @@ void Solver::initializeSettings()
     env->settings->createSetting(
         "Gurobi.ScaleFlag", "Subsolver", 0, "Controls model scaling: 0: Off. 1: Agressive. 2: Very agressive.", 0, 2);
 
-    env->settings->createSetting("Gurobi.MIPFocus", "Subsolver", 0,
+    env->settings->createSetting("Gurobi.MIPFocus", "Subsolver", 1,
         "MIP focus: 0: Automatic. 1: Feasibility. 2: Optimality. 3: Best bound.", 0, 3);
 
     env->settings->createSetting("Gurobi.NumericFocus", "Subsolver", 0,
