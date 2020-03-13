@@ -863,6 +863,8 @@ void MIPSolverCbc::setTimeLimit(double seconds)
 {
     if(seconds > 1e100)
         timeLimit = 1e100;
+    else if(seconds < 0)
+        timeLimit = 0.00001;
     else
         timeLimit = seconds;
 }
