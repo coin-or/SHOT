@@ -1543,10 +1543,22 @@ void Solver::verifySettings()
 #endif
 
 #if GRB_VERSION_MAJOR >= 9
-        if(env->settings->getSetting<int>("Reformulation.Quadratics.ExtractStrategy", "Model")
-            > (int)ES_QuadraticTermsExtractStrategy::ExtractTermsToSame)
+
+        if(env->settings->getSetting<bool>("UseRecommendedSettings", "Strategy"))
+        {
+            // Activate Gurobi nonconvex MIQCQP solver for all nonconvex quadratic terms by default
+            env->settings->updateSetting("Reformulation.Quadratics.ExtractStrategy", "Model",
+                (int)ES_QuadraticTermsExtractStrategy::ExtractToEqualityConstraintIfNonconvex);
+
             env->settings->updateSetting("Reformulation.Quadratics.Strategy", "Model",
                 (int)ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained);
+        }
+        else if(env->settings->getSetting<int>("Reformulation.Quadratics.ExtractStrategy", "Model")
+            > (int)ES_QuadraticTermsExtractStrategy::ExtractTermsToSame)
+        {
+            env->settings->updateSetting("Reformulation.Quadratics.Strategy", "Model",
+                (int)ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained);
+        }
 #endif
     }
 #endif
