@@ -36,6 +36,7 @@ public:
     VectorDouble primalSolution;
     std::vector<PrimalSolution> primalSolutions;
     std::map<E_PrimalSolutionSource, int> primalSolutionSourceStatistics;
+    std::map<E_AuxiliaryVariableType, int> auxiliaryVariablesIntroduced;
 
     void addPrimalSolution(PrimalSolution solution);
     double getPrimalBound();
@@ -92,6 +93,9 @@ public:
         const PrimalSolution& solution, const VectorString& variables, const std::string& fileName);
     void savePrimalSolutionToFile(
         const PrimalSolution& solution, const Variables& variables, const std::string& fileName);
+
+    void increaseAuxiliaryVariableCounter(E_AuxiliaryVariableType type);
+    int getAuxiliaryVariableCounter(E_AuxiliaryVariableType type);
 
 private:
     EnvironmentPtr env;
