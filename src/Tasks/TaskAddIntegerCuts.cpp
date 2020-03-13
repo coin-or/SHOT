@@ -40,55 +40,11 @@ void TaskAddIntegerCuts::run()
     {
         int numAdded = 0;
 
-        for(size_t j = 0; j < env->dualSolver->integerCutWaitingList.size(); j++)
+        for(auto& IC : env->dualSolver->integerCutWaitingList)
         {
-            auto [ones, zeroes] = env->dualSolver->integerCutWaitingList.at(j);
+            if(env->dualSolver->MIPSolver->createIntegerCut(IC))
+                env->dualSolver->addGeneratedIntegerCut(IC);
 
-            bool alreadyAdded = false;
-
-            for(auto [oldOnes, oldZeroes] : env->dualSolver->generatedIntegerCuts)
-            {
-                bool cutsAreEqual = true;
-
-                if(oldOnes.size() != ones.size())
-                    continue;
-
-                if(oldZeroes.size() != zeroes.size())
-                    continue;
-
-                for(size_t i = 0; i < oldZeroes.size(); i++)
-                {
-                    if(zeroes[i] != oldZeroes[i])
-                    {
-                        cutsAreEqual = false;
-                        break;
-                    }
-                }
-
-                if(!cutsAreEqual)
-                    continue;
-
-                for(size_t i = 0; i < oldOnes.size(); i++)
-                {
-                    if(ones[i] != oldOnes[i])
-                    {
-                        cutsAreEqual = false;
-                        break;
-                    }
-                }
-
-                if(cutsAreEqual)
-                {
-                    alreadyAdded = true;
-                    break;
-                }
-            }
-
-            if(alreadyAdded)
-                continue;
-
-            env->dualSolver->MIPSolver->createIntegerCut(ones, zeroes);
-            env->dualSolver->generatedIntegerCuts.emplace_back(ones, zeroes);
             numAdded++;
         }
 

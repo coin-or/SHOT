@@ -500,7 +500,10 @@ auto randomNumberBetween = [](double low, double high) {
 
 VectorDouble hashComparisonVector;
 
-double calculateHash(VectorDouble const& point)
+template double calculateHash(VectorDouble const& point);
+template double calculateHash(VectorInteger const& point);
+
+template <typename T> double calculateHash(std::vector<T> const& point)
 {
     auto length = point.size();
 

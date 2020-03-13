@@ -409,8 +409,11 @@ void GurobiCallback::callback()
 
                 for(auto& IC : env->dualSolver->integerCutWaitingList)
                 {
-                    if(this->createIntegerCut(IC.first, IC.second))
+                    if(this->createIntegerCut(IC))
+                    {
+                        env->dualSolver->addGeneratedIntegerCut(IC);
                         addedIntegerCuts++;
+                    }
                 }
 
                 if(addedIntegerCuts > 0)
@@ -609,25 +612,40 @@ GurobiCallback::GurobiCallback(GRBVar* xvars, EnvironmentPtr envPtr)
 
 GurobiCallback::~GurobiCallback() { delete[] vars; }
 
-bool GurobiCallback::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes)
+bool GurobiCallback::createIntegerCut(IntegerCut& integerCut)
 {
+    if(!integerCut.areAllVariablesBinary)
+    {
+        env->output->outputInfo("        Integer cut for nonbinary variables not supported in single-tree strategy.");
+        return (false);
+    }
+
     try
     {
         GRBLinExpr expr = 0;
+        size_t index = 0;
 
-        for(int I : binaryIndexesOnes)
+        for(auto& VAR : env->reformulatedProblem->allVariables)
         {
-            expr += 1.0 * vars[I];
+            if(!(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer))
+                continue;
+
+            int variableValue = integerCut.variableValues[index];
+            auto variable = vars[VAR->index];
+
+            if(variableValue == VAR->upperBound)
+            {
+                expr += (variableValue - variable);
+            }
+            else if(variableValue == VAR->lowerBound)
+            {
+                expr += variable;
+            }
+
+            index++;
         }
 
-        for(int I : binaryIndexesZeroes)
-        {
-            expr += (1 - 1.0 * vars[I]);
-        }
-
-        addLazy(expr <= binaryIndexesOnes.size() + binaryIndexesZeroes.size() - 1.0);
-
-        env->solutionStatistics.numberOfIntegerCuts++;
+        addLazy(expr >= 1);
     }
     catch(GRBException& e)
     {

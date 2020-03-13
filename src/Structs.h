@@ -161,6 +161,7 @@ struct PrimalFixedNLPCandidate
     double objValue;
     int iterFound;
     PairIndexValue maxDevatingConstraint;
+    double discreteVariablePointHash;
 };
 
 struct DualSolution
@@ -175,22 +176,32 @@ struct DualSolution
 struct Hyperplane
 {
     NumericConstraintPtr sourceConstraint;
-    int sourceConstraintIndex; // TODO remove
+    int sourceConstraintIndex; // -1 if objective function
     VectorDouble generatedPoint;
     double objectiveFunctionValue; // Used for the objective cuts only
     E_HyperplaneSource source;
     bool isObjectiveHyperplane = false;
+    double pointHash;
 };
 
 struct GeneratedHyperplane
 {
-    int sourceConstraintIndex;
+    NumericConstraintPtr sourceConstraint;
+    int sourceConstraintIndex; // -1 if objective function
     E_HyperplaneSource source = E_HyperplaneSource::None;
     bool isLazy = false;
     bool isRemoved = false;
     bool isSourceConvex = false;
     int iterationGenerated = -1;
+    double pointHash;
+};
 
+struct IntegerCut
+{
+    VectorInteger variableValues;
+    E_IntegerCutSource source = E_IntegerCutSource::None;
+    bool areAllVariablesBinary = false;
+    int iterationGenerated = -1;
     double pointHash;
 };
 

@@ -1128,9 +1128,12 @@ void MIPSolverCplex::addMIPStart(VectorDouble point)
     else if(this->hasDualAuxiliaryObjectiveVariable())
         startVal.add(env->reformulatedProblem->objectiveFunction->calculateValue(point));
 
+    while(startVal.getSize() < cplexVars.getSize())
+        startVal.add(0);
+
     try
     {
-        cplexInstance.addMIPStart(cplexVars, startVal);
+        cplexInstance.addMIPStart(cplexVars, startVal, IloCplex::MIPStartRepair);
     }
     catch(IloException& e)
     {
@@ -1438,41 +1441,118 @@ bool MIPSolverCplex::createHyperplane(
     return (true);
 }
 
-bool MIPSolverCplex::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes)
+bool MIPSolverCplex::createIntegerCut(IntegerCut& integerCut)
 {
     try
     {
-        IloExpr expr(cplexEnv);
-
-        for(int I : binaryIndexesOnes)
-        {
-            expr += 1.0 * cplexVars[I];
-        }
-
-        for(int I : binaryIndexesZeroes)
-        {
-            expr += (1 - 1.0 * cplexVars[I]);
-        }
-
         int numConstraintsBefore = cplexInstance.getNrows();
+        IloExpr expr(cplexEnv);
+        size_t index = 0;
 
-        IloRange tmpRange(cplexEnv, -IloInfinity, expr, binaryIndexesOnes.size() + binaryIndexesZeroes.size() - 1.0);
-        tmpRange.setName(fmt::format("IC_{}", integerCuts.size()).c_str());
-
-        cplexModel.add(tmpRange);
-        cplexInstance.extract(cplexModel);
-
-        // Make sure that Cplex actually has added the constraint
-        if(cplexInstance.getNrows() > numConstraintsBefore)
+        for(auto& VAR : env->reformulatedProblem->allVariables)
         {
-            cplexConstrs.add(tmpRange);
-            integerCuts.push_back(cplexConstrs.getSize() - 1);
-            env->solutionStatistics.numberOfIntegerCuts++;
+            if(!(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer))
+                continue;
+
+            int variableValue = integerCut.variableValues[index];
+            auto variable = cplexVars[VAR->index];
+
+            if(variableValue == VAR->upperBound)
+            {
+                expr += (variableValue - variable);
+            }
+            else if(variableValue == VAR->lowerBound)
+            {
+                expr += variable;
+            }
+            else
+            {
+                int wIndex = numberOfVariables;
+                int vIndex = numberOfVariables + 1;
+                numberOfVariables += 2;
+
+                auto w = IloNumVar(cplexEnv, 0, getUnboundedVariableBoundValue(), ILOFLOAT,
+                    fmt::format("wIC{}_{}", env->solutionStatistics.numberOfIntegerCuts, index).c_str());
+                cplexVars.add(w);
+                cplexModel.add(w);
+
+                auto v = IloNumVar(cplexEnv, 0, 1, ILOBOOL,
+                    fmt::format("vIC{}_{}", env->solutionStatistics.numberOfIntegerCuts, index).c_str());
+
+                expr += 1.0 * w;
+
+                double M1 = 2 * (variableValue - VAR->lowerBound);
+                double M2 = 2 * (VAR->upperBound - variableValue);
+
+                int tmpNumConstraints = cplexInstance.getNrows();
+                IloRange cut1(cplexEnv, -IloInfinity, -w - variable, -variableValue,
+                    fmt::format("IC{}_{}_1a", env->solutionStatistics.numberOfIntegerCuts, index).c_str());
+                cplexModel.add(cut1);
+
+                if(cplexInstance.getNrows() > tmpNumConstraints)
+                {
+                    cplexInstance.extract(cplexModel);
+                    integerCuts.push_back(numConstraintsBefore + index);
+                    cplexConstrs.add(cut1);
+                }
+
+                tmpNumConstraints = cplexInstance.getNrows();
+                IloRange cut2(cplexEnv, -variableValue, w - variable, IloInfinity,
+                    fmt::format("IC{}_{}_1b", env->solutionStatistics.numberOfIntegerCuts, index).c_str());
+                cplexModel.add(cut2);
+
+                if(cplexInstance.getNrows() > tmpNumConstraints)
+                {
+                    cplexInstance.extract(cplexModel);
+                    integerCuts.push_back(numConstraintsBefore + index);
+                    cplexConstrs.add(cut2);
+                }
+
+                tmpNumConstraints = cplexInstance.getNrows();
+                IloRange cut3(cplexEnv, -IloInfinity, w - variable + M1 * v, -variableValue + M1,
+                    fmt::format("IC{}_{}_2", env->solutionStatistics.numberOfIntegerCuts, index).c_str());
+                cplexModel.add(cut3);
+
+                if(cplexInstance.getNrows() > tmpNumConstraints)
+                {
+                    cplexInstance.extract(cplexModel);
+                    integerCuts.push_back(numConstraintsBefore + index);
+                    cplexConstrs.add(cut3);
+                }
+
+                tmpNumConstraints = cplexInstance.getNrows();
+                IloRange cut4(cplexEnv, -IloInfinity, w + variable - M2 * v, variableValue,
+                    fmt::format("IC{}_{}_3", env->solutionStatistics.numberOfIntegerCuts, index).c_str());
+                cplexModel.add(cut4);
+
+                if(cplexInstance.getNrows() > tmpNumConstraints)
+                {
+                    cplexInstance.extract(cplexModel);
+                    integerCuts.push_back(numConstraintsBefore + index);
+                    cplexConstrs.add(cut4);
+                }
+            }
+
+            index++;
         }
-        else
+
+        int tmpNumConstraints = cplexInstance.getNrows();
+        IloRange cut4(
+            cplexEnv, 1, expr, IloInfinity, fmt::format("IC{}_4", env->solutionStatistics.numberOfIntegerCuts).c_str());
+        cplexModel.add(cut4);
+
+        if(cplexInstance.getNrows() > tmpNumConstraints)
+        {
+            cplexInstance.extract(cplexModel);
+            integerCuts.push_back(numConstraintsBefore + index);
+            cplexConstrs.add(cut4);
+        }
+
+        auto addedConstraints = cplexInstance.getNrows() - numConstraintsBefore;
+
+        if(addedConstraints == 0)
         {
             env->output->outputInfo("        Integer cut not added by Cplex");
-            expr.end();
             return (false);
         }
     }

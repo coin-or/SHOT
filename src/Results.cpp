@@ -1226,4 +1226,23 @@ void Results::savePrimalSolutionToFile(
     Utilities::writeStringToFile(fileName, str.str());
 }
 
+void Results::increaseAuxiliaryVariableCounter(E_AuxiliaryVariableType type)
+{
+    auto element = this->auxiliaryVariablesIntroduced.emplace(type, 1);
+
+    if(!element.second)
+    {
+        // Element already exists
+        element.first->second += 1;
+    }
+}
+
+int Results::getAuxiliaryVariableCounter(E_AuxiliaryVariableType type)
+{
+    if(this->auxiliaryVariablesIntroduced[type] == 0)
+        return 0;
+    else
+        return (this->auxiliaryVariablesIntroduced[type]);
+}
+
 } // namespace SHOT

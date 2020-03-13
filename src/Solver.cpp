@@ -46,6 +46,10 @@ namespace fs = std;
 namespace fs = std::experimental;
 #endif
 
+#ifdef HAS_GUROBI
+#include "gurobi_c++.h"
+#endif
+
 namespace SHOT
 {
 
@@ -309,6 +313,7 @@ bool Solver::setProblem(std::string fileName)
             ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
 
             if(modelingSystem->createProblem(problem, fileName) != E_ProblemCreationStatus::NormalCompletion)
+
             {
                 return (false);
             }
@@ -343,6 +348,8 @@ bool Solver::setProblem(std::string fileName)
 
         if(env->problem->name == "")
             env->problem->name = problemName.string();
+
+        verifySettings();
 
         auto taskReformulateProblem = std::make_unique<TaskReformulateProblem>(env);
         taskReformulateProblem->run();
@@ -423,10 +430,11 @@ bool Solver::setProblem(SHOT::ProblemPtr problem, SHOT::ModelingSystemPtr modeli
     }
 #endif
 
+    verifySettings();
+
     auto taskReformulateProblem = std::make_unique<TaskReformulateProblem>(env);
     taskReformulateProblem->run();
 
-    verifySettings();
     setConvexityBasedSettings();
 
     return (this->selectStrategy());
@@ -1099,6 +1107,10 @@ void Solver::initializeSettings()
     env->settings->createSetting(
         "FixedInteger.IterationLimit", "Primal", 10000000, "Max number of iterations per call", 0, SHOT_INT_MAX);
 
+    env->settings->createSetting("FixedInteger.OnlyUniqueIntegerCombinations", "Primal", true,
+        "Whether to resolve with the same integer combination, e.g. for nonconvex problems with different continuous "
+        "variable starting points");
+
     VectorString enumPrimalNLPSolver;
     enumPrimalNLPSolver.push_back("Ipopt");
     enumPrimalNLPSolver.push_back("GAMS");
@@ -1202,7 +1214,7 @@ void Solver::initializeSettings()
 
     env->settings->createSetting("Cplex.MemoryEmphasis", "Subsolver", 0, "Try to conserve memory when possible", 0, 1);
 
-    env->settings->createSetting("Cplex.MIPEmphasis", "Subsolver", 0,
+    env->settings->createSetting("Cplex.MIPEmphasis", "Subsolver", 1,
         "Sets the MIP emphasis: 0: Balanced. 1: Feasibility. 2: Optimality. 3: Best bound. 4: Hidden feasible", 0, 4);
 
     env->settings->createSetting("Cplex.NodeFile", "Subsolver", 1,
@@ -1251,7 +1263,7 @@ void Solver::initializeSettings()
     env->settings->createSetting(
         "Gurobi.ScaleFlag", "Subsolver", 0, "Controls model scaling: 0: Off. 1: Agressive. 2: Very agressive.", 0, 2);
 
-    env->settings->createSetting("Gurobi.MIPFocus", "Subsolver", 0,
+    env->settings->createSetting("Gurobi.MIPFocus", "Subsolver", 1,
         "MIP focus: 0: Automatic. 1: Feasibility. 2: Optimality. 3: Best bound.", 0, 3);
 
     env->settings->createSetting("Gurobi.NumericFocus", "Subsolver", 0,
@@ -1509,6 +1521,11 @@ void Solver::verifySettings()
     {
         MIPSolverDefined = true;
         unboundedVariableBound = 1e20;
+
+        if(env->settings->getSetting<int>("Reformulation.Quadratics.ExtractStrategy", "Model")
+            > (int)ES_QuadraticTermsExtractStrategy::ExtractTermsToSame)
+            env->settings->updateSetting("Reformulation.Quadratics.ExtractStrategy", "Model",
+                (int)ES_QuadraticTermsExtractStrategy::ExtractTermsToSame);
     }
 #endif
 
@@ -1517,6 +1534,32 @@ void Solver::verifySettings()
     {
         MIPSolverDefined = true;
         unboundedVariableBound = 1e20;
+
+#if GRB_VERSION_MAJOR < 9
+        if(env->settings->getSetting<int>("Reformulation.Quadratics.ExtractStrategy", "Model")
+            > (int)ES_QuadraticTermsExtractStrategy::ExtractTermsToSame)
+            env->settings->updateSetting("Reformulation.Quadratics.ExtractStrategy", "Model",
+                (int)ES_QuadraticTermsExtractStrategy::ExtractTermsToSame);
+#endif
+
+#if GRB_VERSION_MAJOR >= 9
+
+        if(env->settings->getSetting<bool>("UseRecommendedSettings", "Strategy"))
+        {
+            // Activate Gurobi nonconvex MIQCQP solver for all nonconvex quadratic terms by default
+            env->settings->updateSetting("Reformulation.Quadratics.ExtractStrategy", "Model",
+                (int)ES_QuadraticTermsExtractStrategy::ExtractToEqualityConstraintIfNonconvex);
+
+            env->settings->updateSetting("Reformulation.Quadratics.Strategy", "Model",
+                (int)ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained);
+        }
+        else if(env->settings->getSetting<int>("Reformulation.Quadratics.ExtractStrategy", "Model")
+            > (int)ES_QuadraticTermsExtractStrategy::ExtractTermsToSame)
+        {
+            env->settings->updateSetting("Reformulation.Quadratics.Strategy", "Model",
+                (int)ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained);
+        }
+#endif
     }
 #endif
 
@@ -1530,6 +1573,8 @@ void Solver::verifySettings()
         env->settings->updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::MultiTree));
         env->settings->updateSetting(
             "Reformulation.Quadratics.Strategy", "Model", static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear));
+        env->settings->updateSetting(
+            "Reformulation.Quadratics.Strategy", "Model", (int)ES_QuadraticTermsExtractStrategy::DoNotExtract);
     }
 #endif
 
@@ -1585,16 +1630,14 @@ void Solver::setConvexityBasedSettings()
             env->settings->updateSetting("ESH.Rootsearch.UniqueConstraints", "Dual", false);
 
             env->settings->updateSetting("HyperplaneCuts.ConstraintSelectionFactor", "Dual", 1.0);
-            // env->settings->updateSetting("HyperplaneCuts.UseIntegerCuts", "Dual", true);
-            env->settings->updateSetting("HyperplaneCuts.MaxPerIteration", "Dual", 5);
+            env->settings->updateSetting("HyperplaneCuts.UseIntegerCuts", "Dual", true);
 
             env->settings->updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::MultiTree));
 
             env->settings->updateSetting("MIP.Presolve.UpdateObtainedBounds", "Dual", false);
+            env->settings->updateSetting("MIP.SolutionLimit.Initial", "Dual", SHOT_INT_MAX);
 
             env->settings->updateSetting("Relaxation.Use", "Dual", false);
-
-            env->settings->updateSetting("Reformulation.Bilinear.AddConvexEnvelope", "Model", true);
 
             env->settings->updateSetting(
                 "Reformulation.Constraint.PartitionNonlinearTerms", "Model", (int)ES_PartitionNonlinearSums::Always);
@@ -1607,23 +1650,25 @@ void Solver::setConvexityBasedSettings()
             // env->settings->updateSetting("Reformulation.Quadratics.Strategy", "Model", 0);
 
             env->settings->updateSetting("FixedInteger.CallStrategy", "Primal", 0);
-            env->settings->updateSetting("FixedInteger.CreateInfeasibilityCut", "Primal", true);
+            env->settings->updateSetting("FixedInteger.CreateInfeasibilityCut", "Primal", false);
             env->settings->updateSetting("FixedInteger.Source", "Primal", 0);
-            env->settings->updateSetting("FixedInteger.Warmstart", "Primal", false);
+            env->settings->updateSetting("FixedInteger.Warmstart", "Primal", true);
 
-            env->settings->updateSetting("Rootsearch.Use", "Primal", false);
+            env->settings->updateSetting("FixedInteger.OnlyUniqueIntegerCombinations", "Primal", false);
 
-            env->settings->updateSetting("BoundTightening.FeasibilityBased.TimeLimit", "Model", 10.0);
+            env->settings->updateSetting("Rootsearch.Use", "Primal", true);
+
+            env->settings->updateSetting("BoundTightening.FeasibilityBased.TimeLimit", "Model", 5.0);
 
 #ifdef HAS_CPLEX
 
             if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Cplex)
             {
-                env->settings->updateSetting("Cplex.MIPEmphasis", "Subsolver", 4);
+                /*env->settings->updateSetting("Cplex.MIPEmphasis", "Subsolver", 4);
                 env->settings->updateSetting("Cplex.NumericalEmphasis", "Subsolver", 1);
                 env->settings->updateSetting("Cplex.Probe", "Subsolver", 3);
                 env->settings->updateSetting("Cplex.SolutionPoolIntensity", "Subsolver", 4);
-
+*/
                 if(env->reformulatedProblem->objectiveFunction->properties.classification
                         == E_ObjectiveFunctionClassification::Quadratic
                     || env->reformulatedProblem->properties.numberOfQuadraticConstraints > 0)

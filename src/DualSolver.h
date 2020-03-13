@@ -31,12 +31,15 @@ public:
     void addGeneratedHyperplane(const Hyperplane& hyperplane);
     bool hasHyperplaneBeenAdded(double hash, int constraintIndex);
 
-    std::vector<GeneratedHyperplane> generatedHyperplanes;
-    std::vector<std::pair<VectorInteger, VectorInteger>> generatedIntegerCuts;
+    void addIntegerCut(IntegerCut integerCut);
+    void addGeneratedIntegerCut(IntegerCut integerCut);
+    bool hasIntegerCutBeenAdded(double hash);
 
-    // First is binaries = 1, second is binaries = 0
-    std::vector<std::pair<VectorInteger, VectorInteger>> integerCutWaitingList;
+    std::vector<GeneratedHyperplane> generatedHyperplanes;
     std::vector<Hyperplane> hyperplaneWaitingList;
+
+    std::vector<IntegerCut> generatedIntegerCuts;
+    std::vector<IntegerCut> integerCutWaitingList;
 
     std::vector<std::shared_ptr<InteriorPoint>> interiorPts;
 

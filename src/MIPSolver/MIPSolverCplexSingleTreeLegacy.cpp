@@ -92,6 +92,9 @@ void HCallbackI::main() // Called at each node...
         else if(env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
             tmpVals.add(env->reformulatedProblem->objectiveFunction->calculateValue(primalSol));
 
+        while(tmpVals.getSize() < cplexVars.getSize())
+            tmpVals.add(0);
+
         try
         {
             setSolution(cplexVars, tmpVals);
@@ -507,19 +510,19 @@ void CtCallbackI::main()
 
     if(env->settings->getSetting<bool>("HyperplaneCuts.UseIntegerCuts", "Dual"))
     {
-        bool addedIntegerCut = false;
+        int addedIntegerCuts = 0;
 
-        for(auto& ic : env->dualSolver->integerCutWaitingList)
+        for(auto& IC : env->dualSolver->integerCutWaitingList)
         {
-            this->createIntegerCut(ic.first, ic.second);
-            addedIntegerCut = true;
+            if(this->createIntegerCut(IC))
+            {
+                env->dualSolver->addGeneratedIntegerCut(IC);
+                addedIntegerCuts++;
+            }
         }
 
-        if(addedIntegerCut)
-        {
-            env->output->outputDebug("        Added " + std::to_string(env->dualSolver->integerCutWaitingList.size())
-                + " integer cut(s).                                        ");
-        }
+        if(addedIntegerCuts > 0)
+            env->output->outputDebug(fmt::format("        Added {} integer cut(s)", addedIntegerCuts));
 
         env->dualSolver->integerCutWaitingList.clear();
     }
@@ -609,28 +612,43 @@ bool CtCallbackI::createHyperplane(Hyperplane hyperplane)
     return (true);
 }
 
-bool CtCallbackI::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes)
+bool CtCallbackI::createIntegerCut(IntegerCut& integerCut)
 {
+    if(!integerCut.areAllVariablesBinary)
+    {
+        env->output->outputInfo("        Integer cut for nonbinary variables not supported in single-tree strategy.");
+        return (false);
+    }
+
     try
     {
         IloExpr expr(this->getEnv());
+        size_t index = 0;
 
-        for(int I : binaryIndexesOnes)
+        for(auto& VAR : env->reformulatedProblem->allVariables)
         {
-            expr += 1.0 * cplexVars[I];
+            if(!(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer))
+                continue;
+
+            int variableValue = integerCut.variableValues[index];
+            auto variable = cplexVars[VAR->index];
+
+            if(variableValue == VAR->upperBound)
+            {
+                expr += (variableValue - variable);
+            }
+            else if(variableValue == VAR->lowerBound)
+            {
+                expr += variable;
+            }
+
+            index++;
         }
 
-        for(int I : binaryIndexesZeroes)
-        {
-            expr += (1 - 1.0 * cplexVars[I]);
-        }
-
-        IloRange tmpRange(
-            this->getEnv(), -IloInfinity, expr, binaryIndexesOnes.size() + binaryIndexesZeroes.size() - 1.0);
-        tmpRange.setName("IC");
+        IloRange tmpRange(this->getEnv(), 1, expr, IloInfinity,
+            fmt::format("IC{}", env->solutionStatistics.numberOfIntegerCuts).c_str());
 
         add(tmpRange);
-        env->solutionStatistics.numberOfIntegerCuts++;
 
         tmpRange.end();
         expr.end();
