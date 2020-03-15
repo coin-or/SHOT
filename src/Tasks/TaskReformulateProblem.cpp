@@ -1447,7 +1447,7 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
             auto [auxVariable, newVariable] = getBilinearAuxiliaryVariable(firstVariable, secondVariable);
             resultLinearTerms.add(std::make_shared<LinearTerm>(signfactor * T->coefficient, auxVariable));
         }
-        else if(T->isBilinear
+        else if(partitionNonBinaryTerms && T->isBilinear
             && ((T->firstVariable->properties.type == E_VariableType::Integer
                     && (T->firstVariable->upperBound - T->firstVariable->lowerBound
                            < maxBilinearIntegerReformulationDomain))
