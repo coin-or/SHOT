@@ -495,6 +495,20 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
                 env->results->getCurrentDualBound(), env->results->getPrimalBound(),
                 env->results->getAbsoluteGlobalObjectiveGap(), env->results->getRelativeGlobalObjectiveGap(), NAN, -1,
                 NAN, E_IterationLineType::PrimalNLP);
+
+            // Add integer cut.
+            if(env->settings->getSetting<bool>("HyperplaneCuts.UseIntegerCuts", "Dual")
+                && sourceProblem->properties.numberOfDiscreteVariables > 0)
+            {
+                IntegerCut integerCut;
+                integerCut.source = E_IntegerCutSource::NLPFixedInteger;
+                integerCut.variableValues.reserve(discreteVariableIndexes.size());
+
+                for(auto& I : discreteVariableIndexes)
+                    integerCut.variableValues.push_back(std::abs(round(CAND.point.at(I))));
+
+                env->dualSolver->addIntegerCut(integerCut);
+            }
         }
 
         env->solutionStatistics.numberOfIterationsWithoutNLPCallMIP = 0;
