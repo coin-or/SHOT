@@ -1847,19 +1847,29 @@ public:
 
         double power = secondChild->getBounds().l();
 
-        Interval interval(0.0);
+        double intpart;
+        bool isInteger = (std::modf(power, &intpart) == 0.0);
+        int integerValue = (int)round(intpart);
+        bool isEven = (integerValue % 2 == 0);
 
-        if(std::abs(power - 2.0) <= 2e-10)
+        if(isInteger && isEven && power > 0 && bound.l() <= 0.0)
+            bound.l(0.0);
+        else if(bound.l() <= 0.0)
+            bound.l(SHOT_DBL_EPS);
+
+        Interval interval;
+
+        if(power == 2.0)
+            interval = sqrt(bound);
+        else if(power == -1.0)
         {
-            interval = pow(bound, 1.0 / power);
+            interval = 1 / bound;
+
+            if(interval.l() < 1e-10 && interval.u() > 1e-10)
+                interval.l(1e-10);
         }
         else
-        {
-            if(bound.l() < 0)
-                return (false);
-
-            interval = sqrt(bound);
-        }
+            interval = pow(bound, 1.0 / power);
 
         return (firstChild->tightenBounds(interval));
     };
