@@ -198,8 +198,6 @@ void DualSolver::addGeneratedHyperplane(const Hyperplane& hyperplane)
         env->results->solutionIsGlobal = false;
     }
 
-    genHyperplane.pointHash = Utilities::calculateHash(hyperplane.generatedPoint);
-
     if(hasHyperplaneBeenAdded(genHyperplane.pointHash, genHyperplane.sourceConstraintIndex))
     {
         env->output->outputTrace(fmt::format("        Not added hyperplane with hash {} to constraint {}",
