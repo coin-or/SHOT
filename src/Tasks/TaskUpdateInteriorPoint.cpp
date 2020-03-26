@@ -68,48 +68,35 @@ void TaskUpdateInteriorPoint::run()
         return;
     }
 
-    // Add the new point if it is deeper within the feasible region
-    if(maxDevPrimal.value < env->dualSolver->interiorPts.at(0)->maxDevatingConstraint.value)
+    // Need to calculate the value for the point in the reformulated problem
+    auto tmpIP = std::make_shared<InteriorPoint>();
+
+    for(auto& VAR : env->reformulatedProblem->auxiliaryVariables)
+        tmpPrimalPoint.push_back(VAR->calculate(tmpPrimalPoint));
+
+    if(env->reformulatedProblem->auxiliaryObjectiveVariable)
+        tmpPrimalPoint.push_back(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(tmpPrimalPoint));
+
+    tmpIP->point = tmpPrimalPoint;
+    assert((int)tmpIP->point.size() == env->reformulatedProblem->properties.numberOfVariables);
+
+    auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
+        tmpIP->point, env->reformulatedProblem->nonlinearConstraints);
+    tmpIP->maxDevatingConstraint = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+
+    // Replace the current point with the new point if it is deeper within the feasible region
+    if(maxDev.normalizedValue < env->dualSolver->interiorPts.at(0)->maxDevatingConstraint.value)
     {
-        auto tmpIP = std::make_shared<InteriorPoint>();
-
-        for(auto& VAR : env->reformulatedProblem->auxiliaryVariables)
-            tmpPrimalPoint.push_back(VAR->calculate(tmpPrimalPoint));
-
-        if(env->reformulatedProblem->auxiliaryObjectiveVariable)
-            tmpPrimalPoint.push_back(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(tmpPrimalPoint));
-
-        tmpIP->point = tmpPrimalPoint;
-        assert((int)tmpIP->point.size() == env->reformulatedProblem->properties.numberOfVariables);
-
-        auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
-            tmpIP->point, env->reformulatedProblem->nonlinearConstraints);
-        tmpIP->maxDevatingConstraint = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
-
         env->output->outputDebug(
             "     Interior point replaced with primal solution point due to constraint deviation.");
 
         env->dualSolver->interiorPts.back() = tmpIP;
     }
+    // Add the new point
     else if(env->settings->getSetting<int>("ESH.InteriorPoint.UsePrimalSolution", "Dual")
             == static_cast<int>(ES_AddPrimalPointAsInteriorPoint::KeepBoth)
-        && maxDevPrimal.value < 0)
+        && maxDev.normalizedValue < 0)
     {
-        auto tmpIP = std::make_shared<InteriorPoint>();
-
-        for(auto& VAR : env->reformulatedProblem->auxiliaryVariables)
-            tmpPrimalPoint.push_back(VAR->calculate(tmpPrimalPoint));
-
-        if(env->reformulatedProblem->auxiliaryObjectiveVariable)
-            tmpPrimalPoint.push_back(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(tmpPrimalPoint));
-
-        tmpIP->point = tmpPrimalPoint;
-        assert((int)tmpIP->point.size() == env->reformulatedProblem->properties.numberOfVariables);
-
-        auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
-            tmpIP->point, env->reformulatedProblem->nonlinearConstraints);
-        tmpIP->maxDevatingConstraint = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
-
         env->output->outputDebug("     Primal solution point used as additional interior point.");
 
         if((int)env->dualSolver->interiorPts.size() == env->solutionStatistics.numberOfOriginalInteriorPoints)
@@ -121,37 +108,22 @@ void TaskUpdateInteriorPoint::run()
             env->dualSolver->interiorPts.back() = tmpIP;
         }
     }
+    // Use the new point only
     else if(env->settings->getSetting<int>("ESH.InteriorPoint.UsePrimalSolution", "Dual")
             == static_cast<int>(ES_AddPrimalPointAsInteriorPoint::KeepNew)
-        && maxDevPrimal.value < 0)
+        && maxDev.normalizedValue < 0)
     {
-        auto tmpIP = std::make_shared<InteriorPoint>();
-
-        for(auto& VAR : env->reformulatedProblem->auxiliaryVariables)
-            tmpPrimalPoint.push_back(VAR->calculate(tmpPrimalPoint));
-
-        if(env->reformulatedProblem->auxiliaryObjectiveVariable)
-            tmpPrimalPoint.push_back(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(tmpPrimalPoint));
-
-        // Add the new point only
-        tmpIP->point = tmpPrimalPoint;
-        assert((int)tmpIP->point.size() == env->reformulatedProblem->properties.numberOfVariables);
-
-        auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
-            tmpIP->point, env->reformulatedProblem->nonlinearConstraints);
-        tmpIP->maxDevatingConstraint = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
-
         env->output->outputDebug("     Interior point replaced with primal solution point.");
 
         env->dualSolver->interiorPts.back() = tmpIP;
     }
+    // Find a new point in the midpoint between the original and new
     else if(env->settings->getSetting<int>("ESH.InteriorPoint.UsePrimalSolution", "Dual")
             == static_cast<int>(ES_AddPrimalPointAsInteriorPoint::OnlyAverage)
-        && maxDevPrimal.value < 0)
+        && maxDev.normalizedValue < 0)
     {
         auto tmpIP = std::make_shared<InteriorPoint>();
 
-        // Find a new point in the midpoint between the original and new
         for(size_t i = 0; i < tmpPrimalPoint.size(); i++)
         {
             tmpPrimalPoint.at(i) = (0.5 * tmpPrimalPoint.at(i) + 0.5 * env->dualSolver->interiorPts.at(0)->point.at(i));
