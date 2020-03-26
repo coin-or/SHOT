@@ -144,7 +144,6 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
                 }
 
                 selectedNumericValues.emplace_back(i, j, NCV);
-                addedHyperplanes++;
             }
         }
     }
@@ -227,6 +226,8 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
                 + Utilities::toString(externalConstraintValue.error));
 
             hyperplane.generatedPoint.clear();
+
+            addedHyperplanes++;
         }
         else
         {

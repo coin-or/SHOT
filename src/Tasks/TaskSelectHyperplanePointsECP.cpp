@@ -106,7 +106,6 @@ void TaskSelectHyperplanePointsECP::run(std::vector<SolutionPoint> solPoints)
             }
 
             selectedNumericValues.emplace_back(i, NCV);
-            addedHyperplanes++;
         }
     }
 
