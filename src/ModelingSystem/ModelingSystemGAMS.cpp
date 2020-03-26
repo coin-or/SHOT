@@ -26,7 +26,7 @@
 #endif
 
 #if defined(_WIN32)
-# define WEXITSTATUS(x) (x)
+#define WEXITSTATUS(x) (x)
 #endif
 
 #include <cstdio> // for tmpnam()
@@ -492,7 +492,8 @@ void ModelingSystemGAMS::createAuditLicensing()
     palLicenseRegisterGAMS(auditLicensing, 6, gevGetStrOpt(modelingEnvironment, "License6", buf));
     palLicenseRegisterGAMSDone(auditLicensing);
 
-    palLicenseCheck(auditLicensing, gmoM(modelingObject), gmoN(modelingObject), gmoNZ(modelingObject), gmoNLNZ(modelingObject), gmoNDisc(modelingObject));
+    palLicenseCheck(auditLicensing, gmoM(modelingObject), gmoN(modelingObject), gmoNZ(modelingObject),
+        gmoNLNZ(modelingObject), gmoNDisc(modelingObject));
 }
 
 void ModelingSystemGAMS::finalizeSolution()
@@ -1086,6 +1087,10 @@ bool ModelingSystemGAMS::copyQuadraticTerms(ProblemPtr destination)
                     return (false);
                 }
             }
+
+            delete[] variableOneIndexes;
+            delete[] variableTwoIndexes;
+            delete[] quadraticCoefficients;
         }
     }
 
