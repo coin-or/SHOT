@@ -78,6 +78,9 @@ public:
     virtual int addLinearConstraint(
         const std::map<int, double>& elements, double constant, std::string name, bool isGreaterThan)
         = 0;
+    virtual int addLinearConstraint(
+        const std::map<int, double>& elements, double constant, std::string name, bool isGreaterThan, bool allowRepair)
+        = 0;
 
     virtual void setTimeLimit(double seconds) = 0;
 

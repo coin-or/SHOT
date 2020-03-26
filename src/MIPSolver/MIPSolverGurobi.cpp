@@ -313,6 +313,8 @@ bool MIPSolverGurobi::finalizeConstraint(std::string name, double valueLHS, doub
                         constraintLinearExpression + constraintQuadraticExpression >= valueRHS, name + "_b");
             }
         }
+
+        allowRepairOfConstraint.push_back(false);
     }
     catch(GRBException& e)
     {
@@ -426,7 +428,7 @@ void MIPSolverGurobi::initializeSolverSettings()
 }
 
 int MIPSolverGurobi::addLinearConstraint(
-    const std::map<int, double>& elements, double constant, std::string name, bool isGreaterThan)
+    const std::map<int, double>& elements, double constant, std::string name, bool isGreaterThan, bool allowRepair)
 {
     try
     {
@@ -455,6 +457,7 @@ int MIPSolverGurobi::addLinearConstraint(
 
         if(gurobiModel->get(GRB_IntAttr_NumConstrs) > numConstraintsBefore)
         {
+            allowRepairOfConstraint.push_back(allowRepair);
         }
         else
         {
@@ -473,6 +476,8 @@ int MIPSolverGurobi::addLinearConstraint(
 
 bool MIPSolverGurobi::createIntegerCut(IntegerCut& integerCut)
 {
+    bool allowIntegerCutRepair = env->settings->getSetting<bool>("MIP.InfeasibilityRepair.IntegerCuts", "Dual");
+
     try
     {
         int numConstraintsBefore = gurobiModel->get(GRB_IntAttr_NumConstrs);
@@ -520,6 +525,7 @@ bool MIPSolverGurobi::createIntegerCut(IntegerCut& integerCut)
                 if(gurobiModel->get(GRB_IntAttr_NumConstrs) > tmpNumConstraints)
                 {
                     integerCuts.push_back(numConstraintsBefore + index);
+                    allowRepairOfConstraint.push_back(false);
                 }
 
                 tmpNumConstraints = gurobiModel->get(GRB_IntAttr_NumConstrs);
@@ -530,6 +536,7 @@ bool MIPSolverGurobi::createIntegerCut(IntegerCut& integerCut)
                 if(gurobiModel->get(GRB_IntAttr_NumConstrs) > tmpNumConstraints)
                 {
                     integerCuts.push_back(numConstraintsBefore + index);
+                    allowRepairOfConstraint.push_back(false);
                 }
 
                 tmpNumConstraints = gurobiModel->get(GRB_IntAttr_NumConstrs);
@@ -540,6 +547,7 @@ bool MIPSolverGurobi::createIntegerCut(IntegerCut& integerCut)
                 if(gurobiModel->get(GRB_IntAttr_NumConstrs) > tmpNumConstraints)
                 {
                     integerCuts.push_back(numConstraintsBefore + index);
+                    allowRepairOfConstraint.push_back(false);
                 }
 
                 tmpNumConstraints = gurobiModel->get(GRB_IntAttr_NumConstrs);
@@ -550,6 +558,7 @@ bool MIPSolverGurobi::createIntegerCut(IntegerCut& integerCut)
                 if(gurobiModel->get(GRB_IntAttr_NumConstrs) > tmpNumConstraints)
                 {
                     integerCuts.push_back(numConstraintsBefore + index);
+                    allowRepairOfConstraint.push_back(false);
                 }
             }
 
@@ -563,6 +572,7 @@ bool MIPSolverGurobi::createIntegerCut(IntegerCut& integerCut)
         if(gurobiModel->get(GRB_IntAttr_NumConstrs) > tmpNumConstraints)
         {
             integerCuts.push_back(numConstraintsBefore + index);
+            allowRepairOfConstraint.push_back(allowIntegerCutRepair);
         }
 
         gurobiModel->update();
@@ -850,29 +860,11 @@ bool MIPSolverGurobi::repairInfeasibility()
 
         for(int i = numOrigConstraints; i < numCurrConstraints; i++)
         {
-            if(i == cutOffConstraintIndex)
-            {
-            }
-            else if(std::find(integerCuts.begin(), integerCuts.end(), i) != integerCuts.end())
-            {
-                if(env->settings->getSetting<bool>("MIP.InfeasibilityRepair.IntegerCuts", "Dual"))
-                {
-                    repairConstraints.push_back(feasModel.getConstr(i));
-                    originalConstraints.push_back(gurobiModel->getConstr(i));
-                    relaxParameters.push_back(1 / (((double)i) + 1.0));
-                    numConstraintsToRepair++;
-                }
-            }
-            else if(env->dualSolver->generatedHyperplanes.at(hyperplaneCounter).isSourceConvex)
-            {
-                hyperplaneCounter++;
-            }
-            else
+            if(allowRepairOfConstraint[i])
             {
                 repairConstraints.push_back(feasModel.getConstr(i));
                 originalConstraints.push_back(gurobiModel->getConstr(i));
-                relaxParameters.push_back(1 / (((double)i) + 1.0));
-                numConstraintsToRepair++;
+                relaxParameters.push_back(1 / (((double)i - numOrigConstraints) + 1.0));
             }
         }
 
@@ -1055,6 +1047,7 @@ void MIPSolverGurobi::setCutOffAsConstraint(double cutOff)
                     "        Setting cutoff constraint to " + Utilities::toString(cutOff) + " for minimization.");
             }
 
+            allowRepairOfConstraint.push_back(false);
             gurobiModel->update();
             modelUpdated = false;
 

@@ -167,7 +167,7 @@ bool MIPSolverBase::createHyperplane(Hyperplane hyperplane)
     identifier += "_" + std::to_string(constraintCounter);
     constraintCounter++;
 
-    if(addLinearConstraint(tmpPair.first, tmpPair.second, identifier) < 0)
+    if(addLinearConstraint(tmpPair.first, tmpPair.second, identifier, false, !hyperplane.isSourceConvex) < 0)
         return (false);
 
     return (true);

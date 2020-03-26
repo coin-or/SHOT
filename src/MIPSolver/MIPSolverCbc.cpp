@@ -218,6 +218,7 @@ bool MIPSolverCbc::finalizeConstraint(std::string name, double valueLHS, double 
         return (false);
     }
 
+    allowRepairOfConstraint.push_back(false);
     numberOfConstraints++;
     return (true);
 }
@@ -267,7 +268,7 @@ void MIPSolverCbc::initializeSolverSettings()
 }
 
 int MIPSolverCbc::addLinearConstraint(
-    const std::map<int, double>& elements, double constant, std::string name, bool isGreaterThan)
+    const std::map<int, double>& elements, double constant, std::string name, bool isGreaterThan, bool allowRepair)
 {
     try
     {
@@ -293,6 +294,7 @@ int MIPSolverCbc::addLinearConstraint(
 
         if(osiInterface->getNumRows() > numConstraintsBefore)
         {
+            allowRepairOfConstraint.push_back(allowRepair);
         }
         else
         {
@@ -624,6 +626,7 @@ bool MIPSolverCbc::repairInfeasibility()
 
     try
     {
+        // auto repairedInterface = std::make_unique<OsiClpSolverInterface>(*osiInterface->clone());
         auto repairedInterface = osiInterface->clone();
 
         int numOrigConstraints = env->reformulatedProblem->properties.numberOfLinearConstraints;
@@ -636,28 +639,14 @@ bool MIPSolverCbc::repairInfeasibility()
         int numConstraintsToRepair = 0;
         int hyperplaneCounter = 0;
 
+        auto rowSense = osiInterface->getRowSense();
+
         for(int i = numOrigConstraints; i < numCurrConstraints; i++)
         {
-            if(i == cutOffConstraintIndex)
-            {
-            }
-            else if(std::find(integerCuts.begin(), integerCuts.end(), i) != integerCuts.end())
-            {
-                if(env->settings->getSetting<bool>("MIP.InfeasibilityRepair.IntegerCuts", "Dual"))
-                {
-                    repairConstraints.push_back(i);
-                    relaxParameters.push_back(1 / (((double)i) + 1.0));
-                    numConstraintsToRepair++;
-                }
-            }
-            else if(env->dualSolver->generatedHyperplanes.at(hyperplaneCounter).isSourceConvex)
-            {
-                hyperplaneCounter++;
-            }
-            else
+            if(allowRepairOfConstraint[i])
             {
                 repairConstraints.push_back(i);
-                relaxParameters.push_back(1 / (((double)i) + 1.0));
+                relaxParameters.push_back(1 / (((double)i) - numOrigConstraints + 1.0));
                 numConstraintsToRepair++;
             }
         }
@@ -681,13 +670,26 @@ bool MIPSolverCbc::repairInfeasibility()
             Utilities::saveVariablePointVectorToFile(relaxParameters, constraints, ss.str());
         }
 
-        double tmpCoefficient[1] = { -1.0 };
-
         for(int i = 0; i < numConstraintsToRepair; i++)
         {
-            int tmpConstraint[1] = { repairConstraints[i] };
-            repairedInterface->addCol(
-                1, tmpConstraint, tmpCoefficient, 0.0, osiInterface->getInfinity(), relaxParameters[i]);
+            if(rowSense[repairConstraints.at(i)] == 'L')
+            {
+                int tmpConstraint[1] = { repairConstraints.at(i) };
+                double tmpCoefficient[1] = { -1.0 };
+                repairedInterface->addCol(
+                    1, tmpConstraint, tmpCoefficient, 0.0, osiInterface->getInfinity(), relaxParameters.at(i));
+            }
+            else if(rowSense[repairConstraints.at(i)] == 'G')
+            {
+                int tmpConstraint[1] = { repairConstraints.at(i) };
+                double tmpCoefficient[1] = { 1.0 };
+                repairedInterface->addCol(
+                    1, tmpConstraint, tmpCoefficient, 0.0, osiInterface->getInfinity(), relaxParameters.at(i));
+            }
+            else
+            {
+                std::cout << " constraint not supported\n";
+            }
         }
 
         if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
@@ -784,11 +786,16 @@ bool MIPSolverCbc::repairInfeasibility()
 
         CbcMain1(numArguments, const_cast<const char**>(argv), *cbcModel);
 
+        for(int i = numArguments - 1; i >= 0; --i)
+            free(argv[i]);
+
         auto MIPSolutionStatus = getSolutionStatus();
 
         if(MIPSolutionStatus != E_ProblemSolutionStatus::Optimal)
         {
             env->output->outputDebug("        Could not repair the infeasible dual problem.");
+
+            delete repairedInterface;
             return (false);
         }
 
@@ -802,13 +809,22 @@ bool MIPSolverCbc::repairInfeasibility()
             if(slackValue == 0.0)
                 continue;
 
-            double oldRHS = osiInterface->getRowUpper()[numOrigConstraints + i];
-            osiInterface->setRowUpper(repairConstraints[i], oldRHS + 1.5 * slackValue);
+            double oldRHS = osiInterface->getRowUpper()[repairConstraints[i]];
+
+            if(rowSense[repairConstraints.at(i)] == 'L')
+            {
+                osiInterface->setRowUpper(repairConstraints[i], oldRHS + 1.5 * slackValue);
+                env->output->outputDebug("        Constraint: " + osiInterface->getRowName(repairConstraints[i])
+                    + " repaired with infeasibility = " + std::to_string(1.5 * slackValue));
+            }
+            else if(rowSense[repairConstraints.at(i)] == 'G')
+            {
+                env->output->outputDebug("        Constraint: " + osiInterface->getRowName(repairConstraints[i])
+                    + " repaired with infeasibility = " + std::to_string(-1.5 * slackValue));
+                osiInterface->setRowUpper(repairConstraints[i], oldRHS - 1.5 * slackValue);
+            }
 
             numRepairs++;
-
-            env->output->outputDebug("        Constraint: " + osiInterface->getRowName(repairConstraints[i])
-                + " repaired with infeasibility = " + std::to_string(1.5 * slackValue));
         }
 
         env->results->getCurrentIteration()->numberOfInfeasibilityRepairedConstraints = numRepairs;
@@ -823,6 +839,8 @@ bool MIPSolverCbc::repairInfeasibility()
             writeProblemToFile(ss.str());
         }
 
+        delete repairedInterface;
+
         if(numRepairs == 0)
         {
             env->output->outputDebug("        Could not repair the infeasible dual problem.");
@@ -832,9 +850,6 @@ bool MIPSolverCbc::repairInfeasibility()
         env->output->outputDebug("        Number of constraints modified: " + std::to_string(numRepairs));
 
         cbcModel = std::make_unique<CbcModel>(*osiInterface);
-
-        for(int i = numArguments - 1; i >= 0; --i)
-            free(argv[i]);
 
         return (true);
     }
@@ -905,6 +920,8 @@ void MIPSolverCbc::setCutOffAsConstraint([[maybe_unused]] double cutOff)
                 osiInterface->addRow(
                     objectiveLinearExpression, -osiInterface->getInfinity(), -1.0 * cutOff, "CUTOFF_C");
 
+            allowRepairOfConstraint.push_back(false);
+
             cutOffConstraintDefined = true;
             cutOffConstraintIndex = osiInterface->getNumRows() - 1;
 
@@ -974,6 +991,21 @@ void MIPSolverCbc::addMIPStart(VectorDouble point)
         variableValues.push_back(tmpPair);
     }
 
+    auto numVariables = osiInterface->getNumCols();
+
+    while(variableValues.size() < numVariables)
+    {
+        std::pair<std::string, double> tmpPair;
+
+        tmpPair.first = osiInterface->getColName(variableValues.size() - 1);
+
+        // TODO: if integer cuts for non binary variables have been added, a complete starting vector is not known
+        // Adding 0.0 for now
+        tmpPair.second = 0.0;
+
+        variableValues.push_back(tmpPair);
+    }
+
     MIPStarts.push_back(variableValues);
 }
 
@@ -1032,11 +1064,13 @@ void MIPSolverCbc::deleteMIPStarts() { MIPStarts.clear(); }
 bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
 {
     assert(integerCut.variableValues.size() == env->reformulatedProblem->properties.numberOfDiscreteVariables);
+    bool allowIntegerCutRepair = env->settings->getSetting<bool>("MIP.InfeasibilityRepair.IntegerCuts", "Dual");
+
+    int numConstraintsBefore = osiInterface->getNumRows();
+    int constraintCounter = osiInterface->getNumRows();
 
     try
     {
-        int numConstraintsBefore = osiInterface->getNumRows();
-
         if(integerCut.areAllVariablesBinary) // Integer cut for problem with binary variables only
         {
             size_t index = 0;
@@ -1044,7 +1078,7 @@ bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
 
             for(auto& VAR : env->reformulatedProblem->allVariables)
             {
-                if(!(VAR->properties.type == E_VariableType::Binary && VAR->properties.type == E_VariableType::Integer))
+                if(!(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer))
                     continue;
 
                 int variableValue = integerCut.variableValues[index];
@@ -1062,12 +1096,20 @@ bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
                 index++;
             }
 
+            int tmpNumConstraints = osiInterface->getNumRows();
+
             osiInterface->addRow(cut, -osiInterface->getInfinity(), integerCut.variableValues.size() - 1.0,
                 fmt::format("IC_{}", env->solutionStatistics.numberOfIntegerCuts));
+
+            if(osiInterface->getNumRows() > tmpNumConstraints)
+            {
+                allowRepairOfConstraint.push_back(allowIntegerCutRepair);
+                integerCuts.push_back(constraintCounter);
+                constraintCounter++;
+            }
         }
         else // Integer cut for problem with general integers
         {
-            return (false);
             size_t index = 0;
             CoinPackedVector cut;
             double sumLB = 0.0;
@@ -1090,7 +1132,7 @@ bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
                 }
                 else if(variableValue == VAR->lowerBound)
                 {
-                    sumLB += VAR->lowerBound;
+                    sumLB -= VAR->lowerBound;
                     cut.insert(VAR->index, 1.0);
                 }
                 else
@@ -1099,12 +1141,9 @@ bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
                     int vIndex = numberOfVariables + 1;
                     numberOfVariables += 2;
 
-                    std::cout << "add IC with " << VAR->name << ": " << numberOfVariables << std::endl;
-
                     double M1 = 2 * (variableValue - VAR->lowerBound);
                     double M2 = 2 * (VAR->upperBound - variableValue);
 
-                    std::cout << "h0\n";
                     double tmpCoefficient[1] = { 0.0 };
                     int tmpConstraint[1] = { 0 };
                     osiInterface->addCol(1, tmpConstraint, tmpCoefficient, 0.0, osiInterface->getInfinity(), 0.0,
@@ -1116,52 +1155,85 @@ bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
 
                     CoinPackedVector cut1a, cut1b, cut2, cut3;
 
+                    int tmpNumConstraints = osiInterface->getNumRows();
                     cut1a.insert(VAR->index, 1.0);
                     cut1a.insert(wIndex, 1.0);
                     osiInterface->addRow(cut1a, variableValue, osiInterface->getInfinity(),
                         fmt::format("IC{}_{}_1a", env->solutionStatistics.numberOfIntegerCuts, index));
 
-                    std::cout << "h1a\n";
-                    osiInterface->addCol(2, tmpConstraint, tmpCoefficient, 0.0, osiInterface->getInfinity(), 0.0);
+                    if(osiInterface->getNumRows() > tmpNumConstraints)
+                    {
+                        allowRepairOfConstraint.push_back(false);
+                        integerCuts.push_back(constraintCounter);
+                        constraintCounter++;
+                    }
 
-                    std::cout << "h1\n";
+                    tmpNumConstraints = osiInterface->getNumRows();
                     cut1b.insert(VAR->index, 1.0);
                     cut1b.insert(wIndex, -1.0);
+
                     osiInterface->addRow(cut1b, -osiInterface->getInfinity(), variableValue,
                         fmt::format("IC{}_{}_1b", env->solutionStatistics.numberOfIntegerCuts, index));
 
-                    std::cout << "h2\n";
+                    if(osiInterface->getNumRows() > tmpNumConstraints)
+                    {
+                        allowRepairOfConstraint.push_back(false);
+                        integerCuts.push_back(constraintCounter);
+                        constraintCounter++;
+                    }
+
+                    tmpNumConstraints = osiInterface->getNumRows();
                     cut2.insert(wIndex, 1.0);
                     cut2.insert(VAR->index, -1.0);
                     cut2.insert(vIndex, M1);
                     osiInterface->addRow(cut2, -osiInterface->getInfinity(), -variableValue + M1,
                         fmt::format("IC{}_{}_2", env->solutionStatistics.numberOfIntegerCuts, index));
 
-                    std::cout << "h3\n";
+                    if(osiInterface->getNumRows() > tmpNumConstraints)
+                    {
+                        allowRepairOfConstraint.push_back(false);
+                        integerCuts.push_back(constraintCounter);
+                        constraintCounter++;
+                    }
+
+                    tmpNumConstraints = osiInterface->getNumRows();
                     cut3.insert(wIndex, 1.0);
                     cut3.insert(VAR->index, 1.0);
                     cut3.insert(vIndex, -M2);
                     osiInterface->addRow(cut3, -osiInterface->getInfinity(), variableValue,
                         fmt::format("IC{}_{}_3", env->solutionStatistics.numberOfIntegerCuts, index));
 
-                    osiInterface->setColumnType(wIndex, 'C');
-                    osiInterface->setColumnType(vIndex, 'B');
+                    if(osiInterface->getNumRows() > tmpNumConstraints)
+                    {
+                        allowRepairOfConstraint.push_back(false);
+                        integerCuts.push_back(constraintCounter);
+                        constraintCounter++;
+                    }
 
+                    osiInterface->setContinuous(wIndex);
+                    osiInterface->setInteger(vIndex);
                     osiInterface->setColLower(wIndex, 0);
-                }
+                    osiInterface->setColLower(vIndex, 0);
+                    osiInterface->setColUpper(vIndex, 1);
 
-                index++;
+                    index++;
+                }
             }
 
-            osiInterface->addRow(cut, 1, osiInterface->getInfinity(),
+            int tmpNumConstraints = osiInterface->getNumRows();
+
+            osiInterface->addRow(cut, 1 - sumLB - sumUB, osiInterface->getInfinity(),
                 fmt::format("IC{}_4", env->solutionStatistics.numberOfIntegerCuts));
+
+            if(osiInterface->getNumRows() > tmpNumConstraints)
+            {
+                allowRepairOfConstraint.push_back(allowIntegerCutRepair);
+                integerCuts.push_back(constraintCounter);
+                constraintCounter++;
+            }
         }
 
-        if(osiInterface->getNumRows() > numConstraintsBefore)
-        {
-            integerCuts.push_back(osiInterface->getNumRows() - 1);
-        }
-        else
+        if(constraintCounter == numConstraintsBefore)
         {
             env->output->outputInfo("        Integer cut not added by Cbc");
             return (false);

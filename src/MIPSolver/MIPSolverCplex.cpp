@@ -280,12 +280,14 @@ bool MIPSolverCplex::finalizeConstraint(std::string name, double valueLHS, doubl
             IloRange tmpRange = IloRange(cplexEnv, valueLHS, constrExpression, valueRHS, name.c_str());
             cplexModel.add(tmpRange);
             cplexConstrs.add(tmpRange);
+            allowRepairOfConstraint.push_back(false);
         }
         else
         {
             IloRange tmpRange = IloRange(cplexEnv, valueRHS, constrExpression, valueLHS, name.c_str());
             cplexModel.add(tmpRange);
             cplexConstrs.add(tmpRange);
+            allowRepairOfConstraint.push_back(false);
         }
     }
     catch(IloException& e)
@@ -436,7 +438,7 @@ void MIPSolverCplex::initializeSolverSettings()
 }
 
 int MIPSolverCplex::addLinearConstraint(
-    const std::map<int, double>& elements, double constant, std::string name, bool isGreaterThan)
+    const std::map<int, double>& elements, double constant, std::string name, bool isGreaterThan, bool allowRepair)
 {
     try
     {
@@ -461,6 +463,7 @@ int MIPSolverCplex::addLinearConstraint(
             if(cplexInstance.getNrows() > numConstraintsBefore)
             {
                 cplexConstrs.add(tmpRange);
+                allowRepairOfConstraint.push_back(allowRepair);
             }
             else
             {
@@ -481,6 +484,7 @@ int MIPSolverCplex::addLinearConstraint(
             if(cplexInstance.getNrows() > numConstraintsBefore)
             {
                 cplexConstrs.add(tmpRange);
+                allowRepairOfConstraint.push_back(allowRepair);
             }
             else
             {
@@ -744,25 +748,13 @@ bool MIPSolverCplex::repairInfeasibility()
 
         for(int i = numOrigConstraints; i < numCurrConstraints; i++)
         {
-            if(i == cutOffConstraintIndex)
+            if(allowRepairOfConstraint[i])
             {
-                relax.add(0.0);
-            }
-            else if(std::find(integerCuts.begin(), integerCuts.end(), i) != integerCuts.end())
-            {
-                if(env->settings->getSetting<bool>("MIP.InfeasibilityRepair.IntegerCuts", "Dual"))
-                    relax.add(1 / (((double)i) + 1.0));
-                else
-                    relax.add(0);
-            }
-            else if(env->dualSolver->generatedHyperplanes.at(hyperplaneCounter).isSourceConvex)
-            {
-                relax.add(0);
-                hyperplaneCounter++;
+                relax.add(1 / (((double)i) - numOrigConstraints + 1.0));
             }
             else
             {
-                relax.add(1 / (((double)i) + 1.0));
+                relax.add(0.0);
             }
         }
 
@@ -1064,6 +1056,7 @@ void MIPSolverCplex::setCutOffAsConstraint(double cutOff)
                 tmpRange.setName("CUTOFF_C");
                 cplexModel.add(tmpRange);
                 cplexConstrs.add(tmpRange);
+                allowRepairOfConstraint.push_back(false);
 
                 env->output->outputDebug(
                     "        Setting cutoff constraint to " + Utilities::toString(cutOff) + " for maximization.");
@@ -1074,6 +1067,7 @@ void MIPSolverCplex::setCutOffAsConstraint(double cutOff)
                 tmpRange.setName("CUTOFF_C");
                 cplexModel.add(tmpRange);
                 cplexConstrs.add(tmpRange);
+                allowRepairOfConstraint.push_back(false);
 
                 env->output->outputDebug(
                     "        Setting cutoff constraint to " + Utilities::toString(cutOff) + " for minimization.");
@@ -1443,6 +1437,8 @@ bool MIPSolverCplex::createHyperplane(
 
 bool MIPSolverCplex::createIntegerCut(IntegerCut& integerCut)
 {
+    bool allowIntegerCutRepair = env->settings->getSetting<bool>("MIP.InfeasibilityRepair.IntegerCuts", "Dual");
+
     try
     {
         int numConstraintsBefore = cplexInstance.getNrows();
@@ -1494,6 +1490,7 @@ bool MIPSolverCplex::createIntegerCut(IntegerCut& integerCut)
                     cplexInstance.extract(cplexModel);
                     integerCuts.push_back(numConstraintsBefore + index);
                     cplexConstrs.add(cut1);
+                    allowRepairOfConstraint.push_back(false);
                 }
 
                 tmpNumConstraints = cplexInstance.getNrows();
@@ -1506,6 +1503,7 @@ bool MIPSolverCplex::createIntegerCut(IntegerCut& integerCut)
                     cplexInstance.extract(cplexModel);
                     integerCuts.push_back(numConstraintsBefore + index);
                     cplexConstrs.add(cut2);
+                    allowRepairOfConstraint.push_back(false);
                 }
 
                 tmpNumConstraints = cplexInstance.getNrows();
@@ -1518,6 +1516,7 @@ bool MIPSolverCplex::createIntegerCut(IntegerCut& integerCut)
                     cplexInstance.extract(cplexModel);
                     integerCuts.push_back(numConstraintsBefore + index);
                     cplexConstrs.add(cut3);
+                    allowRepairOfConstraint.push_back(false);
                 }
 
                 tmpNumConstraints = cplexInstance.getNrows();
@@ -1530,6 +1529,7 @@ bool MIPSolverCplex::createIntegerCut(IntegerCut& integerCut)
                     cplexInstance.extract(cplexModel);
                     integerCuts.push_back(numConstraintsBefore + index);
                     cplexConstrs.add(cut4);
+                    allowRepairOfConstraint.push_back(false);
                 }
             }
 
@@ -1537,15 +1537,16 @@ bool MIPSolverCplex::createIntegerCut(IntegerCut& integerCut)
         }
 
         int tmpNumConstraints = cplexInstance.getNrows();
-        IloRange cut4(
+        IloRange cut5(
             cplexEnv, 1, expr, IloInfinity, fmt::format("IC{}_4", env->solutionStatistics.numberOfIntegerCuts).c_str());
-        cplexModel.add(cut4);
+        cplexModel.add(cut5);
 
         if(cplexInstance.getNrows() > tmpNumConstraints)
         {
             cplexInstance.extract(cplexModel);
             integerCuts.push_back(numConstraintsBefore + index);
-            cplexConstrs.add(cut4);
+            cplexConstrs.add(cut5);
+            allowRepairOfConstraint.push_back(allowIntegerCutRepair);
         }
 
         auto addedConstraints = cplexInstance.getNrows() - numConstraintsBefore;
