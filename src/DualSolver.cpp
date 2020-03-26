@@ -176,25 +176,18 @@ void DualSolver::addGeneratedHyperplane(const Hyperplane& hyperplane)
 
     genHyperplane.source = hyperplane.source;
     if(hyperplane.sourceConstraint)
+    {
         genHyperplane.sourceConstraint = hyperplane.sourceConstraint;
+        genHyperplane.sourceConstraintIndex = hyperplane.sourceConstraint->index;
+    }
+    else
+        genHyperplane.sourceConstraintIndex = -1;
+
     genHyperplane.iterationGenerated = env->results->getCurrentIteration()->iterationNumber;
     genHyperplane.isLazy = false;
     genHyperplane.pointHash = hyperplane.pointHash;
 
-    if(hyperplane.sourceConstraint)
-    {
-        if(hyperplane.sourceConstraint->properties.convexity == E_Convexity::Convex)
-            genHyperplane.isSourceConvex = true;
-        else
-            genHyperplane.isSourceConvex = false;
-    }
-    else
-    {
-        if(env->reformulatedProblem->objectiveFunction->properties.convexity == E_Convexity::Convex)
-            genHyperplane.isSourceConvex = true;
-        else
-            genHyperplane.isSourceConvex = false;
-    }
+    genHyperplane.isSourceConvex = hyperplane.isSourceConvex;
 
     if(!genHyperplane.isSourceConvex)
     {
@@ -214,8 +207,11 @@ void DualSolver::addGeneratedHyperplane(const Hyperplane& hyperplane)
         return;
     }
 
-    env->output->outputTrace(fmt::format("        Added hyperplane with hash {} to constraint {}",
-        genHyperplane.pointHash, genHyperplane.sourceConstraintIndex));
+    if(hyperplane.sourceConstraint)
+    {
+        env->output->outputTrace(fmt::format("        Added hyperplane with hash {} to constraint {}",
+            genHyperplane.pointHash, genHyperplane.sourceConstraint->index));
+    }
 
     generatedHyperplanes.push_back(genHyperplane);
 
@@ -231,7 +227,13 @@ bool DualSolver::hasHyperplaneBeenAdded(double hash, int constraintIndex)
 {
     for(auto& H : generatedHyperplanes)
     {
-        if(H.sourceConstraintIndex == constraintIndex && Utilities::isAlmostEqual(H.pointHash, hash, 1e-8))
+        if(H.source == E_HyperplaneSource::ObjectiveRootsearch && constraintIndex == -1
+            && Utilities::isAlmostEqual(H.pointHash, hash, 1e-8))
+        {
+            return (true);
+        }
+        else if(H.source != E_HyperplaneSource::ObjectiveRootsearch && H.sourceConstraint->index == constraintIndex
+            && Utilities::isAlmostEqual(H.pointHash, hash, 1e-8))
         {
             return (true);
         }

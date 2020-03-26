@@ -181,6 +181,7 @@ struct Hyperplane
     double objectiveFunctionValue; // Used for the objective cuts only
     E_HyperplaneSource source;
     bool isObjectiveHyperplane = false;
+    bool isSourceConvex = false;
     double pointHash;
 };
 

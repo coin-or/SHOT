@@ -343,6 +343,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
                     hyperplane.sourceConstraintIndex = NCV.constraint->index;
                     hyperplane.generatedPoint = tmpPoint;
                     hyperplane.source = E_HyperplaneSource::InteriorPointSearch;
+                    hyperplane.isSourceConvex = true;
 
                     env->dualSolver->addHyperplane(hyperplane);
                 }

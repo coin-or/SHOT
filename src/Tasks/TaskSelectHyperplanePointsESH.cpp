@@ -200,6 +200,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
             hyperplane.sourceConstraint = externalConstraintValue.constraint;
             hyperplane.sourceConstraintIndex = externalConstraintValue.constraint->index;
             hyperplane.generatedPoint = externalPoint;
+            hyperplane.isSourceConvex = (NCV.constraint->properties.convexity <= E_Convexity::Convex);
 
             if(solPoints.at(i).isRelaxedPoint)
             {
@@ -294,6 +295,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
                 hyperplane.sourceConstraint = externalConstraintValue.constraint;
                 hyperplane.sourceConstraintIndex = externalConstraintValue.constraint->index;
                 hyperplane.generatedPoint = externalPoint;
+                hyperplane.isSourceConvex = (NCV.constraint->properties.convexity <= E_Convexity::Convex);
 
                 if(solPoints.at(i).isRelaxedPoint)
                 {
@@ -393,6 +395,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
                 hyperplane.sourceConstraint = externalConstraintValue.constraint;
                 hyperplane.sourceConstraintIndex = externalConstraintValue.constraint->index;
                 hyperplane.generatedPoint = externalPoint;
+                hyperplane.isSourceConvex = (NCV.constraint->properties.convexity <= E_Convexity::Convex);
 
                 if(solPoints.at(i).isRelaxedPoint)
                 {
