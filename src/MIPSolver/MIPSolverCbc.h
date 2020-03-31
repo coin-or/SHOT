@@ -166,6 +166,7 @@ private:
     long int solLimit;
     double timeLimit = 1e100;
     double cutOff;
+    int numberOfThreads = 1;
 
     std::vector<std::vector<std::pair<std::string, double>>> MIPStarts;
 

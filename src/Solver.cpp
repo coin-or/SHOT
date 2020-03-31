@@ -1261,13 +1261,22 @@ void Solver::initializeSettings()
     env->settings->createSettingGroup("Subsolver", "Gurobi", "Gurobi", "");
 
     env->settings->createSetting(
-        "Gurobi.ScaleFlag", "Subsolver", 0, "Controls model scaling: 0: Off. 1: Agressive. 2: Very agressive.", 0, 2);
+        "Gurobi.Heuristics", "Subsolver", 0.05, "The relative amount of time spent in MIP heuristics.", 0.0, 1.0);
 
-    env->settings->createSetting("Gurobi.MIPFocus", "Subsolver", 1,
+    env->settings->createSetting("Gurobi.MIPFocus", "Subsolver", 0,
         "MIP focus: 0: Automatic. 1: Feasibility. 2: Optimality. 3: Best bound.", 0, 3);
 
-    env->settings->createSetting("Gurobi.NumericFocus", "Subsolver", 0,
+    env->settings->createSetting("Gurobi.NumericFocus", "Subsolver", 2,
         "Numeric focus (higher number more careful): 0: Automatic. 3: Most careful.", 0, 3);
+
+    env->settings->createSetting("Gurobi.PoolSearchMode", "Subsolver", 0,
+        "Finds extra solutions: 0: No extra effort. 1: Try to find solutions. 2: Find n best solutions.", 0, 2);
+
+    env->settings->createSetting(
+        "Gurobi.PoolSolutions", "Subsolver", 1, "Determines how many MIP solutions are stored.", 1, 2000000000);
+
+    env->settings->createSetting("Gurobi.ScaleFlag", "Subsolver", -1,
+        "Controls model scaling: -1: Automatic. 0: Off. 1-3: The higher the more aggressive.", -1, 3);
 
 #endif
 
@@ -1280,7 +1289,7 @@ void Solver::initializeSettings()
     env->settings->createSetting("Cbc.AutoScale", "Subsolver", false,
         "Whether to scale objective, rhs and bounds of problem if they look odd (experimental)");
 
-    env->settings->createSetting("Cbc.NodeStrategy", "Subsolver", std::string("fewest"),
+    env->settings->createSetting("Cbc.NodeStrategy", "Subsolver", std::string("hybrid"),
         "Node strategy, valid values: depth, downdepth, downfewest, fewest, hybrid, updepth, upfewest");
 
     env->settings->createSetting(

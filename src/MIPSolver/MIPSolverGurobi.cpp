@@ -368,46 +368,40 @@ void MIPSolverGurobi::initializeSolverSettings()
 {
     try
     {
+        // Control solver output
         if(!env->settings->getSetting<bool>("Console.DualSolver.Show", "Output"))
-        {
             gurobiModel->getEnv().set(GRB_IntParam_OutputFlag, 0);
-        }
 
+        // Set termination tolerances
         gurobiModel->getEnv().set(
             GRB_DoubleParam_MIPGap, env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination") / 1.0);
         gurobiModel->getEnv().set(
             GRB_DoubleParam_MIPGapAbs, env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination") / 1.0);
-
-        // Default 0 to fix som problems with some problems
         gurobiModel->getEnv().set(
-            GRB_IntParam_ScaleFlag, env->settings->getSetting<int>("Gurobi.ScaleFlag", "Subsolver"));
-        gurobiModel->getEnv().set(
-            GRB_IntParam_NumericFocus, env->settings->getSetting<int>("Gurobi.NumericFocus", "Subsolver"));
-        gurobiModel->getEnv().set(
-            GRB_IntParam_MIPFocus, env->settings->getSetting<int>("Gurobi.MIPFocus", "Subsolver"));
-        gurobiModel->getEnv().set(GRB_IntParam_Threads, env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual"));
-
-        auto constraintTolerance
-            = std::min(env->settings->getSetting<double>("Tolerance.NonlinearConstraint", "Primal"),
-                env->settings->getSetting<double>("Tolerance.LinearConstraint", "Primal"));
-
-        gurobiModel->getEnv().set(GRB_DoubleParam_FeasibilityTol, constraintTolerance);
+            GRB_DoubleParam_FeasibilityTol, env->settings->getSetting<double>("Tolerance.LinearConstraint", "Primal"));
         gurobiModel->getEnv().set(
             GRB_DoubleParam_IntFeasTol, env->settings->getSetting<double>("Tolerance.Integer", "Primal"));
 
-        // gurobiModel->getEnv().set(GRB_DoubleParam_OptimalityTol, 1e-6);
-        // gurobiModel->getEnv().set(GRB_DoubleParam_MarkowitzTol, 1e-4);
+        // Add a user-provided node limit
+        if(auto nodeLimit = env->settings->getSetting<double>("MIP.NodeLimit", "Dual"); nodeLimit > 0)
+            gurobiModel->getEnv().set(GRB_DoubleParam_NodeLimit, nodeLimit);
 
+        // Set solution pool settings
         gurobiModel->getEnv().set(GRB_IntParam_SolutionLimit, GRB_MAXINT);
         gurobiModel->getEnv().set(
             GRB_IntParam_SolutionNumber, env->settings->getSetting<int>("MIP.SolutionPool.Capacity", "Dual") + 1);
+        gurobiModel->getEnv().set(
+            GRB_IntParam_PoolSearchMode, env->settings->getSetting<int>("Gurobi.PoolSearchMode", "Subsolver"));
+        gurobiModel->getEnv().set(
+            GRB_IntParam_PoolSolutions, env->settings->getSetting<int>("Gurobi.PoolSolutions", "Subsolver"));
 
-        // Adds a user-provided node limit
-        if(env->settings->getSetting<double>("MIP.NodeLimit", "Dual") > 0)
-        {
-            gurobiModel->getEnv().set(
-                GRB_DoubleParam_NodeLimit, env->settings->getSetting<double>("MIP.NodeLimit", "Dual"));
-        }
+        // Set solver emphasis
+        gurobiModel->getEnv().set(
+            GRB_IntParam_NumericFocus, env->settings->getSetting<int>("Gurobi.NumericFocus", "Subsolver"));
+
+        // Set parameters for quadratics
+        gurobiModel->getEnv().set(GRB_DoubleParam_PSDTol,
+            env->settings->getSetting<double>("Convexity.Quadratics.EigenValueTolerance", "Model"));
 
 #if GRB_VERSION_MAJOR >= 9
         // Supports nonconvex MIQCQP
@@ -418,12 +412,21 @@ void MIPSolverGurobi::initializeSolverSettings()
             gurobiModel->getEnv().set(GRB_IntParam_NonConvex, 2);
         }
 #endif
+
+        // Set various solver specific MIP settings
+        gurobiModel->getEnv().set(
+            GRB_IntParam_ScaleFlag, env->settings->getSetting<int>("Gurobi.ScaleFlag", "Subsolver"));
+        gurobiModel->getEnv().set(
+            GRB_IntParam_MIPFocus, env->settings->getSetting<int>("Gurobi.MIPFocus", "Subsolver"));
+        gurobiModel->getEnv().set(
+            GRB_DoubleParam_Heuristics, env->settings->getSetting<double>("Gurobi.Heuristics", "Subsolver"));
+
+        // Set number of threads
+        gurobiModel->getEnv().set(GRB_IntParam_Threads, env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual"));
     }
     catch(GRBException& e)
     {
-        {
-            env->output->outputError(" Error when initializing Gurobi parameters: ", e.getMessage());
-        }
+        env->output->outputError(" Error when initializing Gurobi parameters: ", e.getMessage());
     }
 }
 

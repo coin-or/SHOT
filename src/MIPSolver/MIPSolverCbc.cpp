@@ -250,21 +250,37 @@ bool MIPSolverCbc::finalizeProblem()
 
 void MIPSolverCbc::initializeSolverSettings()
 {
+    // Set termination tolerances
     cbcModel->setAllowableGap(env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination") / 1.0);
     cbcModel->setAllowableFractionGap(env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination") / 1.0);
-    cbcModel->setMaximumSolutions(solLimit);
-    cbcModel->setMaximumSavedSolutions(env->settings->getSetting<int>("MIP.SolutionPool.Capacity", "Dual"));
+    osiInterface->setDblParam(
+        OsiPrimalTolerance, env->settings->getSetting<double>("Tolerance.LinearConstraint", "Primal"));
+    cbcModel->setIntegerTolerance(env->settings->getSetting<double>("Tolerance.Integer", "Primal"));
 
     // Adds a user-provided node limit
-    if(env->settings->getSetting<double>("MIP.NodeLimit", "Dual") > 0)
+    if(auto nodeLimit = env->settings->getSetting<double>("MIP.NodeLimit", "Dual"); nodeLimit > 0)
     {
-        auto nodeLimit = env->settings->getSetting<double>("MIP.NodeLimit", "Dual");
-
         if(nodeLimit > SHOT_INT_MAX)
             nodeLimit = SHOT_INT_MAX;
 
         cbcModel->setMaximumNodes(nodeLimit);
     }
+
+    // Set solution pool settings
+    cbcModel->setMaximumSolutions(solLimit);
+    cbcModel->setMaximumSavedSolutions(env->settings->getSetting<int>("MIP.SolutionPool.Capacity", "Dual"));
+
+    // Set number of threads
+    if(cbcModel->haveMultiThreadSupport())
+    {
+        // Cbc runs deterministcally if 100 is added to the number of threads
+        if(env->settings->getSetting<bool>("Cbc.DeterministicParallelMode", "Subsolver"))
+            numberOfThreads = env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual") + 100;
+        else
+            numberOfThreads = env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual");
+    }
+    else
+        numberOfThreads = 1;
 }
 
 int MIPSolverCbc::addLinearConstraint(
@@ -445,12 +461,8 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
 
     if(cbcModel->haveMultiThreadSupport())
     {
-        // Cbc runs in deterministic mode if number of threads > 100
         argv[13] = strdup("-threads");
-        if(env->settings->getSetting<bool>("Cbc.DeterministicParallelMode", "Subsolver"))
-            arg = std::to_string(env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual") + 100);
-        else
-            arg = std::to_string(env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual"));
+        arg = std::to_string(numberOfThreads);
         argv[14] = strdup(arg.c_str());
 
         argv[15] = strdup("-solve");
@@ -765,12 +777,8 @@ bool MIPSolverCbc::repairInfeasibility()
 
         if(cbcModel->haveMultiThreadSupport())
         {
-            // Cbc runs in deterministic mode if number of threads > 100
             argv[13] = strdup("-threads");
-            if(env->settings->getSetting<bool>("Cbc.DeterministicParallelMode", "Subsolver"))
-                arg = std::to_string(env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual") + 100);
-            else
-                arg = std::to_string(env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual"));
+            arg = std::to_string(numberOfThreads);
             argv[14] = strdup(arg.c_str());
 
             argv[15] = strdup("-solve");
@@ -1429,12 +1437,6 @@ void MIPSolverCbc::writePresolvedToFile([[maybe_unused]] std::string filename)
 
 void MIPSolverCbc::checkParameters()
 {
-    // Check if Cbc has been compiled with support for multiple threads
-    if(!cbcModel->haveMultiThreadSupport())
-    {
-        env->settings->updateSetting("MIP.NumberOfThreads", "Dual", 1);
-    }
-
     // For stability
     env->settings->updateSetting("Tolerance.TrustLinearConstraintValues", "Primal", false);
 

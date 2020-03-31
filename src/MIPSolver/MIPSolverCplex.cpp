@@ -348,7 +348,7 @@ void MIPSolverCplex::initializeSolverSettings()
 {
     try
     {
-        // Disable Cplex output
+        // Control solver output
         if(!env->settings->getSetting<bool>("Console.DualSolver.Show", "Output"))
         {
             cplexInstance.setOut(cplexEnv.getNullStream());
@@ -359,13 +359,32 @@ void MIPSolverCplex::initializeSolverSettings()
             }
         }
 
+        // Set termination tolerances
         cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::MIPGap,
             env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination") / 1.0);
         cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::AbsMIPGap,
             env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination") / 1.0);
-
+        cplexInstance.setParam(IloCplex::Param::Simplex::Tolerances::Feasibility,
+            env->settings->getSetting<double>("Tolerance.LinearConstraint", "Primal"));
         cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::Integrality,
             env->settings->getSetting<double>("Tolerance.Integer", "Primal"));
+
+        // Adds a user-provided node limit
+        if(auto nodeLimit = env->settings->getSetting<double>("MIP.NodeLimit", "Dual"); nodeLimit > 0)
+        {
+            if(nodeLimit > CPX_BIGINT)
+                cplexInstance.setParam(IloCplex::Param::MIP::Limits::Nodes, CPX_BIGINT);
+        }
+
+        // Set solution pool settings
+        cplexInstance.setParam(IloCplex::Param::MIP::Pool::Intensity,
+            env->settings->getSetting<int>("Cplex.SolutionPoolIntensity", "Subsolver")); // Don't use 3 with heuristics
+        cplexInstance.setParam(IloCplex::Param::MIP::Pool::Replace,
+            env->settings->getSetting<int>("Cplex.SolutionPoolReplace", "Subsolver"));
+        cplexInstance.setParam(IloCplex::Param::MIP::Pool::RelGap,
+            env->settings->getSetting<double>("Cplex.SolutionPoolGap", "Subsolver"));
+        cplexInstance.setParam(
+            IloCplex::Param::MIP::Pool::Capacity, env->settings->getSetting<int>("MIP.SolutionPool.Capacity", "Dual"));
 
         if(env->settings->getSetting<bool>("TreeStrategy.Multi.Reinitialize", "Dual"))
         {
@@ -378,58 +397,40 @@ void MIPSolverCplex::initializeSolverSettings()
             cplexInstance.setParam(IloCplex::Param::MIP::Limits::Solutions, 21000000);
         }
 
-        cplexInstance.setParam(IloCplex::Param::MIP::Pool::Intensity,
-            env->settings->getSetting<int>("Cplex.SolutionPoolIntensity", "Subsolver")); // Don't use 3 with heuristics
-        cplexInstance.setParam(IloCplex::Param::MIP::Pool::Replace,
-            env->settings->getSetting<int>("Cplex.SolutionPoolReplace", "Subsolver"));
-        cplexInstance.setParam(IloCplex::Param::MIP::Pool::RelGap,
-            env->settings->getSetting<double>("Cplex.SolutionPoolGap", "Subsolver"));
-        cplexInstance.setParam(
-            IloCplex::Param::MIP::Pool::Capacity, env->settings->getSetting<int>("MIP.SolutionPool.Capacity", "Dual"));
-
-        cplexInstance.setParam(
-            IloCplex::Param::MIP::Strategy::Probe, env->settings->getSetting<int>("Cplex.Probe", "Subsolver"));
-        cplexInstance.setParam(
-            IloCplex::Param::Emphasis::MIP, env->settings->getSetting<int>("Cplex.MIPEmphasis", "Subsolver"));
-
-        cplexInstance.setParam(
-            IloCplex::Param::Parallel, env->settings->getSetting<int>("Cplex.ParallelMode", "Subsolver"));
-        cplexInstance.setParam(IloCplex::Param::Threads, env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual"));
-
+        // Set solver emphasis
         cplexInstance.setParam(IloCplex::Param::Emphasis::Numerical,
             env->settings->getSetting<int>("Cplex.NumericalEmphasis", "Subsolver"));
         cplexInstance.setParam(
             IloCplex::Param::Emphasis::Memory, env->settings->getSetting<int>("Cplex.MemoryEmphasis", "Subsolver"));
 
-        // Sets whether CPLEX allows nonconvex quadratic functions
+        // Set parameters for quadratics
         cplexInstance.setParam(
             IloCplex::Param::OptimalityTarget, env->settings->getSetting<int>("Cplex.OptimalityTarget", "Subsolver"));
 
-        // Options for using swap file
-        auto workdir = env->settings->getSetting<std::string>("Cplex.WorkDirectory", "Subsolver");
+        // Set various solver specific MIP settings
+        cplexInstance.setParam(
+            IloCplex::Param::MIP::Strategy::Probe, env->settings->getSetting<int>("Cplex.Probe", "Subsolver"));
+        cplexInstance.setParam(
+            IloCplex::Param::Emphasis::MIP, env->settings->getSetting<int>("Cplex.MIPEmphasis", "Subsolver"));
+        cplexInstance.setParam(
+            IloCplex::Param::Parallel, env->settings->getSetting<int>("Cplex.ParallelMode", "Subsolver"));
 
-        if(workdir != "")
+        // Set number of threads
+        cplexInstance.setParam(IloCplex::Param::Threads, env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual"));
+
+        // Options for using swap file
+        if(auto workdir = env->settings->getSetting<std::string>("Cplex.WorkDirectory", "Subsolver"); workdir != "")
             cplexInstance.setParam(IloCplex::Param::WorkDir, workdir.c_str());
 
-        auto workmem = env->settings->getSetting<double>("Cplex.WorkMemory", "Subsolver");
-
-        if(workmem > 0)
+        if(auto workmem = env->settings->getSetting<double>("Cplex.WorkMemory", "Subsolver"); workmem > 0)
             cplexInstance.setParam(IloCplex::Param::WorkMem, workmem);
 
         cplexInstance.setParam(
             IloCplex::Param::MIP::Strategy::File, env->settings->getSetting<int>("Cplex.NodeFile", "Subsolver"));
 
+        // Set feasibility relaxation parameters
         cplexInstance.setParam(
             IloCplex::Param::Feasopt::Mode, env->settings->getSetting<int>("Cplex.FeasOptMode", "Subsolver"));
-
-        // Adds a user-provided node limit
-        if(env->settings->getSetting<double>("MIP.NodeLimit", "Dual") > 0)
-        {
-            auto nodeLimit = env->settings->getSetting<double>("MIP.NodeLimit", "Dual");
-
-            if(nodeLimit > CPX_BIGINT)
-                cplexInstance.setParam(IloCplex::Param::MIP::Limits::Nodes, CPX_BIGINT);
-        }
     }
     catch(IloException& e)
     {
