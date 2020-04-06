@@ -58,7 +58,7 @@ void TaskSelectHyperplanePointsObjectiveFunction::run(std::vector<SolutionPoint>
         env->dualSolver->addHyperplane(hyperplane);
         numHyperplaneAdded++;
 
-        env->output->outputWarning("         Adding objective cutting plane since the dual has stagnated.");
+        env->output->outputDebug("         Adding objective cutting plane since the dual has stagnated.");
     }
 
     bool isConvex = env->reformulatedProblem->objectiveFunction->properties.convexity == E_Convexity::Linear

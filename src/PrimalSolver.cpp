@@ -463,7 +463,7 @@ void PrimalSolver::addFixedNLPCandidate(
             PrimalFixedNLPCandidate { candidate, source, objVal, iter, maxConstrDev, pointHash });
     }
     else
-        env->output->outputInfo(
+        env->output->outputDebug(
             fmt::format("        Candidate for fixed integer search with hash {} has been used already.", pointHash));
 }
 

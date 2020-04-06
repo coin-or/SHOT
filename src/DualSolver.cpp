@@ -124,7 +124,7 @@ void DualSolver::addHyperplane(Hyperplane& hyperplane)
     }
     else
     {
-        env->output->outputInfo(
+        env->output->outputDebug(
             fmt::format("        Hyperplane with hash {} has been added already.", hyperplane.pointHash));
     }
 }
@@ -254,7 +254,7 @@ void DualSolver::addIntegerCut(IntegerCut integerCut)
     if(!hasIntegerCutBeenAdded(integerCut.pointHash))
         this->integerCutWaitingList.push_back(integerCut);
     else
-        env->output->outputInfo(
+        env->output->outputDebug(
             fmt::format("        Integer cut with hash {} has been added already.", integerCut.pointHash));
 }
 
@@ -280,7 +280,7 @@ void DualSolver::addGeneratedIntegerCut(IntegerCut integerCut)
         env->output->outputInfo("        Solution is no longer global since integer cut has been added.");
     }
 
-    env->output->outputInfo(fmt::format("        Added integer cut with hash {}", integerCut.pointHash));
+    env->output->outputDebug(fmt::format("        Added integer cut with hash {}", integerCut.pointHash));
 
     generatedIntegerCuts.push_back(integerCut);
 
