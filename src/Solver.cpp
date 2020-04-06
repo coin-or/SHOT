@@ -474,6 +474,7 @@ bool Solver::selectStrategy()
         if(isConvex && (useQuadraticObjective || useQuadraticConstraints) && env->problem->properties.isMIQPProblem)
         // Convex MIQP problem
         {
+            env->settings->updateSetting("Console.DualSolver.Show", "Output", true);
             env->output->outputDebug(" Using convex MIQP solution strategy.");
             solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
             env->results->usedSolutionStrategy = E_SolutionStrategy::MIQP;
@@ -482,6 +483,7 @@ bool Solver::selectStrategy()
         // Convex QP problem
         {
             env->output->outputDebug(" Using convex QP solution strategy.");
+            env->settings->updateSetting("Console.DualSolver.Show", "Output", true);
             solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
             env->results->usedSolutionStrategy = E_SolutionStrategy::MIQP;
         }
@@ -489,6 +491,7 @@ bool Solver::selectStrategy()
         else if(isConvex && useQuadraticConstraints && env->problem->properties.isMIQCQPProblem)
         {
             env->output->outputDebug(" Using convex MIQCQP solution strategy.");
+            env->settings->updateSetting("Console.DualSolver.Show", "Output", true);
             solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
             env->results->usedSolutionStrategy = E_SolutionStrategy::MIQCQP;
         }
@@ -497,6 +500,7 @@ bool Solver::selectStrategy()
             && env->problem->properties.isQCQPProblem)
         {
             env->output->outputDebug(" Using convex QCQP solution strategy.");
+            env->settings->updateSetting("Console.DualSolver.Show", "Output", true);
             solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
             env->results->usedSolutionStrategy = E_SolutionStrategy::MIQCQP;
         }
@@ -504,6 +508,7 @@ bool Solver::selectStrategy()
         else if(env->problem->properties.isMILPProblem || env->problem->properties.isLPProblem)
         {
             env->output->outputDebug(" Using MILP solution strategy.");
+            env->settings->updateSetting("Console.DualSolver.Show", "Output", true);
             solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
             env->results->usedSolutionStrategy = E_SolutionStrategy::MIQP;
         }

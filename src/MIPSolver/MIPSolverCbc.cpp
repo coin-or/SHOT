@@ -1439,10 +1439,6 @@ void MIPSolverCbc::checkParameters()
 {
     // For stability
     env->settings->updateSetting("Tolerance.TrustLinearConstraintValues", "Primal", false);
-
-    // Show solver output for problems that are normally solved in one iteration
-    if(env->reformulatedProblem->properties.numberOfNonlinearConstraints == 0)
-        env->settings->updateSetting("Console.DualSolver.Show", "Output", true);
 }
 
 int MIPSolverCbc::getNumberOfExploredNodes()
