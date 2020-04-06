@@ -1493,7 +1493,7 @@ void Solver::initializeSettings()
     enumFileFormat.push_back("NL");
     enumFileFormat.push_back("None");
     env->settings->createSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::None),
-        "The format of the problem file", enumFileFormat, true);
+        "The format of the problem file", enumFileFormat, 0, true);
     enumFileFormat.clear();
 
     env->settings->createSetting("ProblemFile", "Input", empty, "The filename of the problem", true);
