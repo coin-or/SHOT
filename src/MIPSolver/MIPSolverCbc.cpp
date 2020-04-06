@@ -252,7 +252,7 @@ void MIPSolverCbc::initializeSolverSettings()
 {
     // Set termination tolerances
     cbcModel->setAllowableGap(env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination") / 1.0);
-    cbcModel->setAllowableFractionGap(env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination") / 1.0);
+    cbcModel->setAllowableFractionGap(env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination") / 1.0);
     osiInterface->setDblParam(
         OsiPrimalTolerance, env->settings->getSetting<double>("Tolerance.LinearConstraint", "Primal"));
     cbcModel->setIntegerTolerance(env->settings->getSetting<double>("Tolerance.Integer", "Primal"));
