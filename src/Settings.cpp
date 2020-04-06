@@ -218,17 +218,20 @@ void Settings::createSetting(
 
 // Enum settings ==================================================================
 
-void Settings::createSetting(
-    std::string name, std::string category, int value, std::string description, VectorString enumDesc, bool isPrivate)
+void Settings::createSetting(std::string name, std::string category, int value, std::string description,
+    VectorString enumDesc, int startValue, bool isPrivate)
 {
     createBaseSetting<int>(name, category, value, description, isPrivate);
-    settingBounds[make_pair(category, name)] = std::make_pair(0, enumDesc.size() - 1);
+    settingBounds[make_pair(category, name)]
+        = std::make_pair((double)startValue, (double)(startValue + enumDesc.size() - 1));
 
-    for(size_t i = 0; i < enumDesc.size(); i++)
+    size_t counter = 0;
+
+    for(int i = startValue; i < (int)(startValue + enumDesc.size()); i++)
     {
-        enumDescriptions[make_tuple(category, name, i)] = enumDesc.at(i);
-
-        output->outputTrace(" Enum value " + std::to_string(i) + ": " + enumDesc.at(i));
+        enumDescriptions[make_tuple(category, name, i)] = enumDesc.at(counter);
+        output->outputTrace(" Enum value " + std::to_string(i) + ": " + enumDesc.at(counter));
+        counter++;
     }
 
     settingEnums[make_pair(category, name)] = true;
@@ -264,19 +267,19 @@ std::string Settings::getEnumDescriptionListMarkup(std::string name, std::string
     return desc.str();
 }
 
-std::vector<std::pair<int, std::string> > Settings::getEnumDescription(std::string name, std::string category)
+std::vector<std::pair<int, std::string>> Settings::getEnumDescription(std::string name, std::string category)
 {
-   std::vector<std::pair<int, std::string> > r;
+    std::vector<std::pair<int, std::string>> r;
 
-   for(auto& E : enumDescriptions)
-   {
-       if(name == std::get<1>(E.first) && category == std::get<0>(E.first))
-       {
-          r.push_back(std::pair<int, std::string>(std::get<2>(E.first), E.second));
-       }
-   }
+    for(auto& E : enumDescriptions)
+    {
+        if(name == std::get<1>(E.first) && category == std::get<0>(E.first))
+        {
+            r.push_back(std::pair<int, std::string>(std::get<2>(E.first), E.second));
+        }
+    }
 
-   return r;
+    return r;
 }
 
 // General methods ================================================================
@@ -713,22 +716,22 @@ VectorString Settings::getSettingIdentifiers(E_SettingType type)
 
 VectorPairString Settings::getSettingSplitIdentifiers(E_SettingType type)
 {
-   VectorPairString names;
+    VectorPairString names;
 
-   for(auto& T : settingTypes)
-   {
-       auto key = T.first;
-       std::string name = T.first.second;
-       std::string category = T.first.first;
+    for(auto& T : settingTypes)
+    {
+        auto key = T.first;
+        std::string name = T.first.second;
+        std::string category = T.first.first;
 
-       if(settingIsPrivate[key])
-           continue; // Do not include an internal setting
+        if(settingIsPrivate[key])
+            continue; // Do not include an internal setting
 
-       if(T.second == type)
-           names.push_back(T.first);
-   }
+        if(T.second == type)
+            names.push_back(T.first);
+    }
 
-   return (names);
+    return (names);
 }
 
 bool Settings::readSettingsFromOSoL(std::string osol)
