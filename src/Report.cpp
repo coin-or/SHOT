@@ -442,14 +442,7 @@ void Report::outputOptionsReport()
 #ifdef HAS_CPLEX
         if(solver == ES_MIPSolver::Cplex)
         {
-            if(env->settings->getSetting<bool>("Cplex.UseGenericCallback", "Subsolver"))
-            {
-                dualSolver = "CPLEX with new callback functionality";
-            }
-            else
-            {
-                dualSolver = "CPLEX with old callback functionality";
-            }
+            dualSolver = "CPLEX";
         }
 #endif
 
