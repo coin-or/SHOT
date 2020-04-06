@@ -23,6 +23,7 @@
 #include "GamsNLinstr.h"
 #ifdef GAMS_BUILD
 #include "GamsLicensing.h"
+#include "GamsHSLInit.h"
 #endif
 
 #if defined(_WIN32)
@@ -87,8 +88,11 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
     assert(auditLicensing != nullptr);
 
     /* if IPOPTH is licensed, use MA27, otherwise Mumps */
-    if(GAMSHSLInit(modelingObject, auditLicensing))
+    if(GAMScheckIpoptLicense(auditLicensing, false))
+    {
+        GamsHSLInit();
         env->settings->updateSetting("Ipopt.LinearSolver", "Subsolver", static_cast<int>(ES_IpoptSolver::ma27));
+    }
     else
         env->settings->updateSetting("Ipopt.LinearSolver", "Subsolver", static_cast<int>(ES_IpoptSolver::mumps));
 #endif

@@ -505,8 +505,6 @@ bool MIPSolverGurobi::createIntegerCut(IntegerCut& integerCut)
             }
             else
             {
-                int wIndex = numberOfVariables;
-                int vIndex = numberOfVariables + 1;
                 numberOfVariables += 2;
 
                 auto w = gurobiModel->addVar(0, getUnboundedVariableBoundValue(), 0.0, GRB_CONTINUOUS,
@@ -858,8 +856,6 @@ bool MIPSolverGurobi::repairInfeasibility()
         std::vector<GRBConstr> originalConstraints;
         VectorDouble relaxParameters;
         int numConstraintsToRepair = 0;
-
-        int hyperplaneCounter = 0;
 
         for(int i = numOrigConstraints; i < numCurrConstraints; i++)
         {

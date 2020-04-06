@@ -2139,8 +2139,6 @@ std::pair<AuxiliaryVariablePtr, bool> TaskReformulateProblem::getAbsoluteValueAu
 
     // Get the max bound
     auto bounds = source->getBounds();
-    double lowerBound = bounds.l();
-    double upperBounds = bounds.u();
 
     auto auxVariable = std::make_shared<AuxiliaryVariable>("s_abs_" + std::to_string(auxVariableCounter + 1),
         auxVariableCounter, E_VariableType::Real, bounds.l(), bounds.u());
