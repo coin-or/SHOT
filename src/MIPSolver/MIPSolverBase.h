@@ -86,6 +86,9 @@ public:
     virtual int addLinearConstraint(
         const std::map<int, double>& elements, double constant, std::string name, bool isGreaterThan)
         = 0;
+    virtual int addLinearConstraint(
+        const std::map<int, double>& elements, double constant, std::string name, bool isGreaterThan, bool allowRepair)
+        = 0;
 
     virtual void activateDiscreteVariables(bool activate) = 0;
 
@@ -110,28 +113,31 @@ public:
         switch(source)
         {
         case E_HyperplaneSource::MIPOptimalRootsearch:
-            identifier = "H_LS_I";
+            identifier = "H_RS_OPT";
+            break;
+        case E_HyperplaneSource::MIPSolutionPoolRootsearch:
+            identifier = "H_RS_POOL";
             break;
         case E_HyperplaneSource::LPRelaxedRootsearch:
-            identifier = "H_LS_R";
+            identifier = "H_RS_REL";
             break;
         case E_HyperplaneSource::MIPOptimalSolutionPoint:
-            identifier = "H_OPT_I";
+            identifier = "H_SP_OPT";
             break;
         case E_HyperplaneSource::MIPSolutionPoolSolutionPoint:
-            identifier = "H_SP_I";
+            identifier = "H_SP_POOL";
             break;
         case E_HyperplaneSource::LPRelaxedSolutionPoint:
-            identifier = "H_OPT_R";
+            identifier = "H_SP_REL";
             break;
         case E_HyperplaneSource::LPFixedIntegers:
-            identifier = "H_FI_R";
+            identifier = "H_FIX";
             break;
         case E_HyperplaneSource::PrimalSolutionSearch:
-            identifier = "H_PH";
+            identifier = "H_PRIM";
             break;
         case E_HyperplaneSource::PrimalSolutionSearchInteriorObjective:
-            identifier = "H_PH_IO";
+            identifier = "H_PRIM_IO";
             break;
         case E_HyperplaneSource::InteriorPointSearch:
             identifier = "H_IP";
@@ -140,7 +146,7 @@ public:
             identifier = "H_CB_R";
             break;
         case E_HyperplaneSource::ObjectiveRootsearch:
-            identifier = "H_LS_OBJ";
+            identifier = "H_RS_OBJ";
             break;
         default:
             break;
@@ -150,6 +156,7 @@ public:
     }
 
     std::vector<int> integerCuts; // Contains the constraint indexes that are integerCuts
+    std::vector<bool> allowRepairOfConstraint; // Whether to allow the added cuts to be relaxed
 
     int prevSolutionLimit = 1;
 

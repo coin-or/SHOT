@@ -1126,6 +1126,12 @@ inline std::optional<SignomialTermPtr> convertExpressionToSignomialTerm(std::sha
 
     for(auto& C : product->children)
     {
+        if(C->getType() == E_NonlinearExpressionTypes::Constant)
+        {
+            signomialTerm->coefficient *= std::dynamic_pointer_cast<ExpressionConstant>(C)->constant;
+            continue;
+        }
+
         auto childSignomial = convertToSignomialTerm(C);
 
         if(!childSignomial) // Not a signomial term

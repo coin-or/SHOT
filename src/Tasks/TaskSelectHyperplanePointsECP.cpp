@@ -106,7 +106,6 @@ void TaskSelectHyperplanePointsECP::run(std::vector<SolutionPoint> solPoints)
             }
 
             selectedNumericValues.emplace_back(i, NCV);
-            addedHyperplanes++;
         }
     }
 
@@ -119,6 +118,7 @@ void TaskSelectHyperplanePointsECP::run(std::vector<SolutionPoint> solPoints)
         hyperplane.sourceConstraint = NCV.constraint;
         hyperplane.sourceConstraintIndex = NCV.constraint->index;
         hyperplane.generatedPoint = solPoints.at(i).point;
+        hyperplane.isSourceConvex = (NCV.constraint->properties.convexity <= E_Convexity::Convex);
 
         if(solPoints.at(i).isRelaxedPoint)
         {
@@ -166,6 +166,7 @@ void TaskSelectHyperplanePointsECP::run(std::vector<SolutionPoint> solPoints)
             hyperplane.sourceConstraint = NCV.constraint;
             hyperplane.sourceConstraintIndex = NCV.constraint->index;
             hyperplane.generatedPoint = solPoints.at(i).point;
+            hyperplane.isSourceConvex = (NCV.constraint->properties.convexity <= E_Convexity::Convex);
 
             if(solPoints.at(i).isRelaxedPoint)
             {

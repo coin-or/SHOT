@@ -52,10 +52,17 @@ public:
 
     int addLinearConstraint(std::map<int, double>& elements, double constant, std::string name) override
     {
-        return (addLinearConstraint(elements, constant, name, false));
+        return (addLinearConstraint(elements, constant, name, false, true));
     }
+
     int addLinearConstraint(
-        const std::map<int, double>& elements, double constant, std::string name, bool isGreaterThan) override;
+        const std::map<int, double>& elements, double constant, std::string name, bool isGreaterThan) override
+    {
+        return (addLinearConstraint(elements, constant, name, isGreaterThan, true));
+    }
+
+    int addLinearConstraint(const std::map<int, double>& elements, double constant, std::string name,
+        bool isGreaterThan, bool allowRepair) override;
 
     bool createHyperplane(Hyperplane hyperplane) override { return (MIPSolverBase::createHyperplane(hyperplane)); }
 
@@ -159,6 +166,7 @@ private:
     long int solLimit;
     double timeLimit = 1e100;
     double cutOff;
+    int numberOfThreads = 1;
 
     std::vector<std::vector<std::pair<std::string, double>>> MIPStarts;
 
