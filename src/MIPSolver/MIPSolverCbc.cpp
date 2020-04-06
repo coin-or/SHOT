@@ -649,7 +649,6 @@ bool MIPSolverCbc::repairInfeasibility()
         VectorDouble relaxParameters;
 
         int numConstraintsToRepair = 0;
-        int hyperplaneCounter = 0;
 
         auto rowSense = osiInterface->getRowSense();
 
@@ -1001,7 +1000,7 @@ void MIPSolverCbc::addMIPStart(VectorDouble point)
 
     auto numVariables = osiInterface->getNumCols();
 
-    while(variableValues.size() < numVariables)
+    while(variableValues.size() < (size_t)numVariables)
     {
         std::pair<std::string, double> tmpPair;
 
@@ -1071,7 +1070,7 @@ void MIPSolverCbc::deleteMIPStarts() { MIPStarts.clear(); }
 
 bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
 {
-    assert(integerCut.variableValues.size() == env->reformulatedProblem->properties.numberOfDiscreteVariables);
+    assert(integerCut.variableValues.size() == (size_t)env->reformulatedProblem->properties.numberOfDiscreteVariables);
     bool allowIntegerCutRepair = env->settings->getSetting<bool>("MIP.InfeasibilityRepair.IntegerCuts", "Dual");
 
     int numConstraintsBefore = osiInterface->getNumRows();

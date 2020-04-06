@@ -745,8 +745,6 @@ bool MIPSolverCplex::repairInfeasibility()
 
         relax.add(numOrigConstraints, 0.0);
 
-        int hyperplaneCounter = 0;
-
         for(int i = numOrigConstraints; i < numCurrConstraints; i++)
         {
             if(allowRepairOfConstraint[i])
@@ -1464,8 +1462,6 @@ bool MIPSolverCplex::createIntegerCut(IntegerCut& integerCut)
             }
             else
             {
-                int wIndex = numberOfVariables;
-                int vIndex = numberOfVariables + 1;
                 numberOfVariables += 2;
 
                 auto w = IloNumVar(cplexEnv, 0, getUnboundedVariableBoundValue(), ILOFLOAT,
