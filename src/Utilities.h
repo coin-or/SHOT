@@ -129,4 +129,6 @@ SparseVariableMatrix combineSparseVariableMatrices(
 E_Convexity combineConvexity(const E_Convexity first, const E_Convexity second);
 
 E_Monotonicity combineMonotonicity(const E_Monotonicity first, const E_Monotonicity second);
+
+std::vector<std::string> splitStringByCharacter(const std::string& source, char character);
 } // namespace SHOT::Utilities
