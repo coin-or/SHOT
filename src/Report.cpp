@@ -508,52 +508,10 @@ void Report::outputOptionsReport()
 
     report << " Primal NLP solver:          ";
 
-    switch(static_cast<ES_PrimalNLPSolver>(env->results->usedPrimalNLPSolver))
-    {
-    case(ES_PrimalNLPSolver::None):
+    if(static_cast<ES_PrimalNLPSolver>(env->results->usedPrimalNLPSolver) == ES_PrimalNLPSolver::None)
         report << "none";
-        break;
-    case(ES_PrimalNLPSolver::GAMS):
-        report << "GAMS ";
-        report << env->results->usedPrimalNLPSolverVersion;
-        report << " (";
-        report << env->settings->getSetting<std::string>("GAMS.NLP.Solver", "Subsolver");
-        report << ")\r\n";
-        break;
-    case(ES_PrimalNLPSolver::Ipopt):
-        report << "Ipopt " << env->results->usedPrimalNLPSolverVersion << " ";
-
-        switch(static_cast<ES_IpoptSolver>(env->settings->getSetting<int>("Ipopt.LinearSolver", "Subsolver")))
-        {
-        case(ES_IpoptSolver::ma27):
-            report << "with HSL MA27 linear solver";
-            break;
-
-        case(ES_IpoptSolver::ma57):
-            report << "with HSL MA57 linear solver";
-            break;
-
-        case(ES_IpoptSolver::ma86):
-            report << "with HSL MA86 linear solver";
-            break;
-
-        case(ES_IpoptSolver::ma97):
-            report << "with HSL MA97 linear solver";
-            break;
-
-        case(ES_IpoptSolver::mumps):
-            report << "with MUMPS linear solver";
-            break;
-        default:
-            report << "with Ipopt default linear solver";
-        }
-
-        report << "\r\n";
-        break;
-    default:
-        report << "none";
-        break;
-    }
+    else
+        report << env->results->usedPrimalNLPSolverDescription;
 
     report << "\r\n";
 

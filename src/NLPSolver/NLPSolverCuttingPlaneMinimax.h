@@ -49,7 +49,7 @@ public:
 
     void saveProblemToFile(std::string fileName) override;
 
-    std::string getSolverVersion() override { return (""); };
+    std::string getSolverDescription() override { return ("Built in minmax solver"); };
 
 private:
     std::unique_ptr<IMIPSolver> LPSolver;

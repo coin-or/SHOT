@@ -53,7 +53,7 @@ public:
     void updateVariableLowerBound(int variableIndex, double bound) override;
     void updateVariableUpperBound(int variableIndex, double bound) override;
 
-    std::string getSolverVersion() override { return (std::to_string(GAMSMAJOR) + "." + std::to_string(GAMSMINOR)); };
+    std::string getSolverDescription() override;
 
 protected:
     E_NLPSolutionStatus solveProblemInstance() override;
@@ -62,5 +62,6 @@ protected:
     VectorDouble getVariableUpperBounds() override;
 
 private:
+    std::string selectedNLPSolver = "";
 };
 } // namespace SHOT
