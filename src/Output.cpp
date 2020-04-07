@@ -10,6 +10,11 @@
 
 #include "Output.h"
 
+#include "Environment.h"
+#include "Utilities.h"
+
+#include <iostream>
+
 namespace SHOT
 {
 Output::Output()
@@ -20,7 +25,7 @@ Output::Output()
 #endif
 
     consoleSink = std::make_shared<spdlog::sinks::stdout_sink_st>();
-    std::vector<spdlog::sink_ptr> sinks{ consoleSink };
+    std::vector<spdlog::sink_ptr> sinks { consoleSink };
     logger = std::make_shared<spdlog::logger>("multi_sink", sinks.begin(), sinks.end());
 
     logger->set_pattern("%v");
@@ -92,7 +97,7 @@ void Output::setLogLevels(E_LogLevel consoleLogLevel, E_LogLevel fileLogLevel)
         break;
     }
 
-    if( fileSink != NULL )
+    if(fileSink != NULL)
         switch(fileLogLevel)
         {
         case E_LogLevel::Off:
@@ -156,10 +161,48 @@ void Output::setFileSink(std::string filename)
     fileSink->set_pattern("%v");
     fileSink->set_level(consoleSink->level());
 
-    std::vector<spdlog::sink_ptr> sinks{ consoleSink, fileSink };
+    std::vector<spdlog::sink_ptr> sinks { consoleSink, fileSink };
     logger = std::make_shared<spdlog::logger>("multi_sink", sinks.begin(), sinks.end());
 
     logger->set_pattern("%v");
 }
 
+int OutputStream::overflow(int c)
+{
+    if(std::istream::traits_type::to_char_type(c) != '\n')
+    {
+        ss.put(c);
+    }
+    else
+    {
+        switch(logLevel)
+        {
+        case(E_LogLevel::Info):
+            env->output->outputInfo(fmt::format("      | {} ", ss.str()));
+            break;
+
+        case(E_LogLevel::Debug):
+            env->output->outputDebug(fmt::format("      | {} ", ss.str()));
+            break;
+
+        case(E_LogLevel::Error):
+            env->output->outputError(fmt::format("      | {} ", ss.str()));
+            break;
+
+        case(E_LogLevel::Warning):
+            env->output->outputWarning(fmt::format("      | {} ", ss.str()));
+            break;
+
+        case(E_LogLevel::Trace):
+            env->output->outputTrace(fmt::format("      | {} ", ss.str()));
+            break;
+
+        default:
+            break;
+        }
+        ss.str(std::string());
+    }
+
+    return 0;
+}
 } // namespace SHOT

@@ -19,6 +19,7 @@
 
 namespace SHOT
 {
+
 class DllExport Output
 {
 public:
@@ -44,5 +45,21 @@ private:
     std::shared_ptr<spdlog::sinks::basic_file_sink_st> fileSink;
 
     std::shared_ptr<spdlog::logger> logger;
+};
+
+class Environment;
+using EnvironmentPtr = std::shared_ptr<Environment>;
+
+class OutputStream : public std::streambuf, public std::ostream
+{
+private:
+    EnvironmentPtr env;
+    std::stringstream ss;
+    E_LogLevel logLevel;
+
+public:
+    OutputStream(EnvironmentPtr envPtr, E_LogLevel logLevel) : std::ostream(this), env(envPtr), logLevel(logLevel) {}
+
+    int overflow(int c = std::istream::traits_type::eof());
 };
 }
