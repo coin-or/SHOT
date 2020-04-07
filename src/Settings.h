@@ -170,7 +170,7 @@ public:
         double minVal = SHOT_DBL_MIN, double maxVal = SHOT_DBL_MAX, bool isPrivate = false);
 
     void createSetting(std::string name, std::string category, int value, std::string description,
-        VectorString enumDesc, int startValue, bool isPrivate = false);
+        VectorString enumDesc, int startValue = 0, bool isPrivate = false);
 
     void createSetting(
         std::string name, std::string category, bool value, std::string description, bool isPrivate = false);
