@@ -984,4 +984,38 @@ void NLPSolverIpoptBase::updateSettings() {}
 void NLPSolverIpoptBase::saveOptionsToFile([[maybe_unused]] std::string fileName) {}
 
 void NLPSolverIpoptBase::saveProblemToFile([[maybe_unused]] std::string fileName) {}
+
+std::string NLPSolverIpoptBase::getSolverDescription()
+{
+    std::string linearSolver = "";
+
+    switch(static_cast<ES_IpoptSolver>(env->settings->getSetting<int>("Ipopt.LinearSolver", "Subsolver")))
+    {
+    case(ES_IpoptSolver::ma27):
+        linearSolver = "HSL MA27";
+        break;
+
+    case(ES_IpoptSolver::ma57):
+        linearSolver = "HSL MA57";
+        break;
+
+    case(ES_IpoptSolver::ma86):
+        linearSolver = "HSL MA86";
+        break;
+
+    case(ES_IpoptSolver::ma97):
+        linearSolver = "HSL MA97";
+        break;
+
+    case(ES_IpoptSolver::mumps):
+        linearSolver = "MUMPS";
+        break;
+    default:
+        linearSolver = "default linear solver";
+    }
+
+    std::string description = fmt::format("Ipopt {} (with {})", IPOPT_VERSION, linearSolver);
+
+    return (description);
+};
 } // namespace SHOT

@@ -35,39 +35,53 @@ NLPSolverGAMS::NLPSolverGAMS(EnvironmentPtr envPtr, gmoHandle_t modelingObject, 
     timelimit = env->settings->getSetting<double>("FixedInteger.TimeLimit", "Primal");
     iterlimit = env->settings->getSetting<int>("FixedInteger.IterationLimit", "Primal");
 
-    if( nlpsolver == "auto" )
+    if(nlpsolver == "auto")
     {
         assert(auditLicensing != nullptr);
-        if( !palLicenseCheckSubSys(auditLicensing, (char*)"CO") )
+        if(!palLicenseCheckSubSys(auditLicensing, (char*)"CO"))
         {
             env->output->outputDebug("CONOPT licensed. Using CONOPT as GAMS NLP solver.");
             nlpsolver = "conopt";
+            selectedNLPSolver = "CONOPT (automatically selected)";
         }
-        else if( !palLicenseCheckSubSys(auditLicensing, (char*)"KN") )
+        else if(!palLicenseCheckSubSys(auditLicensing, (char*)"KN"))
         {
             env->output->outputDebug("CONOPT not licensed. KNITRO licensed. Using KNITRO as GAMS NLP solver.");
             nlpsolver = "knitro";
+            selectedNLPSolver = "KNITRO (automatically selected)";
         }
-        else if( !palLicenseCheckSubSys(auditLicensing, (char*)"SN") )
+        else if(!palLicenseCheckSubSys(auditLicensing, (char*)"SN"))
         {
             env->output->outputDebug("CONOPT and KNITRO not licensed. SNOPT licensed. Using SNOPT as GAMS NLP solver.");
             nlpsolver = "snopt";
+            selectedNLPSolver = "SNOPT (automatically selected)";
         }
-        else if( !palLicenseCheckSubSys(auditLicensing, (char*)"M5") )
+        else if(!palLicenseCheckSubSys(auditLicensing, (char*)"M5"))
         {
-            env->output->outputDebug("CONOPT, KNITRO, and SNOPT not licensed. MINOS licensed. Using MINOS as GAMS NLP solver.");
+            env->output->outputDebug(
+                "CONOPT, KNITRO, and SNOPT not licensed. MINOS licensed. Using MINOS as GAMS NLP solver.");
             nlpsolver = "minos";
+            selectedNLPSolver = "MINOS (automatically selected)";
         }
-        else if( !palLicenseCheckSubSys(auditLicensing, (char*)"IP") )
+        else if(!palLicenseCheckSubSys(auditLicensing, (char*)"IP"))
         {
-            env->output->outputDebug("CONOPT, KNITRO, SNOPT, and MINOS not licensed. IPOPTH licensed. Using IPOPTH as GAMS NLP solver.");
+            env->output->outputDebug(
+                "CONOPT, KNITRO, SNOPT, and MINOS not licensed. IPOPTH licensed. Using IPOPTH as GAMS NLP solver.");
             nlpsolver = "ipopth";
+            selectedNLPSolver = "IPOPTH (automatically selected)";
         }
         else
         {
-            env->output->outputDebug("CONOPT, KNITRO, SNOPT, MINOS, and IPOPTH not licensed. Using IPOPT as GAMS NLP solver.");
+            env->output->outputDebug(
+                "CONOPT, KNITRO, SNOPT, MINOS, and IPOPTH not licensed. Using IPOPT as GAMS NLP solver.");
             nlpsolver = "ipopt";
+            selectedNLPSolver = "IPOPT (automatically selected)";
         }
+    }
+    else
+    {
+        selectedNLPSolver = nlpsolver;
+        std::transform(selectedNLPSolver.begin(), selectedNLPSolver.end(), selectedNLPSolver.begin(), ::toupper);
     }
 
     // TODO: showlog seems to have no effect...
@@ -238,5 +252,10 @@ void NLPSolverGAMS::updateVariableUpperBound(int variableIndex, double bound)
     gmoSetAltVarUpperOne(modelingObject, variableIndex, bound);
 }
 
-void updateVariableUpperBound(double bound);
+std::string NLPSolverGAMS::getSolverDescription()
+{
+    std::string description = fmt::format("{} in GAMS {}.{}", selectedNLPSolver, GAMSMAJOR, GAMSMINOR);
+
+    return (description);
+};
 } // namespace SHOT

@@ -66,7 +66,6 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(Environment
 
         env->results->usedPrimalNLPSolver = ES_PrimalNLPSolver::Ipopt;
         NLPSolver = std::make_shared<NLPSolverIpoptRelaxed>(env, sourceProblem);
-        env->results->usedPrimalNLPSolverVersion = NLPSolver->getSolverVersion();
         break;
     }
 #endif
@@ -82,6 +81,7 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(Environment
         NLPSolver = std::make_shared<NLPSolverGAMS>(env,
             (std::dynamic_pointer_cast<ModelingSystemGAMS>(env->modelingSystem))->modelingObject,
             (std::dynamic_pointer_cast<ModelingSystemGAMS>(env->modelingSystem))->auditLicensing);
+
         break;
     }
 #endif
@@ -90,6 +90,8 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(Environment
         // We should never get here since there is a check in Solver.cpp that makes sure that the correct solver is used
         break;
     }
+
+    env->results->usedPrimalNLPSolverDescription = NLPSolver->getSolverDescription();
 
     if(env->settings->getSetting<bool>("FixedInteger.CreateInfeasibilityCut", "Primal"))
     {
