@@ -1709,6 +1709,11 @@ void Solver::verifySettings()
 
     if(env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination") < 1e-8)
         (env->settings->updateSetting("ObjectiveGap.Absolute", "Termination", 1e-10));
+
+    // Set correct iteration detail output when showing dual solver output
+    if(env->settings->getSetting<bool>("Console.DualSolver.Show", "Output"))
+        env->settings->updateSetting(
+            "Console.Iteration.Detail", "Output", static_cast<int>(ES_IterationOutputDetail::Full));
 }
 
 void Solver::setConvexityBasedSettings()
