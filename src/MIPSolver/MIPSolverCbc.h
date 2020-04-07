@@ -14,6 +14,7 @@
 #include <optional>
 
 #include "CoinPackedVector.hpp"
+#include "CoinMessageHandler.hpp"
 
 class OsiClpSolverInterface;
 class CbcModel;
@@ -21,6 +22,28 @@ class CoinModel;
 
 namespace SHOT
 {
+
+class CbcMessageHandler : public CoinMessageHandler
+{
+private:
+    EnvironmentPtr env;
+
+public:
+    CbcMessageHandler(EnvironmentPtr envPtr) : CoinMessageHandler() { env = envPtr; }
+
+    CbcMessageHandler(const CbcMessageHandler& r) : CoinMessageHandler(r) {}
+
+    CbcMessageHandler& operator=(const CbcMessageHandler& r)
+    {
+        CoinMessageHandler::operator=(r);
+        return *this;
+    }
+
+    virtual CoinMessageHandler* clone() { return new CbcMessageHandler(*this); }
+
+    virtual int print();
+};
+
 class MIPSolverCbc : public IMIPSolver, MIPSolverBase
 {
 public:
@@ -160,6 +183,7 @@ private:
     std::unique_ptr<OsiClpSolverInterface> osiInterface;
     std::unique_ptr<CbcModel> cbcModel;
     std::unique_ptr<CoinModel> coinModel;
+    std::unique_ptr<CbcMessageHandler> messageHandler;
 
     CoinPackedVector objectiveLinearExpression;
 
@@ -172,4 +196,5 @@ private:
 
     std::vector<E_VariableType> variableTypes;
 };
+
 } // namespace SHOT
