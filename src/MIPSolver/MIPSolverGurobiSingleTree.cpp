@@ -171,9 +171,15 @@ E_ProblemSolutionStatus MIPSolverGurobiSingleTree::solveProblem()
 
 void GurobiCallback::callback()
 {
-    if(where == GRB_CB_POLLING || where == GRB_CB_PRESOLVE || where == GRB_CB_SIMPLEX || where == GRB_CB_MESSAGE
-        || where == GRB_CB_BARRIER)
+    if(where == GRB_CB_POLLING || where == GRB_CB_PRESOLVE || where == GRB_CB_SIMPLEX || where == GRB_CB_BARRIER)
         return;
+
+    if(where == GRB_CB_MESSAGE && showOutput) // Show output on console and log
+    {
+        auto message = getStringInfo(GRB_CB_MSG_STRING);
+        message.erase(std::remove(message.begin(), message.end(), '\n'), message.end());
+        env->output->outputInfo(fmt::format("      | {} ", message));
+    }
 
     try
     {
@@ -558,10 +564,11 @@ bool GurobiCallback::createHyperplane(Hyperplane hyperplane)
 GurobiCallback::GurobiCallback(GRBVar* xvars, EnvironmentPtr envPtr)
 {
     env = envPtr;
-    lastUpdatedPrimal = env->results->getPrimalBound();
-
     vars = xvars;
 
+    showOutput = env->settings->getSetting<bool>("Console.DualSolver.Show", "Output");
+
+    lastUpdatedPrimal = env->results->getPrimalBound();
     isMinimization = env->reformulatedProblem->objectiveFunction->properties.isMinimize;
 
     env->solutionStatistics.iterationLastLazyAdded = 0;

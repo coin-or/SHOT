@@ -29,6 +29,7 @@ protected:
 private:
     int lastExploredNodes = 0;
     int lastOpenNodes = 0;
+    bool showOutput = false;
 
     bool createHyperplane(Hyperplane hyperplane);
 

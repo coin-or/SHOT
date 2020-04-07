@@ -368,9 +368,8 @@ void MIPSolverGurobi::initializeSolverSettings()
 {
     try
     {
-        // Control solver output
-        if(!env->settings->getSetting<bool>("Console.DualSolver.Show", "Output"))
-            gurobiModel->getEnv().set(GRB_IntParam_OutputFlag, 0);
+        // Console output controlled in callback, but need to disable it so messages won't appear twice
+        gurobiModel->getEnv().set(GRB_IntParam_LogToConsole, 0);
 
         // Set termination tolerances
         gurobiModel->getEnv().set(
@@ -1351,14 +1350,23 @@ std::string MIPSolverGurobi::getSolverVersion()
     return (fmt::format("{}.{}", std::to_string(GRB_VERSION_MAJOR), std::to_string(GRB_VERSION_MINOR)));
 }
 
-GurobiInfoCallback::GurobiInfoCallback(EnvironmentPtr envPtr) : env(envPtr) {}
+GurobiInfoCallback::GurobiInfoCallback(EnvironmentPtr envPtr) : env(envPtr)
+{
+    showOutput = env->settings->getSetting<bool>("Console.DualSolver.Show", "Output");
+}
 
-// Used to get the number of open nodes
 void GurobiInfoCallback::callback()
 {
     try
     {
-        if(where == GRB_CB_MIP)
+        if(where == GRB_CB_MESSAGE && showOutput) // Show output on console and log
+        {
+            auto message = getStringInfo(GRB_CB_MSG_STRING);
+            message.erase(std::remove(message.begin(), message.end(), '\n'), message.end());
+            env->output->outputInfo(fmt::format("      | {} ", message));
+        }
+        else if(where == GRB_CB_MIP)
+        // Used to get the number of open nodes
         {
             auto currIter = env->results->getCurrentIteration();
             currIter->numberOfExploredNodes = (int)getDoubleInfo(GRB_CB_MIP_NODCNT);

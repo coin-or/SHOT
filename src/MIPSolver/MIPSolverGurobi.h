@@ -172,5 +172,6 @@ protected:
 
 private:
     EnvironmentPtr env;
+    bool showOutput = false;
 };
 } // namespace SHOT
