@@ -23,6 +23,8 @@
 
 namespace SHOT
 {
+class OutputStream;
+
 class MIPSolverCplex : public IMIPSolver, public MIPSolverBase
 {
 public:
@@ -164,6 +166,8 @@ public:
 
     IloModel cplexModel;
     IloCplex cplexInstance;
+
+    std::unique_ptr<OutputStream> cplexOutputStream;
 
 protected:
     IloEnv cplexEnv;
