@@ -16,12 +16,12 @@
 namespace SHOT
 {
 
-class GurobiCallback : public GRBCallback, public MIPSolverCallbackBase
+class GurobiCallbackSingleTree : public GRBCallback, public MIPSolverCallbackBase
 {
 public:
     GRBVar* vars;
-    GurobiCallback(GRBVar* xvars, EnvironmentPtr envPtr);
-    ~GurobiCallback();
+    GurobiCallbackSingleTree(GRBVar* xvars, EnvironmentPtr envPtr);
+    ~GurobiCallbackSingleTree();
 
 protected:
     void callback() override;
@@ -56,6 +56,6 @@ public:
 
 private:
     bool isCallbackInitialized = false;
-    std::unique_ptr<GurobiCallback> gurobiCallback;
+    std::unique_ptr<GurobiCallbackSingleTree> gurobiCallback;
 };
 } // namespace SHOT

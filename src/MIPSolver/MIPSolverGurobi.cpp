@@ -762,7 +762,7 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
             modelUpdated = false;
         }
 
-        GurobiInfoCallback gurobiCallback = GurobiInfoCallback(env);
+        auto gurobiCallback = GurobiCallbackMultiTree(env);
         gurobiModel->setCallback(&gurobiCallback);
         gurobiModel->optimize();
 
@@ -818,7 +818,7 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
         {
             gurobiModel->update();
 
-            GurobiInfoCallback gurobiCallback = GurobiInfoCallback(env);
+            auto gurobiCallback = GurobiCallbackMultiTree(env);
             gurobiModel->setCallback(&gurobiCallback);
             gurobiModel->optimize();
 
@@ -1350,12 +1350,12 @@ std::string MIPSolverGurobi::getSolverVersion()
     return (fmt::format("{}.{}", std::to_string(GRB_VERSION_MAJOR), std::to_string(GRB_VERSION_MINOR)));
 }
 
-GurobiInfoCallback::GurobiInfoCallback(EnvironmentPtr envPtr) : env(envPtr)
+GurobiCallbackMultiTree::GurobiCallbackMultiTree(EnvironmentPtr envPtr) : env(envPtr)
 {
     showOutput = env->settings->getSetting<bool>("Console.DualSolver.Show", "Output");
 }
 
-void GurobiInfoCallback::callback()
+void GurobiCallbackMultiTree::callback()
 {
     try
     {
