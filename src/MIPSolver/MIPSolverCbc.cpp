@@ -44,6 +44,8 @@ bool MIPSolverCbc::initializeProblem()
     osiInterface = std::make_unique<OsiClpSolverInterface>();
     coinModel = std::make_unique<CoinModel>();
 
+    messageHandler = std::make_unique<CbcMessageHandler>(env);
+
     cachedSolutionHasChanged = true;
     isVariablesFixed = false;
 
@@ -281,6 +283,8 @@ void MIPSolverCbc::initializeSolverSettings()
     }
     else
         numberOfThreads = 1;
+
+    cbcModel->passInMessageHandler(messageHandler.get());
 }
 
 int MIPSolverCbc::addLinearConstraint(
@@ -1586,4 +1590,16 @@ int MIPSolverCbc::getNumberOfExploredNodes()
 }
 
 std::string MIPSolverCbc::getSolverVersion() { return (CBC_VERSION); }
+
+int CbcMessageHandler ::print()
+{
+    std::string message(CoinMessageHandler::messageBuffer());
+
+    auto lines = Utilities::splitStringByCharacter(CoinMessageHandler::messageBuffer(), '\n');
+
+    for(auto const line : lines)
+        env->output->outputInfo(fmt::format("      | {} ", line));
+
+    return 0;
+}
 } // namespace SHOT

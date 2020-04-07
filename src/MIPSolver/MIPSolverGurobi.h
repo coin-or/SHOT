@@ -162,15 +162,16 @@ public:
 private:
 };
 
-class GurobiInfoCallback : public GRBCallback
+class GurobiCallbackMultiTree : public GRBCallback
 {
 public:
-    GurobiInfoCallback(EnvironmentPtr envPtr);
+    GurobiCallbackMultiTree(EnvironmentPtr envPtr);
 
 protected:
     void callback() override;
 
 private:
     EnvironmentPtr env;
+    bool showOutput = false;
 };
 } // namespace SHOT

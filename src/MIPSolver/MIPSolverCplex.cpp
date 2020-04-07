@@ -349,14 +349,23 @@ void MIPSolverCplex::initializeSolverSettings()
     try
     {
         // Control solver output
-        if(!env->settings->getSetting<bool>("Console.DualSolver.Show", "Output"))
+        if(env->settings->getSetting<bool>("Console.DualSolver.Show", "Output"))
+        {
+            cplexOutputStream = std::make_unique<OutputStream>(env, E_LogLevel::Info);
+            cplexInstance.setOut(*cplexOutputStream);
+            cplexInstance.setWarning(cplexEnv.getNullStream());
+        }
+        else
         {
             cplexInstance.setOut(cplexEnv.getNullStream());
 
-            if(env->settings->getSetting<int>("Console.LogLevel", "Output") >= static_cast<int>(E_LogLevel::Debug))
+            if(env->settings->getSetting<int>("Console.LogLevel", "Output") <= static_cast<int>(E_LogLevel::Debug))
             {
-                cplexInstance.setWarning(cplexEnv.getNullStream());
+                cplexOutputStream = std::make_unique<OutputStream>(env, E_LogLevel::Info);
+                cplexInstance.setWarning(*cplexOutputStream);
             }
+            else
+                cplexInstance.setWarning(cplexEnv.getNullStream());
         }
 
         // Set termination tolerances

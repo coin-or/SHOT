@@ -94,11 +94,6 @@ void Report::outputIterationDetail(int iterationNumber, std::string iterationDes
             this->outputIterationDetailHeader();
         }
 
-        bool showConsoleOutput = env->settings->getSetting<bool>("Console.DualSolver.Show", "Output");
-
-        if(showConsoleOutput)
-            env->output->outputInfo("");
-
         iterationsWithoutPrintoutCounter = 0;
         iterationPrintoutsSinceLastHeader++;
         lastIterationOutputTimeStamp = env->timing->getElapsedTime("Total");
@@ -187,9 +182,6 @@ void Report::outputIterationDetail(int iterationNumber, std::string iterationDes
         }
 
         env->output->outputDebug(nodes.str());
-
-        if(showConsoleOutput)
-            env->output->outputInfo("");
     }
     catch(...)
     {

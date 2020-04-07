@@ -89,7 +89,7 @@ E_ProblemSolutionStatus MIPSolverGurobiSingleTree::solveProblem()
     {
         if(!isCallbackInitialized)
         {
-            gurobiCallback = std::make_unique<GurobiCallback>(gurobiModel->getVars(), env);
+            gurobiCallback = std::make_unique<GurobiCallbackSingleTree>(gurobiModel->getVars(), env);
             isCallbackInitialized = true;
         }
 
@@ -145,7 +145,7 @@ E_ProblemSolutionStatus MIPSolverGurobiSingleTree::solveProblem()
 
             if(!isCallbackInitialized)
             {
-                gurobiCallback = std::make_unique<GurobiCallback>(gurobiModel->getVars(), env);
+                gurobiCallback = std::make_unique<GurobiCallbackSingleTree>(gurobiModel->getVars(), env);
                 isCallbackInitialized = true;
             }
 
@@ -169,11 +169,17 @@ E_ProblemSolutionStatus MIPSolverGurobiSingleTree::solveProblem()
     return (MIPSolutionStatus);
 }
 
-void GurobiCallback::callback()
+void GurobiCallbackSingleTree::callback()
 {
-    if(where == GRB_CB_POLLING || where == GRB_CB_PRESOLVE || where == GRB_CB_SIMPLEX || where == GRB_CB_MESSAGE
-        || where == GRB_CB_BARRIER)
+    if(where == GRB_CB_POLLING || where == GRB_CB_PRESOLVE || where == GRB_CB_SIMPLEX || where == GRB_CB_BARRIER)
         return;
+
+    if(where == GRB_CB_MESSAGE && showOutput) // Show output on console and log
+    {
+        auto message = getStringInfo(GRB_CB_MSG_STRING);
+        message.erase(std::remove(message.begin(), message.end(), '\n'), message.end());
+        env->output->outputInfo(fmt::format("      | {} ", message));
+    }
 
     try
     {
@@ -493,7 +499,7 @@ void GurobiCallback::callback()
     }
 }
 
-bool GurobiCallback::createHyperplane(Hyperplane hyperplane)
+bool GurobiCallbackSingleTree::createHyperplane(Hyperplane hyperplane)
 {
     try
     {
@@ -555,13 +561,14 @@ bool GurobiCallback::createHyperplane(Hyperplane hyperplane)
     return (true);
 }
 
-GurobiCallback::GurobiCallback(GRBVar* xvars, EnvironmentPtr envPtr)
+GurobiCallbackSingleTree::GurobiCallbackSingleTree(GRBVar* xvars, EnvironmentPtr envPtr)
 {
     env = envPtr;
-    lastUpdatedPrimal = env->results->getPrimalBound();
-
     vars = xvars;
 
+    showOutput = env->settings->getSetting<bool>("Console.DualSolver.Show", "Output");
+
+    lastUpdatedPrimal = env->results->getPrimalBound();
     isMinimization = env->reformulatedProblem->objectiveFunction->properties.isMinimize;
 
     env->solutionStatistics.iterationLastLazyAdded = 0;
@@ -610,9 +617,9 @@ GurobiCallback::GurobiCallback(GRBVar* xvars, EnvironmentPtr envPtr)
     lastUpdatedPrimal = env->results->getPrimalBound();
 }
 
-GurobiCallback::~GurobiCallback() { delete[] vars; }
+GurobiCallbackSingleTree::~GurobiCallbackSingleTree() { delete[] vars; }
 
-bool GurobiCallback::createIntegerCut(IntegerCut& integerCut)
+bool GurobiCallbackSingleTree::createIntegerCut(IntegerCut& integerCut)
 {
     if(!integerCut.areAllVariablesBinary)
     {
@@ -656,7 +663,7 @@ bool GurobiCallback::createIntegerCut(IntegerCut& integerCut)
     return (true);
 }
 
-void GurobiCallback::addLazyConstraint(std::vector<SolutionPoint> candidatePoints)
+void GurobiCallbackSingleTree::addLazyConstraint(std::vector<SolutionPoint> candidatePoints)
 {
     try
     {
