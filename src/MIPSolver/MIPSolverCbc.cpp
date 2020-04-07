@@ -433,11 +433,77 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
         argv[2] = strdup("off");
 
     argv[3] = strdup("-nodestrategy");
-    arg = env->settings->getSetting<std::string>("Cbc.NodeStrategy", "Subsolver");
+
+    switch(env->settings->getSetting<int>("Cbc.NodeStrategy", "Subsolver"))
+    {
+    case 0:
+        arg = "depth";
+        break;
+
+    case 1:
+        arg = "downdepth";
+        break;
+
+    case 2:
+        arg = "downfewest";
+        break;
+
+    case 3:
+        arg = "fewest";
+        break;
+
+    case 4:
+        arg = "hybrid";
+        break;
+
+    case 5:
+        arg = "updepth";
+        break;
+
+    case 6:
+        arg = "upfewest";
+        break;
+
+    default:
+        arg = "hybrid";
+        break;
+    }
+
     argv[4] = strdup(arg.c_str());
 
     argv[5] = strdup("-scaling");
-    arg = env->settings->getSetting<std::string>("Cbc.Scaling", "Subsolver");
+
+    switch(env->settings->getSetting<int>("Cbc.Scaling", "Subsolver"))
+    {
+    case 0:
+        arg = "automatic";
+        break;
+
+    case 1:
+        arg = "dynamic";
+        break;
+
+    case 2:
+        arg = "equilibrium";
+        break;
+
+    case 3:
+        arg = "geometric";
+        break;
+
+    case 4:
+        arg = "off";
+        break;
+
+    case 5:
+        arg = "rowsonly";
+        break;
+
+    default:
+        arg = "automatic";
+        break;
+    }
+
     argv[6] = strdup(arg.c_str());
 
     argv[7] = strdup("-strategy");
@@ -748,11 +814,77 @@ bool MIPSolverCbc::repairInfeasibility()
             argv[2] = strdup("off");
 
         argv[3] = strdup("-nodestrategy");
-        arg = env->settings->getSetting<std::string>("Cbc.NodeStrategy", "Subsolver");
+
+        switch(env->settings->getSetting<int>("Cbc.NodeStrategy", "Subsolver"))
+        {
+        case 0:
+            arg = "depth";
+            break;
+
+        case 1:
+            arg = "downdepth";
+            break;
+
+        case 2:
+            arg = "downfewest";
+            break;
+
+        case 3:
+            arg = "fewest";
+            break;
+
+        case 4:
+            arg = "hybrid";
+            break;
+
+        case 5:
+            arg = "updepth";
+            break;
+
+        case 6:
+            arg = "upfewest";
+            break;
+
+        default:
+            arg = "hybrid";
+            break;
+        }
+
         argv[4] = strdup(arg.c_str());
 
         argv[5] = strdup("-scaling");
-        arg = env->settings->getSetting<std::string>("Cbc.Scaling", "Subsolver");
+
+        switch(env->settings->getSetting<int>("Cbc.Scaling", "Subsolver"))
+        {
+        case 0:
+            arg = "automatic";
+            break;
+
+        case 1:
+            arg = "dynamic";
+            break;
+
+        case 2:
+            arg = "equilibrium";
+            break;
+
+        case 3:
+            arg = "geometric";
+            break;
+
+        case 4:
+            arg = "off";
+            break;
+
+        case 5:
+            arg = "rowsonly";
+            break;
+
+        default:
+            arg = "automatic";
+            break;
+        }
+
         argv[6] = strdup(arg.c_str());
 
         argv[7] = strdup("-strategy");

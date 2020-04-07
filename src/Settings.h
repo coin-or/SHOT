@@ -106,13 +106,13 @@ public:
     template <typename T> T getSetting(std::string name, std::string category)
     {
         // Check that setting is of the correct type
-       using value_type
+        using value_type
 #ifndef _MSC_VER
-        [[maybe_unused]]
+            [[maybe_unused]]
 #endif
-            = typename std::enable_if<std::is_same<std::string, T>::value
-                || std::is_same<double, T>::value || std::is_same<int, T>::value || std::is_same<bool, T>::value,
-            T>::type;
+            = typename std::enable_if<std::is_same<std::string, T>::value || std::is_same<double, T>::value
+                    || std::is_same<int, T>::value || std::is_same<bool, T>::value,
+                T>::type;
 
         PairString key = make_pair(category, name);
 
@@ -152,12 +152,12 @@ public:
 
     std::string getSettingDescription(std::string name, std::string category)
     {
-       return settingDescriptions.at(PairString(category, name));
+        return settingDescriptions.at(PairString(category, name));
     }
 
     PairDouble getSettingBounds(std::string name, std::string category)
     {
-       return settingBounds.at(PairString(category, name));
+        return settingBounds.at(PairString(category, name));
     }
 
     void createSetting(
@@ -170,7 +170,7 @@ public:
         double minVal = SHOT_DBL_MIN, double maxVal = SHOT_DBL_MAX, bool isPrivate = false);
 
     void createSetting(std::string name, std::string category, int value, std::string description,
-        VectorString enumDesc, bool isPrivate = false);
+        VectorString enumDesc, int startValue = 0, bool isPrivate = false);
 
     void createSetting(
         std::string name, std::string category, bool value, std::string description, bool isPrivate = false);
@@ -182,12 +182,12 @@ public:
 
     PairString getCategoryDescription(std::string category)
     {
-       return settingGroupDescriptions.at(PairString(category, ""));
+        return settingGroupDescriptions.at(PairString(category, ""));
     }
 
     std::string getEnumDescriptionList(std::string name, std::string category);
     std::string getEnumDescriptionListMarkup(std::string name, std::string category);
-    std::vector<std::pair<int, std::string> > getEnumDescription(std::string name, std::string category);
+    std::vector<std::pair<int, std::string>> getEnumDescription(std::string name, std::string category);
 
     std::string getSettingsAsOSoL();
     std::string getSettingsAsString(bool showUnchanged, bool showDescriptions);

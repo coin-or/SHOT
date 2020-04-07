@@ -116,7 +116,7 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
             == static_cast<int>(ES_QuadraticTermsExtractStrategy::ExtractToEqualityConstraintAlways));
 
     maxBilinearIntegerReformulationDomain
-        = env->settings->getSetting<int>("Reformulation.Bilinear.IntegerFormulation.MaxVariableDomain", "Model");
+        = env->settings->getSetting<int>("Reformulation.Bilinear.IntegerFormulation.MaxDomain", "Model");
 
     auxVariableCounter = env->problem->properties.numberOfVariables;
     auxConstraintCounter = env->problem->properties.numberOfNumericConstraints;

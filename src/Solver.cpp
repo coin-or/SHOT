@@ -640,7 +640,7 @@ void Solver::initializeSettings()
     enumHyperplanePointStrategy.push_back("ESH");
     enumHyperplanePointStrategy.push_back("ECP");
     env->settings->createSetting("CutStrategy", "Dual", static_cast<int>(ES_HyperplaneCutStrategy::ESH),
-        "Dual cut strategy", enumHyperplanePointStrategy);
+        "Dual cut strategy", enumHyperplanePointStrategy, 0);
     enumHyperplanePointStrategy.clear();
 
     env->settings->createSettingGroup("Dual", "ESH", "Extended supporting hyperplane method",
@@ -686,7 +686,7 @@ void Solver::initializeSettings()
     enumNLPSolver.push_back("Ipopt minimax and relaxed");*/
 
     env->settings->createSetting("ESH.InteriorPoint.Solver", "Dual",
-        static_cast<int>(ES_InteriorPointStrategy::CuttingPlaneMiniMax), "NLP solver", enumNLPSolver, true);
+        static_cast<int>(ES_InteriorPointStrategy::CuttingPlaneMiniMax), "NLP solver", enumNLPSolver, 0, true);
     enumNLPSolver.clear();
 
     VectorString enumAddPrimalPointAsInteriorPoint;
@@ -696,7 +696,7 @@ void Solver::initializeSettings()
     enumAddPrimalPointAsInteriorPoint.push_back("Use avarage");
     env->settings->createSetting("ESH.InteriorPoint.UsePrimalSolution", "Dual",
         static_cast<int>(ES_AddPrimalPointAsInteriorPoint::KeepBoth), "Utilize primal solution as interior point",
-        enumAddPrimalPointAsInteriorPoint);
+        enumAddPrimalPointAsInteriorPoint, 0);
     enumAddPrimalPointAsInteriorPoint.clear();
 
     env->settings->createSetting(
@@ -749,7 +749,7 @@ void Solver::initializeSettings()
     enumObjectiveRootsearch.push_back("Never");
     env->settings->createSetting("HyperplaneCuts.ObjectiveRootSearch", "Dual",
         static_cast<int>(ES_ObjectiveRootsearch::IfConvex), "When to use the objective root search",
-        enumObjectiveRootsearch);
+        enumObjectiveRootsearch, 0);
     enumObjectiveRootsearch.clear();
 
     // TODO: activate
@@ -791,7 +791,7 @@ void Solver::initializeSettings()
     enumPresolve.push_back("Once");
     enumPresolve.push_back("Always");
     env->settings->createSetting("MIP.Presolve.Frequency", "Dual", static_cast<int>(ES_MIPPresolveStrategy::Once),
-        "When to call the MIP presolve", enumPresolve);
+        "When to call the MIP presolve", enumPresolve, 0);
     enumPresolve.clear();
 
     env->settings->createSetting("MIP.Presolve.RemoveRedundantConstraints", "Dual", false,
@@ -822,7 +822,7 @@ void Solver::initializeSettings()
     enumMIPSolver.push_back("Gurobi");
     enumMIPSolver.push_back("Cbc");
     env->settings->createSetting(
-        "MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Cplex), "Which MIP solver to use", enumMIPSolver);
+        "MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Cplex), "Which MIP solver to use", enumMIPSolver, 0);
     enumMIPSolver.clear();
 
     env->settings->createSetting(
@@ -873,7 +873,7 @@ void Solver::initializeSettings()
     enumSolutionStrategy.push_back("Multi-tree");
     enumSolutionStrategy.push_back("Single-tree");
     env->settings->createSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::SingleTree),
-        "The main strategy to use", enumSolutionStrategy);
+        "The main strategy to use", enumSolutionStrategy, 0);
     enumSolutionStrategy.clear();
 
     env->settings->createSetting("TreeStrategy.Multi.Reinitialize", "Dual", false,
@@ -944,10 +944,10 @@ void Solver::initializeSettings()
     enumBilinearIntegerReformulation.push_back("2D");
     env->settings->createSetting("Reformulation.Bilinear.IntegerFormulation", "Model",
         static_cast<int>(ES_ReformulatiomBilinearInteger::OneDiscretization),
-        "How to reformulate integer bilinear terms", enumBilinearIntegerReformulation);
+        "How to reformulate integer bilinear terms", enumBilinearIntegerReformulation, 0);
     enumBilinearIntegerReformulation.clear();
 
-    env->settings->createSetting("Reformulation.Bilinear.IntegerFormulation.MaxVariableDomain", "Model", 100,
+    env->settings->createSetting("Reformulation.Bilinear.IntegerFormulation.MaxDomain", "Model", 100,
         "Do not reformulate integer variables in bilinear terms which can assume more than this number of discrete "
         "values",
         2, SHOT_INT_MAX);
@@ -959,11 +959,11 @@ void Solver::initializeSettings()
     enumNonlinearTermPartitioning.push_back("Never");
     env->settings->createSetting("Reformulation.Constraint.PartitionNonlinearTerms", "Model",
         static_cast<int>(ES_PartitionNonlinearSums::IfConvex), "When to partition nonlinear sums in objective function",
-        enumNonlinearTermPartitioning);
+        enumNonlinearTermPartitioning, 0);
 
     env->settings->createSetting("Reformulation.Constraint.PartitionQuadraticTerms", "Model",
         static_cast<int>(ES_PartitionNonlinearSums::IfConvex), "When to partition quadratic sums in objective function",
-        enumNonlinearTermPartitioning);
+        enumNonlinearTermPartitioning, 0);
 
     // Reformulations for monomials
 
@@ -976,7 +976,7 @@ void Solver::initializeSettings()
     enumBinaryMonomialReformulation.push_back("Costa and Liberti");
     env->settings->createSetting("Reformulation.Monomials.Formulation", "Model",
         static_cast<int>(ES_ReformulationBinaryMonomials::Simple), "How to reformulate binary monomials",
-        enumBinaryMonomialReformulation);
+        enumBinaryMonomialReformulation, 0);
     enumBinaryMonomialReformulation.clear();
 
     // Reformulations for objective functions
@@ -985,11 +985,11 @@ void Solver::initializeSettings()
 
     env->settings->createSetting("Reformulation.ObjectiveFunction.PartitionNonlinearTerms", "Model",
         static_cast<int>(ES_PartitionNonlinearSums::IfConvex), "When to partition nonlinear sums in objective function",
-        enumNonlinearTermPartitioning);
+        enumNonlinearTermPartitioning, 0);
 
     env->settings->createSetting("Reformulation.ObjectiveFunction.PartitionQuadraticTerms", "Model",
         static_cast<int>(ES_PartitionNonlinearSums::IfConvex), "When to partition quadratic sums in objective function",
-        enumNonlinearTermPartitioning);
+        enumNonlinearTermPartitioning, 0);
 
     enumNonlinearTermPartitioning.clear();
 
@@ -1008,7 +1008,7 @@ void Solver::initializeSettings()
 
     env->settings->createSetting("Reformulation.Quadratics.ExtractStrategy", "Model",
         static_cast<int>(ES_QuadraticTermsExtractStrategy::ExtractTermsToSame),
-        "How to extract quadratic terms from nonlinear expressions", enumQuadExtractStrategy);
+        "How to extract quadratic terms from nonlinear expressions", enumQuadExtractStrategy, 0);
     enumQuadExtractStrategy.clear();
 
     VectorString enumQPStrategy;
@@ -1019,7 +1019,7 @@ void Solver::initializeSettings()
 
     env->settings->createSetting("Reformulation.Quadratics.Strategy", "Model",
         static_cast<int>(ES_QuadraticProblemStrategy::ConvexQuadraticallyConstrained),
-        "How to treat quadratic functions", enumQPStrategy);
+        "How to treat quadratic functions", enumQPStrategy, 0);
     enumQPStrategy.clear();
 
     // Logging and output settings
@@ -1035,15 +1035,15 @@ void Solver::initializeSettings()
     enumLogLevel.push_back("Error");
     enumLogLevel.push_back("Critical");
     enumLogLevel.push_back("Off");
-    env->settings->createSetting(
-        "Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Info), "Log level for console output", enumLogLevel);
+    env->settings->createSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Info),
+        "Log level for console output", enumLogLevel, 0);
 
     env->settings->createSetting("Debug.Enable", "Output", false, "Use debug functionality");
 
     env->settings->createSetting("Debug.Path", "Output", empty, "The path where to save the debug information", true);
 
     env->settings->createSetting(
-        "File.LogLevel", "Output", static_cast<int>(E_LogLevel::Info), "Log level for file output", enumLogLevel);
+        "File.LogLevel", "Output", static_cast<int>(E_LogLevel::Info), "Log level for file output", enumLogLevel, 0);
     enumLogLevel.clear();
 
     env->settings->createSetting("Console.DualSolver.Show", "Output", false, "Show output from dual solver on console");
@@ -1061,14 +1061,14 @@ void Solver::initializeSettings()
 
     env->settings->createSetting("Console.Iteration.Detail", "Output",
         static_cast<int>(ES_IterationOutputDetail::ObjectiveGapUpdates), "When should the fixed strategy be used",
-        enumIterationDetail);
+        enumIterationDetail, 0);
     enumIterationDetail.clear();
 
     VectorString enumOutputDirectory;
     enumOutputDirectory.push_back("Problem directory");
     enumOutputDirectory.push_back("Program directory");
     env->settings->createSetting("OutputDirectory", "Output", static_cast<int>(ES_OutputDirectory::Program),
-        "Where to save the output files", enumOutputDirectory);
+        "Where to save the output files", enumOutputDirectory, 0);
     enumOutputDirectory.clear();
 
     env->settings->createSetting(
@@ -1089,7 +1089,7 @@ void Solver::initializeSettings()
 
     env->settings->createSetting("FixedInteger.CallStrategy", "Primal",
         static_cast<int>(ES_PrimalNLPStrategy::IterationOrTimeAndAllFeasibleSolutions),
-        "When should the fixed strategy be used", enumPrimalNLPStrategy);
+        "When should the fixed strategy be used", enumPrimalNLPStrategy, 0);
     enumPrimalNLPStrategy.clear();
 
     env->settings->createSetting(
@@ -1121,7 +1121,7 @@ void Solver::initializeSettings()
     enumPrimalNLPSolver.push_back("GAMS");
 
     env->settings->createSetting("FixedInteger.Solver", "Primal", static_cast<int>(ES_PrimalNLPSolver::Ipopt),
-        "NLP solver to use", enumPrimalNLPSolver);
+        "NLP solver to use", enumPrimalNLPSolver, 0);
     enumPrimalNLPSolver.clear();
 
     VectorString enumPrimalBoundNLPStartingPoint;
@@ -1132,7 +1132,7 @@ void Solver::initializeSettings()
     enumPrimalBoundNLPStartingPoint.push_back("With smallest constraint deviation");
     env->settings->createSetting("FixedInteger.Source", "Primal",
         static_cast<int>(ES_PrimalNLPFixedPoint::FirstAndFeasibleSolutions), "Source of fixed MIP solution point",
-        enumPrimalBoundNLPStartingPoint);
+        enumPrimalBoundNLPStartingPoint, 0);
     enumPrimalBoundNLPStartingPoint.clear();
 
     VectorString enumPrimalBoundNLPProblemSource;
@@ -1141,7 +1141,7 @@ void Solver::initializeSettings()
     enumPrimalBoundNLPProblemSource.push_back("Both");
     env->settings->createSetting("FixedInteger.SourceProblem", "Primal",
         static_cast<int>(ES_PrimalNLPProblemSource::OriginalProblem),
-        "Which problem formulation to use for NLP problem", enumPrimalBoundNLPProblemSource);
+        "Which problem formulation to use for NLP problem", enumPrimalBoundNLPProblemSource, 0);
     enumPrimalBoundNLPProblemSource.clear();
 
     env->settings->createSetting(
@@ -1200,53 +1200,91 @@ void Solver::initializeSettings()
     env->settings->createSetting("Cplex.AddRelaxedLazyConstraintsAsLocal", "Subsolver", false,
         "Whether to add lazy constraints generated in relaxed points as local or global");
 
+    VectorString enumCplexOptimalityTarget;
+    enumCplexOptimalityTarget.push_back("Automatic");
+    enumCplexOptimalityTarget.push_back("Searches for a globally optimal solution to a convex model");
+    enumCplexOptimalityTarget.push_back("Searches for a solution that satisfies first-order optimality conditions, but "
+                                        "is not necessarily globally optimal");
+    enumCplexOptimalityTarget.push_back("Searches for a globally "
+                                        "optimal solution to a nonconvex model");
     env->settings->createSetting("Cplex.OptimalityTarget", "Subsolver", 0,
-        "Specifies how CPLEX treats nonconvex quadratics: 0. Automatic. 1. Searches for a globally optimal solution to "
-        "a convex model. 2. Searches for a solution that satisfies first-order optimality "
-        "conditions, but is not necessarily globally optimal. 3. Searches for a globally "
-        "optimal solution to a nonconvex model; changes problem type to MIQP if necessary.",
-        0, 3);
+        "Specifies how CPLEX treats nonconvex quadratics", enumCplexOptimalityTarget, 0);
+    enumCplexOptimalityTarget.clear();
 
-    env->settings->createSetting("Cplex.FeasOptMode", "Subsolver", 0,
-        "Strategy to use for the feasibility repair: 0. Minimize the sum of all required relaxations in first phase "
-        "only. 1. Minimize the sum of all required relaxations in first phase and execute second phase to find optimum "
-        "among minimal relaxations. 2. Minimize the number of constraints and bounds requiring relaxation in first "
-        "phase only. 3. Minimize the number of constraints and bounds requiring relaxation in first phase and execute "
-        "second phase to find optimum among minimal relaxations. 4. Minimize the sum of squares of required "
-        "relaxations in first phase only. 5. Minimize the sum of squares of required relaxations in first phase and "
-        "execute second phase to find optimum among minimal relaxations",
-        0, 5);
+    VectorString enumCplexFeasOptMode;
+    enumCplexFeasOptMode.push_back("Minimize the sum of all required relaxations in first phase only");
+    enumCplexFeasOptMode.push_back("Minimize the sum of all required relaxations in first phase and execute second "
+                                   "phase to find optimum among minimal relaxations");
+    enumCplexFeasOptMode.push_back("Minimize the number of constraints and bounds requiring relaxation in first "
+                                   "phase only");
+    enumCplexFeasOptMode.push_back("Minimize the sum of squares of required "
+                                   "relaxations in first phase only");
+    enumCplexFeasOptMode.push_back(" Minimize the sum of squares of required relaxations in first phase and execute "
+                                   "second phase to find optimum among minimal relaxations");
+    env->settings->createSetting(
+        "Cplex.FeasOptMode", "Subsolver", 0, "Strategy to use for the feasibility repair", enumCplexFeasOptMode, 0);
+    enumCplexFeasOptMode.clear();
+
+    VectorString enumCplexMIPEmphasis;
+    enumCplexMIPEmphasis.push_back("Balanced");
+    enumCplexMIPEmphasis.push_back("Feasibility");
+    enumCplexMIPEmphasis.push_back("Optimality");
+    enumCplexMIPEmphasis.push_back("Best bound");
+    enumCplexMIPEmphasis.push_back("Hidden feasible");
+    env->settings->createSetting("Cplex.MIPEmphasis", "Subsolver", 1, "Sets the MIP emphasis", enumCplexMIPEmphasis, 0);
+    enumCplexMIPEmphasis.clear();
 
     env->settings->createSetting("Cplex.MemoryEmphasis", "Subsolver", 0, "Try to conserve memory when possible", 0, 1);
 
-    env->settings->createSetting("Cplex.MIPEmphasis", "Subsolver", 1,
-        "Sets the MIP emphasis: 0: Balanced. 1: Feasibility. 2: Optimality. 3: Best bound. 4: Hidden feasible", 0, 4);
-
-    env->settings->createSetting("Cplex.NodeFile", "Subsolver", 1,
-        "Where to store the node file: 0: No file. 1: Compressed in memory. 2: On disk. 3: Compressed on disk.", 0, 3);
+    VectorString enumCplexNodeFile;
+    enumCplexNodeFile.push_back("No file");
+    enumCplexNodeFile.push_back("Compressed in memory");
+    enumCplexNodeFile.push_back("On disk");
+    enumCplexNodeFile.push_back("Compressed on disk");
+    env->settings->createSetting(
+        "Cplex.NodeFile", "Subsolver", 1, "Where to store the node file", enumCplexNodeFile, 0);
+    enumCplexNodeFile.clear();
 
     env->settings->createSetting("Cplex.NumericalEmphasis", "Subsolver", 0, "Emphasis on numerical stability", 0, 1);
 
+    VectorString enumCplexParallelMode;
+    enumCplexParallelMode.push_back("Opportunistic");
+    enumCplexParallelMode.push_back("Automatic");
+    enumCplexParallelMode.push_back("Deterministic");
     env->settings->createSetting("Cplex.ParallelMode", "Subsolver", 0,
-        "Sets the parallel optimization mode: -1: Opportunistic. 0: Automatic. 1: Deterministic.", -1, 1);
+        "Controls how much time and memory should be used when filling the solution pool", enumCplexParallelMode, -1);
+    enumCplexParallelMode.clear();
 
-    env->settings->createSetting("Cplex.Probe", "Subsolver", 0,
-        "Sets the MIP probing level: -1: No probing. 0: Automatic. 1: Moderate. 2: Aggressive. 3: Very aggressive", -1,
-        3);
+    VectorString enumCplexProbe;
+    enumCplexProbe.push_back("No probing");
+    enumCplexProbe.push_back("Automatic");
+    enumCplexProbe.push_back("Moderate");
+    enumCplexProbe.push_back("Aggressive");
+    enumCplexProbe.push_back("Very aggressive");
+    env->settings->createSetting("Cplex.Probe", "Subsolver", 0, "Sets the MIP probing level", enumCplexProbe, -1);
+    enumCplexProbe.clear();
 
     env->settings->createSetting("Cplex.SolutionPoolGap", "Subsolver", 1.0e+75,
         "Sets the relative gap filter on objective values in the solution pool", 0, 1.0e+75);
 
+    VectorString enumCplexSolPoolIntensity;
+    enumCplexSolPoolIntensity.push_back("Automatic");
+    enumCplexSolPoolIntensity.push_back("Mild");
+    enumCplexSolPoolIntensity.push_back("Moderate");
+    enumCplexSolPoolIntensity.push_back("Aggressive");
+    enumCplexSolPoolIntensity.push_back("Very aggressive");
     env->settings->createSetting("Cplex.SolutionPoolIntensity", "Subsolver", 0,
-        "Controls how much time and memory should be used when filling the solution pool: 0: Automatic. 1: Mild. "
-        "2: "
-        "Moderate. 3: Aggressive. 4: Very aggressive",
-        0, 4);
+        "Controls how much time and memory should be used when filling the solution pool", enumCplexSolPoolIntensity,
+        0);
+    enumCplexSolPoolIntensity.clear();
 
-    env->settings->createSetting("Cplex.SolutionPoolReplace", "Subsolver", 1,
-        "How to replace solutions in the solution pool when full: 0: Replace oldest. 1: Replace worst. 2: Find "
-        "diverse.",
-        0, 2);
+    VectorString enumCplexSolPoolReplace;
+    enumCplexSolPoolReplace.push_back("Replace oldest");
+    enumCplexSolPoolReplace.push_back("Replace worst");
+    enumCplexSolPoolReplace.push_back("Find diverse");
+    env->settings->createSetting("Cplex.SolutionPoolReplace", "Subsolver", 0,
+        "How to replace solutions in the solution pool when full", enumCplexSolPoolReplace, 0);
+    enumCplexSolPoolReplace.clear();
 
     env->settings->createSetting("Cplex.UseGenericCallback", "Subsolver", false,
         "Use the new generic callback (vers. >12.8) in the single-tree strategy (experimental)");
@@ -1268,20 +1306,42 @@ void Solver::initializeSettings()
     env->settings->createSetting(
         "Gurobi.Heuristics", "Subsolver", 0.05, "The relative amount of time spent in MIP heuristics.", 0.0, 1.0);
 
-    env->settings->createSetting("Gurobi.MIPFocus", "Subsolver", 0,
-        "MIP focus: 0: Automatic. 1: Feasibility. 2: Optimality. 3: Best bound.", 0, 3);
+    VectorString enumGurobiMIPFocus;
+    enumGurobiMIPFocus.push_back("Automatic");
+    enumGurobiMIPFocus.push_back("Feasibility");
+    enumGurobiMIPFocus.push_back("Optimality");
+    enumGurobiMIPFocus.push_back("Best bound");
+    env->settings->createSetting("Gurobi.MIPFocus", "Subsolver", 0, "MIP focus", enumGurobiMIPFocus, 0);
+    enumGurobiMIPFocus.clear();
 
-    env->settings->createSetting("Gurobi.NumericFocus", "Subsolver", 2,
-        "Numeric focus (higher number more careful): 0: Automatic. 3: Most careful.", 0, 3);
+    VectorString enumGurobiNumericFocus;
+    enumGurobiNumericFocus.push_back("Automatic");
+    enumGurobiNumericFocus.push_back("Mild");
+    enumGurobiNumericFocus.push_back("Moderate");
+    enumGurobiNumericFocus.push_back("Aggressive");
+    env->settings->createSetting("Gurobi.NumericFocus", "Subsolver", 2, "MIP focus", enumGurobiNumericFocus, 0);
+    enumGurobiNumericFocus.clear();
 
-    env->settings->createSetting("Gurobi.PoolSearchMode", "Subsolver", 0,
-        "Finds extra solutions: 0: No extra effort. 1: Try to find solutions. 2: Find n best solutions.", 0, 2);
+    VectorString enumGurobiPoolSearchMode;
+    enumGurobiPoolSearchMode.push_back("No extra effort");
+    enumGurobiPoolSearchMode.push_back("Try to find solutions");
+    enumGurobiPoolSearchMode.push_back("Find n best solutions");
+    env->settings->createSetting(
+        "Gurobi.PoolSearchMode", "Subsolver", 0, "Finds extra solutions", enumGurobiPoolSearchMode, 0);
+    enumGurobiPoolSearchMode.clear();
 
     env->settings->createSetting(
-        "Gurobi.PoolSolutions", "Subsolver", 1, "Determines how many MIP solutions are stored.", 1, 2000000000);
+        "Gurobi.PoolSolutions", "Subsolver", 1, "Determines how many MIP solutions are stored", 1, 2000000000);
 
-    env->settings->createSetting("Gurobi.ScaleFlag", "Subsolver", -1,
-        "Controls model scaling: -1: Automatic. 0: Off. 1-3: The higher the more aggressive.", -1, 3);
+    VectorString enumGurobiScaleFlag;
+    enumGurobiScaleFlag.push_back("Automatic");
+    enumGurobiScaleFlag.push_back("Off");
+    enumGurobiScaleFlag.push_back("Mild");
+    enumGurobiScaleFlag.push_back("Moderate");
+    enumGurobiScaleFlag.push_back("Aggressive");
+    env->settings->createSetting(
+        "Gurobi.ScaleFlag", "Subsolver", -1, "Controls model scaling", enumGurobiScaleFlag, -1);
+    enumGurobiScaleFlag.clear();
 
 #endif
 
@@ -1294,17 +1354,36 @@ void Solver::initializeSettings()
     env->settings->createSetting("Cbc.AutoScale", "Subsolver", false,
         "Whether to scale objective, rhs and bounds of problem if they look odd (experimental)");
 
-    env->settings->createSetting("Cbc.NodeStrategy", "Subsolver", std::string("hybrid"),
-        "Node strategy, valid values: depth, downdepth, downfewest, fewest, hybrid, updepth, upfewest");
+    VectorString enumCbcNodeStrategy;
+    enumCbcNodeStrategy.push_back("depth");
+    enumCbcNodeStrategy.push_back("downdepth");
+    enumCbcNodeStrategy.push_back("downfewest");
+    enumCbcNodeStrategy.push_back("fewest");
+    enumCbcNodeStrategy.push_back("hybrid");
+    enumCbcNodeStrategy.push_back("updepth");
+    enumCbcNodeStrategy.push_back("upfewest");
+    env->settings->createSetting("Cbc.NodeStrategy", "Subsolver", 4, "Node strategy", enumCbcNodeStrategy, 0);
+    enumCbcNodeStrategy.clear();
 
     env->settings->createSetting(
         "Cbc.DeterministicParallelMode", "Subsolver", false, "Run Cbc with multiple threads in deterministic mode");
 
-    env->settings->createSetting("Cbc.Scaling", "Subsolver", std::string("automatic"),
-        "Whether to scale problem, valid values: automatic, dynamic, equilibrium, geometric, off, rowsonly");
+    VectorString enumCbcScaling;
+    enumCbcScaling.push_back("automatic");
+    enumCbcScaling.push_back("dynamic");
+    enumCbcScaling.push_back("equilibrium");
+    enumCbcScaling.push_back("geometric");
+    enumCbcScaling.push_back("off");
+    enumCbcScaling.push_back("rowsonly");
+    env->settings->createSetting("Cbc.Scaling", "Subsolver", 0, "Whether to scale problem", enumCbcScaling, 0);
+    enumCbcScaling.clear();
 
-    env->settings->createSetting("Cbc.Strategy", "Subsolver", 1,
-        "This turns on newer features. Use 0 for easy problems, 1 is default, 2 is aggressive", 0, 2);
+    VectorString enumStrategy;
+    enumStrategy.push_back("easy problems");
+    enumStrategy.push_back("default");
+    enumStrategy.push_back("aggressive");
+    env->settings->createSetting("Cbc.Strategy", "Subsolver", 1, "This turns on newer features", enumStrategy, 0);
+    enumStrategy.clear();
 
 #endif
 
@@ -1341,7 +1420,7 @@ void Solver::initializeSettings()
     enumIPOptSolver.push_back("MA97");
     enumIPOptSolver.push_back("MUMPS");
     env->settings->createSetting("Ipopt.LinearSolver", "Subsolver", static_cast<int>(ES_IpoptSolver::IpoptDefault),
-        "Ipopt linear subsolver", enumIPOptSolver);
+        "Ipopt linear subsolver", enumIPOptSolver, 0);
     enumIPOptSolver.clear();
 
     env->settings->createSetting("Ipopt.MaxIterations", "Subsolver", 1000, "Maximum number of iterations");
@@ -1367,7 +1446,7 @@ void Solver::initializeSettings()
     enumRootsearchMethod.push_back("BoostBisection");
     enumRootsearchMethod.push_back("Bisection");
     env->settings->createSetting("Rootsearch.Method", "Subsolver", static_cast<int>(ES_RootsearchMethod::BoostTOMS748),
-        "Root search method to use", enumRootsearchMethod);
+        "Root search method to use", enumRootsearchMethod, 0);
     enumRootsearchMethod.clear();
 
     env->settings->createSetting("Rootsearch.TerminationTolerance", "Subsolver", 1e-16,
@@ -1414,7 +1493,7 @@ void Solver::initializeSettings()
     enumFileFormat.push_back("NL");
     enumFileFormat.push_back("None");
     env->settings->createSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::None),
-        "The format of the problem file", enumFileFormat, true);
+        "The format of the problem file", enumFileFormat, 0, true);
     enumFileFormat.clear();
 
     env->settings->createSetting("ProblemFile", "Input", empty, "The filename of the problem", true);
@@ -1678,11 +1757,6 @@ void Solver::setConvexityBasedSettings()
 
             if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Cplex)
             {
-                /*env->settings->updateSetting("Cplex.MIPEmphasis", "Subsolver", 4);
-                env->settings->updateSetting("Cplex.NumericalEmphasis", "Subsolver", 1);
-                env->settings->updateSetting("Cplex.Probe", "Subsolver", 3);
-                env->settings->updateSetting("Cplex.SolutionPoolIntensity", "Subsolver", 4);
-*/
                 if(env->reformulatedProblem->objectiveFunction->properties.classification
                         == E_ObjectiveFunctionClassification::Quadratic
                     || env->reformulatedProblem->properties.numberOfQuadraticConstraints > 0)

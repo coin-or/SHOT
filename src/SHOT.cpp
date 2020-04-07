@@ -191,7 +191,7 @@ int main(int argc, char* argv[])
             }
 
             defaultOptionsGenerated = true;
-            env->output->outputInfo(" Default options file written to: " + filepath.string());
+            env->output->outputInfo(" Default options file written to: " + filepath.string() + '\n');
         }
     }
     else if(cmdl("--osol")) // Have specified a OSoL-file
@@ -202,7 +202,7 @@ int main(int argc, char* argv[])
         if(fs::filesystem::exists(filepath))
         {
             optionsFile = filepath;
-            env->output->outputInfo(" Default options file written to: " + filepath.string());
+            env->output->outputInfo(" Default options file written to: " + filepath.string() + '\n');
         }
         else
         {
