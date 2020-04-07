@@ -342,7 +342,7 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
                                     ->FirstChildElement("instanceData")
                                     ->FirstChildElement("linearConstraintCoefficients");
 
-        int numberOfCoeffs = std::stoi(linConCoeffNodes->Attribute("numberOfValues"));
+        int numberOfCoeffs = (linConCoeffNodes == NULL) ? 0 : std::stoi(linConCoeffNodes->Attribute("numberOfValues"));
 
         if(numberOfCoeffs > 0)
         {
