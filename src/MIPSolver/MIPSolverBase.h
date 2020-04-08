@@ -21,6 +21,8 @@
 #include <map>
 #include <optional>
 #include <utility>
+#include <cassert>
+#include <iostream>
 
 namespace SHOT
 {
@@ -31,7 +33,7 @@ private:
     std::vector<PairDouble> fixedVariableOriginalBounds;
 
     bool dualAuxiliaryObjectiveVariableDefined = false;
-    int dualAuxiliaryObjectiveVariableIndex;
+    int dualAuxiliaryObjectiveVariableIndex = -1;
     int constraintCounter = 0;
 
 protected:
@@ -98,7 +100,12 @@ public:
     virtual int getNumberOfVariables() { return numberOfVariables; }
 
     virtual bool hasDualAuxiliaryObjectiveVariable() { return dualAuxiliaryObjectiveVariableDefined; };
-    virtual int getDualAuxiliaryObjectiveVariableIndex() { return dualAuxiliaryObjectiveVariableIndex; };
+    virtual int getDualAuxiliaryObjectiveVariableIndex()
+    {
+        assert(dualAuxiliaryObjectiveVariableDefined);
+        assert(dualAuxiliaryObjectiveVariableIndex >= 0);
+        return dualAuxiliaryObjectiveVariableIndex;
+    };
 
     virtual void setDualAuxiliaryObjectiveVariableIndex(int index)
     {
