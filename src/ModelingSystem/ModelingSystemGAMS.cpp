@@ -129,6 +129,9 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
 
         env->settings->updateSetting("MIP.NumberOfThreads", "Dual", gevThreads(modelingEnvironment));
 
+        char buf[GMS_SSSIZE];
+        env->settings->updateSetting("Debug.Path", "Output", std::string(gevGetStrOpt(modelingEnvironment, gevNameScrDir, buf)));
+
         env->output->outputDebug("Time limit set to "
             + Utilities::toString(env->settings->getSetting<double>("TimeLimit", "Termination")) + " by GAMS");
         env->output->outputDebug("Iteration limit set to "
@@ -141,6 +144,8 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
             + " by GAMS");
         env->output->outputDebug("MIP number of threads set to "
             + Utilities::toString(env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual")) + " by GAMS");
+        env->output->outputDebug("Debug path set to "
+            + env->settings->getSetting<std::string>("Debug.Path", "Output") + " by GAMS");
     }
 
     if(gmoOptFile(modelingObject) > 0) // GAMS provides an option file
