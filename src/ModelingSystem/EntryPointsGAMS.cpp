@@ -210,7 +210,7 @@ extern "C"
         }
         catch(const std::exception& e)
         {
-            env->output->outputError(fmt::format("Error when solving problem with GAMS: {}", e.what()));
+            env->output->outputError(fmt::format("Error when solving problem: {}", e.what()));
 
             gmoSolveStatSet(gs->gmo, gmoSolveStat_Solver);
             gmoModelStatSet(gs->gmo, gmoModelStat_ErrorNoSolution);
