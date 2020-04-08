@@ -201,6 +201,7 @@ void GurobiCallbackSingleTree::callback()
                 tmpDualObjBound = getDoubleInfo(GRB_CB_MIPNODE_OBJBND);
                 break;
             default:
+                tmpDualObjBound  = 0.0; // just to suppress a compiler warning
                 break;
             }
 
