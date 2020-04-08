@@ -102,8 +102,8 @@ public:
     virtual bool hasDualAuxiliaryObjectiveVariable() { return dualAuxiliaryObjectiveVariableDefined; };
     virtual int getDualAuxiliaryObjectiveVariableIndex()
     {
+        assert(dualAuxiliaryObjectiveVariableDefined);
         assert(dualAuxiliaryObjectiveVariableIndex >= 0);
-        std::cout << "Nonlinear obj index" << dualAuxiliaryObjectiveVariableIndex << std::endl;
         return dualAuxiliaryObjectiveVariableIndex;
     };
 

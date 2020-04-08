@@ -588,7 +588,8 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
     if(MIPSolutionStatus == E_ProblemSolutionStatus::Infeasible)
     {
         if(env->reformulatedProblem->objectiveFunction->properties.classification
-            == E_ObjectiveFunctionClassification::QuadraticConsideredAsNonlinear)
+                == E_ObjectiveFunctionClassification::QuadraticConsideredAsNonlinear
+            && hasDualAuxiliaryObjectiveVariable())
         {
             osiInterface->setColBounds(getDualAuxiliaryObjectiveVariableIndex(), -1000000000.0, 1000000000.0);
 
@@ -639,8 +640,9 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
                 }
             }
         }
-        else if((env->reformulatedProblem->objectiveFunction->properties.classification
-                    >= E_ObjectiveFunctionClassification::QuadraticConsideredAsNonlinear))
+        else if(env->reformulatedProblem->objectiveFunction->properties.classification
+                >= E_ObjectiveFunctionClassification::QuadraticConsideredAsNonlinear
+            && hasDualAuxiliaryObjectiveVariable())
         {
             // The auxiliary variable in the dual problem is unbounded
             updateVariableBound(getDualAuxiliaryObjectiveVariableIndex(), -getUnboundedVariableBoundValue() / 10e40,
