@@ -129,9 +129,6 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
 
         env->settings->updateSetting("MIP.NumberOfThreads", "Dual", gevThreads(modelingEnvironment));
 
-        char buf[GMS_SSSIZE];
-        env->settings->updateSetting("Debug.Path", "Output", std::string(gevGetStrOpt(modelingEnvironment, gevNameScrDir, buf)));
-
         env->output->outputDebug("Time limit set to "
             + Utilities::toString(env->settings->getSetting<double>("TimeLimit", "Termination")) + " by GAMS");
         env->output->outputDebug("Iteration limit set to "
@@ -144,8 +141,6 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
             + " by GAMS");
         env->output->outputDebug("MIP number of threads set to "
             + Utilities::toString(env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual")) + " by GAMS");
-        env->output->outputDebug("Debug path set to "
-            + env->settings->getSetting<std::string>("Debug.Path", "Output") + " by GAMS");
     }
 
     if(gmoOptFile(modelingObject) > 0) // GAMS provides an option file
@@ -297,28 +292,25 @@ void ModelingSystemGAMS::createModelFromProblemFile(const std::string& filename)
     assert(modelingObject == nullptr);
     assert(modelingEnvironment == nullptr);
 
-    /* create temporary directory, mkdtemp is preferred over tmpnam */
-#if _DEFAULT_SOURCE || _BSD_SOURCE || _POSIX_C_SOURCE >= 200809L
-    strcpy(buffer, "loadgmsXXXXXX");
-    tmpdirname = mkdtemp(buffer);
-    if(tmpdirname.length() == 0)
-    {
+    if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+        tmpdirname = Utilities::createTemporaryDirectory(
+            "SHOT_GAMS_", env->settings->getSetting<std::string>("Debug.Path", "Output"));
+    else
+        tmpdirname = Utilities::createTemporaryDirectory("SHOT_GAMS_");
+
+    if(tmpdirname == "")
         throw std::logic_error("Could not create temporary directory.");
-    }
-#else
-    tmpdirname = std::tmpnam(nullptr);
-    fs::filesystem::create_directory(tmpdirname);
-    fs::filesystem::permissions(tmpdirname, fs::filesystem::perms::all);
-#endif
 
     createdtmpdir = true;
 
     /* create empty convertd options file */
     std::ofstream convertdopt((fs::filesystem::path(tmpdirname) / "convertd.opt").string(), std::ios::out);
+
     if(!convertdopt.good())
     {
         throw std::logic_error("Could not create convertd options file.");
     }
+
     convertdopt << " " << std::endl;
     convertdopt.close();
 
@@ -635,8 +627,8 @@ void ModelingSystemGAMS::clearGAMSObjects()
         auditLicensing = nullptr;
     }
 
-    /* remove temporary directory content (should have only files) and directory itself) */
-    if(createdtmpdir)
+    /* remove temporary directory contents if not in debug mode (should have only files) and directory itself) */
+    if(createdtmpdir && !env->settings->getSetting<bool>("Debug.Enable", "Output"))
     {
         fs::filesystem::remove_all(tmpdirname);
         createdtmpdir = false;
