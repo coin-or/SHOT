@@ -376,14 +376,13 @@ bool Solver::setProblem(std::string fileName)
 
         if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
         {
-            std::stringstream problemFilename;
-            problemFilename << env->settings->getSetting<std::string>("Debug.Path", "Output");
-            problemFilename << "/originalproblem.txt";
+            fs::filesystem::path problemFilename(env->settings->getSetting<std::string>("Debug.Path", "Output"));
+            problemFilename /= "originalproblem.txt";
 
             std::stringstream problemText;
             problemText << env->problem;
 
-            Utilities::writeStringToFile(problemFilename.str(), problemText.str());
+            Utilities::writeStringToFile(problemFilename.string(), problemText.str());
         }
     }
     catch(const std::exception& e)
@@ -420,15 +419,13 @@ bool Solver::setProblem(SHOT::ProblemPtr problem, SHOT::ModelingSystemPtr modeli
     {
         initializeDebugMode();
 
-        std::stringstream filename;
-        filename << env->settings->getSetting<std::string>("Debug.Path", "Output");
-        filename << "/originalproblem";
-        filename << ".txt";
+        fs::filesystem::path filename(env->settings->getSetting<std::string>("Debug.Path", "Output"));
+        filename /= "originalproblem.txt";
 
         std::stringstream problem;
         problem << env->problem;
 
-        Utilities::writeStringToFile(filename.str(), problem.str());
+        Utilities::writeStringToFile(filename.string(), problem.str());
     }
 
     // Do not do convexifying reformulations if the problem is assumed to be convex
@@ -583,14 +580,12 @@ bool Solver::solveProblem()
 {
     if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
     {
-        std::stringstream filename;
-        filename << env->settings->getSetting<std::string>("Debug.Path", "Output");
-        filename << "/usedsettings";
-        filename << ".opt";
+        fs::filesystem::path filename(env->settings->getSetting<std::string>("Debug.Path", "Output"));
+        filename /= "usedsettings.opt";
 
         auto usedSettings = env->settings->getSettingsAsString(false, false);
 
-        Utilities::writeStringToFile(filename.str(), usedSettings);
+        Utilities::writeStringToFile(filename.string(), usedSettings);
     }
 
     if(env->problem->objectiveFunction->properties.isMinimize)
