@@ -630,12 +630,12 @@ int main(int argc, char* argv[])
     }
 
     env->results = NULL;
-    env->settings = NULL;
     env->problem = NULL;
     env->reformulatedProblem = NULL;
     env->modelingSystem = NULL;
     env->dualSolver = NULL;
     env->primalSolver = NULL;
+    env->settings = NULL;
     env->output = NULL;
     env->report = NULL;
     env->tasks = NULL;

@@ -19,8 +19,6 @@
 #include "Timing.h"
 #include "Utilities.h"
 
-#include <random>
-
 #ifdef HAS_GAMS
 #include "ModelingSystem/ModelingSystemGAMS.h"
 #endif
@@ -216,40 +214,17 @@ bool Solver::setProblem(std::string fileName)
     env->settings->updateSetting("ProblemFile", "Input", fs::filesystem::absolute(problemFile).string());
 
     // Sets the debug path if not already set
-    if(env->settings->getSetting<std::string>("Debug.Path", "Output") == "")
+    if(env->settings->getSetting<bool>("Debug.Enable", "Output")
+        && env->settings->getSetting<std::string>("Debug.Path", "Output") == "")
     {
-        auto tmpDirPath = fs::filesystem::temp_directory_path();
-        int i = 0;
-
-        int maxTries = 1000;
-        std::random_device dev;
-        std::mt19937 prng(dev());
-        std::uniform_int_distribution<uint64_t> rand(0);
-        fs::filesystem::path path;
-
-        while(true)
+        if(auto debugPath = Utilities::createTemporaryDirectory("SHOT_debug_"); debugPath == "")
         {
-            std::stringstream ss;
-            ss << "SHOT_" << std::hex << rand(prng);
-            path = tmpDirPath / ss.str();
-
-            if(fs::filesystem::create_directory(path))
-            // True if the directory was created.
-            {
-                fs::filesystem::path debugPath(path);
-
-                env->settings->updateSetting("Debug.Path", "Output", debugPath.string());
-                break;
-            }
-            if(i == maxTries)
-            {
-                env->output->outputError(
-                    fmt::format("Could not create debug directory in folder \"{}\". Try emptying the directory.",
-                        tmpDirPath.string()));
-                return (false);
-            }
-
-            i++;
+            env->output->outputError("Could not create debug directory.");
+            return (false);
+        }
+        else
+        {
+            env->settings->updateSetting("Debug.Path", "Output", debugPath);
         }
     }
 
