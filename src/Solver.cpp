@@ -1574,11 +1574,14 @@ void Solver::initializeDebugMode()
         }
     }
 
-    fs::filesystem::path source(
-        fs::filesystem::canonical(env->settings->getSetting<std::string>("ProblemFile", "Input")));
+    if(env->settings->getSetting<std::string>("ProblemFile", "Input") != "")
+    {
+        fs::filesystem::path source(
+           fs::filesystem::canonical(env->settings->getSetting<std::string>("ProblemFile", "Input")));
 
-    fs::filesystem::copy_file(
-        source.string(), (debugDir / source.filename()).string(), fs::filesystem::copy_options::overwrite_existing);
+        fs::filesystem::copy_file(
+           source.string(), (debugDir / source.filename()).string(), fs::filesystem::copy_options::overwrite_existing);
+    }
 }
 
 void Solver::verifySettings()
