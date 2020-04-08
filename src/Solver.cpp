@@ -19,6 +19,8 @@
 #include "Timing.h"
 #include "Utilities.h"
 
+#include <random>
+
 #ifdef HAS_GAMS
 #include "ModelingSystem/ModelingSystemGAMS.h"
 #endif
@@ -216,20 +218,38 @@ bool Solver::setProblem(std::string fileName)
     // Sets the debug path if not already set
     if(env->settings->getSetting<std::string>("Debug.Path", "Output") == "")
     {
-        if(static_cast<ES_OutputDirectory>(env->settings->getSetting<int>("OutputDirectory", "Output"))
-            == ES_OutputDirectory::Program)
-        {
-            fs::filesystem::path debugPath(fs::filesystem::current_path());
-            debugPath /= ("debug" / problemName);
+        auto tmpDirPath = fs::filesystem::temp_directory_path();
+        int i = 0;
 
-            env->settings->updateSetting("Debug.Path", "Output", debugPath.string());
-        }
-        else
-        {
-            fs::filesystem::path debugPath(problemPath);
-            debugPath /= ("debug" / problemName);
+        int maxTries = 1000;
+        std::random_device dev;
+        std::mt19937 prng(dev());
+        std::uniform_int_distribution<uint64_t> rand(0);
+        fs::filesystem::path path;
 
-            env->settings->updateSetting("Debug.Path", "Output", debugPath.string());
+        while(true)
+        {
+            std::stringstream ss;
+            ss << "SHOT_" << std::hex << rand(prng);
+            path = tmpDirPath / ss.str();
+
+            if(fs::filesystem::create_directory(path))
+            // True if the directory was created.
+            {
+                fs::filesystem::path debugPath(path);
+
+                env->settings->updateSetting("Debug.Path", "Output", debugPath.string());
+                break;
+            }
+            if(i == maxTries)
+            {
+                env->output->outputError(
+                    fmt::format("Could not create debug directory in folder \"{}\". Try emptying the directory.",
+                        tmpDirPath.string()));
+                return (false);
+            }
+
+            i++;
         }
     }
 
@@ -356,14 +376,13 @@ bool Solver::setProblem(std::string fileName)
 
         if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
         {
-            std::stringstream problemFilename;
-            problemFilename << env->settings->getSetting<std::string>("Debug.Path", "Output");
-            problemFilename << "/originalproblem.txt";
+            fs::filesystem::path problemFilename(env->settings->getSetting<std::string>("Debug.Path", "Output"));
+            problemFilename /= "originalproblem.txt";
 
             std::stringstream problemText;
             problemText << env->problem;
 
-            Utilities::writeStringToFile(problemFilename.str(), problemText.str());
+            Utilities::writeStringToFile(problemFilename.string(), problemText.str());
         }
     }
     catch(const std::exception& e)
@@ -400,15 +419,13 @@ bool Solver::setProblem(SHOT::ProblemPtr problem, SHOT::ModelingSystemPtr modeli
     {
         initializeDebugMode();
 
-        std::stringstream filename;
-        filename << env->settings->getSetting<std::string>("Debug.Path", "Output");
-        filename << "/originalproblem";
-        filename << ".txt";
+        fs::filesystem::path filename(env->settings->getSetting<std::string>("Debug.Path", "Output"));
+        filename /= "originalproblem.txt";
 
         std::stringstream problem;
         problem << env->problem;
 
-        Utilities::writeStringToFile(filename.str(), problem.str());
+        Utilities::writeStringToFile(filename.string(), problem.str());
     }
 
     // Do not do convexifying reformulations if the problem is assumed to be convex
@@ -563,14 +580,12 @@ bool Solver::solveProblem()
 {
     if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
     {
-        std::stringstream filename;
-        filename << env->settings->getSetting<std::string>("Debug.Path", "Output");
-        filename << "/usedsettings";
-        filename << ".opt";
+        fs::filesystem::path filename(env->settings->getSetting<std::string>("Debug.Path", "Output"));
+        filename /= "usedsettings.opt";
 
         auto usedSettings = env->settings->getSettingsAsString(false, false);
 
-        Utilities::writeStringToFile(filename.str(), usedSettings);
+        Utilities::writeStringToFile(filename.string(), usedSettings);
     }
 
     if(env->problem->objectiveFunction->properties.isMinimize)
@@ -1040,7 +1055,8 @@ void Solver::initializeSettings()
 
     env->settings->createSetting("Debug.Enable", "Output", false, "Use debug functionality");
 
-    env->settings->createSetting("Debug.Path", "Output", empty, "The path where to save the debug information", true);
+    env->settings->createSetting(
+        "Debug.Path", "Output", empty, "The folder where to save the debug information", false);
 
     env->settings->createSetting(
         "File.LogLevel", "Output", static_cast<int>(E_LogLevel::Info), "Log level for file output", enumLogLevel, 0);
