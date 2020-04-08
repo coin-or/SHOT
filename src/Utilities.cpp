@@ -22,6 +22,16 @@
 
 #include "spdlog/fmt/fmt.h"
 
+#ifdef HAS_STD_FILESYSTEM
+#include <filesystem>
+namespace fs = std;
+#endif
+
+#ifdef HAS_STD_EXPERIMENTAL_FILESYSTEM
+#include <experimental/filesystem>
+namespace fs = std::experimental;
+#endif
+
 namespace SHOT::Utilities
 {
 
@@ -737,6 +747,43 @@ std::vector<std::string> splitStringByCharacter(const std::string& source, char 
         result.push_back(line);
 
     return result;
+}
+
+std::string createTemporaryDirectory(std::string filePrefix, std::string folder)
+{
+    auto tmpDirPath = fs::filesystem::temp_directory_path();
+    int i = 0;
+
+    int maxTries = 1000;
+    std::random_device dev;
+    std::mt19937 prng(dev());
+    std::uniform_int_distribution<uint64_t> rand(0);
+    fs::filesystem::path path;
+
+    while(true)
+    {
+        std::stringstream ss;
+        ss << filePrefix << std::hex << rand(prng);
+
+        if(folder == "")
+            path = tmpDirPath / ss.str();
+        else
+            path = fs::filesystem::path(folder) / ss.str();
+
+        if(fs::filesystem::create_directory(path))
+        // True if the directory was created.
+        {
+            break;
+        }
+        if(i == maxTries)
+        {
+            return ("");
+        }
+
+        i++;
+    }
+
+    return (path.string());
 }
 
 } // namespace SHOT::Utilities

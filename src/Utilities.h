@@ -131,4 +131,8 @@ E_Convexity combineConvexity(const E_Convexity first, const E_Convexity second);
 E_Monotonicity combineMonotonicity(const E_Monotonicity first, const E_Monotonicity second);
 
 std::vector<std::string> splitStringByCharacter(const std::string& source, char character);
+
+// Creates a unique directory in the specified folder (or system temporary folder if folder is an empty string).
+// Returns an empty string if the directory could not be created.
+std::string createTemporaryDirectory(std::string filePrefix, std::string folder = "");
 } // namespace SHOT::Utilities
