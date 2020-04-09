@@ -849,12 +849,11 @@ void NLPSolverIpoptBase::setInitialSettings()
     ipoptApplication->Options()->SetStringValue("ma86_order", "auto", true, true);
     ipoptApplication->Options()->SetStringValue("mu_oracle", "probing", true, true);
     ipoptApplication->Options()->SetStringValue("expect_infeasible_problem", "yes", true, true);
-    ipoptApplication->Options()->SetStringValue("warm_start_init_point", "yes", true, true);
+    // ipoptApplication->Options()->SetStringValue("warm_start_init_point", "yes", true, true);
     ipoptApplication->Options()->SetNumericValue("gamma_phi", 1e-8, true, true);
     ipoptApplication->Options()->SetNumericValue("gamma_theta", 1e-4, true, true);
     ipoptApplication->Options()->SetNumericValue("required_infeasibility_reduction", 0.1, true, true);
     ipoptApplication->Options()->SetNumericValue("bound_relax_factor", 1e-10, true, true);
-
 
     // if we have linear constraint and a quadratic objective, then the hessian of the Lagrangian is constant, and
     // Ipopt can make use of this
