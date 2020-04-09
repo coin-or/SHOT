@@ -301,12 +301,12 @@ void CtCallbackI::main()
 
     this->getValues(tmpVals, cplexVars);
 
-    int size
+    int numberOfVariables
         = (env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable()) ? tmpVals.getSize() - 1 : tmpVals.getSize();
 
-    VectorDouble solution(size);
+    VectorDouble solution(numberOfVariables);
 
-    for(int i = 0; i < size; i++)
+    for(int i = 0; i < numberOfVariables; i++)
     {
         solution.at(i) = tmpVals[i];
     }
@@ -319,6 +319,7 @@ void CtCallbackI::main()
     {
         auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
             solution, env->reformulatedProblem->nonlinearConstraints);
+
         solutionCandidate.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
     }
     else
@@ -386,10 +387,17 @@ void CtCallbackI::main()
 
     auto threadId = std::to_string(this->getMyThreadNum());
 
-    env->results->getCurrentIteration()->numberOfOpenNodes = this->getNremainingNodes();
+    currIter->maxDeviation = solutionCandidate.maxDeviation.value;
+    currIter->maxDeviationConstraint = solutionCandidate.maxDeviation.index;
+    currIter->solutionStatus = E_ProblemSolutionStatus::Feasible;
+    currIter->objectiveValue = this->getIncumbentObjValue();
 
+    currIter->numberOfOpenNodes = this->getNremainingNodes();
     env->solutionStatistics.numberOfExploredNodes
         = std::max((int)this->getNnodes(), env->solutionStatistics.numberOfExploredNodes);
+
+    auto bounds = std::make_pair(env->results->getCurrentDualBound(), env->results->getPrimalBound());
+    currIter->currentObjectiveBounds = bounds;
 
     printIterationReport(candidatePoints.at(0), threadId);
 
