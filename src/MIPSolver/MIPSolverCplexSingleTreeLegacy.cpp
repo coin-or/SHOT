@@ -52,8 +52,6 @@ HCallbackI::HCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx2)
     }
 }
 
-HCallbackI::~HCallbackI() = default;
-
 IloCplex::CallbackI* HCallbackI::duplicateCallback() const { return (new(getEnv()) HCallbackI(*this)); }
 
 static IloCplex::Callback HCallback(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray cplexVars)
@@ -106,7 +104,6 @@ void HCallbackI::main() // Called at each node...
         }
 
         tmpVals.end();
-
         lastUpdatedPrimal = env->results->getPrimalBound();
     }
 
@@ -167,19 +164,16 @@ void HCallbackI::main() // Called at each node...
     return;
 }
 
-InfoCallbackI::InfoCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx2)
-    : IloCplex::MIPInfoCallbackI(iloEnv), cplexVars(xx2)
+InfoCallbackI::InfoCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv) : IloCplex::MIPInfoCallbackI(iloEnv)
 {
     env = envPtr;
 }
 
-InfoCallbackI::~InfoCallbackI() = default;
-
 IloCplex::CallbackI* InfoCallbackI::duplicateCallback() const { return (new(getEnv()) InfoCallbackI(*this)); }
 
-static IloCplex::Callback InfoCallback(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray cplexVars)
+static IloCplex::Callback InfoCallback(EnvironmentPtr envPtr, IloEnv iloEnv)
 {
-    return (IloCplex::Callback(new(iloEnv) InfoCallbackI(envPtr, iloEnv, cplexVars)));
+    return (IloCplex::Callback(new(iloEnv) InfoCallbackI(envPtr, iloEnv)));
 }
 
 void InfoCallbackI::main() // Called at each node...
@@ -278,8 +272,6 @@ CtCallbackI::CtCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx
         taskSelectPrimalSolutionFromRootsearch = std::make_unique<TaskSelectPrimalCandidatesFromRootsearch>(env);
     }
 }
-
-CtCallbackI::~CtCallbackI() = default;
 
 IloCplex::CallbackI* CtCallbackI::duplicateCallback() const { return (new(getEnv()) CtCallbackI(*this)); }
 
@@ -631,15 +623,14 @@ bool CtCallbackI::createIntegerCut(IntegerCut& integerCut)
                 continue;
 
             int variableValue = integerCut.variableValues[index];
-            auto variable = cplexVars[VAR->index];
 
             if(variableValue == VAR->upperBound)
             {
-                expr += (variableValue - variable);
+                expr += (variableValue - cplexVars[VAR->index]);
             }
             else if(variableValue == VAR->lowerBound)
             {
-                expr += variable;
+                expr += cplexVars[VAR->index];
             }
 
             index++;
@@ -728,9 +719,14 @@ E_ProblemSolutionStatus MIPSolverCplexSingleTreeLegacy::solveProblem()
         {
             if(getDiscreteVariableStatus())
             {
-                cplexInstance.use(CtCallback(env, cplexEnv, cplexVars));
-                cplexInstance.use(HCallback(env, cplexEnv, cplexVars));
-                cplexInstance.use(InfoCallback(env, cplexEnv, cplexVars));
+                ctCallback = new(cplexEnv) CtCallbackI(env, cplexEnv, cplexVars);
+                hCallback = new(cplexEnv) HCallbackI(env, cplexEnv, cplexVars);
+                infoCallback = new(cplexEnv) InfoCallbackI(env, cplexEnv);
+                callbacksInitialized = true;
+
+                cplexInstance.use(ctCallback);
+                cplexInstance.use(hCallback);
+                cplexInstance.use(infoCallback);
             }
         }
 
@@ -766,6 +762,17 @@ E_ProblemSolutionStatus MIPSolverCplexSingleTreeLegacy::solveProblem()
             repairInfeasibility();
             MIPSolutionStatus = E_ProblemSolutionStatus::Unbounded;
             env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed = true;
+        }
+
+        if(callbacksInitialized)
+        {
+            cplexInstance.remove(ctCallback);
+            cplexInstance.remove(hCallback);
+            cplexInstance.remove(infoCallback);
+            delete ctCallback;
+            delete hCallback;
+            delete infoCallback;
+            callbacksInitialized = false;
         }
     }
     catch(IloException& e)
