@@ -625,7 +625,7 @@ bool GurobiCallbackSingleTree::createIntegerCut(IntegerCut& integerCut)
 {
     if(!integerCut.areAllVariablesBinary)
     {
-        env->output->outputInfo("        Integer cut for nonbinary variables not supported in single-tree strategy.");
+        env->output->outputDebug("        Integer cut for nonbinary variables not supported in single-tree strategy.");
         return (false);
     }
 

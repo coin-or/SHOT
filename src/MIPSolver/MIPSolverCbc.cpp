@@ -318,7 +318,7 @@ int MIPSolverCbc::addLinearConstraint(
         }
         else
         {
-            env->output->outputInfo("        Linear constraint  not added by Cbc");
+            env->output->outputDebug("        Linear constraint  not added by Cbc");
             return (-1);
         }
     }
@@ -1234,7 +1234,7 @@ bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
                     cut.insert(VAR->index, -1.0);
                 else
                 {
-                    env->output->outputInfo("        Integer cut not added by Cbc ");
+                    env->output->outputDebug("        Integer cut not added by Cbc ");
                     return (false);
                 }
 
@@ -1380,7 +1380,7 @@ bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
 
         if(constraintCounter == numConstraintsBefore)
         {
-            env->output->outputInfo("        Integer cut not added by Cbc");
+            env->output->outputDebug("        Integer cut not added by Cbc");
             return (false);
         }
     }

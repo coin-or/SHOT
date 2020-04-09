@@ -186,7 +186,7 @@ void InfoCallbackI::main() // Called at each node...
 
     if(env->results->isRelativeObjectiveGapToleranceMet())
     {
-        env->output->outputInfo(
+        env->output->outputDebug(
             "        Terminated by relative objective gap tolerance in info callback: " + Utilities::toString(relObjGap)
             + " < " + Utilities::toString(env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination")));
 
@@ -195,7 +195,7 @@ void InfoCallbackI::main() // Called at each node...
     }
     else if(env->results->isAbsoluteObjectiveGapToleranceMet())
     {
-        env->output->outputInfo(
+        env->output->outputDebug(
             "        Terminated by absolute objective gap tolerance in info callback: " + Utilities::toString(absObjGap)
             + " < " + Utilities::toString(env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination")));
 
@@ -204,14 +204,14 @@ void InfoCallbackI::main() // Called at each node...
     }
     else if(checkIterationLimit())
     {
-        env->output->outputInfo("        Terminated since iteration limit reached in info callback.");
+        env->output->outputDebug("        Terminated since iteration limit reached in info callback.");
 
         this->abort();
         return;
     }
     else if(checkUserTermination())
     {
-        env->output->outputInfo("        Terminated due to termination by user.");
+        env->output->outputDebug("        Terminated by user.");
 
         this->abort();
         return;
@@ -403,7 +403,7 @@ void CtCallbackI::main()
 
     if(env->results->isAbsoluteObjectiveGapToleranceMet())
     {
-        env->output->outputInfo("        Terminated by absolute objective gap tolerance in lazy callback");
+        env->output->outputDebug("        Terminated by absolute objective gap tolerance in lazy callback");
 
         solution.clear();
         abort();
@@ -412,7 +412,7 @@ void CtCallbackI::main()
 
     if(env->results->isRelativeObjectiveGapToleranceMet())
     {
-        env->output->outputInfo("        Terminated by relative objective gap tolerance in lazy callback");
+        env->output->outputDebug("        Terminated by relative objective gap tolerance in lazy callback");
 
         solution.clear();
         abort();
@@ -421,7 +421,7 @@ void CtCallbackI::main()
 
     if(checkIterationLimit())
     {
-        env->output->outputInfo("        Terminated by iteration limit in lazy callback");
+        env->output->outputDebug("        Terminated by iteration limit in lazy callback");
 
         solution.clear();
         abort();
@@ -430,7 +430,7 @@ void CtCallbackI::main()
 
     if(checkUserTermination())
     {
-        env->output->outputInfo("        Terminated by user in lazy callback");
+        env->output->outputDebug("        Terminated by user in lazy callback");
 
         solution.clear();
         abort();
@@ -463,7 +463,7 @@ void CtCallbackI::main()
 
         if(env->results->isAbsoluteObjectiveGapToleranceMet())
         {
-            env->output->outputInfo("        Terminated by absolute objective gap tolerance in lazy callback");
+            env->output->outputDebug("        Terminated by absolute objective gap tolerance in lazy callback");
 
             solution.clear();
             abort();
@@ -472,7 +472,7 @@ void CtCallbackI::main()
 
         if(env->results->isRelativeObjectiveGapToleranceMet())
         {
-            env->output->outputInfo("        Terminated by relative objective gap tolerance in lazy callback");
+            env->output->outputDebug("        Terminated by relative objective gap tolerance in lazy callback");
 
             solution.clear();
             abort();
@@ -616,7 +616,7 @@ bool CtCallbackI::createIntegerCut(IntegerCut& integerCut)
 {
     if(!integerCut.areAllVariablesBinary)
     {
-        env->output->outputInfo("        Integer cut for nonbinary variables not supported in single-tree strategy.");
+        env->output->outputDebug("        Integer cut for nonbinary variables not supported in single-tree strategy.");
         return (false);
     }
 
