@@ -40,6 +40,8 @@ public:
 
     void setFileSink(std::string filename);
 
+    void flush() { logger->flush(); }
+
 private:
     std::shared_ptr<spdlog::sinks::sink> consoleSink;
     std::shared_ptr<spdlog::sinks::basic_file_sink_st> fileSink;

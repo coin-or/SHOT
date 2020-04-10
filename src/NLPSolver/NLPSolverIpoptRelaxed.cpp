@@ -27,7 +27,12 @@ NLPSolverIpoptRelaxed::NLPSolverIpoptRelaxed(EnvironmentPtr envPtr, ProblemPtr s
     updateSettings();
 
     ipoptProblem = new IpoptProblem(env, sourceProblem);
-    ipoptApplication = new Ipopt::IpoptApplication();
+    ipoptApplication = new Ipopt::IpoptApplication(false);
+
+    Ipopt::SmartPtr<Ipopt::Journal> jrnl = new SHOTJournal(envPtr, "console", Ipopt::J_ALL);
+    jrnl->SetPrintLevel(Ipopt::J_DBG, Ipopt::J_NONE);
+    if( !ipoptApplication->Jnlst()->AddJournal(jrnl) )
+        envPtr->output->outputError("        Failed to register SHOTJournal for IPOPT output.");
 
     setInitialSettings();
 
