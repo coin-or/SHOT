@@ -84,7 +84,6 @@ NLPSolverGAMS::NLPSolverGAMS(EnvironmentPtr envPtr, gmoHandle_t modelingObject, 
         std::transform(selectedNLPSolver.begin(), selectedNLPSolver.end(), selectedNLPSolver.begin(), ::toupper);
     }
 
-    // TODO: showlog seems to have no effect...
     showlog = env->settings->getSetting<bool>("Console.PrimalSolver.Show", "Output");
 }
 
