@@ -1043,12 +1043,8 @@ void Solver::initializeSettings()
     enumLogLevel.clear();
 
     env->settings->createSetting("Console.DualSolver.Show", "Output", false, "Show output from dual solver on console");
-
-#ifdef HAS_GAMS
-
-    env->settings->createSetting("Console.GAMS.Show", "Output", false, "Show GAMS output on console");
-
-#endif
+    env->settings->createSetting(
+        "Console.PrimalSolver.Show", "Output", false, "Show output from primal solver on console");
 
     VectorString enumIterationDetail;
     enumIterationDetail.push_back("Full");
@@ -1711,6 +1707,11 @@ void Solver::verifySettings()
 
     // Set correct iteration detail output when showing dual solver output
     if(env->settings->getSetting<bool>("Console.DualSolver.Show", "Output"))
+        env->settings->updateSetting(
+            "Console.Iteration.Detail", "Output", static_cast<int>(ES_IterationOutputDetail::Full));
+
+    // Set correct iteration detail output when showing primal solver output
+    if(env->settings->getSetting<bool>("Console.PrimalSolver.Show", "Output"))
         env->settings->updateSetting(
             "Console.Iteration.Detail", "Output", static_cast<int>(ES_IterationOutputDetail::Full));
 }

@@ -85,7 +85,7 @@ NLPSolverGAMS::NLPSolverGAMS(EnvironmentPtr envPtr, gmoHandle_t modelingObject, 
     }
 
     // TODO: showlog seems to have no effect...
-    showlog = env->settings->getSetting<bool>("Console.GAMS.Show", "Output");
+    showlog = env->settings->getSetting<bool>("Console.PrimalSolver.Show", "Output");
 }
 
 NLPSolverGAMS::~NLPSolverGAMS() = default;
