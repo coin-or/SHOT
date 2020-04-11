@@ -142,19 +142,19 @@ bool Solver::setOptionsFromFile(std::string fileName)
         else
         {
             env->output->outputError(
-                "Error when reading options from \"" + fileName + "\". File extension must be osol, xml or opt.");
+                " Error when reading options from \"" + fileName + "\". File extension must be osol, xml or opt.");
             result = false;
         }
     }
     catch(const std::exception& e)
     {
-        env->output->outputError("Error when reading options from \"" + fileName + "\"", e.what());
+        env->output->outputError(" Error when reading options from \"" + fileName + "\"", e.what());
         result = false;
     }
 
     env->settings->updateSetting("OptionsFile", "Input", fileName);
 
-    env->output->outputDebug("Options read from file \"" + fileName + "\"");
+    env->output->outputDebug(" Options read from file \"" + fileName + "\"");
 
     return (result);
 }
@@ -163,7 +163,7 @@ bool Solver::setOptionsFromString(std::string options)
 {
     bool status = env->settings->readSettingsFromString(options);
 
-    env->output->outputDebug("Options read.");
+    env->output->outputDebug(" Options read.");
 
     return (status);
 }
@@ -174,7 +174,7 @@ bool Solver::setOptionsFromOSoL(std::string options)
 
     verifySettings();
 
-    env->output->outputDebug("Options read.");
+    env->output->outputDebug(" Options read.");
 
     return (status);
 }
@@ -189,7 +189,7 @@ bool Solver::setProblem(std::string fileName)
 {
     if(!fs::filesystem::exists(fileName))
     {
-        env->output->outputError("Problem file \"" + fileName + "\" does not exist.");
+        env->output->outputError(" Problem file \"" + fileName + "\" does not exist.");
 
         return (false);
     }
@@ -198,7 +198,7 @@ bool Solver::setProblem(std::string fileName)
 
     if(!problemFile.has_extension())
     {
-        env->output->outputError("Problem file \"" + fileName + "\" does not specify a file extension.");
+        env->output->outputError(" Problem file \"" + fileName + "\" does not specify a file extension.");
 
         return (false);
     }
@@ -219,7 +219,7 @@ bool Solver::setProblem(std::string fileName)
     {
         if(auto debugPath = Utilities::createTemporaryDirectory("SHOT_debug_"); debugPath == "")
         {
-            env->output->outputError("Could not create debug directory.");
+            env->output->outputError(" Could not create debug directory.");
             return (false);
         }
         else
@@ -362,7 +362,7 @@ bool Solver::setProblem(std::string fileName)
     }
     catch(const std::exception& e)
     {
-        env->output->outputError(fmt::format("Error when reading problem from \"{0}\"", e.what()));
+        env->output->outputError(fmt::format(" Error when reading problem from \"{0}\"", e.what()));
 
         return (false);
     }
@@ -386,7 +386,7 @@ bool Solver::setProblem(SHOT::ProblemPtr problem, SHOT::ModelingSystemPtr modeli
     {
         if(auto debugPath = Utilities::createTemporaryDirectory("SHOT_debug_"); debugPath == "")
         {
-            env->output->outputError("Could not create debug directory.");
+            env->output->outputError(" Could not create debug directory.");
             return (false);
         }
         else
@@ -617,13 +617,13 @@ void Solver::initializeSettings()
 {
     if(env->settings->settingsInitialized)
     {
-        env->output->outputWarning("Warning! Settings have already been initialized. Ignoring new settings.");
+        env->output->outputWarning(" Warning! Settings have already been initialized. Ignoring new settings.");
         return;
     }
 
     std::string empty; // Used to create empty string options
 
-    env->output->outputDebug("Starting initialization of settings:");
+    env->output->outputDebug(" Starting initialization of settings:");
 
     env->settings->createSettingGroup("Dual", "", "Dual strategy",
         "These settings control the various functionality of the dual strategy in SHOT, i.e., the polyhedral outer "
@@ -1502,7 +1502,7 @@ void Solver::initializeSettings()
 
     env->settings->settingsInitialized = true;
 
-    env->output->outputDebug("Initialization of settings complete.");
+    env->output->outputDebug(" Initialization of settings complete.");
 }
 
 void Solver::initializeDebugMode()
@@ -1512,17 +1512,17 @@ void Solver::initializeDebugMode()
 
     if(fs::filesystem::exists(debugDir))
     {
-        env->output->outputDebug("Debug directory " + debugPath + " already exists.");
+        env->output->outputDebug(" Debug directory " + debugPath + " already exists.");
     }
     else
     {
         if(fs::filesystem::create_directories(debugDir))
         {
-            env->output->outputDebug("Debug directory " + debugPath + " created.");
+            env->output->outputDebug(" Debug directory " + debugPath + " created.");
         }
         else
         {
-            env->output->outputWarning("Could not create debug directory.");
+            env->output->outputWarning(" Could not create debug directory.");
         }
     }
 
