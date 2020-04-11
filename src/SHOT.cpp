@@ -94,13 +94,14 @@ int main(int argc, char* argv[])
         env->output->outputCritical("   --AMPL                   Activates ASL support. Only to be used with nl-files");
 #endif
         env->output->outputCritical("   --debug [DIRECTORY]      Saves debug information in the specified directory");
-        env->output->outputCritical(
-            "                            If DIRECTORY is empty 'debug/<problem_name>/' is used");
+        env->output->outputCritical("                            If DIRECTORY is empty a temporary directory is used");
         env->output->outputCritical("   --log FILE               Sets the filename for the log file");
         env->output->outputCritical("   --opt [FILE]             Reads in options from FILE in GAMS format");
-        env->output->outputCritical("                            If FILE is empty, a new options file will be created");
+        env->output->outputCritical(
+            "                            If FILE is empty, a new options file SHOT.opt will be created");
         env->output->outputCritical("   --osol [FILE]            Reads in options from FILE in OSoL format");
-        env->output->outputCritical("                            If FILE is empty, a new options file will be created");
+        env->output->outputCritical(
+            "                            If FILE is empty, a new options file SHOT.osol will be created");
         env->output->outputCritical("   --osrl FILE              Sets the filename for the OSrL result file");
         env->output->outputCritical(
             "   --trc [FILE]             Prints a trace file to <problemname>.trc or specified filename");
@@ -151,7 +152,7 @@ int main(int argc, char* argv[])
 
         auto filepath = fs::filesystem::current_path() / fs::filesystem::path("options.md");
         if(!Utilities::writeStringToFile(filepath.string(), markup))
-            env->output->outputCritical("Error when writing markup file: " + filepath.string());
+            env->output->outputCritical(" Error when writing markup file: " + filepath.string());
     }
 
     // Read or create options file
@@ -173,9 +174,9 @@ int main(int argc, char* argv[])
             return 0;
         }
     }
-    else if(cmdl["--opt"]) // Create a new opt-file
+    else if(cmdl["--opt"]) // Create a new opt-file  or read from default file (SHOT.opt)
     {
-        auto filepath = fs::filesystem::current_path() / fs::filesystem::path("options.opt");
+        auto filepath = fs::filesystem::current_path() / fs::filesystem::path("SHOT.opt");
 
         if(fs::filesystem::exists(filepath))
         {
@@ -202,7 +203,6 @@ int main(int argc, char* argv[])
         if(fs::filesystem::exists(filepath))
         {
             optionsFile = filepath;
-            env->output->outputInfo(" Default options file written to: " + filepath.string() + '\n');
         }
         else
         {
@@ -210,9 +210,9 @@ int main(int argc, char* argv[])
             return 0;
         }
     }
-    else if(cmdl["--osol"]) // Create a new OSoL-file
+    else if(cmdl["--osol"]) // Create a new OSoL-file  or read from default file (SHOT.osol)
     {
-        auto filepath = fs::filesystem::current_path() / fs::filesystem::path("options.xml");
+        auto filepath = fs::filesystem::current_path() / fs::filesystem::path("SHOT.osol");
 
         if(fs::filesystem::exists(filepath))
         {
@@ -220,15 +220,16 @@ int main(int argc, char* argv[])
         }
         else
         {
-            // Create OSoL-file
+            // Create option file
             if(!Utilities::writeStringToFile(filepath.string(), solver.getOptionsOSoL()))
             {
-                env->output->outputCritical(" Error when writing OSoL file: " + filepath.string());
+                env->output->outputCritical(" Error when writing options file: " + filepath.string());
                 return 0;
             }
-        }
 
-        defaultOptionsGenerated = true;
+            defaultOptionsGenerated = true;
+            env->output->outputInfo(" Default options file written to: " + filepath.string() + '\n');
+        }
     }
 
     if(!defaultOptionsGenerated)

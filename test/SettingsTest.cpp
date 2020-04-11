@@ -80,11 +80,11 @@ bool SettingsTestOptions(bool useOSiL)
 
     if(useOSiL)
     {
-        filename = "options.xml";
+        filename = "SHOT.osol";
     }
     else
     {
-        filename = "options.opt";
+        filename = "SHOT.opt";
     }
 
     if(fs::filesystem::exists(filename))
