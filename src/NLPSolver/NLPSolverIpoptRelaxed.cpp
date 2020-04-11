@@ -29,10 +29,10 @@ NLPSolverIpoptRelaxed::NLPSolverIpoptRelaxed(EnvironmentPtr envPtr, ProblemPtr s
     ipoptProblem = new IpoptProblem(env, sourceProblem);
     ipoptApplication = new Ipopt::IpoptApplication(false);
 
-    Ipopt::SmartPtr<Ipopt::Journal> jrnl = new SHOTIpoptJournal(envPtr, "console", Ipopt::J_ALL);
+    Ipopt::SmartPtr<Ipopt::Journal> jrnl = new IpoptJournal(envPtr, "console", Ipopt::J_ALL);
     jrnl->SetPrintLevel(Ipopt::J_DBG, Ipopt::J_NONE);
     if(!ipoptApplication->Jnlst()->AddJournal(jrnl))
-        envPtr->output->outputError("        Failed to register SHOTIpoptJournal for IPOPT output.");
+        envPtr->output->outputError("        Failed to register IpoptJournal for IPOPT output.");
 
     setInitialSettings();
 

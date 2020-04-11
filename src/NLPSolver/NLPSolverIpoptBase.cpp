@@ -21,7 +21,7 @@ namespace SHOT
 
 using namespace Ipopt;
 
-void SHOTIpoptJournal::PrintImpl(Ipopt::EJournalCategory category, Ipopt::EJournalLevel level, const char* str)
+void IpoptJournal::PrintImpl(Ipopt::EJournalCategory category, Ipopt::EJournalLevel level, const char* str)
 {
     auto lines = Utilities::splitStringByCharacter(str, '\n');
 
@@ -57,7 +57,7 @@ void SHOTIpoptJournal::PrintImpl(Ipopt::EJournalCategory category, Ipopt::EJourn
     }
 }
 
-void SHOTIpoptJournal::PrintfImpl(
+void IpoptJournal::PrintfImpl(
     Ipopt::EJournalCategory category, Ipopt::EJournalLevel level, const char* pformat, va_list ap)
 {
     if(level == Ipopt::EJournalLevel::J_NONE)
@@ -79,7 +79,7 @@ void SHOTIpoptJournal::PrintfImpl(
     }
 }
 
-void SHOTIpoptJournal::FlushBufferImpl()
+void IpoptJournal::FlushBufferImpl()
 {
     if(outBufPos > 0)
     {

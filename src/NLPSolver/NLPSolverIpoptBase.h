@@ -23,7 +23,7 @@ namespace SHOT
 class NLPSolverIpoptBase;
 
 // An Ipopt Journal implementation that uses the SHOT routines for output */
-class SHOTIpoptJournal : public Ipopt::Journal
+class IpoptJournal : public Ipopt::Journal
 {
 private:
     EnvironmentPtr env;
@@ -31,7 +31,7 @@ private:
     int outBufPos = 0;
 
 public:
-    SHOTIpoptJournal(EnvironmentPtr envPtr, /**< SHOT environment */
+    IpoptJournal(EnvironmentPtr envPtr, /**< SHOT environment */
         const char* name, /**< journalist name */
         Ipopt::EJournalLevel default_level /**< default journal level */
         )
