@@ -21,11 +21,7 @@ namespace SHOT
 
 using namespace Ipopt;
 
-void SHOTJournal::PrintImpl(
-   Ipopt::EJournalCategory category,
-   Ipopt::EJournalLevel    level,
-   const char*             str
-)
+void SHOTIpoptJournal::PrintImpl(Ipopt::EJournalCategory category, Ipopt::EJournalLevel level, const char* str)
 {
     auto lines = Utilities::splitStringByCharacter(str, '\n');
 
@@ -33,32 +29,28 @@ void SHOTJournal::PrintImpl(
         env->output->outputInfo(fmt::format("      | {} ", line));
 }
 
-void SHOTJournal::PrintfImpl(
-   Ipopt::EJournalCategory category,
-   Ipopt::EJournalLevel    level,
-   const char*             pformat,
-   va_list                 ap
-)
+void SHOTIpoptJournal::PrintfImpl(
+    Ipopt::EJournalCategory category, Ipopt::EJournalLevel level, const char* pformat, va_list ap)
 {
     // append to output buffer
     int rc = std::vsnprintf(outBuf + outBufPos, sizeof(outBuf) - outBufPos, pformat, ap);
 
-    if( rc < 0 ) // ignore error
+    if(rc < 0) // ignore error
         return;
 
     outBufPos += rc;
 
     // if output buffer terminates with newline or is almost full, then print
-    if( (outBufPos > 0 && outBuf[outBufPos-1] == '\n') || outBufPos > sizeof(outBuf) - 100 )
+    if((outBufPos > 0 && outBuf[outBufPos - 1] == '\n') || outBufPos > sizeof(outBuf) - 100)
     {
         PrintImpl(category, level, outBuf);
         outBufPos = 0;
     }
 }
 
-void SHOTJournal::FlushBufferImpl()
+void SHOTIpoptJournal::FlushBufferImpl()
 {
-    if( outBufPos > 0 )
+    if(outBufPos > 0)
     {
         // just make up a category and level, as not used in PrintImpl anyway
         PrintImpl(J_LAST_CATEGORY, J_ALL, outBuf);
@@ -67,7 +59,6 @@ void SHOTJournal::FlushBufferImpl()
 
     env->output->flush();
 }
-
 
 IpoptProblem::IpoptProblem(EnvironmentPtr envPtr, ProblemPtr problem) : env(envPtr), sourceProblem(problem) {}
 

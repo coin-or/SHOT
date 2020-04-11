@@ -23,40 +23,29 @@ namespace SHOT
 class NLPSolverIpoptBase;
 
 // An Ipopt Journal implementation that uses the SHOT routines for output */
-class SHOTJournal : public Ipopt::Journal
+class SHOTIpoptJournal : public Ipopt::Journal
 {
 private:
-   EnvironmentPtr env;
-   char outBuf[10000];
-   int outBufPos = 0;
+    EnvironmentPtr env;
+    char outBuf[10000];
+    int outBufPos = 0;
 
 public:
-   SHOTJournal(
-      EnvironmentPtr       envPtr,           /**< SHOT environment */
-      const char*          name,             /**< journalist name */
-      Ipopt::EJournalLevel default_level     /**< default journal level */
-   )
-   : Ipopt::Journal(name, default_level),
-     env(envPtr)
-   { }
+    SHOTIpoptJournal(EnvironmentPtr envPtr, /**< SHOT environment */
+        const char* name, /**< journalist name */
+        Ipopt::EJournalLevel default_level /**< default journal level */
+        )
+        : Ipopt::Journal(name, default_level), env(envPtr)
+    {
+    }
 
 protected:
-   void PrintImpl(
-      Ipopt::EJournalCategory category,
-      Ipopt::EJournalLevel    level,
-      const char*             str
-   );
+    void PrintImpl(Ipopt::EJournalCategory category, Ipopt::EJournalLevel level, const char* str);
 
-   void PrintfImpl(
-      Ipopt::EJournalCategory category,
-      Ipopt::EJournalLevel    level,
-      const char*             pformat,
-      va_list                 ap
-   );
+    void PrintfImpl(Ipopt::EJournalCategory category, Ipopt::EJournalLevel level, const char* pformat, va_list ap);
 
-   void FlushBufferImpl();
+    void FlushBufferImpl();
 };
-
 
 // The following class is adapted from COIN-OR Optimization Services Ipopt interface
 class IpoptProblem : public Ipopt::TNLP
