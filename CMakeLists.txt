@@ -563,6 +563,7 @@ file(
     "${PROJECT_SOURCE_DIR}/src/Solver.cpp"
     "${PROJECT_SOURCE_DIR}/src/RootsearchMethod/RootsearchMethodBoost.cpp"
 )
+
 add_library(SHOTSolver SHARED ${SOURCES})
 
 # Links the compiled libraries
@@ -572,8 +573,15 @@ target_link_libraries(SHOTSolver SHOTResults)
 target_link_libraries(SHOTSolver SHOTDualStrategy)
 target_link_libraries(SHOTSolver SHOTPrimalStrategy)
 target_link_libraries(SHOTSolver SHOTTasks)
-# need these whole-archive flags to ensure that EntryPointGAMS symbols will be present in library
-target_link_libraries(SHOTSolver "-Wl,--whole-archive" SHOTModelingInterfaces "-Wl,--no-whole-archive")
+
+if(MSYS OR MINGW)
+    # MinGW cross compilation will not work if "-Wl,--whole-archive" is defined below
+    target_link_libraries(SHOTSolver SHOTModelingInterfaces)
+else()
+    # need these whole-archive flags to ensure that EntryPointGAMS symbols will be present in library
+    target_link_libraries(SHOTSolver "-Wl,--whole-archive" SHOTModelingInterfaces "-Wl,--no-whole-archive")
+endif()
+
 target_link_libraries(SHOTSolver SHOTSolutionStrategies)
 
 # Link the standard library required for std::filesystem (if needed)
