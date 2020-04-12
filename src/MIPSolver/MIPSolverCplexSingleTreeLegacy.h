@@ -24,27 +24,6 @@
 
 namespace SHOT
 {
-class MIPSolverCplexSingleTreeLegacy : public MIPSolverCplex
-{
-public:
-    MIPSolverCplexSingleTreeLegacy(EnvironmentPtr envPtr);
-    ~MIPSolverCplexSingleTreeLegacy() override = default;
-
-    void checkParameters() override;
-
-    void initializeSolverSettings() override;
-
-    E_ProblemSolutionStatus solveProblem() override;
-
-    int increaseSolutionLimit(int increment) override;
-    void setSolutionLimit(long limit) override;
-    int getSolutionLimit() override;
-
-    std::mutex callbackMutex2;
-
-private:
-protected:
-};
 
 class HCallbackI : public IloCplex::HeuristicCallbackI, public MIPSolverCallbackBase
 {
@@ -56,20 +35,18 @@ public:
     HCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx2);
     void main() override;
 
-    ~HCallbackI() override;
+    ~HCallbackI() override = default;
 };
 
 class InfoCallbackI : public IloCplex::MIPInfoCallbackI, public MIPSolverCallbackBase
 {
-    IloNumVarArray cplexVars;
-
 private:
 public:
     IloCplex::CallbackI* duplicateCallback() const override;
-    InfoCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx2);
+    InfoCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv);
     void main() override;
 
-    ~InfoCallbackI() override;
+    ~InfoCallbackI() override = default;
 };
 
 class CtCallbackI : public IloCplex::LazyConstraintCallbackI, public MIPSolverCallbackBase
@@ -86,6 +63,45 @@ public:
     CtCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx2);
     void main() override;
 
-    ~CtCallbackI() override;
+    ~CtCallbackI() override = default;
+};
+
+class MIPSolverCplexSingleTreeLegacy : public MIPSolverCplex
+{
+public:
+    MIPSolverCplexSingleTreeLegacy(EnvironmentPtr envPtr);
+    ~MIPSolverCplexSingleTreeLegacy() override
+    {
+        if(callbacksInitialized)
+        {
+            cplexInstance.remove(ctCallback);
+            cplexInstance.remove(hCallback);
+            cplexInstance.remove(infoCallback);
+            delete ctCallback;
+            delete hCallback;
+            delete infoCallback;
+            callbacksInitialized = false;
+        }
+    }
+
+    void checkParameters() override;
+
+    void initializeSolverSettings() override;
+
+    E_ProblemSolutionStatus solveProblem() override;
+
+    int increaseSolutionLimit(int increment) override;
+    void setSolutionLimit(long limit) override;
+    int getSolutionLimit() override;
+
+    std::mutex callbackMutex2;
+
+private:
+    CtCallbackI* ctCallback;
+    HCallbackI* hCallback;
+    InfoCallbackI* infoCallback;
+    bool callbacksInitialized = false;
+
+protected:
 };
 } // namespace SHOT

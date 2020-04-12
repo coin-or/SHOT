@@ -201,7 +201,7 @@ void GurobiCallbackSingleTree::callback()
                 tmpDualObjBound = getDoubleInfo(GRB_CB_MIPNODE_OBJBND);
                 break;
             default:
-                tmpDualObjBound  = 0.0; // just to suppress a compiler warning
+                tmpDualObjBound = 0.0; // just to suppress a compiler warning
                 break;
             }
 
@@ -625,7 +625,7 @@ bool GurobiCallbackSingleTree::createIntegerCut(IntegerCut& integerCut)
 {
     if(!integerCut.areAllVariablesBinary)
     {
-        env->output->outputInfo("        Integer cut for nonbinary variables not supported in single-tree strategy.");
+        env->output->outputDebug("        Integer cut for nonbinary variables not supported in single-tree strategy.");
         return (false);
     }
 

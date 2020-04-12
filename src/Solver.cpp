@@ -1278,8 +1278,8 @@ void Solver::initializeSettings()
         "How to replace solutions in the solution pool when full", enumCplexSolPoolReplace, 0);
     enumCplexSolPoolReplace.clear();
 
-    env->settings->createSetting("Cplex.UseGenericCallback", "Subsolver", false,
-        "Use the new generic callback (vers. >12.8) in the single-tree strategy (experimental)");
+    env->settings->createSetting(
+        "Cplex.UseGenericCallback", "Subsolver", false, "Use the new generic callback in the single-tree strategy");
 
     std::string workdir = "";
     env->settings->createSetting("Cplex.WorkDirectory", "Subsolver", workdir, "Directory for swap file");

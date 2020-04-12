@@ -506,7 +506,7 @@ bool CplexCallback::createIntegerCut(IntegerCut& integerCut, const IloCplex::Cal
 {
     if(!integerCut.areAllVariablesBinary)
     {
-        env->output->outputInfo("        Integer cut for nonbinary variables not supported in single-tree strategy.");
+        env->output->outputDebug("        Integer cut for nonbinary variables not supported in single-tree strategy.");
         return (false);
     }
 

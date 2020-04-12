@@ -477,7 +477,7 @@ int MIPSolverCplex::addLinearConstraint(
             }
             else
             {
-                env->output->outputInfo("        Hyperplane not added by Cplex");
+                env->output->outputDebug("        Hyperplane not added by Cplex");
                 tmpRange.end();
                 return (-1);
             }
@@ -498,7 +498,7 @@ int MIPSolverCplex::addLinearConstraint(
             }
             else
             {
-                env->output->outputInfo("        Hyperplane not added by Cplex");
+                env->output->outputDebug("        Hyperplane not added by Cplex");
                 tmpRange.end();
                 return (-1);
             }
@@ -1554,7 +1554,7 @@ bool MIPSolverCplex::createIntegerCut(IntegerCut& integerCut)
 
         if(addedConstraints == 0)
         {
-            env->output->outputInfo("        Integer cut not added by Cplex");
+            env->output->outputDebug("        Integer cut not added by Cplex");
             return (false);
         }
     }

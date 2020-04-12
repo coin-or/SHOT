@@ -52,8 +52,6 @@ HCallbackI::HCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx2)
     }
 }
 
-HCallbackI::~HCallbackI() = default;
-
 IloCplex::CallbackI* HCallbackI::duplicateCallback() const { return (new(getEnv()) HCallbackI(*this)); }
 
 static IloCplex::Callback HCallback(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray cplexVars)
@@ -106,7 +104,6 @@ void HCallbackI::main() // Called at each node...
         }
 
         tmpVals.end();
-
         lastUpdatedPrimal = env->results->getPrimalBound();
     }
 
@@ -167,19 +164,16 @@ void HCallbackI::main() // Called at each node...
     return;
 }
 
-InfoCallbackI::InfoCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx2)
-    : IloCplex::MIPInfoCallbackI(iloEnv), cplexVars(xx2)
+InfoCallbackI::InfoCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv) : IloCplex::MIPInfoCallbackI(iloEnv)
 {
     env = envPtr;
 }
 
-InfoCallbackI::~InfoCallbackI() = default;
-
 IloCplex::CallbackI* InfoCallbackI::duplicateCallback() const { return (new(getEnv()) InfoCallbackI(*this)); }
 
-static IloCplex::Callback InfoCallback(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray cplexVars)
+static IloCplex::Callback InfoCallback(EnvironmentPtr envPtr, IloEnv iloEnv)
 {
-    return (IloCplex::Callback(new(iloEnv) InfoCallbackI(envPtr, iloEnv, cplexVars)));
+    return (IloCplex::Callback(new(iloEnv) InfoCallbackI(envPtr, iloEnv)));
 }
 
 void InfoCallbackI::main() // Called at each node...
@@ -192,7 +186,7 @@ void InfoCallbackI::main() // Called at each node...
 
     if(env->results->isRelativeObjectiveGapToleranceMet())
     {
-        env->output->outputInfo(
+        env->output->outputDebug(
             "        Terminated by relative objective gap tolerance in info callback: " + Utilities::toString(relObjGap)
             + " < " + Utilities::toString(env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination")));
 
@@ -201,7 +195,7 @@ void InfoCallbackI::main() // Called at each node...
     }
     else if(env->results->isAbsoluteObjectiveGapToleranceMet())
     {
-        env->output->outputInfo(
+        env->output->outputDebug(
             "        Terminated by absolute objective gap tolerance in info callback: " + Utilities::toString(absObjGap)
             + " < " + Utilities::toString(env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination")));
 
@@ -210,14 +204,14 @@ void InfoCallbackI::main() // Called at each node...
     }
     else if(checkIterationLimit())
     {
-        env->output->outputInfo("        Terminated since iteration limit reached in info callback.");
+        env->output->outputDebug("        Terminated since iteration limit reached in info callback.");
 
         this->abort();
         return;
     }
     else if(checkUserTermination())
     {
-        env->output->outputInfo("        Terminated due to termination by user.");
+        env->output->outputDebug("        Terminated by user.");
 
         this->abort();
         return;
@@ -279,8 +273,6 @@ CtCallbackI::CtCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx
     }
 }
 
-CtCallbackI::~CtCallbackI() = default;
-
 IloCplex::CallbackI* CtCallbackI::duplicateCallback() const { return (new(getEnv()) CtCallbackI(*this)); }
 
 static IloCplex::Callback CtCallback(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray cplexVars)
@@ -309,12 +301,12 @@ void CtCallbackI::main()
 
     this->getValues(tmpVals, cplexVars);
 
-    int size
+    int numberOfVariables
         = (env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable()) ? tmpVals.getSize() - 1 : tmpVals.getSize();
 
-    VectorDouble solution(size);
+    VectorDouble solution(numberOfVariables);
 
-    for(int i = 0; i < size; i++)
+    for(int i = 0; i < numberOfVariables; i++)
     {
         solution.at(i) = tmpVals[i];
     }
@@ -327,6 +319,7 @@ void CtCallbackI::main()
     {
         auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
             solution, env->reformulatedProblem->nonlinearConstraints);
+
         solutionCandidate.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
     }
     else
@@ -394,16 +387,23 @@ void CtCallbackI::main()
 
     auto threadId = std::to_string(this->getMyThreadNum());
 
-    env->results->getCurrentIteration()->numberOfOpenNodes = this->getNremainingNodes();
+    currIter->maxDeviation = solutionCandidate.maxDeviation.value;
+    currIter->maxDeviationConstraint = solutionCandidate.maxDeviation.index;
+    currIter->solutionStatus = E_ProblemSolutionStatus::Feasible;
+    currIter->objectiveValue = this->getIncumbentObjValue();
 
+    currIter->numberOfOpenNodes = this->getNremainingNodes();
     env->solutionStatistics.numberOfExploredNodes
         = std::max((int)this->getNnodes(), env->solutionStatistics.numberOfExploredNodes);
+
+    auto bounds = std::make_pair(env->results->getCurrentDualBound(), env->results->getPrimalBound());
+    currIter->currentObjectiveBounds = bounds;
 
     printIterationReport(candidatePoints.at(0), threadId);
 
     if(env->results->isAbsoluteObjectiveGapToleranceMet())
     {
-        env->output->outputInfo("        Terminated by absolute objective gap tolerance in lazy callback");
+        env->output->outputDebug("        Terminated by absolute objective gap tolerance in lazy callback");
 
         solution.clear();
         abort();
@@ -412,7 +412,7 @@ void CtCallbackI::main()
 
     if(env->results->isRelativeObjectiveGapToleranceMet())
     {
-        env->output->outputInfo("        Terminated by relative objective gap tolerance in lazy callback");
+        env->output->outputDebug("        Terminated by relative objective gap tolerance in lazy callback");
 
         solution.clear();
         abort();
@@ -421,7 +421,7 @@ void CtCallbackI::main()
 
     if(checkIterationLimit())
     {
-        env->output->outputInfo("        Terminated by iteration limit in lazy callback");
+        env->output->outputDebug("        Terminated by iteration limit in lazy callback");
 
         solution.clear();
         abort();
@@ -430,7 +430,7 @@ void CtCallbackI::main()
 
     if(checkUserTermination())
     {
-        env->output->outputInfo("        Terminated by user in lazy callback");
+        env->output->outputDebug("        Terminated by user in lazy callback");
 
         solution.clear();
         abort();
@@ -463,7 +463,7 @@ void CtCallbackI::main()
 
         if(env->results->isAbsoluteObjectiveGapToleranceMet())
         {
-            env->output->outputInfo("        Terminated by absolute objective gap tolerance in lazy callback");
+            env->output->outputDebug("        Terminated by absolute objective gap tolerance in lazy callback");
 
             solution.clear();
             abort();
@@ -472,7 +472,7 @@ void CtCallbackI::main()
 
         if(env->results->isRelativeObjectiveGapToleranceMet())
         {
-            env->output->outputInfo("        Terminated by relative objective gap tolerance in lazy callback");
+            env->output->outputDebug("        Terminated by relative objective gap tolerance in lazy callback");
 
             solution.clear();
             abort();
@@ -616,7 +616,7 @@ bool CtCallbackI::createIntegerCut(IntegerCut& integerCut)
 {
     if(!integerCut.areAllVariablesBinary)
     {
-        env->output->outputInfo("        Integer cut for nonbinary variables not supported in single-tree strategy.");
+        env->output->outputDebug("        Integer cut for nonbinary variables not supported in single-tree strategy.");
         return (false);
     }
 
@@ -631,15 +631,14 @@ bool CtCallbackI::createIntegerCut(IntegerCut& integerCut)
                 continue;
 
             int variableValue = integerCut.variableValues[index];
-            auto variable = cplexVars[VAR->index];
 
             if(variableValue == VAR->upperBound)
             {
-                expr += (variableValue - variable);
+                expr += (variableValue - cplexVars[VAR->index]);
             }
             else if(variableValue == VAR->lowerBound)
             {
-                expr += variable;
+                expr += cplexVars[VAR->index];
             }
 
             index++;
@@ -728,9 +727,14 @@ E_ProblemSolutionStatus MIPSolverCplexSingleTreeLegacy::solveProblem()
         {
             if(getDiscreteVariableStatus())
             {
-                cplexInstance.use(CtCallback(env, cplexEnv, cplexVars));
-                cplexInstance.use(HCallback(env, cplexEnv, cplexVars));
-                cplexInstance.use(InfoCallback(env, cplexEnv, cplexVars));
+                ctCallback = new(cplexEnv) CtCallbackI(env, cplexEnv, cplexVars);
+                hCallback = new(cplexEnv) HCallbackI(env, cplexEnv, cplexVars);
+                infoCallback = new(cplexEnv) InfoCallbackI(env, cplexEnv);
+                callbacksInitialized = true;
+
+                cplexInstance.use(ctCallback);
+                cplexInstance.use(hCallback);
+                cplexInstance.use(infoCallback);
             }
         }
 
@@ -766,6 +770,17 @@ E_ProblemSolutionStatus MIPSolverCplexSingleTreeLegacy::solveProblem()
             repairInfeasibility();
             MIPSolutionStatus = E_ProblemSolutionStatus::Unbounded;
             env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed = true;
+        }
+
+        if(callbacksInitialized)
+        {
+            cplexInstance.remove(ctCallback);
+            cplexInstance.remove(hCallback);
+            cplexInstance.remove(infoCallback);
+            delete ctCallback;
+            delete hCallback;
+            delete infoCallback;
+            callbacksInitialized = false;
         }
     }
     catch(IloException& e)
