@@ -31,7 +31,11 @@ When the relative or absolute difference (objective gap) between the primal and 
 
 ## Compilation instructions
 
-Instructions for compiling SHOT is available at the project website at https://www.shotsolver.dev. 
+Instructions for compiling SHOT is available at the [project website](https://shotsolver.dev/shot/about-shot/compiling).
+
+## Solver manual
+
+Instructions for how to use SHOT, e.g. call it from different environments are provided on the [project website](https://shotsolver.dev/shot/using-shot/getting-started).
 
 ## Publications
 
