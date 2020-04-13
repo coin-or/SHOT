@@ -6,11 +6,20 @@
 
 <img align="right" width="200" src="SHOT.png">*SHOT is a software for solving mathematical optimization problems of the mixed-integer nonlinear programming (MINLP) class. In addition to MINLP problems, SHOT can also be used for subclasses such as NLP and MI(QC)QP.*
 
-Originally SHOT was intended for convex MINLP problems only, but as of version 1.0 it also has functionality to solve nonconvex MINLP problems,  as a heuristic method without providing any guarantees of global optimality. SHOT can solve certain nonconvex problem types to global optimality as well, and the bounds for the objective function value are guaranteed for nonconvex problems as well.
+Originally SHOT was intended for convex MINLP problems only, but as of version 1.0 it also has functionality to solve nonconvex MINLP problems as a heuristic method without providing any guarantees of global optimality. SHOT can solve certain nonconvex problem types to global optimality as well, and the bounds for the objective function value are guaranteed for nonconvex problems as well.
+
+**SHOT can be used**
+- as a console application,
+- from [GAMS](https://www.gams.com),
+- from any modeling system that can use ASL, such as
+  - [Pyomo](https://www.pyomo.org), 
+  - [JuMP](https://github.com/JuliaOpt/JuMP.jl), and 
+  - [AMPL](https://www.ampl.com),
+- using its API implemented in C++.
 
 The documentation is provided at the project website at https://www.shotsolver.dev.
 
-Project manager is [Andreas Lundell](https://www.researchgate.net/profile/Andreas_Lundell). A full list of contributors is available on the [project website](https://shotsolver.dev/shot/about-shot/contributors).
+SHOT is a [COIN-OR project](https://www.coin-or.org), and won the [COIN-OR Cup 2018](https://www.coin-or.org/2018-coin-or-cup-winner/). Project manager is [Andreas Lundell](https://www.researchgate.net/profile/Andreas_Lundell). A full list of contributors is available on the [project website](https://shotsolver.dev/shot/about-shot/contributors).
 
 ## Dual bound through polyhedral (outer) approximation
 
