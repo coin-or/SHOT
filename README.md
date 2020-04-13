@@ -10,7 +10,7 @@ Originally SHOT was intended for convex MINLP problems only, but as of version 1
 
 The documentation is provided at the project website at https://www.shotsolver.dev.
 
-Project manager is Andreas Lundell. A full list of contributors is available at https://shotsolver.dev/shot/about-shot/contributors
+Project manager is [Andreas Lundell](https://www.researchgate.net/profile/Andreas_Lundell). A full list of contributors is available at https://shotsolver.dev/shot/about-shot/contributors
 
 ## Dual bound through polyhedral (outer) approximation
 
