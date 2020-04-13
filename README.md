@@ -1,12 +1,16 @@
-[![Build Status](https://travis-ci.org/coin-or/SHOT.svg?branch=master)](https://travis-ci.org/coin-or/SHOT)
+[![Build Status](https://travis-ci.org/coin-or/SHOT.svg?branch=master)](https://travis-ci.org/coin-or/SHOT) 
+[![License](https://img.shields.io/badge/License-EPL%202.0-red.svg)](https://opensource.org/licenses/EPL-1.0)
+
 
 # The Supporting Hyperplane Optimization Toolkit
 
-<img align="right" width="200" src="SHOT.png"> SHOT is a software for solving mathematical optimization problems of the mixed-integer nonlinear programming (MINLP) class. 
+<img align="right" width="200" src="SHOT.png">*SHOT is a software for solving mathematical optimization problems of the mixed-integer nonlinear programming (MINLP) class. In addition to MINLP problems, SHOT can also be used for subclasses such as NLP and MI(QC)QP.*
 
 Originally SHOT was intended for convex MINLP problems only, but as of version 1.0 it also has functionality to solve nonconvex MINLP problems,  as a heuristic method without providing any guarantees of global optimality. SHOT can solve certain nonconvex problem types to global optimality as well, and the bounds for the objective function value are guaranteed for nonconvex problems as well.
 
 The documentation is provided at the project website at https://www.shotsolver.dev.
+
+Project manager is Andreas Lundell. A full list of contributors is available at https://shotsolver.dev/shot/about-shot/contributors
 
 ## Dual bound through polyhedral (outer) approximation
 
@@ -33,11 +37,11 @@ Instructions for compiling SHOT is available at the project website at https://w
 
 **SHOT is best described in the paper:**
 
-Lundell, A. Kronqvist, J. and Westerlund, T. The Supporting Hyperplane Optimization Toolkit: A Polyhedral Outer Approximation Based 
-Convex MINLP Solver Utilizing a Single Branching Tree Approach (2018). http://www.optimization-online.org/DB_FILE/2018/06/6680.pdf
+Lundell, A. Kronqvist, J. and Westerlund, T. *The Supporting Hyperplane Optimization Toolkit: A Polyhedral Outer Approximation Based 
+Convex MINLP Solver Utilizing a Single Branching Tree Approach* (2018). http://www.optimization-online.org/DB_FILE/2018/06/6680.pdf
 
 **The features for solving nonconvex MINLP problems are described in the papers:**
 
-Lundell, A. and Kronqvist, J., Polyhedral Approximation Strategies in Nonconvex Mixed-Integer Nonlinear Programming. Optimization Online (2020). http://www.optimization-online.org/DB_HTML/2020/03/7691.html
+Lundell, A. and Kronqvist, J., *Polyhedral Approximation Strategies in Nonconvex Mixed-Integer Nonlinear Programming*. Optimization Online (2020). http://www.optimization-online.org/DB_HTML/2020/03/7691.html
 
-Lundell, A. and Kronqvist, J. On Solving Nonconvex MINLP Problems with SHOT (2019). In: Le Thi H., Le H., Pham Dinh T. (editors) Optimization of Complex Systems: Theory, Models, Algorithms and Applications. WCGO 2019. Advances in Intelligent Systems and Computing, vol 991. Springer, Cham.
+Lundell, A. and Kronqvist, J. *On Solving Nonconvex MINLP Problems with SHOT* (2019). In: Le Thi H., Le H., Pham Dinh T. (editors) Optimization of Complex Systems: Theory, Models, Algorithms and Applications. WCGO 2019. Advances in Intelligent Systems and Computing, vol 991. Springer, Cham.
