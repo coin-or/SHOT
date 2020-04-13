@@ -1,8 +1,8 @@
 [![Build Status](https://travis-ci.org/coin-or/SHOT.svg?branch=master)](https://travis-ci.org/coin-or/SHOT)
 
-# The Supporting Hyperplane Optimization Toolkit (SHOT)
+# The Supporting Hyperplane Optimization Toolkit
 
-SHOT is a software for solving mathematical optimization problems of the mixed-integer nonlinear programming (MINLP) class. 
+<img align="right" width="200" src="SHOT.png"> SHOT is a software for solving mathematical optimization problems of the mixed-integer nonlinear programming (MINLP) class. 
 
 Originally SHOT was intended for convex MINLP problems only, but as of version 1.0 it also has functionality to solve nonconvex MINLP problems,  as a heuristic method without providing any guarantees of global optimality. SHOT can solve certain nonconvex problem types to global optimality as well, and the bounds for the objective function value are guaranteed for nonconvex problems as well.
 
