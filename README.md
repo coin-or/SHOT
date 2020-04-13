@@ -44,7 +44,7 @@ Instructions for compiling SHOT is available at the [project website](https://sh
 
 ## Solver manual
 
-Instructions for how to use SHOT, e.g. call it from different environments are provided on the [project website](https://shotsolver.dev/shot/using-shot/getting-started).
+Instructions for how to use SHOT, e.g. call it from different environments, are provided on the [project website](https://shotsolver.dev/shot/using-shot/getting-started).
 
 ## Publications
 
