@@ -17,6 +17,8 @@ Originally SHOT was intended for convex MINLP problems only, but as of version 1
   - [AMPL](https://www.ampl.com),
 - using its API implemented in C++.
 
+SHOT requires a MILP solver: [Cplex](https://www.ibm.com/analytics/cplex-optimizer), [Gurobi](https://www.gurobi.com) or [Cbc](https://www.github.com/coin-or/Cbc). In addition an NLP solver is required; currently only [Ipopt](https://www.github.com/coin-or/Ipopt) is supported. If SHOT is interfaced with GAMS, any licensed NLP solver can be used.
+
 The documentation is provided at the project website at https://www.shotsolver.dev.
 
 SHOT is a [COIN-OR project](https://www.coin-or.org), and won the [COIN-OR Cup 2018](https://www.coin-or.org/2018-coin-or-cup-winner/). Project manager is [Andreas Lundell](https://www.researchgate.net/profile/Andreas_Lundell). A full list of contributors is available on the [project website](https://shotsolver.dev/shot/about-shot/contributors).
