@@ -12,8 +12,8 @@ Originally SHOT was intended for convex MINLP problems only, but as of version 1
 - as a console application,
 - from [GAMS](https://www.gams.com),
 - from any modeling system that can use ASL, such as
-  - [Pyomo](https://www.pyomo.org), 
-  - [JuMP](https://github.com/JuliaOpt/JuMP.jl), and 
+  - [Pyomo/Python](https://www.pyomo.org), 
+  - [JuMP/Julia](https://github.com/JuliaOpt/AmplNLWriter.jl), and 
   - [AMPL](https://www.ampl.com),
 - using its API implemented in C++.
 
