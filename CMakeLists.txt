@@ -42,23 +42,23 @@ option(SIMPLE_OUTPUT_CHARS "Whether to avoid using special characters in the con
 option(HAS_AMPL "Should the AMPL .nl interface be build" ON)
 
 # GAMS
-option(HAS_GAMS "Is GAMS available" ON)
-set(GAMS_DIR "/opt/gams/gams27.3" CACHE STRING "The base directory where GAMS is located (if available)")
+option(HAS_GAMS "Is GAMS available" OFF)
+set(GAMS_DIR "/opt/gams/gams30.2" CACHE STRING "The base directory where GAMS is located (if available)")
 
 # CPLEX
-option(HAS_CPLEX "Is Cplex available" ON)
-set(CPLEX_DIR "/opt/ibm/ILOG/CPLEX_Studio129" CACHE STRING "The base directory where CPLEX is located (if available)")
+option(HAS_CPLEX "Is Cplex available" OFF)
+set(CPLEX_DIR "/opt/ibm/ILOG/CPLEX_Studio1210" CACHE STRING "The base directory where CPLEX is located (if available)")
 
 # Gurobi
-option(HAS_GUROBI "Is Gurobi available" ON)
-set(GUROBI_DIR "/opt/gurobi/gurobi810" CACHE STRING "The base directory where Gurobi is located (if available)")
+option(HAS_GUROBI "Is Gurobi available" OFF)
+set(GUROBI_DIR "/opt/gurobi/gurobi900" CACHE STRING "The base directory where Gurobi is located (if available)")
 
 # Cbc
-option(HAS_CBC "Is Cbc available" ON)
+option(HAS_CBC "Is Cbc available" OFF)
 set(CBC_DIR "/opt/Cbc-2.10" CACHE STRING "The base directory where Cbc is located (if available).")
 
 # Ipopt
-option(HAS_IPOPT "Is Ipopt available" ON)
+option(HAS_IPOPT "Is Ipopt available" OFF)
 set(IPOPT_DIR "/opt/ipopt" CACHE STRING "The base directory where Ipopt is located (if available).")
 
 # Create also the executable
@@ -121,7 +121,7 @@ message(STATUS "Git hash: " ${GITHASH})
 # Sets version number
 set(SHOT_VERSION_MAJOR 1)
 set(SHOT_VERSION_MINOR 0)
-set(SHOT_VERSION_PATCH "\"alpha 1\"")
+set(SHOT_VERSION_PATCH 0)
 
 mark_as_advanced(
     SHOT_VERSION_MAJOR
