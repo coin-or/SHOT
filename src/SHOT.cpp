@@ -38,6 +38,7 @@ int main(int argc, char* argv[])
     Solver solver;
     auto env = solver.getEnvironment();
     bool useASL = false;
+    bool headerPrinted = false;
 
     argh::parser cmdl;
     cmdl.add_params({ "--opt", "--osol" });
@@ -64,10 +65,11 @@ int main(int argc, char* argv[])
         solver.setLogFile(logFile.string());
     }
 
-    env->report->outputSolverHeader();
-
     if(cmdl["--help"])
     {
+        env->report->outputSolverHeader();
+        headerPrinted = true;
+
 #ifdef SIMPLE_OUTPUT_CHARS
         env->output->outputInfo("-----------------------------------------------------------------------------------"
                                 "-----------------------------------\r\n");
@@ -148,11 +150,27 @@ int main(int argc, char* argv[])
     // Generate a markup file with the options
     if(cmdl["--docs"])
     {
+        if(!headerPrinted)
+        {
+            env->report->outputSolverHeader();
+            headerPrinted = true;
+        }
+
+#ifdef SIMPLE_OUTPUT_CHARS
+        env->output->outputInfo("-----------------------------------------------------------------------------------"
+                                "-----------------------------------\r\n");
+#else
+        env->output->outputInfo("╶──────────────────────────────────────────────────────────────────────────────────"
+                                "───────────────────────────────────╴\r\n");
+#endif
+
         std::string markup = env->settings->getSettingsAsMarkup();
 
         auto filepath = fs::filesystem::current_path() / fs::filesystem::path("options.md");
         if(!Utilities::writeStringToFile(filepath.string(), markup))
             env->output->outputCritical(" Error when writing markup file: " + filepath.string());
+        else
+            env->output->outputInfo(fmt::format(" Default options documentation written to: {}\n", filepath.string()));
     }
 
     // Read or create options file
@@ -170,6 +188,22 @@ int main(int argc, char* argv[])
         }
         else
         {
+            if(!headerPrinted)
+            {
+                env->report->outputSolverHeader();
+                headerPrinted = true;
+            }
+
+#ifdef SIMPLE_OUTPUT_CHARS
+            env->output->outputInfo(
+                "-----------------------------------------------------------------------------------"
+                "-----------------------------------\r\n");
+#else
+            env->output->outputInfo(
+                "╶──────────────────────────────────────────────────────────────────────────────────"
+                "───────────────────────────────────╴\r\n");
+#endif
+
             env->output->outputCritical(" Options file not found: " + filepath.string());
             return 0;
         }
@@ -187,12 +221,28 @@ int main(int argc, char* argv[])
             // Create option file
             if(!Utilities::writeStringToFile(filepath.string(), solver.getOptions()))
             {
+                if(!headerPrinted)
+                {
+                    env->report->outputSolverHeader();
+                    headerPrinted = true;
+                }
+
+#ifdef SIMPLE_OUTPUT_CHARS
+                env->output->outputInfo(
+                    "-----------------------------------------------------------------------------------"
+                    "-----------------------------------\r\n");
+#else
+                env->output->outputInfo(
+                    "╶──────────────────────────────────────────────────────────────────────────────────"
+                    "───────────────────────────────────╴\r\n");
+#endif
+
                 env->output->outputCritical(" Error when writing options file: " + filepath.string());
                 return 0;
             }
 
             defaultOptionsGenerated = true;
-            env->output->outputInfo(" Default options file written to: " + filepath.string() + '\n');
+            optionsFile = filepath;
         }
     }
     else if(cmdl("--osol")) // Have specified a OSoL-file
@@ -206,6 +256,22 @@ int main(int argc, char* argv[])
         }
         else
         {
+            if(!headerPrinted)
+            {
+                env->report->outputSolverHeader();
+                headerPrinted = true;
+            }
+
+#ifdef SIMPLE_OUTPUT_CHARS
+            env->output->outputInfo(
+                "-----------------------------------------------------------------------------------"
+                "-----------------------------------\r\n");
+#else
+            env->output->outputInfo(
+                "╶──────────────────────────────────────────────────────────────────────────────────"
+                "───────────────────────────────────╴\r\n");
+#endif
+
             env->output->outputCritical(" Options file not found: " + filepath.string());
             return 0;
         }
@@ -223,12 +289,28 @@ int main(int argc, char* argv[])
             // Create option file
             if(!Utilities::writeStringToFile(filepath.string(), solver.getOptionsOSoL()))
             {
+                if(!headerPrinted)
+                {
+                    env->report->outputSolverHeader();
+                    headerPrinted = true;
+                }
+
+#ifdef SIMPLE_OUTPUT_CHARS
+                env->output->outputInfo(
+                    "-----------------------------------------------------------------------------------"
+                    "-----------------------------------\r\n");
+#else
+                env->output->outputInfo(
+                    "╶──────────────────────────────────────────────────────────────────────────────────"
+                    "───────────────────────────────────╴\r\n");
+#endif
+
                 env->output->outputCritical(" Error when writing options file: " + filepath.string());
                 return 0;
             }
 
             defaultOptionsGenerated = true;
-            env->output->outputInfo(" Default options file written to: " + filepath.string() + '\n');
+            optionsFile = filepath;
         }
     }
 
@@ -236,12 +318,25 @@ int main(int argc, char* argv[])
     {
         if(!optionsFile.empty() && !solver.setOptionsFromFile(optionsFile.string()))
         {
+            if(!headerPrinted)
+            {
+                env->report->outputSolverHeader();
+                headerPrinted = true;
+            }
+
+#ifdef SIMPLE_OUTPUT_CHARS
+            env->output->outputInfo(
+                "-----------------------------------------------------------------------------------"
+                "-----------------------------------\r\n");
+#else
+            env->output->outputInfo(
+                "╶──────────────────────────────────────────────────────────────────────────────────"
+                "───────────────────────────────────╴\r\n");
+#endif
+
             env->output->outputCritical(" Cannot set options from file: " + optionsFile.string());
             return (0);
         }
-
-        env->output->setLogLevels(static_cast<E_LogLevel>(env->settings->getSetting<int>("Console.LogLevel", "Output")),
-            static_cast<E_LogLevel>(env->settings->getSetting<int>("File.LogLevel", "Output")));
     }
 
 // Reads options specified in the command line arguments
@@ -473,6 +568,29 @@ int main(int argc, char* argv[])
                 break;
             }
         }
+    }
+
+    // Need to set the log levels after we have read the options from file and console
+    env->output->setLogLevels(static_cast<E_LogLevel>(env->settings->getSetting<int>("Console.LogLevel", "Output")),
+        static_cast<E_LogLevel>(env->settings->getSetting<int>("File.LogLevel", "Output")));
+
+    if(!headerPrinted)
+    {
+        env->report->outputSolverHeader();
+        headerPrinted = true;
+    }
+
+    if(defaultOptionsGenerated)
+    {
+#ifdef SIMPLE_OUTPUT_CHARS
+        env->output->outputInfo("-----------------------------------------------------------------------------------"
+                                "-----------------------------------\r\n");
+#else
+        env->output->outputInfo("╶──────────────────────────────────────────────────────────────────────────────────"
+                                "───────────────────────────────────╴\r\n");
+#endif
+
+        env->output->outputInfo(fmt::format(" Default options file written to: {}\n", optionsFile.string()));
     }
 
     if(!cmdl(1))
