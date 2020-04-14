@@ -1527,8 +1527,15 @@ void Solver::initializeDebugMode()
         fs::filesystem::path source(
             fs::filesystem::canonical(env->settings->getSetting<std::string>("ProblemFile", "Input")));
 
-        fs::filesystem::copy_file(
-            source.string(), (debugDir / source.filename()).string(), fs::filesystem::copy_options::overwrite_existing);
+        try
+        {
+            fs::filesystem::copy_file(
+                source, (debugDir / source.filename()), fs::filesystem::copy_options::overwrite_existing);
+        }
+        catch(const fs::filesystem::filesystem_error& e)
+        {
+            env->output->outputError(" Error when copying problem file to debug directory: ", e.what());
+        }
     }
 }
 
