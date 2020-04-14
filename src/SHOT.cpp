@@ -625,8 +625,7 @@ int main(int argc, char* argv[])
 
     if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
     {
-        auto debugDirectory = fs::filesystem::current_path()
-            / fs::filesystem::path(env->settings->getSetting<std::string>("Debug.Path", "Output"));
+        auto debugDirectory = fs::filesystem::path(env->settings->getSetting<std::string>("Debug.Path", "Output"));
         env->output->outputInfo(" Debug directory:    " + debugDirectory.string());
     }
 
