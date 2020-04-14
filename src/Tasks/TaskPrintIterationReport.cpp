@@ -50,7 +50,7 @@ void TaskPrintIterationReport::run()
         tmpType << "QCQP";
         break;
     case E_DualProblemClass::MIP:
-        tmpType << "MIP";
+        tmpType << "MILP";
         break;
     case E_DualProblemClass::MIQP:
         tmpType << "MIQP";
