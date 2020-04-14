@@ -54,11 +54,6 @@ HCallbackI::HCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx2)
 
 IloCplex::CallbackI* HCallbackI::duplicateCallback() const { return (new(getEnv()) HCallbackI(*this)); }
 
-static IloCplex::Callback HCallback(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray cplexVars)
-{
-    return (IloCplex::Callback(new(iloEnv) HCallbackI(envPtr, iloEnv, cplexVars)));
-}
-
 // This callback injects the best known primal solution into all threads.
 void HCallbackI::main() // Called at each node...
 {
@@ -171,11 +166,6 @@ InfoCallbackI::InfoCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv) : IloCplex::M
 
 IloCplex::CallbackI* InfoCallbackI::duplicateCallback() const { return (new(getEnv()) InfoCallbackI(*this)); }
 
-static IloCplex::Callback InfoCallback(EnvironmentPtr envPtr, IloEnv iloEnv)
-{
-    return (IloCplex::Callback(new(iloEnv) InfoCallbackI(envPtr, iloEnv)));
-}
-
 void InfoCallbackI::main() // Called at each node...
 {
     std::lock_guard<std::mutex> lock(
@@ -274,11 +264,6 @@ CtCallbackI::CtCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx
 }
 
 IloCplex::CallbackI* CtCallbackI::duplicateCallback() const { return (new(getEnv()) CtCallbackI(*this)); }
-
-static IloCplex::Callback CtCallback(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray cplexVars)
-{
-    return (IloCplex::Callback(new(iloEnv) CtCallbackI(envPtr, iloEnv, cplexVars)));
-}
 
 void CtCallbackI::main()
 {
