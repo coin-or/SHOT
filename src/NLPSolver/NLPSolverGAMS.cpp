@@ -137,6 +137,37 @@ double NLPSolverGAMS::getSolution([[maybe_unused]] int i)
     throw std::logic_error("getSolution(int) not implemented");
 }
 
+typedef struct
+{
+    Environment* env;
+    gevHandle_t gev;
+    void* orighandle;
+    bool switchhandle;
+} gevwritecallback_data;
+
+static void GEV_CALLCONV gevwritecallback(const char* msg, int mode, void* usrmem)
+{
+    // mode == 2 seems to be the log, ignore status file (mode==1)
+    if(mode != 2)
+        return;
+
+    // convert Pascal string to C string (which will start at msg+1)
+    (const_cast<char*>(msg))[std::min(GMS_SSSIZE - 1, (int)*msg)] = '\0';
+
+    gevwritecallback_data* cbdata = static_cast<gevwritecallback_data*>(usrmem);
+
+    // restore original writecallback in gev, so that output below doesn't come back to this callback
+    if(cbdata->switchhandle)
+        gevRestoreLogStat(cbdata->gev, &cbdata->orighandle);
+
+    // puts(msg+1);
+    cbdata->env->output->outputInfo(fmt::format("      | {} ", msg + 1));
+
+    // install this function as writecallback in gev again
+    if(cbdata->switchhandle)
+        gevSwitchLogStat(cbdata->gev, 3, nullptr, 0, nullptr, 0, gevwritecallback, usrmem, &cbdata->orighandle);
+}
+
 double NLPSolverGAMS::getObjectiveValue() { return gmoGetHeadnTail(modelingObject, gmoHobjval); }
 
 E_NLPSolutionStatus NLPSolverGAMS::solveProblemInstance()
@@ -158,6 +189,20 @@ E_NLPSolutionStatus NLPSolverGAMS::solveProblemInstance()
     gmoAltBoundsSet(modelingObject, 1); /* use alternative bounds */
     gmoForceContSet(modelingObject, 1);
 
+    // if we are called from GAMS (via EntryPointsGAMS), then there will be no input problem file set
+    bool fromGAMS = env->settings->getSetting<std::string>("ProblemFile", "Input").empty();
+
+    // redirect output from NLP solver to gevwritecallback
+    gevwritecallback_data cbdata = { .env = env.get(),
+        .gev = modelingEnvironment,
+        // if run from within GAMS, then EntryPointsGAMS will have installed an spdlog sink, so that messages to
+        // env->output go through modelingEnvironment since there is only one modelingEnvironment, we need to take extra
+        // care that output send to gevwritecallback() gets to the original modelingEnvironment output stream
+        .switchhandle = fromGAMS };
+
+    if(showlog)
+        gevSwitchLogStat(modelingEnvironment, 3, nullptr, 0, nullptr, 0, gevwritecallback, &cbdata, &cbdata.orighandle);
+
     if(gevCallSolver(modelingEnvironment, modelingObject, "", nlpsolver.c_str(), gevSolveLinkLoadLibrary,
            showlog ? gevSolverSameStreams : gevSolverQuiet, nullptr, nullptr, timelimit, iterlimit, 0, 0.0, 0.0,
            nullptr, msg)
@@ -167,9 +212,12 @@ E_NLPSolutionStatus NLPSolverGAMS::solveProblemInstance()
         throw std::logic_error(std::string("Calling GAMS NLP solver failed: ") + msg);
     }
 
+    if(showlog)
+        gevRestoreLogStat(modelingEnvironment, &cbdata.orighandle);
+
     /* if not run via GAMS, then uninstall GAMS SIGINT handler, as gevTerminateGet() is not checked (is only checked if
      * called from GAMS) */
-    if(env->settings->getSetting<std::string>("ProblemFile", "Input") != "")
+    if(!fromGAMS)
         gevTerminateUninstall(modelingEnvironment);
 
     gmoAltBoundsSet(modelingObject, 0);
