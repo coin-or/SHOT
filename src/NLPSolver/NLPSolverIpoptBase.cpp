@@ -72,7 +72,7 @@ void IpoptJournal::PrintfImpl(
     outBufPos += rc;
 
     // if output buffer terminates with newline or is almost full, then print
-    if((outBufPos > 0 && outBuf[outBufPos - 1] == '\n') || outBufPos > sizeof(outBuf) - 100)
+    if((outBufPos > 0 && outBuf[outBufPos - 1] == '\n') || outBufPos > (int)sizeof(outBuf) - 100)
     {
         PrintImpl(category, level, outBuf);
         outBufPos = 0;
