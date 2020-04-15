@@ -193,12 +193,13 @@ E_NLPSolutionStatus NLPSolverGAMS::solveProblemInstance()
     bool fromGAMS = env->settings->getSetting<std::string>("ProblemFile", "Input").empty();
 
     // redirect output from NLP solver to gevwritecallback
-    gevwritecallback_data cbdata = { .env = env.get(),
-        .gev = modelingEnvironment,
-        // if run from within GAMS, then EntryPointsGAMS will have installed an spdlog sink, so that messages to
-        // env->output go through modelingEnvironment since there is only one modelingEnvironment, we need to take extra
-        // care that output send to gevwritecallback() gets to the original modelingEnvironment output stream
-        .switchhandle = fromGAMS };
+    gevwritecallback_data cbdata;
+    cbdata.env = env.get();
+    cbdata.gev = modelingEnvironment;
+    // if run from within GAMS, then EntryPointsGAMS will have installed an spdlog sink, so that messages to
+    // env->output go through modelingEnvironment since there is only one modelingEnvironment, we need to take extra
+    // care that output send to gevwritecallback() gets to the original modelingEnvironment output stream
+    cbdata.switchhandle = fromGAMS;
 
     if(showlog)
         gevSwitchLogStat(modelingEnvironment, 3, nullptr, 0, nullptr, 0, gevwritecallback, &cbdata, &cbdata.orighandle);
