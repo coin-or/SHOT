@@ -2591,7 +2591,7 @@ public:
             {
                 auto power = std::dynamic_pointer_cast<ExpressionPower>(C);
 
-                if(power->secondChild->getType() != E_NonlinearExpressionTypes::Constant
+                if(power->secondChild->getType() == E_NonlinearExpressionTypes::Constant
                     && std::dynamic_pointer_cast<ExpressionConstant>(power->secondChild)->constant > 0)
                 {
                     isValid = false;
