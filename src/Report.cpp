@@ -149,39 +149,29 @@ void Report::outputIterationDetail(int iterationNumber, std::string iterationDes
 
         if(lineType == E_IterationLineType::DualRepair || lineType == E_IterationLineType::DualReductionCut)
         {
-            auto tmpLine = fmt::format("{:>6d}: {:<10s}{:^10.2f}{:^13s}{:>27s}{:>19s}{:<32s}", iterationNumber,
-                iterationDesc, totalTime, combDualCuts, "", "", "");
-
             env->output->outputDebug("");
-            env->output->outputInfo(tmpLine);
+            env->output->outputInfo(fmt::format("{:>6d}: {:<10s}{:^10.2f}{:^13s}{:>27s}{:>19s}{:<32s}", iterationNumber,
+                iterationDesc, totalTime, combDualCuts, "", "", ""));
             env->output->outputDebug("");
         }
         else
         {
-            auto tmpLine = fmt::format("{:>6d}: {:<10s}{:^10.2f}{:>13s}{:>27s}{:>19s}{:<32s}", iterationNumber,
-                iterationDesc, totalTime, combDualCuts, combObjectiveValue, combObjectiveGap, combCurrSol);
-
             env->output->outputDebug("");
-            env->output->outputInfo(tmpLine);
+            env->output->outputInfo(fmt::format("{:>6d}: {:<10s}{:^10.2f}{:>13s}{:>27s}{:>19s}{:<32s}", iterationNumber,
+                iterationDesc, totalTime, combDualCuts, combObjectiveValue, combObjectiveGap, combCurrSol));
             env->output->outputDebug("");
         }
 
-        std::stringstream nodes;
-        nodes << "        Explored nodes: ";
-
-        if(env->results->getCurrentIteration()->numberOfExploredNodes > 0)
+        if(env->results->getCurrentIteration()->numberOfExploredNodes > 0
+            || env->results->getCurrentIteration()->numberOfOpenNodes > 0)
         {
-            nodes << " +" << env->results->getCurrentIteration()->numberOfExploredNodes << " = ";
+            env->output->outputDebug(fmt::format("        Explored nodes: + {} = {}.",
+                env->results->getCurrentIteration()->numberOfExploredNodes,
+                env->solutionStatistics.numberOfExploredNodes));
+
+            env->output->outputDebug(
+                fmt::format("        Open nodes:     {}", env->results->getCurrentIteration()->numberOfOpenNodes));
         }
-
-        nodes << env->solutionStatistics.numberOfExploredNodes << ".";
-
-        if(env->results->getCurrentIteration()->numberOfOpenNodes > 0)
-        {
-            nodes << " Open nodes: " << env->results->getCurrentIteration()->numberOfOpenNodes << ".";
-        }
-
-        env->output->outputDebug(nodes.str());
     }
     catch(...)
     {
@@ -230,10 +220,8 @@ void Report::outputIterationDetailMinimax(int iterationNumber, std::string itera
             = fmt::format("{:>8s} | {:<8s}", Utilities::toStringFormat(absoluteObjectiveGap, "{:.1e}"),
                 Utilities::toStringFormat(relativeObjectiveGap, "{:.1e}"));
 
-        auto tmpLine = fmt::format("{:6d}: {:<10s}{:^10.2f}{:13s}{:27s}{:19s}", iterationNumber, iterationDesc,
-            totalTime, combDualCuts, combObjectiveValue, combObjectiveGap);
-
-        env->output->outputInfo(tmpLine);
+        env->output->outputInfo(fmt::format("{:6d}: {:<10s}{:^10.2f}{:13s}{:27s}{:19s}", iterationNumber, iterationDesc,
+            totalTime, combDualCuts, combObjectiveValue, combObjectiveGap));
     }
     catch(...)
     {
@@ -245,177 +233,142 @@ void Report::outputIterationDetailHeader()
 {
     firstIterationHeaderPrinted = true;
 
-    std::stringstream header;
-
-    header << "\n";
-    header << "                                                                                     \n";
+    env->output->outputInfo("");
+    env->output->outputInfo("");
 
 #ifdef SIMPLE_OUTPUT_CHARS
-    header << "    Iteration     |  Time  |  Dual cuts  |     Objective value     |   Objective gap   |     Current "
-              "solution\n";
+    env->output->outputInfo(
+        "    Iteration     |  Time  |  Dual cuts  |     Objective value     |   Objective gap   |     Current "
+        "solution");
 
     if(env->problem->objectiveFunction->properties.isMinimize)
     {
-        header
-            << "     #: type      |  tot.  |   + | tot.  |       dual | primal     |    abs. | rel.    |    obj.fn. | "
-               "max.err.\n";
+        env->output->outputInfo(
+            "     #: type      |  tot.  |   + | tot.  |       dual | primal     |    abs. | rel.    |    obj.fn. | "
+            "max.err.");
     }
     else
     {
-        header
-            << "     #: type      |  tot.  |   + | tot.  |     primal | dual       |    abs. | rel.    |    obj.fn. | "
-               "max.err.\n";
+        env->output->outputInfo(
+            "     #: type      |  tot.  |   + | tot.  |     primal | dual       |    abs. | rel.    |    obj.fn. | "
+            "max.err.");
     }
 
-    header << "----------------------------------------------------------------------------------------------------"
+    env->output->outputInfo( "----------------------------------------------------------------------------------------------------"
               "----------------";
 #else
-    header << "    Iteration     │  Time  │  Dual cuts  │     Objective value     │   Objective gap   │     Current "
-              "solution\n";
+    env->output->outputInfo(
+        "    Iteration     │  Time  │  Dual cuts  │     Objective value     │   Objective gap   │     Current "
+        "solution");
 
     if(env->problem->objectiveFunction->properties.isMinimize)
     {
-        header
-            << "     #: type      │  tot.  │   + | tot.  │       dual | primal     │    abs. | rel.    │    obj.fn. | "
-               "max.err.\n";
+        env->output->outputInfo(
+            "     #: type      │  tot.  │   + | tot.  │       dual | primal     │    abs. | rel.    │    obj.fn. | "
+            "max.err.");
     }
     else
     {
-        header
-            << "     #: type      │  tot.  │   + | tot.  │     primal | dual       │    abs. | rel.    │    obj.fn. | "
-               "max.err.\n";
+        env->output->outputInfo(
+            "     #: type      │  tot.  │   + | tot.  │     primal | dual       │    abs. | rel.    │    obj.fn. | "
+            "max.err.)");
     }
 
-    header << "╶─────────────────┴────────┴─────────────┴─────────────────────────┴───────────────────┴────────────"
-              "───────────────╴";
+    env->output->outputInfo(
+        "╶─────────────────┴────────┴─────────────┴─────────────────────────┴───────────────────┴────────────"
+        "───────────────╴)");
 #endif
 
-    header << "\n";
-
-    env->output->outputInfo(header.str());
+    env->output->outputInfo("");
     iterationPrintoutsSinceLastHeader = 0;
 }
 
 void Report::outputIterationDetailHeaderMinimax()
 {
-    std::stringstream header;
-    header << "                                                                                     \n";
+    env->output->outputInfo("");
 
 #ifdef SIMPLE_OUTPUT_CHARS
-    header << "    Iteration      |  Time  |    Cuts     |     Objective value     |  Objective diff.   \n";
-    header << "     #: type       |  tot.  |   + | tot.  |    problem | line srch  |    abs. | rel.    \n";
-    header << "---------------------------------------------------------------------------------------\n";
+    env->output->outputInfo(
+        "    Iteration      |  Time  |    Cuts     |     Objective value     |  Objective diff.   ");
+    env->output->outputInfo("     #: type       |  tot.  |   + | tot.  |    problem | line srch  |    abs. | rel.    ");
+    env->output->outputInfo("---------------------------------------------------------------------------------------");
 #else
-    header << "    Iteration     │  Time  │    Cuts     │     Objective value     │  Objective diff.   \n";
-    header << "     #: type      │  tot.  │   + | tot.  │    problem | line srch  │    abs. | rel.    \n";
-    header << "╶─────────────────┴────────┴─────────────┴─────────────────────────┴──────────────────╴\n";
+    env->output->outputInfo("    Iteration     │  Time  │    Cuts     │     Objective value     │  Objective diff.   ");
+    env->output->outputInfo("     #: type      │  tot.  │   + | tot.  │    problem | line srch  │    abs. | rel.    ");
+    env->output->outputInfo("╶─────────────────┴────────┴─────────────┴─────────────────────────┴──────────────────╴");
 #endif
-
-    env->output->outputInfo(header.str());
 }
 
 void Report::outputSolverHeader()
 {
-    std::stringstream header;
-
 #ifdef SIMPLE_OUTPUT_CHARS
-    header << "\n";
-    header << "- Supporting Hyperplane Optimization Toolkit (SHOT) ";
-    header << "-------------------------------------------------------------------\n";
+    env->output->outputInfo("");
+    env->output->outputInfo("- Supporting Hyperplane Optimization Toolkit (SHOT) "
+                            "-------------------------------------------------------------------");
 #else
-    header << "\n";
-    header << "╶ Supporting Hyperplane Optimization Toolkit (SHOT) ";
-    header << "──────────────────────────────────────────────────────────────────╴\n";
+    env->output->outputInfo("");
+    env->output->outputInfo("╶ Supporting Hyperplane Optimization Toolkit (SHOT) "
+                            "──────────────────────────────────────────────────────────────────╴");
 #endif
 
-    header << "\n";
+    env->output->outputInfo("");
 
-    header << " Andreas Lundell and Jan Kronqvist, Åbo Akademi University, Finland.\n";
-    header << " See documentation for full list of contributors and utilized software libraries.\n";
+    env->output->outputInfo(" Andreas Lundell and Jan Kronqvist, Åbo Akademi University, Finland.");
+    env->output->outputInfo(" See documentation for full list of contributors and utilized software libraries.");
 
-    header << "\n";
-    header << " Version: ";
-    header << SHOT_VERSION_MAJOR;
-    header << ".";
-    header << SHOT_VERSION_MINOR;
+    env->output->outputInfo("");
 
     if(SHOT_VERSION_PATCH != 0)
     {
-        header << ".";
-        header << SHOT_VERSION_PATCH;
+        env->output->outputInfo(fmt::format(" Version: {}.{}.{}. Git hash: {}. Released: {}.", SHOT_VERSION_MAJOR,
+            SHOT_VERSION_MINOR, SHOT_VERSION_PATCH, SHOT_GITHASH, __DATE__));
     }
-
-    header << ". ";
-
-    if(*SHOT_GITHASH != '\0')
+    else
     {
-        header << "Git hash: ";
-        header << SHOT_GITHASH;
-        header << ". ";
+        env->output->outputInfo(fmt::format(" Version: {}.{}. Git hash: {}. Released: {}.", SHOT_VERSION_MAJOR,
+            SHOT_VERSION_MINOR, SHOT_GITHASH, __DATE__));
     }
 
-    header << "Released ";
-    header << __DATE__;
-    header << ". ";
-
-    header << "\n";
-    header << "\n";
-    header << " For more information visit https://shotsolver.dev\n";
-
-    env->output->outputInfo(header.str());
+    env->output->outputInfo("");
+    env->output->outputInfo(" For more information visit https://shotsolver.dev");
+    env->output->outputInfo("");
 }
 
 void Report::outputOptionsReport()
 {
-    std::stringstream report;
-
-    report << "\n";
+    env->output->outputInfo("");
 
 #ifdef SIMPLE_OUTPUT_CHARS
-    report << "- Options ";
-    report << "--------------------------------------------------------------------------------------------------------"
-              "-----\n";
+    env->output->outputInfo("- Options "
+                            "------------------------------------------------------------------------------------------"
+                            "-------------------");
 #else
-    report << "╶ Options ";
-    report << "────────────────────────────────────────────────────────────────────────────────────────────────────────"
-              "────╴\n";
+    env->output->outputInfo("╶ Options "
+                            "──────────────────────────────────────────────────────────────────────────────────────────"
+                            "──────────────────╴");
 #endif
 
-    report << "\n";
+    env->output->outputInfo("");
 
-    auto optionsFile = env->settings->getSetting<std::string>("OptionsFile", "Input");
-
-    if(optionsFile == "")
-    {
-        report << " No options file specified.\n";
-    }
+    if(auto optionsFile = env->settings->getSetting<std::string>("OptionsFile", "Input"); optionsFile == "")
+        env->output->outputInfo(" No options file specified.");
     else
+        env->output->outputInfo(fmt::format(" Options read from file:     {}", optionsFile));
+
+    env->output->outputInfo("");
+
+    if(auto nonDefaultSettings = env->settings->getChangedSettings(); nonDefaultSettings.size() > 0)
     {
-        report << " Options read from file:     ";
-        report << optionsFile;
-        report << "\n";
-    }
-
-    report << "\n";
-
-    auto nonDefaultSettings = env->settings->getChangedSettings();
-
-    if(nonDefaultSettings.size() > 0)
-    {
-        report << " Nondefault options used:\n";
-        report << "\n";
+        env->output->outputInfo(" Nondefault options used:");
+        env->output->outputInfo("");
 
         for(auto& S : nonDefaultSettings)
-        {
-            report << "  - " << S << "\n";
-        }
+            env->output->outputInfo(fmt::format("  - {}", S));
 
-        report << "\n";
+        env->output->outputInfo("");
     }
 
     std::string cutAlgorithm, dualSolver;
-    bool useSingleTree = (static_cast<ES_TreeStrategy>(env->settings->getSetting<int>("TreeStrategy", "Dual"))
-        == ES_TreeStrategy::SingleTree);
 
     if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
         == ES_HyperplaneCutStrategy::ESH)
@@ -429,129 +382,86 @@ void Report::outputOptionsReport()
 
     auto solver = static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual"));
 
-    if(useSingleTree)
-    {
 #ifdef HAS_CPLEX
-        if(solver == ES_MIPSolver::Cplex)
-        {
-            dualSolver = "CPLEX";
-        }
+    if(solver == ES_MIPSolver::Cplex)
+        dualSolver = "CPLEX";
 #endif
 
 #ifdef HAS_GUROBI
-        if(solver == ES_MIPSolver::Gurobi)
-        {
-            dualSolver = "Gurobi";
-        }
+    if(solver == ES_MIPSolver::Gurobi)
+        dualSolver = "Gurobi";
 #endif
 
 #ifdef HAS_CBC
-        if(solver == ES_MIPSolver::Cbc)
-        {
-            dualSolver = "Cbc";
-        }
+    if(solver == ES_MIPSolver::Cbc)
+        dualSolver = "Cbc";
 #endif
-    }
-    else
-    {
-
-#ifdef HAS_CPLEX
-        if(solver == ES_MIPSolver::Cplex)
-        {
-            dualSolver = "CPLEX";
-        }
-#endif
-
-#ifdef HAS_GUROBI
-        if(solver == ES_MIPSolver::Gurobi)
-        {
-            dualSolver = "Gurobi";
-        }
-#endif
-
-#ifdef HAS_CBC
-        if(solver == ES_MIPSolver::Cbc)
-        {
-            dualSolver = "Cbc";
-        }
-#endif
-    }
 
     switch(static_cast<E_SolutionStrategy>(env->results->usedSolutionStrategy))
     {
     case(E_SolutionStrategy::SingleTree):
-        report << " Dual strategy:              Single-tree\n";
-        report << "  - cut algorithm:           " << cutAlgorithm << "\n";
+        env->output->outputInfo(" Dual strategy:              Single-tree");
+        env->output->outputInfo(fmt::format("  - cut algorithm:           {}", cutAlgorithm));
         break;
     case(E_SolutionStrategy::MultiTree):
-        report << " Dual strategy:              Multi-tree\n";
-        report << "  - cut algorithm:           " << cutAlgorithm << "\n";
+        env->output->outputInfo(" Dual strategy:              Multi-tree");
+        env->output->outputInfo(fmt::format("  - cut algorithm:           {}", cutAlgorithm));
         break;
     case(E_SolutionStrategy::NLP):
-        report << " Dual strategy:              NLP version\n";
-        report << "  - cut algorithm:           " << cutAlgorithm << "\n";
+        env->output->outputInfo(" Dual strategy:              NLP version");
+        env->output->outputInfo(fmt::format("  - cut algorithm:           {}", cutAlgorithm));
         break;
     case(E_SolutionStrategy::MIQP):
-        report << " Dual strategy:              MIQP version\n";
+        env->output->outputInfo(" Dual strategy:              MIQP version");
         break;
     case(E_SolutionStrategy::MIQCQP):
-        report << " Dual strategy:              MIQCQP version\n";
+        env->output->outputInfo(" Dual strategy:              MIQCQP version");
         break;
     default:
         break;
     }
 
-    report << "  - solver:                  " << dualSolver << " " << env->dualSolver->MIPSolver->getSolverVersion()
-           << "\n";
+    env->output->outputInfo(
+        fmt::format("  - solver:                  {} {}", dualSolver, env->dualSolver->MIPSolver->getSolverVersion()));
 
-    report << "\n";
+    env->output->outputInfo("");
 
-    report << " Primal NLP solver:          ";
+    env->output->outputInfo(fmt::format(" Primal NLP solver:          {}",
+        (static_cast<ES_PrimalNLPSolver>(env->results->usedPrimalNLPSolver) == ES_PrimalNLPSolver::None)
+            ? "none"
+            : env->results->usedPrimalNLPSolverDescription));
 
-    if(static_cast<ES_PrimalNLPSolver>(env->results->usedPrimalNLPSolver) == ES_PrimalNLPSolver::None)
-        report << "none";
-    else
-        report << env->results->usedPrimalNLPSolverDescription;
-
-    report << "\n";
+    env->output->outputInfo("");
 
     if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
-    {
-        report << " Debug directory:            ";
-        report << env->settings->getSetting<std::string>("Debug.Path", "Output");
-        report << "\n";
-    }
-
-    env->output->outputInfo(report.str());
+        env->output->outputInfo(fmt::format(
+            " Debug directory:            {}", env->settings->getSetting<std::string>("Debug.Path", "Output")));
 }
 
-void Report::outputModelingSystemHeader(ES_SourceFormat source, std::string filename)
+void Report::outputModelingSystemReport(ES_SourceFormat source, std::string filename)
 {
-    std::stringstream report;
-
 #ifdef SIMPLE_OUTPUT_CHARS
-    report << "- Modeling system ";
-    report << "-----------------------------------------------------------------------------------------------------"
-              "\n";
+    env->output->outputInfo(
+        "- Modeling system "
+        "-----------------------------------------------------------------------------------------------------");
 #else
-    report << "╶ Modeling system ";
-    report << "────────────────────────────────────────────────────────────────────────────────────────────────────╴"
-              "\n";
+    env->output->outputInfo(
+        "╶ Modeling system "
+        "────────────────────────────────────────────────────────────────────────────────────────────────────╴");
 #endif
 
-    report << "\n";
+    env->output->outputInfo("");
 
     switch(source)
     {
     case(ES_SourceFormat::GAMS):
-        report << " Modeling system:            GAMS\n";
+        env->output->outputInfo(" Modeling system:            GAMS");
         break;
     case(ES_SourceFormat::OSiL):
-        report << " Modeling system:            OSiL\n";
+        env->output->outputInfo(" Modeling system:            OSiL");
         break;
-
     case(ES_SourceFormat::NL):
-        report << " Modeling system:            AMPL\n";
+        env->output->outputInfo(" Modeling system:            AMPL");
         break;
 
     default:
@@ -559,45 +469,35 @@ void Report::outputModelingSystemHeader(ES_SourceFormat source, std::string file
     }
 
     if(filename != "")
-        report << " Problem read from file:     " << filename << "\n";
+        env->output->outputInfo(fmt::format(" Problem read from file:     {}", filename));
 
-    env->output->outputInfo(report.str());
-}
-
-void Report::outputModelingSystemReport()
-{
-    std::stringstream report;
-    env->output->outputInfo(report.str());
+    env->output->outputInfo("");
 }
 
 void Report::outputProblemInstanceReport()
 {
-    std::stringstream report;
-
     bool isReformulated = (env->problem == env->reformulatedProblem) ? false : true;
 
+    env->output->outputInfo("");
+
 #ifdef SIMPLE_OUTPUT_CHARS
-    report << "\n- Problem instance ";
-    report << "----------------------------------------------------------------------------------------------------"
-              "\n";
+    env->output->outputInfo(
+        "- Problem instance "
+        "----------------------------------------------------------------------------------------------------");
 #else
-    report << "\n╶ Problem instance ";
-    report << "───────────────────────────────────────────────────────────────────────────────────────────────────╴"
-              "\n";
+    env->output->outputInfo(
+        "╶ Problem instance "
+        "───────────────────────────────────────────────────────────────────────────────────────────────────╴");
 #endif
 
-    report << "\n";
+    env->output->outputInfo("");
 
     if(isReformulated)
-    {
-        report << fmt::format(" {:35s}{:21s}{:s}", "", "Original", "Reformulated") << "\n";
-    }
+        env->output->outputInfo(fmt::format(" {:35s}{:21s}{:s}", "", "Original", "Reformulated"));
     else
-    {
-        report << fmt::format(" {:35s}{:21s}{:s}", "", "Original", "") << "\n";
-    }
+        env->output->outputInfo(fmt::format(" {:35s}{:21s}{:s}", "", "Original", ""));
 
-    report << "\n";
+    env->output->outputInfo("");
 
     std::string problemClassificationOrig;
     std::string problemClassificationRef = "";
@@ -649,9 +549,8 @@ void Report::outputProblemInstanceReport()
             problemClassificationRef += ", nonconvex";
     }
 
-    report << fmt::format(
-                  " {:35s}{:21s}{:s}", "Problem classification:", problemClassificationOrig, problemClassificationRef)
-           << "\n";
+    env->output->outputInfo(fmt::format(
+        " {:35s}{:21s}{:s}", "Problem classification:", problemClassificationOrig, problemClassificationRef));
 
     std::string objectiveClassificationOrig;
     std::string objectiveClassificationRef = "";
@@ -779,156 +678,132 @@ void Report::outputProblemInstanceReport()
         }
     }
 
-    report << "\n";
+    env->output->outputInfo("");
 
-    report << fmt::format(
-                  " {:35s}{:21s}{:s}", "Objective function direction:", objectiveDirectionOrig, objectiveDirectionRef)
-           << "\n";
+    env->output->outputInfo(fmt::format(
+        " {:35s}{:21s}{:s}", "Objective function direction:", objectiveDirectionOrig, objectiveDirectionRef));
 
-    report << fmt::format(" {:35s}{:21s}{:s}", "Objective function type:", objectiveClassificationOrig,
-                  objectiveClassificationRef)
-           << "\n";
+    env->output->outputInfo(fmt::format(
+        " {:35s}{:21s}{:s}", "Objective function type:", objectiveClassificationOrig, objectiveClassificationRef));
 
-    report << "\n";
+    env->output->outputInfo("");
 
     if(isReformulated)
     {
         if(env->problem->properties.numberOfNumericConstraints > 0
             || env->reformulatedProblem->properties.numberOfNumericConstraints > 0)
-            report << fmt::format(" {:35s}{:<21d}{:d}",
-                          "Number of constraints:", env->problem->properties.numberOfNumericConstraints,
-                          env->reformulatedProblem->properties.numberOfNumericConstraints)
-                   << "\n";
+            env->output->outputInfo(fmt::format(" {:35s}{:<21d}{:d}",
+                "Number of constraints:", env->problem->properties.numberOfNumericConstraints,
+                env->reformulatedProblem->properties.numberOfNumericConstraints));
 
         if(env->problem->properties.numberOfLinearConstraints > 0
             || env->reformulatedProblem->properties.numberOfLinearConstraints > 0)
-            report << fmt::format(" {:35s}{:<21d}{:d}",
-                          " - linear:", env->problem->properties.numberOfLinearConstraints,
-                          env->reformulatedProblem->properties.numberOfLinearConstraints)
-
-                   << "\n";
+            env->output->outputInfo(
+                fmt::format(" {:35s}{:<21d}{:d}", " - linear:", env->problem->properties.numberOfLinearConstraints,
+                    env->reformulatedProblem->properties.numberOfLinearConstraints));
 
         if(env->problem->properties.numberOfConvexQuadraticConstraints > 0
             || env->reformulatedProblem->properties.numberOfConvexQuadraticConstraints > 0)
-            report << fmt::format(" {:35s}{:<21d}{:d}",
-                          " - convex quadratic:", env->problem->properties.numberOfConvexQuadraticConstraints,
-                          env->reformulatedProblem->properties.numberOfConvexQuadraticConstraints)
-
-                   << "\n";
+            env->output->outputInfo(fmt::format(" {:35s}{:<21d}{:d}",
+                " - convex quadratic:", env->problem->properties.numberOfConvexQuadraticConstraints,
+                env->reformulatedProblem->properties.numberOfConvexQuadraticConstraints));
 
         if(env->problem->properties.numberOfNonconvexQuadraticConstraints > 0
             || env->reformulatedProblem->properties.numberOfNonconvexQuadraticConstraints > 0)
-            report << fmt::format(" {:35s}{:<21d}{:d}",
-                          " - nonconvex quadratic:", env->problem->properties.numberOfNonconvexQuadraticConstraints,
-                          env->reformulatedProblem->properties.numberOfNonconvexQuadraticConstraints)
-
-                   << "\n";
+            env->output->outputInfo(fmt::format(" {:35s}{:<21d}{:d}",
+                " - nonconvex quadratic:", env->problem->properties.numberOfNonconvexQuadraticConstraints,
+                env->reformulatedProblem->properties.numberOfNonconvexQuadraticConstraints));
 
         if(env->problem->properties.numberOfConvexNonlinearConstraints > 0
             || env->reformulatedProblem->properties.numberOfConvexNonlinearConstraints > 0)
-            report << fmt::format(" {:35s}{:<21d}{:d}",
-                          " - convex nonlinear:", env->problem->properties.numberOfConvexNonlinearConstraints,
-                          env->reformulatedProblem->properties.numberOfConvexNonlinearConstraints)
-                   << "\n";
+            env->output->outputInfo(fmt::format(" {:35s}{:<21d}{:d}",
+                " - convex nonlinear:", env->problem->properties.numberOfConvexNonlinearConstraints,
+                env->reformulatedProblem->properties.numberOfConvexNonlinearConstraints));
 
         if(env->problem->properties.numberOfNonconvexNonlinearConstraints > 0
             || env->reformulatedProblem->properties.numberOfNonconvexNonlinearConstraints > 0)
-            report << fmt::format(" {:35s}{:<21d}{:d}",
-                          " - nonconvex nonlinear:", env->problem->properties.numberOfNonconvexNonlinearConstraints,
-                          env->reformulatedProblem->properties.numberOfNonconvexNonlinearConstraints)
-                   << "\n";
+            env->output->outputInfo(fmt::format(" {:35s}{:<21d}{:d}",
+                " - nonconvex nonlinear:", env->problem->properties.numberOfNonconvexNonlinearConstraints,
+                env->reformulatedProblem->properties.numberOfNonconvexNonlinearConstraints));
     }
     else
     {
         if(env->problem->properties.numberOfNumericConstraints > 0)
-            report << fmt::format(" {:35s}{:<21d}{:d}",
-                          "Number of constraints:", env->problem->properties.numberOfNumericConstraints, "")
-                   << "\n";
+            env->output->outputInfo(fmt::format(" {:35s}{:<21d}{:d}",
+                "Number of constraints:", env->problem->properties.numberOfNumericConstraints, ""));
 
         if(env->problem->properties.numberOfLinearConstraints > 0)
-            report << fmt::format(
-                          " {:35s}{:<21d}{:d}", " - linear:", env->problem->properties.numberOfLinearConstraints, "")
-                   << "\n";
+            env->output->outputInfo(fmt::format(
+                " {:35s}{:<21d}{:d}", " - linear:", env->problem->properties.numberOfLinearConstraints, ""));
 
         if(env->problem->properties.numberOfQuadraticConstraints > 0)
-            report << fmt::format(" {:35s}{:<21d}{:d}",
-                          " - quadratic:", env->problem->properties.numberOfQuadraticConstraints, "")
-                   << "\n";
+            env->output->outputInfo(fmt::format(
+                " {:35s}{:<21d}{:d}", " - quadratic:", env->problem->properties.numberOfQuadraticConstraints, ""));
 
         if(env->problem->properties.numberOfNonlinearConstraints > 0)
-            report << fmt::format(" {:35s}{:<21d}{:d}",
-                          " - nonlinear:", env->problem->properties.numberOfNonlinearConstraints, "")
-                   << "\n";
+            env->output->outputInfo(fmt::format(
+                " {:35s}{:<21d}{:d}", " - nonlinear:", env->problem->properties.numberOfNonlinearConstraints, ""));
     }
 
-    report << "\n";
+    env->output->outputInfo("");
 
     if(isReformulated)
     {
         if(env->problem->properties.numberOfVariables > 0 || env->reformulatedProblem->properties.numberOfVariables > 0)
-            report << fmt::format(" {:35s}{:<21d}{:d}",
-                          "Number of variables:", env->problem->properties.numberOfVariables,
-                          env->reformulatedProblem->properties.numberOfVariables)
-                   << "\n";
+            env->output->outputInfo(fmt::format(" {:35s}{:<21d}{:d}", "Number of variables:",
+                env->problem->properties.numberOfVariables, env->reformulatedProblem->properties.numberOfVariables));
 
         if(env->problem->properties.numberOfRealVariables > 0
             || env->reformulatedProblem->properties.numberOfRealVariables > 0)
-            report << fmt::format(" {:35s}{:<21d}{:d}", " - real:", env->problem->properties.numberOfRealVariables,
-                          env->reformulatedProblem->properties.numberOfRealVariables)
-                   << "\n";
+            env->output->outputInfo(
+                fmt::format(" {:35s}{:<21d}{:d}", " - real:", env->problem->properties.numberOfRealVariables,
+                    env->reformulatedProblem->properties.numberOfRealVariables));
 
         if(env->problem->properties.numberOfBinaryVariables > 0
             || env->reformulatedProblem->properties.numberOfBinaryVariables > 0)
-            report << fmt::format(" {:35s}{:<21d}{:d}", " - binary:", env->problem->properties.numberOfBinaryVariables,
-                          env->reformulatedProblem->properties.numberOfBinaryVariables)
-                   << "\n";
+            env->output->outputInfo(
+                fmt::format(" {:35s}{:<21d}{:d}", " - binary:", env->problem->properties.numberOfBinaryVariables,
+                    env->reformulatedProblem->properties.numberOfBinaryVariables));
 
         if(env->problem->properties.numberOfIntegerVariables > 0
             || env->reformulatedProblem->properties.numberOfIntegerVariables > 0)
-            report << fmt::format(" {:35s}{:<21d}{:d}",
-                          " - integer:", env->problem->properties.numberOfIntegerVariables,
-                          env->reformulatedProblem->properties.numberOfIntegerVariables)
-                   << "\n";
+            env->output->outputInfo(
+                fmt::format(" {:35s}{:<21d}{:d}", " - integer:", env->problem->properties.numberOfIntegerVariables,
+                    env->reformulatedProblem->properties.numberOfIntegerVariables));
 
         if(env->problem->properties.numberOfSemicontinuousVariables > 0
             || env->reformulatedProblem->properties.numberOfSemicontinuousVariables > 0)
-            report << fmt::format(" {:35s}{:<21d}{:d}",
-                          " - semicontinuous:", env->problem->properties.numberOfSemicontinuousVariables,
-                          env->reformulatedProblem->properties.numberOfSemicontinuousVariables)
-                   << "\n";
+            env->output->outputInfo(fmt::format(" {:35s}{:<21d}{:d}",
+                " - semicontinuous:", env->problem->properties.numberOfSemicontinuousVariables,
+                env->reformulatedProblem->properties.numberOfSemicontinuousVariables));
 
         if(env->problem->properties.numberOfNonlinearVariables > 0
             || env->reformulatedProblem->properties.numberOfNonlinearVariables > 0)
-            report << fmt::format(" {:35s}{:<21d}{:d}",
-                          " - nonlinear:", env->problem->properties.numberOfNonlinearVariables,
-                          env->reformulatedProblem->properties.numberOfNonlinearVariables)
-                   << "\n";
+            env->output->outputInfo(
+                fmt::format(" {:35s}{:<21d}{:d}", " - nonlinear:", env->problem->properties.numberOfNonlinearVariables,
+                    env->reformulatedProblem->properties.numberOfNonlinearVariables));
     }
     else
     {
         if(env->problem->properties.numberOfVariables > 0)
-            report << fmt::format(
-                          " {:35s}{:<21d}{:d}", "Number of variables:", env->problem->properties.numberOfVariables, "")
-                   << "\n";
+            env->output->outputInfo(fmt::format(
+                " {:35s}{:<21d}{:d}", "Number of variables:", env->problem->properties.numberOfVariables, ""));
 
         if(env->problem->properties.numberOfRealVariables > 0)
-            report << fmt::format(" {:35s}{:<21d}{:d}", " - real:", env->problem->properties.numberOfRealVariables, "")
-                   << "\n";
+            env->output->outputInfo(
+                fmt::format(" {:35s}{:<21d}{:d}", " - real:", env->problem->properties.numberOfRealVariables, ""));
 
         if(env->problem->properties.numberOfBinaryVariables > 0)
-            report << fmt::format(
-                          " {:35s}{:<21d}{:d}", " - binary:", env->problem->properties.numberOfBinaryVariables, "")
-                   << "\n";
+            env->output->outputInfo(
+                fmt::format(" {:35s}{:<21d}{:d}", " - binary:", env->problem->properties.numberOfBinaryVariables, ""));
 
         if(env->problem->properties.numberOfIntegerVariables > 0)
-            report << fmt::format(
-                          " {:35s}{:<21d}{:d}", " - integer:", env->problem->properties.numberOfIntegerVariables, "")
-                   << "\n";
+            env->output->outputInfo(fmt::format(
+                " {:35s}{:<21d}{:d}", " - integer:", env->problem->properties.numberOfIntegerVariables, ""));
 
         if(env->problem->properties.numberOfSemicontinuousVariables > 0)
-            report << fmt::format(" {:35s}{:<21d}{:d}",
-                          " - semicontinuous:", env->problem->properties.numberOfSemicontinuousVariables, "")
-                   << "\n";
+            env->output->outputInfo(fmt::format(" {:35s}{:<21d}{:d}",
+                " - semicontinuous:", env->problem->properties.numberOfSemicontinuousVariables, ""));
     }
 
     if(env->results->auxiliaryVariablesIntroduced.size() > 0)
@@ -938,117 +813,119 @@ void Report::outputProblemInstanceReport()
         for(auto& AUXVAR : env->results->auxiliaryVariablesIntroduced)
             totalNumberOfTransformations += AUXVAR.second;
 
-        if(env->problem->properties.numberOfVariables > 0)
-            report << '\n';
-        report << fmt::format(" {:56s}{:d}", "Number of transformations performed:", totalNumberOfTransformations)
-               << "\n";
+        env->output->outputInfo("");
+
+        env->output->outputInfo(
+            fmt::format(" {:56s}{:d}", "Number of transformations performed:", totalNumberOfTransformations));
 
         if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::NonlinearObjectiveFunction);
             value > 0)
-            report << fmt::format(" {:56s}{:d}", "- epigraph:", "", value) << "\n";
+            env->output->outputInfo(fmt::format(" {:56s}{:d}", "- epigraph:", "", value));
 
         if(auto value
             = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::NonlinearExpressionPartitioning);
             value > 0)
-            report << fmt::format(" {:56s}{:d}", "- nonlinear expression partitioning:", value) << "\n";
+            env->output->outputInfo(fmt::format(" {:56s}{:d}", "- nonlinear expression partitioning:", value));
 
         if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::MonomialTermsPartitioning);
             value > 0)
-            report << fmt::format(" {:56s}{:d}", "- monomial terms partitioning:", value) << "\n";
+            env->output->outputInfo(fmt::format(" {:56s}{:d}", "- monomial terms partitioning:", value));
 
         if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::SignomialTermsPartitioning);
             value > 0)
-            report << fmt::format(" {:56s}{:d}", "- signomial terms partitioning:", value) << "\n";
+            env->output->outputInfo(fmt::format(" {:56s}{:d}", "- signomial terms partitioning:", value));
 
         if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::ContinuousBilinear);
             value > 0)
-            report << fmt::format(" {:56s}{:d}", "- continuous bilinear term extraction:", value) << "\n";
+            env->output->outputInfo(fmt::format(" {:56s}{:d}", "- continuous bilinear term extraction:", value));
 
         if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::BinaryBilinear); value > 0)
-            report << fmt::format(" {:56s}{:d}", "- binary bilinear term reformulation:", value) << "\n";
+            env->output->outputInfo(fmt::format(" {:56s}{:d}", "- binary bilinear term reformulation:", value));
 
         if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::BinaryContinuousBilinear);
             value > 0)
-            report << fmt::format(" {:56s}{:d}", "- binary/continuous bilinear term reformulation:", value) << "\n";
+            env->output->outputInfo(
+                fmt::format(" {:56s}{:d}", "- binary/continuous bilinear term reformulation:", value));
 
         if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::IntegerBilinear); value > 0)
-            report << fmt::format(" {:56s}{:d}", "- integer bilinear term reformulation:", value) << "\n";
+            env->output->outputInfo(fmt::format(" {:56s}{:d}", "- integer bilinear term reformulation:", value));
 
         if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::BinaryMonomial); value > 0)
-            report << fmt::format(" {:56s}{:d}", "- binary monomial term reformulation:", value) << "\n";
+            env->output->outputInfo(fmt::format(" {:56s}{:d}", "- binary monomial term reformulation:", value));
 
         if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::AbsoluteValue); value > 0)
-            report << fmt::format(" {:56s}{:d}", "-absolute value reformulation:", value) << "\n";
+            env->output->outputInfo(fmt::format(" {:56s}{:d}", "-absolute value reformulation:", value));
     }
-
-    env->output->outputInfo(report.str());
 }
 
 void Report::outputSolutionReport()
 {
     std::stringstream report;
 
-    report << "\n\n";
+    env->output->outputInfo("");
 
 #ifdef SIMPLE_OUTPUT_CHARS
-    report << "- Solution report ";
-    report
-        << "-----------------------------------------------------------------------------------------------------\n";
+    env->output->outputInfo(
+        "- Solution report "
+        "-----------------------------------------------------------------------------------------------------");
 #else
-    report << "╶ Solution report ";
-    report
-        << "────────────────────────────────────────────────────────────────────────────────────────────────────╴\n";
+    env->output->outputInfo(
+        "╶ Solution report "
+        "────────────────────────────────────────────────────────────────────────────────────────────────────╴");
 #endif
 
-    report << "\n";
+    env->output->outputInfo("");
 
     bool primalSolutionFound = env->results->hasPrimalSolution();
 
     if(env->results->terminationReasonDescription != "")
-        report << " " << env->results->terminationReasonDescription << "\n\n";
+        env->output->outputInfo(fmt::format(" {}", env->results->terminationReasonDescription));
+
+    env->output->outputInfo("");
 
     switch(env->results->getModelReturnStatus())
     {
-    /* case E_ModelReturnStatus::OptimalLocal:
-        report << " Optimal primal solution found, but it might be local since the model seems to be nonconvex.\n";
-        break;*/
     case E_ModelReturnStatus::OptimalGlobal:
-        report << " Globally optimal primal solution found.\n";
+        env->output->outputInfo(" Globally optimal primal solution found.");
         break;
     case E_ModelReturnStatus::FeasibleSolution:
         if(env->reformulatedProblem->properties.convexity == E_ProblemConvexity::Convex)
-            report << " Feasible primal solution found to convex problem. Can not guarantee optimality to the given "
-                      "termination criteria.\n";
+            env->output->outputInfo(
+                " Feasible primal solution found to convex problem. Can not guarantee optimality to the given "
+                "termination criteria.");
         else
-            report << " Feasible primal solution found to nonconvex problem. Can not guarantee optimality to the given "
-                      "termination criteria.\n";
+            env->output->outputInfo(
+                " Feasible primal solution found to nonconvex problem. Can not guarantee optimality to the given "
+                "termination criteria.");
         break;
     case E_ModelReturnStatus::InfeasibleLocal:
-        report << " Problem found to be infeasible, but globality could not be verified since the problem seems to be "
-                  "nonconvex.\n";
+        env->output->outputInfo(
+            " Problem found to be infeasible, but globality could not be verified since the problem seems to be "
+            "nonconvex.");
         break;
     case E_ModelReturnStatus::InfeasibleGlobal:
-        report << " Problem is infeasible.\n";
+        env->output->outputInfo(" Problem is infeasible.");
         break;
     case E_ModelReturnStatus::Unbounded:
-        report << " Problem is unbounded, but a primal solution was found.\n";
+        env->output->outputInfo(" Problem is unbounded, but a primal solution was found.");
         break;
     case E_ModelReturnStatus::UnboundedNoSolution:
-        report << " Problem is unbounded, and no primal solution was found.\n";
+        env->output->outputInfo(" Problem is unbounded, and no primal solution was found.");
         break;
     case E_ModelReturnStatus::NoSolutionReturned:
-        report << " No solution found. Try modifying the termination criteria.\n";
+        env->output->outputInfo(" No solution found. Try modifying the termination criteria.");
         break;
     case E_ModelReturnStatus::ErrorUnknown:
-        report << " An error occurred, but a primal solution was found.\n";
+        env->output->outputInfo(" An error occurred, but a primal solution was found.");
         break;
     case E_ModelReturnStatus::None:
     case E_ModelReturnStatus::ErrorNoSolution:
-        report << " An error occurred, and no primal solution was found.\n";
+        env->output->outputInfo(" An error occurred, and no primal solution was found.");
     };
 
-    // Warn the user if variables are at maximum bound limits
+    env->output->outputInfo("");
 
+    // Warn the user if variables are at maximum bound limits
     if(primalSolutionFound)
     {
         bool variablesAreBounded = true;
@@ -1084,57 +961,56 @@ void Report::outputSolutionReport()
         }
 
         if(!variablesAreBounded)
-            report
-                << " Warning! Solution point is at maximum variable bounds. Problem might be artificially bounded.\n";
+        {
+            env->output->outputInfo(
+                " Warning! Solution point is at maximum variable bounds. Problem might be artificially bounded.");
+            env->output->outputInfo("");
+        }
     }
-
-    report << "\n";
 
     if(env->problem->objectiveFunction->properties.isMinimize)
     {
-        report << " Objective bound (minimization) [dual, primal]:  ";
-        report << "[" << Utilities::toStringFormat(env->results->getGlobalDualBound(), "{:g}") << ", ";
-        report << Utilities::toStringFormat(env->results->getPrimalBound(), "{:g}") << "]\n";
+        env->output->outputInfo(fmt::format(" Objective bound (minimization) [dual, primal]:  [{:g}, {:g}].",
+            env->results->getGlobalDualBound(), env->results->getPrimalBound()));
     }
     else
     {
-        report << " Objective bound (maximization) [primal, dual]:  ";
-        report << "[" << Utilities::toStringFormat(env->results->getPrimalBound(), "{:g}") << ", ";
-        report << Utilities::toStringFormat(env->results->getGlobalDualBound(), "{:g}") << "]\n";
+        env->output->outputInfo(fmt::format(" Objective bound (maximization) [primal, dual]:  [{:g}, {:g}].",
+            env->results->getPrimalBound(), env->results->getGlobalDualBound()));
     }
 
-    report << " Objective gap absolute / relative:              ";
-    report << "" << Utilities::toStringFormat(env->results->getAbsoluteGlobalObjectiveGap(), "{:g}") << " / ";
-    report << Utilities::toStringFormat(env->results->getRelativeGlobalObjectiveGap(), "{:g}") << "\n";
-    report << "\n";
+    env->output->outputInfo(fmt::format(" Objective gap absolute / relative:              {:g} / {:g}.",
+        env->results->getAbsoluteGlobalObjectiveGap(), env->results->getRelativeGlobalObjectiveGap()));
 
-    std::stringstream fulfilled;
-    std::stringstream unfulfilled;
+    env->output->outputInfo("");
+
+    std::vector<std::string> fulfilled;
+    std::vector<std::string> unfulfilled;
 
     if(env->results->isAbsoluteObjectiveGapToleranceMet())
     {
-        fulfilled << "  - absolute objective gap tolerance             ";
-        fulfilled << env->results->getAbsoluteGlobalObjectiveGap() << " <= ";
-        fulfilled << env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination") << "\n";
+        fulfilled.push_back(fmt::format("  - absolute objective gap tolerance             {:g} <= {:g}",
+            env->results->getAbsoluteGlobalObjectiveGap(),
+            env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination")));
     }
     else
     {
-        unfulfilled << "  - absolute objective gap tolerance             ";
-        unfulfilled << env->results->getAbsoluteGlobalObjectiveGap() << " > ";
-        unfulfilled << env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination") << "\n";
+        unfulfilled.push_back(fmt::format("  - absolute objective gap tolerance             {:g} > {:g}",
+            env->results->getAbsoluteGlobalObjectiveGap(),
+            env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination")));
     }
 
     if(env->results->isRelativeObjectiveGapToleranceMet())
     {
-        fulfilled << "  - relative objective gap tolerance             ";
-        fulfilled << env->results->getRelativeGlobalObjectiveGap() << " <= ";
-        fulfilled << env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination") << "\n";
+        fulfilled.push_back(fmt::format("  - relative objective gap tolerance             {:g} <= {:g}",
+            env->results->getRelativeGlobalObjectiveGap(),
+            env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination")));
     }
     else
     {
-        unfulfilled << "  - relative objective gap tolerance             ";
-        unfulfilled << env->results->getRelativeGlobalObjectiveGap() << " > ";
-        unfulfilled << env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination") << "\n";
+        unfulfilled.push_back(fmt::format("  - relative objective gap tolerance             {:g} > {:g}",
+            env->results->getRelativeGlobalObjectiveGap(),
+            env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination")));
     }
 
     if(static_cast<ES_TreeStrategy>(env->settings->getSetting<int>("TreeStrategy", "Dual"))
@@ -1143,141 +1019,144 @@ void Report::outputSolutionReport()
         if(env->results->getCurrentIteration()->maxDeviation
             <= env->settings->getSetting<double>("ConstraintTolerance", "Termination"))
         {
-            fulfilled << "  - maximal constraint tolerance                 ";
-            fulfilled << env->results->getCurrentIteration()->maxDeviation << " <= ";
-            fulfilled << env->settings->getSetting<double>("ConstraintTolerance", "Termination") << "\n";
+            fulfilled.push_back(fmt::format("  - maximal constraint tolerance                 {:g} <= {:g}",
+                env->results->getCurrentIteration()->maxDeviation,
+                env->settings->getSetting<double>("ConstraintTolerance", "Termination")));
         }
         else
         {
-            unfulfilled << "  - maximal constraint tolerance                 ";
-            unfulfilled << env->results->getCurrentIteration()->maxDeviation << " > ";
-            unfulfilled << env->settings->getSetting<double>("ConstraintTolerance", "Termination") << "\n";
+            unfulfilled.push_back(fmt::format("  - maximal constraint tolerance                 {:g} > {:g}",
+                env->results->getCurrentIteration()->maxDeviation,
+                env->settings->getSetting<double>("ConstraintTolerance", "Termination")));
         }
     }
 
-    int iterLim = env->settings->getSetting<int>("IterationLimit", "Termination");
+    ;
 
-    if(env->results->getCurrentIteration()->iterationNumber > iterLim)
+    if(int iterLim = env->settings->getSetting<int>("IterationLimit", "Termination");
+        env->results->getCurrentIteration()->iterationNumber > iterLim)
     {
-        fulfilled << "  - iteration limit                              ";
-        fulfilled << env->results->getCurrentIteration()->iterationNumber << " > ";
-        fulfilled << iterLim << "\n";
+        fulfilled.push_back(fmt::format("  - iteration limit                              {} > {}",
+            env->results->getCurrentIteration()->iterationNumber, iterLim));
     }
     else
     {
-        unfulfilled << "  - iteration limit                              ";
-        unfulfilled << env->results->getCurrentIteration()->iterationNumber << " <= ";
-        unfulfilled << iterLim << "\n";
+        unfulfilled.push_back(fmt::format("  - iteration limit                              {} <= {}",
+            env->results->getCurrentIteration()->iterationNumber, iterLim));
     }
 
-    if(env->timing->getElapsedTime("Total") > env->settings->getSetting<double>("TimeLimit", "Termination"))
+    auto timeLimit = env->settings->getSetting<double>("TimeLimit", "Termination");
+
+    if(auto totalTime = env->timing->getElapsedTime("Total"); totalTime > timeLimit)
     {
-        fulfilled << "  - solution time limit (s)                      ";
-        fulfilled << env->timing->getElapsedTime("Total") << " > ";
-        fulfilled << env->settings->getSetting<double>("TimeLimit", "Termination") << "\n";
+        fulfilled.push_back(
+            fmt::format("  - solution time limit (s)                      {:g} > {:g}", totalTime, timeLimit));
     }
     else
     {
-        unfulfilled << "  - solution time limit (s)                      ";
-        unfulfilled << env->timing->getElapsedTime("Total") << " <= ";
-        unfulfilled << env->settings->getSetting<double>("TimeLimit", "Termination") << "\n";
+        unfulfilled.push_back(
+            fmt::format("  - solution time limit (s)                      {:g} <= {:g}", totalTime, timeLimit));
     }
 
-    report << " Fulfilled termination criteria: \n";
-    report << fulfilled.str();
-    report << "\n";
+    env->output->outputInfo(" Fulfilled termination criteria: ");
 
-    report << " Unfulfilled termination criteria: \n";
-    report << unfulfilled.str();
-    report << "\n";
+    for(auto const COND : fulfilled)
+        env->output->outputInfo(COND);
 
-    report << " Dual problems solved in main step:              ";
-    report << env->solutionStatistics.getNumberOfTotalDualProblems() << "\n";
+    env->output->outputInfo("");
+
+    env->output->outputInfo(" Unfulfilled termination criteria:");
+
+    for(auto const COND : unfulfilled)
+        env->output->outputInfo(COND);
+
+    env->output->outputInfo("");
+
+    env->output->outputInfo(fmt::format(
+        " Dual problems solved in main step:              {}", env->solutionStatistics.getNumberOfTotalDualProblems()));
 
     if(env->solutionStatistics.numberOfProblemsLP > 0)
     {
-        report << "  - LP problems                                  " << env->solutionStatistics.numberOfProblemsLP
-               << "\n";
+        env->output->outputInfo(fmt::format(
+            "  - LP problems                                  {}", env->solutionStatistics.numberOfProblemsLP));
     }
 
     if(env->solutionStatistics.numberOfProblemsQP > 0)
     {
-        report << "  - QP problems                                  " << env->solutionStatistics.numberOfProblemsQP
-               << "\n";
+        env->output->outputInfo(fmt::format(
+            "  - QP problems                                  {}", env->solutionStatistics.numberOfProblemsQP));
     }
 
     if(env->solutionStatistics.numberOfProblemsQCQP > 0)
     {
-        report << "  - QCQP problems                                " << env->solutionStatistics.numberOfProblemsQCQP
-               << "\n";
+        env->output->outputInfo(fmt::format(
+            "  - QCQP problems                                {}", env->solutionStatistics.numberOfProblemsQCQP));
     }
 
     if(env->solutionStatistics.numberOfProblemsOptimalMILP > 0)
     {
-        report << "  - MILP problems, optimal                       "
-               << env->solutionStatistics.numberOfProblemsOptimalMILP << "\n";
+        env->output->outputInfo(fmt::format("  - MILP problems, optimal                       {}",
+            env->solutionStatistics.numberOfProblemsOptimalMILP));
     }
 
     if(env->solutionStatistics.numberOfProblemsFeasibleMILP > 0)
     {
-        report << "  - MILP problems, feasible                      "
-               << env->solutionStatistics.numberOfProblemsFeasibleMILP << "\n";
+        env->output->outputInfo(fmt::format("  - MILP problems, feasible                      {}",
+            env->solutionStatistics.numberOfProblemsFeasibleMILP));
     }
 
     if(env->solutionStatistics.numberOfProblemsOptimalMIQP > 0)
     {
-        report << "  - MIQP problems, optimal                       "
-               << env->solutionStatistics.numberOfProblemsOptimalMIQP << "\n";
+        env->output->outputInfo(fmt::format("  - MIQP problems, optimal                       {}",
+            env->solutionStatistics.numberOfProblemsOptimalMIQP));
     }
 
     if(env->solutionStatistics.numberOfProblemsFeasibleMIQP > 0)
     {
-        report << "  - MIQP problems, feasible                      "
-               << env->solutionStatistics.numberOfProblemsFeasibleMIQP << "\n";
+        env->output->outputInfo(fmt::format("  - MIQP problems, feasible                      {}",
+            env->solutionStatistics.numberOfProblemsFeasibleMIQP));
     }
 
-    report << "\n";
+    env->output->outputInfo("");
 
     if(env->solutionStatistics.numberOfExploredNodes > 0)
     {
-        report << " Number of explored nodes:                       ";
-        report << env->solutionStatistics.numberOfExploredNodes << "\n";
-
-        report << "\n";
+        env->output->outputInfo(fmt::format(
+            " Number of explored nodes:                       {}", env->solutionStatistics.numberOfExploredNodes));
+        env->output->outputInfo("");
     }
 
     if(env->solutionStatistics.numberOfProblemsNLPInteriorPointSearch > 0
         || env->solutionStatistics.numberOfProblemsMinimaxLP > 0)
     {
-        report << " Problems solved during interior point search: \n";
+        env->output->outputInfo(" Problems solved during interior point search:");
 
         if(env->solutionStatistics.numberOfProblemsNLPInteriorPointSearch > 0)
         {
-            report << " - NLP problems:                                 ";
-            report << env->solutionStatistics.numberOfProblemsNLPInteriorPointSearch << "\n";
+            env->output->outputInfo(fmt::format(" - NLP problems:                                 {}",
+                env->solutionStatistics.numberOfProblemsNLPInteriorPointSearch));
         }
 
         if(env->solutionStatistics.numberOfProblemsMinimaxLP > 0)
         {
-            report << " - LP problems:                                  ";
-            report << env->solutionStatistics.numberOfProblemsMinimaxLP << "\n";
+            env->output->outputInfo(fmt::format(" - LP problems:                                  {}",
+                env->solutionStatistics.numberOfProblemsMinimaxLP));
         }
 
-        report << "\n";
+        env->output->outputInfo("");
     }
 
     if(env->solutionStatistics.numberOfProblemsFixedNLP > 0)
     {
-        report << " Fixed primal NLP problems solved:               ";
-        report << env->solutionStatistics.numberOfProblemsFixedNLP << "\n";
-        report << "\n";
+        env->output->outputInfo(fmt::format(
+            " Fixed primal NLP problems solved:               {}", env->solutionStatistics.numberOfProblemsFixedNLP));
+        env->output->outputInfo("");
     }
 
     if(env->results->hasPrimalSolution())
     {
-        report << fmt::format(" {:<48}{:d}",
-                      "Number of primal solutions found:", env->solutionStatistics.numberOfFoundPrimalSolutions)
-               << "\n";
+        env->output->outputInfo(fmt::format(
+            " {:<48}{:d}", "Number of primal solutions found:", env->solutionStatistics.numberOfFoundPrimalSolutions));
 
         for(auto& S : env->results->primalSolutionSourceStatistics)
         {
@@ -1314,10 +1193,10 @@ void Report::outputSolutionReport()
                 break;
             }
 
-            report << fmt::format(" - {:<46}{:d}", sourceDesc + ':', S.second) << "\n";
+            env->output->outputInfo(fmt::format(" - {:<46}{:d}", sourceDesc + ':', S.second));
         }
 
-        report << "\n";
+        env->output->outputInfo("");
     }
 
     for(auto& T : env->timing->timers)
@@ -1326,48 +1205,44 @@ void Report::outputSolutionReport()
         auto elapsed = T.elapsed();
 
         if(elapsed > 0)
-        {
-            report << fmt::format(" {:<48}{:g}", T.description + ':', elapsed) << "\n";
-        }
+            env->output->outputInfo(fmt::format(" {:<48}{:g}", T.description + ':', elapsed));
     }
-
-    env->output->outputInfo(report.str());
 }
 
 void Report::outputInteriorPointPreReport()
 {
     std::stringstream report;
 
+    env->output->outputInfo("");
+
 #ifdef SIMPLE_OUTPUT_CHARS
-    report << "\n";
-    report << "- Interior point search ";
-    report << "-----------------------------------------------------------------------------------------------\n";
+    env->output->outputInfo(
+        "- Interior point search "
+        "-----------------------------------------------------------------------------------------------");
 #else
-    report << "\n";
-    report << "╶ Interior point search ";
-    report << "──────────────────────────────────────────────────────────────────────────────────────────────╴\n";
+    env->output->outputInfo(
+        "╶ Interior point search "
+        "──────────────────────────────────────────────────────────────────────────────────────────────╴");
 #endif
 
-    report << "\n";
-
-    report << " Strategy selected:          ";
+    env->output->outputInfo("");
 
     switch(static_cast<ES_InteriorPointStrategy>(env->settings->getSetting<int>("ESH.InteriorPoint.Solver", "Dual")))
     {
     case(ES_InteriorPointStrategy::CuttingPlaneMiniMax):
-        report << "cutting plane minimax";
+        env->output->outputInfo(" Strategy selected:          cutting plane minimax");
         break;
     case(ES_InteriorPointStrategy::IpoptMinimax):
-        report << "Ipopt minimax";
+        env->output->outputInfo(" Strategy selected:          Ipopt minimax");
         break;
     case(ES_InteriorPointStrategy::IpoptRelaxed):
-        report << "Ipopt relaxed";
+        env->output->outputInfo(" Strategy selected:          Ipopt relaxed");
         break;
     case(ES_InteriorPointStrategy::IpoptMinimaxAndRelaxed):
-        report << "Ipopt minimax and Ipopt relaxed";
+        env->output->outputInfo(" Strategy selected:          Ipopt minimax and relaxed");
         break;
     default:
-        report << "none";
+        env->output->outputInfo(" Strategy selected:          none");
         break;
     }
 
