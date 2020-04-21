@@ -72,11 +72,13 @@ int main(int argc, char* argv[])
 
 #ifdef SIMPLE_OUTPUT_CHARS
         env->output->outputInfo("-----------------------------------------------------------------------------------"
-                                "-----------------------------------\r\n");
+                                "-----------------------------------");
 #else
         env->output->outputInfo("╶──────────────────────────────────────────────────────────────────────────────────"
-                                "───────────────────────────────────╴\r\n");
+                                "───────────────────────────────────╴");
 #endif
+
+        env->output->outputInfo("");
 
         env->output->outputCritical(" Usage: SHOT PROBLEMFILE [ARGUMENTS] [OPTIONS]");
         env->output->outputCritical("");
@@ -158,11 +160,13 @@ int main(int argc, char* argv[])
 
 #ifdef SIMPLE_OUTPUT_CHARS
         env->output->outputInfo("-----------------------------------------------------------------------------------"
-                                "-----------------------------------\r\n");
+                                "-----------------------------------");
 #else
         env->output->outputInfo("╶──────────────────────────────────────────────────────────────────────────────────"
-                                "───────────────────────────────────╴\r\n");
+                                "───────────────────────────────────╴");
 #endif
+
+        env->output->outputInfo("");
 
         std::string markup = env->settings->getSettingsAsMarkup();
 
@@ -170,7 +174,9 @@ int main(int argc, char* argv[])
         if(!Utilities::writeStringToFile(filepath.string(), markup))
             env->output->outputCritical(" Error when writing markup file: " + filepath.string());
         else
-            env->output->outputInfo(fmt::format(" Default options documentation written to: {}\n", filepath.string()));
+            env->output->outputInfo(fmt::format(" Default options documentation written to: {}", filepath.string()));
+
+        env->output->outputInfo("");
     }
 
     // Read or create options file
@@ -197,12 +203,14 @@ int main(int argc, char* argv[])
 #ifdef SIMPLE_OUTPUT_CHARS
             env->output->outputInfo(
                 "-----------------------------------------------------------------------------------"
-                "-----------------------------------\r\n");
+                "-----------------------------------");
 #else
             env->output->outputInfo(
                 "╶──────────────────────────────────────────────────────────────────────────────────"
-                "───────────────────────────────────╴\r\n");
+                "───────────────────────────────────╴");
 #endif
+
+            env->output->outputInfo("");
 
             env->output->outputCritical(" Options file not found: " + filepath.string());
             return 0;
@@ -230,12 +238,14 @@ int main(int argc, char* argv[])
 #ifdef SIMPLE_OUTPUT_CHARS
                 env->output->outputInfo(
                     "-----------------------------------------------------------------------------------"
-                    "-----------------------------------\r\n");
+                    "-----------------------------------");
 #else
                 env->output->outputInfo(
                     "╶──────────────────────────────────────────────────────────────────────────────────"
-                    "───────────────────────────────────╴\r\n");
+                    "───────────────────────────────────╴");
 #endif
+
+                env->output->outputInfo("");
 
                 env->output->outputCritical(" Error when writing options file: " + filepath.string());
                 return 0;
@@ -265,12 +275,14 @@ int main(int argc, char* argv[])
 #ifdef SIMPLE_OUTPUT_CHARS
             env->output->outputInfo(
                 "-----------------------------------------------------------------------------------"
-                "-----------------------------------\r\n");
+                "-----------------------------------");
 #else
             env->output->outputInfo(
                 "╶──────────────────────────────────────────────────────────────────────────────────"
-                "───────────────────────────────────╴\r\n");
+                "───────────────────────────────────╴");
 #endif
+
+            env->output->outputInfo("");
 
             env->output->outputCritical(" Options file not found: " + filepath.string());
             return 0;
@@ -298,12 +310,14 @@ int main(int argc, char* argv[])
 #ifdef SIMPLE_OUTPUT_CHARS
                 env->output->outputInfo(
                     "-----------------------------------------------------------------------------------"
-                    "-----------------------------------\r\n");
+                    "-----------------------------------");
 #else
                 env->output->outputInfo(
                     "╶──────────────────────────────────────────────────────────────────────────────────"
-                    "───────────────────────────────────╴\r\n");
+                    "───────────────────────────────────╴");
 #endif
+
+                env->output->outputInfo("");
 
                 env->output->outputCritical(" Error when writing options file: " + filepath.string());
                 return 0;
@@ -327,12 +341,14 @@ int main(int argc, char* argv[])
 #ifdef SIMPLE_OUTPUT_CHARS
             env->output->outputInfo(
                 "-----------------------------------------------------------------------------------"
-                "-----------------------------------\r\n");
+                "-----------------------------------");
 #else
             env->output->outputInfo(
                 "╶──────────────────────────────────────────────────────────────────────────────────"
-                "───────────────────────────────────╴\r\n");
+                "───────────────────────────────────╴");
 #endif
+
+            env->output->outputInfo("");
 
             env->output->outputCritical(" Cannot set options from file: " + optionsFile.string());
             return (0);
@@ -584,18 +600,21 @@ int main(int argc, char* argv[])
     {
 #ifdef SIMPLE_OUTPUT_CHARS
         env->output->outputInfo("-----------------------------------------------------------------------------------"
-                                "-----------------------------------\r\n");
+                                "-----------------------------------");
 #else
         env->output->outputInfo("╶──────────────────────────────────────────────────────────────────────────────────"
-                                "───────────────────────────────────╴\r\n");
+                                "───────────────────────────────────╴");
 #endif
 
-        env->output->outputInfo(fmt::format(" Default options file written to: {}\n", optionsFile.string()));
+        env->output->outputInfo("");
+        env->output->outputInfo(fmt::format(" Default options file written to: {}", optionsFile.string()));
+        env->output->outputInfo("");
     }
 
     if(!cmdl(1))
     {
-        env->output->outputCritical(" No problem file specified.\r\n");
+        env->output->outputCritical(" No problem file specified.");
+        env->output->outputCritical("");
         env->output->outputCritical(" Try 'SHOT --help' for more information.");
         return (0);
     }
@@ -665,11 +684,13 @@ int main(int argc, char* argv[])
 
 #ifdef SIMPLE_OUTPUT_CHARS
     env->output->outputInfo("-----------------------------------------------------------------------------------"
-                            "-----------------------------------\r\n");
+                            "-----------------------------------");
 #else
     env->output->outputInfo("╶──────────────────────────────────────────────────────────────────────────────────"
-                            "───────────────────────────────────╴\r\n");
+                            "───────────────────────────────────╴");
 #endif
+
+    env->output->outputInfo("");
 
     std::string osrl = solver.getResultsOSrL();
 

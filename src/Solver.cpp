@@ -283,7 +283,7 @@ bool Solver::setProblem(std::string fileName)
     {
         if(problemExtension == ".osil" || problemExtension == ".xml")
         {
-            env->report->outputModelingSystemHeader(ES_SourceFormat::OSiL, fileName);
+            env->report->outputModelingSystemReport(ES_SourceFormat::OSiL, fileName);
 
             auto modelingSystem = std::make_shared<ModelingSystemOSiL>(env);
             ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
@@ -302,7 +302,7 @@ bool Solver::setProblem(std::string fileName)
 #ifdef HAS_AMPL
         if(problemExtension == ".nl")
         {
-            env->report->outputModelingSystemHeader(ES_SourceFormat::NL, fileName);
+            env->report->outputModelingSystemReport(ES_SourceFormat::NL, fileName);
 
             auto modelingSystem = std::make_shared<ModelingSystemAMPL>(env);
             ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
@@ -323,7 +323,7 @@ bool Solver::setProblem(std::string fileName)
 #ifdef HAS_GAMS
         if(problemExtension == ".gms")
         {
-            env->report->outputModelingSystemHeader(ES_SourceFormat::GAMS, fileName);
+            env->report->outputModelingSystemReport(ES_SourceFormat::GAMS, fileName);
 
             auto modelingSystem = std::make_shared<SHOT::ModelingSystemGAMS>(env);
             SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
