@@ -254,8 +254,9 @@ void Report::outputIterationDetailHeader()
             "max.err.");
     }
 
-    env->output->outputInfo( "----------------------------------------------------------------------------------------------------"
-              "----------------";
+    env->output->outputInfo(
+        "----------------------------------------------------------------------------------------------------"
+        "----------------");
 #else
     env->output->outputInfo(
         "    Iteration     │  Time  │  Dual cuts  │     Objective value     │   Objective gap   │     Current "
