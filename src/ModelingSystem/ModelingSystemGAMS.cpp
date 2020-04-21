@@ -208,7 +208,7 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(
     }
     catch(const std::exception& e)
     {
-        env->output->outputError(fmt::format(" Error when reading GAMS model from \"{}\".\r\n {}", filename, e.what()));
+        env->output->outputError(fmt::format(" Error when reading GAMS model from \"{}\".\n {}", filename, e.what()));
 
         return (E_ProblemCreationStatus::Error);
     }
