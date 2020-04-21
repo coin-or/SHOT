@@ -45,11 +45,12 @@ cmake_pop_check_state()
 
 if(have_fs)
     add_library(CXX::Filesystem INTERFACE IMPORTED)
-    target_compile_definitions(CXX::Filesystem INTERFACE STD_FS_IS_EXPERIMENTAL=$<NOT:$<BOOL:${HAVE_STD_FILESYSTEM}>>)
+    set_property(TARGET CXX::Filesystem APPEND PROPERTY 
+        INTERFACE_COMPILE_DEFINITIONS FOO_BAR STD_FS_IS_EXPERIMENTAL=$<NOT:$<BOOL:${HAVE_STD_FILESYSTEM}>>)
     if(CAN_COMPILE_FS_WITHOUT_LINK)
         # Nothing to add...
     elseif(CAN_COMPILE_FS_WITH_LINK)
-        target_link_libraries(CXX::Filesystem INTERFACE -lstdc++fs)
+        set_property(TARGET CXX::Filesystem APPEND PROPERTY INTERFACE_LINK_LIBRARIES  -lstdc++fs)
     else()
         message(WARNING "Failed to link a filesystem library, although we found the headers...?")
     endif()
