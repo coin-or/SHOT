@@ -101,16 +101,35 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
     // We do not want to use GAMS defaults if called on a gms file, in which case we would have created our own GMO.
     if(!createdgmo)
     {
+        // Sets time limit
         env->settings->updateSetting("TimeLimit", "Termination", gevGetDblOpt(modelingEnvironment, gevResLim));
+        env->output->outputDebug(
+            fmt::format("Time limit set to {} by GAMS", env->settings->getSetting<double>("TimeLimit", "Termination")));
+
+        // Sets iteration limit
         if(gevGetIntOpt(modelingEnvironment, gevIterLim) != ITERLIM_INFINITY)
+        {
             env->settings->updateSetting(
                 "IterationLimit", "Termination", gevGetIntOpt(modelingEnvironment, gevIterLim));
+            env->output->outputDebug(fmt::format(
+                "Iteration limit set to {} by GAMS", env->settings->getSetting<int>("IterationLimit", "Termination")));
+        }
         else
+        {
             env->settings->updateSetting("IterationLimit", "Termination", SHOT_INT_MAX);
+        }
+
+        // Sets absolute objective gap tolerance
         env->settings->updateSetting(
             "ObjectiveGap.Absolute", "Termination", gevGetDblOpt(modelingEnvironment, gevOptCA));
+        env->output->outputDebug(fmt::format("Absolute termination tolerance set to {} by GAMS",
+            env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination")));
+
+        // Sets relative objective gap tolerance
         env->settings->updateSetting(
             "ObjectiveGap.Relative", "Termination", gevGetDblOpt(modelingEnvironment, gevOptCR));
+        env->output->outputDebug(fmt::format("Relative termination tolerance set to {} by GAMS",
+            env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination")));
 
         // Sets cutoff value for dual solver
         if(gevGetIntOpt(modelingEnvironment, gevUseCutOff) == 1)
@@ -127,22 +146,14 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
                 "MIP.NodeLimit", "Dual", (double)gevGetIntOpt(modelingEnvironment, gevNodeLim));
         }
 
+        // Sets the number of threads
         env->settings->updateSetting("MIP.NumberOfThreads", "Dual", gevThreads(modelingEnvironment));
+        env->output->outputDebug(fmt::format(
+            "MIP number of threads set to {} by GAMS", env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual")));
 
         // Uses NLP solver in GAMS by default, Ipopt can be used directly if value set by user in options file (read
         // below)
         env->settings->updateSetting("FixedInteger.Solver", "Primal", static_cast<int>(ES_PrimalNLPSolver::GAMS));
-
-        env->output->outputDebug("Iteration limit set to "
-            + Utilities::toString(env->settings->getSetting<int>("IterationLimit", "Termination")) + " by GAMS");
-        env->output->outputDebug("Absolute termination tolerance set to "
-            + Utilities::toString(env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination"))
-            + " by GAMS");
-        env->output->outputDebug("Relative termination tolerance set to "
-            + Utilities::toString(env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination"))
-            + " by GAMS");
-        env->output->outputDebug("MIP number of threads set to "
-            + Utilities::toString(env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual")) + " by GAMS");
     }
 
     if(gmoOptFile(modelingObject) > 0) // GAMS provides an option file
