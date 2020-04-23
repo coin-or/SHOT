@@ -129,8 +129,10 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
 
         env->settings->updateSetting("MIP.NumberOfThreads", "Dual", gevThreads(modelingEnvironment));
 
-        env->output->outputDebug("Time limit set to "
-            + Utilities::toString(env->settings->getSetting<double>("TimeLimit", "Termination")) + " by GAMS");
+        // Uses NLP solver in GAMS by default, Ipopt can be used directly if value set by user in options file (read
+        // below)
+        env->settings->updateSetting("FixedInteger.Solver", "Primal", static_cast<int>(ES_PrimalNLPSolver::GAMS));
+
         env->output->outputDebug("Iteration limit set to "
             + Utilities::toString(env->settings->getSetting<int>("IterationLimit", "Termination")) + " by GAMS");
         env->output->outputDebug("Absolute termination tolerance set to "
