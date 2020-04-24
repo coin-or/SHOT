@@ -2011,11 +2011,11 @@ NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(st
 NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(std::shared_ptr<ExpressionSquare> source)
 {
     // Extract all quadratic terms from inside of the nonlinear expression
-    auto convxity = source->getConvexity();
+    auto convexity = source->getConvexity();
 
     if((extractQuadraticTermsFromNonconvexExpressions
-           && !(convxity > E_Convexity::Convex || convxity == E_Convexity::Unknown))
-        || extractQuadraticTermsFromConvexExpressions)
+           && (convexity > E_Convexity::Convex || convexity == E_Convexity::Unknown))
+        || (extractQuadraticTermsFromConvexExpressions && convexity == E_Convexity::Convex))
     {
         auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression,
             tmpConstant]
