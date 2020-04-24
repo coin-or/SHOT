@@ -89,8 +89,8 @@ private:
 
     LinearTerms partitionNonlinearBinaryProduct(const std::shared_ptr<ExpressionSum> source, bool reversedSigns);
 
-    std::tuple<LinearTerms, QuadraticTerms> reformulateAndPartitionQuadraticSum(
-        const QuadraticTerms& quadraticTerms, bool reversedSigns, bool partitionNonBinaryTerms);
+    std::tuple<LinearTerms, QuadraticTerms> reformulateAndPartitionQuadraticSum(const QuadraticTerms& quadraticTerms,
+        bool reversedSigns, bool partitionNonBinaryTerms, bool partitionIfAllTermsConvex);
     std::tuple<LinearTerms, MonomialTerms> reformulateMonomialSum(
         const MonomialTerms& monomialTerms, bool reversedSigns);
 
@@ -99,12 +99,17 @@ private:
     NonlinearExpressionPtr reformulateNonlinearExpression(std::shared_ptr<ExpressionSquare> source);
     NonlinearExpressionPtr reformulateNonlinearExpression(std::shared_ptr<ExpressionProduct> source);
 
+    std::pair<AuxiliaryVariablePtr, bool> getSquareAuxiliaryVariable(VariablePtr firstVariable);
+
     std::pair<AuxiliaryVariablePtr, bool> getBilinearAuxiliaryVariable(
         VariablePtr firstVariable, VariablePtr secondVariable);
 
     std::pair<AuxiliaryVariablePtr, bool> getAbsoluteValueAuxiliaryVariable(std::shared_ptr<ExpressionAbs> source);
 
+    void createSquareReformulations();
     void createBilinearReformulations();
+
+    void reformulateSquareTerm(VariablePtr variable, AuxiliaryVariablePtr auxVariable);
 
     void reformulateBinaryBilinearTerm(
         VariablePtr firstVariable, VariablePtr secondVariable, AuxiliaryVariablePtr auxVariable);
@@ -122,6 +127,8 @@ private:
     int auxConstraintCounter = 0;
 
     std::map<VariablePtr, Variables> integerAuxiliaryBinaryVariables;
+
+    std::map<VariablePtr, AuxiliaryVariablePtr> squareAuxVariables;
 
     std::map<std::tuple<VariablePtr, VariablePtr>, AuxiliaryVariablePtr> bilinearAuxVariables;
 
