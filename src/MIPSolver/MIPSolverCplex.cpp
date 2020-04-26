@@ -377,6 +377,8 @@ void MIPSolverCplex::initializeSolverSettings()
             env->settings->getSetting<double>("Tolerance.LinearConstraint", "Primal"));
         cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::Integrality,
             env->settings->getSetting<double>("Tolerance.Integer", "Primal"));
+        cplexInstance.setParam(IloCplex::Param::Simplex::Tolerances::Optimality,
+            env->settings->getSetting<double>("MIP.OptimalityTolerance", "Dual"));
 
         // Adds a user-provided node limit
         if(auto nodeLimit = env->settings->getSetting<double>("MIP.NodeLimit", "Dual"); nodeLimit > 0)

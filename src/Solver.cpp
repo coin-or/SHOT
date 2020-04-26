@@ -775,6 +775,9 @@ void Solver::initializeSettings()
     env->settings->createSetting("MIP.InfeasibilityRepair.TimeLimit", "Dual", 10.0,
         "Time limit when reparing infeasible problem", 0, SHOT_DBL_MAX);
 
+    env->settings->createSetting("MIP.OptimalityTolerance", "Dual", 1e-6,
+        "The reduced-cost tolerance for optimality in the MIP solver", 1e-9, 1e-2);
+
     env->settings->createSetting("MIP.NodeLimit", "Dual", SHOT_DBL_MAX,
         "Node limit to use for MIP solver in single-tree strategy", 0.0, SHOT_DBL_MAX);
 
