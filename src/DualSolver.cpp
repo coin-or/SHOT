@@ -223,6 +223,11 @@ void DualSolver::addGeneratedHyperplane(const Hyperplane& hyperplane)
 
 bool DualSolver::hasHyperplaneBeenAdded(double hash, int constraintIndex)
 {
+    // Cuts added as lazy might not actually always be added (e.g. in different threads), thus we have to allow them to
+    // be added again
+    if(env->settings->getSetting<int>("TreeStrategy", "Dual") == static_cast<int>(ES_TreeStrategy::SingleTree))
+        return false;
+
     for(auto& H : generatedHyperplanes)
     {
         if(H.source == E_HyperplaneSource::ObjectiveRootsearch && constraintIndex == -1
