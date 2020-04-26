@@ -56,7 +56,11 @@ void Results::addPrimalSolution(PrimalSolution solution)
     }
 
     if(!isDifferent) // The same solution point is already saved
+    {
+        env->output->outputDebug(fmt::format(
+            "         Primal solution candidate with objective value {} already known.", solution.objValue));
         return;
+    }
 
     if(this->primalSolutions.size() == 0)
     {
@@ -68,12 +72,25 @@ void Results::addPrimalSolution(PrimalSolution solution)
         env->output->outputDebug(fmt::format(
             "        First primal solution {} from {} found.", solution.objValue, solution.sourceDescription));
     }
-    else if((env->problem->objectiveFunction->properties.isMinimize
-                && solution.objValue < this->primalSolutions.back().objValue)
-        || (!env->problem->objectiveFunction->properties.isMinimize
-               && solution.objValue > this->primalSolutions.back().objValue))
+    else if(auto primalsol = this->primalSolutions.back();
+            (env->problem->objectiveFunction->properties.isMinimize && solution.objValue < primalsol.objValue)
+            || (!env->problem->objectiveFunction->properties.isMinimize && solution.objValue > primalsol.objValue))
     {
         // Have a solution which is better than the worst one in the solution pool
+        this->primalSolutions.back() = solution;
+        this->primalSolution = solution.point;
+        this->setPrimalBound(solution.objValue);
+
+        env->output->outputDebug(fmt::format("        New (currently best) primal solution {} from {} found.",
+            solution.objValue, solution.sourceDescription));
+    }
+    else if(Utilities::isAlmostEqual(solution.objValue, primalsol.objValue, 1e-10)
+        && (std::max({ solution.maxDevatingConstraintLinear.value, solution.maxDevatingConstraintQuadratic.value,
+                solution.maxDevatingConstraintNonlinear.value })
+               < std::max({ primalsol.maxDevatingConstraintLinear.value, primalsol.maxDevatingConstraintQuadratic.value,
+                     primalsol.maxDevatingConstraintNonlinear.value })))
+    {
+        // Have a solution which is similar to the best known, but with smaller constraint error
         this->primalSolutions.back() = solution;
         this->primalSolution = solution.point;
         this->setPrimalBound(solution.objValue);
@@ -91,6 +108,10 @@ void Results::addPrimalSolution(PrimalSolution solution)
     }
     else
     {
+        env->output->outputDebug(fmt::format(
+            "        Primal solution {} from {} is not an improvement of the current value {} or the solution "
+            "pool is full, so it will not be saved.",
+            solution.objValue, solution.sourceDescription, primalsol.objValue));
         // Will not save this solution
         return;
     }
