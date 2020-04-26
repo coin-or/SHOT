@@ -520,9 +520,42 @@ void TaskSelectPrimalCandidatesFromNLP::createInfeasibilityCut(const VectorDoubl
     }
 }
 
-void TaskSelectPrimalCandidatesFromNLP::createIntegerCut(const VectorDouble variableSolution)
+void TaskSelectPrimalCandidatesFromNLP::createIntegerCut(VectorDouble variableSolution)
 {
-    env->output->outputDebug("         Adding integer cut from fixed NLP solution.");
+    bool withinBounds = true;
+
+    // Verify that solution is within bounds: if the difference is small project to the bound, otherwise do not add
+    // integer cut
+    for(size_t i = 0; i < variableSolution.size(); i++)
+    {
+        if(variableSolution[i] < sourceProblem->variableLowerBounds[i])
+        {
+            if(variableSolution[i] > sourceProblem->variableLowerBounds[i] - 1e-8)
+                variableSolution[i] = sourceProblem->variableLowerBounds[i];
+            else
+            {
+                withinBounds = false;
+                break;
+            }
+        }
+
+        if(variableSolution[i] > sourceProblem->variableUpperBounds[i])
+        {
+            if(variableSolution[i] < sourceProblem->variableUpperBounds[i] + 1e-8)
+                variableSolution[i] = sourceProblem->variableUpperBounds[i];
+            else
+            {
+                withinBounds = false;
+                break;
+            }
+        }
+    }
+
+    if(!withinBounds)
+    {
+        env->output->outputDebug("         Can not add integer cut since solution is not within variable bounds.");
+        return;
+    }
 
     IntegerCut integerCut;
     integerCut.source = E_IntegerCutSource::NLPFixedInteger;
