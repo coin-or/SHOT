@@ -309,8 +309,7 @@ enum class ES_RootsearchConstraintStrategy
 enum class ES_RootsearchMethod
 {
     BoostTOMS748,
-    BoostBisection,
-    Bisection
+    BoostBisection
 };
 
 enum class ES_MIPSolver

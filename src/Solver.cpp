@@ -1434,8 +1434,7 @@ void Solver::initializeSettings()
         "Rootsearch.MaxIterations", "Subsolver", 100, "Maximal root search iterations", 0, SHOT_INT_MAX);
 
     VectorString enumRootsearchMethod;
-    enumRootsearchMethod.push_back("BoostTOMS748");
-    enumRootsearchMethod.push_back("BoostBisection");
+    enumRootsearchMethod.push_back("TOMS748");
     enumRootsearchMethod.push_back("Bisection");
     env->settings->createSetting("Rootsearch.Method", "Subsolver", static_cast<int>(ES_RootsearchMethod::BoostTOMS748),
         "Root search method to use", enumRootsearchMethod, 0);
