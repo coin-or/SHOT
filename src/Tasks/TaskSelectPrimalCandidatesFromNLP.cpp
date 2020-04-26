@@ -400,18 +400,7 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
             // Add integer cut.
             if(env->settings->getSetting<bool>("HyperplaneCuts.UseIntegerCuts", "Dual")
                 && sourceProblem->properties.numberOfDiscreteVariables > 0)
-            {
-                env->output->outputDebug("         Adding integer cut from fixed NLP solution.");
-
-                IntegerCut integerCut;
-                integerCut.source = E_IntegerCutSource::NLPFixedInteger;
-                integerCut.variableValues.reserve(discreteVariableIndexes.size());
-
-                for(auto& I : discreteVariableIndexes)
-                    integerCut.variableValues.push_back(std::abs(round(CAND.point.at(I))));
-
-                env->dualSolver->addIntegerCut(integerCut);
-            }
+                createIntegerCut(CAND.point);
 
             if(env->settings->getSetting<bool>("FixedInteger.CreateInfeasibilityCut", "Primal"))
                 createInfeasibilityCut(variableSolution);
@@ -468,18 +457,7 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
             // Add integer cut.
             if(env->settings->getSetting<bool>("HyperplaneCuts.UseIntegerCuts", "Dual")
                 && sourceProblem->properties.numberOfDiscreteVariables > 0)
-            {
-                env->output->outputDebug("         Adding integer cut from fixed NLP solution.");
-
-                IntegerCut integerCut;
-                integerCut.source = E_IntegerCutSource::NLPFixedInteger;
-                integerCut.variableValues.reserve(discreteVariableIndexes.size());
-
-                for(auto& I : discreteVariableIndexes)
-                    integerCut.variableValues.push_back(std::abs(round(CAND.point.at(I))));
-
-                env->dualSolver->addIntegerCut(integerCut);
-            }
+                createIntegerCut(CAND.point);
         }
         else
         {
@@ -492,18 +470,7 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
             // Add integer cut.
             if(env->settings->getSetting<bool>("HyperplaneCuts.UseIntegerCuts", "Dual")
                 && sourceProblem->properties.numberOfDiscreteVariables > 0)
-            {
-                env->output->outputDebug("         Adding integer cut from fixed NLP solution.");
-
-                IntegerCut integerCut;
-                integerCut.source = E_IntegerCutSource::NLPFixedInteger;
-                integerCut.variableValues.reserve(discreteVariableIndexes.size());
-
-                for(auto& I : discreteVariableIndexes)
-                    integerCut.variableValues.push_back(std::abs(round(CAND.point.at(I))));
-
-                env->dualSolver->addIntegerCut(integerCut);
-            }
+                createIntegerCut(CAND.point);
         }
 
         env->solutionStatistics.numberOfIterationsWithoutNLPCallMIP = 0;
@@ -516,7 +483,7 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
     return (true);
 }
 
-void TaskSelectPrimalCandidatesFromNLP::createInfeasibilityCut(VectorDouble variableSolution)
+void TaskSelectPrimalCandidatesFromNLP::createInfeasibilityCut(const VectorDouble variableSolution)
 {
     env->output->outputDebug("         Adding infeasibility cut from fixed NLP solution.");
 
@@ -555,6 +522,20 @@ void TaskSelectPrimalCandidatesFromNLP::createInfeasibilityCut(VectorDouble vari
     {
         std::dynamic_pointer_cast<TaskSelectHyperplanePointsECP>(taskSelectHPPts)->run(solutionPoints);
     }
+}
+
+void TaskSelectPrimalCandidatesFromNLP::createIntegerCut(const VectorDouble variableSolution)
+{
+    env->output->outputDebug("         Adding integer cut from fixed NLP solution.");
+
+    IntegerCut integerCut;
+    integerCut.source = E_IntegerCutSource::NLPFixedInteger;
+    integerCut.variableValues.reserve(discreteVariableIndexes.size());
+
+    for(auto& I : discreteVariableIndexes)
+        integerCut.variableValues.push_back(std::abs(round(variableSolution.at(I))));
+
+    env->dualSolver->addIntegerCut(integerCut);
 }
 
 } // namespace SHOT
