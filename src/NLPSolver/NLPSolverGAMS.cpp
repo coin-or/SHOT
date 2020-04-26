@@ -40,40 +40,41 @@ NLPSolverGAMS::NLPSolverGAMS(EnvironmentPtr envPtr, gmoHandle_t modelingObject, 
         assert(auditLicensing != nullptr);
         if(!palLicenseCheckSubSys(auditLicensing, (char*)"CO"))
         {
-            env->output->outputDebug("CONOPT licensed. Using CONOPT as GAMS NLP solver.");
+            env->output->outputDebug("        CONOPT licensed. Using CONOPT as GAMS NLP solver.");
             nlpsolver = "conopt";
             selectedNLPSolver = "CONOPT (automatically selected)";
         }
         else if(!palLicenseCheckSubSys(auditLicensing, (char*)"KN"))
         {
-            env->output->outputDebug("CONOPT not licensed. KNITRO licensed. Using KNITRO as GAMS NLP solver.");
+            env->output->outputDebug("        CONOPT not licensed. KNITRO licensed. Using KNITRO as GAMS NLP solver.");
             nlpsolver = "knitro";
             selectedNLPSolver = "KNITRO (automatically selected)";
         }
         else if(!palLicenseCheckSubSys(auditLicensing, (char*)"SN"))
         {
-            env->output->outputDebug("CONOPT and KNITRO not licensed. SNOPT licensed. Using SNOPT as GAMS NLP solver.");
+            env->output->outputDebug(
+                "        CONOPT and KNITRO not licensed. SNOPT licensed. Using SNOPT as GAMS NLP solver.");
             nlpsolver = "snopt";
             selectedNLPSolver = "SNOPT (automatically selected)";
         }
         else if(!palLicenseCheckSubSys(auditLicensing, (char*)"M5"))
         {
             env->output->outputDebug(
-                "CONOPT, KNITRO, and SNOPT not licensed. MINOS licensed. Using MINOS as GAMS NLP solver.");
+                "        CONOPT, KNITRO, and SNOPT not licensed. MINOS licensed. Using MINOS as GAMS NLP solver.");
             nlpsolver = "minos";
             selectedNLPSolver = "MINOS (automatically selected)";
         }
         else if(!palLicenseCheckSubSys(auditLicensing, (char*)"IP"))
         {
-            env->output->outputDebug(
-                "CONOPT, KNITRO, SNOPT, and MINOS not licensed. IPOPTH licensed. Using IPOPTH as GAMS NLP solver.");
+            env->output->outputDebug("        CONOPT, KNITRO, SNOPT, and MINOS not licensed. IPOPTH licensed. Using "
+                                     "IPOPTH as GAMS NLP solver.");
             nlpsolver = "ipopth";
             selectedNLPSolver = "IPOPTH (automatically selected)";
         }
         else
         {
             env->output->outputDebug(
-                "CONOPT, KNITRO, SNOPT, MINOS, and IPOPTH not licensed. Using IPOPT as GAMS NLP solver.");
+                "        CONOPT, KNITRO, SNOPT, MINOS, and IPOPTH not licensed. Using IPOPT as GAMS NLP solver.");
             nlpsolver = "ipopt";
             selectedNLPSolver = "IPOPT (automatically selected)";
         }

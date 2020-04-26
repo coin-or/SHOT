@@ -527,7 +527,7 @@ void MIPSolverCplex::activateDiscreteVariables(bool activate)
 
         if(activate)
         {
-            env->output->outputDebug(" Activating MIP strategy.");
+            env->output->outputDebug("        Activating MIP strategy.");
 
             for(int i = 0; i < numberOfVariables; i++)
             {
