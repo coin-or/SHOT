@@ -723,9 +723,6 @@ E_ProblemSolutionStatus MIPSolverCplexSingleTreeLegacy::solveProblem()
             }
         }
 
-        // Fixes a deadlock bug in Cplex 12.7 and 12.8
-        cplexEnv.setNormalizer(false);
-
         cplexInstance.solve();
         MIPSolutionStatus = getSolutionStatus();
 
