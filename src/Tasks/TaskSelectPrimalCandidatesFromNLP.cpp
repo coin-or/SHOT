@@ -93,19 +93,6 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(Environment
 
     env->results->usedPrimalNLPSolverDescription = NLPSolver->getSolverDescription();
 
-    if(env->settings->getSetting<bool>("FixedInteger.CreateInfeasibilityCut", "Primal"))
-    {
-        if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
-            == ES_HyperplaneCutStrategy::ESH)
-        {
-            taskSelectHPPts = std::make_shared<TaskSelectHyperplanePointsESH>(env);
-        }
-        else
-        {
-            taskSelectHPPts = std::make_shared<TaskSelectHyperplanePointsECP>(env);
-        }
-    }
-
     this->originalIterFrequency = env->settings->getSetting<int>("FixedInteger.Frequency.Iteration", "Primal");
     this->originalTimeFrequency = env->settings->getSetting<double>("FixedInteger.Frequency.Time", "Primal");
 
@@ -512,6 +499,15 @@ void TaskSelectPrimalCandidatesFromNLP::createInfeasibilityCut(const VectorDoubl
 
     std::vector<SolutionPoint> solutionPoints(1);
     solutionPoints.at(0) = tmpSolPt;
+
+    if(!taskSelectHPPts)
+    {
+        if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
+            == ES_HyperplaneCutStrategy::ESH)
+            taskSelectHPPts = std::make_shared<TaskSelectHyperplanePointsESH>(env);
+        else
+            taskSelectHPPts = std::make_shared<TaskSelectHyperplanePointsECP>(env);
+    }
 
     if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
         == ES_HyperplaneCutStrategy::ESH)
