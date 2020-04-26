@@ -180,6 +180,7 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
 
     if(env->primalSolver->fixedPrimalNLPCandidates.size() == 0)
     {
+        env->output->outputDebug("         No candidate points available.");
         env->solutionStatistics.numberOfIterationsWithoutNLPCallMIP++;
         return (false);
     }
@@ -196,6 +197,7 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
         // TODO: remove?
         if(env->settings->getSetting<bool>("FixedInteger.UsePresolveBounds", "Primal"))
         {
+            env->output->outputDebug("         Updating variable bounds from MIP presolve.");
             for(auto& V : env->reformulatedProblem->allVariables)
             {
                 if(V->index > sizeOfVariableVector)
@@ -235,6 +237,9 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
 
         if(env->settings->getSetting<bool>("FixedInteger.Warmstart", "Primal"))
         {
+            env->output->outputDebug(
+                "         Setting warm start for continuous variable to candidate solution value.");
+
             for(auto& V : sourceProblem->realVariables)
             {
                 startingPointIndexes.at(V->index) = V->index;
@@ -276,21 +281,65 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
         switch(CAND.sourceType)
         {
         case E_PrimalNLPSource::FirstSolution:
+            env->output->outputDebug("         Source from candidate point is first MIP solution point.");
             sourceDesc = "SOLPT-" + source;
             break;
         case E_PrimalNLPSource::FeasibleSolution:
+            env->output->outputDebug("         Source from candidate point is MIP solution pool.");
             sourceDesc = "FEASP-" + source;
             break;
         case E_PrimalNLPSource::InfeasibleSolution:
+            env->output->outputDebug("         Source from candidate point is infeasible MIP solution.");
             sourceDesc = "UNFEA-" + source;
             break;
         case E_PrimalNLPSource::SmallestDeviationSolution:
+            env->output->outputDebug(
+                "         Source from candidate point is MIP solution with smallest nonlinear error.");
             sourceDesc = "SMDEV-" + source;
             break;
         case E_PrimalNLPSource::FirstSolutionNewDualBound:
+            env->output->outputDebug(
+                "         Source from candidate point is first MIP solution point which gave dual bound update.");
             sourceDesc = "NEWDB-" + source;
             break;
         default:
+            break;
+        }
+
+        switch(solvestatus)
+        {
+        case E_NLPSolutionStatus::Optimal:
+            env->output->outputDebug(fmt::format(
+                "         Optimal solution {} found to fixed NLP problem.", NLPSolver->getObjectiveValue()));
+            break;
+
+        case E_NLPSolutionStatus::Feasible:
+            env->output->outputDebug(fmt::format(
+                "         Feasible solution {} found to fixed NLP problem.", NLPSolver->getObjectiveValue()));
+            break;
+
+        case E_NLPSolutionStatus::Infeasible:
+            env->output->outputDebug("         Fixed NLP problem is infeasible.");
+            break;
+
+        case E_NLPSolutionStatus::Unbounded:
+            env->output->outputDebug("         Fixed NLP problem is unbounded.");
+            break;
+
+        case E_NLPSolutionStatus::TimeLimit:
+            env->output->outputDebug("         Time limit hit when solving fixed NLP problem.");
+            break;
+
+        case E_NLPSolutionStatus::IterationLimit:
+            env->output->outputDebug("         Iteration limit hit when solving fixed NLP problem.");
+            break;
+
+        case E_NLPSolutionStatus::Error:
+            env->output->outputDebug("         Error ocurred when solving fixed NLP problem.");
+            break;
+
+        default:
+
             break;
         }
 
@@ -313,22 +362,52 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
 
                 if(interval > 0.1 * this->originalTimeFrequency)
                     env->settings->updateSetting("FixedInteger.Frequency.Time", "Primal", interval);
+
+                env->output->outputDebug(fmt::format(
+                    "         Iteration frequency updated to {} and time frequency updated to {} ", iters, interval));
             }
 
             env->primalSolver->addPrimalSolutionCandidate(
                 variableSolution, E_PrimalSolutionSource::NLPFixedIntegers, currIter->iterationNumber);
 
-            if(sourceProblem->properties.numberOfNonlinearConstraints > 0)
+            if(sourceProblem->properties.numberOfNonlinearConstraints > 0
+                || sourceProblem->properties.numberOfQuadraticConstraints > 0)
             {
-                auto mostDevConstr = sourceProblem->getMaxNumericConstraintValue(
-                    variableSolution, sourceProblem->nonlinearConstraints);
+                int constraintIndex = -2;
+                double maxError = 0.0;
+
+                if(sourceProblem->properties.numberOfNonlinearConstraints > 0)
+                {
+                    auto mostDevConstr = sourceProblem->getMaxNumericConstraintValue(
+                        variableSolution, sourceProblem->nonlinearConstraints);
+
+                    constraintIndex = mostDevConstr.constraint->index;
+                    maxError = mostDevConstr.normalizedValue;
+
+                    env->output->outputDebug(fmt::format("         Max error {} from nonlinear constraint {}.",
+                        mostDevConstr.normalizedValue, mostDevConstr.constraint->name));
+                }
+
+                if(sourceProblem->properties.numberOfQuadraticConstraints > 0)
+                {
+                    auto mostDevConstr = sourceProblem->getMaxNumericConstraintValue(
+                        variableSolution, sourceProblem->quadraticConstraints);
+
+                    env->output->outputDebug(fmt::format("         Max error {} from quadratic constraint {}.",
+                        mostDevConstr.normalizedValue, mostDevConstr.constraint->name));
+
+                    if(mostDevConstr.normalizedValue > maxError)
+                    {
+                        constraintIndex = mostDevConstr.constraint->index;
+                        maxError = mostDevConstr.normalizedValue;
+                    }
+                }
 
                 env->report->outputIterationDetail(env->solutionStatistics.numberOfProblemsFixedNLP,
                     ("NLP" + sourceDesc), env->timing->getElapsedTime("Total"), currIter->numHyperplanesAdded,
                     currIter->totNumHyperplanes, env->results->getCurrentDualBound(), env->results->getPrimalBound(),
                     env->results->getAbsoluteGlobalObjectiveGap(), env->results->getRelativeGlobalObjectiveGap(),
-                    tmpObj, mostDevConstr.constraint->index, mostDevConstr.normalizedValue,
-                    E_IterationLineType::PrimalNLP);
+                    tmpObj, constraintIndex, maxError, E_IterationLineType::PrimalNLP);
             }
             else
             {
@@ -346,6 +425,8 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
             if(env->settings->getSetting<bool>("HyperplaneCuts.UseIntegerCuts", "Dual")
                 && sourceProblem->properties.numberOfDiscreteVariables > 0)
             {
+                env->output->outputDebug("         Adding integer cut from fixed NLP solution.");
+
                 IntegerCut integerCut;
                 integerCut.source = E_IntegerCutSource::NLPFixedInteger;
                 integerCut.variableValues.reserve(discreteVariableIndexes.size());
@@ -358,6 +439,8 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
 
             if(env->settings->getSetting<bool>("FixedInteger.CreateInfeasibilityCut", "Primal"))
             {
+                env->output->outputDebug("         Adding infeasibility cut from fixed NLP solution.");
+
                 SolutionPoint tmpSolPt;
                 tmpSolPt.point = variableSolution;
                 tmpSolPt.objectiveValue = sourceProblem->objectiveFunction->calculateValue(variableSolution);
@@ -407,6 +490,8 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
 
                 if(env->settings->getSetting<bool>("FixedInteger.CreateInfeasibilityCut", "Primal"))
                 {
+                    env->output->outputDebug("         Adding infeasibility cut from fixed NLP solution.");
+
                     SolutionPoint tmpSolPt;
                     tmpSolPt.point = variableSolution;
                     tmpSolPt.objectiveValue = sourceProblem->objectiveFunction->calculateValue(variableSolution);
@@ -472,14 +557,16 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
                 if(interval < 10 * this->originalTimeFrequency)
                     env->settings->updateSetting("FixedInteger.Frequency.Time", "Primal", interval);
 
-                env->output->outputDebug(fmt::format("        Duration: {} s. New interval: {} s or {} iterations.",
-                    timeEnd - timeStart, interval, iters));
+                env->output->outputDebug(fmt::format(
+                    "         Iteration frequency updated to {} and time frequency updated to {} ", iters, interval));
             }
 
             // Add integer cut.
             if(env->settings->getSetting<bool>("HyperplaneCuts.UseIntegerCuts", "Dual")
                 && sourceProblem->properties.numberOfDiscreteVariables > 0)
             {
+                env->output->outputDebug("         Adding integer cut from fixed NLP solution.");
+
                 IntegerCut integerCut;
                 integerCut.source = E_IntegerCutSource::NLPFixedInteger;
                 integerCut.variableValues.reserve(discreteVariableIndexes.size());
@@ -502,6 +589,8 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
             if(env->settings->getSetting<bool>("HyperplaneCuts.UseIntegerCuts", "Dual")
                 && sourceProblem->properties.numberOfDiscreteVariables > 0)
             {
+                env->output->outputDebug("         Adding integer cut from fixed NLP solution.");
+
                 IntegerCut integerCut;
                 integerCut.source = E_IntegerCutSource::NLPFixedInteger;
                 integerCut.variableValues.reserve(discreteVariableIndexes.size());
