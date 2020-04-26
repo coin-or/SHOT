@@ -373,41 +373,17 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
             if(sourceProblem->properties.numberOfNonlinearConstraints > 0
                 || sourceProblem->properties.numberOfQuadraticConstraints > 0)
             {
-                int constraintIndex = -2;
-                double maxError = 0.0;
+                auto mostDevConstr = sourceProblem->getMostDeviatingNonlinearOrQuadraticConstraint(variableSolution);
 
-                if(sourceProblem->properties.numberOfNonlinearConstraints > 0)
-                {
-                    auto mostDevConstr = sourceProblem->getMaxNumericConstraintValue(
-                        variableSolution, sourceProblem->nonlinearConstraints);
-
-                    constraintIndex = mostDevConstr.constraint->index;
-                    maxError = mostDevConstr.normalizedValue;
-
-                    env->output->outputDebug(fmt::format("         Max error {} from nonlinear constraint {}.",
-                        mostDevConstr.normalizedValue, mostDevConstr.constraint->name));
-                }
-
-                if(sourceProblem->properties.numberOfQuadraticConstraints > 0)
-                {
-                    auto mostDevConstr = sourceProblem->getMaxNumericConstraintValue(
-                        variableSolution, sourceProblem->quadraticConstraints);
-
-                    env->output->outputDebug(fmt::format("         Max error {} from quadratic constraint {}.",
-                        mostDevConstr.normalizedValue, mostDevConstr.constraint->name));
-
-                    if(mostDevConstr.normalizedValue > maxError)
-                    {
-                        constraintIndex = mostDevConstr.constraint->index;
-                        maxError = mostDevConstr.normalizedValue;
-                    }
-                }
+                env->output->outputDebug(fmt::format("         Max error {} from nonlinear or quadratic constraint {}.",
+                    mostDevConstr->normalizedValue, mostDevConstr->constraint->name));
 
                 env->report->outputIterationDetail(env->solutionStatistics.numberOfProblemsFixedNLP,
                     ("NLP" + sourceDesc), env->timing->getElapsedTime("Total"), currIter->numHyperplanesAdded,
                     currIter->totNumHyperplanes, env->results->getCurrentDualBound(), env->results->getPrimalBound(),
                     env->results->getAbsoluteGlobalObjectiveGap(), env->results->getRelativeGlobalObjectiveGap(),
-                    tmpObj, constraintIndex, maxError, E_IterationLineType::PrimalNLP);
+                    tmpObj, mostDevConstr->constraint->index, mostDevConstr->normalizedValue,
+                    E_IterationLineType::PrimalNLP);
             }
             else
             {
@@ -438,42 +414,7 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
             }
 
             if(env->settings->getSetting<bool>("FixedInteger.CreateInfeasibilityCut", "Primal"))
-            {
-                env->output->outputDebug("         Adding infeasibility cut from fixed NLP solution.");
-
-                SolutionPoint tmpSolPt;
-                tmpSolPt.point = variableSolution;
-                tmpSolPt.objectiveValue = sourceProblem->objectiveFunction->calculateValue(variableSolution);
-                tmpSolPt.iterFound = env->results->getCurrentIteration()->iterationNumber;
-
-                if(!sourceIsReformulatedProblem) // Need to calculate values for the auxiliary variables in this
-                                                 // case
-                {
-                    for(auto& V : env->reformulatedProblem->auxiliaryVariables)
-                    {
-                        tmpSolPt.point.push_back(V->calculate(variableSolution));
-                    }
-
-                    if(env->reformulatedProblem->auxiliaryObjectiveVariable)
-                    {
-                        tmpSolPt.point.push_back(
-                            env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(variableSolution));
-                    }
-                }
-
-                std::vector<SolutionPoint> solutionPoints(1);
-                solutionPoints.at(0) = tmpSolPt;
-
-                if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
-                    == ES_HyperplaneCutStrategy::ESH)
-                {
-                    std::dynamic_pointer_cast<TaskSelectHyperplanePointsESH>(taskSelectHPPts)->run(solutionPoints);
-                }
-                else
-                {
-                    std::dynamic_pointer_cast<TaskSelectHyperplanePointsECP>(taskSelectHPPts)->run(solutionPoints);
-                }
-            }
+                createInfeasibilityCut(variableSolution);
         }
         else if(sourceProblem->properties.numberOfNonlinearConstraints > 0)
         {
@@ -489,44 +430,7 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
                     variableSolution, sourceProblem->nonlinearConstraints);
 
                 if(env->settings->getSetting<bool>("FixedInteger.CreateInfeasibilityCut", "Primal"))
-                {
-                    env->output->outputDebug("         Adding infeasibility cut from fixed NLP solution.");
-
-                    SolutionPoint tmpSolPt;
-                    tmpSolPt.point = variableSolution;
-                    tmpSolPt.objectiveValue = sourceProblem->objectiveFunction->calculateValue(variableSolution);
-                    tmpSolPt.iterFound = env->results->getCurrentIteration()->iterationNumber;
-                    tmpSolPt.maxDeviation
-                        = PairIndexValue(mostDevConstr.constraint->index, mostDevConstr.normalizedValue);
-
-                    if(!sourceIsReformulatedProblem) // Need to calculate values for the auxiliary variables in this
-                                                     // case
-                    {
-                        for(auto& V : env->reformulatedProblem->auxiliaryVariables)
-                        {
-                            tmpSolPt.point.push_back(V->calculate(variableSolution));
-                        }
-
-                        if(env->reformulatedProblem->auxiliaryObjectiveVariable)
-                        {
-                            tmpSolPt.point.push_back(
-                                env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(variableSolution));
-                        }
-                    }
-
-                    std::vector<SolutionPoint> solutionPoints(1);
-                    solutionPoints.at(0) = tmpSolPt;
-
-                    if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
-                        == ES_HyperplaneCutStrategy::ESH)
-                    {
-                        std::dynamic_pointer_cast<TaskSelectHyperplanePointsESH>(taskSelectHPPts)->run(solutionPoints);
-                    }
-                    else
-                    {
-                        std::dynamic_pointer_cast<TaskSelectHyperplanePointsECP>(taskSelectHPPts)->run(solutionPoints);
-                    }
-                }
+                    createInfeasibilityCut(variableSolution);
 
                 env->report->outputIterationDetail(env->solutionStatistics.numberOfProblemsFixedNLP,
                     ("NLP" + sourceDesc), env->timing->getElapsedTime("Total"), currIter->numHyperplanesAdded,
@@ -610,6 +514,47 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
     }
 
     return (true);
+}
+
+void TaskSelectPrimalCandidatesFromNLP::createInfeasibilityCut(VectorDouble variableSolution)
+{
+    env->output->outputDebug("         Adding infeasibility cut from fixed NLP solution.");
+
+    SolutionPoint tmpSolPt;
+    tmpSolPt.point = variableSolution;
+    tmpSolPt.objectiveValue = sourceProblem->objectiveFunction->calculateValue(variableSolution);
+    tmpSolPt.iterFound = env->results->getCurrentIteration()->iterationNumber;
+
+    if(auto mostDevConstr = sourceProblem->getMostDeviatingNonlinearOrQuadraticConstraint(variableSolution);
+        mostDevConstr)
+        tmpSolPt.maxDeviation = PairIndexValue(mostDevConstr->constraint->index, mostDevConstr->normalizedValue);
+
+    if(!sourceIsReformulatedProblem) // Need to calculate values for the auxiliary variables in this
+                                     // case
+    {
+        for(auto& V : env->reformulatedProblem->auxiliaryVariables)
+        {
+            tmpSolPt.point.push_back(V->calculate(variableSolution));
+        }
+
+        if(env->reformulatedProblem->auxiliaryObjectiveVariable)
+        {
+            tmpSolPt.point.push_back(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(variableSolution));
+        }
+    }
+
+    std::vector<SolutionPoint> solutionPoints(1);
+    solutionPoints.at(0) = tmpSolPt;
+
+    if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
+        == ES_HyperplaneCutStrategy::ESH)
+    {
+        std::dynamic_pointer_cast<TaskSelectHyperplanePointsESH>(taskSelectHPPts)->run(solutionPoints);
+    }
+    else
+    {
+        std::dynamic_pointer_cast<TaskSelectHyperplanePointsECP>(taskSelectHPPts)->run(solutionPoints);
+    }
 }
 
 } // namespace SHOT

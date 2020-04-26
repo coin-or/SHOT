@@ -32,6 +32,8 @@ public:
 private:
     virtual bool solveFixedNLP();
 
+    void createInfeasibilityCut(VectorDouble point);
+
     std::shared_ptr<INLPSolver> NLPSolver;
 
     VectorInteger discreteVariableIndexes;
