@@ -576,7 +576,7 @@ bool CtCallbackI::createHyperplane(Hyperplane hyperplane)
         }
         else
         {
-            add(tmpRange, IloCplex::CutManagement::UseCutPurge).end();
+            add(tmpRange, IloCplex::CutManagement::UseCutForce).end();
         }
 
         std::string identifier = env->dualSolver->MIPSolver->getConstraintIdentifier(hyperplane.source);
