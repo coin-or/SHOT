@@ -165,12 +165,8 @@ void Report::outputIterationDetail(int iterationNumber, std::string iterationDes
         if(env->results->getCurrentIteration()->numberOfExploredNodes > 0
             || env->results->getCurrentIteration()->numberOfOpenNodes > 0)
         {
-            env->output->outputDebug(fmt::format("        Explored nodes: + {} = {}.",
-                env->results->getCurrentIteration()->numberOfExploredNodes,
-                env->solutionStatistics.numberOfExploredNodes));
-
-            env->output->outputDebug(
-                fmt::format("        Open nodes:     {}", env->results->getCurrentIteration()->numberOfOpenNodes));
+            env->output->outputDebug(fmt::format("        Explored nodes: {}. Open nodes: {}.",
+                env->solutionStatistics.numberOfExploredNodes, env->results->getCurrentIteration()->numberOfOpenNodes));
         }
     }
     catch(...)
