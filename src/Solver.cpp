@@ -1144,8 +1144,6 @@ void Solver::initializeSettings()
     env->settings->createSetting("FixedInteger.UsePresolveBounds", "Primal", false,
         "Use variable bounds from MIP in NLP problems. Warning! Does not seem to work", true);
 
-    env->settings->createSetting("FixedInteger.ProblemSource", "Primal", true, "Use the fixed integer primal strategy");
-
     env->settings->createSetting("FixedInteger.Warmstart", "Primal", true, "Warm start the NLP solver");
 
     // Primal settings: rootsearch
