@@ -1282,7 +1282,7 @@ std::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstraint
 
 std::optional<NumericConstraintValue> Problem::getMostDeviatingNonlinearOrQuadraticConstraint(const VectorDouble& point)
 {
-    NumericConstraintValue constraintValue;
+    std::optional<NumericConstraintValue> constraintValue;
 
     if(properties.numberOfNonlinearConstraints > 0)
     {
@@ -1292,17 +1292,13 @@ std::optional<NumericConstraintValue> Problem::getMostDeviatingNonlinearOrQuadra
         {
             auto quadConstraintValue = getMaxNumericConstraintValue(point, quadraticConstraints);
 
-            if(quadConstraintValue.error > constraintValue.error)
+            if(quadConstraintValue.error > constraintValue->error)
                 constraintValue = quadConstraintValue;
         }
     }
     else if(properties.numberOfQuadraticConstraints > 0)
     {
         constraintValue = getMaxNumericConstraintValue(point, quadraticConstraints);
-    }
-    else
-    {
-        throw ConstraintNotFoundException("There are no quadratic or nonlinear constraints.");
     }
 
     return (constraintValue);
