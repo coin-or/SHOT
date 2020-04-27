@@ -310,7 +310,7 @@ void Report::outputSolverHeader()
 
     env->output->outputInfo("");
 
-    env->output->outputInfo(" Andreas Lundell and Jan Kronqvist, Åbo Akademi University, Finland.");
+    env->output->outputInfo(fmt::format(" Andreas Lundell and Jan Kronqvist, Åbo Akademi University, Finland."));
     env->output->outputInfo(" See documentation for full list of contributors and utilized software libraries.");
 
     env->output->outputInfo("");
