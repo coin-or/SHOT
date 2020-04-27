@@ -165,12 +165,8 @@ void Report::outputIterationDetail(int iterationNumber, std::string iterationDes
         if(env->results->getCurrentIteration()->numberOfExploredNodes > 0
             || env->results->getCurrentIteration()->numberOfOpenNodes > 0)
         {
-            env->output->outputDebug(fmt::format("        Explored nodes: + {} = {}.",
-                env->results->getCurrentIteration()->numberOfExploredNodes,
-                env->solutionStatistics.numberOfExploredNodes));
-
-            env->output->outputDebug(
-                fmt::format("        Open nodes:     {}", env->results->getCurrentIteration()->numberOfOpenNodes));
+            env->output->outputDebug(fmt::format("        Explored nodes: {}. Open nodes: {}.",
+                env->solutionStatistics.numberOfExploredNodes, env->results->getCurrentIteration()->numberOfOpenNodes));
         }
     }
     catch(...)
@@ -314,7 +310,7 @@ void Report::outputSolverHeader()
 
     env->output->outputInfo("");
 
-    env->output->outputInfo(" Andreas Lundell and Jan Kronqvist, Åbo Akademi University, Finland.");
+    env->output->outputInfo(fmt::format(" Andreas Lundell and Jan Kronqvist, Åbo Akademi University, Finland."));
     env->output->outputInfo(" See documentation for full list of contributors and utilized software libraries.");
 
     env->output->outputInfo("");

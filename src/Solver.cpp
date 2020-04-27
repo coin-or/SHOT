@@ -775,6 +775,9 @@ void Solver::initializeSettings()
     env->settings->createSetting("MIP.InfeasibilityRepair.TimeLimit", "Dual", 10.0,
         "Time limit when reparing infeasible problem", 0, SHOT_DBL_MAX);
 
+    env->settings->createSetting("MIP.OptimalityTolerance", "Dual", 1e-6,
+        "The reduced-cost tolerance for optimality in the MIP solver", 1e-9, 1e-2);
+
     env->settings->createSetting("MIP.NodeLimit", "Dual", SHOT_DBL_MAX,
         "Node limit to use for MIP solver in single-tree strategy", 0.0, SHOT_DBL_MAX);
 
@@ -1144,8 +1147,6 @@ void Solver::initializeSettings()
     env->settings->createSetting("FixedInteger.UsePresolveBounds", "Primal", false,
         "Use variable bounds from MIP in NLP problems. Warning! Does not seem to work", true);
 
-    env->settings->createSetting("FixedInteger.ProblemSource", "Primal", true, "Use the fixed integer primal strategy");
-
     env->settings->createSetting("FixedInteger.Warmstart", "Primal", true, "Warm start the NLP solver");
 
     // Primal settings: rootsearch
@@ -1434,8 +1435,7 @@ void Solver::initializeSettings()
         "Rootsearch.MaxIterations", "Subsolver", 100, "Maximal root search iterations", 0, SHOT_INT_MAX);
 
     VectorString enumRootsearchMethod;
-    enumRootsearchMethod.push_back("BoostTOMS748");
-    enumRootsearchMethod.push_back("BoostBisection");
+    enumRootsearchMethod.push_back("TOMS748");
     enumRootsearchMethod.push_back("Bisection");
     env->settings->createSetting("Rootsearch.Method", "Subsolver", static_cast<int>(ES_RootsearchMethod::BoostTOMS748),
         "Root search method to use", enumRootsearchMethod, 0);

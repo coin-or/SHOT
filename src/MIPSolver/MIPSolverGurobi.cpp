@@ -380,6 +380,8 @@ void MIPSolverGurobi::initializeSolverSettings()
             GRB_DoubleParam_FeasibilityTol, env->settings->getSetting<double>("Tolerance.LinearConstraint", "Primal"));
         gurobiModel->getEnv().set(
             GRB_DoubleParam_IntFeasTol, env->settings->getSetting<double>("Tolerance.Integer", "Primal"));
+        gurobiModel->getEnv().set(
+            GRB_DoubleParam_OptimalityTol, env->settings->getSetting<double>("MIP.OptimalityTolerance", "Dual"));
 
         // Add a user-provided node limit
         if(auto nodeLimit = env->settings->getSetting<double>("MIP.NodeLimit", "Dual"); nodeLimit > 0)

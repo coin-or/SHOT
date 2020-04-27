@@ -576,7 +576,7 @@ bool CtCallbackI::createHyperplane(Hyperplane hyperplane)
         }
         else
         {
-            add(tmpRange, IloCplex::CutManagement::UseCutPurge).end();
+            add(tmpRange, IloCplex::CutManagement::UseCutForce).end();
         }
 
         std::string identifier = env->dualSolver->MIPSolver->getConstraintIdentifier(hyperplane.source);
@@ -722,9 +722,6 @@ E_ProblemSolutionStatus MIPSolverCplexSingleTreeLegacy::solveProblem()
                 cplexInstance.use(infoCallback);
             }
         }
-
-        // Fixes a deadlock bug in Cplex 12.7 and 12.8
-        cplexEnv.setNormalizer(false);
 
         cplexInstance.solve();
         MIPSolutionStatus = getSolutionStatus();

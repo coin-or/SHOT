@@ -258,6 +258,7 @@ void MIPSolverCbc::initializeSolverSettings()
     osiInterface->setDblParam(
         OsiPrimalTolerance, env->settings->getSetting<double>("Tolerance.LinearConstraint", "Primal"));
     cbcModel->setIntegerTolerance(env->settings->getSetting<double>("Tolerance.Integer", "Primal"));
+    osiInterface->setDblParam(OsiDualTolerance, env->settings->getSetting<double>("MIP.OptimalityTolerance", "Dual"));
 
     // Adds a user-provided node limit
     if(auto nodeLimit = env->settings->getSetting<double>("MIP.NodeLimit", "Dual"); nodeLimit > 0)

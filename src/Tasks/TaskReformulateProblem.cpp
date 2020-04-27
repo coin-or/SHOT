@@ -152,6 +152,9 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
     // Reformulating objective function
     reformulateObjectiveFunction();
 
+    // Creating expressions for sums of squares partitioning
+    createSquareReformulations();
+
     // Creating expressions for the bilinear reformulations
     createBilinearReformulations();
 
@@ -309,7 +312,7 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
         if(partitionQuadraticTermsInObjective)
         {
             auto [tmpLinearTerms, tmpQuadraticTerms]
-                = reformulateAndPartitionQuadraticSum(sourceObjective->quadraticTerms, isSignReversed, true);
+                = reformulateAndPartitionQuadraticSum(sourceObjective->quadraticTerms, isSignReversed, true, true);
 
             destinationLinearTerms.add(tmpLinearTerms);
             destinationQuadraticTerms.add(tmpQuadraticTerms);
@@ -706,8 +709,8 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
             partitionTerms = false;
         }
 
-        auto [tmpLinearTerms, tmpQuadraticTerms]
-            = reformulateAndPartitionQuadraticSum(sourceConstraint->quadraticTerms, isSignReversed, partitionTerms);
+        auto [tmpLinearTerms, tmpQuadraticTerms] = reformulateAndPartitionQuadraticSum(
+            sourceConstraint->quadraticTerms, isSignReversed, partitionTerms, true);
 
         destinationLinearTerms.add(tmpLinearTerms);
         destinationQuadraticTerms.add(tmpQuadraticTerms);
@@ -823,7 +826,13 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
             destinationLinearTerms.add(tmpLinearTerms);
 
         if(tmpQuadraticTerms.size() > 0)
-            destinationQuadraticTerms.add(tmpQuadraticTerms);
+        {
+            auto [tmpLinearTerms2, tmpQuadraticTerms2]
+                = reformulateAndPartitionQuadraticSum(tmpQuadraticTerms, false, true, true);
+
+            destinationLinearTerms.add(tmpLinearTerms2);
+            destinationQuadraticTerms.add(tmpQuadraticTerms2);
+        }
 
         if(tmpMonomialTerms.size() > 0)
             destinationMonomialTerms.add(tmpMonomialTerms);
@@ -1128,7 +1137,7 @@ LinearTerms TaskReformulateProblem::partitionNonlinearSum(
                 }
 
                 auto [tmpLinearTerms, tmpQuadraticTerms]
-                    = reformulateAndPartitionQuadraticSum(quadTerms, reversedSigns, partitionTerms);
+                    = reformulateAndPartitionQuadraticSum(quadTerms, reversedSigns, partitionTerms, true);
 
                 if(tmpQuadraticTerms.size() == 0)
                 // Otherwise we cannot proceed and will continue as if nonbilinear term
@@ -1392,7 +1401,8 @@ LinearTerms TaskReformulateProblem::partitionSignomialTerms(const SignomialTerms
 }
 
 std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPartitionQuadraticSum(
-    const QuadraticTerms& quadraticTerms, bool reversedSigns, bool partitionNonBinaryTerms)
+    const QuadraticTerms& quadraticTerms, bool reversedSigns, bool partitionNonBinaryTerms,
+    bool partitionIfAllTermsConvex)
 {
     LinearTerms resultLinearTerms;
     QuadraticTerms resultQuadraticTerms;
@@ -1400,12 +1410,22 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
     double signfactor = reversedSigns ? -1.0 : 1.0;
 
     bool allTermsAreBinary = true;
+    bool allTermsConvex = true;
 
     for(auto& T : quadraticTerms)
     {
         if(!T->isBinary)
         {
             allTermsAreBinary = false;
+            break;
+        }
+    }
+
+    for(auto& T : quadraticTerms)
+    {
+        if(T->getConvexity() != E_Convexity::Convex)
+        {
+            allTermsConvex = false;
             break;
         }
     }
@@ -1429,6 +1449,11 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
                 resultQuadraticTerms.add(
                     std::make_shared<QuadraticTerm>(T->coefficient, firstVariable, secondVariable));
             }
+        }
+        else if(partitionIfAllTermsConvex && allTermsConvex)
+        {
+            auto [auxVariable, newVariable] = getSquareAuxiliaryVariable(T->firstVariable);
+            resultLinearTerms.add(std::make_shared<LinearTerm>(signfactor * T->coefficient, auxVariable));
         }
         else if(T->isSquare && allTermsAreBinary) // Square term b^2 -> b
         {
@@ -1986,11 +2011,11 @@ NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(st
 NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(std::shared_ptr<ExpressionSquare> source)
 {
     // Extract all quadratic terms from inside of the nonlinear expression
-    auto convxity = source->getConvexity();
+    auto convexity = source->getConvexity();
 
     if((extractQuadraticTermsFromNonconvexExpressions
-           && !(convxity > E_Convexity::Convex || convxity == E_Convexity::Unknown))
-        || extractQuadraticTermsFromConvexExpressions)
+           && (convexity > E_Convexity::Convex || convexity == E_Convexity::Unknown))
+        || (extractQuadraticTermsFromConvexExpressions && convexity == E_Convexity::Convex))
     {
         auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression,
             tmpConstant]
@@ -2052,6 +2077,52 @@ NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(st
         C = reformulateNonlinearExpression(C);
 
     return (simplify(source));
+}
+
+std::pair<AuxiliaryVariablePtr, bool> TaskReformulateProblem::getSquareAuxiliaryVariable(VariablePtr variable)
+{
+    auto auxVariableIterator = squareAuxVariables.find(variable);
+
+    if(auxVariableIterator != squareAuxVariables.end())
+        return (std::make_pair(auxVariableIterator->second, false));
+
+    // Create a new variable
+
+    // Get the max bounds
+    auto valueList = { variable->lowerBound * variable->lowerBound, variable->upperBound * variable->upperBound };
+
+    double lowerBound = std::min(valueList);
+    double upperBound = std::max(valueList);
+
+    E_VariableType variableType;
+    E_AuxiliaryVariableType auxVariableType;
+
+    if(variable->properties.type == E_VariableType::Binary)
+    {
+        variableType = E_VariableType::Binary;
+    }
+    else if(variable->properties.type == E_VariableType::Integer)
+    {
+        variableType = E_VariableType::Integer;
+    }
+    else
+    {
+        variableType = E_VariableType::Real;
+    }
+
+    auxVariableType = E_AuxiliaryVariableType::SquareTermsPartitioning;
+
+    auto auxVariable = std::make_shared<AuxiliaryVariable>(
+        "s_sq_" + variable->name, auxVariableCounter, variableType, lowerBound, upperBound);
+    auxVariableCounter++;
+    auxVariable->properties.auxiliaryType = auxVariableType;
+    env->results->increaseAuxiliaryVariableCounter(auxVariableType);
+
+    reformulatedProblem->add((auxVariable));
+    auxVariable->quadraticTerms.add(std::make_shared<QuadraticTerm>(1.0, variable, variable));
+    squareAuxVariables.emplace(variable, auxVariable);
+
+    return (std::make_pair(auxVariable, true));
 }
 
 std::pair<AuxiliaryVariablePtr, bool> TaskReformulateProblem::getBilinearAuxiliaryVariable(
@@ -2152,6 +2223,15 @@ std::pair<AuxiliaryVariablePtr, bool> TaskReformulateProblem::getAbsoluteValueAu
     absoluteExpressionsAuxVariables.emplace(key, auxVariable);
 
     return (std::make_pair(auxVariable, true));
+}
+
+void TaskReformulateProblem::createSquareReformulations()
+{
+    for(const auto& [VAR, AUXVAR] : squareAuxVariables)
+    {
+        reformulateSquareTerm(VAR, AUXVAR);
+        AUXVAR->properties.auxiliaryType = E_AuxiliaryVariableType::SquareTermsPartitioning;
+    }
 }
 
 void TaskReformulateProblem::createBilinearReformulations()
@@ -2381,6 +2461,32 @@ void TaskReformulateProblem::reformulateIntegerBilinearTerm(
     }
 }
 
+void TaskReformulateProblem::reformulateSquareTerm(VariablePtr variable, AuxiliaryVariablePtr auxVariable)
+{
+    if(useConvexQuadraticConstraints)
+    {
+        auto auxConstraint = std::make_shared<QuadraticConstraint>(
+            auxConstraintCounter, "s_sq_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, 0.0);
+        auxConstraintCounter++;
+
+        auxConstraint->add(std::make_shared<LinearTerm>(-1.0, auxVariable));
+        auxConstraint->add(std::make_shared<QuadraticTerm>(1.0, variable, variable));
+
+        reformulatedProblem->add(std::move(auxConstraint));
+    }
+    else
+    {
+        auto auxConstraint = std::make_shared<NonlinearConstraint>(
+            auxConstraintCounter, "s_sq_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, 0.0);
+        auxConstraintCounter++;
+
+        auxConstraint->add(std::make_shared<LinearTerm>(-1.0, auxVariable));
+        auxConstraint->add(std::make_shared<QuadraticTerm>(1.0, variable, variable));
+
+        reformulatedProblem->add(std::move(auxConstraint));
+    }
+}
+
 void TaskReformulateProblem::reformulateRealBilinearTerm(
     VariablePtr firstVariable, VariablePtr secondVariable, AuxiliaryVariablePtr auxVariable)
 {
@@ -2400,7 +2506,7 @@ void TaskReformulateProblem::reformulateRealBilinearTerm(
     else
     {
         auto auxConstraint = std::make_shared<NonlinearConstraint>(
-            auxConstraintCounter, "s_blcc_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, 0.0);
+            auxConstraintCounter, "s_blcc_" + std::to_string(auxConstraintCounter), 0.0, 0.0);
         auxConstraintCounter++;
 
         auxConstraint->add(std::make_shared<LinearTerm>(-1.0, auxVariable));

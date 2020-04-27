@@ -175,7 +175,7 @@ public:
     std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> getLagrangianHessianSparsityPattern();
 
     std::optional<NumericConstraintValue> getMostDeviatingNumericConstraint(const VectorDouble& point);
-
+    std::optional<NumericConstraintValue> getMostDeviatingNonlinearOrQuadraticConstraint(const VectorDouble& point);
     std::optional<NumericConstraintValue> getMostDeviatingNonlinearConstraint(const VectorDouble& point);
 
     template <typename T>
