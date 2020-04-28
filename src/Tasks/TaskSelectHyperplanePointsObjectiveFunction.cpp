@@ -163,7 +163,7 @@ void TaskSelectHyperplanePointsObjectiveFunction::run(std::vector<SolutionPoint>
             hyperplane.isObjectiveHyperplane = true;
             hyperplane.sourceConstraintIndex = -1;
             hyperplane.generatedPoint = SOLPT.point;
-            hyperplane.source = E_HyperplaneSource::ObjectiveRootsearch;
+            hyperplane.source = E_HyperplaneSource::ObjectiveCuttingPlane;
             hyperplane.isSourceConvex = isConvex;
 
             hyperplane.objectiveFunctionValue

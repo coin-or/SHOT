@@ -168,6 +168,9 @@ void DualSolver::addGeneratedHyperplane(const Hyperplane& hyperplane)
     case E_HyperplaneSource::ObjectiveRootsearch:
         source = "objective rootsearch";
         break;
+    case E_HyperplaneSource::ObjectiveCuttingPlane:
+        source = "objective cutting plane";
+        break;
     default:
         break;
     }

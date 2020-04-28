@@ -66,7 +66,8 @@ enum class E_HyperplaneSource
     PrimalSolutionSearchInteriorObjective,
     InteriorPointSearch,
     MIPCallbackRelaxed,
-    ObjectiveRootsearch
+    ObjectiveRootsearch,
+    ObjectiveCuttingPlane
 };
 
 enum class E_IntegerCutSource
