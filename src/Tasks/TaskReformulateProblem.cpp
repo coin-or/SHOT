@@ -2091,7 +2091,7 @@ std::pair<AuxiliaryVariablePtr, bool> TaskReformulateProblem::getSquareAuxiliary
     // Get the max bounds
     auto valueList = { variable->lowerBound * variable->lowerBound, variable->upperBound * variable->upperBound };
 
-    double lowerBound = std::min(valueList);
+    double lowerBound = (variable->lowerBound < 0) ? 0.0 : std::min(valueList);
     double upperBound = std::max(valueList);
 
     E_VariableType variableType;
