@@ -176,7 +176,6 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
 
     for(auto& CAND : env->primalSolver->fixedPrimalNLPCandidates)
     {
-        double timeStart = env->timing->getElapsedTime("Total");
         VectorDouble fixedVariableValues(discreteVariableIndexes.size());
 
         int sizeOfVariableVector = sourceProblem->properties.numberOfVariables;
@@ -259,8 +258,6 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
 
         NLPSolver->unfixVariables();
         env->solutionStatistics.numberOfProblemsFixedNLP++;
-
-        double timeEnd = env->timing->getElapsedTime("Total");
 
         std::string source = (sourceIsReformulatedProblem) ? "R" : "O";
 
