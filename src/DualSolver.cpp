@@ -115,9 +115,11 @@ void DualSolver::addHyperplane(Hyperplane& hyperplane)
 
     hyperplane.pointHash = Utilities::calculateHash(hyperplane.generatedPoint);
 
-    if((hyperplane.source == E_HyperplaneSource::ObjectiveRootsearch
+    if(((hyperplane.source == E_HyperplaneSource::ObjectiveRootsearch
+            || hyperplane.source == E_HyperplaneSource::ObjectiveCuttingPlane)
            && !hasHyperplaneBeenAdded(hyperplane.pointHash, -1))
         || (hyperplane.source != E_HyperplaneSource::ObjectiveRootsearch
+               && hyperplane.source != E_HyperplaneSource::ObjectiveCuttingPlane
                && (!hasHyperplaneBeenAdded(hyperplane.pointHash, hyperplane.sourceConstraint->index))))
     {
         this->hyperplaneWaitingList.push_back(hyperplane);
@@ -233,12 +235,14 @@ bool DualSolver::hasHyperplaneBeenAdded(double hash, int constraintIndex)
 
     for(auto& H : generatedHyperplanes)
     {
-        if(H.source == E_HyperplaneSource::ObjectiveRootsearch && constraintIndex == -1
-            && Utilities::isAlmostEqual(H.pointHash, hash, 1e-8))
+        if((H.source == E_HyperplaneSource::ObjectiveRootsearch
+               || H.source == E_HyperplaneSource::ObjectiveCuttingPlane)
+            && constraintIndex == -1 && Utilities::isAlmostEqual(H.pointHash, hash, 1e-8))
         {
             return (true);
         }
-        else if(H.source != E_HyperplaneSource::ObjectiveRootsearch && H.sourceConstraint->index == constraintIndex
+        else if(H.source != E_HyperplaneSource::ObjectiveRootsearch
+            && H.source != E_HyperplaneSource::ObjectiveCuttingPlane && H.sourceConstraint->index == constraintIndex
             && Utilities::isAlmostEqual(H.pointHash, hash, 1e-8))
         {
             return (true);
