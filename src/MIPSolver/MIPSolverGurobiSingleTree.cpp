@@ -250,7 +250,7 @@ void GurobiCallbackSingleTree::callback()
                 tmpPt.objectiveValue = env->problem->objectiveFunction->calculateValue(primalSolution);
                 tmpPt.point = primalSolution;
 
-                env->primalSolver->addPrimalSolutionCandidate(tmpPt, E_PrimalSolutionSource::LazyConstraintCallback);
+                env->primalSolver->addPrimalSolutionCandidate(tmpPt, E_PrimalSolutionSource::MIPCallback);
             }
         }
 

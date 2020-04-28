@@ -147,9 +147,7 @@ enum class E_PrimalSolutionSource
     NLPRelaxed,
     MIPSolutionPool,
     LPFixedIntegers,
-    LazyConstraintCallback,
-    HeuristicCallback,
-    IncumbentCallback
+    MIPCallback
 };
 
 enum class E_ProblemConvexity

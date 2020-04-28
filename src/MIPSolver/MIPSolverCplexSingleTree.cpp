@@ -140,7 +140,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
                 tmpPt.objectiveValue = env->problem->objectiveFunction->calculateValue(primalSolution);
                 tmpPt.point = primalSolution;
 
-                env->primalSolver->addPrimalSolutionCandidate(tmpPt, E_PrimalSolutionSource::LazyConstraintCallback);
+                env->primalSolver->addPrimalSolutionCandidate(tmpPt, E_PrimalSolutionSource::MIPCallback);
             }
         }
 

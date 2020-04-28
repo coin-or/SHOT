@@ -413,19 +413,9 @@ std::string Results::getResultsOSrL()
             otherNode->SetAttribute(
                 "description", "The number of primal solutions found by solving integer-fixed LP problems");
             break;
-        case E_PrimalSolutionSource::LazyConstraintCallback:
-            otherNode->SetAttribute("name", "NumberOfPrimalSolutionsFoundLazyCallback");
-            otherNode->SetAttribute("description", "The number of primal solutions found in lazy constraint callback");
-            break;
-        case E_PrimalSolutionSource::HeuristicCallback:
-            otherNode->SetAttribute("name", "NumberOfPrimalSolutionsFoundHeuristicCallback");
-            otherNode->SetAttribute(
-                "description", "The number of primal solutions found in heuristic constraint callback");
-            break;
-        case E_PrimalSolutionSource::IncumbentCallback:
-            otherNode->SetAttribute("name", "NumberOfPrimalSolutionsFoundIncumbentCallback");
-            otherNode->SetAttribute(
-                "description", "The number of primal solutions found in incumbent constraint callback");
+        case E_PrimalSolutionSource::MIPCallback:
+            otherNode->SetAttribute("name", "NumberOfPrimalSolutionsFoundMIPCallback");
+            otherNode->SetAttribute("description", "The number of primal solutions found in MIP callbacks");
             break;
         default:
             otherNode->SetAttribute("name", "NumberOfPrimalSolutionsFoundOther");

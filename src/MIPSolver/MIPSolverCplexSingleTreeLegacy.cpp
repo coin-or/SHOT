@@ -360,7 +360,7 @@ void CtCallbackI::main()
             tmpPt.iterFound = env->results->getCurrentIteration()->iterationNumber;
             tmpPt.objectiveValue = this->getIncumbentObjValue();
             tmpPt.point = primalSolution;
-            env->primalSolver->addPrimalSolutionCandidate(tmpPt, E_PrimalSolutionSource::LazyConstraintCallback);
+            env->primalSolver->addPrimalSolutionCandidate(tmpPt, E_PrimalSolutionSource::MIPCallback);
             tmpPrimalVals.end();
             primalSolution.clear();
         }

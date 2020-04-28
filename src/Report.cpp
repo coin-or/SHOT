@@ -1176,14 +1176,9 @@ void Report::outputSolutionReport()
             case E_PrimalSolutionSource::LPFixedIntegers:
                 sourceDesc = "LP problem with fixed integers";
                 break;
-            case E_PrimalSolutionSource::LazyConstraintCallback:
-                sourceDesc = "lazy constraint callback";
+            case E_PrimalSolutionSource::MIPCallback:
+                sourceDesc = "MIP callback";
                 break;
-            case E_PrimalSolutionSource::HeuristicCallback:
-                sourceDesc = "heuristic constraint callback";
-                break;
-            case E_PrimalSolutionSource::IncumbentCallback:
-                sourceDesc = "incumbent constraint callback";
                 break;
             default:
                 sourceDesc = "other";

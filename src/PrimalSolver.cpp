@@ -121,14 +121,8 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
     case E_PrimalSolutionSource::LPFixedIntegers:
         sourceDesc = "LP fixed";
         break;
-    case E_PrimalSolutionSource::LazyConstraintCallback:
-        sourceDesc = "lazy constraint callback";
-        break;
-    case E_PrimalSolutionSource::HeuristicCallback:
-        sourceDesc = "heuristic constraint callback";
-        break;
-    case E_PrimalSolutionSource::IncumbentCallback:
-        sourceDesc = "incumbent constraint callback";
+    case E_PrimalSolutionSource::MIPCallback:
+        sourceDesc = "MIP callback";
         break;
     default:
         sourceDesc = "other";
@@ -299,9 +293,8 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
     // For example rootsearches may violate linear constraints
     bool acceptableType = (primalSol.sourceType == E_PrimalSolutionSource::MIPSolutionPool
         || primalSol.sourceType == E_PrimalSolutionSource::NLPFixedIntegers
-        || primalSol.sourceType == E_PrimalSolutionSource::IncumbentCallback
         || primalSol.sourceType == E_PrimalSolutionSource::LPFixedIntegers
-        || primalSol.sourceType == E_PrimalSolutionSource::LazyConstraintCallback);
+        || primalSol.sourceType == E_PrimalSolutionSource::MIPCallback);
 
     if(!primalSol.integerRoundingPerformed && acceptableType
         && env->settings->getSetting<bool>("Tolerance.TrustLinearConstraintValues", "Primal"))
