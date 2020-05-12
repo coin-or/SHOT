@@ -199,6 +199,7 @@ struct GeneratedHyperplane
 
 struct IntegerCut
 {
+    VectorInteger variableIndexes;
     VectorInteger variableValues;
     E_IntegerCutSource source = E_IntegerCutSource::None;
     bool areAllVariablesBinary = false;

@@ -1215,6 +1215,16 @@ bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
     int numConstraintsBefore = osiInterface->getNumRows();
     int constraintCounter = osiInterface->getNumRows();
 
+    // Verify that no integer values are outside of variable bounds
+    for(size_t i = 0; i < integerCut.variableIndexes.size(); i++)
+    {
+        auto VAR = env->reformulatedProblem->getVariable(integerCut.variableIndexes[i]);
+        int variableValue = integerCut.variableValues[i];
+
+        if(variableValue < VAR->lowerBound || variableValue > VAR->upperBound)
+            return (false);
+    }
+
     try
     {
         if(integerCut.areAllVariablesBinary) // Integer cut for problem with binary variables only
@@ -1261,15 +1271,13 @@ bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
             double sumLB = 0.0;
             double sumUB = 0.0;
 
-            for(auto& VAR : env->reformulatedProblem->allVariables)
+            for(auto& I : integerCut.variableIndexes)
             {
-                if(!(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer))
-                    continue;
-
+                auto VAR = env->reformulatedProblem->getVariable(I);
                 int variableValue = integerCut.variableValues[index];
 
-                assert(variableValue >= VAR->lowerBound);
-                assert(variableValue <= VAR->upperBound);
+                assert(
+                    VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer);
 
                 if(variableValue == VAR->upperBound)
                 {
