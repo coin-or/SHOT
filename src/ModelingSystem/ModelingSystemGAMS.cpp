@@ -1176,6 +1176,7 @@ bool ModelingSystemGAMS::copyNonlinearExpressions(ProblemPtr destination)
                     = parseGamsInstructions(codelen, opcodes, fields, constantlen, constants, destination);
 
                 auto constraint = std::dynamic_pointer_cast<NonlinearConstraint>(destination->getConstraint(i));
+
                 constraint->add(std::move(destinationExpression));
             }
             catch(const ConstraintNotFoundException&)
@@ -1368,7 +1369,7 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
         case nlDivI: // divide immediate
         {
             auto expression = std::make_shared<ExpressionDivide>(
-                std::make_shared<ExpressionConstant>(constants[address]), stack.rbegin()[0]);
+                stack.rbegin()[0], std::make_shared<ExpressionConstant>(constants[address]));
             stack.pop_back();
             stack.push_back(expression);
             break;
