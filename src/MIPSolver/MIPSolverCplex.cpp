@@ -1444,19 +1444,29 @@ bool MIPSolverCplex::createIntegerCut(IntegerCut& integerCut)
 {
     bool allowIntegerCutRepair = env->settings->getSetting<bool>("MIP.InfeasibilityRepair.IntegerCuts", "Dual");
 
+    // Verify that no integer values are outside of variable bounds
+    for(size_t i = 0; i < integerCut.variableIndexes.size(); i++)
+    {
+        auto VAR = env->reformulatedProblem->getVariable(integerCut.variableIndexes[i]);
+        int variableValue = integerCut.variableValues[i];
+
+        if(variableValue < VAR->lowerBound || variableValue > VAR->upperBound)
+            return (false);
+    }
+
     try
     {
         int numConstraintsBefore = cplexInstance.getNrows();
         IloExpr expr(cplexEnv);
         size_t index = 0;
 
-        for(auto& VAR : env->reformulatedProblem->allVariables)
+        for(auto& I : integerCut.variableIndexes)
         {
-            if(!(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer))
-                continue;
-
+            auto VAR = env->reformulatedProblem->getVariable(I);
             int variableValue = integerCut.variableValues[index];
             auto variable = cplexVars[VAR->index];
+
+            assert(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer);
 
             if(variableValue == VAR->upperBound)
             {

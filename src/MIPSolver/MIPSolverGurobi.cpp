@@ -488,13 +488,23 @@ bool MIPSolverGurobi::createIntegerCut(IntegerCut& integerCut)
         GRBLinExpr expr = 0;
         size_t index = 0;
 
-        for(auto& VAR : env->reformulatedProblem->allVariables)
+        // Verify that no integer values are outside of variable bounds
+        for(size_t i = 0; i < integerCut.variableIndexes.size(); i++)
         {
-            if(!(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer))
-                continue;
+            auto VAR = env->reformulatedProblem->getVariable(integerCut.variableIndexes[i]);
+            int variableValue = integerCut.variableValues[i];
 
+            if(variableValue < VAR->lowerBound || variableValue > VAR->upperBound)
+                return (false);
+        }
+
+        for(auto& I : integerCut.variableIndexes)
+        {
+            auto VAR = env->reformulatedProblem->getVariable(I);
             int variableValue = integerCut.variableValues[index];
-            auto variable = gurobiModel->getVar(VAR->index);
+            auto variable = gurobiModel->getVar(I);
+
+            assert(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer);
 
             if(variableValue == VAR->upperBound)
             {
