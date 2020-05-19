@@ -1360,7 +1360,7 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
         {
             address = gmoGetjSolver(modelingObject, address);
             auto expression = std::make_shared<ExpressionDivide>(
-                std::make_shared<ExpressionVariable>(destination->getVariable(address)), stack.rbegin()[0]);
+                stack.rbegin()[0], std::make_shared<ExpressionVariable>(destination->getVariable(address)));
             stack.pop_back();
             stack.push_back(expression);
             break;
