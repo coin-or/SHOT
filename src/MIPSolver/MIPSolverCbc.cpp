@@ -1469,8 +1469,9 @@ void MIPSolverCbc::updateVariableBound(int varIndex, double lowerBound, double u
     try
     {
         osiInterface->setColBounds(varIndex, lowerBound, upperBound);
-        assert(osiInterface->getColLower()[varIndex] == lowerBound);
-        assert(osiInterface->getColUpper()[varIndex] == upperBound);
+        // TODO: activate these again, cf. issue #77
+        // assert(osiInterface->getColLower()[varIndex] == lowerBound);
+        // assert(osiInterface->getColUpper()[varIndex] == upperBound);
     }
     catch(std::exception& e)
     {
@@ -1490,7 +1491,8 @@ void MIPSolverCbc::updateVariableLowerBound(int varIndex, double lowerBound)
     try
     {
         osiInterface->setColLower(varIndex, lowerBound);
-        assert(osiInterface->getColLower()[varIndex] == lowerBound);
+        // TODO: activate these again, cf. issue #77
+        // assert(osiInterface->getColLower()[varIndex] == lowerBound);
     }
     catch(std::exception& e)
     {
@@ -1510,7 +1512,8 @@ void MIPSolverCbc::updateVariableUpperBound(int varIndex, double upperBound)
     try
     {
         osiInterface->setColUpper(varIndex, upperBound);
-        assert(osiInterface->getColUpper()[varIndex] == upperBound);
+        // TODO: activate these again, cf. issue #77
+        // assert(osiInterface->getColUpper()[varIndex] == upperBound);
     }
     catch(std::exception& e)
     {
