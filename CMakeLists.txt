@@ -121,7 +121,7 @@ message(STATUS "Git hash: " ${GITHASH})
 # Sets version number
 set(SHOT_VERSION_MAJOR 1)
 set(SHOT_VERSION_MINOR 0)
-set(SHOT_VERSION_PATCH 0)
+set(SHOT_VERSION_PATCH 1)
 
 mark_as_advanced(
     SHOT_VERSION_MAJOR
