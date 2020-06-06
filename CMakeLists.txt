@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.9)
 
 # For ccache
 find_program(CCACHE_PROGRAM ccache)
@@ -7,7 +7,11 @@ if(CCACHE_PROGRAM)
     set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK "${CCACHE_PROGRAM}")
 endif()
 
-project(SHOT)
+
+project(SHOT VERSION 1.0.1
+                  DESCRIPTION "The Supporting Hyperplane Optimization Toolkit (SHOT) for Mixed-Integer Nonlinear Optimization"
+                  LANGUAGES CXX C)
+
 set(CMAKE_CXX_STANDARD 17)
 
 # Location of extra CMake scripts
@@ -118,15 +122,7 @@ else()
 endif()
 message(STATUS "Git hash: " ${GITHASH})
 
-# Sets version number
-set(SHOT_VERSION_MAJOR 1)
-set(SHOT_VERSION_MINOR 0)
-set(SHOT_VERSION_PATCH 1)
-
 mark_as_advanced(
-    SHOT_VERSION_MAJOR
-    SHOT_VERSION_MINOR
-    SHOT_VERSION_PATCH
     GITHASH
 )
 
