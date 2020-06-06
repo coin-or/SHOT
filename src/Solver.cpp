@@ -373,7 +373,8 @@ bool Solver::setProblem(std::string fileName)
     return (this->selectStrategy());
 }
 
-bool Solver::setProblem(SHOT::ProblemPtr problem, SHOT::ModelingSystemPtr modelingSystem)
+bool Solver::setProblem(
+    SHOT::ProblemPtr problem, SHOT::ProblemPtr reformulatedProblem, SHOT::ModelingSystemPtr modelingSystem)
 {
     env->modelingSystem = modelingSystem;
     env->problem = problem;
@@ -429,8 +430,15 @@ bool Solver::setProblem(SHOT::ProblemPtr problem, SHOT::ModelingSystemPtr modeli
 
     verifySettings();
 
-    auto taskReformulateProblem = std::make_unique<TaskReformulateProblem>(env);
-    taskReformulateProblem->run();
+    if(reformulatedProblem)
+    {
+        env->reformulatedProblem = reformulatedProblem;
+    }
+    else
+    {
+        auto taskReformulateProblem = std::make_unique<TaskReformulateProblem>(env);
+        taskReformulateProblem->run();
+    }
 
     setConvexityBasedSettings();
 

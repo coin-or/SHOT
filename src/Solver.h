@@ -61,7 +61,11 @@ public:
     bool setLogFile(std::string filename);
 
     bool setProblem(std::string fileName);
-    bool setProblem(ProblemPtr problem, ModelingSystemPtr modelingSystem);
+    bool setProblem(ProblemPtr problem, ProblemPtr reformulatedProblem, ModelingSystemPtr modelingSystem = nullptr);
+    bool setProblem(ProblemPtr problem, ModelingSystemPtr modelingSystem = nullptr)
+    {
+        return setProblem(problem, nullptr, modelingSystem);
+    };
 
     bool solveProblem();
 
