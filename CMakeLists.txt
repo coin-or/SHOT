@@ -541,6 +541,7 @@ if(HAS_IPOPT)
     target_link_libraries(SHOTPrimalStrategy ${IPOPT_LIBRARIES})
     target_include_directories(SHOTPrimalStrategy PUBLIC "${IPOPT_DIR}/include/coin")
     target_compile_options(SHOTPrimalStrategy PUBLIC ${IPOPT_CFLAGS_OTHER})
+    add_definitions(-DHAS_IPOPT)
 
     message("-- The following Ipopt libraries will be used from: ${IPOPT_LIBRARY_DIRS}")
     message("   ${IPOPT_LIBRARIES}")
@@ -627,8 +628,60 @@ else()
     )
 endif()
 
-# Installation target
-install(TARGETS ${PROJECT_NAME} DESTINATION bin)
+# For making the installation package
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+    MyLibConfigVersion.cmake
+    VERSION ${PACKAGE_VERSION}
+    COMPATIBILITY AnyNewerVersion
+)
+
+install(
+    TARGETS ${PROJECT_NAME}
+    EXPORT SHOTTargets
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION bin
+    INCLUDES DESTINATION include
+)
+
+# Copy some additional files
+install(
+    FILES
+    ${CMAKE_CURRENT_SOURCE_DIR}/AUTHORS
+    ${CMAKE_CURRENT_SOURCE_DIR}/INSTALL
+    ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE
+    ${CMAKE_CURRENT_SOURCE_DIR}/README
+    DESTINATION bin
+)
+
+# Need to install the library as well
+install(TARGETS SHOTSolver DESTINATION lib)
+
+install(
+    EXPORT SHOTTargets
+    FILE SHOTTargets.cmake
+    NAMESPACE SHOT::
+    DESTINATION lib/cmake/SHOT
+)
+
+# Copy all header files including directory structure
+install(
+    DIRECTORY "${CMAKE_SOURCE_DIR}/src/" # source directory
+    DESTINATION "include" # target directory
+    FILES_MATCHING # install only matched files
+    PATTERN  "*.h" # select header files
+)
+
+# Setting CPack metadata
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Andreas Lundell")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "The Supporting Hyperplane Optimization Toolkit (SHOT)")
+set(CPACK_PACKAGE_VENDOR "Åbo Akademi University")
+set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/README")
+set(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/INSTALL")
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+set(CPACK_GENERATOR "STGZ;ZIP")
+include(CPack)
 
 # Add a target to generate API documentation with Doxygen
 option(BUILD_DOCUMENTATION "Create and install the HTML based API documentation(requires Doxygen)" ${DOXYGEN_FOUND})
@@ -652,7 +705,7 @@ if(BUILD_DOCUMENTATION)
         VERBATIM
     )
 
-    install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/html DESTINATION share/doc)
+    install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doxydoc/html DESTINATION docs)
 endif()
 
 if(COMPILE_TESTS)
