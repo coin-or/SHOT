@@ -563,7 +563,16 @@ void NonlinearConstraint::add(NonlinearExpressionPtr expression)
             terms.push_back(nonlinearExpression);
         }
 
-        terms.push_back(expression);
+        if(expression->getType() == E_NonlinearExpressionTypes::Sum)
+        {
+            for(auto& TERM : std::dynamic_pointer_cast<ExpressionSum>(expression)->children)
+                terms.add(TERM);
+        }
+        else
+        {
+            terms.push_back(expression);
+        }
+
         nonlinearExpression = std::make_shared<ExpressionSum>(std::move(terms));
     }
     else
