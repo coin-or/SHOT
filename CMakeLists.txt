@@ -248,7 +248,6 @@ if(HAS_IPOPT)
     pkg_search_module(IPOPT REQUIRED ipopt)
     link_directories(${IPOPT_LIBRARY_DIRS})
     include_directories(SYSTEM ${IPOPT_INCLUDE_DIRS})
-    add_definitions(-DHAS_IPOPT)
 
     set(PRIMAL_SOURCES "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverIpoptBase.cpp")
     set(PRIMAL_SOURCES ${PRIMAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverIpoptRelaxed.cpp")
@@ -538,18 +537,22 @@ endif(HAS_CBC)
 
 # Ipopt linking
 if(HAS_IPOPT)
+    message("-- Ipopt include files will be used from: ${IPOPT_DIR}/include/coin")
     target_link_libraries(SHOTPrimalStrategy ${IPOPT_LIBRARIES})
     target_include_directories(SHOTPrimalStrategy PUBLIC "${IPOPT_DIR}/include/coin")
     target_compile_options(SHOTPrimalStrategy PUBLIC ${IPOPT_CFLAGS_OTHER})
+
+    message("-- The following Ipopt libraries will be used from: ${IPOPT_LIBRARY_DIRS}")
+    message("   ${IPOPT_LIBRARIES}")
 endif(HAS_IPOPT)
 
 # GAMS linking
 if(HAS_GAMS)
+    message("-- GAMS include files will be used from: ${GAMS_DIR}/apifiles/C/api")
     include_directories(SYSTEM "${GAMS_DIR}/apifiles/C/api")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DGAMSDIR=\\\"${GAMS_DIR}\\\"")
 endif(HAS_GAMS)
 
-# Creates the SHOT library that is linked to the executable
 file(
     GLOB_RECURSE
     SOURCES
@@ -558,6 +561,7 @@ file(
     "${PROJECT_SOURCE_DIR}/src/RootsearchMethod/RootsearchMethodBoost.cpp"
 )
 
+# Creates the SHOT library that is linked to the executable
 add_library(SHOTSolver SHARED ${SOURCES})
 
 # Links the compiled libraries
