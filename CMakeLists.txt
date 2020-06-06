@@ -29,7 +29,6 @@ else()
 endif()
 
 # Sets the release types, e.g. Release, Debug:
-
 # set(CMAKE_BUILD_TYPE Debug)
 
 # Asserts enabled in CppAD otherwise
@@ -95,7 +94,7 @@ if(NOT (HAS_CPLEX OR HAS_GUROBI OR HAS_CBC))
     message(FATAL_ERROR "No MIP solver defined. SHOT needs at least one!")
 endif()
 
-# Try to find Git
+# Try to find Git (used to get the hash shown by the console program)
 find_program(GIT git)
 
 if((GIT) AND (EXISTS ${CMAKE_CURRENT_LIST_DIR}/.git))
@@ -122,11 +121,10 @@ else()
 endif()
 message(STATUS "Git hash: " ${GITHASH})
 
-mark_as_advanced(
-    GITHASH
-)
+mark_as_advanced(GITHASH)
 
 configure_file("${PROJECT_SOURCE_DIR}/src/SHOTConfig.h.in" "${PROJECT_BINARY_DIR}/SHOTConfig.h")
+
 include_directories("${PROJECT_BINARY_DIR}")
 
 set_property(GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS ON)
