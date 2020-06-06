@@ -49,6 +49,7 @@ enum class E_DualSolutionSource
 
 enum class E_EventType
 {
+    NewPrimalSolution,
     UserTerminationCheck
 };
 
