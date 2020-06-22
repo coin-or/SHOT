@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.9)
 
 # For ccache
 find_program(CCACHE_PROGRAM ccache)
@@ -7,7 +7,11 @@ if(CCACHE_PROGRAM)
     set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK "${CCACHE_PROGRAM}")
 endif()
 
-project(SHOT)
+
+project(SHOT VERSION 1.0.1
+                  DESCRIPTION "The Supporting Hyperplane Optimization Toolkit (SHOT) for Mixed-Integer Nonlinear Optimization"
+                  LANGUAGES CXX C)
+
 set(CMAKE_CXX_STANDARD 17)
 
 # Location of extra CMake scripts
@@ -25,7 +29,6 @@ else()
 endif()
 
 # Sets the release types, e.g. Release, Debug:
-
 # set(CMAKE_BUILD_TYPE Debug)
 
 # Asserts enabled in CppAD otherwise
@@ -91,7 +94,7 @@ if(NOT (HAS_CPLEX OR HAS_GUROBI OR HAS_CBC))
     message(FATAL_ERROR "No MIP solver defined. SHOT needs at least one!")
 endif()
 
-# Try to find Git
+# Try to find Git (used to get the hash shown by the console program)
 find_program(GIT git)
 
 if((GIT) AND (EXISTS ${CMAKE_CURRENT_LIST_DIR}/.git))
@@ -118,19 +121,10 @@ else()
 endif()
 message(STATUS "Git hash: " ${GITHASH})
 
-# Sets version number
-set(SHOT_VERSION_MAJOR 1)
-set(SHOT_VERSION_MINOR 0)
-set(SHOT_VERSION_PATCH 1)
-
-mark_as_advanced(
-    SHOT_VERSION_MAJOR
-    SHOT_VERSION_MINOR
-    SHOT_VERSION_PATCH
-    GITHASH
-)
+mark_as_advanced(GITHASH)
 
 configure_file("${PROJECT_SOURCE_DIR}/src/SHOTConfig.h.in" "${PROJECT_BINARY_DIR}/SHOTConfig.h")
+
 include_directories("${PROJECT_BINARY_DIR}")
 
 set_property(GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS ON)
@@ -254,7 +248,6 @@ if(HAS_IPOPT)
     pkg_search_module(IPOPT REQUIRED ipopt)
     link_directories(${IPOPT_LIBRARY_DIRS})
     include_directories(SYSTEM ${IPOPT_INCLUDE_DIRS})
-    add_definitions(-DHAS_IPOPT)
 
     set(PRIMAL_SOURCES "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverIpoptBase.cpp")
     set(PRIMAL_SOURCES ${PRIMAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverIpoptRelaxed.cpp")
@@ -544,18 +537,23 @@ endif(HAS_CBC)
 
 # Ipopt linking
 if(HAS_IPOPT)
+    message("-- Ipopt include files will be used from: ${IPOPT_DIR}/include/coin")
     target_link_libraries(SHOTPrimalStrategy ${IPOPT_LIBRARIES})
     target_include_directories(SHOTPrimalStrategy PUBLIC "${IPOPT_DIR}/include/coin")
     target_compile_options(SHOTPrimalStrategy PUBLIC ${IPOPT_CFLAGS_OTHER})
+    add_definitions(-DHAS_IPOPT)
+
+    message("-- The following Ipopt libraries will be used from: ${IPOPT_LIBRARY_DIRS}")
+    message("   ${IPOPT_LIBRARIES}")
 endif(HAS_IPOPT)
 
 # GAMS linking
 if(HAS_GAMS)
+    message("-- GAMS include files will be used from: ${GAMS_DIR}/apifiles/C/api")
     include_directories(SYSTEM "${GAMS_DIR}/apifiles/C/api")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DGAMSDIR=\\\"${GAMS_DIR}\\\"")
 endif(HAS_GAMS)
 
-# Creates the SHOT library that is linked to the executable
 file(
     GLOB_RECURSE
     SOURCES
@@ -564,6 +562,7 @@ file(
     "${PROJECT_SOURCE_DIR}/src/RootsearchMethod/RootsearchMethodBoost.cpp"
 )
 
+# Creates the SHOT library that is linked to the executable
 add_library(SHOTSolver SHARED ${SOURCES})
 
 # Links the compiled libraries
@@ -629,8 +628,60 @@ else()
     )
 endif()
 
-# Installation target
-install(TARGETS ${PROJECT_NAME} DESTINATION bin)
+# For making the installation package
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+    MyLibConfigVersion.cmake
+    VERSION ${PACKAGE_VERSION}
+    COMPATIBILITY AnyNewerVersion
+)
+
+install(
+    TARGETS ${PROJECT_NAME}
+    EXPORT SHOTTargets
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION bin
+    INCLUDES DESTINATION include
+)
+
+# Copy some additional files
+install(
+    FILES
+    ${CMAKE_CURRENT_SOURCE_DIR}/AUTHORS
+    ${CMAKE_CURRENT_SOURCE_DIR}/INSTALL
+    ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE
+    ${CMAKE_CURRENT_SOURCE_DIR}/README
+    DESTINATION bin
+)
+
+# Need to install the library as well
+install(TARGETS SHOTSolver DESTINATION lib)
+
+install(
+    EXPORT SHOTTargets
+    FILE SHOTTargets.cmake
+    NAMESPACE SHOT::
+    DESTINATION lib/cmake/SHOT
+)
+
+# Copy all header files including directory structure
+install(
+    DIRECTORY "${CMAKE_SOURCE_DIR}/src/" # source directory
+    DESTINATION "include" # target directory
+    FILES_MATCHING # install only matched files
+    PATTERN  "*.h" # select header files
+)
+
+# Setting CPack metadata
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Andreas Lundell")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "The Supporting Hyperplane Optimization Toolkit (SHOT)")
+set(CPACK_PACKAGE_VENDOR "Åbo Akademi University")
+set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/README")
+set(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/INSTALL")
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+set(CPACK_GENERATOR "STGZ;ZIP")
+include(CPack)
 
 # Add a target to generate API documentation with Doxygen
 option(BUILD_DOCUMENTATION "Create and install the HTML based API documentation(requires Doxygen)" ${DOXYGEN_FOUND})
@@ -654,7 +705,7 @@ if(BUILD_DOCUMENTATION)
         VERBATIM
     )
 
-    install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/html DESTINATION share/doc)
+    install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doxydoc/html DESTINATION docs)
 endif()
 
 if(COMPILE_TESTS)
