@@ -18,11 +18,14 @@ before_script:
   - git clone https://github.com/coin-or/coinbrew
   - cd coinbrew
   - mkdir /home/travis/build/coin-or/SHOT/ThirdParty/Ipopt
-  - bash ./coinbrew fetch build Ipopt@3.13 --prefix=/home/travis/build/coin-or/SHOT/ThirdParty/Ipopt --no-prompt --tests none --build-dir=build_ipopt
+  - rm -rf /home/travis/build/coin-or/build_ipopt
+  - mkdir /home/travis/build/coin-or/build_ipopt
+  - bash ./coinbrew fetch build Ipopt@3.13 --debug --prefix=/home/travis/build/coin-or/SHOT/ThirdParty/Ipopt --no-prompt --tests none --build-dir=/home/travis/build/coin-or/build_ipopt
   - bash ./coinbrew install Ipopt --debug
-  - rm build -rf
   - mkdir /home/travis/build/coin-or/SHOT/ThirdParty/Cbc
-  - bash ./coinbrew fetch build Cbc@2.10 --prefix=/home/travis/build/coin-or/SHOT/ThirdParty/Cbc --no-prompt --tests none --build-dir=build_cbc --no-third-party
+  - rm -rf /home/travis/build/coin-or/build_cbc  
+  - mkdir /home/travis/build/coin-or/build_cbc  
+  - bash ./coinbrew fetch build Cbc@2.10 --debug --prefix=/home/travis/build/coin-or/SHOT/ThirdParty/Cbc --no-prompt --tests none --build-dir=/home/travis/build/coin-or/build_cbc
   - bash ./coinbrew install Cbc --debug
   - mkdir /home/travis/build/coin-or/SHOT/build
   - cd /home/travis/build/coin-or/SHOT/build
