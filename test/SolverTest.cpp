@@ -331,7 +331,7 @@ bool CreateAndSolveProblem()
     problem->add(e8);
 
     // Creating the constraint e9: sqr(b5) + sqr(x3) <= 4.64;
-    auto e9 = std::make_shared<QuadraticConstraint>(7, "e9", SHOT_DBL_MIN, 4.64);
+    auto e9 = std::make_shared<QuadraticConstraint>(8, "e9", SHOT_DBL_MIN, 4.64);
     e9->add(std::make_shared<QuadraticTerm>(1.0, b5, b5));
     e9->add(std::make_shared<QuadraticTerm>(1.0, x3, x3));
     problem->add(e9);
