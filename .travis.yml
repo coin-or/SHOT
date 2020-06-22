@@ -29,7 +29,7 @@ before_script:
   - mkdir /home/travis/build/coin-or/SHOT/ThirdParty/Cbc
   - rm -rf /home/travis/build/coin-or/build_cbc  
   - mkdir /home/travis/build/coin-or/build_cbc  
-  - bash ./coinbrew build Cbc@2.10 --verbosity 4 --prefix=/home/travis/build/coin-or/SHOT/ThirdParty/Cbc --no-prompt --tests none --build-dir=/home/travis/build/coin-or/build_cbc
+  - bash ./coinbrew build Cbc --verbosity 4 --prefix=/home/travis/build/coin-or/SHOT/ThirdParty/Cbc --no-prompt --tests none --build-dir=/home/travis/build/coin-or/build_cbc
   - bash ./coinbrew install Cbc --debug
   - mkdir /home/travis/build/coin-or/SHOT/build
   - cd /home/travis/build/coin-or/SHOT/build
