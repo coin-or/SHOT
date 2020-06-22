@@ -23,13 +23,13 @@ before_script:
   - mkdir /home/travis/build/coin-or/SHOT/ThirdParty/Ipopt
   - rm -rf /home/travis/build/coin-or/build_ipopt
   - mkdir /home/travis/build/coin-or/build_ipopt
-  - bash ./coinbrew fetch build Ipopt@3.13 --debug --prefix=/home/travis/build/coin-or/SHOT/ThirdParty/Ipopt --no-prompt --tests none --build-dir=/home/travis/build/coin-or/build_ipopt
+  - bash ./coinbrew build Ipopt@3.13 --debug --prefix=/home/travis/build/coin-or/SHOT/ThirdParty/Ipopt --no-prompt --tests none --build-dir=/home/travis/build/coin-or/build_ipopt
   - bash ./coinbrew install Ipopt --debug
   - rm -rf /home/travis/build/coin-or/SHOT/ThirdParty/Cbc
   - mkdir /home/travis/build/coin-or/SHOT/ThirdParty/Cbc
   - rm -rf /home/travis/build/coin-or/build_cbc  
   - mkdir /home/travis/build/coin-or/build_cbc  
-  - bash ./coinbrew fetch build Cbc@2.10 --debug --prefix=/home/travis/build/coin-or/SHOT/ThirdParty/Cbc --no-prompt --tests none --build-dir=/home/travis/build/coin-or/build_cbc --verbosity 4
+  - bash ./coinbrew build Cbc@2.10 --verbosity 4 --prefix=/home/travis/build/coin-or/SHOT/ThirdParty/Cbc --no-prompt --tests none --build-dir=/home/travis/build/coin-or/build_cbc
   - bash ./coinbrew install Cbc --debug
   - mkdir /home/travis/build/coin-or/SHOT/build
   - cd /home/travis/build/coin-or/SHOT/build
