@@ -77,12 +77,23 @@ public:
         upperBound = SHOT_DBL_MAX;
     }
 
-    Variable(std::string variableName, int variableIndex, E_VariableType variableType, double LB, double UB)
+    Variable(std::string variableName, int variableIndex, E_VariableType variableType, [[maybe_unused]] double LB,
+        [[maybe_unused]] double UB)
     {
         index = variableIndex;
         name = variableName;
-        lowerBound = LB;
-        upperBound = UB;
+
+        if(variableType == E_VariableType::Binary)
+        {
+            lowerBound = 0;
+            upperBound = 1;
+        }
+        else
+        {
+            lowerBound = SHOT_DBL_MIN;
+            upperBound = SHOT_DBL_MAX;
+        }
+
         properties.type = variableType;
     };
 
@@ -90,8 +101,18 @@ public:
     {
         index = variableIndex;
         name = variableName;
-        lowerBound = SHOT_DBL_MIN;
-        upperBound = SHOT_DBL_MAX;
+
+        if(variableType == E_VariableType::Binary)
+        {
+            lowerBound = 0;
+            upperBound = 1;
+        }
+        else
+        {
+            lowerBound = SHOT_DBL_MIN;
+            upperBound = SHOT_DBL_MAX;
+        }
+
         properties.type = variableType;
     };
 

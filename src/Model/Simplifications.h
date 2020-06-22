@@ -874,6 +874,72 @@ inline std::optional<QuadraticTermPtr> convertSquareToQuadraticTerm(std::shared_
     return resultingQuadraticTerm;
 }
 
+inline std::optional<std::tuple<QuadraticTermPtr, LinearTermPtr, double>> convertSquareToUnivariteQuadraticExpression(
+    std::shared_ptr<ExpressionSquare> product)
+{
+    std::optional<std::tuple<QuadraticTermPtr, LinearTermPtr, double>> resultingExpression;
+
+    if(product->getNumberOfChildren() == 0)
+        return resultingExpression;
+
+    if(product->child->getType() != E_NonlinearExpressionTypes::Sum)
+        return resultingExpression;
+
+    // Now know we have a square of a sum
+
+    auto sum = std::dynamic_pointer_cast<ExpressionSum>(product->child);
+
+    if(sum->getNumberOfChildren() != 2)
+        return resultingExpression;
+
+    double constant;
+    VariablePtr variable;
+    double variableCoefficient = 1.0;
+
+    if(sum->children[0]->getType() == E_NonlinearExpressionTypes::Constant)
+    {
+        constant = std::dynamic_pointer_cast<ExpressionConstant>(sum->children[0])->constant;
+
+        if(sum->children[1]->getType() == E_NonlinearExpressionTypes::Variable)
+            variable = std::dynamic_pointer_cast<ExpressionVariable>(sum->children[1])->variable;
+        else if(sum->children[1]->getType() == E_NonlinearExpressionTypes::Product
+            && std::dynamic_pointer_cast<ExpressionProduct>(sum->children[1])->isLinearTerm())
+        {
+            auto linearTerm
+                = convertProductToLinearTerm(std::dynamic_pointer_cast<ExpressionProduct>(sum->children[1]));
+
+            variable = linearTerm.value()->variable;
+            variableCoefficient = linearTerm.value()->coefficient;
+        }
+        else
+            return resultingExpression;
+    }
+    else if(sum->children[1]->getType() == E_NonlinearExpressionTypes::Constant)
+    {
+        constant = std::dynamic_pointer_cast<ExpressionConstant>(sum->children[1])->constant;
+
+        if(sum->children[0]->getType() == E_NonlinearExpressionTypes::Variable)
+            variable = std::dynamic_pointer_cast<ExpressionVariable>(sum->children[0])->variable;
+        else if(sum->children[0]->getType() == E_NonlinearExpressionTypes::Product
+            && std::dynamic_pointer_cast<ExpressionProduct>(sum->children[0])->isLinearTerm())
+        {
+            auto linearTerm
+                = convertProductToLinearTerm(std::dynamic_pointer_cast<ExpressionProduct>(sum->children[0]));
+
+            variable = linearTerm.value()->variable;
+            variableCoefficient = linearTerm.value()->coefficient;
+        }
+        else
+            return resultingExpression;
+    }
+
+    resultingExpression = std::make_tuple(
+        std::make_shared<QuadraticTerm>(variableCoefficient * variableCoefficient, variable, variable),
+        std::make_shared<LinearTerm>(2.0 * constant * variableCoefficient, variable), constant * constant);
+
+    return resultingExpression;
+}
+
 inline std::optional<QuadraticTermPtr> convertPowerToQuadraticTerm(std::shared_ptr<ExpressionPower> power)
 {
     std::optional<QuadraticTermPtr> resultingQuadraticTerm;
@@ -1225,6 +1291,13 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
         if(auto optional = convertSquareToQuadraticTerm(square); optional && extractQuadratics)
         {
             quadraticTerms.add(optional.value());
+        }
+        else if(auto optional = convertSquareToUnivariteQuadraticExpression(square);
+                optional && extractQuadratics && extractLinears)
+        {
+            quadraticTerms.add(std::get<0>(optional.value()));
+            linearTerms.add(std::get<1>(optional.value()));
+            constant += std::get<2>(optional.value());
         }
         else if(auto optional = convertExpressionToSignomialTerm(square); optional && extractSignomials)
         {

@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <limits>
 
+#include "EventHandler.h"
 #include "Iteration.h"
 #include "Output.h"
 #include "Results.h"
@@ -185,6 +186,8 @@ void Results::addPrimalSolution(PrimalSolution solution)
 
         env->output->outputCritical("        Primal objective cut added.");
     }*/
+
+    env->events->notify(E_EventType::NewPrimalSolution);
 }
 
 bool Results::isRelativeObjectiveGapToleranceMet()

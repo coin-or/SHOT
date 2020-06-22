@@ -23,7 +23,7 @@ namespace SHOT
 class EventHandler
 {
 public:
-    inline EventHandler(EnvironmentPtr envPtr) : env(envPtr){};
+    inline EventHandler(EnvironmentPtr envPtr) : env(envPtr) {};
 
     template <typename Callback> void registerCallback(const E_EventType& event, Callback&& callback)
     {
@@ -38,6 +38,9 @@ public:
     inline void notify(const E_EventType& event) const
     {
         if(registeredCallbacks.size() == 0)
+            return;
+
+        if(registeredCallbacks.find(event) == registeredCallbacks.end())
             return;
 
         for(const auto& C : registeredCallbacks.at(event))
