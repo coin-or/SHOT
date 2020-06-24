@@ -20,6 +20,8 @@
 
 #include "../src/Tasks/TaskReformulateProblem.h"
 
+#include <sstream>
+
 using namespace SHOT;
 
 bool ModelTestVariables();
@@ -31,6 +33,7 @@ bool ModelTestCreateProblem();
 bool ModelTestCreateProblem2();
 bool ModelTestCreateProblem3();
 bool ModelTestConvexity();
+bool ModelTestCopy();
 
 bool TestReadProblem(const std::string& problemFile);
 bool TestRootsearch(const std::string& problemFile);
@@ -82,6 +85,9 @@ int ModelTest(int argc, char* argv[])
         break;
     case 9:
         passed = ModelTestConvexity();
+        break;
+    case 10:
+        passed = ModelTestCopy();
         break;
     default:
         passed = false;
@@ -1061,6 +1067,123 @@ bool ModelTestConvexity()
     default:
         break;
     }
+
+    return passed;
+}
+
+bool ModelTestCopy()
+{
+    bool passed = true;
+
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+    SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
+    env->problem = problem;
+
+    // Creating variables
+
+    auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 100.0);
+    SHOT::ExpressionVariablePtr expressionVariable_x = std::make_shared<SHOT::ExpressionVariable>(var_x);
+
+    auto var_y = std::make_shared<SHOT::Variable>("y", 1, SHOT::E_VariableType::Integer, 0.0, 1.0);
+    SHOT::ExpressionVariablePtr expressionVariable_y = std::make_shared<SHOT::ExpressionVariable>(var_y);
+
+    auto var_z = std::make_shared<SHOT::Variable>("z", 2, SHOT::E_VariableType::Integer, 0.0, 2.0);
+    SHOT::ExpressionVariablePtr expressionVariable_z = std::make_shared<SHOT::ExpressionVariable>(var_z);
+
+    SHOT::Variables variables = { var_x, var_y, var_z };
+    problem->add(variables);
+
+    SHOT::NonlinearObjectiveFunctionPtr objectiveFunction
+        = std::make_shared<SHOT::NonlinearObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize);
+    SHOT::LinearTermPtr objLinearTerm1 = std::make_shared<SHOT::LinearTerm>(1.0, var_x);
+    SHOT::LinearTermPtr objLinearTerm2 = std::make_shared<SHOT::LinearTerm>(1.0, var_y);
+
+    SHOT::LinearTerms objLinearTerms;
+    objLinearTerms.add(objLinearTerm1);
+    objLinearTerms.add(objLinearTerm2);
+
+    objectiveFunction->add(objLinearTerms);
+
+    SHOT::QuadraticTermPtr objQuadraticTerm1 = std::make_shared<SHOT::QuadraticTerm>(1, var_x, var_y);
+    SHOT::QuadraticTermPtr objQuadraticTerm2 = std::make_shared<SHOT::QuadraticTerm>(2, var_x, var_x);
+    SHOT::QuadraticTerms objQuadraticTerms;
+    objQuadraticTerms.add(objQuadraticTerm1);
+    objQuadraticTerms.add(objQuadraticTerm2);
+    objectiveFunction->add(objQuadraticTerms);
+
+    SHOT::NonlinearExpressions objExpressions;
+    objExpressions.add(expressionVariable_x);
+    objExpressions.add(expressionVariable_y);
+    SHOT::NonlinearExpressionPtr objExprSum = std::make_shared<SHOT::ExpressionSum>(objExpressions);
+    objectiveFunction->add(objExprSum);
+    problem->add(objectiveFunction);
+
+    SHOT::LinearTermPtr linearTerm1 = std::make_shared<SHOT::LinearTerm>(-1, var_x);
+    SHOT::LinearTermPtr linearTerm2 = std::make_shared<SHOT::LinearTerm>(1.2, var_y);
+    SHOT::LinearTerms linearTerms;
+    linearTerms.add(linearTerm1);
+    linearTerms.add(linearTerm2);
+    SHOT::LinearConstraintPtr linearConstraint
+        = std::make_shared<SHOT::LinearConstraint>(0, "linconstr", linearTerms, -2.0, 4.0);
+    problem->add(linearConstraint);
+
+    SHOT::QuadraticTermPtr quadraticTerm1 = std::make_shared<SHOT::QuadraticTerm>(1, var_x, var_y);
+    SHOT::QuadraticTermPtr quadraticTerm2 = std::make_shared<SHOT::QuadraticTerm>(2, var_x, var_x);
+    SHOT::QuadraticTerms quadraticTerms;
+    quadraticTerms.add(quadraticTerm1);
+    quadraticTerms.add(quadraticTerm2);
+    SHOT::QuadraticConstraintPtr quadraticConstraint
+        = std::make_shared<SHOT::QuadraticConstraint>(1, "quadconstr", quadraticTerms, -10.0, 20.0);
+    problem->add(quadraticConstraint);
+
+    SHOT::NonlinearExpressionPtr exprPlus
+        = std::make_shared<SHOT::ExpressionSum>(expressionVariable_z, expressionVariable_x);
+    SHOT::NonlinearExpressionPtr exprConstant = std::make_shared<SHOT::ExpressionConstant>(3);
+    SHOT::NonlinearExpressionPtr exprPower
+        = std::make_shared<SHOT::ExpressionPower>(expressionVariable_z, exprConstant);
+
+    SHOT::NonlinearExpressions expressions;
+    expressions.add(exprPower);
+    expressions.add(exprPlus);
+
+    SHOT::NonlinearExpressionPtr exprSum = std::make_shared<SHOT::ExpressionSum>(expressions);
+
+    SHOT::NonlinearConstraintPtr nonlinearConstraint
+        = std::make_shared<SHOT::NonlinearConstraint>(2, "nlconstr", linearTerms, exprSum, -10.0, 20.0);
+    problem->add(nonlinearConstraint);
+
+    SHOT::NonlinearExpressionPtr exprConstant2 = std::make_shared<SHOT::ExpressionConstant>(40.0);
+    SHOT::NonlinearExpressionPtr exprTimes
+        = std::make_shared<SHOT::ExpressionProduct>(exprConstant2, expressionVariable_x);
+    SHOT::NonlinearExpressionPtr exprPlus2 = std::make_shared<SHOT::ExpressionProduct>(exprTimes, expressionVariable_y);
+
+    SHOT::NonlinearConstraintPtr nonlinearConstraint2
+        = std::make_shared<SHOT::NonlinearConstraint>(3, "nlconstr2", exprPlus2, -1000.0, 0);
+    problem->add(nonlinearConstraint2);
+
+    problem->finalize();
+
+    std::stringstream problemText;
+    problemText << problem;
+
+    std::cout << "Problem created:\n\n";
+    std::cout << problemText.str() << '\n';
+
+    auto problemCopy = problem->createCopy();
+
+    std::stringstream problemCopyText;
+    problemCopyText << problemCopy;
+
+    std::cout << "Problem copy created:\n\n";
+    std::cout << problemCopyText.str() << '\n';
+
+    if(problemCopyText.str() != problemText.str())
+        passed = false;
+
+    auto problemRelaxedCopy = problem->createCopy(true);
+    std::cout << "Relaxed problem copy created:\n\n";
+    std::cout << problemRelaxedCopy << '\n';
 
     return passed;
 }

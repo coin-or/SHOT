@@ -16,7 +16,8 @@ set(Model_parts
     6
     7
     8
-    9) # The different parts of each test (if any)
+    9
+    10) # The different parts of each test (if any)
 set(Settings_parts 1 2)
 
 if(HAS_CPLEX)
@@ -143,7 +144,6 @@ endif(HAS_GUROBI)
 
 target_link_libraries(${TEST_EXE_NAME} pthread)
 target_link_libraries(${TEST_EXE_NAME} m)
-target_link_libraries(${TEST_EXE_NAME} bz2)
 target_link_libraries(${TEST_EXE_NAME} z)
 target_link_libraries(${TEST_EXE_NAME} lapack)
 target_link_libraries(${TEST_EXE_NAME} blas)
