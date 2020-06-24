@@ -127,8 +127,8 @@ void Problem::updateConstraints()
         else if(C->valueLHS == C->valueRHS
             && ((C->properties.convexity == E_Convexity::Convex
                     && C->properties.monotonicity == E_Monotonicity::Nondecreasing)
-                   || (C->properties.convexity == E_Convexity::Concave
-                          && C->properties.monotonicity == E_Monotonicity::Nonincreasing)))
+                || (C->properties.convexity == E_Convexity::Concave
+                    && C->properties.monotonicity == E_Monotonicity::Nonincreasing)))
         {
             // Will rewrite as ()^2 <=c^2
 
@@ -303,13 +303,13 @@ void Problem::updateConvexity()
     {
         if(objectiveFunction->properties.isMinimize
             && (objectiveFunction->properties.convexity == E_Convexity::Linear
-                   || objectiveFunction->properties.convexity == E_Convexity::Convex))
+                || objectiveFunction->properties.convexity == E_Convexity::Convex))
         {
             properties.convexity = E_ProblemConvexity::Convex;
         }
         else if(objectiveFunction->properties.isMaximize
             && (objectiveFunction->properties.convexity == E_Convexity::Linear
-                   || objectiveFunction->properties.convexity == E_Convexity::Concave))
+                || objectiveFunction->properties.convexity == E_Convexity::Concave))
         {
             properties.convexity = E_ProblemConvexity::Convex;
         }
@@ -537,8 +537,8 @@ void Problem::updateVariables()
 
         assert(!V->properties.isNonlinear
             || (V->properties.isNonlinear
-                   && (V->properties.inQuadraticTerms || V->properties.inMonomialTerms || V->properties.inSignomialTerms
-                          || V->properties.inNonlinearExpression)));
+                && (V->properties.inQuadraticTerms || V->properties.inMonomialTerms || V->properties.inSignomialTerms
+                    || V->properties.inNonlinearExpression)));
     }
 
     allVariables.takeOwnership(shared_from_this());
@@ -577,8 +577,8 @@ void Problem::updateProperties()
 
     bool isObjNonlinear = (objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic
         && (objectiveFunction->properties.hasQuadraticTerms || objectiveFunction->properties.hasMonomialTerms
-               || objectiveFunction->properties.hasSignomialTerms
-               || objectiveFunction->properties.hasNonlinearExpression));
+            || objectiveFunction->properties.hasSignomialTerms
+            || objectiveFunction->properties.hasNonlinearExpression));
     bool isObjQuadratic = (objectiveFunction->properties.classification == E_ObjectiveFunctionClassification::Quadratic
         && objectiveFunction->properties.hasQuadraticTerms);
 
@@ -794,7 +794,7 @@ void Problem::updateFactorableFunctions()
     CppAD::AD<double>::abort_recording();
 }
 
-Problem::Problem(EnvironmentPtr env) : env(env) {}
+Problem::Problem(EnvironmentPtr env) : env(env) { }
 
 Problem::~Problem()
 {
@@ -2271,5 +2271,220 @@ bool Problem::verifyOwnership()
     }
 
     return (true);
+}
+
+ProblemPtr Problem::createCopy(bool relaxed)
+{
+    auto destinationProblem = std::make_shared<Problem>(env);
+
+    // Copying variables
+    for(auto& V : this->allVariables)
+    {
+        auto variableType = relaxed ? E_VariableType::Real : V->properties.type;
+        auto variable = std::make_shared<Variable>(V->name, V->index, variableType, V->lowerBound, V->upperBound);
+
+        variable->properties.hasLowerBoundBeenTightened = V->properties.hasLowerBoundBeenTightened;
+        variable->properties.hasUpperBoundBeenTightened = V->properties.hasUpperBoundBeenTightened;
+
+        destinationProblem->add(std::move(variable));
+    }
+
+    ObjectiveFunctionPtr destinationObjective;
+
+    // Copying the objective function
+    if(this->objectiveFunction->properties.classification == E_ObjectiveFunctionClassification::Linear
+        || (!this->objectiveFunction->properties.hasNonlinearExpression
+            && !this->objectiveFunction->properties.hasQuadraticTerms
+            && !this->objectiveFunction->properties.hasMonomialTerms
+            && !this->objectiveFunction->properties.hasSignomialTerms))
+    {
+        // Linear objective function
+        destinationObjective = std::make_shared<LinearObjectiveFunction>();
+    }
+    else if(this->objectiveFunction->properties.classification == E_ObjectiveFunctionClassification::Quadratic
+        || (!this->objectiveFunction->properties.hasNonlinearExpression
+            && !this->objectiveFunction->properties.hasMonomialTerms
+            && !this->objectiveFunction->properties.hasSignomialTerms))
+    {
+        // Quadratic objective function
+        destinationObjective = std::make_shared<QuadraticObjectiveFunction>();
+    }
+    else if(this->objectiveFunction->properties.classification == E_ObjectiveFunctionClassification::Nonlinear)
+    {
+        // Nonlinear objective function
+        destinationObjective = std::make_shared<NonlinearObjectiveFunction>();
+    }
+
+    destinationObjective->direction = this->objectiveFunction->direction;
+    destinationObjective->constant = this->objectiveFunction->constant;
+
+    // Copy linear terms to objective
+    if(this->objectiveFunction->properties.hasLinearTerms)
+    {
+        for(auto& LT : std::dynamic_pointer_cast<LinearObjectiveFunction>(this->objectiveFunction)->linearTerms)
+        {
+            auto variable = destinationProblem->getVariable(LT->variable->index);
+
+            std::dynamic_pointer_cast<LinearObjectiveFunction>(destinationObjective)
+                ->add(std::make_shared<LinearTerm>(LT->coefficient, variable));
+        }
+    }
+
+    // Copy quadratic terms to objective
+    if(this->objectiveFunction->properties.hasQuadraticTerms)
+    {
+        for(auto& QT : std::dynamic_pointer_cast<QuadraticObjectiveFunction>(this->objectiveFunction)->quadraticTerms)
+        {
+            auto firstVariable = destinationProblem->getVariable(QT->firstVariable->index);
+            auto secondVariable = destinationProblem->getVariable(QT->secondVariable->index);
+
+            std::dynamic_pointer_cast<QuadraticObjectiveFunction>(destinationObjective)
+                ->add(std::make_shared<QuadraticTerm>(QT->coefficient, firstVariable, secondVariable));
+        }
+    }
+
+    // Copy monomial terms to objective
+    if(this->objectiveFunction->properties.hasMonomialTerms)
+    {
+        for(auto& MT : std::dynamic_pointer_cast<NonlinearObjectiveFunction>(this->objectiveFunction)->monomialTerms)
+        {
+            Variables variables;
+
+            for(auto& V : MT->variables)
+                variables.push_back(destinationProblem->getVariable(V->index));
+
+            std::dynamic_pointer_cast<NonlinearObjectiveFunction>(destinationObjective)
+                ->add(std::make_shared<MonomialTerm>(MT->coefficient, variables));
+        }
+    }
+
+    // Copy signomial terms to objective
+    if(this->objectiveFunction->properties.hasSignomialTerms)
+    {
+        for(auto& ST : std::dynamic_pointer_cast<NonlinearObjectiveFunction>(this->objectiveFunction)->signomialTerms)
+        {
+            SignomialElements elements;
+
+            for(auto& E : ST->elements)
+                elements.push_back(
+                    std::make_shared<SignomialElement>(destinationProblem->getVariable(E->variable->index), E->power));
+
+            std::dynamic_pointer_cast<NonlinearObjectiveFunction>(destinationObjective)
+                ->add(std::make_shared<SignomialTerm>(ST->coefficient, elements));
+        }
+    }
+
+    // Copy nonlinear expression to objective
+    if(this->objectiveFunction->properties.hasNonlinearExpression)
+        std::dynamic_pointer_cast<NonlinearObjectiveFunction>(destinationObjective)
+            ->add(std::move(
+                copyNonlinearExpression(std::dynamic_pointer_cast<NonlinearObjectiveFunction>(this->objectiveFunction)
+                                            ->nonlinearExpression.get(),
+                    destinationProblem)));
+
+    destinationProblem->add(std::move(destinationObjective));
+
+    // Copying constraints
+    for(auto& C : this->numericConstraints)
+    {
+        NumericConstraintPtr destinationConstraint;
+
+        double valueLHS = std::dynamic_pointer_cast<NumericConstraint>(C)->valueLHS;
+        double valueRHS = std::dynamic_pointer_cast<NumericConstraint>(C)->valueRHS;
+
+        if(C->properties.classification == E_ConstraintClassification::Linear
+            || (!C->properties.hasNonlinearExpression && !C->properties.hasQuadraticTerms
+                && !C->properties.hasMonomialTerms && !C->properties.hasSignomialTerms))
+        {
+            // Linear constraint
+            destinationConstraint = std::make_shared<LinearConstraint>(C->index, C->name, valueLHS, valueRHS);
+            destinationConstraint->properties.classification = E_ConstraintClassification::Linear;
+        }
+        else if(C->properties.classification == E_ConstraintClassification::Quadratic
+            || (!C->properties.hasNonlinearExpression && !C->properties.hasMonomialTerms
+                && !C->properties.hasSignomialTerms))
+        {
+            // Quadratic constraint
+            destinationConstraint = std::make_shared<QuadraticConstraint>(C->index, C->name, valueLHS, valueRHS);
+            destinationConstraint->properties.classification = E_ConstraintClassification::Quadratic;
+        }
+        else
+        {
+            // Nonlinear constraint
+            destinationConstraint = std::make_shared<NonlinearConstraint>(C->index, C->name, valueLHS, valueRHS);
+            destinationConstraint->properties.classification = E_ConstraintClassification::Quadratic;
+        }
+
+        destinationConstraint->constant = std::dynamic_pointer_cast<NumericConstraint>(C)->constant;
+
+        // Copy linear terms
+        if(C->properties.hasLinearTerms)
+        {
+            for(auto& LT : std::dynamic_pointer_cast<LinearConstraint>(C)->linearTerms)
+            {
+                auto variable = destinationProblem->getVariable(LT->variable->index);
+
+                std::dynamic_pointer_cast<LinearConstraint>(destinationConstraint)
+                    ->add(std::make_shared<LinearTerm>(LT->coefficient, variable));
+            }
+        }
+
+        // Copy quadratic terms
+        if(C->properties.hasQuadraticTerms)
+        {
+            for(auto& QT : std::dynamic_pointer_cast<QuadraticConstraint>(C)->quadraticTerms)
+            {
+                auto firstVariable = destinationProblem->getVariable(QT->firstVariable->index);
+                auto secondVariable = destinationProblem->getVariable(QT->secondVariable->index);
+
+                std::dynamic_pointer_cast<QuadraticConstraint>(destinationConstraint)
+                    ->add(std::make_shared<QuadraticTerm>(QT->coefficient, firstVariable, secondVariable));
+            }
+        }
+
+        // Copy monomial terms
+        if(C->properties.hasMonomialTerms)
+        {
+            for(auto& MT : std::dynamic_pointer_cast<NonlinearConstraint>(C)->monomialTerms)
+            {
+                Variables variables;
+
+                for(auto& V : MT->variables)
+                    variables.push_back(destinationProblem->getVariable(V->index));
+
+                std::dynamic_pointer_cast<NonlinearConstraint>(destinationConstraint)
+                    ->add(std::make_shared<MonomialTerm>(MT->coefficient, variables));
+            }
+        }
+
+        // Copy signomial terms
+        if(C->properties.hasSignomialTerms)
+        {
+            for(auto& ST : std::dynamic_pointer_cast<NonlinearConstraint>(C)->signomialTerms)
+            {
+                SignomialElements elements;
+
+                for(auto& E : ST->elements)
+                    elements.push_back(std::make_shared<SignomialElement>(
+                        destinationProblem->getVariable(E->variable->index), E->power));
+
+                std::dynamic_pointer_cast<NonlinearConstraint>(destinationConstraint)
+                    ->add(std::make_shared<SignomialTerm>(ST->coefficient, elements));
+            }
+        }
+
+        // Copy nonlinear expression
+        if(C->properties.hasNonlinearExpression)
+            std::dynamic_pointer_cast<NonlinearConstraint>(destinationConstraint)
+                ->add(copyNonlinearExpression(
+                    std::dynamic_pointer_cast<NonlinearConstraint>(C)->nonlinearExpression.get(), destinationProblem));
+
+        destinationProblem->add(std::move(destinationConstraint));
+    }
+
+    destinationProblem->updateProperties();
+    destinationProblem->finalize();
+
+    return (destinationProblem);
 }
 } // namespace SHOT

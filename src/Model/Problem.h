@@ -238,6 +238,8 @@ public:
     bool doFBBTOnConstraint(NumericConstraintPtr constraint, double timeLimit);
 
     friend std::ostream& operator<<(std::ostream& stream, const Problem& problem);
+
+    ProblemPtr createCopy(bool relaxed = false);
 };
 
 inline std::ostream& operator<<(std::ostream& stream, ProblemPtr problem)
