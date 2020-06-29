@@ -119,8 +119,8 @@ void DualSolver::addHyperplane(Hyperplane& hyperplane)
             || hyperplane.source == E_HyperplaneSource::ObjectiveCuttingPlane)
            && !hasHyperplaneBeenAdded(hyperplane.pointHash, -1))
         || (hyperplane.source != E_HyperplaneSource::ObjectiveRootsearch
-               && hyperplane.source != E_HyperplaneSource::ObjectiveCuttingPlane
-               && (!hasHyperplaneBeenAdded(hyperplane.pointHash, hyperplane.sourceConstraint->index))))
+            && hyperplane.source != E_HyperplaneSource::ObjectiveCuttingPlane
+            && (!hasHyperplaneBeenAdded(hyperplane.pointHash, hyperplane.sourceConstraint->index))))
     {
         this->hyperplaneWaitingList.push_back(hyperplane);
     }
@@ -191,6 +191,9 @@ void DualSolver::addGeneratedHyperplane(const Hyperplane& hyperplane)
     genHyperplane.iterationGenerated = env->results->getCurrentIteration()->iterationNumber;
     genHyperplane.isLazy = false;
     genHyperplane.pointHash = hyperplane.pointHash;
+
+    if(env->settings->getSetting<bool>("HyperplaneCuts.SaveHyperplanePoints", "Dual"))
+        genHyperplane.generatedPoint = hyperplane.generatedPoint;
 
     genHyperplane.isSourceConvex = hyperplane.isSourceConvex;
 

@@ -189,6 +189,7 @@ struct GeneratedHyperplane
 {
     NumericConstraintPtr sourceConstraint;
     int sourceConstraintIndex; // -1 if objective function
+    VectorDouble generatedPoint;
     E_HyperplaneSource source = E_HyperplaneSource::None;
     bool isLazy = false;
     bool isRemoved = false;
@@ -273,7 +274,7 @@ private:
     std::string message;
 
 public:
-    Exception(std::string message) : message(message) {}
+    Exception(std::string message) : message(message) { }
 
     inline const char* what() const throw() override { return (message.c_str()); }
 };
@@ -281,31 +282,31 @@ public:
 class VariableNotFoundException : public Exception
 {
 public:
-    VariableNotFoundException(std::string message) : Exception(message) {}
+    VariableNotFoundException(std::string message) : Exception(message) { }
 };
 
 class ConstraintNotFoundException : public Exception
 {
 public:
-    ConstraintNotFoundException(std::string message) : Exception(message) {}
+    ConstraintNotFoundException(std::string message) : Exception(message) { }
 };
 
 class OperationNotImplementedException : public Exception
 {
 public:
-    OperationNotImplementedException(std::string message) : Exception(message) {}
+    OperationNotImplementedException(std::string message) : Exception(message) { }
 };
 
 class NoPrimalSolutionException : public Exception
 {
 public:
-    NoPrimalSolutionException(std::string message) : Exception(message) {}
+    NoPrimalSolutionException(std::string message) : Exception(message) { }
 };
 
 class UnsolvedProblemException : public Exception
 {
 public:
-    UnsolvedProblemException(std::string message) : Exception(message) {}
+    UnsolvedProblemException(std::string message) : Exception(message) { }
 };
 
 } // namespace SHOT

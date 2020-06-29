@@ -20,13 +20,11 @@ class NLPSolverSHOT : public NLPSolverBase
 private:
     ProblemPtr sourceProblem;
     ProblemPtr relaxedProblem;
-    std::shared_ptr<Solver> solver;
 
     VectorInteger fixedVariableIndexes;
     VectorDouble fixedVariableValues;
 
     void initializeMIPProblem();
-    void resetBounds();
 
 public:
     NLPSolverSHOT(EnvironmentPtr envPtr, ProblemPtr source);
@@ -53,6 +51,8 @@ public:
     void updateVariableUpperBound(int variableIndex, double bound) override;
 
     std::string getSolverDescription() override;
+
+    std::shared_ptr<Solver> solver;
 
 protected:
     E_NLPSolutionStatus solveProblemInstance() override;

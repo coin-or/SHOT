@@ -62,6 +62,8 @@ void NLPSolverSHOT::initializeMIPProblem()
     solver->updateSetting(
         "Convexity.AssumeConvex", "Model", env->settings->getSetting<bool>("Convexity.AssumeConvex", "Model"));
 
+    solver->updateSetting("HyperplaneCuts.SaveHyperplanePoints", "Dual", true);
+
     // Set the debug path for the subsolver
     auto mainDebugPath = env->settings->getSetting<std::string>("Debug.Path", "Output");
     fs::filesystem::path subproblemDebugPath(mainDebugPath);
@@ -70,10 +72,8 @@ void NLPSolverSHOT::initializeMIPProblem()
     solver->updateSetting("Debug.Path", "Output", subproblemDebugPath.string());
 
     relaxedProblem = sourceProblem->createCopy(solver->getEnvironment(), true);
-    solver->setProblem(relaxedProblem, relaxedProblem);
+    solver->setProblem(env->problem->createCopy(solver->getEnvironment(), true), relaxedProblem);
 }
-
-void resetBounds() { }
 
 void NLPSolverSHOT::setStartingPoint(VectorInteger variableIndexes, VectorDouble variableValues) { }
 
@@ -201,5 +201,6 @@ std::string NLPSolverSHOT::getSolverDescription()
     std::string description = "SHOT NLP solver";
 
     return (description);
-};
-} // namespace SHOT
+}
+
+} // namespace SHOT'

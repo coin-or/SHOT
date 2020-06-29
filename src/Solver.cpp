@@ -746,6 +746,9 @@ void Solver::initializeSettings()
     env->settings->createSetting("HyperplaneCuts.UseIntegerCuts", "Dual", false,
         "Add integer cuts for infeasible integer-combinations for binary problems");
 
+    env->settings->createSetting("HyperplaneCuts.SaveHyperplanePoints", "Dual", false,
+        "Whether to save the points in the generated hyperplanes list", true);
+
     VectorString enumObjectiveRootsearch;
     enumObjectiveRootsearch.push_back("Always");
     enumObjectiveRootsearch.push_back("IfConvex");
@@ -1094,6 +1097,9 @@ void Solver::initializeSettings()
         static_cast<int>(ES_PrimalNLPStrategy::IterationOrTimeAndAllFeasibleSolutions),
         "When should the fixed strategy be used", enumPrimalNLPStrategy, 0);
     enumPrimalNLPStrategy.clear();
+
+    env->settings->createSetting("FixedInteger.CopyNumberOfHyperplanes", "Primal", 10,
+        "The max number of hyperplanes to copy to original problem (if available)");
 
     env->settings->createSetting(
         "FixedInteger.CreateInfeasibilityCut", "Primal", false, "Create a cut from an infeasible solution point");
