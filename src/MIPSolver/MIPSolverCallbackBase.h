@@ -40,6 +40,8 @@ protected:
     double lastSummaryTimeStamp = 0.0;
     int lastHeaderIter = 0;
 
+    bool warningMessageShownLargeRHS = false;
+
     std::shared_ptr<TaskSelectPrimalCandidatesFromNLP> taskSelectPrimNLPOriginal;
     std::shared_ptr<TaskSelectPrimalCandidatesFromNLP> taskSelectPrimNLPReformulated;
     std::shared_ptr<TaskBase> taskSelectHPPts;

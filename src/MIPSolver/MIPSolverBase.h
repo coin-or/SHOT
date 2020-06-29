@@ -36,6 +36,8 @@ private:
     int dualAuxiliaryObjectiveVariableIndex = -1;
     int constraintCounter = 0;
 
+    bool warningMessageShownLargeRHS = false;
+
 protected:
     int numberOfVariables = 0;
     int numberOfConstraints = 0;

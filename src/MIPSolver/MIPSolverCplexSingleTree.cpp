@@ -104,7 +104,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
 
             if((tmpPrimalObjBound < 1e74)
                 && ((isMinimization && tmpPrimalObjBound < env->results->getPrimalBound())
-                       || (!isMinimization && tmpPrimalObjBound > env->results->getPrimalBound())))
+                    || (!isMinimization && tmpPrimalObjBound > env->results->getPrimalBound())))
             {
                 IloNumArray tmpPrimalVals(context.getEnv());
 
@@ -466,8 +466,13 @@ bool CplexCallback::createHyperplane(Hyperplane hyperplane, const IloCplex::Call
 
         tmpPair.second /= scalingFactor;
 
-        env->output->outputWarning("        Large values found in RHS of cut, you might want to consider reducing the "
-                                   "bounds of the nonlinear variables.");
+        if(!warningMessageShownLargeRHS)
+        {
+            env->output->outputWarning(
+                "        Large values found in RHS of cut, you might want to consider reducing the "
+                "bounds of the nonlinear variables.");
+            warningMessageShownLargeRHS = true;
+        }
     }
 
     try
@@ -769,5 +774,5 @@ int MIPSolverCplexSingleTree::getSolutionLimit()
     return (solLim);
 }
 
-void MIPSolverCplexSingleTree::checkParameters() {}
+void MIPSolverCplexSingleTree::checkParameters() { }
 } // namespace SHOT

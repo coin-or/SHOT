@@ -78,7 +78,7 @@ void MIPSolverGurobiSingleTree::setSolutionLimit(long limit)
 
 int MIPSolverGurobiSingleTree::getSolutionLimit() { return (gurobiModel->getEnv().get(GRB_IntParam_SolutionLimit)); }
 
-void MIPSolverGurobiSingleTree::checkParameters() {}
+void MIPSolverGurobiSingleTree::checkParameters() { }
 
 E_ProblemSolutionStatus MIPSolverGurobiSingleTree::solveProblem()
 {
@@ -116,9 +116,9 @@ E_ProblemSolutionStatus MIPSolverGurobiSingleTree::solveProblem()
                && std::dynamic_pointer_cast<LinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
                       ->isDualUnbounded())
             || (env->reformulatedProblem->objectiveFunction->properties.classification
-                       == E_ObjectiveFunctionClassification::Quadratic
-                   && std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                          ->isDualUnbounded()))
+                    == E_ObjectiveFunctionClassification::Quadratic
+                && std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
+                       ->isDualUnbounded()))
         {
             for(auto& V : env->reformulatedProblem->allVariables)
             {
@@ -223,7 +223,7 @@ void GurobiCallbackSingleTree::callback()
 
             if((tmpPrimalObjBound < 1e100)
                 && ((isMinimization && tmpPrimalObjBound < env->results->getPrimalBound())
-                       || (!isMinimization && tmpPrimalObjBound > env->results->getPrimalBound())))
+                    || (!isMinimization && tmpPrimalObjBound > env->results->getPrimalBound())))
             {
                 int numberOfVariables = env->problem->properties.numberOfVariables;
                 VectorDouble primalSolution(numberOfVariables);
@@ -538,9 +538,13 @@ bool GurobiCallbackSingleTree::createHyperplane(Hyperplane hyperplane)
 
             tmpPair.second /= scalingFactor;
 
-            env->output->outputWarning(
-                "        Large values found in RHS of cut, you might want to consider reducing the "
-                "bounds of the nonlinear variables.");
+            if(!warningMessageShownLargeRHS)
+            {
+                env->output->outputWarning(
+                    "        Large values found in RHS of cut, you might want to consider reducing the "
+                    "bounds of the nonlinear variables.");
+                warningMessageShownLargeRHS = true;
+            }
         }
 
         GRBLinExpr expr = 0;
