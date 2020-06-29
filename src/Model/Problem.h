@@ -166,7 +166,6 @@ public:
     AuxiliaryVariables getAuxiliaryVariablesOfType(E_AuxiliaryVariableType type);
 
     void setVariableLowerBound(int variableIndex, double bound);
-
     void setVariableUpperBound(int variableIndex, double bound);
     void setVariableBounds(int variableIndex, double lowerBound, double upperBound);
 

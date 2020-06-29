@@ -2277,14 +2277,33 @@ ProblemPtr Problem::createCopy(bool relaxed)
 {
     auto destinationProblem = std::make_shared<Problem>(env);
 
+    double minLBCont = env->settings->getSetting<double>("Variables.Continuous.MinimumLowerBound", "Model");
+    double maxUBCont = env->settings->getSetting<double>("Variables.Continuous.MaximumUpperBound", "Model");
+    double minLBInt = env->settings->getSetting<double>("Variables.Integer.MinimumLowerBound", "Model");
+    double maxUBInt = env->settings->getSetting<double>("Variables.Integer.MaximumUpperBound", "Model");
+
     // Copying variables
     for(auto& V : this->allVariables)
     {
         auto variableType = relaxed ? E_VariableType::Real : V->properties.type;
+
         auto variable = std::make_shared<Variable>(V->name, V->index, variableType, V->lowerBound, V->upperBound);
 
-        variable->properties.hasLowerBoundBeenTightened = V->properties.hasLowerBoundBeenTightened;
-        variable->properties.hasUpperBoundBeenTightened = V->properties.hasUpperBoundBeenTightened;
+        if(V->properties.type == E_VariableType::Real)
+        {
+            variable->lowerBound = std::max(V->lowerBound, minLBCont);
+            variable->upperBound = std::min(V->upperBound, maxUBCont);
+        }
+        else if(V->properties.type == E_VariableType::Binary)
+        {
+            variable->lowerBound = std::max(V->lowerBound, 0.0);
+            variable->upperBound = std::min(V->upperBound, 1.0);
+        }
+        else if(V->properties.type == E_VariableType::Integer)
+        {
+            variable->lowerBound = std::max(V->lowerBound, minLBInt);
+            variable->upperBound = std::min(V->upperBound, maxUBInt);
+        }
 
         destinationProblem->add(std::move(variable));
     }
