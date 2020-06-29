@@ -25,6 +25,8 @@ private:
     VectorInteger fixedVariableIndexes;
     VectorDouble fixedVariableValues;
 
+    void initializeMIPProblem();
+
 public:
     NLPSolverSHOT(EnvironmentPtr envPtr, ProblemPtr source);
 

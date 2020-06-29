@@ -34,9 +34,42 @@ namespace fs = std::experimental;
 namespace SHOT
 {
 
-NLPSolverSHOT::NLPSolverSHOT(EnvironmentPtr envPtr, ProblemPtr source) : INLPSolver(envPtr) { sourceProblem = source; }
+NLPSolverSHOT::NLPSolverSHOT(EnvironmentPtr envPtr, ProblemPtr source) : INLPSolver(envPtr)
+{
+    sourceProblem = source;
+    initializeMIPProblem();
+}
 
 NLPSolverSHOT::~NLPSolverSHOT() = default;
+
+void NLPSolverSHOT::initializeMIPProblem()
+{
+    solver = std::make_unique<Solver>();
+
+    relaxedProblem = sourceProblem->createCopy(solver->getEnvironment(), true);
+
+    solver->getEnvironment()->output->setPrefix("      | ");
+
+    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Info));
+    solver->updateSetting(
+        "Console.DualSolver.Show", "Output", env->settings->getSetting<bool>("Console.DualSolver.Show", "Output"));
+    solver->updateSetting("Debug.Enable", "Output", env->settings->getSetting<bool>("Debug.Enable", "Output"));
+    solver->updateSetting("CutStrategy", "Dual", 0);
+    solver->updateSetting("TreeStrategy", "Dual", 1);
+    solver->updateSetting("MIP.Solver", "Dual", env->settings->getSetting<int>("MIP.Solver", "Dual"));
+    solver->updateSetting("Console.Iteration.Detail", "Output", 0);
+    solver->updateSetting(
+        "ConstraintTolerance", "Termination", env->settings->getSetting<double>("ConstraintTolerance", "Termination"));
+
+    // Set the debug path for the subsolver
+    auto mainDebugPath = env->settings->getSetting<std::string>("Debug.Path", "Output");
+    fs::filesystem::path subproblemDebugPath(mainDebugPath);
+    // subproblemDebugPath /= ("SHOT_fixedNLP_" + std::to_string(env->results->getCurrentIteration()->iterationNumber));
+    subproblemDebugPath /= ("SHOT_fixedNLP");
+    solver->updateSetting("Debug.Path", "Output", subproblemDebugPath.string());
+
+    solver->setProblem(relaxedProblem);
+}
 
 void NLPSolverSHOT::setStartingPoint(VectorInteger variableIndexes, VectorDouble variableValues)
 {
@@ -57,13 +90,18 @@ void NLPSolverSHOT::fixVariables(VectorInteger variableIndexes, VectorDouble var
 
 void NLPSolverSHOT::unfixVariables()
 {
-    /*for(int i = 0; i < relaxedProblem->properties.numberOfVariables; ++i)
-    {
-        auto bounds = sourceProblem->getVariableBounds();
-        relaxedProblem->setVariableBounds(i, bounds.at(i).l(), bounds.at(i).u());
-    }*/
+    auto bounds = sourceProblem->getVariableBounds();
 
-    // solver->getEnvironment()->dualSolver->MIPSolver->unfixVariables();
+    for(int i = 0; i < fixedVariableIndexes.size(); ++i)
+    {
+        relaxedProblem->setVariableBounds(fixedVariableIndexes.at(i), bounds.at(fixedVariableIndexes.at(i)).l(),
+            bounds.at(fixedVariableIndexes.at(i)).u());
+    }
+
+    solver->getEnvironment()->dualSolver->MIPSolver->unfixVariables();
+
+    fixedVariableIndexes.clear();
+    fixedVariableValues.clear();
 }
 
 void NLPSolverSHOT::saveOptionsToFile([[maybe_unused]] std::string fileName) { }
@@ -101,26 +139,10 @@ double NLPSolverSHOT::getObjectiveValue()
 
 E_NLPSolutionStatus NLPSolverSHOT::solveProblemInstance()
 {
-    relaxedProblem = sourceProblem->createCopy(true);
-
-    solver = std::make_unique<Solver>();
-
-    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Trace));
-    solver->updateSetting("Debug.Enable", "Output", true);
-    solver->updateSetting("CutStrategy", "Dual", 1);
-    solver->updateSetting("Console.Iteration.Detail", "Output", 0);
-    solver->updateSetting("ConstraintTolerance", "Termination", 1e-6);
-
-    // Set the debug path for the subsolver
-    auto mainDebugPath = env->settings->getSetting<std::string>("Debug.Path", "Output");
-    fs::filesystem::path subproblemDebugPath(mainDebugPath);
-    subproblemDebugPath /= ("SHOT_fixedNLP_" + std::to_string(env->results->getCurrentIteration()->iterationNumber));
-    solver->updateSetting("Debug.Path", "Output", subproblemDebugPath.string());
-
-    solver->setProblem(relaxedProblem);
-
     for(size_t i = 0; i < fixedVariableIndexes.size(); ++i)
-        relaxedProblem->setVariableBounds(i, fixedVariableValues[i], fixedVariableValues[i]);
+    {
+        relaxedProblem->setVariableBounds(fixedVariableIndexes[i], fixedVariableValues[i], fixedVariableValues[i]);
+    }
 
     solver->getEnvironment()->dualSolver->MIPSolver->fixVariables(fixedVariableIndexes, fixedVariableValues);
 
@@ -137,8 +159,6 @@ E_NLPSolutionStatus NLPSolverSHOT::solveProblemInstance()
 
     if(terminationReason == E_TerminationReason::AbsoluteGap || terminationReason == E_TerminationReason::RelativeGap)
         status = E_NLPSolutionStatus::Optimal;
-    else if(terminationReason == E_TerminationReason::ConstraintTolerance)
-        status = E_NLPSolutionStatus::Feasible;
     else if(solver->hasPrimalSolution())
         status = E_NLPSolutionStatus::Feasible;
     else if(terminationReason == E_TerminationReason::InfeasibleProblem)
