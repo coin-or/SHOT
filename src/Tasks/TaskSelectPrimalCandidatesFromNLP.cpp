@@ -35,6 +35,8 @@
 #include "../ModelingSystem/ModelingSystemGAMS.h"
 #endif
 
+#include "../NLPSolver/NLPSolverSHOT.h"
+
 namespace SHOT
 {
 
@@ -46,6 +48,17 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(Environment
 
     originalNLPTime = env->settings->getSetting<double>("FixedInteger.Frequency.Time", "Primal");
     originalNLPIter = env->settings->getSetting<int>("FixedInteger.Frequency.Iteration", "Primal");
+
+    if(useReformulatedProblem)
+    {
+        sourceProblem = env->reformulatedProblem;
+        sourceIsReformulatedProblem = true;
+    }
+    else
+    {
+        sourceProblem = env->problem;
+        sourceIsReformulatedProblem = false;
+    }
 
     switch(static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("FixedInteger.Solver", "Primal")))
     {
@@ -85,6 +98,14 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(Environment
         break;
     }
 #endif
+
+    case(ES_PrimalNLPSolver::SHOT):
+    {
+        env->results->usedPrimalNLPSolver = ES_PrimalNLPSolver::SHOT;
+        NLPSolver = std::make_shared<NLPSolverSHOT>(env, sourceProblem);
+
+        break;
+    }
 
     default:
         // We should never get here since there is a check in Solver.cpp that makes sure that the correct solver is used

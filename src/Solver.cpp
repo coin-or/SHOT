@@ -1122,6 +1122,7 @@ void Solver::initializeSettings()
     VectorString enumPrimalNLPSolver;
     enumPrimalNLPSolver.push_back("Ipopt");
     enumPrimalNLPSolver.push_back("GAMS");
+    enumPrimalNLPSolver.push_back("SHOT");
 
     env->settings->createSetting("FixedInteger.Solver", "Primal", static_cast<int>(ES_PrimalNLPSolver::Ipopt),
         "NLP solver to use", enumPrimalNLPSolver, 0);
@@ -1579,7 +1580,7 @@ void Solver::verifySettings()
            == ES_PrimalNLPSolver::GAMS)
         && (static_cast<ES_PrimalNLPProblemSource>(
                 env->settings->getSetting<int>("FixedInteger.SourceProblem", "Primal"))
-               != ES_PrimalNLPProblemSource::OriginalProblem))
+            != ES_PrimalNLPProblemSource::OriginalProblem))
     {
         env->output->outputWarning(" Cannot use GAMS NLP solvers when solving fixed NLP problems based on the "
                                    "reformulated model. Use Ipopt instead!");

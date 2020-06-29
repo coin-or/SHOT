@@ -353,6 +353,7 @@ enum class ES_PrimalNLPSolver
 {
     Ipopt,
     GAMS,
+    SHOT,
     None
 };
 
