@@ -46,20 +46,21 @@ void NLPSolverSHOT::initializeMIPProblem()
 {
     solver = std::make_unique<Solver>();
 
-    relaxedProblem = sourceProblem->createCopy(solver->getEnvironment(), true);
-
     solver->getEnvironment()->output->setPrefix("      | ");
 
     solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Info));
     solver->updateSetting(
         "Console.DualSolver.Show", "Output", env->settings->getSetting<bool>("Console.DualSolver.Show", "Output"));
     solver->updateSetting("Debug.Enable", "Output", env->settings->getSetting<bool>("Debug.Enable", "Output"));
-    solver->updateSetting("CutStrategy", "Dual", 0);
+    solver->updateSetting("CutStrategy", "Dual", 1);
     solver->updateSetting("TreeStrategy", "Dual", 1);
     solver->updateSetting("MIP.Solver", "Dual", env->settings->getSetting<int>("MIP.Solver", "Dual"));
     solver->updateSetting("Console.Iteration.Detail", "Output", 0);
     solver->updateSetting(
         "ConstraintTolerance", "Termination", env->settings->getSetting<double>("ConstraintTolerance", "Termination"));
+
+    solver->updateSetting(
+        "Convexity.AssumeConvex", "Model", env->settings->getSetting<bool>("Convexity.AssumeConvex", "Model"));
 
     // Set the debug path for the subsolver
     auto mainDebugPath = env->settings->getSetting<std::string>("Debug.Path", "Output");
@@ -68,17 +69,13 @@ void NLPSolverSHOT::initializeMIPProblem()
     subproblemDebugPath /= ("SHOT_fixedNLP");
     solver->updateSetting("Debug.Path", "Output", subproblemDebugPath.string());
 
-    solver->setProblem(relaxedProblem);
+    relaxedProblem = sourceProblem->createCopy(solver->getEnvironment(), true);
+    solver->setProblem(relaxedProblem, relaxedProblem);
 }
 
-void NLPSolverSHOT::setStartingPoint(VectorInteger variableIndexes, VectorDouble variableValues)
-{
-    for(size_t i = 0; i < variableIndexes.size(); ++i)
-    {
-        // assert(variableIndexes[i] < gmoN(modelingObject));
-        // gmoSetVarLOne(modelingObject, variableIndexes[i], variableValues[i]);
-    }
-}
+void resetBounds() { }
+
+void NLPSolverSHOT::setStartingPoint(VectorInteger variableIndexes, VectorDouble variableValues) { }
 
 void NLPSolverSHOT::clearStartingPoint() { }
 
@@ -90,15 +87,14 @@ void NLPSolverSHOT::fixVariables(VectorInteger variableIndexes, VectorDouble var
 
 void NLPSolverSHOT::unfixVariables()
 {
-    auto bounds = sourceProblem->getVariableBounds();
-
-    for(int i = 0; i < fixedVariableIndexes.size(); ++i)
+    for(auto& VAR : sourceProblem->allVariables)
     {
-        relaxedProblem->setVariableBounds(fixedVariableIndexes.at(i), bounds.at(fixedVariableIndexes.at(i)).l(),
-            bounds.at(fixedVariableIndexes.at(i)).u());
+        relaxedProblem->setVariableBounds(VAR->index, VAR->lowerBound, VAR->upperBound);
     }
 
-    solver->getEnvironment()->dualSolver->MIPSolver->unfixVariables();
+    for(auto& VAR : relaxedProblem->allVariables)
+        solver->getEnvironment()->dualSolver->MIPSolver->updateVariableBound(
+            VAR->index, VAR->lowerBound, VAR->upperBound);
 
     fixedVariableIndexes.clear();
     fixedVariableValues.clear();
@@ -139,12 +135,19 @@ double NLPSolverSHOT::getObjectiveValue()
 
 E_NLPSolutionStatus NLPSolverSHOT::solveProblemInstance()
 {
+    // Set fixed discrete variables
     for(size_t i = 0; i < fixedVariableIndexes.size(); ++i)
-    {
         relaxedProblem->setVariableBounds(fixedVariableIndexes[i], fixedVariableValues[i], fixedVariableValues[i]);
-    }
 
-    solver->getEnvironment()->dualSolver->MIPSolver->fixVariables(fixedVariableIndexes, fixedVariableValues);
+    // Tighten the bounds
+    relaxedProblem->doFBBT();
+
+    // Update the bounds to the MIP solver
+    for(auto& VAR : relaxedProblem->allVariables)
+        solver->getEnvironment()->dualSolver->MIPSolver->updateVariableBound(
+            VAR->index, VAR->lowerBound, VAR->upperBound);
+
+    // solver->getEnvironment()->dualSolver->MIPSolver->fixVariables(fixedVariableIndexes, fixedVariableValues);
 
     std::cout << "---------------------------------\n";
 
@@ -185,22 +188,12 @@ VectorDouble NLPSolverSHOT::getVariableUpperBounds() { return (relaxedProblem->g
 
 void NLPSolverSHOT::updateVariableLowerBound(int variableIndex, double bound)
 {
-    /*relaxedProblem->setVariableLowerBound(variableIndex, bound);
-
-    auto currentVariableBound
-        = solver->getEnvironment()->dualSolver->MIPSolver->getCurrentVariableBounds(variableIndex);
-    solver->getEnvironment()->dualSolver->MIPSolver->updateVariableBound(
-        variableIndex, bound, std::get<1>(currentVariableBound));*/
+    relaxedProblem->setVariableLowerBound(variableIndex, bound);
 }
 
 void NLPSolverSHOT::updateVariableUpperBound(int variableIndex, double bound)
 {
-    /*relaxedProblem->setVariableLowerBound(variableIndex, bound);
-
-    auto currentVariableBound
-        = solver->getEnvironment()->dualSolver->MIPSolver->getCurrentVariableBounds(variableIndex);
-    solver->getEnvironment()->dualSolver->MIPSolver->updateVariableBound(
-        variableIndex, std::get<0>(currentVariableBound), bound);*/
+    relaxedProblem->setVariableUpperBound(variableIndex, bound);
 }
 
 std::string NLPSolverSHOT::getSolverDescription()

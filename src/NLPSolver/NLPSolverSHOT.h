@@ -26,6 +26,7 @@ private:
     VectorDouble fixedVariableValues;
 
     void initializeMIPProblem();
+    void resetBounds();
 
 public:
     NLPSolverSHOT(EnvironmentPtr envPtr, ProblemPtr source);
