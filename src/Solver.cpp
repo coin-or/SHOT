@@ -708,24 +708,6 @@ void Solver::initializeSettings()
     env->settings->createSetting("ESH.Rootsearch.ConstraintTolerance", "Dual", 1e-8,
         "Constraint tolerance for when not to add individual hyperplanes", 0, SHOT_DBL_MAX);
 
-    // Dual strategy settings: Fixed integer strategy
-
-    env->settings->createSettingGroup("Dual", "FixedInteger", "Fixed integer dual strategy",
-        "If no progress has been made in a certain number of iterations, it is possible to fix the integer variables "
-        "and solve integer-relaxed subproblems. These settings control this functionality. ");
-
-    env->settings->createSetting("FixedInteger.ConstraintTolerance", "Dual", 0.0001,
-        "Constraint tolerance for fixed strategy", 0.0, SHOT_DBL_MAX, true);
-
-    env->settings->createSetting(
-        "FixedInteger.MaxIterations", "Dual", 20, "Max LP iterations for fixed strategy", 0, SHOT_INT_MAX, true);
-
-    env->settings->createSetting("FixedInteger.ObjectiveTolerance", "Dual", 0.001,
-        "Objective tolerance for fixed strategy", 0.0, SHOT_DBL_MAX, true);
-
-    env->settings->createSetting("FixedInteger.Use", "Dual", false,
-        "Solve a fixed LP problem if integer-values have not changes in several MIP iterations", true);
-
     // Dual strategy settings: Hyperplane generation
 
     env->settings->createSettingGroup("Dual", "HyperplaneCuts", "Generated hyperplane cuts",

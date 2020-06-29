@@ -59,7 +59,6 @@
 #include "../Tasks/TaskClearFixedPrimalCandidates.h"
 
 #include "../Tasks/TaskSelectHyperplanePointsObjectiveFunction.h"
-#include "../Tasks/TaskSolveFixedDualProblem.h"
 
 #include "../Tasks/TaskAddIntegerCuts.h"
 
@@ -196,5 +195,5 @@ bool SolutionStrategyMIQCQP::solveProblem()
     return (true);
 }
 
-void SolutionStrategyMIQCQP::initializeStrategy() {}
+void SolutionStrategyMIQCQP::initializeStrategy() { }
 } // namespace SHOT

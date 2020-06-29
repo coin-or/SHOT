@@ -63,7 +63,6 @@
 #include "../Tasks/TaskUpdateInteriorPoint.h"
 
 #include "../Tasks/TaskSelectHyperplanePointsObjectiveFunction.h"
-#include "../Tasks/TaskSolveFixedDualProblem.h"
 
 #include "../Tasks/TaskAddIntegerCuts.h"
 
@@ -309,5 +308,5 @@ bool SolutionStrategySingleTree::solveProblem()
     return (true);
 }
 
-void SolutionStrategySingleTree::initializeStrategy() {}
+void SolutionStrategySingleTree::initializeStrategy() { }
 } // namespace SHOT

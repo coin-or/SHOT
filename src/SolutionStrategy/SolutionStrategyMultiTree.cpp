@@ -63,7 +63,6 @@
 #include "../Tasks/TaskUpdateInteriorPoint.h"
 
 #include "../Tasks/TaskSelectHyperplanePointsObjectiveFunction.h"
-#include "../Tasks/TaskSolveFixedDualProblem.h"
 
 #include "../Tasks/TaskAddIntegerCuts.h"
 
@@ -200,14 +199,6 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
         = std::make_shared<TaskCheckMaxNumberOfPrimalReductionCuts>(env, "FinalizeSolution");
     env->tasks->addTask(tCheckMaxNumberOfObjectiveCuts, "CheckMaxObjectiveCuts");
 
-    if(env->settings->getSetting<bool>("FixedInteger.Use", "Dual"))
-    {
-        auto tSolveFixedLP = std::make_shared<TaskSolveFixedDualProblem>(env);
-        env->tasks->addTask(tSolveFixedLP, "SolveFixedLP");
-        env->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
-        env->tasks->addTask(tCheckRelGap, "CheckRelGap");
-    }
-
     if(env->settings->getSetting<bool>("FixedInteger.Use", "Primal") && env->reformulatedProblem->properties.isDiscrete)
     {
         auto tSelectPrimFixedNLPSolPool = std::make_shared<TaskSelectPrimalFixedNLPPointsFromSolutionPool>(env);
@@ -343,5 +334,5 @@ bool SolutionStrategyMultiTree::solveProblem()
     return (true);
 }
 
-void SolutionStrategyMultiTree::initializeStrategy() {}
+void SolutionStrategyMultiTree::initializeStrategy() { }
 } // namespace SHOT

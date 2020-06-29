@@ -59,7 +59,6 @@
 #include "../Tasks/TaskUpdateInteriorPoint.h"
 
 #include "../Tasks/TaskSelectHyperplanePointsObjectiveFunction.h"
-#include "../Tasks/TaskSolveFixedDualProblem.h"
 
 #include "../Tasks/TaskAddIntegerCuts.h"
 
@@ -246,5 +245,5 @@ bool SolutionStrategyNLP::solveProblem()
     return (true);
 }
 
-void SolutionStrategyNLP::initializeStrategy() {}
+void SolutionStrategyNLP::initializeStrategy() { }
 } // namespace SHOT
