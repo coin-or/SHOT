@@ -238,7 +238,7 @@ public:
 
     friend std::ostream& operator<<(std::ostream& stream, const Problem& problem);
 
-    ProblemPtr createCopy(bool relaxed = false);
+    ProblemPtr createCopy(EnvironmentPtr destinationEnv, bool relaxed = false);
 };
 
 inline std::ostream& operator<<(std::ostream& stream, ProblemPtr problem)

@@ -2273,14 +2273,14 @@ bool Problem::verifyOwnership()
     return (true);
 }
 
-ProblemPtr Problem::createCopy(bool relaxed)
+ProblemPtr Problem::createCopy(EnvironmentPtr destinationEnv, bool relaxed)
 {
-    auto destinationProblem = std::make_shared<Problem>(env);
+    auto destinationProblem = std::make_shared<Problem>(destinationEnv);
 
-    double minLBCont = env->settings->getSetting<double>("Variables.Continuous.MinimumLowerBound", "Model");
-    double maxUBCont = env->settings->getSetting<double>("Variables.Continuous.MaximumUpperBound", "Model");
-    double minLBInt = env->settings->getSetting<double>("Variables.Integer.MinimumLowerBound", "Model");
-    double maxUBInt = env->settings->getSetting<double>("Variables.Integer.MaximumUpperBound", "Model");
+    double minLBCont = destinationEnv->settings->getSetting<double>("Variables.Continuous.MinimumLowerBound", "Model");
+    double maxUBCont = destinationEnv->settings->getSetting<double>("Variables.Continuous.MaximumUpperBound", "Model");
+    double minLBInt = destinationEnv->settings->getSetting<double>("Variables.Integer.MinimumLowerBound", "Model");
+    double maxUBInt = destinationEnv->settings->getSetting<double>("Variables.Integer.MaximumUpperBound", "Model");
 
     // Copying variables
     for(auto& V : this->allVariables)
