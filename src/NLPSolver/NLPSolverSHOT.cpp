@@ -90,6 +90,8 @@ void NLPSolverSHOT::unfixVariables()
     for(auto& VAR : sourceProblem->allVariables)
     {
         relaxedProblem->setVariableBounds(VAR->index, VAR->lowerBound, VAR->upperBound);
+        VAR->properties.hasLowerBoundBeenTightened = false;
+        VAR->properties.hasUpperBoundBeenTightened = false;
     }
 
     for(auto& VAR : relaxedProblem->allVariables)
