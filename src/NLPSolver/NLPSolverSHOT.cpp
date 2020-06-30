@@ -14,6 +14,7 @@
 #include "../Environment.h"
 #include "../Iteration.h"
 #include "../Output.h"
+#include "../Report.h"
 #include "../Results.h"
 #include "../Settings.h"
 #include "../Solver.h"
@@ -137,6 +138,20 @@ double NLPSolverSHOT::getObjectiveValue()
 
 E_NLPSolutionStatus NLPSolverSHOT::solveProblemInstance()
 {
+    solver->getEnvironment()->output->outputInfo("");
+
+#ifdef SIMPLE_OUTPUT_CHARS
+    solver->getEnvironment()->output->outputInfo(
+        "- Solving fixed NLP problem "
+        "-------------------------------------------------------------------------------------------");
+#else
+    solver->getEnvironment()->output->outputInfo(
+        "╶ Solving fixed NLP problem "
+        "──────────────────────────────────────────────────────────────────────────────────────────╴");
+#endif
+
+    solver->getEnvironment()->output->outputInfo("");
+
     // Set fixed discrete variables
     for(size_t i = 0; i < fixedVariableIndexes.size(); ++i)
         relaxedProblem->setVariableBounds(fixedVariableIndexes[i], fixedVariableValues[i], fixedVariableValues[i]);
@@ -151,12 +166,19 @@ E_NLPSolutionStatus NLPSolverSHOT::solveProblemInstance()
 
     // solver->getEnvironment()->dualSolver->MIPSolver->fixVariables(fixedVariableIndexes, fixedVariableValues);
 
-    std::cout << "---------------------------------\n";
+    if(!problemInfoPrinted)
+    {
+        solver->getEnvironment()->report->outputProblemInstanceReport();
+        solver->getEnvironment()->report->outputOptionsReport();
+        problemInfoPrinted = true;
+    }
 
     if(!solver->solveProblem())
         return E_NLPSolutionStatus::Error;
 
-    std::cout << "---------------------------------\n";
+    solver->getEnvironment()->report->outputSolutionReport();
+
+    solver->getEnvironment()->output->outputInfo("");
 
     E_NLPSolutionStatus status;
 

@@ -24,6 +24,8 @@ private:
     VectorInteger fixedVariableIndexes;
     VectorDouble fixedVariableValues;
 
+    bool problemInfoPrinted = false;
+
     void initializeMIPProblem();
 
 public:
