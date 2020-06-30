@@ -518,7 +518,8 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
 
                 newHP.generatedPoint = HP.generatedPoint;
                 newHP.isSourceConvex = HP.isSourceConvex;
-                newHP.objectiveFunctionValue = env->problem->objectiveFunction->calculateValue(newHP.generatedPoint);
+                newHP.objectiveFunctionValue
+                    = env->reformulatedProblem->objectiveFunction->calculateValue(newHP.generatedPoint);
 
                 env->dualSolver->addHyperplane(newHP);
                 hyperplaneCounter++;
