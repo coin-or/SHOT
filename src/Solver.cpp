@@ -32,6 +32,7 @@
 #include "SolutionStrategy/SolutionStrategyMIQCQP.h"
 #include "SolutionStrategy/SolutionStrategyNLP.h"
 
+#include "../Tasks/TaskPerformBoundTightening.h"
 #include "../Tasks/TaskReformulateProblem.h"
 
 #include <map>
@@ -68,6 +69,7 @@ Solver::Solver()
     env->timing->createTimer("ProblemInitialization", " - problem initialization");
     env->timing->createTimer("ProblemReformulation", " - problem reformulation");
     env->timing->createTimer("BoundTightening", " - bound tightening");
+    env->timing->createTimer("BoundTighteningPOA", "   - initial outer approximation");
     env->timing->createTimer("BoundTighteningFBBTOriginal", "   - feasibility based (original problem)");
     env->timing->createTimer("BoundTighteningFBBTReformulated", "   - feasibility based (reformulated problem)");
 
@@ -343,6 +345,9 @@ bool Solver::setProblem(std::string fileName)
 
         if(env->problem->name == "")
             env->problem->name = problemName.string();
+
+        auto taskPerformBoundTightening = std::make_unique<TaskPerformBoundTightening>(env, env->problem);
+        taskPerformBoundTightening->run();
 
         verifySettings();
 
@@ -893,6 +898,9 @@ void Solver::initializeSettings()
 
     env->settings->createSetting("BoundTightening.FeasibilityBased.UseNonlinear", "Model", true,
         "Peform feasibility-based bound tightening on nonlinear expressions");
+
+    env->settings->createSetting(
+        "BoundTightening.InitialPOA.Use", "Model", true, "Create an initial polyhedral outer approximation.");
 
     env->settings->createSettingGroup(
         "Model", "Convexity", "Convexity", "These settings control the convexity detection functionality.");
