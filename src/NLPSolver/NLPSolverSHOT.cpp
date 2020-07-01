@@ -49,7 +49,7 @@ void NLPSolverSHOT::initializeMIPProblem()
 
     solver->getEnvironment()->output->setPrefix("      | ");
 
-    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Info));
+    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Off));
     solver->updateSetting(
         "Console.DualSolver.Show", "Output", env->settings->getSetting<bool>("Console.DualSolver.Show", "Output"));
     solver->updateSetting("Debug.Enable", "Output", env->settings->getSetting<bool>("Debug.Enable", "Output"));
@@ -156,8 +156,9 @@ E_NLPSolutionStatus NLPSolverSHOT::solveProblemInstance()
     for(size_t i = 0; i < fixedVariableIndexes.size(); ++i)
         relaxedProblem->setVariableBounds(fixedVariableIndexes[i], fixedVariableValues[i], fixedVariableValues[i]);
 
-    // Tighten the bounds
-    relaxedProblem->doFBBT();
+    // Tighten the bounds if fixed
+    if(fixedVariableIndexes.size() > 0)
+        relaxedProblem->doFBBT();
 
     // Update the bounds to the MIP solver
     for(auto& VAR : relaxedProblem->allVariables)
