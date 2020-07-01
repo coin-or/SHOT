@@ -1666,6 +1666,9 @@ void Problem::doFBBT()
 
     bool stopTightening = false;
 
+    int numberOfTightenedVariablesBefore = std::count_if(allVariables.begin(), allVariables.end(),
+        [](auto V) { return (V->properties.hasLowerBoundBeenTightened || V->properties.hasUpperBoundBeenTightened); });
+
     for(int i = 0; i < numberOfIterations; i++)
     {
         bool boundsUpdated = false;
@@ -1718,20 +1721,22 @@ void Problem::doFBBT()
             break;
     }
 
-    int numberOfTightenedVariables = std::count_if(allVariables.begin(), allVariables.end(),
+    int numberOfTightenedVariablesAfter = std::count_if(allVariables.begin(), allVariables.end(),
         [](auto V) { return (V->properties.hasLowerBoundBeenTightened || V->properties.hasUpperBoundBeenTightened); });
 
     if(properties.isReformulated)
     {
         env->timing->stopTimer("BoundTighteningFBBTReformulated");
         env->output->outputInfo(fmt::format("  - Bounds for {} variables tightened in {:.2f} s.",
-            numberOfTightenedVariables, env->timing->getElapsedTime("BoundTighteningFBBTReformulated")));
+            numberOfTightenedVariablesAfter - numberOfTightenedVariablesBefore,
+            env->timing->getElapsedTime("BoundTighteningFBBTReformulated")));
     }
     else
     {
         env->timing->stopTimer("BoundTighteningFBBTOriginal");
         env->output->outputInfo(fmt::format("  - Bounds for {} variables tightened in {:.2f} s.",
-            numberOfTightenedVariables, env->timing->getElapsedTime("BoundTighteningFBBTOriginal")));
+            numberOfTightenedVariablesAfter - numberOfTightenedVariablesBefore,
+            env->timing->getElapsedTime("BoundTighteningFBBTOriginal")));
     }
 
     env->timing->stopTimer("BoundTightening");
@@ -1790,7 +1795,7 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint, double timeLim
                 {
                     boundsUpdated = true;
                     env->output->outputDebug(
-                        fmt::format("  bound tightened using linear term in constraint {} .", constraint->name));
+                        fmt::format("  bound tightened using linear term in constraint {}.", constraint->name));
                 }
             }
         }
