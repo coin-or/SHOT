@@ -52,14 +52,14 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool u
             {
                 env->dualSolver->MIPSolver = MIPSolverPtr(std::make_shared<MIPSolverCplexSingleTree>(env));
                 env->results->usedMIPSolver = ES_MIPSolver::Cplex;
-                env->output->outputDebug("Cplex with lazy callbacks selected as MIP solver.");
+                env->output->outputDebug(" Cplex with lazy callbacks selected as MIP solver.");
                 solverSelected = true;
             }
             else
             {
                 env->dualSolver->MIPSolver = MIPSolverPtr(std::make_shared<MIPSolverCplexSingleTreeLegacy>(env));
                 env->results->usedMIPSolver = ES_MIPSolver::Cplex;
-                env->output->outputDebug("Cplex with original lazy callbacks selected as MIP solver.");
+                env->output->outputDebug(" Cplex with original lazy callbacks selected as MIP solver.");
                 solverSelected = true;
             }
         }
@@ -70,7 +70,7 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool u
         {
             env->dualSolver->MIPSolver = MIPSolverPtr(std::make_shared<MIPSolverGurobiSingleTree>(env));
             env->results->usedMIPSolver = ES_MIPSolver::Gurobi;
-            env->output->outputDebug("Gurobi with lazy callbacks selected as MIP solver.");
+            env->output->outputDebug(" Gurobi with lazy callbacks selected as MIP solver.");
             solverSelected = true;
         }
 #endif
@@ -80,7 +80,7 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool u
         {
             env->dualSolver->MIPSolver = MIPSolverPtr(std::make_shared<MIPSolverCbc>(env));
             env->results->usedMIPSolver = ES_MIPSolver::Cbc;
-            env->output->outputDebug("Cbc selected as MIP solver.");
+            env->output->outputDebug(" Cbc selected as MIP solver.");
             solverSelected = true;
         }
 #endif
@@ -148,7 +148,7 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool u
 
 TaskInitializeDualSolver::~TaskInitializeDualSolver() = default;
 
-void TaskInitializeDualSolver::run() {}
+void TaskInitializeDualSolver::run() { }
 std::string TaskInitializeDualSolver::getType()
 {
     std::string type = typeid(this).name();

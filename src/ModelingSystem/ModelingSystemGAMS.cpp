@@ -77,7 +77,7 @@ ModelingSystemGAMS::~ModelingSystemGAMS()
     }
 }
 
-void ModelingSystemGAMS::augmentSettings([[maybe_unused]] SettingsPtr settings) {}
+void ModelingSystemGAMS::augmentSettings([[maybe_unused]] SettingsPtr settings) { }
 
 void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
 {
@@ -169,7 +169,7 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
             }
             catch(std::exception& e)
             {
-                env->output->outputError("Error when reading GAMS options file " + std::string(buffer), e.what());
+                env->output->outputError(" Error when reading GAMS options file " + std::string(buffer), e.what());
                 throw std::logic_error("Cannot read GAMS options file.");
             }
         }
@@ -283,13 +283,13 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem)
     }
     catch(const OperationNotImplementedException& e)
     {
-        env->output->outputError("Capability problem when creating problem from GAMS object: ");
+        env->output->outputError(" Capability problem when creating problem from GAMS object: ");
         env->output->outputError(e.what());
         return (E_ProblemCreationStatus::CapabilityProblem);
     }
     catch(const std::exception& e)
     {
-        env->output->outputError("Error when creating problem from GAMS object.", e.what());
+        env->output->outputError(" Error when creating problem from GAMS object.", e.what());
 
         return (E_ProblemCreationStatus::Error);
     }
@@ -650,7 +650,7 @@ void ModelingSystemGAMS::clearGAMSObjects()
 
 bool ModelingSystemGAMS::copyVariables(ProblemPtr destination)
 {
-    env->output->outputDebug("Starting to copy variables between GAMS modeling and SHOT problem objects.");
+    env->output->outputTrace(" Starting to copy variables between GAMS modeling and SHOT problem objects.");
 
     int numVariables = gmoN(modelingObject);
 
@@ -786,14 +786,14 @@ bool ModelingSystemGAMS::copyVariables(ProblemPtr destination)
         return (false);
     }
 
-    env->output->outputDebug("Finished copying variables between GAMS modeling and SHOT problem objects.");
+    env->output->outputTrace(" Finished copying variables between GAMS modeling and SHOT problem objects.");
 
     return (true);
 }
 
 bool ModelingSystemGAMS::copyObjectiveFunction(ProblemPtr destination)
 {
-    env->output->outputDebug("Starting to copy objective function between GAMS modeling and SHOT problem objects.");
+    env->output->outputTrace(" Starting to copy objective function between GAMS modeling and SHOT problem objects.");
 
     // Check if we have an objective at all
     if(gmoModelType(modelingObject) == gmoProc_cns)
@@ -871,14 +871,14 @@ bool ModelingSystemGAMS::copyObjectiveFunction(ProblemPtr destination)
 
     destination->add(objectiveFunction);
 
-    env->output->outputDebug("Finished copying objective function between GAMS modeling and SHOT problem objects.");
+    env->output->outputTrace(" Finished copying objective function between GAMS modeling and SHOT problem objects.");
 
     return (true);
 }
 
 bool ModelingSystemGAMS::copyConstraints(ProblemPtr destination)
 {
-    env->output->outputDebug("Starting to copy constraints between GAMS modeling and SHOT problem objects.");
+    env->output->outputTrace(" Starting to copy constraints between GAMS modeling and SHOT problem objects.");
 
     int numberOfConstraints = gmoM(modelingObject);
 
@@ -951,14 +951,14 @@ bool ModelingSystemGAMS::copyConstraints(ProblemPtr destination)
         env->output->outputDebug("GAMS modeling object does not have any constraints.");
     }
 
-    env->output->outputDebug("Finished copying constraints between GAMS modeling and SHOT problem objects.");
+    env->output->outputTrace(" Finished copying constraints between GAMS modeling and SHOT problem objects.");
 
     return (true);
 }
 
 bool ModelingSystemGAMS::copyLinearTerms(ProblemPtr destination)
 {
-    env->output->outputDebug("Starting to copy linear terms between GAMS modeling and SHOT problem objects.");
+    env->output->outputTrace(" Starting to copy linear terms between GAMS modeling and SHOT problem objects.");
 
     double* linearCoefficients = new double[gmoNZ(modelingObject) + gmoN(modelingObject)];
     int* variableIndexes = new int[gmoNZ(modelingObject) + gmoN(modelingObject)];
@@ -1005,14 +1005,14 @@ bool ModelingSystemGAMS::copyLinearTerms(ProblemPtr destination)
     delete[] variableIndexes;
     delete[] nonlinearFlags;
 
-    env->output->outputDebug("Finished copying linear terms between GAMS modeling and SHOT problem objects.");
+    env->output->outputTrace(" Finished copying linear terms between GAMS modeling and SHOT problem objects.");
 
     return (true);
 }
 
 bool ModelingSystemGAMS::copyQuadraticTerms(ProblemPtr destination)
 {
-    env->output->outputDebug("Starting to copy quadratic terms between GAMS modeling and SHOT problem objects.");
+    env->output->outputTrace(" Starting to copy quadratic terms between GAMS modeling and SHOT problem objects.");
 
     if(gmoGetObjOrder(modelingObject) == gmoorder_Q)
     {
@@ -1108,14 +1108,14 @@ bool ModelingSystemGAMS::copyQuadraticTerms(ProblemPtr destination)
         }
     }
 
-    env->output->outputDebug("Finished copying quadratic terms between GAMS modeling and SHOT problem objects.");
+    env->output->outputTrace(" Finished copying quadratic terms between GAMS modeling and SHOT problem objects.");
 
     return (true);
 }
 
 bool ModelingSystemGAMS::copyNonlinearExpressions(ProblemPtr destination)
 {
-    env->output->outputDebug("Starting to copy nonlinear expressions between GAMS modeling and SHOT problem objects.");
+    env->output->outputTrace(" Starting to copy nonlinear expressions between GAMS modeling and SHOT problem objects.");
 
     int* opcodes = new int[gmoNLCodeSizeMaxRow(modelingObject) + 1];
     int* fields = new int[gmoNLCodeSizeMaxRow(modelingObject) + 1];
@@ -1192,7 +1192,7 @@ bool ModelingSystemGAMS::copyNonlinearExpressions(ProblemPtr destination)
     delete[] opcodes;
     delete[] fields;
 
-    env->output->outputDebug("Finished copying nonlinear expressions between GAMS modeling and SHOT problem objects.");
+    env->output->outputTrace(" Finished copying nonlinear expressions between GAMS modeling and SHOT problem objects.");
 
     return (true);
 }
