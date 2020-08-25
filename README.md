@@ -11,6 +11,7 @@ Originally SHOT was intended for convex MINLP problems only, but as of version 1
 **SHOT can be used**
 - as a console application,
 - from [GAMS](https://www.gams.com),
+- on the [NEOS Server](https://neos-server.org/neos/solvers/minco:SHOT/GAMS.html)
 - from any modeling system that can use ASL, such as
   - [Pyomo/Python](https://www.pyomo.org), 
   - [JuMP/Julia](https://github.com/JuliaOpt/AmplNLWriter.jl), and 
