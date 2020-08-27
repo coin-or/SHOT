@@ -32,6 +32,7 @@
 
 #include <cstdio> // for tmpnam()
 #include <cstdlib> // for mkdtemp()
+#include <climits>
 #include <fstream>
 
 #ifdef HAS_STD_FILESYSTEM
@@ -106,8 +107,8 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
         env->output->outputDebug(
             fmt::format("Time limit set to {} by GAMS", env->settings->getSetting<double>("TimeLimit", "Termination")));
 
-        // Sets iteration limit
-        if(gevGetIntOpt(modelingEnvironment, gevIterLim) != ITERLIM_INFINITY)
+        // Sets iteration limit, if different than SHOT default
+        if(gevGetIntOpt(modelingEnvironment, gevIterLim) < INT_MAX)
         {
             env->settings->updateSetting(
                 "IterationLimit", "Termination", gevGetIntOpt(modelingEnvironment, gevIterLim));
