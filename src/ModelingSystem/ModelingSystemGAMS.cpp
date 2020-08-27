@@ -32,6 +32,7 @@
 
 #include <cstdio> // for tmpnam()
 #include <cstdlib> // for mkdtemp()
+#include <climits>
 #include <fstream>
 
 #ifdef HAS_STD_FILESYSTEM
@@ -106,8 +107,8 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
         env->output->outputDebug(
             fmt::format("Time limit set to {} by GAMS", env->settings->getSetting<double>("TimeLimit", "Termination")));
 
-        // Sets iteration limit
-        if(gevGetIntOpt(modelingEnvironment, gevIterLim) != ITERLIM_INFINITY)
+        // Sets iteration limit, if different than SHOT default
+        if(gevGetIntOpt(modelingEnvironment, gevIterLim) < INT_MAX)
         {
             env->settings->updateSetting(
                 "IterationLimit", "Termination", gevGetIntOpt(modelingEnvironment, gevIterLim));
@@ -607,8 +608,7 @@ void ModelingSystemGAMS::finalizeSolution()
     gmoCompleteSolution(modelingObject);
 
     // set some more statistics, etc
-    gmoSetHeadnTail(modelingObject, gmoTmipbest,
-        r->currentDualBound); // TODO how do we know that a dual bound has actually been computed
+    gmoSetHeadnTail(modelingObject, gmoTmipbest, r->getGlobalDualBound());
     gmoSetHeadnTail(modelingObject, gmoHiterused, r->getCurrentIteration()->iterationNumber);
     // TODO this seems to be 0: gmoSetHeadnTail(modelingObject, gmoHiterused,
     // env->solutionStatistics.numberOfIterations);
