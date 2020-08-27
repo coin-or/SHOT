@@ -608,8 +608,7 @@ void ModelingSystemGAMS::finalizeSolution()
     gmoCompleteSolution(modelingObject);
 
     // set some more statistics, etc
-    gmoSetHeadnTail(modelingObject, gmoTmipbest,
-        r->currentDualBound); // TODO how do we know that a dual bound has actually been computed
+    gmoSetHeadnTail(modelingObject, gmoTmipbest, r->getGlobalDualBound());
     gmoSetHeadnTail(modelingObject, gmoHiterused, r->getCurrentIteration()->iterationNumber);
     // TODO this seems to be 0: gmoSetHeadnTail(modelingObject, gmoHiterused,
     // env->solutionStatistics.numberOfIterations);
