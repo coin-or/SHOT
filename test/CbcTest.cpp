@@ -20,14 +20,14 @@
 
 using namespace SHOT;
 
-bool GurobiTest1(std::string filename)
+bool CbcTest1(std::string filename)
 {
     bool passed = true;
 
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
     auto env = solver->getEnvironment();
 
-    solver->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Gurobi));
+    solver->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Cbc));
 
     try
     {
@@ -73,15 +73,15 @@ bool GurobiTest1(std::string filename)
     return passed;
 }
 
-bool GurobiTerminationCallbackTest(std::string filename)
+bool CbcTerminationCallbackTest(std::string filename)
 {
     bool passed = true;
 
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
     auto env = solver->getEnvironment();
 
+    solver->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Cbc));
     solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Error));
-    solver->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Gurobi));
 
     std::cout << "Reading problem:  " << filename << '\n';
 
@@ -103,9 +103,8 @@ bool GurobiTerminationCallbackTest(std::string filename)
     return passed;
 }
 
-int GurobiTest(int argc, char* argv[])
+int CbcTest(int argc, char* argv[])
 {
-
     int defaultchoice = 1;
 
     int choice = defaultchoice;
@@ -124,14 +123,14 @@ int GurobiTest(int argc, char* argv[])
     switch(choice)
     {
     case 1:
-        std::cout << "Starting test to solve a MINLP problem with Gurobi." << std::endl;
-        passed = GurobiTest1("data/tls2.osil");
-        std::cout << "Finished test to solve a MINLP problem with Gurobi." << std::endl;
+        std::cout << "Starting test to solve a MINLP problem with Cbc." << std::endl;
+        passed = CbcTest1("data/tls2.osil");
+        std::cout << "Finished test to solve a MINLP problem with Cbc." << std::endl;
         break;
     case 2:
-        std::cout << "Starting test to check termination callback in Gurobi:" << std::endl;
-        passed = GurobiTerminationCallbackTest("data/tls2.osil");
-        std::cout << "Finished test checking termination callback in Gurobi." << std::endl;
+        std::cout << "Starting test to check termination callback in Cbc:" << std::endl;
+        passed = CbcTerminationCallbackTest("data/tls2.osil");
+        std::cout << "Finished test checking termination callback in Cbc." << std::endl;
         break;
     default:
         passed = false;

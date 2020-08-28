@@ -8,48 +8,11 @@
 
 #include "../src/Solver.h"
 #include "../src/Utilities.h"
+#include "../src/TaskHandler.h"
 
 #include <iostream>
 
 using namespace SHOT;
-
-bool CplexTest1(std::string filename);
-
-int CplexTest(int argc, char* argv[])
-{
-
-    int defaultchoice = 1;
-
-    int choice = defaultchoice;
-
-    if(argc > 1)
-    {
-        if(sscanf(argv[1], "%d", &choice) != 1)
-        {
-            printf("Couldn't parse that input as a number\n");
-            return -1;
-        }
-    }
-
-    bool passed = true;
-
-    switch(choice)
-    {
-    case 1:
-        std::cout << "Starting test to solve a MINLP problem with Cplex" << std::endl;
-        passed = CplexTest1("data/tls2.osil");
-        std::cout << "Finished test to solve a MINLP problem with Cplex." << std::endl;
-        break;
-    default:
-        passed = false;
-        std::cout << "Test #" << choice << " does not exist!\n";
-    }
-
-    if(passed)
-        return 0;
-    else
-        return -1;
-}
 
 bool CplexTest1(std::string filename)
 {
@@ -102,4 +65,75 @@ bool CplexTest1(std::string filename)
     }
 
     return passed;
+}
+
+bool CplexTerminationCallbackTest(std::string filename)
+{
+    bool passed = true;
+
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+
+    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Error));
+    solver->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Cplex));
+
+    std::cout << "Reading problem:  " << filename << '\n';
+
+    if(!solver->setProblem(filename))
+    {
+        std::cout << "Error while reading problem";
+        passed = false;
+    }
+
+    // Registers a callback that terminates as soon as possible when solving the MIP problem
+    solver->registerCallback(E_EventType::UserTerminationCheck, [&env] {
+        std::cout << "Callback activated. Terminating.\n";
+        env->tasks->terminate();
+    });
+
+    // Solving the problem
+    solver->solveProblem();
+
+    return passed;
+}
+
+int CplexTest(int argc, char* argv[])
+{
+
+    int defaultchoice = 1;
+
+    int choice = defaultchoice;
+
+    if(argc > 1)
+    {
+        if(sscanf(argv[1], "%d", &choice) != 1)
+        {
+            printf("Couldn't parse that input as a number\n");
+            return -1;
+        }
+    }
+
+    bool passed = true;
+
+    switch(choice)
+    {
+    case 1:
+        std::cout << "Starting test to solve a MINLP problem with Cplex" << std::endl;
+        passed = CplexTest1("data/tls2.osil");
+        std::cout << "Finished test to solve a MINLP problem with Cplex." << std::endl;
+        break;
+    case 2:
+        std::cout << "Starting test to check termination callback in Cplex:" << std::endl;
+        passed = CplexTerminationCallbackTest("data/tls2.osil");
+        std::cout << "Finished test checking termination callback in Cplex." << std::endl;
+        break;
+    default:
+        passed = false;
+        std::cout << "Test #" << choice << " does not exist!\n";
+    }
+
+    if(passed)
+        return 0;
+    else
+        return -1;
 }

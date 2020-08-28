@@ -20,12 +20,18 @@ set(Model_parts
     10) # The different parts of each test (if any)
 set(Settings_parts 1 2)
 
+if(HAS_CBC)
+  set(Cbc_parts 1 2)
+  set(cpptests ${cpptests} Cbc)
+endif()
+
 if(HAS_CPLEX)
-  set(Cplex_parts 1)
+  set(Cplex_parts 1 2)
   set(cpptests ${cpptests} Cplex)
 endif()
 
 if(HAS_GUROBI)
+  set(Gurobi_parts 1 2)
   set(cpptests ${cpptests} Gurobi)
 endif()
 
