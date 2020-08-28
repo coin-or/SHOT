@@ -9,6 +9,7 @@
 */
 
 #include "MIPSolverCbc.h"
+#include "MIPSolverCallbackBase.h"
 
 #include "../DualSolver.h"
 #include "../Iteration.h"
@@ -30,6 +31,44 @@
 
 namespace SHOT
 {
+
+class TerminationEventHandler : public CbcEventHandler, public MIPSolverCallbackBase
+{
+
+public:
+    TerminationEventHandler(EnvironmentPtr envPtr) { env = envPtr; };
+    // EventHandler(CbcModel* model) : CbcEventHandler(model) {};
+
+    virtual ~TerminationEventHandler() {};
+
+    TerminationEventHandler(const TerminationEventHandler& rhs) : CbcEventHandler(rhs) {};
+
+    TerminationEventHandler& operator=(const TerminationEventHandler& rhs)
+    {
+        if(this != &rhs)
+        {
+            CbcEventHandler::operator=(rhs);
+        }
+        return *this;
+    }
+
+    virtual TerminationEventHandler* clone() const { return new TerminationEventHandler(env); };
+
+    virtual CbcAction event(CbcEvent whichEvent)
+    {
+        if(whichEvent == CbcEventHandler::CbcEvent::node)
+        {
+            env->output->outputDebug("        Terminated by user.");
+
+            // return (CbcEventHandler::CbcAction::stop);
+        }
+
+        return (CbcEventHandler::CbcAction::noAction);
+    }
+
+private:
+    EnvironmentPtr env;
+};
 
 MIPSolverCbc::MIPSolverCbc(EnvironmentPtr envPtr) { env = envPtr; }
 
@@ -576,6 +615,9 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
             osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
         }
 
+        // TerminationEventHandler eventHandler(env);
+        // cbcModel->passInEventHandler(&eventHandler);
+
         CbcMain1(numArguments, const_cast<const char**>(argv), *cbcModel);
 
         MIPSolutionStatus = getSolutionStatus();
@@ -626,9 +668,9 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
                && std::dynamic_pointer_cast<LinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
                       ->isDualUnbounded())
             || (env->reformulatedProblem->objectiveFunction->properties.classification
-                       == E_ObjectiveFunctionClassification::Quadratic
-                   && std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                          ->isDualUnbounded()))
+                    == E_ObjectiveFunctionClassification::Quadratic
+                && std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
+                       ->isDualUnbounded()))
         {
             for(auto& V : env->reformulatedProblem->allVariables)
             {

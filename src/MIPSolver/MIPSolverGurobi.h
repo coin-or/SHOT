@@ -10,11 +10,13 @@
 
 #pragma once
 #include "MIPSolverBase.h"
+#include "MIPSolverCallbackBase.h"
 
 #include "gurobi_c++.h"
 
 namespace SHOT
 {
+
 class MIPSolverGurobi : public IMIPSolver, public MIPSolverBase
 {
 public:
@@ -162,7 +164,7 @@ public:
 private:
 };
 
-class GurobiCallbackMultiTree : public GRBCallback
+class GurobiCallbackMultiTree : public GRBCallback, public MIPSolverCallbackBase
 {
 public:
     GurobiCallbackMultiTree(EnvironmentPtr envPtr);
@@ -171,7 +173,6 @@ protected:
     void callback() override;
 
 private:
-    EnvironmentPtr env;
     bool showOutput = false;
 };
 } // namespace SHOT

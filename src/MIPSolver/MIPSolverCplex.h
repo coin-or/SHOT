@@ -10,6 +10,7 @@
 
 #pragma once
 #include "MIPSolverBase.h"
+#include "MIPSolverCallbackBase.h"
 
 #ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wignored-attributes"
@@ -24,6 +25,17 @@
 namespace SHOT
 {
 class OutputStream;
+
+class UserTerminationCallbackI : public IloCplex::MIPInfoCallbackI, public MIPSolverCallbackBase
+{
+private:
+public:
+    IloCplex::CallbackI* duplicateCallback() const override;
+    UserTerminationCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv);
+    void main() override;
+
+    ~UserTerminationCallbackI() override = default;
+};
 
 class MIPSolverCplex : public IMIPSolver, public MIPSolverBase
 {
@@ -168,6 +180,10 @@ public:
     IloCplex cplexInstance;
 
     std::unique_ptr<OutputStream> cplexOutputStream;
+
+private:
+    UserTerminationCallbackI* infoCallback;
+    bool callbacksInitialized = false;
 
 protected:
     IloEnv cplexEnv;
