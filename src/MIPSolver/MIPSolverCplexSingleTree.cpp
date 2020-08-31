@@ -104,7 +104,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
 
             if((tmpPrimalObjBound < 1e74)
                 && ((isMinimization && tmpPrimalObjBound < env->results->getPrimalBound())
-                       || (!isMinimization && tmpPrimalObjBound > env->results->getPrimalBound())))
+                    || (!isMinimization && tmpPrimalObjBound > env->results->getPrimalBound())))
             {
                 IloNumArray tmpPrimalVals(context.getEnv());
 
@@ -397,31 +397,6 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
 
             lastUpdatedPrimal = env->results->getPrimalBound();
         }
-        /*
-        // Adds cutoff
-
-            double cutOffTol
-            = env->settings->getSetting<double>("MIP.CutOff.Tolerance", "Dual");
-
-        if(isMinimization)
-        {
-            (static_cast<MIPSolverCplexSingleTree*>(env->dualSolver->MIPSolver.get()))
-                ->cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::UpperCutoff, primalBound + cutOffTol);
-
-            env->output->outputDebug(
-                "     Setting cutoff value to " + std::to_string(primalBound + cutOffTol) + " for
-        minimization.");
-        }
-        else
-        {
-            (static_cast<MIPSolverCplexSingleTree*>(env->dualSolver->MIPSolver.get()))
-                ->cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::LowerCutoff, primalBound - cutOffTol);
-
-            env->output->outputDebug(
-                "     Setting cutoff value to " + std::to_string(primalBound - cutOffTol) + " for
-        maximization.");
-        }
-        */
     }
     catch(IloException& e)
     {
@@ -706,6 +681,7 @@ E_ProblemSolutionStatus MIPSolverCplexSingleTree::solveProblem()
             modelUpdated = true;
         }
 
+        // If the previous repair failed, we can try this
         if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
         {
             repairInfeasibility();
@@ -762,12 +738,11 @@ int MIPSolverCplexSingleTree::getSolutionLimit()
     }
     catch(IloException& e)
     {
-
         env->output->outputError("        Error when obtaining solution limit", e.getMessage());
     }
 
     return (solLim);
 }
 
-void MIPSolverCplexSingleTree::checkParameters() {}
+void MIPSolverCplexSingleTree::checkParameters() { }
 } // namespace SHOT

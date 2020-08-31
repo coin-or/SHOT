@@ -23,23 +23,61 @@
 namespace SHOT
 {
 
+UserTerminationCallbackI::UserTerminationCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv)
+    : IloCplex::MIPInfoCallbackI(iloEnv)
+{
+    env = envPtr;
+}
+
+IloCplex::CallbackI* UserTerminationCallbackI::duplicateCallback() const
+{
+    return (new(getEnv()) UserTerminationCallbackI(*this));
+}
+
+void UserTerminationCallbackI::main() // Called at each node...
+{
+    if(checkUserTermination())
+    {
+        env->output->outputDebug("        Terminated by user.");
+
+        this->abort();
+        return;
+    }
+
+    return;
+}
+
 MIPSolverCplex::MIPSolverCplex()
 {
     // Should not be called
 }
 
-MIPSolverCplex::MIPSolverCplex(EnvironmentPtr envPtr) { env = envPtr; }
+MIPSolverCplex::MIPSolverCplex(EnvironmentPtr envPtr)
+{
+    env = envPtr;
+    cplexModel = IloModel(cplexEnv);
+
+    cplexVars = IloNumVarArray(cplexEnv);
+    cplexConstrs = IloRangeArray(cplexEnv);
+}
 
 MIPSolverCplex::~MIPSolverCplex()
 {
+
     cplexVarConvers.clear();
     cplexModel.end();
     cplexVars.end();
     cplexConstrs.end();
     cplexInstance.end();
     cplexEnv.end();
-}
 
+    if(callbacksInitialized)
+    {
+        cplexInstance.remove(infoCallback);
+        delete infoCallback;
+        callbacksInitialized = false;
+    }
+}
 bool MIPSolverCplex::initializeProblem()
 {
     discreteVariablesActivated = true;
@@ -676,7 +714,6 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
                 cplexModel.add(IloMaximize(cplexEnv, cplexObjectiveExpression));
 
             modelUpdated = true;
-            objectiveFunctionReplacedWithZero = false;
         }
 
         if(modelUpdated)
@@ -685,8 +722,29 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
             modelUpdated = false;
         }
 
-        cplexInstance.solve();
-        MIPSolutionStatus = getSolutionStatus();
+        if(objectiveFunctionReplacedWithZero || !getDiscreteVariableStatus())
+        {
+            objectiveFunctionReplacedWithZero = false;
+
+            // Fixes a deadlock bug in Cplex 12.7 and 12.8
+            cplexEnv.setNormalizer(false);
+
+            cplexInstance.solve();
+            MIPSolutionStatus = MIPSolverCplex::getSolutionStatus();
+        }
+        else
+        {
+            infoCallback = new(cplexEnv) UserTerminationCallbackI(env, cplexEnv);
+            callbacksInitialized = true;
+
+            cplexInstance.use(infoCallback);
+
+            // Fixes a deadlock bug in Cplex 12.7 and 12.8
+            cplexEnv.setNormalizer(false);
+
+            cplexInstance.solve();
+            MIPSolutionStatus = getSolutionStatus();
+        }
 
         // Try to solve a feasibility problem to get a valid solution point if unbounded
         if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
@@ -716,6 +774,15 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
             MIPSolutionStatus = E_ProblemSolutionStatus::Unbounded;
             env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed = true;
         }
+
+        if(callbacksInitialized)
+        {
+            cplexInstance.remove(infoCallback);
+            delete infoCallback;
+            callbacksInitialized = false;
+        }
+
+        objectiveFunctionReplacedWithZero = false;
     }
 
     catch(IloException& e)
@@ -1012,9 +1079,7 @@ void MIPSolverCplex::setTimeLimit(double seconds)
 {
     try
     {
-        if(seconds > 1e+75)
-        {
-        }
+        if(seconds > 1e+75) { }
         else if(seconds > 0)
         {
             cplexInstance.setParam(IloCplex::Param::TimeLimit, seconds);
@@ -1389,7 +1454,7 @@ void MIPSolverCplex::writePresolvedToFile([[maybe_unused]] std::string filename)
     }
 }
 
-void MIPSolverCplex::checkParameters() {}
+void MIPSolverCplex::checkParameters() { }
 
 bool MIPSolverCplex::createHyperplane(
     Hyperplane hyperplane, std::function<IloConstraint(IloRange)> addConstraintFunction)
@@ -1620,5 +1685,4 @@ std::string MIPSolverCplex::getSolverVersion()
 
     return (fmt::format("{}.{}", major, minor));
 }
-
 } // namespace SHOT

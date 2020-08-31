@@ -11,11 +11,13 @@
 #include "MIPSolverGurobi.h"
 
 #include "../DualSolver.h"
+#include "../EventHandler.h"
 #include "../Iteration.h"
 #include "../Output.h"
 #include "../PrimalSolver.h"
 #include "../Results.h"
 #include "../Settings.h"
+#include "../TaskHandler.h"
 #include "../Timing.h"
 #include "../Utilities.h"
 
@@ -797,9 +799,9 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
                && std::dynamic_pointer_cast<LinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
                       ->isDualUnbounded())
             || (env->reformulatedProblem->objectiveFunction->properties.classification
-                       == E_ObjectiveFunctionClassification::Quadratic
-                   && std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                          ->isDualUnbounded()))
+                    == E_ObjectiveFunctionClassification::Quadratic
+                && std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
+                       ->isDualUnbounded()))
         {
             for(auto& V : env->reformulatedProblem->allVariables)
             {
@@ -1333,9 +1335,9 @@ double MIPSolverGurobi::getDualObjectiveValue()
     return (objVal);
 }
 
-void MIPSolverGurobi::writePresolvedToFile([[maybe_unused]] std::string filename) {}
+void MIPSolverGurobi::writePresolvedToFile([[maybe_unused]] std::string filename) { }
 
-void MIPSolverGurobi::checkParameters() {}
+void MIPSolverGurobi::checkParameters() { }
 
 std::pair<VectorDouble, VectorDouble> MIPSolverGurobi::presolveAndGetNewBounds()
 {
@@ -1363,8 +1365,9 @@ std::string MIPSolverGurobi::getSolverVersion()
     return (fmt::format("{}.{}", std::to_string(GRB_VERSION_MAJOR), std::to_string(GRB_VERSION_MINOR)));
 }
 
-GurobiCallbackMultiTree::GurobiCallbackMultiTree(EnvironmentPtr envPtr) : env(envPtr)
+GurobiCallbackMultiTree::GurobiCallbackMultiTree(EnvironmentPtr envPtr)
 {
+    env = envPtr;
     showOutput = env->settings->getSetting<bool>("Console.DualSolver.Show", "Output");
 }
 
@@ -1385,6 +1388,9 @@ void GurobiCallbackMultiTree::callback()
             currIter->numberOfExploredNodes = (int)getDoubleInfo(GRB_CB_MIP_NODCNT);
             currIter->numberOfOpenNodes = (int)getDoubleInfo(GRB_CB_MIP_NODLFT);
         }
+
+        if(checkUserTermination())
+            this->abort();
     }
     catch(GRBException& e)
     {
