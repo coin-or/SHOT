@@ -615,8 +615,8 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
             osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
         }
 
-        // TerminationEventHandler eventHandler(env);
-        // cbcModel->passInEventHandler(&eventHandler);
+        TerminationEventHandler eventHandler(env);
+        cbcModel->passInEventHandler(&eventHandler);
 
         CbcMain1(numArguments, const_cast<const char**>(argv), *cbcModel);
 
