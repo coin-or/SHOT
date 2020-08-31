@@ -38,7 +38,7 @@ bool CbcTest1(std::string filename)
         }
         else
         {
-            passed = false;
+            return false;
         }
     }
     catch(Exception& e)
@@ -81,6 +81,7 @@ bool CbcTerminationCallbackTest(std::string filename)
 
     solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Error));
     solver->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Cbc));
+    solver->updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::MultiTree));
 
     std::cout << "Reading problem:  " << filename << '\n';
 
@@ -90,7 +91,7 @@ bool CbcTerminationCallbackTest(std::string filename)
         return (false);
     }
 
-    // Registers a callback that terminates as soon as possible when solving the MIP problem
+    // Registers a callback that terminates in the third iteration
     solver->registerCallback(E_EventType::UserTerminationCheck, [&env] {
         std::cout << "Callback activated. Terminating.\n";
 
@@ -105,13 +106,13 @@ bool CbcTerminationCallbackTest(std::string filename)
         return (false);
     }
 
-    if(env->results->getNumberOfIterations() == 3)
+    if(env->results->getNumberOfIterations() != 3)
     {
         std::cout << "Termination callback did not seem to work as expected\n";
-        return (true);
+        return (false);
     }
 
-    return (false);
+    return (true);
 }
 
 int CbcTest(int argc, char* argv[])
