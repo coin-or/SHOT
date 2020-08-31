@@ -8,9 +8,10 @@
    Please see the README and LICENSE files for more information.
 */
 
-#include "../src/Solver.h"
+#include "../src/Results.h"
 #include "../src/Output.h"
 #include "../src/Settings.h"
+#include "../src/Solver.h"
 #include "../src/Utilities.h"
 #include "../src/TaskHandler.h"
 
@@ -75,32 +76,42 @@ bool CbcTest1(std::string filename)
 
 bool CbcTerminationCallbackTest(std::string filename)
 {
-    bool passed = true;
-
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
     auto env = solver->getEnvironment();
 
-    solver->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Cbc));
     solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Error));
+    solver->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Cbc));
 
     std::cout << "Reading problem:  " << filename << '\n';
 
     if(!solver->setProblem(filename))
     {
         std::cout << "Error while reading problem";
-        passed = false;
+        return (false);
     }
 
     // Registers a callback that terminates as soon as possible when solving the MIP problem
     solver->registerCallback(E_EventType::UserTerminationCheck, [&env] {
         std::cout << "Callback activated. Terminating.\n";
-        env->tasks->terminate();
+
+        if(env->results->getNumberOfIterations() == 3)
+            env->tasks->terminate();
     });
 
     // Solving the problem
-    solver->solveProblem();
+    if(!solver->solveProblem())
+    {
+        std::cout << "Error while solving problem\n";
+        return (false);
+    }
 
-    return passed;
+    if(env->results->getNumberOfIterations() == 3)
+    {
+        std::cout << "Termination callback did not seem to work as expected\n";
+        return (true);
+    }
+
+    return (false);
 }
 
 int CbcTest(int argc, char* argv[])
