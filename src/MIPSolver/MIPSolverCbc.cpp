@@ -37,7 +37,6 @@ class TerminationEventHandler : public CbcEventHandler, public MIPSolverCallback
 
 public:
     TerminationEventHandler(EnvironmentPtr envPtr) { env = envPtr; };
-    // EventHandler(CbcModel* model) : CbcEventHandler(model) {};
 
     virtual ~TerminationEventHandler() {};
 
@@ -56,18 +55,15 @@ public:
 
     virtual CbcAction event(CbcEvent whichEvent)
     {
-        if(whichEvent == CbcEventHandler::CbcEvent::node)
+        if(whichEvent == CbcEventHandler::CbcEvent::node && checkUserTermination())
         {
             env->output->outputDebug("        Terminated by user.");
 
-            // return (CbcEventHandler::CbcAction::stop);
+            return (CbcEventHandler::CbcAction::stop);
         }
 
         return (CbcEventHandler::CbcAction::noAction);
     }
-
-private:
-    EnvironmentPtr env;
 };
 
 MIPSolverCbc::MIPSolverCbc(EnvironmentPtr envPtr) { env = envPtr; }
