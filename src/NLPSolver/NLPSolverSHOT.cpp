@@ -49,7 +49,7 @@ void NLPSolverSHOT::initializeMIPProblem()
 
     solver->getEnvironment()->output->setPrefix("      | ");
 
-    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Off));
+    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Info));
     solver->updateSetting(
         "Console.DualSolver.Show", "Output", env->settings->getSetting<bool>("Console.DualSolver.Show", "Output"));
     solver->updateSetting("Debug.Enable", "Output", env->settings->getSetting<bool>("Debug.Enable", "Output"));

@@ -887,6 +887,8 @@ void Solver::initializeSettings()
         "SHOT performs bound tightening to strengthen the internal representation of the problem. These settings "
         "control how and when bound tightening is performed.");
 
+    // Bound tightening: feasibility based
+
     env->settings->createSetting(
         "BoundTightening.FeasibilityBased.MaxIterations", "Model", 5, "Maximal number of bound tightening iterations");
 
@@ -899,16 +901,51 @@ void Solver::initializeSettings()
     env->settings->createSetting("BoundTightening.FeasibilityBased.UseNonlinear", "Model", true,
         "Peform feasibility-based bound tightening on nonlinear expressions");
 
+    // Bound tightening: initial POA
+
     env->settings->createSetting(
-        "BoundTightening.InitialPOA.Use", "Model", true, "Create an initial polyhedral outer approximation.");
+        "BoundTightening.InitialPOA.ConstraintTolerance", "Model", 1e-3, "Constraint termination tolerance");
+
+    VectorString enumCutStrategy;
+    enumCutStrategy.push_back("ESH");
+    enumCutStrategy.push_back("ECP");
+    env->settings->createSetting("BoundTightening.InitialPOA.CutStrategy", "Model",
+        static_cast<int>(ES_HyperplaneCutStrategy::ESH), "Dual cut strategy", enumCutStrategy, 0);
+    enumCutStrategy.clear();
+
+    env->settings->createSetting("BoundTightening.InitialPOA.IterationLimit", "Model", 50, "Iteration limit for POA");
+
+    env->settings->createSetting("BoundTightening.InitialPOA.ObjectiveConstraintTolerance", "Model", 1e-3,
+        "Objective constraint termination tolerance");
+
+    env->settings->createSetting(
+        "BoundTightening.InitialPOA.ObjectiveGapAbsolute", "Model", 1e-1, "Absolute objective gap termination level");
+
+    env->settings->createSetting(
+        "BoundTightening.InitialPOA.ObjectiveGapRelative", "Model", 1e-1, "Relative objective gap termination level");
+
+    env->settings->createSetting("BoundTightening.InitialPOA.StagnationConstraintTolerance", "Model", 1e-3,
+        "Tolerance factor for when no progress is made");
+
+    env->settings->createSetting("BoundTightening.InitialPOA.StagnationIterationLimit", "Model", 5,
+        "Limit for iterations without significant progress");
+
+    env->settings->createSetting(
+        "BoundTightening.InitialPOA.Use", "Model", true, "Create an initial polyhedral outer approximation");
+
+    env->settings->createSetting("BoundTightening.InitialPOA.TimeLimit", "Model", 5.0, "Time limit for initial POA");
+
+    // Convexity settings
 
     env->settings->createSettingGroup(
-        "Model", "Convexity", "Convexity", "These settings control the convexity detection functionality.");
+        "Model", "Convexity", "Convexity", "These settings control the convexity detection functionality");
 
-    env->settings->createSetting("Convexity.AssumeConvex", "Model", false, "Assume that the problem is convex.");
+    env->settings->createSetting("Convexity.AssumeConvex", "Model", false, "Assume that the problem is convex");
 
     env->settings->createSetting("Convexity.Quadratics.EigenValueTolerance", "Model", 1e-5,
         "Convexity tolerance for the eigenvalues of the Hessian matrix for quadratic terms", 0.0, SHOT_DBL_MAX);
+
+    // Variable settings
 
     env->settings->createSettingGroup("Model", "Variables", "Variables",
         "These settings control the maximum variable bounds allowed in SHOT. Projection will be performed onto these "
@@ -928,6 +965,8 @@ void Solver::initializeSettings()
 
     env->settings->createSetting("Variables.NonlinearObjectiveVariable.Bound", "Model", 1e12,
         "Max absolute bound for the auxiliary nonlinear objective variable", SHOT_DBL_MIN, SHOT_DBL_MAX);
+
+    // Reformulation settings
 
     env->settings->createSettingGroup("Model", "Reformulation", "Automatic reformulations",
         "These settings control the automatic reformulations performed in SHOT.");
