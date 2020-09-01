@@ -134,7 +134,6 @@ struct SolutionPoint
 struct InteriorPoint
 {
     VectorDouble point;
-    ES_InteriorPointStrategy NLPSolver;
     PairIndexValue maxDevatingConstraint;
 };
 
@@ -226,7 +225,6 @@ struct SolutionStatistics
 
     int numberOfProblemsMinimaxLP = 0;
 
-    int numberOfProblemsNLPInteriorPointSearch = 0;
     int numberOfProblemsFixedNLP = 0;
 
     int numberOfConstraintsRemovedInPresolve = 0;
@@ -264,8 +262,6 @@ struct SolutionStatistics
             + numberOfProblemsFeasibleMIQP + numberOfProblemsOptimalMIQP + numberOfProblemsOptimalMIQCQP
             + numberOfProblemsFeasibleMIQCQP);
     };
-
-    int getNumberOfTotalNLPProblems() { return (numberOfProblemsNLPInteriorPointSearch + numberOfProblemsFixedNLP); };
 };
 
 class Exception : public std::exception

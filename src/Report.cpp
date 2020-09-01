@@ -1138,23 +1138,11 @@ void Report::outputSolutionReport()
         env->output->outputInfo("");
     }
 
-    if(env->solutionStatistics.numberOfProblemsNLPInteriorPointSearch > 0
-        || env->solutionStatistics.numberOfProblemsMinimaxLP > 0)
+    if(env->solutionStatistics.numberOfProblemsMinimaxLP > 0)
     {
         env->output->outputInfo(" Problems solved during interior point search:");
-
-        if(env->solutionStatistics.numberOfProblemsNLPInteriorPointSearch > 0)
-        {
-            env->output->outputInfo(fmt::format(" - NLP problems:                                 {}",
-                env->solutionStatistics.numberOfProblemsNLPInteriorPointSearch));
-        }
-
-        if(env->solutionStatistics.numberOfProblemsMinimaxLP > 0)
-        {
-            env->output->outputInfo(fmt::format(" - LP problems:                                  {}",
-                env->solutionStatistics.numberOfProblemsMinimaxLP));
-        }
-
+        env->output->outputInfo(fmt::format(
+            " - LP problems:                                  {}", env->solutionStatistics.numberOfProblemsMinimaxLP));
         env->output->outputInfo("");
     }
 
@@ -1233,25 +1221,7 @@ void Report::outputInteriorPointPreReport()
 #endif
 
     env->output->outputInfo("");
-
-    switch(static_cast<ES_InteriorPointStrategy>(env->settings->getSetting<int>("ESH.InteriorPoint.Solver", "Dual")))
-    {
-    case(ES_InteriorPointStrategy::CuttingPlaneMiniMax):
-        env->output->outputInfo(" Strategy selected:          cutting plane minimax");
-        break;
-    case(ES_InteriorPointStrategy::IpoptMinimax):
-        env->output->outputInfo(" Strategy selected:          Ipopt minimax");
-        break;
-    case(ES_InteriorPointStrategy::IpoptRelaxed):
-        env->output->outputInfo(" Strategy selected:          Ipopt relaxed");
-        break;
-    case(ES_InteriorPointStrategy::IpoptMinimaxAndRelaxed):
-        env->output->outputInfo(" Strategy selected:          Ipopt minimax and relaxed");
-        break;
-    default:
-        env->output->outputInfo(" Strategy selected:          none");
-        break;
-    }
+    env->output->outputInfo(" Strategy selected:          cutting plane minimax");
 
     env->output->outputInfo(report.str());
 }

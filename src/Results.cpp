@@ -341,7 +341,7 @@ std::string Results::getResultsOSrL()
 
     otherNode = osrlDocument.NewElement("other");
     otherNode->SetAttribute("name", "NumberOfNLPProblems");
-    otherNode->SetAttribute("value", env->solutionStatistics.getNumberOfTotalNLPProblems());
+    otherNode->SetAttribute("value", env->solutionStatistics.numberOfProblemsFixedNLP);
     otherNode->SetAttribute("description", "The number of NLP problems solved in the primal strategy");
     otherResultsNode->InsertEndChild(otherNode);
 

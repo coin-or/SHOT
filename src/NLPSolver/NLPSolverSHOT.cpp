@@ -53,7 +53,7 @@ void NLPSolverSHOT::initializeMIPProblem()
     solver->updateSetting(
         "Console.DualSolver.Show", "Output", env->settings->getSetting<bool>("Console.DualSolver.Show", "Output"));
     solver->updateSetting("Debug.Enable", "Output", env->settings->getSetting<bool>("Debug.Enable", "Output"));
-    solver->updateSetting("CutStrategy", "Dual", 1);
+    solver->updateSetting("CutStrategy", "Dual", 0);
     solver->updateSetting("TreeStrategy", "Dual", 1);
     solver->updateSetting("MIP.Solver", "Dual", env->settings->getSetting<int>("MIP.Solver", "Dual"));
     solver->updateSetting("Console.Iteration.Detail", "Output", 0);

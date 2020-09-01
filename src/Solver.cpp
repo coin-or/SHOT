@@ -687,16 +687,6 @@ void Solver::initializeSettings()
     env->settings->createSetting("ESH.InteriorPoint.MinimaxObjectiveUpperBound", "Dual", 0.1,
         "Upper bound for minimax objective variable", SHOT_DBL_MIN, SHOT_DBL_MAX);
 
-    VectorString enumNLPSolver;
-    enumNLPSolver.push_back("Cutting plane minimax");
-    /*enumNLPSolver.push_back("Ipopt minimax");
-    enumNLPSolver.push_back("Ipopt relaxed");
-    enumNLPSolver.push_back("Ipopt minimax and relaxed");*/
-
-    env->settings->createSetting("ESH.InteriorPoint.Solver", "Dual",
-        static_cast<int>(ES_InteriorPointStrategy::CuttingPlaneMiniMax), "NLP solver", enumNLPSolver, 0, true);
-    enumNLPSolver.clear();
-
     VectorString enumAddPrimalPointAsInteriorPoint;
     enumAddPrimalPointAsInteriorPoint.push_back("No");
     enumAddPrimalPointAsInteriorPoint.push_back("Add as new");
@@ -904,13 +894,13 @@ void Solver::initializeSettings()
     // Bound tightening: initial POA
 
     env->settings->createSetting(
-        "BoundTightening.InitialPOA.ConstraintTolerance", "Model", 1e-3, "Constraint termination tolerance");
+        "BoundTightening.InitialPOA.ConstraintTolerance", "Model", 1e-1, "Constraint termination tolerance");
 
     VectorString enumCutStrategy;
     enumCutStrategy.push_back("ESH");
     enumCutStrategy.push_back("ECP");
     env->settings->createSetting("BoundTightening.InitialPOA.CutStrategy", "Model",
-        static_cast<int>(ES_HyperplaneCutStrategy::ESH), "Dual cut strategy", enumCutStrategy, 0);
+        static_cast<int>(ES_HyperplaneCutStrategy::ECP), "Dual cut strategy", enumCutStrategy, 0);
     enumCutStrategy.clear();
 
     env->settings->createSetting("BoundTightening.InitialPOA.IterationLimit", "Model", 50, "Iteration limit for POA");
@@ -924,7 +914,7 @@ void Solver::initializeSettings()
     env->settings->createSetting(
         "BoundTightening.InitialPOA.ObjectiveGapRelative", "Model", 1e-1, "Relative objective gap termination level");
 
-    env->settings->createSetting("BoundTightening.InitialPOA.StagnationConstraintTolerance", "Model", 1e-3,
+    env->settings->createSetting("BoundTightening.InitialPOA.StagnationConstraintTolerance", "Model", 1e-2,
         "Tolerance factor for when no progress is made");
 
     env->settings->createSetting("BoundTightening.InitialPOA.StagnationIterationLimit", "Model", 5,

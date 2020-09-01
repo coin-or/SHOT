@@ -268,14 +268,6 @@ enum class ES_HyperplaneCutStrategy
     ECP
 };
 
-enum class ES_InteriorPointStrategy
-{
-    CuttingPlaneMiniMax,
-    IpoptMinimax,
-    IpoptRelaxed,
-    IpoptMinimaxAndRelaxed
-};
-
 enum class ES_IpoptSolver
 {
     IpoptDefault,
