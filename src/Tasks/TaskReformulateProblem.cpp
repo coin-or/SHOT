@@ -159,7 +159,9 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
     createBilinearReformulations();
 
     reformulatedProblem->properties.isReformulated = true;
+    reformulatedProblem->properties.numberOfAddedLinearizations = env->problem->properties.numberOfAddedLinearizations;
     reformulatedProblem->finalize();
+    reformulatedProblem->doFBBT();
 
     // Fixing that a quadratic objective changed into a nonlinear objective is correctly identified
     if(!(useConvexQuadraticObjective || useNonconvexQuadraticObjective)
@@ -199,7 +201,7 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
 
 TaskReformulateProblem::~TaskReformulateProblem() = default;
 
-void TaskReformulateProblem::run() {}
+void TaskReformulateProblem::run() { }
 
 std::string TaskReformulateProblem::getType()
 {
@@ -283,8 +285,7 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
         // Check whether we should partition the quadratic terms at all
         if(env->settings->getSetting<int>("Reformulation.ObjectiveFunction.PartitionQuadraticTerms", "Model")
             == (int)ES_PartitionNonlinearSums::Always)
-        {
-        }
+        { }
         else if(env->settings->getSetting<int>("Reformulation.ObjectiveFunction.PartitionQuadraticTerms", "Model")
             == (int)ES_PartitionNonlinearSums::Never)
         {
@@ -637,7 +638,7 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
 
     if(C->properties.classification == E_ConstraintClassification::Linear
         || (!C->properties.hasNonlinearExpression && !C->properties.hasQuadraticTerms && !C->properties.hasMonomialTerms
-               && !C->properties.hasSignomialTerms))
+            && !C->properties.hasSignomialTerms))
     {
         // Linear constraint
         LinearConstraintPtr constraint = std::make_shared<LinearConstraint>(C->index, C->name, valueLHS, valueRHS);
@@ -654,8 +655,8 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
     if(((useConvexQuadraticConstraints && C->properties.convexity == E_Convexity::Convex)
            || useNonconvexQuadraticConstraints)
         && (C->properties.classification == E_ConstraintClassification::Quadratic
-               || (!C->properties.hasNonlinearExpression && !C->properties.hasMonomialTerms
-                      && !C->properties.hasSignomialTerms)))
+            || (!C->properties.hasNonlinearExpression && !C->properties.hasMonomialTerms
+                && !C->properties.hasSignomialTerms)))
     {
         // Quadratic constraint (not considered as nonlinear)
         QuadraticConstraintPtr constraint
@@ -1466,7 +1467,7 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
         }
         else if(T->isBilinear
             && (T->firstVariable->properties.type == E_VariableType::Binary
-                   || T->secondVariable->properties.type == E_VariableType::Binary))
+                || T->secondVariable->properties.type == E_VariableType::Binary))
         // Bilinear term b1*x2 or x1*b2
         {
             auto [auxVariable, newVariable] = getBilinearAuxiliaryVariable(firstVariable, secondVariable);
@@ -1475,10 +1476,10 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
         else if(partitionNonBinaryTerms && T->isBilinear
             && ((T->firstVariable->properties.type == E_VariableType::Integer
                     && (T->firstVariable->upperBound - T->firstVariable->lowerBound
-                           < maxBilinearIntegerReformulationDomain))
-                   || (T->secondVariable->properties.type == E_VariableType::Integer
-                          && (T->secondVariable->upperBound - T->secondVariable->lowerBound
-                                 < maxBilinearIntegerReformulationDomain))))
+                        < maxBilinearIntegerReformulationDomain))
+                || (T->secondVariable->properties.type == E_VariableType::Integer
+                    && (T->secondVariable->upperBound - T->secondVariable->lowerBound
+                        < maxBilinearIntegerReformulationDomain))))
         // bilinear term i1*i2 or i1*x2
         {
             auto [auxVariable, newVariable] = getBilinearAuxiliaryVariable(T->firstVariable, T->secondVariable);
@@ -2169,7 +2170,7 @@ std::pair<AuxiliaryVariablePtr, bool> TaskReformulateProblem::getBilinearAuxilia
     else if((firstVariable->properties.type == E_VariableType::Binary
                 && secondVariable->properties.type == E_VariableType::Integer)
         || (firstVariable->properties.type == E_VariableType::Integer
-               && secondVariable->properties.type == E_VariableType::Binary))
+            && secondVariable->properties.type == E_VariableType::Binary))
     {
         variableType = E_VariableType::Integer;
         auxVariableType = E_AuxiliaryVariableType::IntegerBilinear;

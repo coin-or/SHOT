@@ -90,8 +90,8 @@ public:
         }
         else
         {
-            lowerBound = SHOT_DBL_MIN;
-            upperBound = SHOT_DBL_MAX;
+            lowerBound = LB;
+            upperBound = UB;
         }
 
         properties.type = variableType;

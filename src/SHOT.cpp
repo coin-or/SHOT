@@ -131,9 +131,16 @@ int main(int argc, char* argv[])
 #ifdef HAS_GUROBI
         env->output->outputCritical("   --mip=gurobi             Sets the MIP solver to Gurobi");
 #endif
-#ifdef HAS_GAMS
-        env->output->outputCritical("   --nlp={ipopt, gams}      Sets the NLP solver to use");
+#ifdef HAS_IPOPT
+        env->output->outputCritical("   --nlp=ipopt              Sets the primal NLP solver to Ipopt");
 #endif
+
+#ifdef HAS_GAMS
+        env->output->outputCritical("   --nlp=gams               Use primal NLP solver from GAMS");
+#endif
+
+        env->output->outputCritical("   --nlp=shot               Use SHOT as primal NLP solver");
+
 #ifdef HAS_CPLEX
         env->output->outputCritical("   --tree={single, multi}   Activates single- or multi-tree strategy");
 #elif HAS_GUROBI
@@ -408,6 +415,8 @@ int main(int argc, char* argv[])
         if(argValue == "ipopt")
             solver.updateSetting("FixedInteger.Solver", "Primal", static_cast<int>(ES_PrimalNLPSolver::Ipopt));
 #endif
+        if(argValue == "shot")
+            solver.updateSetting("FixedInteger.Solver", "Primal", static_cast<int>(ES_PrimalNLPSolver::SHOT));
     }
 
     if(cmdl("--tree") >> argValue)

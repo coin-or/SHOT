@@ -32,6 +32,7 @@
 #include "SolutionStrategy/SolutionStrategyMIQCQP.h"
 #include "SolutionStrategy/SolutionStrategyNLP.h"
 
+#include "../Tasks/TaskPerformBoundTightening.h"
 #include "../Tasks/TaskReformulateProblem.h"
 
 #include <map>
@@ -68,6 +69,7 @@ Solver::Solver()
     env->timing->createTimer("ProblemInitialization", " - problem initialization");
     env->timing->createTimer("ProblemReformulation", " - problem reformulation");
     env->timing->createTimer("BoundTightening", " - bound tightening");
+    env->timing->createTimer("BoundTighteningPOA", "   - initial outer approximation");
     env->timing->createTimer("BoundTighteningFBBTOriginal", "   - feasibility based (original problem)");
     env->timing->createTimer("BoundTighteningFBBTReformulated", "   - feasibility based (reformulated problem)");
 
@@ -343,6 +345,9 @@ bool Solver::setProblem(std::string fileName)
 
         if(env->problem->name == "")
             env->problem->name = problemName.string();
+
+        auto taskPerformBoundTightening = std::make_unique<TaskPerformBoundTightening>(env, env->problem);
+        taskPerformBoundTightening->run();
 
         verifySettings();
 
@@ -682,16 +687,6 @@ void Solver::initializeSettings()
     env->settings->createSetting("ESH.InteriorPoint.MinimaxObjectiveUpperBound", "Dual", 0.1,
         "Upper bound for minimax objective variable", SHOT_DBL_MIN, SHOT_DBL_MAX);
 
-    VectorString enumNLPSolver;
-    enumNLPSolver.push_back("Cutting plane minimax");
-    /*enumNLPSolver.push_back("Ipopt minimax");
-    enumNLPSolver.push_back("Ipopt relaxed");
-    enumNLPSolver.push_back("Ipopt minimax and relaxed");*/
-
-    env->settings->createSetting("ESH.InteriorPoint.Solver", "Dual",
-        static_cast<int>(ES_InteriorPointStrategy::CuttingPlaneMiniMax), "NLP solver", enumNLPSolver, 0, true);
-    enumNLPSolver.clear();
-
     VectorString enumAddPrimalPointAsInteriorPoint;
     enumAddPrimalPointAsInteriorPoint.push_back("No");
     enumAddPrimalPointAsInteriorPoint.push_back("Add as new");
@@ -707,24 +702,6 @@ void Solver::initializeSettings()
 
     env->settings->createSetting("ESH.Rootsearch.ConstraintTolerance", "Dual", 1e-8,
         "Constraint tolerance for when not to add individual hyperplanes", 0, SHOT_DBL_MAX);
-
-    // Dual strategy settings: Fixed integer strategy
-
-    env->settings->createSettingGroup("Dual", "FixedInteger", "Fixed integer dual strategy",
-        "If no progress has been made in a certain number of iterations, it is possible to fix the integer variables "
-        "and solve integer-relaxed subproblems. These settings control this functionality. ");
-
-    env->settings->createSetting("FixedInteger.ConstraintTolerance", "Dual", 0.0001,
-        "Constraint tolerance for fixed strategy", 0.0, SHOT_DBL_MAX, true);
-
-    env->settings->createSetting(
-        "FixedInteger.MaxIterations", "Dual", 20, "Max LP iterations for fixed strategy", 0, SHOT_INT_MAX, true);
-
-    env->settings->createSetting("FixedInteger.ObjectiveTolerance", "Dual", 0.001,
-        "Objective tolerance for fixed strategy", 0.0, SHOT_DBL_MAX, true);
-
-    env->settings->createSetting("FixedInteger.Use", "Dual", false,
-        "Solve a fixed LP problem if integer-values have not changes in several MIP iterations", true);
 
     // Dual strategy settings: Hyperplane generation
 
@@ -745,6 +722,9 @@ void Solver::initializeSettings()
 
     env->settings->createSetting("HyperplaneCuts.UseIntegerCuts", "Dual", false,
         "Add integer cuts for infeasible integer-combinations for binary problems");
+
+    env->settings->createSetting("HyperplaneCuts.SaveHyperplanePoints", "Dual", false,
+        "Whether to save the points in the generated hyperplanes list", true);
 
     VectorString enumObjectiveRootsearch;
     enumObjectiveRootsearch.push_back("Always");
@@ -897,6 +877,8 @@ void Solver::initializeSettings()
         "SHOT performs bound tightening to strengthen the internal representation of the problem. These settings "
         "control how and when bound tightening is performed.");
 
+    // Bound tightening: feasibility based
+
     env->settings->createSetting(
         "BoundTightening.FeasibilityBased.MaxIterations", "Model", 5, "Maximal number of bound tightening iterations");
 
@@ -909,13 +891,51 @@ void Solver::initializeSettings()
     env->settings->createSetting("BoundTightening.FeasibilityBased.UseNonlinear", "Model", true,
         "Peform feasibility-based bound tightening on nonlinear expressions");
 
-    env->settings->createSettingGroup(
-        "Model", "Convexity", "Convexity", "These settings control the convexity detection functionality.");
+    // Bound tightening: initial POA
 
-    env->settings->createSetting("Convexity.AssumeConvex", "Model", false, "Assume that the problem is convex.");
+    env->settings->createSetting(
+        "BoundTightening.InitialPOA.ConstraintTolerance", "Model", 1e-1, "Constraint termination tolerance");
+
+    VectorString enumCutStrategy;
+    enumCutStrategy.push_back("ESH");
+    enumCutStrategy.push_back("ECP");
+    env->settings->createSetting("BoundTightening.InitialPOA.CutStrategy", "Model",
+        static_cast<int>(ES_HyperplaneCutStrategy::ECP), "Dual cut strategy", enumCutStrategy, 0);
+    enumCutStrategy.clear();
+
+    env->settings->createSetting("BoundTightening.InitialPOA.IterationLimit", "Model", 50, "Iteration limit for POA");
+
+    env->settings->createSetting("BoundTightening.InitialPOA.ObjectiveConstraintTolerance", "Model", 1e-3,
+        "Objective constraint termination tolerance");
+
+    env->settings->createSetting(
+        "BoundTightening.InitialPOA.ObjectiveGapAbsolute", "Model", 1e-1, "Absolute objective gap termination level");
+
+    env->settings->createSetting(
+        "BoundTightening.InitialPOA.ObjectiveGapRelative", "Model", 1e-1, "Relative objective gap termination level");
+
+    env->settings->createSetting("BoundTightening.InitialPOA.StagnationConstraintTolerance", "Model", 1e-2,
+        "Tolerance factor for when no progress is made");
+
+    env->settings->createSetting("BoundTightening.InitialPOA.StagnationIterationLimit", "Model", 5,
+        "Limit for iterations without significant progress");
+
+    env->settings->createSetting(
+        "BoundTightening.InitialPOA.Use", "Model", true, "Create an initial polyhedral outer approximation");
+
+    env->settings->createSetting("BoundTightening.InitialPOA.TimeLimit", "Model", 5.0, "Time limit for initial POA");
+
+    // Convexity settings
+
+    env->settings->createSettingGroup(
+        "Model", "Convexity", "Convexity", "These settings control the convexity detection functionality");
+
+    env->settings->createSetting("Convexity.AssumeConvex", "Model", false, "Assume that the problem is convex");
 
     env->settings->createSetting("Convexity.Quadratics.EigenValueTolerance", "Model", 1e-5,
         "Convexity tolerance for the eigenvalues of the Hessian matrix for quadratic terms", 0.0, SHOT_DBL_MAX);
+
+    // Variable settings
 
     env->settings->createSettingGroup("Model", "Variables", "Variables",
         "These settings control the maximum variable bounds allowed in SHOT. Projection will be performed onto these "
@@ -935,6 +955,8 @@ void Solver::initializeSettings()
 
     env->settings->createSetting("Variables.NonlinearObjectiveVariable.Bound", "Model", 1e12,
         "Max absolute bound for the auxiliary nonlinear objective variable", SHOT_DBL_MIN, SHOT_DBL_MAX);
+
+    // Reformulation settings
 
     env->settings->createSettingGroup("Model", "Reformulation", "Automatic reformulations",
         "These settings control the automatic reformulations performed in SHOT.");
@@ -1095,6 +1117,9 @@ void Solver::initializeSettings()
         "When should the fixed strategy be used", enumPrimalNLPStrategy, 0);
     enumPrimalNLPStrategy.clear();
 
+    env->settings->createSetting("FixedInteger.CopyNumberOfHyperplanes", "Primal", 10,
+        "The max number of hyperplanes to copy to original problem (if available)");
+
     env->settings->createSetting(
         "FixedInteger.CreateInfeasibilityCut", "Primal", false, "Create a cut from an infeasible solution point");
 
@@ -1122,6 +1147,7 @@ void Solver::initializeSettings()
     VectorString enumPrimalNLPSolver;
     enumPrimalNLPSolver.push_back("Ipopt");
     enumPrimalNLPSolver.push_back("GAMS");
+    enumPrimalNLPSolver.push_back("SHOT");
 
     env->settings->createSetting("FixedInteger.Solver", "Primal", static_cast<int>(ES_PrimalNLPSolver::Ipopt),
         "NLP solver to use", enumPrimalNLPSolver, 0);
@@ -1579,7 +1605,7 @@ void Solver::verifySettings()
            == ES_PrimalNLPSolver::GAMS)
         && (static_cast<ES_PrimalNLPProblemSource>(
                 env->settings->getSetting<int>("FixedInteger.SourceProblem", "Primal"))
-               != ES_PrimalNLPProblemSource::OriginalProblem))
+            != ES_PrimalNLPProblemSource::OriginalProblem))
     {
         env->output->outputWarning(" Cannot use GAMS NLP solvers when solving fixed NLP problems based on the "
                                    "reformulated model. Use Ipopt instead!");

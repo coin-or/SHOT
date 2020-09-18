@@ -41,6 +41,7 @@ public:
     std::vector<IntegerCut> generatedIntegerCuts;
     std::vector<IntegerCut> integerCutWaitingList;
 
+    std::vector<std::shared_ptr<InteriorPoint>> interiorPointCandidates;
     std::vector<std::shared_ptr<InteriorPoint>> interiorPts;
 
     double cutOffToUse;

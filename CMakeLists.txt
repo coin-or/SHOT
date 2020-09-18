@@ -175,6 +175,7 @@ file(
     "${PROJECT_SOURCE_DIR}/src/NLPSolver/INLPSolver.h"
     "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverBase.h"
     "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverCuttingPlaneMinimax.h"
+    "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverSHOT.h"
     "${PROJECT_SOURCE_DIR}/src/SolutionStrategy/*.h"
     "${PROJECT_SOURCE_DIR}/src/Tasks/*.h"
     "${PROJECT_SOURCE_DIR}/src/Settings.h"
@@ -417,6 +418,7 @@ add_library(
     ${PROJECT_SOURCE_DIR}/src/PrimalSolver.cpp
     ${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverBase.cpp
     ${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverCuttingPlaneMinimax.cpp
+    ${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverSHOT.cpp
 )
 target_link_libraries(SHOTPrimalStrategy SHOTModel)
 

@@ -1170,7 +1170,7 @@ bool ModelTestCopy()
     std::cout << "Problem created:\n\n";
     std::cout << problemText.str() << '\n';
 
-    auto problemCopy = problem->createCopy();
+    auto problemCopy = problem->createCopy(solver->getEnvironment());
 
     std::stringstream problemCopyText;
     problemCopyText << problemCopy;
@@ -1178,10 +1178,10 @@ bool ModelTestCopy()
     std::cout << "Problem copy created:\n\n";
     std::cout << problemCopyText.str() << '\n';
 
-    if(problemCopyText.str() != problemText.str())
+    if(problemCopyText.str().erase('*') != problemText.str().erase('*'))
         passed = false;
 
-    auto problemRelaxedCopy = problem->createCopy(true);
+    auto problemRelaxedCopy = problem->createCopy(solver->getEnvironment(), true);
     std::cout << "Relaxed problem copy created:\n\n";
     std::cout << problemRelaxedCopy << '\n';
 

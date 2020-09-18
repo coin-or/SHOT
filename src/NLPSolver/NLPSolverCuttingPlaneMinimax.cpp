@@ -102,7 +102,7 @@ NLPSolverCuttingPlaneMinimax::NLPSolverCuttingPlaneMinimax(EnvironmentPtr envPtr
 
 NLPSolverCuttingPlaneMinimax::~NLPSolverCuttingPlaneMinimax() = default;
 
-void NLPSolverCuttingPlaneMinimax::saveProblemToFile([[maybe_unused]] std::string fileName) {}
+void NLPSolverCuttingPlaneMinimax::saveProblemToFile([[maybe_unused]] std::string fileName) { }
 
 E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 {
@@ -137,11 +137,10 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 
     int numHyperAdded = 0;
     int numHyperTot = 0;
+    bool NaNWarningPrinted = false;
 
     for(int i = 0; i <= maxIter; i++)
     {
-        bool NaNWarningPrinted = false;
-
         boost::uintmax_t maxIterSubsolverTmp = maxIterSubsolver;
 
         // Saves the LP problem to file if in debug mode
@@ -300,11 +299,13 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
                 constant /= scalingFactor;
 
                 if(!NaNWarningPrinted)
+                {
                     env->output->outputWarning(
                         "        Large values found in RHS of cut, you might want to consider reducing the "
                         "bounds of the nonlinear variables.");
 
-                NaNWarningPrinted = true;
+                    NaNWarningPrinted = true;
+                }
             }
 
             bool cutHasNoNaNsorInfs = true;
@@ -501,7 +502,7 @@ void NLPSolverCuttingPlaneMinimax::updateVariableUpperBound(int variableIndex, d
     LPSolver->updateVariableUpperBound(variableIndex, bound);
 }
 
-void NLPSolverCuttingPlaneMinimax::clearStartingPoint() {}
+void NLPSolverCuttingPlaneMinimax::clearStartingPoint() { }
 
-void NLPSolverCuttingPlaneMinimax::saveOptionsToFile([[maybe_unused]] std::string fileName) {}
+void NLPSolverCuttingPlaneMinimax::saveOptionsToFile([[maybe_unused]] std::string fileName) { }
 } // namespace SHOT

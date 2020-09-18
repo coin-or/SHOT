@@ -9,27 +9,34 @@
 */
 
 #pragma once
-
 #include "TaskBase.h"
+
+#include <memory>
+#include <string>
+#include <vector>
 
 #include "../Structs.h"
 
 namespace SHOT
 {
-class TaskSolveFixedDualProblem : public TaskBase
+class NLPSolverSHOT;
+
+class TaskPerformBoundTightening : public TaskBase
 {
 public:
-    TaskSolveFixedDualProblem(EnvironmentPtr envPtr);
-    ~TaskSolveFixedDualProblem() override;
+    TaskPerformBoundTightening(EnvironmentPtr envPtr, ProblemPtr source);
+    ~TaskPerformBoundTightening() override;
     void run() override;
     std::string getType() override;
 
+    std::shared_ptr<NLPSolverSHOT> POASolver;
+
 private:
-    VectorInteger discreteVariableIndexes;
-    std::vector<VectorDouble> testedPoints;
+    virtual void createPOA();
 
-    VectorDouble lastSolution;
+    std::shared_ptr<TaskBase> taskSelectHPPts;
 
-    int totalIters = 0;
+    ProblemPtr sourceProblem;
+    ProblemPtr relaxedProblem;
 };
 } // namespace SHOT

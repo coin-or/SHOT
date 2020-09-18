@@ -161,9 +161,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
     {
         auto value = V->calculate(tmpPoint);
 
-        if(value == 0.0)
-        {
-        }
+        if(value == 0.0) { }
         else if(value > V->upperBound)
         {
             isVariableBoundsFulfilled = false;
@@ -319,7 +317,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
             if(maxLinearConstraintValue.error > linTol)
             {
                 auto tmpLine = fmt::format("         Linear constraints are not fulfilled. Most deviating {}: {} > {}.",
-                    maxLinearConstraintValue.constraint->name, maxLinearConstraintValue.error, linTol);
+                    maxLinearConstraintValue.constraint->index, maxLinearConstraintValue.error, linTol);
                 env->output->outputDebug(tmpLine);
 
                 return (false);
@@ -327,7 +325,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
             else
             {
                 auto tmpLine = fmt::format("         Linear constraints are fulfilled. Most deviating {}: {} > {}.",
-                    maxLinearConstraintValue.constraint->name, maxLinearConstraintValue.error, linTol);
+                    maxLinearConstraintValue.constraint->index, maxLinearConstraintValue.error, linTol);
                 env->output->outputDebug(tmpLine);
             }
         }
@@ -351,7 +349,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
         if(mostDevQuadraticConstraints.value > nonlinTol)
         {
             auto tmpLine = fmt::format("         Quadratic constraints are not fulfilled. Most deviating {}: {} > {}.",
-                maxQuadraticConstraintValue.constraint->name, maxQuadraticConstraintValue.error, nonlinTol);
+                maxQuadraticConstraintValue.constraint->index, maxQuadraticConstraintValue.error, nonlinTol);
             env->output->outputDebug(tmpLine);
 
             return (false);
@@ -359,7 +357,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
         else
         {
             auto tmpLine = fmt::format("         Quadratic constraints are fulfilled. Most deviating {}: {} > {}.",
-                maxQuadraticConstraintValue.constraint->name, maxQuadraticConstraintValue.error, nonlinTol);
+                maxQuadraticConstraintValue.constraint->index, maxQuadraticConstraintValue.error, nonlinTol);
             env->output->outputDebug(tmpLine);
         }
 
@@ -382,7 +380,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
         if(mostDevNonlinearConstraints.value > nonlinTol)
         {
             auto tmpLine = fmt::format("         Nonlinear constraints are not fulfilled. Most deviating {}: {} > {}.",
-                maxNonlinearConstraintValue.constraint->name, mostDevNonlinearConstraints.value, nonlinTol);
+                maxNonlinearConstraintValue.constraint->index, mostDevNonlinearConstraints.value, nonlinTol);
             env->output->outputDebug(tmpLine);
 
             return (false);
@@ -390,7 +388,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
         else
         {
             auto tmpLine = fmt::format("         Nonlinear constraints are fulfilled. Most deviating {}: {} > {}.",
-                maxNonlinearConstraintValue.constraint->name, mostDevNonlinearConstraints.value, nonlinTol);
+                maxNonlinearConstraintValue.constraint->index, mostDevNonlinearConstraints.value, nonlinTol);
             env->output->outputDebug(tmpLine);
         }
 

@@ -26,7 +26,7 @@
 namespace SHOT
 {
 
-Report::Report(EnvironmentPtr envPtr) : env(envPtr) {}
+Report::Report(EnvironmentPtr envPtr) : env(envPtr) { }
 
 Report::~Report() = default;
 
@@ -695,9 +695,11 @@ void Report::outputProblemInstanceReport()
 
         if(env->problem->properties.numberOfLinearConstraints > 0
             || env->reformulatedProblem->properties.numberOfLinearConstraints > 0)
-            env->output->outputInfo(
-                fmt::format(" {:35s}{:<21d}{:d}", " - linear:", env->problem->properties.numberOfLinearConstraints,
-                    env->reformulatedProblem->properties.numberOfLinearConstraints));
+            env->output->outputInfo(fmt::format(" {:35s}{:<21d}{:d}", " - linear:",
+                env->problem->properties.numberOfLinearConstraints
+                    - env->problem->properties.numberOfAddedLinearizations,
+                env->reformulatedProblem->properties.numberOfLinearConstraints
+                    - env->reformulatedProblem->properties.numberOfAddedLinearizations));
 
         if(env->problem->properties.numberOfConvexQuadraticConstraints > 0
             || env->reformulatedProblem->properties.numberOfConvexQuadraticConstraints > 0)
@@ -722,16 +724,25 @@ void Report::outputProblemInstanceReport()
             env->output->outputInfo(fmt::format(" {:35s}{:<21d}{:d}",
                 " - nonconvex nonlinear:", env->problem->properties.numberOfNonconvexNonlinearConstraints,
                 env->reformulatedProblem->properties.numberOfNonconvexNonlinearConstraints));
+
+        if(env->problem->properties.numberOfAddedLinearizations > 0)
+            env->output->outputInfo(fmt::format(" {:35s}{:<21d}{:d}",
+                " - added linearizations:", env->problem->properties.numberOfAddedLinearizations,
+                env->reformulatedProblem->properties.numberOfAddedLinearizations));
     }
     else
     {
         if(env->problem->properties.numberOfNumericConstraints > 0)
-            env->output->outputInfo(fmt::format(" {:35s}{:<21d}{:d}",
-                "Number of constraints:", env->problem->properties.numberOfNumericConstraints, ""));
+            env->output->outputInfo(fmt::format(" {:35s}{:<21d}{:d}", "Number of constraints:",
+                env->problem->properties.numberOfNumericConstraints
+                    - env->problem->properties.numberOfAddedLinearizations,
+                ""));
 
         if(env->problem->properties.numberOfLinearConstraints > 0)
-            env->output->outputInfo(fmt::format(
-                " {:35s}{:<21d}{:d}", " - linear:", env->problem->properties.numberOfLinearConstraints, ""));
+            env->output->outputInfo(fmt::format(" {:35s}{:<21d}{:d}", " - linear:",
+                env->problem->properties.numberOfLinearConstraints
+                    - env->problem->properties.numberOfAddedLinearizations,
+                ""));
 
         if(env->problem->properties.numberOfQuadraticConstraints > 0)
             env->output->outputInfo(fmt::format(
@@ -740,6 +751,10 @@ void Report::outputProblemInstanceReport()
         if(env->problem->properties.numberOfNonlinearConstraints > 0)
             env->output->outputInfo(fmt::format(
                 " {:35s}{:<21d}{:d}", " - nonlinear:", env->problem->properties.numberOfNonlinearConstraints, ""));
+
+        if(env->problem->properties.numberOfNonlinearConstraints > 0)
+            env->output->outputInfo(fmt::format(" {:35s}{:<21d}{:d}",
+                " - added linearizations:", env->problem->properties.numberOfAddedLinearizations, ""));
     }
 
     env->output->outputInfo("");
@@ -1123,23 +1138,11 @@ void Report::outputSolutionReport()
         env->output->outputInfo("");
     }
 
-    if(env->solutionStatistics.numberOfProblemsNLPInteriorPointSearch > 0
-        || env->solutionStatistics.numberOfProblemsMinimaxLP > 0)
+    if(env->solutionStatistics.numberOfProblemsMinimaxLP > 0)
     {
         env->output->outputInfo(" Problems solved during interior point search:");
-
-        if(env->solutionStatistics.numberOfProblemsNLPInteriorPointSearch > 0)
-        {
-            env->output->outputInfo(fmt::format(" - NLP problems:                                 {}",
-                env->solutionStatistics.numberOfProblemsNLPInteriorPointSearch));
-        }
-
-        if(env->solutionStatistics.numberOfProblemsMinimaxLP > 0)
-        {
-            env->output->outputInfo(fmt::format(" - LP problems:                                  {}",
-                env->solutionStatistics.numberOfProblemsMinimaxLP));
-        }
-
+        env->output->outputInfo(fmt::format(
+            " - LP problems:                                  {}", env->solutionStatistics.numberOfProblemsMinimaxLP));
         env->output->outputInfo("");
     }
 
@@ -1218,25 +1221,7 @@ void Report::outputInteriorPointPreReport()
 #endif
 
     env->output->outputInfo("");
-
-    switch(static_cast<ES_InteriorPointStrategy>(env->settings->getSetting<int>("ESH.InteriorPoint.Solver", "Dual")))
-    {
-    case(ES_InteriorPointStrategy::CuttingPlaneMiniMax):
-        env->output->outputInfo(" Strategy selected:          cutting plane minimax");
-        break;
-    case(ES_InteriorPointStrategy::IpoptMinimax):
-        env->output->outputInfo(" Strategy selected:          Ipopt minimax");
-        break;
-    case(ES_InteriorPointStrategy::IpoptRelaxed):
-        env->output->outputInfo(" Strategy selected:          Ipopt relaxed");
-        break;
-    case(ES_InteriorPointStrategy::IpoptMinimaxAndRelaxed):
-        env->output->outputInfo(" Strategy selected:          Ipopt minimax and relaxed");
-        break;
-    default:
-        env->output->outputInfo(" Strategy selected:          none");
-        break;
-    }
+    env->output->outputInfo(" Strategy selected:          cutting plane minimax");
 
     env->output->outputInfo(report.str());
 }

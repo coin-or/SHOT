@@ -42,6 +42,8 @@ public:
 
     void flush() { logger->flush(); }
 
+    void setPrefix(std::string prefix);
+
 private:
     std::shared_ptr<spdlog::sinks::sink> consoleSink;
     std::shared_ptr<spdlog::sinks::basic_file_sink_st> fileSink;
@@ -60,7 +62,7 @@ private:
     E_LogLevel logLevel;
 
 public:
-    OutputStream(EnvironmentPtr envPtr, E_LogLevel logLevel) : std::ostream(this), env(envPtr), logLevel(logLevel) {}
+    OutputStream(EnvironmentPtr envPtr, E_LogLevel logLevel) : std::ostream(this), env(envPtr), logLevel(logLevel) { }
 
     int overflow(int c = std::istream::traits_type::eof());
 };

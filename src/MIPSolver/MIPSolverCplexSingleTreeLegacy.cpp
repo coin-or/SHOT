@@ -64,7 +64,7 @@ void HCallbackI::main() // Called at each node...
 
     if(env->results->hasPrimalSolution()
         && ((isMinimization && lastUpdatedPrimal < env->results->getPrimalBound())
-               || (!isMinimization && lastUpdatedPrimal > env->results->getPrimalBound())))
+            || (!isMinimization && lastUpdatedPrimal > env->results->getPrimalBound())))
     {
         auto primalSol = env->results->primalSolution;
 
@@ -549,8 +549,13 @@ bool CtCallbackI::createHyperplane(Hyperplane hyperplane)
 
         tmpPair.second /= scalingFactor;
 
-        env->output->outputWarning("        Large values found in RHS of cut, you might want to consider reducing the "
-                                   "bounds of the nonlinear variables.");
+        if(!warningMessageShownLargeRHS)
+        {
+            env->output->outputWarning(
+                "        Large values found in RHS of cut, you might want to consider reducing the "
+                "bounds of the nonlinear variables.");
+            warningMessageShownLargeRHS = true;
+        }
     }
 
     auto currIter = env->results->getCurrentIteration(); // The unsolved new iteration
@@ -821,5 +826,5 @@ int MIPSolverCplexSingleTreeLegacy::getSolutionLimit()
     return (solLim);
 }
 
-void MIPSolverCplexSingleTreeLegacy::checkParameters() {}
+void MIPSolverCplexSingleTreeLegacy::checkParameters() { }
 } // namespace SHOT

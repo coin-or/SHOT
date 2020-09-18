@@ -36,6 +36,8 @@ Output::Output()
 
 Output::~Output() = default;
 
+void Output::setPrefix(std::string prefix) { logger->set_pattern(prefix + "%v"); }
+
 void Output::outputCritical(std::string message) { logger->critical(message); }
 
 void Output::outputError(std::string message) { logger->error(message); }
