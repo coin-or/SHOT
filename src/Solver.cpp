@@ -921,7 +921,7 @@ void Solver::initializeSettings()
         "Limit for iterations without significant progress");
 
     env->settings->createSetting(
-        "BoundTightening.InitialPOA.Use", "Model", true, "Create an initial polyhedral outer approximation");
+        "BoundTightening.InitialPOA.Use", "Model", false, "Create an initial polyhedral outer approximation");
 
     env->settings->createSetting("BoundTightening.InitialPOA.TimeLimit", "Model", 5.0, "Time limit for initial POA");
 
