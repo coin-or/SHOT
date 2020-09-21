@@ -89,8 +89,8 @@ private:
 
     LinearTerms partitionNonlinearBinaryProduct(const std::shared_ptr<ExpressionSum> source, bool reversedSigns);
 
-    std::tuple<LinearTerms, QuadraticTerms> reformulateAndPartitionQuadraticSum(const QuadraticTerms& quadraticTerms,
-        bool reversedSigns, bool partitionNonBinaryTerms, bool partitionIfAllTermsConvex);
+    std::tuple<LinearTerms, QuadraticTerms> reformulateAndPartitionQuadraticSum(
+        const QuadraticTerms& quadraticTerms, bool reversedSigns, ES_PartitionNonlinearSums partitionStrategy);
     std::tuple<LinearTerms, MonomialTerms> reformulateMonomialSum(
         const MonomialTerms& monomialTerms, bool reversedSigns);
 

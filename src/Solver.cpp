@@ -983,7 +983,7 @@ void Solver::initializeSettings()
     // Reformulations for constraints
     VectorString enumNonlinearTermPartitioning;
     enumNonlinearTermPartitioning.push_back("Always");
-    enumNonlinearTermPartitioning.push_back("If convex");
+    enumNonlinearTermPartitioning.push_back("If result is convex");
     enumNonlinearTermPartitioning.push_back("Never");
     env->settings->createSetting("Reformulation.Constraint.PartitionNonlinearTerms", "Model",
         static_cast<int>(ES_PartitionNonlinearSums::IfConvex), "When to partition nonlinear sums in objective function",
@@ -1779,13 +1779,13 @@ void Solver::setConvexityBasedSettings()
             env->settings->updateSetting("Relaxation.Use", "Dual", false);
 
             env->settings->updateSetting(
-                "Reformulation.Constraint.PartitionNonlinearTerms", "Model", (int)ES_PartitionNonlinearSums::Always);
+                "Reformulation.Constraint.PartitionNonlinearTerms", "Model", (int)ES_PartitionNonlinearSums::IfConvex);
             env->settings->updateSetting(
-                "Reformulation.Constraint.PartitionQuadraticTerms", "Model", (int)ES_PartitionNonlinearSums::Always);
+                "Reformulation.Constraint.PartitionQuadraticTerms", "Model", (int)ES_PartitionNonlinearSums::IfConvex);
             env->settings->updateSetting("Reformulation.ObjectiveFunction.PartitionNonlinearTerms", "Model",
-                (int)ES_PartitionNonlinearSums::Always);
+                (int)ES_PartitionNonlinearSums::IfConvex);
             env->settings->updateSetting("Reformulation.ObjectiveFunction.PartitionQuadraticTerms", "Model",
-                (int)ES_PartitionNonlinearSums::Always);
+                (int)ES_PartitionNonlinearSums::IfConvex);
             // env->settings->updateSetting("Reformulation.Quadratics.Strategy", "Model", 0);
 
             env->settings->updateSetting("FixedInteger.CallStrategy", "Primal", 0);
