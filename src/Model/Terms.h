@@ -765,6 +765,9 @@ public:
         else if(variableBound.l() <= 0)
             variableBound.l(0.0);
 
+        if(power == 1.0)
+            return (variableBound);
+
         auto bounds = pow(variableBound, 1.0 / power);
 
         if(bounds.l() <= 0.0)
