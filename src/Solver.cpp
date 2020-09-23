@@ -829,6 +829,9 @@ void Solver::initializeSettings()
     env->settings->createSetting(
         "ReductionCut.ReductionFactor", "Dual", 0.001, "The factor used to reduce the cutoff value", 0, 1.0);
 
+    env->settings->createSetting(
+        "ReductionCut.Use", "Dual", true, "Enable the dual reduction cut strategy for nonconvex problems");
+
     // Dual strategy settings: Relaxation strategies
 
     env->settings->createSettingGroup("Dual", "Relaxation", "Relaxation strategies",

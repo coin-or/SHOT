@@ -165,8 +165,12 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr)
     auto tCheckPrimalStag = std::make_shared<TaskCheckPrimalStagnation>(env, "AddObjectiveCut", "CheckDualStag");
     env->tasks->addTask(tCheckPrimalStag, "CheckPrimalStag");
 
-    auto tAddObjectiveCut = std::make_shared<TaskAddPrimalReductionCut>(env, "CheckDualStag", "CheckDualStag");
-    env->tasks->addTask(tAddObjectiveCut, "AddObjectiveCut");
+    if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex
+        && env->settings->getSetting<bool>("ReductionCut.Use", "Dual"))
+    {
+        auto tAddObjectiveCut = std::make_shared<TaskAddPrimalReductionCut>(env, "CheckDualStag", "CheckDualStag");
+        env->tasks->addTask(tAddObjectiveCut, "AddObjectiveCut");
+    }
 
     auto tCheckDualStag = std::make_shared<TaskCheckDualStagnation>(env, "FinalizeSolution");
     env->tasks->addTask(tCheckDualStag, "CheckDualStag");
@@ -205,7 +209,8 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr)
 
     env->tasks->addTask(tFinalizeSolution, "FinalizeSolution");
 
-    if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex)
+    if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex
+        && env->settings->getSetting<bool>("ReductionCut.Use", "Dual"))
     {
         auto tAddObjectiveCutFinal = std::make_shared<TaskAddPrimalReductionCut>(env, "InitIter2", "Terminate");
         std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tAddObjectiveCutFinal);
