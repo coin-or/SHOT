@@ -294,7 +294,8 @@ public:
 
     bool isBilinear = false;
     bool isSquare = false;
-    bool isBinary = false;
+    bool isBinary = false; // Binary times binary
+    bool isInteger = false; // Integer times integer (non binary variables)
 
     QuadraticTerm() = default;
 
@@ -317,6 +318,11 @@ public:
             && secondVariable->properties.type == E_VariableType::Binary)
         {
             isBinary = true;
+        }
+        else if(firstVariable->properties.type == E_VariableType::Integer
+            && secondVariable->properties.type == E_VariableType::Integer)
+        {
+            isInteger = true;
         }
     };
 
