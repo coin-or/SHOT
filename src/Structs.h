@@ -256,6 +256,16 @@ struct SolutionStatistics
     int numberOfPrimalReductionCutsUpdatesWithoutEffect = 0;
     int numberOfDualRepairsSinceLastPrimalUpdate = 0;
 
+    int numberOfPrimalReductionsPerformed = 0;
+    int numberOfSuccessfulDualRepairsPerformed = 0;
+    int numberOfUnsuccessfulDualRepairsPerformed = 0;
+
+    int numberOfPrimalImprovementsAfterInfeasibilityRepair = 0;
+    int numberOfPrimalImprovementsAfterReductionCut = 0;
+
+    bool hasInfeasibilityRepairBeenPerformedSincePrimalImprovement = false;
+    bool hasReductionCutBeenAddedSincePrimalImprovement = false;
+
     int getNumberOfTotalDualProblems()
     {
         return (numberOfProblemsLP + numberOfProblemsQP + numberOfProblemsFeasibleMILP + numberOfProblemsOptimalMILP
