@@ -763,6 +763,9 @@ void Solver::initializeSettings()
     env->settings->createSetting("MIP.InfeasibilityRepair.TimeLimit", "Dual", 10.0,
         "Time limit when reparing infeasible problem", 0, SHOT_DBL_MAX);
 
+    env->settings->createSetting(
+        "MIP.InfeasibilityRepair.Use", "Dual", true, "Enable the infeasibility repair strategy for nonconvex problems");
+
     env->settings->createSetting("MIP.OptimalityTolerance", "Dual", 1e-6,
         "The reduced-cost tolerance for optimality in the MIP solver", 1e-9, 1e-2);
 
