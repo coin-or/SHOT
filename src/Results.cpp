@@ -135,6 +135,18 @@ void Results::addPrimalSolution(PrimalSolution solution)
 
     env->solutionStatistics.numberOfFoundPrimalSolutions++;
 
+    if(env->solutionStatistics.hasInfeasibilityRepairBeenPerformedSincePrimalImprovement)
+    {
+        env->solutionStatistics.numberOfPrimalImprovementsAfterInfeasibilityRepair++;
+        env->solutionStatistics.hasInfeasibilityRepairBeenPerformedSincePrimalImprovement = false;
+    }
+
+    if(env->solutionStatistics.hasReductionCutBeenAddedSincePrimalImprovement)
+    {
+        env->solutionStatistics.numberOfPrimalImprovementsAfterReductionCut++;
+        env->solutionStatistics.hasReductionCutBeenAddedSincePrimalImprovement = false;
+    }
+
     // Saves statistics for the sources of primal solutions
     auto element = this->primalSolutionSourceStatistics.emplace(solution.sourceType, 1);
 
@@ -349,6 +361,41 @@ std::string Results::getResultsOSrL()
     otherNode->SetAttribute("name", "NumberOfPrimalSolutionsFound");
     otherNode->SetAttribute("value", env->solutionStatistics.numberOfFoundPrimalSolutions);
     otherNode->SetAttribute("description", "The number of primal solutions found");
+    otherResultsNode->InsertEndChild(otherNode);
+
+    otherNode = osrlDocument.NewElement("other");
+    otherNode->SetAttribute("name", "NumberOfSuccesfulInfeasibilityRepairsPerformed");
+    otherNode->SetAttribute("value", env->solutionStatistics.numberOfSuccessfulDualRepairsPerformed);
+    otherNode->SetAttribute(
+        "description", "The number of sucessful infeasibility repairs performed for nonconvex problems");
+    otherResultsNode->InsertEndChild(otherNode);
+
+    otherNode = osrlDocument.NewElement("other");
+    otherNode->SetAttribute("name", "NumberOfUnsuccesfulInfeasibilityRepairsPerformed");
+    otherNode->SetAttribute("value", env->solutionStatistics.numberOfUnsuccessfulDualRepairsPerformed);
+    otherNode->SetAttribute(
+        "description", "The number of unsucessful infeasibility repairs performed for nonconvex problems");
+    otherResultsNode->InsertEndChild(otherNode);
+
+    otherNode = osrlDocument.NewElement("other");
+    otherNode->SetAttribute("name", "NumberOfReductionCutStepsPerformed");
+    otherNode->SetAttribute("value", env->solutionStatistics.numberOfPrimalReductionsPerformed);
+    otherNode->SetAttribute("description", "The number of reduction cut steps performed for nonconvex problems");
+    otherResultsNode->InsertEndChild(otherNode);
+
+    otherNode = osrlDocument.NewElement("other");
+    otherNode->SetAttribute("name", "numberOfPrimalImprovementsAfterInfeasibilityRepair");
+    otherNode->SetAttribute("value", env->solutionStatistics.numberOfPrimalImprovementsAfterInfeasibilityRepair);
+    otherNode->SetAttribute("description",
+        "The number of cases where the repairing of infeasibilities for nonconvex problems has directly resulted in "
+        "improved primal solutions");
+    otherResultsNode->InsertEndChild(otherNode);
+
+    otherNode = osrlDocument.NewElement("other");
+    otherNode->SetAttribute("name", "numberOfPrimalImprovementsAfterReductionCut");
+    otherNode->SetAttribute("value", env->solutionStatistics.numberOfPrimalImprovementsAfterReductionCut);
+    otherNode->SetAttribute("description",
+        "The number of cases where the primal reduction cut has directly resulted in improved primal solutions");
     otherResultsNode->InsertEndChild(otherNode);
 
     auto dualSolver = static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual"));

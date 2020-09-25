@@ -110,6 +110,8 @@ void TaskRepairInfeasibleDualProblem::run()
     {
         env->tasks->setNextTask(taskIDIfTrue);
         iterLastRepair = currIter->iterationNumber;
+        env->solutionStatistics.hasInfeasibilityRepairBeenPerformedSincePrimalImprovement = true;
+        env->solutionStatistics.numberOfSuccessfulDualRepairsPerformed++;
 
         currIter->wasInfeasibilityRepairSuccessful = true;
         tmpType << "-SUCC";
@@ -117,6 +119,8 @@ void TaskRepairInfeasibleDualProblem::run()
     else if(mainRepairTries < 2)
     {
         currIter->wasInfeasibilityRepairSuccessful = false;
+        env->solutionStatistics.numberOfUnsuccessfulDualRepairsPerformed++;
+
         env->dualSolver->cutOffToUse = env->results->getPrimalBound();
         env->solutionStatistics.numberOfDualRepairsSinceLastPrimalUpdate = 0;
         env->tasks->setNextTask(taskIDIfTrue);
@@ -126,6 +130,8 @@ void TaskRepairInfeasibleDualProblem::run()
     else
     {
         currIter->wasInfeasibilityRepairSuccessful = false;
+        env->solutionStatistics.numberOfUnsuccessfulDualRepairsPerformed++;
+
         env->tasks->setNextTask(taskIDIfFalse);
         mainRepairTries++;
         tmpType << "-FAIL-" << mainRepairTries;

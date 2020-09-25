@@ -174,6 +174,8 @@ void QuadraticTerms::updateConvexity()
     {
         double eigenvalue = eigenSolver.eigenvalues().col(0)[i];
 
+        this->minEigenValue = std::min(minEigenValue, eigenvalue);
+
         areAllNegativeOrZero = areAllNegativeOrZero && eigenvalue <= eigenvalueTolerance;
         areAllPositiveOrZero = areAllPositiveOrZero && eigenvalue >= -eigenvalueTolerance;
     }
@@ -184,6 +186,9 @@ void QuadraticTerms::updateConvexity()
         convexity = E_Convexity::Concave;
     else
         convexity = E_Convexity::Nonconvex;
+
+    if(this->minEigenValue >= -eigenvalueTolerance)
+        minEigenValueWithinTolerance = true;
 }
 
 MonomialTerm::MonomialTerm(const MonomialTerm* term, ProblemPtr destinationProblem)

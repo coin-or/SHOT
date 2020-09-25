@@ -414,6 +414,9 @@ private:
     void updateConvexity() override;
 
 public:
+    double minEigenValue = SHOT::SHOT_DBL_MAX;
+    bool minEigenValueWithinTolerance = false;
+
     using std::vector<QuadraticTermPtr>::operator[];
 
     using std::vector<QuadraticTermPtr>::at;

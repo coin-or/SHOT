@@ -146,7 +146,8 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
     auto tPrintIterReport = std::make_shared<TaskPrintIterationReport>(env);
     env->tasks->addTask(tPrintIterReport, "PrintIterReport");
 
-    if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex)
+    if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex
+        && env->settings->getSetting<bool>("MIP.InfeasibilityRepair.Use", "Dual"))
     {
         auto tRepairInfeasibility = std::make_shared<TaskRepairInfeasibleDualProblem>(env, "SolveIter", "CheckAbsGap");
         env->tasks->addTask(tRepairInfeasibility, "RepairInfeasibility");
@@ -174,7 +175,8 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
     auto tCheckIterError = std::make_shared<TaskCheckIterationError>(env, "FinalizeSolution");
     env->tasks->addTask(tCheckIterError, "CheckIterError");
 
-    if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex)
+    if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex
+        && env->settings->getSetting<bool>("ReductionCut.Use", "Dual"))
     {
         auto tCheckMaxNumberOfObjectiveCuts
             = std::make_shared<TaskCheckMaxNumberOfPrimalReductionCuts>(env, "FinalizeSolution");
@@ -268,7 +270,8 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
 
     env->tasks->addTask(tFinalizeSolution, "FinalizeSolution");
 
-    if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex)
+    if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex
+        && env->settings->getSetting<bool>("ReductionCut.Use", "Dual"))
     {
         auto tAddObjectiveCutFinal = std::make_shared<TaskAddPrimalReductionCut>(env, "InitIter2", "Terminate");
         std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tAddObjectiveCutFinal);
