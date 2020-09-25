@@ -44,6 +44,12 @@ public:
 private:
     bool useConvexQuadraticConstraints = false;
     bool useNonconvexQuadraticConstraints = false;
+
+    // If the constraint is convex in SHOT with respect to the
+    // Model.Convexity.Quadratics.EigenValueTolerance, but the MIP solver does not support such a tolerance
+    // (Cplex)
+    bool useConvexQuadraticConstraintsWithinTolerance = false;
+
     bool useConvexQuadraticObjective = false;
     bool useNonconvexQuadraticObjective = false;
     bool quadraticObjectiveRegardedAsNonlinear = false;
