@@ -504,12 +504,14 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
                 {
                     newHP.isObjectiveHyperplane = true;
                     newHP.sourceConstraintIndex = -1;
+                    newHP.source = HP.source;
                 }
                 else if(auto NCV = env->reformulatedProblem->getMostDeviatingNonlinearConstraint(HP.generatedPoint);
                         NCV)
                 {
                     newHP.sourceConstraintIndex = NCV->constraint->index;
                     newHP.sourceConstraint = NCV->constraint;
+                    newHP.source = HP.source;
                 }
                 else
                 {

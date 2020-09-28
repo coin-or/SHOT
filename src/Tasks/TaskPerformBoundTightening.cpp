@@ -135,6 +135,7 @@ void TaskPerformBoundTightening::createPOA()
             || HP.source == E_HyperplaneSource::ObjectiveRootsearch)
             continue;
 
+        newHP.source = HP.source;
         newHP.sourceConstraintIndex = HP.sourceConstraintIndex;
         newHP.sourceConstraint
             = std::dynamic_pointer_cast<NumericConstraint>(sourceProblem->getConstraint(HP.sourceConstraintIndex));
