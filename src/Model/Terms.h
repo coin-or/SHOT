@@ -736,8 +736,6 @@ public:
 
         double intpart;
         bool isInteger = (std::modf(power, &intpart) == 0.0);
-        int integerValue = (int)round(intpart);
-        bool isEven = (integerValue % 2 == 0);
 
         if(variableBound.l() <= 0)
         {
@@ -762,22 +760,44 @@ public:
 
     inline Interval getBounds()
     {
+        if(power == 0.0)
+            return (Interval(1.0));
+
         auto variableBound = variable->getBound();
-
-        double intpart;
-        bool isInteger = (std::modf(power, &intpart) == 0.0);
-
-        if(isInteger && power > 0 && variableBound.l() < 0.0)
-            variableBound.l(0.0);
-        else if(!isInteger && variableBound.l() <= 0.0)
-            variableBound.l(SHOT_DBL_EPS);
-        else if(variableBound.l() <= 0)
-            variableBound.l(0.0);
 
         if(power == 1.0)
             return (variableBound);
 
-        auto bounds = pow(variableBound, 1.0 / power);
+        double intpart;
+        bool isInteger = (std::modf(power, &intpart) == 0.0);
+        if(isInteger && power > 0 && variableBound.l() < 0.0)
+            variableBound.l(0.0);
+        else if(!isInteger && variableBound.l() <= 0.0)
+            variableBound.l(SHOT_DBL_EPS);
+        else if(power < 0.0 && variableBound.l() <= 0.0)
+            variableBound.l(SHOT_DBL_EPS);
+        else if(variableBound.l() <= 0)
+            variableBound.l(0.0);
+
+        Interval bounds;
+
+        if(isInteger && power > 0)
+        {
+            double lower = sqrt(variableBound.l());
+            double upper = sqrt(variableBound.u());
+
+            return (Interval(std::min(lower, upper), std::max(lower, upper)));
+        }
+
+        if(power == -1.0)
+        {
+            bounds = 1 / variableBound;
+
+            if(bounds.l() < 1e-10 && bounds.u() > 1e-10)
+                bounds.l(1e-10);
+        }
+        else
+            bounds = pow(variableBound, 1.0 / power);
 
         if(bounds.l() <= 0.0)
             bounds.l(0.0);
@@ -787,6 +807,12 @@ public:
 
     inline bool tightenBounds(Interval bound)
     {
+        if(power == 0.0)
+            return (variable->tightenBounds(Interval(1.0)));
+
+        if(power == 1.0)
+            return (variable->tightenBounds(bound));
+
         double intpart;
         bool isInteger = (std::modf(power, &intpart) == 0.0);
         int integerValue = (int)round(intpart);
@@ -794,17 +820,29 @@ public:
 
         if(isInteger && isEven && power > 0 && bound.l() <= 0.0)
             bound.l(0.0);
-        else if(bound.l() <= 0.0)
+        else if(!isInteger && bound.l() <= 0.0)
             bound.l(SHOT_DBL_EPS);
+        else if(power < 0.0 && bound.l() <= 0.0)
+            bound.l(SHOT_DBL_EPS);
+        else if(bound.l() <= 0)
+            bound.l(0.0);
 
         Interval interval;
 
         if(bound.l() < 0.0)
             return (false);
 
-        if(power == 2.0)
-            interval = sqrt(bound);
-        else if(power == -1.0)
+        if(isInteger && power > 0)
+        {
+            interval = bound;
+
+            double lower = sqrt(interval.l());
+            double upper = sqrt(interval.u());
+
+            return (variable->tightenBounds(Interval(std::min(lower, upper), std::max(lower, upper))));
+        }
+
+        if(power == -1.0)
         {
             interval = 1 / bound;
 
