@@ -736,6 +736,8 @@ public:
 
         double intpart;
         bool isInteger = (std::modf(power, &intpart) == 0.0);
+        int integerValue = (int)round(intpart);
+        bool isEven = (integerValue % 2 == 0);
 
         if(variableBound.l() <= 0)
         {
@@ -770,6 +772,7 @@ public:
 
         double intpart;
         bool isInteger = (std::modf(power, &intpart) == 0.0);
+
         if(isInteger && power > 0 && variableBound.l() < 0.0)
             variableBound.l(0.0);
         else if(!isInteger && variableBound.l() <= 0.0)
