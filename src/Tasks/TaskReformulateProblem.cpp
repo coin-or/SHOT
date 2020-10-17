@@ -19,6 +19,7 @@
 #include "../Timing.h"
 
 #include "../Model/Simplifications.h"
+#include "TaskPerformBoundTightening.h"
 
 namespace SHOT
 {
@@ -170,7 +171,9 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
     reformulatedProblem->properties.isReformulated = true;
     reformulatedProblem->properties.numberOfAddedLinearizations = env->problem->properties.numberOfAddedLinearizations;
     reformulatedProblem->finalize();
-    reformulatedProblem->doFBBT();
+
+    auto taskPerformBoundTightening = std::make_unique<TaskPerformBoundTightening>(env, reformulatedProblem);
+    taskPerformBoundTightening->run();
 
     // Fixing that a quadratic objective changed into a nonlinear objective is correctly identified
     if(!(useConvexQuadraticObjective || useNonconvexQuadraticObjective)
