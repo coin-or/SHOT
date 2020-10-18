@@ -2,6 +2,7 @@ language: cpp
 
 compiler:
   - gcc
+  - clang
   
 matrix:
   include:
@@ -12,6 +13,10 @@ matrix:
           packages:
             - gfortran
             - liblapack-dev
+            - clang-9
+            - cmake
+            - gcc-9
+            - g++-9
 
 before_script:
   - git clone https://github.com/coin-or/coinbrew
