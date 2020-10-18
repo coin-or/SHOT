@@ -21,6 +21,10 @@
 #include "../Model/Simplifications.h"
 #include "TaskPerformBoundTightening.h"
 
+#ifdef HAS_GUROBI
+#include "gurobi_c.h"
+#endif
+
 namespace SHOT
 {
 
@@ -30,6 +34,9 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
 
     auto quadraticStrategy = static_cast<ES_QuadraticProblemStrategy>(
         env->settings->getSetting<int>("Reformulation.Quadratics.Strategy", "Model"));
+
+    auto integerBilinearStrategy = static_cast<ES_ReformulateBilinearInteger>(
+        env->settings->getSetting<int>("Reformulation.Bilinear.IntegerFormulation", "Model"));
 
     if(env->settings->getSetting<int>("MIP.Solver", "Dual") == (int)ES_MIPSolver::Cplex)
     {
@@ -62,6 +69,21 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
             useNonconvexQuadraticConstraints = false; // No support in Cplex
             useConvexQuadraticObjective = true;
             useNonconvexQuadraticObjective = true;
+            break;
+        default:
+            break;
+        }
+
+        switch(integerBilinearStrategy)
+        {
+        case(ES_ReformulateBilinearInteger::No):
+            useIntegerBilinearTermReformulation = false;
+            break;
+        case(ES_ReformulateBilinearInteger::NoIfQuadraticSupport):
+            useIntegerBilinearTermReformulation = true;
+            break;
+        case(ES_ReformulateBilinearInteger::Yes):
+            useIntegerBilinearTermReformulation = true;
             break;
         default:
             break;
@@ -102,6 +124,28 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
         default:
             break;
         }
+
+        switch(integerBilinearStrategy)
+        {
+        case(ES_ReformulateBilinearInteger::No):
+            useIntegerBilinearTermReformulation = false;
+            break;
+
+        case(ES_ReformulateBilinearInteger::NoIfQuadraticSupport):
+#ifdef HAS_GUROBI
+#if GRB_VERSION_MAJOR >= 9
+            useIntegerBilinearTermReformulation = false;
+#elif GRB_VERSION_MAJOR < 9
+            useIntegerBilinearTermReformulation = true;
+#endif
+#endif
+            break;
+        case(ES_ReformulateBilinearInteger::Yes):
+            useIntegerBilinearTermReformulation = true;
+            break;
+        default:
+            break;
+        }
     }
     else if(env->settings->getSetting<int>("MIP.Solver", "Dual") == (int)ES_MIPSolver::Cbc)
     {
@@ -111,6 +155,21 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
         useNonconvexQuadraticConstraints = false;
         useConvexQuadraticObjective = false;
         useNonconvexQuadraticObjective = false;
+
+        switch(integerBilinearStrategy)
+        {
+        case(ES_ReformulateBilinearInteger::No):
+            useIntegerBilinearTermReformulation = false;
+            break;
+        case(ES_ReformulateBilinearInteger::NoIfQuadraticSupport):
+            useIntegerBilinearTermReformulation = true;
+            break;
+        case(ES_ReformulateBilinearInteger::Yes):
+            useIntegerBilinearTermReformulation = true;
+            break;
+        default:
+            break;
+        }
     }
     else
     {
@@ -1452,7 +1511,7 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
             // Bilinear term b1*x2 or x1*b2
             {
             }
-            else if(T->isBilinear
+            else if(useIntegerBilinearTermReformulation && T->isBilinear
                 && ((T->firstVariable->properties.type == E_VariableType::Integer
                         && (T->firstVariable->upperBound - T->firstVariable->lowerBound
                             < maxBilinearIntegerReformulationDomain))
@@ -1466,7 +1525,7 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
                                                                    // equality constraint
             {
             }
-            else // Square term x1^2 or general bilinear term x1*x2 will remain as is
+            else // Negative square term -x1^2 or general bilinear term x1*x2 will remain as is
             {
                 allTermsConvexAfterReformulation = false;
                 break;
@@ -1504,7 +1563,7 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
                 auto [auxVariable, newVariable] = getBilinearAuxiliaryVariable(firstVariable, secondVariable);
                 resultLinearTerms.add(std::make_shared<LinearTerm>(signfactor * T->coefficient, auxVariable));
             }
-            else if(T->isBilinear
+            else if(useIntegerBilinearTermReformulation && T->isBilinear
                 && ((T->firstVariable->properties.type == E_VariableType::Integer
                         && (T->firstVariable->upperBound - T->firstVariable->lowerBound
                             < maxBilinearIntegerReformulationDomain))

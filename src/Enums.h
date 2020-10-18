@@ -363,11 +363,11 @@ enum class ES_ReformulationBinaryMonomials
     CostaLiberti
 };
 
-enum class ES_ReformulatiomBilinearInteger
+enum class ES_ReformulateBilinearInteger
 {
-    None,
-    OneDiscretization //,
-    // TwoDiscretization
+    No,
+    NoIfQuadraticSupport,
+    Yes
 };
 
 enum class ES_PartitionNonlinearSums

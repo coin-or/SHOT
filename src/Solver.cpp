@@ -250,10 +250,10 @@ bool Solver::setProblem(std::string fileName)
     if(env->settings->getSetting<bool>("Convexity.AssumeConvex", "Model"))
     {
         env->settings->updateSetting(
-            "Reformulation.Bilinear.IntegerFormulation", "Model", (int)ES_ReformulatiomBilinearInteger::None);
+            "Reformulation.Bilinear.IntegerFormulation", "Model", (int)ES_ReformulateBilinearInteger::No);
 
         env->settings->updateSetting(
-            "Reformulation.Monomials.Formulation", "Model", (int)ES_ReformulatiomBilinearInteger::None);
+            "Reformulation.Monomials.Formulation", "Model", (int)ES_ReformulationBinaryMonomials::None);
     }
 
 #ifndef HAS_GAMS
@@ -418,10 +418,10 @@ bool Solver::setProblem(
     if(env->settings->getSetting<bool>("Convexity.AssumeConvex", "Model"))
     {
         env->settings->updateSetting(
-            "Reformulation.Bilinear.IntegerFormulation", "Model", (int)ES_ReformulatiomBilinearInteger::None);
+            "Reformulation.Bilinear.IntegerFormulation", "Model", (int)ES_ReformulateBilinearInteger::No);
 
         env->settings->updateSetting(
-            "Reformulation.Monomials.Formulation", "Model", (int)ES_ReformulatiomBilinearInteger::None);
+            "Reformulation.Monomials.Formulation", "Model", (int)ES_ReformulationBinaryMonomials::None);
     }
 
 #ifdef HAS_CBC
@@ -973,12 +973,12 @@ void Solver::initializeSettings()
 
     // Reformulations for integer bilinears
     VectorString enumBilinearIntegerReformulation;
-    enumBilinearIntegerReformulation.push_back("None");
-    enumBilinearIntegerReformulation.push_back("1D");
-    enumBilinearIntegerReformulation.push_back("2D");
+    enumBilinearIntegerReformulation.push_back("No");
+    enumBilinearIntegerReformulation.push_back("No if nonconvex quadratic terms allowed by MIP solver");
+    enumBilinearIntegerReformulation.push_back("Yes");
     env->settings->createSetting("Reformulation.Bilinear.IntegerFormulation", "Model",
-        static_cast<int>(ES_ReformulatiomBilinearInteger::OneDiscretization),
-        "How to reformulate integer bilinear terms", enumBilinearIntegerReformulation, 0);
+        static_cast<int>(ES_ReformulateBilinearInteger::NoIfQuadraticSupport), "Reformulate integer bilinear terms",
+        enumBilinearIntegerReformulation, 0);
     enumBilinearIntegerReformulation.clear();
 
     env->settings->createSetting("Reformulation.Bilinear.IntegerFormulation.MaxDomain", "Model", 100,
@@ -1682,9 +1682,6 @@ void Solver::verifySettings()
         if(env->settings->getSetting<bool>("UseRecommendedSettings", "Strategy"))
         {
             // Activate Gurobi nonconvex MIQCQP solver for all nonconvex quadratic terms by default
-            env->settings->updateSetting("Reformulation.Quadratics.ExtractStrategy", "Model",
-                (int)ES_QuadraticTermsExtractStrategy::ExtractToEqualityConstraintIfNonconvex);
-
             env->settings->updateSetting("Reformulation.Quadratics.Strategy", "Model",
                 (int)ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained);
         }
