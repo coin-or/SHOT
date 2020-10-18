@@ -125,7 +125,7 @@ void Problem::updateConstraints()
 
             C->constant *= -1.0;
         }
-        else if(C->valueLHS == C->valueRHS
+        else if(C->valueLHS == C->valueRHS && C->getConstraintFunctionBounds().l() > 0
             && ((C->properties.convexity == E_Convexity::Convex
                     && C->properties.monotonicity == E_Monotonicity::Nondecreasing)
                 || (C->properties.convexity == E_Convexity::Concave

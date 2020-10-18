@@ -61,7 +61,7 @@ private:
 
     int maxBilinearIntegerReformulationDomain = 2;
 
-    bool useIntegerBilinearTermReformulation = false; // integer term i1*i2
+    bool useIntegerBilinearTermReformulation = false; // integer term i1*i2 or i1*x2
 
     void reformulateObjectiveFunction();
     void createEpigraphConstraint();
