@@ -1364,7 +1364,7 @@ void Solver::initializeSettings()
     enumGurobiPoolSearchMode.clear();
 
     env->settings->createSetting(
-        "Gurobi.PoolSolutions", "Subsolver", 1, "Determines how many MIP solutions are stored", 1, 2000000000);
+        "Gurobi.PoolSolutions", "Subsolver", 10, "Determines how many MIP solutions are stored", 1, 2000000000);
 
     VectorString enumGurobiScaleFlag;
     enumGurobiScaleFlag.push_back("Automatic");
