@@ -125,11 +125,9 @@ void Problem::updateConstraints()
 
             C->constant *= -1.0;
         }
-        else if(C->valueLHS == C->valueRHS && C->getConstraintFunctionBounds().l() > 0
-            && ((C->properties.convexity == E_Convexity::Convex
-                    && C->properties.monotonicity == E_Monotonicity::Nondecreasing)
-                || (C->properties.convexity == E_Convexity::Concave
-                    && C->properties.monotonicity == E_Monotonicity::Nonincreasing)))
+        /*else if(C->valueLHS == C->valueRHS
+            && ((C->getConstraintFunctionBounds().u() <= 0 && C->properties.convexity == E_Convexity::Convex)
+                || (C->getConstraintFunctionBounds().l() >= 0 && C->properties.convexity == E_Convexity::Concave)))
         {
             // Will rewrite as ()^2 <=c^2
 
@@ -229,7 +227,7 @@ void Problem::updateConstraints()
             // We know this is a convex constraint
             auxConstraint->properties.convexity = E_Convexity::Convex;
             auxConstraints.push_back(auxConstraint);
-        }
+        }*/
         else if(C->valueLHS != SHOT_DBL_MIN && C->valueRHS != SHOT_DBL_MAX)
         {
             double valueLHS = C->valueLHS;
