@@ -316,7 +316,8 @@ bool MIPSolverGurobi::finalizeConstraint(std::string name, double valueLHS, doub
             }
         }
 
-        allowRepairOfConstraint.push_back(false);
+        if(constraintQuadraticExpression.size() == 0)
+            allowRepairOfConstraint.push_back(false);
     }
     catch(GRBException& e)
     {
@@ -862,6 +863,12 @@ bool MIPSolverGurobi::repairInfeasibility()
         gurobiModel->update();
         auto feasModel = GRBModel(*gurobiModel);
 
+        // Gurobi copies over the cutoff from the original model
+        if(isMinimizationProblem)
+            feasModel.set(GRB_DoubleParam_Cutoff, SHOT_DBL_MAX);
+        else
+            feasModel.set(GRB_DoubleParam_Cutoff, SHOT_DBL_MIN);
+
         int numOrigConstraints = env->reformulatedProblem->properties.numberOfLinearConstraints;
         int numOrigVariables = gurobiModel->get(GRB_IntAttr_NumVars);
         int numCurrConstraints = feasModel.get(GRB_IntAttr_NumConstrs);
@@ -878,6 +885,7 @@ bool MIPSolverGurobi::repairInfeasibility()
                 repairConstraints.push_back(feasModel.getConstr(i));
                 originalConstraints.push_back(gurobiModel->getConstr(i));
                 relaxParameters.push_back(1 / (((double)i - numOrigConstraints) + 1.0));
+                numConstraintsToRepair++;
             }
         }
 
@@ -912,6 +920,25 @@ bool MIPSolverGurobi::repairInfeasibility()
         }
 
         feasModel.optimize();
+
+        // Saves the relaxation model to file
+        if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+        {
+            std::stringstream ss;
+            ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
+            ss << "/lp";
+            ss << env->results->getCurrentIteration()->iterationNumber - 1;
+            ss << "infeasrelax.lp";
+
+            try
+            {
+                feasModel.write(ss.str());
+            }
+            catch(GRBException& e)
+            {
+                env->output->outputError("        Error when saving model to file", e.getMessage());
+            }
+        }
 
         int status = feasModel.get(GRB_IntAttr_Status);
 
