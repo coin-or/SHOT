@@ -643,14 +643,17 @@ void ModelingSystemGAMS::finalizeSolution()
 
             handle
                 = gmoPrepareSolPoolMerge(modelingObject, solfile.c_str(), r->primalSolutions.size() - 1, "soln_shot_p");
+
             if(handle != NULL)
             {
                 for(int k = 0; k < solnvarsym && !error; k++)
                 {
                     gmoPrepareSolPoolNextSym(modelingObject, handle);
+
                     for(int i = 1; i < r->primalSolutions.size(); ++i)
                     {
                         gmoSetVarL(modelingObject, &r->primalSolutions[i].point[0]);
+
                         if(gmoUnloadSolPoolSolution(modelingObject, handle, i - 1))
                         {
                             env->output->outputError("Problems unloading solution point " + std::to_string(i)
