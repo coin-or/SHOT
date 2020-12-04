@@ -107,8 +107,8 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
     {
         // Sets time limit
         env->settings->updateSetting("TimeLimit", "Termination", gevGetDblOpt(modelingEnvironment, gevResLim));
-        env->output->outputDebug(
-            fmt::format("Time limit set to {} by GAMS", env->settings->getSetting<double>("TimeLimit", "Termination")));
+        env->output->outputDebug(fmt::format(
+            " Time limit set to {} by GAMS", env->settings->getSetting<double>("TimeLimit", "Termination")));
 
         // Sets iteration limit, if different than SHOT default
         if(gevGetIntOpt(modelingEnvironment, gevIterLim) < INT_MAX)
@@ -116,7 +116,7 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
             env->settings->updateSetting(
                 "IterationLimit", "Termination", gevGetIntOpt(modelingEnvironment, gevIterLim));
             env->output->outputDebug(fmt::format(
-                "Iteration limit set to {} by GAMS", env->settings->getSetting<int>("IterationLimit", "Termination")));
+                " Iteration limit set to {} by GAMS", env->settings->getSetting<int>("IterationLimit", "Termination")));
         }
         else
         {
@@ -126,13 +126,13 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
         // Sets absolute objective gap tolerance
         env->settings->updateSetting(
             "ObjectiveGap.Absolute", "Termination", gevGetDblOpt(modelingEnvironment, gevOptCA));
-        env->output->outputDebug(fmt::format("Absolute termination tolerance set to {} by GAMS",
+        env->output->outputDebug(fmt::format(" Absolute termination tolerance set to {} by GAMS",
             env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination")));
 
         // Sets relative objective gap tolerance
         env->settings->updateSetting(
             "ObjectiveGap.Relative", "Termination", gevGetDblOpt(modelingEnvironment, gevOptCR));
-        env->output->outputDebug(fmt::format("Relative termination tolerance set to {} by GAMS",
+        env->output->outputDebug(fmt::format(" Relative termination tolerance set to {} by GAMS",
             env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination")));
 
         // Sets cutoff value for dual solver
@@ -153,7 +153,7 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
         // Sets the number of threads
         env->settings->updateSetting("MIP.NumberOfThreads", "Dual", gevThreads(modelingEnvironment));
         env->output->outputDebug(fmt::format(
-            "MIP number of threads set to {} by GAMS", env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual")));
+            " MIP number of threads set to {} by GAMS", env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual")));
 
         // Uses NLP solver in GAMS by default, Ipopt can be used directly if value set by user in options file (read
         // below)
@@ -203,7 +203,7 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(
 {
     if(!fs::filesystem::exists(filename))
     {
-        env->output->outputError("File \"" + filename + "\" does not exist.");
+        env->output->outputError(" File \"" + filename + "\" does not exist.");
 
         return (E_ProblemCreationStatus::FileDoesNotExist);
     }
@@ -633,8 +633,9 @@ void ModelingSystemGAMS::finalizeSolution()
 
         if(gmoCheckSolPoolUEL(modelingObject, "soln_shot_p", &solnvarsym))
         {
-            env->output->outputError("Solution pool scenario label 'soln_shot_p' contained in model dictionary. Cannot "
-                                     "dump merged solutions pool.");
+            env->output->outputError(
+                " Solution pool scenario label 'soln_shot_p' contained in model dictionary. Cannot "
+                "dump merged solutions pool.");
         }
         else
         {
@@ -656,7 +657,7 @@ void ModelingSystemGAMS::finalizeSolution()
 
                         if(gmoUnloadSolPoolSolution(modelingObject, handle, i - 1))
                         {
-                            env->output->outputError("Problems unloading solution point " + std::to_string(i)
+                            env->output->outputError(" Problems unloading solution point " + std::to_string(i)
                                 + " symbol " + std::to_string(k));
                             error = true;
                             break;
@@ -665,7 +666,7 @@ void ModelingSystemGAMS::finalizeSolution()
                 }
                 if(gmoFinalizeSolPoolMerge(modelingObject, handle))
                 {
-                    env->output->outputError("Problems finalizing merged solution pool");
+                    env->output->outputError(" Problems finalizing merged solution pool");
                     error = true;
                 }
                 if(!error)
@@ -677,7 +678,7 @@ void ModelingSystemGAMS::finalizeSolution()
             }
             else
             {
-                env->output->outputError("Problems preparing merged solution pool\n");
+                env->output->outputError(" Problems preparing merged solution pool\n");
             }
         }
     }
@@ -805,7 +806,7 @@ bool ModelingSystemGAMS::copyVariables(ProblemPtr destination)
 
                 break;
             case gmovar_SI:
-                env->output->outputError("Unsupported variable type.");
+                env->output->outputError(" Unsupported variable type.");
 
                 delete[] variableLBs;
                 delete[] variableUBs;
@@ -813,7 +814,7 @@ bool ModelingSystemGAMS::copyVariables(ProblemPtr destination)
                 return (false);
                 break;
             case gmovar_S1:
-                env->output->outputError("Unsupported variable type.");
+                env->output->outputError(" Unsupported variable type.");
 
                 delete[] variableLBs;
                 delete[] variableUBs;
@@ -821,7 +822,7 @@ bool ModelingSystemGAMS::copyVariables(ProblemPtr destination)
                 return (false);
                 break;
             case gmovar_S2:
-                env->output->outputError("Unsupported variable type.");
+                env->output->outputError(" Unsupported variable type.");
 
                 delete[] variableLBs;
                 delete[] variableUBs;
@@ -829,7 +830,7 @@ bool ModelingSystemGAMS::copyVariables(ProblemPtr destination)
                 return (false);
                 break;
             default:
-                env->output->outputError("Unsupported variable type.");
+                env->output->outputError(" Unsupported variable type.");
 
                 delete[] variableLBs;
                 delete[] variableUBs;
@@ -847,7 +848,7 @@ bool ModelingSystemGAMS::copyVariables(ProblemPtr destination)
     }
     else
     {
-        env->output->outputError("Problem has no variables.");
+        env->output->outputError(" Problem has no variables.");
 
         return (false);
     }
@@ -865,7 +866,7 @@ bool ModelingSystemGAMS::copyObjectiveFunction(ProblemPtr destination)
     if(gmoModelType(modelingObject) == gmoProc_cns)
     {
         // no objective in constraint satisfaction models
-        env->output->outputError("Problem has no objective function.");
+        env->output->outputError(" Problem has no objective function.");
         return (false);
     }
 
@@ -886,7 +887,7 @@ bool ModelingSystemGAMS::copyObjectiveFunction(ProblemPtr destination)
         break;
 
     default:
-        env->output->outputError("Objective function of unknown type.");
+        env->output->outputError(" Objective function of unknown type.");
         return (false);
         break;
     }
@@ -977,7 +978,7 @@ bool ModelingSystemGAMS::copyConstraints(ProblemPtr destination)
                 break;
 
             default:
-                env->output->outputError("Constraint index" + std::to_string(i) + "is of unknown type.");
+                env->output->outputError(" Constraint index" + std::to_string(i) + "is of unknown type.");
                 return (false);
             }
 
@@ -1007,14 +1008,14 @@ bool ModelingSystemGAMS::copyConstraints(ProblemPtr destination)
                 break;
             }
             default:
-                env->output->outputError("Constraint index" + std::to_string(i) + "is of unknown type.");
+                env->output->outputError(" Constraint index" + std::to_string(i) + "is of unknown type.");
                 return (false);
             }
         }
     }
     else
     {
-        env->output->outputDebug("GAMS modeling object does not have any constraints.");
+        env->output->outputDebug(" GAMS modeling object does not have any constraints.");
     }
 
     env->output->outputTrace(" Finished copying constraints between GAMS modeling and SHOT problem objects.");
