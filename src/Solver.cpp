@@ -1434,6 +1434,9 @@ void Solver::initializeSettings()
     env->settings->createSetting(
         "GAMS.NLP.Solver", "Subsolver", solver, "NLP solver to use in GAMS (auto: SHOT chooses)");
 
+    env->settings->createSetting(
+        "GAMS.SolutionsFile", "Subsolver", std::string(), "Name of GDX file to write alternative solutions to", false);
+
 #endif
 
     // Subsolver settings: Ipopt
