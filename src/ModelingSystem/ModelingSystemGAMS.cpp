@@ -86,7 +86,7 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
     assert(modelingObject != nullptr);
 
     settings->createSetting(
-        "SolutionsFile", "Output", std::string(), "Name of GDX file to write alternative solutions to", false);
+        "SolutionsFile", "GAMS", std::string(), "Name of GDX file to write alternative solutions to", false);
 
 #ifdef GAMS_BUILD
     assert(auditLicensing != nullptr);
@@ -625,7 +625,8 @@ void ModelingSystemGAMS::finalizeSolution()
         gmoUnloadSolutionLegacy(modelingObject);
 
     // write alternate solutions to GDX file, if requested
-    std::string solfile = env->settings->getSetting<std::string>("SolutionsFile", "Output");
+    std::string solfile = env->settings->getSetting<std::string>("SolutionsFile", "GAMS");
+
     if(!solfile.empty() && r->primalSolutions.size() > 1)
     {
         int solnvarsym;
