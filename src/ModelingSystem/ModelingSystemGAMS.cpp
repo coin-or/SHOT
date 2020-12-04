@@ -85,7 +85,8 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
     assert(modelingEnvironment != nullptr);
     assert(modelingObject != nullptr);
 
-    settings->createSetting("SolutionsFile", "Output", std::string(), "Name of GDX file to write alternative solutions to", false);
+    settings->createSetting(
+        "SolutionsFile", "Output", std::string(), "Name of GDX file to write alternative solutions to", false);
 
 #ifdef GAMS_BUILD
     assert(auditLicensing != nullptr);
@@ -625,45 +626,49 @@ void ModelingSystemGAMS::finalizeSolution()
 
     // write alternate solutions to GDX file, if requested
     std::string solfile = env->settings->getSetting<std::string>("SolutionsFile", "Output");
-    if( !solfile.empty() && r->primalSolutions.size() > 1 )
+    if(!solfile.empty() && r->primalSolutions.size() > 1)
     {
         int solnvarsym;
 
-        if( gmoCheckSolPoolUEL(modelingObject, "soln_shot_p", &solnvarsym) )
+        if(gmoCheckSolPoolUEL(modelingObject, "soln_shot_p", &solnvarsym))
         {
-            env->output->outputError("Solution pool scenario label 'soln_shot_p' contained in model dictionary. Cannot dump merged solutions pool.");
+            env->output->outputError("Solution pool scenario label 'soln_shot_p' contained in model dictionary. Cannot "
+                                     "dump merged solutions pool.");
         }
         else
         {
             void* handle;
             bool error = false;
 
-            handle = gmoPrepareSolPoolMerge(modelingObject, solfile.c_str(), r->primalSolutions.size()-1, "soln_shot_p");
-            if( handle != NULL )
+            handle
+                = gmoPrepareSolPoolMerge(modelingObject, solfile.c_str(), r->primalSolutions.size() - 1, "soln_shot_p");
+            if(handle != NULL)
             {
-                for( int k = 0; k < solnvarsym && !error; k++ )
+                for(int k = 0; k < solnvarsym && !error; k++)
                 {
                     gmoPrepareSolPoolNextSym(modelingObject, handle);
-                    for( int i = 1; i < r->primalSolutions.size(); ++i )
+                    for(int i = 1; i < r->primalSolutions.size(); ++i)
                     {
                         gmoSetVarL(modelingObject, &r->primalSolutions[i].point[0]);
-                        if( gmoUnloadSolPoolSolution(modelingObject, handle, i-1) )
+                        if(gmoUnloadSolPoolSolution(modelingObject, handle, i - 1))
                         {
-                            env->output->outputError("Problems unloading solution point " + std::to_string(i) + " symbol " + std::to_string(k));
+                            env->output->outputError("Problems unloading solution point " + std::to_string(i)
+                                + " symbol " + std::to_string(k));
                             error = true;
                             break;
                         }
                     }
                 }
-                if( gmoFinalizeSolPoolMerge(modelingObject, handle) )
+                if(gmoFinalizeSolPoolMerge(modelingObject, handle))
                 {
                     env->output->outputError("Problems finalizing merged solution pool");
                     error = true;
                 }
-                if( !error )
+                if(!error)
                 {
                     env->output->outputInfo("");
-                    env->output->outputInfo(" Written " + std::to_string(r->primalSolutions.size()-1) + " alternate solutions to " + solfile);
+                    env->output->outputInfo(" Written " + std::to_string(r->primalSolutions.size() - 1)
+                        + " alternate solutions to " + solfile);
                 }
             }
             else
@@ -672,7 +677,7 @@ void ModelingSystemGAMS::finalizeSolution()
             }
         }
     }
-    else if( !solfile.empty() && r->primalSolutions.size() == 1 )
+    else if(!solfile.empty() && r->primalSolutions.size() == 1)
     {
         env->output->outputInfo("");
         env->output->outputInfo(" Only one solution found, skip dumping alternate solutions.");
