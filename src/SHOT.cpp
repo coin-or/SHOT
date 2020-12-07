@@ -689,6 +689,7 @@ int main(int argc, char* argv[])
         return (0);
     }
 
+    solver.finalizeSolution();
     env->report->outputSolutionReport();
 
 #ifdef SIMPLE_OUTPUT_CHARS
