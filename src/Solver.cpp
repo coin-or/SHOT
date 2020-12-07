@@ -1061,6 +1061,17 @@ void Solver::initializeSettings()
     env->settings->createSettingGroup("Output", "", "Solver output",
         "These settings control how much and what output is shown to the user from the solver.");
 
+    env->settings->createSetting("Console.DualSolver.Show", "Output", false, "Show output from dual solver on console");
+    
+    VectorString enumIterationDetail;
+    enumIterationDetail.push_back("Full");
+    enumIterationDetail.push_back("On objective gap update");
+    enumIterationDetail.push_back("On objective gap update and all primal NLP calls");
+    env->settings->createSetting("Console.Iteration.Detail", "Output",
+        static_cast<int>(ES_IterationOutputDetail::ObjectiveGapUpdates), "When should the fixed strategy be used",
+        enumIterationDetail, 0);
+    enumIterationDetail.clear();
+
     VectorString enumLogLevel;
     enumLogLevel.push_back("Trace");
     enumLogLevel.push_back("Debug");
@@ -1072,6 +1083,9 @@ void Solver::initializeSettings()
     env->settings->createSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Info),
         "Log level for console output", enumLogLevel, 0);
 
+    env->settings->createSetting(
+        "Console.PrimalSolver.Show", "Output", false, "Show output from primal solver on console");
+
     env->settings->createSetting("Debug.Enable", "Output", false, "Use debug functionality");
 
     env->settings->createSetting(
@@ -1081,19 +1095,8 @@ void Solver::initializeSettings()
         "File.LogLevel", "Output", static_cast<int>(E_LogLevel::Info), "Log level for file output", enumLogLevel, 0);
     enumLogLevel.clear();
 
-    env->settings->createSetting("Console.DualSolver.Show", "Output", false, "Show output from dual solver on console");
     env->settings->createSetting(
-        "Console.PrimalSolver.Show", "Output", false, "Show output from primal solver on console");
-
-    VectorString enumIterationDetail;
-    enumIterationDetail.push_back("Full");
-    enumIterationDetail.push_back("On objective gap update");
-    enumIterationDetail.push_back("On objective gap update and all primal NLP calls");
-
-    env->settings->createSetting("Console.Iteration.Detail", "Output",
-        static_cast<int>(ES_IterationOutputDetail::ObjectiveGapUpdates), "When should the fixed strategy be used",
-        enumIterationDetail, 0);
-    enumIterationDetail.clear();
+        "GAMS.AlternateSolutionsFile", "Output", std::string(), "Name of GAMS GDX file to write alternative solutions to", false);
 
     VectorString enumOutputDirectory;
     enumOutputDirectory.push_back("Problem directory");
@@ -1103,7 +1106,7 @@ void Solver::initializeSettings()
     enumOutputDirectory.clear();
 
     env->settings->createSetting(
-        "SaveNumberOfSolutions", "Output", 1, "Save this number of primal solutions to OSrL file");
+        "SaveNumberOfSolutions", "Output", 1, "Save max this number of primal solutions to OSrL or GDX file");
 
     env->settings->createSettingGroup(
         "Primal", "", "Primal heuristics", "These settings control the primal heuristics used in SHOT.");
@@ -1433,7 +1436,6 @@ void Solver::initializeSettings()
     std::string solver = "auto";
     env->settings->createSetting(
         "GAMS.NLP.Solver", "Subsolver", solver, "NLP solver to use in GAMS (auto: SHOT chooses)");
-
 #endif
 
     // Subsolver settings: Ipopt
