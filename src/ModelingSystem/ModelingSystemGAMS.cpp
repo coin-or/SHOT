@@ -622,7 +622,7 @@ void ModelingSystemGAMS::finalizeSolution()
         gmoUnloadSolutionLegacy(modelingObject);
 
     // write alternate solutions to GDX file, if requested
-    std::string solfile = env->settings->getSetting<std::string>("GAMS.SolutionsFile", "Subsolver");
+    std::string solfile = env->settings->getSetting<std::string>("GAMS.AlternateSolutionsFile", "Output");
 
     if(!solfile.empty() && r->primalSolutions.size() > 1)
     {
