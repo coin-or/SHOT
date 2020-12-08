@@ -162,11 +162,12 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
         gmoNameOptFile(modelingObject, buffer);
         if(fs::filesystem::exists(buffer))
         {
-            env->output->outputInfo(" Reading options from " + std::string(buffer));
+            env->output->outputDebug(" Reading options from " + std::string(buffer));
             try
             {
                 std::string fileContents = Utilities::getFileAsString(buffer);
                 settings->readSettingsFromString(fileContents);
+                settings->updateSetting("OptionsFile", "Input", std::string(buffer));
             }
             catch(std::exception& e)
             {
@@ -661,15 +662,17 @@ void ModelingSystemGAMS::finalizeSolution()
                         }
                     }
                 }
+
                 if(gmoFinalizeSolPoolMerge(modelingObject, handle))
                 {
                     env->output->outputError(" Problems finalizing merged solution pool");
                     error = true;
                 }
+
                 if(!error)
                 {
-                    env->output->outputInfo("");
-                    env->output->outputInfo(" Written " + std::to_string(r->primalSolutions.size() - 1)
+                    env->output->outputDebug("");
+                    env->output->outputDebug(" Written " + std::to_string(r->primalSolutions.size() - 1)
                         + " alternate solutions to " + solfile);
                 }
             }

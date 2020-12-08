@@ -91,6 +91,7 @@ void Report::outputIterationDetail(int iterationNumber, std::string iterationDes
 
         if(iterationPrintoutsSinceLastHeader > 75)
         {
+            env->output->outputInfo("");
             this->outputIterationDetailHeader();
         }
 
@@ -229,9 +230,6 @@ void Report::outputIterationDetailHeader()
 {
     firstIterationHeaderPrinted = true;
 
-    env->output->outputInfo("");
-    env->output->outputInfo("");
-
 #ifdef SIMPLE_OUTPUT_CHARS
     env->output->outputInfo(
         "    Iteration     |  Time  |  Dual cuts  |     Objective value     |   Objective gap   |     Current "
@@ -271,9 +269,8 @@ void Report::outputIterationDetailHeader()
             "max.err.)");
     }
 
-    env->output->outputInfo(
-        "╶─────────────────┴────────┴─────────────┴─────────────────────────┴───────────────────┴────────────"
-        "───────────────╴)");
+    env->output->outputInfo("╶─────────────────┴────────┴─────────────┴─────────────────────────┴───────────────────┴──"
+                            "────────────────────────────╴");
 #endif
 
     env->output->outputInfo("");
@@ -282,7 +279,6 @@ void Report::outputIterationDetailHeader()
 
 void Report::outputIterationDetailHeaderMinimax()
 {
-    env->output->outputInfo("");
 
 #ifdef SIMPLE_OUTPUT_CHARS
     env->output->outputInfo(
@@ -356,7 +352,7 @@ void Report::outputOptionsReport()
 
     if(auto nonDefaultSettings = env->settings->getChangedSettings(); nonDefaultSettings.size() > 0)
     {
-        env->output->outputInfo(" Nondefault options used:");
+        env->output->outputInfo(" Options specified:");
         env->output->outputInfo("");
 
         for(auto& S : nonDefaultSettings)
@@ -1222,6 +1218,25 @@ void Report::outputInteriorPointPreReport()
 
     env->output->outputInfo("");
     env->output->outputInfo(" Strategy selected:          cutting plane minimax");
+
+    env->output->outputInfo(report.str());
+}
+
+void Report::outputPreReport()
+{
+    std::stringstream report;
+
+    env->output->outputInfo("");
+
+#ifdef SIMPLE_OUTPUT_CHARS
+    env->output->outputInfo(
+        "- Main iteration step "
+        "-------------------------------------------------------------------------------------------------");
+#else
+    env->output->outputInfo(
+        "╶ Main iteration step "
+        "────────────────────────────────────────────────────────────────────────────────────────────────╴");
+#endif
 
     env->output->outputInfo(report.str());
 }

@@ -79,17 +79,17 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
 {
     env = envPtr;
 
-    env->timing->createTimer("InteriorPointSearch", " - interior point search");
+    env->timing->createTimer("InteriorPointSearch", "- interior point search");
 
-    env->timing->createTimer("DualProblemsRelaxed", "   - solving relaxed problems");
-    env->timing->createTimer("DualStrategy", " - dual strategy");
-    env->timing->createTimer("DualProblemsDiscrete", "   - solving MIP problems");
-    env->timing->createTimer("DualCutGenerationRootSearch", "   - root search for constraint cuts");
-    env->timing->createTimer("DualObjectiveRootSearch", "   - root search for objective cut");
+    env->timing->createTimer("DualProblemsRelaxed", "  - solving relaxed problems");
+    env->timing->createTimer("DualStrategy", "- dual strategy");
+    env->timing->createTimer("DualProblemsDiscrete", "  - solving MIP problems");
+    env->timing->createTimer("DualCutGenerationRootSearch", "  - root search for constraint cuts");
+    env->timing->createTimer("DualObjectiveRootSearch", "  - root search for objective cut");
 
-    env->timing->createTimer("PrimalStrategy", " - primal strategy");
-    env->timing->createTimer("PrimalBoundStrategyNLP", "   - solving NLP problems");
-    env->timing->createTimer("PrimalBoundStrategyRootSearch", "   - performing root searches");
+    env->timing->createTimer("PrimalStrategy", "- primal strategy");
+    env->timing->createTimer("PrimalBoundStrategyNLP", "  - solving NLP problems");
+    env->timing->createTimer("PrimalBoundStrategyRootSearch", "  - performing root searches");
 
     auto tFinalizeSolution = std::make_shared<TaskSequential>(env);
 
