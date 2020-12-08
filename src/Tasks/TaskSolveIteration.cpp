@@ -42,7 +42,10 @@ TaskSolveIteration::~TaskSolveIteration() = default;
 void TaskSolveIteration::run()
 {
     if(!env->report->firstIterationHeaderPrinted)
+    {
+        env->report->outputPreReport();
         env->report->outputIterationDetailHeader();
+    }
 
     env->timing->startTimer("DualStrategy");
     auto currIter = env->results->getCurrentIteration();
@@ -281,8 +284,8 @@ void TaskSolveIteration::run()
     }
     else if(currIter->isDualProblemDiscrete
         && (currIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit
-               || currIter->solutionStatus == E_ProblemSolutionStatus::TimeLimit
-               || currIter->solutionStatus == E_ProblemSolutionStatus::NodeLimit))
+            || currIter->solutionStatus == E_ProblemSolutionStatus::TimeLimit
+            || currIter->solutionStatus == E_ProblemSolutionStatus::NodeLimit))
     {
 
         if(env->reformulatedProblem->properties.isMIQPProblem)
