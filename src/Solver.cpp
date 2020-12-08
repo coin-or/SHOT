@@ -66,12 +66,12 @@ Solver::Solver()
     env->timing->createTimer("Total", "Total solution time");
     env->timing->startTimer("Total");
 
-    env->timing->createTimer("ProblemInitialization", " - problem initialization");
-    env->timing->createTimer("ProblemReformulation", " - problem reformulation");
-    env->timing->createTimer("BoundTightening", " - bound tightening");
-    env->timing->createTimer("BoundTighteningPOA", "   - initial outer approximation");
-    env->timing->createTimer("BoundTighteningFBBTOriginal", "   - feasibility based (original problem)");
-    env->timing->createTimer("BoundTighteningFBBTReformulated", "   - feasibility based (reformulated problem)");
+    env->timing->createTimer("ProblemInitialization", "- problem initialization");
+    env->timing->createTimer("ProblemReformulation", "- problem reformulation");
+    env->timing->createTimer("BoundTightening", "- bound tightening");
+    env->timing->createTimer("BoundTighteningPOA", "  - initial outer approximation");
+    env->timing->createTimer("BoundTighteningFBBTOriginal", "  - feasibility based (original problem)");
+    env->timing->createTimer("BoundTighteningFBBTReformulated", "  - feasibility based (reformulated problem)");
 
     env->settings = std::make_shared<Settings>(env->output);
     env->tasks = std::make_shared<TaskHandler>(env);
@@ -97,12 +97,12 @@ Solver::Solver(std::shared_ptr<spdlog::sinks::sink> consoleSink)
     env->timing->createTimer("Total", "Total solution time");
     env->timing->startTimer("Total");
 
-    env->timing->createTimer("ProblemInitialization", " - problem initialization");
-    env->timing->createTimer("ProblemReformulation", " - problem reformulation");
-    env->timing->createTimer("BoundTightening", " - bound tightening");
-    env->timing->createTimer("BoundTighteningFBBT", "   - feasibility based");
-    env->timing->createTimer("BoundTighteningFBBTOriginal", "   - feasibility based (original problem");
-    env->timing->createTimer("BoundTighteningFBBTReformulated", "   - feasibility based (reformulated problem");
+    env->timing->createTimer("ProblemInitialization", "- problem initialization");
+    env->timing->createTimer("ProblemReformulation", "- problem reformulation");
+    env->timing->createTimer("BoundTightening", "- bound tightening");
+    env->timing->createTimer("BoundTighteningFBBT", "  - feasibility based");
+    env->timing->createTimer("BoundTighteningFBBTOriginal", "  - feasibility based (original problem");
+    env->timing->createTimer("BoundTighteningFBBTReformulated", "  - feasibility based (reformulated problem");
 
     env->settings = std::make_shared<Settings>(env->output);
     env->tasks = std::make_shared<TaskHandler>(env);
@@ -1062,7 +1062,7 @@ void Solver::initializeSettings()
         "These settings control how much and what output is shown to the user from the solver.");
 
     env->settings->createSetting("Console.DualSolver.Show", "Output", false, "Show output from dual solver on console");
-    
+
     VectorString enumIterationDetail;
     enumIterationDetail.push_back("Full");
     enumIterationDetail.push_back("On objective gap update");
@@ -1095,8 +1095,8 @@ void Solver::initializeSettings()
         "File.LogLevel", "Output", static_cast<int>(E_LogLevel::Info), "Log level for file output", enumLogLevel, 0);
     enumLogLevel.clear();
 
-    env->settings->createSetting(
-        "GAMS.AlternateSolutionsFile", "Output", std::string(), "Name of GAMS GDX file to write alternative solutions to", false);
+    env->settings->createSetting("GAMS.AlternateSolutionsFile", "Output", std::string(),
+        "Name of GAMS GDX file to write alternative solutions to", false);
 
     VectorString enumOutputDirectory;
     enumOutputDirectory.push_back("Problem directory");
