@@ -73,13 +73,13 @@ SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(EnvironmentPtr envPtr)
 {
     env = envPtr;
 
-    env->timing->createTimer("InteriorPointSearch", " - interior point search");
+    env->timing->createTimer("InteriorPointSearch", "- interior point search");
 
-    env->timing->createTimer("DualStrategy", " - dual strategy");
-    env->timing->createTimer("DualProblemsDiscrete", "   - solving MIP problems");
+    env->timing->createTimer("DualStrategy", "- dual strategy");
+    env->timing->createTimer("DualProblemsDiscrete", "  - solving MIP problems");
 
-    env->timing->createTimer("PrimalStrategy", " - primal strategy");
-    env->timing->createTimer("PrimalBoundStrategyNLP", "   - solving NLP problems");
+    env->timing->createTimer("PrimalStrategy", "- primal strategy");
+    env->timing->createTimer("PrimalBoundStrategyNLP", "  - solving NLP problems");
 
     auto tFinalizeSolution = std::make_shared<TaskSequential>(env);
 
