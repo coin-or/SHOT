@@ -662,15 +662,17 @@ void ModelingSystemGAMS::finalizeSolution()
                         }
                     }
                 }
+
                 if(gmoFinalizeSolPoolMerge(modelingObject, handle))
                 {
                     env->output->outputError(" Problems finalizing merged solution pool");
                     error = true;
                 }
+
                 if(!error)
                 {
-                    env->output->outputInfo("");
-                    env->output->outputInfo(" Written " + std::to_string(r->primalSolutions.size() - 1)
+                    env->output->outputDebug("");
+                    env->output->outputDebug(" Written " + std::to_string(r->primalSolutions.size() - 1)
                         + " alternate solutions to " + solfile);
                 }
             }

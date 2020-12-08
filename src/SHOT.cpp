@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
     cmdl.parse(argc, argv);
 
     std::string filename;
-    fs::filesystem::path resultFile, optionsFile, traceFile, logFile, solFile;
+    fs::filesystem::path resultFile, optionsFile, traceFile, logFile, solFile, gdxFile;
 
     // Read or create the file for the log
     if(cmdl("--log")) // Have specified a log-file
@@ -681,6 +681,13 @@ int main(int argc, char* argv[])
             / fs::filesystem::path(solFilename);
     }
 
+    std::string gdxFilename;
+    if(gdxFilename = env->settings->getSetting<std::string>("GAMS.AlternateSolutionsFile", "Output");
+        gdxFilename != "") // Have specified an gdx-file location
+    {
+        gdxFile = fs::filesystem::absolute(gdxFilename).string();
+    }
+
     env->report->outputProblemInstanceReport();
     env->report->outputOptionsReport();
 
@@ -722,6 +729,9 @@ int main(int argc, char* argv[])
         else
             env->output->outputInfo(" Results written to: " + resultFile.string());
     }
+
+    if(gdxFilename != "")
+        env->output->outputInfo("                     " + gdxFile.string());
 
     if(cmdl["--trc"] || cmdl("--trc"))
     {
