@@ -31,6 +31,8 @@ public:
 
     void outputInteriorPointPreReport();
 
+    void outputPreReport();
+
     void outputIterationDetailHeader();
 
     void outputIterationDetail(int iterationNumber, std::string iterationDesc, double totalTime, int dualCutsAdded,
