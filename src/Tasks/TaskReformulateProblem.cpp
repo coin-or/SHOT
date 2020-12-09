@@ -1460,6 +1460,7 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
 
     double signfactor = reversedSigns ? -1.0 : 1.0;
 
+    bool quadraticSumConvex = quadraticTerms.minEigenValueWithinTolerance;
     bool allTermsAreBinary = true;
     bool allTermsConvex = true;
     bool allTermsConvexAfterReformulation = true;
@@ -1534,7 +1535,8 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
     }
 
     if(partitionStrategy == ES_PartitionNonlinearSums::Always
-        || (allTermsConvexAfterReformulation && partitionStrategy == ES_PartitionNonlinearSums::IfConvex))
+        || (!quadraticSumConvex // should not reformulate if sum is convex unless forced
+            && allTermsConvexAfterReformulation && partitionStrategy == ES_PartitionNonlinearSums::IfConvex))
     {
         for(auto& T : quadraticTerms)
         {
