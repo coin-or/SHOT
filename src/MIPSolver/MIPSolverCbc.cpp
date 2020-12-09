@@ -153,11 +153,10 @@ bool MIPSolverCbc::addLinearTermToObjective(double coefficient, int variableInde
         double currentValue = coinModel->getColObjective(variableIndex);
 
         coinModel->setColObjective(variableIndex, coefficient + currentValue);
-        objectiveLinearExpression.insert(variableIndex, coefficient + currentValue);
     }
-    catch(std::exception& e)
+    catch(CoinError& e)
     {
-        env->output->outputError("        Cbc exception caught when adding linear term to objective: ", e.what());
+        env->output->outputError("        Cbc exception caught when adding linear term to objective: ", e.message());
         return (false);
     }
 
@@ -175,17 +174,23 @@ bool MIPSolverCbc::finalizeObjective(bool isMinimize, double constant)
 {
     try
     {
+        objectiveLinearExpression.clear();
+
+        for(int i = 0; i < coinModel->numberColumns(); i++)
+        {
+            if(auto coefficient = coinModel->getColObjective(i); coefficient != 0.0)
+            {
+                if(!isMinimize) // if maximize, we need to change the sign
+                    coefficient *= -1;
+
+                objectiveLinearExpression.insert(i, coefficient);
+                coinModel->setColObjective(i, coefficient);
+            }
+        }
+
         if(!isMinimize)
         {
             isMinimizationProblem = false;
-
-            for(int i = 0; i < objectiveLinearExpression.getNumElements(); i++)
-            {
-                objectiveLinearExpression.getElements()[i] *= -1;
-                coinModel->setColObjective(
-                    objectiveLinearExpression.getIndices()[i], objectiveLinearExpression.getElements()[i]);
-            }
-
             coinModel->setObjectiveOffset(-constant);
         }
         else
