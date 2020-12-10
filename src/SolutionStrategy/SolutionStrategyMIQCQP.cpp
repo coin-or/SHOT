@@ -12,7 +12,6 @@
 
 #include "../TaskHandler.h"
 
-#include "../Tasks/TaskAddIntegerCuts.h"
 #include "../Tasks/TaskFindInteriorPoint.h"
 #include "../Tasks/TaskBase.h"
 #include "../Tasks/TaskSequential.h"
@@ -59,8 +58,6 @@
 #include "../Tasks/TaskClearFixedPrimalCandidates.h"
 
 #include "../Tasks/TaskSelectHyperplanePointsObjectiveFunction.h"
-
-#include "../Tasks/TaskAddIntegerCuts.h"
 
 #include "../Output.h"
 #include "../Settings.h"
