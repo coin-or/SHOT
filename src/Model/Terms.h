@@ -18,6 +18,9 @@
 
 #include "ffunc.hpp"
 
+#include <Eigen/Sparse>
+#include <Eigen/Eigenvalues>
+#include "Eigen/src/SparseCore/SparseUtil.h"
 #include <vector>
 
 namespace SHOT
@@ -416,6 +419,15 @@ private:
 public:
     double minEigenValue = SHOT::SHOT_DBL_MAX;
     bool minEigenValueWithinTolerance = false;
+
+    bool allSquares = false;
+    bool allPositive = false;
+    bool allNegative = false;
+    bool allBilinear = false;
+
+    Eigen::VectorXcd eigenvalues;
+    Eigen::MatrixXcd eigenvectors;
+    std::map<VariablePtr, int> variableMap;
 
     using std::vector<QuadraticTermPtr>::operator[];
 

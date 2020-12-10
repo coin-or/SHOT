@@ -12,9 +12,9 @@
 #include "Problem.h"
 #include "../Settings.h"
 
-#include <Eigen/Sparse>
-#include <Eigen/Eigenvalues>
-#include "Eigen/src/SparseCore/SparseUtil.h"
+//#include <Eigen/Sparse>
+//#include <Eigen/Eigenvalues>
+//#include "Eigen/src/SparseCore/SparseUtil.h"
 
 namespace SHOT
 {
@@ -43,14 +43,13 @@ void QuadraticTerms::updateConvexity()
     std::vector<Eigen::Triplet<double>> elements;
     elements.reserve(2 * size());
 
-    std::map<VariablePtr, int> variableMap;
-
-    bool allSquares = true;
-    bool allPositive = true;
-    bool allNegative = true;
-    bool allBilinear = true;
+    allSquares = true;
+    allPositive = true;
+    allNegative = true;
+    allBilinear = true;
 
     int variableCounter = 0;
+    variableMap.clear();
 
     for(auto& T : (*this))
     {
@@ -143,14 +142,17 @@ void QuadraticTerms::updateConvexity()
     Eigen::SparseMatrix<double> matrix(numberOfVariables, numberOfVariables);
     matrix.setFromTriplets(elements.begin(), elements.end());
 
-    Eigen::SelfAdjointEigenSolver<Eigen::SparseMatrix<double>> eigenSolver(
-        matrix, Eigen::DecompositionOptions::EigenvaluesOnly);
+    Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eigenSolver(
+        matrix, Eigen::DecompositionOptions::ComputeEigenvectors);
 
     if(eigenSolver.info() != Eigen::Success)
     {
         convexity = E_Convexity::Unknown;
         return;
     }
+
+    eigenvalues = eigenSolver.eigenvalues();
+    eigenvectors = eigenSolver.eigenvectors();
 
     bool areAllPositiveOrZero = true;
     bool areAllNegativeOrZero = true;

@@ -1,0 +1,11 @@
+
+╶ Supporting Hyperplane Optimization Toolkit (SHOT) ──────────────────────────────────────────────────────────────────╴
+
+ Andreas Lundell and Jan Kronqvist, Åbo Akademi University, Finland.
+ See documentation for full list of contributors and utilized software libraries.
+
+ Version: 1.0.1. Git hash: c3fe84d8-dirty. Released: Dec  8 2020.
+
+ For more information visit https://shotsolver.dev
+
+ Problem file QPLIB_10050.gms not found!

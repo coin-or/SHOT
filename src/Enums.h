@@ -18,7 +18,7 @@ enum class E_AuxiliaryVariableType
     None,
     NonlinearObjectiveFunction, // From epigraph formulation of (nonlinear) objective function
     NonlinearExpressionPartitioning, // From reformulating nonlinear terms as constraints
-    MonomialTermsPartitioning, // From reformulating monoial terms as constraints
+    MonomialTermsPartitioning, // From reformulating monomial terms as constraints
     SignomialTermsPartitioning, // From reformulating signomial terms as constraints
     SquareTermsPartitioning, // From reformulating sums of square terms
     ContinuousBilinear, // From linearizing a bilinear term x1 * x2 where x1 and x2 are real
@@ -26,7 +26,8 @@ enum class E_AuxiliaryVariableType
     BinaryContinuousBilinear, // From linearizing a bilinear term b1 * x2 where b1 is binary and x2 is continuous
     IntegerBilinear, // From linearizing a bilinear term i1 * x2, where i1 is integer and x2 is continuous or discrete
     BinaryMonomial, // Fram linearizing a monomial term b1 * b2 * ... * bn, where bi are binary
-    AbsoluteValue // From rewriting an absolute value
+    AbsoluteValue, // From rewriting an absolute value
+    EigenvalueDecomposition // From performing an eigenvalue decomposition on quadratic sums
 };
 
 enum class E_Convexity

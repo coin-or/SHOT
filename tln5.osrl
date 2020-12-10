@@ -1,0 +1,192 @@
+<osrl xmlns="os.optimizationservices.org" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:schemaLocation="os.optimizationservices.org http://www.optimizationservices.org/schemas/2.0/OSrL.xsd">
+    <general>
+        <otherResults numberOfOtherResults="1">
+            <other name="UsedOptions">Dual.CutStrategy = 0
+Dual.ESH.InteriorPoint.CuttingPlane.ConstraintSelectionFactor = 0.25
+Dual.ESH.InteriorPoint.CuttingPlane.IterationLimit = 50
+Dual.ESH.InteriorPoint.CuttingPlane.IterationLimitSubsolver = 100
+Dual.ESH.InteriorPoint.CuttingPlane.Reuse = false
+Dual.ESH.InteriorPoint.CuttingPlane.TerminationToleranceAbs = 1.0
+Dual.ESH.InteriorPoint.CuttingPlane.TerminationToleranceRel = 1.0
+Dual.ESH.InteriorPoint.CuttingPlane.TimeLimit = 10.0
+Dual.ESH.InteriorPoint.MinimaxObjectiveLowerBound = -1000000000000.0
+Dual.ESH.InteriorPoint.MinimaxObjectiveUpperBound = 0.1
+Dual.ESH.InteriorPoint.UsePrimalSolution = 1
+Dual.ESH.Rootsearch.ConstraintTolerance = 1e-08
+Dual.ESH.Rootsearch.UniqueConstraints = false
+Dual.HyperplaneCuts.ConstraintSelectionFactor = 1.0
+Dual.HyperplaneCuts.Delay = true
+Dual.HyperplaneCuts.MaxConstraintFactor = 0.1
+Dual.HyperplaneCuts.MaxPerIteration = 200
+Dual.HyperplaneCuts.ObjectiveRootSearch = 1
+Dual.HyperplaneCuts.UseIntegerCuts = true
+Dual.MIP.CutOff.InitialValue = 1.7976931348623157e+308
+Dual.MIP.CutOff.Tolerance = 1e-05
+Dual.MIP.CutOff.UseInitialValue = false
+Dual.MIP.InfeasibilityRepair.IntegerCuts = true
+Dual.MIP.InfeasibilityRepair.IterationLimit = 100
+Dual.MIP.InfeasibilityRepair.TimeLimit = 10.0
+Dual.MIP.NodeLimit = 1.7976931348623157e+308
+Dual.MIP.NumberOfThreads = 0
+Dual.MIP.OptimalityTolerance = 1e-06
+Dual.MIP.Presolve.Frequency = 1
+Dual.MIP.Presolve.RemoveRedundantConstraints = false
+Dual.MIP.Presolve.UpdateObtainedBounds = false
+Dual.MIP.SolutionLimit.ForceOptimal.Iteration = 10000
+Dual.MIP.SolutionLimit.ForceOptimal.Time = 1000.0
+Dual.MIP.SolutionLimit.IncreaseIterations = 50
+Dual.MIP.SolutionLimit.Initial = 2147483647
+Dual.MIP.SolutionLimit.UpdateTolerance = 0.001
+Dual.MIP.SolutionPool.Capacity = 100
+Dual.MIP.Solver = 0
+Dual.MIP.UpdateObjectiveBounds = false
+Dual.ReductionCut.MaxIterations = 5
+Dual.ReductionCut.ReductionFactor = 0.001
+Dual.Relaxation.Frequency = 0
+Dual.Relaxation.IterationLimit = 200
+Dual.Relaxation.MaxLazyConstraints = 0
+Dual.Relaxation.TerminationTolerance = 0.5
+Dual.Relaxation.TimeLimit = 30.0
+Dual.Relaxation.Use = false
+Dual.TreeStrategy = 0
+Model.BoundTightening.FeasibilityBased.MaxIterations = 5
+Model.BoundTightening.FeasibilityBased.TimeLimit = 5.0
+Model.BoundTightening.FeasibilityBased.Use = true
+Model.BoundTightening.FeasibilityBased.UseNonlinear = true
+Model.Convexity.AssumeConvex = false
+Model.Convexity.Quadratics.EigenValueTolerance = 1e-05
+Model.Reformulation.Bilinear.AddConvexEnvelope = false
+Model.Reformulation.Bilinear.IntegerFormulation = 1
+Model.Reformulation.Bilinear.IntegerFormulation.MaxDomain = 100
+Model.Reformulation.Constraint.PartitionNonlinearTerms = 0
+Model.Reformulation.Constraint.PartitionQuadraticTerms = 0
+Model.Reformulation.Monomials.Extract = true
+Model.Reformulation.Monomials.Formulation = 1
+Model.Reformulation.ObjectiveFunction.Epigraph.Use = false
+Model.Reformulation.ObjectiveFunction.PartitionNonlinearTerms = 0
+Model.Reformulation.ObjectiveFunction.PartitionQuadraticTerms = 0
+Model.Reformulation.Quadratics.ExtractStrategy = 1
+Model.Reformulation.Quadratics.Strategy = 2
+Model.Reformulation.Signomials.Extract = true
+Model.Variables.Continuous.MaximumUpperBound = 1e+20
+Model.Variables.Continuous.MinimumLowerBound = -1e+20
+Model.Variables.Integer.MaximumUpperBound = 2000000000.0
+Model.Variables.Integer.MinimumLowerBound = -2000000000.0
+Model.Variables.NonlinearObjectiveVariable.Bound = 1000000000000.0
+Output.Console.DualSolver.Show = false
+Output.Console.Iteration.Detail = 1
+Output.Console.LogLevel = 2
+Output.Console.PrimalSolver.Show = false
+Output.Debug.Enable = false
+Output.Debug.Path = 
+Output.File.LogLevel = 2
+Output.OutputDirectory = 1
+Output.SaveNumberOfSolutions = 1
+Primal.FixedInteger.CallStrategy = 0
+Primal.FixedInteger.CreateInfeasibilityCut = false
+Primal.FixedInteger.DualPointGap.Relative = 0.001
+Primal.FixedInteger.Frequency.Dynamic = true
+Primal.FixedInteger.Frequency.Iteration = 10
+Primal.FixedInteger.Frequency.Time = 5.0
+Primal.FixedInteger.IterationLimit = 10000000
+Primal.FixedInteger.OnlyUniqueIntegerCombinations = false
+Primal.FixedInteger.Solver = 0
+Primal.FixedInteger.Source = 0
+Primal.FixedInteger.SourceProblem = 0
+Primal.FixedInteger.TimeLimit = 10.0
+Primal.FixedInteger.Use = true
+Primal.FixedInteger.Warmstart = true
+Primal.Rootsearch.Use = true
+Primal.Tolerance.Integer = 1e-05
+Primal.Tolerance.LinearConstraint = 1e-06
+Primal.Tolerance.NonlinearConstraint = 1e-05
+Primal.Tolerance.TrustLinearConstraintValues = true
+Strategy.UseRecommendedSettings = true
+Subsolver.Cbc.AutoScale = false
+Subsolver.Cbc.DeterministicParallelMode = false
+Subsolver.Cbc.NodeStrategy = 4
+Subsolver.Cbc.Scaling = 0
+Subsolver.Cbc.Strategy = 1
+Subsolver.Cplex.AddRelaxedLazyConstraintsAsLocal = false
+Subsolver.Cplex.FeasOptMode = 0
+Subsolver.Cplex.MIPEmphasis = 1
+Subsolver.Cplex.MemoryEmphasis = 0
+Subsolver.Cplex.NodeFile = 1
+Subsolver.Cplex.NumericalEmphasis = 0
+Subsolver.Cplex.OptimalityTarget = 0
+Subsolver.Cplex.ParallelMode = 0
+Subsolver.Cplex.Probe = 0
+Subsolver.Cplex.SolutionPoolGap = 1e+75
+Subsolver.Cplex.SolutionPoolIntensity = 0
+Subsolver.Cplex.SolutionPoolReplace = 0
+Subsolver.Cplex.UseGenericCallback = false
+Subsolver.Cplex.WorkDirectory = 
+Subsolver.Cplex.WorkMemory = 0.0
+Subsolver.GAMS.NLP.OptionsFilename = 
+Subsolver.GAMS.NLP.Solver = auto
+Subsolver.Gurobi.Heuristics = 0.05
+Subsolver.Gurobi.MIPFocus = 0
+Subsolver.Gurobi.NumericFocus = 2
+Subsolver.Gurobi.PoolSearchMode = 0
+Subsolver.Gurobi.PoolSolutions = 1
+Subsolver.Gurobi.ScaleFlag = -1
+Subsolver.Ipopt.ConstraintViolationTolerance = 1e-08
+Subsolver.Ipopt.LinearSolver = 0
+Subsolver.Ipopt.MaxIterations = 1000
+Subsolver.Ipopt.RelativeConvergenceTolerance = 1e-08
+Subsolver.Rootsearch.ActiveConstraintTolerance = 0.0
+Subsolver.Rootsearch.MaxIterations = 100
+Subsolver.Rootsearch.Method = 0
+Subsolver.Rootsearch.TerminationTolerance = 1e-16
+Termination.ConstraintTolerance = 1e-08
+Termination.DualStagnation.ConstraintTolerance = 1e-06
+Termination.DualStagnation.IterationLimit = 50
+Termination.IterationLimit = 200000
+Termination.ObjectiveConstraintTolerance = 1e-08
+Termination.ObjectiveGap.Absolute = 0.001
+Termination.ObjectiveGap.Relative = 0.001
+Termination.PrimalStagnation.IterationLimit = 50
+Termination.TimeLimit = 1.7976931348623157e+308
+</other>
+            <other name="DualObjectiveBound" value="0" description="The dual bound for the objective"/>
+            <other name="PrimalObjectiveBound" value="1.7976931348623157e+308" description="The primal bound for the objective"/>
+            <other name="MaxConstraintError" value="1.7976931348623157e+308" description="The maximal constraint error"/>
+            <other name="AbsoluteOptimalityGap" value="1.7976931348623157e+308" description="The absolute optimality gap"/>
+            <other name="RelativeOptimalityGap" value="1" description="The relative optimality gap"/>
+            <other name="NumberOfLPProblems" value="0" description="The number of LP problems solved in the dual strategy"/>
+            <other name="NumberOfQPProblems" value="0" description="The number of QP problems solved in the dual strategy"/>
+            <other name="NumberOfFeasibleMILPProblems" value="0" description="The number of MILP problems solved to feasibility in the dual strategy"/>
+            <other name="NumberOfFeasibleMIQPProblems" value="0" description="The number of MIQP problems solved to feasibility in the dual strategy"/>
+            <other name="NumberOfOptimalMILPProblems" value="1" description="The number of MILP problems solved to optimality in the dual strategy"/>
+            <other name="NumberOfOptimalMIQPProblems" value="0" description="The number of MIQP problems solved to optimality in the dual strategy"/>
+            <other name="TotalNumberOfDualProblems" value="1" description="The total number of problems solved in the dual strategy"/>
+            <other name="NumberOfNLPProblems" value="1" description="The number of NLP problems solved in the primal strategy"/>
+            <other name="NumberOfPrimalSolutionsFound" value="0" description="The number of primal solutions found"/>
+            <other name="DualSolver" value="CPLEX 12.10" description="The dual solver used"/>
+            <other name="FixedNLPSolver" value="CPLEX 12.10" description="The dual solver used"/>
+        </otherResults>
+        <solverInvoked>Supporting Hyperplane Optimization Toolkit, version 1.0.1</solverInvoked>
+        <instanceName>tln5</instanceName>
+    </general>
+    <job>
+        <timingInformation numberOfTimes="16">
+            <time type="Total" unit="second" description="Total solution time">0.40468310000000002</time>
+            <time type="ProblemInitialization" unit="second" description=" - problem initialization">0</time>
+            <time type="ProblemReformulation" unit="second" description=" - problem reformulation">0.0041640000000000002</time>
+            <time type="BoundTightening" unit="second" description=" - bound tightening">0.0027940999999999999</time>
+            <time type="BoundTighteningFBBTOriginal" unit="second" description="   - feasibility based (original problem)">0</time>
+            <time type="BoundTighteningFBBTReformulated" unit="second" description="   - feasibility based (reformulated problem)">0.002751</time>
+            <time type="InteriorPointSearch" unit="second" description=" - interior point search">0.0103737</time>
+            <time type="DualStrategy" unit="second" description=" - dual strategy">0.1586207</time>
+            <time type="DualProblemsRelaxed" unit="second" description="   - solving relaxed problems">0</time>
+            <time type="DualProblemsIntegerFixed" unit="second" description="   - solving integer-fixed problems">0</time>
+            <time type="DualProblemsDiscrete" unit="second" description="   - solving MIP problems">0</time>
+            <time type="DualCutGenerationRootSearch" unit="second" description="   - root search for constraint cuts">0.00076179999999999998</time>
+            <time type="DualObjectiveRootSearch" unit="second" description="   - root search for objective cut">0</time>
+            <time type="PrimalStrategy" unit="second" description=" - primal strategy">0.1080719</time>
+            <time type="PrimalBoundStrategyNLP" unit="second" description="   - solving NLP problems">0.0070263000000000009</time>
+            <time type="PrimalBoundStrategyRootSearch" unit="second" description="   - performing root searches">0.060242499999999997</time>
+        </timingInformation>
+    </job>
+    <optimization numberOfSolutions="0" numberOfVariables="35" numberOfConstraints="30" numberOfObjectives="1"/>
+</osrl>

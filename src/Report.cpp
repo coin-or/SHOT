@@ -863,6 +863,10 @@ void Report::outputProblemInstanceReport()
 
         if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::AbsoluteValue); value > 0)
             env->output->outputInfo(fmt::format(" {:56s}{:d}", "-absolute value reformulation:", value));
+
+        if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::EigenvalueDecomposition);
+            value > 0)
+            env->output->outputInfo(fmt::format(" {:56s}{:d}", "-quadratic eigenvalue decomposition:", value));
     }
 }
 
