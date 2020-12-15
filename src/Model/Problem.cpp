@@ -1763,7 +1763,6 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint, double timeLim
 {
     bool boundsUpdated = false;
 
-    std::cout << timeLimit << " ";
     try
     {
         if(constraint->properties.hasLinearTerms)
