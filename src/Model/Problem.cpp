@@ -1664,10 +1664,14 @@ void Problem::doFBBT()
 
     bool stopTightening = false;
 
+    double timeEnd = startTime + timeLimit;
+
     int numberOfTightenedVariablesBefore = std::count_if(allVariables.begin(), allVariables.end(),
         [](auto V) { return (V->properties.hasLowerBoundBeenTightened || V->properties.hasUpperBoundBeenTightened); });
 
-    for(int i = 0; i < numberOfIterations; i++)
+    int i = 0;
+
+    for(i = 0; i < numberOfIterations; i++)
     {
         bool boundsUpdated = false;
 
@@ -1675,13 +1679,14 @@ void Problem::doFBBT()
 
         for(auto& C : linearConstraints)
         {
-            if(env->timing->getElapsedTime("BoundTightening") - startTime > timeLimit)
+            if(env->timing->getElapsedTime("BoundTightening") > timeEnd)
             {
                 stopTightening = true;
                 break;
             }
 
-            boundsUpdated = doFBBTOnConstraint(C, timeLimit + startTime) || boundsUpdated;
+            boundsUpdated
+                = doFBBTOnConstraint(C, timeEnd - env->timing->getElapsedTime("BoundTightening")) || boundsUpdated;
         }
 
         if(stopTightening)
@@ -1689,13 +1694,14 @@ void Problem::doFBBT()
 
         for(auto& C : quadraticConstraints)
         {
-            if(env->timing->getElapsedTime("BoundTightening") - startTime > timeLimit)
+            if(env->timing->getElapsedTime("BoundTightening") > timeEnd)
             {
                 stopTightening = true;
                 break;
             }
 
-            boundsUpdated = doFBBTOnConstraint(C, timeLimit + startTime) || boundsUpdated;
+            boundsUpdated
+                = doFBBTOnConstraint(C, timeEnd - env->timing->getElapsedTime("BoundTightening")) || boundsUpdated;
         }
 
         if(stopTightening)
@@ -1705,13 +1711,14 @@ void Problem::doFBBT()
         {
             for(auto& C : nonlinearConstraints)
             {
-                if(env->timing->getElapsedTime("BoundTightening") - startTime > timeLimit)
+                if(env->timing->getElapsedTime("BoundTightening") > timeEnd)
                 {
                     stopTightening = true;
                     break;
                 }
 
-                boundsUpdated = doFBBTOnConstraint(C, timeLimit + startTime) || boundsUpdated;
+                boundsUpdated
+                    = doFBBTOnConstraint(C, timeEnd - env->timing->getElapsedTime("BoundTightening")) || boundsUpdated;
             }
         }
 
@@ -1725,16 +1732,16 @@ void Problem::doFBBT()
     if(properties.isReformulated)
     {
         env->timing->stopTimer("BoundTighteningFBBTReformulated");
-        env->output->outputInfo(fmt::format("  - Bounds for {} variables tightened in {:.2f} s.",
+        env->output->outputInfo(fmt::format("  - Bounds for {} variables tightened in {:.2f} s and {} passes.",
             numberOfTightenedVariablesAfter - numberOfTightenedVariablesBefore,
-            env->timing->getElapsedTime("BoundTighteningFBBTReformulated")));
+            env->timing->getElapsedTime("BoundTighteningFBBTReformulated"), i + 1));
     }
     else
     {
         env->timing->stopTimer("BoundTighteningFBBTOriginal");
-        env->output->outputInfo(fmt::format("  - Bounds for {} variables tightened in {:.2f} s.",
+        env->output->outputInfo(fmt::format("  - Bounds for {} variables tightened in {:.2f} s and {} passes.",
             numberOfTightenedVariablesAfter - numberOfTightenedVariablesBefore,
-            env->timing->getElapsedTime("BoundTighteningFBBTOriginal")));
+            env->timing->getElapsedTime("BoundTighteningFBBTOriginal"), i + 1));
     }
 
     env->timing->stopTimer("BoundTightening");
@@ -1744,6 +1751,7 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint, double timeLim
 {
     bool boundsUpdated = false;
 
+    std::cout << timeLimit << " ";
     try
     {
         if(constraint->properties.hasLinearTerms)
