@@ -25,12 +25,14 @@ void Problem::updateConstraints()
 {
     NumericConstraints auxConstraints;
 
+    env->output->outputTrace(" Swapping bounds");
     for(auto& C : numericConstraints)
     {
         if(C->valueLHS > C->valueRHS)
             std::swap(C->valueRHS, C->valueLHS);
     }
 
+    env->output->outputTrace(" Standardizing linear constraints");
     for(auto& C : linearConstraints)
     {
         if(C->valueRHS == SHOT_DBL_MAX && C->valueLHS != SHOT_DBL_MIN)
@@ -51,6 +53,7 @@ void Problem::updateConstraints()
                                              "Reformulation.Quadratics.Strategy", "Model"))
         != ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained;
 
+    env->output->outputTrace(" Standardizing quadratic constraints");
     for(auto& C : quadraticConstraints)
     {
         if(C->valueRHS == SHOT_DBL_MAX && C->valueLHS != SHOT_DBL_MIN)
@@ -98,6 +101,7 @@ void Problem::updateConstraints()
         }
     }
 
+    env->output->outputTrace(" Standardizing nonlinear constraints");
     for(auto& C : nonlinearConstraints)
     {
         C->variablesInNonlinearExpression.clear();
@@ -269,11 +273,13 @@ void Problem::updateConstraints()
         }
     }
 
+    env->output->outputTrace(" Adding auxiliary constraints");
     for(auto& C : auxConstraints)
         this->add(C);
 
     this->objectiveFunction->takeOwnership(shared_from_this());
 
+    env->output->outputTrace(" Updating all constraints");
     for(auto& C : numericConstraints)
     {
         C->updateProperties();
@@ -549,10 +555,14 @@ void Problem::updateVariables()
 
 void Problem::updateProperties()
 {
+    env->output->outputTrace("Started updating properties of problem");
     objectiveFunction->updateProperties();
 
+    env->output->outputTrace("Updating constraints");
     updateConstraints();
+    env->output->outputTrace("Updating variables");
     updateVariables();
+    env->output->outputTrace("Updating convexity");
     updateConvexity();
 
     properties.numberOfVariables = allVariables.size();
@@ -735,6 +745,7 @@ void Problem::updateProperties()
     }
 
     properties.isValid = true;
+    env->output->outputTrace("Finished updating properties of problem");
 }
 
 void Problem::updateFactorableFunctions()
