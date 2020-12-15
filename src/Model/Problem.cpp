@@ -47,6 +47,10 @@ void Problem::updateConstraints()
         }
     }
 
+    auto useNonconvexQuadraticStrategy = static_cast<ES_QuadraticProblemStrategy>(env->settings->getSetting<int>(
+                                             "Reformulation.Quadratics.Strategy", "Model"))
+        != ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained;
+
     for(auto& C : quadraticConstraints)
     {
         if(C->valueRHS == SHOT_DBL_MAX && C->valueLHS != SHOT_DBL_MIN)
@@ -64,10 +68,7 @@ void Problem::updateConstraints()
 
             C->constant *= -1.0;
         }
-        else if(C->valueLHS != SHOT_DBL_MIN && C->valueRHS != SHOT_DBL_MAX
-            && static_cast<ES_QuadraticProblemStrategy>(
-                   env->settings->getSetting<int>("Reformulation.Quadratics.Strategy", "Model"))
-                != ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained)
+        else if(C->valueLHS != SHOT_DBL_MIN && C->valueRHS != SHOT_DBL_MAX && useNonconvexQuadraticStrategy)
         {
             double valueLHS = C->valueLHS;
             C->valueLHS = SHOT_DBL_MIN;
