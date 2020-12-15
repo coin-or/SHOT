@@ -12,9 +12,7 @@
 #include "Problem.h"
 #include "../Settings.h"
 
-//#include <Eigen/Sparse>
-//#include <Eigen/Eigenvalues>
-//#include "Eigen/src/SparseCore/SparseUtil.h"
+#include <Eigen/Sparse>
 
 namespace SHOT
 {

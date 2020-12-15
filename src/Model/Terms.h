@@ -18,9 +18,7 @@
 
 #include "ffunc.hpp"
 
-#include <Eigen/Sparse>
 #include <Eigen/Eigenvalues>
-#include "Eigen/src/SparseCore/SparseUtil.h"
 #include <vector>
 
 namespace SHOT
