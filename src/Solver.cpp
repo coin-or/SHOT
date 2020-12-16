@@ -697,11 +697,14 @@ void Solver::initializeSettings()
         enumAddPrimalPointAsInteriorPoint, 0);
     enumAddPrimalPointAsInteriorPoint.clear();
 
+    env->settings->createSetting("ESH.Rootsearch.ConstraintTolerance", "Dual", 1e-8,
+        "Constraint tolerance for when not to add individual hyperplanes", 0, SHOT_DBL_MAX);
+
     env->settings->createSetting(
         "ESH.Rootsearch.UniqueConstraints", "Dual", false, "Allow only one hyperplane per constraint per iteration");
 
-    env->settings->createSetting("ESH.Rootsearch.ConstraintTolerance", "Dual", 1e-8,
-        "Constraint tolerance for when not to add individual hyperplanes", 0, SHOT_DBL_MAX);
+    env->settings->createSetting("ESH.Rootsearch.UseMaxFunction", "Dual", false,
+        "Perform rootsearch on max function, otherwise on individual constraints");
 
     // Dual strategy settings: Hyperplane generation
 
