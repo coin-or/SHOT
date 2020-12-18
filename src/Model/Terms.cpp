@@ -72,6 +72,8 @@ void QuadraticTerms::updateConvexity()
             allBilinear = false;
 
             elements.emplace_back(currentVariableIndex, currentVariableIndex, 2 * T->coefficient);
+            // std::cout << T->firstVariable->index + 1 << " " << T->secondVariable->index + 1 << " " << T->coefficient
+            //          << std::endl;
         }
         else
         {
@@ -106,32 +108,42 @@ void QuadraticTerms::updateConvexity()
             allSquares = false;
 
             // Matrix is self adjoint, so only need lower triangular elements
-            if(T->firstVariable->index > T->secondVariable->index)
+            if(currentFirstVariableIndex > currentSecondVariableIndex)
             {
-                elements.emplace_back(currentFirstVariableIndex, currentSecondVariableIndex, 0.5 * T->coefficient);
+                elements.emplace_back(currentFirstVariableIndex, currentSecondVariableIndex, T->coefficient);
+                // std::cout << currentFirstVariableIndex + 1 << " " << currentSecondVariableIndex + 1 << " "
+                //          << T->coefficient << std::endl;
             }
             else
             {
-                elements.emplace_back(currentSecondVariableIndex, currentFirstVariableIndex, 0.5 * T->coefficient);
+                elements.emplace_back(currentSecondVariableIndex, currentFirstVariableIndex, T->coefficient);
+
+                // std::cout << currentSecondVariableIndex + 1 << " " << currentFirstVariableIndex + 1 << " "
+                //          << T->coefficient << std::endl;
             }
         }
     }
 
+    // std::cout << std::endl;
+
     if(allSquares && allPositive)
     {
         convexity = E_Convexity::Convex;
+        minEigenValueWithinTolerance = true;
         return;
     }
 
     if(allSquares && allNegative)
     {
         convexity = E_Convexity::Concave;
+        minEigenValueWithinTolerance = false;
         return;
     }
 
     if(allBilinear)
     {
         convexity = E_Convexity::Nonconvex;
+        minEigenValueWithinTolerance = false;
         return;
     }
 
@@ -140,17 +152,24 @@ void QuadraticTerms::updateConvexity()
     Eigen::SparseMatrix<double> matrix(numberOfVariables, numberOfVariables);
     matrix.setFromTriplets(elements.begin(), elements.end());
 
+    // std::cout << matrix.toDense() << std::endl;
+
     Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eigenSolver(
         matrix, Eigen::DecompositionOptions::ComputeEigenvectors);
 
     if(eigenSolver.info() != Eigen::Success)
     {
         convexity = E_Convexity::Unknown;
+        minEigenValueWithinTolerance = false;
         return;
     }
 
     eigenvalues = eigenSolver.eigenvalues();
     eigenvectors = eigenSolver.eigenvectors();
+
+    // std::cout << eigenvalues << std::endl;
+
+    // std::cout << eigenvectors << std::endl;
 
     bool areAllPositiveOrZero = true;
     bool areAllNegativeOrZero = true;
@@ -172,7 +191,7 @@ void QuadraticTerms::updateConvexity()
 
     for(int i = 0; i < numberOfVariables; i++)
     {
-        double eigenvalue = eigenSolver.eigenvalues().col(0)[i];
+        double eigenvalue = eigenSolver.eigenvalues()[i];
 
         this->minEigenValue = std::min(minEigenValue, eigenvalue);
 

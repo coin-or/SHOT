@@ -109,7 +109,8 @@ private:
     NonlinearExpressionPtr reformulateNonlinearExpression(std::shared_ptr<ExpressionSquare> source);
     NonlinearExpressionPtr reformulateNonlinearExpression(std::shared_ptr<ExpressionProduct> source);
 
-    std::pair<AuxiliaryVariablePtr, bool> getSquareAuxiliaryVariable(VariablePtr firstVariable);
+    std::pair<AuxiliaryVariablePtr, bool> getSquareAuxiliaryVariable(
+        VariablePtr firstVariable, E_AuxiliaryVariableType auxVariableType);
 
     std::pair<AuxiliaryVariablePtr, bool> getBilinearAuxiliaryVariable(
         VariablePtr firstVariable, VariablePtr secondVariable);

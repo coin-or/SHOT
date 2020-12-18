@@ -1534,8 +1534,8 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
         }
     }
 
-    if(partitionStrategy == ES_PartitionNonlinearSums::Always
-        && quadraticSumConvex) // Use the eigenvalue decomposition reformulation
+    if(partitionStrategy == ES_PartitionNonlinearSums::Always && quadraticSumConvex
+        && !quadraticTerms.allSquares) // Use the eigenvalue decomposition reformulation
     {
         auto linearTerms = doEigenvalueDecomposition(quadraticTerms);
         resultLinearTerms.add(linearTerms);
@@ -1555,7 +1555,8 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
             }
             else if(T->isSquare)
             {
-                auto [auxVariable, newVariable] = getSquareAuxiliaryVariable(T->firstVariable);
+                auto [auxVariable, newVariable]
+                    = getSquareAuxiliaryVariable(T->firstVariable, E_AuxiliaryVariableType::SquareTermsPartitioning);
                 resultLinearTerms.add(std::make_shared<LinearTerm>(signfactor * T->coefficient, auxVariable));
             }
             else if(T->isBilinear && T->isBinary) // Bilinear term b1*b2
@@ -1920,8 +1921,9 @@ LinearTerms TaskReformulateProblem::doEigenvalueDecomposition(QuadraticTerms qua
         auxVariableCounter++;
         env->results->increaseAuxiliaryVariableCounter(E_AuxiliaryVariableType::EigenvalueDecomposition);
 
-        auto [auxVariable, newVariable] = getSquareAuxiliaryVariable(auxQuadVariable);
-        resultLinearTerms.add(std::make_shared<LinearTerm>(quadraticTerms.eigenvalues[i].real(), auxVariable));
+        auto [auxVariable, newVariable]
+            = getSquareAuxiliaryVariable(auxQuadVariable, E_AuxiliaryVariableType::EigenvalueDecomposition);
+        resultLinearTerms.add(std::make_shared<LinearTerm>(0.5 * quadraticTerms.eigenvalues[i].real(), auxVariable));
 
         auto auxConstraint = std::make_shared<LinearConstraint>(
             auxConstraintCounter, "q_evd" + std::to_string(auxConstraintCounter), 0, 0);
@@ -2222,7 +2224,8 @@ NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(st
     return (simplify(source));
 }
 
-std::pair<AuxiliaryVariablePtr, bool> TaskReformulateProblem::getSquareAuxiliaryVariable(VariablePtr variable)
+std::pair<AuxiliaryVariablePtr, bool> TaskReformulateProblem::getSquareAuxiliaryVariable(
+    VariablePtr variable, E_AuxiliaryVariableType auxVariableType)
 {
     auto auxVariableIterator = squareAuxVariables.find(variable);
 
@@ -2238,7 +2241,6 @@ std::pair<AuxiliaryVariablePtr, bool> TaskReformulateProblem::getSquareAuxiliary
     double upperBound = std::max(valueList);
 
     E_VariableType variableType;
-    E_AuxiliaryVariableType auxVariableType;
 
     if(variable->properties.type == E_VariableType::Binary)
     {
@@ -2252,8 +2254,6 @@ std::pair<AuxiliaryVariablePtr, bool> TaskReformulateProblem::getSquareAuxiliary
     {
         variableType = E_VariableType::Real;
     }
-
-    auxVariableType = E_AuxiliaryVariableType::SquareTermsPartitioning;
 
     auto auxVariable = std::make_shared<AuxiliaryVariable>(
         "s_sq_" + variable->name, auxVariableCounter, variableType, lowerBound, upperBound);
