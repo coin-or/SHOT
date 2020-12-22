@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.9)
+include(ExternalProject)
 
 # For ccache
 find_program(CCACHE_PROGRAM ccache)
@@ -13,6 +14,7 @@ project(SHOT VERSION 1.0.1
                   LANGUAGES CXX C)
 
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # Location of extra CMake scripts
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/misc")
@@ -67,8 +69,6 @@ set(IPOPT_DIR "/opt/ipopt" CACHE STRING "The base directory where Ipopt is locat
 # Create also the executable
 option(GENERATE_EXE "Should the SHOT executable be generated (requires at least that either OS or GAMS is available)"
        ON)
-
-option(SPDLOG_STATIC "Should Spdlog be compiled statically" ON)
 
 # External libraries; these are included in SHOT's source tree, and should not need to be modified
 set(AMPL_DIR "ThirdParty/ampl")
@@ -196,7 +196,9 @@ if(HAS_CBC)
 
     if(CBC_FOUND)
         set(DUAL_SOURCES "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCbc.cpp")
+        set(DUAL_SOURCES ${DUAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.cpp")
         set(DUAL_HEADERS "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCbc.h")
+        set(DUAL_HEADERS ${DUAL_HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.h")
     endif(CBC_FOUND)
 endif(HAS_CBC)
 
@@ -332,6 +334,7 @@ include_directories(SYSTEM "${EIGEN_DIR}")
 include_directories(SYSTEM "${MCPP_DIR}/include")
 include_directories(SYSTEM "${MCPP_DIR}/3rdparty/cpplapack/include")
 include_directories(SYSTEM "${MCPP_DIR}/3rdparty/fadbad++")
+include_directories(SYSTEM "${SPDLOG_DIR}/include")
 
 # Make sure the source file lists are in the correct format
 file(TO_CMAKE_PATH "${SOURCES}" SOURCES)
@@ -339,20 +342,19 @@ file(TO_CMAKE_PATH "${DUAL_SOURCES}" DUAL_SOURCES)
 file(TO_CMAKE_PATH "${PRIMAL_SOURCES}" PRIMAL_SOURCES)
 file(TO_CMAKE_PATH "${MODELING_SOURCES}" MODELING_SOURCES)
 
-# Will use spdlog as a static library on non-Windows systems
-if(MSVC OR MSYS OR MINGW)
-    set(SPDLOG_STATIC OFF)
-endif()
-
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-
-if(SPDLOG_STATIC)
-    add_subdirectory(${SPDLOG_DIR}/spdlog)
-    list(APPEND CMAKE_MODULE_PATH "${SPDLOG_DIR}/spdlog/cmake")
-endif()
-
 # Will use tinyxml2 as a static library
 add_library(tinyxml2 STATIC ${TINYXML2_DIR}/tinyxml2.h ${TINYXML2_DIR}/tinyxml2.cpp)
+
+# Adding spdlog using as an external project
+ExternalProject_Add(spdlog
+    PREFIX spdlog
+    SOURCE_DIR ${PROJECT_SOURCE_DIR}/${SPDLOG_DIR}
+    CMAKE_ARGS -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+    -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+    -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
+    -DCMAKE_INSTALL_PREFIX=""
+    -DSPDLOG_BUILD_SHARED=OFF
+)
 
 # Creates the helper library
 add_library(
@@ -372,11 +374,7 @@ add_library(
 )
 target_link_libraries(SHOTHelper tinyxml2)
 
-if(SPDLOG_STATIC)
-    target_link_libraries(SHOTHelper spdlog::spdlog)
-else()
-    target_include_directories(SHOTHelper PUBLIC "${SPDLOG_DIR}/spdlog/include")
-endif()
+add_dependencies(SHOTHelper spdlog)
 
 # Creates the model library
 add_library(
