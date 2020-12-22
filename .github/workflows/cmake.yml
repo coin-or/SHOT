@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v2; 
       
     - name: Create Build Environment
       # Some projects don't allow in-source building, so create a separate build directory
@@ -26,20 +26,37 @@ jobs:
       shell: bash
       run: sudo apt-get update ; sudo apt-get install libc6-dev libbz2-dev zlib1g-dev liblapack-dev libnauty2-dev libopenblas-base libopenblas-dev libmumps-dev
 
+    - name: Cache Cbc
+      id: cache-cbc
+      uses: actions/cache@v2
+      with:
+        path: ${{runner.workspace}}/ThirdParty/Cbc
+        key: ${{ runner.os }}-cbc
+        
+    - name: Cache Ipopt
+      id: cache-ipopt
+      uses: actions/cache@v2
+      with:
+        path: ${{runner.workspace}}/ThirdParty/Ipopt
+        key: ${{ runner.os }}-ipopt
+
     - name: Download Coinbrew
+      if: steps.cache-ipopt.outputs.cache-hit != 'true' || steps.cache-cbc.outputs.cache-hit != 'true'
       shell: bash
       working-directory: ${{runner.workspace}}/build
       run: git clone https://github.com/coin-or/coinbrew
 
     - name: Download and build Ipopt
+      if: steps.cache-ipopt.outputs.cache-hit != 'true'
       shell: bash
       working-directory: ${{runner.workspace}}/build/coinbrew
       run: ./coinbrew build Ipopt --verbosity 2 --prefix=${{runner.workspace}}/ThirdParty/Ipopt --no-prompt --tests none
 
     - name: Download and build Cbc
+      if: steps.cache-cbc.outputs.cache-hit != 'true'
       shell: bash
       working-directory: ${{runner.workspace}}/build/coinbrew
-      run: ./coinbrew build Cbc --verbosity 2 --prefix=${{runner.workspace}}/ThirdParty/Cbc --no-third-party --no-prompt --tests none
+      run: ./coinbrew build Cbc --verbosity 2 --prefix=${{runner.workspace}}/ThirdParty/Cbc --no-prompt --tests none
 
     - name: Configure CMake
       # Use a bash shell so we can use the same syntax for environment variable
@@ -49,7 +66,7 @@ jobs:
       # Note the current convention is to use the -S and -B options here to specify source 
       # and build directories, but this is only available with CMake 3.13 and higher.  
       # The CMake binaries on the Github Actions machines are (as of this writing) 3.12
-      run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DHAS_CBC=on -DCBC_DIR=${{runner.workspace}}/ThirdParty/Cbc -DHAS_IPOPT=ON -DIPOPT_DIR=${{runner.workspace}}/ThirdParty/Ipopt -DHAS_GAMS=off -DHAS_CPLEX=off -DHAS_GUROBI=off -DCOMPILE_TESTS=on -DSPDLOG_STATIC=off
+      run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DHAS_CBC=on -DCBC_DIR=${{runner.workspace}}/ThirdParty/Cbc -DHAS_IPOPT=ON -DIPOPT_DIR=${{runner.workspace}}/ThirdParty/Ipopt -DHAS_GAMS=off -DHAS_CPLEX=off -DHAS_GUROBI=off -DCOMPILE_TESTS=on -DSPDLOG_STATIC=on
 
     - name: Build
       working-directory: ${{runner.workspace}}/build
