@@ -286,6 +286,11 @@ if(HAS_GAMS)
     set(PRIMAL_SOURCES ${PRIMAL_SOURCES} "${GAMS_DIR}/apifiles/C/api/gevmcc.c")
     set(PRIMAL_SOURCES ${PRIMAL_SOURCES} "${GAMS_DIR}/apifiles/C/api/palmcc.c")
 
+    if(EXISTS ${GAMS_DIR}/apifiles/C/api/gcmt.c)
+        set(PRIMAL_SOURCES "${GAMS_DIR}/apifiles/C/api/gcmt.c")
+        set(PRIMAL_HEADERS "${GAMS_DIR}/apifiles/C/api/gcmt.h")
+    endif()
+
     set(MODELING_SOURCES ${MODELING_SOURCES} "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemGAMS.cpp")
     set(MODELING_SOURCES ${MODELING_SOURCES} "${PROJECT_SOURCE_DIR}/src/ModelingSystem/EntryPointsGAMS.cpp")
     set(PRIMAL_SOURCES ${PRIMAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverGAMS.cpp")
