@@ -285,8 +285,8 @@ if(HAS_GAMS)
     set(PRIMAL_SOURCES ${PRIMAL_SOURCES} "${GAMS_DIR}/apifiles/C/api/palmcc.c")
 
     if(EXISTS ${GAMS_DIR}/apifiles/C/api/gcmt.c)
-        set(PRIMAL_SOURCES "${GAMS_DIR}/apifiles/C/api/gcmt.c")
-        set(PRIMAL_HEADERS "${GAMS_DIR}/apifiles/C/api/gcmt.h")
+        set(PRIMAL_SOURCES ${PRIMAL_SOURCES} "${GAMS_DIR}/apifiles/C/api/gcmt.c")
+        set(PRIMAL_HEADERS ${PRIMAL_HEADERS} "${GAMS_DIR}/apifiles/C/api/gcmt.h")
     endif()
 
     set(MODELING_SOURCES ${MODELING_SOURCES} "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemGAMS.cpp")
