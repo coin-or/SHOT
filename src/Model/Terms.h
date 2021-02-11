@@ -249,7 +249,17 @@ public:
 
     void add(LinearTermPtr term)
     {
-        (*this).push_back(term);
+        auto variable = term->variable;
+
+        // In case there are multiple terms of the same variable
+        auto it = std::find_if((*this).begin(), (*this).end(),
+            [&variable](const LinearTermPtr& ptr) { return ptr->variable == variable; });
+
+        if(it != (*this).end())
+            it->get()->coefficient += term->coefficient;
+        else
+            (*this).push_back(term);
+
         monotonicity = E_Monotonicity::NotSet;
     }
 
@@ -257,7 +267,7 @@ public:
     {
         for(auto& TERM : terms)
         {
-            (*this).push_back(TERM);
+            add(TERM);
         }
 
         if(terms.size() > 0)
@@ -443,7 +453,25 @@ public:
 
     void add(QuadraticTermPtr term)
     {
-        (*this).push_back(term);
+        auto firstVariable = term->firstVariable;
+        auto secondVariable = term->secondVariable;
+
+        // In case there are multiple terms of the same variable
+        auto it = std::find_if(
+            (*this).begin(), (*this).end(), [&firstVariable, &secondVariable](const QuadraticTermPtr& ptr) {
+                return (((ptr->firstVariable == firstVariable) && (ptr->secondVariable == secondVariable))
+                    || ((ptr->firstVariable == secondVariable) && (ptr->secondVariable == firstVariable)));
+            });
+
+        if(it != (*this).end())
+        {
+            it->get()->coefficient += term->coefficient;
+        }
+        else
+        {
+            (*this).push_back(term);
+        }
+
         convexity = E_Convexity::NotSet;
         monotonicity = E_Monotonicity::NotSet;
     }
@@ -452,7 +480,7 @@ public:
     {
         for(auto& TERM : terms)
         {
-            (*this).push_back(TERM);
+            add(TERM);
         }
 
         if(terms.size() > 0)
