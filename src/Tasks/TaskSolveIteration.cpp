@@ -169,9 +169,15 @@ void TaskSolveIteration::run()
             Utilities::saveVariablePointVectorToFile(sols.at(0).point, variableNames, ss.str());
         }
 
-        currIter->solutionPoints = sols;
-
         currIter->objectiveValue = env->dualSolver->MIPSolver->getObjectiveValue();
+
+        if(env->reformulatedProblem->antiEpigraphObjectiveVariable)
+        {
+            for(auto& SOL : sols)
+                SOL.point.at(env->reformulatedProblem->antiEpigraphObjectiveVariable->index) = currIter->objectiveValue;
+        }
+
+        currIter->solutionPoints = sols;
 
         if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
         {

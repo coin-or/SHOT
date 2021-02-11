@@ -116,6 +116,8 @@ public:
     AuxiliaryVariables auxiliaryVariables;
     AuxiliaryVariablePtr auxiliaryObjectiveVariable; // This is not the same as one created in the dual problem
 
+    VariablePtr antiEpigraphObjectiveVariable; // This is the objective variable used before anti epigraph formulation
+
     VectorDouble variableLowerBounds;
     VectorDouble variableUpperBounds;
     IntervalVector variableBounds;
