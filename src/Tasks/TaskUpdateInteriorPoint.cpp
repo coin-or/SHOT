@@ -21,7 +21,7 @@
 namespace SHOT
 {
 
-TaskUpdateInteriorPoint::TaskUpdateInteriorPoint(EnvironmentPtr envPtr) : TaskBase(envPtr) {}
+TaskUpdateInteriorPoint::TaskUpdateInteriorPoint(EnvironmentPtr envPtr) : TaskBase(envPtr) { }
 
 TaskUpdateInteriorPoint::~TaskUpdateInteriorPoint() = default;
 
@@ -97,7 +97,7 @@ void TaskUpdateInteriorPoint::run()
             == static_cast<int>(ES_AddPrimalPointAsInteriorPoint::KeepBoth)
         && maxDev.normalizedValue < 0)
     {
-        env->output->outputDebug("     Primal solution point used as additional interior point.");
+        env->output->outputDebug("        Primal solution point used as additional interior point.");
 
         if((int)env->dualSolver->interiorPts.size() == env->solutionStatistics.numberOfOriginalInteriorPoints)
         {
