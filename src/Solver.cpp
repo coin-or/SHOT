@@ -1510,7 +1510,7 @@ void Solver::initializeSettings()
         "Min absolute difference between max nonlinear constraint errors in subsequent iterations for termination", 0,
         SHOT_DBL_MAX);
 
-    env->settings->createSetting("DualStagnation.IterationLimit", "Termination", 50,
+    env->settings->createSetting("DualStagnation.IterationLimit", "Termination", SHOT_INT_MAX,
         "Max number of iterations without significant dual objective value improvement", 0, SHOT_INT_MAX);
 
     env->settings->createSetting("PrimalStagnation.IterationLimit", "Termination", 50,
