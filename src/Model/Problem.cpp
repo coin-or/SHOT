@@ -1792,7 +1792,7 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint, double timeLim
                 if(env->timing->getElapsedTime("BoundTightening") > timeLimit)
                     break;
 
-                if(T->coefficient == 0.0)
+                if(Utilities::isAlmostZero(T->coefficient))
                     continue;
 
                 Interval newBound = otherTermsBound;
@@ -1806,6 +1806,7 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint, double timeLim
                 }
 
                 Interval termBound = Interval(constraint->valueLHS, constraint->valueRHS) - newBound;
+
                 termBound = termBound / T->coefficient;
 
                 if(T->variable->tightenBounds(termBound))
@@ -1843,7 +1844,7 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint, double timeLim
                 if(env->timing->getElapsedTime("BoundTightening") > timeLimit)
                     break;
 
-                if(T->coefficient == 0.0)
+                if(Utilities::isAlmostZero(T->coefficient))
                     continue;
 
                 Interval newBound = otherTermsBound;
@@ -1857,6 +1858,7 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint, double timeLim
                 }
 
                 Interval termBound = Interval(constraint->valueLHS, constraint->valueRHS) - newBound;
+
                 termBound = termBound / T->coefficient;
 
                 if(T->firstVariable == T->secondVariable)
@@ -1921,7 +1923,7 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint, double timeLim
                 if(env->timing->getElapsedTime("BoundTightening") > timeLimit)
                     break;
 
-                if(T->coefficient == 0.0)
+                if(Utilities::isAlmostZero(T->coefficient))
                     continue;
 
                 Interval newBound = otherTermsBound;
@@ -1991,7 +1993,7 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint, double timeLim
                 if(env->timing->getElapsedTime("BoundTightening") > timeLimit)
                     break;
 
-                if(T->coefficient == 0.0)
+                if(Utilities::isAlmostZero(T->coefficient))
                     continue;
 
                 Interval newBound = otherTermsBound;
