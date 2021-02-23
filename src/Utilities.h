@@ -111,6 +111,8 @@ template <typename T> double calculateHash(std::vector<T> const& point);
 
 bool isAlmostEqual(double x, double y, const double epsilon);
 
+bool isAlmostZero(double x);
+
 bool isInteger(double value);
 std::string trim(std::string& str);
 

@@ -1931,7 +1931,8 @@ LinearTerms TaskReformulateProblem::doEigenvalueDecomposition(QuadraticTerms qua
 
         for(auto [VAR, j] : quadraticTerms.variableMap)
         {
-            auxConstraint->add(std::make_shared<LinearTerm>(quadraticTerms.eigenvectors(j, i).real(), VAR));
+            if(quadraticTerms.eigenvectors(j, i).real() != 0.0)
+                auxConstraint->add(std::make_shared<LinearTerm>(quadraticTerms.eigenvectors(j, i).real(), VAR));
         }
 
         auxConstraint->add(std::make_shared<LinearTerm>(-1.0, auxQuadVariable));
