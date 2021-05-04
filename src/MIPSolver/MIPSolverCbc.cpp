@@ -1614,7 +1614,7 @@ int CbcMessageHandler::print()
 
     auto lines = Utilities::splitStringByCharacter(CoinMessageHandler::messageBuffer(), '\n');
 
-    for(auto const line : lines)
+    for(auto const& line : lines)
         env->output->outputInfo(fmt::format("      | {} ", line));
 
     return 0;

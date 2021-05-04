@@ -1057,14 +1057,14 @@ void Report::outputSolutionReport()
 
     env->output->outputInfo(" Fulfilled termination criteria: ");
 
-    for(auto const COND : fulfilled)
+    for(auto const& COND : fulfilled)
         env->output->outputInfo(COND);
 
     env->output->outputInfo("");
 
     env->output->outputInfo(" Unfulfilled termination criteria:");
 
-    for(auto const COND : unfulfilled)
+    for(auto const& COND : unfulfilled)
         env->output->outputInfo(COND);
 
     env->output->outputInfo("");
