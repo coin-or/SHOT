@@ -553,6 +553,7 @@ endif(HAS_IPOPT)
 if(HAS_GAMS)
     include_directories(SYSTEM "${GAMS_DIR}/apifiles/C/api")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DGAMSDIR=\\\"${GAMS_DIR}\\\"")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DGC_NO_MUTEX")
 endif(HAS_GAMS)
 
 # Creates the SHOT library that is linked to the executable
