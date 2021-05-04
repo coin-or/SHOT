@@ -157,6 +157,14 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
         env->settings->updateSetting("FixedInteger.Solver", "Primal", static_cast<int>(ES_PrimalNLPSolver::GAMS));
     }
 
+#if GMOAPIVERSION >= 21
+    VectorString enumQExtractAlg;
+    enumQExtractAlg.push_back("automatic");
+    enumQExtractAlg.push_back("threepass");
+    enumQExtractAlg.push_back("doubleforward");
+    env->settings->createSetting("QExtractAlg", "Model", 0, "Extraction algorithm for quadratic equations in GAMS interface", enumQExtractAlg);
+#endif
+
     if(gmoOptFile(modelingObject) > 0) // GAMS provides an option file
     {
         gmoNameOptFile(modelingObject, buffer);
@@ -241,7 +249,15 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem)
     gmoMinfSet(modelingObject, SHOT_DBL_MIN);
     gmoPinfSet(modelingObject, SHOT_DBL_MAX);
     gmoIndexBaseSet(modelingObject, 0);
+
+#if GMOAPIVERSION >= 21
+    gmoQExtractAlgSet(modelingObject, env->settings->getSetting<int>("QExtractAlg", "Model"));
+    gevTimeDiff(modelingEnvironment);
+#endif
     gmoUseQSet(modelingObject, 1);
+#if GMOAPIVERSION >= 21
+    env->output->outputInfo(std::string(" Time to extract information on quadratics: ") + std::to_string(gevTimeDiff(modelingEnvironment)));
+#endif
 
     try
     {
