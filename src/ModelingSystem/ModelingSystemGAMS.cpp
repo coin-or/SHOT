@@ -1032,13 +1032,21 @@ bool ModelingSystemGAMS::copyQuadraticTerms(ProblemPtr destination)
 
     if(gmoGetObjOrder(modelingObject) == gmoorder_Q)
     {
+#if GMOAPIVERSION <= 19
         int numQuadraticTerms = gmoObjQNZ(modelingObject);
+#else
+        int numQuadraticTerms = gmoObjQMatNZ(modelingObject);
+#endif
 
         int* variableOneIndexes = new int[numQuadraticTerms];
         int* variableTwoIndexes = new int[numQuadraticTerms];
         double* quadraticCoefficients = new double[numQuadraticTerms];
 
+#if GMOAPIVERSION <= 19
         gmoGetObjQ(modelingObject, variableOneIndexes, variableTwoIndexes, quadraticCoefficients);
+#else
+        gmoGetObjQMat(modelingObject, variableOneIndexes, variableTwoIndexes, quadraticCoefficients);
+#endif
 
         for(int j = 0; j < numQuadraticTerms; ++j)
         {
@@ -1083,7 +1091,11 @@ bool ModelingSystemGAMS::copyQuadraticTerms(ProblemPtr destination)
             int* variableTwoIndexes = new int[numQuadraticTerms];
             double* quadraticCoefficients = new double[numQuadraticTerms];
 
+#if GMOAPIVERSION <= 19
             gmoGetRowQ(modelingObject, i, variableOneIndexes, variableTwoIndexes, quadraticCoefficients);
+#else
+            gmoGetRowQMat(modelingObject, i, variableOneIndexes, variableTwoIndexes, quadraticCoefficients);
+#endif
 
             for(int j = 0; j < numQuadraticTerms; ++j)
             {
