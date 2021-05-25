@@ -1020,6 +1020,11 @@ void Solver::initializeSettings()
         "How to treat quadratic functions", enumQPStrategy, 0);
     enumQPStrategy.clear();
 
+    // Modeling system settings
+
+    env->settings->createSettingGroup("ModelingSystem", "", "Modeling system",
+        "These settings control functionality used in the interfaces to different modeling environments.");
+
     // Logging and output settings
 
     env->settings->createSettingGroup("Output", "", "Solver output",
@@ -1377,22 +1382,6 @@ void Solver::initializeSettings()
     enumStrategy.push_back("aggressive");
     env->settings->createSetting("Cbc.Strategy", "Subsolver", 1, "This turns on newer features", enumStrategy, 0);
     enumStrategy.clear();
-
-#endif
-
-    // Subsolver settings: GAMS NLP
-
-#ifdef HAS_GAMS
-
-    env->settings->createSettingGroup("Subsolver", "GAMS", "GAMS", "Settings for the GAMS NLP solvers.");
-
-    std::string optfile = "";
-    env->settings->createSetting(
-        "GAMS.NLP.OptionsFilename", "Subsolver", optfile, "Options file for the NLP solver in GAMS");
-
-    std::string solver = "auto";
-    env->settings->createSetting(
-        "GAMS.NLP.Solver", "Subsolver", solver, "NLP solver to use in GAMS (auto: SHOT chooses)");
 
 #endif
 
