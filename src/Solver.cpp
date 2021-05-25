@@ -1496,6 +1496,26 @@ void Solver::initializeSettings()
 
     env->settings->createSetting("ResultPath", "Output", empty, "The path where to save the result information", true);
 
+    // Need to create the modeling systems temporary to get their settings
+    {
+        auto modelingSystem = std::make_shared<ModelingSystemOSiL>(env);
+        modelingSystem->augmentSettings(env->settings);
+    }
+
+#ifdef HAS_AMPL
+    {
+        auto modelingSystem = std::make_shared<ModelingSystemAMPL>(env);
+        modelingSystem->augmentSettings(env->settings);
+    }
+#endif
+
+#ifdef HAS_GAMS
+    {
+        auto modelingSystem = std::make_shared<ModelingSystemGAMS>(env);
+        modelingSystem->augmentSettings(env->settings);
+    }
+#endif
+
     env->settings->settingsInitialized = true;
 
     env->output->outputDebug(" Initialization of settings complete.");
@@ -1571,7 +1591,7 @@ void Solver::verifySettings()
            == ES_PrimalNLPSolver::GAMS)
         && (static_cast<ES_PrimalNLPProblemSource>(
                 env->settings->getSetting<int>("FixedInteger.SourceProblem", "Primal"))
-               != ES_PrimalNLPProblemSource::OriginalProblem))
+            != ES_PrimalNLPProblemSource::OriginalProblem))
     {
         env->output->outputWarning(" Cannot use GAMS NLP solvers when solving fixed NLP problems based on the "
                                    "reformulated model. Use Ipopt instead!");
