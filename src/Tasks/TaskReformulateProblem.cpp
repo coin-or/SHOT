@@ -1535,12 +1535,6 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
     }
 
     if(partitionStrategy == ES_PartitionNonlinearSums::Always
-        && quadraticSumConvex) // Use the eigenvalue decomposition reformulation
-    {
-        auto linearTerms = doEigenvalueDecomposition(quadraticTerms);
-        resultLinearTerms.add(linearTerms);
-    }
-    else if(partitionStrategy == ES_PartitionNonlinearSums::Always
         || (!quadraticSumConvex // should not reformulate if sum is convex unless forced
             && allTermsConvexAfterReformulation && partitionStrategy == ES_PartitionNonlinearSums::IfConvex))
     {
@@ -1906,39 +1900,6 @@ void TaskReformulateProblem::copySignomialTermsToObjectiveFunction(
         std::dynamic_pointer_cast<NonlinearObjectiveFunction>(destination)
             ->add(std::make_shared<SignomialTerm>(signCoefficient * ST->coefficient, elements));
     }
-}
-
-LinearTerms TaskReformulateProblem::doEigenvalueDecomposition(QuadraticTerms quadraticTerms)
-{
-    LinearTerms resultLinearTerms;
-    resultLinearTerms.takeOwnership(reformulatedProblem);
-
-    for(size_t i = 0; i < quadraticTerms.variableMap.size(); i++)
-    {
-        auto auxQuadVariable = std::make_shared<AuxiliaryVariable>("q_evd_" + std::to_string(auxVariableCounter),
-            auxVariableCounter, E_VariableType::Real, SHOT_DBL_MIN, SHOT_DBL_MAX);
-        auxVariableCounter++;
-        env->results->increaseAuxiliaryVariableCounter(E_AuxiliaryVariableType::EigenvalueDecomposition);
-
-        auto [auxVariable, newVariable] = getSquareAuxiliaryVariable(auxQuadVariable);
-        resultLinearTerms.add(std::make_shared<LinearTerm>(quadraticTerms.eigenvalues[i].real(), auxVariable));
-
-        auto auxConstraint = std::make_shared<LinearConstraint>(
-            auxConstraintCounter, "q_evd" + std::to_string(auxConstraintCounter), 0, 0);
-        auxConstraintCounter++;
-
-        for(auto [VAR, j] : quadraticTerms.variableMap)
-        {
-            auxConstraint->add(std::make_shared<LinearTerm>(quadraticTerms.eigenvectors(j, i).real(), VAR));
-        }
-
-        auxConstraint->add(std::make_shared<LinearTerm>(-1.0, auxQuadVariable));
-
-        reformulatedProblem->add(auxConstraint);
-        reformulatedProblem->add(std::move(auxQuadVariable));
-    }
-
-    return (resultLinearTerms);
 }
 
 NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(NonlinearExpressionPtr source)
