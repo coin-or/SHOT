@@ -74,7 +74,7 @@ void QuadraticTerms::updateConvexity()
             allNegative = allNegative && T->coefficient <= 0;
             allBilinear = false;
 
-            elements.emplace_back(currentVariableIndex, currentVariableIndex, T->coefficient);
+            elements.emplace_back(currentVariableIndex, currentVariableIndex, 2 * T->coefficient);
         }
         else
         {
