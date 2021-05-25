@@ -814,12 +814,15 @@ void Report::outputProblemInstanceReport()
                 " - semicontinuous:", env->problem->properties.numberOfSemicontinuousVariables, ""));
     }
 
-    if(env->results->auxiliaryVariablesIntroduced.size() > 0)
+    if(env->results->auxiliaryVariablesIntroduced.size() > 0 || env->reformulatedProblem->antiEpigraphObjectiveVariable)
     {
         int totalNumberOfTransformations = 0;
 
         for(auto& AUXVAR : env->results->auxiliaryVariablesIntroduced)
             totalNumberOfTransformations += AUXVAR.second;
+
+        if(env->reformulatedProblem->antiEpigraphObjectiveVariable)
+            totalNumberOfTransformations++;
 
         env->output->outputInfo("");
 
@@ -862,7 +865,10 @@ void Report::outputProblemInstanceReport()
             env->output->outputInfo(fmt::format(" {:56s}{:d}", "- binary monomial term reformulation:", value));
 
         if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::AbsoluteValue); value > 0)
-            env->output->outputInfo(fmt::format(" {:56s}{:d}", "-absolute value reformulation:", value));
+            env->output->outputInfo(fmt::format(" {:56s}{:d}", "- absolute value reformulation:", value));
+
+        if(env->reformulatedProblem->antiEpigraphObjectiveVariable)
+            env->output->outputInfo(fmt::format(" {:56s}", "- anti-epigraph reformulation"));
     }
 }
 
