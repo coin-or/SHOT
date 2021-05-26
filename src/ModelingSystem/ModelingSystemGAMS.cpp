@@ -268,7 +268,7 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem)
     gmoIndexBaseSet(modelingObject, 0);
 
 #if GMOAPIVERSION >= 21
-    gmoQExtractAlgSet(modelingObject, env->settings->getSetting<int>("QExtractAlg", "Model"));
+    gmoQExtractAlgSet(modelingObject, env->settings->getSetting<int>("GAMS.QExtractAlg", "ModelingSystem"));
     gevTimeDiff(modelingEnvironment);
 #endif
     gmoUseQSet(modelingObject, 1);
