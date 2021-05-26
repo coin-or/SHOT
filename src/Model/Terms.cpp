@@ -72,8 +72,6 @@ void QuadraticTerms::updateConvexity()
             allBilinear = false;
 
             elements.emplace_back(currentVariableIndex, currentVariableIndex, 2 * T->coefficient);
-            // std::cout << T->firstVariable->index + 1 << " " << T->secondVariable->index + 1 << " " << T->coefficient
-            //          << std::endl;
         }
         else
         {

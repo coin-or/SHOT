@@ -77,6 +77,10 @@ void TaskUpdateInteriorPoint::run()
     if(env->reformulatedProblem->auxiliaryObjectiveVariable)
         tmpPrimalPoint.push_back(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(tmpPrimalPoint));
 
+    if(env->reformulatedProblem->antiEpigraphObjectiveVariable)
+        tmpPrimalPoint.at(env->reformulatedProblem->antiEpigraphObjectiveVariable->index)
+            = env->reformulatedProblem->objectiveFunction->calculateValue(tmpPrimalPoint);
+
     tmpIP->point = tmpPrimalPoint;
     assert((int)tmpIP->point.size() == env->reformulatedProblem->properties.numberOfVariables);
 
@@ -134,6 +138,10 @@ void TaskUpdateInteriorPoint::run()
 
         if(env->reformulatedProblem->auxiliaryObjectiveVariable)
             tmpPrimalPoint.push_back(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(tmpPrimalPoint));
+
+        if(env->reformulatedProblem->antiEpigraphObjectiveVariable)
+            tmpPrimalPoint.at(env->reformulatedProblem->antiEpigraphObjectiveVariable->index)
+                = env->reformulatedProblem->objectiveFunction->calculateValue(tmpPrimalPoint);
 
         tmpIP->point = tmpPrimalPoint;
         assert((int)tmpIP->point.size() == env->reformulatedProblem->properties.numberOfVariables);

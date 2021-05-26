@@ -50,6 +50,8 @@ struct VariableProperties
     bool inSignomialTerms = false;
     bool inNonlinearExpression = false;
 
+    int inNumberOfLinearTerms = 0;
+
     bool hasUpperBoundBeenTightened = false;
     bool hasLowerBoundBeenTightened = false;
 

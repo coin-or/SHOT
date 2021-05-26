@@ -59,6 +59,6 @@ Convex MINLP Solver Utilizing a Single Branching Tree Approach* (2018). http://w
 
 **The features for solving nonconvex MINLP problems are described in the papers:**
 
-Lundell, A. and Kronqvist, J., *Polyhedral Approximation Strategies in Nonconvex Mixed-Integer Nonlinear Programming*. Optimization Online (2020). http://www.optimization-online.org/DB_HTML/2020/03/7691.html
+Lundell, A. and Kronqvist, J., *Polyhedral approximation strategies for nonconvex mixed-integer nonlinear programming in SHOT*. Journal of Global Optimization (2021). https://doi.org/10.1007/s10898-021-01006-1
 
 Lundell, A. and Kronqvist, J. *On Solving Nonconvex MINLP Problems with SHOT* (2019). In: Le Thi H., Le H., Pham Dinh T. (editors) Optimization of Complex Systems: Theory, Models, Algorithms and Applications. WCGO 2019. Advances in Intelligent Systems and Computing, vol 991. Springer, Cham.

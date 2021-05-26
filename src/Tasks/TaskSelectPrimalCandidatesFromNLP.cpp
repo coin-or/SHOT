@@ -565,6 +565,12 @@ void TaskSelectPrimalCandidatesFromNLP::createInfeasibilityCut(const VectorDoubl
         {
             tmpSolPt.point.push_back(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(variableSolution));
         }
+
+        if(env->reformulatedProblem->antiEpigraphObjectiveVariable)
+        {
+            tmpSolPt.point.at(env->reformulatedProblem->antiEpigraphObjectiveVariable->index)
+                = env->reformulatedProblem->objectiveFunction->calculateValue(tmpSolPt.point);
+        }
     }
 
     std::vector<SolutionPoint> solutionPoints(1);

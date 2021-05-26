@@ -27,6 +27,7 @@ enum class E_AuxiliaryVariableType
     IntegerBilinear, // From linearizing a bilinear term i1 * x2, where i1 is integer and x2 is continuous or discrete
     BinaryMonomial, // Fram linearizing a monomial term b1 * b2 * ... * bn, where bi are binary
     AbsoluteValue, // From rewriting an absolute value
+    AntiEpigraph, // For rewriting an epigraph formulation as objective
     EigenvalueDecomposition // From performing an eigenvalue decomposition on quadratic sums
 };
 

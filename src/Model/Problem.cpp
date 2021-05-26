@@ -479,13 +479,18 @@ void Problem::updateVariables()
         {
             T->variable->properties.inLinearConstraints = true;
             T->variable->properties.inLinearTerms = true;
+            T->variable->properties.inNumberOfLinearTerms++;
         }
     }
 
     for(auto& C : quadraticConstraints)
     {
         for(auto& T : C->linearTerms)
+        {
             T->variable->properties.inLinearTerms = true;
+            T->variable->properties.inQuadraticConstraints = true;
+            T->variable->properties.inNumberOfLinearTerms++;
+        }
 
         for(auto& T : C->quadraticTerms)
         {
@@ -501,12 +506,18 @@ void Problem::updateVariables()
     for(auto& C : nonlinearConstraints)
     {
         for(auto& T : C->linearTerms)
+        {
             T->variable->properties.inLinearTerms = true;
+            T->variable->properties.inNonlinearConstraints = true;
+            T->variable->properties.inNumberOfLinearTerms++;
+        }
 
         for(auto& T : C->quadraticTerms)
         {
             T->firstVariable->properties.inQuadraticTerms = true;
             T->secondVariable->properties.inQuadraticTerms = true;
+            T->firstVariable->properties.inNonlinearConstraints = true;
+            T->secondVariable->properties.inNonlinearConstraints = true;
             T->firstVariable->properties.isNonlinear = true;
             T->secondVariable->properties.isNonlinear = true;
         }
