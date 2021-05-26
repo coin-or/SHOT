@@ -831,44 +831,48 @@ void Report::outputProblemInstanceReport()
 
         if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::NonlinearObjectiveFunction);
             value > 0)
-            env->output->outputInfo(fmt::format(" {:56s}{:d}", "- epigraph:", "", value));
+            env->output->outputInfo(fmt::format(" {:56s}{:d}", " - epigraph:", "", value));
 
         if(auto value
             = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::NonlinearExpressionPartitioning);
             value > 0)
-            env->output->outputInfo(fmt::format(" {:56s}{:d}", "- nonlinear expression partitioning:", value));
+            env->output->outputInfo(fmt::format(" {:56s}{:d}", " - nonlinear expression partitioning:", value));
 
         if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::MonomialTermsPartitioning);
             value > 0)
-            env->output->outputInfo(fmt::format(" {:56s}{:d}", "- monomial terms partitioning:", value));
+            env->output->outputInfo(fmt::format(" {:56s}{:d}", " - monomial terms partitioning:", value));
 
         if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::SignomialTermsPartitioning);
             value > 0)
-            env->output->outputInfo(fmt::format(" {:56s}{:d}", "- signomial terms partitioning:", value));
+            env->output->outputInfo(fmt::format(" {:56s}{:d}", " - signomial terms partitioning:", value));
 
         if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::ContinuousBilinear);
             value > 0)
-            env->output->outputInfo(fmt::format(" {:56s}{:d}", "- continuous bilinear term extraction:", value));
+            env->output->outputInfo(fmt::format(" {:56s}{:d}", " - continuous bilinear term extraction:", value));
 
         if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::BinaryBilinear); value > 0)
-            env->output->outputInfo(fmt::format(" {:56s}{:d}", "- binary bilinear term reformulation:", value));
+            env->output->outputInfo(fmt::format(" {:56s}{:d}", " - binary bilinear term reformulation:", value));
 
         if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::BinaryContinuousBilinear);
             value > 0)
             env->output->outputInfo(
-                fmt::format(" {:56s}{:d}", "- binary/continuous bilinear term reformulation:", value));
+                fmt::format(" {:56s}{:d}", " - binary/continuous bilinear term reformulation:", value));
 
         if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::IntegerBilinear); value > 0)
-            env->output->outputInfo(fmt::format(" {:56s}{:d}", "- integer bilinear term reformulation:", value));
+            env->output->outputInfo(fmt::format(" {:56s}{:d}", " - integer bilinear term reformulation:", value));
 
         if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::BinaryMonomial); value > 0)
-            env->output->outputInfo(fmt::format(" {:56s}{:d}", "- binary monomial term reformulation:", value));
+            env->output->outputInfo(fmt::format(" {:56s}{:d}", " - binary monomial term reformulation:", value));
 
         if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::AbsoluteValue); value > 0)
             env->output->outputInfo(fmt::format(" {:56s}{:d}", "- absolute value reformulation:", value));
 
         if(env->reformulatedProblem->antiEpigraphObjectiveVariable)
             env->output->outputInfo(fmt::format(" {:56s}", "- anti-epigraph reformulation"));
+
+        if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::EigenvalueDecomposition);
+            value > 0)
+            env->output->outputInfo(fmt::format(" {:56s}{:d}", " - quadratic eigenvalue decomposition:", value));
     }
 }
 

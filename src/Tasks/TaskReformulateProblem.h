@@ -102,12 +102,15 @@ private:
     std::tuple<LinearTerms, MonomialTerms> reformulateMonomialSum(
         const MonomialTerms& monomialTerms, bool reversedSigns);
 
+    LinearTerms doEigenvalueDecomposition(QuadraticTerms quadraticTerms);
+
     NonlinearExpressionPtr reformulateNonlinearExpression(NonlinearExpressionPtr source);
     NonlinearExpressionPtr reformulateNonlinearExpression(std::shared_ptr<ExpressionAbs> source);
     NonlinearExpressionPtr reformulateNonlinearExpression(std::shared_ptr<ExpressionSquare> source);
     NonlinearExpressionPtr reformulateNonlinearExpression(std::shared_ptr<ExpressionProduct> source);
 
-    std::pair<AuxiliaryVariablePtr, bool> getSquareAuxiliaryVariable(VariablePtr firstVariable);
+    std::pair<AuxiliaryVariablePtr, bool> getSquareAuxiliaryVariable(
+        VariablePtr firstVariable, E_AuxiliaryVariableType auxVariableType);
 
     std::pair<AuxiliaryVariablePtr, bool> getBilinearAuxiliaryVariable(
         VariablePtr firstVariable, VariablePtr secondVariable);

@@ -109,6 +109,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
 
         if(addedHyperplanes >= maxHyperplanesPerIter)
         {
+            env->output->outputDebug("        Not generating hyperplane using ESH: Max number already added.");         
             env->timing->stopTimer("DualCutGenerationRootSearch");
             break;
         }
@@ -134,6 +135,10 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
                         numericConstraintValuesConvex.push_back(NCV);
                     else
                         numericConstraintValuesAll.push_back(NCV);
+
+                    env->output->outputDebug("        Not generating hyperplane using ESH: Numerical error.");
+                    continue;
+
                 }
 
                 if(numericConstraintValuesConvex.size() > 0)
@@ -153,19 +158,33 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
                 {
                     // Do not add hyperplane if one has been added for this constraint already
                     if(useUniqueConstraints && hyperplaneAddedToConstraint.at(NCV.constraint->index))
+                    {
+                        env->output->outputDebug("        Not generating hyperplane using ESH: Hyperplane generated for constraint already.");
                         continue;
-
+                    }
+                  
                     // Do not add hyperplane if there are numerical errors
                     if(std::isnan(NCV.error) || std::isnan(NCV.normalizedValue))
+                    {
+                        env->output->outputDebug(" Not generating hyperplane using ESH: Numerical error.");
                         continue;
+                    }
 
                     // Do not add hyperplane if less than this tolerance or negative
                     if(NCV.normalizedValue < rootsearchConstraintTolerance)
+                    {
+                        env->output->outputDebug(
+                             "        Not generating hyperplane using ESH: Rootsearch tolerance reached.");
                         continue;
+                    }
 
                     // Do not add hyperplane if constraint value is much less than largest
                     if(NCV.error < constraintMaxSelectionFactor * numericConstraintValues.at(0).error)
+                    {
+                        env->output->outputDebug(
+                            "        Not generating hyperplane using ESH: Constraint value much smaller than largest.");          
                         continue;
+                    }
 
                     if(NCV.constraint->properties.convexity != E_Convexity::Convex)
                     {

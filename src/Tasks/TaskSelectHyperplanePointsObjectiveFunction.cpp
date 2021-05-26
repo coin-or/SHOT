@@ -52,7 +52,8 @@ void TaskSelectHyperplanePointsObjectiveFunction::run(std::vector<SolutionPoint>
         hyperplane.sourceConstraintIndex = -1;
         hyperplane.generatedPoint = sourcePoints[0].point;
         hyperplane.source = E_HyperplaneSource::ObjectiveRootsearch;
-        hyperplane.objectiveFunctionValue = 0.0;
+        hyperplane.objectiveFunctionValue
+            = env->reformulatedProblem->objectiveFunction->calculateValue(sourcePoints[0].point);
         hyperplane.isSourceConvex = true;
 
         env->dualSolver->addHyperplane(hyperplane);
@@ -64,8 +65,8 @@ void TaskSelectHyperplanePointsObjectiveFunction::run(std::vector<SolutionPoint>
     bool isConvex = env->reformulatedProblem->objectiveFunction->properties.convexity == E_Convexity::Linear
         || ((env->reformulatedProblem->objectiveFunction->properties.isMinimize
                 && env->reformulatedProblem->objectiveFunction->properties.convexity == E_Convexity::Convex)
-               || (env->reformulatedProblem->objectiveFunction->properties.isMaximize
-                      && env->reformulatedProblem->objectiveFunction->properties.convexity == E_Convexity::Concave));
+            || (env->reformulatedProblem->objectiveFunction->properties.isMaximize
+                && env->reformulatedProblem->objectiveFunction->properties.convexity == E_Convexity::Concave));
 
     if(!isConvex && (env->results->getCurrentIteration()->numHyperplanesAdded > 0 || numHyperplaneAdded > 0))
     {
@@ -89,17 +90,13 @@ void TaskSelectHyperplanePointsObjectiveFunction::run(std::vector<SolutionPoint>
         && env->reformulatedProblem->properties.convexity > E_ProblemConvexity::Convex)
         useRootsearch = false;
 
-    if(useRootsearch)
+    for(auto& SOLPT : sourcePoints)
     {
-        env->timing->startTimer("DualObjectiveRootSearch");
-
-        for(auto& SOLPT : sourcePoints)
+        if(useRootsearch)
         {
-            double objectiveLinearizationError = std::abs(
-                env->reformulatedProblem->objectiveFunction->calculateValue(SOLPT.point) - SOLPT.objectiveValue);
+            env->timing->startTimer("DualObjectiveRootSearch");
 
-            if(objectiveLinearizationError < 1e-7)
-                continue;
+            bool addedHyperplane = false;
 
             auto exactValue = env->reformulatedProblem->objectiveFunction->calculateValue(SOLPT.point);
 
@@ -138,42 +135,42 @@ void TaskSelectHyperplanePointsObjectiveFunction::run(std::vector<SolutionPoint>
 
                 env->dualSolver->addHyperplane(hyperplane);
                 numHyperplaneAdded++;
+
+                env->timing->stopTimer("DualObjectiveRootSearch");
+                continue;
             }
             catch(std::exception& e)
             {
-                env->output->outputWarning(
-                    "        Cannot find solution with root search for generating supporting objective hyperplane.");
+                env->output->outputWarning("        Cannot find solution with root search for generating "
+                                           "supporting objective hyperplane. Adding cutting plane instead.");
                 env->output->outputDebug(fmt::format("        {}", e.what()));
+
+                env->timing->stopTimer("DualObjectiveRootSearch");
             }
         }
 
-        env->timing->stopTimer("DualObjectiveRootSearch");
+        Hyperplane hyperplane;
+        hyperplane.isObjectiveHyperplane = true;
+        hyperplane.sourceConstraintIndex = -1;
+        hyperplane.generatedPoint = SOLPT.point;
+        hyperplane.source = E_HyperplaneSource::ObjectiveCuttingPlane;
+        hyperplane.isSourceConvex = isConvex;
+
+        hyperplane.objectiveFunctionValue
+            = env->reformulatedProblem->objectiveFunction->calculateValue(hyperplane.generatedPoint);
+
+        env->dualSolver->addHyperplane(hyperplane);
+        numHyperplaneAdded++;
     }
 
     if(numHyperplaneAdded > 0)
     {
-        env->output->outputDebug(fmt::format(
-            "        Added {} separating hyperplanes for objective function to waiting list.", numHyperplaneAdded));
+        env->output->outputDebug(
+            fmt::format("        Added {} linearizations for objective function to waiting list.", numHyperplaneAdded));
     }
     else
     {
-        for(auto& SOLPT : sourcePoints)
-        {
-            Hyperplane hyperplane;
-            hyperplane.isObjectiveHyperplane = true;
-            hyperplane.sourceConstraintIndex = -1;
-            hyperplane.generatedPoint = SOLPT.point;
-            hyperplane.source = E_HyperplaneSource::ObjectiveCuttingPlane;
-            hyperplane.isSourceConvex = isConvex;
-
-            hyperplane.objectiveFunctionValue
-                = env->reformulatedProblem->objectiveFunction->calculateValue(hyperplane.generatedPoint);
-
-            env->dualSolver->addHyperplane(hyperplane);
-        }
-
-        env->output->outputDebug(
-            fmt::format("        Added {} cutting planes for objective function to waiting list.", numHyperplaneAdded));
+        env->output->outputDebug(fmt::format("        No linearizations for objective function added."));
     }
 }
 

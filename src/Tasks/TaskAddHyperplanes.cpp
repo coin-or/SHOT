@@ -67,6 +67,14 @@ void TaskAddHyperplanes::run()
                 env->dualSolver->addGeneratedHyperplane(tmpItem);
                 addedHyperplanes++;
                 this->itersWithoutAddedHPs = 0;
+
+                env->output->outputDebug(
+                    fmt::format("        Cut added successfully for constraint {}.", tmpItem.sourceConstraintIndex));
+            }
+            else
+            {
+                env->output->outputDebug(fmt::format(
+                    "        Cut not added successfully for constraint {}.", tmpItem.sourceConstraintIndex));
             }
         }
 

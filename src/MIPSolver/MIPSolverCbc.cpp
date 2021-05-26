@@ -384,7 +384,7 @@ void MIPSolverCbc::activateDiscreteVariables(bool activate)
 {
     if(activate)
     {
-        env->output->outputDebug(" Activating MIP strategy");
+        env->output->outputDebug("        Activating MIP strategy");
 
         for(int i = 0; i < numberOfVariables; i++)
         {
@@ -399,7 +399,7 @@ void MIPSolverCbc::activateDiscreteVariables(bool activate)
     }
     else
     {
-        env->output->outputDebug(" Activating LP strategy");
+        env->output->outputDebug("        Activating LP strategy");
         for(int i = 0; i < numberOfVariables; i++)
         {
             if(variableTypes.at(i) == E_VariableType::Integer || variableTypes.at(i) == E_VariableType::Binary)
