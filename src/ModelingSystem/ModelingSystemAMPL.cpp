@@ -434,13 +434,13 @@ public:
     }
 };
 
-ModelingSystemAMPL::ModelingSystemAMPL(EnvironmentPtr envPtr) : IModelingSystem(envPtr) {}
+ModelingSystemAMPL::ModelingSystemAMPL(EnvironmentPtr envPtr) : IModelingSystem(envPtr) { }
 
 ModelingSystemAMPL::~ModelingSystemAMPL() = default;
 
-void ModelingSystemAMPL::augmentSettings([[maybe_unused]] SettingsPtr settings) {}
+void ModelingSystemAMPL::augmentSettings([[maybe_unused]] SettingsPtr settings) { }
 
-void ModelingSystemAMPL::updateSettings([[maybe_unused]] SettingsPtr settings) {}
+void ModelingSystemAMPL::updateSettings([[maybe_unused]] SettingsPtr settings) { }
 
 E_ProblemCreationStatus ModelingSystemAMPL::createProblem(ProblemPtr& problem, const std::string& filename)
 {
@@ -515,6 +515,6 @@ E_ProblemCreationStatus ModelingSystemAMPL::createProblem(ProblemPtr& problem, c
     return (E_ProblemCreationStatus::NormalCompletion);
 }
 
-void ModelingSystemAMPL::finalizeSolution() {}
+void ModelingSystemAMPL::finalizeSolution() { }
 
 } // Namespace SHOT

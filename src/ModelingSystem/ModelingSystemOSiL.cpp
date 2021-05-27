@@ -31,13 +31,13 @@ namespace fs = std::experimental;
 namespace SHOT
 {
 
-ModelingSystemOSiL::ModelingSystemOSiL(EnvironmentPtr envPtr) : IModelingSystem(envPtr) {}
+ModelingSystemOSiL::ModelingSystemOSiL(EnvironmentPtr envPtr) : IModelingSystem(envPtr) { }
 
 ModelingSystemOSiL::~ModelingSystemOSiL() = default;
 
-void ModelingSystemOSiL::augmentSettings([[maybe_unused]] SettingsPtr settings) {}
+void ModelingSystemOSiL::augmentSettings([[maybe_unused]] SettingsPtr settings) { }
 
-void ModelingSystemOSiL::updateSettings([[maybe_unused]] SettingsPtr settings) {}
+void ModelingSystemOSiL::updateSettings([[maybe_unused]] SettingsPtr settings) { }
 
 E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, const std::string& filename)
 {
@@ -600,6 +600,6 @@ NonlinearExpressionPtr ModelingSystemOSiL::convertNonlinearNode(tinyxml2::XMLNod
     return nullptr;
 }
 
-void ModelingSystemOSiL::finalizeSolution() {}
+void ModelingSystemOSiL::finalizeSolution() { }
 
 } // Namespace SHOT
