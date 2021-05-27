@@ -15,6 +15,7 @@
 #include "../Timing.h"
 #include "../Utilities.h"
 #include "../Model/Simplifications.h"
+
 #include "../Tasks/TaskReformulateProblem.h"
 
 namespace SHOT
@@ -24,12 +25,14 @@ void Problem::updateConstraints()
 {
     NumericConstraints auxConstraints;
 
+    env->output->outputTrace(" Swapping bounds");
     for(auto& C : numericConstraints)
     {
         if(C->valueLHS > C->valueRHS)
             std::swap(C->valueRHS, C->valueLHS);
     }
 
+    env->output->outputTrace(" Standardizing linear constraints");
     for(auto& C : linearConstraints)
     {
         if(C->valueRHS == SHOT_DBL_MAX && C->valueLHS != SHOT_DBL_MIN)
@@ -46,6 +49,11 @@ void Problem::updateConstraints()
         }
     }
 
+    auto useNonconvexQuadraticStrategy = static_cast<ES_QuadraticProblemStrategy>(env->settings->getSetting<int>(
+                                             "Reformulation.Quadratics.Strategy", "Model"))
+        != ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained;
+
+    env->output->outputTrace(" Standardizing quadratic constraints");
     for(auto& C : quadraticConstraints)
     {
         if(C->valueRHS == SHOT_DBL_MAX && C->valueLHS != SHOT_DBL_MIN)
@@ -63,10 +71,7 @@ void Problem::updateConstraints()
 
             C->constant *= -1.0;
         }
-        else if(C->valueLHS != SHOT_DBL_MIN && C->valueRHS != SHOT_DBL_MAX
-            && static_cast<ES_QuadraticProblemStrategy>(
-                   env->settings->getSetting<int>("Reformulation.Quadratics.Strategy", "Model"))
-                != ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained)
+        else if(C->valueLHS != SHOT_DBL_MIN && C->valueRHS != SHOT_DBL_MAX && useNonconvexQuadraticStrategy)
         {
             double valueLHS = C->valueLHS;
             C->valueLHS = SHOT_DBL_MIN;
@@ -96,6 +101,7 @@ void Problem::updateConstraints()
         }
     }
 
+    env->output->outputTrace(" Standardizing nonlinear constraints");
     for(auto& C : nonlinearConstraints)
     {
         C->variablesInNonlinearExpression.clear();
@@ -124,11 +130,9 @@ void Problem::updateConstraints()
 
             C->constant *= -1.0;
         }
-        else if(C->valueLHS == C->valueRHS
-            && ((C->properties.convexity == E_Convexity::Convex
-                    && C->properties.monotonicity == E_Monotonicity::Nondecreasing)
-                   || (C->properties.convexity == E_Convexity::Concave
-                          && C->properties.monotonicity == E_Monotonicity::Nonincreasing)))
+        /*else if(C->valueLHS == C->valueRHS
+            && ((C->getConstraintFunctionBounds().u() <= 0 && C->properties.convexity == E_Convexity::Convex)
+                || (C->getConstraintFunctionBounds().l() >= 0 && C->properties.convexity == E_Convexity::Concave)))
         {
             // Will rewrite as ()^2 <=c^2
 
@@ -228,7 +232,7 @@ void Problem::updateConstraints()
             // We know this is a convex constraint
             auxConstraint->properties.convexity = E_Convexity::Convex;
             auxConstraints.push_back(auxConstraint);
-        }
+        }*/
         else if(C->valueLHS != SHOT_DBL_MIN && C->valueRHS != SHOT_DBL_MAX)
         {
             double valueLHS = C->valueLHS;
@@ -269,11 +273,13 @@ void Problem::updateConstraints()
         }
     }
 
+    env->output->outputTrace(" Adding auxiliary constraints");
     for(auto& C : auxConstraints)
         this->add(C);
 
     this->objectiveFunction->takeOwnership(shared_from_this());
 
+    env->output->outputTrace(" Updating all constraints");
     for(auto& C : numericConstraints)
     {
         C->updateProperties();
@@ -303,13 +309,13 @@ void Problem::updateConvexity()
     {
         if(objectiveFunction->properties.isMinimize
             && (objectiveFunction->properties.convexity == E_Convexity::Linear
-                   || objectiveFunction->properties.convexity == E_Convexity::Convex))
+                || objectiveFunction->properties.convexity == E_Convexity::Convex))
         {
             properties.convexity = E_ProblemConvexity::Convex;
         }
         else if(objectiveFunction->properties.isMaximize
             && (objectiveFunction->properties.convexity == E_Convexity::Linear
-                   || objectiveFunction->properties.convexity == E_Convexity::Concave))
+                || objectiveFunction->properties.convexity == E_Convexity::Concave))
         {
             properties.convexity = E_ProblemConvexity::Convex;
         }
@@ -473,13 +479,18 @@ void Problem::updateVariables()
         {
             T->variable->properties.inLinearConstraints = true;
             T->variable->properties.inLinearTerms = true;
+            T->variable->properties.inNumberOfLinearTerms++;
         }
     }
 
     for(auto& C : quadraticConstraints)
     {
         for(auto& T : C->linearTerms)
+        {
             T->variable->properties.inLinearTerms = true;
+            T->variable->properties.inQuadraticConstraints = true;
+            T->variable->properties.inNumberOfLinearTerms++;
+        }
 
         for(auto& T : C->quadraticTerms)
         {
@@ -495,12 +506,18 @@ void Problem::updateVariables()
     for(auto& C : nonlinearConstraints)
     {
         for(auto& T : C->linearTerms)
+        {
             T->variable->properties.inLinearTerms = true;
+            T->variable->properties.inNonlinearConstraints = true;
+            T->variable->properties.inNumberOfLinearTerms++;
+        }
 
         for(auto& T : C->quadraticTerms)
         {
             T->firstVariable->properties.inQuadraticTerms = true;
             T->secondVariable->properties.inQuadraticTerms = true;
+            T->firstVariable->properties.inNonlinearConstraints = true;
+            T->secondVariable->properties.inNonlinearConstraints = true;
             T->firstVariable->properties.isNonlinear = true;
             T->secondVariable->properties.isNonlinear = true;
         }
@@ -537,8 +554,8 @@ void Problem::updateVariables()
 
         assert(!V->properties.isNonlinear
             || (V->properties.isNonlinear
-                   && (V->properties.inQuadraticTerms || V->properties.inMonomialTerms || V->properties.inSignomialTerms
-                          || V->properties.inNonlinearExpression)));
+                && (V->properties.inQuadraticTerms || V->properties.inMonomialTerms || V->properties.inSignomialTerms
+                    || V->properties.inNonlinearExpression)));
     }
 
     allVariables.takeOwnership(shared_from_this());
@@ -549,10 +566,14 @@ void Problem::updateVariables()
 
 void Problem::updateProperties()
 {
+    env->output->outputTrace("Started updating properties of problem");
     objectiveFunction->updateProperties();
 
+    env->output->outputTrace("Updating constraints");
     updateConstraints();
+    env->output->outputTrace("Updating variables");
     updateVariables();
+    env->output->outputTrace("Updating convexity");
     updateConvexity();
 
     properties.numberOfVariables = allVariables.size();
@@ -577,8 +598,8 @@ void Problem::updateProperties()
 
     bool isObjNonlinear = (objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic
         && (objectiveFunction->properties.hasQuadraticTerms || objectiveFunction->properties.hasMonomialTerms
-               || objectiveFunction->properties.hasSignomialTerms
-               || objectiveFunction->properties.hasNonlinearExpression));
+            || objectiveFunction->properties.hasSignomialTerms
+            || objectiveFunction->properties.hasNonlinearExpression));
     bool isObjQuadratic = (objectiveFunction->properties.classification == E_ObjectiveFunctionClassification::Quadratic
         && objectiveFunction->properties.hasQuadraticTerms);
 
@@ -735,6 +756,7 @@ void Problem::updateProperties()
     }
 
     properties.isValid = true;
+    env->output->outputTrace("Finished updating properties of problem");
 }
 
 void Problem::updateFactorableFunctions()
@@ -794,7 +816,7 @@ void Problem::updateFactorableFunctions()
     CppAD::AD<double>::abort_recording();
 }
 
-Problem::Problem(EnvironmentPtr env) : env(env) {}
+Problem::Problem(EnvironmentPtr env) : env(env) { }
 
 Problem::~Problem()
 {
@@ -825,25 +847,6 @@ void Problem::finalize()
     updateProperties();
     updateFactorableFunctions();
     assert(verifyOwnership());
-
-    if(env->settings->getSetting<bool>("BoundTightening.FeasibilityBased.Use", "Model"))
-    {
-        bool performBoundTightening = true;
-
-        auto quadraticStrategy = static_cast<ES_QuadraticProblemStrategy>(
-            env->settings->getSetting<int>("Reformulation.Quadratics.Strategy", "Model"));
-
-        // Do not do bound tightening on problems solved by MIP solver
-        if(this->properties.isLPProblem || this->properties.isMILPProblem)
-            performBoundTightening = false;
-        else if(this->properties.isMIQPProblem && quadraticStrategy != ES_QuadraticProblemStrategy::Nonlinear)
-            performBoundTightening = false;
-        else if(this->properties.isMIQCQPProblem && quadraticStrategy != ES_QuadraticProblemStrategy::Nonlinear)
-            performBoundTightening = false;
-
-        if(performBoundTightening)
-            doFBBT();
-    }
 
     if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
         getConstraintsJacobianSparsityPattern();
@@ -1684,7 +1687,14 @@ void Problem::doFBBT()
 
     bool stopTightening = false;
 
-    for(int i = 0; i < numberOfIterations; i++)
+    double timeEnd = startTime + timeLimit;
+
+    int numberOfTightenedVariablesBefore = std::count_if(allVariables.begin(), allVariables.end(),
+        [](auto V) { return (V->properties.hasLowerBoundBeenTightened || V->properties.hasUpperBoundBeenTightened); });
+
+    int i = 0;
+
+    for(i = 0; i < numberOfIterations; i++)
     {
         bool boundsUpdated = false;
 
@@ -1692,13 +1702,14 @@ void Problem::doFBBT()
 
         for(auto& C : linearConstraints)
         {
-            if(env->timing->getElapsedTime("BoundTightening") - startTime > timeLimit)
+            if(env->timing->getElapsedTime("BoundTightening") > timeEnd)
             {
                 stopTightening = true;
                 break;
             }
 
-            boundsUpdated = doFBBTOnConstraint(C, timeLimit + startTime) || boundsUpdated;
+            boundsUpdated
+                = doFBBTOnConstraint(C, timeEnd - env->timing->getElapsedTime("BoundTightening")) || boundsUpdated;
         }
 
         if(stopTightening)
@@ -1706,13 +1717,14 @@ void Problem::doFBBT()
 
         for(auto& C : quadraticConstraints)
         {
-            if(env->timing->getElapsedTime("BoundTightening") - startTime > timeLimit)
+            if(env->timing->getElapsedTime("BoundTightening") > timeEnd)
             {
                 stopTightening = true;
                 break;
             }
 
-            boundsUpdated = doFBBTOnConstraint(C, timeLimit + startTime) || boundsUpdated;
+            boundsUpdated
+                = doFBBTOnConstraint(C, timeEnd - env->timing->getElapsedTime("BoundTightening")) || boundsUpdated;
         }
 
         if(stopTightening)
@@ -1722,13 +1734,14 @@ void Problem::doFBBT()
         {
             for(auto& C : nonlinearConstraints)
             {
-                if(env->timing->getElapsedTime("BoundTightening") - startTime > timeLimit)
+                if(env->timing->getElapsedTime("BoundTightening") > timeEnd)
                 {
                     stopTightening = true;
                     break;
                 }
 
-                boundsUpdated = doFBBTOnConstraint(C, timeLimit + startTime) || boundsUpdated;
+                boundsUpdated
+                    = doFBBTOnConstraint(C, timeEnd - env->timing->getElapsedTime("BoundTightening")) || boundsUpdated;
             }
         }
 
@@ -1736,20 +1749,22 @@ void Problem::doFBBT()
             break;
     }
 
-    int numberOfTightenedVariables = std::count_if(allVariables.begin(), allVariables.end(),
+    int numberOfTightenedVariablesAfter = std::count_if(allVariables.begin(), allVariables.end(),
         [](auto V) { return (V->properties.hasLowerBoundBeenTightened || V->properties.hasUpperBoundBeenTightened); });
 
     if(properties.isReformulated)
     {
         env->timing->stopTimer("BoundTighteningFBBTReformulated");
-        env->output->outputInfo(fmt::format("  - Bounds for {} variables tightened in {:.2f} s.",
-            numberOfTightenedVariables, env->timing->getElapsedTime("BoundTighteningFBBTReformulated")));
+        env->output->outputInfo(fmt::format("  - Bounds for {} variables tightened in {:.2f} s and {} passes.",
+            numberOfTightenedVariablesAfter - numberOfTightenedVariablesBefore,
+            env->timing->getElapsedTime("BoundTighteningFBBTReformulated"), i + 1));
     }
     else
     {
         env->timing->stopTimer("BoundTighteningFBBTOriginal");
-        env->output->outputInfo(fmt::format("  - Bounds for {} variables tightened in {:.2f} s.",
-            numberOfTightenedVariables, env->timing->getElapsedTime("BoundTighteningFBBTOriginal")));
+        env->output->outputInfo(fmt::format("  - Bounds for {} variables tightened in {:.2f} s and {} passes.",
+            numberOfTightenedVariablesAfter - numberOfTightenedVariablesBefore,
+            env->timing->getElapsedTime("BoundTighteningFBBTOriginal"), i + 1));
     }
 
     env->timing->stopTimer("BoundTightening");
@@ -1788,7 +1803,7 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint, double timeLim
                 if(env->timing->getElapsedTime("BoundTightening") > timeLimit)
                     break;
 
-                if(T->coefficient == 0.0)
+                if(Utilities::isAlmostZero(T->coefficient))
                     continue;
 
                 Interval newBound = otherTermsBound;
@@ -1802,13 +1817,14 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint, double timeLim
                 }
 
                 Interval termBound = Interval(constraint->valueLHS, constraint->valueRHS) - newBound;
+
                 termBound = termBound / T->coefficient;
 
                 if(T->variable->tightenBounds(termBound))
                 {
                     boundsUpdated = true;
                     env->output->outputDebug(
-                        fmt::format("  bound tightened using linear term in constraint {} .", constraint->name));
+                        fmt::format("  bound tightened using linear term in constraint {}.", constraint->name));
                 }
             }
         }
@@ -1839,7 +1855,7 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint, double timeLim
                 if(env->timing->getElapsedTime("BoundTightening") > timeLimit)
                     break;
 
-                if(T->coefficient == 0.0)
+                if(Utilities::isAlmostZero(T->coefficient))
                     continue;
 
                 Interval newBound = otherTermsBound;
@@ -1853,6 +1869,7 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint, double timeLim
                 }
 
                 Interval termBound = Interval(constraint->valueLHS, constraint->valueRHS) - newBound;
+
                 termBound = termBound / T->coefficient;
 
                 if(T->firstVariable == T->secondVariable)
@@ -1917,7 +1934,7 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint, double timeLim
                 if(env->timing->getElapsedTime("BoundTightening") > timeLimit)
                     break;
 
-                if(T->coefficient == 0.0)
+                if(Utilities::isAlmostZero(T->coefficient))
                     continue;
 
                 Interval newBound = otherTermsBound;
@@ -1987,7 +2004,7 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint, double timeLim
                 if(env->timing->getElapsedTime("BoundTightening") > timeLimit)
                     break;
 
-                if(T->coefficient == 0.0)
+                if(Utilities::isAlmostZero(T->coefficient))
                     continue;
 
                 Interval newBound = otherTermsBound;
@@ -2271,5 +2288,266 @@ bool Problem::verifyOwnership()
     }
 
     return (true);
+}
+
+ProblemPtr Problem::createCopy(EnvironmentPtr destinationEnv, bool integerRelaxed, bool convexityRelaxed)
+{
+    auto destinationProblem = std::make_shared<Problem>(destinationEnv);
+
+    double minLBCont = destinationEnv->settings->getSetting<double>("Variables.Continuous.MinimumLowerBound", "Model");
+    double maxUBCont = destinationEnv->settings->getSetting<double>("Variables.Continuous.MaximumUpperBound", "Model");
+    double minLBInt = destinationEnv->settings->getSetting<double>("Variables.Integer.MinimumLowerBound", "Model");
+    double maxUBInt = destinationEnv->settings->getSetting<double>("Variables.Integer.MaximumUpperBound", "Model");
+
+    // Copying variables
+    for(auto& V : this->allVariables)
+    {
+        auto variableType = integerRelaxed ? E_VariableType::Real : V->properties.type;
+
+        auto variable = std::make_shared<Variable>(V->name, V->index, variableType, V->lowerBound, V->upperBound);
+
+        if(V->properties.type == E_VariableType::Real)
+        {
+            variable->lowerBound = std::max(V->lowerBound, minLBCont);
+            variable->upperBound = std::min(V->upperBound, maxUBCont);
+        }
+        else if(V->properties.type == E_VariableType::Binary)
+        {
+            variable->lowerBound = std::max(V->lowerBound, 0.0);
+            variable->upperBound = std::min(V->upperBound, 1.0);
+        }
+        else if(V->properties.type == E_VariableType::Integer)
+        {
+            variable->lowerBound = std::max(V->lowerBound, minLBInt);
+            variable->upperBound = std::min(V->upperBound, maxUBInt);
+        }
+
+        destinationProblem->add(std::move(variable));
+    }
+
+    ObjectiveFunctionPtr destinationObjective;
+
+    // Copying the objective function
+    if(convexityRelaxed && this->objectiveFunction->properties.convexity > E_Convexity::Convex)
+    {
+        // Linear objective function if convexity relaxation
+        destinationObjective = std::make_shared<LinearObjectiveFunction>();
+    }
+    else
+    {
+        if(this->objectiveFunction->properties.classification == E_ObjectiveFunctionClassification::Linear
+            || (!this->objectiveFunction->properties.hasNonlinearExpression
+                && !this->objectiveFunction->properties.hasQuadraticTerms
+                && !this->objectiveFunction->properties.hasMonomialTerms
+                && !this->objectiveFunction->properties.hasSignomialTerms))
+        {
+            // Linear objective function
+            destinationObjective = std::make_shared<LinearObjectiveFunction>();
+        }
+        else if(this->objectiveFunction->properties.classification == E_ObjectiveFunctionClassification::Quadratic
+            || (!this->objectiveFunction->properties.hasNonlinearExpression
+                && !this->objectiveFunction->properties.hasMonomialTerms
+                && !this->objectiveFunction->properties.hasSignomialTerms))
+        {
+            // Quadratic objective function
+            destinationObjective = std::make_shared<QuadraticObjectiveFunction>();
+        }
+        else if(this->objectiveFunction->properties.classification == E_ObjectiveFunctionClassification::Nonlinear)
+        {
+            // Nonlinear objective function
+            destinationObjective = std::make_shared<NonlinearObjectiveFunction>();
+        }
+
+        destinationObjective->direction = this->objectiveFunction->direction;
+        destinationObjective->constant = this->objectiveFunction->constant;
+
+        // Copy linear terms to objective
+        if(this->objectiveFunction->properties.hasLinearTerms)
+        {
+            for(auto& LT : std::dynamic_pointer_cast<LinearObjectiveFunction>(this->objectiveFunction)->linearTerms)
+            {
+                auto variable = destinationProblem->getVariable(LT->variable->index);
+
+                std::dynamic_pointer_cast<LinearObjectiveFunction>(destinationObjective)
+                    ->add(std::make_shared<LinearTerm>(LT->coefficient, variable));
+            }
+        }
+
+        // Copy quadratic terms to objective
+        if(this->objectiveFunction->properties.hasQuadraticTerms)
+        {
+            for(auto& QT :
+                std::dynamic_pointer_cast<QuadraticObjectiveFunction>(this->objectiveFunction)->quadraticTerms)
+            {
+                auto firstVariable = destinationProblem->getVariable(QT->firstVariable->index);
+                auto secondVariable = destinationProblem->getVariable(QT->secondVariable->index);
+
+                std::dynamic_pointer_cast<QuadraticObjectiveFunction>(destinationObjective)
+                    ->add(std::make_shared<QuadraticTerm>(QT->coefficient, firstVariable, secondVariable));
+            }
+        }
+
+        // Copy monomial terms to objective
+        if(this->objectiveFunction->properties.hasMonomialTerms)
+        {
+            for(auto& MT :
+                std::dynamic_pointer_cast<NonlinearObjectiveFunction>(this->objectiveFunction)->monomialTerms)
+            {
+                Variables variables;
+
+                for(auto& V : MT->variables)
+                    variables.push_back(destinationProblem->getVariable(V->index));
+
+                std::dynamic_pointer_cast<NonlinearObjectiveFunction>(destinationObjective)
+                    ->add(std::make_shared<MonomialTerm>(MT->coefficient, variables));
+            }
+        }
+
+        // Copy signomial terms to objective
+        if(this->objectiveFunction->properties.hasSignomialTerms)
+        {
+            for(auto& ST :
+                std::dynamic_pointer_cast<NonlinearObjectiveFunction>(this->objectiveFunction)->signomialTerms)
+            {
+                SignomialElements elements;
+
+                for(auto& E : ST->elements)
+                    elements.push_back(std::make_shared<SignomialElement>(
+                        destinationProblem->getVariable(E->variable->index), E->power));
+
+                std::dynamic_pointer_cast<NonlinearObjectiveFunction>(destinationObjective)
+                    ->add(std::make_shared<SignomialTerm>(ST->coefficient, elements));
+            }
+        }
+
+        // Copy nonlinear expression to objective
+        if(this->objectiveFunction->properties.hasNonlinearExpression)
+            std::dynamic_pointer_cast<NonlinearObjectiveFunction>(destinationObjective)
+                ->add(std::move(copyNonlinearExpression(
+                    std::dynamic_pointer_cast<NonlinearObjectiveFunction>(this->objectiveFunction)
+                        ->nonlinearExpression.get(),
+                    destinationProblem)));
+    }
+
+    destinationProblem->add(std::move(destinationObjective));
+
+    // Copying constraints
+    for(auto& C : this->numericConstraints)
+    {
+        NumericConstraintPtr destinationConstraint;
+
+        if(convexityRelaxed && C->valueLHS == C->valueRHS && C->properties.convexity > E_Convexity::Linear)
+        {
+            // Empty linear constraint instead of nonconvex equality constraint to get indexing correct
+            destinationConstraint = std::make_shared<LinearConstraint>(C->index, C->name, SHOT_DBL_MIN, 0.0);
+            destinationConstraint->properties.classification = E_ConstraintClassification::Linear;
+        }
+        else if(convexityRelaxed && C->properties.convexity > E_Convexity::Convex)
+        {
+            // Empty linear constraint instead of nonconvex constraint to get indexing correct
+            destinationConstraint = std::make_shared<LinearConstraint>(C->index, C->name, SHOT_DBL_MIN, 0.0);
+            destinationConstraint->properties.classification = E_ConstraintClassification::Linear;
+        }
+        else
+        {
+            double valueLHS = std::dynamic_pointer_cast<NumericConstraint>(C)->valueLHS;
+            double valueRHS = std::dynamic_pointer_cast<NumericConstraint>(C)->valueRHS;
+
+            if(C->properties.classification == E_ConstraintClassification::Linear
+                || (!C->properties.hasNonlinearExpression && !C->properties.hasQuadraticTerms
+                    && !C->properties.hasMonomialTerms && !C->properties.hasSignomialTerms))
+            {
+                // Linear constraint
+                destinationConstraint = std::make_shared<LinearConstraint>(C->index, C->name, valueLHS, valueRHS);
+                destinationConstraint->properties.classification = E_ConstraintClassification::Linear;
+            }
+            else if(C->properties.classification == E_ConstraintClassification::Quadratic
+                || (!C->properties.hasNonlinearExpression && !C->properties.hasMonomialTerms
+                    && !C->properties.hasSignomialTerms))
+            {
+                // Quadratic constraint
+                destinationConstraint = std::make_shared<QuadraticConstraint>(C->index, C->name, valueLHS, valueRHS);
+                destinationConstraint->properties.classification = E_ConstraintClassification::Quadratic;
+            }
+            else
+            {
+                // Nonlinear constraint
+                destinationConstraint = std::make_shared<NonlinearConstraint>(C->index, C->name, valueLHS, valueRHS);
+                destinationConstraint->properties.classification = E_ConstraintClassification::Quadratic;
+            }
+
+            destinationConstraint->constant = std::dynamic_pointer_cast<NumericConstraint>(C)->constant;
+
+            // Copy linear terms
+            if(C->properties.hasLinearTerms)
+            {
+                for(auto& LT : std::dynamic_pointer_cast<LinearConstraint>(C)->linearTerms)
+                {
+                    auto variable = destinationProblem->getVariable(LT->variable->index);
+
+                    std::dynamic_pointer_cast<LinearConstraint>(destinationConstraint)
+                        ->add(std::make_shared<LinearTerm>(LT->coefficient, variable));
+                }
+            }
+
+            // Copy quadratic terms
+            if(C->properties.hasQuadraticTerms)
+            {
+                for(auto& QT : std::dynamic_pointer_cast<QuadraticConstraint>(C)->quadraticTerms)
+                {
+                    auto firstVariable = destinationProblem->getVariable(QT->firstVariable->index);
+                    auto secondVariable = destinationProblem->getVariable(QT->secondVariable->index);
+
+                    std::dynamic_pointer_cast<QuadraticConstraint>(destinationConstraint)
+                        ->add(std::make_shared<QuadraticTerm>(QT->coefficient, firstVariable, secondVariable));
+                }
+            }
+
+            // Copy monomial terms
+            if(C->properties.hasMonomialTerms)
+            {
+                for(auto& MT : std::dynamic_pointer_cast<NonlinearConstraint>(C)->monomialTerms)
+                {
+                    Variables variables;
+
+                    for(auto& V : MT->variables)
+                        variables.push_back(destinationProblem->getVariable(V->index));
+
+                    std::dynamic_pointer_cast<NonlinearConstraint>(destinationConstraint)
+                        ->add(std::make_shared<MonomialTerm>(MT->coefficient, variables));
+                }
+            }
+
+            // Copy signomial terms
+            if(C->properties.hasSignomialTerms)
+            {
+                for(auto& ST : std::dynamic_pointer_cast<NonlinearConstraint>(C)->signomialTerms)
+                {
+                    SignomialElements elements;
+
+                    for(auto& E : ST->elements)
+                        elements.push_back(std::make_shared<SignomialElement>(
+                            destinationProblem->getVariable(E->variable->index), E->power));
+
+                    std::dynamic_pointer_cast<NonlinearConstraint>(destinationConstraint)
+                        ->add(std::make_shared<SignomialTerm>(ST->coefficient, elements));
+                }
+            }
+
+            // Copy nonlinear expression
+            if(C->properties.hasNonlinearExpression)
+                std::dynamic_pointer_cast<NonlinearConstraint>(destinationConstraint)
+                    ->add(copyNonlinearExpression(
+                        std::dynamic_pointer_cast<NonlinearConstraint>(C)->nonlinearExpression.get(),
+                        destinationProblem));
+        }
+
+        destinationProblem->add(std::move(destinationConstraint));
+    }
+
+    destinationProblem->updateProperties();
+    destinationProblem->finalize();
+
+    return (destinationProblem);
 }
 } // namespace SHOT

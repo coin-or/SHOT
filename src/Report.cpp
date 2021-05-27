@@ -26,7 +26,7 @@
 namespace SHOT
 {
 
-Report::Report(EnvironmentPtr envPtr) : env(envPtr) {}
+Report::Report(EnvironmentPtr envPtr) : env(envPtr) { }
 
 Report::~Report() = default;
 
@@ -91,6 +91,7 @@ void Report::outputIterationDetail(int iterationNumber, std::string iterationDes
 
         if(iterationPrintoutsSinceLastHeader > 75)
         {
+            env->output->outputInfo("");
             this->outputIterationDetailHeader();
         }
 
@@ -229,9 +230,6 @@ void Report::outputIterationDetailHeader()
 {
     firstIterationHeaderPrinted = true;
 
-    env->output->outputInfo("");
-    env->output->outputInfo("");
-
 #ifdef SIMPLE_OUTPUT_CHARS
     env->output->outputInfo(
         "    Iteration     |  Time  |  Dual cuts  |     Objective value     |   Objective gap   |     Current "
@@ -271,9 +269,8 @@ void Report::outputIterationDetailHeader()
             "max.err.)");
     }
 
-    env->output->outputInfo(
-        "╶─────────────────┴────────┴─────────────┴─────────────────────────┴───────────────────┴────────────"
-        "───────────────╴)");
+    env->output->outputInfo("╶─────────────────┴────────┴─────────────┴─────────────────────────┴───────────────────┴──"
+                            "────────────────────────────╴");
 #endif
 
     env->output->outputInfo("");
@@ -282,7 +279,6 @@ void Report::outputIterationDetailHeader()
 
 void Report::outputIterationDetailHeaderMinimax()
 {
-    env->output->outputInfo("");
 
 #ifdef SIMPLE_OUTPUT_CHARS
     env->output->outputInfo(
@@ -356,7 +352,7 @@ void Report::outputOptionsReport()
 
     if(auto nonDefaultSettings = env->settings->getChangedSettings(); nonDefaultSettings.size() > 0)
     {
-        env->output->outputInfo(" Nondefault options used:");
+        env->output->outputInfo(" Options specified:");
         env->output->outputInfo("");
 
         for(auto& S : nonDefaultSettings)
@@ -695,9 +691,11 @@ void Report::outputProblemInstanceReport()
 
         if(env->problem->properties.numberOfLinearConstraints > 0
             || env->reformulatedProblem->properties.numberOfLinearConstraints > 0)
-            env->output->outputInfo(
-                fmt::format(" {:35s}{:<21d}{:d}", " - linear:", env->problem->properties.numberOfLinearConstraints,
-                    env->reformulatedProblem->properties.numberOfLinearConstraints));
+            env->output->outputInfo(fmt::format(" {:35s}{:<21d}{:d}", " - linear:",
+                env->problem->properties.numberOfLinearConstraints
+                    - env->problem->properties.numberOfAddedLinearizations,
+                env->reformulatedProblem->properties.numberOfLinearConstraints
+                    - env->reformulatedProblem->properties.numberOfAddedLinearizations));
 
         if(env->problem->properties.numberOfConvexQuadraticConstraints > 0
             || env->reformulatedProblem->properties.numberOfConvexQuadraticConstraints > 0)
@@ -722,16 +720,25 @@ void Report::outputProblemInstanceReport()
             env->output->outputInfo(fmt::format(" {:35s}{:<21d}{:d}",
                 " - nonconvex nonlinear:", env->problem->properties.numberOfNonconvexNonlinearConstraints,
                 env->reformulatedProblem->properties.numberOfNonconvexNonlinearConstraints));
+
+        if(env->problem->properties.numberOfAddedLinearizations > 0)
+            env->output->outputInfo(fmt::format(" {:35s}{:<21d}{:d}",
+                " - added linearizations:", env->problem->properties.numberOfAddedLinearizations,
+                env->reformulatedProblem->properties.numberOfAddedLinearizations));
     }
     else
     {
         if(env->problem->properties.numberOfNumericConstraints > 0)
-            env->output->outputInfo(fmt::format(" {:35s}{:<21d}{:d}",
-                "Number of constraints:", env->problem->properties.numberOfNumericConstraints, ""));
+            env->output->outputInfo(fmt::format(" {:35s}{:<21d}{:d}", "Number of constraints:",
+                env->problem->properties.numberOfNumericConstraints
+                    - env->problem->properties.numberOfAddedLinearizations,
+                ""));
 
         if(env->problem->properties.numberOfLinearConstraints > 0)
-            env->output->outputInfo(fmt::format(
-                " {:35s}{:<21d}{:d}", " - linear:", env->problem->properties.numberOfLinearConstraints, ""));
+            env->output->outputInfo(fmt::format(" {:35s}{:<21d}{:d}", " - linear:",
+                env->problem->properties.numberOfLinearConstraints
+                    - env->problem->properties.numberOfAddedLinearizations,
+                ""));
 
         if(env->problem->properties.numberOfQuadraticConstraints > 0)
             env->output->outputInfo(fmt::format(
@@ -740,6 +747,10 @@ void Report::outputProblemInstanceReport()
         if(env->problem->properties.numberOfNonlinearConstraints > 0)
             env->output->outputInfo(fmt::format(
                 " {:35s}{:<21d}{:d}", " - nonlinear:", env->problem->properties.numberOfNonlinearConstraints, ""));
+
+        if(env->problem->properties.numberOfNonlinearConstraints > 0)
+            env->output->outputInfo(fmt::format(" {:35s}{:<21d}{:d}",
+                " - added linearizations:", env->problem->properties.numberOfAddedLinearizations, ""));
     }
 
     env->output->outputInfo("");
@@ -803,12 +814,15 @@ void Report::outputProblemInstanceReport()
                 " - semicontinuous:", env->problem->properties.numberOfSemicontinuousVariables, ""));
     }
 
-    if(env->results->auxiliaryVariablesIntroduced.size() > 0)
+    if(env->results->auxiliaryVariablesIntroduced.size() > 0 || env->reformulatedProblem->antiEpigraphObjectiveVariable)
     {
         int totalNumberOfTransformations = 0;
 
         for(auto& AUXVAR : env->results->auxiliaryVariablesIntroduced)
             totalNumberOfTransformations += AUXVAR.second;
+
+        if(env->reformulatedProblem->antiEpigraphObjectiveVariable)
+            totalNumberOfTransformations++;
 
         env->output->outputInfo("");
 
@@ -817,41 +831,48 @@ void Report::outputProblemInstanceReport()
 
         if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::NonlinearObjectiveFunction);
             value > 0)
-            env->output->outputInfo(fmt::format(" {:56s}{:d}", "- epigraph:", "", value));
+            env->output->outputInfo(fmt::format(" {:56s}{:d}", " - epigraph:", "", value));
 
         if(auto value
             = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::NonlinearExpressionPartitioning);
             value > 0)
-            env->output->outputInfo(fmt::format(" {:56s}{:d}", "- nonlinear expression partitioning:", value));
+            env->output->outputInfo(fmt::format(" {:56s}{:d}", " - nonlinear expression partitioning:", value));
 
         if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::MonomialTermsPartitioning);
             value > 0)
-            env->output->outputInfo(fmt::format(" {:56s}{:d}", "- monomial terms partitioning:", value));
+            env->output->outputInfo(fmt::format(" {:56s}{:d}", " - monomial terms partitioning:", value));
 
         if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::SignomialTermsPartitioning);
             value > 0)
-            env->output->outputInfo(fmt::format(" {:56s}{:d}", "- signomial terms partitioning:", value));
+            env->output->outputInfo(fmt::format(" {:56s}{:d}", " - signomial terms partitioning:", value));
 
         if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::ContinuousBilinear);
             value > 0)
-            env->output->outputInfo(fmt::format(" {:56s}{:d}", "- continuous bilinear term extraction:", value));
+            env->output->outputInfo(fmt::format(" {:56s}{:d}", " - continuous bilinear term extraction:", value));
 
         if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::BinaryBilinear); value > 0)
-            env->output->outputInfo(fmt::format(" {:56s}{:d}", "- binary bilinear term reformulation:", value));
+            env->output->outputInfo(fmt::format(" {:56s}{:d}", " - binary bilinear term reformulation:", value));
 
         if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::BinaryContinuousBilinear);
             value > 0)
             env->output->outputInfo(
-                fmt::format(" {:56s}{:d}", "- binary/continuous bilinear term reformulation:", value));
+                fmt::format(" {:56s}{:d}", " - binary/continuous bilinear term reformulation:", value));
 
         if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::IntegerBilinear); value > 0)
-            env->output->outputInfo(fmt::format(" {:56s}{:d}", "- integer bilinear term reformulation:", value));
+            env->output->outputInfo(fmt::format(" {:56s}{:d}", " - integer bilinear term reformulation:", value));
 
         if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::BinaryMonomial); value > 0)
-            env->output->outputInfo(fmt::format(" {:56s}{:d}", "- binary monomial term reformulation:", value));
+            env->output->outputInfo(fmt::format(" {:56s}{:d}", " - binary monomial term reformulation:", value));
 
         if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::AbsoluteValue); value > 0)
-            env->output->outputInfo(fmt::format(" {:56s}{:d}", "-absolute value reformulation:", value));
+            env->output->outputInfo(fmt::format(" {:56s}{:d}", "- absolute value reformulation:", value));
+
+        if(env->reformulatedProblem->antiEpigraphObjectiveVariable)
+            env->output->outputInfo(fmt::format(" {:56s}", "- anti-epigraph reformulation"));
+
+        if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::EigenvalueDecomposition);
+            value > 0)
+            env->output->outputInfo(fmt::format(" {:56s}{:d}", " - quadratic eigenvalue decomposition:", value));
     }
 }
 
@@ -1123,23 +1144,11 @@ void Report::outputSolutionReport()
         env->output->outputInfo("");
     }
 
-    if(env->solutionStatistics.numberOfProblemsNLPInteriorPointSearch > 0
-        || env->solutionStatistics.numberOfProblemsMinimaxLP > 0)
+    if(env->solutionStatistics.numberOfProblemsMinimaxLP > 0)
     {
         env->output->outputInfo(" Problems solved during interior point search:");
-
-        if(env->solutionStatistics.numberOfProblemsNLPInteriorPointSearch > 0)
-        {
-            env->output->outputInfo(fmt::format(" - NLP problems:                                 {}",
-                env->solutionStatistics.numberOfProblemsNLPInteriorPointSearch));
-        }
-
-        if(env->solutionStatistics.numberOfProblemsMinimaxLP > 0)
-        {
-            env->output->outputInfo(fmt::format(" - LP problems:                                  {}",
-                env->solutionStatistics.numberOfProblemsMinimaxLP));
-        }
-
+        env->output->outputInfo(fmt::format(
+            " - LP problems:                                  {}", env->solutionStatistics.numberOfProblemsMinimaxLP));
         env->output->outputInfo("");
     }
 
@@ -1218,25 +1227,26 @@ void Report::outputInteriorPointPreReport()
 #endif
 
     env->output->outputInfo("");
+    env->output->outputInfo(" Strategy selected:          cutting plane minimax");
 
-    switch(static_cast<ES_InteriorPointStrategy>(env->settings->getSetting<int>("ESH.InteriorPoint.Solver", "Dual")))
-    {
-    case(ES_InteriorPointStrategy::CuttingPlaneMiniMax):
-        env->output->outputInfo(" Strategy selected:          cutting plane minimax");
-        break;
-    case(ES_InteriorPointStrategy::IpoptMinimax):
-        env->output->outputInfo(" Strategy selected:          Ipopt minimax");
-        break;
-    case(ES_InteriorPointStrategy::IpoptRelaxed):
-        env->output->outputInfo(" Strategy selected:          Ipopt relaxed");
-        break;
-    case(ES_InteriorPointStrategy::IpoptMinimaxAndRelaxed):
-        env->output->outputInfo(" Strategy selected:          Ipopt minimax and relaxed");
-        break;
-    default:
-        env->output->outputInfo(" Strategy selected:          none");
-        break;
-    }
+    env->output->outputInfo(report.str());
+}
+
+void Report::outputPreReport()
+{
+    std::stringstream report;
+
+    env->output->outputInfo("");
+
+#ifdef SIMPLE_OUTPUT_CHARS
+    env->output->outputInfo(
+        "- Main iteration step "
+        "-------------------------------------------------------------------------------------------------");
+#else
+    env->output->outputInfo(
+        "╶ Main iteration step "
+        "────────────────────────────────────────────────────────────────────────────────────────────────╴");
+#endif
 
     env->output->outputInfo(report.str());
 }

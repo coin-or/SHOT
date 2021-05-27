@@ -63,7 +63,6 @@
 #include "../Tasks/TaskUpdateInteriorPoint.h"
 
 #include "../Tasks/TaskSelectHyperplanePointsObjectiveFunction.h"
-#include "../Tasks/TaskSolveFixedDualProblem.h"
 
 #include "../Tasks/TaskAddIntegerCuts.h"
 
@@ -80,18 +79,18 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
 {
     env = envPtr;
 
-    env->timing->createTimer("InteriorPointSearch", " - interior point search");
+    env->timing->createTimer("InteriorPointSearch", "- interior point search");
 
-    env->timing->createTimer("DualStrategy", " - dual strategy");
-    env->timing->createTimer("DualProblemsRelaxed", "   - solving relaxed problems");
-    env->timing->createTimer("DualProblemsIntegerFixed", "   - solving integer-fixed problems");
-    env->timing->createTimer("DualProblemsDiscrete", "   - solving MIP problems");
-    env->timing->createTimer("DualCutGenerationRootSearch", "   - root search for constraint cuts");
-    env->timing->createTimer("DualObjectiveRootSearch", "   - root search for objective cut");
+    env->timing->createTimer("DualStrategy", "- dual strategy");
+    env->timing->createTimer("DualProblemsRelaxed", "  - solving relaxed problems");
+    env->timing->createTimer("DualProblemsIntegerFixed", "  - solving integer-fixed problems");
+    env->timing->createTimer("DualProblemsDiscrete", "  - solving MIP problems");
+    env->timing->createTimer("DualCutGenerationRootSearch", "  - root search for constraint cuts");
+    env->timing->createTimer("DualObjectiveRootSearch", "  - root search for objective cut");
 
-    env->timing->createTimer("PrimalStrategy", " - primal strategy");
-    env->timing->createTimer("PrimalBoundStrategyNLP", "   - solving NLP problems");
-    env->timing->createTimer("PrimalBoundStrategyRootSearch", "   - performing root searches");
+    env->timing->createTimer("PrimalStrategy", "- primal strategy");
+    env->timing->createTimer("PrimalBoundStrategyNLP", "  - solving NLP problems");
+    env->timing->createTimer("PrimalBoundStrategyRootSearch", "  - performing root searches");
 
     auto tFinalizeSolution = std::make_shared<TaskSequential>(env);
 
@@ -151,7 +150,8 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
     auto tPrintIterReport = std::make_shared<TaskPrintIterationReport>(env);
     env->tasks->addTask(tPrintIterReport, "PrintIterReport");
 
-    if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex)
+    if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex
+        && env->settings->getSetting<bool>("MIP.InfeasibilityRepair.Use", "Dual"))
     {
         auto tRepairInfeasibility
             = std::make_shared<TaskRepairInfeasibleDualProblem>(env, "CheckPrimalStag", "CheckAbsGap");
@@ -180,7 +180,8 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
     auto tCheckIterError = std::make_shared<TaskCheckIterationError>(env, "FinalizeSolution");
     env->tasks->addTask(tCheckIterError, "CheckIterError");
 
-    if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex)
+    if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex
+        && env->settings->getSetting<bool>("ReductionCut.Use", "Dual"))
     {
         auto tCheckMaxNumberOfObjectiveCuts
             = std::make_shared<TaskCheckMaxNumberOfPrimalReductionCuts>(env, "FinalizeSolution");
@@ -199,14 +200,6 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
     auto tCheckMaxNumberOfObjectiveCuts
         = std::make_shared<TaskCheckMaxNumberOfPrimalReductionCuts>(env, "FinalizeSolution");
     env->tasks->addTask(tCheckMaxNumberOfObjectiveCuts, "CheckMaxObjectiveCuts");
-
-    if(env->settings->getSetting<bool>("FixedInteger.Use", "Dual"))
-    {
-        auto tSolveFixedLP = std::make_shared<TaskSolveFixedDualProblem>(env);
-        env->tasks->addTask(tSolveFixedLP, "SolveFixedLP");
-        env->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
-        env->tasks->addTask(tCheckRelGap, "CheckRelGap");
-    }
 
     if(env->settings->getSetting<bool>("FixedInteger.Use", "Primal") && env->reformulatedProblem->properties.isDiscrete)
     {
@@ -283,13 +276,13 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
         env->tasks->addTask(tSelectObjectiveHPPts, "SelectObjectiveHPPts");
     }
 
+    env->tasks->addTask(tAddHPs, "AddHPs");
+
     if(env->settings->getSetting<bool>("HyperplaneCuts.UseIntegerCuts", "Dual"))
     {
         auto tAddICs = std::make_shared<TaskAddIntegerCuts>(env);
         env->tasks->addTask(tAddICs, "AddICs");
     }
-
-    env->tasks->addTask(tAddHPs, "AddHPs");
 
     if(static_cast<ES_MIPPresolveStrategy>(env->settings->getSetting<int>("MIP.Presolve.Frequency", "Dual"))
         != ES_MIPPresolveStrategy::Never)
@@ -303,7 +296,8 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
 
     env->tasks->addTask(tFinalizeSolution, "FinalizeSolution");
 
-    if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex)
+    if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex
+        && env->settings->getSetting<bool>("ReductionCut.Use", "Dual"))
     {
         auto tAddObjectiveCutFinal = std::make_shared<TaskAddPrimalReductionCut>(env, "InitIter2", "Terminate");
         std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tAddObjectiveCutFinal);
@@ -343,5 +337,5 @@ bool SolutionStrategyMultiTree::solveProblem()
     return (true);
 }
 
-void SolutionStrategyMultiTree::initializeStrategy() {}
+void SolutionStrategyMultiTree::initializeStrategy() { }
 } // namespace SHOT

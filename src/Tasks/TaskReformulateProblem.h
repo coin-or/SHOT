@@ -44,6 +44,12 @@ public:
 private:
     bool useConvexQuadraticConstraints = false;
     bool useNonconvexQuadraticConstraints = false;
+
+    // If the constraint is convex in SHOT with respect to the
+    // Model.Convexity.Quadratics.EigenValueTolerance, but the MIP solver does not support such a tolerance
+    // (Cplex)
+    bool useConvexQuadraticConstraintsWithinTolerance = false;
+
     bool useConvexQuadraticObjective = false;
     bool useNonconvexQuadraticObjective = false;
     bool quadraticObjectiveRegardedAsNonlinear = false;
@@ -54,6 +60,8 @@ private:
     bool extractQuadraticTermsFromConvexExpressions = false;
 
     int maxBilinearIntegerReformulationDomain = 2;
+
+    bool useIntegerBilinearTermReformulation = false; // integer term i1*i2 or i1*x2
 
     void reformulateObjectiveFunction();
     void createEpigraphConstraint();
@@ -89,17 +97,20 @@ private:
 
     LinearTerms partitionNonlinearBinaryProduct(const std::shared_ptr<ExpressionSum> source, bool reversedSigns);
 
-    std::tuple<LinearTerms, QuadraticTerms> reformulateAndPartitionQuadraticSum(const QuadraticTerms& quadraticTerms,
-        bool reversedSigns, bool partitionNonBinaryTerms, bool partitionIfAllTermsConvex);
+    std::tuple<LinearTerms, QuadraticTerms> reformulateAndPartitionQuadraticSum(
+        const QuadraticTerms& quadraticTerms, bool reversedSigns, ES_PartitionNonlinearSums partitionStrategy);
     std::tuple<LinearTerms, MonomialTerms> reformulateMonomialSum(
         const MonomialTerms& monomialTerms, bool reversedSigns);
+
+    LinearTerms doEigenvalueDecomposition(QuadraticTerms quadraticTerms);
 
     NonlinearExpressionPtr reformulateNonlinearExpression(NonlinearExpressionPtr source);
     NonlinearExpressionPtr reformulateNonlinearExpression(std::shared_ptr<ExpressionAbs> source);
     NonlinearExpressionPtr reformulateNonlinearExpression(std::shared_ptr<ExpressionSquare> source);
     NonlinearExpressionPtr reformulateNonlinearExpression(std::shared_ptr<ExpressionProduct> source);
 
-    std::pair<AuxiliaryVariablePtr, bool> getSquareAuxiliaryVariable(VariablePtr firstVariable);
+    std::pair<AuxiliaryVariablePtr, bool> getSquareAuxiliaryVariable(
+        VariablePtr firstVariable, E_AuxiliaryVariableType auxVariableType);
 
     std::pair<AuxiliaryVariablePtr, bool> getBilinearAuxiliaryVariable(
         VariablePtr firstVariable, VariablePtr secondVariable);

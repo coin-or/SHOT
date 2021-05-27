@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <limits>
 
+#include "EventHandler.h"
 #include "Iteration.h"
 #include "Output.h"
 #include "Results.h"
@@ -87,8 +88,8 @@ void Results::addPrimalSolution(PrimalSolution solution)
     else if(Utilities::isAlmostEqual(solution.objValue, primalsol.objValue, 1e-10)
         && (std::max({ solution.maxDevatingConstraintLinear.value, solution.maxDevatingConstraintQuadratic.value,
                 solution.maxDevatingConstraintNonlinear.value })
-               < std::max({ primalsol.maxDevatingConstraintLinear.value, primalsol.maxDevatingConstraintQuadratic.value,
-                     primalsol.maxDevatingConstraintNonlinear.value })))
+            < std::max({ primalsol.maxDevatingConstraintLinear.value, primalsol.maxDevatingConstraintQuadratic.value,
+                primalsol.maxDevatingConstraintNonlinear.value })))
     {
         // Have a solution which is similar to the best known, but with smaller constraint error
         this->primalSolutions.back() = solution;
@@ -133,6 +134,18 @@ void Results::addPrimalSolution(PrimalSolution solution)
     }
 
     env->solutionStatistics.numberOfFoundPrimalSolutions++;
+
+    if(env->solutionStatistics.hasInfeasibilityRepairBeenPerformedSincePrimalImprovement)
+    {
+        env->solutionStatistics.numberOfPrimalImprovementsAfterInfeasibilityRepair++;
+        env->solutionStatistics.hasInfeasibilityRepairBeenPerformedSincePrimalImprovement = false;
+    }
+
+    if(env->solutionStatistics.hasReductionCutBeenAddedSincePrimalImprovement)
+    {
+        env->solutionStatistics.numberOfPrimalImprovementsAfterReductionCut++;
+        env->solutionStatistics.hasReductionCutBeenAddedSincePrimalImprovement = false;
+    }
 
     // Saves statistics for the sources of primal solutions
     auto element = this->primalSolutionSourceStatistics.emplace(solution.sourceType, 1);
@@ -185,6 +198,8 @@ void Results::addPrimalSolution(PrimalSolution solution)
 
         env->output->outputCritical("        Primal objective cut added.");
     }*/
+
+    env->events->notify(E_EventType::NewPrimalSolution);
 }
 
 bool Results::isRelativeObjectiveGapToleranceMet()
@@ -213,7 +228,7 @@ bool Results::isAbsoluteObjectiveGapToleranceMet()
     }
 }
 
-Results::Results(EnvironmentPtr envPtr) : env(envPtr) {}
+Results::Results(EnvironmentPtr envPtr) : env(envPtr) { }
 
 Results::~Results()
 {
@@ -338,7 +353,7 @@ std::string Results::getResultsOSrL()
 
     otherNode = osrlDocument.NewElement("other");
     otherNode->SetAttribute("name", "NumberOfNLPProblems");
-    otherNode->SetAttribute("value", env->solutionStatistics.getNumberOfTotalNLPProblems());
+    otherNode->SetAttribute("value", env->solutionStatistics.numberOfProblemsFixedNLP);
     otherNode->SetAttribute("description", "The number of NLP problems solved in the primal strategy");
     otherResultsNode->InsertEndChild(otherNode);
 
@@ -346,6 +361,41 @@ std::string Results::getResultsOSrL()
     otherNode->SetAttribute("name", "NumberOfPrimalSolutionsFound");
     otherNode->SetAttribute("value", env->solutionStatistics.numberOfFoundPrimalSolutions);
     otherNode->SetAttribute("description", "The number of primal solutions found");
+    otherResultsNode->InsertEndChild(otherNode);
+
+    otherNode = osrlDocument.NewElement("other");
+    otherNode->SetAttribute("name", "NumberOfSuccesfulInfeasibilityRepairsPerformed");
+    otherNode->SetAttribute("value", env->solutionStatistics.numberOfSuccessfulDualRepairsPerformed);
+    otherNode->SetAttribute(
+        "description", "The number of sucessful infeasibility repairs performed for nonconvex problems");
+    otherResultsNode->InsertEndChild(otherNode);
+
+    otherNode = osrlDocument.NewElement("other");
+    otherNode->SetAttribute("name", "NumberOfUnsuccesfulInfeasibilityRepairsPerformed");
+    otherNode->SetAttribute("value", env->solutionStatistics.numberOfUnsuccessfulDualRepairsPerformed);
+    otherNode->SetAttribute(
+        "description", "The number of unsucessful infeasibility repairs performed for nonconvex problems");
+    otherResultsNode->InsertEndChild(otherNode);
+
+    otherNode = osrlDocument.NewElement("other");
+    otherNode->SetAttribute("name", "NumberOfReductionCutStepsPerformed");
+    otherNode->SetAttribute("value", env->solutionStatistics.numberOfPrimalReductionsPerformed);
+    otherNode->SetAttribute("description", "The number of reduction cut steps performed for nonconvex problems");
+    otherResultsNode->InsertEndChild(otherNode);
+
+    otherNode = osrlDocument.NewElement("other");
+    otherNode->SetAttribute("name", "numberOfPrimalImprovementsAfterInfeasibilityRepair");
+    otherNode->SetAttribute("value", env->solutionStatistics.numberOfPrimalImprovementsAfterInfeasibilityRepair);
+    otherNode->SetAttribute("description",
+        "The number of cases where the repairing of infeasibilities for nonconvex problems has directly resulted in "
+        "improved primal solutions");
+    otherResultsNode->InsertEndChild(otherNode);
+
+    otherNode = osrlDocument.NewElement("other");
+    otherNode->SetAttribute("name", "numberOfPrimalImprovementsAfterReductionCut");
+    otherNode->SetAttribute("value", env->solutionStatistics.numberOfPrimalImprovementsAfterReductionCut);
+    otherNode->SetAttribute("description",
+        "The number of cases where the primal reduction cut has directly resulted in improved primal solutions");
     otherResultsNode->InsertEndChild(otherNode);
 
     auto dualSolver = static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual"));
@@ -455,7 +505,8 @@ std::string Results::getResultsOSrL()
     auto optimizationNode = osrlDocument.NewElement("optimization");
     optimizationNode->SetAttribute("numberOfSolutions", (int)primalSolutions.size());
     optimizationNode->SetAttribute("numberOfVariables", env->problem->properties.numberOfVariables);
-    optimizationNode->SetAttribute("numberOfConstraints", env->problem->properties.numberOfNumericConstraints);
+    optimizationNode->SetAttribute("numberOfConstraints",
+        env->problem->properties.numberOfNumericConstraints - env->problem->properties.numberOfAddedLinearizations);
     optimizationNode->SetAttribute("numberOfObjectives", 1);
 
     auto solutionNode = osrlDocument.NewElement("solution");
@@ -801,7 +852,8 @@ std::string Results::getResultsTrace()
     ss << Utilities::toStringFormat(Utilities::getJulianFractionalDate(), "{:.5f}", false);
     ss << ",";
     ss << (env->problem->objectiveFunction->properties.isMinimize ? "0" : "1") << ",";
-    ss << env->problem->properties.numberOfNumericConstraints << ",";
+    ss << env->problem->properties.numberOfNumericConstraints - env->problem->properties.numberOfAddedLinearizations
+       << ",";
     ss << env->problem->properties.numberOfVariables << ",";
     ss << env->problem->properties.numberOfDiscreteVariables << ",";
 
@@ -971,7 +1023,8 @@ std::string Results::getResultsSol()
 
     ss << "0\n"; // Number of options
 
-    ss << fmt::format("{0}\n{0}\n{1}\n{1}\n", env->problem->properties.numberOfNumericConstraints,
+    ss << fmt::format("{0}\n{0}\n{1}\n{1}\n",
+        env->problem->properties.numberOfNumericConstraints - env->problem->properties.numberOfAddedLinearizations,
         env->problem->properties.numberOfVariables);
 
     for(auto const& C : env->problem->numericConstraints)

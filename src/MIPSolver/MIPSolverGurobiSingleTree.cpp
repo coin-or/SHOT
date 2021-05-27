@@ -11,11 +11,13 @@
 #include "MIPSolverGurobiSingleTree.h"
 
 #include "../DualSolver.h"
+#include "../EventHandler.h"
 #include "../Iteration.h"
 #include "../Output.h"
 #include "../PrimalSolver.h"
 #include "../Results.h"
 #include "../Settings.h"
+#include "../TaskHandler.h"
 #include "../Timing.h"
 #include "../Utilities.h"
 
@@ -78,7 +80,7 @@ void MIPSolverGurobiSingleTree::setSolutionLimit(long limit)
 
 int MIPSolverGurobiSingleTree::getSolutionLimit() { return (gurobiModel->getEnv().get(GRB_IntParam_SolutionLimit)); }
 
-void MIPSolverGurobiSingleTree::checkParameters() {}
+void MIPSolverGurobiSingleTree::checkParameters() { }
 
 E_ProblemSolutionStatus MIPSolverGurobiSingleTree::solveProblem()
 {
@@ -116,9 +118,9 @@ E_ProblemSolutionStatus MIPSolverGurobiSingleTree::solveProblem()
                && std::dynamic_pointer_cast<LinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
                       ->isDualUnbounded())
             || (env->reformulatedProblem->objectiveFunction->properties.classification
-                       == E_ObjectiveFunctionClassification::Quadratic
-                   && std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                          ->isDualUnbounded()))
+                    == E_ObjectiveFunctionClassification::Quadratic
+                && std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
+                       ->isDualUnbounded()))
         {
             for(auto& V : env->reformulatedProblem->allVariables)
             {
@@ -223,7 +225,7 @@ void GurobiCallbackSingleTree::callback()
 
             if((tmpPrimalObjBound < 1e100)
                 && ((isMinimization && tmpPrimalObjBound < env->results->getPrimalBound())
-                       || (!isMinimization && tmpPrimalObjBound > env->results->getPrimalBound())))
+                    || (!isMinimization && tmpPrimalObjBound > env->results->getPrimalBound())))
             {
                 int numberOfVariables = env->problem->properties.numberOfVariables;
                 VectorDouble primalSolution(numberOfVariables);
@@ -442,8 +444,6 @@ void GurobiCallbackSingleTree::callback()
             lastOpenNodes = (int)getDoubleInfo(GRB_CB_MIP_NODLFT);
         }
 
-        // if(where == GRB_CB_MIPSOL)
-        //{
         // Add current primal bound as new incumbent candidate
         auto primalBound = env->results->getPrimalBound();
 
@@ -472,28 +472,6 @@ void GurobiCallbackSingleTree::callback()
 
             lastUpdatedPrimal = env->results->getPrimalBound();
         }
-
-        // Adds cutoff
-
-        /*double cutOffTol = env->settings->getSetting<double>("MIP.CutOff.Tolerance", "Dual");
-
-        if(isMinimization)
-        {
-            static_cast<MIPSolverGurobiSingleTree*>(env->dualSolver->MIPSolver.get())
-                ->gurobiModel->set(GRB_DoubleParam_Cutoff, primalBound + cutOffTol);
-
-            env->output->outputDebug("     Setting cutoff value to "
-                + Utilities::toString(primalBound + cutOffTol) + " for minimization.");
-        }
-        else
-        {
-            static_cast<MIPSolverGurobiSingleTree*>(env->dualSolver->MIPSolver.get())
-                ->gurobiModel->set(GRB_DoubleParam_Cutoff, -primalBound - cutOffTol);
-
-            env->output->outputDebug("     Setting cutoff value to "
-                + Utilities::toString(-primalBound - cutOffTol) + " for minimization.");
-        }*/
-        //}
     }
     catch(GRBException& e)
     {
@@ -538,9 +516,13 @@ bool GurobiCallbackSingleTree::createHyperplane(Hyperplane hyperplane)
 
             tmpPair.second /= scalingFactor;
 
-            env->output->outputWarning(
-                "        Large values found in RHS of cut, you might want to consider reducing the "
-                "bounds of the nonlinear variables.");
+            if(!warningMessageShownLargeRHS)
+            {
+                env->output->outputWarning(
+                    "        Large values found in RHS of cut, you might want to consider reducing the "
+                    "bounds of the nonlinear variables.");
+                warningMessageShownLargeRHS = true;
+            }
         }
 
         GRBLinExpr expr = 0;

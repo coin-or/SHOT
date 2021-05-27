@@ -78,31 +78,7 @@ ModelingSystemGAMS::~ModelingSystemGAMS()
     }
 }
 
-void ModelingSystemGAMS::augmentSettings([[maybe_unused]] SettingsPtr settings)
-{
-    // Subsolver settings: GAMS NLP
-
-    settings->createSettingGroup("Subsolver", "GAMS", "GAMS", "Settings for the GAMS NLP solvers.");
-
-    std::string optfile = "";
-    settings->createSetting(
-        "GAMS.NLP.OptionsFilename", "Subsolver", optfile, "Options file for the NLP solver in GAMS");
-
-    std::string solver = "auto";
-    settings->createSetting("GAMS.NLP.Solver", "Subsolver", solver, "NLP solver to use in GAMS (auto: SHOT chooses)");
-
-#if GMOAPIVERSION >= 21
-    settings->createSettingGroup(
-        "ModelingSystem", "GAMS", "GAMS interface", "These settings control functionality used in the GAMS interface.");
-
-    VectorString enumQExtractAlg;
-    enumQExtractAlg.push_back("automatic");
-    enumQExtractAlg.push_back("threepass");
-    enumQExtractAlg.push_back("doubleforward");
-    settings->createSetting("GAMS.QExtractAlg", "ModelingSystem", 0,
-        "Extraction algorithm for quadratic equations in GAMS interface", enumQExtractAlg);
-#endif
-}
+void ModelingSystemGAMS::augmentSettings([[maybe_unused]] SettingsPtr settings) { }
 
 void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
 {
@@ -128,8 +104,8 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
     {
         // Sets time limit
         env->settings->updateSetting("TimeLimit", "Termination", gevGetDblOpt(modelingEnvironment, gevResLim));
-        env->output->outputDebug(
-            fmt::format("Time limit set to {} by GAMS", env->settings->getSetting<double>("TimeLimit", "Termination")));
+        env->output->outputDebug(fmt::format(
+            " Time limit set to {} by GAMS", env->settings->getSetting<double>("TimeLimit", "Termination")));
 
         // Sets iteration limit, if different than SHOT default
         if(gevGetIntOpt(modelingEnvironment, gevIterLim) < INT_MAX)
@@ -137,7 +113,7 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
             env->settings->updateSetting(
                 "IterationLimit", "Termination", gevGetIntOpt(modelingEnvironment, gevIterLim));
             env->output->outputDebug(fmt::format(
-                "Iteration limit set to {} by GAMS", env->settings->getSetting<int>("IterationLimit", "Termination")));
+                " Iteration limit set to {} by GAMS", env->settings->getSetting<int>("IterationLimit", "Termination")));
         }
         else
         {
@@ -147,13 +123,13 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
         // Sets absolute objective gap tolerance
         env->settings->updateSetting(
             "ObjectiveGap.Absolute", "Termination", gevGetDblOpt(modelingEnvironment, gevOptCA));
-        env->output->outputDebug(fmt::format("Absolute termination tolerance set to {} by GAMS",
+        env->output->outputDebug(fmt::format(" Absolute termination tolerance set to {} by GAMS",
             env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination")));
 
         // Sets relative objective gap tolerance
         env->settings->updateSetting(
             "ObjectiveGap.Relative", "Termination", gevGetDblOpt(modelingEnvironment, gevOptCR));
-        env->output->outputDebug(fmt::format("Relative termination tolerance set to {} by GAMS",
+        env->output->outputDebug(fmt::format(" Relative termination tolerance set to {} by GAMS",
             env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination")));
 
         // Sets cutoff value for dual solver
@@ -174,7 +150,7 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
         // Sets the number of threads
         env->settings->updateSetting("MIP.NumberOfThreads", "Dual", gevThreads(modelingEnvironment));
         env->output->outputDebug(fmt::format(
-            "MIP number of threads set to {} by GAMS", env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual")));
+            " MIP number of threads set to {} by GAMS", env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual")));
 
         // Uses NLP solver in GAMS by default, Ipopt can be used directly if value set by user in options file (read
         // below)
@@ -186,15 +162,16 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
         gmoNameOptFile(modelingObject, buffer);
         if(fs::filesystem::exists(buffer))
         {
-            env->output->outputInfo(" Reading options from " + std::string(buffer));
+            env->output->outputDebug(" Reading options from " + std::string(buffer));
             try
             {
                 std::string fileContents = Utilities::getFileAsString(buffer);
                 settings->readSettingsFromString(fileContents);
+                settings->updateSetting("OptionsFile", "Input", std::string(buffer));
             }
             catch(std::exception& e)
             {
-                env->output->outputError("Error when reading GAMS options file " + std::string(buffer), e.what());
+                env->output->outputError(" Error when reading GAMS options file " + std::string(buffer), e.what());
                 throw std::logic_error("Cannot read GAMS options file.");
             }
         }
@@ -224,7 +201,7 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(
 {
     if(!fs::filesystem::exists(filename))
     {
-        env->output->outputError("File \"" + filename + "\" does not exist.");
+        env->output->outputError(" File \"" + filename + "\" does not exist.");
 
         return (E_ProblemCreationStatus::FileDoesNotExist);
     }
@@ -317,13 +294,13 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem)
     }
     catch(const OperationNotImplementedException& e)
     {
-        env->output->outputError("Capability problem when creating problem from GAMS object: ");
+        env->output->outputError(" Capability problem when creating problem from GAMS object: ");
         env->output->outputError(e.what());
         return (E_ProblemCreationStatus::CapabilityProblem);
     }
     catch(const std::exception& e)
     {
-        env->output->outputError("Error when creating problem from GAMS object.", e.what());
+        env->output->outputError(" Error when creating problem from GAMS object.", e.what());
 
         return (E_ProblemCreationStatus::Error);
     }
@@ -653,6 +630,72 @@ void ModelingSystemGAMS::finalizeSolution()
     // removed here)
     if(createdgmo)
         gmoUnloadSolutionLegacy(modelingObject);
+
+    // write alternate solutions to GDX file, if requested
+    std::string solfile = env->settings->getSetting<std::string>("GAMS.AlternateSolutionsFile", "Output");
+
+    if(!solfile.empty() && r->primalSolutions.size() > 1)
+    {
+        int solnvarsym;
+
+        if(gmoCheckSolPoolUEL(modelingObject, "soln_shot_p", &solnvarsym))
+        {
+            env->output->outputError(
+                " Solution pool scenario label 'soln_shot_p' contained in model dictionary. Cannot "
+                "dump merged solutions pool.");
+        }
+        else
+        {
+            void* handle;
+            bool error = false;
+
+            handle
+                = gmoPrepareSolPoolMerge(modelingObject, solfile.c_str(), r->primalSolutions.size() - 1, "soln_shot_p");
+
+            if(handle != NULL)
+            {
+                for(int k = 0; k < solnvarsym && !error; k++)
+                {
+                    gmoPrepareSolPoolNextSym(modelingObject, handle);
+
+                    for(int i = 1; i < r->primalSolutions.size(); ++i)
+                    {
+                        gmoSetVarL(modelingObject, &r->primalSolutions[i].point[0]);
+
+                        if(gmoUnloadSolPoolSolution(modelingObject, handle, i - 1))
+                        {
+                            env->output->outputError(" Problems unloading solution point " + std::to_string(i)
+                                + " symbol " + std::to_string(k));
+                            error = true;
+                            break;
+                        }
+                    }
+                }
+
+                if(gmoFinalizeSolPoolMerge(modelingObject, handle))
+                {
+                    env->output->outputError(" Problems finalizing merged solution pool");
+                    error = true;
+                }
+
+                if(!error)
+                {
+                    env->output->outputDebug("");
+                    env->output->outputDebug(" Written " + std::to_string(r->primalSolutions.size() - 1)
+                        + " alternate solutions to " + solfile);
+                }
+            }
+            else
+            {
+                env->output->outputError(" Problems preparing merged solution pool\n");
+            }
+        }
+    }
+    else if(!solfile.empty() && r->primalSolutions.size() == 1)
+    {
+        env->output->outputInfo("");
+        env->output->outputInfo(" Only one solution found, skip dumping alternate solutions.");
+    }
 }
 
 void ModelingSystemGAMS::clearGAMSObjects()
@@ -683,7 +726,7 @@ void ModelingSystemGAMS::clearGAMSObjects()
 
 bool ModelingSystemGAMS::copyVariables(ProblemPtr destination)
 {
-    env->output->outputDebug("Starting to copy variables between GAMS modeling and SHOT problem objects.");
+    env->output->outputTrace(" Starting to copy variables between GAMS modeling and SHOT problem objects.");
 
     int numVariables = gmoN(modelingObject);
 
@@ -772,7 +815,7 @@ bool ModelingSystemGAMS::copyVariables(ProblemPtr destination)
 
                 break;
             case gmovar_SI:
-                env->output->outputError("Unsupported variable type.");
+                env->output->outputError(" Unsupported variable type.");
 
                 delete[] variableLBs;
                 delete[] variableUBs;
@@ -780,7 +823,7 @@ bool ModelingSystemGAMS::copyVariables(ProblemPtr destination)
                 return (false);
                 break;
             case gmovar_S1:
-                env->output->outputError("Unsupported variable type.");
+                env->output->outputError(" Unsupported variable type.");
 
                 delete[] variableLBs;
                 delete[] variableUBs;
@@ -788,7 +831,7 @@ bool ModelingSystemGAMS::copyVariables(ProblemPtr destination)
                 return (false);
                 break;
             case gmovar_S2:
-                env->output->outputError("Unsupported variable type.");
+                env->output->outputError(" Unsupported variable type.");
 
                 delete[] variableLBs;
                 delete[] variableUBs;
@@ -796,7 +839,7 @@ bool ModelingSystemGAMS::copyVariables(ProblemPtr destination)
                 return (false);
                 break;
             default:
-                env->output->outputError("Unsupported variable type.");
+                env->output->outputError(" Unsupported variable type.");
 
                 delete[] variableLBs;
                 delete[] variableUBs;
@@ -814,25 +857,25 @@ bool ModelingSystemGAMS::copyVariables(ProblemPtr destination)
     }
     else
     {
-        env->output->outputError("Problem has no variables.");
+        env->output->outputError(" Problem has no variables.");
 
         return (false);
     }
 
-    env->output->outputDebug("Finished copying variables between GAMS modeling and SHOT problem objects.");
+    env->output->outputTrace(" Finished copying variables between GAMS modeling and SHOT problem objects.");
 
     return (true);
 }
 
 bool ModelingSystemGAMS::copyObjectiveFunction(ProblemPtr destination)
 {
-    env->output->outputDebug("Starting to copy objective function between GAMS modeling and SHOT problem objects.");
+    env->output->outputTrace(" Starting to copy objective function between GAMS modeling and SHOT problem objects.");
 
     // Check if we have an objective at all
     if(gmoModelType(modelingObject) == gmoProc_cns)
     {
         // no objective in constraint satisfaction models
-        env->output->outputError("Problem has no objective function.");
+        env->output->outputError(" Problem has no objective function.");
         return (false);
     }
 
@@ -853,7 +896,7 @@ bool ModelingSystemGAMS::copyObjectiveFunction(ProblemPtr destination)
         break;
 
     default:
-        env->output->outputError("Objective function of unknown type.");
+        env->output->outputError(" Objective function of unknown type.");
         return (false);
         break;
     }
@@ -904,14 +947,14 @@ bool ModelingSystemGAMS::copyObjectiveFunction(ProblemPtr destination)
 
     destination->add(objectiveFunction);
 
-    env->output->outputDebug("Finished copying objective function between GAMS modeling and SHOT problem objects.");
+    env->output->outputTrace(" Finished copying objective function between GAMS modeling and SHOT problem objects.");
 
     return (true);
 }
 
 bool ModelingSystemGAMS::copyConstraints(ProblemPtr destination)
 {
-    env->output->outputDebug("Starting to copy constraints between GAMS modeling and SHOT problem objects.");
+    env->output->outputTrace(" Starting to copy constraints between GAMS modeling and SHOT problem objects.");
 
     int numberOfConstraints = gmoM(modelingObject);
 
@@ -944,7 +987,7 @@ bool ModelingSystemGAMS::copyConstraints(ProblemPtr destination)
                 break;
 
             default:
-                env->output->outputError("Constraint index" + std::to_string(i) + "is of unknown type.");
+                env->output->outputError(" Constraint index" + std::to_string(i) + "is of unknown type.");
                 return (false);
             }
 
@@ -974,24 +1017,24 @@ bool ModelingSystemGAMS::copyConstraints(ProblemPtr destination)
                 break;
             }
             default:
-                env->output->outputError("Constraint index" + std::to_string(i) + "is of unknown type.");
+                env->output->outputError(" Constraint index" + std::to_string(i) + "is of unknown type.");
                 return (false);
             }
         }
     }
     else
     {
-        env->output->outputDebug("GAMS modeling object does not have any constraints.");
+        env->output->outputDebug(" GAMS modeling object does not have any constraints.");
     }
 
-    env->output->outputDebug("Finished copying constraints between GAMS modeling and SHOT problem objects.");
+    env->output->outputTrace(" Finished copying constraints between GAMS modeling and SHOT problem objects.");
 
     return (true);
 }
 
 bool ModelingSystemGAMS::copyLinearTerms(ProblemPtr destination)
 {
-    env->output->outputDebug("Starting to copy linear terms between GAMS modeling and SHOT problem objects.");
+    env->output->outputTrace(" Starting to copy linear terms between GAMS modeling and SHOT problem objects.");
 
     double* linearCoefficients = new double[gmoNZ(modelingObject) + gmoN(modelingObject)];
     int* variableIndexes = new int[gmoNZ(modelingObject) + gmoN(modelingObject)];
@@ -1038,14 +1081,14 @@ bool ModelingSystemGAMS::copyLinearTerms(ProblemPtr destination)
     delete[] variableIndexes;
     delete[] nonlinearFlags;
 
-    env->output->outputDebug("Finished copying linear terms between GAMS modeling and SHOT problem objects.");
+    env->output->outputTrace(" Finished copying linear terms between GAMS modeling and SHOT problem objects.");
 
     return (true);
 }
 
 bool ModelingSystemGAMS::copyQuadraticTerms(ProblemPtr destination)
 {
-    env->output->outputDebug("Starting to copy quadratic terms between GAMS modeling and SHOT problem objects.");
+    env->output->outputTrace(" Starting to copy quadratic terms between GAMS modeling and SHOT problem objects.");
 
     if(gmoGetObjOrder(modelingObject) == gmoorder_Q)
     {
@@ -1153,14 +1196,14 @@ bool ModelingSystemGAMS::copyQuadraticTerms(ProblemPtr destination)
         }
     }
 
-    env->output->outputDebug("Finished copying quadratic terms between GAMS modeling and SHOT problem objects.");
+    env->output->outputTrace(" Finished copying quadratic terms between GAMS modeling and SHOT problem objects.");
 
     return (true);
 }
 
 bool ModelingSystemGAMS::copyNonlinearExpressions(ProblemPtr destination)
 {
-    env->output->outputDebug("Starting to copy nonlinear expressions between GAMS modeling and SHOT problem objects.");
+    env->output->outputTrace(" Starting to copy nonlinear expressions between GAMS modeling and SHOT problem objects.");
 
     int* opcodes = new int[gmoNLCodeSizeMaxRow(modelingObject) + 1];
     int* fields = new int[gmoNLCodeSizeMaxRow(modelingObject) + 1];
@@ -1237,7 +1280,7 @@ bool ModelingSystemGAMS::copyNonlinearExpressions(ProblemPtr destination)
     delete[] opcodes;
     delete[] fields;
 
-    env->output->outputDebug("Finished copying nonlinear expressions between GAMS modeling and SHOT problem objects.");
+    env->output->outputTrace(" Finished copying nonlinear expressions between GAMS modeling and SHOT problem objects.");
 
     return (true);
 }

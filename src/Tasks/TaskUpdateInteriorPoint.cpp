@@ -21,7 +21,7 @@
 namespace SHOT
 {
 
-TaskUpdateInteriorPoint::TaskUpdateInteriorPoint(EnvironmentPtr envPtr) : TaskBase(envPtr) {}
+TaskUpdateInteriorPoint::TaskUpdateInteriorPoint(EnvironmentPtr envPtr) : TaskBase(envPtr) { }
 
 TaskUpdateInteriorPoint::~TaskUpdateInteriorPoint() = default;
 
@@ -77,6 +77,10 @@ void TaskUpdateInteriorPoint::run()
     if(env->reformulatedProblem->auxiliaryObjectiveVariable)
         tmpPrimalPoint.push_back(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(tmpPrimalPoint));
 
+    if(env->reformulatedProblem->antiEpigraphObjectiveVariable)
+        tmpPrimalPoint.at(env->reformulatedProblem->antiEpigraphObjectiveVariable->index)
+            = env->reformulatedProblem->objectiveFunction->calculateValue(tmpPrimalPoint);
+
     tmpIP->point = tmpPrimalPoint;
     assert((int)tmpIP->point.size() == env->reformulatedProblem->properties.numberOfVariables);
 
@@ -97,7 +101,7 @@ void TaskUpdateInteriorPoint::run()
             == static_cast<int>(ES_AddPrimalPointAsInteriorPoint::KeepBoth)
         && maxDev.normalizedValue < 0)
     {
-        env->output->outputDebug("     Primal solution point used as additional interior point.");
+        env->output->outputDebug("        Primal solution point used as additional interior point.");
 
         if((int)env->dualSolver->interiorPts.size() == env->solutionStatistics.numberOfOriginalInteriorPoints)
         {
@@ -134,6 +138,10 @@ void TaskUpdateInteriorPoint::run()
 
         if(env->reformulatedProblem->auxiliaryObjectiveVariable)
             tmpPrimalPoint.push_back(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(tmpPrimalPoint));
+
+        if(env->reformulatedProblem->antiEpigraphObjectiveVariable)
+            tmpPrimalPoint.at(env->reformulatedProblem->antiEpigraphObjectiveVariable->index)
+                = env->reformulatedProblem->objectiveFunction->calculateValue(tmpPrimalPoint);
 
         tmpIP->point = tmpPrimalPoint;
         assert((int)tmpIP->point.size() == env->reformulatedProblem->properties.numberOfVariables);

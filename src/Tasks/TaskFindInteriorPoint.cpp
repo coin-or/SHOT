@@ -43,19 +43,79 @@ void TaskFindInteriorPoint::run()
 
     env->output->outputDebug(" Initializing NLP solver");
 
-    auto solver
-        = static_cast<ES_InteriorPointStrategy>(env->settings->getSetting<int>("ESH.InteriorPoint.Solver", "Dual"));
-
-    if(solver == ES_InteriorPointStrategy::CuttingPlaneMiniMax)
+    if(env->dualSolver->interiorPointCandidates.size() > 0)
     {
-        NLPSolvers.emplace_back(std::make_unique<NLPSolverCuttingPlaneMinimax>(env, env->reformulatedProblem));
+        int i = 0;
 
-        env->output->outputDebug(" Cutting plane minimax selected as NLP solver.");
+        for(auto& PT : env->dualSolver->interiorPointCandidates)
+        {
+            auto tmpIP = std::make_shared<InteriorPoint>();
+
+            tmpIP->point = PT->point;
+
+            for(auto& V : env->reformulatedProblem->auxiliaryVariables)
+            {
+                tmpIP->point.push_back(V->calculate(PT->point));
+            }
+
+            if(env->reformulatedProblem->auxiliaryObjectiveVariable)
+            {
+                tmpIP->point.push_back(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(PT->point));
+            }
+
+            if(env->reformulatedProblem->antiEpigraphObjectiveVariable)
+            {
+                tmpIP->point.at(env->reformulatedProblem->antiEpigraphObjectiveVariable->index)
+                    = env->reformulatedProblem->objectiveFunction->calculateValue(tmpIP->point);
+            }
+
+            assert((int)tmpIP->point.size() == env->reformulatedProblem->properties.numberOfVariables);
+
+            auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
+                tmpIP->point, env->reformulatedProblem->nonlinearConstraints);
+            tmpIP->maxDevatingConstraint = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+
+            if(maxDev.normalizedValue >= 0)
+            {
+                env->output->outputWarning(" Maximum deviation in interior point is too large: "
+                    + Utilities::toString(maxDev.normalizedValue));
+
+                if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+                {
+                    std::string filename = env->settings->getSetting<std::string>("Debug.Path", "Output")
+                        + "/interiorpoint_provided_notused_" + std::to_string(i) + ".txt";
+                    Utilities::saveVariablePointVectorToFile(tmpIP->point, variableNames, filename);
+                }
+            }
+            else
+            {
+                env->output->outputInfo(" Valid interior point with constraint deviation "
+                    + Utilities::toString(maxDev.normalizedValue) + " found.");
+
+                env->dualSolver->interiorPts.push_back(tmpIP);
+
+                if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+                {
+                    std::string filename = env->settings->getSetting<std::string>("Debug.Path", "Output")
+                        + "/interiorpoint_provided" + std::to_string(i) + ".txt";
+                    Utilities::saveVariablePointVectorToFile(tmpIP->point, variableNames, filename);
+                }
+            }
+
+            i++;
+
+            env->solutionStatistics.numberOfOriginalInteriorPoints++;
+        }
+
+        env->timing->stopTimer("InteriorPointSearch");
     }
-    else
-    {
+
+    if(env->dualSolver->interiorPts.size() > 0)
         return;
-    }
+
+    NLPSolvers.emplace_back(std::make_unique<NLPSolverCuttingPlaneMinimax>(env, env->reformulatedProblem));
+
+    env->output->outputDebug(" Cutting plane minimax selected as NLP solver.");
 
     if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
     {
@@ -83,9 +143,6 @@ void TaskFindInteriorPoint::run()
             continue;
 
         auto tmpIP = std::make_shared<InteriorPoint>();
-
-        tmpIP->NLPSolver
-            = static_cast<ES_InteriorPointStrategy>(env->settings->getSetting<int>("ESH.InteriorPoint.Solver", "Dual"));
 
         tmpIP->point = NLPSolvers.at(i)->getSolution();
         assert((int)tmpIP->point.size() == env->reformulatedProblem->properties.numberOfVariables);
@@ -122,13 +179,6 @@ void TaskFindInteriorPoint::run()
         }
 
         foundNLPPoint = (foundNLPPoint || (maxDev.normalizedValue <= 0));
-
-        if(tmpIP->NLPSolver == ES_InteriorPointStrategy::IpoptMinimax
-            || tmpIP->NLPSolver == ES_InteriorPointStrategy::IpoptRelaxed
-            || tmpIP->NLPSolver == ES_InteriorPointStrategy::IpoptMinimaxAndRelaxed)
-        {
-            env->solutionStatistics.numberOfProblemsNLPInteriorPointSearch++;
-        }
     }
 
     if(!foundNLPPoint)

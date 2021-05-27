@@ -64,9 +64,7 @@ void TaskAddPrimalReductionCut::run()
 
     auto currIter = env->results->getCurrentIteration(); // The solved iteration
 
-    if(currIter->forceObjectiveReductionCut)
-    {
-    }
+    if(currIter->forceObjectiveReductionCut) { }
     else if(currIter->solutionStatus == E_ProblemSolutionStatus::Infeasible
         && !currIter->wasInfeasibilityRepairSuccessful)
     {
@@ -121,6 +119,8 @@ void TaskAddPrimalReductionCut::run()
 
     env->solutionStatistics.numberOfPrimalReductionCutsUpdatesWithoutEffect++;
     totalReductionCutUpdates++;
+    env->solutionStatistics.numberOfPrimalReductionsPerformed++;
+    env->solutionStatistics.hasReductionCutBeenAddedSincePrimalImprovement = true;
 
     env->tasks->setNextTask(taskIDIfTrue);
 }

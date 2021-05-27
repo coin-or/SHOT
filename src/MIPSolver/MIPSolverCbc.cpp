@@ -9,6 +9,7 @@
 */
 
 #include "MIPSolverCbc.h"
+#include "MIPSolverCallbackBase.h"
 
 #include "../DualSolver.h"
 #include "../Iteration.h"
@@ -30,6 +31,42 @@
 
 namespace SHOT
 {
+
+class TerminationEventHandler : public CbcEventHandler, public MIPSolverCallbackBase
+{
+
+public:
+    TerminationEventHandler(EnvironmentPtr envPtr) { env = envPtr; };
+
+    virtual ~TerminationEventHandler() {};
+
+    TerminationEventHandler(const TerminationEventHandler& rhs) : CbcEventHandler(rhs) {};
+
+    TerminationEventHandler& operator=(const TerminationEventHandler& rhs)
+    {
+        if(this != &rhs)
+        {
+            CbcEventHandler::operator=(rhs);
+        }
+        return *this;
+    }
+
+    virtual TerminationEventHandler* clone() const { return new TerminationEventHandler(env); };
+
+    virtual CbcAction event(CbcEvent whichEvent)
+    {
+        if(whichEvent == CbcEventHandler::CbcEvent::node && checkUserTermination())
+        {
+            env->output->outputDebug("        Terminated by user.");
+
+            return (CbcEventHandler::CbcAction::stop);
+        }
+
+        return (CbcEventHandler::CbcAction::noAction);
+    }
+};
+
+static int dummyCallback(CbcModel* /*model*/, int /*whereFrom*/) { return 0; }
 
 MIPSolverCbc::MIPSolverCbc(EnvironmentPtr envPtr) { env = envPtr; }
 
@@ -118,11 +155,10 @@ bool MIPSolverCbc::addLinearTermToObjective(double coefficient, int variableInde
         double currentValue = coinModel->getColObjective(variableIndex);
 
         coinModel->setColObjective(variableIndex, coefficient + currentValue);
-        objectiveLinearExpression.insert(variableIndex, coefficient + currentValue);
     }
-    catch(std::exception& e)
+    catch(CoinError& e)
     {
-        env->output->outputError("        Cbc exception caught when adding linear term to objective: ", e.what());
+        env->output->outputError("        Cbc exception caught when adding linear term to objective: ", e.message());
         return (false);
     }
 
@@ -140,17 +176,23 @@ bool MIPSolverCbc::finalizeObjective(bool isMinimize, double constant)
 {
     try
     {
+        objectiveLinearExpression.clear();
+
+        for(int i = 0; i < coinModel->numberColumns(); i++)
+        {
+            if(auto coefficient = coinModel->getColObjective(i); coefficient != 0.0)
+            {
+                if(!isMinimize) // if maximize, we need to change the sign
+                    coefficient *= -1;
+
+                objectiveLinearExpression.insert(i, coefficient);
+                coinModel->setColObjective(i, coefficient);
+            }
+        }
+
         if(!isMinimize)
         {
             isMinimizationProblem = false;
-
-            for(int i = 0; i < objectiveLinearExpression.getNumElements(); i++)
-            {
-                objectiveLinearExpression.getElements()[i] *= -1;
-                coinModel->setColObjective(
-                    objectiveLinearExpression.getIndices()[i], objectiveLinearExpression.getElements()[i]);
-            }
-
             coinModel->setObjectiveOffset(-constant);
         }
         else
@@ -231,7 +273,8 @@ bool MIPSolverCbc::finalizeProblem()
     {
         osiInterface->loadFromCoinModel(*coinModel);
         cbcModel = std::make_unique<CbcModel>(*osiInterface);
-        CbcMain0(*cbcModel);
+        CbcSolverUsefulData solverData;
+        CbcMain0(*cbcModel, solverData);
 
         if(!env->settings->getSetting<bool>("Console.DualSolver.Show", "Output"))
         {
@@ -341,7 +384,7 @@ void MIPSolverCbc::activateDiscreteVariables(bool activate)
 {
     if(activate)
     {
-        env->output->outputDebug(" Activating MIP strategy");
+        env->output->outputDebug("        Activating MIP strategy");
 
         for(int i = 0; i < numberOfVariables; i++)
         {
@@ -356,7 +399,7 @@ void MIPSolverCbc::activateDiscreteVariables(bool activate)
     }
     else
     {
-        env->output->outputDebug(" Activating LP strategy");
+        env->output->outputDebug("        Activating LP strategy");
         for(int i = 0; i < numberOfVariables; i++)
         {
             if(variableTypes.at(i) == E_VariableType::Integer || variableTypes.at(i) == E_VariableType::Binary)
@@ -568,7 +611,8 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
             env->output->outputError("        Error when adding MIP start to Cbc", e.what());
         }
 
-        CbcMain0(*cbcModel);
+        CbcSolverUsefulData solverData;
+        CbcMain0(*cbcModel, solverData);
 
         if(!env->settings->getSetting<bool>("Console.DualSolver.Show", "Output"))
         {
@@ -576,7 +620,10 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
             osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
         }
 
-        CbcMain1(numArguments, const_cast<const char**>(argv), *cbcModel);
+        TerminationEventHandler eventHandler(env);
+        cbcModel->passInEventHandler(&eventHandler);
+
+        CbcMain1(numArguments, const_cast<const char**>(argv), *cbcModel, dummyCallback, solverData);
 
         MIPSolutionStatus = getSolutionStatus();
     }
@@ -598,7 +645,8 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
 
             initializeSolverSettings();
 
-            CbcMain0(*cbcModel);
+            CbcSolverUsefulData solverData;
+            CbcMain0(*cbcModel, solverData);
 
             if(!env->settings->getSetting<bool>("Console.DualSolver.Show", "Output"))
             {
@@ -606,7 +654,7 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
                 osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
             }
 
-            CbcMain1(numArguments, const_cast<const char**>(argv), *cbcModel);
+            CbcMain1(numArguments, const_cast<const char**>(argv), *cbcModel, dummyCallback, solverData);
 
             MIPSolutionStatus = getSolutionStatus();
 
@@ -626,9 +674,9 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
                && std::dynamic_pointer_cast<LinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
                       ->isDualUnbounded())
             || (env->reformulatedProblem->objectiveFunction->properties.classification
-                       == E_ObjectiveFunctionClassification::Quadratic
-                   && std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                          ->isDualUnbounded()))
+                    == E_ObjectiveFunctionClassification::Quadratic
+                && std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
+                       ->isDualUnbounded()))
         {
             for(auto& V : env->reformulatedProblem->allVariables)
             {
@@ -676,7 +724,8 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
 
             initializeSolverSettings();
 
-            CbcMain0(*cbcModel);
+            CbcSolverUsefulData solverData;
+            CbcMain0(*cbcModel, solverData);
 
             if(!env->settings->getSetting<bool>("Console.DualSolver.Show", "Output"))
             {
@@ -684,7 +733,7 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
                 osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
             }
 
-            CbcMain1(numArguments, const_cast<const char**>(argv), *cbcModel);
+            CbcMain1(numArguments, const_cast<const char**>(argv), *cbcModel, dummyCallback, solverData);
 
             MIPSolutionStatus = getSolutionStatus();
 
@@ -799,7 +848,8 @@ bool MIPSolverCbc::repairInfeasibility()
 
         initializeSolverSettings();
 
-        CbcMain0(*cbcModel);
+        CbcSolverUsefulData solverData;
+        CbcMain0(*cbcModel, solverData);
 
         if(!env->settings->getSetting<bool>("Console.DualSolver.Show", "Output"))
         {
@@ -930,7 +980,7 @@ bool MIPSolverCbc::repairInfeasibility()
             argv[16] = strdup("");
         }
 
-        CbcMain1(numArguments, const_cast<const char**>(argv), *cbcModel);
+        CbcMain1(numArguments, const_cast<const char**>(argv), *cbcModel, dummyCallback, solverData);
 
         for(int i = numArguments - 1; i >= 0; --i)
             free(argv[i]);

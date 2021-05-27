@@ -63,7 +63,6 @@
 #include "../Tasks/TaskUpdateInteriorPoint.h"
 
 #include "../Tasks/TaskSelectHyperplanePointsObjectiveFunction.h"
-#include "../Tasks/TaskSolveFixedDualProblem.h"
 
 #include "../Tasks/TaskAddIntegerCuts.h"
 
@@ -80,17 +79,17 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
 {
     env = envPtr;
 
-    env->timing->createTimer("InteriorPointSearch", " - interior point search");
+    env->timing->createTimer("InteriorPointSearch", "- interior point search");
 
-    env->timing->createTimer("DualProblemsRelaxed", "   - solving relaxed problems");
-    env->timing->createTimer("DualStrategy", " - dual strategy");
-    env->timing->createTimer("DualProblemsDiscrete", "   - solving MIP problems");
-    env->timing->createTimer("DualCutGenerationRootSearch", "   - root search for constraint cuts");
-    env->timing->createTimer("DualObjectiveRootSearch", "   - root search for objective cut");
+    env->timing->createTimer("DualProblemsRelaxed", "  - solving relaxed problems");
+    env->timing->createTimer("DualStrategy", "- dual strategy");
+    env->timing->createTimer("DualProblemsDiscrete", "  - solving MIP problems");
+    env->timing->createTimer("DualCutGenerationRootSearch", "  - root search for constraint cuts");
+    env->timing->createTimer("DualObjectiveRootSearch", "  - root search for objective cut");
 
-    env->timing->createTimer("PrimalStrategy", " - primal strategy");
-    env->timing->createTimer("PrimalBoundStrategyNLP", "   - solving NLP problems");
-    env->timing->createTimer("PrimalBoundStrategyRootSearch", "   - performing root searches");
+    env->timing->createTimer("PrimalStrategy", "- primal strategy");
+    env->timing->createTimer("PrimalBoundStrategyNLP", "  - solving NLP problems");
+    env->timing->createTimer("PrimalBoundStrategyRootSearch", "  - performing root searches");
 
     auto tFinalizeSolution = std::make_shared<TaskSequential>(env);
 
@@ -147,7 +146,8 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
     auto tPrintIterReport = std::make_shared<TaskPrintIterationReport>(env);
     env->tasks->addTask(tPrintIterReport, "PrintIterReport");
 
-    if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex)
+    if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex
+        && env->settings->getSetting<bool>("MIP.InfeasibilityRepair.Use", "Dual"))
     {
         auto tRepairInfeasibility = std::make_shared<TaskRepairInfeasibleDualProblem>(env, "SolveIter", "CheckAbsGap");
         env->tasks->addTask(tRepairInfeasibility, "RepairInfeasibility");
@@ -175,7 +175,8 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
     auto tCheckIterError = std::make_shared<TaskCheckIterationError>(env, "FinalizeSolution");
     env->tasks->addTask(tCheckIterError, "CheckIterError");
 
-    if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex)
+    if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex
+        && env->settings->getSetting<bool>("ReductionCut.Use", "Dual"))
     {
         auto tCheckMaxNumberOfObjectiveCuts
             = std::make_shared<TaskCheckMaxNumberOfPrimalReductionCuts>(env, "FinalizeSolution");
@@ -256,20 +257,21 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
         env->tasks->addTask(tSelectObjectiveHPPts, "SelectObjectiveHPPts");
     }
 
+    env->tasks->addTask(tAddHPs, "AddHPs");
+
     if(env->settings->getSetting<bool>("HyperplaneCuts.UseIntegerCuts", "Dual"))
     {
         auto tAddICs = std::make_shared<TaskAddIntegerCuts>(env);
         env->tasks->addTask(tAddICs, "AddICs");
     }
 
-    env->tasks->addTask(tAddHPs, "AddHPs");
-
     auto tGoto = std::make_shared<TaskGoto>(env, "SolveIter");
     env->tasks->addTask(tGoto, "Goto");
 
     env->tasks->addTask(tFinalizeSolution, "FinalizeSolution");
 
-    if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex)
+    if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex
+        && env->settings->getSetting<bool>("ReductionCut.Use", "Dual"))
     {
         auto tAddObjectiveCutFinal = std::make_shared<TaskAddPrimalReductionCut>(env, "InitIter2", "Terminate");
         std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tAddObjectiveCutFinal);
@@ -309,5 +311,5 @@ bool SolutionStrategySingleTree::solveProblem()
     return (true);
 }
 
-void SolutionStrategySingleTree::initializeStrategy() {}
+void SolutionStrategySingleTree::initializeStrategy() { }
 } // namespace SHOT

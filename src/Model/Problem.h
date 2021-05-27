@@ -57,8 +57,8 @@ struct ProblemProperties
     int numberOfVariablesInNonlinearExpressions = 0;
     int numberOfAuxiliaryVariables = 0;
 
-    int numberOfNumericConstraints = 0;
-    int numberOfLinearConstraints = 0;
+    int numberOfNumericConstraints = 0; // This include the linearizations in the POA step
+    int numberOfLinearConstraints = 0; // This include the linearizations in the POA step
     int numberOfQuadraticConstraints = 0;
     int numberOfConvexQuadraticConstraints = 0;
     int numberOfNonconvexQuadraticConstraints = 0;
@@ -66,6 +66,8 @@ struct ProblemProperties
     int numberOfConvexNonlinearConstraints = 0;
     int numberOfNonconvexNonlinearConstraints = 0;
     int numberOfNonlinearExpressions = 0; // This includes a possible nonlinear objective
+
+    int numberOfAddedLinearizations = 0; // In the initial POA step
 
     std::string name = "";
     std::string description = "";
@@ -113,6 +115,8 @@ public:
 
     AuxiliaryVariables auxiliaryVariables;
     AuxiliaryVariablePtr auxiliaryObjectiveVariable; // This is not the same as one created in the dual problem
+
+    VariablePtr antiEpigraphObjectiveVariable; // This is the objective variable used before anti epigraph formulation
 
     VectorDouble variableLowerBounds;
     VectorDouble variableUpperBounds;
@@ -166,7 +170,6 @@ public:
     AuxiliaryVariables getAuxiliaryVariablesOfType(E_AuxiliaryVariableType type);
 
     void setVariableLowerBound(int variableIndex, double bound);
-
     void setVariableUpperBound(int variableIndex, double bound);
     void setVariableBounds(int variableIndex, double lowerBound, double upperBound);
 
@@ -238,6 +241,8 @@ public:
     bool doFBBTOnConstraint(NumericConstraintPtr constraint, double timeLimit);
 
     friend std::ostream& operator<<(std::ostream& stream, const Problem& problem);
+
+    ProblemPtr createCopy(EnvironmentPtr destinationEnv, bool integerRelaxed = false, bool convexityRelaxed = false);
 };
 
 inline std::ostream& operator<<(std::ostream& stream, ProblemPtr problem)

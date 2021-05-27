@@ -16,15 +16,22 @@ set(Model_parts
     6
     7
     8
-    9) # The different parts of each test (if any)
+    9
+    10) # The different parts of each test (if any)
 set(Settings_parts 1 2)
 
+if(HAS_CBC)
+  set(Cbc_parts 1 2)
+  set(cpptests ${cpptests} Cbc)
+endif()
+
 if(HAS_CPLEX)
-  set(Cplex_parts 1)
+  set(Cplex_parts 1 2)
   set(cpptests ${cpptests} Cplex)
 endif()
 
 if(HAS_GUROBI)
+  set(Gurobi_parts 1 2)
   set(cpptests ${cpptests} Gurobi)
 endif()
 
@@ -44,7 +51,8 @@ set(Solver_parts
     1
     2
     3
-    4)
+    4
+    5)
 set(cpptests ${cpptests} Solver)
 
 if(HAS_IPOPT)
@@ -142,7 +150,6 @@ endif(HAS_GUROBI)
 
 target_link_libraries(${TEST_EXE_NAME} pthread)
 target_link_libraries(${TEST_EXE_NAME} m)
-target_link_libraries(${TEST_EXE_NAME} bz2)
 target_link_libraries(${TEST_EXE_NAME} z)
 target_link_libraries(${TEST_EXE_NAME} lapack)
 target_link_libraries(${TEST_EXE_NAME} blas)

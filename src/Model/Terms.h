@@ -18,6 +18,7 @@
 
 #include "ffunc.hpp"
 
+#include <Eigen/Eigenvalues>
 #include <vector>
 
 namespace SHOT
@@ -248,7 +249,17 @@ public:
 
     void add(LinearTermPtr term)
     {
-        (*this).push_back(term);
+        auto variable = term->variable;
+
+        // In case there are multiple terms of the same variable
+        auto it = std::find_if((*this).begin(), (*this).end(),
+            [&variable](const LinearTermPtr& ptr) { return ptr->variable == variable; });
+
+        if(it != (*this).end())
+            it->get()->coefficient += term->coefficient;
+        else
+            (*this).push_back(term);
+
         monotonicity = E_Monotonicity::NotSet;
     }
 
@@ -256,7 +267,7 @@ public:
     {
         for(auto& TERM : terms)
         {
-            (*this).push_back(TERM);
+            add(TERM);
         }
 
         if(terms.size() > 0)
@@ -294,7 +305,8 @@ public:
 
     bool isBilinear = false;
     bool isSquare = false;
-    bool isBinary = false;
+    bool isBinary = false; // Binary times binary
+    bool isInteger = false; // Integer times integer (non binary variables)
 
     QuadraticTerm() = default;
 
@@ -317,6 +329,11 @@ public:
             && secondVariable->properties.type == E_VariableType::Binary)
         {
             isBinary = true;
+        }
+        else if(firstVariable->properties.type == E_VariableType::Integer
+            && secondVariable->properties.type == E_VariableType::Integer)
+        {
+            isInteger = true;
         }
     };
 
@@ -408,6 +425,18 @@ private:
     void updateConvexity() override;
 
 public:
+    double minEigenValue = SHOT::SHOT_DBL_MAX;
+    bool minEigenValueWithinTolerance = false;
+
+    bool allSquares = false;
+    bool allPositive = false;
+    bool allNegative = false;
+    bool allBilinear = false;
+
+    Eigen::VectorXcd eigenvalues;
+    Eigen::MatrixXcd eigenvectors;
+    std::map<VariablePtr, int> variableMap;
+
     using std::vector<QuadraticTermPtr>::operator[];
 
     using std::vector<QuadraticTermPtr>::at;
@@ -424,7 +453,25 @@ public:
 
     void add(QuadraticTermPtr term)
     {
-        (*this).push_back(term);
+        auto firstVariable = term->firstVariable;
+        auto secondVariable = term->secondVariable;
+
+        // In case there are multiple terms of the same variable
+        auto it = std::find_if(
+            (*this).begin(), (*this).end(), [&firstVariable, &secondVariable](const QuadraticTermPtr& ptr) {
+                return (((ptr->firstVariable == firstVariable) && (ptr->secondVariable == secondVariable))
+                    || ((ptr->firstVariable == secondVariable) && (ptr->secondVariable == firstVariable)));
+            });
+
+        if(it != (*this).end())
+        {
+            it->get()->coefficient += term->coefficient;
+        }
+        else
+        {
+            (*this).push_back(term);
+        }
+
         convexity = E_Convexity::NotSet;
         monotonicity = E_Monotonicity::NotSet;
     }
@@ -433,7 +480,7 @@ public:
     {
         for(auto& TERM : terms)
         {
-            (*this).push_back(TERM);
+            add(TERM);
         }
 
         if(terms.size() > 0)
@@ -753,7 +800,13 @@ public:
 
     inline Interval getBounds()
     {
+        if(power == 0.0)
+            return (Interval(1.0));
+
         auto variableBound = variable->getBound();
+
+        if(power == 1.0)
+            return (variableBound);
 
         double intpart;
         bool isInteger = (std::modf(power, &intpart) == 0.0);
@@ -762,10 +815,30 @@ public:
             variableBound.l(0.0);
         else if(!isInteger && variableBound.l() <= 0.0)
             variableBound.l(SHOT_DBL_EPS);
+        else if(power < 0.0 && variableBound.l() <= 0.0)
+            variableBound.l(SHOT_DBL_EPS);
         else if(variableBound.l() <= 0)
             variableBound.l(0.0);
 
-        auto bounds = pow(variableBound, 1.0 / power);
+        Interval bounds;
+
+        if(isInteger && power > 0)
+        {
+            double lower = sqrt(variableBound.l());
+            double upper = sqrt(variableBound.u());
+
+            return (Interval(std::min(lower, upper), std::max(lower, upper)));
+        }
+
+        if(power == -1.0)
+        {
+            bounds = 1 / variableBound;
+
+            if(bounds.l() < 1e-10 && bounds.u() > 1e-10)
+                bounds.l(1e-10);
+        }
+        else
+            bounds = pow(variableBound, 1.0 / power);
 
         if(bounds.l() <= 0.0)
             bounds.l(0.0);
@@ -775,6 +848,12 @@ public:
 
     inline bool tightenBounds(Interval bound)
     {
+        if(power == 0.0)
+            return (variable->tightenBounds(Interval(1.0)));
+
+        if(power == 1.0)
+            return (variable->tightenBounds(bound));
+
         double intpart;
         bool isInteger = (std::modf(power, &intpart) == 0.0);
         int integerValue = (int)round(intpart);
@@ -782,17 +861,29 @@ public:
 
         if(isInteger && isEven && power > 0 && bound.l() <= 0.0)
             bound.l(0.0);
-        else if(bound.l() <= 0.0)
+        else if(!isInteger && bound.l() <= 0.0)
             bound.l(SHOT_DBL_EPS);
+        else if(power < 0.0 && bound.l() <= 0.0)
+            bound.l(SHOT_DBL_EPS);
+        else if(bound.l() <= 0)
+            bound.l(0.0);
 
         Interval interval;
 
         if(bound.l() < 0.0)
             return (false);
 
-        if(power == 2.0)
-            interval = sqrt(bound);
-        else if(power == -1.0)
+        if(isInteger && power > 0)
+        {
+            interval = bound;
+
+            double lower = sqrt(interval.l());
+            double upper = sqrt(interval.u());
+
+            return (variable->tightenBounds(Interval(std::min(lower, upper), std::max(lower, upper))));
+        }
+
+        if(power == -1.0)
         {
             interval = 1 / bound;
 

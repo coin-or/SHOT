@@ -1,4 +1,5 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.9)
+include(ExternalProject)
 
 # For ccache
 find_program(CCACHE_PROGRAM ccache)
@@ -7,8 +8,13 @@ if(CCACHE_PROGRAM)
     set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK "${CCACHE_PROGRAM}")
 endif()
 
-project(SHOT)
+
+project(SHOT VERSION 1.0.1
+                  DESCRIPTION "The Supporting Hyperplane Optimization Toolkit (SHOT) for Mixed-Integer Nonlinear Optimization"
+                  LANGUAGES CXX C)
+
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # Location of extra CMake scripts
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/misc")
@@ -25,7 +31,6 @@ else()
 endif()
 
 # Sets the release types, e.g. Release, Debug:
-
 # set(CMAKE_BUILD_TYPE Debug)
 
 # Asserts enabled in CppAD otherwise
@@ -65,8 +70,6 @@ set(IPOPT_DIR "/opt/ipopt" CACHE STRING "The base directory where Ipopt is locat
 option(GENERATE_EXE "Should the SHOT executable be generated (requires at least that either OS or GAMS is available)"
        ON)
 
-option(SPDLOG_STATIC "Should Spdlog be compiled statically" ON)
-
 # External libraries; these are included in SHOT's source tree, and should not need to be modified
 set(AMPL_DIR "ThirdParty/ampl")
 set(ARGH_DIR "ThirdParty/argh")
@@ -91,7 +94,7 @@ if(NOT (HAS_CPLEX OR HAS_GUROBI OR HAS_CBC))
     message(FATAL_ERROR "No MIP solver defined. SHOT needs at least one!")
 endif()
 
-# Try to find Git
+# Try to find Git (used to get the hash shown by the console program)
 find_program(GIT git)
 
 if((GIT) AND (EXISTS ${CMAKE_CURRENT_LIST_DIR}/.git))
@@ -118,19 +121,10 @@ else()
 endif()
 message(STATUS "Git hash: " ${GITHASH})
 
-# Sets version number
-set(SHOT_VERSION_MAJOR 1)
-set(SHOT_VERSION_MINOR 0)
-set(SHOT_VERSION_PATCH 1)
-
-mark_as_advanced(
-    SHOT_VERSION_MAJOR
-    SHOT_VERSION_MINOR
-    SHOT_VERSION_PATCH
-    GITHASH
-)
+mark_as_advanced(GITHASH)
 
 configure_file("${PROJECT_SOURCE_DIR}/src/SHOTConfig.h.in" "${PROJECT_BINARY_DIR}/SHOTConfig.h")
+
 include_directories("${PROJECT_BINARY_DIR}")
 
 set_property(GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS ON)
@@ -181,6 +175,7 @@ file(
     "${PROJECT_SOURCE_DIR}/src/NLPSolver/INLPSolver.h"
     "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverBase.h"
     "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverCuttingPlaneMinimax.h"
+    "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverSHOT.h"
     "${PROJECT_SOURCE_DIR}/src/SolutionStrategy/*.h"
     "${PROJECT_SOURCE_DIR}/src/Tasks/*.h"
     "${PROJECT_SOURCE_DIR}/src/Settings.h"
@@ -201,7 +196,9 @@ if(HAS_CBC)
 
     if(CBC_FOUND)
         set(DUAL_SOURCES "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCbc.cpp")
+        set(DUAL_SOURCES ${DUAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.cpp")
         set(DUAL_HEADERS "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCbc.h")
+        set(DUAL_HEADERS ${DUAL_HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.h")
     endif(CBC_FOUND)
 endif(HAS_CBC)
 
@@ -254,7 +251,6 @@ if(HAS_IPOPT)
     pkg_search_module(IPOPT REQUIRED ipopt)
     link_directories(${IPOPT_LIBRARY_DIRS})
     include_directories(SYSTEM ${IPOPT_INCLUDE_DIRS})
-    add_definitions(-DHAS_IPOPT)
 
     set(PRIMAL_SOURCES "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverIpoptBase.cpp")
     set(PRIMAL_SOURCES ${PRIMAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverIpoptRelaxed.cpp")
@@ -289,6 +285,11 @@ if(HAS_GAMS)
     set(PRIMAL_SOURCES ${PRIMAL_SOURCES} "${GAMS_DIR}/apifiles/C/api/gmomcc.c")
     set(PRIMAL_SOURCES ${PRIMAL_SOURCES} "${GAMS_DIR}/apifiles/C/api/gevmcc.c")
     set(PRIMAL_SOURCES ${PRIMAL_SOURCES} "${GAMS_DIR}/apifiles/C/api/palmcc.c")
+
+    if(EXISTS ${GAMS_DIR}/apifiles/C/api/gcmt.c)
+        set(PRIMAL_SOURCES ${PRIMAL_SOURCES} "${GAMS_DIR}/apifiles/C/api/gcmt.c")
+        set(PRIMAL_HEADERS ${PRIMAL_HEADERS} "${GAMS_DIR}/apifiles/C/api/gcmt.h")
+    endif()
 
     set(MODELING_SOURCES ${MODELING_SOURCES} "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemGAMS.cpp")
     set(MODELING_SOURCES ${MODELING_SOURCES} "${PROJECT_SOURCE_DIR}/src/ModelingSystem/EntryPointsGAMS.cpp")
@@ -338,6 +339,7 @@ include_directories(SYSTEM "${EIGEN_DIR}")
 include_directories(SYSTEM "${MCPP_DIR}/include")
 include_directories(SYSTEM "${MCPP_DIR}/3rdparty/cpplapack/include")
 include_directories(SYSTEM "${MCPP_DIR}/3rdparty/fadbad++")
+include_directories(SYSTEM "${SPDLOG_DIR}/include")
 
 # Make sure the source file lists are in the correct format
 file(TO_CMAKE_PATH "${SOURCES}" SOURCES)
@@ -345,20 +347,19 @@ file(TO_CMAKE_PATH "${DUAL_SOURCES}" DUAL_SOURCES)
 file(TO_CMAKE_PATH "${PRIMAL_SOURCES}" PRIMAL_SOURCES)
 file(TO_CMAKE_PATH "${MODELING_SOURCES}" MODELING_SOURCES)
 
-# Will use spdlog as a static library on non-Windows systems
-if(MSVC OR MSYS OR MINGW)
-    set(SPDLOG_STATIC OFF)
-endif()
-
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-
-if(SPDLOG_STATIC)
-    add_subdirectory(${SPDLOG_DIR}/spdlog)
-    list(APPEND CMAKE_MODULE_PATH "${SPDLOG_DIR}/spdlog/cmake")
-endif()
-
 # Will use tinyxml2 as a static library
 add_library(tinyxml2 STATIC ${TINYXML2_DIR}/tinyxml2.h ${TINYXML2_DIR}/tinyxml2.cpp)
+
+# Adding spdlog using as an external project
+ExternalProject_Add(spdlog
+    PREFIX spdlog
+    SOURCE_DIR ${PROJECT_SOURCE_DIR}/${SPDLOG_DIR}
+    CMAKE_ARGS -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+    -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+    -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
+    -DCMAKE_INSTALL_PREFIX=""
+    -DSPDLOG_BUILD_SHARED=OFF
+)
 
 # Creates the helper library
 add_library(
@@ -378,11 +379,7 @@ add_library(
 )
 target_link_libraries(SHOTHelper tinyxml2)
 
-if(SPDLOG_STATIC)
-    target_link_libraries(SHOTHelper spdlog::spdlog)
-else()
-    target_include_directories(SHOTHelper PUBLIC "${SPDLOG_DIR}/spdlog/include")
-endif()
+add_dependencies(SHOTHelper spdlog)
 
 # Creates the model library
 add_library(
@@ -424,6 +421,7 @@ add_library(
     ${PROJECT_SOURCE_DIR}/src/PrimalSolver.cpp
     ${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverBase.cpp
     ${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverCuttingPlaneMinimax.cpp
+    ${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverSHOT.cpp
 )
 target_link_libraries(SHOTPrimalStrategy SHOTModel)
 
@@ -544,19 +542,24 @@ endif(HAS_CBC)
 
 # Ipopt linking
 if(HAS_IPOPT)
+    message("-- Ipopt include files will be used from: ${IPOPT_DIR}/include/coin")
     target_link_libraries(SHOTPrimalStrategy ${IPOPT_LIBRARIES})
     target_include_directories(SHOTPrimalStrategy PUBLIC "${IPOPT_DIR}/include/coin")
     target_compile_options(SHOTPrimalStrategy PUBLIC ${IPOPT_CFLAGS_OTHER})
+    add_definitions(-DHAS_IPOPT)
+
+    message("-- The following Ipopt libraries will be used from: ${IPOPT_LIBRARY_DIRS}")
+    message("   ${IPOPT_LIBRARIES}")
 endif(HAS_IPOPT)
 
 # GAMS linking
 if(HAS_GAMS)
+    message("-- GAMS include files will be used from: ${GAMS_DIR}/apifiles/C/api")
     include_directories(SYSTEM "${GAMS_DIR}/apifiles/C/api")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DGAMSDIR=\\\"${GAMS_DIR}\\\"")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DGC_NO_MUTEX")
 endif(HAS_GAMS)
 
-# Creates the SHOT library that is linked to the executable
 file(
     GLOB_RECURSE
     SOURCES
@@ -565,6 +568,7 @@ file(
     "${PROJECT_SOURCE_DIR}/src/RootsearchMethod/RootsearchMethodBoost.cpp"
 )
 
+# Creates the SHOT library that is linked to the executable
 add_library(SHOTSolver SHARED ${SOURCES})
 
 # Links the compiled libraries
@@ -630,8 +634,60 @@ else()
     )
 endif()
 
-# Installation target
-install(TARGETS ${PROJECT_NAME} DESTINATION bin)
+# For making the installation package
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+    MyLibConfigVersion.cmake
+    VERSION ${PACKAGE_VERSION}
+    COMPATIBILITY AnyNewerVersion
+)
+
+install(
+    TARGETS ${PROJECT_NAME}
+    EXPORT SHOTTargets
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION bin
+    INCLUDES DESTINATION include
+)
+
+# Copy some additional files
+install(
+    FILES
+    ${CMAKE_CURRENT_SOURCE_DIR}/AUTHORS
+    ${CMAKE_CURRENT_SOURCE_DIR}/INSTALL
+    ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE
+    ${CMAKE_CURRENT_SOURCE_DIR}/README
+    DESTINATION bin
+)
+
+# Need to install the library as well
+install(TARGETS SHOTSolver DESTINATION lib)
+
+install(
+    EXPORT SHOTTargets
+    FILE SHOTTargets.cmake
+    NAMESPACE SHOT::
+    DESTINATION lib/cmake/SHOT
+)
+
+# Copy all header files including directory structure
+install(
+    DIRECTORY "${CMAKE_SOURCE_DIR}/src/" # source directory
+    DESTINATION "include" # target directory
+    FILES_MATCHING # install only matched files
+    PATTERN  "*.h" # select header files
+)
+
+# Setting CPack metadata
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Andreas Lundell")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "The Supporting Hyperplane Optimization Toolkit (SHOT)")
+set(CPACK_PACKAGE_VENDOR "Åbo Akademi University")
+set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/README")
+set(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/INSTALL")
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+set(CPACK_GENERATOR "STGZ;ZIP")
+include(CPack)
 
 # Add a target to generate API documentation with Doxygen
 option(BUILD_DOCUMENTATION "Create and install the HTML based API documentation(requires Doxygen)" ${DOXYGEN_FOUND})
@@ -655,7 +711,7 @@ if(BUILD_DOCUMENTATION)
         VERBATIM
     )
 
-    install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/html DESTINATION share/doc)
+    install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doxydoc/html DESTINATION docs)
 endif()
 
 if(COMPILE_TESTS)

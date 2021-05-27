@@ -17,6 +17,7 @@
 #include "../Report.h"
 #include "../Results.h"
 #include "../Settings.h"
+#include "../Solver.h"
 #include "../Timing.h"
 #include "../Utilities.h"
 
@@ -35,6 +36,8 @@
 #include "../ModelingSystem/ModelingSystemGAMS.h"
 #endif
 
+#include "../NLPSolver/NLPSolverSHOT.h"
+
 namespace SHOT
 {
 
@@ -46,6 +49,17 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(Environment
 
     originalNLPTime = env->settings->getSetting<double>("FixedInteger.Frequency.Time", "Primal");
     originalNLPIter = env->settings->getSetting<int>("FixedInteger.Frequency.Iteration", "Primal");
+
+    if(useReformulatedProblem)
+    {
+        sourceProblem = env->reformulatedProblem;
+        sourceIsReformulatedProblem = true;
+    }
+    else
+    {
+        sourceProblem = env->problem;
+        sourceIsReformulatedProblem = false;
+    }
 
     switch(static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("FixedInteger.Solver", "Primal")))
     {
@@ -85,6 +99,18 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(Environment
         break;
     }
 #endif
+
+    case(ES_PrimalNLPSolver::SHOT):
+    {
+        // Always use the reformulated problem with SHOT
+        sourceProblem = env->reformulatedProblem;
+
+        env->results->usedPrimalNLPSolver = ES_PrimalNLPSolver::SHOT;
+        NLPSolver = std::make_shared<NLPSolverSHOT>(env, sourceProblem);
+        sourceIsReformulatedProblem = true;
+
+        break;
+    }
 
     default:
         // We should never get here since there is a check in Solver.cpp that makes sure that the correct solver is used
@@ -456,6 +482,53 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
                 && sourceProblem->properties.numberOfDiscreteVariables > 0)
                 createIntegerCut(CAND.point);
         }
+        if(static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("FixedInteger.Solver", "Primal"))
+            == ES_PrimalNLPSolver::SHOT)
+        {
+            auto SHOTSolver = std::dynamic_pointer_cast<NLPSolverSHOT>(NLPSolver);
+            int numHyperplanesToCopy = env->settings->getSetting<int>("FixedInteger.CopyNumberOfHyperplanes", "Primal");
+            int hyperplaneCounter = 0;
+
+            for(auto it = SHOTSolver->solver->getEnvironment()->dualSolver->generatedHyperplanes.rbegin();
+                it != SHOTSolver->solver->getEnvironment()->dualSolver->generatedHyperplanes.rend(); ++it)
+            {
+                auto HP = *it;
+
+                if(hyperplaneCounter >= numHyperplanesToCopy)
+                    break;
+
+                Hyperplane newHP;
+
+                if(HP.source == E_HyperplaneSource::ObjectiveCuttingPlane
+                    || HP.source == E_HyperplaneSource::ObjectiveRootsearch)
+                {
+                    newHP.isObjectiveHyperplane = true;
+                    newHP.sourceConstraintIndex = -1;
+                    newHP.source = HP.source;
+                }
+                else if(auto NCV = env->reformulatedProblem->getMostDeviatingNonlinearConstraint(HP.generatedPoint);
+                        NCV)
+                {
+                    newHP.sourceConstraintIndex = NCV->constraint->index;
+                    newHP.sourceConstraint = NCV->constraint;
+                    newHP.source = HP.source;
+                }
+                else
+                {
+                    continue;
+                }
+
+                newHP.generatedPoint = HP.generatedPoint;
+                newHP.isSourceConvex = HP.isSourceConvex;
+                newHP.objectiveFunctionValue
+                    = env->reformulatedProblem->objectiveFunction->calculateValue(newHP.generatedPoint);
+
+                env->dualSolver->addHyperplane(newHP);
+                hyperplaneCounter++;
+            }
+
+            SHOTSolver->solver->getEnvironment()->dualSolver->generatedHyperplanes.clear();
+        }
 
         env->solutionStatistics.numberOfIterationsWithoutNLPCallMIP = 0;
         env->solutionStatistics.timeLastFixedNLPCall = env->timing->getElapsedTime("Total");
@@ -491,6 +564,12 @@ void TaskSelectPrimalCandidatesFromNLP::createInfeasibilityCut(const VectorDoubl
         if(env->reformulatedProblem->auxiliaryObjectiveVariable)
         {
             tmpSolPt.point.push_back(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(variableSolution));
+        }
+
+        if(env->reformulatedProblem->antiEpigraphObjectiveVariable)
+        {
+            tmpSolPt.point.at(env->reformulatedProblem->antiEpigraphObjectiveVariable->index)
+                = env->reformulatedProblem->objectiveFunction->calculateValue(tmpSolPt.point);
         }
     }
 

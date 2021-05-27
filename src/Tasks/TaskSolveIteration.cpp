@@ -42,7 +42,10 @@ TaskSolveIteration::~TaskSolveIteration() = default;
 void TaskSolveIteration::run()
 {
     if(!env->report->firstIterationHeaderPrinted)
+    {
+        env->report->outputPreReport();
         env->report->outputIterationDetailHeader();
+    }
 
     env->timing->startTimer("DualStrategy");
     auto currIter = env->results->getCurrentIteration();
@@ -166,9 +169,15 @@ void TaskSolveIteration::run()
             Utilities::saveVariablePointVectorToFile(sols.at(0).point, variableNames, ss.str());
         }
 
-        currIter->solutionPoints = sols;
-
         currIter->objectiveValue = env->dualSolver->MIPSolver->getObjectiveValue();
+
+        if(env->reformulatedProblem->antiEpigraphObjectiveVariable)
+        {
+            for(auto& SOL : sols)
+                SOL.point.at(env->reformulatedProblem->antiEpigraphObjectiveVariable->index) = currIter->objectiveValue;
+        }
+
+        currIter->solutionPoints = sols;
 
         if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
         {
@@ -281,8 +290,8 @@ void TaskSolveIteration::run()
     }
     else if(currIter->isDualProblemDiscrete
         && (currIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit
-               || currIter->solutionStatus == E_ProblemSolutionStatus::TimeLimit
-               || currIter->solutionStatus == E_ProblemSolutionStatus::NodeLimit))
+            || currIter->solutionStatus == E_ProblemSolutionStatus::TimeLimit
+            || currIter->solutionStatus == E_ProblemSolutionStatus::NodeLimit))
     {
 
         if(env->reformulatedProblem->properties.isMIQPProblem)

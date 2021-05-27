@@ -12,7 +12,6 @@
 
 #include "../TaskHandler.h"
 
-#include "../Tasks/TaskAddIntegerCuts.h"
 #include "../Tasks/TaskFindInteriorPoint.h"
 #include "../Tasks/TaskBase.h"
 #include "../Tasks/TaskSequential.h"
@@ -59,7 +58,6 @@
 #include "../Tasks/TaskUpdateInteriorPoint.h"
 
 #include "../Tasks/TaskSelectHyperplanePointsObjectiveFunction.h"
-#include "../Tasks/TaskSolveFixedDualProblem.h"
 
 #include "../Tasks/TaskAddIntegerCuts.h"
 
@@ -76,16 +74,16 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr)
 {
     env = envPtr;
 
-    env->timing->createTimer("InteriorPointSearch", " - interior point search");
+    env->timing->createTimer("InteriorPointSearch", "- interior point search");
 
-    env->timing->createTimer("DualStrategy", " - dual strategy");
-    env->timing->createTimer("DualProblemsRelaxed", "   - solving relaxed problems");
-    env->timing->createTimer("DualProblemsDiscrete", "   - solving MIP problems");
-    env->timing->createTimer("DualCutGenerationRootSearch", "   - root search for constraint cuts");
-    env->timing->createTimer("DualObjectiveRootSearch", "   - root search for objective cut");
+    env->timing->createTimer("DualStrategy", "- dual strategy");
+    env->timing->createTimer("DualProblemsRelaxed", "  - solving relaxed problems");
+    env->timing->createTimer("DualProblemsDiscrete", "  - solving MIP problems");
+    env->timing->createTimer("DualCutGenerationRootSearch", "  - root search for constraint cuts");
+    env->timing->createTimer("DualObjectiveRootSearch", "  - root search for objective cut");
 
-    env->timing->createTimer("PrimalStrategy", " - primal strategy");
-    env->timing->createTimer("PrimalBoundStrategyRootSearch", "   - performing root searches");
+    env->timing->createTimer("PrimalStrategy", "- primal strategy");
+    env->timing->createTimer("PrimalBoundStrategyRootSearch", "  - performing root searches");
 
     auto tFinalizeSolution = std::make_shared<TaskSequential>(env);
 
@@ -166,8 +164,12 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr)
     auto tCheckPrimalStag = std::make_shared<TaskCheckPrimalStagnation>(env, "AddObjectiveCut", "CheckDualStag");
     env->tasks->addTask(tCheckPrimalStag, "CheckPrimalStag");
 
-    auto tAddObjectiveCut = std::make_shared<TaskAddPrimalReductionCut>(env, "CheckDualStag", "CheckDualStag");
-    env->tasks->addTask(tAddObjectiveCut, "AddObjectiveCut");
+    if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex
+        && env->settings->getSetting<bool>("ReductionCut.Use", "Dual"))
+    {
+        auto tAddObjectiveCut = std::make_shared<TaskAddPrimalReductionCut>(env, "CheckDualStag", "CheckDualStag");
+        env->tasks->addTask(tAddObjectiveCut, "AddObjectiveCut");
+    }
 
     auto tCheckDualStag = std::make_shared<TaskCheckDualStagnation>(env, "FinalizeSolution");
     env->tasks->addTask(tCheckDualStag, "CheckDualStag");
@@ -206,7 +208,8 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr)
 
     env->tasks->addTask(tFinalizeSolution, "FinalizeSolution");
 
-    if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex)
+    if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex
+        && env->settings->getSetting<bool>("ReductionCut.Use", "Dual"))
     {
         auto tAddObjectiveCutFinal = std::make_shared<TaskAddPrimalReductionCut>(env, "InitIter2", "Terminate");
         std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tAddObjectiveCutFinal);
@@ -246,5 +249,5 @@ bool SolutionStrategyNLP::solveProblem()
     return (true);
 }
 
-void SolutionStrategyNLP::initializeStrategy() {}
+void SolutionStrategyNLP::initializeStrategy() { }
 } // namespace SHOT

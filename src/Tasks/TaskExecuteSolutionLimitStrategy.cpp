@@ -88,7 +88,7 @@ void TaskExecuteSolutionLimitStrategy::run()
             env->dualSolver->MIPSolver->setSolutionLimit(2100000000);
             temporaryOptLimitUsed = true;
             currIter->MIPSolutionLimitUpdated = true;
-            env->output->outputCritical(
+            env->output->outputDebug(
                 "        Forced optimal iteration since too long time since last dual bound update");
 
             env->timing->stopTimer("DualStrategy");

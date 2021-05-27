@@ -629,8 +629,27 @@ void NonlinearObjectiveFunction::add(NonlinearExpressionPtr expression)
     if(nonlinearExpression)
     {
         NonlinearExpressions terms;
-        terms.push_back(nonlinearExpression);
-        terms.push_back(expression);
+
+        if(nonlinearExpression->getType() == E_NonlinearExpressionTypes::Sum)
+        {
+            for(auto& TERM : std::dynamic_pointer_cast<ExpressionSum>(nonlinearExpression)->children)
+                terms.add(TERM);
+        }
+        else
+        {
+            terms.push_back(nonlinearExpression);
+        }
+
+        if(expression->getType() == E_NonlinearExpressionTypes::Sum)
+        {
+            for(auto& TERM : std::dynamic_pointer_cast<ExpressionSum>(expression)->children)
+                terms.add(TERM);
+        }
+        else
+        {
+            terms.push_back(expression);
+        }
+
         nonlinearExpression = std::make_shared<ExpressionSum>(std::move(terms));
     }
     else
@@ -1146,12 +1165,6 @@ std::ostream& NonlinearObjectiveFunction::print(std::ostream& stream) const
 
     if(nonlinearExpression != nullptr)
         stream << " +(" << nonlinearExpression << ')';
-
-    if(constant > 0)
-        stream << '+' << constant;
-
-    if(constant < 0)
-        stream << constant;
 
     return stream;
 }

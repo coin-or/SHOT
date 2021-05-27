@@ -12,7 +12,6 @@
 
 #include "../TaskHandler.h"
 
-#include "../Tasks/TaskAddIntegerCuts.h"
 #include "../Tasks/TaskFindInteriorPoint.h"
 #include "../Tasks/TaskBase.h"
 #include "../Tasks/TaskSequential.h"
@@ -59,9 +58,6 @@
 #include "../Tasks/TaskClearFixedPrimalCandidates.h"
 
 #include "../Tasks/TaskSelectHyperplanePointsObjectiveFunction.h"
-#include "../Tasks/TaskSolveFixedDualProblem.h"
-
-#include "../Tasks/TaskAddIntegerCuts.h"
 
 #include "../Output.h"
 #include "../Settings.h"
@@ -74,13 +70,13 @@ SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(EnvironmentPtr envPtr)
 {
     env = envPtr;
 
-    env->timing->createTimer("InteriorPointSearch", " - interior point search");
+    env->timing->createTimer("InteriorPointSearch", "- interior point search");
 
-    env->timing->createTimer("DualStrategy", " - dual strategy");
-    env->timing->createTimer("DualProblemsDiscrete", "   - solving MIP problems");
+    env->timing->createTimer("DualStrategy", "- dual strategy");
+    env->timing->createTimer("DualProblemsDiscrete", "  - solving MIP problems");
 
-    env->timing->createTimer("PrimalStrategy", " - primal strategy");
-    env->timing->createTimer("PrimalBoundStrategyNLP", "   - solving NLP problems");
+    env->timing->createTimer("PrimalStrategy", "- primal strategy");
+    env->timing->createTimer("PrimalBoundStrategyNLP", "  - solving NLP problems");
 
     auto tFinalizeSolution = std::make_shared<TaskSequential>(env);
 
@@ -196,5 +192,5 @@ bool SolutionStrategyMIQCQP::solveProblem()
     return (true);
 }
 
-void SolutionStrategyMIQCQP::initializeStrategy() {}
+void SolutionStrategyMIQCQP::initializeStrategy() { }
 } // namespace SHOT

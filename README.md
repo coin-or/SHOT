@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/coin-or/SHOT.svg?branch=master)](https://travis-ci.org/coin-or/SHOT) 
+![CMake](https://github.com/coin-or/SHOT/workflows/CMake/badge.svg)
 [![License](https://img.shields.io/badge/License-EPL%202.0-red.svg)](https://opensource.org/licenses/EPL-1.0)
 
 
@@ -11,6 +12,7 @@ Originally SHOT was intended for convex MINLP problems only, but as of version 1
 **SHOT can be used**
 - as a console application,
 - from [GAMS](https://www.gams.com),
+- on the [NEOS Server](https://neos-server.org/neos/solvers/minco:SHOT/GAMS.html),
 - from any modeling system that can use ASL, such as
   - [Pyomo/Python](https://www.pyomo.org), 
   - [JuMP/Julia](https://github.com/JuliaOpt/AmplNLWriter.jl), and 
@@ -57,6 +59,6 @@ Convex MINLP Solver Utilizing a Single Branching Tree Approach* (2018). http://w
 
 **The features for solving nonconvex MINLP problems are described in the papers:**
 
-Lundell, A. and Kronqvist, J., *Polyhedral Approximation Strategies in Nonconvex Mixed-Integer Nonlinear Programming*. Optimization Online (2020). http://www.optimization-online.org/DB_HTML/2020/03/7691.html
+Lundell, A. and Kronqvist, J., *Polyhedral approximation strategies for nonconvex mixed-integer nonlinear programming in SHOT*. Journal of Global Optimization (2021). https://doi.org/10.1007/s10898-021-01006-1
 
 Lundell, A. and Kronqvist, J. *On Solving Nonconvex MINLP Problems with SHOT* (2019). In: Le Thi H., Le H., Pham Dinh T. (editors) Optimization of Complex Systems: Theory, Models, Algorithms and Applications. WCGO 2019. Advances in Intelligent Systems and Computing, vol 991. Springer, Cham.

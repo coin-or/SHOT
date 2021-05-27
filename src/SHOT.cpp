@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
     cmdl.parse(argc, argv);
 
     std::string filename;
-    fs::filesystem::path resultFile, optionsFile, traceFile, logFile, solFile;
+    fs::filesystem::path resultFile, optionsFile, traceFile, logFile, solFile, gdxFile;
 
     // Read or create the file for the log
     if(cmdl("--log")) // Have specified a log-file
@@ -131,9 +131,16 @@ int main(int argc, char* argv[])
 #ifdef HAS_GUROBI
         env->output->outputCritical("   --mip=gurobi             Sets the MIP solver to Gurobi");
 #endif
-#ifdef HAS_GAMS
-        env->output->outputCritical("   --nlp={ipopt, gams}      Sets the NLP solver to use");
+#ifdef HAS_IPOPT
+        env->output->outputCritical("   --nlp=ipopt              Sets the primal NLP solver to Ipopt");
 #endif
+
+#ifdef HAS_GAMS
+        env->output->outputCritical("   --nlp=gams               Use primal NLP solver from GAMS");
+#endif
+
+        env->output->outputCritical("   --nlp=shot               Use SHOT as primal NLP solver");
+
 #ifdef HAS_CPLEX
         env->output->outputCritical("   --tree={single, multi}   Activates single- or multi-tree strategy");
 #elif HAS_GUROBI
@@ -408,6 +415,8 @@ int main(int argc, char* argv[])
         if(argValue == "ipopt")
             solver.updateSetting("FixedInteger.Solver", "Primal", static_cast<int>(ES_PrimalNLPSolver::Ipopt));
 #endif
+        if(argValue == "shot")
+            solver.updateSetting("FixedInteger.Solver", "Primal", static_cast<int>(ES_PrimalNLPSolver::SHOT));
     }
 
     if(cmdl("--tree") >> argValue)
@@ -672,6 +681,13 @@ int main(int argc, char* argv[])
             / fs::filesystem::path(solFilename);
     }
 
+    std::string gdxFilename;
+    if(gdxFilename = env->settings->getSetting<std::string>("GAMS.AlternateSolutionsFile", "Output");
+        gdxFilename != "") // Have specified an gdx-file location
+    {
+        gdxFile = fs::filesystem::absolute(gdxFilename).string();
+    }
+
     env->report->outputProblemInstanceReport();
     env->report->outputOptionsReport();
 
@@ -680,6 +696,7 @@ int main(int argc, char* argv[])
         return (0);
     }
 
+    solver.finalizeSolution();
     env->report->outputSolutionReport();
 
 #ifdef SIMPLE_OUTPUT_CHARS
@@ -712,6 +729,9 @@ int main(int argc, char* argv[])
         else
             env->output->outputInfo(" Results written to: " + resultFile.string());
     }
+
+    if(gdxFilename != "")
+        env->output->outputInfo("                     " + gdxFile.string());
 
     if(cmdl["--trc"] || cmdl("--trc"))
     {

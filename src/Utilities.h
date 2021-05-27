@@ -111,8 +111,10 @@ template <typename T> double calculateHash(std::vector<T> const& point);
 
 bool isAlmostEqual(double x, double y, const double epsilon);
 
+bool isAlmostZero(double x);
+
 bool isInteger(double value);
-std::string trim(const std::string& str);
+std::string trim(std::string& str);
 
 SparseVariableVector combineSparseVariableVectors(
     const SparseVariableVector& first, const SparseVariableVector& second);
