@@ -1531,8 +1531,6 @@ void Solver::initializeSettings()
 
     env->settings->createSetting("ResultPath", "Output", empty, "The path where to save the result information", true);
 
-    // Need to create the modeling systems temporary to get their settings
-
     ModelingSystemOSiL::augmentSettings(env->settings);
 
 #ifdef HAS_AMPL
