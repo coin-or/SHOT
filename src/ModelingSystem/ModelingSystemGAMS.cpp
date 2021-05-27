@@ -82,25 +82,24 @@ void ModelingSystemGAMS::augmentSettings([[maybe_unused]] SettingsPtr settings)
 {
     // Subsolver settings: GAMS NLP
 
-    env->settings->createSettingGroup("Subsolver", "GAMS", "GAMS", "Settings for the GAMS NLP solvers.");
+    settings->createSettingGroup("Subsolver", "GAMS", "GAMS", "Settings for the GAMS NLP solvers.");
 
     std::string optfile = "";
-    env->settings->createSetting(
+    settings->createSetting(
         "GAMS.NLP.OptionsFilename", "Subsolver", optfile, "Options file for the NLP solver in GAMS");
 
     std::string solver = "auto";
-    env->settings->createSetting(
-        "GAMS.NLP.Solver", "Subsolver", solver, "NLP solver to use in GAMS (auto: SHOT chooses)");
+    settings->createSetting("GAMS.NLP.Solver", "Subsolver", solver, "NLP solver to use in GAMS (auto: SHOT chooses)");
 
 #if GMOAPIVERSION >= 21
-    env->settings->createSettingGroup(
+    settings->createSettingGroup(
         "ModelingSystem", "GAMS", "GAMS interface", "These settings control functionality used in the GAMS interface.");
 
     VectorString enumQExtractAlg;
     enumQExtractAlg.push_back("automatic");
     enumQExtractAlg.push_back("threepass");
     enumQExtractAlg.push_back("doubleforward");
-    env->settings->createSetting("GAMS.QExtractAlg", "ModelingSystem", 0,
+    settings->createSetting("GAMS.QExtractAlg", "ModelingSystem", 0,
         "Extraction algorithm for quadratic equations in GAMS interface", enumQExtractAlg);
 #endif
 }

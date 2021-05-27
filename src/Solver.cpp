@@ -1486,23 +1486,15 @@ void Solver::initializeSettings()
     env->settings->createSetting("ResultPath", "Output", empty, "The path where to save the result information", true);
 
     // Need to create the modeling systems temporary to get their settings
-    {
-        auto modelingSystem = std::make_shared<ModelingSystemOSiL>(env);
-        modelingSystem->augmentSettings(env->settings);
-    }
+
+    ModelingSystemOSiL::augmentSettings(env->settings);
 
 #ifdef HAS_AMPL
-    {
-        auto modelingSystem = std::make_shared<ModelingSystemAMPL>(env);
-        modelingSystem->augmentSettings(env->settings);
-    }
+    ModelingSystemAMPL::augmentSettings(env->settings);
 #endif
 
 #ifdef HAS_GAMS
-    {
-        auto modelingSystem = std::make_shared<ModelingSystemGAMS>(env);
-        modelingSystem->augmentSettings(env->settings);
-    }
+    ModelingSystemGAMS::augmentSettings(env->settings);
 #endif
 
     env->settings->settingsInitialized = true;
