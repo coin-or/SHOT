@@ -1706,7 +1706,8 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
         }
     }
 
-    if(partitionStrategy == ES_PartitionNonlinearSums::Always && quadraticSumConvex
+    if(env->settings->getSetting<bool>("Reformulation.Quadratics.UseEigenValueDecomposition", "Model")
+        && partitionStrategy <= ES_PartitionNonlinearSums::IfConvex && quadraticSumConvex
         && !quadraticTerms.allSquares) // Use the eigenvalue decomposition reformulation
     {
         auto linearTerms = doEigenvalueDecomposition(quadraticTerms);
