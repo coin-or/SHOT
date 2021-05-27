@@ -343,115 +343,118 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
                     }
                 }
 
-                assert(epigraphConstraint && epigraphConstraintTerm);
-
-                double epigraphFactor = -originalObjectiveCoefficient / epigraphConstraintTerm->coefficient;
-
-                ObjectiveFunctionPtr destinationObjective;
-
-                if(std::dynamic_pointer_cast<QuadraticConstraint>(epigraphConstraint))
+                if(epigraphConstraint && epigraphConstraintTerm)
                 {
-                    destinationObjective = std::make_shared<QuadraticObjectiveFunction>();
-                }
-                else
-                {
-                    destinationObjective = std::make_shared<NonlinearObjectiveFunction>();
-                }
+                    double epigraphFactor = -originalObjectiveCoefficient / epigraphConstraintTerm->coefficient;
 
-                for(auto& QT : std::dynamic_pointer_cast<QuadraticConstraint>(epigraphConstraint)->quadraticTerms)
-                {
-                    std::dynamic_pointer_cast<QuadraticObjectiveFunction>(destinationObjective)
-                        ->add(std::make_shared<QuadraticTerm>(
-                            epigraphFactor * QT->coefficient, QT->firstVariable, QT->secondVariable));
-                }
+                    ObjectiveFunctionPtr destinationObjective;
 
-                if(std::dynamic_pointer_cast<NonlinearConstraint>(epigraphConstraint))
-                {
-                    for(auto& MT : std::dynamic_pointer_cast<NonlinearConstraint>(epigraphConstraint)->monomialTerms)
+                    if(std::dynamic_pointer_cast<NonlinearConstraint>(epigraphConstraint))
                     {
-                        Variables variables;
-
-                        for(auto& V : MT->variables)
-                            variables.push_back(V);
-
-                        std::dynamic_pointer_cast<NonlinearObjectiveFunction>(destinationObjective)
-                            ->add(std::make_shared<MonomialTerm>(epigraphFactor * MT->coefficient, variables));
+                        destinationObjective = std::make_shared<NonlinearObjectiveFunction>();
+                    }
+                    else
+                    {
+                        destinationObjective = std::make_shared<QuadraticObjectiveFunction>();
                     }
 
-                    for(auto& ST : std::dynamic_pointer_cast<NonlinearConstraint>(epigraphConstraint)->signomialTerms)
+                    for(auto& QT : std::dynamic_pointer_cast<QuadraticConstraint>(epigraphConstraint)->quadraticTerms)
                     {
-                        SignomialElements elements;
-
-                        for(auto& E : ST->elements)
-                            elements.push_back(std::make_shared<SignomialElement>(E->variable, E->power));
-
-                        std::dynamic_pointer_cast<NonlinearObjectiveFunction>(destinationObjective)
-                            ->add(std::make_shared<SignomialTerm>(epigraphFactor * ST->coefficient, elements));
+                        std::dynamic_pointer_cast<QuadraticObjectiveFunction>(destinationObjective)
+                            ->add(std::make_shared<QuadraticTerm>(
+                                epigraphFactor * QT->coefficient, QT->firstVariable, QT->secondVariable));
                     }
 
-                    if(std::dynamic_pointer_cast<NonlinearConstraint>(epigraphConstraint)->nonlinearExpression)
+                    if(std::dynamic_pointer_cast<NonlinearConstraint>(epigraphConstraint))
                     {
-                        std::dynamic_pointer_cast<NonlinearObjectiveFunction>(destinationObjective)
-                            ->add(simplify(std::make_shared<ExpressionProduct>(
-                                std::make_shared<ExpressionConstant>(epigraphFactor),
-                                copyNonlinearExpression(
-                                    std::dynamic_pointer_cast<NonlinearConstraint>(epigraphConstraint)
-                                        ->nonlinearExpression.get(),
-                                    reformulatedProblem))));
-                    }
-                }
+                        for(auto& MT :
+                            std::dynamic_pointer_cast<NonlinearConstraint>(epigraphConstraint)->monomialTerms)
+                        {
+                            Variables variables;
 
-                for(auto& LT : std::dynamic_pointer_cast<LinearConstraint>(epigraphConstraint)->linearTerms)
-                {
-                    if(auto variable = LT->variable; variable != epigraphConstraintTerm->variable)
+                            for(auto& V : MT->variables)
+                                variables.push_back(V);
+
+                            std::dynamic_pointer_cast<NonlinearObjectiveFunction>(destinationObjective)
+                                ->add(std::make_shared<MonomialTerm>(epigraphFactor * MT->coefficient, variables));
+                        }
+
+                        for(auto& ST :
+                            std::dynamic_pointer_cast<NonlinearConstraint>(epigraphConstraint)->signomialTerms)
+                        {
+                            SignomialElements elements;
+
+                            for(auto& E : ST->elements)
+                                elements.push_back(std::make_shared<SignomialElement>(E->variable, E->power));
+
+                            std::dynamic_pointer_cast<NonlinearObjectiveFunction>(destinationObjective)
+                                ->add(std::make_shared<SignomialTerm>(epigraphFactor * ST->coefficient, elements));
+                        }
+
+                        if(std::dynamic_pointer_cast<NonlinearConstraint>(epigraphConstraint)->nonlinearExpression)
+                        {
+                            std::dynamic_pointer_cast<NonlinearObjectiveFunction>(destinationObjective)
+                                ->add(simplify(std::make_shared<ExpressionProduct>(
+                                    std::make_shared<ExpressionConstant>(epigraphFactor),
+                                    copyNonlinearExpression(
+                                        std::dynamic_pointer_cast<NonlinearConstraint>(epigraphConstraint)
+                                            ->nonlinearExpression.get(),
+                                        reformulatedProblem))));
+                        }
+                    }
+
+                    for(auto& LT : std::dynamic_pointer_cast<LinearConstraint>(epigraphConstraint)->linearTerms)
                     {
-                        std::dynamic_pointer_cast<LinearObjectiveFunction>(destinationObjective)
-                            ->add(std::make_shared<LinearTerm>(epigraphFactor * LT->coefficient, variable));
+                        if(auto variable = LT->variable; variable != epigraphConstraintTerm->variable)
+                        {
+                            std::dynamic_pointer_cast<LinearObjectiveFunction>(destinationObjective)
+                                ->add(std::make_shared<LinearTerm>(epigraphFactor * LT->coefficient, variable));
+                        }
                     }
+
+                    destinationObjective->ownerProblem = reformulatedProblem;
+                    destinationObjective->direction = sourceObjective->direction;
+
+                    destinationObjective->constant = env->problem->objectiveFunction->constant
+                        + epigraphFactor
+                            * (std::dynamic_pointer_cast<LinearConstraint>(epigraphConstraint)->constant
+                                - std::dynamic_pointer_cast<LinearConstraint>(epigraphConstraint)->valueRHS);
+
+                    // Remove constraint
+                    if(std::dynamic_pointer_cast<QuadraticConstraint>(epigraphConstraint))
+                    {
+                        reformulatedProblem->quadraticConstraints.erase(
+                            std::remove(reformulatedProblem->quadraticConstraints.begin(),
+                                reformulatedProblem->quadraticConstraints.end(),
+                                std::dynamic_pointer_cast<QuadraticConstraint>(epigraphConstraint)),
+                            reformulatedProblem->quadraticConstraints.end());
+
+                        reformulatedProblem->numericConstraints.erase(
+                            std::remove(reformulatedProblem->numericConstraints.begin(),
+                                reformulatedProblem->numericConstraints.end(), epigraphConstraint),
+                            reformulatedProblem->numericConstraints.end());
+                    }
+
+                    if(std::dynamic_pointer_cast<NonlinearConstraint>(epigraphConstraint))
+                    {
+                        reformulatedProblem->nonlinearConstraints.erase(
+                            std::remove(reformulatedProblem->nonlinearConstraints.begin(),
+                                reformulatedProblem->nonlinearConstraints.end(),
+                                std::dynamic_pointer_cast<NonlinearConstraint>(epigraphConstraint)),
+                            reformulatedProblem->nonlinearConstraints.end());
+
+                        reformulatedProblem->numericConstraints.erase(
+                            std::remove(reformulatedProblem->numericConstraints.begin(),
+                                reformulatedProblem->numericConstraints.end(), epigraphConstraint),
+                            reformulatedProblem->numericConstraints.end());
+                    }
+
+                    reformulatedProblem->antiEpigraphObjectiveVariable = epigraphConstraintTerm->variable;
+
+                    reformulatedProblem->add(std::move(destinationObjective));
+
+                    return;
                 }
-
-                destinationObjective->ownerProblem = reformulatedProblem;
-                destinationObjective->direction = sourceObjective->direction;
-
-                destinationObjective->constant = env->problem->objectiveFunction->constant
-                    + epigraphFactor
-                        * (std::dynamic_pointer_cast<LinearConstraint>(epigraphConstraint)->constant
-                            - std::dynamic_pointer_cast<LinearConstraint>(epigraphConstraint)->valueRHS);
-
-                // Remove constraint
-                if(std::dynamic_pointer_cast<QuadraticConstraint>(epigraphConstraint))
-                {
-                    reformulatedProblem->quadraticConstraints.erase(
-                        std::remove(reformulatedProblem->quadraticConstraints.begin(),
-                            reformulatedProblem->quadraticConstraints.end(),
-                            std::dynamic_pointer_cast<QuadraticConstraint>(epigraphConstraint)),
-                        reformulatedProblem->quadraticConstraints.end());
-
-                    reformulatedProblem->numericConstraints.erase(
-                        std::remove(reformulatedProblem->numericConstraints.begin(),
-                            reformulatedProblem->numericConstraints.end(), epigraphConstraint),
-                        reformulatedProblem->numericConstraints.end());
-                }
-
-                if(std::dynamic_pointer_cast<NonlinearConstraint>(epigraphConstraint))
-                {
-                    reformulatedProblem->nonlinearConstraints.erase(
-                        std::remove(reformulatedProblem->nonlinearConstraints.begin(),
-                            reformulatedProblem->nonlinearConstraints.end(),
-                            std::dynamic_pointer_cast<NonlinearConstraint>(epigraphConstraint)),
-                        reformulatedProblem->nonlinearConstraints.end());
-
-                    reformulatedProblem->numericConstraints.erase(
-                        std::remove(reformulatedProblem->numericConstraints.begin(),
-                            reformulatedProblem->numericConstraints.end(), epigraphConstraint),
-                        reformulatedProblem->numericConstraints.end());
-                }
-
-                reformulatedProblem->antiEpigraphObjectiveVariable = epigraphConstraintTerm->variable;
-
-                reformulatedProblem->add(std::move(destinationObjective));
-
-                return;
             }
         }
 
@@ -1703,7 +1706,8 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
         }
     }
 
-    if(partitionStrategy == ES_PartitionNonlinearSums::Always && quadraticSumConvex
+    if(env->settings->getSetting<bool>("Reformulation.Quadratics.UseEigenValueDecomposition", "Model")
+        && partitionStrategy <= ES_PartitionNonlinearSums::IfConvex && quadraticSumConvex
         && !quadraticTerms.allSquares) // Use the eigenvalue decomposition reformulation
     {
         auto linearTerms = doEigenvalueDecomposition(quadraticTerms);

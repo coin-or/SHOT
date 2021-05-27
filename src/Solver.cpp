@@ -1059,6 +1059,9 @@ void Solver::initializeSettings()
         "How to treat quadratic functions", enumQPStrategy, 0);
     enumQPStrategy.clear();
 
+    env->settings->createSetting("Reformulation.Quadratics.UseEigenValueDecomposition", "Model", true,
+        "Whether to use the eigen value decomposition of convex quadratic functions");
+
     // Modeling system settings
 
     env->settings->createSettingGroup("ModelingSystem", "", "Modeling system",
