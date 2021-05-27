@@ -37,20 +37,20 @@ void IpoptJournal::PrintImpl(Ipopt::EJournalCategory category, Ipopt::EJournalLe
     case J_ITERSUMMARY:
     case J_DETAILED:
 
-        for(auto const line : lines)
+        for(auto const& line : lines)
             env->output->outputInfo(fmt::format("      | {} ", line));
 
         break;
 
     case J_MOREDETAILED:
 
-        for(auto const line : lines)
+        for(auto const& line : lines)
             env->output->outputDebug(fmt::format("      | {} ", line));
 
         break;
 
     default:
-        for(auto const line : lines)
+        for(auto const& line : lines)
             env->output->outputTrace(fmt::format("      | {} ", line));
 
         break;

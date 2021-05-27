@@ -242,7 +242,16 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem)
     gmoMinfSet(modelingObject, SHOT_DBL_MIN);
     gmoPinfSet(modelingObject, SHOT_DBL_MAX);
     gmoIndexBaseSet(modelingObject, 0);
+
+#if GMOAPIVERSION >= 21
+    gmoQExtractAlgSet(modelingObject, env->settings->getSetting<int>("GAMS.QExtractAlg", "ModelingSystem"));
+    gevTimeDiff(modelingEnvironment);
+#endif
     gmoUseQSet(modelingObject, 1);
+#if GMOAPIVERSION >= 21
+    env->output->outputInfo(
+        std::string(" Time to extract information on quadratics: ") + std::to_string(gevTimeDiff(modelingEnvironment)));
+#endif
 
     try
     {
@@ -318,18 +327,18 @@ void ModelingSystemGAMS::createModelFromProblemFile(const std::string& filename)
 
     createdtmpdir = true;
 
-    /* create empty convertd options file */
-    std::ofstream convertdopt((fs::filesystem::path(tmpdirname) / "convertd.opt").string(), std::ios::out);
+    /* create empty convert options file */
+    std::ofstream convertopt((fs::filesystem::path(tmpdirname) / "convert.opt").string(), std::ios::out);
 
-    if(!convertdopt.good())
+    if(!convertopt.good())
     {
-        throw std::logic_error("Could not create convertd options file.");
+        throw std::logic_error("Could not create convert options file.");
     }
 
-    convertdopt << " " << std::endl;
-    convertdopt.close();
+    convertopt << " " << std::endl;
+    convertopt.close();
 
-    /* call GAMS with convertd solver to get compiled model instance in temporary directory
+    /* call GAMS with convert solver to get compiled model instance in temporary directory
      * we set lo=3 so that we get lo=3 into the gams control file, which is useful for showing the log of GAMS (NLP)
      * solvers later but since we don't want to see the stdout output from gams here, we redirect stdout to /dev/null
      * for this gams call
@@ -341,7 +350,7 @@ void ModelingSystemGAMS::createModelFromProblemFile(const std::string& filename)
     gamscall = "gams";
 #endif
     gamscall += " \"" + filename + "\"";
-    gamscall += " SOLVER=CONVERTD PF4=0 SOLPRINT=0 LIMCOL=0 LIMROW=0 PC=2";
+    gamscall += " SOLVER=CONVERT PF4=0 SOLPRINT=0 LIMCOL=0 LIMROW=0 PC=2";
     gamscall += " SCRDIR=" + tmpdirname;
     gamscall += " OUTPUT=" + (fs::filesystem::path(tmpdirname) / "listing").string();
     gamscall += " OPTFILE=1 OPTDIR=" + tmpdirname;
@@ -439,7 +448,7 @@ void ModelingSystemGAMS::createModelFromProblemFile(const std::string& filename)
 
     createModelFromGAMSModel((fs::filesystem::path(tmpdirname) / "gamscntr.dat").string());
 
-    /* since we ran convert with options file, GMO now stores convertd.opt as options file, which we don't want to use
+    /* since we ran convert with options file, GMO now stores convert.opt as options file, which we don't want to use
      * as a SHOT options file */
     gmoOptFileSet(modelingObject, 0);
 
@@ -1083,13 +1092,21 @@ bool ModelingSystemGAMS::copyQuadraticTerms(ProblemPtr destination)
 
     if(gmoGetObjOrder(modelingObject) == gmoorder_Q)
     {
+#if GMOAPIVERSION <= 19
         int numQuadraticTerms = gmoObjQNZ(modelingObject);
+#else
+        int numQuadraticTerms = gmoObjQMatNZ(modelingObject);
+#endif
 
         int* variableOneIndexes = new int[numQuadraticTerms];
         int* variableTwoIndexes = new int[numQuadraticTerms];
         double* quadraticCoefficients = new double[numQuadraticTerms];
 
+#if GMOAPIVERSION <= 19
         gmoGetObjQ(modelingObject, variableOneIndexes, variableTwoIndexes, quadraticCoefficients);
+#else
+        gmoGetObjQMat(modelingObject, variableOneIndexes, variableTwoIndexes, quadraticCoefficients);
+#endif
 
         for(int j = 0; j < numQuadraticTerms; ++j)
         {
@@ -1134,7 +1151,11 @@ bool ModelingSystemGAMS::copyQuadraticTerms(ProblemPtr destination)
             int* variableTwoIndexes = new int[numQuadraticTerms];
             double* quadraticCoefficients = new double[numQuadraticTerms];
 
+#if GMOAPIVERSION <= 19
             gmoGetRowQ(modelingObject, i, variableOneIndexes, variableTwoIndexes, quadraticCoefficients);
+#else
+            gmoGetRowQMat(modelingObject, i, variableOneIndexes, variableTwoIndexes, quadraticCoefficients);
+#endif
 
             for(int j = 0; j < numQuadraticTerms; ++j)
             {

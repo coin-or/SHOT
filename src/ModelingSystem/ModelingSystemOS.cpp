@@ -43,13 +43,13 @@ namespace fs = std::experimental;
 namespace SHOT
 {
 
-ModelingSystemOS::ModelingSystemOS(EnvironmentPtr envPtr) : IModelingSystem(envPtr) {}
+ModelingSystemOS::ModelingSystemOS(EnvironmentPtr envPtr) : IModelingSystem(envPtr) { }
 
 ModelingSystemOS::~ModelingSystemOS() = default;
 
-void ModelingSystemOS::augmentSettings([[maybe_unused]] SettingsPtr settings) {}
+void ModelingSystemOS::augmentSettings([[maybe_unused]] SettingsPtr settings) { }
 
-void ModelingSystemOS::updateSettings([[maybe_unused]] SettingsPtr settings) {}
+void ModelingSystemOS::updateSettings([[maybe_unused]] SettingsPtr settings) { }
 
 E_ProblemCreationStatus ModelingSystemOS::createProblem(
     ProblemPtr& problem, const std::string& filename, const E_OSInputFileFormat& type)
@@ -141,7 +141,7 @@ E_ProblemCreationStatus ModelingSystemOS::createProblem(ProblemPtr& problem, std
     return (E_ProblemCreationStatus::NormalCompletion);
 }
 
-void ModelingSystemOS::finalizeSolution() {}
+void ModelingSystemOS::finalizeSolution() { }
 
 OSInstance* ModelingSystemOS::readInstanceFromOSiL(const std::string& text)
 {

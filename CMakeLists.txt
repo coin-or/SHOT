@@ -557,6 +557,7 @@ if(HAS_GAMS)
     message("-- GAMS include files will be used from: ${GAMS_DIR}/apifiles/C/api")
     include_directories(SYSTEM "${GAMS_DIR}/apifiles/C/api")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DGAMSDIR=\\\"${GAMS_DIR}\\\"")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DGC_NO_MUTEX")
 endif(HAS_GAMS)
 
 file(

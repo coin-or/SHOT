@@ -1059,6 +1059,11 @@ void Solver::initializeSettings()
         "How to treat quadratic functions", enumQPStrategy, 0);
     enumQPStrategy.clear();
 
+    // Modeling system settings
+
+    env->settings->createSettingGroup("ModelingSystem", "", "Modeling system",
+        "These settings control functionality used in the interfaces to different modeling environments.");
+
     // Logging and output settings
 
     env->settings->createSettingGroup("Output", "", "Solver output",
@@ -1426,21 +1431,6 @@ void Solver::initializeSettings()
 
 #endif
 
-    // Subsolver settings: GAMS NLP
-
-#ifdef HAS_GAMS
-
-    env->settings->createSettingGroup("Subsolver", "GAMS", "GAMS", "Settings for the GAMS NLP solvers.");
-
-    std::string optfile = "";
-    env->settings->createSetting(
-        "GAMS.NLP.OptionsFilename", "Subsolver", optfile, "Options file for the NLP solver in GAMS");
-
-    std::string solver = "auto";
-    env->settings->createSetting(
-        "GAMS.NLP.Solver", "Subsolver", solver, "NLP solver to use in GAMS (auto: SHOT chooses)");
-#endif
-
     // Subsolver settings: Ipopt
 
 #ifdef HAS_IPOPT
@@ -1540,6 +1530,16 @@ void Solver::initializeSettings()
     env->settings->createSetting("OptionsFile", "Input", empty, "The name of the options file used", true);
 
     env->settings->createSetting("ResultPath", "Output", empty, "The path where to save the result information", true);
+
+    ModelingSystemOSiL::augmentSettings(env->settings);
+
+#ifdef HAS_AMPL
+    ModelingSystemAMPL::augmentSettings(env->settings);
+#endif
+
+#ifdef HAS_GAMS
+    ModelingSystemGAMS::augmentSettings(env->settings);
+#endif
 
     env->settings->settingsInitialized = true;
 

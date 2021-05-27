@@ -43,7 +43,7 @@ public:
     void setModelingObject(gmoHandle_t gmo);
 
     // Adds modeling system specific settings
-    void augmentSettings(SettingsPtr settings) override;
+    static void augmentSettings(SettingsPtr settings);
 
     // Get specific settings from modeling system
     void updateSettings(SettingsPtr settings) override;
@@ -100,7 +100,7 @@ private:
     GamsOutputSink() = delete;
 
 public:
-    GamsOutputSink(gevHandle_t gev_) : gev(gev_) {}
+    GamsOutputSink(gevHandle_t gev_) : gev(gev_) { }
 
     void sink_it_(const spdlog::details::log_msg& msg) override
     {
