@@ -31,11 +31,11 @@ enum class E_ProblemCreationStatus
 class IModelingSystem
 {
 public:
-    IModelingSystem(EnvironmentPtr envPtr) : env(envPtr){};
-    virtual ~IModelingSystem()= default;
+    IModelingSystem(EnvironmentPtr envPtr) : env(envPtr) {};
+    virtual ~IModelingSystem() = default;
 
     // Adds modeling system specific settings
-    virtual void augmentSettings(SettingsPtr settings) = 0;
+    static void augmentSettings([[maybe_unused]] SettingsPtr settings) {};
 
     // Get specific settings from modeling system
     virtual void updateSettings(SettingsPtr settings) = 0;
