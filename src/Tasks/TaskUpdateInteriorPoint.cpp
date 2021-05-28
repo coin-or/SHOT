@@ -47,6 +47,9 @@ void TaskUpdateInteriorPoint::run()
         for(auto& VAR : env->reformulatedProblem->auxiliaryVariables)
             tmpPrimalPoint.push_back(VAR->calculate(tmpPrimalPoint));
 
+        if(env->reformulatedProblem->auxiliaryObjectiveVariable)
+            tmpPrimalPoint.push_back(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(tmpPrimalPoint));
+
         tmpIP->point = tmpPrimalPoint;
         assert((int)tmpIP->point.size() == env->reformulatedProblem->properties.numberOfVariables);
 

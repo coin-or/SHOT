@@ -729,27 +729,27 @@ void Report::outputProblemInstanceReport()
     else
     {
         if(env->problem->properties.numberOfNumericConstraints > 0)
-            env->output->outputInfo(fmt::format(" {:35s}{:<21d}{:d}", "Number of constraints:",
+            env->output->outputInfo(fmt::format(" {:35s}{:<21d}{:s}", "Number of constraints:",
                 env->problem->properties.numberOfNumericConstraints
                     - env->problem->properties.numberOfAddedLinearizations,
                 ""));
 
         if(env->problem->properties.numberOfLinearConstraints > 0)
-            env->output->outputInfo(fmt::format(" {:35s}{:<21d}{:d}", " - linear:",
+            env->output->outputInfo(fmt::format(" {:35s}{:<21d}{:s}", " - linear:",
                 env->problem->properties.numberOfLinearConstraints
                     - env->problem->properties.numberOfAddedLinearizations,
                 ""));
 
         if(env->problem->properties.numberOfQuadraticConstraints > 0)
             env->output->outputInfo(fmt::format(
-                " {:35s}{:<21d}{:d}", " - quadratic:", env->problem->properties.numberOfQuadraticConstraints, ""));
+                " {:35s}{:<21d}{:s}", " - quadratic:", env->problem->properties.numberOfQuadraticConstraints, ""));
 
         if(env->problem->properties.numberOfNonlinearConstraints > 0)
             env->output->outputInfo(fmt::format(
-                " {:35s}{:<21d}{:d}", " - nonlinear:", env->problem->properties.numberOfNonlinearConstraints, ""));
+                " {:35s}{:<21d}{:s}", " - nonlinear:", env->problem->properties.numberOfNonlinearConstraints, ""));
 
         if(env->problem->properties.numberOfNonlinearConstraints > 0)
-            env->output->outputInfo(fmt::format(" {:35s}{:<21d}{:d}",
+            env->output->outputInfo(fmt::format(" {:35s}{:<21d}{:s}",
                 " - added linearizations:", env->problem->properties.numberOfAddedLinearizations, ""));
     }
 
@@ -795,22 +795,22 @@ void Report::outputProblemInstanceReport()
     {
         if(env->problem->properties.numberOfVariables > 0)
             env->output->outputInfo(fmt::format(
-                " {:35s}{:<21d}{:d}", "Number of variables:", env->problem->properties.numberOfVariables, ""));
+                " {:35s}{:<21d}{:s}", "Number of variables:", env->problem->properties.numberOfVariables, ""));
 
         if(env->problem->properties.numberOfRealVariables > 0)
             env->output->outputInfo(
-                fmt::format(" {:35s}{:<21d}{:d}", " - real:", env->problem->properties.numberOfRealVariables, ""));
+                fmt::format(" {:35s}{:<21d}{:s}", " - real:", env->problem->properties.numberOfRealVariables, ""));
 
         if(env->problem->properties.numberOfBinaryVariables > 0)
             env->output->outputInfo(
-                fmt::format(" {:35s}{:<21d}{:d}", " - binary:", env->problem->properties.numberOfBinaryVariables, ""));
+                fmt::format(" {:35s}{:<21d}{:s}", " - binary:", env->problem->properties.numberOfBinaryVariables, ""));
 
         if(env->problem->properties.numberOfIntegerVariables > 0)
             env->output->outputInfo(fmt::format(
-                " {:35s}{:<21d}{:d}", " - integer:", env->problem->properties.numberOfIntegerVariables, ""));
+                " {:35s}{:<21d}{:s}", " - integer:", env->problem->properties.numberOfIntegerVariables, ""));
 
         if(env->problem->properties.numberOfSemicontinuousVariables > 0)
-            env->output->outputInfo(fmt::format(" {:35s}{:<21d}{:d}",
+            env->output->outputInfo(fmt::format(" {:35s}{:<21d}{:s}",
                 " - semicontinuous:", env->problem->properties.numberOfSemicontinuousVariables, ""));
     }
 

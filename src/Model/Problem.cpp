@@ -2290,7 +2290,8 @@ bool Problem::verifyOwnership()
     return (true);
 }
 
-ProblemPtr Problem::createCopy(EnvironmentPtr destinationEnv, bool integerRelaxed, bool convexityRelaxed)
+ProblemPtr Problem::createCopy(
+    EnvironmentPtr destinationEnv, bool integerRelaxed, bool convexityRelaxed, bool copyAuxiliary)
 {
     auto destinationProblem = std::make_shared<Problem>(destinationEnv);
 
@@ -2304,7 +2305,23 @@ ProblemPtr Problem::createCopy(EnvironmentPtr destinationEnv, bool integerRelaxe
     {
         auto variableType = integerRelaxed ? E_VariableType::Real : V->properties.type;
 
-        auto variable = std::make_shared<Variable>(V->name, V->index, variableType, V->lowerBound, V->upperBound);
+        VariablePtr variable;
+
+        if(V->properties.isAuxiliary && copyAuxiliary)
+        {
+            variable
+                = std::make_shared<AuxiliaryVariable>(V->name, V->index, variableType, V->lowerBound, V->upperBound);
+            destinationProblem->add(variable);
+
+            variable->properties.auxiliaryType = V->properties.auxiliaryType;
+        }
+        else
+        {
+            variable = std::make_shared<Variable>(V->name, V->index, variableType, V->lowerBound, V->upperBound);
+            destinationProblem->add(variable);
+        }
+
+        variable->properties.type = integerRelaxed ? E_VariableType::Real : V->properties.type;
 
         if(V->properties.type == E_VariableType::Real)
         {
@@ -2321,6 +2338,34 @@ ProblemPtr Problem::createCopy(EnvironmentPtr destinationEnv, bool integerRelaxe
             variable->lowerBound = std::max(V->lowerBound, minLBInt);
             variable->upperBound = std::min(V->upperBound, maxUBInt);
         }
+    }
+
+    if(this->auxiliaryObjectiveVariable)
+    {
+        auto variableType = integerRelaxed ? E_VariableType::Real : this->auxiliaryObjectiveVariable->properties.type;
+
+        auto variable = std::make_shared<AuxiliaryVariable>(this->auxiliaryObjectiveVariable->name,
+            this->auxiliaryObjectiveVariable->index, variableType, this->auxiliaryObjectiveVariable->lowerBound,
+            this->auxiliaryObjectiveVariable->upperBound);
+
+        if(this->auxiliaryObjectiveVariable->properties.type == E_VariableType::Real)
+        {
+            variable->lowerBound = std::max(this->auxiliaryObjectiveVariable->lowerBound, minLBCont);
+            variable->upperBound = std::min(this->auxiliaryObjectiveVariable->upperBound, maxUBCont);
+        }
+        else if(this->auxiliaryObjectiveVariable->properties.type == E_VariableType::Binary)
+        {
+            variable->lowerBound = std::max(this->auxiliaryObjectiveVariable->lowerBound, 0.0);
+            variable->upperBound = std::min(this->auxiliaryObjectiveVariable->upperBound, 1.0);
+        }
+        else if(this->auxiliaryObjectiveVariable->properties.type == E_VariableType::Integer)
+        {
+            variable->lowerBound = std::max(this->auxiliaryObjectiveVariable->lowerBound, minLBInt);
+            variable->upperBound = std::min(this->auxiliaryObjectiveVariable->upperBound, maxUBInt);
+        }
+
+        variable->properties.auxiliaryType = this->auxiliaryObjectiveVariable->properties.auxiliaryType;
+        this->auxiliaryObjectiveVariable = variable;
 
         destinationProblem->add(std::move(variable));
     }
