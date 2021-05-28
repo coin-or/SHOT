@@ -45,23 +45,30 @@ NLPSolverSHOT::~NLPSolverSHOT() = default;
 
 void NLPSolverSHOT::initializeMIPProblem()
 {
-    solver = std::make_unique<Solver>();
+    solver = std::make_shared<Solver>();
 
     solver->getEnvironment()->output->setPrefix("      | ");
 
-    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Info));
+    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Off));
     solver->updateSetting(
         "Console.DualSolver.Show", "Output", env->settings->getSetting<bool>("Console.DualSolver.Show", "Output"));
     solver->updateSetting("Debug.Enable", "Output", env->settings->getSetting<bool>("Debug.Enable", "Output"));
     solver->updateSetting("CutStrategy", "Dual", 0);
     solver->updateSetting("TreeStrategy", "Dual", 1);
     solver->updateSetting("MIP.Solver", "Dual", env->settings->getSetting<int>("MIP.Solver", "Dual"));
+
+    solver->updateSetting("BoundTightening.FeasibilityBased.Use", "Model", false);
+    solver->updateSetting("BoundTightening.FeasibilityBased.MaxIterations", "Model", 0);
+
     solver->updateSetting("Console.Iteration.Detail", "Output", 0);
     solver->updateSetting(
         "ConstraintTolerance", "Termination", env->settings->getSetting<double>("ConstraintTolerance", "Termination"));
 
     solver->updateSetting(
         "Convexity.AssumeConvex", "Model", env->settings->getSetting<bool>("Convexity.AssumeConvex", "Model"));
+
+    solver->updateSetting("ObjectiveGap.Relative", "Termination", 1e-6);
+    solver->updateSetting("ObjectiveGap.Absolute", "Termination", 1e-6);
 
     solver->updateSetting("HyperplaneCuts.SaveHyperplanePoints", "Dual", true);
 
@@ -72,8 +79,8 @@ void NLPSolverSHOT::initializeMIPProblem()
     subproblemDebugPath /= ("SHOT_fixedNLP");
     solver->updateSetting("Debug.Path", "Output", subproblemDebugPath.string());
 
-    relaxedProblem = sourceProblem->createCopy(solver->getEnvironment(), true);
-    solver->setProblem(env->problem->createCopy(solver->getEnvironment(), true), relaxedProblem);
+    relaxedProblem = sourceProblem->createCopy(solver->getEnvironment(), true, false, false);
+    solver->setProblem(relaxedProblem, relaxedProblem);
 }
 
 void NLPSolverSHOT::setStartingPoint(VectorInteger variableIndexes, VectorDouble variableValues) { }
@@ -157,8 +164,8 @@ E_NLPSolutionStatus NLPSolverSHOT::solveProblemInstance()
         relaxedProblem->setVariableBounds(fixedVariableIndexes[i], fixedVariableValues[i], fixedVariableValues[i]);
 
     // Tighten the bounds if fixed
-    if(fixedVariableIndexes.size() > 0)
-        relaxedProblem->doFBBT();
+    // if(fixedVariableIndexes.size() > 0)
+    // relaxedProblem->doFBBT();
 
     // Update the bounds to the MIP solver
     for(auto& VAR : relaxedProblem->allVariables)

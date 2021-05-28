@@ -240,7 +240,8 @@ public:
 
     friend std::ostream& operator<<(std::ostream& stream, const Problem& problem);
 
-    ProblemPtr createCopy(EnvironmentPtr destinationEnv, bool integerRelaxed = false, bool convexityRelaxed = false);
+    ProblemPtr createCopy(EnvironmentPtr destinationEnv, bool integerRelaxed = false, bool convexityRelaxed = false,
+        bool copyAuxiliary = false);
 };
 
 inline std::ostream& operator<<(std::ostream& stream, ProblemPtr problem)
