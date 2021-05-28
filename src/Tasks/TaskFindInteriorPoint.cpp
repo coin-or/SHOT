@@ -147,8 +147,9 @@ void TaskFindInteriorPoint::run()
 
         if(maxDev.normalizedValue >= 0)
         {
+            env->output->outputWarning("");
             env->output->outputWarning(
-                "\n Maximum deviation in interior point is too large: " + Utilities::toString(maxDev.normalizedValue));
+                " Maximum deviation in interior point is too large: " + Utilities::toString(maxDev.normalizedValue));
 
             if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
             {
@@ -159,7 +160,8 @@ void TaskFindInteriorPoint::run()
         }
         else
         {
-            env->output->outputInfo("\n Valid interior point with constraint deviation "
+            env->output->outputInfo("");
+            env->output->outputInfo(" Valid interior point with constraint deviation "
                 + Utilities::toString(maxDev.normalizedValue) + " found.");
 
             env->dualSolver->interiorPts.push_back(tmpIP);
@@ -177,7 +179,8 @@ void TaskFindInteriorPoint::run()
 
     if(!foundNLPPoint)
     {
-        env->output->outputError("\n No interior point found!                            ");
+        env->output->outputError("");
+        env->output->outputError(" No interior point found!                            ");
         env->timing->stopTimer("InteriorPointSearch");
 
         return;
