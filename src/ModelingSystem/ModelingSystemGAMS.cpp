@@ -78,7 +78,31 @@ ModelingSystemGAMS::~ModelingSystemGAMS()
     }
 }
 
-void ModelingSystemGAMS::augmentSettings([[maybe_unused]] SettingsPtr settings) { }
+void ModelingSystemGAMS::augmentSettings([[maybe_unused]] SettingsPtr settings)
+{
+    // Subsolver settings: GAMS NLP
+
+    settings->createSettingGroup("Subsolver", "GAMS", "GAMS", "Settings for the GAMS NLP solvers.");
+
+    std::string optfile = "";
+    settings->createSetting(
+        "GAMS.NLP.OptionsFilename", "Subsolver", optfile, "Options file for the NLP solver in GAMS");
+
+    std::string solver = "auto";
+    settings->createSetting("GAMS.NLP.Solver", "Subsolver", solver, "NLP solver to use in GAMS (auto: SHOT chooses)");
+
+#if GMOAPIVERSION >= 21
+    settings->createSettingGroup(
+        "ModelingSystem", "GAMS", "GAMS interface", "These settings control functionality used in the GAMS interface.");
+
+    VectorString enumQExtractAlg;
+    enumQExtractAlg.push_back("automatic");
+    enumQExtractAlg.push_back("threepass");
+    enumQExtractAlg.push_back("doubleforward");
+    settings->createSetting("GAMS.QExtractAlg", "ModelingSystem", 0,
+        "Extraction algorithm for quadratic equations in GAMS interface", enumQExtractAlg);
+#endif
+}
 
 void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
 {
@@ -186,7 +210,8 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
     /* if CPLEX is set, then check whether GAMS/CPLEX license is present */
     if(env->settings->getSetting<int>("MIP.Solver", "Dual") == (int)ES_MIPSolver::Cplex)
     {
-        /* sometimes we would also allow a solver if demo-sized problem, but we don't know how large the MIPs will be */
+        /* sometimes we would also allow a solver if demo-sized problem, but we don't know how large the MIPs will
+         * be */
         if(!GAMScheckCPLEXLicense(auditLicensing, true))
         {
             env->output->outputInfo(
@@ -258,8 +283,8 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem)
         gmoNameInput(modelingObject, buffer);
         problem->name = buffer;
 
-        /* copyVariables and copyConstraints only return false if there was an unsupported variable or equation type or
-         * there were no variables or no equations all cases are SHOT capability problems
+        /* copyVariables and copyConstraints only return false if there was an unsupported variable or equation type
+         * or there were no variables or no equations all cases are SHOT capability problems
          */
 
         if(!copyVariables(problem))
@@ -340,8 +365,8 @@ void ModelingSystemGAMS::createModelFromProblemFile(const std::string& filename)
 
     /* call GAMS with convert solver to get compiled model instance in temporary directory
      * we set lo=3 so that we get lo=3 into the gams control file, which is useful for showing the log of GAMS (NLP)
-     * solvers later but since we don't want to see the stdout output from gams here, we redirect stdout to /dev/null
-     * for this gams call
+     * solvers later but since we don't want to see the stdout output from gams here, we redirect stdout to
+     * /dev/null for this gams call
      */
     std::string gamscall;
 #ifdef GAMSDIR
@@ -448,8 +473,8 @@ void ModelingSystemGAMS::createModelFromProblemFile(const std::string& filename)
 
     createModelFromGAMSModel((fs::filesystem::path(tmpdirname) / "gamscntr.dat").string());
 
-    /* since we ran convert with options file, GMO now stores convert.opt as options file, which we don't want to use
-     * as a SHOT options file */
+    /* since we ran convert with options file, GMO now stores convert.opt as options file, which we don't want to
+     * use as a SHOT options file */
     gmoOptFileSet(modelingObject, 0);
 
     /* do not have GEV catch SIGINT, as with this setup we would not pass this signal on to SHOT */
@@ -625,9 +650,9 @@ void ModelingSystemGAMS::finalizeSolution()
     gmoSetHeadnTail(modelingObject, gmoHresused, env->timing->getElapsedTime("Total"));
     gmoSetHeadnTail(modelingObject, gmoTmipnod, env->solutionStatistics.numberOfExploredNodes);
 
-    // if we created the GMO object due to starting from a .gms or .dat file, then we should write the solution into a
-    // GAMS solution file (though it's probably of no interest if started from .gms and starting from .dat has been
-    // removed here)
+    // if we created the GMO object due to starting from a .gms or .dat file, then we should write the solution into
+    // a GAMS solution file (though it's probably of no interest if started from .gms and starting from .dat has
+    // been removed here)
     if(createdgmo)
         gmoUnloadSolutionLegacy(modelingObject);
 
@@ -1111,8 +1136,8 @@ bool ModelingSystemGAMS::copyQuadraticTerms(ProblemPtr destination)
         for(int j = 0; j < numQuadraticTerms; ++j)
         {
             if(variableOneIndexes[j] == variableTwoIndexes[j])
-                quadraticCoefficients[j]
-                    /= 2.0; /* for some strange reason, the coefficients on the diagonal are multiplied by 2 in GMO */
+                quadraticCoefficients[j] /= 2.0; /* for some strange reason, the coefficients on the diagonal are
+                                                    multiplied by 2 in GMO */
 
             try
             {
@@ -1160,8 +1185,8 @@ bool ModelingSystemGAMS::copyQuadraticTerms(ProblemPtr destination)
             for(int j = 0; j < numQuadraticTerms; ++j)
             {
                 if(variableOneIndexes[j] == variableTwoIndexes[j])
-                    quadraticCoefficients[j] /= 2.0; /* for some strange reason, the coefficients on the diagonal are
-                                                        multiplied by 2 in GMO */
+                    quadraticCoefficients[j] /= 2.0; /* for some strange reason, the coefficients on the diagonal
+                                                        are multiplied by 2 in GMO */
 
                 try
                 {
