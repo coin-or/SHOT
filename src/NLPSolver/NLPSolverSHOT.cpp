@@ -49,9 +49,20 @@ void NLPSolverSHOT::initializeMIPProblem()
 
     solver->getEnvironment()->output->setPrefix("      | ");
 
-    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Off));
-    solver->updateSetting(
-        "Console.DualSolver.Show", "Output", env->settings->getSetting<bool>("Console.DualSolver.Show", "Output"));
+    if(env->settings->getSetting<bool>("Console.PrimalSolver.Show", "Output"))
+    {
+        solver->updateSetting(
+            "Console.LogLevel", "Output", env->settings->getSetting<int>("Console.LogLevel", "Output"));
+        solver->updateSetting(
+            "Console.DualSolver.Show", "Output", env->settings->getSetting<bool>("Console.DualSolver.Show", "Output"));
+    }
+    else
+    {
+        solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Off));
+    }
+
+    solver->updateSetting("Console.Iteration.Detail", "Output", 0);
+
     solver->updateSetting("Debug.Enable", "Output", env->settings->getSetting<bool>("Debug.Enable", "Output"));
     solver->updateSetting("CutStrategy", "Dual", 0);
     solver->updateSetting("TreeStrategy", "Dual", 1);
@@ -61,22 +72,38 @@ void NLPSolverSHOT::initializeMIPProblem()
     solver->updateSetting("BoundTightening.FeasibilityBased.MaxIterations", "Model", 0);
 
     solver->updateSetting("Console.Iteration.Detail", "Output", 0);
-    solver->updateSetting(
-        "ConstraintTolerance", "Termination", env->settings->getSetting<double>("ConstraintTolerance", "Termination"));
 
     solver->updateSetting(
         "Convexity.AssumeConvex", "Model", env->settings->getSetting<bool>("Convexity.AssumeConvex", "Model"));
 
     solver->updateSetting("ObjectiveGap.Relative", "Termination", 1e-6);
     solver->updateSetting("ObjectiveGap.Absolute", "Termination", 1e-6);
+    solver->updateSetting(
+        "ConstraintTolerance", "Termination", env->settings->getSetting<double>("ConstraintTolerance", "Termination"));
 
-    solver->updateSetting("HyperplaneCuts.SaveHyperplanePoints", "Dual", true);
+    solver->updateSetting(
+        "TimeLimit", "Termination", env->settings->getSetting<double>("FixedInteger.TimeLimit", "Primal"));
+    solver->updateSetting(
+        "IterationLimit", "Termination", env->settings->getSetting<int>("FixedInteger.IterationLimit", "Primal"));
+
+    solver->updateSetting("DualStagnation.IterationLimit", "Termination",
+        env->settings->getSetting<int>("FixedInteger.IterationLimit", "Primal") / 2);
+
+    if(env->settings->getSetting<bool>("SHOT.ReuseHyperplaneCuts", "Subsolver"))
+        solver->updateSetting("HyperplaneCuts.SaveHyperplanePoints", "Dual", true);
+
+    solver->updateSetting(
+        "BoundTightening.FeasibilityBased.Use", "Model", env->settings->getSetting<bool>("SHOT.UseFBBT", "Subsolver"));
 
     if(env->dualSolver->cutOffToUse != SHOT_DBL_MAX)
     {
         solver->updateSetting("MIP.CutOff.InitialValue", "Dual", env->dualSolver->cutOffToUse);
         solver->updateSetting("MIP.CutOff.UseInitialValue", "Dual", true);
     }
+
+    // Put more emphasis on numerical stability in the LP solver
+    solver->updateSetting("Cplex.NumericalEmphasis", "Subsolver", 1);
+    solver->updateSetting("Gurobi.NumericFocus", "Subsolver", 3);
 
     // Set the debug path for the subsolver
     auto mainDebugPath = env->settings->getSetting<std::string>("Debug.Path", "Output");
@@ -170,8 +197,9 @@ E_NLPSolutionStatus NLPSolverSHOT::solveProblemInstance()
         relaxedProblem->setVariableBounds(fixedVariableIndexes[i], fixedVariableValues[i], fixedVariableValues[i]);
 
     // Tighten the bounds if fixed
-    // if(fixedVariableIndexes.size() > 0)
-    // relaxedProblem->doFBBT();
+    if(fixedVariableIndexes.size() > 0
+        && solver->getEnvironment()->settings->getSetting<bool>("BoundTightening.FeasibilityBased.Use", "Model"))
+        relaxedProblem->doFBBT();
 
     // Update the bounds to the MIP solver
     for(auto& VAR : relaxedProblem->allVariables)
@@ -186,13 +214,50 @@ E_NLPSolutionStatus NLPSolverSHOT::solveProblemInstance()
         solver->getEnvironment()->report->outputOptionsReport();
         problemInfoPrinted = true;
     }
-
     if(!solver->solveProblem())
         return E_NLPSolutionStatus::Error;
 
     solver->getEnvironment()->report->outputSolutionReport();
 
     solver->getEnvironment()->output->outputInfo("");
+
+    int hyperplaneCounter = 0;
+
+    for(auto& HP : solver->getEnvironment()->dualSolver->generatedHyperplanes)
+    {
+        Hyperplane hyperplane;
+        hyperplane.sourceConstraint = std::dynamic_pointer_cast<NumericConstraint>(
+            env->reformulatedProblem->getConstraint(HP.sourceConstraint->index));
+        hyperplane.sourceConstraintIndex = HP.sourceConstraint->index;
+        hyperplane.generatedPoint = HP.generatedPoint;
+        hyperplane.source = E_HyperplaneSource::PrimalSolutionSearch;
+        hyperplane.isSourceConvex = HP.sourceConstraint->properties.convexity <= E_Convexity::Convex;
+
+        std::vector<double> tmpSolPt(
+            HP.generatedPoint.begin(), HP.generatedPoint.begin() + env->problem->properties.numberOfVariables);
+
+        for(auto& V : env->reformulatedProblem->auxiliaryVariables)
+        {
+            tmpSolPt.push_back(V->calculate(tmpSolPt));
+        }
+
+        if(env->reformulatedProblem->auxiliaryObjectiveVariable)
+        {
+            tmpSolPt.push_back(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(tmpSolPt));
+        }
+
+        if(env->reformulatedProblem->antiEpigraphObjectiveVariable)
+        {
+            tmpSolPt.at(env->reformulatedProblem->antiEpigraphObjectiveVariable->index)
+                = env->reformulatedProblem->objectiveFunction->calculateValue(tmpSolPt);
+        }
+
+        env->dualSolver->addHyperplane(hyperplane);
+        hyperplaneCounter++;
+    }
+
+    solver->getEnvironment()->output->outputInfo(
+        fmt::format(" Added {} hyperplanes generated by SHOT primal NLP solver.", hyperplaneCounter));
 
     E_NLPSolutionStatus status;
 

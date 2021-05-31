@@ -727,7 +727,7 @@ void Solver::initializeSettings()
         "Add integer cuts for infeasible integer-combinations for binary problems");
 
     env->settings->createSetting("HyperplaneCuts.SaveHyperplanePoints", "Dual", false,
-        "Whether to save the points in the generated hyperplanes list", true);
+        "Whether to save the points in the generated hyperplanes list", false);
 
     VectorString enumObjectiveRootsearch;
     enumObjectiveRootsearch.push_back("Always");
@@ -1460,6 +1460,13 @@ void Solver::initializeSettings()
         "Ipopt.RelativeConvergenceTolerance", "Subsolver", 1E-8, "Relative convergence tolerance");
 
 #endif
+
+    env->settings->createSettingGroup("Subsolver", "SHOT", "SHOT primal NLP solver", "");
+
+    env->settings->createSetting(
+        "SHOT.ReuseHyperplaneCuts", "Subsolver", true, "Reuse valid generated hyperplanes in main dual model.");
+
+    env->settings->createSetting("SHOT.UseFBBT", "Subsolver", true, "Do FBBT on NLP problem.");
 
     // Subsolver settings: root searches
 
