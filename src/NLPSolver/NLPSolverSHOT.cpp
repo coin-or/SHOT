@@ -72,6 +72,12 @@ void NLPSolverSHOT::initializeMIPProblem()
 
     solver->updateSetting("HyperplaneCuts.SaveHyperplanePoints", "Dual", true);
 
+    if(env->dualSolver->cutOffToUse != SHOT_DBL_MAX)
+    {
+        solver->updateSetting("MIP.CutOff.InitialValue", "Dual", env->dualSolver->cutOffToUse);
+        solver->updateSetting("MIP.CutOff.UseInitialValue", "Dual", true);
+    }
+
     // Set the debug path for the subsolver
     auto mainDebugPath = env->settings->getSetting<std::string>("Debug.Path", "Output");
     fs::filesystem::path subproblemDebugPath(mainDebugPath);
