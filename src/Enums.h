@@ -151,7 +151,8 @@ enum class E_PrimalSolutionSource
     NLPRelaxed,
     MIPSolutionPool,
     LPFixedIntegers,
-    MIPCallback
+    MIPCallback,
+    InteriorPointSearch
 };
 
 enum class E_ProblemConvexity

@@ -482,6 +482,7 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
                 && sourceProblem->properties.numberOfDiscreteVariables > 0)
                 createIntegerCut(CAND.point);
         }
+
         if(static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("FixedInteger.Solver", "Primal"))
             == ES_PrimalNLPSolver::SHOT)
         {

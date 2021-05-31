@@ -11,6 +11,7 @@
 #include "TaskFindInteriorPoint.h"
 
 #include "../DualSolver.h"
+#include "../PrimalSolver.h"
 #include "../Report.h"
 #include "../Results.h"
 #include "../Settings.h"
@@ -195,6 +196,11 @@ void TaskFindInteriorPoint::run()
     env->output->outputDebug(" Finished solving NLP problem.");
 
     env->solutionStatistics.numberOfOriginalInteriorPoints = env->dualSolver->interiorPts.size();
+
+    for(auto IP : env->dualSolver->interiorPts)
+    {
+        env->primalSolver->addPrimalSolutionCandidate(IP->point, E_PrimalSolutionSource::InteriorPointSearch, 0);
+    }
 
     env->timing->stopTimer("InteriorPointSearch");
 }

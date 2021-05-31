@@ -1188,6 +1188,8 @@ void Report::outputSolutionReport()
             case E_PrimalSolutionSource::MIPCallback:
                 sourceDesc = "MIP callback";
                 break;
+            case E_PrimalSolutionSource::InteriorPointSearch:
+                sourceDesc = "Interior point search";
                 break;
             default:
                 sourceDesc = "other";

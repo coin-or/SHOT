@@ -467,6 +467,11 @@ std::string Results::getResultsOSrL()
             otherNode->SetAttribute("name", "NumberOfPrimalSolutionsFoundMIPCallback");
             otherNode->SetAttribute("description", "The number of primal solutions found in MIP callbacks");
             break;
+        case E_PrimalSolutionSource::InteriorPointSearch:
+            otherNode->SetAttribute("name", "NumberOfPrimalSolutionsFoundInteriorPointSearch");
+            otherNode->SetAttribute(
+                "description", "The number of primal solutions found when searching for interior point");
+            break;
         default:
             otherNode->SetAttribute("name", "NumberOfPrimalSolutionsFoundOther");
             otherNode->SetAttribute("description", "The number of primal solutions found with unknown method");
