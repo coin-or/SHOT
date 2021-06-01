@@ -483,54 +483,6 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
                 createIntegerCut(CAND.point);
         }
 
-        if(static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("FixedInteger.Solver", "Primal"))
-            == ES_PrimalNLPSolver::SHOT)
-        {
-            auto SHOTSolver = std::dynamic_pointer_cast<NLPSolverSHOT>(NLPSolver);
-            int numHyperplanesToCopy = env->settings->getSetting<int>("FixedInteger.CopyNumberOfHyperplanes", "Primal");
-            int hyperplaneCounter = 0;
-
-            for(auto it = SHOTSolver->solver->getEnvironment()->dualSolver->generatedHyperplanes.rbegin();
-                it != SHOTSolver->solver->getEnvironment()->dualSolver->generatedHyperplanes.rend(); ++it)
-            {
-                auto HP = *it;
-
-                if(hyperplaneCounter >= numHyperplanesToCopy)
-                    break;
-
-                Hyperplane newHP;
-
-                if(HP.source == E_HyperplaneSource::ObjectiveCuttingPlane
-                    || HP.source == E_HyperplaneSource::ObjectiveRootsearch)
-                {
-                    newHP.isObjectiveHyperplane = true;
-                    newHP.sourceConstraintIndex = -1;
-                    newHP.source = HP.source;
-                }
-                else if(auto NCV = env->reformulatedProblem->getMostDeviatingNonlinearConstraint(HP.generatedPoint);
-                        NCV)
-                {
-                    newHP.sourceConstraintIndex = NCV->constraint->index;
-                    newHP.sourceConstraint = NCV->constraint;
-                    newHP.source = HP.source;
-                }
-                else
-                {
-                    continue;
-                }
-
-                newHP.generatedPoint = HP.generatedPoint;
-                newHP.isSourceConvex = HP.isSourceConvex;
-                newHP.objectiveFunctionValue
-                    = env->reformulatedProblem->objectiveFunction->calculateValue(newHP.generatedPoint);
-
-                env->dualSolver->addHyperplane(newHP);
-                hyperplaneCounter++;
-            }
-
-            SHOTSolver->solver->getEnvironment()->dualSolver->generatedHyperplanes.clear();
-        }
-
         env->solutionStatistics.numberOfIterationsWithoutNLPCallMIP = 0;
         env->solutionStatistics.timeLastFixedNLPCall = env->timing->getElapsedTime("Total");
         counter++;

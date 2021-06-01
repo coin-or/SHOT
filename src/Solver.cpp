@@ -1137,9 +1137,6 @@ void Solver::initializeSettings()
         "When should the fixed strategy be used", enumPrimalNLPStrategy, 0);
     enumPrimalNLPStrategy.clear();
 
-    env->settings->createSetting("FixedInteger.CopyNumberOfHyperplanes", "Primal", 10,
-        "The max number of hyperplanes to copy to original problem (if available)");
-
     env->settings->createSetting(
         "FixedInteger.CreateInfeasibilityCut", "Primal", false, "Create a cut from an infeasible solution point");
 
@@ -1464,7 +1461,9 @@ void Solver::initializeSettings()
     env->settings->createSettingGroup("Subsolver", "SHOT", "SHOT primal NLP solver", "");
 
     env->settings->createSetting(
-        "SHOT.ReuseHyperplaneCuts", "Subsolver", true, "Reuse valid generated hyperplanes in main dual model.");
+        "SHOT.ReuseHyperplanes.Use", "Subsolver", true, "Reuse valid generated hyperplanes in main dual model.");
+    env->settings->createSetting("SHOT.ReuseHyperplanes.Fraction", "Subsolver", 0.1,
+        "The fraction of generated hyperplanes to reuse.", 0.0, 1.0);
 
     env->settings->createSetting("SHOT.UseFBBT", "Subsolver", true, "Do FBBT on NLP problem.");
 

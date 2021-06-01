@@ -86,20 +86,13 @@ void NLPSolverSHOT::initializeMIPProblem()
     solver->updateSetting(
         "IterationLimit", "Termination", env->settings->getSetting<int>("FixedInteger.IterationLimit", "Primal"));
 
-    solver->updateSetting("DualStagnation.IterationLimit", "Termination",
-        env->settings->getSetting<int>("FixedInteger.IterationLimit", "Primal") / 2);
+    solver->updateSetting("DualStagnation.IterationLimit", "Termination", 20);
 
-    if(env->settings->getSetting<bool>("SHOT.ReuseHyperplaneCuts", "Subsolver"))
+    if(env->settings->getSetting<bool>("SHOT.ReuseHyperplanes.Use", "Subsolver"))
         solver->updateSetting("HyperplaneCuts.SaveHyperplanePoints", "Dual", true);
 
     solver->updateSetting(
         "BoundTightening.FeasibilityBased.Use", "Model", env->settings->getSetting<bool>("SHOT.UseFBBT", "Subsolver"));
-
-    if(env->dualSolver->cutOffToUse != SHOT_DBL_MAX)
-    {
-        solver->updateSetting("MIP.CutOff.InitialValue", "Dual", env->dualSolver->cutOffToUse);
-        solver->updateSetting("MIP.CutOff.UseInitialValue", "Dual", true);
-    }
 
     // Put more emphasis on numerical stability in the LP solver
     solver->updateSetting("Cplex.NumericalEmphasis", "Subsolver", 1);
@@ -206,7 +199,12 @@ E_NLPSolutionStatus NLPSolverSHOT::solveProblemInstance()
         solver->getEnvironment()->dualSolver->MIPSolver->updateVariableBound(
             VAR->index, VAR->lowerBound, VAR->upperBound);
 
-    // solver->getEnvironment()->dualSolver->MIPSolver->fixVariables(fixedVariableIndexes, fixedVariableValues);
+    // Setting the cutoff value from currently best known solution
+    if(env->dualSolver->cutOffToUse != SHOT_DBL_MAX)
+    {
+        solver->updateSetting("MIP.CutOff.InitialValue", "Dual", env->dualSolver->cutOffToUse);
+        solver->updateSetting("MIP.CutOff.UseInitialValue", "Dual", true);
+    }
 
     if(!problemInfoPrinted)
     {
@@ -214,6 +212,7 @@ E_NLPSolutionStatus NLPSolverSHOT::solveProblemInstance()
         solver->getEnvironment()->report->outputOptionsReport();
         problemInfoPrinted = true;
     }
+
     if(!solver->solveProblem())
         return E_NLPSolutionStatus::Error;
 
@@ -223,41 +222,66 @@ E_NLPSolutionStatus NLPSolverSHOT::solveProblemInstance()
 
     int hyperplaneCounter = 0;
 
-    for(auto& HP : solver->getEnvironment()->dualSolver->generatedHyperplanes)
+    if(env->settings->getSetting<bool>("SHOT.ReuseHyperplanes.Use", "Subsolver"))
     {
-        Hyperplane hyperplane;
-        hyperplane.sourceConstraint = std::dynamic_pointer_cast<NumericConstraint>(
-            env->reformulatedProblem->getConstraint(HP.sourceConstraint->index));
-        hyperplane.sourceConstraintIndex = HP.sourceConstraint->index;
-        hyperplane.generatedPoint = HP.generatedPoint;
-        hyperplane.source = E_HyperplaneSource::PrimalSolutionSearch;
-        hyperplane.isSourceConvex = HP.sourceConstraint->properties.convexity <= E_Convexity::Convex;
+        int numHyperplanesToCopy = solver->getEnvironment()->dualSolver->generatedHyperplanes.size()
+            * env->settings->getSetting<double>("SHOT.ReuseHyperplanes.Fraction", "Subsolver");
 
-        std::vector<double> tmpSolPt(
-            HP.generatedPoint.begin(), HP.generatedPoint.begin() + env->problem->properties.numberOfVariables);
-
-        for(auto& V : env->reformulatedProblem->auxiliaryVariables)
+        for(auto& HP : solver->getEnvironment()->dualSolver->generatedHyperplanes)
         {
-            tmpSolPt.push_back(V->calculate(tmpSolPt));
+            if(hyperplaneCounter >= numHyperplanesToCopy)
+                break;
+
+            std::vector<double> tmpSolPt(
+                HP.generatedPoint.begin(), HP.generatedPoint.begin() + env->problem->properties.numberOfVariables);
+
+            for(auto& V : env->reformulatedProblem->auxiliaryVariables)
+            {
+                tmpSolPt.push_back(V->calculate(tmpSolPt));
+            }
+
+            if(env->reformulatedProblem->auxiliaryObjectiveVariable)
+            {
+                tmpSolPt.push_back(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(tmpSolPt));
+            }
+
+            if(env->reformulatedProblem->antiEpigraphObjectiveVariable)
+            {
+                tmpSolPt.at(env->reformulatedProblem->antiEpigraphObjectiveVariable->index)
+                    = env->reformulatedProblem->objectiveFunction->calculateValue(tmpSolPt);
+            }
+
+            Hyperplane hyperplane;
+            hyperplane.generatedPoint = tmpSolPt;
+            hyperplane.objectiveFunctionValue = sourceProblem->objectiveFunction->calculateValue(tmpSolPt);
+
+            if(HP.source == E_HyperplaneSource::ObjectiveCuttingPlane
+                || HP.source == E_HyperplaneSource::ObjectiveRootsearch)
+            {
+                hyperplane.isObjectiveHyperplane = true;
+                hyperplane.sourceConstraintIndex = -1;
+                hyperplane.isSourceConvex
+                    = sourceProblem->objectiveFunction->properties.convexity <= E_Convexity::Convex;
+            }
+            else
+            {
+                hyperplane.sourceConstraintIndex = HP.sourceConstraintIndex;
+                hyperplane.sourceConstraint = std::dynamic_pointer_cast<NumericConstraint>(
+                    env->reformulatedProblem->getConstraint(HP.sourceConstraintIndex));
+                hyperplane.isSourceConvex = hyperplane.sourceConstraint->properties.convexity <= E_Convexity::Convex;
+            }
+
+            hyperplane.source = E_HyperplaneSource::PrimalSolutionSearch;
+
+            env->dualSolver->addHyperplane(hyperplane);
+            hyperplaneCounter++;
         }
 
-        if(env->reformulatedProblem->auxiliaryObjectiveVariable)
-        {
-            tmpSolPt.push_back(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(tmpSolPt));
-        }
+        solver->getEnvironment()->dualSolver->generatedHyperplanes.clear();
 
-        if(env->reformulatedProblem->antiEpigraphObjectiveVariable)
-        {
-            tmpSolPt.at(env->reformulatedProblem->antiEpigraphObjectiveVariable->index)
-                = env->reformulatedProblem->objectiveFunction->calculateValue(tmpSolPt);
-        }
-
-        env->dualSolver->addHyperplane(hyperplane);
-        hyperplaneCounter++;
+        solver->getEnvironment()->output->outputInfo(
+            fmt::format(" Added {} hyperplanes generated by SHOT primal NLP solver.", hyperplaneCounter));
     }
-
-    solver->getEnvironment()->output->outputInfo(
-        fmt::format(" Added {} hyperplanes generated by SHOT primal NLP solver.", hyperplaneCounter));
 
     E_NLPSolutionStatus status;
 
