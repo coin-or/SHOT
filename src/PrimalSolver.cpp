@@ -124,6 +124,9 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
     case E_PrimalSolutionSource::MIPCallback:
         sourceDesc = "MIP callback";
         break;
+    case E_PrimalSolutionSource::InteriorPointSearch:
+        sourceDesc = "Interior point search";
+        break;
     default:
         sourceDesc = "other";
         break;
@@ -292,7 +295,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
     bool acceptableType = (primalSol.sourceType == E_PrimalSolutionSource::MIPSolutionPool
         || primalSol.sourceType == E_PrimalSolutionSource::NLPFixedIntegers
         || primalSol.sourceType == E_PrimalSolutionSource::LPFixedIntegers
-        || primalSol.sourceType == E_PrimalSolutionSource::MIPCallback);
+        || primalSol.sourceType == E_PrimalSolutionSource::MIPCallback|| primalSol.sourceType == E_PrimalSolutionSource::InteriorPointSearch);
 
     if(!primalSol.integerRoundingPerformed && acceptableType
         && env->settings->getSetting<bool>("Tolerance.TrustLinearConstraintValues", "Primal"))
