@@ -542,6 +542,8 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionSum> 
 
     NonlinearExpressions children;
 
+    std::map<VariablePtr, double> linearVariableCoefficients;
+
     for(auto& C : expression->children)
     {
         C = simplify(C);
@@ -564,6 +566,41 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionSum> 
                 }
             }
         }
+        else if(C->getType() == E_NonlinearExpressionTypes::Variable)
+        {
+            auto variable = std::dynamic_pointer_cast<ExpressionVariable>(C)->variable;
+
+            if(auto it { linearVariableCoefficients.find(variable) }; it != std::end(linearVariableCoefficients))
+            {
+                (*it).second += 1.0;
+            }
+            else
+            {
+                linearVariableCoefficients.insert({ variable, 1.0 });
+            }
+        }
+        else if(C->getType() == E_NonlinearExpressionTypes::Product
+            && std::dynamic_pointer_cast<ExpressionProduct>(C)->isLinearTerm())
+        {
+            if(auto linearTerm = std::dynamic_pointer_cast<ExpressionProduct>(C)->getLinearTerm(); linearTerm)
+            {
+                double coefficient = std::get<0>(*linearTerm);
+                VariablePtr variable = std::get<1>(*linearTerm);
+
+                if(auto it { linearVariableCoefficients.find(variable) }; it != std::end(linearVariableCoefficients))
+                {
+                    (*it).second += coefficient;
+                }
+                else
+                {
+                    linearVariableCoefficients.insert({ variable, coefficient });
+                }
+            }
+            else
+            {
+                children.add(C);
+            }
+        }
         else
         {
             children.add(C);
@@ -581,6 +618,15 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionSum> 
     for(auto& C : children)
     {
         sum->children.add(C);
+    }
+
+    for(auto& P : linearVariableCoefficients)
+    {
+        if(P.second == 1.0)
+            sum->children.add(std::make_shared<ExpressionVariable>(P.first));
+        else if(P.second != 0.0)
+            sum->children.add(std::make_shared<ExpressionProduct>(
+                std::make_shared<ExpressionConstant>(P.second), std::make_shared<ExpressionVariable>(P.first)));
     }
 
     return (sum);
