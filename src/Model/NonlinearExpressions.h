@@ -20,6 +20,11 @@
 #include "ffunc.hpp"
 #include "cppad/cppad.hpp"
 
+#include <memory>
+#include <optional>
+#include <tuple>
+#include <vector>
+
 namespace SHOT
 {
 
@@ -166,6 +171,9 @@ inline std::ostream& operator<<(std::ostream& stream, NonlinearExpressionPtr exp
 
     return stream;
 }
+
+bool checkPerspectiveConvexity(
+    NonlinearExpressionPtr expression, double linearCoefficient, VariablePtr linearVariable, double constant);
 
 class NonlinearExpressions : private std::vector<NonlinearExpressionPtr>
 {
@@ -2386,6 +2394,8 @@ public:
 
         return true;
     };
+
+    std::optional<std::tuple<double, VariablePtr, double>> getLinearTermAndConstant();
 };
 
 class ExpressionProduct : public ExpressionGeneral, public std::enable_shared_from_this<ExpressionProduct>
@@ -2646,6 +2656,75 @@ public:
             }
         }
 
+        // Identify convex hull reformulation
+
+        if(children.size() == 2)
+        {
+            bool isConvex = true;
+            bool isValid = true;
+
+            NonlinearExpressionPtr otherFactor;
+            NonlinearExpressionPtr linearFactor;
+
+            double linearCoefficient;
+            VariablePtr linearVariable;
+            double constant;
+
+            // Check for and get linear factor and other factor
+            for(auto& C : children)
+            {
+                if(C->getType() == E_NonlinearExpressionTypes::Sum && C->getNumberOfChildren() == 2)
+                {
+                    if(linearFactor) // Double linear factor found
+                    {
+                        isValid = false;
+                        break;
+                    }
+
+                    if(auto linearTermAndConstant
+                        = std::dynamic_pointer_cast<ExpressionSum>(C)->getLinearTermAndConstant();
+                        linearTermAndConstant)
+                    {
+                        linearCoefficient = std::get<0>(*linearTermAndConstant);
+                        linearVariable = std::get<1>(*linearTermAndConstant);
+                        constant = std::get<2>(*linearTermAndConstant);
+
+                        linearFactor = C;
+                        continue;
+                    }
+                }
+
+                if(otherFactor) // Double other factor found
+                {
+                    isValid = false;
+                    break;
+                }
+
+                otherFactor = C;
+            }
+
+            if(isValid && linearFactor && otherFactor)
+            {
+                NonlinearExpressions terms;
+
+                if(otherFactor->getType() == E_NonlinearExpressionTypes::Sum)
+                    terms = std::dynamic_pointer_cast<ExpressionSum>(otherFactor)->children;
+                else
+                    terms.add(otherFactor);
+
+                for(auto& T : terms)
+                {
+                    isConvex = isConvex && checkPerspectiveConvexity(T, linearCoefficient, linearVariable, constant);
+
+                    if(!isConvex)
+                        break;
+                }
+            }
+
+            if(isConvex)
+                return (E_Convexity::Convex);
+        }
+
         return E_Convexity::Unknown;
     };
 
@@ -2811,7 +2890,43 @@ public:
 
         return (true);
     }
-};
 
+    inline std::optional<std::tuple<double, VariablePtr>> getLinearTerm()
+    {
+        std::optional<std::tuple<double, VariablePtr>> result;
+
+        if(getNumberOfChildren() != 2)
+            return (result);
+
+        if(children[0]->getType() == E_NonlinearExpressionTypes::Constant
+            && children[1]->getType() == E_NonlinearExpressionTypes::Variable)
+        {
+            auto coefficient = std::dynamic_pointer_cast<ExpressionConstant>(children[0])->constant;
+            auto variable = std::dynamic_pointer_cast<ExpressionVariable>(children[1])->variable;
+            result = std::make_tuple(coefficient, variable);
+        }
+        else if(children[1]->getType() == E_NonlinearExpressionTypes::Constant
+            && children[0]->getType() == E_NonlinearExpressionTypes::Variable)
+        {
+            auto coefficient = std::dynamic_pointer_cast<ExpressionConstant>(children[1])->constant;
+            auto variable = std::dynamic_pointer_cast<ExpressionVariable>(children[0])->variable;
+            result = std::make_tuple(coefficient, variable);
+        }
+
+        return (result);
+    }
+};
 // End general operations
+
+bool checkPerspectiveConvexity(std::shared_ptr<ExpressionDivide> expression, double linearCoefficient,
+    VariablePtr linearVariable, double constant);
+bool checkPerspectiveConvexity(std::shared_ptr<ExpressionNegate> expression, double linearCoefficient,
+    VariablePtr linearVariable, double constant);
+bool checkPerspectiveConvexity(std::shared_ptr<ExpressionProduct> expression, double linearCoefficient,
+    VariablePtr linearVariable, double constant);
+bool checkPerspectiveConvexity(std::shared_ptr<ExpressionSquare> expression, double linearCoefficient,
+    VariablePtr linearVariable, double constant);
+bool checkPerspectiveConvexity(
+    std::shared_ptr<ExpressionLog> expression, double linearCoefficient, VariablePtr linearVariable, double constant);
+
 } // namespace SHOT
