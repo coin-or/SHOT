@@ -169,6 +169,42 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionSquar
         return (std::dynamic_pointer_cast<ExpressionSquare>(child)->child);
     }
 
+    if(child->getType() == E_NonlinearExpressionTypes::Product && child->getNumberOfChildren() == 2)
+    {
+        auto childrenProduct = std::dynamic_pointer_cast<ExpressionProduct>(child)->children;
+
+        if(childrenProduct[0]->getType() == E_NonlinearExpressionTypes::Constant)
+        {
+            double coefficient = childrenProduct[0]->getBounds().l();
+
+            if(coefficient != 1.0)
+            {
+                auto product = std::make_shared<ExpressionProduct>();
+                product->children.add(std::make_shared<ExpressionConstant>(std::sqrt(coefficient)));
+                product->children.add(std::make_shared<ExpressionSquareRoot>(childrenProduct[1]));
+            }
+            else
+            {
+                return (simplify(std::make_shared<ExpressionSquareRoot>(childrenProduct[1])));
+            }
+        }
+        else if(childrenProduct[1]->getType() == E_NonlinearExpressionTypes::Constant)
+        {
+            double coefficient = childrenProduct[1]->getBounds().l();
+
+            if(coefficient != 1.0)
+            {
+                auto product = std::make_shared<ExpressionProduct>();
+                product->children.add(std::make_shared<ExpressionConstant>(std::sqrt(coefficient)));
+                product->children.add(std::make_shared<ExpressionSquareRoot>(childrenProduct[0]));
+            }
+            else
+            {
+                return (simplify(std::make_shared<ExpressionSquareRoot>(childrenProduct[0])));
+            }
+        }
+    }
+
     expression->child = child;
     return expression;
 }
@@ -182,11 +218,48 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionSquar
         // Cancellation
         return (std::dynamic_pointer_cast<ExpressionSquareRoot>(child)->child);
     }
-    else if(child->getType() == E_NonlinearExpressionTypes::Constant)
+
+    if(child->getType() == E_NonlinearExpressionTypes::Constant)
     {
         std::dynamic_pointer_cast<ExpressionConstant>(child)->constant
             *= std::dynamic_pointer_cast<ExpressionConstant>(child)->constant;
         return (child);
+    }
+
+    if(child->getType() == E_NonlinearExpressionTypes::Product && child->getNumberOfChildren() == 2)
+    {
+        auto childrenProduct = std::dynamic_pointer_cast<ExpressionProduct>(child)->children;
+
+        if(childrenProduct[0]->getType() == E_NonlinearExpressionTypes::Constant)
+        {
+            double coefficient = childrenProduct[0]->getBounds().l();
+
+            if(coefficient != 1.0)
+            {
+                auto product = std::make_shared<ExpressionProduct>();
+                product->children.add(std::make_shared<ExpressionConstant>(std::sqrt(coefficient)));
+                product->children.add(std::make_shared<ExpressionSquare>(childrenProduct[1]));
+            }
+            else
+            {
+                return (simplify(std::make_shared<ExpressionSquare>(childrenProduct[1])));
+            }
+        }
+        else if(childrenProduct[1]->getType() == E_NonlinearExpressionTypes::Constant)
+        {
+            double coefficient = childrenProduct[1]->getBounds().l();
+
+            if(coefficient != 1.0)
+            {
+                auto product = std::make_shared<ExpressionProduct>();
+                product->children.add(std::make_shared<ExpressionConstant>(std::sqrt(coefficient)));
+                product->children.add(std::make_shared<ExpressionSquare>(childrenProduct[0]));
+            }
+            else
+            {
+                return (simplify(std::make_shared<ExpressionSquare>(childrenProduct[0])));
+            }
+        }
     }
 
     expression->child = child;
