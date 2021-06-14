@@ -1538,19 +1538,18 @@ public:
             && secondChild->getType() == E_NonlinearExpressionTypes::Sum && secondChild->getNumberOfChildren() == 2)
         {
             auto sum = std::dynamic_pointer_cast<ExpressionGeneral>(secondChild);
-            auto variable = std::dynamic_pointer_cast<ExpressionVariable>(firstChild)->variable;
             double constant;
             double coefficient;
             bool isValid = false;
 
-            ExpressionVariablePtr nominatorVariable;
+            ExpressionVariablePtr nominatorVariable = std::dynamic_pointer_cast<ExpressionVariable>(firstChild);
             ExpressionVariablePtr denominatorVariable;
 
             // x/(x+c)
             if(sum->children[0]->getType() == E_NonlinearExpressionTypes::Variable
                 && sum->children[1]->getType() == E_NonlinearExpressionTypes::Constant)
             {
-                nominatorVariable = std::dynamic_pointer_cast<ExpressionVariable>(sum->children[0]);
+                denominatorVariable = std::dynamic_pointer_cast<ExpressionVariable>(sum->children[0]);
                 constant = std::dynamic_pointer_cast<ExpressionConstant>(sum->children[1])->constant;
                 coefficient = 1.0;
                 isValid = true;
@@ -1575,7 +1574,9 @@ public:
                 if(prod->children[0]->getType() == E_NonlinearExpressionTypes::Variable
                     && prod->children[1]->getType() == E_NonlinearExpressionTypes::Constant)
                 {
-                    if(std::dynamic_pointer_cast<ExpressionVariable>(prod->children[0])->variable == variable)
+                    denominatorVariable = std::dynamic_pointer_cast<ExpressionVariable>(prod->children[0]);
+
+                    if(denominatorVariable->variable == nominatorVariable->variable)
                     {
                         coefficient = std::dynamic_pointer_cast<ExpressionConstant>(prod->children[1])->constant;
                         constant = std::dynamic_pointer_cast<ExpressionConstant>(sum->children[1])->constant;
@@ -1586,7 +1587,9 @@ public:
                 else if(prod->children[1]->getType() == E_NonlinearExpressionTypes::Variable
                     && prod->children[0]->getType() == E_NonlinearExpressionTypes::Constant)
                 {
-                    if(std::dynamic_pointer_cast<ExpressionVariable>(prod->children[1])->variable == variable)
+                    denominatorVariable = std::dynamic_pointer_cast<ExpressionVariable>(prod->children[1]);
+
+                    if(denominatorVariable->variable == nominatorVariable->variable)
                     {
                         coefficient = std::dynamic_pointer_cast<ExpressionConstant>(prod->children[0])->constant;
                         constant = std::dynamic_pointer_cast<ExpressionConstant>(sum->children[1])->constant;
@@ -1605,7 +1608,9 @@ public:
                 if(prod->children[0]->getType() == E_NonlinearExpressionTypes::Variable
                     && prod->children[1]->getType() == E_NonlinearExpressionTypes::Constant)
                 {
-                    if(std::dynamic_pointer_cast<ExpressionVariable>(prod->children[0])->variable == variable)
+                    denominatorVariable = std::dynamic_pointer_cast<ExpressionVariable>(prod->children[0]);
+
+                    if(denominatorVariable->variable == nominatorVariable->variable)
                     {
                         coefficient = std::dynamic_pointer_cast<ExpressionConstant>(prod->children[1])->constant;
                         constant = std::dynamic_pointer_cast<ExpressionConstant>(sum->children[0])->constant;
@@ -1616,7 +1621,9 @@ public:
                 else if(prod->children[1]->getType() == E_NonlinearExpressionTypes::Variable
                     && prod->children[0]->getType() == E_NonlinearExpressionTypes::Constant)
                 {
-                    if(std::dynamic_pointer_cast<ExpressionVariable>(prod->children[1])->variable == variable)
+                    denominatorVariable = std::dynamic_pointer_cast<ExpressionVariable>(prod->children[1]);
+
+                    if(denominatorVariable->variable == nominatorVariable->variable)
                     {
                         coefficient = std::dynamic_pointer_cast<ExpressionConstant>(prod->children[0])->constant;
                         constant = std::dynamic_pointer_cast<ExpressionConstant>(sum->children[0])->constant;
@@ -1627,34 +1634,30 @@ public:
 
             if(isValid)
             {
-                if(denominatorVariable && nominatorVariable
-                    && (denominatorVariable->variable == nominatorVariable->variable))
+                if(constant < 0)
                 {
-                    if(constant < 0)
-                    {
-                        if(coefficient < 0 && nominatorVariable->variable->getBound().l() > -constant / coefficient)
-                            return E_Convexity::Convex;
-                        if(coefficient > 0 && nominatorVariable->variable->getBound().l() > -constant / coefficient)
-                            return E_Convexity::Convex;
+                    if(coefficient < 0 && nominatorVariable->variable->getBound().l() > -constant / coefficient)
+                        return E_Convexity::Convex;
+                    if(coefficient > 0 && nominatorVariable->variable->getBound().l() > -constant / coefficient)
+                        return E_Convexity::Convex;
 
-                        if(coefficient < 0 && nominatorVariable->variable->getBound().l() > -constant / coefficient)
-                            return E_Convexity::Concave;
-                        if(coefficient > 0 && nominatorVariable->variable->getBound().l() < -constant / coefficient)
-                            return E_Convexity::Concave;
-                    }
+                    if(coefficient < 0 && nominatorVariable->variable->getBound().l() > -constant / coefficient)
+                        return E_Convexity::Concave;
+                    if(coefficient > 0 && nominatorVariable->variable->getBound().l() < -constant / coefficient)
+                        return E_Convexity::Concave;
+                }
 
-                    if(constant > 0)
-                    {
-                        if(coefficient < 0 && nominatorVariable->variable->getBound().l() < -constant / coefficient)
-                            return E_Convexity::Convex;
-                        if(coefficient > 0 && nominatorVariable->variable->getBound().l() < -constant / coefficient)
-                            return E_Convexity::Convex;
+                if(constant > 0)
+                {
+                    if(coefficient < 0 && nominatorVariable->variable->getBound().l() < -constant / coefficient)
+                        return E_Convexity::Convex;
+                    if(coefficient > 0 && nominatorVariable->variable->getBound().l() < -constant / coefficient)
+                        return E_Convexity::Convex;
 
-                        if(coefficient < 0 && nominatorVariable->variable->getBound().l() > -constant / coefficient)
-                            return E_Convexity::Concave;
-                        if(coefficient > 0 && nominatorVariable->variable->getBound().l() > -constant / coefficient)
-                            return E_Convexity::Concave;
-                    }
+                    if(coefficient < 0 && nominatorVariable->variable->getBound().l() > -constant / coefficient)
+                        return E_Convexity::Concave;
+                    if(coefficient > 0 && nominatorVariable->variable->getBound().l() > -constant / coefficient)
+                        return E_Convexity::Concave;
                 }
             }
         }
