@@ -993,9 +993,9 @@ void Problem::add(NonlinearConstraintPtr constraint)
 void Problem::add(ObjectiveFunctionPtr objective)
 {
     objectiveFunction = objective;
-    objectiveFunction->updateProperties();
-
     objective->takeOwnership(shared_from_this());
+
+    objectiveFunction->updateProperties();
 
     env->output->outputTrace("Added objective function to problem.");
 }
@@ -1003,9 +1003,9 @@ void Problem::add(ObjectiveFunctionPtr objective)
 void Problem::add(LinearObjectiveFunctionPtr objective)
 {
     objectiveFunction = objective;
-    objectiveFunction->updateProperties();
-
     objective->takeOwnership(shared_from_this());
+
+    objectiveFunction->updateProperties();
 
     env->output->outputTrace("Added linear objective function to problem.");
 }
@@ -1013,9 +1013,9 @@ void Problem::add(LinearObjectiveFunctionPtr objective)
 void Problem::add(QuadraticObjectiveFunctionPtr objective)
 {
     objectiveFunction = objective;
-    objectiveFunction->updateProperties();
-
     objective->takeOwnership(shared_from_this());
+
+    objectiveFunction->updateProperties();
 
     env->output->outputTrace("Added quadratic objective function to problem.");
 }
@@ -1023,9 +1023,9 @@ void Problem::add(QuadraticObjectiveFunctionPtr objective)
 void Problem::add(NonlinearObjectiveFunctionPtr objective)
 {
     objectiveFunction = objective;
-    objectiveFunction->updateProperties();
-
     objective->takeOwnership(shared_from_this());
+
+    objectiveFunction->updateProperties();
 
     env->output->outputTrace("Added nonlinear objective function to problem.");
 }
