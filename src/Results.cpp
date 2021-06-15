@@ -1022,21 +1022,28 @@ std::string Results::getResultsSol()
 
     std::stringstream ss;
 
-    ss << fmt::format("\nSHOT: {}\n", description);
+    ss << fmt::format("SHOT: {}\n", description);
 
     ss << "\nOptions\n";
 
-    ss << "0\n"; // Number of options
+    ss << env->settings->getSetting<std::string>("AMPL.OptionsHeader", "ModelingSystem");
 
-    ss << fmt::format("{0}\n{0}\n{1}\n{1}\n",
-        env->problem->properties.numberOfNumericConstraints - env->problem->properties.numberOfAddedLinearizations,
-        env->problem->properties.numberOfVariables);
+    ss << fmt::format("{0}\n{1}\n{2}\n{3}\n",
+        env->settings->getSetting<int>("AMPL.NumberOfOriginalConstraints", "ModelingSystem"), 0,
+        env->problem->properties.numberOfVariables, env->problem->properties.numberOfVariables);
 
-    for(auto const& C : env->problem->numericConstraints)
-        ss << fmt::format("{}\n", C->calculateNumericValue(this->primalSolution).normalizedRHSValue);
-
-    for(auto const& V : this->primalSolution)
-        ss << fmt::format("{}\n", V);
+    if(this->primalSolution.size() > 0)
+    {
+        for(auto const& V : this->primalSolution)
+            ss << fmt::format("{}\n", V);
+    }
+    else
+    {
+        {
+            for(int i = 0; i < env->problem->properties.numberOfVariables; i++)
+                ss << fmt::format("{}\n", 0);
+        }
+    }
 
     ss << fmt::format("objno 0 {}", status);
 
