@@ -186,6 +186,8 @@ public:
 
         assert(variableIndex == h.num_vars);
 
+        env->settings->updateSetting("AMPL.NumberOfOriginalConstraints", "ModelingSystem", h.num_algebraic_cons);
+
         destination->numericConstraints.reserve(h.num_algebraic_cons);
         destination->linearConstraints.reserve(h.num_algebraic_cons - h.num_nl_cons);
         destination->nonlinearConstraints.reserve(h.num_nl_cons);
@@ -455,6 +457,8 @@ void ModelingSystemAMPL::augmentSettings(SettingsPtr settings)
 {
     settings->createSetting("AMPL.OptionsHeader", "ModelingSystem", std::string("0\n"),
         "The AMPL options header for the solution file", true);
+    settings->createSetting("AMPL.NumberOfOriginalConstraints", "ModelingSystem", 0,
+        "The number of constraints in the original problem submitted to SHOT", 0, SHOT_INT_MAX, true);
 }
 
 void ModelingSystemAMPL::updateSettings([[maybe_unused]] SettingsPtr settings) { }

@@ -1028,7 +1028,9 @@ std::string Results::getResultsSol()
 
     ss << env->settings->getSetting<std::string>("AMPL.OptionsHeader", "ModelingSystem");
 
-    ss << fmt::format("{0}\n{0}\n{1}\n{1}\n", 0, env->problem->properties.numberOfVariables);
+    ss << fmt::format("{0}\n{1}\n{2}\n{3}\n",
+        env->settings->getSetting<int>("AMPL.NumberOfOriginalConstraints", "ModelingSystem"), 0,
+        env->problem->properties.numberOfVariables, env->problem->properties.numberOfVariables);
 
     if(this->primalSolution.size() > 0)
     {
