@@ -364,7 +364,7 @@ int main(int argc, char* argv[])
 
 // Reads options specified in the command line arguments
 #if HAS_AMPL
-    if(cmdl["--AMPL"])
+    if(cmdl["--AMPL", "-AMPL"])
     {
         useASL = true;
 
