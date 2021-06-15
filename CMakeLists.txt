@@ -393,6 +393,7 @@ add_library(
     ${PROJECT_SOURCE_DIR}/src/Model/Terms.h
     ${PROJECT_SOURCE_DIR}/src/Model/Terms.cpp
     ${PROJECT_SOURCE_DIR}/src/Model/NonlinearExpressions.h
+    ${PROJECT_SOURCE_DIR}/src/Model/NonlinearExpressions.cpp
     ${PROJECT_SOURCE_DIR}/src/Model/Variables.h
     ${PROJECT_SOURCE_DIR}/src/Model/Variables.cpp
     ${PROJECT_SOURCE_DIR}/src/Model/AuxiliaryVariables.h
