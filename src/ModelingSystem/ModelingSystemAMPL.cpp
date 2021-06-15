@@ -78,6 +78,19 @@ public:
         destination->integerVariables.reserve(h.num_integer_vars());
         destination->realVariables.reserve(h.num_continuous_vars());
 
+        // Creates the options header needed for the sol-file in AMPL
+        if(h.num_ampl_options > 0)
+        {
+            std::stringstream solHeader;
+
+            solHeader << h.num_ampl_options << '\n';
+
+            for(int i = 0; i < h.num_ampl_options; i++)
+                solHeader << h.ampl_options[i] << '\n';
+
+            env->settings->updateSetting("AMPL.OptionsHeader", "ModelingSystem", solHeader.str());
+        }
+
         int variableIndex = 0;
 
         // Nonlinear variables in both constraints and objective
@@ -438,7 +451,11 @@ ModelingSystemAMPL::ModelingSystemAMPL(EnvironmentPtr envPtr) : IModelingSystem(
 
 ModelingSystemAMPL::~ModelingSystemAMPL() = default;
 
-void ModelingSystemAMPL::augmentSettings([[maybe_unused]] SettingsPtr settings) { }
+void ModelingSystemAMPL::augmentSettings(SettingsPtr settings)
+{
+    settings->createSetting("AMPL.OptionsHeader", "ModelingSystem", std::string("0\n"),
+        "The AMPL options header for the solution file", true);
+}
 
 void ModelingSystemAMPL::updateSettings([[maybe_unused]] SettingsPtr settings) { }
 
