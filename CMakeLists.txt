@@ -180,7 +180,7 @@ file(
     "${PROJECT_SOURCE_DIR}/src/Tasks/*.h"
     "${PROJECT_SOURCE_DIR}/src/Settings.h"
     "${TINYXML2_DIR}/tinyxml2.h"
-    "${CPPAD_DIR}/include/cppad/cppad.hpp"
+    #"${CPPAD_DIR}/include/cppad/cppad.hpp"
 )
 
 # Cbc
@@ -361,6 +361,17 @@ ExternalProject_Add(spdlog
     -DSPDLOG_BUILD_SHARED=OFF
 )
 
+# Adding CppAD using as an external project
+ExternalProject_Add(cppad
+    PREFIX cppad
+    SOURCE_DIR ${PROJECT_SOURCE_DIR}/${CPPAD_DIR}
+    CMAKE_ARGS -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+    -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+    -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
+    -Dcppad_prefix=${CMAKE_CURRENT_BINARY_DIR}/CppAD
+    -Dcppad_cxx_flags="-std=c++17"
+)
+
 # Creates the helper library
 add_library(
     SHOTHelper STATIC
@@ -380,6 +391,7 @@ add_library(
 target_link_libraries(SHOTHelper tinyxml2)
 
 add_dependencies(SHOTHelper spdlog)
+add_dependencies(SHOTHelper cppad)
 
 # Creates the model library
 add_library(

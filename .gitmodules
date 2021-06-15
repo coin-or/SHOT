@@ -1,3 +1,6 @@
 [submodule "ThirdParty/spdlog"]
 	path = ThirdParty/spdlog
 	url = https://github.com/gabime/spdlog
+[submodule "ThirdParty/CppAD"]
+	path = ThirdParty/CppAD
+	url = https://github.com/coin-or/CppAD
