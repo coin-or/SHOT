@@ -2177,6 +2177,27 @@ std::ostream& operator<<(std::ostream& stream, const Problem& problem)
         stream << C << '\n';
     }
 
+    stream << "\nspecial ordered sets:\n";
+
+    for(auto& S : problem.specialOrderedSets)
+    {
+        bool hasWeights = (S->weights.size() > 0);
+
+        stream << (S->type == E_SOSType::One ? "SOS1: " : "SOS2: ");
+
+        for(int i = 0; i < S->variables.size(); i++)
+        {
+            stream << S->variables[i]->name;
+
+            if(hasWeights)
+                stream << ":" << S->weights[i] << " ";
+            else
+                stream << " ";
+        }
+
+        stream << '\n';
+    }
+
     stream << "\nvariables:\n";
 
     for(auto& V : problem.allVariables)
