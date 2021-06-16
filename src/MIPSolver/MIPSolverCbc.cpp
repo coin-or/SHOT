@@ -28,7 +28,6 @@
 #include "CbcModel.hpp"
 #include "CbcSolver.hpp"
 #include "OsiClpSolverInterface.hpp"
-#include "CbcSOS.hpp"
 
 namespace SHOT
 {
@@ -71,13 +70,7 @@ static int dummyCallback(CbcModel* /*model*/, int /*whereFrom*/) { return 0; }
 
 MIPSolverCbc::MIPSolverCbc(EnvironmentPtr envPtr) { env = envPtr; }
 
-MIPSolverCbc::~MIPSolverCbc()
-{
-    for(int i = 0; i < specialOrderedSets.size(); i++)
-        delete specialOrderedSets[i];
-
-    specialOrderedSets.clear();
-}
+MIPSolverCbc::~MIPSolverCbc() = default;
 
 bool MIPSolverCbc::initializeProblem()
 {
@@ -394,9 +387,14 @@ bool MIPSolverCbc::addSpecialOrderedSet(E_SOSType type, VectorInteger variableIn
         if(variableWeights.size() > 0)
             assert(variableWeights.size() == variableIndexes.size());
 
-        specialOrderedSets.push_back(new CbcSOS(cbcModel.get(), variableIndexes.size(), &variableIndexes[0],
-            variableWeights.empty() ? nullptr : &variableWeights[0], specialOrderedSets.size(),
-            (type == E_SOSType::One) ? 1 : 2));
+        auto objects = new OsiObject*[1];
+        objects[0] = new OsiSOS(osiInterface.get(), variableIndexes.size(), &variableIndexes[0], &variableWeights[0],
+            (type == E_SOSType::One) ? 1 : 2);
+
+        osiInterface->addObjects(1, objects);
+
+        delete objects[0];
+        delete[] objects;
     }
     catch(std::exception& e)
     {
@@ -625,8 +623,6 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
     try
     {
         cbcModel = std::make_unique<CbcModel>(*osiInterface);
-
-        cbcModel->addObjects(specialOrderedSets.size(), &specialOrderedSets[0]);
 
         initializeSolverSettings();
 

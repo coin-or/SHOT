@@ -199,8 +199,6 @@ private:
     std::vector<std::vector<std::pair<std::string, double>>> MIPStarts;
 
     std::vector<E_VariableType> variableTypes;
-
-    std::vector<CbcObject*> specialOrderedSets;
 };
 
 } // namespace SHOT
