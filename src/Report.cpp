@@ -814,19 +814,26 @@ void Report::outputProblemInstanceReport()
                 " - semicontinuous:", env->problem->properties.numberOfSemicontinuousVariables, ""));
     }
 
-    if(isReformulated)
+    if(env->problem->properties.numberOfSpecialOrderedSets
+            + env->reformulatedProblem->properties.numberOfSpecialOrderedSets
+        > 0)
     {
-        if(env->problem->properties.numberOfVariables > 0
-            || env->reformulatedProblem->properties.numberOfSpecialOrderedSets > 0)
-            env->output->outputInfo(fmt::format(" {:35s}{:<21d}{:d}",
-                "Number of special ordered sets:", env->problem->properties.numberOfVariables,
-                env->reformulatedProblem->properties.numberOfSpecialOrderedSets));
-    }
-    else
-    {
-        if(env->problem->properties.numberOfVariables > 0)
-            env->output->outputInfo(fmt::format(" {:35s}{:<21d}{:s}",
-                "Number of special ordered sets:", env->problem->properties.numberOfSpecialOrderedSets, ""));
+        env->output->outputInfo("");
+
+        if(isReformulated)
+        {
+            if(env->problem->properties.numberOfVariables > 0
+                || env->reformulatedProblem->properties.numberOfSpecialOrderedSets > 0)
+                env->output->outputInfo(fmt::format(" {:35s}{:<21d}{:d}",
+                    "Number of special ordered sets:", env->problem->properties.numberOfSpecialOrderedSets,
+                    env->reformulatedProblem->properties.numberOfSpecialOrderedSets));
+        }
+        else
+        {
+            if(env->problem->properties.numberOfVariables > 0)
+                env->output->outputInfo(fmt::format(" {:35s}{:<21d}{:s}",
+                    "Number of special ordered sets:", env->problem->properties.numberOfSpecialOrderedSets, ""));
+        }
     }
 
     if(env->results->auxiliaryVariablesIntroduced.size() > 0 || env->reformulatedProblem->antiEpigraphObjectiveVariable)
