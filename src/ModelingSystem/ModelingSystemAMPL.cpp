@@ -65,7 +65,7 @@ private:
     // collected while handling suffixes in SuffixHandler
     // sosvars maps the SOS index (can be negative) to the indices of the variables in the SOS
     // sosweights gives for each variable its weight in the SOS it appears in (if any)
-    std::map<int, std::vector<int> > sosvars;
+    std::map<int, std::vector<int>> sosvars;
     std::vector<int> sosweights;
 
     void reset() { nonlinearExpressions.clear(); }
@@ -411,115 +411,110 @@ public:
     /// regarding SOS in AMPL, see https://ampl.com/faqs/how-can-i-use-the-solvers-special-ordered-sets-feature/
     /// we pass the .ref suffix as weight to the SOS constraint
     /// for a SOS2, the weights determine the order of variables in the set
-    template<typename T> class SuffixHandler
+    template <typename T> class SuffixHandler
     {
     private:
-       AMPLProblemHandler& amplph;
+        AMPLProblemHandler& amplph;
 
-       // type of suffix that is handled, or IGNORE if unsupported suffix
-       enum
-       {
-          IGNORE,
-          VARSOSNO,
-          VARREF,
-       } suffix;
+        // type of suffix that is handled, or IGNORE if unsupported suffix
+        enum
+        {
+            IGNORE,
+            VARSOSNO,
+            VARREF,
+        } suffix;
 
     public:
-       /// constructor
-       SuffixHandler(
-          AMPLProblemHandler& amplph_,        ///< problem handler
-          fmtold::StringRef   name,           ///< name of suffix
-          mp::suf::Kind       kind            ///< whether suffix applies to var, cons, etc
-          )
-       : amplph(amplph_),
-         suffix(IGNORE)
-       {
-          switch( kind )
-          {
-             case mp::suf::Kind::CON:
-             {
-                 amplph.env->output->outputInfo(fmtold::format("Unknown constraint suffix {}. Ignoring.\n", name));
-                 break;
-             }
+        /// constructor
+        SuffixHandler(AMPLProblemHandler& amplph_, ///< problem handler
+            fmtold::StringRef name, ///< name of suffix
+            mp::suf::Kind kind ///< whether suffix applies to var, cons, etc
+            )
+            : amplph(amplph_), suffix(IGNORE)
+        {
+            switch(kind)
+            {
+            case mp::suf::Kind::CON:
+            {
+                amplph.env->output->outputInfo(fmtold::format("Unknown constraint suffix {}. Ignoring.\n", name));
+                break;
+            }
 
-             case mp::suf::Kind::VAR:
-             {
-                if( strncmp(name.data(), "sosno", name.size()) == 0 )
+            case mp::suf::Kind::VAR:
+            {
+                if(strncmp(name.data(), "sosno", name.size()) == 0)
                 {
-                   // SOS membership
-                   suffix = VARSOSNO;
+                    // SOS membership
+                    suffix = VARSOSNO;
                 }
-                else if( strncmp(name.data(), "ref", name.size()) == 0 )
+                else if(strncmp(name.data(), "ref", name.size()) == 0)
                 {
-                   // SOS weights
-                   suffix = VARREF;
-                   amplph.sosweights.resize(amplph.destination->allVariables.size(), 0);
+                    // SOS weights
+                    suffix = VARREF;
+                    amplph.sosweights.resize(amplph.destination->allVariables.size(), 0);
                 }
                 else
                 {
-                   amplph.env->output->outputInfo(fmtold::format("Unknown variable suffix {}. Ignoring.\n", name));
+                    amplph.env->output->outputInfo(fmtold::format("Unknown variable suffix {}. Ignoring.\n", name));
                 }
                 break;
-             }
+            }
 
-             case mp::suf::Kind::OBJ:
-             {
-                 amplph.env->output->outputInfo(fmtold::format("Unknown objective suffix {}. Ignoring.\n", name));
-                 break;
-             }
+            case mp::suf::Kind::OBJ:
+            {
+                amplph.env->output->outputInfo(fmtold::format("Unknown objective suffix {}. Ignoring.\n", name));
+                break;
+            }
 
-             case mp::suf::Kind::PROBLEM:
-             {
-                 amplph.env->output->outputInfo(fmtold::format("Unknown problem suffix {}. Ignoring.\n", name));
-                 break;
-             }
-          }
-       }
+            case mp::suf::Kind::PROBLEM:
+            {
+                amplph.env->output->outputInfo(fmtold::format("Unknown problem suffix {}. Ignoring.\n", name));
+                break;
+            }
+            }
+        }
 
-       void SetValue(
-          int             index,              ///< index of variable, constraint, etc
-          T               value               ///< value of suffix
-       )
-       {
-          assert(index >= 0);
-          switch( suffix )
-          {
-             case IGNORE :
+        void SetValue(int index, ///< index of variable, constraint, etc
+            T value ///< value of suffix
+        )
+        {
+            assert(index >= 0);
+            switch(suffix)
+            {
+            case IGNORE:
                 return;
 
-             case VARSOSNO:
+            case VARSOSNO:
                 // remember that variable index belongs to SOS identified by value
                 amplph.sosvars[(int)value].push_back(index);
                 break;
 
-             case VARREF:
+            case VARREF:
                 // remember that variable index has weight value
                 amplph.sosweights[index] = (int)value;
                 break;
-          }
-       }
+            }
+        }
     };
 
     typedef SuffixHandler<int> IntSuffixHandler;
     /// receive notification of an integer suffix
-    IntSuffixHandler OnIntSuffix(
-       fmtold::StringRef  name,               ///< suffix name, not null-terminated
-       mp::suf::Kind      kind,               ///< suffix kind
-       int                /*num_values*/      ///< number of values to expect
-       )
+    IntSuffixHandler OnIntSuffix(fmtold::StringRef name, ///< suffix name, not null-terminated
+        mp::suf::Kind kind, ///< suffix kind
+        int /*num_values*/ ///< number of values to expect
+    )
     {
-       return IntSuffixHandler(*this, name, kind);
+        return IntSuffixHandler(*this, name, kind);
     }
 
     typedef SuffixHandler<double> DblSuffixHandler;
     /// receive notification of a double suffix
-    DblSuffixHandler OnDblSuffix(
-       fmtold::StringRef  name,               ///< suffix name, not null-terminated
-       mp::suf::Kind      kind,               ///< suffix kind
-       int                /*num_values*/      ///< number of values to expect
-       )
+    DblSuffixHandler OnDblSuffix(fmtold::StringRef name, ///< suffix name, not null-terminated
+        mp::suf::Kind kind, ///< suffix kind
+        int /*num_values*/ ///< number of values to expect
+    )
     {
-       return DblSuffixHandler(*this, name, kind);
+        return DblSuffixHandler(*this, name, kind);
     }
 
     class LinearPartHandler
@@ -575,51 +570,48 @@ public:
     void EndInput()
     {
         // add SOS constraints
-        std::vector<VariablePtr> setvars;  // variables in one SOS
-        std::vector<double> setweights;    // weights for one SOS
-        if( !sosvars.empty() )
-           setvars.resize(destination->allVariables.size());
-        if( !sosweights.empty() )
-           setweights.resize(setvars.size());
-        for( std::map<int, std::vector<int> >::iterator sosit(sosvars.begin()); sosit != sosvars.end(); ++sosit )
+        Variables setvars; // variables in one SOS
+        VectorDouble setweights; // weights for one SOS
+
+        if(!sosvars.empty())
+            setvars.resize(destination->allVariables.size());
+
+        if(!sosweights.empty())
+            setweights.resize(setvars.size());
+
+        for(auto sosit(sosvars.begin()); sosit != sosvars.end(); ++sosit)
         {
-           assert(sosit->first != 0);
-           assert(!sosit->second.empty());
+            assert(sosit->first != 0);
+            assert(!sosit->second.empty());
 
-           // a negative SOS identifier means SOS2
-           bool issos2 = sosit->first < 0;
+            // a negative SOS identifier means SOS2
+            bool issos2 = sosit->first < 0;
 
-           if( issos2 && sosweights.empty() )
-           {
-              // if no .ref suffix was given for a SOS2 constraint, then we consider this as an error
-              // since the weights determine the order
-              // for a SOS1, the weights only specify branching preference, so can treat them as optional
-              OnUnhandled("SOS2 requires variable .ref suffix");
-           }
+            if(issos2 && sosweights.empty())
+            {
+                // if no .ref suffix was given for a SOS2 constraint, then we consider this as an error
+                // since the weights determine the order
+                // for a SOS1, the weights only specify branching preference, so can treat them as optional
+                OnUnhandled("SOS2 requires variable .ref suffix");
+            }
 
-           for( size_t i = 0; i < sosit->second.size(); ++i )
-           {
-              int varidx = sosit->second[i];
-              setvars[i] = destination->getVariable(varidx);
+            for(size_t i = 0; i < sosit->second.size(); ++i)
+            {
+                int varidx = sosit->second[i];
+                setvars[i] = destination->getVariable(varidx);
 
-              if( issos2 && sosweights[varidx] == 0 )
-                 // 0 is the default if no ref was given for a variable; we don't allow this for SOS2
-                 OnUnhandled("Missing .ref value for SOS2 variable");
-              if( !sosweights.empty() )
-                 setweights[i] = (double)sosweights[varidx];
-           }
+                assert(setvars[i]);
 
-           char name[20];
-           if( !issos2 )
-           {
-               (void) sprintf(name, "sos1_%d", sosit->first);
-// FIXME              destination->add(std::make_shared<SOS1Constraint>(sosit->first, name, sosit->second.size(), setvars.data(), setweights.empty() ? NULL : setweights.data());
-           }
-           else
-           {
-               (void) sprintf(name, "sos2_%d", -sosit->first);
-// FIXME               destination->add(std::make_shared<SOS2Constraint>(-sosit->first, name, sosit->second.size(), setvars.data(), setweights.data());
-           }
+                if(issos2 && sosweights[varidx] == 0)
+                    // 0 is the default if no ref was given for a variable; we don't allow this for SOS2
+                    OnUnhandled("Missing .ref value for SOS2 variable");
+
+                if(!sosweights.empty())
+                    setweights[i] = (double)sosweights[varidx];
+            }
+
+            destination->add(
+                std::make_shared<SpecialOrderedSet>((issos2) ? E_SOSType::Two : E_SOSType::One, setvars, setweights));
         }
     }
 };
