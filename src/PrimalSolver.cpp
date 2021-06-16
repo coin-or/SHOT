@@ -164,16 +164,29 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
     {
         auto value = V->calculate(tmpPoint);
 
-        if(value == 0.0) { }
-        else if(value > V->upperBound)
+        if(value != 0.0)
         {
-            isVariableBoundsFulfilled = false;
-            tmpPoint.at(V->index) = V->upperBound;
-        }
-        else if(value < V->lowerBound)
-        {
-            isVariableBoundsFulfilled = false;
-            tmpPoint.at(V->index) = V->lowerBound;
+            double lb, ub;
+            if( V->semiBound < 0.0 )
+            {
+                lb = V->lowerBound;
+                ub = V->semiBound;
+            }
+            else
+            {
+                lb = V->semiBound;
+                ub = V->upperBound;
+            }
+            if(value > ub)
+            {
+                isVariableBoundsFulfilled = false;
+                tmpPoint.at(V->index) = V->upperBound;
+            }
+            else if(value < lb)
+            {
+                isVariableBoundsFulfilled = false;
+                tmpPoint.at(V->index) = V->lowerBound;
+            }
         }
     }
 
