@@ -569,16 +569,6 @@ public:
     /// receive notification about the end of the input
     void EndInput()
     {
-        // add SOS constraints
-        Variables setvars; // variables in one SOS
-        VectorDouble setweights; // weights for one SOS
-
-        if(!sosvars.empty())
-            setvars.resize(destination->allVariables.size());
-
-        if(!sosweights.empty())
-            setweights.resize(setvars.size());
-
         for(auto sosit(sosvars.begin()); sosit != sosvars.end(); ++sosit)
         {
             assert(sosit->first != 0);
@@ -595,16 +585,24 @@ public:
                 OnUnhandled("SOS2 requires variable .ref suffix");
             }
 
+            // add SOS constraints
+            Variables setvars; // variables in one SOS
+            setvars.resize(sosit->second.size());
+
+            VectorDouble setweights; // weights for one SOS
+
+            if(!sosweights.empty())
+                setweights.resize(sosit->second.size());
+
             for(size_t i = 0; i < sosit->second.size(); ++i)
             {
                 int varidx = sosit->second[i];
-                setvars[i] = destination->getVariable(varidx);
-
-                assert(setvars[i]);
 
                 if(issos2 && sosweights[varidx] == 0)
                     // 0 is the default if no ref was given for a variable; we don't allow this for SOS2
                     OnUnhandled("Missing .ref value for SOS2 variable");
+
+                setvars[i] = destination->getVariable(varidx);
 
                 if(!sosweights.empty())
                     setweights[i] = (double)sosweights[varidx];
