@@ -85,7 +85,7 @@ struct SpecialOrderedSet
 
     SpecialOrderedSet() = default;
 
-    SpecialOrderedSet(E_SOSType SOSType, Variables vars, VectorDouble w)
+    SpecialOrderedSet(E_SOSType SOSType, Variables vars, VectorDouble w = {})
     {
         type = SOSType;
         variables = vars;
