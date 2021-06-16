@@ -1310,35 +1310,31 @@ bool ModelingSystemGAMS::copySOS(ProblemPtr destination)
 
     int numSos = numSos1 + numSos2;
     int* sostype = new int[numSos];
-    int* sosbeg = new int[numSos+1];
+    int* sosbeg = new int[numSos + 1];
     int* sosind = new int[nzSos];
     double* soswt = new double[nzSos];
 
-    (void) gmoGetSosConstraints(modelingObject, sostype, sosbeg, sosind, soswt);
-
-    VariablePtr* vars = new VariablePtr[nzSos];
+    (void)gmoGetSosConstraints(modelingObject, sostype, sosbeg, sosind, soswt);
 
     for(int i = 0; i < numSos; ++i)
     {
-        for(int j = sosbeg[i], k = 0; j < sosbeg[i+1]; ++j, ++k)
+        Variables vars;
+        vars.reserve(sosbeg[i + 1] - sosbeg[i]);
+
+        VectorDouble weights;
+        weights.reserve(sosbeg[i + 1] - sosbeg[i]);
+
+        for(int j = sosbeg[i], k = 0; j < sosbeg[i + 1]; ++j)
         {
-            assert(gmoGetVarTypeOne(modelingObject, sosind[j]) == (sostype[i] == 1 ? (int) gmovar_S1 : (int) gmovar_S2));
-            vars[k] = destination->getVariable(sosind[j]);
+            assert(gmoGetVarTypeOne(modelingObject, sosind[j]) == (sostype[i] == 1 ? (int)gmovar_S1 : (int)gmovar_S2));
+            vars.push_back(destination->getVariable(sosind[j]));
+            weights.push_back(soswt[j]);
         }
 
-        sprintf(buffer, "sos%d", i);
-        if(sostype[i] == 1)
-        {
-//FIXME            destination->add(std::make_shared<SOS1Constraint>(i, buffer, k, vars, &soswt[sosbeg[i]]);
-        }
-        else
-        {
-            assert(sostype[i] == 2);
-//FIXME            destination->add(std::make_shared<SOS2Constraint>(i, buffer, k, vars, &soswt[sosbeg[i]]);
-        }
+        destination->add(
+            std::make_shared<SpecialOrderedSet>((sostype[i] == 1) ? E_SOSType::One : E_SOSType::Two, vars, weights));
     }
 
-    delete[] vars;
     delete[] soswt;
     delete[] sosind;
     delete[] sosbeg;

@@ -83,6 +83,15 @@ struct SpecialOrderedSet
 
     VectorDouble weights;
 
+    SpecialOrderedSet() = default;
+
+    SpecialOrderedSet(E_SOSType SOSType, Variables vars, VectorDouble w)
+    {
+        type = SOSType;
+        variables = vars;
+        weights = w;
+    };
+
     void takeOwnership([[maybe_unused]] ProblemPtr owner) {};
 };
 
