@@ -118,7 +118,7 @@ bool MIPSolverCplex::initializeProblem()
     return (true);
 }
 
-bool MIPSolverCplex::addVariable(std::string name, E_VariableType type, double lowerBound, double upperBound)
+bool MIPSolverCplex::addVariable(std::string name, E_VariableType type, double lowerBound, double upperBound, double semiBound)
 {
     if(lowerBound < -getUnboundedVariableBoundValue())
         lowerBound = -getUnboundedVariableBoundValue();
@@ -149,6 +149,10 @@ bool MIPSolverCplex::addVariable(std::string name, E_VariableType type, double l
         case E_VariableType::Semicontinuous:
         {
             isProblemDiscrete = true;
+            if( semiBound < 0.0 )
+                upperBound = semiBound;
+            else
+                lowerBound = semiBound;
             auto cplexVar = IloSemiContVar(cplexEnv, lowerBound, upperBound, ILOFLOAT, name.c_str());
             cplexVars.add(cplexVar);
             cplexModel.add(cplexVar);

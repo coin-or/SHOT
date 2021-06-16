@@ -264,11 +264,11 @@ bool ModelingSystemOS::copyVariables(OSInstance* source, ProblemPtr destination)
             case 'D':
                 variableType = E_VariableType::Semicontinuous;
 
-                if(variableLB < 0.0)
+                if(variableLB < minLBCont)
                 {
                     // env->output->outputDebug("Corrected lower bound for variable " + variableNames[i] + " from " +
-                    // std::to_string(variableLBs[i]) + " to " + std::to_string(0.0));
-                    variableLB = 0.0;
+                    // std::to_string(variableLBs[i]) + " to " + std::to_string(minLBCont));
+                    variableLB = minLBCont;
                 }
 
                 if(variableUB > maxUBCont)

@@ -79,7 +79,7 @@ bool TaskCreateDualProblem::createProblem(MIPSolverPtr destination, ProblemPtr s
     for(auto& V : sourceProblem->allVariables)
     {
         variablesInitialized = variablesInitialized
-            && destination->addVariable(V->name.c_str(), V->properties.type, V->lowerBound, V->upperBound);
+            && destination->addVariable(V->name.c_str(), V->properties.type, V->lowerBound, V->upperBound, V->semiBound);
     }
 
     if(!variablesInitialized)
@@ -107,10 +107,10 @@ bool TaskCreateDualProblem::createProblem(MIPSolverPtr destination, ProblemPtr s
         destination->setDualAuxiliaryObjectiveVariableIndex(sourceProblem->properties.numberOfVariables);
 
         if(sourceProblem->objectiveFunction->properties.isMinimize)
-            destination->addVariable("shot_dual_objvar", E_VariableType::Real, objectiveBound.l(), objectiveBound.u());
+            destination->addVariable("shot_dual_objvar", E_VariableType::Real, objectiveBound.l(), objectiveBound.u(), 0.0);
         else
             destination->addVariable(
-                "shot_dual_objvar", E_VariableType::Real, -objectiveBound.u(), -objectiveBound.l());
+                "shot_dual_objvar", E_VariableType::Real, -objectiveBound.u(), -objectiveBound.l(), 0.0);
     }
 
     // Now creating the objective function

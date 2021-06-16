@@ -70,6 +70,7 @@ public:
 
     double upperBound;
     double lowerBound;
+    double semiBound;
 
     FactorableFunction* factorableFunctionVariable;
 
@@ -89,6 +90,28 @@ public:
         {
             lowerBound = 0;
             upperBound = 1;
+        }
+        else if(variableType == E_VariableType::Semicontinuous)
+        {
+            if( LB > 0.0 )
+            {
+                lowerBound = 0.0;
+                upperBound = UB;
+                semiBound = LB;
+            }
+            else if( UB < 0.0 )
+            {
+                lowerBound = LB;
+                upperBound = 0.0;
+                semiBound = UB;
+            }
+            else
+            {
+                // LB <= 0, UB >= 0 -> change to ordinary continuous variable
+                variableType = E_VariableType::Real;
+                lowerBound = LB;
+                upperBound = UB;
+            }
         }
         else
         {
@@ -113,6 +136,8 @@ public:
         {
             lowerBound = SHOT_DBL_MIN;
             upperBound = SHOT_DBL_MAX;
+            if(variableType == E_VariableType::Semicontinuous)
+                variableType = E_VariableType::Real;
         }
 
         properties.type = variableType;

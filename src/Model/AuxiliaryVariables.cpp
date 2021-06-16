@@ -64,7 +64,10 @@ std::ostream& operator<<(std::ostream& stream, AuxiliaryVariablePtr var)
         break;
 
     case E_VariableType::Semicontinuous:
-        stream << var->name << " in {0} or " << var->lowerBound << " <= " << var->name << " <= " << var->upperBound;
+        if( var->semiBound < 0.0 )
+            stream << var->name << " in {0} or " << var->lowerBound << " <= " << var->name << " <= " << var->semiBound;
+        else
+            stream << var->name << " in {0} or " << var->semiBound << " <= " << var->name << " <= " << var->upperBound;
         break;
 
     default:

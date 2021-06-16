@@ -136,8 +136,8 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
         case 'D':
             variableType = E_VariableType::Semicontinuous;
 
-            if(variableLB < 0.0)
-                variableLB = 0.0;
+            if(variableLB < minLBCont)
+                variableLB = minLBCont;
 
             if(variableUB > maxUBCont)
                 variableUB = maxUBCont;

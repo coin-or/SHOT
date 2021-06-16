@@ -833,9 +833,9 @@ bool ModelingSystemGAMS::copyVariables(ProblemPtr destination)
             case gmovar_SC:
                 variableType = E_VariableType::Semicontinuous;
 
-                if(variableLBs[i] < 0.0)
+                if(variableLBs[i] < minLBCont)
                 {
-                    variableLBs[i] = 0.0;
+                    variableLBs[i] = minLBCont;
                 }
 
                 if(variableUBs[i] > maxUBCont)

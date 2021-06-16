@@ -76,7 +76,7 @@ bool MIPSolverGurobi::initializeProblem()
     return (true);
 }
 
-bool MIPSolverGurobi::addVariable(std::string name, E_VariableType type, double lowerBound, double upperBound)
+bool MIPSolverGurobi::addVariable(std::string name, E_VariableType type, double lowerBound, double upperBound, double semiBound)
 {
     if(lowerBound < -getUnboundedVariableBoundValue())
         lowerBound = -getUnboundedVariableBoundValue();
@@ -104,6 +104,10 @@ bool MIPSolverGurobi::addVariable(std::string name, E_VariableType type, double 
 
         case E_VariableType::Semicontinuous:
             isProblemDiscrete = true;
+            if( semiBound < 0.0 )
+                upperBound = semiBound;
+            else
+                lowerBound = semiBound;
             gurobiModel->addVar(lowerBound, upperBound, 0.0, GRB_SEMICONT, name);
             break;
 

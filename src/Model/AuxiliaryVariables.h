@@ -39,6 +39,7 @@ public:
 
     AuxiliaryVariable(std::string variableName, int variableIndex, E_VariableType variableType, double LB, double UB)
     {
+        assert(variableType != E_VariableType::Semicontinuous);  // not supported yet
         Variable::name = variableName;
         Variable::index = variableIndex;
         properties.type = variableType;
@@ -49,6 +50,7 @@ public:
 
     AuxiliaryVariable(std::string variableName, int variableIndex, E_VariableType variableType)
     {
+        assert(variableType != E_VariableType::Semicontinuous);  // not supported yet
         Variable::name = variableName;
         Variable::index = variableIndex;
         properties.type = variableType;

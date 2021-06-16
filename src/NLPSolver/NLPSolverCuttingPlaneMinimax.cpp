@@ -400,7 +400,7 @@ bool NLPSolverCuttingPlaneMinimax::createProblem(IMIPSolver* destination, Proble
     for(auto& V : sourceProblem->allVariables)
     {
         variablesInitialized = variablesInitialized
-            && destination->addVariable(V->name, V->properties.type, V->lowerBound, V->upperBound);
+            && destination->addVariable(V->name, V->properties.type, V->lowerBound, V->upperBound, V->semiBound);
 
         if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
         {
@@ -413,7 +413,7 @@ bool NLPSolverCuttingPlaneMinimax::createProblem(IMIPSolver* destination, Proble
     double objLowerBound = env->settings->getSetting<double>("ESH.InteriorPoint.MinimaxObjectiveLowerBound", "Dual");
 
     variablesInitialized = variablesInitialized
-        && destination->addVariable("shot_mmobjvar", E_VariableType::Real, objLowerBound, objUpperBound);
+        && destination->addVariable("shot_mmobjvar", E_VariableType::Real, objLowerBound, objUpperBound, 0.0);
 
     if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
     {
