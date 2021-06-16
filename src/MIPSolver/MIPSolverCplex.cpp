@@ -557,31 +557,31 @@ bool MIPSolverCplex::addSpecialOrderedSet(E_SOSType type, VectorInteger variable
 {
     try
     {
-        IloNumVarArray variables(cplexModel.getEnv(), variableIndexes.size());
+        IloNumVarArray variables(cplexEnv, variableIndexes.size());
 
-        for(auto I : variableIndexes)
-            variables.add(cplexVars[I]);
+        for(int i = 0; i < variableIndexes.size(); i++)
+            variables[i] = cplexVars[variableIndexes[i]];
 
         if(variableWeights.size() > 0)
         {
             assert(variableWeights.size() == variableIndexes.size());
 
-            IloNumArray weights(cplexModel.getEnv(), variableWeights.size());
+            IloNumArray weights(cplexEnv, variableWeights.size());
 
-            for(auto W : variableWeights)
-                weights.add(W);
+            for(int i = 0; i < variableWeights.size(); i++)
+                weights[i] = variableWeights[i];
 
             if(type == E_SOSType::One)
-                cplexModel.add(IloSOS1(cplexModel.getEnv(), variables, weights));
+                cplexModel.add(IloSOS1(cplexEnv, variables, weights));
             else if(type == E_SOSType::Two)
-                cplexModel.add(IloSOS2(cplexModel.getEnv(), variables, weights));
+                cplexModel.add(IloSOS2(cplexEnv, variables, weights));
         }
         else
         {
             if(type == E_SOSType::One)
-                cplexModel.add(IloSOS1(cplexModel.getEnv(), variables));
+                cplexModel.add(IloSOS1(cplexEnv, variables));
             else if(type == E_SOSType::Two)
-                cplexModel.add(IloSOS2(cplexModel.getEnv(), variables));
+                cplexModel.add(IloSOS2(cplexEnv, variables));
         }
     }
     catch(IloException& e)
