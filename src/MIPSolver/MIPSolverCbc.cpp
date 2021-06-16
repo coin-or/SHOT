@@ -27,6 +27,7 @@
 #include "CoinPragma.hpp"
 #include "CbcModel.hpp"
 #include "CbcSolver.hpp"
+#include "CbcBranchLotsize.hpp"
 #include "OsiClpSolverInterface.hpp"
 
 namespace SHOT
@@ -123,7 +124,7 @@ bool MIPSolverCbc::addVariable(std::string name, E_VariableType type, double low
 
         case E_VariableType::Semicontinuous:
             isProblemDiscrete = true;
-            coinModel->setInteger(index);
+            ++numberOfSemiVars;
             break;
 
         default:
@@ -273,6 +274,64 @@ bool MIPSolverCbc::finalizeProblem()
     {
         osiInterface->loadFromCoinModel(*coinModel);
         cbcModel = std::make_unique<CbcModel>(*osiInterface);
+
+        // assemble semicontinuous and semiinteger variables
+        if(numberOfSemiVars > 0)
+        {
+           CbcObject** semiobjects = new CbcObject*[numberOfSemiVars];
+           int object_nr = 0;
+           double points[4];
+           points[0] = 0.;
+           points[1] = 0.;
+           for( size_t i = 0; i < variableTypes.size(); ++i )
+           {
+               if( variableTypes[i] != E_VariableType::Semicontinuous )
+                   continue;
+
+              double varlb = coinModel->columnLower(i);
+              double varub = coinModel->columnUpper(i);
+
+#if 0
+              if( vartype == gmovar_SI && varub - varlb <= 1000 )
+              {
+                 // model lotsize for discrete variable as a set of integer values
+                 int len = (int)(varub - varlb + 2);
+                 double* points2 = new double[len];
+                 points2[0] = 0.;
+                 int j = 1;
+                 for( int p = (int)varlb; p <= varub; ++p, ++j )
+                    points2[j] = (double)p;
+                 semiobjects[object_nr] = new CbcLotsize(cbcModel, i, len, points2, false);
+                 delete[] points2;
+              }
+              else
+#endif
+              {
+                 // lotsize for continuous variable or integer with large upper bounds
+                 //if( vartype == gmovar_SI )
+                 //   gevLogStat(gev, "Warning: Support of semiinteger variables with a range larger than 1000 is experimental.\n");
+                 points[2] = varlb;
+                 points[3] = varub;
+                 if( varlb == varub ) // var. can be only 0 or varlb
+                    semiobjects[object_nr] = new CbcLotsize(cbcModel.get(), i, 2, points+1, false);
+                 else // var. can be 0 or in the range between low and upper
+                    semiobjects[object_nr] = new CbcLotsize(cbcModel.get(), i, 2, points,   true );
+              }
+
+              // set actual lower bound of variable in solver
+              cbcModel->solver()->setColLower(i, 0.0);
+
+              ++object_nr;
+           }
+           assert(object_nr == numberOfSemiVars);
+
+           cbcModel->addObjects(numberOfSemiVars, semiobjects);
+
+           for( int i = 0; i < numberOfSemiVars; ++i )
+              delete semiobjects[i];
+           delete[] semiobjects;
+        }
+
         CbcSolverUsefulData solverData;
         CbcMain0(*cbcModel, solverData);
 

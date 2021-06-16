@@ -195,6 +195,7 @@ private:
     double timeLimit = 1e100;
     double cutOff;
     int numberOfThreads = 1;
+    int numberOfSemiVars = 0;
 
     std::vector<std::vector<std::pair<std::string, double>>> MIPStarts;
 
