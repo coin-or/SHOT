@@ -305,6 +305,9 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem)
         if(!copyNonlinearExpressions(problem))
             return (E_ProblemCreationStatus::ErrorInConstraints);
 
+        if(!copySOS(problem))
+            return (E_ProblemCreationStatus::ErrorInConstraints);
+
         problem->updateProperties();
 
         bool extractMonomialTerms = env->settings->getSetting<bool>("Reformulation.Monomials.Extract", "Model");
@@ -781,6 +784,8 @@ bool ModelingSystemGAMS::copyVariables(ProblemPtr destination)
             switch(gmoGetVarTypeOne(modelingObject, i))
             {
             case gmovar_X:
+            case gmovar_S1:
+            case gmovar_S2:
                 variableType = E_VariableType::Real;
 
                 if(variableLBs[i] < minLBCont)
@@ -840,22 +845,6 @@ bool ModelingSystemGAMS::copyVariables(ProblemPtr destination)
 
                 break;
             case gmovar_SI:
-                env->output->outputError(" Unsupported variable type.");
-
-                delete[] variableLBs;
-                delete[] variableUBs;
-
-                return (false);
-                break;
-            case gmovar_S1:
-                env->output->outputError(" Unsupported variable type.");
-
-                delete[] variableLBs;
-                delete[] variableUBs;
-
-                return (false);
-                break;
-            case gmovar_S2:
                 env->output->outputError(" Unsupported variable type.");
 
                 delete[] variableLBs;
@@ -1308,6 +1297,54 @@ bool ModelingSystemGAMS::copyNonlinearExpressions(ProblemPtr destination)
     env->output->outputTrace(" Finished copying nonlinear expressions between GAMS modeling and SHOT problem objects.");
 
     return (true);
+}
+
+bool ModelingSystemGAMS::copySOS(ProblemPtr destination)
+{
+    int numSos1;
+    int numSos2;
+    int nzSos;
+    gmoGetSosCounts(modelingObject, &numSos1, &numSos2, &nzSos);
+    if(nzSos == 0)
+        return true;
+
+    int numSos = numSos1 + numSos2;
+    int* sostype = new int[numSos];
+    int* sosbeg = new int[numSos+1];
+    int* sosind = new int[nzSos];
+    double* soswt = new double[nzSos];
+
+    (void) gmoGetSosConstraints(modelingObject, sostype, sosbeg, sosind, soswt);
+
+    VariablePtr* vars = new VariablePtr[nzSos];
+
+    for(int i = 0; i < numSos; ++i)
+    {
+        for(int j = sosbeg[i], k = 0; j < sosbeg[i+1]; ++j, ++k)
+        {
+            assert(gmoGetVarTypeOne(modelingObject, sosind[j]) == (sostype[i] == 1 ? (int) gmovar_S1 : (int) gmovar_S2));
+            vars[k] = destination->getVariable(sosind[j]);
+        }
+
+        sprintf(buffer, "sos%d", i);
+        if(sostype[i] == 1)
+        {
+//FIXME            destination->add(std::make_shared<SOS1Constraint>(i, buffer, k, vars, &soswt[sosbeg[i]]);
+        }
+        else
+        {
+            assert(sostype[i] == 2);
+//FIXME            destination->add(std::make_shared<SOS2Constraint>(i, buffer, k, vars, &soswt[sosbeg[i]]);
+        }
+    }
+
+    delete[] vars;
+    delete[] soswt;
+    delete[] sosind;
+    delete[] sosbeg;
+    delete[] sostype;
+
+    return true;
 }
 
 NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /**< length of GAMS instructions */

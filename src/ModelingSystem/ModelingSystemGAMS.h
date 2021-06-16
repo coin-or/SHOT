@@ -80,6 +80,7 @@ private:
     bool copyLinearTerms(ProblemPtr destination);
     bool copyQuadraticTerms(ProblemPtr destination);
     bool copyNonlinearExpressions(ProblemPtr destination);
+    bool copySOS(ProblemPtr destination);
 
     static void applyOperation(std::vector<NonlinearExpressionPtr>& stack, NonlinearExpressionPtr op, int nargs);
 
