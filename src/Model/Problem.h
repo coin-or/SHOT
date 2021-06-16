@@ -67,12 +67,27 @@ struct ProblemProperties
     int numberOfNonconvexNonlinearConstraints = 0;
     int numberOfNonlinearExpressions = 0; // This includes a possible nonlinear objective
 
+    int numberOfSpecialOrderedSets = 0;
+
     int numberOfAddedLinearizations = 0; // In the initial POA step
 
     std::string name = "";
     std::string description = "";
     bool isReformulated = false; // True if this is the reformulated problem
 };
+
+struct SpecialOrderedSet
+{
+    E_SOSType type = E_SOSType::One;
+    Variables variables;
+
+    VectorDouble weights;
+
+    void takeOwnership([[maybe_unused]] ProblemPtr owner) {};
+};
+
+using SpecialOrderedSetPtr = std::shared_ptr<SpecialOrderedSet>;
+using SpecialOrderedSets = std::vector<SpecialOrderedSetPtr>;
 
 class DllExport Problem : public std::enable_shared_from_this<Problem>
 {
@@ -129,6 +144,8 @@ public:
     QuadraticConstraints quadraticConstraints;
     NonlinearConstraints nonlinearConstraints;
 
+    SpecialOrderedSets specialOrderedSets;
+
     std::vector<CppAD::AD<double>> factorableFunctionVariables;
     std::vector<CppAD::AD<double>> factorableFunctions;
     CppAD::ADFun<double> ADFunctions;
@@ -153,6 +170,8 @@ public:
     void add(LinearObjectiveFunctionPtr objective);
     void add(QuadraticObjectiveFunctionPtr objective);
     void add(NonlinearObjectiveFunctionPtr objective);
+
+    void add(SpecialOrderedSetPtr orderedSet);
 
     template <class T> void add(std::vector<T> elements);
 
@@ -232,6 +251,8 @@ public:
     virtual bool areNumericConstraintsFulfilled(VectorDouble point, double tolerance);
 
     virtual bool areIntegralityConstraintsFulfilled(VectorDouble point, double tolerance);
+
+    virtual bool areSpecialOrderedSetsFulfilled(VectorDouble point, double tolerance);
 
     bool areVariableBoundsFulfilled(VectorDouble point, double tolerance);
 

@@ -28,6 +28,7 @@
 #include "CbcModel.hpp"
 #include "CbcSolver.hpp"
 #include "OsiClpSolverInterface.hpp"
+#include "CbcSOS.hpp"
 
 namespace SHOT
 {
@@ -70,7 +71,13 @@ static int dummyCallback(CbcModel* /*model*/, int /*whereFrom*/) { return 0; }
 
 MIPSolverCbc::MIPSolverCbc(EnvironmentPtr envPtr) { env = envPtr; }
 
-MIPSolverCbc::~MIPSolverCbc() = default;
+MIPSolverCbc::~MIPSolverCbc()
+{
+    for(int i = 0; i < specialOrderedSets.size(); i++)
+        delete specialOrderedSets[i];
+
+    specialOrderedSets.clear();
+}
 
 bool MIPSolverCbc::initializeProblem()
 {
@@ -380,6 +387,31 @@ int MIPSolverCbc::addLinearConstraint(
     return (osiInterface->getNumRows() - 1);
 }
 
+bool MIPSolverCbc::addSpecialOrderedSet(E_SOSType type, VectorInteger variableIndexes, VectorDouble variableWeights)
+{
+    try
+    {
+        if(variableWeights.size() > 0)
+            assert(variableWeights.size() == variableIndexes.size());
+
+        specialOrderedSets.push_back(new CbcSOS(cbcModel.get(), variableIndexes.size(), &variableIndexes[0],
+            variableWeights.empty() ? nullptr : &variableWeights[0], specialOrderedSets.size(),
+            (type == E_SOSType::One) ? 1 : 2));
+    }
+    catch(std::exception& e)
+    {
+        env->output->outputError("        Error when adding special ordered set constraint in Cbc:", e.what());
+        return (false);
+    }
+    catch(CoinError& e)
+    {
+        env->output->outputError("        Error when adding special ordered set constraint in Cbc:", e.message());
+        return (false);
+    }
+
+    return (true);
+}
+
 void MIPSolverCbc::activateDiscreteVariables(bool activate)
 {
     if(activate)
@@ -593,6 +625,8 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
     try
     {
         cbcModel = std::make_unique<CbcModel>(*osiInterface);
+
+        cbcModel->addObjects(specialOrderedSets.size(), &specialOrderedSets[0]);
 
         initializeSolverSettings();
 

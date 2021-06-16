@@ -553,6 +553,46 @@ int MIPSolverCplex::addLinearConstraint(
     return (cplexInstance.getNrows() - 1);
 }
 
+bool MIPSolverCplex::addSpecialOrderedSet(E_SOSType type, VectorInteger variableIndexes, VectorDouble variableWeights)
+{
+    try
+    {
+        IloNumVarArray variables(cplexModel.getEnv(), variableIndexes.size());
+
+        for(auto I : variableIndexes)
+            variables.add(cplexVars[I]);
+
+        if(variableWeights.size() > 0)
+        {
+            assert(variableWeights.size() == variableIndexes.size());
+
+            IloNumArray weights(cplexModel.getEnv(), variableWeights.size());
+
+            for(auto W : variableWeights)
+                weights.add(W);
+
+            if(type == E_SOSType::One)
+                cplexModel.add(IloSOS1(cplexModel.getEnv(), variables, weights));
+            if(type == E_SOSType::Two)
+                cplexModel.add(IloSOS2(cplexModel.getEnv(), variables, weights));
+        }
+        else
+        {
+            if(type == E_SOSType::One)
+                cplexModel.add(IloSOS1(cplexModel.getEnv(), variables));
+            if(type == E_SOSType::Two)
+                cplexModel.add(IloSOS2(cplexModel.getEnv(), variables));
+        }
+    }
+    catch(IloException& e)
+    {
+        env->output->outputError("        Error when adding special ordered set constraint", e.getMessage());
+        return (false);
+    }
+
+    return (true);
+}
+
 void MIPSolverCplex::activateDiscreteVariables(bool activate)
 {
     try

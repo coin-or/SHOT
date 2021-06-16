@@ -61,6 +61,9 @@ public:
     int addLinearConstraint(const std::map<int, double>& elements, double constant, std::string name,
         bool isGreaterThan, bool allowRepair) override;
 
+    bool addSpecialOrderedSet(
+        E_SOSType type, VectorInteger variableIndexes, VectorDouble variableWeights = {}) override;
+
     bool createHyperplane(Hyperplane hyperplane) override { return (MIPSolverBase::createHyperplane(hyperplane)); }
 
     bool createIntegerCut(IntegerCut& integerCut) override;

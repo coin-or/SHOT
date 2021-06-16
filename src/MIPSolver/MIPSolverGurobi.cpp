@@ -481,6 +481,35 @@ int MIPSolverGurobi::addLinearConstraint(
     return (gurobiModel->get(GRB_IntAttr_NumConstrs) - 1);
 }
 
+bool MIPSolverGurobi::addSpecialOrderedSet(E_SOSType type, VectorInteger variableIndexes, VectorDouble variableWeights)
+{
+    try
+    {
+        std::vector<GRBVar> variables;
+
+        for(auto I : variableIndexes)
+            variables.push_back(gurobiModel->getVar(I));
+
+        if(variableWeights.size() == 0)
+        {
+            for(int i = 0; i < variableIndexes.size(); i++)
+                variableWeights[i] = i;
+        }
+
+        assert(variableWeights.size() == variableIndexes.size());
+
+        gurobiModel->addSOS(&variables[0], &variableWeights[0], variables.size(),
+            (type == E_SOSType::One) ? GRB_SOS_TYPE1 : GRB_SOS_TYPE2);
+    }
+    catch(GRBException& e)
+    {
+        env->output->outputError("        Error when adding special ordered set constraint", e.getMessage());
+        return (false);
+    }
+
+    return (true);
+}
+
 bool MIPSolverGurobi::createIntegerCut(IntegerCut& integerCut)
 {
     bool allowIntegerCutRepair = env->settings->getSetting<bool>("MIP.InfeasibilityRepair.IntegerCuts", "Dual");

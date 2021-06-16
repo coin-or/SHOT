@@ -231,6 +231,12 @@ enum class E_SolutionStrategy
     None
 };
 
+enum class E_SOSType
+{
+    One,
+    Two
+};
+
 enum class E_TerminationReason
 {
     ConstraintTolerance,
