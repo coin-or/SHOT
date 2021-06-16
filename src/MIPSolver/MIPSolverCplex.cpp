@@ -573,14 +573,14 @@ bool MIPSolverCplex::addSpecialOrderedSet(E_SOSType type, VectorInteger variable
 
             if(type == E_SOSType::One)
                 cplexModel.add(IloSOS1(cplexModel.getEnv(), variables, weights));
-            if(type == E_SOSType::Two)
+            else if(type == E_SOSType::Two)
                 cplexModel.add(IloSOS2(cplexModel.getEnv(), variables, weights));
         }
         else
         {
             if(type == E_SOSType::One)
                 cplexModel.add(IloSOS1(cplexModel.getEnv(), variables));
-            if(type == E_SOSType::Two)
+            else if(type == E_SOSType::Two)
                 cplexModel.add(IloSOS2(cplexModel.getEnv(), variables));
         }
     }
