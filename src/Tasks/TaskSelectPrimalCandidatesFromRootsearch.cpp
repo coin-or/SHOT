@@ -69,6 +69,11 @@ void TaskSelectPrimalCandidatesFromRootsearch::run(std::vector<SolutionPoint> so
                     xNLP.at(V->index) = P.point.at(V->index);
                 }
 
+                for(auto& V : env->reformulatedProblem->semiintegerVariables)
+                {
+                    xNLP.at(V->index) = P.point.at(V->index);
+                }
+
                 auto maxDevNLP2 = env->reformulatedProblem->getMaxNumericConstraintValue(
                     xNLP, env->reformulatedProblem->numericConstraints);
                 auto maxDevMIP = env->reformulatedProblem->getMaxNumericConstraintValue(

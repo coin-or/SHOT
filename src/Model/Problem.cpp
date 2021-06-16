@@ -581,9 +581,9 @@ void Problem::updateProperties()
     properties.numberOfRealVariables = realVariables.size();
     properties.numberOfBinaryVariables = binaryVariables.size();
     properties.numberOfIntegerVariables = integerVariables.size();
-    properties.numberOfDiscreteVariables = properties.numberOfBinaryVariables + properties.numberOfIntegerVariables;
     properties.numberOfSemicontinuousVariables = semicontinuousVariables.size();
     properties.numberOfSemiintegerVariables = semiintegerVariables.size();
+    properties.numberOfDiscreteVariables = properties.numberOfBinaryVariables + properties.numberOfIntegerVariables + properties.numberOfSemiintegerVariables;
     properties.numberOfNonlinearVariables = nonlinearVariables.size();
     properties.numberOfVariablesInNonlinearExpressions = nonlinearExpressionVariables.size();
     properties.numberOfAuxiliaryVariables = auxiliaryVariables.size();
@@ -593,7 +593,7 @@ void Problem::updateProperties()
 
     assert(properties.numberOfVariables
         == properties.numberOfRealVariables + properties.numberOfDiscreteVariables
-            + properties.numberOfSemicontinuousVariables + properties.numberOfSemiintegerVariables);
+            + properties.numberOfSemicontinuousVariables);
 
     properties.numberOfNumericConstraints = numericConstraints.size();
     properties.numberOfLinearConstraints = linearConstraints.size();
@@ -1648,6 +1648,12 @@ bool Problem::areNumericConstraintsFulfilled(VectorDouble point, double toleranc
 bool Problem::areIntegralityConstraintsFulfilled(VectorDouble point, double tolerance)
 {
     for(auto& V : integerVariables)
+    {
+        if(abs(point.at(V->index) - round(point.at(V->index))) > tolerance)
+            return false;
+    }
+
+    for(auto& V : semiintegerVariables)
     {
         if(abs(point.at(V->index) - round(point.at(V->index))) > tolerance)
             return false;

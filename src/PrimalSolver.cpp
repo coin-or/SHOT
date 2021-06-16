@@ -210,12 +210,12 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
             if(value > ub)
             {
                 isVariableBoundsFulfilled = false;
-                tmpPoint.at(V->index) = V->upperBound;
+                tmpPoint.at(V->index) = round(V->upperBound - 0.5);
             }
             else if(value < lb)
             {
                 isVariableBoundsFulfilled = false;
-                tmpPoint.at(V->index) = V->lowerBound;
+                tmpPoint.at(V->index) = round(V->lowerBound + 0.5);
             }
         }
     }
@@ -293,6 +293,23 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
         }
 
         for(auto& V : env->problem->binaryVariables)
+        {
+            auto value = V->calculate(tmpPoint);
+            int index = V->index;
+
+            double rounded = std::round(value);
+            double error = std::abs(rounded - value);
+
+            maxIntegerError = std::max(maxIntegerError, error);
+
+            if(error > integerTol)
+            {
+                ptRounded.at(index) = rounded;
+                isRounded = true;
+            }
+        }
+
+        for(auto& V : env->problem->semiintegerVariables)
         {
             auto value = V->calculate(tmpPoint);
             int index = V->index;
@@ -490,7 +507,7 @@ void PrimalSolver::addFixedNLPCandidate(
 
     for(auto& VAR : env->reformulatedProblem->allVariables)
     {
-        if(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer)
+        if(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer || VAR->properties.type == E_VariableType::Semiinteger)
             discretVariableValues.push_back(candidate[VAR->index]);
     }
 

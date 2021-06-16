@@ -1698,10 +1698,10 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
             {
             }
             else if(useIntegerBilinearTermReformulation && T->isBilinear
-                && ((T->firstVariable->properties.type == E_VariableType::Integer
+                && (((T->firstVariable->properties.type == E_VariableType::Integer || T->firstVariable->properties.type == E_VariableType::Semiinteger)
                         && (T->firstVariable->upperBound - T->firstVariable->lowerBound
                             < maxBilinearIntegerReformulationDomain))
-                    || (T->secondVariable->properties.type == E_VariableType::Integer
+                    || ((T->secondVariable->properties.type == E_VariableType::Integer || T->secondVariable->properties.type == E_VariableType::Semiinteger)
                         && (T->secondVariable->upperBound - T->secondVariable->lowerBound
                             < maxBilinearIntegerReformulationDomain))))
             // bilinear term i1*i2 or i1*x2
@@ -1759,10 +1759,10 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
                 resultLinearTerms.add(std::make_shared<LinearTerm>(signfactor * T->coefficient, auxVariable));
             }
             else if(useIntegerBilinearTermReformulation && T->isBilinear
-                && ((T->firstVariable->properties.type == E_VariableType::Integer
+                && (((T->firstVariable->properties.type == E_VariableType::Integer || T->firstVariable->properties.type == E_VariableType::Semiinteger)
                         && (T->firstVariable->upperBound - T->firstVariable->lowerBound
                             < maxBilinearIntegerReformulationDomain))
-                    || (T->secondVariable->properties.type == E_VariableType::Integer
+                    || ((T->secondVariable->properties.type == E_VariableType::Integer || T->secondVariable->properties.type == E_VariableType::Semiinteger)
                         && (T->secondVariable->upperBound - T->secondVariable->lowerBound
                             < maxBilinearIntegerReformulationDomain))))
             // bilinear term i1*i2 or i1*x2
@@ -2433,7 +2433,7 @@ std::pair<AuxiliaryVariablePtr, bool> TaskReformulateProblem::getSquareAuxiliary
     {
         variableType = E_VariableType::Binary;
     }
-    else if(variable->properties.type == E_VariableType::Integer)
+    else if(variable->properties.type == E_VariableType::Integer || variable->properties.type == E_VariableType::Semiinteger)
     {
         variableType = E_VariableType::Integer;
     }
@@ -2496,9 +2496,15 @@ std::pair<AuxiliaryVariablePtr, bool> TaskReformulateProblem::getBilinearAuxilia
         variableType = E_VariableType::Integer;
         auxVariableType = E_AuxiliaryVariableType::IntegerBilinear;
     }
+    else if(firstVariable->properties.type == E_VariableType::Semiinteger
+        && secondVariable->properties.type == E_VariableType::Semiinteger)
+    {
+        variableType = E_VariableType::Integer;
+        auxVariableType = E_AuxiliaryVariableType::IntegerBilinear;
+    }
     else if((firstVariable->properties.type == E_VariableType::Binary
-                && secondVariable->properties.type == E_VariableType::Integer)
-        || (firstVariable->properties.type == E_VariableType::Integer
+                && (secondVariable->properties.type == E_VariableType::Integer || secondVariable->properties.type == E_VariableType::Semiinteger))
+        || ((firstVariable->properties.type == E_VariableType::Integer || firstVariable->properties.type == E_VariableType::Semiinteger)
             && secondVariable->properties.type == E_VariableType::Binary))
     {
         variableType = E_VariableType::Integer;
@@ -2585,7 +2591,7 @@ void TaskReformulateProblem::createBilinearReformulations()
             reformulateBinaryContinuousBilinearTerm(firstVariable, secondVariable, AUXVAR);
             AUXVAR->properties.auxiliaryType = E_AuxiliaryVariableType::BinaryContinuousBilinear;
         }
-        else if(firstVariableType == E_VariableType::Integer || secondVariableType == E_VariableType::Integer)
+        else if(firstVariableType == E_VariableType::Integer || firstVariableType == E_VariableType::Semiinteger || secondVariableType == E_VariableType::Integer || secondVariableType == E_VariableType::Semiinteger)
         {
             reformulateIntegerBilinearTerm(firstVariable, secondVariable, AUXVAR);
             AUXVAR->properties.auxiliaryType = E_AuxiliaryVariableType::IntegerBilinear;
@@ -2681,7 +2687,8 @@ void TaskReformulateProblem::reformulateIntegerBilinearTerm(
     bool firstVariableIsDiscrete = false;
 
     if(firstVariable->properties.type == E_VariableType::Binary
-        || firstVariable->properties.type == E_VariableType::Integer)
+        || firstVariable->properties.type == E_VariableType::Integer
+        || firstVariable->properties.type == E_VariableType::Semiinteger)
     {
         foundFirstVariable
             = (integerAuxiliaryBinaryVariables.find(firstVariable) != integerAuxiliaryBinaryVariables.end());
@@ -2689,7 +2696,8 @@ void TaskReformulateProblem::reformulateIntegerBilinearTerm(
     }
 
     if(secondVariable->properties.type == E_VariableType::Binary
-        || secondVariable->properties.type == E_VariableType::Integer)
+        || secondVariable->properties.type == E_VariableType::Integer
+        || secondVariable->properties.type == E_VariableType::Semiinteger)
     {
         foundSecondVariable
             = (integerAuxiliaryBinaryVariables.find(secondVariable) != integerAuxiliaryBinaryVariables.end());

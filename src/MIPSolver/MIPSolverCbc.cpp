@@ -457,7 +457,7 @@ void MIPSolverCbc::activateDiscreteVariables(bool activate)
 
         for(int i = 0; i < numberOfVariables; i++)
         {
-            if(variableTypes.at(i) == E_VariableType::Integer || variableTypes.at(i) == E_VariableType::Binary)
+            if(variableTypes.at(i) == E_VariableType::Integer || variableTypes.at(i) == E_VariableType::Binary || variableTypes.at(i) == E_VariableType::Semiinteger)
             {
                 osiInterface->setInteger(i);
                 assert(osiInterface->isInteger(i));
@@ -471,7 +471,7 @@ void MIPSolverCbc::activateDiscreteVariables(bool activate)
         env->output->outputDebug("        Activating LP strategy");
         for(int i = 0; i < numberOfVariables; i++)
         {
-            if(variableTypes.at(i) == E_VariableType::Integer || variableTypes.at(i) == E_VariableType::Binary)
+            if(variableTypes.at(i) == E_VariableType::Integer || variableTypes.at(i) == E_VariableType::Binary || variableTypes.at(i) == E_VariableType::Semiinteger)
             {
                 osiInterface->setContinuous(i);
                 assert(osiInterface->isContinuous(i));
@@ -1353,7 +1353,7 @@ bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
 
             for(auto& VAR : env->reformulatedProblem->allVariables)
             {
-                if(!(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer))
+                if(!(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer || VAR->properties.type == E_VariableType::Semiinteger))
                     continue;
 
                 int variableValue = integerCut.variableValues[index];
@@ -1396,7 +1396,7 @@ bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
                 int variableValue = integerCut.variableValues[index];
 
                 assert(
-                    VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer);
+                    VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer || VAR->properties.type == E_VariableType::Semiinteger);
 
                 if(variableValue == VAR->upperBound)
                 {

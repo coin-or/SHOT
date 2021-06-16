@@ -132,6 +132,11 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(Environment
         discreteVariableIndexes.push_back(V->index);
     }
 
+    for(auto& V : sourceProblem->semiintegerVariables)
+    {
+        discreteVariableIndexes.push_back(V->index);
+    }
+
     if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
     {
         for(auto& V : sourceProblem->allVariables)

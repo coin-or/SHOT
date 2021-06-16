@@ -44,7 +44,7 @@ bool Variable::tightenBounds(const Interval bound)
             // Special logic for negative zero
             this->lowerBound = -bound.l();
         }
-        else if(this->properties.type == E_VariableType::Binary || this->properties.type == E_VariableType::Integer)
+        else if(this->properties.type == E_VariableType::Binary || this->properties.type == E_VariableType::Integer || this->properties.type == E_VariableType::Semiinteger)
         {
             this->lowerBound = std::ceil(bound.l());
         }
@@ -64,7 +64,7 @@ bool Variable::tightenBounds(const Interval bound)
             // Special logic for negative zero
             this->upperBound = -bound.u();
         }
-        else if(this->properties.type == E_VariableType::Binary || this->properties.type == E_VariableType::Integer)
+        else if(this->properties.type == E_VariableType::Binary || this->properties.type == E_VariableType::Integer || this->properties.type == E_VariableType::Semiinteger)
         {
             this->upperBound = std::floor(bound.u());
         }

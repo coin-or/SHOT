@@ -335,6 +335,11 @@ public:
         {
             isInteger = true;
         }
+        else if(firstVariable->properties.type == E_VariableType::Semiinteger
+            && secondVariable->properties.type == E_VariableType::Semiinteger)
+        {
+            isInteger = true;
+        }
     };
 
     inline double calculate(const VectorDouble& point) const override

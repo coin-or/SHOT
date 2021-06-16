@@ -617,7 +617,7 @@ bool CtCallbackI::createIntegerCut(IntegerCut& integerCut)
 
         for(auto& VAR : env->reformulatedProblem->allVariables)
         {
-            if(!(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer))
+            if(!(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer || VAR->properties.type == E_VariableType::Semiinteger))
                 continue;
 
             int variableValue = integerCut.variableValues[index];

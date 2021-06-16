@@ -551,7 +551,7 @@ bool MIPSolverGurobi::createIntegerCut(IntegerCut& integerCut)
             int variableValue = integerCut.variableValues[index];
             auto variable = gurobiModel->getVar(I);
 
-            assert(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer);
+            assert(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer || VAR->properties.type == E_VariableType::Semiinteger);
 
             if(variableValue == VAR->upperBound)
             {
