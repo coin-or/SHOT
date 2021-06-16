@@ -303,6 +303,7 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
         env->output->outputError(fmt::format("Error when parsing objective function."));
         return (E_ProblemCreationStatus::ErrorInObjective);
     }
+
     try
     {
         if(quadraticCoeffNodes != NULL)
@@ -432,29 +433,32 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
         return (E_ProblemCreationStatus::ErrorInConstraints);
     }
 
-    auto SOSNodes = osilDocument.FirstChildElement("osil")
-                        ->FirstChildElement("instanceData")
-                        ->FirstChildElement("specialOrderedSets");
-
     // Read the SOS
     try
     {
-        for(auto S = SOSNodes->FirstChildElement("sos"); S != nullptr; S = S->NextSiblingElement("sos"))
+        auto SOSNodes = osilDocument.FirstChildElement("osil")
+                            ->FirstChildElement("instanceData")
+                            ->FirstChildElement("specialOrderedSets");
+
+        if(SOSNodes != NULL)
         {
-            int SOSType = (S->Attribute("type") != NULL) ? std::stoi(S->Attribute("type")) : 1;
-            int numVariables = (S->Attribute("numberOfVar") != NULL) ? std::stoi(S->Attribute("numberOfVar")) : 1;
-
-            Variables variables;
-            variables.reserve(numVariables);
-
-            for(auto VAR = S->FirstChildElement("var"); VAR != nullptr; VAR = VAR->NextSiblingElement("var"))
+            for(auto S = SOSNodes->FirstChildElement("sos"); S != nullptr; S = S->NextSiblingElement("sos"))
             {
-                int variableIndex = std::stoi(VAR->Attribute("idx"));
-                variables.push_back(problem->getVariable(variableIndex));
-            }
+                int SOSType = (S->Attribute("type") != NULL) ? std::stoi(S->Attribute("type")) : 1;
+                int numVariables = (S->Attribute("numberOfVar") != NULL) ? std::stoi(S->Attribute("numberOfVar")) : 1;
 
-            problem->add(
-                std::make_shared<SpecialOrderedSet>((SOSType == 1) ? E_SOSType::One : E_SOSType::Two, variables));
+                Variables variables;
+                variables.reserve(numVariables);
+
+                for(auto VAR = S->FirstChildElement("var"); VAR != nullptr; VAR = VAR->NextSiblingElement("var"))
+                {
+                    int variableIndex = std::stoi(VAR->Attribute("idx"));
+                    variables.push_back(problem->getVariable(variableIndex));
+                }
+
+                problem->add(
+                    std::make_shared<SpecialOrderedSet>((SOSType == 1) ? E_SOSType::One : E_SOSType::Two, variables));
+            }
         }
     }
     catch(const std::exception&)
