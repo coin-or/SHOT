@@ -393,6 +393,7 @@ void Problem::updateVariables()
     binaryVariables.sortByIndex();
     integerVariables.sortByIndex();
     semicontinuousVariables.sortByIndex();
+    semiintegerVariables.sortByIndex();
     auxiliaryVariables.sortByIndex();
 
     nonlinearVariables.clear();
@@ -582,6 +583,7 @@ void Problem::updateProperties()
     properties.numberOfIntegerVariables = integerVariables.size();
     properties.numberOfDiscreteVariables = properties.numberOfBinaryVariables + properties.numberOfIntegerVariables;
     properties.numberOfSemicontinuousVariables = semicontinuousVariables.size();
+    properties.numberOfSemiintegerVariables = semiintegerVariables.size();
     properties.numberOfNonlinearVariables = nonlinearVariables.size();
     properties.numberOfVariablesInNonlinearExpressions = nonlinearExpressionVariables.size();
     properties.numberOfAuxiliaryVariables = auxiliaryVariables.size();
@@ -591,7 +593,7 @@ void Problem::updateProperties()
 
     assert(properties.numberOfVariables
         == properties.numberOfRealVariables + properties.numberOfDiscreteVariables
-            + properties.numberOfSemicontinuousVariables);
+            + properties.numberOfSemicontinuousVariables + properties.numberOfSemiintegerVariables);
 
     properties.numberOfNumericConstraints = numericConstraints.size();
     properties.numberOfLinearConstraints = linearConstraints.size();
@@ -655,7 +657,7 @@ void Problem::updateProperties()
     properties.numberOfSpecialOrderedSets = specialOrderedSets.size();
 
     properties.isDiscrete = (properties.numberOfDiscreteVariables > 0 || properties.numberOfSemicontinuousVariables > 0
-        || properties.numberOfSpecialOrderedSets > 0);
+        || properties.numberOfSpecialOrderedSets > 0 || properties.numberOfSemiintegerVariables > 0);
 
     if(areConstrsNonlinear || isObjNonlinear)
         properties.isNonlinear = true;
@@ -827,6 +829,7 @@ Problem::~Problem()
     binaryVariables.clear();
     integerVariables.clear();
     semicontinuousVariables.clear();
+    semiintegerVariables.clear();
     nonlinearVariables.clear();
     nonlinearExpressionVariables.clear();
 
@@ -881,6 +884,9 @@ void Problem::add(VariablePtr variable)
     case(E_VariableType::Semicontinuous):
         semicontinuousVariables.push_back(variable);
         break;
+    case(E_VariableType::Semiinteger):
+        semiintegerVariables.push_back(variable);
+        break;
     default:
         break;
     }
@@ -919,6 +925,9 @@ void Problem::add(AuxiliaryVariablePtr variable)
         break;
     case(E_VariableType::Semicontinuous):
         semicontinuousVariables.push_back(variable);
+        break;
+    case(E_VariableType::Semiinteger):
+        semiintegerVariables.push_back(variable);
         break;
     default:
         break;
@@ -2240,6 +2249,10 @@ bool Problem::verifyOwnership()
         return (false);
 
     if(std::any_of(semicontinuousVariables.begin(), semicontinuousVariables.end(),
+           [this](VariablePtr const& V) { return (V->ownerProblem.lock().get() != this); }))
+        return (false);
+
+    if(std::any_of(semiintegerVariables.begin(), semiintegerVariables.end(),
            [this](VariablePtr const& V) { return (V->ownerProblem.lock().get() != this); }))
         return (false);
 

@@ -144,6 +144,10 @@ std::ostream& operator<<(std::ostream& stream, VariablePtr var)
         type << "C";
         break;
 
+    case(E_VariableType::Semiinteger):
+        type << "D";
+        break;
+
     default:
         type << "?";
         break;

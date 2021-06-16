@@ -144,6 +144,17 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
 
             break;
 
+        case 'J':
+            variableType = E_VariableType::Semiinteger;
+
+            if(variableLB < minLBInt)
+                variableLB = minLBInt;
+
+            if(variableUB > maxUBInt)
+                variableUB = maxUBInt;
+
+            break;
+
         default:
             return (E_ProblemCreationStatus::ErrorInVariables);
             break;

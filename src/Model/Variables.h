@@ -91,7 +91,7 @@ public:
             lowerBound = 0;
             upperBound = 1;
         }
-        else if(variableType == E_VariableType::Semicontinuous)
+        else if(variableType == E_VariableType::Semicontinuous || variableType == E_VariableType::Semiinteger)
         {
             if( LB > 0.0 )
             {
@@ -108,7 +108,7 @@ public:
             else
             {
                 // LB <= 0, UB >= 0 -> change to ordinary continuous variable
-                variableType = E_VariableType::Real;
+                variableType = (variableType == E_VariableType::Semicontinuous) ? E_VariableType::Real : E_VariableType::Integer;
                 lowerBound = LB;
                 upperBound = UB;
             }
@@ -138,6 +138,8 @@ public:
             upperBound = SHOT_DBL_MAX;
             if(variableType == E_VariableType::Semicontinuous)
                 variableType = E_VariableType::Real;
+            else if(variableType == E_VariableType::Semiinteger)
+                variableType = E_VariableType::Integer;
         }
 
         properties.type = variableType;

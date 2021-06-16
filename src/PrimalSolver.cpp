@@ -190,6 +190,36 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
         }
     }
 
+    for(auto& V : env->problem->semiintegerVariables)
+    {
+        auto value = V->calculate(tmpPoint);
+
+        if(value != 0.0)
+        {
+            double lb, ub;
+            if( V->semiBound < 0.0 )
+            {
+                lb = V->lowerBound;
+                ub = V->semiBound;
+            }
+            else
+            {
+                lb = V->semiBound;
+                ub = V->upperBound;
+            }
+            if(value > ub)
+            {
+                isVariableBoundsFulfilled = false;
+                tmpPoint.at(V->index) = V->upperBound;
+            }
+            else if(value < lb)
+            {
+                isVariableBoundsFulfilled = false;
+                tmpPoint.at(V->index) = V->lowerBound;
+            }
+        }
+    }
+
     for(auto& V : env->problem->integerVariables)
     {
         auto value = V->calculate(tmpPoint);

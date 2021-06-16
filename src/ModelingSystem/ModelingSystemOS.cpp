@@ -280,6 +280,25 @@ bool ModelingSystemOS::copyVariables(OSInstance* source, ProblemPtr destination)
 
                 break;
 
+            case 'J':
+                variableType = E_VariableType::Semiinteger;
+
+                if(variableLB < minLBInt)
+                {
+                    // env->output->outputDebug("Corrected lower bound for variable " + variableNames[i] + " from " +
+                    // std::to_string(variableLBs[i]) + " to " + std::to_string(minLBInt));
+                    variableLB = minLBInt;
+                }
+
+                if(variableUB > maxUBInt)
+                {
+                    // env->output->outputDebug("Corrected upper bound for variable " + variableNames[i] + " from " +
+                    // std::to_string(variableUBs[i]) + " to " + std::to_string(maxUBInt));
+                    variableUB = maxUBInt;
+                }
+
+                break;
+
             default:
                 return (false);
                 break;

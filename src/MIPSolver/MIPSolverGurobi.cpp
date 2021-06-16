@@ -111,6 +111,15 @@ bool MIPSolverGurobi::addVariable(std::string name, E_VariableType type, double 
             gurobiModel->addVar(lowerBound, upperBound, 0.0, GRB_SEMICONT, name);
             break;
 
+        case E_VariableType::Semiinteger:
+            isProblemDiscrete = true;
+            if( semiBound < 0.0 )
+                upperBound = semiBound;
+            else
+                lowerBound = semiBound;
+            gurobiModel->addVar(lowerBound, upperBound, 0.0, GRB_SEMIINT, name);
+            break;
+
         default:
             break;
         }

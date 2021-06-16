@@ -845,12 +845,18 @@ bool ModelingSystemGAMS::copyVariables(ProblemPtr destination)
 
                 break;
             case gmovar_SI:
-                env->output->outputError(" Unsupported variable type.");
+                variableType = E_VariableType::Semiinteger;
 
-                delete[] variableLBs;
-                delete[] variableUBs;
+                if(variableLBs[i] < minLBInt)
+                {
+                    variableLBs[i] = minLBInt;
+                }
 
-                return (false);
+                if(variableUBs[i] > maxUBInt)
+                {
+                    variableUBs[i] = maxUBInt;
+                }
+
                 break;
             default:
                 env->output->outputError(" Unsupported variable type.");

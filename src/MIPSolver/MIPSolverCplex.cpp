@@ -147,13 +147,14 @@ bool MIPSolverCplex::addVariable(std::string name, E_VariableType type, double l
             break;
         }
         case E_VariableType::Semicontinuous:
+        case E_VariableType::Semiinteger:
         {
             isProblemDiscrete = true;
             if( semiBound < 0.0 )
                 upperBound = semiBound;
             else
                 lowerBound = semiBound;
-            auto cplexVar = IloSemiContVar(cplexEnv, lowerBound, upperBound, ILOFLOAT, name.c_str());
+            auto cplexVar = IloSemiContVar(cplexEnv, lowerBound, upperBound, (type == E_VariableType::Semicontinuous) ? ILOFLOAT : ILOINT, name.c_str());
             cplexVars.add(cplexVar);
             cplexModel.add(cplexVar);
             break;

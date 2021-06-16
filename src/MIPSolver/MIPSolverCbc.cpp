@@ -122,6 +122,8 @@ bool MIPSolverCbc::addVariable(std::string name, E_VariableType type, double low
             coinModel->setInteger(index);
             break;
 
+        case E_VariableType::Semiinteger:
+            coinModel->setInteger(index);
         case E_VariableType::Semicontinuous:
         {
             // variable is either {0} or in [semiBound,upperBound]
