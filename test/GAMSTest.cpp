@@ -340,6 +340,21 @@ int GAMSTest(int argc, char* argv[])
         passed = SolveProblemGAMS("data/milp.gms");
         std::cout << "Finished test to solve a MILP problem in GAMS syntax." << std::endl;
         break;
+    case 8:
+        std::cout << "Starting test to solve problem sos1a with SOS1 constraints in GAMS syntax:" << std::endl;
+        passed = SolveProblemGAMS("data/sos1a.gms");
+        std::cout << "Finished test to solve problem sos1a with SOS1 constraints in GAMS syntax." << std::endl;
+        break;
+    case 9:
+        std::cout << "Starting test to solve problem sos2a with SOS2 constraints in GAMS syntax:" << std::endl;
+        passed = SolveProblemGAMS("data/sos2a.gms");
+        std::cout << "Finished test to solve problem sos2a with SOS2 constraints in GAMS syntax." << std::endl;
+        break;
+    case 10:
+        std::cout << "Starting test to solve problem sos3 with SOS1 and SOS2 constraints in GAMS syntax:" << std::endl;
+        passed = SolveProblemGAMS("data/sos3.gms");
+        std::cout << "Finished test to solve problem sos3 with SOS1 and SOS2 constraints in GAMS syntax." << std::endl;
+        break;
     default:
         passed = false;
         std::cout << "Test #" << choice << " does not exist!\n";

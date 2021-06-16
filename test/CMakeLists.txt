@@ -43,7 +43,9 @@ if(HAS_GAMS)
       4
       5
       6
-      7)
+      7
+      8
+      9)
   set(cpptests ${cpptests} GAMS)
 endif()
 
