@@ -384,8 +384,15 @@ bool MIPSolverCbc::addSpecialOrderedSet(E_SOSType type, VectorInteger variableIn
 {
     try
     {
-        if(variableWeights.size() > 0)
-            assert(variableWeights.size() == variableIndexes.size());
+        if(variableWeights.size() == 0)
+        {
+            variableWeights.resize(variableIndexes.size());
+
+            for(int i = 0; i < variableIndexes.size(); i++)
+                variableWeights[i] = i;
+        }
+
+        assert(variableWeights.size() == variableIndexes.size());
 
         auto objects = new OsiObject*[1];
         objects[0] = new OsiSOS(osiInterface.get(), variableIndexes.size(), &variableIndexes[0], &variableWeights[0],
