@@ -218,6 +218,19 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
         }
     }
 
+    // Copying special ordered sets
+    for(auto& S : env->problem->specialOrderedSets)
+    {
+        auto SOS = std::make_shared<SpecialOrderedSet>();
+        SOS->type = S->type;
+        SOS->weights = S->weights;
+
+        for(auto& VAR : S->variables)
+            SOS->variables.push_back(reformulatedProblem->getVariable(VAR->index));
+
+        reformulatedProblem->add(std::move(SOS));
+    }
+
     // Reformulating objective function
     reformulateObjectiveFunction();
 

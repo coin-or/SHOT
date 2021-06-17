@@ -221,11 +221,11 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
         primalSol.boundProjectionPerformed = false;
     }
 
+    auto integerTol = env->settings->getSetting<double>("Tolerance.Integer", "Primal");
+
     // Check that it fulfills integer constraints, round otherwise
     if(env->problem->properties.numberOfDiscreteVariables > 0)
     {
-        auto integerTol = env->settings->getSetting<double>("Tolerance.Integer", "Primal");
-
         bool isRounded = false;
 
         VectorDouble ptRounded(tmpPoint);
@@ -285,6 +285,16 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
         primalSol.maxIntegerToleranceError = maxIntegerError;
     }
 
+    // Check that solution fulfills special ordered sets
+    if(env->problem->properties.numberOfSpecialOrderedSets > 0
+        && !env->problem->areSpecialOrderedSetsFulfilled(tmpPoint, integerTol))
+    {
+        env->output->outputDebug(
+            fmt::format("         Special ordered sets not fulfilled to tolerance {}.", integerTol));
+
+        return (false);
+    }
+
     // Recalculate the objective if rounding or projection has been performed
     if(reCalculateObjective)
     {
@@ -295,7 +305,8 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
     bool acceptableType = (primalSol.sourceType == E_PrimalSolutionSource::MIPSolutionPool
         || primalSol.sourceType == E_PrimalSolutionSource::NLPFixedIntegers
         || primalSol.sourceType == E_PrimalSolutionSource::LPFixedIntegers
-        || primalSol.sourceType == E_PrimalSolutionSource::MIPCallback|| primalSol.sourceType == E_PrimalSolutionSource::InteriorPointSearch);
+        || primalSol.sourceType == E_PrimalSolutionSource::MIPCallback
+        || primalSol.sourceType == E_PrimalSolutionSource::InteriorPointSearch);
 
     if(!primalSol.integerRoundingPerformed && acceptableType
         && env->settings->getSetting<bool>("Tolerance.TrustLinearConstraintValues", "Primal"))

@@ -553,6 +553,58 @@ int MIPSolverCplex::addLinearConstraint(
     return (cplexInstance.getNrows() - 1);
 }
 
+bool MIPSolverCplex::addSpecialOrderedSet(E_SOSType type, VectorInteger variableIndexes, VectorDouble variableWeights)
+{
+    try
+    {
+        IloNumVarArray variables(cplexEnv, variableIndexes.size());
+
+        for(int i = 0; i < variableIndexes.size(); i++)
+            variables[i] = cplexVars[variableIndexes[i]];
+
+        if(variableWeights.size() > 0)
+        {
+            assert(variableWeights.size() == variableIndexes.size());
+
+            IloNumArray weights(cplexEnv, variableWeights.size());
+
+            for(int i = 0; i < variableWeights.size(); i++)
+                weights[i] = variableWeights[i];
+
+            if(type == E_SOSType::One)
+                cplexModel.add(IloSOS1(cplexEnv, variables, weights));
+            else if(type == E_SOSType::Two)
+                cplexModel.add(IloSOS2(cplexEnv, variables, weights));
+            else
+            {
+                env->output->outputError(
+                    "        Error when adding special ordered set constraint: type not specified!");
+                return (false);
+            }
+        }
+        else
+        {
+            if(type == E_SOSType::One)
+                cplexModel.add(IloSOS1(cplexEnv, variables));
+            else if(type == E_SOSType::Two)
+                cplexModel.add(IloSOS2(cplexEnv, variables));
+            else
+            {
+                env->output->outputError(
+                    "        Error when adding special ordered set constraint: type not specified!");
+                return (false);
+            }
+        }
+    }
+    catch(IloException& e)
+    {
+        env->output->outputError("        Error when adding special ordered set constraint", e.getMessage());
+        return (false);
+    }
+
+    return (true);
+}
+
 void MIPSolverCplex::activateDiscreteVariables(bool activate)
 {
     try

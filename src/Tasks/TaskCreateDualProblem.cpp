@@ -144,13 +144,13 @@ bool TaskCreateDualProblem::createProblem(MIPSolverPtr destination, ProblemPtr s
             {
                 objectiveInitialized = objectiveInitialized
                     && destination->addQuadraticTermToObjective(
-                           T->coefficient, T->firstVariable->index, T->secondVariable->index);
+                        T->coefficient, T->firstVariable->index, T->secondVariable->index);
             }
         }
 
         objectiveInitialized = objectiveInitialized
             && destination->finalizeObjective(
-                   sourceProblem->objectiveFunction->properties.isMinimize, sourceProblem->objectiveFunction->constant);
+                sourceProblem->objectiveFunction->properties.isMinimize, sourceProblem->objectiveFunction->constant);
     }
 
     if(!objectiveInitialized)
@@ -196,7 +196,7 @@ bool TaskCreateDualProblem::createProblem(MIPSolverPtr destination, ProblemPtr s
             {
                 constraintsInitialized = constraintsInitialized
                     && destination->addQuadraticTermToConstraint(
-                           T->coefficient, T->firstVariable->index, T->secondVariable->index);
+                        T->coefficient, T->firstVariable->index, T->secondVariable->index);
             }
         }
 
@@ -205,6 +205,33 @@ bool TaskCreateDualProblem::createProblem(MIPSolverPtr destination, ProblemPtr s
     }
 
     if(!constraintsInitialized)
+        return false;
+
+    bool SOSInitialized = true;
+
+    for(auto& S : sourceProblem->specialOrderedSets)
+    {
+        std::vector<int> variableIndexes;
+        std::vector<double> variableWeights;
+
+        for(auto& V : S->variables)
+            variableIndexes.push_back(V->index);
+
+        if(S->weights.size() > 0)
+        {
+            for(auto& W : S->weights)
+                variableWeights.push_back(W);
+
+            SOSInitialized
+                = SOSInitialized && destination->addSpecialOrderedSet(S->type, variableIndexes, variableWeights);
+        }
+        else
+        {
+            SOSInitialized = SOSInitialized && destination->addSpecialOrderedSet(S->type, variableIndexes);
+        }
+    }
+
+    if(!SOSInitialized)
         return false;
 
     bool problemFinalized = destination->finalizeProblem();

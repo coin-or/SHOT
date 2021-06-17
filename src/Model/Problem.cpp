@@ -652,8 +652,10 @@ void Problem::updateProperties()
     bool areConstrsNonlinear = (properties.numberOfNonlinearConstraints > 0);
     bool areConstrsQuadratic = (properties.numberOfQuadraticConstraints > 0);
 
-    properties.isDiscrete
-        = (properties.numberOfDiscreteVariables > 0 || properties.numberOfSemicontinuousVariables > 0);
+    properties.numberOfSpecialOrderedSets = specialOrderedSets.size();
+
+    properties.isDiscrete = (properties.numberOfDiscreteVariables > 0 || properties.numberOfSemicontinuousVariables > 0
+        || properties.numberOfSpecialOrderedSets > 0);
 
     if(areConstrsNonlinear || isObjNonlinear)
         properties.isNonlinear = true;
@@ -1028,6 +1030,16 @@ void Problem::add(NonlinearObjectiveFunctionPtr objective)
     objectiveFunction->updateProperties();
 
     env->output->outputTrace("Added nonlinear objective function to problem.");
+}
+
+void Problem::add(SpecialOrderedSetPtr orderedSet)
+{
+    specialOrderedSets.push_back(orderedSet);
+
+    if(orderedSet->type == E_SOSType::One)
+        env->output->outputTrace("Added special ordered set of type 1 to problem.");
+    else
+        env->output->outputTrace("Added special ordered set of type 2 to problem.");
 }
 
 template <class T> void Problem::add(std::vector<T> elements)
@@ -1652,6 +1664,53 @@ bool Problem::areVariableBoundsFulfilled(VectorDouble point, double tolerance)
     return true;
 }
 
+bool Problem::areSpecialOrderedSetsFulfilled(VectorDouble point, double tolerance)
+{
+    for(auto& S : specialOrderedSets)
+    {
+        if(S->type == E_SOSType::One)
+        {
+            bool found = false;
+
+            for(auto& V : S->variables)
+            {
+                if(abs(point.at(V->index) > tolerance))
+                {
+                    if(found)
+                        return false;
+
+                    found = true;
+                }
+            }
+        }
+        else if(S->type == E_SOSType::Two)
+        {
+            int numFound = 0;
+            int firstIndex = 0;
+
+            for(int i = 0; i < S->variables.size(); i++)
+            {
+                if(abs(point.at(S->variables[i]->index) > tolerance))
+                {
+                    if(numFound == 0)
+                    {
+                        firstIndex = i;
+                        numFound = 1;
+                    }
+                    else if(numFound == 1 && firstIndex == i - 1)
+                    {
+                        numFound = 2;
+                    }
+                    else
+                        return false;
+                }
+            }
+        }
+    }
+
+    return true;
+}
+
 void Problem::saveProblemToFile(std::string filename)
 {
     std::stringstream stream;
@@ -2116,6 +2175,27 @@ std::ostream& operator<<(std::ostream& stream, const Problem& problem)
     for(auto& C : problem.numericConstraints)
     {
         stream << C << '\n';
+    }
+
+    stream << "\nspecial ordered sets:\n";
+
+    for(auto& S : problem.specialOrderedSets)
+    {
+        bool hasWeights = (S->weights.size() > 0);
+
+        stream << (S->type == E_SOSType::One ? "SOS1: " : "SOS2: ");
+
+        for(int i = 0; i < S->variables.size(); i++)
+        {
+            stream << S->variables[i]->name;
+
+            if(hasWeights)
+                stream << ":" << S->weights[i] << " ";
+            else
+                stream << " ";
+        }
+
+        stream << '\n';
     }
 
     stream << "\nvariables:\n";
@@ -2588,6 +2668,19 @@ ProblemPtr Problem::createCopy(
         }
 
         destinationProblem->add(std::move(destinationConstraint));
+    }
+
+    // Copy SOS
+    for(auto& S : this->specialOrderedSets)
+    {
+        auto SOS = std::make_shared<SpecialOrderedSet>();
+        SOS->type = S->type;
+        SOS->weights = S->weights;
+
+        for(auto& VAR : S->variables)
+            SOS->variables.push_back(destinationProblem->getVariable(VAR->index));
+
+        destinationProblem->add(std::move(SOS));
     }
 
     destinationProblem->updateProperties();

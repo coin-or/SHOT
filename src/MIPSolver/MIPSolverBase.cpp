@@ -45,7 +45,8 @@ E_DualProblemClass MIPSolverBase::getProblemClass()
 bool MIPSolverBase::getDiscreteVariableStatus()
 {
     if(env->reformulatedProblem->properties.numberOfDiscreteVariables == 0
-        && env->reformulatedProblem->properties.numberOfSemicontinuousVariables == 0)
+        && env->reformulatedProblem->properties.numberOfSemicontinuousVariables == 0
+        && env->reformulatedProblem->properties.numberOfSpecialOrderedSets == 0)
     {
         return (false);
     }

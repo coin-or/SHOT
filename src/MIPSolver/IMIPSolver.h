@@ -82,6 +82,9 @@ public:
         const std::map<int, double>& elements, double constant, std::string name, bool isGreaterThan, bool allowRepair)
         = 0;
 
+    virtual bool addSpecialOrderedSet(E_SOSType type, VectorInteger variableIndexes, VectorDouble variableWeights = {})
+        = 0;
+
     virtual void setTimeLimit(double seconds) = 0;
 
     virtual void setCutOff(double cutOff) = 0;
