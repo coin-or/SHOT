@@ -394,12 +394,14 @@ bool MIPSolverCbc::addSpecialOrderedSet(E_SOSType type, VectorInteger variableIn
 
         assert(variableWeights.size() == variableIndexes.size());
 
-        auto object = new OsiSOS(osiInterface.get(), variableIndexes.size(), &variableIndexes[0], &variableWeights[0],
+        auto objects = new OsiObject*[1];
+        objects[0] = new OsiSOS(osiInterface.get(), variableIndexes.size(), &variableIndexes[0], &variableWeights[0],
             (type == E_SOSType::One) ? 1 : 2);
 
-        osiInterface->addObjects(1, &object);
+        osiInterface->addObjects(1, objects);
 
-        delete object;
+        delete objects[0];
+        delete[] objects;
     }
     catch(std::exception& e)
     {
