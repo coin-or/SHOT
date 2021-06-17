@@ -575,6 +575,12 @@ bool MIPSolverCplex::addSpecialOrderedSet(E_SOSType type, VectorInteger variable
                 cplexModel.add(IloSOS1(cplexEnv, variables, weights));
             else if(type == E_SOSType::Two)
                 cplexModel.add(IloSOS2(cplexEnv, variables, weights));
+            else
+            {
+                env->output->outputError(
+                    "        Error when adding special ordered set constraint: type not specified!");
+                return (false);
+            }
         }
         else
         {
@@ -582,6 +588,12 @@ bool MIPSolverCplex::addSpecialOrderedSet(E_SOSType type, VectorInteger variable
                 cplexModel.add(IloSOS1(cplexEnv, variables));
             else if(type == E_SOSType::Two)
                 cplexModel.add(IloSOS2(cplexEnv, variables));
+            else
+            {
+                env->output->outputError(
+                    "        Error when adding special ordered set constraint: type not specified!");
+                return (false);
+            }
         }
     }
     catch(IloException& e)
