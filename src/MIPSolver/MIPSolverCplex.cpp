@@ -118,7 +118,8 @@ bool MIPSolverCplex::initializeProblem()
     return (true);
 }
 
-bool MIPSolverCplex::addVariable(std::string name, E_VariableType type, double lowerBound, double upperBound, double semiBound)
+bool MIPSolverCplex::addVariable(
+    std::string name, E_VariableType type, double lowerBound, double upperBound, double semiBound)
 {
     if(lowerBound < -getUnboundedVariableBoundValue())
         lowerBound = -getUnboundedVariableBoundValue();
@@ -150,11 +151,12 @@ bool MIPSolverCplex::addVariable(std::string name, E_VariableType type, double l
         case E_VariableType::Semiinteger:
         {
             isProblemDiscrete = true;
-            if( semiBound < 0.0 )
+            if(semiBound < 0.0)
                 upperBound = semiBound;
             else
                 lowerBound = semiBound;
-            auto cplexVar = IloSemiContVar(cplexEnv, lowerBound, upperBound, (type == E_VariableType::Semicontinuous) ? ILOFLOAT : ILOINT, name.c_str());
+            auto cplexVar = IloSemiContVar(cplexEnv, lowerBound, upperBound,
+                (type == E_VariableType::Semicontinuous) ? ILOFLOAT : ILOINT, name.c_str());
             cplexVars.add(cplexVar);
             cplexModel.add(cplexVar);
             break;
@@ -628,7 +630,7 @@ void MIPSolverCplex::activateDiscreteVariables(bool activate)
 
             for(int i = 0; i < numberOfVariables; i++)
             {
-                if(variableTypes.at(i) == E_VariableType::Integer /*|| variableTypes.at(i) == E_VariableType::Semiinteger*/)
+                if(variableTypes.at(i) == E_VariableType::Integer || variableTypes.at(i) == E_VariableType::Semiinteger)
                 {
                     auto tmpVar = cplexVars[i];
                     auto tmpConv = IloConversion(cplexEnv, tmpVar, ILOINT);
@@ -651,7 +653,8 @@ void MIPSolverCplex::activateDiscreteVariables(bool activate)
             env->output->outputDebug("        Activating LP strategy.");
             for(int i = 0; i < numberOfVariables; i++)
             {
-                if(variableTypes.at(i) == E_VariableType::Integer || variableTypes.at(i) == E_VariableType::Binary /*|| variableTypes.at(i) == E_VariableType::Semiinteger*/)
+                if(variableTypes.at(i) == E_VariableType::Integer || variableTypes.at(i) == E_VariableType::Binary
+                    || variableTypes.at(i) == E_VariableType::Semiinteger)
                 {
                     auto tmpVar = cplexVars[i];
                     auto tmpConv = IloConversion(cplexEnv, tmpVar, ILOFLOAT);
@@ -1588,7 +1591,8 @@ bool MIPSolverCplex::createIntegerCut(IntegerCut& integerCut)
             int variableValue = integerCut.variableValues[index];
             auto variable = cplexVars[VAR->index];
 
-            assert(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer || VAR->properties.type == E_VariableType::Semiinteger);
+            assert(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer
+                || VAR->properties.type == E_VariableType::Semiinteger);
 
             if(variableValue == VAR->upperBound)
             {

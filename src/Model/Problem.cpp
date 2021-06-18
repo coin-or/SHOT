@@ -583,7 +583,8 @@ void Problem::updateProperties()
     properties.numberOfIntegerVariables = integerVariables.size();
     properties.numberOfSemicontinuousVariables = semicontinuousVariables.size();
     properties.numberOfSemiintegerVariables = semiintegerVariables.size();
-    properties.numberOfDiscreteVariables = properties.numberOfBinaryVariables + properties.numberOfIntegerVariables + properties.numberOfSemiintegerVariables;
+    properties.numberOfDiscreteVariables = properties.numberOfBinaryVariables + properties.numberOfIntegerVariables
+        + properties.numberOfSemiintegerVariables;
     properties.numberOfNonlinearVariables = nonlinearVariables.size();
     properties.numberOfVariablesInNonlinearExpressions = nonlinearExpressionVariables.size();
     properties.numberOfAuxiliaryVariables = auxiliaryVariables.size();
@@ -2192,25 +2193,28 @@ std::ostream& operator<<(std::ostream& stream, const Problem& problem)
         stream << C << '\n';
     }
 
-    stream << "\nspecial ordered sets:\n";
-
-    for(auto& S : problem.specialOrderedSets)
+    if(problem.properties.numberOfSpecialOrderedSets > 0)
     {
-        bool hasWeights = (S->weights.size() > 0);
+        stream << "\nspecial ordered sets:\n";
 
-        stream << (S->type == E_SOSType::One ? "SOS1: " : "SOS2: ");
-
-        for(int i = 0; i < S->variables.size(); i++)
+        for(auto& S : problem.specialOrderedSets)
         {
-            stream << S->variables[i]->name;
+            bool hasWeights = (S->weights.size() > 0);
 
-            if(hasWeights)
-                stream << ":" << S->weights[i] << " ";
-            else
-                stream << " ";
+            stream << (S->type == E_SOSType::One ? "SOS1: " : "SOS2: ");
+
+            for(int i = 0; i < S->variables.size(); i++)
+            {
+                stream << S->variables[i]->name;
+
+                if(hasWeights)
+                    stream << ":" << S->weights[i] << " ";
+                else
+                    stream << " ";
+            }
+
+            stream << '\n';
         }
-
-        stream << '\n';
     }
 
     stream << "\nvariables:\n";
@@ -2408,15 +2412,17 @@ ProblemPtr Problem::createCopy(
 
         if(V->properties.isAuxiliary && copyAuxiliary)
         {
-            variable
-                = std::make_shared<AuxiliaryVariable>(V->name, V->index, variableType, V->lowerBound, V->upperBound);
+            variable = std::make_shared<AuxiliaryVariable>(
+                V->name, V->index, variableType, V->lowerBound, V->upperBound, V->semiBound);
             destinationProblem->add(variable);
 
             variable->properties.auxiliaryType = V->properties.auxiliaryType;
         }
         else
         {
-            variable = std::make_shared<Variable>(V->name, V->index, variableType, V->lowerBound, V->upperBound);
+            variable = std::make_shared<Variable>(
+                V->name, V->index, variableType, V->lowerBound, V->upperBound, V->semiBound);
+
             destinationProblem->add(variable);
         }
 
@@ -2433,6 +2439,16 @@ ProblemPtr Problem::createCopy(
             variable->upperBound = std::min(V->upperBound, 1.0);
         }
         else if(V->properties.type == E_VariableType::Integer)
+        {
+            variable->lowerBound = std::max(V->lowerBound, minLBInt);
+            variable->upperBound = std::min(V->upperBound, maxUBInt);
+        }
+        else if(V->properties.type == E_VariableType::Semicontinuous)
+        {
+            variable->lowerBound = std::max(V->lowerBound, minLBCont);
+            variable->upperBound = std::min(V->upperBound, maxUBCont);
+        }
+        else if(V->properties.type == E_VariableType::Semiinteger)
         {
             variable->lowerBound = std::max(V->lowerBound, minLBInt);
             variable->upperBound = std::min(V->upperBound, maxUBInt);
@@ -2458,6 +2474,16 @@ ProblemPtr Problem::createCopy(
             variable->upperBound = std::min(this->auxiliaryObjectiveVariable->upperBound, 1.0);
         }
         else if(this->auxiliaryObjectiveVariable->properties.type == E_VariableType::Integer)
+        {
+            variable->lowerBound = std::max(this->auxiliaryObjectiveVariable->lowerBound, minLBInt);
+            variable->upperBound = std::min(this->auxiliaryObjectiveVariable->upperBound, maxUBInt);
+        }
+        else if(this->auxiliaryObjectiveVariable->properties.type == E_VariableType::Semicontinuous)
+        {
+            variable->lowerBound = std::max(this->auxiliaryObjectiveVariable->lowerBound, minLBCont);
+            variable->upperBound = std::min(this->auxiliaryObjectiveVariable->upperBound, maxUBCont);
+        }
+        else if(this->auxiliaryObjectiveVariable->properties.type == E_VariableType::Semiinteger)
         {
             variable->lowerBound = std::max(this->auxiliaryObjectiveVariable->lowerBound, minLBInt);
             variable->upperBound = std::min(this->auxiliaryObjectiveVariable->upperBound, maxUBInt);

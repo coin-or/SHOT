@@ -780,6 +780,8 @@ bool ModelingSystemGAMS::copyVariables(ProblemPtr destination)
             std::string variableName = buffer;
 
             E_VariableType variableType;
+            double semiBound = NAN;
+            bool isSemi = false;
 
             switch(gmoGetVarTypeOne(modelingObject, i))
             {
@@ -833,6 +835,23 @@ bool ModelingSystemGAMS::copyVariables(ProblemPtr destination)
             case gmovar_SC:
                 variableType = E_VariableType::Semicontinuous;
 
+                if(variableLBs[i] > 0.0)
+                {
+                    semiBound = variableLBs[i];
+                    variableLBs[i] = 0.0;
+                    isSemi = true;
+                }
+                else if(variableUBs[i] < 0.0)
+                {
+                    semiBound = variableUBs[i];
+                    variableUBs[i] = 0.0;
+                    isSemi = true;
+                }
+                else
+                {
+                    variableType = E_VariableType::Real;
+                }
+
                 if(variableLBs[i] < minLBCont)
                 {
                     variableLBs[i] = minLBCont;
@@ -847,6 +866,23 @@ bool ModelingSystemGAMS::copyVariables(ProblemPtr destination)
             case gmovar_SI:
                 variableType = E_VariableType::Semiinteger;
 
+                if(variableLBs[i] > 0.0)
+                {
+                    semiBound = variableLBs[i];
+                    variableLBs[i] = 0.0;
+                    isSemi = true;
+                }
+                else if(variableUBs[i] < 0.0)
+                {
+                    semiBound = variableUBs[i];
+                    variableUBs[i] = 0.0;
+                    isSemi = true;
+                }
+                else
+                {
+                    variableType = E_VariableType::Integer;
+                }
+
                 if(variableLBs[i] < minLBInt)
                 {
                     variableLBs[i] = minLBInt;
@@ -856,6 +892,8 @@ bool ModelingSystemGAMS::copyVariables(ProblemPtr destination)
                 {
                     variableUBs[i] = maxUBInt;
                 }
+
+                isSemi = true;
 
                 break;
             default:
@@ -868,10 +906,20 @@ bool ModelingSystemGAMS::copyVariables(ProblemPtr destination)
                 break;
             }
 
-            auto variable
-                = std::make_shared<SHOT::Variable>(variableName, i, variableType, variableLBs[i], variableUBs[i]);
-            destination->add(std::move(variable));
+            if(isSemi)
+            {
+                auto variable = std::make_shared<SHOT::Variable>(
+                    variableName, i, variableType, variableLBs[i], variableUBs[i], semiBound);
+                destination->add(std::move(variable));
+            }
+            else
+            {
+                auto variable
+                    = std::make_shared<SHOT::Variable>(variableName, i, variableType, variableLBs[i], variableUBs[i]);
+                destination->add(std::move(variable));
+            }
         }
+
         delete[] variableLBs;
         delete[] variableUBs;
     }

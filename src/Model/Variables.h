@@ -81,7 +81,7 @@ public:
     }
 
     Variable(std::string variableName, int variableIndex, E_VariableType variableType, [[maybe_unused]] double LB,
-        [[maybe_unused]] double UB)
+        [[maybe_unused]] double UB, double variableSemiBound = NAN)
     {
         index = variableIndex;
         name = variableName;
@@ -91,28 +91,6 @@ public:
             lowerBound = 0;
             upperBound = 1;
         }
-        else if(variableType == E_VariableType::Semicontinuous || variableType == E_VariableType::Semiinteger)
-        {
-            if( LB > 0.0 )
-            {
-                lowerBound = 0.0;
-                upperBound = UB;
-                semiBound = LB;
-            }
-            else if( UB < 0.0 )
-            {
-                lowerBound = LB;
-                upperBound = 0.0;
-                semiBound = UB;
-            }
-            else
-            {
-                // LB <= 0, UB >= 0 -> change to ordinary continuous variable
-                variableType = (variableType == E_VariableType::Semicontinuous) ? E_VariableType::Real : E_VariableType::Integer;
-                lowerBound = LB;
-                upperBound = UB;
-            }
-        }
         else
         {
             lowerBound = LB;
@@ -120,6 +98,7 @@ public:
         }
 
         properties.type = variableType;
+        semiBound = variableSemiBound;
     };
 
     Variable(std::string variableName, int variableIndex, E_VariableType variableType)

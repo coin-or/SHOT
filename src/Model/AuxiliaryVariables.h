@@ -37,10 +37,11 @@ public:
         properties.isAuxiliary = true;
     }
 
-    AuxiliaryVariable(std::string variableName, int variableIndex, E_VariableType variableType, double LB, double UB)
+    AuxiliaryVariable(std::string variableName, int variableIndex, E_VariableType variableType, double LB, double UB,
+        [[maybe_unused]] double variableSemiBound = NAN)
     {
-        assert(variableType != E_VariableType::Semicontinuous);  // not supported yet
-        assert(variableType != E_VariableType::Semiinteger);  // not supported yet
+        assert(variableType != E_VariableType::Semicontinuous); // not supported yet
+        assert(variableType != E_VariableType::Semiinteger); // not supported yet
         Variable::name = variableName;
         Variable::index = variableIndex;
         properties.type = variableType;
@@ -51,8 +52,8 @@ public:
 
     AuxiliaryVariable(std::string variableName, int variableIndex, E_VariableType variableType)
     {
-        assert(variableType != E_VariableType::Semicontinuous);  // not supported yet
-        assert(variableType != E_VariableType::Semiinteger);  // not supported yet
+        assert(variableType != E_VariableType::Semicontinuous); // not supported yet
+        assert(variableType != E_VariableType::Semiinteger); // not supported yet
         Variable::name = variableName;
         Variable::index = variableIndex;
         properties.type = variableType;
