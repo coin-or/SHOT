@@ -184,7 +184,7 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
             }
             else
             {
-                variableType = E_VariableType::Real;
+                variableType = E_VariableType::Integer;
             }
 
             break;
