@@ -456,7 +456,8 @@ bool Solver::selectStrategy()
     {
         if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Cbc)
         {
-            if(env->problem->properties.numberOfDiscreteVariables == 0 && env->problem->properties.numberOfSemicontinuousVariables == 0)
+            if(env->problem->properties.numberOfDiscreteVariables == 0
+                && env->problem->properties.numberOfSemicontinuousVariables == 0)
             {
                 env->output->outputDebug(" Using continuous problem solution strategy.");
                 solutionStrategy = std::make_unique<SolutionStrategyNLP>(env);
@@ -1683,29 +1684,6 @@ void Solver::verifySettings()
     {
         MIPSolverDefined = true;
         unboundedVariableBound = 1e20;
-
-#if GRB_VERSION_MAJOR < 9
-        if(env->settings->getSetting<int>("Reformulation.Quadratics.ExtractStrategy", "Model")
-            > (int)ES_QuadraticTermsExtractStrategy::ExtractTermsToSame)
-            env->settings->updateSetting("Reformulation.Quadratics.ExtractStrategy", "Model",
-                (int)ES_QuadraticTermsExtractStrategy::ExtractTermsToSame);
-#endif
-
-#if GRB_VERSION_MAJOR >= 9
-
-        if(env->settings->getSetting<bool>("UseRecommendedSettings", "Strategy"))
-        {
-            // Activate Gurobi nonconvex MIQCQP solver for all nonconvex quadratic terms by default
-            env->settings->updateSetting("Reformulation.Quadratics.Strategy", "Model",
-                (int)ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained);
-        }
-        else if(env->settings->getSetting<int>("Reformulation.Quadratics.ExtractStrategy", "Model")
-            > (int)ES_QuadraticTermsExtractStrategy::ExtractTermsToSame)
-        {
-            env->settings->updateSetting("Reformulation.Quadratics.Strategy", "Model",
-                (int)ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained);
-        }
-#endif
     }
 #endif
 
@@ -1826,6 +1804,34 @@ void Solver::setConvexityBasedSettings()
                     env->settings->updateSetting("Cplex.OptimalityTarget", "Subsolver", 3);
             }
 
+#endif
+
+#ifdef HAS_GUROBI
+            if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Gurobi)
+            {
+#if GRB_VERSION_MAJOR < 9
+                if(env->settings->getSetting<int>("Reformulation.Quadratics.ExtractStrategy", "Model")
+                    > (int)ES_QuadraticTermsExtractStrategy::ExtractTermsToSame)
+                    env->settings->updateSetting("Reformulation.Quadratics.ExtractStrategy", "Model",
+                        (int)ES_QuadraticTermsExtractStrategy::ExtractTermsToSame);
+#endif
+
+#if GRB_VERSION_MAJOR >= 9
+
+                if(env->settings->getSetting<bool>("UseRecommendedSettings", "Strategy"))
+                {
+                    // Activate Gurobi nonconvex MIQCQP solver for all nonconvex quadratic terms by default
+                    env->settings->updateSetting("Reformulation.Quadratics.Strategy", "Model",
+                        (int)ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained);
+                }
+                else if(env->settings->getSetting<int>("Reformulation.Quadratics.ExtractStrategy", "Model")
+                    > (int)ES_QuadraticTermsExtractStrategy::ExtractTermsToSame)
+                {
+                    env->settings->updateSetting("Reformulation.Quadratics.Strategy", "Model",
+                        (int)ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained);
+                }
+#endif
+            }
 #endif
         }
 
