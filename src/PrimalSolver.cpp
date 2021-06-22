@@ -164,10 +164,17 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
     {
         auto value = V->calculate(tmpPoint);
 
-        if(value != 0.0)
+        if(value == 0.0) { }
+        else if(Utilities::isAlmostZero(value, 1e-7))
+        {
+            tmpPoint.at(V->index) = 0.0;
+            isVariableBoundsFulfilled = false;
+        }
+        else
         {
             double lb, ub;
-            if( V->semiBound < 0.0 )
+
+            if(V->semiBound < 0.0)
             {
                 lb = V->lowerBound;
                 ub = V->semiBound;
@@ -177,15 +184,28 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
                 lb = V->semiBound;
                 ub = V->upperBound;
             }
+
             if(value > ub)
             {
                 isVariableBoundsFulfilled = false;
-                tmpPoint.at(V->index) = V->upperBound;
+                double diffToZero = std::abs(value);
+                double diffToLowerBound = std::abs(V->lowerBound - value);
+
+                if(diffToZero < diffToLowerBound)
+                    tmpPoint.at(V->index) = 0.0;
+                else
+                    tmpPoint.at(V->index) = ub;
             }
             else if(value < lb)
             {
                 isVariableBoundsFulfilled = false;
-                tmpPoint.at(V->index) = V->lowerBound;
+                double diffToZero = std::abs(value);
+                double diffToLowerBound = std::abs(V->lowerBound - value);
+
+                if(diffToZero < diffToLowerBound)
+                    tmpPoint.at(V->index) = 0.0;
+                else
+                    tmpPoint.at(V->index) = lb;
             }
         }
     }
@@ -194,10 +214,16 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
     {
         auto value = V->calculate(tmpPoint);
 
-        if(value != 0.0)
+        if(value == 0.0) { }
+        else if(Utilities::isAlmostZero(value, 1e-7))
+        {
+            tmpPoint.at(V->index) = 0.0;
+            isVariableBoundsFulfilled = false;
+        }
+        else
         {
             double lb, ub;
-            if( V->semiBound < 0.0 )
+            if(V->semiBound < 0.0)
             {
                 lb = V->lowerBound;
                 ub = V->semiBound;
@@ -207,15 +233,28 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
                 lb = V->semiBound;
                 ub = V->upperBound;
             }
+
             if(value > ub)
             {
                 isVariableBoundsFulfilled = false;
-                tmpPoint.at(V->index) = round(V->upperBound - 0.5);
+                double diffToZero = std::abs(value);
+                double diffToLowerBound = std::abs(V->lowerBound - value);
+
+                if(diffToZero < diffToLowerBound)
+                    tmpPoint.at(V->index) = 0.0;
+                else
+                    tmpPoint.at(V->index) = round(ub - 0.5);
             }
             else if(value < lb)
             {
                 isVariableBoundsFulfilled = false;
-                tmpPoint.at(V->index) = round(V->lowerBound + 0.5);
+                double diffToZero = std::abs(value);
+                double diffToLowerBound = std::abs(V->lowerBound - value);
+
+                if(diffToZero < diffToLowerBound)
+                    tmpPoint.at(V->index) = 0.0;
+                else
+                    tmpPoint.at(V->index) = round(lb + 0.5);
             }
         }
     }
@@ -368,7 +407,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
         || primalSol.sourceType == E_PrimalSolutionSource::MIPCallback
         || primalSol.sourceType == E_PrimalSolutionSource::InteriorPointSearch);
 
-    if(!primalSol.integerRoundingPerformed && acceptableType
+    if(!primalSol.integerRoundingPerformed && !primalSol.boundProjectionPerformed && acceptableType
         && env->settings->getSetting<bool>("Tolerance.TrustLinearConstraintValues", "Primal"))
     {
         env->output->outputDebug(
@@ -391,7 +430,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
             if(maxLinearConstraintValue.error > linTol)
             {
                 auto tmpLine = fmt::format("         Linear constraints are not fulfilled. Most deviating {}: {} > {}.",
-                    maxLinearConstraintValue.constraint->index, maxLinearConstraintValue.error, linTol);
+                    maxLinearConstraintValue.constraint->name, maxLinearConstraintValue.error, linTol);
                 env->output->outputDebug(tmpLine);
 
                 return (false);
@@ -507,7 +546,8 @@ void PrimalSolver::addFixedNLPCandidate(
 
     for(auto& VAR : env->reformulatedProblem->allVariables)
     {
-        if(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer || VAR->properties.type == E_VariableType::Semiinteger)
+        if(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer
+            || VAR->properties.type == E_VariableType::Semiinteger)
             discretVariableValues.push_back(candidate[VAR->index]);
     }
 
