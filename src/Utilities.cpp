@@ -530,7 +530,7 @@ template <typename T> double calculateHash(std::vector<T> const& point)
 
 bool isAlmostEqual(double x, double y, const double epsilon) { return std::abs(x - y) <= epsilon * std::abs(x); }
 
-bool isAlmostZero(double x) { return std::abs(x) < std::numeric_limits<double>::epsilon(); }
+bool isAlmostZero(double x, const double epsilon) { return std::abs(x) < epsilon; }
 
 std::string trim(std::string& str)
 {
