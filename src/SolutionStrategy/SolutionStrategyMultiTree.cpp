@@ -119,7 +119,9 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
     auto tAddHPs = std::make_shared<TaskAddHyperplanes>(env);
     env->tasks->addTask(tAddHPs, "AddHPs");
 
-    if(env->settings->getSetting<bool>("Relaxation.Use", "Dual"))
+    if(env->settings->getSetting<bool>("Relaxation.Use", "Dual")
+        && env->reformulatedProblem->properties.numberOfSemicontinuousVariables == 0
+        && env->reformulatedProblem->properties.numberOfSemiintegerVariables == 0)
     {
         auto tExecuteRelaxStrategy = std::make_shared<TaskExecuteRelaxationStrategy>(env);
         env->tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategyInitial");
@@ -242,7 +244,9 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
         env->tasks->addTask(tCreateDualProblem, "CreateMILPProblem");
     }
 
-    if(env->settings->getSetting<bool>("Relaxation.Use", "Dual"))
+    if(env->settings->getSetting<bool>("Relaxation.Use", "Dual")
+        && env->reformulatedProblem->properties.numberOfSemicontinuousVariables == 0
+        && env->reformulatedProblem->properties.numberOfSemiintegerVariables == 0)
     {
         auto tExecuteRelaxStrategy = std::make_shared<TaskExecuteRelaxationStrategy>(env);
         env->tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategy");

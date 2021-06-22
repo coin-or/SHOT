@@ -614,9 +614,12 @@ bool MIPSolverCplex::addSpecialOrderedSet(E_SOSType type, VectorInteger variable
 
 void MIPSolverCplex::activateDiscreteVariables(bool activate)
 {
+    if(env->reformulatedProblem->properties.numberOfSemiintegerVariables > 0
+        || env->reformulatedProblem->properties.numberOfSemicontinuousVariables > 0)
+        return;
+
     try
     {
-
         for(auto& C : cplexVarConvers)
         {
             C.end();
@@ -630,7 +633,7 @@ void MIPSolverCplex::activateDiscreteVariables(bool activate)
 
             for(int i = 0; i < numberOfVariables; i++)
             {
-                if(variableTypes.at(i) == E_VariableType::Integer || variableTypes.at(i) == E_VariableType::Semiinteger)
+                if(variableTypes.at(i) == E_VariableType::Integer)
                 {
                     auto tmpVar = cplexVars[i];
                     auto tmpConv = IloConversion(cplexEnv, tmpVar, ILOINT);
@@ -653,8 +656,7 @@ void MIPSolverCplex::activateDiscreteVariables(bool activate)
             env->output->outputDebug("        Activating LP strategy.");
             for(int i = 0; i < numberOfVariables; i++)
             {
-                if(variableTypes.at(i) == E_VariableType::Integer || variableTypes.at(i) == E_VariableType::Binary
-                    || variableTypes.at(i) == E_VariableType::Semiinteger)
+                if(variableTypes.at(i) == E_VariableType::Integer || variableTypes.at(i) == E_VariableType::Binary)
                 {
                     auto tmpVar = cplexVars[i];
                     auto tmpConv = IloConversion(cplexEnv, tmpVar, ILOFLOAT);

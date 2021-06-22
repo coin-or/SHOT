@@ -76,7 +76,8 @@ bool MIPSolverGurobi::initializeProblem()
     return (true);
 }
 
-bool MIPSolverGurobi::addVariable(std::string name, E_VariableType type, double lowerBound, double upperBound, double semiBound)
+bool MIPSolverGurobi::addVariable(
+    std::string name, E_VariableType type, double lowerBound, double upperBound, double semiBound)
 {
     if(lowerBound < -getUnboundedVariableBoundValue())
         lowerBound = -getUnboundedVariableBoundValue();
@@ -104,7 +105,7 @@ bool MIPSolverGurobi::addVariable(std::string name, E_VariableType type, double 
 
         case E_VariableType::Semicontinuous:
             isProblemDiscrete = true;
-            if( semiBound < 0.0 )
+            if(semiBound < 0.0)
                 upperBound = semiBound;
             else
                 lowerBound = semiBound;
@@ -113,7 +114,7 @@ bool MIPSolverGurobi::addVariable(std::string name, E_VariableType type, double 
 
         case E_VariableType::Semiinteger:
             isProblemDiscrete = true;
-            if( semiBound < 0.0 )
+            if(semiBound < 0.0)
                 upperBound = semiBound;
             else
                 lowerBound = semiBound;
@@ -551,7 +552,8 @@ bool MIPSolverGurobi::createIntegerCut(IntegerCut& integerCut)
             int variableValue = integerCut.variableValues[index];
             auto variable = gurobiModel->getVar(I);
 
-            assert(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer || VAR->properties.type == E_VariableType::Semiinteger);
+            assert(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer
+                || VAR->properties.type == E_VariableType::Semiinteger);
 
             if(variableValue == VAR->upperBound)
             {
@@ -701,12 +703,20 @@ int MIPSolverGurobi::getNumberOfSolutions()
 
 void MIPSolverGurobi::activateDiscreteVariables(bool activate)
 {
+
+    if(env->reformulatedProblem->properties.numberOfSemiintegerVariables > 0
+        || env->reformulatedProblem->properties.numberOfSemicontinuousVariables > 0)
+        return;
+
     if(activate)
     {
         env->output->outputDebug("        Activating MIP strategy.");
 
         for(int i = 0; i < numberOfVariables; i++)
         {
+            assert(variableTypes.at(i) != E_VariableType::Semicontinuous
+                && variableTypes.at(i) != E_VariableType::Semiinteger);
+
             if(variableTypes.at(i) == E_VariableType::Integer)
             {
                 GRBVar tmpVar = gurobiModel->getVar(i);
@@ -725,8 +735,12 @@ void MIPSolverGurobi::activateDiscreteVariables(bool activate)
     else
     {
         env->output->outputDebug("        Activating LP strategy.");
+
         for(int i = 0; i < numberOfVariables; i++)
         {
+            assert(variableTypes.at(i) != E_VariableType::Semicontinuous
+                && variableTypes.at(i) != E_VariableType::Semiinteger);
+
             if(variableTypes.at(i) == E_VariableType::Integer || variableTypes.at(i) == E_VariableType::Binary)
             {
                 GRBVar tmpVar = gurobiModel->getVar(i);
