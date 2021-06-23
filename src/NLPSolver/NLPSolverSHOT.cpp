@@ -235,21 +235,10 @@ E_NLPSolutionStatus NLPSolverSHOT::solveProblemInstance()
             std::vector<double> tmpSolPt(
                 HP.generatedPoint.begin(), HP.generatedPoint.begin() + env->problem->properties.numberOfVariables);
 
-            for(auto& V : env->reformulatedProblem->auxiliaryVariables)
-            {
-                tmpSolPt.push_back(V->calculate(tmpSolPt));
-            }
+            if(tmpSolPt.size() < env->reformulatedProblem->properties.numberOfVariables)
+                env->reformulatedProblem->augmentAuxiliaryVariableValues(tmpSolPt);
 
-            if(env->reformulatedProblem->auxiliaryObjectiveVariable)
-            {
-                tmpSolPt.push_back(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(tmpSolPt));
-            }
-
-            if(env->reformulatedProblem->antiEpigraphObjectiveVariable)
-            {
-                tmpSolPt.at(env->reformulatedProblem->antiEpigraphObjectiveVariable->index)
-                    = env->reformulatedProblem->objectiveFunction->calculateValue(tmpSolPt);
-            }
+            assert(tmpSolPt.size() == env->reformulatedProblem->properties.numberOfVariables);
 
             Hyperplane hyperplane;
             hyperplane.generatedPoint = tmpSolPt;

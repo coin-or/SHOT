@@ -526,18 +526,8 @@ void PrimalSolver::addFixedNLPCandidate(
 {
     VectorDouble candidate(pt);
 
-    if((int)candidate.size() < env->reformulatedProblem->properties.numberOfVariables)
-    {
-        for(auto& V : env->reformulatedProblem->auxiliaryVariables)
-        {
-            candidate.push_back(V->calculate(pt));
-        }
-
-        if(env->reformulatedProblem->auxiliaryObjectiveVariable)
-        {
-            candidate.push_back(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(pt));
-        }
-    }
+    if(candidate.size() < env->reformulatedProblem->properties.numberOfVariables)
+        env->reformulatedProblem->augmentAuxiliaryVariableValues(candidate);
 
     assert((int)candidate.size() == env->reformulatedProblem->properties.numberOfVariables);
 

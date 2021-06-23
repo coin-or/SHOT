@@ -2733,4 +2733,42 @@ ProblemPtr Problem::createCopy(
 
     return (destinationProblem);
 }
+
+void Problem::augmentAuxiliaryVariableValues(VectorDouble& point)
+{
+    auto originalLength = point.size();
+
+    if(!this->properties.isReformulated)
+        return;
+
+    assert(point.size() == this->properties.numberOfVariables - this->properties.numberOfAuxiliaryVariables);
+
+    for(auto& V : this->auxiliaryVariables)
+    {
+        double value = V->calculate(point);
+        point.push_back(value); // Need to add the values of the auxiliary variables in case these are needed by
+                                // subsequent aux. variables
+    }
+
+    if(this->auxiliaryObjectiveVariable)
+    {
+        double value = (this->objectiveFunction->properties.isMinimize)
+            ? this->auxiliaryObjectiveVariable->calculate(point)
+            : -1.0 * this->auxiliaryObjectiveVariable->calculate(point);
+
+        point.push_back(value);
+    }
+
+    if(this->antiEpigraphObjectiveVariable)
+        point.at(this->antiEpigraphObjectiveVariable->index) = this->objectiveFunction->calculateValue(point);
+
+    assert(point.size() == this->properties.numberOfVariables);
+
+    for(auto& PT : point)
+    {
+        assert(PT != NAN);
+    }
+
+    return;
+}
 } // namespace SHOT

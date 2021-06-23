@@ -272,6 +272,8 @@ public:
     void doFBBT();
     bool doFBBTOnConstraint(NumericConstraintPtr constraint, double timeLimit);
 
+    void augmentAuxiliaryVariableValues(VectorDouble& point);
+
     friend std::ostream& operator<<(std::ostream& stream, const Problem& problem);
 
     ProblemPtr createCopy(EnvironmentPtr destinationEnv, bool integerRelaxed = false, bool convexityRelaxed = false,

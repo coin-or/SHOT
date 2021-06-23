@@ -54,23 +54,10 @@ void TaskFindInteriorPoint::run()
 
             tmpIP->point = PT->point;
 
-            for(auto& V : env->reformulatedProblem->auxiliaryVariables)
-            {
-                tmpIP->point.push_back(V->calculate(PT->point));
-            }
+            if(tmpIP->point.size() < env->reformulatedProblem->properties.numberOfVariables)
+                env->reformulatedProblem->augmentAuxiliaryVariableValues(tmpIP->point);
 
-            if(env->reformulatedProblem->auxiliaryObjectiveVariable)
-            {
-                tmpIP->point.push_back(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(PT->point));
-            }
-
-            if(env->reformulatedProblem->antiEpigraphObjectiveVariable)
-            {
-                tmpIP->point.at(env->reformulatedProblem->antiEpigraphObjectiveVariable->index)
-                    = env->reformulatedProblem->objectiveFunction->calculateValue(tmpIP->point);
-            }
-
-            assert((int)tmpIP->point.size() == env->reformulatedProblem->properties.numberOfVariables);
+            assert(tmpIP->point.size() == env->reformulatedProblem->properties.numberOfVariables);
 
             auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
                 tmpIP->point, env->reformulatedProblem->nonlinearConstraints);

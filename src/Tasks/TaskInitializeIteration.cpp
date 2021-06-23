@@ -18,7 +18,7 @@
 namespace SHOT
 {
 
-TaskInitializeIteration::TaskInitializeIteration(EnvironmentPtr envPtr) : TaskBase(envPtr) {}
+TaskInitializeIteration::TaskInitializeIteration(EnvironmentPtr envPtr) : TaskBase(envPtr) { }
 
 TaskInitializeIteration::~TaskInitializeIteration() = default;
 
