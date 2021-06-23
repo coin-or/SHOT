@@ -55,7 +55,8 @@ public:
 
     void checkParameters() override;
 
-    bool addVariable(std::string name, E_VariableType type, double lowerBound, double upperBound, double semiBound) override;
+    bool addVariable(
+        std::string name, E_VariableType type, double lowerBound, double upperBound, double semiBound) override;
 
     bool initializeObjective() override;
     bool addLinearTermToObjective(double coefficient, int variableIndex) override;
@@ -196,10 +197,10 @@ private:
     double cutOff;
     int numberOfThreads = 1;
 
-    std::vector<std::vector<std::pair<std::string, double>>> MIPStarts;
+    std::vector<std::pair<std::string, double>> MIPStart;
 
     std::vector<E_VariableType> variableTypes;
-    std::vector<std::pair<int, std::array<double, 4> > > lotsizes;
+    std::vector<std::pair<int, std::array<double, 4>>> lotsizes;
 };
 
 } // namespace SHOT

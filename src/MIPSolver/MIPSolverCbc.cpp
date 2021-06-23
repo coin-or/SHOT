@@ -676,20 +676,9 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
 
         initializeSolverSettings();
 
-        // Adding the MIP starts provided
-        try
-        {
-            for(auto& P : MIPStarts)
-            {
-                cbcModel->setMIPStart(P);
-            }
-
-            MIPStarts.clear();
-        }
-        catch(std::exception& e)
-        {
-            env->output->outputError("        Error when adding MIP start to Cbc", e.what());
-        }
+        // Adding the MIP start provided
+        if(isProblemDiscrete)
+            cbcModel->setMIPStart(MIPStart);
 
         CbcSolverUsefulData solverData;
         CbcMain0(*cbcModel, solverData);
@@ -1231,58 +1220,19 @@ void MIPSolverCbc::setCutOffAsConstraint([[maybe_unused]] double cutOff)
 
 void MIPSolverCbc::addMIPStart(VectorDouble point)
 {
-    std::vector<std::pair<std::string, double>> variableValues;
+    MIPStart.clear();
 
-    for(int i = 0; i < env->problem->properties.numberOfVariables; i++)
-    {
-        std::pair<std::string, double> tmpPair;
+    if(point.size() < env->reformulatedProblem->properties.numberOfVariables)
+        env->reformulatedProblem->augmentAuxiliaryVariableValues(point);
 
-        tmpPair.first = variableNames.at(i);
-        tmpPair.second = point.at(i);
+    if(this->hasDualAuxiliaryObjectiveVariable())
+        point.push_back(env->reformulatedProblem->objectiveFunction->calculateValue(point));
 
-        variableValues.push_back(tmpPair);
-    }
+    assert(osiInterface->getNumCols() == point.size());
+    assert(variableNames.size() == point.size());
 
-    for(auto& V : env->reformulatedProblem->auxiliaryVariables)
-    {
-        std::pair<std::string, double> tmpPair;
-
-        tmpPair.first = V->name;
-        tmpPair.second = V->calculate(point);
-
-        variableValues.push_back(tmpPair);
-    }
-
-    if(env->reformulatedProblem->auxiliaryObjectiveVariable)
-    {
-        std::pair<std::string, double> tmpPair;
-
-        tmpPair.first = env->reformulatedProblem->auxiliaryObjectiveVariable->name;
-
-        if(isMinimizationProblem)
-            tmpPair.second = env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(point);
-        else
-            tmpPair.second = -1.0 * env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(point);
-
-        variableValues.push_back(tmpPair);
-    }
-
-    auto numVariables = osiInterface->getNumCols();
-
-    while(variableValues.size() < (size_t)numVariables)
-    {
-        std::pair<std::string, double> tmpPair;
-
-        tmpPair.first = osiInterface->getColName(variableValues.size() - 1);
-
-        // TODO: if integer cuts for non binary variables have been added, a complete starting vector is not known
-        // Adding 0.0 for now
-        tmpPair.second = 0.0;
-
-        variableValues.push_back(tmpPair);
-    }
-
-    MIPStarts.push_back(variableValues);
+    for(auto i = 0; i < point.size(); i++)
+        MIPStart.emplace_back(variableNames.at(i).c_str(), point.at(i));
 }
 
 void MIPSolverCbc::writeProblemToFile(std::string filename)
@@ -1335,7 +1285,7 @@ double MIPSolverCbc::getObjectiveValue(int solIdx)
     return (objectiveValue);
 }
 
-void MIPSolverCbc::deleteMIPStarts() { MIPStarts.clear(); }
+void MIPSolverCbc::deleteMIPStarts() { MIPStart.clear(); }
 
 bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
 {
