@@ -1244,23 +1244,17 @@ void MIPSolverCplex::addMIPStart(VectorDouble point)
 {
     IloNumArray startVal(cplexEnv);
 
-    for(double P : point)
-    {
-        startVal.add(P);
-    }
+    if(point.size() < env->reformulatedProblem->properties.numberOfVariables)
+        env->reformulatedProblem->augmentAuxiliaryVariableValues(point);
 
-    for(auto& V : env->reformulatedProblem->auxiliaryVariables)
-    {
-        startVal.add(V->calculate(point));
-    }
+    assert(env->reformulatedProblem->properties.numberOfVariables == point.size());
+    assert(variableNames.size() == point.size());
 
-    if(env->reformulatedProblem->auxiliaryObjectiveVariable)
-        startVal.add(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(point));
-    else if(this->hasDualAuxiliaryObjectiveVariable())
+    if(this->hasDualAuxiliaryObjectiveVariable())
         startVal.add(env->reformulatedProblem->objectiveFunction->calculateValue(point));
 
-    while(startVal.getSize() < cplexVars.getSize())
-        startVal.add(0);
+    for(double P : point)
+        startVal.add(P);
 
     try
     {
