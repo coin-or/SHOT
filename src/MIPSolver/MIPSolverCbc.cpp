@@ -676,8 +676,13 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
 
         initializeSolverSettings();
 
-        // Adding the MIP start provided
-        if(isProblemDiscrete)
+        // Adding the MIP start provided, so far only if there are no special variable types included, since the MIP
+        // start functionality in Cbc version 2 is unstable
+        if(MIPStart.size() > 0
+            && (env->reformulatedProblem->properties.numberOfSemiintegerVariables
+                    + env->reformulatedProblem->properties.numberOfSemicontinuousVariables
+                    + env->reformulatedProblem->properties.numberOfSpecialOrderedSets
+                == 0))
             cbcModel->setMIPStart(MIPStart);
 
         CbcSolverUsefulData solverData;
