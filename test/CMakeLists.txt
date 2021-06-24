@@ -21,17 +21,17 @@ set(Model_parts
 set(Settings_parts 1 2)
 
 if(HAS_CBC)
-  set(Cbc_parts 1 2)
+  set(Cbc_parts 1 2 3)
   set(cpptests ${cpptests} Cbc)
 endif()
 
 if(HAS_CPLEX)
-  set(Cplex_parts 1 2)
+  set(Cplex_parts 1 2 3)
   set(cpptests ${cpptests} Cplex)
 endif()
 
 if(HAS_GUROBI)
-  set(Gurobi_parts 1 2)
+  set(Gurobi_parts 1 2 3)
   set(cpptests ${cpptests} Gurobi)
 endif()
 
@@ -45,7 +45,9 @@ if(HAS_GAMS)
       6
       7
       8
-      9)
+      9
+      10
+      11)
   set(cpptests ${cpptests} GAMS)
 endif()
 
@@ -54,7 +56,8 @@ set(Solver_parts
     2
     3
     4
-    5)
+    5
+    6)
 set(cpptests ${cpptests} Solver)
 
 if(HAS_IPOPT)

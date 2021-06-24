@@ -130,7 +130,7 @@ int CplexTest(int argc, char* argv[])
     switch(choice)
     {
     case 1:
-        std::cout << "Starting test to solve a MINLP problem with Cplex" << std::endl;
+        std::cout << "Starting test to solve a MINLP problem with Cplex:" << std::endl;
         passed = CplexTest1("data/tls2.osil");
         std::cout << "Finished test to solve a MINLP problem with Cplex." << std::endl;
         break;
@@ -138,6 +138,11 @@ int CplexTest(int argc, char* argv[])
         std::cout << "Starting test to check termination callback in Cplex:" << std::endl;
         passed = CplexTerminationCallbackTest("data/tls2.osil");
         std::cout << "Finished test checking termination callback in Cplex." << std::endl;
+        break;
+    case 3:
+        std::cout << "Starting test to solve problem with semicont. variables with Cplex:" << std::endl;
+        passed = CplexTest1("data/meanvarxsc.osil");
+        std::cout << "Finished test to solve problem with semicont. variables with Cplex." << std::endl;
         break;
     default:
         passed = false;

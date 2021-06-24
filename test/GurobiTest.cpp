@@ -145,6 +145,11 @@ int GurobiTest(int argc, char* argv[])
         passed = GurobiTerminationCallbackTest("data/tls2.osil");
         std::cout << "Finished test checking termination callback in Gurobi." << std::endl;
         break;
+    case 3:
+        std::cout << "Starting test to solve problem with semicont. variables with Gurobi.:" << std::endl;
+        passed = GurobiTest1("data/meanvarxsc.osil");
+        std::cout << "Finished test to solve problem with semicont. variables with Gurobi." << std::endl;
+        break;
     default:
         passed = false;
         std::cout << "Test #" << choice << " does not exist!\n";
