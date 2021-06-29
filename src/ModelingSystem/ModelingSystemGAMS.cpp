@@ -686,7 +686,7 @@ void ModelingSystemGAMS::finalizeSolution()
                 {
                     gmoPrepareSolPoolNextSym(modelingObject, handle);
 
-                    for(int i = 1; i < r->primalSolutions.size(); ++i)
+                    for(size_t i = 1; i < r->primalSolutions.size(); ++i)
                     {
                         gmoSetVarL(modelingObject, &r->primalSolutions[i].point[0]);
 
@@ -1324,7 +1324,7 @@ bool ModelingSystemGAMS::copySOS(ProblemPtr destination)
         VectorDouble weights;
         weights.reserve(sosbeg[i + 1] - sosbeg[i]);
 
-        for(int j = sosbeg[i], k = 0; j < sosbeg[i + 1]; ++j)
+        for(int j = sosbeg[i]; j < sosbeg[i + 1]; ++j)
         {
             assert(gmoGetVarTypeOne(modelingObject, sosind[j]) == (sostype[i] == 1 ? (int)gmovar_S1 : (int)gmovar_S2));
             vars.push_back(destination->getVariable(sosind[j]));

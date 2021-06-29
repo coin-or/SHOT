@@ -1686,9 +1686,9 @@ bool Problem::areSpecialOrderedSetsFulfilled(VectorDouble point, double toleranc
         else if(S->type == E_SOSType::Two)
         {
             int numFound = 0;
-            int firstIndex = 0;
+            size_t firstIndex = 0;
 
-            for(int i = 0; i < S->variables.size(); i++)
+            for(size_t i = 0; i < S->variables.size(); i++)
             {
                 if(abs(point.at(S->variables[i]->index) > tolerance))
                 {
@@ -2185,7 +2185,7 @@ std::ostream& operator<<(std::ostream& stream, const Problem& problem)
 
         stream << (S->type == E_SOSType::One ? "SOS1: " : "SOS2: ");
 
-        for(int i = 0; i < S->variables.size(); i++)
+        for(size_t i = 0; i < S->variables.size(); i++)
         {
             stream << S->variables[i]->name;
 

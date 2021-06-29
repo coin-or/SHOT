@@ -1365,8 +1365,6 @@ LinearTerms TaskReformulateProblem::partitionNonlinearSum(
                 quadTerms.takeOwnership(reformulatedProblem);
                 quadTerms.add(optionalQuadraticTerm.value());
 
-                bool partitionQuadraticTermsIfResultIsConvex = true;
-
                 auto [tmpLinearTerms, tmpQuadraticTerms] = reformulateAndPartitionQuadraticSum(quadTerms, reversedSigns,
                     static_cast<ES_PartitionNonlinearSums>(
                         env->settings->getSetting<int>("Reformulation.Constraint.PartitionNonlinearTerms", "Model")));
@@ -1646,18 +1644,8 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
     double signfactor = reversedSigns ? -1.0 : 1.0;
 
     bool quadraticSumConvex = quadraticTerms.minEigenValueWithinTolerance;
-    bool allTermsAreBinary = true;
     bool allTermsConvex = true;
     bool allTermsConvexAfterReformulation = true;
-
-    for(auto& T : quadraticTerms)
-    {
-        if(!T->isBinary)
-        {
-            allTermsAreBinary = false;
-            break;
-        }
-    }
 
     for(auto& T : quadraticTerms)
     {

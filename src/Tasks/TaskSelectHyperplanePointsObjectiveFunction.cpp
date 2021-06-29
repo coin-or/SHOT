@@ -96,8 +96,6 @@ void TaskSelectHyperplanePointsObjectiveFunction::run(std::vector<SolutionPoint>
         {
             env->timing->startTimer("DualObjectiveRootSearch");
 
-            bool addedHyperplane = false;
-
             auto exactValue = env->reformulatedProblem->objectiveFunction->calculateValue(SOLPT.point);
 
             double factor = std::min(0.01, 1 / std::abs(SOLPT.objectiveValue));
