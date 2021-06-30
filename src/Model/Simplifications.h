@@ -1015,7 +1015,7 @@ inline std::optional<std::tuple<QuadraticTermPtr, LinearTermPtr, double>> conver
     if(sum->getNumberOfChildren() != 2)
         return resultingExpression;
 
-    double constant;
+    double constant = 0.0;
     VariablePtr variable;
     double variableCoefficient = 1.0;
 
