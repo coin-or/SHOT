@@ -289,25 +289,6 @@ bool MIPSolverCbc::finalizeProblem()
         osiInterface->loadFromCoinModel(*coinModel);
         cbcModel = std::make_unique<CbcModel>(*osiInterface);
 
-        // create and add lotsize objects
-        if(!lotsizes.empty())
-        {
-            std::vector<CbcObject*> cbcobjects;
-            cbcobjects.reserve(lotsizes.size());
-            for(const auto& l : lotsizes)
-            {
-                if(l.second[2] == l.second[3]) // special case where second interval is singleton, too
-                    cbcobjects.push_back(new CbcLotsize(cbcModel.get(), l.first, 2, l.second.data() + 1, false));
-                else
-                    cbcobjects.push_back(new CbcLotsize(cbcModel.get(), l.first, 2, l.second.data(), true));
-            }
-
-            cbcModel->addObjects(cbcobjects.size(), cbcobjects.data());
-
-            for(CbcObject* o : cbcobjects)
-                delete o;
-        }
-
         CbcSolverUsefulData solverData;
         CbcMain0(*cbcModel, solverData);
 
@@ -684,6 +665,26 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
                     + env->reformulatedProblem->properties.numberOfSpecialOrderedSets
                 == 0))
             cbcModel->setMIPStart(MIPStart);
+
+        // Create and add lotsize objects
+        if(!lotsizes.empty())
+        {
+            std::vector<CbcObject*> cbcobjects;
+            cbcobjects.reserve(lotsizes.size());
+
+            for(const auto& l : lotsizes)
+            {
+                if(l.second[2] == l.second[3]) // special case where second interval is singleton, too
+                    cbcobjects.push_back(new CbcLotsize(cbcModel.get(), l.first, 2, l.second.data() + 1, false));
+                else
+                    cbcobjects.push_back(new CbcLotsize(cbcModel.get(), l.first, 2, l.second.data(), true));
+            }
+
+            cbcModel->addObjects(cbcobjects.size(), cbcobjects.data());
+
+            for(CbcObject* o : cbcobjects)
+                delete o;
+        }
 
         CbcSolverUsefulData solverData;
         CbcMain0(*cbcModel, solverData);
