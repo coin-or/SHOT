@@ -1184,7 +1184,7 @@ void MIPSolverGurobi::addMIPStart(VectorDouble point)
     {
         VectorDouble startVal;
 
-        if(point.size() < env->reformulatedProblem->properties.numberOfVariables)
+        if((int)point.size() < env->reformulatedProblem->properties.numberOfVariables)
             env->reformulatedProblem->augmentAuxiliaryVariableValues(point);
 
         assert(env->reformulatedProblem->properties.numberOfVariables == point.size());

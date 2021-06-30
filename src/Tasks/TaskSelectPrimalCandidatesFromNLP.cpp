@@ -514,7 +514,7 @@ void TaskSelectPrimalCandidatesFromNLP::createInfeasibilityCut(const VectorDoubl
     if(!sourceIsReformulatedProblem) // Need to calculate values for the auxiliary variables in this
                                      // case
     {
-        if(tmpSolPt.point.size() < env->reformulatedProblem->properties.numberOfVariables)
+        if((int)tmpSolPt.point.size() < env->reformulatedProblem->properties.numberOfVariables)
             env->reformulatedProblem->augmentAuxiliaryVariableValues(tmpSolPt.point);
 
         assert(tmpSolPt.point.size() == env->reformulatedProblem->properties.numberOfVariables);

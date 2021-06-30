@@ -235,7 +235,7 @@ E_NLPSolutionStatus NLPSolverSHOT::solveProblemInstance()
             std::vector<double> tmpSolPt(
                 HP.generatedPoint.begin(), HP.generatedPoint.begin() + env->problem->properties.numberOfVariables);
 
-            if(tmpSolPt.size() < env->reformulatedProblem->properties.numberOfVariables)
+            if((int)tmpSolPt.size() < env->reformulatedProblem->properties.numberOfVariables)
                 env->reformulatedProblem->augmentAuxiliaryVariableValues(tmpSolPt);
 
             assert(tmpSolPt.size() == env->reformulatedProblem->properties.numberOfVariables);

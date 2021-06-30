@@ -363,7 +363,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
 
             IloNumArray tmpVals(context.getEnv());
 
-            if(primalSol.size() < env->reformulatedProblem->properties.numberOfVariables)
+            if((int)primalSol.size() < env->reformulatedProblem->properties.numberOfVariables)
                 env->reformulatedProblem->augmentAuxiliaryVariableValues(primalSol);
 
             if(env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())

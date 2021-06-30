@@ -2203,7 +2203,7 @@ std::ostream& operator<<(std::ostream& stream, const Problem& problem)
 
             stream << (S->type == E_SOSType::One ? "SOS1: " : "SOS2: ");
 
-            for(int i = 0; i < S->variables.size(); i++)
+            for(size_t i = 0; i < S->variables.size(); i++)
             {
                 stream << S->variables[i]->name;
 
@@ -2736,8 +2736,6 @@ ProblemPtr Problem::createCopy(
 
 void Problem::augmentAuxiliaryVariableValues(VectorDouble& point)
 {
-    auto originalLength = point.size();
-
     if(!this->properties.isReformulated)
         return;
 
@@ -2764,10 +2762,12 @@ void Problem::augmentAuxiliaryVariableValues(VectorDouble& point)
 
     assert(point.size() == this->properties.numberOfVariables);
 
+#ifndef NDEBUG
     for(auto& PT : point)
     {
         assert(PT != NAN);
     }
+#endif
 
     return;
 }

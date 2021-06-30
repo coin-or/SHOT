@@ -54,7 +54,7 @@ void TaskFindInteriorPoint::run()
 
             tmpIP->point = PT->point;
 
-            if(tmpIP->point.size() < env->reformulatedProblem->properties.numberOfVariables)
+            if((int)tmpIP->point.size() < env->reformulatedProblem->properties.numberOfVariables)
                 env->reformulatedProblem->augmentAuxiliaryVariableValues(tmpIP->point);
 
             assert(tmpIP->point.size() == env->reformulatedProblem->properties.numberOfVariables);

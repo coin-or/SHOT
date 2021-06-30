@@ -452,7 +452,7 @@ void GurobiCallbackSingleTree::callback()
         {
             auto primalSol = env->results->primalSolution;
 
-            if(primalSol.size() < env->reformulatedProblem->properties.numberOfVariables)
+            if((int)primalSol.size() < env->reformulatedProblem->properties.numberOfVariables)
                 env->reformulatedProblem->augmentAuxiliaryVariableValues(primalSol);
 
             assert(env->reformulatedProblem->properties.numberOfVariables == primalSol.size());

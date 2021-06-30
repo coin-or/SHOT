@@ -44,7 +44,7 @@ void TaskUpdateInteriorPoint::run()
     {
         auto tmpIP = std::make_shared<InteriorPoint>();
 
-        if(tmpPrimalPoint.size() < env->reformulatedProblem->properties.numberOfVariables)
+        if((int)tmpPrimalPoint.size() < env->reformulatedProblem->properties.numberOfVariables)
             env->reformulatedProblem->augmentAuxiliaryVariableValues(tmpPrimalPoint);
 
         assert(tmpPrimalPoint.size() == env->reformulatedProblem->properties.numberOfVariables);
@@ -73,7 +73,7 @@ void TaskUpdateInteriorPoint::run()
     // Need to calculate the value for the point in the reformulated problem
     auto tmpIP = std::make_shared<InteriorPoint>();
 
-    if(tmpPrimalPoint.size() < env->reformulatedProblem->properties.numberOfVariables)
+    if((int)tmpPrimalPoint.size() < env->reformulatedProblem->properties.numberOfVariables)
         env->reformulatedProblem->augmentAuxiliaryVariableValues(tmpPrimalPoint);
 
     assert(tmpPrimalPoint.size() == env->reformulatedProblem->properties.numberOfVariables);
@@ -127,7 +127,7 @@ void TaskUpdateInteriorPoint::run()
         for(size_t i = 0; i < tmpPrimalPoint.size(); i++)
             tmpPrimalPoint.at(i) = (0.5 * tmpPrimalPoint.at(i) + 0.5 * env->dualSolver->interiorPts.at(0)->point.at(i));
 
-        if(tmpPrimalPoint.size() < env->reformulatedProblem->properties.numberOfVariables)
+        if((int)tmpPrimalPoint.size() < env->reformulatedProblem->properties.numberOfVariables)
             env->reformulatedProblem->augmentAuxiliaryVariableValues(tmpPrimalPoint);
 
         assert(tmpPrimalPoint.size() == env->reformulatedProblem->properties.numberOfVariables);

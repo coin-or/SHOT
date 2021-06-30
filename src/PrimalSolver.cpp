@@ -526,7 +526,7 @@ void PrimalSolver::addFixedNLPCandidate(
 {
     VectorDouble candidate(pt);
 
-    if(candidate.size() < env->reformulatedProblem->properties.numberOfVariables)
+    if((int)candidate.size() < env->reformulatedProblem->properties.numberOfVariables)
         env->reformulatedProblem->augmentAuxiliaryVariableValues(candidate);
 
     assert((int)candidate.size() == env->reformulatedProblem->properties.numberOfVariables);

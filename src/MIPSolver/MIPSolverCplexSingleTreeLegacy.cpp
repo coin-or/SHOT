@@ -70,7 +70,7 @@ void HCallbackI::main() // Called at each node...
 
         IloNumArray tmpVals(this->getEnv());
 
-        if(primalSol.size() < env->reformulatedProblem->properties.numberOfVariables)
+        if((int)primalSol.size() < env->reformulatedProblem->properties.numberOfVariables)
             env->reformulatedProblem->augmentAuxiliaryVariableValues(primalSol);
 
         assert(env->reformulatedProblem->properties.numberOfVariables == primalSol.size());

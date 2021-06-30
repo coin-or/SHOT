@@ -1228,7 +1228,7 @@ void MIPSolverCbc::addMIPStart(VectorDouble point)
 {
     MIPStart.clear();
 
-    if(point.size() < env->reformulatedProblem->properties.numberOfVariables)
+    if((int)point.size() < env->reformulatedProblem->properties.numberOfVariables)
         env->reformulatedProblem->augmentAuxiliaryVariableValues(point);
 
     if(this->hasDualAuxiliaryObjectiveVariable())
@@ -1237,7 +1237,7 @@ void MIPSolverCbc::addMIPStart(VectorDouble point)
     assert(osiInterface->getNumCols() == point.size());
     assert(variableNames.size() == point.size());
 
-    for(auto i = 0; i < point.size(); i++)
+    for(size_t i = 0; i < point.size(); i++)
         MIPStart.emplace_back(variableNames.at(i).c_str(), point.at(i));
 }
 

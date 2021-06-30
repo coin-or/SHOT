@@ -1244,7 +1244,7 @@ void MIPSolverCplex::addMIPStart(VectorDouble point)
 {
     IloNumArray startVal(cplexEnv);
 
-    if(point.size() < env->reformulatedProblem->properties.numberOfVariables)
+    if((int)point.size() < env->reformulatedProblem->properties.numberOfVariables)
         env->reformulatedProblem->augmentAuxiliaryVariableValues(point);
 
     assert(env->reformulatedProblem->properties.numberOfVariables == point.size());
