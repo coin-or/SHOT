@@ -260,7 +260,8 @@ enum class E_VariableType
     Real,
     Binary,
     Integer,
-    Semicontinuous
+    Semicontinuous,
+    Semiinteger
 };
 
 enum class ES_AddPrimalPointAsInteriorPoint

@@ -118,7 +118,8 @@ bool MIPSolverCplex::initializeProblem()
     return (true);
 }
 
-bool MIPSolverCplex::addVariable(std::string name, E_VariableType type, double lowerBound, double upperBound)
+bool MIPSolverCplex::addVariable(
+    std::string name, E_VariableType type, double lowerBound, double upperBound, double semiBound)
 {
     if(lowerBound < -getUnboundedVariableBoundValue())
         lowerBound = -getUnboundedVariableBoundValue();
@@ -147,9 +148,15 @@ bool MIPSolverCplex::addVariable(std::string name, E_VariableType type, double l
             break;
         }
         case E_VariableType::Semicontinuous:
+        case E_VariableType::Semiinteger:
         {
             isProblemDiscrete = true;
-            auto cplexVar = IloSemiContVar(cplexEnv, lowerBound, upperBound, ILOFLOAT, name.c_str());
+            if(semiBound < 0.0)
+                upperBound = semiBound;
+            else
+                lowerBound = semiBound;
+            auto cplexVar = IloSemiContVar(cplexEnv, lowerBound, upperBound,
+                (type == E_VariableType::Semicontinuous) ? ILOFLOAT : ILOINT, name.c_str());
             cplexVars.add(cplexVar);
             cplexModel.add(cplexVar);
             break;
@@ -607,9 +614,12 @@ bool MIPSolverCplex::addSpecialOrderedSet(E_SOSType type, VectorInteger variable
 
 void MIPSolverCplex::activateDiscreteVariables(bool activate)
 {
+    if(env->reformulatedProblem->properties.numberOfSemiintegerVariables > 0
+        || env->reformulatedProblem->properties.numberOfSemicontinuousVariables > 0)
+        return;
+
     try
     {
-
         for(auto& C : cplexVarConvers)
         {
             C.end();
@@ -1234,23 +1244,17 @@ void MIPSolverCplex::addMIPStart(VectorDouble point)
 {
     IloNumArray startVal(cplexEnv);
 
-    for(double P : point)
-    {
-        startVal.add(P);
-    }
+    if(point.size() < env->reformulatedProblem->properties.numberOfVariables)
+        env->reformulatedProblem->augmentAuxiliaryVariableValues(point);
 
-    for(auto& V : env->reformulatedProblem->auxiliaryVariables)
-    {
-        startVal.add(V->calculate(point));
-    }
+    assert(env->reformulatedProblem->properties.numberOfVariables == point.size());
+    assert(variableNames.size() == point.size());
 
-    if(env->reformulatedProblem->auxiliaryObjectiveVariable)
-        startVal.add(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(point));
-    else if(this->hasDualAuxiliaryObjectiveVariable())
+    if(this->hasDualAuxiliaryObjectiveVariable())
         startVal.add(env->reformulatedProblem->objectiveFunction->calculateValue(point));
 
-    while(startVal.getSize() < cplexVars.getSize())
-        startVal.add(0);
+    for(double P : point)
+        startVal.add(P);
 
     try
     {
@@ -1583,7 +1587,8 @@ bool MIPSolverCplex::createIntegerCut(IntegerCut& integerCut)
             int variableValue = integerCut.variableValues[index];
             auto variable = cplexVars[VAR->index];
 
-            assert(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer);
+            assert(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer
+                || VAR->properties.type == E_VariableType::Semiinteger);
 
             if(variableValue == VAR->upperBound)
             {

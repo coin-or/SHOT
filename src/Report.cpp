@@ -785,6 +785,12 @@ void Report::outputProblemInstanceReport()
                 " - semicontinuous:", env->problem->properties.numberOfSemicontinuousVariables,
                 env->reformulatedProblem->properties.numberOfSemicontinuousVariables));
 
+        if(env->problem->properties.numberOfSemiintegerVariables > 0
+            || env->reformulatedProblem->properties.numberOfSemiintegerVariables > 0)
+            env->output->outputInfo(fmt::format(" {:35s}{:<21d}{:d}",
+                " - semiinteger:", env->problem->properties.numberOfSemiintegerVariables,
+                env->reformulatedProblem->properties.numberOfSemiintegerVariables));
+
         if(env->problem->properties.numberOfNonlinearVariables > 0
             || env->reformulatedProblem->properties.numberOfNonlinearVariables > 0)
             env->output->outputInfo(
@@ -812,7 +818,11 @@ void Report::outputProblemInstanceReport()
         if(env->problem->properties.numberOfSemicontinuousVariables > 0)
             env->output->outputInfo(fmt::format(" {:35s}{:<21d}{:s}",
                 " - semicontinuous:", env->problem->properties.numberOfSemicontinuousVariables, ""));
-    }
+
+        if(env->problem->properties.numberOfSemiintegerVariables > 0)
+            env->output->outputInfo(fmt::format(" {:35s}{:<21d}{:s}",
+                " - semiinteger:", env->problem->properties.numberOfSemiintegerVariables, ""));
+}
 
     if(env->problem->properties.numberOfSpecialOrderedSets
             + env->reformulatedProblem->properties.numberOfSpecialOrderedSets

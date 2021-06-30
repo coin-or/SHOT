@@ -76,7 +76,8 @@ bool MIPSolverGurobi::initializeProblem()
     return (true);
 }
 
-bool MIPSolverGurobi::addVariable(std::string name, E_VariableType type, double lowerBound, double upperBound)
+bool MIPSolverGurobi::addVariable(
+    std::string name, E_VariableType type, double lowerBound, double upperBound, double semiBound)
 {
     if(lowerBound < -getUnboundedVariableBoundValue())
         lowerBound = -getUnboundedVariableBoundValue();
@@ -104,7 +105,20 @@ bool MIPSolverGurobi::addVariable(std::string name, E_VariableType type, double 
 
         case E_VariableType::Semicontinuous:
             isProblemDiscrete = true;
+            if(semiBound < 0.0)
+                upperBound = semiBound;
+            else
+                lowerBound = semiBound;
             gurobiModel->addVar(lowerBound, upperBound, 0.0, GRB_SEMICONT, name);
+            break;
+
+        case E_VariableType::Semiinteger:
+            isProblemDiscrete = true;
+            if(semiBound < 0.0)
+                upperBound = semiBound;
+            else
+                lowerBound = semiBound;
+            gurobiModel->addVar(lowerBound, upperBound, 0.0, GRB_SEMIINT, name);
             break;
 
         default:
@@ -538,7 +552,8 @@ bool MIPSolverGurobi::createIntegerCut(IntegerCut& integerCut)
             int variableValue = integerCut.variableValues[index];
             auto variable = gurobiModel->getVar(I);
 
-            assert(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer);
+            assert(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer
+                || VAR->properties.type == E_VariableType::Semiinteger);
 
             if(variableValue == VAR->upperBound)
             {
@@ -688,12 +703,20 @@ int MIPSolverGurobi::getNumberOfSolutions()
 
 void MIPSolverGurobi::activateDiscreteVariables(bool activate)
 {
+
+    if(env->reformulatedProblem->properties.numberOfSemiintegerVariables > 0
+        || env->reformulatedProblem->properties.numberOfSemicontinuousVariables > 0)
+        return;
+
     if(activate)
     {
         env->output->outputDebug("        Activating MIP strategy.");
 
         for(int i = 0; i < numberOfVariables; i++)
         {
+            assert(variableTypes.at(i) != E_VariableType::Semicontinuous
+                && variableTypes.at(i) != E_VariableType::Semiinteger);
+
             if(variableTypes.at(i) == E_VariableType::Integer)
             {
                 GRBVar tmpVar = gurobiModel->getVar(i);
@@ -712,8 +735,12 @@ void MIPSolverGurobi::activateDiscreteVariables(bool activate)
     else
     {
         env->output->outputDebug("        Activating LP strategy.");
+
         for(int i = 0; i < numberOfVariables; i++)
         {
+            assert(variableTypes.at(i) != E_VariableType::Semicontinuous
+                && variableTypes.at(i) != E_VariableType::Semiinteger);
+
             if(variableTypes.at(i) == E_VariableType::Integer || variableTypes.at(i) == E_VariableType::Binary)
             {
                 GRBVar tmpVar = gurobiModel->getVar(i);
@@ -1157,20 +1184,17 @@ void MIPSolverGurobi::addMIPStart(VectorDouble point)
     {
         VectorDouble startVal;
 
+        if(point.size() < env->reformulatedProblem->properties.numberOfVariables)
+            env->reformulatedProblem->augmentAuxiliaryVariableValues(point);
+
+        assert(env->reformulatedProblem->properties.numberOfVariables == point.size());
+        assert(variableNames.size() == point.size());
+
+        if(this->hasDualAuxiliaryObjectiveVariable())
+            point.push_back(env->reformulatedProblem->objectiveFunction->calculateValue(point));
+
         for(double P : point)
-        {
             startVal.push_back(P);
-        }
-
-        for(auto& V : env->reformulatedProblem->auxiliaryVariables)
-        {
-            startVal.push_back(V->calculate(point));
-        }
-
-        if(env->reformulatedProblem->auxiliaryObjectiveVariable)
-            startVal.push_back(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(point));
-        else if(this->hasDualAuxiliaryObjectiveVariable())
-            startVal.push_back(env->reformulatedProblem->objectiveFunction->calculateValue(point));
 
         for(size_t i = 0; i < startVal.size(); i++)
         {

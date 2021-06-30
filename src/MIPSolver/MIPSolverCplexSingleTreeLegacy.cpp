@@ -70,23 +70,21 @@ void HCallbackI::main() // Called at each node...
 
         IloNumArray tmpVals(this->getEnv());
 
-        for(double S : primalSol)
-        {
-            tmpVals.add(S);
-        }
+        if(primalSol.size() < env->reformulatedProblem->properties.numberOfVariables)
+            env->reformulatedProblem->augmentAuxiliaryVariableValues(primalSol);
+
+        assert(env->reformulatedProblem->properties.numberOfVariables == primalSol.size());
+
+        if(env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
+            primalSol.push_back(env->reformulatedProblem->objectiveFunction->calculateValue(primalSol));
+
+        for(double P : primalSol)
+            tmpVals.add(P);
 
         for(auto& V : env->reformulatedProblem->auxiliaryVariables)
         {
             tmpVals.add(V->calculate(primalSol));
         }
-
-        if(env->reformulatedProblem->auxiliaryObjectiveVariable)
-            tmpVals.add(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(primalSol));
-        else if(env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
-            tmpVals.add(env->reformulatedProblem->objectiveFunction->calculateValue(primalSol));
-
-        while(tmpVals.getSize() < cplexVars.getSize())
-            tmpVals.add(0);
 
         try
         {
@@ -617,7 +615,8 @@ bool CtCallbackI::createIntegerCut(IntegerCut& integerCut)
 
         for(auto& VAR : env->reformulatedProblem->allVariables)
         {
-            if(!(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer))
+            if(!(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer
+                   || VAR->properties.type == E_VariableType::Semiinteger))
                 continue;
 
             int variableValue = integerCut.variableValues[index];

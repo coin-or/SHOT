@@ -51,8 +51,9 @@ struct ProblemProperties
     int numberOfRealVariables = 0;
     int numberOfDiscreteVariables = 0; // Binary and integer variables
     int numberOfBinaryVariables = 0;
-    int numberOfIntegerVariables = 0; // Not including binary variables
+    int numberOfIntegerVariables = 0; // Not including binary or semiinteger variables
     int numberOfSemicontinuousVariables = 0;
+    int numberOfSemiintegerVariables = 0;
     int numberOfNonlinearVariables = 0;
     int numberOfVariablesInNonlinearExpressions = 0;
     int numberOfAuxiliaryVariables = 0;
@@ -134,6 +135,7 @@ public:
     Variables binaryVariables;
     Variables integerVariables;
     Variables semicontinuousVariables;
+    Variables semiintegerVariables;
     Variables nonlinearVariables; // All nonlinear variables, including in quadratic, signomial or monomial terms
     Variables nonlinearExpressionVariables; // Variables in general nonlinear expressions
 
@@ -269,6 +271,8 @@ public:
 
     void doFBBT();
     bool doFBBTOnConstraint(NumericConstraintPtr constraint, double timeLimit);
+
+    void augmentAuxiliaryVariableValues(VectorDouble& point);
 
     friend std::ostream& operator<<(std::ostream& stream, const Problem& problem);
 

@@ -393,6 +393,7 @@ void Problem::updateVariables()
     binaryVariables.sortByIndex();
     integerVariables.sortByIndex();
     semicontinuousVariables.sortByIndex();
+    semiintegerVariables.sortByIndex();
     auxiliaryVariables.sortByIndex();
 
     nonlinearVariables.clear();
@@ -580,8 +581,10 @@ void Problem::updateProperties()
     properties.numberOfRealVariables = realVariables.size();
     properties.numberOfBinaryVariables = binaryVariables.size();
     properties.numberOfIntegerVariables = integerVariables.size();
-    properties.numberOfDiscreteVariables = properties.numberOfBinaryVariables + properties.numberOfIntegerVariables;
     properties.numberOfSemicontinuousVariables = semicontinuousVariables.size();
+    properties.numberOfSemiintegerVariables = semiintegerVariables.size();
+    properties.numberOfDiscreteVariables = properties.numberOfBinaryVariables + properties.numberOfIntegerVariables
+        + properties.numberOfSemiintegerVariables;
     properties.numberOfNonlinearVariables = nonlinearVariables.size();
     properties.numberOfVariablesInNonlinearExpressions = nonlinearExpressionVariables.size();
     properties.numberOfAuxiliaryVariables = auxiliaryVariables.size();
@@ -655,7 +658,7 @@ void Problem::updateProperties()
     properties.numberOfSpecialOrderedSets = specialOrderedSets.size();
 
     properties.isDiscrete = (properties.numberOfDiscreteVariables > 0 || properties.numberOfSemicontinuousVariables > 0
-        || properties.numberOfSpecialOrderedSets > 0);
+        || properties.numberOfSpecialOrderedSets > 0 || properties.numberOfSemiintegerVariables > 0);
 
     if(areConstrsNonlinear || isObjNonlinear)
         properties.isNonlinear = true;
@@ -827,6 +830,7 @@ Problem::~Problem()
     binaryVariables.clear();
     integerVariables.clear();
     semicontinuousVariables.clear();
+    semiintegerVariables.clear();
     nonlinearVariables.clear();
     nonlinearExpressionVariables.clear();
 
@@ -881,6 +885,9 @@ void Problem::add(VariablePtr variable)
     case(E_VariableType::Semicontinuous):
         semicontinuousVariables.push_back(variable);
         break;
+    case(E_VariableType::Semiinteger):
+        semiintegerVariables.push_back(variable);
+        break;
     default:
         break;
     }
@@ -919,6 +926,9 @@ void Problem::add(AuxiliaryVariablePtr variable)
         break;
     case(E_VariableType::Semicontinuous):
         semicontinuousVariables.push_back(variable);
+        break;
+    case(E_VariableType::Semiinteger):
+        semiintegerVariables.push_back(variable);
         break;
     default:
         break;
@@ -1644,6 +1654,12 @@ bool Problem::areIntegralityConstraintsFulfilled(VectorDouble point, double tole
             return false;
     }
 
+    for(auto& V : semiintegerVariables)
+    {
+        if(abs(point.at(V->index) - round(point.at(V->index))) > tolerance)
+            return false;
+    }
+
     return true;
 }
 
@@ -2177,25 +2193,28 @@ std::ostream& operator<<(std::ostream& stream, const Problem& problem)
         stream << C << '\n';
     }
 
-    stream << "\nspecial ordered sets:\n";
-
-    for(auto& S : problem.specialOrderedSets)
+    if(problem.properties.numberOfSpecialOrderedSets > 0)
     {
-        bool hasWeights = (S->weights.size() > 0);
+        stream << "\nspecial ordered sets:\n";
 
-        stream << (S->type == E_SOSType::One ? "SOS1: " : "SOS2: ");
-
-        for(size_t i = 0; i < S->variables.size(); i++)
+        for(auto& S : problem.specialOrderedSets)
         {
-            stream << S->variables[i]->name;
+            bool hasWeights = (S->weights.size() > 0);
 
-            if(hasWeights)
-                stream << ":" << S->weights[i] << " ";
-            else
-                stream << " ";
+            stream << (S->type == E_SOSType::One ? "SOS1: " : "SOS2: ");
+
+            for(int i = 0; i < S->variables.size(); i++)
+            {
+                stream << S->variables[i]->name;
+
+                if(hasWeights)
+                    stream << ":" << S->weights[i] << " ";
+                else
+                    stream << " ";
+            }
+
+            stream << '\n';
         }
-
-        stream << '\n';
     }
 
     stream << "\nvariables:\n";
@@ -2240,6 +2259,10 @@ bool Problem::verifyOwnership()
         return (false);
 
     if(std::any_of(semicontinuousVariables.begin(), semicontinuousVariables.end(),
+           [this](VariablePtr const& V) { return (V->ownerProblem.lock().get() != this); }))
+        return (false);
+
+    if(std::any_of(semiintegerVariables.begin(), semiintegerVariables.end(),
            [this](VariablePtr const& V) { return (V->ownerProblem.lock().get() != this); }))
         return (false);
 
@@ -2389,15 +2412,17 @@ ProblemPtr Problem::createCopy(
 
         if(V->properties.isAuxiliary && copyAuxiliary)
         {
-            variable
-                = std::make_shared<AuxiliaryVariable>(V->name, V->index, variableType, V->lowerBound, V->upperBound);
+            variable = std::make_shared<AuxiliaryVariable>(
+                V->name, V->index, variableType, V->lowerBound, V->upperBound, V->semiBound);
             destinationProblem->add(variable);
 
             variable->properties.auxiliaryType = V->properties.auxiliaryType;
         }
         else
         {
-            variable = std::make_shared<Variable>(V->name, V->index, variableType, V->lowerBound, V->upperBound);
+            variable = std::make_shared<Variable>(
+                V->name, V->index, variableType, V->lowerBound, V->upperBound, V->semiBound);
+
             destinationProblem->add(variable);
         }
 
@@ -2414,6 +2439,16 @@ ProblemPtr Problem::createCopy(
             variable->upperBound = std::min(V->upperBound, 1.0);
         }
         else if(V->properties.type == E_VariableType::Integer)
+        {
+            variable->lowerBound = std::max(V->lowerBound, minLBInt);
+            variable->upperBound = std::min(V->upperBound, maxUBInt);
+        }
+        else if(V->properties.type == E_VariableType::Semicontinuous)
+        {
+            variable->lowerBound = std::max(V->lowerBound, minLBCont);
+            variable->upperBound = std::min(V->upperBound, maxUBCont);
+        }
+        else if(V->properties.type == E_VariableType::Semiinteger)
         {
             variable->lowerBound = std::max(V->lowerBound, minLBInt);
             variable->upperBound = std::min(V->upperBound, maxUBInt);
@@ -2439,6 +2474,16 @@ ProblemPtr Problem::createCopy(
             variable->upperBound = std::min(this->auxiliaryObjectiveVariable->upperBound, 1.0);
         }
         else if(this->auxiliaryObjectiveVariable->properties.type == E_VariableType::Integer)
+        {
+            variable->lowerBound = std::max(this->auxiliaryObjectiveVariable->lowerBound, minLBInt);
+            variable->upperBound = std::min(this->auxiliaryObjectiveVariable->upperBound, maxUBInt);
+        }
+        else if(this->auxiliaryObjectiveVariable->properties.type == E_VariableType::Semicontinuous)
+        {
+            variable->lowerBound = std::max(this->auxiliaryObjectiveVariable->lowerBound, minLBCont);
+            variable->upperBound = std::min(this->auxiliaryObjectiveVariable->upperBound, maxUBCont);
+        }
+        else if(this->auxiliaryObjectiveVariable->properties.type == E_VariableType::Semiinteger)
         {
             variable->lowerBound = std::max(this->auxiliaryObjectiveVariable->lowerBound, minLBInt);
             variable->upperBound = std::min(this->auxiliaryObjectiveVariable->upperBound, maxUBInt);
@@ -2687,5 +2732,43 @@ ProblemPtr Problem::createCopy(
     destinationProblem->finalize();
 
     return (destinationProblem);
+}
+
+void Problem::augmentAuxiliaryVariableValues(VectorDouble& point)
+{
+    auto originalLength = point.size();
+
+    if(!this->properties.isReformulated)
+        return;
+
+    assert(point.size() == this->properties.numberOfVariables - this->properties.numberOfAuxiliaryVariables);
+
+    for(auto& V : this->auxiliaryVariables)
+    {
+        double value = V->calculate(point);
+        point.push_back(value); // Need to add the values of the auxiliary variables in case these are needed by
+                                // subsequent aux. variables
+    }
+
+    if(this->auxiliaryObjectiveVariable)
+    {
+        double value = (this->objectiveFunction->properties.isMinimize)
+            ? this->auxiliaryObjectiveVariable->calculate(point)
+            : -1.0 * this->auxiliaryObjectiveVariable->calculate(point);
+
+        point.push_back(value);
+    }
+
+    if(this->antiEpigraphObjectiveVariable)
+        point.at(this->antiEpigraphObjectiveVariable->index) = this->objectiveFunction->calculateValue(point);
+
+    assert(point.size() == this->properties.numberOfVariables);
+
+    for(auto& PT : point)
+    {
+        assert(PT != NAN);
+    }
+
+    return;
 }
 } // namespace SHOT

@@ -30,7 +30,7 @@ public:
     virtual bool initializeProblem() = 0;
     virtual void checkParameters() = 0;
 
-    virtual bool addVariable(std::string name, E_VariableType type, double lowerBound, double upperBound) = 0;
+    virtual bool addVariable(std::string name, E_VariableType type, double lowerBound, double upperBound, double semiBound) = 0;
 
     virtual bool initializeObjective() = 0;
     virtual bool addLinearTermToObjective(double coefficient, int variableIndex) = 0;

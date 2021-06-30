@@ -27,6 +27,7 @@
 #include "CoinPragma.hpp"
 #include "CbcModel.hpp"
 #include "CbcSolver.hpp"
+#include "CbcBranchLotsize.hpp"
 #include "OsiClpSolverInterface.hpp"
 
 namespace SHOT
@@ -91,7 +92,8 @@ bool MIPSolverCbc::initializeProblem()
     return (true);
 }
 
-bool MIPSolverCbc::addVariable(std::string name, E_VariableType type, double lowerBound, double upperBound)
+bool MIPSolverCbc::addVariable(
+    std::string name, E_VariableType type, double lowerBound, double upperBound, double semiBound)
 {
     int index = numberOfVariables;
 
@@ -121,10 +123,23 @@ bool MIPSolverCbc::addVariable(std::string name, E_VariableType type, double low
             coinModel->setInteger(index);
             break;
 
-        case E_VariableType::Semicontinuous:
-            isProblemDiscrete = true;
+        case E_VariableType::Semiinteger:
             coinModel->setInteger(index);
+        case E_VariableType::Semicontinuous:
+        {
+            // variable is either {0} or in [semiBound,upperBound]
+            std::array<double, 4> points = { 0.0, 0.0, semiBound, upperBound };
+            if(semiBound < 0.0)
+            {
+                // variable is actually either {0} or in [lowerBound,semiBound]
+                points[2] = lowerBound;
+                points[3] = semiBound;
+            }
+            lotsizes.push_back(std::make_pair(index, points));
+
+            isProblemDiscrete = true;
             break;
+        }
 
         default:
             break;
@@ -273,6 +288,7 @@ bool MIPSolverCbc::finalizeProblem()
     {
         osiInterface->loadFromCoinModel(*coinModel);
         cbcModel = std::make_unique<CbcModel>(*osiInterface);
+
         CbcSolverUsefulData solverData;
         CbcMain0(*cbcModel, solverData);
 
@@ -417,12 +433,19 @@ bool MIPSolverCbc::addSpecialOrderedSet(E_SOSType type, VectorInteger variableIn
 
 void MIPSolverCbc::activateDiscreteVariables(bool activate)
 {
+    if(env->reformulatedProblem->properties.numberOfSemiintegerVariables > 0
+        || env->reformulatedProblem->properties.numberOfSemicontinuousVariables > 0)
+        return;
+
     if(activate)
     {
         env->output->outputDebug("        Activating MIP strategy");
 
         for(int i = 0; i < numberOfVariables; i++)
         {
+            assert(variableTypes.at(i) != E_VariableType::Semicontinuous
+                && variableTypes.at(i) != E_VariableType::Semiinteger);
+
             if(variableTypes.at(i) == E_VariableType::Integer || variableTypes.at(i) == E_VariableType::Binary)
             {
                 osiInterface->setInteger(i);
@@ -437,6 +460,9 @@ void MIPSolverCbc::activateDiscreteVariables(bool activate)
         env->output->outputDebug("        Activating LP strategy");
         for(int i = 0; i < numberOfVariables; i++)
         {
+            assert(variableTypes.at(i) != E_VariableType::Semicontinuous
+                && variableTypes.at(i) != E_VariableType::Semiinteger);
+
             if(variableTypes.at(i) == E_VariableType::Integer || variableTypes.at(i) == E_VariableType::Binary)
             {
                 osiInterface->setContinuous(i);
@@ -631,19 +657,33 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
 
         initializeSolverSettings();
 
-        // Adding the MIP starts provided
-        try
+        // Adding the MIP start provided, so far only if there are no special variable types included, since the MIP
+        // start functionality in Cbc version 2 is unstable
+        if(MIPStart.size() > 0
+            && (env->reformulatedProblem->properties.numberOfSemiintegerVariables
+                    + env->reformulatedProblem->properties.numberOfSemicontinuousVariables
+                    + env->reformulatedProblem->properties.numberOfSpecialOrderedSets
+                == 0))
+            cbcModel->setMIPStart(MIPStart);
+
+        // Create and add lotsize objects
+        if(!lotsizes.empty())
         {
-            for(auto& P : MIPStarts)
+            std::vector<CbcObject*> cbcobjects;
+            cbcobjects.reserve(lotsizes.size());
+
+            for(const auto& l : lotsizes)
             {
-                cbcModel->setMIPStart(P);
+                if(l.second[2] == l.second[3]) // special case where second interval is singleton, too
+                    cbcobjects.push_back(new CbcLotsize(cbcModel.get(), l.first, 2, l.second.data() + 1, false));
+                else
+                    cbcobjects.push_back(new CbcLotsize(cbcModel.get(), l.first, 2, l.second.data(), true));
             }
 
-            MIPStarts.clear();
-        }
-        catch(std::exception& e)
-        {
-            env->output->outputError("        Error when adding MIP start to Cbc", e.what());
+            cbcModel->addObjects(cbcobjects.size(), cbcobjects.data());
+
+            for(CbcObject* o : cbcobjects)
+                delete o;
         }
 
         CbcSolverUsefulData solverData;
@@ -1186,58 +1226,19 @@ void MIPSolverCbc::setCutOffAsConstraint([[maybe_unused]] double cutOff)
 
 void MIPSolverCbc::addMIPStart(VectorDouble point)
 {
-    std::vector<std::pair<std::string, double>> variableValues;
+    MIPStart.clear();
 
-    for(int i = 0; i < env->problem->properties.numberOfVariables; i++)
-    {
-        std::pair<std::string, double> tmpPair;
+    if(point.size() < env->reformulatedProblem->properties.numberOfVariables)
+        env->reformulatedProblem->augmentAuxiliaryVariableValues(point);
 
-        tmpPair.first = variableNames.at(i);
-        tmpPair.second = point.at(i);
+    if(this->hasDualAuxiliaryObjectiveVariable())
+        point.push_back(env->reformulatedProblem->objectiveFunction->calculateValue(point));
 
-        variableValues.push_back(tmpPair);
-    }
+    assert(osiInterface->getNumCols() == point.size());
+    assert(variableNames.size() == point.size());
 
-    for(auto& V : env->reformulatedProblem->auxiliaryVariables)
-    {
-        std::pair<std::string, double> tmpPair;
-
-        tmpPair.first = V->name;
-        tmpPair.second = V->calculate(point);
-
-        variableValues.push_back(tmpPair);
-    }
-
-    if(env->reformulatedProblem->auxiliaryObjectiveVariable)
-    {
-        std::pair<std::string, double> tmpPair;
-
-        tmpPair.first = env->reformulatedProblem->auxiliaryObjectiveVariable->name;
-
-        if(isMinimizationProblem)
-            tmpPair.second = env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(point);
-        else
-            tmpPair.second = -1.0 * env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(point);
-
-        variableValues.push_back(tmpPair);
-    }
-
-    auto numVariables = osiInterface->getNumCols();
-
-    while(variableValues.size() < (size_t)numVariables)
-    {
-        std::pair<std::string, double> tmpPair;
-
-        tmpPair.first = osiInterface->getColName(variableValues.size() - 1);
-
-        // TODO: if integer cuts for non binary variables have been added, a complete starting vector is not known
-        // Adding 0.0 for now
-        tmpPair.second = 0.0;
-
-        variableValues.push_back(tmpPair);
-    }
-
-    MIPStarts.push_back(variableValues);
+    for(auto i = 0; i < point.size(); i++)
+        MIPStart.emplace_back(variableNames.at(i).c_str(), point.at(i));
 }
 
 void MIPSolverCbc::writeProblemToFile(std::string filename)
@@ -1290,7 +1291,7 @@ double MIPSolverCbc::getObjectiveValue(int solIdx)
     return (objectiveValue);
 }
 
-void MIPSolverCbc::deleteMIPStarts() { MIPStarts.clear(); }
+void MIPSolverCbc::deleteMIPStarts() { MIPStart.clear(); }
 
 bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
 {
@@ -1319,7 +1320,8 @@ bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
 
             for(auto& VAR : env->reformulatedProblem->allVariables)
             {
-                if(!(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer))
+                if(!(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer
+                       || VAR->properties.type == E_VariableType::Semiinteger))
                     continue;
 
                 int variableValue = integerCut.variableValues[index];
@@ -1361,8 +1363,8 @@ bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
                 auto VAR = env->reformulatedProblem->getVariable(I);
                 int variableValue = integerCut.variableValues[index];
 
-                assert(
-                    VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer);
+                assert(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer
+                    || VAR->properties.type == E_VariableType::Semiinteger);
 
                 if(variableValue == VAR->upperBound)
                 {

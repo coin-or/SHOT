@@ -44,11 +44,10 @@ void TaskUpdateInteriorPoint::run()
     {
         auto tmpIP = std::make_shared<InteriorPoint>();
 
-        for(auto& VAR : env->reformulatedProblem->auxiliaryVariables)
-            tmpPrimalPoint.push_back(VAR->calculate(tmpPrimalPoint));
+        if(tmpPrimalPoint.size() < env->reformulatedProblem->properties.numberOfVariables)
+            env->reformulatedProblem->augmentAuxiliaryVariableValues(tmpPrimalPoint);
 
-        if(env->reformulatedProblem->auxiliaryObjectiveVariable)
-            tmpPrimalPoint.push_back(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(tmpPrimalPoint));
+        assert(tmpPrimalPoint.size() == env->reformulatedProblem->properties.numberOfVariables);
 
         tmpIP->point = tmpPrimalPoint;
         assert((int)tmpIP->point.size() == env->reformulatedProblem->properties.numberOfVariables);
@@ -74,18 +73,12 @@ void TaskUpdateInteriorPoint::run()
     // Need to calculate the value for the point in the reformulated problem
     auto tmpIP = std::make_shared<InteriorPoint>();
 
-    for(auto& VAR : env->reformulatedProblem->auxiliaryVariables)
-        tmpPrimalPoint.push_back(VAR->calculate(tmpPrimalPoint));
+    if(tmpPrimalPoint.size() < env->reformulatedProblem->properties.numberOfVariables)
+        env->reformulatedProblem->augmentAuxiliaryVariableValues(tmpPrimalPoint);
 
-    if(env->reformulatedProblem->auxiliaryObjectiveVariable)
-        tmpPrimalPoint.push_back(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(tmpPrimalPoint));
-
-    if(env->reformulatedProblem->antiEpigraphObjectiveVariable)
-        tmpPrimalPoint.at(env->reformulatedProblem->antiEpigraphObjectiveVariable->index)
-            = env->reformulatedProblem->objectiveFunction->calculateValue(tmpPrimalPoint);
+    assert(tmpPrimalPoint.size() == env->reformulatedProblem->properties.numberOfVariables);
 
     tmpIP->point = tmpPrimalPoint;
-    assert((int)tmpIP->point.size() == env->reformulatedProblem->properties.numberOfVariables);
 
     auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
         tmpIP->point, env->reformulatedProblem->nonlinearConstraints);
@@ -132,22 +125,14 @@ void TaskUpdateInteriorPoint::run()
         auto tmpIP = std::make_shared<InteriorPoint>();
 
         for(size_t i = 0; i < tmpPrimalPoint.size(); i++)
-        {
             tmpPrimalPoint.at(i) = (0.5 * tmpPrimalPoint.at(i) + 0.5 * env->dualSolver->interiorPts.at(0)->point.at(i));
-        }
 
-        for(auto& VAR : env->reformulatedProblem->auxiliaryVariables)
-            tmpPrimalPoint.push_back(VAR->calculate(tmpPrimalPoint));
+        if(tmpPrimalPoint.size() < env->reformulatedProblem->properties.numberOfVariables)
+            env->reformulatedProblem->augmentAuxiliaryVariableValues(tmpPrimalPoint);
 
-        if(env->reformulatedProblem->auxiliaryObjectiveVariable)
-            tmpPrimalPoint.push_back(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(tmpPrimalPoint));
-
-        if(env->reformulatedProblem->antiEpigraphObjectiveVariable)
-            tmpPrimalPoint.at(env->reformulatedProblem->antiEpigraphObjectiveVariable->index)
-                = env->reformulatedProblem->objectiveFunction->calculateValue(tmpPrimalPoint);
+        assert(tmpPrimalPoint.size() == env->reformulatedProblem->properties.numberOfVariables);
 
         tmpIP->point = tmpPrimalPoint;
-        assert((int)tmpIP->point.size() == env->reformulatedProblem->properties.numberOfVariables);
 
         auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
             tmpIP->point, env->reformulatedProblem->nonlinearConstraints);

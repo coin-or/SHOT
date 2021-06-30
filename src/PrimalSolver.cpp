@@ -165,15 +165,97 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
         auto value = V->calculate(tmpPoint);
 
         if(value == 0.0) { }
-        else if(value > V->upperBound)
+        else if(Utilities::isAlmostZero(value, 1e-7))
         {
+            tmpPoint.at(V->index) = 0.0;
             isVariableBoundsFulfilled = false;
-            tmpPoint.at(V->index) = V->upperBound;
         }
-        else if(value < V->lowerBound)
+        else
         {
+            double lb, ub;
+
+            if(V->semiBound < 0.0)
+            {
+                lb = V->lowerBound;
+                ub = V->semiBound;
+            }
+            else
+            {
+                lb = V->semiBound;
+                ub = V->upperBound;
+            }
+
+            if(value > ub)
+            {
+                isVariableBoundsFulfilled = false;
+                double diffToZero = std::abs(value);
+                double diffToLowerBound = std::abs(V->lowerBound - value);
+
+                if(diffToZero < diffToLowerBound)
+                    tmpPoint.at(V->index) = 0.0;
+                else
+                    tmpPoint.at(V->index) = ub;
+            }
+            else if(value < lb)
+            {
+                isVariableBoundsFulfilled = false;
+                double diffToZero = std::abs(value);
+                double diffToLowerBound = std::abs(V->lowerBound - value);
+
+                if(diffToZero < diffToLowerBound)
+                    tmpPoint.at(V->index) = 0.0;
+                else
+                    tmpPoint.at(V->index) = lb;
+            }
+        }
+    }
+
+    for(auto& V : env->problem->semiintegerVariables)
+    {
+        auto value = V->calculate(tmpPoint);
+
+        if(value == 0.0) { }
+        else if(Utilities::isAlmostZero(value, 1e-7))
+        {
+            tmpPoint.at(V->index) = 0.0;
             isVariableBoundsFulfilled = false;
-            tmpPoint.at(V->index) = V->lowerBound;
+        }
+        else
+        {
+            double lb, ub;
+            if(V->semiBound < 0.0)
+            {
+                lb = V->lowerBound;
+                ub = V->semiBound;
+            }
+            else
+            {
+                lb = V->semiBound;
+                ub = V->upperBound;
+            }
+
+            if(value > ub)
+            {
+                isVariableBoundsFulfilled = false;
+                double diffToZero = std::abs(value);
+                double diffToLowerBound = std::abs(V->lowerBound - value);
+
+                if(diffToZero < diffToLowerBound)
+                    tmpPoint.at(V->index) = 0.0;
+                else
+                    tmpPoint.at(V->index) = round(ub - 0.5);
+            }
+            else if(value < lb)
+            {
+                isVariableBoundsFulfilled = false;
+                double diffToZero = std::abs(value);
+                double diffToLowerBound = std::abs(V->lowerBound - value);
+
+                if(diffToZero < diffToLowerBound)
+                    tmpPoint.at(V->index) = 0.0;
+                else
+                    tmpPoint.at(V->index) = round(lb + 0.5);
+            }
         }
     }
 
@@ -266,6 +348,23 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
             }
         }
 
+        for(auto& V : env->problem->semiintegerVariables)
+        {
+            auto value = V->calculate(tmpPoint);
+            int index = V->index;
+
+            double rounded = std::round(value);
+            double error = std::abs(rounded - value);
+
+            maxIntegerError = std::max(maxIntegerError, error);
+
+            if(error > integerTol)
+            {
+                ptRounded.at(index) = rounded;
+                isRounded = true;
+            }
+        }
+
         if(isRounded)
         {
             reCalculateObjective = true;
@@ -308,7 +407,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
         || primalSol.sourceType == E_PrimalSolutionSource::MIPCallback
         || primalSol.sourceType == E_PrimalSolutionSource::InteriorPointSearch);
 
-    if(!primalSol.integerRoundingPerformed && acceptableType
+    if(!primalSol.integerRoundingPerformed && !primalSol.boundProjectionPerformed && acceptableType
         && env->settings->getSetting<bool>("Tolerance.TrustLinearConstraintValues", "Primal"))
     {
         env->output->outputDebug(
@@ -331,7 +430,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
             if(maxLinearConstraintValue.error > linTol)
             {
                 auto tmpLine = fmt::format("         Linear constraints are not fulfilled. Most deviating {}: {} > {}.",
-                    maxLinearConstraintValue.constraint->index, maxLinearConstraintValue.error, linTol);
+                    maxLinearConstraintValue.constraint->name, maxLinearConstraintValue.error, linTol);
                 env->output->outputDebug(tmpLine);
 
                 return (false);
@@ -427,18 +526,8 @@ void PrimalSolver::addFixedNLPCandidate(
 {
     VectorDouble candidate(pt);
 
-    if((int)candidate.size() < env->reformulatedProblem->properties.numberOfVariables)
-    {
-        for(auto& V : env->reformulatedProblem->auxiliaryVariables)
-        {
-            candidate.push_back(V->calculate(pt));
-        }
-
-        if(env->reformulatedProblem->auxiliaryObjectiveVariable)
-        {
-            candidate.push_back(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(pt));
-        }
-    }
+    if(candidate.size() < env->reformulatedProblem->properties.numberOfVariables)
+        env->reformulatedProblem->augmentAuxiliaryVariableValues(candidate);
 
     assert((int)candidate.size() == env->reformulatedProblem->properties.numberOfVariables);
 
@@ -447,7 +536,8 @@ void PrimalSolver::addFixedNLPCandidate(
 
     for(auto& VAR : env->reformulatedProblem->allVariables)
     {
-        if(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer)
+        if(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer
+            || VAR->properties.type == E_VariableType::Semiinteger)
             discretVariableValues.push_back(candidate[VAR->index]);
     }
 

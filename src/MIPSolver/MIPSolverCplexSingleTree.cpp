@@ -363,23 +363,16 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
 
             IloNumArray tmpVals(context.getEnv());
 
+            if(primalSol.size() < env->reformulatedProblem->properties.numberOfVariables)
+                env->reformulatedProblem->augmentAuxiliaryVariableValues(primalSol);
+
+            if(env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
+                primalSol.push_back(env->reformulatedProblem->objectiveFunction->calculateValue(primalSol));
+
+            assert(cplexVars.getSize() == primalSol.size());
+
             for(double S : primalSol)
-            {
                 tmpVals.add(S);
-            }
-
-            for(auto& V : env->reformulatedProblem->auxiliaryVariables)
-            {
-                tmpVals.add(V->calculate(primalSol));
-            }
-
-            if(env->reformulatedProblem->auxiliaryObjectiveVariable)
-                tmpVals.add(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(primalSol));
-            else if(env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
-                tmpVals.add(env->reformulatedProblem->objectiveFunction->calculateValue(primalSol));
-
-            while(tmpVals.getSize() < cplexVars.getSize())
-                tmpVals.add(0);
 
             try
             {
@@ -497,7 +490,8 @@ bool CplexCallback::createIntegerCut(IntegerCut& integerCut, const IloCplex::Cal
 
         for(auto& VAR : env->reformulatedProblem->allVariables)
         {
-            if(!(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer))
+            if(!(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer
+                   || VAR->properties.type == E_VariableType::Semiinteger))
                 continue;
 
             int variableValue = integerCut.variableValues[index];

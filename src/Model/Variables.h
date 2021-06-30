@@ -70,6 +70,7 @@ public:
 
     double upperBound;
     double lowerBound;
+    double semiBound;
 
     FactorableFunction* factorableFunctionVariable;
 
@@ -80,7 +81,7 @@ public:
     }
 
     Variable(std::string variableName, int variableIndex, E_VariableType variableType, [[maybe_unused]] double LB,
-        [[maybe_unused]] double UB)
+        [[maybe_unused]] double UB, double variableSemiBound = NAN)
     {
         index = variableIndex;
         name = variableName;
@@ -97,6 +98,7 @@ public:
         }
 
         properties.type = variableType;
+        semiBound = variableSemiBound;
     };
 
     Variable(std::string variableName, int variableIndex, E_VariableType variableType)
@@ -113,6 +115,10 @@ public:
         {
             lowerBound = SHOT_DBL_MIN;
             upperBound = SHOT_DBL_MAX;
+            if(variableType == E_VariableType::Semicontinuous)
+                variableType = E_VariableType::Real;
+            else if(variableType == E_VariableType::Semiinteger)
+                variableType = E_VariableType::Integer;
         }
 
         properties.type = variableType;

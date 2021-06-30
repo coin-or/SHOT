@@ -95,6 +95,7 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
 
         double variableLB = (V->Attribute("lb") != NULL) ? std::stod(V->Attribute("lb")) : 0.0; // By OSiL definition
         double variableUB = (V->Attribute("ub") != NULL) ? std::stod(V->Attribute("ub")) : SHOT_DBL_MAX;
+        double semiBound = NAN;
 
         E_VariableType variableType;
 
@@ -134,13 +135,57 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
             break;
 
         case 'D':
-            variableType = E_VariableType::Semicontinuous;
 
-            if(variableLB < 0.0)
-                variableLB = 0.0;
+            if(variableLB < minLBCont)
+                variableLB = minLBCont;
 
             if(variableUB > maxUBCont)
                 variableUB = maxUBCont;
+
+            if(variableLB > 0.0)
+            {
+                semiBound = variableLB;
+                variableLB = 0.0;
+                variableType = E_VariableType::Semicontinuous;
+            }
+            else if(variableUB < 0.0)
+            {
+                semiBound = variableUB;
+                variableUB = 0.0;
+                variableType = E_VariableType::Semicontinuous;
+            }
+            else
+            {
+                variableType = E_VariableType::Real;
+            }
+
+            break;
+
+        case 'J':
+            variableType = E_VariableType::Semiinteger;
+
+            if(variableLB < minLBInt)
+                variableLB = minLBInt;
+
+            if(variableUB > maxUBInt)
+                variableUB = maxUBInt;
+
+            if(variableLB > 0.0)
+            {
+                semiBound = variableLB;
+                variableLB = 0.0;
+                variableType = E_VariableType::Semiinteger;
+            }
+            else if(variableUB < 0.0)
+            {
+                semiBound = variableUB;
+                variableUB = 0.0;
+                variableType = E_VariableType::Semiinteger;
+            }
+            else
+            {
+                variableType = E_VariableType::Integer;
+            }
 
             break;
 
@@ -149,8 +194,8 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
             break;
         }
 
-        problem->add(
-            std::make_shared<SHOT::Variable>(variableName, variableIndex, variableType, variableLB, variableUB));
+        problem->add(std::make_shared<SHOT::Variable>(
+            variableName, variableIndex, variableType, variableLB, variableUB, semiBound));
 
         variableIndex++;
     }

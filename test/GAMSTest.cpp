@@ -355,6 +355,13 @@ int GAMSTest(int argc, char* argv[])
         passed = SolveProblemGAMS("data/sos3.gms");
         std::cout << "Finished test to solve problem sos3 with SOS1 and SOS2 constraints in GAMS syntax." << std::endl;
         break;
+    case 11:
+        std::cout << "Starting test to solve problem meanvarxsc with semi continuous variables in GAMS syntax:"
+                  << std::endl;
+        passed = SolveProblemGAMS("data/meanvarxsc.gms");
+        std::cout << "Finished test to solve problem meanvarxsc with semi continuous variables in GAMS syntax."
+                  << std::endl;
+        break;
     default:
         passed = false;
         std::cout << "Test #" << choice << " does not exist!\n";

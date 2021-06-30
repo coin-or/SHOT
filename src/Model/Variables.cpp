@@ -44,7 +44,8 @@ bool Variable::tightenBounds(const Interval bound)
             // Special logic for negative zero
             this->lowerBound = -bound.l();
         }
-        else if(this->properties.type == E_VariableType::Binary || this->properties.type == E_VariableType::Integer)
+        else if(this->properties.type == E_VariableType::Binary || this->properties.type == E_VariableType::Integer
+            || this->properties.type == E_VariableType::Semiinteger)
         {
             this->lowerBound = std::ceil(bound.l());
         }
@@ -64,7 +65,8 @@ bool Variable::tightenBounds(const Interval bound)
             // Special logic for negative zero
             this->upperBound = -bound.u();
         }
-        else if(this->properties.type == E_VariableType::Binary || this->properties.type == E_VariableType::Integer)
+        else if(this->properties.type == E_VariableType::Binary || this->properties.type == E_VariableType::Integer
+            || this->properties.type == E_VariableType::Semiinteger)
         {
             this->upperBound = std::floor(bound.u());
         }
@@ -129,23 +131,27 @@ std::ostream& operator<<(std::ostream& stream, VariablePtr var)
     switch(var->properties.type)
     {
     case(E_VariableType::Real):
-        type << "C";
+        type << "C ";
         break;
 
     case(E_VariableType::Binary):
-        type << "B";
+        type << "B ";
         break;
 
     case(E_VariableType::Integer):
-        type << "I";
+        type << "I ";
         break;
 
     case(E_VariableType::Semicontinuous):
-        type << "C";
+        type << "SC";
+        break;
+
+    case(E_VariableType::Semiinteger):
+        type << "SI";
         break;
 
     default:
-        type << "?";
+        type << "? ";
         break;
     }
 
@@ -198,8 +204,11 @@ std::ostream& operator<<(std::ostream& stream, VariablePtr var)
     else
         inTerms << " ";
 
-    stream << fmt::format("[{:>5d},{:<1s}] [{:<4s}] [{:<5s}]\t{:>10}  {:1s} <= {:^14s}  <= {:1s} {:<10}", var->index,
-        type.str(), contains.str(), inTerms.str(), var->lowerBound,
+    stream << fmt::format("[{:>6d},{:<1s}] [{:<4s}] [{:<5s}]\t{:>10}  {:1s} <= {:^14s}  <= {:1s} {:<10}", var->index,
+        type.str(), contains.str(), inTerms.str(),
+        (var->properties.type == E_VariableType::Semicontinuous || var->properties.type == E_VariableType::Semiinteger)
+            ? var->semiBound
+            : var->lowerBound,
         var->properties.hasLowerBoundBeenTightened ? "*" : " ", var->name,
         var->properties.hasUpperBoundBeenTightened ? "*" : " ", var->upperBound);
 

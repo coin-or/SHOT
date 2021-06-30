@@ -144,6 +144,11 @@ int CbcTest(int argc, char* argv[])
         passed = CbcTerminationCallbackTest("data/tls2.osil");
         std::cout << "Finished test checking termination callback in Cbc." << std::endl;
         break;
+    case 3:
+        std::cout << "Starting test to solve problem with semicont. variables:" << std::endl;
+        passed = CbcTest1("data/meanvarxsc.osil");
+        std::cout << "Finished test to solve problem with semicont. variables." << std::endl;
+        break;
     default:
         passed = false;
         std::cout << "Test #" << choice << " does not exist!\n";

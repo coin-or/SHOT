@@ -458,6 +458,11 @@ int SolverTest(int argc, char* argv[])
         passed = CreateAndSolveProblem();
         std::cout << "Finished test solving model using SHOT API." << std::endl;
         break;
+    case 6:
+        std::cout << "Starting test to read OSiL file with semicont. variables:" << std::endl;
+        passed = ReadProblem("data/meanvarxsc.osil");
+        std::cout << "Finished test to read OSiL file with semicont. variables." << std::endl;
+        break;
     default:
         passed = false;
         std::cout << "Test #" << choice << " does not exist!\n";
