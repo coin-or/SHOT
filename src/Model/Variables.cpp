@@ -205,7 +205,10 @@ std::ostream& operator<<(std::ostream& stream, VariablePtr var)
         inTerms << " ";
 
     stream << fmt::format("[{:>6d},{:<1s}] [{:<4s}] [{:<5s}]\t{:>10}  {:1s} <= {:^14s}  <= {:1s} {:<10}", var->index,
-        type.str(), contains.str(), inTerms.str(), var->lowerBound,
+        type.str(), contains.str(), inTerms.str(),
+        (var->properties.type == E_VariableType::Semicontinuous || var->properties.type == E_VariableType::Semiinteger)
+            ? var->semiBound
+            : var->lowerBound,
         var->properties.hasLowerBoundBeenTightened ? "*" : " ", var->name,
         var->properties.hasUpperBoundBeenTightened ? "*" : " ", var->upperBound);
 
