@@ -60,7 +60,7 @@ jobs:
       if: steps.cache-cbc.outputs.cache-hit != 'true'
       shell: bash
       working-directory: ${{runner.workspace}}/build/coinbrew
-      run: ./coinbrew build Cbc@stable/2.10 --verbosity 2 --prefix=${{runner.workspace}}/ThirdParty/Cbc --no-prompt --tests none --no-third-party
+      run: rm -rf build dist ; ./coinbrew build Cbc@stable/2.10 --verbosity 2 --prefix=${{runner.workspace}}/ThirdParty/Cbc --no-prompt --tests none --no-third-party
 
     - name: Configure CMake
       # Use a bash shell so we can use the same syntax for environment variable
