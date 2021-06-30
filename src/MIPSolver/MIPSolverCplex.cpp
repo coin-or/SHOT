@@ -566,7 +566,7 @@ bool MIPSolverCplex::addSpecialOrderedSet(E_SOSType type, VectorInteger variable
     {
         IloNumVarArray variables(cplexEnv, variableIndexes.size());
 
-        for(int i = 0; i < variableIndexes.size(); i++)
+        for(size_t i = 0; i < variableIndexes.size(); i++)
             variables[i] = cplexVars[variableIndexes[i]];
 
         if(variableWeights.size() > 0)
@@ -575,7 +575,7 @@ bool MIPSolverCplex::addSpecialOrderedSet(E_SOSType type, VectorInteger variable
 
             IloNumArray weights(cplexEnv, variableWeights.size());
 
-            for(int i = 0; i < variableWeights.size(); i++)
+            for(size_t i = 0; i < variableWeights.size(); i++)
                 weights[i] = variableWeights[i];
 
             if(type == E_SOSType::One)

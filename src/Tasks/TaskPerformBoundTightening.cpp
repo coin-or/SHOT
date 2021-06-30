@@ -134,7 +134,8 @@ void TaskPerformBoundTightening::createPOA()
         POASolver->updateVariableUpperBound(V->index, V->upperBound);
     }
 
-    auto solvestatus = POASolver->solveProblem();
+    // TODO handle return code?
+    POASolver->solveProblem();
 
     int hyperplaneCounter = 0;
 

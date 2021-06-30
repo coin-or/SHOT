@@ -508,7 +508,7 @@ bool MIPSolverGurobi::addSpecialOrderedSet(E_SOSType type, VectorInteger variabl
         {
             variableWeights.resize(variableIndexes.size());
 
-            for(int i = 0; i < variableIndexes.size(); i++)
+            for(size_t i = 0; i < variableIndexes.size(); i++)
                 variableWeights[i] = i;
         }
 
