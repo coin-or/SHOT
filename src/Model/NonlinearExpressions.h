@@ -2671,9 +2671,9 @@ public:
             NonlinearExpressionPtr otherFactor;
             NonlinearExpressionPtr linearFactor;
 
-            double linearCoefficient;
+            double linearCoefficient = 0.0;
             VariablePtr linearVariable;
-            double constant;
+            double constant = 0.0;
 
             // Check for and get linear factor and other factor
             for(auto& C : children)
