@@ -1,4 +1,3 @@
-[![Build Status](https://travis-ci.org/coin-or/SHOT.svg?branch=master)](https://travis-ci.org/coin-or/SHOT) 
 ![CMake](https://github.com/coin-or/SHOT/workflows/CMake/badge.svg)
 [![License](https://img.shields.io/badge/License-EPL%202.0-red.svg)](https://opensource.org/licenses/EPL-1.0)
 
