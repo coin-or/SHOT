@@ -1690,7 +1690,7 @@ bool Problem::areSpecialOrderedSetsFulfilled(VectorDouble point, double toleranc
 
             for(auto& V : S->variables)
             {
-                if(abs(point.at(V->index) > tolerance))
+                if(abs(point.at(V->index)) > tolerance)
                 {
                     if(found)
                         return false;
@@ -1706,7 +1706,7 @@ bool Problem::areSpecialOrderedSetsFulfilled(VectorDouble point, double toleranc
 
             for(size_t i = 0; i < S->variables.size(); i++)
             {
-                if(abs(point.at(S->variables[i]->index) > tolerance))
+                if(abs(point.at(S->variables[i]->index)) > tolerance)
                 {
                     if(numFound == 0)
                     {

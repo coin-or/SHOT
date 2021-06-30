@@ -13,65 +13,62 @@
 
 #include <sstream>
 #include <string>
+#include <stdexcept>
 
 namespace SHOT
 {
-class TaskException : public std::exception
+class TaskException : public std::runtime_error
 {
 public:
-    TaskException(EnvironmentPtr envPtr[[maybe_unused]], std::string msg) : message(msg) {}
-    TaskException() = default;
-
-    const char* what() const throw() override
+    TaskException(EnvironmentPtr envPtr [[maybe_unused]], std::string msg) : std::runtime_error(""), message(msg)
     {
+        std::stringstream tmpMessage;
+
         if(message == "")
-            return "Unspecified task exception occurred!";
+            tmpMessage << "Unspecified task exception occurred!";
         else
         {
-            std::stringstream tmpMessage;
             tmpMessage << "Task exception: ";
             tmpMessage << message;
-
-            return (tmpMessage.str().c_str());
         }
+
+        static_cast<std::exception&>(*this) = std::runtime_error(tmpMessage.str());
     }
 
 private:
     std::string message;
 };
 
-class TaskExceptionFunctionNotDefined : public std::exception
+class TaskExceptionFunctionNotDefined : public std::runtime_error
 {
 public:
-    TaskExceptionFunctionNotDefined(EnvironmentPtr envPtr[[maybe_unused]], std::string task) : taskName(task) {}
-
-    const char* what() const throw() override
+    TaskExceptionFunctionNotDefined(EnvironmentPtr envPtr [[maybe_unused]], std::string task)
+        : std::runtime_error(""), taskName(task)
     {
         std::stringstream message;
         message << "Exception: task function in ";
         message << taskName;
         message << " not defined!";
 
-        return (message.str().c_str());
+        static_cast<std::exception&>(*this) = std::runtime_error(message.str());
     }
 
 private:
     std::string taskName;
 };
 
-class TaskExceptionNotFound : public std::exception
+class TaskExceptionNotFound : public std::runtime_error
 {
 public:
-    TaskExceptionNotFound(EnvironmentPtr envPtr[[maybe_unused]], std::string task) : taskID(task) {}
-
-    const char* what() const throw() override
+    TaskExceptionNotFound(EnvironmentPtr envPtr [[maybe_unused]], std::string task)
+        : std::runtime_error(""), taskID(task)
     {
         std::stringstream message;
         message << "Exception: task with ID ";
         message << taskID;
         message << " does not exist!";
 
-        return (message.str().c_str());
+        static_cast<std::exception&>(*this) = std::runtime_error(message.str());
     }
 
 private:
