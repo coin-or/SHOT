@@ -598,9 +598,9 @@ public:
         NonlinearExpressions children;
         auto isValid = true;
 
-        if(child->getNumberOfChildren() == 1)
+        if(std::dynamic_pointer_cast<ExpressionUnary>(child) != nullptr)
         {
-            children.add(std::dynamic_pointer_cast<ExpressionUnary>(child)->child);
+            children.add(std::static_pointer_cast<ExpressionUnary>(child)->child);
         }
         else if(child->getType() == E_NonlinearExpressionTypes::Sum)
         {
