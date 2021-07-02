@@ -867,7 +867,7 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionProdu
         return (simplifyExpression(sum));
     }
 
-    if(children.size() == 0) // Everything has been simplified away
+    if(children.size() == 0 && unaddedChildren.size() == 0) // Everything has been simplified away
         return (std::make_shared<ExpressionConstant>(constant));
 
     auto product = std::make_shared<ExpressionProduct>();
