@@ -1188,10 +1188,11 @@ void MIPSolverGurobi::addMIPStart(VectorDouble point)
             env->reformulatedProblem->augmentAuxiliaryVariableValues(point);
 
         assert(env->reformulatedProblem->properties.numberOfVariables == point.size());
-        assert(variableNames.size() == point.size());
 
         if(this->hasDualAuxiliaryObjectiveVariable())
             point.push_back(env->reformulatedProblem->objectiveFunction->calculateValue(point));
+
+        assert(variableNames.size() == point.size());
 
         for(double P : point)
             startVal.push_back(P);
