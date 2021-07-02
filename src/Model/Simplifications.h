@@ -154,6 +154,13 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionInver
                 return child;
             }
         }
+        else if(child->getType() == E_NonlinearExpressionTypes::Constant)
+        {
+            std::dynamic_pointer_cast<ExpressionConstant>(child)->constant
+                = 1.0 / std::dynamic_pointer_cast<ExpressionConstant>(child)->constant;
+
+            return (child);
+        }
     }
 
     return (expression);
@@ -203,6 +210,13 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionSquar
                 return (simplify(std::make_shared<ExpressionSquareRoot>(childrenProduct[0])));
             }
         }
+    }
+    else if(child->getType() == E_NonlinearExpressionTypes::Constant)
+    {
+        std::dynamic_pointer_cast<ExpressionConstant>(child)->constant
+            = std::sqrt(std::dynamic_pointer_cast<ExpressionConstant>(child)->constant);
+
+        return (child);
     }
 
     expression->child = child;
@@ -276,6 +290,14 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionExp> 
         return (std::dynamic_pointer_cast<ExpressionLog>(child)->child);
     }
 
+    if(child->getType() == E_NonlinearExpressionTypes::Constant)
+    {
+        std::dynamic_pointer_cast<ExpressionConstant>(child)->constant
+            = std::exp(std::dynamic_pointer_cast<ExpressionConstant>(child)->constant);
+
+        return (child);
+    }
+
     expression->child = child;
     return expression;
 }
@@ -296,6 +318,14 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionLog> 
         return (std::make_shared<ExpressionConstant>(0));
     }
 
+    if(child->getType() == E_NonlinearExpressionTypes::Constant)
+    {
+        std::dynamic_pointer_cast<ExpressionConstant>(child)->constant
+            = std::log(std::dynamic_pointer_cast<ExpressionConstant>(child)->constant);
+
+        return (child);
+    }
+
     expression->child = child;
     return expression;
 }
@@ -308,6 +338,14 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionCos> 
     {
         // Cancellation
         return (std::dynamic_pointer_cast<ExpressionArcCos>(child)->child);
+    }
+
+    if(child->getType() == E_NonlinearExpressionTypes::Constant)
+    {
+        std::dynamic_pointer_cast<ExpressionConstant>(child)->constant
+            = std::cos(std::dynamic_pointer_cast<ExpressionConstant>(child)->constant);
+
+        return (child);
     }
 
     expression->child = child;
@@ -324,6 +362,14 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionArcCo
         return (std::dynamic_pointer_cast<ExpressionCos>(child)->child);
     }
 
+    if(child->getType() == E_NonlinearExpressionTypes::Constant)
+    {
+        std::dynamic_pointer_cast<ExpressionConstant>(child)->constant
+            = std::acos(std::dynamic_pointer_cast<ExpressionConstant>(child)->constant);
+
+        return (child);
+    }
+
     expression->child = child;
     return expression;
 }
@@ -336,6 +382,14 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionSin> 
     {
         // Cancellation
         return (std::dynamic_pointer_cast<ExpressionArcSin>(child)->child);
+    }
+
+    if(child->getType() == E_NonlinearExpressionTypes::Constant)
+    {
+        std::dynamic_pointer_cast<ExpressionConstant>(child)->constant
+            = std::sin(std::dynamic_pointer_cast<ExpressionConstant>(child)->constant);
+
+        return (child);
     }
 
     expression->child = child;
@@ -352,6 +406,14 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionArcSi
         return (std::dynamic_pointer_cast<ExpressionSin>(child)->child);
     }
 
+    if(child->getType() == E_NonlinearExpressionTypes::Constant)
+    {
+        std::dynamic_pointer_cast<ExpressionConstant>(child)->constant
+            = std::asin(std::dynamic_pointer_cast<ExpressionConstant>(child)->constant);
+
+        return (child);
+    }
+
     expression->child = child;
     return expression;
 }
@@ -364,6 +426,14 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionTan> 
     {
         // Cancellation
         return (std::dynamic_pointer_cast<ExpressionArcTan>(child)->child);
+    }
+
+    if(child->getType() == E_NonlinearExpressionTypes::Constant)
+    {
+        std::dynamic_pointer_cast<ExpressionConstant>(child)->constant
+            = std::tan(std::dynamic_pointer_cast<ExpressionConstant>(child)->constant);
+
+        return (child);
     }
 
     expression->child = child;
@@ -380,6 +450,14 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionArcTa
         return (std::dynamic_pointer_cast<ExpressionTan>(child)->child);
     }
 
+    if(child->getType() == E_NonlinearExpressionTypes::Constant)
+    {
+        std::dynamic_pointer_cast<ExpressionConstant>(child)->constant
+            = std::atan(std::dynamic_pointer_cast<ExpressionConstant>(child)->constant);
+
+        return (child);
+    }
+
     expression->child = child;
     return expression;
 }
@@ -392,6 +470,14 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionAbs> 
     {
         // Cancellation
         expression->child = std::dynamic_pointer_cast<ExpressionNegate>(child)->child;
+    }
+
+    if(child->getType() == E_NonlinearExpressionTypes::Constant)
+    {
+        std::dynamic_pointer_cast<ExpressionConstant>(child)->constant
+            = std::abs(std::dynamic_pointer_cast<ExpressionConstant>(child)->constant);
+
+        return (child);
     }
 
     expression->child = child;
@@ -685,9 +771,8 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionSum> 
     if(constant != 0.0)
         sum->children.add(std::make_shared<ExpressionConstant>(constant));
 
-    if(children.size() == 0 && constant == 0.0
-        && linearVariableCoefficients.size() == 0) // Everything has been simplified away
-        return (std::make_shared<ExpressionConstant>(0.0));
+    if(children.size() == 0 && linearVariableCoefficients.size() == 0) // Everything has been simplified away
+        return (std::make_shared<ExpressionConstant>(constant));
 
     for(auto& C : children)
     {
@@ -782,6 +867,9 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionProdu
         return (simplifyExpression(sum));
     }
 
+    if(children.size() == 0) // Everything has been simplified away
+        return (std::make_shared<ExpressionConstant>(constant));
+
     auto product = std::make_shared<ExpressionProduct>();
 
     if(constant != 1.0)
@@ -842,6 +930,8 @@ inline NonlinearExpressionPtr simplify(NonlinearExpressionPtr expression)
         return simplifyExpression(std::dynamic_pointer_cast<ExpressionSum>(expression));
     case E_NonlinearExpressionTypes::Product:
         return simplifyExpression(std::dynamic_pointer_cast<ExpressionProduct>(expression));
+    default:
+        assert(false);
     }
 
     return (expression);

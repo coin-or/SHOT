@@ -1010,7 +1010,8 @@ void NonlinearConstraint::updateProperties()
         nonlinearExpression->appendNonlinearVariables(variablesInNonlinearExpression);
 
         assert(variablesInNonlinearExpression.size() > 0
-            || nonlinearExpression->getType() == E_NonlinearExpressionTypes::Constant);
+            || nonlinearExpression->getType() == E_NonlinearExpressionTypes::Constant
+            || nonlinearExpression->getBounds().l() == nonlinearExpression->getBounds().u());
 
         try
         {
