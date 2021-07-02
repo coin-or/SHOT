@@ -139,8 +139,8 @@ void TaskSelectHyperplanePointsObjectiveFunction::run(std::vector<SolutionPoint>
             }
             catch(std::exception& e)
             {
-                env->output->outputWarning("        Cannot find solution with root search for generating "
-                                           "supporting objective hyperplane. Adding cutting plane instead.");
+                env->output->outputDebug("        Cannot find solution with root search for generating "
+                                         "supporting objective hyperplane. Adding cutting plane instead.");
                 env->output->outputDebug(fmt::format("        {}", e.what()));
 
                 env->timing->stopTimer("DualObjectiveRootSearch");
