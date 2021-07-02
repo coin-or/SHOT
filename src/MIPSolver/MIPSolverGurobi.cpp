@@ -1159,7 +1159,7 @@ void MIPSolverGurobi::setCutOffAsConstraint(double cutOff)
             if(env->reformulatedProblem->objectiveFunction->properties.isMaximize)
             {
                 constraint.set(GRB_DoubleAttr_RHS, -cutOff);
-                env->output->outputCritical(
+                env->output->outputDebug(
                     "        Setting cutoff constraint value to " + Utilities::toString(cutOff) + " for maximization.");
             }
             else
