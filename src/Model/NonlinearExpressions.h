@@ -613,7 +613,8 @@ public:
 
         for(auto& C : children)
         {
-            if(!(C->getBounds().l() >= 0 && (C->getConvexity() <= E_Convexity::Convex)))
+            if(!(C->getType() == E_NonlinearExpressionTypes::Square && C->getBounds().l() >= 0
+                   && (C->getConvexity() == E_Convexity::Convex)))
             {
                 isValid = false;
                 break;
