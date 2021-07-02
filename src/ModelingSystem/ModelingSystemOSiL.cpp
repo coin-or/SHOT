@@ -266,26 +266,30 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
 
     try
     {
-        for(auto C = constraintsNodes->FirstChildElement("con"); C != nullptr; C = C->NextSiblingElement("con"))
+        if(constraintsNodes != NULL)
         {
-            double lowerBound = (C->Attribute("lb") != NULL) ? std::stod(C->Attribute("lb")) : SHOT_DBL_MIN;
-            double upperBound = (C->Attribute("ub") != NULL) ? std::stod(C->Attribute("ub")) : SHOT_DBL_MAX;
+            for(auto C = constraintsNodes->FirstChildElement("con"); C != nullptr; C = C->NextSiblingElement("con"))
+            {
+                double lowerBound = (C->Attribute("lb") != NULL) ? std::stod(C->Attribute("lb")) : SHOT_DBL_MIN;
+                double upperBound = (C->Attribute("ub") != NULL) ? std::stod(C->Attribute("ub")) : SHOT_DBL_MAX;
 
-            auto name
-                = (C->Attribute("name") != NULL) ? C->Attribute("name") : "con" + std::to_string(constraintCounter);
+                auto name
+                    = (C->Attribute("name") != NULL) ? C->Attribute("name") : "con" + std::to_string(constraintCounter);
 
-            auto nonlinearExpression = nonlinearConstraints.find(constraintCounter);
-            auto hasQuadraticTerms = containsQuadraticTerms.find(constraintCounter);
+                auto nonlinearExpression = nonlinearConstraints.find(constraintCounter);
+                auto hasQuadraticTerms = containsQuadraticTerms.find(constraintCounter);
 
-            if(nonlinearExpression != nonlinearConstraints.end())
-                problem->add(std::make_shared<NonlinearConstraint>(
-                    constraintCounter, name, nonlinearExpression->second, lowerBound, upperBound));
-            else if(hasQuadraticTerms != containsQuadraticTerms.end())
-                problem->add(std::make_shared<QuadraticConstraint>(constraintCounter, name, lowerBound, upperBound));
-            else
-                problem->add(std::make_shared<LinearConstraint>(constraintCounter, name, lowerBound, upperBound));
+                if(nonlinearExpression != nonlinearConstraints.end())
+                    problem->add(std::make_shared<NonlinearConstraint>(
+                        constraintCounter, name, nonlinearExpression->second, lowerBound, upperBound));
+                else if(hasQuadraticTerms != containsQuadraticTerms.end())
+                    problem->add(
+                        std::make_shared<QuadraticConstraint>(constraintCounter, name, lowerBound, upperBound));
+                else
+                    problem->add(std::make_shared<LinearConstraint>(constraintCounter, name, lowerBound, upperBound));
 
-            constraintCounter++;
+                constraintCounter++;
+            }
         }
     }
     catch(const std::exception&)
