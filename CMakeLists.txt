@@ -464,6 +464,9 @@ target_link_libraries(SHOTDualStrategy SHOTModel)
 
 # Creates the tasks library
 file(GLOB_RECURSE TASK_SOURCES "${PROJECT_SOURCE_DIR}/src/Tasks/*.cpp")
+# These sources are already added in SHOTHelper
+list(REMOVE_ITEM TASK_SOURCES "${PROJECT_SOURCE_DIR}/src/Tasks/TaskBase.h")
+list(REMOVE_ITEM TASK_SOURCES "${PROJECT_SOURCE_DIR}/src/Tasks/TaskBase.cpp")
 add_library(SHOTTasks STATIC ${TASK_SOURCES})
 target_link_libraries(SHOTTasks SHOTPrimalStrategy)
 target_link_libraries(SHOTTasks SHOTDualStrategy)
