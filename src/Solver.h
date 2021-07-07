@@ -35,6 +35,7 @@ private:
     void initializeSettings();
     void verifySettings();
 
+    void setConvexityBasedSettingsPreReformulation();
     void setConvexityBasedSettings();
 
     void initializeDebugMode();
