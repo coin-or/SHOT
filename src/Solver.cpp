@@ -1658,8 +1658,8 @@ void Solver::verifySettings()
         env->output->outputWarning(" Using GAMS NLP solvers instead.");
 
 #else
-        env->settings->updateSetting("FixedInteger.Use", "Primal", false);
-        env->output->outputWarning(" No NLP solver available. Disabling primal strategy!");
+        env->settings->updateSetting("FixedInteger.Solver", "Primal", (int)ES_PrimalNLPSolver::SHOT);
+        env->output->outputWarning(" No external NLP solver available. Using SHOT as NLP solver.");
 #endif
     }
 
