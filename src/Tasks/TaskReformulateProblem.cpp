@@ -810,7 +810,7 @@ void TaskReformulateProblem::createEpigraphConstraint()
     {
         copyQuadraticTermsToConstraint(
             std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->problem->objectiveFunction)->quadraticTerms,
-            constraint);
+            constraint, isSignReversed);
     }
 
     if(env->problem->objectiveFunction->properties.hasMonomialTerms)
@@ -1412,6 +1412,9 @@ LinearTerms TaskReformulateProblem::partitionNonlinearSum(
             try
             {
                 bounds = T->getBounds();
+
+                if(reversedSigns)
+                    bounds = -1.0 * bounds;
             }
             catch(mc::Interval::Exceptions&)
             {
@@ -1532,6 +1535,9 @@ LinearTerms TaskReformulateProblem::partitionMonomialTerms(const MonomialTerms s
         try
         {
             bounds = T->getBounds();
+
+            if(reversedSigns)
+                bounds = -1.0 * bounds;
         }
         catch(mc::Interval::Exceptions&)
         {
@@ -1587,6 +1593,9 @@ LinearTerms TaskReformulateProblem::partitionSignomialTerms(const SignomialTerms
         try
         {
             bounds = T->getBounds() / coefficient;
+
+            if(reversedSigns)
+                bounds = -1.0 * bounds;
         }
         catch(mc::Interval::Exceptions&)
         {

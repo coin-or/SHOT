@@ -1248,17 +1248,25 @@ void MIPSolverCplex::addMIPStart(VectorDouble point)
         env->reformulatedProblem->augmentAuxiliaryVariableValues(point);
 
     assert(env->reformulatedProblem->properties.numberOfVariables == point.size());
-    assert(variableNames.size() == point.size());
-
-    if(this->hasDualAuxiliaryObjectiveVariable())
-        startVal.add(env->reformulatedProblem->objectiveFunction->calculateValue(point));
 
     for(double P : point)
         startVal.add(P);
 
+    auto startVars = IloNumVarArray(cplexEnv);
+
+    if(this->hasDualAuxiliaryObjectiveVariable())
+        startVal.add(env->reformulatedProblem->objectiveFunction->calculateValue(point));
+
+    // Not all variables in cplexVars need to be in the MIP start (e.g. variables from integer cuts)
+    for(int i = 0; i < startVal.getSize(); i++)
+        startVars.add(cplexVars[i]);
+
+    assert(variableNames.size() == startVal.getSize());
+    assert(startVars.getSize() == startVal.getSize());
+
     try
     {
-        cplexInstance.addMIPStart(cplexVars, startVal, IloCplex::MIPStartRepair);
+        cplexInstance.addMIPStart(startVars, startVal, IloCplex::MIPStartAuto);
     }
     catch(IloException& e)
     {
@@ -1266,6 +1274,7 @@ void MIPSolverCplex::addMIPStart(VectorDouble point)
     }
 
     startVal.end();
+    startVars.end();
 
     env->output->outputDebug("        Added MIP starting point.");
 }

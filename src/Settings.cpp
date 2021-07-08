@@ -18,9 +18,9 @@
 
 namespace SHOT
 {
-Settings::Settings(OutputPtr outputPtr) : output(outputPtr) {}
+Settings::Settings(OutputPtr outputPtr) : output(outputPtr) { }
 
-Settings::~Settings() {}
+Settings::~Settings() { }
 
 template <typename T>
 void Settings::createBaseSetting(
@@ -437,7 +437,7 @@ std::string Settings::getSettingsAsString(bool hideUnchanged = false, bool hideD
 
             if(subCategory != currentSubCategory
                 && (settingGroupDescriptions.find(std::make_pair(category, subCategory))
-                       != settingGroupDescriptions.end()))
+                    != settingGroupDescriptions.end()))
             {
                 // This is a second level group
 
@@ -601,15 +601,15 @@ std::string Settings::getSettingsAsMarkup()
 
             if(std::round(bounds.second) == std::round(bounds.first) + 1)
             {
-                validValues = fmt::format("{{{},{}}}", bounds.first, bounds.second);
+                validValues = fmt::format("{{{},{}}}", (int)bounds.first, (int)bounds.second);
             }
             else if(std::round(bounds.second) == SHOT_INT_MAX)
             {
-                validValues = fmt::format("{{{},...,∞}}", bounds.first);
+                validValues = fmt::format("{{{},...,∞}}", (int)bounds.first);
             }
             else
             {
-                validValues = fmt::format("{{{},...,{}}}", bounds.first, bounds.second);
+                validValues = fmt::format("{{{},...,{}}}", (int)bounds.first, (int)bounds.second);
             }
 
             defaultValue = fmt::format("{}", getSetting<int>(name, category));

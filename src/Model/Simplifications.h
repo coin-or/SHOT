@@ -154,6 +154,13 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionInver
                 return child;
             }
         }
+        else if(child->getType() == E_NonlinearExpressionTypes::Constant)
+        {
+            std::dynamic_pointer_cast<ExpressionConstant>(child)->constant
+                = 1.0 / std::dynamic_pointer_cast<ExpressionConstant>(child)->constant;
+
+            return (child);
+        }
     }
 
     return (expression);
@@ -203,6 +210,13 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionSquar
                 return (simplify(std::make_shared<ExpressionSquareRoot>(childrenProduct[0])));
             }
         }
+    }
+    else if(child->getType() == E_NonlinearExpressionTypes::Constant)
+    {
+        std::dynamic_pointer_cast<ExpressionConstant>(child)->constant
+            = std::sqrt(std::dynamic_pointer_cast<ExpressionConstant>(child)->constant);
+
+        return (child);
     }
 
     expression->child = child;
@@ -276,6 +290,14 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionExp> 
         return (std::dynamic_pointer_cast<ExpressionLog>(child)->child);
     }
 
+    if(child->getType() == E_NonlinearExpressionTypes::Constant)
+    {
+        std::dynamic_pointer_cast<ExpressionConstant>(child)->constant
+            = std::exp(std::dynamic_pointer_cast<ExpressionConstant>(child)->constant);
+
+        return (child);
+    }
+
     expression->child = child;
     return expression;
 }
@@ -296,6 +318,14 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionLog> 
         return (std::make_shared<ExpressionConstant>(0));
     }
 
+    if(child->getType() == E_NonlinearExpressionTypes::Constant)
+    {
+        std::dynamic_pointer_cast<ExpressionConstant>(child)->constant
+            = std::log(std::dynamic_pointer_cast<ExpressionConstant>(child)->constant);
+
+        return (child);
+    }
+
     expression->child = child;
     return expression;
 }
@@ -308,6 +338,14 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionCos> 
     {
         // Cancellation
         return (std::dynamic_pointer_cast<ExpressionArcCos>(child)->child);
+    }
+
+    if(child->getType() == E_NonlinearExpressionTypes::Constant)
+    {
+        std::dynamic_pointer_cast<ExpressionConstant>(child)->constant
+            = std::cos(std::dynamic_pointer_cast<ExpressionConstant>(child)->constant);
+
+        return (child);
     }
 
     expression->child = child;
@@ -324,6 +362,14 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionArcCo
         return (std::dynamic_pointer_cast<ExpressionCos>(child)->child);
     }
 
+    if(child->getType() == E_NonlinearExpressionTypes::Constant)
+    {
+        std::dynamic_pointer_cast<ExpressionConstant>(child)->constant
+            = std::acos(std::dynamic_pointer_cast<ExpressionConstant>(child)->constant);
+
+        return (child);
+    }
+
     expression->child = child;
     return expression;
 }
@@ -336,6 +382,14 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionSin> 
     {
         // Cancellation
         return (std::dynamic_pointer_cast<ExpressionArcSin>(child)->child);
+    }
+
+    if(child->getType() == E_NonlinearExpressionTypes::Constant)
+    {
+        std::dynamic_pointer_cast<ExpressionConstant>(child)->constant
+            = std::sin(std::dynamic_pointer_cast<ExpressionConstant>(child)->constant);
+
+        return (child);
     }
 
     expression->child = child;
@@ -352,6 +406,14 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionArcSi
         return (std::dynamic_pointer_cast<ExpressionSin>(child)->child);
     }
 
+    if(child->getType() == E_NonlinearExpressionTypes::Constant)
+    {
+        std::dynamic_pointer_cast<ExpressionConstant>(child)->constant
+            = std::asin(std::dynamic_pointer_cast<ExpressionConstant>(child)->constant);
+
+        return (child);
+    }
+
     expression->child = child;
     return expression;
 }
@@ -364,6 +426,14 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionTan> 
     {
         // Cancellation
         return (std::dynamic_pointer_cast<ExpressionArcTan>(child)->child);
+    }
+
+    if(child->getType() == E_NonlinearExpressionTypes::Constant)
+    {
+        std::dynamic_pointer_cast<ExpressionConstant>(child)->constant
+            = std::tan(std::dynamic_pointer_cast<ExpressionConstant>(child)->constant);
+
+        return (child);
     }
 
     expression->child = child;
@@ -380,6 +450,14 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionArcTa
         return (std::dynamic_pointer_cast<ExpressionTan>(child)->child);
     }
 
+    if(child->getType() == E_NonlinearExpressionTypes::Constant)
+    {
+        std::dynamic_pointer_cast<ExpressionConstant>(child)->constant
+            = std::atan(std::dynamic_pointer_cast<ExpressionConstant>(child)->constant);
+
+        return (child);
+    }
+
     expression->child = child;
     return expression;
 }
@@ -392,6 +470,14 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionAbs> 
     {
         // Cancellation
         expression->child = std::dynamic_pointer_cast<ExpressionNegate>(child)->child;
+    }
+
+    if(child->getType() == E_NonlinearExpressionTypes::Constant)
+    {
+        std::dynamic_pointer_cast<ExpressionConstant>(child)->constant
+            = std::abs(std::dynamic_pointer_cast<ExpressionConstant>(child)->constant);
+
+        return (child);
     }
 
     expression->child = child;
@@ -685,9 +771,8 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionSum> 
     if(constant != 0.0)
         sum->children.add(std::make_shared<ExpressionConstant>(constant));
 
-    if(children.size() == 0 && constant == 0.0
-        && linearVariableCoefficients.size() == 0) // Everything has been simplified away
-        return (std::make_shared<ExpressionConstant>(0.0));
+    if(children.size() == 0 && linearVariableCoefficients.size() == 0) // Everything has been simplified away
+        return (std::make_shared<ExpressionConstant>(constant));
 
     for(auto& C : children)
     {
@@ -782,6 +867,9 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionProdu
         return (simplifyExpression(sum));
     }
 
+    if(children.size() == 0 && unaddedChildren.size() == 0) // Everything has been simplified away
+        return (std::make_shared<ExpressionConstant>(constant));
+
     auto product = std::make_shared<ExpressionProduct>();
 
     if(constant != 1.0)
@@ -802,47 +890,198 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionProdu
 
 inline NonlinearExpressionPtr simplify(NonlinearExpressionPtr expression)
 {
-    switch(expression->getType())
+    std::stringstream ss;
+    auto type = expression->getType();
+
+    /*switch(type)
+    {
+    case E_NonlinearExpressionTypes::Constant:
+        ss << "\nBefore simplification of constant: " << *expression << std::endl;
+        break;
+    case E_NonlinearExpressionTypes::Variable:
+        ss << "\nBefore simplification of variable: " << *expression << std::endl;
+        break;
+    case E_NonlinearExpressionTypes::Negate:
+        ss << "\nBefore simplification of negate: " << *expression << std::endl;
+        break;
+    case E_NonlinearExpressionTypes::Invert:
+        ss << "\nBefore simplification of invert: " << *expression << std::endl;
+        break;
+    case E_NonlinearExpressionTypes::SquareRoot:
+        ss << "\nBefore simplification of square root: " << *expression << std::endl;
+        break;
+    case E_NonlinearExpressionTypes::Square:
+        ss << "\nBefore simplification of square: " << *expression << std::endl;
+        break;
+    case E_NonlinearExpressionTypes::Log:
+        ss << "\nBefore simplification of log: " << *expression << std::endl;
+        break;
+    case E_NonlinearExpressionTypes::Exp:
+        ss << "\nBefore simplification of exp: " << *expression << std::endl;
+        break;
+    case E_NonlinearExpressionTypes::Cos:
+        ss << "\nBefore simplification of cos: " << *expression << std::endl;
+        break;
+    case E_NonlinearExpressionTypes::ArcCos:
+        ss << "\nBefore simplification of arccos: " << *expression << std::endl;
+        break;
+    case E_NonlinearExpressionTypes::Sin:
+        ss << "\nBefore simplification of sin: " << *expression << std::endl;
+        break;
+    case E_NonlinearExpressionTypes::ArcSin:
+        ss << "\nBefore simplification of arcsin: " << *expression << std::endl;
+        break;
+    case E_NonlinearExpressionTypes::Tan:
+        ss << "\nBefore simplification of tan: " << *expression << std::endl;
+        break;
+    case E_NonlinearExpressionTypes::ArcTan:
+        ss << "\nBefore simplification of arctan: " << *expression << std::endl;
+        break;
+    case E_NonlinearExpressionTypes::Abs:
+        ss << "\nBefore simplification of abs: " << *expression << std::endl;
+        break;
+    case E_NonlinearExpressionTypes::Divide:
+        ss << "\nBefore simplification of divide: " << *expression << std::endl;
+        break;
+    case E_NonlinearExpressionTypes::Power:
+        ss << "\nBefore simplification of power: " << *expression << std::endl;
+        break;
+    case E_NonlinearExpressionTypes::Sum:
+        ss << "\nBefore simplification of sum: " << *expression << std::endl;
+        break;
+    case E_NonlinearExpressionTypes::Product:
+        ss << "\nBefore simplification of product: " << *expression << std::endl;
+        break;
+    default:
+        assert(false);
+    }*/
+
+    switch(type)
     {
     case E_NonlinearExpressionTypes::Constant:
         break;
     case E_NonlinearExpressionTypes::Variable:
-        return simplifyExpression(std::dynamic_pointer_cast<ExpressionVariable>(expression));
+        expression = simplifyExpression(std::dynamic_pointer_cast<ExpressionVariable>(expression));
+        break;
     case E_NonlinearExpressionTypes::Negate:
-        return simplifyExpression(std::dynamic_pointer_cast<ExpressionNegate>(expression));
+        expression = simplifyExpression(std::dynamic_pointer_cast<ExpressionNegate>(expression));
+        break;
     case E_NonlinearExpressionTypes::Invert:
-        return simplifyExpression(std::dynamic_pointer_cast<ExpressionInvert>(expression));
+        expression = simplifyExpression(std::dynamic_pointer_cast<ExpressionInvert>(expression));
+        break;
     case E_NonlinearExpressionTypes::SquareRoot:
-        return simplifyExpression(std::dynamic_pointer_cast<ExpressionSquareRoot>(expression));
+        expression = simplifyExpression(std::dynamic_pointer_cast<ExpressionSquareRoot>(expression));
+        break;
     case E_NonlinearExpressionTypes::Square:
-        return simplifyExpression(std::dynamic_pointer_cast<ExpressionSquare>(expression));
+        expression = simplifyExpression(std::dynamic_pointer_cast<ExpressionSquare>(expression));
+        break;
     case E_NonlinearExpressionTypes::Log:
-        return simplifyExpression(std::dynamic_pointer_cast<ExpressionLog>(expression));
+        expression = simplifyExpression(std::dynamic_pointer_cast<ExpressionLog>(expression));
+        break;
     case E_NonlinearExpressionTypes::Exp:
-        return simplifyExpression(std::dynamic_pointer_cast<ExpressionExp>(expression));
+        expression = simplifyExpression(std::dynamic_pointer_cast<ExpressionExp>(expression));
+        break;
     case E_NonlinearExpressionTypes::Cos:
-        return simplifyExpression(std::dynamic_pointer_cast<ExpressionCos>(expression));
+        expression = simplifyExpression(std::dynamic_pointer_cast<ExpressionCos>(expression));
+        break;
     case E_NonlinearExpressionTypes::ArcCos:
-        return simplifyExpression(std::dynamic_pointer_cast<ExpressionArcCos>(expression));
+        expression = simplifyExpression(std::dynamic_pointer_cast<ExpressionArcCos>(expression));
+        break;
     case E_NonlinearExpressionTypes::Sin:
-        return simplifyExpression(std::dynamic_pointer_cast<ExpressionSin>(expression));
+        expression = simplifyExpression(std::dynamic_pointer_cast<ExpressionSin>(expression));
+        break;
     case E_NonlinearExpressionTypes::ArcSin:
-        return simplifyExpression(std::dynamic_pointer_cast<ExpressionArcSin>(expression));
+        expression = simplifyExpression(std::dynamic_pointer_cast<ExpressionArcSin>(expression));
+        break;
     case E_NonlinearExpressionTypes::Tan:
-        return simplifyExpression(std::dynamic_pointer_cast<ExpressionTan>(expression));
+        expression = simplifyExpression(std::dynamic_pointer_cast<ExpressionTan>(expression));
+        break;
     case E_NonlinearExpressionTypes::ArcTan:
-        return simplifyExpression(std::dynamic_pointer_cast<ExpressionArcTan>(expression));
+        expression = simplifyExpression(std::dynamic_pointer_cast<ExpressionArcTan>(expression));
+        break;
     case E_NonlinearExpressionTypes::Abs:
-        return simplifyExpression(std::dynamic_pointer_cast<ExpressionAbs>(expression));
+        expression = simplifyExpression(std::dynamic_pointer_cast<ExpressionAbs>(expression));
+        break;
     case E_NonlinearExpressionTypes::Divide:
-        return simplifyExpression(std::dynamic_pointer_cast<ExpressionDivide>(expression));
+        expression = simplifyExpression(std::dynamic_pointer_cast<ExpressionDivide>(expression));
+        break;
     case E_NonlinearExpressionTypes::Power:
-        return simplifyExpression(std::dynamic_pointer_cast<ExpressionPower>(expression));
+        expression = simplifyExpression(std::dynamic_pointer_cast<ExpressionPower>(expression));
+        break;
     case E_NonlinearExpressionTypes::Sum:
-        return simplifyExpression(std::dynamic_pointer_cast<ExpressionSum>(expression));
+        expression = simplifyExpression(std::dynamic_pointer_cast<ExpressionSum>(expression));
+        break;
     case E_NonlinearExpressionTypes::Product:
-        return simplifyExpression(std::dynamic_pointer_cast<ExpressionProduct>(expression));
+        expression = simplifyExpression(std::dynamic_pointer_cast<ExpressionProduct>(expression));
+        break;
+    default:
+        assert(false);
     }
+
+    /*switch(type)
+    {
+    case E_NonlinearExpressionTypes::Constant:
+        ss << " After simplification of constant: " << *expression << std::endl;
+        break;
+    case E_NonlinearExpressionTypes::Variable:
+        ss << " After simplification of variable: " << *expression << std::endl;
+        break;
+    case E_NonlinearExpressionTypes::Negate:
+        ss << " After simplification of negate: " << *expression << std::endl;
+        break;
+    case E_NonlinearExpressionTypes::Invert:
+        ss << " After simplification of invert: " << *expression << std::endl;
+        break;
+    case E_NonlinearExpressionTypes::SquareRoot:
+        ss << " After simplification of square root: " << *expression << std::endl;
+        break;
+    case E_NonlinearExpressionTypes::Square:
+        ss << " After simplification of square: " << *expression << std::endl;
+        break;
+    case E_NonlinearExpressionTypes::Log:
+        ss << " After simplification of log: " << *expression << std::endl;
+        break;
+    case E_NonlinearExpressionTypes::Exp:
+        ss << " After simplification of exp: " << *expression << std::endl;
+        break;
+    case E_NonlinearExpressionTypes::Cos:
+        ss << " After simplification of cos: " << *expression << std::endl;
+        break;
+    case E_NonlinearExpressionTypes::ArcCos:
+        ss << " After simplification of arccos: " << *expression << std::endl;
+        break;
+    case E_NonlinearExpressionTypes::Sin:
+        ss << " After simplification of sin: " << *expression << std::endl;
+        break;
+    case E_NonlinearExpressionTypes::ArcSin:
+        ss << " After simplification of arcsin: " << *expression << std::endl;
+        break;
+    case E_NonlinearExpressionTypes::Tan:
+        ss << " After simplification of tan: " << *expression << std::endl;
+        break;
+    case E_NonlinearExpressionTypes::ArcTan:
+        ss << " After simplification of arctan: " << *expression << std::endl;
+        break;
+    case E_NonlinearExpressionTypes::Abs:
+        ss << " After simplification of abs: " << *expression << std::endl;
+        break;
+    case E_NonlinearExpressionTypes::Divide:
+        ss << " After simplification of divide: " << *expression << std::endl;
+        break;
+    case E_NonlinearExpressionTypes::Power:
+        ss << " After simplification of power: " << *expression << std::endl;
+        break;
+    case E_NonlinearExpressionTypes::Sum:
+        ss << " After simplification of sum: " << *expression << std::endl;
+        break;
+    case E_NonlinearExpressionTypes::Product:
+        ss << " After simplification of product: " << *expression << std::endl;
+        break;
+    default:
+        assert(false);
+    }
+
+    std::cout << ss.str() << std::endl;*/
 
     return (expression);
 }

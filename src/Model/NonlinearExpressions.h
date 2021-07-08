@@ -613,7 +613,8 @@ public:
 
         for(auto& C : children)
         {
-            if(!(C->getBounds().l() >= 0 && (C->getConvexity() <= E_Convexity::Convex)))
+            if(!(C->getType() == E_NonlinearExpressionTypes::Square && C->getBounds().l() >= 0
+                   && (C->getConvexity() == E_Convexity::Convex)))
             {
                 isValid = false;
                 break;
@@ -2578,7 +2579,7 @@ public:
                 if(secondConvexity == E_Convexity::Concave && constant->constant < 0)
                     return E_Convexity::Convex;
 
-                if(secondConvexity == E_Convexity::Nonconvex)
+                if(secondConvexity == E_Convexity::Nonconvex || secondConvexity == E_Convexity::Unknown)
                     return E_Convexity::Nonconvex;
             }
 

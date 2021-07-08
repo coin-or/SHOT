@@ -820,9 +820,9 @@ void Report::outputProblemInstanceReport()
                 " - semicontinuous:", env->problem->properties.numberOfSemicontinuousVariables, ""));
 
         if(env->problem->properties.numberOfSemiintegerVariables > 0)
-            env->output->outputInfo(fmt::format(" {:35s}{:<21d}{:s}",
-                " - semiinteger:", env->problem->properties.numberOfSemiintegerVariables, ""));
-}
+            env->output->outputInfo(fmt::format(
+                " {:35s}{:<21d}{:s}", " - semiinteger:", env->problem->properties.numberOfSemiintegerVariables, ""));
+    }
 
     if(env->problem->properties.numberOfSpecialOrderedSets
             + env->reformulatedProblem->properties.numberOfSpecialOrderedSets
@@ -897,10 +897,10 @@ void Report::outputProblemInstanceReport()
             env->output->outputInfo(fmt::format(" {:56s}{:d}", " - binary monomial term reformulation:", value));
 
         if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::AbsoluteValue); value > 0)
-            env->output->outputInfo(fmt::format(" {:56s}{:d}", "- absolute value reformulation:", value));
+            env->output->outputInfo(fmt::format(" {:56s}{:d}", " - absolute value reformulation:", value));
 
         if(env->reformulatedProblem->antiEpigraphObjectiveVariable)
-            env->output->outputInfo(fmt::format(" {:56s}", "- anti-epigraph reformulation"));
+            env->output->outputInfo(fmt::format(" {:56s}", " - anti-epigraph reformulation"));
 
         if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::EigenvalueDecomposition);
             value > 0)

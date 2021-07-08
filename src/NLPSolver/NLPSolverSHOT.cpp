@@ -95,8 +95,14 @@ void NLPSolverSHOT::initializeMIPProblem()
         "BoundTightening.FeasibilityBased.Use", "Model", env->settings->getSetting<bool>("SHOT.UseFBBT", "Subsolver"));
 
     // Put more emphasis on numerical stability in the LP solver
+#ifdef HAS_CPLEX
     solver->updateSetting("Cplex.NumericalEmphasis", "Subsolver", 1);
+#endif
+
+    // Put more emphasis on numerical stability in the LP solver
+#ifdef HAS_GUROBI
     solver->updateSetting("Gurobi.NumericFocus", "Subsolver", 3);
+#endif
 
     // Set the debug path for the subsolver
     auto mainDebugPath = env->settings->getSetting<std::string>("Debug.Path", "Output");

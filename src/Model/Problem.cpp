@@ -323,7 +323,7 @@ void Problem::updateConvexity()
         {
             properties.convexity = E_ProblemConvexity::Nonconvex;
         }
-        else if(objectiveFunction->properties.convexity == E_Convexity::Unknown)
+        else
         {
             properties.convexity = E_ProblemConvexity::Nonconvex;
         }

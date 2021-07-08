@@ -48,7 +48,8 @@ public:
 
     void checkParameters() override;
 
-    bool addVariable(std::string name, E_VariableType type, double lowerBound, double upperBound, double semiBound) override;
+    bool addVariable(
+        std::string name, E_VariableType type, double lowerBound, double upperBound, double semiBound) override;
 
     bool initializeObjective() override;
     bool addLinearTermToObjective(double coefficient, int variableIndex) override;
