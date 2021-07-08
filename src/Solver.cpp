@@ -817,8 +817,21 @@ void Solver::initializeSettings()
     enumMIPSolver.push_back("Cplex");
     enumMIPSolver.push_back("Gurobi");
     enumMIPSolver.push_back("Cbc");
+
+    ES_MIPSolver usedMIPSolver;
+
+#ifdef HAS_GUROBI
+    usedMIPSolver = ES_MIPSolver::Gurobi;
+#elif HAS_CPLEX
+    usedMIPSolver = ES_MIPSolver::Cplex;
+#elif HAS_CBC
+    usedMIPSolver = ES_MIPSolver::Cbc;
+#else
+    env->output->outputCritical(" SHOT has not been compiled with support for any MIP solver.");
+#endif
+
     env->settings->createSetting(
-        "MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Cplex), "Which MIP solver to use", enumMIPSolver, 0);
+        "MIP.Solver", "Dual", static_cast<int>(usedMIPSolver), "Which MIP solver to use", enumMIPSolver, 0);
     enumMIPSolver.clear();
 
     env->settings->createSetting(
@@ -1709,15 +1722,15 @@ void Solver::verifySettings()
     {
         env->output->outputWarning(" SHOT has not been compiled with support for selected MIP solver.");
 
-#ifdef HAS_CBC
-        env->settings->updateSetting("MIP.Solver", "Dual", (int)ES_MIPSolver::Cbc);
-        unboundedVariableBound = 1e50;
-#elif HAS_GUROBI
+#ifdef HAS_GUROBI
         env->settings->updateSetting("MIP.Solver", "Dual", (int)ES_MIPSolver::Gurobi);
         unboundedVariableBound = 1e20;
 #elif HAS_CPLEX
         env->settings->updateSetting("MIP.Solver", "Dual", (int)ES_MIPSolver::Cplex);
         unboundedVariableBound = 1e20;
+#elif HAS_CBC
+        env->settings->updateSetting("MIP.Solver", "Dual", (int)ES_MIPSolver::Cbc);
+        unboundedVariableBound = 1e50;
 #else
         env->output->outputCritical(" SHOT has not been compiled with support for any MIP solver.");
 #endif
