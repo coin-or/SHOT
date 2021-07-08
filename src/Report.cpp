@@ -900,7 +900,7 @@ void Report::outputProblemInstanceReport()
             env->output->outputInfo(fmt::format(" {:56s}{:d}", " - absolute value reformulation:", value));
 
         if(env->reformulatedProblem->antiEpigraphObjectiveVariable)
-            env->output->outputInfo(fmt::format(" {:56s}", "- anti-epigraph reformulation"));
+            env->output->outputInfo(fmt::format(" {:56s}", " - anti-epigraph reformulation"));
 
         if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::EigenvalueDecomposition);
             value > 0)
