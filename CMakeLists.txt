@@ -595,6 +595,9 @@ target_link_libraries(SHOTSolver SHOTTasks)
 if(MSYS OR MINGW)
     # MinGW cross compilation will not work if "-Wl,--whole-archive" is defined below
     target_link_libraries(SHOTSolver SHOTModelingInterfaces)
+elseif(APPLE)
+    # need these all-load flags to ensure that EntryPointGAMS symbols will be present in library
+    target_link_libraries(SHOTSolver "-Wl,-all_load" SHOTModelingInterfaces)
 else()
     # need these whole-archive flags to ensure that EntryPointGAMS symbols will be present in library
     target_link_libraries(SHOTSolver "-Wl,--whole-archive" SHOTModelingInterfaces "-Wl,--no-whole-archive")
