@@ -179,6 +179,13 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
         // Uses NLP solver in GAMS by default, Ipopt can be used directly if value set by user in options file (read
         // below)
         env->settings->updateSetting("FixedInteger.Solver", "Primal", static_cast<int>(ES_PrimalNLPSolver::GAMS));
+
+#ifdef GAMS_BUILD
+        // Change default MIP solver to CPLEX, which may then be changed to CBC below if no license is available
+        // The original default of Gurobi would lead to SHOT stopping with a license error if no Gurobi license is
+        // available
+        env->settings->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Cplex));
+#endif
     }
 
     if(gmoOptFile(modelingObject) > 0) // GAMS provides an option file
