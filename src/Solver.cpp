@@ -1848,6 +1848,15 @@ void Solver::setConvexityBasedSettings()
 
             env->settings->updateSetting("Relaxation.Use", "Dual", false);
 
+            env->settings->updateSetting(
+                "Reformulation.Constraint.PartitionNonlinearTerms", "Model", (int)ES_PartitionNonlinearSums::IfConvex);
+            env->settings->updateSetting(
+                "Reformulation.Constraint.PartitionQuadraticTerms", "Model", (int)ES_PartitionNonlinearSums::IfConvex);
+            env->settings->updateSetting("Reformulation.ObjectiveFunction.PartitionNonlinearTerms", "Model",
+                (int)ES_PartitionNonlinearSums::IfConvex);
+            env->settings->updateSetting("Reformulation.ObjectiveFunction.PartitionQuadraticTerms", "Model",
+                (int)ES_PartitionNonlinearSums::IfConvex);
+
             env->settings->updateSetting("FixedInteger.CallStrategy", "Primal", 0);
             env->settings->updateSetting("FixedInteger.CreateInfeasibilityCut", "Primal", false);
             env->settings->updateSetting("FixedInteger.Source", "Primal", 0);
