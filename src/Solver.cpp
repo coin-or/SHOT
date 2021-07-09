@@ -1306,7 +1306,7 @@ void Solver::initializeSettings()
         "Cplex.NodeFile", "Subsolver", 1, "Where to store the node file", enumCplexNodeFile, 0);
     enumCplexNodeFile.clear();
 
-    env->settings->createSetting("Cplex.NumericalEmphasis", "Subsolver", 0, "Emphasis on numerical stability", 1, 1);
+    env->settings->createSetting("Cplex.NumericalEmphasis", "Subsolver", 1, "Emphasis on numerical stability", 0, 1);
 
     VectorString enumCplexParallelMode;
     enumCplexParallelMode.push_back("Opportunistic");
@@ -1436,7 +1436,7 @@ void Solver::initializeSettings()
     enumCbcScaling.push_back("geometric");
     enumCbcScaling.push_back("off");
     enumCbcScaling.push_back("rowsonly");
-    env->settings->createSetting("Cbc.Scaling", "Subsolver", 0, "Whether to scale problem", enumCbcScaling, 4);
+    env->settings->createSetting("Cbc.Scaling", "Subsolver", 4, "Whether to scale problem", enumCbcScaling, 0);
     enumCbcScaling.clear();
 
     VectorString enumStrategy;
