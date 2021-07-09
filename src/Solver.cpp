@@ -1076,7 +1076,7 @@ void Solver::initializeSettings()
         "How to treat quadratic functions", enumQPStrategy, 0);
     enumQPStrategy.clear();
 
-    env->settings->createSetting("Reformulation.Quadratics.UseEigenValueDecomposition", "Model", true,
+    env->settings->createSetting("Reformulation.Quadratics.UseEigenValueDecomposition", "Model", false,
         "Whether to use the eigen value decomposition of convex quadratic functions");
 
     // Modeling system settings
@@ -1820,6 +1820,7 @@ void Solver::setConvexityBasedSettingsPreReformulation()
                 "Reformulation.Constraint.PartitionNonlinearTerms", "Model", (int)ES_PartitionNonlinearSums::IfConvex);
             env->settings->updateSetting("Reformulation.ObjectiveFunction.PartitionNonlinearTerms", "Model",
                 (int)ES_PartitionNonlinearSums::IfConvex);
+            env->settings->updateSetting("Reformulation.Quadratics.UseEigenValueDecomposition", "Model", true);
         }
 
 #endif
