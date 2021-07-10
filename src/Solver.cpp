@@ -1817,9 +1817,17 @@ void Solver::setConvexityBasedSettingsPreReformulation()
             {
                 env->settings->updateSetting("Reformulation.Quadratics.UseEigenValueDecomposition", "Model", false);
             }
-        }
-
 #endif
+        }
+        else if(env->problem->properties.convexity == E_ProblemConvexity::Convex)
+        {
+#ifdef HAS_CBC
+            if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Cbc)
+            {
+                env->settings->updateSetting("Reformulation.Quadratics.UseEigenValueDecomposition", "Model", true);
+            }
+#endif
+        }
     }
 }
 
