@@ -1811,16 +1811,13 @@ void Solver::setConvexityBasedSettingsPreReformulation()
 #endif
             }
 #endif
-        }
 
 #ifdef HAS_CBC
-        if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Cbc)
-        {
-            env->settings->updateSetting(
-                "Reformulation.Constraint.PartitionNonlinearTerms", "Model", (int)ES_PartitionNonlinearSums::IfConvex);
-            env->settings->updateSetting("Reformulation.ObjectiveFunction.PartitionNonlinearTerms", "Model",
-                (int)ES_PartitionNonlinearSums::IfConvex);
-            env->settings->updateSetting("Reformulation.Quadratics.UseEigenValueDecomposition", "Model", true);
+            if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Cbc)
+            {
+                    (int)ES_PartitionNonlinearSums::IfConvex);
+                    env->settings->updateSetting("Reformulation.Quadratics.UseEigenValueDecomposition", "Model", true);
+            }
         }
 
 #endif
