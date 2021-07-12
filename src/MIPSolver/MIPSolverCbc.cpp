@@ -1173,13 +1173,13 @@ void MIPSolverCbc::setCutOff(double cutOff)
     {
         this->cutOff = cutOff + cutOffTol;
 
-        env->output->outputInfo(fmt::format("        Setting cutoff value to {} for minimization.", this->cutOff));
+        env->output->outputDebug(fmt::format("        Setting cutoff value to {} for minimization.", this->cutOff));
     }
     else
     {
         this->cutOff = -1 * (cutOff + cutOffTol);
 
-        env->output->outputInfo(fmt::format("        Setting cutoff value to {} for maximization.", this->cutOff));
+        env->output->outputDebug(fmt::format("        Setting cutoff value to {} for maximization.", this->cutOff));
     }
 }
 
@@ -1195,7 +1195,7 @@ void MIPSolverCbc::setCutOffAsConstraint([[maybe_unused]] double cutOff)
             if(isMinimizationProblem)
             {
                 osiInterface->addRow(objectiveLinearExpression, -osiInterface->getInfinity(),
-                    (cutOff + this->objectiveConstant), "CUTOFF_C");
+                    (cutOff - this->objectiveConstant), "CUTOFF_C");
 
                 env->output->outputDebug(
                     "        Setting cutoff constraint to " + Utilities::toString(cutOff) + " for minimization.");
@@ -1203,7 +1203,7 @@ void MIPSolverCbc::setCutOffAsConstraint([[maybe_unused]] double cutOff)
             else
             {
                 osiInterface->addRow(objectiveLinearExpression, -osiInterface->getInfinity(),
-                    -1.0 * (cutOff + this->objectiveConstant), "CUTOFF_C");
+                    -1.0 * (cutOff - this->objectiveConstant), "CUTOFF_C");
 
                 env->output->outputDebug(
                     "        Setting cutoff constraint value to " + Utilities::toString(cutOff) + " for maximization.");
@@ -1220,14 +1220,14 @@ void MIPSolverCbc::setCutOffAsConstraint([[maybe_unused]] double cutOff)
         {
             if(isMinimizationProblem)
             {
-                osiInterface->setRowUpper(cutOffConstraintIndex, cutOff + this->objectiveConstant);
+                osiInterface->setRowUpper(cutOffConstraintIndex, cutOff - this->objectiveConstant);
 
                 env->output->outputDebug(
                     "        Setting cutoff constraint value to " + Utilities::toString(cutOff) + " for minimization.");
             }
             else
             {
-                osiInterface->setRowUpper(cutOffConstraintIndex, -(cutOff + this->objectiveConstant));
+                osiInterface->setRowUpper(cutOffConstraintIndex, -(cutOff - this->objectiveConstant));
 
                 env->output->outputDebug(
                     "        Setting cutoff constraint value to " + Utilities::toString(cutOff) + " for maximization.");
