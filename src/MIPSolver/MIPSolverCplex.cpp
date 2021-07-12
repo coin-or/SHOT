@@ -1220,13 +1220,15 @@ void MIPSolverCplex::setCutOffAsConstraint(double cutOff)
         {
             if(env->reformulatedProblem->objectiveFunction->properties.isMaximize)
             {
-                cplexConstrs[cutOffConstraintIndex].setLB(cutOff);
+                cplexConstrs[cutOffConstraintIndex].setLB(
+                    cutOff - env->reformulatedProblem->objectiveFunction->constant);
                 env->output->outputDebug(
                     "        Setting cutoff constraint value to " + Utilities::toString(cutOff) + " for maximization.");
             }
             else
             {
-                cplexConstrs[cutOffConstraintIndex].setUB(cutOff);
+                cplexConstrs[cutOffConstraintIndex].setUB(
+                    cutOff - env->reformulatedProblem->objectiveFunction->constant);
                 env->output->outputDebug(
                     "        Setting cutoff constraint to " + Utilities::toString(cutOff) + " for minimization.");
             }

@@ -206,15 +206,11 @@ bool MIPSolverCbc::finalizeObjective(bool isMinimize, double constant)
         }
 
         if(!isMinimize)
-        {
             isMinimizationProblem = false;
-            coinModel->setObjectiveOffset(-constant);
-        }
         else
-        {
             isMinimizationProblem = true;
-            coinModel->setObjectiveOffset(constant);
-        }
+
+        this->objectiveConstant = constant;
 
         coinModel->setOptimizationDirection(1.0);
     }
@@ -296,6 +292,7 @@ bool MIPSolverCbc::finalizeProblem()
         {
             cbcModel->setLogLevel(0);
             osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
+            osiInterface->setDblParam(OsiObjOffset, this->objectiveConstant);
         }
 
         setSolutionLimit(1);
@@ -478,7 +475,7 @@ E_ProblemSolutionStatus MIPSolverCbc::getSolutionStatus()
 {
     E_ProblemSolutionStatus MIPSolutionStatus;
 
-    if(cbcModel->isProvenOptimal())
+    if(cbcModel->isProvenOptimal() && cbcModel->numberSavedSolutions() > 0)
     {
         MIPSolutionStatus = E_ProblemSolutionStatus::Optimal;
     }
@@ -490,7 +487,7 @@ E_ProblemSolutionStatus MIPSolverCbc::getSolutionStatus()
     {
         MIPSolutionStatus = E_ProblemSolutionStatus::Unbounded;
     }
-    else if(cbcModel->isSolutionLimitReached())
+    else if(cbcModel->isSolutionLimitReached() && cbcModel->numberSavedSolutions() > 0)
     {
         MIPSolutionStatus = E_ProblemSolutionStatus::SolutionLimit;
     }
@@ -693,6 +690,7 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
         {
             cbcModel->setLogLevel(0);
             osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
+            osiInterface->setDblParam(OsiObjOffset, this->objectiveConstant);
         }
 
         TerminationEventHandler eventHandler(env);
@@ -727,11 +725,15 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
             {
                 cbcModel->setLogLevel(0);
                 osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
+                osiInterface->setDblParam(OsiObjOffset, this->objectiveConstant);
             }
 
             CbcMain1(numArguments, const_cast<const char**>(argv), *cbcModel, dummyCallback, solverData);
 
             MIPSolutionStatus = getSolutionStatus();
+
+            if(MIPSolutionStatus == E_ProblemSolutionStatus::Optimal)
+                MIPSolutionStatus = E_ProblemSolutionStatus::Feasible;
 
             osiInterface->setColBounds(getDualAuxiliaryObjectiveVariableIndex(), -getUnboundedVariableBoundValue(),
                 getUnboundedVariableBoundValue());
@@ -806,11 +808,15 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
             {
                 cbcModel->setLogLevel(0);
                 osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
+                osiInterface->setDblParam(OsiObjOffset, this->objectiveConstant);
             }
 
             CbcMain1(numArguments, const_cast<const char**>(argv), *cbcModel, dummyCallback, solverData);
 
             MIPSolutionStatus = getSolutionStatus();
+
+            if(MIPSolutionStatus == E_ProblemSolutionStatus::Optimal)
+                MIPSolutionStatus = E_ProblemSolutionStatus::Feasible;
 
             for(auto& P : originalObjectiveCoefficients)
             {
@@ -930,6 +936,7 @@ bool MIPSolverCbc::repairInfeasibility()
         {
             cbcModel->setLogLevel(0);
             osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
+            osiInterface->setDblParam(OsiObjOffset, this->objectiveConstant);
         }
 
         cachedSolutionHasChanged = true;
@@ -1166,13 +1173,13 @@ void MIPSolverCbc::setCutOff(double cutOff)
     {
         this->cutOff = cutOff + cutOffTol;
 
-        env->output->outputDebug(fmt::format("        Setting cutoff value to  {} for minimization.", this->cutOff));
+        env->output->outputDebug(fmt::format("        Setting cutoff value to {} for minimization.", this->cutOff));
     }
     else
     {
         this->cutOff = -1 * (cutOff + cutOffTol);
 
-        env->output->outputDebug(fmt::format("        Setting cutoff value to  {} for maximization.", this->cutOff));
+        env->output->outputDebug(fmt::format("        Setting cutoff value to {} for maximization.", this->cutOff));
     }
 }
 
@@ -1186,10 +1193,21 @@ void MIPSolverCbc::setCutOffAsConstraint([[maybe_unused]] double cutOff)
         if(!cutOffConstraintDefined)
         {
             if(isMinimizationProblem)
-                osiInterface->addRow(objectiveLinearExpression, -osiInterface->getInfinity(), cutOff, "CUTOFF_C");
+            {
+                osiInterface->addRow(objectiveLinearExpression, -osiInterface->getInfinity(),
+                    (cutOff - this->objectiveConstant), "CUTOFF_C");
+
+                env->output->outputDebug(
+                    "        Setting cutoff constraint to " + Utilities::toString(cutOff) + " for minimization.");
+            }
             else
-                osiInterface->addRow(
-                    objectiveLinearExpression, -osiInterface->getInfinity(), -1.0 * cutOff, "CUTOFF_C");
+            {
+                osiInterface->addRow(objectiveLinearExpression, -osiInterface->getInfinity(),
+                    -1.0 * (cutOff - this->objectiveConstant), "CUTOFF_C");
+
+                env->output->outputDebug(
+                    "        Setting cutoff constraint value to " + Utilities::toString(cutOff) + " for maximization.");
+            }
 
             allowRepairOfConstraint.push_back(false);
 
@@ -1202,14 +1220,14 @@ void MIPSolverCbc::setCutOffAsConstraint([[maybe_unused]] double cutOff)
         {
             if(isMinimizationProblem)
             {
-                osiInterface->setRowUpper(cutOffConstraintIndex, cutOff);
+                osiInterface->setRowUpper(cutOffConstraintIndex, cutOff - this->objectiveConstant);
 
                 env->output->outputDebug(
-                    "        Setting cutoff constraint to " + Utilities::toString(cutOff) + " for minimization.");
+                    "        Setting cutoff constraint value to " + Utilities::toString(cutOff) + " for minimization.");
             }
             else
             {
-                osiInterface->setRowUpper(cutOffConstraintIndex, -cutOff);
+                osiInterface->setRowUpper(cutOffConstraintIndex, -(cutOff - this->objectiveConstant));
 
                 env->output->outputDebug(
                     "        Setting cutoff constraint value to " + Utilities::toString(cutOff) + " for maximization.");
@@ -1279,6 +1297,8 @@ double MIPSolverCbc::getObjectiveValue(int solIdx)
             objectiveValue += factor * objectiveLinearExpression.getElements()[i]
                 * variableSolution[objectiveLinearExpression.getIndices()[i]];
         }
+
+        objectiveValue += this->objectiveConstant;
     }
     catch(std::exception& e)
     {
@@ -1650,6 +1670,10 @@ double MIPSolverCbc::getDualObjectiveValue()
         else if(getSolutionStatus() == E_ProblemSolutionStatus::Optimal)
         {
             objVal = getObjectiveValue();
+        }
+        else
+        {
+            objVal = cbcModel->getBestPossibleObjValue();
         }
     }
     catch(std::exception& e)
