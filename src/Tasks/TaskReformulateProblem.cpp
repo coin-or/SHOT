@@ -676,7 +676,7 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
     if(copyOriginalLinearTerms)
         copyLinearTermsToObjectiveFunction(
             std::dynamic_pointer_cast<LinearObjectiveFunction>(env->problem->objectiveFunction)->linearTerms,
-            std::dynamic_pointer_cast<LinearObjectiveFunction>(objective), isSignReversed);
+            std::dynamic_pointer_cast<LinearObjectiveFunction>(objective));
 
     if(destinationLinearTerms.size() > 0)
         std::dynamic_pointer_cast<LinearObjectiveFunction>(objective)->add(destinationLinearTerms);
