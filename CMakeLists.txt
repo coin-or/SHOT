@@ -9,7 +9,7 @@ if(CCACHE_PROGRAM)
 endif()
 
 
-project(SHOT VERSION 1.0.1
+project(SHOT VERSION 1.1.0
                   DESCRIPTION "The Supporting Hyperplane Optimization Toolkit (SHOT) for Mixed-Integer Nonlinear Optimization"
                   LANGUAGES CXX C)
 
