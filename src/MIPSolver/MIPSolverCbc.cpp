@@ -789,7 +789,7 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
 
             try
             {
-                osiInterface->writeLp(ss.str().c_str(), "");
+                osiInterface->writeLp(ss.str().c_str(), "", 1e-7, 10, 10, 0.0, true);
             }
             catch(std::exception& e)
             {
@@ -920,7 +920,7 @@ bool MIPSolverCbc::repairInfeasibility()
 
             try
             {
-                repairedInterface->writeLp(ss.str().c_str(), "");
+                repairedInterface->writeLp(ss.str().c_str(), "", 1e-7, 10, 10, 0.0, true);
             }
             catch(std::exception& e)
             {
@@ -1267,7 +1267,7 @@ void MIPSolverCbc::writeProblemToFile(std::string filename)
 {
     try
     {
-        osiInterface->writeLp(filename.c_str(), "");
+        osiInterface->writeLp(filename.c_str(), "", 1e-7, 10, 10, 0.0, true);
     }
     catch(std::exception& e)
     {
