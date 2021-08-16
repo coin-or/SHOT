@@ -1947,7 +1947,7 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint, double timeLim
 
                 termBound = termBound / T->coefficient;
 
-                if(T->firstVariable == T->secondVariable)
+                if(T->firstVariable == T->secondVariable && (T->firstVariable->lowerBound > 0))
                 {
                     if(termBound.l() < 0)
                         continue;
