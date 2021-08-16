@@ -292,8 +292,9 @@ bool MIPSolverCbc::finalizeProblem()
         {
             cbcModel->setLogLevel(0);
             osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
-            osiInterface->setDblParam(OsiObjOffset, this->objectiveConstant);
         }
+
+        osiInterface->setDblParam(OsiObjOffset, this->objectiveConstant);
 
         setSolutionLimit(1);
     }
@@ -690,8 +691,9 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
         {
             cbcModel->setLogLevel(0);
             osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
-            osiInterface->setDblParam(OsiObjOffset, this->objectiveConstant);
         }
+
+        osiInterface->setDblParam(OsiObjOffset, this->objectiveConstant);
 
         TerminationEventHandler eventHandler(env);
         cbcModel->passInEventHandler(&eventHandler);
@@ -725,8 +727,9 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
             {
                 cbcModel->setLogLevel(0);
                 osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
-                osiInterface->setDblParam(OsiObjOffset, this->objectiveConstant);
             }
+
+            osiInterface->setDblParam(OsiObjOffset, this->objectiveConstant);
 
             CbcMain1(numArguments, const_cast<const char**>(argv), *cbcModel, dummyCallback, solverData);
 
@@ -808,8 +811,9 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
             {
                 cbcModel->setLogLevel(0);
                 osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
-                osiInterface->setDblParam(OsiObjOffset, this->objectiveConstant);
             }
+
+            osiInterface->setDblParam(OsiObjOffset, this->objectiveConstant);
 
             CbcMain1(numArguments, const_cast<const char**>(argv), *cbcModel, dummyCallback, solverData);
 
@@ -936,8 +940,9 @@ bool MIPSolverCbc::repairInfeasibility()
         {
             cbcModel->setLogLevel(0);
             osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
-            osiInterface->setDblParam(OsiObjOffset, this->objectiveConstant);
         }
+
+        osiInterface->setDblParam(OsiObjOffset, this->objectiveConstant);
 
         cachedSolutionHasChanged = true;
 
