@@ -779,27 +779,27 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
             problemUpdated = true;
         }
 
-        if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
-        {
-            std::stringstream ss;
-            ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
-            ss << "/lp";
-            ss << env->results->getCurrentIteration()->iterationNumber - 1;
-            ss << "unbounded.lp";
-
-            try
-            {
-                osiInterface->writeLp(ss.str().c_str(), "", 1e-7, 10, 10, 0.0, true);
-            }
-            catch(std::exception& e)
-            {
-                env->output->outputError(
-                    "        Error when saving relaxed infesibility model to file in Cbc", e.what());
-            }
-        }
-
         if(problemUpdated)
         {
+            if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+            {
+                std::stringstream ss;
+                ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
+                ss << "/lp";
+                ss << env->results->getCurrentIteration()->iterationNumber - 1;
+                ss << "unbounded.lp";
+
+                try
+                {
+                    osiInterface->writeLp(ss.str().c_str(), "", 1e-7, 10, 10, 0.0, true);
+                }
+                catch(std::exception& e)
+                {
+                    env->output->outputError(
+                        "        Error when saving relaxed infesibility model to file in Cbc", e.what());
+                }
+            }
+
             cbcModel = std::make_unique<CbcModel>(*osiInterface);
 
             initializeSolverSettings();
