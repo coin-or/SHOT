@@ -617,34 +617,43 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
     arg = std::to_string(env->settings->getSetting<int>("Cbc.Strategy", "Subsolver"));
     argv[8] = strdup(arg.c_str());
 
-    argv[9] = strdup("-cutoff");
+    /*
+        TODO: Adding cutoffs seems to have stability-issues (status changes from unbounded -> infeasible in some
+        cases, cf. https://github.com/coin-or/SHOT/issues/133). As the cutoff is added as a constraint, this can be
+        deactivated here.
 
-    if(this->cutOff > 1e100)
-        arg = "1e100";
-    else if(this->cutOff < -1e100)
-        arg = "-1e100";
-    else
-        arg = fmt::format("{}", this->cutOff);
+        argv[9] = strdup("-cutoff");
 
-    argv[10] = strdup(arg.c_str());
+        if(this->cutOff > 1e100)
+            arg = "1e100";
+        else if(this->cutOff < -1e100)
+            arg = "-1e100";
+        else
+            arg = fmt::format("{}", this->cutOff);
 
-    argv[11] = strdup("-sec");
+        argv[10] = strdup(arg.c_str());*/
+
+    argv[9] = strdup("-sec");
     arg = fmt::format("{}", this->timeLimit);
-    argv[12] = strdup(arg.c_str());
+    argv[10] = strdup(arg.c_str());
 
     if(cbcModel->haveMultiThreadSupport())
     {
-        argv[13] = strdup("-threads");
+        argv[11] = strdup("-threads");
         arg = std::to_string(numberOfThreads);
-        argv[14] = strdup(arg.c_str());
+        argv[12] = strdup(arg.c_str());
 
-        argv[15] = strdup("-solve");
-        argv[16] = strdup("-quit");
+        argv[13] = strdup("-solve");
+        argv[14] = strdup("-quit");
+        argv[15] = strdup("");
+        argv[16] = strdup("");
     }
     else
     {
-        argv[13] = strdup("-solve");
-        argv[14] = strdup("-quit");
+        argv[11] = strdup("-solve");
+        argv[12] = strdup("-quit");
+        argv[13] = strdup("");
+        argv[14] = strdup("");
         argv[15] = strdup("");
         argv[16] = strdup("");
     }
@@ -1035,6 +1044,7 @@ bool MIPSolverCbc::repairInfeasibility()
         arg = std::to_string(env->settings->getSetting<int>("Cbc.Strategy", "Subsolver"));
         argv[8] = strdup(arg.c_str());
 
+        /*
         argv[9] = strdup("-cutoff");
 
         if(this->cutOff > 1e100)
@@ -1044,25 +1054,29 @@ bool MIPSolverCbc::repairInfeasibility()
         else
             arg = fmt::format("{}", this->cutOff);
 
-        argv[10] = strdup(arg.c_str());
+        argv[10] = strdup(arg.c_str());*/
 
-        argv[11] = strdup("-sec");
+        argv[9] = strdup("-sec");
         arg = fmt::format("{}", this->timeLimit);
-        argv[12] = strdup(arg.c_str());
+        argv[10] = strdup(arg.c_str());
 
         if(cbcModel->haveMultiThreadSupport())
         {
-            argv[13] = strdup("-threads");
+            argv[11] = strdup("-threads");
             arg = std::to_string(numberOfThreads);
-            argv[14] = strdup(arg.c_str());
+            argv[12] = strdup(arg.c_str());
 
-            argv[15] = strdup("-solve");
-            argv[16] = strdup("-quit");
+            argv[13] = strdup("-solve");
+            argv[14] = strdup("-quit");
+            argv[15] = strdup("");
+            argv[16] = strdup("");
         }
         else
         {
-            argv[13] = strdup("-solve");
-            argv[14] = strdup("-quit");
+            argv[11] = strdup("-solve");
+            argv[12] = strdup("-quit");
+            argv[13] = strdup("");
+            argv[14] = strdup("");
             argv[15] = strdup("");
             argv[16] = strdup("");
         }
