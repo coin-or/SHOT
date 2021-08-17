@@ -57,7 +57,7 @@ void TaskSolveIteration::run()
     auto timeLim = env->settings->getSetting<double>("TimeLimit", "Termination") - env->timing->getElapsedTime("Total");
     env->dualSolver->MIPSolver->setTimeLimit(timeLim);
 
-    if(env->dualSolver->useCutOff)
+    if(env->dualSolver->useCutOff && !currIter->MIPSolutionLimitUpdated)
     {
         double cutOffValue;
         double cutOffValueConstraint;
