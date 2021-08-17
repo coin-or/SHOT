@@ -2667,18 +2667,36 @@ void TaskReformulateProblem::reformulateBinaryContinuousBilinearTerm(
         "s_blbc_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, otherVariable->upperBound);
     auxConstraint1->add(std::make_shared<LinearTerm>(-1.0, auxVariable));
     auxConstraint1->add(std::make_shared<LinearTerm>(1.0, otherVariable));
-    auxConstraint1->add(std::make_shared<LinearTerm>(otherVariable->upperBound, binaryVariable));
+    if(otherVariable->upperBound != 0.0)
+        auxConstraint1->add(std::make_shared<LinearTerm>(otherVariable->upperBound, binaryVariable));
     auxConstraintCounter++;
 
     auto auxConstraint2 = std::make_shared<LinearConstraint>(auxConstraintCounter,
         "s_blbc_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, otherVariable->upperBound);
     auxConstraint2->add(std::make_shared<LinearTerm>(1.0, auxVariable));
     auxConstraint2->add(std::make_shared<LinearTerm>(-1.0, otherVariable));
-    auxConstraint2->add(std::make_shared<LinearTerm>(otherVariable->upperBound, binaryVariable));
+    if(otherVariable->upperBound != 0.0)
+        auxConstraint2->add(std::make_shared<LinearTerm>(otherVariable->upperBound, binaryVariable));
+    auxConstraintCounter++;
+
+    auto auxConstraint3 = std::make_shared<LinearConstraint>(
+        auxConstraintCounter, "s_blbc_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, 0);
+    auxConstraint3->add(std::make_shared<LinearTerm>(-1.0, auxVariable));
+    if(otherVariable->lowerBound != 0.0)
+        auxConstraint3->add(std::make_shared<LinearTerm>(otherVariable->lowerBound, binaryVariable));
+    auxConstraintCounter++;
+
+    auto auxConstraint4 = std::make_shared<LinearConstraint>(
+        auxConstraintCounter, "s_blbc_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, 0);
+    auxConstraint4->add(std::make_shared<LinearTerm>(1.0, auxVariable));
+    if(otherVariable->upperBound != 0.0)
+        auxConstraint4->add(std::make_shared<LinearTerm>(-otherVariable->upperBound, binaryVariable));
     auxConstraintCounter++;
 
     reformulatedProblem->add(std::move(auxConstraint1));
     reformulatedProblem->add(std::move(auxConstraint2));
+    reformulatedProblem->add(std::move(auxConstraint3));
+    reformulatedProblem->add(std::move(auxConstraint4));
 }
 
 void TaskReformulateProblem::reformulateIntegerBilinearTerm(
