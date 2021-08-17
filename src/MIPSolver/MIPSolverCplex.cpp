@@ -235,7 +235,7 @@ bool MIPSolverCplex::finalizeObjective(bool isMinimize, double constant)
 {
     try
     {
-        if(constant != 0.0)
+        if(constant != 0.0 && !this->hasDualAuxiliaryObjectiveVariable())
             objExpression += constant;
 
         if(isMinimize)
@@ -1220,15 +1220,24 @@ void MIPSolverCplex::setCutOffAsConstraint(double cutOff)
         {
             if(env->reformulatedProblem->objectiveFunction->properties.isMaximize)
             {
-                cplexConstrs[cutOffConstraintIndex].setLB(
-                    cutOff - env->reformulatedProblem->objectiveFunction->constant);
+                if(hasDualAuxiliaryObjectiveVariable())
+                    cplexConstrs[cutOffConstraintIndex].setLB(cutOff);
+                else
+                    cplexConstrs[cutOffConstraintIndex].setLB(
+                        cutOff - env->reformulatedProblem->objectiveFunction->constant);
+
                 env->output->outputDebug(
                     "        Setting cutoff constraint value to " + Utilities::toString(cutOff) + " for maximization.");
             }
             else
             {
-                cplexConstrs[cutOffConstraintIndex].setUB(
-                    cutOff - env->reformulatedProblem->objectiveFunction->constant);
+                if(hasDualAuxiliaryObjectiveVariable())
+                    cplexConstrs[cutOffConstraintIndex].setUB(cutOff);
+                else
+                    cplexConstrs[cutOffConstraintIndex].setUB(
+                        cutOff - env->reformulatedProblem->objectiveFunction->constant);
+
+                cplexConstrs[cutOffConstraintIndex].setUB(cutOff);
                 env->output->outputDebug(
                     "        Setting cutoff constraint to " + Utilities::toString(cutOff) + " for minimization.");
             }
