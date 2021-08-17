@@ -1449,7 +1449,7 @@ int MIPSolverGurobi::getNumberOfExploredNodes()
     }
     catch(GRBException& e)
     {
-        env->output->outputError("        Error when getting number of nodes", e.getMessage());
+        env->output->outputDebug("        Error when getting number of nodes.");
         return 0;
     }
 }
