@@ -47,19 +47,12 @@ bool MIPSolutionLimitStrategyIncrease::updateLimit()
     // Solution limit has not been updated in the maximal number of iterations
     if(prevIter->isMIP()
         && (currIter->iterationNumber - lastIterSolLimIncreased
-                   > env->settings->getSetting<int>("MIP.SolutionLimit.IncreaseIterations", "Dual")
-               && currIter->iterationNumber - lastIterOptimal
-                   > env->settings->getSetting<int>("MIP.SolutionLimit.IncreaseIterations", "Dual")))
+                > env->settings->getSetting<int>("MIP.SolutionLimit.IncreaseIterations", "Dual")
+            && currIter->iterationNumber - lastIterOptimal
+                > env->settings->getSetting<int>("MIP.SolutionLimit.IncreaseIterations", "Dual")))
     {
         env->output->outputDebug("     Force solution limit update.");
         return (true);
-    }
-
-    bool useObjectiveRootsearchUpdate = true;
-
-    if(prevIter->maxDeviationConstraint == -1 && useObjectiveRootsearchUpdate)
-    {
-        return (false);
     }
 
     if(prevIter->isMIP() && prevIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit)
