@@ -681,13 +681,7 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionSum> 
 
     for(auto& C : expression->children)
     {
-        C = simplify(C);
-
-        if(C->getType() == E_NonlinearExpressionTypes::Constant)
-        {
-            constant += std::dynamic_pointer_cast<ExpressionConstant>(C)->constant;
-        }
-        else if(C->getType() == E_NonlinearExpressionTypes::Sum)
+        if(C->getType() == E_NonlinearExpressionTypes::Sum)
         {
             for(auto& CC : std::dynamic_pointer_cast<ExpressionSum>(C)->children)
             {
@@ -697,9 +691,18 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionSum> 
                 }
                 else
                 {
-                    children.add(CC);
+                    children.add(simplify(CC));
                 }
             }
+
+            continue;
+        }
+
+        C = simplify(C);
+
+        if(C->getType() == E_NonlinearExpressionTypes::Constant)
+        {
+            constant += std::dynamic_pointer_cast<ExpressionConstant>(C)->constant;
         }
         else if(C->getType() == E_NonlinearExpressionTypes::Variable)
         {
