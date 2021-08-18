@@ -1727,6 +1727,7 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
         resultLinearTerms.add(linearTerms);
     }
     else if(partitionStrategy == ES_PartitionNonlinearSums::Always
+        || (allTermsConvex && partitionStrategy == ES_PartitionNonlinearSums::IfConvex)
         || (!quadraticSumConvex // should not reformulate if sum is convex unless forced
             && allTermsConvexAfterReformulation && partitionStrategy == ES_PartitionNonlinearSums::IfConvex))
     {
