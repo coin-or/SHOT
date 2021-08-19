@@ -547,14 +547,17 @@ void TaskSelectPrimalCandidatesFromNLP::createIntegerCut(VectorDouble variableSo
 {
     bool withinBounds = true;
 
+    assert(variableSolution.size() == env->reformulatedProblem->variableLowerBounds.size());
+    assert(variableSolution.size() == env->reformulatedProblem->variableUpperBounds.size());
+
     // Verify that solution is within bounds: if the difference is small project to the bound, otherwise do not add
     // integer cut
     for(size_t i = 0; i < variableSolution.size(); i++)
     {
-        if(variableSolution[i] < sourceProblem->variableLowerBounds[i])
+        if(variableSolution[i] < env->reformulatedProblem->variableLowerBounds[i])
         {
-            if(variableSolution[i] > sourceProblem->variableLowerBounds[i] - 1e-8)
-                variableSolution[i] = sourceProblem->variableLowerBounds[i];
+            if(variableSolution[i] > env->reformulatedProblem->variableLowerBounds[i] - 1e-8)
+                variableSolution[i] = env->reformulatedProblem->variableLowerBounds[i];
             else
             {
                 withinBounds = false;
@@ -562,10 +565,10 @@ void TaskSelectPrimalCandidatesFromNLP::createIntegerCut(VectorDouble variableSo
             }
         }
 
-        if(variableSolution[i] > sourceProblem->variableUpperBounds[i])
+        if(variableSolution[i] > env->reformulatedProblem->variableUpperBounds[i])
         {
-            if(variableSolution[i] < sourceProblem->variableUpperBounds[i] + 1e-8)
-                variableSolution[i] = sourceProblem->variableUpperBounds[i];
+            if(variableSolution[i] < env->reformulatedProblem->variableUpperBounds[i] + 1e-8)
+                variableSolution[i] = env->reformulatedProblem->variableUpperBounds[i];
             else
             {
                 withinBounds = false;
