@@ -1742,8 +1742,8 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
             }
             else if(T->isSquare)
             {
-                auto [auxVariable, newVariable]
-                    = getSquareAuxiliaryVariable(T->firstVariable, E_AuxiliaryVariableType::SquareTermsPartitioning);
+                auto [auxVariable, newVariable] = getSquareAuxiliaryVariable(
+                    T->firstVariable, 1.0, E_AuxiliaryVariableType::SquareTermsPartitioning);
                 resultLinearTerms.add(std::make_shared<LinearTerm>(signfactor * T->coefficient, auxVariable));
             }
             else if(T->isBilinear && T->isBinary) // Bilinear term b1*b2
@@ -2105,14 +2105,8 @@ LinearTerms TaskReformulateProblem::doEigenvalueDecomposition(QuadraticTerms qua
 
     for(size_t i = 0; i < quadraticTerms.variableMap.size(); i++)
     {
-        auto auxQuadVariable = std::make_shared<AuxiliaryVariable>("q_evd_" + std::to_string(auxVariableCounter),
-            auxVariableCounter, E_VariableType::Real, SHOT_DBL_MIN, SHOT_DBL_MAX);
-        auxVariableCounter++;
-        env->results->increaseAuxiliaryVariableCounter(E_AuxiliaryVariableType::EigenvalueDecomposition);
-
-        auto [auxVariable, newVariable]
-            = getSquareAuxiliaryVariable(auxQuadVariable, E_AuxiliaryVariableType::EigenvalueDecomposition);
-        resultLinearTerms.add(std::make_shared<LinearTerm>(0.5 * quadraticTerms.eigenvalues[i].real(), auxVariable));
+        if(std::abs(quadraticTerms.eigenvalues[i].real()) < 1e-6)
+            continue;
 
         auto auxConstraint = std::make_shared<LinearConstraint>(
             auxConstraintCounter, "q_evd" + std::to_string(auxConstraintCounter), 0, 0);
@@ -2124,8 +2118,18 @@ LinearTerms TaskReformulateProblem::doEigenvalueDecomposition(QuadraticTerms qua
                 auxConstraint->add(std::make_shared<LinearTerm>(quadraticTerms.eigenvectors(j, i).real(), VAR));
         }
 
-        auxConstraint->add(std::make_shared<LinearTerm>(-1.0, auxQuadVariable));
+        auto bounds = auxConstraint->linearTerms.calculate(env->problem->getVariableBounds());
 
+        auto auxQuadVariable = std::make_shared<AuxiliaryVariable>("q_evd_" + std::to_string(auxVariableCounter),
+            auxVariableCounter, E_VariableType::Real, bounds.l(), bounds.u());
+        auxVariableCounter++;
+        env->results->increaseAuxiliaryVariableCounter(E_AuxiliaryVariableType::EigenvalueDecomposition);
+
+        auto [auxVariable, newVariable] = getSquareAuxiliaryVariable(
+            auxQuadVariable, quadraticTerms.eigenvalues[i].real(), E_AuxiliaryVariableType::EigenvalueDecomposition);
+        resultLinearTerms.add(std::make_shared<LinearTerm>(0.5, auxVariable));
+
+        auxConstraint->add(std::make_shared<LinearTerm>(-1.0, auxQuadVariable));
         reformulatedProblem->add(auxConstraint);
         reformulatedProblem->add(std::move(auxQuadVariable));
     }
@@ -2415,9 +2419,9 @@ NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(st
 }
 
 std::pair<AuxiliaryVariablePtr, bool> TaskReformulateProblem::getSquareAuxiliaryVariable(
-    VariablePtr variable, E_AuxiliaryVariableType auxVariableType)
+    VariablePtr variable, double coefficient, E_AuxiliaryVariableType auxVariableType)
 {
-    auto auxVariableIterator = squareAuxVariables.find(variable);
+    auto auxVariableIterator = squareAuxVariables.find(std::make_pair(variable, coefficient));
 
     if(auxVariableIterator != squareAuxVariables.end())
         return (std::make_pair(auxVariableIterator->second, false));
@@ -2453,8 +2457,8 @@ std::pair<AuxiliaryVariablePtr, bool> TaskReformulateProblem::getSquareAuxiliary
     env->results->increaseAuxiliaryVariableCounter(auxVariableType);
 
     reformulatedProblem->add((auxVariable));
-    auxVariable->quadraticTerms.add(std::make_shared<QuadraticTerm>(1.0, variable, variable));
-    squareAuxVariables.emplace(variable, auxVariable);
+    auxVariable->quadraticTerms.add(std::make_shared<QuadraticTerm>(coefficient, variable, variable));
+    squareAuxVariables.emplace(std::make_pair(variable, coefficient), auxVariable);
 
     return (std::make_pair(auxVariable, true));
 }
@@ -2569,9 +2573,9 @@ std::pair<AuxiliaryVariablePtr, bool> TaskReformulateProblem::getAbsoluteValueAu
 
 void TaskReformulateProblem::createSquareReformulations()
 {
-    for(const auto& [VAR, AUXVAR] : squareAuxVariables)
+    for(const auto& [PAIR, AUXVAR] : squareAuxVariables)
     {
-        reformulateSquareTerm(VAR, AUXVAR);
+        reformulateSquareTerm(PAIR.first, AUXVAR, PAIR.second);
         AUXVAR->properties.auxiliaryType = E_AuxiliaryVariableType::SquareTermsPartitioning;
     }
 }
@@ -2824,7 +2828,8 @@ void TaskReformulateProblem::reformulateIntegerBilinearTerm(
     }
 }
 
-void TaskReformulateProblem::reformulateSquareTerm(VariablePtr variable, AuxiliaryVariablePtr auxVariable)
+void TaskReformulateProblem::reformulateSquareTerm(
+    VariablePtr variable, AuxiliaryVariablePtr auxVariable, double coefficient)
 {
     if(useConvexQuadraticConstraints)
     {
@@ -2833,7 +2838,7 @@ void TaskReformulateProblem::reformulateSquareTerm(VariablePtr variable, Auxilia
         auxConstraintCounter++;
 
         auxConstraint->add(std::make_shared<LinearTerm>(-1.0, auxVariable));
-        auxConstraint->add(std::make_shared<QuadraticTerm>(1.0, variable, variable));
+        auxConstraint->add(std::make_shared<QuadraticTerm>(coefficient, variable, variable));
 
         reformulatedProblem->add(std::move(auxConstraint));
     }
@@ -2844,7 +2849,7 @@ void TaskReformulateProblem::reformulateSquareTerm(VariablePtr variable, Auxilia
         auxConstraintCounter++;
 
         auxConstraint->add(std::make_shared<LinearTerm>(-1.0, auxVariable));
-        auxConstraint->add(std::make_shared<QuadraticTerm>(1.0, variable, variable));
+        auxConstraint->add(std::make_shared<QuadraticTerm>(coefficient, variable, variable));
 
         reformulatedProblem->add(std::move(auxConstraint));
     }
