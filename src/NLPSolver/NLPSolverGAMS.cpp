@@ -64,6 +64,7 @@ NLPSolverGAMS::NLPSolverGAMS(EnvironmentPtr envPtr, gmoHandle_t modelingObject, 
             nlpsolver = "minos";
             selectedNLPSolver = "MINOS (automatically selected)";
         }
+#if defined(GAMS_BUILD) || !defined(HAS_IPOPT)
         else if(!palLicenseCheckSubSys(auditLicensing, (char*)"IP"))
         {
             env->output->outputDebug("        CONOPT, KNITRO, SNOPT, and MINOS not licensed. IPOPTH licensed. Using "
@@ -78,6 +79,14 @@ NLPSolverGAMS::NLPSolverGAMS(EnvironmentPtr envPtr, gmoHandle_t modelingObject, 
             nlpsolver = "ipopt";
             selectedNLPSolver = "IPOPT (automatically selected)";
         }
+#else
+        else
+        {
+            // not considering Ipopt(H) here, as there likely will be a mismatch between the IPOPT lib build into SHOT and the IPOPT lib that comes with GAMS, see #135
+            env->output->outputError("CONOPT, KNITRO, SNOPT, and MINOS not licensed. No suitable GAMS NLP solver available.");
+            throw std::logic_error("No GAMS NLP solver available");
+        }
+#endif
     }
     else
     {
