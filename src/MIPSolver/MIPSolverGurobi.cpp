@@ -1447,7 +1447,7 @@ int MIPSolverGurobi::getNumberOfExploredNodes()
     {
         return ((int)gurobiModel->get(GRB_DoubleAttr_NodeCount));
     }
-    catch(GRBException& e)
+    catch(GRBException&)
     {
         env->output->outputDebug("        Error when getting number of nodes.");
         return 0;
