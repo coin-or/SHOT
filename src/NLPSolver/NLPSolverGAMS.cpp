@@ -35,6 +35,11 @@ NLPSolverGAMS::NLPSolverGAMS(EnvironmentPtr envPtr, gmoHandle_t modelingObject, 
     timelimit = env->settings->getSetting<double>("FixedInteger.TimeLimit", "Primal");
     iterlimit = env->settings->getSetting<int>("FixedInteger.IterationLimit", "Primal");
 
+    // by default we want the fast solvelink=5; but if SHOT is build with Ipopt (and is not build by GAMS for GAMS),
+    // then there can be conflicts between the Ipopt library linked to SHOT and the one in GAMS;
+    // so in that case we switch to solvelink=2
+    solvelink = gevSolveLinkLoadLibrary;
+
     if(nlpsolver == "auto")
     {
         assert(auditLicensing != nullptr);
@@ -70,6 +75,9 @@ NLPSolverGAMS::NLPSolverGAMS(EnvironmentPtr envPtr, gmoHandle_t modelingObject, 
                                      "IPOPTH as GAMS NLP solver.");
             nlpsolver = "ipopth";
             selectedNLPSolver = "IPOPTH (automatically selected)";
+#if !defined(GAMS_BUILD) && defined(HAS_IPOPT)
+            solvelink = gevSolveLinkCallModule;
+#endif
         }
         else
         {
@@ -77,12 +85,20 @@ NLPSolverGAMS::NLPSolverGAMS(EnvironmentPtr envPtr, gmoHandle_t modelingObject, 
                 "        CONOPT, KNITRO, SNOPT, MINOS, and IPOPTH not licensed. Using IPOPT as GAMS NLP solver.");
             nlpsolver = "ipopt";
             selectedNLPSolver = "IPOPT (automatically selected)";
+#if !defined(GAMS_BUILD) && defined(HAS_IPOPT)
+            solvelink = gevSolveLinkCallModule;
+#endif
         }
     }
     else
     {
         selectedNLPSolver = nlpsolver;
         std::transform(selectedNLPSolver.begin(), selectedNLPSolver.end(), selectedNLPSolver.begin(), ::toupper);
+
+#if !defined(GAMS_BUILD) && defined(HAS_IPOPT)
+        if( selectedNLPSolver.compare(0, 5, "IPOPT", 5) == 0 )
+            solvelink = gevSolveLinkCallModule;
+#endif
     }
 
     showlog = env->settings->getSetting<bool>("Console.PrimalSolver.Show", "Output");
@@ -205,7 +221,7 @@ E_NLPSolutionStatus NLPSolverGAMS::solveProblemInstance()
     if(showlog)
         gevSwitchLogStat(modelingEnvironment, 3, nullptr, 0, nullptr, 0, gevwritecallback, &cbdata, &cbdata.orighandle);
 
-    if(gevCallSolver(modelingEnvironment, modelingObject, "", nlpsolver.c_str(), gevSolveLinkLoadLibrary,
+    if(gevCallSolver(modelingEnvironment, modelingObject, "", nlpsolver.c_str(), solvelink,
            showlog ? gevSolverSameStreams : gevSolverQuiet, nullptr, nullptr, timelimit, iterlimit, 0, 0.0, 0.0,
            nullptr, msg)
         != 0)

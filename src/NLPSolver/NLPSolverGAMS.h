@@ -28,6 +28,7 @@ private:
     double timelimit;
     int iterlimit;
     bool showlog;
+    int solvelink;
 
 public:
     NLPSolverGAMS(EnvironmentPtr envPtr, gmoHandle_t modelingObject, palHandle_t auditLicensing);
