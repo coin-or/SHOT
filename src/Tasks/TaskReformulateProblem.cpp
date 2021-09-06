@@ -2837,8 +2837,8 @@ void TaskReformulateProblem::reformulateSquareTerm(
             auxConstraintCounter, "s_sq_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, 0.0);
         auxConstraintCounter++;
 
-        auxConstraint->add(std::make_shared<LinearTerm>(-1.0, auxVariable));
-        auxConstraint->add(std::make_shared<QuadraticTerm>(coefficient, variable, variable));
+        auxConstraint->add(std::make_shared<LinearTerm>(-1.0 / coefficient, auxVariable));
+        auxConstraint->add(std::make_shared<QuadraticTerm>(1.0, variable, variable));
 
         reformulatedProblem->add(std::move(auxConstraint));
     }
@@ -2848,8 +2848,8 @@ void TaskReformulateProblem::reformulateSquareTerm(
             auxConstraintCounter, "s_sq_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, 0.0);
         auxConstraintCounter++;
 
-        auxConstraint->add(std::make_shared<LinearTerm>(-1.0, auxVariable));
-        auxConstraint->add(std::make_shared<QuadraticTerm>(coefficient, variable, variable));
+        auxConstraint->add(std::make_shared<LinearTerm>(-1.0 / coefficient, auxVariable));
+        auxConstraint->add(std::make_shared<QuadraticTerm>(1.0, variable, variable));
 
         reformulatedProblem->add(std::move(auxConstraint));
     }
