@@ -867,9 +867,9 @@ public:
         if(isInteger && isEven && power > 0 && bound.l() <= 0.0)
             bound.l(0.0);
         else if(!isInteger && bound.l() <= 0.0)
-            bound.l(SHOT_DBL_EPS);
+            bound.l(SHOT_DBL_SIG_MIN);
         else if(power < 0.0 && bound.l() <= 0.0)
-            bound.l(SHOT_DBL_EPS);
+            bound.l(SHOT_DBL_SIG_MIN);
         else if(bound.l() <= 0)
             bound.l(0.0);
 
