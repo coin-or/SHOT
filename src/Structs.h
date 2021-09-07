@@ -55,6 +55,7 @@ const double SHOT_DBL_MIN = std::numeric_limits<double>::lowest();
 const double SHOT_DBL_MAX = std::numeric_limits<double>::max();
 const double SHOT_DBL_INF = std::numeric_limits<double>::infinity();
 const double SHOT_DBL_EPS = std::numeric_limits<double>::epsilon();
+const double SHOT_DBL_SIG_MIN = 0.00001; // Minimal value for base in power function if power is noninteger
 const int SHOT_INT_MAX = std::numeric_limits<int>::max();
 const long SHOT_LONG_MAX = std::numeric_limits<long>::max();
 
