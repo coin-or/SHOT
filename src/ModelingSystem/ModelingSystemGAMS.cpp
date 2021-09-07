@@ -1002,8 +1002,17 @@ bool ModelingSystemGAMS::copyObjectiveFunction(ProblemPtr destination)
             try
             {
                 VariablePtr variable = destination->getVariable(variableIndexes[i]);
-                (std::static_pointer_cast<LinearObjectiveFunction>(objectiveFunction))
-                    ->add(std::make_shared<LinearTerm>(coefficients[i], variable));
+
+                if(variable->lowerBound == variable->upperBound)
+                {
+                    (std::static_pointer_cast<LinearObjectiveFunction>(objectiveFunction))->constant
+                        += variable->lowerBound * coefficients[i];
+                }
+                else
+                {
+                    (std::static_pointer_cast<LinearObjectiveFunction>(objectiveFunction))
+                        ->add(std::make_shared<LinearTerm>(coefficients[i], variable));
+                }
             }
             catch(const VariableNotFoundException&)
             {
@@ -1132,8 +1141,12 @@ bool ModelingSystemGAMS::copyLinearTerms(ProblemPtr destination)
 
             for(int j = 0; j < rownz; j++)
             {
-                constraint->add(
-                    std::make_shared<LinearTerm>(linearCoefficients[j], destination->getVariable(variableIndexes[j])));
+                auto variable = destination->getVariable(variableIndexes[j]);
+
+                if(variable->lowerBound == variable->upperBound)
+                    constraint->constant += variable->lowerBound * linearCoefficients[j];
+                else
+                    constraint->add(std::make_shared<LinearTerm>(linearCoefficients[j], variable));
             }
         }
         catch(const VariableNotFoundException&)
@@ -1194,8 +1207,31 @@ bool ModelingSystemGAMS::copyQuadraticTerms(ProblemPtr destination)
                 VariablePtr firstVariable = destination->getVariable(variableOneIndexes[j]);
                 VariablePtr secondVariable = destination->getVariable(variableTwoIndexes[j]);
 
-                (std::static_pointer_cast<QuadraticObjectiveFunction>(destination->objectiveFunction))
-                    ->add(std::make_shared<QuadraticTerm>(quadraticCoefficients[j], firstVariable, secondVariable));
+                bool firstVariableFixed = firstVariable->lowerBound == firstVariable->upperBound;
+                bool secondVariableFixed = secondVariable->lowerBound == secondVariable->upperBound;
+
+                if(firstVariableFixed && secondVariableFixed)
+                {
+                    destination->objectiveFunction->constant
+                        += quadraticCoefficients[j] * firstVariable->lowerBound * secondVariable->lowerBound;
+                }
+                else if(firstVariableFixed)
+                {
+                    (std::static_pointer_cast<LinearObjectiveFunction>(destination->objectiveFunction))
+                        ->add(std::make_shared<LinearTerm>(
+                            quadraticCoefficients[j] * firstVariable->lowerBound, secondVariable));
+                }
+                else if(secondVariableFixed)
+                {
+                    (std::static_pointer_cast<LinearObjectiveFunction>(destination->objectiveFunction))
+                        ->add(std::make_shared<LinearTerm>(
+                            quadraticCoefficients[j] * secondVariable->lowerBound, firstVariable));
+                }
+                else
+                {
+                    (std::static_pointer_cast<QuadraticObjectiveFunction>(destination->objectiveFunction))
+                        ->add(std::make_shared<QuadraticTerm>(quadraticCoefficients[j], firstVariable, secondVariable));
+                }
             }
             catch(const VariableNotFoundException&)
             {
@@ -1243,9 +1279,32 @@ bool ModelingSystemGAMS::copyQuadraticTerms(ProblemPtr destination)
                     VariablePtr firstVariable = destination->getVariable(variableOneIndexes[j]);
                     VariablePtr secondVariable = destination->getVariable(variableTwoIndexes[j]);
 
-                    auto constraint = std::static_pointer_cast<QuadraticConstraint>(destination->getConstraint(i));
-                    constraint->add(
-                        std::make_shared<QuadraticTerm>(quadraticCoefficients[j], firstVariable, secondVariable));
+                    bool firstVariableFixed = firstVariable->lowerBound == firstVariable->upperBound;
+                    bool secondVariableFixed = secondVariable->lowerBound == secondVariable->upperBound;
+
+                    if(firstVariableFixed && secondVariableFixed)
+                    {
+                        (std::static_pointer_cast<LinearConstraint>(destination->getConstraint(i)))->constant
+                            += quadraticCoefficients[j] * firstVariable->lowerBound * secondVariable->lowerBound;
+                    }
+                    else if(firstVariableFixed)
+                    {
+                        (std::static_pointer_cast<LinearConstraint>(destination->getConstraint(i)))
+                            ->add(std::make_shared<LinearTerm>(
+                                quadraticCoefficients[j] * firstVariable->lowerBound, secondVariable));
+                    }
+                    else if(secondVariableFixed)
+                    {
+                        (std::static_pointer_cast<LinearConstraint>(destination->getConstraint(i)))
+                            ->add(std::make_shared<LinearTerm>(
+                                quadraticCoefficients[j] * secondVariable->lowerBound, firstVariable));
+                    }
+                    else
+                    {
+                        (std::static_pointer_cast<QuadraticConstraint>(destination->getConstraint(i)))
+                            ->add(std::make_shared<QuadraticTerm>(
+                                quadraticCoefficients[j], firstVariable, secondVariable));
+                    }
                 }
                 catch(const VariableNotFoundException&)
                 {
@@ -1467,10 +1526,24 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
         case nlAddV: // add variable
         {
             address = gmoGetjSolver(modelingObject, address);
-            auto expression = std::make_shared<ExpressionSum>(
-                std::make_shared<ExpressionVariable>(destination->getVariable(address)), stack.rbegin()[0]);
-            stack.pop_back();
-            stack.push_back(expression);
+
+            auto variable = destination->getVariable(address);
+
+            if(variable->lowerBound == variable->upperBound)
+            {
+                auto expression = std::make_shared<ExpressionSum>(
+                    std::make_shared<ExpressionConstant>(variable->lowerBound), stack.rbegin()[0]);
+                stack.pop_back();
+                stack.push_back(expression);
+            }
+            else
+            {
+                auto expression = std::make_shared<ExpressionSum>(
+                    std::make_shared<ExpressionVariable>(variable), stack.rbegin()[0]);
+                stack.pop_back();
+                stack.push_back(expression);
+            }
+
             break;
         }
 
@@ -1496,11 +1569,24 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
         case nlSubV: // subtract variable
         {
             address = gmoGetjSolver(modelingObject, address);
-            auto expression = std::make_shared<ExpressionSum>(stack.rbegin()[0],
-                std::make_shared<ExpressionNegate>(
-                    std::make_shared<ExpressionVariable>(destination->getVariable(address))));
-            stack.pop_back();
-            stack.push_back(expression);
+
+            auto variable = destination->getVariable(address);
+
+            if(variable->lowerBound == variable->upperBound)
+            {
+                auto expression = std::make_shared<ExpressionSum>(
+                    stack.rbegin()[0], std::make_shared<ExpressionConstant>(-variable->lowerBound));
+                stack.pop_back();
+                stack.push_back(expression);
+            }
+            else
+            {
+                auto expression = std::make_shared<ExpressionSum>(stack.rbegin()[0],
+                    std::make_shared<ExpressionNegate>(std::make_shared<ExpressionVariable>(variable)));
+                stack.pop_back();
+                stack.push_back(expression);
+            }
+
             break;
         }
 
@@ -1525,10 +1611,24 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
         case nlMulV: // multiply variable
         {
             address = gmoGetjSolver(modelingObject, address);
-            auto expression = std::make_shared<ExpressionProduct>(
-                std::make_shared<ExpressionVariable>(destination->getVariable(address)), stack.rbegin()[0]);
-            stack.pop_back();
-            stack.push_back(expression);
+
+            auto variable = destination->getVariable(address);
+
+            if(variable->lowerBound == variable->upperBound)
+            {
+                auto expression = std::make_shared<ExpressionProduct>(
+                    std::make_shared<ExpressionConstant>(variable->lowerBound), stack.rbegin()[0]);
+                stack.pop_back();
+                stack.push_back(expression);
+            }
+            else
+            {
+                auto expression = std::make_shared<ExpressionProduct>(
+                    std::make_shared<ExpressionVariable>(destination->getVariable(address)), stack.rbegin()[0]);
+                stack.pop_back();
+                stack.push_back(expression);
+            }
+
             break;
         }
 
@@ -1566,10 +1666,24 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
         case nlDivV: // divide variable
         {
             address = gmoGetjSolver(modelingObject, address);
-            auto expression = std::make_shared<ExpressionDivide>(
-                stack.rbegin()[0], std::make_shared<ExpressionVariable>(destination->getVariable(address)));
-            stack.pop_back();
-            stack.push_back(expression);
+
+            auto variable = destination->getVariable(address);
+
+            if(variable->lowerBound == variable->upperBound)
+            {
+                auto expression = std::make_shared<ExpressionDivide>(
+                    stack.rbegin()[0], std::make_shared<ExpressionConstant>(variable->lowerBound));
+                stack.pop_back();
+                stack.push_back(expression);
+            }
+            else
+            {
+                auto expression = std::make_shared<ExpressionDivide>(
+                    stack.rbegin()[0], std::make_shared<ExpressionVariable>(destination->getVariable(address)));
+                stack.pop_back();
+                stack.push_back(expression);
+            }
+
             break;
         }
 
@@ -1593,8 +1707,19 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
         case nlUMinV: // unary minus variable
         {
             address = gmoGetjSolver(modelingObject, address);
-            stack.push_back(std::make_shared<ExpressionNegate>(
-                std::make_shared<ExpressionVariable>(destination->getVariable(address))));
+
+            auto variable = destination->getVariable(address);
+
+            if(variable->lowerBound == variable->upperBound)
+            {
+                stack.push_back(std::make_shared<ExpressionConstant>(-variable->lowerBound));
+            }
+            else
+            {
+                stack.push_back(std::make_shared<ExpressionNegate>(
+                    std::make_shared<ExpressionVariable>(destination->getVariable(address))));
+            }
+
             break;
         }
 
