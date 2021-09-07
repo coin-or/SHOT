@@ -110,7 +110,46 @@ void TaskPerformBoundTightening::run()
             performBoundTightening = false;
 
         if(performBoundTightening)
+        {
+            auto objectiveBoundsBefore
+                = sourceProblem->objectiveFunction->getBounds(); // To update implicit variable bounds
+
             sourceProblem->doFBBT();
+
+            auto objectiveBoundsAfter
+                = sourceProblem->objectiveFunction->getBounds(); // To get objecive variable bounds
+            env->output->outputInfo(fmt::format(
+                "  - Objective bounds are: [{:g}, {:g}]", objectiveBoundsAfter.l(), objectiveBoundsAfter.u()));
+
+            if(sourceProblem->objectiveFunction->properties.isMinimize)
+            {
+                if(objectiveBoundsAfter.l() > -SHOT_DBL_INF) // Update dual bound
+                {
+                    DualSolution sol = { {}, E_DualSolutionSource::MIPSolverBound, objectiveBoundsAfter.l(), 0, false };
+                    env->dualSolver->addDualSolutionCandidate(sol);
+                }
+
+                if(objectiveBoundsAfter.u() < SHOT_DBL_INF) // Update MIP cutoff
+                {
+                    env->settings->updateSetting("MIP.CutOff.InitialValue", "Dual", objectiveBoundsAfter.u());
+                    env->settings->updateSetting("MIP.CutOff.UseInitialValue", "Dual", true);
+                }
+            }
+            else if(sourceProblem->objectiveFunction->properties.isMaximize)
+            {
+                if(objectiveBoundsAfter.u() < SHOT_DBL_INF) // Update dual bound
+                {
+                    DualSolution sol = { {}, E_DualSolutionSource::MIPSolverBound, objectiveBoundsAfter.u(), 0, false };
+                    env->dualSolver->addDualSolutionCandidate(sol);
+                }
+
+                if(objectiveBoundsAfter.l() > -SHOT_DBL_INF) // Update MIP cutoff
+                {
+                    env->settings->updateSetting("MIP.CutOff.InitialValue", "Dual", objectiveBoundsAfter.l());
+                    env->settings->updateSetting("MIP.CutOff.UseInitialValue", "Dual", true);
+                }
+            }
+        }
     }
 
     env->timing->stopTimer("BoundTightening");
