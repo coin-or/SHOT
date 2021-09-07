@@ -374,9 +374,36 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
 
                     for(auto& QT : std::dynamic_pointer_cast<QuadraticConstraint>(epigraphConstraint)->quadraticTerms)
                     {
-                        std::dynamic_pointer_cast<QuadraticObjectiveFunction>(destinationObjective)
-                            ->add(std::make_shared<QuadraticTerm>(
-                                epigraphFactor * QT->coefficient, QT->firstVariable, QT->secondVariable));
+                        VariablePtr firstVariable = QT->firstVariable;
+                        VariablePtr secondVariable = QT->secondVariable;
+
+                        bool firstVariableFixed = firstVariable->lowerBound == firstVariable->upperBound;
+                        bool secondVariableFixed = secondVariable->lowerBound == secondVariable->upperBound;
+
+                        if(firstVariableFixed && secondVariableFixed)
+                        {
+                            (std::static_pointer_cast<LinearObjectiveFunction>(destinationObjective))->constant
+                                += epigraphFactor * QT->coefficient * firstVariable->lowerBound
+                                * secondVariable->lowerBound;
+                        }
+                        else if(firstVariableFixed)
+                        {
+                            (std::static_pointer_cast<LinearObjectiveFunction>(destinationObjective))
+                                ->add(std::make_shared<LinearTerm>(
+                                    epigraphFactor * QT->coefficient * firstVariable->lowerBound, secondVariable));
+                        }
+                        else if(secondVariableFixed)
+                        {
+                            (std::static_pointer_cast<LinearObjectiveFunction>(destinationObjective))
+                                ->add(std::make_shared<LinearTerm>(
+                                    epigraphFactor * QT->coefficient * secondVariable->lowerBound, firstVariable));
+                        }
+                        else
+                        {
+                            std::dynamic_pointer_cast<QuadraticObjectiveFunction>(destinationObjective)
+                                ->add(std::make_shared<QuadraticTerm>(
+                                    epigraphFactor * QT->coefficient, firstVariable, secondVariable));
+                        }
                     }
 
                     if(std::dynamic_pointer_cast<NonlinearConstraint>(epigraphConstraint))
@@ -384,25 +411,35 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
                         for(auto& MT :
                             std::dynamic_pointer_cast<NonlinearConstraint>(epigraphConstraint)->monomialTerms)
                         {
+                            double coefficient = MT->coefficient;
                             Variables variables;
 
                             for(auto& V : MT->variables)
-                                variables.push_back(V);
+                            {
+                                if(V->lowerBound == V->upperBound)
+                                    coefficient *= V->lowerBound;
+                                else
+                                    variables.push_back(V);
+                            }
 
                             std::dynamic_pointer_cast<NonlinearObjectiveFunction>(destinationObjective)
-                                ->add(std::make_shared<MonomialTerm>(epigraphFactor * MT->coefficient, variables));
+                                ->add(std::make_shared<MonomialTerm>(epigraphFactor * coefficient, variables));
                         }
 
                         for(auto& ST :
                             std::dynamic_pointer_cast<NonlinearConstraint>(epigraphConstraint)->signomialTerms)
                         {
+                            double coefficient = ST->coefficient;
                             SignomialElements elements;
 
                             for(auto& E : ST->elements)
-                                elements.push_back(std::make_shared<SignomialElement>(E->variable, E->power));
+                                if(E->variable->lowerBound == E->variable->upperBound)
+                                    coefficient *= std::pow(E->variable->lowerBound, E->power);
+                                else
+                                    elements.push_back(std::make_shared<SignomialElement>(E->variable, E->power));
 
                             std::dynamic_pointer_cast<NonlinearObjectiveFunction>(destinationObjective)
-                                ->add(std::make_shared<SignomialTerm>(epigraphFactor * ST->coefficient, elements));
+                                ->add(std::make_shared<SignomialTerm>(epigraphFactor * coefficient, elements));
                         }
 
                         if(std::dynamic_pointer_cast<NonlinearConstraint>(epigraphConstraint)->nonlinearExpression)
@@ -421,8 +458,16 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
                     {
                         if(auto variable = LT->variable; variable != epigraphConstraintTerm->variable)
                         {
-                            std::dynamic_pointer_cast<LinearObjectiveFunction>(destinationObjective)
-                                ->add(std::make_shared<LinearTerm>(epigraphFactor * LT->coefficient, variable));
+                            if(variable->lowerBound == variable->upperBound)
+                            {
+                                std::dynamic_pointer_cast<LinearObjectiveFunction>(destinationObjective)->constant
+                                    += epigraphFactor * LT->coefficient * variable->lowerBound;
+                            }
+                            else
+                            {
+                                std::dynamic_pointer_cast<LinearObjectiveFunction>(destinationObjective)
+                                    ->add(std::make_shared<LinearTerm>(epigraphFactor * LT->coefficient, variable));
+                            }
                         }
                     }
 
@@ -876,8 +921,7 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
         auto sourceConstraint = std::dynamic_pointer_cast<LinearConstraint>(C);
 
         copyLinearTermsToConstraint(sourceConstraint->linearTerms, constraint);
-
-        constraint->constant = constant;
+        constraint->constant += constant;
 
         return (NumericConstraints({ constraint }));
     }
@@ -904,7 +948,7 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
         copyLinearTermsToConstraint(sourceConstraint->linearTerms, constraint);
         copyQuadraticTermsToConstraint(sourceConstraint->quadraticTerms, constraint);
 
-        constraint->constant = constant;
+        constraint->constant += constant;
 
         return (NumericConstraints({ constraint }));
     }
@@ -1312,7 +1356,7 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
         constraint->ownerProblem = reformulatedProblem;
     }
 
-    constraint->constant = constant;
+    constraint->constant += constant;
 
     if(destinationLinearTerms.size() > 0)
         std::dynamic_pointer_cast<LinearConstraint>(constraint)->add(destinationLinearTerms);
@@ -1976,8 +2020,16 @@ void TaskReformulateProblem::copyLinearTermsToConstraint(LinearTerms terms, T de
     {
         auto variable = reformulatedProblem->getVariable(LT->variable->index);
 
-        std::dynamic_pointer_cast<LinearConstraint>(destination)
-            ->add(std::make_shared<LinearTerm>(signCoefficient * LT->coefficient, variable));
+        if(variable->lowerBound == variable->upperBound)
+        {
+            std::dynamic_pointer_cast<LinearConstraint>(destination)->constant
+                += signCoefficient * LT->coefficient * variable->lowerBound;
+        }
+        else
+        {
+            std::dynamic_pointer_cast<LinearConstraint>(destination)
+                ->add(std::make_shared<LinearTerm>(signCoefficient * LT->coefficient, variable));
+        }
     }
 }
 
@@ -1988,11 +2040,35 @@ void TaskReformulateProblem::copyQuadraticTermsToConstraint(QuadraticTerms terms
 
     for(auto& QT : terms)
     {
-        auto firstVariable = reformulatedProblem->getVariable(QT->firstVariable->index);
-        auto secondVariable = reformulatedProblem->getVariable(QT->secondVariable->index);
+        VariablePtr firstVariable = reformulatedProblem->getVariable(QT->firstVariable->index);
+        VariablePtr secondVariable = reformulatedProblem->getVariable(QT->secondVariable->index);
 
-        std::dynamic_pointer_cast<QuadraticConstraint>(destination)
-            ->add(std::make_shared<QuadraticTerm>(signCoefficient * QT->coefficient, firstVariable, secondVariable));
+        bool firstVariableFixed = firstVariable->lowerBound == firstVariable->upperBound;
+        bool secondVariableFixed = secondVariable->lowerBound == secondVariable->upperBound;
+
+        if(firstVariableFixed && secondVariableFixed)
+        {
+            (std::static_pointer_cast<LinearConstraint>(destination))->constant
+                += signCoefficient * QT->coefficient * firstVariable->lowerBound * secondVariable->lowerBound;
+        }
+        else if(firstVariableFixed)
+        {
+            (std::static_pointer_cast<LinearConstraint>(destination))
+                ->add(std::make_shared<LinearTerm>(
+                    signCoefficient * QT->coefficient * firstVariable->lowerBound, secondVariable));
+        }
+        else if(secondVariableFixed)
+        {
+            (std::static_pointer_cast<LinearConstraint>(destination))
+                ->add(std::make_shared<LinearTerm>(
+                    signCoefficient * QT->coefficient * secondVariable->lowerBound, firstVariable));
+        }
+        else
+        {
+            std::dynamic_pointer_cast<QuadraticConstraint>(destination)
+                ->add(
+                    std::make_shared<QuadraticTerm>(signCoefficient * QT->coefficient, firstVariable, secondVariable));
+        }
     }
 }
 
@@ -2003,13 +2079,19 @@ void TaskReformulateProblem::copyMonomialTermsToConstraint(MonomialTerms terms, 
 
     for(auto& MT : terms)
     {
+        double coefficient = MT->coefficient;
         Variables variables;
 
         for(auto& V : MT->variables)
-            variables.push_back(reformulatedProblem->getVariable(V->index));
+        {
+            if(V->lowerBound == V->upperBound)
+                coefficient *= V->lowerBound;
+            else
+                variables.push_back(reformulatedProblem->getVariable(V->index));
+        }
 
-        std::dynamic_pointer_cast<NonlinearConstraint>(destination)
-            ->add(std::make_shared<MonomialTerm>(signCoefficient * MT->coefficient, variables));
+        std::dynamic_pointer_cast<NonlinearObjectiveFunction>(destination)
+            ->add(std::make_shared<MonomialTerm>(signCoefficient * coefficient, variables));
     }
 }
 
@@ -2020,14 +2102,18 @@ void TaskReformulateProblem::copySignomialTermsToConstraint(SignomialTerms terms
 
     for(auto& ST : terms)
     {
+        double coefficient = ST->coefficient;
         SignomialElements elements;
 
         for(auto& E : ST->elements)
-            elements.push_back(
-                std::make_shared<SignomialElement>(reformulatedProblem->getVariable(E->variable->index), E->power));
+            if(E->variable->lowerBound == E->variable->upperBound)
+                coefficient *= std::pow(E->variable->lowerBound, E->power);
+            else
+                elements.push_back(
+                    std::make_shared<SignomialElement>(reformulatedProblem->getVariable(E->variable->index), E->power));
 
         std::dynamic_pointer_cast<NonlinearConstraint>(destination)
-            ->add(std::make_shared<SignomialTerm>(signCoefficient * ST->coefficient, elements));
+            ->add(std::make_shared<SignomialTerm>(signCoefficient * coefficient, elements));
     }
 }
 
@@ -2040,8 +2126,16 @@ void TaskReformulateProblem::copyLinearTermsToObjectiveFunction(LinearTerms term
     {
         auto variable = reformulatedProblem->getVariable(LT->variable->index);
 
-        std::dynamic_pointer_cast<LinearObjectiveFunction>(destination)
-            ->add(std::make_shared<LinearTerm>(signCoefficient * LT->coefficient, variable));
+        if(variable->lowerBound == variable->upperBound)
+        {
+            std::dynamic_pointer_cast<LinearObjectiveFunction>(destination)->constant
+                += signCoefficient * LT->coefficient * variable->lowerBound;
+        }
+        else
+        {
+            std::dynamic_pointer_cast<LinearObjectiveFunction>(destination)
+                ->add(std::make_shared<LinearTerm>(signCoefficient * LT->coefficient, variable));
+        }
     }
 }
 
@@ -2053,11 +2147,35 @@ void TaskReformulateProblem::copyQuadraticTermsToObjectiveFunction(
 
     for(auto& QT : terms)
     {
-        auto firstVariable = reformulatedProblem->getVariable(QT->firstVariable->index);
-        auto secondVariable = reformulatedProblem->getVariable(QT->secondVariable->index);
+        VariablePtr firstVariable = reformulatedProblem->getVariable(QT->firstVariable->index);
+        VariablePtr secondVariable = reformulatedProblem->getVariable(QT->secondVariable->index);
 
-        std::dynamic_pointer_cast<QuadraticObjectiveFunction>(destination)
-            ->add(std::make_shared<QuadraticTerm>(signCoefficient * QT->coefficient, firstVariable, secondVariable));
+        bool firstVariableFixed = firstVariable->lowerBound == firstVariable->upperBound;
+        bool secondVariableFixed = secondVariable->lowerBound == secondVariable->upperBound;
+
+        if(firstVariableFixed && secondVariableFixed)
+        {
+            (std::static_pointer_cast<LinearObjectiveFunction>(destination))->constant
+                += signCoefficient * QT->coefficient * firstVariable->lowerBound * secondVariable->lowerBound;
+        }
+        else if(firstVariableFixed)
+        {
+            (std::static_pointer_cast<LinearObjectiveFunction>(destination))
+                ->add(std::make_shared<LinearTerm>(
+                    signCoefficient * QT->coefficient * firstVariable->lowerBound, secondVariable));
+        }
+        else if(secondVariableFixed)
+        {
+            (std::static_pointer_cast<LinearObjectiveFunction>(destination))
+                ->add(std::make_shared<LinearTerm>(
+                    signCoefficient * QT->coefficient * secondVariable->lowerBound, firstVariable));
+        }
+        else
+        {
+            std::dynamic_pointer_cast<QuadraticObjectiveFunction>(destination)
+                ->add(
+                    std::make_shared<QuadraticTerm>(signCoefficient * QT->coefficient, firstVariable, secondVariable));
+        }
     }
 }
 
@@ -2069,13 +2187,19 @@ void TaskReformulateProblem::copyMonomialTermsToObjectiveFunction(
 
     for(auto& MT : terms)
     {
+        double coefficient = MT->coefficient;
         Variables variables;
 
         for(auto& V : MT->variables)
-            variables.push_back(reformulatedProblem->getVariable(V->index));
+        {
+            if(V->lowerBound == V->upperBound)
+                coefficient *= V->lowerBound;
+            else
+                variables.push_back(reformulatedProblem->getVariable(V->index));
+        }
 
         std::dynamic_pointer_cast<NonlinearObjectiveFunction>(destination)
-            ->add(std::make_shared<MonomialTerm>(signCoefficient * MT->coefficient, variables));
+            ->add(std::make_shared<MonomialTerm>(signCoefficient * coefficient, variables));
     }
 }
 
@@ -2087,14 +2211,18 @@ void TaskReformulateProblem::copySignomialTermsToObjectiveFunction(
 
     for(auto& ST : terms)
     {
+        double coefficient = ST->coefficient;
         SignomialElements elements;
 
         for(auto& E : ST->elements)
-            elements.push_back(
-                std::make_shared<SignomialElement>(reformulatedProblem->getVariable(E->variable->index), E->power));
+            if(E->variable->lowerBound == E->variable->upperBound)
+                coefficient *= std::pow(E->variable->lowerBound, E->power);
+            else
+                elements.push_back(
+                    std::make_shared<SignomialElement>(reformulatedProblem->getVariable(E->variable->index), E->power));
 
         std::dynamic_pointer_cast<NonlinearObjectiveFunction>(destination)
-            ->add(std::make_shared<SignomialTerm>(signCoefficient * ST->coefficient, elements));
+            ->add(std::make_shared<SignomialTerm>(signCoefficient * coefficient, elements));
     }
 }
 
