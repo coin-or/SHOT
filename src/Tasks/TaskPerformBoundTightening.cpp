@@ -111,8 +111,27 @@ void TaskPerformBoundTightening::run()
 
         if(performBoundTightening)
         {
-            auto objectiveBoundsBefore
-                = sourceProblem->objectiveFunction->getBounds(); // To update implicit variable bounds
+            auto objectiveBoundsBefore = sourceProblem->objectiveFunction->getBounds();
+
+            // Updating implicit variable bounds from signomials and nonlinear expressions
+
+            auto infinteInterval = Interval(-SHOT_DBL_MAX, SHOT_DBL_MAX);
+
+            if(sourceProblem->objectiveFunction->properties.hasSignomialTerms)
+            {
+                for(auto& ST : std::dynamic_pointer_cast<NonlinearObjectiveFunction>(sourceProblem->objectiveFunction)
+                                   ->signomialTerms)
+                {
+                    for(auto& SE : ST->elements)
+                        SE->tightenBounds(infinteInterval);
+                }
+            }
+
+            if(sourceProblem->objectiveFunction->properties.hasNonlinearExpression)
+            {
+                std::dynamic_pointer_cast<NonlinearObjectiveFunction>(sourceProblem->objectiveFunction)
+                    ->nonlinearExpression->tightenBounds(infinteInterval);
+            }
 
             sourceProblem->doFBBT();
 
