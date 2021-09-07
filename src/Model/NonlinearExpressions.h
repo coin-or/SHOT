@@ -1836,9 +1836,9 @@ public:
             if(baseBounds.l() <= 0)
             {
                 if(!isInteger)
-                    baseBounds.l(SHOT_DBL_EPS);
+                    baseBounds.l(SHOT_DBL_SIG_MIN);
                 else if(isInteger && power < 0)
-                    baseBounds.l(SHOT_DBL_EPS);
+                    baseBounds.l(SHOT_DBL_SIG_MIN);
             }
 
             if(isInteger)
@@ -1855,14 +1855,14 @@ public:
         if(powerBounds.l() < 0)
         {
             if(baseBounds.l() <= 0)
-                baseBounds.l(SHOT_DBL_EPS);
+                baseBounds.l(SHOT_DBL_SIG_MIN);
         }
         else if(powerBounds.l() == 0.0)
         {
             if(baseBounds.l() < 0)
                 baseBounds.l(0.0);
             if(baseBounds.l() <= 0)
-                baseBounds.l(SHOT_DBL_EPS);
+                baseBounds.l(SHOT_DBL_SIG_MIN);
         }
 
         return (pow(baseBounds, powerBounds));
@@ -1883,7 +1883,7 @@ public:
         if(isInteger && isEven && power > 0 && bound.l() <= 0.0)
             bound.l(0.0);
         else if(bound.l() <= 0.0)
-            bound.l(SHOT_DBL_EPS);
+            bound.l(SHOT_DBL_SIG_MIN);
 
         Interval interval;
 
