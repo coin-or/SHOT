@@ -110,7 +110,7 @@ private:
     NonlinearExpressionPtr reformulateNonlinearExpression(std::shared_ptr<ExpressionProduct> source);
 
     std::pair<AuxiliaryVariablePtr, bool> getSquareAuxiliaryVariable(
-        VariablePtr firstVariable, E_AuxiliaryVariableType auxVariableType);
+        VariablePtr firstVariable, double coefficient, E_AuxiliaryVariableType auxVariableType);
 
     std::pair<AuxiliaryVariablePtr, bool> getBilinearAuxiliaryVariable(
         VariablePtr firstVariable, VariablePtr secondVariable);
@@ -120,7 +120,7 @@ private:
     void createSquareReformulations();
     void createBilinearReformulations();
 
-    void reformulateSquareTerm(VariablePtr variable, AuxiliaryVariablePtr auxVariable);
+    void reformulateSquareTerm(VariablePtr variable, AuxiliaryVariablePtr auxVariable, double coefficient = 1.0);
 
     void reformulateBinaryBilinearTerm(
         VariablePtr firstVariable, VariablePtr secondVariable, AuxiliaryVariablePtr auxVariable);
@@ -139,7 +139,7 @@ private:
 
     std::map<VariablePtr, Variables> integerAuxiliaryBinaryVariables;
 
-    std::map<VariablePtr, AuxiliaryVariablePtr> squareAuxVariables;
+    std::map<std::pair<VariablePtr, double>, AuxiliaryVariablePtr> squareAuxVariables;
 
     std::map<std::tuple<VariablePtr, VariablePtr>, AuxiliaryVariablePtr> bilinearAuxVariables;
 
