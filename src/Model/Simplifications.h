@@ -1830,25 +1830,112 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
         nonlinearExpression = nullptr;
     }
 
+    // Need to go through them again and chech if there are fixed variables that can be simplified
+    LinearTerms newLinearTerms;
+    QuadraticTerms newQuadraticTerms;
+    MonomialTerms newMonomialTerms;
+    SignomialTerms newSignomialTerms;
+    double newConstant = constant;
+
+    for(auto& LT : linearTerms)
+    {
+        if(LT->variable->lowerBound == LT->variable->upperBound)
+            newConstant += LT->coefficient * LT->variable->lowerBound;
+        else
+            newLinearTerms.add(LT);
+    }
+
+    for(auto& QT : quadraticTerms)
+    {
+        VariablePtr firstVariable = QT->firstVariable;
+        VariablePtr secondVariable = QT->secondVariable;
+
+        bool firstVariableFixed = firstVariable->lowerBound == firstVariable->upperBound;
+        bool secondVariableFixed = secondVariable->lowerBound == secondVariable->upperBound;
+
+        if(firstVariableFixed && secondVariableFixed)
+            newConstant += QT->coefficient * firstVariable->lowerBound * secondVariable->lowerBound;
+        else if(firstVariableFixed)
+            newLinearTerms.add(
+                std::make_shared<LinearTerm>(QT->coefficient * firstVariable->lowerBound, secondVariable));
+        else if(secondVariableFixed)
+            newLinearTerms.add(
+                std::make_shared<LinearTerm>(QT->coefficient * secondVariable->lowerBound, firstVariable));
+        else
+            newQuadraticTerms.add(QT);
+    }
+
+    for(auto& MT : monomialTerms)
+    {
+        double coefficient = MT->coefficient;
+        Variables variables;
+
+        for(auto& V : MT->variables)
+        {
+            if(V->lowerBound == V->upperBound)
+                coefficient *= V->lowerBound;
+            else
+                variables.push_back(V);
+        }
+
+        if(variables.size() == 0)
+            newConstant += coefficient;
+        else if(variables.size() == 1)
+            newLinearTerms.add(std::make_shared<LinearTerm>(coefficient, variables[0]));
+        else
+            newMonomialTerms.add(std::make_shared<MonomialTerm>(coefficient, variables));
+    }
+
+    for(auto& ST : signomialTerms)
+    {
+        double coefficient = ST->coefficient;
+        SignomialElements elements;
+
+        for(auto& E : ST->elements)
+            if(E->variable->lowerBound == E->variable->upperBound)
+                coefficient *= std::pow(E->variable->lowerBound, E->power);
+            else
+                elements.push_back(E);
+
+        if(elements.size() == 0)
+            newConstant += coefficient;
+        else if(elements.size() == 1)
+        {
+            if(elements[0]->power == 1.0)
+                newLinearTerms.add(std::make_shared<LinearTerm>(coefficient, elements[0]->variable));
+            else if(elements[0]->power == 2.0)
+                newQuadraticTerms.add(
+                    std::make_shared<QuadraticTerm>(coefficient, elements[0]->variable, elements[0]->variable));
+            else
+                newSignomialTerms.add(std::make_shared<SignomialTerm>(coefficient, elements));
+        }
+        else
+            newSignomialTerms.add(std::make_shared<SignomialTerm>(coefficient, elements));
+    }
+
+    if(nonlinearExpression != nullptr)
+        nonlinearExpression = simplify(nonlinearExpression);
+
     if(auto sharedOwnerProblem = expression->ownerProblem.lock())
     {
-        for(auto& T : linearTerms)
+        for(auto& T : newLinearTerms)
             T->takeOwnership(sharedOwnerProblem);
 
-        for(auto& T : quadraticTerms)
+        for(auto& T : newQuadraticTerms)
             T->takeOwnership(sharedOwnerProblem);
 
-        for(auto& T : monomialTerms)
+        for(auto& T : newMonomialTerms)
             T->takeOwnership(sharedOwnerProblem);
 
-        for(auto& T : signomialTerms)
+        for(auto& T : newSignomialTerms)
             T->takeOwnership(sharedOwnerProblem);
 
         if(nonlinearExpression)
             nonlinearExpression->takeOwnership(sharedOwnerProblem);
     }
 
-    return std::make_tuple(linearTerms, quadraticTerms, monomialTerms, signomialTerms, nonlinearExpression, constant);
+    return std::make_tuple(
+        newLinearTerms, newQuadraticTerms, newMonomialTerms, newSignomialTerms, nonlinearExpression, newConstant);
 }
 
 void simplifyNonlinearExpressions(

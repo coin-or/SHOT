@@ -363,25 +363,6 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
             double tmpObj = NLPSolver->getObjectiveValue();
             auto variableSolution = NLPSolver->getSolution();
 
-            if(env->settings->getSetting<bool>("FixedInteger.Frequency.Dynamic", "Primal"))
-            {
-                int iters = std::max(
-                    std::ceil(env->settings->getSetting<int>("FixedInteger.Frequency.Iteration", "Primal") * 0.98),
-                    originalNLPIter);
-
-                if(iters > std::max(0.1 * this->originalIterFrequency, 1.0))
-                    env->settings->updateSetting("FixedInteger.Frequency.Iteration", "Primal", iters);
-
-                double interval = std::max(
-                    0.9 * env->settings->getSetting<double>("FixedInteger.Frequency.Time", "Primal"), originalNLPTime);
-
-                if(interval > 0.1 * this->originalTimeFrequency)
-                    env->settings->updateSetting("FixedInteger.Frequency.Time", "Primal", interval);
-
-                env->output->outputDebug(fmt::format(
-                    "         Iteration frequency updated to {} and time frequency updated to {} ", iters, interval));
-            }
-
             env->primalSolver->addPrimalSolutionCandidate(
                 variableSolution, E_PrimalSolutionSource::NLPFixedIntegers, currIter->iterationNumber);
 
@@ -420,18 +401,25 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
             if(env->settings->getSetting<bool>("FixedInteger.CreateInfeasibilityCut", "Primal"))
                 createInfeasibilityCut(variableSolution);
         }
-        else if(sourceProblem->properties.numberOfNonlinearConstraints > 0)
+        else if(solvestatus == E_NLPSolutionStatus::Error || solvestatus == E_NLPSolutionStatus::Unbounded
+            || solvestatus == E_NLPSolutionStatus::Infeasible)
+        {
+            env->report->outputIterationDetail(env->solutionStatistics.numberOfProblemsFixedNLP, ("NLP" + sourceDesc),
+                env->timing->getElapsedTime("Total"), currIter->numHyperplanesAdded, currIter->totNumHyperplanes,
+                env->results->getCurrentDualBound(), env->results->getPrimalBound(),
+                env->results->getAbsoluteGlobalObjectiveGap(), env->results->getRelativeGlobalObjectiveGap(), NAN, -1,
+                NAN, E_IterationLineType::PrimalNLP);
+        }
+        else if(sourceProblem->properties.numberOfNonlinearConstraints > 0
+            || sourceProblem->properties.numberOfQuadraticConstraints > 0)
         {
             double tmpObj = NLPSolver->getObjectiveValue();
-
-            // Utilize the solution point for adding a cutting plane / supporting hyperplane
 
             auto variableSolution = NLPSolver->getSolution();
 
             if(variableSolution.size() > 0)
             {
-                auto mostDevConstr = sourceProblem->getMaxNumericConstraintValue(
-                    variableSolution, sourceProblem->nonlinearConstraints);
+                auto mostDevConstr = sourceProblem->getMostDeviatingNonlinearOrQuadraticConstraint(variableSolution);
 
                 if(env->settings->getSetting<bool>("FixedInteger.CreateInfeasibilityCut", "Primal"))
                     createInfeasibilityCut(variableSolution);
@@ -440,7 +428,7 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
                     ("NLP" + sourceDesc), env->timing->getElapsedTime("Total"), currIter->numHyperplanesAdded,
                     currIter->totNumHyperplanes, env->results->getCurrentDualBound(), env->results->getPrimalBound(),
                     env->results->getAbsoluteGlobalObjectiveGap(), env->results->getRelativeGlobalObjectiveGap(),
-                    tmpObj, mostDevConstr.constraint->index, mostDevConstr.normalizedValue,
+                    tmpObj, mostDevConstr->constraint->index, mostDevConstr->normalizedValue,
                     E_IterationLineType::PrimalNLP);
             }
             else
@@ -451,8 +439,44 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
                     env->results->getAbsoluteGlobalObjectiveGap(), env->results->getRelativeGlobalObjectiveGap(), NAN,
                     -1, NAN, E_IterationLineType::PrimalNLP);
             }
+        }
+        else
+        {
+            double tmpObj = NLPSolver->getObjectiveValue();
 
-            if(env->settings->getSetting<bool>("FixedInteger.Frequency.Dynamic", "Primal"))
+            auto variableSolution = NLPSolver->getSolution();
+
+            if(variableSolution.size() > 0)
+            {
+                env->report->outputIterationDetail(env->solutionStatistics.numberOfProblemsFixedNLP,
+                    ("NLP" + sourceDesc), env->timing->getElapsedTime("Total"), currIter->numHyperplanesAdded,
+                    currIter->totNumHyperplanes, env->results->getCurrentDualBound(), env->results->getPrimalBound(),
+                    env->results->getAbsoluteGlobalObjectiveGap(), env->results->getRelativeGlobalObjectiveGap(), NAN,
+                    -1, NAN, E_IterationLineType::PrimalNLP);
+            }
+        }
+
+        if(env->settings->getSetting<bool>("FixedInteger.Frequency.Dynamic", "Primal"))
+        {
+            if(solvestatus == E_NLPSolutionStatus::Optimal || solvestatus == E_NLPSolutionStatus::Feasible)
+            {
+                int iters = std::max(
+                    std::ceil(env->settings->getSetting<int>("FixedInteger.Frequency.Iteration", "Primal") * 0.98),
+                    originalNLPIter);
+
+                if(iters > std::max(0.1 * this->originalIterFrequency, 1.0))
+                    env->settings->updateSetting("FixedInteger.Frequency.Iteration", "Primal", iters);
+
+                double interval = std::max(
+                    0.9 * env->settings->getSetting<double>("FixedInteger.Frequency.Time", "Primal"), originalNLPTime);
+
+                if(interval > 0.1 * this->originalTimeFrequency)
+                    env->settings->updateSetting("FixedInteger.Frequency.Time", "Primal", interval);
+
+                env->output->outputDebug(fmt::format(
+                    "         Iteration frequency updated to {} and time frequency updated to {} ", iters, interval));
+            }
+            else
             {
                 int iters
                     = std::ceil(env->settings->getSetting<int>("FixedInteger.Frequency.Iteration", "Primal") * 1.02);
@@ -468,24 +492,6 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
                 env->output->outputDebug(fmt::format(
                     "         Iteration frequency updated to {} and time frequency updated to {} ", iters, interval));
             }
-
-            // Add integer cut.
-            if(env->settings->getSetting<bool>("HyperplaneCuts.UseIntegerCuts", "Dual")
-                && sourceProblem->properties.numberOfDiscreteVariables > 0)
-                createIntegerCut(CAND.point);
-        }
-        else
-        {
-            env->report->outputIterationDetail(env->solutionStatistics.numberOfProblemsFixedNLP, ("NLP" + sourceDesc),
-                env->timing->getElapsedTime("Total"), currIter->numHyperplanesAdded, currIter->totNumHyperplanes,
-                env->results->getCurrentDualBound(), env->results->getPrimalBound(),
-                env->results->getAbsoluteGlobalObjectiveGap(), env->results->getRelativeGlobalObjectiveGap(), NAN, -1,
-                NAN, E_IterationLineType::PrimalNLP);
-
-            // Add integer cut.
-            if(env->settings->getSetting<bool>("HyperplaneCuts.UseIntegerCuts", "Dual")
-                && sourceProblem->properties.numberOfDiscreteVariables > 0)
-                createIntegerCut(CAND.point);
         }
 
         env->solutionStatistics.numberOfIterationsWithoutNLPCallMIP = 0;

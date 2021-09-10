@@ -505,8 +505,12 @@ NonlinearExpressionPtr copyNonlinearExpression(NonlinearExpression* expression, 
         }
         else
         {
-            int variableIndex = ((ExpressionVariable*)expression)->variable->index;
-            return std::make_shared<ExpressionVariable>(destination->getVariable(variableIndex));
+            auto exprVariable = (ExpressionVariable*)(expression);
+
+            if(exprVariable->variable->lowerBound == exprVariable->variable->upperBound)
+                return std::make_shared<ExpressionConstant>(exprVariable->variable->lowerBound);
+            else
+                return std::make_shared<ExpressionVariable>(destination->getVariable(exprVariable->variable->index));
         }
     }
     default:

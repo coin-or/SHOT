@@ -1747,11 +1747,13 @@ void Problem::doFBBT()
     if(properties.isReformulated)
     {
         env->timing->startTimer("BoundTighteningFBBTReformulated");
+        env->output->outputInfo("");
         env->output->outputInfo(" Performing bound tightening on reformulated problem.");
     }
     else
     {
         env->timing->startTimer("BoundTighteningFBBTOriginal");
+        env->output->outputInfo("");
         env->output->outputInfo(" Performing bound tightening on original problem.");
     }
 

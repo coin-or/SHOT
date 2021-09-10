@@ -110,7 +110,65 @@ void TaskPerformBoundTightening::run()
             performBoundTightening = false;
 
         if(performBoundTightening)
+        {
+            auto objectiveBoundsBefore = sourceProblem->objectiveFunction->getBounds();
+
+            // Updating implicit variable bounds from signomials and nonlinear expressions
+
+            auto infinteInterval = Interval(-SHOT_DBL_MAX, SHOT_DBL_MAX);
+
+            if(sourceProblem->objectiveFunction->properties.hasSignomialTerms)
+            {
+                for(auto& ST : std::dynamic_pointer_cast<NonlinearObjectiveFunction>(sourceProblem->objectiveFunction)
+                                   ->signomialTerms)
+                {
+                    for(auto& SE : ST->elements)
+                        SE->tightenBounds(infinteInterval);
+                }
+            }
+
+            if(sourceProblem->objectiveFunction->properties.hasNonlinearExpression)
+            {
+                std::dynamic_pointer_cast<NonlinearObjectiveFunction>(sourceProblem->objectiveFunction)
+                    ->nonlinearExpression->tightenBounds(infinteInterval);
+            }
+
             sourceProblem->doFBBT();
+
+            auto objectiveBoundsAfter
+                = sourceProblem->objectiveFunction->getBounds(); // To get objecive variable bounds
+            env->output->outputInfo(fmt::format(
+                "  - Objective bounds are: [{:g}, {:g}]", objectiveBoundsAfter.l(), objectiveBoundsAfter.u()));
+
+            if(sourceProblem->objectiveFunction->properties.isMinimize)
+            {
+                if(objectiveBoundsAfter.l() > -SHOT_DBL_INF) // Update dual bound
+                {
+                    DualSolution sol = { {}, E_DualSolutionSource::MIPSolverBound, objectiveBoundsAfter.l(), 0, false };
+                    env->dualSolver->addDualSolutionCandidate(sol);
+                }
+
+                if(objectiveBoundsAfter.u() < SHOT_DBL_INF) // Update MIP cutoff
+                {
+                    env->settings->updateSetting("MIP.CutOff.InitialValue", "Dual", objectiveBoundsAfter.u());
+                    env->settings->updateSetting("MIP.CutOff.UseInitialValue", "Dual", true);
+                }
+            }
+            else if(sourceProblem->objectiveFunction->properties.isMaximize)
+            {
+                if(objectiveBoundsAfter.u() < SHOT_DBL_INF) // Update dual bound
+                {
+                    DualSolution sol = { {}, E_DualSolutionSource::MIPSolverBound, objectiveBoundsAfter.u(), 0, false };
+                    env->dualSolver->addDualSolutionCandidate(sol);
+                }
+
+                if(objectiveBoundsAfter.l() > -SHOT_DBL_INF) // Update MIP cutoff
+                {
+                    env->settings->updateSetting("MIP.CutOff.InitialValue", "Dual", objectiveBoundsAfter.l());
+                    env->settings->updateSetting("MIP.CutOff.UseInitialValue", "Dual", true);
+                }
+            }
+        }
     }
 
     env->timing->stopTimer("BoundTightening");

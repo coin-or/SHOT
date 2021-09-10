@@ -1629,6 +1629,8 @@ bool MIPSolverCplex::createIntegerCut(IntegerCut& integerCut)
 
                 auto v = IloNumVar(cplexEnv, 0, 1, ILOBOOL,
                     fmt::format("vIC{}_{}", env->solutionStatistics.numberOfIntegerCuts, index).c_str());
+                cplexVars.add(v);
+                cplexModel.add(v);
 
                 expr += 1.0 * w;
 

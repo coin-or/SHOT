@@ -225,7 +225,12 @@ public:
 
     NonlinearExpressionPtr OnVariableRef(int variableIndex)
     {
-        return std::make_shared<ExpressionVariable>(destination->getVariable(variableIndex));
+        auto variable = destination->getVariable(variableIndex);
+
+        if(variable->lowerBound == variable->upperBound)
+            return std::make_shared<ExpressionConstant>(variable->lowerBound);
+
+        return std::make_shared<ExpressionVariable>(variable);
     }
 
     NonlinearExpressionPtr OnUnary(mp::expr::Kind kind, NonlinearExpressionPtr child)
@@ -543,12 +548,27 @@ public:
             if(coefficient == 0.0)
                 return;
 
-            if(inObjectiveFunction)
-                std::dynamic_pointer_cast<LinearObjectiveFunction>(destination->objectiveFunction)
-                    ->add(std::make_shared<LinearTerm>(coefficient, destination->getVariable(variableIndex)));
+            auto variable = destination->getVariable(variableIndex);
+
+            if(variable->lowerBound == variable->upperBound)
+            {
+                if(inObjectiveFunction)
+                    std::dynamic_pointer_cast<LinearObjectiveFunction>(destination->objectiveFunction)->constant
+                        += coefficient * variable->lowerBound;
+                else
+                    std::dynamic_pointer_cast<LinearConstraint>(destination->numericConstraints[constraintIndex])
+                        ->constant
+                        += coefficient * variable->lowerBound;
+            }
             else
-                std::dynamic_pointer_cast<LinearConstraint>(destination->numericConstraints[constraintIndex])
-                    ->add(std::make_shared<LinearTerm>(coefficient, destination->getVariable(variableIndex)));
+            {
+                if(inObjectiveFunction)
+                    std::dynamic_pointer_cast<LinearObjectiveFunction>(destination->objectiveFunction)
+                        ->add(std::make_shared<LinearTerm>(coefficient, variable));
+                else
+                    std::dynamic_pointer_cast<LinearConstraint>(destination->numericConstraints[constraintIndex])
+                        ->add(std::make_shared<LinearTerm>(coefficient, variable));
+            }
         }
     };
 

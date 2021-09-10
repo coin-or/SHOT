@@ -91,7 +91,7 @@ void IpoptJournal::FlushBufferImpl()
     env->output->flush();
 }
 
-IpoptProblem::IpoptProblem(EnvironmentPtr envPtr, ProblemPtr problem) : env(envPtr), sourceProblem(problem) {}
+IpoptProblem::IpoptProblem(EnvironmentPtr envPtr, ProblemPtr problem) : env(envPtr), sourceProblem(problem) { }
 
 bool IpoptProblem::get_nlp_info(Index& n, Index& m, Index& nnz_jac_g, Index& nnz_h_lag, IndexStyleEnum& index_style)
 {
@@ -697,6 +697,7 @@ E_NLPSolutionStatus NLPSolverIpoptBase::solveProblemInstance()
     env->output->outputDebug("        Starting solution of Ipopt problem.");
 
     E_NLPSolutionStatus status;
+    ipoptProblem->variableSolution.clear();
 
     try
     {
@@ -747,7 +748,7 @@ E_NLPSolutionStatus NLPSolverIpoptBase::solveProblemInstance()
 
         default:
             status = E_NLPSolutionStatus::Error;
-            env->output->outputError(" Error when solving NLP problem with Ipopt.");
+            env->output->outputError("        Error when solving NLP problem with Ipopt.");
             break;
         }
     }
@@ -1038,11 +1039,11 @@ void NLPSolverIpoptBase::updateVariableUpperBound(int variableIndex, double boun
     ipoptProblem->upperBounds[variableIndex] = bound;
 }
 
-void NLPSolverIpoptBase::updateSettings() {}
+void NLPSolverIpoptBase::updateSettings() { }
 
-void NLPSolverIpoptBase::saveOptionsToFile([[maybe_unused]] std::string fileName) {}
+void NLPSolverIpoptBase::saveOptionsToFile([[maybe_unused]] std::string fileName) { }
 
-void NLPSolverIpoptBase::saveProblemToFile([[maybe_unused]] std::string fileName) {}
+void NLPSolverIpoptBase::saveProblemToFile([[maybe_unused]] std::string fileName) { }
 
 std::string NLPSolverIpoptBase::getSolverDescription()
 {
