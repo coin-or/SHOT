@@ -808,8 +808,9 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
             MIPSolutionStatus = getSolutionStatus();
         }
 
-        // Try to solve a feasibility problem to get a valid solution point if unbounded
-        if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
+        // Try to solve a feasibility problem to get a valid solution point if unbounded and not when solving the
+        // minimax-problem
+        if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded && env->results->getNumberOfIterations() > 0)
         {
             cplexModel.remove(cplexInstance.getObjective());
 
@@ -830,7 +831,7 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
         }
 
         // If the previous repair failed, we can try this
-        if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
+        if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded && env->results->getNumberOfIterations() > 0)
         {
             repairInfeasibility();
             MIPSolutionStatus = E_ProblemSolutionStatus::Unbounded;

@@ -752,8 +752,8 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
         }
     }
 
-    // To find a feasible point for an unbounded dual problem
-    if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
+    // To find a feasible point for an unbounded dual problem and not when solving the minimax-problem
+    if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded && env->results->getNumberOfIterations() > 0)
     {
         std::vector<PairIndexValue> originalObjectiveCoefficients;
         bool problemUpdated = false;
