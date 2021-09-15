@@ -42,7 +42,7 @@ public:
 
     virtual Interval getBounds();
 
-    void inline takeOwnership(ProblemPtr owner) { ownerProblem = owner; }
+    virtual void takeOwnership(ProblemPtr owner) = 0;
 
     virtual E_Convexity getConvexity() const = 0;
 
@@ -73,6 +73,13 @@ public:
     {
         Interval value = coefficient * variable->calculate(intervalVector);
         return value;
+    }
+
+    inline void takeOwnership(ProblemPtr owner) override
+    {
+        assert(ownerProblem.expired() || (ownerProblem.lock().get() == owner.get()));
+
+        ownerProblem = owner;
     }
 
     E_Convexity getConvexity() const override { return E_Convexity::Linear; };
@@ -355,6 +362,15 @@ public:
         return value;
     }
 
+    inline void takeOwnership(ProblemPtr owner) override
+    {
+        assert(ownerProblem.expired() || (ownerProblem.lock().get() == owner.get()));
+        assert(firstVariable->ownerProblem.expired() || (firstVariable->ownerProblem.lock().get() == owner.get()));
+        assert(secondVariable->ownerProblem.expired() || (secondVariable->ownerProblem.lock().get() == owner.get()));
+
+        ownerProblem = owner;
+    }
+
     E_Convexity getConvexity() const override
     {
         if(firstVariable == secondVariable)
@@ -602,6 +618,16 @@ public:
         }
 
         return value;
+    }
+
+    inline void takeOwnership(ProblemPtr owner) override
+    {
+        assert(ownerProblem.expired() || (ownerProblem.lock().get() == owner.get()));
+
+        for(auto& VAR : variables)
+            assert(VAR->ownerProblem.expired() || (VAR->ownerProblem.lock().get() == owner.get()));
+
+        ownerProblem = owner;
     }
 
     inline E_Convexity getConvexity() const override { return E_Convexity::Nonconvex; };
@@ -955,6 +981,16 @@ public:
         }
 
         return value;
+    }
+
+    inline void takeOwnership(ProblemPtr owner) override
+    {
+        assert(ownerProblem.expired() || (ownerProblem.lock().get() == owner.get()));
+
+        for(auto& E : elements)
+            assert(E->variable->ownerProblem.expired() || (E->variable->ownerProblem.lock().get() == owner.get()));
+
+        ownerProblem = owner;
     }
 
     inline E_Convexity getConvexity() const override
