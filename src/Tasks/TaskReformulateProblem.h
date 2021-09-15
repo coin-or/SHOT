@@ -131,8 +131,10 @@ private:
     void reformulateRealBilinearTerm(
         VariablePtr firstVariable, VariablePtr secondVariable, AuxiliaryVariablePtr auxVariable);
 
-    void addBilinearMcCormickEnvelope(
-        AuxiliaryVariablePtr auxVariable, VariablePtr firstVariable, VariablePtr secondVariable);
+    void addBilinearMcCormickEnvelope(VariablePtr auxVariable, VariablePtr firstVariable, VariablePtr secondVariable);
+
+    std::optional<QuadraticTermPtr> reformulateProductToQuadraticTerm(std::shared_ptr<ExpressionProduct> product);
+    std::optional<MonomialTermPtr> reformulateProductToMonomialTerm(std::shared_ptr<ExpressionProduct> product);
 
     int auxVariableCounter = 0;
     int auxConstraintCounter = 0;
