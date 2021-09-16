@@ -245,9 +245,6 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
     reformulatedProblem->properties.numberOfAddedLinearizations = env->problem->properties.numberOfAddedLinearizations;
     reformulatedProblem->finalize();
 
-    auto taskPerformBoundTightening = std::make_unique<TaskPerformBoundTightening>(env, reformulatedProblem);
-    taskPerformBoundTightening->run();
-
     // Fixing that a quadratic objective changed into a nonlinear objective is correctly identified
     if(!(useConvexQuadraticObjective || useNonconvexQuadraticObjective)
         && reformulatedProblem->objectiveFunction->properties.classification
@@ -280,6 +277,9 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
 
         Utilities::writeStringToFile(filename.str(), problem.str());
     }
+
+    auto taskPerformBoundTightening = std::make_unique<TaskPerformBoundTightening>(env, reformulatedProblem);
+    taskPerformBoundTightening->run();
 
     env->timing->stopTimer("ProblemReformulation");
 }

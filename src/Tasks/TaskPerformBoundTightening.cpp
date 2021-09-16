@@ -87,7 +87,7 @@ void TaskPerformBoundTightening::run()
 {
     env->timing->startTimer("BoundTightening");
 
-    if(env->settings->getSetting<bool>("BoundTightening.InitialPOA.Use", "Model")
+    if(env->settings->getSetting<bool>("BoundTightening.InitialPOA.Use", "Model") && env->reformulatedProblem
         && (sourceProblem->properties.numberOfNonlinearConstraints > 0
             || sourceProblem->objectiveFunction->properties.classification
                 > E_ObjectiveFunctionClassification::Quadratic))
