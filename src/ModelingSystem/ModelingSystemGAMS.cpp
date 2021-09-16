@@ -281,7 +281,7 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem)
 #endif
     gmoUseQSet(modelingObject, 1);
 #if GMOAPIVERSION >= 21
-    env->output->outputInfo(
+    env->output->outputDebug(
         std::string(" Time to extract information on quadratics: ") + std::to_string(gevTimeDiff(modelingEnvironment)));
 #endif
 
