@@ -346,6 +346,16 @@ bool Solver::setProblem(std::string fileName)
         if(env->problem->name == "")
             env->problem->name = problemName.string();
 
+#ifdef SIMPLE_OUTPUT_CHARS
+        env->output->outputInfo(
+            "- Bound tightening "
+            "----------------------------------------------------------------------------------------------------");
+#else
+        env->output->outputInfo(
+            "- Bound tightening "
+            "───────────────────────────────────────────────────────────────────────────────────────────────────╴");
+#endif
+
         auto taskPerformBoundTightening = std::make_unique<TaskPerformBoundTightening>(env, env->problem);
         taskPerformBoundTightening->run();
 
