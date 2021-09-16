@@ -2158,7 +2158,7 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint, double timeLim
     }
     catch(mc::Interval::Exceptions& e)
     {
-        env->output->outputError(
+        env->output->outputDebug(
             fmt::format("  error when tightening bound in constraint {}: {}", constraint->name, e.what()));
     }
 
