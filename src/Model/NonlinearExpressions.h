@@ -1882,8 +1882,10 @@ public:
 
         if(isInteger && isEven && power > 0 && bound.l() <= 0.0)
             bound.l(0.0);
-        else if(bound.l() <= 0.0)
+        else if(bound.l() <= 0.0 && bound.u() > SHOT_DBL_SIG_MIN)
             bound.l(SHOT_DBL_SIG_MIN);
+        else if(bound.u() < 0)
+            return (false);
 
         Interval interval;
 
