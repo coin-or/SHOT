@@ -892,6 +892,8 @@ void Problem::add(VariablePtr variable)
         break;
     }
 
+    assert(variable->index + 1 == allVariables.size());
+
     variable->takeOwnership(shared_from_this());
     variablesUpdated = false;
 
@@ -933,6 +935,8 @@ void Problem::add(AuxiliaryVariablePtr variable)
     default:
         break;
     }
+
+    assert(variable->index + 1 == allVariables.size());
 
     variable->takeOwnership(shared_from_this());
     variablesUpdated = false;
