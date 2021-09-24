@@ -10,6 +10,8 @@
 
 #include "AuxiliaryVariables.h"
 
+#include "spdlog/fmt/fmt.h"
+
 namespace SHOT
 {
 double AuxiliaryVariable::calculate(const VectorDouble& point) const
@@ -44,81 +46,152 @@ Interval AuxiliaryVariable::calculate(const IntervalVector& intervalVector) cons
 
 std::ostream& operator<<(std::ostream& stream, AuxiliaryVariablePtr var)
 {
-    stream << "[" << var->index << "]:\t";
+    std::stringstream type;
 
     switch(var->properties.type)
     {
-    case E_VariableType::Real:
-        stream << var->lowerBound << " <= " << var->name << " <= " << var->upperBound;
+    case(E_VariableType::Real):
+        type << "C ";
         break;
 
-    case E_VariableType::Binary:
-        stream << var->name << " in {0,1}";
+    case(E_VariableType::Binary):
+        type << "B ";
         break;
 
-    case E_VariableType::Integer:
-        if(var->lowerBound == 0.0 && var->upperBound == 1.0)
-            stream << var->name << " in {0,1}";
-        else
-            stream << var->name << " in {" << var->lowerBound << ",...," << var->upperBound << "}";
+    case(E_VariableType::Integer):
+        type << "I ";
         break;
 
-    case E_VariableType::Semicontinuous:
-        if( var->semiBound < 0.0 )
-            stream << var->name << " in {0} or " << var->lowerBound << " <= " << var->name << " <= " << var->semiBound;
-        else
-            stream << var->name << " in {0} or " << var->semiBound << " <= " << var->name << " <= " << var->upperBound;
+    case(E_VariableType::Semicontinuous):
+        type << "SC";
         break;
 
-    case E_VariableType::Semiinteger:
-        if( var->semiBound < 0.0 )
-            stream << var->name << " in {" << var->lowerBound << ",...," << var->semiBound << ",0}";
-        else
-            stream << var->name << " in {0," << var->semiBound << ",...," << var->upperBound << "}";
+    case(E_VariableType::Semiinteger):
+        type << "SI";
         break;
 
     default:
-        stream << var->lowerBound << " <= " << var->name << " <= " << var->upperBound;
+        type << "? ";
         break;
     }
+
+    std::stringstream contains;
+
+    if(var->properties.inObjectiveFunction)
+        contains << "O";
+    else
+        contains << " ";
+
+    if(var->properties.inLinearConstraints)
+        contains << "L";
+    else
+        contains << " ";
+
+    if(var->properties.inQuadraticConstraints)
+        contains << "Q";
+    else
+        contains << " ";
+
+    if(var->properties.inNonlinearConstraints)
+        contains << "N";
+    else
+        contains << " ";
+
+    std::stringstream inTerms;
+
+    if(var->properties.inLinearTerms)
+        inTerms << "L";
+    else
+        inTerms << " ";
+
+    if(var->properties.inQuadraticTerms)
+        inTerms << "Q";
+    else
+        inTerms << " ";
+
+    if(var->properties.inMonomialTerms)
+        inTerms << "M";
+    else
+        inTerms << " ";
+
+    if(var->properties.inSignomialTerms)
+        inTerms << "S";
+    else
+        inTerms << "    ";
+
+    if(var->properties.inNonlinearExpression)
+        inTerms << "N";
+    else
+        inTerms << " ";
+
+    std::stringstream auxtype;
 
     switch(var->properties.auxiliaryType)
     {
     case E_AuxiliaryVariableType::NonlinearObjectiveFunction:
-        stream << " (objective auxiliary variable)";
+        auxtype << "nonlinear obj. aux. var.";
         break;
 
     case E_AuxiliaryVariableType::NonlinearExpressionPartitioning:
-        stream << " (partition reformulation for nonlinear sum)";
+        auxtype << "nonlinear sum part.";
         break;
 
     case E_AuxiliaryVariableType::MonomialTermsPartitioning:
-        stream << " (partition reformulation for monomial sum)";
+        auxtype << "monomial sum part.";
         break;
 
     case E_AuxiliaryVariableType::SignomialTermsPartitioning:
-        stream << " (partition reformulation for signomial sum)";
+        auxtype << "signomial sum part.";
         break;
 
-    case E_AuxiliaryVariableType::BinaryBilinear:
-        stream << " (binary bilinear linearization)";
-        break;
-    case E_AuxiliaryVariableType::BinaryContinuousBilinear:
-        stream << " (mixed binary-continuous bilinear linearization)";
+    case E_AuxiliaryVariableType::SquareTermsPartitioning:
+        auxtype << "square terms part.";
         break;
 
     case E_AuxiliaryVariableType::ContinuousBilinear:
-        stream << " (continuous bilinear linearization)";
+        auxtype << "cont. bilinear lin.";
+        break;
+
+    case E_AuxiliaryVariableType::BinaryBilinear:
+        auxtype << "bin bilinear lin.";
+        break;
+
+    case E_AuxiliaryVariableType::BinaryContinuousBilinear:
+        auxtype << "mixed bin./cont. bilinear lin.";
         break;
 
     case E_AuxiliaryVariableType::IntegerBilinear:
-        stream << " (integer bilinear linearization)";
+        auxtype << "int. bilinear lin.";
+        break;
+
+    case E_AuxiliaryVariableType::BinaryMonomial:
+        auxtype << "bin. monomial lin.";
+        break;
+
+    case E_AuxiliaryVariableType::AbsoluteValue:
+        auxtype << "abs. value ref.";
+        break;
+
+    case E_AuxiliaryVariableType::AntiEpigraph:
+        auxtype << "anti epigraph ref.";
+        break;
+
+    case E_AuxiliaryVariableType::EigenvalueDecomposition:
+        auxtype << "eigenval. decomp. ref.";
         break;
 
     default:
-        stream << " (unknown auxiliary variable)";
+        auxtype << "unspecified aux. var.";
         break;
     }
+
+    stream << fmt::format("[{:>6d},{:<1s}] [{:<4s}] [{:<5s}]\t{:>12f}  {:1s} <= {:^16s}  <= {:1s} {:<12f} {:>30s}",
+        var->index, type.str(), contains.str(), inTerms.str(),
+        (var->properties.type == E_VariableType::Semicontinuous || var->properties.type == E_VariableType::Semiinteger)
+            ? var->semiBound
+            : var->lowerBound,
+        var->properties.hasLowerBoundBeenTightened ? "*" : " ", var->name,
+        var->properties.hasUpperBoundBeenTightened ? "*" : " ", var->upperBound, auxtype.str());
 
     return stream;
 }

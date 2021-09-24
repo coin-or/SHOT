@@ -2223,7 +2223,10 @@ std::ostream& operator<<(std::ostream& stream, const Problem& problem)
 
     for(auto& V : problem.allVariables)
     {
-        stream << V << '\n';
+        if(!V->properties.isAuxiliary)
+            stream << V << '\n';
+        else
+            stream << std::static_pointer_cast<AuxiliaryVariable>(V) << '\n';
     }
 
     switch(problem.properties.convexity)
