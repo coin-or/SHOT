@@ -1086,7 +1086,19 @@ void Solver::initializeSettings()
         "How to treat quadratic functions", enumQPStrategy, 0);
     enumQPStrategy.clear();
 
-    env->settings->createSetting("Reformulation.Quadratics.UseEigenValueDecomposition", "Model", false,
+    env->settings->createSetting("Reformulation.Quadratics.EigenValueDecomposition.Use", "Model", false,
+        "Whether to use the eigenvalue decomposition of convex quadratic functions");
+
+    VectorString enumEigenValueStrategy;
+    enumEigenValueStrategy.push_back("Term coefficient is included in reformulation");
+    enumEigenValueStrategy.push_back("Term coefficient remains");
+
+    env->settings->createSetting("Reformulation.Quadratics.EigenValueDecomposition.Formulation", "Model",
+        static_cast<int>(ES_EigenValueDecompositionFormulation::CoefficientReformulated),
+        "Which formulation to use in eigenvalue decomposition", enumEigenValueStrategy, 0);
+    enumEigenValueStrategy.clear();
+
+    env->settings->createSetting("Reformulation.Quadratics.EigenValueDecomposition.Method", "Model", false,
         "Whether to use the eigen value decomposition of convex quadratic functions");
 
     // Modeling system settings
@@ -1825,7 +1837,7 @@ void Solver::setConvexityBasedSettingsPreReformulation()
 #ifdef HAS_CBC
             if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Cbc)
             {
-                env->settings->updateSetting("Reformulation.Quadratics.UseEigenValueDecomposition", "Model", false);
+                env->settings->updateSetting("Reformulation.Quadratics.EigenValueDecomposition.Use", "Model", false);
             }
 #endif
         }
@@ -1834,7 +1846,7 @@ void Solver::setConvexityBasedSettingsPreReformulation()
 #ifdef HAS_CBC
             if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Cbc)
             {
-                env->settings->updateSetting("Reformulation.Quadratics.UseEigenValueDecomposition", "Model", true);
+                env->settings->updateSetting("Reformulation.Quadratics.EigenValueDecomposition.Use", "Model", true);
             }
 #endif
         }

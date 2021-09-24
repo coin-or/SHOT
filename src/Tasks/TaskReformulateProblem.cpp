@@ -782,6 +782,7 @@ void TaskReformulateProblem::createEpigraphConstraint()
 
     auto objectiveVariable = std::make_shared<AuxiliaryVariable>(
         "shot_objvar", auxVariableCounter, E_VariableType::Real, objectiveBound.l(), objectiveBound.u());
+    auxVariableCounter++;
     objectiveVariable->properties.auxiliaryType = E_AuxiliaryVariableType::NonlinearObjectiveFunction;
     env->results->increaseAuxiliaryVariableCounter(E_AuxiliaryVariableType::NonlinearObjectiveFunction);
 
@@ -1765,7 +1766,7 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
         }
     }
 
-    if(env->settings->getSetting<bool>("Reformulation.Quadratics.UseEigenValueDecomposition", "Model")
+    if(env->settings->getSetting<bool>("Reformulation.Quadratics.EigenValueDecomposition.Use", "Model")
         && partitionStrategy <= ES_PartitionNonlinearSums::IfConvex && quadraticSumConvex
         && !quadraticTerms.allSquares) // Use the eigenvalue decomposition reformulation
     {
@@ -2253,15 +2254,28 @@ LinearTerms TaskReformulateProblem::doEigenvalueDecomposition(QuadraticTerms qua
         auto auxQuadVariable = std::make_shared<AuxiliaryVariable>("q_evd_" + std::to_string(auxVariableCounter),
             auxVariableCounter, E_VariableType::Real, bounds.l(), bounds.u());
         auxVariableCounter++;
+        auxQuadVariable->properties.auxiliaryType = E_AuxiliaryVariableType::EigenvalueDecomposition;
+        reformulatedProblem->add(auxQuadVariable);
+
         env->results->increaseAuxiliaryVariableCounter(E_AuxiliaryVariableType::EigenvalueDecomposition);
 
-        auto [auxVariable, newVariable] = getSquareAuxiliaryVariable(
-            auxQuadVariable, quadraticTerms.eigenvalues[i].real(), E_AuxiliaryVariableType::EigenvalueDecomposition);
-        resultLinearTerms.add(std::make_shared<LinearTerm>(0.5, auxVariable));
+        if(env->settings->getSetting<int>("Reformulation.Quadratics.EigenValueDecomposition.Formulation", "Model")
+            == static_cast<int>(ES_EigenValueDecompositionFormulation::CoefficientReformulated))
+        {
+            auto [auxVariable, newVariable] = getSquareAuxiliaryVariable(auxQuadVariable,
+                quadraticTerms.eigenvalues[i].real(), E_AuxiliaryVariableType::EigenvalueDecomposition);
+            resultLinearTerms.add(std::make_shared<LinearTerm>(0.5, auxVariable));
+        }
+        else
+        {
+            auto [auxVariable, newVariable]
+                = getSquareAuxiliaryVariable(auxQuadVariable, 1.0, E_AuxiliaryVariableType::EigenvalueDecomposition);
+            resultLinearTerms.add(
+                std::make_shared<LinearTerm>(0.5 * quadraticTerms.eigenvalues[i].real(), auxVariable));
+        }
 
         auxConstraint->add(std::make_shared<LinearTerm>(-1.0, auxQuadVariable));
-        reformulatedProblem->add(auxConstraint);
-        reformulatedProblem->add(std::move(auxQuadVariable));
+        reformulatedProblem->add(std::move(auxConstraint));
     }
 
     return (resultLinearTerms);

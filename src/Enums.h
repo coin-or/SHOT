@@ -272,6 +272,12 @@ enum class ES_AddPrimalPointAsInteriorPoint
     OnlyAverage
 };
 
+enum class ES_EigenValueDecompositionFormulation
+{
+    CoefficientReformulated,
+    CoefficientRemains
+};
+
 enum class ES_HyperplaneCutStrategy
 {
     ESH,
