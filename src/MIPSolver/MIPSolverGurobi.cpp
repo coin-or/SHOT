@@ -1096,6 +1096,9 @@ void MIPSolverGurobi::setTimeLimit(double seconds)
 
 void MIPSolverGurobi::setCutOff(double cutOff)
 {
+    if(std::abs(cutOff) > 1e20)
+        return;
+
     try
     {
         // Gurobi has problems if not an epsilon value is added to the cutoff...
