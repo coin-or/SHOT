@@ -356,6 +356,19 @@ bool Solver::setProblem(std::string fileName)
             "───────────────────────────────────────────────────────────────────────────────────────────────────╴");
 #endif
 
+        if(env->settings->getSetting<bool>("MIP.CutOff.UseInitialValue", "Dual")
+            && std::abs(env->settings->getSetting<double>("MIP.CutOff.InitialValue", "Dual")) < SHOT_DBL_MAX)
+        {
+            env->dualSolver->cutOffToUse = env->settings->getSetting<double>("MIP.CutOff.InitialValue", "Dual");
+            env->dualSolver->useCutOff = true;
+            env->output->outputDebug(
+                fmt::format("  Setting user defined cutoff value to {}.", env->dualSolver->cutOffToUse));
+        }
+        else
+        {
+            env->dualSolver->cutOffToUse = env->results->getPrimalBound();
+        }
+
         auto taskPerformBoundTightening = std::make_unique<TaskPerformBoundTightening>(env, env->problem);
         taskPerformBoundTightening->run();
 
