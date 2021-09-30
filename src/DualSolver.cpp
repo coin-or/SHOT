@@ -72,7 +72,13 @@ void DualSolver::checkDualSolutionCandidates()
             // New dual solution
             env->results->setDualBound(C.objValue);
             currDualBound = C.objValue;
-            env->solutionStatistics.iterationLastDualBoundUpdate = env->results->getCurrentIteration()->iterationNumber;
+
+            if(env->results->getNumberOfIterations() > 0)
+                env->solutionStatistics.iterationLastDualBoundUpdate
+                    = env->results->getCurrentIteration()->iterationNumber;
+            else
+                env->solutionStatistics.iterationLastDualBoundUpdate = 0;
+
             env->solutionStatistics.iterationLastDualBoundUpdate = env->timing->getElapsedTime("Total");
 
             if(C.sourceType == E_DualSolutionSource::MIPSolutionOptimal
@@ -257,7 +263,8 @@ bool DualSolver::hasHyperplaneBeenAdded(double hash, int constraintIndex)
 
 void DualSolver::addIntegerCut(IntegerCut integerCut)
 {
-    if(env->reformulatedProblem->properties.numberOfIntegerVariables > 0 || env->reformulatedProblem->properties.numberOfSemiintegerVariables > 0)
+    if(env->reformulatedProblem->properties.numberOfIntegerVariables > 0
+        || env->reformulatedProblem->properties.numberOfSemiintegerVariables > 0)
         integerCut.areAllVariablesBinary = false;
     else
     {
