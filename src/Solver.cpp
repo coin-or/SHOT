@@ -1415,7 +1415,7 @@ void Solver::initializeSettings()
     enumGurobiNumericFocus.push_back("Mild");
     enumGurobiNumericFocus.push_back("Moderate");
     enumGurobiNumericFocus.push_back("Aggressive");
-    env->settings->createSetting("Gurobi.NumericFocus", "Subsolver", 2, "MIP focus", enumGurobiNumericFocus, 0);
+    env->settings->createSetting("Gurobi.NumericFocus", "Subsolver", 1, "MIP focus", enumGurobiNumericFocus, 0);
     enumGurobiNumericFocus.clear();
 
     VectorString enumGurobiPoolSearchMode;
