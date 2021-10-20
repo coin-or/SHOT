@@ -428,19 +428,23 @@ void CtCallbackI::main()
 
     if(checkFixedNLPStrategy(solutionCandidate))
     {
-        env->primalSolver->addFixedNLPCandidate(solution, E_PrimalNLPSource::FirstSolution, this->getObjValue(),
-            env->results->getCurrentIteration()->iterationNumber, solutionCandidate.maxDeviation);
-
         if(taskSelectPrimNLPOriginal)
-            taskSelectPrimNLPOriginal->run();
+        {
+            env->primalSolver->addFixedNLPCandidate(solution, E_PrimalNLPSource::FirstSolution, this->getObjValue(),
+                env->results->getCurrentIteration()->iterationNumber, solutionCandidate.maxDeviation);
 
-        env->primalSolver->addFixedNLPCandidate(solution, E_PrimalNLPSource::FirstSolution, this->getObjValue(),
-            env->results->getCurrentIteration()->iterationNumber, solutionCandidate.maxDeviation);
+            taskSelectPrimNLPOriginal->run();
+            env->primalSolver->fixedPrimalNLPCandidates.clear();
+        }
 
         if(taskSelectPrimNLPReformulated)
-            taskSelectPrimNLPReformulated->run();
+        {
+            env->primalSolver->addFixedNLPCandidate(solution, E_PrimalNLPSource::FirstSolution, this->getObjValue(),
+                env->results->getCurrentIteration()->iterationNumber, solutionCandidate.maxDeviation);
 
-        env->primalSolver->fixedPrimalNLPCandidates.clear();
+            taskSelectPrimNLPReformulated->run();
+            env->primalSolver->fixedPrimalNLPCandidates.clear();
+        }
 
         env->primalSolver->checkPrimalSolutionCandidates();
 
@@ -485,8 +489,8 @@ void CtCallbackI::main()
 
     for(auto& hp : env->dualSolver->hyperplaneWaitingList)
     {
-        this->createHyperplane(hp);
-        this->lastNumAddedHyperplanes++;
+        if(this->createHyperplane(hp))
+            this->lastNumAddedHyperplanes++;
     }
 
     env->dualSolver->hyperplaneWaitingList.clear();

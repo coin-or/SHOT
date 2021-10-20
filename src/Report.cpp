@@ -878,6 +878,10 @@ void Report::outputProblemInstanceReport()
             value > 0)
             env->output->outputInfo(fmt::format(" {:56s}{:d}", " - signomial terms partitioning:", value));
 
+        if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::SquareTermsPartitioning);
+            value > 0)
+            env->output->outputInfo(fmt::format(" {:56s}{:d}", " - square terms partitioning:", value));
+
         if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::ContinuousBilinear);
             value > 0)
             env->output->outputInfo(fmt::format(" {:56s}{:d}", " - continuous bilinear term extraction:", value));

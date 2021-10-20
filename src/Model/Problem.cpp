@@ -892,6 +892,8 @@ void Problem::add(VariablePtr variable)
         break;
     }
 
+    assert(variable->index + 1 == allVariables.size());
+
     variable->takeOwnership(shared_from_this());
     variablesUpdated = false;
 
@@ -933,6 +935,8 @@ void Problem::add(AuxiliaryVariablePtr variable)
     default:
         break;
     }
+
+    assert(variable->index + 1 == allVariables.size());
 
     variable->takeOwnership(shared_from_this());
     variablesUpdated = false;
@@ -2223,7 +2227,10 @@ std::ostream& operator<<(std::ostream& stream, const Problem& problem)
 
     for(auto& V : problem.allVariables)
     {
-        stream << V << '\n';
+        if(!V->properties.isAuxiliary)
+            stream << V << '\n';
+        else
+            stream << std::static_pointer_cast<AuxiliaryVariable>(V) << '\n';
     }
 
     switch(problem.properties.convexity)

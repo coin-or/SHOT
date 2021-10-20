@@ -142,30 +142,24 @@ void TaskPerformBoundTightening::run()
 
             if(sourceProblem->objectiveFunction->properties.isMinimize)
             {
-                if(objectiveBoundsAfter.l() > -SHOT_DBL_INF) // Update dual bound
-                {
-                    DualSolution sol = { {}, E_DualSolutionSource::MIPSolverBound, objectiveBoundsAfter.l(), 0, false };
-                    env->dualSolver->addDualSolutionCandidate(sol);
-                }
+                DualSolution sol = { {}, E_DualSolutionSource::MIPSolverBound, objectiveBoundsAfter.l(), 0, false };
+                env->dualSolver->addDualSolutionCandidate(sol);
 
-                if(objectiveBoundsAfter.u() < SHOT_DBL_INF) // Update MIP cutoff
+                if(objectiveBoundsAfter.u() < env->dualSolver->cutOffToUse) // Update MIP cutoff
                 {
-                    env->settings->updateSetting("MIP.CutOff.InitialValue", "Dual", objectiveBoundsAfter.u());
-                    env->settings->updateSetting("MIP.CutOff.UseInitialValue", "Dual", true);
+                    env->dualSolver->cutOffToUse = objectiveBoundsAfter.u();
+                    env->dualSolver->useCutOff = true;
                 }
             }
             else if(sourceProblem->objectiveFunction->properties.isMaximize)
             {
-                if(objectiveBoundsAfter.u() < SHOT_DBL_INF) // Update dual bound
-                {
-                    DualSolution sol = { {}, E_DualSolutionSource::MIPSolverBound, objectiveBoundsAfter.u(), 0, false };
-                    env->dualSolver->addDualSolutionCandidate(sol);
-                }
+                DualSolution sol = { {}, E_DualSolutionSource::MIPSolverBound, objectiveBoundsAfter.u(), 0, false };
+                env->dualSolver->addDualSolutionCandidate(sol);
 
-                if(objectiveBoundsAfter.l() > -SHOT_DBL_INF) // Update MIP cutoff
+                if(objectiveBoundsAfter.l() > env->dualSolver->cutOffToUse) // Update MIP cutoff
                 {
-                    env->settings->updateSetting("MIP.CutOff.InitialValue", "Dual", objectiveBoundsAfter.l());
-                    env->settings->updateSetting("MIP.CutOff.UseInitialValue", "Dual", true);
+                    env->dualSolver->cutOffToUse = objectiveBoundsAfter.l();
+                    env->dualSolver->useCutOff = true;
                 }
             }
         }

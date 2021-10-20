@@ -1082,7 +1082,7 @@ int Results::getNumberOfIterations() { return (iterations.size()); }
 
 double Results::getPrimalBound()
 {
-    if(this->currentPrimalBound != NAN)
+    if(!isnan(this->currentPrimalBound))
         return (this->currentPrimalBound);
     else if(env->problem->objectiveFunction->direction == E_ObjectiveFunctionDirection::Minimize)
         return (SHOT_DBL_MAX);
@@ -1112,8 +1112,23 @@ void Results::setPrimalBound(double value)
             this->currentDualBound = value;
     }
 
-    env->dualSolver->cutOffToUse = value;
-    env->dualSolver->useCutOff = true;
+    if(env->problem->objectiveFunction->properties.isMinimize)
+    {
+        if(value < env->dualSolver->cutOffToUse)
+        {
+            env->dualSolver->cutOffToUse = value;
+            env->dualSolver->useCutOff = true;
+        }
+    }
+    else
+    {
+        if(value > env->dualSolver->cutOffToUse)
+        {
+            env->dualSolver->cutOffToUse = value;
+            env->dualSolver->useCutOff = true;
+        }
+    }
+
     env->solutionStatistics.numberOfIterationsWithPrimalStagnation = 0;
     env->solutionStatistics.lastIterationWithSignificantPrimalUpdate = getNumberOfIterations() - 1;
     env->solutionStatistics.numberOfPrimalReductionCutsUpdatesWithoutEffect = 0;

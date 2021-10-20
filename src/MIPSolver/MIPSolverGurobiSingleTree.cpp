@@ -186,6 +186,31 @@ void GurobiCallbackSingleTree::callback()
 
     try
     {
+
+        // Add current primal bound as new incumbent candidate
+        auto primalBound = env->results->getPrimalBound();
+
+        if(((isMinimization && lastUpdatedPrimal < primalBound)
+               || (!isMinimization && lastUpdatedPrimal > primalBound)))
+        {
+            auto primalSol = env->results->primalSolution;
+
+            if((int)primalSol.size() < env->reformulatedProblem->properties.numberOfVariables)
+                env->reformulatedProblem->augmentAuxiliaryVariableValues(primalSol);
+
+            assert(env->reformulatedProblem->properties.numberOfVariables == primalSol.size());
+
+            if(env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
+                primalSol.push_back(env->reformulatedProblem->objectiveFunction->calculateValue(primalSol));
+
+            for(size_t i = 0; i < primalSol.size(); i++)
+            {
+                setSolution(vars[i], primalSol.at(i));
+            }
+
+            lastUpdatedPrimal = env->results->getPrimalBound();
+        }
+
         // Check if better dual bound
         double tmpDualObjBound;
 
@@ -394,21 +419,25 @@ void GurobiCallbackSingleTree::callback()
 
             if(checkFixedNLPStrategy(candidatePoints.at(0)))
             {
-                env->primalSolver->addFixedNLPCandidate(candidatePoints.at(0).point, E_PrimalNLPSource::FirstSolution,
-                    getDoubleInfo(GRB_CB_MIPSOL_OBJ), env->results->getCurrentIteration()->iterationNumber,
-                    candidatePoints.at(0).maxDeviation);
-
                 if(taskSelectPrimNLPOriginal)
-                    taskSelectPrimNLPOriginal->run();
+                {
+                    env->primalSolver->addFixedNLPCandidate(candidatePoints.at(0).point,
+                        E_PrimalNLPSource::FirstSolution, getDoubleInfo(GRB_CB_MIPSOL_OBJ),
+                        env->results->getCurrentIteration()->iterationNumber, candidatePoints.at(0).maxDeviation);
 
-                env->primalSolver->addFixedNLPCandidate(candidatePoints.at(0).point, E_PrimalNLPSource::FirstSolution,
-                    getDoubleInfo(GRB_CB_MIPSOL_OBJ), env->results->getCurrentIteration()->iterationNumber,
-                    candidatePoints.at(0).maxDeviation);
+                    taskSelectPrimNLPOriginal->run();
+                    env->primalSolver->fixedPrimalNLPCandidates.clear();
+                }
 
                 if(taskSelectPrimNLPReformulated)
-                    taskSelectPrimNLPReformulated->run();
+                {
+                    env->primalSolver->addFixedNLPCandidate(candidatePoints.at(0).point,
+                        E_PrimalNLPSource::FirstSolution, getDoubleInfo(GRB_CB_MIPSOL_OBJ),
+                        env->results->getCurrentIteration()->iterationNumber, candidatePoints.at(0).maxDeviation);
 
-                env->primalSolver->fixedPrimalNLPCandidates.clear();
+                    taskSelectPrimNLPReformulated->run();
+                    env->primalSolver->fixedPrimalNLPCandidates.clear();
+                }
 
                 env->primalSolver->checkPrimalSolutionCandidates();
             }
@@ -442,30 +471,6 @@ void GurobiCallbackSingleTree::callback()
         {
             lastExploredNodes = (int)getDoubleInfo(GRB_CB_MIP_NODCNT);
             lastOpenNodes = (int)getDoubleInfo(GRB_CB_MIP_NODLFT);
-        }
-
-        // Add current primal bound as new incumbent candidate
-        auto primalBound = env->results->getPrimalBound();
-
-        if(((isMinimization && lastUpdatedPrimal < primalBound)
-               || (!isMinimization && lastUpdatedPrimal > primalBound)))
-        {
-            auto primalSol = env->results->primalSolution;
-
-            if((int)primalSol.size() < env->reformulatedProblem->properties.numberOfVariables)
-                env->reformulatedProblem->augmentAuxiliaryVariableValues(primalSol);
-
-            assert(env->reformulatedProblem->properties.numberOfVariables == primalSol.size());
-
-            if(env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
-                primalSol.push_back(env->reformulatedProblem->objectiveFunction->calculateValue(primalSol));
-
-            for(size_t i = 0; i < primalSol.size(); i++)
-            {
-                setSolution(vars[i], primalSol.at(i));
-            }
-
-            lastUpdatedPrimal = env->results->getPrimalBound();
         }
     }
     catch(GRBException& e)
@@ -669,8 +674,8 @@ void GurobiCallbackSingleTree::addLazyConstraint(std::vector<SolutionPoint> cand
 
         for(auto& hp : env->dualSolver->hyperplaneWaitingList)
         {
-            this->createHyperplane(hp);
-            this->lastNumAddedHyperplanes++;
+            if(this->createHyperplane(hp))
+                this->lastNumAddedHyperplanes++;
         }
 
         env->dualSolver->hyperplaneWaitingList.clear();

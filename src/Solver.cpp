@@ -356,6 +356,19 @@ bool Solver::setProblem(std::string fileName)
             "───────────────────────────────────────────────────────────────────────────────────────────────────╴");
 #endif
 
+        if(env->settings->getSetting<bool>("MIP.CutOff.UseInitialValue", "Dual")
+            && std::abs(env->settings->getSetting<double>("MIP.CutOff.InitialValue", "Dual")) < SHOT_DBL_MAX)
+        {
+            env->dualSolver->cutOffToUse = env->settings->getSetting<double>("MIP.CutOff.InitialValue", "Dual");
+            env->dualSolver->useCutOff = true;
+            env->output->outputDebug(
+                fmt::format("  Setting user defined cutoff value to {}.", env->dualSolver->cutOffToUse));
+        }
+        else
+        {
+            env->dualSolver->cutOffToUse = env->results->getPrimalBound();
+        }
+
         auto taskPerformBoundTightening = std::make_unique<TaskPerformBoundTightening>(env, env->problem);
         taskPerformBoundTightening->run();
 
@@ -1086,7 +1099,19 @@ void Solver::initializeSettings()
         "How to treat quadratic functions", enumQPStrategy, 0);
     enumQPStrategy.clear();
 
-    env->settings->createSetting("Reformulation.Quadratics.UseEigenValueDecomposition", "Model", false,
+    env->settings->createSetting("Reformulation.Quadratics.EigenValueDecomposition.Use", "Model", false,
+        "Whether to use the eigenvalue decomposition of convex quadratic functions");
+
+    VectorString enumEigenValueStrategy;
+    enumEigenValueStrategy.push_back("Term coefficient is included in reformulation");
+    enumEigenValueStrategy.push_back("Term coefficient remains");
+
+    env->settings->createSetting("Reformulation.Quadratics.EigenValueDecomposition.Formulation", "Model",
+        static_cast<int>(ES_EigenValueDecompositionFormulation::CoefficientReformulated),
+        "Which formulation to use in eigenvalue decomposition", enumEigenValueStrategy, 0);
+    enumEigenValueStrategy.clear();
+
+    env->settings->createSetting("Reformulation.Quadratics.EigenValueDecomposition.Method", "Model", false,
         "Whether to use the eigen value decomposition of convex quadratic functions");
 
     // Modeling system settings
@@ -1390,7 +1415,7 @@ void Solver::initializeSettings()
     enumGurobiNumericFocus.push_back("Mild");
     enumGurobiNumericFocus.push_back("Moderate");
     enumGurobiNumericFocus.push_back("Aggressive");
-    env->settings->createSetting("Gurobi.NumericFocus", "Subsolver", 2, "MIP focus", enumGurobiNumericFocus, 0);
+    env->settings->createSetting("Gurobi.NumericFocus", "Subsolver", 1, "MIP focus", enumGurobiNumericFocus, 0);
     enumGurobiNumericFocus.clear();
 
     VectorString enumGurobiPoolSearchMode;
@@ -1825,7 +1850,7 @@ void Solver::setConvexityBasedSettingsPreReformulation()
 #ifdef HAS_CBC
             if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Cbc)
             {
-                env->settings->updateSetting("Reformulation.Quadratics.UseEigenValueDecomposition", "Model", false);
+                env->settings->updateSetting("Reformulation.Quadratics.EigenValueDecomposition.Use", "Model", false);
             }
 #endif
         }
@@ -1834,7 +1859,7 @@ void Solver::setConvexityBasedSettingsPreReformulation()
 #ifdef HAS_CBC
             if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Cbc)
             {
-                env->settings->updateSetting("Reformulation.Quadratics.UseEigenValueDecomposition", "Model", true);
+                env->settings->updateSetting("Reformulation.Quadratics.EigenValueDecomposition.Use", "Model", true);
             }
 #endif
         }

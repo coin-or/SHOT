@@ -315,21 +315,26 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
 
             if(checkFixedNLPStrategy(candidatePoints.at(0)))
             {
-                env->primalSolver->addFixedNLPCandidate(candidatePoints.at(0).point, E_PrimalNLPSource::FirstSolution,
-                    context.getCandidateObjective(), env->results->getCurrentIteration()->iterationNumber,
-                    candidatePoints.at(0).maxDeviation);
 
                 if(taskSelectPrimNLPOriginal)
-                    taskSelectPrimNLPOriginal->run();
+                {
+                    env->primalSolver->addFixedNLPCandidate(candidatePoints.at(0).point,
+                        E_PrimalNLPSource::FirstSolution, context.getCandidateObjective(),
+                        env->results->getCurrentIteration()->iterationNumber, candidatePoints.at(0).maxDeviation);
 
-                env->primalSolver->addFixedNLPCandidate(candidatePoints.at(0).point, E_PrimalNLPSource::FirstSolution,
-                    context.getCandidateObjective(), env->results->getCurrentIteration()->iterationNumber,
-                    candidatePoints.at(0).maxDeviation);
+                    taskSelectPrimNLPOriginal->run();
+                    env->primalSolver->fixedPrimalNLPCandidates.clear();
+                }
 
                 if(taskSelectPrimNLPReformulated)
-                    taskSelectPrimNLPReformulated->run();
+                {
+                    env->primalSolver->addFixedNLPCandidate(candidatePoints.at(0).point,
+                        E_PrimalNLPSource::FirstSolution, context.getCandidateObjective(),
+                        env->results->getCurrentIteration()->iterationNumber, candidatePoints.at(0).maxDeviation);
 
-                env->primalSolver->fixedPrimalNLPCandidates.clear();
+                    taskSelectPrimNLPReformulated->run();
+                    env->primalSolver->fixedPrimalNLPCandidates.clear();
+                }
 
                 env->primalSolver->checkPrimalSolutionCandidates();
             }
@@ -554,8 +559,8 @@ void CplexCallback::addLazyConstraint(
 
         for(auto& hp : env->dualSolver->hyperplaneWaitingList)
         {
-            this->createHyperplane(hp, context);
-            this->lastNumAddedHyperplanes++;
+            if(this->createHyperplane(hp, context))
+                this->lastNumAddedHyperplanes++;
         }
 
         env->dualSolver->hyperplaneWaitingList.clear();
