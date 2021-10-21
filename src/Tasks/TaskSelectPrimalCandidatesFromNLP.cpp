@@ -442,7 +442,6 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
         }
         else
         {
-            double tmpObj = NLPSolver->getObjectiveValue();
 
             auto variableSolution = NLPSolver->getSolution();
 
