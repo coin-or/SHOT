@@ -1830,7 +1830,7 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
         nonlinearExpression = nullptr;
     }
 
-    // Need to go through them again and chech if there are fixed variables that can be simplified
+    // Need to go through them again and check if there are fixed variables that can be simplified
     LinearTerms newLinearTerms;
     QuadraticTerms newQuadraticTerms;
     MonomialTerms newMonomialTerms;
