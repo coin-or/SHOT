@@ -624,8 +624,10 @@ public:
     {
         assert(ownerProblem.expired() || (ownerProblem.lock().get() == owner.get()));
 
+#ifndef NDEBUG
         for(auto& VAR : variables)
             assert(VAR->ownerProblem.expired() || (VAR->ownerProblem.lock().get() == owner.get()));
+#endif
 
         ownerProblem = owner;
     }
@@ -987,8 +989,10 @@ public:
     {
         assert(ownerProblem.expired() || (ownerProblem.lock().get() == owner.get()));
 
+#ifndef NDEBUG
         for(auto& E : elements)
             assert(E->variable->ownerProblem.expired() || (E->variable->ownerProblem.lock().get() == owner.get()));
+#endif
 
         ownerProblem = owner;
     }
