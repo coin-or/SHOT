@@ -2236,7 +2236,8 @@ LinearTerms TaskReformulateProblem::doEigenvalueDecomposition(QuadraticTerms qua
 
     for(size_t i = 0; i < quadraticTerms.variableMap.size(); i++)
     {
-        if(std::abs(quadraticTerms.eigenvalues[i].real()) < 1e-6)
+        if(std::abs(quadraticTerms.eigenvalues[i].real())
+            < env->settings->getSetting<double>("Reformulation.Quadratics.EigenValueDecomposition.Tolerance", "Model"))
             continue;
 
         auto auxConstraint = std::make_shared<LinearConstraint>(

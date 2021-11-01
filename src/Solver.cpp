@@ -1114,6 +1114,9 @@ void Solver::initializeSettings()
     env->settings->createSetting("Reformulation.Quadratics.EigenValueDecomposition.Method", "Model", false,
         "Whether to use the eigen value decomposition of convex quadratic functions");
 
+    env->settings->createSetting("Reformulation.Quadratics.EigenValueDecomposition.Tolerance", "Model", 1e-6,
+        "Variables with eigenvalues smaller than this value will be ignored", 0.0, SHOT_DBL_MAX);
+
     // Modeling system settings
 
     env->settings->createSettingGroup("ModelingSystem", "", "Modeling system",
