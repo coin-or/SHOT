@@ -311,7 +311,7 @@ void Report::outputSolverHeader()
 
     env->output->outputInfo("");
 
-    if(SHOT_VERSION_PATCH != 0)
+    if(SHOT_VERSION_PATCH[0] != '0')
     {
         env->output->outputInfo(fmt::format(" Version: {}.{}.{}. Git hash: {}. Released: {}.", SHOT_VERSION_MAJOR,
             SHOT_VERSION_MINOR, SHOT_VERSION_PATCH, SHOT_GITHASH, __DATE__));
