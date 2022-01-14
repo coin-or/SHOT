@@ -339,14 +339,17 @@ public:
         else
             destination->objectiveFunction->direction = E_ObjectiveFunctionDirection::Minimize;
 
-        if (nonlinearExpression->getType() == E_NonlinearExpressionTypes::Constant)
+        if(nonlinearExpression) 
         {
-            destination->objectiveFunction->constant += nonlinearExpression->getBounds().l();
-        }
-        else if(nonlinearExpression)
-        {
-            std::dynamic_pointer_cast<NonlinearObjectiveFunction>(destination->objectiveFunction)
-                ->add(nonlinearExpression);
+            if (nonlinearExpression->getType() == E_NonlinearExpressionTypes::Constant)
+            {
+                destination->objectiveFunction->constant += nonlinearExpression->getBounds().l();
+            }
+            else 
+            {
+                std::dynamic_pointer_cast<NonlinearObjectiveFunction>(destination->objectiveFunction)
+                    ->add(nonlinearExpression);
+            }
         }
 
         reset();
