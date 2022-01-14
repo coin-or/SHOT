@@ -125,6 +125,9 @@ int main(int argc, char* argv[])
 #ifdef HAS_CBC
         env->output->outputCritical("   --mip=cbc                Sets the MIP solver to Cbc");
 #endif
+#ifdef HAS_HIGHS
+        env->output->outputCritical("   --mip=highs              Sets the MIP solver to HiGHS");
+#endif
 #ifdef HAS_CPLEX
         env->output->outputCritical("   --mip=cplex              Sets the MIP solver to Cplex");
 #endif
@@ -394,6 +397,10 @@ int main(int argc, char* argv[])
 #ifdef HAS_CBC
         if(argValue == "cbc")
             solver.updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Cbc));
+#endif
+#ifdef HAS_HIGHS
+        if(argValue == "highs")
+            solver.updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Highs));
 #endif
 #ifdef HAS_CPLEX
         if(argValue == "cplex")

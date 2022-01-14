@@ -325,6 +325,7 @@ enum class ES_MIPSolver
     Cplex,
     Gurobi,
     Cbc,
+    Highs,
     None
 };
 

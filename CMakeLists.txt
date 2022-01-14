@@ -62,6 +62,9 @@ set(GUROBI_DIR "/opt/gurobi/gurobi900" CACHE STRING "The base directory where Gu
 option(HAS_CBC "Is Cbc available" OFF)
 set(CBC_DIR "/opt/Cbc-2.10" CACHE STRING "The base directory where Cbc is located (if available).")
 
+# Cbc
+option(HAS_HIGHS "Is HiGHS available" ON)
+
 # Ipopt
 option(HAS_IPOPT "Is Ipopt available" OFF)
 set(IPOPT_DIR "/opt/ipopt" CACHE STRING "The base directory where Ipopt is located (if available).")
@@ -76,6 +79,7 @@ set(ARGH_DIR "ThirdParty/argh")
 set(BOOST_DIR "ThirdParty/boost")
 set(CPPAD_DIR "ThirdParty/CppAD")
 set(EIGEN_DIR "ThirdParty/eigen")
+set(HIGHS_DIR "ThirdParty/HiGHS")
 set(MCPP_DIR "ThirdParty/mc++")
 set(SPDLOG_DIR "ThirdParty/spdlog")
 set(TINYXML2_DIR "ThirdParty/tinyxml2")
@@ -90,7 +94,7 @@ file(TO_CMAKE_PATH "${GUROBI_DIR}" ${GUROBI_DIR})
 file(TO_CMAKE_PATH "${IPOPT_DIR}" ${IPOPT_DIR})
 
 # Check if a MIP solver is defined
-if(NOT (HAS_CPLEX OR HAS_GUROBI OR HAS_CBC))
+if(NOT (HAS_CPLEX OR HAS_GUROBI OR HAS_CBC OR HAS_HIGHS))
     message(FATAL_ERROR "No MIP solver defined. SHOT needs at least one!")
 endif()
 
@@ -180,7 +184,6 @@ file(
     "${PROJECT_SOURCE_DIR}/src/Tasks/*.h"
     "${PROJECT_SOURCE_DIR}/src/Settings.h"
     "${TINYXML2_DIR}/tinyxml2.h"
-    #"${CPPAD_DIR}/include/cppad/cppad.hpp"
 )
 
 # Cbc
@@ -195,9 +198,9 @@ if(HAS_CBC)
     endif(CBC_FOUND)
 
     if(CBC_FOUND)
-        set(DUAL_SOURCES "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCbc.cpp")
+        set(DUAL_SOURCES ${DUAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCbc.cpp")
         set(DUAL_SOURCES ${DUAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.cpp")
-        set(DUAL_HEADERS "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCbc.h")
+        set(DUAL_HEADERS ${DUAL_HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCbc.h")
         set(DUAL_HEADERS ${DUAL_HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.h")
     endif(CBC_FOUND)
 endif(HAS_CBC)
@@ -238,6 +241,15 @@ if(HAS_GUROBI)
         set(DUAL_HEADERS ${DUAL_HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverGurobiSingleTree.h")
     endif(GUROBI_FOUND)
 endif(HAS_GUROBI)
+
+
+# HiGHS
+
+if(HAS_HIGHS)
+    add_definitions(-DHAS_HIGHS)
+    set(DUAL_SOURCES ${DUAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverHighs.cpp")
+    set(DUAL_HEADERS ${DUAL_HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverHighs.h")
+endif(HAS_HIGHS)
 
 # Ipopt
 
@@ -340,6 +352,7 @@ include_directories(SYSTEM "${MCPP_DIR}/include")
 include_directories(SYSTEM "${MCPP_DIR}/3rdparty/cpplapack/include")
 include_directories(SYSTEM "${MCPP_DIR}/3rdparty/fadbad++")
 include_directories(SYSTEM "${SPDLOG_DIR}/include")
+include_directories(SYSTEM "${HIGHS_DIR}/include")
 
 # Make sure the source file lists are in the correct format
 file(TO_CMAKE_PATH "${SOURCES}" SOURCES)
@@ -371,6 +384,18 @@ ExternalProject_Add(cppad
     -Dcppad_prefix=${CMAKE_CURRENT_BINARY_DIR}/CppAD
     -Dcppad_cxx_flags="-std=c++17"
 )
+
+# Adding HiGHS using as an external project
+ExternalProject_Add(HiGHS
+    PREFIX HiGHS
+    SOURCE_DIR ${PROJECT_SOURCE_DIR}/${HIGHS_DIR}
+    CMAKE_ARGS -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+    -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+    -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
+    -DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/HiGHS
+)
+
+SET(HIGHS_LIB_DIR ${CMAKE_CURRENT_BINARY_DIR}/HiGHS/lib)
 
 # Creates the helper library
 add_library(
@@ -461,6 +486,7 @@ add_library(
     ${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyStandard.cpp
 )
 target_link_libraries(SHOTDualStrategy SHOTModel)
+
 
 # Creates the tasks library
 file(GLOB_RECURSE TASK_SOURCES "${PROJECT_SOURCE_DIR}/src/Tasks/*.cpp")
@@ -555,6 +581,14 @@ if(HAS_CBC)
         message("   ${CBC_LIBRARIES}")
     endif()
 endif(HAS_CBC)
+
+# HiGHS linking
+if(HAS_HIGHS)
+    message("-- HiGHS include files will be used from: ${HIGHS_LIB_DIR}")
+    add_dependencies(SHOTDualStrategy HiGHS)
+    target_link_libraries(SHOTDualStrategy ${HIGHS_LIB_DIR}/libhighs.so)
+    target_include_directories(SHOTDualStrategy PUBLIC "${CMAKE_CURRENT_BINARY_DIR}/HiGHS/include")
+endif(HAS_HIGHS)
 
 # Ipopt linking
 if(HAS_IPOPT)

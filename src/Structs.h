@@ -168,7 +168,7 @@ struct DualSolution
 {
     VectorDouble point;
     E_DualSolutionSource sourceType;
-    double objValue;
+    double objValue = SHOT_DBL_INF;
     int iterFound;
     bool displayed; // Has the dual solution been displayed on console?
 };

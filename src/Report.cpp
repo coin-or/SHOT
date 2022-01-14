@@ -390,6 +390,11 @@ void Report::outputOptionsReport()
         dualSolver = "Cbc";
 #endif
 
+#ifdef HAS_HIGHS
+    if(solver == ES_MIPSolver::Highs)
+        dualSolver = "HiGHS";
+#endif
+
     switch(static_cast<E_SolutionStrategy>(env->results->usedSolutionStrategy))
     {
     case(E_SolutionStrategy::SingleTree):

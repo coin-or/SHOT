@@ -18,6 +18,22 @@
 #include "../DualSolver.h"
 #include "../MIPSolver/IMIPSolver.h"
 
+#ifdef HAS_CPLEX
+#include "MIPSolver/MIPSolverCplex.h"
+#endif
+
+#ifdef HAS_GUROBI
+#include "MIPSolver/MIPSolverGurobi.h"
+#endif
+
+#ifdef HAS_CBC
+#include "MIPSolver/MIPSolverCbc.h"
+#endif
+
+#ifdef HAS_HIGHS
+#include "MIPSolver/MIPSolverHighs.h"
+#endif
+
 #include <functional>
 #include <map>
 
@@ -83,6 +99,14 @@ NLPSolverCuttingPlaneMinimax::NLPSolverCuttingPlaneMinimax(EnvironmentPtr envPtr
     {
         LPSolver = std::make_unique<MIPSolverCbc>(env);
         env->output->outputDebug(" Cbc selected as MIP solver for minimax solver.");
+    }
+#endif
+
+#ifdef HAS_HIGHS
+    if(solver == ES_MIPSolver::Highs)
+    {
+        LPSolver = std::make_unique<MIPSolverHighs>(env);
+        env->output->outputDebug(" Highs selected as MIP solver for minimax solver.");
     }
 #endif
 

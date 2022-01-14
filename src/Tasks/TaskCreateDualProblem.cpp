@@ -28,8 +28,6 @@ TaskCreateDualProblem::TaskCreateDualProblem(EnvironmentPtr envPtr) : TaskBase(e
 
     createProblem(env->dualSolver->MIPSolver, env->reformulatedProblem);
 
-    env->dualSolver->MIPSolver->finalizeProblem();
-
     env->dualSolver->MIPSolver->initializeSolverSettings();
 
     if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
@@ -79,7 +77,8 @@ bool TaskCreateDualProblem::createProblem(MIPSolverPtr destination, ProblemPtr s
     for(auto& V : sourceProblem->allVariables)
     {
         variablesInitialized = variablesInitialized
-            && destination->addVariable(V->name.c_str(), V->properties.type, V->lowerBound, V->upperBound, V->semiBound);
+            && destination->addVariable(
+                V->name.c_str(), V->properties.type, V->lowerBound, V->upperBound, V->semiBound);
     }
 
     if(!variablesInitialized)
@@ -107,7 +106,8 @@ bool TaskCreateDualProblem::createProblem(MIPSolverPtr destination, ProblemPtr s
         destination->setDualAuxiliaryObjectiveVariableIndex(sourceProblem->properties.numberOfVariables);
 
         if(sourceProblem->objectiveFunction->properties.isMinimize)
-            destination->addVariable("shot_dual_objvar", E_VariableType::Real, objectiveBound.l(), objectiveBound.u(), 0.0);
+            destination->addVariable(
+                "shot_dual_objvar", E_VariableType::Real, objectiveBound.l(), objectiveBound.u(), 0.0);
         else
             destination->addVariable(
                 "shot_dual_objvar", E_VariableType::Real, -objectiveBound.u(), -objectiveBound.l(), 0.0);

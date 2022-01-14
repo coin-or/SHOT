@@ -281,6 +281,15 @@ bool Solver::setProblem(std::string fileName)
     }
 #endif
 
+#ifdef HAS_HIGHS
+    // TODO: figure out a better way to do this
+    if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Highs)
+    {
+        env->settings->updateSetting(
+            "Reformulation.Quadratics.Strategy", "Model", (int)ES_QuadraticProblemStrategy::Nonlinear);
+    }
+#endif
+
     try
     {
         if(problemExtension == ".osil" || problemExtension == ".xml")
@@ -457,6 +466,15 @@ bool Solver::setProblem(
     }
 #endif
 
+#ifdef HAS_HIGHS
+    // TODO: figure out a better way to do this
+    if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Highs)
+    {
+        env->settings->updateSetting(
+            "Reformulation.Quadratics.Strategy", "Model", (int)ES_QuadraticProblemStrategy::Nonlinear);
+    }
+#endif
+
     setConvexityBasedSettingsPreReformulation();
     verifySettings();
 
@@ -480,7 +498,8 @@ bool Solver::selectStrategy()
 {
     try
     {
-        if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Cbc)
+        if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Cbc
+            || static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Highs)
         {
             if(env->problem->properties.numberOfDiscreteVariables == 0
                 && env->problem->properties.numberOfSemicontinuousVariables == 0)
@@ -840,6 +859,7 @@ void Solver::initializeSettings()
     enumMIPSolver.push_back("Cplex");
     enumMIPSolver.push_back("Gurobi");
     enumMIPSolver.push_back("Cbc");
+    enumMIPSolver.push_back("Highs");
 
     ES_MIPSolver usedMIPSolver;
 
@@ -849,6 +869,8 @@ void Solver::initializeSettings()
     usedMIPSolver = ES_MIPSolver::Cplex;
 #elif HAS_CBC
     usedMIPSolver = ES_MIPSolver::Cbc;
+#elif HAS_HIGHS
+    usedMIPSolver = ES_MIPSolver::Highs;
 #else
     env->output->outputCritical(" SHOT has not been compiled with support for any MIP solver.");
 #endif
@@ -1756,6 +1778,21 @@ void Solver::verifySettings()
     }
 #endif
 
+#ifdef HAS_HIGHS
+    if(solver == ES_MIPSolver::Highs)
+    {
+        MIPSolverDefined = true;
+        unboundedVariableBound = 1e50;
+
+        // Some features are not available in Highs
+        env->settings->updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::MultiTree));
+        env->settings->updateSetting(
+            "Reformulation.Quadratics.Strategy", "Model", static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear));
+        env->settings->updateSetting(
+            "Reformulation.Quadratics.Strategy", "Model", (int)ES_QuadraticTermsExtractStrategy::DoNotExtract);
+    }
+#endif
+
     if(!MIPSolverDefined)
     {
         env->output->outputWarning(" SHOT has not been compiled with support for selected MIP solver.");
@@ -1768,6 +1805,9 @@ void Solver::verifySettings()
         unboundedVariableBound = 1e20;
 #elif HAS_CBC
         env->settings->updateSetting("MIP.Solver", "Dual", (int)ES_MIPSolver::Cbc);
+        unboundedVariableBound = 1e50;
+#elif HAS_HIGHS
+        env->settings->updateSetting("MIP.Solver", "Dual", (int)ES_MIPSolver::Highs);
         unboundedVariableBound = 1e50;
 #else
         env->output->outputCritical(" SHOT has not been compiled with support for any MIP solver.");
@@ -1856,11 +1896,25 @@ void Solver::setConvexityBasedSettingsPreReformulation()
                 env->settings->updateSetting("Reformulation.Quadratics.EigenValueDecomposition.Use", "Model", false);
             }
 #endif
+
+#ifdef HAS_HIGHS
+            if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Highs)
+            {
+                env->settings->updateSetting("Reformulation.Quadratics.EigenValueDecomposition.Use", "Model", false);
+            }
+#endif
         }
         else if(env->problem->properties.convexity == E_ProblemConvexity::Convex)
         {
 #ifdef HAS_CBC
             if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Cbc)
+            {
+                env->settings->updateSetting("Reformulation.Quadratics.EigenValueDecomposition.Use", "Model", true);
+            }
+#endif
+
+#ifdef HAS_HIGHS
+            if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Highs)
             {
                 env->settings->updateSetting("Reformulation.Quadratics.EigenValueDecomposition.Use", "Model", true);
             }
@@ -1931,7 +1985,16 @@ void Solver::setConvexityBasedSettings()
             env->settings->updateSetting("Reformulation.ObjectiveFunction.PartitionNonlinearTerms", "Model",
                 (int)ES_PartitionNonlinearSums::IfConvex);
         }
+#endif
 
+#ifdef HAS_HIGHS
+        if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Highs)
+        {
+            env->settings->updateSetting(
+                "Reformulation.Constraint.PartitionNonlinearTerms", "Model", (int)ES_PartitionNonlinearSums::IfConvex);
+            env->settings->updateSetting("Reformulation.ObjectiveFunction.PartitionNonlinearTerms", "Model",
+                (int)ES_PartitionNonlinearSums::IfConvex);
+        }
 #endif
     }
 }
