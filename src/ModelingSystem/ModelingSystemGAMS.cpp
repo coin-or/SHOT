@@ -285,7 +285,7 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem)
         std::string(" Time to extract information on quadratics: ") + std::to_string(gevTimeDiff(modelingEnvironment)));
 #endif
 
-#if GMOAPIVERSION >= 21
+#if GMOAPIVERSION >= 22
     if( gmoNZ64(modelingObject) > INT_MAX )
     {
        env->output->outputError(" Problems with more than 2^31 nonzeros not supported by SHOT.");
@@ -293,7 +293,7 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem)
     }
 #endif
 
-#if GMOAPIVERSION >= 22
+#if GMOAPIVERSION >= 23
     if( gmoMaxQNZ64(modelingObject) > INT_MAX )
     {
        env->output->outputError(" Problems with more than 2^31 nonzeros in a quadratic coefficients matrix not supported by SHOT.");
