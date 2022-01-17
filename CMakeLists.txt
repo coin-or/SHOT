@@ -588,6 +588,9 @@ if(HAS_HIGHS)
     add_dependencies(SHOTDualStrategy HiGHS)
     target_link_libraries(SHOTDualStrategy ${HIGHS_LIB_DIR}/libhighs.so)
     target_include_directories(SHOTDualStrategy PUBLIC "${CMAKE_CURRENT_BINARY_DIR}/HiGHS/include")
+    add_dependencies(SHOTPrimalStrategy HiGHS)
+    target_link_libraries(SHOTPrimalStrategy ${HIGHS_LIB_DIR}/libhighs.so)
+    target_include_directories(SHOTPrimalStrategy PUBLIC "${CMAKE_CURRENT_BINARY_DIR}/HiGHS/include")
 endif(HAS_HIGHS)
 
 # Ipopt linking
