@@ -573,6 +573,7 @@ if(HAS_CBC)
         message("-- Cbc libraries could not be found!")
     else()
         message("-- Cbc include files will be used from: ${CBC_INCLUDE_DIRS}")
+        target_include_directories(SHOTDualStrategy PUBLIC "${CBC_INCLUDE_DIRS}")
 
         target_link_libraries(SHOTDualStrategy ${CBC_LIBRARIES})
         target_compile_options(SHOTDualStrategy PUBLIC ${CBC_CFLAGS_OTHER})
