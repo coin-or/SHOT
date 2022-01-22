@@ -218,8 +218,27 @@ bool MIPSolverHighs::finalizeProblem()
 
 void MIPSolverHighs::initializeSolverSettings()
 {
-    highsInstance.setOptionValue("highs_debug_level", 0);
-    highsInstance.setOptionValue("output_flag", true);
+    highsInstance.setOptionValue(
+        "mip_rel_gap", env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination"));
+    highsInstance.setOptionValue(
+        "mip_abs_gap", env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination"));
+
+    // Adds a user-provided node limit
+    if(auto nodeLimit = env->settings->getSetting<double>("MIP.NodeLimit", "Dual"); nodeLimit > 0)
+    {
+        if(nodeLimit > SHOT_INT_MAX)
+            nodeLimit = SHOT_INT_MAX;
+
+        highsInstance.setOptionValue("mip_max_nodes", nodeLimit);
+    }
+
+    // highsInstance.setOptionValue("highs_debug_level", 3);
+    // highsInstance.setOptionValue("mip_report_level", 2);
+
+    if(env->settings->getSetting<bool>("Console.DualSolver.Show", "Output"))
+        highsInstance.setOptionValue("output_flag", true);
+    else
+        highsInstance.setOptionValue("output_flag", false);
 }
 
 int MIPSolverHighs::addLinearConstraint(
@@ -263,8 +282,10 @@ int MIPSolverHighs::addLinearConstraint(
 
 bool MIPSolverHighs::addSpecialOrderedSet(E_SOSType type, VectorInteger variableIndexes, VectorDouble variableWeights)
 {
-    // Not implemented
-    return (true);
+    // TODO: Not implemented
+    throw new OperationNotImplementedException(
+        "Special ordered set functionality not yet implemented in HiGHS interface.");
+    return (false);
 }
 
 void MIPSolverHighs::activateDiscreteVariables(bool activate)
@@ -350,10 +371,6 @@ E_ProblemSolutionStatus MIPSolverHighs::solveProblem()
     E_ProblemSolutionStatus MIPSolutionStatus;
     cachedSolutionHasChanged = true;
 
-    initializeSolverSettings();
-
-    // TODO: Add MIP start
-
     highsReturnStatus = highsInstance.run();
     assert(highsReturnStatus == HighsStatus::kOk);
     MIPSolutionStatus = getSolutionStatus();
@@ -363,7 +380,12 @@ E_ProblemSolutionStatus MIPSolverHighs::solveProblem()
     return (MIPSolutionStatus);
 }
 
-bool MIPSolverHighs::repairInfeasibility() { return false; }
+bool MIPSolverHighs::repairInfeasibility()
+{
+    throw new OperationNotImplementedException(
+        "Cannot repair infeasible dual problem as HiGHS interface is not yet fully implemented.");
+    return (false);
+}
 
 int MIPSolverHighs::increaseSolutionLimit(int increment)
 {
@@ -409,7 +431,11 @@ void MIPSolverHighs::setCutOffAsConstraint([[maybe_unused]] double cutOff)
 
 void MIPSolverHighs::addMIPStart(VectorDouble point)
 {
-    // TODO
+    // TODO: this does not seem to work
+    HighsSolution solution;
+    solution.col_value = point;
+
+    highsInstance.setSolution(solution);
 }
 
 void MIPSolverHighs::writeProblemToFile(std::string filename)
@@ -441,11 +467,15 @@ double MIPSolverHighs::getObjectiveValue(int solIdx)
     return (objectiveValue);
 }
 
-void MIPSolverHighs::deleteMIPStarts() { MIPStart.clear(); }
+void MIPSolverHighs::deleteMIPStarts()
+{
+    // TODO: not yet implemented
+    MIPStart.clear();
+}
 
 bool MIPSolverHighs::createIntegerCut(IntegerCut& integerCut)
 {
-    // TODO
+    // TODO: not yet implemented
     return (false);
 }
 
@@ -457,8 +487,8 @@ VectorDouble MIPSolverHighs::getVariableSolution(int solIdx)
 
 int MIPSolverHighs::getNumberOfSolutions()
 {
+    // TODO: fix when solution pool functionality is available in HiGHS
     int numSols = 1;
-
     return (numSols);
 }
 
@@ -484,17 +514,8 @@ PairDouble MIPSolverHighs::getCurrentVariableBounds(int varIndex)
 {
     PairDouble tmpBounds;
 
-    try
-    {
-        tmpBounds.first = variableLowerBounds[varIndex];
-        tmpBounds.second = variableUpperBounds[varIndex];
-    }
-    catch(std::exception& e)
-    {
-        env->output->outputError(
-            "        Error when obtaining variable bounds for variable index" + std::to_string(varIndex) + " in HiGHS",
-            e.what());
-    }
+    tmpBounds.first = variableLowerBounds[varIndex];
+    tmpBounds.second = variableUpperBounds[varIndex];
 
     return (tmpBounds);
 }
@@ -510,20 +531,13 @@ double MIPSolverHighs::getDualObjectiveValue()
     bool isMIP = getDiscreteVariableStatus();
     double objVal = (isMinimizationProblem ? SHOT_DBL_MIN : SHOT_DBL_MAX);
 
-    try
+    if(isMIP)
     {
-        if(isMIP)
-        {
-            objVal = highsInstance.getInfo().mip_dual_bound;
-        }
-        else if(getSolutionStatus() == E_ProblemSolutionStatus::Optimal)
-        {
-            objVal = highsInstance.getInfo().objective_function_value;
-        }
+        objVal = highsInstance.getInfo().mip_dual_bound;
     }
-    catch(std::exception& e)
+    else if(getSolutionStatus() == E_ProblemSolutionStatus::Optimal)
     {
-        env->output->outputError("        Error when obtaining dual objective value in HiGHS", e.what());
+        objVal = highsInstance.getInfo().objective_function_value;
     }
 
     return (objVal);
