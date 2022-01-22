@@ -229,11 +229,13 @@ void MIPSolverHighs::initializeSolverSettings()
         if(nodeLimit > SHOT_INT_MAX)
             nodeLimit = SHOT_INT_MAX;
 
-        highsInstance.setOptionValue("mip_max_nodes", nodeLimit);
+        highsInstance.setOptionValue("mip_max_nodes", (int)nodeLimit);
     }
 
     // highsInstance.setOptionValue("highs_debug_level", 3);
     // highsInstance.setOptionValue("mip_report_level", 2);
+
+    highsInstance.setOptionValue("threads", env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual"));
 
     if(env->settings->getSetting<bool>("Console.DualSolver.Show", "Output"))
         highsInstance.setOptionValue("output_flag", true);
@@ -407,25 +409,69 @@ void MIPSolverHighs::setCutOff(double cutOff)
     if(cutOff == SHOT_DBL_MAX || cutOff == SHOT_DBL_MIN)
         return;
 
-    double cutOffTol = env->settings->getSetting<double>("MIP.CutOff.Tolerance", "Dual");
+    // TODO: fix this when/if HiGHS get cutoff support
+    this->setCutOffAsConstraint(cutOff);
+}
 
-    if(isMinimizationProblem)
+void MIPSolverHighs::setCutOffAsConstraint(double cutOff)
+{
+    if(cutOff == SHOT_DBL_MAX || cutOff == SHOT_DBL_MIN)
+        return;
+
+    if(!cutOffConstraintDefined)
     {
-        this->cutOff = cutOff + cutOffTol;
+        VectorInteger variableIndexes;
+        VectorDouble coefficients;
 
-        env->output->outputDebug(fmt::format("        Setting cutoff value to {} for minimization.", this->cutOff));
+        int numConstraintsBefore = highsInstance.getNumRow();
+
+        for(size_t i = 0; i < variableCosts.size(); i++)
+        {
+            if(variableCosts[i] != 0.0)
+            {
+                variableIndexes.push_back(i);
+                coefficients.push_back(variableCosts[i]);
+            }
+        }
+
+        if(isMinimizationProblem)
+        {
+            highsInstance.addRow(-highsInstance.getInfinity(), (cutOff - this->objectiveConstant),
+                variableIndexes.size(), &variableIndexes[0], &coefficients[0]);
+            env->output->outputDebug(
+                "        Setting cutoff constraint to " + Utilities::toString(cutOff) + " for minimization.");
+        }
+        else
+        {
+            highsInstance.addRow(-highsInstance.getInfinity(), -1.0 * (cutOff - this->objectiveConstant),
+                variableIndexes.size(), &variableIndexes[0], &coefficients[0]);
+            env->output->outputDebug(
+                "        Setting cutoff constraint value to " + Utilities::toString(cutOff) + " for maximization.");
+        }
+
+        allowRepairOfConstraint.push_back(false);
+
+        cutOffConstraintDefined = true;
+        cutOffConstraintIndex = highsInstance.getNumRow() - 1;
     }
     else
     {
-        this->cutOff = -1 * (cutOff + cutOffTol);
-
-        env->output->outputDebug(fmt::format("        Setting cutoff value to {} for maximization.", this->cutOff));
+        if(isMinimizationProblem)
+        {
+            highsInstance.changeRowBounds(
+                cutOffConstraintIndex, -highsInstance.getInfinity(), cutOff - this->objectiveConstant);
+            env->output->outputDebug(
+                "        Setting cutoff constraint value to " + Utilities::toString(cutOff) + " for minimization.");
+        }
+        else
+        {
+            highsInstance.changeRowBounds(
+                cutOffConstraintIndex, -highsInstance.getInfinity(), -(cutOff - this->objectiveConstant));
+            env->output->outputDebug(
+                "        Setting cutoff constraint value to " + Utilities::toString(cutOff) + " for maximization.");
+        }
     }
-}
 
-void MIPSolverHighs::setCutOffAsConstraint([[maybe_unused]] double cutOff)
-{
-    // TODO
     return;
 }
 

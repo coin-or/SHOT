@@ -17,27 +17,6 @@
 
 namespace SHOT
 {
-/*
-class CbcMessageHandler : public CoinMessageHandler
-{
-private:
-    EnvironmentPtr env;
-
-public:
-    CbcMessageHandler(EnvironmentPtr envPtr) : CoinMessageHandler() { env = envPtr; }
-
-    CbcMessageHandler(const CbcMessageHandler& r) : CoinMessageHandler(r) { }
-
-    CbcMessageHandler& operator=(const CbcMessageHandler& r)
-    {
-        CoinMessageHandler::operator=(r);
-        return *this;
-    }
-
-    virtual CoinMessageHandler* clone() { return new CbcMessageHandler(*this); }
-
-    virtual int print();
-};*/
 
 class MIPSolverHighs : public IMIPSolver, MIPSolverBase
 {
