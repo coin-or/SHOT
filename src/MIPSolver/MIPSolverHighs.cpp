@@ -222,6 +222,8 @@ void MIPSolverHighs::initializeSolverSettings()
         "mip_rel_gap", env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination"));
     highsInstance.setOptionValue(
         "mip_abs_gap", env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination"));
+    highsInstance.setOptionValue(
+        "mip_feasibility_tolerance", env->settings->getSetting<double>("Tolerance.Integer", "Primal"));
 
     // Adds a user-provided node limit
     if(auto nodeLimit = env->settings->getSetting<double>("MIP.NodeLimit", "Dual"); nodeLimit > 0)
