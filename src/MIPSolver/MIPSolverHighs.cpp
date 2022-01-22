@@ -337,7 +337,6 @@ void MIPSolverHighs::activateDiscreteVariables(bool activate)
 
 E_ProblemSolutionStatus MIPSolverHighs::getSolutionStatus()
 {
-
     E_ProblemSolutionStatus MIPSolutionStatus;
 
     auto modelStatus = highsInstance.getModelStatus();
