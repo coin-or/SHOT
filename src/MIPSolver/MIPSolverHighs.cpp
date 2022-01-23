@@ -410,8 +410,7 @@ void MIPSolverHighs::setCutOff(double cutOff)
     if(cutOff == SHOT_DBL_MAX || cutOff == SHOT_DBL_MIN)
         return;
 
-    // TODO: fix this when/if HiGHS get cutoff support
-    this->setCutOffAsConstraint(cutOff);
+    highsInstance.setOptionValue("objective_bound", cutOff);
 }
 
 void MIPSolverHighs::setCutOffAsConstraint(double cutOff)
