@@ -755,7 +755,7 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
     // To find a feasible point for an unbounded dual problem and not when solving the minimax-problem
     if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded && env->results->getNumberOfIterations() > 0)
     {
-        std::vector<PairIndexValue> originalObjectiveCoefficients;
+        VectorInteger variablesWithChangedBounds;
         bool problemUpdated = false;
 
         if((env->reformulatedProblem->objectiveFunction->properties.classification
@@ -771,9 +771,9 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
             {
                 if(V->isDualUnbounded())
                 {
-                    // Temporarily remove unbounded terms from objective
-                    originalObjectiveCoefficients.emplace_back(V->index, osiInterface->getObjCoefficients()[V->index]);
-                    osiInterface->setObjCoeff(V->index, 0.0);
+                    // Temporarily introduce bounds [-1e20,1e20] for unbounded variables in objective
+                    updateVariableBound(V->index, -1e20, 1e20);
+                    variablesWithChangedBounds.push_back(V->index);
                     problemUpdated = true;
                 }
             }
@@ -831,10 +831,10 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
             if(MIPSolutionStatus == E_ProblemSolutionStatus::Optimal)
                 MIPSolutionStatus = E_ProblemSolutionStatus::Feasible;
 
-            for(auto& P : originalObjectiveCoefficients)
+            for(auto& I : variablesWithChangedBounds)
             {
-                osiInterface->setObjCoeff(P.index, P.value);
-                assert(osiInterface->getObjCoefficients()[P.index] == P.value);
+                updateVariableBound(I, env->reformulatedProblem->getVariableLowerBound(I),
+                    env->reformulatedProblem->getVariableUpperBound(I));
             }
 
             env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed = true;
