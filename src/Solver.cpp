@@ -1035,11 +1035,11 @@ void Solver::initializeSettings()
     enumNonlinearTermPartitioning.push_back("If result is convex");
     enumNonlinearTermPartitioning.push_back("Never");
     env->settings->createSetting("Reformulation.Constraint.PartitionNonlinearTerms", "Model",
-        static_cast<int>(ES_PartitionNonlinearSums::IfConvex), "When to partition nonlinear sums in objective function",
+        static_cast<int>(ES_PartitionNonlinearSums::IfConvex), "When to partition nonlinear sums in constraints",
         enumNonlinearTermPartitioning, 0);
 
     env->settings->createSetting("Reformulation.Constraint.PartitionQuadraticTerms", "Model",
-        static_cast<int>(ES_PartitionNonlinearSums::IfConvex), "When to partition quadratic sums in objective function",
+        static_cast<int>(ES_PartitionNonlinearSums::IfConvex), "When to partition quadratic sums in constraints",
         enumNonlinearTermPartitioning, 0);
 
     // Reformulations for monomials
