@@ -22,6 +22,7 @@
 #include <map>
 
 #include "boost/math/tools/minima.hpp"
+#include "boost/version.hpp"
 
 namespace SHOT
 {
@@ -116,7 +117,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
         = env->settings->getSetting<double>("ESH.InteriorPoint.CuttingPlane.TerminationToleranceRel", "Dual");
     double constrSelFactor
         = env->settings->getSetting<double>("ESH.InteriorPoint.CuttingPlane.ConstraintSelectionFactor", "Dual");
-    boost::uintmax_t maxIterSubsolver
+    int maxIterSubsolver
         = env->settings->getSetting<int>("ESH.InteriorPoint.CuttingPlane.IterationLimitSubsolver", "Dual");
     int bitPrecision = env->settings->getSetting<int>("ESH.InteriorPoint.CuttingPlane.BitPrecision", "Dual");
 
@@ -141,7 +142,12 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 
     for(int i = 0; i <= maxIter; i++)
     {
+        // boost 1.77.0 changed from boost::uintmax_t to std::uintmax_t
+#if defined(BOOST_VERSION) && BOOST_VERSION >= 107700
+        std::uintmax_t maxIterSubsolverTmp = maxIterSubsolver;
+#else
         boost::uintmax_t maxIterSubsolverTmp = maxIterSubsolver;
+#endif
 
         // Saves the LP problem to file if in debug mode
         if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
@@ -217,7 +223,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
         {
             MinimizationFunction funct(LPVarSol, prevSol, sourceProblem);
 
-            // Solves the minization problem wrt lambda in [0, 1]
+            // Solves the minimization problem wrt lambda in [0, 1]
             auto minimizationResult
                 = boost::math::tools::brent_find_minima(funct, 0.0, 1.0, bitPrecision, maxIterSubsolverTmp);
 
