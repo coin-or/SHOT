@@ -22,7 +22,7 @@
 #include <map>
 
 #include "boost/math/tools/minima.hpp"
-#include "boost/version.hpp"
+#include "boost/cstdint.hpp"
 
 namespace SHOT
 {
@@ -142,12 +142,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 
     for(int i = 0; i <= maxIter; i++)
     {
-        // boost 1.77.0 changed from boost::uintmax_t to std::uintmax_t
-#if defined(BOOST_VERSION) && BOOST_VERSION >= 107700
-        std::uintmax_t maxIterSubsolverTmp = maxIterSubsolver;
-#else
         boost::uintmax_t maxIterSubsolverTmp = maxIterSubsolver;
-#endif
 
         // Saves the LP problem to file if in debug mode
         if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
