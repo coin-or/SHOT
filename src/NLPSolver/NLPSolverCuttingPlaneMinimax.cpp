@@ -22,6 +22,7 @@
 #include <map>
 
 #include "boost/math/tools/minima.hpp"
+#include "boost/cstdint.hpp"
 
 namespace SHOT
 {
@@ -116,7 +117,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
         = env->settings->getSetting<double>("ESH.InteriorPoint.CuttingPlane.TerminationToleranceRel", "Dual");
     double constrSelFactor
         = env->settings->getSetting<double>("ESH.InteriorPoint.CuttingPlane.ConstraintSelectionFactor", "Dual");
-    boost::uintmax_t maxIterSubsolver
+    int maxIterSubsolver
         = env->settings->getSetting<int>("ESH.InteriorPoint.CuttingPlane.IterationLimitSubsolver", "Dual");
     int bitPrecision = env->settings->getSetting<int>("ESH.InteriorPoint.CuttingPlane.BitPrecision", "Dual");
 
@@ -217,7 +218,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
         {
             MinimizationFunction funct(LPVarSol, prevSol, sourceProblem);
 
-            // Solves the minization problem wrt lambda in [0, 1]
+            // Solves the minimization problem wrt lambda in [0, 1]
             auto minimizationResult
                 = boost::math::tools::brent_find_minima(funct, 0.0, 1.0, bitPrecision, maxIterSubsolverTmp);
 

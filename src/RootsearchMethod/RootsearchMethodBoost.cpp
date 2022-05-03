@@ -17,6 +17,7 @@
 #include "../Iteration.h"
 
 #include "boost/math/tools/roots.hpp"
+#include "boost/cstdint.hpp"
 
 namespace SHOT
 {
