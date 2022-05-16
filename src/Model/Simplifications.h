@@ -745,18 +745,13 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionSum> 
         }
     }
 
-    auto sum = std::make_shared<ExpressionSum>();
-
-    if(constant != 0.0)
-        sum->children.add(std::make_shared<ExpressionConstant>(constant));
-
     if(children.size() == 0 && linearVariableCoefficients.size() == 0) // Everything has been simplified away
         return (std::make_shared<ExpressionConstant>(constant));
 
-    for(auto& C : children)
-    {
-        sum->children.add(C);
-    }
+    auto sum = std::make_shared<ExpressionSum>(children);
+
+    if(constant != 0.0)
+        sum->children.add(std::make_shared<ExpressionConstant>(constant));
 
     for(auto& P : linearVariableCoefficients)
     {
