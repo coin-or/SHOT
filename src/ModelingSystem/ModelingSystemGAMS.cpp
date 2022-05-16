@@ -265,6 +265,8 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(
 
 E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem)
 {
+    env->timing->startTimer("ProblemInitialization");
+
     assert(modelingObject != nullptr);
     assert(modelingEnvironment != nullptr);
 
@@ -311,25 +313,46 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem)
          */
 
         if(!copyVariables(problem))
+        {
+            env->timing->stopTimer("ProblemInitialization");
             return (E_ProblemCreationStatus::CapabilityProblem);
+        }
 
         if(!copyObjectiveFunction(problem))
+        {
+            env->timing->stopTimer("ProblemInitialization");
             return (E_ProblemCreationStatus::ErrorInObjective);
+        }
 
         if(!copyConstraints(problem))
+        {
+            env->timing->stopTimer("ProblemInitialization");
             return (E_ProblemCreationStatus::CapabilityProblem);
+        }
 
         if(!copyLinearTerms(problem))
+        {
+            env->timing->stopTimer("ProblemInitialization");
             return (E_ProblemCreationStatus::ErrorInConstraints);
+        }
 
         if(!copyQuadraticTerms(problem))
+        {
+            env->timing->stopTimer("ProblemInitialization");
             return (E_ProblemCreationStatus::ErrorInConstraints);
+        }
 
         if(!copyNonlinearExpressions(problem))
+        {
+            env->timing->stopTimer("ProblemInitialization");
             return (E_ProblemCreationStatus::ErrorInConstraints);
+        }
 
         if(!copySOS(problem))
+        {
+            env->timing->stopTimer("ProblemInitialization");
             return (E_ProblemCreationStatus::ErrorInConstraints);
+        }
 
         problem->updateProperties();
 
@@ -347,15 +370,18 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem)
     {
         env->output->outputError(" Capability problem when creating problem from GAMS object: ");
         env->output->outputError(e.what());
+        env->timing->stopTimer("ProblemInitialization");
         return (E_ProblemCreationStatus::CapabilityProblem);
     }
     catch(const std::exception& e)
     {
         env->output->outputError(" Error when creating problem from GAMS object.", e.what());
 
+        env->timing->stopTimer("ProblemInitialization");
         return (E_ProblemCreationStatus::Error);
     }
 
+    env->timing->stopTimer("ProblemInitialization");
     return (E_ProblemCreationStatus::NormalCompletion);
 }
 
@@ -1535,21 +1561,21 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
             bool child1IsSum = (stack.rbegin()[1]->getType() == E_NonlinearExpressionTypes::Sum);
             bool child0IsSum = (stack.rbegin()[0]->getType() == E_NonlinearExpressionTypes::Sum);
 
-            NonlinearExpressions terms;
+            auto sum = std::make_shared<ExpressionSum>();
 
             if(child0IsSum)
-                terms.add(std::move(std::dynamic_pointer_cast<ExpressionSum>(stack.rbegin()[0])->children));
+                sum->children.add(std::move(std::dynamic_pointer_cast<ExpressionSum>(stack.rbegin()[0])->children));
             else
-                terms.add(stack.rbegin()[0]);
+                sum->children.add(std::move(stack.rbegin()[0]));
 
             if(child1IsSum)
-                terms.add(std::move(std::dynamic_pointer_cast<ExpressionSum>(stack.rbegin()[1])->children));
+                sum->children.add(std::move(std::dynamic_pointer_cast<ExpressionSum>(stack.rbegin()[1])->children));
             else
-                terms.add(stack.rbegin()[1]);
+                sum->children.add(std::move(stack.rbegin()[1]));
 
             stack.pop_back();
             stack.pop_back();
-            stack.push_back(std::make_shared<ExpressionSum>(terms));
+            stack.push_back(std::move(sum));
 
             break;
         }
@@ -1560,19 +1586,37 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
 
             auto variable = destination->getVariable(address);
 
+            bool mainIsSum = (stack.rbegin()[0]->getType() == E_NonlinearExpressionTypes::Sum);
+
             if(variable->lowerBound == variable->upperBound)
             {
-                auto expression = std::make_shared<ExpressionSum>(
-                    std::make_shared<ExpressionConstant>(variable->lowerBound), stack.rbegin()[0]);
-                stack.pop_back();
-                stack.push_back(expression);
+                if(mainIsSum)
+                {
+                    std::dynamic_pointer_cast<ExpressionSum>(stack.rbegin()[0])
+                        ->children.add(std::make_shared<ExpressionConstant>(variable->lowerBound));
+                }
+                else
+                {
+                    auto expression = std::make_shared<ExpressionSum>(
+                        std::make_shared<ExpressionConstant>(variable->lowerBound), stack.rbegin()[0]);
+                    stack.pop_back();
+                    stack.push_back(std::move(expression));
+                }
             }
             else
             {
-                auto expression = std::make_shared<ExpressionSum>(
-                    std::make_shared<ExpressionVariable>(variable), stack.rbegin()[0]);
-                stack.pop_back();
-                stack.push_back(expression);
+                if(mainIsSum)
+                {
+                    std::dynamic_pointer_cast<ExpressionSum>(stack.rbegin()[0])
+                        ->children.add(std::make_shared<ExpressionVariable>(variable));
+                }
+                else
+                {
+                    auto expression = std::make_shared<ExpressionSum>(
+                        std::make_shared<ExpressionVariable>(variable), stack.rbegin()[0]);
+                    stack.pop_back();
+                    stack.push_back(std::move(expression));
+                }
             }
 
             break;
@@ -1583,7 +1627,7 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
             auto expression = std::make_shared<ExpressionSum>(
                 std::make_shared<ExpressionConstant>(constants[address]), stack.rbegin()[0]);
             stack.pop_back();
-            stack.push_back(expression);
+            stack.push_back(std::move(expression));
             break;
         }
 
@@ -1594,13 +1638,13 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
             if(mainIsSum)
             {
                 std::dynamic_pointer_cast<ExpressionSum>(stack.rbegin()[1])
-                    ->children.add(std::make_shared<ExpressionNegate>(stack.rbegin()[0]));
+                    ->children.add(std::make_shared<ExpressionNegate>(std::move(stack.rbegin()[0])));
                 stack.pop_back();
             }
             else
             {
                 auto expression = std::make_shared<ExpressionSum>(
-                    stack.rbegin()[1], std::make_shared<ExpressionNegate>(stack.rbegin()[0]));
+                    std::move(stack.rbegin()[1]), std::make_shared<ExpressionNegate>(std::move(stack.rbegin()[0])));
                 stack.pop_back();
                 stack.pop_back();
                 stack.push_back(expression);
@@ -1618,13 +1662,13 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
             if(variable->lowerBound == variable->upperBound)
             {
                 auto expression = std::make_shared<ExpressionSum>(
-                    stack.rbegin()[0], std::make_shared<ExpressionConstant>(-variable->lowerBound));
+                    std::move(stack.rbegin()[0]), std::make_shared<ExpressionConstant>(-variable->lowerBound));
                 stack.pop_back();
                 stack.push_back(expression);
             }
             else
             {
-                auto expression = std::make_shared<ExpressionSum>(stack.rbegin()[0],
+                auto expression = std::make_shared<ExpressionSum>(std::move(stack.rbegin()[0]),
                     std::make_shared<ExpressionNegate>(std::make_shared<ExpressionVariable>(variable)));
                 stack.pop_back();
                 stack.push_back(expression);
@@ -1635,7 +1679,7 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
 
         case nlSubI: // subtract immediate
         {
-            auto expression = std::make_shared<ExpressionSum>(stack.rbegin()[0],
+            auto expression = std::make_shared<ExpressionSum>(std::move(stack.rbegin()[0]),
                 std::make_shared<ExpressionNegate>(std::make_shared<ExpressionConstant>(constants[address])));
             stack.pop_back();
             stack.push_back(expression);
@@ -1647,21 +1691,23 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
             bool child1IsProd = (stack.rbegin()[1]->getType() == E_NonlinearExpressionTypes::Product);
             bool child0IsProd = (stack.rbegin()[0]->getType() == E_NonlinearExpressionTypes::Product);
 
-            NonlinearExpressions factors;
+            auto prod = std::make_shared<ExpressionProduct>();
 
             if(child0IsProd)
-                factors.add(std::move(std::dynamic_pointer_cast<ExpressionProduct>(stack.rbegin()[0])->children));
+                prod->children.add(
+                    std::move(std::dynamic_pointer_cast<ExpressionProduct>(stack.rbegin()[0])->children));
             else
-                factors.add(stack.rbegin()[0]);
+                prod->children.add(std::move(stack.rbegin()[0]));
 
             if(child1IsProd)
-                factors.add(std::move(std::dynamic_pointer_cast<ExpressionProduct>(stack.rbegin()[1])->children));
+                prod->children.add(
+                    std::move(std::dynamic_pointer_cast<ExpressionProduct>(stack.rbegin()[1])->children));
             else
-                factors.add(stack.rbegin()[1]);
+                prod->children.add(std::move(stack.rbegin()[1]));
 
             stack.pop_back();
             stack.pop_back();
-            stack.push_back(std::make_shared<ExpressionProduct>(factors));
+            stack.push_back(std::move(prod));
 
             break;
         }
@@ -1686,7 +1732,7 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
                     auto expression = std::make_shared<ExpressionProduct>(
                         std::make_shared<ExpressionConstant>(variable->lowerBound), stack.rbegin()[0]);
                     stack.pop_back();
-                    stack.push_back(expression);
+                    stack.push_back(std::move(expression));
                 }
             }
             else
@@ -1694,14 +1740,14 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
                 if(mainIsProd)
                 {
                     std::dynamic_pointer_cast<ExpressionProduct>(stack.rbegin()[0])
-                        ->children.add(std::make_shared<ExpressionVariable>(destination->getVariable(address)));
+                        ->children.add(std::make_shared<ExpressionVariable>(variable));
                 }
                 else
                 {
                     auto expression = std::make_shared<ExpressionProduct>(
-                        std::make_shared<ExpressionVariable>(destination->getVariable(address)), stack.rbegin()[0]);
+                        std::make_shared<ExpressionVariable>(variable), stack.rbegin()[0]);
                     stack.pop_back();
-                    stack.push_back(expression);
+                    stack.push_back(std::move(expression));
                 }
             }
 
@@ -1714,13 +1760,13 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
 
             if(mainIsProd)
             {
-                std::dynamic_pointer_cast<ExpressionProduct>(stack.rbegin()[0])
+                std::dynamic_pointer_cast<ExpressionProduct>(std::move(stack.rbegin()[0]))
                     ->children.add(std::make_shared<ExpressionConstant>(constants[address]));
             }
             else
             {
                 auto expression = std::make_shared<ExpressionProduct>(
-                    std::make_shared<ExpressionConstant>(constants[address]), stack.rbegin()[0]);
+                    std::make_shared<ExpressionConstant>(constants[address]), std::move(stack.rbegin()[0]));
                 stack.pop_back();
                 stack.push_back(expression);
             }
@@ -1731,22 +1777,25 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
         case nlMulIAdd: // multiply immediate and add
         {
             auto expressionProduct = std::make_shared<ExpressionProduct>(
-                std::make_shared<ExpressionConstant>(constants[address]), stack.rbegin()[0]);
+                std::make_shared<ExpressionConstant>(constants[address]), std::move(stack.rbegin()[0]));
             stack.pop_back();
-            stack.push_back(expressionProduct);
-            auto expressionSum = std::make_shared<ExpressionSum>(stack.rbegin()[1], stack.rbegin()[0]);
+            stack.push_back(std::move(expressionProduct));
+
+            auto expressionSum
+                = std::make_shared<ExpressionSum>(std::move(stack.rbegin()[1]), std::move(stack.rbegin()[0]));
             stack.pop_back();
             stack.pop_back();
-            stack.push_back(expressionSum);
+            stack.push_back(std::move(expressionSum));
             break;
         }
 
         case nlDiv: // divide
         {
-            auto expression = std::make_shared<ExpressionDivide>(stack.rbegin()[1], stack.rbegin()[0]);
+            auto expression
+                = std::make_shared<ExpressionDivide>(std::move(stack.rbegin()[1]), std::move(stack.rbegin()[0]));
             stack.pop_back();
             stack.pop_back();
-            stack.push_back(expression);
+            stack.push_back(std::move(expression));
             break;
         }
 
@@ -1759,16 +1808,16 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
             if(variable->lowerBound == variable->upperBound)
             {
                 auto expression = std::make_shared<ExpressionDivide>(
-                    stack.rbegin()[0], std::make_shared<ExpressionConstant>(variable->lowerBound));
+                    std::move(stack.rbegin()[0]), std::make_shared<ExpressionConstant>(variable->lowerBound));
                 stack.pop_back();
-                stack.push_back(expression);
+                stack.push_back(std::move(expression));
             }
             else
             {
-                auto expression = std::make_shared<ExpressionDivide>(
-                    stack.rbegin()[0], std::make_shared<ExpressionVariable>(destination->getVariable(address)));
+                auto expression = std::make_shared<ExpressionDivide>(std::move(stack.rbegin()[0]),
+                    std::make_shared<ExpressionVariable>(destination->getVariable(address)));
                 stack.pop_back();
-                stack.push_back(expression);
+                stack.push_back(std::move(expression));
             }
 
             break;
@@ -1777,17 +1826,17 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
         case nlDivI: // divide immediate
         {
             auto expression = std::make_shared<ExpressionDivide>(
-                stack.rbegin()[0], std::make_shared<ExpressionConstant>(constants[address]));
+                std::move(stack.rbegin()[0]), std::make_shared<ExpressionConstant>(constants[address]));
             stack.pop_back();
-            stack.push_back(expression);
+            stack.push_back(std::move(expression));
             break;
         }
 
         case nlUMin: // unary minus
         {
-            auto expression = std::make_shared<ExpressionNegate>(stack.rbegin()[0]);
+            auto expression = std::make_shared<ExpressionNegate>(std::move(stack.rbegin()[0]));
             stack.pop_back();
-            stack.push_back(expression);
+            stack.push_back(std::move(expression));
             break;
         }
 
@@ -1827,25 +1876,25 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
 
             case fnsqr:
             {
-                auto expression = std::make_shared<ExpressionSquare>(stack.rbegin()[0]);
+                auto expression = std::make_shared<ExpressionSquare>(std::move(stack.rbegin()[0]));
                 stack.pop_back();
-                stack.push_back(expression);
+                stack.push_back(std::move(expression));
                 break;
             }
 
             case fnexp:
             {
-                auto expression = std::make_shared<ExpressionExp>(stack.rbegin()[0]);
+                auto expression = std::make_shared<ExpressionExp>(std::move(stack.rbegin()[0]));
                 stack.pop_back();
-                stack.push_back(expression);
+                stack.push_back(std::move(expression));
                 break;
             }
 
             case fnlog:
             {
-                auto expression = std::make_shared<ExpressionLog>(stack.rbegin()[0]);
+                auto expression = std::make_shared<ExpressionLog>(std::move(stack.rbegin()[0]));
                 stack.pop_back();
-                stack.push_back(expression);
+                stack.push_back(std::move(expression));
                 break;
             }
 
@@ -1853,7 +1902,7 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
             {
                 auto expression
                     = std::make_shared<ExpressionProduct>(std::make_shared<ExpressionConstant>(1.0 / log(10.0)),
-                        std::make_shared<ExpressionLog>(stack.rbegin()[0]));
+                        std::make_shared<ExpressionLog>(std::move(stack.rbegin()[0])));
 
                 stack.pop_back();
                 stack.push_back(expression);
@@ -1864,7 +1913,7 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
             {
                 auto expression
                     = std::make_shared<ExpressionProduct>(std::make_shared<ExpressionConstant>(1.0 / log(2.0)),
-                        std::make_shared<ExpressionLog>(stack.rbegin()[0]));
+                        std::make_shared<ExpressionLog>(std::move(stack.rbegin()[0])));
                 stack.pop_back();
                 stack.push_back(expression);
                 break;
@@ -1872,7 +1921,7 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
 
             case fnsqrt:
             {
-                auto expression = std::make_shared<ExpressionSquareRoot>(stack.rbegin()[0]);
+                auto expression = std::make_shared<ExpressionSquareRoot>(std::move(stack.rbegin()[0]));
                 stack.pop_back();
                 stack.push_back(expression);
                 break;
@@ -1880,7 +1929,7 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
 
             case fnabs:
             {
-                auto expression = std::make_shared<ExpressionAbs>(stack.rbegin()[0]);
+                auto expression = std::make_shared<ExpressionAbs>(std::move(stack.rbegin()[0]));
                 stack.pop_back();
                 stack.push_back(expression);
                 break;
@@ -1888,7 +1937,7 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
 
             case fncos:
             {
-                auto expression = std::make_shared<ExpressionCos>(stack.rbegin()[0]);
+                auto expression = std::make_shared<ExpressionCos>(std::move(stack.rbegin()[0]));
                 stack.pop_back();
                 stack.push_back(expression);
                 break;
@@ -1896,7 +1945,7 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
 
             case fnsin:
             {
-                auto expression = std::make_shared<ExpressionSin>(stack.rbegin()[0]);
+                auto expression = std::make_shared<ExpressionSin>(std::move(stack.rbegin()[0]));
                 stack.pop_back();
                 stack.push_back(expression);
                 break;
@@ -1907,7 +1956,8 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
             case fncvpower: // constant ^ x
             case fnvcpower: // x ^ constant
             {
-                auto expression = std::make_shared<ExpressionPower>(stack.rbegin()[1], stack.rbegin()[0]);
+                auto expression
+                    = std::make_shared<ExpressionPower>(std::move(stack.rbegin()[1]), std::move(stack.rbegin()[0]));
                 stack.pop_back();
                 stack.pop_back();
                 stack.push_back(expression);
@@ -1922,7 +1972,8 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
 
             case fndiv:
             {
-                auto expression = std::make_shared<ExpressionDivide>(stack.rbegin()[1], stack.rbegin()[0]);
+                auto expression
+                    = std::make_shared<ExpressionDivide>(std::move(stack.rbegin()[1]), std::move(stack.rbegin()[0]));
                 stack.pop_back();
                 stack.pop_back();
                 stack.push_back(expression);
