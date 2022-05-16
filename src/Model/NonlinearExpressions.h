@@ -198,6 +198,11 @@ public:
     };
 
     inline void add(NonlinearExpressionPtr expression) { (*this).push_back(expression); };
+    inline void add(NonlinearExpressions expressions)
+    {
+        for(auto& E : expressions)
+            (*this).push_back(E);
+    };
 };
 
 class ExpressionConstant : public NonlinearExpression
