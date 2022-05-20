@@ -1584,29 +1584,12 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
             else // Create a new sum and add the two last elements on the stack to this
             {
                 auto sum = std::make_shared<ExpressionSum>();
-                sum->children.add(std::move(stack.rbegin()[0]));
                 sum->children.add(std::move(stack.rbegin()[1]));
+                sum->children.add(std::move(stack.rbegin()[0]));
                 stack.pop_back();
                 stack.pop_back();
                 stack.push_back(std::move(sum));
             }
-
-            /*
-                        auto sum = std::make_shared<ExpressionSum>();
-
-                        if(child0IsSum)
-                            sum->children.add(std::move(std::dynamic_pointer_cast<ExpressionSum>(stack.rbegin()[0])->children));
-                        else
-                            sum->children.add(std::move(stack.rbegin()[0]));
-
-                        if(child1IsSum)
-                            sum->children.add(std::move(std::dynamic_pointer_cast<ExpressionSum>(stack.rbegin()[1])->children));
-                        else
-                            sum->children.add(std::move(stack.rbegin()[1]));
-
-                        stack.pop_back();
-                        stack.pop_back();
-                        stack.push_back(std::move(sum));*/
 
             break;
         }
@@ -1722,23 +1705,37 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
             bool child1IsProd = (stack.rbegin()[1]->getType() == E_NonlinearExpressionTypes::Product);
             bool child0IsProd = (stack.rbegin()[0]->getType() == E_NonlinearExpressionTypes::Product);
 
-            auto prod = std::make_shared<ExpressionProduct>();
-
-            if(child0IsProd)
-                prod->children.add(
-                    std::move(std::dynamic_pointer_cast<ExpressionProduct>(stack.rbegin()[0])->children));
-            else
-                prod->children.add(std::move(stack.rbegin()[0]));
-
-            if(child1IsProd)
-                prod->children.add(
-                    std::move(std::dynamic_pointer_cast<ExpressionProduct>(stack.rbegin()[1])->children));
-            else
+            if(child1IsProd && child0IsProd) // Add children of last element on stack to the previous element's children
+            {
+                std::dynamic_pointer_cast<ExpressionProduct>(stack.rbegin()[1])
+                    ->children.add(
+                        std::move(std::dynamic_pointer_cast<ExpressionProduct>(stack.rbegin()[0])->children));
+                stack.pop_back();
+            }
+            else if(child1IsProd) // Add last element on stack to the previous element's children
+            {
+                std::dynamic_pointer_cast<ExpressionProduct>(stack.rbegin()[1])
+                    ->children.add(std::move(stack.rbegin()[0]));
+                stack.pop_back();
+            }
+            else if(child0IsProd) // Add the element before the last element on stack to the last element's children,
+                                  // remove the last two from stack and readd the correct one
+            {
+                auto tmpElement = stack.rbegin()[0];
+                std::dynamic_pointer_cast<ExpressionProduct>(tmpElement)->children.add(std::move(stack.rbegin()[1]));
+                stack.pop_back();
+                stack.pop_back();
+                stack.push_back(tmpElement);
+            }
+            else // Create a new product and add the two last elements on the stack to this
+            {
+                auto prod = std::make_shared<ExpressionProduct>();
                 prod->children.add(std::move(stack.rbegin()[1]));
-
-            stack.pop_back();
-            stack.pop_back();
-            stack.push_back(std::move(prod));
+                prod->children.add(std::move(stack.rbegin()[0]));
+                stack.pop_back();
+                stack.pop_back();
+                stack.push_back(std::move(prod));
+            }
 
             break;
         }
