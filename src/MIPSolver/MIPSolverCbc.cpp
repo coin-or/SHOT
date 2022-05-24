@@ -637,7 +637,8 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
     arg = fmt::format("{}", this->timeLimit);
     argv[10] = strdup(arg.c_str());
 
-    if(cbcModel->haveMultiThreadSupport())
+    // pass threads option if not running single-threaded (101 = 1 thread + deterministic multithreading)
+    if(numberOfThreads != 1 && numberOfThreads != 101)
     {
         argv[11] = strdup("-threads");
         arg = std::to_string(numberOfThreads);
@@ -1060,7 +1061,8 @@ bool MIPSolverCbc::repairInfeasibility()
         arg = fmt::format("{}", this->timeLimit);
         argv[10] = strdup(arg.c_str());
 
-        if(cbcModel->haveMultiThreadSupport())
+        // pass threads option if not running single-threaded (101 = 1 thread + deterministic multithreading)
+        if(numberOfThreads != 1 && numberOfThreads != 101)
         {
             argv[11] = strdup("-threads");
             arg = std::to_string(numberOfThreads);
