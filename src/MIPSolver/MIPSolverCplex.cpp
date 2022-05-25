@@ -828,6 +828,7 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
 
             objectiveFunctionReplacedWithZero = true;
             modelUpdated = true;
+            env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed = true;
         }
 
         // If the previous repair failed, we can try this
@@ -844,8 +845,6 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
             delete infoCallback;
             callbacksInitialized = false;
         }
-
-        objectiveFunctionReplacedWithZero = false;
     }
 
     catch(IloException& e)
