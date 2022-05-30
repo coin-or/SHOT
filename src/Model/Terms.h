@@ -447,7 +447,9 @@ private:
 
 public:
     double minEigenValue = SHOT::SHOT_DBL_MAX;
+    double maxEigenValue = SHOT::SHOT_DBL_MIN;
     bool minEigenValueWithinTolerance = false;
+    bool maxEigenValueWithinTolerance = false;
 
     bool allSquares = false;
     bool allPositive = false;
@@ -478,8 +480,9 @@ public:
         auto secondVariable = term->secondVariable;
 
         // In case there are multiple terms of the same variable
-        auto it = std::find_if(
-            (*this).begin(), (*this).end(), [&firstVariable, &secondVariable](const QuadraticTermPtr& ptr) {
+        auto it = std::find_if((*this).begin(), (*this).end(),
+            [&firstVariable, &secondVariable](const QuadraticTermPtr& ptr)
+            {
                 return (((ptr->firstVariable == firstVariable) && (ptr->secondVariable == secondVariable))
                     || ((ptr->firstVariable == secondVariable) && (ptr->secondVariable == firstVariable)));
             });
