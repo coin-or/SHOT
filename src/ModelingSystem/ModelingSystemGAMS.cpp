@@ -1612,7 +1612,7 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
                 else
                 {
                     auto expression = std::make_shared<ExpressionSum>(
-                        std::make_shared<ExpressionConstant>(variable->lowerBound), stack.rbegin()[0]);
+                        std::make_shared<ExpressionConstant>(variable->lowerBound), std::move(stack.rbegin()[0]));
                     stack.pop_back();
                     stack.push_back(std::move(expression));
                 }
@@ -1627,7 +1627,7 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
                 else
                 {
                     auto expression = std::make_shared<ExpressionSum>(
-                        std::make_shared<ExpressionVariable>(variable), stack.rbegin()[0]);
+                        std::make_shared<ExpressionVariable>(variable), std::move(stack.rbegin()[0]));
                     stack.pop_back();
                     stack.push_back(std::move(expression));
                 }
@@ -1757,7 +1757,7 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
                 else
                 {
                     auto expression = std::make_shared<ExpressionProduct>(
-                        std::make_shared<ExpressionConstant>(variable->lowerBound), stack.rbegin()[0]);
+                        std::make_shared<ExpressionConstant>(variable->lowerBound), std::move(stack.rbegin()[0]));
                     stack.pop_back();
                     stack.push_back(std::move(expression));
                 }
@@ -1772,7 +1772,7 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
                 else
                 {
                     auto expression = std::make_shared<ExpressionProduct>(
-                        std::make_shared<ExpressionVariable>(variable), stack.rbegin()[0]);
+                        std::make_shared<ExpressionVariable>(variable), std::move(stack.rbegin()[0]));
                     stack.pop_back();
                     stack.push_back(std::move(expression));
                 }
@@ -1808,11 +1808,22 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
             stack.pop_back();
             stack.push_back(std::move(expressionProduct));
 
-            auto expressionSum
-                = std::make_shared<ExpressionSum>(std::move(stack.rbegin()[1]), std::move(stack.rbegin()[0]));
-            stack.pop_back();
-            stack.pop_back();
-            stack.push_back(std::move(expressionSum));
+            bool prevIsSum = (stack.rbegin()[1]->getType() == E_NonlinearExpressionTypes::Sum);
+
+            if(prevIsSum)
+            {
+                std::static_pointer_cast<ExpressionSum>(stack.rbegin()[1])->children.add(std::move(stack.rbegin()[0]));
+                stack.pop_back();
+            }
+            else
+            {
+                auto expressionSum
+                    = std::make_shared<ExpressionSum>(std::move(stack.rbegin()[1]), std::move(stack.rbegin()[0]));
+                stack.pop_back();
+                stack.pop_back();
+                stack.push_back(std::move(expressionSum));
+            }
+
             break;
         }
 
