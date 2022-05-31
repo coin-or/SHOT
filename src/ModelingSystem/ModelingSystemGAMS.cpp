@@ -1563,20 +1563,20 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
 
             if(child1IsSum && child0IsSum) // Add children of last element on stack to the previous element's children
             {
-                std::dynamic_pointer_cast<ExpressionSum>(stack.rbegin()[1])
-                    ->children.add(std::move(std::dynamic_pointer_cast<ExpressionSum>(stack.rbegin()[0])->children));
+                std::static_pointer_cast<ExpressionSum>(stack.rbegin()[1])
+                    ->children.add(std::move(std::static_pointer_cast<ExpressionSum>(stack.rbegin()[0])->children));
                 stack.pop_back();
             }
             else if(child1IsSum) // Add last element on stack to the previous element's children
             {
-                std::dynamic_pointer_cast<ExpressionSum>(stack.rbegin()[1])->children.add(std::move(stack.rbegin()[0]));
+                std::static_pointer_cast<ExpressionSum>(stack.rbegin()[1])->children.add(std::move(stack.rbegin()[0]));
                 stack.pop_back();
             }
             else if(child0IsSum) // Add the element before the last element on stack to the last element's children,
                                  // remove the last two from stack and readd the correct one
             {
                 auto tmpElement = stack.rbegin()[0];
-                std::dynamic_pointer_cast<ExpressionSum>(tmpElement)->children.add(std::move(stack.rbegin()[1]));
+                std::static_pointer_cast<ExpressionSum>(tmpElement)->children.add(std::move(stack.rbegin()[1]));
                 stack.pop_back();
                 stack.pop_back();
                 stack.push_back(tmpElement);
@@ -1606,7 +1606,7 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
             {
                 if(mainIsSum)
                 {
-                    std::dynamic_pointer_cast<ExpressionSum>(stack.rbegin()[0])
+                    std::static_pointer_cast<ExpressionSum>(stack.rbegin()[0])
                         ->children.add(std::make_shared<ExpressionConstant>(variable->lowerBound));
                 }
                 else
@@ -1621,7 +1621,7 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
             {
                 if(mainIsSum)
                 {
-                    std::dynamic_pointer_cast<ExpressionSum>(stack.rbegin()[0])
+                    std::static_pointer_cast<ExpressionSum>(stack.rbegin()[0])
                         ->children.add(std::make_shared<ExpressionVariable>(variable));
                 }
                 else
@@ -1651,7 +1651,7 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
 
             if(mainIsSum)
             {
-                std::dynamic_pointer_cast<ExpressionSum>(stack.rbegin()[1])
+                std::static_pointer_cast<ExpressionSum>(stack.rbegin()[1])
                     ->children.add(std::make_shared<ExpressionNegate>(std::move(stack.rbegin()[0])));
                 stack.pop_back();
             }
@@ -1707,14 +1707,13 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
 
             if(child1IsProd && child0IsProd) // Add children of last element on stack to the previous element's children
             {
-                std::dynamic_pointer_cast<ExpressionProduct>(stack.rbegin()[1])
-                    ->children.add(
-                        std::move(std::dynamic_pointer_cast<ExpressionProduct>(stack.rbegin()[0])->children));
+                std::static_pointer_cast<ExpressionProduct>(stack.rbegin()[1])
+                    ->children.add(std::move(std::static_pointer_cast<ExpressionProduct>(stack.rbegin()[0])->children));
                 stack.pop_back();
             }
             else if(child1IsProd) // Add last element on stack to the previous element's children
             {
-                std::dynamic_pointer_cast<ExpressionProduct>(stack.rbegin()[1])
+                std::static_pointer_cast<ExpressionProduct>(stack.rbegin()[1])
                     ->children.add(std::move(stack.rbegin()[0]));
                 stack.pop_back();
             }
@@ -1722,7 +1721,7 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
                                   // remove the last two from stack and readd the correct one
             {
                 auto tmpElement = stack.rbegin()[0];
-                std::dynamic_pointer_cast<ExpressionProduct>(tmpElement)->children.add(std::move(stack.rbegin()[1]));
+                std::static_pointer_cast<ExpressionProduct>(tmpElement)->children.add(std::move(stack.rbegin()[1]));
                 stack.pop_back();
                 stack.pop_back();
                 stack.push_back(tmpElement);
@@ -1752,7 +1751,7 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
             {
                 if(mainIsProd)
                 {
-                    std::dynamic_pointer_cast<ExpressionProduct>(stack.rbegin()[0])
+                    std::static_pointer_cast<ExpressionProduct>(stack.rbegin()[0])
                         ->children.add(std::make_shared<ExpressionConstant>(variable->lowerBound));
                 }
                 else
@@ -1767,7 +1766,7 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
             {
                 if(mainIsProd)
                 {
-                    std::dynamic_pointer_cast<ExpressionProduct>(stack.rbegin()[0])
+                    std::static_pointer_cast<ExpressionProduct>(stack.rbegin()[0])
                         ->children.add(std::make_shared<ExpressionVariable>(variable));
                 }
                 else
@@ -1788,7 +1787,7 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
 
             if(mainIsProd)
             {
-                std::dynamic_pointer_cast<ExpressionProduct>(std::move(stack.rbegin()[0]))
+                std::static_pointer_cast<ExpressionProduct>(std::move(stack.rbegin()[0]))
                     ->children.add(std::make_shared<ExpressionConstant>(constants[address]));
             }
             else
