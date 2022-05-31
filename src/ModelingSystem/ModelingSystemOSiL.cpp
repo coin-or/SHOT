@@ -12,6 +12,7 @@
 
 #include "../Output.h"
 #include "../Settings.h"
+#include "../Timing.h"
 #include "../Utilities.h"
 
 #include "../Model/Simplifications.h"
@@ -48,6 +49,8 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
         return (E_ProblemCreationStatus::FileDoesNotExist);
     }
 
+    env->timing->startTimer("ProblemInitialization");
+
     fs::filesystem::path problemFile(filename);
     fs::filesystem::path problemPath = problemFile.parent_path();
 
@@ -61,6 +64,7 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
     {
         env->output->outputError(
             fmt::format("Could not read problem from OSiL file {}:", filename), std::to_string(result));
+        env->timing->stopTimer("ProblemInitialization");
         return (E_ProblemCreationStatus::ErrorInFile);
     }
 
@@ -87,7 +91,10 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
     for(auto V = variablesNodes->FirstChildElement("var"); V != nullptr; V = V->NextSiblingElement("var"))
     {
         if(V->Attribute("name") == NULL)
+        {
+            env->timing->stopTimer("ProblemInitialization");
             return (E_ProblemCreationStatus::ErrorInVariables);
+        }
 
         auto variableName = (V->Attribute("name") != NULL) ? V->Attribute("name") : "x" + std::to_string(variableIndex);
 
@@ -203,6 +210,7 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
     if(variableIndex == 0)
     {
         env->output->outputError(fmt::format("No variables defined."));
+        env->timing->stopTimer("ProblemInitialization");
         return (E_ProblemCreationStatus::ErrorInVariables);
     }
 
@@ -229,6 +237,7 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
     catch(const std::exception&)
     {
         env->output->outputError(fmt::format("Error when parsing quadratic terms."));
+        env->timing->stopTimer("ProblemInitialization");
         return (E_ProblemCreationStatus::ErrorInConstraints);
     }
 
@@ -255,6 +264,7 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
     catch(const std::exception&)
     {
         env->output->outputError(fmt::format("Error when parsing nonlinear expressions."));
+        env->timing->stopTimer("ProblemInitialization");
         return (E_ProblemCreationStatus::ErrorInConstraints);
     }
 
@@ -295,6 +305,7 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
     catch(const std::exception&)
     {
         env->output->outputError(fmt::format("Error when parsing constraints."));
+        env->timing->stopTimer("ProblemInitialization");
         return (E_ProblemCreationStatus::ErrorInConstraints);
     }
 
@@ -307,6 +318,7 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
         if(objectivesNodes->FirstChild()->NextSibling() != NULL)
         {
             // Error message here
+            env->timing->stopTimer("ProblemInitialization");
             return (E_ProblemCreationStatus::ErrorInObjective);
         }
 
@@ -314,6 +326,7 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
 
         if(objective->Attribute("maxOrMin") == NULL)
         {
+            env->timing->stopTimer("ProblemInitialization");
             return (E_ProblemCreationStatus::ErrorInObjective);
         }
 
@@ -338,7 +351,10 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
         for(auto C = objective->FirstChildElement("coef"); C != nullptr; C = C->NextSiblingElement("coef"))
         {
             if(C->Attribute("idx") == NULL)
+            {
+                env->timing->stopTimer("ProblemInitialization");
                 return (E_ProblemCreationStatus::ErrorInObjective);
+            }
 
             double coefficient = std::stod(C->GetText());
             int index = std::stoi(C->Attribute("idx"));
@@ -350,6 +366,7 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
     catch(const std::exception&)
     {
         env->output->outputError(fmt::format("Error when parsing objective function."));
+        env->timing->stopTimer("ProblemInitialization");
         return (E_ProblemCreationStatus::ErrorInObjective);
     }
 
@@ -428,6 +445,7 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
     catch(const std::exception&)
     {
         env->output->outputError(fmt::format("Error when parsing quadratic terms."));
+        env->timing->stopTimer("ProblemInitialization");
         return (E_ProblemCreationStatus::ErrorInConstraints);
     }
 
@@ -538,6 +556,7 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
     catch(const std::exception&)
     {
         env->output->outputError(fmt::format("Error when parsing linear terms in constraints."));
+        env->timing->stopTimer("ProblemInitialization");
         return (E_ProblemCreationStatus::ErrorInConstraints);
     }
 
@@ -572,6 +591,7 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
     catch(const std::exception&)
     {
         env->output->outputError(fmt::format("Error when parsing special ordered sets."));
+        env->timing->stopTimer("ProblemInitialization");
         return (E_ProblemCreationStatus::ErrorInConstraints);
     }
 
@@ -586,6 +606,7 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
 
     problem->finalize();
 
+    env->timing->stopTimer("ProblemInitialization");
     return (E_ProblemCreationStatus::NormalCompletion);
 }
 

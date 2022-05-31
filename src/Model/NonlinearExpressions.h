@@ -198,6 +198,11 @@ public:
     };
 
     inline void add(NonlinearExpressionPtr expression) { (*this).push_back(expression); };
+    inline void add(NonlinearExpressions expressions)
+    {
+        for(auto& E : expressions)
+            (*this).push_back(E);
+    };
 };
 
 class ExpressionConstant : public NonlinearExpression
@@ -394,7 +399,7 @@ public:
 
     inline std::ostream& print(std::ostream& stream) const override
     {
-        stream << "(-" << child << ')';
+        stream << "-" << child;
         return stream;
     }
 
@@ -494,7 +499,7 @@ public:
 
     inline std::ostream& print(std::ostream& stream) const override
     {
-        stream << "1/(" << child << ')';
+        stream << "1/" << child;
         return stream;
     }
 
@@ -1925,7 +1930,7 @@ public:
 
     inline std::ostream& print(std::ostream& stream) const override
     {
-        stream << '(' << firstChild << ")^(" << secondChild << ')';
+        stream << firstChild << "^" << secondChild;
         return stream;
     }
 
