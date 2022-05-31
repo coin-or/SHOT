@@ -399,7 +399,7 @@ public:
 
     inline std::ostream& print(std::ostream& stream) const override
     {
-        stream << "(-" << child << ')';
+        stream << "-" << child;
         return stream;
     }
 
@@ -499,7 +499,7 @@ public:
 
     inline std::ostream& print(std::ostream& stream) const override
     {
-        stream << "1/(" << child << ')';
+        stream << "1/" << child;
         return stream;
     }
 
@@ -1930,7 +1930,7 @@ public:
 
     inline std::ostream& print(std::ostream& stream) const override
     {
-        stream << '(' << firstChild << ")^(" << secondChild << ')';
+        stream << firstChild << "^" << secondChild;
         return stream;
     }
 
