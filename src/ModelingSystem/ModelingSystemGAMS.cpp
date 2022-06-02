@@ -1787,7 +1787,7 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
 
             if(mainIsProd)
             {
-                std::static_pointer_cast<ExpressionProduct>(std::move(stack.rbegin()[0]))
+                std::static_pointer_cast<ExpressionProduct>(stack.rbegin()[0])
                     ->children.add(std::make_shared<ExpressionConstant>(constants[address]));
             }
             else
