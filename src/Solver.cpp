@@ -378,6 +378,17 @@ bool Solver::setProblem(std::string fileName)
         auto taskReformulateProblem = std::make_unique<TaskReformulateProblem>(env);
         taskReformulateProblem->run();
 
+        if(env->reformulatedProblem->objectiveFunction->properties.isMinimize)
+        {
+            env->results->setDualBound(SHOT_DBL_MIN);
+            env->results->setPrimalBound(SHOT_DBL_MAX);
+        }
+        else
+        {
+            env->results->setDualBound(SHOT_DBL_MAX);
+            env->results->setPrimalBound(SHOT_DBL_MIN);
+        }
+
         if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
         {
             fs::filesystem::path problemFilename(env->settings->getSetting<std::string>("Debug.Path", "Output"));
@@ -468,6 +479,17 @@ bool Solver::setProblem(
     {
         auto taskReformulateProblem = std::make_unique<TaskReformulateProblem>(env);
         taskReformulateProblem->run();
+    }
+
+    if(env->reformulatedProblem->objectiveFunction->properties.isMinimize)
+    {
+        env->results->setDualBound(SHOT_DBL_MIN);
+        env->results->setPrimalBound(SHOT_DBL_MAX);
+    }
+    else
+    {
+        env->results->setDualBound(SHOT_DBL_MAX);
+        env->results->setPrimalBound(SHOT_DBL_MIN);
     }
 
     setConvexityBasedSettings();
