@@ -8,10 +8,12 @@ if(CCACHE_PROGRAM)
     set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK "${CCACHE_PROGRAM}")
 endif()
 
-
-project(SHOT VERSION 1.1.0
-                  DESCRIPTION "The Supporting Hyperplane Optimization Toolkit (SHOT) for Mixed-Integer Nonlinear Optimization"
-                  LANGUAGES CXX C)
+project(
+    SHOT
+    VERSION 1.1.0
+    DESCRIPTION "The Supporting Hyperplane Optimization Toolkit (SHOT) for Mixed-Integer Nonlinear Optimization"
+    LANGUAGES CXX C
+)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -30,8 +32,7 @@ else()
     message(SEND_ERROR "SHOT needs support for C++17 filesystem.")
 endif()
 
-# Sets the release types, e.g. Release, Debug:
-# set(CMAKE_BUILD_TYPE Debug)
+# Sets the release types, e.g. Release, Debug: set(CMAKE_BUILD_TYPE Debug)
 
 # Asserts enabled in CppAD otherwise
 if(NOT CMAKE_BUILD_TYPE MATCHES Debug)
@@ -48,27 +49,43 @@ option(HAS_AMPL "Should the AMPL .nl interface be build" ON)
 
 # GAMS
 option(HAS_GAMS "Is GAMS available" OFF)
-set(GAMS_DIR "/opt/gams/gams30.2" CACHE STRING "The base directory where GAMS is located (if available)")
+set(GAMS_DIR
+    "/opt/gams/gams30.2"
+    CACHE STRING "The base directory where GAMS is located (if available)"
+)
 
 # CPLEX
 option(HAS_CPLEX "Is Cplex available" OFF)
-set(CPLEX_DIR "/opt/ibm/ILOG/CPLEX_Studio1210" CACHE STRING "The base directory where CPLEX is located (if available)")
+set(CPLEX_DIR
+    "/opt/ibm/ILOG/CPLEX_Studio1210"
+    CACHE STRING "The base directory where CPLEX is located (if available)"
+)
 
 # Gurobi
 option(HAS_GUROBI "Is Gurobi available" OFF)
-set(GUROBI_DIR "/opt/gurobi/gurobi900" CACHE STRING "The base directory where Gurobi is located (if available)")
+set(GUROBI_DIR
+    "/opt/gurobi/gurobi900"
+    CACHE STRING "The base directory where Gurobi is located (if available)"
+)
 
 # Cbc
 option(HAS_CBC "Is Cbc available" OFF)
-set(CBC_DIR "/opt/Cbc-2.10" CACHE STRING "The base directory where Cbc is located (if available).")
+set(CBC_DIR
+    "/opt/Cbc-2.10"
+    CACHE STRING "The base directory where Cbc is located (if available)."
+)
 
 # Ipopt
 option(HAS_IPOPT "Is Ipopt available" OFF)
-set(IPOPT_DIR "/opt/ipopt" CACHE STRING "The base directory where Ipopt is located (if available).")
+set(IPOPT_DIR
+    "/opt/ipopt"
+    CACHE STRING "The base directory where Ipopt is located (if available)."
+)
 
 # Create also the executable
-option(GENERATE_EXE "Should the SHOT executable be generated (requires at least that either OS or GAMS is available)"
-       ON)
+option(
+    GENERATE_EXE "Should the SHOT executable be generated (requires at least that either OS or GAMS is available)" ON
+)
 
 # External libraries; these are included in SHOT's source tree, and should not need to be modified
 set(AMPL_DIR "ThirdParty/ampl")
@@ -90,7 +107,11 @@ file(TO_CMAKE_PATH "${GUROBI_DIR}" ${GUROBI_DIR})
 file(TO_CMAKE_PATH "${IPOPT_DIR}" ${IPOPT_DIR})
 
 # Check if a MIP solver is defined
-if(NOT (HAS_CPLEX OR HAS_GUROBI OR HAS_CBC))
+if(NOT
+   (HAS_CPLEX
+    OR HAS_GUROBI
+    OR HAS_CBC)
+)
     message(FATAL_ERROR "No MIP solver defined. SHOT needs at least one!")
 endif()
 
@@ -99,23 +120,12 @@ find_program(GIT git)
 
 if((GIT) AND (EXISTS ${CMAKE_CURRENT_LIST_DIR}/.git))
     execute_process(
-        COMMAND
-            ${GIT}
-            describe
-            --always
-            --dirty
+        COMMAND ${GIT} describe --always --dirty
         WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
         OUTPUT_VARIABLE GITHASH
         OUTPUT_STRIP_TRAILING_WHITESPACE
     )
-    string(
-        REGEX
-        REPLACE
-            "^.*-g"
-            ""
-            GITHASH
-            ${GITHASH}
-    )
+    string(REGEX REPLACE "^.*-g" "" GITHASH ${GITHASH})
 else()
     set(GITHASH "n/a")
 endif()
@@ -180,7 +190,7 @@ file(
     "${PROJECT_SOURCE_DIR}/src/Tasks/*.h"
     "${PROJECT_SOURCE_DIR}/src/Settings.h"
     "${TINYXML2_DIR}/tinyxml2.h"
-    #"${CPPAD_DIR}/include/cppad/cppad.hpp"
+    # "${CPPAD_DIR}/include/cppad/cppad.hpp"
 )
 
 # Cbc
@@ -262,8 +272,7 @@ endif(HAS_IPOPT)
 
 if(HAS_AMPL)
     add_definitions(-DHAS_AMPL)
-    set(
-        MODELING_SOURCES
+    set(MODELING_SOURCES
         ${MODELING_SOURCES}
         "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemAMPL.cpp"
         "${AMPL_DIR}/src/expr-info.cc"
@@ -351,25 +360,23 @@ file(TO_CMAKE_PATH "${MODELING_SOURCES}" MODELING_SOURCES)
 add_library(tinyxml2 STATIC ${TINYXML2_DIR}/tinyxml2.h ${TINYXML2_DIR}/tinyxml2.cpp)
 
 # Adding spdlog using as an external project
-ExternalProject_Add(spdlog
+ExternalProject_Add(
+    spdlog
     PREFIX spdlog
     SOURCE_DIR ${PROJECT_SOURCE_DIR}/${SPDLOG_DIR}
-    CMAKE_ARGS -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-    -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
-    -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
-    -DCMAKE_INSTALL_PREFIX=""
-    -DSPDLOG_BUILD_SHARED=OFF
+    CMAKE_ARGS -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+               -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} -DCMAKE_INSTALL_PREFIX="" -DSPDLOG_BUILD_SHARED=OFF
 )
 
 # Adding CppAD using as an external project
-ExternalProject_Add(cppad
+ExternalProject_Add(
+    cppad
     PREFIX cppad
     SOURCE_DIR ${PROJECT_SOURCE_DIR}/${CPPAD_DIR}
-    CMAKE_ARGS -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-    -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
-    -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
-    -Dcppad_prefix=${CMAKE_CURRENT_BINARY_DIR}/CppAD
-    -Dcppad_cxx_flags="-std=c++17"
+    CMAKE_ARGS
+        -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+        -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} -Dcppad_prefix=${CMAKE_CURRENT_BINARY_DIR}/CppAD
+        -Dcppad_cxx_flags="-std=c++17"
 )
 
 # Creates the helper library
@@ -418,11 +425,8 @@ target_link_libraries(SHOTModel SHOTHelper)
 # Creates the results library
 add_library(
     SHOTResults STATIC
-    ${PROJECT_SOURCE_DIR}/src/Results.h
-    ${PROJECT_SOURCE_DIR}/src/Results.cpp
-    ${PROJECT_SOURCE_DIR}/src/Iteration.h
-    ${PROJECT_SOURCE_DIR}/src/Iteration.cpp
-    ${PROJECT_SOURCE_DIR}/src/Timing.h
+    ${PROJECT_SOURCE_DIR}/src/Results.h ${PROJECT_SOURCE_DIR}/src/Results.cpp ${PROJECT_SOURCE_DIR}/src/Iteration.h
+    ${PROJECT_SOURCE_DIR}/src/Iteration.cpp ${PROJECT_SOURCE_DIR}/src/Timing.h
 )
 target_link_libraries(SHOTResults SHOTModel)
 
@@ -483,7 +487,10 @@ target_link_libraries(SHOTModelingInterfaces SHOTModel)
 
 # Cplex linking
 if(HAS_CPLEX)
-    if(NOT (CPLEX_FOUND) OR NOT (CPLEX_CONCERT_FOUND) OR NOT (CPLEX_ILOCPLEX_FOUND))
+    if(NOT (CPLEX_FOUND)
+       OR NOT (CPLEX_CONCERT_FOUND)
+       OR NOT (CPLEX_ILOCPLEX_FOUND)
+    )
         message("-- CPLEX libraries could not be found!")
     else()
 
@@ -531,11 +538,14 @@ if(HAS_GUROBI)
 
             target_link_libraries(SHOTDualStrategy ${GUROBI_CPP_LIBRARY})
             target_link_libraries(SHOTDualStrategy ${GUROBI_LIBRARY_DEBUG})
+            target_link_libraries(SHOTDualStrategy optimized ${GUROBI_CXX_LIBRARY} debug ${GUROBI_CXX_DEBUG_LIBRARY})
+            target_link_libraries(SHOTDualStrategy ${GUROBI_LIBRARY})
         else()
             message("   ${GUROBI_LIBRARY}")
             message("   ${GUROBI_CPP_LIBRARY}")
 
             target_link_libraries(SHOTDualStrategy ${GUROBI_CPP_LIBRARY})
+            target_link_libraries(SHOTDualStrategy optimized ${GUROBI_CXX_LIBRARY} debug ${GUROBI_CXX_DEBUG_LIBRARY})
             target_link_libraries(SHOTDualStrategy ${GUROBI_LIBRARY})
         endif()
     endif()
@@ -577,10 +587,7 @@ if(HAS_GAMS)
 endif(HAS_GAMS)
 
 file(
-    GLOB_RECURSE
-    SOURCES
-    "${PROJECT_SOURCE_DIR}/src/Report.cpp"
-    "${PROJECT_SOURCE_DIR}/src/Solver.cpp"
+    GLOB_RECURSE SOURCES "${PROJECT_SOURCE_DIR}/src/Report.cpp" "${PROJECT_SOURCE_DIR}/src/Solver.cpp"
     "${PROJECT_SOURCE_DIR}/src/RootsearchMethod/RootsearchMethodBoost.cpp"
 )
 
@@ -635,7 +642,10 @@ if(MSVC)
 endif(MSVC)
 
 # Extra flags for MinGW
-if (MSVC OR MSYS OR MINGW)
+if(MSVC
+   OR MSYS
+   OR MINGW
+)
     add_definitions(-DSIMPLE_OUTPUT_CHARS)
 endif()
 
@@ -643,14 +653,7 @@ endif()
 if(MSVC)
     target_compile_options(SHOTSolver PRIVATE /W4 /WX)
 else()
-    target_compile_options(
-        SHOTSolver
-        PRIVATE
-            -Wall
-            -Wextra
-            -pedantic
-            -Wno-unused-local-typedefs
-    )
+    target_compile_options(SHOTSolver PRIVATE -Wall -Wextra -pedantic -Wno-unused-local-typedefs)
 endif()
 
 # For making the installation package
@@ -667,17 +670,14 @@ install(
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
     RUNTIME DESTINATION bin
-    INCLUDES DESTINATION include
+    INCLUDES
+    DESTINATION include
 )
 
 # Copy some additional files
 install(
-    FILES
-    ${CMAKE_CURRENT_SOURCE_DIR}/AUTHORS
-    ${CMAKE_CURRENT_SOURCE_DIR}/INSTALL
-    ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE
-    ${CMAKE_CURRENT_SOURCE_DIR}/README
-    DESTINATION bin
+    FILES ${CMAKE_CURRENT_SOURCE_DIR}/AUTHORS ${CMAKE_CURRENT_SOURCE_DIR}/INSTALL ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE
+          ${CMAKE_CURRENT_SOURCE_DIR}/README DESTINATION bin
 )
 
 # Need to install the library as well
@@ -695,7 +695,7 @@ install(
     DIRECTORY "${CMAKE_SOURCE_DIR}/src/" # source directory
     DESTINATION "include" # target directory
     FILES_MATCHING # install only matched files
-    PATTERN  "*.h" # select header files
+    PATTERN "*.h" # select header files
 )
 
 # Setting CPack metadata

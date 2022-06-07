@@ -1493,5 +1493,9 @@ void GurobiCallbackMultiTree::callback()
     {
         env->output->outputError("        Gurobi error when running main callback method", e.getMessage());
     }
+    catch(...)
+    {
+        env->output->outputError("        Gurobi error when running main callback method");
+    }
 }
 } // namespace SHOT
