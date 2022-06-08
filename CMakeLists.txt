@@ -352,7 +352,7 @@ include_directories(SYSTEM "${MCPP_DIR}/include")
 include_directories(SYSTEM "${MCPP_DIR}/3rdparty/cpplapack/include")
 include_directories(SYSTEM "${MCPP_DIR}/3rdparty/fadbad++")
 include_directories(SYSTEM "${SPDLOG_DIR}/include")
-include_directories(SYSTEM "${HIGHS_DIR}/include")
+#¤include_directories(SYSTEM "${HIGHS_DIR}/src/")
 
 # Make sure the source file lists are in the correct format
 file(TO_CMAKE_PATH "${SOURCES}" SOURCES)
@@ -588,10 +588,10 @@ if(HAS_HIGHS)
     message("-- HiGHS include files will be used from: ${HIGHS_LIB_DIR}")
     add_dependencies(SHOTDualStrategy HiGHS)
     target_link_libraries(SHOTDualStrategy ${HIGHS_LIB_DIR}/libhighs.so)
-    target_include_directories(SHOTDualStrategy PUBLIC "${CMAKE_CURRENT_BINARY_DIR}/HiGHS/include")
+    target_include_directories(SHOTDualStrategy PUBLIC "${CMAKE_CURRENT_BINARY_DIR}/HiGHS/include/highs")
     add_dependencies(SHOTPrimalStrategy HiGHS)
     target_link_libraries(SHOTPrimalStrategy ${HIGHS_LIB_DIR}/libhighs.so)
-    target_include_directories(SHOTPrimalStrategy PUBLIC "${CMAKE_CURRENT_BINARY_DIR}/HiGHS/include")
+    target_include_directories(SHOTPrimalStrategy PUBLIC "${CMAKE_CURRENT_BINARY_DIR}/HiGHS/include/highs")
 endif(HAS_HIGHS)
 
 # Ipopt linking
