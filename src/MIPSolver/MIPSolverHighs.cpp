@@ -224,6 +224,7 @@ void MIPSolverHighs::initializeSolverSettings()
         "mip_abs_gap", env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination"));
     highsInstance.setOptionValue(
         "mip_feasibility_tolerance", env->settings->getSetting<double>("Tolerance.Integer", "Primal"));
+    highsInstance.setOptionValue("mip_heuristic_effort", 1.0);
 
     // Adds a user-provided node limit
     if(auto nodeLimit = env->settings->getSetting<double>("MIP.NodeLimit", "Dual"); nodeLimit > 0)
@@ -355,9 +356,21 @@ E_ProblemSolutionStatus MIPSolverHighs::getSolutionStatus()
     {
         MIPSolutionStatus = E_ProblemSolutionStatus::Unbounded;
     }
+    else if(modelStatus == HighsModelStatus::kObjectiveBound)
+    {
+        MIPSolutionStatus = E_ProblemSolutionStatus::CutOff;
+    }
+    else if(modelStatus == HighsModelStatus::kObjectiveTarget)
+    {
+        MIPSolutionStatus = E_ProblemSolutionStatus::CutOff;
+    }
     else if(modelStatus == HighsModelStatus::kTimeLimit)
     {
         MIPSolutionStatus = E_ProblemSolutionStatus::TimeLimit;
+    }
+    else if(modelStatus == HighsModelStatus::kIterationLimit)
+    {
+        MIPSolutionStatus = E_ProblemSolutionStatus::SolutionLimit;
     }
     else
     {
@@ -375,7 +388,6 @@ E_ProblemSolutionStatus MIPSolverHighs::solveProblem()
     cachedSolutionHasChanged = true;
 
     highsReturnStatus = highsInstance.run();
-    assert(highsReturnStatus == HighsStatus::kOk);
     MIPSolutionStatus = getSolutionStatus();
 
     // TODO:: repair infeasible or unbounded problem (if needed)
@@ -399,9 +411,26 @@ int MIPSolverHighs::increaseSolutionLimit(int increment)
     return (this->solLimit);
 }
 
-void MIPSolverHighs::setSolutionLimit(long int limit) { this->solLimit = limit; }
+void MIPSolverHighs::setSolutionLimit(long int limit)
+{
+    if(limit > kHighsIInf)
+    {
+        highsInstance.setOptionValue("mip_max_improving_sols", kHighsIInf);
+        this->solLimit = kHighsIInf;
+    }
+    else
+    {
+        highsInstance.setOptionValue("mip_max_improving_sols", (int)limit);
+        this->solLimit = limit;
+    }
+}
 
-int MIPSolverHighs::getSolutionLimit() { return (this->solLimit); }
+int MIPSolverHighs::getSolutionLimit()
+{
+    HighsInt solutionLimit;
+    highsInstance.getOptionValue("mip_max_improving_sols", solutionLimit);
+    return ((int)solutionLimit);
+}
 
 void MIPSolverHighs::setTimeLimit(double seconds) { highsInstance.setOptionValue("time_limit", seconds); }
 
@@ -477,7 +506,6 @@ void MIPSolverHighs::setCutOffAsConstraint(double cutOff)
 
 void MIPSolverHighs::addMIPStart(VectorDouble point)
 {
-    // TODO: this does not seem to work
     HighsSolution solution;
     solution.col_value = point;
 
