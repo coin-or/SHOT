@@ -24,6 +24,21 @@
 
 namespace SHOT
 {
+
+// Callback that correctly indents Highs log messages and prints them using SHOT's logging functionality
+static void highsLogCallback(HighsLogType type, const char* message, void* envPtr)
+{
+    auto env = static_cast<Environment*>(envPtr);
+
+    if(!env->settings->getSetting<bool>("Console.DualSolver.Show", "Output"))
+        return;
+
+    auto lines = Utilities::splitStringByCharacter(std::string(message), '\n');
+
+    for(auto const& line : lines)
+        env->output->outputInfo(fmt::format("      | {} ", line));
+}
+
 MIPSolverHighs::MIPSolverHighs(EnvironmentPtr envPtr) { env = envPtr; }
 
 MIPSolverHighs::~MIPSolverHighs() = default;
@@ -240,10 +255,7 @@ void MIPSolverHighs::initializeSolverSettings()
 
     highsInstance.setOptionValue("threads", env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual"));
 
-    if(env->settings->getSetting<bool>("Console.DualSolver.Show", "Output"))
-        highsInstance.setOptionValue("output_flag", true);
-    else
-        highsInstance.setOptionValue("output_flag", false);
+    highsInstance.setLogCallback(highsLogCallback, (void*)env.get());
 }
 
 int MIPSolverHighs::addLinearConstraint(
