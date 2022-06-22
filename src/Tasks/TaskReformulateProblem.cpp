@@ -1712,7 +1712,7 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
                 break;
             }
             else if((!reversedSigns && (T->getConvexity() == E_Convexity::Convex))
-                || reversedSigns && (T->getConvexity() == E_Convexity::Concave))
+                || (reversedSigns && (T->getConvexity() == E_Convexity::Concave)))
             {
             }
             else if(T->isSquare && T->isBinary) // Square term b^2 -> b
