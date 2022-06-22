@@ -585,7 +585,7 @@ bool Solver::selectStrategy()
             }
         }
 
-        // Want to show the output from Gurobi if problem is Gurobi can handle the problem
+        // Want to show the output from Gurobi if Gurobi handles the whole problem
         if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Gurobi
             && ((useQuadraticObjective || useQuadraticConstraints)
                 && (env->problem->properties.isMIQPProblem || env->problem->properties.isMIQCQPProblem
