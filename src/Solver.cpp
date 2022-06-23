@@ -607,6 +607,14 @@ bool Solver::selectStrategy()
             }
         }
 
+        // Want to show the output from Gurobi if Gurobi handles the whole problem
+        if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Gurobi
+            && ((useQuadraticObjective || useQuadraticConstraints)
+                && (env->problem->properties.isMIQPProblem || env->problem->properties.isMIQCQPProblem
+                    || env->problem->properties.isQCQPProblem || env->problem->properties.isQPProblem)))
+        {
+            env->settings->updateSetting("Console.DualSolver.Show", "Output", true);
+        }
         isProblemInitialized = true;
     }
     catch(Exception& e)

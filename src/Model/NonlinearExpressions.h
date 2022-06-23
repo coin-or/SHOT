@@ -2691,6 +2691,7 @@ public:
                     if(linearFactor) // Double linear factor found
                     {
                         isValid = false;
+                        isConvex = false;
                         break;
                     }
 
@@ -2710,6 +2711,7 @@ public:
                 if(otherFactor) // Double other factor found
                 {
                     isValid = false;
+                    isConvex = false;
                     break;
                 }
 

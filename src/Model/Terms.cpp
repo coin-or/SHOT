@@ -122,12 +122,13 @@ void QuadraticTerms::updateConvexity()
         }
     }
 
-    // std::cout << std::endl;
+    // These are used to avoid using Eigen in obvious cases
 
     if(allSquares && allPositive)
     {
         convexity = E_Convexity::Convex;
         minEigenValueWithinTolerance = true;
+        maxEigenValueWithinTolerance = false;
         return;
     }
 
@@ -135,6 +136,7 @@ void QuadraticTerms::updateConvexity()
     {
         convexity = E_Convexity::Concave;
         minEigenValueWithinTolerance = false;
+        maxEigenValueWithinTolerance = true;
         return;
     }
 
@@ -142,6 +144,7 @@ void QuadraticTerms::updateConvexity()
     {
         convexity = E_Convexity::Nonconvex;
         minEigenValueWithinTolerance = false;
+        maxEigenValueWithinTolerance = false;
         return;
     }
 
@@ -159,6 +162,7 @@ void QuadraticTerms::updateConvexity()
     {
         convexity = E_Convexity::Unknown;
         minEigenValueWithinTolerance = false;
+        maxEigenValueWithinTolerance = false;
         return;
     }
 
@@ -191,7 +195,8 @@ void QuadraticTerms::updateConvexity()
     {
         double eigenvalue = eigenSolver.eigenvalues()[i];
 
-        this->minEigenValue = std::min(minEigenValue, eigenvalue);
+        this->minEigenValue = std::min(this->minEigenValue, eigenvalue);
+        this->maxEigenValue = std::max(this->maxEigenValue, eigenvalue);
 
         areAllNegativeOrZero = areAllNegativeOrZero && eigenvalue <= eigenvalueTolerance;
         areAllPositiveOrZero = areAllPositiveOrZero && eigenvalue >= -eigenvalueTolerance;
@@ -206,6 +211,9 @@ void QuadraticTerms::updateConvexity()
 
     if(this->minEigenValue >= -eigenvalueTolerance)
         minEigenValueWithinTolerance = true;
+
+    if(this->maxEigenValue <= eigenvalueTolerance)
+        maxEigenValueWithinTolerance = true;
 }
 
 MonomialTerm::MonomialTerm(const MonomialTerm* term, ProblemPtr destinationProblem)

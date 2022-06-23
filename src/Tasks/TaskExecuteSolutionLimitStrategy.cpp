@@ -95,14 +95,15 @@ void TaskExecuteSolutionLimitStrategy::run()
             return;
         }
 
-        if(env->results->getPrimalBound() < SHOT_DBL_MAX && prevIter->solutionStatus != E_ProblemSolutionStatus::Optimal
-            && std ::abs(prevIter->objectiveValue - env->results->getPrimalBound()) < 0.001)
+        if(std::abs(env->results->getPrimalBound()) < SHOT_DBL_MAX
+            && prevIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit
+            && std::abs(prevIter->objectiveValue - env->results->getPrimalBound()) < 0.001)
         {
-            previousSolLimit = prevIter->usedMIPSolutionLimit + 1;
+            previousSolLimit = prevIter->usedMIPSolutionLimit;
             env->dualSolver->MIPSolver->setSolutionLimit(2100000000);
             temporaryOptLimitUsed = true;
             currIter->MIPSolutionLimitUpdated = true;
-            env->output->outputInfo(
+            env->output->outputDebug(
                 "        Forced optimal iteration since difference between MIP solution and primal is small");
 
             env->timing->stopTimer("DualStrategy");
