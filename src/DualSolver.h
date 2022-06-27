@@ -44,7 +44,7 @@ public:
     std::vector<std::shared_ptr<InteriorPoint>> interiorPointCandidates;
     std::vector<std::shared_ptr<InteriorPoint>> interiorPts;
 
-    double cutOffToUse;
+    double cutOffToUse = SHOT_DBL_INF;
     bool useCutOff = false;
     bool isSingleTree = false;
 
