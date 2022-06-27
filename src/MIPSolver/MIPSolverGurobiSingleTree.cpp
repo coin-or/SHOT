@@ -64,8 +64,7 @@ void MIPSolverGurobiSingleTree::initializeSolverSettings()
 
 int MIPSolverGurobiSingleTree::increaseSolutionLimit(int increment)
 {
-    gurobiModel->set(
-        GRB_IntParam_SolutionLimit, gurobiModel->get(GRB_IntParam_SolutionLimit) + increment);
+    gurobiModel->set(GRB_IntParam_SolutionLimit, gurobiModel->get(GRB_IntParam_SolutionLimit) + increment);
 
     return (gurobiModel->get(GRB_IntParam_SolutionLimit));
 }
@@ -174,7 +173,6 @@ E_ProblemSolutionStatus MIPSolverGurobiSingleTree::solveProblem()
 
 void GurobiCallbackSingleTree::callback()
 {
-  std::cout << "in GurobiSingleTree callback\n";
     if(where == GRB_CB_POLLING || where == GRB_CB_PRESOLVE || where == GRB_CB_SIMPLEX || where == GRB_CB_BARRIER)
         return;
 
