@@ -66,6 +66,9 @@
 
 #include "../Tasks/TaskAddIntegerCuts.h"
 
+#include "../Tasks/TaskSelectSingleVariableTransformationBreakpoints.h"
+#include "../Tasks/TaskUpdateSingleVariableTransformationLinearizations.h"
+
 #include "../Output.h"
 #include "../Model/Problem.h"
 #include "../Model/ObjectiveFunction.h"
@@ -97,6 +100,14 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
     auto tInitMIPSolver = std::make_shared<TaskInitializeDualSolver>(env, false);
     env->tasks->addTask(tInitMIPSolver, "InitMIPSolver");
 
+    if(env->reformulatedProblem->properties.numberOfSingleVariableTransformations > 0)
+    {
+        auto tInitSingleVariableLinearizationsBreakpoints
+            = std::make_shared<TaskSelectSingleVariableTransformationBreakpoints>(env);
+        env->tasks->addTask(
+            tInitSingleVariableLinearizationsBreakpoints, "InitSingleVariableTransformationBreakpoints");
+    }
+
     // auto tReformulateProblem = std::make_shared<TaskReformulateProblem>(env);
     // env->tasks->addTask(tReformulateProblem, "ReformulateProb");
 
@@ -118,6 +129,9 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
 
     auto tAddHPs = std::make_shared<TaskAddHyperplanes>(env);
     env->tasks->addTask(tAddHPs, "AddHPs");
+
+    auto tUpdateLinearizations = std::make_shared<TaskUpdateSingleVariableTransformationLinearizations>(env);
+    env->tasks->addTask(tUpdateLinearizations, "UpdateLinearizations");
 
     if(env->settings->getSetting<bool>("Relaxation.Use", "Dual")
         && env->reformulatedProblem->properties.numberOfSemicontinuousVariables == 0
@@ -255,6 +269,14 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
     auto tExecuteSolLimStrategy = std::make_shared<TaskExecuteSolutionLimitStrategy>(env);
     env->tasks->addTask(tExecuteSolLimStrategy, "ExecSolLimStrategy");
 
+    if(env->reformulatedProblem->properties.numberOfSingleVariableTransformations > 0)
+    {
+        auto tUpdateSingleVariableLinearizationsBreakpoints
+            = env->tasks->getTask("InitSingleVariableTransformationBreakpoints");
+        env->tasks->addTask(
+            tUpdateSingleVariableLinearizationsBreakpoints, "UpdateSingleVariableTransformationBreakpoints");
+    }
+
     if(env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
     {
         if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
@@ -281,6 +303,7 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
     }
 
     env->tasks->addTask(tAddHPs, "AddHPs");
+    env->tasks->addTask(tUpdateLinearizations, "UpdateLinearizations");
 
     if(env->settings->getSetting<bool>("HyperplaneCuts.UseIntegerCuts", "Dual"))
     {

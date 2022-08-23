@@ -180,6 +180,18 @@ std::ostream& operator<<(std::ostream& stream, AuxiliaryVariablePtr var)
         auxtype << "eigenval. decomp. ref.";
         break;
 
+    case E_AuxiliaryVariableType::SignomialReformulationExponential:
+        auxtype << "signomial ref. (ET)";
+        break;
+
+    case E_AuxiliaryVariableType::SignomialReformulationPower:
+        auxtype << "signomial ref. (PT)";
+        break;
+
+    case E_AuxiliaryVariableType::LinearSumExtraction:
+        auxtype << "linear sum extract.";
+        break;
+
     default:
         auxtype << "unspecified aux. var.";
         break;

@@ -1,18 +1,17 @@
 /**
-   The Supporting Hyperplane Optimization Toolkit (SHOT).
+  The Supporting Hyperplane Optimization Toolkit (SHOT).
 
-   @author Andreas Lundell, Åbo Akademi University
+  @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE
-   This software is licensed under the Eclipse Public License 2.0.
-   Please see the README and LICENSE files for more information.
+  @section LICENSE
+  This software is licensed under the Eclipse Public License 2.0.
+  Please see the README and LICENSE files for more information.
 */
 
 #pragma once
 
 namespace SHOT
 {
-
 enum class E_AuxiliaryVariableType
 {
     None,
@@ -24,11 +23,25 @@ enum class E_AuxiliaryVariableType
     ContinuousBilinear, // From linearizing a bilinear term x1 * x2 where x1 and x2 are real
     BinaryBilinear, // From linearizing a bilinear term b1 * b2 where b1 and b2 are binary
     BinaryContinuousBilinear, // From linearizing a bilinear term b1 * x2 where b1 is binary and x2 is continuous
-    IntegerBilinear, // From linearizing a bilinear term i1 * x2, where i1 is integer and x2 is continuous or discrete
+    IntegerBilinear, // From linearizing a bilinear term i1 * x2, where i1 is integer and x2 is continuous or
+                     // discrete
     BinaryMonomial, // Fram linearizing a monomial term b1 * b2 * ... * bn, where bi are binary
     AbsoluteValue, // From rewriting an absolute value
     AntiEpigraph, // For rewriting an epigraph formulation as objective
-    EigenvalueDecomposition // From performing an eigenvalue decomposition on quadratic sums
+    EigenvalueDecomposition, // From performing an eigenvalue decomposition on quadratic sums
+    SignomialReformulationPower, // From performing a reformulation of nonconvex signomials using power
+                                 // transformation
+    SignomialReformulationExponential, // From performing a reformulation of nonconvex signomials using exponential
+                                       // transformation
+    LinearSumExtraction // From extracting linear expressions from nonlinear expressions
+};
+
+enum class E_BreakpointSource
+{
+    Initial, // From initial linearization
+    DualSolution, // From actual dual solution point
+    DualSolutionMidpoint, // From midpoint in interval of dual solution point
+    PrimalSolution // From primal solution point
 };
 
 enum class E_Convexity
@@ -221,6 +234,12 @@ enum E_SettingType
     Boolean
 };
 
+enum class E_SingleVariableTransformationType
+{
+    Exponential,
+    Power
+};
+
 enum class E_SolutionStrategy
 {
     SingleTree,
@@ -404,8 +423,8 @@ enum class ES_QuadraticProblemStrategy
 enum class ES_QuadraticTermsExtractStrategy
 {
     DoNotExtract,
-    ExtractTermsToSame, // Extract terms at first level of nonlinear expression (at model read) to the same objective or
-                        // constraint
+    ExtractTermsToSame, // Extract terms at first level of nonlinear expression (at model read) to the same
+                        // objective or constraint
     ExtractToEqualityConstraintIfNonconvex, // Extract terms at all levels (at reformulation step) to a new equality
                                             // expression
     ExtractToEqualityConstraintAlways // Extract terms at all levels (at reformulation step) to a new equality

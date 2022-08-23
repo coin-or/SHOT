@@ -208,6 +208,7 @@ public:
 
     inline E_Convexity getConvexity()
     {
+
         if(convexity == E_Convexity::NotSet)
             updateConvexity();
 

@@ -12,8 +12,15 @@
 #include "Environment.h"
 #include "Structs.h"
 
+#include "Model/SingleVariableTransformations.h"
+
 namespace SHOT
 {
+
+class SingleVariableTransformation;
+using SingleVariableTransformationPtr = std::shared_ptr<SingleVariableTransformation>;
+class SingleVariableTransformations;
+
 class DualSolver
 {
 public:
@@ -35,6 +42,9 @@ public:
     void addGeneratedIntegerCut(IntegerCut integerCut);
     bool hasIntegerCutBeenAdded(double hash);
 
+    void addSingleTransformationVariableBreakpoint(
+        SingleVariableTransformationPtr transformationVariable, double breakpoint, E_BreakpointSource source);
+
     std::vector<GeneratedHyperplane> generatedHyperplanes;
     std::vector<Hyperplane> hyperplaneWaitingList;
 
@@ -43,6 +53,9 @@ public:
 
     std::vector<std::shared_ptr<InteriorPoint>> interiorPointCandidates;
     std::vector<std::shared_ptr<InteriorPoint>> interiorPts;
+
+    SingleVariableTransformations singleVariableTransformations;
+    int itersWithoutAddedBreakpoints = 0;
 
     double cutOffToUse = SHOT_DBL_INF;
     bool useCutOff = false;

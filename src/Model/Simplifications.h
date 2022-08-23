@@ -32,11 +32,6 @@ NonlinearExpressionPtr copyNonlinearExpression(NonlinearExpression* expression, 
 
 inline NonlinearExpressionPtr simplify(NonlinearExpressionPtr expression);
 
-inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionConstant> expression)
-{
-    return (expression);
-}
-
 inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionVariable> expression)
 {
     if(expression->variable->lowerBound == expression->variable->upperBound)
@@ -1569,6 +1564,8 @@ inline std::optional<SignomialTermPtr> convertToSignomialTerm(NonlinearExpressio
 {
     switch(expression->getType())
     {
+    case E_NonlinearExpressionTypes::Constant:
+        return convertExpressionToSignomialTerm(std::dynamic_pointer_cast<ExpressionConstant>(expression));
     case E_NonlinearExpressionTypes::Variable:
         return convertExpressionToSignomialTerm(std::dynamic_pointer_cast<ExpressionVariable>(expression));
     case E_NonlinearExpressionTypes::Negate:
@@ -1595,7 +1592,7 @@ inline std::optional<SignomialTermPtr> convertToSignomialTerm(NonlinearExpressio
 
 inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, NonlinearExpressionPtr, double>
     extractTermsAndConstant(NonlinearExpressionPtr expression, bool extractMonomials, bool extractSignomials,
-        bool extractQuadratics, bool extractLinears)
+        bool extractQuadratics, bool extractLinears, ProblemPtr ownerProblem)
 {
     double constant = 0.0;
     LinearTerms linearTerms;
@@ -1670,6 +1667,19 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
             nonlinearExpression = expression;
         }
     }
+    else if(expression->getType() == E_NonlinearExpressionTypes::Divide)
+    {
+        auto divide = std::dynamic_pointer_cast<ExpressionDivide>(expression);
+
+        if(auto optional = convertExpressionToSignomialTerm(divide); optional && extractSignomials)
+        {
+            signomialTerms.add(optional.value());
+        }
+        else
+        {
+            nonlinearExpression = expression;
+        }
+    }
     else if(expression->getType() == E_NonlinearExpressionTypes::Negate)
     {
         auto negation = std::dynamic_pointer_cast<ExpressionNegate>(expression);
@@ -1705,6 +1715,28 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
             {
                 optional.value()->coefficient *= -1.0;
                 quadraticTerms.add(optional.value());
+                converted = true;
+            }
+        }
+        else if(negation->child->getType() == E_NonlinearExpressionTypes::Invert)
+        {
+            if(auto optional
+                = convertExpressionToSignomialTerm(std::dynamic_pointer_cast<ExpressionInvert>(negation->child));
+                optional && extractSignomials)
+            {
+                optional.value()->coefficient *= -1.0;
+                signomialTerms.add(optional.value());
+                converted = true;
+            }
+        }
+        else if(negation->child->getType() == E_NonlinearExpressionTypes::Divide)
+        {
+            if(auto optional
+                = convertExpressionToSignomialTerm(std::dynamic_pointer_cast<ExpressionDivide>(negation->child));
+                optional && extractSignomials)
+            {
+                optional.value()->coefficient *= -1.0;
+                signomialTerms.add(optional.value());
                 converted = true;
             }
         }
@@ -1793,7 +1825,8 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
         {
             auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression,
                 tmpConstant]
-                = extractTermsAndConstant(C, extractMonomials, extractSignomials, extractQuadratics, extractLinears);
+                = extractTermsAndConstant(
+                    C, extractMonomials, extractSignomials, extractQuadratics, extractLinears, ownerProblem);
 
             linearTerms.add(tmpLinearTerms);
             quadraticTerms.add(tmpQuadraticTerms);
@@ -1911,23 +1944,20 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
     if(nonlinearExpression != nullptr)
         nonlinearExpression = simplify(nonlinearExpression);
 
-    if(auto sharedOwnerProblem = expression->ownerProblem.lock())
-    {
-        for(auto& T : newLinearTerms)
-            T->takeOwnership(sharedOwnerProblem);
+    for(auto& T : newLinearTerms)
+        T->takeOwnership(ownerProblem);
 
-        for(auto& T : newQuadraticTerms)
-            T->takeOwnership(sharedOwnerProblem);
+    for(auto& T : newQuadraticTerms)
+        T->takeOwnership(ownerProblem);
 
-        for(auto& T : newMonomialTerms)
-            T->takeOwnership(sharedOwnerProblem);
+    for(auto& T : newMonomialTerms)
+        T->takeOwnership(ownerProblem);
 
-        for(auto& T : newSignomialTerms)
-            T->takeOwnership(sharedOwnerProblem);
+    for(auto& T : newSignomialTerms)
+        T->takeOwnership(ownerProblem);
 
-        if(nonlinearExpression)
-            nonlinearExpression->takeOwnership(sharedOwnerProblem);
-    }
+    if(nonlinearExpression)
+        nonlinearExpression->takeOwnership(ownerProblem);
 
     return std::make_tuple(
         newLinearTerms, newQuadraticTerms, newMonomialTerms, newSignomialTerms, nonlinearExpression, newConstant);

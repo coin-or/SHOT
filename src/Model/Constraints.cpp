@@ -118,9 +118,8 @@ std::shared_ptr<Variables> NumericConstraint::getGradientSparsityPattern()
 
     // Sorts the variables
     std::sort(gradientSparsityPattern->begin(), gradientSparsityPattern->end(),
-        [](const VariablePtr& variableOne, const VariablePtr& variableTwo) {
-            return (variableOne->index < variableTwo->index);
-        });
+        [](const VariablePtr& variableOne, const VariablePtr& variableTwo)
+        { return (variableOne->index < variableTwo->index); });
 
     // Remove duplicates
     auto last = std::unique(gradientSparsityPattern->begin(), gradientSparsityPattern->end());
@@ -143,8 +142,8 @@ std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> NumericConstra
 
     // Sorts the elements
     std::sort(hessianSparsityPattern->begin(), hessianSparsityPattern->end(),
-        [](const std::pair<VariablePtr, VariablePtr>& elementOne,
-            const std::pair<VariablePtr, VariablePtr>& elementTwo) {
+        [](const std::pair<VariablePtr, VariablePtr>& elementOne, const std::pair<VariablePtr, VariablePtr>& elementTwo)
+        {
             if(elementOne.first->index < elementTwo.first->index)
                 return (true);
             if(elementOne.second->index == elementTwo.second->index)
@@ -1088,9 +1087,8 @@ void NonlinearConstraint::updateProperties()
             = Utilities::combineMonotonicity(properties.monotonicity, nonlinearExpression->getMonotonicity());
 
     std::sort(variablesInNonlinearExpression.begin(), variablesInNonlinearExpression.end(),
-        [](const VariablePtr& variableOne, const VariablePtr& variableTwo) {
-            return (variableOne->index < variableTwo->index);
-        });
+        [](const VariablePtr& variableOne, const VariablePtr& variableTwo)
+        { return (variableOne->index < variableTwo->index); });
 }
 
 std::ostream& operator<<(std::ostream& stream, NumericConstraintPtr constraint)

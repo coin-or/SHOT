@@ -553,30 +553,14 @@ public:
 
         void AddTerm(int variableIndex, double coefficient)
         {
-            if(coefficient == 0.0)
-                return;
-
             auto variable = destination->getVariable(variableIndex);
 
-            if(variable->lowerBound == variable->upperBound)
-            {
-                if(inObjectiveFunction)
-                    std::dynamic_pointer_cast<LinearObjectiveFunction>(destination->objectiveFunction)->constant
-                        += coefficient * variable->lowerBound;
-                else
-                    std::dynamic_pointer_cast<LinearConstraint>(destination->numericConstraints[constraintIndex])
-                        ->constant
-                        += coefficient * variable->lowerBound;
-            }
+            if(inObjectiveFunction)
+                std::dynamic_pointer_cast<LinearObjectiveFunction>(destination->objectiveFunction)
+                    ->add(std::make_shared<LinearTerm>(coefficient, variable));
             else
-            {
-                if(inObjectiveFunction)
-                    std::dynamic_pointer_cast<LinearObjectiveFunction>(destination->objectiveFunction)
-                        ->add(std::make_shared<LinearTerm>(coefficient, variable));
-                else
-                    std::dynamic_pointer_cast<LinearConstraint>(destination->numericConstraints[constraintIndex])
-                        ->add(std::make_shared<LinearTerm>(coefficient, variable));
-            }
+                std::dynamic_pointer_cast<LinearConstraint>(destination->numericConstraints[constraintIndex])
+                    ->add(std::make_shared<LinearTerm>(coefficient, variable));
         }
     };
 

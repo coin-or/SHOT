@@ -22,6 +22,7 @@
 #include "../Utilities.h"
 
 #include "../Model/Problem.h"
+#include "../Model/SingleVariableTransformations.h"
 
 namespace SHOT
 {
@@ -523,6 +524,51 @@ bool MIPSolverGurobi::addSpecialOrderedSet(E_SOSType type, VectorInteger variabl
     }
 
     return (true);
+}
+
+bool MIPSolverGurobi::addPiecewiseLinearApproximation(SingleVariableTransformationPtr transformationVariable)
+{
+    try
+    {
+        int numBreakpoints = transformationVariable->breakpoints.size();
+
+        auto originalVariable = gurobiModel->getVar(transformationVariable->originalVariable->index);
+        auto auxiliaryVariable = gurobiModel->getVar(transformationVariable->transformationVariable->index);
+
+        VectorDouble xpts, fpts;
+
+        for(auto& BP : transformationVariable->breakpoints)
+        {
+            xpts.push_back(BP.point);
+            fpts.push_back(BP.value);
+        }
+
+        GRBGenConstr gc1 = gurobiModel->addGenConstrPWL(originalVariable, auxiliaryVariable, numBreakpoints, &xpts[0],
+            &fpts[0], transformationVariable->transformationVariable->name);
+
+        piecewiseLinearConstraints.push_back(gc1);
+    }
+    catch(GRBException& e)
+    {
+        env->output->outputError(
+            fmt::format("        Could not add piecewise linear approximation for transformation variable {}:  ",
+                transformationVariable->transformationVariable->name),
+            e.getMessage());
+        return (false);
+    }
+
+    return (true);
+}
+
+void MIPSolverGurobi::removePiecewiseLinearApproximations()
+{
+    for(auto GC : piecewiseLinearConstraints)
+    {
+        gurobiModel->remove(GC);
+        gurobiModel->update();
+    }
+
+    piecewiseLinearConstraints.clear();
 }
 
 bool MIPSolverGurobi::createIntegerCut(IntegerCut& integerCut)

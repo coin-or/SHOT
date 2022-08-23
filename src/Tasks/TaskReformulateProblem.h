@@ -108,6 +108,11 @@ private:
     NonlinearExpressionPtr reformulateNonlinearExpression(std::shared_ptr<ExpressionAbs> source);
     NonlinearExpressionPtr reformulateNonlinearExpression(std::shared_ptr<ExpressionSquare> source);
     NonlinearExpressionPtr reformulateNonlinearExpression(std::shared_ptr<ExpressionProduct> source);
+    NonlinearExpressionPtr reformulateNonlinearExpression(std::shared_ptr<ExpressionSum> source);
+
+    SignomialTermPtr convexifyNegativeSignomialTermUsingPowerTransformation(const SignomialTermPtr sourceTerm);
+    NonlinearExpressionPtr convexifyPositiveSignomialTermUsingExponentialTransformation(
+        const SignomialTermPtr sourceTerm);
 
     std::pair<AuxiliaryVariablePtr, bool> getSquareAuxiliaryVariable(
         VariablePtr firstVariable, double coefficient, E_AuxiliaryVariableType auxVariableType);
@@ -116,6 +121,10 @@ private:
         VariablePtr firstVariable, VariablePtr secondVariable);
 
     std::pair<AuxiliaryVariablePtr, bool> getAbsoluteValueAuxiliaryVariable(std::shared_ptr<ExpressionAbs> source);
+
+    std::pair<AuxiliaryVariablePtr, bool> getSingleVariableExponentialAuxiliaryVariable(VariablePtr originalVariable);
+    std::pair<AuxiliaryVariablePtr, bool> getSingleVariablePowerAuxiliaryVariable(
+        VariablePtr originalVariable, double power);
 
     void createSquareReformulations();
     void createBilinearReformulations();
@@ -130,6 +139,9 @@ private:
         VariablePtr firstVariable, VariablePtr secondVariable, AuxiliaryVariablePtr auxVariable);
     void reformulateRealBilinearTerm(
         VariablePtr firstVariable, VariablePtr secondVariable, AuxiliaryVariablePtr auxVariable);
+
+    void createSingleVariableExponentialTransformations();
+    void createSingleVariablePowerTransformations();
 
     void addBilinearMcCormickEnvelope(VariablePtr auxVariable, VariablePtr firstVariable, VariablePtr secondVariable);
 
@@ -146,6 +158,9 @@ private:
     std::map<std::tuple<VariablePtr, VariablePtr>, AuxiliaryVariablePtr> bilinearAuxVariables;
 
     std::map<std::string, AuxiliaryVariablePtr> absoluteExpressionsAuxVariables;
+
+    std::map<VariablePtr, AuxiliaryVariablePtr> singleVariableExponentialAuxVariables;
+    std::map<std::pair<VariablePtr, double>, AuxiliaryVariablePtr> singleVariablePowerAuxVariables;
 
     ProblemPtr reformulatedProblem;
 };

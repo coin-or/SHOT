@@ -50,7 +50,8 @@ void TaskCheckDualStagnation::run()
 
     if(!env->dualSolver->isSingleTree && !currIter->MIPSolutionLimitUpdated
         && currIter->iterationNumber - env->solutionStatistics.iterationLastDualCutAdded > 2
-        && currIter->solutionStatus != E_ProblemSolutionStatus::SolutionLimit)
+        && currIter->solutionStatus != E_ProblemSolutionStatus::SolutionLimit
+        && env->dualSolver->singleVariableTransformations.size() == 0)
     {
         env->results->terminationReason = E_TerminationReason::NoDualCutsAdded;
         env->tasks->setNextTask(taskIDIfTrue);

@@ -909,6 +909,19 @@ void Report::outputProblemInstanceReport()
         if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::EigenvalueDecomposition);
             value > 0)
             env->output->outputInfo(fmt::format(" {:56s}{:d}", " - quadratic eigenvalue decomposition:", value));
+
+        if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::SignomialReformulationPower);
+            value > 0)
+            env->output->outputInfo(fmt::format(" {:56s}{:d}", " - signomial power transformation:", value));
+
+        if(auto value
+            = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::SignomialReformulationExponential);
+            value > 0)
+            env->output->outputInfo(fmt::format(" {:56s}{:d}", " - signomial exponential transformation:", value));
+
+        if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::LinearSumExtraction);
+            value > 0)
+            env->output->outputInfo(fmt::format(" {:56s}{:d}", " - linear sum extraction:", value));
     }
 }
 

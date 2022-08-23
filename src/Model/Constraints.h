@@ -379,6 +379,41 @@ public:
         properties.hasNonlinearExpression = true;
     };
 
+    NonlinearConstraint(int constraintIndex, std::string constraintName, LinearTerms linTerms, QuadraticTerms quadTerms,
+        SignomialTerms signTerms, NonlinearExpressionPtr expression, double LHS, double RHS)
+    {
+        index = constraintIndex;
+        name = constraintName;
+        linearTerms = linTerms;
+        quadraticTerms = quadTerms;
+        signomialTerms = signTerms;
+        nonlinearExpression = expression;
+        valueLHS = LHS;
+        valueRHS = RHS;
+
+        properties.hasLinearTerms = linearTerms.size() > 0 ? true : false;
+        properties.hasQuadraticTerms = quadraticTerms.size() > 0 ? true : false;
+        properties.hasSignomialTerms = signomialTerms.size() > 0 ? true : false;
+        properties.hasNonlinearExpression = true;
+    };
+
+    NonlinearConstraint(int constraintIndex, std::string constraintName, LinearTerms linTerms, QuadraticTerms quadTerms,
+        SignomialTerms signTerms, double LHS, double RHS)
+    {
+        index = constraintIndex;
+        name = constraintName;
+        linearTerms = linTerms;
+        quadraticTerms = quadTerms;
+        signomialTerms = signTerms;
+        valueLHS = LHS;
+        valueRHS = RHS;
+
+        properties.hasLinearTerms = linearTerms.size() > 0 ? true : false;
+        properties.hasQuadraticTerms = quadraticTerms.size() > 0 ? true : false;
+        properties.hasSignomialTerms = signomialTerms.size() > 0 ? true : false;
+        properties.hasNonlinearExpression = false;
+    };
+
     void add(LinearTerms terms);
     void add(LinearTermPtr term);
     void add(QuadraticTerms terms);

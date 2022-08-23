@@ -241,6 +241,10 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
     // Creating expressions for the bilinear reformulations
     createBilinearReformulations();
 
+    // Creating single variable transformations
+    createSingleVariableExponentialTransformations();
+    createSingleVariablePowerTransformations();
+
     reformulatedProblem->properties.isReformulated = true;
     reformulatedProblem->properties.numberOfAddedLinearizations = env->problem->properties.numberOfAddedLinearizations;
     reformulatedProblem->finalize();
@@ -620,34 +624,28 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
     {
         auto sourceObjective = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->problem->objectiveFunction);
 
-        if(static_cast<ES_PartitionNonlinearSums>(
-               env->settings->getSetting<int>("Reformulation.ObjectiveFunction.PartitionNonlinearTerms", "Model"))
-            == ES_PartitionNonlinearSums::Always)
+        bool areAllConvex = false;
+
+        if(!isSignReversed && sourceObjective->signomialTerms.checkAllForConvexityType(E_Convexity::Convex))
+            areAllConvex = true;
+        else if(isSignReversed && sourceObjective->signomialTerms.checkAllForConvexityType(E_Convexity::Concave))
+            areAllConvex = true;
+
+        if(!areAllConvex)
         {
             auto tmpLinearTerms = partitionSignomialTerms(sourceObjective->signomialTerms, isSignReversed);
             destinationLinearTerms.add(tmpLinearTerms);
         }
-        else if(static_cast<ES_PartitionNonlinearSums>(
-                    env->settings->getSetting<int>("Reformulation.ObjectiveFunction.PartitionNonlinearTerms", "Model"))
-            == ES_PartitionNonlinearSums::IfConvex)
+        else if((static_cast<ES_PartitionNonlinearSums>(
+                     env->settings->getSetting<int>("Reformulation.Constraint.PartitionNonlinearTerms", "Model"))
+                        == ES_PartitionNonlinearSums::Always
+                    || static_cast<ES_PartitionNonlinearSums>(
+                           env->settings->getSetting<int>("Reformulation.Constraint.PartitionNonlinearTerms", "Model"))
+                        == ES_PartitionNonlinearSums::IfConvex)
+            && sourceObjective->signomialTerms.size() > 1)
         {
-            bool areAllConvex = false;
-
-            if(!isSignReversed && sourceObjective->signomialTerms.checkAllForConvexityType(E_Convexity::Convex))
-                areAllConvex = true;
-            else if(isSignReversed && sourceObjective->signomialTerms.checkAllForConvexityType(E_Convexity::Concave))
-                areAllConvex = true;
-
-            if(areAllConvex)
-            {
-                auto tmpLinearTerms = partitionSignomialTerms(sourceObjective->signomialTerms, isSignReversed);
-                destinationLinearTerms.add(tmpLinearTerms);
-            }
-            else
-            {
-                for(auto& T : sourceObjective->signomialTerms)
-                    destinationSignomialTerms.add(std::make_shared<SignomialTerm>(T.get(), reformulatedProblem));
-            }
+            auto tmpLinearTerms = partitionSignomialTerms(sourceObjective->signomialTerms, isSignReversed);
+            destinationLinearTerms.add(tmpLinearTerms);
         }
         else
         {
@@ -1046,49 +1044,9 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
         }
     }
 
-    if(C->properties.hasSignomialTerms)
-    {
-        auto sourceConstraint = std::dynamic_pointer_cast<NonlinearConstraint>(C);
-
-        if(static_cast<ES_PartitionNonlinearSums>(
-               env->settings->getSetting<int>("Reformulation.Constraint.PartitionNonlinearTerms", "Model"))
-                == ES_PartitionNonlinearSums::Always
-            && sourceConstraint->signomialTerms.size() > 1)
-        {
-            auto tmpLinearTerms = partitionSignomialTerms(sourceConstraint->signomialTerms, isSignReversed);
-            destinationLinearTerms.add(tmpLinearTerms);
-        }
-        else if(static_cast<ES_PartitionNonlinearSums>(
-                    env->settings->getSetting<int>("Reformulation.Constraint.PartitionNonlinearTerms", "Model"))
-                == ES_PartitionNonlinearSums::IfConvex
-            && sourceConstraint->signomialTerms.size() > 1)
-        {
-            bool areAllConvex = false;
-
-            if(!isSignReversed && sourceConstraint->signomialTerms.checkAllForConvexityType(E_Convexity::Convex))
-                areAllConvex = true;
-            else if(isSignReversed && sourceConstraint->signomialTerms.checkAllForConvexityType(E_Convexity::Concave))
-                areAllConvex = true;
-
-            if(areAllConvex)
-            {
-                auto tmpLinearTerms = partitionSignomialTerms(sourceConstraint->signomialTerms, isSignReversed);
-                destinationLinearTerms.add(tmpLinearTerms);
-            }
-            else
-            {
-                for(auto& T : sourceConstraint->signomialTerms)
-                    destinationSignomialTerms.add(std::make_shared<SignomialTerm>(T.get(), reformulatedProblem));
-            }
-        }
-        else
-        {
-            for(auto& T : sourceConstraint->signomialTerms)
-                destinationSignomialTerms.add(std::make_shared<SignomialTerm>(T.get(), reformulatedProblem));
-        }
-    }
-
     NonlinearExpressionPtr destinationExpression;
+
+    SignomialTerms extractedSignomialTerms;
 
     if(C->properties.hasNonlinearExpression)
     {
@@ -1100,7 +1058,7 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
 
         auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression,
             tmpConstant]
-            = extractTermsAndConstant(reformulatedExpression, true, true, true, true);
+            = extractTermsAndConstant(reformulatedExpression, true, true, true, true, reformulatedProblem);
 
         if(tmpLinearTerms.size() > 0)
             destinationLinearTerms.add(tmpLinearTerms);
@@ -1118,9 +1076,47 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
             destinationMonomialTerms.add(tmpMonomialTerms);
 
         if(tmpSignomialTerms.size() > 0)
-            destinationSignomialTerms.add(tmpSignomialTerms);
+            extractedSignomialTerms.add(tmpSignomialTerms);
 
         destinationExpression = tmpNonlinearExpression;
+    }
+
+    if(C->properties.hasSignomialTerms || extractedSignomialTerms.size() > 0)
+    {
+        auto sourceConstraint = std::dynamic_pointer_cast<NonlinearConstraint>(C);
+
+        bool areAllConvex = false;
+
+        if(!isSignReversed && sourceConstraint->signomialTerms.checkAllForConvexityType(E_Convexity::Convex)
+            && extractedSignomialTerms.checkAllForConvexityType(E_Convexity::Convex))
+            areAllConvex = true;
+        else if(isSignReversed && sourceConstraint->signomialTerms.checkAllForConvexityType(E_Convexity::Concave)
+            && extractedSignomialTerms.checkAllForConvexityType(E_Convexity::Concave))
+            areAllConvex = true;
+
+        if(!areAllConvex)
+        {
+            destinationLinearTerms.add(partitionSignomialTerms(sourceConstraint->signomialTerms, isSignReversed));
+            destinationLinearTerms.add(partitionSignomialTerms(extractedSignomialTerms, isSignReversed));
+        }
+        else if((static_cast<ES_PartitionNonlinearSums>(
+                     env->settings->getSetting<int>("Reformulation.Constraint.PartitionNonlinearTerms", "Model"))
+                        == ES_PartitionNonlinearSums::Always
+                    || static_cast<ES_PartitionNonlinearSums>(
+                           env->settings->getSetting<int>("Reformulation.Constraint.PartitionNonlinearTerms", "Model"))
+                        == ES_PartitionNonlinearSums::IfConvex)
+            && sourceConstraint->signomialTerms.size() + extractedSignomialTerms.size() > 1)
+        {
+            destinationLinearTerms.add(partitionSignomialTerms(sourceConstraint->signomialTerms, isSignReversed));
+            destinationLinearTerms.add(partitionSignomialTerms(extractedSignomialTerms, isSignReversed));
+        }
+        else
+        {
+            for(auto& T : sourceConstraint->signomialTerms)
+                destinationSignomialTerms.add(std::make_shared<SignomialTerm>(T.get(), reformulatedProblem));
+
+            destinationLinearTerms.add(partitionSignomialTerms(extractedSignomialTerms, isSignReversed));
+        }
     }
 
     if(destinationExpression)
@@ -1635,11 +1631,11 @@ LinearTerms TaskReformulateProblem::partitionSignomialTerms(const SignomialTerms
         double varLowerBound = env->settings->getSetting<double>("Variables.Continuous.MinimumLowerBound", "Model");
         double varUpperBound = env->settings->getSetting<double>("Variables.Continuous.MaximumUpperBound", "Model");
 
-        double coefficient = std::abs(T->coefficient);
+        std::cout << T << std::endl;
 
         try
         {
-            bounds = T->getBounds() / coefficient;
+            bounds = T->getBounds();
 
             if(reversedSigns)
                 bounds = -1.0 * bounds;
@@ -1655,36 +1651,58 @@ LinearTerms TaskReformulateProblem::partitionSignomialTerms(const SignomialTerms
         auxVariableCounter++;
         env->results->increaseAuxiliaryVariableCounter(E_AuxiliaryVariableType::SignomialTermsPartitioning);
 
-        resultLinearTerms.add(std::make_shared<LinearTerm>(coefficient, auxVariable));
+        reformulatedProblem->add(auxVariable);
+
+        resultLinearTerms.add(std::make_shared<LinearTerm>(1.0, auxVariable));
 
         auto auxConstraint = std::make_shared<NonlinearConstraint>(
             auxConstraintCounter, "cs_psig_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, 0.0);
         auxConstraint->add(std::make_shared<LinearTerm>(-1.0, auxVariable));
         auxConstraintCounter++;
 
-        auto signomialTerm = std::make_shared<SignomialTerm>(T.get(), reformulatedProblem);
-        signomialTerm->coefficient /= coefficient;
-
-        if(reversedSigns)
+        if(T->getConvexity() == E_Convexity::Convex)
+        // What about reversed signs + concave?
         {
-            signomialTerm->coefficient *= -1.0;
+            auto signomialTerm = std::make_shared<SignomialTerm>(T.get(), reformulatedProblem);
+
+            if(reversedSigns)
+                signomialTerm->coefficient *= -1.0;
+
+            if(signomialTerm->coefficient < 0.0 && auxVariable->upperBound > 0.0)
+                auxVariable->upperBound = 0.0;
+            else if(signomialTerm->coefficient > 0.0 && auxVariable->lowerBound < 0.0)
+                auxVariable->lowerBound = 0.0;
+
+            auxConstraint->add(signomialTerm);
+            auxVariable->signomialTerms.push_back(signomialTerm);
+        }
+        else
+        {
+            bool positiveTerm = (T->coefficient > 0 && !reversedSigns) || (T->coefficient < 0 && reversedSigns);
+
+            if(positiveTerm) // The convexified term will have exponential factors
+            {
+                auto nonlinearExpression = convexifyPositiveSignomialTermUsingExponentialTransformation(T);
+
+                auxConstraint->add(nonlinearExpression);
+                auxVariable->nonlinearExpression = nonlinearExpression;
+            }
+            else // The convexified term is signomial
+            {
+                auto signomialTerm = convexifyNegativeSignomialTermUsingPowerTransformation(T);
+
+                auxConstraint->add(signomialTerm);
+                auxVariable->signomialTerms.push_back(signomialTerm);
+                auxVariable->signomialTerms.takeOwnership(reformulatedProblem);
+            }
         }
 
-        if(signomialTerm->coefficient < 0.0 && auxVariable->upperBound > 0.0)
-            auxVariable->upperBound = 0.0;
-        else if(signomialTerm->coefficient > 0.0 && auxVariable->lowerBound < 0.0)
-            auxVariable->lowerBound = 0.0;
+        reformulatedProblem->add(std::move(auxConstraint));
 
-        auxConstraint->add(signomialTerm);
-
-        auxVariable->signomialTerms.push_back(signomialTerm);
-
-        reformulatedProblem->add(std::move(auxVariable));
-
-        auto numericConstraints = reformulateConstraint(auxConstraint);
+        /*auto numericConstraints = reformulateConstraint(auxConstraint);
 
         for(auto& C : numericConstraints)
-            reformulatedProblem->add(std::move(C));
+            reformulatedProblem->add(std::move(C));*/
     }
 
     return (resultLinearTerms);
@@ -2355,8 +2373,7 @@ NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(No
             = reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionPower>(source)->secondChild);
         break;
     case E_NonlinearExpressionTypes::Sum:
-        for(auto& C : std::dynamic_pointer_cast<ExpressionSum>(source)->children)
-            C = reformulateNonlinearExpression(C);
+        source = reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionSum>(source));
         break;
     case E_NonlinearExpressionTypes::Product:
         // Extract quadratics
@@ -2375,7 +2392,7 @@ NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(st
         return (std::make_shared<ExpressionVariable>(auxVariable));
 
     auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression, tmpConstant]
-        = extractTermsAndConstant(source->child, true, true, true, true);
+        = extractTermsAndConstant(source->child, true, true, true, true, reformulatedProblem);
 
     auto bounds = source->getBounds();
 
@@ -2497,7 +2514,7 @@ NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(st
     {
         auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression,
             tmpConstant]
-            = extractTermsAndConstant(source, false, false, true, false);
+            = extractTermsAndConstant(source, false, false, true, false, reformulatedProblem);
 
         if(tmpQuadraticTerms.size() > 0)
         {
@@ -2524,15 +2541,15 @@ NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(st
 NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(std::shared_ptr<ExpressionProduct> source)
 {
     // Extract all quadratic terms from inside of the nonlinear expression
-    auto convxity = source->getConvexity();
+    auto convexity = source->getConvexity();
 
     if((extractQuadraticTermsFromNonconvexExpressions
-           && !(convxity > E_Convexity::Convex || convxity == E_Convexity::Unknown))
+           && !(convexity > E_Convexity::Convex || convexity == E_Convexity::Unknown))
         || extractQuadraticTermsFromConvexExpressions)
     {
         auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression,
             tmpConstant]
-            = extractTermsAndConstant(source, false, false, true, false);
+            = extractTermsAndConstant(source, false, false, true, false, reformulatedProblem);
 
         if(tmpQuadraticTerms.size() > 0)
         {
@@ -2555,6 +2572,143 @@ NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(st
         C = reformulateNonlinearExpression(C);
 
     return (simplify(source));
+}
+
+NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(std::shared_ptr<ExpressionSum> source)
+{
+    auto convexity = source->getConvexity();
+
+    if(convexity == E_Convexity::Linear && source->getNumberOfChildren() > 1)
+    {
+        auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression,
+            tmpConstant]
+            = extractTermsAndConstant(source, false, false, false, true, reformulatedProblem);
+
+        auto bounds = source->getBounds();
+
+        assert(tmpQuadraticTerms.size() == 0 && tmpMonomialTerms.size() == 0 && tmpSignomialTerms.size() == 0
+            && !tmpNonlinearExpression);
+
+        NumericConstraintPtr auxConstraint;
+
+        auxConstraint = std::make_shared<LinearConstraint>(
+            auxConstraintCounter, "s_csum_" + std::to_string(auxConstraintCounter), -tmpConstant, -tmpConstant);
+        auxConstraint->properties.classification = E_ConstraintClassification::Linear;
+        auxConstraint->ownerProblem = reformulatedProblem;
+        auxConstraintCounter++;
+
+        auto auxVariable = std::make_shared<AuxiliaryVariable>("s_sum_" + std::to_string(auxVariableCounter),
+            auxVariableCounter, E_VariableType::Real, bounds.l(), bounds.u());
+        auxVariableCounter++;
+        env->results->increaseAuxiliaryVariableCounter(E_AuxiliaryVariableType::LinearSumExtraction);
+        auxVariable->properties.auxiliaryType = E_AuxiliaryVariableType::LinearSumExtraction;
+
+        for(auto& T : tmpLinearTerms)
+            auxVariable->linearTerms.add(std::make_shared<LinearTerm>(T->coefficient, T->variable));
+
+        auxVariable->constant += tmpConstant;
+
+        reformulatedProblem->add(auxVariable);
+
+        tmpLinearTerms.push_back(std::make_shared<LinearTerm>(-1.0, auxVariable));
+        std::dynamic_pointer_cast<LinearConstraint>(auxConstraint)->add(tmpLinearTerms);
+
+        reformulatedProblem->add(auxConstraint);
+
+        return (std::make_shared<ExpressionVariable>(auxVariable));
+    }
+    else
+    {
+        for(auto& C : source->children)
+            C = reformulateNonlinearExpression(C);
+    }
+
+    return (simplify(source));
+}
+
+NonlinearExpressionPtr TaskReformulateProblem::convexifyPositiveSignomialTermUsingExponentialTransformation(
+    const SignomialTermPtr sourceTerm)
+{
+    NonlinearExpressions factors;
+
+    std::cout << sourceTerm << std::endl;
+
+    factors.push_back(std::make_shared<ExpressionConstant>(sourceTerm->coefficient));
+
+    for(auto& E : sourceTerm->elements)
+    {
+        auto variable = reformulatedProblem->getVariable(E->variable->index);
+        auto transformationVariable = getSingleVariableExponentialAuxiliaryVariable(variable);
+
+        if(E->power > 0)
+        {
+            // TODO: extract powers into constant?
+            factors.push_back(std::make_shared<ExpressionExp>(
+                std::make_shared<ExpressionProduct>(std::make_shared<ExpressionConstant>(E->power),
+                    std::make_shared<ExpressionVariable>(transformationVariable.first))));
+        }
+        else
+        {
+            factors.push_back(std::make_shared<ExpressionPower>(
+                std::make_shared<ExpressionVariable>(variable), std::make_shared<ExpressionConstant>(E->power)));
+        }
+    }
+
+    auto nonlinearExpression = std::make_shared<ExpressionProduct>(factors);
+
+    return (nonlinearExpression);
+}
+
+SignomialTermPtr TaskReformulateProblem::convexifyNegativeSignomialTermUsingPowerTransformation(
+    const SignomialTermPtr sourceTerm)
+{
+
+    std::cout << sourceTerm << std::endl;
+
+    auto signomialTerm = std::make_shared<SignomialTerm>();
+
+    signomialTerm->coefficient = sourceTerm->coefficient;
+    signomialTerm->takeOwnership(reformulatedProblem);
+
+    double powerLeaveSum = 0.0;
+    double powerTransSum = 0.0;
+
+    for(auto& E : sourceTerm->elements)
+    {
+        if(E->power < 0 || E->power >= 1)
+            powerTransSum += std::abs(E->power);
+        else
+            powerLeaveSum += E->power;
+    }
+
+    double transformationPower = (1 - powerLeaveSum) / powerTransSum;
+
+    for(auto& E : sourceTerm->elements)
+    {
+        if(E->power >= 1)
+        {
+            auto variable = reformulatedProblem->getVariable(E->variable->index);
+            auto transformationVariable = getSingleVariablePowerAuxiliaryVariable(variable, transformationPower);
+
+            signomialTerm->elements.push_back(
+                std::make_shared<SignomialElement>(transformationVariable.first, E->power * transformationPower));
+        }
+        else if(E->power < 0)
+        {
+            auto variable = reformulatedProblem->getVariable(E->variable->index);
+            auto transformationVariable = getSingleVariablePowerAuxiliaryVariable(variable, -transformationPower);
+
+            signomialTerm->elements.push_back(
+                std::make_shared<SignomialElement>(transformationVariable.first, -E->power * transformationPower));
+        }
+        else
+        {
+            auto variable = reformulatedProblem->getVariable(E->variable->index);
+            signomialTerm->elements.push_back(std::make_shared<SignomialElement>(variable, E->power));
+        }
+    }
+
+    return (signomialTerm);
 }
 
 std::pair<AuxiliaryVariablePtr, bool> TaskReformulateProblem::getSquareAuxiliaryVariable(
@@ -2711,6 +2865,80 @@ std::pair<AuxiliaryVariablePtr, bool> TaskReformulateProblem::getAbsoluteValueAu
     return (std::make_pair(auxVariable, true));
 }
 
+std::pair<AuxiliaryVariablePtr, bool> TaskReformulateProblem::getSingleVariableExponentialAuxiliaryVariable(
+    VariablePtr originalVariable)
+{
+    auto auxVariableIterator = singleVariableExponentialAuxVariables.find(originalVariable);
+
+    if(auxVariableIterator != singleVariableExponentialAuxVariables.end())
+        return (std::make_pair(auxVariableIterator->second, false));
+
+    // Create a new variable
+
+    // Get the max bounds
+    double lowerBound = log(originalVariable->lowerBound);
+    double upperBound = log(originalVariable->upperBound);
+
+    E_VariableType variableType = E_VariableType::Real;
+
+    auto auxVariable = std::make_shared<AuxiliaryVariable>(
+        "s_se_" + originalVariable->name, auxVariableCounter, variableType, lowerBound, upperBound);
+
+    auxVariableCounter++;
+    auxVariable->properties.auxiliaryType = E_AuxiliaryVariableType::SignomialReformulationExponential;
+    env->results->increaseAuxiliaryVariableCounter(E_AuxiliaryVariableType::SignomialReformulationExponential);
+
+    reformulatedProblem->add(auxVariable);
+    auxVariable->nonlinearExpression
+        = std::make_shared<ExpressionLog>(std::make_shared<ExpressionVariable>(originalVariable));
+
+    singleVariableExponentialAuxVariables.emplace(originalVariable, auxVariable);
+
+    return (std::make_pair(auxVariable, true));
+}
+
+std::pair<AuxiliaryVariablePtr, bool> TaskReformulateProblem::getSingleVariablePowerAuxiliaryVariable(
+    VariablePtr originalVariable, double power)
+{
+    power = std::round(power * 10000.0) / 10000.0;
+    auto auxVariableIterator = singleVariablePowerAuxVariables.find(std::make_pair(originalVariable, power));
+
+    // TODO: add parameter
+    if(auxVariableIterator != singleVariablePowerAuxVariables.end())
+        return (std::make_pair(auxVariableIterator->second, false));
+
+    // Create a new variable
+
+    assert(power != 0.0);
+    double invPower = 1.0 / power;
+
+    auto key = std::make_pair(originalVariable, power);
+
+    // Get the max bounds
+    auto valueList = { pow(originalVariable->lowerBound, invPower), pow(originalVariable->upperBound, invPower) };
+
+    double lowerBound = std::min(valueList);
+    double upperBound = std::max(valueList);
+
+    E_VariableType variableType = E_VariableType::Real;
+
+    auto auxVariable = std::make_shared<AuxiliaryVariable>(
+        "s_sp_" + originalVariable->name + "_" + std::to_string(auxVariableCounter), auxVariableCounter, variableType,
+        lowerBound, upperBound);
+
+    auxVariableCounter++;
+    auxVariable->properties.auxiliaryType = E_AuxiliaryVariableType::SignomialReformulationPower;
+    env->results->increaseAuxiliaryVariableCounter(E_AuxiliaryVariableType::SignomialReformulationPower);
+
+    reformulatedProblem->add(auxVariable);
+    auxVariable->nonlinearExpression = std::make_shared<ExpressionPower>(
+        std::make_shared<ExpressionVariable>(originalVariable), std::make_shared<ExpressionConstant>(invPower));
+
+    singleVariablePowerAuxVariables.emplace(key, auxVariable);
+
+    return (std::make_pair(auxVariable, true));
+}
+
 void TaskReformulateProblem::createSquareReformulations()
 {
     for(const auto& [PAIR, AUXVAR] : squareAuxVariables)
@@ -2755,6 +2983,35 @@ void TaskReformulateProblem::createBilinearReformulations()
         else
         {
         }
+    }
+}
+
+void TaskReformulateProblem::createSingleVariableExponentialTransformations()
+{
+    for(const auto& [ORIGVAR, AUXVAR] : singleVariableExponentialAuxVariables)
+    {
+        AUXVAR->properties.auxiliaryType = E_AuxiliaryVariableType::SignomialReformulationExponential;
+
+        auto transformation = std::make_shared<SingleVariableExponentialTransformation>();
+        transformation->originalVariable = ORIGVAR;
+        transformation->transformationVariable = AUXVAR;
+
+        reformulatedProblem->add(transformation);
+    }
+}
+
+void TaskReformulateProblem::createSingleVariablePowerTransformations()
+{
+    for(const auto& [TRANS, AUXVAR] : singleVariablePowerAuxVariables)
+    {
+        AUXVAR->properties.auxiliaryType = E_AuxiliaryVariableType::SignomialReformulationPower;
+
+        auto transformation = std::make_shared<SingleVariablePowerTransformation>();
+        transformation->originalVariable = std::get<0>(TRANS);
+        transformation->transformationVariable = AUXVAR;
+        transformation->power = std::get<1>(TRANS);
+
+        reformulatedProblem->add(transformation);
     }
 }
 
@@ -2934,6 +3191,9 @@ void TaskReformulateProblem::reformulateIntegerBilinearTerm(
         {
             auto auxBinary = std::make_shared<AuxiliaryVariable>(
                 "s_bli" + std::to_string(auxVariableCounter + 1), auxVariableCounter, E_VariableType::Binary, 0.0, 1.0);
+
+            auxBinary->properties.auxiliaryType = E_AuxiliaryVariableType::IntegerBilinear;
+            env->results->increaseAuxiliaryVariableCounter(E_AuxiliaryVariableType::IntegerBilinear);
 
             auxFirstSum->add(std::make_shared<LinearTerm>(1.0, auxBinary));
             auxFirstSumVarDef->add(std::make_shared<LinearTerm>(i, auxBinary));

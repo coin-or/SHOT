@@ -28,9 +28,12 @@ void simplifyNonlinearExpressions(
         auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression,
             tmpConstant]
             = extractTermsAndConstant(
-                nonlinearExpression, extractMonomials, extractSignomials, extractQuadratics, true);
+                nonlinearExpression, extractMonomials, extractSignomials, extractQuadratics, true, problem);
 
-        if(tmpMonomialTerms.size() == 0 && tmpSignomialTerms.size() == 0 && !tmpNonlinearExpression
+        if(tmpMonomialTerms.size() == 0 && tmpSignomialTerms.size() == 0
+            && (!tmpNonlinearExpression
+                || (tmpNonlinearExpression->getType() == E_NonlinearExpressionTypes::Constant
+                    && std::dynamic_pointer_cast<ExpressionConstant>(tmpNonlinearExpression)->constant == 0.0))
             && nonlinearObjective->monomialTerms.size() == 0 && nonlinearObjective->signomialTerms.size() == 0)
         {
             // The objective is no longer nonlinear
@@ -88,7 +91,11 @@ void simplifyNonlinearExpressions(
             if(tmpSignomialTerms.size() > 0)
                 nonlinearObjective->add(std::move(tmpSignomialTerms));
 
-            nonlinearObjective->nonlinearExpression = tmpNonlinearExpression;
+            if(tmpNonlinearExpression)
+            {
+                if(tmpNonlinearExpression->getBounds().l() != 0.0 || tmpNonlinearExpression->getBounds().u() != 0.0)
+                    nonlinearObjective->nonlinearExpression = tmpNonlinearExpression;
+            }
 
             if(tmpConstant != 0.0)
                 nonlinearObjective->constant += tmpConstant;
@@ -108,9 +115,17 @@ void simplifyNonlinearExpressions(
         auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression,
             tmpConstant]
             = extractTermsAndConstant(
-                nonlinearExpression, extractMonomials, extractSignomials, extractQuadratics, true);
+                nonlinearExpression, extractMonomials, extractSignomials, extractQuadratics, true, problem);
 
-        if(tmpMonomialTerms.size() == 0 && tmpSignomialTerms.size() == 0 && !tmpNonlinearExpression
+        std::cout << tmpNonlinearExpression << std::endl;
+
+        for(auto T : tmpSignomialTerms)
+            std::cout << T << std::endl;
+
+        if(tmpMonomialTerms.size() == 0 && tmpSignomialTerms.size() == 0
+            && (!tmpNonlinearExpression
+                || (tmpNonlinearExpression->getType() == E_NonlinearExpressionTypes::Constant
+                    && std::dynamic_pointer_cast<ExpressionConstant>(tmpNonlinearExpression)->constant == 0.0))
             && nonlinearConstraint->monomialTerms.size() == 0 && nonlinearConstraint->signomialTerms.size() == 0)
         {
             // The constraint is no longer nonlinear
@@ -179,7 +194,11 @@ void simplifyNonlinearExpressions(
                 nonlinearConstraint->add(std::move(tmpSignomialTerms));
 
             if(tmpNonlinearExpression)
-                nonlinearConstraint->nonlinearExpression = tmpNonlinearExpression;
+            {
+                std::cout << tmpNonlinearExpression << std::endl;
+                if(tmpNonlinearExpression->getBounds().l() != 0.0 || tmpNonlinearExpression->getBounds().u() != 0.0)
+                    nonlinearConstraint->nonlinearExpression = tmpNonlinearExpression;
+            }
             else
             {
                 nonlinearConstraint->nonlinearExpression = nullptr;
@@ -367,6 +386,13 @@ void simplifyNonlinearExpressions(
         {
             // Runs again to remove zeroes
             C->nonlinearExpression = simplify(C->nonlinearExpression);
+
+            if(C->nonlinearExpression->getType() == E_NonlinearExpressionTypes::Constant
+                && std::static_pointer_cast<ExpressionConstant>(C->nonlinearExpression)->constant == 0)
+            {
+                C->nonlinearExpression = nullptr;
+                C->properties.hasNonlinearExpression = false;
+            }
         }
     }
 }

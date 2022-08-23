@@ -390,54 +390,13 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
 
                 if(placementIndex == -1)
                 {
-                    if(firstVariableFixed && secondVariableFixed)
-                    {
-                        (std::static_pointer_cast<LinearObjectiveFunction>(problem->objectiveFunction))->constant
-                            += coefficient * firstVariable->lowerBound * secondVariable->lowerBound;
-                    }
-                    else if(firstVariableFixed)
-                    {
-                        std::dynamic_pointer_cast<LinearObjectiveFunction>(problem->objectiveFunction)
-                            ->add(
-                                std::make_shared<LinearTerm>(coefficient * firstVariable->lowerBound, secondVariable));
-                    }
-                    else if(secondVariableFixed)
-                    {
-                        std::dynamic_pointer_cast<LinearObjectiveFunction>(problem->objectiveFunction)
-                            ->add(
-                                std::make_shared<LinearTerm>(coefficient * secondVariable->lowerBound, firstVariable));
-                    }
-                    else
-                    {
-                        std::dynamic_pointer_cast<QuadraticObjectiveFunction>(problem->objectiveFunction)
-                            ->add(std::make_shared<QuadraticTerm>(coefficient, firstVariable, secondVariable));
-                    }
+                    std::dynamic_pointer_cast<QuadraticObjectiveFunction>(problem->objectiveFunction)
+                        ->add(std::make_shared<QuadraticTerm>(coefficient, firstVariable, secondVariable));
                 }
                 else
                 {
-                    if(firstVariableFixed && secondVariableFixed)
-                    {
-                        std::dynamic_pointer_cast<LinearConstraint>(problem->numericConstraints[placementIndex])
-                            ->constant
-                            += coefficient * firstVariable->lowerBound * secondVariable->lowerBound;
-                    }
-                    else if(firstVariableFixed)
-                    {
-                        std::dynamic_pointer_cast<LinearConstraint>(problem->numericConstraints[placementIndex])
-                            ->add(
-                                std::make_shared<LinearTerm>(coefficient * firstVariable->lowerBound, secondVariable));
-                    }
-                    else if(secondVariableFixed)
-                    {
-                        std::dynamic_pointer_cast<LinearConstraint>(problem->numericConstraints[placementIndex])
-                            ->add(
-                                std::make_shared<LinearTerm>(coefficient * secondVariable->lowerBound, firstVariable));
-                    }
-                    else
-                    {
-                        std::dynamic_pointer_cast<QuadraticConstraint>(problem->numericConstraints[placementIndex])
-                            ->add(std::make_shared<QuadraticTerm>(coefficient, firstVariable, secondVariable));
-                    }
+                    std::dynamic_pointer_cast<QuadraticConstraint>(problem->numericConstraints[placementIndex])
+                        ->add(std::make_shared<QuadraticTerm>(coefficient, firstVariable, secondVariable));
                 }
             }
         }

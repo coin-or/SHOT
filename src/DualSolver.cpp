@@ -8,6 +8,8 @@
    Please see the README and LICENSE files for more information.
 */
 
+#include <algorithm> // std::find
+
 #include "DualSolver.h"
 #include "Output.h"
 #include "Settings.h"
@@ -17,6 +19,7 @@
 #include "Timing.h"
 #include "Problem.h"
 #include "ObjectiveFunction.h"
+#include "SingleVariableTransformations.h"
 #include "MIPSolver/IMIPSolver.h"
 
 namespace SHOT
@@ -326,6 +329,24 @@ bool DualSolver::hasIntegerCutBeenAdded(double hash)
     }
 
     return (false);
+}
+
+void DualSolver::addSingleTransformationVariableBreakpoint(
+    SingleVariableTransformationPtr transformationVariable, double breakpoint, E_BreakpointSource source)
+{
+    auto it
+        = std::find(singleVariableTransformations.begin(), singleVariableTransformations.end(), transformationVariable);
+
+    if(it != singleVariableTransformations.end())
+    {
+        (*it)->addBreakpoint(breakpoint, env->results->getCurrentIteration()->iterationNumber, source);
+    }
+    else
+    {
+        throw VariableNotFoundException(fmt::format(
+            "Cannot add breakpoint to single variable transformation variable {} since variable can not be found.",
+            transformationVariable->transformationVariable->name));
+    }
 }
 
 } // namespace SHOT

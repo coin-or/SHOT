@@ -2650,6 +2650,24 @@ public:
                     break;
                 }
             }
+            else if(C->getType() == E_NonlinearExpressionTypes::Invert)
+            {
+                auto invert = std::static_pointer_cast<ExpressionInvert>(C);
+
+                if(invert->child->getType() != E_NonlinearExpressionTypes::Variable)
+                {
+                    isValid = false;
+                    break;
+                }
+
+                auto variable = std::static_pointer_cast<ExpressionVariable>(invert->child);
+
+                if(variable->getBounds().l() <= 0)
+                {
+                    isValid = false;
+                    break;
+                }
+            }
             else
             {
                 isValid = false;
@@ -2893,7 +2911,9 @@ public:
     {
         for(auto& C : children)
         {
-            if(C->getType() == E_NonlinearExpressionTypes::Variable) { }
+            if(C->getType() == E_NonlinearExpressionTypes::Variable)
+            {
+            }
             else if(C->getType() == E_NonlinearExpressionTypes::Constant)
             {
             }

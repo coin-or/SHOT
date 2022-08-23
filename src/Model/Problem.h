@@ -18,7 +18,9 @@
 #include "AuxiliaryVariables.h"
 #include "ObjectiveFunction.h"
 #include "Constraints.h"
+#include "SingleVariableTransformations.h"
 
+#include <map>
 #include <memory>
 #include <optional>
 #include <string>
@@ -67,6 +69,10 @@ struct ProblemProperties
     int numberOfConvexNonlinearConstraints = 0;
     int numberOfNonconvexNonlinearConstraints = 0;
     int numberOfNonlinearExpressions = 0; // This includes a possible nonlinear objective
+
+    int numberOfSingleVariableTransformations = 0;
+    int numberOfSingleVariablePowerTransformations = 0;
+    int numberOfSingleVariableExponentialTransformations = 0;
 
     int numberOfSpecialOrderedSets = 0;
 
@@ -155,6 +161,10 @@ public:
     QuadraticConstraints quadraticConstraints;
     NonlinearConstraints nonlinearConstraints;
 
+    SingleVariableTransformations singleVariableTransformations;
+    std::map<SingleVariableTransformationPtr, NonlinearConstraints> singleVariableTransformationsInConstraints;
+    std::map<VariablePtr, AuxiliaryVariables> originalVariablesInSingleVariableTransformations;
+
     SpecialOrderedSets specialOrderedSets;
 
     std::vector<CppAD::AD<double>> factorableFunctionVariables;
@@ -183,6 +193,10 @@ public:
     void add(NonlinearObjectiveFunctionPtr objective);
 
     void add(SpecialOrderedSetPtr orderedSet);
+
+    void add(SingleVariableTransformationPtr transformation);
+    void add(SingleVariableExponentialTransformationPtr transformation);
+    void add(SingleVariablePowerTransformationPtr transformation);
 
     template <class T> void add(std::vector<T> elements);
 

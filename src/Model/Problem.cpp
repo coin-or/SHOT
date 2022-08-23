@@ -612,6 +612,8 @@ void Problem::updateProperties()
 
     for(auto& C : quadraticConstraints)
     {
+        std::cout << C << std::endl;
+        assert(C->properties.classification == E_ConstraintClassification::Quadratic);
         if(C->properties.hasQuadraticTerms)
         {
             properties.numberOfQuadraticConstraints++;
@@ -630,6 +632,9 @@ void Problem::updateProperties()
 
     for(auto& C : nonlinearConstraints)
     {
+        assert(C->properties.classification == E_ConstraintClassification::Nonlinear
+            || C->properties.classification == E_ConstraintClassification::QuadraticConsideredAsNonlinear);
+
         if(C->properties.hasQuadraticTerms || C->properties.hasMonomialTerms || C->properties.hasSignomialTerms
             || C->properties.hasNonlinearExpression)
         {
@@ -656,6 +661,8 @@ void Problem::updateProperties()
     bool areConstrsQuadratic = (properties.numberOfQuadraticConstraints > 0);
 
     properties.numberOfSpecialOrderedSets = specialOrderedSets.size();
+
+    properties.numberOfSingleVariableTransformations = singleVariableTransformations.size();
 
     properties.isDiscrete = (properties.numberOfDiscreteVariables > 0 || properties.numberOfSemicontinuousVariables > 0
         || properties.numberOfSpecialOrderedSets > 0 || properties.numberOfSemiintegerVariables > 0);
@@ -854,6 +861,37 @@ void Problem::finalize()
     updateFactorableFunctions();
     assert(verifyOwnership());
 
+    /*
+    #ifndef NDEBUG
+
+        for(auto C : linearConstraints)
+        {
+            std::cout << C << std::endl;
+            assert(C->properties.classification == E_ConstraintClassification::Linear);
+            assert(C->linearTerms.size() > 0);
+        }
+
+        for(auto C : quadraticConstraints)
+        {
+            std::cout << C << std::endl;
+            assert(C->properties.classification == E_ConstraintClassification::Quadratic);
+            assert(C->quadraticTerms.size() > 0);
+        }
+
+        for(auto C : nonlinearConstraints)
+        {
+            std::cout << C << std::endl;
+            assert(!(C->nonlinearExpression->getType() == E_NonlinearExpressionTypes::Constant
+                && std::static_pointer_cast<ExpressionConstant>(C->nonlinearExpression)->constant == 0.0));
+
+            assert(C->properties.classification == E_ConstraintClassification::Nonlinear
+                || (C->properties.classification == E_ConstraintClassification::QuadraticConsideredAsNonlinear
+                    && C->quadraticTerms.size() > 0));
+            assert(C->monomialTerms.size() > 0 || C->signomialTerms.size() > 0 || C->nonlinearExpression);
+        }
+
+    #endif*/
+
     if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
         getConstraintsJacobianSparsityPattern();
 
@@ -949,6 +987,14 @@ void Problem::add(NumericConstraintPtr constraint)
     constraint->index = numericConstraints.size();
     numericConstraints.push_back(constraint);
 
+    assert(!(constraint->properties.hasNonlinearExpression
+        && std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->nonlinearExpression->getType()
+            == E_NonlinearExpressionTypes::Constant
+        && std::static_pointer_cast<ExpressionConstant>(
+               std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->nonlinearExpression)
+                ->constant
+            == 0.0));
+
     if(constraint->properties.hasNonlinearExpression || constraint->properties.hasMonomialTerms
         || constraint->properties.hasSignomialTerms)
     {
@@ -986,6 +1032,11 @@ void Problem::add(LinearConstraintPtr constraint)
 
 void Problem::add(QuadraticConstraintPtr constraint)
 {
+    if(constraint->quadraticTerms.size() == 0)
+    {
+        std::cout << "constraint " << constraint->name << " has no quadratic terms" << std::endl;
+        std::cout << constraint << std::endl;
+    };
     constraint->index = numericConstraints.size();
     numericConstraints.push_back(std::dynamic_pointer_cast<NumericConstraint>(constraint));
     quadraticConstraints.push_back(constraint);
@@ -997,6 +1048,10 @@ void Problem::add(QuadraticConstraintPtr constraint)
 
 void Problem::add(NonlinearConstraintPtr constraint)
 {
+    assert(!(constraint->nonlinearExpression
+        && constraint->nonlinearExpression->getType() == E_NonlinearExpressionTypes::Constant
+        && std::static_pointer_cast<ExpressionConstant>(constraint->nonlinearExpression)->constant == 0.0));
+
     constraint->index = numericConstraints.size();
     numericConstraints.push_back(std::dynamic_pointer_cast<NumericConstraint>(constraint));
     nonlinearConstraints.push_back(constraint);
@@ -1064,6 +1119,30 @@ template <class T> void Problem::add(std::vector<T> elements)
 
         E->takeOwnership(shared_from_this());
     }
+}
+
+void Problem::add(SingleVariableTransformationPtr transformation)
+{
+    singleVariableTransformations.push_back(transformation);
+
+    if(transformation->type == E_SingleVariableTransformationType::Exponential)
+        env->output->outputTrace("Added single variable exponential transformation to problem.");
+    else if(transformation->type == E_SingleVariableTransformationType::Power)
+        env->output->outputTrace("Added single variable power transformation to problem.");
+    else
+        env->output->outputTrace("Added unknown single variable transformation to problem.");
+}
+
+void Problem::add(SingleVariableExponentialTransformationPtr transformation)
+{
+    singleVariableTransformations.push_back(transformation);
+    env->output->outputTrace("Added single variable exponential transformation to problem.");
+}
+
+void Problem::add(SingleVariablePowerTransformationPtr transformation)
+{
+    singleVariableTransformations.push_back(transformation);
+    env->output->outputTrace("Added single variable power transformation to problem.");
 }
 
 VariablePtr Problem::getVariable(int variableIndex)
@@ -1218,8 +1297,8 @@ std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> Problem::getCo
 
     // Sorts the elements
     std::sort(constraintsHessianSparsityPattern->begin(), constraintsHessianSparsityPattern->end(),
-        [](const std::pair<VariablePtr, VariablePtr>& elementOne,
-            const std::pair<VariablePtr, VariablePtr>& elementTwo) {
+        [](const std::pair<VariablePtr, VariablePtr>& elementOne, const std::pair<VariablePtr, VariablePtr>& elementTwo)
+        {
             if(elementOne.first->index < elementTwo.first->index)
                 return (true);
             if(elementOne.second->index == elementTwo.second->index)
@@ -1288,8 +1367,8 @@ std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> Problem::getLa
 
     // Sorts the elements
     std::sort(lagrangianHessianSparsityPattern->begin(), lagrangianHessianSparsityPattern->end(),
-        [](const std::pair<VariablePtr, VariablePtr>& elementOne,
-            const std::pair<VariablePtr, VariablePtr>& elementTwo) {
+        [](const std::pair<VariablePtr, VariablePtr>& elementOne, const std::pair<VariablePtr, VariablePtr>& elementTwo)
+        {
             if(elementOne.first->index < elementTwo.first->index)
                 return (true);
             if(elementOne.first->index == elementTwo.first->index)
@@ -1824,6 +1903,22 @@ void Problem::doFBBT()
                 boundsUpdated
                     = doFBBTOnConstraint(C, timeEnd - env->timing->getElapsedTime("BoundTightening")) || boundsUpdated;
             }
+
+            for(auto& T : singleVariableTransformations)
+            {
+                if(env->timing->getElapsedTime("BoundTightening") > timeEnd)
+                {
+                    stopTightening = true;
+                    break;
+                }
+
+                // TODO: need to calculate transformation variable bound if original variable bounds have been updated.
+                /*
+                                boundsUpdated
+                                    =
+                   T->transformationVariable->tightenBounds(variableBounds.at(T->transformationVariable->index))
+                                    || boundsUpdated;*/
+            }
         }
 
         if(stopTightening || !boundsUpdated)
@@ -2197,6 +2292,14 @@ std::ostream& operator<<(std::ostream& stream, const Problem& problem)
     for(auto& C : problem.numericConstraints)
     {
         stream << C << '\n';
+    }
+
+    if(problem.singleVariableTransformations.size() > 0)
+        stream << "\nsingle variable transformations:\n";
+
+    for(auto& T : problem.singleVariableTransformations)
+    {
+        stream << T << '\n';
     }
 
     if(problem.properties.numberOfSpecialOrderedSets > 0)

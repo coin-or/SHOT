@@ -17,6 +17,10 @@
 namespace SHOT
 {
 
+class SingleVariableTransformation;
+using SingleVariableTransformationPtr = std::shared_ptr<SingleVariableTransformation>;
+class SingleVariableTransformations;
+
 class GurobiCallbackMultiTree : public GRBCallback, public MIPSolverCallbackBase
 {
 public:
@@ -76,6 +80,9 @@ public:
 
     bool addSpecialOrderedSet(
         E_SOSType type, VectorInteger variableIndexes, VectorDouble variableWeights = {}) override;
+
+    bool addPiecewiseLinearApproximation(SingleVariableTransformationPtr transformationVariable);
+    void removePiecewiseLinearApproximations();
 
     bool createHyperplane(Hyperplane hyperplane) override { return (MIPSolverBase::createHyperplane(hyperplane)); }
 
@@ -178,6 +185,7 @@ public:
     GRBQuadExpr constraintQuadraticExpression;
 
 private:
+    std::vector<GRBGenConstr> piecewiseLinearConstraints;
 };
 
 } // namespace SHOT
