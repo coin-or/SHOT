@@ -3,10 +3,12 @@ set(TEST_EXE_NAME test_runner)
 set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_CXX_STANDARD 17)
 
-# The main groups of tests, there should be a file matching the name +"test".cpp
-# in the test directory
-set(cpptests Model Settings)
+# There should be a file matching the name +"test".cpp in the test directory for each test in the list cpptests
 
+set(cpptests ${cpptests} Settings)
+set(Settings_parts 1 2)
+
+set(cpptests ${cpptests} Model)
 set(Model_parts
     1
     2
@@ -18,7 +20,15 @@ set(Model_parts
     8
     9
     10) # The different parts of each test (if any)
-set(Settings_parts 1 2)
+
+set(cpptests ${cpptests} SignomialReformulation)
+set(SignomialReformulation_parts
+1
+2
+3
+4
+5
+6)
 
 if(HAS_CBC)
   set(Cbc_parts 1 2 3)
