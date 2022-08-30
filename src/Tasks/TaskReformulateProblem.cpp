@@ -571,7 +571,6 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
     // Objective is to be regarded as nonlinear
 
     bool copyOriginalLinearTerms = false;
-    bool copyOriginalNonlinearExpression = false;
 
     // These will be added to the new constraint, and their signs have been altered
     LinearTerms destinationLinearTerms;
@@ -588,14 +587,60 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
     if(env->problem->objectiveFunction->properties.hasLinearTerms)
         copyOriginalLinearTerms = true;
 
+    LinearTerms extractedLinearTerms;
+    QuadraticTerms extractedQuadraticTerms;
+    MonomialTerms extractedMonomialTerms;
+    SignomialTerms extractedSignomialTerms;
+    NonlinearExpressionPtr extractedNonlinearExpression;
+
+    if(env->problem->objectiveFunction->properties.hasNonlinearExpression)
+    {
+        auto sourceObjective = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->problem->objectiveFunction);
+
+        // Now trying to reformulate the nonlinear expression
+        auto reformulatedExpression = simplify(reformulateNonlinearExpression(
+            copyNonlinearExpression(sourceObjective->nonlinearExpression.get(), reformulatedProblem)));
+
+        auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression,
+            tmpConstant]
+            = extractTermsAndConstant(reformulatedExpression, true, true, true, true, reformulatedProblem);
+
+        if(tmpLinearTerms.size() > 0)
+            extractedLinearTerms.add(tmpLinearTerms);
+
+        if(tmpQuadraticTerms.size() > 0)
+            extractedQuadraticTerms.add(tmpQuadraticTerms);
+
+        if(tmpMonomialTerms.size() > 0)
+            extractedMonomialTerms.add(tmpMonomialTerms);
+
+        if(tmpSignomialTerms.size() > 0)
+            extractedSignomialTerms.add(tmpSignomialTerms);
+
+        extractedNonlinearExpression = tmpNonlinearExpression;
+    }
+
+    auto quadraticPartitionStrategy = static_cast<ES_PartitionNonlinearSums>(
+        env->settings->getSetting<int>("Reformulation.ObjectiveFunction.PartitionQuadraticTerms", "Model"));
+
+    auto nonlinearPartitionStrategy = static_cast<ES_PartitionNonlinearSums>(
+        env->settings->getSetting<int>("Reformulation.ObjectiveFunction.PartitionNonlinearTerms", "Model"));
+
     if(env->problem->objectiveFunction->properties.hasQuadraticTerms)
     {
         auto sourceObjective = std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->problem->objectiveFunction);
 
-        auto [tmpLinearTerms, tmpQuadraticTerms] = reformulateAndPartitionQuadraticSum(sourceObjective->quadraticTerms,
-            isSignReversed,
-            static_cast<ES_PartitionNonlinearSums>(
-                env->settings->getSetting<int>("Reformulation.ObjectiveFunction.PartitionQuadraticTerms", "Model")));
+        auto [tmpLinearTerms, tmpQuadraticTerms] = reformulateAndPartitionQuadraticSum(
+            sourceObjective->quadraticTerms, isSignReversed, quadraticPartitionStrategy);
+
+        destinationLinearTerms.add(tmpLinearTerms);
+        destinationQuadraticTerms.add(tmpQuadraticTerms);
+    }
+
+    if(extractedQuadraticTerms.size() > 0)
+    {
+        auto [tmpLinearTerms, tmpQuadraticTerms]
+            = reformulateAndPartitionQuadraticSum(extractedQuadraticTerms, isSignReversed, quadraticPartitionStrategy);
 
         destinationLinearTerms.add(tmpLinearTerms);
         destinationQuadraticTerms.add(tmpQuadraticTerms);
@@ -605,10 +650,7 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
     {
         auto sourceObjective = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->problem->objectiveFunction);
 
-        if(static_cast<ES_PartitionNonlinearSums>(
-               env->settings->getSetting<int>("Reformulation.ObjectiveFunction.PartitionNonlinearTerms", "Model"))
-                == ES_PartitionNonlinearSums::Always
-            && sourceObjective->monomialTerms.size() > 1)
+        if(nonlinearPartitionStrategy == ES_PartitionNonlinearSums::Always)
         {
             auto tmpLinearTerms = partitionMonomialTerms(sourceObjective->monomialTerms, isSignReversed);
             destinationLinearTerms.add(tmpLinearTerms);
@@ -636,13 +678,9 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
             auto tmpLinearTerms = partitionSignomialTerms(sourceObjective->signomialTerms, isSignReversed);
             destinationLinearTerms.add(tmpLinearTerms);
         }
-        else if((static_cast<ES_PartitionNonlinearSums>(
-                     env->settings->getSetting<int>("Reformulation.Constraint.PartitionNonlinearTerms", "Model"))
-                        == ES_PartitionNonlinearSums::Always
-                    || static_cast<ES_PartitionNonlinearSums>(
-                           env->settings->getSetting<int>("Reformulation.Constraint.PartitionNonlinearTerms", "Model"))
-                        == ES_PartitionNonlinearSums::IfConvex)
-            && sourceObjective->signomialTerms.size() > 1)
+        else if((static_cast<ES_PartitionNonlinearSums>(nonlinearPartitionStrategy) == ES_PartitionNonlinearSums::Always
+                    || static_cast<ES_PartitionNonlinearSums>(nonlinearPartitionStrategy)
+                        == ES_PartitionNonlinearSums::IfConvex))
         {
             auto tmpLinearTerms = partitionSignomialTerms(sourceObjective->signomialTerms, isSignReversed);
             destinationLinearTerms.add(tmpLinearTerms);
@@ -654,25 +692,47 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
         }
     }
 
-    if(env->problem->objectiveFunction->properties.hasNonlinearExpression)
+    if(extractedSignomialTerms.size() > 0)
     {
-        auto sourceObjective = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->problem->objectiveFunction);
+        bool areAllConvex = false;
 
-        if(static_cast<ES_PartitionNonlinearSums>(
-               env->settings->getSetting<int>("Reformulation.ObjectiveFunction.PartitionNonlinearTerms", "Model"))
-                == ES_PartitionNonlinearSums::Always
-            && sourceObjective->nonlinearExpression->getType() == E_NonlinearExpressionTypes::Sum)
+        if(!isSignReversed && extractedSignomialTerms.checkAllForConvexityType(E_Convexity::Convex))
+            areAllConvex = true;
+        else if(isSignReversed && extractedSignomialTerms.checkAllForConvexityType(E_Convexity::Concave))
+            areAllConvex = true;
+
+        if(!areAllConvex)
         {
-            auto tmpLinearTerms = partitionNonlinearSum(
-                std::dynamic_pointer_cast<ExpressionSum>(sourceObjective->nonlinearExpression), isSignReversed);
+            auto tmpLinearTerms = partitionSignomialTerms(extractedSignomialTerms, isSignReversed);
             destinationLinearTerms.add(tmpLinearTerms);
         }
-        else if(static_cast<ES_PartitionNonlinearSums>(
-                    env->settings->getSetting<int>("Reformulation.ObjectiveFunction.PartitionNonlinearTerms", "Model"))
-                == ES_PartitionNonlinearSums::IfConvex
-            && sourceObjective->nonlinearExpression->getType() == E_NonlinearExpressionTypes::Sum)
+        else if((static_cast<ES_PartitionNonlinearSums>(nonlinearPartitionStrategy) == ES_PartitionNonlinearSums::Always
+                    || static_cast<ES_PartitionNonlinearSums>(nonlinearPartitionStrategy)
+                        == ES_PartitionNonlinearSums::IfConvex))
         {
-            auto sum = std::dynamic_pointer_cast<ExpressionSum>(sourceObjective->nonlinearExpression);
+            auto tmpLinearTerms = partitionSignomialTerms(extractedSignomialTerms, isSignReversed);
+            destinationLinearTerms.add(tmpLinearTerms);
+        }
+        else
+        {
+            for(auto& T : extractedSignomialTerms)
+                destinationSignomialTerms.add(std::make_shared<SignomialTerm>(T.get(), reformulatedProblem));
+        }
+    }
+
+    if(extractedNonlinearExpression)
+    {
+        if(nonlinearPartitionStrategy == ES_PartitionNonlinearSums::Always
+            && extractedNonlinearExpression->getType() == E_NonlinearExpressionTypes::Sum)
+        {
+            auto tmpLinearTerms = partitionNonlinearSum(
+                std::dynamic_pointer_cast<ExpressionSum>(extractedNonlinearExpression), isSignReversed);
+            destinationLinearTerms.add(tmpLinearTerms);
+        }
+        else if(nonlinearPartitionStrategy == ES_PartitionNonlinearSums::IfConvex
+            && extractedNonlinearExpression->getType() == E_NonlinearExpressionTypes::Sum)
+        {
+            auto sum = std::dynamic_pointer_cast<ExpressionSum>(extractedNonlinearExpression);
             bool areAllConvex = false;
 
             if(!isSignReversed && sum->checkAllForConvexityType(E_Convexity::Convex))
@@ -684,32 +744,19 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
             {
                 auto tmpLinearTerms = partitionNonlinearSum(sum, isSignReversed);
                 destinationLinearTerms.add(tmpLinearTerms);
+                extractedNonlinearExpression = nullptr;
             }
-            else
-            {
-                copyOriginalNonlinearExpression = true;
-            }
-        }
-        else
-        {
-            copyOriginalNonlinearExpression = true;
         }
     }
 
     ObjectiveFunctionPtr objective;
 
-    if(copyOriginalNonlinearExpression || destinationMonomialTerms.size() > 0 || destinationSignomialTerms.size() > 0)
-    {
+    if(extractedNonlinearExpression || destinationMonomialTerms.size() > 0 || destinationSignomialTerms.size() > 0)
         objective = std::make_shared<NonlinearObjectiveFunction>();
-    }
     else if(destinationQuadraticTerms.size() > 0)
-    {
         objective = std::make_shared<QuadraticObjectiveFunction>();
-    }
     else
-    {
         objective = std::make_shared<LinearObjectiveFunction>();
-    }
 
     objective->ownerProblem = reformulatedProblem;
 
@@ -733,23 +780,18 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
     if(destinationSignomialTerms.size() > 0)
         std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objective)->add(destinationSignomialTerms);
 
-    if(copyOriginalNonlinearExpression || destinationMonomialTerms.size() > 0 || destinationSignomialTerms.size() > 0)
+    if(extractedNonlinearExpression)
     {
-        auto sourceObjective = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->problem->objectiveFunction);
-
-        if(sourceObjective->properties.hasNonlinearExpression)
-        {
-            if(isSignReversed)
-                std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objective)->add(
-                    reformulateNonlinearExpression(simplify(std::make_shared<ExpressionNegate>(
-                        copyNonlinearExpression(sourceObjective->nonlinearExpression.get(), reformulatedProblem)))));
-            else
-                std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objective)->add(reformulateNonlinearExpression(
-                    copyNonlinearExpression(sourceObjective->nonlinearExpression.get(), reformulatedProblem)));
-        }
+        if(isSignReversed)
+            std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objective)->add(
+                reformulateNonlinearExpression(simplify(std::make_shared<ExpressionNegate>(
+                    copyNonlinearExpression(extractedNonlinearExpression.get(), reformulatedProblem)))));
+        else
+            std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objective)->add(reformulateNonlinearExpression(
+                copyNonlinearExpression(extractedNonlinearExpression.get(), reformulatedProblem)));
     }
 
-    if(copyOriginalNonlinearExpression)
+    if(extractedNonlinearExpression)
     {
         reformulatedProblem->add(std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objective));
     }
@@ -958,13 +1000,9 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
 
     // These will be added to the new constraint, and their signs have been altered
     LinearTerms destinationLinearTerms;
-    destinationLinearTerms.takeOwnership(reformulatedProblem);
     QuadraticTerms destinationQuadraticTerms;
-    destinationQuadraticTerms.takeOwnership(reformulatedProblem);
     MonomialTerms destinationMonomialTerms;
-    destinationMonomialTerms.takeOwnership(reformulatedProblem);
     SignomialTerms destinationSignomialTerms;
-    destinationSignomialTerms.takeOwnership(reformulatedProblem);
 
     // Needs to take ownership of the terms already, otherwise we cannot access the problem from within the term
     destinationLinearTerms.takeOwnership(reformulatedProblem);
@@ -973,80 +1011,16 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
     destinationSignomialTerms.takeOwnership(reformulatedProblem);
 
     bool isSignReversed = false;
+    bool copyOriginalLinearTerms = false;
 
-    auto partitionQuadraticTermsStrategy = static_cast<ES_PartitionNonlinearSums>(
-        env->settings->getSetting<int>("Reformulation.Constraint.PartitionQuadraticTerms", "Model"));
-
-    if(C->properties.hasLinearTerms)
-    {
-        for(auto& T : std::dynamic_pointer_cast<LinearConstraint>(C)->linearTerms)
-            destinationLinearTerms.add(std::make_shared<LinearTerm>(T->coefficient, T->variable));
-    }
-
-    if(C->properties.hasQuadraticTerms)
-    {
-        auto sourceConstraint = std::dynamic_pointer_cast<QuadraticConstraint>(C);
-
-        auto [tmpLinearTerms, tmpQuadraticTerms] = reformulateAndPartitionQuadraticSum(
-            sourceConstraint->quadraticTerms, isSignReversed, partitionQuadraticTermsStrategy);
-
-        destinationLinearTerms.add(tmpLinearTerms);
-        destinationQuadraticTerms.add(tmpQuadraticTerms);
-    }
-
-    if(C->properties.hasMonomialTerms)
-    {
-        auto sourceConstraint = std::dynamic_pointer_cast<NonlinearConstraint>(C);
-
-        if(env->settings->getSetting<int>("Reformulation.Monomials.Formulation", "Model")
-            != static_cast<int>(ES_ReformulationBinaryMonomials::None))
-        {
-            auto [tmpLinearTerms, tmpMonomialTerms]
-                = reformulateMonomialSum(sourceConstraint->monomialTerms, isSignReversed);
-
-            if(tmpMonomialTerms.size() == 0)
-            {
-                // All monomials have been reformulated
-                destinationLinearTerms.add(tmpLinearTerms);
-            }
-            else
-            {
-                if(static_cast<ES_PartitionNonlinearSums>(
-                       env->settings->getSetting<int>("Reformulation.Constraint.PartitionNonlinearTerms", "Model"))
-                        == ES_PartitionNonlinearSums::Always
-                    && tmpMonomialTerms.size() > 1)
-                {
-                    auto tmpLinearTerms = partitionMonomialTerms(tmpMonomialTerms, isSignReversed);
-                    destinationLinearTerms.add(tmpLinearTerms);
-                }
-                else // Monomials are always nonconvex
-                {
-                    for(auto& T : sourceConstraint->monomialTerms)
-                        destinationMonomialTerms.add(std::make_shared<MonomialTerm>(T.get(), reformulatedProblem));
-                }
-            }
-        }
-        else
-        {
-            if(static_cast<ES_PartitionNonlinearSums>(
-                   env->settings->getSetting<int>("Reformulation.Constraint.PartitionNonlinearTerms", "Model"))
-                    == ES_PartitionNonlinearSums::Always
-                && destinationMonomialTerms.size() > 1)
-            {
-                auto tmpLinearTerms = partitionMonomialTerms(destinationMonomialTerms, isSignReversed);
-                destinationLinearTerms.add(tmpLinearTerms);
-            }
-            else // Monomials are always nonconvex
-            {
-                for(auto& T : sourceConstraint->monomialTerms)
-                    destinationMonomialTerms.add(std::make_shared<MonomialTerm>(T.get(), reformulatedProblem));
-            }
-        }
-    }
-
-    NonlinearExpressionPtr destinationExpression;
-
+    LinearTerms extractedLinearTerms;
+    QuadraticTerms extractedQuadraticTerms;
+    MonomialTerms extractedMonomialTerms;
     SignomialTerms extractedSignomialTerms;
+    NonlinearExpressionPtr extractedNonlinearExpression;
+
+    if(env->problem->objectiveFunction->properties.hasLinearTerms)
+        copyOriginalLinearTerms = true;
 
     if(C->properties.hasNonlinearExpression)
     {
@@ -1061,81 +1035,133 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
             = extractTermsAndConstant(reformulatedExpression, true, true, true, true, reformulatedProblem);
 
         if(tmpLinearTerms.size() > 0)
-            destinationLinearTerms.add(tmpLinearTerms);
+            extractedLinearTerms.add(tmpLinearTerms);
 
         if(tmpQuadraticTerms.size() > 0)
-        {
-            auto [tmpLinearTerms2, tmpQuadraticTerms2] = reformulateAndPartitionQuadraticSum(
-                tmpQuadraticTerms, isSignReversed, partitionQuadraticTermsStrategy);
-
-            destinationLinearTerms.add(tmpLinearTerms2);
-            destinationQuadraticTerms.add(tmpQuadraticTerms2);
-        }
+            extractedQuadraticTerms.add(tmpQuadraticTerms);
 
         if(tmpMonomialTerms.size() > 0)
-            destinationMonomialTerms.add(tmpMonomialTerms);
+            extractedMonomialTerms.add(tmpMonomialTerms);
 
         if(tmpSignomialTerms.size() > 0)
             extractedSignomialTerms.add(tmpSignomialTerms);
 
-        destinationExpression = tmpNonlinearExpression;
+        extractedNonlinearExpression = tmpNonlinearExpression;
     }
 
-    if(C->properties.hasSignomialTerms || extractedSignomialTerms.size() > 0)
+    auto quadraticPartitionStrategy = static_cast<ES_PartitionNonlinearSums>(
+        env->settings->getSetting<int>("Reformulation.Constraint.PartitionQuadraticTerms", "Model"));
+
+    auto nonlinearPartitionStrategy = static_cast<ES_PartitionNonlinearSums>(
+        env->settings->getSetting<int>("Reformulation.Constraint.PartitionNonlinearTerms", "Model"));
+
+    if(C->properties.hasQuadraticTerms)
+    {
+        auto sourceConstraint = std::dynamic_pointer_cast<QuadraticConstraint>(C);
+
+        auto [tmpLinearTerms, tmpQuadraticTerms] = reformulateAndPartitionQuadraticSum(
+            sourceConstraint->quadraticTerms, isSignReversed, quadraticPartitionStrategy);
+
+        destinationLinearTerms.add(tmpLinearTerms);
+        destinationQuadraticTerms.add(tmpQuadraticTerms);
+    }
+
+    if(extractedQuadraticTerms.size() > 0)
+    {
+        auto [tmpLinearTerms, tmpQuadraticTerms]
+            = reformulateAndPartitionQuadraticSum(extractedQuadraticTerms, isSignReversed, quadraticPartitionStrategy);
+
+        destinationLinearTerms.add(tmpLinearTerms);
+        destinationQuadraticTerms.add(tmpQuadraticTerms);
+    }
+
+    if(C->properties.hasMonomialTerms)
+    {
+        auto sourceConstraint = std::dynamic_pointer_cast<NonlinearConstraint>(C);
+
+        if(nonlinearPartitionStrategy == ES_PartitionNonlinearSums::Always)
+        {
+            auto tmpLinearTerms = partitionMonomialTerms(sourceConstraint->monomialTerms, isSignReversed);
+            destinationLinearTerms.add(tmpLinearTerms);
+        }
+        else // Monomials are always nonconvex
+        {
+            for(auto& T : sourceConstraint->monomialTerms)
+                destinationMonomialTerms.add(std::make_shared<MonomialTerm>(T.get(), reformulatedProblem));
+        }
+    }
+
+    if(C->properties.hasSignomialTerms)
     {
         auto sourceConstraint = std::dynamic_pointer_cast<NonlinearConstraint>(C);
 
         bool areAllConvex = false;
 
-        if(!isSignReversed && sourceConstraint->signomialTerms.checkAllForConvexityType(E_Convexity::Convex)
-            && extractedSignomialTerms.checkAllForConvexityType(E_Convexity::Convex))
+        if(!isSignReversed && sourceConstraint->signomialTerms.checkAllForConvexityType(E_Convexity::Convex))
             areAllConvex = true;
-        else if(isSignReversed && sourceConstraint->signomialTerms.checkAllForConvexityType(E_Convexity::Concave)
-            && extractedSignomialTerms.checkAllForConvexityType(E_Convexity::Concave))
+        else if(isSignReversed && sourceConstraint->signomialTerms.checkAllForConvexityType(E_Convexity::Concave))
             areAllConvex = true;
 
         if(!areAllConvex)
         {
-            destinationLinearTerms.add(partitionSignomialTerms(sourceConstraint->signomialTerms, isSignReversed));
-            destinationLinearTerms.add(partitionSignomialTerms(extractedSignomialTerms, isSignReversed));
+            auto tmpLinearTerms = partitionSignomialTerms(sourceConstraint->signomialTerms, isSignReversed);
+            destinationLinearTerms.add(tmpLinearTerms);
         }
-        else if((static_cast<ES_PartitionNonlinearSums>(
-                     env->settings->getSetting<int>("Reformulation.Constraint.PartitionNonlinearTerms", "Model"))
-                        == ES_PartitionNonlinearSums::Always
-                    || static_cast<ES_PartitionNonlinearSums>(
-                           env->settings->getSetting<int>("Reformulation.Constraint.PartitionNonlinearTerms", "Model"))
-                        == ES_PartitionNonlinearSums::IfConvex)
-            && sourceConstraint->signomialTerms.size() + extractedSignomialTerms.size() > 1)
+        else if((static_cast<ES_PartitionNonlinearSums>(nonlinearPartitionStrategy) == ES_PartitionNonlinearSums::Always
+                    || static_cast<ES_PartitionNonlinearSums>(nonlinearPartitionStrategy)
+                        == ES_PartitionNonlinearSums::IfConvex))
         {
-            destinationLinearTerms.add(partitionSignomialTerms(sourceConstraint->signomialTerms, isSignReversed));
-            destinationLinearTerms.add(partitionSignomialTerms(extractedSignomialTerms, isSignReversed));
+            auto tmpLinearTerms = partitionSignomialTerms(sourceConstraint->signomialTerms, isSignReversed);
+            destinationLinearTerms.add(tmpLinearTerms);
         }
         else
         {
             for(auto& T : sourceConstraint->signomialTerms)
                 destinationSignomialTerms.add(std::make_shared<SignomialTerm>(T.get(), reformulatedProblem));
-
-            destinationLinearTerms.add(partitionSignomialTerms(extractedSignomialTerms, isSignReversed));
         }
     }
 
-    if(destinationExpression)
+    if(extractedSignomialTerms.size() > 0)
     {
-        if(static_cast<ES_PartitionNonlinearSums>(
-               env->settings->getSetting<int>("Reformulation.Constraint.PartitionNonlinearTerms", "Model"))
-                == ES_PartitionNonlinearSums::Always
-            && destinationExpression->getType() == E_NonlinearExpressionTypes::Sum)
+        bool areAllConvex = false;
+
+        if(!isSignReversed && extractedSignomialTerms.checkAllForConvexityType(E_Convexity::Convex))
+            areAllConvex = true;
+        else if(isSignReversed && extractedSignomialTerms.checkAllForConvexityType(E_Convexity::Concave))
+            areAllConvex = true;
+
+        if(!areAllConvex)
         {
-            auto tmpLinearTerms = partitionNonlinearSum(
-                std::dynamic_pointer_cast<ExpressionSum>(destinationExpression), isSignReversed);
+            auto tmpLinearTerms = partitionSignomialTerms(extractedSignomialTerms, isSignReversed);
             destinationLinearTerms.add(tmpLinearTerms);
         }
-        else if(static_cast<ES_PartitionNonlinearSums>(
-                    env->settings->getSetting<int>("Reformulation.Constraint.PartitionNonlinearTerms", "Model"))
-                == ES_PartitionNonlinearSums::IfConvex
-            && destinationExpression->getType() == E_NonlinearExpressionTypes::Sum)
+        else if((static_cast<ES_PartitionNonlinearSums>(nonlinearPartitionStrategy) == ES_PartitionNonlinearSums::Always
+                    || static_cast<ES_PartitionNonlinearSums>(nonlinearPartitionStrategy)
+                        == ES_PartitionNonlinearSums::IfConvex))
         {
-            auto sum = std::dynamic_pointer_cast<ExpressionSum>(destinationExpression);
+            auto tmpLinearTerms = partitionSignomialTerms(extractedSignomialTerms, isSignReversed);
+            destinationLinearTerms.add(tmpLinearTerms);
+        }
+        else
+        {
+            for(auto& T : extractedSignomialTerms)
+                destinationSignomialTerms.add(std::make_shared<SignomialTerm>(T.get(), reformulatedProblem));
+        }
+    }
+
+    if(extractedNonlinearExpression)
+    {
+        if(nonlinearPartitionStrategy == ES_PartitionNonlinearSums::Always
+            && extractedNonlinearExpression->getType() == E_NonlinearExpressionTypes::Sum)
+        {
+            auto tmpLinearTerms = partitionNonlinearSum(
+                std::dynamic_pointer_cast<ExpressionSum>(extractedNonlinearExpression), isSignReversed);
+            destinationLinearTerms.add(tmpLinearTerms);
+        }
+        else if(nonlinearPartitionStrategy == ES_PartitionNonlinearSums::IfConvex
+            && extractedNonlinearExpression->getType() == E_NonlinearExpressionTypes::Sum)
+        {
+            auto sum = std::dynamic_pointer_cast<ExpressionSum>(extractedNonlinearExpression);
             bool areAllConvex = false;
 
             if(!isSignReversed && sum->checkAllForConvexityType(E_Convexity::Convex))
@@ -1147,27 +1173,15 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
             {
                 auto tmpLinearTerms = partitionNonlinearSum(sum, isSignReversed);
                 destinationLinearTerms.add(tmpLinearTerms);
+                extractedNonlinearExpression = nullptr;
             }
-            else
-            {
-                copyOriginalNonlinearExpression = true;
-            }
-        }
-        else if(destinationExpression->getType() == E_NonlinearExpressionTypes::Constant
-            && std::dynamic_pointer_cast<ExpressionConstant>(destinationExpression)->constant == 0.0)
-        {
-            // Nonlinear expression is constant zero
-        }
-        else
-        {
-            copyOriginalNonlinearExpression = true;
         }
     }
 
     NumericConstraints resultingConstraints;
     NumericConstraintPtr constraint;
 
-    if(copyOriginalNonlinearExpression || destinationMonomialTerms.size() > 0)
+    if(extractedNonlinearExpression)
     // We have a nonlinear constraint
     {
         constraint = std::make_shared<NonlinearConstraint>(C->index, C->name, valueLHS, valueRHS);
@@ -1346,12 +1360,16 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
         constraint->ownerProblem = reformulatedProblem;
     }
     else
-    // We have quadratic constraint
+    // We have a quadratic constraint
     {
         constraint = std::make_shared<QuadraticConstraint>(C->index, C->name, valueLHS, valueRHS);
         constraint->properties.classification = E_ConstraintClassification::Quadratic;
         constraint->ownerProblem = reformulatedProblem;
     }
+
+    if(copyOriginalLinearTerms)
+        copyLinearTermsToConstraint(std::dynamic_pointer_cast<LinearConstraint>(C)->linearTerms,
+            std::dynamic_pointer_cast<LinearConstraint>(constraint));
 
     constraint->constant += constant;
 
@@ -1367,15 +1385,15 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
     if(destinationSignomialTerms.size() > 0)
         std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->add(destinationSignomialTerms);
 
-    if(copyOriginalNonlinearExpression)
+    if(extractedNonlinearExpression)
     {
         auto sourceConstraint = std::dynamic_pointer_cast<NonlinearConstraint>(C);
 
         if(isSignReversed)
             std::dynamic_pointer_cast<NonlinearConstraint>(constraint)
-                ->add(simplify(std::make_shared<ExpressionNegate>(destinationExpression)));
+                ->add(simplify(std::make_shared<ExpressionNegate>(extractedNonlinearExpression)));
         else
-            std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->add(destinationExpression);
+            std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->add(extractedNonlinearExpression);
     }
 
     resultingConstraints.insert(resultingConstraints.begin(), constraint);
@@ -2675,6 +2693,7 @@ SignomialTermPtr TaskReformulateProblem::convexifyNegativeSignomialTermUsingPowe
 
     for(auto& E : sourceTerm->elements)
     {
+        std::cout << E->power << " " << E->variable << std::endl;
         if(E->power < 0 || E->power >= 1)
             powerTransSum += std::abs(E->power);
         else
