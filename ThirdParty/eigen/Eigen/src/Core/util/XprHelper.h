@@ -129,19 +129,21 @@ struct promote_index_type
 template<typename T, int Value> class variable_if_dynamic
 {
   public:
-    EIGEN_EMPTY_STRUCT_CTOR(variable_if_dynamic)
+    EIGEN_DEFAULT_EMPTY_CONSTRUCTOR_AND_DESTRUCTOR(variable_if_dynamic)
     EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE explicit variable_if_dynamic(T v) { EIGEN_ONLY_USED_FOR_DEBUG(v); eigen_assert(v == T(Value)); }
-    EIGEN_DEVICE_FUNC static EIGEN_STRONG_INLINE T value() { return T(Value); }
-    EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE operator T() const { return T(Value); }
-    EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE void setValue(T) {}
+    EIGEN_DEVICE_FUNC static EIGEN_STRONG_INLINE EIGEN_CONSTEXPR
+    T value() { return T(Value); }
+    EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE EIGEN_CONSTEXPR
+    operator T() const { return T(Value); }
+    EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE
+    void setValue(T v) const { EIGEN_ONLY_USED_FOR_DEBUG(v); eigen_assert(v == T(Value)); }
 };
 
 template<typename T> class variable_if_dynamic<T, Dynamic>
 {
     T m_value;
-    EIGEN_DEVICE_FUNC variable_if_dynamic() { eigen_assert(false); }
   public:
-    EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE explicit variable_if_dynamic(T value) : m_value(value) {}
+    EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE explicit variable_if_dynamic(T value = 0) EIGEN_NO_THROW : m_value(value) {}
     EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE T value() const { return m_value; }
     EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE operator T() const { return m_value; }
     EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE void setValue(T value) { m_value = value; }
@@ -154,8 +156,10 @@ template<typename T, int Value> class variable_if_dynamicindex
   public:
     EIGEN_EMPTY_STRUCT_CTOR(variable_if_dynamicindex)
     EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE explicit variable_if_dynamicindex(T v) { EIGEN_ONLY_USED_FOR_DEBUG(v); eigen_assert(v == T(Value)); }
-    EIGEN_DEVICE_FUNC static EIGEN_STRONG_INLINE T value() { return T(Value); }
-    EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE void setValue(T) {}
+    EIGEN_DEVICE_FUNC static EIGEN_STRONG_INLINE EIGEN_CONSTEXPR
+    T value() { return T(Value); }
+    EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE
+    void setValue(T) {}
 };
 
 template<typename T> class variable_if_dynamicindex<T, DynamicIndex>
@@ -180,46 +184,10 @@ template<typename T> struct functor_traits
 
 template<typename T> struct packet_traits;
 
-template<typename T> struct unpacket_traits
-{
-  typedef T type;
-  typedef T half;
-  enum
-  {
-    size = 1,
-    alignment = 1,
-    vectorizable = false,
-    masked_load_available=false,
-    masked_store_available=false
-  };
-};
+template<typename T> struct unpacket_traits;
 
-// If we vectorize regardless of alignment, pick the full-sized packet if:
-// * The size is large enough;
-// * Picking it will result in less operations than picking the half size.
-//   Consider the case where the size is 12, the full packet is 8, and the
-//   half packet is 4. If we pick the full packet we'd have 1 + 4 operations,
-//   but only 3 operations if we pick the half-packet.
-//
-// Otherwise, pick the packet size we know is going to work with the alignment
-// of the given data. See
-// <https://gitlab.com/libeigen/eigen/merge_requests/46#note_270578113> for more
-// information.
-#if EIGEN_UNALIGNED_VECTORIZE
-template<int Size, typename PacketType,
-         bool Stop =
-           Size==Dynamic ||
-           (Size >= unpacket_traits<PacketType>::size &&
-             // If the packet size is 1 we're always good -- it will always divide things perfectly.
-             // We have this check since otherwise 1/2 would be 0 in the division below.
-             (unpacket_traits<PacketType>::size == 1 ||
-               (Size/unpacket_traits<PacketType>::size + Size%unpacket_traits<PacketType>::size) <=
-               (Size/(unpacket_traits<PacketType>::size/2) + Size%(unpacket_traits<PacketType>::size/2)))) ||
-           is_same<PacketType,typename unpacket_traits<PacketType>::half>::value>
-#else
 template<int Size, typename PacketType,
          bool Stop = Size==Dynamic || (Size%unpacket_traits<PacketType>::size)==0 || is_same<PacketType,typename unpacket_traits<PacketType>::half>::value>
-#endif
 struct find_best_packet_helper;
 
 template< int Size, typename PacketType>
@@ -452,7 +420,7 @@ struct ref_selector
     T const&,
     const T
   >::type type;
-  
+
   typedef typename conditional<
     bool(traits<T>::Flags & NestByRefBit),
     T &,
@@ -631,14 +599,14 @@ template<typename ExpressionType, typename Scalar = typename ExpressionType::Sca
 struct plain_row_type
 {
   typedef Matrix<Scalar, 1, ExpressionType::ColsAtCompileTime,
-                 ExpressionType::PlainObject::Options | RowMajor, 1, ExpressionType::MaxColsAtCompileTime> MatrixRowType;
+                 int(ExpressionType::PlainObject::Options) | int(RowMajor), 1, ExpressionType::MaxColsAtCompileTime> MatrixRowType;
   typedef Array<Scalar, 1, ExpressionType::ColsAtCompileTime,
-                 ExpressionType::PlainObject::Options | RowMajor, 1, ExpressionType::MaxColsAtCompileTime> ArrayRowType;
+                 int(ExpressionType::PlainObject::Options) | int(RowMajor), 1, ExpressionType::MaxColsAtCompileTime> ArrayRowType;
 
   typedef typename conditional<
     is_same< typename traits<ExpressionType>::XprKind, MatrixXpr >::value,
     MatrixRowType,
-    ArrayRowType 
+    ArrayRowType
   >::type type;
 };
 
@@ -653,7 +621,7 @@ struct plain_col_type
   typedef typename conditional<
     is_same< typename traits<ExpressionType>::XprKind, MatrixXpr >::value,
     MatrixColType,
-    ArrayColType 
+    ArrayColType
   >::type type;
 };
 
@@ -669,7 +637,7 @@ struct plain_diag_type
   typedef typename conditional<
     is_same< typename traits<ExpressionType>::XprKind, MatrixXpr >::value,
     MatrixDiagType,
-    ArrayDiagType 
+    ArrayDiagType
   >::type type;
 };
 
@@ -785,7 +753,7 @@ std::string demangle_flags(int f)
   if(f&DirectAccessBit)             res += " | Direct";
   if(f&NestByRefBit)                res += " | NestByRef";
   if(f&NoPreferredStorageOrderBit)  res += " | NoPreferredStorageOrderBit";
-  
+
   return res;
 }
 #endif
@@ -882,7 +850,7 @@ struct ScalarBinaryOpTraits<void,void,BinaryOp>
 #define EIGEN_CHECK_BINARY_COMPATIBILIY(BINOP,LHS,RHS) \
   EIGEN_STATIC_ASSERT((Eigen::internal::has_ReturnType<ScalarBinaryOpTraits<LHS, RHS,BINOP> >::value), \
     YOU_MIXED_DIFFERENT_NUMERIC_TYPES__YOU_NEED_TO_USE_THE_CAST_METHOD_OF_MATRIXBASE_TO_CAST_NUMERIC_TYPES_EXPLICITLY)
-    
+
 } // end namespace Eigen
 
 #endif // EIGEN_XPRHELPER_H

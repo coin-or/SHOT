@@ -1761,7 +1761,7 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
         && partitionStrategy <= ES_PartitionNonlinearSums::IfConvex && quadraticSumConvex
         && !quadraticTerms.allSquares) // Use the eigenvalue decomposition reformulation
     {
-        auto linearTerms = doEigenvalueDecomposition(quadraticTerms);
+        auto linearTerms = doLDLTDecomposition(quadraticTerms);
         resultLinearTerms.add(linearTerms);
     }
     else if(partitionStrategy == ES_PartitionNonlinearSums::Always
@@ -2267,6 +2267,65 @@ LinearTerms TaskReformulateProblem::doEigenvalueDecomposition(QuadraticTerms qua
                 = getSquareAuxiliaryVariable(auxQuadVariable, 1.0, E_AuxiliaryVariableType::EigenvalueDecomposition);
             resultLinearTerms.add(
                 std::make_shared<LinearTerm>(0.5 * quadraticTerms.eigenvalues[i].real(), auxVariable));
+        }
+
+        auxConstraint->add(std::make_shared<LinearTerm>(-1.0, auxQuadVariable));
+        reformulatedProblem->add(std::move(auxConstraint));
+    }
+
+    return (resultLinearTerms);
+}
+
+LinearTerms TaskReformulateProblem::doLDLTDecomposition(QuadraticTerms quadraticTerms)
+{
+    LinearTerms resultLinearTerms;
+    resultLinearTerms.takeOwnership(reformulatedProblem);
+
+    quadraticTerms.performLDLTFactorization();
+
+    if(!quadraticTerms.LDLTFactorizationSuccessful)
+    {
+        return (doEigenvalueDecomposition(quadraticTerms));
+    }
+
+    for(size_t i = 0; i < quadraticTerms.variableMap.size(); i++)
+    {
+        /*if(std::abs(quadraticTerms.LDLDiag[i].real())
+            < env->settings->getSetting<double>("Reformulation.Quadratics.EigenValueDecomposition.Tolerance", "Model"))
+            continue;*/
+
+        auto auxConstraint = std::make_shared<LinearConstraint>(
+            auxConstraintCounter, "q_ldl" + std::to_string(auxConstraintCounter), 0, 0);
+        auxConstraintCounter++;
+
+        for(auto [VAR, j] : quadraticTerms.variableMap)
+        {
+            if(quadraticTerms.LDLMatrixL(j, i) != 0.0)
+                auxConstraint->add(std::make_shared<LinearTerm>(quadraticTerms.LDLMatrixL(j, i), VAR));
+        }
+
+        auto bounds = auxConstraint->linearTerms.calculate(env->problem->getVariableBounds());
+
+        auto auxQuadVariable = std::make_shared<AuxiliaryVariable>("q_evd_" + std::to_string(auxVariableCounter),
+            auxVariableCounter, E_VariableType::Real, bounds.l(), bounds.u());
+        auxVariableCounter++;
+        auxQuadVariable->properties.auxiliaryType = E_AuxiliaryVariableType::EigenvalueDecomposition;
+        reformulatedProblem->add(auxQuadVariable);
+
+        env->results->increaseAuxiliaryVariableCounter(E_AuxiliaryVariableType::EigenvalueDecomposition);
+
+        if(env->settings->getSetting<int>("Reformulation.Quadratics.EigenValueDecomposition.Formulation", "Model")
+            == static_cast<int>(ES_EigenValueDecompositionFormulation::CoefficientReformulated))
+        {
+            auto [auxVariable, newVariable] = getSquareAuxiliaryVariable(
+                auxQuadVariable, quadraticTerms.LDLDiag[i], E_AuxiliaryVariableType::EigenvalueDecomposition);
+            resultLinearTerms.add(std::make_shared<LinearTerm>(0.5, auxVariable));
+        }
+        else
+        {
+            auto [auxVariable, newVariable]
+                = getSquareAuxiliaryVariable(auxQuadVariable, 1.0, E_AuxiliaryVariableType::EigenvalueDecomposition);
+            resultLinearTerms.add(std::make_shared<LinearTerm>(0.5 * quadraticTerms.LDLDiag[i], auxVariable));
         }
 
         auxConstraint->add(std::make_shared<LinearTerm>(-1.0, auxQuadVariable));

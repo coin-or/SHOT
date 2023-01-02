@@ -14,6 +14,9 @@
 
 #include <Eigen/Sparse>
 
+#include <Eigen/Core>
+#include <Eigen/Dense>
+
 namespace SHOT
 {
 Interval Term::getBounds()
@@ -214,6 +217,113 @@ void QuadraticTerms::updateConvexity()
 
     if(this->maxEigenValue <= eigenvalueTolerance)
         maxEigenValueWithinTolerance = true;
+}
+
+void QuadraticTerms::performLDLTFactorization()
+{
+    if(LDLTFactorizationPerformed)
+        return;
+
+    assert(convexity != E_Convexity::NotSet);
+
+    // The following cases should not be handled with the LDLT reformulation
+    if(allSquares && allPositive)
+    {
+        LDLTFactorizationPerformed = true;
+        LDLTFactorizationSuccessful = false;
+        return;
+    }
+
+    if(allSquares && allNegative)
+    {
+        LDLTFactorizationPerformed = true;
+        LDLTFactorizationSuccessful = false;
+        return;
+    }
+
+    if(allBilinear)
+    {
+        LDLTFactorizationPerformed = true;
+        LDLTFactorizationSuccessful = false;
+        return;
+    }
+
+    int numberOfVariables = variableMap.size();
+
+    for(auto& T : (*this))
+    {
+        if(T->firstVariable == T->secondVariable)
+        {
+            int currentVariableIndex;
+            auto element = variableMap.find(T->firstVariable);
+
+            currentVariableIndex = element->second;
+            elements.emplace_back(currentVariableIndex, currentVariableIndex, 2 * T->coefficient);
+        }
+        else
+        {
+            auto firstElement = variableMap.find(T->firstVariable);
+            int currentFirstVariableIndex = firstElement->second;
+
+            auto secondElement = variableMap.find(T->secondVariable);
+            int currentSecondVariableIndex = secondElement->second;
+
+            // Matrix is self adjoint, so only need lower triangular elements
+            if(currentFirstVariableIndex > currentSecondVariableIndex)
+            {
+                elements.emplace_back(currentFirstVariableIndex, currentSecondVariableIndex, T->coefficient);
+                // std::cout << currentFirstVariableIndex + 1 << " " << currentSecondVariableIndex + 1 << " "
+                //          << T->coefficient << std::endl;
+            }
+            else
+            {
+                elements.emplace_back(currentSecondVariableIndex, currentFirstVariableIndex, T->coefficient);
+
+                // std::cout << currentSecondVariableIndex + 1 << " " << currentFirstVariableIndex + 1 << " "
+                //          << T->coefficient << std::endl;
+            }
+        }
+    }
+
+    Eigen::SparseMatrix<std::complex<double>> matrix(numberOfVariables, numberOfVariables);
+
+    for(auto E : elements)
+    {
+        matrix.insert(E.row(), E.col()) = std::complex<double>(E.value(), 0.0);
+    }
+
+    matrix.makeCompressed();
+
+    Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>, Eigen::Lower> eigenSolverLDLT(matrix);
+
+    eigenSolverLDLT.compute(matrix);
+
+    switch(eigenSolverLDLT.info())
+    {
+    case Eigen::Success:
+        break;
+    case Eigen::NumericalIssue:
+        std::cout << "Error: LDLT::info(): Numerical issue." << std::endl;
+    default:
+        LDLTFactorizationPerformed = true;
+        LDLTFactorizationSuccessful = false;
+        return;
+    }
+
+    Eigen::MatrixXd ident(numberOfVariables, numberOfVariables);
+    ident.setIdentity();
+
+    auto matrixL = eigenSolverLDLT.matrixL().real();
+    LDLMatrixL = matrixL * ident;
+
+    for(auto diag : eigenSolverLDLT.vectorD())
+        LDLDiag.push_back(diag.real());
+
+    std::cout << "L-matrix: \n" << LDLMatrixL << std::endl;
+    Utilities::displayVector(LDLDiag);
+
+    LDLTFactorizationPerformed = true;
+    LDLTFactorizationSuccessful = true;
 }
 
 MonomialTerm::MonomialTerm(const MonomialTerm* term, ProblemPtr destinationProblem)
