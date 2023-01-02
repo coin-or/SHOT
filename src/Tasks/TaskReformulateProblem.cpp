@@ -1761,6 +1761,7 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
         && partitionStrategy <= ES_PartitionNonlinearSums::IfConvex && quadraticSumConvex
         && !quadraticTerms.allSquares) // Use the eigenvalue decomposition reformulation
     {
+        // auto linearTerms = doEigenvalueDecomposition(quadraticTerms);
         auto linearTerms = doLDLTDecomposition(quadraticTerms);
         resultLinearTerms.add(linearTerms);
     }
@@ -2290,9 +2291,9 @@ LinearTerms TaskReformulateProblem::doLDLTDecomposition(QuadraticTerms quadratic
 
     for(size_t i = 0; i < quadraticTerms.variableMap.size(); i++)
     {
-        /*if(std::abs(quadraticTerms.LDLDiag[i].real())
+        if(std::abs(quadraticTerms.LDLDiag[i])
             < env->settings->getSetting<double>("Reformulation.Quadratics.EigenValueDecomposition.Tolerance", "Model"))
-            continue;*/
+            continue;
 
         auto auxConstraint = std::make_shared<LinearConstraint>(
             auxConstraintCounter, "q_ldl" + std::to_string(auxConstraintCounter), 0, 0);

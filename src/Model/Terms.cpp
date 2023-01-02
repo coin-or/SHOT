@@ -293,8 +293,9 @@ void QuadraticTerms::performLDLTFactorization()
     }
 
     matrix.makeCompressed();
+    // std::cout << "Original matrix: \n" << matrix << std::endl;
 
-    Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>, Eigen::Lower> eigenSolverLDLT(matrix);
+    Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>> eigenSolverLDLT(matrix);
 
     eigenSolverLDLT.compute(matrix);
 
@@ -313,14 +314,37 @@ void QuadraticTerms::performLDLTFactorization()
     Eigen::MatrixXd ident(numberOfVariables, numberOfVariables);
     ident.setIdentity();
 
-    auto matrixL = eigenSolverLDLT.matrixL().real();
-    LDLMatrixL = matrixL * ident;
+    auto matrixL = (eigenSolverLDLT.matrixL()).real();
+
+    auto permInv = eigenSolverLDLT.permutationPinv();
+
+    LDLMatrixL = (permInv * (matrixL * ident)).eval();
+    auto LDLMatrixLT = ((matrixL * ident).transpose() * permInv.transpose()).eval();
+
+    // std::cout << perm * ident << std::endl;
 
     for(auto diag : eigenSolverLDLT.vectorD())
         LDLDiag.push_back(diag.real());
 
-    std::cout << "L-matrix: \n" << LDLMatrixL << std::endl;
-    Utilities::displayVector(LDLDiag);
+    auto diagonal = matrix.diagonal();
+    auto original = (matrix * ident).eval();
+    original += matrix.transpose();
+    original -= diagonal.asDiagonal();
+
+    // std::cout << "original \n" << original.real() << std::endl;
+
+    // std::cout << "diagonal \n" << (eigenSolverLDLT.vectorD().asDiagonal()) * ident << std::endl;
+
+    // std::cout << "L-matrix 1: \n" << LDLMatrixL << std::endl;
+    // std::cout << "L-matrix 2: \n" << LDLMatrixLT << std::endl;
+
+    Eigen::MatrixXcd reconstructed = LDLMatrixL * eigenSolverLDLT.vectorD().asDiagonal() * LDLMatrixLT;
+    Eigen::MatrixXd error = reconstructed.real() - original.real();
+
+    // std::cout << "error \n" << error << std::endl;
+
+    std::cout << "max-error " << error.maxCoeff() << std::endl;
+    std::cout << "min-value " << error.minCoeff() << std::endl;
 
     LDLTFactorizationPerformed = true;
     LDLTFactorizationSuccessful = true;
