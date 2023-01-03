@@ -14,9 +14,6 @@
 
 #include <Eigen/Sparse>
 
-#include <Eigen/Core>
-#include <Eigen/Dense>
-
 namespace SHOT
 {
 Interval Term::getBounds()
@@ -343,8 +340,16 @@ void QuadraticTerms::performLDLTFactorization()
 
     // std::cout << "error \n" << error << std::endl;
 
-    std::cout << "max-error " << error.maxCoeff() << std::endl;
-    std::cout << "min-value " << error.minCoeff() << std::endl;
+    // std::cout << "max-error " << error.maxCoeff() << std::endl;
+    // std::cout << "min-value " << error.minCoeff() << std::endl;
+
+    // The error to the reconstructed matrix is too large, will not use the decomposition
+    if(std::abs(error.maxCoeff()) > 1e-12 || std::abs(error.minCoeff()) < -1e-12)
+    {
+        LDLTFactorizationPerformed = true;
+        LDLTFactorizationSuccessful = false;
+        return;
+    }
 
     LDLTFactorizationPerformed = true;
     LDLTFactorizationSuccessful = true;

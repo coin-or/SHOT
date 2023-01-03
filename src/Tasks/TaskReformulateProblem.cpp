@@ -2294,6 +2294,7 @@ LinearTerms TaskReformulateProblem::doLDLTDecomposition(QuadraticTerms quadratic
 
     quadraticTerms.performLDLTFactorization();
 
+    // The decomposition was not successful, using the eigenvalue decomposition instead
     if(!quadraticTerms.LDLTFactorizationSuccessful)
     {
         return (doEigenvalueDecomposition(quadraticTerms));
