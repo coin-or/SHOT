@@ -2628,10 +2628,24 @@ std::pair<AuxiliaryVariablePtr, bool> TaskReformulateProblem::getSquareAuxiliary
     // Create a new variable
 
     // Get the max bounds
-    auto valueList = { variable->lowerBound * variable->lowerBound, variable->upperBound * variable->upperBound };
 
-    double lowerBound = (variable->lowerBound < 0) ? 0.0 : std::min(valueList);
-    double upperBound = std::max(valueList);
+    double lowerBound = SHOT_DBL_MIN;
+    double upperBound = SHOT_DBL_MAX;
+
+    if(variable->lowerBound <= 0 && variable->upperBound >= 0)
+    {
+        lowerBound = std::min({ coefficient * variable->lowerBound * variable->lowerBound,
+            coefficient * variable->upperBound * variable->upperBound, 0.0 });
+        upperBound = std::max({ coefficient * variable->lowerBound * variable->lowerBound,
+            coefficient * variable->upperBound * variable->upperBound, 0.0 });
+    }
+    else
+    {
+        lowerBound = std::min({ coefficient * variable->lowerBound * variable->lowerBound,
+            coefficient * variable->upperBound * variable->upperBound });
+        upperBound = std::max({ coefficient * variable->lowerBound * variable->lowerBound,
+            coefficient * variable->upperBound * variable->upperBound });
+    }
 
     E_VariableType variableType;
 
