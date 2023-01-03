@@ -461,8 +461,8 @@ public:
     Eigen::MatrixXcd eigenvectors;
     Eigen::MatrixXd LDLMatrixL;
     VectorDouble LDLDiag;
-    bool LDLTFactorizationPerformed = false;
-    bool LDLTFactorizationSuccessful = false;
+    bool LDLFactorizationPerformed = false;
+    bool LDLFactorizationSuccessful = false;
 
     std::vector<Eigen::Triplet<double>> elements;
     std::map<VariablePtr, int> variableMap;
@@ -567,7 +567,7 @@ public:
         return gradient;
     };
 
-    void performLDLTFactorization();
+    void performLDLFactorization();
 };
 
 class MonomialTerm : public Term

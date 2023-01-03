@@ -1771,7 +1771,7 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
         }
         else
         {
-            auto linearTerms = doLDLTDecomposition(quadraticTerms);
+            auto linearTerms = doLDLDecomposition(quadraticTerms);
             resultLinearTerms.add(linearTerms);
         }
     }
@@ -2287,15 +2287,15 @@ LinearTerms TaskReformulateProblem::doEigenvalueDecomposition(QuadraticTerms qua
     return (resultLinearTerms);
 }
 
-LinearTerms TaskReformulateProblem::doLDLTDecomposition(QuadraticTerms quadraticTerms)
+LinearTerms TaskReformulateProblem::doLDLDecomposition(QuadraticTerms quadraticTerms)
 {
     LinearTerms resultLinearTerms;
     resultLinearTerms.takeOwnership(reformulatedProblem);
 
-    quadraticTerms.performLDLTFactorization();
+    quadraticTerms.performLDLFactorization();
 
     // The decomposition was not successful, using the eigenvalue decomposition instead
-    if(!quadraticTerms.LDLTFactorizationSuccessful)
+    if(!quadraticTerms.LDLFactorizationSuccessful)
     {
         return (doEigenvalueDecomposition(quadraticTerms));
     }

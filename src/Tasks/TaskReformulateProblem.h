@@ -103,7 +103,7 @@ private:
         const MonomialTerms& monomialTerms, bool reversedSigns);
 
     LinearTerms doEigenvalueDecomposition(QuadraticTerms quadraticTerms);
-    LinearTerms doLDLTDecomposition(QuadraticTerms quadraticTerms);
+    LinearTerms doLDLDecomposition(QuadraticTerms quadraticTerms);
 
     NonlinearExpressionPtr reformulateNonlinearExpression(NonlinearExpressionPtr source);
     NonlinearExpressionPtr reformulateNonlinearExpression(std::shared_ptr<ExpressionAbs> source);

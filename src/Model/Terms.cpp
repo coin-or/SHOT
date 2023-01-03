@@ -216,32 +216,32 @@ void QuadraticTerms::updateConvexity()
         maxEigenValueWithinTolerance = true;
 }
 
-void QuadraticTerms::performLDLTFactorization()
+void QuadraticTerms::performLDLFactorization()
 {
-    if(LDLTFactorizationPerformed)
+    if(LDLFactorizationPerformed)
         return;
 
     assert(convexity != E_Convexity::NotSet);
 
-    // The following cases should not be handled with the LDLT reformulation
+    // The following cases should not be handled with the LDL reformulation
     if(allSquares && allPositive)
     {
-        LDLTFactorizationPerformed = true;
-        LDLTFactorizationSuccessful = false;
+        LDLFactorizationPerformed = true;
+        LDLFactorizationSuccessful = false;
         return;
     }
 
     if(allSquares && allNegative)
     {
-        LDLTFactorizationPerformed = true;
-        LDLTFactorizationSuccessful = false;
+        LDLFactorizationPerformed = true;
+        LDLFactorizationSuccessful = false;
         return;
     }
 
     if(allBilinear)
     {
-        LDLTFactorizationPerformed = true;
-        LDLTFactorizationSuccessful = false;
+        LDLFactorizationPerformed = true;
+        LDLFactorizationSuccessful = false;
         return;
     }
 
@@ -292,35 +292,35 @@ void QuadraticTerms::performLDLTFactorization()
     matrix.makeCompressed();
     // std::cout << "Original matrix: \n" << matrix << std::endl;
 
-    Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>> eigenSolverLDLT(matrix);
+    Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>> eigenSolverLDL(matrix);
 
-    eigenSolverLDLT.compute(matrix);
+    eigenSolverLDL.compute(matrix);
 
-    switch(eigenSolverLDLT.info())
+    switch(eigenSolverLDL.info())
     {
     case Eigen::Success:
         break;
     case Eigen::NumericalIssue:
-        std::cout << "Error: LDLT::info(): Numerical issue." << std::endl;
+        // std::cout << "Error: LDL::info(): Numerical issue." << std::endl;
     default:
-        LDLTFactorizationPerformed = true;
-        LDLTFactorizationSuccessful = false;
+        LDLFactorizationPerformed = true;
+        LDLFactorizationSuccessful = false;
         return;
     }
 
     Eigen::MatrixXd ident(numberOfVariables, numberOfVariables);
     ident.setIdentity();
 
-    auto matrixL = (eigenSolverLDLT.matrixL()).real();
+    auto matrixL = (eigenSolverLDL.matrixL()).real();
 
-    auto permInv = eigenSolverLDLT.permutationPinv();
+    auto permInv = eigenSolverLDL.permutationPinv();
 
     LDLMatrixL = (permInv * (matrixL * ident)).eval();
     auto LDLMatrixLT = ((matrixL * ident).transpose() * permInv.transpose()).eval();
 
     // std::cout << perm * ident << std::endl;
 
-    for(auto diag : eigenSolverLDLT.vectorD())
+    for(auto diag : eigenSolverLDL.vectorD())
         LDLDiag.push_back(diag.real());
 
     auto diagonal = matrix.diagonal();
@@ -330,12 +330,12 @@ void QuadraticTerms::performLDLTFactorization()
 
     // std::cout << "original \n" << original.real() << std::endl;
 
-    // std::cout << "diagonal \n" << (eigenSolverLDLT.vectorD().asDiagonal()) * ident << std::endl;
+    // std::cout << "diagonal \n" << (eigenSolverLDL.vectorD().asDiagonal()) * ident << std::endl;
 
     // std::cout << "L-matrix 1: \n" << LDLMatrixL << std::endl;
     // std::cout << "L-matrix 2: \n" << LDLMatrixLT << std::endl;
 
-    Eigen::MatrixXcd reconstructed = LDLMatrixL * eigenSolverLDLT.vectorD().asDiagonal() * LDLMatrixLT;
+    Eigen::MatrixXcd reconstructed = LDLMatrixL * eigenSolverLDL.vectorD().asDiagonal() * LDLMatrixLT;
     Eigen::MatrixXd error = reconstructed.real() - original.real();
 
     // std::cout << "error \n" << error << std::endl;
@@ -346,13 +346,13 @@ void QuadraticTerms::performLDLTFactorization()
     // The error to the reconstructed matrix is too large, will not use the decomposition
     if(std::abs(error.maxCoeff()) > 1e-12 || std::abs(error.minCoeff()) < -1e-12)
     {
-        LDLTFactorizationPerformed = true;
-        LDLTFactorizationSuccessful = false;
+        LDLFactorizationPerformed = true;
+        LDLFactorizationSuccessful = false;
         return;
     }
 
-    LDLTFactorizationPerformed = true;
-    LDLTFactorizationSuccessful = true;
+    LDLFactorizationPerformed = true;
+    LDLFactorizationSuccessful = true;
 }
 
 MonomialTerm::MonomialTerm(const MonomialTerm* term, ProblemPtr destinationProblem)
