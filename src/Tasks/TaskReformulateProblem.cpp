@@ -1757,13 +1757,23 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
     bool allTermsConvex = quadraticTerms.checkAllForConvexityType(E_Convexity::Convex);
     bool allTermsConcave = quadraticTerms.checkAllForConvexityType(E_Convexity::Concave);
 
-    if(env->settings->getSetting<bool>("Reformulation.Quadratics.EigenValueDecomposition.Use", "Model")
+    auto quadraticDecompositionMethod = (ES_QuadraticDecomposition)env->settings->getSetting<int>(
+        "Reformulation.Quadratics.Decomposition.Method", "Model");
+
+    if(quadraticDecompositionMethod != ES_QuadraticDecomposition::None
         && partitionStrategy <= ES_PartitionNonlinearSums::IfConvex && quadraticSumConvex
-        && !quadraticTerms.allSquares) // Use the eigenvalue decomposition reformulation
+        && !quadraticTerms.allSquares) // Use one of the quadratic decompositions
     {
-        // auto linearTerms = doEigenvalueDecomposition(quadraticTerms);
-        auto linearTerms = doLDLTDecomposition(quadraticTerms);
-        resultLinearTerms.add(linearTerms);
+        if(quadraticDecompositionMethod == ES_QuadraticDecomposition::EigenValueDecomposition)
+        {
+            auto linearTerms = doEigenvalueDecomposition(quadraticTerms);
+            resultLinearTerms.add(linearTerms);
+        }
+        else
+        {
+            auto linearTerms = doLDLTDecomposition(quadraticTerms);
+            resultLinearTerms.add(linearTerms);
+        }
     }
     else if(partitionStrategy == ES_PartitionNonlinearSums::Always
         || (!reversedSigns && allTermsConvex && partitionStrategy == ES_PartitionNonlinearSums::IfConvex)
@@ -2232,7 +2242,7 @@ LinearTerms TaskReformulateProblem::doEigenvalueDecomposition(QuadraticTerms qua
     for(size_t i = 0; i < quadraticTerms.variableMap.size(); i++)
     {
         if(std::abs(quadraticTerms.eigenvalues[i].real())
-            < env->settings->getSetting<double>("Reformulation.Quadratics.EigenValueDecomposition.Tolerance", "Model"))
+            < env->settings->getSetting<double>("Reformulation.Quadratics.Decomposition.Tolerance", "Model"))
             continue;
 
         auto auxConstraint = std::make_shared<LinearConstraint>(
@@ -2255,8 +2265,8 @@ LinearTerms TaskReformulateProblem::doEigenvalueDecomposition(QuadraticTerms qua
 
         env->results->increaseAuxiliaryVariableCounter(E_AuxiliaryVariableType::EigenvalueDecomposition);
 
-        if(env->settings->getSetting<int>("Reformulation.Quadratics.EigenValueDecomposition.Formulation", "Model")
-            == static_cast<int>(ES_EigenValueDecompositionFormulation::CoefficientReformulated))
+        if(env->settings->getSetting<int>("Reformulation.Quadratics.Decomposition.Formulation", "Model")
+            == static_cast<int>(ES_QuadraticDecompositionFormulation::CoefficientReformulated))
         {
             auto [auxVariable, newVariable] = getSquareAuxiliaryVariable(auxQuadVariable,
                 quadraticTerms.eigenvalues[i].real(), E_AuxiliaryVariableType::EigenvalueDecomposition);
@@ -2292,7 +2302,7 @@ LinearTerms TaskReformulateProblem::doLDLTDecomposition(QuadraticTerms quadratic
     for(size_t i = 0; i < quadraticTerms.variableMap.size(); i++)
     {
         if(std::abs(quadraticTerms.LDLDiag[i])
-            < env->settings->getSetting<double>("Reformulation.Quadratics.EigenValueDecomposition.Tolerance", "Model"))
+            < env->settings->getSetting<double>("Reformulation.Quadratics.Decomposition.Tolerance", "Model"))
             continue;
 
         auto auxConstraint = std::make_shared<LinearConstraint>(
@@ -2315,8 +2325,8 @@ LinearTerms TaskReformulateProblem::doLDLTDecomposition(QuadraticTerms quadratic
 
         env->results->increaseAuxiliaryVariableCounter(E_AuxiliaryVariableType::EigenvalueDecomposition);
 
-        if(env->settings->getSetting<int>("Reformulation.Quadratics.EigenValueDecomposition.Formulation", "Model")
-            == static_cast<int>(ES_EigenValueDecompositionFormulation::CoefficientReformulated))
+        if(env->settings->getSetting<int>("Reformulation.Quadratics.Decomposition.Formulation", "Model")
+            == static_cast<int>(ES_QuadraticDecompositionFormulation::CoefficientReformulated))
         {
             auto [auxVariable, newVariable] = getSquareAuxiliaryVariable(
                 auxQuadVariable, quadraticTerms.LDLDiag[i], E_AuxiliaryVariableType::EigenvalueDecomposition);

@@ -272,12 +272,6 @@ enum class ES_AddPrimalPointAsInteriorPoint
     OnlyAverage
 };
 
-enum class ES_EigenValueDecompositionFormulation
-{
-    CoefficientReformulated,
-    CoefficientRemains
-};
-
 enum class ES_HyperplaneCutStrategy
 {
     ESH,
@@ -399,6 +393,19 @@ enum class ES_QuadraticProblemStrategy
     QuadraticObjective,
     ConvexQuadraticallyConstrained,
     NonconvexQuadraticallyConstrained
+};
+
+enum class ES_QuadraticDecompositionFormulation
+{
+    CoefficientReformulated,
+    CoefficientRemains
+};
+
+enum class ES_QuadraticDecomposition
+{
+    None,
+    EigenValueDecomposition,
+    LDLDecomposition
 };
 
 enum class ES_QuadraticTermsExtractStrategy

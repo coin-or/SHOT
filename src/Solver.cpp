@@ -1129,23 +1129,29 @@ void Solver::initializeSettings()
         "How to treat quadratic functions", enumQPStrategy, 0);
     enumQPStrategy.clear();
 
-    env->settings->createSetting("Reformulation.Quadratics.EigenValueDecomposition.Use", "Model", false,
-        "Whether to use the eigenvalue decomposition of convex quadratic functions");
+    VectorString enumQPDecomposition;
+    enumQPDecomposition.push_back("No decomposition");
+    enumQPDecomposition.push_back("Eigenvalue decomposition");
+    enumQPDecomposition.push_back("LDL decomposition");
 
-    VectorString enumEigenValueStrategy;
-    enumEigenValueStrategy.push_back("Term coefficient is included in reformulation");
-    enumEigenValueStrategy.push_back("Term coefficient remains");
+    env->settings->createSetting("Reformulation.Quadratics.Decomposition.Method", "Model",
+        static_cast<int>(ES_QuadraticDecomposition::LDLDecomposition),
+        "Whether to use the eigenvalue decomposition of convex quadratic functions", enumQPDecomposition, 0);
+    enumQPDecomposition.clear();
 
-    env->settings->createSetting("Reformulation.Quadratics.EigenValueDecomposition.Formulation", "Model",
-        static_cast<int>(ES_EigenValueDecompositionFormulation::CoefficientReformulated),
-        "Which formulation to use in eigenvalue decomposition", enumEigenValueStrategy, 0);
-    enumEigenValueStrategy.clear();
+    VectorString enumQuadraticDecompCoeffStrategy;
+    enumQuadraticDecompCoeffStrategy.push_back("Coefficient is included in reformulation");
+    enumQuadraticDecompCoeffStrategy.push_back("Coefficient remains");
 
-    env->settings->createSetting("Reformulation.Quadratics.EigenValueDecomposition.Method", "Model", false,
-        "Whether to use the eigen value decomposition of convex quadratic functions");
+    env->settings->createSetting("Reformulation.Quadratics.Decomposition.Formulation", "Model",
+        static_cast<int>(ES_QuadraticDecompositionFormulation::CoefficientReformulated),
+        "Placement of the original term cofficient when decomposing a quadratic term", enumQuadraticDecompCoeffStrategy,
+        0);
+    enumQuadraticDecompCoeffStrategy.clear();
 
-    env->settings->createSetting("Reformulation.Quadratics.EigenValueDecomposition.Tolerance", "Model", 1e-6,
-        "Variables with eigenvalues smaller than this value will be ignored", 0.0, SHOT_DBL_MAX);
+    env->settings->createSetting("Reformulation.Quadratics.Decomposition.Tolerance", "Model", 1e-7,
+        "Terms with corresponding eigenvalues or diagonal elements in D-matrix smaller than this value will be ignored",
+        0.0, SHOT_DBL_MAX);
 
     // Modeling system settings
 
@@ -1877,22 +1883,6 @@ void Solver::setConvexityBasedSettingsPreReformulation()
                         (int)ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained);
                 }
 #endif
-            }
-#endif
-
-#ifdef HAS_CBC
-            if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Cbc)
-            {
-                env->settings->updateSetting("Reformulation.Quadratics.EigenValueDecomposition.Use", "Model", false);
-            }
-#endif
-        }
-        else if(env->problem->properties.convexity == E_ProblemConvexity::Convex)
-        {
-#ifdef HAS_CBC
-            if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Cbc)
-            {
-                env->settings->updateSetting("Reformulation.Quadratics.EigenValueDecomposition.Use", "Model", true);
             }
 #endif
         }
