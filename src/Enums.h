@@ -28,7 +28,8 @@ enum class E_AuxiliaryVariableType
     BinaryMonomial, // Fram linearizing a monomial term b1 * b2 * ... * bn, where bi are binary
     AbsoluteValue, // From rewriting an absolute value
     AntiEpigraph, // For rewriting an epigraph formulation as objective
-    EigenvalueDecomposition // From performing an eigenvalue decomposition on quadratic sums
+    EigenvalueDecomposition, // From performing an eigenvalue decomposition on quadratic sums
+    LDLDecomposition // From performing an LDL decomposition on quadratic sums
 };
 
 enum class E_Convexity

@@ -2321,22 +2321,22 @@ LinearTerms TaskReformulateProblem::doLDLTDecomposition(QuadraticTerms quadratic
         auto auxQuadVariable = std::make_shared<AuxiliaryVariable>("q_evd_" + std::to_string(auxVariableCounter),
             auxVariableCounter, E_VariableType::Real, bounds.l(), bounds.u());
         auxVariableCounter++;
-        auxQuadVariable->properties.auxiliaryType = E_AuxiliaryVariableType::EigenvalueDecomposition;
+        auxQuadVariable->properties.auxiliaryType = E_AuxiliaryVariableType::LDLDecomposition;
         reformulatedProblem->add(auxQuadVariable);
 
-        env->results->increaseAuxiliaryVariableCounter(E_AuxiliaryVariableType::EigenvalueDecomposition);
+        env->results->increaseAuxiliaryVariableCounter(E_AuxiliaryVariableType::LDLDecomposition);
 
         if(env->settings->getSetting<int>("Reformulation.Quadratics.Decomposition.Formulation", "Model")
             == static_cast<int>(ES_QuadraticDecompositionFormulation::CoefficientReformulated))
         {
             auto [auxVariable, newVariable] = getSquareAuxiliaryVariable(
-                auxQuadVariable, quadraticTerms.LDLDiag[i], E_AuxiliaryVariableType::EigenvalueDecomposition);
+                auxQuadVariable, quadraticTerms.LDLDiag[i], E_AuxiliaryVariableType::LDLDecomposition);
             resultLinearTerms.add(std::make_shared<LinearTerm>(0.5, auxVariable));
         }
         else
         {
             auto [auxVariable, newVariable]
-                = getSquareAuxiliaryVariable(auxQuadVariable, 1.0, E_AuxiliaryVariableType::EigenvalueDecomposition);
+                = getSquareAuxiliaryVariable(auxQuadVariable, 1.0, E_AuxiliaryVariableType::LDLDecomposition);
             resultLinearTerms.add(std::make_shared<LinearTerm>(0.5 * quadraticTerms.LDLDiag[i], auxVariable));
         }
 

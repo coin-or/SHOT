@@ -180,6 +180,10 @@ std::ostream& operator<<(std::ostream& stream, AuxiliaryVariablePtr var)
         auxtype << "eigenval. decomp. ref.";
         break;
 
+    case E_AuxiliaryVariableType::LDLDecomposition:
+        auxtype << "LDL decomp. ref.";
+        break;
+
     default:
         auxtype << "unspecified aux. var.";
         break;

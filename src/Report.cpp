@@ -909,6 +909,9 @@ void Report::outputProblemInstanceReport()
         if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::EigenvalueDecomposition);
             value > 0)
             env->output->outputInfo(fmt::format(" {:56s}{:d}", " - quadratic eigenvalue decomposition:", value));
+
+        if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::LDLDecomposition); value > 0)
+            env->output->outputInfo(fmt::format(" {:56s}{:d}", " - quadratic LDL decomposition:", value));
     }
 }
 
