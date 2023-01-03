@@ -38,7 +38,6 @@ void QuadraticTerms::updateConvexity()
         return;
     }
 
-    std::vector<Eigen::Triplet<double>> elements;
     elements.reserve(2 * size());
 
     allSquares = true;
@@ -246,41 +245,6 @@ void QuadraticTerms::performLDLFactorization()
     }
 
     int numberOfVariables = variableMap.size();
-
-    for(auto& T : (*this))
-    {
-        if(T->firstVariable == T->secondVariable)
-        {
-            int currentVariableIndex;
-            auto element = variableMap.find(T->firstVariable);
-
-            currentVariableIndex = element->second;
-            elements.emplace_back(currentVariableIndex, currentVariableIndex, 2 * T->coefficient);
-        }
-        else
-        {
-            auto firstElement = variableMap.find(T->firstVariable);
-            int currentFirstVariableIndex = firstElement->second;
-
-            auto secondElement = variableMap.find(T->secondVariable);
-            int currentSecondVariableIndex = secondElement->second;
-
-            // Matrix is self adjoint, so only need lower triangular elements
-            if(currentFirstVariableIndex > currentSecondVariableIndex)
-            {
-                elements.emplace_back(currentFirstVariableIndex, currentSecondVariableIndex, T->coefficient);
-                // std::cout << currentFirstVariableIndex + 1 << " " << currentSecondVariableIndex + 1 << " "
-                //          << T->coefficient << std::endl;
-            }
-            else
-            {
-                elements.emplace_back(currentSecondVariableIndex, currentFirstVariableIndex, T->coefficient);
-
-                // std::cout << currentSecondVariableIndex + 1 << " " << currentFirstVariableIndex + 1 << " "
-                //          << T->coefficient << std::endl;
-            }
-        }
-    }
 
     Eigen::SparseMatrix<std::complex<double>> matrix(numberOfVariables, numberOfVariables);
 
