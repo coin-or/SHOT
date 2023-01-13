@@ -2083,13 +2083,20 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
             case fnarccos:
             case fnarcsin:
             case fnarctan2 /* arctan(x2/x1) */:
-            default:
             {
-                debugout << "nr. " << address + 1 << " - unsuppored. Error." << std::endl;
+                debugout << "nr. " << address + 1 << " - unsupported. Error." << std::endl;
                 char buffer[256];
                 sprintf(buffer, "Error: Unsupported GAMS function %s.\n", GamsFuncCodeName[address + 1]);
                 gevLogStatPChar(modelingEnvironment, buffer);
-                throw OperationNotImplementedException(fmt::format("Error: Unsupported GAMS function {}", buffer));
+                throw OperationNotImplementedException(fmt::format("Error: Unsupported GAMS function {}", GamsFuncCodeName[address + 1]));
+            }
+            default:
+            {
+                debugout << "nr. " << address + 1 << " - unsupported. Error." << std::endl;
+                char buffer[256];
+                sprintf(buffer, "Error: Unsupported new GAMS function %d.\n", address + 1);
+                gevLogStatPChar(modelingEnvironment, buffer);
+                throw OperationNotImplementedException(fmt::format("Error: Unsupported new GAMS function {}", address));
             }
             }
             break;
