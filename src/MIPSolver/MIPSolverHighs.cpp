@@ -382,6 +382,10 @@ E_ProblemSolutionStatus MIPSolverHighs::getSolutionStatus()
     }
     else if(modelStatus == HighsModelStatus::kIterationLimit)
     {
+        MIPSolutionStatus = E_ProblemSolutionStatus::IterationLimit;
+    }
+    else if(modelStatus == HighsModelStatus::kSolutionLimit)
+    {
         MIPSolutionStatus = E_ProblemSolutionStatus::SolutionLimit;
     }
     else
@@ -521,7 +525,11 @@ void MIPSolverHighs::addMIPStart(VectorDouble point)
     HighsSolution solution;
     solution.col_value = point;
 
-    highsInstance.setSolution(solution);
+    auto sol = highsInstance.getSolution();
+    auto return_status = highsInstance.setSolution(solution);
+
+    if(return_status != HighsStatus::kOk)
+        env->output->outputDebug("        Could not att MIP start in Highs.");
 }
 
 void MIPSolverHighs::writeProblemToFile(std::string filename)

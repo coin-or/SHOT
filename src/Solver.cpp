@@ -1808,7 +1808,7 @@ void Solver::verifySettings()
         unboundedVariableBound = 1e50;
 #elif HAS_HIGHS
         env->settings->updateSetting("MIP.Solver", "Dual", (int)ES_MIPSolver::Highs);
-        unboundedVariableBound = 1e50;
+        unboundedVariableBound = 1e20;
 #else
         env->output->outputCritical(" SHOT has not been compiled with support for any MIP solver.");
 #endif
