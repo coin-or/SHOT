@@ -104,7 +104,9 @@ void TaskSolveIteration::run()
 
     if(env->dualSolver->MIPSolver->getDiscreteVariableStatus() && env->results->hasPrimalSolution())
     {
-        env->dualSolver->MIPSolver->addMIPStart(env->results->primalSolution);
+        auto primalSol = env->results->primalSolution;
+        env->reformulatedProblem->augmentAuxiliaryVariableValues(primalSol);
+        env->dualSolver->MIPSolver->addMIPStart(primalSol);
     }
 
     if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
