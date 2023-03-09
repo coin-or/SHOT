@@ -25,18 +25,18 @@ jobs:
 
     - name: Install dependencies
       shell: bash
-      run: sudo apt-get update ; sudo apt-get install -y libc6-dev libbz2-dev zlib1g-dev liblapack-dev libnauty2-dev libopenblas-base libopenblas-dev libmumps-dev
+      run: sudo apt-get update ; sudo apt-get install -y libc6-dev libbz2-dev zlib1g-dev liblapack-dev libnauty2-dev libopenblas-base libopenblas-dev libmumps-dev pkgconf
 
     - name: Cache Cbc
       id: cache-cbc
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: ${{runner.workspace}}/ThirdParty/Cbc
         key: ${{ runner.os }}-cbc
 
     - name: Cache Ipopt
       id: cache-ipopt
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: ${{runner.workspace}}/ThirdParty/Ipopt
         key: ${{ runner.os }}-ipopt
