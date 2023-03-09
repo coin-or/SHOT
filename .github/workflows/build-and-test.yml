@@ -25,7 +25,7 @@ jobs:
 
     - name: Install dependencies
       shell: bash
-      run: sudo apt-get update ; sudo apt-get install libc6-dev libbz2-dev zlib1g-dev liblapack-dev libnauty2-dev libopenblas-base libopenblas-dev libmumps-dev
+      run: sudo apt-get update ; sudo apt-get install -y libc6-dev libbz2-dev zlib1g-dev liblapack-dev libnauty2-dev libopenblas-base libopenblas-dev libmumps-dev
 
     - name: Cache Cbc
       id: cache-cbc
