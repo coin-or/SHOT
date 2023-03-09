@@ -82,10 +82,3 @@ jobs:
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
       run: ctest -C $BUILD_TYPE --output-on-failure
 
-    # Upload all the build files as artifacts.
-    - uses: actions/upload-artifact@v3
-      with:
-        name: shot-build
-        path: ${{runner.workspace}}/build
-        retention-days: 4
-
