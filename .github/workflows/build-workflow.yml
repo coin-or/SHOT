@@ -149,29 +149,29 @@ jobs:
       with:
         name: test-logs-${{ env.VERSION }}
         path: |
-          build/test-output/*.log
-          build/test-output/*.xml
+          ${{runner.workspace}}/build/test-output/*.log
+          ${{runner.workspace}}/build/test-output/*.xml
         retention-days: ${{ inputs.version }}
 
     - uses: actions/upload-artifact@v3
       name: Upload SHOT Optionsfile
       with:
         name: shot-optsfile-${{ env.VERSION }}
-        path: build/SHOT.opt
+        path: ${{runner.workspace}}/build/SHOT.opt
         retention-days: ${{ inputs.version }}
 
     - uses: actions/upload-artifact@v3
       name: Upload SHOT File
       with:
         name: shot-binary-${{ env.VERSION }}
-        path: build/SHOT
+        path: ${{runner.workspace}}/build/SHOT
         retention-days: ${{ inputs.version }}
 
     - uses: actions/upload-artifact@v3
       name: Upload SHOT File
       with:
         name: shot-package-${{ env.VERSION }}
-        path: build/SHOT-*-Linux.zip
+        path: ${{runner.workspace}}/build/SHOT-*-Linux.zip
         retention-days: ${{ inputs.version }}
 
     - uses: actions/upload-artifact@v3
@@ -179,8 +179,8 @@ jobs:
       with:
         name: shot-libraries-${{ env.VERSION }}
         path: |
-          build/*.so
-          build/*.a
+          ${{runner.workspace}}/build/*.so
+          ${{runner.workspace}}/build/*.a
         retention-days: ${{ inputs.version }}
 
     - name: Output artifact names
