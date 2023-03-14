@@ -60,7 +60,7 @@ jobs:
     runs-on: [self-hosted, linux]
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Checkout submodules
       run: git submodule update --init --recursive
@@ -168,7 +168,7 @@ jobs:
         retention-days: ${{ inputs.retention }}
 
     - uses: actions/upload-artifact@v3
-      name: Upload SHOT File
+      name: Upload SHOT Package file
       with:
         name: shot-package-${{ env.VERSION }}
         path: ${{runner.workspace}}/build/SHOT-*-Linux.zip
