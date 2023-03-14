@@ -1,0 +1,11 @@
+name: Build
+
+on: [push]
+
+jobs:
+  build:
+    uses: ./.github/workflows/build-workflow.yml
+    with:
+      job_count: 3
+      build_type: Release
+      retention: 30

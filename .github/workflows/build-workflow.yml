@@ -1,0 +1,195 @@
+name: Build and Test
+
+on:
+  workflow_call:
+    inputs:
+      build_type:
+        description: 'The CMake build type, can be either: Release, Debug, RelWithDebInfo, etc.'
+        default: Release
+        required: false
+        type: string
+      job_count:
+        description: 'The amount of jobs to use when building the program and dependencies.'
+        default: 1
+        required: false
+        type: number
+        # Map the workflow outputs to job outputs
+      version:
+        description: 'The version to build SHOT as.'
+        default: ${{ github.sha }}
+        required: false
+        type: string
+      retention:
+        description: 'The artifact retention period (in days)'
+        default: 60
+        required: false
+        type: number
+    outputs:
+      test_artifact:
+        description: "Test artifact ID"
+        value: ${{ jobs.build.outputs.test_artifact }}
+      options_artifact:
+        description: "SHOT Optionsfile artifact ID"
+        value: ${{ jobs.build.outputs.options_artifact }}
+      binary_artifact:
+        description: "SHOT Binary artifact ID"
+        value: ${{ jobs.build.outputs.binary_artifact }}
+      package_artifact:
+        description: "SHOT Package artifact ID"
+        value: ${{ jobs.build.outputs.package_artifact }}
+      library_artifact:
+        description: "SHOT Libraries artifact ID"
+        value: ${{ jobs.build.outputs.library_artifact }}
+
+
+env:
+  # Customize
+  BUILD_TYPE: ${{ inputs.build_type }}
+  JOB_COUNT: ${{ inputs.job_count }}
+  VERSION: ${{ inputs.version }}
+
+jobs:
+  build:
+    outputs:
+      test_artifact: ${{ steps.artifact_outputs.test }}
+      options_artifact: ${{ steps.artifact_outputs.options }}
+      binary_artifact: ${{ steps.artifact_outputs.binary }}
+      package_artifact: ${{ steps.artifact_outputs.package }}
+      library_artifact: ${{ steps.artifact_outputs.library }}
+    name: Build SHOT
+    runs-on: [self-hosted, linux]
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Checkout submodules
+      run: git submodule update --init --recursive
+
+    - name: Create Build Environment
+      # Some projects don't allow in-source building, so create a separate build directory
+      # We'll use this as our working directory for all subsequent commands
+      run: cmake -E make_directory ${{runner.workspace}}/build
+
+    - name: Install dependencies
+      shell: bash
+      run: sudo apt-get update ; sudo apt-get install -y libc6-dev libbz2-dev zlib1g-dev liblapack-dev libnauty2-dev libopenblas-base libopenblas-dev libmumps-dev pkgconf
+
+    - name: Cache Cbc
+      id: cache-cbc
+      uses: actions/cache@v3
+      with:
+        path: ${{runner.workspace}}/ThirdParty/Cbc
+        key: ${{ runner.os }}-cbc
+
+    - name: Cache Ipopt
+      id: cache-ipopt
+      uses: actions/cache@v3
+      with:
+        path: ${{runner.workspace}}/ThirdParty/Ipopt
+        key: ${{ runner.os }}-ipopt
+
+    - name: Setup Coinbrew
+      if: steps.cache-ipopt.outputs.cache-hit != 'true' || steps.cache-cbc.outputs.cache-hit != 'true'
+      shell: bash
+      working-directory: ${{runner.workspace}}/build
+      run: git -C "coinbrew" pull || git clone https://github.com/coin-or/coinbrew
+
+    - name: Download and build Ipopt
+      if: steps.cache-ipopt.outputs.cache-hit != 'true'
+      shell: bash
+      working-directory: ${{runner.workspace}}/build/coinbrew
+      run: ./coinbrew build Ipopt --verbosity 2 --prefix=${{runner.workspace}}/ThirdParty/Ipopt -j $JOB_COUNT --no-prompt --tests none
+
+    - name: Download and build Cbc
+      if: steps.cache-cbc.outputs.cache-hit != 'true'
+      shell: bash
+      working-directory: ${{runner.workspace}}/build/coinbrew
+      run: rm -rf build dist ; ./coinbrew build Cbc@stable/2.10 --verbosity 2 -j $JOB_COUNT --prefix=${{runner.workspace}}/ThirdParty/Cbc --no-prompt --tests none --no-third-party
+
+    - name: Configure CMake
+      # Use a bash shell so we can use the same syntax for environment variable
+      # access regardless of the host operating system
+      shell: bash
+      working-directory: ${{runner.workspace}}/build
+      # Note the current convention is to use the -S and -B options here to specify source
+      # and build directories, but this is only available with CMake 3.13 and higher.
+      # The CMake binaries on the Github Actions machines are (as of this writing) 3.12
+      run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DHAS_CBC=on -DCBC_DIR=${{runner.workspace}}/ThirdParty/Cbc -DHAS_IPOPT=ON -DIPOPT_DIR=${{runner.workspace}}/ThirdParty/Ipopt -DHAS_GAMS=off -DHAS_CPLEX=off -DHAS_GUROBI=off -DCOMPILE_TESTS=on -DSPDLOG_STATIC=on
+
+    - name: Build
+      working-directory: ${{runner.workspace}}/build
+      shell: bash
+      # Execute the build.  You can specify a specific target with "--target <NAME>"
+      run: cmake --build . --config $BUILD_TYPE -j $JOB_COUNT
+
+    - name: Generate Optionsfile
+      working-directory: ${{runner.workspace}}/build
+      shell: bash
+      run: ./SHOT --opt
+
+    - name: Test
+      id: test
+      working-directory: ${{runner.workspace}}/build
+      shell: bash
+      # Execute tests defined by the CMake configuration.
+      # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
+      run: ctest -C $BUILD_TYPE --output-on-failure --output-junit test-output/ctest-junit-output.xml --output-log test-output/ctest-test.log
+
+    - name: Construct package
+      working-directory: ${{runner.workspace}}/build
+      shell: bash
+      # Execute tests defined by the CMake configuration.
+      # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
+      run: make package
+
+      # This will always run as we always want the test output, however if the files are not found, we just warn the user.
+    - uses: actions/upload-artifact@v3
+      if: ${{ always()  }}
+      name: Upload test results
+      with:
+        name: test-logs-${{ env.VERSION }}
+        path: |
+          build/test-output/*.log
+          build/test-output/*.xml
+        retention-days: ${{ inputs.version }}
+
+    - uses: actions/upload-artifact@v3
+      name: Upload SHOT Optionsfile
+      with:
+        name: shot-optsfile-${{ env.VERSION }}
+        path: build/SHOT.opt
+        retention-days: ${{ inputs.version }}
+
+    - uses: actions/upload-artifact@v3
+      name: Upload SHOT File
+      with:
+        name: shot-binary-${{ env.VERSION }}
+        path: build/SHOT
+        retention-days: ${{ inputs.version }}
+
+    - uses: actions/upload-artifact@v3
+      name: Upload SHOT File
+      with:
+        name: shot-package-${{ env.VERSION }}
+        path: build/SHOT-*-Linux.zip
+        retention-days: ${{ inputs.version }}
+
+    - uses: actions/upload-artifact@v3
+      name: Upload SHOT Libraries
+      with:
+        name: shot-libraries-${{ env.VERSION }}
+        path: |
+          build/*.so
+          build/*.a
+        retention-days: ${{ inputs.version }}
+
+    - name: Output artifact names
+      shell: bash
+        # Execute tests defined by the CMake configuration.
+        # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
+      run: |
+        echo "test=test-logs-${{ env.VERSION }}" >> $GITHUB_OUTPUT
+        echo "options=shot-optsfile-${{ env.VERSION }}" >> $GITHUB_OUTPUT
+        echo "binary=shot-binary-${{ env.VERSION }}" >> $GITHUB_OUTPUT
+        echo "package=shot-package-${{ env.VERSION }}" >> $GITHUB_OUTPUT
+        echo "library=shot-libraries-${{ env.VERSION }}" >> $GITHUB_OUTPUT
