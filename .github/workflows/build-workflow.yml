@@ -151,28 +151,28 @@ jobs:
         path: |
           ${{runner.workspace}}/build/test-output/*.log
           ${{runner.workspace}}/build/test-output/*.xml
-        retention-days: ${{ inputs.version }}
+        retention-days: ${{ inputs.retention }}
 
     - uses: actions/upload-artifact@v3
       name: Upload SHOT Optionsfile
       with:
         name: shot-optsfile-${{ env.VERSION }}
         path: ${{runner.workspace}}/build/SHOT.opt
-        retention-days: ${{ inputs.version }}
+        retention-days: ${{ inputs.retention }}
 
     - uses: actions/upload-artifact@v3
       name: Upload SHOT File
       with:
         name: shot-binary-${{ env.VERSION }}
         path: ${{runner.workspace}}/build/SHOT
-        retention-days: ${{ inputs.version }}
+        retention-days: ${{ inputs.retention }}
 
     - uses: actions/upload-artifact@v3
       name: Upload SHOT File
       with:
         name: shot-package-${{ env.VERSION }}
         path: ${{runner.workspace}}/build/SHOT-*-Linux.zip
-        retention-days: ${{ inputs.version }}
+        retention-days: ${{ inputs.retention }}
 
     - uses: actions/upload-artifact@v3
       name: Upload SHOT Libraries
@@ -181,7 +181,7 @@ jobs:
         path: |
           ${{runner.workspace}}/build/*.so
           ${{runner.workspace}}/build/*.a
-        retention-days: ${{ inputs.version }}
+        retention-days: ${{ inputs.retention }}
 
     - name: Output artifact names
       shell: bash
