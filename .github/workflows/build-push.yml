@@ -12,8 +12,8 @@ jobs:
       retention: 30
 
   publish-test:
-    needs: build-test
     name: Publish test results
+    needs: build-test
     runs-on: [self-hosted, docker]
     steps:
       - uses: actions/download-artifact@v3

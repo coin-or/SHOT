@@ -25,21 +25,21 @@ on:
         required: false
         type: number
     outputs:
-      test_artifact:
+      test-artifact:
         description: "Test artifact ID"
-        value: ${{ jobs.build.outputs.test_artifact }}
-      options_artifact:
+        value: ${{ jobs.build.outputs.test-artifact }}
+      options-artifact:
         description: "SHOT Optionsfile artifact ID"
-        value: ${{ jobs.build.outputs.options_artifact }}
-      binary_artifact:
+        value: ${{ jobs.build.outputs.options-artifact }}
+      binary-artifact:
         description: "SHOT Binary artifact ID"
-        value: ${{ jobs.build.outputs.binary_artifact }}
-      package_artifact:
+        value: ${{ jobs.build.outputs.binary-artifact }}
+      package-artifact:
         description: "SHOT Package artifact ID"
-        value: ${{ jobs.build.outputs.package_artifact }}
-      library_artifact:
+        value: ${{ jobs.build.outputs.package-artifact }}
+      library-artifact:
         description: "SHOT Libraries artifact ID"
-        value: ${{ jobs.build.outputs.library_artifact }}
+        value: ${{ jobs.build.outputs.library-artifact }}
 
 
 env:
@@ -51,11 +51,11 @@ env:
 jobs:
   build:
     outputs:
-      test_artifact: ${{ steps.artifact_outputs.test }}
-      options_artifact: ${{ steps.artifact_outputs.options }}
-      binary_artifact: ${{ steps.artifact_outputs.binary }}
-      package_artifact: ${{ steps.artifact_outputs.package }}
-      library_artifact: ${{ steps.artifact_outputs.library }}
+      test-artifact: ${{ steps.artifact_outputs.test }}
+      options-artifact: ${{ steps.artifact_outputs.options }}
+      binary-artifact: ${{ steps.artifact_outputs.binary }}
+      package-artifact: ${{ steps.artifact_outputs.package }}
+      library-artifact: ${{ steps.artifact_outputs.library }}
     name: Build SHOT
     runs-on: [self-hosted, linux]
 
@@ -185,8 +185,6 @@ jobs:
 
     - name: Output artifact names
       shell: bash
-        # Execute tests defined by the CMake configuration.
-        # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
       run: |
         echo "test=test-logs-${{ env.VERSION }}" >> $GITHUB_OUTPUT
         echo "options=shot-optsfile-${{ env.VERSION }}" >> $GITHUB_OUTPUT
