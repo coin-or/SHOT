@@ -19,7 +19,7 @@ jobs:
       - uses: actions/download-artifact@v3
         name: Download test results
         with:
-          name: ${needs.build-test.outputs.test_artifact}
+          name: ${{needs.build-test.outputs.test_artifact}}
 
       - name: Publish Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2
