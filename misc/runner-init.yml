@@ -3,15 +3,17 @@ package_update: true
 package_upgrade: true
 
 packages:
-  # Required for GitHub runner
+  # Requirements for GitHub runner
   - zlib1g
   - libssl1.1
   - libkrb5-3
   - liblttng-ust-ctl4
   - liblttng-ust0
+  - libssl-dev
+  # Required for the setup of GitHub Runner.
   - build-essential
   - jq
-  - libssl-dev
+  # Docker packages
   - ca-certificates
   - curl
   - gnupg
@@ -66,3 +68,5 @@ runcmd:
   - usermod -aG docker ghrunner
   - systemctl enable docker.service
   - systemctl enable containerd.service
+  # Finally reboot the VM to correctly enable permissions for Docker.
+  - reboot now
