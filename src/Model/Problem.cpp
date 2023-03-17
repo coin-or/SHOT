@@ -2602,10 +2602,10 @@ ProblemPtr Problem::createCopy(
         // Copy nonlinear expression to objective
         if(this->objectiveFunction->properties.hasNonlinearExpression)
             std::dynamic_pointer_cast<NonlinearObjectiveFunction>(destinationObjective)
-                ->add(std::move(copyNonlinearExpression(
+                ->add(copyNonlinearExpression(
                     std::dynamic_pointer_cast<NonlinearObjectiveFunction>(this->objectiveFunction)
                         ->nonlinearExpression.get(),
-                    destinationProblem)));
+                    destinationProblem));
     }
 
     destinationProblem->add(std::move(destinationObjective));
