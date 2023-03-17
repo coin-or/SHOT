@@ -40,7 +40,7 @@ public:
         return *this;
     }
 
-    virtual CoinMessageHandler* clone() { return new CbcMessageHandler(*this); }
+    virtual CoinMessageHandler* clone() const { return new CbcMessageHandler(*this); }
 
     virtual int print();
 };
