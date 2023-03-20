@@ -10,22 +10,23 @@ jobs:
       job_count: 3
       build_type: Release
       retention: 30
+      upload_artifacts: false
 
-  publish-test:
-    name: Publish test results
-    needs: build-test
-    runs-on: [self-hosted, docker]
-    steps:
-      - uses: actions/download-artifact@v3
-        name: Download test results
-        with:
-          name: ${{needs.build-test.outputs.test_artifact}}
-
-      - name: Publish Test Results
-        uses: EnricoMi/publish-unit-test-result-action@v2
-        if: always()
-        with:
-          files: |
-            test-output/*.xml
+#  publish-test:
+#    name: Publish test results
+#    needs: build-test
+#    runs-on: [self-hosted, docker]
+#    steps:
+#      - uses: actions/download-artifact@v3
+#        name: Download test results
+#        with:
+#          name: ${{needs.build-test.outputs.test_artifact}}
+#
+#      - name: Publish Test Results
+#        uses: EnricoMi/publish-unit-test-result-action@v2
+#        if: always()
+#        with:
+#          files: |
+#            test-output/*.xml
 
 

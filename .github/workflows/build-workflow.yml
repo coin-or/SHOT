@@ -8,6 +8,11 @@ on:
         default: Release
         required: false
         type: string
+      build_args:
+        description: 'Additional build parameters'
+        default: '-DHAS_GAMS=off -DHAS_CPLEX=off -DHAS_GUROBI=off -DCOMPILE_TESTS=on -DSPDLOG_STATIC=on'
+        required: false
+        type: string
       job_count:
         description: 'The amount of jobs to use when building the program and dependencies.'
         default: 1
@@ -24,6 +29,11 @@ on:
         default: 60
         required: false
         type: number
+      upload_artifacts:
+        description: 'Should the artifacts be uploaded'
+        default: true
+        required: false
+        type: boolean
     outputs:
       test-artifact:
         description: "Test artifact ID"
@@ -47,6 +57,7 @@ env:
   BUILD_TYPE: ${{ inputs.build_type }}
   JOB_COUNT: ${{ inputs.job_count }}
   VERSION: ${{ inputs.version }}
+  EXTRA_BUILD_ARGS: ${{ inputs.build_args }}
 
 jobs:
   build:
@@ -114,7 +125,7 @@ jobs:
       # Note the current convention is to use the -S and -B options here to specify source
       # and build directories, but this is only available with CMake 3.13 and higher.
       # The CMake binaries on the Github Actions machines are (as of this writing) 3.12
-      run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DHAS_CBC=on -DCBC_DIR=${{runner.workspace}}/ThirdParty/Cbc -DHAS_IPOPT=ON -DIPOPT_DIR=${{runner.workspace}}/ThirdParty/Ipopt -DHAS_GAMS=off -DHAS_CPLEX=off -DHAS_GUROBI=off -DCOMPILE_TESTS=on -DSPDLOG_STATIC=on
+      run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DHAS_CBC=on -DCBC_DIR=${{runner.workspace}}/ThirdParty/Cbc -DHAS_IPOPT=ON -DIPOPT_DIR=${{runner.workspace}}/ThirdParty/Ipopt $EXTRA_BUILD_ARGS
 
     - name: Build
       working-directory: ${{runner.workspace}}/build
@@ -154,6 +165,7 @@ jobs:
         retention-days: ${{ inputs.retention }}
 
     - uses: actions/upload-artifact@v3
+      if: ${{ inputs.upload_artifacts }}
       name: Upload SHOT Optionsfile
       with:
         name: shot-optsfile-${{ env.VERSION }}
@@ -161,6 +173,7 @@ jobs:
         retention-days: ${{ inputs.retention }}
 
     - uses: actions/upload-artifact@v3
+      if: ${{ inputs.upload_artifacts }}
       name: Upload SHOT File
       with:
         name: shot-binary-${{ env.VERSION }}
@@ -168,6 +181,7 @@ jobs:
         retention-days: ${{ inputs.retention }}
 
     - uses: actions/upload-artifact@v3
+      if: ${{ inputs.upload_artifacts }}
       name: Upload SHOT Package file
       with:
         name: shot-package-${{ env.VERSION }}
@@ -175,6 +189,7 @@ jobs:
         retention-days: ${{ inputs.retention }}
 
     - uses: actions/upload-artifact@v3
+      if: ${{ inputs.upload_artifacts }}
       name: Upload SHOT Libraries
       with:
         name: shot-libraries-${{ env.VERSION }}
@@ -184,6 +199,7 @@ jobs:
         retention-days: ${{ inputs.retention }}
 
     - name: Output artifact names
+      if: ${{ inputs.upload_artifacts }}
       shell: bash
       run: |
         echo "test=test-logs-${{ env.VERSION }}" >> $GITHUB_OUTPUT
