@@ -7,7 +7,7 @@ jobs:
     name: Build & Test
     uses: ./.github/workflows/build-workflow.yml
     with:
-      job_count: 3
+      job_count: 4
       build_type: Release
       retention: 30
       upload_artifacts: true
@@ -35,7 +35,7 @@ jobs:
     needs: [ build-test ]
     uses: ./.github/workflows/build-workflow.yml
     with:
-      job_count: 3
+      job_count: 4
       build_type: Release
       retention: 30
       upload_artifacts: false
