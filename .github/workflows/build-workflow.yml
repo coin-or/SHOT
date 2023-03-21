@@ -198,12 +198,18 @@ jobs:
             ${{runner.workspace}}/build/*.a
           retention-days: ${{ inputs.retention }}
 
-    - name: Output artifact names
-      if: ${{ inputs.upload_artifacts }}
-      shell: bash
-      run: |
-        echo "test=test-logs-${{ env.VERSION }}" >> $GITHUB_OUTPUT
-        echo "options=shot-optsfile-${{ env.VERSION }}" >> $GITHUB_OUTPUT
-        echo "binary=shot-binary-${{ env.VERSION }}" >> $GITHUB_OUTPUT
-        echo "package=shot-package-${{ env.VERSION }}" >> $GITHUB_OUTPUT
-        echo "library=shot-libraries-${{ env.VERSION }}" >> $GITHUB_OUTPUT
+      - name: Output artifact names
+        id: output-artifacts
+        if: ${{ inputs.upload_artifacts }}
+        shell: bash
+        run: |
+          echo "test=test-logs-${{ env.VERSION }}" >> $GITHUB_OUTPUT
+          echo "options=shot-optsfile-${{ env.VERSION }}" >> $GITHUB_OUTPUT
+          echo "binary=shot-binary-${{ env.VERSION }}" >> $GITHUB_OUTPUT
+          echo "package=shot-package-${{ env.VERSION }}" >> $GITHUB_OUTPUT
+          echo "library=shot-libraries-${{ env.VERSION }}" >> $GITHUB_OUTPUT
+
+      - name: Output test artifacts
+        if: ${{ inputs.upload_artifacts }} != true && steps.output-artifacts.outcome != 'success'
+        shell: bash
+        run: echo "test=test-logs-${{ env.VERSION }}" >> $GITHUB_OUTPUT
