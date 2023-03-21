@@ -78,8 +78,8 @@ env:
   EXTRA_BUILD_ARGS: ${{ inputs.build_args }}
   GRB_LICENSE_FILE: ${{ github.workspace }}/gurobi.lic
   GRB_INSTALL_PATH: ${{ github.workspace }}/ThirdParty/gurobi
-  GAMS_LICENSE_FILE: ${{ github.workspace }}/ThirdParty/gams42.3/gamslice.txt
-  GAMS_INSTALL_PATH: ${{ github.workspace }}/ThirdParty/gams42.3/
+  GAMS_LICENSE_FILE: ${{ github.workspace }}/ThirdParty/gams42.3_linux_x64_64_sfx/gamslice.txt
+  GAMS_INSTALL_PATH: ${{ github.workspace }}/ThirdParty/gams42.3_linux_x64_64_sfx/
 
 jobs:
   build:
@@ -176,7 +176,7 @@ jobs:
         if: ${{ inputs.is_proprietary }}
         shell: bash
         working-directory: ${{github.workspace}}/ThirdParty
-        run: wget https://d37drm4t2jghv5.cloudfront.net/distributions/42.3.0/linux/linux_x64_64_sfx.exe ; chmod +x linux_x64_64_sfx.exe ; ./linux_x64_64_sfx.exe -d gams42.3 ; rm linux_x64_64_sfx.exe
+        run: wget https://d37drm4t2jghv5.cloudfront.net/distributions/42.3.0/linux/linux_x64_64_sfx.exe ; chmod +x linux_x64_64_sfx.exe ; ./linux_x64_64_sfx.exe ; rm linux_x64_64_sfx.exe
 
       # Add the license file to the GAMS installation directory
       - name: Setup GAMS License file
@@ -188,7 +188,7 @@ jobs:
       - name: Install GAMS
         if: ${{ inputs.is_proprietary }}
         shell: bash
-        working-directory: ${{ github.workspace }}/ThirdParty/gams42.3/
+        working-directory: ${{ github.workspace }}/ThirdParty/gams42.3_linux_x64_64_sfx/
         run: ./gamsinst -a
 
       - name: Configure CMake
@@ -289,7 +289,7 @@ jobs:
         run: echo "test=test-logs-${{ env.VERSION }}" >> $GITHUB_OUTPUT
 
       - name: Cleanup license files
-        if: ${{ inputs.is_proprietary }}
+        if: ${{ success() || failure() }}
         shell: bash
         run: |
           rm -f $GRB_LICENSE_FILE
