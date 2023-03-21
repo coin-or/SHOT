@@ -40,4 +40,7 @@ jobs:
       retention: 30
       upload_artifacts: false
       is_proprietary: true
+    secrets:
+      gurobi_license: ${{ secrets.GUROBI_LICENSE_FILE }}
+      gams_license: ${{ secrets.GAMS_LICENSE_FILE }}
 
