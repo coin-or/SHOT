@@ -34,6 +34,12 @@ on:
         default: true
         required: false
         type: boolean
+      is_proprietary:
+        description: 'Is this a proprietary build (this will install Gurobi and GAMS)'
+        default: false
+        required: false
+        type: boolean
+
     outputs:
       test-artifact:
         description: "Test artifact ID"
@@ -58,6 +64,8 @@ env:
   JOB_COUNT: ${{ inputs.job_count }}
   VERSION: ${{ inputs.version }}
   EXTRA_BUILD_ARGS: ${{ inputs.build_args }}
+  GRB_LICENSE_FILE: ${{ github.workspace }}/gurobi.lic
+  GRB_INSTALL_PATH: ${{ github.workspace }}/ThirdParty/gurobi
 
 jobs:
   build:
@@ -71,6 +79,13 @@ jobs:
     runs-on: [ self-hosted, linux, cmake ]
 
     steps:
+      - name: Cleanup workspace
+        run: |
+          ls -la ./
+          rm -rf ./* || true
+          rm -rf ./.??* || true
+          ls -la ./
+
       - uses: actions/checkout@v3
 
       - name: Checkout submodules
@@ -114,8 +129,29 @@ jobs:
       - name: Download and build Cbc
         if: steps.cache-cbc.outputs.cache-hit != 'true'
         shell: bash
-        working-directory: ${{runner.workspace}}/build/coinbrew
-        run: rm -rf build dist ; ./coinbrew build Cbc@stable/2.10 --verbosity 2 -j $JOB_COUNT --prefix=${{runner.workspace}}/ThirdParty/Cbc --no-prompt --tests none --no-third-party
+        working-directory: ${{github.workspace}}/build/coinbrew
+        run: rm -rf build dist ; ./coinbrew build Cbc@stable/2.10 --verbosity 2 -j $JOB_COUNT --prefix=${{github.workspace}}/ThirdParty/Cbc --no-prompt --tests none --no-third-party
+
+      - name: Setup Gurobi License file
+        if: ${{ inputs.is_proprietary }}
+        shell: bash
+        working-directory: ${{github.workspace}}
+        run: echo ${{ secrets.GUROBI_LICENSE_FILE }} | base64 -d > gurobi.lic
+
+      - name: Download Gurobi
+        if: ${{ inputs.is_proprietary }}
+        shell: bash
+        working-directory: ${{github.workspace}}/ThirdParty
+        run: wget https://packages.gurobi.com/10.0/gurobi10.0.1_linux64.tar.gz ; tar -xvf gurobi10.0.1_linux64.tar.gz ; rm gurobi10.0.1_linux64.tar.gz
+
+      - name: Setup Gurobi environment variables
+        if: ${{ inputs.is_proprietary }}
+        shell: bash
+        working-directory: ${{github.workspace}}/ThirdParty
+        run: |
+          echo "${{ github.workspace }}/ThirdParty/gurobi1001/linux64/bin" >> $GITHUB_PATH
+          echo "GUROBI_HOME=${{ github.workspace }}/ThirdParty/gurobi1001/linux64" >> $GITHUB_ENV
+          echo "LD_LIBRARY_PATH=${{ github.workspace }}/ThirdParty/gurobi1001/linux64/lib" >> $GITHUB_ENV
 
       - name: Configure CMake
         # Use a bash shell so we can use the same syntax for environment variable
@@ -213,3 +249,8 @@ jobs:
         if: ${{ inputs.upload_artifacts }} != true && steps.output-artifacts.outcome != 'success'
         shell: bash
         run: echo "test=test-logs-${{ env.VERSION }}" >> $GITHUB_OUTPUT
+
+      - name: Cleanup license files
+        if: ${{ inputs.is_proprietary }}
+        shell: bash
+        run: rm -f $GRB_LICENSE_FILE
