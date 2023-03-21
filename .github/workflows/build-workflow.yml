@@ -39,6 +39,11 @@ on:
         default: false
         required: false
         type: boolean
+      artifact_suffix:
+        description: 'The suffix to add to the artifact name'
+        default: ''
+        required: false
+        type: string
     secrets:
       gurobi_license:
         description: 'Gurobi license file secret'
@@ -70,6 +75,7 @@ env:
   BUILD_TYPE: ${{ inputs.build_type }}
   JOB_COUNT: ${{ inputs.job_count }}
   VERSION: ${{ inputs.version }}
+  ARTIFACT_SUFFIX: ${{ inputs.artifact_suffix }}
   EXTRA_BUILD_ARGS: ${{ inputs.build_args }}
   GRB_LICENSE_FILE: ${{ github.workspace }}/gurobi.lic
   GRB_INSTALL_PATH: ${{ github.workspace }}/ThirdParty/gurobi
@@ -227,7 +233,7 @@ jobs:
         if: ${{ always() }}
         name: Upload test results
         with:
-          name: test-logs-${{ env.VERSION }}
+          name: test-logs-${{ env.VERSION }}${{ env.ARTIFACT_SUFFIX }}
           path: |
             ${{github.workspace}}/build/test-output/*.log
             ${{github.workspace}}/build/test-output/*.xml
@@ -237,7 +243,7 @@ jobs:
         if: ${{ inputs.upload_artifacts }}
         name: Upload SHOT Optionsfile
         with:
-          name: shot-optsfile-${{ env.VERSION }}
+          name: shot-optsfile-${{ env.VERSION }}${{ env.ARTIFACT_SUFFIX }}
           path: ${{github.workspace}}/build/SHOT.opt
           retention-days: ${{ inputs.retention }}
 
@@ -245,7 +251,7 @@ jobs:
         if: ${{ inputs.upload_artifacts }}
         name: Upload SHOT File
         with:
-          name: shot-binary-${{ env.VERSION }}
+          name: shot-binary-${{ env.VERSION }}${{ env.ARTIFACT_SUFFIX }}
           path: ${{github.workspace}}/build/SHOT
           retention-days: ${{ inputs.retention }}
 
@@ -253,7 +259,7 @@ jobs:
         if: ${{ inputs.upload_artifacts }}
         name: Upload SHOT Package file
         with:
-          name: shot-package-${{ env.VERSION }}
+          name: shot-package-${{ env.VERSION }}${{ env.ARTIFACT_SUFFIX }}
           path: ${{github.workspace}}/build/SHOT-*-Linux.zip
           retention-days: ${{ inputs.retention }}
 
@@ -261,7 +267,7 @@ jobs:
         if: ${{ inputs.upload_artifacts }}
         name: Upload SHOT Libraries
         with:
-          name: shot-libraries-${{ env.VERSION }}
+          name: shot-libraries-${{ env.VERSION }}${{ env.ARTIFACT_SUFFIX }}
           path: |
             ${{github.workspace}}/build/*.so
             ${{github.workspace}}/build/*.a

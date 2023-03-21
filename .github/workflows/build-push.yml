@@ -1,8 +1,13 @@
 name: Build
 
+# Build this on push
 on: [ push ]
 
+# Only build one build at a time
+concurrency: push-build
+
 jobs:
+  # First, we build and test using the default build options and only open source external libraries
   build-test:
     name: Build & Test
     uses: ./.github/workflows/build-workflow.yml
@@ -12,6 +17,7 @@ jobs:
       retention: 30
       upload_artifacts: true
 
+  # Publish the test results as an output
   publish-test:
     name: Publish test results
     needs: build-test
@@ -28,8 +34,8 @@ jobs:
         with:
           files: |
             build/test-output/*.xml
-  
 
+  # Then, we build and test using all licenses included proprietary ones
   build-properitary:
     name: Build & Test (Proprietary licenses)
     needs: [ build-test ]
@@ -40,6 +46,7 @@ jobs:
       retention: 30
       upload_artifacts: false
       is_proprietary: true
+      artifact_suffix: '-proprietary'
       build_args: '-DHAS_GAMS=on -DGAMS_DIR=$GAMS_INSTALL_PATH -DHAS_CPLEX=off -DHAS_GUROBI=on -DGUROBI_DIR=$GRB_INSTALL_PATH -DCOMPILE_TESTS=on -DSPDLOG_STATIC=on'
     secrets:
       gurobi_license: ${{ secrets.GUROBI_LICENSE_FILE }}
