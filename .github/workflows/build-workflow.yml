@@ -73,6 +73,8 @@ env:
   EXTRA_BUILD_ARGS: ${{ inputs.build_args }}
   GRB_LICENSE_FILE: ${{ github.workspace }}/gurobi.lic
   GRB_INSTALL_PATH: ${{ github.workspace }}/ThirdParty/gurobi
+  GAMS_LICENSE_FILE: ${{ github.workspace }}/ThirdParty/gams42.3/gamslice.txt
+  GAMS_INSTALL_PATH: ${{ github.workspace }}/ThirdParty/gams42.3/
 
 jobs:
   build:
@@ -137,18 +139,22 @@ jobs:
         working-directory: ${{github.workspace}}/build/coinbrew
         run: rm -rf build dist ; ./coinbrew build Cbc@stable/2.10 --verbosity 2 -j $JOB_COUNT --prefix=${{github.workspace}}/ThirdParty/Cbc --no-prompt --tests none --no-third-party
 
+      # Proprietary software setup happens here (GAMS and Gurobi)
+      # First we create the license files from the base64 encoded secrets.
       - name: Setup Gurobi License file
         if: ${{ inputs.is_proprietary }}
         shell: bash
         working-directory: ${{github.workspace}}
-        run: echo ${{ secrets.gurobi_license }} | base64 -d > gurobi.lic
+        run: echo ${{ secrets.gurobi_license }} | base64 -d > $GRB_LICENSE_FILE
 
+      # Then we download and install Gurobi
       - name: Download Gurobi
         if: ${{ inputs.is_proprietary }}
         shell: bash
         working-directory: ${{github.workspace}}/ThirdParty
         run: wget https://packages.gurobi.com/10.0/gurobi10.0.1_linux64.tar.gz ; tar -xvf gurobi10.0.1_linux64.tar.gz ; rm gurobi10.0.1_linux64.tar.gz
 
+      # Finally, we set the environment variables needed for Gurobi to work.
       - name: Setup Gurobi environment variables
         if: ${{ inputs.is_proprietary }}
         shell: bash
@@ -157,6 +163,28 @@ jobs:
           echo "${{ github.workspace }}/ThirdParty/gurobi1001/linux64/bin" >> $GITHUB_PATH
           echo "GUROBI_HOME=${{ github.workspace }}/ThirdParty/gurobi1001/linux64" >> $GITHUB_ENV
           echo "LD_LIBRARY_PATH=${{ github.workspace }}/ThirdParty/gurobi1001/linux64/lib" >> $GITHUB_ENV
+
+      # Next, we set up GAMS
+
+      # Download GAMS
+      - name: Download GAMS
+        if: ${{ inputs.is_proprietary }}
+        shell: bash
+        working-directory: ${{github.workspace}}/ThirdParty
+        run: wget https://d37drm4t2jghv5.cloudfront.net/distributions/42.3.0/linux/linux_x64_64_sfx.exe ; chmod +x linux_x64_64_sfx.exe ; ./linux_x64_64_sfx.exe -d gams42.3 ; rm linux_x64_64_sfx.exe
+
+      # Add the license file to the GAMS installation directory
+      - name: Setup GAMS License file
+        if: ${{ inputs.is_proprietary }}
+        shell: bash
+        working-directory: ${{github.workspace}}
+        run: echo ${{ secrets.gams_license }} | base64 -d > $GAMS_LICENSE_FILE
+
+      - name: Install GAMS
+        if: ${{ inputs.is_proprietary }}
+        shell: bash
+        working-directory: ${{ github.workspace }}/ThirdParty/gams42.3/
+        run: ./gamsinst -a
 
       - name: Configure CMake
         # Use a bash shell so we can use the same syntax for environment variable
@@ -258,4 +286,6 @@ jobs:
       - name: Cleanup license files
         if: ${{ inputs.is_proprietary }}
         shell: bash
-        run: rm -f $GRB_LICENSE_FILE
+        run: |
+          rm -f $GRB_LICENSE_FILE
+          rm -f $GAMS_LICENSE_FILE
