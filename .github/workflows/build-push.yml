@@ -40,6 +40,7 @@ jobs:
       retention: 30
       upload_artifacts: false
       is_proprietary: true
+      build_args: '-DHAS_GAMS=off -DHAS_CPLEX=off -DHAS_GUROBI=on -DGUROBI_DIR=$GRB_INSTALL_PATH -DCOMPILE_TESTS=on -DSPDLOG_STATIC=on'
     secrets:
       gurobi_license: ${{ secrets.GUROBI_LICENSE_FILE }}
       gams_license: ${{ secrets.GAMS_LICENSE_FILE }}
