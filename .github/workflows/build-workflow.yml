@@ -170,7 +170,6 @@ jobs:
           echo "LD_LIBRARY_PATH=${{ github.workspace }}/ThirdParty/gurobi1001/linux64/lib" >> $GITHUB_ENV
 
       # Next, we set up GAMS
-
       # Download GAMS
       - name: Download GAMS
         if: ${{ inputs.is_proprietary }}
