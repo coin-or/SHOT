@@ -71,7 +71,6 @@ on:
 
 
 env:
-  # Customize
   BUILD_TYPE: ${{ inputs.build_type }}
   JOB_COUNT: ${{ inputs.job_count }}
   VERSION: ${{ inputs.version }}
