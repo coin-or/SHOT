@@ -157,7 +157,7 @@ jobs:
         if: ${{ inputs.is_proprietary }}
         shell: bash
         working-directory: ${{github.workspace}}/ThirdParty
-        run: wget https://packages.gurobi.com/10.0/gurobi10.0.1_linux64.tar.gz ; tar -xvf gurobi10.0.1_linux64.tar.gz ; rm gurobi10.0.1_linux64.tar.gz
+        run: wget -q https://packages.gurobi.com/10.0/gurobi10.0.1_linux64.tar.gz ; tar -xvf gurobi10.0.1_linux64.tar.gz ; rm gurobi10.0.1_linux64.tar.gz
 
       # Finally, we set the environment variables needed for Gurobi to work.
       - name: Setup Gurobi environment variables
@@ -175,7 +175,7 @@ jobs:
         if: ${{ inputs.is_proprietary }}
         shell: bash
         working-directory: ${{github.workspace}}/ThirdParty
-        run: wget https://d37drm4t2jghv5.cloudfront.net/distributions/42.3.0/linux/linux_x64_64_sfx.exe ; chmod +x linux_x64_64_sfx.exe ; ./linux_x64_64_sfx.exe ; rm linux_x64_64_sfx.exe
+        run: wget -q https://d37drm4t2jghv5.cloudfront.net/distributions/42.3.0/linux/linux_x64_64_sfx.exe ; chmod +x linux_x64_64_sfx.exe ; ./linux_x64_64_sfx.exe ; rm linux_x64_64_sfx.exe
 
       # Add the license file to the GAMS installation directory
       - name: Setup GAMS License file
