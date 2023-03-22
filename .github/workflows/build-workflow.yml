@@ -203,7 +203,7 @@ jobs:
         # Note the current convention is to use the -S and -B options here to specify source
         # and build directories, but this is only available with CMake 3.13 and higher.
         # The CMake binaries on the Github Actions machines are (as of this writing) 3.12
-        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DHAS_CBC=on -DCBC_DIR=${{github.workspace}}/ThirdParty/Cbc -DHAS_IPOPT=ON -DIPOPT_DIR=${{github.workspace}}/ThirdParty/Ipopt $EXTRA_BUILD_ARGS
+        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DHAS_CBC=on -DCBC_DIR=${{github.workspace}}/ThirdParty/Cbc -DHAS_IPOPT=ON -DIPOPT_DIR=${{github.workspace}}/ThirdParty/Ipopt -DGAMS_DIR=$GAMS_INSTALL_PATH -DGUROBI_DIR=$GRB_INSTALL_PATH $EXTRA_BUILD_ARGS
 
       - name: Build
         working-directory: ${{github.workspace}}/build
