@@ -47,7 +47,7 @@ jobs:
       upload_artifacts: false
       is_proprietary: true
       artifact_suffix: '-proprietary'
-      build_args: '-DHAS_GAMS=on -DGAMS_DIR=$GAMS_INSTALL_PATH -DHAS_CPLEX=off -DHAS_GUROBI=on -DGUROBI_DIR=$GRB_INSTALL_PATH -DCOMPILE_TESTS=on -DSPDLOG_STATIC=on'
+      build_args: '-DHAS_GAMS=on -DGAMS_DIR=${GAMS_INSTALL_PATH} -DHAS_CPLEX=off -DHAS_GUROBI=on -DGUROBI_DIR=${GRB_INSTALL_PATH} -DCOMPILE_TESTS=on -DSPDLOG_STATIC=on'
     secrets:
       gurobi_license: ${{ secrets.GUROBI_LICENSE_FILE }}
       gams_license: ${{ secrets.GAMS_LICENSE_FILE }}
