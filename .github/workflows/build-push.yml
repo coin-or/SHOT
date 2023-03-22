@@ -7,38 +7,38 @@ on: [ push ]
 concurrency: push-build
 
 jobs:
-#  # First, we build and test using the default build options and only open source external libraries
-#  build-test:
-#    name: Build & Test
-#    uses: ./.github/workflows/build-workflow.yml
-#    with:
-#      job_count: 4
-#      build_type: Release
-#      retention: 30
-#      upload_artifacts: true
-#
-#  # Publish the test results as an output
-#  publish-test:
-#    name: Publish test results
-#    needs: build-test
-#    runs-on: [ self-hosted, docker ]
-#    steps:
-#      - uses: actions/download-artifact@v3
-#        name: Download test results
-#        with:
-#          name: ${{ needs.build-test.outputs.test-artifact }}
-#
-#      - name: Publish Test Results
-#        uses: EnricoMi/publish-unit-test-result-action@v2
-#        if: always()
-#        with:
-#          files: |
-#            build/test-output/*.xml
+  # First, we build and test using the default build options and only open source external libraries
+  build-test:
+    name: Build & Test
+    uses: ./.github/workflows/build-workflow.yml
+    with:
+      job_count: 4
+      build_type: Release
+      retention: 30
+      upload_artifacts: true
+
+  # Publish the test results as an output
+  publish-test:
+    name: Publish test results
+    needs: build-test
+    runs-on: [ self-hosted, docker ]
+    steps:
+      - uses: actions/download-artifact@v3
+        name: Download test results
+        with:
+          name: ${{ needs.build-test.outputs.test-artifact }}
+
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always()
+        with:
+          files: |
+            build/test-output/*.xml
 
   # Then, we build and test using all licenses included proprietary ones
   build-properitary:
     name: Build & Test (Proprietary licenses)
-#    needs: [ build-test, publish-test ]
+    needs: [ build-test, publish-test ]
     uses: ./.github/workflows/build-workflow.yml
     with:
       job_count: 4
