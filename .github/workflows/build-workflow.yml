@@ -77,7 +77,7 @@ env:
   ARTIFACT_SUFFIX: ${{ inputs.artifact_suffix }}
   EXTRA_BUILD_ARGS: ${{ inputs.build_args }}
   GRB_LICENSE_FILE: ${{ github.workspace }}/gurobi.lic
-  GRB_INSTALL_PATH: ${{ github.workspace }}/ThirdParty/gurobi
+  GRB_INSTALL_PATH: ${{ github.workspace }}/ThirdParty/gurobi1001
   GAMS_LICENSE_FILE: ${{ github.workspace }}/ThirdParty/gams42.3_linux_x64_64_sfx/gamslice.txt
   GAMS_INSTALL_PATH: ${{ github.workspace }}/ThirdParty/gams42.3_linux_x64_64_sfx
 
