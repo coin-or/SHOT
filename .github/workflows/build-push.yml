@@ -51,5 +51,5 @@ jobs:
         if: always()
         with:
           files: |
-            artifacts/build/test-output/*.xml
+            artifacts/test-*/*.xml
 
