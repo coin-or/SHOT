@@ -98,8 +98,8 @@ jobs:
     runs-on: [ self-hosted, linux, cmake ]
 
     env:
-      GAMS_OPTIONS: -DHAS_GAMS=on
-      GUROBI_OPTIONS: -DHAS_GUROBI=on
+      GAMS_OPTIONS: -DHAS_GAMS=off
+      GUROBI_OPTIONS: -DHAS_GUROBI=off
 
     steps:
       - name: Cleanup workspace
