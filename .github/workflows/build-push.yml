@@ -27,9 +27,9 @@ jobs:
       build_type: Release
       retention: 30
       upload_artifacts: false
-      is_proprietary: true
+      enable_gurobi: true
+      enable_gams: true
       artifact_suffix: '-proprietary'
-      build_args: '-DHAS_GAMS=on -DHAS_CPLEX=off -DHAS_GUROBI=on -DCOMPILE_TESTS=on -DSPDLOG_STATIC=on'
     secrets:
       gurobi_license: ${{ secrets.GUROBI_LICENSE_FILE }}
       gams_license: ${{ secrets.GAMS_LICENSE_FILE }}

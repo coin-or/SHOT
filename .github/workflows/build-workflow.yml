@@ -34,8 +34,13 @@ on:
         default: true
         required: false
         type: boolean
-      is_proprietary:
-        description: 'Is this a proprietary build (this will install Gurobi and GAMS)'
+      enable_gurobi:
+        description: 'Is this a Gurobi build (this will install Gurobi)'
+        default: false
+        required: false
+        type: boolean
+      enable_gams:
+        description: 'Is this a GAMS build (this will install GAMS)'
         default: false
         required: false
         type: boolean
@@ -92,6 +97,10 @@ jobs:
     name: Build SHOT
     runs-on: [ self-hosted, linux, cmake ]
 
+    env:
+      GAMS_OPTIONS: -DHAS_GAMS=on
+      GUROBI_OPTIONS: -DHAS_GUROBI=on
+
     steps:
       - name: Cleanup workspace
         run: |
@@ -147,21 +156,21 @@ jobs:
       # Proprietary software setup happens here (GAMS and Gurobi)
       # First we create the license files from the base64 encoded secrets.
       - name: Setup Gurobi License file
-        if: ${{ inputs.is_proprietary }}
+        if: ${{ inputs.enable_gurobi }}
         shell: bash
         working-directory: ${{github.workspace}}
         run: echo ${{ secrets.gurobi_license }} | base64 -d > $GRB_LICENSE_FILE
 
       # Then we download and install Gurobi
       - name: Download Gurobi
-        if: ${{ inputs.is_proprietary }}
+        if: ${{ inputs.enable_gurobi }}
         shell: bash
         working-directory: ${{github.workspace}}/ThirdParty
         run: wget -q https://packages.gurobi.com/10.0/gurobi10.0.1_linux64.tar.gz ; tar -xvf gurobi10.0.1_linux64.tar.gz ; rm gurobi10.0.1_linux64.tar.gz
 
       # Finally, we set the environment variables needed for Gurobi to work.
       - name: Setup Gurobi environment variables
-        if: ${{ inputs.is_proprietary }}
+        if: ${{ inputs.enable_gurobi }}
         shell: bash
         working-directory: ${{github.workspace}}/ThirdParty
         run: |
@@ -169,31 +178,41 @@ jobs:
           echo "GUROBI_HOME=${{ github.workspace }}/ThirdParty/gurobi1001/linux64" >> $GITHUB_ENV
           echo "LD_LIBRARY_PATH=${{ github.workspace }}/ThirdParty/gurobi1001/linux64/lib" >> $GITHUB_ENV
 
+      - name: Set Gurobi options
+        if: ${{ inputs.enable_gurobi }}
+        shell: bash
+        run: echo "GUROBI_OPTIONS=-DHAS_GUROBI=on" >> $GITHUB_ENV
+
       # Next, we set up GAMS
       # Download GAMS
       - name: Download GAMS
-        if: ${{ inputs.is_proprietary }}
+        if: ${{ inputs.enable_gams }}
         shell: bash
         working-directory: ${{github.workspace}}/ThirdParty
         run: wget -q https://d37drm4t2jghv5.cloudfront.net/distributions/42.3.0/linux/linux_x64_64_sfx.exe ; chmod +x linux_x64_64_sfx.exe ; ./linux_x64_64_sfx.exe ; rm linux_x64_64_sfx.exe
 
       # Add the license file to the GAMS installation directory
       - name: Setup GAMS License file
-        if: ${{ inputs.is_proprietary }}
+        if: ${{ inputs.enable_gams }}
         shell: bash
         working-directory: ${{github.workspace}}
         run: echo ${{ secrets.gams_license }} | base64 -d > $GAMS_LICENSE_FILE
 
       - name: Install GAMS
-        if: ${{ inputs.is_proprietary }}
+        if: ${{ inputs.enable_gams }}
         shell: bash
         working-directory: ${{ github.workspace }}/ThirdParty/gams42.3_linux_x64_64_sfx/
         run: ./gamsinst -a
 
       - name: Add GAMS to the path
-        if: ${{ inputs.is_proprietary }}
+        if: ${{ inputs.enable_gams }}
         shell: bash
         run: echo "$GAMS_INSTALL_PATH" >> $GITHUB_PATH
+
+      - name: Set GAMS options
+        if: ${{ inputs.enable_gams }}
+        shell: bash
+        run: echo "GAMS_OPTIONS=-DHAS_GAMS=on" >> $GITHUB_ENV
 
       - name: Configure CMake
         # Use a bash shell so we can use the same syntax for environment variable
@@ -203,7 +222,7 @@ jobs:
         # Note the current convention is to use the -S and -B options here to specify source
         # and build directories, but this is only available with CMake 3.13 and higher.
         # The CMake binaries on the Github Actions machines are (as of this writing) 3.12
-        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DHAS_CBC=on -DCBC_DIR=${{github.workspace}}/ThirdParty/Cbc -DHAS_IPOPT=ON -DIPOPT_DIR=${{github.workspace}}/ThirdParty/Ipopt -DGAMS_DIR=$GAMS_INSTALL_PATH -DGUROBI_DIR=$GRB_INSTALL_PATH $EXTRA_BUILD_ARGS
+        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DHAS_CBC=on -DCBC_DIR=${{github.workspace}}/ThirdParty/Cbc -DHAS_IPOPT=ON -DIPOPT_DIR=${{github.workspace}}/ThirdParty/Ipopt -DGAMS_DIR=$GAMS_INSTALL_PATH -DGUROBI_DIR=$GRB_INSTALL_PATH -DCOMPILE_TESTS=on -DSPDLOG_STATIC=on $GAMS_OPTIONS $GUROBI_OPTIONS -DHAS_CPLEX=off
 
       - name: Build
         working-directory: ${{github.workspace}}/build
