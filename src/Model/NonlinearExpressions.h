@@ -1543,8 +1543,8 @@ public:
             && secondChild->getType() == E_NonlinearExpressionTypes::Sum && secondChild->getNumberOfChildren() == 2)
         {
             auto sum = std::dynamic_pointer_cast<ExpressionGeneral>(secondChild);
-            double constant;
-            double coefficient;
+            double constant = 0.0;
+            double coefficient = 0.0;
             bool isValid = false;
 
             ExpressionVariablePtr nominatorVariable = std::dynamic_pointer_cast<ExpressionVariable>(firstChild);
