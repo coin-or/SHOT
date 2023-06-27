@@ -17,7 +17,6 @@
 
 #include "../Utilities.h"
 
-#include "ffunc.hpp"
 #include "cppad/cppad.hpp"
 
 #include <memory>
