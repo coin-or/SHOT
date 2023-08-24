@@ -32,11 +32,12 @@ private:
 public:
     CbcMessageHandler(EnvironmentPtr envPtr) : CoinMessageHandler() { env = envPtr; }
 
-    CbcMessageHandler(const CbcMessageHandler& r) : CoinMessageHandler(r) { }
+    CbcMessageHandler(const CbcMessageHandler& r) : CoinMessageHandler(r), env(r.env) { }
 
     CbcMessageHandler& operator=(const CbcMessageHandler& r)
     {
         CoinMessageHandler::operator=(r);
+        env = r.env;
         return *this;
     }
 
