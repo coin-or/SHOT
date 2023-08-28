@@ -1082,7 +1082,7 @@ int Results::getNumberOfIterations() { return (iterations.size()); }
 
 double Results::getPrimalBound()
 {
-    if(!isnan(this->currentPrimalBound))
+    if(!std::isnan(this->currentPrimalBound))
         return (this->currentPrimalBound);
     else if(env->problem->objectiveFunction->direction == E_ObjectiveFunctionDirection::Minimize)
         return (SHOT_DBL_MAX);

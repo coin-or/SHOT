@@ -16,8 +16,6 @@
 
 #include "Variables.h"
 
-#include "ffunc.hpp"
-
 #include <Eigen/Eigenvalues>
 #include <vector>
 
