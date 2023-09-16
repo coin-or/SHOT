@@ -1932,7 +1932,6 @@ void Solver::setConvexityBasedSettings()
             env->settings->updateSetting("FixedInteger.CallStrategy", "Primal", 0);
             env->settings->updateSetting("FixedInteger.CreateInfeasibilityCut", "Primal", false);
             env->settings->updateSetting("FixedInteger.Source", "Primal", 0);
-            env->settings->updateSetting("FixedInteger.Warmstart", "Primal", true);
 
             env->settings->updateSetting("FixedInteger.OnlyUniqueIntegerCombinations", "Primal", false);
 

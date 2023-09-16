@@ -35,7 +35,7 @@ TaskCreateDualProblem::TaskCreateDualProblem(EnvironmentPtr envPtr) : TaskBase(e
     if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
     {
         env->dualSolver->MIPSolver->writeProblemToFile(
-            env->settings->getSetting<std::string>("Debug.Path", "Output") + "/lp0.lp");
+            env->settings->getSetting<std::string>("Debug.Path", "Output") + "/dualiter0_problem.lp");
     }
 
     env->output->outputDebug(" Dual problem created");

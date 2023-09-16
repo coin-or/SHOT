@@ -265,7 +265,9 @@ void DualSolver::addIntegerCut(IntegerCut integerCut)
 {
     if(env->reformulatedProblem->properties.numberOfIntegerVariables > 0
         || env->reformulatedProblem->properties.numberOfSemiintegerVariables > 0)
+    {
         integerCut.areAllVariablesBinary = false;
+    }
     else
     {
         integerCut.areAllVariablesBinary = true;

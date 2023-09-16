@@ -121,16 +121,14 @@ void Results::addPrimalSolution(PrimalSolution solution)
     if(env->problem->objectiveFunction->properties.isMinimize)
     {
         std::sort(this->primalSolutions.begin(), this->primalSolutions.end(),
-            [](const PrimalSolution& firstSolution, const PrimalSolution& secondSolution) {
-                return (firstSolution.objValue < secondSolution.objValue);
-            });
+            [](const PrimalSolution& firstSolution, const PrimalSolution& secondSolution)
+            { return (firstSolution.objValue < secondSolution.objValue); });
     }
     else
     {
         std::sort(this->primalSolutions.begin(), this->primalSolutions.end(),
-            [](const PrimalSolution& firstSolution, const PrimalSolution& secondSolution) {
-                return (firstSolution.objValue > secondSolution.objValue);
-            });
+            [](const PrimalSolution& firstSolution, const PrimalSolution& secondSolution)
+            { return (firstSolution.objValue > secondSolution.objValue); });
     }
 
     env->solutionStatistics.numberOfFoundPrimalSolutions++;
@@ -159,13 +157,11 @@ void Results::addPrimalSolution(PrimalSolution solution)
     // Write the new primal point to a file
     if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
     {
-        std::stringstream fileName;
-        fileName << env->settings->getSetting<std::string>("Debug.Path", "Output");
-        fileName << "/primalpoint";
-        fileName << env->solutionStatistics.numberOfFoundPrimalSolutions;
-        fileName << ".txt";
+        auto filename
+            = fmt::format("{}/primal_solpt{}.txt", env->settings->getSetting<std::string>("Debug.Path", "Output"),
+                env->solutionStatistics.numberOfFoundPrimalSolutions);
 
-        savePrimalSolutionToFile(solution, env->problem->allVariables, fileName.str());
+        savePrimalSolutionToFile(solution, env->problem->allVariables, filename);
     }
 
     // TODO: Add primal objective cut

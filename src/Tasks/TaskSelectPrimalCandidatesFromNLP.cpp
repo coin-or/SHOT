@@ -265,9 +265,9 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
 
             if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
             {
-                std::string filename = env->settings->getSetting<std::string>("Debug.Path", "Output")
-                    + "/primalnlp_warmstart" + std::to_string(currIter->iterationNumber) + "_" + std::to_string(counter)
-                    + ".txt";
+                auto filename = fmt::format("{}/primalnlp{}_warmstart_{}.txt",
+                    env->settings->getSetting<std::string>("Debug.Path", "Output"),
+                    env->results->getCurrentIteration()->iterationNumber - 1, counter);
 
                 Utilities::saveVariablePointVectorToFile(startingPointValues, variableNames, filename);
             }
