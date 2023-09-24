@@ -34,6 +34,18 @@ jobs:
       gurobi_license: ${{ secrets.GUROBI_LICENSE_FILE }}
       gams_license: ${{ secrets.GAMS_LICENSE_FILE }}
 
+  # Finally, we run some simple benchmarks
+  benchmark:
+    name: Benchmark
+    needs: [ build-test, build-proprietary ]
+    runs-on: [ self-hosted, docker ]
+    steps:
+    - name: Run Benchmark
+      uses: maxemiliang/shot-benchmarker@v1
+      with:
+        benchmark_folder: "MINLP-convex-small"
+        benchmark_type: "nl"
+        shot_executable: "shot"
 
   # Publish the test results as an output
   publish-test:
