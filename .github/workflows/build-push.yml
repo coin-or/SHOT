@@ -1,7 +1,7 @@
 name: Build
 
 # Build this on push
-on: [ push ]
+on: [ push, workflow_dispatch ]
 
 # Only build one build at a time
 concurrency: push-build
