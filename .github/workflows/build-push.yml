@@ -45,7 +45,7 @@ jobs:
       with:
         benchmark_folder: "MINLP-convex-small"
         benchmark_type: "nl"
-        shot_executable: "shot"
+        shot_executable: ${{github.workspace}}/build/SHOT
 
   # Publish the test results as an output
   publish-test:
