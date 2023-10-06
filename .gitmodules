@@ -6,4 +6,4 @@
 	url = https://github.com/coin-or/CppAD
 [submodule "ThirdParty/HiGHS"]
 	path = ThirdParty/HiGHS
-	url = https://github.com/coin-or/HiGHS
+	url = https://github.com/ERGO-Code/HiGHS
