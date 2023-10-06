@@ -953,12 +953,11 @@ bool MIPSolverGurobi::repairInfeasibility()
                 constraints[i] = repairConstraints[i].get(GRB_StringAttr_ConstrName);
             }
 
-            std::stringstream ss;
-            ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
-            ss << "/lp";
-            ss << env->results->getCurrentIteration()->iterationNumber - 1;
-            ss << "repairedweights.txt";
-            Utilities::saveVariablePointVectorToFile(relaxParameters, constraints, ss.str());
+            auto filename = fmt::format("{}/dualiter{}_infeasrelaxweights.txt",
+                env->settings->getSetting<std::string>("Debug.Path", "Output"),
+                env->results->getCurrentIteration()->iterationNumber - 1);
+
+            Utilities::saveVariablePointVectorToFile(relaxParameters, constraints, filename);
         }
 
         // Gurobi modifies the value when running feasModel.optimize()
@@ -977,15 +976,13 @@ bool MIPSolverGurobi::repairInfeasibility()
         // Saves the relaxation model to file
         if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
         {
-            std::stringstream ss;
-            ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
-            ss << "/lp";
-            ss << env->results->getCurrentIteration()->iterationNumber - 1;
-            ss << "infeasrelax.lp";
+            auto filename = fmt::format("{}/dualiter{}_infeasrelax.lp",
+                env->settings->getSetting<std::string>("Debug.Path", "Output"),
+                env->results->getCurrentIteration()->iterationNumber - 1);
 
             try
             {
-                feasModel.write(ss.str());
+                feasModel.write(filename);
             }
             catch(GRBException& e)
             {
@@ -1025,12 +1022,11 @@ bool MIPSolverGurobi::repairInfeasibility()
 
         if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
         {
-            std::stringstream ss;
-            ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
-            ss << "/lp";
-            ss << env->results->getCurrentIteration()->iterationNumber - 1;
-            ss << "repaired.lp";
-            writeProblemToFile(ss.str());
+            auto filename = fmt::format("{}/dualiter{}_infeasrelax.lp",
+                env->settings->getSetting<std::string>("Debug.Path", "Output"),
+                env->results->getCurrentIteration()->iterationNumber - 1);
+
+            writeProblemToFile(filename);
         }
 
         if(numRepairs == 0)

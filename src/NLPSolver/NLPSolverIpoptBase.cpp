@@ -196,6 +196,7 @@ bool IpoptProblem::get_starting_point(Index n, [[maybe_unused]] bool init_x, [[m
     [[maybe_unused]] bool init_z, [[maybe_unused]] Number* z_L, [[maybe_unused]] Number* z_U, [[maybe_unused]] Index m,
     [[maybe_unused]] bool init_lambda, [[maybe_unused]] Number* lambda)
 {
+    /*
     assert(init_x == true);
     assert(init_z == false);
     assert(init_lambda == false);
@@ -294,7 +295,7 @@ bool IpoptProblem::get_starting_point(Index n, [[maybe_unused]] bool init_x, [[m
             x[k] = variableLB;
         else
             x[k] = variableUB;
-    }
+    }*/
 
     return (true);
 }
@@ -477,6 +478,7 @@ bool IpoptProblem::eval_h(Index n, const Number* x, [[maybe_unused]] bool new_x,
     return (true);
 }
 
+/*
 bool IpoptProblem::get_scaling_parameters(Number& obj_scaling, [[maybe_unused]] bool& use_x_scaling,
     [[maybe_unused]] Index n, [[maybe_unused]] Number* x_scaling, [[maybe_unused]] bool& use_g_scaling,
     [[maybe_unused]] Index m, [[maybe_unused]] Number* g_scaling)
@@ -487,7 +489,7 @@ bool IpoptProblem::get_scaling_parameters(Number& obj_scaling, [[maybe_unused]] 
     use_g_scaling = false;
 
     return (true);
-}
+}*/
 
 void IpoptProblem::finalize_solution(SolverReturn status, [[maybe_unused]] Index n, const Number* x,
     [[maybe_unused]] const Number* z_L, [[maybe_unused]] const Number* z_U, [[maybe_unused]] Index m,
@@ -896,24 +898,24 @@ void NLPSolverIpoptBase::setInitialSettings()
     // ipoptApplication->Options()->SetStringValue("derivative_test_print_all", "no");
 
     // These are default settings for Ipopt in Bonmin, so should work here as well
-    ipoptApplication->Options()->SetNumericValue("bound_relax_factor", 1e-10, true, true);
+    ipoptApplication->Options()->SetNumericValue("bound_relax_factor", 1e-8, true, true);
     ipoptApplication->Options()->SetStringValue("mu_strategy", "adaptive", true, true);
-    ipoptApplication->Options()->SetStringValue("ma86_order", "auto", true, true);
+    // ipoptApplication->Options()->SetStringValue("ma86_order", "auto", true, true);
     ipoptApplication->Options()->SetStringValue("mu_oracle", "probing", true, true);
     ipoptApplication->Options()->SetStringValue("expect_infeasible_problem", "yes", true, true);
-    // ipoptApplication->Options()->SetStringValue("warm_start_init_point", "yes", true, true);
+    ipoptApplication->Options()->SetStringValue("warm_start_init_point", "no", true,
+        true); // Cannot warm start since we do not have all required info, just a starting point
     ipoptApplication->Options()->SetNumericValue("gamma_phi", 1e-8, true, true);
     ipoptApplication->Options()->SetNumericValue("gamma_theta", 1e-4, true, true);
     ipoptApplication->Options()->SetNumericValue("required_infeasibility_reduction", 0.1, true, true);
-    ipoptApplication->Options()->SetNumericValue("bound_relax_factor", 1e-10, true, true);
+    // ipoptApplication->Options()->SetStringValue("nlp_scaling_method", "none", true, true);
+    ipoptApplication->Options()->SetNumericValue(
+        "obj_scaling_factor", sourceProblem->objectiveFunction->properties.isMinimize ? 1.0 : -1.0, true, true);
 
     // if we have linear constraint and a quadratic objective, then the hessian of the Lagrangian is constant, and
     // Ipopt can make use of this
     if(sourceProblem->properties.isMIQPProblem)
         ipoptApplication->Options()->SetStringValue("hessian_constant", "yes", true, true);
-
-    ipoptApplication->Options()->GetNumericValue(
-        "diverging_iterates_tol", ipoptProblem->divergingIterativesTolerance, "");
 
     setSolverSpecificInitialSettings();
 }
