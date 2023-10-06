@@ -53,8 +53,7 @@ Instructions for how to use SHOT, e.g. call it from different environments, are 
 
 **SHOT is best described in the paper:**
 
-Lundell, A. Kronqvist, J. and Westerlund, T. *The Supporting Hyperplane Optimization Toolkit: A Polyhedral Outer Approximation Based 
-Convex MINLP Solver Utilizing a Single Branching Tree Approach* (2018). http://www.optimization-online.org/DB_FILE/2018/06/6680.pdf
+Lundell, A. Kronqvist, J. and Westerlund, T. *The supporting hyperplane optimization toolkit for convex MINLP*. Journal of Global Optimization (2022). https://link.springer.com/article/10.1007/s10898-022-01128-0
 
 **The features for solving nonconvex MINLP problems are described in the papers:**
 

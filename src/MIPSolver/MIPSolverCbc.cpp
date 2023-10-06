@@ -637,7 +637,8 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
     arg = fmt::format("{}", this->timeLimit);
     argv[10] = strdup(arg.c_str());
 
-    if(cbcModel->haveMultiThreadSupport())
+    // pass threads option if not running single-threaded (101 = 1 thread + deterministic multithreading)
+    if(numberOfThreads != 1 && numberOfThreads != 101)
     {
         argv[11] = strdup("-threads");
         arg = std::to_string(numberOfThreads);
@@ -755,7 +756,7 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
     // To find a feasible point for an unbounded dual problem and not when solving the minimax-problem
     if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded && env->results->getNumberOfIterations() > 0)
     {
-        std::vector<PairIndexValue> originalObjectiveCoefficients;
+        VectorInteger variablesWithChangedBounds;
         bool problemUpdated = false;
 
         if((env->reformulatedProblem->objectiveFunction->properties.classification
@@ -771,9 +772,9 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
             {
                 if(V->isDualUnbounded())
                 {
-                    // Temporarily remove unbounded terms from objective
-                    originalObjectiveCoefficients.emplace_back(V->index, osiInterface->getObjCoefficients()[V->index]);
-                    osiInterface->setObjCoeff(V->index, 0.0);
+                    // Temporarily introduce bounds [-1e20,1e20] for unbounded variables in objective
+                    updateVariableBound(V->index, -1e20, 1e20);
+                    variablesWithChangedBounds.push_back(V->index);
                     problemUpdated = true;
                 }
             }
@@ -792,15 +793,14 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
         {
             if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
             {
-                std::stringstream ss;
-                ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
-                ss << "/lp";
-                ss << env->results->getCurrentIteration()->iterationNumber - 1;
-                ss << "unbounded.lp";
+
+                auto filename = fmt::format("{}/dualiter{}_unbounded.lp",
+                    env->settings->getSetting<std::string>("Debug.Path", "Output"),
+                    env->results->getCurrentIteration()->iterationNumber - 1);
 
                 try
                 {
-                    osiInterface->writeLp(ss.str().c_str(), "", 1e-7, 10, 10, 0.0, true);
+                    osiInterface->writeLp(filename.c_str(), "", 1e-7, 10, 10, 0.0, true);
                 }
                 catch(std::exception& e)
                 {
@@ -831,10 +831,10 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
             if(MIPSolutionStatus == E_ProblemSolutionStatus::Optimal)
                 MIPSolutionStatus = E_ProblemSolutionStatus::Feasible;
 
-            for(auto& P : originalObjectiveCoefficients)
+            for(auto& I : variablesWithChangedBounds)
             {
-                osiInterface->setObjCoeff(P.index, P.value);
-                assert(osiInterface->getObjCoefficients()[P.index] == P.value);
+                updateVariableBound(I, env->reformulatedProblem->getVariableLowerBound(I),
+                    env->reformulatedProblem->getVariableUpperBound(I));
             }
 
             env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed = true;
@@ -889,12 +889,11 @@ bool MIPSolverCbc::repairInfeasibility()
                 constraints[i] = osiInterface->getRowName(repairConstraints[i]);
             }
 
-            std::stringstream ss;
-            ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
-            ss << "/lp";
-            ss << env->results->getCurrentIteration()->iterationNumber - 1;
-            ss << "repairedweights.txt";
-            Utilities::saveVariablePointVectorToFile(relaxParameters, constraints, ss.str());
+            auto filename = fmt::format("{}/dualiter{}_infeasrelaxweights.txt",
+                env->settings->getSetting<std::string>("Debug.Path", "Output"),
+                env->results->getCurrentIteration()->iterationNumber - 1);
+
+            Utilities::saveVariablePointVectorToFile(relaxParameters, constraints, filename);
         }
 
         for(int i = 0; i < numConstraintsToRepair; i++)
@@ -921,15 +920,13 @@ bool MIPSolverCbc::repairInfeasibility()
 
         if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
         {
-            std::stringstream ss;
-            ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
-            ss << "/lp";
-            ss << env->results->getCurrentIteration()->iterationNumber - 1;
-            ss << "infeasrelax.lp";
+            auto filename = fmt::format("{}/dualiter{}_infeasrelax.lp",
+                env->settings->getSetting<std::string>("Debug.Path", "Output"),
+                env->results->getCurrentIteration()->iterationNumber - 1);
 
             try
             {
-                repairedInterface->writeLp(ss.str().c_str(), "", 1e-7, 10, 10, 0.0, true);
+                repairedInterface->writeLp(filename.c_str(), "", 1e-7, 10, 10, 0.0, true);
             }
             catch(std::exception& e)
             {
@@ -1060,7 +1057,8 @@ bool MIPSolverCbc::repairInfeasibility()
         arg = fmt::format("{}", this->timeLimit);
         argv[10] = strdup(arg.c_str());
 
-        if(cbcModel->haveMultiThreadSupport())
+        // pass threads option if not running single-threaded (101 = 1 thread + deterministic multithreading)
+        if(numberOfThreads != 1 && numberOfThreads != 101)
         {
             argv[11] = strdup("-threads");
             arg = std::to_string(numberOfThreads);
@@ -1128,12 +1126,11 @@ bool MIPSolverCbc::repairInfeasibility()
 
         if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
         {
-            std::stringstream ss;
-            ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
-            ss << "/lp";
-            ss << env->results->getCurrentIteration()->iterationNumber - 1;
-            ss << "repaired.lp";
-            writeProblemToFile(ss.str());
+            auto filename = fmt::format("{}/dualiter{}_infeasrelax.lp",
+                env->settings->getSetting<std::string>("Debug.Path", "Output"),
+                env->results->getCurrentIteration()->iterationNumber - 1);
+
+            writeProblemToFile(filename);
         }
 
         delete repairedInterface;

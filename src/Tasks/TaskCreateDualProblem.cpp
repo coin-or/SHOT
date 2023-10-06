@@ -33,7 +33,7 @@ TaskCreateDualProblem::TaskCreateDualProblem(EnvironmentPtr envPtr) : TaskBase(e
     if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
     {
         env->dualSolver->MIPSolver->writeProblemToFile(
-            env->settings->getSetting<std::string>("Debug.Path", "Output") + "/lp0.lp");
+            env->settings->getSetting<std::string>("Debug.Path", "Output") + "/dualiter0_problem.lp");
     }
 
     env->output->outputDebug(" Dual problem created");
@@ -105,12 +105,11 @@ bool TaskCreateDualProblem::createProblem(MIPSolverPtr destination, ProblemPtr s
 
         destination->setDualAuxiliaryObjectiveVariableIndex(sourceProblem->properties.numberOfVariables);
 
-        if(sourceProblem->objectiveFunction->properties.isMinimize)
-            destination->addVariable(
-                "shot_dual_objvar", E_VariableType::Real, objectiveBound.l(), objectiveBound.u(), 0.0);
-        else
-            destination->addVariable(
-                "shot_dual_objvar", E_VariableType::Real, -objectiveBound.u(), -objectiveBound.l(), 0.0);
+        destination->addVariable("shot_dual_objvar", E_VariableType::Real, objectiveBound.l(), objectiveBound.u(), 0.0);
+
+        env->output->outputDebug(fmt::format(
+            "         SHOT internal dual objective variable created with index {} and bounds [{},{}] created.",
+            sourceProblem->properties.numberOfVariables, objectiveBound.l(), objectiveBound.u()));
     }
 
     // Now creating the objective function

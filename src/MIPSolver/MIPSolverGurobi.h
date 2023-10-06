@@ -17,6 +17,18 @@
 namespace SHOT
 {
 
+class GurobiCallbackMultiTree : public GRBCallback, public MIPSolverCallbackBase
+{
+public:
+    GurobiCallbackMultiTree(EnvironmentPtr envPtr);
+
+protected:
+    void callback() override;
+
+private:
+    bool showOutput = false;
+};
+
 class MIPSolverGurobi : public IMIPSolver, public MIPSolverBase
 {
 public:
@@ -28,7 +40,8 @@ public:
 
     void checkParameters() override;
 
-    bool addVariable(std::string name, E_VariableType type, double lowerBound, double upperBound, double semiBound) override;
+    bool addVariable(
+        std::string name, E_VariableType type, double lowerBound, double upperBound, double semiBound) override;
 
     bool initializeObjective() override;
     bool addLinearTermToObjective(double coefficient, int variableIndex) override;
@@ -157,8 +170,8 @@ public:
 
     std::string getSolverVersion() override;
 
-    std::shared_ptr<GRBEnv> gurobiEnv;
     std::shared_ptr<GRBModel> gurobiModel;
+    std::unique_ptr<GurobiCallbackMultiTree> gurobiCallback;
     GRBLinExpr objectiveLinearExpression;
     GRBQuadExpr objectiveQuadraticExpression;
     GRBLinExpr constraintLinearExpression;
@@ -167,15 +180,4 @@ public:
 private:
 };
 
-class GurobiCallbackMultiTree : public GRBCallback, public MIPSolverCallbackBase
-{
-public:
-    GurobiCallbackMultiTree(EnvironmentPtr envPtr);
-
-protected:
-    void callback() override;
-
-private:
-    bool showOutput = false;
-};
 } // namespace SHOT

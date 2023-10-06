@@ -13,6 +13,7 @@
 #include "../Output.h"
 #include "../Results.h"
 #include "../Settings.h"
+#include "../Timing.h"
 #include "../Utilities.h"
 
 #include "../Model/NonlinearExpressions.h"
@@ -341,8 +342,15 @@ public:
 
         if(nonlinearExpression)
         {
-            std::dynamic_pointer_cast<NonlinearObjectiveFunction>(destination->objectiveFunction)
-                ->add(nonlinearExpression);
+            if(nonlinearExpression->getType() == E_NonlinearExpressionTypes::Constant)
+            {
+                destination->objectiveFunction->constant += nonlinearExpression->getBounds().l();
+            }
+            else
+            {
+                std::dynamic_pointer_cast<NonlinearObjectiveFunction>(destination->objectiveFunction)
+                    ->add(nonlinearExpression);
+            }
         }
 
         reset();
@@ -654,8 +662,11 @@ E_ProblemCreationStatus ModelingSystemAMPL::createProblem(ProblemPtr& problem, c
     {
         env->output->outputError("Problem file \"" + filename + "\" does not exist.");
 
+        env->timing->stopTimer("ProblemInitialization");
         return (E_ProblemCreationStatus::FileDoesNotExist);
     }
+
+    env->timing->startTimer("ProblemInitialization");
 
     fs::filesystem::path problemFile(filename);
     fs::filesystem::path problemPath = problemFile.parent_path();
@@ -669,6 +680,7 @@ E_ProblemCreationStatus ModelingSystemAMPL::createProblem(ProblemPtr& problem, c
     {
         env->output->outputError(fmt::format("Error when reading AMPL model from \"{}\": {}", filename, e.what()));
 
+        env->timing->stopTimer("ProblemInitialization");
         return (E_ProblemCreationStatus::Error);
     }
 
@@ -718,6 +730,7 @@ E_ProblemCreationStatus ModelingSystemAMPL::createProblem(ProblemPtr& problem, c
 
     problem->finalize();
 
+    env->timing->stopTimer("ProblemInitialization");
     return (E_ProblemCreationStatus::NormalCompletion);
 }
 

@@ -17,7 +17,6 @@
 
 #include "../Utilities.h"
 
-#include "ffunc.hpp"
 #include "cppad/cppad.hpp"
 
 #include <memory>
@@ -198,6 +197,11 @@ public:
     };
 
     inline void add(NonlinearExpressionPtr expression) { (*this).push_back(expression); };
+    inline void add(NonlinearExpressions expressions)
+    {
+        for(auto& E : expressions)
+            (*this).push_back(E);
+    };
 };
 
 class ExpressionConstant : public NonlinearExpression
@@ -394,7 +398,7 @@ public:
 
     inline std::ostream& print(std::ostream& stream) const override
     {
-        stream << "(-" << child << ')';
+        stream << "-" << child;
         return stream;
     }
 
@@ -494,7 +498,7 @@ public:
 
     inline std::ostream& print(std::ostream& stream) const override
     {
-        stream << "1/(" << child << ')';
+        stream << "1/" << child;
         return stream;
     }
 
@@ -1538,8 +1542,8 @@ public:
             && secondChild->getType() == E_NonlinearExpressionTypes::Sum && secondChild->getNumberOfChildren() == 2)
         {
             auto sum = std::dynamic_pointer_cast<ExpressionGeneral>(secondChild);
-            double constant;
-            double coefficient;
+            double constant = 0.0;
+            double coefficient = 0.0;
             bool isValid = false;
 
             ExpressionVariablePtr nominatorVariable = std::dynamic_pointer_cast<ExpressionVariable>(firstChild);
@@ -1925,7 +1929,7 @@ public:
 
     inline std::ostream& print(std::ostream& stream) const override
     {
-        stream << '(' << firstChild << ")^(" << secondChild << ')';
+        stream << firstChild << "^" << secondChild;
         return stream;
     }
 
@@ -2686,6 +2690,7 @@ public:
                     if(linearFactor) // Double linear factor found
                     {
                         isValid = false;
+                        isConvex = false;
                         break;
                     }
 
@@ -2705,6 +2710,7 @@ public:
                 if(otherFactor) // Double other factor found
                 {
                     isValid = false;
+                    isConvex = false;
                     break;
                 }
 

@@ -31,7 +31,11 @@ MIPSolverGurobi::MIPSolverGurobi()
     // Should not be called
 }
 
-MIPSolverGurobi::MIPSolverGurobi(EnvironmentPtr envPtr) { env = envPtr; }
+MIPSolverGurobi::MIPSolverGurobi(EnvironmentPtr envPtr)
+{
+    env = envPtr;
+    gurobiCallback = std::make_unique<GurobiCallbackMultiTree>(env);
+}
 
 MIPSolverGurobi::~MIPSolverGurobi()
 {
@@ -47,7 +51,6 @@ bool MIPSolverGurobi::initializeProblem()
 
     if(alreadyInitialized)
     {
-        std::shared_ptr<GRBEnv> gurobiEnv;
         std::shared_ptr<GRBModel> gurobiModel;
     }
     else
@@ -59,8 +62,8 @@ bool MIPSolverGurobi::initializeProblem()
 
     try
     {
-        gurobiEnv = std::make_shared<GRBEnv>();
-        gurobiModel = std::make_shared<GRBModel>(*gurobiEnv.get());
+        GRBEnv env = GRBEnv();
+        gurobiModel = std::make_shared<GRBModel>(env);
     }
     catch(GRBException& e)
     {
@@ -386,39 +389,37 @@ void MIPSolverGurobi::initializeSolverSettings()
     try
     {
         // Console output controlled in callback, but need to disable it so messages won't appear twice
-        gurobiModel->getEnv().set(GRB_IntParam_LogToConsole, 0);
+        gurobiModel->set(GRB_IntParam_LogToConsole, 0);
 
         // Set termination tolerances
-        gurobiModel->getEnv().set(
+        gurobiModel->set(
             GRB_DoubleParam_MIPGap, env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination") / 1.0);
-        gurobiModel->getEnv().set(
+        gurobiModel->set(
             GRB_DoubleParam_MIPGapAbs, env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination") / 1.0);
-        gurobiModel->getEnv().set(
+        gurobiModel->set(
             GRB_DoubleParam_FeasibilityTol, env->settings->getSetting<double>("Tolerance.LinearConstraint", "Primal"));
-        gurobiModel->getEnv().set(
-            GRB_DoubleParam_IntFeasTol, env->settings->getSetting<double>("Tolerance.Integer", "Primal"));
-        gurobiModel->getEnv().set(
+        gurobiModel->set(GRB_DoubleParam_IntFeasTol, env->settings->getSetting<double>("Tolerance.Integer", "Primal"));
+        gurobiModel->set(
             GRB_DoubleParam_OptimalityTol, env->settings->getSetting<double>("MIP.OptimalityTolerance", "Dual"));
 
         // Add a user-provided node limit
         if(auto nodeLimit = env->settings->getSetting<double>("MIP.NodeLimit", "Dual"); nodeLimit > 0)
-            gurobiModel->getEnv().set(GRB_DoubleParam_NodeLimit, nodeLimit);
+            gurobiModel->set(GRB_DoubleParam_NodeLimit, nodeLimit);
 
         // Set solution pool settings
-        gurobiModel->getEnv().set(GRB_IntParam_SolutionLimit, GRB_MAXINT);
-        gurobiModel->getEnv().set(
+        gurobiModel->set(GRB_IntParam_SolutionLimit, GRB_MAXINT);
+        gurobiModel->set(
             GRB_IntParam_SolutionNumber, env->settings->getSetting<int>("MIP.SolutionPool.Capacity", "Dual") + 1);
-        gurobiModel->getEnv().set(
+        gurobiModel->set(
             GRB_IntParam_PoolSearchMode, env->settings->getSetting<int>("Gurobi.PoolSearchMode", "Subsolver"));
-        gurobiModel->getEnv().set(
+        gurobiModel->set(
             GRB_IntParam_PoolSolutions, env->settings->getSetting<int>("Gurobi.PoolSolutions", "Subsolver"));
 
         // Set solver emphasis
-        gurobiModel->getEnv().set(
-            GRB_IntParam_NumericFocus, env->settings->getSetting<int>("Gurobi.NumericFocus", "Subsolver"));
+        gurobiModel->set(GRB_IntParam_NumericFocus, env->settings->getSetting<int>("Gurobi.NumericFocus", "Subsolver"));
 
         // Set parameters for quadratics
-        gurobiModel->getEnv().set(GRB_DoubleParam_PSDTol,
+        gurobiModel->set(GRB_DoubleParam_PSDTol,
             env->settings->getSetting<double>("Convexity.Quadratics.EigenValueTolerance", "Model"));
 
 #if GRB_VERSION_MAJOR >= 9
@@ -427,20 +428,18 @@ void MIPSolverGurobi::initializeSolverSettings()
                env->settings->getSetting<int>("Reformulation.Quadratics.Strategy", "Model"))
             == ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained)
         {
-            gurobiModel->getEnv().set(GRB_IntParam_NonConvex, 2);
+            gurobiModel->set(GRB_IntParam_NonConvex, 2);
         }
 #endif
 
         // Set various solver specific MIP settings
-        gurobiModel->getEnv().set(
-            GRB_IntParam_ScaleFlag, env->settings->getSetting<int>("Gurobi.ScaleFlag", "Subsolver"));
-        gurobiModel->getEnv().set(
-            GRB_IntParam_MIPFocus, env->settings->getSetting<int>("Gurobi.MIPFocus", "Subsolver"));
-        gurobiModel->getEnv().set(
+        gurobiModel->set(GRB_IntParam_ScaleFlag, env->settings->getSetting<int>("Gurobi.ScaleFlag", "Subsolver"));
+        gurobiModel->set(GRB_IntParam_MIPFocus, env->settings->getSetting<int>("Gurobi.MIPFocus", "Subsolver"));
+        gurobiModel->set(
             GRB_DoubleParam_Heuristics, env->settings->getSetting<double>("Gurobi.Heuristics", "Subsolver"));
 
         // Set number of threads
-        gurobiModel->getEnv().set(GRB_IntParam_Threads, env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual"));
+        gurobiModel->set(GRB_IntParam_Threads, env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual"));
     }
     catch(GRBException& e)
     {
@@ -666,7 +665,7 @@ VectorDouble MIPSolverGurobi::getVariableSolution(int solIdx)
     {
         if(isMIP && solIdx > 0)
         {
-            gurobiModel->getEnv().set(GRB_IntParam_SolutionNumber, solIdx);
+            gurobiModel->set(GRB_IntParam_SolutionNumber, solIdx);
 
             for(int i = 0; i < numVar; i++)
             {
@@ -834,9 +833,7 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
             gurobiModel->update();
             modelUpdated = false;
         }
-
-        auto gurobiCallback = GurobiCallbackMultiTree(env);
-        gurobiModel->setCallback(&gurobiCallback);
+        gurobiModel->setCallback(gurobiCallback.get());
         gurobiModel->optimize();
 
         MIPSolutionStatus = getSolutionStatus();
@@ -891,9 +888,7 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
         if(problemUpdated)
         {
             gurobiModel->update();
-
-            auto gurobiCallback = GurobiCallbackMultiTree(env);
-            gurobiModel->setCallback(&gurobiCallback);
+            gurobiModel->setCallback(gurobiCallback.get());
             gurobiModel->optimize();
 
             MIPSolutionStatus = getSolutionStatus();
@@ -958,12 +953,11 @@ bool MIPSolverGurobi::repairInfeasibility()
                 constraints[i] = repairConstraints[i].get(GRB_StringAttr_ConstrName);
             }
 
-            std::stringstream ss;
-            ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
-            ss << "/lp";
-            ss << env->results->getCurrentIteration()->iterationNumber - 1;
-            ss << "repairedweights.txt";
-            Utilities::saveVariablePointVectorToFile(relaxParameters, constraints, ss.str());
+            auto filename = fmt::format("{}/dualiter{}_infeasrelaxweights.txt",
+                env->settings->getSetting<std::string>("Debug.Path", "Output"),
+                env->results->getCurrentIteration()->iterationNumber - 1);
+
+            Utilities::saveVariablePointVectorToFile(relaxParameters, constraints, filename);
         }
 
         // Gurobi modifies the value when running feasModel.optimize()
@@ -982,15 +976,13 @@ bool MIPSolverGurobi::repairInfeasibility()
         // Saves the relaxation model to file
         if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
         {
-            std::stringstream ss;
-            ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
-            ss << "/lp";
-            ss << env->results->getCurrentIteration()->iterationNumber - 1;
-            ss << "infeasrelax.lp";
+            auto filename = fmt::format("{}/dualiter{}_infeasrelax.lp",
+                env->settings->getSetting<std::string>("Debug.Path", "Output"),
+                env->results->getCurrentIteration()->iterationNumber - 1);
 
             try
             {
-                feasModel.write(ss.str());
+                feasModel.write(filename);
             }
             catch(GRBException& e)
             {
@@ -1030,12 +1022,11 @@ bool MIPSolverGurobi::repairInfeasibility()
 
         if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
         {
-            std::stringstream ss;
-            ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
-            ss << "/lp";
-            ss << env->results->getCurrentIteration()->iterationNumber - 1;
-            ss << "repaired.lp";
-            writeProblemToFile(ss.str());
+            auto filename = fmt::format("{}/dualiter{}_infeasrelax.lp",
+                env->settings->getSetting<std::string>("Debug.Path", "Output"),
+                env->results->getCurrentIteration()->iterationNumber - 1);
+
+            writeProblemToFile(filename);
         }
 
         if(numRepairs == 0)
@@ -1059,21 +1050,20 @@ bool MIPSolverGurobi::repairInfeasibility()
 
 int MIPSolverGurobi::increaseSolutionLimit(int increment)
 {
-    gurobiModel->getEnv().set(
-        GRB_IntParam_SolutionLimit, gurobiModel->getEnv().get(GRB_IntParam_SolutionLimit) + increment);
+    gurobiModel->set(GRB_IntParam_SolutionLimit, gurobiModel->get(GRB_IntParam_SolutionLimit) + increment);
 
-    return (gurobiModel->getEnv().get(GRB_IntParam_SolutionLimit));
+    return (gurobiModel->get(GRB_IntParam_SolutionLimit));
 }
 
 void MIPSolverGurobi::setSolutionLimit(long limit)
 {
     if(limit > GRB_MAXINT)
-        gurobiModel->getEnv().set(GRB_IntParam_SolutionLimit, GRB_MAXINT);
+        gurobiModel->set(GRB_IntParam_SolutionLimit, GRB_MAXINT);
     else
-        gurobiModel->getEnv().set(GRB_IntParam_SolutionLimit, limit);
+        gurobiModel->set(GRB_IntParam_SolutionLimit, limit);
 }
 
-int MIPSolverGurobi::getSolutionLimit() { return (gurobiModel->getEnv().get(GRB_IntParam_SolutionLimit)); }
+int MIPSolverGurobi::getSolutionLimit() { return (gurobiModel->get(GRB_IntParam_SolutionLimit)); }
 
 void MIPSolverGurobi::setTimeLimit(double seconds)
 {
@@ -1081,11 +1071,11 @@ void MIPSolverGurobi::setTimeLimit(double seconds)
     {
         if(seconds > 0)
         {
-            gurobiModel->getEnv().set(GRB_DoubleParam_TimeLimit, seconds);
+            gurobiModel->set(GRB_DoubleParam_TimeLimit, seconds);
         }
         else
         {
-            gurobiModel->getEnv().set(GRB_DoubleParam_TimeLimit, 0.00001);
+            gurobiModel->set(GRB_DoubleParam_TimeLimit, 0.00001);
         }
     }
     catch(GRBException& e)
@@ -1107,13 +1097,13 @@ void MIPSolverGurobi::setCutOff(double cutOff)
 
         if(isMinimizationProblem)
         {
-            gurobiModel->getEnv().set(GRB_DoubleParam_Cutoff, cutOff + cutOffTol);
+            gurobiModel->set(GRB_DoubleParam_Cutoff, cutOff + cutOffTol);
             env->output->outputDebug(
                 fmt::format("        Setting cutoff value to  {} for maximization.", cutOff + cutOffTol));
         }
         else
         {
-            gurobiModel->getEnv().set(GRB_DoubleParam_Cutoff, cutOff - cutOffTol);
+            gurobiModel->set(GRB_DoubleParam_Cutoff, cutOff - cutOffTol);
             env->output->outputDebug(
                 fmt::format("        Setting cutoff value to  {} for maximization.", cutOff - cutOffTol));
         }
@@ -1260,7 +1250,7 @@ double MIPSolverGurobi::getObjectiveValue(int solIdx)
         }
         else // Gurobi has no functionality to access the objective value of a specific solution
         {
-            gurobiModel->getEnv().set(GRB_IntParam_SolutionNumber, solIdx);
+            gurobiModel->set(GRB_IntParam_SolutionNumber, solIdx);
 
             auto objective = gurobiModel->getObjective();
             objVal = objective.getLinExpr().getConstant();
@@ -1492,6 +1482,10 @@ void GurobiCallbackMultiTree::callback()
     catch(GRBException& e)
     {
         env->output->outputError("        Gurobi error when running main callback method", e.getMessage());
+    }
+    catch(...)
+    {
+        env->output->outputError("        Gurobi error when running main callback method");
     }
 }
 } // namespace SHOT

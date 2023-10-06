@@ -1107,8 +1107,8 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
 
         if(tmpQuadraticTerms.size() > 0)
         {
-            auto [tmpLinearTerms2, tmpQuadraticTerms2]
-                = reformulateAndPartitionQuadraticSum(tmpQuadraticTerms, false, partitionQuadraticTermsStrategy);
+            auto [tmpLinearTerms2, tmpQuadraticTerms2] = reformulateAndPartitionQuadraticSum(
+                tmpQuadraticTerms, isSignReversed, partitionQuadraticTermsStrategy);
 
             destinationLinearTerms.add(tmpLinearTerms2);
             destinationQuadraticTerms.add(tmpQuadraticTerms2);
@@ -1691,43 +1691,28 @@ LinearTerms TaskReformulateProblem::partitionSignomialTerms(const SignomialTerms
 }
 
 std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPartitionQuadraticSum(
-    const QuadraticTerms& quadraticTerms, bool reversedSigns, ES_PartitionNonlinearSums partitionStrategy)
+    QuadraticTerms& quadraticTerms, bool reversedSigns, ES_PartitionNonlinearSums partitionStrategy)
 {
     LinearTerms resultLinearTerms;
     resultLinearTerms.takeOwnership(reformulatedProblem);
     QuadraticTerms resultQuadraticTerms;
     resultQuadraticTerms.takeOwnership(reformulatedProblem);
 
-    double signfactor = reversedSigns ? -1.0 : 1.0;
+    bool performPartitioning = true;
 
-    bool quadraticSumConvex = quadraticTerms.minEigenValueWithinTolerance;
-    bool allTermsConvex = true;
-    bool allTermsConvexAfterReformulation = true;
-
-    for(auto& T : quadraticTerms)
-    {
-        if(T->getConvexity() != E_Convexity::Convex)
-        {
-            allTermsConvex = false;
-            break;
-        }
-    }
-
-    if(!allTermsConvex && partitionStrategy != ES_PartitionNonlinearSums::Always)
+    if(partitionStrategy != ES_PartitionNonlinearSums::Always)
     {
         for(auto& T : quadraticTerms)
         {
-            auto firstVariable = reformulatedProblem->getVariable(T->firstVariable->index);
-            auto secondVariable = reformulatedProblem->getVariable(T->secondVariable->index);
-
             if(!T->isSquare
                 && (T->firstVariable->upperBound > 1e15 || T->secondVariable->upperBound > 1e15
                     || T->firstVariable->lowerBound < -1e15 || T->secondVariable->lowerBound < -1e15))
             {
-                allTermsConvexAfterReformulation = false;
+                performPartitioning = false;
                 break;
             }
-            else if(T->getConvexity() == E_Convexity::Convex)
+            else if((!reversedSigns && (T->getConvexity() == E_Convexity::Convex))
+                || (reversedSigns && (T->getConvexity() == E_Convexity::Concave)))
             {
             }
             else if(T->isSquare && T->isBinary) // Square term b^2 -> b
@@ -1754,17 +1739,23 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
             // bilinear term i1*i2 or i1*x2
             {
             }
-            else if(extractQuadraticTermsFromNonconvexExpressions) // Bilinear term +x1*x2 which will be extracted to
-                                                                   // equality constraint
+            else if(extractQuadraticTermsFromNonconvexExpressions) // Bilinear term +x1*x2 which will be extracted
+                                                                   // to equality constraint
             {
             }
-            else // Negative square term -x1^2 or general bilinear term x1*x2 will remain as is
+            else // Remaining nonconvex terms x1*x2 will remain as is
             {
-                allTermsConvexAfterReformulation = false;
+                performPartitioning = false;
                 break;
             }
         }
     }
+
+    bool quadraticSumConvex = quadraticTerms.minEigenValueWithinTolerance;
+    bool quadraticSumConcave = quadraticTerms.maxEigenValueWithinTolerance;
+
+    bool allTermsConvex = quadraticTerms.checkAllForConvexityType(E_Convexity::Convex);
+    bool allTermsConcave = quadraticTerms.checkAllForConvexityType(E_Convexity::Concave);
 
     if(env->settings->getSetting<bool>("Reformulation.Quadratics.EigenValueDecomposition.Use", "Model")
         && partitionStrategy <= ES_PartitionNonlinearSums::IfConvex && quadraticSumConvex
@@ -1774,9 +1765,12 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
         resultLinearTerms.add(linearTerms);
     }
     else if(partitionStrategy == ES_PartitionNonlinearSums::Always
-        || (allTermsConvex && partitionStrategy == ES_PartitionNonlinearSums::IfConvex)
-        || (!quadraticSumConvex // should not reformulate if sum is convex unless forced
-            && allTermsConvexAfterReformulation && partitionStrategy == ES_PartitionNonlinearSums::IfConvex))
+        || (!reversedSigns && allTermsConvex && partitionStrategy == ES_PartitionNonlinearSums::IfConvex)
+        || (reversedSigns && allTermsConcave && partitionStrategy == ES_PartitionNonlinearSums::IfConvex)
+        || (!reversedSigns && !quadraticSumConvex // should not reformulate if sum is convex unless forced
+            && performPartitioning && partitionStrategy == ES_PartitionNonlinearSums::IfConvex)
+        || (reversedSigns && !quadraticSumConcave // should not reformulate if sum is concave unless forced
+            && performPartitioning && partitionStrategy == ES_PartitionNonlinearSums::IfConvex))
     {
         for(auto& T : quadraticTerms)
         {
@@ -1785,18 +1779,18 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
 
             if(T->isSquare && T->isBinary) // Square term b^2 -> b
             {
-                resultLinearTerms.add(std::make_shared<LinearTerm>(signfactor * T->coefficient, firstVariable));
+                resultLinearTerms.add(std::make_shared<LinearTerm>(T->coefficient, firstVariable));
             }
             else if(T->isSquare)
             {
                 auto [auxVariable, newVariable]
                     = getSquareAuxiliaryVariable(firstVariable, 1.0, E_AuxiliaryVariableType::SquareTermsPartitioning);
-                resultLinearTerms.add(std::make_shared<LinearTerm>(signfactor * T->coefficient, auxVariable));
+                resultLinearTerms.add(std::make_shared<LinearTerm>(T->coefficient, auxVariable));
             }
             else if(T->isBilinear && T->isBinary) // Bilinear term b1*b2
             {
                 auto [auxVariable, newVariable] = getBilinearAuxiliaryVariable(firstVariable, secondVariable);
-                resultLinearTerms.add(std::make_shared<LinearTerm>(signfactor * T->coefficient, auxVariable));
+                resultLinearTerms.add(std::make_shared<LinearTerm>(T->coefficient, auxVariable));
             }
             else if(T->isBilinear
                 && (firstVariable->properties.type == E_VariableType::Binary
@@ -1804,7 +1798,7 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
             // Bilinear term b1*x2 or x1*b2
             {
                 auto [auxVariable, newVariable] = getBilinearAuxiliaryVariable(firstVariable, secondVariable);
-                resultLinearTerms.add(std::make_shared<LinearTerm>(signfactor * T->coefficient, auxVariable));
+                resultLinearTerms.add(std::make_shared<LinearTerm>(T->coefficient, auxVariable));
             }
             else if(useIntegerBilinearTermReformulation && T->isBilinear
                 && (((firstVariable->properties.type == E_VariableType::Integer
@@ -1818,13 +1812,13 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
             // bilinear term i1*i2 or i1*x2
             {
                 auto [auxVariable, newVariable] = getBilinearAuxiliaryVariable(firstVariable, secondVariable);
-                resultLinearTerms.add(std::make_shared<LinearTerm>(signfactor * T->coefficient, auxVariable));
+                resultLinearTerms.add(std::make_shared<LinearTerm>(T->coefficient, auxVariable));
             }
             else if(extractQuadraticTermsFromNonconvexExpressions) // Bilinear term +x1*x2 which will be extracted
-                                                                   // to equality constraint
+            // to equality constraint
             {
                 auto [auxVariable, newVariable] = getBilinearAuxiliaryVariable(firstVariable, secondVariable);
-                resultLinearTerms.add(std::make_shared<LinearTerm>(signfactor * T->coefficient, auxVariable));
+                resultLinearTerms.add(std::make_shared<LinearTerm>(T->coefficient, auxVariable));
             }
             else // Square term x1^2 or general bilinear term x1*x2 will remain as is
             {
@@ -2289,44 +2283,44 @@ NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(No
     case E_NonlinearExpressionTypes::Constant:
     case E_NonlinearExpressionTypes::Variable:
         break;
-    /*case E_NonlinearExpressionTypes::Negate:
-        std::dynamic_pointer_cast<ExpressionNegate>(source)->child
-            = reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionNegate>(source)->child);
-        return (reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionNegate>(source)));
-        break;
-    case E_NonlinearExpressionTypes::Invert:
-        return (reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionInvert>(source)));
-        break;
-    case E_NonlinearExpressionTypes::SquareRoot:
-        return (reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionSquareRoot>(source)));
-        break;
-    case E_NonlinearExpressionTypes::Square:
-        return (reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionSquare>(source)));
-        break;
-    case E_NonlinearExpressionTypes::Log:
-        return (reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionLog>(source)));
-        break;
-    case E_NonlinearExpressionTypes::Exp:
-        return (reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionExp>(source)));
-        break;
-    case E_NonlinearExpressionTypes::Cos:
-        return (reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionCos>(source)));
-        break;
-    case E_NonlinearExpressionTypes::ArcCos:
-        return (reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionArcCos>(source)));
-        break;
-    case E_NonlinearExpressionTypes::Sin:
-        return (reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionSin>(source)));
-        break;
-    case E_NonlinearExpressionTypes::ArcSin:
-        return (reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionArcSin>(source)));
-        break;
-    case E_NonlinearExpressionTypes::Tan:
-        return (reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionTan>(source)));
-        break;
-    case E_NonlinearExpressionTypes::ArcTan:
-        return (reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionArcTan>(source)));
-        break;*/
+        /*case E_NonlinearExpressionTypes::Negate:
+            std::dynamic_pointer_cast<ExpressionNegate>(source)->child
+                = reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionNegate>(source)->child);
+            return (reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionNegate>(source)));
+            break;
+        case E_NonlinearExpressionTypes::Invert:
+            return (reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionInvert>(source)));
+            break;
+        case E_NonlinearExpressionTypes::SquareRoot:
+            return (reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionSquareRoot>(source)));
+            break;
+        case E_NonlinearExpressionTypes::Square:
+            return (reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionSquare>(source)));
+            break;
+        case E_NonlinearExpressionTypes::Log:
+            return (reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionLog>(source)));
+            break;
+        case E_NonlinearExpressionTypes::Exp:
+            return (reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionExp>(source)));
+            break;
+        case E_NonlinearExpressionTypes::Cos:
+            return (reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionCos>(source)));
+            break;
+        case E_NonlinearExpressionTypes::ArcCos:
+            return (reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionArcCos>(source)));
+            break;
+        case E_NonlinearExpressionTypes::Sin:
+            return (reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionSin>(source)));
+            break;
+        case E_NonlinearExpressionTypes::ArcSin:
+            return (reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionArcSin>(source)));
+            break;
+        case E_NonlinearExpressionTypes::Tan:
+            return (reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionTan>(source)));
+            break;
+        case E_NonlinearExpressionTypes::ArcTan:
+            return (reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionArcTan>(source)));
+            break;*/
     case E_NonlinearExpressionTypes::Negate:
     case E_NonlinearExpressionTypes::Invert:
     case E_NonlinearExpressionTypes::SquareRoot:
@@ -2785,7 +2779,6 @@ void TaskReformulateProblem::reformulateBinaryBilinearTerm(
     }
     else
     {
-
         auto linearTerm1 = std::make_shared<LinearTerm>(1.0, firstVariable);
         auto linearTerm2 = std::make_shared<LinearTerm>(1.0, secondVariable);
         auto linearTerm3 = std::make_shared<LinearTerm>(-1.0, usedAuxVariable);

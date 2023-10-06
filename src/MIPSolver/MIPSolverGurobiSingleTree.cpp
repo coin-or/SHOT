@@ -33,8 +33,8 @@ MIPSolverGurobiSingleTree::MIPSolverGurobiSingleTree(EnvironmentPtr envPtr)
 
     try
     {
-        gurobiEnv = std::make_shared<GRBEnv>();
-        gurobiModel = std::make_shared<GRBModel>(*gurobiEnv.get());
+        GRBEnv env = GRBEnv();
+        gurobiModel = std::make_shared<GRBModel>(env);
     }
     catch(GRBException& e)
     {
@@ -64,21 +64,20 @@ void MIPSolverGurobiSingleTree::initializeSolverSettings()
 
 int MIPSolverGurobiSingleTree::increaseSolutionLimit(int increment)
 {
-    gurobiModel->getEnv().set(
-        GRB_IntParam_SolutionLimit, gurobiModel->getEnv().get(GRB_IntParam_SolutionLimit) + increment);
+    gurobiModel->set(GRB_IntParam_SolutionLimit, gurobiModel->get(GRB_IntParam_SolutionLimit) + increment);
 
-    return (gurobiModel->getEnv().get(GRB_IntParam_SolutionLimit));
+    return (gurobiModel->get(GRB_IntParam_SolutionLimit));
 }
 
 void MIPSolverGurobiSingleTree::setSolutionLimit(long limit)
 {
     if(limit > GRB_MAXINT)
-        gurobiModel->getEnv().set(GRB_IntParam_SolutionLimit, GRB_MAXINT);
+        gurobiModel->set(GRB_IntParam_SolutionLimit, GRB_MAXINT);
     else
-        gurobiModel->getEnv().set(GRB_IntParam_SolutionLimit, limit);
+        gurobiModel->set(GRB_IntParam_SolutionLimit, limit);
 }
 
-int MIPSolverGurobiSingleTree::getSolutionLimit() { return (gurobiModel->getEnv().get(GRB_IntParam_SolutionLimit)); }
+int MIPSolverGurobiSingleTree::getSolutionLimit() { return (gurobiModel->get(GRB_IntParam_SolutionLimit)); }
 
 void MIPSolverGurobiSingleTree::checkParameters() { }
 

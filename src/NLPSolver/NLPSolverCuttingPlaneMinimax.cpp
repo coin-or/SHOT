@@ -38,6 +38,7 @@
 #include <map>
 
 #include "boost/math/tools/minima.hpp"
+#include "boost/cstdint.hpp"
 
 namespace SHOT
 {
@@ -140,7 +141,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
         = env->settings->getSetting<double>("ESH.InteriorPoint.CuttingPlane.TerminationToleranceRel", "Dual");
     double constrSelFactor
         = env->settings->getSetting<double>("ESH.InteriorPoint.CuttingPlane.ConstraintSelectionFactor", "Dual");
-    boost::uintmax_t maxIterSubsolver
+    int maxIterSubsolver
         = env->settings->getSetting<int>("ESH.InteriorPoint.CuttingPlane.IterationLimitSubsolver", "Dual");
     int bitPrecision = env->settings->getSetting<int>("ESH.InteriorPoint.CuttingPlane.BitPrecision", "Dual");
 
@@ -170,12 +171,10 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
         // Saves the LP problem to file if in debug mode
         if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
         {
-            std::stringstream ss;
-            ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
-            ss << "/lpminimax";
-            ss << i;
-            ss << ".lp";
-            LPSolver->writeProblemToFile(ss.str());
+            auto filename
+                = fmt::format("{}/minimax{}.lp", env->settings->getSetting<std::string>("Debug.Path", "Output"), i);
+
+            LPSolver->writeProblemToFile(filename);
         }
 
         // Solves the problem and obtains the solution
@@ -216,12 +215,10 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
         // Saves the LP solution to file if in debug mode
         if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
         {
-            std::stringstream ss;
-            ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
-            ss << "/lpminimaxsolpt";
-            ss << i;
-            ss << ".txt";
-            Utilities::saveVariablePointVectorToFile(LPVarSol, variableNames, ss.str());
+            auto filename = fmt::format(
+                "{}/minimax{}_solpt.txt", env->settings->getSetting<std::string>("Debug.Path", "Output"), i);
+
+            Utilities::saveVariablePointVectorToFile(LPVarSol, variableNames, filename);
         }
 
         if(std::isnan(LPObjVar))
@@ -241,7 +238,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
         {
             MinimizationFunction funct(LPVarSol, prevSol, sourceProblem);
 
-            // Solves the minization problem wrt lambda in [0, 1]
+            // Solves the minimization problem wrt lambda in [0, 1]
             auto minimizationResult
                 = boost::math::tools::brent_find_minima(funct, 0.0, 1.0, bitPrecision, maxIterSubsolverTmp);
 
@@ -261,12 +258,10 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             // Saves the LP solution to file if in debug mode
             if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
             {
-                std::stringstream ss;
-                ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
-                ss << "/lpminimaxlinesearchsolpt";
-                ss << i;
-                ss << ".txt";
-                Utilities::saveVariablePointVectorToFile(currSol, variableNames, ss.str());
+                auto filename = fmt::format(
+                    "{}/minimax{}_lsearchsolpt.txt", env->settings->getSetting<std::string>("Debug.Path", "Output"), i);
+
+                Utilities::saveVariablePointVectorToFile(currSol, variableNames, filename);
             }
         }
 

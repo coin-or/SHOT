@@ -18,7 +18,7 @@
 #include <ostream>
 #include <string>
 
-#include "ffunc.hpp"
+#include "interval.hpp"
 #include "cppad/cppad.hpp"
 
 namespace SHOT

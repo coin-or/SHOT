@@ -828,6 +828,7 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
 
             objectiveFunctionReplacedWithZero = true;
             modelUpdated = true;
+            env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed = true;
         }
 
         // If the previous repair failed, we can try this
@@ -844,8 +845,6 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
             delete infoCallback;
             callbacksInitialized = false;
         }
-
-        objectiveFunctionReplacedWithZero = false;
     }
 
     catch(IloException& e)
@@ -915,12 +914,11 @@ bool MIPSolverCplex::repairInfeasibility()
                 constraints[i] = expression.str();
             }
 
-            std::stringstream ss;
-            ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
-            ss << "/lp";
-            ss << env->results->getCurrentIteration()->iterationNumber - 1;
-            ss << "repairedweights.txt";
-            Utilities::saveVariablePointVectorToFile(weights, constraints, ss.str());
+            auto filename = fmt::format("{}/dualiter{}_infeasrelaxweights.txt",
+                env->settings->getSetting<std::string>("Debug.Path", "Output"),
+                env->results->getCurrentIteration()->iterationNumber - 1);
+
+            Utilities::saveVariablePointVectorToFile(weights, constraints, filename);
         }
 
         if(cplexInstance.feasOpt(cplexConstrs, relax))
@@ -959,12 +957,11 @@ bool MIPSolverCplex::repairInfeasibility()
 
             if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
             {
-                std::stringstream ss;
-                ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
-                ss << "/lp";
-                ss << env->results->getCurrentIteration()->iterationNumber - 1;
-                ss << "repaired.lp";
-                writeProblemToFile(ss.str());
+                auto filename = fmt::format("{}/dualiter{}_infeasrelax.lp",
+                    env->settings->getSetting<std::string>("Debug.Path", "Output"),
+                    env->results->getCurrentIteration()->iterationNumber - 1);
+
+                writeProblemToFile(filename);
             }
 
             if(numRepairs == 0)
@@ -1142,7 +1139,9 @@ void MIPSolverCplex::setTimeLimit(double seconds)
 {
     try
     {
-        if(seconds > 1e+75) { }
+        if(seconds > 1e+75)
+        {
+        }
         else if(seconds > 0)
         {
             cplexInstance.setParam(IloCplex::Param::TimeLimit, seconds);

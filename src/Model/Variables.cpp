@@ -11,8 +11,6 @@
 #include "Variables.h"
 #include "Problem.h"
 
-#include "ffunc.hpp"
-
 #include "spdlog/fmt/fmt.h"
 
 #include "../Environment.h"

@@ -387,6 +387,17 @@ bool Solver::setProblem(std::string fileName)
         auto taskReformulateProblem = std::make_unique<TaskReformulateProblem>(env);
         taskReformulateProblem->run();
 
+        if(env->reformulatedProblem->objectiveFunction->properties.isMinimize)
+        {
+            env->results->setDualBound(SHOT_DBL_MIN);
+            env->results->setPrimalBound(SHOT_DBL_MAX);
+        }
+        else
+        {
+            env->results->setDualBound(SHOT_DBL_MAX);
+            env->results->setPrimalBound(SHOT_DBL_MIN);
+        }
+
         if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
         {
             fs::filesystem::path problemFilename(env->settings->getSetting<std::string>("Debug.Path", "Output"));
@@ -486,6 +497,17 @@ bool Solver::setProblem(
     {
         auto taskReformulateProblem = std::make_unique<TaskReformulateProblem>(env);
         taskReformulateProblem->run();
+    }
+
+    if(env->reformulatedProblem->objectiveFunction->properties.isMinimize)
+    {
+        env->results->setDualBound(SHOT_DBL_MIN);
+        env->results->setPrimalBound(SHOT_DBL_MAX);
+    }
+    else
+    {
+        env->results->setDualBound(SHOT_DBL_MAX);
+        env->results->setPrimalBound(SHOT_DBL_MIN);
     }
 
     setConvexityBasedSettings();
@@ -604,6 +626,14 @@ bool Solver::selectStrategy()
             }
         }
 
+        // Want to show the output from Gurobi if Gurobi handles the whole problem
+        if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Gurobi
+            && ((useQuadraticObjective || useQuadraticConstraints)
+                && (env->problem->properties.isMIQPProblem || env->problem->properties.isMIQCQPProblem
+                    || env->problem->properties.isQCQPProblem || env->problem->properties.isQPProblem)))
+        {
+            env->settings->updateSetting("Console.DualSolver.Show", "Output", true);
+        }
         isProblemInitialized = true;
     }
     catch(Exception& e)
@@ -1057,11 +1087,11 @@ void Solver::initializeSettings()
     enumNonlinearTermPartitioning.push_back("If result is convex");
     enumNonlinearTermPartitioning.push_back("Never");
     env->settings->createSetting("Reformulation.Constraint.PartitionNonlinearTerms", "Model",
-        static_cast<int>(ES_PartitionNonlinearSums::IfConvex), "When to partition nonlinear sums in objective function",
+        static_cast<int>(ES_PartitionNonlinearSums::IfConvex), "When to partition nonlinear sums in constraints",
         enumNonlinearTermPartitioning, 0);
 
     env->settings->createSetting("Reformulation.Constraint.PartitionQuadraticTerms", "Model",
-        static_cast<int>(ES_PartitionNonlinearSums::IfConvex), "When to partition quadratic sums in objective function",
+        static_cast<int>(ES_PartitionNonlinearSums::IfConvex), "When to partition quadratic sums in constraints",
         enumNonlinearTermPartitioning, 0);
 
     // Reformulations for monomials
@@ -1956,7 +1986,6 @@ void Solver::setConvexityBasedSettings()
             env->settings->updateSetting("FixedInteger.CallStrategy", "Primal", 0);
             env->settings->updateSetting("FixedInteger.CreateInfeasibilityCut", "Primal", false);
             env->settings->updateSetting("FixedInteger.Source", "Primal", 0);
-            env->settings->updateSetting("FixedInteger.Warmstart", "Primal", true);
 
             env->settings->updateSetting("FixedInteger.OnlyUniqueIntegerCombinations", "Primal", false);
 
