@@ -39,6 +39,41 @@ static void highsLogCallback(HighsLogType type, const char* message, void* envPt
         env->output->outputInfo(fmt::format("      | {} ", line));
 }
 
+static void userInterruptCallback(const int callback_type, const char* message, const HighsCallbackDataOut* data_out,
+    HighsCallbackDataIn* data_in, void* user_callback_data)
+{
+    auto env = *reinterpret_cast<std::shared_ptr<Environment>*>(user_callback_data);
+    auto MIPSolver = std::dynamic_pointer_cast<MIPSolverHighs>(env->dualSolver->MIPSolver);
+
+    if(callback_type == kCallBackMipFeasibleSolution)
+    {
+        std::vector<double> solution(
+            data_out->mip_solution, data_out->mip_solution + MIPSolver->getNumberOfVariables());
+
+        MIPSolver->currentSolutions.push_back(std::make_pair(data_out->objective_function_value, solution));
+
+        std::cout << "Sol limit " << MIPSolver->getSolutionLimit() << " number sols "
+                  << MIPSolver->currentSolutions.size() << std::endl;
+
+        data_in->user_interrupt = false;
+    }
+    else if(callback_type == kCallbackMipInterrupt)
+    {
+        // std::cout << "Sol limit " << MIPSolver->getSolutionLimit() << " number sols "
+        //           << MIPSolver->currentSolutions.size() << std::endl;
+
+        if(MIPSolver->currentSolutions.size() >= MIPSolver->getSolutionLimit())
+        {
+            std::cout << "sol limit reached\n";
+            data_in->user_interrupt = false;
+        }
+        else
+        {
+            data_in->user_interrupt = false;
+        }
+    }
+}
+
 MIPSolverHighs::MIPSolverHighs(EnvironmentPtr envPtr) { env = envPtr; }
 
 MIPSolverHighs::~MIPSolverHighs() = default;
@@ -239,7 +274,7 @@ void MIPSolverHighs::initializeSolverSettings()
         "mip_abs_gap", env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination"));
     highsInstance.setOptionValue(
         "mip_feasibility_tolerance", env->settings->getSetting<double>("Tolerance.Integer", "Primal"));
-    highsInstance.setOptionValue("mip_heuristic_effort", 1.0);
+    // highsInstance.setOptionValue("mip_heuristic_effort", 1.0);
 
     // Adds a user-provided node limit
     if(auto nodeLimit = env->settings->getSetting<double>("MIP.NodeLimit", "Dual"); nodeLimit > 0)
@@ -256,6 +291,14 @@ void MIPSolverHighs::initializeSolverSettings()
     highsInstance.setOptionValue("threads", env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual"));
 
     highsInstance.setLogCallback(highsLogCallback, (void*)env.get());
+
+    // void* p_user_callback_data = (void*)(env.get());
+
+    auto ptr1 = reinterpret_cast<void*>(&env); /* shared_ptr > void ptr */
+
+    highsInstance.setCallback(userInterruptCallback, ptr1);
+    highsInstance.startCallback(kCallbackMipInterrupt);
+    highsInstance.startCallback(kCallBackMipFeasibleSolution);
 }
 
 int MIPSolverHighs::addLinearConstraint(
@@ -388,6 +431,11 @@ E_ProblemSolutionStatus MIPSolverHighs::getSolutionStatus()
     {
         MIPSolutionStatus = E_ProblemSolutionStatus::SolutionLimit;
     }
+    else if(modelStatus == HighsModelStatus::kInterrupt)
+    {
+        // Since we interrup in the callback
+        MIPSolutionStatus = E_ProblemSolutionStatus::SolutionLimit;
+    }
     else
     {
         MIPSolutionStatus = E_ProblemSolutionStatus::Error;
@@ -402,6 +450,7 @@ E_ProblemSolutionStatus MIPSolverHighs::solveProblem()
 {
     E_ProblemSolutionStatus MIPSolutionStatus;
     cachedSolutionHasChanged = true;
+    currentSolutions.clear();
 
     highsReturnStatus = highsInstance.run();
     MIPSolutionStatus = getSolutionStatus();
@@ -437,7 +486,6 @@ void MIPSolverHighs::setSolutionLimit(long int limit)
     else
     {
         highsInstance.setOptionValue("mip_max_improving_sols", (int)limit);
-        this->solLimit = limit;
     }
 }
 
@@ -546,17 +594,17 @@ void MIPSolverHighs::writeProblemToFile(std::string filename)
 
 double MIPSolverHighs::getObjectiveValue(int solIdx)
 {
+    double objectiveValue;
     bool isMIP = getDiscreteVariableStatus();
 
-    if(!isMIP && solIdx > 0) // LP problems only have one solution!
+    if(isProblemDiscrete && isMIP)
     {
-        env->output->outputError("        Cannot obtain solution with index " + std::to_string(solIdx)
-            + " in HiGHS since the problem is LP/QP!");
-
-        return (NAN);
+        objectiveValue = currentSolutions.at(currentSolutions.size() - solIdx - 1).first;
     }
-
-    double objectiveValue = highsInstance.getInfo().objective_function_value;
+    else
+    {
+        objectiveValue = highsInstance.getInfo().objective_function_value;
+    }
 
     return (objectiveValue);
 }
@@ -575,14 +623,39 @@ bool MIPSolverHighs::createIntegerCut(IntegerCut& integerCut)
 
 VectorDouble MIPSolverHighs::getVariableSolution(int solIdx)
 {
-    auto solution = highsInstance.getSolution().col_value;
+    // auto solution = highsInstance.getSolution().col_value;
+    // return (solution);
+    VectorDouble solution;
+    bool isMIP = getDiscreteVariableStatus();
+
+    if(isProblemDiscrete && isMIP)
+    {
+        solution = currentSolutions.at(currentSolutions.size() - solIdx - 1).second;
+    }
+    else
+    {
+        solution = highsInstance.getSolution().col_value;
+    }
+
     return (solution);
 }
 
 int MIPSolverHighs::getNumberOfSolutions()
 {
-    // TODO: fix when solution pool functionality is available in HiGHS
-    int numSols = 1;
+    int numSols = 0;
+    bool isMIP = getDiscreteVariableStatus();
+
+    if(isProblemDiscrete && isMIP)
+    {
+        numSols = currentSolutions.size();
+    }
+    else
+    {
+        // LP problem
+        numSols = 1;
+        // TODO better way?
+    }
+
     return (numSols);
 }
 

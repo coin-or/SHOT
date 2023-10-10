@@ -157,6 +157,8 @@ public:
 
     std::string getSolverVersion() override;
 
+    std::vector<std::pair<double, VectorDouble>> currentSolutions;
+
 private:
     HighsModel highsModel;
     Highs highsInstance;
