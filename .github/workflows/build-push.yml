@@ -41,7 +41,7 @@ jobs:
     runs-on: [ self-hosted, docker ]
     steps:
     - name: Run Benchmark
-      uses: maxemiliang/shot-benchmarker@v1.6
+      uses: maxemiliang/shot-benchmarker@v1.7
       with:
         benchmark_folder: "MINLP-convex-small"
         benchmark_type: "nl"
