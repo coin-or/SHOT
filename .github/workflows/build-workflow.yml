@@ -104,8 +104,10 @@ jobs:
     steps:
       - name: Cleanup workspace
         run: |
-          rm -rf ./* || true
-          rm -rf ./.??* || true
+          sudo rm -rf ./* || true
+        rm -rf ./* || true
+      3
+          sudo rm -rf ./.??* || true
 
       - uses: actions/checkout@v3
 
