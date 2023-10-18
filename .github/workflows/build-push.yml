@@ -38,7 +38,7 @@ jobs:
   benchmark:
     name: Benchmark
     needs: [ build-test ]
-    uses: ./.github/workflows/benchmarker.yml§
+    uses: ./.github/workflows/benchmarker.yml
     with:
       benchmark_folder: "MINLP-convex-small"
       benchmark_type: "nl"
