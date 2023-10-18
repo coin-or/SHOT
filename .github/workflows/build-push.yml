@@ -38,14 +38,11 @@ jobs:
   benchmark:
     name: Benchmark
     needs: [ build-test ]
-    runs-on: [ self-hosted, docker ]
-    steps:
-    - name: Run Benchmark
-      uses: maxemiliang/shot-benchmarker@v1.8
-      with:
-        benchmark_folder: "MINLP-convex-small"
-        benchmark_type: "nl"
-        shot_executable: ${{github.workspace}}/build/SHOT
+    uses: ./.github/workflows/benchmarker.yml§
+    with:
+      benchmark_folder: "MINLP-convex-small"
+      benchmark_type: "nl"
+      shot_executable: ${{github.workspace}}/build/SHOT
 
   # Publish the test results as an output
   publish-test:

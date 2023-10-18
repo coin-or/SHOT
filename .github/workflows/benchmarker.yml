@@ -1,0 +1,54 @@
+name: Benchmark
+
+on:
+  workflow_call:
+    inputs:
+      shot_executable:
+        description: 'The SHOT executable to run'
+        default: "shot"
+        required: false
+        type: string
+      benchmark_folder:
+        description: 'The benchmark to run (folder name from: https://github.com/andreaslundell/SHOT_benchmark_problems)'
+        default: "MINLP-convex-small"
+        required: false
+        type: string
+      benchmark_type:
+        description: 'The benchmark type to run, can be gms, nl or osil'
+        default: "nl"
+        required: false
+        type: string
+      benchmarks:
+        description: 'The benchmarks to run, can be a list of benchmarks or a single benchmark, defaults to all benchmarks'
+        default: ""
+        required: false
+        type: string
+
+jobs:
+  benchmark:
+    name: Benchmark SHOT
+    runs-on: [ self-hosted, linux, cmake ]
+
+    steps:
+      - shell: bash
+        run: git clone https://github.com/maxemiliang/shot-benchmarker.git
+
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+          cache: 'pip'
+        working-directory: ${{ github.workspace }}/shot-benchmarker
+
+      - shell: bash
+        run: pip install -r requirements.txt
+        working-directory: ${{ github.workspace }}/shot-benchmarker
+
+      - shell: bash
+        env:
+          INPUT_BENCHMARK_FOLDER: ${{ inputs.benchmark_folder }}
+          INPUT_BENCHMARK_TYPE: ${{ inputs.benchmark_type }}
+          INPUT_BENCHMARKS: ${{ inputs.benchmarks  }}
+          INPUT_SHOT_EXECUTABLE: ${{ inputs.shot_executable }}
+        run: python main.py
+        working-directory: ${{ github.workspace }}/shot-benchmarker
