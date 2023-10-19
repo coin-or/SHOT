@@ -62,3 +62,9 @@ jobs:
           INPUT_SHOT_EXECUTABLE: ${{ inputs.shot_executable }}
         working-directory: ${{ github.workspace }}/shot-benchmarker
         run: python main.py
+
+      - name: Upload benchmarks
+        uses: actions/upload-artifact@v3
+        with:
+          name: benchmarks-${{ github.sha }}
+          path: ${{ github.workspace }}/shot-benchmarker/benchmarks
