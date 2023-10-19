@@ -31,8 +31,7 @@ jobs:
 
     steps:
       - shell: bash
-        run: git clone https://github.com/maxemiliang/shot-benchmarker.git
-
+        run: git pull -C shot-benchmarker || git clone https://github.com/maxemiliang/shot-benchmarker.git
 
       - uses: actions/setup-python@v4
         with:
