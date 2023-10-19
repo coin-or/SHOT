@@ -5,7 +5,7 @@ on:
     inputs:
       shot_executable:
         description: 'The SHOT executable to run'
-        default: ${{ env.GITHUB_WORKSPACE }}/build/SHOT
+        default: ${{ github.workspace }}/build/SHOT
         required: false
         type: string
       benchmark_folder:
