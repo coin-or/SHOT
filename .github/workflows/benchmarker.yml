@@ -20,7 +20,7 @@ on:
         type: string
       benchmarks:
         description: 'The benchmarks to run, can be a list of benchmarks or a single benchmark, defaults to all benchmarks'
-        default: ""
+        default: "all"
         required: false
         type: string
 
@@ -43,6 +43,9 @@ jobs:
       - shell: bash
         run: pip install -r requirements.txt
         working-directory: ${{ github.workspace }}/shot-benchmarker
+
+      - shell: bash
+        run: echo ${{ inputs.shot_executable }}
 
       - shell: bash
         env:
