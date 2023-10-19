@@ -24,8 +24,15 @@ on:
         required: false
         type: string
 
+    outputs:
+      benchmarks:
+        description: 'The benchmarks that were run'
+        value: ${{ jobs.benchmark.outputs.benchmarks }}
+
 jobs:
   benchmark:
+    outputs:
+        benchmarks: ${{ steps.benchmark.outputs.benchmarks }}
     name: Benchmark SHOT
     runs-on: [ self-hosted, linux, cmake ]
 
@@ -47,6 +54,7 @@ jobs:
         run: echo ${{ inputs.shot_executable }}
 
       - shell: bash
+        id: benchmark
         env:
           INPUT_BENCHMARK_FOLDER: ${{ inputs.benchmark_folder }}
           INPUT_BENCHMARK_TYPE: ${{ inputs.benchmark_type }}
