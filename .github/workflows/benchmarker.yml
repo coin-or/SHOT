@@ -104,3 +104,10 @@ jobs:
         with:
           name: benchmarks-${{ github.sha }}
           path: ${{ github.workspace }}/shot-benchmarker/benchmarks
+
+      - name: Cleanup license files
+        if: ${{ success() || failure() }}
+        shell: bash
+        run: |
+          rm -f $GRB_LICENSE_FILE
+          rm -f $GAMS_LICENSE_FILE
