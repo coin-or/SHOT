@@ -42,6 +42,11 @@ jobs:
     with:
       benchmark_folder: "MINLP-convex-small"
       benchmark_type: "nl"
+      enable_gurobi: true
+      enable_gams: true
+    secrets:
+      gurobi_license: ${{ secrets.GUROBI_LICENSE_FILE }}
+      gams_license: ${{ secrets.GAMS_LICENSE_FILE }}
 
   # Publish the test results as an output
   publish-test:

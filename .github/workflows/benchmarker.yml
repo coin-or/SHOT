@@ -23,11 +23,34 @@ on:
         default: "all"
         required: false
         type: string
+      enable_gurobi:
+        description: 'Is this a Gurobi build (this will install Gurobi)'
+        default: false
+        required: false
+        type: boolean
+      enable_gams:
+        description: 'Is this a GAMS build (this will install GAMS)'
+        default: false
+        required: false
+        type: boolean
+
+    secrets:
+      gurobi_license:
+        description: 'Gurobi license file secret'
+        required: false
+      gams_license:
+        description: 'GAMS license file secret'
+        required: false
 
     outputs:
       benchmarks:
         description: 'The benchmarks that were run'
         value: ${{ jobs.benchmark.outputs.benchmarks }}
+
+
+env:
+  GRB_LICENSE_FILE: ${{ github.workspace }}/gurobi.lic
+  GAMS_LICENSE_FILE: ${{ github.workspace }}/ThirdParty/gams42.3_linux_x64_64_sfx/gamslice.txt
 
 jobs:
   benchmark:
@@ -52,6 +75,19 @@ jobs:
 
       - shell: bash
         run: echo ${{ inputs.shot_executable }}
+
+      # Add the license file to the GAMS installation directory
+      - name: Setup GAMS License file
+        if: ${{ inputs.enable_gams }}
+        shell: bash
+        working-directory: ${{github.workspace}}
+        run: echo ${{ secrets.gams_license }} | base64 -d > $GAMS_LICENSE_FILE
+
+      - name: Setup Gurobi License file
+        if: ${{ inputs.enable_gurobi }}
+        shell: bash
+        working-directory: ${{github.workspace}}
+        run: echo ${{ secrets.gurobi_license }} | base64 -d > $GRB_LICENSE_FILE
 
       - shell: bash
         id: benchmark
