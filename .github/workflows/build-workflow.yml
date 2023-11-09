@@ -89,11 +89,11 @@ env:
 jobs:
   build:
     outputs:
-      test-artifact: ${{ steps.artifact_outputs.test }}
-      options-artifact: ${{ steps.artifact_outputs.options }}
-      binary-artifact: ${{ steps.artifact_outputs.binary }}
-      package-artifact: ${{ steps.artifact_outputs.package }}
-      library-artifact: ${{ steps.artifact_outputs.library }}
+      test-artifact: ${{ steps.output-artifacts.test }}
+      options-artifact: ${{ steps.output-artifacts.options }}
+      binary-artifact: ${{ steps.output-artifacts.binary }}
+      package-artifact: ${{ steps.output-artifacts.package }}
+      library-artifact: ${{ steps.output-artifacts.library }}
     name: Build SHOT
     runs-on: [ self-hosted, linux, cmake ]
 

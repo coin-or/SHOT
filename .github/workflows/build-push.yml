@@ -16,8 +16,6 @@ jobs:
       build_type: Release
       retention: 30
       upload_artifacts: true
-    outputs:
-      binary-artifact: ${{ steps.build.output-artifacts.binary }}
 
 #  # Then, we build and test using all licenses included proprietary ones
 #  build-proprietary:
