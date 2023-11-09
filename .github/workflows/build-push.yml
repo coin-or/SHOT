@@ -42,8 +42,9 @@ jobs:
     with:
       benchmark_folder: "MINLP-convex-small"
       benchmark_type: "nl"
-      enable_gurobi: true
-      enable_gams: true
+      enable_gurobi: false
+      enable_gams: false
+      shot_artifact: ${{ needs.build-test.outputs.binary-artifact }}
     secrets:
       gurobi_license: ${{ secrets.GUROBI_LICENSE_FILE }}
       gams_license: ${{ secrets.GAMS_LICENSE_FILE }}

@@ -33,7 +33,11 @@ on:
         default: false
         required: false
         type: boolean
-
+      shot_artifact:
+        description: 'The SHOT artifact to use'
+        default: ""
+        required: false
+        type: string
     secrets:
       gurobi_license:
         description: 'Gurobi license file secret'
@@ -60,6 +64,13 @@ jobs:
     runs-on: [ self-hosted, linux, cmake ]
 
     steps:
+      - name: Fetch SHOT artifact
+        if: ${{ inputs.shot_artifact != '' }}
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ inputs.shot_artifact }}
+          path: ${{ github.workspace }}/build
+
       - shell: bash
         run: git -C shot-benchmarker pull || git clone https://github.com/maxemiliang/shot-benchmarker.git
 
