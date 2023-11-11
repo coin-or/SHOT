@@ -78,7 +78,6 @@ jobs:
         with:
           python-version: 3.11
           cache: 'pip'
-          working-directory: ${{ github.workspace }}/shot-benchmarker
 
       - shell: bash
         run: pip install -r requirements.txt
@@ -91,13 +90,13 @@ jobs:
       - name: Setup GAMS License file
         if: ${{ inputs.enable_gams }}
         shell: bash
-        working-directory: ${{github.workspace}}
+        working-directory: ${{ github.workspace }}
         run: echo ${{ secrets.gams_license }} | base64 -d > $GAMS_LICENSE_FILE
 
       - name: Setup Gurobi License file
         if: ${{ inputs.enable_gurobi }}
         shell: bash
-        working-directory: ${{github.workspace}}
+        working-directory: ${{ github.workspace }}
         run: echo ${{ secrets.gurobi_license }} | base64 -d > $GRB_LICENSE_FILE
 
       - shell: bash

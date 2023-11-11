@@ -44,7 +44,7 @@ jobs:
       benchmark_type: "nl"
       enable_gurobi: false
       enable_gams: false
-      shot_artifact: ${{ needs.build-test.outputs.binary-artifact }}
+      shot_artifact: shot-binary-${{ github.sha }}
     secrets:
       gurobi_license: ${{ secrets.GUROBI_LICENSE_FILE }}
       gams_license: ${{ secrets.GAMS_LICENSE_FILE }}
