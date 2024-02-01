@@ -215,19 +215,20 @@ jobs:
         run: echo "GAMS_OPTIONS=-DHAS_GAMS=on" >> $GITHUB_ENV
 
       - name: Configure CMake
-        # Use a bash shell so we can use the same syntax for environment variable
+        # Uses bash shell, so we can use the same syntax for environment variable
         # access regardless of the host operating system
         shell: bash
         working-directory: ${{github.workspace}}/build
-        # Note the current convention is to use the -S and -B options here to specify source
-        # and build directories, but this is only available with CMake 3.13 and higher.
-        # The CMake binaries on the Github Actions machines are (as of this writing) 3.12
-        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DHAS_CBC=on -DCBC_DIR=${{github.workspace}}/ThirdParty/Cbc -DHAS_IPOPT=ON -DIPOPT_DIR=${{github.workspace}}/ThirdParty/Ipopt -DGAMS_DIR=$GAMS_INSTALL_PATH -DGUROBI_DIR=$GRB_INSTALL_PATH -DCOMPILE_TESTS=on -DSPDLOG_STATIC=on $GAMS_OPTIONS $GUROBI_OPTIONS -DHAS_CPLEX=off
+        # Here we configure the build, we set the build type,
+        # enable the tests and set the path to the external libraries.
+        run: cmake -S $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DHAS_CBC=on -DCBC_DIR=${{github.workspace}}/ThirdParty/Cbc -DHAS_IPOPT=ON -DIPOPT_DIR=${{github.workspace}}/ThirdParty/Ipopt -DGAMS_DIR=$GAMS_INSTALL_PATH -DGUROBI_DIR=$GRB_INSTALL_PATH -DCOMPILE_TESTS=on -DSPDLOG_STATIC=on $GAMS_OPTIONS $GUROBI_OPTIONS -DHAS_CPLEX=off
 
       - name: Build
         working-directory: ${{github.workspace}}/build
         shell: bash
-        # Execute the build.  You can specify a specific target with "--target <NAME>"
+        # We build the job, $BUILD_TYPE can be Release, Debug, RelWithDebInfo.
+        # $JOB_COUNT is the amount of jobs to use when building the program and dependencies,
+        # this can be set as an input.
         run: cmake --build . --config $BUILD_TYPE -j $JOB_COUNT
 
       - name: Generate Optionsfile
@@ -239,15 +240,11 @@ jobs:
         id: test
         working-directory: ${{github.workspace}}/build
         shell: bash
-        # Execute tests defined by the CMake configuration.
-        # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
         run: ctest -C $BUILD_TYPE --output-on-failure --output-junit test-output/ctest-junit-output.xml --output-log test-output/ctest-test.log
 
       - name: Construct package
         working-directory: ${{github.workspace}}/build
         shell: bash
-        # Execute tests defined by the CMake configuration.
-        # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
         run: make package
 
         # This will always run as we always want the test output, however if the files are not found, we just warn the user.
