@@ -37,7 +37,7 @@ jobs:
   # Finally, we run some simple benchmarks
   benchmark:
     name: Benchmark
-    needs: [ build-test, build-proprietary ]
+    needs: [ build-test ]
     uses: ./.github/workflows/benchmarker.yml
     with:
       benchmark_folder: "MINLP-convex-small"
@@ -52,7 +52,7 @@ jobs:
   # Publish the test results as an output
   publish-test:
     name: Publish test results
-    needs: [ build-test, build-proprietary ]
+    needs: [ build-test ]
     runs-on: [ self-hosted, docker ]
     steps:
       - uses: actions/download-artifact@v3
