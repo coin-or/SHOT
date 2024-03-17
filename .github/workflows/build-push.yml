@@ -8,14 +8,14 @@ concurrency: push-build
 
 jobs:
   # First, we build and test using the default build options and only open source external libraries
-  build-test:
-    name: Build & Test
-    uses: ./.github/workflows/build-workflow.yml
-    with:
-      job_count: 4
-      build_type: Release
-      retention: 30
-      upload_artifacts: true
+#  build-test:
+#    name: Build & Test
+#    uses: ./.github/workflows/build-workflow.yml
+#    with:
+#      job_count: 4
+#      build_type: Release
+#      retention: 30
+#      upload_artifacts: true
 
   # Then, we build and test using all licenses included proprietary ones
 #  build-proprietary:
@@ -37,33 +37,33 @@ jobs:
   # Finally, we run some simple benchmarks
   benchmark:
     name: Benchmark
-    needs: [ build-test ]
+#    needs: [ build-test ]
     uses: ./.github/workflows/benchmarker.yml
     with:
       benchmark_folder: "MINLP-convex-small"
       benchmark_type: "nl"
       enable_gurobi: false
       enable_gams: false
-      shot_artifact: shot-binary-${{ github.sha }}
+      shot_artifact: shot-binary-b22eca247cc8986be66df8f7e5a9cbe6e55a1f70
     secrets:
       gurobi_license: ${{ secrets.GUROBI_LICENSE_FILE }}
       gams_license: ${{ secrets.GAMS_LICENSE_FILE }}
 
   # Publish the test results as an output
-  publish-test:
-    name: Publish test results
-    needs: [ build-test ]
-    runs-on: [ self-hosted, docker ]
-    steps:
-      - uses: actions/download-artifact@v3
-        name: Download artifacts
-        with:
-          path: artifacts
-
-      - name: Publish Test Results
-        uses: EnricoMi/publish-unit-test-result-action@v2
-        if: always()
-        with:
-          files: |
-            artifacts/test-*/*.xml
+#  publish-test:
+#    name: Publish test results
+#    needs: [ build-test ]
+#    runs-on: [ self-hosted, docker ]
+#    steps:
+#      - uses: actions/download-artifact@v3
+#        name: Download artifacts
+#        with:
+#          path: artifacts
+#
+#      - name: Publish Test Results
+#        uses: EnricoMi/publish-unit-test-result-action@v2
+#        if: always()
+#        with:
+#          files: |
+#            artifacts/test-*/*.xml
 

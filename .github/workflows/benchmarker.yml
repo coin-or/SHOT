@@ -106,9 +106,9 @@ jobs:
           INPUT_BENCHMARK_TYPE: ${{ inputs.benchmark_type }}
           INPUT_BENCHMARKS: ${{ inputs.benchmarks  }}
           INPUT_SHOT_EXECUTABLE: ${{ inputs.shot_executable }}
-          OS_AUTH_URL: '${{ secrets.OS_AUTH_URL }}'
-          OS_PROJECT_ID: '${{ secrets.OS_PROJECT_ID }}'
-          OS_PROJECT_NAME: '${{ secrets.OS_PROJECT_NAME }}'
+          OS_AUTH_URL: 'https://pouta.csc.fi:5001/v3'
+          OS_PROJECT_ID: '230dabcfb234424cb77e7de501ef7efc'
+          OS_PROJECT_NAME: 'project_2001223'
           OS_USER_DOMAIN_NAME: "Default"
           OS_PROJECT_DOMAIN_ID: "default"
           OS_USERNAME: '${{ secrets.OS_USERNAME }}'
