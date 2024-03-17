@@ -116,6 +116,7 @@ jobs:
           OS_REGION_NAME: "regionOne"
           OS_INTERFACE: "public"
           OS_IDENTITY_API_VERSION: "3"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         working-directory: ${{ github.workspace }}/shot-benchmarker
         run: python main.py -c -s
 
