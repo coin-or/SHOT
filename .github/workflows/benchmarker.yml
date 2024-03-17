@@ -45,6 +45,13 @@ on:
       gams_license:
         description: 'GAMS license file secret'
         required: false
+      OS_USERNAME:
+        description: 'OpenStack username'
+        required: true
+      OS_PASSWORD:
+        description: 'OpenStack password'
+        required: true
+
 
     outputs:
       benchmarks:
