@@ -115,8 +115,8 @@ jobs:
           OS_PROJECT_NAME: 'project_2001223'
           OS_USER_DOMAIN_NAME: "Default"
           OS_PROJECT_DOMAIN_ID: "default"
-          OS_USERNAME: ${{ secrets.OS_USERNAME }}
-          OS_PASSWORD: ${{ secrets.OS_PASSWORD }}
+          OS_USERNAME: '${{ secrets.OS_USERNAME }}'
+          OS_PASSWORD: '${{ secrets.OS_PASSWORD }}'
           OS_REGION_NAME: "regionOne"
           OS_INTERFACE: "public"
           OS_IDENTITY_API_VERSION: "3"
