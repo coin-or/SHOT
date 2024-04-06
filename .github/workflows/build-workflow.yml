@@ -174,7 +174,7 @@ jobs:
         id: get_version
         run: |
           version=${{ env.GUROBI_VERSION }}
-          major_minor=$(echo version | awk -F '.' '{print $1 "." $2}')
+          major_minor=$(echo $version | awk -F '.' '{print $1 "." $2}')
           version_without_dot=$(echo $version | tr -d .) 
           echo "GUROBI_SHORT_VERSION=$major_minor" >> $GITHUB_ENV
           echo "GUROBI_VERSION_WITHOUT_DOT=$version_without_dot" >> $GITHUB_ENV
@@ -206,7 +206,7 @@ jobs:
         id: get_gams_short_version
         run: |
           version=${{ env.GAMS_VERSION }}
-          major_minor=$(echo version | awk -F '.' '{print $1 "." $2}')
+          major_minor=$(echo $version | awk -F '.' '{print $1 "." $2}')
           echo "GAMS_SHORT_VERSION=$major_minor" >> $GITHUB_ENV
           echo "GAMS_INSTALL_PATH=${{ github.workspace }}/ThirdParty/gams${{ env.GAMS_SHORT_VERSION }}_linux_x64_64_sfx" >> $GITHUB_ENV
           echo "GAMS_LICENSE_FILE=${{ github.workspace }}/ThirdParty/gams${{ env.GAMS_SHORT_VERSION }}_linux_x64_64_sfx/gamslice.txt" >> $GITHUB_ENV
