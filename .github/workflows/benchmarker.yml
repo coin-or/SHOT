@@ -124,7 +124,7 @@ jobs:
           OS_IDENTITY_API_VERSION: "3"
           GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
         working-directory: ${{ github.workspace }}/shot-benchmarker
-        run: python main.py -c -s
+        run: python main.py -c -s --runs 5
 
       - name: Upload benchmarks
         uses: actions/upload-artifact@v3
