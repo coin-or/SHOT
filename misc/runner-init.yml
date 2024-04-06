@@ -18,6 +18,7 @@ packages:
   - curl
   - gnupg
   - lsb-release
+  - ccache
 
 users:
   - default
