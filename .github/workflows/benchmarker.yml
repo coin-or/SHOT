@@ -5,7 +5,7 @@ on:
     inputs:
       shot_executable:
         description: 'The SHOT executable to run'
-        default: ./../build/SHOT
+        default: ./../shot-binary/SHOT
         required: false
         type: string
       benchmark_folder:
@@ -76,7 +76,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: ${{ inputs.shot_artifact }}
-          path: ${{ github.workspace }}/build
+          path: ${{ github.workspace }}/shot-binary
 
       - shell: bash
         run: git -C shot-benchmarker pull || git clone https://github.com/maxemiliang/shot-benchmarker.git
