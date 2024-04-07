@@ -56,7 +56,7 @@ on:
         type: string
       gams_version:
         description: 'The version of GAMS to use'
-        default: '46.4.0'
+        default: '42.3.0'
         required: false
         type: string
     secrets:
