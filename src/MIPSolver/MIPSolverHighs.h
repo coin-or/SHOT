@@ -17,6 +17,10 @@
 
 namespace SHOT
 {
+struct HighsMipData
+{
+    EnvironmentPtr env;
+};
 
 class MIPSolverHighs : public IMIPSolver, MIPSolverBase
 {
@@ -157,14 +161,16 @@ public:
 
     std::string getSolverVersion() override;
 
-    std::vector<std::pair<double, VectorDouble>> currentSolutions;
+    // Objective value, solution point has, solution point
+    std::vector<SolutionPoint> currentSolutions;
 
 private:
     HighsModel highsModel;
     Highs highsInstance;
     HighsStatus highsReturnStatus;
+    HighsMipData highsCallbackData;
 
-    long int solLimit;
+    long int solutionLimit;
     double timeLimit = 1e100;
     double cutOff;
     int numberOfThreads = 1;
