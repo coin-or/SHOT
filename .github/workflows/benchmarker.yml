@@ -71,6 +71,11 @@ jobs:
     runs-on: [ self-hosted, linux, cmake ]
 
     steps:
+      - name: Cleanup workspace
+        run: |
+          sudo rm -rf ./* || true
+          sudo rm -rf ./.??* || true  
+
       - shell: bash
         run: git -C shot-benchmarker pull || git clone https://github.com/maxemiliang/shot-benchmarker.git
 
