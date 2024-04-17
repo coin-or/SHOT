@@ -92,6 +92,11 @@ jobs:
           cd ${{ github.workspace }}/shot-benchmarker
           chmod +x SHOT
 
+      - name: Show linked libraries
+        shell: bash
+        working-directory: ${{ github.workspace }}/shot-benchmarker
+        run: ldd SHOT
+
       - uses: actions/setup-python@v4
         with:
           python-version: 3.11
