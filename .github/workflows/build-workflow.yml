@@ -275,6 +275,11 @@ jobs:
         shell: bash
         run: make package
 
+      - name: Show linked libraries
+        working-directory: ${{github.workspace}}/build
+        shell: bash
+        run: ldd SHOT
+
         # This will always run as we always want the test output, however if the files are not found, we just warn the user.
       - uses: actions/upload-artifact@v3
         if: ${{ always() }}
