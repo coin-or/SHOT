@@ -48,6 +48,11 @@ on:
         default: ""
         required: false
         type: string
+      artifact_suffix:
+        description: 'The suffix to add to the artifact name'
+        default: ''
+        required: false
+        type: string
     secrets:
       gurobi_license:
         description: 'Gurobi license file secret'
@@ -166,7 +171,7 @@ jobs:
       - name: Upload benchmarks
         uses: actions/upload-artifact@v4
         with:
-          name: benchmarks-${{ github.sha }}
+          name: benchmarks-${{ github.sha }}${{ inputs.artifact_suffix }}
           path: ${{ github.workspace }}/shot-benchmarker/benchmarks
 
       - name: Cleanup license files

@@ -382,6 +382,7 @@ jobs:
       enable_gams: ${{ inputs.enable_gams }}
       gurobi_license_file: ${{ needs.build.outputs.gurobi_license_file }}
       gams_license_file: ${{ needs.build.outputs.gams_license_file }}
+      artifact_suffix: ${{ inputs.artifact_suffix }}
     secrets:
       gurobi_license: ${{ secrets.gurobi_license }}
       gams_license: ${{ secrets.gams_license }}
