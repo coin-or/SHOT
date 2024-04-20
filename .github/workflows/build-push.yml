@@ -34,6 +34,7 @@ jobs:
       enable_gurobi: true
       enable_gams: true
       artifact_suffix: '-proprietary'
+      run_benchmarks: true
     secrets:
       gurobi_license: ${{ secrets.GUROBI_LICENSE_FILE }}
       gams_license: ${{ secrets.GAMS_LICENSE_FILE }}
