@@ -16,6 +16,10 @@ jobs:
       build_type: Release
       retention: 30
       upload_artifacts: true
+      run_benchmarks: true
+    secrets:
+      OS_USERNAME: ${{ secrets.OS_USERNAME }}
+      OS_PASSWORD: ${{ secrets.OS_PASSWORD }}
 
   # Then, we build and test using all licenses included proprietary ones
   build-proprietary:
@@ -33,6 +37,8 @@ jobs:
     secrets:
       gurobi_license: ${{ secrets.GUROBI_LICENSE_FILE }}
       gams_license: ${{ secrets.GAMS_LICENSE_FILE }}
+      OS_USERNAME: ${{ secrets.OS_USERNAME }}
+      OS_PASSWORD: ${{ secrets.OS_PASSWORD }}
 
 
   # Publish the test results as an output

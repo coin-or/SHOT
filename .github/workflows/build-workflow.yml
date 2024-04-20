@@ -59,12 +59,23 @@ on:
         default: '42.3.0'
         required: false
         type: string
+      run_benchmarks:
+        description: 'Should the benchmarks be run'
+        default: false
+        required: false
+        type: boolean
     secrets:
       gurobi_license:
         description: 'Gurobi license file secret'
         required: false
       gams_license:
         description: 'GAMS license file secret'
+        required: false
+      OS_USERNAME:
+        description: 'OpenStack username'
+        required: false
+      OS_PASSWORD:
+        description: 'OpenStack password'
         required: false
 
     outputs:
@@ -350,8 +361,10 @@ jobs:
 
   # Finally, we run some simple benchmarks
   benchmark:
+    if: ${{ inputs.run_benchmarks }}
     name: Benchmark
     uses: ./.github/workflows/benchmarker.yml
+    needs: [ build ]
     with:
       shot_executable_path: "${{ github.workspace }}/build"
       benchmark_folder: "MINLP-convex-small"
