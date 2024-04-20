@@ -114,6 +114,8 @@ jobs:
       binary-artifact: ${{ steps.output-artifacts.binary }}
       package-artifact: ${{ steps.output-artifacts.package }}
       library-artifact: ${{ steps.output-artifacts.library }}
+      gurobi_license_file: ${{ steps.licensefiles.outputs.gurobi}}
+      gams_license_file: ${{ steps.licensefiles.outputs.gams }}
     name: Build SHOT
     runs-on: [ self-hosted, linux, cmake ]
 
@@ -253,6 +255,13 @@ jobs:
         shell: bash
         run: echo "GAMS_OPTIONS=-DHAS_GAMS=on" >> $GITHUB_ENV
 
+      - name: Output License files
+        id: licensefiles
+        shell: bash
+        run: |
+          echo "gurobi=${{ github.workspace }}/ThirdParty/gurobi${{ env.GUROBI_VERSION_WITHOUT_DOT }}/linux64/bin/gurobi.lic" >> $GITHUB_OUTPUT
+          echo "gams=${{ github.workspace }}/ThirdParty/gams${{ env.GAMS_SHORT_VERSION }}_linux_x64_64_sfx/gamslice.txt" >> $GITHUB_OUTPUT
+
       - name: Configure CMake
         # Uses bash shell, so we can use the same syntax for environment variable
         # access regardless of the host operating system
@@ -371,8 +380,8 @@ jobs:
       benchmark_type: "nl"
       enable_gurobi: ${{ inputs.enable_gurobi }}
       enable_gams: ${{ inputs.enable_gams }}
-      gurobi_license_file: ${{ env.GUROBI_LICENSE_FILE }}
-      gams_license_file: ${{ env.GAMS_LICENSE_FILE }}
+      gurobi_license_file: ${{ needs.build.outputs.gurobi_license_file }}
+      gams_license_file: ${{ needs.build.outputs.gams_license_file }}
     secrets:
       gurobi_license: ${{ secrets.gurobi_license }}
       gams_license: ${{ secrets.gams_license }}
