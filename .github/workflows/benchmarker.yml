@@ -38,6 +38,16 @@ on:
         default: ""
         required: false
         type: string
+      gurobi_license_file:
+        description: 'The path to the Gurobi license file'
+        default: ""
+        required: false
+        type: string
+      gams_license_file:
+        description: 'The path to the GAMS license file'
+        default: ""
+        required: false
+        type: string
     secrets:
       gurobi_license:
         description: 'Gurobi license file secret'
@@ -60,8 +70,8 @@ on:
 
 
 env:
-  GRB_LICENSE_FILE: ${{ github.workspace }}/gurobi.lic
-  GAMS_LICENSE_FILE: ${{ github.workspace }}/ThirdParty/gams42.3_linux_x64_64_sfx/gamslice.txt
+  GRB_LICENSE_FILE: ${{inputs.gurobi_license_file}}
+  GAMS_LICENSE_FILE: ${{inputs.gams_license_file}}
 
 jobs:
   benchmark:

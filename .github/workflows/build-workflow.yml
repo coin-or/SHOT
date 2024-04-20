@@ -371,8 +371,10 @@ jobs:
       benchmark_type: "nl"
       enable_gurobi: ${{ inputs.enable_gurobi }}
       enable_gams: ${{ inputs.enable_gams }}
+      gurobi_license_file: ${{ env.GUROBI_LICENSE_FILE }}
+      gams_license_file: ${{ env.GAMS_LICENSE_FILE }}
     secrets:
-      gurobi_license: ${{ secrets.GUROBI_LICENSE_FILE }}
-      gams_license: ${{ secrets.GAMS_LICENSE_FILE }}
+      gurobi_license: ${{ secrets.gurobi_license }}
+      gams_license: ${{ secrets.gams_license }}
       OS_USERNAME: ${{ secrets.OS_USERNAME }}
       OS_PASSWORD: ${{ secrets.OS_PASSWORD }}
