@@ -366,7 +366,7 @@ jobs:
     uses: ./.github/workflows/benchmarker.yml
     needs: [ build ]
     with:
-      shot_executable_path: ${{ github.workspace }}/build
+      shot_executable_path: build
       benchmark_folder: "MINLP-convex-small"
       benchmark_type: "nl"
       enable_gurobi: ${{ inputs.enable_gurobi }}

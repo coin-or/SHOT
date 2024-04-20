@@ -71,17 +71,12 @@ jobs:
     runs-on: [ self-hosted, linux, cmake ]
 
     steps:
-      - name: Cleanup workspace
-        run: |
-          sudo rm -rf ./* || true
-          sudo rm -rf ./.??* || true  
-
       - shell: bash
         run: git -C shot-benchmarker pull || git clone https://github.com/maxemiliang/shot-benchmarker.git
 
       - name: Fetch SHOT artifact
         if: ${{ inputs.shot_artifact != '' }}
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ inputs.shot_artifact }}
           path: ${{ github.workspace }}/shot-benchmarker
@@ -91,10 +86,16 @@ jobs:
         shell: bash
         run: echo "SHOT_EXECUTABLE_PATH=${{ github.workspace }}/shot-benchmarker" >> $GITHUB_ENV
 
-      - name: Set the SHOT executable path
+      # If the path is not an absolute path, we assume it is relative to the current working directory
+      - name: Set the SHOT executable path.
         if: ${{ inputs.shot_executable_path != '' }}
         shell: bash
-        run: echo "SHOT_EXECUTABLE_PATH=${{ inputs.shot_executable_path }}" >> $GITHUB_ENV
+        run: |
+          if [[ ${{ inputs.shot_executable_path }} == /* ]]; then
+            echo "SHOT_EXECUTABLE_PATH=${{ inputs.shot_executable_path }}" >> $GITHUB_ENV
+          else
+            echo "SHOT_EXECUTABLE_PATH=${{ github.workspace }}/${{ inputs.shot_executable_path }}" >> $GITHUB_ENV
+          fi
 
       - name: Make SHOT executable
         shell: bash
@@ -104,7 +105,7 @@ jobs:
 
       - name: Show linked libraries
         shell: bash
-        working-directory: ${{ github.workspace }}/shot-benchmarker
+        working-directory: ${{ env.SHOT_EXECUTABLE_PATH }}
         run: ldd SHOT
 
       - uses: actions/setup-python@v4
