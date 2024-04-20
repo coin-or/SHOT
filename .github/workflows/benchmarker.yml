@@ -3,9 +3,9 @@ name: Benchmark
 on:
   workflow_call:
     inputs:
-      shot_executable:
-        description: 'The SHOT executable to run'
-        default: ./SHOT
+      shot_executable_path:
+        description: 'The path to the SHOT executable to run'
+        default: "/SHOT"
         required: false
         type: string
       benchmark_folder:
@@ -86,10 +86,20 @@ jobs:
           name: ${{ inputs.shot_artifact }}
           path: ${{ github.workspace }}/shot-benchmarker
 
+      - name: Set the SHOT executable path if an artifact is used
+        if : ${{ inputs.shot_executable_path == '' }}
+        shell: bash
+        run: echo "SHOT_EXECUTABLE_PATH=${{ github.workspace }}/shot-benchmarker" >> $GITHUB_ENV
+
+      - name: Set the SHOT executable path
+        if: ${{ inputs.shot_executable_path != '' }}
+        shell: bash
+        run: echo "SHOT_EXECUTABLE_PATH=${{ inputs.shot_executable_path }}" >> $GITHUB_ENV
+
       - name: Make SHOT executable
         shell: bash
         run: |
-          cd ${{ github.workspace }}/shot-benchmarker
+          cd ${{ env.SHOT_EXECUTABLE_PATH }}
           chmod +x SHOT
 
       - name: Show linked libraries
@@ -125,7 +135,7 @@ jobs:
           INPUT_BENCHMARK_FOLDER: ${{ inputs.benchmark_folder }}
           INPUT_BENCHMARK_TYPE: ${{ inputs.benchmark_type }}
           INPUT_BENCHMARKS: ${{ inputs.benchmarks  }}
-          INPUT_SHOT_EXECUTABLE: ${{ inputs.shot_executable }}
+          INPUT_SHOT_EXECUTABLE: ${{ env.SHOT_EXECUTABLE_PATH }}/SHOT
           INPUT_IS_GAMS: ${{ inputs.enable_gams }}
           INPUT_IS_GUROBI: ${{ inputs.enable_gurobi }}
           OS_AUTH_URL: 'https://pouta.csc.fi:5001/v3'

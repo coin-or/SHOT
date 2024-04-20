@@ -347,3 +347,19 @@ jobs:
         run: |
           rm -f $GRB_LICENSE_FILE
           rm -f $GAMS_LICENSE_FILE
+
+  # Finally, we run some simple benchmarks
+  benchmark:
+    name: Benchmark
+    uses: ./.github/workflows/benchmarker.yml
+    with:
+      shot_executable_path: "${{ github.workspace }}/build"
+      benchmark_folder: "MINLP-convex-small"
+      benchmark_type: "nl"
+      enable_gurobi: ${{ inputs.enable_gurobi }}
+      enable_gams: ${{ inputs.enable_gams }}
+    secrets:
+      gurobi_license: ${{ secrets.GUROBI_LICENSE_FILE }}
+      gams_license: ${{ secrets.GAMS_LICENSE_FILE }}
+      OS_USERNAME: ${{ secrets.OS_USERNAME }}
+      OS_PASSWORD: ${{ secrets.OS_PASSWORD }}
