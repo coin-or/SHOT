@@ -38,7 +38,7 @@ jobs:
   # Publish the test results as an output
   publish-test:
     name: Publish test results
-    needs: [ build-test, build-proprietary, benchmark ]
+    needs: [ build-test, build-proprietary ]
     runs-on: [ self-hosted, docker ]
     steps:
       - uses: actions/download-artifact@v3
