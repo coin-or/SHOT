@@ -292,7 +292,7 @@ jobs:
         run: ldd SHOT
 
         # This will always run as we always want the test output, however if the files are not found, we just warn the user.
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: ${{ always() }}
         name: Upload test results
         with:
@@ -302,7 +302,7 @@ jobs:
             ${{github.workspace}}/build/test-output/*.xml
           retention-days: ${{ inputs.retention }}
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: ${{ inputs.upload_artifacts }}
         name: Upload SHOT Optionsfile
         with:
@@ -310,7 +310,7 @@ jobs:
           path: ${{github.workspace}}/build/SHOT.opt
           retention-days: ${{ inputs.retention }}
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: ${{ inputs.upload_artifacts }}
         name: Upload SHOT File
         with:
@@ -318,7 +318,7 @@ jobs:
           path: ${{github.workspace}}/build/SHOT
           retention-days: ${{ inputs.retention }}
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: ${{ inputs.upload_artifacts }}
         name: Upload SHOT Package file
         with:
@@ -326,7 +326,7 @@ jobs:
           path: ${{github.workspace}}/build/SHOT-*-Linux.zip
           retention-days: ${{ inputs.retention }}
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: ${{ inputs.upload_artifacts }}
         name: Upload SHOT Libraries
         with:
