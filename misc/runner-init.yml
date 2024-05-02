@@ -1,0 +1,73 @@
+#cloud-config:
+package_update: true
+package_upgrade: true
+
+packages:
+  # Requirements for GitHub runner
+  - zlib1g
+  - libssl1.1
+  - libkrb5-3
+  - liblttng-ust-ctl4
+  - liblttng-ust0
+  - libssl-dev
+  # Required for the setup of GitHub Runner.
+  - build-essential
+  - jq
+  # Docker packages
+  - ca-certificates
+  - curl
+  - gnupg
+  - lsb-release
+  - ccache
+
+users:
+  - default
+  - name: ghrunner
+    groups: sudo
+    shell: /bin/bash
+    sudo: ['ALL=(ALL) NOPASSWD:ALL']
+
+runcmd:
+  # Install docker
+  - mkdir -m 0755 -p /etc/apt/keyrings
+  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+  - echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+  - chmod a+r /etc/apt/keyrings/docker.gpg
+  - apt-get update
+  - apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+  # Install CMake
+  - 'curl -O -L https://github.com/Kitware/CMake/releases/download/v3.26.0/cmake-3.26.0-linux-x86_64.sh'
+  - mv cmake-3.26.0-linux-x86_64.sh /opt/
+  - cd /opt/
+  - chmod +x cmake-3.26.0-linux-x86_64.sh
+  - bash ./cmake-3.26.0-linux-x86_64.sh --skip-license
+  - ln -s /opt/bin/* /usr/local/bin
+  - echo "Installed CMake"
+  - cd /home/ghrunner
+  # Create the GH Runner directory.
+  - su 'ghrunner' -c "mkdir actions-runner"
+  - echo "Directory created"
+  - cd actions-runner
+  - echo "Swapped directory"
+  # We fetch a temporary runner creation token to allow adding the runner to the repo see: https://developer.github.com/v3/actions/self-hosted-runners/ for more information.
+  - 'export RUNNERTOKEN=$(curl -s -XPOST -H "authorization: token _REPLACE_TOKEN_" https://api.github.com/repos/coin-or/SHOT/actions/runners/registration-token | jq -r .token)'
+  - echo "Fetched token"
+  # Fetch the runner code
+  - su 'ghrunner' -c "curl -O -L https://github.com/actions/runner/releases/download/v2.302.1/actions-runner-linux-x64-2.302.1.tar.gz"
+  - echo "Fetched the installer"
+  # Extract the code as the runner user
+  - su 'ghrunner' -c "tar xzf ./actions-runner-linux-x64-2.302.1.tar.gz"
+  - echo "Installing the runner and dependencies"
+  # Config the runner and install it as a service.
+  - ./bin/installdependencies.sh
+  - su 'ghrunner' -c './config.sh --url https://github.com/coin-or/SHOT --token $RUNNERTOKEN --unattended --labels docker,x64,linux,cmake'
+  - ./svc.sh install ghrunner
+  - ./svc.sh start
+  - chown -R ghrunner /home/ghrunner/actions-runner
+  # Post install steps for docker
+  - groupadd docker
+  - usermod -aG docker ghrunner
+  - systemctl enable docker.service
+  - systemctl enable containerd.service
+  # Finally reboot the VM to correctly enable permissions for Docker.
+  - reboot now
