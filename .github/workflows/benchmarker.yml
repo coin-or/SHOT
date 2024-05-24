@@ -87,7 +87,7 @@ jobs:
 
     steps:
       - shell: bash
-        run: git -C shot-benchmarker pull || git clone https://github.com/maxemiliang/shot-benchmarker.git
+        run: git -C shot-benchmarker pull || git clone https://github.com/andreaslundell/shot-benchmarker.git
 
       - name: Fetch SHOT artifact
         if: ${{ inputs.shot_artifact != '' }}
