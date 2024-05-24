@@ -129,7 +129,7 @@ jobs:
           sudo rm -rf ./* || true
           sudo rm -rf ./.??* || true
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Checkout submodules
         run: git submodule update --init --recursive
@@ -145,14 +145,14 @@ jobs:
 
       - name: Cache Cbc
         id: cache-cbc
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ${{github.workspace}}/ThirdParty/Cbc
           key: ${{ runner.os }}-cbc
 
       - name: Cache Ipopt
         id: cache-ipopt
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ${{github.workspace}}/ThirdParty/Ipopt
           key: ${{ runner.os }}-ipopt
