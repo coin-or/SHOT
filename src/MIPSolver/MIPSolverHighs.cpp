@@ -3,7 +3,7 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE
+   @section∏LICENSE
    This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
@@ -84,7 +84,7 @@ HighsCallbackFunctionType highsCallback
               currentSolution.hashValue = hashValue;
               MIPSolver->currentSolutions.push_back(currentSolution);
 
-              env->output->outputInfo(fmt::format("      | #sols: {} \t obj.val: {:.4f} \t gap: {:.4f} ",
+              env->output->outputDebug(fmt::format("      | #sols: {} \t obj.val: {:.4f} \t gap: {:.4f} ",
                   MIPSolver->currentSolutions.size(), data_out->objective_function_value, data_out->mip_gap));
 
               // Sorts the solutions so that the best one is at the first position
@@ -317,7 +317,6 @@ void MIPSolverHighs::initializeSolverSettings()
         "mip_abs_gap", env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination"));
     highsInstance.setOptionValue(
         "mip_feasibility_tolerance", env->settings->getSetting<double>("Tolerance.Integer", "Primal"));
-    // highsInstance.setOptionValue("mip_heuristic_effort", 1.0);
 
     // Adds a user-provided node limit
     if(auto nodeLimit = env->settings->getSetting<double>("MIP.NodeLimit", "Dual"); nodeLimit > 0)
@@ -328,11 +327,57 @@ void MIPSolverHighs::initializeSolverSettings()
         highsInstance.setOptionValue("mip_max_nodes", (int)nodeLimit);
     }
 
+    highsInstance.setOptionValue(
+        "mip_allow_restart", env->settings->getSetting<bool>("Highs.MIPAllowRestart", "Subsolver"));
+    highsInstance.setOptionValue(
+        "mip_detect_symmetry", env->settings->getSetting<bool>("Highs.MIPDetectSymmetry", "Subsolver"));
+    highsInstance.setOptionValue(
+        "mip_heuristic_effort", env->settings->getSetting<double>("Highs.MIPHeuristicEffort", "Subsolver"));
+
+    switch(env->settings->getSetting<int>("Highs.Parallel", "Subsolver"))
+    {
+    case 0:
+        highsInstance.setOptionValue("parallel", "off");
+        break;
+    case 1:
+        highsInstance.setOptionValue("parallel", "choose");
+        break;
+    case 2:
+        highsInstance.setOptionValue("parallel", "on");
+        break;
+    default:
+        highsInstance.setOptionValue("parallel", "choose");
+        break;
+    }
+
+    switch(env->settings->getSetting<int>("Highs.Presolve", "Subsolver"))
+    {
+    case 0:
+        highsInstance.setOptionValue("presolve", "off");
+        break;
+    case 1:
+        highsInstance.setOptionValue("presolve", "choose");
+        break;
+    case 2:
+        highsInstance.setOptionValue("presolve", "on");
+        break;
+    default:
+        highsInstance.setOptionValue("presolve", "choose");
+        break;
+    }
+
+    highsInstance.setOptionValue("threads", env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual"));
+
+    // highsInstance.setOptionValue("simplex_strategy", 0);
+    // highsInstance.setOptionValue("solver", "choose");
+    // highsInstance.setOptionValue("primal_feasibility_tolerance", 1e-6);
+    // highsInstance.setOptionValue("dual_feasibility_tolerance", 1e-6);
+
     // highsInstance.setOptionValue("highs_debug_level", 3);
     // highsInstance.setOptionValue("mip_report_level", 2);
+    // highsInstance.setOptionValue("output_flag", true);
 
-    highsInstance.setOptionValue("output_flag", false);
-    highsInstance.setOptionValue("threads", env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual"));
+    highsCallbackData.env = env;
 
     highsInstance.setCallback(highsCallback, reinterpret_cast<void*>(&highsCallbackData));
     highsInstance.startCallback(kCallbackMipSolution);
@@ -491,8 +536,7 @@ E_ProblemSolutionStatus MIPSolverHighs::solveProblem()
     cachedSolutionHasChanged = true;
     currentSolutions.clear();
 
-    HighsLp lp = highsInstance.getLp();
-    highsCallbackData.env = env;
+    // HighsLp lp = highsInstance.getLp();
 
     highsReturnStatus = highsInstance.run();
     MIPSolutionStatus = getSolutionStatus();
@@ -610,7 +654,7 @@ void MIPSolverHighs::addMIPStart(VectorDouble point)
     auto return_status = highsInstance.setSolution(solution);
 
     if(return_status != HighsStatus::kOk)
-        env->output->outputDebug("        Could not att MIP start in Highs.");
+        env->output->outputDebug("        Could not add MIP start in Highs.");
 }
 
 void MIPSolverHighs::writeProblemToFile(std::string filename)

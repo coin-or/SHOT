@@ -1538,6 +1538,34 @@ void Solver::initializeSettings()
 
 #endif
 
+#ifdef HAS_HIGHS
+
+    env->settings->createSettingGroup("Subsolver", "Highs", "Highs", "");
+
+    env->settings->createSetting("Highs.MIPAllowRestart", "Subsolver", true, "Whether MIP restart is permitted");
+
+    env->settings->createSetting(
+        "Highs.MIPDetectSymmetry", "Subsolver", true, "Whether MIP symmetry should be detected");
+
+    env->settings->createSetting(
+        "Highs.MIPHeuristicEffort", "Subsolver", 0.05, "Effort spent for MIP heuristics", 0, 1);
+
+    VectorString enumHighsParallel;
+    enumHighsParallel.push_back("off");
+    enumHighsParallel.push_back("choose");
+    enumHighsParallel.push_back("on");
+    env->settings->createSetting("Highs.Parallel", "Subsolver", 1, "Use parallelization", enumHighsParallel, 0);
+    enumHighsParallel.clear();
+
+    VectorString enumHighsPresolve;
+    enumHighsPresolve.push_back("off");
+    enumHighsPresolve.push_back("choose");
+    enumHighsPresolve.push_back("on");
+    env->settings->createSetting("Highs.Presolve", "Subsolver", 1, "Use presolve", enumHighsPresolve, 0);
+    enumHighsPresolve.clear();
+
+#endif
+
     // Subsolver settings: Ipopt
 
 #ifdef HAS_IPOPT
