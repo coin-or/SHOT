@@ -1,0 +1,390 @@
+name: Build and Test
+
+on:
+  workflow_call:
+    inputs:
+      build_type:
+        description: 'The CMake build type, can be either: Release, Debug, RelWithDebInfo, etc.'
+        default: Release
+        required: false
+        type: string
+      build_args:
+        description: 'Additional build parameters'
+        default: '-DHAS_GAMS=off -DHAS_CPLEX=off -DHAS_GUROBI=off -DCOMPILE_TESTS=on -DSPDLOG_STATIC=on'
+        required: false
+        type: string
+      job_count:
+        description: 'The amount of jobs to use when building the program and dependencies.'
+        default: 1
+        required: false
+        type: number
+        # Map the workflow outputs to job outputs
+      version:
+        description: 'The version to build SHOT as.'
+        default: ${{ github.sha }}
+        required: false
+        type: string
+      retention:
+        description: 'The artifact retention period (in days)'
+        default: 60
+        required: false
+        type: number
+      upload_artifacts:
+        description: 'Should the artifacts be uploaded'
+        default: true
+        required: false
+        type: boolean
+      enable_gurobi:
+        description: 'Is this a Gurobi build (this will install Gurobi)'
+        default: false
+        required: false
+        type: boolean
+      enable_gams:
+        description: 'Is this a GAMS build (this will install GAMS)'
+        default: false
+        required: false
+        type: boolean
+      artifact_suffix:
+        description: 'The suffix to add to the artifact name'
+        default: ''
+        required: false
+        type: string
+      gurobi_version:
+        description: 'The version of Gurobi to use'
+        default: '11.0.1'
+        required: false
+        type: string
+      gams_version:
+        description: 'The version of GAMS to use'
+        default: '42.3.0'
+        required: false
+        type: string
+      run_benchmarks:
+        description: 'Should the benchmarks be run'
+        default: false
+        required: false
+        type: boolean
+    secrets:
+      gurobi_license:
+        description: 'Gurobi license file secret'
+        required: false
+      gams_license:
+        description: 'GAMS license file secret'
+        required: false
+      OS_USERNAME:
+        description: 'OpenStack username'
+        required: false
+      OS_PASSWORD:
+        description: 'OpenStack password'
+        required: false
+
+    outputs:
+      test-artifact:
+        description: "Test artifact ID"
+        value: ${{ jobs.build.outputs.test-artifact }}
+      options-artifact:
+        description: "SHOT Optionsfile artifact ID"
+        value: ${{ jobs.build.outputs.options-artifact }}
+      binary-artifact:
+        description: "SHOT Binary artifact ID"
+        value: ${{ jobs.build.outputs.binary-artifact }}
+      package-artifact:
+        description: "SHOT Package artifact ID"
+        value: ${{ jobs.build.outputs.package-artifact }}
+      library-artifact:
+        description: "SHOT Libraries artifact ID"
+        value: ${{ jobs.build.outputs.library-artifact }}
+
+
+env:
+  BUILD_TYPE: ${{ inputs.build_type }}
+  JOB_COUNT: ${{ inputs.job_count }}
+  VERSION: ${{ inputs.version }}
+  ARTIFACT_SUFFIX: ${{ inputs.artifact_suffix }}
+  EXTRA_BUILD_ARGS: ${{ inputs.build_args }}
+  GRB_LICENSE_FILE: ${{ github.workspace }}/gurobi.lic
+  GUROBI_VERSION: ${{ inputs.gurobi_version }}
+  GAMS_VERSION: ${{ inputs.gams_version }}
+
+jobs:
+  build:
+    outputs:
+      test-artifact: ${{ steps.output-artifacts.test }}
+      options-artifact: ${{ steps.output-artifacts.options }}
+      binary-artifact: ${{ steps.output-artifacts.binary }}
+      package-artifact: ${{ steps.output-artifacts.package }}
+      library-artifact: ${{ steps.output-artifacts.library }}
+      gurobi_license_file: ${{ steps.licensefiles.outputs.gurobi}}
+      gams_license_file: ${{ steps.licensefiles.outputs.gams }}
+    name: Build SHOT
+    runs-on: [ self-hosted, linux, cmake ]
+
+    env:
+      GAMS_OPTIONS: -DHAS_GAMS=off
+      GUROBI_OPTIONS: -DHAS_GUROBI=off
+
+    steps:
+      - name: Cleanup workspace
+        run: |
+          sudo rm -rf ./* || true
+          sudo rm -rf ./.??* || true
+
+      - uses: actions/checkout@v4
+
+      - name: Checkout submodules
+        run: git submodule update --init --recursive
+
+      - name: Create Build Environment
+        # Some projects don't allow in-source building, so create a separate build directory
+        # We'll use this as our working directory for all subsequent commands
+        run: cmake -E make_directory ${{github.workspace}}/build
+
+      - name: Install dependencies
+        shell: bash
+        run: sudo apt-get update ; sudo apt-get install -y libc6-dev libbz2-dev zlib1g-dev liblapack-dev libnauty2-dev libopenblas-base libopenblas-dev libmumps-dev pkgconf
+
+      - name: Cache Cbc
+        id: cache-cbc
+        uses: actions/cache@v4
+        with:
+          path: ${{github.workspace}}/ThirdParty/Cbc
+          key: ${{ runner.os }}-cbc
+
+      - name: Cache Ipopt
+        id: cache-ipopt
+        uses: actions/cache@v4
+        with:
+          path: ${{github.workspace}}/ThirdParty/Ipopt
+          key: ${{ runner.os }}-ipopt
+
+      - name: Setup Coinbrew
+        if: steps.cache-ipopt.outputs.cache-hit != 'true' || steps.cache-cbc.outputs.cache-hit != 'true'
+        shell: bash
+        working-directory: ${{github.workspace}}/build
+        run: git -C "coinbrew" pull || git clone https://github.com/coin-or/coinbrew
+
+      - name: Download and build Ipopt
+        if: steps.cache-ipopt.outputs.cache-hit != 'true'
+        shell: bash
+        working-directory: ${{github.workspace}}/build/coinbrew
+        run: ./coinbrew build Ipopt --verbosity 2 --prefix=${{github.workspace}}/ThirdParty/Ipopt -j $JOB_COUNT --no-prompt --tests none
+
+      - name: Download and build Cbc
+        if: steps.cache-cbc.outputs.cache-hit != 'true'
+        shell: bash
+        working-directory: ${{github.workspace}}/build/coinbrew
+        run: rm -rf build dist ; ./coinbrew build Cbc@stable/2.10 --verbosity 2 -j $JOB_COUNT --prefix=${{github.workspace}}/ThirdParty/Cbc --no-prompt --tests none --no-third-party
+
+      # Proprietary software setup happens here (GAMS and Gurobi)
+      # First we create the license files from the base64 encoded secrets.
+      - name: Setup Gurobi License file
+        if: ${{ inputs.enable_gurobi }}
+        shell: bash
+        working-directory: ${{github.workspace}}
+        run: echo ${{ secrets.gurobi_license }} | base64 -d > $GRB_LICENSE_FILE
+
+      - name: Extract Version
+        id: get_version
+        run: |
+          version=${{ env.GUROBI_VERSION }}
+          major_minor=$(echo $version | awk -F '.' '{print $1 "." $2}')
+          version_without_dot=$(echo $version | tr -d .) 
+          echo "GUROBI_SHORT_VERSION=$major_minor" >> $GITHUB_ENV
+          echo "GUROBI_VERSION_WITHOUT_DOT=$version_without_dot" >> $GITHUB_ENV
+          echo "GRB_INSTALL_PATH=${{ github.workspace }}/ThirdParty/gurobi${version_without_dot}" >> $GITHUB_ENV
+
+      # Then we download and install Gurobi
+      - name: Download Gurobi
+        if: ${{ inputs.enable_gurobi }}
+        shell: bash
+        working-directory: ${{github.workspace}}/ThirdParty
+        run: wget -q https://packages.gurobi.com/${{ env.GUROBI_SHORT_VERSION }}/gurobi${{ env.GUROBI_VERSION }}_linux64.tar.gz ; tar -xvf gurobi${{ env.GUROBI_VERSION }}_linux64.tar.gz ; rm gurobi${{ env.GUROBI_VERSION }}_linux64.tar.gz
+
+      # Finally, we set the environment variables needed for Gurobi to work.
+      - name: Setup Gurobi environment variables
+        if: ${{ inputs.enable_gurobi }}
+        shell: bash
+        working-directory: ${{github.workspace}}/ThirdParty
+        run: |
+          echo "${{ github.workspace }}/ThirdParty/gurobi${{ env.GUROBI_VERSION_WITHOUT_DOT }}/linux64/bin" >> $GITHUB_PATH
+          echo "GUROBI_HOME=${{ github.workspace }}/ThirdParty/gurobi${{ env.GUROBI_VERSION_WITHOUT_DOT }}/linux64" >> $GITHUB_ENV
+          echo "LD_LIBRARY_PATH=${{ github.workspace }}/ThirdParty/gurobi${{ env.GUROBI_VERSION_WITHOUT_DOT }}/linux64/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
+
+      - name: Set Gurobi options
+        if: ${{ inputs.enable_gurobi }}
+        shell: bash
+        run: echo "GUROBI_OPTIONS=-DHAS_GUROBI=on" >> $GITHUB_ENV
+
+      - name: Get GAMS short version
+        id: get_gams_short_version
+        run: |
+          version=${{ env.GAMS_VERSION }}
+          major_minor=$(echo $version | awk -F '.' '{print $1 "." $2}')
+          echo "GAMS_SHORT_VERSION=$major_minor" >> $GITHUB_ENV
+          echo "GAMS_INSTALL_PATH=${{ github.workspace }}/ThirdParty/gams${major_minor}_linux_x64_64_sfx" >> $GITHUB_ENV
+          echo "GAMS_LICENSE_FILE=${{ github.workspace }}/ThirdParty/gams${major_minor}_linux_x64_64_sfx/gamslice.txt" >> $GITHUB_ENV
+
+      # Next, we set up GAMS
+      # Download GAMS
+      - name: Download GAMS
+        if: ${{ inputs.enable_gams }}
+        shell: bash
+        working-directory: ${{github.workspace}}/ThirdParty
+        run: wget -q https://d37drm4t2jghv5.cloudfront.net/distributions/${{ env.GAMS_VERSION }}/linux/linux_x64_64_sfx.exe ; chmod +x linux_x64_64_sfx.exe ; ./linux_x64_64_sfx.exe ; rm linux_x64_64_sfx.exe
+
+      # Add the license file to the GAMS installation directory
+      - name: Setup GAMS License file
+        if: ${{ inputs.enable_gams }}
+        shell: bash
+        working-directory: ${{github.workspace}}
+        run: echo ${{ secrets.gams_license }} | base64 -d > $GAMS_LICENSE_FILE
+
+      - name: Install GAMS
+        if: ${{ inputs.enable_gams }}
+        shell: bash
+        working-directory: ${{ github.workspace }}/ThirdParty/gams${{ env.GAMS_SHORT_VERSION }}_linux_x64_64_sfx/
+        run: ./gamsinst -a
+
+      - name: Add GAMS to the path
+        if: ${{ inputs.enable_gams }}
+        shell: bash
+        run: echo "$GAMS_INSTALL_PATH" >> $GITHUB_PATH
+
+      - name: Set GAMS options
+        if: ${{ inputs.enable_gams }}
+        shell: bash
+        run: echo "GAMS_OPTIONS=-DHAS_GAMS=on" >> $GITHUB_ENV
+
+      - name: Output License files
+        id: licensefiles
+        shell: bash
+        run: |
+          echo "gurobi=${{ github.workspace }}/ThirdParty/gurobi${{ env.GUROBI_VERSION_WITHOUT_DOT }}/linux64/bin/gurobi.lic" >> $GITHUB_OUTPUT
+          echo "gams=${{ github.workspace }}/ThirdParty/gams${{ env.GAMS_SHORT_VERSION }}_linux_x64_64_sfx/gamslice.txt" >> $GITHUB_OUTPUT
+
+      - name: Configure CMake
+        # Uses bash shell, so we can use the same syntax for environment variable
+        # access regardless of the host operating system
+        shell: bash
+        working-directory: ${{github.workspace}}/build
+        # Here we configure the build, we set the build type,
+        # enable the tests and set the path to the external libraries.
+        run: cmake -S $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DHAS_CBC=on -DCBC_DIR=${{github.workspace}}/ThirdParty/Cbc -DHAS_IPOPT=ON -DIPOPT_DIR=${{github.workspace}}/ThirdParty/Ipopt -DGAMS_DIR=$GAMS_INSTALL_PATH -DGUROBI_DIR=$GRB_INSTALL_PATH -DCOMPILE_TESTS=on -DSPDLOG_STATIC=on $GAMS_OPTIONS $GUROBI_OPTIONS -DHAS_CPLEX=off
+
+      - name: Build
+        working-directory: ${{github.workspace}}/build
+        shell: bash
+        # We build the job, $BUILD_TYPE can be Release, Debug, RelWithDebInfo.
+        # $JOB_COUNT is the amount of jobs to use when building the program and dependencies,
+        # this can be set as an input.
+        run: cmake --build . --config $BUILD_TYPE -j $JOB_COUNT
+
+      - name: Generate Optionsfile
+        working-directory: ${{github.workspace}}/build
+        shell: bash
+        run: ./SHOT --opt
+
+      - name: Test
+        id: test
+        working-directory: ${{github.workspace}}/build
+        shell: bash
+        run: ctest -C $BUILD_TYPE --output-on-failure --output-junit test-output/ctest-junit-output.xml --output-log test-output/ctest-test.log
+
+      - name: Construct package
+        working-directory: ${{github.workspace}}/build
+        shell: bash
+        run: make package
+
+      - name: Show linked libraries
+        working-directory: ${{github.workspace}}/build
+        shell: bash
+        run: ldd SHOT
+
+        # This will always run as we always want the test output, however if the files are not found, we just warn the user.
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        name: Upload test results
+        with:
+          name: test-logs-${{ env.VERSION }}${{ env.ARTIFACT_SUFFIX }}
+          path: |
+            ${{github.workspace}}/build/test-output/*.log
+            ${{github.workspace}}/build/test-output/*.xml
+          retention-days: ${{ inputs.retention }}
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ inputs.upload_artifacts }}
+        name: Upload SHOT Optionsfile
+        with:
+          name: shot-optsfile-${{ env.VERSION }}${{ env.ARTIFACT_SUFFIX }}
+          path: ${{github.workspace}}/build/SHOT.opt
+          retention-days: ${{ inputs.retention }}
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ inputs.upload_artifacts }}
+        name: Upload SHOT File
+        with:
+          name: shot-binary-${{ env.VERSION }}${{ env.ARTIFACT_SUFFIX }}
+          path: ${{github.workspace}}/build/SHOT
+          retention-days: ${{ inputs.retention }}
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ inputs.upload_artifacts }}
+        name: Upload SHOT Package file
+        with:
+          name: shot-package-${{ env.VERSION }}${{ env.ARTIFACT_SUFFIX }}
+          path: ${{github.workspace}}/build/SHOT-*-Linux.zip
+          retention-days: ${{ inputs.retention }}
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ inputs.upload_artifacts }}
+        name: Upload SHOT Libraries
+        with:
+          name: shot-libraries-${{ env.VERSION }}${{ env.ARTIFACT_SUFFIX }}
+          path: |
+            ${{github.workspace}}/build/*.so
+            ${{github.workspace}}/build/*.a
+          retention-days: ${{ inputs.retention }}
+
+      - name: Output artifact names
+        id: output-artifacts
+        if: ${{ inputs.upload_artifacts }}
+        shell: bash
+        run: |
+          echo "test=test-logs-${{ env.VERSION }}${{ env.ARTIFACT_SUFFIX }}" >> $GITHUB_OUTPUT
+          echo "options=shot-optsfile-${{ env.VERSION }}${{ env.ARTIFACT_SUFFIX }}" >> $GITHUB_OUTPUT
+          echo "binary=shot-binary-${{ env.VERSION }}${{ env.ARTIFACT_SUFFIX }}" >> $GITHUB_OUTPUT
+          echo "package=shot-package-${{ env.VERSION }}${{ env.ARTIFACT_SUFFIX }}" >> $GITHUB_OUTPUT
+          echo "library=shot-libraries-${{ env.VERSION }}${{ env.ARTIFACT_SUFFIX }}" >> $GITHUB_OUTPUT
+
+      - name: Output test artifacts
+        if: ${{ inputs.upload_artifacts }} != true && steps.output-artifacts.outcome != 'success'
+        shell: bash
+        run: echo "test=test-logs-${{ env.VERSION }}" >> $GITHUB_OUTPUT
+
+      - name: Cleanup license files
+        if: ${{ success() || failure() }}
+        shell: bash
+        run: |
+          rm -f $GRB_LICENSE_FILE
+          rm -f $GAMS_LICENSE_FILE
+
+  # Finally, we run some simple benchmarks
+  benchmark:
+    if: ${{ inputs.run_benchmarks }}
+    name: Benchmark
+    uses: ./.github/workflows/benchmarker.yml
+    needs: [ build ]
+    with:
+      shot_executable_path: build
+      benchmark_folder: "MINLP-convex-small"
+      benchmark_type: "nl"
+      enable_gurobi: ${{ inputs.enable_gurobi }}
+      enable_gams: ${{ inputs.enable_gams }}
+      gurobi_license_file: ${{ needs.build.outputs.gurobi_license_file }}
+      gams_license_file: ${{ needs.build.outputs.gams_license_file }}
+      artifact_suffix: ${{ inputs.artifact_suffix }}
+    secrets:
+      gurobi_license: ${{ secrets.gurobi_license }}
+      gams_license: ${{ secrets.gams_license }}
+      OS_USERNAME: ${{ secrets.OS_USERNAME }}
+      OS_PASSWORD: ${{ secrets.OS_PASSWORD }}

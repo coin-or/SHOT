@@ -196,7 +196,6 @@ bool IpoptProblem::get_starting_point(Index n, [[maybe_unused]] bool init_x, [[m
     [[maybe_unused]] bool init_z, [[maybe_unused]] Number* z_L, [[maybe_unused]] Number* z_U, [[maybe_unused]] Index m,
     [[maybe_unused]] bool init_lambda, [[maybe_unused]] Number* lambda)
 {
-    /*
     assert(init_x == true);
     assert(init_z == false);
     assert(init_lambda == false);
@@ -295,7 +294,7 @@ bool IpoptProblem::get_starting_point(Index n, [[maybe_unused]] bool init_x, [[m
             x[k] = variableLB;
         else
             x[k] = variableUB;
-    }*/
+    }
 
     return (true);
 }
@@ -903,8 +902,7 @@ void NLPSolverIpoptBase::setInitialSettings()
     // ipoptApplication->Options()->SetStringValue("ma86_order", "auto", true, true);
     ipoptApplication->Options()->SetStringValue("mu_oracle", "probing", true, true);
     ipoptApplication->Options()->SetStringValue("expect_infeasible_problem", "yes", true, true);
-    ipoptApplication->Options()->SetStringValue("warm_start_init_point", "no", true,
-        true); // Cannot warm start since we do not have all required info, just a starting point
+    ipoptApplication->Options()->SetStringValue("warm_start_init_point", "no", true, true);
     ipoptApplication->Options()->SetNumericValue("gamma_phi", 1e-8, true, true);
     ipoptApplication->Options()->SetNumericValue("gamma_theta", 1e-4, true, true);
     ipoptApplication->Options()->SetNumericValue("required_infeasibility_reduction", 0.1, true, true);

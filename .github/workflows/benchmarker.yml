@@ -1,0 +1,183 @@
+name: Benchmark
+
+on:
+  workflow_call:
+    inputs:
+      shot_executable_path:
+        description: 'The path to the SHOT executable to run'
+        default: "/SHOT"
+        required: false
+        type: string
+      benchmark_folder:
+        description: 'The benchmark to run (folder name from: https://github.com/andreaslundell/SHOT_benchmark_problems)'
+        default: "MINLP-convex-small"
+        required: false
+        type: string
+      benchmark_type:
+        description: 'The benchmark type to run, can be gms, nl or osil'
+        default: "nl"
+        required: false
+        type: string
+      benchmarks:
+        description: 'The benchmarks to run, can be a list of benchmarks or a single benchmark, defaults to all benchmarks'
+        default: "all"
+        required: false
+        type: string
+      enable_gurobi:
+        description: 'Is this a Gurobi build (this will install Gurobi)'
+        default: false
+        required: false
+        type: boolean
+      enable_gams:
+        description: 'Is this a GAMS build (this will install GAMS)'
+        default: false
+        required: false
+        type: boolean
+      shot_artifact:
+        description: 'The SHOT artifact to use'
+        default: ""
+        required: false
+        type: string
+      gurobi_license_file:
+        description: 'The path to the Gurobi license file'
+        default: ""
+        required: false
+        type: string
+      gams_license_file:
+        description: 'The path to the GAMS license file'
+        default: ""
+        required: false
+        type: string
+      artifact_suffix:
+        description: 'The suffix to add to the artifact name'
+        default: ''
+        required: false
+        type: string
+    secrets:
+      gurobi_license:
+        description: 'Gurobi license file secret'
+        required: false
+      gams_license:
+        description: 'GAMS license file secret'
+        required: false
+      OS_USERNAME:
+        description: 'OpenStack username'
+        required: true
+      OS_PASSWORD:
+        description: 'OpenStack password'
+        required: true
+
+
+    outputs:
+      benchmarks:
+        description: 'The benchmarks that were run'
+        value: ${{ jobs.benchmark.outputs.benchmarks }}
+
+
+env:
+  GRB_LICENSE_FILE: ${{inputs.gurobi_license_file}}
+  GAMS_LICENSE_FILE: ${{inputs.gams_license_file}}
+
+jobs:
+  benchmark:
+    outputs:
+        benchmarks: ${{ steps.benchmark.outputs.benchmarks }}
+    name: Benchmark SHOT
+    runs-on: [ self-hosted, linux, cmake ]
+
+    steps:
+      - shell: bash
+        run: git -C shot-benchmarker pull || git clone https://github.com/andreaslundell/shot-benchmarker.git
+
+      - name: Fetch SHOT artifact
+        if: ${{ inputs.shot_artifact != '' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.shot_artifact }}
+          path: ${{ github.workspace }}/shot-benchmarker
+
+      - name: Set the SHOT executable path if an artifact is used
+        if : ${{ inputs.shot_executable_path == '' }}
+        shell: bash
+        run: echo "SHOT_EXECUTABLE_PATH=${{ github.workspace }}/shot-benchmarker" >> $GITHUB_ENV
+
+      # If the path is not an absolute path, we assume it is relative to the current working directory
+      - name: Set the SHOT executable path.
+        if: ${{ inputs.shot_executable_path != '' }}
+        shell: bash
+        run: |
+          if [[ ${{ inputs.shot_executable_path }} == /* ]]; then
+            echo "SHOT_EXECUTABLE_PATH=${{ inputs.shot_executable_path }}" >> $GITHUB_ENV
+          else
+            echo "SHOT_EXECUTABLE_PATH=${{ github.workspace }}/${{ inputs.shot_executable_path }}" >> $GITHUB_ENV
+          fi
+
+      - name: Make SHOT executable
+        shell: bash
+        run: |
+          cd ${{ env.SHOT_EXECUTABLE_PATH }}
+          chmod +x SHOT
+
+      - name: Show linked libraries
+        shell: bash
+        working-directory: ${{ env.SHOT_EXECUTABLE_PATH }}
+        run: ldd SHOT
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+          cache: 'pip'
+
+      - shell: bash
+        run: pip install -r requirements.txt
+        working-directory: ${{ github.workspace }}/shot-benchmarker
+
+      # Add the license file to the GAMS installation directory
+      - name: Setup GAMS License file
+        if: ${{ inputs.enable_gams }}
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        run: echo ${{ secrets.gams_license }} | base64 -d > $GAMS_LICENSE_FILE
+
+      - name: Setup Gurobi License file
+        if: ${{ inputs.enable_gurobi }}
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        run: echo ${{ secrets.gurobi_license }} | base64 -d > $GRB_LICENSE_FILE
+
+      - shell: bash
+        id: benchmark
+        env:
+          INPUT_BENCHMARK_FOLDER: ${{ inputs.benchmark_folder }}
+          INPUT_BENCHMARK_TYPE: ${{ inputs.benchmark_type }}
+          INPUT_BENCHMARKS: ${{ inputs.benchmarks  }}
+          INPUT_SHOT_EXECUTABLE: ${{ env.SHOT_EXECUTABLE_PATH }}/SHOT
+          INPUT_COMPARISON_SUFFIX: ${{ inputs.artifact_suffix }}
+          INPUT_IS_GAMS: ${{ inputs.enable_gams }}
+          INPUT_IS_GUROBI: ${{ inputs.enable_gurobi }}
+          OS_AUTH_URL: 'https://pouta.csc.fi:5001/v3'
+          OS_PROJECT_ID: '230dabcfb234424cb77e7de501ef7efc'
+          OS_PROJECT_NAME: 'project_2001223'
+          OS_USER_DOMAIN_NAME: "Default"
+          OS_PROJECT_DOMAIN_ID: "default"
+          OS_USERNAME: '${{ secrets.OS_USERNAME }}'
+          OS_PASSWORD: '${{ secrets.OS_PASSWORD }}'
+          OS_REGION_NAME: "regionOne"
+          OS_INTERFACE: "public"
+          OS_IDENTITY_API_VERSION: "3"
+          GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
+        working-directory: ${{ github.workspace }}/shot-benchmarker
+        run: python main.py -c -s --runs 5
+
+      - name: Upload benchmarks
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmarks-${{ github.sha }}${{ inputs.artifact_suffix }}
+          path: ${{ github.workspace }}/shot-benchmarker/benchmarks
+
+      - name: Cleanup license files
+        if: ${{ success() || failure() }}
+        shell: bash
+        run: |
+          rm -f $GRB_LICENSE_FILE
+          rm -f $GAMS_LICENSE_FILE

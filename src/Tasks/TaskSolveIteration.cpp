@@ -155,13 +155,13 @@ void TaskSolveIteration::run()
         {
             auto debugPath = env->settings->getSetting<std::string>("Debug.Path", "Output");
 
-            for(int i = 0; i < sols.size(); i++)
+            for(size_t i = 0; i < sols.size(); i++)
             {
                 auto filename = fmt::format("{}/dualiter{}_solpt_{}.txt", debugPath, currIter->iterationNumber - 1, i);
                 Utilities::saveVariablePointVectorToFile(sols.at(i).point, variableNames, filename);
             }
 
-            for(int i = 0; i < sols.size(); i++)
+            for(size_t i = 0; i < sols.size(); i++)
             {
                 auto filename
                     = fmt::format("{}/dualiter{}_solinfo_{}.txt", debugPath, currIter->iterationNumber - 1, i);

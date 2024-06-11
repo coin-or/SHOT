@@ -31,3 +31,4 @@
 build/*
 /.vs
 /out/build
+/.cache/

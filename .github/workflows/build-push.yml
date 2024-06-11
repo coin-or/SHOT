@@ -1,0 +1,62 @@
+name: Build
+
+# Build this on push
+on: [ push, workflow_dispatch ]
+
+# Only build one build at a time
+concurrency: push-build
+
+jobs:
+  # First, we build and test using the default build options and only open source external libraries
+  build-test:
+    name: Build & Test
+    uses: ./.github/workflows/build-workflow.yml
+    with:
+      job_count: 4
+      build_type: Release
+      retention: 30
+      upload_artifacts: true
+      run_benchmarks: true
+    secrets:
+      OS_USERNAME: ${{ secrets.OS_USERNAME }}
+      OS_PASSWORD: ${{ secrets.OS_PASSWORD }}
+
+  # Then, we build and test using all licenses included proprietary ones
+  build-proprietary:
+    name: Build & Test (Proprietary licenses)
+    needs: [ build-test ]
+    uses: ./.github/workflows/build-workflow.yml
+    with:
+      job_count: 4
+      build_type: Release
+      retention: 30
+      upload_artifacts: false
+      enable_gurobi: true
+      enable_gams: true
+      artifact_suffix: '-proprietary'
+      run_benchmarks: true
+    secrets:
+      gurobi_license: ${{ secrets.GUROBI_LICENSE_FILE }}
+      gams_license: ${{ secrets.GAMS_LICENSE_FILE }}
+      OS_USERNAME: ${{ secrets.OS_USERNAME }}
+      OS_PASSWORD: ${{ secrets.OS_PASSWORD }}
+
+
+  # Publish the test results as an output
+  publish-test:
+    name: Publish test results
+    needs: [ build-test, build-proprietary ]
+    runs-on: [ self-hosted, docker ]
+    steps:
+      - uses: actions/download-artifact@v4
+        name: Download artifacts
+        with:
+          path: artifacts
+
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always()
+        with:
+          files: |
+            artifacts/test-*/*.xml
+
