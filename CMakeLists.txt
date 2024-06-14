@@ -191,7 +191,12 @@ file(
 # Cbc
 
 if(HAS_CBC)
-    find_package(CBC)
+    find_package(PkgConfig)
+    
+    if(PkgConfig_FOUND)
+        include(FindPkgConfig)
+        find_package(CBC)
+    endif()
 
     if(CBC_FOUND)
         link_directories(${CBC_LIBRARY_DIRS})
@@ -231,7 +236,7 @@ endif(HAS_CPLEX)
 # Gurobi
 
 if(HAS_GUROBI)
-    find_package(Gurobi)
+    find_package(GUROBI)
     add_definitions(-DHAS_GUROBI)
 
     if(GUROBI_FOUND)
@@ -254,7 +259,7 @@ if(HAS_HIGHS)
 
     if(USE_EXTERNAL_HIGHS)
         find_package(Threads REQUIRED)
-        find_package(HIGHS REQUIRED EXACT PATHS ${HIGHS_EXTERNAL_DIR} NO_DEFAULT_PATH)
+        find_package(HIGHS REQUIRED PATHS ${HIGHS_EXTERNAL_DIR} NO_DEFAULT_PATH)
     endif()
   
     if(NOT(USE_EXTERNAL_HIGHS))

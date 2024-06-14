@@ -1,28 +1,21 @@
-find_package(PkgConfig)
-
 set(CBC_FOUND false)
 
-if(PkgConfig_FOUND)
-  include(FindPkgConfig)
+set(ENV{PKG_CONFIG_PATH} "${CBC_DIR}/lib/pkgconfig")
+pkg_search_module(CBC cbc)
 
-  set(ENV{PKG_CONFIG_PATH} "${CBC_DIR}/lib/pkgconfig")
-  pkg_search_module(CBC cbc)
+if(CBC_FOUND)
+  message("-- Cbc found using Pkg-config:")
+  message("   Include directories found: ${CBC_INCLUDE_DIRS}")
+  message("   Library directories found: ${CBC_LIBRARY_DIRS}")
 
-  if(CBC_FOUND)
-    message("-- Cbc found using Pkg-config:")
-    message("   Include directories found: ${CBC_INCLUDE_DIRS}")
-    message("   Library directories found: ${CBC_LIBRARY_DIRS}")
-
-    # Handle the QUIETLY and REQUIRED arguments and set CBC_FOUND to TRUE if all listed variables are TRUE.
-    find_package_handle_standard_args(CBC
-                                      DEFAULT_MSG
-                                      CBC_LIBRARIES
-                                      CBC_INCLUDE_DIRS
-                                      CBC_LIBRARY_DIRS)
-    mark_as_advanced(CBC_LIBRARIES CBC_INCLUDE_DIRS CBC_LIBRARY_DIRS)
-  endif(CBC_FOUND)
-
-endif(PkgConfig_FOUND)
+  # Handle the QUIETLY and REQUIRED arguments and set CBC_FOUND to TRUE if all listed variables are TRUE.
+  find_package_handle_standard_args(CBC
+                                    DEFAULT_MSG
+                                    CBC_LIBRARIES
+                                    CBC_INCLUDE_DIRS
+                                    CBC_LIBRARY_DIRS)
+  mark_as_advanced(CBC_LIBRARIES CBC_INCLUDE_DIRS CBC_LIBRARY_DIRS)
+endif(CBC_FOUND)
 
 if(NOT (CBC_FOUND))
 
