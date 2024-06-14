@@ -50,7 +50,7 @@ HighsCallbackFunctionType highsCallback
 
           if(callback_type == kCallbackMipInterrupt)
           {
-              if(MIPSolver->currentSolutions.size() == MIPSolver->getSolutionLimit())
+              if(MIPSolver->currentSolutions.size() >= MIPSolver->getSolutionLimit())
               {
                   env->output->outputDebug(fmt::format("      | solution limit reached "));
                   data_in->user_interrupt = true;
@@ -689,6 +689,7 @@ double MIPSolverHighs::getObjectiveValue(int solIdx)
 void MIPSolverHighs::deleteMIPStarts()
 {
     // TODO: not yet implemented
+
     MIPStart.clear();
 }
 
@@ -700,8 +701,6 @@ bool MIPSolverHighs::createIntegerCut(IntegerCut& integerCut)
 
 VectorDouble MIPSolverHighs::getVariableSolution(int solIdx)
 {
-    // auto solution = highsInstance.getSolution().col_value;
-    // return (solution);
     VectorDouble solution;
     bool isMIP = getDiscreteVariableStatus();
 

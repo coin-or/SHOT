@@ -48,26 +48,28 @@ option(HAS_AMPL "Should the AMPL .nl interface be build" ON)
 
 # GAMS
 option(HAS_GAMS "Is GAMS available" ON)
-set(GAMS_DIR "/opt/gams/gams46.4" CACHE STRING "The base directory where GAMS is located (if available)")
+set(GAMS_DIR "/opt/gams" CACHE STRING "The base directory where GAMS is located (if available)")
 
 # CPLEX
 option(HAS_CPLEX "Is Cplex available" ON)
-set(CPLEX_DIR "/opt/ibm/ILOG/CPLEX_Studio221" CACHE STRING "The base directory where CPLEX is located (if available)")
+set(CPLEX_DIR "/opt/cplex" CACHE STRING "The base directory where CPLEX is located (if available)")
 
 # Gurobi
 option(HAS_GUROBI "Is Gurobi available" ON)
-set(GUROBI_DIR "/opt/gurobi/gurobi1101" CACHE STRING "The base directory where Gurobi is located (if available)")
+set(GUROBI_DIR "/opt/gurobi" CACHE STRING "The base directory where Gurobi is located (if available)")
 
 # Cbc
 option(HAS_CBC "Is Cbc available" ON)
-set(CBC_DIR "/opt/cbc-2.10.10" CACHE STRING "The base directory where Cbc is located (if available).")
+set(CBC_DIR "/opt/cbc" CACHE STRING "The base directory where Cbc is located (if available).")
 
 # Ipopt
 option(HAS_IPOPT "Is Ipopt available" ON)
-set(IPOPT_DIR "/opt/ipopt-3.14" CACHE STRING "The base directory where Ipopt is located (if available).")
+set(IPOPT_DIR "/opt/ipopt" CACHE STRING "The base directory where Ipopt is located (if available).")
 
-# Highs
+# HiGHS
 option(HAS_HIGHS "Is HiGHS available" ON)
+option(USE_EXTERNAL_HIGHS "Use precompiled, external HiGHS libraries" OFF)
+set(HIGHS_EXTERNAL_DIR "/opt/highs" CACHE STRING "The external directory where HiGHS is located).")
 
 # Create also the executable
 option(GENERATE_EXE "Should the SHOT executable be generated (requires at least that either OS or GAMS is available)"
@@ -79,7 +81,6 @@ set(ARGH_DIR "ThirdParty/argh")
 set(BOOST_DIR "ThirdParty/boost")
 set(CPPAD_DIR "ThirdParty/CppAD")
 set(EIGEN_DIR "ThirdParty/eigen")
-set(HIGHS_DIR "ThirdParty/HiGHS")
 set(MCPP_DIR "ThirdParty/mc++")
 set(SPDLOG_DIR "ThirdParty/spdlog")
 set(TINYXML2_DIR "ThirdParty/tinyxml2")
@@ -91,6 +92,7 @@ file(TO_CMAKE_PATH "${CBC_DIR}" ${CBC_DIR})
 file(TO_CMAKE_PATH "${CPLEX_DIR}" ${CPLEX_DIR})
 file(TO_CMAKE_PATH "${GAMS_DIR}" ${GAMS_DIR})
 file(TO_CMAKE_PATH "${GUROBI_DIR}" ${GUROBI_DIR})
+file(TO_CMAKE_PATH "${HIGHS_EXTERNAL_DIR}" ${HIGHS_EXTERNAL_DIR})
 file(TO_CMAKE_PATH "${IPOPT_DIR}" ${IPOPT_DIR})
 
 # Check if a MIP solver is defined
@@ -249,6 +251,22 @@ if(HAS_HIGHS)
     add_definitions(-DHAS_HIGHS)
     set(DUAL_SOURCES ${DUAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverHighs.cpp")
     set(DUAL_HEADERS ${DUAL_HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverHighs.h")
+
+    if(USE_EXTERNAL_HIGHS)
+        find_package(Threads REQUIRED)
+        find_package(HIGHS REQUIRED EXACT PATHS ${HIGHS_EXTERNAL_DIR} NO_DEFAULT_PATH)
+    endif()
+  
+    if(NOT(USE_EXTERNAL_HIGHS))
+        include(FetchContent)
+        FetchContent_Declare(
+            highs
+            GIT_REPOSITORY "https://github.com/ERGO-Code/HiGHS.git"
+            GIT_TAG        "latest"
+        )
+
+        FetchContent_MakeAvailable(highs)
+    endif()
 endif(HAS_HIGHS)
 
 # Ipopt
@@ -352,7 +370,6 @@ include_directories(SYSTEM "${MCPP_DIR}/include")
 #include_directories(SYSTEM "${MCPP_DIR}/3rdparty/cpplapack/include")
 #include_directories(SYSTEM "${MCPP_DIR}/3rdparty/fadbad++")
 include_directories(SYSTEM "${SPDLOG_DIR}/include")
-#¤include_directories(SYSTEM "${HIGHS_DIR}/src/")
 
 # Make sure the source file lists are in the correct format
 file(TO_CMAKE_PATH "${SOURCES}" SOURCES)
@@ -384,18 +401,6 @@ ExternalProject_Add(cppad
     -Dcppad_prefix=${CMAKE_CURRENT_BINARY_DIR}/CppAD
     -Dcppad_cxx_flags="-std=c++17"
 )
-
-# Adding HiGHS using as an external project
-ExternalProject_Add(HiGHS
-    PREFIX HiGHS
-    SOURCE_DIR ${PROJECT_SOURCE_DIR}/${HIGHS_DIR}
-    CMAKE_ARGS -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-    -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
-    -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
-    -DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/HiGHS
-)
-
-SET(HIGHS_LIB_DIR ${CMAKE_CURRENT_BINARY_DIR}/HiGHS/lib)
 
 # Creates the helper library
 add_library(
@@ -585,13 +590,11 @@ endif(HAS_CBC)
 
 # HiGHS linking
 if(HAS_HIGHS)
-    message("-- HiGHS include files will be used from: ${HIGHS_LIB_DIR}")
-    add_dependencies(SHOTDualStrategy HiGHS)
-    target_link_libraries(SHOTDualStrategy ${HIGHS_LIB_DIR}/libhighs.so)
-    target_include_directories(SHOTDualStrategy PUBLIC "${CMAKE_CURRENT_BINARY_DIR}/HiGHS/include/highs")
-    add_dependencies(SHOTPrimalStrategy HiGHS)
-    target_link_libraries(SHOTPrimalStrategy ${HIGHS_LIB_DIR}/libhighs.so)
-    target_include_directories(SHOTPrimalStrategy PUBLIC "${CMAKE_CURRENT_BINARY_DIR}/HiGHS/include/highs")
+    message("-- HiGHS include files will be used from: ${HIGHS_INCLUDE_DIRS}")
+    add_dependencies(SHOTDualStrategy highs::highs)
+    target_link_libraries(SHOTDualStrategy highs::highs)
+    add_dependencies(SHOTPrimalStrategy highs::highs)
+    target_link_libraries(SHOTPrimalStrategy highs::highs)
 endif(HAS_HIGHS)
 
 # Ipopt linking
