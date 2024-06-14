@@ -192,7 +192,7 @@ file(
 
 if(HAS_CBC)
     find_package(PkgConfig)
-    
+
     if(PkgConfig_FOUND)
         include(FindPkgConfig)
         find_package(CBC)
