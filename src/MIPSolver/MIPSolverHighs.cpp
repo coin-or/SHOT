@@ -299,7 +299,7 @@ bool MIPSolverHighs::finalizeProblem()
     highsModel.lp_.col_cost_ = variableCosts;
     highsModel.lp_.sense_ = objectiveSense;
 
-    if(highsInstance.passModel(highsModel) != HighsStatus::kOk)
+    if(highsInstance.passModel(highsModel) == HighsStatus::kError)
         return (false);
 
     setSolutionLimit(1);
