@@ -125,8 +125,6 @@ bool MIPSolverHighs::initializeProblem()
 {
     discreteVariablesActivated = true;
 
-    this->cutOff = 1e100;
-
     aMatrixStart.push_back(0);
 
     cachedSolutionHasChanged = true;
@@ -207,12 +205,12 @@ bool MIPSolverHighs::finalizeObjective(bool isMinimize, double constant)
 {
     if(!isMinimize)
     {
-        objectiveSense = ObjSense::kMaximize;
+        this->objectiveSense = ObjSense::kMaximize;
         isMinimizationProblem = false;
     }
     else
     {
-        objectiveSense = ObjSense::kMinimize;
+        this->objectiveSense = ObjSense::kMinimize;
         isMinimizationProblem = true;
     }
 
@@ -578,10 +576,27 @@ void MIPSolverHighs::setTimeLimit(double seconds) { highsInstance.setOptionValue
 
 void MIPSolverHighs::setCutOff(double cutOff)
 {
+    // TODO: Some problems with maximization problems and cutoff, disabling for now
+    return;
+
     if(cutOff == SHOT_DBL_MAX || cutOff == SHOT_DBL_MIN)
         return;
 
-    highsInstance.setOptionValue("objective_bound", cutOff);
+    double cutOffTol = env->settings->getSetting<double>("MIP.CutOff.Tolerance", "Dual");
+    double cutOffWithTol = (isMinimizationProblem) ? cutOff + cutOffTol : cutOff - cutOffTol;
+
+    if(isMinimizationProblem)
+    {
+        highsInstance.setOptionValue("objective_bound", cutOffWithTol);
+
+        env->output->outputInfo(fmt::format("        Setting cutoff value to {} for minimization.", cutOffWithTol));
+    }
+    else
+    {
+        highsInstance.setOptionValue("objective_bound", cutOffWithTol);
+
+        env->output->outputInfo(fmt::format("        Setting cutoff value to {} for maximization.", cutOffWithTol));
+    }
 }
 
 void MIPSolverHighs::setCutOffAsConstraint(double cutOff)
@@ -614,8 +629,8 @@ void MIPSolverHighs::setCutOffAsConstraint(double cutOff)
         }
         else
         {
-            highsInstance.addRow(-highsInstance.getInfinity(), -1.0 * (cutOff - this->objectiveConstant),
-                variableIndexes.size(), &variableIndexes[0], &coefficients[0]);
+            highsInstance.addRow(cutOff - this->objectiveConstant, highsInstance.getInfinity(), variableIndexes.size(),
+                &variableIndexes[0], &coefficients[0]);
             env->output->outputDebug(
                 "        Setting cutoff constraint value to " + Utilities::toString(cutOff) + " for maximization.");
         }
@@ -637,7 +652,7 @@ void MIPSolverHighs::setCutOffAsConstraint(double cutOff)
         else
         {
             highsInstance.changeRowBounds(
-                cutOffConstraintIndex, -highsInstance.getInfinity(), -(cutOff - this->objectiveConstant));
+                cutOffConstraintIndex, cutOff - this->objectiveConstant, highsInstance.getInfinity());
             env->output->outputDebug(
                 "        Setting cutoff constraint value to " + Utilities::toString(cutOff) + " for maximization.");
         }

@@ -171,9 +171,6 @@ private:
     HighsMipData highsCallbackData;
 
     long int solutionLimit;
-    double timeLimit = 1e100;
-    double cutOff;
-    int numberOfThreads = 1;
     double objectiveConstant = 0.0;
 
     std::vector<std::pair<std::string, double>> MIPStart;

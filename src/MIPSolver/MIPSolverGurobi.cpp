@@ -1099,7 +1099,7 @@ void MIPSolverGurobi::setCutOff(double cutOff)
         {
             gurobiModel->set(GRB_DoubleParam_Cutoff, cutOff + cutOffTol);
             env->output->outputDebug(
-                fmt::format("        Setting cutoff value to  {} for maximization.", cutOff + cutOffTol));
+                fmt::format("        Setting cutoff value to  {} for minimization.", cutOff + cutOffTol));
         }
         else
         {
