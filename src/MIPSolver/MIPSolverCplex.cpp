@@ -1139,9 +1139,7 @@ void MIPSolverCplex::setTimeLimit(double seconds)
 {
     try
     {
-        if(seconds > 1e+75)
-        {
-        }
+        if(seconds > 1e+75) { }
         else if(seconds > 0)
         {
             cplexInstance.setParam(IloCplex::Param::TimeLimit, seconds);

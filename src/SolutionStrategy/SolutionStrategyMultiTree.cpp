@@ -66,6 +66,8 @@
 
 #include "../Tasks/TaskAddIntegerCuts.h"
 
+#include "../Tasks/TaskPerformDualBounding.h"
+
 #include "../Output.h"
 #include "../Model/Problem.h"
 #include "../Model/ObjectiveFunction.h"
@@ -136,6 +138,12 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
 
     auto tSolveIteration = std::make_shared<TaskSolveIteration>(env);
     env->tasks->addTask(tSolveIteration, "SolveIter");
+
+    // if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex)
+    //    {
+    auto tPerformDualBounding = std::make_shared<TaskPerformDualBounding>(env);
+    env->tasks->addTask(tPerformDualBounding, "DualBounding");
+    //}
 
     auto tSelectPrimSolPool = std::make_shared<TaskSelectPrimalCandidatesFromSolutionPool>(env);
     env->tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");

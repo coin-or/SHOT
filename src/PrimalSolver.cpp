@@ -116,7 +116,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
         sourceDesc = "NLP fixed";
         break;
     case E_PrimalSolutionSource::MIPSolutionPool:
-        sourceDesc = "MILP sol. pool";
+        sourceDesc = "MIP sol. pool";
         break;
     case E_PrimalSolutionSource::LPFixedIntegers:
         sourceDesc = "LP fixed";
@@ -126,6 +126,9 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
         break;
     case E_PrimalSolutionSource::InteriorPointSearch:
         sourceDesc = "Interior point search";
+        break;
+    case E_PrimalSolutionSource::ConvexBounding:
+        sourceDesc = "Convex MIP bounding";
         break;
     default:
         sourceDesc = "other";

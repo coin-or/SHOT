@@ -1939,6 +1939,9 @@ void Solver::setConvexityBasedSettings()
 
             env->settings->updateSetting("BoundTightening.FeasibilityBased.TimeLimit", "Model", 5.0);
 
+            // Need to save these to perform dual bound updates
+            // env->settings->updateSetting("HyperplaneCuts.SaveHyperplanePoints", "Dual", true);
+
 #ifdef HAS_CPLEX
 
             if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Cplex)

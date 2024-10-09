@@ -69,8 +69,11 @@ void DualSolver::checkDualSolutionCandidates()
 
         if(updateDual)
         {
-            // New dual solution
-            env->results->setDualBound(C.objValue);
+            if(C.sourceType == E_DualSolutionSource::ConvexBounding)
+                env->results->setDualBound(C.objValue, true); // Force valid dual bound update
+            else
+                env->results->setDualBound(C.objValue);
+
             currDualBound = C.objValue;
 
             if(env->results->getNumberOfIterations() > 0)
@@ -83,7 +86,8 @@ void DualSolver::checkDualSolutionCandidates()
 
             if(C.sourceType == E_DualSolutionSource::MIPSolutionOptimal
                 || C.sourceType == E_DualSolutionSource::LPSolution
-                || C.sourceType == E_DualSolutionSource::MIPSolverBound)
+                || C.sourceType == E_DualSolutionSource::MIPSolverBound
+                || C.sourceType == E_DualSolutionSource::ConvexBounding)
             {
                 env->results->addDualSolution(C);
             }
@@ -104,11 +108,21 @@ void DualSolver::checkDualSolutionCandidates()
             case E_DualSolutionSource::MIPSolverBound:
                 sourceDesc = "MIP solver bound";
                 break;
+            case E_DualSolutionSource::ConvexBounding:
+                sourceDesc = "Convex MIP bounding";
+                break;
             default:
                 break;
             }
 
-            env->output->outputDebug(fmt::format("        New dual bound {}, source: {}", C.objValue, sourceDesc));
+            if(C.sourceType == E_DualSolutionSource::ConvexBounding)
+            {
+                env->output->outputInfo(fmt::format("        New dual bound {}, source: {}", C.objValue, sourceDesc));
+            }
+            else
+            {
+                env->output->outputDebug(fmt::format("        New dual bound {}, source: {}", C.objValue, sourceDesc));
+            }
         }
     }
 
@@ -231,6 +245,11 @@ void DualSolver::addGeneratedHyperplane(const Hyperplane& hyperplane)
     currentIteration->numHyperplanesAdded++;
     currentIteration->totNumHyperplanes++;
     env->solutionStatistics.iterationLastDualCutAdded = currentIteration->iterationNumber;
+
+    if(hyperplane.isSourceConvex)
+        env->solutionStatistics.numberOfHyperplanesWithConvexSource++;
+    else
+        env->solutionStatistics.numberOfHyperplanesWithNonconvexSource++;
 
     env->output->outputTrace("        Hyperplane generated from: " + source);
 }

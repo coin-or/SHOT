@@ -179,23 +179,17 @@ struct Hyperplane
     int sourceConstraintIndex; // -1 if objective function
     VectorDouble generatedPoint;
     double objectiveFunctionValue; // Used for the objective cuts only
-    E_HyperplaneSource source;
+    E_HyperplaneSource source = E_HyperplaneSource::None;
     bool isObjectiveHyperplane = false;
     bool isSourceConvex = false;
     double pointHash;
 };
 
-struct GeneratedHyperplane
+struct GeneratedHyperplane : Hyperplane
 {
-    NumericConstraintPtr sourceConstraint;
-    int sourceConstraintIndex; // -1 if objective function
-    VectorDouble generatedPoint;
-    E_HyperplaneSource source = E_HyperplaneSource::None;
     bool isLazy = false;
     bool isRemoved = false;
-    bool isSourceConvex = false;
     int iterationGenerated = -1;
-    double pointHash;
 };
 
 struct IntegerCut
@@ -231,6 +225,8 @@ struct SolutionStatistics
     int numberOfConstraintsRemovedInPresolve = 0;
     int numberOfVariableBoundsTightenedInPresolve = 0;
 
+    int numberOfHyperplanesWithConvexSource = 0;
+    int numberOfHyperplanesWithNonconvexSource = 0;
     int numberOfIntegerCuts = 0;
 
     int numberOfIterationsWithDualStagnation = 0;

@@ -11,20 +11,26 @@
 #pragma once
 #include "TaskBase.h"
 
+#include "../MIPSolver/IMIPSolver.h"
+#include "../Model/Problem.h"
+
 #include "TaskCreateMIPProblem.h"
 
 namespace SHOT
 {
-class TaskCreateDualProblem : public TaskBase
+
+class TaskPerformDualBounding : public TaskBase
 {
 public:
-    TaskCreateDualProblem(EnvironmentPtr envPtr);
-    ~TaskCreateDualProblem() override;
+    TaskPerformDualBounding(EnvironmentPtr envPtr);
+    ~TaskPerformDualBounding() override;
 
     void run() override;
     std::string getType() override;
 
 private:
     std::shared_ptr<TaskCreateMIPProblem> taskCreateMIPProblem;
+    int lastNumberOfHyperplanesWithConvexSource = 0;
+    int lastNumberOfHyperplanesWithNonconvexSource = 0;
 };
 } // namespace SHOT

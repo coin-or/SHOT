@@ -63,6 +63,8 @@
 #include "../Settings.h"
 #include "../Timing.h"
 
+#include "../Model/Problem.h"
+
 namespace SHOT
 {
 

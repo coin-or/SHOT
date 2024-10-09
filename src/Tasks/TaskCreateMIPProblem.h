@@ -11,20 +11,22 @@
 #pragma once
 #include "TaskBase.h"
 
-#include "TaskCreateMIPProblem.h"
-
 namespace SHOT
 {
-class TaskCreateDualProblem : public TaskBase
+
+class TaskCreateMIPProblem : public TaskBase
 {
 public:
-    TaskCreateDualProblem(EnvironmentPtr envPtr);
-    ~TaskCreateDualProblem() override;
+    TaskCreateMIPProblem(EnvironmentPtr envPtr, MIPSolverPtr MIPSolver, ProblemPtr sourceProblem);
+    ~TaskCreateMIPProblem() override;
 
     void run() override;
     std::string getType() override;
 
 private:
-    std::shared_ptr<TaskCreateMIPProblem> taskCreateMIPProblem;
+    bool createProblem(MIPSolverPtr destinationProblem, ProblemPtr sourceProblem);
+
+    MIPSolverPtr MIPSolver;
+    ProblemPtr sourceProblem;
 };
 } // namespace SHOT

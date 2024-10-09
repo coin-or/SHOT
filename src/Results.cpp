@@ -121,14 +121,16 @@ void Results::addPrimalSolution(PrimalSolution solution)
     if(env->problem->objectiveFunction->properties.isMinimize)
     {
         std::sort(this->primalSolutions.begin(), this->primalSolutions.end(),
-            [](const PrimalSolution& firstSolution, const PrimalSolution& secondSolution)
-            { return (firstSolution.objValue < secondSolution.objValue); });
+            [](const PrimalSolution& firstSolution, const PrimalSolution& secondSolution) {
+                return (firstSolution.objValue < secondSolution.objValue);
+            });
     }
     else
     {
         std::sort(this->primalSolutions.begin(), this->primalSolutions.end(),
-            [](const PrimalSolution& firstSolution, const PrimalSolution& secondSolution)
-            { return (firstSolution.objValue > secondSolution.objValue); });
+            [](const PrimalSolution& firstSolution, const PrimalSolution& secondSolution) {
+                return (firstSolution.objValue > secondSolution.objValue);
+            });
     }
 
     env->solutionStatistics.numberOfFoundPrimalSolutions++;
@@ -1135,7 +1137,7 @@ double Results::getCurrentDualBound() { return (this->currentDualBound); }
 
 double Results::getGlobalDualBound() { return (globalDualBound); }
 
-void Results::setDualBound(double value)
+void Results::setDualBound(double value, bool forceGlobal)
 {
     double primalBound = this->getPrimalBound();
 
@@ -1152,8 +1154,12 @@ void Results::setDualBound(double value)
 
     this->currentDualBound = value;
 
-    if(this->solutionIsGlobal)
+    if(this->solutionIsGlobal || forceGlobal)
+    {
+        env->output->outputInfo(fmt::format(" New dual bound: {} ", this->currentDualBound));
         this->globalDualBound = value;
+        this->solutionIsGlobal = true;
+    }
 
     env->solutionStatistics.numberOfIterationsWithDualStagnation = 0;
 

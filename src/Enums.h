@@ -46,7 +46,8 @@ enum class E_DualSolutionSource
     LPSolution,
     MIPSolutionOptimal,
     ObjectiveConstraint,
-    MIPSolverBound
+    MIPSolverBound,
+    ConvexBounding
 };
 
 enum class E_EventType
@@ -152,7 +153,8 @@ enum class E_PrimalSolutionSource
     MIPSolutionPool,
     LPFixedIntegers,
     MIPCallback,
-    InteriorPointSearch
+    InteriorPointSearch,
+    ConvexBounding
 };
 
 enum class E_ProblemConvexity
