@@ -101,7 +101,7 @@ void TaskAddPrimalReductionCut::run()
         }
     }
     else if(env->settings->getSetting<int>("ReductionCut.Strategy", "Dual")
-        == (int)ES_ReductionCutStrategy::GoldenSection)
+        == (int)ES_ReductionCutStrategy::GoldenRatio)
     {
         double factor = 0.618;
 
@@ -133,6 +133,11 @@ void TaskAddPrimalReductionCut::run()
                   << env->solutionStatistics.numberOfPrimalImprovementsAfterInfeasibilityRepair << std::endl;
         std::cout << "        Primal improv. after red. cut: "
                   << env->solutionStatistics.numberOfPrimalImprovementsAfterReductionCut << std::endl;
+    }
+    else
+    {
+        env->tasks->setNextTask(taskIDIfFalse);
+        return;
     }
 
     env->dualSolver->cutOffToUse = cutOffToUse;

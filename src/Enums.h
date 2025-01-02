@@ -375,7 +375,7 @@ enum class ES_PrimalNLPStrategy
 enum class ES_ReductionCutStrategy
 {
     Fraction,
-    GoldenSection
+    GoldenRatio
 };
 
 enum class ES_ReformulationBinaryMonomials

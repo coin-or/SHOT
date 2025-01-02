@@ -901,7 +901,7 @@ void Solver::initializeSettings()
 
     VectorString enumReductionCutStrategy;
     enumReductionCutStrategy.push_back("Fraction");
-    enumReductionCutStrategy.push_back("GoldenSection");
+    enumReductionCutStrategy.push_back("GoldenRatio");
 
     ES_ReductionCutStrategy reductionCutStrategy;
 
