@@ -372,6 +372,12 @@ enum class ES_PrimalNLPStrategy
     IterationOrTimeAndAllFeasibleSolutions
 };
 
+enum class ES_ReductionCutStrategy
+{
+    Fraction,
+    GoldenSection
+};
+
 enum class ES_ReformulationBinaryMonomials
 {
     None,

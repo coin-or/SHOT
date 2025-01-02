@@ -896,14 +896,27 @@ void Solver::initializeSettings()
         "These settings control the added dual reduction cuts from the primal solution that will try to force a better "
         "primal solution. This functionality is only used if SHOT cannot deduce that the problem is nonconvex .");
 
+    env->settings->createSetting(
+        "ReductionCut.Use", "Dual", true, "Enable the dual reduction cut strategy for nonconvex problems");
+
+    VectorString enumReductionCutStrategy;
+    enumReductionCutStrategy.push_back("Fraction");
+    enumReductionCutStrategy.push_back("GoldenSection");
+
+    ES_ReductionCutStrategy reductionCutStrategy;
+
+    reductionCutStrategy = ES_ReductionCutStrategy::Fraction;
+
+    env->settings->createSetting("ReductionCut.Strategy", "Dual", static_cast<int>(reductionCutStrategy),
+        "The reduction cut strategy to use", enumReductionCutStrategy,
+        static_cast<int>(ES_ReductionCutStrategy::Fraction));
+    enumMIPSolver.clear();
+
     env->settings->createSetting("ReductionCut.MaxIterations", "Dual", 5,
         "Max number of primal cut reduction without primal improvement", 0, SHOT_INT_MAX);
 
     env->settings->createSetting(
         "ReductionCut.ReductionFactor", "Dual", 0.001, "The factor used to reduce the cutoff value", 0, 1.0);
-
-    env->settings->createSetting(
-        "ReductionCut.Use", "Dual", true, "Enable the dual reduction cut strategy for nonconvex problems");
 
     // Dual strategy settings: Relaxation strategies
 
