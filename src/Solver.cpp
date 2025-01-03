@@ -912,7 +912,7 @@ void Solver::initializeSettings()
         static_cast<int>(ES_ReductionCutStrategy::Fraction));
     enumMIPSolver.clear();
 
-    env->settings->createSetting("ReductionCut.MaxIterations", "Dual", 5,
+    env->settings->createSetting("ReductionCut.MaxIterations", "Dual", 20,
         "Max number of primal cut reduction without primal improvement", 0, SHOT_INT_MAX);
 
     env->settings->createSetting(
