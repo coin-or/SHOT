@@ -27,5 +27,6 @@ private:
     std::string taskIDIfTrue;
     std::string taskIDIfFalse;
     int totalReductionCutUpdates = 0;
+    double currentLowerBoundForReductionCut = SHOT_DBL_INF;
 };
 } // namespace SHOT
