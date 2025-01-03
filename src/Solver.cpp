@@ -1154,9 +1154,6 @@ void Solver::initializeSettings()
         "Which formulation to use in eigenvalue decomposition", enumEigenValueStrategy, 0);
     enumEigenValueStrategy.clear();
 
-    env->settings->createSetting("Reformulation.Quadratics.EigenValueDecomposition.Method", "Model", false,
-        "Whether to use the eigen value decomposition of convex quadratic functions");
-
     env->settings->createSetting("Reformulation.Quadratics.EigenValueDecomposition.Tolerance", "Model", 1e-6,
         "Variables with eigenvalues smaller than this value will be ignored", 0.0, SHOT_DBL_MAX);
 

@@ -120,19 +120,16 @@ void TaskAddPrimalReductionCut::run()
 
         cutOffToUse = (1 - factor) * currentLowerBoundForReductionCut + factor * env->results->currentPrimalBound;
 
-        std::cout << "        Cut off diff: " << std::abs(currentLowerBoundForReductionCut - cutOffToUse) << std::endl;
-        if(std::abs(currentLowerBoundForReductionCut - cutOffToUse) < 1e-4)
+        env->output->outputInfo(fmt::format(
+            "        {} {}", "Cut off difference:", std::abs(currentLowerBoundForReductionCut - cutOffToUse)));
+
+        if(std::abs(currentLowerBoundForReductionCut - cutOffToUse) < 1e-6)
         {
             env->tasks->setNextTask(taskIDIfFalse);
             return;
         }
 
         currentLowerBoundForReductionCut = cutOffToUse;
-        std::cout << "        Cut off to use: " << cutOffToUse << std::endl;
-        std::cout << "        Primal improv. after repair: "
-                  << env->solutionStatistics.numberOfPrimalImprovementsAfterInfeasibilityRepair << std::endl;
-        std::cout << "        Primal improv. after red. cut: "
-                  << env->solutionStatistics.numberOfPrimalImprovementsAfterReductionCut << std::endl;
     }
     else
     {
@@ -141,6 +138,12 @@ void TaskAddPrimalReductionCut::run()
     }
 
     env->dualSolver->cutOffToUse = cutOffToUse;
+
+    env->output->outputInfo(fmt::format("        {} {}", "Cut off used:", cutOffToUse));
+    env->output->outputInfo(fmt::format("        {} {}", "Primal improvements after repair:",
+        env->solutionStatistics.numberOfPrimalImprovementsAfterInfeasibilityRepair));
+    env->output->outputInfo(fmt::format("        {} {}", "Primal improvements after reduction cut:",
+        env->solutionStatistics.numberOfPrimalImprovementsAfterReductionCut));
 
     if(env->reformulatedProblem->objectiveFunction->properties.isMinimize)
     {
