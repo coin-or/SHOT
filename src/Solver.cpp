@@ -2058,12 +2058,11 @@ E_TerminationReason Solver::getTerminationReason() { return (env->results->termi
 E_ModelReturnStatus Solver::getModelReturnStatus() { return (env->results->getModelReturnStatus()); }
 
 
-
 namespace py = pybind11;
 
 
 PYBIND11_MODULE(shotpy, m) {
-    m.doc() = "pybind11 example plugin"; // optional module docstring
+    m.doc() = "shotpy";
 
     py::class_<Solver>(m, "Solver")
     .def(py::init())
@@ -2158,8 +2157,6 @@ PYBIND11_MODULE(shotpy, m) {
     .def_readwrite("displayed", &PrimalSolution::displayed) 
     ;
 
-
-
     py::class_<SolutionStatistics>(m, "SolutionStatistics")
     .def_readwrite("numberOfIterations", &SolutionStatistics::numberOfIterations)   
     .def_readwrite("numberOfProblemsLP", &SolutionStatistics::numberOfProblemsLP)   
@@ -2206,12 +2203,6 @@ PYBIND11_MODULE(shotpy, m) {
     .def_readwrite("hasReductionCutBeenAddedSincePrimalImprovement", &SolutionStatistics::hasReductionCutBeenAddedSincePrimalImprovement)
     .def("getNumberOfTotalDualProblems", &SolutionStatistics::getNumberOfTotalDualProblems)
     ;
-
-
-
-
 }
-
-
 
 } // namespace SHOT
