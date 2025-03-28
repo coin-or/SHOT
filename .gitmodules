@@ -4,7 +4,3 @@
 [submodule "ThirdParty/CppAD"]
 	path = ThirdParty/CppAD
 	url = https://github.com/coin-or/CppAD
-[submodule "ThirdParty/pybind11"]
-	path = ThirdParty/pybind11
-	url = ../../pybind/pybind11
-	branch = stable
