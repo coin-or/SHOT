@@ -117,7 +117,7 @@ public:
     PrimalSolution getPrimalSolution();
     std::vector<PrimalSolution> getPrimalSolutions();
 
-    SolutionStatistics getSetSolutionStatistics() { return env->solutionStatistics; };
+    SolutionStatistics getSolutionStatistics() { return env->solutionStatistics; };
 
     E_TerminationReason getTerminationReason();
     E_ModelReturnStatus getModelReturnStatus();

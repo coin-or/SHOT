@@ -2079,7 +2079,7 @@ PYBIND11_MODULE(shotpy, m) {
     .def("getResultsSol", &Solver::getResultsSol)
     .def("getResultsTrace", &Solver::getResultsTrace)
 
-    .def("getSetSolutionStatistics", &Solver::getSetSolutionStatistics)
+    .def("getSolutionStatistics", &Solver::getSolutionStatistics)
     .def("getSettingsAsMarkup", &Solver::getSettingsAsMarkup)
 
     .def("getBoolSetting", py::overload_cast<std::string, std::string>(&Solver::getSetting<bool>))
