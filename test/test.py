@@ -1,4 +1,4 @@
-import shotpy
+shotpy
 
 def solveProblem(problemFile, correctObjectiveValue):
         
@@ -39,9 +39,9 @@ def solveProblem(problemFile, correctObjectiveValue):
         print("Solution " + solutions.index(solution).__str__())
         print("\tObjective value " + str(solution.objValue))
         print("\tSource " + str(solution.sourceType))
-        #print("\tSource description: " + str(solution.sourceDescription)) # not working
+        print("\tSource description: " + str(solution.sourceDescription))
         print("\tPoint " + str(solution.point))
-        #print("\tMax deviation " + str(solution.maxDevatingConstraintNonlinear.value)) # not working
+        print("\tMax deviation " + str(solution.maxDevatingConstraintNonlinear.value))
                 
     objValue = solutions[0].objValue
     
@@ -51,13 +51,13 @@ def solveProblem(problemFile, correctObjectiveValue):
     else: 
         print("Objective value is correct")
         
-    stats = solver.getSetSolutionStatistics()
+    stats = solver.getSolutionStatistics()
     print("Number of iterations " + str(stats.numberOfIterations))
     
-    #print(solver.getResultsOSrL())
+    # print(solver.getResultsOSrL())
     
-    #if (solver.getTerminationReason() != E_TerminationReason.AbsoluteGap): #not working
-    #    print("Termination reason is AbsoluteGap")
+    terminationreason = solver.getTerminationReason() 
+    print("Termination reason is:", terminationreason)
         
 if __name__ == '__main__':
 
