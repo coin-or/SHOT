@@ -2108,7 +2108,7 @@ PYBIND11_MODULE(shotpy, m) {
     .def("updateSetting", py::overload_cast<std::string, std::string, bool>(&Solver::updateSetting))
     ;
 
-    py::enum_<E_PrimalSolutionSource>(m, "E_PrimalSolutionSource", py::arithmetic())
+    py::enum_<E_PrimalSolutionSource>(m, "PrimalSolutionSource", py::arithmetic())
         .value("Rootsearch", E_PrimalSolutionSource::Rootsearch)
         .value("RootsearchFixedIntegers", E_PrimalSolutionSource::RootsearchFixedIntegers)
         .value("NLPFixedIntegers", E_PrimalSolutionSource::NLPFixedIntegers)
@@ -2119,7 +2119,7 @@ PYBIND11_MODULE(shotpy, m) {
         .value("InteriorPointSearch", E_PrimalSolutionSource::InteriorPointSearch)
     ;
 
-    py::enum_<E_ModelReturnStatus>(m, "E_ModelReturnStatus", py::arithmetic())
+    py::enum_<E_ModelReturnStatus>(m, "ModelReturnStatus", py::arithmetic())
         .value("None", E_ModelReturnStatus::None)
         .value("OptimalGlobal", E_ModelReturnStatus::OptimalGlobal)
         .value("Unbounded", E_ModelReturnStatus::Unbounded)
@@ -2132,7 +2132,7 @@ PYBIND11_MODULE(shotpy, m) {
         .value("ErrorNoSolution", E_ModelReturnStatus::ErrorNoSolution)
     ;
 
-    py::enum_<E_TerminationReason>(m, "E_TerminationReason", py::arithmetic())
+    py::enum_<E_TerminationReason>(m, "TerminationReason", py::arithmetic())
         .value("ConstraintTolerance", E_TerminationReason::ConstraintTolerance)
         .value("ObjectiveStagnation", E_TerminationReason::ObjectiveStagnation)
         .value("IterationLimit", E_TerminationReason::IterationLimit)
