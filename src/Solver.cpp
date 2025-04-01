@@ -2148,6 +2148,11 @@ PYBIND11_MODULE(shotpy, m) {
         .value("NumericIssues", E_TerminationReason::NumericIssues)
     ;
 
+    py::class_<PairIndexValue>(m, "PairIndexValue")
+    .def_readwrite("index", &PairIndexValue::index)   
+    .def_readwrite("value", &PairIndexValue::value)
+    ;
+
     py::class_<PrimalSolution>(m, "PrimalSolution")
     .def_readwrite("point", &PrimalSolution::point)   
     .def_readwrite("sourceType", &PrimalSolution::sourceType)
