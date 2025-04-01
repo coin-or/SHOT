@@ -2156,6 +2156,7 @@ PYBIND11_MODULE(shotpy, m) {
     py::class_<PrimalSolution>(m, "PrimalSolution")
     .def_readwrite("point", &PrimalSolution::point)   
     .def_readwrite("sourceType", &PrimalSolution::sourceType)
+    .def_readwrite("sourceDescription", &PrimalSolution::sourceDescription)
     .def_readwrite("objValue", &PrimalSolution::objValue)    
     .def_readwrite("iterFound", &PrimalSolution::iterFound)    
     .def_readwrite("maxDevatingConstraintLinear", &PrimalSolution::maxDevatingConstraintLinear)    
