@@ -6,7 +6,7 @@ if __name__ == '__main__':
 
     # solver.setOptionsFromFile('filename')
     
-    print('getSettingsAsMarkup', solver.getSettingsAsMarkup()
+    print('getSettingsAsMarkup', solver.getSettingsAsMarkup())
 
     solver.setLogFile('testlogfile.txt')
 
@@ -53,7 +53,7 @@ if __name__ == '__main__':
     print('getModelReturnStatus', solver.getModelReturnStatus())
     print('getTerminationReason', solver.getTerminationReason())
 
-    getsetsolutionstatistics = solver.getSetSolutionStatistics() 
-    print('numberofiterations', getsetsolutionstatistics.numberOfIterations)
+    getsolutionstatistics = solver.getSolutionStatistics() 
+    print('numberofiterations', getsolutionstatistics.numberOfIterations)
 
     solver.updateSetting('name', 'category', False)
