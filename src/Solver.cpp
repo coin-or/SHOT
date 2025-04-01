@@ -8,8 +8,10 @@
    Please see the README and LICENSE files for more information.
 */
 
+#ifdef HAS_PYTHON
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#endif
 
 #include "Solver.h"
 
@@ -2058,8 +2060,8 @@ E_TerminationReason Solver::getTerminationReason() { return (env->results->termi
 E_ModelReturnStatus Solver::getModelReturnStatus() { return (env->results->getModelReturnStatus()); }
 
 
+#ifdef HAS_PYTHON
 namespace py = pybind11;
-
 
 PYBIND11_MODULE(shotpy, m) {
     m.doc() = "shotpy";
@@ -2215,5 +2217,5 @@ PYBIND11_MODULE(shotpy, m) {
     .def("getNumberOfTotalDualProblems", &SolutionStatistics::getNumberOfTotalDualProblems)
     ;
 }
-
+#endif
 } // namespace SHOT
