@@ -2085,7 +2085,7 @@ PYBIND11_MODULE(shotpy, m) {
     .def("getSettingsAsMarkup", &Solver::getSettingsAsMarkup)
 
     .def("getBoolSetting", py::overload_cast<std::string, std::string>(&Solver::getSetting<bool>))
-    .def("getStringSetting", py::overload_cast<std::string, std::string>(&Solver::getSetting<int>))
+    .def("getStringSetting", py::overload_cast<std::string, std::string>(&Solver::getSetting<std::string>))
     .def("getIntSetting", py::overload_cast<std::string, std::string>(&Solver::getSetting<int>))
     .def("getDoubleSetting", py::overload_cast<std::string, std::string>(&Solver::getSetting<double>))
 
