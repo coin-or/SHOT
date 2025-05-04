@@ -433,7 +433,7 @@ target_link_libraries(SHOTResults SHOTModel)
 
 if(HAS_PYTHON)
     add_subdirectory(${PYBIND11_DIR})
-    pybind11_add_module(shotpy src/Solver.cpp)
+    pybind11_add_module(shotpy src/Shotpy.cpp)
     target_link_libraries(shotpy PRIVATE SHOTSolver)
 endif(HAS_PYTHON)
 
@@ -646,9 +646,6 @@ if(HAS_PYTHON)
     target_link_libraries(${PROJECT_NAME} ${Python3_LIBRARIES})
     message("-- The following Python libraries will be used from: ${Python3_LIBRARIES}")
     message("   ${Python3_INCLUDE_DIRS}")
-
-# Is this needed?
-#    add_definitions(-DHAS_PYTHON)
 
 endif(HAS_PYTHON)
 
