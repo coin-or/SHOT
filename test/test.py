@@ -1,4 +1,14 @@
-shotpy
+import os, sys
+from pathlib import Path
+
+# Establish parent folders and add build folder to sys.path
+parent = str(Path(__file__).absolute().parent.parent)
+build_folder = os.path.join(parent, 'build')
+sys.path.append(build_folder)
+
+# Import shotpy, which in this case is shotpy lib file from build folder
+import shotpy
+
 
 def solveProblem(problemFile, correctObjectiveValue):
         
@@ -17,7 +27,7 @@ def solveProblem(problemFile, correctObjectiveValue):
     else:
         print("Problem file read from " + problemFile)
     
-    
+
     solver.outputProblemInstanceReport()
     
     if (not solver.solveProblem()):
@@ -61,6 +71,6 @@ def solveProblem(problemFile, correctObjectiveValue):
         
 if __name__ == '__main__':
 
-    solveProblem('test/data/alan.osil', 2.925)  
-    solveProblem('test/data/meanvarxsc.osil', 14.36923211)
-    solveProblem('test/data/fo7_2.osil', 17.74934573)
+    solveProblem('data/alan.osil', 2.925)  
+    solveProblem('data/meanvarxsc.osil', 14.36923211)
+    solveProblem('data/fo7_2.osil', 17.74934573)
