@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.9)
+cmake_minimum_required(VERSION 3.20)
 include(ExternalProject)
 
 # For ccache
@@ -66,6 +66,9 @@ set(CBC_DIR "/opt/Cbc-2.10" CACHE STRING "The base directory where Cbc is locate
 option(HAS_IPOPT "Is Ipopt available" OFF)
 set(IPOPT_DIR "/opt/ipopt" CACHE STRING "The base directory where Ipopt is located (if available).")
 
+# Python
+option(HAS_PYTHON "Is Python available" OFF)
+
 # Create also the executable
 option(GENERATE_EXE "Should the SHOT executable be generated (requires at least that either OS or GAMS is available)"
        ON)
@@ -77,6 +80,7 @@ set(BOOST_DIR "ThirdParty/boost")
 set(CPPAD_DIR "ThirdParty/CppAD")
 set(EIGEN_DIR "ThirdParty/eigen")
 set(MCPP_DIR "ThirdParty/mc++")
+set(PYBIND11_DIR "ThirdParty/pybind11")
 set(SPDLOG_DIR "ThirdParty/spdlog")
 set(TINYXML2_DIR "ThirdParty/tinyxml2")
 
@@ -339,6 +343,7 @@ include_directories(SYSTEM "${EIGEN_DIR}")
 include_directories(SYSTEM "${MCPP_DIR}/include")
 #include_directories(SYSTEM "${MCPP_DIR}/3rdparty/cpplapack/include")
 #include_directories(SYSTEM "${MCPP_DIR}/3rdparty/fadbad++")
+include_directories(SYSTEM "${PYBIND11_DIR}/include")
 include_directories(SYSTEM "${SPDLOG_DIR}/include")
 
 # Make sure the source file lists are in the correct format
@@ -425,6 +430,12 @@ add_library(
     ${PROJECT_SOURCE_DIR}/src/Timing.h
 )
 target_link_libraries(SHOTResults SHOTModel)
+
+if(HAS_PYTHON)
+    add_subdirectory(${PYBIND11_DIR})
+    pybind11_add_module(shotpy src/Shotpy.cpp)
+    target_link_libraries(shotpy PRIVATE SHOTSolver)
+endif(HAS_PYTHON)
 
 # Creates the primal strategy library
 add_library(
@@ -627,6 +638,16 @@ if(GENERATE_EXE)
         endif(UNIX)
     endif(HAS_GAMS)
 endif(GENERATE_EXE)
+
+
+if(HAS_PYTHON)
+    find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
+    include_directories(SYSTEM ${Python3_INCLUDE_DIRS})
+    target_link_libraries(${PROJECT_NAME} ${Python3_LIBRARIES})
+    message("-- The following Python libraries will be used from: ${Python3_LIBRARIES}")
+    message("   ${Python3_INCLUDE_DIRS}")
+
+endif(HAS_PYTHON)
 
 # Extra flags for Visual Studio compilers
 if(MSVC)
