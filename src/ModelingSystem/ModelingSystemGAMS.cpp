@@ -618,6 +618,8 @@ void ModelingSystemGAMS::createAuditLicensing()
     palLicenseRegisterGAMS(auditLicensing, 4, gevGetStrOpt(modelingEnvironment, "License4", buf));
     palLicenseRegisterGAMS(auditLicensing, 5, gevGetStrOpt(modelingEnvironment, "License5", buf));
     palLicenseRegisterGAMS(auditLicensing, 6, gevGetStrOpt(modelingEnvironment, "License6", buf));
+    palLicenseRegisterGAMS(auditLicensing, 7, gevGetStrOpt(modelingEnvironment, "License7", buf));
+    palLicenseRegisterGAMS(auditLicensing, 8, gevGetStrOpt(modelingEnvironment, "License8", buf));
     palLicenseRegisterGAMSDone(auditLicensing);
 
     palLicenseCheck(auditLicensing, gmoM(modelingObject), gmoN(modelingObject), gmoNZ(modelingObject),
