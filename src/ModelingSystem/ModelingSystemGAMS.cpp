@@ -104,6 +104,13 @@ void ModelingSystemGAMS::augmentSettings([[maybe_unused]] SettingsPtr settings)
 #endif
     settings->createSetting("GAMS.QExtractAlg", "ModelingSystem", 0,
         "Extraction algorithm for quadratic equations in GAMS interface", enumQExtractAlg);
+
+#if GMOAPIVERSION >= 28
+    settings->createSetting("GAMS.QExtractDenseSwitchFactor", "ModelingSystem", 0.008,
+        "Sparse/dense factor for quadratic extraction algorithm in GAMS interface.", 0.0);
+    settings->createSetting("GAMS.QExtractDenseSwitchLog", "ModelingSystem", false,
+        "Whether to print additional information about sparse/dense factor choice in quadratic extraction algorithm in GAMS interface.");
+#endif
 #endif
 }
 
@@ -288,6 +295,10 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem)
 #if GMOAPIVERSION >= 21
     int qextractalg = env->settings->getSetting<int>("GAMS.QExtractAlg", "ModelingSystem");
     gmoQExtractAlgSet(modelingObject, qextractalg);
+#endif
+#if GMOAPIVERSION >= 28
+    gmoQExtractDenseSwitchFactorSet(modelingObject, env->settings->getSetting<double>("GAMS.QExtractDenseSwitchFactor", "ModelingSystem"));
+    gmoQExtractDenseSwitchLogSet(modelingObject, (int)env->settings->getSetting<bool>("GAMS.QExtractDenseSwitchLog", "ModelingSystem"));
 #endif
     gmoUseQSet(modelingObject, 1);
 #if GMOAPIVERSION >= 25
