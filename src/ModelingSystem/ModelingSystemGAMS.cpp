@@ -175,7 +175,12 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
         }
 
         // Sets the number of threads
-        env->settings->updateSetting("MIP.NumberOfThreads", "Dual", gevThreads(modelingEnvironment));
+        // gevThreadsRaw >= 0 from GAMS have the same meaning in SHOT
+        // for gevThreadsRaw < 0, use gevThreads() to translate to number of processors to use
+        int nthreads = gevGetIntOpt(modelingEnvironment, gevThreadsRaw);
+        if( nthreads < 0 )
+           nthreads = gevThreads(modelingEnvironment);
+        env->settings->updateSetting("MIP.NumberOfThreads", "Dual", nthreads);
         env->output->outputDebug(fmt::format(
             " MIP number of threads set to {} by GAMS", env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual")));
 
