@@ -379,6 +379,9 @@ bool CreateAndSolveProblem()
     solver = nullptr;
     env = nullptr;
 
+    // Will now do a test to see if we can add a primal solution callback to the solver
+    // and reuse the problem instance without problems.
+
     // Need to reinitialize the SHOT solver class and update the environment
     solver = std::make_unique<SHOT::Solver>();
     env = solver->getEnvironment();
@@ -416,6 +419,87 @@ bool CreateAndSolveProblem()
             // If the callback argument is not a PrimalSolution
             passed = false;
             std::cout << "Failed to cast callback argument: " << e.what() << std::endl;
+        }
+    });
+
+    // Solving the problem
+    solver->solveProblem();
+
+    if(solver->getPrimalSolutions().size() > 0)
+    {
+        std::cout << std::endl << "Objective value: " << solver->getPrimalSolution().objValue << std::endl;
+        passed = true;
+    }
+    else
+    {
+        passed = false;
+    }
+
+    if(!passed)
+        std::cout << "Cound not resolve problem!\n";
+    else
+        std::cout << "Could reuse the problem instance without problem!\n";
+
+    std::cout << "Now trying to have two callbacks, one that prints out the primal solution and one that is "
+                 "terminating after one primal solution has been found\n\n";
+
+    solver = nullptr;
+    env = nullptr;
+
+    // Will now do a test to see if we can add a primal solution callback to the solver
+    // and reuse the problem instance without problems.
+
+    // Need to reinitialize the SHOT solver class and update the environment
+    solver = std::make_unique<SHOT::Solver>();
+    env = solver->getEnvironment();
+    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Off));
+
+    // Resetting our problem objects
+    solver->setProblem(problem, reformulatedProblem);
+
+    // Registers a callback that is activated every time a new primal solution is found
+    solver->registerCallback(E_EventType::NewPrimalSolution, [&env, &passed](std::any args) {
+        try
+        {
+            PrimalSolution solution = std::any_cast<PrimalSolution>(args);
+
+            std::cout << "We have a new primal solution: " << solution.objValue
+                      << " found at iteration: " << solution.iterFound << ". In total we now have "
+                      << env->solutionStatistics.numberOfFoundPrimalSolutions << " solutions.\n";
+
+            std::cout << "Primal solution point:\n";
+            Utilities::displayVector(solution.point);
+
+            if(solution.objValue == env->results->getPrimalBound())
+            {
+                std::cout << "Ok, new primal solution has been saved successfully. " << solution.objValue << ".\n";
+                passed = true;
+            }
+            else
+            {
+                std::cout << "Error: new primal solution not saved successfully!\n";
+                passed = false;
+            }
+        }
+        catch(const std::bad_any_cast& e)
+        {
+            // If the callback argument is not a PrimalSolution
+            passed = false;
+            std::cout << "Failed to cast callback argument: " << e.what() << std::endl;
+        }
+    });
+
+    // Registers a callback that terminates if we have found at least one primal solution
+    solver->registerCallback(E_EventType::UserTerminationCheck, [&env](std::any args) {
+        // If we have found one primal solution, we terminate the solver
+        if(env->results->getNumberOfIterations() > 0 && env->results->primalSolution.size() > 0)
+        {
+            std::cout << "Termination callback activated. We have found at least one solution.\n";
+            env->tasks->terminate();
+        }
+        else
+        {
+            std::cout << "Termination callback activated. We have not found a primal solution yet.\n";
         }
     });
 
