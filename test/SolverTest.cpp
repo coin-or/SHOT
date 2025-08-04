@@ -388,9 +388,35 @@ bool CreateAndSolveProblem()
     solver->setProblem(problem, reformulatedProblem);
 
     // Registers a callback that is activated every time a new primal solution is found
-    solver->registerCallback(E_EventType::NewPrimalSolution, [&env] {
-        std::cout << "We have a new primal solution: " << env->results->getPrimalBound() << ". In total now "
-                  << env->solutionStatistics.numberOfFoundPrimalSolutions << " solutions.\n";
+    solver->registerCallback(E_EventType::NewPrimalSolution, [&env, &passed](std::any args) {
+        try
+        {
+            PrimalSolution solution = std::any_cast<PrimalSolution>(args);
+
+            std::cout << "We have a new primal solution: " << solution.objValue
+                      << " found at iteration: " << solution.iterFound << ". In total we now have "
+                      << env->solutionStatistics.numberOfFoundPrimalSolutions << " solutions.\n";
+
+            std::cout << "Primal solution point:\n";
+            Utilities::displayVector(solution.point);
+
+            if(solution.objValue == env->results->getPrimalBound())
+            {
+                std::cout << "Ok, new primal solution has been saved successfully. " << solution.objValue << ".\n";
+                passed = true;
+            }
+            else
+            {
+                std::cout << "Error: new primal solution not saved successfully!\n";
+                passed = false;
+            }
+        }
+        catch(const std::bad_any_cast& e)
+        {
+            // If the callback argument is not a PrimalSolution
+            passed = false;
+            std::cout << "Failed to cast callback argument: " << e.what() << std::endl;
+        }
     });
 
     // Solving the problem

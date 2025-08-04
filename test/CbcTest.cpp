@@ -126,14 +126,12 @@ bool CbcTerminationCallbackTest(std::string filename)
     }
 
     // Registers a callback that terminates in the third iteration
-    solver->registerCallback(E_EventType::UserTerminationCheck,
-        [&env]
-        {
-            std::cout << "Callback activated. Terminating.\n";
+    solver->registerCallback(E_EventType::UserTerminationCheck, [&env](std::any args) {
+        std::cout << "Callback activated. Terminating.\n";
 
-            if(env->results->getNumberOfIterations() == 3)
-                env->tasks->terminate();
-        });
+        if(env->results->getNumberOfIterations() == 3)
+            env->tasks->terminate();
+    });
 
     // Solving the problem
     if(!solver->solveProblem())

@@ -265,7 +265,7 @@ bool TestCallbackGAMS(std::string filename)
     auto solver = std::make_unique<SHOT::Solver>();
     auto env = solver->getEnvironment();
 
-    solver->registerCallback(E_EventType::UserTerminationCheck, [&env] {
+    solver->registerCallback(E_EventType::UserTerminationCheck, [&env](std::any args) {
         std::cout << "Checking whether to terminate SHOT... ";
 
         if(env->results->hasPrimalSolution())

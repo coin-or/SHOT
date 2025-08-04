@@ -45,9 +45,15 @@
 #include "../Tasks/TaskCheckUserTermination.h"
 
 #include "../Tasks/TaskInitializeRootsearch.h"
-#include "../Tasks/TaskSelectHyperplanePointsESH.h"
-#include "../Tasks/TaskSelectHyperplanePointsECP.h"
+#include "../Tasks/TaskSelectHyperplanesESH.h"
+#include "../Tasks/TaskSelectHyperplanesECP.h"
+#include "../Tasks/TaskSelectHyperplanesExternal.h"
 #include "../Tasks/TaskAddHyperplanes.h"
+
+#ifdef HAS_JULIA
+#include "../Tasks/TaskAddHyperplanesLasserreHierarchy.h"
+#endif
+
 #include "../Tasks/TaskAddPrimalReductionCut.h"
 #include "../Tasks/TaskCheckMaxNumberOfPrimalReductionCuts.h"
 
@@ -57,7 +63,7 @@
 
 #include "../Tasks/TaskUpdateInteriorPoint.h"
 
-#include "../Tasks/TaskSelectHyperplanePointsObjectiveFunction.h"
+#include "../Tasks/TaskSelectHyperplanesObjectiveFunction.h"
 
 #include "../Tasks/TaskAddIntegerCuts.h"
 
@@ -85,6 +91,8 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr)
     env->timing->createTimer("PrimalStrategy", "- primal strategy");
     env->timing->createTimer("PrimalBoundStrategyRootSearch", "  - performing root searches");
 
+    env->timing->createTimer("CallbackExternalHyperplaneGeneration", "  - callback: external hyperplane generation");
+
     auto tFinalizeSolution = std::make_shared<TaskSequential>(env);
 
     auto tInitMIPSolver = std::make_shared<TaskInitializeDualSolver>(env, false);
@@ -108,6 +116,9 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr)
 
     auto tAddHPs = std::make_shared<TaskAddHyperplanes>(env);
     env->tasks->addTask(tAddHPs, "AddHPs");
+
+    // auto tAddHPsLasserreHierarchy = std::make_shared<TaskAddHyperplanesLasserreHierarchy>(env);
+    // env->tasks->addTask(tAddHPsLasserreHierarchy, "AddHPsLasserreHierarchy");
 
     if(static_cast<ES_MIPPresolveStrategy>(env->settings->getSetting<int>("MIP.Presolve.Frequency", "Dual"))
         != ES_MIPPresolveStrategy::Never)
@@ -184,12 +195,13 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr)
             auto tUpdateInteriorPoint = std::make_shared<TaskUpdateInteriorPoint>(env);
             env->tasks->addTask(tUpdateInteriorPoint, "UpdateInteriorPoint");
 
-            auto tSelectHPPts = std::make_shared<TaskSelectHyperplanePointsESH>(env);
+            auto tSelectHPPts = std::make_shared<TaskSelectHyperplanesESH>(env);
             env->tasks->addTask(tSelectHPPts, "SelectHPPts");
         }
-        else
+        else if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
+            == ES_HyperplaneCutStrategy::ECP)
         {
-            auto tSelectHPPts = std::make_shared<TaskSelectHyperplanePointsECP>(env);
+            auto tSelectHPPts = std::make_shared<TaskSelectHyperplanesECP>(env);
             env->tasks->addTask(tSelectHPPts, "SelectHPPts");
         }
     }
@@ -197,11 +209,15 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr)
     if(env->reformulatedProblem->objectiveFunction->properties.classification
         > E_ObjectiveFunctionClassification::Quadratic)
     {
-        auto tSelectObjectiveHPPts = std::make_shared<TaskSelectHyperplanePointsObjectiveFunction>(env);
+        auto tSelectObjectiveHPPts = std::make_shared<TaskSelectHyperplanesObjectiveFunction>(env);
         env->tasks->addTask(tSelectObjectiveHPPts, "SelectObjectiveHPPts");
     }
 
+    auto tSelectExternalHPs = std::make_shared<TaskSelectHyperplanesExternal>(env);
+    env->tasks->addTask(tSelectExternalHPs, "SelectExternalHPs");
+
     env->tasks->addTask(tAddHPs, "AddHPs");
+    // env->tasks->addTask(tAddHPsLasserreHierarchy, "AddHPs");
 
     auto tGoto = std::make_shared<TaskGoto>(env, "SolveIter");
     env->tasks->addTask(tGoto, "Goto");

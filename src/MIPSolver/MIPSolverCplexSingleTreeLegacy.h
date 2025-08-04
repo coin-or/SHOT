@@ -53,7 +53,7 @@ class CtCallbackI : public IloCplex::LazyConstraintCallbackI, public MIPSolverCa
 {
     IloNumVarArray cplexVars;
 
-    bool createHyperplane(Hyperplane hyperplane);
+    bool createHyperplane(HyperplanePtr hyperplane);
 
     bool createIntegerCut(IntegerCut& integerCut);
 

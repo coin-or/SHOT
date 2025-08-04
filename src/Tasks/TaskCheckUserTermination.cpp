@@ -14,6 +14,8 @@
 #include "../Results.h"
 #include "../TaskHandler.h"
 
+#include <any>
+
 namespace SHOT
 {
 
@@ -26,7 +28,7 @@ TaskCheckUserTermination::~TaskCheckUserTermination() = default;
 
 void TaskCheckUserTermination::run()
 {
-    env->events->notify(E_EventType::UserTerminationCheck);
+    env->events->notify(E_EventType::UserTerminationCheck, std::any());
 
     if(env->tasks->isTerminated()
         || env->results->getCurrentIteration()->solutionStatus == E_ProblemSolutionStatus::Abort)

@@ -57,11 +57,11 @@ protected:
 public:
     ~MIPSolverBase();
 
-    virtual bool createHyperplane(Hyperplane hyperplane);
+    virtual bool createHyperplane(HyperplanePtr hyperplane);
 
-    virtual bool createInteriorHyperplane(Hyperplane hyperplane);
+    virtual bool createInteriorHyperplane(HyperplanePtr hyperplane);
 
-    std::optional<std::pair<std::map<int, double>, double>> createHyperplaneTerms(Hyperplane hyperplane);
+    std::optional<std::pair<std::map<int, double>, double>> createHyperplaneTerms(HyperplanePtr hyperplane);
 
     virtual void setCutOffAsConstraint(double cutOff) = 0;
 
@@ -161,6 +161,9 @@ public:
             identifier = "H_RS_OBJ";
         case E_HyperplaneSource::ObjectiveCuttingPlane:
             identifier = "H_CP_OBJ";
+            break;
+        case E_HyperplaneSource::External:
+            identifier = "H_EXT";
             break;
         default:
             break;

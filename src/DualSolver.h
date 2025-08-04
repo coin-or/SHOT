@@ -27,16 +27,16 @@ public:
     void addDualSolutionCandidate(DualSolution solution);
     void checkDualSolutionCandidates();
 
-    void addHyperplane(Hyperplane& hyperplane);
-    void addGeneratedHyperplane(const Hyperplane& hyperplane);
+    void addHyperplane(HyperplanePtr hyperplane);
+    void addGeneratedHyperplane(const HyperplanePtr hyperplane);
     bool hasHyperplaneBeenAdded(double hash, int constraintIndex);
 
     void addIntegerCut(IntegerCut integerCut);
     void addGeneratedIntegerCut(IntegerCut integerCut);
     bool hasIntegerCutBeenAdded(double hash);
 
-    std::vector<GeneratedHyperplane> generatedHyperplanes;
-    std::vector<Hyperplane> hyperplaneWaitingList;
+    std::vector<GeneratedHyperplanePtr> generatedHyperplanes;
+    std::vector<HyperplanePtr> hyperplaneWaitingList;
 
     std::vector<IntegerCut> generatedIntegerCuts;
     std::vector<IntegerCut> integerCutWaitingList;

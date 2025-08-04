@@ -10,6 +10,7 @@
 
 #include "Results.h"
 
+#include <any>
 #include <algorithm>
 #include <limits>
 
@@ -121,14 +122,16 @@ void Results::addPrimalSolution(PrimalSolution solution)
     if(env->problem->objectiveFunction->properties.isMinimize)
     {
         std::sort(this->primalSolutions.begin(), this->primalSolutions.end(),
-            [](const PrimalSolution& firstSolution, const PrimalSolution& secondSolution)
-            { return (firstSolution.objValue < secondSolution.objValue); });
+            [](const PrimalSolution& firstSolution, const PrimalSolution& secondSolution) {
+                return (firstSolution.objValue < secondSolution.objValue);
+            });
     }
     else
     {
         std::sort(this->primalSolutions.begin(), this->primalSolutions.end(),
-            [](const PrimalSolution& firstSolution, const PrimalSolution& secondSolution)
-            { return (firstSolution.objValue > secondSolution.objValue); });
+            [](const PrimalSolution& firstSolution, const PrimalSolution& secondSolution) {
+                return (firstSolution.objValue > secondSolution.objValue);
+            });
     }
 
     env->solutionStatistics.numberOfFoundPrimalSolutions++;
@@ -195,7 +198,7 @@ void Results::addPrimalSolution(PrimalSolution solution)
         env->output->outputCritical("        Primal objective cut added.");
     }*/
 
-    env->events->notify(E_EventType::NewPrimalSolution);
+    env->events->notify(E_EventType::NewPrimalSolution, std::any(solution));
 }
 
 bool Results::isRelativeObjectiveGapToleranceMet()

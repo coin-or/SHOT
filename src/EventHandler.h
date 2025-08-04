@@ -12,6 +12,7 @@
 #include "Environment.h"
 #include "Enums.h"
 
+#include <any>
 #include <functional>
 #include <map>
 #include <vector>
@@ -25,30 +26,31 @@ class EventHandler
 public:
     inline EventHandler(EnvironmentPtr envPtr) : env(envPtr) {};
 
+    // Register a callback for a specific event type
     template <typename Callback> void registerCallback(const E_EventType& event, Callback&& callback)
     {
-        registeredCallbacks[event].push_back(std::forward<Callback>(callback));
+        registeredCallbacks[event].push_back([callback](std::any args) { callback(args); });
     }
 
-    template <typename Callback> void registerCallback(E_EventType&& event, Callback&& callback)
+    // Notify all callbacks registered for a specific event type
+    void notify(const E_EventType& event, std::any args) const
     {
-        registeredCallbacks[std::move(event)].push_back(std::forward<Callback>(callback));
-    }
-
-    inline void notify(const E_EventType& event) const
-    {
-        if(registeredCallbacks.size() == 0)
+        if(registeredCallbacks.empty())
             return;
 
-        if(registeredCallbacks.find(event) == registeredCallbacks.end())
+        auto it = registeredCallbacks.find(event);
+        if(it == registeredCallbacks.end())
             return;
 
-        for(const auto& C : registeredCallbacks.at(event))
-            C();
+        for(const auto& callback : it->second)
+        {
+            callback(args);
+        }
     }
 
 private:
-    std::map<E_EventType, std::vector<std::function<void()>>> registeredCallbacks;
+    // Map of event types to their registered callbacks
+    std::map<E_EventType, std::vector<std::function<void(std::any)>>> registeredCallbacks;
 
     EnvironmentPtr env;
 };

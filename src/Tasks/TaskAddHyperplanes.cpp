@@ -49,32 +49,50 @@ void TaskAddHyperplanes::run()
             if(addedHyperplanes >= env->settings->getSetting<int>("HyperplaneCuts.MaxPerIteration", "Dual"))
                 break;
 
-            auto tmpItem = env->dualSolver->hyperplaneWaitingList.at(k - 1);
+            auto HP = env->dualSolver->hyperplaneWaitingList.at(k - 1);
 
             bool cutAddedSuccessfully = false;
 
-            if(tmpItem.source == E_HyperplaneSource::PrimalSolutionSearchInteriorObjective)
+            if(HP->source == E_HyperplaneSource::PrimalSolutionSearchInteriorObjective)
             {
-                cutAddedSuccessfully = env->dualSolver->MIPSolver->createInteriorHyperplane(tmpItem);
+                cutAddedSuccessfully = env->dualSolver->MIPSolver->createInteriorHyperplane(HP);
             }
             else
             {
-                cutAddedSuccessfully = env->dualSolver->MIPSolver->createHyperplane(tmpItem);
+                cutAddedSuccessfully = env->dualSolver->MIPSolver->createHyperplane(HP);
             }
 
             if(cutAddedSuccessfully)
             {
-                env->dualSolver->addGeneratedHyperplane(tmpItem);
+                env->dualSolver->addGeneratedHyperplane(HP);
                 addedHyperplanes++;
                 this->itersWithoutAddedHPs = 0;
-
-                env->output->outputDebug(
-                    fmt::format("        Cut added successfully for constraint {}.", tmpItem.sourceConstraintIndex));
             }
-            else
+
+            if(auto constraintHyperplane = std::dynamic_pointer_cast<ConstraintHyperplane>(HP))
             {
-                env->output->outputDebug(fmt::format(
-                    "        Cut not added successfully for constraint {}.", tmpItem.sourceConstraintIndex));
+                if(cutAddedSuccessfully)
+                    env->output->outputDebug(fmt::format(
+                        "        Cut added for constraint {}.", constraintHyperplane->sourceConstraint->name));
+                else
+                    env->output->outputDebug(fmt::format(
+                        "        Cut not added for constraint {}.", constraintHyperplane->sourceConstraint->name));
+            }
+            else if(auto objectiveHyperplane = std::dynamic_pointer_cast<ObjectiveHyperplane>(HP))
+            {
+                if(cutAddedSuccessfully)
+                    env->output->outputDebug(fmt::format("        Cut added for objective constraint."));
+                else
+                    env->output->outputDebug(fmt::format("        Cut not added for objective constraint."));
+            }
+            else if(auto externalHyperplane = std::dynamic_pointer_cast<ExternalHyperplane>(HP))
+            {
+                if(cutAddedSuccessfully)
+                    env->output->outputInfo(
+                        fmt::format("        Cut added for external constraint {}.", externalHyperplane->description));
+                else
+                    env->output->outputInfo(fmt::format(
+                        "        Cut not added for external constraint {}.", externalHyperplane->description));
             }
         }
 

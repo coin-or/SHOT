@@ -58,7 +58,7 @@ private:
     IloNumVarArray cplexVars;
     IloCplex cplexInst;
 
-    bool createHyperplane(Hyperplane hyperplane, const IloCplex::Callback::Context& context);
+    bool createHyperplane(HyperplanePtr hyperplane, const IloCplex::Callback::Context& context);
     bool createIntegerCut(IntegerCut& integerCut, const IloCplex::Callback::Context& context);
 
 public:

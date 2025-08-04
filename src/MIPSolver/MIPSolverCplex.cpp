@@ -1139,9 +1139,7 @@ void MIPSolverCplex::setTimeLimit(double seconds)
 {
     try
     {
-        if(seconds > 1e+75)
-        {
-        }
+        if(seconds > 1e+75) { }
         else if(seconds > 0)
         {
             cplexInstance.setParam(IloCplex::Param::TimeLimit, seconds);
@@ -1533,7 +1531,7 @@ void MIPSolverCplex::writePresolvedToFile([[maybe_unused]] std::string filename)
 void MIPSolverCplex::checkParameters() { }
 
 bool MIPSolverCplex::createHyperplane(
-    Hyperplane hyperplane, std::function<IloConstraint(IloRange)> addConstraintFunction)
+    HyperplanePtr hyperplane, std::function<IloConstraint(IloRange)> addConstraintFunction)
 {
     auto currIter = env->results->getCurrentIteration(); // The unsolved new iteration
 

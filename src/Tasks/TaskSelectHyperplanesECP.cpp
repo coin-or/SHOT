@@ -7,7 +7,7 @@
    This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
-#include "TaskSelectHyperplanePointsECP.h"
+#include "TaskSelectHyperplanesECP.h"
 
 #include "../DualSolver.h"
 #include "../MIPSolver/IMIPSolver.h"
@@ -22,17 +22,17 @@
 namespace SHOT
 {
 
-TaskSelectHyperplanePointsECP::TaskSelectHyperplanePointsECP(EnvironmentPtr envPtr) : TaskBase(envPtr)
+TaskSelectHyperplanesECP::TaskSelectHyperplanesECP(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
     env->timing->startTimer("DualCutGenerationRootSearch");
     env->timing->stopTimer("DualCutGenerationRootSearch");
 }
 
-TaskSelectHyperplanePointsECP::~TaskSelectHyperplanePointsECP() = default;
+TaskSelectHyperplanesECP::~TaskSelectHyperplanesECP() = default;
 
-void TaskSelectHyperplanePointsECP::run() { this->run(env->results->getPreviousIteration()->solutionPoints); }
+void TaskSelectHyperplanesECP::run() { this->run(env->results->getPreviousIteration()->solutionPoints); }
 
-void TaskSelectHyperplanePointsECP::run(std::vector<SolutionPoint> solPoints)
+void TaskSelectHyperplanesECP::run(std::vector<SolutionPoint> solPoints)
 {
     if(env->reformulatedProblem->properties.numberOfNonlinearConstraints == 0)
         return;
@@ -114,27 +114,26 @@ void TaskSelectHyperplanePointsECP::run(std::vector<SolutionPoint> solPoints)
         int i = std::get<0>(values);
         auto NCV = std::get<1>(values);
 
-        Hyperplane hyperplane;
-        hyperplane.sourceConstraint = NCV.constraint;
-        hyperplane.sourceConstraintIndex = NCV.constraint->index;
-        hyperplane.generatedPoint = solPoints.at(i).point;
-        hyperplane.isSourceConvex = (NCV.constraint->properties.convexity <= E_Convexity::Convex);
+        auto hyperplane = std::make_shared<ConstraintHyperplane>();
+        hyperplane->sourceConstraint = NCV.constraint;
+        hyperplane->generatedPoint = solPoints.at(i).point;
+        hyperplane->isGlobal = (NCV.constraint->properties.convexity <= E_Convexity::Convex);
 
         if(solPoints.at(i).isRelaxedPoint)
         {
-            hyperplane.source = E_HyperplaneSource::MIPCallbackRelaxed;
+            hyperplane->source = E_HyperplaneSource::MIPCallbackRelaxed;
         }
         else if(i == 0 && currIter->isMIP())
         {
-            hyperplane.source = E_HyperplaneSource::MIPOptimalSolutionPoint;
+            hyperplane->source = E_HyperplaneSource::MIPOptimalSolutionPoint;
         }
         else if(currIter->isMIP())
         {
-            hyperplane.source = E_HyperplaneSource::MIPSolutionPoolSolutionPoint;
+            hyperplane->source = E_HyperplaneSource::MIPSolutionPoolSolutionPoint;
         }
         else
         {
-            hyperplane.source = E_HyperplaneSource::LPRelaxedSolutionPoint;
+            hyperplane->source = E_HyperplaneSource::LPRelaxedSolutionPoint;
         }
 
         env->dualSolver->addHyperplane(hyperplane);
@@ -147,7 +146,7 @@ void TaskSelectHyperplanePointsECP::run(std::vector<SolutionPoint> solPoints)
                 NCV.constraint->name, NCV.error));
     }
 
-    std::vector<std::pair<Hyperplane, double>> hyperplanesCuttingAwayPrimals;
+    std::vector<std::pair<ConstraintHyperplanePtr, double>> hyperplanesCuttingAwayPrimals;
 
     if(addedHyperplanes == 0)
     {
@@ -162,27 +161,26 @@ void TaskSelectHyperplanePointsECP::run(std::vector<SolutionPoint> solPoints)
             int i = std::get<0>(values);
             auto NCV = std::get<1>(values);
 
-            Hyperplane hyperplane;
-            hyperplane.sourceConstraint = NCV.constraint;
-            hyperplane.sourceConstraintIndex = NCV.constraint->index;
-            hyperplane.generatedPoint = solPoints.at(i).point;
-            hyperplane.isSourceConvex = (NCV.constraint->properties.convexity <= E_Convexity::Convex);
+            auto hyperplane = std::make_shared<ConstraintHyperplane>();
+            hyperplane->sourceConstraint = NCV.constraint;
+            hyperplane->generatedPoint = solPoints.at(i).point;
+            hyperplane->isGlobal = (NCV.constraint->properties.convexity <= E_Convexity::Convex);
 
             if(solPoints.at(i).isRelaxedPoint)
             {
-                hyperplane.source = E_HyperplaneSource::MIPCallbackRelaxed;
+                hyperplane->source = E_HyperplaneSource::MIPCallbackRelaxed;
             }
             else if(i == 0 && currIter->isMIP())
             {
-                hyperplane.source = E_HyperplaneSource::MIPOptimalSolutionPoint;
+                hyperplane->source = E_HyperplaneSource::MIPOptimalSolutionPoint;
             }
             else if(currIter->isMIP())
             {
-                hyperplane.source = E_HyperplaneSource::MIPSolutionPoolSolutionPoint;
+                hyperplane->source = E_HyperplaneSource::MIPSolutionPoolSolutionPoint;
             }
             else
             {
-                hyperplane.source = E_HyperplaneSource::LPRelaxedSolutionPoint;
+                hyperplane->source = E_HyperplaneSource::LPRelaxedSolutionPoint;
             }
 
             bool cutsAwayPrimalSolution = false;
@@ -228,11 +226,11 @@ void TaskSelectHyperplanePointsECP::run(std::vector<SolutionPoint> solPoints)
         for(auto& HP : hyperplanesCuttingAwayPrimals)
         {
             env->dualSolver->addHyperplane(HP.first);
-            hyperplaneAddedToConstraint.at(HP.first.sourceConstraint->index) = true;
+            hyperplaneAddedToConstraint.at(HP.first->sourceConstraint->index) = true;
             addedHyperplanes++;
             env->output->outputDebug(fmt::format("         Selected hyperplane cut for constraint {} that cuts away "
                                                  "previous primal solution with error {}",
-                HP.first.sourceConstraint->index, HP.second));
+                HP.first->sourceConstraint->index, HP.second));
 
             addedHyperplanes++;
 
@@ -249,7 +247,7 @@ void TaskSelectHyperplanePointsECP::run(std::vector<SolutionPoint> solPoints)
     env->timing->stopTimer("DualCutGenerationRootSearch");
 }
 
-std::string TaskSelectHyperplanePointsECP::getType()
+std::string TaskSelectHyperplanesECP::getType()
 {
     std::string type = typeid(this).name();
     return (type);

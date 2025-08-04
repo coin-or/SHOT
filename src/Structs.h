@@ -78,6 +78,9 @@ class PrimalSolver;
 class Constraint;
 class NumericConstraint;
 
+struct Hyperplane;
+struct GeneratedHyperplane;
+
 using ResultsPtr = std::shared_ptr<Results>;
 using SettingsPtr = std::shared_ptr<Settings>;
 using ModelPtr = std::shared_ptr<Model>;
@@ -96,6 +99,9 @@ using IterationPtr = std::shared_ptr<Iteration>;
 
 using ConstraintPtr = std::shared_ptr<Constraint>;
 using NumericConstraintPtr = std::shared_ptr<NumericConstraint>;
+
+using HyperplanePtr = std::shared_ptr<Hyperplane>;
+using GeneratedHyperplanePtr = std::shared_ptr<GeneratedHyperplane>;
 
 using PairInteger = std::pair<int, int>;
 using PairDouble = std::pair<double, double>;
@@ -175,27 +181,66 @@ struct DualSolution
 
 struct Hyperplane
 {
-    NumericConstraintPtr sourceConstraint;
-    int sourceConstraintIndex; // -1 if objective function
-    VectorDouble generatedPoint;
-    double objectiveFunctionValue; // Used for the objective cuts only
     E_HyperplaneSource source;
-    bool isObjectiveHyperplane = false;
-    bool isSourceConvex = false;
-    double pointHash;
+    bool isGlobal = false;
+
+public:
+    virtual ~Hyperplane() = default;
 };
+
+struct NumericHyperplane : public Hyperplane
+{
+    VectorDouble generatedPoint;
+    double pointHash;
+
+public:
+    virtual ~NumericHyperplane() = default;
+};
+
+using NumericHyperplanePtr = std::shared_ptr<NumericHyperplane>;
+
+struct ObjectiveHyperplane : public NumericHyperplane
+{
+    double objectiveFunctionValue;
+
+public:
+    virtual ~ObjectiveHyperplane() = default;
+};
+
+using ObjectiveHyperplanePtr = std::shared_ptr<ObjectiveHyperplane>;
+
+struct ConstraintHyperplane : public NumericHyperplane
+{
+    NumericConstraintPtr sourceConstraint;
+
+public:
+    virtual ~ConstraintHyperplane() = default;
+};
+
+using ConstraintHyperplanePtr = std::shared_ptr<ConstraintHyperplane>;
+
+struct ExternalHyperplane : public Hyperplane
+{
+    VectorInteger variableIndexes;
+    VectorDouble variableCoefficients;
+    std::string description;
+    double rhsValue = 0.0; // Right-hand side value of the hyperplane
+
+public:
+    virtual ~ExternalHyperplane() = default;
+};
+
+using ExternalHyperplanePtr = std::shared_ptr<ExternalHyperplane>;
 
 struct GeneratedHyperplane
 {
-    NumericConstraintPtr sourceConstraint;
-    int sourceConstraintIndex; // -1 if objective function
-    VectorDouble generatedPoint;
-    E_HyperplaneSource source = E_HyperplaneSource::None;
+    HyperplanePtr sourceHyperplane; // The hyperplane that was used to generate this hyperplane
     bool isLazy = false;
     bool isRemoved = false;
-    bool isSourceConvex = false;
     int iterationGenerated = -1;
-    double pointHash;
+
+public:
+    virtual ~GeneratedHyperplane() = default;
 };
 
 struct IntegerCut

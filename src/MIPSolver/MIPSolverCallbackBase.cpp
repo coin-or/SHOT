@@ -17,6 +17,8 @@
 #include "../TaskHandler.h"
 #include "../Timing.h"
 
+#include <any>
+
 namespace SHOT
 {
 
@@ -40,7 +42,7 @@ bool MIPSolverCallbackBase::checkIterationLimit()
 
 bool MIPSolverCallbackBase::checkUserTermination()
 {
-    env->events->notify(E_EventType::UserTerminationCheck);
+    env->events->notify(E_EventType::UserTerminationCheck, std::any());
 
     if(env->tasks->isTerminated())
         return (true);

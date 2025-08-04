@@ -334,12 +334,11 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
                     auto tmpPoint = currSol;
                     tmpPoint.pop_back();
 
-                    Hyperplane hyperplane;
-                    hyperplane.sourceConstraint = NCV.constraint;
-                    hyperplane.sourceConstraintIndex = NCV.constraint->index;
-                    hyperplane.generatedPoint = tmpPoint;
-                    hyperplane.source = E_HyperplaneSource::InteriorPointSearch;
-                    hyperplane.isSourceConvex = true;
+                    auto hyperplane = std::make_shared<ConstraintHyperplane>();
+                    hyperplane->sourceConstraint = NCV.constraint;
+                    hyperplane->generatedPoint = tmpPoint;
+                    hyperplane->source = E_HyperplaneSource::InteriorPointSearch;
+                    hyperplane->isGlobal = true;
 
                     env->dualSolver->addHyperplane(hyperplane);
                 }

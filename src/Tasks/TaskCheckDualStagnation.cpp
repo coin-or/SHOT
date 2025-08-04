@@ -31,6 +31,7 @@ TaskCheckDualStagnation::~TaskCheckDualStagnation() = default;
 
 void TaskCheckDualStagnation::run()
 {
+    return;
     auto currIter = env->results->getCurrentIteration();
 
     if(env->problem->properties.isDiscrete && !currIter->isMIP())
