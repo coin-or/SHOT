@@ -11,6 +11,7 @@
 #include "TaskCheckUserTermination.h"
 
 #include "../EventHandler.h"
+#include "../Output.h"
 #include "../Results.h"
 #include "../TaskHandler.h"
 
@@ -28,7 +29,20 @@ TaskCheckUserTermination::~TaskCheckUserTermination() = default;
 
 void TaskCheckUserTermination::run()
 {
+    if(env->tasks->isTerminated())
+        return;
+
+    // Notify callback
     env->events->notify(E_EventType::UserTerminationCheck, std::any());
+
+    // Check if user termination was requested
+    if(env->events->hasDataProvider(E_EventType::UserTerminationCheck))
+    {
+        auto shouldTerminate = env->events->requestData<bool>(E_EventType::UserTerminationCheck);
+
+        if(shouldTerminate.has_value() && *shouldTerminate)
+            env->tasks->terminate();
+    }
 
     if(env->tasks->isTerminated()
         || env->results->getCurrentIteration()->solutionStatus == E_ProblemSolutionStatus::Abort)

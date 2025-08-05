@@ -57,7 +57,8 @@ set(Solver_parts
     3
     4
     5
-    6)
+    6
+    7)
 set(cpptests ${cpptests} Solver)
 
 if(HAS_IPOPT)

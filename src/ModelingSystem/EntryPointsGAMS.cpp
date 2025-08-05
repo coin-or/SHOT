@@ -191,9 +191,11 @@ extern "C"
             env->timing->stopTimer("ProblemInitialization");
 
             solver.registerCallback(
-                E_EventType::UserTerminationCheck, [&env, gev = (gevHandle_t)gmoEnvironment(gs->gmo)](std::any args) {
+                E_EventType::UserTerminationCheck, [gev = (gevHandle_t)gmoEnvironment(gs->gmo)]() -> bool {
                     if(gevTerminateGet(gev))
-                        env->tasks->terminate();
+                        return (true);
+
+                    return (false);
                 });
 
             if(!solver.setProblem(problem, modelingSystem))

@@ -122,13 +122,14 @@ bool CplexTerminationCallbackTest(std::string filename)
         std::cout << "Error while reading problem";
         return (false);
     }
-
-    // Registers a callback that terminates in the third iteration
-    solver->registerCallback(E_EventType::UserTerminationCheck, [&env](std::any args) {
+    // Registers a callback that terminates after the third iteration
+    solver->registerCallback(E_EventType::UserTerminationCheck, [&env]() -> bool {
         std::cout << "Callback activated. Terminating.\n";
 
-        if(env->results->getNumberOfIterations() == 3)
-            env->tasks->terminate();
+        if(env->results->getNumberOfIterations() > 3)
+            return (true);
+
+        return (false);
     });
 
     // Solving the problem
@@ -138,7 +139,7 @@ bool CplexTerminationCallbackTest(std::string filename)
         return (false);
     }
 
-    if(env->results->getNumberOfIterations() != 3)
+    if(env->results->terminationReason != E_TerminationReason::UserAbort)
     {
         std::cout << "Termination callback did not seem to work as expected\n";
         return (false);

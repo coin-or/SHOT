@@ -117,7 +117,7 @@ bool GurobiTerminationCallbackTest(std::string filename)
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
     auto env = solver->getEnvironment();
 
-    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Error));
+    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Off));
     solver->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Gurobi));
     solver->updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::MultiTree));
 
@@ -129,12 +129,14 @@ bool GurobiTerminationCallbackTest(std::string filename)
         return (false);
     }
 
-    // Registers a callback that terminates in the third iteration
-    solver->registerCallback(E_EventType::UserTerminationCheck, [&env](std::any args) {
+    // Registers a callback that terminates after the third iteration
+    solver->registerCallback(E_EventType::UserTerminationCheck, [&env]() -> bool {
         std::cout << "Callback activated. Terminating.\n";
 
-        if(env->results->getNumberOfIterations() == 3)
-            env->tasks->terminate();
+        if(env->results->getNumberOfIterations() > 3)
+            return (true);
+
+        return (false);
     });
 
     // Solving the problem
@@ -144,7 +146,7 @@ bool GurobiTerminationCallbackTest(std::string filename)
         return (false);
     }
 
-    if(env->results->getNumberOfIterations() != 3)
+    if(env->results->terminationReason != E_TerminationReason::UserAbort)
     {
         std::cout << "Termination callback did not seem to work as expected\n";
         return (false);

@@ -51,9 +51,12 @@ enum class E_DualSolutionSource
 
 enum class E_EventType
 {
-    NewPrimalSolution,
-    UserTerminationCheck,
+    ExternalDualBound,
     ExternalHyperplaneSelection,
+    ExternalPrimalSolution,
+    NewPrimalSolution,
+    PrimalSolutionCandidateSelection,
+    UserTerminationCheck,
 };
 
 enum class E_HyperplaneSource
