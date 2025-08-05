@@ -137,7 +137,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
 
     primalSol.sourceDescription = sourceDesc;
 
-    // Recalculate if the objective to be sure it is correct
+    // Recalculate the objective to be sure it is correct
     primalSol.objValue = env->problem->objectiveFunction->calculateValue(primalSol.point);
     tmpObjVal = primalSol.objValue;
 
