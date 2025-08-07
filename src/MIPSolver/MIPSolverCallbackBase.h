@@ -15,6 +15,7 @@
 #include "../Tasks/TaskSelectHyperplanesObjectiveFunction.h"
 #include "../Tasks/TaskSelectPrimalCandidatesFromRootsearch.h"
 #include "../Tasks/TaskSelectPrimalCandidatesFromNLP.h"
+#include "../Tasks/TaskSelectPrimalCandidatesFromExternalSource.h"
 #include "../Tasks/TaskSelectHyperplanesESH.h"
 #include "../Tasks/TaskSelectHyperplanesECP.h"
 #include "../Tasks/TaskSelectHyperplanesExternal.h"
@@ -43,13 +44,16 @@ protected:
 
     bool warningMessageShownLargeRHS = false;
 
-    std::shared_ptr<TaskSelectPrimalCandidatesFromNLP> taskSelectPrimNLPOriginal;
-    std::shared_ptr<TaskSelectPrimalCandidatesFromNLP> taskSelectPrimNLPReformulated;
+    std::shared_ptr<TaskUpdateInteriorPoint> tUpdateInteriorPoint;
+
     std::shared_ptr<TaskBase> taskSelectHPPts;
     std::shared_ptr<TaskSelectHyperplanesObjectiveFunction> taskSelectHPPtsByObjectiveRootsearch;
     std::shared_ptr<TaskSelectHyperplanesExternal> taskSelectExternalHPs;
+
+    std::shared_ptr<TaskSelectPrimalCandidatesFromNLP> taskSelectPrimNLPOriginal;
+    std::shared_ptr<TaskSelectPrimalCandidatesFromNLP> taskSelectPrimNLPReformulated;
     std::shared_ptr<TaskSelectPrimalCandidatesFromRootsearch> taskSelectPrimalSolutionFromRootsearch;
-    std::shared_ptr<TaskUpdateInteriorPoint> tUpdateInteriorPoint;
+    std::shared_ptr<TaskSelectPrimalCandidatesFromExternalSource> taskSelectPrimalSolutionFromExternal;
 
     bool checkFixedNLPStrategy(SolutionPoint point);
 

@@ -11,6 +11,7 @@
 #include "MIPSolverCplexSingleTreeLegacy.h"
 
 #include "../DualSolver.h"
+#include "../EventHandler.h"
 #include "../Iteration.h"
 #include "../Output.h"
 #include "../PrimalSolver.h"
@@ -268,6 +269,11 @@ CtCallbackI::CtCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx
     {
         taskSelectPrimalSolutionFromRootsearch = std::make_unique<TaskSelectPrimalCandidatesFromRootsearch>(env);
     }
+
+    if(env->events->hasDataProvider(E_EventType::ExternalPrimalSolution))
+    {
+        taskSelectPrimalSolutionFromExternal = std::make_shared<TaskSelectPrimalCandidatesFromExternalSource>(env);
+    }
 }
 
 IloCplex::CallbackI* CtCallbackI::duplicateCallback() const { return (new(getEnv()) CtCallbackI(*this)); }
@@ -433,6 +439,11 @@ void CtCallbackI::main()
         && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
     {
         taskSelectPrimalSolutionFromRootsearch->run(candidatePoints);
+    }
+
+    if(env->events->hasDataProvider(E_EventType::ExternalPrimalSolution))
+    {
+        taskSelectPrimalSolutionFromExternal->run();
     }
 
     if(checkFixedNLPStrategy(solutionCandidate))

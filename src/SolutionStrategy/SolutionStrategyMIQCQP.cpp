@@ -58,6 +58,7 @@
 #include "../Tasks/TaskSelectPrimalCandidatesFromRootsearch.h"
 #include "../Tasks/TaskSelectPrimalCandidatesFromNLP.h"
 #include "../Tasks/TaskSelectPrimalFixedNLPPointsFromSolutionPool.h"
+#include "../Tasks/TaskSelectPrimalCandidatesFromExternalSource.h"
 #include "../Tasks/TaskClearFixedPrimalCandidates.h"
 
 #include "../Tasks/TaskUpdateExternalDualBound.h"

@@ -63,6 +63,7 @@
 #include "../Tasks/TaskSelectPrimalCandidatesFromRootsearch.h"
 #include "../Tasks/TaskSelectPrimalCandidatesFromNLP.h"
 #include "../Tasks/TaskSelectPrimalFixedNLPPointsFromSolutionPool.h"
+#include "../Tasks/TaskSelectPrimalCandidatesFromExternalSource.h"
 #include "../Tasks/TaskClearFixedPrimalCandidates.h"
 
 #include "../Tasks/TaskUpdateInteriorPoint.h"
@@ -147,6 +148,10 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
         env->tasks->addTask(tSelectPrimRootsearch, "SelectPrimRootsearch");
         std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tSelectPrimRootsearch);
     }
+
+    auto tSelectPrimExternal = std::make_shared<TaskSelectPrimalCandidatesFromExternalSource>(env);
+    env->tasks->addTask(tSelectPrimExternal, "SelectPrimExternal");
+    std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tSelectPrimExternal);
 
     auto tPrintIterReport = std::make_shared<TaskPrintIterationReport>(env);
     env->tasks->addTask(tPrintIterReport, "PrintIterReport");

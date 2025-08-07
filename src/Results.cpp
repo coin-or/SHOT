@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <limits>
 
+#include "CallbackData.h"
 #include "EventHandler.h"
 #include "Iteration.h"
 #include "Output.h"
@@ -198,7 +199,21 @@ void Results::addPrimalSolution(PrimalSolution solution)
         env->output->outputCritical("        Primal objective cut added.");
     }*/
 
-    env->events->notify(E_EventType::NewPrimalSolution, std::any(solution));
+    // Only create callback data and notify if there are registered data provider callbacks
+    if(env->events->hasNotificationCallbacks(E_EventType::NewPrimalSolution))
+    {
+        // Create structured callback data for the new primal solution
+        bool isMinimization = (env->reformulatedProblem->objectiveFunction->properties.isMinimize);
+        double currentDualBound = getCurrentDualBound();
+        double relativeGap = getRelativeCurrentObjectiveGap();
+        double absoluteGap = getAbsoluteCurrentObjectiveGap();
+        int iterationNumber = env->results->getNumberOfIterations();
+
+        PrimalSolutionCallbackData callbackData(isMinimization, solution.point, solution.objValue, currentDualBound,
+            relativeGap, absoluteGap, iterationNumber, solution.sourceType, env->solutionStatistics);
+
+        env->events->notify(E_EventType::NewPrimalSolution, callbackData);
+    }
 }
 
 bool Results::isRelativeObjectiveGapToleranceMet()

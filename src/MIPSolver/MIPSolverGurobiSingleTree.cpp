@@ -10,6 +10,7 @@
 
 #include "MIPSolverGurobiSingleTree.h"
 
+#include "../CallbackData.h"
 #include "../DualSolver.h"
 #include "../EventHandler.h"
 #include "../Iteration.h"
@@ -444,6 +445,11 @@ void GurobiCallbackSingleTree::callback()
                 env->primalSolver->checkPrimalSolutionCandidates();
             }
 
+            if(env->events->hasDataProvider(E_EventType::ExternalPrimalSolution))
+            {
+                taskSelectPrimalSolutionFromExternal->run();
+            }
+
             if(env->settings->getSetting<bool>("HyperplaneCuts.UseIntegerCuts", "Dual"))
             {
                 int addedIntegerCuts = 0;
@@ -619,6 +625,11 @@ GurobiCallbackSingleTree::GurobiCallbackSingleTree(GRBVar* xvars, EnvironmentPtr
         && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
     {
         taskSelectPrimalSolutionFromRootsearch = std::make_shared<TaskSelectPrimalCandidatesFromRootsearch>(env);
+    }
+
+    if(env->events->hasDataProvider(E_EventType::ExternalPrimalSolution))
+    {
+        taskSelectPrimalSolutionFromExternal = std::make_shared<TaskSelectPrimalCandidatesFromExternalSource>(env);
     }
 
     lastUpdatedPrimal = env->results->getPrimalBound();

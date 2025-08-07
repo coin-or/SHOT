@@ -9,11 +9,15 @@
 */
 
 #include "../src/CallbackData.h"
+#include "../src/DualSolver.h"
+#include "../src/Environment.h"
 #include "../src/Report.h"
 #include "../src/Results.h"
 #include "../src/Solver.h"
 #include "../src/TaskHandler.h"
 #include "../src/Utilities.h"
+
+#include "../src/MIPSolver/IMIPSolver.h"
 
 #include "../src/Model/Problem.h"
 #include "../src/Model/ObjectiveFunction.h"
@@ -119,7 +123,7 @@ bool GurobiTerminationCallbackTest(std::string filename)
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
     auto env = solver->getEnvironment();
 
-    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Info));
+    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Off));
     solver->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Gurobi));
     solver->updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::MultiTree));
 
@@ -167,6 +171,53 @@ bool GurobiExternalDualBoundCallbackTest(std::string filename, double dualBoundT
     auto env = solver->getEnvironment();
 
     solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Info));
+    solver->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Cplex));
+    solver->updateSetting("TreeStrategy", "Dual", static_cast<int>(treeStrategy));
+
+    std::cout << "Reading problem:  " << filename << '\n';
+
+    if(!solver->setProblem(filename))
+    {
+        std::cout << "Error while reading problem";
+        return (false);
+    }
+
+    // Vector to collect all primal solutions found during optimization
+    std::vector<VectorDouble> foundSolutions;
+
+    // Registers a callback that collects all new primal solutions
+    solver->registerCallback(E_EventType::NewPrimalSolution, [&foundSolutions](std::any args) {
+        try
+        {
+            auto data = std::any_cast<PrimalSolutionCallbackData>(args);
+            std::cout << "New primal solution found with objective value: " << data.objectiveValue
+                      << " from source: " << static_cast<int>(data.sourceType) << " (iteration " << data.iterationNumber
+                      << ")\n";
+
+            // Add the solution to our collection
+            foundSolutions.push_back(data.solution);
+        }
+        catch(const std::bad_any_cast&)
+        {
+            std::cout << "New primal solution callback executed with no valid structured data\n";
+        }
+    });
+
+    // Solving the problem
+    if(!solver->solveProblem())
+    {
+        std::cout << "Error while solving problem\n";
+        return (false);
+    }
+
+    std::cout << "Total solutions collected: " << foundSolutions.size() << "\n";
+
+    // Create a new solver instance
+
+    solver = std::make_unique<Solver>();
+    env = solver->getEnvironment();
+
+    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Info));
     solver->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Gurobi));
     solver->updateSetting("TreeStrategy", "Dual", static_cast<int>(treeStrategy));
 
@@ -202,6 +253,46 @@ bool GurobiExternalDualBoundCallbackTest(std::string filename, double dualBoundT
         return (newDualBound);
     });
 
+    // Registers a callback that provides external primal solutions from our collected solutions
+    solver->registerCallback(
+        E_EventType::ExternalPrimalSolution, [&foundSolutions, &env](std::any args) -> std::vector<VectorDouble> {
+            if(!env->dualSolver->MIPSolver->getDiscreteVariableStatus())
+            {
+                std::cout
+                    << "Still waiting to add primal solution candidates until the relaxation strategy is finished.\n";
+                return std::vector<VectorDouble>();
+            }
+
+            try
+            {
+                auto data = std::any_cast<ExternalPrimalSolutionCallbackData>(args);
+                std::cout << "External primal solution callback requested (iteration " << data.iterationNumber
+                          << ", current gap: " << data.relativeGap << ")\n";
+
+                if(!foundSolutions.empty())
+                {
+                    std::cout << "Providing " << foundSolutions.size()
+                              << " collected solutions as external candidates\n";
+
+                    // Create a copy of foundSolutions and clear the original
+                    std::vector<VectorDouble> solutionsToAdd = foundSolutions;
+                    foundSolutions.clear();
+
+                    return solutionsToAdd;
+                }
+                else
+                {
+                    std::cout << "No collected solutions available to provide\n";
+                    return std::vector<VectorDouble>();
+                }
+            }
+            catch(const std::bad_any_cast&)
+            {
+                std::cout << "External primal solution callback executed with no valid structured data\n";
+                return std::vector<VectorDouble>();
+            }
+        });
+
     if(!solver->solveProblem())
     {
         std::cout << "Error while solving problem\n";
@@ -225,6 +316,7 @@ bool GurobiExternalDualBoundCallbackTest(std::string filename, double dualBoundT
 
 int GurobiTest(int argc, char* argv[])
 {
+
     int defaultchoice = 1;
 
     int choice = defaultchoice;
@@ -278,14 +370,20 @@ int GurobiTest(int argc, char* argv[])
         std::cout << "Finished test to solve nonconvex maximization problem 'ncvx_min_ndiv.nl'." << std::endl;
         break;
     case 8:
-        std::cout << "Starting test to set the dual bound through a callback with multi-tree strategy" << std::endl;
-        passed = GurobiExternalDualBoundCallbackTest("data/fo7.gms", 20.7298, ES_TreeStrategy::MultiTree);
-        std::cout << "Finished test to set dual bound through a callback with multi-tree strategy." << std::endl;
+        std::cout << "Starting test for callbacks getting and setting primal solutions and dual bounds through a "
+                     "callback with multi-tree strategy"
+                  << std::endl;
+        passed = GurobiExternalDualBoundCallbackTest("data/fo7_2.osil", 17.74934, ES_TreeStrategy::MultiTree);
+        std::cout << "Finished test for callbacks getting and setting primal solutions and dual bounds through a "
+                     "callback with multi-tree strategy.";
         break;
     case 9:
-        std::cout << "Starting test to set the dual bound through a callback with single-tree strategy" << std::endl;
-        passed = GurobiExternalDualBoundCallbackTest("data/fo7_2.osil", 20.7298, ES_TreeStrategy::SingleTree);
-        std::cout << "Finished test to set dual bound through a callback with single-tree strategy." << std::endl;
+        std::cout << "Starting test for callbacks getting and setting primal solutions and dual bounds through a "
+                     "callback with single-tree strategy"
+                  << std::endl;
+        passed = GurobiExternalDualBoundCallbackTest("data/fo7_2.osil", 17.74934, ES_TreeStrategy::SingleTree);
+        std::cout << "Finished test for callbacks getting and setting primal solutions and dual bounds through a "
+                     "callback with single-tree strategy.";
         break;
     default:
         passed = false;

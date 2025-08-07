@@ -11,6 +11,7 @@
 #include "MIPSolverCplexSingleTree.h"
 
 #include "../DualSolver.h"
+#include "../EventHandler.h"
 #include "../Iteration.h"
 #include "../Output.h"
 #include "../PrimalSolver.h"
@@ -74,6 +75,11 @@ CplexCallback::CplexCallback(EnvironmentPtr envPtr, const IloNumVarArray& vars, 
         && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
     {
         taskSelectPrimalSolutionFromRootsearch = std::make_shared<TaskSelectPrimalCandidatesFromRootsearch>(env);
+    }
+
+    if(env->events->hasDataProvider(E_EventType::ExternalPrimalSolution))
+    {
+        taskSelectPrimalSolutionFromExternal = std::make_shared<TaskSelectPrimalCandidatesFromExternalSource>(env);
     }
 
     lastUpdatedPrimal = env->results->getPrimalBound();
@@ -312,6 +318,11 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
             {
                 taskSelectPrimalSolutionFromRootsearch->run(candidatePoints);
                 env->primalSolver->checkPrimalSolutionCandidates();
+            }
+
+            if(env->events->hasDataProvider(E_EventType::ExternalPrimalSolution))
+            {
+                taskSelectPrimalSolutionFromExternal->run();
             }
 
             currIter->isSolved = true;

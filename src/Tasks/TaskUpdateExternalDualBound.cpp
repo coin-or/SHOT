@@ -36,7 +36,7 @@ void TaskUpdateExternalDualBound::run()
         bool isMinimization = (env->reformulatedProblem->objectiveFunction->properties.isMinimize);
         double currentDualBound = env->results->getCurrentDualBound();
         double currentPrimalBound = env->results->getPrimalBound();
-        int iterationNumber = env->results->getCurrentIteration()->iterationNumber;
+        int iterationNumber = env->results->getNumberOfIterations();
         double absoluteGap = env->results->getAbsoluteCurrentObjectiveGap();
         double relativeGap = env->results->getRelativeCurrentObjectiveGap();
 
