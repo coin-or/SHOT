@@ -269,8 +269,9 @@ bool TestCallbackGAMS(std::string filename)
     {
         return (false);
     }
-    // Registers a callback that terminates after the third iteration
-    solver->registerCallback(E_EventType::UserTerminationCheck, [&env]() -> bool {
+
+    // Registers a callback that terminates when a primal solution has been found
+    solver->registerCallback(E_EventType::UserTerminationCheck, [&env](std::any args) -> bool {
         std::cout << "Checking whether to terminate SHOT... ";
 
         if(env->results->hasPrimalSolution())
