@@ -8,10 +8,12 @@
    Please see the README and LICENSE files for more information.
 */
 
+#include "../src/CallbackData.h"
+#include "../src/Report.h"
 #include "../src/Results.h"
 #include "../src/Solver.h"
-#include "../src/TaskHandler.h"
 #include "../src/Utilities.h"
+#include "../src/TaskHandler.h"
 
 #include "../src/Model/Problem.h"
 #include "../src/Model/ObjectiveFunction.h"
@@ -126,13 +128,17 @@ bool CbcTerminationCallbackTest(std::string filename)
     }
 
     // Registers a callback that terminates after the third iteration
-    solver->registerCallback(E_EventType::UserTerminationCheck, [&env]() -> bool {
-        std::cout << "Callback activated. Terminating.\n";
+    solver->registerCallback(E_EventType::UserTerminationCheck, [](std::any args) -> bool {
+        auto data = std::any_cast<TerminationCallbackData>(args);
+        std::cout << "Termination callback activated with structured data (iteration " << data.iterationNumber << ")\n";
 
-        if(env->results->getNumberOfIterations() > 3)
-            return (true);
+        if(data.iterationNumber > 3)
+        {
+            std::cout << "Terminating after iteration " << data.iterationNumber << "\n";
+            return true;
+        }
 
-        return (false);
+        return false;
     });
 
     // Solving the problem
@@ -145,6 +151,68 @@ bool CbcTerminationCallbackTest(std::string filename)
     if(env->results->terminationReason != E_TerminationReason::UserAbort)
     {
         std::cout << "Termination callback did not seem to work as expected\n";
+        return (false);
+    }
+
+    return (true);
+}
+
+bool CbcExternalDualBoundCallbackTest(std::string filename, double dualBoundToTest, ES_TreeStrategy treeStrategy)
+{
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+
+    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Info));
+    solver->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Gurobi));
+    solver->updateSetting("TreeStrategy", "Dual", static_cast<int>(treeStrategy));
+
+    std::cout << "Reading problem:  " << filename << '\n';
+
+    if(!solver->setProblem(filename))
+    {
+        std::cout << "Error while reading problem";
+        return (false);
+    }
+
+    // Registers a callback that sets the dual bound to a fixed value
+    solver->registerCallback(E_EventType::ExternalDualBound, [dualBoundToTest](std::any args) {
+        double newDualBound = std::numeric_limits<double>::quiet_NaN();
+
+        try
+        {
+            auto data = std::any_cast<DualBoundCallbackData>(args);
+
+            if(data.currentDualBound >= dualBoundToTest)
+                return (newDualBound);
+
+            newDualBound = dualBoundToTest;
+            std::cout << "Current dual bound is " << data.currentDualBound
+                      << ", new external dual bound given as = " << newDualBound << "\n";
+        }
+        catch(const std::bad_any_cast&)
+        {
+            std::cout << "External dual bound callback executed with no valid structured data\n";
+            throw std::runtime_error("Invalid data type for external dual bound callback");
+        }
+
+        return (newDualBound);
+    });
+
+    if(!solver->solveProblem())
+    {
+        std::cout << "Error while solving problem\n";
+        return (false);
+    }
+
+    env->report->outputSolutionReport();
+
+    if(env->solutionStatistics.hasExternalDualBoundBeenSet)
+    {
+        std::cout << "External dual bound callback was executed successfully.\n";
+    }
+    else
+    {
+        std::cout << "External dual bound callback was not executed as expected.\n";
         return (false);
     }
 
@@ -204,6 +272,11 @@ int CbcTest(int argc, char* argv[])
         std::cout << "Starting test to solve nonconvex maximization problem 'ncvx_min_ndiv.nl':" << std::endl;
         passed = CbcTest1("data/ncvx_min_ndiv.nl", -13.0);
         std::cout << "Finished test to solve nonconvex maximization problem 'ncvx_min_ndiv.nl'." << std::endl;
+        break;
+    case 8:
+        std::cout << "Starting test to set the dual bound through a callback with multi-tree strategy" << std::endl;
+        passed = CbcExternalDualBoundCallbackTest("data/fo7_2.osil", 20.7298, ES_TreeStrategy::MultiTree);
+        std::cout << "Finished test to set dual bound through a callback with multi-tree strategy." << std::endl;
         break;
     default:
         passed = false;

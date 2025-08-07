@@ -223,6 +223,29 @@ public:
             || parameterizedDataProviders.find(event) != parameterizedDataProviders.end();
     }
 
+    /**
+     * @brief Check if notification callbacks are registered for an event
+     *
+     * @param event The event type to check
+     * @return true if notification callbacks are registered, false otherwise
+     */
+    bool hasNotificationCallbacks(const E_EventType& event) const
+    {
+        auto it = notificationCallbacks.find(event);
+        return it != notificationCallbacks.end() && !it->second.empty();
+    }
+
+    /**
+     * @brief Check if any callbacks (data providers or notifications) are registered for an event
+     *
+     * @param event The event type to check
+     * @return true if any callbacks are registered, false otherwise
+     */
+    bool hasAnyCallbacks(const E_EventType& event) const
+    {
+        return hasDataProvider(event) || hasNotificationCallbacks(event);
+    }
+
 private:
     /// Map of event types to their registered notification callbacks
     std::map<E_EventType, std::vector<std::function<void(std::any)>>> notificationCallbacks;

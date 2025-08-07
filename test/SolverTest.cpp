@@ -15,6 +15,7 @@
 #include "../src/Structs.h"
 #include "../src/TaskHandler.h"
 #include "../src/Utilities.h"
+#include "../src/CallbackData.h"
 #include "../src/Model/Simplifications.h"
 
 #include "../src/Model/Variables.h"
@@ -492,17 +493,20 @@ bool CreateAndSolveProblem()
     });
 
     // Registers a callback that terminates if we have found at least one primal solution
-    solver->registerCallback(E_EventType::UserTerminationCheck, [&env]() -> bool {
+    solver->registerCallback(E_EventType::UserTerminationCheck, [](std::any args) -> bool {
+        auto data = std::any_cast<TerminationCallbackData>(args);
+        std::cout << "Termination callback with structured data - iteration: " << data.iterationNumber << "\n";
+
         // If we have found one primal solution, we terminate the solver
-        if(env->results->getNumberOfIterations() > 0 && env->results->primalSolution.size() > 0)
+        if(data.iterationNumber > 0 && data.solutionStatistics.numberOfFoundPrimalSolutions > 0)
         {
             std::cout << "Termination callback activated. We have found at least one solution.\n";
-            return (true);
+            return true;
         }
         else
         {
             std::cout << "Termination callback activated. We have not found a primal solution yet.\n";
-            return (false);
+            return false;
         }
     });
 
@@ -670,20 +674,24 @@ bool TestCallbackUserTermination()
     bool solverWasTerminated = false;
 
     // Register user termination check - returns bool
-    solver->registerCallback(E_EventType::UserTerminationCheck, [&iterationCount, &terminationRequested]() -> bool {
-        iterationCount++;
-        // std::cout << "User termination check called (iteration " << iterationCount << ")" << std::endl;
+    solver->registerCallback(
+        E_EventType::UserTerminationCheck, [&iterationCount, &terminationRequested](std::any args) -> bool {
+            iterationCount++;
 
-        // Terminate after 3 checks
-        if(iterationCount >= 3)
-        {
-            std::cout << "User termination check requesting termination" << std::endl;
-            terminationRequested = true;
-            return (true); // Request termination
-        }
+            auto data = std::any_cast<TerminationCallbackData>(args);
+            std::cout << "User termination check called with structured data (call #" << iterationCount
+                      << ", solver iteration " << data.iterationNumber << ")" << std::endl;
 
-        return (false); // Continue
-    });
+            // Terminate after 3 checks
+            if(iterationCount >= 3)
+            {
+                std::cout << "User termination check requesting termination" << std::endl;
+                terminationRequested = true;
+                return true; // Request termination
+            }
+
+            return false; // Continue
+        });
 
     // Set high iteration limit so termination comes from our callback
     env->settings->updateSetting("IterationLimit", "Termination", 100);

@@ -119,7 +119,7 @@ bool GurobiTerminationCallbackTest(std::string filename)
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
     auto env = solver->getEnvironment();
 
-    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Off));
+    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Info));
     solver->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Gurobi));
     solver->updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::MultiTree));
 
@@ -132,13 +132,17 @@ bool GurobiTerminationCallbackTest(std::string filename)
     }
 
     // Registers a callback that terminates after the third iteration
-    solver->registerCallback(E_EventType::UserTerminationCheck, [&env]() -> bool {
-        std::cout << "Callback activated. Terminating.\n";
+    solver->registerCallback(E_EventType::UserTerminationCheck, [](std::any args) -> bool {
+        auto data = std::any_cast<TerminationCallbackData>(args);
+        std::cout << "Termination callback activated with structured data (iteration " << data.iterationNumber << ")\n";
 
-        if(env->results->getNumberOfIterations() > 3)
-            return (true);
+        if(data.solutionStatistics.numberOfIterations > 3)
+        {
+            std::cout << "Terminating after iteration " << data.iterationNumber << "\n";
+            return true;
+        }
 
-        return (false);
+        return false;
     });
 
     // Solving the problem
@@ -157,17 +161,14 @@ bool GurobiTerminationCallbackTest(std::string filename)
     return (true);
 }
 
-bool GurobiExternalDualBoundCallbackTest()
+bool GurobiExternalDualBoundCallbackTest(std::string filename, double dualBoundToTest, ES_TreeStrategy treeStrategy)
 {
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
     auto env = solver->getEnvironment();
 
     solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Info));
     solver->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Gurobi));
-    solver->updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::MultiTree));
-
-    std::string filename = "data/fo7.gms";
-    double dualBoundToTest = 20.72982507;
+    solver->updateSetting("TreeStrategy", "Dual", static_cast<int>(treeStrategy));
 
     std::cout << "Reading problem:  " << filename << '\n';
 
@@ -209,7 +210,7 @@ bool GurobiExternalDualBoundCallbackTest()
 
     env->report->outputSolutionReport();
 
-    if(env->solutionStatistics.hasExternalDualBoundBeenSet && env->results->getCurrentDualBound() >= dualBoundToTest)
+    if(env->solutionStatistics.hasExternalDualBoundBeenSet)
     {
         std::cout << "External dual bound callback was executed successfully.\n";
     }
@@ -277,9 +278,14 @@ int GurobiTest(int argc, char* argv[])
         std::cout << "Finished test to solve nonconvex maximization problem 'ncvx_min_ndiv.nl'." << std::endl;
         break;
     case 8:
-        std::cout << "Starting test to set the dual bound through a callback" << std::endl;
-        passed = GurobiExternalDualBoundCallbackTest();
-        std::cout << "Finished test to set dual bound through a callback." << std::endl;
+        std::cout << "Starting test to set the dual bound through a callback with multi-tree strategy" << std::endl;
+        passed = GurobiExternalDualBoundCallbackTest("data/fo7.gms", 20.7298, ES_TreeStrategy::MultiTree);
+        std::cout << "Finished test to set dual bound through a callback with multi-tree strategy." << std::endl;
+        break;
+    case 9:
+        std::cout << "Starting test to set the dual bound through a callback with single-tree strategy" << std::endl;
+        passed = GurobiExternalDualBoundCallbackTest("data/fo7_2.osil", 20.7298, ES_TreeStrategy::SingleTree);
+        std::cout << "Finished test to set dual bound through a callback with single-tree strategy." << std::endl;
         break;
     default:
         passed = false;

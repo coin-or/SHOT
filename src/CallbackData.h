@@ -48,4 +48,32 @@ struct DualBoundCallbackData
     }
 };
 
+/**
+ * @brief Data structure for user termination check callback events
+ *
+ * Provides context information for user termination decisions.
+ */
+struct TerminationCallbackData
+{
+    int iterationNumber; ///< Current iteration number
+    double currentDualBound; ///< Current dual bound
+    double currentPrimalBound; ///< Current primal bound
+    double relativeGap; ///< Current relative gap
+    double absoluteGap; ///< Current absolute gap
+    double timeElapsed; ///< Time elapsed since start
+    SolutionStatistics solutionStatistics; ///< Statistics about the current solution state
+
+    TerminationCallbackData(int iteration, double time, double dualBound, double primalBound, double relGap,
+        double absGap, SolutionStatistics stats)
+        : iterationNumber(iteration)
+        , currentDualBound(dualBound)
+        , currentPrimalBound(primalBound)
+        , relativeGap(relGap)
+        , absoluteGap(absGap)
+        , timeElapsed(time)
+        , solutionStatistics(stats)
+    {
+    }
+};
+
 } // namespace SHOT
