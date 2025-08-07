@@ -1049,7 +1049,11 @@ std::string Results::getResultsSol()
     return (ss.str());
 }
 
-void Results::createIteration() { iterations.push_back(std::make_shared<Iteration>(env)); }
+void Results::createIteration()
+{
+    iterations.push_back(std::make_shared<Iteration>(env));
+    env->solutionStatistics.numberOfIterations++;
+}
 
 IterationPtr Results::getCurrentIteration() { return (iterations.back()); }
 
