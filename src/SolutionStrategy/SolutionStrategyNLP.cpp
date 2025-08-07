@@ -47,12 +47,11 @@
 #include "../Tasks/TaskInitializeRootsearch.h"
 #include "../Tasks/TaskSelectHyperplanesESH.h"
 #include "../Tasks/TaskSelectHyperplanesECP.h"
+#include "../Tasks/TaskSelectHyperplanesObjectiveFunction.h"
 #include "../Tasks/TaskSelectHyperplanesExternal.h"
 #include "../Tasks/TaskAddHyperplanes.h"
 
-#ifdef HAS_JULIA
-#include "../Tasks/TaskAddHyperplanesLasserreHierarchy.h"
-#endif
+#include "../Tasks/TaskAddIntegerCuts.h"
 
 #include "../Tasks/TaskAddPrimalReductionCut.h"
 #include "../Tasks/TaskCheckMaxNumberOfPrimalReductionCuts.h"
@@ -63,9 +62,7 @@
 
 #include "../Tasks/TaskUpdateInteriorPoint.h"
 
-#include "../Tasks/TaskSelectHyperplanesObjectiveFunction.h"
-
-#include "../Tasks/TaskAddIntegerCuts.h"
+#include "../Tasks/TaskUpdateExternalDualBound.h"
 
 #include "../Output.h"
 #include "../Model/Problem.h"
@@ -117,8 +114,8 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr)
     auto tAddHPs = std::make_shared<TaskAddHyperplanes>(env);
     env->tasks->addTask(tAddHPs, "AddHPs");
 
-    // auto tAddHPsLasserreHierarchy = std::make_shared<TaskAddHyperplanesLasserreHierarchy>(env);
-    // env->tasks->addTask(tAddHPsLasserreHierarchy, "AddHPsLasserreHierarchy");
+    auto tUpdateExternalDualBound = std::make_shared<TaskUpdateExternalDualBound>(env);
+    env->tasks->addTask(tUpdateExternalDualBound, "UpdateExternalDualBound");
 
     if(static_cast<ES_MIPPresolveStrategy>(env->settings->getSetting<int>("MIP.Presolve.Frequency", "Dual"))
         != ES_MIPPresolveStrategy::Never)
@@ -217,7 +214,8 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr)
     env->tasks->addTask(tSelectExternalHPs, "SelectExternalHPs");
 
     env->tasks->addTask(tAddHPs, "AddHPs");
-    // env->tasks->addTask(tAddHPsLasserreHierarchy, "AddHPs");
+
+    env->tasks->addTask(tUpdateExternalDualBound, "UpdateExternalDualBound");
 
     auto tGoto = std::make_shared<TaskGoto>(env, "SolveIter");
     env->tasks->addTask(tGoto, "Goto");

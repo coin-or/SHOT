@@ -31,7 +31,7 @@ if(HAS_CPLEX)
 endif()
 
 if(HAS_GUROBI)
-  set(Gurobi_parts 1 2 3 4 5 6 7)
+  set(Gurobi_parts 1 2 3 4 5 6 7 8)
   set(cpptests ${cpptests} Gurobi)
 endif()
 

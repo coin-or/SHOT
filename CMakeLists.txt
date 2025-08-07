@@ -222,6 +222,7 @@ file(
     "${PROJECT_SOURCE_DIR}/src/Tasks/TaskCheckIterationError.h"
     "${PROJECT_SOURCE_DIR}/src/Tasks/TaskRepairInfeasibleDualProblem.h"
     "${PROJECT_SOURCE_DIR}/src/Tasks/TaskSelectHyperplanesExternal.h"
+    "${PROJECT_SOURCE_DIR}/src/Tasks/TaskUpdateExternalDualBound.h"
     "${PROJECT_SOURCE_DIR}/src/Settings.h"
     "${TINYXML2_DIR}/tinyxml2.h"
     #"${CPPAD_DIR}/include/cppad/cppad.hpp"
@@ -599,6 +600,8 @@ add_library(
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskTerminate.h
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskUpdateInteriorPoint.cpp
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskUpdateInteriorPoint.h
+    ${PROJECT_SOURCE_DIR}/src/Tasks/TaskUpdateExternalDualBound.cpp
+    ${PROJECT_SOURCE_DIR}/src/Tasks/TaskUpdateExternalDualBound.h
 )
 
 target_link_libraries(SHOTTasks SHOTPrimalStrategy)

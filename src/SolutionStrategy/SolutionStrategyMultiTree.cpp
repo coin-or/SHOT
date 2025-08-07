@@ -50,12 +50,11 @@
 #include "../Tasks/TaskInitializeRootsearch.h"
 #include "../Tasks/TaskSelectHyperplanesESH.h"
 #include "../Tasks/TaskSelectHyperplanesECP.h"
+#include "../Tasks/TaskSelectHyperplanesObjectiveFunction.h"
 #include "../Tasks/TaskSelectHyperplanesExternal.h"
 #include "../Tasks/TaskAddHyperplanes.h"
 
-#ifdef HAS_JULIA
-#include "../Tasks/TaskAddHyperplanesLasserreHierarchy.h"
-#endif
+#include "../Tasks/TaskAddIntegerCuts.h"
 
 #include "../Tasks/TaskAddPrimalReductionCut.h"
 #include "../Tasks/TaskCheckMaxNumberOfPrimalReductionCuts.h"
@@ -68,9 +67,7 @@
 
 #include "../Tasks/TaskUpdateInteriorPoint.h"
 
-#include "../Tasks/TaskSelectHyperplanesObjectiveFunction.h"
-
-#include "../Tasks/TaskAddIntegerCuts.h"
+#include "../Tasks/TaskUpdateExternalDualBound.h"
 
 #include "../Output.h"
 #include "../Model/Problem.h"
@@ -124,11 +121,11 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
     auto tInitializeIteration = std::make_shared<TaskInitializeIteration>(env);
     env->tasks->addTask(tInitializeIteration, "InitIter");
 
-    // auto tAddHPsLasserreHierarchy = std::make_shared<TaskAddHyperplanesLasserreHierarchy>(env);
-    // env->tasks->addTask(tAddHPsLasserreHierarchy, "AddHPsLasserreHierarchy");
-
     auto tAddHPs = std::make_shared<TaskAddHyperplanes>(env);
     env->tasks->addTask(tAddHPs, "AddHPs");
+
+    auto tUpdateExternalDualBound = std::make_shared<TaskUpdateExternalDualBound>(env);
+    env->tasks->addTask(tUpdateExternalDualBound, "UpdateExternalDualBound");
 
     if(env->settings->getSetting<bool>("Relaxation.Use", "Dual")
         && env->reformulatedProblem->properties.numberOfSemicontinuousVariables == 0
@@ -309,6 +306,8 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
         auto tPresolve = std::make_shared<TaskPresolve>(env);
         env->tasks->addTask(tPresolve, "Presolve2");
     }
+
+    env->tasks->addTask(tUpdateExternalDualBound, "UpdateExternalDualBound");
 
     auto tGoto = std::make_shared<TaskGoto>(env, "SolveIter");
     env->tasks->addTask(tGoto, "Goto");

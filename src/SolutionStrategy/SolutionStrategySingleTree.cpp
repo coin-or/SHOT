@@ -50,8 +50,12 @@
 #include "../Tasks/TaskInitializeRootsearch.h"
 #include "../Tasks/TaskSelectHyperplanesESH.h"
 #include "../Tasks/TaskSelectHyperplanesECP.h"
+#include "../Tasks/TaskSelectHyperplanesObjectiveFunction.h"
 #include "../Tasks/TaskSelectHyperplanesExternal.h"
 #include "../Tasks/TaskAddHyperplanes.h"
+
+#include "../Tasks/TaskAddIntegerCuts.h"
+
 #include "../Tasks/TaskAddPrimalReductionCut.h"
 #include "../Tasks/TaskCheckMaxNumberOfPrimalReductionCuts.h"
 
@@ -62,10 +66,6 @@
 #include "../Tasks/TaskClearFixedPrimalCandidates.h"
 
 #include "../Tasks/TaskUpdateInteriorPoint.h"
-
-#include "../Tasks/TaskSelectHyperplanesObjectiveFunction.h"
-
-#include "../Tasks/TaskAddIntegerCuts.h"
 
 #include "../Output.h"
 #include "../Model/Problem.h"

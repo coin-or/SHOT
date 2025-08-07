@@ -312,6 +312,9 @@ struct SolutionStatistics
     bool hasInfeasibilityRepairBeenPerformedSincePrimalImprovement = false;
     bool hasReductionCutBeenAddedSincePrimalImprovement = false;
 
+    // Related to callbacks
+    bool hasExternalDualBoundBeenSet = false;
+
     int getNumberOfTotalDualProblems()
     {
         return (numberOfProblemsLP + numberOfProblemsQP + numberOfProblemsFeasibleMILP + numberOfProblemsOptimalMILP
