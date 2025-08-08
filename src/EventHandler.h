@@ -56,7 +56,7 @@ namespace SHOT
 class EventHandler
 {
 public:
-    inline EventHandler(EnvironmentPtr envPtr) : env(envPtr) {};
+    EventHandler(EnvironmentPtr envPtr);
 
     /**
      * @brief Unified callback registration method
@@ -134,31 +134,14 @@ public:
      * @param event The event type to notify
      * @param args Arguments to pass to the callbacks (wrapped in std::any)
      */
-    void notify(const E_EventType& event, std::any args) const
-    {
-        env->output->outputTrace(
-            "Notifying callbacks for event: " + std::to_string(static_cast<int>(event)) + " (args)");
-        auto it = notificationCallbacks.find(event);
-        if(it != notificationCallbacks.end())
-        {
-            for(const auto& callback : it->second)
-            {
-                callback(args);
-            }
-        }
-    }
+    void notify(const E_EventType& event, std::any args) const;
 
     /**
      * @brief Notify callbacks with no arguments
      *
      * @param event The event type to notify
      */
-    void notify(const E_EventType& event) const
-    {
-        env->output->outputTrace(
-            "Notifying callbacks for event: " + std::to_string(static_cast<int>(event)) + " (no args)");
-        notify(event, std::any());
-    }
+    void notify(const E_EventType& event) const;
 
     /**
      * @brief Request data from a registered data provider (no arguments)
@@ -217,11 +200,7 @@ public:
      * @param event The event type to check
      * @return true if a data provider is registered, false otherwise
      */
-    bool hasDataProvider(const E_EventType& event) const
-    {
-        return dataProviders.find(event) != dataProviders.end()
-            || parameterizedDataProviders.find(event) != parameterizedDataProviders.end();
-    }
+    bool hasDataProvider(const E_EventType& event) const;
 
     /**
      * @brief Check if notification callbacks are registered for an event
@@ -229,11 +208,7 @@ public:
      * @param event The event type to check
      * @return true if notification callbacks are registered, false otherwise
      */
-    bool hasNotificationCallbacks(const E_EventType& event) const
-    {
-        auto it = notificationCallbacks.find(event);
-        return it != notificationCallbacks.end() && !it->second.empty();
-    }
+    bool hasNotificationCallbacks(const E_EventType& event) const;
 
     /**
      * @brief Check if any callbacks (data providers or notifications) are registered for an event
@@ -241,10 +216,7 @@ public:
      * @param event The event type to check
      * @return true if any callbacks are registered, false otherwise
      */
-    bool hasAnyCallbacks(const E_EventType& event) const
-    {
-        return hasDataProvider(event) || hasNotificationCallbacks(event);
-    }
+    bool hasAnyCallbacks(const E_EventType& event) const;
 
 private:
     /// Map of event types to their registered notification callbacks

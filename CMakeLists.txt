@@ -430,6 +430,8 @@ add_library(
     ${PROJECT_SOURCE_DIR}/src/Output.cpp
     ${PROJECT_SOURCE_DIR}/src/Utilities.h
     ${PROJECT_SOURCE_DIR}/src/Utilities.cpp
+    ${PROJECT_SOURCE_DIR}/src/EventHandler.h
+    ${PROJECT_SOURCE_DIR}/src/EventHandler.cpp
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskBase.h
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskBase.cpp
     ${PROJECT_SOURCE_DIR}/src/TaskHandler.h
