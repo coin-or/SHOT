@@ -137,4 +137,41 @@ struct ExternalPrimalSolutionCallbackData
     }
 };
 
+/**
+ * @brief Data structure for external hyperplane selection callback events
+ *
+ * Provides context information for callbacks that provide external hyperplanes.
+ */
+struct ExternalHyperplaneSelectionCallbackData
+{
+    bool isMinimization; ///< True if minimization problem, false if maximization problem
+    int iterationNumber; ///< Current iteration number
+    double currentDualBound; ///< Current dual bound value
+    double currentPrimalBound; ///< Current primal bound value
+    double relativeGap; ///< Current relative gap
+    double absoluteGap; ///< Current absolute gap
+    std::vector<SolutionPoint> solutionPoints; ///< Solution points from current iteration for hyperplane generation
+    ProblemPtr originalProblem; ///< Pointer to the original problem
+    ProblemPtr reformulatedProblem; ///< Pointer to the reformulated problem
+    bool isObjectiveNonlinear; ///< True if the objective function of the reformulated problem is nonlinear
+    SolutionStatistics solutionStatistics; ///< Statistics about the current solution state
+
+    ExternalHyperplaneSelectionCallbackData(bool minimize, int iteration, double dualBound, double primalBound,
+        double relGap, double absGap, const std::vector<SolutionPoint>& points, ProblemPtr origProblem,
+        ProblemPtr reformProblem, bool objNonlinear, SolutionStatistics stats)
+        : isMinimization(minimize)
+        , iterationNumber(iteration)
+        , currentDualBound(dualBound)
+        , currentPrimalBound(primalBound)
+        , relativeGap(relGap)
+        , absoluteGap(absGap)
+        , solutionPoints(points)
+        , originalProblem(origProblem)
+        , reformulatedProblem(reformProblem)
+        , isObjectiveNonlinear(objNonlinear)
+        , solutionStatistics(stats)
+    {
+    }
+};
+
 } // namespace SHOT

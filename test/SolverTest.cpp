@@ -719,6 +719,161 @@ bool TestCallbackUserTermination()
     return passed;
 }
 
+bool TestCallbackExternalHyperplane()
+{
+    bool passed = true;
+
+    auto solver = std::make_unique<SHOT::Solver>();
+
+    // Contains the environment variable unique to the created solver instance
+    auto env = solver->getEnvironment();
+    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Off));
+    solver->updateSetting("Convexity.AssumeConvex", "Model", true);
+    solver->updateSetting("Debug.Enable", "Output", true);
+    solver->updateSetting("Reformulation.Constraint.PartitionQuadraticTerms", "Model", 2);
+    solver->updateSetting("Relaxation.Use", "Dual", false);
+    solver->updateSetting("CutStrategy", "Dual", 1);
+
+    // Initializing a SHOT problem class
+    auto problem = std::make_shared<SHOT::Problem>(env);
+    problem->name = "ex1223b";
+
+    // Creating the variables
+    auto x1 = std::make_shared<Variable>("x1", 0, E_VariableType::Integer, 0.0, 3.0);
+    auto x2 = std::make_shared<Variable>("x2", 1, E_VariableType::Integer, 1.0, 3.0);
+
+    // All variables are nonlinear, so need to add expression variables as well
+    auto nl_x1 = std::make_shared<ExpressionVariable>(x1);
+    auto nl_x2 = std::make_shared<ExpressionVariable>(x2);
+
+    // Adding the variables to the problem
+    problem->add({ x1, x2 });
+
+    // Creating the objective function
+    // minimize -x1 -2x2
+
+    auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    problem->add(objective);
+
+    objective->add(std::make_shared<LinearTerm>(-1.0, x1));
+    objective->add(std::make_shared<LinearTerm>(-2.0, x2));
+
+    // Creating the constraint e1: 0.1 e^x2 + x1^2 + x2 <= 10;
+    auto e1 = std::make_shared<NonlinearConstraint>(0, "e1", SHOT_DBL_MIN, 10.0);
+    e1->add(std::make_shared<QuadraticTerm>(1.0, x1, x1));
+    e1->add(std::make_shared<LinearTerm>(1.0, x2));
+
+    e1->add(std::make_shared<ExpressionProduct>(
+        std::make_shared<ExpressionConstant>(0.1), std::make_shared<ExpressionExp>(nl_x2)));
+    problem->add(e1);
+
+    // Creating the constraint e2: e^x1 / x2  <= 3;
+    auto e2 = std::make_shared<NonlinearConstraint>(1, "e2", SHOT_DBL_MIN, 3.0);
+
+    e2->add(std::make_shared<ExpressionDivide>(std::make_shared<ExpressionExp>(nl_x1), nl_x2));
+    problem->add(e2);
+
+    NonlinearConstraints constraints = { e1, e2 };
+
+    // Add constraints to a vector
+
+    // Finalize the problem object (after this no changes should be made)
+    problem->updateProperties();
+    problem->finalize();
+    solver->setProblem(problem, problem);
+
+    // Writing the problem to console
+    std::cout << '\n';
+    std::cout << "Problem created:\n\n";
+    std::cout << env->problem << '\n';
+
+    // Writing the reformulated problem to console
+    std::cout << '\n';
+    std::cout << "Reformulated problem created:\n\n";
+    std::cout << env->reformulatedProblem << '\n';
+
+    // Register external hyperplane callback
+    solver->registerCallback(E_EventType::ExternalHyperplaneSelection, [&env, &constraints](std::any args) -> std::any {
+        auto data = std::any_cast<ExternalHyperplaneSelectionCallbackData>(args);
+
+        std::cout << "External hyperplane callback called at iteration " << data.iterationNumber << std::endl;
+        std::cout << "Current dual bound: " << data.currentDualBound << std::endl;
+        std::cout << "Current primal bound: " << data.currentPrimalBound << std::endl;
+        std::cout << "Number of solution points: " << data.solutionPoints.size() << std::endl;
+
+        std::vector<ExternalHyperplane> hyperplanes;
+
+        // Example: Add a simple cutting plane if we have solution points
+        if(!data.solutionPoints.empty() && data.iterationNumber > 0)
+        {
+            for(const auto& solPoint : data.solutionPoints)
+            {
+                std::cout << "\nSolution point: \n";
+                Utilities::displayVector(solPoint.point);
+
+                // Constraint with largest error
+                auto constraint = constraints.at(solPoint.maxDeviation.index);
+
+                double funcValue = constraint->calculateFunctionValue(solPoint.point) - constraint->valueRHS;
+                auto gradient = constraint->calculateGradient(solPoint.point, false);
+
+                // This is just an example - in practice you'd generate meaningful hyperplanes
+                ExternalHyperplane hyperplane;
+
+                double constant = funcValue;
+                constant += (-gradient[env->reformulatedProblem->getVariable(0)]) * solPoint.point.at(0);
+                constant += (-gradient[env->reformulatedProblem->getVariable(1)]) * solPoint.point.at(1);
+
+                // Set hyperplane properties
+                hyperplane.variableIndexes = { 0, 1 }; // x1, x2
+                hyperplane.variableCoefficients.emplace_back() = gradient[env->reformulatedProblem->getVariable(0)];
+                hyperplane.variableCoefficients.emplace_back() = gradient[env->reformulatedProblem->getVariable(1)];
+                hyperplane.rhsValue = -constant; // RHS
+                hyperplane.isGlobal = true;
+
+                hyperplanes.push_back(hyperplane);
+
+                std::cout << "Generetaed hyperplane variable coefficients: \n";
+                Utilities::displayVector(hyperplane.variableCoefficients);
+                std::cout << "RHS value: " << hyperplane.rhsValue << std::endl;
+
+                break; // Only add one hyperplane per iterations
+            }
+        }
+
+        std::cout << "Returning " << hyperplanes.size() << " external hyperplanes" << std::endl;
+        return std::make_any<std::vector<ExternalHyperplane>>(hyperplanes);
+    });
+
+    solver->solveProblem();
+
+    if(solver->getPrimalSolutions().size() > 0)
+    {
+        std::cout << "Solution found: \n";
+        std::cout << std::endl << "Objective value: " << solver->getPrimalSolution().objValue << std::endl;
+        std::cout << std::endl << "Solution point: \n";
+        Utilities::displayVector(solver->getPrimalSolution().point);
+
+        if(solver->getPrimalSolution().objValue == -8 && solver->getPrimalSolution().point.size() == 2
+            && solver->getPrimalSolution().point[0] == 2 && solver->getPrimalSolution().point[1] == 3)
+        {
+            std::cout << "Ok, solution is correct!" << std::endl;
+            passed = true;
+        }
+        else
+        {
+            std::cout << "Error: solution is not correct!" << std::endl;
+            passed = false;
+        }
+    }
+    else
+    {
+        passed = false;
+    }
+
+    return passed;
+}
+
 int SolverTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -772,6 +927,11 @@ int SolverTest(int argc, char* argv[])
         std::cout << "Starting test for callback system - user termination check:" << std::endl;
         passed = TestCallbackUserTermination();
         std::cout << "Finished test for callback system - user termination check." << std::endl;
+        break;
+    case 8:
+        std::cout << "Starting test for callback system - external hyperplanes" << std::endl;
+        passed = TestCallbackExternalHyperplane();
+        std::cout << "Finished test for callback system - external hyperplanes." << std::endl;
         break;
     default:
         passed = false;
