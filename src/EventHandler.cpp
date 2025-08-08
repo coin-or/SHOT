@@ -13,14 +13,11 @@
 namespace SHOT
 {
 
-EventHandler::EventHandler(EnvironmentPtr envPtr) : env(envPtr) 
-{
-}
+EventHandler::EventHandler(EnvironmentPtr envPtr) : env(envPtr) { }
 
 void EventHandler::notify(const E_EventType& event, std::any args) const
 {
-    env->output->outputTrace(
-        "Notifying callbacks for event: " + std::to_string(static_cast<int>(event)) + " (args)");
+    env->output->outputTrace("Notifying callbacks for event: " + std::to_string(static_cast<int>(event)) + " (args)");
     auto it = notificationCallbacks.find(event);
     if(it != notificationCallbacks.end())
     {
