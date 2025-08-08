@@ -59,10 +59,23 @@ enum class E_EventType
     UserTerminationCheck,
 };
 
-enum class E_HyperplaneSourceUserTerminationCheck None, MIPOptimalRootsearch, MIPSolutionPoolRootsearch,
-    LPRelaxedRootsearch, MIPOptimalSolutionPoint, MIPSolutionPoolSolutionPoint, LPRelaxedSolutionPoint, LPFixedIntegers,
-    PrimalSolutionSearch, PrimalSolutionSearchInteriorObjective, InteriorPointSearch, MIPCallbackRelaxed,
-    ObjectiveRootsearch, ObjectiveCuttingPlane, External
+enum class E_HyperplaneSourceUserTerminationCheck
+{
+    None,
+    MIPOptimalRootsearch,
+    MIPSolutionPoolRootsearch,
+    LPRelaxedRootsearch,
+    MIPOptimalSolutionPoint,
+    MIPSolutionPoolSolutionPoint,
+    LPRelaxedSolutionPoint,
+    LPFixedIntegers,
+    PrimalSolutionSearch,
+    PrimalSolutionSearchInteriorObjective,
+    InteriorPointSearch,
+    MIPCallbackRelaxed,
+    ObjectiveRootsearch,
+    ObjectiveCuttingPlane,
+    External
 };
 
 enum class E_IntegerCutSource
