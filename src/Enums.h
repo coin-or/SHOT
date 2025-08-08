@@ -59,7 +59,7 @@ enum class E_EventType
     UserTerminationCheck,
 };
 
-enum class E_HyperplaneSourceUserTerminationCheck
+enum class E_HyperplaneSource
 {
     None,
     MIPOptimalRootsearch,
