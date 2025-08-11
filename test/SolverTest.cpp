@@ -9,7 +9,9 @@
 */
 
 #include "../src/Solver.h"
+#include "../src/DualSolver.h"
 #include "../src/Environment.h"
+#include "../src/MIPSolver/IMIPSolver.h"
 #include "../src/Results.h"
 #include "../src/Settings.h"
 #include "../src/Structs.h"
@@ -730,9 +732,11 @@ bool TestCallbackExternalHyperplane()
     solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Off));
     solver->updateSetting("Convexity.AssumeConvex", "Model", true);
     solver->updateSetting("Debug.Enable", "Output", true);
-    solver->updateSetting("Reformulation.Constraint.PartitionQuadraticTerms", "Model", 2);
+    solver->updateSetting("Reformulation.Constraint.PartitionQuadraticTerms", "Model",
+        static_cast<int>(ES_PartitionNonlinearSums::Never));
     solver->updateSetting("Relaxation.Use", "Dual", false);
-    solver->updateSetting("CutStrategy", "Dual", 1);
+    solver->updateSetting("CutStrategy", "Dual", static_cast<int>(ES_HyperplaneCutStrategy::OnlyExternal));
+    solver->updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::MultiTree));
 
     // Initializing a SHOT problem class
     auto problem = std::make_shared<SHOT::Problem>(env);
@@ -830,6 +834,8 @@ bool TestCallbackExternalHyperplane()
                 hyperplane.variableCoefficients.emplace_back() = gradient[env->reformulatedProblem->getVariable(1)];
                 hyperplane.rhsValue = -constant; // RHS
                 hyperplane.isGlobal = true;
+                hyperplane.description = fmt::format("hyp_{}", data.iterationNumber);
+                hyperplane.source = E_HyperplaneSource::External;
 
                 hyperplanes.push_back(hyperplane);
 
@@ -846,6 +852,10 @@ bool TestCallbackExternalHyperplane()
     });
 
     solver->solveProblem();
+
+    auto filename = "dualiter_problem.lp";
+
+    env->dualSolver->MIPSolver->writeProblemToFile(filename);
 
     if(solver->getPrimalSolutions().size() > 0)
     {
