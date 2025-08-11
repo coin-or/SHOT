@@ -833,7 +833,7 @@ bool TestCallbackExternalHyperplane()
 
                 hyperplanes.push_back(hyperplane);
 
-                std::cout << "Generetaed hyperplane variable coefficients: \n";
+                std::cout << "Generated hyperplane variable coefficients: \n";
                 Utilities::displayVector(hyperplane.variableCoefficients);
                 std::cout << "RHS value: " << hyperplane.rhsValue << std::endl;
 
