@@ -27,8 +27,8 @@ namespace SHOT
 
 // Callback that correctly indents Highs log messages and prints them using SHOT's logging functionality
 HighsCallbackFunctionType highsCallback
-    = [](int callback_type, const std::string& message, const HighsCallbackDataOut* data_out,
-          HighsCallbackDataIn* data_in, void* user_callback_data) {
+    = [](int callback_type, const std::string& message, const HighsCallbackOutput* data_out,
+          HighsCallbackInput* data_in, void* user_callback_data) {
           HighsMipData callback_data = *(static_cast<HighsMipData*>(user_callback_data));
           auto env = callback_data.env;
 
@@ -65,8 +65,7 @@ HighsCallbackFunctionType highsCallback
 
           if(callback_type == kCallbackMipSolution)
           {
-              std::vector<double> solution(
-                  data_out->mip_solution, data_out->mip_solution + MIPSolver->getNumberOfVariables());
+              std::vector<double> solution = data_out->mip_solution;
 
               double hashValue = Utilities::calculateHash(solution);
 
