@@ -868,7 +868,7 @@ void Report::outputProblemInstanceReport()
 
         if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::NonlinearObjectiveFunction);
             value > 0)
-            env->output->outputInfo(fmt::format(" {:56s}{:d}", " - epigraph:", "", value));
+            env->output->outputInfo(fmt::format(" {:56s}{:d}", " - epigraph:", value));
 
         if(auto value
             = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::NonlinearExpressionPartitioning);
