@@ -844,7 +844,7 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
         MIPSolutionStatus = E_ProblemSolutionStatus::Error;
     }
 
-    // To find a feasible point for an unbounded dual problem  and not when solving the minimax-problem
+    // To find a feasible point for an unbounded dual problem and not when solving the minimax-problem
     if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded && env->results->getNumberOfIterations() > 0)
     {
         std::vector<PairIndexValue> originalObjectiveCoefficients;
