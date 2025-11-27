@@ -170,7 +170,7 @@ bool MIPSolverHighs::addVariable(
 
     case E_VariableType::Semiinteger:
         isProblemDiscrete = true;
-        variableTypesHighs.push_back(HighsVarType::kSemiInteger);
+        variableTypesHighs.push_back(HighsVarType::kContinuous);
         break;
     case E_VariableType::Semicontinuous:
     {
@@ -538,20 +538,238 @@ E_ProblemSolutionStatus MIPSolverHighs::solveProblem()
     cachedSolutionHasChanged = true;
     currentSolutions.clear();
 
-    // HighsLp lp = highsInstance.getLp();
-
     highsReturnStatus = highsInstance.run();
     MIPSolutionStatus = getSolutionStatus();
 
-    // TODO:: repair infeasible or unbounded problem (if needed)
+    // To find a feasible point for an unbounded dual problem and not when solving the minimax-problem
+    if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded && env->results->getNumberOfIterations() > 0)
+    {
+        std::vector<PairIndexValue> originalObjectiveCoefficients;
+        bool problemUpdated = false;
+
+        if((env->reformulatedProblem->objectiveFunction->properties.classification
+                   == E_ObjectiveFunctionClassification::Linear
+               && std::dynamic_pointer_cast<LinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
+                      ->isDualUnbounded())
+            || (env->reformulatedProblem->objectiveFunction->properties.classification
+                    == E_ObjectiveFunctionClassification::Quadratic
+                && std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
+                       ->isDualUnbounded()))
+        {
+            for(auto& V : env->reformulatedProblem->allVariables)
+            {
+                if(!V->properties.inObjectiveFunction)
+                    continue;
+
+                if(V->isDualUnbounded())
+                {
+                    // Temporarily remove unbounded terms from objective
+                    originalObjectiveCoefficients.emplace_back(V->index, variableCosts.at(V->index));
+
+                    highsInstance.changeColCost(V->index, 0.0);
+                    problemUpdated = true;
+                }
+            }
+        }
+        else if(env->reformulatedProblem->objectiveFunction->properties.classification
+                >= E_ObjectiveFunctionClassification::QuadraticConsideredAsNonlinear
+            && hasDualAuxiliaryObjectiveVariable())
+        {
+            // The auxiliary variable in the dual problem is unbounded
+            updateVariableBound(getDualAuxiliaryObjectiveVariableIndex(), -getUnboundedVariableBoundValue() / 1.1,
+                getUnboundedVariableBoundValue() / 1.1);
+            problemUpdated = true;
+        }
+
+        if(problemUpdated)
+        {
+            currentSolutions.clear();
+            highsReturnStatus = highsInstance.run();
+            MIPSolutionStatus = getSolutionStatus();
+
+            // Restore original objective coefficients
+            for(auto& P : originalObjectiveCoefficients)
+                highsInstance.changeColCost(P.index, P.value);
+
+            if(env->results->iterations.size() > 0) // Might not have iterations if we are using the minimax solver
+                env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed = true;
+        }
+    }
 
     return (MIPSolutionStatus);
 }
 
 bool MIPSolverHighs::repairInfeasibility()
 {
-    throw new OperationNotImplementedException(
-        "Cannot repair infeasible dual problem as HiGHS interface is not yet fully implemented.");
+    // TODO: this needs to be checked at some stage
+
+    if(env->dualSolver->generatedHyperplanes.size() == 0)
+        return (false);
+
+    try
+    {
+        // Create a copy of the model for the feasibility relaxation
+        Highs feasModel;
+        feasModel.passModel(highsInstance.getModel());
+        feasModel.setOptionValue("output_flag", false);
+
+        // Remove cutoff constraint if present (similar to Gurobi's cutoff removal)
+        if(isMinimizationProblem)
+            feasModel.setOptionValue("objective_bound", SHOT_DBL_MAX);
+        else
+            feasModel.setOptionValue("objective_bound", SHOT_DBL_MIN);
+
+        int numOrigConstraints = env->reformulatedProblem->properties.numberOfLinearConstraints;
+        int numCurrConstraints = highsInstance.getNumRow();
+
+        VectorInteger repairConstraints;
+        int numConstraintsToRepair = 0;
+
+        // Build the local_rhs_penalty array for feasibilityRelaxation
+        // -1.0 means the constraint cannot be violated, positive value is the penalty
+        VectorDouble localRhsPenalty(numCurrConstraints, -1.0);
+
+        for(int i = numOrigConstraints; i < numCurrConstraints; i++)
+        {
+            if(allowRepairOfConstraint[i])
+            {
+                repairConstraints.push_back(i);
+                // Use decreasing penalties for newer constraints
+                localRhsPenalty[i] = 1.0 / (((double)i) - numOrigConstraints + 1.0);
+                numConstraintsToRepair++;
+            }
+        }
+
+        if(numConstraintsToRepair == 0)
+        {
+            env->output->outputDebug("        No constraints available for repair.");
+            return (false);
+        }
+
+        // Saves the relaxation weights to a file
+        if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+        {
+            VectorString constraints(repairConstraints.size());
+            VectorDouble relaxParameters(repairConstraints.size());
+
+            for(size_t i = 0; i < repairConstraints.size(); i++)
+            {
+                std::string rowName;
+                feasModel.getRowName(repairConstraints[i], rowName);
+                constraints[i] = rowName;
+                relaxParameters[i] = localRhsPenalty[repairConstraints[i]];
+            }
+
+            auto filename = fmt::format("{}/dualiter{}_infeasrelaxweights.txt",
+                env->settings->getSetting<std::string>("Debug.Path", "Output"),
+                env->results->getCurrentIteration()->iterationNumber - 1);
+
+            Utilities::saveVariablePointVectorToFile(relaxParameters, constraints, filename);
+        }
+
+        // Store original row bounds before relaxation
+        VectorDouble origRowLower = feasModel.getLp().row_lower_;
+        VectorDouble origRowUpper = feasModel.getLp().row_upper_;
+
+        // Use HiGHS's built-in feasibility relaxation
+        // global_lower_penalty = -1: cannot violate variable lower bounds
+        // global_upper_penalty = -1: cannot violate variable upper bounds
+        // global_rhs_penalty = 0: use local penalties for constraint RHS
+        // local_rhs_penalty: per-constraint penalties (-1 = cannot violate, positive = penalty)
+        auto status = feasModel.feasibilityRelaxation(-1.0, -1.0, 0.0, nullptr, nullptr, localRhsPenalty.data());
+
+        if(status != HighsStatus::kOk)
+        {
+            env->output->outputDebug("        Could not repair the infeasible dual problem.");
+            return (false);
+        }
+
+        // Saves the relaxation model to file (after relaxation)
+        if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+        {
+            auto filename = fmt::format("{}/dualiter{}_infeasrelax.lp",
+                env->settings->getSetting<std::string>("Debug.Path", "Output"),
+                env->results->getCurrentIteration()->iterationNumber - 1);
+
+            try
+            {
+                feasModel.writeModel(filename);
+            }
+            catch(std::exception& e)
+            {
+                env->output->outputError("        Error when saving relaxed infeasibility model to file", e.what());
+            }
+        }
+
+        // Get the row values from the relaxed solution
+        auto rowValues = feasModel.getSolution().row_value;
+        int numRepairs = 0;
+
+        for(int i = 0; i < numConstraintsToRepair; i++)
+        {
+            int constraintIdx = repairConstraints[i];
+            double rowValue = rowValues[constraintIdx];
+            double rowLower = origRowLower[constraintIdx];
+            double rowUpper = origRowUpper[constraintIdx];
+
+            std::string rowName;
+            highsInstance.getRowName(constraintIdx, rowName);
+
+            // Check if constraint was violated and compute the slack
+            bool wasRelaxed = false;
+            double slackValue = 0.0;
+
+            if(rowLower > -highsInstance.getInfinity() / 2 && rowValue < rowLower - 1e-6)
+            {
+                // Lower bound was violated
+                slackValue = rowLower - rowValue;
+                double newLower = rowLower - 1.5 * slackValue;
+                highsInstance.changeRowBounds(constraintIdx, newLower, highsInstance.getLp().row_upper_[constraintIdx]);
+                env->output->outputDebug("        Constraint: " + rowName
+                    + " repaired with infeasibility = " + std::to_string(-1.5 * slackValue));
+                wasRelaxed = true;
+            }
+            else if(rowUpper < highsInstance.getInfinity() / 2 && rowValue > rowUpper + 1e-6)
+            {
+                // Upper bound was violated
+                slackValue = rowValue - rowUpper;
+                double newUpper = rowUpper + 1.5 * slackValue;
+                highsInstance.changeRowBounds(constraintIdx, highsInstance.getLp().row_lower_[constraintIdx], newUpper);
+                env->output->outputDebug("        Constraint: " + rowName
+                    + " repaired with infeasibility = " + std::to_string(1.5 * slackValue));
+                wasRelaxed = true;
+            }
+
+            if(wasRelaxed)
+                numRepairs++;
+        }
+
+        env->results->getCurrentIteration()->numberOfInfeasibilityRepairedConstraints = numRepairs;
+
+        if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+        {
+            auto filename = fmt::format("{}/dualiter{}_repaired.lp",
+                env->settings->getSetting<std::string>("Debug.Path", "Output"),
+                env->results->getCurrentIteration()->iterationNumber - 1);
+
+            writeProblemToFile(filename);
+        }
+
+        if(numRepairs == 0)
+        {
+            env->output->outputDebug("        Could not repair the infeasible dual problem.");
+            return (false);
+        }
+
+        env->output->outputDebug("        Number of constraints modified: " + std::to_string(numRepairs));
+
+        return (true);
+    }
+    catch(std::exception& e)
+    {
+        env->output->outputError("        Error when trying to repair infeasibility", e.what());
+    }
+
     return (false);
 }
 
