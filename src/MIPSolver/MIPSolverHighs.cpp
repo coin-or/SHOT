@@ -169,11 +169,13 @@ bool MIPSolverHighs::addVariable(
         break;
 
     case E_VariableType::Semiinteger:
+        isProblemDiscrete = true;
         variableTypesHighs.push_back(HighsVarType::kSemiInteger);
+        break;
     case E_VariableType::Semicontinuous:
     {
-        // TODO
         isProblemDiscrete = true;
+        variableTypesHighs.push_back(HighsVarType::kSemiContinuous);
         break;
     }
 
