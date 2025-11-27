@@ -83,7 +83,7 @@ HighsCallbackFunctionType highsCallback
               currentSolution.hashValue = hashValue;
               MIPSolver->currentSolutions.push_back(currentSolution);
 
-              env->output->outputDebug(fmt::format("      | #sols: {} \t obj.val: {:.4f} \t gap: {:.4f} ",
+              env->output->outputInfo(fmt::format("      | #sols: {} \t obj.val: {:.4f} \t gap: {:.4f} ",
                   MIPSolver->currentSolutions.size(), data_out->objective_function_value, data_out->mip_gap));
 
               // Sorts the solutions so that the best one is at the first position
@@ -334,6 +334,30 @@ void MIPSolverHighs::initializeSolverSettings()
         "mip_detect_symmetry", env->settings->getSetting<bool>("Highs.MIPDetectSymmetry", "Subsolver"));
     highsInstance.setOptionValue(
         "mip_heuristic_effort", env->settings->getSetting<double>("Highs.MIPHeuristicEffort", "Subsolver"));
+    highsInstance.setOptionValue(
+        "mip_heuristic_run_zi_round", env->settings->getSetting<bool>("Highs.MIPHeuristicRunZiRound", "Subsolver"));
+    highsInstance.setOptionValue(
+        "mip_heuristic_run_shifting", env->settings->getSetting<bool>("Highs.MIPHeuristicRunShifting", "Subsolver"));
+
+    // highsInstance.setOptionValue("mip_improving_solution_save", true);
+    // highsInstance.setOptionValue("mip_improving_solution_file", "higssol.sol");
+
+    /*
+    switch(env->settings->getSetting<int>("Highs.MIPIPMSolver", "Subsolver"))
+    {
+    case 0:
+        highsInstance.setOptionValue("mip_ipm_solver", "choose");
+        break;
+    case 1:
+        highsInstance.setOptionValue("mip_ipm_solver", "ipx");
+        break;
+    case 2:
+        highsInstance.setOptionValue("mip_ipm_solver", "hipo");
+        break;
+    default:
+        highsInstance.setOptionValue("mip_ipm_solver", "choose");
+        break;
+    }*/
 
     switch(env->settings->getSetting<int>("Highs.Parallel", "Subsolver"))
     {

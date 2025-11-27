@@ -1550,6 +1550,19 @@ void Solver::initializeSettings()
     env->settings->createSetting(
         "Highs.MIPHeuristicEffort", "Subsolver", 0.05, "Effort spent for MIP heuristics", 0, 1);
 
+    env->settings->createSetting("Highs.MIPHeuristicRunZiRound", "Subsolver", false, "Run Zi Round heuristic");
+
+    env->settings->createSetting("Highs.MIPHeuristicRunShifting", "Subsolver", false, "Run Shifting heuristic");
+
+    /*
+    VectorString enumHighsMIPIPMSolver;
+    enumHighsMIPIPMSolver.push_back("choose");
+    enumHighsMIPIPMSolver.push_back("ipx");
+    enumHighsMIPIPMSolver.push_back("hipo");
+    env->settings->createSetting("Highs.MIPIPMSolver", "Subsolver", 1, "MIP IPM solver", enumHighsMIPIPMSolver, 0);
+    enumHighsMIPIPMSolver.clear();
+    */
+
     VectorString enumHighsParallel;
     enumHighsParallel.push_back("off");
     enumHighsParallel.push_back("choose");
