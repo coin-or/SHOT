@@ -805,19 +805,19 @@ void MIPSolverHighs::setCutOff(double cutOff)
         return;
 
     double cutOffTol = env->settings->getSetting<double>("MIP.CutOff.Tolerance", "Dual");
-    double cutOffWithTol = (isMinimizationProblem) ? cutOff + cutOffTol : cutOff - cutOffTol;
+    double cutOffWithTol = cutOff + cutOffTol;
 
     if(isMinimizationProblem)
     {
         highsInstance.setOptionValue("objective_bound", cutOffWithTol);
 
-        env->output->outputInfo(fmt::format("        Setting cutoff value to {} for minimization.", cutOffWithTol));
+        env->output->outputDebug(fmt::format("        Setting cutoff value to {} for minimization.", cutOffWithTol));
     }
     else
     {
-        highsInstance.setOptionValue("objective_bound", cutOffWithTol);
+        highsInstance.setOptionValue("objective_bound", -cutOffWithTol);
 
-        env->output->outputInfo(fmt::format("        Setting cutoff value to {} for maximization.", cutOffWithTol));
+        env->output->outputDebug(fmt::format("        Setting cutoff value to {} for maximization.", cutOffWithTol));
     }
 }
 
@@ -1000,7 +1000,7 @@ bool MIPSolverHighs::createIntegerCut(IntegerCut& integerCut)
         }
         else // Integer cut for problem with general integers
         {
-            env->output->outputInfo("        Adding general integer cut in HiGHS ");
+            env->output->outputDebug("        Adding general integer cut in HiGHS ");
             size_t index = 0;
             VectorInteger cutIndexes;
             VectorDouble cutCoeffs;
