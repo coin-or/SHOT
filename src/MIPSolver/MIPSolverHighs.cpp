@@ -198,7 +198,8 @@ bool MIPSolverHighs::addLinearTermToObjective(double coefficient, int variableIn
 bool MIPSolverHighs::addQuadraticTermToObjective([[maybe_unused]] double coefficient,
     [[maybe_unused]] int firstVariableIndex, [[maybe_unused]] int secondVariableIndex)
 {
-    // Not implemented
+    // TODO: Not implemented
+    throw new OperationNotImplementedException("Quadratic objective functions not yet implemented in HiGHS interface.");
     return (false);
 }
 
@@ -243,7 +244,8 @@ bool MIPSolverHighs::addLinearTermToConstraint(double coefficient, int variableI
 bool MIPSolverHighs::addQuadraticTermToConstraint([[maybe_unused]] double coefficient,
     [[maybe_unused]] int firstVariableIndex, [[maybe_unused]] int secondVariableIndex)
 {
-    // Not implemented
+    // TODO: Not implemented
+    throw new OperationNotImplementedException("Quadratic constraints not yet implemented in HiGHS interface.");
     return (false);
 }
 
