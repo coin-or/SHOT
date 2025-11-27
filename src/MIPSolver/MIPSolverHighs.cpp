@@ -414,11 +414,12 @@ int MIPSolverHighs::addLinearConstraint(
 
     if(highsInstance.getNumRow() > numConstraintsBefore)
     {
+        highsInstance.passRowName(highsInstance.getNumRow() - 1, name);
         allowRepairOfConstraint.push_back(allowRepair);
     }
     else
     {
-        env->output->outputWarning("        Linear constraint  not added by Highs");
+        env->output->outputWarning("        Linear constraint not added by Highs");
         return (-1);
     }
 
@@ -642,6 +643,7 @@ void MIPSolverHighs::setCutOffAsConstraint(double cutOff)
 
         cutOffConstraintDefined = true;
         cutOffConstraintIndex = highsInstance.getNumRow() - 1;
+        highsInstance.passRowName(cutOffConstraintIndex, "CUTOFF_C");
     }
     else
     {
@@ -713,8 +715,218 @@ void MIPSolverHighs::deleteMIPStarts()
 
 bool MIPSolverHighs::createIntegerCut(IntegerCut& integerCut)
 {
-    // TODO: not yet implemented
-    return (false);
+    assert(integerCut.variableValues.size() == (size_t)env->reformulatedProblem->properties.numberOfDiscreteVariables);
+    bool allowIntegerCutRepair = env->settings->getSetting<bool>("MIP.InfeasibilityRepair.IntegerCuts", "Dual");
+
+    int numConstraintsBefore = highsInstance.getNumRow();
+    int constraintCounter = highsInstance.getNumRow();
+
+    // Verify that no integer values are outside of variable bounds
+    for(size_t i = 0; i < integerCut.variableIndexes.size(); i++)
+    {
+        auto VAR = env->reformulatedProblem->getVariable(integerCut.variableIndexes[i]);
+        int variableValue = integerCut.variableValues[i];
+
+        if(variableValue < VAR->lowerBound || variableValue > VAR->upperBound)
+            return (false);
+    }
+
+    try
+    {
+        if(integerCut.areAllVariablesBinary) // Integer cut for problem with binary variables only
+        {
+            size_t index = 0;
+            VectorInteger cutIndexes;
+            VectorDouble cutCoeffs;
+
+            for(auto& VAR : env->reformulatedProblem->allVariables)
+            {
+                if(!(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer
+                       || VAR->properties.type == E_VariableType::Semiinteger))
+                    continue;
+
+                int variableValue = integerCut.variableValues[index];
+
+                if(variableValue == 1.0)
+                {
+                    cutIndexes.push_back(VAR->index);
+                    cutCoeffs.push_back(1.0);
+                }
+                else if(variableValue == 0.0)
+                {
+                    cutIndexes.push_back(VAR->index);
+                    cutCoeffs.push_back(-1.0);
+                }
+                else
+                {
+                    env->output->outputDebug("        Integer cut not added by HiGHS ");
+                    return (false);
+                }
+
+                index++;
+            }
+
+            int tmpNumConstraints = highsInstance.getNumRow();
+
+            highsInstance.addRow(-highsInstance.getInfinity(), integerCut.variableValues.size() - 1.0,
+                cutIndexes.size(), cutIndexes.data(), cutCoeffs.data());
+
+            if(highsInstance.getNumRow() > tmpNumConstraints)
+            {
+                highsInstance.passRowName(
+                    constraintCounter, fmt::format("IC_{}", env->solutionStatistics.numberOfIntegerCuts));
+                allowRepairOfConstraint.push_back(allowIntegerCutRepair);
+                integerCuts.push_back(constraintCounter);
+                constraintCounter++;
+            }
+        }
+        else // Integer cut for problem with general integers
+        {
+            env->output->outputInfo("        Adding general integer cut in HiGHS ");
+            size_t index = 0;
+            VectorInteger cutIndexes;
+            VectorDouble cutCoeffs;
+            double sumLB = 0.0;
+            double sumUB = 0.0;
+
+            for(auto& I : integerCut.variableIndexes)
+            {
+                auto VAR = env->reformulatedProblem->getVariable(I);
+                int variableValue = integerCut.variableValues[index];
+
+                assert(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer
+                    || VAR->properties.type == E_VariableType::Semiinteger);
+
+                if(variableValue == VAR->upperBound)
+                {
+                    sumUB += VAR->upperBound;
+                    cutIndexes.push_back(VAR->index);
+                    cutCoeffs.push_back(-1.0);
+                }
+                else if(variableValue == VAR->lowerBound)
+                {
+                    sumLB -= VAR->lowerBound;
+                    cutIndexes.push_back(VAR->index);
+                    cutCoeffs.push_back(1.0);
+                }
+                else
+                {
+                    int wIndex = numberOfVariables;
+                    int vIndex = numberOfVariables + 1;
+                    numberOfVariables += 2;
+
+                    double M1 = 2 * (variableValue - VAR->lowerBound);
+                    double M2 = 2 * (VAR->upperBound - variableValue);
+
+                    // Add auxiliary variables w (continuous) and v (binary)
+                    highsInstance.addCol(0.0, 0.0, highsInstance.getInfinity(), 0, nullptr, nullptr);
+                    highsInstance.addCol(0.0, 0.0, 1.0, 0, nullptr, nullptr);
+                    highsInstance.changeColIntegrality(wIndex, HighsVarType::kContinuous);
+                    highsInstance.changeColIntegrality(vIndex, HighsVarType::kInteger);
+                    highsInstance.passColName(
+                        wIndex, fmt::format("wIC{}_{}", env->solutionStatistics.numberOfIntegerCuts, index));
+                    highsInstance.passColName(
+                        vIndex, fmt::format("vIC{}_{}", env->solutionStatistics.numberOfIntegerCuts, index));
+
+                    cutIndexes.push_back(wIndex);
+                    cutCoeffs.push_back(1.0);
+
+                    // Constraint 1a: x + w >= variableValue  =>  -w <= x - variableValue
+                    VectorInteger cut1aIndexes = { VAR->index, wIndex };
+                    VectorDouble cut1aCoeffs = { 1.0, 1.0 };
+                    int tmpNumConstraints = highsInstance.getNumRow();
+                    highsInstance.addRow(variableValue, highsInstance.getInfinity(), cut1aIndexes.size(),
+                        cut1aIndexes.data(), cut1aCoeffs.data());
+
+                    if(highsInstance.getNumRow() > tmpNumConstraints)
+                    {
+                        highsInstance.passRowName(constraintCounter,
+                            fmt::format("IC{}_{}_1a", env->solutionStatistics.numberOfIntegerCuts, index));
+                        allowRepairOfConstraint.push_back(false);
+                        integerCuts.push_back(constraintCounter);
+                        constraintCounter++;
+                    }
+
+                    // Constraint 1b: x - w <= variableValue
+                    VectorInteger cut1bIndexes = { VAR->index, wIndex };
+                    VectorDouble cut1bCoeffs = { 1.0, -1.0 };
+                    tmpNumConstraints = highsInstance.getNumRow();
+                    highsInstance.addRow(-highsInstance.getInfinity(), variableValue, cut1bIndexes.size(),
+                        cut1bIndexes.data(), cut1bCoeffs.data());
+
+                    if(highsInstance.getNumRow() > tmpNumConstraints)
+                    {
+                        highsInstance.passRowName(constraintCounter,
+                            fmt::format("IC{}_{}_1b", env->solutionStatistics.numberOfIntegerCuts, index));
+                        allowRepairOfConstraint.push_back(false);
+                        integerCuts.push_back(constraintCounter);
+                        constraintCounter++;
+                    }
+
+                    // Constraint 2: w - x + M1*v <= -variableValue + M1
+                    VectorInteger cut2Indexes = { wIndex, VAR->index, vIndex };
+                    VectorDouble cut2Coeffs = { 1.0, -1.0, M1 };
+                    tmpNumConstraints = highsInstance.getNumRow();
+                    highsInstance.addRow(-highsInstance.getInfinity(), -variableValue + M1, cut2Indexes.size(),
+                        cut2Indexes.data(), cut2Coeffs.data());
+
+                    if(highsInstance.getNumRow() > tmpNumConstraints)
+                    {
+                        highsInstance.passRowName(constraintCounter,
+                            fmt::format("IC{}_{}_2", env->solutionStatistics.numberOfIntegerCuts, index));
+                        allowRepairOfConstraint.push_back(false);
+                        integerCuts.push_back(constraintCounter);
+                        constraintCounter++;
+                    }
+
+                    // Constraint 3: w + x - M2*v <= variableValue
+                    VectorInteger cut3Indexes = { wIndex, VAR->index, vIndex };
+                    VectorDouble cut3Coeffs = { 1.0, 1.0, -M2 };
+                    tmpNumConstraints = highsInstance.getNumRow();
+                    highsInstance.addRow(-highsInstance.getInfinity(), variableValue, cut3Indexes.size(),
+                        cut3Indexes.data(), cut3Coeffs.data());
+
+                    if(highsInstance.getNumRow() > tmpNumConstraints)
+                    {
+                        highsInstance.passRowName(constraintCounter,
+                            fmt::format("IC{}_{}_3", env->solutionStatistics.numberOfIntegerCuts, index));
+                        allowRepairOfConstraint.push_back(false);
+                        integerCuts.push_back(constraintCounter);
+                        constraintCounter++;
+                    }
+                }
+
+                index++;
+            }
+
+            // Final constraint: sum >= 1 - sumLB - sumUB
+            int tmpNumConstraints = highsInstance.getNumRow();
+            highsInstance.addRow(
+                1 - sumLB - sumUB, highsInstance.getInfinity(), cutIndexes.size(), cutIndexes.data(), cutCoeffs.data());
+
+            if(highsInstance.getNumRow() > tmpNumConstraints)
+            {
+                highsInstance.passRowName(
+                    constraintCounter, fmt::format("IC{}_4", env->solutionStatistics.numberOfIntegerCuts));
+                allowRepairOfConstraint.push_back(allowIntegerCutRepair);
+                integerCuts.push_back(constraintCounter);
+                constraintCounter++;
+            }
+        }
+
+        if(constraintCounter == numConstraintsBefore)
+        {
+            env->output->outputDebug("        Integer cut not added by HiGHS");
+            return (false);
+        }
+    }
+    catch(std::exception& e)
+    {
+        env->output->outputError("        Error when adding integer cut in HiGHS: ", e.what());
+        return (false);
+    }
+
+    return (true);
 }
 
 VectorDouble MIPSolverHighs::getVariableSolution(int solIdx)
