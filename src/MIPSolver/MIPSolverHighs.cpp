@@ -83,7 +83,7 @@ HighsCallbackFunctionType highsCallback
               currentSolution.hashValue = hashValue;
               MIPSolver->currentSolutions.push_back(currentSolution);
 
-              env->output->outputInfo(fmt::format("      | #sols: {} \t obj.val: {:.4f} \t gap: {:.4f} ",
+              env->output->outputDebug(fmt::format("      | #sols: {} \t obj.val: {:.4f} \t gap: {:.4f} ",
                   MIPSolver->currentSolutions.size(), data_out->objective_function_value, data_out->mip_gap));
 
               // Sorts the solutions so that the best one is at the first position
