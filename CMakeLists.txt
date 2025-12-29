@@ -337,8 +337,8 @@ include_directories(SYSTEM "${BOOST_DIR}")
 include_directories(SYSTEM "${CPPAD_DIR}/include/")
 include_directories(SYSTEM "${EIGEN_DIR}")
 include_directories(SYSTEM "${MCPP_DIR}/include")
-include_directories(SYSTEM "${MCPP_DIR}/3rdparty/cpplapack/include")
-include_directories(SYSTEM "${MCPP_DIR}/3rdparty/fadbad++")
+#include_directories(SYSTEM "${MCPP_DIR}/3rdparty/cpplapack/include")
+#include_directories(SYSTEM "${MCPP_DIR}/3rdparty/fadbad++")
 include_directories(SYSTEM "${SPDLOG_DIR}/include")
 
 # Make sure the source file lists are in the correct format

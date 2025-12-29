@@ -147,12 +147,10 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
         // Saves the LP problem to file if in debug mode
         if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
         {
-            std::stringstream ss;
-            ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
-            ss << "/lpminimax";
-            ss << i;
-            ss << ".lp";
-            LPSolver->writeProblemToFile(ss.str());
+            auto filename
+                = fmt::format("{}/minimax{}.lp", env->settings->getSetting<std::string>("Debug.Path", "Output"), i);
+
+            LPSolver->writeProblemToFile(filename);
         }
 
         // Solves the problem and obtains the solution
@@ -193,12 +191,10 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
         // Saves the LP solution to file if in debug mode
         if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
         {
-            std::stringstream ss;
-            ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
-            ss << "/lpminimaxsolpt";
-            ss << i;
-            ss << ".txt";
-            Utilities::saveVariablePointVectorToFile(LPVarSol, variableNames, ss.str());
+            auto filename = fmt::format(
+                "{}/minimax{}_solpt.txt", env->settings->getSetting<std::string>("Debug.Path", "Output"), i);
+
+            Utilities::saveVariablePointVectorToFile(LPVarSol, variableNames, filename);
         }
 
         if(std::isnan(LPObjVar))
@@ -238,12 +234,10 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             // Saves the LP solution to file if in debug mode
             if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
             {
-                std::stringstream ss;
-                ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
-                ss << "/lpminimaxlinesearchsolpt";
-                ss << i;
-                ss << ".txt";
-                Utilities::saveVariablePointVectorToFile(currSol, variableNames, ss.str());
+                auto filename = fmt::format(
+                    "{}/minimax{}_lsearchsolpt.txt", env->settings->getSetting<std::string>("Debug.Path", "Output"), i);
+
+                Utilities::saveVariablePointVectorToFile(currSol, variableNames, filename);
             }
         }
 

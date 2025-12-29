@@ -104,17 +104,17 @@ void TaskSolveIteration::run()
 
     if(env->dualSolver->MIPSolver->getDiscreteVariableStatus() && env->results->hasPrimalSolution())
     {
-        env->dualSolver->MIPSolver->addMIPStart(env->results->primalSolution);
+        auto primalSol = env->results->primalSolution;
+        env->reformulatedProblem->augmentAuxiliaryVariableValues(primalSol);
+        env->dualSolver->MIPSolver->addMIPStart(primalSol);
     }
 
     if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
     {
-        std::stringstream ss;
-        ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
-        ss << "/lp";
-        ss << currIter->iterationNumber - 1;
-        ss << ".lp";
-        env->dualSolver->MIPSolver->writeProblemToFile(ss.str());
+        auto filename = fmt::format("{}/dualiter{}_problem.lp",
+            env->settings->getSetting<std::string>("Debug.Path", "Output"), currIter->iterationNumber - 1);
+
+        env->dualSolver->MIPSolver->writeProblemToFile(filename);
     }
 
     if(env->reformulatedProblem->properties.isLPProblem || env->reformulatedProblem->properties.isMILPProblem
@@ -153,12 +153,23 @@ void TaskSolveIteration::run()
 
         if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
         {
-            std::stringstream ss;
-            ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
-            ss << "/lpsolpt";
-            ss << currIter->iterationNumber - 1;
-            ss << ".txt";
-            Utilities::saveVariablePointVectorToFile(sols.at(0).point, variableNames, ss.str());
+            auto debugPath = env->settings->getSetting<std::string>("Debug.Path", "Output");
+
+            for(size_t i = 0; i < sols.size(); i++)
+            {
+                auto filename = fmt::format("{}/dualiter{}_solpt_{}.txt", debugPath, currIter->iterationNumber - 1, i);
+                Utilities::saveVariablePointVectorToFile(sols.at(i).point, variableNames, filename);
+            }
+
+            for(size_t i = 0; i < sols.size(); i++)
+            {
+                auto filename
+                    = fmt::format("{}/dualiter{}_solinfo_{}.txt", debugPath, currIter->iterationNumber - 1, i);
+                auto filecontents
+                    = fmt::format("objective function value\t\t{}\nmax constr. dev. ([index]: value)\t[{}]: {}\n",
+                        sols.at(i).objectiveValue, sols.at(i).maxDeviation.index, sols.at(i).maxDeviation.value);
+                Utilities::writeStringToFile(filename, filecontents);
+            }
         }
 
         currIter->objectiveValue = env->dualSolver->MIPSolver->getObjectiveValue();
@@ -171,22 +182,6 @@ void TaskSolveIteration::run()
 
         currIter->solutionPoints = sols;
 
-        if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
-        {
-            VectorDouble tmpObjValue;
-            VectorString tmpObjName;
-
-            tmpObjValue.push_back(env->dualSolver->MIPSolver->getObjectiveValue());
-            tmpObjName.push_back("objective");
-
-            std::stringstream ss;
-            ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
-            ss << "/lpobjsol";
-            ss << currIter->iterationNumber - 1;
-            ss << ".txt";
-            Utilities::saveVariablePointVectorToFile(tmpObjValue, tmpObjName, ss.str());
-        }
-
         if(env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
         {
             auto mostDevConstr = env->reformulatedProblem->getMaxNumericConstraintValue(
@@ -197,18 +192,12 @@ void TaskSolveIteration::run()
 
             if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
             {
-                VectorDouble tmpMostDevValue;
-                VectorString tmpConstrIndex;
+                auto filename = fmt::format("{}/dualiter{}_mostdev.txt",
+                    env->settings->getSetting<std::string>("Debug.Path", "Output"), currIter->iterationNumber - 1);
+                auto filecontents = fmt::format("most dev. constraint ([index]: value)\t[{}]: {}\n",
+                    currIter->maxDeviationConstraint, currIter->maxDeviation);
 
-                tmpMostDevValue.push_back(currIter->maxDeviation);
-                tmpConstrIndex.push_back(std::to_string(currIter->maxDeviationConstraint));
-
-                std::stringstream ss;
-                ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
-                ss << "/lpmostdevm";
-                ss << currIter->iterationNumber - 1;
-                ss << ".txt";
-                Utilities::saveVariablePointVectorToFile(tmpMostDevValue, tmpConstrIndex, ss.str());
+                Utilities::writeStringToFile(filename, filecontents);
             }
         }
         else

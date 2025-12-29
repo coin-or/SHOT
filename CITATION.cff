@@ -1,0 +1,32 @@
+cff-version: 1.2.0
+message: 'If you use this software, please cite it as below'
+authors:
+- given-names: Andreas
+  family-names: Lundell
+  email: andreas.lundell@abo.fi
+- given-names: Jan
+  family-names: Kronqvist
+- given-names: Tapio
+  family-names: Westerlund
+title: "SHOT"
+version: 1.1
+date-released: 2021-10-20
+url: "https://github.com/coin-or/SHOT/releases/tag/releases%2F1.1.0"
+preferred-citation:
+  type: article
+  authors:
+    - given-names: A.
+      family-names: Lundell
+      email: andreas.lundell@abo.fi
+    - given-names: J.
+      family-names: Kronqvist
+    - given-names: T.
+      family-names: Westerlund
+  doi: 10.1007/s10898-022-01128-0
+  journal: "Journal of Global Optimization"
+  start: 1 # First page number
+  end: 41 # Last page number
+  title: "The supporting hyperplane optimization toolkit for convex MINLP"
+  issue: 1
+  volume: 84
+  year: 2022

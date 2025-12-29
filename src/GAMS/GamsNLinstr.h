@@ -177,6 +177,23 @@ extern "C"
         fnlicensestatus,
         fnlicenselevel,
         fnheaplimit,
+        fnlinear,
+        fntriangle,
+        fnforceerror,
+        fnforceerrorcount,
+        fnrandbinomial,
+        fnjobhandle,
+        fnjobstatus,
+        fnjobkill,
+        fnjobterminate,
+        fnnumcores,
+        fnEmbeddedHandle,
+        fnPlatformCode,
+        fnLogit,
+        fnlsemax,
+        fnlsemaxsc,
+        fnlsemin,
+        fnlseminsc,
         fndummy
     } GamsFuncCode;
 
@@ -190,7 +207,10 @@ extern "C"
         "centropy", "gmillisec", "maxerror", "timeel", "gamma", "loggamma", "beta", "logbeta", "gammareg", "betareg",
         "sinh", "cosh", "tanh", "mathlastrc", "mathlastec", "mathoval", "signpower", "handle", "ncpvusin", "ncpvupow",
         "binomial", "rehandle", "gamsver", "delhandle", "tan", "arccos", "arcsin", "arctan2", "sleep", "heapf",
-        "cohandle", "gamsrel", "poly", "licensestatus", "licenselevel", "heaplimit", "dummy" };
+        "cohandle", "gamsrel", "poly", "licensestatus", "licenselevel", "heaplimit", "randlinear", "randtriangle",
+        "forceerror", "forceerrorcnt", "randbinomial", "jobhandle", "jobstatus", "jobkill", "jobterminate",
+        "numcores", "embeddedhandle", "platformcode", "logit", "lsemax", "lsemaxsc", "lsemin", "lseminsc", "dummy"
+ };
 
 #ifdef __cplusplus
 }

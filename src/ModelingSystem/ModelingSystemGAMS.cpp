@@ -99,6 +99,9 @@ void ModelingSystemGAMS::augmentSettings([[maybe_unused]] SettingsPtr settings)
     enumQExtractAlg.push_back("automatic");
     enumQExtractAlg.push_back("threepass");
     enumQExtractAlg.push_back("doubleforward");
+#if GMOAPIVERSION >= 25
+    enumQExtractAlg.push_back("concurrent");
+#endif
     settings->createSetting("GAMS.QExtractAlg", "ModelingSystem", 0,
         "Extraction algorithm for quadratic equations in GAMS interface", enumQExtractAlg);
 #endif
@@ -278,13 +281,20 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem)
     gmoIndexBaseSet(modelingObject, 0);
 
 #if GMOAPIVERSION >= 21
-    gmoQExtractAlgSet(modelingObject, env->settings->getSetting<int>("GAMS.QExtractAlg", "ModelingSystem"));
-    gevTimeDiff(modelingEnvironment);
+    int qextractalg = env->settings->getSetting<int>("GAMS.QExtractAlg", "ModelingSystem");
+    gmoQExtractAlgSet(modelingObject, qextractalg);
 #endif
     gmoUseQSet(modelingObject, 1);
-#if GMOAPIVERSION >= 21
-    env->output->outputDebug(
-        std::string(" Time to extract information on quadratics: ") + std::to_string(gevTimeDiff(modelingEnvironment)));
+#if GMOAPIVERSION >= 25
+    char msg[2*GMS_SSSIZE];
+    double qtime;
+    INT64 qwin_3pass;
+    INT64 qwin_dblfwd;
+    gmoGetQMakerStats(modelingObject, buffer, &qtime, &qwin_3pass, &qwin_dblfwd);
+    sprintf(msg, " Extraction of quadratics (%s algorithm): %.2fs", buffer, qtime);
+    if( qextractalg == 3 )
+       sprintf(msg + strlen(msg), " (ThreePass fastest on %ld equations, DoubleForward fastest on %ld equations)", (long)qwin_3pass, (long)qwin_dblfwd);
+    env->output->outputDebug(msg);
 #endif
 
 #if GMOAPIVERSION >= 22
@@ -2073,13 +2083,20 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
             case fnarccos:
             case fnarcsin:
             case fnarctan2 /* arctan(x2/x1) */:
-            default:
             {
-                debugout << "nr. " << address + 1 << " - unsuppored. Error." << std::endl;
+                debugout << "nr. " << address + 1 << " - unsupported. Error." << std::endl;
                 char buffer[256];
                 sprintf(buffer, "Error: Unsupported GAMS function %s.\n", GamsFuncCodeName[address + 1]);
                 gevLogStatPChar(modelingEnvironment, buffer);
-                throw OperationNotImplementedException(fmt::format("Error: Unsupported GAMS function {}", buffer));
+                throw OperationNotImplementedException(fmt::format("Error: Unsupported GAMS function {}", GamsFuncCodeName[address + 1]));
+            }
+            default:
+            {
+                debugout << "nr. " << address + 1 << " - unsupported. Error." << std::endl;
+                char buffer[256];
+                sprintf(buffer, "Error: Unsupported new GAMS function %d.\n", address + 1);
+                gevLogStatPChar(modelingEnvironment, buffer);
+                throw OperationNotImplementedException(fmt::format("Error: Unsupported new GAMS function {}", address));
             }
             }
             break;

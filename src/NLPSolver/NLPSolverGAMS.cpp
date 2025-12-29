@@ -319,7 +319,7 @@ void NLPSolverGAMS::updateVariableUpperBound(int variableIndex, double bound)
 
 std::string NLPSolverGAMS::getSolverDescription()
 {
-    std::string description = fmt::format("{} in GAMS {}.{}", selectedNLPSolver, GAMSMAJOR, GAMSMINOR);
+    std::string description = fmt::format("{} in GAMS", selectedNLPSolver);
 
     return (description);
 };

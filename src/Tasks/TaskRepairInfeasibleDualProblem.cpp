@@ -125,7 +125,7 @@ void TaskRepairInfeasibleDualProblem::run()
         env->solutionStatistics.numberOfDualRepairsSinceLastPrimalUpdate = 0;
         env->tasks->setNextTask(taskIDIfTrue);
         mainRepairTries++;
-        tmpType << "-FAIL-" << mainRepairTries;
+        tmpType << "-F-" << mainRepairTries;
     }
     else
     {
@@ -134,7 +134,7 @@ void TaskRepairInfeasibleDualProblem::run()
 
         env->tasks->setNextTask(taskIDIfFalse);
         mainRepairTries++;
-        tmpType << "-FAIL-" << mainRepairTries;
+        tmpType << "-F-" << mainRepairTries;
     }
 
     totRepairTries++;

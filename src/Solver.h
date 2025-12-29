@@ -68,6 +68,9 @@ public:
         return setProblem(problem, nullptr, modelingSystem);
     };
 
+    ProblemPtr getOriginalProblem() { return (env->problem); };
+    ProblemPtr getReformulatedProblem() { return (env->reformulatedProblem); };
+
     bool solveProblem();
 
     void finalizeSolution();

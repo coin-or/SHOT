@@ -9,19 +9,18 @@
 */
 
 #include "../src/Results.h"
-#include "../src/Output.h"
-#include "../src/Settings.h"
 #include "../src/Solver.h"
-#include "../src/Utilities.h"
 #include "../src/TaskHandler.h"
+#include "../src/Utilities.h"
 
 #include "../src/Model/Problem.h"
+#include "../src/Model/ObjectiveFunction.h"
 
 #include <iostream>
 
 using namespace SHOT;
 
-bool CbcTest1(std::string filename)
+bool CbcTest1(std::string filename, double correctObjectiveValue)
 {
     bool passed = true;
 
@@ -71,6 +70,41 @@ bool CbcTest1(std::string filename)
         passed = false;
     }
 
+    if(solver->getOriginalProblem()->objectiveFunction->properties.isMinimize)
+    {
+        if(correctObjectiveValue <= solver->getPrimalBound() + 1e-5
+            && correctObjectiveValue >= solver->getCurrentDualBound() - 1e-5)
+        {
+            std::cout << std::endl
+                      << "Global objective value is within dual and primal bounds for minimization problem."
+                      << std::endl;
+        }
+        else
+        {
+            std::cout << std::endl
+                      << "Global objective value is not within dual and primal bounds for minimization problem."
+                      << std::endl;
+            passed = false;
+        }
+    }
+    else
+    {
+        if(correctObjectiveValue >= solver->getPrimalBound() - 1e-5
+            && correctObjectiveValue <= solver->getCurrentDualBound() + 1e-5)
+        {
+            std::cout << std::endl
+                      << "Global objective value " << correctObjectiveValue
+                      << " is within primal and dual bounds for maximization problem." << std::endl;
+        }
+        else
+        {
+            std::cout << std::endl
+                      << "Global objective value is not within primal and dual bounds for maximization problem."
+                      << std::endl;
+            passed = false;
+        }
+    }
+
     return passed;
 }
 
@@ -92,12 +126,14 @@ bool CbcTerminationCallbackTest(std::string filename)
     }
 
     // Registers a callback that terminates in the third iteration
-    solver->registerCallback(E_EventType::UserTerminationCheck, [&env] {
-        std::cout << "Callback activated. Terminating.\n";
+    solver->registerCallback(E_EventType::UserTerminationCheck,
+        [&env]
+        {
+            std::cout << "Callback activated. Terminating.\n";
 
-        if(env->results->getNumberOfIterations() == 3)
-            env->tasks->terminate();
-    });
+            if(env->results->getNumberOfIterations() == 3)
+                env->tasks->terminate();
+        });
 
     // Solving the problem
     if(!solver->solveProblem())
@@ -136,7 +172,7 @@ int CbcTest(int argc, char* argv[])
     {
     case 1:
         std::cout << "Starting test to solve a MINLP problem with Cbc." << std::endl;
-        passed = CbcTest1("data/tls2.osil");
+        passed = CbcTest1("data/tls2.osil", 5.3);
         std::cout << "Finished test to solve a MINLP problem with Cbc." << std::endl;
         break;
     case 2:
@@ -146,8 +182,28 @@ int CbcTest(int argc, char* argv[])
         break;
     case 3:
         std::cout << "Starting test to solve problem with semicont. variables:" << std::endl;
-        passed = CbcTest1("data/meanvarxsc.osil");
+        passed = CbcTest1("data/meanvarxsc.osil", 14.36923211);
         std::cout << "Finished test to solve problem with semicont. variables." << std::endl;
+        break;
+    case 4:
+        std::cout << "Starting test to solve nonconvex maximization problem 'ncvx_max_div.nl':" << std::endl;
+        passed = CbcTest1("data/ncvx_max_div.nl", 13.0);
+        std::cout << "Finished test to solve nonconvex maximization problem 'ncvx_max_div.nl'." << std::endl;
+        break;
+    case 5:
+        std::cout << "Starting test to solve nonconvex maximization problem 'ncvx_min_div.nl':" << std::endl;
+        passed = CbcTest1("data/ncvx_min_div.nl", -13.0);
+        std::cout << "Finished test to solve nonconvex maximization problem 'ncvx_min_div.nl'." << std::endl;
+        break;
+    case 6:
+        std::cout << "Starting test to solve nonconvex maximization problem 'ncvx_max_ndiv.nl':" << std::endl;
+        passed = CbcTest1("data/ncvx_max_ndiv.nl", 13.0);
+        std::cout << "Finished test to solve nonconvex maximization problem 'ncvx_max_ndiv.nl'." << std::endl;
+        break;
+    case 7:
+        std::cout << "Starting test to solve nonconvex maximization problem 'ncvx_min_ndiv.nl':" << std::endl;
+        passed = CbcTest1("data/ncvx_min_ndiv.nl", -13.0);
+        std::cout << "Finished test to solve nonconvex maximization problem 'ncvx_min_ndiv.nl'." << std::endl;
         break;
     default:
         passed = false;

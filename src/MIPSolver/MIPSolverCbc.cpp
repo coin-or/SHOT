@@ -793,15 +793,14 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
         {
             if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
             {
-                std::stringstream ss;
-                ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
-                ss << "/lp";
-                ss << env->results->getCurrentIteration()->iterationNumber - 1;
-                ss << "unbounded.lp";
+
+                auto filename = fmt::format("{}/dualiter{}_unbounded.lp",
+                    env->settings->getSetting<std::string>("Debug.Path", "Output"),
+                    env->results->getCurrentIteration()->iterationNumber - 1);
 
                 try
                 {
-                    osiInterface->writeLp(ss.str().c_str(), "", 1e-7, 10, 10, 0.0, true);
+                    osiInterface->writeLp(filename.c_str(), "", 1e-7, 10, 10, 0.0, true);
                 }
                 catch(std::exception& e)
                 {
@@ -890,12 +889,11 @@ bool MIPSolverCbc::repairInfeasibility()
                 constraints[i] = osiInterface->getRowName(repairConstraints[i]);
             }
 
-            std::stringstream ss;
-            ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
-            ss << "/lp";
-            ss << env->results->getCurrentIteration()->iterationNumber - 1;
-            ss << "repairedweights.txt";
-            Utilities::saveVariablePointVectorToFile(relaxParameters, constraints, ss.str());
+            auto filename = fmt::format("{}/dualiter{}_infeasrelaxweights.txt",
+                env->settings->getSetting<std::string>("Debug.Path", "Output"),
+                env->results->getCurrentIteration()->iterationNumber - 1);
+
+            Utilities::saveVariablePointVectorToFile(relaxParameters, constraints, filename);
         }
 
         for(int i = 0; i < numConstraintsToRepair; i++)
@@ -922,15 +920,13 @@ bool MIPSolverCbc::repairInfeasibility()
 
         if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
         {
-            std::stringstream ss;
-            ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
-            ss << "/lp";
-            ss << env->results->getCurrentIteration()->iterationNumber - 1;
-            ss << "infeasrelax.lp";
+            auto filename = fmt::format("{}/dualiter{}_infeasrelax.lp",
+                env->settings->getSetting<std::string>("Debug.Path", "Output"),
+                env->results->getCurrentIteration()->iterationNumber - 1);
 
             try
             {
-                repairedInterface->writeLp(ss.str().c_str(), "", 1e-7, 10, 10, 0.0, true);
+                repairedInterface->writeLp(filename.c_str(), "", 1e-7, 10, 10, 0.0, true);
             }
             catch(std::exception& e)
             {
@@ -1130,12 +1126,11 @@ bool MIPSolverCbc::repairInfeasibility()
 
         if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
         {
-            std::stringstream ss;
-            ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
-            ss << "/lp";
-            ss << env->results->getCurrentIteration()->iterationNumber - 1;
-            ss << "repaired.lp";
-            writeProblemToFile(ss.str());
+            auto filename = fmt::format("{}/dualiter{}_infeasrelax.lp",
+                env->settings->getSetting<std::string>("Debug.Path", "Output"),
+                env->results->getCurrentIteration()->iterationNumber - 1);
+
+            writeProblemToFile(filename);
         }
 
         delete repairedInterface;
