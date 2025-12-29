@@ -47,24 +47,29 @@ option(SIMPLE_OUTPUT_CHARS "Whether to avoid using special characters in the con
 option(HAS_AMPL "Should the AMPL .nl interface be build" ON)
 
 # GAMS
-option(HAS_GAMS "Is GAMS available" OFF)
-set(GAMS_DIR "/opt/gams/gams30.2" CACHE STRING "The base directory where GAMS is located (if available)")
+option(HAS_GAMS "Is GAMS available" ON)
+set(GAMS_DIR "/opt/gams" CACHE STRING "The base directory where GAMS is located (if available)")
 
 # CPLEX
-option(HAS_CPLEX "Is Cplex available" OFF)
-set(CPLEX_DIR "/opt/ibm/ILOG/CPLEX_Studio1210" CACHE STRING "The base directory where CPLEX is located (if available)")
+option(HAS_CPLEX "Is Cplex available" ON)
+set(CPLEX_DIR "/opt/cplex" CACHE STRING "The base directory where CPLEX is located (if available)")
 
 # Gurobi
-option(HAS_GUROBI "Is Gurobi available" OFF)
-set(GUROBI_DIR "/opt/gurobi/gurobi900" CACHE STRING "The base directory where Gurobi is located (if available)")
+option(HAS_GUROBI "Is Gurobi available" ON)
+set(GUROBI_DIR "/opt/gurobi" CACHE STRING "The base directory where Gurobi is located (if available)")
 
 # Cbc
-option(HAS_CBC "Is Cbc available" OFF)
-set(CBC_DIR "/opt/Cbc-2.10" CACHE STRING "The base directory where Cbc is located (if available).")
+option(HAS_CBC "Is Cbc available" ON)
+set(CBC_DIR "/opt/cbc" CACHE STRING "The base directory where Cbc is located (if available).")
 
 # Ipopt
-option(HAS_IPOPT "Is Ipopt available" OFF)
+option(HAS_IPOPT "Is Ipopt available" ON)
 set(IPOPT_DIR "/opt/ipopt" CACHE STRING "The base directory where Ipopt is located (if available).")
+
+# HiGHS
+option(HAS_HIGHS "Is HiGHS available" ON)
+option(USE_EXTERNAL_HIGHS "Use precompiled, external HiGHS libraries" OFF)
+set(HIGHS_EXTERNAL_DIR "/opt/highs" CACHE STRING "The external directory where HiGHS is located).")
 
 # Create also the executable
 option(GENERATE_EXE "Should the SHOT executable be generated (requires at least that either OS or GAMS is available)"
@@ -87,10 +92,11 @@ file(TO_CMAKE_PATH "${CBC_DIR}" ${CBC_DIR})
 file(TO_CMAKE_PATH "${CPLEX_DIR}" ${CPLEX_DIR})
 file(TO_CMAKE_PATH "${GAMS_DIR}" ${GAMS_DIR})
 file(TO_CMAKE_PATH "${GUROBI_DIR}" ${GUROBI_DIR})
+file(TO_CMAKE_PATH "${HIGHS_EXTERNAL_DIR}" ${HIGHS_EXTERNAL_DIR})
 file(TO_CMAKE_PATH "${IPOPT_DIR}" ${IPOPT_DIR})
 
 # Check if a MIP solver is defined
-if(NOT (HAS_CPLEX OR HAS_GUROBI OR HAS_CBC))
+if(NOT (HAS_CPLEX OR HAS_GUROBI OR HAS_CBC OR HAS_HIGHS))
     message(FATAL_ERROR "No MIP solver defined. SHOT needs at least one!")
 endif()
 
@@ -180,13 +186,17 @@ file(
     "${PROJECT_SOURCE_DIR}/src/Tasks/*.h"
     "${PROJECT_SOURCE_DIR}/src/Settings.h"
     "${TINYXML2_DIR}/tinyxml2.h"
-    #"${CPPAD_DIR}/include/cppad/cppad.hpp"
 )
 
 # Cbc
 
 if(HAS_CBC)
-    find_package(CBC)
+    find_package(PkgConfig)
+
+    if(PkgConfig_FOUND)
+        include(FindPkgConfig)
+        find_package(CBC)
+    endif()
 
     if(CBC_FOUND)
         link_directories(${CBC_LIBRARY_DIRS})
@@ -195,9 +205,9 @@ if(HAS_CBC)
     endif(CBC_FOUND)
 
     if(CBC_FOUND)
-        set(DUAL_SOURCES "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCbc.cpp")
+        set(DUAL_SOURCES ${DUAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCbc.cpp")
         set(DUAL_SOURCES ${DUAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.cpp")
-        set(DUAL_HEADERS "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCbc.h")
+        set(DUAL_HEADERS ${DUAL_HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCbc.h")
         set(DUAL_HEADERS ${DUAL_HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.h")
     endif(CBC_FOUND)
 endif(HAS_CBC)
@@ -226,7 +236,7 @@ endif(HAS_CPLEX)
 # Gurobi
 
 if(HAS_GUROBI)
-    find_package(Gurobi)
+    find_package(GUROBI)
     add_definitions(-DHAS_GUROBI)
 
     if(GUROBI_FOUND)
@@ -238,6 +248,31 @@ if(HAS_GUROBI)
         set(DUAL_HEADERS ${DUAL_HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverGurobiSingleTree.h")
     endif(GUROBI_FOUND)
 endif(HAS_GUROBI)
+
+
+# HiGHS
+
+if(HAS_HIGHS)
+    add_definitions(-DHAS_HIGHS)
+    set(DUAL_SOURCES ${DUAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverHighs.cpp")
+    set(DUAL_HEADERS ${DUAL_HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverHighs.h")
+
+    if(USE_EXTERNAL_HIGHS)
+        find_package(Threads REQUIRED)
+        find_package(HIGHS REQUIRED PATHS ${HIGHS_EXTERNAL_DIR} NO_DEFAULT_PATH)
+    endif()
+  
+    if(NOT(USE_EXTERNAL_HIGHS))
+        include(FetchContent)
+        FetchContent_Declare(
+            highs
+            GIT_REPOSITORY "https://github.com/ERGO-Code/HiGHS.git"
+            GIT_TAG        "latest"
+        )
+
+        FetchContent_MakeAvailable(highs)
+    endif()
+endif(HAS_HIGHS)
 
 # Ipopt
 
@@ -462,6 +497,7 @@ add_library(
 )
 target_link_libraries(SHOTDualStrategy SHOTModel)
 
+
 # Creates the tasks library
 file(GLOB_RECURSE TASK_SOURCES "${PROJECT_SOURCE_DIR}/src/Tasks/*.cpp")
 # These sources are already added in SHOTHelper
@@ -547,6 +583,7 @@ if(HAS_CBC)
         message("-- Cbc libraries could not be found!")
     else()
         message("-- Cbc include files will be used from: ${CBC_INCLUDE_DIRS}")
+        target_include_directories(SHOTDualStrategy PUBLIC "${CBC_INCLUDE_DIRS}")
 
         target_link_libraries(SHOTDualStrategy ${CBC_LIBRARIES})
         target_compile_options(SHOTDualStrategy PUBLIC ${CBC_CFLAGS_OTHER})
@@ -555,6 +592,15 @@ if(HAS_CBC)
         message("   ${CBC_LIBRARIES}")
     endif()
 endif(HAS_CBC)
+
+# HiGHS linking
+if(HAS_HIGHS)
+    message("-- HiGHS include files will be used from: ${HIGHS_INCLUDE_DIRS}")
+    add_dependencies(SHOTDualStrategy highs::highs)
+    target_link_libraries(SHOTDualStrategy highs::highs)
+    add_dependencies(SHOTPrimalStrategy highs::highs)
+    target_link_libraries(SHOTPrimalStrategy highs::highs)
+endif(HAS_HIGHS)
 
 # Ipopt linking
 if(HAS_IPOPT)

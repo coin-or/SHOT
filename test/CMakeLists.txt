@@ -35,6 +35,12 @@ if(HAS_GUROBI)
   set(cpptests ${cpptests} Gurobi)
 endif()
 
+if(HAS_HIGHS)
+  set(Highs_parts 1 2)
+  set(cpptests ${cpptests} Highs)
+endif()
+
+
 if(HAS_GAMS)
   set(GAMS_parts
       1

@@ -28,8 +28,6 @@ TaskCreateDualProblem::TaskCreateDualProblem(EnvironmentPtr envPtr) : TaskBase(e
 
     createProblem(env->dualSolver->MIPSolver, env->reformulatedProblem);
 
-    env->dualSolver->MIPSolver->finalizeProblem();
-
     env->dualSolver->MIPSolver->initializeSolverSettings();
 
     if(env->settings->getSetting<bool>("Debug.Enable", "Output"))

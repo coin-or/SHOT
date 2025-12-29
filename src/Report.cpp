@@ -395,6 +395,11 @@ void Report::outputOptionsReport()
         dualSolver = "Cbc";
 #endif
 
+#ifdef HAS_HIGHS
+    if(solver == ES_MIPSolver::Highs)
+        dualSolver = "HiGHS";
+#endif
+
     switch(static_cast<E_SolutionStrategy>(env->results->usedSolutionStrategy))
     {
     case(E_SolutionStrategy::SingleTree):
@@ -868,7 +873,7 @@ void Report::outputProblemInstanceReport()
 
         if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::NonlinearObjectiveFunction);
             value > 0)
-            env->output->outputInfo(fmt::format(" {:56s}{:d}", " - epigraph:", "", value));
+            env->output->outputInfo(fmt::format(" {:56s}{:d}", " - epigraph:", value));
 
         if(auto value
             = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::NonlinearExpressionPartitioning);

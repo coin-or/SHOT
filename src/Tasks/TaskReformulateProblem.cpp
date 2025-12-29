@@ -530,6 +530,14 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
         return;
     }
 
+    if(env->problem->objectiveFunction->properties.classification >= E_ObjectiveFunctionClassification::Quadratic
+        && env->settings->getSetting<bool>("Reformulation.ObjectiveFunction.Epigraph.Use", "Model"))
+    {
+        // Rewrite objective as objective constraint, aka epigraph
+        createEpigraphConstraint();
+        return;
+    }
+
     if(((env->problem->properties.convexity == E_ProblemConvexity::Convex && useConvexQuadraticObjective)
            || useNonconvexQuadraticObjective)
         && env->problem->objectiveFunction->properties.classification == E_ObjectiveFunctionClassification::Quadratic)
@@ -553,15 +561,6 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
     if(env->problem->objectiveFunction->properties.classification == E_ObjectiveFunctionClassification::Quadratic)
     {
         quadraticObjectiveRegardedAsNonlinear = true;
-    }
-
-    if(env->problem->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic
-        && env->settings->getSetting<bool>("Reformulation.ObjectiveFunction.Epigraph.Use", "Model"))
-    {
-        // Rewrite objective as objective constraint, aka epigraph
-
-        createEpigraphConstraint();
-        return;
     }
 
     // Objective is to be regarded as nonlinear
