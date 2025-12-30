@@ -10,6 +10,7 @@
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <pybind11/operators.h>
 
 #include "Solver.h"
 
@@ -21,6 +22,15 @@
 #include "TaskHandler.h"
 #include "Timing.h"
 #include "Utilities.h"
+
+#include "Model/Problem.h"
+#include "Model/Variables.h"
+#include "Model/Terms.h"
+#include "Model/Constraints.h"
+#include "Model/ObjectiveFunction.h"
+#include "Model/NonlinearExpressions.h"
+
+#include <sstream>
 
 #ifdef HAS_GAMS
 #include "ModelingSystem/ModelingSystemGAMS.h"
@@ -58,52 +68,850 @@ namespace SHOT
 {
 namespace py = pybind11;
 
-PYBIND11_MODULE(shotpy, m) {
+// Forward declarations for operator overloads
+NonlinearExpressionPtr wrapInExpression(VariablePtr var);
+NonlinearExpressionPtr wrapInExpression(double value);
+NonlinearExpressionPtr wrapInExpression(NonlinearExpressionPtr expr);
+
+// Helper to wrap a Variable in an ExpressionVariable
+NonlinearExpressionPtr wrapInExpression(VariablePtr var) { return std::make_shared<ExpressionVariable>(var); }
+
+// Helper to wrap a constant in an ExpressionConstant
+NonlinearExpressionPtr wrapInExpression(double value) { return std::make_shared<ExpressionConstant>(value); }
+
+// Pass-through for expressions
+NonlinearExpressionPtr wrapInExpression(NonlinearExpressionPtr expr) { return expr; }
+
+PYBIND11_MODULE(shotpy, m)
+{
     m.doc() = "shotpy";
 
+    // ===== Constants =====
+    m.attr("SHOT_DBL_MAX") = SHOT_DBL_MAX;
+    m.attr("SHOT_DBL_MIN") = SHOT_DBL_MIN;
+
+    // ===== Variable Types Enum =====
+    py::enum_<E_VariableType>(m, "VariableType")
+        .value("Real", E_VariableType::Real)
+        .value("Binary", E_VariableType::Binary)
+        .value("Integer", E_VariableType::Integer)
+        .value("Semicontinuous", E_VariableType::Semicontinuous)
+        .value("Semiinteger", E_VariableType::Semiinteger);
+
+    // ===== Objective Direction Enum =====
+    py::enum_<E_ObjectiveFunctionDirection>(m, "ObjectiveDirection")
+        .value("Minimize", E_ObjectiveFunctionDirection::Minimize)
+        .value("Maximize", E_ObjectiveFunctionDirection::Maximize);
+
+    // ===== Convexity Enum =====
+    py::enum_<E_Convexity>(m, "Convexity")
+        .value("Linear", E_Convexity::Linear)
+        .value("Convex", E_Convexity::Convex)
+        .value("Concave", E_Convexity::Concave)
+        .value("Nonconvex", E_Convexity::Nonconvex)
+        .value("Unknown", E_Convexity::Unknown)
+        .value("NotSet", E_Convexity::NotSet);
+
+    // ===== Problem Convexity Enum =====
+    py::enum_<E_ProblemConvexity>(m, "ProblemConvexity")
+        .value("Convex", E_ProblemConvexity::Convex)
+        .value("Nonconvex", E_ProblemConvexity::Nonconvex)
+        .value("NotSet", E_ProblemConvexity::NotSet);
+
+    // ===== Variable Class =====
+    py::class_<Variable, std::shared_ptr<Variable>>(m, "Variable")
+        .def(py::init<std::string, int, E_VariableType, double, double>(), py::arg("name"), py::arg("index"),
+            py::arg("type"), py::arg("lower_bound"), py::arg("upper_bound"))
+        .def_readwrite("name", &Variable::name)
+        .def_readwrite("index", &Variable::index)
+        .def_readwrite("lowerBound", &Variable::lowerBound)
+        .def_readwrite("upperBound", &Variable::upperBound)
+        .def_readonly("properties", &Variable::properties)
+        .def("__repr__",
+            [](const Variable& v) { return "<Variable '" + v.name + "' index=" + std::to_string(v.index) + ">"; })
+        // Operator overloads for natural expression building
+        .def(
+            "__add__",
+            [](VariablePtr self, VariablePtr other) -> NonlinearExpressionPtr {
+                return std::make_shared<ExpressionSum>(wrapInExpression(self), wrapInExpression(other));
+            },
+            py::is_operator())
+        .def(
+            "__add__",
+            [](VariablePtr self, double other) -> NonlinearExpressionPtr {
+                return std::make_shared<ExpressionSum>(wrapInExpression(self), wrapInExpression(other));
+            },
+            py::is_operator())
+        .def(
+            "__radd__",
+            [](VariablePtr self, double other) -> NonlinearExpressionPtr {
+                return std::make_shared<ExpressionSum>(wrapInExpression(other), wrapInExpression(self));
+            },
+            py::is_operator())
+        .def(
+            "__add__",
+            [](VariablePtr self, NonlinearExpressionPtr other) -> NonlinearExpressionPtr {
+                return std::make_shared<ExpressionSum>(wrapInExpression(self), other);
+            },
+            py::is_operator())
+        .def(
+            "__radd__",
+            [](VariablePtr self, NonlinearExpressionPtr other) -> NonlinearExpressionPtr {
+                return std::make_shared<ExpressionSum>(other, wrapInExpression(self));
+            },
+            py::is_operator())
+        .def(
+            "__sub__",
+            [](VariablePtr self, VariablePtr other) -> NonlinearExpressionPtr {
+                return std::make_shared<ExpressionSum>(
+                    wrapInExpression(self), std::make_shared<ExpressionNegate>(wrapInExpression(other)));
+            },
+            py::is_operator())
+        .def(
+            "__sub__",
+            [](VariablePtr self, double other) -> NonlinearExpressionPtr {
+                return std::make_shared<ExpressionSum>(wrapInExpression(self), wrapInExpression(-other));
+            },
+            py::is_operator())
+        .def(
+            "__rsub__",
+            [](VariablePtr self, double other) -> NonlinearExpressionPtr {
+                return std::make_shared<ExpressionSum>(
+                    wrapInExpression(other), std::make_shared<ExpressionNegate>(wrapInExpression(self)));
+            },
+            py::is_operator())
+        .def(
+            "__sub__",
+            [](VariablePtr self, NonlinearExpressionPtr other) -> NonlinearExpressionPtr {
+                return std::make_shared<ExpressionSum>(
+                    wrapInExpression(self), std::make_shared<ExpressionNegate>(other));
+            },
+            py::is_operator())
+        .def(
+            "__mul__",
+            [](VariablePtr self, VariablePtr other) -> NonlinearExpressionPtr {
+                return std::make_shared<ExpressionProduct>(wrapInExpression(self), wrapInExpression(other));
+            },
+            py::is_operator())
+        .def(
+            "__mul__",
+            [](VariablePtr self, double other) -> NonlinearExpressionPtr {
+                return std::make_shared<ExpressionProduct>(wrapInExpression(self), wrapInExpression(other));
+            },
+            py::is_operator())
+        .def(
+            "__rmul__",
+            [](VariablePtr self, double other) -> NonlinearExpressionPtr {
+                return std::make_shared<ExpressionProduct>(wrapInExpression(other), wrapInExpression(self));
+            },
+            py::is_operator())
+        .def(
+            "__mul__",
+            [](VariablePtr self, NonlinearExpressionPtr other) -> NonlinearExpressionPtr {
+                return std::make_shared<ExpressionProduct>(wrapInExpression(self), other);
+            },
+            py::is_operator())
+        .def(
+            "__rmul__",
+            [](VariablePtr self, NonlinearExpressionPtr other) -> NonlinearExpressionPtr {
+                return std::make_shared<ExpressionProduct>(other, wrapInExpression(self));
+            },
+            py::is_operator())
+        .def(
+            "__truediv__",
+            [](VariablePtr self, VariablePtr other) -> NonlinearExpressionPtr {
+                return std::make_shared<ExpressionDivide>(wrapInExpression(self), wrapInExpression(other));
+            },
+            py::is_operator())
+        .def(
+            "__truediv__",
+            [](VariablePtr self, double other) -> NonlinearExpressionPtr {
+                return std::make_shared<ExpressionDivide>(wrapInExpression(self), wrapInExpression(other));
+            },
+            py::is_operator())
+        .def(
+            "__rtruediv__",
+            [](VariablePtr self, double other) -> NonlinearExpressionPtr {
+                return std::make_shared<ExpressionDivide>(wrapInExpression(other), wrapInExpression(self));
+            },
+            py::is_operator())
+        .def(
+            "__truediv__",
+            [](VariablePtr self, NonlinearExpressionPtr other) -> NonlinearExpressionPtr {
+                return std::make_shared<ExpressionDivide>(wrapInExpression(self), other);
+            },
+            py::is_operator())
+        .def(
+            "__pow__",
+            [](VariablePtr self, double exponent) -> NonlinearExpressionPtr {
+                if(exponent == 2.0)
+                    return std::make_shared<ExpressionSquare>(wrapInExpression(self));
+                return std::make_shared<ExpressionPower>(wrapInExpression(self), wrapInExpression(exponent));
+            },
+            py::is_operator())
+        .def(
+            "__pow__",
+            [](VariablePtr self, VariablePtr other) -> NonlinearExpressionPtr {
+                return std::make_shared<ExpressionPower>(wrapInExpression(self), wrapInExpression(other));
+            },
+            py::is_operator())
+        .def(
+            "__pow__",
+            [](VariablePtr self, NonlinearExpressionPtr other) -> NonlinearExpressionPtr {
+                return std::make_shared<ExpressionPower>(wrapInExpression(self), other);
+            },
+            py::is_operator())
+        .def(
+            "__neg__",
+            [](VariablePtr self) -> NonlinearExpressionPtr {
+                return std::make_shared<ExpressionNegate>(wrapInExpression(self));
+            },
+            py::is_operator());
+
+    // ===== VariableProperties Struct =====
+    py::class_<VariableProperties>(m, "VariableProperties")
+        .def_readonly("type", &VariableProperties::type)
+        .def_readonly("isAuxiliary", &VariableProperties::isAuxiliary)
+        .def_readonly("isNonlinear", &VariableProperties::isNonlinear)
+        .def_readonly("inObjectiveFunction", &VariableProperties::inObjectiveFunction)
+        .def_readonly("inLinearConstraints", &VariableProperties::inLinearConstraints)
+        .def_readonly("inQuadraticConstraints", &VariableProperties::inQuadraticConstraints)
+        .def_readonly("inNonlinearConstraints", &VariableProperties::inNonlinearConstraints);
+
+    // ===== NonlinearExpression Base Class =====
+    py::class_<NonlinearExpression, NonlinearExpressionPtr>(m, "Expression")
+        .def("getType", &NonlinearExpression::getType)
+        .def("getConvexity", &NonlinearExpression::getConvexity)
+        .def("__repr__",
+            [](NonlinearExpressionPtr self) {
+                std::ostringstream oss;
+                oss << *self;
+                return "<Expression: " + oss.str() + ">";
+            })
+        // Operator overloads for expressions
+        .def(
+            "__add__",
+            [](NonlinearExpressionPtr self, NonlinearExpressionPtr other) -> NonlinearExpressionPtr {
+                return std::make_shared<ExpressionSum>(self, other);
+            },
+            py::is_operator())
+        .def(
+            "__add__",
+            [](NonlinearExpressionPtr self, double other) -> NonlinearExpressionPtr {
+                return std::make_shared<ExpressionSum>(self, wrapInExpression(other));
+            },
+            py::is_operator())
+        .def(
+            "__radd__",
+            [](NonlinearExpressionPtr self, double other) -> NonlinearExpressionPtr {
+                return std::make_shared<ExpressionSum>(wrapInExpression(other), self);
+            },
+            py::is_operator())
+        .def(
+            "__add__",
+            [](NonlinearExpressionPtr self, VariablePtr other) -> NonlinearExpressionPtr {
+                return std::make_shared<ExpressionSum>(self, wrapInExpression(other));
+            },
+            py::is_operator())
+        .def(
+            "__sub__",
+            [](NonlinearExpressionPtr self, NonlinearExpressionPtr other) -> NonlinearExpressionPtr {
+                return std::make_shared<ExpressionSum>(self, std::make_shared<ExpressionNegate>(other));
+            },
+            py::is_operator())
+        .def(
+            "__sub__",
+            [](NonlinearExpressionPtr self, double other) -> NonlinearExpressionPtr {
+                return std::make_shared<ExpressionSum>(self, wrapInExpression(-other));
+            },
+            py::is_operator())
+        .def(
+            "__rsub__",
+            [](NonlinearExpressionPtr self, double other) -> NonlinearExpressionPtr {
+                return std::make_shared<ExpressionSum>(
+                    wrapInExpression(other), std::make_shared<ExpressionNegate>(self));
+            },
+            py::is_operator())
+        .def(
+            "__sub__",
+            [](NonlinearExpressionPtr self, VariablePtr other) -> NonlinearExpressionPtr {
+                return std::make_shared<ExpressionSum>(
+                    self, std::make_shared<ExpressionNegate>(wrapInExpression(other)));
+            },
+            py::is_operator())
+        .def(
+            "__mul__",
+            [](NonlinearExpressionPtr self, NonlinearExpressionPtr other) -> NonlinearExpressionPtr {
+                return std::make_shared<ExpressionProduct>(self, other);
+            },
+            py::is_operator())
+        .def(
+            "__mul__",
+            [](NonlinearExpressionPtr self, double other) -> NonlinearExpressionPtr {
+                return std::make_shared<ExpressionProduct>(self, wrapInExpression(other));
+            },
+            py::is_operator())
+        .def(
+            "__rmul__",
+            [](NonlinearExpressionPtr self, double other) -> NonlinearExpressionPtr {
+                return std::make_shared<ExpressionProduct>(wrapInExpression(other), self);
+            },
+            py::is_operator())
+        .def(
+            "__mul__",
+            [](NonlinearExpressionPtr self, VariablePtr other) -> NonlinearExpressionPtr {
+                return std::make_shared<ExpressionProduct>(self, wrapInExpression(other));
+            },
+            py::is_operator())
+        .def(
+            "__truediv__",
+            [](NonlinearExpressionPtr self, NonlinearExpressionPtr other) -> NonlinearExpressionPtr {
+                return std::make_shared<ExpressionDivide>(self, other);
+            },
+            py::is_operator())
+        .def(
+            "__truediv__",
+            [](NonlinearExpressionPtr self, double other) -> NonlinearExpressionPtr {
+                return std::make_shared<ExpressionDivide>(self, wrapInExpression(other));
+            },
+            py::is_operator())
+        .def(
+            "__rtruediv__",
+            [](NonlinearExpressionPtr self, double other) -> NonlinearExpressionPtr {
+                return std::make_shared<ExpressionDivide>(wrapInExpression(other), self);
+            },
+            py::is_operator())
+        .def(
+            "__truediv__",
+            [](NonlinearExpressionPtr self, VariablePtr other) -> NonlinearExpressionPtr {
+                return std::make_shared<ExpressionDivide>(self, wrapInExpression(other));
+            },
+            py::is_operator())
+        .def(
+            "__pow__",
+            [](NonlinearExpressionPtr self, double exponent) -> NonlinearExpressionPtr {
+                if(exponent == 2.0)
+                    return std::make_shared<ExpressionSquare>(self);
+                return std::make_shared<ExpressionPower>(self, wrapInExpression(exponent));
+            },
+            py::is_operator())
+        .def(
+            "__pow__",
+            [](NonlinearExpressionPtr self, NonlinearExpressionPtr other) -> NonlinearExpressionPtr {
+                return std::make_shared<ExpressionPower>(self, other);
+            },
+            py::is_operator())
+        .def(
+            "__pow__",
+            [](NonlinearExpressionPtr self, VariablePtr other) -> NonlinearExpressionPtr {
+                return std::make_shared<ExpressionPower>(self, wrapInExpression(other));
+            },
+            py::is_operator())
+        .def(
+            "__neg__",
+            [](NonlinearExpressionPtr self) -> NonlinearExpressionPtr {
+                return std::make_shared<ExpressionNegate>(self);
+            },
+            py::is_operator());
+
+    // ===== NonlinearExpression Type Enum =====
+    py::enum_<E_NonlinearExpressionTypes>(m, "ExpressionType")
+        .value("Constant", E_NonlinearExpressionTypes::Constant)
+        .value("Var", E_NonlinearExpressionTypes::Variable) // Renamed to avoid conflict with Variable class
+        .value("Negate", E_NonlinearExpressionTypes::Negate)
+        .value("Invert", E_NonlinearExpressionTypes::Invert)
+        .value("SquareRoot", E_NonlinearExpressionTypes::SquareRoot)
+        .value("Log", E_NonlinearExpressionTypes::Log)
+        .value("Exp", E_NonlinearExpressionTypes::Exp)
+        .value("Square", E_NonlinearExpressionTypes::Square)
+        .value("Cos", E_NonlinearExpressionTypes::Cos)
+        .value("Sin", E_NonlinearExpressionTypes::Sin)
+        .value("Tan", E_NonlinearExpressionTypes::Tan)
+        .value("ArcCos", E_NonlinearExpressionTypes::ArcCos)
+        .value("ArcSin", E_NonlinearExpressionTypes::ArcSin)
+        .value("ArcTan", E_NonlinearExpressionTypes::ArcTan)
+        .value("Abs", E_NonlinearExpressionTypes::Abs)
+        .value("Divide", E_NonlinearExpressionTypes::Divide)
+        .value("Power", E_NonlinearExpressionTypes::Power)
+        .value("Sum", E_NonlinearExpressionTypes::Sum)
+        .value("Product", E_NonlinearExpressionTypes::Product);
+    // Note: Not using .export_values() to avoid polluting module namespace
+
+    // ===== Nonlinear Expression Helper Functions =====
+    m.def(
+        "exp",
+        [](VariablePtr var) -> NonlinearExpressionPtr {
+            return std::make_shared<ExpressionExp>(wrapInExpression(var));
+        },
+        "Exponential function", py::arg("x"));
+
+    m.def(
+        "exp",
+        [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr { return std::make_shared<ExpressionExp>(expr); },
+        "Exponential function", py::arg("x"));
+
+    m.def(
+        "log",
+        [](VariablePtr var) -> NonlinearExpressionPtr {
+            return std::make_shared<ExpressionLog>(wrapInExpression(var));
+        },
+        "Natural logarithm", py::arg("x"));
+
+    m.def(
+        "log",
+        [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr { return std::make_shared<ExpressionLog>(expr); },
+        "Natural logarithm", py::arg("x"));
+
+    m.def(
+        "sqrt",
+        [](VariablePtr var) -> NonlinearExpressionPtr {
+            return std::make_shared<ExpressionSquareRoot>(wrapInExpression(var));
+        },
+        "Square root", py::arg("x"));
+
+    m.def(
+        "sqrt",
+        [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr {
+            return std::make_shared<ExpressionSquareRoot>(expr);
+        },
+        "Square root", py::arg("x"));
+
+    m.def(
+        "sin",
+        [](VariablePtr var) -> NonlinearExpressionPtr {
+            return std::make_shared<ExpressionSin>(wrapInExpression(var));
+        },
+        "Sine function", py::arg("x"));
+
+    m.def(
+        "sin",
+        [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr { return std::make_shared<ExpressionSin>(expr); },
+        "Sine function", py::arg("x"));
+
+    m.def(
+        "cos",
+        [](VariablePtr var) -> NonlinearExpressionPtr {
+            return std::make_shared<ExpressionCos>(wrapInExpression(var));
+        },
+        "Cosine function", py::arg("x"));
+
+    m.def(
+        "cos",
+        [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr { return std::make_shared<ExpressionCos>(expr); },
+        "Cosine function", py::arg("x"));
+
+    m.def(
+        "tan",
+        [](VariablePtr var) -> NonlinearExpressionPtr {
+            return std::make_shared<ExpressionTan>(wrapInExpression(var));
+        },
+        "Tangent function", py::arg("x"));
+
+    m.def(
+        "tan",
+        [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr { return std::make_shared<ExpressionTan>(expr); },
+        "Tangent function", py::arg("x"));
+
+    m.def(
+        "asin",
+        [](VariablePtr var) -> NonlinearExpressionPtr {
+            return std::make_shared<ExpressionArcSin>(wrapInExpression(var));
+        },
+        "Arc sine function", py::arg("x"));
+
+    m.def(
+        "asin",
+        [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr { return std::make_shared<ExpressionArcSin>(expr); },
+        "Arc sine function", py::arg("x"));
+
+    m.def(
+        "acos",
+        [](VariablePtr var) -> NonlinearExpressionPtr {
+            return std::make_shared<ExpressionArcCos>(wrapInExpression(var));
+        },
+        "Arc cosine function", py::arg("x"));
+
+    m.def(
+        "acos",
+        [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr { return std::make_shared<ExpressionArcCos>(expr); },
+        "Arc cosine function", py::arg("x"));
+
+    m.def(
+        "atan",
+        [](VariablePtr var) -> NonlinearExpressionPtr {
+            return std::make_shared<ExpressionArcTan>(wrapInExpression(var));
+        },
+        "Arc tangent function", py::arg("x"));
+
+    m.def(
+        "atan",
+        [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr { return std::make_shared<ExpressionArcTan>(expr); },
+        "Arc tangent function", py::arg("x"));
+
+    m.def(
+        "abs",
+        [](VariablePtr var) -> NonlinearExpressionPtr {
+            return std::make_shared<ExpressionAbs>(wrapInExpression(var));
+        },
+        "Absolute value", py::arg("x"));
+
+    m.def(
+        "abs",
+        [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr { return std::make_shared<ExpressionAbs>(expr); },
+        "Absolute value", py::arg("x"));
+
+    m.def(
+        "square",
+        [](VariablePtr var) -> NonlinearExpressionPtr {
+            return std::make_shared<ExpressionSquare>(wrapInExpression(var));
+        },
+        "Square function", py::arg("x"));
+
+    m.def(
+        "square",
+        [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr { return std::make_shared<ExpressionSquare>(expr); },
+        "Square function", py::arg("x"));
+
+    // ===== LinearTerm Class =====
+    py::class_<LinearTerm, std::shared_ptr<LinearTerm>>(m, "LinearTerm")
+        .def(py::init<double, VariablePtr>(), py::arg("coefficient"), py::arg("variable"))
+        .def_readwrite("coefficient", &LinearTerm::coefficient)
+        .def_readwrite("variable", &LinearTerm::variable)
+        .def("__repr__", [](const LinearTerm& t) {
+            return "<LinearTerm: " + std::to_string(t.coefficient) + "*" + t.variable->name + ">";
+        });
+
+    // ===== QuadraticTerm Class =====
+    py::class_<QuadraticTerm, std::shared_ptr<QuadraticTerm>>(m, "QuadraticTerm")
+        .def(py::init<double, VariablePtr, VariablePtr>(), py::arg("coefficient"), py::arg("firstVariable"),
+            py::arg("secondVariable"))
+        .def_readwrite("coefficient", &QuadraticTerm::coefficient)
+        .def_readwrite("firstVariable", &QuadraticTerm::firstVariable)
+        .def_readwrite("secondVariable", &QuadraticTerm::secondVariable)
+        .def_readonly("isBilinear", &QuadraticTerm::isBilinear)
+        .def_readonly("isSquare", &QuadraticTerm::isSquare)
+        .def("__repr__", [](const QuadraticTerm& t) {
+            return "<QuadraticTerm: " + std::to_string(t.coefficient) + "*" + t.firstVariable->name + "*"
+                + t.secondVariable->name + ">";
+        });
+
+    // ===== LinearTerms Collection =====
+    py::class_<LinearTerms>(m, "LinearTerms")
+        .def(py::init<>())
+        .def("add", py::overload_cast<LinearTermPtr>(&LinearTerms::add))
+        .def("add", py::overload_cast<LinearTerms>(&LinearTerms::add))
+        .def("size", [](LinearTerms& self) { return self.size(); })
+        .def("__len__", [](LinearTerms& self) { return self.size(); })
+        .def("__getitem__", [](LinearTerms& self, size_t i) { return self[i]; });
+
+    // ===== QuadraticTerms Collection =====
+    py::class_<QuadraticTerms>(m, "QuadraticTerms")
+        .def(py::init<>())
+        .def("add", py::overload_cast<QuadraticTermPtr>(&QuadraticTerms::add))
+        .def("add", py::overload_cast<QuadraticTerms>(&QuadraticTerms::add))
+        .def("size", [](QuadraticTerms& self) { return self.size(); })
+        .def("__len__", [](QuadraticTerms& self) { return self.size(); })
+        .def("__getitem__", [](QuadraticTerms& self, size_t i) { return self[i]; });
+
+    // ===== ConstraintProperties Struct =====
+    py::class_<ConstraintProperties>(m, "ConstraintProperties")
+        .def_readonly("convexity", &ConstraintProperties::convexity)
+        .def_readonly("hasLinearTerms", &ConstraintProperties::hasLinearTerms)
+        .def_readonly("hasQuadraticTerms", &ConstraintProperties::hasQuadraticTerms)
+        .def_readonly("hasMonomialTerms", &ConstraintProperties::hasMonomialTerms)
+        .def_readonly("hasSignomialTerms", &ConstraintProperties::hasSignomialTerms)
+        .def_readonly("hasNonlinearExpression", &ConstraintProperties::hasNonlinearExpression);
+
+    // ===== NumericConstraint Base Class =====
+    py::class_<NumericConstraint, std::shared_ptr<NumericConstraint>>(m, "NumericConstraint")
+        .def_readwrite("index", &NumericConstraint::index)
+        .def_readwrite("name", &NumericConstraint::name)
+        .def_readwrite("valueLHS", &NumericConstraint::valueLHS)
+        .def_readwrite("valueRHS", &NumericConstraint::valueRHS)
+        .def_readwrite("constant", &NumericConstraint::constant)
+        .def_readonly("properties", &NumericConstraint::properties);
+
+    // ===== LinearConstraint Class =====
+    py::class_<LinearConstraint, NumericConstraint, std::shared_ptr<LinearConstraint>>(m, "LinearConstraint")
+        .def(py::init<int, std::string, double, double>(), py::arg("index"), py::arg("name"), py::arg("lhs"),
+            py::arg("rhs"))
+        .def(py::init<int, std::string, LinearTerms, double, double>(), py::arg("index"), py::arg("name"),
+            py::arg("linearTerms"), py::arg("lhs"), py::arg("rhs"))
+        .def_readwrite("linearTerms", &LinearConstraint::linearTerms)
+        .def("add", py::overload_cast<LinearTerms>(&LinearConstraint::add))
+        .def("add", py::overload_cast<LinearTermPtr>(&LinearConstraint::add))
+        .def("__repr__", [](LinearConstraintPtr c) {
+            std::ostringstream oss;
+            oss << *c;
+            return "<LinearConstraint '" + c->name + "': " + oss.str() + ">";
+        });
+
+    // ===== QuadraticConstraint Class =====
+    py::class_<QuadraticConstraint, LinearConstraint, std::shared_ptr<QuadraticConstraint>>(m, "QuadraticConstraint")
+        .def(py::init<int, std::string, double, double>(), py::arg("index"), py::arg("name"), py::arg("lhs"),
+            py::arg("rhs"))
+        .def(py::init<int, std::string, LinearTerms, QuadraticTerms, double, double>(), py::arg("index"),
+            py::arg("name"), py::arg("linearTerms"), py::arg("quadraticTerms"), py::arg("lhs"), py::arg("rhs"))
+        .def_readwrite("quadraticTerms", &QuadraticConstraint::quadraticTerms)
+        .def("add", py::overload_cast<QuadraticTerms>(&QuadraticConstraint::add))
+        .def("add", py::overload_cast<QuadraticTermPtr>(&QuadraticConstraint::add))
+        .def("__repr__", [](QuadraticConstraintPtr c) {
+            std::ostringstream oss;
+            oss << *c;
+            return "<QuadraticConstraint '" + c->name + "': " + oss.str() + ">";
+        });
+
+    // ===== NonlinearConstraint Class =====
+    py::class_<NonlinearConstraint, QuadraticConstraint, std::shared_ptr<NonlinearConstraint>>(m, "NonlinearConstraint")
+        .def(py::init<int, std::string, double, double>(), py::arg("index"), py::arg("name"), py::arg("lhs"),
+            py::arg("rhs"))
+        .def(py::init<int, std::string, NonlinearExpressionPtr, double, double>(), py::arg("index"), py::arg("name"),
+            py::arg("expression"), py::arg("lhs"), py::arg("rhs"))
+        .def(py::init<int, std::string, LinearTerms, NonlinearExpressionPtr, double, double>(), py::arg("index"),
+            py::arg("name"), py::arg("linearTerms"), py::arg("expression"), py::arg("lhs"), py::arg("rhs"))
+        .def(py::init<int, std::string, LinearTerms, QuadraticTerms, NonlinearExpressionPtr, double, double>(),
+            py::arg("index"), py::arg("name"), py::arg("linearTerms"), py::arg("quadraticTerms"), py::arg("expression"),
+            py::arg("lhs"), py::arg("rhs"))
+        .def_readwrite("nonlinearExpression", &NonlinearConstraint::nonlinearExpression)
+        .def("add", py::overload_cast<NonlinearExpressionPtr>(&NonlinearConstraint::add))
+        .def("__repr__", [](NonlinearConstraintPtr c) {
+            std::ostringstream oss;
+            oss << *c;
+            return "<NonlinearConstraint '" + c->name + "': " + oss.str() + ">";
+        });
+
+    // ===== ObjectiveFunctionProperties Struct =====
+    py::class_<ObjectiveFunctionProperties>(m, "ObjectiveFunctionProperties")
+        .def_readonly("isMinimize", &ObjectiveFunctionProperties::isMinimize)
+        .def_readonly("isMaximize", &ObjectiveFunctionProperties::isMaximize)
+        .def_readonly("convexity", &ObjectiveFunctionProperties::convexity)
+        .def_readonly("hasLinearTerms", &ObjectiveFunctionProperties::hasLinearTerms)
+        .def_readonly("hasQuadraticTerms", &ObjectiveFunctionProperties::hasQuadraticTerms)
+        .def_readonly("hasMonomialTerms", &ObjectiveFunctionProperties::hasMonomialTerms)
+        .def_readonly("hasSignomialTerms", &ObjectiveFunctionProperties::hasSignomialTerms)
+        .def_readonly("hasNonlinearExpression", &ObjectiveFunctionProperties::hasNonlinearExpression);
+
+    // ===== ObjectiveFunction Base Class =====
+    py::class_<ObjectiveFunction, std::shared_ptr<ObjectiveFunction>>(m, "ObjectiveFunction")
+        .def_readwrite("direction", &ObjectiveFunction::direction)
+        .def_readwrite("constant", &ObjectiveFunction::constant)
+        .def_readonly("properties", &ObjectiveFunction::properties);
+
+    // ===== LinearObjectiveFunction Class =====
+    py::class_<LinearObjectiveFunction, ObjectiveFunction, std::shared_ptr<LinearObjectiveFunction>>(
+        m, "LinearObjectiveFunction")
+        .def(py::init<E_ObjectiveFunctionDirection>(), py::arg("direction"))
+        .def(py::init<E_ObjectiveFunctionDirection, double>(), py::arg("direction"), py::arg("constant"))
+        .def(py::init<E_ObjectiveFunctionDirection, LinearTerms, double>(), py::arg("direction"),
+            py::arg("linearTerms"), py::arg("constant"))
+        .def_readwrite("linearTerms", &LinearObjectiveFunction::linearTerms)
+        .def("add", py::overload_cast<LinearTerms>(&LinearObjectiveFunction::add))
+        .def("add", py::overload_cast<LinearTermPtr>(&LinearObjectiveFunction::add));
+
+    // ===== QuadraticObjectiveFunction Class =====
+    py::class_<QuadraticObjectiveFunction, LinearObjectiveFunction, std::shared_ptr<QuadraticObjectiveFunction>>(
+        m, "QuadraticObjectiveFunction")
+        .def(py::init<E_ObjectiveFunctionDirection>(), py::arg("direction"))
+        .def(py::init<E_ObjectiveFunctionDirection, double>(), py::arg("direction"), py::arg("constant"))
+        .def(py::init<E_ObjectiveFunctionDirection, LinearTerms, QuadraticTerms, double>(), py::arg("direction"),
+            py::arg("linearTerms"), py::arg("quadraticTerms"), py::arg("constant"))
+        .def_readwrite("quadraticTerms", &QuadraticObjectiveFunction::quadraticTerms)
+        .def("add", py::overload_cast<QuadraticTerms>(&QuadraticObjectiveFunction::add))
+        .def("add", py::overload_cast<QuadraticTermPtr>(&QuadraticObjectiveFunction::add));
+
+    // ===== NonlinearObjectiveFunction Class =====
+    py::class_<NonlinearObjectiveFunction, QuadraticObjectiveFunction, std::shared_ptr<NonlinearObjectiveFunction>>(
+        m, "NonlinearObjectiveFunction")
+        .def(py::init<E_ObjectiveFunctionDirection>(), py::arg("direction"))
+        .def(py::init<E_ObjectiveFunctionDirection, double>(), py::arg("direction"), py::arg("constant"))
+        .def(py::init<E_ObjectiveFunctionDirection, NonlinearExpressionPtr, double>(), py::arg("direction"),
+            py::arg("expression"), py::arg("constant"))
+        .def(py::init<E_ObjectiveFunctionDirection, LinearTerms, NonlinearExpressionPtr, double>(),
+            py::arg("direction"), py::arg("linearTerms"), py::arg("expression"), py::arg("constant"))
+        .def(py::init<E_ObjectiveFunctionDirection, LinearTerms, QuadraticTerms, NonlinearExpressionPtr, double>(),
+            py::arg("direction"), py::arg("linearTerms"), py::arg("quadraticTerms"), py::arg("expression"),
+            py::arg("constant"))
+        .def_readwrite("nonlinearExpression", &NonlinearObjectiveFunction::nonlinearExpression)
+        .def("add", py::overload_cast<NonlinearExpressionPtr>(&NonlinearObjectiveFunction::add));
+
+    // ===== ProblemProperties Struct =====
+    py::class_<ProblemProperties>(m, "ProblemProperties")
+        .def_readonly("isValid", &ProblemProperties::isValid)
+        .def_readonly("convexity", &ProblemProperties::convexity)
+        .def_readonly("isNonlinear", &ProblemProperties::isNonlinear)
+        .def_readonly("isDiscrete", &ProblemProperties::isDiscrete)
+        .def_readonly("isMINLPProblem", &ProblemProperties::isMINLPProblem)
+        .def_readonly("isNLPProblem", &ProblemProperties::isNLPProblem)
+        .def_readonly("isMIQPProblem", &ProblemProperties::isMIQPProblem)
+        .def_readonly("isQPProblem", &ProblemProperties::isQPProblem)
+        .def_readonly("isMIQCQPProblem", &ProblemProperties::isMIQCQPProblem)
+        .def_readonly("isQCQPProblem", &ProblemProperties::isQCQPProblem)
+        .def_readonly("isMILPProblem", &ProblemProperties::isMILPProblem)
+        .def_readonly("isLPProblem", &ProblemProperties::isLPProblem)
+        .def_readonly("numberOfVariables", &ProblemProperties::numberOfVariables)
+        .def_readonly("numberOfRealVariables", &ProblemProperties::numberOfRealVariables)
+        .def_readonly("numberOfDiscreteVariables", &ProblemProperties::numberOfDiscreteVariables)
+        .def_readonly("numberOfBinaryVariables", &ProblemProperties::numberOfBinaryVariables)
+        .def_readonly("numberOfIntegerVariables", &ProblemProperties::numberOfIntegerVariables)
+        .def_readonly("numberOfNumericConstraints", &ProblemProperties::numberOfNumericConstraints)
+        .def_readonly("numberOfLinearConstraints", &ProblemProperties::numberOfLinearConstraints)
+        .def_readonly("numberOfQuadraticConstraints", &ProblemProperties::numberOfQuadraticConstraints)
+        .def_readonly("numberOfConvexQuadraticConstraints", &ProblemProperties::numberOfConvexQuadraticConstraints)
+        .def_readonly(
+            "numberOfNonconvexQuadraticConstraints", &ProblemProperties::numberOfNonconvexQuadraticConstraints)
+        .def_readonly("numberOfNonlinearConstraints", &ProblemProperties::numberOfNonlinearConstraints)
+        .def_readonly("numberOfConvexNonlinearConstraints", &ProblemProperties::numberOfConvexNonlinearConstraints)
+        .def_readonly(
+            "numberOfNonconvexNonlinearConstraints", &ProblemProperties::numberOfNonconvexNonlinearConstraints)
+        .def_readonly("name", &ProblemProperties::name)
+        .def_readonly("description", &ProblemProperties::description)
+        .def_readonly("isReformulated", &ProblemProperties::isReformulated);
+
+    // ===== Problem Class =====
+    // Problem uses enable_shared_from_this, pybind11 handles this automatically
+    // when we specify shared_ptr as the holder type
+    py::class_<Problem, std::shared_ptr<Problem>>(m, "Problem")
+        .def(py::init<EnvironmentPtr>(), py::arg("environment"))
+        .def_readwrite("name", &Problem::name)
+        .def_readonly("properties", &Problem::properties)
+        .def_readonly("allVariables", &Problem::allVariables)
+        .def_readonly("realVariables", &Problem::realVariables)
+        .def_readonly("binaryVariables", &Problem::binaryVariables)
+        .def_readonly("integerVariables", &Problem::integerVariables)
+        .def_readonly("objectiveFunction", &Problem::objectiveFunction)
+        .def_readonly("linearConstraints", &Problem::linearConstraints)
+        .def_readonly("quadraticConstraints", &Problem::quadraticConstraints)
+        .def_readonly("nonlinearConstraints", &Problem::nonlinearConstraints)
+        .def_readonly("numericConstraints", &Problem::numericConstraints)
+        // Add methods - using lambdas since these are separate method overloads
+        .def(
+            "addVariable", [](Problem& self, VariablePtr var) { self.add(var); }, py::arg("variable"))
+        .def(
+            "addVariables", [](Problem& self, Variables vars) { self.add(vars); }, py::arg("variables"))
+        // Order matters for pybind11 overload resolution - most specific types first
+        .def(
+            "addConstraint", [](Problem& self, NonlinearConstraintPtr c) { self.add(c); }, py::arg("constraint"))
+        .def(
+            "addConstraint", [](Problem& self, QuadraticConstraintPtr c) { self.add(c); }, py::arg("constraint"))
+        .def(
+            "addConstraint", [](Problem& self, LinearConstraintPtr c) { self.add(c); }, py::arg("constraint"))
+        .def(
+            "addConstraint", [](Problem& self, NumericConstraintPtr c) { self.add(c); }, py::arg("constraint"))
+        // Order matters for pybind11 overload resolution - most specific types first
+        .def(
+            "setObjective", [](Problem& self, NonlinearObjectiveFunctionPtr obj) { self.add(obj); },
+            py::arg("objective"))
+        .def(
+            "setObjective", [](Problem& self, QuadraticObjectiveFunctionPtr obj) { self.add(obj); },
+            py::arg("objective"))
+        .def(
+            "setObjective", [](Problem& self, LinearObjectiveFunctionPtr obj) { self.add(obj); }, py::arg("objective"))
+        .def(
+            "setObjective", [](Problem& self, ObjectiveFunctionPtr obj) { self.add(obj); }, py::arg("objective"))
+        .def(
+            "setObjective", [](Problem& self, NonlinearObjectiveFunctionPtr obj) { self.add(obj); },
+            py::arg("objective"))
+        // Finalize
+        .def("finalize", &Problem::finalize, "Finalize the problem and update all properties")
+        .def("updateProperties", &Problem::updateProperties, "Update problem properties")
+        // Getters
+        .def("getVariable", &Problem::getVariable, py::arg("index"))
+        .def("getVariableLowerBound", &Problem::getVariableLowerBound, py::arg("index"))
+        .def("getVariableUpperBound", &Problem::getVariableUpperBound, py::arg("index"))
+        .def("getVariableLowerBounds", &Problem::getVariableLowerBounds)
+        .def("getVariableUpperBounds", &Problem::getVariableUpperBounds)
+        // String representation
+        .def("__repr__", [](ProblemPtr p) {
+            std::string repr = "<Problem";
+            if(!p->name.empty())
+                repr += " '" + p->name + "'";
+            repr += " vars=" + std::to_string(p->properties.numberOfVariables);
+            repr += " constrs=" + std::to_string(p->properties.numberOfNumericConstraints);
+            repr += ">";
+            return repr;
+        })
+        .def("__str__", [](ProblemPtr p) {
+            std::ostringstream oss;
+            oss << p;
+            return oss.str();
+        })
+        .def("toString", [](ProblemPtr p) {
+            std::ostringstream oss;
+            oss << p;
+            return oss.str();
+        }, "Get the full string representation of the problem");
+
+    // ===== Variables Collection =====
+    py::class_<Variables>(m, "Variables")
+        .def(py::init<>())
+        .def("size", [](Variables& self) { return self.size(); })
+        .def("__len__", [](Variables& self) { return self.size(); })
+        .def("__getitem__", [](Variables& self, size_t i) { return self[i]; })
+        .def(
+            "__iter__", [](Variables& self) { return py::make_iterator(self.begin(), self.end()); },
+            py::keep_alive<0, 1>());
+
+    // ===== Environment Class =====
+    py::class_<Environment, std::shared_ptr<Environment>>(m, "Environment")
+        .def_readonly("problem", &Environment::problem)
+        .def_readonly("reformulatedProblem", &Environment::reformulatedProblem);
+
+    // ===== Solver Class =====
     py::class_<Solver>(m, "Solver")
-    .def(py::init())
-    .def("getAbsoluteObjectiveGap", &Solver::getAbsoluteObjectiveGap)
-    .def("getCurrentDualBound", &Solver::getCurrentDualBound)
-    .def("getModelReturnStatus", &Solver::getModelReturnStatus)
-    .def("getOptions", &Solver::getOptions)
-    .def("getOptionsOSoL", &Solver::getOptionsOSoL)
-    .def("getPrimalBound", &Solver::getPrimalBound)
-    .def("getPrimalSolution", &Solver::getPrimalSolution)
-    .def("getPrimalSolutions", &Solver::getPrimalSolutions)
-    .def("getRelativeObjectiveGap", &Solver::getRelativeObjectiveGap)
-    .def("getResultsOSrL", &Solver::getResultsOSrL)
-    .def("getResultsSol", &Solver::getResultsSol)
-    .def("getResultsTrace", &Solver::getResultsTrace)
+        .def(py::init())
+        .def("getEnvironment", &Solver::getEnvironment)
+        .def("getOriginalProblem", &Solver::getOriginalProblem)
+        .def("getReformulatedProblem", &Solver::getReformulatedProblem)
+        .def("getAbsoluteObjectiveGap", &Solver::getAbsoluteObjectiveGap)
+        .def("getCurrentDualBound", &Solver::getCurrentDualBound)
+        .def("getModelReturnStatus", &Solver::getModelReturnStatus)
+        .def("getOptions", &Solver::getOptions)
+        .def("getOptionsOSoL", &Solver::getOptionsOSoL)
+        .def("getPrimalBound", &Solver::getPrimalBound)
+        .def("getPrimalSolution", &Solver::getPrimalSolution)
+        .def("getPrimalSolutions", &Solver::getPrimalSolutions)
+        .def("getRelativeObjectiveGap", &Solver::getRelativeObjectiveGap)
+        .def("getResultsOSrL", &Solver::getResultsOSrL)
+        .def("getResultsSol", &Solver::getResultsSol)
+        .def("getResultsTrace", &Solver::getResultsTrace)
 
-    .def("getSolutionStatistics", &Solver::getSolutionStatistics)
-    .def("getSettingsAsMarkup", &Solver::getSettingsAsMarkup)
+        .def("getSolutionStatistics", &Solver::getSolutionStatistics)
+        .def("getSettingsAsMarkup", &Solver::getSettingsAsMarkup)
 
-    .def("getBoolSetting", py::overload_cast<std::string, std::string>(&Solver::getSetting<bool>))
-    .def("getStringSetting", py::overload_cast<std::string, std::string>(&Solver::getSetting<std::string>))
-    .def("getIntSetting", py::overload_cast<std::string, std::string>(&Solver::getSetting<int>))
-    .def("getDoubleSetting", py::overload_cast<std::string, std::string>(&Solver::getSetting<double>))
+        .def("getBoolSetting", py::overload_cast<std::string, std::string>(&Solver::getSetting<bool>))
+        .def("getStringSetting", py::overload_cast<std::string, std::string>(&Solver::getSetting<std::string>))
+        .def("getIntSetting", py::overload_cast<std::string, std::string>(&Solver::getSetting<int>))
+        .def("getDoubleSetting", py::overload_cast<std::string, std::string>(&Solver::getSetting<double>))
 
-    .def("getTerminationReason", &Solver::getTerminationReason)
-    .def("hasPrimalSolution", &Solver::hasPrimalSolution)
+        .def("getTerminationReason", &Solver::getTerminationReason)
+        .def("hasPrimalSolution", &Solver::hasPrimalSolution)
 
-    .def("outputSolverHeader", &Solver::outputSolverHeader)
-    .def("outputOptionsReport", &Solver::outputOptionsReport)
-    .def("outputProblemInstanceReport", &Solver::outputProblemInstanceReport)
-    .def("outputSolutionReport", &Solver::outputSolutionReport)
+        .def("outputSolverHeader", &Solver::outputSolverHeader)
+        .def("outputOptionsReport", &Solver::outputOptionsReport)
+        .def("outputProblemInstanceReport", &Solver::outputProblemInstanceReport)
+        .def("outputSolutionReport", &Solver::outputSolutionReport)
 
-    .def("setLogFile", &Solver::setLogFile)
-    .def("setOptionsFromFile", &Solver::setOptionsFromFile)
-    .def("setOptionsFromOSoL", &Solver::setOptionsFromOSoL)
-    .def("setOptionsFromString", &Solver::setOptionsFromString)
-    .def("setProblem", py::overload_cast<std::string>(&Solver::setProblem))
-    .def("solveProblem", &Solver::solveProblem)
-    .def("updateLogLevels", &Solver::updateLogLevels)
-    .def("updateSetting", py::overload_cast<std::string, std::string, int>(&Solver::updateSetting))
-    .def("updateSetting", py::overload_cast<std::string, std::string, std::string>(&Solver::updateSetting))
-    .def("updateSetting", py::overload_cast<std::string, std::string, double>(&Solver::updateSetting))
-    .def("updateSetting", py::overload_cast<std::string, std::string, bool>(&Solver::updateSetting))
-    ;
+        .def("setLogFile", &Solver::setLogFile)
+        .def("setOptionsFromFile", &Solver::setOptionsFromFile)
+        .def("setOptionsFromOSoL", &Solver::setOptionsFromOSoL)
+        .def("setOptionsFromString", &Solver::setOptionsFromString)
+        .def("setProblem", py::overload_cast<std::string>(&Solver::setProblem), "Load problem from file",
+            py::arg("filename"))
+        .def(
+            "setProblem", [](Solver& self, ProblemPtr problem) { return self.setProblem(problem, nullptr, nullptr); },
+            "Set problem from Problem object", py::arg("problem"))
+        .def(
+            "setProblem",
+            [](Solver& self, ProblemPtr problem, ProblemPtr reformulatedProblem) {
+                return self.setProblem(problem, reformulatedProblem, nullptr);
+            },
+            "Set problem with reformulated problem", py::arg("problem"), py::arg("reformulatedProblem"))
+        .def("solveProblem", &Solver::solveProblem)
+        .def("updateLogLevels", &Solver::updateLogLevels)
+        .def("updateSetting", py::overload_cast<std::string, std::string, int>(&Solver::updateSetting))
+        .def("updateSetting", py::overload_cast<std::string, std::string, std::string>(&Solver::updateSetting))
+        .def("updateSetting", py::overload_cast<std::string, std::string, double>(&Solver::updateSetting))
+        .def("updateSetting", py::overload_cast<std::string, std::string, bool>(&Solver::updateSetting));
 
     py::enum_<E_PrimalSolutionSource>(m, "PrimalSolutionSource", py::arithmetic())
         .value("Rootsearch", E_PrimalSolutionSource::Rootsearch)
@@ -113,8 +921,7 @@ PYBIND11_MODULE(shotpy, m) {
         .value("MIPSolutionPool", E_PrimalSolutionSource::MIPSolutionPool)
         .value("LPFixedIntegers", E_PrimalSolutionSource::LPFixedIntegers)
         .value("MIPCallback", E_PrimalSolutionSource::MIPCallback)
-        .value("InteriorPointSearch", E_PrimalSolutionSource::InteriorPointSearch)
-    ;
+        .value("InteriorPointSearch", E_PrimalSolutionSource::InteriorPointSearch);
 
     py::enum_<E_ModelReturnStatus>(m, "ModelReturnStatus", py::arithmetic())
         .value("None", E_ModelReturnStatus::None)
@@ -126,8 +933,7 @@ PYBIND11_MODULE(shotpy, m) {
         .value("FeasibleSolution", E_ModelReturnStatus::FeasibleSolution)
         .value("NoSolutionReturned", E_ModelReturnStatus::NoSolutionReturned)
         .value("ErrorUnknown", E_ModelReturnStatus::ErrorUnknown)
-        .value("ErrorNoSolution", E_ModelReturnStatus::ErrorNoSolution)
-    ;
+        .value("ErrorNoSolution", E_ModelReturnStatus::ErrorNoSolution);
 
     py::enum_<E_TerminationReason>(m, "TerminationReason", py::arithmetic())
         .value("ConstraintTolerance", E_TerminationReason::ConstraintTolerance)
@@ -142,74 +948,85 @@ PYBIND11_MODULE(shotpy, m) {
         .value("UserAbort", E_TerminationReason::UserAbort)
         .value("NoDualCutsAdded", E_TerminationReason::NoDualCutsAdded)
         .value("None", E_TerminationReason::None)
-        .value("NumericIssues", E_TerminationReason::NumericIssues)
-    ;
+        .value("NumericIssues", E_TerminationReason::NumericIssues);
 
     py::class_<PairIndexValue>(m, "PairIndexValue")
-    .def_readwrite("index", &PairIndexValue::index)   
-    .def_readwrite("value", &PairIndexValue::value)
-    ;
+        .def_readwrite("index", &PairIndexValue::index)
+        .def_readwrite("value", &PairIndexValue::value);
 
     py::class_<PrimalSolution>(m, "PrimalSolution")
-    .def_readwrite("point", &PrimalSolution::point)   
-    .def_readwrite("sourceType", &PrimalSolution::sourceType)
-    .def_readwrite("sourceDescription", &PrimalSolution::sourceDescription)
-    .def_readwrite("objValue", &PrimalSolution::objValue)    
-    .def_readwrite("iterFound", &PrimalSolution::iterFound)    
-    .def_readwrite("maxDevatingConstraintLinear", &PrimalSolution::maxDevatingConstraintLinear)    
-    .def_readwrite("maxDevatingConstraintQuadratic", &PrimalSolution::maxDevatingConstraintQuadratic)    
-    .def_readwrite("maxDevatingConstraintNonlinear", &PrimalSolution::maxDevatingConstraintNonlinear)    
-    .def_readwrite("maxIntegerToleranceError", &PrimalSolution::maxIntegerToleranceError)    
-    .def_readwrite("boundProjectionPerformed", &PrimalSolution::boundProjectionPerformed)    
-    .def_readwrite("integerRoundingPerformed", &PrimalSolution::integerRoundingPerformed) 
-    .def_readwrite("displayed", &PrimalSolution::displayed) 
-    ;
+        .def_readwrite("point", &PrimalSolution::point)
+        .def_readwrite("sourceType", &PrimalSolution::sourceType)
+        .def_readwrite("sourceDescription", &PrimalSolution::sourceDescription)
+        .def_readwrite("objValue", &PrimalSolution::objValue)
+        .def_readwrite("iterFound", &PrimalSolution::iterFound)
+        .def_readwrite("maxDevatingConstraintLinear", &PrimalSolution::maxDevatingConstraintLinear)
+        .def_readwrite("maxDevatingConstraintQuadratic", &PrimalSolution::maxDevatingConstraintQuadratic)
+        .def_readwrite("maxDevatingConstraintNonlinear", &PrimalSolution::maxDevatingConstraintNonlinear)
+        .def_readwrite("maxIntegerToleranceError", &PrimalSolution::maxIntegerToleranceError)
+        .def_readwrite("boundProjectionPerformed", &PrimalSolution::boundProjectionPerformed)
+        .def_readwrite("integerRoundingPerformed", &PrimalSolution::integerRoundingPerformed)
+        .def_readwrite("displayed", &PrimalSolution::displayed);
 
     py::class_<SolutionStatistics>(m, "SolutionStatistics")
-    .def_readwrite("numberOfIterations", &SolutionStatistics::numberOfIterations)   
-    .def_readwrite("numberOfProblemsLP", &SolutionStatistics::numberOfProblemsLP)   
-    .def_readwrite("numberOfProblemsQP ", &SolutionStatistics::numberOfProblemsQP)
-    .def_readwrite("numberOfProblemsQCQP", &SolutionStatistics::numberOfProblemsQCQP)
-    .def_readwrite("numberOfProblemsFeasibleMILP", &SolutionStatistics::numberOfProblemsFeasibleMILP)
-    .def_readwrite("numberOfProblemsOptimalMILP", &SolutionStatistics::numberOfProblemsOptimalMILP)
-    .def_readwrite("numberOfProblemsFeasibleMIQP", &SolutionStatistics::numberOfProblemsFeasibleMIQP)
-    .def_readwrite("numberOfProblemsOptimalMIQP", &SolutionStatistics::numberOfProblemsOptimalMIQP)
-    .def_readwrite("numberOfProblemsFeasibleMIQCQP", &SolutionStatistics::numberOfProblemsFeasibleMIQCQP)
-    .def_readwrite("numberOfProblemsOptimalMIQCQP", &SolutionStatistics::numberOfProblemsOptimalMIQCQP)
-    .def_readwrite("numberOfFunctionEvalutions", &SolutionStatistics::numberOfFunctionEvalutions)
-    .def_readwrite("numberOfGradientEvaluations", &SolutionStatistics::numberOfGradientEvaluations)
-    .def_readwrite("numberOfProblemsMinimaxLP", &SolutionStatistics::numberOfProblemsMinimaxLP)
-    .def_readwrite("numberOfProblemsFixedNLP", &SolutionStatistics::numberOfProblemsFixedNLP)
-    .def_readwrite("numberOfConstraintsRemovedInPresolve", &SolutionStatistics::numberOfConstraintsRemovedInPresolve)
-    .def_readwrite("numberOfVariableBoundsTightenedInPresolve", &SolutionStatistics::numberOfVariableBoundsTightenedInPresolve)
-    .def_readwrite("numberOfHyperplanesWithConvexSource", &SolutionStatistics::numberOfHyperplanesWithConvexSource)
-    .def_readwrite("numberOfHyperplanesWithNonconvexSource", &SolutionStatistics::numberOfHyperplanesWithNonconvexSource)
-    .def_readwrite("numberOfIntegerCuts", &SolutionStatistics::numberOfIntegerCuts)
-    .def_readwrite("numberOfIterationsWithDualStagnation", &SolutionStatistics::numberOfIterationsWithDualStagnation)
-    .def_readwrite("lastIterationWithSignificantDualUpdate", &SolutionStatistics::lastIterationWithSignificantDualUpdate)
-    .def_readwrite("numberOfIterationsWithPrimalStagnation", &SolutionStatistics::numberOfIterationsWithPrimalStagnation)
-    .def_readwrite("lastIterationWithSignificantPrimalUpdate", &SolutionStatistics::lastIterationWithSignificantPrimalUpdate)
-    .def_readwrite("numberOfIterationsWithoutNLPCallMIP", &SolutionStatistics::numberOfIterationsWithoutNLPCallMIP)
-    .def_readwrite("iterationLastPrimalBoundUpdate", &SolutionStatistics::iterationLastPrimalBoundUpdate)
-    .def_readwrite("iterationLastDualBoundUpdate", &SolutionStatistics::iterationLastDualBoundUpdate)
-    .def_readwrite("iterationLastLazyAdded", &SolutionStatistics::iterationLastLazyAdded)
-    .def_readwrite("iterationLastDualCutAdded", &SolutionStatistics::iterationLastDualCutAdded)
-    .def_readwrite("timeLastDualBoundUpdate", &SolutionStatistics::timeLastDualBoundUpdate)
-    .def_readwrite("timeLastFixedNLPCall", &SolutionStatistics::timeLastFixedNLPCall)
-    .def_readwrite("numberOfOriginalInteriorPoints", &SolutionStatistics::numberOfOriginalInteriorPoints)
-    .def_readwrite("numberOfFoundPrimalSolutions", &SolutionStatistics::numberOfFoundPrimalSolutions)
-    .def_readwrite("numberOfExploredNodes", &SolutionStatistics::numberOfExploredNodes)
-    .def_readwrite("numberOfOpenNodes", &SolutionStatistics::numberOfOpenNodes)
-    .def_readwrite("numberOfPrimalReductionCutsUpdatesWithoutEffect", &SolutionStatistics::numberOfPrimalReductionCutsUpdatesWithoutEffect)
-    .def_readwrite("numberOfDualRepairsSinceLastPrimalUpdate", &SolutionStatistics::numberOfDualRepairsSinceLastPrimalUpdate)
-    .def_readwrite("numberOfPrimalReductionsPerformed", &SolutionStatistics::numberOfPrimalReductionsPerformed)
-    .def_readwrite("numberOfSuccessfulDualRepairsPerformed", &SolutionStatistics::numberOfSuccessfulDualRepairsPerformed)
-    .def_readwrite("numberOfUnsuccessfulDualRepairsPerformed", &SolutionStatistics::numberOfUnsuccessfulDualRepairsPerformed)
-    .def_readwrite("numberOfPrimalImprovementsAfterInfeasibilityRepair", &SolutionStatistics::numberOfPrimalImprovementsAfterInfeasibilityRepair)
-    .def_readwrite("numberOfPrimalImprovementsAfterReductionCut", &SolutionStatistics::numberOfPrimalImprovementsAfterReductionCut)
-    .def_readwrite("hasInfeasibilityRepairBeenPerformedSincePrimalImprovement", &SolutionStatistics::hasInfeasibilityRepairBeenPerformedSincePrimalImprovement)
-    .def_readwrite("hasReductionCutBeenAddedSincePrimalImprovement", &SolutionStatistics::hasReductionCutBeenAddedSincePrimalImprovement)
-    .def("getNumberOfTotalDualProblems", &SolutionStatistics::getNumberOfTotalDualProblems)
-    ;
+        .def_readwrite("numberOfIterations", &SolutionStatistics::numberOfIterations)
+        .def_readwrite("numberOfProblemsLP", &SolutionStatistics::numberOfProblemsLP)
+        .def_readwrite("numberOfProblemsQP ", &SolutionStatistics::numberOfProblemsQP)
+        .def_readwrite("numberOfProblemsQCQP", &SolutionStatistics::numberOfProblemsQCQP)
+        .def_readwrite("numberOfProblemsFeasibleMILP", &SolutionStatistics::numberOfProblemsFeasibleMILP)
+        .def_readwrite("numberOfProblemsOptimalMILP", &SolutionStatistics::numberOfProblemsOptimalMILP)
+        .def_readwrite("numberOfProblemsFeasibleMIQP", &SolutionStatistics::numberOfProblemsFeasibleMIQP)
+        .def_readwrite("numberOfProblemsOptimalMIQP", &SolutionStatistics::numberOfProblemsOptimalMIQP)
+        .def_readwrite("numberOfProblemsFeasibleMIQCQP", &SolutionStatistics::numberOfProblemsFeasibleMIQCQP)
+        .def_readwrite("numberOfProblemsOptimalMIQCQP", &SolutionStatistics::numberOfProblemsOptimalMIQCQP)
+        .def_readwrite("numberOfFunctionEvalutions", &SolutionStatistics::numberOfFunctionEvalutions)
+        .def_readwrite("numberOfGradientEvaluations", &SolutionStatistics::numberOfGradientEvaluations)
+        .def_readwrite("numberOfProblemsMinimaxLP", &SolutionStatistics::numberOfProblemsMinimaxLP)
+        .def_readwrite("numberOfProblemsFixedNLP", &SolutionStatistics::numberOfProblemsFixedNLP)
+        .def_readwrite(
+            "numberOfConstraintsRemovedInPresolve", &SolutionStatistics::numberOfConstraintsRemovedInPresolve)
+        .def_readwrite(
+            "numberOfVariableBoundsTightenedInPresolve", &SolutionStatistics::numberOfVariableBoundsTightenedInPresolve)
+        .def_readwrite("numberOfHyperplanesWithConvexSource", &SolutionStatistics::numberOfHyperplanesWithConvexSource)
+        .def_readwrite(
+            "numberOfHyperplanesWithNonconvexSource", &SolutionStatistics::numberOfHyperplanesWithNonconvexSource)
+        .def_readwrite("numberOfIntegerCuts", &SolutionStatistics::numberOfIntegerCuts)
+        .def_readwrite(
+            "numberOfIterationsWithDualStagnation", &SolutionStatistics::numberOfIterationsWithDualStagnation)
+        .def_readwrite(
+            "lastIterationWithSignificantDualUpdate", &SolutionStatistics::lastIterationWithSignificantDualUpdate)
+        .def_readwrite(
+            "numberOfIterationsWithPrimalStagnation", &SolutionStatistics::numberOfIterationsWithPrimalStagnation)
+        .def_readwrite(
+            "lastIterationWithSignificantPrimalUpdate", &SolutionStatistics::lastIterationWithSignificantPrimalUpdate)
+        .def_readwrite("numberOfIterationsWithoutNLPCallMIP", &SolutionStatistics::numberOfIterationsWithoutNLPCallMIP)
+        .def_readwrite("iterationLastPrimalBoundUpdate", &SolutionStatistics::iterationLastPrimalBoundUpdate)
+        .def_readwrite("iterationLastDualBoundUpdate", &SolutionStatistics::iterationLastDualBoundUpdate)
+        .def_readwrite("iterationLastLazyAdded", &SolutionStatistics::iterationLastLazyAdded)
+        .def_readwrite("iterationLastDualCutAdded", &SolutionStatistics::iterationLastDualCutAdded)
+        .def_readwrite("timeLastDualBoundUpdate", &SolutionStatistics::timeLastDualBoundUpdate)
+        .def_readwrite("timeLastFixedNLPCall", &SolutionStatistics::timeLastFixedNLPCall)
+        .def_readwrite("numberOfOriginalInteriorPoints", &SolutionStatistics::numberOfOriginalInteriorPoints)
+        .def_readwrite("numberOfFoundPrimalSolutions", &SolutionStatistics::numberOfFoundPrimalSolutions)
+        .def_readwrite("numberOfExploredNodes", &SolutionStatistics::numberOfExploredNodes)
+        .def_readwrite("numberOfOpenNodes", &SolutionStatistics::numberOfOpenNodes)
+        .def_readwrite("numberOfPrimalReductionCutsUpdatesWithoutEffect",
+            &SolutionStatistics::numberOfPrimalReductionCutsUpdatesWithoutEffect)
+        .def_readwrite(
+            "numberOfDualRepairsSinceLastPrimalUpdate", &SolutionStatistics::numberOfDualRepairsSinceLastPrimalUpdate)
+        .def_readwrite("numberOfPrimalReductionsPerformed", &SolutionStatistics::numberOfPrimalReductionsPerformed)
+        .def_readwrite(
+            "numberOfSuccessfulDualRepairsPerformed", &SolutionStatistics::numberOfSuccessfulDualRepairsPerformed)
+        .def_readwrite(
+            "numberOfUnsuccessfulDualRepairsPerformed", &SolutionStatistics::numberOfUnsuccessfulDualRepairsPerformed)
+        .def_readwrite("numberOfPrimalImprovementsAfterInfeasibilityRepair",
+            &SolutionStatistics::numberOfPrimalImprovementsAfterInfeasibilityRepair)
+        .def_readwrite("numberOfPrimalImprovementsAfterReductionCut",
+            &SolutionStatistics::numberOfPrimalImprovementsAfterReductionCut)
+        .def_readwrite("hasInfeasibilityRepairBeenPerformedSincePrimalImprovement",
+            &SolutionStatistics::hasInfeasibilityRepairBeenPerformedSincePrimalImprovement)
+        .def_readwrite("hasReductionCutBeenAddedSincePrimalImprovement",
+            &SolutionStatistics::hasReductionCutBeenAddedSincePrimalImprovement)
+        .def("getNumberOfTotalDualProblems", &SolutionStatistics::getNumberOfTotalDualProblems);
 }
 }
