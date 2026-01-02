@@ -64,7 +64,7 @@ class OptimizationTestBase:
 
 def build_ex1223b(env, problem):
     """
-    Build the ex1223b problem (convex MINLP problem).
+    Build the ex1223b problem.
     
     This is a convex MINLP with 3 continuous and 4 binary variables.
     
@@ -235,16 +235,142 @@ class TestEx1223b(OptimizationTestBase):
 
 
 # =============================================================================
-# Template for adding new problems
+# File-based Problem Tests
+# =============================================================================
+# 
+# To add a new test problem, simply add an entry to BENCHMARK_PROBLEMS below.
+# Each entry specifies:
+#   - name: Problem name (used to find files like name.osil, name.gms, name.nl)
+#   - expected_obj: Known optimal objective value (from MINLPLib or other source)
+#   - formats: List of file formats available for this problem
+#   - tolerance: (optional) Tolerance for objective comparison, default 0.01
+#   - xfail: (optional) If True, marks test as expected failure
+#   - xfail_reason: (optional) Reason for expected failure
+#
+# Example:
+#   {"name": "newproblem", "expected_obj": 42.0, "formats": ["osil", "gms"]},
 # =============================================================================
 
-# def build_new_problem(env, problem):
-#     """
-#     Build a new optimization problem.
-#     
-#     Problem description here...
-#     Optimal objective: X.XXX
-#     """
+from pathlib import Path
+
+# Test problems configuration
+# Add new problems here - tests are automatically generated
+TEST_PROBLEMS = [
+    {
+        "name": "alan",
+        "expected_obj": 2.925,
+        "formats": ["osil", "gms"],
+    },
+    {
+        "name": "ex4",
+        "expected_obj": -8.06413617,
+        "formats": ["osil"],
+    },
+    {
+        "name": "flay02h",
+        "expected_obj": 37.94733192,
+        "formats": ["osil", "gms"],
+    },
+    {
+        "name": "synthes1",
+        "expected_obj": 6.00975909,
+        "formats": ["osil", "gms"],
+        "xfail": True,
+        "xfail_reason": "Solver converges to suboptimal solution - needs investigation",
+    },
+]
+
+
+def get_data_dir():
+    """Return the path to the test data directory."""
+    return Path(__file__).parent.parent / "data"
+
+
+def solve_file_and_verify(filename, expected_obj, tolerance=0.01):
+    """
+    Load a problem from file, solve it, and verify the objective.
+    
+    Args:
+        filename: Name of the problem file (e.g., "alan.gms")
+        expected_obj: Expected optimal objective value
+        tolerance: Tolerance for objective comparison
+        
+    Returns:
+        The solver instance after solving
+    """
+    solver = shotpy.Solver()
+    filepath = get_data_dir() / filename
+    
+    if not filepath.exists():
+        pytest.skip(f"Test file not found: {filepath}")
+    
+    result = solver.setProblem(str(filepath))
+    assert result == True, f"Failed to load problem from {filename}"
+    
+    result = solver.solveProblem()
+    assert result == True, f"Failed to solve problem {filename}"
+    
+    obj_value = solver.getPrimalBound()
+    assert abs(obj_value - expected_obj) < tolerance, \
+        f"Objective {obj_value} differs from expected {expected_obj} by {abs(obj_value - expected_obj)}"
+    
+    return solver
+
+
+def _get_format_support(fmt):
+    """Check if a file format is supported."""
+    format_support = {
+        "osil": shotpy.HAS_OSIL,
+        "gms": shotpy.HAS_GAMS,
+        "nl": shotpy.HAS_AMPL,
+    }
+    return format_support.get(fmt, False)
+
+
+def _generate_test_cases():
+    """Generate test case parameters from TEST_PROBLEMS."""
+    test_cases = []
+    for problem in TEST_PROBLEMS:
+        name = problem["name"]
+        expected_obj = problem["expected_obj"]
+        tolerance = problem.get("tolerance", 0.01)
+        xfail = problem.get("xfail", False)
+        xfail_reason = problem.get("xfail_reason", "Known issue")
+        
+        for fmt in problem["formats"]:
+            filename = f"{name}.{fmt}"
+            test_id = f"{name}_{fmt}"
+            
+            # Build marks list
+            marks = []
+            
+            # Add skip mark if format not supported
+            if not _get_format_support(fmt):
+                marks.append(pytest.mark.skip(reason=f"{fmt.upper()} format not available"))
+            
+            # Add xfail mark if specified
+            if xfail:
+                marks.append(pytest.mark.xfail(reason=xfail_reason))
+            
+            test_cases.append(
+                pytest.param(filename, expected_obj, tolerance, id=test_id, marks=marks)
+            )
+    
+    return test_cases
+
+
+class TestProblemsFromFile:
+    """
+    Parametrized tests for optimization problems loaded from files.
+    
+    Tests are automatically generated from TEST_PROBLEMS configuration.
+    To add a new problem, simply add an entry to TEST_PROBLEMS above.
+    """
+    
+    @pytest.mark.parametrize("filename,expected_obj,tolerance", _generate_test_cases())
+    def test_solve_problem(self, filename, expected_obj, tolerance):
+        """Test solving a problem from file and verify optimal objective."""
+        solve_file_and_verify(filename, expected_obj, tolerance)
 #     problem.name = "problem_name"
 #     
 #     # Create variables
