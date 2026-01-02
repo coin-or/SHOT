@@ -195,8 +195,8 @@ execute_process(COMMAND ${CMAKE_COMMAND}
                         ${CMAKE_CURRENT_BINARY_DIR}/data)
 
 # ===== Python API Tests =====
-# Add Python tests if shotpy target exists (Python bindings are built)
-if(TARGET shotpy)
+# Add Python tests if SHOTpy target exists (Python bindings are built)
+if(TARGET SHOTpy)
   # Find Python interpreter
   find_package(Python3 COMPONENTS Interpreter)
   
@@ -229,7 +229,7 @@ if(TARGET shotpy)
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
       )
       
-      # Set environment so pytest can find shotpy module
+      # Set environment so pytest can find SHOTpy module
       set_tests_properties(Python_API_Tests PROPERTIES
         ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}"
         FAIL_REGULAR_EXPRESSION "FAILED;ERROR"

@@ -94,24 +94,24 @@ class TestProblemInfo:
 
     def test_get_problem_name(self, problem):
         """Test setting and getting problem name."""
-        import shotpy
+        import SHOTpy
         
         problem.name = "test_problem"
         assert problem.name == "test_problem"
 
     def test_problem_to_string(self, problem):
         """Test converting problem to string representation."""
-        import shotpy
+        import SHOTpy
         
-        x = shotpy.Variable("x", 0, shotpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         
-        obj = shotpy.LinearObjectiveFunction(shotpy.ObjectiveDirection.Minimize)
-        obj.add(shotpy.LinearTerm(1.0, x))
+        obj = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
+        obj.add(SHOTpy.LinearTerm(1.0, x))
         problem.setObjective(obj)
         
-        c = shotpy.LinearConstraint(0, "c1", 0.0, 5.0)
-        c.add(shotpy.LinearTerm(1.0, x))
+        c = SHOTpy.LinearConstraint(0, "c1", 0.0, 5.0)
+        c.add(SHOTpy.LinearTerm(1.0, x))
         problem.addConstraint(c)
         
         problem.finalize()

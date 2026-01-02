@@ -11,9 +11,9 @@ class TestVariableCreation:
 
     def test_create_real_variable(self, problem):
         """Test creating a real (continuous) variable."""
-        import shotpy
+        import SHOTpy
         
-        x = shotpy.Variable("x", 0, shotpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         
         assert x.name == "x"
@@ -23,9 +23,9 @@ class TestVariableCreation:
 
     def test_create_binary_variable(self, problem):
         """Test creating a binary variable."""
-        import shotpy
+        import SHOTpy
         
-        b = shotpy.Variable("b", 0, shotpy.VariableType.Binary, 0.0, 1.0)
+        b = SHOTpy.Variable("b", 0, SHOTpy.VariableType.Binary, 0.0, 1.0)
         problem.addVariable(b)
         
         assert b.name == "b"
@@ -36,9 +36,9 @@ class TestVariableCreation:
 
     def test_create_integer_variable(self, problem):
         """Test creating an integer variable."""
-        import shotpy
+        import SHOTpy
         
-        i = shotpy.Variable("i", 0, shotpy.VariableType.Integer, -5.0, 5.0)
+        i = SHOTpy.Variable("i", 0, SHOTpy.VariableType.Integer, -5.0, 5.0)
         problem.addVariable(i)
         
         assert i.name == "i"
@@ -47,11 +47,11 @@ class TestVariableCreation:
 
     def test_multiple_variables(self, problem):
         """Test creating multiple variables with correct indices."""
-        import shotpy
+        import SHOTpy
         
-        x = shotpy.Variable("x", 0, shotpy.VariableType.Real, 0.0, 10.0)
-        y = shotpy.Variable("y", 1, shotpy.VariableType.Real, 0.0, 10.0)
-        z = shotpy.Variable("z", 2, shotpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
+        z = SHOTpy.Variable("z", 2, SHOTpy.VariableType.Real, 0.0, 10.0)
         
         problem.addVariable(x)
         problem.addVariable(y)
@@ -64,9 +64,9 @@ class TestVariableCreation:
 
     def test_variable_identity(self, problem):
         """Test that added variables maintain identity."""
-        import shotpy
+        import SHOTpy
         
-        x = shotpy.Variable("x", 0, shotpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         
         retrieved = problem.getVariable(0)
@@ -78,10 +78,10 @@ class TestExpressionBuilding:
 
     def test_variable_addition(self, problem):
         """Test adding two variables."""
-        import shotpy
+        import SHOTpy
         
-        x = shotpy.Variable("x", 0, shotpy.VariableType.Real, 0.0, 10.0)
-        y = shotpy.Variable("y", 1, shotpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -91,9 +91,9 @@ class TestExpressionBuilding:
 
     def test_variable_plus_constant(self, problem):
         """Test adding a constant to a variable."""
-        import shotpy
+        import SHOTpy
         
-        x = shotpy.Variable("x", 0, shotpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         
         expr = x + 5
@@ -102,9 +102,9 @@ class TestExpressionBuilding:
 
     def test_constant_plus_variable(self, problem):
         """Test adding a variable to a constant (reverse add)."""
-        import shotpy
+        import SHOTpy
         
-        x = shotpy.Variable("x", 0, shotpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         
         expr = 5 + x
@@ -113,9 +113,9 @@ class TestExpressionBuilding:
 
     def test_variable_subtraction(self, problem):
         """Test subtracting variables."""
-        import shotpy
+        import SHOTpy
         
-        x = shotpy.Variable("x", 0, shotpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         
         expr = x - 1
@@ -125,10 +125,10 @@ class TestExpressionBuilding:
 
     def test_variable_multiplication(self, problem):
         """Test multiplying variables."""
-        import shotpy
+        import SHOTpy
         
-        x = shotpy.Variable("x", 0, shotpy.VariableType.Real, 0.0, 10.0)
-        y = shotpy.Variable("y", 1, shotpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -138,9 +138,9 @@ class TestExpressionBuilding:
 
     def test_variable_power(self, problem):
         """Test variable raised to a power."""
-        import shotpy
+        import SHOTpy
         
-        x = shotpy.Variable("x", 0, shotpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         
         expr = x ** 2
@@ -150,9 +150,9 @@ class TestExpressionBuilding:
 
     def test_squared_expression(self, problem):
         """Test squaring an expression like (x-1)^2."""
-        import shotpy
+        import SHOTpy
         
-        x = shotpy.Variable("x", 0, shotpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         
         expr = (x - 1) ** 2
@@ -161,65 +161,65 @@ class TestExpressionBuilding:
 
     def test_log_expression(self, problem):
         """Test log function."""
-        import shotpy
+        import SHOTpy
         
-        x = shotpy.Variable("x", 0, shotpy.VariableType.Real, 1.0, 10.0)
+        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 1.0, 10.0)
         problem.addVariable(x)
         
-        expr = shotpy.log(x)
+        expr = SHOTpy.log(x)
         assert "log" in str(expr).lower()
 
     def test_exp_expression(self, problem):
         """Test exp function."""
-        import shotpy
+        import SHOTpy
         
-        x = shotpy.Variable("x", 0, shotpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         
-        expr = shotpy.exp(x)
+        expr = SHOTpy.exp(x)
         assert "exp" in str(expr).lower()
 
     def test_sqrt_expression(self, problem):
         """Test sqrt function."""
-        import shotpy
+        import SHOTpy
         
-        x = shotpy.Variable("x", 0, shotpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         
-        expr = shotpy.sqrt(x)
+        expr = SHOTpy.sqrt(x)
         assert "sqrt" in str(expr).lower()
 
     def test_sin_expression(self, problem):
         """Test sin function."""
-        import shotpy
+        import SHOTpy
         
-        x = shotpy.Variable("x", 0, shotpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         
-        expr = shotpy.sin(x)
+        expr = SHOTpy.sin(x)
         assert "sin" in str(expr).lower()
 
     def test_cos_expression(self, problem):
         """Test cos function."""
-        import shotpy
+        import SHOTpy
         
-        x = shotpy.Variable("x", 0, shotpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         
-        expr = shotpy.cos(x)
+        expr = SHOTpy.cos(x)
         assert "cos" in str(expr).lower()
 
     def test_complex_expression(self, problem):
         """Test building a complex expression."""
-        import shotpy
+        import SHOTpy
         
-        x = shotpy.Variable("x", 0, shotpy.VariableType.Real, 0.0, 10.0)
-        y = shotpy.Variable("y", 1, shotpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
         # (x-1)^2 + (y-2)^2 + log(x+y)
-        expr = (x - 1)**2 + (y - 2)**2 + shotpy.log(x + y + 1)
+        expr = (x - 1)**2 + (y - 2)**2 + SHOTpy.log(x + y + 1)
         expr_str = str(expr)
         assert "x" in expr_str
         assert "y" in expr_str

@@ -9,9 +9,9 @@ import sys
 from pathlib import Path
 import pytest
 
-# Add build directory to path so we can import shotpy
+# Add build directory to path so we can import SHOTpy
 def _setup_path():
-    """Find and add the shotpy module to sys.path."""
+    """Find and add the SHOTpy module to sys.path."""
     test_dir = Path(__file__).parent
     repo_root = test_dir.parent.parent
     
@@ -24,32 +24,32 @@ def _setup_path():
     
     for build_dir in possible_builds:
         if build_dir.exists():
-            # Check if shotpy module exists
-            shotpy_files = list(build_dir.glob("shotpy*.so")) + list(build_dir.glob("shotpy*.pyd"))
-            if shotpy_files:
+            # Check if SHOTpy module exists
+            SHOTpy_files = list(build_dir.glob("SHOTpy*.so")) + list(build_dir.glob("SHOTpy*.pyd"))
+            if SHOTpy_files:
                 sys.path.insert(0, str(build_dir))
                 return str(build_dir)
     
     # If not found, try the current working directory
     cwd = Path.cwd()
-    shotpy_files = list(cwd.glob("shotpy*.so")) + list(cwd.glob("shotpy*.pyd"))
-    if shotpy_files:
+    SHOTpy_files = list(cwd.glob("SHOTpy*.so")) + list(cwd.glob("SHOTpy*.pyd"))
+    if SHOTpy_files:
         sys.path.insert(0, str(cwd))
         return str(cwd)
     
-    raise ImportError("Could not find shotpy module. Make sure SHOT is built.")
+    raise ImportError("Could not find SHOTpy module. Make sure SHOT is built.")
 
 BUILD_DIR = _setup_path()
 
-import shotpy
+import SHOTpy
 
 
 class SHOTContext:
     """Container to hold solver, env, and problem together to manage lifetimes."""
     def __init__(self):
-        self.solver = shotpy.Solver()
+        self.solver = SHOTpy.Solver()
         self.env = self.solver.getEnvironment()
-        self.problem = shotpy.Problem(self.env)
+        self.problem = SHOTpy.Problem(self.env)
 
 
 def set_default_objective(problem, variables=None):
@@ -61,10 +61,10 @@ def set_default_objective(problem, variables=None):
         variables: Optional list of variables to include in the objective.
                   If None, creates a zero objective (minimize 0).
     """
-    obj = shotpy.LinearObjectiveFunction(shotpy.ObjectiveDirection.Minimize)
+    obj = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
     if variables:
         for var in variables:
-            obj.add(shotpy.LinearTerm(1.0, var))
+            obj.add(SHOTpy.LinearTerm(1.0, var))
     problem.setObjective(obj)
 
 
@@ -98,9 +98,9 @@ def data_dir():
     return Path(__file__).parent.parent / "data"
 
 
-# Re-export shotpy for convenience
+# Re-export SHOTpy for convenience
 @pytest.fixture
-def shotpy_module():
-    """Provide the shotpy module."""
-    return shotpy
+def SHOTpy_module():
+    """Provide the SHOTpy module."""
+    return SHOTpy
 

@@ -83,9 +83,9 @@ NonlinearExpressionPtr wrapInExpression(double value) { return std::make_shared<
 // Pass-through for expressions
 NonlinearExpressionPtr wrapInExpression(NonlinearExpressionPtr expr) { return expr; }
 
-PYBIND11_MODULE(shotpy, m)
+PYBIND11_MODULE(SHOTpy, m)
 {
-    m.doc() = "shotpy";
+    m.doc() = "SHOTpy";
 
     // ===== Constants =====
     m.attr("SHOT_DBL_MAX") = SHOT_DBL_MAX;
@@ -192,7 +192,7 @@ PYBIND11_MODULE(shotpy, m)
         "getSupportedNLPSolvers",
         []() {
             std::vector<std::string> solvers;
-            solvers.push_back("SHOT");  // Always available
+            solvers.push_back("SHOT"); // Always available
 #ifdef HAS_IPOPT
             solvers.push_back("Ipopt");
 #endif

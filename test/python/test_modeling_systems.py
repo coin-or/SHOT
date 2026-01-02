@@ -7,18 +7,18 @@ modeling system support is not compiled in.
 """
 
 import pytest
-import shotpy
+import SHOTpy
 from pathlib import Path
 
 
 # Skip decorators for conditional tests
 skip_if_no_gams = pytest.mark.skipif(
-    not shotpy.HAS_GAMS,
+    not SHOTpy.HAS_GAMS,
     reason="GAMS support not available in this build"
 )
 
 skip_if_no_ampl = pytest.mark.skipif(
-    not shotpy.HAS_AMPL,
+    not SHOTpy.HAS_AMPL,
     reason="AMPL support not available in this build"
 )
 
@@ -28,30 +28,30 @@ class TestModelingSystemAvailability:
 
     def test_has_osil_always_true(self):
         """OSiL support should always be available."""
-        assert shotpy.HAS_OSIL == True
+        assert SHOTpy.HAS_OSIL == True
 
     def test_has_gams_is_bool(self):
         """HAS_GAMS should be a boolean."""
-        assert isinstance(shotpy.HAS_GAMS, bool)
+        assert isinstance(SHOTpy.HAS_GAMS, bool)
 
     def test_has_ampl_is_bool(self):
         """HAS_AMPL should be a boolean."""
-        assert isinstance(shotpy.HAS_AMPL, bool)
+        assert isinstance(SHOTpy.HAS_AMPL, bool)
 
     def test_get_supported_modeling_systems(self):
         """Test getSupportedModelingSystems returns valid list."""
-        systems = shotpy.getSupportedModelingSystems()
+        systems = SHOTpy.getSupportedModelingSystems()
         
         assert isinstance(systems, list)
         assert "OSiL" in systems
         
         # Verify consistency with individual flags
-        if shotpy.HAS_GAMS:
+        if SHOTpy.HAS_GAMS:
             assert "GAMS" in systems
         else:
             assert "GAMS" not in systems
             
-        if shotpy.HAS_AMPL:
+        if SHOTpy.HAS_AMPL:
             assert "AMPL" in systems
         else:
             assert "AMPL" not in systems
@@ -63,7 +63,7 @@ class TestOSiL:
     @pytest.fixture
     def solver(self):
         """Create a fresh solver instance."""
-        return shotpy.Solver()
+        return SHOTpy.Solver()
 
     @pytest.fixture
     def data_dir(self):
@@ -102,7 +102,7 @@ class TestGAMS:
     @pytest.fixture
     def solver(self):
         """Create a fresh solver instance."""
-        return shotpy.Solver()
+        return SHOTpy.Solver()
 
     @pytest.fixture
     def data_dir(self):
@@ -141,7 +141,7 @@ class TestAMPL:
     @pytest.fixture
     def solver(self):
         """Create a fresh solver instance."""
-        return shotpy.Solver()
+        return SHOTpy.Solver()
 
     @pytest.fixture
     def data_dir(self):

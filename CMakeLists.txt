@@ -433,8 +433,8 @@ target_link_libraries(SHOTResults SHOTModel)
 
 if(HAS_PYTHON)
     add_subdirectory(${PYBIND11_DIR})
-    pybind11_add_module(shotpy src/Shotpy.cpp)
-    target_link_libraries(shotpy PRIVATE SHOTSolver)
+    pybind11_add_module(SHOTpy src/SHOTpy.cpp)
+    target_link_libraries(SHOTpy PRIVATE SHOTSolver)
 endif(HAS_PYTHON)
 
 # Creates the primal strategy library

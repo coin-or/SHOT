@@ -10,7 +10,7 @@ To add a new problem test:
 """
 
 import pytest
-import shotpy
+import SHOTpy
 from conftest import SHOTContext
 
 
@@ -90,13 +90,13 @@ def build_ex1223b(env, problem):
     problem.name = "ex1223b"
     
     # Create variables
-    x1 = shotpy.Variable("x1", 0, shotpy.VariableType.Real, 0.0, 10.0)
-    x2 = shotpy.Variable("x2", 1, shotpy.VariableType.Real, 0.0, 10.0)
-    x3 = shotpy.Variable("x3", 2, shotpy.VariableType.Real, 0.0, 10.0)
-    b4 = shotpy.Variable("b4", 3, shotpy.VariableType.Binary, 0.0, 1.0)
-    b5 = shotpy.Variable("b5", 4, shotpy.VariableType.Binary, 0.0, 1.0)
-    b6 = shotpy.Variable("b6", 5, shotpy.VariableType.Binary, 0.0, 1.0)
-    b7 = shotpy.Variable("b7", 6, shotpy.VariableType.Binary, 0.0, 1.0)
+    x1 = SHOTpy.Variable("x1", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
+    x2 = SHOTpy.Variable("x2", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
+    x3 = SHOTpy.Variable("x3", 2, SHOTpy.VariableType.Real, 0.0, 10.0)
+    b4 = SHOTpy.Variable("b4", 3, SHOTpy.VariableType.Binary, 0.0, 1.0)
+    b5 = SHOTpy.Variable("b5", 4, SHOTpy.VariableType.Binary, 0.0, 1.0)
+    b6 = SHOTpy.Variable("b6", 5, SHOTpy.VariableType.Binary, 0.0, 1.0)
+    b7 = SHOTpy.Variable("b7", 6, SHOTpy.VariableType.Binary, 0.0, 1.0)
     
     # Add variables to problem
     for var in [x1, x2, x3, b4, b5, b6, b7]:
@@ -104,65 +104,65 @@ def build_ex1223b(env, problem):
     
     # Create nonlinear objective function
     # minimize (b4-1)^2 + (b5-2)^2 + (b6-1)^2 - log(1+b7) + (x1-1)^2 + (x2-2)^2 + (x3-3)^2
-    objective = shotpy.NonlinearObjectiveFunction(shotpy.ObjectiveDirection.Minimize)
+    objective = SHOTpy.NonlinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
     obj_expr = ((b4 - 1)**2 + (b5 - 2)**2 + (b6 - 1)**2 
-                - shotpy.log(1 + b7) 
+                - SHOTpy.log(1 + b7) 
                 + (x1 - 1)**2 + (x2 - 2)**2 + (x3 - 3)**2)
     objective.add(obj_expr)
     problem.setObjective(objective)
     
     # e1: x1 + x2 + x3 + b4 + b5 + b6 <= 5
-    e1 = shotpy.LinearConstraint(0, "e1", -shotpy.SHOT_DBL_MAX, 5.0)
+    e1 = SHOTpy.LinearConstraint(0, "e1", -SHOTpy.SHOT_DBL_MAX, 5.0)
     for var in [x1, x2, x3, b4, b5, b6]:
-        e1.add(shotpy.LinearTerm(1.0, var))
+        e1.add(SHOTpy.LinearTerm(1.0, var))
     problem.addConstraint(e1)
     
     # e2: b6^2 + x1^2 + x2^2 + x3^2 <= 5.5
-    e2 = shotpy.QuadraticConstraint(1, "e2", -shotpy.SHOT_DBL_MAX, 5.5)
+    e2 = SHOTpy.QuadraticConstraint(1, "e2", -SHOTpy.SHOT_DBL_MAX, 5.5)
     for var in [b6, x1, x2, x3]:
-        e2.add(shotpy.QuadraticTerm(1.0, var, var))
+        e2.add(SHOTpy.QuadraticTerm(1.0, var, var))
     problem.addConstraint(e2)
     
     # e3: x1 + b4 <= 1.2
-    e3 = shotpy.LinearConstraint(2, "e3", -shotpy.SHOT_DBL_MAX, 1.2)
-    e3.add(shotpy.LinearTerm(1.0, x1))
-    e3.add(shotpy.LinearTerm(1.0, b4))
+    e3 = SHOTpy.LinearConstraint(2, "e3", -SHOTpy.SHOT_DBL_MAX, 1.2)
+    e3.add(SHOTpy.LinearTerm(1.0, x1))
+    e3.add(SHOTpy.LinearTerm(1.0, b4))
     problem.addConstraint(e3)
     
     # e4: x2 + b5 <= 1.8
-    e4 = shotpy.LinearConstraint(3, "e4", -shotpy.SHOT_DBL_MAX, 1.8)
-    e4.add(shotpy.LinearTerm(1.0, x2))
-    e4.add(shotpy.LinearTerm(1.0, b5))
+    e4 = SHOTpy.LinearConstraint(3, "e4", -SHOTpy.SHOT_DBL_MAX, 1.8)
+    e4.add(SHOTpy.LinearTerm(1.0, x2))
+    e4.add(SHOTpy.LinearTerm(1.0, b5))
     problem.addConstraint(e4)
     
     # e5: x3 + b6 <= 2.5
-    e5 = shotpy.LinearConstraint(4, "e5", -shotpy.SHOT_DBL_MAX, 2.5)
-    e5.add(shotpy.LinearTerm(1.0, x3))
-    e5.add(shotpy.LinearTerm(1.0, b6))
+    e5 = SHOTpy.LinearConstraint(4, "e5", -SHOTpy.SHOT_DBL_MAX, 2.5)
+    e5.add(SHOTpy.LinearTerm(1.0, x3))
+    e5.add(SHOTpy.LinearTerm(1.0, b6))
     problem.addConstraint(e5)
     
     # e6: x1 + b7 <= 1.2
-    e6 = shotpy.LinearConstraint(5, "e6", -shotpy.SHOT_DBL_MAX, 1.2)
-    e6.add(shotpy.LinearTerm(1.0, x1))
-    e6.add(shotpy.LinearTerm(1.0, b7))
+    e6 = SHOTpy.LinearConstraint(5, "e6", -SHOTpy.SHOT_DBL_MAX, 1.2)
+    e6.add(SHOTpy.LinearTerm(1.0, x1))
+    e6.add(SHOTpy.LinearTerm(1.0, b7))
     problem.addConstraint(e6)
     
     # e7: b5^2 + x2^2 <= 1.64
-    e7 = shotpy.QuadraticConstraint(6, "e7", -shotpy.SHOT_DBL_MAX, 1.64)
-    e7.add(shotpy.QuadraticTerm(1.0, b5, b5))
-    e7.add(shotpy.QuadraticTerm(1.0, x2, x2))
+    e7 = SHOTpy.QuadraticConstraint(6, "e7", -SHOTpy.SHOT_DBL_MAX, 1.64)
+    e7.add(SHOTpy.QuadraticTerm(1.0, b5, b5))
+    e7.add(SHOTpy.QuadraticTerm(1.0, x2, x2))
     problem.addConstraint(e7)
     
     # e8: b6^2 + x3^2 <= 4.25
-    e8 = shotpy.QuadraticConstraint(7, "e8", -shotpy.SHOT_DBL_MAX, 4.25)
-    e8.add(shotpy.QuadraticTerm(1.0, b6, b6))
-    e8.add(shotpy.QuadraticTerm(1.0, x3, x3))
+    e8 = SHOTpy.QuadraticConstraint(7, "e8", -SHOTpy.SHOT_DBL_MAX, 4.25)
+    e8.add(SHOTpy.QuadraticTerm(1.0, b6, b6))
+    e8.add(SHOTpy.QuadraticTerm(1.0, x3, x3))
     problem.addConstraint(e8)
     
     # e9: b5^2 + x3^2 <= 4.64
-    e9 = shotpy.QuadraticConstraint(8, "e9", -shotpy.SHOT_DBL_MAX, 4.64)
-    e9.add(shotpy.QuadraticTerm(1.0, b5, b5))
-    e9.add(shotpy.QuadraticTerm(1.0, x3, x3))
+    e9 = SHOTpy.QuadraticConstraint(8, "e9", -SHOTpy.SHOT_DBL_MAX, 4.64)
+    e9.add(SHOTpy.QuadraticTerm(1.0, b5, b5))
+    e9.add(SHOTpy.QuadraticTerm(1.0, x3, x3))
     problem.addConstraint(e9)
     
     return problem
@@ -257,24 +257,24 @@ class TestEx1223b(OptimizationTestBase):
 
 from pathlib import Path
 
-# MIP solver enum mapping (uses shotpy.MIPSolver enum)
+# MIP solver enum mapping (uses SHOTpy.MIPSolver enum)
 def get_mip_solver_enum(solver_name):
     """Get the MIPSolver enum value for a solver name."""
     mapping = {
-        "cplex": shotpy.MIPSolver.Cplex,
-        "gurobi": shotpy.MIPSolver.Gurobi,
-        "cbc": shotpy.MIPSolver.Cbc,
+        "cplex": SHOTpy.MIPSolver.Cplex,
+        "gurobi": SHOTpy.MIPSolver.Gurobi,
+        "cbc": SHOTpy.MIPSolver.Cbc,
         # "highs": not yet in enum
     }
     return mapping.get(solver_name.lower())
 
-# NLP solver enum mapping (uses shotpy.PrimalNLPSolver enum)
+# NLP solver enum mapping (uses SHOTpy.PrimalNLPSolver enum)
 def get_nlp_solver_enum(solver_name):
     """Get the PrimalNLPSolver enum value for a solver name."""
     mapping = {
-        "ipopt": shotpy.PrimalNLPSolver.Ipopt,
-        "gams": shotpy.PrimalNLPSolver.GAMS,
-        "shot": shotpy.PrimalNLPSolver.SHOT,
+        "ipopt": SHOTpy.PrimalNLPSolver.Ipopt,
+        "gams": SHOTpy.PrimalNLPSolver.GAMS,
+        "shot": SHOTpy.PrimalNLPSolver.SHOT,
     }
     return mapping.get(solver_name.lower())
 
@@ -329,7 +329,7 @@ def solve_file_and_verify(filename, expected_obj, tolerance=0.01, mip_solver=Non
     Returns:
         The solver instance after solving
     """
-    solver = shotpy.Solver()
+    solver = SHOTpy.Solver()
     filepath = get_data_dir() / filename
     
     if not filepath.exists():
@@ -363,9 +363,9 @@ def solve_file_and_verify(filename, expected_obj, tolerance=0.01, mip_solver=Non
 def _get_format_support(fmt):
     """Check if a file format is supported."""
     format_support = {
-        "osil": shotpy.HAS_OSIL,
-        "gms": shotpy.HAS_GAMS,
-        "nl": shotpy.HAS_AMPL,
+        "osil": SHOTpy.HAS_OSIL,
+        "gms": SHOTpy.HAS_GAMS,
+        "nl": SHOTpy.HAS_AMPL,
     }
     return format_support.get(fmt, False)
 
@@ -373,10 +373,10 @@ def _get_format_support(fmt):
 def _get_mip_solver_support(solver_name):
     """Check if a MIP solver is supported."""
     solver_support = {
-        "cplex": shotpy.HAS_CPLEX,
-        "gurobi": shotpy.HAS_GUROBI,
-        "cbc": shotpy.HAS_CBC,
-        "highs": shotpy.HAS_HIGHS,
+        "cplex": SHOTpy.HAS_CPLEX,
+        "gurobi": SHOTpy.HAS_GUROBI,
+        "cbc": SHOTpy.HAS_CBC,
+        "highs": SHOTpy.HAS_HIGHS,
     }
     return solver_support.get(solver_name.lower(), False)
 
@@ -384,9 +384,9 @@ def _get_mip_solver_support(solver_name):
 def _get_nlp_solver_support(solver_name):
     """Check if an NLP solver is supported."""
     solver_support = {
-        "ipopt": shotpy.HAS_IPOPT,
-        "gams": shotpy.HAS_GAMS_NLP,
-        "shot": shotpy.HAS_SHOT_NLP,
+        "ipopt": SHOTpy.HAS_IPOPT,
+        "gams": SHOTpy.HAS_GAMS_NLP,
+        "shot": SHOTpy.HAS_SHOT_NLP,
     }
     return solver_support.get(solver_name.lower(), False)
 

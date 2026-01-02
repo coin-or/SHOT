@@ -6,13 +6,13 @@ parent = str(Path(__file__).absolute().parent.parent)
 build_folder = os.path.join(parent, 'build')
 sys.path.append(build_folder)
 
-# Import shotpy, which in this case is shotpy lib file from build folder
-import shotpy
+# Import SHOTpy, which in this case is SHOTpy lib file from build folder
+import SHOTpy
 
 
 def solveProblem(problemFile, correctObjectiveValue):
         
-    solver = shotpy.Solver()
+    solver = SHOTpy.Solver()
     loglevel = 6
     solver.updateSetting('Console.LogLevel', 'Output', loglevel)
     

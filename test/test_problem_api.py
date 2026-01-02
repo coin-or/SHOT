@@ -19,7 +19,7 @@ build_dir = os.path.join(os.path.dirname(__file__), '..', 'build', 'debug')
 if os.path.exists(build_dir):
     sys.path.insert(0, build_dir)
 
-import shotpy as shot
+import SHOTpy as shot
 
 def example_linear_problem():
     """Simple LP: minimize x + y subject to constraints"""

@@ -11,14 +11,14 @@ class TestLinearConstraints:
 
     def test_create_linear_constraint(self, problem):
         """Test creating a basic linear constraint."""
-        import shotpy
+        import SHOTpy
         
-        x = shotpy.Variable("x", 0, shotpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         
         # x <= 5
-        c = shotpy.LinearConstraint(0, "c1", -shotpy.SHOT_DBL_MAX, 5.0)
-        c.add(shotpy.LinearTerm(1.0, x))
+        c = SHOTpy.LinearConstraint(0, "c1", -SHOTpy.SHOT_DBL_MAX, 5.0)
+        c.add(SHOTpy.LinearTerm(1.0, x))
         problem.addConstraint(c)
         
         set_default_objective(problem, [x])
@@ -29,17 +29,17 @@ class TestLinearConstraints:
 
     def test_create_equality_constraint(self, problem):
         """Test creating an equality constraint."""
-        import shotpy
+        import SHOTpy
         
-        x = shotpy.Variable("x", 0, shotpy.VariableType.Real, 0.0, 10.0)
-        y = shotpy.Variable("y", 1, shotpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
         # x + y = 5
-        c = shotpy.LinearConstraint(0, "eq1", 5.0, 5.0)
-        c.add(shotpy.LinearTerm(1.0, x))
-        c.add(shotpy.LinearTerm(1.0, y))
+        c = SHOTpy.LinearConstraint(0, "eq1", 5.0, 5.0)
+        c.add(SHOTpy.LinearTerm(1.0, x))
+        c.add(SHOTpy.LinearTerm(1.0, y))
         problem.addConstraint(c)
         
         set_default_objective(problem, [x, y])
@@ -49,20 +49,20 @@ class TestLinearConstraints:
 
     def test_multiple_linear_terms(self, problem):
         """Test constraint with multiple linear terms."""
-        import shotpy
+        import SHOTpy
         
-        x = shotpy.Variable("x", 0, shotpy.VariableType.Real, 0.0, 10.0)
-        y = shotpy.Variable("y", 1, shotpy.VariableType.Real, 0.0, 10.0)
-        z = shotpy.Variable("z", 2, shotpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
+        z = SHOTpy.Variable("z", 2, SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         problem.addVariable(z)
         
         # 2x + 3y - z <= 10
-        c = shotpy.LinearConstraint(0, "c1", -shotpy.SHOT_DBL_MAX, 10.0)
-        c.add(shotpy.LinearTerm(2.0, x))
-        c.add(shotpy.LinearTerm(3.0, y))
-        c.add(shotpy.LinearTerm(-1.0, z))
+        c = SHOTpy.LinearConstraint(0, "c1", -SHOTpy.SHOT_DBL_MAX, 10.0)
+        c.add(SHOTpy.LinearTerm(2.0, x))
+        c.add(SHOTpy.LinearTerm(3.0, y))
+        c.add(SHOTpy.LinearTerm(-1.0, z))
         problem.addConstraint(c)
         
         set_default_objective(problem, [x, y, z])
@@ -78,14 +78,14 @@ class TestQuadraticConstraints:
 
     def test_create_quadratic_constraint(self, problem):
         """Test creating a basic quadratic constraint."""
-        import shotpy
+        import SHOTpy
         
-        x = shotpy.Variable("x", 0, shotpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         
         # x^2 <= 25
-        c = shotpy.QuadraticConstraint(0, "q1", -shotpy.SHOT_DBL_MAX, 25.0)
-        c.add(shotpy.QuadraticTerm(1.0, x, x))
+        c = SHOTpy.QuadraticConstraint(0, "q1", -SHOTpy.SHOT_DBL_MAX, 25.0)
+        c.add(SHOTpy.QuadraticTerm(1.0, x, x))
         problem.addConstraint(c)
         
         set_default_objective(problem, [x])
@@ -96,18 +96,18 @@ class TestQuadraticConstraints:
 
     def test_quadratic_with_cross_term(self, problem):
         """Test quadratic constraint with cross term."""
-        import shotpy
+        import SHOTpy
         
-        x = shotpy.Variable("x", 0, shotpy.VariableType.Real, 0.0, 10.0)
-        y = shotpy.Variable("y", 1, shotpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
         # x^2 + 2xy + y^2 <= 100 (i.e., (x+y)^2 <= 100)
-        c = shotpy.QuadraticConstraint(0, "q1", -shotpy.SHOT_DBL_MAX, 100.0)
-        c.add(shotpy.QuadraticTerm(1.0, x, x))
-        c.add(shotpy.QuadraticTerm(2.0, x, y))
-        c.add(shotpy.QuadraticTerm(1.0, y, y))
+        c = SHOTpy.QuadraticConstraint(0, "q1", -SHOTpy.SHOT_DBL_MAX, 100.0)
+        c.add(SHOTpy.QuadraticTerm(1.0, x, x))
+        c.add(SHOTpy.QuadraticTerm(2.0, x, y))
+        c.add(SHOTpy.QuadraticTerm(1.0, y, y))
         problem.addConstraint(c)
         
         set_default_objective(problem, [x, y])
@@ -124,17 +124,17 @@ class TestQuadraticConstraints:
         in the linear terms collection - but this API doesn't expose that directly.
         This test verifies that quadratic constraints work correctly.
         """
-        import shotpy
+        import SHOTpy
         
-        x = shotpy.Variable("x", 0, shotpy.VariableType.Real, 0.0, 10.0)
-        y = shotpy.Variable("y", 1, shotpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
         # x^2 + y^2 <= 10 (pure quadratic)
-        c = shotpy.QuadraticConstraint(0, "q1", -shotpy.SHOT_DBL_MAX, 10.0)
-        c.add(shotpy.QuadraticTerm(1.0, x, x))
-        c.add(shotpy.QuadraticTerm(1.0, y, y))
+        c = SHOTpy.QuadraticConstraint(0, "q1", -SHOTpy.SHOT_DBL_MAX, 10.0)
+        c.add(SHOTpy.QuadraticTerm(1.0, x, x))
+        c.add(SHOTpy.QuadraticTerm(1.0, y, y))
         problem.addConstraint(c)
         
         set_default_objective(problem, [x, y])
@@ -149,14 +149,14 @@ class TestNonlinearConstraints:
 
     def test_create_nonlinear_constraint(self, problem):
         """Test creating a basic nonlinear constraint."""
-        import shotpy
+        import SHOTpy
         
-        x = shotpy.Variable("x", 0, shotpy.VariableType.Real, 1.0, 10.0)
+        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 1.0, 10.0)
         problem.addVariable(x)
         
         # log(x) <= 2
-        c = shotpy.NonlinearConstraint(0, "nl1", -shotpy.SHOT_DBL_MAX, 2.0)
-        c.add(shotpy.log(x))
+        c = SHOTpy.NonlinearConstraint(0, "nl1", -SHOTpy.SHOT_DBL_MAX, 2.0)
+        c.add(SHOTpy.log(x))
         problem.addConstraint(c)
         
         set_default_objective(problem, [x])
@@ -167,16 +167,16 @@ class TestNonlinearConstraints:
 
     def test_nonlinear_with_multiple_variables(self, problem):
         """Test nonlinear constraint with multiple variables."""
-        import shotpy
+        import SHOTpy
         
-        x = shotpy.Variable("x", 0, shotpy.VariableType.Real, 0.0, 10.0)
-        y = shotpy.Variable("y", 1, shotpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
         # exp(x) + exp(y) <= 100
-        c = shotpy.NonlinearConstraint(0, "nl1", -shotpy.SHOT_DBL_MAX, 100.0)
-        c.add(shotpy.exp(x) + shotpy.exp(y))
+        c = SHOTpy.NonlinearConstraint(0, "nl1", -SHOTpy.SHOT_DBL_MAX, 100.0)
+        c.add(SHOTpy.exp(x) + SHOTpy.exp(y))
         problem.addConstraint(c)
         
         set_default_objective(problem, [x, y])
@@ -190,23 +190,23 @@ class TestMixedConstraints:
 
     def test_linear_and_quadratic(self, problem):
         """Test problem with both linear and quadratic constraints."""
-        import shotpy
+        import SHOTpy
         
-        x = shotpy.Variable("x", 0, shotpy.VariableType.Real, 0.0, 10.0)
-        y = shotpy.Variable("y", 1, shotpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
         # Linear: x + y <= 5
-        c1 = shotpy.LinearConstraint(0, "lin1", -shotpy.SHOT_DBL_MAX, 5.0)
-        c1.add(shotpy.LinearTerm(1.0, x))
-        c1.add(shotpy.LinearTerm(1.0, y))
+        c1 = SHOTpy.LinearConstraint(0, "lin1", -SHOTpy.SHOT_DBL_MAX, 5.0)
+        c1.add(SHOTpy.LinearTerm(1.0, x))
+        c1.add(SHOTpy.LinearTerm(1.0, y))
         problem.addConstraint(c1)
         
         # Quadratic: x^2 + y^2 <= 10
-        c2 = shotpy.QuadraticConstraint(1, "quad1", -shotpy.SHOT_DBL_MAX, 10.0)
-        c2.add(shotpy.QuadraticTerm(1.0, x, x))
-        c2.add(shotpy.QuadraticTerm(1.0, y, y))
+        c2 = SHOTpy.QuadraticConstraint(1, "quad1", -SHOTpy.SHOT_DBL_MAX, 10.0)
+        c2.add(SHOTpy.QuadraticTerm(1.0, x, x))
+        c2.add(SHOTpy.QuadraticTerm(1.0, y, y))
         problem.addConstraint(c2)
         
         set_default_objective(problem, [x, y])
@@ -217,34 +217,34 @@ class TestMixedConstraints:
 
     def test_all_constraint_types(self, problem):
         """Test problem with linear, quadratic, and nonlinear constraints."""
-        import shotpy
+        import SHOTpy
         
-        x = shotpy.Variable("x", 0, shotpy.VariableType.Real, 1.0, 10.0)
-        y = shotpy.Variable("y", 1, shotpy.VariableType.Real, 1.0, 10.0)
+        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 1.0, 10.0)
+        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 1.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
         # Linear objective
-        obj = shotpy.LinearObjectiveFunction(shotpy.ObjectiveDirection.Minimize)
-        obj.add(shotpy.LinearTerm(1.0, x))
-        obj.add(shotpy.LinearTerm(1.0, y))
+        obj = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
+        obj.add(SHOTpy.LinearTerm(1.0, x))
+        obj.add(SHOTpy.LinearTerm(1.0, y))
         problem.setObjective(obj)
         
         # Linear: x + y <= 10
-        c1 = shotpy.LinearConstraint(0, "lin", -shotpy.SHOT_DBL_MAX, 10.0)
-        c1.add(shotpy.LinearTerm(1.0, x))
-        c1.add(shotpy.LinearTerm(1.0, y))
+        c1 = SHOTpy.LinearConstraint(0, "lin", -SHOTpy.SHOT_DBL_MAX, 10.0)
+        c1.add(SHOTpy.LinearTerm(1.0, x))
+        c1.add(SHOTpy.LinearTerm(1.0, y))
         problem.addConstraint(c1)
         
         # Quadratic: x^2 + y^2 <= 50
-        c2 = shotpy.QuadraticConstraint(1, "quad", -shotpy.SHOT_DBL_MAX, 50.0)
-        c2.add(shotpy.QuadraticTerm(1.0, x, x))
-        c2.add(shotpy.QuadraticTerm(1.0, y, y))
+        c2 = SHOTpy.QuadraticConstraint(1, "quad", -SHOTpy.SHOT_DBL_MAX, 50.0)
+        c2.add(SHOTpy.QuadraticTerm(1.0, x, x))
+        c2.add(SHOTpy.QuadraticTerm(1.0, y, y))
         problem.addConstraint(c2)
         
         # Nonlinear: log(x*y) >= 0
-        c3 = shotpy.NonlinearConstraint(2, "nonlin", 0.0, shotpy.SHOT_DBL_MAX)
-        c3.add(shotpy.log(x * y))
+        c3 = SHOTpy.NonlinearConstraint(2, "nonlin", 0.0, SHOTpy.SHOT_DBL_MAX)
+        c3.add(SHOTpy.log(x * y))
         problem.addConstraint(c3)
         
         problem.finalize()
