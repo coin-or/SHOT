@@ -18,7 +18,7 @@
 #include "../Utilities.h"
 #include "../Enums.h"
 
-#include "../Model/Simplifications.h"
+#include "../Model/Problem.h"
 
 #include "GamsNLinstr.h"
 #ifdef GAMS_BUILD
@@ -364,16 +364,6 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem)
             env->timing->stopTimer("ProblemInitialization");
             return (E_ProblemCreationStatus::ErrorInConstraints);
         }
-
-        problem->updateProperties();
-
-        bool extractMonomialTerms = env->settings->getSetting<bool>("Reformulation.Monomials.Extract", "Model");
-        bool extractSignomialTerms = env->settings->getSetting<bool>("Reformulation.Signomials.Extract", "Model");
-        bool extractQuadraticTerms
-            = (env->settings->getSetting<int>("Reformulation.Quadratics.ExtractStrategy", "Model")
-                >= static_cast<int>(ES_QuadraticTermsExtractStrategy::ExtractTermsToSame));
-
-        simplifyNonlinearExpressions(problem, extractMonomialTerms, extractSignomialTerms, extractQuadraticTerms);
 
         problem->finalize();
     }

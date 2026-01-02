@@ -14,7 +14,6 @@
 #include "../src/Structs.h"
 #include "../src/TaskHandler.h"
 #include "../src/Utilities.h"
-#include "../src/Model/Simplifications.h"
 
 #include "../src/Model/Variables.h"
 #include "../src/Model/Terms.h"
@@ -336,11 +335,7 @@ bool CreateAndSolveProblem()
     e9->add(std::make_shared<QuadraticTerm>(1.0, x3, x3));
     problem->add(e9);
 
-    // Simplify the nonlinear expressions (and extract e.g. the quadratics)
-    simplifyNonlinearExpressions(problem, true, true, true);
-
-    // Finalize the problem object (after this no changes should be made)
-    problem->updateProperties();
+    // Finalize the problem object (this now includes simplifyNonlinearExpressions and updateProperties)
     problem->finalize();
     solver->setProblem(problem);
 

@@ -850,6 +850,15 @@ Problem::~Problem()
 
 void Problem::finalize()
 {
+    // Extract quadratic, monomial and signomial terms from nonlinear expressions based on settings
+    bool extractMonomialTerms = env->settings->getSetting<bool>("Reformulation.Monomials.Extract", "Model");
+    bool extractSignomialTerms = env->settings->getSetting<bool>("Reformulation.Signomials.Extract", "Model");
+    bool extractQuadraticTerms = (env->settings->getSetting<int>("Reformulation.Quadratics.ExtractStrategy", "Model")
+        >= static_cast<int>(ES_QuadraticTermsExtractStrategy::ExtractTermsToSame));
+
+    simplifyNonlinearExpressions(
+        shared_from_this(), extractMonomialTerms, extractSignomialTerms, extractQuadraticTerms);
+
     updateProperties();
     updateFactorableFunctions();
     assert(verifyOwnership());
@@ -2737,8 +2746,10 @@ ProblemPtr Problem::createCopy(
         destinationProblem->add(std::move(SOS));
     }
 
+    // Note: We don't call finalize() here since the source problem was already simplified.
+    // We only need to update properties and factorable functions for the copy.
     destinationProblem->updateProperties();
-    destinationProblem->finalize();
+    destinationProblem->updateFactorableFunctions();
 
     return (destinationProblem);
 }
