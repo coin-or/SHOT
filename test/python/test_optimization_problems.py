@@ -238,7 +238,7 @@ class TestEx1223b(OptimizationTestBase):
 # File-based Problem Tests
 # =============================================================================
 # 
-# To add a new test problem, simply add an entry to BENCHMARK_PROBLEMS below.
+# To add a new test problem, simply add an entry to TEST_PROBLEMS below.
 # Each entry specifies:
 #   - name: Problem name (used to find files like name.osil, name.gms, name.nl)
 #   - expected_obj: Known optimal objective value (from MINLPLib or other source)
@@ -371,33 +371,3 @@ class TestProblemsFromFile:
     def test_solve_problem(self, filename, expected_obj, tolerance):
         """Test solving a problem from file and verify optimal objective."""
         solve_file_and_verify(filename, expected_obj, tolerance)
-#     problem.name = "problem_name"
-#     
-#     # Create variables
-#     # ...
-#     
-#     # Create objective
-#     # ...
-#     
-#     # Create constraints
-#     # ...
-#     
-#     return problem
-#
-#
-# class TestNewProblem(OptimizationTestBase):
-#     """Tests for the new optimization problem."""
-#     
-#     EXPECTED_OBJECTIVE = X.XXX
-#     OBJECTIVE_TOLERANCE = 0.01
-#     
-#     def test_new_problem_solve(self):
-#         """Test solving new_problem and verify optimal objective."""
-#         solver, env, problem = self.create_solver_and_problem()
-#         build_new_problem(env, problem)
-#         
-#         self.solve_and_verify(
-#             solver, problem,
-#             expected_obj=self.EXPECTED_OBJECTIVE,
-#             tolerance=self.OBJECTIVE_TOLERANCE
-#         )
