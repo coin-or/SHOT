@@ -636,6 +636,9 @@ bool Solver::selectStrategy()
 
 bool Solver::solveProblem()
 {
+    // Verify settings in case they were changed after setProblem() was called
+    verifySettings();
+
     if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
     {
         fs::filesystem::path filename(env->settings->getSetting<std::string>("Debug.Path", "Output"));
@@ -1760,11 +1763,13 @@ void Solver::verifySettings()
 #endif
 
     if((env->settings->getSetting<int>("SourceFormat", "Input") == static_cast<int>(ES_SourceFormat::OSiL)
-           || env->settings->getSetting<int>("SourceFormat", "Input") == static_cast<int>(ES_SourceFormat::NL))
+           || env->settings->getSetting<int>("SourceFormat", "Input") == static_cast<int>(ES_SourceFormat::NL)
+           || env->settings->getSetting<int>("SourceFormat", "Input") == static_cast<int>(ES_SourceFormat::None))
         && static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("FixedInteger.Solver", "Primal"))
             == ES_PrimalNLPSolver::GAMS)
     {
-        env->output->outputWarning(" Cannot use GAMS NLP solvers with problem files in OSiL or nl formats.");
+        env->output->outputWarning(
+            " Cannot use GAMS NLP solvers with problems not originating from GAMS (OSiL, nl, or API-built problems).");
         NLPSolverDefined = false;
     }
 

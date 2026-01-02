@@ -389,7 +389,8 @@ def _get_nlp_solver_support(solver_name):
 XFAIL_MIP_SOLVERS = {"highs": "HiGHS support not yet implemented"}
 
 # NLP solvers that are not yet implemented or have issues (will be skipped to avoid segfault)
-SKIP_NLP_SOLVERS = {"gams": "GAMS NLP solver causes segfault - needs investigation"}
+# Note: GAMS NLP solver can only be used with GAMS format files - this is handled separately
+SKIP_NLP_SOLVERS = {}
 
 # NLP solvers that are implemented but may have issues (will be marked as xfail)
 XFAIL_NLP_SOLVERS = {}
@@ -436,6 +437,10 @@ def _generate_test_cases():
                     # Add skip mark if NLP solver not supported
                     if nlp_solver and not _get_nlp_solver_support(nlp_solver):
                         marks.append(pytest.mark.skip(reason=f"{nlp_solver.upper()} NLP solver not available"))
+                    
+                    # GAMS NLP solver can only be used with GAMS format files
+                    if nlp_solver and nlp_solver.lower() == "gams" and fmt != "gms":
+                        marks.append(pytest.mark.skip(reason="GAMS NLP solver only works with GAMS format files"))
                     
                     # Add skip mark for NLP solvers known to cause issues (like segfaults)
                     if nlp_solver and nlp_solver.lower() in SKIP_NLP_SOLVERS:
