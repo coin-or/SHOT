@@ -124,6 +124,51 @@ PYBIND11_MODULE(shotpy, m)
         },
         "Returns a list of modeling systems supported in this build");
 
+    // ===== MIP Solver Availability =====
+    // These constants indicate which MIP solvers are available in this build
+#ifdef HAS_CPLEX
+    m.attr("HAS_CPLEX") = true;
+#else
+    m.attr("HAS_CPLEX") = false;
+#endif
+
+#ifdef HAS_GUROBI
+    m.attr("HAS_GUROBI") = true;
+#else
+    m.attr("HAS_GUROBI") = false;
+#endif
+
+#ifdef HAS_CBC
+    m.attr("HAS_CBC") = true;
+#else
+    m.attr("HAS_CBC") = false;
+#endif
+
+    // HiGHS support will be added in a future version
+    m.attr("HAS_HIGHS") = false;
+
+    // Function to get list of supported MIP solvers
+    m.def(
+        "getSupportedMIPSolvers",
+        []() {
+            std::vector<std::string> solvers;
+#ifdef HAS_CPLEX
+            solvers.push_back("CPLEX");
+#endif
+#ifdef HAS_GUROBI
+            solvers.push_back("Gurobi");
+#endif
+#ifdef HAS_CBC
+            solvers.push_back("Cbc");
+#endif
+            // HiGHS support will be added in a future version
+            // #ifdef HAS_HIGHS
+            //             solvers.push_back("HiGHS");
+            // #endif
+            return solvers;
+        },
+        "Returns a list of MIP solvers supported in this build");
+
     // ===== Variable Types Enum =====
     py::enum_<E_VariableType>(m, "VariableType")
         .value("Real", E_VariableType::Real)

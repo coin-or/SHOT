@@ -52,6 +52,66 @@ class TestConstants:
         assert isinstance(systems, list)
         assert 'OSiL' in systems
 
+    def test_has_cplex_constant(self):
+        """Test that HAS_CPLEX is defined and is a boolean."""
+        import shotpy
+        
+        assert hasattr(shotpy, 'HAS_CPLEX')
+        assert isinstance(shotpy.HAS_CPLEX, bool)
+
+    def test_has_gurobi_constant(self):
+        """Test that HAS_GUROBI is defined and is a boolean."""
+        import shotpy
+        
+        assert hasattr(shotpy, 'HAS_GUROBI')
+        assert isinstance(shotpy.HAS_GUROBI, bool)
+
+    def test_has_cbc_constant(self):
+        """Test that HAS_CBC is defined and is a boolean."""
+        import shotpy
+        
+        assert hasattr(shotpy, 'HAS_CBC')
+        assert isinstance(shotpy.HAS_CBC, bool)
+
+    def test_has_highs_constant(self):
+        """Test that HAS_HIGHS is defined and is a boolean."""
+        import shotpy
+        
+        assert hasattr(shotpy, 'HAS_HIGHS')
+        assert isinstance(shotpy.HAS_HIGHS, bool)
+
+    @pytest.mark.xfail(reason="HiGHS support not yet implemented")
+    def test_highs_available(self):
+        """Test that HiGHS solver is available."""
+        import shotpy
+        
+        assert shotpy.HAS_HIGHS == True
+
+    def test_get_supported_mip_solvers(self):
+        """Test that getSupportedMIPSolvers function exists and returns a list."""
+        import shotpy
+        
+        assert hasattr(shotpy, 'getSupportedMIPSolvers')
+        solvers = shotpy.getSupportedMIPSolvers()
+        assert isinstance(solvers, list)
+        # At least one MIP solver must be available (required by SHOT)
+        assert len(solvers) >= 1
+
+    def test_mip_solver_constants_match_function(self):
+        """Test that MIP solver constants are consistent with getSupportedMIPSolvers."""
+        import shotpy
+        
+        solvers = shotpy.getSupportedMIPSolvers()
+        
+        if shotpy.HAS_CPLEX:
+            assert 'CPLEX' in solvers
+        if shotpy.HAS_GUROBI:
+            assert 'Gurobi' in solvers
+        if shotpy.HAS_CBC:
+            assert 'Cbc' in solvers
+        if shotpy.HAS_HIGHS:
+            assert 'HiGHS' in solvers
+
 
 class TestEnums:
     """Tests for SHOT enumerations."""
