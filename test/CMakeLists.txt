@@ -17,7 +17,8 @@ set(Model_parts
     7
     8
     9
-    10) # The different parts of each test (if any)
+    10
+    11) # The different parts of each test (if any)
 set(Settings_parts 1 2)
 
 if(HAS_CBC)
@@ -192,3 +193,81 @@ execute_process(COMMAND ${CMAKE_COMMAND}
                         copy_directory
                         ${CMAKE_CURRENT_SOURCE_DIR}/data
                         ${CMAKE_CURRENT_BINARY_DIR}/data)
+
+# ===== Python API Tests =====
+# Add Python tests if shotpy target exists (Python bindings are built)
+if(TARGET shotpy)
+  # Find Python interpreter
+  find_package(Python3 COMPONENTS Interpreter)
+  
+  if(Python3_FOUND)
+    # Check if pytest is available
+    execute_process(
+      COMMAND ${Python3_EXECUTABLE} -c "import pytest"
+      RESULT_VARIABLE PYTEST_FOUND
+      OUTPUT_QUIET
+      ERROR_QUIET
+    )
+    
+    if(PYTEST_FOUND EQUAL 0)
+      message(STATUS "pytest found - Python API tests will be added")
+      
+      # Copy Python test files to build directory
+      execute_process(COMMAND ${CMAKE_COMMAND}
+                              -E
+                              copy_directory
+                              ${CMAKE_CURRENT_SOURCE_DIR}/python
+                              ${CMAKE_CURRENT_BINARY_DIR}/python)
+      
+      # Add a single test that runs all Python tests via pytest
+      add_test(
+        NAME Python_API_Tests
+        COMMAND ${Python3_EXECUTABLE} -m pytest 
+                ${CMAKE_CURRENT_BINARY_DIR}/python
+                -v
+                --tb=short
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+      )
+      
+      # Set environment so pytest can find shotpy module
+      set_tests_properties(Python_API_Tests PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}"
+        FAIL_REGULAR_EXPRESSION "FAILED;ERROR"
+        TIMEOUT 300
+      )
+      
+      # Individual Python test files (for more granular testing)
+      set(PYTHON_TEST_FILES
+        test_module_api
+        test_variables_expressions
+        test_constraints
+        test_objectives
+        test_settings
+        test_problem_io
+        test_solve_problems
+      )
+      
+      foreach(pytest_file ${PYTHON_TEST_FILES})
+        add_test(
+          NAME Python_${pytest_file}
+          COMMAND ${Python3_EXECUTABLE} -m pytest 
+                  ${CMAKE_CURRENT_BINARY_DIR}/python/${pytest_file}.py
+                  -v
+                  --tb=short
+          WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        )
+        set_tests_properties(Python_${pytest_file} PROPERTIES
+          ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}"
+          FAIL_REGULAR_EXPRESSION "FAILED;ERROR"
+          TIMEOUT 120
+        )
+      endforeach()
+      
+    else()
+      message(STATUS "pytest not found - Python API tests will be skipped")
+      message(STATUS "Install pytest with: pip install pytest")
+    endif()
+  else()
+    message(STATUS "Python3 not found - Python API tests will be skipped")
+  endif()
+endif()
