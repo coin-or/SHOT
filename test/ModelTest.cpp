@@ -461,6 +461,13 @@ bool ModelTestCreateProblem()
     std::cout << '\n';
     std::cout << "Quadratic constraint " << quadraticConstraint << " created\n";
 
+    // Create separate linear terms for the nonlinear constraint (don't share with linearConstraint)
+    SHOT::LinearTermPtr nlLinearTerm1 = std::make_shared<SHOT::LinearTerm>(-1, var_x);
+    SHOT::LinearTermPtr nlLinearTerm2 = std::make_shared<SHOT::LinearTerm>(1.2, var_y);
+    SHOT::LinearTerms nlLinearTerms;
+    nlLinearTerms.add(nlLinearTerm1);
+    nlLinearTerms.add(nlLinearTerm2);
+
     SHOT::NonlinearExpressionPtr exprPlus
         = std::make_shared<SHOT::ExpressionSum>(expressionVariable_z, expressionVariable_x);
     SHOT::NonlinearExpressionPtr exprConstant = std::make_shared<SHOT::ExpressionConstant>(3);
@@ -474,7 +481,7 @@ bool ModelTestCreateProblem()
     SHOT::NonlinearExpressionPtr exprSum = std::make_shared<SHOT::ExpressionSum>(expressions);
 
     SHOT::NonlinearConstraintPtr nonlinearConstraint
-        = std::make_shared<SHOT::NonlinearConstraint>(2, "nlconstr", linearTerms, exprSum, -10.0, 20.0);
+        = std::make_shared<SHOT::NonlinearConstraint>(2, "nlconstr", nlLinearTerms, exprSum, -10.0, 20.0);
     problem->add(nonlinearConstraint);
 
     std::cout << '\n';
@@ -495,6 +502,14 @@ bool ModelTestCreateProblem()
     std::cout << '\n';
     std::cout << "Finalizing problem:\n";
     problem->finalize();
+
+    // After finalize(), constraints may have been replaced with different types
+    // (e.g., NonlinearConstraint -> QuadraticConstraint if the expression was bilinear).
+    // We need to get fresh references from the problem.
+    auto finalLinearConstraint = std::dynamic_pointer_cast<SHOT::NumericConstraint>(problem->getConstraint(0));
+    auto finalQuadraticConstraint = std::dynamic_pointer_cast<SHOT::NumericConstraint>(problem->getConstraint(1));
+    auto finalNonlinearConstraint = std::dynamic_pointer_cast<SHOT::NumericConstraint>(problem->getConstraint(2));
+    auto finalNonlinearConstraint2 = std::dynamic_pointer_cast<SHOT::NumericConstraint>(problem->getConstraint(3));
 
     std::cout << '\n';
     std::cout << "Problem created:\n\n";
@@ -526,7 +541,7 @@ bool ModelTestCreateProblem()
     }
 
     std::cout << "\nCalculating gradient for function in linear constraint:\n";
-    auto gradientLinear = linearConstraint->calculateGradient(point, true);
+    auto gradientLinear = finalLinearConstraint->calculateGradient(point, true);
 
     for(auto const& G : gradientLinear)
     {
@@ -534,7 +549,7 @@ bool ModelTestCreateProblem()
     }
 
     std::cout << "\nCalculating Hessian for function in linear constraint (there should be none):\n";
-    auto hessianLinear = linearConstraint->calculateHessian(point, true);
+    auto hessianLinear = finalLinearConstraint->calculateHessian(point, true);
 
     if(hessianLinear.size() > 0)
     {
@@ -549,7 +564,7 @@ bool ModelTestCreateProblem()
     }
 
     std::cout << "\nCalculating gradient for function in quadratic constraint:\n";
-    auto gradientQuadratic = quadraticConstraint->calculateGradient(point, true);
+    auto gradientQuadratic = finalQuadraticConstraint->calculateGradient(point, true);
 
     for(auto const& G : gradientQuadratic)
     {
@@ -557,7 +572,7 @@ bool ModelTestCreateProblem()
     }
 
     std::cout << "\nCalculating hessian for function in quadratic constraint:\n";
-    auto hessianQuadratic = quadraticConstraint->calculateHessian(point, true);
+    auto hessianQuadratic = finalQuadraticConstraint->calculateHessian(point, true);
 
     for(auto const& H : hessianQuadratic)
     {
@@ -565,7 +580,7 @@ bool ModelTestCreateProblem()
     }
 
     std::cout << "\nCalculating gradient for function in first nonlinear constraint:\n";
-    auto gradientNonlinear = nonlinearConstraint->calculateGradient(point, true);
+    auto gradientNonlinear = finalNonlinearConstraint->calculateGradient(point, true);
 
     for(auto const& G : gradientNonlinear)
     {
@@ -573,7 +588,7 @@ bool ModelTestCreateProblem()
     }
 
     std::cout << "\nCalculating hessian for function in first nonlinear constraint (there should be one element):\n";
-    auto hessianNonlinear = nonlinearConstraint->calculateHessian(point, true);
+    auto hessianNonlinear = finalNonlinearConstraint->calculateHessian(point, true);
 
     for(auto const& H : hessianNonlinear)
     {
@@ -581,7 +596,7 @@ bool ModelTestCreateProblem()
     }
 
     std::cout << "\nCalculating gradient for function in second nonlinear constraint:\n";
-    auto gradientNonlinear2 = nonlinearConstraint2->calculateGradient(point, true);
+    auto gradientNonlinear2 = finalNonlinearConstraint2->calculateGradient(point, true);
 
     for(auto const& G : gradientNonlinear2)
     {
@@ -589,7 +604,7 @@ bool ModelTestCreateProblem()
     }
 
     std::cout << "\nCalculating hessian for function in second nonlinear constraint:\n";
-    auto hessianNonlinear2 = nonlinearConstraint2->calculateHessian(point, true);
+    auto hessianNonlinear2 = finalNonlinearConstraint2->calculateHessian(point, true);
 
     for(auto const& H : hessianNonlinear2)
     {
