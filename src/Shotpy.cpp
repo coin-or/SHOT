@@ -29,6 +29,7 @@
 #include "Model/Constraints.h"
 #include "Model/ObjectiveFunction.h"
 #include "Model/NonlinearExpressions.h"
+#include "Model/Simplifications.h"
 
 #include <sstream>
 
@@ -811,8 +812,15 @@ PYBIND11_MODULE(shotpy, m)
         .def(
             "setObjective", [](Problem& self, NonlinearObjectiveFunctionPtr obj) { self.add(obj); },
             py::arg("objective"))
-        // Finalize
-        .def("finalize", &Problem::finalize, "Finalize the problem and update all properties")
+        // Finalize - just call the basic finalize, don't extract terms yet
+        // The term extraction happens later during problem reformulation
+        .def(
+            "finalize",
+            [](Problem& self) {
+                // Just call the basic finalize which updates properties and factorable functions
+                self.finalize();
+            },
+            "Finalize the problem: update all properties")
         .def("updateProperties", &Problem::updateProperties, "Update problem properties")
         // Getters
         .def("getVariable", &Problem::getVariable, py::arg("index"))
@@ -821,25 +829,30 @@ PYBIND11_MODULE(shotpy, m)
         .def("getVariableLowerBounds", &Problem::getVariableLowerBounds)
         .def("getVariableUpperBounds", &Problem::getVariableUpperBounds)
         // String representation
-        .def("__repr__", [](ProblemPtr p) {
-            std::string repr = "<Problem";
-            if(!p->name.empty())
-                repr += " '" + p->name + "'";
-            repr += " vars=" + std::to_string(p->properties.numberOfVariables);
-            repr += " constrs=" + std::to_string(p->properties.numberOfNumericConstraints);
-            repr += ">";
-            return repr;
-        })
-        .def("__str__", [](ProblemPtr p) {
-            std::ostringstream oss;
-            oss << p;
-            return oss.str();
-        })
-        .def("toString", [](ProblemPtr p) {
-            std::ostringstream oss;
-            oss << p;
-            return oss.str();
-        }, "Get the full string representation of the problem");
+        .def("__repr__",
+            [](ProblemPtr p) {
+                std::string repr = "<Problem";
+                if(!p->name.empty())
+                    repr += " '" + p->name + "'";
+                repr += " vars=" + std::to_string(p->properties.numberOfVariables);
+                repr += " constrs=" + std::to_string(p->properties.numberOfNumericConstraints);
+                repr += ">";
+                return repr;
+            })
+        .def("__str__",
+            [](ProblemPtr p) {
+                std::ostringstream oss;
+                oss << p;
+                return oss.str();
+            })
+        .def(
+            "toString",
+            [](ProblemPtr p) {
+                std::ostringstream oss;
+                oss << p;
+                return oss.str();
+            },
+            "Get the full string representation of the problem");
 
     // ===== Variables Collection =====
     py::class_<Variables>(m, "Variables")
