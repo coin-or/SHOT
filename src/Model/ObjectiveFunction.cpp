@@ -554,7 +554,7 @@ void QuadraticObjectiveFunction::initializeHessianSparsityPattern()
         auto firstVariable
             = (T->firstVariable->index < T->secondVariable->index) ? T->firstVariable : T->secondVariable;
         auto secondVariable
-            = (T->firstVariable->index > T->secondVariable->index) ? T->secondVariable : T->firstVariable;
+            = (T->firstVariable->index < T->secondVariable->index) ? T->secondVariable : T->firstVariable;
 
         auto key = std::make_pair(firstVariable, secondVariable);
 
