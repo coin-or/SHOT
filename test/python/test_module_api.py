@@ -112,6 +112,51 @@ class TestConstants:
         if shotpy.HAS_HIGHS:
             assert 'HiGHS' in solvers
 
+    def test_has_ipopt_constant(self):
+        """Test that HAS_IPOPT is defined and is a boolean."""
+        import shotpy
+        
+        assert hasattr(shotpy, 'HAS_IPOPT')
+        assert isinstance(shotpy.HAS_IPOPT, bool)
+
+    def test_has_shot_nlp_constant(self):
+        """Test that HAS_SHOT_NLP is defined and is True (always available)."""
+        import shotpy
+        
+        assert hasattr(shotpy, 'HAS_SHOT_NLP')
+        assert shotpy.HAS_SHOT_NLP == True
+
+    def test_has_gams_nlp_constant(self):
+        """Test that HAS_GAMS_NLP is defined and is a boolean."""
+        import shotpy
+        
+        assert hasattr(shotpy, 'HAS_GAMS_NLP')
+        assert isinstance(shotpy.HAS_GAMS_NLP, bool)
+
+    def test_get_supported_nlp_solvers(self):
+        """Test that getSupportedNLPSolvers function exists and returns a list."""
+        import shotpy
+        
+        assert hasattr(shotpy, 'getSupportedNLPSolvers')
+        solvers = shotpy.getSupportedNLPSolvers()
+        assert isinstance(solvers, list)
+        # SHOT NLP solver is always available
+        assert 'SHOT' in solvers
+
+    def test_nlp_solver_constants_match_function(self):
+        """Test that NLP solver constants are consistent with getSupportedNLPSolvers."""
+        import shotpy
+        
+        solvers = shotpy.getSupportedNLPSolvers()
+        
+        # SHOT is always available
+        assert 'SHOT' in solvers
+        
+        if shotpy.HAS_IPOPT:
+            assert 'Ipopt' in solvers
+        if shotpy.HAS_GAMS_NLP:
+            assert 'GAMS' in solvers
+
 
 class TestEnums:
     """Tests for SHOT enumerations."""

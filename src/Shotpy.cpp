@@ -169,6 +169,40 @@ PYBIND11_MODULE(shotpy, m)
         },
         "Returns a list of MIP solvers supported in this build");
 
+    // ===== NLP Solver Availability =====
+    // These constants indicate which NLP solvers are available in this build
+#ifdef HAS_IPOPT
+    m.attr("HAS_IPOPT") = true;
+#else
+    m.attr("HAS_IPOPT") = false;
+#endif
+
+    // SHOT's internal NLP solver is always available
+    m.attr("HAS_SHOT_NLP") = true;
+
+    // GAMS NLP solver is available when GAMS is available
+#ifdef HAS_GAMS
+    m.attr("HAS_GAMS_NLP") = true;
+#else
+    m.attr("HAS_GAMS_NLP") = false;
+#endif
+
+    // Function to get list of supported NLP solvers
+    m.def(
+        "getSupportedNLPSolvers",
+        []() {
+            std::vector<std::string> solvers;
+            solvers.push_back("SHOT");  // Always available
+#ifdef HAS_IPOPT
+            solvers.push_back("Ipopt");
+#endif
+#ifdef HAS_GAMS
+            solvers.push_back("GAMS");
+#endif
+            return solvers;
+        },
+        "Returns a list of NLP solvers supported in this build");
+
     // ===== Variable Types Enum =====
     py::enum_<E_VariableType>(m, "VariableType")
         .value("Real", E_VariableType::Real)
