@@ -1076,15 +1076,14 @@ PYBIND11_MODULE(SHOTpy, m)
         .def(
             "setObjective", [](Problem& self, NonlinearObjectiveFunctionPtr obj) { self.add(obj); },
             py::arg("objective"))
-        // Finalize - just call the basic finalize, don't extract terms yet
-        // The term extraction happens later during problem reformulation
+        // Finalize: simplify expressions, extract terms (linear, quadratic, monomial, signomial),
+        // update properties, and prepare factorable functions
         .def(
             "finalize",
             [](Problem& self) {
-                // Just call the basic finalize which updates properties and factorable functions
                 self.finalize();
             },
-            "Finalize the problem: update all properties")
+            "Finalize the problem: extract terms from expressions, update properties, and prepare for solving")
         .def("updateProperties", &Problem::updateProperties, "Update problem properties")
         // Getters
         .def("getVariable", &Problem::getVariable, py::arg("index"))

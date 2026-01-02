@@ -269,3 +269,74 @@ class TestSolverStatus:
         # Gap should be very small for optimal solution
         gap = solver.getAbsoluteObjectiveGap()
         assert gap < 0.01
+
+
+class TestFinalizeIdempotency:
+    """Tests to verify that finalize() is idempotent (calling multiple times has same effect)."""
+
+    def test_double_finalize_is_idempotent(self, solver, env):
+        """Test that calling finalize() twice produces the same result."""
+        import SHOTpy
+        
+        problem = SHOTpy.Problem(env)
+        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
+        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
+        problem.addVariable(x)
+        problem.addVariable(y)
+        
+        # Create a problem with various expression types
+        obj = SHOTpy.NonlinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
+        obj.add(x ** 2)  # Quadratic expression
+        obj.add(SHOTpy.log(x))  # Nonlinear expression
+        obj.add(2.0 * y)  # Linear expression
+        problem.setObjective(obj)
+        
+        c = SHOTpy.NonlinearConstraint(0, "c1", -SHOTpy.SHOT_DBL_MAX, 10.0)
+        c.add(x * y)  # Bilinear
+        c.add(SHOTpy.exp(y))  # Nonlinear
+        problem.addConstraint(c)
+        
+        # First finalize
+        problem.finalize()
+        output_after_first = problem.toString()
+        
+        # Second finalize - should not change anything
+        problem.finalize()
+        output_after_second = problem.toString()
+        
+        # Outputs should be identical
+        assert output_after_first == output_after_second, \
+            f"Double finalize changed the problem!\nAfter 1st:\n{output_after_first}\nAfter 2nd:\n{output_after_second}"
+
+    def test_triple_finalize_is_idempotent(self, solver, env):
+        """Test that calling finalize() three times produces the same result."""
+        import SHOTpy
+        
+        problem = SHOTpy.Problem(env)
+        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
+        problem.addVariable(x)
+        
+        # Expression that gets simplified: exp(log(x)) -> x
+        obj = SHOTpy.NonlinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
+        obj.add(SHOTpy.exp(SHOTpy.log(x)))
+        problem.setObjective(obj)
+        
+        c = SHOTpy.LinearConstraint(0, "bound", 0.1, SHOTpy.SHOT_DBL_MAX)
+        c.add(SHOTpy.LinearTerm(1.0, x))
+        problem.addConstraint(c)
+        
+        # First finalize
+        problem.finalize()
+        output1 = problem.toString()
+        
+        # Second finalize
+        problem.finalize()
+        output2 = problem.toString()
+        
+        # Third finalize
+        problem.finalize()
+        output3 = problem.toString()
+        
+        # All outputs should be identical
+        assert output1 == output2 == output3, \
+            f"Multiple finalize calls changed the problem!\n1st:\n{output1}\n2nd:\n{output2}\n3rd:\n{output3}"

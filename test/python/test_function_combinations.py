@@ -1022,18 +1022,203 @@ class TestTermTypeIndicatorsInOutput:
         assert all(indicators_found.values()), f"Not all indicators found: {indicators_found}"
 
 
+class TestExpressionSimplification:
+    """Tests for algebraic simplification of expressions during finalize()."""
+
+    def test_exp_log_simplifies_to_identity(self, solver, env):
+        """Test that exp(log(x)) simplifies to x for x > 0."""
+        import SHOTpy
+        
+        problem = SHOTpy.Problem(env)
+        # x must be > 0 for log(x) to be valid
+        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
+        problem.addVariable(x)
+        
+        # exp(log(x)) should simplify to x
+        expr = SHOTpy.exp(SHOTpy.log(x))
+        
+        obj = SHOTpy.NonlinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
+        obj.add(expr)
+        problem.setObjective(obj)
+        
+        c = SHOTpy.LinearConstraint(0, "bound", 0.1, SHOTpy.SHOT_DBL_MAX)
+        c.add(SHOTpy.LinearTerm(1.0, x))
+        problem.addConstraint(c)
+        
+        problem.finalize()
+        output = problem.toString()
+        
+        # After simplification: exp(log(x)) = x
+        # The output should show just x (linear), not exp or log
+        assert 'exp' not in output.lower(), f"exp should be simplified away: {output}"
+        assert 'log' not in output.lower() and 'ln' not in output.lower(), f"log should be simplified away: {output}"
+        # Should be linear now (just x)
+        assert '[L' in output, f"exp(log(x)) should simplify to linear x: {output}"
+
+    def test_log_exp_simplifies_to_identity(self, solver, env):
+        """Test that log(exp(y)) simplifies to y for all y."""
+        import SHOTpy
+        
+        problem = SHOTpy.Problem(env)
+        # y can be any real value
+        y = SHOTpy.Variable("y", 0, SHOTpy.VariableType.Real, -5.0, 5.0)
+        problem.addVariable(y)
+        
+        # log(exp(y)) should simplify to y
+        expr = SHOTpy.log(SHOTpy.exp(y))
+        
+        obj = SHOTpy.NonlinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
+        obj.add(expr)
+        problem.setObjective(obj)
+        
+        c = SHOTpy.LinearConstraint(0, "bound", -5.0, SHOTpy.SHOT_DBL_MAX)
+        c.add(SHOTpy.LinearTerm(1.0, y))
+        problem.addConstraint(c)
+        
+        problem.finalize()
+        output = problem.toString()
+        
+        # After simplification: log(exp(y)) = y
+        # The output should show just y (linear), not exp or log
+        assert 'exp' not in output.lower(), f"exp should be simplified away: {output}"
+        assert 'log' not in output.lower() and 'ln' not in output.lower(), f"log should be simplified away: {output}"
+        # Should be linear now (just y)
+        assert '[L' in output, f"log(exp(y)) should simplify to linear y: {output}"
+
+    def test_negative_plus_positive_cancels_to_zero(self, solver, env):
+        """Test that -x + x simplifies to 0 (linear term cancellation)."""
+        import SHOTpy
+        
+        problem = SHOTpy.Problem(env)
+        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
+        problem.addVariable(x)
+        
+        # -x + x should cancel to 0
+        expr = -x + x
+        
+        obj = SHOTpy.NonlinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
+        obj.add(expr)
+        problem.setObjective(obj)
+        
+        c = SHOTpy.LinearConstraint(0, "bound", 0.0, SHOTpy.SHOT_DBL_MAX)
+        c.add(SHOTpy.LinearTerm(1.0, x))
+        problem.addConstraint(c)
+        
+        problem.finalize()
+        output = problem.toString()
+        
+        # After simplification: -x + x = 0
+        # The objective should have empty term type indicators [     ] (no L, Q, M, S, E)
+        for line in output.split('\n'):
+            if 'minimize' in line.lower() or 'maximize' in line.lower():
+                continue
+            if line.strip().startswith('[') and 'bound' not in line:
+                # This is the objective line - check that term indicators are empty
+                # [     ] means no terms (everything cancelled)
+                assert '[     ]' in line, f"-x + x should cancel to 0 (empty terms): {line}"
+                break
+
+    def test_positive_minus_same_cancels_to_zero(self, solver, env):
+        """Test that x - x simplifies to 0."""
+        import SHOTpy
+        
+        problem = SHOTpy.Problem(env)
+        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
+        problem.addVariable(x)
+        
+        # x - x should cancel to 0
+        expr = x - x
+        
+        obj = SHOTpy.NonlinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
+        obj.add(expr)
+        problem.setObjective(obj)
+        
+        c = SHOTpy.LinearConstraint(0, "bound", 0.0, SHOTpy.SHOT_DBL_MAX)
+        c.add(SHOTpy.LinearTerm(1.0, x))
+        problem.addConstraint(c)
+        
+        problem.finalize()
+        output = problem.toString()
+        
+        # After simplification: x - x = 0
+        # The objective should have empty term type indicators [     ] (no L, Q, M, S, E)
+        for line in output.split('\n'):
+            if 'minimize' in line.lower() or 'maximize' in line.lower():
+                continue
+            if line.strip().startswith('[') and 'bound' not in line:
+                # This is the objective line - check that term indicators are empty
+                assert '[     ]' in line, f"x - x should cancel to 0 (empty terms): {line}"
+                break
+
+    def test_linear_term_combination(self, solver, env):
+        """Test that 2*x + 3*x simplifies to 5*x."""
+        import SHOTpy
+        
+        problem = SHOTpy.Problem(env)
+        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
+        problem.addVariable(x)
+        
+        # 2*x + 3*x should combine to 5*x
+        expr = 2.0 * x + 3.0 * x
+        
+        obj = SHOTpy.NonlinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
+        obj.add(expr)
+        problem.setObjective(obj)
+        
+        c = SHOTpy.LinearConstraint(0, "bound", 0.0, SHOTpy.SHOT_DBL_MAX)
+        c.add(SHOTpy.LinearTerm(1.0, x))
+        problem.addConstraint(c)
+        
+        problem.finalize()
+        output = problem.toString()
+        
+        # Should be linear with combined coefficient
+        assert '[L' in output, f"2*x + 3*x should be linear: {output}"
+        # Check that 5*x appears (or +5*x)
+        assert '5' in output and 'x' in output, f"Should have coefficient 5: {output}"
+
+    def test_exp_log_nested_in_expression(self, solver, env):
+        """Test exp(log(x)) + y simplifies to x + y."""
+        import SHOTpy
+        
+        problem = SHOTpy.Problem(env)
+        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
+        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
+        problem.addVariable(x)
+        problem.addVariable(y)
+        
+        # exp(log(x)) + y should simplify to x + y
+        expr = SHOTpy.exp(SHOTpy.log(x)) + y
+        
+        obj = SHOTpy.NonlinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
+        obj.add(expr)
+        problem.setObjective(obj)
+        
+        c = SHOTpy.LinearConstraint(0, "bound", 0.1, SHOTpy.SHOT_DBL_MAX)
+        c.add(SHOTpy.LinearTerm(1.0, x))
+        problem.addConstraint(c)
+        
+        problem.finalize()
+        output = problem.toString()
+        
+        # After simplification should be linear (x + y)
+        assert 'exp' not in output.lower(), f"exp should be simplified away: {output}"
+        assert 'log' not in output.lower() and 'ln' not in output.lower(), f"log should be simplified away: {output}"
+        assert '[L' in output, f"exp(log(x)) + y should simplify to linear: {output}"
+
+
 class TestDeepNonlinearExpressions:
     """Tests for deeply nested nonlinear expressions with multiple levels and variables."""
 
     def test_three_level_nested_expression(self, solver, env):
-        """Test expression with 3 levels of nesting: log(exp(sin(x)))."""
+        """Test expression with 3 levels of nesting: log(exp(sin(x))) simplifies to sin(x)."""
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
         x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 3.0)
         problem.addVariable(x)
         
-        # 3 levels: log(exp(sin(x)))
+        # 3 levels: log(exp(sin(x))) - this simplifies to sin(x) because log(exp(y)) = y
         expr = SHOTpy.log(SHOTpy.exp(SHOTpy.sin(x)))
         
         obj = SHOTpy.NonlinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
@@ -1047,10 +1232,9 @@ class TestDeepNonlinearExpressions:
         problem.finalize()
         output = problem.toString()
         
-        # Verify the expression contains the nested functions
-        assert 'log' in output.lower() or 'ln' in output.lower()
-        assert 'exp' in output.lower()
-        assert 'sin' in output.lower()
+        # After simplification: log(exp(sin(x))) = sin(x)
+        # The simplifier correctly reduces log(exp(y)) to y
+        assert 'sin' in output.lower(), f"Expected sin(x) after simplification: {output}"
 
     def test_four_level_nested_expression(self, solver, env):
         """Test expression with 4 levels of nesting: sqrt(abs(cos(log(x))))."""
@@ -1676,8 +1860,8 @@ class TestExpressionVsExplicitTerms:
         else:
             assert False, "Constraint 'explicit_linear' not found"
 
-    def test_linear_expression_shows_E(self, solver, env):
-        """Linear expression via operators shows E indicator (remains as expression)."""
+    def test_linear_expression_extracted_to_L(self, solver, env):
+        """Linear expression via operators is extracted to L indicator (linear term)."""
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
@@ -1690,7 +1874,7 @@ class TestExpressionVsExplicitTerms:
         
         # Linear expression via operators (not explicit term)
         c = SHOTpy.NonlinearConstraint(0, "expr_linear", -SHOTpy.SHOT_DBL_MAX, 10.0)
-        c.add(2.0 * x)  # Expression, not LinearTerm
+        c.add(2.0 * x)  # Expression, gets extracted to LinearTerm in finalize()
         problem.addConstraint(c)
         
         problem.finalize()
@@ -1698,8 +1882,8 @@ class TestExpressionVsExplicitTerms:
         
         for line in output.split('\n'):
             if 'expr_linear' in line:
-                # Expressions remain as E even if they're mathematically linear
-                assert 'E' in line, f"Expression should show E indicator: {line}"
+                # Expression is extracted to linear term, showing L indicator
+                assert '[L    ]' in line, f"Linear expression should be extracted to L: {line}"
                 break
         else:
             assert False, "Constraint 'expr_linear' not found"
@@ -1731,8 +1915,8 @@ class TestExpressionVsExplicitTerms:
         else:
             assert False, "Constraint 'explicit_quadratic' not found"
 
-    def test_quadratic_expression_shows_E(self, solver, env):
-        """Quadratic expression via operators shows E indicator (remains as expression)."""
+    def test_quadratic_expression_extracted_to_Q(self, solver, env):
+        """Quadratic expression via operators is extracted to Q indicator (quadratic term)."""
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
@@ -1745,7 +1929,7 @@ class TestExpressionVsExplicitTerms:
         
         # Quadratic expression via operators (not explicit term)
         c = SHOTpy.NonlinearConstraint(0, "expr_quadratic", -SHOTpy.SHOT_DBL_MAX, 10.0)
-        c.add(x ** 2)  # Expression, not QuadraticTerm
+        c.add(x ** 2)  # Expression, gets extracted to QuadraticTerm in finalize()
         problem.addConstraint(c)
         
         problem.finalize()
@@ -1753,8 +1937,8 @@ class TestExpressionVsExplicitTerms:
         
         for line in output.split('\n'):
             if 'expr_quadratic' in line:
-                # Expressions remain as E even if they're mathematically quadratic
-                assert 'E' in line, f"Expression should show E indicator: {line}"
+                # Expression is extracted to quadratic term, showing Q indicator
+                assert '[ Q' in line, f"Quadratic expression should be extracted to Q: {line}"
                 break
         else:
             assert False, "Constraint 'expr_quadratic' not found"
@@ -1815,8 +1999,8 @@ class TestExpressionVsExplicitTerms:
         else:
             assert False, "Constraint 'explicit_monomial' not found"
 
-    def test_bilinear_expression_shows_E(self, solver, env):
-        """Bilinear expression x*y via operators shows E indicator (remains as expression)."""
+    def test_bilinear_expression_extracted_to_Q(self, solver, env):
+        """Bilinear expression x*y via operators is extracted to Q indicator (quadratic term)."""
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
@@ -1831,7 +2015,7 @@ class TestExpressionVsExplicitTerms:
         
         # Bilinear expression via operators
         c = SHOTpy.NonlinearConstraint(0, "expr_bilinear", -SHOTpy.SHOT_DBL_MAX, 10.0)
-        c.add(x * y)  # Expression, not QuadraticTerm or MonomialTerm
+        c.add(x * y)  # Expression, gets extracted to QuadraticTerm in finalize()
         problem.addConstraint(c)
         
         problem.finalize()
@@ -1839,8 +2023,8 @@ class TestExpressionVsExplicitTerms:
         
         for line in output.split('\n'):
             if 'expr_bilinear' in line:
-                # Expressions remain as E even if they're bilinear
-                assert 'E' in line, f"Expression should show E indicator: {line}"
+                # Bilinear expression is extracted to quadratic term, showing Q indicator
+                assert '[ Q' in line, f"Bilinear expression should be extracted to Q: {line}"
                 break
         else:
             assert False, "Constraint 'expr_bilinear' not found"
