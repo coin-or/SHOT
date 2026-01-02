@@ -243,6 +243,7 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
 
     reformulatedProblem->properties.isReformulated = true;
     reformulatedProblem->properties.numberOfAddedLinearizations = env->problem->properties.numberOfAddedLinearizations;
+
     reformulatedProblem->finalize();
 
     // Fixing that a quadratic objective changed into a nonlinear objective is correctly identified

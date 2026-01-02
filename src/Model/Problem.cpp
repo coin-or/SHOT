@@ -850,6 +850,10 @@ Problem::~Problem()
 
 void Problem::finalize()
 {
+    // Need to update properties first so that hasNonlinearExpression etc. flags are set
+    // before simplifyNonlinearExpressions() checks them
+    updateProperties();
+
     // Extract quadratic, monomial and signomial terms from nonlinear expressions based on settings
     bool extractMonomialTerms = env->settings->getSetting<bool>("Reformulation.Monomials.Extract", "Model");
     bool extractSignomialTerms = env->settings->getSetting<bool>("Reformulation.Signomials.Extract", "Model");
@@ -859,6 +863,7 @@ void Problem::finalize()
     simplifyNonlinearExpressions(
         shared_from_this(), extractMonomialTerms, extractSignomialTerms, extractQuadraticTerms);
 
+    // Update properties again after simplification since constraint types may have changed
     updateProperties();
     updateFactorableFunctions();
     assert(verifyOwnership());
