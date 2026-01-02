@@ -72,13 +72,13 @@ E_ProblemCreationStatus ModelingSystemOS::createProblem(
         {
             instance = std::shared_ptr<OSInstance>(readInstanceFromOSiLFile(filename));
 
-            env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::OSiL));
+            env->settings->updateSetting("ModelingSystem", "Input", static_cast<int>(ES_ModelingSystem::OSiL));
         }
         else if(type == E_OSInputFileFormat::Ampl)
         {
             instance = std::shared_ptr<OSInstance>(readInstanceFromAmplFile(filename));
 
-            env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::NL));
+            env->settings->updateSetting("ModelingSystem", "Input", static_cast<int>(ES_ModelingSystem::AMPL));
         }
     }
     catch(const std::exception& e)

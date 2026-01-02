@@ -303,6 +303,14 @@ enum class ES_IterationOutputDetail
     ObjectiveGapUpdatesAndNLPCalls
 };
 
+enum class ES_ModelingSystem
+{
+    OSiL,
+    GAMS,
+    AMPL,
+    None
+};
+
 enum class ES_ObjectiveRootsearch
 {
     Always,
@@ -418,14 +426,6 @@ enum class ES_QuadraticTermsExtractStrategy
                                             // expression
     ExtractToEqualityConstraintAlways // Extract terms at all levels (at reformulation step) to a new equality
                                       // expression
-};
-
-enum class ES_SourceFormat
-{
-    OSiL,
-    GAMS,
-    NL,
-    None
 };
 
 enum class ES_TreeStrategy

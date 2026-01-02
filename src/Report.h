@@ -25,7 +25,7 @@ public:
 
     void outputOptionsReport();
 
-    void outputModelingSystemReport(ES_SourceFormat source, std::string filename = "");
+    void outputModelingSystemReport(ES_ModelingSystem system, std::string filename = "");
 
     void outputProblemInstanceReport();
 

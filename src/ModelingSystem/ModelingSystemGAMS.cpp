@@ -247,13 +247,13 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(
         {
             createModelFromProblemFile(filename);
 
-            env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::GAMS));
+            env->settings->updateSetting("ModelingSystem", "Input", static_cast<int>(ES_ModelingSystem::GAMS));
         }
         else if(inputSource == E_GAMSInputSource::GAMSModel)
         {
             createModelFromGAMSModel(filename);
 
-            env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::GAMS));
+            env->settings->updateSetting("ModelingSystem", "Input", static_cast<int>(ES_ModelingSystem::GAMS));
         }
     }
     catch(const std::exception& e)
@@ -286,14 +286,15 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem)
 #endif
     gmoUseQSet(modelingObject, 1);
 #if GMOAPIVERSION >= 25
-    char msg[2*GMS_SSSIZE];
+    char msg[2 * GMS_SSSIZE];
     double qtime;
     INT64 qwin_3pass;
     INT64 qwin_dblfwd;
     gmoGetQMakerStats(modelingObject, buffer, &qtime, &qwin_3pass, &qwin_dblfwd);
     sprintf(msg, " Extraction of quadratics (%s algorithm): %.2fs", buffer, qtime);
-    if( qextractalg == 3 )
-       sprintf(msg + strlen(msg), " (ThreePass fastest on %ld equations, DoubleForward fastest on %ld equations)", (long)qwin_3pass, (long)qwin_dblfwd);
+    if(qextractalg == 3)
+        sprintf(msg + strlen(msg), " (ThreePass fastest on %ld equations, DoubleForward fastest on %ld equations)",
+            (long)qwin_3pass, (long)qwin_dblfwd);
     env->output->outputDebug(msg);
 #endif
 
@@ -2088,7 +2089,8 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
                 char buffer[256];
                 sprintf(buffer, "Error: Unsupported GAMS function %s.\n", GamsFuncCodeName[address + 1]);
                 gevLogStatPChar(modelingEnvironment, buffer);
-                throw OperationNotImplementedException(fmt::format("Error: Unsupported GAMS function {}", GamsFuncCodeName[address + 1]));
+                throw OperationNotImplementedException(
+                    fmt::format("Error: Unsupported GAMS function {}", GamsFuncCodeName[address + 1]));
             }
             default:
             {

@@ -293,7 +293,7 @@ bool Solver::setProblem(std::string fileName)
     {
         if(problemExtension == ".osil" || problemExtension == ".xml")
         {
-            env->report->outputModelingSystemReport(ES_SourceFormat::OSiL, fileName);
+            env->report->outputModelingSystemReport(ES_ModelingSystem::OSiL, fileName);
 
             auto modelingSystem = std::make_shared<ModelingSystemOSiL>(env);
             ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
@@ -306,13 +306,13 @@ bool Solver::setProblem(std::string fileName)
             env->modelingSystem = modelingSystem;
             env->problem = problem;
 
-            env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::OSiL));
+            env->settings->updateSetting("ModelingSystem", "Input", static_cast<int>(ES_ModelingSystem::OSiL));
         }
 
 #ifdef HAS_AMPL
         if(problemExtension == ".nl")
         {
-            env->report->outputModelingSystemReport(ES_SourceFormat::NL, fileName);
+            env->report->outputModelingSystemReport(ES_ModelingSystem::AMPL, fileName);
 
             auto modelingSystem = std::make_shared<ModelingSystemAMPL>(env);
             ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
@@ -326,14 +326,14 @@ bool Solver::setProblem(std::string fileName)
             env->modelingSystem = modelingSystem;
             env->problem = problem;
 
-            env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::NL));
+            env->settings->updateSetting("ModelingSystem", "Input", static_cast<int>(ES_ModelingSystem::AMPL));
         }
 #endif
 
 #ifdef HAS_GAMS
         if(problemExtension == ".gms")
         {
-            env->report->outputModelingSystemReport(ES_SourceFormat::GAMS, fileName);
+            env->report->outputModelingSystemReport(ES_ModelingSystem::GAMS, fileName);
 
             auto modelingSystem = std::make_shared<SHOT::ModelingSystemGAMS>(env);
             SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
@@ -347,7 +347,7 @@ bool Solver::setProblem(std::string fileName)
             env->modelingSystem = modelingSystem;
             env->problem = problem;
 
-            env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::GAMS));
+            env->settings->updateSetting("ModelingSystem", "Input", static_cast<int>(ES_ModelingSystem::GAMS));
         }
 #endif
 
@@ -1656,7 +1656,7 @@ void Solver::initializeSettings()
     enumFileFormat.push_back("GAMS");
     enumFileFormat.push_back("NL");
     enumFileFormat.push_back("None");
-    env->settings->createSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::None),
+    env->settings->createSetting("ModelingSystem", "Input", static_cast<int>(ES_ModelingSystem::None),
         "The format of the problem file", enumFileFormat, 0, true);
     enumFileFormat.clear();
 
@@ -1762,9 +1762,9 @@ void Solver::verifySettings()
     }
 #endif
 
-    if((env->settings->getSetting<int>("SourceFormat", "Input") == static_cast<int>(ES_SourceFormat::OSiL)
-           || env->settings->getSetting<int>("SourceFormat", "Input") == static_cast<int>(ES_SourceFormat::NL)
-           || env->settings->getSetting<int>("SourceFormat", "Input") == static_cast<int>(ES_SourceFormat::None))
+    if((env->settings->getSetting<int>("ModelingSystem", "Input") == static_cast<int>(ES_ModelingSystem::OSiL)
+           || env->settings->getSetting<int>("ModelingSystem", "Input") == static_cast<int>(ES_ModelingSystem::AMPL)
+           || env->settings->getSetting<int>("ModelingSystem", "Input") == static_cast<int>(ES_ModelingSystem::None))
         && static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("FixedInteger.Solver", "Primal"))
             == ES_PrimalNLPSolver::GAMS)
     {
@@ -2059,15 +2059,15 @@ E_TerminationReason Solver::getTerminationReason() { return (env->results->termi
 
 E_ModelReturnStatus Solver::getModelReturnStatus() { return (env->results->getModelReturnStatus()); }
 
-std::vector<ES_SourceFormat> Solver::getSupportedModelingSystems()
+std::vector<ES_ModelingSystem> Solver::getSupportedModelingSystems()
 {
-    std::vector<ES_SourceFormat> systems;
-    systems.push_back(ES_SourceFormat::OSiL); // Always available
+    std::vector<ES_ModelingSystem> systems;
+    systems.push_back(ES_ModelingSystem::OSiL); // Always available
 #ifdef HAS_GAMS
-    systems.push_back(ES_SourceFormat::GAMS);
+    systems.push_back(ES_ModelingSystem::GAMS);
 #endif
 #ifdef HAS_AMPL
-    systems.push_back(ES_SourceFormat::NL);
+    systems.push_back(ES_ModelingSystem::AMPL);
 #endif
     return systems;
 }
@@ -2101,19 +2101,19 @@ std::vector<ES_PrimalNLPSolver> Solver::getSupportedNLPSolvers()
     return solvers;
 }
 
-bool Solver::hasModelingSystem(ES_SourceFormat format)
+bool Solver::hasModelingSystem(ES_ModelingSystem format)
 {
     switch(format)
     {
-    case ES_SourceFormat::OSiL:
+    case ES_ModelingSystem::OSiL:
         return true; // Always available
-    case ES_SourceFormat::GAMS:
+    case ES_ModelingSystem::GAMS:
 #ifdef HAS_GAMS
         return true;
 #else
         return false;
 #endif
-    case ES_SourceFormat::NL:
+    case ES_ModelingSystem::AMPL:
 #ifdef HAS_AMPL
         return true;
 #else

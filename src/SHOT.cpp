@@ -645,7 +645,7 @@ int main(int argc, char* argv[])
     }
 
     // Check if we want to use the ASL calling format
-    if(useASL && !((ES_SourceFormat)solver.getSetting<int>("SourceFormat", "Input") == ES_SourceFormat::NL))
+    if(useASL && !((ES_ModelingSystem)solver.getSetting<int>("ModelingSystem", "Input") == ES_ModelingSystem::AMPL))
     {
         env->output->outputCritical(" Error: Can only use parameter AMPL if the problem is a AMPL (.nl) file.");
         return (0);
