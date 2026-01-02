@@ -257,20 +257,26 @@ class TestEx1223b(OptimizationTestBase):
 
 from pathlib import Path
 
-# MIP solver enum values (must match ES_MIPSolver in Enums.h)
-MIP_SOLVER_IDS = {
-    "cplex": 0,
-    "gurobi": 1,
-    "cbc": 2,
-    "highs": 3,  # Not yet implemented
-}
+# MIP solver enum mapping (uses shotpy.MIPSolver enum)
+def get_mip_solver_enum(solver_name):
+    """Get the MIPSolver enum value for a solver name."""
+    mapping = {
+        "cplex": shotpy.MIPSolver.Cplex,
+        "gurobi": shotpy.MIPSolver.Gurobi,
+        "cbc": shotpy.MIPSolver.Cbc,
+        # "highs": not yet in enum
+    }
+    return mapping.get(solver_name.lower())
 
-# NLP solver enum values (must match ES_PrimalNLPSolver in Enums.h)
-NLP_SOLVER_IDS = {
-    "ipopt": 0,
-    "gams": 1,
-    "shot": 2,
-}
+# NLP solver enum mapping (uses shotpy.PrimalNLPSolver enum)
+def get_nlp_solver_enum(solver_name):
+    """Get the PrimalNLPSolver enum value for a solver name."""
+    mapping = {
+        "ipopt": shotpy.PrimalNLPSolver.Ipopt,
+        "gams": shotpy.PrimalNLPSolver.GAMS,
+        "shot": shotpy.PrimalNLPSolver.SHOT,
+    }
+    return mapping.get(solver_name.lower())
 
 # Test problems configuration
 # Add new problems here - tests are automatically generated
@@ -332,17 +338,17 @@ def solve_file_and_verify(filename, expected_obj, tolerance=0.01, mip_solver=Non
     result = solver.setProblem(str(filepath))
     assert result == True, f"Failed to load problem from {filename}"
     
-    # Set MIP solver if specified
+    # Set MIP solver if specified (using type-safe enum)
     if mip_solver is not None:
-        solver_id = MIP_SOLVER_IDS.get(mip_solver.lower())
-        if solver_id is not None:
-            solver.updateSetting("MIP.Solver", "Dual", solver_id)
+        solver_enum = get_mip_solver_enum(mip_solver)
+        if solver_enum is not None:
+            solver.updateSetting("MIP.Solver", "Dual", int(solver_enum))
     
-    # Set NLP solver if specified
+    # Set NLP solver if specified (using type-safe enum)
     if nlp_solver is not None:
-        solver_id = NLP_SOLVER_IDS.get(nlp_solver.lower())
-        if solver_id is not None:
-            solver.updateSetting("FixedInteger.Solver", "Primal", solver_id)
+        solver_enum = get_nlp_solver_enum(nlp_solver)
+        if solver_enum is not None:
+            solver.updateSetting("FixedInteger.Solver", "Primal", int(solver_enum))
     
     result = solver.solveProblem()
     assert result == True, f"Failed to solve problem {filename}"

@@ -231,6 +231,66 @@ PYBIND11_MODULE(shotpy, m)
         .value("Nonconvex", E_ProblemConvexity::Nonconvex)
         .value("NotSet", E_ProblemConvexity::NotSet);
 
+    // ===== Settings Enums =====
+    // These enums are used for type-safe setting values
+
+    // Hyperplane cut strategy: ESH or ECP
+    py::enum_<ES_HyperplaneCutStrategy>(m, "HyperplaneCutStrategy")
+        .value("ESH", ES_HyperplaneCutStrategy::ESH)
+        .value("ECP", ES_HyperplaneCutStrategy::ECP);
+
+    // Iteration output detail level
+    py::enum_<ES_IterationOutputDetail>(m, "IterationOutputDetail")
+        .value("Full", ES_IterationOutputDetail::Full)
+        .value("ObjectiveGapUpdates", ES_IterationOutputDetail::ObjectiveGapUpdates)
+        .value("ObjectiveGapUpdatesAndNLPCalls", ES_IterationOutputDetail::ObjectiveGapUpdatesAndNLPCalls);
+
+    // MIP solver selection
+    py::enum_<ES_MIPSolver>(m, "MIPSolver")
+        .value("Cplex", ES_MIPSolver::Cplex)
+        .value("Gurobi", ES_MIPSolver::Gurobi)
+        .value("Cbc", ES_MIPSolver::Cbc)
+        .value("None", ES_MIPSolver::None);
+
+    // Source of fixed MIP solution point for NLP
+    py::enum_<ES_PrimalNLPFixedPoint>(m, "PrimalNLPFixedPoint")
+        .value("AllSolutions", ES_PrimalNLPFixedPoint::AllSolutions)
+        .value("FirstSolution", ES_PrimalNLPFixedPoint::FirstSolution)
+        .value("AllFeasibleSolutions", ES_PrimalNLPFixedPoint::AllFeasibleSolutions)
+        .value("FirstAndFeasibleSolutions", ES_PrimalNLPFixedPoint::FirstAndFeasibleSolutions)
+        .value("SmallestDeviationSolution", ES_PrimalNLPFixedPoint::SmallestDeviationSolution);
+
+    // Problem formulation source for NLP
+    py::enum_<ES_PrimalNLPProblemSource>(m, "PrimalNLPProblemSource")
+        .value("OriginalProblem", ES_PrimalNLPProblemSource::OriginalProblem)
+        .value("ReformulatedProblem", ES_PrimalNLPProblemSource::ReformulatedProblem)
+        .value("Both", ES_PrimalNLPProblemSource::Both);
+
+    // NLP solver selection
+    py::enum_<ES_PrimalNLPSolver>(m, "PrimalNLPSolver")
+        .value("Ipopt", ES_PrimalNLPSolver::Ipopt)
+        .value("GAMS", ES_PrimalNLPSolver::GAMS)
+        .value("SHOT", ES_PrimalNLPSolver::SHOT)
+        .value("None", ES_PrimalNLPSolver::None);
+
+    // NLP solver call strategy
+    py::enum_<ES_PrimalNLPStrategy>(m, "PrimalNLPStrategy")
+        .value("AlwaysUse", ES_PrimalNLPStrategy::AlwaysUse)
+        .value("IterationOrTime", ES_PrimalNLPStrategy::IterationOrTime)
+        .value("IterationOrTimeAndAllFeasibleSolutions", ES_PrimalNLPStrategy::IterationOrTimeAndAllFeasibleSolutions);
+
+    // Quadratic problem handling strategy
+    py::enum_<ES_QuadraticProblemStrategy>(m, "QuadraticProblemStrategy")
+        .value("Nonlinear", ES_QuadraticProblemStrategy::Nonlinear)
+        .value("QuadraticObjective", ES_QuadraticProblemStrategy::QuadraticObjective)
+        .value("ConvexQuadraticallyConstrained", ES_QuadraticProblemStrategy::ConvexQuadraticallyConstrained)
+        .value("NonconvexQuadraticallyConstrained", ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained);
+
+    // Tree strategy: single-tree or multi-tree
+    py::enum_<ES_TreeStrategy>(m, "TreeStrategy")
+        .value("MultiTree", ES_TreeStrategy::MultiTree)
+        .value("SingleTree", ES_TreeStrategy::SingleTree);
+
     // ===== Variable Class =====
     py::class_<Variable, std::shared_ptr<Variable>>(m, "Variable")
         .def(py::init<std::string, int, E_VariableType, double, double>(), py::arg("name"), py::arg("index"),

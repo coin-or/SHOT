@@ -198,6 +198,90 @@ class TestEnums:
         assert hasattr(shotpy.ProblemConvexity, 'Convex')
         assert hasattr(shotpy.ProblemConvexity, 'Nonconvex')
 
+    def test_hyperplane_cut_strategy_enum(self):
+        """Test HyperplaneCutStrategy enumeration."""
+        import shotpy
+        
+        assert hasattr(shotpy, 'HyperplaneCutStrategy')
+        assert hasattr(shotpy.HyperplaneCutStrategy, 'ESH')
+        assert hasattr(shotpy.HyperplaneCutStrategy, 'ECP')
+
+    def test_iteration_output_detail_enum(self):
+        """Test IterationOutputDetail enumeration."""
+        import shotpy
+        
+        assert hasattr(shotpy, 'IterationOutputDetail')
+        assert hasattr(shotpy.IterationOutputDetail, 'Full')
+        assert hasattr(shotpy.IterationOutputDetail, 'ObjectiveGapUpdates')
+        assert hasattr(shotpy.IterationOutputDetail, 'ObjectiveGapUpdatesAndNLPCalls')
+
+    def test_mip_solver_enum(self):
+        """Test MIPSolver enumeration."""
+        import shotpy
+        
+        assert hasattr(shotpy, 'MIPSolver')
+        assert hasattr(shotpy.MIPSolver, 'Cplex')
+        assert hasattr(shotpy.MIPSolver, 'Gurobi')
+        assert hasattr(shotpy.MIPSolver, 'Cbc')
+        assert hasattr(shotpy.MIPSolver, 'None')
+
+    def test_primal_nlp_fixed_point_enum(self):
+        """Test PrimalNLPFixedPoint enumeration."""
+        import shotpy
+        
+        assert hasattr(shotpy, 'PrimalNLPFixedPoint')
+        assert hasattr(shotpy.PrimalNLPFixedPoint, 'AllSolutions')
+        assert hasattr(shotpy.PrimalNLPFixedPoint, 'FirstSolution')
+        assert hasattr(shotpy.PrimalNLPFixedPoint, 'AllFeasibleSolutions')
+        assert hasattr(shotpy.PrimalNLPFixedPoint, 'FirstAndFeasibleSolutions')
+        assert hasattr(shotpy.PrimalNLPFixedPoint, 'SmallestDeviationSolution')
+
+    def test_primal_nlp_problem_source_enum(self):
+        """Test PrimalNLPProblemSource enumeration."""
+        import shotpy
+        
+        assert hasattr(shotpy, 'PrimalNLPProblemSource')
+        assert hasattr(shotpy.PrimalNLPProblemSource, 'OriginalProblem')
+        assert hasattr(shotpy.PrimalNLPProblemSource, 'ReformulatedProblem')
+        assert hasattr(shotpy.PrimalNLPProblemSource, 'Both')
+
+    def test_primal_nlp_solver_enum(self):
+        """Test PrimalNLPSolver enumeration."""
+        import shotpy
+        
+        assert hasattr(shotpy, 'PrimalNLPSolver')
+        assert hasattr(shotpy.PrimalNLPSolver, 'Ipopt')
+        assert hasattr(shotpy.PrimalNLPSolver, 'GAMS')
+        assert hasattr(shotpy.PrimalNLPSolver, 'SHOT')
+        assert hasattr(shotpy.PrimalNLPSolver, 'None')
+
+    def test_primal_nlp_strategy_enum(self):
+        """Test PrimalNLPStrategy enumeration."""
+        import shotpy
+        
+        assert hasattr(shotpy, 'PrimalNLPStrategy')
+        assert hasattr(shotpy.PrimalNLPStrategy, 'AlwaysUse')
+        assert hasattr(shotpy.PrimalNLPStrategy, 'IterationOrTime')
+        assert hasattr(shotpy.PrimalNLPStrategy, 'IterationOrTimeAndAllFeasibleSolutions')
+
+    def test_quadratic_problem_strategy_enum(self):
+        """Test QuadraticProblemStrategy enumeration."""
+        import shotpy
+        
+        assert hasattr(shotpy, 'QuadraticProblemStrategy')
+        assert hasattr(shotpy.QuadraticProblemStrategy, 'Nonlinear')
+        assert hasattr(shotpy.QuadraticProblemStrategy, 'QuadraticObjective')
+        assert hasattr(shotpy.QuadraticProblemStrategy, 'ConvexQuadraticallyConstrained')
+        assert hasattr(shotpy.QuadraticProblemStrategy, 'NonconvexQuadraticallyConstrained')
+
+    def test_tree_strategy_enum(self):
+        """Test TreeStrategy enumeration."""
+        import shotpy
+        
+        assert hasattr(shotpy, 'TreeStrategy')
+        assert hasattr(shotpy.TreeStrategy, 'MultiTree')
+        assert hasattr(shotpy.TreeStrategy, 'SingleTree')
+
 
 class TestClassesExist:
     """Tests that expected classes are available."""
