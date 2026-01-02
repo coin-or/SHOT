@@ -243,15 +243,25 @@ class TestEx1223b(OptimizationTestBase):
 #   - name: Problem name (used to find files like name.osil, name.gms, name.nl)
 #   - expected_obj: Known optimal objective value (from MINLPLib or other source)
 #   - formats: List of file formats available for this problem
+#   - solvers: (optional) List of MIP solvers to test with ["cplex", "gurobi", "cbc"]
+#              If not specified, uses the default solver
 #   - tolerance: (optional) Tolerance for objective comparison, default 0.01
 #   - xfail: (optional) If True, marks test as expected failure
 #   - xfail_reason: (optional) Reason for expected failure
 #
 # Example:
-#   {"name": "newproblem", "expected_obj": 42.0, "formats": ["osil", "gms"]},
+#   {"name": "newproblem", "expected_obj": 42.0, "formats": ["osil", "gms"], "solvers": ["cbc", "gurobi"]},
 # =============================================================================
 
 from pathlib import Path
+
+# MIP solver enum values (must match ES_MIPSolver in Enums.h)
+MIP_SOLVER_IDS = {
+    "cplex": 0,
+    "gurobi": 1,
+    "cbc": 2,
+    "highs": 3,  # Not yet implemented
+}
 
 # Test problems configuration
 # Add new problems here - tests are automatically generated
@@ -260,21 +270,25 @@ TEST_PROBLEMS = [
         "name": "alan",
         "expected_obj": 2.925,
         "formats": ["osil", "gms"],
+        "solvers": ["cplex", "gurobi", "cbc", "highs"],
     },
     {
         "name": "ex4",
         "expected_obj": -8.06413617,
         "formats": ["osil"],
+        "solvers": ["cplex", "gurobi", "cbc", "highs"],
     },
     {
         "name": "flay02h",
         "expected_obj": 37.94733192,
         "formats": ["osil", "gms"],
+        "solvers": ["cplex", "gurobi", "cbc", "highs"],
     },
     {
         "name": "synthes1",
         "expected_obj": 6.00975909,
         "formats": ["osil", "gms"],
+        "solvers": ["cplex", "gurobi", "cbc", "highs"],
         "xfail": True,
         "xfail_reason": "Solver converges to suboptimal solution - needs investigation",
     },
@@ -286,7 +300,7 @@ def get_data_dir():
     return Path(__file__).parent.parent / "data"
 
 
-def solve_file_and_verify(filename, expected_obj, tolerance=0.01):
+def solve_file_and_verify(filename, expected_obj, tolerance=0.01, mip_solver=None):
     """
     Load a problem from file, solve it, and verify the objective.
     
@@ -294,6 +308,7 @@ def solve_file_and_verify(filename, expected_obj, tolerance=0.01):
         filename: Name of the problem file (e.g., "alan.gms")
         expected_obj: Expected optimal objective value
         tolerance: Tolerance for objective comparison
+        mip_solver: Optional MIP solver name ("cplex", "gurobi", "cbc")
         
     Returns:
         The solver instance after solving
@@ -306,6 +321,12 @@ def solve_file_and_verify(filename, expected_obj, tolerance=0.01):
     
     result = solver.setProblem(str(filepath))
     assert result == True, f"Failed to load problem from {filename}"
+    
+    # Set MIP solver if specified
+    if mip_solver is not None:
+        solver_id = MIP_SOLVER_IDS.get(mip_solver.lower())
+        if solver_id is not None:
+            solver.updateSetting("MIP.Solver", "Dual", solver_id)
     
     result = solver.solveProblem()
     assert result == True, f"Failed to solve problem {filename}"
@@ -327,6 +348,25 @@ def _get_format_support(fmt):
     return format_support.get(fmt, False)
 
 
+def _get_solver_support(solver_name):
+    """Check if a MIP solver is supported."""
+    solver_support = {
+        "cplex": shotpy.HAS_CPLEX,
+        "gurobi": shotpy.HAS_GUROBI,
+        "cbc": shotpy.HAS_CBC,
+        "highs": shotpy.HAS_HIGHS,
+    }
+    return solver_support.get(solver_name.lower(), False)
+
+
+# Solvers that are not yet implemented (will be marked as xfail)
+XFAIL_SOLVERS = {"highs": "HiGHS support not yet implemented"}
+
+
+# All available MIP solvers (used as default when "solvers" not specified)
+ALL_MIP_SOLVERS = ["cplex", "gurobi", "cbc", "highs"]
+
+
 def _generate_test_cases():
     """Generate test case parameters from TEST_PROBLEMS."""
     test_cases = []
@@ -336,25 +376,41 @@ def _generate_test_cases():
         tolerance = problem.get("tolerance", 0.01)
         xfail = problem.get("xfail", False)
         xfail_reason = problem.get("xfail_reason", "Known issue")
+        solvers = problem.get("solvers", ALL_MIP_SOLVERS)  # Default: all solvers
         
         for fmt in problem["formats"]:
-            filename = f"{name}.{fmt}"
-            test_id = f"{name}_{fmt}"
-            
-            # Build marks list
-            marks = []
-            
-            # Add skip mark if format not supported
-            if not _get_format_support(fmt):
-                marks.append(pytest.mark.skip(reason=f"{fmt.upper()} format not available"))
-            
-            # Add xfail mark if specified
-            if xfail:
-                marks.append(pytest.mark.xfail(reason=xfail_reason))
-            
-            test_cases.append(
-                pytest.param(filename, expected_obj, tolerance, id=test_id, marks=marks)
-            )
+            for mip_solver in solvers:
+                filename = f"{name}.{fmt}"
+                
+                # Build test ID
+                if mip_solver:
+                    test_id = f"{name}_{fmt}_{mip_solver}"
+                else:
+                    test_id = f"{name}_{fmt}"
+                
+                # Build marks list
+                marks = []
+                
+                # Add skip mark if format not supported
+                if not _get_format_support(fmt):
+                    marks.append(pytest.mark.skip(reason=f"{fmt.upper()} format not available"))
+                
+                # Add skip mark if solver not supported
+                if mip_solver and not _get_solver_support(mip_solver):
+                    marks.append(pytest.mark.skip(reason=f"{mip_solver.upper()} solver not available"))
+                
+                # Add xfail mark for solvers not yet implemented
+                if mip_solver and mip_solver.lower() in XFAIL_SOLVERS:
+                    marks.append(pytest.mark.xfail(reason=XFAIL_SOLVERS[mip_solver.lower()]))
+                
+                # Add xfail mark if specified for the problem
+                if xfail:
+                    marks.append(pytest.mark.xfail(reason=xfail_reason))
+                
+                test_cases.append(
+                    pytest.param(filename, expected_obj, tolerance, mip_solver, 
+                                id=test_id, marks=marks)
+                )
     
     return test_cases
 
@@ -367,7 +423,7 @@ class TestProblemsFromFile:
     To add a new problem, simply add an entry to TEST_PROBLEMS above.
     """
     
-    @pytest.mark.parametrize("filename,expected_obj,tolerance", _generate_test_cases())
-    def test_solve_problem(self, filename, expected_obj, tolerance):
+    @pytest.mark.parametrize("filename,expected_obj,tolerance,mip_solver", _generate_test_cases())
+    def test_solve_problem(self, filename, expected_obj, tolerance, mip_solver):
         """Test solving a problem from file and verify optimal objective."""
-        solve_file_and_verify(filename, expected_obj, tolerance)
+        solve_file_and_verify(filename, expected_obj, tolerance, mip_solver)
