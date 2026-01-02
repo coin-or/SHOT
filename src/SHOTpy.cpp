@@ -108,20 +108,15 @@ PYBIND11_MODULE(SHOTpy, m)
     // OSiL is always available
     m.attr("HAS_OSIL") = true;
 
-    // Function to get list of supported modeling systems
-    m.def(
-        "getSupportedModelingSystems",
-        []() {
-            std::vector<std::string> systems;
-            systems.push_back("OSiL");
-#ifdef HAS_GAMS
-            systems.push_back("GAMS");
-#endif
-#ifdef HAS_AMPL
-            systems.push_back("AMPL");
-#endif
-            return systems;
-        },
+    // Modeling system enum
+    py::enum_<ES_ModelingSystem>(m, "ModelingSystem")
+        .value("OSiL", ES_ModelingSystem::OSiL)
+        .value("GAMS", ES_ModelingSystem::GAMS)
+        .value("AMPL", ES_ModelingSystem::AMPL)
+        .value("None", ES_ModelingSystem::None);
+
+    // Function to get list of supported modeling systems - uses C++ API directly
+    m.def("getSupportedModelingSystems", &Solver::getSupportedModelingSystems,
         "Returns a list of modeling systems supported in this build");
 
     // ===== MIP Solver Availability =====
@@ -147,26 +142,8 @@ PYBIND11_MODULE(SHOTpy, m)
     // HiGHS support will be added in a future version
     m.attr("HAS_HIGHS") = false;
 
-    // Function to get list of supported MIP solvers
-    m.def(
-        "getSupportedMIPSolvers",
-        []() {
-            std::vector<std::string> solvers;
-#ifdef HAS_CPLEX
-            solvers.push_back("CPLEX");
-#endif
-#ifdef HAS_GUROBI
-            solvers.push_back("Gurobi");
-#endif
-#ifdef HAS_CBC
-            solvers.push_back("Cbc");
-#endif
-            // HiGHS support will be added in a future version
-            // #ifdef HAS_HIGHS
-            //             solvers.push_back("HiGHS");
-            // #endif
-            return solvers;
-        },
+    // Function to get list of supported MIP solvers - uses C++ API directly
+    m.def("getSupportedMIPSolvers", &Solver::getSupportedMIPSolvers,
         "Returns a list of MIP solvers supported in this build");
 
     // ===== NLP Solver Availability =====
@@ -187,20 +164,8 @@ PYBIND11_MODULE(SHOTpy, m)
     m.attr("HAS_GAMS_NLP") = false;
 #endif
 
-    // Function to get list of supported NLP solvers
-    m.def(
-        "getSupportedNLPSolvers",
-        []() {
-            std::vector<std::string> solvers;
-            solvers.push_back("SHOT"); // Always available
-#ifdef HAS_IPOPT
-            solvers.push_back("Ipopt");
-#endif
-#ifdef HAS_GAMS
-            solvers.push_back("GAMS");
-#endif
-            return solvers;
-        },
+    // Function to get list of supported NLP solvers - uses C++ API directly
+    m.def("getSupportedNLPSolvers", &Solver::getSupportedNLPSolvers,
         "Returns a list of NLP solvers supported in this build");
 
     // ===== Variable Types Enum =====

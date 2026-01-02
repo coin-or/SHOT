@@ -44,13 +44,16 @@ class TestConstants:
         assert isinstance(SHOTpy.HAS_AMPL, bool)
 
     def test_get_supported_modeling_systems(self):
-        """Test that getSupportedModelingSystems function exists and returns a list."""
+        """Test that getSupportedModelingSystems function exists and returns a list of enum values."""
         import SHOTpy
         
         assert hasattr(SHOTpy, 'getSupportedModelingSystems')
         systems = SHOTpy.getSupportedModelingSystems()
         assert isinstance(systems, list)
-        assert 'OSiL' in systems
+        assert SHOTpy.ModelingSystem.OSiL in systems
+        # All items should be ModelingSystem enum values
+        for system in systems:
+            assert isinstance(system, SHOTpy.ModelingSystem)
 
     def test_has_cplex_constant(self):
         """Test that HAS_CPLEX is defined and is a boolean."""
@@ -88,7 +91,7 @@ class TestConstants:
         assert SHOTpy.HAS_HIGHS == True
 
     def test_get_supported_mip_solvers(self):
-        """Test that getSupportedMIPSolvers function exists and returns a list."""
+        """Test that getSupportedMIPSolvers function exists and returns a list of enum values."""
         import SHOTpy
         
         assert hasattr(SHOTpy, 'getSupportedMIPSolvers')
@@ -96,6 +99,9 @@ class TestConstants:
         assert isinstance(solvers, list)
         # At least one MIP solver must be available (required by SHOT)
         assert len(solvers) >= 1
+        # All items should be MIPSolver enum values
+        for solver in solvers:
+            assert isinstance(solver, SHOTpy.MIPSolver)
 
     def test_mip_solver_constants_match_function(self):
         """Test that MIP solver constants are consistent with getSupportedMIPSolvers."""
@@ -104,13 +110,11 @@ class TestConstants:
         solvers = SHOTpy.getSupportedMIPSolvers()
         
         if SHOTpy.HAS_CPLEX:
-            assert 'CPLEX' in solvers
+            assert SHOTpy.MIPSolver.Cplex in solvers
         if SHOTpy.HAS_GUROBI:
-            assert 'Gurobi' in solvers
+            assert SHOTpy.MIPSolver.Gurobi in solvers
         if SHOTpy.HAS_CBC:
-            assert 'Cbc' in solvers
-        if SHOTpy.HAS_HIGHS:
-            assert 'HiGHS' in solvers
+            assert SHOTpy.MIPSolver.Cbc in solvers
 
     def test_has_ipopt_constant(self):
         """Test that HAS_IPOPT is defined and is a boolean."""
@@ -134,14 +138,17 @@ class TestConstants:
         assert isinstance(SHOTpy.HAS_GAMS_NLP, bool)
 
     def test_get_supported_nlp_solvers(self):
-        """Test that getSupportedNLPSolvers function exists and returns a list."""
+        """Test that getSupportedNLPSolvers function exists and returns a list of enum values."""
         import SHOTpy
         
         assert hasattr(SHOTpy, 'getSupportedNLPSolvers')
         solvers = SHOTpy.getSupportedNLPSolvers()
         assert isinstance(solvers, list)
         # SHOT NLP solver is always available
-        assert 'SHOT' in solvers
+        assert SHOTpy.PrimalNLPSolver.SHOT in solvers
+        # All items should be PrimalNLPSolver enum values
+        for solver in solvers:
+            assert isinstance(solver, SHOTpy.PrimalNLPSolver)
 
     def test_nlp_solver_constants_match_function(self):
         """Test that NLP solver constants are consistent with getSupportedNLPSolvers."""
@@ -150,12 +157,12 @@ class TestConstants:
         solvers = SHOTpy.getSupportedNLPSolvers()
         
         # SHOT is always available
-        assert 'SHOT' in solvers
+        assert SHOTpy.PrimalNLPSolver.SHOT in solvers
         
         if SHOTpy.HAS_IPOPT:
-            assert 'Ipopt' in solvers
+            assert SHOTpy.PrimalNLPSolver.Ipopt in solvers
         if SHOTpy.HAS_GAMS_NLP:
-            assert 'GAMS' in solvers
+            assert SHOTpy.PrimalNLPSolver.GAMS in solvers
 
 
 class TestEnums:
@@ -197,6 +204,16 @@ class TestEnums:
         assert hasattr(SHOTpy, 'ProblemConvexity')
         assert hasattr(SHOTpy.ProblemConvexity, 'Convex')
         assert hasattr(SHOTpy.ProblemConvexity, 'Nonconvex')
+
+    def test_modeling_system_enum(self):
+        """Test ModelingSystem enumeration."""
+        import SHOTpy
+        
+        assert hasattr(SHOTpy, 'ModelingSystem')
+        assert hasattr(SHOTpy.ModelingSystem, 'OSiL')
+        assert hasattr(SHOTpy.ModelingSystem, 'GAMS')
+        assert hasattr(SHOTpy.ModelingSystem, 'AMPL')
+        assert hasattr(SHOTpy.ModelingSystem, 'None')
 
     def test_hyperplane_cut_strategy_enum(self):
         """Test HyperplaneCutStrategy enumeration."""

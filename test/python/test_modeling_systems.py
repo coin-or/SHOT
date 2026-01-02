@@ -39,22 +39,26 @@ class TestModelingSystemAvailability:
         assert isinstance(SHOTpy.HAS_AMPL, bool)
 
     def test_get_supported_modeling_systems(self):
-        """Test getSupportedModelingSystems returns valid list."""
+        """Test getSupportedModelingSystems returns valid list of enum values."""
         systems = SHOTpy.getSupportedModelingSystems()
         
         assert isinstance(systems, list)
-        assert "OSiL" in systems
+        assert SHOTpy.ModelingSystem.OSiL in systems
+        
+        # All items should be ModelingSystem enum values
+        for system in systems:
+            assert isinstance(system, SHOTpy.ModelingSystem)
         
         # Verify consistency with individual flags
         if SHOTpy.HAS_GAMS:
-            assert "GAMS" in systems
+            assert SHOTpy.ModelingSystem.GAMS in systems
         else:
-            assert "GAMS" not in systems
+            assert SHOTpy.ModelingSystem.GAMS not in systems
             
         if SHOTpy.HAS_AMPL:
-            assert "AMPL" in systems
+            assert SHOTpy.ModelingSystem.AMPL in systems
         else:
-            assert "AMPL" not in systems
+            assert SHOTpy.ModelingSystem.AMPL not in systems
 
 
 class TestOSiL:
