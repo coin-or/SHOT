@@ -91,6 +91,39 @@ PYBIND11_MODULE(shotpy, m)
     m.attr("SHOT_DBL_MAX") = SHOT_DBL_MAX;
     m.attr("SHOT_DBL_MIN") = SHOT_DBL_MIN;
 
+    // ===== Modeling System Availability =====
+    // These constants indicate which modeling systems are available in this build
+#ifdef HAS_GAMS
+    m.attr("HAS_GAMS") = true;
+#else
+    m.attr("HAS_GAMS") = false;
+#endif
+
+#ifdef HAS_AMPL
+    m.attr("HAS_AMPL") = true;
+#else
+    m.attr("HAS_AMPL") = false;
+#endif
+
+    // OSiL is always available
+    m.attr("HAS_OSIL") = true;
+
+    // Function to get list of supported modeling systems
+    m.def(
+        "getSupportedModelingSystems",
+        []() {
+            std::vector<std::string> systems;
+            systems.push_back("OSiL");
+#ifdef HAS_GAMS
+            systems.push_back("GAMS");
+#endif
+#ifdef HAS_AMPL
+            systems.push_back("AMPL");
+#endif
+            return systems;
+        },
+        "Returns a list of modeling systems supported in this build");
+
     // ===== Variable Types Enum =====
     py::enum_<E_VariableType>(m, "VariableType")
         .value("Real", E_VariableType::Real)

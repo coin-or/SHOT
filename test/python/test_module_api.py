@@ -22,6 +22,36 @@ class TestConstants:
         assert hasattr(shotpy, 'SHOT_DBL_MIN')
         assert shotpy.SHOT_DBL_MIN < -1e100
 
+    def test_has_osil_constant(self):
+        """Test that HAS_OSIL is defined and is True (always available)."""
+        import shotpy
+        
+        assert hasattr(shotpy, 'HAS_OSIL')
+        assert shotpy.HAS_OSIL == True
+
+    def test_has_gams_constant(self):
+        """Test that HAS_GAMS is defined and is a boolean."""
+        import shotpy
+        
+        assert hasattr(shotpy, 'HAS_GAMS')
+        assert isinstance(shotpy.HAS_GAMS, bool)
+
+    def test_has_ampl_constant(self):
+        """Test that HAS_AMPL is defined and is a boolean."""
+        import shotpy
+        
+        assert hasattr(shotpy, 'HAS_AMPL')
+        assert isinstance(shotpy.HAS_AMPL, bool)
+
+    def test_get_supported_modeling_systems(self):
+        """Test that getSupportedModelingSystems function exists and returns a list."""
+        import shotpy
+        
+        assert hasattr(shotpy, 'getSupportedModelingSystems')
+        systems = shotpy.getSupportedModelingSystems()
+        assert isinstance(systems, list)
+        assert 'OSiL' in systems
+
 
 class TestEnums:
     """Tests for SHOT enumerations."""

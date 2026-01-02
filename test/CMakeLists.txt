@@ -244,7 +244,9 @@ if(TARGET shotpy)
         test_objectives
         test_settings
         test_problem_io
-        test_solve_problems
+        test_create_and_solve_problems
+        test_optimization_problems
+        test_modeling_systems
       )
       
       foreach(pytest_file ${PYTHON_TEST_FILES})
