@@ -11,6 +11,7 @@
 #include "../src/Solver.h"
 #include "../src/Environment.h"
 #include "../src/Settings.h"
+#include "../src/Results.h"
 
 #include "../src/Model/Variables.h"
 #include "../src/Model/Terms.h"
@@ -34,6 +35,7 @@ bool ModelTestCreateProblem2();
 bool ModelTestCreateProblem3();
 bool ModelTestConvexity();
 bool ModelTestCopy();
+bool ModelTestEx1223b();
 
 bool TestReadProblem(const std::string& problemFile);
 bool TestRootsearch(const std::string& problemFile);
@@ -88,6 +90,9 @@ int ModelTest(int argc, char* argv[])
         break;
     case 10:
         passed = ModelTestCopy();
+        break;
+    case 11:
+        passed = ModelTestEx1223b();
         break;
     default:
         passed = false;
@@ -1184,6 +1189,197 @@ bool ModelTestCopy()
     auto problemRelaxedCopy = problem->createCopy(solver->getEnvironment(), true);
     std::cout << "Relaxed problem copy created:\n\n";
     std::cout << problemRelaxedCopy << '\n';
+
+    return passed;
+}
+
+bool ModelTestEx1223b()
+{
+    // Test the ex1223b problem from MINLPLib using the C++ API
+    // This is a convex MINLP with 3 continuous and 4 binary variables.
+    // Optimal solution: x1=0.2, x2=0.8, x3=1.907878, b4=1, b5=1, b6=0, b7=1
+    // Optimal objective: 4.579582402436710
+
+    bool passed = true;
+
+    std::cout << "\n=== Testing ex1223b problem creation and solving ===\n\n";
+
+    // Initializing the SHOT solver class
+    auto solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+
+    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Info));
+    solver->updateSetting("Debug.Enable", "Output", true);
+
+    // Initializing a SHOT problem class
+    auto problem = std::make_shared<Problem>(env);
+    problem->name = "ex1223b";
+
+    // Creating the variables
+    auto x1 = std::make_shared<Variable>("x1", 0, E_VariableType::Real, 0.0, 10.0);
+    auto x2 = std::make_shared<Variable>("x2", 1, E_VariableType::Real, 0.0, 10.0);
+    auto x3 = std::make_shared<Variable>("x3", 2, E_VariableType::Real, 0.0, 10.0);
+    auto b4 = std::make_shared<Variable>("b4", 3, E_VariableType::Binary);
+    auto b5 = std::make_shared<Variable>("b5", 4, E_VariableType::Binary);
+    auto b6 = std::make_shared<Variable>("b6", 5, E_VariableType::Binary);
+    auto b7 = std::make_shared<Variable>("b7", 6, E_VariableType::Binary);
+
+    // Expression variables for nonlinear terms
+    auto nl_x1 = std::make_shared<ExpressionVariable>(x1);
+    auto nl_x2 = std::make_shared<ExpressionVariable>(x2);
+    auto nl_x3 = std::make_shared<ExpressionVariable>(x3);
+    auto nl_b4 = std::make_shared<ExpressionVariable>(b4);
+    auto nl_b5 = std::make_shared<ExpressionVariable>(b5);
+    auto nl_b6 = std::make_shared<ExpressionVariable>(b6);
+    auto nl_b7 = std::make_shared<ExpressionVariable>(b7);
+
+    // Adding the variables to the problem
+    problem->add({ x1, x2, x3, b4, b5, b6, b7 });
+
+    // Creating the objective function
+    // minimize (b4-1)^2 + (b5-2)^2 + (b6-1)^2 - log(1+b7) + (x1-1)^2 + (x2-2)^2 + (x3-3)^2
+    auto objective = std::make_shared<NonlinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    problem->add(objective);
+
+    // (b4 - 1)^2
+    objective->add(std::make_shared<ExpressionSquare>(
+        std::make_shared<ExpressionSum>(std::make_shared<ExpressionConstant>(-1), nl_b4)));
+    // (b5 - 2)^2
+    objective->add(std::make_shared<ExpressionSquare>(
+        std::make_shared<ExpressionSum>(std::make_shared<ExpressionConstant>(-2), nl_b5)));
+    // (b6 - 1)^2
+    objective->add(std::make_shared<ExpressionSquare>(
+        std::make_shared<ExpressionSum>(std::make_shared<ExpressionConstant>(-1), nl_b6)));
+    // -log(1 + b7)
+    objective->add(std::make_shared<ExpressionNegate>(std::make_shared<ExpressionLog>(
+        std::make_shared<ExpressionSum>(std::make_shared<ExpressionConstant>(1), nl_b7))));
+    // (x1 - 1)^2
+    objective->add(std::make_shared<ExpressionSquare>(
+        std::make_shared<ExpressionSum>(std::make_shared<ExpressionConstant>(-1), nl_x1)));
+    // (x2 - 2)^2
+    objective->add(std::make_shared<ExpressionSquare>(
+        std::make_shared<ExpressionSum>(std::make_shared<ExpressionConstant>(-2), nl_x2)));
+    // (x3 - 3)^2
+    objective->add(std::make_shared<ExpressionSquare>(
+        std::make_shared<ExpressionSum>(std::make_shared<ExpressionConstant>(-3), nl_x3)));
+
+    // e1: x1 + x2 + x3 + b4 + b5 + b6 <= 5
+    auto e1 = std::make_shared<LinearConstraint>(0, "e1", SHOT_DBL_MIN, 5.0);
+    e1->add(std::make_shared<LinearTerm>(1.0, x1));
+    e1->add(std::make_shared<LinearTerm>(1.0, x2));
+    e1->add(std::make_shared<LinearTerm>(1.0, x3));
+    e1->add(std::make_shared<LinearTerm>(1.0, b4));
+    e1->add(std::make_shared<LinearTerm>(1.0, b5));
+    e1->add(std::make_shared<LinearTerm>(1.0, b6));
+    problem->add(e1);
+
+    // e2: b6^2 + x1^2 + x2^2 + x3^2 <= 5.5
+    auto e2 = std::make_shared<QuadraticConstraint>(1, "e2", SHOT_DBL_MIN, 5.5);
+    e2->add(std::make_shared<QuadraticTerm>(1.0, b6, b6));
+    e2->add(std::make_shared<QuadraticTerm>(1.0, x1, x1));
+    e2->add(std::make_shared<QuadraticTerm>(1.0, x2, x2));
+    e2->add(std::make_shared<QuadraticTerm>(1.0, x3, x3));
+    problem->add(e2);
+
+    // e3: x1 + b4 <= 1.2
+    auto e3 = std::make_shared<LinearConstraint>(2, "e3", SHOT_DBL_MIN, 1.2);
+    e3->add(std::make_shared<LinearTerm>(1.0, x1));
+    e3->add(std::make_shared<LinearTerm>(1.0, b4));
+    problem->add(e3);
+
+    // e4: x2 + b5 <= 1.8
+    auto e4 = std::make_shared<LinearConstraint>(3, "e4", SHOT_DBL_MIN, 1.8);
+    e4->add(std::make_shared<LinearTerm>(1.0, x2));
+    e4->add(std::make_shared<LinearTerm>(1.0, b5));
+    problem->add(e4);
+
+    // e5: x3 + b6 <= 2.5
+    auto e5 = std::make_shared<LinearConstraint>(4, "e5", SHOT_DBL_MIN, 2.5);
+    e5->add(std::make_shared<LinearTerm>(1.0, x3));
+    e5->add(std::make_shared<LinearTerm>(1.0, b6));
+    problem->add(e5);
+
+    // e6: x1 + b7 <= 1.2
+    auto e6 = std::make_shared<LinearConstraint>(5, "e6", SHOT_DBL_MIN, 1.2);
+    e6->add(std::make_shared<LinearTerm>(1.0, x1));
+    e6->add(std::make_shared<LinearTerm>(1.0, b7));
+    problem->add(e6);
+
+    // e7: b5^2 + x2^2 <= 1.64
+    auto e7 = std::make_shared<QuadraticConstraint>(6, "e7", SHOT_DBL_MIN, 1.64);
+    e7->add(std::make_shared<QuadraticTerm>(1.0, b5, b5));
+    e7->add(std::make_shared<QuadraticTerm>(1.0, x2, x2));
+    problem->add(e7);
+
+    // e8: b6^2 + x3^2 <= 4.25
+    auto e8 = std::make_shared<QuadraticConstraint>(7, "e8", SHOT_DBL_MIN, 4.25);
+    e8->add(std::make_shared<QuadraticTerm>(1.0, b6, b6));
+    e8->add(std::make_shared<QuadraticTerm>(1.0, x3, x3));
+    problem->add(e8);
+
+    // e9: b5^2 + x3^2 <= 4.64
+    auto e9 = std::make_shared<QuadraticConstraint>(8, "e9", SHOT_DBL_MIN, 4.64);
+    e9->add(std::make_shared<QuadraticTerm>(1.0, b5, b5));
+    e9->add(std::make_shared<QuadraticTerm>(1.0, x3, x3));
+    problem->add(e9);
+
+    // Finalize the problem object (this now includes simplifyNonlinearExpressions and updateProperties)
+    problem->finalize();
+
+    std::cout << "Problem created:\n\n";
+    std::cout << problem << '\n';
+
+    // Set problem and solve
+    solver->setProblem(problem);
+
+    std::cout << "\nSolving...\n";
+
+    if(!solver->solveProblem())
+    {
+        std::cout << "Failed to solve problem!\n";
+        passed = false;
+    }
+    else
+    {
+        auto solutions = env->results->primalSolutions;
+
+        if(solutions.size() == 0)
+        {
+            std::cout << "No solution found!\n";
+            passed = false;
+        }
+        else
+        {
+            double objValue = solutions[0].objValue;
+            double expectedObj = 4.579582;
+
+            std::cout << "\nSolution found:\n";
+            std::cout << "  Objective value: " << objValue << "\n";
+            std::cout << "  Expected value:  " << expectedObj << "\n";
+
+            if(solutions[0].point.size() >= 7)
+            {
+                std::cout << "  x1 = " << solutions[0].point[0] << "\n";
+                std::cout << "  x2 = " << solutions[0].point[1] << "\n";
+                std::cout << "  x3 = " << solutions[0].point[2] << "\n";
+                std::cout << "  b4 = " << solutions[0].point[3] << "\n";
+                std::cout << "  b5 = " << solutions[0].point[4] << "\n";
+                std::cout << "  b6 = " << solutions[0].point[5] << "\n";
+                std::cout << "  b7 = " << solutions[0].point[6] << "\n";
+            }
+
+            if(std::abs(objValue - expectedObj) < 0.01)
+            {
+                std::cout << "\n*** TEST PASSED: Objective matches expected value! ***\n";
+            }
+            else
+            {
+                std::cout << "\n*** TEST FAILED: Objective differs from expected! ***\n";
+                std::cout << "  Difference: " << std::abs(objValue - expectedObj) << "\n";
+                passed = false;
+            }
+        }
+    }
 
     return passed;
 }
