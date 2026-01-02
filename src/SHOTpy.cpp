@@ -860,7 +860,47 @@ PYBIND11_MODULE(SHOTpy, m)
         .def_readwrite("valueLHS", &NumericConstraint::valueLHS)
         .def_readwrite("valueRHS", &NumericConstraint::valueRHS)
         .def_readwrite("constant", &NumericConstraint::constant)
-        .def_readonly("properties", &NumericConstraint::properties);
+        .def_readonly("properties", &NumericConstraint::properties)
+        .def(
+            "calculateGradient",
+            [](NumericConstraint& self, const std::vector<double>& point) {
+                auto gradient = self.calculateGradient(point, true);
+                std::map<int, double> result;
+                for(auto& G : gradient)
+                    result[G.first->index] = G.second;
+                return result;
+            },
+            py::arg("point"), "Calculate gradient at point, returns dict of {var_index: value}")
+        .def(
+            "calculateHessian",
+            [](NumericConstraint& self, const std::vector<double>& point) {
+                auto hessian = self.calculateHessian(point, true);
+                std::map<std::pair<int, int>, double> result;
+                for(auto& H : hessian)
+                    result[std::make_pair(H.first.first->index, H.first.second->index)] = H.second;
+                return result;
+            },
+            py::arg("point"), "Calculate Hessian at point, returns dict of {(var1_index, var2_index): value}")
+        .def(
+            "getGradientSparsityPattern",
+            [](NumericConstraint& self) {
+                auto pattern = self.getGradientSparsityPattern();
+                std::vector<int> result;
+                for(auto& V : *pattern)
+                    result.push_back(V->index);
+                return result;
+            },
+            "Get gradient sparsity pattern as list of variable indices")
+        .def(
+            "getHessianSparsityPattern",
+            [](NumericConstraint& self) {
+                auto pattern = self.getHessianSparsityPattern();
+                std::vector<std::pair<int, int>> result;
+                for(auto& E : *pattern)
+                    result.push_back(std::make_pair(E.first->index, E.second->index));
+                return result;
+            },
+            "Get Hessian sparsity pattern as list of (var1_index, var2_index)");
 
     // ===== LinearConstraint Class =====
     py::class_<LinearConstraint, NumericConstraint, std::shared_ptr<LinearConstraint>>(m, "LinearConstraint")
@@ -943,7 +983,47 @@ PYBIND11_MODULE(SHOTpy, m)
     py::class_<ObjectiveFunction, std::shared_ptr<ObjectiveFunction>>(m, "ObjectiveFunction")
         .def_readwrite("direction", &ObjectiveFunction::direction)
         .def_readwrite("constant", &ObjectiveFunction::constant)
-        .def_readonly("properties", &ObjectiveFunction::properties);
+        .def_readonly("properties", &ObjectiveFunction::properties)
+        .def(
+            "calculateGradient",
+            [](ObjectiveFunction& self, const std::vector<double>& point) {
+                auto gradient = self.calculateGradient(point, true);
+                std::map<int, double> result;
+                for(auto& G : gradient)
+                    result[G.first->index] = G.second;
+                return result;
+            },
+            py::arg("point"), "Calculate gradient at point, returns dict of {var_index: value}")
+        .def(
+            "calculateHessian",
+            [](ObjectiveFunction& self, const std::vector<double>& point) {
+                auto hessian = self.calculateHessian(point, true);
+                std::map<std::pair<int, int>, double> result;
+                for(auto& H : hessian)
+                    result[std::make_pair(H.first.first->index, H.first.second->index)] = H.second;
+                return result;
+            },
+            py::arg("point"), "Calculate Hessian at point, returns dict of {(var1_index, var2_index): value}")
+        .def(
+            "getGradientSparsityPattern",
+            [](ObjectiveFunction& self) {
+                auto pattern = self.getGradientSparsityPattern();
+                std::vector<int> result;
+                for(auto& V : *pattern)
+                    result.push_back(V->index);
+                return result;
+            },
+            "Get gradient sparsity pattern as list of variable indices")
+        .def(
+            "getHessianSparsityPattern",
+            [](ObjectiveFunction& self) {
+                auto pattern = self.getHessianSparsityPattern();
+                std::vector<std::pair<int, int>> result;
+                for(auto& E : *pattern)
+                    result.push_back(std::make_pair(E.first->index, E.second->index));
+                return result;
+            },
+            "Get Hessian sparsity pattern as list of (var1_index, var2_index)");
 
     // ===== LinearObjectiveFunction Class =====
     py::class_<LinearObjectiveFunction, ObjectiveFunction, std::shared_ptr<LinearObjectiveFunction>>(
@@ -1079,18 +1159,52 @@ PYBIND11_MODULE(SHOTpy, m)
         // Finalize: simplify expressions, extract terms (linear, quadratic, monomial, signomial),
         // update properties, and prepare factorable functions
         .def(
-            "finalize",
-            [](Problem& self) {
-                self.finalize();
-            },
+            "finalize", [](Problem& self) { self.finalize(); },
             "Finalize the problem: extract terms from expressions, update properties, and prepare for solving")
         .def("updateProperties", &Problem::updateProperties, "Update problem properties")
         // Getters
         .def("getVariable", &Problem::getVariable, py::arg("index"))
+        .def("getConstraint", &Problem::getConstraint, py::arg("index"), "Get constraint by index")
         .def("getVariableLowerBound", &Problem::getVariableLowerBound, py::arg("index"))
         .def("getVariableUpperBound", &Problem::getVariableUpperBound, py::arg("index"))
         .def("getVariableLowerBounds", &Problem::getVariableLowerBounds)
         .def("getVariableUpperBounds", &Problem::getVariableUpperBounds)
+        // Sparsity patterns
+        .def(
+            "getConstraintsJacobianSparsityPattern",
+            [](Problem& self) {
+                auto pattern = self.getConstraintsJacobianSparsityPattern();
+                std::vector<std::pair<int, std::vector<int>>> result;
+                for(auto& E : *pattern)
+                {
+                    std::vector<int> varIndices;
+                    for(auto& V : E.second)
+                        varIndices.push_back(V->index);
+                    result.push_back(std::make_pair(E.first->index, varIndices));
+                }
+                return result;
+            },
+            "Get Jacobian sparsity pattern as list of (constraint_index, [variable_indices])")
+        .def(
+            "getConstraintsHessianSparsityPattern",
+            [](Problem& self) {
+                auto pattern = self.getConstraintsHessianSparsityPattern();
+                std::vector<std::pair<int, int>> result;
+                for(auto& E : *pattern)
+                    result.push_back(std::make_pair(E.first->index, E.second->index));
+                return result;
+            },
+            "Get Hessian sparsity pattern for constraints only as list of (var1_index, var2_index)")
+        .def(
+            "getLagrangianHessianSparsityPattern",
+            [](Problem& self) {
+                auto pattern = self.getLagrangianHessianSparsityPattern();
+                std::vector<std::pair<int, int>> result;
+                for(auto& E : *pattern)
+                    result.push_back(std::make_pair(E.first->index, E.second->index));
+                return result;
+            },
+            "Get Hessian sparsity pattern including objective as list of (var1_index, var2_index)")
         // String representation
         .def("__repr__",
             [](ProblemPtr p) {
