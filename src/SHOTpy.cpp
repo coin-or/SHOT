@@ -751,6 +751,99 @@ PYBIND11_MODULE(SHOTpy, m)
         .def("__len__", [](QuadraticTerms& self) { return self.size(); })
         .def("__getitem__", [](QuadraticTerms& self, size_t i) { return self[i]; });
 
+    // ===== SignomialElement Class =====
+    py::class_<SignomialElement, std::shared_ptr<SignomialElement>>(m, "SignomialElement")
+        .def(py::init<VariablePtr, double>(), py::arg("variable"), py::arg("power"))
+        .def_readwrite("variable", &SignomialElement::variable)
+        .def_readwrite("power", &SignomialElement::power)
+        .def("__repr__", [](const SignomialElement& e) {
+            if(e.power == 1.0)
+                return "<SignomialElement: " + e.variable->name + ">";
+            else
+                return "<SignomialElement: " + e.variable->name + "^" + std::to_string(e.power) + ">";
+        });
+
+    // ===== SignomialTerm Class =====
+    py::class_<SignomialTerm, std::shared_ptr<SignomialTerm>>(m, "SignomialTerm")
+        .def(py::init<double, SignomialElements>(), py::arg("coefficient"), py::arg("elements"))
+        .def(py::init([](double coeff, std::vector<std::pair<VariablePtr, double>>& varPowerPairs) {
+            SignomialElements elements;
+            for(auto& [var, power] : varPowerPairs)
+            {
+                elements.push_back(std::make_shared<SignomialElement>(var, power));
+            }
+            return std::make_shared<SignomialTerm>(coeff, elements);
+        }),
+            py::arg("coefficient"), py::arg("variable_power_pairs"),
+            "Create a signomial term from coefficient and list of (variable, power) tuples")
+        .def_readwrite("coefficient", &SignomialTerm::coefficient)
+        .def_readwrite("elements", &SignomialTerm::elements)
+        .def("__repr__", [](const SignomialTerm& t) {
+            std::ostringstream oss;
+            oss << "<SignomialTerm: " << t.coefficient;
+            for(auto& e : t.elements)
+            {
+                oss << " * " << e->variable->name;
+                if(e->power != 1.0)
+                    oss << "^" << e->power;
+            }
+            oss << ">";
+            return oss.str();
+        });
+
+    // ===== SignomialTerms Collection =====
+    py::class_<SignomialTerms>(m, "SignomialTerms")
+        .def(py::init<>())
+        .def("add", py::overload_cast<SignomialTermPtr>(&SignomialTerms::add))
+        .def("add", py::overload_cast<SignomialTerms>(&SignomialTerms::add))
+        .def("size", [](SignomialTerms& self) { return self.size(); })
+        .def("__len__", [](SignomialTerms& self) { return self.size(); })
+        .def("__getitem__", [](SignomialTerms& self, size_t i) { return self[i]; });
+
+    // ===== MonomialTerm Class =====
+    // Note: MonomialTerm uses Variables (each variable has implicit power 1)
+    py::class_<MonomialTerm, std::shared_ptr<MonomialTerm>>(m, "MonomialTerm")
+        .def(py::init([](double coeff, std::vector<VariablePtr>& varList) {
+            Variables vars;
+            for(auto& v : varList)
+            {
+                vars.push_back(v);
+            }
+            return std::make_shared<MonomialTerm>(coeff, vars);
+        }),
+            py::arg("coefficient"), py::arg("variables"),
+            "Create a monomial term from coefficient and list of variables")
+        .def_readwrite("coefficient", &MonomialTerm::coefficient)
+        .def_property_readonly("variables",
+            [](const MonomialTerm& t) {
+                std::vector<VariablePtr> result;
+                for(auto& v : t.variables)
+                    result.push_back(v);
+                return result;
+            })
+        .def_readonly("isBilinear", &MonomialTerm::isBilinear)
+        .def_readonly("isSquare", &MonomialTerm::isSquare)
+        .def_readonly("isBinary", &MonomialTerm::isBinary)
+        .def("__repr__", [](const MonomialTerm& t) {
+            std::ostringstream oss;
+            oss << "<MonomialTerm: " << t.coefficient;
+            for(auto& v : t.variables)
+            {
+                oss << " * " << v->name;
+            }
+            oss << ">";
+            return oss.str();
+        });
+
+    // ===== MonomialTerms Collection =====
+    py::class_<MonomialTerms>(m, "MonomialTerms")
+        .def(py::init<>())
+        .def("add", py::overload_cast<MonomialTermPtr>(&MonomialTerms::add))
+        .def("add", py::overload_cast<MonomialTerms>(&MonomialTerms::add))
+        .def("size", [](MonomialTerms& self) { return self.size(); })
+        .def("__len__", [](MonomialTerms& self) { return self.size(); })
+        .def("__getitem__", [](MonomialTerms& self, size_t i) { return self[i]; });
+
     // ===== ConstraintProperties Struct =====
     py::class_<ConstraintProperties>(m, "ConstraintProperties")
         .def_readonly("convexity", &ConstraintProperties::convexity)
@@ -791,6 +884,10 @@ PYBIND11_MODULE(SHOTpy, m)
         .def(py::init<int, std::string, LinearTerms, QuadraticTerms, double, double>(), py::arg("index"),
             py::arg("name"), py::arg("linearTerms"), py::arg("quadraticTerms"), py::arg("lhs"), py::arg("rhs"))
         .def_readwrite("quadraticTerms", &QuadraticConstraint::quadraticTerms)
+        // Inherited add methods from LinearConstraint
+        .def("add", py::overload_cast<LinearTerms>(&QuadraticConstraint::add))
+        .def("add", py::overload_cast<LinearTermPtr>(&QuadraticConstraint::add))
+        // QuadraticConstraint-specific add methods
         .def("add", py::overload_cast<QuadraticTerms>(&QuadraticConstraint::add))
         .def("add", py::overload_cast<QuadraticTermPtr>(&QuadraticConstraint::add))
         .def("__repr__", [](QuadraticConstraintPtr c) {
@@ -811,7 +908,20 @@ PYBIND11_MODULE(SHOTpy, m)
             py::arg("index"), py::arg("name"), py::arg("linearTerms"), py::arg("quadraticTerms"), py::arg("expression"),
             py::arg("lhs"), py::arg("rhs"))
         .def_readwrite("nonlinearExpression", &NonlinearConstraint::nonlinearExpression)
+        .def_readwrite("monomialTerms", &NonlinearConstraint::monomialTerms)
+        .def_readwrite("signomialTerms", &NonlinearConstraint::signomialTerms)
+        // Inherited add methods from LinearConstraint
+        .def("add", py::overload_cast<LinearTerms>(&NonlinearConstraint::add))
+        .def("add", py::overload_cast<LinearTermPtr>(&NonlinearConstraint::add))
+        // Inherited add methods from QuadraticConstraint
+        .def("add", py::overload_cast<QuadraticTerms>(&NonlinearConstraint::add))
+        .def("add", py::overload_cast<QuadraticTermPtr>(&NonlinearConstraint::add))
+        // NonlinearConstraint-specific add methods
         .def("add", py::overload_cast<NonlinearExpressionPtr>(&NonlinearConstraint::add))
+        .def("add", py::overload_cast<MonomialTerms>(&NonlinearConstraint::add))
+        .def("add", py::overload_cast<MonomialTermPtr>(&NonlinearConstraint::add))
+        .def("add", py::overload_cast<SignomialTerms>(&NonlinearConstraint::add))
+        .def("add", py::overload_cast<SignomialTermPtr>(&NonlinearConstraint::add))
         .def("__repr__", [](NonlinearConstraintPtr c) {
             std::ostringstream oss;
             oss << *c;
@@ -854,6 +964,10 @@ PYBIND11_MODULE(SHOTpy, m)
         .def(py::init<E_ObjectiveFunctionDirection, LinearTerms, QuadraticTerms, double>(), py::arg("direction"),
             py::arg("linearTerms"), py::arg("quadraticTerms"), py::arg("constant"))
         .def_readwrite("quadraticTerms", &QuadraticObjectiveFunction::quadraticTerms)
+        // Inherited add methods from LinearObjectiveFunction
+        .def("add", py::overload_cast<LinearTerms>(&QuadraticObjectiveFunction::add))
+        .def("add", py::overload_cast<LinearTermPtr>(&QuadraticObjectiveFunction::add))
+        // QuadraticObjectiveFunction-specific add methods
         .def("add", py::overload_cast<QuadraticTerms>(&QuadraticObjectiveFunction::add))
         .def("add", py::overload_cast<QuadraticTermPtr>(&QuadraticObjectiveFunction::add));
 
@@ -870,7 +984,20 @@ PYBIND11_MODULE(SHOTpy, m)
             py::arg("direction"), py::arg("linearTerms"), py::arg("quadraticTerms"), py::arg("expression"),
             py::arg("constant"))
         .def_readwrite("nonlinearExpression", &NonlinearObjectiveFunction::nonlinearExpression)
-        .def("add", py::overload_cast<NonlinearExpressionPtr>(&NonlinearObjectiveFunction::add));
+        .def_readwrite("monomialTerms", &NonlinearObjectiveFunction::monomialTerms)
+        .def_readwrite("signomialTerms", &NonlinearObjectiveFunction::signomialTerms)
+        // Inherited add methods from LinearObjectiveFunction
+        .def("add", py::overload_cast<LinearTerms>(&NonlinearObjectiveFunction::add))
+        .def("add", py::overload_cast<LinearTermPtr>(&NonlinearObjectiveFunction::add))
+        // Inherited add methods from QuadraticObjectiveFunction
+        .def("add", py::overload_cast<QuadraticTerms>(&NonlinearObjectiveFunction::add))
+        .def("add", py::overload_cast<QuadraticTermPtr>(&NonlinearObjectiveFunction::add))
+        // NonlinearObjectiveFunction-specific add methods
+        .def("add", py::overload_cast<NonlinearExpressionPtr>(&NonlinearObjectiveFunction::add))
+        .def("add", py::overload_cast<MonomialTerms>(&NonlinearObjectiveFunction::add))
+        .def("add", py::overload_cast<MonomialTermPtr>(&NonlinearObjectiveFunction::add))
+        .def("add", py::overload_cast<SignomialTerms>(&NonlinearObjectiveFunction::add))
+        .def("add", py::overload_cast<SignomialTermPtr>(&NonlinearObjectiveFunction::add));
 
     // ===== ProblemProperties Struct =====
     py::class_<ProblemProperties>(m, "ProblemProperties")
