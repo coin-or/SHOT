@@ -2059,4 +2059,119 @@ E_TerminationReason Solver::getTerminationReason() { return (env->results->termi
 
 E_ModelReturnStatus Solver::getModelReturnStatus() { return (env->results->getModelReturnStatus()); }
 
+std::vector<ES_SourceFormat> Solver::getSupportedModelingSystems()
+{
+    std::vector<ES_SourceFormat> systems;
+    systems.push_back(ES_SourceFormat::OSiL); // Always available
+#ifdef HAS_GAMS
+    systems.push_back(ES_SourceFormat::GAMS);
+#endif
+#ifdef HAS_AMPL
+    systems.push_back(ES_SourceFormat::NL);
+#endif
+    return systems;
+}
+
+std::vector<ES_MIPSolver> Solver::getSupportedMIPSolvers()
+{
+    std::vector<ES_MIPSolver> solvers;
+#ifdef HAS_CPLEX
+    solvers.push_back(ES_MIPSolver::Cplex);
+#endif
+#ifdef HAS_GUROBI
+    solvers.push_back(ES_MIPSolver::Gurobi);
+#endif
+#ifdef HAS_CBC
+    solvers.push_back(ES_MIPSolver::Cbc);
+#endif
+    // HiGHS support will be added in a future version
+    return solvers;
+}
+
+std::vector<ES_PrimalNLPSolver> Solver::getSupportedNLPSolvers()
+{
+    std::vector<ES_PrimalNLPSolver> solvers;
+    solvers.push_back(ES_PrimalNLPSolver::SHOT); // Always available
+#ifdef HAS_IPOPT
+    solvers.push_back(ES_PrimalNLPSolver::Ipopt);
+#endif
+#ifdef HAS_GAMS
+    solvers.push_back(ES_PrimalNLPSolver::GAMS);
+#endif
+    return solvers;
+}
+
+bool Solver::hasModelingSystem(ES_SourceFormat format)
+{
+    switch(format)
+    {
+    case ES_SourceFormat::OSiL:
+        return true; // Always available
+    case ES_SourceFormat::GAMS:
+#ifdef HAS_GAMS
+        return true;
+#else
+        return false;
+#endif
+    case ES_SourceFormat::NL:
+#ifdef HAS_AMPL
+        return true;
+#else
+        return false;
+#endif
+    default:
+        return false;
+    }
+}
+
+bool Solver::hasMIPSolver(ES_MIPSolver solver)
+{
+    switch(solver)
+    {
+    case ES_MIPSolver::Cplex:
+#ifdef HAS_CPLEX
+        return true;
+#else
+        return false;
+#endif
+    case ES_MIPSolver::Gurobi:
+#ifdef HAS_GUROBI
+        return true;
+#else
+        return false;
+#endif
+    case ES_MIPSolver::Cbc:
+#ifdef HAS_CBC
+        return true;
+#else
+        return false;
+#endif
+    default:
+        return false;
+    }
+}
+
+bool Solver::hasNLPSolver(ES_PrimalNLPSolver solver)
+{
+    switch(solver)
+    {
+    case ES_PrimalNLPSolver::SHOT:
+        return true; // Always available
+    case ES_PrimalNLPSolver::Ipopt:
+#ifdef HAS_IPOPT
+        return true;
+#else
+        return false;
+#endif
+    case ES_PrimalNLPSolver::GAMS:
+#ifdef HAS_GAMS
+        return true;
+#else
+        return false;
+#endif
+    default:
+        return false;
+    }
+}
+
 } // namespace SHOT

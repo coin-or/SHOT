@@ -12,6 +12,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "Environment.h"
 #include "Enums.h"
@@ -121,5 +122,15 @@ public:
 
     E_TerminationReason getTerminationReason();
     E_ModelReturnStatus getModelReturnStatus();
+
+    // Static methods to query available solvers and modeling systems
+    static std::vector<ES_SourceFormat> getSupportedModelingSystems();
+    static std::vector<ES_MIPSolver> getSupportedMIPSolvers();
+    static std::vector<ES_PrimalNLPSolver> getSupportedNLPSolvers();
+
+    // Static methods to check availability of specific components
+    static bool hasModelingSystem(ES_SourceFormat format);
+    static bool hasMIPSolver(ES_MIPSolver solver);
+    static bool hasNLPSolver(ES_PrimalNLPSolver solver);
 };
 } // namespace SHOT
