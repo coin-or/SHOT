@@ -27,6 +27,11 @@
 *.out
 *.app
 
+# Python
+*.pyc
+__pycache__/
+*.pyo
+
 .vscode/*
 build/*
 /.vs
