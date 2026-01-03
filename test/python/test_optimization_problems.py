@@ -179,14 +179,8 @@ class TestEx1223b(OptimizationTestBase):
     EXPECTED_OBJECTIVE = 4.579582
     OBJECTIVE_TOLERANCE = 0.01
     
-    @pytest.mark.xfail(reason="Known issue: nonlinear expression gradients computed incorrectly in Python API")
     def test_ex1223b_solve_exact(self):
-        """Test solving ex1223b and verify optimal objective.
-        
-        Note: This test is expected to fail due to a known issue with
-        nonlinear expression gradient computation in the Python API.
-        When this issue is fixed, this test should pass.
-        """
+        """Test solving ex1223b and verify optimal objective."""
         solver, env, problem = self.create_solver_and_problem()
         build_ex1223b(env, problem)
         
@@ -304,8 +298,6 @@ TEST_PROBLEMS = [
         "expected_obj": 6.00975909,
         "formats": ["osil", "gms"],
         "mip_solvers": ["cplex", "gurobi", "cbc", "highs"],
-        "xfail": True,
-        "xfail_reason": "Solver converges to suboptimal solution - needs investigation",
     },
 ]
 

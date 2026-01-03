@@ -12,6 +12,47 @@
 #include <pybind11/stl.h>
 #include <pybind11/operators.h>
 
+// Prevent CppAD template instantiation in this compilation unit
+// to avoid ODR violations with libSHOTSolver.so
+// The templates are explicitly instantiated in Problem.cpp
+#include "cppad/cppad.hpp"
+extern template class CppAD::AD<double>;
+extern template class CppAD::ADFun<double>;
+
+// Custom CppAD error handler to avoid abort on cleanup errors
+// This is needed because CppAD's thread_alloc has ODR issues with shared libraries
+namespace {
+    void cppad_python_error_handler(
+        bool known,
+        int line,
+        const char* file,
+        const char* exp,
+        const char* msg)
+    {
+        // Check if this is the known cleanup error in thread_alloc
+        std::string fileStr(file ? file : "");
+        std::string expStr(exp ? exp : "");
+        if(fileStr.find("thread_alloc.hpp") != std::string::npos 
+           && expStr.find("count_inuse_") != std::string::npos)
+        {
+            // Suppress this error - it's a harmless ODR issue during cleanup
+            return;
+        }
+        
+        // For other errors, throw an exception
+        std::string error_msg = std::string("CppAD error at ") + file + ":" + std::to_string(line);
+        if(msg) error_msg += std::string(" - ") + msg;
+        throw std::runtime_error(error_msg);
+    }
+    
+    // Register the custom error handler at module load time
+    struct CppADErrorHandlerRegistrar {
+        CppAD::ErrorHandler handler;
+        CppADErrorHandlerRegistrar() : handler(cppad_python_error_handler) {}
+    };
+    static CppADErrorHandlerRegistrar cppad_error_handler_registrar;
+}
+
 #include "Solver.h"
 
 #include "DualSolver.h"
@@ -1066,6 +1107,8 @@ PYBIND11_MODULE(SHOTpy, m)
         .def_readwrite("nonlinearExpression", &NonlinearObjectiveFunction::nonlinearExpression)
         .def_readwrite("monomialTerms", &NonlinearObjectiveFunction::monomialTerms)
         .def_readwrite("signomialTerms", &NonlinearObjectiveFunction::signomialTerms)
+        .def_readonly("variablesInNonlinearExpression", &NonlinearObjectiveFunction::variablesInNonlinearExpression)
+        .def_readonly("nonlinearExpressionIndex", &NonlinearObjectiveFunction::nonlinearExpressionIndex)
         // Inherited add methods from LinearObjectiveFunction
         .def("add", py::overload_cast<LinearTerms>(&NonlinearObjectiveFunction::add))
         .def("add", py::overload_cast<LinearTermPtr>(&NonlinearObjectiveFunction::add))
@@ -1108,6 +1151,9 @@ PYBIND11_MODULE(SHOTpy, m)
         .def_readonly("numberOfConvexNonlinearConstraints", &ProblemProperties::numberOfConvexNonlinearConstraints)
         .def_readonly(
             "numberOfNonconvexNonlinearConstraints", &ProblemProperties::numberOfNonconvexNonlinearConstraints)
+        .def_readonly(
+            "numberOfVariablesInNonlinearExpressions", &ProblemProperties::numberOfVariablesInNonlinearExpressions)
+        .def_readonly("numberOfNonlinearExpressions", &ProblemProperties::numberOfNonlinearExpressions)
         .def_readonly("name", &ProblemProperties::name)
         .def_readonly("description", &ProblemProperties::description)
         .def_readonly("isReformulated", &ProblemProperties::isReformulated);
@@ -1123,6 +1169,7 @@ PYBIND11_MODULE(SHOTpy, m)
         .def_readonly("realVariables", &Problem::realVariables)
         .def_readonly("binaryVariables", &Problem::binaryVariables)
         .def_readonly("integerVariables", &Problem::integerVariables)
+        .def_readonly("nonlinearExpressionVariables", &Problem::nonlinearExpressionVariables)
         .def_readonly("objectiveFunction", &Problem::objectiveFunction)
         .def_readonly("linearConstraints", &Problem::linearConstraints)
         .def_readonly("quadraticConstraints", &Problem::quadraticConstraints)

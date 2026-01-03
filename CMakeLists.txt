@@ -377,6 +377,14 @@ ExternalProject_Add(cppad
     -Dcppad_cxx_flags="-std=c++17"
 )
 
+# CppAD library location (built by external project)
+set(CPPAD_LIB_DIR "${CMAKE_CURRENT_BINARY_DIR}/cppad/src/cppad-build/cppad_lib")
+add_library(cppad_lib SHARED IMPORTED)
+set_target_properties(cppad_lib PROPERTIES
+    IMPORTED_LOCATION "${CPPAD_LIB_DIR}/libcppad_lib.so"
+)
+add_dependencies(cppad_lib cppad)
+
 # Creates the helper library
 add_library(
     SHOTHelper STATIC
@@ -434,7 +442,13 @@ target_link_libraries(SHOTResults SHOTModel)
 if(HAS_PYTHON)
     add_subdirectory(${PYBIND11_DIR})
     pybind11_add_module(SHOTpy src/SHOTpy.cpp)
-    target_link_libraries(SHOTpy PRIVATE SHOTSolver)
+    target_link_libraries(SHOTpy PRIVATE SHOTSolver cppad_lib)
+    # Ensure CppAD symbols are shared between SHOTpy and SHOTSolver
+    # This prevents ODR violations with CppAD's static local variables in templates
+    if(NOT MSVC)
+        target_link_options(SHOTpy PRIVATE "LINKER:--no-as-needed")
+        target_link_options(SHOTpy PRIVATE "LINKER:--export-dynamic")
+    endif()
 endif(HAS_PYTHON)
 
 # Creates the primal strategy library
@@ -618,6 +632,9 @@ else()
 endif()
 
 target_link_libraries(SHOTSolver SHOTSolutionStrategies)
+
+# Link CppAD library (required for newer CppAD versions)
+target_link_libraries(SHOTSolver cppad_lib)
 
 # Link the standard library required for std::filesystem (if needed)
 target_link_libraries(SHOTSolver CXX::Filesystem)

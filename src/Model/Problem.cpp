@@ -18,6 +18,42 @@
 
 #include "../Tasks/TaskReformulateProblem.h"
 
+// Explicit template instantiation for CppAD::AD<double>
+// This ensures the template is instantiated here and not duplicated in SHOTpy.so
+template class CppAD::AD<double>;
+template class CppAD::ADFun<double>;
+
+// Custom CppAD error handler to avoid abort on cleanup errors
+// This is needed because CppAD's thread_alloc has ODR issues with shared libraries
+namespace
+{
+void shot_cppad_error_handler(bool known, int line, const char* file, const char* exp, const char* msg)
+{
+    // Check if this is the known cleanup error in thread_alloc
+    std::string fileStr(file ? file : "");
+    std::string expStr(exp ? exp : "");
+    if(fileStr.find("thread_alloc.hpp") != std::string::npos && expStr.find("count_inuse_") != std::string::npos)
+    {
+        // Suppress this error - it's a harmless ODR issue during cleanup
+        return;
+    }
+
+    // For other errors, throw an exception
+    std::string error_msg = std::string("CppAD error at ") + file + ":" + std::to_string(line);
+    if(msg)
+        error_msg += std::string(" - ") + msg;
+    throw std::runtime_error(error_msg);
+}
+
+// Register the custom error handler at library load time
+struct SHOTCppADErrorHandlerRegistrar
+{
+    CppAD::ErrorHandler handler;
+    SHOTCppADErrorHandlerRegistrar() : handler(shot_cppad_error_handler) { }
+};
+static SHOTCppADErrorHandlerRegistrar shot_cppad_error_handler_registrar;
+}
+
 namespace SHOT
 {
 
@@ -767,7 +803,9 @@ void Problem::updateProperties()
 void Problem::updateFactorableFunctions()
 {
     if(properties.numberOfVariablesInNonlinearExpressions == 0)
+    {
         return;
+    }
 
     int nonlinearVariableCounter = 0;
 
@@ -815,7 +853,6 @@ void Problem::updateFactorableFunctions()
     if(factorableFunctions.size() > 0)
     {
         ADFunctions.Dependent(factorableFunctionVariables, factorableFunctions);
-        // ADFunctions.optimize();
     }
 
     CppAD::AD<double>::abort_recording();

@@ -18,7 +18,8 @@ set(Model_parts
     8
     9
     10
-    11) # The different parts of each test (if any)
+    11
+    12) # The different parts of each test (if any)
 set(Settings_parts 1 2)
 
 if(HAS_CBC)
