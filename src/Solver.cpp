@@ -1996,24 +1996,6 @@ void Solver::setConvexityBasedSettingsPreReformulation()
             }
 #endif
         }
-        else if(env->problem->properties.convexity == E_ProblemConvexity::Convex)
-        {
-#ifdef HAS_CBC
-            if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Cbc)
-            {
-                env->settings->updateSetting("Reformulation.Quadratics.Decomposition.Method", "Model",
-                    (int)ES_QuadraticDecomposition::EigenValueDecomposition);
-            }
-#endif
-
-#ifdef HAS_HIGHS
-            if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Highs)
-            {
-                env->settings->updateSetting("Reformulation.Quadratics.Decomposition.Method", "Model",
-                    (int)ES_QuadraticDecomposition::EigenValueDecomposition);
-            }
-#endif
-        }
     }
 }
 
