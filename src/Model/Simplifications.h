@@ -1933,6 +1933,9 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
         newLinearTerms, newQuadraticTerms, newMonomialTerms, newSignomialTerms, nonlinearExpression, newConstant);
 }
 
+void checkAndConvertObjectivesAndConstraints(
+    ProblemPtr problem, bool extractMonomials, bool extractSignomials, bool extractQuadratics);
+
 void simplifyNonlinearExpressions(
     ProblemPtr problem, bool extractMonomials, bool extractSignomials, bool extractQuadratics);
 

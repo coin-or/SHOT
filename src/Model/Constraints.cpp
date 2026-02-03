@@ -755,6 +755,10 @@ void NonlinearConstraint::initializeGradientSparsityPattern()
             assert(sharedOwnerProblem->properties.numberOfVariablesInNonlinearExpressions > 0);
             assert(sharedOwnerProblem->properties.numberOfNonlinearExpressions > 0);
             assert(this->nonlinearExpressionIndex >= 0);
+            assert((size_t)sharedOwnerProblem->properties.numberOfVariablesInNonlinearExpressions
+                == sharedOwnerProblem->nonlinearExpressionVariables.size());
+            assert((size_t)sharedOwnerProblem->properties.numberOfNonlinearExpressions
+                == sharedOwnerProblem->ADFunctions.Range());
 
             // For some reason we need to have all nonlinear variables activated, otherwise not all nonzero elements
             // of the gradient may be detected

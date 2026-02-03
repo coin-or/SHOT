@@ -642,11 +642,21 @@ void Problem::updateProperties()
         }
 
         if(C->properties.hasNonlinearExpression)
+        {
+            assert(C->variablesInNonlinearExpression.size() > 0);
             properties.numberOfNonlinearExpressions++;
+        }
     }
 
     if(objectiveFunction->properties.hasNonlinearExpression)
-        properties.numberOfNonlinearExpressions++;
+    {
+        auto objective = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objectiveFunction);
+        if(objective)
+        {
+            assert(objective->variablesInNonlinearExpression.size() > 0);
+            properties.numberOfNonlinearExpressions++;
+        }
+    }
 
     assert(properties.numberOfNumericConstraints
         == properties.numberOfLinearConstraints + properties.numberOfQuadraticConstraints
@@ -790,8 +800,9 @@ void Problem::updateFactorableFunctions()
 
     for(auto& C : nonlinearConstraints)
     {
-        if(C->properties.hasNonlinearExpression && C->variablesInNonlinearExpression.size() > 0)
+        if(C->properties.hasNonlinearExpression)
         {
+            assert(C->variablesInNonlinearExpression.size() > 0);
             factorableFunctions.push_back(C->nonlinearExpression->getFactorableFunction());
             constraintsWithNonlinearExpressions.push_back(C);
             C->nonlinearExpressionIndex = nonlinearExpressionCounter;

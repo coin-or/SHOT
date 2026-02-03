@@ -17,6 +17,7 @@
 #include "../src/Model/Constraints.h"
 #include "../src/Model/NonlinearExpressions.h"
 #include "../src/Model/Problem.h"
+#include "../src/Model/Simplifications.h"
 
 #include "../src/Tasks/TaskReformulateProblem.h"
 
@@ -32,6 +33,7 @@ bool ModelTestConstraints();
 bool ModelTestCreateProblem();
 bool ModelTestCreateProblem2();
 bool ModelTestCreateProblem3();
+bool ModelTestSquareRootReformulation();
 bool ModelTestConvexity();
 bool ModelTestCopy();
 
@@ -88,6 +90,9 @@ int ModelTest(int argc, char* argv[])
         break;
     case 10:
         passed = ModelTestCopy();
+        break;
+    case 11:
+        passed = ModelTestSquareRootReformulation();
         break;
     default:
         passed = false;
@@ -1184,6 +1189,229 @@ bool ModelTestCopy()
     auto problemRelaxedCopy = problem->createCopy(solver->getEnvironment(), true);
     std::cout << "Relaxed problem copy created:\n\n";
     std::cout << problemRelaxedCopy << '\n';
+
+    return passed;
+}
+
+bool ModelTestSquareRootReformulation()
+{
+    // Test that square root of sum of quadratic terms gets reformulated to quadratic constraint
+    bool passed = true;
+
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+    SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
+    env->problem = problem;
+
+    // Creating variables
+    auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 100.0);
+    SHOT::ExpressionVariablePtr expressionVariable_x = std::make_shared<SHOT::ExpressionVariable>(var_x);
+
+    auto var_y = std::make_shared<SHOT::Variable>("y", 1, SHOT::E_VariableType::Real, 0.0, 100.0);
+    SHOT::ExpressionVariablePtr expressionVariable_y = std::make_shared<SHOT::ExpressionVariable>(var_y);
+
+    SHOT::Variables variables = { var_x, var_y };
+    problem->add(variables);
+
+    // Create a simple linear objective
+    SHOT::LinearObjectiveFunctionPtr objectiveFunction
+        = std::make_shared<SHOT::LinearObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize);
+    SHOT::LinearTermPtr objLinearTerm1 = std::make_shared<SHOT::LinearTerm>(1.0, var_x);
+    objectiveFunction->add(objLinearTerm1);
+    problem->add(objectiveFunction);
+
+    // Add a linear constraint before the nonlinear one
+    SHOT::LinearConstraintPtr linearConstraint1
+        = std::make_shared<SHOT::LinearConstraint>(0, "linearconstr1", SHOT_DBL_MIN, 50.0);
+    SHOT::LinearTermPtr linTerm1 = std::make_shared<SHOT::LinearTerm>(1.0, var_x);
+    linearConstraint1->add(linTerm1);
+    problem->add(linearConstraint1);
+
+    // Create constraint: sqrt(x^2 + y^2) <= 10
+    // This is: x^2 + y^2 in a square root expression
+    SHOT::NonlinearExpressionPtr exprSquare_x = std::make_shared<SHOT::ExpressionSquare>(expressionVariable_x);
+    SHOT::NonlinearExpressionPtr exprSquare_y = std::make_shared<SHOT::ExpressionSquare>(expressionVariable_y);
+
+    SHOT::NonlinearExpressions sumExpressions;
+    sumExpressions.add(exprSquare_x);
+    sumExpressions.add(exprSquare_y);
+    SHOT::NonlinearExpressionPtr exprSum = std::make_shared<SHOT::ExpressionSum>(sumExpressions);
+
+    SHOT::NonlinearExpressionPtr exprSqrt = std::make_shared<SHOT::ExpressionSquareRoot>(exprSum);
+
+    // Create constraint: sqrt(x^2 + y^2) <= 10
+    SHOT::NonlinearConstraintPtr nonlinearConstraint
+        = std::make_shared<SHOT::NonlinearConstraint>(0, "sqrtconstr", exprSqrt, -SHOT_DBL_MAX, 10.0);
+    problem->add(nonlinearConstraint);
+
+    // Create constraint: sqrt(x + y) <= 5
+    // This should become x + y <= 25 (linear) after reformulation
+    SHOT::NonlinearExpressions sumLinearExpressions;
+    sumLinearExpressions.add(expressionVariable_x);
+    sumLinearExpressions.add(expressionVariable_y);
+    SHOT::NonlinearExpressionPtr exprLinearSum = std::make_shared<SHOT::ExpressionSum>(sumLinearExpressions);
+    SHOT::NonlinearExpressionPtr exprSqrtLinear = std::make_shared<SHOT::ExpressionSquareRoot>(exprLinearSum);
+
+    SHOT::NonlinearConstraintPtr nonlinearConstraint2
+        = std::make_shared<SHOT::NonlinearConstraint>(1, "sqrtlinearconstr", exprSqrtLinear, -SHOT_DBL_MAX, 5.0);
+    problem->add(nonlinearConstraint2);
+
+    // Add a linear constraint after the nonlinear one
+    SHOT::LinearConstraintPtr linearConstraint2
+        = std::make_shared<SHOT::LinearConstraint>(1, "linearconstr2", 0.0, SHOT_DBL_MAX);
+    SHOT::LinearTermPtr linTerm2 = std::make_shared<SHOT::LinearTerm>(1.0, var_y);
+    linearConstraint2->add(linTerm2);
+    problem->add(linearConstraint2);
+
+    std::cout << "\nProblem before reformulation:\n";
+    std::cout << problem << '\n';
+
+    std::cout << "Number of nonlinear constraints before: " << problem->nonlinearConstraints.size() << '\n';
+    std::cout << "Number of quadratic constraints before: " << problem->quadraticConstraints.size() << '\n';
+
+    problem->finalize();
+
+    // Apply simplification and reformulation
+    simplifyNonlinearExpressions(problem, true, true, true);
+
+    std::cout << "\nProblem after reformulation:\n";
+    std::cout << problem << '\n';
+
+    std::cout << "Number of nonlinear constraints after: " << problem->nonlinearConstraints.size() << '\n';
+    std::cout << "Number of quadratic constraints after: " << problem->quadraticConstraints.size() << '\n';
+    std::cout << "Number of linear constraints after: " << problem->linearConstraints.size() << '\n';
+
+    // After square root squaring reformulation:
+    // - sqrt(x^2 + y^2) <= 10 becomes x^2 + y^2 <= 100 (quadratic constraint)
+    // - sqrt(x + y) <= 5 becomes x + y <= 25 (linear constraint)
+
+    // Verify all constraints are in the correct order and type
+    if(problem->numericConstraints.size() != 4)
+    {
+        std::cout << "FAILED: Expected 4 total constraints, got " << problem->numericConstraints.size() << '\n';
+        passed = false;
+    }
+
+    // Verify first constraint is still linear
+    if(problem->numericConstraints.size() > 0)
+    {
+        auto firstConstr = problem->numericConstraints[0];
+        if(firstConstr->name != "linearconstr1" || dynamic_cast<LinearConstraint*>(firstConstr.get()) == nullptr)
+        {
+            std::cout << "FAILED: First constraint should be 'linearconstr1' and linear type\n";
+            passed = false;
+        }
+    }
+
+    // Verify second constraint is now quadratic (was nonlinear sqrt(x^2+y^2))
+    if(problem->numericConstraints.size() > 1)
+    {
+        auto secondConstr = problem->numericConstraints[1];
+        if(secondConstr->name != "sqrtconstr" || dynamic_cast<QuadraticConstraint*>(secondConstr.get()) == nullptr)
+        {
+            std::cout << "FAILED: Second constraint should be 'sqrtconstr' and quadratic type\n";
+            passed = false;
+        }
+    }
+
+    // Verify third constraint is now linear (was nonlinear sqrt(x+y))
+    if(problem->numericConstraints.size() > 2)
+    {
+        auto thirdConstr = problem->numericConstraints[2];
+        if(thirdConstr->name != "sqrtlinearconstr" || dynamic_cast<LinearConstraint*>(thirdConstr.get()) == nullptr)
+        {
+            std::cout << "FAILED: Third constraint should be 'sqrtlinearconstr' and linear type\n";
+            passed = false;
+        }
+
+        // Verify the linear constraint has the correct structure: x + y <= 25
+        auto linConstr = dynamic_cast<LinearConstraint*>(thirdConstr.get());
+        if(linConstr)
+        {
+            if(linConstr->linearTerms.size() != 2)
+            {
+                std::cout << "FAILED: Expected 2 linear terms in 'sqrtlinearconstr', got "
+                          << linConstr->linearTerms.size() << '\n';
+                passed = false;
+            }
+
+            // Check bounds were squared correctly (5^2 = 25)
+            if(abs(linConstr->valueRHS - 25.0) > 1e-6)
+            {
+                std::cout << "FAILED: Expected RHS=25 after squaring in 'sqrtlinearconstr', got " << linConstr->valueRHS
+                          << '\n';
+                passed = false;
+            }
+        }
+    }
+
+    // Verify fourth constraint is still linear
+    if(problem->numericConstraints.size() > 3)
+    {
+        auto fourthConstr = problem->numericConstraints[3];
+        if(fourthConstr->name != "linearconstr2" || dynamic_cast<LinearConstraint*>(fourthConstr.get()) == nullptr)
+        {
+            std::cout << "FAILED: Fourth constraint should be 'linearconstr2' and linear type\n";
+            passed = false;
+        }
+    }
+
+    if(problem->quadraticConstraints.size() < 1)
+    {
+        std::cout << "FAILED: Expected at least 1 quadratic constraint after reformulation, got "
+                  << problem->quadraticConstraints.size() << '\n';
+        passed = false;
+    }
+
+    // Find the quadratic constraint (x^2 + y^2 <= 100)
+    QuadraticConstraintPtr mainQuadConstraint = nullptr;
+    for(auto& c : problem->quadraticConstraints)
+    {
+        if(c->name == "sqrtconstr" && c->quadraticTerms.size() == 2)
+        {
+            mainQuadConstraint = c;
+            break;
+        }
+    }
+
+    if(!mainQuadConstraint)
+    {
+        std::cout << "FAILED: Could not find quadratic constraint 'sqrtconstr'\n";
+        passed = false;
+    }
+
+    // Verify the quadratic constraint has the expected structure
+    if(mainQuadConstraint)
+    {
+        if(mainQuadConstraint->quadraticTerms.size() != 2)
+        {
+            std::cout << "FAILED: Expected 2 quadratic terms, got " << mainQuadConstraint->quadraticTerms.size()
+                      << '\n';
+            passed = false;
+        }
+
+        if(mainQuadConstraint->linearTerms.size() != 0)
+        {
+            std::cout << "FAILED: Expected 0 linear terms, got " << mainQuadConstraint->linearTerms.size() << '\n';
+            passed = false;
+        }
+
+        // Check bounds were squared correctly (10^2 = 100)
+        if(abs(mainQuadConstraint->valueRHS - 100.0) > 1e-6)
+        {
+            std::cout << "FAILED: Expected RHS=100 after squaring, got " << mainQuadConstraint->valueRHS << '\n';
+            passed = false;
+        }
+        else
+        {
+            std::cout << "SUCCESS: Quadratic constraint has correct structure (x^2 + y^2 <= 100)\n";
+        }
+    }
+
+    if(passed)
+        std::cout << "\nSUCCESS: Square root reformulation correctly converted to quadratic constraint\n";
+    else
+        std::cout << "\nFAILED: Square root reformulation test\n";
 
     return passed;
 }
