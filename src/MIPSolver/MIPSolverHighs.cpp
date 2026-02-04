@@ -388,7 +388,18 @@ void MIPSolverHighs::initializeSolverSettings()
 
     highsInstance.setOptionValue("threads", env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual"));
 
-    highsInstance.setOptionValue("run_crossover", env->settings->getSetting<bool>("Highs.RunCrossover", "Subsolver"));
+    switch(env->settings->getSetting<int>("Highs.RunCrossover", "Subsolver"))
+    {
+    case 0:
+        highsInstance.setOptionValue("run_crossover", "off");
+        break;
+    case 1:
+        highsInstance.setOptionValue("run_crossover", "choose");
+        break;
+    case 2:
+        highsInstance.setOptionValue("run_crossover", "on");
+        break;
+    }
 
     highsInstance.setOptionValue("highs_debug_level", env->settings->getSetting<int>("Highs.DebugLevel", "Subsolver"));
 
