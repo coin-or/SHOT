@@ -1573,6 +1573,18 @@ void Solver::initializeSettings()
 
     env->settings->createSetting("Highs.MIPHeuristicRunShifting", "Subsolver", false, "Run Shifting heuristic");
 
+    env->settings->createSetting("Highs.RunCrossover", "Subsolver", false,
+        "Run crossover after solving LP relaxation (can trigger KKT check assertions with numerical issues)");
+
+    VectorString enumHighsDebugLevel;
+    enumHighsDebugLevel.push_back("off");
+    enumHighsDebugLevel.push_back("low");
+    enumHighsDebugLevel.push_back("medium");
+    enumHighsDebugLevel.push_back("high");
+    env->settings->createSetting(
+        "Highs.DebugLevel", "Subsolver", 0, "Debug level for HiGHS internal assertions", enumHighsDebugLevel, 0);
+    enumHighsDebugLevel.clear();
+
     /*
     VectorString enumHighsMIPIPMSolver;
     enumHighsMIPIPMSolver.push_back("choose");

@@ -42,9 +42,11 @@ HighsCallbackFunctionType highsCallback
               for(auto const& line : lines)
                   env->output->outputInfo(fmt::format("      | {} ", line));
 
-              // data_in->user_interrupt = false;
               return;
           }
+
+          // Set user_interrupt to false by default for all MIP callbacks
+          data_in->user_interrupt = false;
 
           auto MIPSolver = std::dynamic_pointer_cast<MIPSolverHighs>(env->dualSolver->MIPSolver);
 
@@ -54,10 +56,6 @@ HighsCallbackFunctionType highsCallback
               {
                   env->output->outputDebug(fmt::format("      | solution limit reached "));
                   data_in->user_interrupt = true;
-              }
-              else
-              {
-                  data_in->user_interrupt = false;
               }
 
               return;
@@ -108,9 +106,6 @@ HighsCallbackFunctionType highsCallback
                        MIPSolver->currentSolutions[i].hashValue)
                              << std::endl;
                }*/
-
-              // Strange that we need to set this manually
-              data_in->user_interrupt = false;
 
               return;
           }
@@ -393,12 +388,15 @@ void MIPSolverHighs::initializeSolverSettings()
 
     highsInstance.setOptionValue("threads", env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual"));
 
+    highsInstance.setOptionValue("run_crossover", env->settings->getSetting<bool>("Highs.RunCrossover", "Subsolver"));
+
+    highsInstance.setOptionValue("highs_debug_level", env->settings->getSetting<int>("Highs.DebugLevel", "Subsolver"));
+
     // highsInstance.setOptionValue("simplex_strategy", 0);
     // highsInstance.setOptionValue("solver", "choose");
     // highsInstance.setOptionValue("primal_feasibility_tolerance", 1e-6);
     // highsInstance.setOptionValue("dual_feasibility_tolerance", 1e-6);
 
-    // highsInstance.setOptionValue("highs_debug_level", 3);
     // highsInstance.setOptionValue("mip_report_level", 2);
     // highsInstance.setOptionValue("output_flag", true);
 
