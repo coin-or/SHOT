@@ -913,6 +913,8 @@ void MIPSolverHighs::addMIPStart(VectorDouble point)
     HighsSolution solution;
     solution.col_value = point;
 
+    assert(point.size() == (size_t)numberOfVariables);
+
     auto return_status = highsInstance.setSolution(solution);
 
     if(return_status != HighsStatus::kOk)

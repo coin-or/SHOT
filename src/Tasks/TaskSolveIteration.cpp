@@ -34,6 +34,11 @@ TaskSolveIteration::TaskSolveIteration(EnvironmentPtr envPtr) : TaskBase(envPtr)
         {
             variableNames.push_back(V->name);
         }
+
+        if(env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
+        {
+            variableNames.push_back("shot_dual_objvar");
+        }
     }
 }
 
@@ -106,7 +111,22 @@ void TaskSolveIteration::run()
     {
         auto primalSol = env->results->primalSolution;
         env->reformulatedProblem->augmentAuxiliaryVariableValues(primalSol);
+
+        if(env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
+        {
+            primalSol.push_back(env->results->getPrimalBound());
+        }
+
+        assert(primalSol.size() == env->dualSolver->MIPSolver->getNumberOfVariables());
+
         env->dualSolver->MIPSolver->addMIPStart(primalSol);
+
+        if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+        {
+            auto filename = fmt::format("{}/dualiter{}_mipstart.txt",
+                env->settings->getSetting<std::string>("Debug.Path", "Output"), currIter->iterationNumber - 1);
+            Utilities::saveVariablePointVectorToFile(primalSol, variableNames, filename);
+        }
     }
 
     if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
