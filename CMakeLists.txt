@@ -271,6 +271,9 @@ if(HAS_HIGHS)
         )
 
         FetchContent_MakeAvailable(highs)
+
+        # Disable HiGHS assertions even in debug builds
+        # target_compile_definitions(highs PRIVATE NDEBUG)
     endif()
 endif(HAS_HIGHS)
 
