@@ -244,6 +244,11 @@ void LinearObjectiveFunction::takeOwnership(ProblemPtr owner)
 
 double LinearObjectiveFunction::calculateValue(const VectorDouble& point)
 {
+    if(auto sharedOwnerProblem = ownerProblem.lock())
+    {
+        assert(point.size() == sharedOwnerProblem->properties.numberOfVariables && 
+               "Solution vector size must match number of variables in problem");
+    }
     double value = constant + linearTerms.calculate(point);
     return value;
 }
@@ -554,7 +559,7 @@ void QuadraticObjectiveFunction::initializeHessianSparsityPattern()
         auto firstVariable
             = (T->firstVariable->index < T->secondVariable->index) ? T->firstVariable : T->secondVariable;
         auto secondVariable
-            = (T->firstVariable->index > T->secondVariable->index) ? T->secondVariable : T->firstVariable;
+            = (T->firstVariable->index < T->secondVariable->index) ? T->secondVariable : T->firstVariable;
 
         auto key = std::make_pair(firstVariable, secondVariable);
 

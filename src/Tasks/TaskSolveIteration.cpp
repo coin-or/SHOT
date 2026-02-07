@@ -228,18 +228,20 @@ void TaskSolveIteration::run()
 
         if(!env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed)
         {
-
             double currentDualBound = env->dualSolver->MIPSolver->getDualObjectiveValue();
+
             if(currIter->isMIP())
             {
-                DualSolution sol = { sols.at(0).point, E_DualSolutionSource::MIPSolverBound, currentDualBound,
-                    currIter->iterationNumber, false };
-                env->dualSolver->addDualSolutionCandidate(sol);
-
                 if(currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
                 {
                     DualSolution sol = { sols.at(0).point, E_DualSolutionSource::MIPSolutionOptimal,
                         currIter->objectiveValue, currIter->iterationNumber, false };
+                    env->dualSolver->addDualSolutionCandidate(sol);
+                }
+                else
+                {
+                    DualSolution sol = { sols.at(0).point, E_DualSolutionSource::MIPSolverBound, currentDualBound,
+                        currIter->iterationNumber, false };
                     env->dualSolver->addDualSolutionCandidate(sol);
                 }
             }

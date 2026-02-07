@@ -74,7 +74,7 @@ class ObjectiveFunction
 {
 
 public:
-    ~ObjectiveFunction() = default;
+    virtual ~ObjectiveFunction() = default;
 
     ObjectiveFunctionProperties properties;
 

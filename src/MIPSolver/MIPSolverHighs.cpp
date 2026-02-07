@@ -21,6 +21,7 @@
 #include "../Utilities.h"
 
 #include "../Model/Problem.h"
+#include "../Model/ObjectiveFunction.h"
 
 namespace SHOT
 {
@@ -65,6 +66,10 @@ HighsCallbackFunctionType highsCallback
           {
               std::vector<double> solution = data_out->mip_solution;
 
+              // Remove auxiliary variables if present (e.g., shot_dual_objvar and variables from integer cuts)
+              // Only keep the first numberOfVariables elements that correspond to the reformulated problem
+              solution.resize(env->reformulatedProblem->properties.numberOfVariables);
+
               double hashValue = Utilities::calculateHash(solution);
 
               for(int i = 0; i < MIPSolver->currentSolutions.size(); i++)
@@ -76,7 +81,9 @@ HighsCallbackFunctionType highsCallback
               }
 
               SolutionPoint currentSolution;
-              currentSolution.objectiveValue = env->reformulatedProblem->objectiveFunction->calculateValue(solution);
+
+              // Use HiGHS's reported objective value directly
+              currentSolution.objectiveValue = data_out->objective_function_value;
               currentSolution.point = solution;
               currentSolution.hashValue = hashValue;
               MIPSolver->currentSolutions.push_back(currentSolution);
@@ -99,13 +106,6 @@ HighsCallbackFunctionType highsCallback
                           return (firstSolution.objectiveValue > secondSolution.objectiveValue);
                       });
               }
-
-              /*for(int i = 0; i < MIPSolver->currentSolutions.size(); i++)
-               {
-                   std::cout << fmt::format("{:.8f} \t {:.8f}  ", MIPSolver->currentSolutions[i].objectiveValue,
-                       MIPSolver->currentSolutions[i].hashValue)
-                             << std::endl;
-               }*/
 
               return;
           }
