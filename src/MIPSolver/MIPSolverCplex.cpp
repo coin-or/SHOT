@@ -1139,9 +1139,7 @@ void MIPSolverCplex::setTimeLimit(double seconds)
 {
     try
     {
-        if(seconds > 1e+75)
-        {
-        }
+        if(seconds > 1e+75) { }
         else if(seconds > 0)
         {
             cplexInstance.setParam(IloCplex::Param::TimeLimit, seconds);
@@ -1253,22 +1251,17 @@ void MIPSolverCplex::setCutOffAsConstraint(double cutOff)
 
 void MIPSolverCplex::addMIPStart(VectorDouble point)
 {
+    assert(point.size() == env->dualSolver->MIPSolver->getNumberOfVariables());
+    assert(variableNames.size() == point.size());
+
     IloNumArray startVal(cplexEnv);
-
-    if((int)point.size() < env->reformulatedProblem->properties.numberOfVariables)
-        env->reformulatedProblem->augmentAuxiliaryVariableValues(point);
-
-    assert(env->reformulatedProblem->properties.numberOfVariables == point.size());
 
     for(double P : point)
         startVal.add(P);
 
     auto startVars = IloNumVarArray(cplexEnv);
 
-    if(this->hasDualAuxiliaryObjectiveVariable())
-        startVal.add(env->reformulatedProblem->objectiveFunction->calculateValue(point));
-
-    // Not all variables in cplexVars need to be in the MIP start (e.g. variables from integer cuts)
+    // Not all variables in cplexVars are yet in the MIP start (e.g. variables from integer cuts)
     for(int i = 0; i < startVal.getSize(); i++)
         startVars.add(cplexVars[i]);
 

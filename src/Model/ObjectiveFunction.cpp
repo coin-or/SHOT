@@ -246,8 +246,9 @@ double LinearObjectiveFunction::calculateValue(const VectorDouble& point)
 {
     if(auto sharedOwnerProblem = ownerProblem.lock())
     {
-        assert(point.size() == sharedOwnerProblem->properties.numberOfVariables && 
-               "Solution vector size must match number of variables in problem");
+        // TODO: Should be == instead of >=, but for now we allow the solution vector to contain auxiliary variable
+        // values that are not used in the objective function
+        assert(point.size() >= sharedOwnerProblem->properties.numberOfVariables);
     }
     double value = constant + linearTerms.calculate(point);
     return value;

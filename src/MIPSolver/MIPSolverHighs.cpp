@@ -919,6 +919,9 @@ void MIPSolverHighs::setCutOffAsConstraint(double cutOff)
 
 void MIPSolverHighs::addMIPStart(VectorDouble point)
 {
+    assert(point.size() == env->dualSolver->MIPSolver->getNumberOfVariables());
+    assert(variableNames.size() == point.size());
+
     HighsSolution solution;
     solution.col_value = point;
 

@@ -1184,19 +1184,12 @@ void MIPSolverGurobi::setCutOffAsConstraint(double cutOff)
 
 void MIPSolverGurobi::addMIPStart(VectorDouble point)
 {
+    assert(point.size() == env->dualSolver->MIPSolver->getNumberOfVariables());
+    assert(variableNames.size() == point.size());
+
     try
     {
         VectorDouble startVal;
-
-        if((int)point.size() < env->reformulatedProblem->properties.numberOfVariables)
-            env->reformulatedProblem->augmentAuxiliaryVariableValues(point);
-
-        assert(env->reformulatedProblem->properties.numberOfVariables == point.size());
-
-        if(this->hasDualAuxiliaryObjectiveVariable())
-            point.push_back(env->reformulatedProblem->objectiveFunction->calculateValue(point));
-
-        assert(variableNames.size() == point.size());
 
         for(double P : point)
             startVal.push_back(P);

@@ -70,6 +70,8 @@ void TaskPresolve::run()
     if(env->dualSolver->MIPSolver->getDiscreteVariableStatus() && env->results->hasPrimalSolution())
     {
         auto primalSol = env->results->primalSolution;
+        assert(primalSol.size() == env->problem->properties.numberOfVariables);
+
         env->reformulatedProblem->augmentAuxiliaryVariableValues(primalSol);
 
         if(env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
