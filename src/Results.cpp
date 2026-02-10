@@ -362,6 +362,12 @@ std::string Results::getResultsOSrL()
         }
     }
 
+    otherNode = osrlDocument.NewElement("other");
+    otherNode->SetAttribute("name", "OriginalProblemObjectiveDirection");
+    otherNode->SetAttribute("value", env->problem->objectiveFunction->properties.isMinimize ? "minimize" : "maximize");
+    otherNode->SetAttribute("description", "Whether the original problem is a minimization or maximization problem");
+    otherResultsNode->InsertEndChild(otherNode);
+
     // Original problem sizes
     otherNode = osrlDocument.NewElement("other");
     otherNode->SetAttribute("name", "OriginalNumberOfVariables");
@@ -427,6 +433,14 @@ std::string Results::getResultsOSrL()
     // Reformulated problem sizes
     if(isReformulated)
     {
+        otherNode = osrlDocument.NewElement("other");
+        otherNode->SetAttribute("name", "ReformulatedProblemObjectiveDirection");
+        otherNode->SetAttribute(
+            "value", env->reformulatedProblem->objectiveFunction->properties.isMinimize ? "minimize" : "maximize");
+        otherNode->SetAttribute(
+            "description", "Whether the reformulated problem is a minimization or maximization problem");
+        otherResultsNode->InsertEndChild(otherNode);
+
         otherNode = osrlDocument.NewElement("other");
         otherNode->SetAttribute("name", "ReformulatedNumberOfVariables");
         otherNode->SetAttribute("value", env->reformulatedProblem->properties.numberOfVariables);
@@ -704,6 +718,9 @@ std::string Results::getResultsOSrL()
     {
         totalReformulations += count;
     }
+
+    if(env->reformulatedProblem->antiEpigraphObjectiveVariable)
+        totalReformulations++;
 
     otherNode = osrlDocument.NewElement("other");
     otherNode->SetAttribute("name", "TotalNumberOfReformulations");
