@@ -387,8 +387,6 @@ void Problem::updateVariableBounds()
 void Problem::updateVariables()
 {
     allVariables.sortByIndex();
-    allVariables.sortByIndex();
-    allVariables.sortByIndex();
     realVariables.sortByIndex();
     binaryVariables.sortByIndex();
     integerVariables.sortByIndex();
@@ -414,9 +412,13 @@ void Problem::updateVariables()
 
     updateVariableBounds();
 
+    auto linearObjective = std::dynamic_pointer_cast<LinearObjectiveFunction>(objectiveFunction);
+    auto quadraticObjective = std::dynamic_pointer_cast<QuadraticObjectiveFunction>(objectiveFunction);
+    auto nonlinearObjective = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objectiveFunction);
+
     if(objectiveFunction->properties.hasLinearTerms)
     {
-        for(auto& T : std::dynamic_pointer_cast<LinearObjectiveFunction>(objectiveFunction)->linearTerms)
+        for(auto& T : linearObjective->linearTerms)
         {
             T->variable->properties.inObjectiveFunction = true;
             T->variable->properties.inLinearTerms = true;
@@ -425,7 +427,7 @@ void Problem::updateVariables()
 
     if(objectiveFunction->properties.hasQuadraticTerms)
     {
-        for(auto& T : std::dynamic_pointer_cast<QuadraticObjectiveFunction>(objectiveFunction)->quadraticTerms)
+        for(auto& T : quadraticObjective->quadraticTerms)
         {
             T->firstVariable->properties.inObjectiveFunction = true;
             T->secondVariable->properties.inObjectiveFunction = true;
@@ -438,7 +440,7 @@ void Problem::updateVariables()
 
     if(objectiveFunction->properties.hasMonomialTerms)
     {
-        for(auto& T : std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objectiveFunction)->monomialTerms)
+        for(auto& T : nonlinearObjective->monomialTerms)
         {
             for(auto& V : T->variables)
             {
@@ -451,7 +453,7 @@ void Problem::updateVariables()
 
     if(objectiveFunction->properties.hasSignomialTerms)
     {
-        for(auto& T : std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objectiveFunction)->signomialTerms)
+        for(auto& T : nonlinearObjective->signomialTerms)
         {
             for(auto& E : T->elements)
             {
@@ -464,8 +466,7 @@ void Problem::updateVariables()
 
     if(objectiveFunction->properties.hasNonlinearExpression)
     {
-        for(auto& V :
-            std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objectiveFunction)->variablesInNonlinearExpression)
+        for(auto& V : nonlinearObjective->variablesInNonlinearExpression)
         {
             V->properties.inObjectiveFunction = true;
             V->properties.inNonlinearExpression = true;
@@ -810,17 +811,15 @@ void Problem::updateFactorableFunctions()
         }
     }
 
-    if(objectiveFunction->properties.hasNonlinearExpression
-        && std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objectiveFunction)
-                ->variablesInNonlinearExpression.size()
-            > 0)
+    auto nonlinearObjectiveFunc = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objectiveFunction);
+
+    if(objectiveFunction->properties.hasNonlinearExpression && nonlinearObjectiveFunc
+        && nonlinearObjectiveFunc->variablesInNonlinearExpression.size() > 0)
     {
-        auto objective = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objectiveFunction);
+        nonlinearObjectiveFunc->updateFactorableFunction();
+        factorableFunctions.push_back(nonlinearObjectiveFunc->nonlinearExpression->getFactorableFunction());
 
-        objective->updateFactorableFunction();
-        factorableFunctions.push_back(objective->nonlinearExpression->getFactorableFunction());
-
-        objective->nonlinearExpressionIndex = nonlinearExpressionCounter;
+        nonlinearObjectiveFunc->nonlinearExpressionIndex = nonlinearExpressionCounter;
     }
 
     if(factorableFunctions.size() > 0)

@@ -171,7 +171,7 @@ void QuadraticTerms::updateConvexity()
         return;
     }
 
-    eigenvalues = eigenSolver.eigenvalues();
+    eigenvalues = eigenSolver.eigenvalues().real();
     eigenvectors = eigenSolver.eigenvectors();
 
     if(auto sharedOwnerProblem = ownerProblem.lock())
@@ -203,7 +203,7 @@ void QuadraticTerms::updateConvexity()
 
     for(int i = 0; i < numberOfVariables; i++)
     {
-        double eigenvalue = eigenSolver.eigenvalues()[i];
+        double eigenvalue = eigenvalues[i].real();
 
         this->minEigenValue = std::min(this->minEigenValue, eigenvalue);
         this->maxEigenValue = std::max(this->maxEigenValue, eigenvalue);
@@ -259,7 +259,7 @@ void QuadraticTerms::performLDLFactorization()
 
     Eigen::SparseMatrix<std::complex<double>> matrix(numberOfVariables, numberOfVariables);
 
-    for(auto E : elements)
+    for(const auto& E : elements)
     {
         matrix.insert(E.row(), E.col()) = std::complex<double>(E.value(), 0.0);
     }
@@ -295,7 +295,7 @@ void QuadraticTerms::performLDLFactorization()
 
     // std::cout << perm * ident << std::endl;
 
-    for(auto diag : eigenSolverLDL.vectorD())
+    for(const auto& diag : eigenSolverLDL.vectorD())
         LDLDiag.push_back(diag.real());
 
     auto diagonal = matrix.diagonal();
