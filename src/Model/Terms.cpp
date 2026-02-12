@@ -11,6 +11,7 @@
 #include "Terms.h"
 #include "Problem.h"
 #include "../Settings.h"
+#include "../Timing.h"
 
 #include <Eigen/Sparse>
 
@@ -154,6 +155,11 @@ void QuadraticTerms::updateConvexity()
 
     // std::cout << matrix.toDense() << std::endl;
 
+    if(auto sharedOwnerProblem = ownerProblem.lock())
+    {
+        sharedOwnerProblem->env->timing->startTimer("EigenvalueComputation");
+    }
+
     Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eigenSolver(
         matrix, Eigen::DecompositionOptions::ComputeEigenvectors);
 
@@ -167,6 +173,11 @@ void QuadraticTerms::updateConvexity()
 
     eigenvalues = eigenSolver.eigenvalues();
     eigenvectors = eigenSolver.eigenvectors();
+
+    if(auto sharedOwnerProblem = ownerProblem.lock())
+    {
+        sharedOwnerProblem->env->timing->stopTimer("EigenvalueComputation");
+    }
 
     // std::cout << eigenvalues << std::endl;
 

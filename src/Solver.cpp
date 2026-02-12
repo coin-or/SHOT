@@ -67,7 +67,10 @@ Solver::Solver()
     env->timing->startTimer("Total");
 
     env->timing->createTimer("ProblemInitialization", "- problem initialization");
+    env->timing->createTimer("EigenvalueComputation", "- eigenvalue and eigenvector computation");
     env->timing->createTimer("ProblemReformulation", "- problem reformulation");
+    env->timing->createTimer("ProblemReformulationEigenDecomp", "  - eigenvalue decomposition");
+    env->timing->createTimer("ProblemReformulationLDLDecomp", "  - LDL decomposition");
     env->timing->createTimer("BoundTightening", "- bound tightening");
     env->timing->createTimer("BoundTighteningPOA", "  - initial outer approximation");
     env->timing->createTimer("BoundTighteningFBBTOriginal", "  - feasibility based (original problem)");
@@ -103,6 +106,7 @@ Solver::Solver(std::shared_ptr<spdlog::sinks::sink> consoleSink)
     env->timing->createTimer("BoundTighteningFBBT", "  - feasibility based");
     env->timing->createTimer("BoundTighteningFBBTOriginal", "  - feasibility based (original problem");
     env->timing->createTimer("BoundTighteningFBBTReformulated", "  - feasibility based (reformulated problem");
+    env->timing->createTimer("EigenvalueComputation", "- eigenvalue and eigenvector computation");
 
     env->settings = std::make_shared<Settings>(env->output);
     env->tasks = std::make_shared<TaskHandler>(env);
