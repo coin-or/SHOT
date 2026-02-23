@@ -11,6 +11,7 @@
 #include "NLPSolverIpoptBase.h"
 
 #include <cstdio>
+#include <cstring>
 
 #include "../Output.h"
 #include "../Settings.h"
@@ -115,11 +116,8 @@ bool IpoptProblem::get_nlp_info(Index& n, Index& m, Index& nnz_jac_g, Index& nnz
 
 bool IpoptProblem::get_bounds_info(Index n, Number* x_l, Number* x_u, Index m, Number* g_l, Number* g_u)
 {
-    for(int i = 0; i < n; i++)
-    {
-        x_l[i] = lowerBounds[i];
-        x_u[i] = upperBounds[i];
-    }
+    std::memcpy(x_l, lowerBounds.data(), n * sizeof(Number));
+    std::memcpy(x_u, upperBounds.data(), n * sizeof(Number));
 
     // Ipopt interprets any number greater than nlp_upper_bound_inf as
     // infinity. The default value of nlp_upper_bound_inf and nlp_lower_bound_inf
@@ -128,7 +126,7 @@ bool IpoptProblem::get_bounds_info(Index n, Number* x_l, Number* x_u, Index m, N
 
     for(int i = 0; i < m; i++)
     {
-        auto constraint = std::dynamic_pointer_cast<NumericConstraint>(sourceProblem->getConstraint(i));
+        auto constraint = sourceProblem->numericConstraints[i];
 
         g_l[i] = constraint->valueLHS;
         g_u[i] = constraint->valueRHS;
@@ -302,10 +300,7 @@ bool IpoptProblem::get_starting_point(Index n, [[maybe_unused]] bool init_x, [[m
 // Returns the value of the objective function
 bool IpoptProblem::eval_f(Index n, const Number* x, [[maybe_unused]] bool new_x, Number& obj_value)
 {
-    VectorDouble vectorPoint(n);
-
-    for(int i = 0; i < n; i++)
-        vectorPoint[i] = x[i];
+    VectorDouble vectorPoint(x, x + n);
 
     obj_value = sourceProblem->objectiveFunction->calculateValue(vectorPoint);
 
@@ -315,13 +310,9 @@ bool IpoptProblem::eval_f(Index n, const Number* x, [[maybe_unused]] bool new_x,
 // Returns the gradient of the objective function
 bool IpoptProblem::eval_grad_f(Index n, const Number* x, [[maybe_unused]] bool new_x, Number* grad_f)
 {
-    VectorDouble vectorPoint(n);
+    VectorDouble vectorPoint(x, x + n);
 
-    for(int i = 0; i < n; i++)
-        vectorPoint[i] = x[i];
-
-    for(int i = 0; i < n; i++)
-        grad_f[i] = 0.0;
+    std::memset(grad_f, 0, n * sizeof(Number));
 
     for(auto& G : sourceProblem->objectiveFunction->calculateGradient(vectorPoint, false))
         grad_f[G.first->index] = G.second;
@@ -332,13 +323,7 @@ bool IpoptProblem::eval_grad_f(Index n, const Number* x, [[maybe_unused]] bool n
 // Return the value of the constraints
 bool IpoptProblem::eval_g(Index n, const Number* x, [[maybe_unused]] bool new_x, Index m, Number* g)
 {
-    VectorDouble vectorPoint(n);
-
-    for(int i = 0; i < n; i++)
-        vectorPoint[i] = x[i];
-
-    for(int i = 0; i < m; i++)
-        g[i] = 0.0;
+    VectorDouble vectorPoint(x, x + n);
 
     for(int i = 0; i < m; i++)
         g[i] = sourceProblem->numericConstraints[i]->calculateFunctionValue(vectorPoint);
@@ -378,13 +363,9 @@ bool IpoptProblem::eval_jac_g(Index n, const Number* x, [[maybe_unused]] bool ne
 
     // The values
 
-    VectorDouble vectorPoint(n);
+    VectorDouble vectorPoint(x, x + n);
 
-    for(int i = 0; i < n; i++)
-        vectorPoint[i] = x[i];
-
-    for(int i = 0; i < nele_jac; i++)
-        values[i] = 0.0;
+    std::memset(values, 0, nele_jac * sizeof(Number));
 
     for(auto& C : sourceProblem->numericConstraints)
     {
@@ -432,13 +413,9 @@ bool IpoptProblem::eval_h(Index n, const Number* x, [[maybe_unused]] bool new_x,
 
     // The values
 
-    VectorDouble vectorPoint(n);
+    VectorDouble vectorPoint(x, x + n);
 
-    for(int i = 0; i < n; i++)
-        vectorPoint[i] = x[i];
-
-    for(int i = 0; i < nele_hess; i++)
-        values[i] = 0.0;
+    std::memset(values, 0, nele_hess * sizeof(Number));
 
     if(obj_factor != 0.0)
     {

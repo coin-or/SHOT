@@ -190,8 +190,11 @@ void TaskPerformBoundTightening::createPOA()
     POASolver->solveProblem();
 
     int hyperplaneCounter = 0;
+    auto POADualSolver = this->POASolver->solver->getEnvironment()->dualSolver;
+    auto objectiveFunction = sourceProblem->objectiveFunction;
+    int baseConstraintIndex = sourceProblem->properties.numberOfLinearConstraints;
 
-    for(auto& HP : this->POASolver->solver->getEnvironment()->dualSolver->generatedHyperplanes)
+    for(auto& HP : POADualSolver->generatedHyperplanes)
     {
         Hyperplane newHP;
 
@@ -205,9 +208,9 @@ void TaskPerformBoundTightening::createPOA()
             = std::dynamic_pointer_cast<NumericConstraint>(sourceProblem->getConstraint(HP.sourceConstraintIndex));
         newHP.generatedPoint = HP.generatedPoint;
         newHP.isSourceConvex = HP.isSourceConvex;
-        newHP.objectiveFunctionValue = sourceProblem->objectiveFunction->calculateValue(newHP.generatedPoint);
+        newHP.objectiveFunctionValue = objectiveFunction->calculateValue(newHP.generatedPoint);
 
-        auto optional = this->POASolver->solver->getEnvironment()->dualSolver->MIPSolver->createHyperplaneTerms(newHP);
+        auto optional = POADualSolver->MIPSolver->createHyperplaneTerms(newHP);
 
         if(!optional)
             continue;
@@ -233,9 +236,11 @@ void TaskPerformBoundTightening::createPOA()
 
         // Small fix to fix badly scaled cuts.
         // TODO: this should be made so it also takes into account small/large coefficients of the linear terms
-        if(abs(tmpPair.second) > 1e15)
+        double absSecond = abs(tmpPair.second);
+
+        if(absSecond > 1e15)
         {
-            double scalingFactor = abs(tmpPair.second) - 1e15;
+            double scalingFactor = absSecond - 1e15;
 
             for(auto& E : tmpPair.first)
                 E.second /= scalingFactor;
@@ -243,8 +248,7 @@ void TaskPerformBoundTightening::createPOA()
             tmpPair.second /= scalingFactor;
         }
 
-        auto linearConstraint = std::make_shared<LinearConstraint>(
-            sourceProblem->properties.numberOfLinearConstraints + hyperplaneCounter,
+        auto linearConstraint = std::make_shared<LinearConstraint>(baseConstraintIndex + hyperplaneCounter,
             fmt::format("initPOA_{}_{}", newHP.sourceConstraint->name, hyperplaneCounter), SHOT_DBL_MIN,
             -tmpPair.second);
 
@@ -260,7 +264,11 @@ void TaskPerformBoundTightening::createPOA()
         sourceProblem->add(std::move(linearConstraint));
     }
 
-    for(auto& PT : this->POASolver->solver->getEnvironment()->dualSolver->interiorPts)
+    auto& interiorPts = POADualSolver->interiorPts;
+    env->dualSolver->interiorPointCandidates.reserve(
+        env->dualSolver->interiorPointCandidates.size() + interiorPts.size());
+
+    for(auto& PT : interiorPts)
         env->dualSolver->interiorPointCandidates.push_back(PT);
 
     if(hyperplaneCounter > 0)

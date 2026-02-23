@@ -11,6 +11,7 @@
 #include "Terms.h"
 #include "Problem.h"
 #include "../Settings.h"
+#include "../Timing.h"
 
 #include <Eigen/Sparse>
 
@@ -38,7 +39,6 @@ void QuadraticTerms::updateConvexity()
         return;
     }
 
-    std::vector<Eigen::Triplet<double>> elements;
     elements.reserve(2 * size());
 
     allSquares = true;
@@ -155,6 +155,11 @@ void QuadraticTerms::updateConvexity()
 
     // std::cout << matrix.toDense() << std::endl;
 
+    if(auto sharedOwnerProblem = ownerProblem.lock())
+    {
+        sharedOwnerProblem->env->timing->startTimer("EigenvalueComputation");
+    }
+
     Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eigenSolver(
         matrix, Eigen::DecompositionOptions::ComputeEigenvectors);
 
@@ -166,8 +171,13 @@ void QuadraticTerms::updateConvexity()
         return;
     }
 
-    eigenvalues = eigenSolver.eigenvalues();
+    eigenvalues = eigenSolver.eigenvalues().real();
     eigenvectors = eigenSolver.eigenvectors();
+
+    if(auto sharedOwnerProblem = ownerProblem.lock())
+    {
+        sharedOwnerProblem->env->timing->stopTimer("EigenvalueComputation");
+    }
 
     // std::cout << eigenvalues << std::endl;
 
@@ -193,7 +203,7 @@ void QuadraticTerms::updateConvexity()
 
     for(int i = 0; i < numberOfVariables; i++)
     {
-        double eigenvalue = eigenSolver.eigenvalues()[i];
+        double eigenvalue = eigenvalues[i].real();
 
         this->minEigenValue = std::min(this->minEigenValue, eigenvalue);
         this->maxEigenValue = std::max(this->maxEigenValue, eigenvalue);
@@ -214,6 +224,110 @@ void QuadraticTerms::updateConvexity()
 
     if(this->maxEigenValue <= eigenvalueTolerance)
         maxEigenValueWithinTolerance = true;
+}
+
+void QuadraticTerms::performLDLFactorization()
+{
+    if(LDLFactorizationPerformed)
+        return;
+
+    assert(convexity != E_Convexity::NotSet);
+
+    // The following cases should not be handled with the LDL reformulation
+    if(allSquares && allPositive)
+    {
+        LDLFactorizationPerformed = true;
+        LDLFactorizationSuccessful = false;
+        return;
+    }
+
+    if(allSquares && allNegative)
+    {
+        LDLFactorizationPerformed = true;
+        LDLFactorizationSuccessful = false;
+        return;
+    }
+
+    if(allBilinear)
+    {
+        LDLFactorizationPerformed = true;
+        LDLFactorizationSuccessful = false;
+        return;
+    }
+
+    int numberOfVariables = variableMap.size();
+
+    Eigen::SparseMatrix<std::complex<double>> matrix(numberOfVariables, numberOfVariables);
+
+    for(const auto& E : elements)
+    {
+        matrix.insert(E.row(), E.col()) = std::complex<double>(E.value(), 0.0);
+    }
+
+    matrix.makeCompressed();
+    // std::cout << "Original matrix: \n" << matrix << std::endl;
+
+    Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>> eigenSolverLDL(matrix);
+
+    eigenSolverLDL.compute(matrix);
+
+    switch(eigenSolverLDL.info())
+    {
+    case Eigen::Success:
+        break;
+    case Eigen::NumericalIssue:
+        // std::cout << "Error: LDL::info(): Numerical issue." << std::endl;
+    default:
+        LDLFactorizationPerformed = true;
+        LDLFactorizationSuccessful = false;
+        return;
+    }
+
+    Eigen::MatrixXd ident(numberOfVariables, numberOfVariables);
+    ident.setIdentity();
+
+    auto matrixL = (eigenSolverLDL.matrixL()).real();
+
+    auto permInv = eigenSolverLDL.permutationPinv();
+
+    LDLMatrixL = (permInv * (matrixL * ident)).eval();
+    auto LDLMatrixLT = ((matrixL * ident).transpose() * permInv.transpose()).eval();
+
+    // std::cout << perm * ident << std::endl;
+
+    for(const auto& diag : eigenSolverLDL.vectorD())
+        LDLDiag.push_back(diag.real());
+
+    auto diagonal = matrix.diagonal();
+    auto original = (matrix * ident).eval();
+    original += matrix.transpose();
+    original -= diagonal.asDiagonal();
+
+    // std::cout << "original \n" << original.real() << std::endl;
+
+    // std::cout << "diagonal \n" << (eigenSolverLDL.vectorD().asDiagonal()) * ident << std::endl;
+
+    // std::cout << "L-matrix 1: \n" << LDLMatrixL << std::endl;
+    // std::cout << "L-matrix 2: \n" << LDLMatrixLT << std::endl;
+
+    Eigen::MatrixXcd reconstructed = LDLMatrixL * eigenSolverLDL.vectorD().asDiagonal() * LDLMatrixLT;
+    Eigen::MatrixXd error = reconstructed.real() - original.real();
+
+    // std::cout << "error \n" << error << std::endl;
+
+    // std::cout << "max-error " << error.maxCoeff() << std::endl;
+    // std::cout << "min-value " << error.minCoeff() << std::endl;
+
+    // The error to the reconstructed matrix is too large, will not use the decomposition
+    if(std::abs(error.maxCoeff()) > 1e-12 || std::abs(error.minCoeff()) < -1e-12)
+    {
+        LDLFactorizationPerformed = true;
+        LDLFactorizationSuccessful = false;
+        return;
+    }
+
+    LDLFactorizationPerformed = true;
+    LDLFactorizationSuccessful = true;
 }
 
 MonomialTerm::MonomialTerm(const MonomialTerm* term, ProblemPtr destinationProblem)

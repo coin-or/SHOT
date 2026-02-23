@@ -11,91 +11,95 @@
 
 #include "Simplifications.h"
 
+#include <unordered_set>
 #include "spdlog/fmt/fmt.h"
 
 namespace SHOT
 {
 
-void simplifyNonlinearExpressions(
+void checkAndConvertObjectivesAndConstraints(
     ProblemPtr problem, bool extractMonomials, bool extractSignomials, bool extractQuadratics)
 {
     if(problem->objectiveFunction->properties.hasNonlinearExpression)
     {
         auto nonlinearObjective = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(problem->objectiveFunction);
 
-        auto nonlinearExpression = simplify(nonlinearObjective->nonlinearExpression);
-
-        auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression,
-            tmpConstant]
-            = extractTermsAndConstant(
-                nonlinearExpression, extractMonomials, extractSignomials, extractQuadratics, true);
-
-        if(tmpMonomialTerms.size() == 0 && tmpSignomialTerms.size() == 0 && !tmpNonlinearExpression
-            && nonlinearObjective->monomialTerms.size() == 0 && nonlinearObjective->signomialTerms.size() == 0)
+        if(nonlinearObjective->nonlinearExpression)
         {
-            // The objective is no longer nonlinear
+            auto nonlinearExpression = simplify(nonlinearObjective->nonlinearExpression);
 
-            if(tmpQuadraticTerms.size() > 0 || nonlinearObjective->quadraticTerms.size() > 0)
+            auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression,
+                tmpConstant]
+                = extractTermsAndConstant(
+                    nonlinearExpression, extractMonomials, extractSignomials, extractQuadratics, true);
+
+            if(tmpMonomialTerms.size() == 0 && tmpSignomialTerms.size() == 0 && !tmpNonlinearExpression
+                && nonlinearObjective->monomialTerms.size() == 0 && nonlinearObjective->signomialTerms.size() == 0)
             {
-                // The objective is quadratic
-                auto newObjective = std::make_shared<QuadraticObjectiveFunction>();
-                newObjective->constant = nonlinearObjective->constant;
-                newObjective->direction = nonlinearObjective->direction;
-                newObjective->linearTerms = nonlinearObjective->linearTerms;
-                newObjective->quadraticTerms = nonlinearObjective->quadraticTerms;
+                // The objective is no longer nonlinear
 
-                if(tmpLinearTerms.size() > 0)
-                    newObjective->add(tmpLinearTerms);
+                if(tmpQuadraticTerms.size() > 0 || nonlinearObjective->quadraticTerms.size() > 0)
+                {
+                    // The objective is quadratic
+                    auto newObjective = std::make_shared<QuadraticObjectiveFunction>();
+                    newObjective->constant = nonlinearObjective->constant;
+                    newObjective->direction = nonlinearObjective->direction;
+                    newObjective->linearTerms = nonlinearObjective->linearTerms;
+                    newObjective->quadraticTerms = nonlinearObjective->quadraticTerms;
 
-                if(tmpQuadraticTerms.size() > 0)
-                    newObjective->add(tmpQuadraticTerms);
+                    if(tmpLinearTerms.size() > 0)
+                        newObjective->add(tmpLinearTerms);
 
-                if(tmpConstant != 0.0)
-                    newObjective->constant += tmpConstant;
+                    if(tmpQuadraticTerms.size() > 0)
+                        newObjective->add(tmpQuadraticTerms);
 
-                newObjective->updateProperties();
-                problem->objectiveFunction = newObjective;
+                    if(tmpConstant != 0.0)
+                        newObjective->constant += tmpConstant;
+
+                    newObjective->updateProperties();
+                    problem->objectiveFunction = newObjective;
+                }
+                else
+                {
+                    // The objective is linear
+                    auto newObjective = std::make_shared<LinearObjectiveFunction>();
+                    newObjective->constant = nonlinearObjective->constant;
+                    newObjective->direction = nonlinearObjective->direction;
+                    newObjective->linearTerms = nonlinearObjective->linearTerms;
+
+                    if(tmpLinearTerms.size() > 0)
+                        newObjective->add(tmpLinearTerms);
+
+                    if(tmpConstant != 0.0)
+                        newObjective->constant += tmpConstant;
+
+                    newObjective->updateProperties();
+                    problem->objectiveFunction = newObjective;
+                }
             }
             else
             {
-                // The objective is linear
-                auto newObjective = std::make_shared<LinearObjectiveFunction>();
-                newObjective->constant = nonlinearObjective->constant;
-                newObjective->direction = nonlinearObjective->direction;
-                newObjective->linearTerms = nonlinearObjective->linearTerms;
-
                 if(tmpLinearTerms.size() > 0)
-                    newObjective->add(tmpLinearTerms);
+                    nonlinearObjective->add(tmpLinearTerms);
+
+                if(tmpQuadraticTerms.size() > 0)
+                    nonlinearObjective->add(tmpQuadraticTerms);
+
+                if(tmpMonomialTerms.size() > 0)
+                    nonlinearObjective->add(std::move(tmpMonomialTerms));
+
+                if(tmpSignomialTerms.size() > 0)
+                    nonlinearObjective->add(std::move(tmpSignomialTerms));
+
+                nonlinearObjective->nonlinearExpression = tmpNonlinearExpression;
 
                 if(tmpConstant != 0.0)
-                    newObjective->constant += tmpConstant;
-
-                newObjective->updateProperties();
-                problem->objectiveFunction = newObjective;
+                    nonlinearObjective->constant += tmpConstant;
             }
-        }
-        else
-        {
-            if(tmpLinearTerms.size() > 0)
-                nonlinearObjective->add(tmpLinearTerms);
-
-            if(tmpQuadraticTerms.size() > 0)
-                nonlinearObjective->add(tmpQuadraticTerms);
-
-            if(tmpMonomialTerms.size() > 0)
-                nonlinearObjective->add(std::move(tmpMonomialTerms));
-
-            if(tmpSignomialTerms.size() > 0)
-                nonlinearObjective->add(std::move(tmpSignomialTerms));
-
-            nonlinearObjective->nonlinearExpression = tmpNonlinearExpression;
-
-            if(tmpConstant != 0.0)
-                nonlinearObjective->constant += tmpConstant;
         }
     }
 
-    bool constraintTypesHaveChanged = false;
+    std::vector<std::pair<NumericConstraintPtr, NumericConstraintPtr>> changedConstraints; // old, new
 
     for(auto& C : problem->numericConstraints)
     {
@@ -103,6 +107,10 @@ void simplifyNonlinearExpressions(
             continue;
 
         auto nonlinearConstraint = std::dynamic_pointer_cast<NonlinearConstraint>(C);
+
+        if(!nonlinearConstraint->nonlinearExpression)
+            continue;
+
         auto nonlinearExpression = simplify(nonlinearConstraint->nonlinearExpression);
 
         auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression,
@@ -118,8 +126,6 @@ void simplifyNonlinearExpressions(
             if(tmpQuadraticTerms.size() > 0 || nonlinearConstraint->quadraticTerms.size() > 0)
             {
                 // The constraint is quadratic
-
-                constraintTypesHaveChanged = true;
 
                 auto newConstraint = std::make_shared<QuadraticConstraint>();
                 newConstraint->index = nonlinearConstraint->index;
@@ -139,13 +145,12 @@ void simplifyNonlinearExpressions(
                 if(tmpConstant != 0.0)
                     newConstraint->constant += tmpConstant;
 
+                changedConstraints.push_back({ C, newConstraint });
                 C = newConstraint;
             }
             else
             {
                 // The constraint is linear
-
-                constraintTypesHaveChanged = true;
 
                 auto newConstraint = std::make_shared<LinearConstraint>();
                 newConstraint->index = nonlinearConstraint->index;
@@ -161,6 +166,7 @@ void simplifyNonlinearExpressions(
                 if(tmpConstant != 0.0)
                     newConstraint->constant += tmpConstant;
 
+                changedConstraints.push_back({ C, newConstraint });
                 C = newConstraint;
             }
         }
@@ -191,23 +197,45 @@ void simplifyNonlinearExpressions(
         }
     }
 
-    if(constraintTypesHaveChanged)
+    // Only update constraint lists if something changed
+    if(!changedConstraints.empty())
     {
-        problem->linearConstraints.clear();
-        problem->quadraticConstraints.clear();
-        problem->nonlinearConstraints.clear();
+        // Remove old constraints from their type-specific lists
+        for(auto& [oldConstraint, newConstraint] : changedConstraints)
+        {
+            if(auto constraint = std::dynamic_pointer_cast<NonlinearConstraint>(oldConstraint))
+            {
+                problem->nonlinearConstraints.erase(
+                    std::remove(problem->nonlinearConstraints.begin(), problem->nonlinearConstraints.end(), constraint),
+                    problem->nonlinearConstraints.end());
+            }
+        }
+
+        // Add new constraints to their type-specific lists in the correct order
+        std::unordered_set<NumericConstraintPtr> newConstraintSet;
+        for(auto& [oldConstraint, newConstraint] : changedConstraints)
+            newConstraintSet.insert(newConstraint);
 
         for(auto& C : problem->numericConstraints)
         {
-            if(auto constraint = std::dynamic_pointer_cast<NonlinearConstraint>(C))
-                problem->nonlinearConstraints.push_back(constraint);
-            else if(auto constraint = std::dynamic_pointer_cast<QuadraticConstraint>(C))
-                problem->quadraticConstraints.push_back(constraint);
-            else if(auto constraint = std::dynamic_pointer_cast<LinearConstraint>(C))
-                problem->linearConstraints.push_back(constraint);
+            if(newConstraintSet.find(C) != newConstraintSet.end())
+            {
+                if(auto constraint = std::dynamic_pointer_cast<QuadraticConstraint>(C))
+                    problem->quadraticConstraints.push_back(constraint);
+                else if(auto constraint = std::dynamic_pointer_cast<LinearConstraint>(C))
+                    problem->linearConstraints.push_back(constraint);
+            }
         }
     }
+}
 
+void simplifyNonlinearExpressions(
+    ProblemPtr problem, bool extractMonomials, bool extractSignomials, bool extractQuadratics)
+{
+    // Check and convert objective and constraint types before reformulations
+    checkAndConvertObjectivesAndConstraints(problem, extractMonomials, extractSignomials, extractQuadratics);
+
+    // Apply reformulations
     for(auto& C : problem->nonlinearConstraints)
     {
         if(C->properties.hasNonlinearExpression
@@ -263,14 +291,15 @@ void simplifyNonlinearExpressions(
         if(C->properties.hasNonlinearExpression && C->nonlinearExpression->getType() == E_NonlinearExpressionTypes::Sum)
         {
             // Removes linear terms, quadratics and constants
+            auto sumExpression = std::dynamic_pointer_cast<ExpressionSum>(C->nonlinearExpression);
 
-            for(auto& T : std::dynamic_pointer_cast<ExpressionSum>(C->nonlinearExpression)->children)
+            for(auto& T : sumExpression->children)
             {
                 if(T->getType() == E_NonlinearExpressionTypes::Constant)
                 {
-                    C->constant += std::dynamic_pointer_cast<ExpressionConstant>(T)->constant;
-                    std::dynamic_pointer_cast<ExpressionConstant>(T)->constant
-                        = 0.0; // Will be removed during simplification later on
+                    auto constExpr = std::dynamic_pointer_cast<ExpressionConstant>(T);
+                    C->constant += constExpr->constant;
+                    constExpr->constant = 0.0; // Will be removed during simplification later on
                 }
                 else if(T->getType() == E_NonlinearExpressionTypes::Variable)
                 {
@@ -282,36 +311,34 @@ void simplifyNonlinearExpressions(
                 else if(T->getType() == E_NonlinearExpressionTypes::Product && T->getNumberOfChildren() == 2)
                 {
                     auto product = std::dynamic_pointer_cast<ExpressionProduct>(T);
+                    auto child0 = product->children.at(0);
+                    auto child1 = product->children.at(1);
+                    auto child0Type = child0->getType();
+                    auto child1Type = child1->getType();
 
-                    if(product->children.at(0)->getType() == E_NonlinearExpressionTypes::Constant
-                        && product->children.at(1)->getType() == E_NonlinearExpressionTypes::Variable)
+                    if(child0Type == E_NonlinearExpressionTypes::Constant
+                        && child1Type == E_NonlinearExpressionTypes::Variable)
                     {
-                        double constant
-                            = std::dynamic_pointer_cast<ExpressionConstant>(product->children.at(0))->constant;
-                        auto variable
-                            = std::dynamic_pointer_cast<ExpressionVariable>(product->children.at(1))->variable;
-
-                        C->linearTerms.add(std::make_shared<LinearTerm>(constant, variable));
-                        T = std::make_shared<ExpressionConstant>(0.0); // Will be removed during simplification later on
-                    }
-                    else if(product->children.at(1)->getType() == E_NonlinearExpressionTypes::Constant
-                        && product->children.at(0)->getType() == E_NonlinearExpressionTypes::Variable)
-                    {
-                        double constant
-                            = std::dynamic_pointer_cast<ExpressionConstant>(product->children.at(1))->constant;
-                        auto variable
-                            = std::dynamic_pointer_cast<ExpressionVariable>(product->children.at(0))->variable;
+                        double constant = std::dynamic_pointer_cast<ExpressionConstant>(child0)->constant;
+                        auto variable = std::dynamic_pointer_cast<ExpressionVariable>(child1)->variable;
 
                         C->linearTerms.add(std::make_shared<LinearTerm>(constant, variable));
                         T = std::make_shared<ExpressionConstant>(0.0); // Will be removed during simplification later on
                     }
-                    else if(product->children.at(1)->getType() == E_NonlinearExpressionTypes::Variable
-                        && product->children.at(0)->getType() == E_NonlinearExpressionTypes::Variable)
+                    else if(child1Type == E_NonlinearExpressionTypes::Constant
+                        && child0Type == E_NonlinearExpressionTypes::Variable)
                     {
-                        auto firstVariable
-                            = std::dynamic_pointer_cast<ExpressionVariable>(product->children.at(0))->variable;
-                        auto secondVariable
-                            = std::dynamic_pointer_cast<ExpressionVariable>(product->children.at(1))->variable;
+                        double constant = std::dynamic_pointer_cast<ExpressionConstant>(child1)->constant;
+                        auto variable = std::dynamic_pointer_cast<ExpressionVariable>(child0)->variable;
+
+                        C->linearTerms.add(std::make_shared<LinearTerm>(constant, variable));
+                        T = std::make_shared<ExpressionConstant>(0.0); // Will be removed during simplification later on
+                    }
+                    else if(child1Type == E_NonlinearExpressionTypes::Variable
+                        && child0Type == E_NonlinearExpressionTypes::Variable)
+                    {
+                        auto firstVariable = std::dynamic_pointer_cast<ExpressionVariable>(child0)->variable;
+                        auto secondVariable = std::dynamic_pointer_cast<ExpressionVariable>(child1)->variable;
 
                         C->quadraticTerms.add(std::make_shared<QuadraticTerm>(1.0, firstVariable, secondVariable));
                         T = std::make_shared<ExpressionConstant>(0.0); // Will be removed during simplification later on
@@ -327,12 +354,13 @@ void simplifyNonlinearExpressions(
 
                     for(auto& E : product->children)
                     {
-                        if(E->getType() == E_NonlinearExpressionTypes::Constant)
+                        auto eType = E->getType();
+                        if(eType == E_NonlinearExpressionTypes::Constant)
                         {
                             numConstants++;
                             constant = std::dynamic_pointer_cast<ExpressionConstant>(E)->constant;
                         }
-                        else if(E->getType() == E_NonlinearExpressionTypes::Variable)
+                        else if(eType == E_NonlinearExpressionTypes::Variable)
                         {
                             numVariables++;
                             variables.push_back(std::dynamic_pointer_cast<ExpressionVariable>(E)->variable);
@@ -369,6 +397,9 @@ void simplifyNonlinearExpressions(
             C->nonlinearExpression = simplify(C->nonlinearExpression);
         }
     }
+
+    // After reformulations, re-check if objective and constraints are now linear or quadratic
+    checkAndConvertObjectivesAndConstraints(problem, extractMonomials, extractSignomials, extractQuadratics);
 }
 
 NonlinearExpressionPtr copyNonlinearExpression(NonlinearExpression* expression, const ProblemPtr destination)

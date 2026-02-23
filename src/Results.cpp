@@ -121,14 +121,16 @@ void Results::addPrimalSolution(PrimalSolution solution)
     if(env->problem->objectiveFunction->properties.isMinimize)
     {
         std::sort(this->primalSolutions.begin(), this->primalSolutions.end(),
-            [](const PrimalSolution& firstSolution, const PrimalSolution& secondSolution)
-            { return (firstSolution.objValue < secondSolution.objValue); });
+            [](const PrimalSolution& firstSolution, const PrimalSolution& secondSolution) {
+                return (firstSolution.objValue < secondSolution.objValue);
+            });
     }
     else
     {
         std::sort(this->primalSolutions.begin(), this->primalSolutions.end(),
-            [](const PrimalSolution& firstSolution, const PrimalSolution& secondSolution)
-            { return (firstSolution.objValue > secondSolution.objValue); });
+            [](const PrimalSolution& firstSolution, const PrimalSolution& secondSolution) {
+                return (firstSolution.objValue > secondSolution.objValue);
+            });
     }
 
     env->solutionStatistics.numberOfFoundPrimalSolutions++;
@@ -270,6 +272,238 @@ std::string Results::getResultsOSrL()
     otherNode->SetText(env->settings->getSettingsAsString(false, true).c_str());
     otherResultsNode->InsertFirstChild(otherNode);
 
+    // Problem classification and type information
+    bool isReformulated = (env->problem != env->reformulatedProblem);
+
+    // Original problem classification
+    std::string problemClassificationOrig;
+    if(env->problem->properties.isLPProblem)
+        problemClassificationOrig = "LP";
+    else if(env->problem->properties.isMILPProblem)
+        problemClassificationOrig = "MILP";
+    else if(env->problem->properties.isQPProblem)
+        problemClassificationOrig = "QP";
+    else if(env->problem->properties.isQCQPProblem)
+        problemClassificationOrig = "QCQP";
+    else if(env->problem->properties.isMIQPProblem)
+        problemClassificationOrig = "MIQP";
+    else if(env->problem->properties.isMIQCQPProblem)
+        problemClassificationOrig = "MIQCQP";
+    else if(env->problem->properties.isNLPProblem)
+        problemClassificationOrig = "NLP";
+    else if(env->problem->properties.isMINLPProblem)
+        problemClassificationOrig = "MINLP";
+
+    otherNode = osrlDocument.NewElement("other");
+    otherNode->SetAttribute("name", "OriginalProblemClassification");
+    otherNode->SetAttribute("value", problemClassificationOrig.c_str());
+    otherNode->SetAttribute("description", "Classification of the original problem");
+    otherResultsNode->InsertEndChild(otherNode);
+
+    if(env->problem->properties.convexity == E_ProblemConvexity::Convex)
+    {
+        otherNode = osrlDocument.NewElement("other");
+        otherNode->SetAttribute("name", "OriginalProblemConvexity");
+        otherNode->SetAttribute("value", "convex");
+        otherNode->SetAttribute("description", "Convexity of the original problem");
+        otherResultsNode->InsertEndChild(otherNode);
+    }
+    else if(env->problem->properties.convexity == E_ProblemConvexity::Nonconvex)
+    {
+        otherNode = osrlDocument.NewElement("other");
+        otherNode->SetAttribute("name", "OriginalProblemConvexity");
+        otherNode->SetAttribute("value", "nonconvex");
+        otherNode->SetAttribute("description", "Convexity of the original problem");
+        otherResultsNode->InsertEndChild(otherNode);
+    }
+
+    // Reformulated problem classification
+    if(isReformulated)
+    {
+        std::string problemClassificationRef;
+        if(env->reformulatedProblem->properties.isLPProblem)
+            problemClassificationRef = "LP";
+        else if(env->reformulatedProblem->properties.isMILPProblem)
+            problemClassificationRef = "MILP";
+        else if(env->reformulatedProblem->properties.isQPProblem)
+            problemClassificationRef = "QP";
+        else if(env->reformulatedProblem->properties.isQCQPProblem)
+            problemClassificationRef = "QCQP";
+        else if(env->reformulatedProblem->properties.isMIQPProblem)
+            problemClassificationRef = "MIQP";
+        else if(env->reformulatedProblem->properties.isMIQCQPProblem)
+            problemClassificationRef = "MIQCQP";
+        else if(env->reformulatedProblem->properties.isNLPProblem)
+            problemClassificationRef = "NLP";
+        else if(env->reformulatedProblem->properties.isMINLPProblem)
+            problemClassificationRef = "MINLP";
+
+        otherNode = osrlDocument.NewElement("other");
+        otherNode->SetAttribute("name", "ReformulatedProblemClassification");
+        otherNode->SetAttribute("value", problemClassificationRef.c_str());
+        otherNode->SetAttribute("description", "Classification of the reformulated problem");
+        otherResultsNode->InsertEndChild(otherNode);
+
+        if(env->reformulatedProblem->properties.convexity == E_ProblemConvexity::Convex)
+        {
+            otherNode = osrlDocument.NewElement("other");
+            otherNode->SetAttribute("name", "ReformulatedProblemConvexity");
+            otherNode->SetAttribute("value", "convex");
+            otherNode->SetAttribute("description", "Convexity of the reformulated problem");
+            otherResultsNode->InsertEndChild(otherNode);
+        }
+        else if(env->reformulatedProblem->properties.convexity == E_ProblemConvexity::Nonconvex)
+        {
+            otherNode = osrlDocument.NewElement("other");
+            otherNode->SetAttribute("name", "ReformulatedProblemConvexity");
+            otherNode->SetAttribute("value", "nonconvex");
+            otherNode->SetAttribute("description", "Convexity of the reformulated problem");
+            otherResultsNode->InsertEndChild(otherNode);
+        }
+    }
+
+    otherNode = osrlDocument.NewElement("other");
+    otherNode->SetAttribute("name", "OriginalProblemObjectiveDirection");
+    otherNode->SetAttribute("value", env->problem->objectiveFunction->properties.isMinimize ? "minimize" : "maximize");
+    otherNode->SetAttribute("description", "Whether the original problem is a minimization or maximization problem");
+    otherResultsNode->InsertEndChild(otherNode);
+
+    // Original problem sizes
+    otherNode = osrlDocument.NewElement("other");
+    otherNode->SetAttribute("name", "OriginalNumberOfVariables");
+    otherNode->SetAttribute("value", env->problem->properties.numberOfVariables);
+    otherNode->SetAttribute("description", "Number of variables in the original problem");
+    otherResultsNode->InsertEndChild(otherNode);
+
+    otherNode = osrlDocument.NewElement("other");
+    otherNode->SetAttribute("name", "OriginalNumberOfRealVariables");
+    otherNode->SetAttribute("value", env->problem->properties.numberOfRealVariables);
+    otherNode->SetAttribute("description", "Number of real variables in the original problem");
+    otherResultsNode->InsertEndChild(otherNode);
+
+    otherNode = osrlDocument.NewElement("other");
+    otherNode->SetAttribute("name", "OriginalNumberOfBinaryVariables");
+    otherNode->SetAttribute("value", env->problem->properties.numberOfBinaryVariables);
+    otherNode->SetAttribute("description", "Number of binary variables in the original problem");
+    otherResultsNode->InsertEndChild(otherNode);
+
+    otherNode = osrlDocument.NewElement("other");
+    otherNode->SetAttribute("name", "OriginalNumberOfIntegerVariables");
+    otherNode->SetAttribute("value", env->problem->properties.numberOfIntegerVariables);
+    otherNode->SetAttribute("description", "Number of integer variables in the original problem");
+    otherResultsNode->InsertEndChild(otherNode);
+
+    otherNode = osrlDocument.NewElement("other");
+    otherNode->SetAttribute("name", "OriginalNumberOfConstraints");
+    otherNode->SetAttribute("value", env->problem->properties.numberOfNumericConstraints);
+    otherNode->SetAttribute("description", "Number of constraints in the original problem");
+    otherResultsNode->InsertEndChild(otherNode);
+
+    otherNode = osrlDocument.NewElement("other");
+    otherNode->SetAttribute("name", "OriginalNumberOfLinearConstraints");
+    otherNode->SetAttribute("value",
+        env->problem->properties.numberOfLinearConstraints - env->problem->properties.numberOfAddedLinearizations);
+    otherNode->SetAttribute("description", "Number of linear constraints in the original problem");
+    otherResultsNode->InsertEndChild(otherNode);
+
+    otherNode = osrlDocument.NewElement("other");
+    otherNode->SetAttribute("name", "OriginalNumberOfConvexQuadraticConstraints");
+    otherNode->SetAttribute("value", env->problem->properties.numberOfConvexQuadraticConstraints);
+    otherNode->SetAttribute("description", "Number of convex quadratic constraints in the original problem");
+    otherResultsNode->InsertEndChild(otherNode);
+
+    otherNode = osrlDocument.NewElement("other");
+    otherNode->SetAttribute("name", "OriginalNumberOfNonconvexQuadraticConstraints");
+    otherNode->SetAttribute("value", env->problem->properties.numberOfNonconvexQuadraticConstraints);
+    otherNode->SetAttribute("description", "Number of nonconvex quadratic constraints in the original problem");
+    otherResultsNode->InsertEndChild(otherNode);
+
+    otherNode = osrlDocument.NewElement("other");
+    otherNode->SetAttribute("name", "OriginalNumberOfConvexNonlinearConstraints");
+    otherNode->SetAttribute("value", env->problem->properties.numberOfConvexNonlinearConstraints);
+    otherNode->SetAttribute("description", "Number of convex nonlinear constraints in the original problem");
+    otherResultsNode->InsertEndChild(otherNode);
+
+    otherNode = osrlDocument.NewElement("other");
+    otherNode->SetAttribute("name", "OriginalNumberOfNonconvexNonlinearConstraints");
+    otherNode->SetAttribute("value", env->problem->properties.numberOfNonconvexNonlinearConstraints);
+    otherNode->SetAttribute("description", "Number of nonconvex nonlinear constraints in the original problem");
+    otherResultsNode->InsertEndChild(otherNode);
+
+    // Reformulated problem sizes
+    if(isReformulated)
+    {
+        otherNode = osrlDocument.NewElement("other");
+        otherNode->SetAttribute("name", "ReformulatedProblemObjectiveDirection");
+        otherNode->SetAttribute(
+            "value", env->reformulatedProblem->objectiveFunction->properties.isMinimize ? "minimize" : "maximize");
+        otherNode->SetAttribute(
+            "description", "Whether the reformulated problem is a minimization or maximization problem");
+        otherResultsNode->InsertEndChild(otherNode);
+
+        otherNode = osrlDocument.NewElement("other");
+        otherNode->SetAttribute("name", "ReformulatedNumberOfVariables");
+        otherNode->SetAttribute("value", env->reformulatedProblem->properties.numberOfVariables);
+        otherNode->SetAttribute("description", "Number of variables in the reformulated problem");
+        otherResultsNode->InsertEndChild(otherNode);
+
+        otherNode = osrlDocument.NewElement("other");
+        otherNode->SetAttribute("name", "ReformulatedNumberOfRealVariables");
+        otherNode->SetAttribute("value", env->reformulatedProblem->properties.numberOfRealVariables);
+        otherNode->SetAttribute("description", "Number of real variables in the reformulated problem");
+        otherResultsNode->InsertEndChild(otherNode);
+
+        otherNode = osrlDocument.NewElement("other");
+        otherNode->SetAttribute("name", "ReformulatedNumberOfBinaryVariables");
+        otherNode->SetAttribute("value", env->reformulatedProblem->properties.numberOfBinaryVariables);
+        otherNode->SetAttribute("description", "Number of binary variables in the reformulated problem");
+        otherResultsNode->InsertEndChild(otherNode);
+
+        otherNode = osrlDocument.NewElement("other");
+        otherNode->SetAttribute("name", "ReformulatedNumberOfIntegerVariables");
+        otherNode->SetAttribute("value", env->reformulatedProblem->properties.numberOfIntegerVariables);
+        otherNode->SetAttribute("description", "Number of integer variables in the reformulated problem");
+        otherResultsNode->InsertEndChild(otherNode);
+
+        otherNode = osrlDocument.NewElement("other");
+        otherNode->SetAttribute("name", "ReformulatedNumberOfConstraints");
+        otherNode->SetAttribute("value", env->reformulatedProblem->properties.numberOfNumericConstraints);
+        otherNode->SetAttribute("description", "Number of constraints in the reformulated problem");
+        otherResultsNode->InsertEndChild(otherNode);
+
+        otherNode = osrlDocument.NewElement("other");
+        otherNode->SetAttribute("name", "ReformulatedNumberOfLinearConstraints");
+        otherNode->SetAttribute("value",
+            env->reformulatedProblem->properties.numberOfLinearConstraints
+                - env->reformulatedProblem->properties.numberOfAddedLinearizations);
+        otherNode->SetAttribute("description", "Number of linear constraints in the reformulated problem");
+        otherResultsNode->InsertEndChild(otherNode);
+
+        otherNode = osrlDocument.NewElement("other");
+        otherNode->SetAttribute("name", "ReformulatedNumberOfConvexQuadraticConstraints");
+        otherNode->SetAttribute("value", env->reformulatedProblem->properties.numberOfConvexQuadraticConstraints);
+        otherNode->SetAttribute("description", "Number of convex quadratic constraints in the reformulated problem");
+        otherResultsNode->InsertEndChild(otherNode);
+
+        otherNode = osrlDocument.NewElement("other");
+        otherNode->SetAttribute("name", "ReformulatedNumberOfNonconvexQuadraticConstraints");
+        otherNode->SetAttribute("value", env->reformulatedProblem->properties.numberOfNonconvexQuadraticConstraints);
+        otherNode->SetAttribute("description", "Number of nonconvex quadratic constraints in the reformulated problem");
+        otherResultsNode->InsertEndChild(otherNode);
+
+        otherNode = osrlDocument.NewElement("other");
+        otherNode->SetAttribute("name", "ReformulatedNumberOfConvexNonlinearConstraints");
+        otherNode->SetAttribute("value", env->reformulatedProblem->properties.numberOfConvexNonlinearConstraints);
+        otherNode->SetAttribute("description", "Number of convex nonlinear constraints in the reformulated problem");
+        otherResultsNode->InsertEndChild(otherNode);
+
+        otherNode = osrlDocument.NewElement("other");
+        otherNode->SetAttribute("name", "ReformulatedNumberOfNonconvexNonlinearConstraints");
+        otherNode->SetAttribute("value", env->reformulatedProblem->properties.numberOfNonconvexNonlinearConstraints);
+        otherNode->SetAttribute("description", "Number of nonconvex nonlinear constraints in the reformulated problem");
+        otherResultsNode->InsertEndChild(otherNode);
+    }
+
     otherNode = osrlDocument.NewElement("other");
     otherNode->SetAttribute("name", "DualObjectiveBound");
     otherNode->SetAttribute("value", globalDualBound);
@@ -380,7 +614,7 @@ std::string Results::getResultsOSrL()
     otherResultsNode->InsertEndChild(otherNode);
 
     otherNode = osrlDocument.NewElement("other");
-    otherNode->SetAttribute("name", "numberOfPrimalImprovementsAfterInfeasibilityRepair");
+    otherNode->SetAttribute("name", "NumberOfPrimalImprovementsAfterInfeasibilityRepair");
     otherNode->SetAttribute("value", env->solutionStatistics.numberOfPrimalImprovementsAfterInfeasibilityRepair);
     otherNode->SetAttribute("description",
         "The number of cases where the repairing of infeasibilities for nonconvex problems has directly resulted in "
@@ -388,7 +622,7 @@ std::string Results::getResultsOSrL()
     otherResultsNode->InsertEndChild(otherNode);
 
     otherNode = osrlDocument.NewElement("other");
-    otherNode->SetAttribute("name", "numberOfPrimalImprovementsAfterReductionCut");
+    otherNode->SetAttribute("name", "NumberOfPrimalImprovementsAfterReductionCut");
     otherNode->SetAttribute("value", env->solutionStatistics.numberOfPrimalImprovementsAfterReductionCut);
     otherNode->SetAttribute("description",
         "The number of cases where the primal reduction cut has directly resulted in improved primal solutions");
@@ -475,6 +709,149 @@ std::string Results::getResultsOSrL()
         }
 
         otherNode->SetAttribute("value", S.second);
+        otherResultsNode->InsertEndChild(otherNode);
+    }
+
+    // Add reformulation statistics
+    int totalReformulations = 0;
+    for(auto& [type, count] : auxiliaryVariablesIntroduced)
+    {
+        totalReformulations += count;
+    }
+
+    if(env->reformulatedProblem->antiEpigraphObjectiveVariable)
+        totalReformulations++;
+
+    otherNode = osrlDocument.NewElement("other");
+    otherNode->SetAttribute("name", "TotalNumberOfReformulations");
+    otherNode->SetAttribute("value", totalReformulations);
+    otherNode->SetAttribute("description", "The total number of reformulations performed");
+    otherResultsNode->InsertEndChild(otherNode);
+
+    // Add breakdown per reformulation type
+    if(auto count = getAuxiliaryVariableCounter(E_AuxiliaryVariableType::NonlinearObjectiveFunction); count > 0)
+    {
+        otherNode = osrlDocument.NewElement("other");
+        otherNode->SetAttribute("name", "NumberOfEpigraphReformulations");
+        otherNode->SetAttribute("value", count);
+        otherNode->SetAttribute("description", "Epigraph formulation of nonlinear objective function");
+        otherResultsNode->InsertEndChild(otherNode);
+    }
+
+    if(auto count = getAuxiliaryVariableCounter(E_AuxiliaryVariableType::NonlinearExpressionPartitioning); count > 0)
+    {
+        otherNode = osrlDocument.NewElement("other");
+        otherNode->SetAttribute("name", "NumberOfNonlinearExpressionPartitionings");
+        otherNode->SetAttribute("value", count);
+        otherNode->SetAttribute("description", "Nonlinear expression partitioning reformulations");
+        otherResultsNode->InsertEndChild(otherNode);
+    }
+
+    if(auto count = getAuxiliaryVariableCounter(E_AuxiliaryVariableType::MonomialTermsPartitioning); count > 0)
+    {
+        otherNode = osrlDocument.NewElement("other");
+        otherNode->SetAttribute("name", "NumberOfMonomialTermsPartitionings");
+        otherNode->SetAttribute("value", count);
+        otherNode->SetAttribute("description", "Monomial terms partitioning reformulations");
+        otherResultsNode->InsertEndChild(otherNode);
+    }
+
+    if(auto count = getAuxiliaryVariableCounter(E_AuxiliaryVariableType::SignomialTermsPartitioning); count > 0)
+    {
+        otherNode = osrlDocument.NewElement("other");
+        otherNode->SetAttribute("name", "NumberOfSignomialTermsPartitionings");
+        otherNode->SetAttribute("value", count);
+        otherNode->SetAttribute("description", "Signomial terms partitioning reformulations");
+        otherResultsNode->InsertEndChild(otherNode);
+    }
+
+    if(auto count = getAuxiliaryVariableCounter(E_AuxiliaryVariableType::SquareTermsPartitioning); count > 0)
+    {
+        otherNode = osrlDocument.NewElement("other");
+        otherNode->SetAttribute("name", "NumberOfSquareTermsPartitionings");
+        otherNode->SetAttribute("value", count);
+        otherNode->SetAttribute("description", "Square terms partitioning reformulations");
+        otherResultsNode->InsertEndChild(otherNode);
+    }
+
+    if(auto count = getAuxiliaryVariableCounter(E_AuxiliaryVariableType::ContinuousBilinear); count > 0)
+    {
+        otherNode = osrlDocument.NewElement("other");
+        otherNode->SetAttribute("name", "NumberOfContinuousBilinearReformulations");
+        otherNode->SetAttribute("value", count);
+        otherNode->SetAttribute("description", "Continuous bilinear term reformulations");
+        otherResultsNode->InsertEndChild(otherNode);
+    }
+
+    if(auto count = getAuxiliaryVariableCounter(E_AuxiliaryVariableType::BinaryBilinear); count > 0)
+    {
+        otherNode = osrlDocument.NewElement("other");
+        otherNode->SetAttribute("name", "NumberOfBinaryBilinearReformulations");
+        otherNode->SetAttribute("value", count);
+        otherNode->SetAttribute("description", "Binary bilinear term reformulations");
+        otherResultsNode->InsertEndChild(otherNode);
+    }
+
+    if(auto count = getAuxiliaryVariableCounter(E_AuxiliaryVariableType::BinaryContinuousBilinear); count > 0)
+    {
+        otherNode = osrlDocument.NewElement("other");
+        otherNode->SetAttribute("name", "NumberOfBinaryContinuousBilinearReformulations");
+        otherNode->SetAttribute("value", count);
+        otherNode->SetAttribute("description", "Binary-continuous bilinear term reformulations");
+        otherResultsNode->InsertEndChild(otherNode);
+    }
+
+    if(auto count = getAuxiliaryVariableCounter(E_AuxiliaryVariableType::IntegerBilinear); count > 0)
+    {
+        otherNode = osrlDocument.NewElement("other");
+        otherNode->SetAttribute("name", "NumberOfIntegerBilinearReformulations");
+        otherNode->SetAttribute("value", count);
+        otherNode->SetAttribute("description", "Integer bilinear term reformulations");
+        otherResultsNode->InsertEndChild(otherNode);
+    }
+
+    if(auto count = getAuxiliaryVariableCounter(E_AuxiliaryVariableType::BinaryMonomial); count > 0)
+    {
+        otherNode = osrlDocument.NewElement("other");
+        otherNode->SetAttribute("name", "NumberOfBinaryMonomialReformulations");
+        otherNode->SetAttribute("value", count);
+        otherNode->SetAttribute("description", "Binary monomial term reformulations");
+        otherResultsNode->InsertEndChild(otherNode);
+    }
+
+    if(auto count = getAuxiliaryVariableCounter(E_AuxiliaryVariableType::AbsoluteValue); count > 0)
+    {
+        otherNode = osrlDocument.NewElement("other");
+        otherNode->SetAttribute("name", "NumberOfAbsoluteValueReformulations");
+        otherNode->SetAttribute("value", count);
+        otherNode->SetAttribute("description", "Absolute value reformulations");
+        otherResultsNode->InsertEndChild(otherNode);
+    }
+
+    if(auto count = getAuxiliaryVariableCounter(E_AuxiliaryVariableType::AntiEpigraph); count > 0)
+    {
+        otherNode = osrlDocument.NewElement("other");
+        otherNode->SetAttribute("name", "NumberOfAntiEpigraphReformulations");
+        otherNode->SetAttribute("value", count);
+        otherNode->SetAttribute("description", "Anti-epigraph reformulations");
+        otherResultsNode->InsertEndChild(otherNode);
+    }
+
+    if(auto count = getAuxiliaryVariableCounter(E_AuxiliaryVariableType::EigenvalueDecomposition); count > 0)
+    {
+        otherNode = osrlDocument.NewElement("other");
+        otherNode->SetAttribute("name", "NumberOfEigenvalueDecompositions");
+        otherNode->SetAttribute("value", count);
+        otherNode->SetAttribute("description", "Eigenvalue decomposition reformulations");
+        otherResultsNode->InsertEndChild(otherNode);
+    }
+
+    if(auto count = getAuxiliaryVariableCounter(E_AuxiliaryVariableType::LDLDecomposition); count > 0)
+    {
+        otherNode = osrlDocument.NewElement("other");
+        otherNode->SetAttribute("name", "NumberOfLDLDecompositions");
+        otherNode->SetAttribute("value", count);
+        otherNode->SetAttribute("description", "LDL decomposition reformulations");
         otherResultsNode->InsertEndChild(otherNode);
     }
 

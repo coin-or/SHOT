@@ -67,7 +67,10 @@ Solver::Solver()
     env->timing->startTimer("Total");
 
     env->timing->createTimer("ProblemInitialization", "- problem initialization");
+    env->timing->createTimer("EigenvalueComputation", "- eigenvalue and eigenvector computation");
     env->timing->createTimer("ProblemReformulation", "- problem reformulation");
+    env->timing->createTimer("ProblemReformulationEigenDecomp", "  - eigenvalue decomposition");
+    env->timing->createTimer("ProblemReformulationLDLDecomp", "  - LDL decomposition");
     env->timing->createTimer("BoundTightening", "- bound tightening");
     env->timing->createTimer("BoundTighteningPOA", "  - initial outer approximation");
     env->timing->createTimer("BoundTighteningFBBTOriginal", "  - feasibility based (original problem)");
@@ -103,6 +106,7 @@ Solver::Solver(std::shared_ptr<spdlog::sinks::sink> consoleSink)
     env->timing->createTimer("BoundTighteningFBBT", "  - feasibility based");
     env->timing->createTimer("BoundTighteningFBBTOriginal", "  - feasibility based (original problem");
     env->timing->createTimer("BoundTighteningFBBTReformulated", "  - feasibility based (reformulated problem");
+    env->timing->createTimer("EigenvalueComputation", "- eigenvalue and eigenvector computation");
 
     env->settings = std::make_shared<Settings>(env->output);
     env->tasks = std::make_shared<TaskHandler>(env);
@@ -275,6 +279,15 @@ bool Solver::setProblem(std::string fileName)
 #ifdef HAS_CBC
     // TODO: figure out a better way to do this
     if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Cbc)
+    {
+        env->settings->updateSetting(
+            "Reformulation.Quadratics.Strategy", "Model", (int)ES_QuadraticProblemStrategy::Nonlinear);
+    }
+#endif
+
+#ifdef HAS_HIGHS
+    // TODO: figure out a better way to do this
+    if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Highs)
     {
         env->settings->updateSetting(
             "Reformulation.Quadratics.Strategy", "Model", (int)ES_QuadraticProblemStrategy::Nonlinear);
@@ -468,6 +481,15 @@ bool Solver::setProblem(
     }
 #endif
 
+#ifdef HAS_HIGHS
+    // TODO: figure out a better way to do this
+    if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Highs)
+    {
+        env->settings->updateSetting(
+            "Reformulation.Quadratics.Strategy", "Model", (int)ES_QuadraticProblemStrategy::Nonlinear);
+    }
+#endif
+
     setConvexityBasedSettingsPreReformulation();
     verifySettings();
 
@@ -502,7 +524,8 @@ bool Solver::selectStrategy()
 {
     try
     {
-        if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Cbc)
+        if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Cbc
+            || static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Highs)
         {
             if(env->problem->properties.numberOfDiscreteVariables == 0
                 && env->problem->properties.numberOfSemicontinuousVariables == 0)
@@ -870,6 +893,7 @@ void Solver::initializeSettings()
     enumMIPSolver.push_back("Cplex");
     enumMIPSolver.push_back("Gurobi");
     enumMIPSolver.push_back("Cbc");
+    enumMIPSolver.push_back("Highs");
 
     ES_MIPSolver usedMIPSolver;
 
@@ -879,6 +903,8 @@ void Solver::initializeSettings()
     usedMIPSolver = ES_MIPSolver::Cplex;
 #elif HAS_CBC
     usedMIPSolver = ES_MIPSolver::Cbc;
+#elif HAS_HIGHS
+    usedMIPSolver = ES_MIPSolver::Highs;
 #else
     env->output->outputCritical(" SHOT has not been compiled with support for any MIP solver.");
 #endif
@@ -1142,20 +1168,29 @@ void Solver::initializeSettings()
         "How to treat quadratic functions", enumQPStrategy, 0);
     enumQPStrategy.clear();
 
-    env->settings->createSetting("Reformulation.Quadratics.EigenValueDecomposition.Use", "Model", false,
-        "Whether to use the eigenvalue decomposition of convex quadratic functions");
+    VectorString enumQPDecomposition;
+    enumQPDecomposition.push_back("No decomposition");
+    enumQPDecomposition.push_back("Eigenvalue decomposition");
+    enumQPDecomposition.push_back("LDL decomposition");
 
-    VectorString enumEigenValueStrategy;
-    enumEigenValueStrategy.push_back("Term coefficient is included in reformulation");
-    enumEigenValueStrategy.push_back("Term coefficient remains");
+    env->settings->createSetting("Reformulation.Quadratics.Decomposition.Method", "Model",
+        static_cast<int>(ES_QuadraticDecomposition::LDLDecomposition),
+        "Whether to use the eigenvalue decomposition of convex quadratic functions", enumQPDecomposition, 0);
+    enumQPDecomposition.clear();
 
-    env->settings->createSetting("Reformulation.Quadratics.EigenValueDecomposition.Formulation", "Model",
-        static_cast<int>(ES_EigenValueDecompositionFormulation::CoefficientReformulated),
-        "Which formulation to use in eigenvalue decomposition", enumEigenValueStrategy, 0);
-    enumEigenValueStrategy.clear();
+    VectorString enumQuadraticDecompCoeffStrategy;
+    enumQuadraticDecompCoeffStrategy.push_back("Coefficient is included in reformulation");
+    enumQuadraticDecompCoeffStrategy.push_back("Coefficient remains");
 
-    env->settings->createSetting("Reformulation.Quadratics.EigenValueDecomposition.Tolerance", "Model", 1e-6,
-        "Variables with eigenvalues smaller than this value will be ignored", 0.0, SHOT_DBL_MAX);
+    env->settings->createSetting("Reformulation.Quadratics.Decomposition.Formulation", "Model",
+        static_cast<int>(ES_QuadraticDecompositionFormulation::CoefficientReformulated),
+        "Placement of the original term cofficient when decomposing a quadratic term", enumQuadraticDecompCoeffStrategy,
+        0);
+    enumQuadraticDecompCoeffStrategy.clear();
+
+    env->settings->createSetting("Reformulation.Quadratics.Decomposition.Tolerance", "Model", 1e-7,
+        "Terms with corresponding eigenvalues or diagonal elements in D-matrix smaller than this value will be ignored",
+        0.0, SHOT_DBL_MAX);
 
     // Modeling system settings
 
@@ -1526,6 +1561,63 @@ void Solver::initializeSettings()
 
 #endif
 
+#ifdef HAS_HIGHS
+
+    env->settings->createSettingGroup("Subsolver", "Highs", "Highs", "");
+
+    env->settings->createSetting("Highs.MIPAllowRestart", "Subsolver", true, "Whether MIP restart is permitted");
+
+    env->settings->createSetting(
+        "Highs.MIPDetectSymmetry", "Subsolver", true, "Whether MIP symmetry should be detected");
+
+    env->settings->createSetting(
+        "Highs.MIPHeuristicEffort", "Subsolver", 0.05, "Effort spent for MIP heuristics", 0, 1);
+
+    env->settings->createSetting("Highs.MIPHeuristicRunZiRound", "Subsolver", false, "Run Zi Round heuristic");
+
+    env->settings->createSetting("Highs.MIPHeuristicRunShifting", "Subsolver", false, "Run Shifting heuristic");
+
+    VectorString enumHighsRunCrossover;
+    enumHighsRunCrossover.push_back("off");
+    enumHighsRunCrossover.push_back("choose");
+    enumHighsRunCrossover.push_back("on");
+    env->settings->createSetting("Highs.RunCrossover", "Subsolver", 0, "Run crossover", enumHighsRunCrossover, 0);
+    enumHighsRunCrossover.clear();
+
+    VectorString enumHighsDebugLevel;
+    enumHighsDebugLevel.push_back("off");
+    enumHighsDebugLevel.push_back("low");
+    enumHighsDebugLevel.push_back("medium");
+    enumHighsDebugLevel.push_back("high");
+    env->settings->createSetting(
+        "Highs.DebugLevel", "Subsolver", 0, "Debug level for HiGHS internal assertions", enumHighsDebugLevel, 0);
+    enumHighsDebugLevel.clear();
+
+    /*
+    VectorString enumHighsMIPIPMSolver;
+    enumHighsMIPIPMSolver.push_back("choose");
+    enumHighsMIPIPMSolver.push_back("ipx");
+    enumHighsMIPIPMSolver.push_back("hipo");
+    env->settings->createSetting("Highs.MIPIPMSolver", "Subsolver", 1, "MIP IPM solver", enumHighsMIPIPMSolver, 0);
+    enumHighsMIPIPMSolver.clear();
+    */
+
+    VectorString enumHighsParallel;
+    enumHighsParallel.push_back("off");
+    enumHighsParallel.push_back("choose");
+    enumHighsParallel.push_back("on");
+    env->settings->createSetting("Highs.Parallel", "Subsolver", 1, "Use parallelization", enumHighsParallel, 0);
+    enumHighsParallel.clear();
+
+    VectorString enumHighsPresolve;
+    enumHighsPresolve.push_back("off");
+    enumHighsPresolve.push_back("choose");
+    enumHighsPresolve.push_back("on");
+    env->settings->createSetting("Highs.Presolve", "Subsolver", 1, "Use presolve", enumHighsPresolve, 0);
+    enumHighsPresolve.clear();
+
+#endif
+
     // Subsolver settings: Ipopt
 
 #ifdef HAS_IPOPT
@@ -1796,6 +1888,21 @@ void Solver::verifySettings()
     }
 #endif
 
+#ifdef HAS_HIGHS
+    if(solver == ES_MIPSolver::Highs)
+    {
+        MIPSolverDefined = true;
+        unboundedVariableBound = 1e50;
+
+        // Some features are not available in Highs
+        env->settings->updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::MultiTree));
+        env->settings->updateSetting(
+            "Reformulation.Quadratics.Strategy", "Model", static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear));
+        env->settings->updateSetting(
+            "Reformulation.Quadratics.Strategy", "Model", (int)ES_QuadraticTermsExtractStrategy::DoNotExtract);
+    }
+#endif
+
     if(!MIPSolverDefined)
     {
         env->output->outputWarning(" SHOT has not been compiled with support for selected MIP solver.");
@@ -1809,6 +1916,9 @@ void Solver::verifySettings()
 #elif HAS_CBC
         env->settings->updateSetting("MIP.Solver", "Dual", (int)ES_MIPSolver::Cbc);
         unboundedVariableBound = 1e50;
+#elif HAS_HIGHS
+        env->settings->updateSetting("MIP.Solver", "Dual", (int)ES_MIPSolver::Highs);
+        unboundedVariableBound = 1e20;
 #else
         env->output->outputCritical(" SHOT has not been compiled with support for any MIP solver.");
 #endif
@@ -1893,16 +2003,16 @@ void Solver::setConvexityBasedSettingsPreReformulation()
 #ifdef HAS_CBC
             if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Cbc)
             {
-                env->settings->updateSetting("Reformulation.Quadratics.EigenValueDecomposition.Use", "Model", false);
+                env->settings->updateSetting(
+                    "Reformulation.Quadratics.Decomposition.Method", "Model", (int)ES_QuadraticDecomposition::None);
             }
 #endif
-        }
-        else if(env->problem->properties.convexity == E_ProblemConvexity::Convex)
-        {
-#ifdef HAS_CBC
-            if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Cbc)
+
+#ifdef HAS_HIGHS
+            if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Highs)
             {
-                env->settings->updateSetting("Reformulation.Quadratics.EigenValueDecomposition.Use", "Model", true);
+                env->settings->updateSetting(
+                    "Reformulation.Quadratics.Decomposition.Method", "Model", (int)ES_QuadraticDecomposition::None);
             }
 #endif
         }
@@ -1970,7 +2080,16 @@ void Solver::setConvexityBasedSettings()
             env->settings->updateSetting("Reformulation.ObjectiveFunction.PartitionNonlinearTerms", "Model",
                 (int)ES_PartitionNonlinearSums::IfConvex);
         }
+#endif
 
+#ifdef HAS_HIGHS
+        if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Highs)
+        {
+            env->settings->updateSetting(
+                "Reformulation.Constraint.PartitionNonlinearTerms", "Model", (int)ES_PartitionNonlinearSums::IfConvex);
+            env->settings->updateSetting("Reformulation.ObjectiveFunction.PartitionNonlinearTerms", "Model",
+                (int)ES_PartitionNonlinearSums::IfConvex);
+        }
 #endif
     }
 }
