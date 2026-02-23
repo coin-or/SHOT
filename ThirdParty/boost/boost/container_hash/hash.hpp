@@ -118,7 +118,7 @@ namespace boost
 {
     namespace hash_detail
     {
-#if defined(_HAS_AUTO_PTR_ETC) && !_HAS_AUTO_PTR_ETC
+#if (defined(_HAS_AUTO_PTR_ETC) && !_HAS_AUTO_PTR_ETC) || (defined(__cplusplus) && __cplusplus >= 201703L)
         template <typename T>
         struct hash_base
         {
