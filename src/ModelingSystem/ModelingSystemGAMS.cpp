@@ -1451,6 +1451,17 @@ bool ModelingSystemGAMS::copyNonlinearExpressions(ProblemPtr destination)
 
                 auto constraint = std::dynamic_pointer_cast<NonlinearConstraint>(destination->getConstraint(i));
 
+                if(!constraint)
+                {
+                    env->output->outputError(fmt::format(
+                        " Constraint {} has nonlinear terms but is not a NonlinearConstraint (order: {})",
+                        i, gmoGetEquOrderOne(modelingObject, i)));
+                    delete[] opcodes;
+                    delete[] fields;
+                    delete[] constants;
+                    return (false);
+                }
+
                 constraint->add(std::move(destinationExpression));
             }
             catch(const ConstraintNotFoundException&)
