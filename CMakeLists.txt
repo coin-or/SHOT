@@ -451,7 +451,7 @@ ExternalProject_Add(cppad
 )
 
 # Set CppAD library path
-set(CPPAD_LIB_DIR "${CMAKE_CURRENT_BINARY_DIR}/cppad/lib")
+set(CPPAD_LIB_DIR "${CMAKE_CURRENT_BINARY_DIR}/CppAD/lib")
 if(APPLE)
     set(CPPAD_LIBRARY "${CPPAD_LIB_DIR}/libcppad_lib.dylib")
 else()
