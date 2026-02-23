@@ -266,7 +266,6 @@ if(HAS_GUROBI)
     endif(GUROBI_FOUND)
 endif(HAS_GUROBI)
 
-
 # HiGHS
 
 # Case 1: Use FetchContent to download HiGHS
@@ -291,14 +290,14 @@ endif()
 # Case 2: Use external HiGHS
 if(HAS_HIGHS AND USE_EXTERNAL_HIGHS)
     find_package(Threads REQUIRED)
-    find_package(HIGHS PATHS ${HIGHS_EXTERNAL_DIR} NO_DEFAULT_PATH)
+    find_package(highs PATHS ${HIGHS_EXTERNAL_DIR} NO_DEFAULT_PATH)
     
-    if(NOT HIGHS_FOUND)
+    if(NOT highs_FOUND)
         message(WARNING "External HiGHS not found, setting HAS_HIGHS to OFF")
         set(HAS_HIGHS OFF)
     endif()
     
-    if(HIGHS_FOUND)
+    if(highs_FOUND)
         add_definitions(-DHAS_HIGHS)
         set(DUAL_SOURCES ${DUAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverHighs.cpp")
         set(DUAL_HEADERS ${DUAL_HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverHighs.h")
