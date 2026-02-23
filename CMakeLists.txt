@@ -609,7 +609,7 @@ endif()
 target_link_libraries(SHOTSolver SHOTSolutionStrategies)
 
 # Link the standard library required for std::filesystem (if needed)
-target_link_libraries(SHOTSolver CXX::Filesystem)
+#target_link_libraries(SHOTSolver CXX::Filesystem)
 
 # Generates the SHOT executable
 if(GENERATE_EXE)
