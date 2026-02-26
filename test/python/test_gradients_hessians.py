@@ -815,7 +815,8 @@ class TestSignomialTerms:
         problem.addVariable(x)
         problem.addVariable(y)
         
-        # Create signomial: x^0.5 * y^1.5 using (variable, power) tuple syntax
+        # Create signomial term: x^0.5 * y^1.5
+        # Using list of multiple (variable, power) tuples
         signomial = SHOTpy.SignomialTerm(1.0, [(x, 0.5), (y, 1.5)])
         signomial_terms = SHOTpy.SignomialTerms()
         signomial_terms.add(signomial)
@@ -1029,10 +1030,8 @@ class TestMixedTermTypes:
         quad_terms = SHOTpy.QuadraticTerms()
         quad_terms.add(SHOTpy.QuadraticTerm(1.0, y, y))
         
-        element = SHOTpy.SignomialElement(x, 0.5)
-        elements = SHOTpy.SignomialElements()
-        elements.add(element)
-        signomial = SHOTpy.SignomialTerm(1.0, elements)
+        # Use the alternative SignomialTerm constructor with (variable, power) pairs
+        signomial = SHOTpy.SignomialTerm(1.0, [(x, 0.5)])
         signomial_terms = SHOTpy.SignomialTerms()
         signomial_terms.add(signomial)
         

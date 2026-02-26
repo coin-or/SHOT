@@ -10,6 +10,7 @@
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <pybind11/stl_bind.h>
 #include <pybind11/operators.h>
 
 // Prevent CppAD template instantiation in this compilation unit
@@ -803,6 +804,20 @@ PYBIND11_MODULE(SHOTpy, m)
                 return "<SignomialElement: " + e.variable->name + ">";
             else
                 return "<SignomialElement: " + e.variable->name + "^" + std::to_string(e.power) + ">";
+        });
+
+    // ===== SignomialElements Collection =====
+    // Note: SignomialElements is a typedef for std::vector<SignomialElementPtr>
+    // We expose it as a simple value-type container
+    py::class_<SignomialElements>(m, "SignomialElements")
+        .def(py::init<>())
+        .def("append", [](SignomialElements& self, SignomialElementPtr elem) {
+            self.push_back(elem);
+        })
+        .def("__len__", [](const SignomialElements& self) { return self.size(); })
+        .def("__getitem__", [](const SignomialElements& self, size_t i) {
+            if (i >= self.size()) throw py::index_error();
+            return self[i];
         });
 
     // ===== SignomialTerm Class =====
