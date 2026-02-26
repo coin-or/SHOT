@@ -291,9 +291,9 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem)
     INT64 qwin_3pass;
     INT64 qwin_dblfwd;
     gmoGetQMakerStats(modelingObject, buffer, &qtime, &qwin_3pass, &qwin_dblfwd);
-    sprintf(msg, " Extraction of quadratics (%s algorithm): %.2fs", buffer, qtime);
+    snprintf(msg, sizeof(msg), " Extraction of quadratics (%s algorithm): %.2fs", buffer, qtime);
     if( qextractalg == 3 )
-       sprintf(msg + strlen(msg), " (ThreePass fastest on %ld equations, DoubleForward fastest on %ld equations)", (long)qwin_3pass, (long)qwin_dblfwd);
+       snprintf(msg + strlen(msg), sizeof(msg) - strlen(msg), " (ThreePass fastest on %ld equations, DoubleForward fastest on %ld equations)", (long)qwin_3pass, (long)qwin_dblfwd);
     env->output->outputDebug(msg);
 #endif
 
@@ -834,7 +834,7 @@ bool ModelingSystemGAMS::copyVariables(ProblemPtr destination)
             if(gmoDict(modelingObject))
                 gmoGetVarNameOne(modelingObject, i, buffer);
             else
-                sprintf(buffer, "x%08d", i);
+                snprintf(buffer, sizeof(buffer), "x%08d", i);
 
             std::string variableName = buffer;
 
@@ -1130,7 +1130,7 @@ bool ModelingSystemGAMS::copyConstraints(ProblemPtr destination)
             if(gmoDict(modelingObject))
                 gmoGetEquNameOne(modelingObject, i, buffer);
             else
-                sprintf(buffer, "e%08d", i);
+                snprintf(buffer, sizeof(buffer), "e%08d", i);
 
             switch(gmoGetEquOrderOne(modelingObject, i))
             {
@@ -2097,7 +2097,7 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
             {
                 debugout << "nr. " << address + 1 << " - unsupported. Error." << std::endl;
                 char buffer[256];
-                sprintf(buffer, "Error: Unsupported GAMS function %s.\n", GamsFuncCodeName[address + 1]);
+                snprintf(buffer, sizeof(buffer), "Error: Unsupported GAMS function %s.\n", GamsFuncCodeName[address + 1]);
                 gevLogStatPChar(modelingEnvironment, buffer);
                 throw OperationNotImplementedException(fmt::format("Error: Unsupported GAMS function {}", GamsFuncCodeName[address + 1]));
             }
@@ -2105,7 +2105,7 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
             {
                 debugout << "nr. " << address + 1 << " - unsupported. Error." << std::endl;
                 char buffer[256];
-                sprintf(buffer, "Error: Unsupported new GAMS function %d.\n", address + 1);
+                snprintf(buffer, sizeof(buffer), "Error: Unsupported new GAMS function %d.\n", address + 1);
                 gevLogStatPChar(modelingEnvironment, buffer);
                 throw OperationNotImplementedException(fmt::format("Error: Unsupported new GAMS function {}", address));
             }
@@ -2117,7 +2117,7 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
         {
             debugout << "opcode " << opcode << " - unsuppored. Error." << std::endl;
             char buffer[256];
-            sprintf(buffer, "Error: Unsupported GAMS opcode %s.\n", GamsOpCodeName[opcode]);
+            snprintf(buffer, sizeof(buffer), "Error: Unsupported GAMS opcode %s.\n", GamsOpCodeName[opcode]);
             gevLogStatPChar(modelingEnvironment, buffer);
             throw OperationNotImplementedException(fmt::format("Error: Unsupported GAMS opcode {}", buffer));
         }
