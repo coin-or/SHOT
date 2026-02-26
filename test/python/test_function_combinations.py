@@ -1451,9 +1451,9 @@ class TestDeepNonlinearExpressions:
         c2.add(SHOTpy.LinearTerm(1.0, x))
         problem.addConstraint(c2)
         
-        # Constraint 3: sqrt(x^2 + y^2 + z^2) <= 15
+        # Constraint 3: exp(x) + log(y) + sin(z) <= 15
         c3 = SHOTpy.NonlinearConstraint(2, "c3_deep", -SHOTpy.SHOT_DBL_MAX, 15.0)
-        c3.add(SHOTpy.sqrt(x**2 + y**2 + z**2))
+        c3.add(SHOTpy.exp(x) + SHOTpy.log(y) + SHOTpy.sin(z))
         problem.addConstraint(c3)
         
         problem.finalize()
