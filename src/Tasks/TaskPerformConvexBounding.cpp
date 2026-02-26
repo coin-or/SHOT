@@ -119,10 +119,10 @@ void TaskPerformConvexBounding::run()
 
     for(auto HP : env->dualSolver->generatedHyperplanes)
     {
-        if(HP.isSourceConvex)
+        if(HP->sourceHyperplane->isGlobal)
         {
             env->output->outputDebug("Convex hyperplane added to convex bounding problem");
-            if(MIPSolver->createHyperplane((Hyperplane)HP))
+            if(MIPSolver->createHyperplane(HP->sourceHyperplane))
                 numberHyperplanesAdded++;
         }
     }

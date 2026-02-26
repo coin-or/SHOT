@@ -678,6 +678,8 @@ add_library(
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskConditional.h
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskCreateDualProblem.cpp
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskCreateDualProblem.h
+    ${PROJECT_SOURCE_DIR}/src/Tasks/TaskCreateMIPProblem.cpp
+    ${PROJECT_SOURCE_DIR}/src/Tasks/TaskCreateMIPProblem.h
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskException.h
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskExecuteRelaxationStrategy.cpp
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskExecuteRelaxationStrategy.h
@@ -695,6 +697,8 @@ add_library(
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskInitializeRootsearch.h
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskPerformBoundTightening.cpp
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskPerformBoundTightening.h
+    ${PROJECT_SOURCE_DIR}/src/Tasks/TaskPerformConvexBounding.cpp
+    ${PROJECT_SOURCE_DIR}/src/Tasks/TaskPerformConvexBounding.h
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskPresolve.cpp
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskPresolve.h
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskPrintIterationReport.cpp

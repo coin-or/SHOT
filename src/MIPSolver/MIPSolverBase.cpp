@@ -203,6 +203,8 @@ std::optional<std::pair<std::map<int, double>, double>> MIPSolverBase::createHyp
 
     if(auto objectiveHP = std::dynamic_pointer_cast<ObjectiveHyperplane>(hyperplane))
     {
+        constant = objectiveHP->objectiveFunctionValue;
+
         if(env->reformulatedProblem->objectiveFunction->properties.hasNonlinearExpression)
         {
             gradient

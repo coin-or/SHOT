@@ -224,12 +224,6 @@ void DualSolver::addGeneratedHyperplane(const HyperplanePtr hyperplane)
     genHyperplane->iterationGenerated = env->results->getCurrentIteration()->iterationNumber;
     genHyperplane->isLazy = false;
 
-    if(auto numericHP = std::dynamic_pointer_cast<NumericHyperplane>(genHyperplane->sourceHyperplane))
-    {
-        if(!env->settings->getSetting<bool>("HyperplaneCuts.SaveHyperplanePoints", "Dual"))
-            numericHP->generatedPoint = VectorDouble();
-    }
-
     if(!genHyperplane->sourceHyperplane->isGlobal)
     {
         if(env->results->solutionIsGlobal)
@@ -250,7 +244,7 @@ void DualSolver::addGeneratedHyperplane(const HyperplanePtr hyperplane)
     currentIteration->totNumHyperplanes++;
     env->solutionStatistics.iterationLastDualCutAdded = currentIteration->iterationNumber;
 
-    if(hyperplane.isSourceConvex)
+    if(hyperplane->isGlobal)
         env->solutionStatistics.numberOfHyperplanesWithConvexSource++;
     else
         env->solutionStatistics.numberOfHyperplanesWithNonconvexSource++;
