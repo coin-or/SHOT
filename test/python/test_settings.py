@@ -176,8 +176,9 @@ class TestSettingsWithEnums:
         assert int(SHOTpy.MIPSolver.Cplex) == 0
         assert int(SHOTpy.MIPSolver.Gurobi) == 1
         assert int(SHOTpy.MIPSolver.Cbc) == 2
+        assert int(SHOTpy.MIPSolver.Highs) == 3
         # 'None' is a Python keyword, so use getattr to access it
-        assert int(getattr(SHOTpy.MIPSolver, 'None')) == 3
+        assert int(getattr(SHOTpy.MIPSolver, 'None')) == 4
         
         # PrimalNLPSolver values
         assert int(SHOTpy.PrimalNLPSolver.Ipopt) == 0
