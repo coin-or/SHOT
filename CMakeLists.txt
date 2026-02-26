@@ -517,12 +517,29 @@ add_library(
 target_link_libraries(SHOTResults SHOTModel)
 
 if(HAS_PYTHON)
+    # Find Python before adding pybind11 to ensure correct paths are used
+    find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
+    # Force pybind11 to use modern FindPython3 instead of deprecated FindPythonLibs
+    set(PYBIND11_FINDPYTHON ON CACHE BOOL "Force pybind11 to use FindPython3" FORCE)
     add_subdirectory(${PYBIND11_DIR})
     pybind11_add_module(SHOTpy src/SHOTpy.cpp)
-    target_link_libraries(SHOTpy PRIVATE SHOTSolver cppad_lib)
+    target_link_libraries(SHOTpy PRIVATE SHOTSolver ${CPPAD_LIBRARY})
+    
+    # Set rpath for finding dynamic libraries
+    if(APPLE)
+        set(SHOTPY_RPATH_DIRS "${CPPAD_LIB_DIR}")
+        if(HAS_GUROBI AND GUROBI_FOUND)
+            list(APPEND SHOTPY_RPATH_DIRS "${GUROBI_LIB_DIR}")
+        endif()
+        set_target_properties(SHOTpy PROPERTIES
+            BUILD_RPATH "${SHOTPY_RPATH_DIRS}"
+            INSTALL_RPATH "@loader_path")
+    endif()
+    
     # Ensure CppAD symbols are shared between SHOTpy and SHOTSolver
     # This prevents ODR violations with CppAD's static local variables in templates
-    if(NOT MSVC)
+    # These linker flags are Linux-specific (GNU ld)
+    if(UNIX AND NOT APPLE)
         target_link_options(SHOTpy PRIVATE "LINKER:--no-as-needed")
         target_link_options(SHOTpy PRIVATE "LINKER:--export-dynamic")
     endif()
@@ -771,7 +788,7 @@ endif(GENERATE_EXE)
 
 
 if(HAS_PYTHON)
-    find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
+    # Python was already found earlier before adding pybind11 subdirectory
     include_directories(SYSTEM ${Python3_INCLUDE_DIRS})
     target_link_libraries(${PROJECT_NAME} ${Python3_LIBRARIES})
     message("-- The following Python libraries will be used from: ${Python3_LIBRARIES}")
