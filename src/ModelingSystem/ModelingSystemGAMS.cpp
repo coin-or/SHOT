@@ -104,6 +104,13 @@ void ModelingSystemGAMS::augmentSettings([[maybe_unused]] SettingsPtr settings)
 #endif
     settings->createSetting("GAMS.QExtractAlg", "ModelingSystem", 0,
         "Extraction algorithm for quadratic equations in GAMS interface", enumQExtractAlg);
+
+#if GMOAPIVERSION >= 28
+    settings->createSetting("GAMS.QExtractDenseSwitchFactor", "ModelingSystem", 0.008,
+        "Sparse/dense factor for quadratic extraction algorithm in GAMS interface.", 0.0);
+    settings->createSetting("GAMS.QExtractDenseSwitchLog", "ModelingSystem", false,
+        "Whether to print additional information about sparse/dense factor choice in quadratic extraction algorithm in GAMS interface.");
+#endif
 #endif
 }
 
@@ -175,7 +182,12 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
         }
 
         // Sets the number of threads
-        env->settings->updateSetting("MIP.NumberOfThreads", "Dual", gevThreads(modelingEnvironment));
+        // gevThreadsRaw >= 0 from GAMS have the same meaning in SHOT
+        // for gevThreadsRaw < 0, use gevThreads() to translate to number of processors to use
+        int nthreads = gevGetIntOpt(modelingEnvironment, gevThreadsRaw);
+        if( nthreads < 0 )
+           nthreads = gevThreads(modelingEnvironment);
+        env->settings->updateSetting("MIP.NumberOfThreads", "Dual", nthreads);
         env->output->outputDebug(fmt::format(
             " MIP number of threads set to {} by GAMS", env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual")));
 
@@ -283,6 +295,10 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem)
 #if GMOAPIVERSION >= 21
     int qextractalg = env->settings->getSetting<int>("GAMS.QExtractAlg", "ModelingSystem");
     gmoQExtractAlgSet(modelingObject, qextractalg);
+#endif
+#if GMOAPIVERSION >= 28
+    gmoQExtractDenseSwitchFactorSet(modelingObject, env->settings->getSetting<double>("GAMS.QExtractDenseSwitchFactor", "ModelingSystem"));
+    gmoQExtractDenseSwitchLogSet(modelingObject, (int)env->settings->getSetting<bool>("GAMS.QExtractDenseSwitchLog", "ModelingSystem"));
 #endif
     gmoUseQSet(modelingObject, 1);
 #if GMOAPIVERSION >= 25
@@ -602,6 +618,8 @@ void ModelingSystemGAMS::createAuditLicensing()
     palLicenseRegisterGAMS(auditLicensing, 4, gevGetStrOpt(modelingEnvironment, "License4", buf));
     palLicenseRegisterGAMS(auditLicensing, 5, gevGetStrOpt(modelingEnvironment, "License5", buf));
     palLicenseRegisterGAMS(auditLicensing, 6, gevGetStrOpt(modelingEnvironment, "License6", buf));
+    palLicenseRegisterGAMS(auditLicensing, 7, gevGetStrOpt(modelingEnvironment, "License7", buf));
+    palLicenseRegisterGAMS(auditLicensing, 8, gevGetStrOpt(modelingEnvironment, "License8", buf));
     palLicenseRegisterGAMSDone(auditLicensing);
 
     palLicenseCheck(auditLicensing, gmoM(modelingObject), gmoN(modelingObject), gmoNZ(modelingObject),
