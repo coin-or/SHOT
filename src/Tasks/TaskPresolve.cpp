@@ -69,7 +69,19 @@ void TaskPresolve::run()
 
     if(env->dualSolver->MIPSolver->getDiscreteVariableStatus() && env->results->hasPrimalSolution())
     {
-        env->dualSolver->MIPSolver->addMIPStart(env->results->primalSolution);
+        auto primalSol = env->results->primalSolution;
+        assert(primalSol.size() == env->problem->properties.numberOfVariables);
+
+        env->reformulatedProblem->augmentAuxiliaryVariableValues(primalSol);
+
+        if(env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
+        {
+            primalSol.push_back(env->results->getPrimalBound());
+        }
+
+        assert(primalSol.size() == env->dualSolver->MIPSolver->getNumberOfVariables());
+
+        env->dualSolver->MIPSolver->addMIPStart(primalSol);
     }
 
     if(env->settings->getSetting<bool>("FixedInteger.UsePresolveBounds", "Primal")

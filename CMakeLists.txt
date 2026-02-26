@@ -271,6 +271,9 @@ if(HAS_HIGHS)
         )
 
         FetchContent_MakeAvailable(highs)
+
+        # Disable HiGHS assertions even in debug builds
+        # target_compile_definitions(highs PRIVATE NDEBUG)
     endif()
 endif(HAS_HIGHS)
 
@@ -406,6 +409,10 @@ ExternalProject_Add(cppad
     -Dcppad_prefix=${CMAKE_CURRENT_BINARY_DIR}/CppAD
     -Dcppad_cxx_flags="-std=c++17"
 )
+
+# Set CppAD library path
+set(CPPAD_LIB_DIR "${CMAKE_CURRENT_BINARY_DIR}/CppAD/lib")
+set(CPPAD_LIBRARY "${CPPAD_LIB_DIR}/libcppad_lib.so")
 
 # Creates the helper library
 add_library(
@@ -653,6 +660,9 @@ else()
 endif()
 
 target_link_libraries(SHOTSolver SHOTSolutionStrategies)
+
+# Link CppAD library
+target_link_libraries(SHOTSolver ${CPPAD_LIBRARY})
 
 # Link the standard library required for std::filesystem (if needed)
 target_link_libraries(SHOTSolver CXX::Filesystem)

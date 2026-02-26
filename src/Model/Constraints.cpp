@@ -563,6 +563,7 @@ void NonlinearConstraint::add(NonlinearExpressionPtr expression)
             terms.push_back(nonlinearExpression);
         }
 
+        auto expressionSum = std::dynamic_pointer_cast<ExpressionSum>(expression);
         if(expression->getType() == E_NonlinearExpressionTypes::Sum)
         {
             for(auto& TERM : std::dynamic_pointer_cast<ExpressionSum>(expression)->children)
@@ -755,6 +756,10 @@ void NonlinearConstraint::initializeGradientSparsityPattern()
             assert(sharedOwnerProblem->properties.numberOfVariablesInNonlinearExpressions > 0);
             assert(sharedOwnerProblem->properties.numberOfNonlinearExpressions > 0);
             assert(this->nonlinearExpressionIndex >= 0);
+            assert((size_t)sharedOwnerProblem->properties.numberOfVariablesInNonlinearExpressions
+                == sharedOwnerProblem->nonlinearExpressionVariables.size());
+            assert((size_t)sharedOwnerProblem->properties.numberOfNonlinearExpressions
+                == sharedOwnerProblem->ADFunctions.Range());
 
             // For some reason we need to have all nonlinear variables activated, otherwise not all nonzero elements
             // of the gradient may be detected
@@ -832,10 +837,10 @@ SparseVariableMatrix NonlinearConstraint::calculateHessian(const VectorDouble& p
 
             for(auto& V1 : variablesInNonlinearExpression)
             {
+                int v1Index = V1->properties.nonlinearVariableIndex;
                 for(auto& V2 : variablesInNonlinearExpression)
                 {
-                    size_t hessianIndex = V1->properties.nonlinearVariableIndex * numberOfNonlinearVariables
-                        + V2->properties.nonlinearVariableIndex;
+                    size_t hessianIndex = v1Index * numberOfNonlinearVariables + V2->properties.nonlinearVariableIndex;
 
                     double hessianValue = calculatedHessian[hessianIndex];
 
@@ -944,12 +949,17 @@ void NonlinearConstraint::initializeHessianSparsityPattern()
 
             for(size_t i = 0; i < nonlinearHessianSparsityPattern.nnz(); i++)
             {
+                size_t targetRowIndex = rowIndices[i];
+                size_t targetColIndex = colIndices[i];
+
                 for(auto& V1 : variablesInNonlinearExpression)
                 {
+                    if((size_t)V1->properties.nonlinearVariableIndex != targetRowIndex)
+                        continue;
+
                     for(auto& V2 : variablesInNonlinearExpression)
                     {
-                        if((size_t)V1->properties.nonlinearVariableIndex == rowIndices[i]
-                            && (size_t)V2->properties.nonlinearVariableIndex == colIndices[i])
+                        if((size_t)V2->properties.nonlinearVariableIndex == targetColIndex)
                         {
                             std::pair<VariablePtr, VariablePtr> variablePair;
 
@@ -962,10 +972,11 @@ void NonlinearConstraint::initializeHessianSparsityPattern()
                                 == hessianSparsityPattern->end())
                                 hessianSparsityPattern->push_back(variablePair);
 
-                            continue;
+                            goto next_sparsity_element;
                         }
                     }
                 }
+            next_sparsity_element:;
             }
         }
     }

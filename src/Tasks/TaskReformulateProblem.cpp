@@ -1397,6 +1397,16 @@ LinearTerms TaskReformulateProblem::partitionNonlinearSum(
 
     bool allNonlinearExpressionsReformulated = false;
 
+    auto partitionNonlinearTermsStrategy = static_cast<ES_PartitionNonlinearSums>(
+        env->settings->getSetting<int>("Reformulation.Constraint.PartitionNonlinearTerms", "Model"));
+    auto monomialFormulation = env->settings->getSetting<int>("Reformulation.Monomials.Formulation", "Model");
+    double varLowerBound = env->settings->getSetting<double>("Variables.Continuous.MinimumLowerBound", "Model");
+    double varUpperBound = env->settings->getSetting<double>("Variables.Continuous.MaximumUpperBound", "Model");
+    auto extractQuadraticTermsSetting
+        = env->settings->getSetting<int>("Reformulation.Quadratics.ExtractStrategy", "Model");
+    auto quadraticStrategy = static_cast<ES_QuadraticProblemStrategy>(
+        env->settings->getSetting<int>("Reformulation.Quadratics.Strategy", "Model"));
+
     for(auto& T : source->children)
     {
         if(T->getType() == E_NonlinearExpressionTypes::Product) // Might be able to reuse auxiliary variable
@@ -1411,9 +1421,8 @@ LinearTerms TaskReformulateProblem::partitionNonlinearSum(
                 quadTerms.takeOwnership(reformulatedProblem);
                 quadTerms.add(optionalQuadraticTerm.value());
 
-                auto [tmpLinearTerms, tmpQuadraticTerms] = reformulateAndPartitionQuadraticSum(quadTerms, reversedSigns,
-                    static_cast<ES_PartitionNonlinearSums>(
-                        env->settings->getSetting<int>("Reformulation.Constraint.PartitionNonlinearTerms", "Model")));
+                auto [tmpLinearTerms, tmpQuadraticTerms]
+                    = reformulateAndPartitionQuadraticSum(quadTerms, reversedSigns, partitionNonlinearTermsStrategy);
 
                 if(tmpQuadraticTerms.size() == 0)
                 // Otherwise we cannot proceed and will continue as if nonbilinear term
@@ -1426,9 +1435,7 @@ LinearTerms TaskReformulateProblem::partitionNonlinearSum(
             auto optionalMonomialTerm
                 = reformulateProductToMonomialTerm(std::dynamic_pointer_cast<ExpressionProduct>(T));
 
-            if(optionalMonomialTerm
-                && env->settings->getSetting<int>("Reformulation.Monomials.Formulation", "Model")
-                    != static_cast<int>(ES_ReformulationBinaryMonomials::None))
+            if(optionalMonomialTerm && monomialFormulation != static_cast<int>(ES_ReformulationBinaryMonomials::None))
             // The product was a monomial term
             {
                 MonomialTerms monomialTerms;
@@ -1452,9 +1459,6 @@ LinearTerms TaskReformulateProblem::partitionNonlinearSum(
         {
             Interval bounds;
 
-            double varLowerBound = env->settings->getSetting<double>("Variables.Continuous.MinimumLowerBound", "Model");
-            double varUpperBound = env->settings->getSetting<double>("Variables.Continuous.MaximumUpperBound", "Model");
-
             try
             {
                 bounds = T->getBounds();
@@ -1475,13 +1479,10 @@ LinearTerms TaskReformulateProblem::partitionNonlinearSum(
 
             resultLinearTerms.add(std::make_shared<LinearTerm>(1.0, auxVariable));
 
-            bool extractQuadraticTerms
-                = (env->settings->getSetting<int>("Reformulation.Quadratics.ExtractStrategy", "Model")
-                    >= static_cast<int>(ES_QuadraticTermsExtractStrategy::ExtractTermsToSame));
+            bool extractQuadraticTerms = (extractQuadraticTermsSetting
+                >= static_cast<int>(ES_QuadraticTermsExtractStrategy::ExtractTermsToSame));
 
-            if(static_cast<ES_QuadraticProblemStrategy>(
-                   env->settings->getSetting<int>("Reformulation.Quadratics.Strategy", "Model"))
-                < ES_QuadraticProblemStrategy::ConvexQuadraticallyConstrained)
+            if(quadraticStrategy < ES_QuadraticProblemStrategy::ConvexQuadraticallyConstrained)
                 extractQuadraticTerms = false;
 
             // If the extracted term is quadratic, create a quadratic constraint instead of a nonlinear one
@@ -1571,12 +1572,12 @@ LinearTerms TaskReformulateProblem::partitionMonomialTerms(const MonomialTerms s
     if(sourceTerms.size() == 0)
         return (resultLinearTerms);
 
+    double varLowerBound = env->settings->getSetting<double>("Variables.Continuous.MinimumLowerBound", "Model");
+    double varUpperBound = env->settings->getSetting<double>("Variables.Continuous.MaximumUpperBound", "Model");
+
     for(auto& T : sourceTerms)
     {
         Interval bounds;
-
-        double varLowerBound = env->settings->getSetting<double>("Variables.Continuous.MinimumLowerBound", "Model");
-        double varUpperBound = env->settings->getSetting<double>("Variables.Continuous.MaximumUpperBound", "Model");
 
         try
         {
@@ -1627,12 +1628,12 @@ LinearTerms TaskReformulateProblem::partitionSignomialTerms(const SignomialTerms
     if(sourceTerms.size() == 0)
         return (resultLinearTerms);
 
+    double varLowerBound = env->settings->getSetting<double>("Variables.Continuous.MinimumLowerBound", "Model");
+    double varUpperBound = env->settings->getSetting<double>("Variables.Continuous.MaximumUpperBound", "Model");
+
     for(auto& T : sourceTerms)
     {
         Interval bounds;
-
-        double varLowerBound = env->settings->getSetting<double>("Variables.Continuous.MinimumLowerBound", "Model");
-        double varUpperBound = env->settings->getSetting<double>("Variables.Continuous.MaximumUpperBound", "Model");
 
         double coefficient = std::abs(T->coefficient);
 
@@ -1710,10 +1711,12 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
                 performPartitioning = false;
                 break;
             }
-            else if((!reversedSigns && (T->getConvexity() == E_Convexity::Convex))
-                || (reversedSigns && (T->getConvexity() == E_Convexity::Concave)))
-            {
-            }
+
+            auto convexity = T->getConvexity();
+
+            if((!reversedSigns && (convexity == E_Convexity::Convex))
+                || (reversedSigns && (convexity == E_Convexity::Concave)))
+            { }
             else if(T->isSquare && T->isBinary) // Square term b^2 -> b
             {
             }
@@ -1756,12 +1759,23 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
     bool allTermsConvex = quadraticTerms.checkAllForConvexityType(E_Convexity::Convex);
     bool allTermsConcave = quadraticTerms.checkAllForConvexityType(E_Convexity::Concave);
 
-    if(env->settings->getSetting<bool>("Reformulation.Quadratics.EigenValueDecomposition.Use", "Model")
+    auto quadraticDecompositionMethod = (ES_QuadraticDecomposition)env->settings->getSetting<int>(
+        "Reformulation.Quadratics.Decomposition.Method", "Model");
+
+    if(quadraticDecompositionMethod != ES_QuadraticDecomposition::None
         && partitionStrategy <= ES_PartitionNonlinearSums::IfConvex && quadraticSumConvex
-        && !quadraticTerms.allSquares) // Use the eigenvalue decomposition reformulation
+        && !quadraticTerms.allSquares) // Use one of the quadratic decompositions
     {
-        auto linearTerms = doEigenvalueDecomposition(quadraticTerms);
-        resultLinearTerms.add(linearTerms);
+        if(quadraticDecompositionMethod == ES_QuadraticDecomposition::EigenValueDecomposition)
+        {
+            auto linearTerms = doEigenvalueDecomposition(quadraticTerms);
+            resultLinearTerms.add(linearTerms);
+        }
+        else
+        {
+            auto linearTerms = doLDLDecomposition(quadraticTerms);
+            resultLinearTerms.add(linearTerms);
+        }
     }
     else if(partitionStrategy == ES_PartitionNonlinearSums::Always
         || (!reversedSigns && allTermsConvex && partitionStrategy == ES_PartitionNonlinearSums::IfConvex)
@@ -1857,6 +1871,7 @@ std::tuple<LinearTerms, MonomialTerms> TaskReformulateProblem::reformulateMonomi
     resultMonomialTerms.takeOwnership(reformulatedProblem);
 
     double signfactor = reversedSigns ? -1.0 : 1.0;
+    auto monomialFormulation = env->settings->getSetting<int>("Reformulation.Monomials.Formulation", "Model");
 
     for(auto& T : monomialTerms)
     {
@@ -1868,9 +1883,7 @@ std::tuple<LinearTerms, MonomialTerms> TaskReformulateProblem::reformulateMonomi
 
     for(auto& T : monomialTerms)
     {
-        if(T->isBinary
-            && env->settings->getSetting<int>("Reformulation.Monomials.Formulation", "Model")
-                == static_cast<int>(ES_ReformulationBinaryMonomials::Simple))
+        if(T->isBinary && monomialFormulation == static_cast<int>(ES_ReformulationBinaryMonomials::Simple))
         {
             auto N = T->variables.size();
 
@@ -1905,9 +1918,7 @@ std::tuple<LinearTerms, MonomialTerms> TaskReformulateProblem::reformulateMonomi
             reformulatedProblem->add(std::move(auxConstraint1));
             reformulatedProblem->add(std::move(auxConstraint2));
         }
-        else if(T->isBinary
-            && env->settings->getSetting<int>("Reformulation.Monomials.Formulation", "Model")
-                == static_cast<int>(ES_ReformulationBinaryMonomials::CostaLiberti))
+        else if(T->isBinary && monomialFormulation == static_cast<int>(ES_ReformulationBinaryMonomials::CostaLiberti))
         {
             int variableOffset = 0;
             int k = T->variables.size();
@@ -1919,6 +1930,7 @@ std::tuple<LinearTerms, MonomialTerms> TaskReformulateProblem::reformulateMonomi
             auxConstraintCounter++;
 
             auto numLambdas = std::pow(2, k);
+            int numLambdasInt = static_cast<int>(numLambdas);
 
             for(auto i = 1; i < numLambdas; i++)
             {
@@ -1951,7 +1963,7 @@ std::tuple<LinearTerms, MonomialTerms> TaskReformulateProblem::reformulateMonomi
 
             resultLinearTerms.add(std::make_shared<LinearTerm>(signfactor * T->coefficient, auxwVar));
 
-            for(auto i = 1; i <= std::pow(2, k); i++)
+            for(auto i = 1; i <= numLambdasInt; i++)
             {
                 double bProd = 1.0;
 
@@ -2011,6 +2023,7 @@ template <class T>
 void TaskReformulateProblem::copyLinearTermsToConstraint(LinearTerms terms, T destination, bool reversedSigns)
 {
     double signCoefficient = (reversedSigns) ? -1.0 : 1.0;
+    auto linearConstraint = std::dynamic_pointer_cast<LinearConstraint>(destination);
 
     for(auto& LT : terms)
     {
@@ -2018,13 +2031,11 @@ void TaskReformulateProblem::copyLinearTermsToConstraint(LinearTerms terms, T de
 
         if(variable->lowerBound == variable->upperBound)
         {
-            std::dynamic_pointer_cast<LinearConstraint>(destination)->constant
-                += signCoefficient * LT->coefficient * variable->lowerBound;
+            linearConstraint->constant += signCoefficient * LT->coefficient * variable->lowerBound;
         }
         else
         {
-            std::dynamic_pointer_cast<LinearConstraint>(destination)
-                ->add(std::make_shared<LinearTerm>(signCoefficient * LT->coefficient, variable));
+            linearConstraint->add(std::make_shared<LinearTerm>(signCoefficient * LT->coefficient, variable));
         }
     }
 }
@@ -2033,6 +2044,8 @@ template <class T>
 void TaskReformulateProblem::copyQuadraticTermsToConstraint(QuadraticTerms terms, T destination, bool reversedSigns)
 {
     double signCoefficient = (reversedSigns) ? -1.0 : 1.0;
+    auto linearConstraint = std::static_pointer_cast<LinearConstraint>(destination);
+    auto quadraticConstraint = std::dynamic_pointer_cast<QuadraticConstraint>(destination);
 
     for(auto& QT : terms)
     {
@@ -2044,26 +2057,23 @@ void TaskReformulateProblem::copyQuadraticTermsToConstraint(QuadraticTerms terms
 
         if(firstVariableFixed && secondVariableFixed)
         {
-            (std::static_pointer_cast<LinearConstraint>(destination))->constant
+            linearConstraint->constant
                 += signCoefficient * QT->coefficient * firstVariable->lowerBound * secondVariable->lowerBound;
         }
         else if(firstVariableFixed)
         {
-            (std::static_pointer_cast<LinearConstraint>(destination))
-                ->add(std::make_shared<LinearTerm>(
-                    signCoefficient * QT->coefficient * firstVariable->lowerBound, secondVariable));
+            linearConstraint->add(std::make_shared<LinearTerm>(
+                signCoefficient * QT->coefficient * firstVariable->lowerBound, secondVariable));
         }
         else if(secondVariableFixed)
         {
-            (std::static_pointer_cast<LinearConstraint>(destination))
-                ->add(std::make_shared<LinearTerm>(
-                    signCoefficient * QT->coefficient * secondVariable->lowerBound, firstVariable));
+            linearConstraint->add(std::make_shared<LinearTerm>(
+                signCoefficient * QT->coefficient * secondVariable->lowerBound, firstVariable));
         }
         else
         {
-            std::dynamic_pointer_cast<QuadraticConstraint>(destination)
-                ->add(
-                    std::make_shared<QuadraticTerm>(signCoefficient * QT->coefficient, firstVariable, secondVariable));
+            quadraticConstraint->add(
+                std::make_shared<QuadraticTerm>(signCoefficient * QT->coefficient, firstVariable, secondVariable));
         }
     }
 }
@@ -2117,6 +2127,7 @@ template <class T>
 void TaskReformulateProblem::copyLinearTermsToObjectiveFunction(LinearTerms terms, T destination, bool reversedSigns)
 {
     double signCoefficient = (reversedSigns) ? -1.0 : 1.0;
+    auto linearObjective = std::dynamic_pointer_cast<LinearObjectiveFunction>(destination);
 
     for(auto& LT : terms)
     {
@@ -2124,13 +2135,11 @@ void TaskReformulateProblem::copyLinearTermsToObjectiveFunction(LinearTerms term
 
         if(variable->lowerBound == variable->upperBound)
         {
-            std::dynamic_pointer_cast<LinearObjectiveFunction>(destination)->constant
-                += signCoefficient * LT->coefficient * variable->lowerBound;
+            linearObjective->constant += signCoefficient * LT->coefficient * variable->lowerBound;
         }
         else
         {
-            std::dynamic_pointer_cast<LinearObjectiveFunction>(destination)
-                ->add(std::make_shared<LinearTerm>(signCoefficient * LT->coefficient, variable));
+            linearObjective->add(std::make_shared<LinearTerm>(signCoefficient * LT->coefficient, variable));
         }
     }
 }
@@ -2140,6 +2149,8 @@ void TaskReformulateProblem::copyQuadraticTermsToObjectiveFunction(
     QuadraticTerms terms, T destination, bool reversedSigns)
 {
     double signCoefficient = (reversedSigns) ? -1.0 : 1.0;
+    auto linearObjective = std::static_pointer_cast<LinearObjectiveFunction>(destination);
+    auto quadraticObjective = std::dynamic_pointer_cast<QuadraticObjectiveFunction>(destination);
 
     for(auto& QT : terms)
     {
@@ -2151,26 +2162,23 @@ void TaskReformulateProblem::copyQuadraticTermsToObjectiveFunction(
 
         if(firstVariableFixed && secondVariableFixed)
         {
-            (std::static_pointer_cast<LinearObjectiveFunction>(destination))->constant
+            linearObjective->constant
                 += signCoefficient * QT->coefficient * firstVariable->lowerBound * secondVariable->lowerBound;
         }
         else if(firstVariableFixed)
         {
-            (std::static_pointer_cast<LinearObjectiveFunction>(destination))
-                ->add(std::make_shared<LinearTerm>(
-                    signCoefficient * QT->coefficient * firstVariable->lowerBound, secondVariable));
+            linearObjective->add(std::make_shared<LinearTerm>(
+                signCoefficient * QT->coefficient * firstVariable->lowerBound, secondVariable));
         }
         else if(secondVariableFixed)
         {
-            (std::static_pointer_cast<LinearObjectiveFunction>(destination))
-                ->add(std::make_shared<LinearTerm>(
-                    signCoefficient * QT->coefficient * secondVariable->lowerBound, firstVariable));
+            linearObjective->add(std::make_shared<LinearTerm>(
+                signCoefficient * QT->coefficient * secondVariable->lowerBound, firstVariable));
         }
         else
         {
-            std::dynamic_pointer_cast<QuadraticObjectiveFunction>(destination)
-                ->add(
-                    std::make_shared<QuadraticTerm>(signCoefficient * QT->coefficient, firstVariable, secondVariable));
+            quadraticObjective->add(
+                std::make_shared<QuadraticTerm>(signCoefficient * QT->coefficient, firstVariable, secondVariable));
         }
     }
 }
@@ -2224,13 +2232,22 @@ void TaskReformulateProblem::copySignomialTermsToObjectiveFunction(
 
 LinearTerms TaskReformulateProblem::doEigenvalueDecomposition(QuadraticTerms quadraticTerms)
 {
+    env->timing->startTimer("ProblemReformulationEigenDecomp");
+
     LinearTerms resultLinearTerms;
     resultLinearTerms.takeOwnership(reformulatedProblem);
 
+    auto eigenValueTolerance
+        = env->settings->getSetting<double>("Reformulation.Quadratics.Decomposition.Tolerance", "Model");
+
+    auto quadraticDecompositionFormulation = (ES_QuadraticDecompositionFormulation)env->settings->getSetting<int>(
+        "Reformulation.Quadratics.Decomposition.Formulation", "Model");
+
     for(size_t i = 0; i < quadraticTerms.variableMap.size(); i++)
     {
-        if(std::abs(quadraticTerms.eigenvalues[i].real())
-            < env->settings->getSetting<double>("Reformulation.Quadratics.EigenValueDecomposition.Tolerance", "Model"))
+        double eigenvalue = quadraticTerms.eigenvalues[i].real();
+
+        if(std::abs(eigenvalue) < eigenValueTolerance)
             continue;
 
         auto auxConstraint = std::make_shared<LinearConstraint>(
@@ -2251,27 +2268,92 @@ LinearTerms TaskReformulateProblem::doEigenvalueDecomposition(QuadraticTerms qua
         auxQuadVariable->properties.auxiliaryType = E_AuxiliaryVariableType::EigenvalueDecomposition;
         reformulatedProblem->add(auxQuadVariable);
 
-        env->results->increaseAuxiliaryVariableCounter(E_AuxiliaryVariableType::EigenvalueDecomposition);
-
-        if(env->settings->getSetting<int>("Reformulation.Quadratics.EigenValueDecomposition.Formulation", "Model")
-            == static_cast<int>(ES_EigenValueDecompositionFormulation::CoefficientReformulated))
+        if(quadraticDecompositionFormulation == ES_QuadraticDecompositionFormulation::CoefficientReformulated)
         {
-            auto [auxVariable, newVariable] = getSquareAuxiliaryVariable(auxQuadVariable,
-                quadraticTerms.eigenvalues[i].real(), E_AuxiliaryVariableType::EigenvalueDecomposition);
+            auto [auxVariable, newVariable] = getSquareAuxiliaryVariable(
+                auxQuadVariable, eigenvalue, E_AuxiliaryVariableType::EigenvalueDecomposition);
             resultLinearTerms.add(std::make_shared<LinearTerm>(0.5, auxVariable));
         }
         else
         {
             auto [auxVariable, newVariable]
                 = getSquareAuxiliaryVariable(auxQuadVariable, 1.0, E_AuxiliaryVariableType::EigenvalueDecomposition);
-            resultLinearTerms.add(
-                std::make_shared<LinearTerm>(0.5 * quadraticTerms.eigenvalues[i].real(), auxVariable));
+            resultLinearTerms.add(std::make_shared<LinearTerm>(0.5 * eigenvalue, auxVariable));
         }
 
         auxConstraint->add(std::make_shared<LinearTerm>(-1.0, auxQuadVariable));
         reformulatedProblem->add(std::move(auxConstraint));
     }
 
+    env->timing->stopTimer("ProblemReformulationEigenDecomp");
+    return (resultLinearTerms);
+}
+
+LinearTerms TaskReformulateProblem::doLDLDecomposition(QuadraticTerms quadraticTerms)
+{
+    env->timing->startTimer("ProblemReformulationLDLDecomp");
+
+    LinearTerms resultLinearTerms;
+    resultLinearTerms.takeOwnership(reformulatedProblem);
+
+    quadraticTerms.performLDLFactorization();
+
+    // The decomposition was not successful, using the eigenvalue decomposition instead
+    if(!quadraticTerms.LDLFactorizationSuccessful)
+    {
+        env->timing->stopTimer("ProblemReformulationLDLDecomp");
+        return (doEigenvalueDecomposition(quadraticTerms));
+    }
+
+    auto eigenValueTolerance
+        = env->settings->getSetting<double>("Reformulation.Quadratics.Decomposition.Tolerance", "Model");
+
+    auto quadraticDecompositionFormulation = (ES_QuadraticDecompositionFormulation)env->settings->getSetting<int>(
+        "Reformulation.Quadratics.Decomposition.Formulation", "Model");
+
+    for(size_t i = 0; i < quadraticTerms.variableMap.size(); i++)
+    {
+        double diagValue = quadraticTerms.LDLDiag[i];
+
+        if(std::abs(diagValue) < eigenValueTolerance)
+            continue;
+
+        auto auxConstraint = std::make_shared<LinearConstraint>(
+            auxConstraintCounter, "q_ldl" + std::to_string(auxConstraintCounter), 0, 0);
+        auxConstraintCounter++;
+
+        for(auto [VAR, j] : quadraticTerms.variableMap)
+        {
+            if(quadraticTerms.LDLMatrixL(j, i) != 0.0)
+                auxConstraint->add(std::make_shared<LinearTerm>(quadraticTerms.LDLMatrixL(j, i), VAR));
+        }
+
+        auto bounds = auxConstraint->linearTerms.calculate(env->problem->getVariableBounds());
+
+        auto auxQuadVariable = std::make_shared<AuxiliaryVariable>("q_evd_" + std::to_string(auxVariableCounter),
+            auxVariableCounter, E_VariableType::Real, bounds.l(), bounds.u());
+        auxVariableCounter++;
+        auxQuadVariable->properties.auxiliaryType = E_AuxiliaryVariableType::LDLDecomposition;
+        reformulatedProblem->add(auxQuadVariable);
+
+        if(quadraticDecompositionFormulation == ES_QuadraticDecompositionFormulation::CoefficientReformulated)
+        {
+            auto [auxVariable, newVariable]
+                = getSquareAuxiliaryVariable(auxQuadVariable, diagValue, E_AuxiliaryVariableType::LDLDecomposition);
+            resultLinearTerms.add(std::make_shared<LinearTerm>(0.5, auxVariable));
+        }
+        else
+        {
+            auto [auxVariable, newVariable]
+                = getSquareAuxiliaryVariable(auxQuadVariable, 1.0, E_AuxiliaryVariableType::LDLDecomposition);
+            resultLinearTerms.add(std::make_shared<LinearTerm>(0.5 * diagValue, auxVariable));
+        }
+
+        auxConstraint->add(std::make_shared<LinearTerm>(-1.0, auxQuadVariable));
+        reformulatedProblem->add(std::move(auxConstraint));
+    }
+
+    env->timing->stopTimer("ProblemReformulationLDLDecomp");
     return (resultLinearTerms);
 }
 
@@ -2567,10 +2649,24 @@ std::pair<AuxiliaryVariablePtr, bool> TaskReformulateProblem::getSquareAuxiliary
     // Create a new variable
 
     // Get the max bounds
-    auto valueList = { variable->lowerBound * variable->lowerBound, variable->upperBound * variable->upperBound };
 
-    double lowerBound = (variable->lowerBound < 0) ? 0.0 : std::min(valueList);
-    double upperBound = std::max(valueList);
+    double lowerBound = SHOT_DBL_MIN;
+    double upperBound = SHOT_DBL_MAX;
+
+    if(variable->lowerBound <= 0 && variable->upperBound >= 0)
+    {
+        lowerBound = std::min({ coefficient * variable->lowerBound * variable->lowerBound,
+            coefficient * variable->upperBound * variable->upperBound, 0.0 });
+        upperBound = std::max({ coefficient * variable->lowerBound * variable->lowerBound,
+            coefficient * variable->upperBound * variable->upperBound, 0.0 });
+    }
+    else
+    {
+        lowerBound = std::min({ coefficient * variable->lowerBound * variable->lowerBound,
+            coefficient * variable->upperBound * variable->upperBound });
+        upperBound = std::max({ coefficient * variable->lowerBound * variable->lowerBound,
+            coefficient * variable->upperBound * variable->upperBound });
+    }
 
     E_VariableType variableType;
 

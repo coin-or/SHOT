@@ -21,6 +21,7 @@
 #include "../Utilities.h"
 
 #include "../Model/Problem.h"
+#include "../Model/ObjectiveFunction.h"
 
 namespace SHOT
 {
@@ -42,9 +43,11 @@ HighsCallbackFunctionType highsCallback
               for(auto const& line : lines)
                   env->output->outputInfo(fmt::format("      | {} ", line));
 
-              // data_in->user_interrupt = false;
               return;
           }
+
+          // Set user_interrupt to false by default for all MIP callbacks
+          data_in->user_interrupt = false;
 
           auto MIPSolver = std::dynamic_pointer_cast<MIPSolverHighs>(env->dualSolver->MIPSolver);
 
@@ -55,10 +58,6 @@ HighsCallbackFunctionType highsCallback
                   env->output->outputDebug(fmt::format("      | solution limit reached "));
                   data_in->user_interrupt = true;
               }
-              else
-              {
-                  data_in->user_interrupt = false;
-              }
 
               return;
           }
@@ -66,6 +65,10 @@ HighsCallbackFunctionType highsCallback
           if(callback_type == kCallbackMipSolution)
           {
               std::vector<double> solution = data_out->mip_solution;
+
+              // Remove auxiliary variables if present (e.g., shot_dual_objvar and variables from integer cuts)
+              // Only keep the first numberOfVariables elements that correspond to the reformulated problem
+              solution.resize(env->reformulatedProblem->properties.numberOfVariables);
 
               double hashValue = Utilities::calculateHash(solution);
 
@@ -78,7 +81,9 @@ HighsCallbackFunctionType highsCallback
               }
 
               SolutionPoint currentSolution;
-              currentSolution.objectiveValue = env->reformulatedProblem->objectiveFunction->calculateValue(solution);
+
+              // Use HiGHS's reported objective value directly
+              currentSolution.objectiveValue = data_out->objective_function_value;
               currentSolution.point = solution;
               currentSolution.hashValue = hashValue;
               MIPSolver->currentSolutions.push_back(currentSolution);
@@ -101,16 +106,6 @@ HighsCallbackFunctionType highsCallback
                           return (firstSolution.objectiveValue > secondSolution.objectiveValue);
                       });
               }
-
-              /*for(int i = 0; i < MIPSolver->currentSolutions.size(); i++)
-               {
-                   std::cout << fmt::format("{:.8f} \t {:.8f}  ", MIPSolver->currentSolutions[i].objectiveValue,
-                       MIPSolver->currentSolutions[i].hashValue)
-                             << std::endl;
-               }*/
-
-              // Strange that we need to set this manually
-              data_in->user_interrupt = false;
 
               return;
           }
@@ -393,12 +388,26 @@ void MIPSolverHighs::initializeSolverSettings()
 
     highsInstance.setOptionValue("threads", env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual"));
 
+    switch(env->settings->getSetting<int>("Highs.RunCrossover", "Subsolver"))
+    {
+    case 0:
+        highsInstance.setOptionValue("run_crossover", "off");
+        break;
+    case 1:
+        highsInstance.setOptionValue("run_crossover", "choose");
+        break;
+    case 2:
+        highsInstance.setOptionValue("run_crossover", "on");
+        break;
+    }
+
+    highsInstance.setOptionValue("highs_debug_level", env->settings->getSetting<int>("Highs.DebugLevel", "Subsolver"));
+
     // highsInstance.setOptionValue("simplex_strategy", 0);
     // highsInstance.setOptionValue("solver", "choose");
     // highsInstance.setOptionValue("primal_feasibility_tolerance", 1e-6);
     // highsInstance.setOptionValue("dual_feasibility_tolerance", 1e-6);
 
-    // highsInstance.setOptionValue("highs_debug_level", 3);
     // highsInstance.setOptionValue("mip_report_level", 2);
     // highsInstance.setOptionValue("output_flag", true);
 
@@ -910,8 +919,13 @@ void MIPSolverHighs::setCutOffAsConstraint(double cutOff)
 
 void MIPSolverHighs::addMIPStart(VectorDouble point)
 {
+    assert(point.size() == env->dualSolver->MIPSolver->getNumberOfVariables());
+    assert(variableNames.size() == point.size());
+
     HighsSolution solution;
     solution.col_value = point;
+
+    assert(point.size() == (size_t)numberOfVariables);
 
     auto return_status = highsInstance.setSolution(solution);
 
