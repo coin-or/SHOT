@@ -129,33 +129,52 @@ void DualSolver::checkDualSolutionCandidates()
     this->dualSolutionCandidates.clear();
 }
 
-void DualSolver::addHyperplane(Hyperplane& hyperplane)
+void DualSolver::addHyperplane(HyperplanePtr hyperplane)
 {
-    assert((int)hyperplane.generatedPoint.size() == env->reformulatedProblem->properties.numberOfVariables);
-
-    hyperplane.pointHash = Utilities::calculateHash(hyperplane.generatedPoint);
-
-    if(((hyperplane.source == E_HyperplaneSource::ObjectiveRootsearch
-            || hyperplane.source == E_HyperplaneSource::ObjectiveCuttingPlane)
-           && !hasHyperplaneBeenAdded(hyperplane.pointHash, -1))
-        || (hyperplane.source != E_HyperplaneSource::ObjectiveRootsearch
-            && hyperplane.source != E_HyperplaneSource::ObjectiveCuttingPlane
-            && (!hasHyperplaneBeenAdded(hyperplane.pointHash, hyperplane.sourceConstraint->index))))
+    if(auto objectiveHP = std::dynamic_pointer_cast<ObjectiveHyperplane>(hyperplane))
     {
-        this->hyperplaneWaitingList.push_back(hyperplane);
+        assert((int)objectiveHP->generatedPoint.size() == env->reformulatedProblem->properties.numberOfVariables);
+
+        objectiveHP->pointHash = Utilities::calculateHash(objectiveHP->generatedPoint);
+
+        if(!hasHyperplaneBeenAdded(objectiveHP->pointHash, -1))
+        {
+            this->hyperplaneWaitingList.push_back(hyperplane);
+        }
+        else
+        {
+            env->output->outputDebug(fmt::format(
+                "        Objective hyperplane with hash {} has been added already.", objectiveHP->pointHash));
+        }
     }
-    else
+    else if(auto constraintHP = std::dynamic_pointer_cast<ConstraintHyperplane>(hyperplane))
     {
-        env->output->outputDebug(
-            fmt::format("        Hyperplane with hash {} has been added already.", hyperplane.pointHash));
+        assert((int)constraintHP->generatedPoint.size() == env->reformulatedProblem->properties.numberOfVariables);
+
+        constraintHP->pointHash = Utilities::calculateHash(constraintHP->generatedPoint);
+
+        if(!hasHyperplaneBeenAdded(constraintHP->pointHash, constraintHP->sourceConstraint->index))
+        {
+            this->hyperplaneWaitingList.push_back(hyperplane);
+        }
+        else
+        {
+            env->output->outputDebug(
+                fmt::format("        Hyperplane with hash {} has been added already.", constraintHP->pointHash));
+        }
+    }
+    else if(auto externalHP = std::dynamic_pointer_cast<ExternalHyperplane>(hyperplane))
+    {
+        // TODO check for already added hyperplanes
+        this->hyperplaneWaitingList.push_back(externalHP);
     }
 }
 
-void DualSolver::addGeneratedHyperplane(const Hyperplane& hyperplane)
+void DualSolver::addGeneratedHyperplane(const HyperplanePtr hyperplane)
 {
     std::string source = "";
 
-    switch(hyperplane.source)
+    switch(hyperplane->source)
     {
     case E_HyperplaneSource::MIPOptimalRootsearch:
         source = "MIP rootsearch";
@@ -193,31 +212,25 @@ void DualSolver::addGeneratedHyperplane(const Hyperplane& hyperplane)
     case E_HyperplaneSource::ObjectiveCuttingPlane:
         source = "objective cutting plane";
         break;
+    case E_HyperplaneSource::External:
+        source = "external";
+        break;
     default:
         break;
     }
 
-    GeneratedHyperplane genHyperplane;
+    auto genHyperplane = std::make_shared<GeneratedHyperplane>();
+    genHyperplane->sourceHyperplane = hyperplane;
+    genHyperplane->iterationGenerated = env->results->getCurrentIteration()->iterationNumber;
+    genHyperplane->isLazy = false;
 
-    genHyperplane.source = hyperplane.source;
-    if(hyperplane.sourceConstraint)
+    if(auto numericHP = std::dynamic_pointer_cast<NumericHyperplane>(genHyperplane->sourceHyperplane))
     {
-        genHyperplane.sourceConstraint = hyperplane.sourceConstraint;
-        genHyperplane.sourceConstraintIndex = hyperplane.sourceConstraint->index;
+        if(!env->settings->getSetting<bool>("HyperplaneCuts.SaveHyperplanePoints", "Dual"))
+            numericHP->generatedPoint = VectorDouble();
     }
-    else
-        genHyperplane.sourceConstraintIndex = -1;
 
-    genHyperplane.iterationGenerated = env->results->getCurrentIteration()->iterationNumber;
-    genHyperplane.isLazy = false;
-    genHyperplane.pointHash = hyperplane.pointHash;
-
-    if(env->settings->getSetting<bool>("HyperplaneCuts.SaveHyperplanePoints", "Dual"))
-        genHyperplane.generatedPoint = hyperplane.generatedPoint;
-
-    genHyperplane.isSourceConvex = hyperplane.isSourceConvex;
-
-    if(!genHyperplane.isSourceConvex)
+    if(!genHyperplane->sourceHyperplane->isGlobal)
     {
         if(env->results->solutionIsGlobal)
             env->output->outputDebug("        Solution is no longer global since hyperplane has been added to "
@@ -228,19 +241,6 @@ void DualSolver::addGeneratedHyperplane(const Hyperplane& hyperplane)
     else
     {
         env->output->outputTrace("        Convex HP added.");
-    }
-
-    if(hasHyperplaneBeenAdded(genHyperplane.pointHash, genHyperplane.sourceConstraintIndex))
-    {
-        env->output->outputTrace(fmt::format("        Not added hyperplane with hash {} to constraint {}",
-            genHyperplane.pointHash, genHyperplane.sourceConstraintIndex));
-        return;
-    }
-
-    if(hyperplane.sourceConstraint)
-    {
-        env->output->outputTrace(fmt::format("        Added hyperplane with hash {} to constraint {}",
-            genHyperplane.pointHash, genHyperplane.sourceConstraint->index));
     }
 
     generatedHyperplanes.push_back(genHyperplane);
@@ -260,24 +260,27 @@ void DualSolver::addGeneratedHyperplane(const Hyperplane& hyperplane)
 
 bool DualSolver::hasHyperplaneBeenAdded(double hash, int constraintIndex)
 {
-    // Cuts added as lazy might not actually always be added (e.g. in different threads), thus we have to allow them to
-    // be added again
+    // Cuts added as lazy might not actually always be added (e.g. in different threads), thus we have to allow them
+    // to be added again
     if(env->settings->getSetting<int>("TreeStrategy", "Dual") == static_cast<int>(ES_TreeStrategy::SingleTree))
         return false;
 
     for(auto& H : generatedHyperplanes)
     {
-        if((H.source == E_HyperplaneSource::ObjectiveRootsearch
-               || H.source == E_HyperplaneSource::ObjectiveCuttingPlane)
-            && constraintIndex == -1 && Utilities::isAlmostEqual(H.pointHash, hash, 1e-8))
+        if(auto objectiveHP = std::dynamic_pointer_cast<ObjectiveHyperplane>(H))
         {
-            return (true);
+            if(constraintIndex == -1 && Utilities::isAlmostEqual(objectiveHP->pointHash, hash, 1e-8))
+            {
+                return (true);
+            }
         }
-        else if(H.source != E_HyperplaneSource::ObjectiveRootsearch
-            && H.source != E_HyperplaneSource::ObjectiveCuttingPlane && H.sourceConstraint->index == constraintIndex
-            && Utilities::isAlmostEqual(H.pointHash, hash, 1e-8))
+        else if(auto constraintHP = std::dynamic_pointer_cast<ConstraintHyperplane>(H))
         {
-            return (true);
+            if(constraintHP->sourceConstraint->index == constraintIndex
+                && Utilities::isAlmostEqual(constraintHP->pointHash, hash, 1e-8))
+            {
+                return (true);
+            }
         }
     }
 

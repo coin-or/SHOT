@@ -112,35 +112,59 @@ std::vector<SolutionPoint> MIPSolverBase::getAllVariableSolutions()
     return (lastSolutions);
 }
 
-bool MIPSolverBase::createHyperplane(Hyperplane hyperplane)
+bool MIPSolverBase::createHyperplane(HyperplanePtr hyperplane)
 {
     auto currIter = env->results->getCurrentIteration(); // The unsolved new iteration
+    auto optionalHyperplanes = createHyperplaneTerms(hyperplane);
 
-    auto optional = createHyperplaneTerms(hyperplane);
-
-    if(!optional)
+    if(!optionalHyperplanes)
     {
         return (false);
     }
 
-    auto tmpPair = optional.value();
+    std::string identifier = getConstraintIdentifier(hyperplane->source);
 
-    for(auto& E : tmpPair.first)
+    if(auto constraintHyperplane = std::dynamic_pointer_cast<ConstraintHyperplane>(hyperplane))
     {
-        if(E.second != E.second || std::isinf(E.second)) // Check for NaN or inf
+        identifier += "_" + constraintHyperplane->sourceConstraint->name;
+    }
+    else if(auto externalHyperplane = std::dynamic_pointer_cast<ExternalHyperplane>(hyperplane))
+    {
+        identifier += "_" + externalHyperplane->description;
+    }
+
+    identifier += "_" + std::to_string(constraintCounter);
+    constraintCounter++;
+
+    auto tmpPair = optionalHyperplanes.value();
+
+    if(auto numericHyperplane = std::dynamic_pointer_cast<NumericHyperplane>(hyperplane))
+    {
+        for(auto& E : tmpPair.first)
         {
-            if(hyperplane.isObjectiveHyperplane)
-                env->output->outputError("        Warning: hyperplane for objective function not generated, NaN or inf "
+            if(E.second != E.second || std::isinf(E.second)) // Check for NaN or inf
+            {
+                env->output->outputError("        Warning: hyperplane not generated, NaN or inf "
                                          "found in linear terms for "
                     + env->reformulatedProblem->getVariable(E.first)->name + " = "
-                    + std::to_string(hyperplane.generatedPoint.at(E.first)));
-            else
-                env->output->outputError("        Warning: hyperplane for constraint "
-                    + hyperplane.sourceConstraint->name + " not generated,  NaN or inf found in linear terms for "
-                    + env->reformulatedProblem->getVariable(E.first)->name + " = "
-                    + std::to_string(hyperplane.generatedPoint.at(E.first)));
+                    + std::to_string(numericHyperplane->generatedPoint.at(E.first)));
 
-            return (false);
+                return (false);
+            }
+        }
+    }
+    else if(auto externalHyperplane = std::dynamic_pointer_cast<ExternalHyperplane>(hyperplane))
+    {
+        for(auto& E : tmpPair.first)
+        {
+            if(E.second != E.second || std::isinf(E.second)) // Check for NaN or inf
+            {
+                env->output->outputError("        Warning: external hyperplane not generated, NaN or inf "
+                                         "found in linear terms for "
+                    + env->reformulatedProblem->getVariable(E.first)->name);
+
+                return (false);
+            }
         }
     }
 
@@ -164,44 +188,32 @@ bool MIPSolverBase::createHyperplane(Hyperplane hyperplane)
         }
     }
 
-    std::string constraintName;
-
-    std::string identifier = getConstraintIdentifier(hyperplane.source);
-
-    if(hyperplane.sourceConstraint != nullptr)
-        identifier = identifier + "_" + hyperplane.sourceConstraint->name;
-
-    identifier += "_" + std::to_string(constraintCounter);
-    constraintCounter++;
-
-    if(addLinearConstraint(tmpPair.first, tmpPair.second, identifier, false, !hyperplane.isSourceConvex) < 0)
+    if(addLinearConstraint(tmpPair.first, tmpPair.second, identifier, false, !hyperplane->isGlobal) < 0)
         return (false);
 
     return (true);
 }
 
-std::optional<std::pair<std::map<int, double>, double>> MIPSolverBase::createHyperplaneTerms(Hyperplane hyperplane)
+std::optional<std::pair<std::map<int, double>, double>> MIPSolverBase::createHyperplaneTerms(HyperplanePtr hyperplane)
 {
     std::map<int, double> elements;
     double constant = 0.0;
     SparseVariableVector gradient;
     double signFactor = 1.0; // Will be -1.0 for greater than constraints
 
-    if(hyperplane.isObjectiveHyperplane)
+    if(auto objectiveHP = std::dynamic_pointer_cast<ObjectiveHyperplane>(hyperplane))
     {
-        constant = hyperplane.objectiveFunctionValue;
-
         if(env->reformulatedProblem->objectiveFunction->properties.hasNonlinearExpression)
         {
             gradient
                 = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                      ->calculateGradient(hyperplane.generatedPoint, true);
+                      ->calculateGradient(objectiveHP->generatedPoint, true);
         }
         else
         {
             gradient
                 = std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                      ->calculateGradient(hyperplane.generatedPoint, true);
+                      ->calculateGradient(objectiveHP->generatedPoint, true);
         }
 
         elements.emplace(dualAuxiliaryObjectiveVariableIndex, -1.0);
@@ -209,10 +221,11 @@ std::optional<std::pair<std::map<int, double>, double>> MIPSolverBase::createHyp
         env->output->outputTrace("        HP point generated for objective function with "
             + std::to_string(gradient.size()) + " elements and constant " + std::to_string(constant));
     }
-    else
+    else if(auto constraintHyperplane = std::dynamic_pointer_cast<ConstraintHyperplane>(hyperplane))
     {
-        assert(hyperplane.sourceConstraint);
-        auto maxDev = hyperplane.sourceConstraint->calculateNumericValue(hyperplane.generatedPoint);
+        assert(constraintHyperplane->sourceConstraint != nullptr);
+        auto maxDev
+            = constraintHyperplane->sourceConstraint->calculateNumericValue(constraintHyperplane->generatedPoint);
 
         if(maxDev.isFulfilledRHS && !maxDev.isFulfilledLHS)
         {
@@ -224,16 +237,16 @@ std::optional<std::pair<std::map<int, double>, double>> MIPSolverBase::createHyp
             constant = maxDev.normalizedRHSValue;
         }
 
-        gradient = std::dynamic_pointer_cast<NonlinearConstraint>(hyperplane.sourceConstraint)
-                       ->calculateGradient(hyperplane.generatedPoint, true);
+        gradient = std::dynamic_pointer_cast<NonlinearConstraint>(constraintHyperplane->sourceConstraint)
+                       ->calculateGradient(constraintHyperplane->generatedPoint, true);
 
         auto nonzeroes
             = std::count_if(gradient.begin(), gradient.end(), [](auto element) { return (element.second != 0.0); });
 
         if(nonzeroes == 0)
         {
-            gradient = std::dynamic_pointer_cast<NonlinearConstraint>(hyperplane.sourceConstraint)
-                           ->calculateGradient(hyperplane.generatedPoint, false);
+            gradient = std::dynamic_pointer_cast<NonlinearConstraint>(constraintHyperplane->sourceConstraint)
+                           ->calculateGradient(constraintHyperplane->generatedPoint, false);
 
             double eps = 0.000001;
 
@@ -247,27 +260,66 @@ std::optional<std::pair<std::map<int, double>, double>> MIPSolverBase::createHyp
         }
 
         env->output->outputTrace("        HP point generated for constraint index "
-            + std::to_string(hyperplane.sourceConstraintIndex) + " with " + std::to_string(gradient.size())
+            + std::to_string(constraintHyperplane->sourceConstraint->index) + " with " + std::to_string(gradient.size())
             + " elements.");
     }
-
-    for(auto const& G : gradient)
+    else if(auto externalHyperplane = std::dynamic_pointer_cast<ExternalHyperplane>(hyperplane))
     {
-        double coefficient = signFactor * G.second;
-        int variableIndex = G.first->index;
+        int addedElements = 0;
 
-        auto element = elements.emplace(variableIndex, coefficient);
-
-        if(!element.second)
+        for(size_t i = 0; i < externalHyperplane->variableIndexes.size(); i++)
         {
-            // Element already exists for the variable
-            element.first->second += coefficient;
+            auto variableIndex = externalHyperplane->variableIndexes.at(i);
+            auto coefficient = externalHyperplane->variableCoefficients.at(i);
+
+            if(coefficient != 0.0)
+            {
+                auto element = elements.emplace(variableIndex, coefficient);
+
+                if(!element.second)
+                {
+                    // Element already exists for the variable
+                    element.first->second += coefficient;
+                }
+                else
+                {
+                    addedElements++;
+                }
+            }
         }
 
-        constant += signFactor * (-G.second) * hyperplane.generatedPoint.at(variableIndex);
+        constant = -externalHyperplane->rhsValue;
 
-        env->output->outputTrace("         Gradient for variable " + G.first->name + " in point "
-            + std::to_string(hyperplane.generatedPoint.at(variableIndex)) + ": " + std::to_string(coefficient));
+        env->output->outputInfo("        HP generated for external hyperplane " + externalHyperplane->description
+            + " with " + std::to_string(addedElements) + " terms.");
+    }
+    else
+    {
+        env->output->outputError("        Hyperplane type not supported!");
+        return (std::nullopt);
+    }
+
+    if(auto numericHyperplane = std::dynamic_pointer_cast<NumericHyperplane>(hyperplane))
+    {
+        for(auto const& G : gradient)
+        {
+            double coefficient = signFactor * G.second;
+            int variableIndex = G.first->index;
+
+            auto element = elements.emplace(variableIndex, coefficient);
+
+            if(!element.second)
+            {
+                // Element already exists for the variable
+                element.first->second += coefficient;
+            }
+
+            constant += signFactor * (-G.second) * numericHyperplane->generatedPoint.at(variableIndex);
+
+            env->output->outputTrace("         Gradient for variable " + G.first->name + " in point "
+                + std::to_string(numericHyperplane->generatedPoint.at(variableIndex)) + ": "
+                + std::to_string(coefficient));
+        }
     }
 
     std::optional<std::pair<std::map<int, double>, double>> optional;
@@ -280,7 +332,7 @@ std::optional<std::pair<std::map<int, double>, double>> MIPSolverBase::createHyp
     return (optional);
 }
 
-bool MIPSolverBase::createInteriorHyperplane([[maybe_unused]] Hyperplane hyperplane)
+bool MIPSolverBase::createInteriorHyperplane([[maybe_unused]] HyperplanePtr hyperplane)
 {
     /*
     auto currIter = env->results->getCurrentIteration(); // The unsolved new iteration

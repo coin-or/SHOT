@@ -10,9 +10,14 @@
 
 #include "TaskCheckUserTermination.h"
 
+#include "../CallbackData.h"
 #include "../EventHandler.h"
+#include "../Output.h"
 #include "../Results.h"
 #include "../TaskHandler.h"
+#include "../Timing.h"
+
+#include <any>
 
 namespace SHOT
 {
@@ -26,7 +31,28 @@ TaskCheckUserTermination::~TaskCheckUserTermination() = default;
 
 void TaskCheckUserTermination::run()
 {
-    env->events->notify(E_EventType::UserTerminationCheck);
+    // Check if user termination was requested by data provider callbacks
+    if(!env->tasks->isTerminated() && env->events->hasDataProvider(E_EventType::UserTerminationCheck))
+    {
+        // Create termination callback data only when needed
+        int iterationNumber = env->results->getNumberOfIterations();
+        double timeElapsed = env->timing->getElapsedTime("Total");
+        double currentDualBound = env->results->getCurrentDualBound();
+        double currentPrimalBound = env->results->getPrimalBound();
+        double relativeGap = env->results->getRelativeCurrentObjectiveGap();
+        double absoluteGap = env->results->getAbsoluteCurrentObjectiveGap();
+
+        TerminationCallbackData callbackData(iterationNumber, timeElapsed, currentDualBound, currentPrimalBound,
+            relativeGap, absoluteGap, env->solutionStatistics);
+
+        auto shouldTerminate = env->events->requestData<bool>(E_EventType::UserTerminationCheck, callbackData);
+
+        if(shouldTerminate.has_value() && *shouldTerminate)
+        {
+            env->output->outputInfo("        User termination check requested termination");
+            env->tasks->terminate();
+        }
+    }
 
     if(env->tasks->isTerminated()
         || env->results->getCurrentIteration()->solutionStatus == E_ProblemSolutionStatus::Abort)

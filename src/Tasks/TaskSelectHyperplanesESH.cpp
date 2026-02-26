@@ -8,7 +8,7 @@
    Please see the README and LICENSE files for more information.
 */
 
-#include "TaskSelectHyperplanePointsESH.h"
+#include "TaskSelectHyperplanesESH.h"
 
 #include "../DualSolver.h"
 #include "../MIPSolver/IMIPSolver.h"
@@ -20,23 +20,23 @@
 
 #include "../Model/Problem.h"
 
-#include "TaskSelectHyperplanePointsECP.h"
+#include "TaskSelectHyperplanesECP.h"
 #include "../RootsearchMethod/IRootsearchMethod.h"
 
 namespace SHOT
 {
 
-TaskSelectHyperplanePointsESH::TaskSelectHyperplanePointsESH(EnvironmentPtr envPtr) : TaskBase(envPtr)
+TaskSelectHyperplanesESH::TaskSelectHyperplanesESH(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
     env->timing->startTimer("DualCutGenerationRootSearch");
     env->timing->stopTimer("DualCutGenerationRootSearch");
 }
 
-TaskSelectHyperplanePointsESH::~TaskSelectHyperplanePointsESH() = default;
+TaskSelectHyperplanesESH::~TaskSelectHyperplanesESH() = default;
 
-void TaskSelectHyperplanePointsESH::run() { this->run(env->results->getPreviousIteration()->solutionPoints); }
+void TaskSelectHyperplanesESH::run() { this->run(env->results->getPreviousIteration()->solutionPoints); }
 
-void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
+void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
 {
     if(env->reformulatedProblem->properties.numberOfNonlinearConstraints == 0)
         return;
@@ -48,7 +48,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
     if(env->dualSolver->interiorPts.size() == 0)
     {
         if(!tSelectHPPts)
-            tSelectHPPts = std::make_unique<TaskSelectHyperplanePointsECP>(env);
+            tSelectHPPts = std::make_unique<TaskSelectHyperplanesECP>(env);
 
         env->output->outputDebug("         Adding cutting plane since no interior point is known.");
         tSelectHPPts->run(solPoints);
@@ -60,7 +60,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
         && env->reformulatedProblem->properties.convexity == E_ProblemConvexity::Convex)
     {
         if(!tSelectHPPts)
-            tSelectHPPts = std::make_unique<TaskSelectHyperplanePointsECP>(env);
+            tSelectHPPts = std::make_unique<TaskSelectHyperplanesECP>(env);
 
         env->output->outputDebug("         Adding cutting plane since the dual has stagnated.");
         tSelectHPPts->run(solPoints);
@@ -109,7 +109,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
 
         if(addedHyperplanes >= maxHyperplanesPerIter)
         {
-            env->output->outputDebug("        Not generating hyperplane using ESH: Max number already added.");         
+            env->output->outputDebug("        Not generating hyperplane using ESH: Max number already added.");
             env->timing->stopTimer("DualCutGenerationRootSearch");
             break;
         }
@@ -138,7 +138,6 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
 
                     env->output->outputDebug("        Not generating hyperplane using ESH: Numerical error.");
                     continue;
-
                 }
 
                 if(numericConstraintValuesConvex.size() > 0)
@@ -159,10 +158,11 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
                     // Do not add hyperplane if one has been added for this constraint already
                     if(useUniqueConstraints && hyperplaneAddedToConstraint.at(NCV.constraint->index))
                     {
-                        env->output->outputDebug("        Not generating hyperplane using ESH: Hyperplane generated for constraint already.");
+                        env->output->outputDebug("        Not generating hyperplane using ESH: Hyperplane generated "
+                                                 "for constraint already.");
                         continue;
                     }
-                  
+
                     // Do not add hyperplane if there are numerical errors
                     if(std::isnan(NCV.error) || std::isnan(NCV.normalizedValue))
                     {
@@ -174,7 +174,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
                     if(NCV.normalizedValue < rootsearchConstraintTolerance)
                     {
                         env->output->outputDebug(
-                             "        Not generating hyperplane using ESH: Rootsearch tolerance reached.");
+                            "        Not generating hyperplane using ESH: Rootsearch tolerance reached.");
                         continue;
                     }
 
@@ -182,7 +182,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
                     if(NCV.error < constraintMaxSelectionFactor * numericConstraintValues.at(0).error)
                     {
                         env->output->outputDebug(
-                            "        Not generating hyperplane using ESH: Constraint value much smaller than largest.");          
+                            "        Not generating hyperplane using ESH: Constraint value much smaller than largest.");
                         continue;
                     }
 
@@ -256,27 +256,26 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
                     continue;
                 }
 
-                Hyperplane hyperplane;
-                hyperplane.sourceConstraint = externalConstraintValue.constraint;
-                hyperplane.sourceConstraintIndex = externalConstraintValue.constraint->index;
-                hyperplane.generatedPoint = externalPoint;
-                hyperplane.isSourceConvex = true; // Only convex constraints used so far
+                auto hyperplane = std::make_shared<ConstraintHyperplane>();
+                hyperplane->sourceConstraint = externalConstraintValue.constraint;
+                hyperplane->generatedPoint = externalPoint;
+                hyperplane->isGlobal = true; // Only convex constraints used so far
 
                 if(solPoints.at(solutionPtIndex).isRelaxedPoint)
                 {
-                    hyperplane.source = E_HyperplaneSource::MIPCallbackRelaxed;
+                    hyperplane->source = E_HyperplaneSource::MIPCallbackRelaxed;
                 }
                 else if(solutionPtIndex == 0 && currIter->isMIP())
                 {
-                    hyperplane.source = E_HyperplaneSource::MIPOptimalRootsearch;
+                    hyperplane->source = E_HyperplaneSource::MIPOptimalRootsearch;
                 }
                 else if(currIter->isMIP())
                 {
-                    hyperplane.source = E_HyperplaneSource::MIPSolutionPoolRootsearch;
+                    hyperplane->source = E_HyperplaneSource::MIPSolutionPoolRootsearch;
                 }
                 else
                 {
-                    hyperplane.source = E_HyperplaneSource::LPRelaxedRootsearch;
+                    hyperplane->source = E_HyperplaneSource::LPRelaxedRootsearch;
                 }
 
                 env->dualSolver->addHyperplane(hyperplane);
@@ -285,8 +284,6 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
 
                 env->output->outputDebug("         Added hyperplane to waiting list with deviation: "
                     + Utilities::toString(externalConstraintValue.error));
-
-                hyperplane.generatedPoint.clear();
 
                 addedHyperplanes++;
             }
@@ -343,28 +340,27 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
                         continue;
                     }
 
-                    Hyperplane hyperplane;
-                    hyperplane.sourceConstraint = externalConstraintValue.constraint;
-                    hyperplane.sourceConstraintIndex = externalConstraintValue.constraint->index;
-                    hyperplane.generatedPoint = externalPoint;
-                    hyperplane.isSourceConvex
+                    auto hyperplane = std::make_shared<ConstraintHyperplane>();
+                    hyperplane->sourceConstraint = externalConstraintValue.constraint;
+                    hyperplane->generatedPoint = externalPoint;
+                    hyperplane->isGlobal
                         = (externalConstraintValue.constraint->properties.convexity <= E_Convexity::Convex);
 
                     if(solPoints.at(solutionPtIndex).isRelaxedPoint)
                     {
-                        hyperplane.source = E_HyperplaneSource::MIPCallbackRelaxed;
+                        hyperplane->source = E_HyperplaneSource::MIPCallbackRelaxed;
                     }
                     else if(solutionPtIndex == 0 && currIter->isMIP())
                     {
-                        hyperplane.source = E_HyperplaneSource::MIPOptimalRootsearch;
+                        hyperplane->source = E_HyperplaneSource::MIPOptimalRootsearch;
                     }
                     else if(currIter->isMIP())
                     {
-                        hyperplane.source = E_HyperplaneSource::MIPSolutionPoolRootsearch;
+                        hyperplane->source = E_HyperplaneSource::MIPSolutionPoolRootsearch;
                     }
                     else
                     {
-                        hyperplane.source = E_HyperplaneSource::LPRelaxedRootsearch;
+                        hyperplane->source = E_HyperplaneSource::LPRelaxedRootsearch;
                     }
 
                     env->dualSolver->addHyperplane(hyperplane);
@@ -373,8 +369,6 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
 
                     env->output->outputDebug("         Added hyperplane to waiting list with deviation: "
                         + Utilities::toString(externalConstraintValue.error));
-
-                    hyperplane.generatedPoint.clear();
 
                     addedHyperplanes++;
                 }
@@ -388,7 +382,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
         }
     }
 
-    std::vector<std::pair<Hyperplane, double>> hyperplanesCuttingAwayPrimals;
+    std::vector<std::pair<ConstraintHyperplanePtr, double>> hyperplanesCuttingAwayPrimals;
 
     // If no hyperplanes added, do rootsearch also on nonconvex constraints
     if(addedHyperplanes == 0 && nonconvexSelectedNumericValues.size() > 0)
@@ -448,28 +442,27 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
                         continue;
                     }
 
-                    Hyperplane hyperplane;
-                    hyperplane.sourceConstraint = externalConstraintValue.constraint;
-                    hyperplane.sourceConstraintIndex = externalConstraintValue.constraint->index;
-                    hyperplane.generatedPoint = externalPoint;
-                    hyperplane.isSourceConvex
+                    auto hyperplane = std::make_shared<ConstraintHyperplane>();
+                    hyperplane->sourceConstraint = externalConstraintValue.constraint;
+                    hyperplane->generatedPoint = externalPoint;
+                    hyperplane->isGlobal
                         = (externalConstraintValue.constraint->properties.convexity == E_Convexity::Convex);
 
                     if(solPoints.at(solutionPtIndex).isRelaxedPoint)
                     {
-                        hyperplane.source = E_HyperplaneSource::MIPCallbackRelaxed;
+                        hyperplane->source = E_HyperplaneSource::MIPCallbackRelaxed;
                     }
                     else if(solutionPtIndex == 0 && currIter->isMIP())
                     {
-                        hyperplane.source = E_HyperplaneSource::MIPOptimalRootsearch;
+                        hyperplane->source = E_HyperplaneSource::MIPOptimalRootsearch;
                     }
                     else if(currIter->isMIP())
                     {
-                        hyperplane.source = E_HyperplaneSource::MIPSolutionPoolRootsearch;
+                        hyperplane->source = E_HyperplaneSource::MIPSolutionPoolRootsearch;
                     }
                     else
                     {
-                        hyperplane.source = E_HyperplaneSource::LPRelaxedRootsearch;
+                        hyperplane->source = E_HyperplaneSource::LPRelaxedRootsearch;
                     }
 
                     env->output->outputDebug("         Added hyperplane to waiting list with deviation: "
@@ -503,8 +496,6 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
                         hyperplaneAddedToConstraint.at(externalConstraintValue.constraint->index) = true;
                         addedHyperplanes++;
                     }
-
-                    hyperplane.generatedPoint.clear();
 
                     addedHyperplanes++;
                 }
@@ -563,27 +554,26 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
                             continue;
                         }
 
-                        Hyperplane hyperplane;
-                        hyperplane.sourceConstraint = externalConstraintValue.constraint;
-                        hyperplane.sourceConstraintIndex = externalConstraintValue.constraint->index;
-                        hyperplane.generatedPoint = externalPoint;
-                        hyperplane.isSourceConvex = (NCV.constraint->properties.convexity <= E_Convexity::Convex);
+                        auto hyperplane = std::make_shared<ConstraintHyperplane>();
+                        hyperplane->sourceConstraint = externalConstraintValue.constraint;
+                        hyperplane->generatedPoint = externalPoint;
+                        hyperplane->isGlobal = (NCV.constraint->properties.convexity <= E_Convexity::Convex);
 
                         if(solPoints.at(solutionPtIndex).isRelaxedPoint)
                         {
-                            hyperplane.source = E_HyperplaneSource::MIPCallbackRelaxed;
+                            hyperplane->source = E_HyperplaneSource::MIPCallbackRelaxed;
                         }
                         else if(solutionPtIndex == 0 && currIter->isMIP())
                         {
-                            hyperplane.source = E_HyperplaneSource::MIPOptimalRootsearch;
+                            hyperplane->source = E_HyperplaneSource::MIPOptimalRootsearch;
                         }
                         else if(currIter->isMIP())
                         {
-                            hyperplane.source = E_HyperplaneSource::MIPSolutionPoolRootsearch;
+                            hyperplane->source = E_HyperplaneSource::MIPSolutionPoolRootsearch;
                         }
                         else
                         {
-                            hyperplane.source = E_HyperplaneSource::LPRelaxedRootsearch;
+                            hyperplane->source = E_HyperplaneSource::LPRelaxedRootsearch;
                         }
 
                         env->output->outputDebug("         Added hyperplane to waiting list with deviation: "
@@ -639,21 +629,21 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
 
         for(auto& HP : hyperplanesCuttingAwayPrimals)
         {
-            double hash = Utilities::calculateHash(HP.first.generatedPoint);
+            double hash = Utilities::calculateHash(HP.first->generatedPoint);
 
-            if(env->dualSolver->hasHyperplaneBeenAdded(hash, HP.first.sourceConstraintIndex))
+            if(env->dualSolver->hasHyperplaneBeenAdded(hash, HP.first->sourceConstraint->index))
             {
                 env->output->outputTrace("         Hyperplane already added for constraint "
-                    + std::to_string(HP.first.sourceConstraintIndex) + " and hash " + std::to_string(hash));
+                    + std::to_string(HP.first->sourceConstraint->index) + " and hash " + std::to_string(hash));
                 continue;
             }
 
             env->dualSolver->addHyperplane(HP.first);
-            hyperplaneAddedToConstraint.at(HP.first.sourceConstraint->index) = true;
+            hyperplaneAddedToConstraint.at(HP.first->sourceConstraint->index) = true;
             addedHyperplanes++;
             env->output->outputDebug(fmt::format("         Selected hyperplane cut for constraint {} that cuts away "
                                                  "previous primal solution with error {}",
-                HP.first.sourceConstraint->index, HP.second));
+                HP.first->sourceConstraint->index, HP.second));
 
             addedHyperplanes++;
 
@@ -670,7 +660,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
     env->timing->stopTimer("DualCutGenerationRootSearch");
 }
 
-std::string TaskSelectHyperplanePointsESH::getType()
+std::string TaskSelectHyperplanesESH::getType()
 {
     std::string type = typeid(this).name();
     return (type);

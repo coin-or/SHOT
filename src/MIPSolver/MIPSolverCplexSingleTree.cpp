@@ -11,6 +11,7 @@
 #include "MIPSolverCplexSingleTree.h"
 
 #include "../DualSolver.h"
+#include "../EventHandler.h"
 #include "../Iteration.h"
 #include "../Output.h"
 #include "../PrimalSolver.h"
@@ -38,19 +39,22 @@ CplexCallback::CplexCallback(EnvironmentPtr envPtr, const IloNumVarArray& vars, 
             == ES_HyperplaneCutStrategy::ESH)
         {
             tUpdateInteriorPoint = std::make_shared<TaskUpdateInteriorPoint>(env);
-            taskSelectHPPts = std::make_shared<TaskSelectHyperplanePointsESH>(env);
+            taskSelectHPPts = std::make_shared<TaskSelectHyperplanesESH>(env);
         }
-        else
+        else if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
+            == ES_HyperplaneCutStrategy::ECP)
         {
-            taskSelectHPPts = std::make_shared<TaskSelectHyperplanePointsECP>(env);
+            taskSelectHPPts = std::make_shared<TaskSelectHyperplanesECP>(env);
         }
     }
 
     if(env->reformulatedProblem->objectiveFunction->properties.classification
         > E_ObjectiveFunctionClassification::Quadratic)
     {
-        taskSelectHPPtsByObjectiveRootsearch = std::make_shared<TaskSelectHyperplanePointsObjectiveFunction>(env);
+        taskSelectHPPtsByObjectiveRootsearch = std::make_shared<TaskSelectHyperplanesObjectiveFunction>(env);
     }
+
+    taskSelectExternalHPs = std::make_shared<TaskSelectHyperplanesExternal>(env);
 
     auto NLPProblemSource = static_cast<ES_PrimalNLPProblemSource>(
         env->settings->getSetting<int>("FixedInteger.SourceProblem", "Primal"));
@@ -71,6 +75,11 @@ CplexCallback::CplexCallback(EnvironmentPtr envPtr, const IloNumVarArray& vars, 
         && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
     {
         taskSelectPrimalSolutionFromRootsearch = std::make_shared<TaskSelectPrimalCandidatesFromRootsearch>(env);
+    }
+
+    if(env->events->hasDataProvider(E_EventType::ExternalPrimalSolution))
+    {
+        taskSelectPrimalSolutionFromExternal = std::make_shared<TaskSelectPrimalCandidatesFromExternalSource>(env);
     }
 
     lastUpdatedPrimal = env->results->getPrimalBound();
@@ -209,11 +218,12 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
                         == ES_HyperplaneCutStrategy::ESH)
                     {
                         tUpdateInteriorPoint->run();
-                        static_cast<TaskSelectHyperplanePointsESH*>(taskSelectHPPts.get())->run(solutionPoints);
+                        static_cast<TaskSelectHyperplanesESH*>(taskSelectHPPts.get())->run(solutionPoints);
                     }
-                    else
+                    else if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
+                        == ES_HyperplaneCutStrategy::ECP)
                     {
-                        static_cast<TaskSelectHyperplanePointsECP*>(taskSelectHPPts.get())->run(solutionPoints);
+                        static_cast<TaskSelectHyperplanesECP*>(taskSelectHPPts.get())->run(solutionPoints);
                     }
 
                     if(env->reformulatedProblem->objectiveFunction->properties.classification
@@ -221,6 +231,8 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
                     {
                         taskSelectHPPtsByObjectiveRootsearch->run(solutionPoints);
                     }
+
+                    taskSelectExternalHPs->run(solutionPoints);
 
                     env->results->getCurrentIteration()->relaxedLazyHyperplanesAdded
                         += (env->dualSolver->hyperplaneWaitingList.size() - waitingListSize);
@@ -306,6 +318,11 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
             {
                 taskSelectPrimalSolutionFromRootsearch->run(candidatePoints);
                 env->primalSolver->checkPrimalSolutionCandidates();
+            }
+
+            if(env->events->hasDataProvider(E_EventType::ExternalPrimalSolution))
+            {
+                taskSelectPrimalSolutionFromExternal->run();
             }
 
             currIter->isSolved = true;
@@ -405,7 +422,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
 /// Destructor
 CplexCallback::~CplexCallback() = default;
 
-bool CplexCallback::createHyperplane(Hyperplane hyperplane, const IloCplex::Callback::Context& context)
+bool CplexCallback::createHyperplane(HyperplanePtr hyperplane, const IloCplex::Callback::Context& context)
 {
     auto currIter = env->results->getCurrentIteration(); // The unsolved new iteration
     auto optionalHyperplanes = env->dualSolver->MIPSolver->createHyperplaneTerms(hyperplane);
@@ -417,14 +434,33 @@ bool CplexCallback::createHyperplane(Hyperplane hyperplane, const IloCplex::Call
 
     auto tmpPair = optionalHyperplanes.value();
 
-    for(auto& E : tmpPair.first)
+    if(auto numericHyperplane = std::dynamic_pointer_cast<NumericHyperplane>(hyperplane))
     {
-        if(E.second != E.second) // Check for NaN
+        for(auto& E : tmpPair.first)
         {
-            env->output->outputError(
-                "        Warning: hyperplane not generated, NaN found in linear terms for variable "
-                + env->problem->getVariable(E.first)->name);
-            return (false);
+            if(E.second != E.second || std::isinf(E.second)) // Check for NaN or inf
+            {
+                env->output->outputError("        Warning: hyperplane not generated, NaN or inf "
+                                         "found in linear terms for "
+                    + env->reformulatedProblem->getVariable(E.first)->name + " = "
+                    + std::to_string(numericHyperplane->generatedPoint.at(E.first)));
+
+                return (false);
+            }
+        }
+    }
+    else if(auto externalHyperplane = std::dynamic_pointer_cast<ExternalHyperplane>(hyperplane))
+    {
+        for(auto& E : tmpPair.first)
+        {
+            if(E.second != E.second || std::isinf(E.second)) // Check for NaN or inf
+            {
+                env->output->outputError("        Warning: external hyperplane not generated, NaN or inf "
+                                         "found in linear terms for "
+                    + env->reformulatedProblem->getVariable(E.first)->name);
+
+                return (false);
+            }
         }
     }
 
@@ -460,11 +496,6 @@ bool CplexCallback::createHyperplane(Hyperplane hyperplane, const IloCplex::Call
         IloRange tmpRange(context.getEnv(), -IloInfinity, expr, -tmpPair.second);
 
         context.rejectCandidate(tmpRange);
-
-        std::string identifier = env->dualSolver->MIPSolver->getConstraintIdentifier(hyperplane.source);
-
-        if(hyperplane.sourceConstraint != nullptr)
-            identifier = identifier + "_" + hyperplane.sourceConstraint->name;
 
         env->dualSolver->addGeneratedHyperplane(hyperplane);
 
@@ -543,11 +574,12 @@ void CplexCallback::addLazyConstraint(
                 == ES_HyperplaneCutStrategy::ESH)
             {
                 tUpdateInteriorPoint->run();
-                static_cast<TaskSelectHyperplanePointsESH*>(taskSelectHPPts.get())->run(candidatePoints);
+                static_cast<TaskSelectHyperplanesESH*>(taskSelectHPPts.get())->run(candidatePoints);
             }
-            else
+            else if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
+                == ES_HyperplaneCutStrategy::ECP)
             {
-                static_cast<TaskSelectHyperplanePointsECP*>(taskSelectHPPts.get())->run(candidatePoints);
+                static_cast<TaskSelectHyperplanesECP*>(taskSelectHPPts.get())->run(candidatePoints);
             }
         }
 
@@ -556,6 +588,8 @@ void CplexCallback::addLazyConstraint(
         {
             taskSelectHPPtsByObjectiveRootsearch->run(candidatePoints);
         }
+
+        taskSelectExternalHPs->run(candidatePoints);
 
         for(auto& hp : env->dualSolver->hyperplaneWaitingList)
         {

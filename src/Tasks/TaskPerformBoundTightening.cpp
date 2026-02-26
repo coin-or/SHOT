@@ -24,9 +24,6 @@
 #include "../Model/Problem.h"
 #include "../NLPSolver/INLPSolver.h"
 
-//#include "../Tasks/TaskSelectHyperplanePointsESH.h"
-//#include "../Tasks/TaskSelectHyperplanePointsECP.h"
-
 #include "../NLPSolver/NLPSolverSHOT.h"
 
 namespace SHOT
@@ -196,72 +193,69 @@ void TaskPerformBoundTightening::createPOA()
 
     for(auto& HP : POADualSolver->generatedHyperplanes)
     {
-        Hyperplane newHP;
+        auto newHP = std::make_shared<ConstraintHyperplane>();
 
-        if(HP.source == E_HyperplaneSource::ObjectiveCuttingPlane
-            || HP.source == E_HyperplaneSource::ObjectiveRootsearch)
-            continue;
-
-        newHP.source = HP.source;
-        newHP.sourceConstraintIndex = HP.sourceConstraintIndex;
-        newHP.sourceConstraint
-            = std::dynamic_pointer_cast<NumericConstraint>(sourceProblem->getConstraint(HP.sourceConstraintIndex));
-        newHP.generatedPoint = HP.generatedPoint;
-        newHP.isSourceConvex = HP.isSourceConvex;
-        newHP.objectiveFunctionValue = objectiveFunction->calculateValue(newHP.generatedPoint);
-
-        auto optional = POADualSolver->MIPSolver->createHyperplaneTerms(newHP);
-
-        if(!optional)
-            continue;
-
-        auto tmpPair = optional.value();
-        bool isOk = true;
-
-        for(auto& E : tmpPair.first)
+        if(auto sourceHP = std::dynamic_pointer_cast<ConstraintHyperplane>(HP->sourceHyperplane))
         {
-            if(E.second != E.second) // Check for NaN
-            {
-                env->output->outputError(
-                    "        Warning: hyperplane not generated, NaN found in linear terms for variable "
-                    + env->problem->getVariable(E.first)->name);
+            newHP->source = sourceHP->source;
+            newHP->sourceConstraint = std::dynamic_pointer_cast<NumericConstraint>(
+                sourceProblem->getConstraint(sourceHP->sourceConstraint->index));
+            newHP->generatedPoint = sourceHP->generatedPoint;
+            newHP->isGlobal = sourceHP->isGlobal;
 
-                isOk = false;
-                break;
-            }
-        }
+            auto optional
+                = this->POASolver->solver->getEnvironment()->dualSolver->MIPSolver->createHyperplaneTerms(newHP);
 
-        if(!isOk)
-            continue;
+            if(!optional)
+                continue;
 
-        // Small fix to fix badly scaled cuts.
-        // TODO: this should be made so it also takes into account small/large coefficients of the linear terms
-        double absSecond = abs(tmpPair.second);
-
-        if(absSecond > 1e15)
-        {
-            double scalingFactor = absSecond - 1e15;
+            auto tmpPair = optional.value();
+            bool isOk = true;
 
             for(auto& E : tmpPair.first)
-                E.second /= scalingFactor;
+            {
+                if(E.second != E.second) // Check for NaN
+                {
+                    env->output->outputError(
+                        "        Warning: hyperplane not generated, NaN found in linear terms for variable "
+                        + env->problem->getVariable(E.first)->name);
 
-            tmpPair.second /= scalingFactor;
+                    isOk = false;
+                    break;
+                }
+            }
+
+            if(!isOk)
+                continue;
+
+            // Small fix to fix badly scaled cuts.
+            // TODO: this should be made so it also takes into account small/large coefficients of the linear terms
+            if(abs(tmpPair.second) > 1e15)
+            {
+                double scalingFactor = abs(tmpPair.second) - 1e15;
+
+                for(auto& E : tmpPair.first)
+                    E.second /= scalingFactor;
+
+                tmpPair.second /= scalingFactor;
+            }
+
+            auto linearConstraint = std::make_shared<LinearConstraint>(
+                sourceProblem->properties.numberOfLinearConstraints + hyperplaneCounter,
+                fmt::format("initPOA_{}_{}", newHP->sourceConstraint->name, hyperplaneCounter), SHOT_DBL_MIN,
+                -tmpPair.second);
+
+            linearConstraint->properties.classification = E_ConstraintClassification::Linear;
+            linearConstraint->properties.convexity = E_Convexity::Linear;
+            linearConstraint->properties.monotonicity = E_Monotonicity::Unknown;
+
+            for(auto& E : tmpPair.first)
+                linearConstraint->add(std::make_shared<LinearTerm>(E.second, sourceProblem->getVariable(E.first)));
+
+            hyperplaneCounter++;
+
+            sourceProblem->add(std::move(linearConstraint));
         }
-
-        auto linearConstraint = std::make_shared<LinearConstraint>(baseConstraintIndex + hyperplaneCounter,
-            fmt::format("initPOA_{}_{}", newHP.sourceConstraint->name, hyperplaneCounter), SHOT_DBL_MIN,
-            -tmpPair.second);
-
-        linearConstraint->properties.classification = E_ConstraintClassification::Linear;
-        linearConstraint->properties.convexity = E_Convexity::Linear;
-        linearConstraint->properties.monotonicity = E_Monotonicity::Unknown;
-
-        for(auto& E : tmpPair.first)
-            linearConstraint->add(std::make_shared<LinearTerm>(E.second, sourceProblem->getVariable(E.first)));
-
-        hyperplaneCounter++;
-
-        sourceProblem->add(std::move(linearConstraint));
     }
 
     auto& interiorPts = POADualSolver->interiorPts;

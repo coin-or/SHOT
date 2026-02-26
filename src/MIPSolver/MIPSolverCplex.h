@@ -85,18 +85,19 @@ public:
     bool addSpecialOrderedSet(
         E_SOSType type, VectorInteger variableIndexes, VectorDouble variableWeights = {}) override;
 
-    bool createHyperplane(Hyperplane hyperplane) override { return (MIPSolverBase::createHyperplane(hyperplane)); }
+    bool createHyperplane(HyperplanePtr hyperplane) override { return (MIPSolverBase::createHyperplane(hyperplane)); }
 
     bool createIntegerCut(IntegerCut& integerCut) override;
 
-    virtual bool createHyperplane(Hyperplane hyperplane, std::function<IloConstraint(IloRange)> addConstraintFunction);
+    virtual bool createHyperplane(
+        HyperplanePtr hyperplane, std::function<IloConstraint(IloRange)> addConstraintFunction);
 
-    bool createInteriorHyperplane(Hyperplane hyperplane) override
+    bool createInteriorHyperplane(HyperplanePtr hyperplane) override
     {
         return (MIPSolverBase::createInteriorHyperplane(hyperplane));
     }
 
-    std::optional<std::pair<std::map<int, double>, double>> createHyperplaneTerms(Hyperplane hyperplane) override
+    std::optional<std::pair<std::map<int, double>, double>> createHyperplaneTerms(HyperplanePtr hyperplane) override
     {
         return (MIPSolverBase::createHyperplaneTerms(hyperplane));
     }

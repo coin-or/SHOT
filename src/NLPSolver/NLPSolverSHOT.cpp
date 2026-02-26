@@ -238,38 +238,45 @@ E_NLPSolutionStatus NLPSolverSHOT::solveProblemInstance()
             if(hyperplaneCounter >= numHyperplanesToCopy)
                 break;
 
-            std::vector<double> tmpSolPt(
-                HP.generatedPoint.begin(), HP.generatedPoint.begin() + env->problem->properties.numberOfVariables);
-
-            if((int)tmpSolPt.size() < env->reformulatedProblem->properties.numberOfVariables)
-                env->reformulatedProblem->augmentAuxiliaryVariableValues(tmpSolPt);
-
-            assert(tmpSolPt.size() == env->reformulatedProblem->properties.numberOfVariables);
-
-            Hyperplane hyperplane;
-            hyperplane.generatedPoint = tmpSolPt;
-            hyperplane.objectiveFunctionValue = sourceProblem->objectiveFunction->calculateValue(tmpSolPt);
-
-            if(HP.source == E_HyperplaneSource::ObjectiveCuttingPlane
-                || HP.source == E_HyperplaneSource::ObjectiveRootsearch)
+            if(auto constraintHP = std::dynamic_pointer_cast<ConstraintHyperplane>(HP))
             {
-                hyperplane.isObjectiveHyperplane = true;
-                hyperplane.sourceConstraintIndex = -1;
-                hyperplane.isSourceConvex
-                    = sourceProblem->objectiveFunction->properties.convexity <= E_Convexity::Convex;
+                std::vector<double> tmpSolPt(constraintHP->generatedPoint.begin(),
+                    constraintHP->generatedPoint.begin() + env->problem->properties.numberOfVariables);
+
+                if((int)tmpSolPt.size() < env->reformulatedProblem->properties.numberOfVariables)
+                    env->reformulatedProblem->augmentAuxiliaryVariableValues(tmpSolPt);
+
+                assert(tmpSolPt.size() == env->reformulatedProblem->properties.numberOfVariables);
+
+                auto hyperplane = std::make_shared<ConstraintHyperplane>();
+                hyperplane->generatedPoint = tmpSolPt;
+                hyperplane->sourceConstraint = std::dynamic_pointer_cast<NumericConstraint>(
+                    env->reformulatedProblem->getConstraint(constraintHP->sourceConstraint->index));
+                hyperplane->isGlobal = HP->sourceHyperplane->isGlobal;
+                hyperplane->source = E_HyperplaneSource::PrimalSolutionSearch;
+
+                env->dualSolver->addHyperplane(hyperplane);
+                hyperplaneCounter++;
             }
-            else
+            else if(auto objectiveHP = std::dynamic_pointer_cast<ObjectiveHyperplane>(HP))
             {
-                hyperplane.sourceConstraintIndex = HP.sourceConstraintIndex;
-                hyperplane.sourceConstraint = std::dynamic_pointer_cast<NumericConstraint>(
-                    env->reformulatedProblem->getConstraint(HP.sourceConstraintIndex));
-                hyperplane.isSourceConvex = hyperplane.sourceConstraint->properties.convexity <= E_Convexity::Convex;
+                std::vector<double> tmpSolPt(objectiveHP->generatedPoint.begin(),
+                    objectiveHP->generatedPoint.begin() + env->problem->properties.numberOfVariables);
+
+                if((int)tmpSolPt.size() < env->reformulatedProblem->properties.numberOfVariables)
+                    env->reformulatedProblem->augmentAuxiliaryVariableValues(tmpSolPt);
+
+                assert(tmpSolPt.size() == env->reformulatedProblem->properties.numberOfVariables);
+
+                ObjectiveHyperplanePtr hyperplane;
+                hyperplane->generatedPoint = tmpSolPt;
+                hyperplane->objectiveFunctionValue = sourceProblem->objectiveFunction->calculateValue(tmpSolPt);
+                hyperplane->isGlobal = sourceProblem->objectiveFunction->properties.convexity <= E_Convexity::Convex;
+                hyperplane->source = E_HyperplaneSource::PrimalSolutionSearch;
+
+                env->dualSolver->addHyperplane(hyperplane);
+                hyperplaneCounter++;
             }
-
-            hyperplane.source = E_HyperplaneSource::PrimalSolutionSearch;
-
-            env->dualSolver->addHyperplane(hyperplane);
-            hyperplaneCounter++;
         }
 
         solver->getEnvironment()->dualSolver->generatedHyperplanes.clear();

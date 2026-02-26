@@ -32,8 +32,8 @@
 #include "SolutionStrategy/SolutionStrategyMIQCQP.h"
 #include "SolutionStrategy/SolutionStrategyNLP.h"
 
-#include "../Tasks/TaskPerformBoundTightening.h"
-#include "../Tasks/TaskReformulateProblem.h"
+#include "Tasks/TaskPerformBoundTightening.h"
+#include "Tasks/TaskReformulateProblem.h"
 
 #include <map>
 
@@ -745,6 +745,7 @@ void Solver::initializeSettings()
     VectorString enumHyperplanePointStrategy;
     enumHyperplanePointStrategy.push_back("ESH");
     enumHyperplanePointStrategy.push_back("ECP");
+    enumHyperplanePointStrategy.push_back("Only external (through callback)");
     env->settings->createSetting("CutStrategy", "Dual", static_cast<int>(ES_HyperplaneCutStrategy::ESH),
         "Dual cut strategy", enumHyperplanePointStrategy, 0);
     enumHyperplanePointStrategy.clear();

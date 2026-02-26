@@ -85,9 +85,37 @@ public:
     void outputProblemInstanceReport();
     void outputSolutionReport();
 
+    /**
+     * @brief Callback registration method
+     *
+     * This method automatically detects whether the callback is a notification callback
+     * or a data provider based on its return type:
+     * - Returns void: Notification callback
+     * - Returns a value: Data provider
+     *
+     * Examples:
+     * // Data provider for dual bound
+     * solver.registerCallback(E_EventType::ExternalDualBound, []() {
+     *     return computeDualBound(); // Returns double -> data provider
+     * });
+     *
+     * // User termination check
+     * solver.registerCallback(E_EventType::UserTerminationCheck, []() {
+     *     return shouldTerminate(); // Returns bool -> data provider
+     * });
+     *
+     * // Notification callback
+     * solver.registerCallback(E_EventType::NewPrimalSolution, [](std::any solution) {
+     *     processSolution(solution); // Returns void -> notification
+     * });
+     *
+     * @tparam Callback The callback function type
+     * @param event The event type to register for
+     * @param callback The callback function
+     */
     template <typename Callback> inline void registerCallback(const E_EventType& event, Callback&& callback)
     {
-        env->events->registerCallback(event, callback);
+        env->events->registerCallback(event, std::forward<Callback>(callback));
     }
 
     std::string getOptionsOSoL();

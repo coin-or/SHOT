@@ -373,9 +373,19 @@ void Report::outputOptionsReport()
     {
         cutAlgorithm = "ESH";
     }
-    else
+    else if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
+        == ES_HyperplaneCutStrategy::ECP)
     {
         cutAlgorithm = "ECP";
+    }
+    else if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
+        == ES_HyperplaneCutStrategy::OnlyExternal)
+    {
+        cutAlgorithm = "Only external cuts";
+    }
+    else
+    {
+        cutAlgorithm = "Unknown";
     }
 
     auto solver = static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual"));

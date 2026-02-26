@@ -8,7 +8,7 @@
    Please see the README and LICENSE files for more information.
 */
 
-#include "TaskSelectHyperplanePointsObjectiveFunction.h"
+#include "TaskSelectHyperplanesObjectiveFunction.h"
 
 #include "../DualSolver.h"
 #include "../Output.h"
@@ -24,19 +24,15 @@
 namespace SHOT
 {
 
-TaskSelectHyperplanePointsObjectiveFunction::TaskSelectHyperplanePointsObjectiveFunction(EnvironmentPtr envPtr)
-    : TaskBase(envPtr)
+TaskSelectHyperplanesObjectiveFunction::TaskSelectHyperplanesObjectiveFunction(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
 }
 
-TaskSelectHyperplanePointsObjectiveFunction::~TaskSelectHyperplanePointsObjectiveFunction() = default;
+TaskSelectHyperplanesObjectiveFunction::~TaskSelectHyperplanesObjectiveFunction() = default;
 
-void TaskSelectHyperplanePointsObjectiveFunction::run()
-{
-    this->run(env->results->getPreviousIteration()->solutionPoints);
-}
+void TaskSelectHyperplanesObjectiveFunction::run() { this->run(env->results->getPreviousIteration()->solutionPoints); }
 
-void TaskSelectHyperplanePointsObjectiveFunction::run(std::vector<SolutionPoint> sourcePoints)
+void TaskSelectHyperplanesObjectiveFunction::run(std::vector<SolutionPoint> sourcePoints)
 {
     if(sourcePoints.size() == 0)
         return;
@@ -47,14 +43,12 @@ void TaskSelectHyperplanePointsObjectiveFunction::run(std::vector<SolutionPoint>
     if(env->solutionStatistics.numberOfIterationsWithDualStagnation > 2
         && env->reformulatedProblem->properties.convexity == E_ProblemConvexity::Convex)
     {
-        Hyperplane hyperplane;
-        hyperplane.isObjectiveHyperplane = true;
-        hyperplane.sourceConstraintIndex = -1;
-        hyperplane.generatedPoint = sourcePoints[0].point;
-        hyperplane.source = E_HyperplaneSource::ObjectiveRootsearch;
-        hyperplane.objectiveFunctionValue
+        ObjectiveHyperplanePtr hyperplane = std::make_shared<ObjectiveHyperplane>();
+        hyperplane->generatedPoint = sourcePoints[0].point;
+        hyperplane->source = E_HyperplaneSource::ObjectiveRootsearch;
+        hyperplane->objectiveFunctionValue
             = env->reformulatedProblem->objectiveFunction->calculateValue(sourcePoints[0].point);
-        hyperplane.isSourceConvex = true;
+        hyperplane->isGlobal = true;
 
         env->dualSolver->addHyperplane(hyperplane);
         numHyperplaneAdded++;
@@ -123,13 +117,11 @@ void TaskSelectHyperplanePointsObjectiveFunction::run(std::vector<SolutionPoint>
                         env->reformulatedProblem->objectiveFunction);
                 }
 
-                Hyperplane hyperplane;
-                hyperplane.isObjectiveHyperplane = true;
-                hyperplane.source = E_HyperplaneSource::ObjectiveRootsearch;
-                hyperplane.sourceConstraintIndex = -1;
-                hyperplane.generatedPoint = SOLPT.point;
-                hyperplane.objectiveFunctionValue = rootBound.second;
-                hyperplane.isSourceConvex = isConvex;
+                ObjectiveHyperplanePtr hyperplane = std::make_shared<ObjectiveHyperplane>();
+                hyperplane->source = E_HyperplaneSource::ObjectiveRootsearch;
+                hyperplane->generatedPoint = SOLPT.point;
+                hyperplane->objectiveFunctionValue = rootBound.second;
+                hyperplane->isGlobal = isConvex;
 
                 env->dualSolver->addHyperplane(hyperplane);
                 numHyperplaneAdded++;
@@ -147,15 +139,13 @@ void TaskSelectHyperplanePointsObjectiveFunction::run(std::vector<SolutionPoint>
             }
         }
 
-        Hyperplane hyperplane;
-        hyperplane.isObjectiveHyperplane = true;
-        hyperplane.sourceConstraintIndex = -1;
-        hyperplane.generatedPoint = SOLPT.point;
-        hyperplane.source = E_HyperplaneSource::ObjectiveCuttingPlane;
-        hyperplane.isSourceConvex = isConvex;
+        ObjectiveHyperplanePtr hyperplane = std::make_shared<ObjectiveHyperplane>();
+        hyperplane->generatedPoint = SOLPT.point;
+        hyperplane->source = E_HyperplaneSource::ObjectiveCuttingPlane;
+        hyperplane->isGlobal = isConvex;
 
-        hyperplane.objectiveFunctionValue
-            = env->reformulatedProblem->objectiveFunction->calculateValue(hyperplane.generatedPoint);
+        hyperplane->objectiveFunctionValue
+            = env->reformulatedProblem->objectiveFunction->calculateValue(hyperplane->generatedPoint);
 
         env->dualSolver->addHyperplane(hyperplane);
         numHyperplaneAdded++;
@@ -172,7 +162,7 @@ void TaskSelectHyperplanePointsObjectiveFunction::run(std::vector<SolutionPoint>
     }
 }
 
-std::string TaskSelectHyperplanePointsObjectiveFunction::getType()
+std::string TaskSelectHyperplanesObjectiveFunction::getType()
 {
     std::string type = typeid(this).name();
     return (type);

@@ -53,8 +53,12 @@ enum class E_DualSolutionSource
 
 enum class E_EventType
 {
+    ExternalDualBound,
+    ExternalHyperplaneSelection,
+    ExternalPrimalSolution,
     NewPrimalSolution,
-    UserTerminationCheck
+    PrimalSolutionCandidateSelection,
+    UserTerminationCheck,
 };
 
 enum class E_HyperplaneSource
@@ -72,7 +76,8 @@ enum class E_HyperplaneSource
     InteriorPointSearch,
     MIPCallbackRelaxed,
     ObjectiveRootsearch,
-    ObjectiveCuttingPlane
+    ObjectiveCuttingPlane,
+    External
 };
 
 enum class E_IntegerCutSource
@@ -155,7 +160,8 @@ enum class E_PrimalSolutionSource
     LPFixedIntegers,
     MIPCallback,
     InteriorPointSearch,
-    ConvexBounding
+    ConvexBounding,
+    ExternalPrimalSolution
 };
 
 enum class E_ProblemConvexity
@@ -278,7 +284,8 @@ enum class ES_AddPrimalPointAsInteriorPoint
 enum class ES_HyperplaneCutStrategy
 {
     ESH,
-    ECP
+    ECP,
+    OnlyExternal
 };
 
 enum class ES_IpoptSolver
