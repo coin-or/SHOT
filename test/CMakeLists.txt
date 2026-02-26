@@ -98,6 +98,19 @@ target_link_libraries(${TEST_EXE_NAME} ${libs})
 
 target_link_libraries(${TEST_EXE_NAME} SHOTSolver)
 
+# Set rpath for finding dynamic libraries on macOS
+if(APPLE)
+    set(RPATH_DIRS "${CPPAD_LIB_DIR}")
+    
+    if(HAS_GUROBI AND GUROBI_FOUND)
+        list(APPEND RPATH_DIRS "${GUROBI_LIB_DIR}")
+    endif()
+    
+    set_target_properties(${TEST_EXE_NAME} PROPERTIES
+        BUILD_RPATH "${RPATH_DIRS}"
+        INSTALL_RPATH "${RPATH_DIRS}")
+endif()
+
 if(HAS_CPLEX)
   if(NOT
      (CPLEX_FOUND)
@@ -164,13 +177,18 @@ target_link_libraries(${TEST_EXE_NAME} m)
 target_link_libraries(${TEST_EXE_NAME} z)
 target_link_libraries(${TEST_EXE_NAME} lapack)
 target_link_libraries(${TEST_EXE_NAME} blas)
-target_link_libraries(${TEST_EXE_NAME} dl)
-target_link_libraries(${TEST_EXE_NAME} gomp)
+
+# Platform-specific libraries
+if(NOT APPLE)
+  target_link_libraries(${TEST_EXE_NAME} dl)
+  target_link_libraries(${TEST_EXE_NAME} gomp)
+endif()
 
 if(HAS_GAMS)
   if(UNIX)
     if(APPLE)
-      target_link_libraries(${TEST_EXE_NAME} ${GAMS_DIR}/libstdc++.6.dylib)
+      # Don't link libstdc++ on macOS - Clang uses libc++ and mixing them causes ABI issues
+      # target_link_libraries(${TEST_EXE_NAME} ${GAMS_DIR}/libstdc++.6.dylib)
     else(APPLE)
       target_link_libraries(${TEST_EXE_NAME} ${GAMS_DIR}/libstdc++.so.6)
     endif(APPLE)

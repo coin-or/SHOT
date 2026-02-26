@@ -198,6 +198,11 @@ if(HAS_CBC)
         find_package(CBC)
     endif()
 
+    if(NOT CBC_FOUND)
+        message(WARNING "Cbc not found, setting HAS_CBC to OFF")
+        set(HAS_CBC OFF)
+    endif()
+
     if(CBC_FOUND)
         link_directories(${CBC_LIBRARY_DIRS})
         include_directories(SYSTEM ${CBC_INCLUDE_DIRS})
@@ -216,10 +221,16 @@ endif(HAS_CBC)
 
 if(HAS_CPLEX)
     find_package(CPLEX)
-    add_definitions(-DIL_STD)
-    add_definitions(-DHAS_CPLEX)
+
+    if(NOT CPLEX_FOUND)
+        message(WARNING "CPLEX not found, setting HAS_CPLEX to OFF")
+        set(HAS_CPLEX OFF)
+    endif()
 
     if(CPLEX_FOUND)
+        add_definitions(-DIL_STD)
+        add_definitions(-DHAS_CPLEX)
+
         set(DUAL_SOURCES ${DUAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.cpp")
         set(DUAL_SOURCES ${DUAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplex.cpp")
 
@@ -237,9 +248,15 @@ endif(HAS_CPLEX)
 
 if(HAS_GUROBI)
     find_package(GUROBI)
-    add_definitions(-DHAS_GUROBI)
+
+    if(NOT GUROBI_FOUND)
+        message(WARNING "Gurobi not found, setting HAS_GUROBI to OFF")
+        set(HAS_GUROBI OFF)
+    endif()
 
     if(GUROBI_FOUND)
+        add_definitions(-DHAS_GUROBI)
+
         set(DUAL_SOURCES ${DUAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.cpp")
         set(DUAL_SOURCES ${DUAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverGurobi.cpp")
         set(DUAL_SOURCES ${DUAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverGurobiSingleTree.cpp")
@@ -249,33 +266,43 @@ if(HAS_GUROBI)
     endif(GUROBI_FOUND)
 endif(HAS_GUROBI)
 
-
 # HiGHS
 
-if(HAS_HIGHS)
+# Case 1: Use FetchContent to download HiGHS
+if(HAS_HIGHS AND NOT USE_EXTERNAL_HIGHS)
     add_definitions(-DHAS_HIGHS)
     set(DUAL_SOURCES ${DUAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverHighs.cpp")
     set(DUAL_HEADERS ${DUAL_HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverHighs.h")
+    
+    include(FetchContent)
+    FetchContent_Declare(
+        highs
+        GIT_REPOSITORY "https://github.com/ERGO-Code/HiGHS.git"
+        GIT_TAG        "latest"
+    )
 
-    if(USE_EXTERNAL_HIGHS)
-        find_package(Threads REQUIRED)
-        find_package(HIGHS REQUIRED PATHS ${HIGHS_EXTERNAL_DIR} NO_DEFAULT_PATH)
+    FetchContent_MakeAvailable(highs)
+
+    # Disable HiGHS assertions even in debug builds
+    # target_compile_definitions(highs PRIVATE NDEBUG)
+endif()
+
+# Case 2: Use external HiGHS
+if(HAS_HIGHS AND USE_EXTERNAL_HIGHS)
+    find_package(Threads REQUIRED)
+    find_package(highs PATHS ${HIGHS_EXTERNAL_DIR} NO_DEFAULT_PATH)
+    
+    if(NOT highs_FOUND)
+        message(WARNING "External HiGHS not found, setting HAS_HIGHS to OFF")
+        set(HAS_HIGHS OFF)
     endif()
-  
-    if(NOT(USE_EXTERNAL_HIGHS))
-        include(FetchContent)
-        FetchContent_Declare(
-            highs
-            GIT_REPOSITORY "https://github.com/ERGO-Code/HiGHS.git"
-            GIT_TAG        "latest"
-        )
-
-        FetchContent_MakeAvailable(highs)
-
-        # Disable HiGHS assertions even in debug builds
-        # target_compile_definitions(highs PRIVATE NDEBUG)
+    
+    if(highs_FOUND)
+        add_definitions(-DHAS_HIGHS)
+        set(DUAL_SOURCES ${DUAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverHighs.cpp")
+        set(DUAL_HEADERS ${DUAL_HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverHighs.h")
     endif()
-endif(HAS_HIGHS)
+endif()
 
 # Ipopt
 
@@ -400,19 +427,35 @@ ExternalProject_Add(spdlog
 )
 
 # Adding CppAD using as an external project
-ExternalProject_Add(cppad
-    PREFIX cppad
-    SOURCE_DIR ${PROJECT_SOURCE_DIR}/${CPPAD_DIR}
-    CMAKE_ARGS -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+set(CPPAD_CMAKE_ARGS
+    -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
     -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
     -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
     -Dcppad_prefix=${CMAKE_CURRENT_BINARY_DIR}/CppAD
     -Dcppad_cxx_flags="-std=c++17"
 )
 
+# Add macOS-specific settings for proper @rpath usage
+if(APPLE)
+    list(APPEND CPPAD_CMAKE_ARGS
+        -DCMAKE_MACOSX_RPATH=ON
+        -DCMAKE_INSTALL_NAME_DIR=@rpath
+    )
+endif()
+
+ExternalProject_Add(cppad
+    PREFIX cppad
+    SOURCE_DIR ${PROJECT_SOURCE_DIR}/${CPPAD_DIR}
+    CMAKE_ARGS ${CPPAD_CMAKE_ARGS}
+)
+
 # Set CppAD library path
 set(CPPAD_LIB_DIR "${CMAKE_CURRENT_BINARY_DIR}/CppAD/lib")
-set(CPPAD_LIBRARY "${CPPAD_LIB_DIR}/libcppad_lib.so")
+if(APPLE)
+    set(CPPAD_LIBRARY "${CPPAD_LIB_DIR}/libcppad_lib.dylib")
+else()
+    set(CPPAD_LIBRARY "${CPPAD_LIB_DIR}/libcppad_lib.so")
+endif()
 
 # Creates the helper library
 add_library(
@@ -640,6 +683,17 @@ file(
 # Creates the SHOT library that is linked to the executable
 add_library(SHOTSolver SHARED ${SOURCES})
 
+# Ensures class type checking works correctly between the executable and shared library
+# Without this, the program can crash when checking object types at runtime
+if(APPLE)
+    # macOS needs this to avoid duplicate type information that breaks type checking
+    # Linux handles this correctly by default
+    target_link_options(SHOTSolver PRIVATE "-Wl,-flat_namespace")
+elseif(UNIX)
+    # Linux already uses flat namespace, but explicitly export symbols for robustness
+    target_link_options(SHOTSolver PRIVATE "-Wl,--export-dynamic")
+endif()
+
 # Links the compiled libraries
 target_link_libraries(SHOTSolver SHOTHelper)
 target_link_libraries(SHOTSolver SHOTModel)
@@ -665,18 +719,32 @@ target_link_libraries(SHOTSolver SHOTSolutionStrategies)
 target_link_libraries(SHOTSolver ${CPPAD_LIBRARY})
 
 # Link the standard library required for std::filesystem (if needed)
-target_link_libraries(SHOTSolver CXX::Filesystem)
+#target_link_libraries(SHOTSolver CXX::Filesystem)
 
 # Generates the SHOT executable
 if(GENERATE_EXE)
     add_executable(${PROJECT_NAME} "${PROJECT_SOURCE_DIR}/src/SHOT.cpp")
     target_link_libraries(${PROJECT_NAME} SHOTSolver)
 
+    # Set rpath for finding dynamic libraries on macOS
+    if(APPLE)
+        set(RPATH_DIRS "${CPPAD_LIB_DIR}")
+        
+        if(HAS_GUROBI AND GUROBI_FOUND)
+            list(APPEND RPATH_DIRS "${GUROBI_LIB_DIR}")
+        endif()
+        
+        set_target_properties(${PROJECT_NAME} PROPERTIES
+            BUILD_RPATH "${RPATH_DIRS}"
+            INSTALL_RPATH "${RPATH_DIRS}")
+    endif()
+
     # Extra linking necessary for GAMS
     if(HAS_GAMS)
         if(UNIX)
             if(APPLE)
-                target_link_libraries(${PROJECT_NAME} ${GAMS_DIR}/libstdc++.6.dylib)
+                # Don't link libstdc++ on macOS - Clang uses libc++ and mixing them causes ABI issues
+                # target_link_libraries(${PROJECT_NAME} ${GAMS_DIR}/libstdc++.6.dylib)
             else(APPLE)
                 target_link_libraries(${PROJECT_NAME} ${GAMS_DIR}/libstdc++.so.6)
             endif(APPLE)
