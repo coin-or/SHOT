@@ -8,3 +8,6 @@
 	path = ThirdParty/pybind11
 	url = https://github.com/pybind/pybind11
 	branch = stable
+[submodule "ThirdParty/HiGHS"]
+	path = ThirdParty/HiGHS
+	url = https://github.com/ERGO-Code/HiGHS

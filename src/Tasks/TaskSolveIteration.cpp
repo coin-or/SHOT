@@ -34,6 +34,11 @@ TaskSolveIteration::TaskSolveIteration(EnvironmentPtr envPtr) : TaskBase(envPtr)
         {
             variableNames.push_back(V->name);
         }
+
+        if(env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
+        {
+            variableNames.push_back("shot_dual_objvar");
+        }
     }
 }
 
@@ -105,8 +110,25 @@ void TaskSolveIteration::run()
     if(env->dualSolver->MIPSolver->getDiscreteVariableStatus() && env->results->hasPrimalSolution())
     {
         auto primalSol = env->results->primalSolution;
+        assert(primalSol.size() == env->problem->properties.numberOfVariables);
+
         env->reformulatedProblem->augmentAuxiliaryVariableValues(primalSol);
+
+        if(env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
+        {
+            primalSol.push_back(env->results->getPrimalBound());
+        }
+
+        assert(primalSol.size() == env->dualSolver->MIPSolver->getNumberOfVariables());
+
         env->dualSolver->MIPSolver->addMIPStart(primalSol);
+
+        if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+        {
+            auto filename = fmt::format("{}/dualiter{}_mipstart.txt",
+                env->settings->getSetting<std::string>("Debug.Path", "Output"), currIter->iterationNumber - 1);
+            Utilities::saveVariablePointVectorToFile(primalSol, variableNames, filename);
+        }
     }
 
     if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
@@ -208,18 +230,20 @@ void TaskSolveIteration::run()
 
         if(!env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed)
         {
-
             double currentDualBound = env->dualSolver->MIPSolver->getDualObjectiveValue();
+
             if(currIter->isMIP())
             {
-                DualSolution sol = { sols.at(0).point, E_DualSolutionSource::MIPSolverBound, currentDualBound,
-                    currIter->iterationNumber, false };
-                env->dualSolver->addDualSolutionCandidate(sol);
-
                 if(currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
                 {
                     DualSolution sol = { sols.at(0).point, E_DualSolutionSource::MIPSolutionOptimal,
                         currIter->objectiveValue, currIter->iterationNumber, false };
+                    env->dualSolver->addDualSolutionCandidate(sol);
+                }
+                else
+                {
+                    DualSolution sol = { sols.at(0).point, E_DualSolutionSource::MIPSolverBound, currentDualBound,
+                        currIter->iterationNumber, false };
                     env->dualSolver->addDualSolutionCandidate(sol);
                 }
             }

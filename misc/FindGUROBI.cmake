@@ -12,12 +12,28 @@ file(GLOB
      "/opt/gurobi/gurobi*/linux64"
      "/opt/gurobi*/linux64"
      "/Library/gurobi*/mac64"
+     "/Library/gurobi*/macos_universal2"
+     "/Library/gurobi*/macos_arm64"
+     "/usr/local"
      "C:\\gurobi*\\win64")
-find_path(GUROBI_INSTALL_DIR
-          NAMES "include/gurobi_c++.h"
-          HINTS "${GUROBI_DIR}/linux64" "${GUROBI_DIR}/mac64"
-                "${GUROBI_DIR}\\win64"
-          PATHS ${GUROBI_SEARCH_PATHS})
+
+# If GUROBI_DIR is explicitly set, prioritize it
+if(GUROBI_DIR)
+    find_path(GUROBI_INSTALL_DIR
+              NAMES "include/gurobi_c++.h"
+              HINTS "${GUROBI_DIR}"
+              NO_DEFAULT_PATH)
+endif()
+
+# If not found with GUROBI_DIR, search in standard locations
+if(NOT GUROBI_INSTALL_DIR)
+    find_path(GUROBI_INSTALL_DIR
+              NAMES "include/gurobi_c++.h"
+              HINTS "${GUROBI_DIR}/linux64" "${GUROBI_DIR}/mac64"
+                    "${GUROBI_DIR}/macos_universal2" "${GUROBI_DIR}/macos_arm64"
+                    "${GUROBI_DIR}\\win64"
+              PATHS ${GUROBI_SEARCH_PATHS})
+endif()
 message(STATUS "Found Gurobi folder: ${GUROBI_INSTALL_DIR}")
 
 if(GUROBI_INSTALL_DIR)
@@ -26,7 +42,51 @@ if(GUROBI_INSTALL_DIR)
   message(STATUS "Using Gurobi include folder: ${GUROBI_INCLUDE_DIR}")
   message(STATUS "Using Gurobi library folder: ${GUROBI_LIB_DIR}")
 
-  if(UNIX)
+  if(APPLE)
+    file(GLOB GUROBI_LIBRARY ${GUROBI_LIB_DIR}/libgurobi*.dylib)
+    file(GLOB GUROBI_LIBRARY_DEBUG ${GUROBI_LIB_DIR}/libgurobi*.dylib)
+
+    # Filter out light and JNI libraries
+    list(FILTER
+         GUROBI_LIBRARY
+         EXCLUDE
+         REGEX
+         ".*_light.dylib$")
+    list(FILTER
+         GUROBI_LIBRARY
+         EXCLUDE
+         REGEX
+         ".*Jni.*dylib$")
+    list(FILTER
+         GUROBI_LIBRARY_DEBUG
+         EXCLUDE
+         REGEX
+         ".*_light.dylib$")
+    list(FILTER
+         GUROBI_LIBRARY_DEBUG
+         EXCLUDE
+         REGEX
+         ".*Jni.*dylib$")
+
+    if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+      file(GLOB GUROBI_CPP_LIBRARY ${GUROBI_LIB_DIR}/libgurobi_c++.a)
+    endif()
+
+    if(CMAKE_COMPILER_IS_GNUCXX)
+      execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion
+                      OUTPUT_VARIABLE GCC_VERSION)
+      if(GCC_VERSION VERSION_GREATER 5.2 OR GCC_VERSION VERSION_EQUAL 5.2)
+        file(GLOB GUROBI_CPP_LIBRARY ${GUROBI_LIB_DIR}/libgurobi_g++5.2.a)
+      else()
+        file(GLOB GUROBI_CPP_LIBRARY ${GUROBI_LIB_DIR}/libgurobi_g++4.2.a)
+      endif()
+
+      if(NOT (GUROBI_CPP_LIBRARY))
+        file(GLOB GUROBI_CPP_LIBRARY ${GUROBI_LIB_DIR}/libgurobi_c++.a)
+      endif()
+    endif()
+
+  elseif(UNIX)
     file(GLOB GUROBI_LIBRARY ${GUROBI_LIB_DIR}/libgurobi*.so)
     file(GLOB GUROBI_LIBRARY_DEBUG ${GUROBI_LIB_DIR}/libgurobi*.so)
 
@@ -69,24 +129,6 @@ if(GUROBI_INSTALL_DIR)
          EXCLUDE
          REGEX
          ".*_light.so$")
-
-  elseif(APPLE)
-    file(GLOB GUROBI_LIBRARY ${GUROBI_LIB_DIR}/libgurobi*.so)
-    file(GLOB GUROBI_LIBRARY_DEBUG ${GUROBI_LIB_DIR}/libgurobi*.so)
-
-    if(CMAKE_COMPILER_IS_GNUCXX)
-      execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion
-                      OUTPUT_VARIABLE GCC_VERSION)
-      if(GCC_VERSION VERSION_GREATER 5.2 OR GCC_VERSION VERSION_EQUAL 5.2)
-        file(GLOB GUROBI_CPP_LIBRARY ${GUROBI_LIB_DIR}/libgurobi_g++5.2.a)
-      else()
-        file(GLOB GUROBI_CPP_LIBRARY ${GUROBI_LIB_DIR}/libgurobi_g++4.2.a)
-      endif()
-
-      if(NOT (GUROBI_CPP_LIBRARY))
-        file(GLOB GUROBI_CPP_LIBRARY ${GUROBI_LIB_DIR}/libgurobi_c++.a)
-      endif()
-    endif()
 
   else()
     if(NOT (MSVC_VERSION LESS 1910))

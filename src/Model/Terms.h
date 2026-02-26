@@ -17,6 +17,7 @@
 #include "Variables.h"
 
 #include <Eigen/Eigenvalues>
+#include <Eigen/Sparse>
 #include <vector>
 
 namespace SHOT
@@ -456,6 +457,12 @@ public:
 
     Eigen::VectorXcd eigenvalues;
     Eigen::MatrixXcd eigenvectors;
+    Eigen::MatrixXd LDLMatrixL;
+    VectorDouble LDLDiag;
+    bool LDLFactorizationPerformed = false;
+    bool LDLFactorizationSuccessful = false;
+
+    std::vector<Eigen::Triplet<double>> elements;
     std::map<VariablePtr, int> variableMap;
 
     using std::vector<QuadraticTermPtr>::operator[];
@@ -557,6 +564,8 @@ public:
 
         return gradient;
     };
+
+    void performLDLFactorization();
 };
 
 class MonomialTerm : public Term

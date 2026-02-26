@@ -47,27 +47,32 @@ option(SIMPLE_OUTPUT_CHARS "Whether to avoid using special characters in the con
 option(HAS_AMPL "Should the AMPL .nl interface be build" ON)
 
 # GAMS
-option(HAS_GAMS "Is GAMS available" OFF)
-set(GAMS_DIR "/opt/gams/gams30.2" CACHE STRING "The base directory where GAMS is located (if available)")
+option(HAS_GAMS "Is GAMS available" ON)
+set(GAMS_DIR "/opt/gams" CACHE STRING "The base directory where GAMS is located (if available)")
 
 # CPLEX
-option(HAS_CPLEX "Is Cplex available" OFF)
-set(CPLEX_DIR "/opt/ibm/ILOG/CPLEX_Studio1210" CACHE STRING "The base directory where CPLEX is located (if available)")
+option(HAS_CPLEX "Is Cplex available" ON)
+set(CPLEX_DIR "/opt/cplex" CACHE STRING "The base directory where CPLEX is located (if available)")
 
 # Gurobi
-option(HAS_GUROBI "Is Gurobi available" OFF)
-set(GUROBI_DIR "/opt/gurobi/gurobi900" CACHE STRING "The base directory where Gurobi is located (if available)")
+option(HAS_GUROBI "Is Gurobi available" ON)
+set(GUROBI_DIR "/opt/gurobi" CACHE STRING "The base directory where Gurobi is located (if available)")
 
 # Cbc
-option(HAS_CBC "Is Cbc available" OFF)
-set(CBC_DIR "/opt/Cbc-2.10" CACHE STRING "The base directory where Cbc is located (if available).")
+option(HAS_CBC "Is Cbc available" ON)
+set(CBC_DIR "/opt/cbc" CACHE STRING "The base directory where Cbc is located (if available).")
 
 # Ipopt
-option(HAS_IPOPT "Is Ipopt available" OFF)
+option(HAS_IPOPT "Is Ipopt available" ON)
 set(IPOPT_DIR "/opt/ipopt" CACHE STRING "The base directory where Ipopt is located (if available).")
 
 # Python
 option(HAS_PYTHON "Is Python available" OFF)
+
+# HiGHS
+option(HAS_HIGHS "Is HiGHS available" ON)
+option(USE_EXTERNAL_HIGHS "Use precompiled, external HiGHS libraries" OFF)
+set(HIGHS_EXTERNAL_DIR "/opt/highs" CACHE STRING "The external directory where HiGHS is located).")
 
 # Create also the executable
 option(GENERATE_EXE "Should the SHOT executable be generated (requires at least that either OS or GAMS is available)"
@@ -91,10 +96,11 @@ file(TO_CMAKE_PATH "${CBC_DIR}" ${CBC_DIR})
 file(TO_CMAKE_PATH "${CPLEX_DIR}" ${CPLEX_DIR})
 file(TO_CMAKE_PATH "${GAMS_DIR}" ${GAMS_DIR})
 file(TO_CMAKE_PATH "${GUROBI_DIR}" ${GUROBI_DIR})
+file(TO_CMAKE_PATH "${HIGHS_EXTERNAL_DIR}" ${HIGHS_EXTERNAL_DIR})
 file(TO_CMAKE_PATH "${IPOPT_DIR}" ${IPOPT_DIR})
 
 # Check if a MIP solver is defined
-if(NOT (HAS_CPLEX OR HAS_GUROBI OR HAS_CBC))
+if(NOT (HAS_CPLEX OR HAS_GUROBI OR HAS_CBC OR HAS_HIGHS))
     message(FATAL_ERROR "No MIP solver defined. SHOT needs at least one!")
 endif()
 
@@ -184,13 +190,22 @@ file(
     "${PROJECT_SOURCE_DIR}/src/Tasks/*.h"
     "${PROJECT_SOURCE_DIR}/src/Settings.h"
     "${TINYXML2_DIR}/tinyxml2.h"
-    #"${CPPAD_DIR}/include/cppad/cppad.hpp"
 )
 
 # Cbc
 
 if(HAS_CBC)
-    find_package(CBC)
+    find_package(PkgConfig)
+
+    if(PkgConfig_FOUND)
+        include(FindPkgConfig)
+        find_package(CBC)
+    endif()
+
+    if(NOT CBC_FOUND)
+        message(WARNING "Cbc not found, setting HAS_CBC to OFF")
+        set(HAS_CBC OFF)
+    endif()
 
     if(CBC_FOUND)
         link_directories(${CBC_LIBRARY_DIRS})
@@ -199,9 +214,9 @@ if(HAS_CBC)
     endif(CBC_FOUND)
 
     if(CBC_FOUND)
-        set(DUAL_SOURCES "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCbc.cpp")
+        set(DUAL_SOURCES ${DUAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCbc.cpp")
         set(DUAL_SOURCES ${DUAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.cpp")
-        set(DUAL_HEADERS "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCbc.h")
+        set(DUAL_HEADERS ${DUAL_HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCbc.h")
         set(DUAL_HEADERS ${DUAL_HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.h")
     endif(CBC_FOUND)
 endif(HAS_CBC)
@@ -210,10 +225,16 @@ endif(HAS_CBC)
 
 if(HAS_CPLEX)
     find_package(CPLEX)
-    add_definitions(-DIL_STD)
-    add_definitions(-DHAS_CPLEX)
+
+    if(NOT CPLEX_FOUND)
+        message(WARNING "CPLEX not found, setting HAS_CPLEX to OFF")
+        set(HAS_CPLEX OFF)
+    endif()
 
     if(CPLEX_FOUND)
+        add_definitions(-DIL_STD)
+        add_definitions(-DHAS_CPLEX)
+
         set(DUAL_SOURCES ${DUAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.cpp")
         set(DUAL_SOURCES ${DUAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplex.cpp")
 
@@ -230,10 +251,16 @@ endif(HAS_CPLEX)
 # Gurobi
 
 if(HAS_GUROBI)
-    find_package(Gurobi)
-    add_definitions(-DHAS_GUROBI)
+    find_package(GUROBI)
+
+    if(NOT GUROBI_FOUND)
+        message(WARNING "Gurobi not found, setting HAS_GUROBI to OFF")
+        set(HAS_GUROBI OFF)
+    endif()
 
     if(GUROBI_FOUND)
+        add_definitions(-DHAS_GUROBI)
+
         set(DUAL_SOURCES ${DUAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.cpp")
         set(DUAL_SOURCES ${DUAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverGurobi.cpp")
         set(DUAL_SOURCES ${DUAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverGurobiSingleTree.cpp")
@@ -242,6 +269,44 @@ if(HAS_GUROBI)
         set(DUAL_HEADERS ${DUAL_HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverGurobiSingleTree.h")
     endif(GUROBI_FOUND)
 endif(HAS_GUROBI)
+
+# HiGHS
+
+# Case 1: Use FetchContent to download HiGHS
+if(HAS_HIGHS AND NOT USE_EXTERNAL_HIGHS)
+    add_definitions(-DHAS_HIGHS)
+    set(DUAL_SOURCES ${DUAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverHighs.cpp")
+    set(DUAL_HEADERS ${DUAL_HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverHighs.h")
+    
+    include(FetchContent)
+    FetchContent_Declare(
+        highs
+        GIT_REPOSITORY "https://github.com/ERGO-Code/HiGHS.git"
+        GIT_TAG        "latest"
+    )
+
+    FetchContent_MakeAvailable(highs)
+
+    # Disable HiGHS assertions even in debug builds
+    # target_compile_definitions(highs PRIVATE NDEBUG)
+endif()
+
+# Case 2: Use external HiGHS
+if(HAS_HIGHS AND USE_EXTERNAL_HIGHS)
+    find_package(Threads REQUIRED)
+    find_package(highs PATHS ${HIGHS_EXTERNAL_DIR} NO_DEFAULT_PATH)
+    
+    if(NOT highs_FOUND)
+        message(WARNING "External HiGHS not found, setting HAS_HIGHS to OFF")
+        set(HAS_HIGHS OFF)
+    endif()
+    
+    if(highs_FOUND)
+        add_definitions(-DHAS_HIGHS)
+        set(DUAL_SOURCES ${DUAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverHighs.cpp")
+        set(DUAL_HEADERS ${DUAL_HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverHighs.h")
+    endif()
+endif()
 
 # Ipopt
 
@@ -367,23 +432,35 @@ ExternalProject_Add(spdlog
 )
 
 # Adding CppAD using as an external project
-ExternalProject_Add(cppad
-    PREFIX cppad
-    SOURCE_DIR ${PROJECT_SOURCE_DIR}/${CPPAD_DIR}
-    CMAKE_ARGS -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+set(CPPAD_CMAKE_ARGS
+    -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
     -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
     -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
     -Dcppad_prefix=${CMAKE_CURRENT_BINARY_DIR}/CppAD
     -Dcppad_cxx_flags="-std=c++17"
 )
 
-# CppAD library location (built by external project)
-set(CPPAD_LIB_DIR "${CMAKE_CURRENT_BINARY_DIR}/cppad/src/cppad-build/cppad_lib")
-add_library(cppad_lib SHARED IMPORTED)
-set_target_properties(cppad_lib PROPERTIES
-    IMPORTED_LOCATION "${CPPAD_LIB_DIR}/libcppad_lib.so"
+# Add macOS-specific settings for proper @rpath usage
+if(APPLE)
+    list(APPEND CPPAD_CMAKE_ARGS
+        -DCMAKE_MACOSX_RPATH=ON
+        -DCMAKE_INSTALL_NAME_DIR=@rpath
+    )
+endif()
+
+ExternalProject_Add(cppad
+    PREFIX cppad
+    SOURCE_DIR ${PROJECT_SOURCE_DIR}/${CPPAD_DIR}
+    CMAKE_ARGS ${CPPAD_CMAKE_ARGS}
 )
-add_dependencies(cppad_lib cppad)
+
+# Set CppAD library path
+set(CPPAD_LIB_DIR "${CMAKE_CURRENT_BINARY_DIR}/CppAD/lib")
+if(APPLE)
+    set(CPPAD_LIBRARY "${CPPAD_LIB_DIR}/libcppad_lib.dylib")
+else()
+    set(CPPAD_LIBRARY "${CPPAD_LIB_DIR}/libcppad_lib.so")
+endif()
 
 # Creates the helper library
 add_library(
@@ -487,6 +564,7 @@ add_library(
 )
 target_link_libraries(SHOTDualStrategy SHOTModel)
 
+
 # Creates the tasks library
 file(GLOB_RECURSE TASK_SOURCES "${PROJECT_SOURCE_DIR}/src/Tasks/*.cpp")
 # These sources are already added in SHOTHelper
@@ -572,6 +650,7 @@ if(HAS_CBC)
         message("-- Cbc libraries could not be found!")
     else()
         message("-- Cbc include files will be used from: ${CBC_INCLUDE_DIRS}")
+        target_include_directories(SHOTDualStrategy PUBLIC "${CBC_INCLUDE_DIRS}")
 
         target_link_libraries(SHOTDualStrategy ${CBC_LIBRARIES})
         target_compile_options(SHOTDualStrategy PUBLIC ${CBC_CFLAGS_OTHER})
@@ -580,6 +659,15 @@ if(HAS_CBC)
         message("   ${CBC_LIBRARIES}")
     endif()
 endif(HAS_CBC)
+
+# HiGHS linking
+if(HAS_HIGHS)
+    message("-- HiGHS include files will be used from: ${HIGHS_INCLUDE_DIRS}")
+    add_dependencies(SHOTDualStrategy highs::highs)
+    target_link_libraries(SHOTDualStrategy highs::highs)
+    add_dependencies(SHOTPrimalStrategy highs::highs)
+    target_link_libraries(SHOTPrimalStrategy highs::highs)
+endif(HAS_HIGHS)
 
 # Ipopt linking
 if(HAS_IPOPT)
@@ -612,6 +700,17 @@ file(
 # Creates the SHOT library that is linked to the executable
 add_library(SHOTSolver SHARED ${SOURCES})
 
+# Ensures class type checking works correctly between the executable and shared library
+# Without this, the program can crash when checking object types at runtime
+if(APPLE)
+    # macOS needs this to avoid duplicate type information that breaks type checking
+    # Linux handles this correctly by default
+    target_link_options(SHOTSolver PRIVATE "-Wl,-flat_namespace")
+elseif(UNIX)
+    # Linux already uses flat namespace, but explicitly export symbols for robustness
+    target_link_options(SHOTSolver PRIVATE "-Wl,--export-dynamic")
+endif()
+
 # Links the compiled libraries
 target_link_libraries(SHOTSolver SHOTHelper)
 target_link_libraries(SHOTSolver SHOTModel)
@@ -633,22 +732,36 @@ endif()
 
 target_link_libraries(SHOTSolver SHOTSolutionStrategies)
 
-# Link CppAD library (required for newer CppAD versions)
-target_link_libraries(SHOTSolver cppad_lib)
+# Link CppAD library
+target_link_libraries(SHOTSolver ${CPPAD_LIBRARY})
 
 # Link the standard library required for std::filesystem (if needed)
-target_link_libraries(SHOTSolver CXX::Filesystem)
+#target_link_libraries(SHOTSolver CXX::Filesystem)
 
 # Generates the SHOT executable
 if(GENERATE_EXE)
     add_executable(${PROJECT_NAME} "${PROJECT_SOURCE_DIR}/src/SHOT.cpp")
     target_link_libraries(${PROJECT_NAME} SHOTSolver)
 
+    # Set rpath for finding dynamic libraries on macOS
+    if(APPLE)
+        set(RPATH_DIRS "${CPPAD_LIB_DIR}")
+        
+        if(HAS_GUROBI AND GUROBI_FOUND)
+            list(APPEND RPATH_DIRS "${GUROBI_LIB_DIR}")
+        endif()
+        
+        set_target_properties(${PROJECT_NAME} PROPERTIES
+            BUILD_RPATH "${RPATH_DIRS}"
+            INSTALL_RPATH "${RPATH_DIRS}")
+    endif()
+
     # Extra linking necessary for GAMS
     if(HAS_GAMS)
         if(UNIX)
             if(APPLE)
-                target_link_libraries(${PROJECT_NAME} ${GAMS_DIR}/libstdc++.6.dylib)
+                # Don't link libstdc++ on macOS - Clang uses libc++ and mixing them causes ABI issues
+                # target_link_libraries(${PROJECT_NAME} ${GAMS_DIR}/libstdc++.6.dylib)
             else(APPLE)
                 target_link_libraries(${PROJECT_NAME} ${GAMS_DIR}/libstdc++.so.6)
             endif(APPLE)

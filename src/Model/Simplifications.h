@@ -796,7 +796,9 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionProdu
         }
         else if(C->getType() == E_NonlinearExpressionTypes::Product)
         {
-            for(auto& CC : std::dynamic_pointer_cast<ExpressionProduct>(C)->children)
+            auto productC = std::dynamic_pointer_cast<ExpressionProduct>(C);
+
+            for(auto& CC : productC->children)
             {
                 if(CC->getType() == E_NonlinearExpressionTypes::Constant)
                 {
@@ -820,8 +822,9 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionProdu
     if(unaddedChildren.size() == 1)
     {
         auto sum = std::make_shared<ExpressionSum>();
+        auto sumChild = std::dynamic_pointer_cast<ExpressionSum>(unaddedChildren[0]);
 
-        for(auto& T : std::dynamic_pointer_cast<ExpressionSum>(unaddedChildren[0])->children)
+        for(auto& T : sumChild->children)
         {
             auto newProduct = std::make_shared<ExpressionProduct>();
 
@@ -1932,6 +1935,9 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
     return std::make_tuple(
         newLinearTerms, newQuadraticTerms, newMonomialTerms, newSignomialTerms, nonlinearExpression, newConstant);
 }
+
+void checkAndConvertObjectivesAndConstraints(
+    ProblemPtr problem, bool extractMonomials, bool extractSignomials, bool extractQuadratics);
 
 void simplifyNonlinearExpressions(
     ProblemPtr problem, bool extractMonomials, bool extractSignomials, bool extractQuadratics);

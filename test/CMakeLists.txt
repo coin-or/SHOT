@@ -19,7 +19,8 @@ set(Model_parts
     9
     10
     11
-    12) # The different parts of each test (if any)
+    12
+    13) # The different parts of each test (if any)
 set(Settings_parts 1 2)
 
 if(HAS_CBC)
@@ -36,6 +37,12 @@ if(HAS_GUROBI)
   set(Gurobi_parts 1 2 3 4 5 6 7)
   set(cpptests ${cpptests} Gurobi)
 endif()
+
+if(HAS_HIGHS)
+  set(Highs_parts 1 2)
+  set(cpptests ${cpptests} Highs)
+endif()
+
 
 if(HAS_GAMS)
   set(GAMS_parts
@@ -93,6 +100,19 @@ add_executable(${TEST_EXE_NAME} ${srclist})
 target_link_libraries(${TEST_EXE_NAME} ${libs})
 
 target_link_libraries(${TEST_EXE_NAME} SHOTSolver)
+
+# Set rpath for finding dynamic libraries on macOS
+if(APPLE)
+    set(RPATH_DIRS "${CPPAD_LIB_DIR}")
+    
+    if(HAS_GUROBI AND GUROBI_FOUND)
+        list(APPEND RPATH_DIRS "${GUROBI_LIB_DIR}")
+    endif()
+    
+    set_target_properties(${TEST_EXE_NAME} PROPERTIES
+        BUILD_RPATH "${RPATH_DIRS}"
+        INSTALL_RPATH "${RPATH_DIRS}")
+endif()
 
 if(HAS_CPLEX)
   if(NOT
@@ -160,13 +180,18 @@ target_link_libraries(${TEST_EXE_NAME} m)
 target_link_libraries(${TEST_EXE_NAME} z)
 target_link_libraries(${TEST_EXE_NAME} lapack)
 target_link_libraries(${TEST_EXE_NAME} blas)
-target_link_libraries(${TEST_EXE_NAME} dl)
-target_link_libraries(${TEST_EXE_NAME} gomp)
+
+# Platform-specific libraries
+if(NOT APPLE)
+  target_link_libraries(${TEST_EXE_NAME} dl)
+  target_link_libraries(${TEST_EXE_NAME} gomp)
+endif()
 
 if(HAS_GAMS)
   if(UNIX)
     if(APPLE)
-      target_link_libraries(${TEST_EXE_NAME} ${GAMS_DIR}/libstdc++.6.dylib)
+      # Don't link libstdc++ on macOS - Clang uses libc++ and mixing them causes ABI issues
+      # target_link_libraries(${TEST_EXE_NAME} ${GAMS_DIR}/libstdc++.6.dylib)
     else(APPLE)
       target_link_libraries(${TEST_EXE_NAME} ${GAMS_DIR}/libstdc++.so.6)
     endif(APPLE)

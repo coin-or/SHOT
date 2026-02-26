@@ -13,18 +13,6 @@
 #include "NLPSolverBase.h"
 #include "../Tasks/TaskAddHyperplanes.h"
 
-#ifdef HAS_CPLEX
-#include "MIPSolver/MIPSolverCplex.h"
-#endif
-
-#ifdef HAS_GUROBI
-#include "MIPSolver/MIPSolverGurobi.h"
-#endif
-
-#ifdef HAS_CBC
-#include "MIPSolver/MIPSolverCbc.h"
-#endif
-
 #include "../Model/Problem.h"
 
 namespace SHOT

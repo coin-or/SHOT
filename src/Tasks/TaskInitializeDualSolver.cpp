@@ -32,6 +32,10 @@
 #include "../MIPSolver/MIPSolverCbc.h"
 #endif
 
+#ifdef HAS_HIGHS
+#include "../MIPSolver/MIPSolverHighs.h"
+#endif
+
 namespace SHOT
 {
 
@@ -84,6 +88,16 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool u
             solverSelected = true;
         }
 #endif
+
+#ifdef HAS_HIGHS
+        if(solver == ES_MIPSolver::Highs)
+        {
+            env->dualSolver->MIPSolver = MIPSolverPtr(std::make_shared<MIPSolverHighs>(env));
+            env->results->usedMIPSolver = ES_MIPSolver::Highs;
+            env->output->outputDebug(" Highs selected as MIP solver.");
+            solverSelected = true;
+        }
+#endif
     }
     else
     {
@@ -117,6 +131,16 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool u
             solverSelected = true;
         }
 #endif
+
+#ifdef HAS_HIGHS
+        if(solver == ES_MIPSolver::Highs)
+        {
+            env->dualSolver->MIPSolver = MIPSolverPtr(std::make_shared<MIPSolverHighs>(env));
+            env->results->usedMIPSolver = ES_MIPSolver::Highs;
+            env->output->outputDebug(" Highs selected as MIP solver.");
+            solverSelected = true;
+        }
+#endif
     }
 
     if(!solverSelected)
@@ -126,6 +150,10 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool u
 #ifdef HAS_CBC
         env->dualSolver->MIPSolver = MIPSolverPtr(std::make_shared<MIPSolverCbc>(env));
         env->results->usedMIPSolver = ES_MIPSolver::Cbc;
+        solverSelected = true;
+#elif HAS_HIGHS
+        env->dualSolver->MIPSolver = MIPSolverPtr(std::make_shared<MIPSolverHighs>(env));
+        env->results->usedMIPSolver = ES_MIPSolver::Highs;
         solverSelected = true;
 #elif HAS_GUROBI
         env->dualSolver->MIPSolver = MIPSolverPtr(std::make_shared<MIPSolverGurobi>(env));

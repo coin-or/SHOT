@@ -1260,18 +1260,15 @@ void MIPSolverCbc::setCutOffAsConstraint([[maybe_unused]] double cutOff)
 
 void MIPSolverCbc::addMIPStart(VectorDouble point)
 {
-    MIPStart.clear();
-
-    if((int)point.size() < env->reformulatedProblem->properties.numberOfVariables)
-        env->reformulatedProblem->augmentAuxiliaryVariableValues(point);
-
-    if(this->hasDualAuxiliaryObjectiveVariable())
-        point.push_back(env->reformulatedProblem->objectiveFunction->calculateValue(point));
-
+    assert(point.size() == env->dualSolver->MIPSolver->getNumberOfVariables());
     assert(variableNames.size() == point.size());
 
-    for(size_t i = 0; i < point.size(); i++)
+    MIPStart.clear();
+
+    for(size_t i = 0; i < variableNames.size(); i++)
+    {
         MIPStart.emplace_back(variableNames.at(i).c_str(), point.at(i));
+    }
 }
 
 void MIPSolverCbc::writeProblemToFile(std::string filename)

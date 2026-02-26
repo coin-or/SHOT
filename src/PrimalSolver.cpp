@@ -24,6 +24,10 @@ namespace SHOT
 
 void PrimalSolver::addPrimalSolutionCandidate(VectorDouble pt, E_PrimalSolutionSource source, int iter)
 {
+    // Only keep variables from the original problem (remove auxiliary variables from reformulated problem)
+    if((int)pt.size() > env->problem->properties.numberOfVariables)
+        pt.resize(env->problem->properties.numberOfVariables);
+
     PrimalSolution sol;
 
     sol.point = pt;
@@ -59,6 +63,10 @@ void PrimalSolver::addPrimalSolutionCandidates(std::vector<VectorDouble> pts, E_
 
 void PrimalSolver::addPrimalSolutionCandidate(SolutionPoint pt, E_PrimalSolutionSource source)
 {
+    // Only keep variables from the original problem (remove auxiliary variables from reformulated problem)
+    if((int)pt.point.size() > env->problem->properties.numberOfVariables)
+        pt.point.resize(env->problem->properties.numberOfVariables);
+
     PrimalSolution sol;
 
     sol.point = pt.point;

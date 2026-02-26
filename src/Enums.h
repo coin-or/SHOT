@@ -28,7 +28,8 @@ enum class E_AuxiliaryVariableType
     BinaryMonomial, // Fram linearizing a monomial term b1 * b2 * ... * bn, where bi are binary
     AbsoluteValue, // From rewriting an absolute value
     AntiEpigraph, // For rewriting an epigraph formulation as objective
-    EigenvalueDecomposition // From performing an eigenvalue decomposition on quadratic sums
+    EigenvalueDecomposition, // From performing an eigenvalue decomposition on quadratic sums
+    LDLDecomposition // From performing an LDL decomposition on quadratic sums
 };
 
 enum class E_Convexity
@@ -274,12 +275,6 @@ enum class ES_AddPrimalPointAsInteriorPoint
     OnlyAverage
 };
 
-enum class ES_EigenValueDecompositionFormulation
-{
-    CoefficientReformulated,
-    CoefficientRemains
-};
-
 enum class ES_HyperplaneCutStrategy
 {
     ESH,
@@ -335,6 +330,7 @@ enum class ES_MIPSolver
     Cplex,
     Gurobi,
     Cbc,
+    Highs,
     None
 };
 
@@ -415,6 +411,19 @@ enum class ES_QuadraticProblemStrategy
     QuadraticObjective,
     ConvexQuadraticallyConstrained,
     NonconvexQuadraticallyConstrained
+};
+
+enum class ES_QuadraticDecompositionFormulation
+{
+    CoefficientReformulated,
+    CoefficientRemains
+};
+
+enum class ES_QuadraticDecomposition
+{
+    None,
+    EigenValueDecomposition,
+    LDLDecomposition
 };
 
 enum class ES_QuadraticTermsExtractStrategy
