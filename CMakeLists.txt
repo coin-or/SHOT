@@ -683,6 +683,17 @@ file(
 # Creates the SHOT library that is linked to the executable
 add_library(SHOTSolver SHARED ${SOURCES})
 
+# Ensures class type checking works correctly between the executable and shared library
+# Without this, the program can crash when checking object types at runtime
+if(APPLE)
+    # macOS needs this to avoid duplicate type information that breaks type checking
+    # Linux handles this correctly by default
+    target_link_options(SHOTSolver PRIVATE "-Wl,-flat_namespace")
+elseif(UNIX)
+    # Linux already uses flat namespace, but explicitly export symbols for robustness
+    target_link_options(SHOTSolver PRIVATE "-Wl,--export-dynamic")
+endif()
+
 # Links the compiled libraries
 target_link_libraries(SHOTSolver SHOTHelper)
 target_link_libraries(SHOTSolver SHOTModel)
