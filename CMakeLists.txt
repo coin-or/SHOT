@@ -543,6 +543,14 @@ if(HAS_PYTHON)
         target_link_options(SHOTpy PRIVATE "LINKER:--no-as-needed")
         target_link_options(SHOTpy PRIVATE "LINKER:--export-dynamic")
     endif()
+    
+    # Copy the SHOTpy tutorial notebook to the same directory as the SHOTpy module
+    add_custom_command(TARGET SHOTpy POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy
+            ${CMAKE_SOURCE_DIR}/docs/SHOTpy_Tutorial.ipynb
+            $<TARGET_FILE_DIR:SHOTpy>/SHOTpy_Tutorial.ipynb
+        COMMENT "Copying SHOTpy tutorial notebook to module directory"
+    )
 endif(HAS_PYTHON)
 
 # Creates the primal strategy library
