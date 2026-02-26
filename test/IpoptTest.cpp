@@ -124,7 +124,11 @@ bool IpoptTest1()
 
     std::cout << "\nCalculating constraint gradient in point (2.0,3.0):\n";
 
-    gradient = problem->nonlinearConstraints.at(0)->calculateGradient(point, true);
+    std::cout << problem << std::endl;
+
+    // After finalization, the constraint may have been reclassified (e.g., from nonlinear to quadratic)
+    // Use numericConstraints instead which includes all constraint types
+    gradient = problem->numericConstraints.at(0)->calculateGradient(point, true);
 
     for(auto const& G : gradient)
     {
