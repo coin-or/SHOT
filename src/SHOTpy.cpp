@@ -181,8 +181,11 @@ PYBIND11_MODULE(SHOTpy, m)
     m.attr("HAS_CBC") = false;
 #endif
 
-    // HiGHS support will be added in a future version
+#ifdef HAS_HIGHS
+    m.attr("HAS_HIGHS") = true;
+#else
     m.attr("HAS_HIGHS") = false;
+#endif
 
     // Function to get list of supported MIP solvers - uses C++ API directly
     m.def("getSupportedMIPSolvers", &Solver::getSupportedMIPSolvers,

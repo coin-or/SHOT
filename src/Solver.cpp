@@ -2204,7 +2204,9 @@ std::vector<ES_MIPSolver> Solver::getSupportedMIPSolvers()
 #ifdef HAS_CBC
     solvers.push_back(ES_MIPSolver::Cbc);
 #endif
-    // HiGHS support will be added in a future version
+#ifdef HAS_HIGHS
+    solvers.push_back(ES_MIPSolver::Highs);
+#endif
     return solvers;
 }
 

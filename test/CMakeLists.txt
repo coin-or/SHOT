@@ -290,7 +290,7 @@ if(TARGET SHOTpy)
         set_tests_properties(Python_${pytest_file} PROPERTIES
           ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}"
           FAIL_REGULAR_EXPRESSION "FAILED;ERROR"
-          TIMEOUT 120
+          TIMEOUT 300
         )
       endforeach()
       

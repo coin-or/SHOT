@@ -258,7 +258,7 @@ def get_mip_solver_enum(solver_name):
         "cplex": SHOTpy.MIPSolver.Cplex,
         "gurobi": SHOTpy.MIPSolver.Gurobi,
         "cbc": SHOTpy.MIPSolver.Cbc,
-        # "highs": not yet in enum
+        "highs": SHOTpy.MIPSolver.Highs
     }
     return mapping.get(solver_name.lower())
 
@@ -384,7 +384,7 @@ def _get_nlp_solver_support(solver_name):
 
 
 # MIP solvers that are not yet implemented (will be marked as xfail)
-XFAIL_MIP_SOLVERS = {"highs": "HiGHS support not yet implemented"}
+XFAIL_MIP_SOLVERS = {}
 
 # NLP solvers that are not yet implemented or have issues (will be skipped to avoid segfault)
 # Note: GAMS NLP solver can only be used with GAMS format files - this is handled separately
