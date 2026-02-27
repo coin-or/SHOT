@@ -276,6 +276,7 @@ if(TARGET SHOTpy)
         test_optimization_problems
         test_modeling_systems
         test_gradients_hessians
+        test_callbacks
       )
       
       foreach(pytest_file ${PYTHON_TEST_FILES})

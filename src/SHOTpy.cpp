@@ -55,6 +55,7 @@ namespace {
 }
 
 #include "Solver.h"
+#include "CallbackData.h"
 
 #include "DualSolver.h"
 #include "PrimalSolver.h"
@@ -1367,7 +1368,105 @@ PYBIND11_MODULE(SHOTpy, m)
         .def("updateSetting", py::overload_cast<std::string, std::string, int>(&Solver::updateSetting))
         .def("updateSetting", py::overload_cast<std::string, std::string, std::string>(&Solver::updateSetting))
         .def("updateSetting", py::overload_cast<std::string, std::string, double>(&Solver::updateSetting))
-        .def("updateSetting", py::overload_cast<std::string, std::string, bool>(&Solver::updateSetting));
+        .def("updateSetting", py::overload_cast<std::string, std::string, bool>(&Solver::updateSetting))
+        .def(
+            "registerCallback",
+            [](Solver& self, E_EventType event, py::function callback) {
+                switch(event)
+                {
+                case E_EventType::NewPrimalSolution:
+                case E_EventType::PrimalSolutionCandidateSelection:
+                    self.registerCallback(event, [callback](std::any args) {
+                        py::gil_scoped_acquire gil;
+                        auto data = std::any_cast<PrimalSolutionCallbackData>(args);
+                        callback(data);
+                    });
+                    break;
+                case E_EventType::UserTerminationCheck:
+                    self.registerCallback(event, [callback](std::any args) -> bool {
+                        py::gil_scoped_acquire gil;
+                        auto data = std::any_cast<TerminationCallbackData>(args);
+                        py::object result = callback(data);
+                        if(result.is_none())
+                            return false;
+                        return result.cast<bool>();
+                    });
+                    break;
+                case E_EventType::ExternalDualBound:
+                    self.registerCallback(event, [callback](std::any args) -> double {
+                        py::gil_scoped_acquire gil;
+                        auto data = std::any_cast<DualBoundCallbackData>(args);
+                        py::object result = callback(data);
+                        if(result.is_none())
+                            return std::numeric_limits<double>::quiet_NaN();
+                        return result.cast<double>();
+                    });
+                    break;
+                case E_EventType::ExternalHyperplaneSelection:
+                    self.registerCallback(
+                        event, [callback](std::any args) -> std::vector<ExternalHyperplane> {
+                            py::gil_scoped_acquire gil;
+                            auto data
+                                = std::any_cast<ExternalHyperplaneSelectionCallbackData>(args);
+                            py::object result = callback(data);
+                            if(result.is_none())
+                                return {};
+                            return result.cast<std::vector<ExternalHyperplane>>();
+                        });
+                    break;
+                case E_EventType::ExternalPrimalSolution:
+                    self.registerCallback(event, [callback](std::any args) -> VectorDouble {
+                        py::gil_scoped_acquire gil;
+                        auto data = std::any_cast<ExternalPrimalSolutionCallbackData>(args);
+                        py::object result = callback(data);
+                        if(result.is_none())
+                            return {};
+                        return result.cast<VectorDouble>();
+                    });
+                    break;
+                default:
+                    throw std::invalid_argument("Unknown event type for registerCallback");
+                }
+            },
+            "Register a Python callback for an event type.\n\n"
+            "Callback signatures by event type:\n"
+            "  EventType.NewPrimalSolution: fn(PrimalSolutionCallbackData) -> None\n"
+            "  EventType.PrimalSolutionCandidateSelection: fn(PrimalSolutionCallbackData) -> None\n"
+            "  EventType.UserTerminationCheck: fn(TerminationCallbackData) -> bool\n"
+            "    Return True to stop, False to continue. Return None to continue.\n"
+            "  EventType.ExternalDualBound: fn(DualBoundCallbackData) -> float\n"
+            "    Return a new dual bound value, or None to skip.\n"
+            "  EventType.ExternalHyperplaneSelection: fn(ExternalHyperplaneSelectionCallbackData) -> list[ExternalHyperplane]\n"
+            "    Return a list of hyperplanes to add, or None/[] to add none.\n"
+            "  EventType.ExternalPrimalSolution: fn(ExternalPrimalSolutionCallbackData) -> list[float]\n"
+            "    Return a new primal solution point, or None/[] to skip.",
+            py::arg("event"), py::arg("callback"));
+
+    py::enum_<E_EventType>(m, "EventType")
+        .value("ExternalDualBound", E_EventType::ExternalDualBound)
+        .value("ExternalHyperplaneSelection", E_EventType::ExternalHyperplaneSelection)
+        .value("ExternalPrimalSolution", E_EventType::ExternalPrimalSolution)
+        .value("NewPrimalSolution", E_EventType::NewPrimalSolution)
+        .value("PrimalSolutionCandidateSelection", E_EventType::PrimalSolutionCandidateSelection)
+        .value("UserTerminationCheck", E_EventType::UserTerminationCheck);
+
+    py::enum_<E_HyperplaneSource>(m, "HyperplaneSource", py::arithmetic())
+        .value("None", E_HyperplaneSource::None)
+        .value("MIPOptimalRootsearch", E_HyperplaneSource::MIPOptimalRootsearch)
+        .value("MIPSolutionPoolRootsearch", E_HyperplaneSource::MIPSolutionPoolRootsearch)
+        .value("LPRelaxedRootsearch", E_HyperplaneSource::LPRelaxedRootsearch)
+        .value("MIPOptimalSolutionPoint", E_HyperplaneSource::MIPOptimalSolutionPoint)
+        .value("MIPSolutionPoolSolutionPoint", E_HyperplaneSource::MIPSolutionPoolSolutionPoint)
+        .value("LPRelaxedSolutionPoint", E_HyperplaneSource::LPRelaxedSolutionPoint)
+        .value("LPFixedIntegers", E_HyperplaneSource::LPFixedIntegers)
+        .value("PrimalSolutionSearch", E_HyperplaneSource::PrimalSolutionSearch)
+        .value("PrimalSolutionSearchInteriorObjective",
+            E_HyperplaneSource::PrimalSolutionSearchInteriorObjective)
+        .value("InteriorPointSearch", E_HyperplaneSource::InteriorPointSearch)
+        .value("MIPCallbackRelaxed", E_HyperplaneSource::MIPCallbackRelaxed)
+        .value("ObjectiveRootsearch", E_HyperplaneSource::ObjectiveRootsearch)
+        .value("ObjectiveCuttingPlane", E_HyperplaneSource::ObjectiveCuttingPlane)
+        .value("External", E_HyperplaneSource::External);
 
     py::enum_<E_PrimalSolutionSource>(m, "PrimalSolutionSource", py::arithmetic())
         .value("Rootsearch", E_PrimalSolutionSource::Rootsearch)
@@ -1484,5 +1583,89 @@ PYBIND11_MODULE(SHOTpy, m)
         .def_readwrite("hasReductionCutBeenAddedSincePrimalImprovement",
             &SolutionStatistics::hasReductionCutBeenAddedSincePrimalImprovement)
         .def("getNumberOfTotalDualProblems", &SolutionStatistics::getNumberOfTotalDualProblems);
+
+    // -------------------------------------------------------------------------
+    // Supporting types for callbacks
+    // -------------------------------------------------------------------------
+
+    py::class_<SolutionPoint>(m, "SolutionPoint")
+        .def(py::init<>())
+        .def_readwrite("point", &SolutionPoint::point)
+        .def_readwrite("objectiveValue", &SolutionPoint::objectiveValue)
+        .def_readwrite("iterFound", &SolutionPoint::iterFound)
+        .def_readwrite("maxDeviation", &SolutionPoint::maxDeviation)
+        .def_readwrite("isRelaxedPoint", &SolutionPoint::isRelaxedPoint)
+        .def_readwrite("hashValue", &SolutionPoint::hashValue);
+
+    // Hyperplane base must be registered before ExternalHyperplane
+    py::class_<Hyperplane>(m, "Hyperplane")
+        .def_readwrite("source", &Hyperplane::source)
+        .def_readwrite("isGlobal", &Hyperplane::isGlobal);
+
+    py::class_<ExternalHyperplane, Hyperplane>(m, "ExternalHyperplane")
+        .def(py::init<>())
+        .def_readwrite("variableIndexes", &ExternalHyperplane::variableIndexes)
+        .def_readwrite("variableCoefficients", &ExternalHyperplane::variableCoefficients)
+        .def_readwrite("description", &ExternalHyperplane::description)
+        .def_readwrite("rhsValue", &ExternalHyperplane::rhsValue);
+
+    // -------------------------------------------------------------------------
+    // Callback data structures (passed to Python callbacks as read-only data)
+    // -------------------------------------------------------------------------
+
+    py::class_<DualBoundCallbackData>(m, "DualBoundCallbackData")
+        .def_readonly("isMinimization", &DualBoundCallbackData::isMinimization)
+        .def_readonly("currentDualBound", &DualBoundCallbackData::currentDualBound)
+        .def_readonly("currentPrimalBound", &DualBoundCallbackData::currentPrimalBound)
+        .def_readonly("relativeGap", &DualBoundCallbackData::relativeGap)
+        .def_readonly("absoluteGap", &DualBoundCallbackData::absoluteGap)
+        .def_readonly("iterationNumber", &DualBoundCallbackData::iterationNumber)
+        .def_readonly("solutionStatistics", &DualBoundCallbackData::solutionStatistics);
+
+    py::class_<TerminationCallbackData>(m, "TerminationCallbackData")
+        .def_readonly("iterationNumber", &TerminationCallbackData::iterationNumber)
+        .def_readonly("currentDualBound", &TerminationCallbackData::currentDualBound)
+        .def_readonly("currentPrimalBound", &TerminationCallbackData::currentPrimalBound)
+        .def_readonly("relativeGap", &TerminationCallbackData::relativeGap)
+        .def_readonly("absoluteGap", &TerminationCallbackData::absoluteGap)
+        .def_readonly("timeElapsed", &TerminationCallbackData::timeElapsed)
+        .def_readonly("solutionStatistics", &TerminationCallbackData::solutionStatistics);
+
+    py::class_<PrimalSolutionCallbackData>(m, "PrimalSolutionCallbackData")
+        .def_readonly("isMinimization", &PrimalSolutionCallbackData::isMinimization)
+        .def_readonly("solution", &PrimalSolutionCallbackData::solution)
+        .def_readonly("objectiveValue", &PrimalSolutionCallbackData::objectiveValue)
+        .def_readonly("currentDualBound", &PrimalSolutionCallbackData::currentDualBound)
+        .def_readonly("relativeGap", &PrimalSolutionCallbackData::relativeGap)
+        .def_readonly("absoluteGap", &PrimalSolutionCallbackData::absoluteGap)
+        .def_readonly("iterationNumber", &PrimalSolutionCallbackData::iterationNumber)
+        .def_readonly("sourceType", &PrimalSolutionCallbackData::sourceType)
+        .def_readonly("solutionStatistics", &PrimalSolutionCallbackData::solutionStatistics);
+
+    py::class_<ExternalPrimalSolutionCallbackData>(m, "ExternalPrimalSolutionCallbackData")
+        .def_readonly("isMinimization", &ExternalPrimalSolutionCallbackData::isMinimization)
+        .def_readonly("currentDualBound", &ExternalPrimalSolutionCallbackData::currentDualBound)
+        .def_readonly("currentPrimalBound", &ExternalPrimalSolutionCallbackData::currentPrimalBound)
+        .def_readonly("relativeGap", &ExternalPrimalSolutionCallbackData::relativeGap)
+        .def_readonly("absoluteGap", &ExternalPrimalSolutionCallbackData::absoluteGap)
+        .def_readonly("iterationNumber", &ExternalPrimalSolutionCallbackData::iterationNumber)
+        .def_readonly("currentSolution", &ExternalPrimalSolutionCallbackData::currentSolution)
+        .def_readonly("solutionStatistics", &ExternalPrimalSolutionCallbackData::solutionStatistics);
+
+    py::class_<ExternalHyperplaneSelectionCallbackData>(m, "ExternalHyperplaneSelectionCallbackData")
+        .def_readonly("isMinimization", &ExternalHyperplaneSelectionCallbackData::isMinimization)
+        .def_readonly("iterationNumber", &ExternalHyperplaneSelectionCallbackData::iterationNumber)
+        .def_readonly("currentDualBound", &ExternalHyperplaneSelectionCallbackData::currentDualBound)
+        .def_readonly("currentPrimalBound", &ExternalHyperplaneSelectionCallbackData::currentPrimalBound)
+        .def_readonly("relativeGap", &ExternalHyperplaneSelectionCallbackData::relativeGap)
+        .def_readonly("absoluteGap", &ExternalHyperplaneSelectionCallbackData::absoluteGap)
+        .def_readonly("solutionPoints", &ExternalHyperplaneSelectionCallbackData::solutionPoints)
+        .def_readonly("originalProblem", &ExternalHyperplaneSelectionCallbackData::originalProblem)
+        .def_readonly(
+            "reformulatedProblem", &ExternalHyperplaneSelectionCallbackData::reformulatedProblem)
+        .def_readonly(
+            "isObjectiveNonlinear", &ExternalHyperplaneSelectionCallbackData::isObjectiveNonlinear)
+        .def_readonly(
+            "solutionStatistics", &ExternalHyperplaneSelectionCallbackData::solutionStatistics);
 }
 }
