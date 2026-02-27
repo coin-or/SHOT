@@ -11,3 +11,7 @@
 [submodule "ThirdParty/HiGHS"]
 	path = ThirdParty/HiGHS
 	url = https://github.com/ERGO-Code/HiGHS
+[submodule "ThirdParty/eigen"]
+	path = ThirdParty/eigen
+	url = https://gitlab.com/libeigen/eigen
+	shallow = true
