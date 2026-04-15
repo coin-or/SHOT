@@ -18,7 +18,6 @@
 
 #include "../Model/NonlinearExpressions.h"
 #include "../Model/Problem.h"
-#include "../Model/Simplifications.h"
 #include "../Model/Variables.h"
 
 #include "mp/nl.h"
@@ -718,15 +717,6 @@ E_ProblemCreationStatus ModelingSystemAMPL::createProblem(ProblemPtr& problem, c
         for(size_t i = 0; i < problem->numericConstraints.size(); i++)
             problem->numericConstraints[i]->name = constraintNames[i];
     }
-
-    problem->updateProperties();
-
-    bool extractMonomialTerms = env->settings->getSetting<bool>("Reformulation.Monomials.Extract", "Model");
-    bool extractSignomialTerms = env->settings->getSetting<bool>("Reformulation.Signomials.Extract", "Model");
-    bool extractQuadraticTerms = (env->settings->getSetting<int>("Reformulation.Quadratics.ExtractStrategy", "Model")
-        >= static_cast<int>(ES_QuadraticTermsExtractStrategy::ExtractTermsToSame));
-
-    simplifyNonlinearExpressions(problem, extractMonomialTerms, extractSignomialTerms, extractQuadraticTerms);
 
     problem->finalize();
 

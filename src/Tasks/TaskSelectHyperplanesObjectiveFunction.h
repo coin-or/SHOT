@@ -13,19 +13,18 @@
 
 #include "../Structs.h"
 
+#include <vector>
+
 namespace SHOT
 {
-class TaskSelectHyperplanePointsECP : public TaskBase
+class TaskSelectHyperplanesObjectiveFunction : public TaskBase
 {
 public:
-    TaskSelectHyperplanePointsECP(EnvironmentPtr envPtr);
-    ~TaskSelectHyperplanePointsECP() override;
+    TaskSelectHyperplanesObjectiveFunction(EnvironmentPtr envPtr);
+    ~TaskSelectHyperplanesObjectiveFunction() override;
 
     void run() override;
     virtual void run(std::vector<SolutionPoint> solPoints);
-
     std::string getType() override;
-
-private:
 };
 } // namespace SHOT

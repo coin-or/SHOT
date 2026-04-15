@@ -9,12 +9,9 @@
 */
 
 #include "Environment.h"
-#include "Solver.h"
-#include "Report.h"
-#include "Utilities.h"
 #include "Output.h"
-#include "Settings.h"
-#include "Problem.h"
+#include "Solver.h"
+#include "Utilities.h"
 
 #include "argh.h"
 
@@ -67,7 +64,7 @@ int main(int argc, char* argv[])
 
     if(cmdl["--help"])
     {
-        env->report->outputSolverHeader();
+        solver.outputSolverHeader();
         headerPrinted = true;
 
 #ifdef SIMPLE_OUTPUT_CHARS
@@ -164,7 +161,7 @@ int main(int argc, char* argv[])
     {
         if(!headerPrinted)
         {
-            env->report->outputSolverHeader();
+            solver.outputSolverHeader();
             headerPrinted = true;
         }
 
@@ -178,7 +175,7 @@ int main(int argc, char* argv[])
 
         env->output->outputInfo("");
 
-        std::string markup = env->settings->getSettingsAsMarkup();
+        std::string markup = solver.getSettingsAsMarkup();
 
         auto filepath = fs::filesystem::current_path() / fs::filesystem::path("options.md");
         if(!Utilities::writeStringToFile(filepath.string(), markup))
@@ -206,7 +203,7 @@ int main(int argc, char* argv[])
         {
             if(!headerPrinted)
             {
-                env->report->outputSolverHeader();
+                solver.outputSolverHeader();
                 headerPrinted = true;
             }
 
@@ -241,7 +238,7 @@ int main(int argc, char* argv[])
             {
                 if(!headerPrinted)
                 {
-                    env->report->outputSolverHeader();
+                    solver.outputSolverHeader();
                     headerPrinted = true;
                 }
 
@@ -278,7 +275,7 @@ int main(int argc, char* argv[])
         {
             if(!headerPrinted)
             {
-                env->report->outputSolverHeader();
+                solver.outputSolverHeader();
                 headerPrinted = true;
             }
 
@@ -313,7 +310,7 @@ int main(int argc, char* argv[])
             {
                 if(!headerPrinted)
                 {
-                    env->report->outputSolverHeader();
+                    solver.outputSolverHeader();
                     headerPrinted = true;
                 }
 
@@ -344,7 +341,7 @@ int main(int argc, char* argv[])
         {
             if(!headerPrinted)
             {
-                env->report->outputSolverHeader();
+                solver.outputSolverHeader();
                 headerPrinted = true;
             }
 
@@ -603,12 +600,11 @@ int main(int argc, char* argv[])
     }
 
     // Need to set the log levels after we have read the options from file and console
-    env->output->setLogLevels(static_cast<E_LogLevel>(env->settings->getSetting<int>("Console.LogLevel", "Output")),
-        static_cast<E_LogLevel>(env->settings->getSetting<int>("File.LogLevel", "Output")));
+    solver.updateLogLevels();
 
     if(!headerPrinted)
     {
-        env->report->outputSolverHeader();
+        solver.outputSolverHeader();
         headerPrinted = true;
     }
 
@@ -656,7 +652,7 @@ int main(int argc, char* argv[])
     }
 
     // Check if we want to use the ASL calling format
-    if(useASL && !((ES_SourceFormat)env->settings->getSetting<int>("SourceFormat", "Input") == ES_SourceFormat::NL))
+    if(useASL && !((ES_ModelingSystem)solver.getSetting<int>("ModelingSystem", "Input") == ES_ModelingSystem::AMPL))
     {
         env->output->outputCritical(" Error: Can only use parameter AMPL if the problem is a AMPL (.nl) file.");
         return (0);
@@ -668,7 +664,7 @@ int main(int argc, char* argv[])
     if(cmdl("--osrl")) // Have specified a OSrL-file location
     {
         osrlFilename = cmdl("--osrl").str();
-        resultFile = fs::filesystem::path(env->settings->getSetting<std::string>("ResultPath", "Output"))
+        resultFile = fs::filesystem::path(solver.getSetting<std::string>("ResultPath", "Output"))
             / fs::filesystem::path(osrlFilename);
     }
 
@@ -676,7 +672,7 @@ int main(int argc, char* argv[])
     if(cmdl("--trc")) // Have specified a trace-file location
     {
         trcFilename = cmdl("--trc").str();
-        traceFile = fs::filesystem::path(env->settings->getSetting<std::string>("ResultPath", "Output"))
+        traceFile = fs::filesystem::path(solver.getSetting<std::string>("ResultPath", "Output"))
             / fs::filesystem::path(trcFilename);
     }
 
@@ -684,27 +680,26 @@ int main(int argc, char* argv[])
     if(cmdl("--sol")) // Have specified an sol-file location
     {
         solFilename = cmdl("--sol").str();
-        solFile = fs::filesystem::path(env->settings->getSetting<std::string>("ResultPath", "Output"))
+        solFile = fs::filesystem::path(solver.getSetting<std::string>("ResultPath", "Output"))
             / fs::filesystem::path(solFilename);
     }
 
     std::string gdxFilename;
-    if(gdxFilename = env->settings->getSetting<std::string>("GAMS.AlternateSolutionsFile", "Output");
+    if(gdxFilename = solver.getSetting<std::string>("GAMS.AlternateSolutionsFile", "Output");
         gdxFilename != "") // Have specified an gdx-file location
     {
         gdxFile = fs::filesystem::absolute(gdxFilename).string();
     }
 
-    env->report->outputProblemInstanceReport();
-    env->report->outputOptionsReport();
+    solver.outputProblemInstanceReport();
+    solver.outputOptionsReport();
 
     if(!solver.solveProblem()) // Solve the problem
     {
         return (0);
     }
 
-    solver.finalizeSolution();
-    env->report->outputSolutionReport();
+    solver.outputSolutionReport();
 
 #ifdef SIMPLE_OUTPUT_CHARS
     env->output->outputInfo("-----------------------------------------------------------------------------------"
@@ -720,8 +715,8 @@ int main(int argc, char* argv[])
 
     if(resultFile.empty())
     {
-        fs::filesystem::path resultPath(env->settings->getSetting<std::string>("ResultPath", "Output"));
-        resultPath /= env->settings->getSetting<std::string>("ProblemName", "Input");
+        fs::filesystem::path resultPath(solver.getSetting<std::string>("ResultPath", "Output"));
+        resultPath /= solver.getSetting<std::string>("ProblemName", "Input");
         resultPath = resultPath.replace_extension(".osrl");
 
         if(!Utilities::writeStringToFile(resultPath.string(), osrl))
@@ -746,8 +741,8 @@ int main(int argc, char* argv[])
 
         if(traceFile.empty())
         {
-            fs::filesystem::path tracePath(env->settings->getSetting<std::string>("ResultPath", "Output"));
-            tracePath /= env->settings->getSetting<std::string>("ProblemName", "Input");
+            fs::filesystem::path tracePath(solver.getSetting<std::string>("ResultPath", "Output"));
+            tracePath /= solver.getSetting<std::string>("ProblemName", "Input");
             tracePath = tracePath.replace_extension(".trc");
 
             if(!Utilities::writeStringToFile(tracePath.string(), trace))
@@ -789,9 +784,9 @@ int main(int argc, char* argv[])
 
     env->output->outputInfo(" Log written to:     " + logFile.string());
 
-    if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+    if(solver.getSetting<bool>("Debug.Enable", "Output"))
     {
-        auto debugDirectory = fs::filesystem::path(env->settings->getSetting<std::string>("Debug.Path", "Output"));
+        auto debugDirectory = fs::filesystem::path(solver.getSetting<std::string>("Debug.Path", "Output"));
         env->output->outputInfo(" Debug directory:    " + debugDirectory.string());
     }
 

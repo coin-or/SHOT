@@ -46,7 +46,7 @@ HighsCallbackFunctionType highsCallback
               return;
           }
 
-          // Set user_interrupt to false by default for all MIP callbacks
+          // Set user_interrupt to false by default for all MIP callba'cks
           data_in->user_interrupt = false;
 
           auto MIPSolver = std::dynamic_pointer_cast<MIPSolverHighs>(env->dualSolver->MIPSolver);
@@ -402,6 +402,8 @@ void MIPSolverHighs::initializeSolverSettings()
     }
 
     highsInstance.setOptionValue("highs_debug_level", env->settings->getSetting<int>("Highs.DebugLevel", "Subsolver"));
+    highsInstance.setOptionValue("log_to_console",
+        false); // Prevent HiGHS from writing directly to stdout; logging is handled through the callback instead
 
     // highsInstance.setOptionValue("simplex_strategy", 0);
     // highsInstance.setOptionValue("solver", "choose");
@@ -409,7 +411,6 @@ void MIPSolverHighs::initializeSolverSettings()
     // highsInstance.setOptionValue("dual_feasibility_tolerance", 1e-6);
 
     // highsInstance.setOptionValue("mip_report_level", 2);
-    // highsInstance.setOptionValue("output_flag", true);
 
     highsCallbackData.env = env;
 

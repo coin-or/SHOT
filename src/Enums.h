@@ -47,13 +47,18 @@ enum class E_DualSolutionSource
     LPSolution,
     MIPSolutionOptimal,
     ObjectiveConstraint,
-    MIPSolverBound
+    MIPSolverBound,
+    ConvexBounding
 };
 
 enum class E_EventType
 {
+    ExternalDualBound,
+    ExternalHyperplaneSelection,
+    ExternalPrimalSolution,
     NewPrimalSolution,
-    UserTerminationCheck
+    PrimalSolutionCandidateSelection,
+    UserTerminationCheck,
 };
 
 enum class E_HyperplaneSource
@@ -71,7 +76,8 @@ enum class E_HyperplaneSource
     InteriorPointSearch,
     MIPCallbackRelaxed,
     ObjectiveRootsearch,
-    ObjectiveCuttingPlane
+    ObjectiveCuttingPlane,
+    External
 };
 
 enum class E_IntegerCutSource
@@ -153,7 +159,9 @@ enum class E_PrimalSolutionSource
     MIPSolutionPool,
     LPFixedIntegers,
     MIPCallback,
-    InteriorPointSearch
+    InteriorPointSearch,
+    ConvexBounding,
+    ExternalPrimalSolution
 };
 
 enum class E_ProblemConvexity
@@ -276,7 +284,8 @@ enum class ES_AddPrimalPointAsInteriorPoint
 enum class ES_HyperplaneCutStrategy
 {
     ESH,
-    ECP
+    ECP,
+    OnlyExternal
 };
 
 enum class ES_IpoptSolver
@@ -294,6 +303,14 @@ enum class ES_IterationOutputDetail
     Full,
     ObjectiveGapUpdates,
     ObjectiveGapUpdatesAndNLPCalls
+};
+
+enum class ES_ModelingSystem
+{
+    OSiL,
+    GAMS,
+    AMPL,
+    None
 };
 
 enum class ES_ObjectiveRootsearch
@@ -425,14 +442,6 @@ enum class ES_QuadraticTermsExtractStrategy
                                             // expression
     ExtractToEqualityConstraintAlways // Extract terms at all levels (at reformulation step) to a new equality
                                       // expression
-};
-
-enum class ES_SourceFormat
-{
-    OSiL,
-    GAMS,
-    NL,
-    None
 };
 
 enum class ES_TreeStrategy

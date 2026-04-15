@@ -31,7 +31,7 @@ private:
     int lastOpenNodes = 0;
     bool showOutput = false;
 
-    bool createHyperplane(Hyperplane hyperplane);
+    bool createHyperplane(HyperplanePtr hyperplane);
 
     virtual bool createIntegerCut(IntegerCut& integerCut);
 

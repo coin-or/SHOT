@@ -11,12 +11,10 @@
 #pragma once
 #include "TaskBase.h"
 
-#include "../MIPSolver/IMIPSolver.h"
-#include "../Model/Problem.h"
+#include "TaskCreateMIPProblem.h"
 
 namespace SHOT
 {
-
 class TaskCreateDualProblem : public TaskBase
 {
 public:
@@ -27,6 +25,6 @@ public:
     std::string getType() override;
 
 private:
-    bool createProblem(MIPSolverPtr destinationProblem, ProblemPtr sourceProblem);
+    std::shared_ptr<TaskCreateMIPProblem> taskCreateMIPProblem;
 };
 } // namespace SHOT

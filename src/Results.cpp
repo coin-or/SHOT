@@ -10,9 +10,11 @@
 
 #include "Results.h"
 
+#include <any>
 #include <algorithm>
 #include <limits>
 
+#include "CallbackData.h"
 #include "EventHandler.h"
 #include "Iteration.h"
 #include "Output.h"
@@ -197,7 +199,21 @@ void Results::addPrimalSolution(PrimalSolution solution)
         env->output->outputCritical("        Primal objective cut added.");
     }*/
 
-    env->events->notify(E_EventType::NewPrimalSolution);
+    // Only create callback data and notify if there are registered data provider callbacks
+    if(env->events->hasNotificationCallbacks(E_EventType::NewPrimalSolution))
+    {
+        // Create structured callback data for the new primal solution
+        bool isMinimization = (env->reformulatedProblem->objectiveFunction->properties.isMinimize);
+        double currentDualBound = getCurrentDualBound();
+        double relativeGap = getRelativeCurrentObjectiveGap();
+        double absoluteGap = getAbsoluteCurrentObjectiveGap();
+        int iterationNumber = env->results->getNumberOfIterations();
+
+        PrimalSolutionCallbackData callbackData(isMinimization, solution.point, solution.objValue, currentDualBound,
+            relativeGap, absoluteGap, iterationNumber, solution.sourceType, env->solutionStatistics);
+
+        env->events->notify(E_EventType::NewPrimalSolution, callbackData);
+    }
 }
 
 bool Results::isRelativeObjectiveGapToleranceMet()
@@ -1423,7 +1439,11 @@ std::string Results::getResultsSol()
     return (ss.str());
 }
 
-void Results::createIteration() { iterations.push_back(std::make_shared<Iteration>(env)); }
+void Results::createIteration()
+{
+    iterations.push_back(std::make_shared<Iteration>(env));
+    env->solutionStatistics.numberOfIterations++;
+}
 
 IterationPtr Results::getCurrentIteration() { return (iterations.back()); }
 
@@ -1512,7 +1532,7 @@ double Results::getCurrentDualBound() { return (this->currentDualBound); }
 
 double Results::getGlobalDualBound() { return (globalDualBound); }
 
-void Results::setDualBound(double value)
+void Results::setDualBound(double value, bool forceGlobal)
 {
     double primalBound = this->getPrimalBound();
 
@@ -1529,8 +1549,11 @@ void Results::setDualBound(double value)
 
     this->currentDualBound = value;
 
-    if(this->solutionIsGlobal)
+    if(this->solutionIsGlobal || forceGlobal)
+    {
         this->globalDualBound = value;
+        this->solutionIsGlobal = true;
+    }
 
     env->solutionStatistics.numberOfIterationsWithDualStagnation = 0;
 

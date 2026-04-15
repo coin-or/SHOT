@@ -15,7 +15,7 @@
 #include "../Timing.h"
 #include "../Utilities.h"
 
-#include "../Model/Simplifications.h"
+#include "../Model/Problem.h"
 
 #include "tinyxml2.h"
 
@@ -594,15 +594,6 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
         env->timing->stopTimer("ProblemInitialization");
         return (E_ProblemCreationStatus::ErrorInConstraints);
     }
-
-    problem->updateProperties();
-
-    bool extractMonomialTerms = env->settings->getSetting<bool>("Reformulation.Monomials.Extract", "Model");
-    bool extractSignomialTerms = env->settings->getSetting<bool>("Reformulation.Signomials.Extract", "Model");
-    bool extractQuadraticTerms = (env->settings->getSetting<int>("Reformulation.Quadratics.ExtractStrategy", "Model")
-        >= static_cast<int>(ES_QuadraticTermsExtractStrategy::ExtractTermsToSame));
-
-    simplifyNonlinearExpressions(problem, extractMonomialTerms, extractSignomialTerms, extractQuadraticTerms);
 
     problem->finalize();
 

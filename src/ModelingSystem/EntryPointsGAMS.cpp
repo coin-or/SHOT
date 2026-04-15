@@ -100,7 +100,7 @@ extern "C"
     DllExport int STDCALL shtCreate(void** Cptr, char* msgBuf, int msgBufLen);
     DllExport int STDCALL shtCreate(void** Cptr, char* msgBuf, int msgBufLen)
     {
-       return 1-shtcreate(Cptr, msgBuf, msgBufLen);
+        return 1 - shtcreate(Cptr, msgBuf, msgBufLen);
     }
 
     // old API
@@ -120,10 +120,7 @@ extern "C"
 
     // new API
     DllExport void STDCALL shtFree(void** Cptr);
-    DllExport void STDCALL shtFree(void** Cptr)
-    {
-       shtfree(Cptr);
-    }
+    DllExport void STDCALL shtFree(void** Cptr) { shtfree(Cptr); }
 
     // old+new API (old API ignores additional optHandle_t)
     DllExport int STDCALL shtReadyAPI(void* Cptr, gmoHandle_t Gptr);
@@ -190,21 +187,23 @@ extern "C"
                 return 0;
             }
 
-            env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::GAMS));
+            env->settings->updateSetting("ModelingSystem", "Input", static_cast<int>(ES_ModelingSystem::GAMS));
             env->timing->stopTimer("ProblemInitialization");
 
             solver.registerCallback(
-                E_EventType::UserTerminationCheck, [&env, gev = (gevHandle_t)gmoEnvironment(gs->gmo)] {
+                E_EventType::UserTerminationCheck, [gev = (gevHandle_t)gmoEnvironment(gs->gmo)](std::any args) -> bool {
                     if(gevTerminateGet(gev))
-                        env->tasks->terminate();
+                        return (true);
+
+                    return (false);
                 });
 
-            if( !solver.setProblem(problem, modelingSystem) )
+            if(!solver.setProblem(problem, modelingSystem))
             {
-               env->output->outputError(" Error when initializing problem.");
-               gmoSolveStatSet(gs->gmo, gmoSolveStat_SetupErr);
-               gmoModelStatSet(gs->gmo, gmoModelStat_ErrorNoSolution);
-               return 0;
+                env->output->outputError(" Error when initializing problem.");
+                gmoSolveStatSet(gs->gmo, gmoSolveStat_SetupErr);
+                gmoModelStatSet(gs->gmo, gmoModelStat_ErrorNoSolution);
+                return 0;
             }
 
             env->report->outputProblemInstanceReport();

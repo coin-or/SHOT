@@ -24,8 +24,8 @@
 #include "../Model/Problem.h"
 #include "../NLPSolver/INLPSolver.h"
 
-#include "../Tasks/TaskSelectHyperplanePointsESH.h"
-#include "../Tasks/TaskSelectHyperplanePointsECP.h"
+#include "../Tasks/TaskSelectHyperplanesESH.h"
+#include "../Tasks/TaskSelectHyperplanesECP.h"
 
 #ifdef HAS_IPOPT
 #include "../NLPSolver/NLPSolverIpoptRelaxed.h"
@@ -532,19 +532,21 @@ void TaskSelectPrimalCandidatesFromNLP::createInfeasibilityCut(const VectorDoubl
     {
         if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
             == ES_HyperplaneCutStrategy::ESH)
-            taskSelectHPPts = std::make_shared<TaskSelectHyperplanePointsESH>(env);
-        else
-            taskSelectHPPts = std::make_shared<TaskSelectHyperplanePointsECP>(env);
+            taskSelectHPPts = std::make_shared<TaskSelectHyperplanesESH>(env);
+        else if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
+            == ES_HyperplaneCutStrategy::ECP)
+            taskSelectHPPts = std::make_shared<TaskSelectHyperplanesECP>(env);
     }
 
     if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
         == ES_HyperplaneCutStrategy::ESH)
     {
-        std::dynamic_pointer_cast<TaskSelectHyperplanePointsESH>(taskSelectHPPts)->run(solutionPoints);
+        std::dynamic_pointer_cast<TaskSelectHyperplanesESH>(taskSelectHPPts)->run(solutionPoints);
     }
-    else
+    else if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
+        == ES_HyperplaneCutStrategy::ECP)
     {
-        std::dynamic_pointer_cast<TaskSelectHyperplanePointsECP>(taskSelectHPPts)->run(solutionPoints);
+        std::dynamic_pointer_cast<TaskSelectHyperplanesECP>(taskSelectHPPts)->run(solutionPoints);
     }
 }
 

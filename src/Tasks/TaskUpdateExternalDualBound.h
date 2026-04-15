@@ -11,20 +11,19 @@
 #pragma once
 #include "TaskBase.h"
 
-#include "../Structs.h"
-
-#include <vector>
-
 namespace SHOT
 {
-class TaskSelectHyperplanePointsObjectiveFunction : public TaskBase
+class TaskUpdateExternalDualBound : public TaskBase
 {
+
 public:
-    TaskSelectHyperplanePointsObjectiveFunction(EnvironmentPtr envPtr);
-    ~TaskSelectHyperplanePointsObjectiveFunction() override;
+    TaskUpdateExternalDualBound(EnvironmentPtr envPtr);
+    ~TaskUpdateExternalDualBound() override;
 
     void run() override;
-    virtual void run(std::vector<SolutionPoint> solPoints);
+
     std::string getType() override;
+
+private:
 };
 } // namespace SHOT

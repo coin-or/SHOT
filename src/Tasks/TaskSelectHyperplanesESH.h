@@ -15,13 +15,13 @@ namespace SHOT
 {
 
 class Constraint;
-class TaskSelectHyperplanePointsECP;
+class TaskSelectHyperplanesECP;
 
-class TaskSelectHyperplanePointsESH : public TaskBase
+class TaskSelectHyperplanesESH : public TaskBase
 {
 public:
-    TaskSelectHyperplanePointsESH(EnvironmentPtr envPtr);
-    ~TaskSelectHyperplanePointsESH() override;
+    TaskSelectHyperplanesESH(EnvironmentPtr envPtr);
+    ~TaskSelectHyperplanesESH() override;
 
     void run() override;
     virtual void run(std::vector<SolutionPoint> solPoints);
@@ -29,7 +29,7 @@ public:
     std::string getType() override;
 
 private:
-    std::unique_ptr<TaskSelectHyperplanePointsECP> tSelectHPPts;
+    std::unique_ptr<TaskSelectHyperplanesECP> tSelectHPPts;
     std::vector<Constraint*> nonlinearConstraints;
 };
 } // namespace SHOT

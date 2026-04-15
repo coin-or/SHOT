@@ -373,9 +373,19 @@ void Report::outputOptionsReport()
     {
         cutAlgorithm = "ESH";
     }
-    else
+    else if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
+        == ES_HyperplaneCutStrategy::ECP)
     {
         cutAlgorithm = "ECP";
+    }
+    else if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
+        == ES_HyperplaneCutStrategy::OnlyExternal)
+    {
+        cutAlgorithm = "Only external cuts";
+    }
+    else
+    {
+        cutAlgorithm = "Unknown";
     }
 
     auto solver = static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual"));
@@ -441,7 +451,7 @@ void Report::outputOptionsReport()
             " Debug directory:            {}", env->settings->getSetting<std::string>("Debug.Path", "Output")));
 }
 
-void Report::outputModelingSystemReport(ES_SourceFormat source, std::string filename)
+void Report::outputModelingSystemReport(ES_ModelingSystem system, std::string filename)
 {
 #ifdef SIMPLE_OUTPUT_CHARS
     env->output->outputInfo(
@@ -455,16 +465,19 @@ void Report::outputModelingSystemReport(ES_SourceFormat source, std::string file
 
     env->output->outputInfo("");
 
-    switch(source)
+    switch(system)
     {
-    case(ES_SourceFormat::GAMS):
+    case(ES_ModelingSystem::GAMS):
         env->output->outputInfo(" Modeling system:            GAMS");
         break;
-    case(ES_SourceFormat::OSiL):
+    case(ES_ModelingSystem::OSiL):
         env->output->outputInfo(" Modeling system:            OSiL");
         break;
-    case(ES_SourceFormat::NL):
+    case(ES_ModelingSystem::AMPL):
         env->output->outputInfo(" Modeling system:            AMPL");
+        break;
+    case(ES_ModelingSystem::None):
+        env->output->outputInfo(" Modeling system:            SHOT API");
         break;
 
     default:

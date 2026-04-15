@@ -18,7 +18,7 @@
 #include "../Utilities.h"
 #include "../Enums.h"
 
-#include "../Model/Simplifications.h"
+#include "../Model/Problem.h"
 
 #include "GamsNLinstr.h"
 #ifdef GAMS_BUILD
@@ -259,13 +259,13 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(
         {
             createModelFromProblemFile(filename);
 
-            env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::GAMS));
+            env->settings->updateSetting("ModelingSystem", "Input", static_cast<int>(ES_ModelingSystem::GAMS));
         }
         else if(inputSource == E_GAMSInputSource::GAMSModel)
         {
             createModelFromGAMSModel(filename);
 
-            env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::GAMS));
+            env->settings->updateSetting("ModelingSystem", "Input", static_cast<int>(ES_ModelingSystem::GAMS));
         }
     }
     catch(const std::exception& e)
@@ -302,7 +302,7 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem)
 #endif
     gmoUseQSet(modelingObject, 1);
 #if GMOAPIVERSION >= 25
-    char msg[2*GMS_SSSIZE];
+    char msg[2 * GMS_SSSIZE];
     double qtime;
     INT64 qwin_3pass;
     INT64 qwin_dblfwd;
@@ -379,16 +379,6 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem)
             env->timing->stopTimer("ProblemInitialization");
             return (E_ProblemCreationStatus::ErrorInConstraints);
         }
-
-        problem->updateProperties();
-
-        bool extractMonomialTerms = env->settings->getSetting<bool>("Reformulation.Monomials.Extract", "Model");
-        bool extractSignomialTerms = env->settings->getSetting<bool>("Reformulation.Signomials.Extract", "Model");
-        bool extractQuadraticTerms
-            = (env->settings->getSetting<int>("Reformulation.Quadratics.ExtractStrategy", "Model")
-                >= static_cast<int>(ES_QuadraticTermsExtractStrategy::ExtractTermsToSame));
-
-        simplifyNonlinearExpressions(problem, extractMonomialTerms, extractSignomialTerms, extractQuadraticTerms);
 
         problem->finalize();
     }
@@ -2117,7 +2107,8 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
                 char buffer[256];
                 snprintf(buffer, sizeof(buffer), "Error: Unsupported GAMS function %s.\n", GamsFuncCodeName[address + 1]);
                 gevLogStatPChar(modelingEnvironment, buffer);
-                throw OperationNotImplementedException(fmt::format("Error: Unsupported GAMS function {}", GamsFuncCodeName[address + 1]));
+                throw OperationNotImplementedException(
+                    fmt::format("Error: Unsupported GAMS function {}", GamsFuncCodeName[address + 1]));
             }
             default:
             {

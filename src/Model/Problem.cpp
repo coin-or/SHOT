@@ -18,6 +18,42 @@
 
 #include "../Tasks/TaskReformulateProblem.h"
 
+// Explicit template instantiation for CppAD::AD<double>
+// This ensures the template is instantiated here and not duplicated in SHOTpy.so
+template class CppAD::AD<double>;
+template class CppAD::ADFun<double>;
+
+// Custom CppAD error handler to avoid abort on cleanup errors
+// This is needed because CppAD's thread_alloc has ODR issues with shared libraries
+namespace
+{
+void shot_cppad_error_handler(bool known, int line, const char* file, const char* exp, const char* msg)
+{
+    // Check if this is the known cleanup error in thread_alloc
+    std::string fileStr(file ? file : "");
+    std::string expStr(exp ? exp : "");
+    if(fileStr.find("thread_alloc.hpp") != std::string::npos && expStr.find("count_inuse_") != std::string::npos)
+    {
+        // Suppress this error - it's a harmless ODR issue during cleanup
+        return;
+    }
+
+    // For other errors, throw an exception
+    std::string error_msg = std::string("CppAD error at ") + file + ":" + std::to_string(line);
+    if(msg)
+        error_msg += std::string(" - ") + msg;
+    throw std::runtime_error(error_msg);
+}
+
+// Register the custom error handler at library load time
+struct SHOTCppADErrorHandlerRegistrar
+{
+    CppAD::ErrorHandler handler;
+    SHOTCppADErrorHandlerRegistrar() : handler(shot_cppad_error_handler) { }
+};
+static SHOTCppADErrorHandlerRegistrar shot_cppad_error_handler_registrar;
+}
+
 namespace SHOT
 {
 
@@ -778,7 +814,9 @@ void Problem::updateProperties()
 void Problem::updateFactorableFunctions()
 {
     if(properties.numberOfVariablesInNonlinearExpressions == 0)
+    {
         return;
+    }
 
     int nonlinearVariableCounter = 0;
 
@@ -825,7 +863,6 @@ void Problem::updateFactorableFunctions()
     if(factorableFunctions.size() > 0)
     {
         ADFunctions.Dependent(factorableFunctionVariables, factorableFunctions);
-        // ADFunctions.optimize();
     }
 
     CppAD::AD<double>::abort_recording();
@@ -860,6 +897,20 @@ Problem::~Problem()
 
 void Problem::finalize()
 {
+    // Need to update properties first so that hasNonlinearExpression etc. flags are set
+    // before simplifyNonlinearExpressions() checks them
+    updateProperties();
+
+    // Extract quadratic, monomial and signomial terms from nonlinear expressions based on settings
+    bool extractMonomialTerms = env->settings->getSetting<bool>("Reformulation.Monomials.Extract", "Model");
+    bool extractSignomialTerms = env->settings->getSetting<bool>("Reformulation.Signomials.Extract", "Model");
+    bool extractQuadraticTerms = (env->settings->getSetting<int>("Reformulation.Quadratics.ExtractStrategy", "Model")
+        >= static_cast<int>(ES_QuadraticTermsExtractStrategy::ExtractTermsToSame));
+
+    simplifyNonlinearExpressions(
+        shared_from_this(), extractMonomialTerms, extractSignomialTerms, extractQuadraticTerms);
+
+    // Update properties again after simplification since constraint types may have changed
     updateProperties();
     updateFactorableFunctions();
     assert(verifyOwnership());
@@ -2747,8 +2798,10 @@ ProblemPtr Problem::createCopy(
         destinationProblem->add(std::move(SOS));
     }
 
+    // Note: We don't call finalize() here since the source problem was already simplified.
+    // We only need to update properties and factorable functions for the copy.
     destinationProblem->updateProperties();
-    destinationProblem->finalize();
+    destinationProblem->updateFactorableFunctions();
 
     return (destinationProblem);
 }

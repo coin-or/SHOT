@@ -30,7 +30,9 @@ public:
     virtual bool initializeProblem() = 0;
     virtual void checkParameters() = 0;
 
-    virtual bool addVariable(std::string name, E_VariableType type, double lowerBound, double upperBound, double semiBound) = 0;
+    virtual bool addVariable(
+        std::string name, E_VariableType type, double lowerBound, double upperBound, double semiBound)
+        = 0;
 
     virtual bool initializeObjective() = 0;
     virtual bool addLinearTermToObjective(double coefficient, int variableIndex) = 0;
@@ -106,11 +108,11 @@ public:
     virtual void presolveAndUpdateBounds() = 0;
     virtual std::pair<VectorDouble, VectorDouble> presolveAndGetNewBounds() = 0;
 
-    virtual bool createHyperplane(Hyperplane hyperplane) = 0;
-    virtual bool createInteriorHyperplane(Hyperplane hyperplane) = 0;
+    virtual bool createHyperplane(HyperplanePtr hyperplane) = 0;
+    virtual bool createInteriorHyperplane(HyperplanePtr hyperplane) = 0;
     virtual bool createIntegerCut(IntegerCut& integerCut) = 0;
 
-    virtual std::optional<std::pair<std::map<int, double>, double>> createHyperplaneTerms(Hyperplane hyperplane) = 0;
+    virtual std::optional<std::pair<std::map<int, double>, double>> createHyperplaneTerms(HyperplanePtr hyperplane) = 0;
 
     virtual bool supportsQuadraticObjective() = 0;
     virtual bool supportsQuadraticConstraints() = 0;

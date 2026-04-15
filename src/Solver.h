@@ -12,10 +12,12 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "Environment.h"
 #include "Enums.h"
 #include "EventHandler.h"
+#include "Settings.h"
 #include "Structs.h"
 
 #include "ModelingSystem/IModelingSystem.h"
@@ -42,6 +44,8 @@ private:
 
     bool selectStrategy();
 
+    void finalizeSolution();
+
     bool isProblemInitialized = false;
     bool isProblemSolved = false;
 
@@ -59,7 +63,10 @@ public:
     bool setOptionsFromString(std::string options);
     bool setOptionsFromOSoL(std::string options);
 
+    std::string getSettingsAsMarkup();
+
     bool setLogFile(std::string filename);
+    void updateLogLevels();
 
     bool setProblem(std::string fileName);
     bool setProblem(ProblemPtr problem, ProblemPtr reformulatedProblem, ModelingSystemPtr modelingSystem = nullptr);
@@ -73,11 +80,42 @@ public:
 
     bool solveProblem();
 
-    void finalizeSolution();
+    void outputSolverHeader();
+    void outputOptionsReport();
+    void outputProblemInstanceReport();
+    void outputSolutionReport();
 
+    /**
+     * @brief Callback registration method
+     *
+     * This method automatically detects whether the callback is a notification callback
+     * or a data provider based on its return type:
+     * - Returns void: Notification callback
+     * - Returns a value: Data provider
+     *
+     * Examples:
+     * // Data provider for dual bound
+     * solver.registerCallback(E_EventType::ExternalDualBound, []() {
+     *     return computeDualBound(); // Returns double -> data provider
+     * });
+     *
+     * // User termination check
+     * solver.registerCallback(E_EventType::UserTerminationCheck, []() {
+     *     return shouldTerminate(); // Returns bool -> data provider
+     * });
+     *
+     * // Notification callback
+     * solver.registerCallback(E_EventType::NewPrimalSolution, [](std::any solution) {
+     *     processSolution(solution); // Returns void -> notification
+     * });
+     *
+     * @tparam Callback The callback function type
+     * @param event The event type to register for
+     * @param callback The callback function
+     */
     template <typename Callback> inline void registerCallback(const E_EventType& event, Callback&& callback)
     {
-        env->events->registerCallback(event, callback);
+        env->events->registerCallback(event, std::forward<Callback>(callback));
     }
 
     std::string getOptionsOSoL();
@@ -92,6 +130,11 @@ public:
     void updateSetting(std::string name, std::string category, double value);
     void updateSetting(std::string name, std::string category, bool value);
 
+    template <typename T> T getSetting(std::string name, std::string category)
+    {
+        return (env->settings->getSetting<T>(name, category));
+    }
+
     VectorString getSettingIdentifiers(E_SettingType type);
 
     double getCurrentDualBound();
@@ -103,7 +146,19 @@ public:
     PrimalSolution getPrimalSolution();
     std::vector<PrimalSolution> getPrimalSolutions();
 
+    SolutionStatistics getSolutionStatistics() { return env->solutionStatistics; };
+
     E_TerminationReason getTerminationReason();
     E_ModelReturnStatus getModelReturnStatus();
+
+    // Static methods to query available solvers and modeling systems
+    static std::vector<ES_ModelingSystem> getSupportedModelingSystems();
+    static std::vector<ES_MIPSolver> getSupportedMIPSolvers();
+    static std::vector<ES_PrimalNLPSolver> getSupportedNLPSolvers();
+
+    // Static methods to check availability of specific components
+    static bool hasModelingSystem(ES_ModelingSystem format);
+    static bool hasMIPSolver(ES_MIPSolver solver);
+    static bool hasNLPSolver(ES_PrimalNLPSolver solver);
 };
 } // namespace SHOT

@@ -1526,7 +1526,7 @@ void MIPSolverCplex::writePresolvedToFile([[maybe_unused]] std::string filename)
 void MIPSolverCplex::checkParameters() { }
 
 bool MIPSolverCplex::createHyperplane(
-    Hyperplane hyperplane, std::function<IloConstraint(IloRange)> addConstraintFunction)
+    HyperplanePtr hyperplane, std::function<IloConstraint(IloRange)> addConstraintFunction)
 {
     auto currIter = env->results->getCurrentIteration(); // The unsolved new iteration
 

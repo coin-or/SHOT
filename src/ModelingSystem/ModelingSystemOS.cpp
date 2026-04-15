@@ -14,7 +14,7 @@
 #include "../Settings.h"
 #include "../Utilities.h"
 
-#include "../Model/Simplifications.h"
+#include "../Model/Problem.h"
 
 #include "OSOption.h"
 #include "OSResult.h"
@@ -72,13 +72,13 @@ E_ProblemCreationStatus ModelingSystemOS::createProblem(
         {
             instance = std::shared_ptr<OSInstance>(readInstanceFromOSiLFile(filename));
 
-            env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::OSiL));
+            env->settings->updateSetting("ModelingSystem", "Input", static_cast<int>(ES_ModelingSystem::OSiL));
         }
         else if(type == E_OSInputFileFormat::Ampl)
         {
             instance = std::shared_ptr<OSInstance>(readInstanceFromAmplFile(filename));
 
-            env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::NL));
+            env->settings->updateSetting("ModelingSystem", "Input", static_cast<int>(ES_ModelingSystem::AMPL));
         }
     }
     catch(const std::exception& e)
@@ -118,16 +118,6 @@ E_ProblemCreationStatus ModelingSystemOS::createProblem(ProblemPtr& problem, std
 
         if(!copyNonlinearExpressions(instance.get(), problem))
             return (E_ProblemCreationStatus::ErrorInConstraints);
-
-        problem->updateProperties();
-
-        bool extractMonomialTerms = env->settings->getSetting<bool>("Reformulation.Monomials.Extract", "Model");
-        bool extractSignomialTerms = env->settings->getSetting<bool>("Reformulation.Signomials.Extract", "Model");
-        bool extractQuadraticTerms
-            = (env->settings->getSetting<int>("Reformulation.Quadratics.ExtractStrategy", "Model")
-                >= static_cast<int>(ES_QuadraticTermsExtractStrategy::ExtractTermsToSame));
-
-        simplifyNonlinearExpressions(problem, extractMonomialTerms, extractSignomialTerms, extractQuadraticTerms);
 
         problem->finalize();
     }

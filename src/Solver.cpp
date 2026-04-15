@@ -32,8 +32,8 @@
 #include "SolutionStrategy/SolutionStrategyMIQCQP.h"
 #include "SolutionStrategy/SolutionStrategyNLP.h"
 
-#include "../Tasks/TaskPerformBoundTightening.h"
-#include "../Tasks/TaskReformulateProblem.h"
+#include "Tasks/TaskPerformBoundTightening.h"
+#include "Tasks/TaskReformulateProblem.h"
 
 #include <map>
 
@@ -185,10 +185,18 @@ bool Solver::setOptionsFromOSoL(std::string options)
     return (status);
 }
 
+std::string Solver::getSettingsAsMarkup() { return (env->settings->getSettingsAsMarkup()); }
+
 bool Solver::setLogFile(std::string filename)
 {
     env->output->setFileSink(filename);
     return (true);
+}
+
+void Solver::updateLogLevels()
+{
+    env->output->setLogLevels(static_cast<E_LogLevel>(env->settings->getSetting<int>("Console.LogLevel", "Output")),
+        static_cast<E_LogLevel>(env->settings->getSetting<int>("File.LogLevel", "Output")));
 }
 
 bool Solver::setProblem(std::string fileName)
@@ -298,7 +306,7 @@ bool Solver::setProblem(std::string fileName)
     {
         if(problemExtension == ".osil" || problemExtension == ".xml")
         {
-            env->report->outputModelingSystemReport(ES_SourceFormat::OSiL, fileName);
+            env->report->outputModelingSystemReport(ES_ModelingSystem::OSiL, fileName);
 
             auto modelingSystem = std::make_shared<ModelingSystemOSiL>(env);
             ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
@@ -311,13 +319,13 @@ bool Solver::setProblem(std::string fileName)
             env->modelingSystem = modelingSystem;
             env->problem = problem;
 
-            env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::OSiL));
+            env->settings->updateSetting("ModelingSystem", "Input", static_cast<int>(ES_ModelingSystem::OSiL));
         }
 
 #ifdef HAS_AMPL
         if(problemExtension == ".nl")
         {
-            env->report->outputModelingSystemReport(ES_SourceFormat::NL, fileName);
+            env->report->outputModelingSystemReport(ES_ModelingSystem::AMPL, fileName);
 
             auto modelingSystem = std::make_shared<ModelingSystemAMPL>(env);
             ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
@@ -331,14 +339,14 @@ bool Solver::setProblem(std::string fileName)
             env->modelingSystem = modelingSystem;
             env->problem = problem;
 
-            env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::NL));
+            env->settings->updateSetting("ModelingSystem", "Input", static_cast<int>(ES_ModelingSystem::AMPL));
         }
 #endif
 
 #ifdef HAS_GAMS
         if(problemExtension == ".gms")
         {
-            env->report->outputModelingSystemReport(ES_SourceFormat::GAMS, fileName);
+            env->report->outputModelingSystemReport(ES_ModelingSystem::GAMS, fileName);
 
             auto modelingSystem = std::make_shared<SHOT::ModelingSystemGAMS>(env);
             SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
@@ -352,7 +360,7 @@ bool Solver::setProblem(std::string fileName)
             env->modelingSystem = modelingSystem;
             env->problem = problem;
 
-            env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::GAMS));
+            env->settings->updateSetting("ModelingSystem", "Input", static_cast<int>(ES_ModelingSystem::GAMS));
         }
 #endif
 
@@ -651,6 +659,9 @@ bool Solver::selectStrategy()
 
 bool Solver::solveProblem()
 {
+    // Verify settings in case they were changed after setProblem() was called
+    verifySettings();
+
     if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
     {
         fs::filesystem::path filename(env->settings->getSetting<std::string>("Debug.Path", "Output"));
@@ -675,6 +686,8 @@ bool Solver::solveProblem()
     assert(solutionStrategy != nullptr); /* would be NULL if setProblem failed */
     isProblemSolved = solutionStrategy->solveProblem();
 
+    this->finalizeSolution();
+
     return (isProblemSolved);
 }
 
@@ -683,6 +696,11 @@ void Solver::finalizeSolution()
     if(env->modelingSystem)
         env->modelingSystem->finalizeSolution();
 }
+
+void Solver::outputSolverHeader() { env->report->outputSolverHeader(); }
+void Solver::outputOptionsReport() { env->report->outputOptionsReport(); }
+void Solver::outputProblemInstanceReport() { env->report->outputProblemInstanceReport(); }
+void Solver::outputSolutionReport() { env->report->outputSolutionReport(); }
 
 std::string Solver::getResultsOSrL() { return (env->results->getResultsOSrL()); }
 
@@ -727,6 +745,7 @@ void Solver::initializeSettings()
     VectorString enumHyperplanePointStrategy;
     enumHyperplanePointStrategy.push_back("ESH");
     enumHyperplanePointStrategy.push_back("ECP");
+    enumHyperplanePointStrategy.push_back("Only external (through callback)");
     env->settings->createSetting("CutStrategy", "Dual", static_cast<int>(ES_HyperplaneCutStrategy::ESH),
         "Dual cut strategy", enumHyperplanePointStrategy, 0);
     enumHyperplanePointStrategy.clear();
@@ -916,11 +935,26 @@ void Solver::initializeSettings()
     env->settings->createSetting(
         "MIP.UpdateObjectiveBounds", "Dual", false, "Update nonlinear objective variable bounds to primal/dual bounds");
 
+    // Convex bounding
+
+    env->settings->createSettingGroup("Dual", "ConvexBounding", "Convex Bounding",
+        "These settings control the convex bounding strategy that solves a MIP problem with all hyperplane cuts "
+        "generated for convex constraints so far and ignoring those generated for nonconvex constraints. This will "
+        "give a dual bound for the nonconvex problem.");
+
+    env->settings->createSetting(
+        "ConvexBounding.Use", "Dual", true, "Enable the convex bounding strategy for nonconvex problems");
+
+    env->settings->createSetting("ConvexBounding.IdleIterations", "Dual", 10,
+        "How often the convex bounding strategy should be executed. 0 = Every iteration with generated hyperplanes for "
+        "nonconvexities, 1 = Every second iteration, etc.",
+        0, SHOT_INT_MAX);
+
     // Primal settings: reduction cuts for nonconvex problems
 
     env->settings->createSettingGroup("Dual", "ReductionCut", "Dual reduction cut",
         "These settings control the added dual reduction cuts from the primal solution that will try to force a better "
-        "primal solution. This functionality is only used if SHOT cannot deduce that the problem is nonconvex .");
+        "primal solution. This functionality is only used if SHOT cannot deduce that the problem is convex .");
 
     env->settings->createSetting(
         "ReductionCut.Use", "Dual", true, "Enable the dual reduction cut strategy for nonconvex problems");
@@ -936,7 +970,7 @@ void Solver::initializeSettings()
     env->settings->createSetting("ReductionCut.Strategy", "Dual", static_cast<int>(reductionCutStrategy),
         "The reduction cut strategy to use", enumReductionCutStrategy,
         static_cast<int>(ES_ReductionCutStrategy::Fraction));
-    enumMIPSolver.clear();
+    enumReductionCutStrategy.clear();
 
     env->settings->createSetting("ReductionCut.MaxIterations", "Dual", 20,
         "Max number of primal cut reduction without primal improvement", 0, SHOT_INT_MAX);
@@ -1715,7 +1749,7 @@ void Solver::initializeSettings()
     enumFileFormat.push_back("GAMS");
     enumFileFormat.push_back("NL");
     enumFileFormat.push_back("None");
-    env->settings->createSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::None),
+    env->settings->createSetting("ModelingSystem", "Input", static_cast<int>(ES_ModelingSystem::None),
         "The format of the problem file", enumFileFormat, 0, true);
     enumFileFormat.clear();
 
@@ -1821,12 +1855,14 @@ void Solver::verifySettings()
     }
 #endif
 
-    if((env->settings->getSetting<int>("SourceFormat", "Input") == static_cast<int>(ES_SourceFormat::OSiL)
-           || env->settings->getSetting<int>("SourceFormat", "Input") == static_cast<int>(ES_SourceFormat::NL))
+    if((env->settings->getSetting<int>("ModelingSystem", "Input") == static_cast<int>(ES_ModelingSystem::OSiL)
+           || env->settings->getSetting<int>("ModelingSystem", "Input") == static_cast<int>(ES_ModelingSystem::AMPL)
+           || env->settings->getSetting<int>("ModelingSystem", "Input") == static_cast<int>(ES_ModelingSystem::None))
         && static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("FixedInteger.Solver", "Primal"))
             == ES_PrimalNLPSolver::GAMS)
     {
-        env->output->outputWarning(" Cannot use GAMS NLP solvers with problem files in OSiL or nl formats.");
+        env->output->outputWarning(
+            " Cannot use GAMS NLP solvers with problems not originating from GAMS (OSiL, nl, or API-built problems).");
         NLPSolverDefined = false;
     }
 
@@ -2059,6 +2095,9 @@ void Solver::setConvexityBasedSettings()
 
             env->settings->updateSetting("BoundTightening.FeasibilityBased.TimeLimit", "Model", 5.0);
 
+            // Need to save these to perform dual bound updates
+            // env->settings->updateSetting("HyperplaneCuts.SaveHyperplanePoints", "Dual", true);
+
 #ifdef HAS_CPLEX
 
             if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Cplex)
@@ -2139,4 +2178,122 @@ std::vector<PrimalSolution> Solver::getPrimalSolutions() { return (env->results-
 E_TerminationReason Solver::getTerminationReason() { return (env->results->terminationReason); }
 
 E_ModelReturnStatus Solver::getModelReturnStatus() { return (env->results->getModelReturnStatus()); }
+
+std::vector<ES_ModelingSystem> Solver::getSupportedModelingSystems()
+{
+    std::vector<ES_ModelingSystem> systems;
+    systems.push_back(ES_ModelingSystem::OSiL); // Always available
+#ifdef HAS_GAMS
+    systems.push_back(ES_ModelingSystem::GAMS);
+#endif
+#ifdef HAS_AMPL
+    systems.push_back(ES_ModelingSystem::AMPL);
+#endif
+    return systems;
+}
+
+std::vector<ES_MIPSolver> Solver::getSupportedMIPSolvers()
+{
+    std::vector<ES_MIPSolver> solvers;
+#ifdef HAS_CPLEX
+    solvers.push_back(ES_MIPSolver::Cplex);
+#endif
+#ifdef HAS_GUROBI
+    solvers.push_back(ES_MIPSolver::Gurobi);
+#endif
+#ifdef HAS_CBC
+    solvers.push_back(ES_MIPSolver::Cbc);
+#endif
+#ifdef HAS_HIGHS
+    solvers.push_back(ES_MIPSolver::Highs);
+#endif
+    return solvers;
+}
+
+std::vector<ES_PrimalNLPSolver> Solver::getSupportedNLPSolvers()
+{
+    std::vector<ES_PrimalNLPSolver> solvers;
+    solvers.push_back(ES_PrimalNLPSolver::SHOT); // Always available
+#ifdef HAS_IPOPT
+    solvers.push_back(ES_PrimalNLPSolver::Ipopt);
+#endif
+#ifdef HAS_GAMS
+    solvers.push_back(ES_PrimalNLPSolver::GAMS);
+#endif
+    return solvers;
+}
+
+bool Solver::hasModelingSystem(ES_ModelingSystem format)
+{
+    switch(format)
+    {
+    case ES_ModelingSystem::OSiL:
+        return true; // Always available
+    case ES_ModelingSystem::GAMS:
+#ifdef HAS_GAMS
+        return true;
+#else
+        return false;
+#endif
+    case ES_ModelingSystem::AMPL:
+#ifdef HAS_AMPL
+        return true;
+#else
+        return false;
+#endif
+    default:
+        return false;
+    }
+}
+
+bool Solver::hasMIPSolver(ES_MIPSolver solver)
+{
+    switch(solver)
+    {
+    case ES_MIPSolver::Cplex:
+#ifdef HAS_CPLEX
+        return true;
+#else
+        return false;
+#endif
+    case ES_MIPSolver::Gurobi:
+#ifdef HAS_GUROBI
+        return true;
+#else
+        return false;
+#endif
+    case ES_MIPSolver::Cbc:
+#ifdef HAS_CBC
+        return true;
+#else
+        return false;
+#endif
+    default:
+        return false;
+    }
+}
+
+bool Solver::hasNLPSolver(ES_PrimalNLPSolver solver)
+{
+    switch(solver)
+    {
+    case ES_PrimalNLPSolver::SHOT:
+        return true; // Always available
+    case ES_PrimalNLPSolver::Ipopt:
+#ifdef HAS_IPOPT
+        return true;
+#else
+        return false;
+#endif
+    case ES_PrimalNLPSolver::GAMS:
+#ifdef HAS_GAMS
+        return true;
+#else
+        return false;
+#endif
+    default:
+        return false;
+    }
+}
+
 } // namespace SHOT

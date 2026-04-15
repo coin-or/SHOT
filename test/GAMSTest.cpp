@@ -265,31 +265,39 @@ bool TestCallbackGAMS(std::string filename)
     auto solver = std::make_unique<SHOT::Solver>();
     auto env = solver->getEnvironment();
 
-    solver->registerCallback(E_EventType::UserTerminationCheck, [&env] {
-        std::cout << "Checking whether to terminate SHOT... ";
-
-        if(env->results->hasPrimalSolution())
-        {
-            env->tasks->terminate();
-            std::cout << "Sure, do it.\n";
-        }
-        else
-        {
-            std::cout << "Not yet!\n";
-        }
-    });
-
     if(!solver->setProblem(filename))
     {
         return (false);
     }
 
-    solver->solveProblem();
+    // Registers a callback that terminates when a primal solution has been found
+    solver->registerCallback(E_EventType::UserTerminationCheck, [&env](std::any args) -> bool {
+        std::cout << "Checking whether to terminate SHOT... ";
 
-    if(env->results->primalSolutions.size() == 1)
-        passed = true;
-    else
+        if(env->results->hasPrimalSolution())
+        {
+            std::cout << "Sure, do it.\n";
+            return (true);
+        }
+        else
+        {
+            std::cout << "Not yet!\n";
+            return (false);
+        }
+    });
+
+    // Solving the problem
+    if(!solver->solveProblem())
+    {
+        std::cout << "Error while solving problem\n";
+        return (false);
+    }
+
+    if(env->results->terminationReason != E_TerminationReason::UserAbort)
+    {
+        std::cout << "Termination callback did not seem to work as expected\n";
         passed = false;
+    }
 
     return passed;
 }
