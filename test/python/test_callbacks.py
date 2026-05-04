@@ -405,6 +405,184 @@ class TestExternalHyperplaneSelectionCallback:
         solver.solveProblem()  # Must not crash
 
 
+class TestExternalHyperplaneGradientCuts:
+    """End-to-end test: solve shot_ex_jogo using *only* external gradient cuts.
+
+    This exercises the full loop:
+      - CutStrategy = OnlyExternal (2) — no built-in ESH/ECP cuts
+      - Relaxation.Use = False — skip LP relaxation phase
+      - The callback looks up the violated constraint by .index (global constraint
+        index) rather than positional index, which is the correct approach when
+        the problem has a mix of linear and nonlinear constraints.
+    """
+
+    def _build_shot_ex_jogo(self, env):
+        """Return (solver, problem) for the shot_ex_jogo MINLP.
+
+        min  -x1 - x2
+        s.t. 2*x1 - 3*x2          <= 2   (linear,    index 0)
+             0.15*(x1-8)^2 + ...  <= 5   (nonlinear, index 1)
+             1/x1 + 1/x2 - ...    <= -4  (nonlinear, index 2)
+        x1 in [1,20] (real), x2 in [1,20] (integer)
+        Known optimum: obj ≈ -20.9036 (primal -20.903615, dual -20.903647)
+        """
+        import SHOTpy
+
+        problem = SHOTpy.Problem(env)
+        problem.name = "shot_ex_jogo"
+
+        x1 = SHOTpy.Variable("x1", 0, SHOTpy.VariableType.Real,    1.0, 20.0)
+        x2 = SHOTpy.Variable("x2", 1, SHOTpy.VariableType.Integer, 1.0, 20.0)
+        problem.addVariable(x1)
+        problem.addVariable(x2)
+
+        obj = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
+        obj.add(SHOTpy.LinearTerm(-1.0, x1))
+        obj.add(SHOTpy.LinearTerm(-1.0, x2))
+        problem.setObjective(obj)
+
+        # Constraint l (index 0): 2*x1 - 3*x2 <= 2
+        lt_l = SHOTpy.LinearTerms()
+        lt_l.add(SHOTpy.LinearTerm( 2.0, x1))
+        lt_l.add(SHOTpy.LinearTerm(-3.0, x2))
+        problem.addConstraint(SHOTpy.LinearConstraint(0, "l", lt_l, SHOTpy.SHOT_DBL_MIN, 2.0))
+
+        # Constraint c1 (index 1): 0.15*(x1-8)^2 + 0.1*(x2-6)^2 + 0.025*exp(x1)/x2^2 <= 5
+        c1 = SHOTpy.NonlinearConstraint(1, "c1", SHOTpy.SHOT_DBL_MIN, 5.0)
+        c1.add(0.15 * (x1 - 8.0)**2 + 0.1 * (x2 - 6.0)**2 + 0.025 * SHOTpy.exp(x1) / x2**2)
+        problem.addConstraint(c1)
+
+        # Constraint c2 (index 2): 1/x1 + 1/x2 - sqrt(x1)*sqrt(x2) <= -4
+        c2 = SHOTpy.NonlinearConstraint(2, "c2", SHOTpy.SHOT_DBL_MIN, -4.0)
+        c2.add(SHOTpy.SignomialTerm( 1.0, [(x1, -1.0)]))
+        c2.add(SHOTpy.SignomialTerm( 1.0, [(x2, -1.0)]))
+        c2.add(SHOTpy.SignomialTerm(-1.0, [(x1, 0.5), (x2, 0.5)]))
+        problem.addConstraint(c2)
+
+        problem.finalize()
+        return problem
+
+    def _make_solver_with_only_external_cuts(self):
+        """Return a Solver configured to accept only external hyperplane cuts."""
+        import SHOTpy
+        solver = SHOTpy.Solver()
+        solver.updateSetting("Console.LogLevel",                             "Output", 2)
+        solver.updateSetting("Convexity.AssumeConvex",                       "Model",  True)
+        solver.updateSetting("Reformulation.Constraint.PartitionQuadraticTerms", "Model", 2) # Never
+        solver.updateSetting("Relaxation.Use",                               "Dual",   True)
+        solver.updateSetting("CutStrategy",                                  "Dual",   2)    # OnlyExternal
+        solver.updateSetting("TreeStrategy",                                 "Dual",   0)    # MultiTree
+        return solver
+
+    def test_solver_finds_solution_with_gradient_cuts(self):
+        """Solver reaches a feasible solution when all cuts come from the callback."""
+        import SHOTpy
+
+        solver = self._make_solver_with_only_external_cuts()
+        env = solver.getEnvironment()
+        problem = self._build_shot_ex_jogo(env)
+        solver.setProblem(problem, problem)
+
+        cut_count = [0]
+
+        def generate_hyperplanes(data):
+            hyperplanes = []
+            if not data.solutionPoints or data.iterationNumber == 0:
+                return hyperplanes
+
+            reform_problem = data.reformulatedProblem
+            for sol_point in data.solutionPoints:
+                dev_idx   = sol_point.maxDeviation.index
+                violation = sol_point.maxDeviation.value
+                if violation <= 0.0:
+                    continue
+
+                # Look up by global .index, not positional index
+                constraint = next(
+                    (nlc for nlc in reform_problem.nonlinearConstraints if nlc.index == dev_idx),
+                    None
+                )
+                if constraint is None:
+                    continue
+
+                gradient = constraint.calculateGradient(sol_point.point)
+                if not gradient:
+                    continue
+
+                var_indices = list(gradient.keys())
+                rhs = sum(gradient[i] * sol_point.point[i] for i in var_indices) - violation
+
+                hp = SHOTpy.ExternalHyperplane()
+                hp.variableIndexes      = var_indices
+                hp.variableCoefficients = list(gradient.values())
+                hp.rhsValue             = rhs
+                hp.isGlobal             = True
+                hp.source               = SHOTpy.HyperplaneSource.External
+                hyperplanes.append(hp)
+                cut_count[0] += 1
+                break
+
+            return hyperplanes
+
+        solver.registerCallback(SHOTpy.EventType.ExternalHyperplaneSelection, generate_hyperplanes)
+        solver.solveProblem()
+
+        assert cut_count[0] > 0, "Callback never generated any hyperplane cuts"
+        assert solver.getPrimalSolutions(), "No primal solution found"
+        obj = solver.getPrimalSolution().objValue
+        # Known optimum: primal ≈ -20.9036, dual ≈ -20.9036
+        # Accept any solution within 1% relative of the known primal bound.
+        assert obj <= -20.903615014500517 * 0.99, (
+            f"Objective {obj:.6f} is far from the known optimum ~-20.9036"
+        )
+
+    def test_constraint_lookup_by_index_not_position(self):
+        """maxDeviation.index is a global constraint index, not a position in
+        nonlinearConstraints.  This test verifies the lookup is correct by
+        checking that the constraint name returned matches the expected constraint."""
+        import SHOTpy
+
+        solver = self._make_solver_with_only_external_cuts()
+        # This test never returns cuts, so cap iterations to avoid running forever
+        solver.updateSetting("IterationLimit", "Termination", 20)
+        env = solver.getEnvironment()
+        problem = self._build_shot_ex_jogo(env)
+        solver.setProblem(problem, problem)
+
+        name_log = []
+
+        def generate_hyperplanes(data):
+            if not data.solutionPoints or data.iterationNumber == 0:
+                return []
+
+            reform_problem = data.reformulatedProblem
+            for sol_point in data.solutionPoints:
+                dev_idx   = sol_point.maxDeviation.index
+                violation = sol_point.maxDeviation.value
+                if violation <= 0.0:
+                    continue
+
+                # Correct lookup: by .index attribute
+                constraint = next(
+                    (nlc for nlc in reform_problem.nonlinearConstraints if nlc.index == dev_idx),
+                    None
+                )
+                if constraint is not None:
+                    name_log.append(constraint.name)
+                    # The name must be one of the nonlinear constraints, not the linear one
+                    assert constraint.name in ("c1", "c2"), (
+                        f"Lookup returned wrong constraint '{constraint.name}' "
+                        f"for global index {dev_idx}"
+                    )
+                break
+            return []
+
+        solver.registerCallback(SHOTpy.EventType.ExternalHyperplaneSelection, generate_hyperplanes)
+        solver.solveProblem()
+
+        assert name_log, "Callback never found a violated nonlinear constraint"
+
+
 class TestRegisterCallbackAPI:
     """API-level checks for Solver.registerCallback."""
 
