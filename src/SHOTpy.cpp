@@ -1365,10 +1365,10 @@ PYBIND11_MODULE(SHOTpy, m)
             "Set problem with reformulated problem", py::arg("problem"), py::arg("reformulatedProblem"))
         .def("solveProblem", &Solver::solveProblem)
         .def("updateLogLevels", &Solver::updateLogLevels)
+        .def("updateSetting", py::overload_cast<std::string, std::string, bool>(&Solver::updateSetting))
         .def("updateSetting", py::overload_cast<std::string, std::string, int>(&Solver::updateSetting))
         .def("updateSetting", py::overload_cast<std::string, std::string, std::string>(&Solver::updateSetting))
         .def("updateSetting", py::overload_cast<std::string, std::string, double>(&Solver::updateSetting))
-        .def("updateSetting", py::overload_cast<std::string, std::string, bool>(&Solver::updateSetting))
         .def(
             "registerCallback",
             [](Solver& self, E_EventType event, py::function callback) {
