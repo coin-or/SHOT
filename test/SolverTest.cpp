@@ -222,128 +222,18 @@ bool TestGradient(const std::string& problemFile)
     return passed;
 }
 
+// Forward declaration — defined later in this file
+static std::pair<std::unique_ptr<SHOT::Solver>, std::shared_ptr<SHOT::Environment>> MakeEx1223bSolver();
+
 bool CreateAndSolveProblem()
 {
     bool passed = true;
 
-    // Initializing the SHOT solver class
-    auto solver = std::make_unique<SHOT::Solver>();
-
-    // Contains the environment variable unique to the created solver instance
-    auto env = solver->getEnvironment();
-    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Off));
+    auto solverEnv = MakeEx1223bSolver();
+    auto& solver = solverEnv.first;
+    auto& env = solverEnv.second;
     solver->updateSetting("Debug.Enable", "Output", true);
-
-    // Initializing a SHOT problem class
-    auto problem = std::make_shared<SHOT::Problem>(env);
-    problem->name = "ex1223b";
-
-    // Creating the variables
-    auto x1 = std::make_shared<Variable>("x1", 0, E_VariableType::Real, 0.0, 10.0);
-    auto x2 = std::make_shared<Variable>("x2", 1, E_VariableType::Real, 0.0, 10.0);
-    auto x3 = std::make_shared<Variable>("x3", 2, E_VariableType::Real, 0.0, 10.0);
-    auto b4 = std::make_shared<Variable>("b4", 3, E_VariableType::Binary);
-    auto b5 = std::make_shared<Variable>("b5", 4, E_VariableType::Binary);
-    auto b6 = std::make_shared<Variable>("b6", 5, E_VariableType::Binary);
-    auto b7 = std::make_shared<Variable>("b7", 6, E_VariableType::Binary);
-
-    // All variables are nonlinear, so need to add expression variables as well
-    auto nl_x1 = std::make_shared<ExpressionVariable>(x1);
-    auto nl_x2 = std::make_shared<ExpressionVariable>(x2);
-    auto nl_x3 = std::make_shared<ExpressionVariable>(x3);
-    auto nl_b4 = std::make_shared<ExpressionVariable>(b4);
-    auto nl_b5 = std::make_shared<ExpressionVariable>(b5);
-    auto nl_b6 = std::make_shared<ExpressionVariable>(b6);
-    auto nl_b7 = std::make_shared<ExpressionVariable>(b7);
-
-    // Adding the variables to the problem
-    problem->add({ x1, x2, x3, b4, b5, b6, b7 });
-
-    // Creating the objective function
-    // minimize -(sqr((-1) + b4) + sqr((-2) + b5) + sqr((-1) + b6) - log(1 + b7) + sqr((-1) + x1) + sqr((-2) + x2) +
-    // sqr((-3) + x3))
-
-    auto objective = std::make_shared<NonlinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
-    problem->add(objective);
-
-    objective->add(std::make_shared<ExpressionSquare>(
-        std::make_shared<ExpressionSum>(std::make_shared<ExpressionConstant>(-1), nl_b4)));
-    objective->add(std::make_shared<ExpressionSquare>(
-        std::make_shared<ExpressionSum>(std::make_shared<ExpressionConstant>(-2), nl_b5)));
-    objective->add(std::make_shared<ExpressionSquare>(
-        std::make_shared<ExpressionSum>(std::make_shared<ExpressionConstant>(-1), nl_b6)));
-    objective->add(std::make_shared<ExpressionNegate>(std::make_shared<ExpressionLog>(
-        std::make_shared<ExpressionSum>(std::make_shared<ExpressionConstant>(1), nl_b7))));
-    objective->add(std::make_shared<ExpressionSquare>(
-        std::make_shared<ExpressionSum>(std::make_shared<ExpressionConstant>(-1), nl_x1)));
-    objective->add(std::make_shared<ExpressionSquare>(
-        std::make_shared<ExpressionSum>(std::make_shared<ExpressionConstant>(-2), nl_x2)));
-    objective->add(std::make_shared<ExpressionSquare>(
-        std::make_shared<ExpressionSum>(std::make_shared<ExpressionConstant>(-3), nl_x3)));
-
-    // Creating the constraint e1: x1 + x2 + x3 + b4 + b5 + b6 <= 5;
-    auto e1 = std::make_shared<LinearConstraint>(0, "e1", SHOT_DBL_MIN, 5.0);
-    e1->add(std::make_shared<LinearTerm>(1.0, x1));
-    e1->add(std::make_shared<LinearTerm>(1.0, x2));
-    e1->add(std::make_shared<LinearTerm>(1.0, x3));
-    e1->add(std::make_shared<LinearTerm>(1.0, b4));
-    e1->add(std::make_shared<LinearTerm>(1.0, b5));
-    e1->add(std::make_shared<LinearTerm>(1.0, b6));
-    problem->add(e1);
-
-    // Creating the constraint e2: sqr(b6) + sqr(x1) + sqr(x2) + sqr(x3) <= 5.5;
-    auto e2 = std::make_shared<QuadraticConstraint>(1, "e2", SHOT_DBL_MIN, 5.5);
-    e2->add(std::make_shared<QuadraticTerm>(1.0, b6, b6));
-    e2->add(std::make_shared<QuadraticTerm>(1.0, x1, x1));
-    e2->add(std::make_shared<QuadraticTerm>(1.0, x2, x2));
-    e2->add(std::make_shared<QuadraticTerm>(1.0, x3, x3));
-    problem->add(e2);
-
-    // Creating the constraint e3: x1 +  b4 <= 1.2;
-    auto e3 = std::make_shared<LinearConstraint>(2, "e3", SHOT_DBL_MIN, 1.2);
-    e3->add(std::make_shared<LinearTerm>(1.0, x1));
-    e3->add(std::make_shared<LinearTerm>(1.0, b4));
-    problem->add(e3);
-
-    // Creating the constraint e4: x2 +  b5 <= 1.8;
-    auto e4 = std::make_shared<LinearConstraint>(3, "e4", SHOT_DBL_MIN, 1.8);
-    e4->add(std::make_shared<LinearTerm>(1.0, x2));
-    e4->add(std::make_shared<LinearTerm>(1.0, b5));
-    problem->add(e4);
-
-    // Creating the constraint e5: x3 +  b6 <= 2.5;
-    auto e5 = std::make_shared<LinearConstraint>(4, "e5", SHOT_DBL_MIN, 2.5);
-    e5->add(std::make_shared<LinearTerm>(1.0, x3));
-    e5->add(std::make_shared<LinearTerm>(1.0, b6));
-    problem->add(e5);
-
-    // Creating the constraint e6: x1 +  b7 <= 1.2;
-    auto e6 = std::make_shared<LinearConstraint>(5, "e6", SHOT_DBL_MIN, 1.2);
-    e6->add(std::make_shared<LinearTerm>(1.0, x1));
-    e6->add(std::make_shared<LinearTerm>(1.0, b7));
-    problem->add(e6);
-
-    // Creating the constraint e7: sqr(b5) + sqr(x2) <= 1.64;
-    auto e7 = std::make_shared<QuadraticConstraint>(6, "e7", SHOT_DBL_MIN, 1.64);
-    e7->add(std::make_shared<QuadraticTerm>(1.0, b5, b5));
-    e7->add(std::make_shared<QuadraticTerm>(1.0, x2, x2));
-    problem->add(e7);
-
-    // Creating the constraint e8: sqr(b6) + sqr(x3) <= 4.25;
-    auto e8 = std::make_shared<QuadraticConstraint>(7, "e8", SHOT_DBL_MIN, 4.25);
-    e8->add(std::make_shared<QuadraticTerm>(1.0, b6, b6));
-    e8->add(std::make_shared<QuadraticTerm>(1.0, x3, x3));
-    problem->add(e8);
-
-    // Creating the constraint e9: sqr(b5) + sqr(x3) <= 4.64;
-    auto e9 = std::make_shared<QuadraticConstraint>(8, "e9", SHOT_DBL_MIN, 4.64);
-    e9->add(std::make_shared<QuadraticTerm>(1.0, b5, b5));
-    e9->add(std::make_shared<QuadraticTerm>(1.0, x3, x3));
-    problem->add(e9);
-
-    // Finalize the problem object (this now includes simplifyNonlinearExpressions and updateProperties)
-    problem->finalize();
-    solver->setProblem(problem);
+    auto problem = env->problem;
 
     // Writing the problem to console
     std::cout << '\n';
@@ -375,7 +265,6 @@ bool CreateAndSolveProblem()
                  "activating everytime a new primal solution is found.\n\n";
 
     auto reformulatedProblem = env->reformulatedProblem; // Since this is a shared pointer it will not be deleted
-    auto settings = env->settings;
 
     solver = nullptr;
     env = nullptr;
@@ -534,127 +423,9 @@ bool TestCallbackUserTermination()
     bool passed = true;
 
     // Initializing the SHOT solver class
-    auto solver = std::make_unique<SHOT::Solver>();
-
-    // Contains the environment variable unique to the created solver instance
-    auto env = solver->getEnvironment();
+    auto [solver, env] = MakeEx1223bSolver();
     solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Critical));
     solver->updateSetting("Debug.Enable", "Output", true);
-
-    // Initializing a SHOT problem class
-    auto problem = std::make_shared<SHOT::Problem>(env);
-    problem->name = "ex1223b";
-
-    // Creating the variables
-    auto x1 = std::make_shared<Variable>("x1", 0, E_VariableType::Real, 0.0, 10.0);
-    auto x2 = std::make_shared<Variable>("x2", 1, E_VariableType::Real, 0.0, 10.0);
-    auto x3 = std::make_shared<Variable>("x3", 2, E_VariableType::Real, 0.0, 10.0);
-    auto b4 = std::make_shared<Variable>("b4", 3, E_VariableType::Binary);
-    auto b5 = std::make_shared<Variable>("b5", 4, E_VariableType::Binary);
-    auto b6 = std::make_shared<Variable>("b6", 5, E_VariableType::Binary);
-    auto b7 = std::make_shared<Variable>("b7", 6, E_VariableType::Binary);
-
-    // All variables are nonlinear, so need to add expression variables as well
-    auto nl_x1 = std::make_shared<ExpressionVariable>(x1);
-    auto nl_x2 = std::make_shared<ExpressionVariable>(x2);
-    auto nl_x3 = std::make_shared<ExpressionVariable>(x3);
-    auto nl_b4 = std::make_shared<ExpressionVariable>(b4);
-    auto nl_b5 = std::make_shared<ExpressionVariable>(b5);
-    auto nl_b6 = std::make_shared<ExpressionVariable>(b6);
-    auto nl_b7 = std::make_shared<ExpressionVariable>(b7);
-
-    // Adding the variables to the problem
-    problem->add({ x1, x2, x3, b4, b5, b6, b7 });
-
-    // Creating the objective function
-    // minimize -(sqr((-1) + b4) + sqr((-2) + b5) + sqr((-1) + b6) - log(1 + b7) + sqr((-1) + x1) + sqr((-2) + x2) +
-    // sqr((-3) + x3))
-
-    auto objective = std::make_shared<NonlinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
-    problem->add(objective);
-
-    objective->add(std::make_shared<ExpressionSquare>(
-        std::make_shared<ExpressionSum>(std::make_shared<ExpressionConstant>(-1), nl_b4)));
-    objective->add(std::make_shared<ExpressionSquare>(
-        std::make_shared<ExpressionSum>(std::make_shared<ExpressionConstant>(-2), nl_b5)));
-    objective->add(std::make_shared<ExpressionSquare>(
-        std::make_shared<ExpressionSum>(std::make_shared<ExpressionConstant>(-1), nl_b6)));
-    objective->add(std::make_shared<ExpressionNegate>(std::make_shared<ExpressionLog>(
-        std::make_shared<ExpressionSum>(std::make_shared<ExpressionConstant>(1), nl_b7))));
-    objective->add(std::make_shared<ExpressionSquare>(
-        std::make_shared<ExpressionSum>(std::make_shared<ExpressionConstant>(-1), nl_x1)));
-    objective->add(std::make_shared<ExpressionSquare>(
-        std::make_shared<ExpressionSum>(std::make_shared<ExpressionConstant>(-2), nl_x2)));
-    objective->add(std::make_shared<ExpressionSquare>(
-        std::make_shared<ExpressionSum>(std::make_shared<ExpressionConstant>(-3), nl_x3)));
-
-    // Creating the constraint e1: x1 + x2 + x3 + b4 + b5 + b6 <= 5;
-    auto e1 = std::make_shared<LinearConstraint>(0, "e1", SHOT_DBL_MIN, 5.0);
-    e1->add(std::make_shared<LinearTerm>(1.0, x1));
-    e1->add(std::make_shared<LinearTerm>(1.0, x2));
-    e1->add(std::make_shared<LinearTerm>(1.0, x3));
-    e1->add(std::make_shared<LinearTerm>(1.0, b4));
-    e1->add(std::make_shared<LinearTerm>(1.0, b5));
-    e1->add(std::make_shared<LinearTerm>(1.0, b6));
-    problem->add(e1);
-
-    // Creating the constraint e2: sqr(b6) + sqr(x1) + sqr(x2) + sqr(x3) <= 5.5;
-    auto e2 = std::make_shared<QuadraticConstraint>(1, "e2", SHOT_DBL_MIN, 5.5);
-    e2->add(std::make_shared<QuadraticTerm>(1.0, b6, b6));
-    e2->add(std::make_shared<QuadraticTerm>(1.0, x1, x1));
-    e2->add(std::make_shared<QuadraticTerm>(1.0, x2, x2));
-    e2->add(std::make_shared<QuadraticTerm>(1.0, x3, x3));
-    problem->add(e2);
-
-    // Creating the constraint e3: x1 +  b4 <= 1.2;
-    auto e3 = std::make_shared<LinearConstraint>(2, "e3", SHOT_DBL_MIN, 1.2);
-    e3->add(std::make_shared<LinearTerm>(1.0, x1));
-    e3->add(std::make_shared<LinearTerm>(1.0, b4));
-    problem->add(e3);
-
-    // Creating the constraint e4: x2 +  b5 <= 1.8;
-    auto e4 = std::make_shared<LinearConstraint>(3, "e4", SHOT_DBL_MIN, 1.8);
-    e4->add(std::make_shared<LinearTerm>(1.0, x2));
-    e4->add(std::make_shared<LinearTerm>(1.0, b5));
-    problem->add(e4);
-
-    // Creating the constraint e5: x3 +  b6 <= 2.5;
-    auto e5 = std::make_shared<LinearConstraint>(4, "e5", SHOT_DBL_MIN, 2.5);
-    e5->add(std::make_shared<LinearTerm>(1.0, x3));
-    e5->add(std::make_shared<LinearTerm>(1.0, b6));
-    problem->add(e5);
-
-    // Creating the constraint e6: x1 +  b7 <= 1.2;
-    auto e6 = std::make_shared<LinearConstraint>(5, "e6", SHOT_DBL_MIN, 1.2);
-    e6->add(std::make_shared<LinearTerm>(1.0, x1));
-    e6->add(std::make_shared<LinearTerm>(1.0, b7));
-    problem->add(e6);
-
-    // Creating the constraint e7: sqr(b5) + sqr(x2) <= 1.64;
-    auto e7 = std::make_shared<QuadraticConstraint>(6, "e7", SHOT_DBL_MIN, 1.64);
-    e7->add(std::make_shared<QuadraticTerm>(1.0, b5, b5));
-    e7->add(std::make_shared<QuadraticTerm>(1.0, x2, x2));
-    problem->add(e7);
-
-    // Creating the constraint e8: sqr(b6) + sqr(x3) <= 4.25;
-    auto e8 = std::make_shared<QuadraticConstraint>(7, "e8", SHOT_DBL_MIN, 4.25);
-    e8->add(std::make_shared<QuadraticTerm>(1.0, b6, b6));
-    e8->add(std::make_shared<QuadraticTerm>(1.0, x3, x3));
-    problem->add(e8);
-
-    // Creating the constraint e9: sqr(b5) + sqr(x3) <= 4.64;
-    auto e9 = std::make_shared<QuadraticConstraint>(8, "e9", SHOT_DBL_MIN, 4.64);
-    e9->add(std::make_shared<QuadraticTerm>(1.0, b5, b5));
-    e9->add(std::make_shared<QuadraticTerm>(1.0, x3, x3));
-    problem->add(e9);
-
-    // Simplify the nonlinear expressions (and extract e.g. the quadratics)
-    simplifyNonlinearExpressions(problem, true, true, true);
-
-    // Finalize the problem object (after this no changes should be made)
-    problem->updateProperties();
-    problem->finalize();
-    solver->setProblem(problem);
 
     // Writing the problem to console
     std::cout << '\n';
@@ -880,6 +651,211 @@ bool TestCallbackExternalHyperplane()
     return passed;
 }
 
+// Build the ex1223b MINLP instance inline and return a ready-to-use solver + environment.
+// Reused by multiple tests.
+static std::pair<std::unique_ptr<SHOT::Solver>, std::shared_ptr<SHOT::Environment>> MakeEx1223bSolver()
+{
+    auto solver = std::make_unique<SHOT::Solver>();
+    auto env = solver->getEnvironment();
+    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Off));
+
+    auto problem = std::make_shared<SHOT::Problem>(env);
+    problem->name = "ex1223b";
+
+    auto x1 = std::make_shared<Variable>("x1", 0, E_VariableType::Real, 0.0, 10.0);
+    auto x2 = std::make_shared<Variable>("x2", 1, E_VariableType::Real, 0.0, 10.0);
+    auto x3 = std::make_shared<Variable>("x3", 2, E_VariableType::Real, 0.0, 10.0);
+    auto b4 = std::make_shared<Variable>("b4", 3, E_VariableType::Binary);
+    auto b5 = std::make_shared<Variable>("b5", 4, E_VariableType::Binary);
+    auto b6 = std::make_shared<Variable>("b6", 5, E_VariableType::Binary);
+    auto b7 = std::make_shared<Variable>("b7", 6, E_VariableType::Binary);
+
+    auto nl_x1 = std::make_shared<ExpressionVariable>(x1);
+    auto nl_x2 = std::make_shared<ExpressionVariable>(x2);
+    auto nl_x3 = std::make_shared<ExpressionVariable>(x3);
+    auto nl_b4 = std::make_shared<ExpressionVariable>(b4);
+    auto nl_b5 = std::make_shared<ExpressionVariable>(b5);
+    auto nl_b6 = std::make_shared<ExpressionVariable>(b6);
+    auto nl_b7 = std::make_shared<ExpressionVariable>(b7);
+
+    problem->add({ x1, x2, x3, b4, b5, b6, b7 });
+
+    auto objective = std::make_shared<NonlinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    problem->add(objective);
+    objective->add(std::make_shared<ExpressionSquare>(
+        std::make_shared<ExpressionSum>(std::make_shared<ExpressionConstant>(-1), nl_b4)));
+    objective->add(std::make_shared<ExpressionSquare>(
+        std::make_shared<ExpressionSum>(std::make_shared<ExpressionConstant>(-2), nl_b5)));
+    objective->add(std::make_shared<ExpressionSquare>(
+        std::make_shared<ExpressionSum>(std::make_shared<ExpressionConstant>(-1), nl_b6)));
+    objective->add(std::make_shared<ExpressionNegate>(std::make_shared<ExpressionLog>(
+        std::make_shared<ExpressionSum>(std::make_shared<ExpressionConstant>(1), nl_b7))));
+    objective->add(std::make_shared<ExpressionSquare>(
+        std::make_shared<ExpressionSum>(std::make_shared<ExpressionConstant>(-1), nl_x1)));
+    objective->add(std::make_shared<ExpressionSquare>(
+        std::make_shared<ExpressionSum>(std::make_shared<ExpressionConstant>(-2), nl_x2)));
+    objective->add(std::make_shared<ExpressionSquare>(
+        std::make_shared<ExpressionSum>(std::make_shared<ExpressionConstant>(-3), nl_x3)));
+
+    auto e1 = std::make_shared<LinearConstraint>(0, "e1", SHOT_DBL_MIN, 5.0);
+    e1->add(std::make_shared<LinearTerm>(1.0, x1)); e1->add(std::make_shared<LinearTerm>(1.0, x2));
+    e1->add(std::make_shared<LinearTerm>(1.0, x3)); e1->add(std::make_shared<LinearTerm>(1.0, b4));
+    e1->add(std::make_shared<LinearTerm>(1.0, b5)); e1->add(std::make_shared<LinearTerm>(1.0, b6));
+    problem->add(e1);
+
+    auto e2 = std::make_shared<QuadraticConstraint>(1, "e2", SHOT_DBL_MIN, 5.5);
+    e2->add(std::make_shared<QuadraticTerm>(1.0, b6, b6)); e2->add(std::make_shared<QuadraticTerm>(1.0, x1, x1));
+    e2->add(std::make_shared<QuadraticTerm>(1.0, x2, x2)); e2->add(std::make_shared<QuadraticTerm>(1.0, x3, x3));
+    problem->add(e2);
+
+    auto e3 = std::make_shared<LinearConstraint>(2, "e3", SHOT_DBL_MIN, 1.2);
+    e3->add(std::make_shared<LinearTerm>(1.0, x1)); e3->add(std::make_shared<LinearTerm>(1.0, b4));
+    problem->add(e3);
+
+    auto e4 = std::make_shared<LinearConstraint>(3, "e4", SHOT_DBL_MIN, 1.8);
+    e4->add(std::make_shared<LinearTerm>(1.0, x2)); e4->add(std::make_shared<LinearTerm>(1.0, b5));
+    problem->add(e4);
+
+    auto e5 = std::make_shared<LinearConstraint>(4, "e5", SHOT_DBL_MIN, 2.5);
+    e5->add(std::make_shared<LinearTerm>(1.0, x3)); e5->add(std::make_shared<LinearTerm>(1.0, b6));
+    problem->add(e5);
+
+    auto e6 = std::make_shared<LinearConstraint>(5, "e6", SHOT_DBL_MIN, 1.2);
+    e6->add(std::make_shared<LinearTerm>(1.0, x1)); e6->add(std::make_shared<LinearTerm>(1.0, b7));
+    problem->add(e6);
+
+    auto e7 = std::make_shared<QuadraticConstraint>(6, "e7", SHOT_DBL_MIN, 1.64);
+    e7->add(std::make_shared<QuadraticTerm>(1.0, b5, b5)); e7->add(std::make_shared<QuadraticTerm>(1.0, x2, x2));
+    problem->add(e7);
+
+    auto e8 = std::make_shared<QuadraticConstraint>(7, "e8", SHOT_DBL_MIN, 4.25);
+    e8->add(std::make_shared<QuadraticTerm>(1.0, b6, b6)); e8->add(std::make_shared<QuadraticTerm>(1.0, x3, x3));
+    problem->add(e8);
+
+    auto e9 = std::make_shared<QuadraticConstraint>(8, "e9", SHOT_DBL_MIN, 4.64);
+    e9->add(std::make_shared<QuadraticTerm>(1.0, b5, b5)); e9->add(std::make_shared<QuadraticTerm>(1.0, x3, x3));
+    problem->add(e9);
+
+    simplifyNonlinearExpressions(problem, true, true, true);
+    problem->updateProperties();
+    problem->finalize();
+    solver->setProblem(problem);
+
+    return { std::move(solver), env };
+}
+
+bool TestCallbackPrimalCandidateSelection()
+{
+    bool passed = true;
+
+    // ── Sub-test 1: callback fires at least once ───────────────────────────
+    std::cout << "\nSub-test 1: PrimalSolutionCandidateSelection callback fires\n";
+    {
+        auto [solver, env] = MakeEx1223bSolver();
+        int candidateCount = 0;
+
+        solver->registerCallback(
+            E_EventType::PrimalSolutionCandidateSelection, [&candidateCount](std::any args) -> bool {
+                auto data = std::any_cast<PrimalSolutionCallbackData>(args);
+                candidateCount++;
+                std::cout << "  Candidate #" << candidateCount << "  obj=" << data.objectiveValue
+                          << "  iter=" << data.iterationNumber << "\n";
+                return true; // accept
+            });
+
+        solver->solveProblem();
+
+        if(candidateCount >= 1)
+        {
+            std::cout << "  OK: callback fired " << candidateCount << " time(s)\n";
+        }
+        else
+        {
+            std::cout << "  FAIL: callback never fired\n";
+            passed = false;
+        }
+    }
+
+    // ── Sub-test 2: returning false prevents all primal solutions ──────────
+    std::cout << "\nSub-test 2: returning false blocks all primal solutions\n";
+    {
+        auto [solver, env] = MakeEx1223bSolver();
+        // Cap iterations so the test terminates quickly
+        solver->updateSetting("IterationLimit", "Termination", 10);
+        int rejectedCount = 0;
+
+        solver->registerCallback(
+            E_EventType::PrimalSolutionCandidateSelection, [&rejectedCount](std::any args) -> bool {
+                auto data = std::any_cast<PrimalSolutionCallbackData>(args);
+                rejectedCount++;
+                std::cout << "  Rejecting candidate obj=" << data.objectiveValue << "\n";
+                return false; // reject everything
+            });
+
+        solver->solveProblem();
+
+        if(rejectedCount >= 1 && solver->getPrimalSolutions().empty())
+        {
+            std::cout << "  OK: rejected " << rejectedCount << " candidate(s), no primal solution recorded\n";
+        }
+        else
+        {
+            std::cout << "  FAIL: rejectedCount=" << rejectedCount
+                      << "  primalSolutions=" << solver->getPrimalSolutions().size() << "\n";
+            passed = false;
+        }
+    }
+
+    // ── Sub-test 3: selective rejection reduces number of incumbents ───────
+    std::cout << "\nSub-test 3: selective rejection reduces accepted incumbents\n";
+    {
+        // Run A: accept all
+        int acceptedA = 0;
+        {
+            auto [solver, env] = MakeEx1223bSolver();
+            solver->registerCallback(
+                E_EventType::PrimalSolutionCandidateSelection, [](std::any) -> bool { return true; });
+            solver->registerCallback(E_EventType::NewPrimalSolution,
+                [&acceptedA](std::any) { acceptedA++; });
+            solver->solveProblem();
+        }
+
+        // Run B: reject candidates with obj > 5
+        int acceptedB = 0;
+        {
+            auto [solver, env] = MakeEx1223bSolver();
+            solver->registerCallback(
+                E_EventType::PrimalSolutionCandidateSelection, [](std::any args) -> bool {
+                    auto data = std::any_cast<PrimalSolutionCallbackData>(args);
+                    return data.objectiveValue <= 5.0;
+                });
+            solver->registerCallback(E_EventType::NewPrimalSolution,
+                [&acceptedB](std::any) { acceptedB++; });
+            solver->solveProblem();
+        }
+
+        std::cout << "  Accept-all incumbents: " << acceptedA
+                  << "  Selective incumbents: " << acceptedB << "\n";
+
+        if(acceptedB <= acceptedA)
+        {
+            std::cout << "  OK: selective rejection did not produce more incumbents\n";
+        }
+        else
+        {
+            std::cout << "  FAIL: selective rejection produced MORE incumbents than accept-all\n";
+            passed = false;
+        }
+    }
+
+    if(!passed)
+        std::cout << "\nTestCallbackPrimalCandidateSelection FAILED\n";
+    else
+        std::cout << "\nTestCallbackPrimalCandidateSelection PASSED\n";
+
+    return passed;
+}
+
 int SolverTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -938,6 +914,11 @@ int SolverTest(int argc, char* argv[])
         std::cout << "Starting test for callback system - external hyperplanes" << std::endl;
         passed = TestCallbackExternalHyperplane();
         std::cout << "Finished test for callback system - external hyperplanes." << std::endl;
+        break;
+    case 9:
+        std::cout << "Starting test for callback system - primal candidate selection" << std::endl;
+        passed = TestCallbackPrimalCandidateSelection();
+        std::cout << "Finished test for callback system - primal candidate selection." << std::endl;
         break;
     default:
         passed = false;
