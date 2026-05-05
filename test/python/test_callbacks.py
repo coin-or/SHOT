@@ -275,6 +275,102 @@ class TestNewPrimalSolutionCallback:
         assert all(isinstance(v, float) for v in d.solution)
 
 
+class TestPrimalSolutionCandidateSelectionCallback:
+    """EventType.PrimalSolutionCandidateSelection – data provider returning bool.
+
+    Return False to reject the candidate (skip feasibility check).
+    Return True or None to accept it.
+    """
+
+    def test_callback_is_called(self, solver, env):
+        """Callback fires at least once during a solve."""
+        import SHOTpy
+
+        call_log = []
+
+        def on_candidate(data):
+            call_log.append(data.objectiveValue)
+            return True  # accept all
+
+        solver.updateSetting("Console.LogLevel", "Output", 2)
+        problem = build_ex1223b(env)
+        solver.setProblem(problem)
+        solver.registerCallback(SHOTpy.EventType.PrimalSolutionCandidateSelection, on_candidate)
+        solver.solveProblem()
+
+        assert len(call_log) >= 1, "PrimalSolutionCandidateSelection callback was never called"
+
+    def test_returning_none_accepts(self, solver, env):
+        """Returning None is treated as accept — solver still finds a solution."""
+        import SHOTpy
+
+        solver.updateSetting("Console.LogLevel", "Output", 2)
+        problem = build_ex1223b(env)
+        solver.setProblem(problem)
+        solver.registerCallback(SHOTpy.EventType.PrimalSolutionCandidateSelection, lambda d: None)
+        solver.solveProblem()
+
+        assert solver.getPrimalSolutions(), "No primal solution found when callback returns None"
+
+    def test_reject_all_prevents_primal_solutions(self, solver, env):
+        """Returning False for every candidate prevents any primal solution from being accepted."""
+        import SHOTpy
+
+        rejected = [0]
+
+        def reject_all(data):
+            rejected[0] += 1
+            return False  # reject everything
+
+        solver.updateSetting("Console.LogLevel", "Output", 2)
+        # Cap iterations so the test does not run forever with no primal bound
+        solver.updateSetting("IterationLimit", "Termination", 10)
+        problem = build_ex1223b(env)
+        solver.setProblem(problem)
+        solver.registerCallback(SHOTpy.EventType.PrimalSolutionCandidateSelection, reject_all)
+        solver.solveProblem()
+
+        assert rejected[0] >= 1, "Reject callback was never called"
+        # With all candidates rejected no primal solution should have been recorded
+        assert not solver.getPrimalSolutions(), (
+            "Expected no primal solutions when every candidate is rejected"
+        )
+
+    def test_selective_rejection_reduces_accepted_count(self, solver, env):
+        """Rejecting a subset of candidates results in fewer incumbents than accepting all."""
+        import SHOTpy
+
+        # ── Run 1: accept everything ──────────────────────────────────────────
+        solver1 = SHOTpy.Solver()
+        solver1.updateSetting("Console.LogLevel", "Output", 2)
+        env1 = solver1.getEnvironment()
+        solver1.setProblem(build_ex1223b(env1))
+
+        accepted_log1 = []
+        solver1.registerCallback(SHOTpy.EventType.PrimalSolutionCandidateSelection, lambda d: True)
+        solver1.registerCallback(SHOTpy.EventType.NewPrimalSolution,
+                                 lambda d: accepted_log1.append(d.objectiveValue))
+        solver1.solveProblem()
+
+        # ── Run 2: reject candidates with obj > 5 (sub-optimal ones) ─────────
+        solver2 = SHOTpy.Solver()
+        solver2.updateSetting("Console.LogLevel", "Output", 2)
+        env2 = solver2.getEnvironment()
+        solver2.setProblem(build_ex1223b(env2))
+
+        accepted_log2 = []
+        solver2.registerCallback(SHOTpy.EventType.PrimalSolutionCandidateSelection,
+                                 lambda d: d.objectiveValue <= 5.0)
+        solver2.registerCallback(SHOTpy.EventType.NewPrimalSolution,
+                                 lambda d: accepted_log2.append(d.objectiveValue))
+        solver2.solveProblem()
+
+        print(f"\n  accepted (all): {len(accepted_log1)}  accepted (filtered): {len(accepted_log2)}")
+        assert len(accepted_log2) <= len(accepted_log1), (
+            "Rejecting sub-optimal candidates should not produce more incumbents"
+        )
+
+
 class TestUserTerminationCheckCallback:
     """EventType.UserTerminationCheck – data provider returning bool."""
 

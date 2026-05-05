@@ -10,6 +10,8 @@
 
 #include "PrimalSolver.h"
 
+#include "CallbackData.h"
+#include "EventHandler.h"
 #include "Output.h"
 #include "Results.h"
 #include "Settings.h"
@@ -71,7 +73,7 @@ void PrimalSolver::addPrimalSolutionCandidate(SolutionPoint pt, E_PrimalSolution
 
     sol.point = pt.point;
     sol.sourceType = source;
-    sol.objValue = pt.objectiveValue;
+    sol.objValue = env->problem->objectiveFunction->calculateValue(sol.point);
     sol.iterFound = pt.iterFound;
 
     env->primalSolver->primalSolutionCandidates.push_back(sol);
@@ -93,7 +95,36 @@ void PrimalSolver::checkPrimalSolutionCandidates()
 
     for(auto& cand : env->primalSolver->primalSolutionCandidates)
     {
-        this->checkPrimalSolutionPoint(cand);
+        bool checkCandidate = true;
+
+        if(env->events->hasDataProvider(E_EventType::PrimalSolutionCandidateSelection))
+        {
+            bool isMinimization = env->reformulatedProblem->objectiveFunction->properties.isMinimize;
+            double currentDualBound = env->results->getCurrentDualBound();
+            double relativeGap = env->results->getRelativeCurrentObjectiveGap();
+            double absoluteGap = env->results->getAbsoluteCurrentObjectiveGap();
+            int iterationNumber = env->results->getNumberOfIterations();
+
+            VectorDouble candidatePoint(
+                cand.point.begin(),
+                cand.point.begin()
+                    + std::min((int)cand.point.size(),
+                        env->problem->properties.numberOfVariables));
+
+            PrimalSolutionCallbackData callbackData(isMinimization, candidatePoint, cand.objValue,
+                currentDualBound, relativeGap, absoluteGap, iterationNumber, cand.sourceType,
+                env->solutionStatistics);
+
+            auto result = env->events->requestData<bool>(
+                E_EventType::PrimalSolutionCandidateSelection, callbackData);
+
+            // Check if solution has been rejected by the callback
+            if(result.has_value() && !result.value())
+                checkCandidate = false;
+        }
+
+        if(checkCandidate)
+            this->checkPrimalSolutionPoint(cand);
     }
 
     env->primalSolver->primalSolutionCandidates.clear();

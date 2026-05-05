@@ -1375,11 +1375,20 @@ PYBIND11_MODULE(SHOTpy, m)
                 switch(event)
                 {
                 case E_EventType::NewPrimalSolution:
-                case E_EventType::PrimalSolutionCandidateSelection:
                     self.registerCallback(event, [callback](std::any args) {
                         py::gil_scoped_acquire gil;
                         auto data = std::any_cast<PrimalSolutionCallbackData>(args);
                         callback(data);
+                    });
+                    break;
+                case E_EventType::PrimalSolutionCandidateSelection:
+                    self.registerCallback(event, [callback](std::any args) -> bool {
+                        py::gil_scoped_acquire gil;
+                        auto data = std::any_cast<PrimalSolutionCallbackData>(args);
+                        py::object result = callback(data);
+                        if(result.is_none())
+                            return true; // None means accept
+                        return result.cast<bool>();
                     });
                     break;
                 case E_EventType::UserTerminationCheck:
@@ -1434,7 +1443,8 @@ PYBIND11_MODULE(SHOTpy, m)
             "Register a Python callback for an event type.\n\n"
             "Callback signatures by event type:\n"
             "  EventType.NewPrimalSolution: fn(PrimalSolutionCallbackData) -> None\n"
-            "  EventType.PrimalSolutionCandidateSelection: fn(PrimalSolutionCallbackData) -> None\n"
+            "  EventType.PrimalSolutionCandidateSelection: fn(PrimalSolutionCallbackData) -> bool\n"
+            "    Return False to reject the candidate (skip feasibility check). None or True to accept.\n"
             "  EventType.UserTerminationCheck: fn(TerminationCallbackData) -> bool\n"
             "    Return True to stop, False to continue. Return None to continue.\n"
             "  EventType.ExternalDualBound: fn(DualBoundCallbackData) -> float\n"
