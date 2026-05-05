@@ -1415,13 +1415,16 @@ PYBIND11_MODULE(SHOTpy, m)
                         });
                     break;
                 case E_EventType::ExternalPrimalSolution:
-                    self.registerCallback(event, [callback](std::any args) -> VectorDouble {
+                    self.registerCallback(event, [callback](std::any args) -> std::vector<VectorDouble> {
                         py::gil_scoped_acquire gil;
                         auto data = std::any_cast<ExternalPrimalSolutionCallbackData>(args);
                         py::object result = callback(data);
                         if(result.is_none())
                             return {};
-                        return result.cast<VectorDouble>();
+                        auto point = result.cast<VectorDouble>();
+                        if(point.empty())
+                            return {};
+                        return { point }; // wrap single solution in a vector as the task expects
                     });
                     break;
                 default:

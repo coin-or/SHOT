@@ -583,6 +583,288 @@ class TestExternalHyperplaneGradientCuts:
         assert name_log, "Callback never found a violated nonlinear constraint"
 
 
+class TestExternalBoundCallbacks:
+    """EventType.ExternalDualBound and EventType.ExternalPrimalSolution on shot_ex_jogo.
+
+    Mirrors the C++ GurobiExternalDualBoundCallbackTest / CbcExternalDualBoundCallbackTest
+    pattern, adapted to the Python API:
+      - ExternalDualBound:    fn(DualBoundCallbackData) -> float  (NaN/None = no update)
+      - ExternalPrimalSolution: fn(ExternalPrimalSolutionCallbackData) -> list[float]  (empty = skip)
+
+    Known solution for shot_ex_jogo:
+      x1 ≈ 8.9036 (real), x2 = 12 (integer), obj ≈ -20.9036
+    """
+
+    # Known optimal point
+    _KNOWN_OBJ   = -20.903615014500517   # primal bound
+    _KNOWN_DUAL  = -20.903647306104258   # dual bound
+    _KNOWN_POINT = [8.903615, 12.0]      # x1, x2
+
+    def _build_shot_ex_jogo(self, env):
+        """Same problem as TestExternalHyperplaneGradientCuts (factored out here for reuse)."""
+        import SHOTpy
+
+        problem = SHOTpy.Problem(env)
+        problem.name = "shot_ex_jogo"
+
+        x1 = SHOTpy.Variable("x1", 0, SHOTpy.VariableType.Real,    1.0, 20.0)
+        x2 = SHOTpy.Variable("x2", 1, SHOTpy.VariableType.Integer, 1.0, 20.0)
+        problem.addVariable(x1)
+        problem.addVariable(x2)
+
+        obj = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
+        obj.add(SHOTpy.LinearTerm(-1.0, x1))
+        obj.add(SHOTpy.LinearTerm(-1.0, x2))
+        problem.setObjective(obj)
+
+        lt_l = SHOTpy.LinearTerms()
+        lt_l.add(SHOTpy.LinearTerm( 2.0, x1))
+        lt_l.add(SHOTpy.LinearTerm(-3.0, x2))
+        problem.addConstraint(SHOTpy.LinearConstraint(0, "l", lt_l, SHOTpy.SHOT_DBL_MIN, 2.0))
+
+        c1 = SHOTpy.NonlinearConstraint(1, "c1", SHOTpy.SHOT_DBL_MIN, 5.0)
+        c1.add(0.15 * (x1 - 8.0)**2 + 0.1 * (x2 - 6.0)**2 + 0.025 * SHOTpy.exp(x1) / x2**2)
+        problem.addConstraint(c1)
+
+        c2 = SHOTpy.NonlinearConstraint(2, "c2", SHOTpy.SHOT_DBL_MIN, -4.0)
+        c2.add(SHOTpy.SignomialTerm( 1.0, [(x1, -1.0)]))
+        c2.add(SHOTpy.SignomialTerm( 1.0, [(x2, -1.0)]))
+        c2.add(SHOTpy.SignomialTerm(-1.0, [(x1, 0.5), (x2, 0.5)]))
+        problem.addConstraint(c2)
+
+        problem.finalize()
+        return problem
+
+    def test_external_dual_bound_callback_is_called(self):
+        """ExternalDualBound callback is invoked and can tighten the dual bound.
+
+        The callback injects the known optimal dual bound (-20.9036) once the
+        solver's own dual bound is worse (larger for minimization), then returns
+        None on subsequent calls to let the solver proceed normally.
+        """
+        import SHOTpy
+        import math
+
+        solver = SHOTpy.Solver()
+        solver.updateSetting("Console.LogLevel", "Output", 2)
+        solver.updateSetting("TreeStrategy", "Dual", 0)  # MultiTree — currently required for ExternalDualBound
+        env = solver.getEnvironment()
+        problem = self._build_shot_ex_jogo(env)
+        solver.setProblem(problem)
+
+        call_log = []
+        injected = [False]
+
+        def provide_dual_bound(data):
+            call_log.append(data.currentDualBound)
+            # Inject once while the current lower bound is still below the known optimum.
+            # For minimization: dual bound starts at -inf and rises; we tighten it by
+            # providing the known value when the solver hasn't reached it yet.
+            if not injected[0] and data.currentDualBound < self._KNOWN_DUAL:
+                injected[0] = True
+                return self._KNOWN_DUAL
+            return None  # None → NaN → no update
+
+        solver.registerCallback(SHOTpy.EventType.ExternalDualBound, provide_dual_bound)
+        solver.solveProblem()
+
+        assert len(call_log) >= 1, "ExternalDualBound callback was never called"
+        assert injected[0], "Known dual bound was never injected"
+        # Solver must still find a feasible solution
+        assert solver.getPrimalSolutions(), "No primal solution found after dual bound injection"
+
+    def test_external_dual_bound_returning_none_is_safe(self):
+        """Returning None from ExternalDualBound must not crash."""
+        import SHOTpy
+
+        solver = SHOTpy.Solver()
+        solver.updateSetting("Console.LogLevel", "Output", 2)
+        solver.updateSetting("TreeStrategy", "Dual", 0)  # MultiTree
+        env = solver.getEnvironment()
+        problem = self._build_shot_ex_jogo(env)
+        solver.setProblem(problem)
+
+        solver.registerCallback(SHOTpy.EventType.ExternalDualBound, lambda d: None)
+        solver.solveProblem()  # Must not crash
+
+    def test_external_primal_solution_callback_is_called(self):
+        """Injecting a pre-verified optimal solution in the first iteration leads to
+        early termination (mirrors the C++ GurobiExternalDualBoundCallbackTest pattern).
+
+        Phase 1: solve shot_ex_jogo, collect the optimal primal solution that SHOT
+                 has already verified as feasible (no rounding issues).
+        Phase 2: re-inject that solution via ExternalPrimalSolution at iteration 1.
+                 With the primal bound immediately tight, the solver should
+                 terminate in fewer iterations than in Phase 1.
+        """
+        import SHOTpy
+
+        # ── Phase 1: collect the verified optimal primal solution ─────────────
+        solver1 = SHOTpy.Solver()
+        solver1.updateSetting("Console.LogLevel",     "Output", 6)
+        solver1.updateSetting("Convexity.AssumeConvex", "Model", True)
+        env1 = solver1.getEnvironment()
+        solver1.setProblem(self._build_shot_ex_jogo(env1), self._build_shot_ex_jogo(env1))
+
+        collected_solutions = []
+        solver1.registerCallback(
+            SHOTpy.EventType.NewPrimalSolution,
+            lambda d: collected_solutions.append(list(d.solution))
+        )
+        solver1.solveProblem()
+        iters_phase1 = solver1.getSolutionStatistics().numberOfIterations
+        print(f"\n  Phase 1 finished: {iters_phase1} iterations, "
+              f"{len(collected_solutions)} primal solutions collected")
+        assert collected_solutions, "No primal solutions collected in phase 1"
+
+        # Best solution found: use the one with the lowest objective
+        best_solution = min(
+            collected_solutions,
+            key=lambda s: solver1.getPrimalSolution().objValue  # all share same solver
+        )
+        # Actually use the final (optimal) solution directly from the solver
+        best_solution = list(solver1.getPrimalSolution().point)
+        best_obj      = solver1.getPrimalSolution().objValue
+        print(f"  Best solution: {best_solution}  obj={best_obj:.6f}")
+
+        # ── Phase 2: inject in the first iteration ────────────────────────────
+        solver2 = SHOTpy.Solver()
+        solver2.updateSetting("Console.LogLevel",     "Output", 2)
+        solver2.updateSetting("Convexity.AssumeConvex", "Model", True)
+        solver2.updateSetting("Relaxation.Use",       "Dual",  False)
+        solver2.updateSetting("TreeStrategy",         "Dual",  0)    # MultiTree
+        env2 = solver2.getEnvironment()
+        solver2.setProblem(self._build_shot_ex_jogo(env2), self._build_shot_ex_jogo(env2))
+
+        provided = [False]
+        call_log  = []
+
+        def on_new_primal(data):
+            print(f"  [NewPrimalSolution]      iter={data.iterationNumber}  obj={data.objectiveValue:.6f}")
+
+        def provide_primal_solution(data):
+            call_log.append(data.iterationNumber)
+            print(f"  [ExternalPrimalSolution] iter={data.iterationNumber}  "
+                  f"dual={data.currentDualBound:.4f}  primal={data.currentPrimalBound:.4f}")
+            if not provided[0]:
+                provided[0] = True
+                print(f"    -> injecting phase-1 optimal solution: {best_solution}")
+                return best_solution
+            return None
+
+        solver2.registerCallback(SHOTpy.EventType.NewPrimalSolution,      on_new_primal)
+        solver2.registerCallback(SHOTpy.EventType.ExternalPrimalSolution, provide_primal_solution)
+        solver2.solveProblem()
+
+        iters_phase2 = solver2.getSolutionStatistics().numberOfIterations
+        obj2         = solver2.getPrimalSolution().objValue
+        print(f"\n  Phase 2 finished: {iters_phase2} iterations  obj={obj2:.6f}")
+
+        assert call_log, "ExternalPrimalSolution callback never called"
+        assert solver2.getPrimalSolutions(), "No primal solution found in phase 2"
+        assert obj2 <= self._KNOWN_OBJ * 0.99, f"Objective {obj2:.6f} far from optimum"
+        # Injecting the optimal solution up-front should mean phase 2 needs no more
+        # iterations than phase 1 (and typically fewer)
+        assert iters_phase2 <= iters_phase1, (
+            f"Expected phase 2 ({iters_phase2} iter) to be no worse than "
+            f"phase 1 ({iters_phase1} iter)"
+        )
+
+    def test_external_primal_solution_returning_none_is_safe(self):
+        """Returning None from ExternalPrimalSolution must not crash."""
+        import SHOTpy
+
+        solver = SHOTpy.Solver()
+        solver.updateSetting("Console.LogLevel", "Output", 2)
+        env = solver.getEnvironment()
+        problem = self._build_shot_ex_jogo(env)
+        solver.setProblem(problem)
+
+        solver.registerCallback(SHOTpy.EventType.ExternalPrimalSolution, lambda d: None)
+        solver.solveProblem()  # Must not crash
+
+    def test_dual_and_primal_callbacks_together(self):
+        """ExternalDualBound and ExternalPrimalSolution both inject values that the solver accepts.
+
+        - ExternalDualBound injects the known optimal dual bound on the first call where
+          the solver's own bound is still worse.  The callback records whether the
+          injection condition was met.
+        - ExternalPrimalSolution injects the known optimal point on the first call.
+          A NewPrimalSolution event near the known objective confirms the point was
+          accepted (not silently discarded).
+        """
+        import SHOTpy
+
+        solver = SHOTpy.Solver()
+        solver.updateSetting("Console.LogLevel",       "Output", 2)
+        solver.updateSetting("Convexity.AssumeConvex", "Model",  True)
+        solver.updateSetting("Relaxation.Use",         "Dual",   False)
+        solver.updateSetting("TreeStrategy",           "Dual",   0)   # MultiTree — required for ExternalDualBound
+        env = solver.getEnvironment()
+        problem = self._build_shot_ex_jogo(env)
+        solver.setProblem(problem, problem)
+
+        dual_calls      = [0]
+        primal_calls    = [0]
+        dual_injected   = [False]
+        primal_injected = [False]
+        primal_accepted = [False]
+
+        def on_new_primal(data):
+            print(f"  [NewPrimalSolution]        iter={data.iterationNumber:3d}  "
+                  f"obj={data.objectiveValue:.6f}  point={[round(v,4) for v in data.solution]}")
+            # Confirm the injected primal solution was accepted by the solver
+            if primal_injected[0] and abs(data.objectiveValue - self._KNOWN_OBJ) < 0.01:
+                primal_accepted[0] = True
+                print(f"    ✓ injected primal accepted (obj near known optimum {self._KNOWN_OBJ:.6f})")
+
+        def provide_dual(data):
+            dual_calls[0] += 1
+            # Inject the known dual bound once while the solver's bound is still worse
+            if not dual_injected[0] and data.currentDualBound < self._KNOWN_DUAL:
+                dual_injected[0] = True
+                print(f"  [ExternalDualBound]        iter={data.iterationNumber:3d}  "
+                      f"current={data.currentDualBound:.6f}  "
+                      f"-> injecting known dual {self._KNOWN_DUAL:.6f}")
+                return self._KNOWN_DUAL
+            print(f"  [ExternalDualBound]        iter={data.iterationNumber:3d}  "
+                  f"current={data.currentDualBound:.6f}  -> None (no update)")
+            return None
+
+        def provide_primal(data):
+            primal_calls[0] += 1
+            if not primal_injected[0]:
+                primal_injected[0] = True
+                point = [8.903615014500554, 12.0]
+                print(f"  [ExternalPrimalSolution]   iter={data.iterationNumber:3d}  "
+                      f"current primal={data.currentPrimalBound:.6f}  "
+                      f"-> injecting known optimal point {point}")
+                return point
+            print(f"  [ExternalPrimalSolution]   iter={data.iterationNumber:3d}  "
+                  f"current primal={data.currentPrimalBound:.6f}  -> None (no update)")
+            return None
+
+        print(f"\n  Registering callbacks: NewPrimalSolution, ExternalDualBound, ExternalPrimalSolution")
+        print(f"  Known dual={self._KNOWN_DUAL:.6f}  known primal={self._KNOWN_OBJ:.6f}")
+        solver.registerCallback(SHOTpy.EventType.NewPrimalSolution,      on_new_primal)
+        solver.registerCallback(SHOTpy.EventType.ExternalDualBound,      provide_dual)
+        solver.registerCallback(SHOTpy.EventType.ExternalPrimalSolution, provide_primal)
+        solver.solveProblem()
+
+        print(f"\n  Summary: dual_calls={dual_calls[0]}  primal_calls={primal_calls[0]}  "
+              f"dual_injected={dual_injected[0]}  primal_injected={primal_injected[0]}  "
+              f"primal_accepted={primal_accepted[0]}")
+        assert dual_calls[0]   >= 1, "ExternalDualBound callback never called"
+        assert primal_calls[0] >= 1, "ExternalPrimalSolution callback never called"
+        assert dual_injected[0],   "Known dual bound was never injected (condition never met)"
+        assert primal_injected[0], "Known primal point was never injected"
+        assert primal_accepted[0], (
+            f"Injected primal point was not accepted: NewPrimalSolution never fired "
+            f"near obj={self._KNOWN_OBJ:.6f}"
+        )
+        assert solver.getPrimalSolutions(), "No primal solution found"
+
+
 class TestRegisterCallbackAPI:
     """API-level checks for Solver.registerCallback."""
 
