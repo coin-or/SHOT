@@ -222,8 +222,11 @@ bool TestGradient(const std::string& problemFile)
     return passed;
 }
 
-// Forward declaration — defined later in this file
-static std::pair<std::unique_ptr<SHOT::Solver>, std::shared_ptr<SHOT::Environment>> MakeEx1223bSolver();
+// Forward declarations — defined later in this file
+static std::pair<std::unique_ptr<SHOT::Solver>, std::shared_ptr<SHOT::Environment>> MakeEx1223bSolver(
+    bool forceNonlinear = false);
+
+bool TestCallbackESHInteriorPoint();
 
 bool CreateAndSolveProblem()
 {
@@ -653,11 +656,15 @@ bool TestCallbackExternalHyperplane()
 
 // Build the ex1223b MINLP instance inline and return a ready-to-use solver + environment.
 // Reused by multiple tests.
-static std::pair<std::unique_ptr<SHOT::Solver>, std::shared_ptr<SHOT::Environment>> MakeEx1223bSolver()
+static std::pair<std::unique_ptr<SHOT::Solver>, std::shared_ptr<SHOT::Environment>> MakeEx1223bSolver(
+    bool forceNonlinear)
 {
     auto solver = std::make_unique<SHOT::Solver>();
     auto env = solver->getEnvironment();
-    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Off));
+    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Info));
+    if(forceNonlinear)
+        solver->updateSetting("Reformulation.Quadratics.Strategy", "Model",
+            static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear));
 
     auto problem = std::make_shared<SHOT::Problem>(env);
     problem->name = "ex1223b";
@@ -856,6 +863,347 @@ bool TestCallbackPrimalCandidateSelection()
     return passed;
 }
 
+bool TestCallbackESHInteriorPoint()
+{
+    bool passed = true;
+
+    // ── Phase 1: Solve ex1223b with default ESH strategy and capture the interior point ──
+    std::cout << "\nPhase 1: Solving ex1223b with default ESH strategy to obtain an interior point\n";
+
+    VectorDouble capturedInteriorPoint;
+    double phase1ObjValue = SHOT_DBL_MAX;
+
+    {
+        auto [solver, env] = MakeEx1223bSolver(true); // force nonlinear strategy so TaskFindInteriorPoint runs
+
+        solver->solveProblem();
+
+        if(solver->getPrimalSolutions().empty())
+        {
+            std::cout << "Phase 1 FAILED: could not find a primal solution\n";
+            return false;
+        }
+
+        phase1ObjValue = solver->getPrimalSolution().objValue;
+        std::cout << "Phase 1 primal objective: " << phase1ObjValue << "\n";
+
+        if(env->dualSolver->interiorPts.empty())
+        {
+            std::cout << "Phase 1 FAILED: no interior points found by internal strategy\n";
+            return false;
+        }
+
+        capturedInteriorPoint = env->dualSolver->interiorPts[0]->point;
+
+        std::cout << "Captured interior point (first " << capturedInteriorPoint.size() << " variables):\n";
+        Utilities::displayVector(capturedInteriorPoint);
+    }
+
+    // ── Phase 2a: Verify callback fires during normal ESH ──
+    std::cout << "\nPhase 2a: Verify ESH interior point callback fires during normal ESH\n";
+    {
+        auto [solver, env] = MakeEx1223bSolver(true); // force nonlinear strategy so TaskFindInteriorPoint runs
+        bool callbackFired = false;
+        size_t pointsReceived = 0;
+
+        solver->registerCallback(
+            E_EventType::ExternalESHRootsearchPointsSelection, [&](std::any args) -> std::any {
+                auto data = std::any_cast<ESHInteriorPointCallbackData>(args);
+                callbackFired = true;
+                pointsReceived = data.currentInteriorPoints.size();
+                std::cout << "  ESH interior point callback fired with " << pointsReceived << " current point(s)\n";
+                // Return empty to keep current points unchanged
+                return std::any(std::vector<VectorDouble>{});
+            });
+
+        solver->solveProblem();
+
+        if(!callbackFired)
+        {
+            std::cout << "Phase 2a FAILED: ESH interior point callback was not fired\n";
+            passed = false;
+        }
+        else if(pointsReceived == 0)
+        {
+            std::cout << "Phase 2a FAILED: callback fired but received no interior points\n";
+            passed = false;
+        }
+        else
+        {
+            std::cout << "Phase 2a PASSED: callback fired with " << pointsReceived << " interior point(s)\n";
+        }
+    }
+
+    // ── Phase 2b: Solve with OnlyExternal strategy + inject captured point via callback ──
+    std::cout << "\nPhase 2b: Solving with ESH.InteriorPoint.Strategy=OnlyExternal and injecting captured point\n";
+    {
+        auto [solver, env] = MakeEx1223bSolver(true); // force nonlinear strategy so TaskFindInteriorPoint runs
+
+        solver->updateSetting("ESH.InteriorPoint.Strategy", "Dual",
+            static_cast<int>(ES_ESHInteriorPointStrategy::OnlyExternal));
+
+        bool callbackFired = false;
+
+        solver->registerCallback(
+            E_EventType::ExternalESHRootsearchPointsSelection, [&](std::any args) -> std::any {
+                auto data = std::any_cast<ESHInteriorPointCallbackData>(args);
+                callbackFired = true;
+                std::cout << "  ESH interior point callback fired (OnlyExternal strategy)\n";
+                std::cout << "  currentInteriorPoints size from callback: "
+                          << data.currentInteriorPoints.size() << " (should be 0)\n";
+                // Return the captured point from Phase 1
+                return std::any(std::vector<VectorDouble>{ capturedInteriorPoint });
+            });
+
+        solver->solveProblem();
+
+        if(!callbackFired)
+        {
+            std::cout << "Phase 2b FAILED: callback was not fired\n";
+            passed = false;
+        }
+        else if(solver->getPrimalSolutions().empty())
+        {
+            std::cout << "Phase 2b FAILED: no primal solution found\n";
+            passed = false;
+        }
+        else
+        {
+            double phase2ObjValue = solver->getPrimalSolution().objValue;
+            std::cout << "Phase 2b primal objective: " << phase2ObjValue << "\n";
+
+            const double tol = 1e-4;
+            if(std::abs(phase2ObjValue - phase1ObjValue) <= tol + tol * std::abs(phase1ObjValue))
+            {
+                std::cout << "Phase 2b PASSED: objective matches Phase 1 within tolerance\n";
+            }
+            else
+            {
+                std::cout << "Phase 2b FAILED: objective " << phase2ObjValue
+                          << " differs from Phase 1 (" << phase1ObjValue << ") by more than tolerance\n";
+                passed = false;
+            }
+        }
+    }
+
+    if(!passed)
+        std::cout << "\nTestCallbackESHInteriorPoint FAILED\n";
+    else
+        std::cout << "\nTestCallbackESHInteriorPoint PASSED\n";
+
+    return passed;
+}
+
+// Builds a modified ex1223b where the objective is to minimize an auxiliary variable mu,
+// which is subtracted from each quadratic constraint. The optimal solution gives a point
+// that is maximally interior to those constraints (mu < 0 means strictly interior).
+static std::pair<std::unique_ptr<SHOT::Solver>, std::shared_ptr<SHOT::Environment>>
+MakeEx1223bInteriorPointSolver()
+{
+    auto solver = std::make_unique<SHOT::Solver>();
+    auto env = solver->getEnvironment();
+    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Info));
+    // Treat quadratic constraints as nonlinear so the interior point is valid for ESH
+    solver->updateSetting("Reformulation.Quadratics.Strategy", "Model",
+        static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear));
+
+    auto problem = std::make_shared<SHOT::Problem>(env);
+    problem->name = "ex1223b_interior";
+
+    // Original variables — all continuous (binary variables relaxed to [0,1])
+    auto x1 = std::make_shared<Variable>("x1", 0, E_VariableType::Real, 0.0, 10.0);
+    auto x2 = std::make_shared<Variable>("x2", 1, E_VariableType::Real, 0.0, 10.0);
+    auto x3 = std::make_shared<Variable>("x3", 2, E_VariableType::Real, 0.0, 10.0);
+    auto b4 = std::make_shared<Variable>("b4", 3, E_VariableType::Real, 0.0, 1.0);
+    auto b5 = std::make_shared<Variable>("b5", 4, E_VariableType::Real, 0.0, 1.0);
+    auto b6 = std::make_shared<Variable>("b6", 5, E_VariableType::Real, 0.0, 1.0);
+    auto b7 = std::make_shared<Variable>("b7", 6, E_VariableType::Real, 0.0, 1.0);
+
+    // Auxiliary variable mu: the objective is to minimize mu
+    auto mu = std::make_shared<Variable>("mu", 7, E_VariableType::Real, -100.0, 100.0);
+
+    problem->add({ x1, x2, x3, b4, b5, b6, b7, mu });
+
+    // Objective: minimize mu
+    auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<LinearTerm>(1.0, mu));
+    problem->add(objective);
+
+    // Linear constraints: unchanged from ex1223b
+    auto e1 = std::make_shared<LinearConstraint>(0, "e1", SHOT_DBL_MIN, 5.0);
+    e1->add(std::make_shared<LinearTerm>(1.0, x1)); e1->add(std::make_shared<LinearTerm>(1.0, x2));
+    e1->add(std::make_shared<LinearTerm>(1.0, x3)); e1->add(std::make_shared<LinearTerm>(1.0, b4));
+    e1->add(std::make_shared<LinearTerm>(1.0, b5)); e1->add(std::make_shared<LinearTerm>(1.0, b6));
+    problem->add(e1);
+
+    // Quadratic constraints with -mu added: f(x) - mu <= rhs
+    auto e2 = std::make_shared<QuadraticConstraint>(1, "e2", SHOT_DBL_MIN, 5.5);
+    e2->add(std::make_shared<QuadraticTerm>(1.0, b6, b6)); e2->add(std::make_shared<QuadraticTerm>(1.0, x1, x1));
+    e2->add(std::make_shared<QuadraticTerm>(1.0, x2, x2)); e2->add(std::make_shared<QuadraticTerm>(1.0, x3, x3));
+    e2->add(std::make_shared<LinearTerm>(-1.0, mu));
+    problem->add(e2);
+
+    auto e3 = std::make_shared<LinearConstraint>(2, "e3", SHOT_DBL_MIN, 1.2);
+    e3->add(std::make_shared<LinearTerm>(1.0, x1)); e3->add(std::make_shared<LinearTerm>(1.0, b4));
+    problem->add(e3);
+
+    auto e4 = std::make_shared<LinearConstraint>(3, "e4", SHOT_DBL_MIN, 1.8);
+    e4->add(std::make_shared<LinearTerm>(1.0, x2)); e4->add(std::make_shared<LinearTerm>(1.0, b5));
+    problem->add(e4);
+
+    auto e5 = std::make_shared<LinearConstraint>(4, "e5", SHOT_DBL_MIN, 2.5);
+    e5->add(std::make_shared<LinearTerm>(1.0, x3)); e5->add(std::make_shared<LinearTerm>(1.0, b6));
+    problem->add(e5);
+
+    auto e6 = std::make_shared<LinearConstraint>(5, "e6", SHOT_DBL_MIN, 1.2);
+    e6->add(std::make_shared<LinearTerm>(1.0, x1)); e6->add(std::make_shared<LinearTerm>(1.0, b7));
+    problem->add(e6);
+
+    auto e7 = std::make_shared<QuadraticConstraint>(6, "e7", SHOT_DBL_MIN, 1.64);
+    e7->add(std::make_shared<QuadraticTerm>(1.0, b5, b5)); e7->add(std::make_shared<QuadraticTerm>(1.0, x2, x2));
+    e7->add(std::make_shared<LinearTerm>(-1.0, mu));
+    problem->add(e7);
+
+    auto e8 = std::make_shared<QuadraticConstraint>(7, "e8", SHOT_DBL_MIN, 4.25);
+    e8->add(std::make_shared<QuadraticTerm>(1.0, b6, b6)); e8->add(std::make_shared<QuadraticTerm>(1.0, x3, x3));
+    e8->add(std::make_shared<LinearTerm>(-1.0, mu));
+    problem->add(e8);
+
+    auto e9 = std::make_shared<QuadraticConstraint>(8, "e9", SHOT_DBL_MIN, 4.64);
+    e9->add(std::make_shared<QuadraticTerm>(1.0, b5, b5)); e9->add(std::make_shared<QuadraticTerm>(1.0, x3, x3));
+    e9->add(std::make_shared<LinearTerm>(-1.0, mu));
+    problem->add(e9);
+
+    simplifyNonlinearExpressions(problem, true, true, true);
+    problem->updateProperties();
+    problem->finalize();
+    solver->setProblem(problem);
+
+    return { std::move(solver), env };
+}
+
+// Returns the worst (most positive) constraint error across all constraint types for a primal solution.
+static double maxConstraintError(const PrimalSolution& sol)
+{
+    double err = SHOT_DBL_MIN;
+    if(sol.maxDevatingConstraintLinear.index >= 0)
+        err = std::max(err, sol.maxDevatingConstraintLinear.value);
+    if(sol.maxDevatingConstraintQuadratic.index >= 0)
+        err = std::max(err, sol.maxDevatingConstraintQuadratic.value);
+    if(sol.maxDevatingConstraintNonlinear.index >= 0)
+        err = std::max(err, sol.maxDevatingConstraintNonlinear.value);
+    return err;
+}
+
+static void printPrimalSolutionConstraintErrors(const PrimalSolution& sol)
+{
+    if(sol.maxDevatingConstraintLinear.index >= 0)
+        std::cout << "  max linear constraint error:    constraint "
+                  << sol.maxDevatingConstraintLinear.index << "  error = "
+                  << sol.maxDevatingConstraintLinear.value << "\n";
+    if(sol.maxDevatingConstraintQuadratic.index >= 0)
+        std::cout << "  max quadratic constraint error: constraint "
+                  << sol.maxDevatingConstraintQuadratic.index << "  error = "
+                  << sol.maxDevatingConstraintQuadratic.value << "\n";
+    if(sol.maxDevatingConstraintNonlinear.index >= 0)
+        std::cout << "  max nonlinear constraint error: constraint "
+                  << sol.maxDevatingConstraintNonlinear.index << "  error = "
+                  << sol.maxDevatingConstraintNonlinear.value << "\n";
+}
+
+bool TestCallbackESHExternalInteriorPointFromAuxProblem()
+{
+    bool passed = true;
+
+    // ── Phase 1: Solve modified ex1223b (minimize mu) to obtain a strictly interior point ──
+    // The modified problem subtracts an auxiliary variable mu from each quadratic constraint.
+    // Minimizing mu maximizes the slack, yielding a point that is as deep in the interior
+    // of the nonlinear feasible region as possible. If optimal mu < 0, the point is strictly
+    // interior to all quadratic constraints.
+    std::cout << "\nPhase 1: Solving modified ex1223b (minimize mu) to obtain an interior point\n";
+
+    VectorDouble interiorPoint; // original variables only (x1..b7), mu excluded
+
+    {
+        auto [solver, env] = MakeEx1223bInteriorPointSolver();
+
+        solver->solveProblem();
+
+        if(solver->getPrimalSolutions().empty())
+        {
+            std::cout << "Phase 1 FAILED: could not find a solution\n";
+            return false;
+        }
+
+        const auto& sol = solver->getPrimalSolution();
+        std::cout << "Phase 1 optimal mu (objective): " << sol.objValue << "\n";
+        std::cout << "Phase 1 full solution point (x1..b7, mu):\n";
+        Utilities::displayVector(sol.point);
+        std::cout << "Phase 1 constraint errors:\n";
+        printPrimalSolutionConstraintErrors(sol);
+
+        if(sol.objValue >= 0.0)
+            std::cout << "  Warning: mu >= 0 (" << sol.objValue
+                      << "); the point may not be strictly interior to all quadratic constraints\n";
+        else
+            std::cout << "  mu = " << sol.objValue
+                      << " < 0: point is strictly interior to quadratic constraints\n";
+
+        // The interior point problem has 8 variables (x1,x2,x3,b4,b5,b6,b7,mu).
+        // Drop mu (last entry) to get the 7-variable point for the original problem.
+        interiorPoint.assign(sol.point.begin(), sol.point.begin() + 7);
+        std::cout << "Phase 1 interior point (original variables, mu dropped):\n";
+        Utilities::displayVector(interiorPoint);
+    }
+
+    // ── Phase 2: Solve original ex1223b with OnlyExternal + inject the interior point ──
+    std::cout << "\nPhase 2: Solving original ex1223b with ESH.InteriorPoint.Strategy=OnlyExternal\n"
+                 "         and injecting the Phase 1 interior point\n";
+    {
+        auto [solver, env] = MakeEx1223bSolver(true); // force nonlinear strategy
+
+        solver->updateSetting("ESH.InteriorPoint.Strategy", "Dual",
+            static_cast<int>(ES_ESHInteriorPointStrategy::OnlyExternal));
+
+        bool callbackFired = false;
+
+        solver->registerCallback(
+            E_EventType::ExternalESHRootsearchPointsSelection, [&](std::any args) -> std::any {
+                auto data = std::any_cast<ESHInteriorPointCallbackData>(args);
+                callbackFired = true;
+                std::cout << "  ESH interior point callback fired (OnlyExternal strategy)\n";
+                std::cout << "  Injecting Phase 1 interior point\n";
+                return std::any(std::vector<VectorDouble>{ interiorPoint });
+            });
+
+        solver->solveProblem();
+
+        if(!callbackFired)
+        {
+            std::cout << "Phase 2 FAILED: callback was not fired\n";
+            passed = false;
+        }
+        else if(solver->getPrimalSolutions().empty())
+        {
+            std::cout << "Phase 2 FAILED: no primal solution found\n";
+            passed = false;
+        }
+        else
+        {
+            double phase2ObjValue = solver->getPrimalSolution().objValue;
+            std::cout << "Phase 2 primal objective: " << phase2ObjValue << "\n";
+            std::cout << "Phase 2 PASSED: solution found with injected interior point\n";
+        }
+    }
+
+    if(!passed)
+        std::cout << "\nTestCallbackESHExternalInteriorPointFromAuxProblem FAILED\n";
+    else
+        std::cout << "\nTestCallbackESHExternalInteriorPointFromAuxProblem PASSED\n";
+
+    return passed;
+}
+
 int SolverTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -919,6 +1267,16 @@ int SolverTest(int argc, char* argv[])
         std::cout << "Starting test for callback system - primal candidate selection" << std::endl;
         passed = TestCallbackPrimalCandidateSelection();
         std::cout << "Finished test for callback system - primal candidate selection." << std::endl;
+        break;
+    case 10:
+        std::cout << "Starting test for callback system - ESH interior point" << std::endl;
+        passed = TestCallbackESHInteriorPoint();
+        std::cout << "Finished test for callback system - ESH interior point." << std::endl;
+        break;
+    case 11:
+        std::cout << "Starting test for callback system - ESH external interior point from auxiliary problem" << std::endl;
+        passed = TestCallbackESHExternalInteriorPointFromAuxProblem();
+        std::cout << "Finished test for callback system - ESH external interior point from auxiliary problem." << std::endl;
         break;
     default:
         passed = false;

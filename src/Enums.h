@@ -59,6 +59,7 @@ enum class E_EventType
     NewPrimalSolution,
     PrimalSolutionCandidateSelection,
     UserTerminationCheck,
+    ExternalESHRootsearchPointsSelection
 };
 
 enum class E_HyperplaneSource
@@ -279,6 +280,12 @@ enum class ES_AddPrimalPointAsInteriorPoint
     KeepBoth,
     KeepNew,
     OnlyAverage
+};
+
+enum class ES_ESHInteriorPointStrategy
+{
+    UseInternalStrategy, // Use the internal cutting-plane minimax NLP strategy
+    OnlyExternal // Skip internal search; rely entirely on callback
 };
 
 enum class ES_HyperplaneCutStrategy

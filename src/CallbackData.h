@@ -174,4 +174,28 @@ struct ExternalHyperplaneSelectionCallbackData
     }
 };
 
+/**
+ * @brief Data structure for the ESH interior point callback event
+ *
+ * Passed to the ExternalESHRootsearchPointsSelection callback after the internal
+ * interior-point search (if used). The callback may return a modified/replacement
+ * set of interior points, or an empty vector to keep the current set unchanged.
+ */
+struct ESHInteriorPointCallbackData
+{
+    std::vector<VectorDouble> currentInteriorPoints; ///< Points found by the internal strategy (may be empty)
+    ProblemPtr originalProblem; ///< Pointer to the original problem
+    ProblemPtr reformulatedProblem; ///< Pointer to the reformulated problem
+    SolutionStatistics solutionStatistics; ///< Statistics about the current solution state
+
+    ESHInteriorPointCallbackData(const std::vector<VectorDouble>& interiorPoints, ProblemPtr origProblem,
+        ProblemPtr reformProblem, SolutionStatistics stats)
+        : currentInteriorPoints(interiorPoints)
+        , originalProblem(origProblem)
+        , reformulatedProblem(reformProblem)
+        , solutionStatistics(stats)
+    {
+    }
+};
+
 } // namespace SHOT

@@ -10,7 +10,9 @@
 
 #include "TaskFindInteriorPoint.h"
 
+#include "../CallbackData.h"
 #include "../DualSolver.h"
+#include "../EventHandler.h"
 #include "../PrimalSolver.h"
 #include "../Report.h"
 #include "../Results.h"
@@ -99,7 +101,81 @@ void TaskFindInteriorPoint::run()
     }
 
     if(env->dualSolver->interiorPts.size() > 0)
+    {
+        env->timing->stopTimer("InteriorPointSearch");
         return;
+    }
+
+    if(static_cast<ES_ESHInteriorPointStrategy>(
+           env->settings->getSetting<int>("ESH.InteriorPoint.Strategy", "Dual"))
+        == ES_ESHInteriorPointStrategy::OnlyExternal)
+    {
+        if(!env->events->hasDataProvider(E_EventType::ExternalESHRootsearchPointsSelection))
+        {
+            env->output->outputWarning(
+                " ESH.InteriorPoint.Strategy is OnlyExternal but no callback is registered. "
+                "No interior point will be available.");
+            env->timing->stopTimer("InteriorPointSearch");
+            return;
+        }
+
+        // Fire the callback with an empty current set
+        ESHInteriorPointCallbackData callbackData(
+            {}, env->problem, env->reformulatedProblem, env->solutionStatistics);
+
+        auto callbackResult = env->events->requestData<std::vector<VectorDouble>>(
+            E_EventType::ExternalESHRootsearchPointsSelection, callbackData);
+
+        if(!callbackResult.has_value() || callbackResult->empty())
+        {
+            env->output->outputWarning(
+                " ESH interior point callback returned no points. No interior point available.");
+            env->timing->stopTimer("InteriorPointSearch");
+            return;
+        }
+
+        int i = 0;
+        for(auto& pt : *callbackResult)
+        {
+            auto tmpIP = std::make_shared<InteriorPoint>();
+            tmpIP->point = pt;
+
+            if((int)tmpIP->point.size() < env->reformulatedProblem->properties.numberOfVariables)
+                env->reformulatedProblem->augmentAuxiliaryVariableValues(tmpIP->point);
+
+            assert(
+                tmpIP->point.size() == (size_t)env->reformulatedProblem->properties.numberOfVariables);
+
+            auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
+                tmpIP->point, env->reformulatedProblem->nonlinearConstraints);
+            tmpIP->maxDevatingConstraint
+                = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+
+            if(maxDev.normalizedValue >= 0)
+            {
+                env->output->outputWarning(
+                    " Callback-provided interior point " + std::to_string(i)
+                    + " has constraint deviation too large: "
+                    + Utilities::toString(maxDev.normalizedValue) + " (discarded)");
+            }
+            else
+            {
+                env->output->outputInfo(" Valid callback-provided interior point " + std::to_string(i)
+                    + " with constraint deviation " + Utilities::toString(maxDev.normalizedValue)
+                    + " accepted.");
+                env->dualSolver->interiorPts.push_back(tmpIP);
+            }
+            i++;
+        }
+
+        env->solutionStatistics.numberOfOriginalInteriorPoints = env->dualSolver->interiorPts.size();
+
+        for(auto& IP : env->dualSolver->interiorPts)
+            env->primalSolver->addPrimalSolutionCandidate(IP->point, E_PrimalSolutionSource::InteriorPointSearch, 0);
+
+        env->timing->stopTimer("InteriorPointSearch");
+        return;
+    }
 
     NLPSolvers.emplace_back(std::make_unique<NLPSolverCuttingPlaneMinimax>(env, env->reformulatedProblem));
 
@@ -187,6 +263,60 @@ void TaskFindInteriorPoint::run()
     for(auto IP : env->dualSolver->interiorPts)
     {
         env->primalSolver->addPrimalSolutionCandidate(IP->point, E_PrimalSolutionSource::InteriorPointSearch, 0);
+    }
+
+    // Fire ESH interior point callback after internal NLP search, allowing user to inspect,
+    // filter, or augment the found interior points
+    if(env->events->hasDataProvider(E_EventType::ExternalESHRootsearchPointsSelection))
+    {
+        std::vector<VectorDouble> currentPoints;
+        for(auto& IP : env->dualSolver->interiorPts)
+            currentPoints.push_back(IP->point);
+
+        ESHInteriorPointCallbackData callbackData(
+            currentPoints, env->problem, env->reformulatedProblem, env->solutionStatistics);
+
+        auto callbackResult = env->events->requestData<std::vector<VectorDouble>>(
+            E_EventType::ExternalESHRootsearchPointsSelection, callbackData);
+
+        if(callbackResult.has_value() && !callbackResult->empty())
+        {
+            env->output->outputInfo(" ESH interior point callback returned replacement points.");
+            env->dualSolver->interiorPts.clear();
+
+            int i = 0;
+            for(auto& pt : *callbackResult)
+            {
+                auto tmpIP = std::make_shared<InteriorPoint>();
+                tmpIP->point = pt;
+
+                if((int)tmpIP->point.size() < env->reformulatedProblem->properties.numberOfVariables)
+                    env->reformulatedProblem->augmentAuxiliaryVariableValues(tmpIP->point);
+
+                assert(tmpIP->point.size() == (size_t)env->reformulatedProblem->properties.numberOfVariables);
+
+                auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
+                    tmpIP->point, env->reformulatedProblem->nonlinearConstraints);
+                tmpIP->maxDevatingConstraint
+                    = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+
+                if(maxDev.normalizedValue >= 0)
+                {
+                    env->output->outputWarning(" Callback-provided interior point " + std::to_string(i)
+                        + " has constraint deviation too large: " + Utilities::toString(maxDev.normalizedValue)
+                        + " (discarded)");
+                }
+                else
+                {
+                    env->output->outputInfo(" Valid callback-provided interior point " + std::to_string(i)
+                        + " with constraint deviation " + Utilities::toString(maxDev.normalizedValue) + " accepted.");
+                    env->dualSolver->interiorPts.push_back(tmpIP);
+                }
+                i++;
+            }
+
+            env->solutionStatistics.numberOfOriginalInteriorPoints = env->dualSolver->interiorPts.size();
+        }
     }
 
     env->timing->stopTimer("InteriorPointSearch");

@@ -997,3 +997,267 @@ class TestRegisterCallbackAPI:
         solver.registerCallback(SHOTpy.EventType.NewPrimalSolution, counter)
         solver.solveProblem()
         assert counter.count >= 1
+
+
+# ---------------------------------------------------------------------------
+# ESH Interior Point Callback tests
+# ---------------------------------------------------------------------------
+
+class TestCallbackESHInteriorPoint:
+    """Tests for the ExternalESHRootsearchPointsSelection callback.
+
+    Uses ex1223b as the test problem (built with build_ex1223b helper).
+    """
+
+    def test_event_type_has_esh_rootsearch(self):
+        """EventType enum exposes ExternalESHRootsearchPointsSelection."""
+        import SHOTpy
+        assert hasattr(SHOTpy.EventType, "ExternalESHRootsearchPointsSelection"), (
+            "SHOTpy.EventType.ExternalESHRootsearchPointsSelection is not exposed"
+        )
+
+    def test_esh_interior_point_callback_data_attrs(self):
+        """ESHInteriorPointCallbackData exposes the expected attributes."""
+        import SHOTpy
+        for attr in ["currentInteriorPoints", "originalProblem", "reformulatedProblem",
+                     "solutionStatistics"]:
+            assert hasattr(SHOTpy.ESHInteriorPointCallbackData, attr), (
+                f"ESHInteriorPointCallbackData missing attribute: {attr}"
+            )
+
+    def test_callback_fires_during_normal_esh(self):
+        """Callback fires during a normal ESH solve and receives interior point(s)."""
+        import SHOTpy
+
+        solver = SHOTpy.Solver()
+        solver.updateSetting("Console.LogLevel", "Output", 6)  # Off
+        solver.updateSetting("Reformulation.Quadratics.Strategy", "Model", 0)  # Nonlinear -> multi-tree/ESH
+        env = solver.getEnvironment()
+        problem = build_ex1223b(env)
+        solver.setProblem(problem)
+
+        callback_fired = [False]
+        points_received = [0]
+
+        def on_interior_points(data):
+            callback_fired[0] = True
+            points_received[0] = len(data.currentInteriorPoints)
+            print(f"  [ESHInteriorPoint] callback fired, {points_received[0]} current point(s)")
+            # Return None to keep the current points unchanged
+            return None
+
+        solver.registerCallback(
+            SHOTpy.EventType.ExternalESHRootsearchPointsSelection, on_interior_points
+        )
+        solver.solveProblem()
+
+        assert callback_fired[0], "ESH interior point callback was not fired"
+        assert points_received[0] > 0, (
+            "Callback fired but received no interior points from the internal strategy"
+        )
+
+    def test_callback_only_external_strategy(self):
+        """Two-phase test: extract interior point, then inject via OnlyExternal strategy.
+
+        Phase 1: Solve ex1223b with the default ESH strategy; record the interior point
+                 found by the internal cutting-plane minimax solver and the optimal primal
+                 objective value.
+
+        Phase 2: Solve ex1223b again with ESH.InteriorPoint.Strategy = OnlyExternal.
+                 Provide the Phase 1 interior point through the callback.  The solver must
+                 reach the same optimal objective (within 1e-4 relative tolerance).
+        """
+        import SHOTpy
+
+        tol = 1e-4
+
+        # ── Phase 1 ──────────────────────────────────────────────────────────
+        solver1 = SHOTpy.Solver()
+        solver1.updateSetting("Console.LogLevel", "Output", 6)
+        solver1.updateSetting("Reformulation.Quadratics.Strategy", "Model", 0)  # Nonlinear -> multi-tree/ESH
+        env1 = solver1.getEnvironment()
+        problem1 = build_ex1223b(env1)
+        solver1.setProblem(problem1)
+
+        captured_points = []
+
+        def capture_interior_points(data):
+            # Store a copy of whatever the internal solver found
+            captured_points.extend(data.currentInteriorPoints)
+            return None  # keep current points unchanged
+
+        solver1.registerCallback(
+            SHOTpy.EventType.ExternalESHRootsearchPointsSelection, capture_interior_points
+        )
+        solver1.solveProblem()
+
+        assert solver1.getPrimalSolutions(), "Phase 1: no primal solution found"
+        phase1_obj = solver1.getPrimalSolution().objValue
+        print(f"\n  Phase 1 objective: {phase1_obj:.6f}")
+
+        assert captured_points, "Phase 1: no interior point captured from internal strategy"
+        print(f"  Captured {len(captured_points)} interior point(s) from Phase 1")
+
+        # ── Phase 2 ──────────────────────────────────────────────────────────
+        solver2 = SHOTpy.Solver()
+        solver2.updateSetting("Console.LogLevel", "Output", 6)
+        solver2.updateSetting("Reformulation.Quadratics.Strategy", "Model", 0)  # Nonlinear -> multi-tree/ESH
+        solver2.updateSetting("ESH.InteriorPoint.Strategy", "Dual", 1)  # OnlyExternal
+        env2 = solver2.getEnvironment()
+        problem2 = build_ex1223b(env2)
+        solver2.setProblem(problem2)
+
+        callback_fired = [False]
+
+        def provide_interior_points(data):
+            callback_fired[0] = True
+            assert len(data.currentInteriorPoints) == 0, (
+                "OnlyExternal: callback received non-empty currentInteriorPoints "
+                "(internal strategy should not have run)"
+            )
+            print(f"  [OnlyExternal] callback fired, injecting {len(captured_points)} point(s)")
+            return captured_points  # inject the Phase-1 interior points
+
+        solver2.registerCallback(
+            SHOTpy.EventType.ExternalESHRootsearchPointsSelection, provide_interior_points
+        )
+        solver2.solveProblem()
+
+        assert callback_fired[0], "Phase 2: ESH interior point callback was not fired"
+        assert solver2.getPrimalSolutions(), "Phase 2: no primal solution found"
+
+        phase2_obj = solver2.getPrimalSolution().objValue
+        print(f"  Phase 2 objective: {phase2_obj:.6f}")
+
+        assert abs(phase2_obj - phase1_obj) <= tol + tol * abs(phase1_obj), (
+            f"Phase 2 objective {phase2_obj:.6f} differs from Phase 1 ({phase1_obj:.6f}) "
+            f"by more than tolerance {tol}"
+        )
+
+    def test_aux_problem_interior_point_injection(self):
+        """Auxiliary-problem approach: find an interior point by minimising a slack variable.
+
+        Phase 1: Solve an auxiliary version of ex1223b where:
+          - binary variables b4-b7 are relaxed to Real [0, 1],
+          - an auxiliary variable mu (Real [-100, 100]) is added,
+          - mu is subtracted from each quadratic/nonlinear constraint,
+          - the objective is ``minimize mu``.
+          Optimal mu < 0 guarantees a strictly interior point.
+
+        Phase 2: Use the auxiliary-problem point as the only interior point (via the
+          OnlyExternal strategy) and verify that ex1223b is still solved to optimality.
+        """
+        import SHOTpy
+
+        # ── Phase 1: auxiliary minimize-mu problem ────────────────────────────
+        solver_aux = SHOTpy.Solver()
+        solver_aux.updateSetting("Console.LogLevel", "Output", 6)
+        solver_aux.updateSetting("Reformulation.Quadratics.Strategy", "Model", 0)  # Nonlinear
+        env_aux = solver_aux.getEnvironment()
+
+        problem_aux = SHOTpy.Problem(env_aux)
+        problem_aux.name = "ex1223b_interior"
+
+        # Original 7 variables, b4-b7 relaxed to Real [0, 1]
+        x1 = SHOTpy.Variable("x1", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x2 = SHOTpy.Variable("x2", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x3 = SHOTpy.Variable("x3", 2, SHOTpy.VariableType.Real, 0.0, 10.0)
+        b4 = SHOTpy.Variable("b4", 3, SHOTpy.VariableType.Real, 0.0, 1.0)
+        b5 = SHOTpy.Variable("b5", 4, SHOTpy.VariableType.Real, 0.0, 1.0)
+        b6 = SHOTpy.Variable("b6", 5, SHOTpy.VariableType.Real, 0.0, 1.0)
+        b7 = SHOTpy.Variable("b7", 6, SHOTpy.VariableType.Real, 0.0, 1.0)
+        mu = SHOTpy.Variable("mu", 7, SHOTpy.VariableType.Real, -100.0, 100.0)
+        for v in [x1, x2, x3, b4, b5, b6, b7, mu]:
+            problem_aux.addVariable(v)
+
+        # Objective: minimize mu
+        lt_obj = SHOTpy.LinearTerms()
+        lt_obj.add(SHOTpy.LinearTerm(1.0, mu))
+        problem_aux.setObjective(
+            SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize, lt_obj, 0.0)
+        )
+
+        # e1: x1+x2+x3+b4+b5+b6 <= 5  (linear, unchanged)
+        lt1 = SHOTpy.LinearTerms()
+        for v in [x1, x2, x3, b4, b5, b6]:
+            lt1.add(SHOTpy.LinearTerm(1.0, v))
+        problem_aux.addConstraint(
+            SHOTpy.LinearConstraint(0, "e1", lt1, SHOTpy.SHOT_DBL_MIN, 5.0)
+        )
+
+        # e2: b6^2+x1^2+x2^2+x3^2 - mu <= 5.5  (quadratic - mu)
+        problem_aux.addConstraint(SHOTpy.NonlinearConstraint(
+            1, "e2", b6**2 + x1**2 + x2**2 + x3**2 - mu, SHOTpy.SHOT_DBL_MIN, 5.5
+        ))
+
+        # e3-e6: linear constraints, unchanged
+        for idx, (va, vb, rhs, nm) in enumerate(
+                [(x1, b4, 1.2, "e3"), (x2, b5, 1.8, "e4"),
+                 (x3, b6, 2.5, "e5"), (x1, b7, 1.2, "e6")], start=2):
+            lt = SHOTpy.LinearTerms()
+            lt.add(SHOTpy.LinearTerm(1.0, va))
+            lt.add(SHOTpy.LinearTerm(1.0, vb))
+            problem_aux.addConstraint(
+                SHOTpy.LinearConstraint(idx, nm, lt, SHOTpy.SHOT_DBL_MIN, rhs)
+            )
+
+        # e7: b5^2+x2^2 - mu <= 1.64
+        problem_aux.addConstraint(SHOTpy.NonlinearConstraint(
+            6, "e7", b5**2 + x2**2 - mu, SHOTpy.SHOT_DBL_MIN, 1.64
+        ))
+        # e8: b6^2+x3^2 - mu <= 4.25
+        problem_aux.addConstraint(SHOTpy.NonlinearConstraint(
+            7, "e8", b6**2 + x3**2 - mu, SHOTpy.SHOT_DBL_MIN, 4.25
+        ))
+        # e9: b5^2+x3^2 - mu <= 4.64
+        problem_aux.addConstraint(SHOTpy.NonlinearConstraint(
+            8, "e9", b5**2 + x3**2 - mu, SHOTpy.SHOT_DBL_MIN, 4.64
+        ))
+
+        problem_aux.finalize()
+        solver_aux.setProblem(problem_aux)
+        solver_aux.solveProblem()
+
+        assert solver_aux.getPrimalSolutions(), "Auxiliary problem: no solution found"
+        aux_sol = solver_aux.getPrimalSolution()
+        optimal_mu = aux_sol.objValue
+        print(f"\n  Auxiliary problem: optimal mu = {optimal_mu:.6f}")
+        if optimal_mu < 0.0:
+            print(f"  mu < 0: point is strictly interior to all quadratic constraints")
+        else:
+            print(f"  Warning: mu >= 0; point may not be strictly interior")
+
+        # The aux problem has 8 variables (x1..b7, mu).  Drop mu (index 7).
+        interior_point = list(aux_sol.point[:7])
+        print(f"  Interior point (mu dropped): {[round(v, 4) for v in interior_point]}")
+
+        # ── Phase 2: inject aux-problem interior point via OnlyExternal ───────
+        solver2 = SHOTpy.Solver()
+        solver2.updateSetting("Console.LogLevel", "Output", 6)
+        solver2.updateSetting("Reformulation.Quadratics.Strategy", "Model", 0)  # Nonlinear
+        solver2.updateSetting("ESH.InteriorPoint.Strategy", "Dual", 1)  # OnlyExternal
+        env2 = solver2.getEnvironment()
+        problem2 = build_ex1223b(env2)
+        solver2.setProblem(problem2)
+
+        callback_fired = [False]
+
+        def inject_aux_point(data):
+            callback_fired[0] = True
+            print(f"  [OnlyExternal] callback fired, injecting aux-problem interior point")
+            return [interior_point]
+
+        solver2.registerCallback(
+            SHOTpy.EventType.ExternalESHRootsearchPointsSelection, inject_aux_point
+        )
+        solver2.solveProblem()
+
+        assert callback_fired[0], "Phase 2: ESH interior point callback was not fired"
+        assert solver2.getPrimalSolutions(), (
+            "Phase 2: no primal solution found when using aux-problem interior point"
+        )
+        phase2_obj = solver2.getPrimalSolution().objValue
+        print(f"  Phase 2 objective: {phase2_obj:.6f}  (expected ≈ 4.5796)")
+        assert abs(phase2_obj - 4.579582) < 0.01, (
+            f"Phase 2 objective {phase2_obj:.6f} differs from known optimum 4.5796"
+        )

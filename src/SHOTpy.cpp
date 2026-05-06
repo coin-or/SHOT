@@ -1436,6 +1436,17 @@ PYBIND11_MODULE(SHOTpy, m)
                         return { point }; // wrap single solution in a vector as the task expects
                     });
                     break;
+                case E_EventType::ExternalESHRootsearchPointsSelection:
+                    self.registerCallback(
+                        event, [callback](std::any args) -> std::vector<VectorDouble> {
+                            py::gil_scoped_acquire gil;
+                            auto data = std::any_cast<ESHInteriorPointCallbackData>(args);
+                            py::object result = callback(data);
+                            if(result.is_none())
+                                return {};
+                            return result.cast<std::vector<VectorDouble>>();
+                        });
+                    break;
                 default:
                     throw std::invalid_argument("Unknown event type for registerCallback");
                 }
@@ -1452,13 +1463,16 @@ PYBIND11_MODULE(SHOTpy, m)
             "  EventType.ExternalHyperplaneSelection: fn(ExternalHyperplaneSelectionCallbackData) -> list[ExternalHyperplane]\n"
             "    Return a list of hyperplanes to add, or None/[] to add none.\n"
             "  EventType.ExternalPrimalSolution: fn(ExternalPrimalSolutionCallbackData) -> list[float]\n"
-            "    Return a new primal solution point, or None/[] to skip.",
+            "    Return a new primal solution point, or None/[] to skip.\n"
+            "  EventType.ExternalESHRootsearchPointsSelection: fn(ESHInteriorPointCallbackData) -> list[list[float]]\n"
+            "    Return a replacement list of interior point vectors, or None/[] to keep current points.",
             py::arg("event"), py::arg("callback"));
 
     py::enum_<E_EventType>(m, "EventType")
         .value("ExternalDualBound", E_EventType::ExternalDualBound)
         .value("ExternalHyperplaneSelection", E_EventType::ExternalHyperplaneSelection)
         .value("ExternalPrimalSolution", E_EventType::ExternalPrimalSolution)
+        .value("ExternalESHRootsearchPointsSelection", E_EventType::ExternalESHRootsearchPointsSelection)
         .value("NewPrimalSolution", E_EventType::NewPrimalSolution)
         .value("PrimalSolutionCandidateSelection", E_EventType::PrimalSolutionCandidateSelection)
         .value("UserTerminationCheck", E_EventType::UserTerminationCheck);
@@ -1680,5 +1694,11 @@ PYBIND11_MODULE(SHOTpy, m)
             "isObjectiveNonlinear", &ExternalHyperplaneSelectionCallbackData::isObjectiveNonlinear)
         .def_readonly(
             "solutionStatistics", &ExternalHyperplaneSelectionCallbackData::solutionStatistics);
+
+    py::class_<ESHInteriorPointCallbackData>(m, "ESHInteriorPointCallbackData")
+        .def_readonly("currentInteriorPoints", &ESHInteriorPointCallbackData::currentInteriorPoints)
+        .def_readonly("originalProblem", &ESHInteriorPointCallbackData::originalProblem)
+        .def_readonly("reformulatedProblem", &ESHInteriorPointCallbackData::reformulatedProblem)
+        .def_readonly("solutionStatistics", &ESHInteriorPointCallbackData::solutionStatistics);
 }
 }
