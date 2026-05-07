@@ -165,6 +165,47 @@ bool GurobiTerminationCallbackTest(std::string filename)
     return (true);
 }
 
+bool GurobiTerminationCallbackSingleTreeTest(std::string filename)
+{
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+
+    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Info));
+    solver->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Gurobi));
+    solver->updateSetting("Console.Iteration.Detail", "Output", static_cast<int>(ES_IterationOutputDetail::Full));
+    solver->updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::SingleTree));
+
+    if(!solver->setProblem(filename))
+    {
+        std::cout << "Error while reading problem";
+        return (false);
+    }
+
+    solver->registerCallback(E_EventType::UserTerminationCheck, [](std::any args) -> bool {
+        auto data = std::any_cast<TerminationCallbackData>(args);
+        if(data.iterationNumber > 10)
+        {
+            std::cout << "Terminating after iteration " << data.iterationNumber << "\n";
+            return true;
+        }
+        return false;
+    });
+
+    if(!solver->solveProblem())
+    {
+        std::cout << "Error while solving problem\n";
+        return (false);
+    }
+
+    if(env->results->terminationReason != E_TerminationReason::UserAbort)
+    {
+        std::cout << "Termination callback did not terminate the single-tree solve as expected\n";
+        return (false);
+    }
+
+    return (true);
+}
+
 bool GurobiExternalPrimalSolutionSingleTreeTest(std::string filename)
 {
     // Phase 1: collect primal solution points from a MultiTree solve
@@ -574,6 +615,11 @@ int GurobiTest(int argc, char* argv[])
         std::cout << "Starting test for external primal solution injection in single-tree strategy" << std::endl;
         passed = GurobiExternalPrimalSolutionSingleTreeTest("data/fo7_2.osil");
         std::cout << "Finished test for external primal solution injection in single-tree strategy.";
+        break;
+    case 12:
+        std::cout << "Starting test for termination callback in single-tree strategy" << std::endl;
+        passed = GurobiTerminationCallbackSingleTreeTest("data/fo7_2.osil");
+        std::cout << "Finished test for termination callback in single-tree strategy.";
         break;
     default:
         passed = false;
