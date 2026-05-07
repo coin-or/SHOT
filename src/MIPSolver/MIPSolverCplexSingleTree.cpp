@@ -300,6 +300,8 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
 
             addLazyConstraint(candidatePoints, context);
 
+            addExternalDualBoundLazyConstraint(context);
+
             currIter->maxDeviation = solutionCandidate.maxDeviation.value;
             currIter->maxDeviationConstraint = solutionCandidate.maxDeviation.index;
             currIter->solutionStatus = E_ProblemSolutionStatus::Feasible;
@@ -783,4 +785,52 @@ int MIPSolverCplexSingleTree::getSolutionLimit()
 }
 
 void MIPSolverCplexSingleTree::checkParameters() { }
+
+void CplexCallback::addExternalDualBoundLazyConstraint(const IloCplex::Callback::Context& context)
+{
+    auto newBound = queryAndUpdateExternalDualBound();
+    if(!newBound.has_value())
+        return;
+
+    try
+    {
+        IloExpr objExpr(context.getEnv());
+
+        if(env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
+        {
+            int objVarIdx = env->dualSolver->MIPSolver->getDualAuxiliaryObjectiveVariableIndex();
+            objExpr = cplexVars[objVarIdx];
+
+            env->output->outputDebug(
+                fmt::format("        Adding external dual bound lazy constraint with auxiliary variable, new bound: {}",
+                    newBound.value()));
+        }
+        else
+        {
+            auto linObj = std::dynamic_pointer_cast<LinearObjectiveFunction>(
+                env->reformulatedProblem->objectiveFunction);
+            if(linObj)
+            {
+                for(auto& T : linObj->linearTerms)
+                    objExpr += T->coefficient * cplexVars[T->variable->index];
+            }
+
+            env->output->outputDebug(
+                fmt::format("        Adding external dual bound lazy constraint without auxiliary variable, new bound: {}",
+                    newBound.value()));
+        }
+
+        IloRange tmpRange(context.getEnv(), isMinimization ? *newBound : -IloInfinity, objExpr,
+            isMinimization ? IloInfinity : *newBound);
+        context.rejectCandidate(tmpRange);
+        tmpRange.end();
+        objExpr.end();
+    }
+    catch(IloException& e)
+    {
+        env->output->outputError(
+            "        Cplex error when adding external dual bound lazy constraint", e.getMessage());
+    }
+}
+
 } // namespace SHOT

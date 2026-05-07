@@ -11,13 +11,17 @@
 #include "MIPSolverCallbackBase.h"
 #include "../CallbackData.h"
 #include "../EventHandler.h"
+#include "../Output.h"
 #include "../Report.h"
 #include "../Results.h"
 #include "../Settings.h"
 #include "../TaskHandler.h"
 #include "../Timing.h"
 
+#include "../Model/Problem.h"
+
 #include <any>
+#include <optional>
 
 namespace SHOT
 {
@@ -123,6 +127,42 @@ bool MIPSolverCallbackBase::checkFixedNLPStrategy(SolutionPoint point)
     env->timing->stopTimer("PrimalStrategy");
 
     return (callNLPSolver);
+}
+
+std::optional<double> MIPSolverCallbackBase::queryAndUpdateExternalDualBound()
+{
+    if(!env->events->hasDataProvider(E_EventType::ExternalDualBound))
+        return std::nullopt;
+
+    bool isMin = env->reformulatedProblem->objectiveFunction->properties.isMinimize;
+    double currentDualBound = env->results->getCurrentDualBound();
+    double currentPrimalBound = env->results->getPrimalBound();
+    int iterationNumber = env->results->getNumberOfIterations();
+    double absoluteGap = env->results->getAbsoluteCurrentObjectiveGap();
+    double relativeGap = env->results->getRelativeCurrentObjectiveGap();
+
+    DualBoundCallbackData callbackData(isMin, currentDualBound, currentPrimalBound, iterationNumber, relativeGap,
+        absoluteGap, env->solutionStatistics);
+
+    auto externalDualBound = env->events->requestData<double>(E_EventType::ExternalDualBound, callbackData);
+
+    if(!externalDualBound.has_value() || std::isnan(*externalDualBound))
+        return std::nullopt;
+
+    double newBound = *externalDualBound;
+
+    bool isBoundImproved = isMin ? (std::isnan(currentDualBound) || newBound > currentDualBound)
+                                 : (std::isnan(currentDualBound) || newBound < currentDualBound);
+
+    if(!isBoundImproved)
+        return std::nullopt;
+
+    env->results->setDualBound(newBound);
+    env->solutionStatistics.hasExternalDualBoundBeenSet = true;
+    env->output->outputInfo(
+        fmt::format("        Updated dual bound from external provider (single-tree): {}", newBound));
+
+    return newBound;
 }
 
 void MIPSolverCallbackBase::printIterationReport(SolutionPoint solution, std::string threadId)

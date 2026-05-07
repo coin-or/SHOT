@@ -159,6 +159,79 @@ bool CplexTerminationCallbackTest(std::string filename)
     return (true);
 }
 
+bool CplexExternalDualBoundLazyConstraintTest(std::string filename, double externalDualBound)
+{
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+
+    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Info));
+    solver->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Cplex));
+    solver->updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::SingleTree));
+
+    std::cout << "Reading problem:  " << filename << '\n';
+
+    if(!solver->setProblem(filename))
+    {
+        std::cout << "Error while reading problem\n";
+        return (false);
+    }
+
+    // Register a callback that raises the external dual bound by 0.1 on each call,
+    // starting from (externalDualBound - 0.4) up to externalDualBound, exercising the
+    // incremental lazy constraint mechanism.
+    double currentExternalBound = externalDualBound - 0.4;
+    solver->registerCallback(
+        E_EventType::ExternalDualBound, [externalDualBound, &currentExternalBound](std::any args) {
+            double newDualBound = std::numeric_limits<double>::quiet_NaN();
+            try
+            {
+                auto data = std::any_cast<DualBoundCallbackData>(args);
+                if(currentExternalBound < externalDualBound)
+                {
+                    currentExternalBound = std::min(currentExternalBound + 0.1, externalDualBound);
+                    newDualBound = currentExternalBound;
+                    std::cout << "Current dual bound is " << data.currentDualBound
+                              << ", providing external dual bound: " << newDualBound << "\n";
+                }
+            }
+            catch(const std::bad_any_cast&)
+            {
+                std::cout << "External dual bound callback executed with no valid structured data\n";
+            }
+            return (newDualBound);
+        });
+
+    if(!solver->solveProblem())
+    {
+        std::cout << "Error while solving problem\n";
+        return (false);
+    }
+
+    env->report->outputSolutionReport();
+
+    if(!env->solutionStatistics.hasExternalDualBoundBeenSet)
+    {
+        std::cout << "External dual bound was never applied.\n";
+        return (false);
+    }
+
+    double finalDualBound = solver->getCurrentDualBound();
+    bool isMin = solver->getOriginalProblem()->objectiveFunction->properties.isMinimize;
+    bool boundRespected = isMin ? (finalDualBound >= externalDualBound - 1e-6)
+                                : (finalDualBound <= externalDualBound + 1e-6);
+
+    if(!boundRespected)
+    {
+        std::cout << "Final dual bound " << finalDualBound
+                  << " does not respect the provided external bound " << externalDualBound << "\n";
+        return (false);
+    }
+
+    std::cout << "External dual bound lazy constraint was enforced successfully. "
+              << "Final dual bound: " << finalDualBound << "\n";
+    return (true);
+}
+
 bool CplexExternalDualBoundCallbackTest(std::string filename, double dualBoundToTest, ES_TreeStrategy treeStrategy)
 {
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
@@ -377,6 +450,11 @@ int CplexTest(int argc, char* argv[])
         std::cout << "Finished test for callbacks getting and setting primal solutions and dual bounds through a "
                      "callback with single-tree strategy."
                   << std::endl;
+        break;
+    case 10:
+        std::cout << "Starting test for external dual bound lazy constraint in single-tree strategy" << std::endl;
+        passed = CplexExternalDualBoundLazyConstraintTest("data/fo7_2.osil", 17.4);
+        std::cout << "Finished test for external dual bound lazy constraint in single-tree strategy.";
         break;
     default:
         passed = false;

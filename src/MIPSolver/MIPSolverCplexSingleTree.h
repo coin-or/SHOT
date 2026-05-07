@@ -67,6 +67,8 @@ public:
 
     void addLazyConstraint(std::vector<SolutionPoint> candidatePoints, const IloCplex::Callback::Context& context);
 
+    void addExternalDualBoundLazyConstraint(const IloCplex::Callback::Context& context);
+
     // This is the function that we have to implement and that Cplex will call
     // during the solution process at the places that we asked for.
     void invoke(const IloCplex::Callback::Context& context) override;
