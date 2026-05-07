@@ -29,12 +29,12 @@ if(HAS_CBC)
 endif()
 
 if(HAS_CPLEX)
-  set(Cplex_parts 1 2 3 4 5 6 7 8 9)
+  set(Cplex_parts 1 2 3 4 5 6 7 8 9 10 11 12)
   set(cpptests ${cpptests} Cplex)
 endif()
 
 if(HAS_GUROBI)
-  set(Gurobi_parts 1 2 3 4 5 6 7 8 9)
+  set(Gurobi_parts 1 2 3 4 5 6 7 8 9 10 11 12)
   set(cpptests ${cpptests} Gurobi)
 endif()
 
@@ -68,7 +68,8 @@ set(Solver_parts
     5
     6
     7
-    8)
+    8
+    9)
 set(cpptests ${cpptests} Solver)
 
 if(HAS_IPOPT)

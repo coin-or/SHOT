@@ -10,7 +10,6 @@
 
 #include "MIPSolverGurobiSingleTree.h"
 
-#include "../CallbackData.h"
 #include "../DualSolver.h"
 #include "../EventHandler.h"
 #include "../Iteration.h"
@@ -186,29 +185,32 @@ void GurobiCallbackSingleTree::callback()
 
     try
     {
-
-        // Add current primal bound as new incumbent candidate
-        auto primalBound = env->results->getPrimalBound();
-
-        if(((isMinimization && lastUpdatedPrimal < primalBound)
-               || (!isMinimization && lastUpdatedPrimal > primalBound)))
+        // Add current primal bound as new incumbent candidate (only valid during GRB_CB_MIPNODE)
+        if(where == GRB_CB_MIPNODE)
         {
-            auto primalSol = env->results->primalSolution;
+            auto primalBound = env->results->getPrimalBound();
 
-            if((int)primalSol.size() < env->reformulatedProblem->properties.numberOfVariables)
-                env->reformulatedProblem->augmentAuxiliaryVariableValues(primalSol);
-
-            assert(env->reformulatedProblem->properties.numberOfVariables == primalSol.size());
-
-            if(env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
-                primalSol.push_back(env->reformulatedProblem->objectiveFunction->calculateValue(primalSol));
-
-            for(size_t i = 0; i < primalSol.size(); i++)
+            if(env->results->hasPrimalSolution()
+                && ((isMinimization && lastUpdatedPrimal > primalBound)
+                    || (!isMinimization && lastUpdatedPrimal < primalBound)))
             {
-                setSolution(vars[i], primalSol.at(i));
-            }
+                auto primalSol = env->results->primalSolution;
 
-            lastUpdatedPrimal = env->results->getPrimalBound();
+                if((int)primalSol.size() < env->reformulatedProblem->properties.numberOfVariables)
+                    env->reformulatedProblem->augmentAuxiliaryVariableValues(primalSol);
+
+                assert(env->reformulatedProblem->properties.numberOfVariables == primalSol.size());
+
+                if(env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
+                    primalSol.push_back(env->reformulatedProblem->objectiveFunction->calculateValue(primalSol));
+
+                for(size_t i = 0; i < primalSol.size(); i++)
+                {
+                    setSolution(vars[i], primalSol.at(i));
+                }
+
+                lastUpdatedPrimal = env->results->getPrimalBound();
+            }
         }
 
         // Check if better dual bound
@@ -400,6 +402,8 @@ void GurobiCallbackSingleTree::callback()
             std::vector<SolutionPoint> candidatePoints { solutionCandidate };
 
             addLazyConstraint(candidatePoints);
+
+            addExternalDualBoundLazyConstraint();
 
             currIter->maxDeviation = solutionCandidate.maxDeviation.value;
             currIter->maxDeviationConstraint = solutionCandidate.maxDeviation.index;
@@ -722,4 +726,52 @@ void GurobiCallbackSingleTree::addLazyConstraint(std::vector<SolutionPoint> cand
         env->output->outputError("        Gurobi error when invoking adding lazy constraint", e.getMessage());
     }
 }
+void GurobiCallbackSingleTree::addExternalDualBoundLazyConstraint()
+{
+    auto newBound = queryAndUpdateExternalDualBound();
+    if(!newBound.has_value())
+        return;
+
+    try
+    {
+        GRBLinExpr objExpr = 0;
+
+        if(env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
+        {
+            int objVarIdx = env->dualSolver->MIPSolver->getDualAuxiliaryObjectiveVariableIndex();
+            objExpr = vars[objVarIdx];
+
+            env->output->outputDebug(
+                fmt::format("        Adding external dual bound lazy constraint with auxiliary variable, new bound: {}",
+                    newBound.value()));
+
+        }
+        else
+        {
+            auto linObj = std::dynamic_pointer_cast<LinearObjectiveFunction>(
+                env->reformulatedProblem->objectiveFunction);
+
+            if(linObj)
+            {
+                for(auto& T : linObj->linearTerms)
+                    objExpr += T->coefficient * vars[T->variable->index];
+            }
+
+            env->output->outputDebug(
+                fmt::format("        Adding external dual bound lazy constraint without auxiliary variable, new bound: {}",
+                    newBound.value()));
+        }
+
+        if(isMinimization)
+            addLazy(objExpr >= *newBound);
+        else
+            addLazy(objExpr <= *newBound);
+    }
+    catch(GRBException& e)
+    {
+        env->output->outputError(
+            "        Gurobi error when adding external dual bound lazy constraint", e.getMessage());
+    }
+}
+
 } // namespace SHOT

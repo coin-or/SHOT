@@ -275,6 +275,102 @@ class TestNewPrimalSolutionCallback:
         assert all(isinstance(v, float) for v in d.solution)
 
 
+class TestPrimalSolutionCandidateSelectionCallback:
+    """EventType.PrimalSolutionCandidateSelection – data provider returning bool.
+
+    Return False to reject the candidate (skip feasibility check).
+    Return True or None to accept it.
+    """
+
+    def test_callback_is_called(self, solver, env):
+        """Callback fires at least once during a solve."""
+        import SHOTpy
+
+        call_log = []
+
+        def on_candidate(data):
+            call_log.append(data.objectiveValue)
+            return True  # accept all
+
+        solver.updateSetting("Console.LogLevel", "Output", 2)
+        problem = build_ex1223b(env)
+        solver.setProblem(problem)
+        solver.registerCallback(SHOTpy.EventType.PrimalSolutionCandidateSelection, on_candidate)
+        solver.solveProblem()
+
+        assert len(call_log) >= 1, "PrimalSolutionCandidateSelection callback was never called"
+
+    def test_returning_none_accepts(self, solver, env):
+        """Returning None is treated as accept — solver still finds a solution."""
+        import SHOTpy
+
+        solver.updateSetting("Console.LogLevel", "Output", 2)
+        problem = build_ex1223b(env)
+        solver.setProblem(problem)
+        solver.registerCallback(SHOTpy.EventType.PrimalSolutionCandidateSelection, lambda d: None)
+        solver.solveProblem()
+
+        assert solver.getPrimalSolutions(), "No primal solution found when callback returns None"
+
+    def test_reject_all_prevents_primal_solutions(self, solver, env):
+        """Returning False for every candidate prevents any primal solution from being accepted."""
+        import SHOTpy
+
+        rejected = [0]
+
+        def reject_all(data):
+            rejected[0] += 1
+            return False  # reject everything
+
+        solver.updateSetting("Console.LogLevel", "Output", 2)
+        # Cap iterations so the test does not run forever with no primal bound
+        solver.updateSetting("IterationLimit", "Termination", 10)
+        problem = build_ex1223b(env)
+        solver.setProblem(problem)
+        solver.registerCallback(SHOTpy.EventType.PrimalSolutionCandidateSelection, reject_all)
+        solver.solveProblem()
+
+        assert rejected[0] >= 1, "Reject callback was never called"
+        # With all candidates rejected no primal solution should have been recorded
+        assert not solver.getPrimalSolutions(), (
+            "Expected no primal solutions when every candidate is rejected"
+        )
+
+    def test_selective_rejection_reduces_accepted_count(self, solver, env):
+        """Rejecting a subset of candidates results in fewer incumbents than accepting all."""
+        import SHOTpy
+
+        # ── Run 1: accept everything ──────────────────────────────────────────
+        solver1 = SHOTpy.Solver()
+        solver1.updateSetting("Console.LogLevel", "Output", 2)
+        env1 = solver1.getEnvironment()
+        solver1.setProblem(build_ex1223b(env1))
+
+        accepted_log1 = []
+        solver1.registerCallback(SHOTpy.EventType.PrimalSolutionCandidateSelection, lambda d: True)
+        solver1.registerCallback(SHOTpy.EventType.NewPrimalSolution,
+                                 lambda d: accepted_log1.append(d.objectiveValue))
+        solver1.solveProblem()
+
+        # ── Run 2: reject candidates with obj > 5 (sub-optimal ones) ─────────
+        solver2 = SHOTpy.Solver()
+        solver2.updateSetting("Console.LogLevel", "Output", 2)
+        env2 = solver2.getEnvironment()
+        solver2.setProblem(build_ex1223b(env2))
+
+        accepted_log2 = []
+        solver2.registerCallback(SHOTpy.EventType.PrimalSolutionCandidateSelection,
+                                 lambda d: d.objectiveValue <= 5.0)
+        solver2.registerCallback(SHOTpy.EventType.NewPrimalSolution,
+                                 lambda d: accepted_log2.append(d.objectiveValue))
+        solver2.solveProblem()
+
+        print(f"\n  accepted (all): {len(accepted_log1)}  accepted (filtered): {len(accepted_log2)}")
+        assert len(accepted_log2) <= len(accepted_log1), (
+            "Rejecting sub-optimal candidates should not produce more incumbents"
+        )
+
+
 class TestUserTerminationCheckCallback:
     """EventType.UserTerminationCheck – data provider returning bool."""
 
@@ -405,6 +501,466 @@ class TestExternalHyperplaneSelectionCallback:
         solver.solveProblem()  # Must not crash
 
 
+class TestExternalHyperplaneGradientCuts:
+    """End-to-end test: solve shot_ex_jogo using *only* external gradient cuts.
+
+    This exercises the full loop:
+      - CutStrategy = OnlyExternal (2) — no built-in ESH/ECP cuts
+      - Relaxation.Use = False — skip LP relaxation phase
+      - The callback looks up the violated constraint by .index (global constraint
+        index) rather than positional index, which is the correct approach when
+        the problem has a mix of linear and nonlinear constraints.
+    """
+
+    def _build_shot_ex_jogo(self, env):
+        """Return (solver, problem) for the shot_ex_jogo MINLP.
+
+        min  -x1 - x2
+        s.t. 2*x1 - 3*x2          <= 2   (linear,    index 0)
+             0.15*(x1-8)^2 + ...  <= 5   (nonlinear, index 1)
+             1/x1 + 1/x2 - ...    <= -4  (nonlinear, index 2)
+        x1 in [1,20] (real), x2 in [1,20] (integer)
+        Known optimum: obj ≈ -20.9036 (primal -20.903615, dual -20.903647)
+        """
+        import SHOTpy
+
+        problem = SHOTpy.Problem(env)
+        problem.name = "shot_ex_jogo"
+
+        x1 = SHOTpy.Variable("x1", 0, SHOTpy.VariableType.Real,    1.0, 20.0)
+        x2 = SHOTpy.Variable("x2", 1, SHOTpy.VariableType.Integer, 1.0, 20.0)
+        problem.addVariable(x1)
+        problem.addVariable(x2)
+
+        obj = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
+        obj.add(SHOTpy.LinearTerm(-1.0, x1))
+        obj.add(SHOTpy.LinearTerm(-1.0, x2))
+        problem.setObjective(obj)
+
+        # Constraint l (index 0): 2*x1 - 3*x2 <= 2
+        lt_l = SHOTpy.LinearTerms()
+        lt_l.add(SHOTpy.LinearTerm( 2.0, x1))
+        lt_l.add(SHOTpy.LinearTerm(-3.0, x2))
+        problem.addConstraint(SHOTpy.LinearConstraint(0, "l", lt_l, SHOTpy.SHOT_DBL_MIN, 2.0))
+
+        # Constraint c1 (index 1): 0.15*(x1-8)^2 + 0.1*(x2-6)^2 + 0.025*exp(x1)/x2^2 <= 5
+        c1 = SHOTpy.NonlinearConstraint(1, "c1", SHOTpy.SHOT_DBL_MIN, 5.0)
+        c1.add(0.15 * (x1 - 8.0)**2 + 0.1 * (x2 - 6.0)**2 + 0.025 * SHOTpy.exp(x1) / x2**2)
+        problem.addConstraint(c1)
+
+        # Constraint c2 (index 2): 1/x1 + 1/x2 - sqrt(x1)*sqrt(x2) <= -4
+        c2 = SHOTpy.NonlinearConstraint(2, "c2", SHOTpy.SHOT_DBL_MIN, -4.0)
+        c2.add(SHOTpy.SignomialTerm( 1.0, [(x1, -1.0)]))
+        c2.add(SHOTpy.SignomialTerm( 1.0, [(x2, -1.0)]))
+        c2.add(SHOTpy.SignomialTerm(-1.0, [(x1, 0.5), (x2, 0.5)]))
+        problem.addConstraint(c2)
+
+        problem.finalize()
+        return problem
+
+    def _make_solver_with_only_external_cuts(self):
+        """Return a Solver configured to accept only external hyperplane cuts."""
+        import SHOTpy
+        solver = SHOTpy.Solver()
+        solver.updateSetting("Console.LogLevel",                             "Output", 2)
+        solver.updateSetting("Convexity.AssumeConvex",                       "Model",  True)
+        solver.updateSetting("Reformulation.Constraint.PartitionQuadraticTerms", "Model", 2) # Never
+        solver.updateSetting("Relaxation.Use",                               "Dual",   True)
+        solver.updateSetting("CutStrategy",                                  "Dual",   2)    # OnlyExternal
+        solver.updateSetting("TreeStrategy",                                 "Dual",   0)    # MultiTree
+        return solver
+
+    def test_solver_finds_solution_with_gradient_cuts(self):
+        """Solver reaches a feasible solution when all cuts come from the callback."""
+        import SHOTpy
+
+        solver = self._make_solver_with_only_external_cuts()
+        env = solver.getEnvironment()
+        problem = self._build_shot_ex_jogo(env)
+        solver.setProblem(problem, problem)
+
+        cut_count = [0]
+
+        def generate_hyperplanes(data):
+            hyperplanes = []
+            if not data.solutionPoints or data.iterationNumber == 0:
+                return hyperplanes
+
+            reform_problem = data.reformulatedProblem
+            for sol_point in data.solutionPoints:
+                dev_idx   = sol_point.maxDeviation.index
+                violation = sol_point.maxDeviation.value
+                if violation <= 0.0:
+                    continue
+
+                # Look up by global .index, not positional index
+                constraint = next(
+                    (nlc for nlc in reform_problem.nonlinearConstraints if nlc.index == dev_idx),
+                    None
+                )
+                if constraint is None:
+                    continue
+
+                gradient = constraint.calculateGradient(sol_point.point)
+                if not gradient:
+                    continue
+
+                var_indices = list(gradient.keys())
+                rhs = sum(gradient[i] * sol_point.point[i] for i in var_indices) - violation
+
+                hp = SHOTpy.ExternalHyperplane()
+                hp.variableIndexes      = var_indices
+                hp.variableCoefficients = list(gradient.values())
+                hp.rhsValue             = rhs
+                hp.isGlobal             = True
+                hp.source               = SHOTpy.HyperplaneSource.External
+                hyperplanes.append(hp)
+                cut_count[0] += 1
+                break
+
+            return hyperplanes
+
+        solver.registerCallback(SHOTpy.EventType.ExternalHyperplaneSelection, generate_hyperplanes)
+        solver.solveProblem()
+
+        assert cut_count[0] > 0, "Callback never generated any hyperplane cuts"
+        assert solver.getPrimalSolutions(), "No primal solution found"
+        obj = solver.getPrimalSolution().objValue
+        # Known optimum: primal ≈ -20.9036, dual ≈ -20.9036
+        # Accept any solution within 1% relative of the known primal bound.
+        assert obj <= -20.903615014500517 * 0.99, (
+            f"Objective {obj:.6f} is far from the known optimum ~-20.9036"
+        )
+
+    def test_constraint_lookup_by_index_not_position(self):
+        """maxDeviation.index is a global constraint index, not a position in
+        nonlinearConstraints.  This test verifies the lookup is correct by
+        checking that the constraint name returned matches the expected constraint."""
+        import SHOTpy
+
+        solver = self._make_solver_with_only_external_cuts()
+        # This test never returns cuts, so cap iterations to avoid running forever
+        solver.updateSetting("IterationLimit", "Termination", 20)
+        env = solver.getEnvironment()
+        problem = self._build_shot_ex_jogo(env)
+        solver.setProblem(problem, problem)
+
+        name_log = []
+
+        def generate_hyperplanes(data):
+            if not data.solutionPoints or data.iterationNumber == 0:
+                return []
+
+            reform_problem = data.reformulatedProblem
+            for sol_point in data.solutionPoints:
+                dev_idx   = sol_point.maxDeviation.index
+                violation = sol_point.maxDeviation.value
+                if violation <= 0.0:
+                    continue
+
+                # Correct lookup: by .index attribute
+                constraint = next(
+                    (nlc for nlc in reform_problem.nonlinearConstraints if nlc.index == dev_idx),
+                    None
+                )
+                if constraint is not None:
+                    name_log.append(constraint.name)
+                    # The name must be one of the nonlinear constraints, not the linear one
+                    assert constraint.name in ("c1", "c2"), (
+                        f"Lookup returned wrong constraint '{constraint.name}' "
+                        f"for global index {dev_idx}"
+                    )
+                break
+            return []
+
+        solver.registerCallback(SHOTpy.EventType.ExternalHyperplaneSelection, generate_hyperplanes)
+        solver.solveProblem()
+
+        assert name_log, "Callback never found a violated nonlinear constraint"
+
+
+class TestExternalBoundCallbacks:
+    """EventType.ExternalDualBound and EventType.ExternalPrimalSolution on shot_ex_jogo.
+
+    Mirrors the C++ GurobiExternalDualBoundCallbackTest / CbcExternalDualBoundCallbackTest
+    pattern, adapted to the Python API:
+      - ExternalDualBound:    fn(DualBoundCallbackData) -> float  (NaN/None = no update)
+      - ExternalPrimalSolution: fn(ExternalPrimalSolutionCallbackData) -> list[float]  (empty = skip)
+
+    Known solution for shot_ex_jogo:
+      x1 ≈ 8.9036 (real), x2 = 12 (integer), obj ≈ -20.9036
+    """
+
+    # Known optimal point
+    _KNOWN_OBJ   = -20.903615014500517   # primal bound
+    _KNOWN_DUAL  = -20.903647306104258   # dual bound
+    _KNOWN_POINT = [8.903615, 12.0]      # x1, x2
+
+    def _build_shot_ex_jogo(self, env):
+        """Same problem as TestExternalHyperplaneGradientCuts (factored out here for reuse)."""
+        import SHOTpy
+
+        problem = SHOTpy.Problem(env)
+        problem.name = "shot_ex_jogo"
+
+        x1 = SHOTpy.Variable("x1", 0, SHOTpy.VariableType.Real,    1.0, 20.0)
+        x2 = SHOTpy.Variable("x2", 1, SHOTpy.VariableType.Integer, 1.0, 20.0)
+        problem.addVariable(x1)
+        problem.addVariable(x2)
+
+        obj = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
+        obj.add(SHOTpy.LinearTerm(-1.0, x1))
+        obj.add(SHOTpy.LinearTerm(-1.0, x2))
+        problem.setObjective(obj)
+
+        lt_l = SHOTpy.LinearTerms()
+        lt_l.add(SHOTpy.LinearTerm( 2.0, x1))
+        lt_l.add(SHOTpy.LinearTerm(-3.0, x2))
+        problem.addConstraint(SHOTpy.LinearConstraint(0, "l", lt_l, SHOTpy.SHOT_DBL_MIN, 2.0))
+
+        c1 = SHOTpy.NonlinearConstraint(1, "c1", SHOTpy.SHOT_DBL_MIN, 5.0)
+        c1.add(0.15 * (x1 - 8.0)**2 + 0.1 * (x2 - 6.0)**2 + 0.025 * SHOTpy.exp(x1) / x2**2)
+        problem.addConstraint(c1)
+
+        c2 = SHOTpy.NonlinearConstraint(2, "c2", SHOTpy.SHOT_DBL_MIN, -4.0)
+        c2.add(SHOTpy.SignomialTerm( 1.0, [(x1, -1.0)]))
+        c2.add(SHOTpy.SignomialTerm( 1.0, [(x2, -1.0)]))
+        c2.add(SHOTpy.SignomialTerm(-1.0, [(x1, 0.5), (x2, 0.5)]))
+        problem.addConstraint(c2)
+
+        problem.finalize()
+        return problem
+
+    def test_external_dual_bound_callback_is_called(self):
+        """ExternalDualBound callback is invoked and can tighten the dual bound.
+
+        The callback injects the known optimal dual bound (-20.9036) once the
+        solver's own dual bound is worse (larger for minimization), then returns
+        None on subsequent calls to let the solver proceed normally.
+        """
+        import SHOTpy
+        import math
+
+        solver = SHOTpy.Solver()
+        solver.updateSetting("Console.LogLevel", "Output", 2)
+        solver.updateSetting("TreeStrategy", "Dual", 0)  # MultiTree — currently required for ExternalDualBound
+        env = solver.getEnvironment()
+        problem = self._build_shot_ex_jogo(env)
+        solver.setProblem(problem)
+
+        call_log = []
+        injected = [False]
+
+        def provide_dual_bound(data):
+            call_log.append(data.currentDualBound)
+            # Inject once while the current lower bound is still below the known optimum.
+            # For minimization: dual bound starts at -inf and rises; we tighten it by
+            # providing the known value when the solver hasn't reached it yet.
+            if not injected[0] and data.currentDualBound < self._KNOWN_DUAL:
+                injected[0] = True
+                return self._KNOWN_DUAL
+            return None  # None → NaN → no update
+
+        solver.registerCallback(SHOTpy.EventType.ExternalDualBound, provide_dual_bound)
+        solver.solveProblem()
+
+        assert len(call_log) >= 1, "ExternalDualBound callback was never called"
+        assert injected[0], "Known dual bound was never injected"
+        # Solver must still find a feasible solution
+        assert solver.getPrimalSolutions(), "No primal solution found after dual bound injection"
+
+    def test_external_dual_bound_returning_none_is_safe(self):
+        """Returning None from ExternalDualBound must not crash."""
+        import SHOTpy
+
+        solver = SHOTpy.Solver()
+        solver.updateSetting("Console.LogLevel", "Output", 2)
+        solver.updateSetting("TreeStrategy", "Dual", 0)  # MultiTree
+        env = solver.getEnvironment()
+        problem = self._build_shot_ex_jogo(env)
+        solver.setProblem(problem)
+
+        solver.registerCallback(SHOTpy.EventType.ExternalDualBound, lambda d: None)
+        solver.solveProblem()  # Must not crash
+
+    def test_external_primal_solution_callback_is_called(self):
+        """Injecting a pre-verified optimal solution in the first iteration leads to
+        early termination (mirrors the C++ GurobiExternalDualBoundCallbackTest pattern).
+
+        Phase 1: solve shot_ex_jogo, collect the optimal primal solution that SHOT
+                 has already verified as feasible (no rounding issues).
+        Phase 2: re-inject that solution via ExternalPrimalSolution at iteration 1.
+                 With the primal bound immediately tight, the solver should
+                 terminate in fewer iterations than in Phase 1.
+        """
+        import SHOTpy
+
+        # ── Phase 1: collect the verified optimal primal solution ─────────────
+        solver1 = SHOTpy.Solver()
+        solver1.updateSetting("Console.LogLevel",     "Output", 6)
+        solver1.updateSetting("Convexity.AssumeConvex", "Model", True)
+        env1 = solver1.getEnvironment()
+        solver1.setProblem(self._build_shot_ex_jogo(env1), self._build_shot_ex_jogo(env1))
+
+        collected_solutions = []
+        solver1.registerCallback(
+            SHOTpy.EventType.NewPrimalSolution,
+            lambda d: collected_solutions.append(list(d.solution))
+        )
+        solver1.solveProblem()
+        iters_phase1 = solver1.getSolutionStatistics().numberOfIterations
+        print(f"\n  Phase 1 finished: {iters_phase1} iterations, "
+              f"{len(collected_solutions)} primal solutions collected")
+        assert collected_solutions, "No primal solutions collected in phase 1"
+
+        # Best solution found: use the one with the lowest objective
+        best_solution = min(
+            collected_solutions,
+            key=lambda s: solver1.getPrimalSolution().objValue  # all share same solver
+        )
+        # Actually use the final (optimal) solution directly from the solver
+        best_solution = list(solver1.getPrimalSolution().point)
+        best_obj      = solver1.getPrimalSolution().objValue
+        print(f"  Best solution: {best_solution}  obj={best_obj:.6f}")
+
+        # ── Phase 2: inject in the first iteration ────────────────────────────
+        solver2 = SHOTpy.Solver()
+        solver2.updateSetting("Console.LogLevel",     "Output", 2)
+        solver2.updateSetting("Convexity.AssumeConvex", "Model", True)
+        solver2.updateSetting("Relaxation.Use",       "Dual",  False)
+        solver2.updateSetting("TreeStrategy",         "Dual",  0)    # MultiTree
+        env2 = solver2.getEnvironment()
+        solver2.setProblem(self._build_shot_ex_jogo(env2), self._build_shot_ex_jogo(env2))
+
+        provided = [False]
+        call_log  = []
+
+        def on_new_primal(data):
+            print(f"  [NewPrimalSolution]      iter={data.iterationNumber}  obj={data.objectiveValue:.6f}")
+
+        def provide_primal_solution(data):
+            call_log.append(data.iterationNumber)
+            print(f"  [ExternalPrimalSolution] iter={data.iterationNumber}  "
+                  f"dual={data.currentDualBound:.4f}  primal={data.currentPrimalBound:.4f}")
+            if not provided[0]:
+                provided[0] = True
+                print(f"    -> injecting phase-1 optimal solution: {best_solution}")
+                return best_solution
+            return None
+
+        solver2.registerCallback(SHOTpy.EventType.NewPrimalSolution,      on_new_primal)
+        solver2.registerCallback(SHOTpy.EventType.ExternalPrimalSolution, provide_primal_solution)
+        solver2.solveProblem()
+
+        iters_phase2 = solver2.getSolutionStatistics().numberOfIterations
+        obj2         = solver2.getPrimalSolution().objValue
+        print(f"\n  Phase 2 finished: {iters_phase2} iterations  obj={obj2:.6f}")
+
+        assert call_log, "ExternalPrimalSolution callback never called"
+        assert solver2.getPrimalSolutions(), "No primal solution found in phase 2"
+        assert obj2 <= self._KNOWN_OBJ * 0.99, f"Objective {obj2:.6f} far from optimum"
+        # Injecting the optimal solution up-front should mean phase 2 needs no more
+        # iterations than phase 1 (and typically fewer)
+        assert iters_phase2 <= iters_phase1, (
+            f"Expected phase 2 ({iters_phase2} iter) to be no worse than "
+            f"phase 1 ({iters_phase1} iter)"
+        )
+
+    def test_external_primal_solution_returning_none_is_safe(self):
+        """Returning None from ExternalPrimalSolution must not crash."""
+        import SHOTpy
+
+        solver = SHOTpy.Solver()
+        solver.updateSetting("Console.LogLevel", "Output", 2)
+        env = solver.getEnvironment()
+        problem = self._build_shot_ex_jogo(env)
+        solver.setProblem(problem)
+
+        solver.registerCallback(SHOTpy.EventType.ExternalPrimalSolution, lambda d: None)
+        solver.solveProblem()  # Must not crash
+
+    def test_dual_and_primal_callbacks_together(self):
+        """ExternalDualBound and ExternalPrimalSolution both inject values that the solver accepts.
+
+        - ExternalDualBound injects the known optimal dual bound on the first call where
+          the solver's own bound is still worse.  The callback records whether the
+          injection condition was met.
+        - ExternalPrimalSolution injects the known optimal point on the first call.
+          A NewPrimalSolution event near the known objective confirms the point was
+          accepted (not silently discarded).
+        """
+        import SHOTpy
+
+        solver = SHOTpy.Solver()
+        solver.updateSetting("Console.LogLevel",       "Output", 2)
+        solver.updateSetting("Convexity.AssumeConvex", "Model",  True)
+        solver.updateSetting("Relaxation.Use",         "Dual",   False)
+        solver.updateSetting("TreeStrategy",           "Dual",   0)   # MultiTree — required for ExternalDualBound
+        env = solver.getEnvironment()
+        problem = self._build_shot_ex_jogo(env)
+        solver.setProblem(problem, problem)
+
+        dual_calls      = [0]
+        primal_calls    = [0]
+        dual_injected   = [False]
+        primal_injected = [False]
+        primal_accepted = [False]
+
+        def on_new_primal(data):
+            print(f"  [NewPrimalSolution]        iter={data.iterationNumber:3d}  "
+                  f"obj={data.objectiveValue:.6f}  point={[round(v,4) for v in data.solution]}")
+            # Confirm the injected primal solution was accepted by the solver
+            if primal_injected[0] and abs(data.objectiveValue - self._KNOWN_OBJ) < 0.01:
+                primal_accepted[0] = True
+                print(f"    ✓ injected primal accepted (obj near known optimum {self._KNOWN_OBJ:.6f})")
+
+        def provide_dual(data):
+            dual_calls[0] += 1
+            # Inject the known dual bound once while the solver's bound is still worse
+            if not dual_injected[0] and data.currentDualBound < self._KNOWN_DUAL:
+                dual_injected[0] = True
+                print(f"  [ExternalDualBound]        iter={data.iterationNumber:3d}  "
+                      f"current={data.currentDualBound:.6f}  "
+                      f"-> injecting known dual {self._KNOWN_DUAL:.6f}")
+                return self._KNOWN_DUAL
+            print(f"  [ExternalDualBound]        iter={data.iterationNumber:3d}  "
+                  f"current={data.currentDualBound:.6f}  -> None (no update)")
+            return None
+
+        def provide_primal(data):
+            primal_calls[0] += 1
+            if not primal_injected[0]:
+                primal_injected[0] = True
+                point = [8.903615014500554, 12.0]
+                print(f"  [ExternalPrimalSolution]   iter={data.iterationNumber:3d}  "
+                      f"current primal={data.currentPrimalBound:.6f}  "
+                      f"-> injecting known optimal point {point}")
+                return point
+            print(f"  [ExternalPrimalSolution]   iter={data.iterationNumber:3d}  "
+                  f"current primal={data.currentPrimalBound:.6f}  -> None (no update)")
+            return None
+
+        print(f"\n  Registering callbacks: NewPrimalSolution, ExternalDualBound, ExternalPrimalSolution")
+        print(f"  Known dual={self._KNOWN_DUAL:.6f}  known primal={self._KNOWN_OBJ:.6f}")
+        solver.registerCallback(SHOTpy.EventType.NewPrimalSolution,      on_new_primal)
+        solver.registerCallback(SHOTpy.EventType.ExternalDualBound,      provide_dual)
+        solver.registerCallback(SHOTpy.EventType.ExternalPrimalSolution, provide_primal)
+        solver.solveProblem()
+
+        print(f"\n  Summary: dual_calls={dual_calls[0]}  primal_calls={primal_calls[0]}  "
+              f"dual_injected={dual_injected[0]}  primal_injected={primal_injected[0]}  "
+              f"primal_accepted={primal_accepted[0]}")
+        assert dual_calls[0]   >= 1, "ExternalDualBound callback never called"
+        assert primal_calls[0] >= 1, "ExternalPrimalSolution callback never called"
+        assert dual_injected[0],   "Known dual bound was never injected (condition never met)"
+        assert primal_injected[0], "Known primal point was never injected"
+        assert primal_accepted[0], (
+            f"Injected primal point was not accepted: NewPrimalSolution never fired "
+            f"near obj={self._KNOWN_OBJ:.6f}"
+        )
+        assert solver.getPrimalSolutions(), "No primal solution found"
+
+
 class TestRegisterCallbackAPI:
     """API-level checks for Solver.registerCallback."""
 
@@ -441,3 +997,267 @@ class TestRegisterCallbackAPI:
         solver.registerCallback(SHOTpy.EventType.NewPrimalSolution, counter)
         solver.solveProblem()
         assert counter.count >= 1
+
+
+# ---------------------------------------------------------------------------
+# ESH Interior Point Callback tests
+# ---------------------------------------------------------------------------
+
+class TestCallbackESHInteriorPoint:
+    """Tests for the ExternalESHRootsearchPointsSelection callback.
+
+    Uses ex1223b as the test problem (built with build_ex1223b helper).
+    """
+
+    def test_event_type_has_esh_rootsearch(self):
+        """EventType enum exposes ExternalESHRootsearchPointsSelection."""
+        import SHOTpy
+        assert hasattr(SHOTpy.EventType, "ExternalESHRootsearchPointsSelection"), (
+            "SHOTpy.EventType.ExternalESHRootsearchPointsSelection is not exposed"
+        )
+
+    def test_esh_interior_point_callback_data_attrs(self):
+        """ESHInteriorPointCallbackData exposes the expected attributes."""
+        import SHOTpy
+        for attr in ["currentInteriorPoints", "originalProblem", "reformulatedProblem",
+                     "solutionStatistics"]:
+            assert hasattr(SHOTpy.ESHInteriorPointCallbackData, attr), (
+                f"ESHInteriorPointCallbackData missing attribute: {attr}"
+            )
+
+    def test_callback_fires_during_normal_esh(self):
+        """Callback fires during a normal ESH solve and receives interior point(s)."""
+        import SHOTpy
+
+        solver = SHOTpy.Solver()
+        solver.updateSetting("Console.LogLevel", "Output", 6)  # Off
+        solver.updateSetting("Reformulation.Quadratics.Strategy", "Model", 0)  # Nonlinear -> multi-tree/ESH
+        env = solver.getEnvironment()
+        problem = build_ex1223b(env)
+        solver.setProblem(problem)
+
+        callback_fired = [False]
+        points_received = [0]
+
+        def on_interior_points(data):
+            callback_fired[0] = True
+            points_received[0] = len(data.currentInteriorPoints)
+            print(f"  [ESHInteriorPoint] callback fired, {points_received[0]} current point(s)")
+            # Return None to keep the current points unchanged
+            return None
+
+        solver.registerCallback(
+            SHOTpy.EventType.ExternalESHRootsearchPointsSelection, on_interior_points
+        )
+        solver.solveProblem()
+
+        assert callback_fired[0], "ESH interior point callback was not fired"
+        assert points_received[0] > 0, (
+            "Callback fired but received no interior points from the internal strategy"
+        )
+
+    def test_callback_only_external_strategy(self):
+        """Two-phase test: extract interior point, then inject via OnlyExternal strategy.
+
+        Phase 1: Solve ex1223b with the default ESH strategy; record the interior point
+                 found by the internal cutting-plane minimax solver and the optimal primal
+                 objective value.
+
+        Phase 2: Solve ex1223b again with ESH.InteriorPoint.Strategy = OnlyExternal.
+                 Provide the Phase 1 interior point through the callback.  The solver must
+                 reach the same optimal objective (within 1e-4 relative tolerance).
+        """
+        import SHOTpy
+
+        tol = 1e-4
+
+        # ── Phase 1 ──────────────────────────────────────────────────────────
+        solver1 = SHOTpy.Solver()
+        solver1.updateSetting("Console.LogLevel", "Output", 6)
+        solver1.updateSetting("Reformulation.Quadratics.Strategy", "Model", 0)  # Nonlinear -> multi-tree/ESH
+        env1 = solver1.getEnvironment()
+        problem1 = build_ex1223b(env1)
+        solver1.setProblem(problem1)
+
+        captured_points = []
+
+        def capture_interior_points(data):
+            # Store a copy of whatever the internal solver found
+            captured_points.extend(data.currentInteriorPoints)
+            return None  # keep current points unchanged
+
+        solver1.registerCallback(
+            SHOTpy.EventType.ExternalESHRootsearchPointsSelection, capture_interior_points
+        )
+        solver1.solveProblem()
+
+        assert solver1.getPrimalSolutions(), "Phase 1: no primal solution found"
+        phase1_obj = solver1.getPrimalSolution().objValue
+        print(f"\n  Phase 1 objective: {phase1_obj:.6f}")
+
+        assert captured_points, "Phase 1: no interior point captured from internal strategy"
+        print(f"  Captured {len(captured_points)} interior point(s) from Phase 1")
+
+        # ── Phase 2 ──────────────────────────────────────────────────────────
+        solver2 = SHOTpy.Solver()
+        solver2.updateSetting("Console.LogLevel", "Output", 6)
+        solver2.updateSetting("Reformulation.Quadratics.Strategy", "Model", 0)  # Nonlinear -> multi-tree/ESH
+        solver2.updateSetting("ESH.InteriorPoint.Strategy", "Dual", 1)  # OnlyExternal
+        env2 = solver2.getEnvironment()
+        problem2 = build_ex1223b(env2)
+        solver2.setProblem(problem2)
+
+        callback_fired = [False]
+
+        def provide_interior_points(data):
+            callback_fired[0] = True
+            assert len(data.currentInteriorPoints) == 0, (
+                "OnlyExternal: callback received non-empty currentInteriorPoints "
+                "(internal strategy should not have run)"
+            )
+            print(f"  [OnlyExternal] callback fired, injecting {len(captured_points)} point(s)")
+            return captured_points  # inject the Phase-1 interior points
+
+        solver2.registerCallback(
+            SHOTpy.EventType.ExternalESHRootsearchPointsSelection, provide_interior_points
+        )
+        solver2.solveProblem()
+
+        assert callback_fired[0], "Phase 2: ESH interior point callback was not fired"
+        assert solver2.getPrimalSolutions(), "Phase 2: no primal solution found"
+
+        phase2_obj = solver2.getPrimalSolution().objValue
+        print(f"  Phase 2 objective: {phase2_obj:.6f}")
+
+        assert abs(phase2_obj - phase1_obj) <= tol + tol * abs(phase1_obj), (
+            f"Phase 2 objective {phase2_obj:.6f} differs from Phase 1 ({phase1_obj:.6f}) "
+            f"by more than tolerance {tol}"
+        )
+
+    def test_aux_problem_interior_point_injection(self):
+        """Auxiliary-problem approach: find an interior point by minimising a slack variable.
+
+        Phase 1: Solve an auxiliary version of ex1223b where:
+          - binary variables b4-b7 are relaxed to Real [0, 1],
+          - an auxiliary variable mu (Real [-100, 100]) is added,
+          - mu is subtracted from each quadratic/nonlinear constraint,
+          - the objective is ``minimize mu``.
+          Optimal mu < 0 guarantees a strictly interior point.
+
+        Phase 2: Use the auxiliary-problem point as the only interior point (via the
+          OnlyExternal strategy) and verify that ex1223b is still solved to optimality.
+        """
+        import SHOTpy
+
+        # ── Phase 1: auxiliary minimize-mu problem ────────────────────────────
+        solver_aux = SHOTpy.Solver()
+        solver_aux.updateSetting("Console.LogLevel", "Output", 6)
+        solver_aux.updateSetting("Reformulation.Quadratics.Strategy", "Model", 0)  # Nonlinear
+        env_aux = solver_aux.getEnvironment()
+
+        problem_aux = SHOTpy.Problem(env_aux)
+        problem_aux.name = "ex1223b_interior"
+
+        # Original 7 variables, b4-b7 relaxed to Real [0, 1]
+        x1 = SHOTpy.Variable("x1", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x2 = SHOTpy.Variable("x2", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x3 = SHOTpy.Variable("x3", 2, SHOTpy.VariableType.Real, 0.0, 10.0)
+        b4 = SHOTpy.Variable("b4", 3, SHOTpy.VariableType.Real, 0.0, 1.0)
+        b5 = SHOTpy.Variable("b5", 4, SHOTpy.VariableType.Real, 0.0, 1.0)
+        b6 = SHOTpy.Variable("b6", 5, SHOTpy.VariableType.Real, 0.0, 1.0)
+        b7 = SHOTpy.Variable("b7", 6, SHOTpy.VariableType.Real, 0.0, 1.0)
+        mu = SHOTpy.Variable("mu", 7, SHOTpy.VariableType.Real, -100.0, 100.0)
+        for v in [x1, x2, x3, b4, b5, b6, b7, mu]:
+            problem_aux.addVariable(v)
+
+        # Objective: minimize mu
+        lt_obj = SHOTpy.LinearTerms()
+        lt_obj.add(SHOTpy.LinearTerm(1.0, mu))
+        problem_aux.setObjective(
+            SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize, lt_obj, 0.0)
+        )
+
+        # e1: x1+x2+x3+b4+b5+b6 <= 5  (linear, unchanged)
+        lt1 = SHOTpy.LinearTerms()
+        for v in [x1, x2, x3, b4, b5, b6]:
+            lt1.add(SHOTpy.LinearTerm(1.0, v))
+        problem_aux.addConstraint(
+            SHOTpy.LinearConstraint(0, "e1", lt1, SHOTpy.SHOT_DBL_MIN, 5.0)
+        )
+
+        # e2: b6^2+x1^2+x2^2+x3^2 - mu <= 5.5  (quadratic - mu)
+        problem_aux.addConstraint(SHOTpy.NonlinearConstraint(
+            1, "e2", b6**2 + x1**2 + x2**2 + x3**2 - mu, SHOTpy.SHOT_DBL_MIN, 5.5
+        ))
+
+        # e3-e6: linear constraints, unchanged
+        for idx, (va, vb, rhs, nm) in enumerate(
+                [(x1, b4, 1.2, "e3"), (x2, b5, 1.8, "e4"),
+                 (x3, b6, 2.5, "e5"), (x1, b7, 1.2, "e6")], start=2):
+            lt = SHOTpy.LinearTerms()
+            lt.add(SHOTpy.LinearTerm(1.0, va))
+            lt.add(SHOTpy.LinearTerm(1.0, vb))
+            problem_aux.addConstraint(
+                SHOTpy.LinearConstraint(idx, nm, lt, SHOTpy.SHOT_DBL_MIN, rhs)
+            )
+
+        # e7: b5^2+x2^2 - mu <= 1.64
+        problem_aux.addConstraint(SHOTpy.NonlinearConstraint(
+            6, "e7", b5**2 + x2**2 - mu, SHOTpy.SHOT_DBL_MIN, 1.64
+        ))
+        # e8: b6^2+x3^2 - mu <= 4.25
+        problem_aux.addConstraint(SHOTpy.NonlinearConstraint(
+            7, "e8", b6**2 + x3**2 - mu, SHOTpy.SHOT_DBL_MIN, 4.25
+        ))
+        # e9: b5^2+x3^2 - mu <= 4.64
+        problem_aux.addConstraint(SHOTpy.NonlinearConstraint(
+            8, "e9", b5**2 + x3**2 - mu, SHOTpy.SHOT_DBL_MIN, 4.64
+        ))
+
+        problem_aux.finalize()
+        solver_aux.setProblem(problem_aux)
+        solver_aux.solveProblem()
+
+        assert solver_aux.getPrimalSolutions(), "Auxiliary problem: no solution found"
+        aux_sol = solver_aux.getPrimalSolution()
+        optimal_mu = aux_sol.objValue
+        print(f"\n  Auxiliary problem: optimal mu = {optimal_mu:.6f}")
+        if optimal_mu < 0.0:
+            print(f"  mu < 0: point is strictly interior to all quadratic constraints")
+        else:
+            print(f"  Warning: mu >= 0; point may not be strictly interior")
+
+        # The aux problem has 8 variables (x1..b7, mu).  Drop mu (index 7).
+        interior_point = list(aux_sol.point[:7])
+        print(f"  Interior point (mu dropped): {[round(v, 4) for v in interior_point]}")
+
+        # ── Phase 2: inject aux-problem interior point via OnlyExternal ───────
+        solver2 = SHOTpy.Solver()
+        solver2.updateSetting("Console.LogLevel", "Output", 6)
+        solver2.updateSetting("Reformulation.Quadratics.Strategy", "Model", 0)  # Nonlinear
+        solver2.updateSetting("ESH.InteriorPoint.Strategy", "Dual", 1)  # OnlyExternal
+        env2 = solver2.getEnvironment()
+        problem2 = build_ex1223b(env2)
+        solver2.setProblem(problem2)
+
+        callback_fired = [False]
+
+        def inject_aux_point(data):
+            callback_fired[0] = True
+            print(f"  [OnlyExternal] callback fired, injecting aux-problem interior point")
+            return [interior_point]
+
+        solver2.registerCallback(
+            SHOTpy.EventType.ExternalESHRootsearchPointsSelection, inject_aux_point
+        )
+        solver2.solveProblem()
+
+        assert callback_fired[0], "Phase 2: ESH interior point callback was not fired"
+        assert solver2.getPrimalSolutions(), (
+            "Phase 2: no primal solution found when using aux-problem interior point"
+        )
+        phase2_obj = solver2.getPrimalSolution().objValue
+        print(f"  Phase 2 objective: {phase2_obj:.6f}  (expected ≈ 4.5796)")
+        assert abs(phase2_obj - 4.579582) < 0.01, (
+            f"Phase 2 objective {phase2_obj:.6f} differs from known optimum 4.5796"
+        )

@@ -12,6 +12,7 @@
 #include "../src/Solver.h"
 #include "../src/TaskHandler.h"
 #include "../src/Utilities.h"
+#include "../src/CallbackData.h"
 
 #include "../src/Model/Problem.h"
 #include "../src/Model/ObjectiveFunction.h"
@@ -126,11 +127,22 @@ bool HighsTerminationCallbackTest(std::string filename)
     }
 
     // Registers a callback that terminates in the third iteration
-    solver->registerCallback(E_EventType::UserTerminationCheck, [&env] {
-        std::cout << "Callback activated. Terminating.\n";
-
-        if(env->results->getNumberOfIterations() == 3)
-            env->tasks->terminate();
+    solver->registerCallback(E_EventType::UserTerminationCheck, [](std::any args) -> bool {
+        try
+        {
+            auto data = std::any_cast<TerminationCallbackData>(args);
+            std::cout << "Callback activated at iteration " << data.iterationNumber << ".\n";
+            if(data.iterationNumber == 3)
+            {
+                std::cout << "Terminating.\n";
+                return true;
+            }
+        }
+        catch(const std::bad_any_cast&)
+        {
+            std::cout << "Termination callback executed with no valid structured data\n";
+        }
+        return false;
     });
 
     // Solving the problem

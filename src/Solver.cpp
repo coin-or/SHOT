@@ -756,6 +756,14 @@ void Solver::initializeSettings()
 
     // Dual strategy settings: Interior point search strategy
 
+    VectorString enumInteriorPointStrategy;
+    enumInteriorPointStrategy.push_back("Use internal strategy");
+    enumInteriorPointStrategy.push_back("Only external (through callback)");
+    env->settings->createSetting("ESH.InteriorPoint.Strategy", "Dual",
+        static_cast<int>(ES_ESHInteriorPointStrategy::UseInternalStrategy),
+        "Strategy for finding ESH interior points", enumInteriorPointStrategy, 0);
+    enumInteriorPointStrategy.clear();
+
     env->settings->createSetting("ESH.InteriorPoint.CuttingPlane.BitPrecision", "Dual", 8,
         "Required termination bit precision for minimization subsolver", 1, 64, true);
 

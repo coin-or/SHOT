@@ -279,7 +279,7 @@ public:
             return std::make_shared<ExpressionArcTan>(child);
 
         default:
-            throw OperationNotImplementedException(fmt::format("Error: Unsupported AMPL function {}", kind));
+            throw OperationNotImplementedException(fmt::format("Error: Unsupported AMPL function {}", static_cast<int>(kind)));
             break;
         }
 
@@ -313,7 +313,7 @@ public:
             return std::make_shared<ExpressionPower>(firstChild, secondChild);
 
         default:
-            throw OperationNotImplementedException(fmt::format("Error: Unsupported AMPL function {}", kind));
+            throw OperationNotImplementedException(fmt::format("Error: Unsupported AMPL function {}", static_cast<int>(kind)));
             break;
         }
 

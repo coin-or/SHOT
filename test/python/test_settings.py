@@ -44,6 +44,15 @@ class TestSettingsAccess:
         extract = solver.getBoolSetting("Reformulation.Monomials.Extract", "Model")
         assert isinstance(extract, bool)
 
+    def test_update_bool_setting_with_python_bool(self, solver):
+        """Test that updateSetting accepts Python True/False for boolean settings."""
+        # Reformulation.Monomials.Extract is a boolean setting
+        solver.updateSetting("Reformulation.Monomials.Extract", "Model", True)
+        assert solver.getBoolSetting("Reformulation.Monomials.Extract", "Model") is True
+
+        solver.updateSetting("Reformulation.Monomials.Extract", "Model", False)
+        assert solver.getBoolSetting("Reformulation.Monomials.Extract", "Model") is False
+
     def test_get_string_setting(self, solver):
         """Test getting a string setting."""
         # Debug.Path is a string setting in the Output category

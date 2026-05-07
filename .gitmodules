@@ -1,13 +1,20 @@
 [submodule "ThirdParty/spdlog"]
 	path = ThirdParty/spdlog
 	url = https://github.com/gabime/spdlog
+	shallow = true	
 [submodule "ThirdParty/CppAD"]
 	path = ThirdParty/CppAD
 	url = https://github.com/coin-or/CppAD
+	shallow = true	
 [submodule "ThirdParty/pybind11"]
 	path = ThirdParty/pybind11
 	url = https://github.com/pybind/pybind11
 	branch = stable
+	shallow = true	
 [submodule "ThirdParty/HiGHS"]
 	path = ThirdParty/HiGHS
 	url = https://github.com/ERGO-Code/HiGHS
+[submodule "ThirdParty/eigen"]
+	path = ThirdParty/eigen
+	url = https://gitlab.com/libeigen/eigen
+	shallow = true

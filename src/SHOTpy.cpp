@@ -1365,21 +1365,30 @@ PYBIND11_MODULE(SHOTpy, m)
             "Set problem with reformulated problem", py::arg("problem"), py::arg("reformulatedProblem"))
         .def("solveProblem", &Solver::solveProblem)
         .def("updateLogLevels", &Solver::updateLogLevels)
+        .def("updateSetting", py::overload_cast<std::string, std::string, bool>(&Solver::updateSetting))
         .def("updateSetting", py::overload_cast<std::string, std::string, int>(&Solver::updateSetting))
         .def("updateSetting", py::overload_cast<std::string, std::string, std::string>(&Solver::updateSetting))
         .def("updateSetting", py::overload_cast<std::string, std::string, double>(&Solver::updateSetting))
-        .def("updateSetting", py::overload_cast<std::string, std::string, bool>(&Solver::updateSetting))
         .def(
             "registerCallback",
             [](Solver& self, E_EventType event, py::function callback) {
                 switch(event)
                 {
                 case E_EventType::NewPrimalSolution:
-                case E_EventType::PrimalSolutionCandidateSelection:
                     self.registerCallback(event, [callback](std::any args) {
                         py::gil_scoped_acquire gil;
                         auto data = std::any_cast<PrimalSolutionCallbackData>(args);
                         callback(data);
+                    });
+                    break;
+                case E_EventType::PrimalSolutionCandidateSelection:
+                    self.registerCallback(event, [callback](std::any args) -> bool {
+                        py::gil_scoped_acquire gil;
+                        auto data = std::any_cast<PrimalSolutionCallbackData>(args);
+                        py::object result = callback(data);
+                        if(result.is_none())
+                            return true; // None means accept
+                        return result.cast<bool>();
                     });
                     break;
                 case E_EventType::UserTerminationCheck:
@@ -1415,14 +1424,28 @@ PYBIND11_MODULE(SHOTpy, m)
                         });
                     break;
                 case E_EventType::ExternalPrimalSolution:
-                    self.registerCallback(event, [callback](std::any args) -> VectorDouble {
+                    self.registerCallback(event, [callback](std::any args) -> std::vector<VectorDouble> {
                         py::gil_scoped_acquire gil;
                         auto data = std::any_cast<ExternalPrimalSolutionCallbackData>(args);
                         py::object result = callback(data);
                         if(result.is_none())
                             return {};
-                        return result.cast<VectorDouble>();
+                        auto point = result.cast<VectorDouble>();
+                        if(point.empty())
+                            return {};
+                        return { point }; // wrap single solution in a vector as the task expects
                     });
+                    break;
+                case E_EventType::ExternalESHRootsearchPointsSelection:
+                    self.registerCallback(
+                        event, [callback](std::any args) -> std::vector<VectorDouble> {
+                            py::gil_scoped_acquire gil;
+                            auto data = std::any_cast<ESHInteriorPointCallbackData>(args);
+                            py::object result = callback(data);
+                            if(result.is_none())
+                                return {};
+                            return result.cast<std::vector<VectorDouble>>();
+                        });
                     break;
                 default:
                     throw std::invalid_argument("Unknown event type for registerCallback");
@@ -1431,7 +1454,8 @@ PYBIND11_MODULE(SHOTpy, m)
             "Register a Python callback for an event type.\n\n"
             "Callback signatures by event type:\n"
             "  EventType.NewPrimalSolution: fn(PrimalSolutionCallbackData) -> None\n"
-            "  EventType.PrimalSolutionCandidateSelection: fn(PrimalSolutionCallbackData) -> None\n"
+            "  EventType.PrimalSolutionCandidateSelection: fn(PrimalSolutionCallbackData) -> bool\n"
+            "    Return False to reject the candidate (skip feasibility check). None or True to accept.\n"
             "  EventType.UserTerminationCheck: fn(TerminationCallbackData) -> bool\n"
             "    Return True to stop, False to continue. Return None to continue.\n"
             "  EventType.ExternalDualBound: fn(DualBoundCallbackData) -> float\n"
@@ -1439,13 +1463,16 @@ PYBIND11_MODULE(SHOTpy, m)
             "  EventType.ExternalHyperplaneSelection: fn(ExternalHyperplaneSelectionCallbackData) -> list[ExternalHyperplane]\n"
             "    Return a list of hyperplanes to add, or None/[] to add none.\n"
             "  EventType.ExternalPrimalSolution: fn(ExternalPrimalSolutionCallbackData) -> list[float]\n"
-            "    Return a new primal solution point, or None/[] to skip.",
+            "    Return a new primal solution point, or None/[] to skip.\n"
+            "  EventType.ExternalESHRootsearchPointsSelection: fn(ESHInteriorPointCallbackData) -> list[list[float]]\n"
+            "    Return a replacement list of interior point vectors, or None/[] to keep current points.",
             py::arg("event"), py::arg("callback"));
 
     py::enum_<E_EventType>(m, "EventType")
         .value("ExternalDualBound", E_EventType::ExternalDualBound)
         .value("ExternalHyperplaneSelection", E_EventType::ExternalHyperplaneSelection)
         .value("ExternalPrimalSolution", E_EventType::ExternalPrimalSolution)
+        .value("ExternalESHRootsearchPointsSelection", E_EventType::ExternalESHRootsearchPointsSelection)
         .value("NewPrimalSolution", E_EventType::NewPrimalSolution)
         .value("PrimalSolutionCandidateSelection", E_EventType::PrimalSolutionCandidateSelection)
         .value("UserTerminationCheck", E_EventType::UserTerminationCheck);
@@ -1667,5 +1694,11 @@ PYBIND11_MODULE(SHOTpy, m)
             "isObjectiveNonlinear", &ExternalHyperplaneSelectionCallbackData::isObjectiveNonlinear)
         .def_readonly(
             "solutionStatistics", &ExternalHyperplaneSelectionCallbackData::solutionStatistics);
+
+    py::class_<ESHInteriorPointCallbackData>(m, "ESHInteriorPointCallbackData")
+        .def_readonly("currentInteriorPoints", &ESHInteriorPointCallbackData::currentInteriorPoints)
+        .def_readonly("originalProblem", &ESHInteriorPointCallbackData::originalProblem)
+        .def_readonly("reformulatedProblem", &ESHInteriorPointCallbackData::reformulatedProblem)
+        .def_readonly("solutionStatistics", &ESHInteriorPointCallbackData::solutionStatistics);
 }
 }

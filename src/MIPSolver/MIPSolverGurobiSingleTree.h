@@ -36,6 +36,8 @@ private:
     virtual bool createIntegerCut(IntegerCut& integerCut);
 
     void addLazyConstraint(std::vector<SolutionPoint> candidatePoints);
+
+    void addExternalDualBoundLazyConstraint();
 };
 
 class MIPSolverGurobiSingleTree : public MIPSolverGurobi

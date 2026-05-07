@@ -22,6 +22,7 @@
 #include "../Tasks/TaskUpdateInteriorPoint.h"
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -60,6 +61,11 @@ protected:
     bool checkIterationLimit();
 
     bool checkUserTermination();
+
+    /// Queries the ExternalDualBound event and, if an improved bound is returned,
+    /// updates env->results and solutionStatistics.
+    /// Returns the new bound value when an improvement was applied, nullopt otherwise.
+    std::optional<double> queryAndUpdateExternalDualBound();
 
     void addLazyConstraint(std::vector<SolutionPoint> candidatePoints);
 

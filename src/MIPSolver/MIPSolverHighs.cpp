@@ -560,7 +560,7 @@ E_ProblemSolutionStatus MIPSolverHighs::getSolutionStatus()
     {
         MIPSolutionStatus = E_ProblemSolutionStatus::Error;
         env->output->outputError(
-            fmt::format("        MIP solver return status unknown (HiGHS returned status {}).", modelStatus));
+            fmt::format("        MIP solver return status unknown (HiGHS returned status {}).", static_cast<int>(modelStatus)));
     }
 
     return (MIPSolutionStatus);

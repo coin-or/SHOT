@@ -68,6 +68,8 @@
 
 #include "../Tasks/TaskUpdateInteriorPoint.h"
 
+#include "../Tasks/TaskUpdateExternalDualBound.h"
+
 #include "../Output.h"
 #include "../Model/Problem.h"
 #include "../Model/ObjectiveFunction.h"
@@ -118,6 +120,9 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
 
     auto tAddHPs = std::make_shared<TaskAddHyperplanes>(env);
     env->tasks->addTask(tAddHPs, "AddHPs");
+
+    auto tUpdateExternalDualBound = std::make_shared<TaskUpdateExternalDualBound>(env);
+    env->tasks->addTask(tUpdateExternalDualBound, "UpdateExternalDualBound");
 
     if(env->settings->getSetting<bool>("Relaxation.Use", "Dual")
         && env->reformulatedProblem->properties.numberOfSemicontinuousVariables == 0
@@ -280,6 +285,8 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
         auto tAddICs = std::make_shared<TaskAddIntegerCuts>(env);
         env->tasks->addTask(tAddICs, "AddICs");
     }
+
+    env->tasks->addTask(tUpdateExternalDualBound, "UpdateExternalDualBound");
 
     auto tGoto = std::make_shared<TaskGoto>(env, "SolveIter");
     env->tasks->addTask(tGoto, "Goto");
