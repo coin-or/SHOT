@@ -159,6 +159,112 @@ bool CplexTerminationCallbackTest(std::string filename)
     return (true);
 }
 
+bool CplexExternalPrimalSolutionSingleTreeTest(std::string filename)
+{
+    // Phase 1: collect primal solution points
+    std::vector<VectorDouble> collectedSolutions;
+
+    {
+        std::unique_ptr<Solver> solver = std::make_unique<Solver>();
+
+        solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Info));
+        solver->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Cplex));
+        solver->updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::SingleTree));
+
+        if(!solver->setProblem(filename))
+        {
+            std::cout << "Error while reading problem in phase 1\n";
+            return (false);
+        }
+
+        solver->registerCallback(E_EventType::NewPrimalSolution, [&collectedSolutions](std::any args) {
+            try
+            {
+                auto data = std::any_cast<PrimalSolutionCallbackData>(args);
+                collectedSolutions.push_back(data.solution);
+            }
+            catch(const std::bad_any_cast&)
+            {
+            }
+        });
+
+        if(!solver->solveProblem())
+        {
+            std::cout << "Error while solving problem in phase 1\n";
+            return (false);
+        }
+    }
+
+    if(collectedSolutions.empty())
+    {
+        std::cout << "No primal solutions collected in phase 1, cannot proceed\n";
+        return (false);
+    }
+
+    std::cout << "Phase 1 collected " << collectedSolutions.size() << " primal solution(s)\n";
+
+    // Phase 2: solve with CPLEX single-tree, injecting the collected solutions via callback
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+
+    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Info));
+    solver->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Cplex));
+    solver->updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::SingleTree));
+
+    if(!solver->setProblem(filename))
+    {
+        std::cout << "Error while reading problem in phase 2\n";
+        return (false);
+    }
+
+    solver->registerCallback(
+        E_EventType::ExternalPrimalSolution, [&collectedSolutions, &env](std::any args) -> std::vector<VectorDouble> {
+            if(!env->dualSolver->MIPSolver->getDiscreteVariableStatus())
+                return {};
+
+            try
+            {
+                std::any_cast<ExternalPrimalSolutionCallbackData>(args);
+            }
+            catch(const std::bad_any_cast&)
+            {
+                return {};
+            }
+
+            if(collectedSolutions.empty())
+                return {};
+
+            std::vector<VectorDouble> toInject = collectedSolutions;
+            collectedSolutions.clear();
+            std::cout << "Injecting " << toInject.size() << " external primal solution(s)\n";
+            return toInject;
+        });
+
+    if(!solver->solveProblem())
+    {
+        std::cout << "Error while solving problem in phase 2\n";
+        return (false);
+    }
+
+    bool foundExternalSolution
+        = env->results->primalSolutionSourceStatistics.count(E_PrimalSolutionSource::ExternalPrimalSolution) > 0;
+
+    if(foundExternalSolution)
+    {
+        int count
+            = env->results->primalSolutionSourceStatistics.at(E_PrimalSolutionSource::ExternalPrimalSolution);
+        std::cout << count << " external primal solution(s) were accepted by the solver\n";
+    }
+
+    if(!foundExternalSolution)
+    {
+        std::cout << "No external primal solution was accepted by the solver\n";
+        return (false);
+    }
+
+    return (true);
+}
+
 bool CplexExternalDualBoundLazyConstraintTest(std::string filename, double externalDualBound)
 {
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
@@ -455,6 +561,11 @@ int CplexTest(int argc, char* argv[])
         std::cout << "Starting test for external dual bound lazy constraint in single-tree strategy" << std::endl;
         passed = CplexExternalDualBoundLazyConstraintTest("data/fo7_2.osil", 17.4);
         std::cout << "Finished test for external dual bound lazy constraint in single-tree strategy.";
+        break;
+    case 11:
+        std::cout << "Starting test for external primal solution injection in single-tree strategy" << std::endl;
+        passed = CplexExternalPrimalSolutionSingleTreeTest("data/fo7_2.osil");
+        std::cout << "Finished test for external primal solution injection in single-tree strategy.";
         break;
     default:
         passed = false;

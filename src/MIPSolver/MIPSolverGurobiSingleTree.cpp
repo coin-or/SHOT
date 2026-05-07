@@ -185,29 +185,32 @@ void GurobiCallbackSingleTree::callback()
 
     try
     {
-
-        // Add current primal bound as new incumbent candidate
-        auto primalBound = env->results->getPrimalBound();
-
-        if(((isMinimization && lastUpdatedPrimal < primalBound)
-               || (!isMinimization && lastUpdatedPrimal > primalBound)))
+        // Add current primal bound as new incumbent candidate (only valid during GRB_CB_MIPNODE)
+        if(where == GRB_CB_MIPNODE)
         {
-            auto primalSol = env->results->primalSolution;
+            auto primalBound = env->results->getPrimalBound();
 
-            if((int)primalSol.size() < env->reformulatedProblem->properties.numberOfVariables)
-                env->reformulatedProblem->augmentAuxiliaryVariableValues(primalSol);
-
-            assert(env->reformulatedProblem->properties.numberOfVariables == primalSol.size());
-
-            if(env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
-                primalSol.push_back(env->reformulatedProblem->objectiveFunction->calculateValue(primalSol));
-
-            for(size_t i = 0; i < primalSol.size(); i++)
+            if(env->results->hasPrimalSolution()
+                && ((isMinimization && lastUpdatedPrimal > primalBound)
+                    || (!isMinimization && lastUpdatedPrimal < primalBound)))
             {
-                setSolution(vars[i], primalSol.at(i));
-            }
+                auto primalSol = env->results->primalSolution;
 
-            lastUpdatedPrimal = env->results->getPrimalBound();
+                if((int)primalSol.size() < env->reformulatedProblem->properties.numberOfVariables)
+                    env->reformulatedProblem->augmentAuxiliaryVariableValues(primalSol);
+
+                assert(env->reformulatedProblem->properties.numberOfVariables == primalSol.size());
+
+                if(env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
+                    primalSol.push_back(env->reformulatedProblem->objectiveFunction->calculateValue(primalSol));
+
+                for(size_t i = 0; i < primalSol.size(); i++)
+                {
+                    setSolution(vars[i], primalSol.at(i));
+                }
+
+                lastUpdatedPrimal = env->results->getPrimalBound();
+            }
         }
 
         // Check if better dual bound
