@@ -16,7 +16,14 @@ if(UNIX)
     set(CPLEX_ARCH x86)
   endif()
   if(APPLE)
-    set(CPLEX_ILOG_DIRS $ENV{HOME}/Applications/IBM/ILOG ${CPLEX_ILOG_DIRS})
+    # Detect Apple Silicon
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
+      set(CPLEX_ARCH arm64)
+    endif()
+    set(CPLEX_ILOG_DIRS
+        $ENV{HOME}/Applications/IBM/ILOG
+        $ENV{HOME}/Applications
+        ${CPLEX_ILOG_DIRS})
     foreach(suffix "osx" "darwin9_gcc4.0")
       set(CPLEX_LIB_PATH_SUFFIXES ${CPLEX_LIB_PATH_SUFFIXES}
                                   lib/${CPLEX_ARCH}_${suffix}/static_pic)
@@ -80,7 +87,13 @@ endif()
 # ----------------------------------------------------------------------------
 # CPLEX
 
-set(CPLEX_DIR ${CPLEX_STUDIO_DIR_}/cplex)
+# Use the local variable when auto-detected, fall back to the cache variable
+# (set by the user via -DCPLEX_STUDIO_DIR=...) when the auto-detection was skipped.
+if(CPLEX_STUDIO_DIR_)
+  set(CPLEX_DIR ${CPLEX_STUDIO_DIR_}/cplex)
+else()
+  set(CPLEX_DIR ${CPLEX_STUDIO_DIR}/cplex)
+endif()
 
 # Find the CPLEX include directory.
 find_path(CPLEX_INCLUDE_DIR ilcplex/cplex.h PATHS ${CPLEX_DIR}/include)
