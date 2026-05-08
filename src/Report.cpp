@@ -349,7 +349,7 @@ void Report::outputOptionsReport()
     env->output->outputInfo("");
 
     if(auto optionsFile = env->settings->getSetting<std::string>("OptionsFile", "Input"); optionsFile == "")
-        env->output->outputInfo(" No options file specified.");
+        env->output->outputDebug(" No options file specified.");
     else
         env->output->outputInfo(fmt::format(" Options read from file:     {}", optionsFile));
 
@@ -357,7 +357,7 @@ void Report::outputOptionsReport()
 
     if(auto nonDefaultSettings = env->settings->getChangedSettings(); nonDefaultSettings.size() > 0)
     {
-        env->output->outputInfo(" Options specified:");
+        env->output->outputInfo(" Non-default options:");
         env->output->outputInfo("");
 
         for(auto& S : nonDefaultSettings)

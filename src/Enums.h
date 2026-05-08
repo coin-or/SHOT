@@ -231,6 +231,18 @@ enum E_SettingType
     Boolean
 };
 
+// Priority levels for settings. Values are spaced by 10 to allow future levels to be inserted between existing ones.
+// Higher numeric value = higher priority (wins over lower when the same setting is written at multiple levels).
+enum class E_SettingPriority : int
+{
+    Default             = 0,  // Value assigned at creation via createSetting
+    RecommendedInternal = 10, // Internally recommended value (e.g. triggered by nonconvex problem detection)
+    OptionsFile         = 20, // Value read from an .osol or .opt options file
+    UserAPI             = 30, // Value set via the public C++/Python API or command-line arguments
+    SolverInternal      = 40, // Value set during the normal solution process inside SHOT
+    SolverCompatibility = 50  // Highest: hard override due to subsolver capability or compile-time limitations
+};
+
 enum class E_SolutionStrategy
 {
     SingleTree,

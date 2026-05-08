@@ -130,9 +130,19 @@ public:
     void updateSetting(std::string name, std::string category, double value);
     void updateSetting(std::string name, std::string category, bool value);
 
+    void updateSetting(std::string name, std::string category, int value, E_SettingPriority priority);
+    void updateSetting(std::string name, std::string category, std::string value, E_SettingPriority priority);
+    void updateSetting(std::string name, std::string category, double value, E_SettingPriority priority);
+    void updateSetting(std::string name, std::string category, bool value, E_SettingPriority priority);
+
     template <typename T> T getSetting(std::string name, std::string category)
     {
         return (env->settings->getSetting<T>(name, category));
+    }
+
+    E_SettingPriority getSettingPriority(std::string name, std::string category)
+    {
+        return (env->settings->getSettingPriority(name, category));
     }
 
     VectorString getSettingIdentifiers(E_SettingType type);
