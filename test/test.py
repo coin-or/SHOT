@@ -73,4 +73,4 @@ if __name__ == '__main__':
 
     solveProblem('data/alan.osil', 2.925)  
     solveProblem('data/meanvarxsc.osil', 14.36923211)
-    solveProblem('data/fo7_2.osil', 17.74934573)
+    solveProblem('data/synthes1.osil', 6.00975909)

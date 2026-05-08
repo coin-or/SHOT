@@ -367,7 +367,7 @@ int CbcTest(int argc, char* argv[])
     case 8:
         std::cout << "Starting test for callbacks getting and setting primal solutions and dual bounds through a "
                      "callback with multi-tree strategy";
-        passed = CbcExternalDualBoundCallbackTest("data/fo7_2.osil", 17.74934, ES_TreeStrategy::MultiTree);
+        passed = CbcExternalDualBoundCallbackTest("data/synthes1.osil", 5.0, ES_TreeStrategy::MultiTree);
         std::cout << "Finished test for callbacks getting and setting primal solutions and dual bounds through a "
                      "callback with multi-tree strategy."
                   << std::endl;

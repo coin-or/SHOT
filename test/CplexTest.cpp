@@ -586,14 +586,14 @@ int CplexTest(int argc, char* argv[])
     case 8:
         std::cout << "Starting test for callbacks getting and setting primal solutions and dual bounds through a "
                      "callback with multi-tree strategy";
-        passed = CplexExternalDualBoundCallbackTest("data/fo7_2.osil", 17.74934, ES_TreeStrategy::MultiTree);
+        passed = CplexExternalDualBoundCallbackTest("data/synthes1.osil", 5.0, ES_TreeStrategy::MultiTree);
         std::cout << "Finished test for callbacks getting and setting primal solutions and dual bounds through a "
                      "callback with multi-tree strategy.";
         break;
     case 9:
         std::cout << "Starting test for callbacks getting and setting primal solutions and dual bounds through a "
                      "callback with single-tree strategy";
-        passed = CplexExternalDualBoundCallbackTest("data/fo7_2.osil", 17.74934, ES_TreeStrategy::SingleTree);
+        passed = CplexExternalDualBoundCallbackTest("data/synthes1.osil", 5.0, ES_TreeStrategy::SingleTree);
         std::cout << "Finished test for callbacks getting and setting primal solutions and dual bounds through a "
                      "callback with single-tree strategy."
                   << std::endl;
@@ -605,12 +605,12 @@ int CplexTest(int argc, char* argv[])
         break;
     case 11:
         std::cout << "Starting test for external primal solution injection in single-tree strategy" << std::endl;
-        passed = CplexExternalPrimalSolutionSingleTreeTest("data/fo7_2.osil");
+        passed = CplexExternalPrimalSolutionSingleTreeTest("data/synthes1.osil");
         std::cout << "Finished test for external primal solution injection in single-tree strategy.";
         break;
     case 12:
         std::cout << "Starting test for termination callback in single-tree strategy" << std::endl;
-        passed = CplexTerminationCallbackSingleTreeTest("data/fo7_2.osil");
+        passed = CplexTerminationCallbackSingleTreeTest("data/synthes1.osil");
         std::cout << "Finished test for termination callback in single-tree strategy.";
         break;
     default:

@@ -594,7 +594,7 @@ int GurobiTest(int argc, char* argv[])
         std::cout << "Starting test for callbacks getting and setting primal solutions and dual bounds through a "
                      "callback with multi-tree strategy"
                   << std::endl;
-        passed = GurobiExternalDualBoundCallbackTest("data/fo7_2.osil", 17.74934, ES_TreeStrategy::MultiTree);
+        passed = GurobiExternalDualBoundCallbackTest("data/synthes1.osil", 5.0, ES_TreeStrategy::MultiTree);
         std::cout << "Finished test for callbacks getting and setting primal solutions and dual bounds through a "
                      "callback with multi-tree strategy.";
         break;
@@ -602,7 +602,7 @@ int GurobiTest(int argc, char* argv[])
         std::cout << "Starting test for callbacks getting and setting primal solutions and dual bounds through a "
                      "callback with single-tree strategy"
                   << std::endl;
-        passed = GurobiExternalDualBoundCallbackTest("data/fo7_2.osil", 17.74934, ES_TreeStrategy::SingleTree);
+        passed = GurobiExternalDualBoundCallbackTest("data/synthes1.osil", 5.0, ES_TreeStrategy::SingleTree);
         std::cout << "Finished test for callbacks getting and setting primal solutions and dual bounds through a "
                      "callback with single-tree strategy.";
         break;
@@ -613,12 +613,12 @@ int GurobiTest(int argc, char* argv[])
         break;
     case 11:
         std::cout << "Starting test for external primal solution injection in single-tree strategy" << std::endl;
-        passed = GurobiExternalPrimalSolutionSingleTreeTest("data/fo7_2.osil");
+        passed = GurobiExternalPrimalSolutionSingleTreeTest("data/synthes1.osil");
         std::cout << "Finished test for external primal solution injection in single-tree strategy.";
         break;
     case 12:
         std::cout << "Starting test for termination callback in single-tree strategy" << std::endl;
-        passed = GurobiTerminationCallbackSingleTreeTest("data/fo7_2.osil");
+        passed = GurobiTerminationCallbackSingleTreeTest("data/synthes1.osil");
         std::cout << "Finished test for termination callback in single-tree strategy.";
         break;
     default:
