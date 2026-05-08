@@ -86,10 +86,10 @@ void ModelingSystemGAMS::augmentSettings([[maybe_unused]] SettingsPtr settings)
 
     std::string optfile = "";
     settings->createSetting(
-        "GAMS.NLP.OptionsFilename", "Subsolver", optfile, "Options file for the NLP solver in GAMS");
+        "Subsolver.GAMS.NLP.OptionsFilename", optfile, "Options file for the NLP solver in GAMS");
 
     std::string solver = "auto";
-    settings->createSetting("GAMS.NLP.Solver", "Subsolver", solver, "NLP solver to use in GAMS (auto: SHOT chooses)");
+    settings->createSetting("Subsolver.GAMS.NLP.Solver", solver, "NLP solver to use in GAMS (auto: SHOT chooses)");
 
 #if GMOAPIVERSION >= 21
     settings->createSettingGroup(
@@ -102,13 +102,13 @@ void ModelingSystemGAMS::augmentSettings([[maybe_unused]] SettingsPtr settings)
 #if GMOAPIVERSION >= 25
     enumQExtractAlg.push_back("concurrent");
 #endif
-    settings->createSetting("GAMS.QExtractAlg", "ModelingSystem", 0,
+    settings->createSetting("ModelingSystem.GAMS.QExtractAlg", 0,
         "Extraction algorithm for quadratic equations in GAMS interface", enumQExtractAlg);
 
 #if GMOAPIVERSION >= 28
-    settings->createSetting("GAMS.QExtractDenseSwitchFactor", "ModelingSystem", 0.008,
+    settings->createSetting("ModelingSystem.GAMS.QExtractDenseSwitchFactor", 0.008,
         "Sparse/dense factor for quadratic extraction algorithm in GAMS interface.", 0.0);
-    settings->createSetting("GAMS.QExtractDenseSwitchLog", "ModelingSystem", false,
+    settings->createSetting("ModelingSystem.GAMS.QExtractDenseSwitchLog", false,
         "Whether to print additional information about sparse/dense factor choice in quadratic extraction algorithm in GAMS interface.");
 #endif
 #endif

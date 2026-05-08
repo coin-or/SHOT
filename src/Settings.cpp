@@ -230,25 +230,28 @@ void Settings::updateSetting(std::string name, std::string category, T value, E_
 // String settings ===============================================================
 
 void Settings::createSetting(
-    std::string name, std::string category, std::string value, std::string description, bool isPrivate)
+    std::string settingName, std::string value, std::string description, bool isPrivate)
 {
+    auto [category, name] = splitKey(settingName);
     createBaseSetting<std::string>(name, category, value, description, isPrivate);
 }
 
 // Integer settings ==============================================================
 
-void Settings::createSetting(std::string name, std::string category, int value, std::string description, double minVal,
-    double maxVal, bool isPrivate)
+void Settings::createSetting(std::string settingName, int value, std::string description,
+    double minVal, double maxVal, bool isPrivate)
 {
+    auto [category, name] = splitKey(settingName);
     createBaseSetting<int>(name, category, value, description, isPrivate);
     settingBounds[make_pair(category, name)] = std::make_pair(minVal, maxVal);
 }
 
 // Double settings ===============================================================
 
-void Settings::createSetting(std::string name, std::string category, double value, std::string description,
+void Settings::createSetting(std::string settingName, double value, std::string description,
     double minVal, double maxVal, bool isPrivate)
 {
+    auto [category, name] = splitKey(settingName);
     createBaseSetting<double>(name, category, value, description, isPrivate);
     settingBounds[make_pair(category, name)] = std::make_pair(minVal, maxVal);
 }
@@ -256,16 +259,18 @@ void Settings::createSetting(std::string name, std::string category, double valu
 // Boolean settings ==============================================================
 
 void Settings::createSetting(
-    std::string name, std::string category, bool value, std::string description, bool isPrivate)
+    std::string settingName, bool value, std::string description, bool isPrivate)
 {
+    auto [category, name] = splitKey(settingName);
     createBaseSetting<bool>(name, category, value, description, isPrivate);
 }
 
 // Enum settings ==================================================================
 
-void Settings::createSetting(std::string name, std::string category, int value, std::string description,
+void Settings::createSetting(std::string settingName, int value, std::string description,
     VectorString enumDesc, int startValue, bool isPrivate)
 {
+    auto [category, name] = splitKey(settingName);
     createBaseSetting<int>(name, category, value, description, isPrivate);
     settingBounds[make_pair(category, name)]
         = std::make_pair((double)startValue, (double)(startValue + enumDesc.size() - 1));

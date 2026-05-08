@@ -52,56 +52,56 @@ void NLPSolverSHOT::initializeMIPProblem()
     if(env->settings->getSetting<bool>("Console.PrimalSolver.Show", "Output"))
     {
         solver->updateSetting(
-            "Console.LogLevel", "Output", env->settings->getSetting<int>("Console.LogLevel", "Output"));
+            "Output.Console.LogLevel", env->settings->getSetting<int>("Console.LogLevel", "Output"));
         solver->updateSetting(
-            "Console.DualSolver.Show", "Output", env->settings->getSetting<bool>("Console.DualSolver.Show", "Output"));
+            "Output.Console.DualSolver.Show", env->settings->getSetting<bool>("Console.DualSolver.Show", "Output"));
     }
     else
     {
-        solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Off));
+        solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
     }
 
-    solver->updateSetting("Console.Iteration.Detail", "Output", 0);
+    solver->updateSetting("Output.Console.Iteration.Detail", 0);
 
-    solver->updateSetting("Debug.Enable", "Output", env->settings->getSetting<bool>("Debug.Enable", "Output"));
-    solver->updateSetting("CutStrategy", "Dual", 0);
-    solver->updateSetting("TreeStrategy", "Dual", 1);
-    solver->updateSetting("MIP.Solver", "Dual", env->settings->getSetting<int>("MIP.Solver", "Dual"));
+    solver->updateSetting("Output.Debug.Enable", env->settings->getSetting<bool>("Debug.Enable", "Output"));
+    solver->updateSetting("Dual.CutStrategy", 0);
+    solver->updateSetting("Dual.TreeStrategy", 1);
+    solver->updateSetting("Dual.MIP.Solver", env->settings->getSetting<int>("MIP.Solver", "Dual"));
 
-    solver->updateSetting("BoundTightening.FeasibilityBased.Use", "Model", false);
-    solver->updateSetting("BoundTightening.FeasibilityBased.MaxIterations", "Model", 0);
+    solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+    solver->updateSetting("Model.BoundTightening.FeasibilityBased.MaxIterations", 0);
 
-    solver->updateSetting("Console.Iteration.Detail", "Output", 0);
-
-    solver->updateSetting(
-        "Convexity.AssumeConvex", "Model", env->settings->getSetting<bool>("Convexity.AssumeConvex", "Model"));
-
-    solver->updateSetting("ObjectiveGap.Relative", "Termination", 1e-6);
-    solver->updateSetting("ObjectiveGap.Absolute", "Termination", 1e-6);
-    solver->updateSetting(
-        "ConstraintTolerance", "Termination", env->settings->getSetting<double>("ConstraintTolerance", "Termination"));
+    solver->updateSetting("Output.Console.Iteration.Detail", 0);
 
     solver->updateSetting(
-        "TimeLimit", "Termination", env->settings->getSetting<double>("FixedInteger.TimeLimit", "Primal"));
-    solver->updateSetting(
-        "IterationLimit", "Termination", env->settings->getSetting<int>("FixedInteger.IterationLimit", "Primal"));
+        "Model.Convexity.AssumeConvex", env->settings->getSetting<bool>("Convexity.AssumeConvex", "Model"));
 
-    solver->updateSetting("DualStagnation.IterationLimit", "Termination", 20);
+    solver->updateSetting("Termination.ObjectiveGap.Relative", 1e-6);
+    solver->updateSetting("Termination.ObjectiveGap.Absolute", 1e-6);
+    solver->updateSetting(
+        "Termination.ConstraintTolerance", env->settings->getSetting<double>("ConstraintTolerance", "Termination"));
+
+    solver->updateSetting(
+        "Termination.TimeLimit", env->settings->getSetting<double>("FixedInteger.TimeLimit", "Primal"));
+    solver->updateSetting(
+        "Termination.IterationLimit", env->settings->getSetting<int>("FixedInteger.IterationLimit", "Primal"));
+
+    solver->updateSetting("Termination.DualStagnation.IterationLimit", 20);
 
     if(env->settings->getSetting<bool>("SHOT.ReuseHyperplanes.Use", "Subsolver"))
-        solver->updateSetting("HyperplaneCuts.SaveHyperplanePoints", "Dual", true);
+        solver->updateSetting("Dual.HyperplaneCuts.SaveHyperplanePoints", true);
 
     solver->updateSetting(
-        "BoundTightening.FeasibilityBased.Use", "Model", env->settings->getSetting<bool>("SHOT.UseFBBT", "Subsolver"));
+        "Model.BoundTightening.FeasibilityBased.Use", env->settings->getSetting<bool>("SHOT.UseFBBT", "Subsolver"));
 
     // Put more emphasis on numerical stability in the LP solver
 #ifdef HAS_CPLEX
-    solver->updateSetting("Cplex.NumericalEmphasis", "Subsolver", 1);
+    solver->updateSetting("Subsolver.Cplex.NumericalEmphasis", 1);
 #endif
 
     // Put more emphasis on numerical stability in the LP solver
 #ifdef HAS_GUROBI
-    solver->updateSetting("Gurobi.NumericFocus", "Subsolver", 3);
+    solver->updateSetting("Subsolver.Gurobi.NumericFocus", 3);
 #endif
 
     // Set the debug path for the subsolver
@@ -109,7 +109,7 @@ void NLPSolverSHOT::initializeMIPProblem()
     fs::filesystem::path subproblemDebugPath(mainDebugPath);
     // subproblemDebugPath /= ("SHOT_fixedNLP_" + std::to_string(env->results->getCurrentIteration()->iterationNumber));
     subproblemDebugPath /= ("SHOT_fixedNLP");
-    solver->updateSetting("Debug.Path", "Output", subproblemDebugPath.string());
+    solver->updateSetting("Output.Debug.Path", subproblemDebugPath.string());
 
     relaxedProblem = sourceProblem->createCopy(solver->getEnvironment(), true, false, false);
     solver->setProblem(relaxedProblem, relaxedProblem);
@@ -208,8 +208,8 @@ E_NLPSolutionStatus NLPSolverSHOT::solveProblemInstance()
     // Setting the cutoff value from currently best known solution
     if(env->dualSolver->cutOffToUse != SHOT_DBL_MAX)
     {
-        solver->updateSetting("MIP.CutOff.InitialValue", "Dual", env->dualSolver->cutOffToUse);
-        solver->updateSetting("MIP.CutOff.UseInitialValue", "Dual", true);
+        solver->updateSetting("Dual.MIP.CutOff.InitialValue", env->dualSolver->cutOffToUse);
+        solver->updateSetting("Dual.MIP.CutOff.UseInitialValue", true);
     }
 
     if(!problemInfoPrinted)

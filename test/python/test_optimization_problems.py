@@ -334,13 +334,13 @@ def solve_file_and_verify(filename, expected_obj, tolerance=0.01, mip_solver=Non
     if mip_solver is not None:
         solver_enum = get_mip_solver_enum(mip_solver)
         if solver_enum is not None:
-            solver.updateSetting("MIP.Solver", "Dual", int(solver_enum))
+            solver.updateSetting("Dual.MIP.Solver", int(solver_enum))
     
     # Set NLP solver if specified (using type-safe enum)
     if nlp_solver is not None:
         solver_enum = get_nlp_solver_enum(nlp_solver)
         if solver_enum is not None:
-            solver.updateSetting("FixedInteger.Solver", "Primal", int(solver_enum))
+            solver.updateSetting("Primal.FixedInteger.Solver", int(solver_enum))
     
     result = solver.solveProblem()
     assert result == True, f"Failed to solve problem {filename}"

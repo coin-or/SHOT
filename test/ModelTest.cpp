@@ -1232,8 +1232,8 @@ bool ModelTestEx1223b()
     auto solver = std::make_unique<Solver>();
     auto env = solver->getEnvironment();
 
-    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Info));
-    solver->updateSetting("Debug.Enable", "Output", true);
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Info));
+    solver->updateSetting("Output.Debug.Enable", true);
 
     // Initializing a SHOT problem class
     auto problem = std::make_shared<Problem>(env);
@@ -1422,7 +1422,7 @@ bool ModelTestGradientsAndHessians()
     auto solver = std::make_unique<Solver>();
     auto env = solver->getEnvironment();
 
-    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Info));
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Info));
 
     // ========== Test 1: Exponential exp(x) ==========
     {

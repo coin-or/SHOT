@@ -369,22 +369,22 @@ int main(int argc, char* argv[])
         useASL = true;
 
         // We always want to write to where the problem is when called by ASL
-        solver.updateSetting("OutputDirectory", "Output", static_cast<int>(ES_OutputDirectory::Problem), E_SettingPriority::UserAPI);
+        solver.updateSetting("Output.OutputDirectory", static_cast<int>(ES_OutputDirectory::Problem), E_SettingPriority::UserAPI);
     }
 #endif
 
     if(cmdl["--convex"])
-        solver.updateSetting("Convexity.AssumeConvex", "Model", true, E_SettingPriority::UserAPI);
+        solver.updateSetting("Model.Convexity.AssumeConvex", true, E_SettingPriority::UserAPI);
 
     if(cmdl["--debug"])
-        solver.updateSetting("Debug.Enable", "Output", true, E_SettingPriority::UserAPI);
+        solver.updateSetting("Output.Debug.Enable", true, E_SettingPriority::UserAPI);
 
     std::string debugPath;
     if(cmdl("--debug"))
     {
         debugPath = cmdl("--debug").str();
-        solver.updateSetting("Debug.Enable", "Output", true, E_SettingPriority::UserAPI);
-        solver.updateSetting("Debug.Path", "Output", debugPath, E_SettingPriority::UserAPI);
+        solver.updateSetting("Output.Debug.Enable", true, E_SettingPriority::UserAPI);
+        solver.updateSetting("Output.Debug.Path", debugPath, E_SettingPriority::UserAPI);
     }
 
     std::string argValue;
@@ -393,19 +393,19 @@ int main(int argc, char* argv[])
     {
 #ifdef HAS_CBC
         if(argValue == "cbc")
-            solver.updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Cbc), E_SettingPriority::UserAPI);
+            solver.updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cbc), E_SettingPriority::UserAPI);
 #endif
 #ifdef HAS_HIGHS
         if(argValue == "highs")
-            solver.updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Highs), E_SettingPriority::UserAPI);
+            solver.updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Highs), E_SettingPriority::UserAPI);
 #endif
 #ifdef HAS_CPLEX
         if(argValue == "cplex")
-            solver.updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Cplex), E_SettingPriority::UserAPI);
+            solver.updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cplex), E_SettingPriority::UserAPI);
 #endif
 #ifdef HAS_GUROBI
         if(argValue == "gurobi")
-            solver.updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Gurobi), E_SettingPriority::UserAPI);
+            solver.updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Gurobi), E_SettingPriority::UserAPI);
 #endif
     }
 
@@ -413,29 +413,29 @@ int main(int argc, char* argv[])
     {
 #ifdef HAS_GAMS
         if(argValue == "gams")
-            solver.updateSetting("FixedInteger.Solver", "Primal", static_cast<int>(ES_PrimalNLPSolver::GAMS), E_SettingPriority::UserAPI);
+            solver.updateSetting("Primal.FixedInteger.Solver", static_cast<int>(ES_PrimalNLPSolver::GAMS), E_SettingPriority::UserAPI);
 #endif
 #ifdef HAS_IPOPT
         if(argValue == "ipopt")
-            solver.updateSetting("FixedInteger.Solver", "Primal", static_cast<int>(ES_PrimalNLPSolver::Ipopt), E_SettingPriority::UserAPI);
+            solver.updateSetting("Primal.FixedInteger.Solver", static_cast<int>(ES_PrimalNLPSolver::Ipopt), E_SettingPriority::UserAPI);
 #endif
         if(argValue == "shot")
-            solver.updateSetting("FixedInteger.Solver", "Primal", static_cast<int>(ES_PrimalNLPSolver::SHOT), E_SettingPriority::UserAPI);
+            solver.updateSetting("Primal.FixedInteger.Solver", static_cast<int>(ES_PrimalNLPSolver::SHOT), E_SettingPriority::UserAPI);
     }
 
     if(cmdl("--tree") >> argValue)
     {
 #ifdef HAS_CPLEX
         if(argValue == "single")
-            solver.updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::SingleTree), E_SettingPriority::UserAPI);
+            solver.updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::SingleTree), E_SettingPriority::UserAPI);
         else if(argValue == "multi")
-            solver.updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::MultiTree), E_SettingPriority::UserAPI);
+            solver.updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::MultiTree), E_SettingPriority::UserAPI);
 #endif
 #ifdef HAS_GUROBI
         if(argValue == "single")
-            solver.updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::SingleTree), E_SettingPriority::UserAPI);
+            solver.updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::SingleTree), E_SettingPriority::UserAPI);
         else if(argValue == "multi")
-            solver.updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::MultiTree), E_SettingPriority::UserAPI);
+            solver.updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::MultiTree), E_SettingPriority::UserAPI);
 #endif
     }
 
@@ -443,7 +443,7 @@ int main(int argc, char* argv[])
     {
         try
         {
-            solver.updateSetting("MIP.NumberOfThreads", "Dual", std::stoi(argValue), E_SettingPriority::UserAPI);
+            solver.updateSetting("Dual.MIP.NumberOfThreads", std::stoi(argValue), E_SettingPriority::UserAPI);
         }
         catch(const std::exception& e)
         {
@@ -455,7 +455,7 @@ int main(int argc, char* argv[])
     {
         try
         {
-            solver.updateSetting("ObjectiveGap.Absolute", "Termination", std::stod(argValue), E_SettingPriority::UserAPI);
+            solver.updateSetting("Termination.ObjectiveGap.Absolute", std::stod(argValue), E_SettingPriority::UserAPI);
         }
         catch(const std::exception& e)
         {
@@ -467,7 +467,7 @@ int main(int argc, char* argv[])
     {
         try
         {
-            solver.updateSetting("ObjectiveGap.Relative", "Termination", std::stod(argValue), E_SettingPriority::UserAPI);
+            solver.updateSetting("Termination.ObjectiveGap.Relative", std::stod(argValue), E_SettingPriority::UserAPI);
         }
         catch(const std::exception& e)
         {
@@ -479,7 +479,7 @@ int main(int argc, char* argv[])
     {
         try
         {
-            solver.updateSetting("TimeLimit", "Termination", std::stod(argValue), E_SettingPriority::UserAPI);
+            solver.updateSetting("Termination.TimeLimit", std::stod(argValue), E_SettingPriority::UserAPI);
         }
         catch(const std::exception& e)
         {
@@ -489,30 +489,21 @@ int main(int argc, char* argv[])
 
     for(auto& ARG : cmdl.pos_args())
     {
-        int dotLocation = ARG.find('.');
-
-        if(dotLocation == std::string::npos)
-            continue;
-
         int equalLocation = ARG.find('=');
 
         if(equalLocation == std::string::npos)
             continue;
 
-        if(equalLocation <= dotLocation)
-            continue;
-
-        auto category = ARG.substr(0, dotLocation);
-        auto name = ARG.substr(dotLocation + 1, equalLocation - dotLocation - 1);
+        auto settingName = ARG.substr(0, equalLocation);
         auto value = ARG.substr(equalLocation + 1, ARG.size());
 
         bool found = false;
 
         for(auto& S : solver.getSettingIdentifiers(E_SettingType::String))
         {
-            if(ARG.find(S) == 0)
+            if(settingName == S)
             {
-                solver.updateSetting(name, category, value, E_SettingPriority::UserAPI);
+                solver.updateSetting(settingName, value, E_SettingPriority::UserAPI);
                 found = true;
                 break;
             }
@@ -523,10 +514,10 @@ int main(int argc, char* argv[])
 
         for(auto& S : solver.getSettingIdentifiers(E_SettingType::Boolean))
         {
-            if(ARG.find(S) == 0)
+            if(settingName == S)
             {
                 if(value == "true" || value == "false")
-                    solver.updateSetting(name, category, (value == "true" ? true : false), E_SettingPriority::UserAPI);
+                    solver.updateSetting(settingName, (value == "true" ? true : false), E_SettingPriority::UserAPI);
                 else
                     env->output->outputCritical(" Cannot read boolean option in " + ARG);
 
@@ -540,11 +531,11 @@ int main(int argc, char* argv[])
 
         for(auto& S : solver.getSettingIdentifiers(E_SettingType::Integer))
         {
-            if(ARG.find(S) == 0)
+            if(settingName == S)
             {
                 try
                 {
-                    solver.updateSetting(name, category, std::stoi(value), E_SettingPriority::UserAPI);
+                    solver.updateSetting(settingName, std::stoi(value), E_SettingPriority::UserAPI);
                 }
                 catch(const std::exception& e)
                 {
@@ -561,11 +552,11 @@ int main(int argc, char* argv[])
 
         for(auto& S : solver.getSettingIdentifiers(E_SettingType::Enum))
         {
-            if(ARG.find(S) == 0)
+            if(settingName == S)
             {
                 try
                 {
-                    solver.updateSetting(name, category, std::stoi(value), E_SettingPriority::UserAPI);
+                    solver.updateSetting(settingName, std::stoi(value), E_SettingPriority::UserAPI);
                 }
                 catch(const std::exception& e)
                 {
@@ -582,11 +573,11 @@ int main(int argc, char* argv[])
 
         for(auto& S : solver.getSettingIdentifiers(E_SettingType::Double))
         {
-            if(ARG.find(S) == 0)
+            if(settingName == S)
             {
                 try
                 {
-                    solver.updateSetting(name, category, std::stod(value), E_SettingPriority::UserAPI);
+                    solver.updateSetting(settingName, std::stod(value), E_SettingPriority::UserAPI);
                 }
                 catch(const std::exception& e)
                 {
@@ -652,7 +643,7 @@ int main(int argc, char* argv[])
     }
 
     // Check if we want to use the ASL calling format
-    if(useASL && !((ES_ModelingSystem)solver.getSetting<int>("ModelingSystem", "Input") == ES_ModelingSystem::AMPL))
+    if(useASL && !((ES_ModelingSystem)solver.getSetting<int>("Input.ModelingSystem") == ES_ModelingSystem::AMPL))
     {
         env->output->outputCritical(" Error: Can only use parameter AMPL if the problem is a AMPL (.nl) file.");
         return (0);
@@ -664,7 +655,7 @@ int main(int argc, char* argv[])
     if(cmdl("--osrl")) // Have specified a OSrL-file location
     {
         osrlFilename = cmdl("--osrl").str();
-        resultFile = fs::filesystem::path(solver.getSetting<std::string>("ResultPath", "Output"))
+        resultFile = fs::filesystem::path(solver.getSetting<std::string>("Output.ResultPath"))
             / fs::filesystem::path(osrlFilename);
     }
 
@@ -672,7 +663,7 @@ int main(int argc, char* argv[])
     if(cmdl("--trc")) // Have specified a trace-file location
     {
         trcFilename = cmdl("--trc").str();
-        traceFile = fs::filesystem::path(solver.getSetting<std::string>("ResultPath", "Output"))
+        traceFile = fs::filesystem::path(solver.getSetting<std::string>("Output.ResultPath"))
             / fs::filesystem::path(trcFilename);
     }
 
@@ -680,12 +671,12 @@ int main(int argc, char* argv[])
     if(cmdl("--sol")) // Have specified an sol-file location
     {
         solFilename = cmdl("--sol").str();
-        solFile = fs::filesystem::path(solver.getSetting<std::string>("ResultPath", "Output"))
+        solFile = fs::filesystem::path(solver.getSetting<std::string>("Output.ResultPath"))
             / fs::filesystem::path(solFilename);
     }
 
     std::string gdxFilename;
-    if(gdxFilename = solver.getSetting<std::string>("GAMS.AlternateSolutionsFile", "Output");
+    if(gdxFilename = solver.getSetting<std::string>("Output.GAMS.AlternateSolutionsFile");
         gdxFilename != "") // Have specified an gdx-file location
     {
         gdxFile = fs::filesystem::absolute(gdxFilename).string();
@@ -715,8 +706,8 @@ int main(int argc, char* argv[])
 
     if(resultFile.empty())
     {
-        fs::filesystem::path resultPath(solver.getSetting<std::string>("ResultPath", "Output"));
-        resultPath /= solver.getSetting<std::string>("ProblemName", "Input");
+        fs::filesystem::path resultPath(solver.getSetting<std::string>("Output.ResultPath"));
+        resultPath /= solver.getSetting<std::string>("Input.ProblemName");
         resultPath = resultPath.replace_extension(".osrl");
 
         if(!Utilities::writeStringToFile(resultPath.string(), osrl))
@@ -741,8 +732,8 @@ int main(int argc, char* argv[])
 
         if(traceFile.empty())
         {
-            fs::filesystem::path tracePath(solver.getSetting<std::string>("ResultPath", "Output"));
-            tracePath /= solver.getSetting<std::string>("ProblemName", "Input");
+            fs::filesystem::path tracePath(solver.getSetting<std::string>("Output.ResultPath"));
+            tracePath /= solver.getSetting<std::string>("Input.ProblemName");
             tracePath = tracePath.replace_extension(".trc");
 
             if(!Utilities::writeStringToFile(tracePath.string(), trace))
@@ -784,9 +775,9 @@ int main(int argc, char* argv[])
 
     env->output->outputInfo(" Log written to:     " + logFile.string());
 
-    if(solver.getSetting<bool>("Debug.Enable", "Output"))
+    if(solver.getSetting<bool>("Output.Debug.Enable"))
     {
-        auto debugDirectory = fs::filesystem::path(solver.getSetting<std::string>("Debug.Path", "Output"));
+        auto debugDirectory = fs::filesystem::path(solver.getSetting<std::string>("Output.Debug.Path"));
         env->output->outputInfo(" Debug directory:    " + debugDirectory.string());
     }
 

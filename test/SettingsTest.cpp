@@ -106,32 +106,32 @@ bool TestPriorityOrdering()
 
     // Higher priority wins; lower-priority write is stored in history but does not change active value.
     auto settings = std::make_shared<Settings>(std::make_shared<Output>());
-    settings->createSetting("TestInt", "Test", 0, "A test integer setting", 0.0, 1000.0);
+    settings->createSetting("Test.TestInt", 0, "A test integer setting", 0.0, 1000.0);
 
-    settings->updateSetting("TestInt", "Test", 42, E_SettingPriority::SolverInternal);
-    if(settings->getSetting<int>("TestInt", "Test") != 42)
+    settings->updateSetting("Test.TestInt", 42, E_SettingPriority::SolverInternal);
+    if(settings->getSetting<int>("Test.TestInt") != 42)
     {
         std::cout << "  FAIL: SolverInternal write did not take effect." << std::endl;
         passed = false;
     }
 
     // A lower-priority write should NOT change the active value
-    settings->updateSetting("TestInt", "Test", 7, E_SettingPriority::OptionsFile);
-    if(settings->getSetting<int>("TestInt", "Test") != 42)
+    settings->updateSetting("Test.TestInt", 7, E_SettingPriority::OptionsFile);
+    if(settings->getSetting<int>("Test.TestInt") != 42)
     {
         std::cout << "  FAIL: Lower-priority (OptionsFile) write incorrectly overrode SolverInternal." << std::endl;
         passed = false;
     }
 
     // But it should be stored in history
-    if(!settings->hasSettingAtPriority("TestInt", "Test", E_SettingPriority::OptionsFile))
+    if(!settings->hasSettingAtPriority("Test.TestInt", E_SettingPriority::OptionsFile))
     {
         std::cout << "  FAIL: OptionsFile value not found in history after lower-priority write." << std::endl;
         passed = false;
     }
 
     // Active priority should still be SolverInternal
-    if(settings->getSettingPriority("TestInt", "Test") != E_SettingPriority::SolverInternal)
+    if(settings->getSettingPriority("Test.TestInt") != E_SettingPriority::SolverInternal)
     {
         std::cout << "  FAIL: Active priority should be SolverInternal." << std::endl;
         passed = false;
@@ -149,14 +149,14 @@ bool TestHistoryRetrieval()
     std::cout << "Starting history retrieval test:" << std::endl;
 
     auto settings = std::make_shared<Settings>(std::make_shared<Output>());
-    settings->createSetting("HistDouble", "Test", 1.0, "A test double setting", 0.0, 100.0);
+    settings->createSetting("Test.HistDouble", 1.0, "A test double setting", 0.0, 100.0);
 
-    settings->updateSetting("HistDouble", "Test", 5.0, E_SettingPriority::OptionsFile);
-    settings->updateSetting("HistDouble", "Test", 9.0, E_SettingPriority::SolverCompatibility);
-    settings->updateSetting("HistDouble", "Test", 12.5, E_SettingPriority::SolverInternal);
+    settings->updateSetting("Test.HistDouble", 5.0, E_SettingPriority::OptionsFile);
+    settings->updateSetting("Test.HistDouble", 9.0, E_SettingPriority::SolverCompatibility);
+    settings->updateSetting("Test.HistDouble", 12.5, E_SettingPriority::SolverInternal);
 
     // getSettingAtPriority
-    double atOptions = settings->getSettingAtPriority<double>("HistDouble", "Test", E_SettingPriority::OptionsFile);
+    double atOptions = settings->getSettingAtPriority<double>("Test.HistDouble", E_SettingPriority::OptionsFile);
     if(atOptions != 5.0)
     {
         std::cout << "  FAIL: getSettingAtPriority<double> at OptionsFile returned " << atOptions
@@ -165,7 +165,7 @@ bool TestHistoryRetrieval()
     }
 
     double atSolverCompat
-        = settings->getSettingAtPriority<double>("HistDouble", "Test", E_SettingPriority::SolverCompatibility);
+        = settings->getSettingAtPriority<double>("Test.HistDouble", E_SettingPriority::SolverCompatibility);
     if(atSolverCompat != 9.0)
     {
         std::cout << "  FAIL: getSettingAtPriority<double> at SolverCompatibility returned " << atSolverCompat
@@ -174,19 +174,19 @@ bool TestHistoryRetrieval()
     }
 
     // hasSettingAtPriority
-    if(!settings->hasSettingAtPriority("HistDouble", "Test", E_SettingPriority::Default))
+    if(!settings->hasSettingAtPriority("Test.HistDouble", E_SettingPriority::Default))
     {
         std::cout << "  FAIL: hasSettingAtPriority should return true for Default (initial value)." << std::endl;
         passed = false;
     }
-    if(settings->hasSettingAtPriority("HistDouble", "Test", E_SettingPriority::UserAPI))
+    if(settings->hasSettingAtPriority("Test.HistDouble", E_SettingPriority::UserAPI))
     {
         std::cout << "  FAIL: hasSettingAtPriority should return false for UserAPI (never written)." << std::endl;
         passed = false;
     }
 
     // getSettingPriorityHistory — should contain Default(0), OptionsFile(20), SolverInternal(40), SolverCompatibility(50)
-    auto history = settings->getSettingPriorityHistory("HistDouble", "Test");
+    auto history = settings->getSettingPriorityHistory("Test.HistDouble");
     if(history.size() != 4)
     {
         std::cout << "  FAIL: getSettingPriorityHistory returned " << history.size() << " entries (expected 4)."
@@ -206,12 +206,12 @@ bool TestGetSettingsAtPriority()
     std::cout << "Starting getSettingsAtPriority test:" << std::endl;
 
     auto settings = std::make_shared<Settings>(std::make_shared<Output>());
-    settings->createSetting("A", "Cat", 1, "Setting A", 0.0, 100.0);
-    settings->createSetting("B", "Cat", 2, "Setting B", 0.0, 100.0);
-    settings->createSetting("C", "Cat", 3, "Setting C", 0.0, 100.0);
+    settings->createSetting("Cat.A", 1, "Setting A", 0.0, 100.0);
+    settings->createSetting("Cat.B", 2, "Setting B", 0.0, 100.0);
+    settings->createSetting("Cat.C", 3, "Setting C", 0.0, 100.0);
 
-    settings->updateSetting("A", "Cat", 10, E_SettingPriority::UserAPI);
-    settings->updateSetting("B", "Cat", 20, E_SettingPriority::UserAPI);
+    settings->updateSetting("Cat.A", 10, E_SettingPriority::UserAPI);
+    settings->updateSetting("Cat.B", 20, E_SettingPriority::UserAPI);
     // C is left at default
 
     auto userSettings = settings->getSettingsAtPriority(E_SettingPriority::UserAPI);
@@ -242,18 +242,18 @@ bool TestIsSettingAtDefault()
     std::cout << "Starting isSettingAtDefault and getChangedSettings test:" << std::endl;
 
     auto settings = std::make_shared<Settings>(std::make_shared<Output>());
-    settings->createSetting("X", "Cat", 5, "Setting X", 0.0, 100.0);
-    settings->createSetting("Y", "Cat", true, "Setting Y");
+    settings->createSetting("Cat.X", 5, "Setting X", 0.0, 100.0);
+    settings->createSetting("Cat.Y", true, "Setting Y");
 
-    if(!settings->isSettingAtDefault("X", "Cat"))
+    if(!settings->isSettingAtDefault("Cat.X"))
     {
         std::cout << "  FAIL: isSettingAtDefault should be true before any update." << std::endl;
         passed = false;
     }
 
-    settings->updateSetting("X", "Cat", 99, E_SettingPriority::UserAPI);
+    settings->updateSetting("Cat.X", 99, E_SettingPriority::UserAPI);
 
-    if(settings->isSettingAtDefault("X", "Cat"))
+    if(settings->isSettingAtDefault("Cat.X"))
     {
         std::cout << "  FAIL: isSettingAtDefault should be false after UserAPI update." << std::endl;
         passed = false;
@@ -292,26 +292,26 @@ bool TestReadSettingsFromStringPriority()
     std::cout << "Starting readSettingsFromString priority test:" << std::endl;
 
     auto settings = std::make_shared<Settings>(std::make_shared<Output>());
-    settings->createSetting("Dual.TimeLimit", "Termination", 1000.0, "Time limit", 0.0, 1e12);
+    settings->createSetting("Termination.Dual.TimeLimit", 1000.0, "Time limit", 0.0, 1e12);
 
     std::string optStr = "Termination.Dual.TimeLimit=300\n";
     settings->readSettingsFromString(optStr);
 
-    if(settings->getSettingPriority("Dual.TimeLimit", "Termination") != E_SettingPriority::OptionsFile)
+    if(settings->getSettingPriority("Termination.Dual.TimeLimit") != E_SettingPriority::OptionsFile)
     {
         std::cout << "  FAIL: readSettingsFromString should set OptionsFile priority." << std::endl;
         passed = false;
     }
 
-    if(settings->getSetting<double>("Dual.TimeLimit", "Termination") != 300.0)
+    if(settings->getSetting<double>("Termination.Dual.TimeLimit") != 300.0)
     {
         std::cout << "  FAIL: active value should be 300.0 after readSettingsFromString." << std::endl;
         passed = false;
     }
 
     // A SolverInternal write (default for bare updateSetting) should still win
-    settings->updateSetting("Dual.TimeLimit", "Termination", 999.0);
-    if(settings->getSetting<double>("Dual.TimeLimit", "Termination") != 999.0)
+    settings->updateSetting("Termination.Dual.TimeLimit", 999.0);
+    if(settings->getSetting<double>("Termination.Dual.TimeLimit") != 999.0)
     {
         std::cout << "  FAIL: SolverInternal update should override OptionsFile." << std::endl;
         passed = false;
@@ -331,14 +331,14 @@ bool TestSolverWrapperPriorityRouting()
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
 
     // Solver::updateSetting (no priority arg) must use UserAPI (30)
-    solver->updateSetting("TimeLimit", "Termination", 500.0);
-    if(solver->getSetting<double>("TimeLimit", "Termination") != 500.0)
+    solver->updateSetting("Termination.TimeLimit", 500.0);
+    if(solver->getSetting<double>("Termination.TimeLimit") != 500.0)
     {
         std::cout << "  FAIL: Solver::updateSetting did not update the setting." << std::endl;
         passed = false;
     }
 
-    auto prio = solver->getSettingPriority("TimeLimit", "Termination");
+    auto prio = solver->getSettingPriority("Termination.TimeLimit");
     if(prio != E_SettingPriority::UserAPI)
     {
         std::cout << "  FAIL: Solver::updateSetting should route to UserAPI priority, got "
@@ -347,8 +347,8 @@ bool TestSolverWrapperPriorityRouting()
     }
 
     // Explicit priority overload
-    solver->updateSetting("TimeLimit", "Termination", 1200.0, E_SettingPriority::SolverCompatibility);
-    if(solver->getSetting<double>("TimeLimit", "Termination") != 1200.0)
+    solver->updateSetting("Termination.TimeLimit", 1200.0, E_SettingPriority::SolverCompatibility);
+    if(solver->getSetting<double>("Termination.TimeLimit") != 1200.0)
     {
         std::cout << "  FAIL: Solver::updateSetting with SolverCompatibility priority did not take effect."
                   << std::endl;
@@ -374,13 +374,13 @@ bool TestUserOverridesConvexityRecommendation()
     auto env = solver->getEnvironment();
 
     // Short limits so the test runs quickly
-    solver->updateSetting("IterationLimit", "Termination", 50);
-    solver->updateSetting("TimeLimit", "Termination", 30.0);
+    solver->updateSetting("Termination.IterationLimit", 50);
+    solver->updateSetting("Termination.TimeLimit", 30.0);
 
     // Override BEFORE setProblem: setConvexityBasedSettings is called inside setProblem and will
     // try to set Relaxation.Use=false at RecommendedInternal (10). Our UserAPI (30) must win so
     // that the SolutionStrategy is constructed with relaxation enabled.
-    solver->updateSetting("Relaxation.Use", "Dual", true);
+    solver->updateSetting("Dual.Relaxation.Use", true);
 
     try
     {
@@ -410,7 +410,7 @@ bool TestUserOverridesConvexityRecommendation()
 
     // 2. setConvexityBasedSettings (called inside setProblem) tried to write Relaxation.Use=false
     //    at RecommendedInternal (10). Our UserAPI (30) override should have won.
-    if(solver->getSettingPriority("Relaxation.Use", "Dual") != E_SettingPriority::UserAPI)
+    if(solver->getSettingPriority("Dual.Relaxation.Use") != E_SettingPriority::UserAPI)
     {
         std::cout << "  FAIL: Relaxation.Use priority should be UserAPI after setProblem "
                      "(recommended-internal write should have lost)."
@@ -418,7 +418,7 @@ bool TestUserOverridesConvexityRecommendation()
         passed = false;
     }
 
-    if(!solver->getSetting<bool>("Relaxation.Use", "Dual"))
+    if(!solver->getSetting<bool>("Dual.Relaxation.Use"))
     {
         std::cout << "  FAIL: Relaxation.Use should still be true after setProblem." << std::endl;
         passed = false;
@@ -428,7 +428,7 @@ bool TestUserOverridesConvexityRecommendation()
 
     // 3. After solving, UserAPI (30) should still win over any RecommendedInternal (10) writes
     //    that solveProblem/verifySettings may have triggered internally.
-    if(solver->getSettingPriority("Relaxation.Use", "Dual") != E_SettingPriority::UserAPI)
+    if(solver->getSettingPriority("Dual.Relaxation.Use") != E_SettingPriority::UserAPI)
     {
         std::cout << "  FAIL: Relaxation.Use should still be at UserAPI priority after solveProblem."
                   << std::endl;

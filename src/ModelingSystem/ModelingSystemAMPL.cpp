@@ -647,9 +647,9 @@ ModelingSystemAMPL::~ModelingSystemAMPL() = default;
 
 void ModelingSystemAMPL::augmentSettings(SettingsPtr settings)
 {
-    settings->createSetting("AMPL.OptionsHeader", "ModelingSystem", std::string("0\n"),
+    settings->createSetting("ModelingSystem.AMPL.OptionsHeader", std::string("0\n"),
         "The AMPL options header for the solution file", true);
-    settings->createSetting("AMPL.NumberOfOriginalConstraints", "ModelingSystem", 0,
+    settings->createSetting("ModelingSystem.AMPL.NumberOfOriginalConstraints", 0,
         "The number of constraints in the original problem submitted to SHOT", 0, SHOT_INT_MAX, true);
 }
 
