@@ -345,7 +345,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
         primalSol.boundProjectionPerformed = false;
     }
 
-    auto integerTol = env->settings->getSetting<double>("Tolerance.Integer", "Primal");
+    auto integerTol = env->settings->getSetting<double>("Primal.Tolerance.Integer");
 
     // Check that it fulfills integer constraints, round otherwise
     if(env->problem->properties.numberOfDiscreteVariables > 0)
@@ -450,7 +450,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
         || primalSol.sourceType == E_PrimalSolutionSource::InteriorPointSearch);
 
     if(!primalSol.integerRoundingPerformed && !primalSol.boundProjectionPerformed && acceptableType
-        && env->settings->getSetting<bool>("Tolerance.TrustLinearConstraintValues", "Primal"))
+        && env->settings->getSetting<bool>("Primal.Tolerance.TrustLinearConstraintValues"))
     {
         env->output->outputDebug(
             "         Assuming that linear constraints are fulfilled since solution is from a subsolver.");
@@ -467,7 +467,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
             mostDevLinearConstraints.index = maxLinearConstraintValue.constraint->index;
             mostDevLinearConstraints.value = maxLinearConstraintValue.normalizedValue;
 
-            auto linTol = env->settings->getSetting<double>("Tolerance.LinearConstraint", "Primal");
+            auto linTol = env->settings->getSetting<double>("Primal.Tolerance.LinearConstraint");
 
             if(maxLinearConstraintValue.error > linTol)
             {
@@ -499,7 +499,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
         mostDevQuadraticConstraints.index = maxQuadraticConstraintValue.constraint->index;
         mostDevQuadraticConstraints.value = maxQuadraticConstraintValue.normalizedValue;
 
-        auto nonlinTol = env->settings->getSetting<double>("Tolerance.NonlinearConstraint", "Primal");
+        auto nonlinTol = env->settings->getSetting<double>("Primal.Tolerance.NonlinearConstraint");
 
         if(mostDevQuadraticConstraints.value > nonlinTol)
         {
@@ -530,7 +530,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
         mostDevNonlinearConstraints.index = maxNonlinearConstraintValue.constraint->index;
         mostDevNonlinearConstraints.value = maxNonlinearConstraintValue.normalizedValue;
 
-        auto nonlinTol = env->settings->getSetting<double>("Tolerance.NonlinearConstraint", "Primal");
+        auto nonlinTol = env->settings->getSetting<double>("Primal.Tolerance.NonlinearConstraint");
 
         if(mostDevNonlinearConstraints.value > nonlinTol)
         {
@@ -585,7 +585,7 @@ void PrimalSolver::addFixedNLPCandidate(
 
     double pointHash;
 
-    if(env->settings->getSetting<bool>("FixedInteger.OnlyUniqueIntegerCombinations", "Primal"))
+    if(env->settings->getSetting<bool>("Primal.FixedInteger.OnlyUniqueIntegerCombinations"))
     {
         pointHash = Utilities::calculateHash(discretVariableValues);
     }

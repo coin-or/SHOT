@@ -36,7 +36,7 @@ void DualSolver::checkDualSolutionCandidates()
     double currDualBound = env->results->getCurrentDualBound();
     double currPrimalBound = env->results->getPrimalBound();
 
-    double gapRelTolerance = env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination");
+    double gapRelTolerance = env->settings->getSetting<double>("Termination.ObjectiveGap.Relative");
 
     for(auto& C : this->dualSolutionCandidates)
     {
@@ -256,7 +256,7 @@ bool DualSolver::hasHyperplaneBeenAdded(double hash, int constraintIndex)
 {
     // Cuts added as lazy might not actually always be added (e.g. in different threads), thus we have to allow them
     // to be added again
-    if(env->settings->getSetting<int>("TreeStrategy", "Dual") == static_cast<int>(ES_TreeStrategy::SingleTree))
+    if(env->settings->getSetting<int>("Dual.TreeStrategy") == static_cast<int>(ES_TreeStrategy::SingleTree))
         return false;
 
     for(auto& H : generatedHyperplanes)

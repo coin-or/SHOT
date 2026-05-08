@@ -158,7 +158,7 @@ bool Solver::setOptionsFromFile(std::string fileName)
         result = false;
     }
 
-    env->settings->updateSetting("OptionsFile", "Input", fileName);
+    env->settings->updateSetting("Input.OptionsFile", fileName);
 
     env->output->outputDebug(" Options read from file \"" + fileName + "\"");
 
@@ -195,8 +195,8 @@ bool Solver::setLogFile(std::string filename)
 
 void Solver::updateLogLevels()
 {
-    env->output->setLogLevels(static_cast<E_LogLevel>(env->settings->getSetting<int>("Console.LogLevel", "Output")),
-        static_cast<E_LogLevel>(env->settings->getSetting<int>("File.LogLevel", "Output")));
+    env->output->setLogLevels(static_cast<E_LogLevel>(env->settings->getSetting<int>("Output.Console.LogLevel")),
+        static_cast<E_LogLevel>(env->settings->getSetting<int>("Output.File.LogLevel")));
 }
 
 bool Solver::setProblem(std::string fileName)
@@ -220,16 +220,16 @@ bool Solver::setProblem(std::string fileName)
     fs::filesystem::path problemExtension = problemFile.extension();
     fs::filesystem::path problemPath = problemFile.parent_path();
 
-    env->settings->updateSetting("ProblemFile", "Input", fs::filesystem::absolute(problemFile).string());
+    env->settings->updateSetting("Input.ProblemFile", fs::filesystem::absolute(problemFile).string());
 
     // Removes path
     fs::filesystem::path problemName = problemFile.stem();
-    env->settings->updateSetting("ProblemName", "Input", problemName.string());
-    env->settings->updateSetting("ProblemFile", "Input", fs::filesystem::absolute(problemFile).string());
+    env->settings->updateSetting("Input.ProblemName", problemName.string());
+    env->settings->updateSetting("Input.ProblemFile", fs::filesystem::absolute(problemFile).string());
 
     // Sets the debug path if not already set
-    if(env->settings->getSetting<bool>("Debug.Enable", "Output")
-        && env->settings->getSetting<std::string>("Debug.Path", "Output") == "")
+    if(env->settings->getSetting<bool>("Output.Debug.Enable")
+        && env->settings->getSetting<std::string>("Output.Debug.Path") == "")
     {
         if(auto debugPath = Utilities::createTemporaryDirectory("SHOT_debug_"); debugPath == "")
         {
@@ -238,34 +238,32 @@ bool Solver::setProblem(std::string fileName)
         }
         else
         {
-            env->settings->updateSetting("Debug.Path", "Output", debugPath);
+            env->settings->updateSetting("Output.Debug.Path", debugPath);
         }
     }
 
     // Sets the result path
-    if(static_cast<ES_OutputDirectory>(env->settings->getSetting<int>("OutputDirectory", "Output"))
+    if(static_cast<ES_OutputDirectory>(env->settings->getSetting<int>("Output.OutputDirectory"))
         == ES_OutputDirectory::Program)
     {
-        env->settings->updateSetting("ResultPath", "Output", fs::filesystem::current_path().string());
+        env->settings->updateSetting("Output.ResultPath", fs::filesystem::current_path().string());
     }
     else
     {
-        env->settings->updateSetting("ResultPath", "Output", problemPath.string());
+        env->settings->updateSetting("Output.ResultPath", problemPath.string());
     }
 
-    if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+    if(env->settings->getSetting<bool>("Output.Debug.Enable"))
     {
         initializeDebugMode();
     }
 
     // Do not do convexifying reformulations if the problem is assumed to be convex
-    if(env->settings->getSetting<bool>("Convexity.AssumeConvex", "Model"))
+    if(env->settings->getSetting<bool>("Model.Convexity.AssumeConvex"))
     {
-        env->settings->updateSetting(
-            "Reformulation.Bilinear.IntegerFormulation", "Model", (int)ES_ReformulateBilinearInteger::No);
+        env->settings->updateSetting("Model.Reformulation.Bilinear.IntegerFormulation", (int)ES_ReformulateBilinearInteger::No);
 
-        env->settings->updateSetting(
-            "Reformulation.Monomials.Formulation", "Model", (int)ES_ReformulationBinaryMonomials::None);
+        env->settings->updateSetting("Model.Reformulation.Monomials.Formulation", (int)ES_ReformulationBinaryMonomials::None);
     }
 
 #ifndef HAS_GAMS
@@ -286,19 +284,17 @@ bool Solver::setProblem(std::string fileName)
 
 #ifdef HAS_CBC
     // TODO: figure out a better way to do this
-    if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Cbc)
+    if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Cbc)
     {
-        env->settings->updateSetting(
-            "Reformulation.Quadratics.Strategy", "Model", (int)ES_QuadraticProblemStrategy::Nonlinear);
+        env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy", (int)ES_QuadraticProblemStrategy::Nonlinear);
     }
 #endif
 
 #ifdef HAS_HIGHS
     // TODO: figure out a better way to do this
-    if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Highs)
+    if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Highs)
     {
-        env->settings->updateSetting(
-            "Reformulation.Quadratics.Strategy", "Model", (int)ES_QuadraticProblemStrategy::Nonlinear);
+        env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy", (int)ES_QuadraticProblemStrategy::Nonlinear);
     }
 #endif
 
@@ -319,7 +315,7 @@ bool Solver::setProblem(std::string fileName)
             env->modelingSystem = modelingSystem;
             env->problem = problem;
 
-            env->settings->updateSetting("ModelingSystem", "Input", static_cast<int>(ES_ModelingSystem::OSiL));
+            env->settings->updateSetting("Input.ModelingSystem", static_cast<int>(ES_ModelingSystem::OSiL));
         }
 
 #ifdef HAS_AMPL
@@ -339,7 +335,7 @@ bool Solver::setProblem(std::string fileName)
             env->modelingSystem = modelingSystem;
             env->problem = problem;
 
-            env->settings->updateSetting("ModelingSystem", "Input", static_cast<int>(ES_ModelingSystem::AMPL));
+            env->settings->updateSetting("Input.ModelingSystem", static_cast<int>(ES_ModelingSystem::AMPL));
         }
 #endif
 
@@ -360,7 +356,7 @@ bool Solver::setProblem(std::string fileName)
             env->modelingSystem = modelingSystem;
             env->problem = problem;
 
-            env->settings->updateSetting("ModelingSystem", "Input", static_cast<int>(ES_ModelingSystem::GAMS));
+            env->settings->updateSetting("Input.ModelingSystem", static_cast<int>(ES_ModelingSystem::GAMS));
         }
 #endif
 
@@ -377,10 +373,10 @@ bool Solver::setProblem(std::string fileName)
             "───────────────────────────────────────────────────────────────────────────────────────────────────╴");
 #endif
 
-        if(env->settings->getSetting<bool>("MIP.CutOff.UseInitialValue", "Dual")
-            && std::abs(env->settings->getSetting<double>("MIP.CutOff.InitialValue", "Dual")) < SHOT_DBL_MAX)
+        if(env->settings->getSetting<bool>("Dual.MIP.CutOff.UseInitialValue")
+            && std::abs(env->settings->getSetting<double>("Dual.MIP.CutOff.InitialValue")) < SHOT_DBL_MAX)
         {
-            env->dualSolver->cutOffToUse = env->settings->getSetting<double>("MIP.CutOff.InitialValue", "Dual");
+            env->dualSolver->cutOffToUse = env->settings->getSetting<double>("Dual.MIP.CutOff.InitialValue");
             env->dualSolver->useCutOff = true;
             env->output->outputDebug(
                 fmt::format("  Setting user defined cutoff value to {}.", env->dualSolver->cutOffToUse));
@@ -410,9 +406,9 @@ bool Solver::setProblem(std::string fileName)
             env->results->setPrimalBound(SHOT_DBL_MIN);
         }
 
-        if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+        if(env->settings->getSetting<bool>("Output.Debug.Enable"))
         {
-            fs::filesystem::path problemFilename(env->settings->getSetting<std::string>("Debug.Path", "Output"));
+            fs::filesystem::path problemFilename(env->settings->getSetting<std::string>("Output.Debug.Path"));
             problemFilename /= "originalproblem.txt";
 
             std::stringstream problemText;
@@ -440,11 +436,11 @@ bool Solver::setProblem(
     env->modelingSystem = modelingSystem;
     env->problem = problem;
 
-    env->settings->updateSetting("ProblemName", "Input", problem->name);
+    env->settings->updateSetting("Input.ProblemName", problem->name);
 
     // Sets the debug path if not already set
-    if(env->settings->getSetting<bool>("Debug.Enable", "Output")
-        && env->settings->getSetting<std::string>("Debug.Path", "Output") == "")
+    if(env->settings->getSetting<bool>("Output.Debug.Enable")
+        && env->settings->getSetting<std::string>("Output.Debug.Path") == "")
     {
         if(auto debugPath = Utilities::createTemporaryDirectory("SHOT_debug_"); debugPath == "")
         {
@@ -453,15 +449,15 @@ bool Solver::setProblem(
         }
         else
         {
-            env->settings->updateSetting("Debug.Path", "Output", debugPath);
+            env->settings->updateSetting("Output.Debug.Path", debugPath);
         }
     }
 
-    if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+    if(env->settings->getSetting<bool>("Output.Debug.Enable"))
     {
         initializeDebugMode();
 
-        fs::filesystem::path filename(env->settings->getSetting<std::string>("Debug.Path", "Output"));
+        fs::filesystem::path filename(env->settings->getSetting<std::string>("Output.Debug.Path"));
         filename /= "originalproblem.txt";
 
         std::stringstream problem;
@@ -471,30 +467,26 @@ bool Solver::setProblem(
     }
 
     // Do not do convexifying reformulations if the problem is assumed to be convex
-    if(env->settings->getSetting<bool>("Convexity.AssumeConvex", "Model"))
+    if(env->settings->getSetting<bool>("Model.Convexity.AssumeConvex"))
     {
-        env->settings->updateSetting(
-            "Reformulation.Bilinear.IntegerFormulation", "Model", (int)ES_ReformulateBilinearInteger::No);
+        env->settings->updateSetting("Model.Reformulation.Bilinear.IntegerFormulation", (int)ES_ReformulateBilinearInteger::No);
 
-        env->settings->updateSetting(
-            "Reformulation.Monomials.Formulation", "Model", (int)ES_ReformulationBinaryMonomials::None);
+        env->settings->updateSetting("Model.Reformulation.Monomials.Formulation", (int)ES_ReformulationBinaryMonomials::None);
     }
 
 #ifdef HAS_CBC
     // TODO: figure out a better way to do this
-    if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Cbc)
+    if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Cbc)
     {
-        env->settings->updateSetting(
-            "Reformulation.Quadratics.Strategy", "Model", (int)ES_QuadraticProblemStrategy::Nonlinear);
+        env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy", (int)ES_QuadraticProblemStrategy::Nonlinear);
     }
 #endif
 
 #ifdef HAS_HIGHS
     // TODO: figure out a better way to do this
-    if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Highs)
+    if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Highs)
     {
-        env->settings->updateSetting(
-            "Reformulation.Quadratics.Strategy", "Model", (int)ES_QuadraticProblemStrategy::Nonlinear);
+        env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy", (int)ES_QuadraticProblemStrategy::Nonlinear);
     }
 #endif
 
@@ -532,8 +524,8 @@ bool Solver::selectStrategy()
 {
     try
     {
-        if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Cbc
-            || static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Highs)
+        if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Cbc
+            || static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Highs)
         {
             if(env->problem->properties.numberOfDiscreteVariables == 0
                 && env->problem->properties.numberOfSemicontinuousVariables == 0)
@@ -553,7 +545,7 @@ bool Solver::selectStrategy()
         }
 
         auto quadraticStrategy = static_cast<ES_QuadraticProblemStrategy>(
-            env->settings->getSetting<int>("Reformulation.Quadratics.Strategy", "Model"));
+            env->settings->getSetting<int>("Model.Reformulation.Quadratics.Strategy"));
         bool useQuadraticConstraints
             = (quadraticStrategy >= ES_QuadraticProblemStrategy::ConvexQuadraticallyConstrained);
         bool useQuadraticObjective
@@ -564,7 +556,7 @@ bool Solver::selectStrategy()
         if(isConvex && (useQuadraticObjective || useQuadraticConstraints) && env->problem->properties.isMIQPProblem)
         // Convex MIQP problem
         {
-            env->settings->updateSetting("Console.DualSolver.Show", "Output", true);
+            env->settings->updateSetting("Output.Console.DualSolver.Show", true);
             env->output->outputDebug(" Using convex MIQP solution strategy.");
             solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
             env->results->usedSolutionStrategy = E_SolutionStrategy::MIQP;
@@ -573,7 +565,7 @@ bool Solver::selectStrategy()
         // Convex QP problem
         {
             env->output->outputDebug(" Using convex QP solution strategy.");
-            env->settings->updateSetting("Console.DualSolver.Show", "Output", true);
+            env->settings->updateSetting("Output.Console.DualSolver.Show", true);
             solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
             env->results->usedSolutionStrategy = E_SolutionStrategy::MIQP;
         }
@@ -581,7 +573,7 @@ bool Solver::selectStrategy()
         else if(isConvex && useQuadraticConstraints && env->problem->properties.isMIQCQPProblem)
         {
             env->output->outputDebug(" Using convex MIQCQP solution strategy.");
-            env->settings->updateSetting("Console.DualSolver.Show", "Output", true);
+            env->settings->updateSetting("Output.Console.DualSolver.Show", true);
             solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
             env->results->usedSolutionStrategy = E_SolutionStrategy::MIQCQP;
         }
@@ -590,7 +582,7 @@ bool Solver::selectStrategy()
             && env->problem->properties.isQCQPProblem)
         {
             env->output->outputDebug(" Using convex QCQP solution strategy.");
-            env->settings->updateSetting("Console.DualSolver.Show", "Output", true);
+            env->settings->updateSetting("Output.Console.DualSolver.Show", true);
             solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
             env->results->usedSolutionStrategy = E_SolutionStrategy::MIQCQP;
         }
@@ -598,7 +590,7 @@ bool Solver::selectStrategy()
         else if(env->problem->properties.isMILPProblem || env->problem->properties.isLPProblem)
         {
             env->output->outputDebug(" Using MILP solution strategy.");
-            env->settings->updateSetting("Console.DualSolver.Show", "Output", true);
+            env->settings->updateSetting("Output.Console.DualSolver.Show", true);
             solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
             env->results->usedSolutionStrategy = E_SolutionStrategy::MIQP;
         }
@@ -619,7 +611,7 @@ bool Solver::selectStrategy()
             }
             else
             {
-                switch(static_cast<ES_TreeStrategy>(env->settings->getSetting<int>("TreeStrategy", "Dual")))
+                switch(static_cast<ES_TreeStrategy>(env->settings->getSetting<int>("Dual.TreeStrategy")))
                 {
                 case(ES_TreeStrategy::SingleTree):
                     env->output->outputDebug(" Using single-tree solution strategy.");
@@ -639,12 +631,12 @@ bool Solver::selectStrategy()
         }
 
         // Want to show the output from Gurobi if Gurobi handles the whole problem
-        if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Gurobi
+        if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Gurobi
             && ((useQuadraticObjective || useQuadraticConstraints)
                 && (env->problem->properties.isMIQPProblem || env->problem->properties.isMIQCQPProblem
                     || env->problem->properties.isQCQPProblem || env->problem->properties.isQPProblem)))
         {
-            env->settings->updateSetting("Console.DualSolver.Show", "Output", true);
+            env->settings->updateSetting("Output.Console.DualSolver.Show", true);
         }
         isProblemInitialized = true;
     }
@@ -662,9 +654,9 @@ bool Solver::solveProblem()
     // Verify settings in case they were changed after setProblem() was called
     verifySettings();
 
-    if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+    if(env->settings->getSetting<bool>("Output.Debug.Enable"))
     {
-        fs::filesystem::path filename(env->settings->getSetting<std::string>("Debug.Path", "Output"));
+        fs::filesystem::path filename(env->settings->getSetting<std::string>("Output.Debug.Path"));
         filename /= "usedsettings.opt";
 
         auto usedSettings = env->settings->getSettingsAsString(false, false);
@@ -1716,7 +1708,7 @@ void Solver::initializeSettings()
 
 void Solver::initializeDebugMode()
 {
-    auto debugPath = env->settings->getSetting<std::string>("Debug.Path", "Output");
+    auto debugPath = env->settings->getSetting<std::string>("Output.Debug.Path");
     fs::filesystem::path debugDir(debugPath);
 
     if(fs::filesystem::exists(debugDir))
@@ -1735,10 +1727,10 @@ void Solver::initializeDebugMode()
         }
     }
 
-    if(env->settings->getSetting<std::string>("ProblemFile", "Input") != "")
+    if(env->settings->getSetting<std::string>("Input.ProblemFile") != "")
     {
         fs::filesystem::path source(
-            fs::filesystem::canonical(env->settings->getSetting<std::string>("ProblemFile", "Input")));
+            fs::filesystem::canonical(env->settings->getSetting<std::string>("Input.ProblemFile")));
 
         try
         {
@@ -1754,15 +1746,15 @@ void Solver::initializeDebugMode()
 
 void Solver::verifySettings()
 {
-    env->output->setLogLevels(static_cast<E_LogLevel>(env->settings->getSetting<int>("Console.LogLevel", "Output")),
-        static_cast<E_LogLevel>(env->settings->getSetting<int>("File.LogLevel", "Output")));
+    env->output->setLogLevels(static_cast<E_LogLevel>(env->settings->getSetting<int>("Output.Console.LogLevel")),
+        static_cast<E_LogLevel>(env->settings->getSetting<int>("Output.File.LogLevel")));
 
     // Checking for errors in NLP solver selection
 
     bool NLPSolverDefined = true;
 
 #ifndef HAS_IPOPT
-    if(static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("FixedInteger.Solver", "Primal"))
+    if(static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("Primal.FixedInteger.Solver"))
         == ES_PrimalNLPSolver::Ipopt)
     {
         env->output->outputWarning(" SHOT has not been compiled with support for Ipopt NLP solver.");
@@ -1771,7 +1763,7 @@ void Solver::verifySettings()
 #endif
 
 #ifndef HAS_GAMS
-    if(static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("FixedInteger.Solver", "Primal"))
+    if(static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("Primal.FixedInteger.Solver"))
         == ES_PrimalNLPSolver::GAMS)
     {
         env->output->outputWarning(" SHOT has not been compiled with support for GAMS NLP solvers.");
@@ -1780,24 +1772,23 @@ void Solver::verifySettings()
 #endif
 
 #ifdef HAS_GAMS
-    if((static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("FixedInteger.Solver", "Primal"))
+    if((static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("Primal.FixedInteger.Solver"))
            == ES_PrimalNLPSolver::GAMS)
         && (static_cast<ES_PrimalNLPProblemSource>(
-                env->settings->getSetting<int>("FixedInteger.SourceProblem", "Primal"))
+                env->settings->getSetting<int>("Primal.FixedInteger.SourceProblem"))
             != ES_PrimalNLPProblemSource::OriginalProblem))
     {
         env->output->outputWarning(" Cannot use GAMS NLP solvers when solving fixed NLP problems based on the "
                                    "reformulated model. Use Ipopt instead!");
-        env->settings->updateSetting(
-            "FixedInteger.SourceProblem", "Primal", static_cast<int>(ES_PrimalNLPProblemSource::OriginalProblem),
+        env->settings->updateSetting("Primal.FixedInteger.SourceProblem", static_cast<int>(ES_PrimalNLPProblemSource::OriginalProblem),
             E_SettingPriority::SolverCompatibility);
     }
 #endif
 
-    if((env->settings->getSetting<int>("ModelingSystem", "Input") == static_cast<int>(ES_ModelingSystem::OSiL)
-           || env->settings->getSetting<int>("ModelingSystem", "Input") == static_cast<int>(ES_ModelingSystem::AMPL)
-           || env->settings->getSetting<int>("ModelingSystem", "Input") == static_cast<int>(ES_ModelingSystem::None))
-        && static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("FixedInteger.Solver", "Primal"))
+    if((env->settings->getSetting<int>("Input.ModelingSystem") == static_cast<int>(ES_ModelingSystem::OSiL)
+           || env->settings->getSetting<int>("Input.ModelingSystem") == static_cast<int>(ES_ModelingSystem::AMPL)
+           || env->settings->getSetting<int>("Input.ModelingSystem") == static_cast<int>(ES_ModelingSystem::None))
+        && static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("Primal.FixedInteger.Solver"))
             == ES_PrimalNLPSolver::GAMS)
     {
         env->output->outputWarning(
@@ -1808,17 +1799,17 @@ void Solver::verifySettings()
     if(!NLPSolverDefined)
     {
 #ifdef HAS_IPOPT
-        env->settings->updateSetting("FixedInteger.Solver", "Primal", (int)ES_PrimalNLPSolver::Ipopt,
+        env->settings->updateSetting("Primal.FixedInteger.Solver", (int)ES_PrimalNLPSolver::Ipopt,
             E_SettingPriority::SolverCompatibility);
         env->output->outputWarning(" Using Ipopt as NLP solver instead.");
 
 #elif HAS_GAMS
-        env->settings->updateSetting("FixedInteger.Solver", "Primal", (int)ES_PrimalNLPSolver::GAMS,
+        env->settings->updateSetting("Primal.FixedInteger.Solver", (int)ES_PrimalNLPSolver::GAMS,
             E_SettingPriority::SolverCompatibility);
         env->output->outputWarning(" Using GAMS NLP solvers instead.");
 
 #else
-        env->settings->updateSetting("FixedInteger.Solver", "Primal", (int)ES_PrimalNLPSolver::SHOT,
+        env->settings->updateSetting("Primal.FixedInteger.Solver", (int)ES_PrimalNLPSolver::SHOT,
             E_SettingPriority::SolverCompatibility);
         env->output->outputWarning(" No external NLP solver available. Using SHOT as NLP solver.");
 #endif
@@ -1826,7 +1817,7 @@ void Solver::verifySettings()
 
     // Checking for errors in MIP solver selection
 
-    auto solver = static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual"));
+    auto solver = static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver"));
     bool MIPSolverDefined = false;
     double unboundedVariableBound = 1e50;
 
@@ -1837,9 +1828,9 @@ void Solver::verifySettings()
         unboundedVariableBound = 1e20;
 
         //TODO: needed
-        if(env->settings->getSetting<int>("Reformulation.Quadratics.ExtractStrategy", "Model")
+        if(env->settings->getSetting<int>("Model.Reformulation.Quadratics.ExtractStrategy")
             > (int)ES_QuadraticTermsExtractStrategy::ExtractTermsToSame)
-            env->settings->updateSetting("Reformulation.Quadratics.ExtractStrategy", "Model",
+            env->settings->updateSetting("Model.Reformulation.Quadratics.ExtractStrategy",
                 (int)ES_QuadraticTermsExtractStrategy::ExtractTermsToSame,
                 E_SettingPriority::RecommendedInternal);
     }
@@ -1860,13 +1851,11 @@ void Solver::verifySettings()
         unboundedVariableBound = 1e50;
 
         // Some features are not available in Cbc
-        env->settings->updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::MultiTree),
+        env->settings->updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::MultiTree),
             E_SettingPriority::SolverCompatibility);
-        env->settings->updateSetting(
-            "Reformulation.Quadratics.Strategy", "Model", static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear),
+        env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy", static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear),
             E_SettingPriority::SolverCompatibility);
-        env->settings->updateSetting(
-            "Reformulation.Quadratics.Strategy", "Model", (int)ES_QuadraticTermsExtractStrategy::DoNotExtract,
+        env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy", (int)ES_QuadraticTermsExtractStrategy::DoNotExtract,
             E_SettingPriority::SolverCompatibility);
     }
 #endif
@@ -1878,13 +1867,11 @@ void Solver::verifySettings()
         unboundedVariableBound = 1e50;
 
         // Some features are not available in Highs
-        env->settings->updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::MultiTree),
+        env->settings->updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::MultiTree),
             E_SettingPriority::SolverCompatibility);
-        env->settings->updateSetting(
-            "Reformulation.Quadratics.Strategy", "Model", static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear),
+        env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy", static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear),
             E_SettingPriority::SolverCompatibility);
-        env->settings->updateSetting(
-            "Reformulation.Quadratics.Strategy", "Model", (int)ES_QuadraticTermsExtractStrategy::DoNotExtract,
+        env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy", (int)ES_QuadraticTermsExtractStrategy::DoNotExtract,
             E_SettingPriority::SolverCompatibility);
     }
 #endif
@@ -1894,19 +1881,19 @@ void Solver::verifySettings()
         env->output->outputWarning(" SHOT has not been compiled with support for selected MIP solver.");
 
 #ifdef HAS_GUROBI
-        env->settings->updateSetting("MIP.Solver", "Dual", (int)ES_MIPSolver::Gurobi,
+        env->settings->updateSetting("Dual.MIP.Solver", (int)ES_MIPSolver::Gurobi,
             E_SettingPriority::RecommendedInternal);
         unboundedVariableBound = 1e20;
 #elif HAS_CPLEX
-        env->settings->updateSetting("MIP.Solver", "Dual", (int)ES_MIPSolver::Cplex,
+        env->settings->updateSetting("Dual.MIP.Solver", (int)ES_MIPSolver::Cplex,
             E_SettingPriority::RecommendedInternal);
         unboundedVariableBound = 1e20;
 #elif HAS_HIGHS
-        env->settings->updateSetting("MIP.Solver", "Dual", (int)ES_MIPSolver::Highs,
+        env->settings->updateSetting("Dual.MIP.Solver", (int)ES_MIPSolver::Highs,
             E_SettingPriority::RecommendedInternal);
         unboundedVariableBound = 1e20;
 #elif HAS_CBC
-        env->settings->updateSetting("MIP.Solver", "Dual", (int)ES_MIPSolver::Cbc,
+        env->settings->updateSetting("Dual.MIP.Solver", (int)ES_MIPSolver::Cbc,
             E_SettingPriority::RecommendedInternal);
         unboundedVariableBound = 1e50;
 
@@ -1916,76 +1903,72 @@ void Solver::verifySettings()
     }
 
     // Updating max bound setting for unbounded variables
-    double minLB = env->settings->getSetting<double>("Variables.Continuous.MinimumLowerBound", "Model");
-    double maxUB = env->settings->getSetting<double>("Variables.Continuous.MaximumUpperBound", "Model");
+    double minLB = env->settings->getSetting<double>("Model.Variables.Continuous.MinimumLowerBound");
+    double maxUB = env->settings->getSetting<double>("Model.Variables.Continuous.MaximumUpperBound");
 
     if(minLB < -unboundedVariableBound)
     {
-        env->settings->updateSetting("Variables.Continuous.MinimumLowerBound", "Model", -unboundedVariableBound,
+        env->settings->updateSetting("Model.Variables.Continuous.MinimumLowerBound", -unboundedVariableBound,
             E_SettingPriority::RecommendedInternal);
     }
 
     if(maxUB > unboundedVariableBound)
     {
-        env->settings->updateSetting("Variables.Continuous.MaximumUpperBound", "Model", unboundedVariableBound,
+        env->settings->updateSetting("Model.Variables.Continuous.MaximumUpperBound", unboundedVariableBound,
             E_SettingPriority::RecommendedInternal);
     }
 
     // Set correct iteration detail output when showing dual solver output
-    if(env->settings->getSetting<bool>("Console.DualSolver.Show", "Output"))
-        env->settings->updateSetting(
-            "Console.Iteration.Detail", "Output", static_cast<int>(ES_IterationOutputDetail::Full),
+    if(env->settings->getSetting<bool>("Output.Console.DualSolver.Show"))
+        env->settings->updateSetting("Output.Console.Iteration.Detail", static_cast<int>(ES_IterationOutputDetail::Full),
             E_SettingPriority::RecommendedInternal);
 
     // Set correct iteration detail output when showing primal solver output
-    if(env->settings->getSetting<bool>("Console.PrimalSolver.Show", "Output"))
-        env->settings->updateSetting(
-            "Console.Iteration.Detail", "Output", static_cast<int>(ES_IterationOutputDetail::Full),
+    if(env->settings->getSetting<bool>("Output.Console.PrimalSolver.Show"))
+        env->settings->updateSetting("Output.Console.Iteration.Detail", static_cast<int>(ES_IterationOutputDetail::Full),
             E_SettingPriority::RecommendedInternal);
 }
 
 void Solver::setConvexityBasedSettingsPreReformulation()
 {
-    if(env->settings->getSetting<bool>("UseRecommendedSettings", "Strategy"))
+    if(env->settings->getSetting<bool>("Strategy.UseRecommendedSettings"))
     {
         if(env->problem->properties.convexity != E_ProblemConvexity::Convex)
         {
-            env->settings->updateSetting(
-                "Reformulation.Constraint.PartitionNonlinearTerms", "Model", (int)ES_PartitionNonlinearSums::IfConvex,
+            env->settings->updateSetting("Model.Reformulation.Constraint.PartitionNonlinearTerms", (int)ES_PartitionNonlinearSums::IfConvex,
                 E_SettingPriority::RecommendedInternal);
-            env->settings->updateSetting(
-                "Reformulation.Constraint.PartitionQuadraticTerms", "Model", (int)ES_PartitionNonlinearSums::IfConvex,
+            env->settings->updateSetting("Model.Reformulation.Constraint.PartitionQuadraticTerms", (int)ES_PartitionNonlinearSums::IfConvex,
                 E_SettingPriority::RecommendedInternal);
-            env->settings->updateSetting("Reformulation.ObjectiveFunction.PartitionNonlinearTerms", "Model",
+            env->settings->updateSetting("Model.Reformulation.ObjectiveFunction.PartitionNonlinearTerms",
                 (int)ES_PartitionNonlinearSums::IfConvex, E_SettingPriority::RecommendedInternal);
-            env->settings->updateSetting("Reformulation.ObjectiveFunction.PartitionQuadraticTerms", "Model",
+            env->settings->updateSetting("Model.Reformulation.ObjectiveFunction.PartitionQuadraticTerms",
                 (int)ES_PartitionNonlinearSums::IfConvex, E_SettingPriority::RecommendedInternal);
-            // env->settings->updateSetting("Reformulation.Quadratics.Strategy", "Model", 0);
+            // env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy", 0);
 
 #ifdef HAS_GUROBI
-            if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Gurobi)
+            if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Gurobi)
             {
 #if GRB_VERSION_MAJOR < 9
-                if(env->settings->getSetting<int>("Reformulation.Quadratics.ExtractStrategy", "Model")
+                if(env->settings->getSetting<int>("Model.Reformulation.Quadratics.ExtractStrategy")
                     > (int)ES_QuadraticTermsExtractStrategy::ExtractTermsToSame)
-                    env->settings->updateSetting("Reformulation.Quadratics.ExtractStrategy", "Model",
+                    env->settings->updateSetting("Model.Reformulation.Quadratics.ExtractStrategy",
                         (int)ES_QuadraticTermsExtractStrategy::ExtractTermsToSame,
                         E_SettingPriority::RecommendedInternal);
 #endif
 
 #if GRB_VERSION_MAJOR >= 9
 
-                if(env->settings->getSetting<bool>("UseRecommendedSettings", "Strategy"))
+                if(env->settings->getSetting<bool>("Strategy.UseRecommendedSettings"))
                 {
                     // Activate Gurobi nonconvex MIQCQP solver for all nonconvex quadratic terms by default
-                    env->settings->updateSetting("Reformulation.Quadratics.Strategy", "Model",
+                    env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy",
                         (int)ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained,
                         E_SettingPriority::RecommendedInternal);
                 }
-                else if(env->settings->getSetting<int>("Reformulation.Quadratics.ExtractStrategy", "Model")
+                else if(env->settings->getSetting<int>("Model.Reformulation.Quadratics.ExtractStrategy")
                     > (int)ES_QuadraticTermsExtractStrategy::ExtractTermsToSame)
                 {
-                    env->settings->updateSetting("Reformulation.Quadratics.Strategy", "Model",
+                    env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy",
                         (int)ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained,
                         E_SettingPriority::RecommendedInternal);
                 }
@@ -1994,19 +1977,17 @@ void Solver::setConvexityBasedSettingsPreReformulation()
 #endif
 
 #ifdef HAS_CBC
-            if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Cbc)
+            if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Cbc)
             {
-                env->settings->updateSetting(
-                    "Reformulation.Quadratics.Decomposition.Method", "Model", (int)ES_QuadraticDecomposition::LDLDecomposition,
+                env->settings->updateSetting("Model.Reformulation.Quadratics.Decomposition.Method", (int)ES_QuadraticDecomposition::LDLDecomposition,
                     E_SettingPriority::RecommendedInternal);
             }
 #endif
 
 #ifdef HAS_HIGHS
-            if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Highs)
+            if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Highs)
             {
-                env->settings->updateSetting(
-                    "Reformulation.Quadratics.Decomposition.Method", "Model", (int)ES_QuadraticDecomposition::LDLDecomposition,
+                env->settings->updateSetting("Model.Reformulation.Quadratics.Decomposition.Method", (int)ES_QuadraticDecomposition::LDLDecomposition,
                     E_SettingPriority::RecommendedInternal);
             }
 #endif
@@ -2016,73 +1997,71 @@ void Solver::setConvexityBasedSettingsPreReformulation()
 
 void Solver::setConvexityBasedSettings()
 {
-    if(env->settings->getSetting<bool>("UseRecommendedSettings", "Strategy"))
+    if(env->settings->getSetting<bool>("Strategy.UseRecommendedSettings"))
     {
         if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex)
         {
-            env->settings->updateSetting("ESH.InteriorPoint.CuttingPlane.IterationLimit", "Dual", 50,
+            env->settings->updateSetting("Dual.ESH.InteriorPoint.CuttingPlane.IterationLimit", 50,
                 E_SettingPriority::RecommendedInternal);
-            env->settings->updateSetting("ESH.InteriorPoint.UsePrimalSolution", "Dual", 1,
-                E_SettingPriority::RecommendedInternal);
-
-            env->settings->updateSetting("ESH.Rootsearch.UniqueConstraints", "Dual", false,
+            env->settings->updateSetting("Dual.ESH.InteriorPoint.UsePrimalSolution", 1,
                 E_SettingPriority::RecommendedInternal);
 
-            env->settings->updateSetting("HyperplaneCuts.ConstraintSelectionFactor", "Dual", 1.0,
+            env->settings->updateSetting("Dual.ESH.Rootsearch.UniqueConstraints", false,
                 E_SettingPriority::RecommendedInternal);
-            env->settings->updateSetting("HyperplaneCuts.UseIntegerCuts", "Dual", true,
+
+            env->settings->updateSetting("Dual.HyperplaneCuts.ConstraintSelectionFactor", 1.0,
+                E_SettingPriority::RecommendedInternal);
+            env->settings->updateSetting("Dual.HyperplaneCuts.UseIntegerCuts", true,
                 E_SettingPriority::RecommendedInternal);
 
             // For full nonconvex features multitree needs to be used
-            env->settings->updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::MultiTree),
+            env->settings->updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::MultiTree),
                 E_SettingPriority::SolverCompatibility);
 
-            env->settings->updateSetting("MIP.Presolve.UpdateObtainedBounds", "Dual", false,
+            env->settings->updateSetting("Dual.MIP.Presolve.UpdateObtainedBounds", false,
                 E_SettingPriority::RecommendedInternal);
-            env->settings->updateSetting("MIP.SolutionLimit.Initial", "Dual", SHOT_INT_MAX,
-                E_SettingPriority::RecommendedInternal);
-
-            env->settings->updateSetting("Relaxation.Use", "Dual", false,
+            env->settings->updateSetting("Dual.MIP.SolutionLimit.Initial", SHOT_INT_MAX,
                 E_SettingPriority::RecommendedInternal);
 
-            env->settings->updateSetting(
-                "Reformulation.Constraint.PartitionNonlinearTerms", "Model", (int)ES_PartitionNonlinearSums::IfConvex,
+            env->settings->updateSetting("Dual.Relaxation.Use", false,
                 E_SettingPriority::RecommendedInternal);
-            env->settings->updateSetting(
-                "Reformulation.Constraint.PartitionQuadraticTerms", "Model", (int)ES_PartitionNonlinearSums::IfConvex,
+
+            env->settings->updateSetting("Model.Reformulation.Constraint.PartitionNonlinearTerms", (int)ES_PartitionNonlinearSums::IfConvex,
                 E_SettingPriority::RecommendedInternal);
-            env->settings->updateSetting("Reformulation.ObjectiveFunction.PartitionNonlinearTerms", "Model",
+            env->settings->updateSetting("Model.Reformulation.Constraint.PartitionQuadraticTerms", (int)ES_PartitionNonlinearSums::IfConvex,
+                E_SettingPriority::RecommendedInternal);
+            env->settings->updateSetting("Model.Reformulation.ObjectiveFunction.PartitionNonlinearTerms",
                 (int)ES_PartitionNonlinearSums::IfConvex, E_SettingPriority::RecommendedInternal);
-            env->settings->updateSetting("Reformulation.ObjectiveFunction.PartitionQuadraticTerms", "Model",
+            env->settings->updateSetting("Model.Reformulation.ObjectiveFunction.PartitionQuadraticTerms",
                 (int)ES_PartitionNonlinearSums::IfConvex, E_SettingPriority::RecommendedInternal);
 
-            env->settings->updateSetting("FixedInteger.CallStrategy", "Primal", 0,
+            env->settings->updateSetting("Primal.FixedInteger.CallStrategy", 0,
                 E_SettingPriority::RecommendedInternal);
-            env->settings->updateSetting("FixedInteger.CreateInfeasibilityCut", "Primal", false,
+            env->settings->updateSetting("Primal.FixedInteger.CreateInfeasibilityCut", false,
                 E_SettingPriority::RecommendedInternal);
-            env->settings->updateSetting("FixedInteger.Source", "Primal", 0,
-                E_SettingPriority::RecommendedInternal);
-
-            env->settings->updateSetting("FixedInteger.OnlyUniqueIntegerCombinations", "Primal", false,
+            env->settings->updateSetting("Primal.FixedInteger.Source", 0,
                 E_SettingPriority::RecommendedInternal);
 
-            env->settings->updateSetting("Rootsearch.Use", "Primal", true,
+            env->settings->updateSetting("Primal.FixedInteger.OnlyUniqueIntegerCombinations", false,
                 E_SettingPriority::RecommendedInternal);
 
-            env->settings->updateSetting("BoundTightening.FeasibilityBased.TimeLimit", "Model", 5.0,
+            env->settings->updateSetting("Primal.Rootsearch.Use", true,
+                E_SettingPriority::RecommendedInternal);
+
+            env->settings->updateSetting("Model.BoundTightening.FeasibilityBased.TimeLimit", 5.0,
                 E_SettingPriority::RecommendedInternal);
 
             // Need to save these to perform dual bound updates
-            // env->settings->updateSetting("HyperplaneCuts.SaveHyperplanePoints", "Dual", true);
+            // env->settings->updateSetting("Dual.HyperplaneCuts.SaveHyperplanePoints", true);
 
 #ifdef HAS_CPLEX
 
-            if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Cplex)
+            if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Cplex)
             {
                 if(env->reformulatedProblem->objectiveFunction->properties.classification
                         == E_ObjectiveFunctionClassification::Quadratic
                     || env->reformulatedProblem->properties.numberOfQuadraticConstraints > 0)
-                    env->settings->updateSetting("Cplex.OptimalityTarget", "Subsolver", 3,
+                    env->settings->updateSetting("Subsolver.Cplex.OptimalityTarget", 3,
                         E_SettingPriority::RecommendedInternal);
             }
 
@@ -2090,23 +2069,21 @@ void Solver::setConvexityBasedSettings()
         }
 
 #ifdef HAS_CBC
-        if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Cbc)
+        if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Cbc)
         {
-            env->settings->updateSetting(
-                "Reformulation.Constraint.PartitionNonlinearTerms", "Model", (int)ES_PartitionNonlinearSums::IfConvex,
+            env->settings->updateSetting("Model.Reformulation.Constraint.PartitionNonlinearTerms", (int)ES_PartitionNonlinearSums::IfConvex,
                 E_SettingPriority::RecommendedInternal);
-            env->settings->updateSetting("Reformulation.ObjectiveFunction.PartitionNonlinearTerms", "Model",
+            env->settings->updateSetting("Model.Reformulation.ObjectiveFunction.PartitionNonlinearTerms",
                 (int)ES_PartitionNonlinearSums::IfConvex, E_SettingPriority::RecommendedInternal);
         }
 #endif
 
 #ifdef HAS_HIGHS
-        if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Highs)
+        if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Highs)
         {
-            env->settings->updateSetting(
-                "Reformulation.Constraint.PartitionNonlinearTerms", "Model", (int)ES_PartitionNonlinearSums::IfConvex,
+            env->settings->updateSetting("Model.Reformulation.Constraint.PartitionNonlinearTerms", (int)ES_PartitionNonlinearSums::IfConvex,
                 E_SettingPriority::RecommendedInternal);
-            env->settings->updateSetting("Reformulation.ObjectiveFunction.PartitionNonlinearTerms", "Model",
+            env->settings->updateSetting("Model.Reformulation.ObjectiveFunction.PartitionNonlinearTerms",
                 (int)ES_PartitionNonlinearSums::IfConvex, E_SettingPriority::RecommendedInternal);
         }
 #endif

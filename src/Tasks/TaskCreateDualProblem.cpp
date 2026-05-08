@@ -44,7 +44,7 @@ TaskCreateDualProblem::~TaskCreateDualProblem() = default;
 void TaskCreateDualProblem::run()
 {
     // Only run this task after intialization if we want to rebuild the tree in the multi-tree strategy
-    if(env->settings->getSetting<bool>("TreeStrategy.Multi.Reinitialize", "Dual"))
+    if(env->settings->getSetting<bool>("Dual.TreeStrategy.Multi.Reinitialize"))
     {
         env->timing->startTimer("DualStrategy");
 
@@ -52,10 +52,10 @@ void TaskCreateDualProblem::run()
 
         taskCreateMIPProblem->run();
 
-        if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+        if(env->settings->getSetting<bool>("Output.Debug.Enable"))
         {
             env->dualSolver->MIPSolver->writeProblemToFile(
-                env->settings->getSetting<std::string>("Debug.Path", "Output") + "/lp0.lp");
+                env->settings->getSetting<std::string>("Output.Debug.Path") + "/lp0.lp");
         }
 
         env->output->outputDebug("        Dual problem recreated");

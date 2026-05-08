@@ -126,10 +126,10 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
     if(GAMScheckIpoptLicense(auditLicensing, false))
     {
         GamsHSLInit();
-        env->settings->updateSetting("Ipopt.LinearSolver", "Subsolver", static_cast<int>(ES_IpoptSolver::ma27));
+        env->settings->updateSetting("Subsolver.Ipopt.LinearSolver", static_cast<int>(ES_IpoptSolver::ma27));
     }
     else
-        env->settings->updateSetting("Ipopt.LinearSolver", "Subsolver", static_cast<int>(ES_IpoptSolver::mumps));
+        env->settings->updateSetting("Subsolver.Ipopt.LinearSolver", static_cast<int>(ES_IpoptSolver::mumps));
 #endif
 
     // Process GAMS options.
@@ -137,48 +137,43 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
     if(!createdgmo)
     {
         // Sets time limit
-        env->settings->updateSetting("TimeLimit", "Termination", gevGetDblOpt(modelingEnvironment, gevResLim));
+        env->settings->updateSetting("Termination.TimeLimit", gevGetDblOpt(modelingEnvironment, gevResLim));
         env->output->outputDebug(fmt::format(
-            " Time limit set to {} by GAMS", env->settings->getSetting<double>("TimeLimit", "Termination")));
+            " Time limit set to {} by GAMS", env->settings->getSetting<double>("Termination.TimeLimit")));
 
         // Sets iteration limit, if different than SHOT default
         if(gevGetIntOpt(modelingEnvironment, gevIterLim) < INT_MAX)
         {
-            env->settings->updateSetting(
-                "IterationLimit", "Termination", gevGetIntOpt(modelingEnvironment, gevIterLim));
+            env->settings->updateSetting("Termination.IterationLimit", gevGetIntOpt(modelingEnvironment, gevIterLim));
             env->output->outputDebug(fmt::format(
-                " Iteration limit set to {} by GAMS", env->settings->getSetting<int>("IterationLimit", "Termination")));
+                " Iteration limit set to {} by GAMS", env->settings->getSetting<int>("Termination.IterationLimit")));
         }
         else
         {
-            env->settings->updateSetting("IterationLimit", "Termination", SHOT_INT_MAX);
+            env->settings->updateSetting("Termination.IterationLimit", SHOT_INT_MAX);
         }
 
         // Sets absolute objective gap tolerance
-        env->settings->updateSetting(
-            "ObjectiveGap.Absolute", "Termination", gevGetDblOpt(modelingEnvironment, gevOptCA));
+        env->settings->updateSetting("Termination.ObjectiveGap.Absolute", gevGetDblOpt(modelingEnvironment, gevOptCA));
         env->output->outputDebug(fmt::format(" Absolute termination tolerance set to {} by GAMS",
-            env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination")));
+            env->settings->getSetting<double>("Termination.ObjectiveGap.Absolute")));
 
         // Sets relative objective gap tolerance
-        env->settings->updateSetting(
-            "ObjectiveGap.Relative", "Termination", gevGetDblOpt(modelingEnvironment, gevOptCR));
+        env->settings->updateSetting("Termination.ObjectiveGap.Relative", gevGetDblOpt(modelingEnvironment, gevOptCR));
         env->output->outputDebug(fmt::format(" Relative termination tolerance set to {} by GAMS",
-            env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination")));
+            env->settings->getSetting<double>("Termination.ObjectiveGap.Relative")));
 
         // Sets cutoff value for dual solver
         if(gevGetIntOpt(modelingEnvironment, gevUseCutOff) == 1)
         {
-            env->settings->updateSetting("MIP.CutOff.UseInitialValue", "Dual", true);
-            env->settings->updateSetting(
-                "MIP.CutOff.InitialValue", "Dual", gevGetDblOpt(modelingEnvironment, gevCutOff));
+            env->settings->updateSetting("Dual.MIP.CutOff.UseInitialValue", true);
+            env->settings->updateSetting("Dual.MIP.CutOff.InitialValue", gevGetDblOpt(modelingEnvironment, gevCutOff));
         }
 
         // Sets node limit for dual solver
         if(gevGetIntOpt(modelingEnvironment, gevNodeLim) > 0)
         {
-            env->settings->updateSetting(
-                "MIP.NodeLimit", "Dual", (double)gevGetIntOpt(modelingEnvironment, gevNodeLim));
+            env->settings->updateSetting("Dual.MIP.NodeLimit", (double)gevGetIntOpt(modelingEnvironment, gevNodeLim));
         }
 
         // Sets the number of threads
@@ -187,19 +182,19 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
         int nthreads = gevGetIntOpt(modelingEnvironment, gevThreadsRaw);
         if( nthreads < 0 )
            nthreads = gevThreads(modelingEnvironment);
-        env->settings->updateSetting("MIP.NumberOfThreads", "Dual", nthreads);
+        env->settings->updateSetting("Dual.MIP.NumberOfThreads", nthreads);
         env->output->outputDebug(fmt::format(
-            " MIP number of threads set to {} by GAMS", env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual")));
+            " MIP number of threads set to {} by GAMS", env->settings->getSetting<int>("Dual.MIP.NumberOfThreads")));
 
         // Uses NLP solver in GAMS by default, Ipopt can be used directly if value set by user in options file (read
         // below)
-        env->settings->updateSetting("FixedInteger.Solver", "Primal", static_cast<int>(ES_PrimalNLPSolver::GAMS));
+        env->settings->updateSetting("Primal.FixedInteger.Solver", static_cast<int>(ES_PrimalNLPSolver::GAMS));
 
 #ifdef GAMS_BUILD
         // Change default MIP solver to CPLEX, which may then be changed to CBC below if no license is available
         // The original default of Gurobi would lead to SHOT stopping with a license error if no Gurobi license is
         // available
-        env->settings->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Cplex));
+        env->settings->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cplex));
 #endif
     }
 
@@ -213,7 +208,7 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
             {
                 std::string fileContents = Utilities::getFileAsString(buffer);
                 settings->readSettingsFromString(fileContents);
-                settings->updateSetting("OptionsFile", "Input", std::string(buffer));
+                settings->updateSetting("Input.OptionsFile", std::string(buffer));
             }
             catch(std::exception& e)
             {
@@ -225,12 +220,12 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
             env->output->outputError(" Error: Options file " + std::string(buffer) + " not found.");
     }
 
-    env->output->setLogLevels(static_cast<E_LogLevel>(settings->getSetting<int>("Console.LogLevel", "Output")),
-        static_cast<E_LogLevel>(settings->getSetting<int>("File.LogLevel", "Output")));
+    env->output->setLogLevels(static_cast<E_LogLevel>(settings->getSetting<int>("Output.Console.LogLevel")),
+        static_cast<E_LogLevel>(settings->getSetting<int>("Output.File.LogLevel")));
 
 #ifdef GAMS_BUILD
     /* if CPLEX is set, then check whether GAMS/CPLEX license is present */
-    if(env->settings->getSetting<int>("MIP.Solver", "Dual") == (int)ES_MIPSolver::Cplex)
+    if(env->settings->getSetting<int>("Dual.MIP.Solver") == (int)ES_MIPSolver::Cplex)
     {
         /* sometimes we would also allow a solver if demo-sized problem, but we don't know how large the MIPs will
          * be */
@@ -238,7 +233,7 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
         {
             env->output->outputInfo(
                 " CPLEX chosen as MIP solver, but no GAMS/CPLEX license available. Changing to CBC.");
-            env->settings->updateSetting("MIP.Solver", "Dual", (int)ES_MIPSolver::Cbc);
+            env->settings->updateSetting("Dual.MIP.Solver", (int)ES_MIPSolver::Cbc);
         }
     }
 #endif
@@ -259,13 +254,13 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(
         {
             createModelFromProblemFile(filename);
 
-            env->settings->updateSetting("ModelingSystem", "Input", static_cast<int>(ES_ModelingSystem::GAMS));
+            env->settings->updateSetting("Input.ModelingSystem", static_cast<int>(ES_ModelingSystem::GAMS));
         }
         else if(inputSource == E_GAMSInputSource::GAMSModel)
         {
             createModelFromGAMSModel(filename);
 
-            env->settings->updateSetting("ModelingSystem", "Input", static_cast<int>(ES_ModelingSystem::GAMS));
+            env->settings->updateSetting("Input.ModelingSystem", static_cast<int>(ES_ModelingSystem::GAMS));
         }
     }
     catch(const std::exception& e)
@@ -293,12 +288,12 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem)
     gmoIndexBaseSet(modelingObject, 0);
 
 #if GMOAPIVERSION >= 21
-    int qextractalg = env->settings->getSetting<int>("GAMS.QExtractAlg", "ModelingSystem");
+    int qextractalg = env->settings->getSetting<int>("ModelingSystem.GAMS.QExtractAlg");
     gmoQExtractAlgSet(modelingObject, qextractalg);
 #endif
 #if GMOAPIVERSION >= 28
-    gmoQExtractDenseSwitchFactorSet(modelingObject, env->settings->getSetting<double>("GAMS.QExtractDenseSwitchFactor", "ModelingSystem"));
-    gmoQExtractDenseSwitchLogSet(modelingObject, (int)env->settings->getSetting<bool>("GAMS.QExtractDenseSwitchLog", "ModelingSystem"));
+    gmoQExtractDenseSwitchFactorSet(modelingObject, env->settings->getSetting<double>("ModelingSystem.GAMS.QExtractDenseSwitchFactor"));
+    gmoQExtractDenseSwitchLogSet(modelingObject, (int)env->settings->getSetting<bool>("ModelingSystem.GAMS.QExtractDenseSwitchLog"));
 #endif
     gmoUseQSet(modelingObject, 1);
 #if GMOAPIVERSION >= 25
@@ -409,9 +404,9 @@ void ModelingSystemGAMS::createModelFromProblemFile(const std::string& filename)
     assert(modelingObject == nullptr);
     assert(modelingEnvironment == nullptr);
 
-    if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+    if(env->settings->getSetting<bool>("Output.Debug.Enable"))
         tmpdirname = Utilities::createTemporaryDirectory(
-            "SHOT_GAMS_", env->settings->getSetting<std::string>("Debug.Path", "Output"));
+            "SHOT_GAMS_", env->settings->getSetting<std::string>("Output.Debug.Path"));
     else
         tmpdirname = Utilities::createTemporaryDirectory("SHOT_GAMS_");
 
@@ -727,7 +722,7 @@ void ModelingSystemGAMS::finalizeSolution()
         gmoUnloadSolutionLegacy(modelingObject);
 
     // write alternate solutions to GDX file, if requested
-    std::string solfile = env->settings->getSetting<std::string>("GAMS.AlternateSolutionsFile", "Output");
+    std::string solfile = env->settings->getSetting<std::string>("Output.GAMS.AlternateSolutionsFile");
 
     if(!solfile.empty() && r->primalSolutions.size() > 1)
     {
@@ -812,7 +807,7 @@ void ModelingSystemGAMS::clearGAMSObjects()
     }
 
     /* remove temporary directory contents if not in debug mode (should have only files) and directory itself) */
-    if(createdtmpdir && !env->settings->getSetting<bool>("Debug.Enable", "Output"))
+    if(createdtmpdir && !env->settings->getSetting<bool>("Output.Debug.Enable"))
     {
         fs::filesystem::remove_all(tmpdirname);
         createdtmpdir = false;
@@ -827,10 +822,10 @@ bool ModelingSystemGAMS::copyVariables(ProblemPtr destination)
 
     if(numVariables > 0)
     {
-        double minLBCont = env->settings->getSetting<double>("Variables.Continuous.MinimumLowerBound", "Model");
-        double maxUBCont = env->settings->getSetting<double>("Variables.Continuous.MaximumUpperBound", "Model");
-        double minLBInt = env->settings->getSetting<double>("Variables.Integer.MinimumLowerBound", "Model");
-        double maxUBInt = env->settings->getSetting<double>("Variables.Integer.MaximumUpperBound", "Model");
+        double minLBCont = env->settings->getSetting<double>("Model.Variables.Continuous.MinimumLowerBound");
+        double maxUBCont = env->settings->getSetting<double>("Model.Variables.Continuous.MaximumUpperBound");
+        double minLBInt = env->settings->getSetting<double>("Model.Variables.Integer.MinimumLowerBound");
+        double maxUBInt = env->settings->getSetting<double>("Model.Variables.Integer.MaximumUpperBound");
 
         double* variableLBs = new double[numVariables];
         double* variableUBs = new double[numVariables];

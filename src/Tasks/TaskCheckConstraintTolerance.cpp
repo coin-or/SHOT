@@ -39,7 +39,7 @@ void TaskCheckConstraintTolerance::run()
     if(env->reformulatedProblem->properties.isMIQPProblem || env->reformulatedProblem->properties.isQPProblem)
         return;
 
-    auto constraintTolerance = env->settings->getSetting<double>("ConstraintTolerance", "Termination") + 1e-10;
+    auto constraintTolerance = env->settings->getSetting<double>("Termination.ConstraintTolerance") + 1e-10;
 
     auto objectiveValueDifference
         = std::abs(env->problem->objectiveFunction->calculateValue(currIter->solutionPoints.at(0).point)

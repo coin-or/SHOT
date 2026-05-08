@@ -50,16 +50,16 @@ NLPSolverIpoptRelaxed::NLPSolverIpoptRelaxed(EnvironmentPtr envPtr, ProblemPtr s
 void NLPSolverIpoptRelaxed::setSolverSpecificInitialSettings()
 {
     ipoptApplication->Options()->SetNumericValue("constr_viol_tol",
-        env->settings->getSetting<double>("Ipopt.ConstraintViolationTolerance", "Subsolver") + 1e-12);
+        env->settings->getSetting<double>("Subsolver.Ipopt.ConstraintViolationTolerance") + 1e-12);
 
     ipoptApplication->Options()->SetNumericValue(
-        "tol", env->settings->getSetting<double>("Ipopt.RelativeConvergenceTolerance", "Subsolver") + 1e-12);
+        "tol", env->settings->getSetting<double>("Subsolver.Ipopt.RelativeConvergenceTolerance") + 1e-12);
 
     ipoptApplication->Options()->SetIntegerValue(
-        "max_iter", env->settings->getSetting<int>("Ipopt.MaxIterations", "Subsolver"));
+        "max_iter", env->settings->getSetting<int>("Subsolver.Ipopt.MaxIterations"));
 
     ipoptApplication->Options()->SetNumericValue(
-        "max_cpu_time", env->settings->getSetting<double>("FixedInteger.TimeLimit", "Primal"));
+        "max_cpu_time", env->settings->getSetting<double>("Primal.FixedInteger.TimeLimit"));
 }
 
 VectorDouble NLPSolverIpoptRelaxed::getSolution() { return (NLPSolverIpoptBase::getSolution()); }

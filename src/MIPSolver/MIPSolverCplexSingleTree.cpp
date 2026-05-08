@@ -35,13 +35,13 @@ CplexCallback::CplexCallback(EnvironmentPtr envPtr, const IloNumVarArray& vars, 
 
     if(env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
     {
-        if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
+        if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("Dual.CutStrategy"))
             == ES_HyperplaneCutStrategy::ESH)
         {
             tUpdateInteriorPoint = std::make_shared<TaskUpdateInteriorPoint>(env);
             taskSelectHPPts = std::make_shared<TaskSelectHyperplanesESH>(env);
         }
-        else if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
+        else if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("Dual.CutStrategy"))
             == ES_HyperplaneCutStrategy::ECP)
         {
             taskSelectHPPts = std::make_shared<TaskSelectHyperplanesECP>(env);
@@ -57,7 +57,7 @@ CplexCallback::CplexCallback(EnvironmentPtr envPtr, const IloNumVarArray& vars, 
     taskSelectExternalHPs = std::make_shared<TaskSelectHyperplanesExternal>(env);
 
     auto NLPProblemSource = static_cast<ES_PrimalNLPProblemSource>(
-        env->settings->getSetting<int>("FixedInteger.SourceProblem", "Primal"));
+        env->settings->getSetting<int>("Primal.FixedInteger.SourceProblem"));
 
     if(NLPProblemSource == ES_PrimalNLPProblemSource::Both
         || NLPProblemSource == ES_PrimalNLPProblemSource::OriginalProblem)
@@ -71,7 +71,7 @@ CplexCallback::CplexCallback(EnvironmentPtr envPtr, const IloNumVarArray& vars, 
         taskSelectPrimNLPReformulated = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env, true);
     }
 
-    if(env->settings->getSetting<bool>("Rootsearch.Use", "Primal")
+    if(env->settings->getSetting<bool>("Primal.Rootsearch.Use")
         && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
     {
         taskSelectPrimalSolutionFromRootsearch = std::make_shared<TaskSelectPrimalCandidatesFromRootsearch>(env);
@@ -171,7 +171,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
                 iterationNumber = env->results->getCurrentIteration()->iterationNumber;
             }
 
-            if(numberOfAddedHyperplanes < env->settings->getSetting<int>("Relaxation.MaxLazyConstraints", "Dual"))
+            if(numberOfAddedHyperplanes < env->settings->getSetting<int>("Dual.Relaxation.MaxLazyConstraints"))
             {
                 int waitingListSize = env->dualSolver->hyperplaneWaitingList.size();
 
@@ -214,13 +214,13 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
 
                 {
                     std::lock_guard<std::mutex> lock(callbackMutex);
-                    if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
+                    if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("Dual.CutStrategy"))
                         == ES_HyperplaneCutStrategy::ESH)
                     {
                         tUpdateInteriorPoint->run();
                         static_cast<TaskSelectHyperplanesESH*>(taskSelectHPPts.get())->run(solutionPoints);
                     }
-                    else if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
+                    else if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("Dual.CutStrategy"))
                         == ES_HyperplaneCutStrategy::ECP)
                     {
                         static_cast<TaskSelectHyperplanesECP*>(taskSelectHPPts.get())->run(solutionPoints);
@@ -315,7 +315,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
             auto bounds = std::make_pair(env->results->getCurrentDualBound(), env->results->getPrimalBound());
             currIter->currentObjectiveBounds = bounds;
 
-            if(env->settings->getSetting<bool>("Rootsearch.Use", "Primal")
+            if(env->settings->getSetting<bool>("Primal.Rootsearch.Use")
                 && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
             {
                 taskSelectPrimalSolutionFromRootsearch->run(candidatePoints);
@@ -358,7 +358,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
                 env->primalSolver->checkPrimalSolutionCandidates();
             }
 
-            if(env->settings->getSetting<bool>("HyperplaneCuts.UseIntegerCuts", "Dual"))
+            if(env->settings->getSetting<bool>("Dual.HyperplaneCuts.UseIntegerCuts"))
             {
                 int addedIntegerCuts = 0;
 
@@ -574,13 +574,13 @@ void CplexCallback::addLazyConstraint(
         if(env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
         {
 
-            if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
+            if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("Dual.CutStrategy"))
                 == ES_HyperplaneCutStrategy::ESH)
             {
                 tUpdateInteriorPoint->run();
                 static_cast<TaskSelectHyperplanesESH*>(taskSelectHPPts.get())->run(candidatePoints);
             }
-            else if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
+            else if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("Dual.CutStrategy"))
                 == ES_HyperplaneCutStrategy::ECP)
             {
                 static_cast<TaskSelectHyperplanesECP*>(taskSelectHPPts.get())->run(candidatePoints);

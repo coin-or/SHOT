@@ -73,10 +73,10 @@ private:
 public:
     AMPLProblemHandler(EnvironmentPtr envPtr, ProblemPtr problem) : env(envPtr), destination(problem)
     {
-        this->minLBCont = env->settings->getSetting<double>("Variables.Continuous.MinimumLowerBound", "Model");
-        this->maxUBCont = env->settings->getSetting<double>("Variables.Continuous.MaximumUpperBound", "Model");
-        this->minLBInt = env->settings->getSetting<double>("Variables.Integer.MinimumLowerBound", "Model");
-        this->maxUBInt = env->settings->getSetting<double>("Variables.Integer.MaximumUpperBound", "Model");
+        this->minLBCont = env->settings->getSetting<double>("Model.Variables.Continuous.MinimumLowerBound");
+        this->maxUBCont = env->settings->getSetting<double>("Model.Variables.Continuous.MaximumUpperBound");
+        this->minLBInt = env->settings->getSetting<double>("Model.Variables.Integer.MinimumLowerBound");
+        this->maxUBInt = env->settings->getSetting<double>("Model.Variables.Integer.MaximumUpperBound");
     }
 
     void OnHeader(const mp::NLHeader& h)
@@ -95,7 +95,7 @@ public:
             for(int i = 0; i < h.num_ampl_options; i++)
                 solHeader << h.ampl_options[i] << '\n';
 
-            env->settings->updateSetting("AMPL.OptionsHeader", "ModelingSystem", solHeader.str());
+            env->settings->updateSetting("ModelingSystem.AMPL.OptionsHeader", solHeader.str());
         }
 
         int variableIndex = 0;
@@ -193,7 +193,7 @@ public:
 
         assert(variableIndex == h.num_vars);
 
-        env->settings->updateSetting("AMPL.NumberOfOriginalConstraints", "ModelingSystem", h.num_algebraic_cons);
+        env->settings->updateSetting("ModelingSystem.AMPL.NumberOfOriginalConstraints", h.num_algebraic_cons);
 
         destination->numericConstraints.reserve(h.num_algebraic_cons);
         destination->linearConstraints.reserve(h.num_algebraic_cons - h.num_nl_cons);

@@ -53,15 +53,15 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
         return;
     }
 
-    auto userSettingStrategy = env->settings->getSetting<int>("FixedInteger.CallStrategy", "Primal");
-    auto userSetting = env->settings->getSetting<int>("FixedInteger.Source", "Primal");
+    auto userSettingStrategy = env->settings->getSetting<int>("Primal.FixedInteger.CallStrategy");
+    auto userSetting = env->settings->getSetting<int>("Primal.FixedInteger.Source");
 
     auto dualBound = env->results->getCurrentDualBound();
 
     if(currIter->solutionStatus == E_ProblemSolutionStatus::Optimal
         && std::abs(allSolutions.at(0).objectiveValue - env->results->getCurrentDualBound())
                 / ((1e-10) + std::abs(dualBound))
-            < env->settings->getSetting<double>("FixedInteger.DualPointGap.Relative", "Primal"))
+            < env->settings->getSetting<double>("Primal.FixedInteger.DualPointGap.Relative"))
     {
         callNLPSolver = true;
         useFeasibleSolutionExtra = true;
@@ -74,14 +74,14 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
         || userSettingStrategy == static_cast<int>(ES_PrimalNLPStrategy::IterationOrTimeAndAllFeasibleSolutions))
     {
         if(env->solutionStatistics.numberOfIterationsWithoutNLPCallMIP
-            >= env->settings->getSetting<int>("FixedInteger.Frequency.Iteration", "Primal"))
+            >= env->settings->getSetting<int>("Primal.FixedInteger.Frequency.Iteration"))
         {
             env->output->outputDebug(
                 "        Activating fixed NLP primal strategy since max iterations since last call has been reached.");
             callNLPSolver = true;
         }
         else if(env->timing->getElapsedTime("Total") - env->solutionStatistics.timeLastFixedNLPCall
-            > env->settings->getSetting<double>("FixedInteger.Frequency.Time", "Primal"))
+            > env->settings->getSetting<double>("Primal.FixedInteger.Frequency.Time"))
         {
             env->output->outputDebug(
                 "        Activating fixed NLP primal strategy since max time limit since last call has been reached.");
@@ -135,7 +135,7 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
             auto tmpSol = allSolutions.at(i);
 
             if(tmpSol.maxDeviation.value
-                <= env->settings->getSetting<double>("Tolerance.NonlinearConstraint", "Primal"))
+                <= env->settings->getSetting<double>("Primal.Tolerance.NonlinearConstraint"))
             {
                 env->primalSolver->addFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::FeasibleSolution,
                     tmpSol.objectiveValue, tmpSol.iterFound, tmpSol.maxDeviation);
@@ -154,7 +154,7 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
             tmpSol = allSolutions.at(i);
 
             if(tmpSol.maxDeviation.value
-                <= env->settings->getSetting<double>("Tolerance.NonlinearConstraint", "Primal"))
+                <= env->settings->getSetting<double>("Primal.Tolerance.NonlinearConstraint"))
             {
                 env->primalSolver->addFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::FeasibleSolution,
                     tmpSol.objectiveValue, tmpSol.iterFound, tmpSol.maxDeviation);

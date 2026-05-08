@@ -830,7 +830,7 @@ void NLPSolverIpoptBase::setInitialSettings()
     std::string subsolver = "";
 
     // Sets the linear solver used
-    switch(static_cast<ES_IpoptSolver>(env->settings->getSetting<int>("Ipopt.LinearSolver", "Subsolver")))
+    switch(static_cast<ES_IpoptSolver>(env->settings->getSetting<int>("Subsolver.Ipopt.LinearSolver")))
     {
     case(ES_IpoptSolver::ma27):
         ipoptApplication->Options()->SetStringValue("linear_solver", "ma27");
@@ -864,7 +864,7 @@ void NLPSolverIpoptBase::setInitialSettings()
     // ipoptApplication->Options()->SetStringValue("fixed_variable_treatment", "make_parameter");
     // ipoptApplication->Options()->SetStringValue("hessian_approximation", "limited-memory");
 
-    if(!env->settings->getSetting<bool>("Console.PrimalSolver.Show", "Output"))
+    if(!env->settings->getSetting<bool>("Output.Console.PrimalSolver.Show"))
     {
         ipoptApplication->Options()->SetIntegerValue("print_level", J_NONE);
         ipoptApplication->Options()->SetStringValue("sb", "yes");
@@ -1026,7 +1026,7 @@ std::string NLPSolverIpoptBase::getSolverDescription()
 {
     std::string linearSolver = "";
 
-    switch(static_cast<ES_IpoptSolver>(env->settings->getSetting<int>("Ipopt.LinearSolver", "Subsolver")))
+    switch(static_cast<ES_IpoptSolver>(env->settings->getSetting<int>("Subsolver.Ipopt.LinearSolver")))
     {
     case(ES_IpoptSolver::ma27):
         linearSolver = "HSL MA27";

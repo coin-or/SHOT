@@ -93,7 +93,7 @@ void TaskUpdateInteriorPoint::run()
         env->dualSolver->interiorPts.back() = tmpIP;
     }
     // Add the new point
-    else if(env->settings->getSetting<int>("ESH.InteriorPoint.UsePrimalSolution", "Dual")
+    else if(env->settings->getSetting<int>("Dual.ESH.InteriorPoint.UsePrimalSolution")
             == static_cast<int>(ES_AddPrimalPointAsInteriorPoint::KeepBoth)
         && maxDev.normalizedValue < 0)
     {
@@ -109,7 +109,7 @@ void TaskUpdateInteriorPoint::run()
         }
     }
     // Use the new point only
-    else if(env->settings->getSetting<int>("ESH.InteriorPoint.UsePrimalSolution", "Dual")
+    else if(env->settings->getSetting<int>("Dual.ESH.InteriorPoint.UsePrimalSolution")
             == static_cast<int>(ES_AddPrimalPointAsInteriorPoint::KeepNew)
         && maxDev.normalizedValue < 0)
     {
@@ -118,7 +118,7 @@ void TaskUpdateInteriorPoint::run()
         env->dualSolver->interiorPts.back() = tmpIP;
     }
     // Find a new point in the midpoint between the original and new
-    else if(env->settings->getSetting<int>("ESH.InteriorPoint.UsePrimalSolution", "Dual")
+    else if(env->settings->getSetting<int>("Dual.ESH.InteriorPoint.UsePrimalSolution")
             == static_cast<int>(ES_AddPrimalPointAsInteriorPoint::OnlyAverage)
         && maxDev.normalizedValue < 0)
     {

@@ -29,11 +29,11 @@ NLPSolverGAMS::NLPSolverGAMS(EnvironmentPtr envPtr, gmoHandle_t modelingObject, 
 {
     modelingEnvironment = (gevHandle_t)gmoEnvironment(modelingObject);
 
-    nlpsolver = env->settings->getSetting<std::string>("GAMS.NLP.Solver", "Subsolver");
-    nlpsolveropt = env->settings->getSetting<std::string>("GAMS.NLP.OptionsFilename", "Subsolver");
+    nlpsolver = env->settings->getSetting<std::string>("Subsolver.GAMS.NLP.Solver");
+    nlpsolveropt = env->settings->getSetting<std::string>("Subsolver.GAMS.NLP.OptionsFilename");
 
-    timelimit = env->settings->getSetting<double>("FixedInteger.TimeLimit", "Primal");
-    iterlimit = env->settings->getSetting<int>("FixedInteger.IterationLimit", "Primal");
+    timelimit = env->settings->getSetting<double>("Primal.FixedInteger.TimeLimit");
+    iterlimit = env->settings->getSetting<int>("Primal.FixedInteger.IterationLimit");
 
     // by default we want the fast solvelink=5; but if SHOT is build with Ipopt (and is not build by GAMS for GAMS),
     // then there can be conflicts between the Ipopt library linked to SHOT and the one in GAMS;
@@ -101,7 +101,7 @@ NLPSolverGAMS::NLPSolverGAMS(EnvironmentPtr envPtr, gmoHandle_t modelingObject, 
 #endif
     }
 
-    showlog = env->settings->getSetting<bool>("Console.PrimalSolver.Show", "Output");
+    showlog = env->settings->getSetting<bool>("Output.Console.PrimalSolver.Show");
 }
 
 NLPSolverGAMS::~NLPSolverGAMS() = default;
@@ -207,7 +207,7 @@ E_NLPSolutionStatus NLPSolverGAMS::solveProblemInstance()
     gmoForceContSet(modelingObject, 1);
 
     // if we are called from GAMS (via EntryPointsGAMS), then there will be no input problem file set
-    bool fromGAMS = env->settings->getSetting<std::string>("ProblemFile", "Input").empty();
+    bool fromGAMS = env->settings->getSetting<std::string>("Input.ProblemFile").empty();
 
     // redirect output from NLP solver to gevwritecallback
     gevwritecallback_data cbdata;

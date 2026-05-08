@@ -43,7 +43,7 @@ void TaskCheckDualStagnation::run()
     // but different nonlinear constraint errors
     if(env->results->getNumberOfIterations() > 1
         && std ::abs(currIter->maxDeviation - env->results->getPreviousIteration()->maxDeviation)
-            > env->settings->getSetting<double>("DualStagnation.ConstraintTolerance", "Termination")
+            > env->settings->getSetting<double>("Termination.DualStagnation.ConstraintTolerance")
         && currIter->iterationNumber - env->solutionStatistics.iterationLastDualCutAdded < 5)
     {
         return;
@@ -59,7 +59,7 @@ void TaskCheckDualStagnation::run()
     }
 
     if(env->solutionStatistics.numberOfIterationsWithDualStagnation
-        >= env->settings->getSetting<int>("DualStagnation.IterationLimit", "Termination"))
+        >= env->settings->getSetting<int>("Termination.DualStagnation.IterationLimit"))
     {
         env->results->terminationReason = E_TerminationReason::ObjectiveStagnation;
         env->tasks->setNextTask(taskIDIfTrue);

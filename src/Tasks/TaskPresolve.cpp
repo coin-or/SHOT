@@ -39,7 +39,7 @@ void TaskPresolve::run()
     auto currIter = env->results->getCurrentIteration();
 
     auto strategy
-        = static_cast<ES_MIPPresolveStrategy>(env->settings->getSetting<int>("MIP.Presolve.Frequency", "Dual"));
+        = static_cast<ES_MIPPresolveStrategy>(env->settings->getSetting<int>("Dual.MIP.Presolve.Frequency"));
 
     if(!currIter->isMIP())
     {
@@ -59,7 +59,7 @@ void TaskPresolve::run()
     }
 
     // Sets the iteration time limit
-    auto timeLim = env->settings->getSetting<double>("TimeLimit", "Termination") - env->timing->getElapsedTime("Total");
+    auto timeLim = env->settings->getSetting<double>("Termination.TimeLimit") - env->timing->getElapsedTime("Total");
     env->dualSolver->MIPSolver->setTimeLimit(timeLim);
 
     if(env->results->hasPrimalSolution())
@@ -84,8 +84,8 @@ void TaskPresolve::run()
         env->dualSolver->MIPSolver->addMIPStart(primalSol);
     }
 
-    if(env->settings->getSetting<bool>("FixedInteger.UsePresolveBounds", "Primal")
-        || env->settings->getSetting<bool>("MIP.Presolve.UpdateObtainedBounds", "Dual"))
+    if(env->settings->getSetting<bool>("Primal.FixedInteger.UsePresolveBounds")
+        || env->settings->getSetting<bool>("Dual.MIP.Presolve.UpdateObtainedBounds"))
     {
         env->dualSolver->MIPSolver->presolveAndUpdateBounds();
         isPresolved = true;

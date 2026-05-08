@@ -30,7 +30,7 @@ void TaskCheckIterationLimit::run()
 {
     auto currIter = env->results->getCurrentIteration();
 
-    auto mainlimit = env->settings->getSetting<int>("IterationLimit", "Termination");
+    auto mainlimit = env->settings->getSetting<int>("Termination.IterationLimit");
 
     if(mainlimit == SHOT_INT_MAX)
         return;

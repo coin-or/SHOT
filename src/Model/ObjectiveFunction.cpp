@@ -866,11 +866,11 @@ void NonlinearObjectiveFunction::initializeGradientSparsityPattern()
 
     if(auto sharedOwnerProblem = ownerProblem.lock())
     {
-        if(sharedOwnerProblem->env->settings->getSetting<bool>("Debug.Enable", "Output"))
+        if(sharedOwnerProblem->env->settings->getSetting<bool>("Output.Debug.Enable"))
         {
             debug = true;
 
-            filename << sharedOwnerProblem->env->settings->getSetting<std::string>("Debug.Path", "Output");
+            filename << sharedOwnerProblem->env->settings->getSetting<std::string>("Output.Debug.Path");
 
             for(auto& V : *gradientSparsityPattern)
                 stream << V->name << '\n';

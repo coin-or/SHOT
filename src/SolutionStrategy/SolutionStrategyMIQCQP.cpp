@@ -113,14 +113,14 @@ SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(EnvironmentPtr envPtr)
     auto tCheckRelGap = std::make_shared<TaskCheckRelativeGap>(env, "FinalizeSolution");
     env->tasks->addTask(tCheckRelGap, "CheckRelGap");
 
-    if(env->settings->getSetting<bool>("FixedInteger.Use", "Primal") && env->reformulatedProblem->properties.isDiscrete)
+    if(env->settings->getSetting<bool>("Primal.FixedInteger.Use") && env->reformulatedProblem->properties.isDiscrete)
     {
         auto tSelectPrimFixedNLPSolPool = std::make_shared<TaskSelectPrimalFixedNLPPointsFromSolutionPool>(env);
         env->tasks->addTask(tSelectPrimFixedNLPSolPool, "SelectPrimFixedNLPSolPool");
         std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tSelectPrimFixedNLPSolPool);
 
         auto NLPProblemSource
-            = static_cast<ES_PrimalNLPProblemSource>(env->settings->getSetting<int>("FixedInteger.Source", "Primal"));
+            = static_cast<ES_PrimalNLPProblemSource>(env->settings->getSetting<int>("Primal.FixedInteger.Source"));
 
         if(NLPProblemSource == ES_PrimalNLPProblemSource::Both
             || NLPProblemSource == ES_PrimalNLPProblemSource::OriginalProblem)

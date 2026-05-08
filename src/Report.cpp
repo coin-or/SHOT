@@ -63,7 +63,7 @@ void Report::outputIterationDetail(int iterationNumber, std::string iterationDes
         }
 
         switch(
-            static_cast<ES_IterationOutputDetail>(env->settings->getSetting<int>("Console.Iteration.Detail", "Output")))
+            static_cast<ES_IterationOutputDetail>(env->settings->getSetting<int>("Output.Console.Iteration.Detail")))
         {
         case ES_IterationOutputDetail::Full:
             printLine = true;
@@ -348,7 +348,7 @@ void Report::outputOptionsReport()
 
     env->output->outputInfo("");
 
-    if(auto optionsFile = env->settings->getSetting<std::string>("OptionsFile", "Input"); optionsFile == "")
+    if(auto optionsFile = env->settings->getSetting<std::string>("Input.OptionsFile"); optionsFile == "")
         env->output->outputDebug(" No options file specified.");
     else
         env->output->outputInfo(fmt::format(" Options read from file:     {}", optionsFile));
@@ -368,17 +368,17 @@ void Report::outputOptionsReport()
 
     std::string cutAlgorithm, dualSolver;
 
-    if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
+    if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("Dual.CutStrategy"))
         == ES_HyperplaneCutStrategy::ESH)
     {
         cutAlgorithm = "ESH";
     }
-    else if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
+    else if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("Dual.CutStrategy"))
         == ES_HyperplaneCutStrategy::ECP)
     {
         cutAlgorithm = "ECP";
     }
-    else if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
+    else if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("Dual.CutStrategy"))
         == ES_HyperplaneCutStrategy::OnlyExternal)
     {
         cutAlgorithm = "Only external cuts";
@@ -388,7 +388,7 @@ void Report::outputOptionsReport()
         cutAlgorithm = "Unknown";
     }
 
-    auto solver = static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual"));
+    auto solver = static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver"));
 
 #ifdef HAS_CPLEX
     if(solver == ES_MIPSolver::Cplex)
@@ -446,9 +446,9 @@ void Report::outputOptionsReport()
 
     env->output->outputInfo("");
 
-    if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+    if(env->settings->getSetting<bool>("Output.Debug.Enable"))
         env->output->outputInfo(fmt::format(
-            " Debug directory:            {}", env->settings->getSetting<std::string>("Debug.Path", "Output")));
+            " Debug directory:            {}", env->settings->getSetting<std::string>("Output.Debug.Path")));
 }
 
 void Report::outputModelingSystemReport(ES_ModelingSystem system, std::string filename)
@@ -1009,10 +1009,10 @@ void Report::outputSolutionReport()
     if(primalSolutionFound)
     {
         bool variablesAreBounded = true;
-        double minLBCont = env->settings->getSetting<double>("Variables.Continuous.MinimumLowerBound", "Model");
-        double maxUBCont = env->settings->getSetting<double>("Variables.Continuous.MaximumUpperBound", "Model");
-        double minLBInt = env->settings->getSetting<double>("Variables.Integer.MinimumLowerBound", "Model");
-        double maxUBInt = env->settings->getSetting<double>("Variables.Integer.MaximumUpperBound", "Model");
+        double minLBCont = env->settings->getSetting<double>("Model.Variables.Continuous.MinimumLowerBound");
+        double maxUBCont = env->settings->getSetting<double>("Model.Variables.Continuous.MaximumUpperBound");
+        double minLBInt = env->settings->getSetting<double>("Model.Variables.Integer.MinimumLowerBound");
+        double maxUBInt = env->settings->getSetting<double>("Model.Variables.Integer.MaximumUpperBound");
 
         if(minLBInt == 0)
             minLBInt = -maxUBInt; // In case a min lower bound of zero is used, we do not want to give false warnings
@@ -1071,49 +1071,49 @@ void Report::outputSolutionReport()
     {
         fulfilled.push_back(fmt::format("  - absolute objective gap tolerance             {:g} <= {:g}",
             env->results->getAbsoluteGlobalObjectiveGap(),
-            env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination")));
+            env->settings->getSetting<double>("Termination.ObjectiveGap.Absolute")));
     }
     else
     {
         unfulfilled.push_back(fmt::format("  - absolute objective gap tolerance             {:g} > {:g}",
             env->results->getAbsoluteGlobalObjectiveGap(),
-            env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination")));
+            env->settings->getSetting<double>("Termination.ObjectiveGap.Absolute")));
     }
 
     if(env->results->isRelativeObjectiveGapToleranceMet())
     {
         fulfilled.push_back(fmt::format("  - relative objective gap tolerance             {:g} <= {:g}",
             env->results->getRelativeGlobalObjectiveGap(),
-            env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination")));
+            env->settings->getSetting<double>("Termination.ObjectiveGap.Relative")));
     }
     else
     {
         unfulfilled.push_back(fmt::format("  - relative objective gap tolerance             {:g} > {:g}",
             env->results->getRelativeGlobalObjectiveGap(),
-            env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination")));
+            env->settings->getSetting<double>("Termination.ObjectiveGap.Relative")));
     }
 
-    if(static_cast<ES_TreeStrategy>(env->settings->getSetting<int>("TreeStrategy", "Dual"))
+    if(static_cast<ES_TreeStrategy>(env->settings->getSetting<int>("Dual.TreeStrategy"))
         != ES_TreeStrategy::SingleTree)
     {
         if(env->results->getCurrentIteration()->maxDeviation
-            <= env->settings->getSetting<double>("ConstraintTolerance", "Termination"))
+            <= env->settings->getSetting<double>("Termination.ConstraintTolerance"))
         {
             fulfilled.push_back(fmt::format("  - maximal constraint tolerance                 {:g} <= {:g}",
                 env->results->getCurrentIteration()->maxDeviation,
-                env->settings->getSetting<double>("ConstraintTolerance", "Termination")));
+                env->settings->getSetting<double>("Termination.ConstraintTolerance")));
         }
         else
         {
             unfulfilled.push_back(fmt::format("  - maximal constraint tolerance                 {:g} > {:g}",
                 env->results->getCurrentIteration()->maxDeviation,
-                env->settings->getSetting<double>("ConstraintTolerance", "Termination")));
+                env->settings->getSetting<double>("Termination.ConstraintTolerance")));
         }
     }
 
     ;
 
-    if(int iterLim = env->settings->getSetting<int>("IterationLimit", "Termination");
+    if(int iterLim = env->settings->getSetting<int>("Termination.IterationLimit");
         env->results->getCurrentIteration()->iterationNumber > iterLim)
     {
         fulfilled.push_back(fmt::format("  - iteration limit                              {} > {}",
@@ -1125,7 +1125,7 @@ void Report::outputSolutionReport()
             env->results->getCurrentIteration()->iterationNumber, iterLim));
     }
 
-    auto timeLimit = env->settings->getSetting<double>("TimeLimit", "Termination");
+    auto timeLimit = env->settings->getSetting<double>("Termination.TimeLimit");
 
     if(auto totalTime = env->timing->getElapsedTime("Total"); totalTime > timeLimit)
     {

@@ -28,7 +28,7 @@ namespace SHOT
 
 TaskSolveIteration::TaskSolveIteration(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
-    if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+    if(env->settings->getSetting<bool>("Output.Debug.Enable"))
     {
         for(auto& V : env->reformulatedProblem->allVariables)
         {
@@ -59,7 +59,7 @@ void TaskSolveIteration::run()
         = env->reformulatedProblem->objectiveFunction->direction == E_ObjectiveFunctionDirection::Minimize;
 
     // Sets the iteration time limit
-    auto timeLim = env->settings->getSetting<double>("TimeLimit", "Termination") - env->timing->getElapsedTime("Total");
+    auto timeLim = env->settings->getSetting<double>("Termination.TimeLimit") - env->timing->getElapsedTime("Total");
     env->dualSolver->MIPSolver->setTimeLimit(timeLim);
 
     if(env->dualSolver->useCutOff && !currIter->MIPSolutionLimitUpdated)
@@ -70,13 +70,13 @@ void TaskSolveIteration::run()
         if(isMinimization)
         {
             cutOffValue
-                = env->dualSolver->cutOffToUse + env->settings->getSetting<double>("MIP.CutOff.Tolerance", "Dual");
+                = env->dualSolver->cutOffToUse + env->settings->getSetting<double>("Dual.MIP.CutOff.Tolerance");
             cutOffValueConstraint = env->dualSolver->cutOffToUse;
         }
         else
         {
             cutOffValue
-                = env->dualSolver->cutOffToUse - env->settings->getSetting<double>("MIP.CutOff.Tolerance", "Dual");
+                = env->dualSolver->cutOffToUse - env->settings->getSetting<double>("Dual.MIP.CutOff.Tolerance");
             cutOffValueConstraint = env->dualSolver->cutOffToUse;
         }
 
@@ -90,7 +90,7 @@ void TaskSolveIteration::run()
     }
 
     if(env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable()
-        && env->settings->getSetting<bool>("MIP.UpdateObjectiveBounds", "Dual") && !currIter->MIPSolutionLimitUpdated)
+        && env->settings->getSetting<bool>("Dual.MIP.UpdateObjectiveBounds") && !currIter->MIPSolutionLimitUpdated)
     {
         auto newLB = env->results->getCurrentDualBound();
         auto newUB = env->results->getPrimalBound();
@@ -123,18 +123,18 @@ void TaskSolveIteration::run()
 
         env->dualSolver->MIPSolver->addMIPStart(primalSol);
 
-        if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+        if(env->settings->getSetting<bool>("Output.Debug.Enable"))
         {
             auto filename = fmt::format("{}/dualiter{}_mipstart.txt",
-                env->settings->getSetting<std::string>("Debug.Path", "Output"), currIter->iterationNumber - 1);
+                env->settings->getSetting<std::string>("Output.Debug.Path"), currIter->iterationNumber - 1);
             Utilities::saveVariablePointVectorToFile(primalSol, variableNames, filename);
         }
     }
 
-    if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+    if(env->settings->getSetting<bool>("Output.Debug.Enable"))
     {
         auto filename = fmt::format("{}/dualiter{}_problem.lp",
-            env->settings->getSetting<std::string>("Debug.Path", "Output"), currIter->iterationNumber - 1);
+            env->settings->getSetting<std::string>("Output.Debug.Path"), currIter->iterationNumber - 1);
 
         env->dualSolver->MIPSolver->writeProblemToFile(filename);
     }
@@ -150,7 +150,7 @@ void TaskSolveIteration::run()
 
     // Must update the pointer to the current iteration if we use the lazy
     // strategy since new iterations have been created when solving
-    if(static_cast<ES_TreeStrategy>(env->settings->getSetting<int>("TreeStrategy", "Dual"))
+    if(static_cast<ES_TreeStrategy>(env->settings->getSetting<int>("Dual.TreeStrategy"))
         == ES_TreeStrategy::SingleTree)
     {
         currIter = env->results->getCurrentIteration();
@@ -173,9 +173,9 @@ void TaskSolveIteration::run()
     {
         env->output->outputDebug(fmt::format("        Number of solutions in solution pool: {} ", sols.size()));
 
-        if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+        if(env->settings->getSetting<bool>("Output.Debug.Enable"))
         {
-            auto debugPath = env->settings->getSetting<std::string>("Debug.Path", "Output");
+            auto debugPath = env->settings->getSetting<std::string>("Output.Debug.Path");
 
             for(size_t i = 0; i < sols.size(); i++)
             {
@@ -212,10 +212,10 @@ void TaskSolveIteration::run()
             currIter->maxDeviationConstraint = mostDevConstr.constraint->index;
             currIter->maxDeviation = mostDevConstr.normalizedValue;
 
-            if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+            if(env->settings->getSetting<bool>("Output.Debug.Enable"))
             {
                 auto filename = fmt::format("{}/dualiter{}_mostdev.txt",
-                    env->settings->getSetting<std::string>("Debug.Path", "Output"), currIter->iterationNumber - 1);
+                    env->settings->getSetting<std::string>("Output.Debug.Path"), currIter->iterationNumber - 1);
                 auto filecontents = fmt::format("most dev. constraint ([index]: value)\t[{}]: {}\n",
                     currIter->maxDeviationConstraint, currIter->maxDeviation);
 

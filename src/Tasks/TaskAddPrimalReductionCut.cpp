@@ -54,7 +54,7 @@ void TaskAddPrimalReductionCut::run()
         return;
     }
 
-    int maxIterations = env->settings->getSetting<int>("ReductionCut.MaxIterations", "Dual");
+    int maxIterations = env->settings->getSetting<int>("Dual.ReductionCut.MaxIterations");
 
     if(env->solutionStatistics.numberOfPrimalReductionCutsUpdatesWithoutEffect >= maxIterations)
     {
@@ -74,7 +74,7 @@ void TaskAddPrimalReductionCut::run()
 
     double cutOffToUse;
 
-    if(env->settings->getSetting<int>("ReductionCut.Strategy", "Dual") == (int)ES_ReductionCutStrategy::Fraction)
+    if(env->settings->getSetting<int>("Dual.ReductionCut.Strategy") == (int)ES_ReductionCutStrategy::Fraction)
     {
         double relativeGap = env->results->getRelativeCurrentObjectiveGap();
 
@@ -88,7 +88,7 @@ void TaskAddPrimalReductionCut::run()
         }
         else
         {
-            double reductionFactor = env->settings->getSetting<double>("ReductionCut.ReductionFactor", "Dual");
+            double reductionFactor = env->settings->getSetting<double>("Dual.ReductionCut.ReductionFactor");
 
             if(env->reformulatedProblem->objectiveFunction->properties.isMinimize)
             {
@@ -100,7 +100,7 @@ void TaskAddPrimalReductionCut::run()
             }
         }
     }
-    else if(env->settings->getSetting<int>("ReductionCut.Strategy", "Dual")
+    else if(env->settings->getSetting<int>("Dual.ReductionCut.Strategy")
         == (int)ES_ReductionCutStrategy::GoldenRatio)
     {
         double factor = 0.618;
