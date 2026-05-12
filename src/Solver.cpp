@@ -1319,7 +1319,7 @@ void Solver::initializeSettings()
 
     // Primal settings: tolerances for accepting primal solutions
 
-    env->settings->createSettingGroup("Primal", "Tolerances", "Primal solution tolerances",
+    env->settings->createSettingGroup("Primal", "Tolerance", "Primal solution tolerances",
         "These settings sets various tolerances for accepting primal solutions.");
 
     env->settings->createSetting("Primal.Tolerance.TrustLinearConstraintValues", true,
