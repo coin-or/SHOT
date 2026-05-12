@@ -283,18 +283,16 @@ bool Solver::setProblem(std::string fileName)
 #endif
 
 #ifdef HAS_CBC
-    // TODO: figure out a better way to do this
     if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Cbc)
     {
-        env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy", (int)ES_QuadraticProblemStrategy::Nonlinear);
+        env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy", (int)ES_QuadraticProblemStrategy::Nonlinear, E_SettingPriority::SolverCompatibility);
     }
 #endif
 
 #ifdef HAS_HIGHS
-    // TODO: figure out a better way to do this
     if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Highs)
     {
-        env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy", (int)ES_QuadraticProblemStrategy::Nonlinear);
+        env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy", (int)ES_QuadraticProblemStrategy::Nonlinear, E_SettingPriority::SolverCompatibility);
     }
 #endif
 
@@ -475,18 +473,16 @@ bool Solver::setProblem(
     }
 
 #ifdef HAS_CBC
-    // TODO: figure out a better way to do this
     if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Cbc)
     {
-        env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy", (int)ES_QuadraticProblemStrategy::Nonlinear);
+        env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy", (int)ES_QuadraticProblemStrategy::Nonlinear, E_SettingPriority::SolverCompatibility);
     }
 #endif
 
 #ifdef HAS_HIGHS
-    // TODO: figure out a better way to do this
     if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Highs)
     {
-        env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy", (int)ES_QuadraticProblemStrategy::Nonlinear);
+        env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy", (int)ES_QuadraticProblemStrategy::Nonlinear, E_SettingPriority::SolverCompatibility);
     }
 #endif
 
