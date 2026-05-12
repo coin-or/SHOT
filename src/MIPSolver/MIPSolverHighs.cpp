@@ -61,7 +61,7 @@ HighsCallbackFunctionType highsCallback
 
     if(callback_type == kCallbackMipInterrupt)
     {
-        if(MIPSolver->currentSolutions.size() >= MIPSolver->getSolutionLimit())
+        if((int)MIPSolver->currentSolutions.size() >= MIPSolver->getSolutionLimit())
         {
             env->output->outputDebug(fmt::format("      | solution limit reached "));
             data_in->user_interrupt = true;
@@ -80,7 +80,7 @@ HighsCallbackFunctionType highsCallback
 
         double hashValue = Utilities::calculateHash(solution);
 
-        for(int i = 0; i < MIPSolver->currentSolutions.size(); i++)
+        for(int i = 0; i < (int)MIPSolver->currentSolutions.size(); i++)
         {
             if(MIPSolver->currentSolutions[i].hashValue == hashValue)
             {
