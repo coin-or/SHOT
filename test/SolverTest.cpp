@@ -287,18 +287,18 @@ bool CreateAndSolveProblem()
     solver->registerCallback(E_EventType::NewPrimalSolution, [&env, &passed](std::any args) {
         try
         {
-            PrimalSolution solution = std::any_cast<PrimalSolution>(args);
+            auto solution = std::any_cast<PrimalSolutionCallbackData>(args);
 
-            std::cout << "We have a new primal solution: " << solution.objValue
-                      << " found at iteration: " << solution.iterFound << ". In total we now have "
+            std::cout << "We have a new primal solution: " << solution.objectiveValue
+                      << " found at iteration: " << solution.iterationNumber << ". In total we now have "
                       << env->solutionStatistics.numberOfFoundPrimalSolutions << " solutions.\n";
 
             std::cout << "Primal solution point:\n";
-            Utilities::displayVector(solution.point);
+            Utilities::displayVector(solution.solution);
 
-            if(solution.objValue == env->results->getPrimalBound())
+            if(solution.objectiveValue == env->results->getPrimalBound())
             {
-                std::cout << "Ok, new primal solution has been saved successfully. " << solution.objValue << ".\n";
+                std::cout << "Ok, new primal solution has been saved successfully. " << solution.objectiveValue << ".\n";
                 passed = true;
             }
             else
@@ -309,7 +309,7 @@ bool CreateAndSolveProblem()
         }
         catch(const std::bad_any_cast& e)
         {
-            // If the callback argument is not a PrimalSolution
+            // If the callback argument is not a PrimalSolutionCallbackData
             passed = false;
             std::cout << "Failed to cast callback argument: " << e.what() << std::endl;
         }
@@ -354,18 +354,18 @@ bool CreateAndSolveProblem()
     solver->registerCallback(E_EventType::NewPrimalSolution, [&env, &passed](std::any args) {
         try
         {
-            PrimalSolution solution = std::any_cast<PrimalSolution>(args);
+            auto solution = std::any_cast<PrimalSolutionCallbackData>(args);
 
-            std::cout << "We have a new primal solution: " << solution.objValue
-                      << " found at iteration: " << solution.iterFound << ". In total we now have "
+            std::cout << "We have a new primal solution: " << solution.objectiveValue
+                      << " found at iteration: " << solution.iterationNumber << ". In total we now have "
                       << env->solutionStatistics.numberOfFoundPrimalSolutions << " solutions.\n";
 
             std::cout << "Primal solution point:\n";
-            Utilities::displayVector(solution.point);
+            Utilities::displayVector(solution.solution);
 
-            if(solution.objValue == env->results->getPrimalBound())
+            if(solution.objectiveValue == env->results->getPrimalBound())
             {
-                std::cout << "Ok, new primal solution has been saved successfully. " << solution.objValue << ".\n";
+                std::cout << "Ok, new primal solution has been saved successfully. " << solution.objectiveValue << ".\n";
                 passed = true;
             }
             else
@@ -376,7 +376,7 @@ bool CreateAndSolveProblem()
         }
         catch(const std::bad_any_cast& e)
         {
-            // If the callback argument is not a PrimalSolution
+            // If the callback argument is not a PrimalSolutionCallbackData
             passed = false;
             std::cout << "Failed to cast callback argument: " << e.what() << std::endl;
         }
