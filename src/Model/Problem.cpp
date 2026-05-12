@@ -18,6 +18,8 @@
 
 #include "../Tasks/TaskReformulateProblem.h"
 
+#include <stdexcept>
+
 // Explicit template instantiation for CppAD::AD<double>
 // This ensures the template is instantiated here and not duplicated in SHOTpy.so
 template class CppAD::AD<double>;
@@ -896,6 +898,26 @@ Problem::~Problem()
 
 void Problem::finalize()
 {
+    if(isFinalized)
+    {
+        env->output->outputWarning(
+            " Problem has already been finalized. Calling it again has no effect.");
+        return;
+    }
+
+    if(!objectiveFunction)
+    {
+        env->output->outputError(
+            " Problem has no objective function defined. Cannot finalize the problem.");
+        throw std::runtime_error("Problem has no objective function defined. Cannot finalize the problem.");
+    }
+
+    if(allVariables.size() == 0)
+    {
+        env->output->outputError(" Problem has no variables defined.");
+        throw std::runtime_error("Problem has no variables defined.");
+    }
+
     // Need to update properties first so that hasNonlinearExpression etc. flags are set
     // before simplifyNonlinearExpressions() checks them
     updateProperties();
@@ -919,6 +941,8 @@ void Problem::finalize()
 
     if(env->settings->getSetting<bool>("Output.Debug.Enable"))
         getLagrangianHessianSparsityPattern();
+
+    isFinalized = true;
 }
 
 void Problem::add(Variables variables)

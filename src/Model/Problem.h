@@ -105,6 +105,7 @@ private:
     bool variablesUpdated = false;
     bool constraintsUpdated = false;
     bool objectiveUpdated = false;
+    bool isFinalized = false;
 
     std::shared_ptr<std::vector<std::pair<NumericConstraintPtr, Variables>>> constraintGradientSparsityPattern;
     std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> constraintsHessianSparsityPattern;

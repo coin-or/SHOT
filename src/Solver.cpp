@@ -434,6 +434,20 @@ bool Solver::setProblem(
     env->modelingSystem = modelingSystem;
     env->problem = problem;
 
+    if(!problem->objectiveFunction)
+    {
+        env->output->outputError(
+                " Problem has no objective function. The solver cannot proceed correctly.");
+            return false;
+    }
+
+    if(problem->allVariables.size() == 0)
+    {
+        env->output->outputError(
+            " Problem has no variables. The solver cannot proceed correctly.");
+        return false;
+    }
+
     env->settings->updateSetting("Input.ProblemName", problem->name);
 
     // Sets the debug path if not already set

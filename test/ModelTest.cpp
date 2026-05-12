@@ -39,6 +39,9 @@ bool ModelTestConvexity();
 bool ModelTestCopy();
 bool ModelTestEx1223b();
 bool ModelTestGradientsAndHessians();
+bool ModelTestFinalizeCalledTwice();
+bool ModelTestFinalizeNoObjective();
+bool ModelTestFinalizeNoVariables();
 
 bool TestReadProblem(const std::string& problemFile);
 bool TestRootsearch(const std::string& problemFile);
@@ -102,6 +105,15 @@ int ModelTest(int argc, char* argv[])
         break;
     case 13:
         passed = ModelTestSquareRootReformulation();
+        break;
+    case 14:
+        passed = ModelTestFinalizeCalledTwice();
+        break;
+    case 15:
+        passed = ModelTestFinalizeNoObjective();
+        break;
+    case 16:
+        passed = ModelTestFinalizeNoVariables();
         break;
     default:
         passed = false;
@@ -1444,8 +1456,8 @@ bool ModelTestGradientsAndHessians()
         problem->finalize();
 
         VectorDouble point = { 1.0 };
-        double expected_gradient = std::exp(1.0);  // d/dx exp(x) = exp(x) = e
-        double expected_hessian = std::exp(1.0);   // d^2/dx^2 exp(x) = exp(x) = e
+        double expected_gradient = std::exp(1.0); // d/dx exp(x) = exp(x) = e
+        double expected_hessian = std::exp(1.0); // d^2/dx^2 exp(x) = exp(x) = e
 
         auto gradient = objective->calculateGradient(point, true);
         auto hessian = objective->calculateHessian(point, true);
@@ -1474,7 +1486,8 @@ bool ModelTestGradientsAndHessians()
             passed = false;
         }
 
-        if(passed) std::cout << "  PASSED\n";
+        if(passed)
+            std::cout << "  PASSED\n";
     }
 
     // ========== Test 2: Logarithm log(x) ==========
@@ -1497,8 +1510,8 @@ bool ModelTestGradientsAndHessians()
         problem->finalize();
 
         VectorDouble point = { 2.0 };
-        double expected_gradient = 1.0 / 2.0;      // d/dx log(x) = 1/x = 0.5
-        double expected_hessian = -1.0 / 4.0;      // d^2/dx^2 log(x) = -1/x^2 = -0.25
+        double expected_gradient = 1.0 / 2.0; // d/dx log(x) = 1/x = 0.5
+        double expected_hessian = -1.0 / 4.0; // d^2/dx^2 log(x) = -1/x^2 = -0.25
 
         auto gradient = objective->calculateGradient(point, true);
         auto hessian = objective->calculateHessian(point, true);
@@ -1527,7 +1540,8 @@ bool ModelTestGradientsAndHessians()
             passed = false;
         }
 
-        if(passed) std::cout << "  PASSED\n";
+        if(passed)
+            std::cout << "  PASSED\n";
     }
 
     // ========== Test 3: Sine and Cosine sin(x) + cos(y) ==========
@@ -1555,8 +1569,8 @@ bool ModelTestGradientsAndHessians()
         problem->finalize();
 
         VectorDouble point = { 0.0, 0.0 };
-        double expected_grad_x = std::cos(0.0);   // d/dx sin(x) = cos(x) = 1
-        double expected_grad_y = -std::sin(0.0);  // d/dy cos(y) = -sin(y) = 0
+        double expected_grad_x = std::cos(0.0); // d/dx sin(x) = cos(x) = 1
+        double expected_grad_y = -std::sin(0.0); // d/dy cos(y) = -sin(y) = 0
         double expected_hess_yy = -std::cos(0.0); // d^2/dy^2 cos(y) = -cos(y) = -1
 
         auto gradient = objective->calculateGradient(point, true);
@@ -1565,8 +1579,7 @@ bool ModelTestGradientsAndHessians()
         std::cout << "  At (0,0): gradient = [" << gradient[x] << ", " << gradient[y] << "]";
         std::cout << " (expected: [" << expected_grad_x << ", " << expected_grad_y << "])\n";
 
-        if(std::abs(gradient[x] - expected_grad_x) > tolerance ||
-           std::abs(gradient[y] - expected_grad_y) > tolerance)
+        if(std::abs(gradient[x] - expected_grad_x) > tolerance || std::abs(gradient[y] - expected_grad_y) > tolerance)
         {
             std::cout << "  FAILED: Gradient mismatch!\n";
             passed = false;
@@ -1589,7 +1602,8 @@ bool ModelTestGradientsAndHessians()
             passed = false;
         }
 
-        if(passed) std::cout << "  PASSED\n";
+        if(passed)
+            std::cout << "  PASSED\n";
     }
 
     // ========== Test 4: Power x^3 ==========
@@ -1613,8 +1627,8 @@ bool ModelTestGradientsAndHessians()
         problem->finalize();
 
         VectorDouble point = { 2.0 };
-        double expected_gradient = 3.0 * std::pow(2.0, 2.0);  // d/dx x^3 = 3*x^2 = 12
-        double expected_hessian = 6.0 * 2.0;                   // d^2/dx^2 x^3 = 6*x = 12
+        double expected_gradient = 3.0 * std::pow(2.0, 2.0); // d/dx x^3 = 3*x^2 = 12
+        double expected_hessian = 6.0 * 2.0; // d^2/dx^2 x^3 = 6*x = 12
 
         auto gradient = objective->calculateGradient(point, true);
         auto hessian = objective->calculateHessian(point, true);
@@ -1643,7 +1657,8 @@ bool ModelTestGradientsAndHessians()
             passed = false;
         }
 
-        if(passed) std::cout << "  PASSED\n";
+        if(passed)
+            std::cout << "  PASSED\n";
     }
 
     // ========== Test 5: Quadratic x^2 + 2*x*y + y^2 ==========
@@ -1659,9 +1674,9 @@ bool ModelTestGradientsAndHessians()
         problem->add(y);
 
         QuadraticTerms quadTerms;
-        quadTerms.add(std::make_shared<QuadraticTerm>(1.0, x, x));  // x^2
-        quadTerms.add(std::make_shared<QuadraticTerm>(2.0, x, y));  // 2*x*y
-        quadTerms.add(std::make_shared<QuadraticTerm>(1.0, y, y));  // y^2
+        quadTerms.add(std::make_shared<QuadraticTerm>(1.0, x, x)); // x^2
+        quadTerms.add(std::make_shared<QuadraticTerm>(2.0, x, y)); // 2*x*y
+        quadTerms.add(std::make_shared<QuadraticTerm>(1.0, y, y)); // y^2
 
         auto objective = std::make_shared<QuadraticObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
         objective->add(quadTerms);
@@ -1685,8 +1700,7 @@ bool ModelTestGradientsAndHessians()
         std::cout << "  At (1,2): gradient = [" << gradient[x] << ", " << gradient[y] << "]";
         std::cout << " (expected: [" << expected_grad_x << ", " << expected_grad_y << "])\n";
 
-        if(std::abs(gradient[x] - expected_grad_x) > tolerance ||
-           std::abs(gradient[y] - expected_grad_y) > tolerance)
+        if(std::abs(gradient[x] - expected_grad_x) > tolerance || std::abs(gradient[y] - expected_grad_y) > tolerance)
         {
             std::cout << "  FAILED: Gradient mismatch!\n";
             passed = false;
@@ -1695,20 +1709,21 @@ bool ModelTestGradientsAndHessians()
         auto key_xx = std::make_pair(x, x);
         auto key_yy = std::make_pair(y, y);
         auto key_xy = std::make_pair(x, y);
-        
+
         std::cout << "  Hessian: [[" << hessian[key_xx] << ", " << hessian[key_xy] << "], [";
         std::cout << hessian[key_xy] << ", " << hessian[key_yy] << "]]\n";
         std::cout << "  Expected: [[2, 2], [2, 2]]\n";
 
-        if(std::abs(hessian[key_xx] - expected_hess_xx) > tolerance ||
-           std::abs(hessian[key_yy] - expected_hess_yy) > tolerance ||
-           std::abs(hessian[key_xy] - expected_hess_xy) > tolerance)
+        if(std::abs(hessian[key_xx] - expected_hess_xx) > tolerance
+            || std::abs(hessian[key_yy] - expected_hess_yy) > tolerance
+            || std::abs(hessian[key_xy] - expected_hess_xy) > tolerance)
         {
             std::cout << "  FAILED: Hessian mismatch!\n";
             passed = false;
         }
 
-        if(passed) std::cout << "  PASSED\n";
+        if(passed)
+            std::cout << "  PASSED\n";
     }
 
     // ========== Test 6: Square root sqrt(x) ==========
@@ -1731,7 +1746,7 @@ bool ModelTestGradientsAndHessians()
         problem->finalize();
 
         VectorDouble point = { 4.0 };
-        double expected_gradient = 0.5 / std::sqrt(4.0);      // d/dx sqrt(x) = 1/(2*sqrt(x)) = 0.25
+        double expected_gradient = 0.5 / std::sqrt(4.0); // d/dx sqrt(x) = 1/(2*sqrt(x)) = 0.25
         double expected_hessian = -0.25 / std::pow(4.0, 1.5); // d^2/dx^2 sqrt(x) = -1/(4*x^1.5) = -1/32
 
         auto gradient = objective->calculateGradient(point, true);
@@ -1761,7 +1776,8 @@ bool ModelTestGradientsAndHessians()
             passed = false;
         }
 
-        if(passed) std::cout << "  PASSED\n";
+        if(passed)
+            std::cout << "  PASSED\n";
     }
 
     // ========== Test 7: Composite exp(x) * sin(y) ==========
@@ -1793,8 +1809,8 @@ bool ModelTestGradientsAndHessians()
         // f = exp(x) * sin(y)
         // df/dx = exp(x) * sin(y) = 1 * 1 = 1
         // df/dy = exp(x) * cos(y) = 1 * 0 = 0
-        double expected_grad_x = std::exp(0.0) * std::sin(pi_2);  // 1 * 1 = 1
-        double expected_grad_y = std::exp(0.0) * std::cos(pi_2);  // 1 * 0 = 0
+        double expected_grad_x = std::exp(0.0) * std::sin(pi_2); // 1 * 1 = 1
+        double expected_grad_y = std::exp(0.0) * std::cos(pi_2); // 1 * 0 = 0
 
         auto gradient = objective->calculateGradient(point, true);
         auto hessian = objective->calculateHessian(point, true);
@@ -1802,8 +1818,7 @@ bool ModelTestGradientsAndHessians()
         std::cout << "  At (0, pi/2): gradient = [" << gradient[x] << ", " << gradient[y] << "]";
         std::cout << " (expected: [" << expected_grad_x << ", " << expected_grad_y << "])\n";
 
-        if(std::abs(gradient[x] - expected_grad_x) > tolerance ||
-           std::abs(gradient[y] - expected_grad_y) > tolerance)
+        if(std::abs(gradient[x] - expected_grad_x) > tolerance || std::abs(gradient[y] - expected_grad_y) > tolerance)
         {
             std::cout << "  FAILED: Gradient mismatch!\n";
             passed = false;
@@ -1823,14 +1838,15 @@ bool ModelTestGradientsAndHessians()
         if(hessian.find(key_yy) != hessian.end())
             std::cout << "  Hessian[y,y] = " << hessian[key_yy] << " (expected: " << expected_hess_yy << ")\n";
 
-        if(hessian.find(key_xx) == hessian.end() || std::abs(hessian[key_xx] - expected_hess_xx) > tolerance ||
-           hessian.find(key_yy) == hessian.end() || std::abs(hessian[key_yy] - expected_hess_yy) > tolerance)
+        if(hessian.find(key_xx) == hessian.end() || std::abs(hessian[key_xx] - expected_hess_xx) > tolerance
+            || hessian.find(key_yy) == hessian.end() || std::abs(hessian[key_yy] - expected_hess_yy) > tolerance)
         {
             std::cout << "  FAILED: Hessian mismatch!\n";
             passed = false;
         }
 
-        if(passed) std::cout << "  PASSED\n";
+        if(passed)
+            std::cout << "  PASSED\n";
     }
 
     // ========== Test 8: Nonlinear constraint log(x) + exp(y) <= 10 ==========
@@ -1875,8 +1891,7 @@ bool ModelTestGradientsAndHessians()
         std::cout << "  At (2, 0): gradient = [" << gradient[x] << ", " << gradient[y] << "]";
         std::cout << " (expected: [" << expected_grad_x << ", " << expected_grad_y << "])\n";
 
-        if(std::abs(gradient[x] - expected_grad_x) > tolerance ||
-           std::abs(gradient[y] - expected_grad_y) > tolerance)
+        if(std::abs(gradient[x] - expected_grad_x) > tolerance || std::abs(gradient[y] - expected_grad_y) > tolerance)
         {
             std::cout << "  FAILED: Gradient mismatch!\n";
             passed = false;
@@ -1895,14 +1910,15 @@ bool ModelTestGradientsAndHessians()
         if(hessian.find(key_yy) != hessian.end())
             std::cout << "  Hessian[y,y] = " << hessian[key_yy] << " (expected: " << expected_hess_yy << ")\n";
 
-        if(hessian.find(key_xx) == hessian.end() || std::abs(hessian[key_xx] - expected_hess_xx) > tolerance ||
-           hessian.find(key_yy) == hessian.end() || std::abs(hessian[key_yy] - expected_hess_yy) > tolerance)
+        if(hessian.find(key_xx) == hessian.end() || std::abs(hessian[key_xx] - expected_hess_xx) > tolerance
+            || hessian.find(key_yy) == hessian.end() || std::abs(hessian[key_yy] - expected_hess_yy) > tolerance)
         {
             std::cout << "  FAILED: Hessian mismatch!\n";
             passed = false;
         }
 
-        if(passed) std::cout << "  PASSED\n";
+        if(passed)
+            std::cout << "  PASSED\n";
     }
 
     // ========== Test 9: Signomial term x^0.5 * y^1.5 ==========
@@ -1942,14 +1958,14 @@ bool ModelTestGradientsAndHessians()
         std::cout << "  At (4,1): gradient = [" << gradient[x] << ", " << gradient[y] << "]";
         std::cout << " (expected: [" << expected_grad_x << ", " << expected_grad_y << "])\n";
 
-        if(std::abs(gradient[x] - expected_grad_x) > tolerance ||
-           std::abs(gradient[y] - expected_grad_y) > tolerance)
+        if(std::abs(gradient[x] - expected_grad_x) > tolerance || std::abs(gradient[y] - expected_grad_y) > tolerance)
         {
             std::cout << "  FAILED: Gradient mismatch!\n";
             passed = false;
         }
 
-        if(passed) std::cout << "  PASSED\n";
+        if(passed)
+            std::cout << "  PASSED\n";
     }
 
     // ========== Test 10: Monomial term x*y*z ==========
@@ -1995,9 +2011,8 @@ bool ModelTestGradientsAndHessians()
         std::cout << "  At (2,3,4): gradient = [" << gradient[x] << ", " << gradient[y] << ", " << gradient[z] << "]";
         std::cout << " (expected: [" << expected_grad_x << ", " << expected_grad_y << ", " << expected_grad_z << "])\n";
 
-        if(std::abs(gradient[x] - expected_grad_x) > tolerance ||
-           std::abs(gradient[y] - expected_grad_y) > tolerance ||
-           std::abs(gradient[z] - expected_grad_z) > tolerance)
+        if(std::abs(gradient[x] - expected_grad_x) > tolerance || std::abs(gradient[y] - expected_grad_y) > tolerance
+            || std::abs(gradient[z] - expected_grad_z) > tolerance)
         {
             std::cout << "  FAILED: Gradient mismatch!\n";
             passed = false;
@@ -2015,15 +2030,16 @@ bool ModelTestGradientsAndHessians()
         if(hessian.find(key_yz) != hessian.end())
             std::cout << "  Hessian[y,z] = " << hessian[key_yz] << " (expected: 2)\n";
 
-        if(hessian.find(key_xy) == hessian.end() || std::abs(hessian[key_xy] - 4.0) > tolerance ||
-           hessian.find(key_xz) == hessian.end() || std::abs(hessian[key_xz] - 3.0) > tolerance ||
-           hessian.find(key_yz) == hessian.end() || std::abs(hessian[key_yz] - 2.0) > tolerance)
+        if(hessian.find(key_xy) == hessian.end() || std::abs(hessian[key_xy] - 4.0) > tolerance
+            || hessian.find(key_xz) == hessian.end() || std::abs(hessian[key_xz] - 3.0) > tolerance
+            || hessian.find(key_yz) == hessian.end() || std::abs(hessian[key_yz] - 2.0) > tolerance)
         {
             std::cout << "  FAILED: Hessian mismatch!\n";
             passed = false;
         }
 
-        if(passed) std::cout << "  PASSED\n";
+        if(passed)
+            std::cout << "  PASSED\n";
     }
 
     // ========== Test 11: Mixed objective with linear + quadratic + nonlinear ==========
@@ -2073,8 +2089,7 @@ bool ModelTestGradientsAndHessians()
         std::cout << "  At (1,0): gradient = [" << gradient[x] << ", " << gradient[y] << "]";
         std::cout << " (expected: [" << expected_grad_x << ", " << expected_grad_y << "])\n";
 
-        if(std::abs(gradient[x] - expected_grad_x) > tolerance ||
-           std::abs(gradient[y] - expected_grad_y) > tolerance)
+        if(std::abs(gradient[x] - expected_grad_x) > tolerance || std::abs(gradient[y] - expected_grad_y) > tolerance)
         {
             std::cout << "  FAILED: Gradient mismatch!\n";
             passed = false;
@@ -2086,14 +2101,15 @@ bool ModelTestGradientsAndHessians()
         std::cout << "  Hessian[x,x] = " << hessian[key_xx] << " (expected: " << expected_hess_xx << ")\n";
         std::cout << "  Hessian[y,y] = " << hessian[key_yy] << " (expected: " << expected_hess_yy << ")\n";
 
-        if(std::abs(hessian[key_xx] - expected_hess_xx) > tolerance ||
-           std::abs(hessian[key_yy] - expected_hess_yy) > tolerance)
+        if(std::abs(hessian[key_xx] - expected_hess_xx) > tolerance
+            || std::abs(hessian[key_yy] - expected_hess_yy) > tolerance)
         {
             std::cout << "  FAILED: Hessian mismatch!\n";
             passed = false;
         }
 
-        if(passed) std::cout << "  PASSED\n";
+        if(passed)
+            std::cout << "  PASSED\n";
     }
 
     // ========== Test 12: Mixed constraint with signomial + quadratic ==========
@@ -2148,8 +2164,7 @@ bool ModelTestGradientsAndHessians()
         std::cout << "  At (4,2): gradient = [" << gradient[x] << ", " << gradient[y] << "]";
         std::cout << " (expected: [" << expected_grad_x << ", " << expected_grad_y << "])\n";
 
-        if(std::abs(gradient[x] - expected_grad_x) > tolerance ||
-           std::abs(gradient[y] - expected_grad_y) > tolerance)
+        if(std::abs(gradient[x] - expected_grad_x) > tolerance || std::abs(gradient[y] - expected_grad_y) > tolerance)
         {
             std::cout << "  FAILED: Gradient mismatch!\n";
             passed = false;
@@ -2161,14 +2176,15 @@ bool ModelTestGradientsAndHessians()
         std::cout << "  Hessian[x,x] = " << hessian[key_xx] << " (expected: " << expected_hess_xx << ")\n";
         std::cout << "  Hessian[y,y] = " << hessian[key_yy] << " (expected: " << expected_hess_yy << ")\n";
 
-        if(std::abs(hessian[key_xx] - expected_hess_xx) > tolerance ||
-           std::abs(hessian[key_yy] - expected_hess_yy) > tolerance)
+        if(std::abs(hessian[key_xx] - expected_hess_xx) > tolerance
+            || std::abs(hessian[key_yy] - expected_hess_yy) > tolerance)
         {
             std::cout << "  FAILED: Hessian mismatch!\n";
             passed = false;
         }
 
-        if(passed) std::cout << "  PASSED\n";
+        if(passed)
+            std::cout << "  PASSED\n";
     }
 
     // ========== Test 13: Full problem with nonlinear objective and constraints ==========
@@ -2223,8 +2239,8 @@ bool ModelTestGradientsAndHessians()
         std::cout << "  Objective at (1,2): gradient = [" << obj_gradient[x] << ", " << obj_gradient[y] << "]";
         std::cout << " (expected: [" << expected_obj_grad_x << ", " << expected_obj_grad_y << "])\n";
 
-        if(std::abs(obj_gradient[x] - expected_obj_grad_x) > tolerance ||
-           std::abs(obj_gradient[y] - expected_obj_grad_y) > tolerance)
+        if(std::abs(obj_gradient[x] - expected_obj_grad_x) > tolerance
+            || std::abs(obj_gradient[y] - expected_obj_grad_y) > tolerance)
         {
             std::cout << "  FAILED: Objective gradient mismatch!\n";
             passed = false;
@@ -2242,8 +2258,8 @@ bool ModelTestGradientsAndHessians()
         std::cout << "  Constraint at (1,2): gradient = [" << constr_gradient[x] << ", " << constr_gradient[y] << "]";
         std::cout << " (expected: [" << expected_constr_grad_x << ", " << expected_constr_grad_y << "])\n";
 
-        if(std::abs(constr_gradient[x] - expected_constr_grad_x) > tolerance ||
-           std::abs(constr_gradient[y] - expected_constr_grad_y) > tolerance)
+        if(std::abs(constr_gradient[x] - expected_constr_grad_x) > tolerance
+            || std::abs(constr_gradient[y] - expected_constr_grad_y) > tolerance)
         {
             std::cout << "  FAILED: Constraint gradient mismatch!\n";
             passed = false;
@@ -2259,15 +2275,16 @@ bool ModelTestGradientsAndHessians()
         std::cout << "  Constr Hessian[x,x] = " << constr_hessian[key_xx] << " (expected: " << std::exp(1.0) << ")\n";
         std::cout << "  Constr Hessian[y,y] = " << constr_hessian[key_yy] << " (expected: 2)\n";
 
-        if(std::abs(obj_hessian[key_xx] - (-1.0)) > tolerance ||
-           std::abs(constr_hessian[key_xx] - std::exp(1.0)) > tolerance ||
-           std::abs(constr_hessian[key_yy] - 2.0) > tolerance)
+        if(std::abs(obj_hessian[key_xx] - (-1.0)) > tolerance
+            || std::abs(constr_hessian[key_xx] - std::exp(1.0)) > tolerance
+            || std::abs(constr_hessian[key_yy] - 2.0) > tolerance)
         {
             std::cout << "  FAILED: Hessian mismatch!\n";
             passed = false;
         }
 
-        if(passed) std::cout << "  PASSED\n";
+        if(passed)
+            std::cout << "  PASSED\n";
     }
 
     if(passed)
@@ -2497,6 +2514,149 @@ bool ModelTestSquareRootReformulation()
         std::cout << "\nSUCCESS: Square root reformulation correctly converted to quadratic constraint\n";
     else
         std::cout << "\nFAILED: Square root reformulation test\n";
+
+    return passed;
+}
+
+bool ModelTestFinalizeCalledTwice()
+{
+    bool passed = true;
+
+    std::cout << "Testing that calling finalize() twice warns and the solver still works:\n";
+
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+
+    SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
+    problem->name = "FinalizeTwiceTest";
+    env->problem = problem;
+
+    auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 100.0);
+    auto var_y = std::make_shared<SHOT::Variable>("y", 1, SHOT::E_VariableType::Integer, 0.0, 1.0);
+    SHOT::ExpressionVariablePtr expressionVariable_y = std::make_shared<SHOT::ExpressionVariable>(var_y);
+
+    problem->add(SHOT::Variables({ var_x, var_y }));
+
+    SHOT::LinearObjectiveFunctionPtr objectiveFunction
+        = std::make_shared<SHOT::LinearObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize);
+    SHOT::LinearTermPtr objLinearTerm1 = std::make_shared<SHOT::LinearTerm>(1.0, var_x);
+    SHOT::LinearTermPtr objLinearTerm2 = std::make_shared<SHOT::LinearTerm>(1.0, var_y);
+    SHOT::LinearTerms objLinearTerms;
+    objLinearTerms.add(objLinearTerm1);
+    objLinearTerms.add(objLinearTerm2);
+    objectiveFunction->add(objLinearTerms);
+    problem->add(objectiveFunction);
+
+    SHOT::NonlinearExpressionPtr exprConstant = std::make_shared<SHOT::ExpressionConstant>(3);
+    SHOT::NonlinearExpressionPtr exprPower
+        = std::make_shared<SHOT::ExpressionPower>(expressionVariable_y, exprConstant);
+    SHOT::NonlinearConstraintPtr nonlinearConstraint
+        = std::make_shared<SHOT::NonlinearConstraint>(0, "nlconstr", exprPower, -10.0, 20.0);
+    problem->add(nonlinearConstraint);
+
+    std::cout << "\nCalling finalize() for the first time:\n";
+    problem->finalize();
+
+    int numVarsAfterFirst = problem->properties.numberOfVariables;
+    int numConstrsAfterFirst = problem->properties.numberOfNumericConstraints;
+
+    std::cout << "After first finalize(): " << numVarsAfterFirst << " variable(s), " << numConstrsAfterFirst
+              << " constraint(s).\n";
+
+    std::cout << "\nCalling finalize() for the second time (should warn and return early):\n";
+    problem->finalize();
+
+    std::cout << "Second finalize() returned (expected a warning above).\n";
+
+    // Properties should be unchanged since the second call was a no-op
+    if(problem->properties.numberOfVariables != numVarsAfterFirst)
+    {
+        std::cout << "FAILED: Variable count changed after second finalize().\n";
+        passed = false;
+    }
+
+    if(problem->properties.numberOfNumericConstraints != numConstrsAfterFirst)
+    {
+        std::cout << "FAILED: Constraint count changed after second finalize().\n";
+        passed = false;
+    }
+
+    // Verify the solver can accept the already-finalized problem
+    if(!solver->setProblem(problem))
+    {
+        std::cout << "FAILED: solver->setProblem() failed after finalize() was called.\n";
+        passed = false;
+    }
+
+    if(passed)
+        std::cout << "\nSUCCESS: Second finalize() warned and returned early; solver accepted the problem.\n";
+    else
+        std::cout << "\nFAILED: Double finalize test.\n";
+
+    return passed;
+}
+
+bool ModelTestFinalizeNoObjective()
+{
+    bool passed = true;
+
+    std::cout << "Testing that finalize() throws error when no objective function is set:\n";
+
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+
+    SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
+    problem->name = "NoObjectiveTest";
+    env->problem = problem;
+
+    auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 100.0);
+    problem->add(SHOT::Variables({ var_x }));
+
+    // Intentionally no objective function added
+
+    try
+    {
+        problem->finalize();
+        std::cout << "FAILED: finalize() did not throw error with no objective function.\n";
+        passed = false;
+    }
+    catch(const std::runtime_error& e)
+    {
+        std::cout << "SUCCESS: finalize() threw std::runtime_error as expected: " << e.what() << "\n";
+    }
+
+    return passed;
+}
+
+bool ModelTestFinalizeNoVariables()
+{
+    bool passed = true;
+
+    std::cout << "Testing that finalize() throws error when no variables are added:\n";
+
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+
+    SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
+    problem->name = "NoVariablesTest";
+    env->problem = problem;
+
+    SHOT::LinearObjectiveFunctionPtr objectiveFunction
+        = std::make_shared<SHOT::LinearObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize);
+    problem->add(objectiveFunction);
+
+    // Intentionally no variables added
+
+    try
+    {
+        problem->finalize();
+        std::cout << "FAILED: finalize() did not throw with no variables.\n";
+        passed = false;
+    }
+    catch(const std::runtime_error& e)
+    {
+        std::cout << "SUCCESS: finalize() threw std::runtime_error as expected: " << e.what() << "\n";
+    }
 
     return passed;
 }
