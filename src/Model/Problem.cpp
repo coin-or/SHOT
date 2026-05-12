@@ -85,8 +85,7 @@ void Problem::updateConstraints()
         }
     }
 
-    auto useNonconvexQuadraticStrategy = static_cast<ES_QuadraticProblemStrategy>(env->settings->getSetting<int>(
-                                             "Reformulation.Quadratics.Strategy", "Model"))
+    auto useNonconvexQuadraticStrategy = static_cast<ES_QuadraticProblemStrategy>(env->settings->getSetting<int>("Model.Reformulation.Quadratics.Strategy"))
         != ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained;
 
     env->output->outputTrace(" Standardizing quadratic constraints");
@@ -325,7 +324,7 @@ void Problem::updateConstraints()
 
 void Problem::updateConvexity()
 {
-    bool assumeConvex = env->settings->getSetting<bool>("Convexity.AssumeConvex", "Model");
+    bool assumeConvex = env->settings->getSetting<bool>("Model.Convexity.AssumeConvex");
 
     if(assumeConvex && objectiveFunction->properties.convexity != E_Convexity::Linear)
         objectiveFunction->properties.convexity
@@ -902,9 +901,9 @@ void Problem::finalize()
     updateProperties();
 
     // Extract quadratic, monomial and signomial terms from nonlinear expressions based on settings
-    bool extractMonomialTerms = env->settings->getSetting<bool>("Reformulation.Monomials.Extract", "Model");
-    bool extractSignomialTerms = env->settings->getSetting<bool>("Reformulation.Signomials.Extract", "Model");
-    bool extractQuadraticTerms = (env->settings->getSetting<int>("Reformulation.Quadratics.ExtractStrategy", "Model")
+    bool extractMonomialTerms = env->settings->getSetting<bool>("Model.Reformulation.Monomials.Extract");
+    bool extractSignomialTerms = env->settings->getSetting<bool>("Model.Reformulation.Signomials.Extract");
+    bool extractQuadraticTerms = (env->settings->getSetting<int>("Model.Reformulation.Quadratics.ExtractStrategy")
         >= static_cast<int>(ES_QuadraticTermsExtractStrategy::ExtractTermsToSame));
 
     simplifyNonlinearExpressions(
@@ -915,10 +914,10 @@ void Problem::finalize()
     updateFactorableFunctions();
     assert(verifyOwnership());
 
-    if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+    if(env->settings->getSetting<bool>("Output.Debug.Enable"))
         getConstraintsJacobianSparsityPattern();
 
-    if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+    if(env->settings->getSetting<bool>("Output.Debug.Enable"))
         getLagrangianHessianSparsityPattern();
 }
 
@@ -1231,10 +1230,10 @@ std::shared_ptr<std::vector<std::pair<NumericConstraintPtr, Variables>>>
         constraintGradientSparsityPattern->push_back(std::make_pair(C, *C->getGradientSparsityPattern()));
     }
 
-    if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+    if(env->settings->getSetting<bool>("Output.Debug.Enable"))
     {
         std::stringstream filename;
-        filename << env->settings->getSetting<std::string>("Debug.Path", "Output");
+        filename << env->settings->getSetting<std::string>("Output.Debug.Path");
 
         filename << "/sparsitypattern_jacobian";
 
@@ -1326,10 +1325,10 @@ std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> Problem::getLa
         }
     }
 
-    if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+    if(env->settings->getSetting<bool>("Output.Debug.Enable"))
     {
         std::stringstream filename;
-        filename << env->settings->getSetting<std::string>("Debug.Path", "Output");
+        filename << env->settings->getSetting<std::string>("Output.Debug.Path");
         filename << "/sparsitypattern_hessianoflagrangian";
 
         if(properties.isReformulated)
@@ -1822,10 +1821,10 @@ void Problem::doFBBT()
         env->output->outputInfo(" Performing bound tightening on original problem.");
     }
 
-    int numberOfIterations = env->settings->getSetting<int>("BoundTightening.FeasibilityBased.MaxIterations", "Model");
-    double timeLimit = env->settings->getSetting<double>("BoundTightening.FeasibilityBased.TimeLimit", "Model");
+    int numberOfIterations = env->settings->getSetting<int>("Model.BoundTightening.FeasibilityBased.MaxIterations");
+    double timeLimit = env->settings->getSetting<double>("Model.BoundTightening.FeasibilityBased.TimeLimit");
     bool useNonlinearBoundTightening
-        = env->settings->getSetting<bool>("BoundTightening.FeasibilityBased.UseNonlinear", "Model");
+        = env->settings->getSetting<bool>("Model.BoundTightening.FeasibilityBased.UseNonlinear");
 
     bool stopTightening = false;
 
@@ -2468,10 +2467,10 @@ ProblemPtr Problem::createCopy(
 {
     auto destinationProblem = std::make_shared<Problem>(destinationEnv);
 
-    double minLBCont = destinationEnv->settings->getSetting<double>("Variables.Continuous.MinimumLowerBound", "Model");
-    double maxUBCont = destinationEnv->settings->getSetting<double>("Variables.Continuous.MaximumUpperBound", "Model");
-    double minLBInt = destinationEnv->settings->getSetting<double>("Variables.Integer.MinimumLowerBound", "Model");
-    double maxUBInt = destinationEnv->settings->getSetting<double>("Variables.Integer.MaximumUpperBound", "Model");
+    double minLBCont = destinationEnv->settings->getSetting<double>("Model.Variables.Continuous.MinimumLowerBound");
+    double maxUBCont = destinationEnv->settings->getSetting<double>("Model.Variables.Continuous.MaximumUpperBound");
+    double minLBInt = destinationEnv->settings->getSetting<double>("Model.Variables.Integer.MinimumLowerBound");
+    double maxUBInt = destinationEnv->settings->getSetting<double>("Model.Variables.Integer.MaximumUpperBound");
 
     // Copying variables
     for(auto& V : this->allVariables)

@@ -28,7 +28,7 @@ bool HighsTest1(std::string filename, double correctObjectiveValue)
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
     auto env = solver->getEnvironment();
 
-    solver->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Highs));
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Highs));
 
     try
     {
@@ -114,9 +114,9 @@ bool HighsTerminationCallbackTest(std::string filename)
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
     auto env = solver->getEnvironment();
 
-    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Error));
-    solver->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Highs));
-    solver->updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::MultiTree));
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Error));
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Highs));
+    solver->updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::MultiTree));
 
     std::cout << "Reading problem:  " << filename << '\n';
 

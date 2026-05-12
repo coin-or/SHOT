@@ -73,18 +73,18 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
     auto currIter = env->results->getCurrentIteration(); // The unsolved new iteration
 
     auto constraintSelectionFactor
-        = env->settings->getSetting<double>("HyperplaneCuts.ConstraintSelectionFactor", "Dual");
-    bool useUniqueConstraints = env->settings->getSetting<bool>("ESH.Rootsearch.UniqueConstraints", "Dual");
+        = env->settings->getSetting<double>("Dual.HyperplaneCuts.ConstraintSelectionFactor");
+    bool useUniqueConstraints = env->settings->getSetting<bool>("Dual.ESH.Rootsearch.UniqueConstraints");
 
-    int rootMaxIter = env->settings->getSetting<int>("Rootsearch.MaxIterations", "Subsolver");
-    double rootTerminationTolerance = env->settings->getSetting<double>("Rootsearch.TerminationTolerance", "Subsolver");
+    int rootMaxIter = env->settings->getSetting<int>("Subsolver.Rootsearch.MaxIterations");
+    double rootTerminationTolerance = env->settings->getSetting<double>("Subsolver.Rootsearch.TerminationTolerance");
     double rootActiveConstraintTolerance
-        = env->settings->getSetting<double>("Rootsearch.ActiveConstraintTolerance", "Subsolver");
-    int maxHyperplanesPerIter = env->settings->getSetting<int>("HyperplaneCuts.MaxPerIteration", "Dual");
+        = env->settings->getSetting<double>("Subsolver.Rootsearch.ActiveConstraintTolerance");
+    int maxHyperplanesPerIter = env->settings->getSetting<int>("Dual.HyperplaneCuts.MaxPerIteration");
     double rootsearchConstraintTolerance
-        = env->settings->getSetting<double>("ESH.Rootsearch.ConstraintTolerance", "Dual");
+        = env->settings->getSetting<double>("Dual.ESH.Rootsearch.ConstraintTolerance");
     double constraintMaxSelectionFactor
-        = env->settings->getSetting<double>("HyperplaneCuts.MaxConstraintFactor", "Dual");
+        = env->settings->getSetting<double>("Dual.HyperplaneCuts.MaxConstraintFactor");
 
     // Contains boolean array that indicates if a constraint has been added or not
     std::vector<bool> hyperplaneAddedToConstraint(
@@ -93,7 +93,7 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
     std::vector<std::tuple<int, int, NumericConstraintValues>> selectedNumericValues;
     std::vector<std::tuple<int, int, NumericConstraintValues>> nonconvexSelectedNumericValues;
 
-    bool useMaxFunction = env->settings->getSetting<bool>("ESH.Rootsearch.UseMaxFunction", "Dual");
+    bool useMaxFunction = env->settings->getSetting<bool>("Dual.ESH.Rootsearch.UseMaxFunction");
 
     if(useMaxFunction)
         constraintSelectionFactor = 1.0;

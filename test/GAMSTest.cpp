@@ -84,7 +84,7 @@ bool TestRootsearchGAMS(const std::string& problemFile)
     auto solver = std::make_unique<SHOT::Solver>();
     auto env = solver->getEnvironment();
 
-    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Debug));
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Debug));
 
     env->modelingSystem = std::make_shared<SHOT::ModelingSystemGAMS>(env);
     SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
@@ -170,7 +170,7 @@ bool TestGradientGAMS(const std::string& problemFile)
     auto solver = std::make_unique<SHOT::Solver>();
     auto env = solver->getEnvironment();
 
-    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Debug));
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Debug));
 
     env->modelingSystem = std::make_shared<SHOT::ModelingSystemGAMS>(env);
     SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
@@ -225,7 +225,7 @@ bool TestReformulateProblemGAMS(const std::string& problemFile)
     auto solver = std::make_unique<SHOT::Solver>();
     auto env = solver->getEnvironment();
 
-    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Debug));
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Debug));
 
     env->modelingSystem = std::make_shared<SHOT::ModelingSystemGAMS>(env);
     SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);

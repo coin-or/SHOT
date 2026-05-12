@@ -80,14 +80,33 @@ private:
     std::map<PairString, int> integerSettings;
     std::map<PairString, bool> booleanSettings;
 
+    // Per-priority history: for each setting key, a map of priority (int) → stored value.
+    // All writes at any priority level are recorded here; the active *Settings maps hold the current winning value.
+    std::map<PairString, std::map<int, std::string>> stringSettingHistory;
+    std::map<PairString, std::map<int, double>>      doubleSettingHistory;
+    std::map<PairString, std::map<int, int>>         integerSettingHistory;
+    std::map<PairString, std::map<int, bool>>        booleanSettingHistory;
+
+    // The highest priority at which the active value was written (0 = default).
+    std::map<PairString, int> settingActivePriority;
+
     std::map<PairString, PairString> settingGroupDescriptions;
     std::map<PairString, std::string> settingDescriptions;
 
     std::map<PairString, E_SettingType> settingTypes;
     std::map<PairString, bool> settingIsPrivate;
-    std::map<PairString, bool> settingIsDefaultValue;
     std::map<PairString, PairDouble> settingBounds;
     std::map<PairString, bool> settingEnums;
+
+    // Splits "Category.Name.Sub" at the first dot into {category, remainder}.
+    // E.g. "Dual.MIP.Solver" -> {"Dual", "MIP.Solver"}
+    static PairString splitKey(const std::string& settingName)
+    {
+        auto dot = settingName.find('.');
+        if(dot == std::string::npos)
+            return { settingName, "" };
+        return { settingName.substr(0, dot), settingName.substr(dot + 1) };
+    }
 
     using TupleStringPairInt = std::tuple<std::string, std::string, int>;
     std::map<TupleStringPairInt, std::string> enumDescriptions;
@@ -99,7 +118,18 @@ public:
 
     ~Settings();
 
-    template <typename T> void updateSetting(std::string name, std::string category, T value);
+    template <typename T>
+    void updateSetting(std::string name, std::string category, T value,
+        E_SettingPriority priority = E_SettingPriority::SolverInternal);
+
+    // Single-string form: updateSetting("Category.Name", value [, priority])
+    template <typename T>
+    void updateSetting(std::string settingName, T value,
+        E_SettingPriority priority = E_SettingPriority::SolverInternal)
+    {
+        auto [cat, name] = splitKey(settingName);
+        updateSetting(name, cat, value, priority);
+    }
 
     // template <typename T> T getSetting(std::string name, std::string category);
 
@@ -150,9 +180,22 @@ public:
         return (value->second);
     }
 
+    // Single-string form: getSetting<T>("Category.Name")
+    template <typename T> T getSetting(std::string settingName)
+    {
+        auto [cat, name] = splitKey(settingName);
+        return getSetting<T>(name, cat);
+    }
+
     std::string getSettingDescription(std::string name, std::string category)
     {
         return settingDescriptions.at(PairString(category, name));
+    }
+
+    std::string getSettingDescription(std::string settingName)
+    {
+        auto [cat, name] = splitKey(settingName);
+        return getSettingDescription(name, cat);
     }
 
     PairDouble getSettingBounds(std::string name, std::string category)
@@ -160,20 +203,24 @@ public:
         return settingBounds.at(PairString(category, name));
     }
 
-    void createSetting(
-        std::string name, std::string category, std::string value, std::string description, bool isPrivate = false);
+    PairDouble getSettingBounds(std::string settingName)
+    {
+        auto [cat, name] = splitKey(settingName);
+        return getSettingBounds(name, cat);
+    }
 
-    void createSetting(std::string name, std::string category, int value, std::string description, double minVal = 0,
-        double maxVal = SHOT_INT_MAX, bool isPrivate = false);
+    void createSetting(std::string settingName, std::string value, std::string description, bool isPrivate = false);
 
-    void createSetting(std::string name, std::string category, double value, std::string description,
+    void createSetting(std::string settingName, int value, std::string description,
+        double minVal = 0, double maxVal = SHOT_INT_MAX, bool isPrivate = false);
+
+    void createSetting(std::string settingName, double value, std::string description,
         double minVal = SHOT_DBL_MIN, double maxVal = SHOT_DBL_MAX, bool isPrivate = false);
 
-    void createSetting(std::string name, std::string category, int value, std::string description,
+    void createSetting(std::string settingName, int value, std::string description,
         VectorString enumDesc, int startValue = 0, bool isPrivate = false);
 
-    void createSetting(
-        std::string name, std::string category, bool value, std::string description, bool isPrivate = false);
+    void createSetting(std::string settingName, bool value, std::string description, bool isPrivate = false);
 
     void createSettingGroup(std::string mainLevel, std::string subLevel, std::string header, std::string description)
     {
@@ -197,7 +244,96 @@ public:
     VectorString getSettingIdentifiers(E_SettingType type);
     VectorPairString getSettingSplitIdentifiers(E_SettingType type);
 
+    // Priority query methods
+    E_SettingPriority getSettingPriority(std::string name, std::string category);
+    E_SettingPriority getSettingPriority(std::string settingName)
+    {
+        auto [cat, name] = splitKey(settingName);
+        return getSettingPriority(name, cat);
+    }
+
+    bool isSettingAtDefault(std::string name, std::string category);
+    bool isSettingAtDefault(std::string settingName)
+    {
+        auto [cat, name] = splitKey(settingName);
+        return isSettingAtDefault(name, cat);
+    }
+
+    VectorString getSettingsAtPriority(E_SettingPriority priority);
+
+    bool hasSettingAtPriority(std::string name, std::string category, E_SettingPriority priority);
+    bool hasSettingAtPriority(std::string settingName, E_SettingPriority priority)
+    {
+        auto [cat, name] = splitKey(settingName);
+        return hasSettingAtPriority(name, cat, priority);
+    }
+
+    std::vector<E_SettingPriority> getSettingPriorityHistory(std::string name, std::string category);
+    std::vector<E_SettingPriority> getSettingPriorityHistory(std::string settingName)
+    {
+        auto [cat, name] = splitKey(settingName);
+        return getSettingPriorityHistory(name, cat);
+    }
+
+    template <typename T>
+    T getSettingAtPriority(std::string name, std::string category, E_SettingPriority priority)
+    {
+        using value_type
+#ifndef _MSC_VER
+            [[maybe_unused]]
+#endif
+            = typename std::enable_if<std::is_same<std::string, T>::value || std::is_same<double, T>::value
+                    || std::is_same<int, T>::value || std::is_same<bool, T>::value,
+                T>::type;
+
+        PairString key = make_pair(category, name);
+        int prio = static_cast<int>(priority);
+
+        if(settingTypes.find(key) == settingTypes.end())
+        {
+            output->outputError("Cannot get setting " + category + "." + name + " since it has not been defined.");
+            throw SettingKeyNotFoundException(name, category);
+        }
+
+        if constexpr(std::is_same_v<T, std::string>)
+        {
+            auto it = stringSettingHistory.find(key);
+            if(it == stringSettingHistory.end() || it->second.find(prio) == it->second.end())
+                throw SettingKeyNotFoundException(name, category);
+            return it->second.at(prio);
+        }
+        else if constexpr(std::is_same_v<T, int>)
+        {
+            auto it = integerSettingHistory.find(key);
+            if(it == integerSettingHistory.end() || it->second.find(prio) == it->second.end())
+                throw SettingKeyNotFoundException(name, category);
+            return it->second.at(prio);
+        }
+        else if constexpr(std::is_same_v<T, double>)
+        {
+            auto it = doubleSettingHistory.find(key);
+            if(it == doubleSettingHistory.end() || it->second.find(prio) == it->second.end())
+                throw SettingKeyNotFoundException(name, category);
+            return it->second.at(prio);
+        }
+        else if constexpr(std::is_same_v<T, bool>)
+        {
+            auto it = booleanSettingHistory.find(key);
+            if(it == booleanSettingHistory.end() || it->second.find(prio) == it->second.end())
+                throw SettingKeyNotFoundException(name, category);
+            return it->second.at(prio);
+        }
+    }
+
+    template <typename T>
+    T getSettingAtPriority(std::string settingName, E_SettingPriority priority)
+    {
+        auto [cat, name] = splitKey(settingName);
+        return getSettingAtPriority<T>(name, cat, priority);
+    }
+
     bool readSettingsFromOSoL(std::string osol);
     bool readSettingsFromString(std::string options);
+
 };
 } // namespace SHOT

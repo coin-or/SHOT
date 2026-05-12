@@ -108,7 +108,7 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
     // auto tReformulateProblem = std::make_shared<TaskReformulateProblem>(env);
     // env->tasks->addTask(tReformulateProblem, "ReformulateProb");
 
-    if(env->settings->getSetting<int>("CutStrategy", "Dual") == (int)ES_HyperplaneCutStrategy::ESH
+    if(env->settings->getSetting<int>("Dual.CutStrategy") == (int)ES_HyperplaneCutStrategy::ESH
         && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
     {
         auto tFindIntPoint = std::make_shared<TaskFindInteriorPoint>(env);
@@ -130,7 +130,7 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
     auto tUpdateExternalDualBound = std::make_shared<TaskUpdateExternalDualBound>(env);
     env->tasks->addTask(tUpdateExternalDualBound, "UpdateExternalDualBound");
 
-    if(env->settings->getSetting<bool>("Relaxation.Use", "Dual")
+    if(env->settings->getSetting<bool>("Dual.Relaxation.Use")
         && env->reformulatedProblem->properties.numberOfSemicontinuousVariables == 0
         && env->reformulatedProblem->properties.numberOfSemiintegerVariables == 0)
     {
@@ -138,7 +138,7 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
         env->tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategyInitial");
     }
 
-    if(static_cast<ES_MIPPresolveStrategy>(env->settings->getSetting<int>("MIP.Presolve.Frequency", "Dual"))
+    if(static_cast<ES_MIPPresolveStrategy>(env->settings->getSetting<int>("Dual.MIP.Presolve.Frequency"))
         != ES_MIPPresolveStrategy::Never)
     {
         auto tPresolve = std::make_shared<TaskPresolve>(env);
@@ -149,7 +149,7 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
     env->tasks->addTask(tSolveIteration, "SolveIter");
 
     if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex
-        && env->settings->getSetting<bool>("ConvexBounding.Use", "Dual"))
+        && env->settings->getSetting<bool>("Dual.ConvexBounding.Use"))
     {
         auto tPerformConvexBounding = std::make_shared<TaskPerformConvexBounding>(env);
         env->tasks->addTask(tPerformConvexBounding, "ConvexBounding");
@@ -159,7 +159,7 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
     env->tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
     std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
 
-    if(env->settings->getSetting<bool>("Rootsearch.Use", "Primal")
+    if(env->settings->getSetting<bool>("Primal.Rootsearch.Use")
         && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
     {
         auto tSelectPrimRootsearch = std::make_shared<TaskSelectPrimalCandidatesFromRootsearch>(env);
@@ -175,7 +175,7 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
     env->tasks->addTask(tPrintIterReport, "PrintIterReport");
 
     if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex
-        && env->settings->getSetting<bool>("MIP.InfeasibilityRepair.Use", "Dual"))
+        && env->settings->getSetting<bool>("Dual.MIP.InfeasibilityRepair.Use"))
     {
         auto tRepairInfeasibility
             = std::make_shared<TaskRepairInfeasibleDualProblem>(env, "CheckPrimalStag", "CheckAbsGap");
@@ -205,7 +205,7 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
     env->tasks->addTask(tCheckIterError, "CheckIterError");
 
     if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex
-        && env->settings->getSetting<bool>("ReductionCut.Use", "Dual"))
+        && env->settings->getSetting<bool>("Dual.ReductionCut.Use"))
     {
         auto tCheckMaxNumberOfObjectiveCuts
             = std::make_shared<TaskCheckMaxNumberOfPrimalReductionCuts>(env, "FinalizeSolution");
@@ -225,14 +225,14 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
         = std::make_shared<TaskCheckMaxNumberOfPrimalReductionCuts>(env, "FinalizeSolution");
     env->tasks->addTask(tCheckMaxNumberOfObjectiveCuts, "CheckMaxObjectiveCuts");
 
-    if(env->settings->getSetting<bool>("FixedInteger.Use", "Primal") && env->reformulatedProblem->properties.isDiscrete)
+    if(env->settings->getSetting<bool>("Primal.FixedInteger.Use") && env->reformulatedProblem->properties.isDiscrete)
     {
         auto tSelectPrimFixedNLPSolPool = std::make_shared<TaskSelectPrimalFixedNLPPointsFromSolutionPool>(env);
         env->tasks->addTask(tSelectPrimFixedNLPSolPool, "SelectPrimFixedNLPSolPool");
         std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tSelectPrimFixedNLPSolPool);
 
         auto NLPProblemSource = static_cast<ES_PrimalNLPProblemSource>(
-            env->settings->getSetting<int>("FixedInteger.SourceProblem", "Primal"));
+            env->settings->getSetting<int>("Primal.FixedInteger.SourceProblem"));
 
         if(NLPProblemSource == ES_PrimalNLPProblemSource::Both
             || NLPProblemSource == ES_PrimalNLPProblemSource::OriginalProblem)
@@ -260,13 +260,13 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
 
     env->tasks->addTask(tInitializeIteration, "InitIter2");
 
-    if(env->settings->getSetting<bool>("TreeStrategy.Multi.Reinitialize", "Dual"))
+    if(env->settings->getSetting<bool>("Dual.TreeStrategy.Multi.Reinitialize"))
     {
         env->tasks->addTask(tInitMIPSolver, "InitMIPSolver");
         env->tasks->addTask(tCreateDualProblem, "CreateMILPProblem");
     }
 
-    if(env->settings->getSetting<bool>("Relaxation.Use", "Dual")
+    if(env->settings->getSetting<bool>("Dual.Relaxation.Use")
         && env->reformulatedProblem->properties.numberOfSemicontinuousVariables == 0
         && env->reformulatedProblem->properties.numberOfSemiintegerVariables == 0)
     {
@@ -279,7 +279,7 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
 
     if(env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
     {
-        if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
+        if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("Dual.CutStrategy"))
             == ES_HyperplaneCutStrategy::ESH)
         {
             auto tUpdateInteriorPoint = std::make_shared<TaskUpdateInteriorPoint>(env);
@@ -288,7 +288,7 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
             auto tSelectHPPts = std::make_shared<TaskSelectHyperplanesESH>(env);
             env->tasks->addTask(tSelectHPPts, "SelectHPPts");
         }
-        else if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
+        else if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("Dual.CutStrategy"))
             == ES_HyperplaneCutStrategy::ECP)
         {
             auto tSelectHPPts = std::make_shared<TaskSelectHyperplanesECP>(env);
@@ -308,13 +308,13 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
 
     env->tasks->addTask(tAddHPs, "AddHPs");
 
-    if(env->settings->getSetting<bool>("HyperplaneCuts.UseIntegerCuts", "Dual"))
+    if(env->settings->getSetting<bool>("Dual.HyperplaneCuts.UseIntegerCuts"))
     {
         auto tAddICs = std::make_shared<TaskAddIntegerCuts>(env);
         env->tasks->addTask(tAddICs, "AddICs");
     }
 
-    if(static_cast<ES_MIPPresolveStrategy>(env->settings->getSetting<int>("MIP.Presolve.Frequency", "Dual"))
+    if(static_cast<ES_MIPPresolveStrategy>(env->settings->getSetting<int>("Dual.MIP.Presolve.Frequency"))
         != ES_MIPPresolveStrategy::Never)
     {
         auto tPresolve = std::make_shared<TaskPresolve>(env);
@@ -329,7 +329,7 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
     env->tasks->addTask(tFinalizeSolution, "FinalizeSolution");
 
     if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex
-        && env->settings->getSetting<bool>("ReductionCut.Use", "Dual"))
+        && env->settings->getSetting<bool>("Dual.ReductionCut.Use"))
     {
         auto tAddObjectiveCutFinal = std::make_shared<TaskAddPrimalReductionCut>(env, "InitIter2", "Terminate");
         std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tAddObjectiveCutFinal);

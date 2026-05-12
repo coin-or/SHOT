@@ -240,7 +240,7 @@ class TestNewPrimalSolutionCallback:
                 "gap": data.relativeGap,
             })
 
-        solver.updateSetting("Console.LogLevel", "Output", 6)  # Off
+        solver.updateSetting("Output.Console.LogLevel", 6)  # Off
         problem = build_ex1223b(env)
         solver.setProblem(problem)
         solver.registerCallback(SHOTpy.EventType.NewPrimalSolution, on_new_primal)
@@ -260,7 +260,7 @@ class TestNewPrimalSolutionCallback:
         def on_new_primal(data):
             received.append(data)
 
-        solver.updateSetting("Console.LogLevel", "Output", 6)
+        solver.updateSetting("Output.Console.LogLevel", 6)
         problem = build_ex1223b(env)
         solver.setProblem(problem)
         solver.registerCallback(SHOTpy.EventType.NewPrimalSolution, on_new_primal)
@@ -292,7 +292,7 @@ class TestPrimalSolutionCandidateSelectionCallback:
             call_log.append(data.objectiveValue)
             return True  # accept all
 
-        solver.updateSetting("Console.LogLevel", "Output", 2)
+        solver.updateSetting("Output.Console.LogLevel", 2)
         problem = build_ex1223b(env)
         solver.setProblem(problem)
         solver.registerCallback(SHOTpy.EventType.PrimalSolutionCandidateSelection, on_candidate)
@@ -304,7 +304,7 @@ class TestPrimalSolutionCandidateSelectionCallback:
         """Returning None is treated as accept — solver still finds a solution."""
         import SHOTpy
 
-        solver.updateSetting("Console.LogLevel", "Output", 2)
+        solver.updateSetting("Output.Console.LogLevel", 2)
         problem = build_ex1223b(env)
         solver.setProblem(problem)
         solver.registerCallback(SHOTpy.EventType.PrimalSolutionCandidateSelection, lambda d: None)
@@ -322,9 +322,9 @@ class TestPrimalSolutionCandidateSelectionCallback:
             rejected[0] += 1
             return False  # reject everything
 
-        solver.updateSetting("Console.LogLevel", "Output", 2)
+        solver.updateSetting("Output.Console.LogLevel", 2)
         # Cap iterations so the test does not run forever with no primal bound
-        solver.updateSetting("IterationLimit", "Termination", 10)
+        solver.updateSetting("Termination.IterationLimit", 10)
         problem = build_ex1223b(env)
         solver.setProblem(problem)
         solver.registerCallback(SHOTpy.EventType.PrimalSolutionCandidateSelection, reject_all)
@@ -342,7 +342,7 @@ class TestPrimalSolutionCandidateSelectionCallback:
 
         # ── Run 1: accept everything ──────────────────────────────────────────
         solver1 = SHOTpy.Solver()
-        solver1.updateSetting("Console.LogLevel", "Output", 2)
+        solver1.updateSetting("Output.Console.LogLevel", 2)
         env1 = solver1.getEnvironment()
         solver1.setProblem(build_ex1223b(env1))
 
@@ -354,7 +354,7 @@ class TestPrimalSolutionCandidateSelectionCallback:
 
         # ── Run 2: reject candidates with obj > 5 (sub-optimal ones) ─────────
         solver2 = SHOTpy.Solver()
-        solver2.updateSetting("Console.LogLevel", "Output", 2)
+        solver2.updateSetting("Output.Console.LogLevel", 2)
         env2 = solver2.getEnvironment()
         solver2.setProblem(build_ex1223b(env2))
 
@@ -385,8 +385,8 @@ class TestUserTerminationCheckCallback:
             # Ask to stop after the 3rd check
             return len(termination_calls) >= 3
 
-        solver.updateSetting("Console.LogLevel", "Output", 6)
-        solver.updateSetting("IterationLimit", "Termination", 1000)
+        solver.updateSetting("Output.Console.LogLevel", 6)
+        solver.updateSetting("Termination.IterationLimit", 1000)
         problem = build_ex1223b(env)
         solver.setProblem(problem)
         solver.registerCallback(SHOTpy.EventType.UserTerminationCheck, should_terminate)
@@ -410,8 +410,8 @@ class TestUserTerminationCheckCallback:
             call_count[0] += 1
             return None  # Python None → C++ treats as False → solver continues
 
-        solver.updateSetting("Console.LogLevel", "Output", 6)
-        solver.updateSetting("IterationLimit", "Termination", 5)
+        solver.updateSetting("Output.Console.LogLevel", 6)
+        solver.updateSetting("Termination.IterationLimit", 5)
         problem = build_ex1223b(env)
         solver.setProblem(problem)
         solver.registerCallback(SHOTpy.EventType.UserTerminationCheck, never_terminate)
@@ -427,7 +427,7 @@ class TestUserTerminationCheckCallback:
             received.append(data)
             return len(received) >= 2
 
-        solver.updateSetting("Console.LogLevel", "Output", 6)
+        solver.updateSetting("Output.Console.LogLevel", 6)
         problem = build_ex1223b(env)
         solver.setProblem(problem)
         solver.registerCallback(SHOTpy.EventType.UserTerminationCheck, collect)
@@ -459,9 +459,9 @@ class TestExternalHyperplaneSelectionCallback:
             # Returning an empty list is valid; SHOT continues with its own cuts
             return []
 
-        solver.updateSetting("Console.LogLevel", "Output", 6)
-        solver.updateSetting("CutStrategy", "Dual", 1)   # OnlyExternal
-        solver.updateSetting("TreeStrategy", "Dual", 1)  # MultiTree
+        solver.updateSetting("Output.Console.LogLevel", 6)
+        solver.updateSetting("Dual.CutStrategy", 1)   # OnlyExternal
+        solver.updateSetting("Dual.TreeStrategy", 1)  # MultiTree
 
         problem, _ = build_small_convex(env)
         solver.setProblem(problem, problem)
@@ -474,9 +474,9 @@ class TestExternalHyperplaneSelectionCallback:
         """Returning None from the hyperplane callback must not crash."""
         import SHOTpy
 
-        solver.updateSetting("Console.LogLevel", "Output", 6)
-        solver.updateSetting("CutStrategy", "Dual", 1)
-        solver.updateSetting("TreeStrategy", "Dual", 1)
+        solver.updateSetting("Output.Console.LogLevel", 6)
+        solver.updateSetting("Dual.CutStrategy", 1)
+        solver.updateSetting("Dual.TreeStrategy", 1)
 
         problem, _ = build_small_convex(env)
         solver.setProblem(problem, problem)
@@ -489,9 +489,9 @@ class TestExternalHyperplaneSelectionCallback:
         """Returning an empty list from the hyperplane callback must not crash."""
         import SHOTpy
 
-        solver.updateSetting("Console.LogLevel", "Output", 6)
-        solver.updateSetting("CutStrategy", "Dual", 1)
-        solver.updateSetting("TreeStrategy", "Dual", 1)
+        solver.updateSetting("Output.Console.LogLevel", 6)
+        solver.updateSetting("Dual.CutStrategy", 1)
+        solver.updateSetting("Dual.TreeStrategy", 1)
 
         problem, _ = build_small_convex(env)
         solver.setProblem(problem, problem)
@@ -562,12 +562,12 @@ class TestExternalHyperplaneGradientCuts:
         """Return a Solver configured to accept only external hyperplane cuts."""
         import SHOTpy
         solver = SHOTpy.Solver()
-        solver.updateSetting("Console.LogLevel",                             "Output", 2)
-        solver.updateSetting("Convexity.AssumeConvex",                       "Model",  True)
-        solver.updateSetting("Reformulation.Constraint.PartitionQuadraticTerms", "Model", 2) # Never
-        solver.updateSetting("Relaxation.Use",                               "Dual",   True)
-        solver.updateSetting("CutStrategy",                                  "Dual",   2)    # OnlyExternal
-        solver.updateSetting("TreeStrategy",                                 "Dual",   0)    # MultiTree
+        solver.updateSetting("Output.Console.LogLevel", 2)
+        solver.updateSetting("Model.Convexity.AssumeConvex", True)
+        solver.updateSetting("Model.Reformulation.Constraint.PartitionQuadraticTerms", 2) # Never
+        solver.updateSetting("Dual.Relaxation.Use", True)
+        solver.updateSetting("Dual.CutStrategy", 2)    # OnlyExternal
+        solver.updateSetting("Dual.TreeStrategy", 0)    # MultiTree
         return solver
 
     def test_solver_finds_solution_with_gradient_cuts(self):
@@ -640,7 +640,7 @@ class TestExternalHyperplaneGradientCuts:
 
         solver = self._make_solver_with_only_external_cuts()
         # This test never returns cuts, so cap iterations to avoid running forever
-        solver.updateSetting("IterationLimit", "Termination", 20)
+        solver.updateSetting("Termination.IterationLimit", 20)
         env = solver.getEnvironment()
         problem = self._build_shot_ex_jogo(env)
         solver.setProblem(problem, problem)
@@ -742,8 +742,8 @@ class TestExternalBoundCallbacks:
         import math
 
         solver = SHOTpy.Solver()
-        solver.updateSetting("Console.LogLevel", "Output", 2)
-        solver.updateSetting("TreeStrategy", "Dual", 0)  # MultiTree — currently required for ExternalDualBound
+        solver.updateSetting("Output.Console.LogLevel", 2)
+        solver.updateSetting("Dual.TreeStrategy", 0)  # MultiTree — currently required for ExternalDualBound
         env = solver.getEnvironment()
         problem = self._build_shot_ex_jogo(env)
         solver.setProblem(problem)
@@ -774,8 +774,8 @@ class TestExternalBoundCallbacks:
         import SHOTpy
 
         solver = SHOTpy.Solver()
-        solver.updateSetting("Console.LogLevel", "Output", 2)
-        solver.updateSetting("TreeStrategy", "Dual", 0)  # MultiTree
+        solver.updateSetting("Output.Console.LogLevel", 2)
+        solver.updateSetting("Dual.TreeStrategy", 0)  # MultiTree
         env = solver.getEnvironment()
         problem = self._build_shot_ex_jogo(env)
         solver.setProblem(problem)
@@ -797,8 +797,8 @@ class TestExternalBoundCallbacks:
 
         # ── Phase 1: collect the verified optimal primal solution ─────────────
         solver1 = SHOTpy.Solver()
-        solver1.updateSetting("Console.LogLevel",     "Output", 6)
-        solver1.updateSetting("Convexity.AssumeConvex", "Model", True)
+        solver1.updateSetting("Output.Console.LogLevel", 6)
+        solver1.updateSetting("Model.Convexity.AssumeConvex", True)
         env1 = solver1.getEnvironment()
         solver1.setProblem(self._build_shot_ex_jogo(env1), self._build_shot_ex_jogo(env1))
 
@@ -825,10 +825,10 @@ class TestExternalBoundCallbacks:
 
         # ── Phase 2: inject in the first iteration ────────────────────────────
         solver2 = SHOTpy.Solver()
-        solver2.updateSetting("Console.LogLevel",     "Output", 2)
-        solver2.updateSetting("Convexity.AssumeConvex", "Model", True)
-        solver2.updateSetting("Relaxation.Use",       "Dual",  False)
-        solver2.updateSetting("TreeStrategy",         "Dual",  0)    # MultiTree
+        solver2.updateSetting("Output.Console.LogLevel", 2)
+        solver2.updateSetting("Model.Convexity.AssumeConvex", True)
+        solver2.updateSetting("Dual.Relaxation.Use", False)
+        solver2.updateSetting("Dual.TreeStrategy", 0)    # MultiTree
         env2 = solver2.getEnvironment()
         solver2.setProblem(self._build_shot_ex_jogo(env2), self._build_shot_ex_jogo(env2))
 
@@ -871,7 +871,7 @@ class TestExternalBoundCallbacks:
         import SHOTpy
 
         solver = SHOTpy.Solver()
-        solver.updateSetting("Console.LogLevel", "Output", 2)
+        solver.updateSetting("Output.Console.LogLevel", 2)
         env = solver.getEnvironment()
         problem = self._build_shot_ex_jogo(env)
         solver.setProblem(problem)
@@ -892,10 +892,10 @@ class TestExternalBoundCallbacks:
         import SHOTpy
 
         solver = SHOTpy.Solver()
-        solver.updateSetting("Console.LogLevel",       "Output", 2)
-        solver.updateSetting("Convexity.AssumeConvex", "Model",  True)
-        solver.updateSetting("Relaxation.Use",         "Dual",   False)
-        solver.updateSetting("TreeStrategy",           "Dual",   0)   # MultiTree — required for ExternalDualBound
+        solver.updateSetting("Output.Console.LogLevel", 2)
+        solver.updateSetting("Model.Convexity.AssumeConvex", True)
+        solver.updateSetting("Dual.Relaxation.Use", False)
+        solver.updateSetting("Dual.TreeStrategy", 0)   # MultiTree — required for ExternalDualBound
         env = solver.getEnvironment()
         problem = self._build_shot_ex_jogo(env)
         solver.setProblem(problem, problem)
@@ -971,8 +971,8 @@ class TestRegisterCallbackAPI:
     def test_register_with_lambda(self, solver, env):
         """registerCallback accepts a lambda."""
         import SHOTpy
-        solver.updateSetting("Console.LogLevel", "Output", 6)
-        solver.updateSetting("IterationLimit", "Termination", 2)
+        solver.updateSetting("Output.Console.LogLevel", 6)
+        solver.updateSetting("Termination.IterationLimit", 2)
         problem = build_ex1223b(env)
         solver.setProblem(problem)
         solver.registerCallback(
@@ -991,7 +991,7 @@ class TestRegisterCallbackAPI:
                 self.count += 1
 
         counter = Counter()
-        solver.updateSetting("Console.LogLevel", "Output", 6)
+        solver.updateSetting("Output.Console.LogLevel", 6)
         problem = build_ex1223b(env)
         solver.setProblem(problem)
         solver.registerCallback(SHOTpy.EventType.NewPrimalSolution, counter)
@@ -1030,8 +1030,8 @@ class TestCallbackESHInteriorPoint:
         import SHOTpy
 
         solver = SHOTpy.Solver()
-        solver.updateSetting("Console.LogLevel", "Output", 6)  # Off
-        solver.updateSetting("Reformulation.Quadratics.Strategy", "Model", 0)  # Nonlinear -> multi-tree/ESH
+        solver.updateSetting("Output.Console.LogLevel", 6)  # Off
+        solver.updateSetting("Model.Reformulation.Quadratics.Strategy", 0)  # Nonlinear -> multi-tree/ESH
         env = solver.getEnvironment()
         problem = build_ex1223b(env)
         solver.setProblem(problem)
@@ -1073,8 +1073,8 @@ class TestCallbackESHInteriorPoint:
 
         # ── Phase 1 ──────────────────────────────────────────────────────────
         solver1 = SHOTpy.Solver()
-        solver1.updateSetting("Console.LogLevel", "Output", 6)
-        solver1.updateSetting("Reformulation.Quadratics.Strategy", "Model", 0)  # Nonlinear -> multi-tree/ESH
+        solver1.updateSetting("Output.Console.LogLevel", 6)
+        solver1.updateSetting("Model.Reformulation.Quadratics.Strategy", 0)  # Nonlinear -> multi-tree/ESH
         env1 = solver1.getEnvironment()
         problem1 = build_ex1223b(env1)
         solver1.setProblem(problem1)
@@ -1100,9 +1100,9 @@ class TestCallbackESHInteriorPoint:
 
         # ── Phase 2 ──────────────────────────────────────────────────────────
         solver2 = SHOTpy.Solver()
-        solver2.updateSetting("Console.LogLevel", "Output", 6)
-        solver2.updateSetting("Reformulation.Quadratics.Strategy", "Model", 0)  # Nonlinear -> multi-tree/ESH
-        solver2.updateSetting("ESH.InteriorPoint.Strategy", "Dual", 1)  # OnlyExternal
+        solver2.updateSetting("Output.Console.LogLevel", 6)
+        solver2.updateSetting("Model.Reformulation.Quadratics.Strategy", 0)  # Nonlinear -> multi-tree/ESH
+        solver2.updateSetting("Dual.ESH.InteriorPoint.Strategy", 1)  # OnlyExternal
         env2 = solver2.getEnvironment()
         problem2 = build_ex1223b(env2)
         solver2.setProblem(problem2)
@@ -1151,8 +1151,8 @@ class TestCallbackESHInteriorPoint:
 
         # ── Phase 1: auxiliary minimize-mu problem ────────────────────────────
         solver_aux = SHOTpy.Solver()
-        solver_aux.updateSetting("Console.LogLevel", "Output", 6)
-        solver_aux.updateSetting("Reformulation.Quadratics.Strategy", "Model", 0)  # Nonlinear
+        solver_aux.updateSetting("Output.Console.LogLevel", 6)
+        solver_aux.updateSetting("Model.Reformulation.Quadratics.Strategy", 0)  # Nonlinear
         env_aux = solver_aux.getEnvironment()
 
         problem_aux = SHOTpy.Problem(env_aux)
@@ -1233,9 +1233,9 @@ class TestCallbackESHInteriorPoint:
 
         # ── Phase 2: inject aux-problem interior point via OnlyExternal ───────
         solver2 = SHOTpy.Solver()
-        solver2.updateSetting("Console.LogLevel", "Output", 6)
-        solver2.updateSetting("Reformulation.Quadratics.Strategy", "Model", 0)  # Nonlinear
-        solver2.updateSetting("ESH.InteriorPoint.Strategy", "Dual", 1)  # OnlyExternal
+        solver2.updateSetting("Output.Console.LogLevel", 6)
+        solver2.updateSetting("Model.Reformulation.Quadratics.Strategy", 0)  # Nonlinear
+        solver2.updateSetting("Dual.ESH.InteriorPoint.Strategy", 1)  # OnlyExternal
         env2 = solver2.getEnvironment()
         problem2 = build_ex1223b(env2)
         solver2.setProblem(problem2)

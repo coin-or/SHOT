@@ -102,10 +102,8 @@ bool Variable::isDualUnbounded()
 
         if(sharedOwnerProblem->env->settings)
         {
-            minLB = sharedOwnerProblem->env->settings->getSetting<double>(
-                "Variables.Continuous.MinimumLowerBound", "Model");
-            maxUB = sharedOwnerProblem->env->settings->getSetting<double>(
-                "Variables.Continuous.MaximumUpperBound", "Model");
+            minLB = sharedOwnerProblem->env->settings->getSetting<double>("Model.Variables.Continuous.MinimumLowerBound");
+            maxUB = sharedOwnerProblem->env->settings->getSetting<double>("Model.Variables.Continuous.MaximumUpperBound");
         }
         else
         {

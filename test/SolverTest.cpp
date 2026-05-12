@@ -109,7 +109,7 @@ bool TestRootsearch(const std::string& problemFile)
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
     auto env = solver->getEnvironment();
 
-    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Error));
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Error));
 
     std::cout << "Reading problem:  " << problemFile << '\n';
 
@@ -185,7 +185,7 @@ bool TestGradient(const std::string& problemFile)
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
     auto env = solver->getEnvironment();
 
-    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Error));
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Error));
 
     std::cout << "Reading problem:  " << problemFile << '\n';
 
@@ -235,7 +235,7 @@ bool CreateAndSolveProblem()
     auto solverEnv = MakeEx1223bSolver();
     auto& solver = solverEnv.first;
     auto& env = solverEnv.second;
-    solver->updateSetting("Debug.Enable", "Output", true);
+    solver->updateSetting("Output.Debug.Enable", true);
     auto problem = env->problem;
 
     // Writing the problem to console
@@ -278,7 +278,7 @@ bool CreateAndSolveProblem()
     // Need to reinitialize the SHOT solver class and update the environment
     solver = std::make_unique<SHOT::Solver>();
     env = solver->getEnvironment();
-    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Off));
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
 
     // Resetting our problem objects
     solver->setProblem(problem, reformulatedProblem);
@@ -345,7 +345,7 @@ bool CreateAndSolveProblem()
     // Need to reinitialize the SHOT solver class and update the environment
     solver = std::make_unique<SHOT::Solver>();
     env = solver->getEnvironment();
-    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Off));
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
 
     // Resetting our problem objects
     solver->setProblem(problem, reformulatedProblem);
@@ -427,8 +427,8 @@ bool TestCallbackUserTermination()
 
     // Initializing the SHOT solver class
     auto [solver, env] = MakeEx1223bSolver();
-    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Critical));
-    solver->updateSetting("Debug.Enable", "Output", true);
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Critical));
+    solver->updateSetting("Output.Debug.Enable", true);
 
     // Writing the problem to console
     std::cout << '\n';
@@ -466,7 +466,7 @@ bool TestCallbackUserTermination()
         });
 
     // Set high iteration limit so termination comes from our callback
-    env->settings->updateSetting("IterationLimit", "Termination", 100);
+    env->settings->updateSetting("Termination.IterationLimit", 100);
 
     // Solve the problem
     solver->solveProblem();
@@ -499,14 +499,13 @@ bool TestCallbackExternalHyperplane()
 
     // Contains the environment variable unique to the created solver instance
     auto env = solver->getEnvironment();
-    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Off));
-    solver->updateSetting("Convexity.AssumeConvex", "Model", true);
-    solver->updateSetting("Debug.Enable", "Output", true);
-    solver->updateSetting("Reformulation.Constraint.PartitionQuadraticTerms", "Model",
-        static_cast<int>(ES_PartitionNonlinearSums::Never));
-    solver->updateSetting("Relaxation.Use", "Dual", false);
-    solver->updateSetting("CutStrategy", "Dual", static_cast<int>(ES_HyperplaneCutStrategy::OnlyExternal));
-    solver->updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::MultiTree));
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+    solver->updateSetting("Model.Convexity.AssumeConvex", true);
+    solver->updateSetting("Output.Debug.Enable", true);
+    solver->updateSetting("Model.Reformulation.Constraint.PartitionQuadraticTerms",         static_cast<int>(ES_PartitionNonlinearSums::Never));
+    solver->updateSetting("Dual.Relaxation.Use", false);
+    solver->updateSetting("Dual.CutStrategy", static_cast<int>(ES_HyperplaneCutStrategy::OnlyExternal));
+    solver->updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::MultiTree));
 
     // Initializing a SHOT problem class
     auto problem = std::make_shared<SHOT::Problem>(env);
@@ -661,10 +660,9 @@ static std::pair<std::unique_ptr<SHOT::Solver>, std::shared_ptr<SHOT::Environmen
 {
     auto solver = std::make_unique<SHOT::Solver>();
     auto env = solver->getEnvironment();
-    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Info));
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Info));
     if(forceNonlinear)
-        solver->updateSetting("Reformulation.Quadratics.Strategy", "Model",
-            static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear));
+        solver->updateSetting("Model.Reformulation.Quadratics.Strategy",             static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear));
 
     auto problem = std::make_shared<SHOT::Problem>(env);
     problem->name = "ex1223b";
@@ -788,7 +786,7 @@ bool TestCallbackPrimalCandidateSelection()
     {
         auto [solver, env] = MakeEx1223bSolver();
         // Cap iterations so the test terminates quickly
-        solver->updateSetting("IterationLimit", "Termination", 10);
+        solver->updateSetting("Termination.IterationLimit", 10);
         int rejectedCount = 0;
 
         solver->registerCallback(
@@ -939,8 +937,7 @@ bool TestCallbackESHInteriorPoint()
     {
         auto [solver, env] = MakeEx1223bSolver(true); // force nonlinear strategy so TaskFindInteriorPoint runs
 
-        solver->updateSetting("ESH.InteriorPoint.Strategy", "Dual",
-            static_cast<int>(ES_ESHInteriorPointStrategy::OnlyExternal));
+        solver->updateSetting("Dual.ESH.InteriorPoint.Strategy",             static_cast<int>(ES_ESHInteriorPointStrategy::OnlyExternal));
 
         bool callbackFired = false;
 
@@ -1002,10 +999,9 @@ MakeEx1223bInteriorPointSolver()
 {
     auto solver = std::make_unique<SHOT::Solver>();
     auto env = solver->getEnvironment();
-    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Info));
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Info));
     // Treat quadratic constraints as nonlinear so the interior point is valid for ESH
-    solver->updateSetting("Reformulation.Quadratics.Strategy", "Model",
-        static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear));
+    solver->updateSetting("Model.Reformulation.Quadratics.Strategy",         static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear));
 
     auto problem = std::make_shared<SHOT::Problem>(env);
     problem->name = "ex1223b_interior";
@@ -1162,8 +1158,7 @@ bool TestCallbackESHExternalInteriorPointFromAuxProblem()
     {
         auto [solver, env] = MakeEx1223bSolver(true); // force nonlinear strategy
 
-        solver->updateSetting("ESH.InteriorPoint.Strategy", "Dual",
-            static_cast<int>(ES_ESHInteriorPointStrategy::OnlyExternal));
+        solver->updateSetting("Dual.ESH.InteriorPoint.Strategy",             static_cast<int>(ES_ESHInteriorPointStrategy::OnlyExternal));
 
         bool callbackFired = false;
 

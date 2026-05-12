@@ -44,7 +44,7 @@ void TaskAddIntegerCuts::run()
         return;
     }
 
-    if(!currIter->isMIP() || !env->settings->getSetting<bool>("HyperplaneCuts.Delay", "Dual")
+    if(!currIter->isMIP() || !env->settings->getSetting<bool>("Dual.HyperplaneCuts.Delay")
         || !currIter->MIPSolutionLimitUpdated)
     {
         int numAdded = 0;

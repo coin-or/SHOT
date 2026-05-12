@@ -72,13 +72,13 @@ E_ProblemCreationStatus ModelingSystemOS::createProblem(
         {
             instance = std::shared_ptr<OSInstance>(readInstanceFromOSiLFile(filename));
 
-            env->settings->updateSetting("ModelingSystem", "Input", static_cast<int>(ES_ModelingSystem::OSiL));
+            env->settings->updateSetting("Input.ModelingSystem", static_cast<int>(ES_ModelingSystem::OSiL));
         }
         else if(type == E_OSInputFileFormat::Ampl)
         {
             instance = std::shared_ptr<OSInstance>(readInstanceFromAmplFile(filename));
 
-            env->settings->updateSetting("ModelingSystem", "Input", static_cast<int>(ES_ModelingSystem::AMPL));
+            env->settings->updateSetting("Input.ModelingSystem", static_cast<int>(ES_ModelingSystem::AMPL));
         }
     }
     catch(const std::exception& e)
@@ -178,10 +178,10 @@ bool ModelingSystemOS::copyVariables(OSInstance* source, ProblemPtr destination)
 
     if(source->instanceData->variables != nullptr && source->instanceData->variables->numberOfVariables > 0)
     {
-        double minLBCont = env->settings->getSetting<double>("Variables.Continuous.MinimumLowerBound", "Model");
-        double maxUBCont = env->settings->getSetting<double>("Variables.Continuous.MaximumUpperBound", "Model");
-        double minLBInt = env->settings->getSetting<double>("Variables.Integer.MinimumLowerBound", "Model");
-        double maxUBInt = env->settings->getSetting<double>("Variables.Integer.MaximumUpperBound", "Model");
+        double minLBCont = env->settings->getSetting<double>("Model.Variables.Continuous.MinimumLowerBound");
+        double maxUBCont = env->settings->getSetting<double>("Model.Variables.Continuous.MaximumUpperBound");
+        double minLBInt = env->settings->getSetting<double>("Model.Variables.Integer.MinimumLowerBound");
+        double maxUBInt = env->settings->getSetting<double>("Model.Variables.Integer.MaximumUpperBound");
 
         int numVariables = source->getVariableNumber();
 

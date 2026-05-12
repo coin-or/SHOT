@@ -14,6 +14,7 @@
 #include "tinyxml2.h"
 
 #include <algorithm>
+#include <set>
 #include <sstream>
 
 namespace SHOT
@@ -66,15 +67,43 @@ void Settings::createBaseSetting(
 
     settingDescriptions[key] = description;
     settingIsPrivate[key] = isPrivate;
-    settingIsDefaultValue[key] = true;
+    settingActivePriority[key] = static_cast<int>(E_SettingPriority::Default);
+
+    // Record initial value in history at Default priority (0)
+    if constexpr(std::is_same_v<T, std::string>)
+        stringSettingHistory[key][0] = value;
+    else if constexpr(std::is_same_v<T, int>)
+        integerSettingHistory[key][0] = value;
+    else if constexpr(std::is_same_v<T, double>)
+        doubleSettingHistory[key][0] = value;
+    else if constexpr(std::is_same_v<T, bool>)
+        booleanSettingHistory[key][0] = value;
 }
 
-template void Settings::updateSetting(std::string name, std::string category, std::string value);
-template void Settings::updateSetting(std::string name, std::string category, int value);
-template void Settings::updateSetting(std::string name, std::string category, double value);
-template void Settings::updateSetting(std::string name, std::string category, bool value);
+template void Settings::updateSetting(
+    std::string name, std::string category, std::string value, E_SettingPriority priority);
+template void Settings::updateSetting(
+    std::string name, std::string category, int value, E_SettingPriority priority);
+template void Settings::updateSetting(
+    std::string name, std::string category, double value, E_SettingPriority priority);
+template void Settings::updateSetting(
+    std::string name, std::string category, bool value, E_SettingPriority priority);
 
-template <typename T> void Settings::updateSetting(std::string name, std::string category, T value)
+static std::string priorityLabel(E_SettingPriority p)
+{
+    switch(p)
+    {
+    case E_SettingPriority::RecommendedInternal: return "recommended";
+    case E_SettingPriority::OptionsFile:         return "options file";
+    case E_SettingPriority::UserAPI:             return "user";
+    case E_SettingPriority::SolverInternal:      return "solver";
+    case E_SettingPriority::SolverCompatibility: return "solver (compatibility)";
+    default:                                     return "default";
+    }
+}
+
+template <typename T>
+void Settings::updateSetting(std::string name, std::string category, T value, E_SettingPriority priority)
 {
     // Check that setting is of the correct type
     using value_type [[maybe_unused]] = typename std::enable_if<std::is_same<std::string, T>::value
@@ -132,23 +161,39 @@ template <typename T> void Settings::updateSetting(std::string name, std::string
         throw SettingKeyNotFoundException(name, category);
     }
 
+    int prio = static_cast<int>(priority);
+
+    // Always record the write in per-priority history
     if constexpr(std::is_same_v<T, std::string>)
+        stringSettingHistory[key][prio] = Utilities::trim(value);
+    else if constexpr(std::is_same_v<T, int>)
+        integerSettingHistory[key][prio] = value;
+    else if constexpr(std::is_same_v<T, double>)
+        doubleSettingHistory[key][prio] = value;
+    else if constexpr(std::is_same_v<T, bool>)
+        booleanSettingHistory[key][prio] = value;
+
+    // Only promote to active if this priority level wins
+    if(prio < settingActivePriority[key])
     {
-        if(Utilities::trim(oldValue->second) == Utilities::trim(value))
-        {
-            output->outputTrace(
-                " Setting " + key.first + "." + key.second + " not updated since the same value was given.");
-            return;
-        }
+        output->outputTrace(" Setting " + key.first + "." + key.second + " stored at priority "
+            + std::to_string(prio) + " but not activated (active priority is "
+            + std::to_string(settingActivePriority[key]) + ").");
+        return;
     }
+
+    // Skip active update when the value and priority are identical to the current active state
+    bool valueUnchanged;
+    if constexpr(std::is_same_v<T, std::string>)
+        valueUnchanged = (Utilities::trim(oldValue->second) == Utilities::trim(value));
     else
+        valueUnchanged = (oldValue->second == value);
+
+    if(valueUnchanged && prio == settingActivePriority[key])
     {
-        if(oldValue->second == value)
-        {
-            output->outputTrace(
-                " Setting " + key.first + "." + key.second + " not updated since the same value was given.");
-            return;
-        }
+        output->outputTrace(
+            " Setting " + key.first + "." + key.second + " not updated since the same value was given.");
+        return;
     }
 
     if constexpr(std::is_same_v<T, std::string>)
@@ -179,31 +224,34 @@ template <typename T> void Settings::updateSetting(std::string name, std::string
             " Setting " + key.first + "." + key.second + " updated. New value = " + std::to_string(value) + ".");
     }
 
-    settingIsDefaultValue[key] = false;
+    settingActivePriority[key] = prio;
 }
 
 // String settings ===============================================================
 
 void Settings::createSetting(
-    std::string name, std::string category, std::string value, std::string description, bool isPrivate)
+    std::string settingName, std::string value, std::string description, bool isPrivate)
 {
+    auto [category, name] = splitKey(settingName);
     createBaseSetting<std::string>(name, category, value, description, isPrivate);
 }
 
 // Integer settings ==============================================================
 
-void Settings::createSetting(std::string name, std::string category, int value, std::string description, double minVal,
-    double maxVal, bool isPrivate)
+void Settings::createSetting(std::string settingName, int value, std::string description,
+    double minVal, double maxVal, bool isPrivate)
 {
+    auto [category, name] = splitKey(settingName);
     createBaseSetting<int>(name, category, value, description, isPrivate);
     settingBounds[make_pair(category, name)] = std::make_pair(minVal, maxVal);
 }
 
 // Double settings ===============================================================
 
-void Settings::createSetting(std::string name, std::string category, double value, std::string description,
+void Settings::createSetting(std::string settingName, double value, std::string description,
     double minVal, double maxVal, bool isPrivate)
 {
+    auto [category, name] = splitKey(settingName);
     createBaseSetting<double>(name, category, value, description, isPrivate);
     settingBounds[make_pair(category, name)] = std::make_pair(minVal, maxVal);
 }
@@ -211,16 +259,18 @@ void Settings::createSetting(std::string name, std::string category, double valu
 // Boolean settings ==============================================================
 
 void Settings::createSetting(
-    std::string name, std::string category, bool value, std::string description, bool isPrivate)
+    std::string settingName, bool value, std::string description, bool isPrivate)
 {
+    auto [category, name] = splitKey(settingName);
     createBaseSetting<bool>(name, category, value, description, isPrivate);
 }
 
 // Enum settings ==================================================================
 
-void Settings::createSetting(std::string name, std::string category, int value, std::string description,
+void Settings::createSetting(std::string settingName, int value, std::string description,
     VectorString enumDesc, int startValue, bool isPrivate)
 {
+    auto [category, name] = splitKey(settingName);
     createBaseSetting<int>(name, category, value, description, isPrivate);
     settingBounds[make_pair(category, name)]
         = std::make_pair((double)startValue, (double)(startValue + enumDesc.size() - 1));
@@ -395,7 +445,7 @@ std::string Settings::getSettingsAsString(bool hideUnchanged = false, bool hideD
         if(settingIsPrivate[key])
             continue; // Do not include an internal setting
 
-        if(hideUnchanged && settingIsDefaultValue[key])
+        if(hideUnchanged && settingActivePriority[key] == 0)
             continue; // Hide setting with default value
 
         if(!hideDescriptions)
@@ -662,30 +712,53 @@ VectorString Settings::getChangedSettings()
         if(settingIsPrivate[key])
             continue; // Do not include an internal setting
 
-        if(settingIsDefaultValue[key])
+        if(settingActivePriority[key] == 0)
             continue; // Hide setting with default value
+
+        auto label = priorityLabel(static_cast<E_SettingPriority>(settingActivePriority[key]));
 
         switch(T.second)
         {
         case(E_SettingType::String):
-            result.push_back(fmt::format("{}.{} = {}", category, name, getSetting<std::string>(name, category)));
+        {
+            auto val = getSetting<std::string>(name, category);
+            if(val == stringSettingHistory[key][0])
+                continue;
+            result.push_back(fmt::format("{}.{} = {}  [{}]", category, name, val, label));
             break;
-
+        }
         case(E_SettingType::Double):
-            result.push_back(fmt::format("{}.{} = {}", category, name, getSetting<double>(name, category)));
+        {
+            auto val = getSetting<double>(name, category);
+            if(val == doubleSettingHistory[key][0])
+                continue;
+            result.push_back(fmt::format("{}.{} = {}  [{}]", category, name, val, label));
             break;
-
+        }
         case(E_SettingType::Integer):
-            result.push_back(fmt::format("{}.{} = {}", category, name, getSetting<int>(name, category)));
+        {
+            auto val = getSetting<int>(name, category);
+            if(val == integerSettingHistory[key][0])
+                continue;
+            result.push_back(fmt::format("{}.{} = {}  [{}]", category, name, val, label));
             break;
-
+        }
         case(E_SettingType::Enum):
-            result.push_back(fmt::format("{}.{} = {}", category, name, getSetting<int>(name, category)));
+        {
+            auto val = getSetting<int>(name, category);
+            if(val == integerSettingHistory[key][0])
+                continue;
+            result.push_back(fmt::format("{}.{} = {}  [{}]", category, name, val, label));
             break;
-
+        }
         case(E_SettingType::Boolean):
-            result.push_back(fmt::format("{}.{} = {}", category, name, getSetting<bool>(name, category)));
+        {
+            auto val = getSetting<bool>(name, category);
+            if(val == booleanSettingHistory[key][0])
+                continue;
+            result.push_back(fmt::format("{}.{} = {}  [{}]", category, name, val, label));
             break;
+        }
         default:
             break;
         }
@@ -793,13 +866,13 @@ bool Settings::readSettingsFromOSoL(std::string osol)
             switch(settingTypes[key])
             {
             case E_SettingType::String:
-                updateSetting(name, category, value);
+                updateSetting(name, category, value, E_SettingPriority::OptionsFile);
                 break;
             case E_SettingType::Enum:
             case E_SettingType::Integer:
                 try
                 {
-                    updateSetting(name, category, std::stoi(value, &convertedChars));
+                    updateSetting(name, category, std::stoi(value, &convertedChars), E_SettingPriority::OptionsFile);
                 }
                 catch(...)
                 {
@@ -810,13 +883,13 @@ bool Settings::readSettingsFromOSoL(std::string osol)
             case E_SettingType::Boolean:
             {
                 bool convertedValue = (value != "false");
-                updateSetting(name, category, convertedValue);
+                updateSetting(name, category, convertedValue, E_SettingPriority::OptionsFile);
                 break;
             }
             case E_SettingType::Double:
                 try
                 {
-                    updateSetting(name, category, std::stod(value));
+                    updateSetting(name, category, std::stod(value), E_SettingPriority::OptionsFile);
                 }
                 catch(...)
                 {
@@ -892,13 +965,13 @@ bool Settings::readSettingsFromString(std::string options)
         switch(settingTypes[keyPair])
         {
         case E_SettingType::String:
-            updateSetting(name, category, value);
+            updateSetting(name, category, value, E_SettingPriority::OptionsFile);
             break;
         case E_SettingType::Enum:
         case E_SettingType::Integer:
             try
             {
-                updateSetting(name, category, std::stoi(value, &convertedChars));
+                updateSetting(name, category, std::stoi(value, &convertedChars), E_SettingPriority::OptionsFile);
             }
             catch(...)
             {
@@ -909,13 +982,13 @@ bool Settings::readSettingsFromString(std::string options)
         case E_SettingType::Boolean:
         {
             bool convertedValue = (value != "false");
-            updateSetting(name, category, convertedValue);
+            updateSetting(name, category, convertedValue, E_SettingPriority::OptionsFile);
             break;
         }
         case E_SettingType::Double:
             try
             {
-                updateSetting(name, category, std::stod(value));
+                updateSetting(name, category, std::stod(value), E_SettingPriority::OptionsFile);
             }
             catch(...)
             {
@@ -934,4 +1007,153 @@ bool Settings::readSettingsFromString(std::string options)
 
     return (true);
 }
+
+E_SettingPriority Settings::getSettingPriority(std::string name, std::string category)
+{
+    PairString key = make_pair(category, name);
+
+    if(settingActivePriority.find(key) == settingActivePriority.end())
+    {
+        output->outputError("Cannot get priority of setting " + category + "." + name + " since it has not been defined.");
+        throw SettingKeyNotFoundException(name, category);
+    }
+
+    return static_cast<E_SettingPriority>(settingActivePriority[key]);
+}
+
+bool Settings::isSettingAtDefault(std::string name, std::string category)
+{
+    PairString key = make_pair(category, name);
+
+    if(settingActivePriority.find(key) == settingActivePriority.end())
+    {
+        output->outputError("Cannot check default state of setting " + category + "." + name + " since it has not been defined.");
+        throw SettingKeyNotFoundException(name, category);
+    }
+
+    return settingActivePriority[key] == static_cast<int>(E_SettingPriority::Default);
+}
+
+VectorString Settings::getSettingsAtPriority(E_SettingPriority priority)
+{
+    VectorString result;
+    int prio = static_cast<int>(priority);
+
+    for(auto& T : settingTypes)
+    {
+        auto key = T.first;
+        std::string name = T.first.second;
+        std::string category = T.first.first;
+
+        if(settingIsPrivate[key])
+            continue;
+
+        if(settingActivePriority[key] != prio)
+            continue;
+
+        switch(T.second)
+        {
+        case(E_SettingType::String):
+            result.push_back(fmt::format("{}.{} = {}", category, name, getSetting<std::string>(name, category)));
+            break;
+        case(E_SettingType::Double):
+            result.push_back(fmt::format("{}.{} = {}", category, name, getSetting<double>(name, category)));
+            break;
+        case(E_SettingType::Integer):
+            result.push_back(fmt::format("{}.{} = {}", category, name, getSetting<int>(name, category)));
+            break;
+        case(E_SettingType::Enum):
+            result.push_back(fmt::format("{}.{} = {}", category, name, getSetting<int>(name, category)));
+            break;
+        case(E_SettingType::Boolean):
+            result.push_back(fmt::format("{}.{} = {}", category, name, getSetting<bool>(name, category)));
+            break;
+        default:
+            break;
+        }
+    }
+
+    return result;
+}
+
+bool Settings::hasSettingAtPriority(std::string name, std::string category, E_SettingPriority priority)
+{
+    PairString key = make_pair(category, name);
+    int prio = static_cast<int>(priority);
+
+    if(settingTypes.find(key) == settingTypes.end())
+        return false;
+
+    switch(settingTypes[key])
+    {
+    case E_SettingType::String:
+    {
+        auto it = stringSettingHistory.find(key);
+        return it != stringSettingHistory.end() && it->second.find(prio) != it->second.end();
+    }
+    case E_SettingType::Integer:
+    case E_SettingType::Enum:
+    {
+        auto it = integerSettingHistory.find(key);
+        return it != integerSettingHistory.end() && it->second.find(prio) != it->second.end();
+    }
+    case E_SettingType::Double:
+    {
+        auto it = doubleSettingHistory.find(key);
+        return it != doubleSettingHistory.end() && it->second.find(prio) != it->second.end();
+    }
+    case E_SettingType::Boolean:
+    {
+        auto it = booleanSettingHistory.find(key);
+        return it != booleanSettingHistory.end() && it->second.find(prio) != it->second.end();
+    }
+    default:
+        return false;
+    }
+}
+
+std::vector<E_SettingPriority> Settings::getSettingPriorityHistory(std::string name, std::string category)
+{
+    PairString key = make_pair(category, name);
+
+    if(settingTypes.find(key) == settingTypes.end())
+    {
+        output->outputError("Cannot get priority history of setting " + category + "." + name + " since it has not been defined.");
+        throw SettingKeyNotFoundException(name, category);
+    }
+
+    std::set<int> prioSet;
+
+    auto collectPrios = [&](auto& histMap) {
+        auto it = histMap.find(key);
+        if(it != histMap.end())
+            for(auto& p : it->second)
+                prioSet.insert(p.first);
+    };
+
+    switch(settingTypes[key])
+    {
+    case E_SettingType::String:
+        collectPrios(stringSettingHistory);
+        break;
+    case E_SettingType::Integer:
+    case E_SettingType::Enum:
+        collectPrios(integerSettingHistory);
+        break;
+    case E_SettingType::Double:
+        collectPrios(doubleSettingHistory);
+        break;
+    case E_SettingType::Boolean:
+        collectPrios(booleanSettingHistory);
+        break;
+    default:
+        break;
+    }
+
+    std::vector<E_SettingPriority> result;
+    for(int p : prioSet)
+        result.push_back(static_cast<E_SettingPriority>(p));
+    return result;
+}
+
 } // namespace SHOT

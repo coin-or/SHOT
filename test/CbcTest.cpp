@@ -33,7 +33,7 @@ bool CbcTest1(std::string filename, double correctObjectiveValue)
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
     auto env = solver->getEnvironment();
 
-    solver->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Cbc));
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cbc));
 
     try
     {
@@ -119,9 +119,9 @@ bool CbcTerminationCallbackTest(std::string filename)
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
     auto env = solver->getEnvironment();
 
-    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Error));
-    solver->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Cbc));
-    solver->updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::MultiTree));
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Error));
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cbc));
+    solver->updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::MultiTree));
 
     std::cout << "Reading problem:  " << filename << '\n';
 
@@ -166,9 +166,9 @@ bool CbcExternalDualBoundCallbackTest(std::string filename, double dualBoundToTe
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
     auto env = solver->getEnvironment();
 
-    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Info));
-    solver->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Cbc));
-    solver->updateSetting("TreeStrategy", "Dual", static_cast<int>(treeStrategy));
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Info));
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cbc));
+    solver->updateSetting("Dual.TreeStrategy", static_cast<int>(treeStrategy));
 
     std::cout << "Reading problem:  " << filename << '\n';
 
@@ -213,9 +213,9 @@ bool CbcExternalDualBoundCallbackTest(std::string filename, double dualBoundToTe
     solver = std::make_unique<Solver>();
     env = solver->getEnvironment();
 
-    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Info));
-    solver->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Gurobi));
-    solver->updateSetting("TreeStrategy", "Dual", static_cast<int>(treeStrategy));
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Info));
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Gurobi));
+    solver->updateSetting("Dual.TreeStrategy", static_cast<int>(treeStrategy));
 
     std::cout << "Reading problem:  " << filename << '\n';
 
@@ -367,7 +367,7 @@ int CbcTest(int argc, char* argv[])
     case 8:
         std::cout << "Starting test for callbacks getting and setting primal solutions and dual bounds through a "
                      "callback with multi-tree strategy";
-        passed = CbcExternalDualBoundCallbackTest("data/fo7_2.osil", 17.74934, ES_TreeStrategy::MultiTree);
+        passed = CbcExternalDualBoundCallbackTest("data/synthes1.osil", 5.0, ES_TreeStrategy::MultiTree);
         std::cout << "Finished test for callbacks getting and setting primal solutions and dual bounds through a "
                      "callback with multi-tree strategy."
                   << std::endl;

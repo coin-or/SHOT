@@ -101,7 +101,7 @@ void Results::addPrimalSolution(PrimalSolution solution)
         env->output->outputDebug(fmt::format("        New (currently best) primal solution {} from {} found.",
             solution.objValue, solution.sourceDescription));
     }
-    else if((int)this->primalSolutions.size() < env->settings->getSetting<int>("SaveNumberOfSolutions", "Output"))
+    else if((int)this->primalSolutions.size() < env->settings->getSetting<int>("Output.SaveNumberOfSolutions"))
     {
         // The solution pool is not yet full, save the solution
         this->primalSolutions.push_back(solution);
@@ -159,17 +159,17 @@ void Results::addPrimalSolution(PrimalSolution solution)
     }
 
     // Write the new primal point to a file
-    if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+    if(env->settings->getSetting<bool>("Output.Debug.Enable"))
     {
         auto filename
-            = fmt::format("{}/primal_solpt{}.txt", env->settings->getSetting<std::string>("Debug.Path", "Output"),
+            = fmt::format("{}/primal_solpt{}.txt", env->settings->getSetting<std::string>("Output.Debug.Path"),
                 env->solutionStatistics.numberOfFoundPrimalSolutions);
 
         savePrimalSolutionToFile(solution, env->problem->allVariables, filename);
     }
 
     // TODO: Add primal objective cut
-    /*if(env->settings->getSetting<bool>("HyperplaneCuts.UsePrimalObjectiveCut", "Dual")
+    /*if(env->settings->getSetting<bool>("Dual.HyperplaneCuts.UsePrimalObjectiveCut")
         && env->reformulatedProblem->objectiveFunction->properties.classification
             > E_ObjectiveFunctionClassification::Quadratic)
     {
@@ -219,7 +219,7 @@ void Results::addPrimalSolution(PrimalSolution solution)
 bool Results::isRelativeObjectiveGapToleranceMet()
 {
     if(this->getRelativeGlobalObjectiveGap()
-        <= env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination"))
+        <= env->settings->getSetting<double>("Termination.ObjectiveGap.Relative"))
     {
         return (true);
     }
@@ -232,7 +232,7 @@ bool Results::isRelativeObjectiveGapToleranceMet()
 bool Results::isAbsoluteObjectiveGapToleranceMet()
 {
     if(this->getAbsoluteGlobalObjectiveGap()
-        <= env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination"))
+        <= env->settings->getSetting<double>("Termination.ObjectiveGap.Absolute"))
     {
         return (true);
     }
@@ -269,7 +269,7 @@ std::string Results::getResultsOSrL()
     auto generalNode = osrlDocument.NewElement("general");
 
     auto instanceNameNode = osrlDocument.NewElement("instanceName");
-    instanceNameNode->SetText(env->settings->getSetting<std::string>("ProblemName", "Input").c_str());
+    instanceNameNode->SetText(env->settings->getSetting<std::string>("Input.ProblemName").c_str());
     generalNode->InsertFirstChild(instanceNameNode);
 
     std::stringstream ssSolver;
@@ -644,7 +644,7 @@ std::string Results::getResultsOSrL()
         "The number of cases where the primal reduction cut has directly resulted in improved primal solutions");
     otherResultsNode->InsertEndChild(otherNode);
 
-    auto dualSolver = static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual"));
+    auto dualSolver = static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver"));
     std::string dualSolverName;
 
 #ifdef HAS_CPLEX
@@ -907,7 +907,7 @@ std::string Results::getResultsOSrL()
 
     int numPrimalSols = primalSolutions.size();
 
-    int numSaveSolutions = std::min(env->settings->getSetting<int>("SaveNumberOfSolutions", "Output"), numPrimalSols);
+    int numSaveSolutions = std::min(env->settings->getSetting<int>("Output.SaveNumberOfSolutions"), numPrimalSols);
 
     auto statusNode = osrlDocument.NewElement("status");
 
@@ -1213,7 +1213,7 @@ std::string Results::getResultsTrace()
         ss << "NONE";
         break;
     case(ES_PrimalNLPSolver::GAMS):
-        ss << env->settings->getSetting<std::string>("GAMS.NLP.Solver", "Subsolver");
+        ss << env->settings->getSetting<std::string>("Subsolver.GAMS.NLP.Solver");
         break;
     case(ES_PrimalNLPSolver::Ipopt):
         ss << "Ipopt";
@@ -1415,10 +1415,10 @@ std::string Results::getResultsSol()
 
     ss << "\nOptions\n";
 
-    ss << env->settings->getSetting<std::string>("AMPL.OptionsHeader", "ModelingSystem");
+    ss << env->settings->getSetting<std::string>("ModelingSystem.AMPL.OptionsHeader");
 
     ss << fmt::format("{0}\n{1}\n{2}\n{3}\n",
-        env->settings->getSetting<int>("AMPL.NumberOfOriginalConstraints", "ModelingSystem"), 0,
+        env->settings->getSetting<int>("ModelingSystem.AMPL.NumberOfOriginalConstraints"), 0,
         env->problem->properties.numberOfVariables, env->problem->properties.numberOfVariables);
 
     if(this->primalSolution.size() > 0)

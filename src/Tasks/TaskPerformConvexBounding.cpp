@@ -68,7 +68,7 @@ void TaskPerformConvexBounding::run()
        " "source have been added."); return;
         }*/
 
-    /*if(this->idleIterations < env->settings->getSetting<int>("ConvexBounding.IdleIterations", "Dual"))
+    /*if(this->idleIterations < env->settings->getSetting<int>("Dual.ConvexBounding.IdleIterations"))
     {
         this->idleIterations++;
         env->output->outputInfo(" Convex bounding not performed since number of idle iterations has not been met.");
@@ -134,15 +134,15 @@ void TaskPerformConvexBounding::run()
 
     int iterationNumber = env->results->getCurrentIteration()->iterationNumber;
 
-    if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+    if(env->settings->getSetting<bool>("Output.Debug.Enable"))
     {
         auto filename = fmt::format("{}/convexbounding_problem{}.lp",
-            env->settings->getSetting<std::string>("Debug.Path", "Output"), iterationNumber - 1);
+            env->settings->getSetting<std::string>("Output.Debug.Path"), iterationNumber - 1);
 
         MIPSolver->writeProblemToFile(filename);
     }
 
-    auto timeLim = env->settings->getSetting<double>("TimeLimit", "Termination") - env->timing->getElapsedTime("Total");
+    auto timeLim = env->settings->getSetting<double>("Termination.TimeLimit") - env->timing->getElapsedTime("Total");
     MIPSolver->setTimeLimit(timeLim);
 
     if(MIPSolver->getDiscreteVariableStatus() && env->results->hasPrimalSolution())

@@ -192,8 +192,7 @@ void QuadraticTerms::updateConvexity()
     {
         if(sharedOwnerProblem->env->settings)
         {
-            eigenvalueTolerance = sharedOwnerProblem->env->settings->getSetting<double>(
-                "Convexity.Quadratics.EigenValueTolerance", "Model");
+            eigenvalueTolerance = sharedOwnerProblem->env->settings->getSetting<double>("Model.Convexity.Quadratics.EigenValueTolerance");
         }
         else
         {

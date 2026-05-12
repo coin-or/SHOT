@@ -24,7 +24,7 @@ Iteration::Iteration(EnvironmentPtr envPtr)
 
     if(env->results->getNumberOfIterations() == 0)
         this->totNumHyperplanes = 0;
-    else if(env->settings->getSetting<bool>("TreeStrategy.Multi.Reinitialize", "Dual"))
+    else if(env->settings->getSetting<bool>("Dual.TreeStrategy.Multi.Reinitialize"))
         this->totNumHyperplanes = 0;
     else
         this->totNumHyperplanes

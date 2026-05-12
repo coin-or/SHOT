@@ -35,7 +35,7 @@ HighsCallbackFunctionType highsCallback
 
           if(callback_type == kCallbackLogging)
           {
-              if(!env->settings->getSetting<bool>("Console.DualSolver.Show", "Output"))
+              if(!env->settings->getSetting<bool>("Output.Console.DualSolver.Show"))
                   return;
 
               auto lines = Utilities::splitStringByCharacter(std::string(message), '\n');
@@ -308,14 +308,14 @@ bool MIPSolverHighs::finalizeProblem()
 void MIPSolverHighs::initializeSolverSettings()
 {
     highsInstance.setOptionValue(
-        "mip_rel_gap", env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination"));
+        "mip_rel_gap", env->settings->getSetting<double>("Termination.ObjectiveGap.Relative"));
     highsInstance.setOptionValue(
-        "mip_abs_gap", env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination"));
+        "mip_abs_gap", env->settings->getSetting<double>("Termination.ObjectiveGap.Absolute"));
     highsInstance.setOptionValue(
-        "mip_feasibility_tolerance", env->settings->getSetting<double>("Tolerance.Integer", "Primal"));
+        "mip_feasibility_tolerance", env->settings->getSetting<double>("Primal.Tolerance.Integer"));
 
     // Adds a user-provided node limit
-    if(auto nodeLimit = env->settings->getSetting<double>("MIP.NodeLimit", "Dual"); nodeLimit > 0)
+    if(auto nodeLimit = env->settings->getSetting<double>("Dual.MIP.NodeLimit"); nodeLimit > 0)
     {
         if(nodeLimit > SHOT_INT_MAX)
             nodeLimit = SHOT_INT_MAX;
@@ -324,21 +324,21 @@ void MIPSolverHighs::initializeSolverSettings()
     }
 
     highsInstance.setOptionValue(
-        "mip_allow_restart", env->settings->getSetting<bool>("Highs.MIPAllowRestart", "Subsolver"));
+        "mip_allow_restart", env->settings->getSetting<bool>("Subsolver.Highs.MIPAllowRestart"));
     highsInstance.setOptionValue(
-        "mip_detect_symmetry", env->settings->getSetting<bool>("Highs.MIPDetectSymmetry", "Subsolver"));
+        "mip_detect_symmetry", env->settings->getSetting<bool>("Subsolver.Highs.MIPDetectSymmetry"));
     highsInstance.setOptionValue(
-        "mip_heuristic_effort", env->settings->getSetting<double>("Highs.MIPHeuristicEffort", "Subsolver"));
+        "mip_heuristic_effort", env->settings->getSetting<double>("Subsolver.Highs.MIPHeuristicEffort"));
     highsInstance.setOptionValue(
-        "mip_heuristic_run_zi_round", env->settings->getSetting<bool>("Highs.MIPHeuristicRunZiRound", "Subsolver"));
+        "mip_heuristic_run_zi_round", env->settings->getSetting<bool>("Subsolver.Highs.MIPHeuristicRunZiRound"));
     highsInstance.setOptionValue(
-        "mip_heuristic_run_shifting", env->settings->getSetting<bool>("Highs.MIPHeuristicRunShifting", "Subsolver"));
+        "mip_heuristic_run_shifting", env->settings->getSetting<bool>("Subsolver.Highs.MIPHeuristicRunShifting"));
 
     // highsInstance.setOptionValue("mip_improving_solution_save", true);
     // highsInstance.setOptionValue("mip_improving_solution_file", "higssol.sol");
 
     /*
-    switch(env->settings->getSetting<int>("Highs.MIPIPMSolver", "Subsolver"))
+    switch(env->settings->getSetting<int>("Subsolver.Highs.MIPIPMSolver"))
     {
     case 0:
         highsInstance.setOptionValue("mip_ipm_solver", "choose");
@@ -354,7 +354,7 @@ void MIPSolverHighs::initializeSolverSettings()
         break;
     }*/
 
-    switch(env->settings->getSetting<int>("Highs.Parallel", "Subsolver"))
+    switch(env->settings->getSetting<int>("Subsolver.Highs.Parallel"))
     {
     case 0:
         highsInstance.setOptionValue("parallel", "off");
@@ -370,7 +370,7 @@ void MIPSolverHighs::initializeSolverSettings()
         break;
     }
 
-    switch(env->settings->getSetting<int>("Highs.Presolve", "Subsolver"))
+    switch(env->settings->getSetting<int>("Subsolver.Highs.Presolve"))
     {
     case 0:
         highsInstance.setOptionValue("presolve", "off");
@@ -386,9 +386,9 @@ void MIPSolverHighs::initializeSolverSettings()
         break;
     }
 
-    highsInstance.setOptionValue("threads", env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual"));
+    highsInstance.setOptionValue("threads", env->settings->getSetting<int>("Dual.MIP.NumberOfThreads"));
 
-    switch(env->settings->getSetting<int>("Highs.RunCrossover", "Subsolver"))
+    switch(env->settings->getSetting<int>("Subsolver.Highs.RunCrossover"))
     {
     case 0:
         highsInstance.setOptionValue("run_crossover", "off");
@@ -401,7 +401,7 @@ void MIPSolverHighs::initializeSolverSettings()
         break;
     }
 
-    highsInstance.setOptionValue("highs_debug_level", env->settings->getSetting<int>("Highs.DebugLevel", "Subsolver"));
+    highsInstance.setOptionValue("highs_debug_level", env->settings->getSetting<int>("Subsolver.Highs.DebugLevel"));
     highsInstance.setOptionValue("log_to_console",
         false); // Prevent HiGHS from writing directly to stdout; logging is handled through the callback instead
 
@@ -681,7 +681,7 @@ bool MIPSolverHighs::repairInfeasibility()
         }
 
         // Saves the relaxation weights to a file
-        if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+        if(env->settings->getSetting<bool>("Output.Debug.Enable"))
         {
             VectorString constraints(repairConstraints.size());
             VectorDouble relaxParameters(repairConstraints.size());
@@ -695,7 +695,7 @@ bool MIPSolverHighs::repairInfeasibility()
             }
 
             auto filename = fmt::format("{}/dualiter{}_infeasrelaxweights.txt",
-                env->settings->getSetting<std::string>("Debug.Path", "Output"),
+                env->settings->getSetting<std::string>("Output.Debug.Path"),
                 env->results->getCurrentIteration()->iterationNumber - 1);
 
             Utilities::saveVariablePointVectorToFile(relaxParameters, constraints, filename);
@@ -719,10 +719,10 @@ bool MIPSolverHighs::repairInfeasibility()
         }
 
         // Saves the relaxation model to file (after relaxation)
-        if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+        if(env->settings->getSetting<bool>("Output.Debug.Enable"))
         {
             auto filename = fmt::format("{}/dualiter{}_infeasrelax.lp",
-                env->settings->getSetting<std::string>("Debug.Path", "Output"),
+                env->settings->getSetting<std::string>("Output.Debug.Path"),
                 env->results->getCurrentIteration()->iterationNumber - 1);
 
             try
@@ -780,10 +780,10 @@ bool MIPSolverHighs::repairInfeasibility()
 
         env->results->getCurrentIteration()->numberOfInfeasibilityRepairedConstraints = numRepairs;
 
-        if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+        if(env->settings->getSetting<bool>("Output.Debug.Enable"))
         {
             auto filename = fmt::format("{}/dualiter{}_repaired.lp",
-                env->settings->getSetting<std::string>("Debug.Path", "Output"),
+                env->settings->getSetting<std::string>("Output.Debug.Path"),
                 env->results->getCurrentIteration()->iterationNumber - 1);
 
             writeProblemToFile(filename);
@@ -838,7 +838,7 @@ void MIPSolverHighs::setCutOff(double cutOff)
     if(cutOff == SHOT_DBL_MAX || cutOff == SHOT_DBL_MIN)
         return;
 
-    double cutOffTol = env->settings->getSetting<double>("MIP.CutOff.Tolerance", "Dual");
+    double cutOffTol = env->settings->getSetting<double>("Dual.MIP.CutOff.Tolerance");
     double cutOffWithTol = cutOff + cutOffTol;
 
     if(isMinimizationProblem)
@@ -973,7 +973,7 @@ void MIPSolverHighs::deleteMIPStarts()
 bool MIPSolverHighs::createIntegerCut(IntegerCut& integerCut)
 {
     assert(integerCut.variableValues.size() == (size_t)env->reformulatedProblem->properties.numberOfDiscreteVariables);
-    bool allowIntegerCutRepair = env->settings->getSetting<bool>("MIP.InfeasibilityRepair.IntegerCuts", "Dual");
+    bool allowIntegerCutRepair = env->settings->getSetting<bool>("Dual.MIP.InfeasibilityRepair.IntegerCuts");
 
     int numConstraintsBefore = highsInstance.getNumRow();
     int constraintCounter = highsInstance.getNumRow();

@@ -350,7 +350,7 @@ bool MIPSolverGurobi::finalizeProblem()
 {
     try
     {
-        if(env->settings->getSetting<bool>("TreeStrategy.Multi.Reinitialize", "Dual"))
+        if(env->settings->getSetting<bool>("Dual.TreeStrategy.Multi.Reinitialize"))
         {
             int setSolLimit;
             bool discreteVariablesActivated = getDiscreteVariableStatus();
@@ -362,7 +362,7 @@ bool MIPSolverGurobi::finalizeProblem()
             }
             else
             {
-                setSolLimit = env->settings->getSetting<int>("MIP.SolutionLimit.Initial", "Dual");
+                setSolLimit = env->settings->getSetting<int>("Dual.MIP.SolutionLimit.Initial");
             }
 
             setSolutionLimit(setSolLimit);
@@ -393,39 +393,39 @@ void MIPSolverGurobi::initializeSolverSettings()
 
         // Set termination tolerances
         gurobiModel->set(
-            GRB_DoubleParam_MIPGap, env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination") / 1.0);
+            GRB_DoubleParam_MIPGap, env->settings->getSetting<double>("Termination.ObjectiveGap.Relative") / 1.0);
         gurobiModel->set(
-            GRB_DoubleParam_MIPGapAbs, env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination") / 1.0);
+            GRB_DoubleParam_MIPGapAbs, env->settings->getSetting<double>("Termination.ObjectiveGap.Absolute") / 1.0);
         gurobiModel->set(
-            GRB_DoubleParam_FeasibilityTol, env->settings->getSetting<double>("Tolerance.LinearConstraint", "Primal"));
-        gurobiModel->set(GRB_DoubleParam_IntFeasTol, env->settings->getSetting<double>("Tolerance.Integer", "Primal"));
+            GRB_DoubleParam_FeasibilityTol, env->settings->getSetting<double>("Primal.Tolerance.LinearConstraint"));
+        gurobiModel->set(GRB_DoubleParam_IntFeasTol, env->settings->getSetting<double>("Primal.Tolerance.Integer"));
         gurobiModel->set(
-            GRB_DoubleParam_OptimalityTol, env->settings->getSetting<double>("MIP.OptimalityTolerance", "Dual"));
+            GRB_DoubleParam_OptimalityTol, env->settings->getSetting<double>("Dual.MIP.OptimalityTolerance"));
 
         // Add a user-provided node limit
-        if(auto nodeLimit = env->settings->getSetting<double>("MIP.NodeLimit", "Dual"); nodeLimit > 0)
+        if(auto nodeLimit = env->settings->getSetting<double>("Dual.MIP.NodeLimit"); nodeLimit > 0)
             gurobiModel->set(GRB_DoubleParam_NodeLimit, nodeLimit);
 
         // Set solution pool settings
         gurobiModel->set(GRB_IntParam_SolutionLimit, GRB_MAXINT);
         gurobiModel->set(
-            GRB_IntParam_SolutionNumber, env->settings->getSetting<int>("MIP.SolutionPool.Capacity", "Dual") + 1);
+            GRB_IntParam_SolutionNumber, env->settings->getSetting<int>("Dual.MIP.SolutionPool.Capacity") + 1);
         gurobiModel->set(
-            GRB_IntParam_PoolSearchMode, env->settings->getSetting<int>("Gurobi.PoolSearchMode", "Subsolver"));
+            GRB_IntParam_PoolSearchMode, env->settings->getSetting<int>("Subsolver.Gurobi.PoolSearchMode"));
         gurobiModel->set(
-            GRB_IntParam_PoolSolutions, env->settings->getSetting<int>("Gurobi.PoolSolutions", "Subsolver"));
+            GRB_IntParam_PoolSolutions, env->settings->getSetting<int>("Subsolver.Gurobi.PoolSolutions"));
 
         // Set solver emphasis
-        gurobiModel->set(GRB_IntParam_NumericFocus, env->settings->getSetting<int>("Gurobi.NumericFocus", "Subsolver"));
+        gurobiModel->set(GRB_IntParam_NumericFocus, env->settings->getSetting<int>("Subsolver.Gurobi.NumericFocus"));
 
         // Set parameters for quadratics
         gurobiModel->set(GRB_DoubleParam_PSDTol,
-            env->settings->getSetting<double>("Convexity.Quadratics.EigenValueTolerance", "Model"));
+            env->settings->getSetting<double>("Model.Convexity.Quadratics.EigenValueTolerance"));
 
 #if GRB_VERSION_MAJOR >= 9
         // Supports nonconvex MIQCQP
         if(static_cast<ES_QuadraticProblemStrategy>(
-               env->settings->getSetting<int>("Reformulation.Quadratics.Strategy", "Model"))
+               env->settings->getSetting<int>("Model.Reformulation.Quadratics.Strategy"))
             == ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained)
         {
             gurobiModel->set(GRB_IntParam_NonConvex, 2);
@@ -433,13 +433,13 @@ void MIPSolverGurobi::initializeSolverSettings()
 #endif
 
         // Set various solver specific MIP settings
-        gurobiModel->set(GRB_IntParam_ScaleFlag, env->settings->getSetting<int>("Gurobi.ScaleFlag", "Subsolver"));
-        gurobiModel->set(GRB_IntParam_MIPFocus, env->settings->getSetting<int>("Gurobi.MIPFocus", "Subsolver"));
+        gurobiModel->set(GRB_IntParam_ScaleFlag, env->settings->getSetting<int>("Subsolver.Gurobi.ScaleFlag"));
+        gurobiModel->set(GRB_IntParam_MIPFocus, env->settings->getSetting<int>("Subsolver.Gurobi.MIPFocus"));
         gurobiModel->set(
-            GRB_DoubleParam_Heuristics, env->settings->getSetting<double>("Gurobi.Heuristics", "Subsolver"));
+            GRB_DoubleParam_Heuristics, env->settings->getSetting<double>("Subsolver.Gurobi.Heuristics"));
 
         // Set number of threads
-        gurobiModel->set(GRB_IntParam_Threads, env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual"));
+        gurobiModel->set(GRB_IntParam_Threads, env->settings->getSetting<int>("Dual.MIP.NumberOfThreads"));
     }
     catch(GRBException& e)
     {
@@ -527,7 +527,7 @@ bool MIPSolverGurobi::addSpecialOrderedSet(E_SOSType type, VectorInteger variabl
 
 bool MIPSolverGurobi::createIntegerCut(IntegerCut& integerCut)
 {
-    bool allowIntegerCutRepair = env->settings->getSetting<bool>("MIP.InfeasibilityRepair.IntegerCuts", "Dual");
+    bool allowIntegerCutRepair = env->settings->getSetting<bool>("Dual.MIP.InfeasibilityRepair.IntegerCuts");
 
     try
     {
@@ -943,7 +943,7 @@ bool MIPSolverGurobi::repairInfeasibility()
         }
 
         // Saves the relaxation weights to a file
-        if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+        if(env->settings->getSetting<bool>("Output.Debug.Enable"))
         {
             VectorString constraints(relaxParameters.size());
 
@@ -954,7 +954,7 @@ bool MIPSolverGurobi::repairInfeasibility()
             }
 
             auto filename = fmt::format("{}/dualiter{}_infeasrelaxweights.txt",
-                env->settings->getSetting<std::string>("Debug.Path", "Output"),
+                env->settings->getSetting<std::string>("Output.Debug.Path"),
                 env->results->getCurrentIteration()->iterationNumber - 1);
 
             Utilities::saveVariablePointVectorToFile(relaxParameters, constraints, filename);
@@ -974,10 +974,10 @@ bool MIPSolverGurobi::repairInfeasibility()
         feasModel.optimize();
 
         // Saves the relaxation model to file
-        if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+        if(env->settings->getSetting<bool>("Output.Debug.Enable"))
         {
             auto filename = fmt::format("{}/dualiter{}_infeasrelax.lp",
-                env->settings->getSetting<std::string>("Debug.Path", "Output"),
+                env->settings->getSetting<std::string>("Output.Debug.Path"),
                 env->results->getCurrentIteration()->iterationNumber - 1);
 
             try
@@ -1020,10 +1020,10 @@ bool MIPSolverGurobi::repairInfeasibility()
 
         env->results->getCurrentIteration()->numberOfInfeasibilityRepairedConstraints = numRepairs;
 
-        if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+        if(env->settings->getSetting<bool>("Output.Debug.Enable"))
         {
             auto filename = fmt::format("{}/dualiter{}_infeasrelax.lp",
-                env->settings->getSetting<std::string>("Debug.Path", "Output"),
+                env->settings->getSetting<std::string>("Output.Debug.Path"),
                 env->results->getCurrentIteration()->iterationNumber - 1);
 
             writeProblemToFile(filename);
@@ -1093,7 +1093,7 @@ void MIPSolverGurobi::setCutOff(double cutOff)
     {
         // Gurobi has problems if not an epsilon value is added to the cutoff...
 
-        double cutOffTol = env->settings->getSetting<double>("MIP.CutOff.Tolerance", "Dual");
+        double cutOffTol = env->settings->getSetting<double>("Dual.MIP.CutOff.Tolerance");
 
         if(isMinimizationProblem)
         {
@@ -1448,7 +1448,7 @@ std::string MIPSolverGurobi::getSolverVersion()
 GurobiCallbackMultiTree::GurobiCallbackMultiTree(EnvironmentPtr envPtr)
 {
     env = envPtr;
-    showOutput = env->settings->getSetting<bool>("Console.DualSolver.Show", "Output");
+    showOutput = env->settings->getSetting<bool>("Output.Console.DualSolver.Show");
 }
 
 void GurobiCallbackMultiTree::callback()

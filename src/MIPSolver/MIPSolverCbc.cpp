@@ -288,7 +288,7 @@ bool MIPSolverCbc::finalizeProblem()
         CbcSolverUsefulData solverData;
         CbcMain0(*cbcModel, solverData);
 
-        if(!env->settings->getSetting<bool>("Console.DualSolver.Show", "Output"))
+        if(!env->settings->getSetting<bool>("Output.Console.DualSolver.Show"))
         {
             cbcModel->setLogLevel(0);
             osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
@@ -310,15 +310,15 @@ bool MIPSolverCbc::finalizeProblem()
 void MIPSolverCbc::initializeSolverSettings()
 {
     // Set termination tolerances
-    cbcModel->setAllowableGap(env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination") / 1.0);
-    cbcModel->setAllowableFractionGap(env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination") / 1.0);
+    cbcModel->setAllowableGap(env->settings->getSetting<double>("Termination.ObjectiveGap.Absolute") / 1.0);
+    cbcModel->setAllowableFractionGap(env->settings->getSetting<double>("Termination.ObjectiveGap.Relative") / 1.0);
     osiInterface->setDblParam(
-        OsiPrimalTolerance, env->settings->getSetting<double>("Tolerance.LinearConstraint", "Primal"));
-    cbcModel->setIntegerTolerance(env->settings->getSetting<double>("Tolerance.Integer", "Primal"));
-    osiInterface->setDblParam(OsiDualTolerance, env->settings->getSetting<double>("MIP.OptimalityTolerance", "Dual"));
+        OsiPrimalTolerance, env->settings->getSetting<double>("Primal.Tolerance.LinearConstraint"));
+    cbcModel->setIntegerTolerance(env->settings->getSetting<double>("Primal.Tolerance.Integer"));
+    osiInterface->setDblParam(OsiDualTolerance, env->settings->getSetting<double>("Dual.MIP.OptimalityTolerance"));
 
     // Adds a user-provided node limit
-    if(auto nodeLimit = env->settings->getSetting<double>("MIP.NodeLimit", "Dual"); nodeLimit > 0)
+    if(auto nodeLimit = env->settings->getSetting<double>("Dual.MIP.NodeLimit"); nodeLimit > 0)
     {
         if(nodeLimit > SHOT_INT_MAX)
             nodeLimit = SHOT_INT_MAX;
@@ -328,16 +328,16 @@ void MIPSolverCbc::initializeSolverSettings()
 
     // Set solution pool settings
     cbcModel->setMaximumSolutions(solLimit);
-    cbcModel->setMaximumSavedSolutions(env->settings->getSetting<int>("MIP.SolutionPool.Capacity", "Dual"));
+    cbcModel->setMaximumSavedSolutions(env->settings->getSetting<int>("Dual.MIP.SolutionPool.Capacity"));
 
     // Set number of threads
     if(cbcModel->haveMultiThreadSupport())
     {
         // Cbc runs deterministcally if 100 is added to the number of threads
-        if(env->settings->getSetting<bool>("Cbc.DeterministicParallelMode", "Subsolver"))
-            numberOfThreads = env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual") + 100;
+        if(env->settings->getSetting<bool>("Subsolver.Cbc.DeterministicParallelMode"))
+            numberOfThreads = env->settings->getSetting<int>("Dual.MIP.NumberOfThreads") + 100;
         else
-            numberOfThreads = env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual");
+            numberOfThreads = env->settings->getSetting<int>("Dual.MIP.NumberOfThreads");
     }
     else
         numberOfThreads = 1;
@@ -534,14 +534,14 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
 
     argv[0] = strdup("");
     argv[1] = strdup("-autoscale");
-    if(env->settings->getSetting<bool>("Cbc.AutoScale", "Subsolver"))
+    if(env->settings->getSetting<bool>("Subsolver.Cbc.AutoScale"))
         argv[2] = strdup("on");
     else
         argv[2] = strdup("off");
 
     argv[3] = strdup("-nodestrategy");
 
-    switch(env->settings->getSetting<int>("Cbc.NodeStrategy", "Subsolver"))
+    switch(env->settings->getSetting<int>("Subsolver.Cbc.NodeStrategy"))
     {
     case 0:
         arg = "depth";
@@ -580,7 +580,7 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
 
     argv[5] = strdup("-scaling");
 
-    switch(env->settings->getSetting<int>("Cbc.Scaling", "Subsolver"))
+    switch(env->settings->getSetting<int>("Subsolver.Cbc.Scaling"))
     {
     case 0:
         arg = "automatic";
@@ -614,7 +614,7 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
     argv[6] = strdup(arg.c_str());
 
     argv[7] = strdup("-strategy");
-    arg = std::to_string(env->settings->getSetting<int>("Cbc.Strategy", "Subsolver"));
+    arg = std::to_string(env->settings->getSetting<int>("Subsolver.Cbc.Strategy"));
     argv[8] = strdup(arg.c_str());
 
     /*
@@ -697,7 +697,7 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
         CbcSolverUsefulData solverData;
         CbcMain0(*cbcModel, solverData);
 
-        if(!env->settings->getSetting<bool>("Console.DualSolver.Show", "Output"))
+        if(!env->settings->getSetting<bool>("Output.Console.DualSolver.Show"))
         {
             cbcModel->setLogLevel(0);
             osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
@@ -733,7 +733,7 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
             CbcSolverUsefulData solverData;
             CbcMain0(*cbcModel, solverData);
 
-            if(!env->settings->getSetting<bool>("Console.DualSolver.Show", "Output"))
+            if(!env->settings->getSetting<bool>("Output.Console.DualSolver.Show"))
             {
                 cbcModel->setLogLevel(0);
                 osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
@@ -791,11 +791,11 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
 
         if(problemUpdated)
         {
-            if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+            if(env->settings->getSetting<bool>("Output.Debug.Enable"))
             {
 
                 auto filename = fmt::format("{}/dualiter{}_unbounded.lp",
-                    env->settings->getSetting<std::string>("Debug.Path", "Output"),
+                    env->settings->getSetting<std::string>("Output.Debug.Path"),
                     env->results->getCurrentIteration()->iterationNumber - 1);
 
                 try
@@ -816,7 +816,7 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
             CbcSolverUsefulData solverData;
             CbcMain0(*cbcModel, solverData);
 
-            if(!env->settings->getSetting<bool>("Console.DualSolver.Show", "Output"))
+            if(!env->settings->getSetting<bool>("Output.Console.DualSolver.Show"))
             {
                 cbcModel->setLogLevel(0);
                 osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
@@ -879,7 +879,7 @@ bool MIPSolverCbc::repairInfeasibility()
         }
 
         // Saves the relaxation weights to a file
-        if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+        if(env->settings->getSetting<bool>("Output.Debug.Enable"))
         {
             VectorString constraints(relaxParameters.size());
 
@@ -890,7 +890,7 @@ bool MIPSolverCbc::repairInfeasibility()
             }
 
             auto filename = fmt::format("{}/dualiter{}_infeasrelaxweights.txt",
-                env->settings->getSetting<std::string>("Debug.Path", "Output"),
+                env->settings->getSetting<std::string>("Output.Debug.Path"),
                 env->results->getCurrentIteration()->iterationNumber - 1);
 
             Utilities::saveVariablePointVectorToFile(relaxParameters, constraints, filename);
@@ -918,10 +918,10 @@ bool MIPSolverCbc::repairInfeasibility()
             }
         }
 
-        if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+        if(env->settings->getSetting<bool>("Output.Debug.Enable"))
         {
             auto filename = fmt::format("{}/dualiter{}_infeasrelax.lp",
-                env->settings->getSetting<std::string>("Debug.Path", "Output"),
+                env->settings->getSetting<std::string>("Output.Debug.Path"),
                 env->results->getCurrentIteration()->iterationNumber - 1);
 
             try
@@ -942,7 +942,7 @@ bool MIPSolverCbc::repairInfeasibility()
         CbcSolverUsefulData solverData;
         CbcMain0(*cbcModel, solverData);
 
-        if(!env->settings->getSetting<bool>("Console.DualSolver.Show", "Output"))
+        if(!env->settings->getSetting<bool>("Output.Console.DualSolver.Show"))
         {
             cbcModel->setLogLevel(0);
             osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
@@ -958,14 +958,14 @@ bool MIPSolverCbc::repairInfeasibility()
 
         argv[0] = strdup("");
         argv[1] = strdup("-autoscale");
-        if(env->settings->getSetting<bool>("Cbc.AutoScale", "Subsolver"))
+        if(env->settings->getSetting<bool>("Subsolver.Cbc.AutoScale"))
             argv[2] = strdup("on");
         else
             argv[2] = strdup("off");
 
         argv[3] = strdup("-nodestrategy");
 
-        switch(env->settings->getSetting<int>("Cbc.NodeStrategy", "Subsolver"))
+        switch(env->settings->getSetting<int>("Subsolver.Cbc.NodeStrategy"))
         {
         case 0:
             arg = "depth";
@@ -1004,7 +1004,7 @@ bool MIPSolverCbc::repairInfeasibility()
 
         argv[5] = strdup("-scaling");
 
-        switch(env->settings->getSetting<int>("Cbc.Scaling", "Subsolver"))
+        switch(env->settings->getSetting<int>("Subsolver.Cbc.Scaling"))
         {
         case 0:
             arg = "automatic";
@@ -1038,7 +1038,7 @@ bool MIPSolverCbc::repairInfeasibility()
         argv[6] = strdup(arg.c_str());
 
         argv[7] = strdup("-strategy");
-        arg = std::to_string(env->settings->getSetting<int>("Cbc.Strategy", "Subsolver"));
+        arg = std::to_string(env->settings->getSetting<int>("Subsolver.Cbc.Strategy"));
         argv[8] = strdup(arg.c_str());
 
         /*
@@ -1124,10 +1124,10 @@ bool MIPSolverCbc::repairInfeasibility()
 
         env->results->getCurrentIteration()->numberOfInfeasibilityRepairedConstraints = numRepairs;
 
-        if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+        if(env->settings->getSetting<bool>("Output.Debug.Enable"))
         {
             auto filename = fmt::format("{}/dualiter{}_infeasrelax.lp",
-                env->settings->getSetting<std::string>("Debug.Path", "Output"),
+                env->settings->getSetting<std::string>("Output.Debug.Path"),
                 env->results->getCurrentIteration()->iterationNumber - 1);
 
             writeProblemToFile(filename);
@@ -1183,7 +1183,7 @@ void MIPSolverCbc::setCutOff(double cutOff)
     if(cutOff == SHOT_DBL_MAX || cutOff == SHOT_DBL_MIN)
         return;
 
-    double cutOffTol = env->settings->getSetting<double>("MIP.CutOff.Tolerance", "Dual");
+    double cutOffTol = env->settings->getSetting<double>("Dual.MIP.CutOff.Tolerance");
 
     if(isMinimizationProblem)
     {
@@ -1328,7 +1328,7 @@ void MIPSolverCbc::deleteMIPStarts() { MIPStart.clear(); }
 bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
 {
     assert(integerCut.variableValues.size() == (size_t)env->reformulatedProblem->properties.numberOfDiscreteVariables);
-    bool allowIntegerCutRepair = env->settings->getSetting<bool>("MIP.InfeasibilityRepair.IntegerCuts", "Dual");
+    bool allowIntegerCutRepair = env->settings->getSetting<bool>("Dual.MIP.InfeasibilityRepair.IntegerCuts");
 
     int numConstraintsBefore = osiInterface->getNumRows();
     int constraintCounter = osiInterface->getNumRows();
@@ -1710,7 +1710,7 @@ void MIPSolverCbc::writePresolvedToFile([[maybe_unused]] std::string filename)
 void MIPSolverCbc::checkParameters()
 {
     // For stability
-    env->settings->updateSetting("Tolerance.TrustLinearConstraintValues", "Primal", false);
+    env->settings->updateSetting("Primal.Tolerance.TrustLinearConstraintValues", false);
 }
 
 int MIPSolverCbc::getNumberOfExploredNodes()
@@ -1730,7 +1730,7 @@ std::string MIPSolverCbc::getSolverVersion() { return (CBC_VERSION); }
 
 int CbcMessageHandler::print()
 {
-    if(!env->settings->getSetting<bool>("Console.DualSolver.Show", "Output"))
+    if(!env->settings->getSetting<bool>("Output.Console.DualSolver.Show"))
         return 0;
 
     std::string message(CoinMessageHandler::messageBuffer());

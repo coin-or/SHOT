@@ -46,8 +46,8 @@ bool RelaxationStrategyBase::isConstraintToleranceReached()
 
     auto prevIter = env->results->getPreviousIteration();
 
-    double constraintTolerance = std::max(env->settings->getSetting<double>("ConstraintTolerance", "Termination"),
-        env->settings->getSetting<double>("Relaxation.TerminationTolerance", "Dual"));
+    double constraintTolerance = std::max(env->settings->getSetting<double>("Termination.ConstraintTolerance"),
+        env->settings->getSetting<double>("Dual.Relaxation.TerminationTolerance"));
 
     if(prevIter->maxDeviation > constraintTolerance)
     {
@@ -76,13 +76,13 @@ bool RelaxationStrategyBase::isGapReached()
     auto prevIter = env->results->getPreviousIteration();
 
     if(env->results->getAbsoluteGlobalObjectiveGap()
-        < 2 * env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination"))
+        < 2 * env->settings->getSetting<double>("Termination.ObjectiveGap.Absolute"))
     {
         return true;
     }
 
     if(env->results->getRelativeGlobalObjectiveGap()
-        < 2 * env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination"))
+        < 2 * env->settings->getSetting<double>("Termination.ObjectiveGap.Relative"))
     {
         return true;
     }

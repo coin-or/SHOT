@@ -35,7 +35,7 @@ TaskPerformBoundTightening::TaskPerformBoundTightening(EnvironmentPtr envPtr, Pr
 
     sourceProblem = source;
 
-    if(env->settings->getSetting<bool>("BoundTightening.InitialPOA.Use", "Model")
+    if(env->settings->getSetting<bool>("Model.BoundTightening.InitialPOA.Use")
         && (sourceProblem->properties.numberOfNonlinearConstraints > 0
             || sourceProblem->objectiveFunction->properties.classification
                 > E_ObjectiveFunctionClassification::Quadratic))
@@ -45,31 +45,31 @@ TaskPerformBoundTightening::TaskPerformBoundTightening(EnvironmentPtr envPtr, Pr
         relaxedProblem = sourceProblem->createCopy(env, true, true);
         POASolver = std::make_shared<NLPSolverSHOT>(env, relaxedProblem);
 
-        POASolver->solver->updateSetting("ConstraintTolerance", "Termination",
-            env->settings->getSetting<double>("BoundTightening.InitialPOA.ConstraintTolerance", "Model"));
-        POASolver->solver->updateSetting("ObjectiveConstraintTolerance", "Termination",
-            env->settings->getSetting<double>("BoundTightening.InitialPOA.ObjectiveConstraintTolerance", "Model"));
+        POASolver->solver->updateSetting("Termination.ConstraintTolerance",
+            env->settings->getSetting<double>("Model.BoundTightening.InitialPOA.ConstraintTolerance"));
+        POASolver->solver->updateSetting("Termination.ObjectiveConstraintTolerance",
+            env->settings->getSetting<double>("Model.BoundTightening.InitialPOA.ObjectiveConstraintTolerance"));
 
-        POASolver->solver->updateSetting("DualStagnation.ConstraintTolerance", "Termination",
-            env->settings->getSetting<double>("BoundTightening.InitialPOA.StagnationConstraintTolerance", "Model"));
-        POASolver->solver->updateSetting("DualStagnation.IterationLimit", "Termination",
-            env->settings->getSetting<int>("BoundTightening.InitialPOA.StagnationIterationLimit", "Model"));
+        POASolver->solver->updateSetting("Termination.DualStagnation.ConstraintTolerance",
+            env->settings->getSetting<double>("Model.BoundTightening.InitialPOA.StagnationConstraintTolerance"));
+        POASolver->solver->updateSetting("Termination.DualStagnation.IterationLimit",
+            env->settings->getSetting<int>("Model.BoundTightening.InitialPOA.StagnationIterationLimit"));
 
-        POASolver->solver->updateSetting("TimeLimit", "Termination",
-            env->settings->getSetting<double>("BoundTightening.InitialPOA.TimeLimit", "Model"));
+        POASolver->solver->updateSetting("Termination.TimeLimit",
+            env->settings->getSetting<double>("Model.BoundTightening.InitialPOA.TimeLimit"));
 
-        POASolver->solver->updateSetting("IterationLimit", "Termination",
-            env->settings->getSetting<int>("BoundTightening.InitialPOA.IterationLimit", "Model"));
+        POASolver->solver->updateSetting("Termination.IterationLimit",
+            env->settings->getSetting<int>("Model.BoundTightening.InitialPOA.IterationLimit"));
 
-        POASolver->solver->updateSetting("ObjectiveGap.Absolute", "Termination",
-            env->settings->getSetting<double>("BoundTightening.InitialPOA.ObjectiveGapAbsolute", "Model"));
-        POASolver->solver->updateSetting("ObjectiveGap.Relative", "Termination",
-            env->settings->getSetting<double>("BoundTightening.InitialPOA.ObjectiveGapRelative", "Model"));
+        POASolver->solver->updateSetting("Termination.ObjectiveGap.Absolute",
+            env->settings->getSetting<double>("Model.BoundTightening.InitialPOA.ObjectiveGapAbsolute"));
+        POASolver->solver->updateSetting("Termination.ObjectiveGap.Relative",
+            env->settings->getSetting<double>("Model.BoundTightening.InitialPOA.ObjectiveGapRelative"));
 
         POASolver->solver->updateSetting(
-            "CutStrategy", "Dual", env->settings->getSetting<int>("BoundTightening.InitialPOA.CutStrategy", "Model"));
+            "Dual.CutStrategy", env->settings->getSetting<int>("Model.BoundTightening.InitialPOA.CutStrategy"));
 
-        POASolver->solver->updateSetting("ESH.InteriorPoint.UsePrimalSolution", "Dual",
+        POASolver->solver->updateSetting("Dual.ESH.InteriorPoint.UsePrimalSolution",
             static_cast<int>(ES_AddPrimalPointAsInteriorPoint::KeepOriginal));
 
         env->timing->stopTimer("BoundTighteningPOA");
@@ -84,18 +84,18 @@ void TaskPerformBoundTightening::run()
 {
     env->timing->startTimer("BoundTightening");
 
-    if(env->settings->getSetting<bool>("BoundTightening.InitialPOA.Use", "Model") && env->reformulatedProblem
+    if(env->settings->getSetting<bool>("Model.BoundTightening.InitialPOA.Use") && env->reformulatedProblem
         && (sourceProblem->properties.numberOfNonlinearConstraints > 0
             || sourceProblem->objectiveFunction->properties.classification
                 > E_ObjectiveFunctionClassification::Quadratic))
         createPOA();
 
-    if(env->settings->getSetting<bool>("BoundTightening.FeasibilityBased.Use", "Model"))
+    if(env->settings->getSetting<bool>("Model.BoundTightening.FeasibilityBased.Use"))
     {
         bool performBoundTightening = true;
 
         auto quadraticStrategy = static_cast<ES_QuadraticProblemStrategy>(
-            env->settings->getSetting<int>("Reformulation.Quadratics.Strategy", "Model"));
+            env->settings->getSetting<int>("Model.Reformulation.Quadratics.Strategy"));
 
         // Do not do bound tightening on problems solved by MIP solver
         if(sourceProblem->properties.isLPProblem || sourceProblem->properties.isMILPProblem)

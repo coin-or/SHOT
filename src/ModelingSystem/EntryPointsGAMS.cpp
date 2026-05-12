@@ -187,7 +187,7 @@ extern "C"
                 return 0;
             }
 
-            env->settings->updateSetting("ModelingSystem", "Input", static_cast<int>(ES_ModelingSystem::GAMS));
+            env->settings->updateSetting("Input.ModelingSystem", static_cast<int>(ES_ModelingSystem::GAMS));
             env->timing->stopTimer("ProblemInitialization");
 
             solver.registerCallback(

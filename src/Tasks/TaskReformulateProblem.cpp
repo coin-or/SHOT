@@ -33,12 +33,12 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
     env->timing->startTimer("ProblemReformulation");
 
     auto quadraticStrategy = static_cast<ES_QuadraticProblemStrategy>(
-        env->settings->getSetting<int>("Reformulation.Quadratics.Strategy", "Model"));
+        env->settings->getSetting<int>("Model.Reformulation.Quadratics.Strategy"));
 
     auto integerBilinearStrategy = static_cast<ES_ReformulateBilinearInteger>(
-        env->settings->getSetting<int>("Reformulation.Bilinear.IntegerFormulation", "Model"));
+        env->settings->getSetting<int>("Model.Reformulation.Bilinear.IntegerFormulation"));
 
-    if(env->settings->getSetting<int>("MIP.Solver", "Dual") == (int)ES_MIPSolver::Cplex)
+    if(env->settings->getSetting<int>("Dual.MIP.Solver") == (int)ES_MIPSolver::Cplex)
     {
         switch(quadraticStrategy)
         {
@@ -89,7 +89,7 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
             break;
         }
     }
-    else if(env->settings->getSetting<int>("MIP.Solver", "Dual") == (int)ES_MIPSolver::Gurobi)
+    else if(env->settings->getSetting<int>("Dual.MIP.Solver") == (int)ES_MIPSolver::Gurobi)
     {
         switch(quadraticStrategy)
         {
@@ -147,7 +147,7 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
             break;
         }
     }
-    else if(env->settings->getSetting<int>("MIP.Solver", "Dual") == (int)ES_MIPSolver::Cbc)
+    else if(env->settings->getSetting<int>("Dual.MIP.Solver") == (int)ES_MIPSolver::Cbc)
     {
         // Cbc does not support quadratic terms
         useConvexQuadraticConstraints = false;
@@ -177,15 +177,15 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
     }
 
     extractQuadraticTermsFromNonconvexExpressions
-        = (env->settings->getSetting<int>("Reformulation.Quadratics.ExtractStrategy", "Model")
+        = (env->settings->getSetting<int>("Model.Reformulation.Quadratics.ExtractStrategy")
             == static_cast<int>(ES_QuadraticTermsExtractStrategy::ExtractToEqualityConstraintIfNonconvex));
 
     extractQuadraticTermsFromConvexExpressions
-        = (env->settings->getSetting<int>("Reformulation.Quadratics.ExtractStrategy", "Model")
+        = (env->settings->getSetting<int>("Model.Reformulation.Quadratics.ExtractStrategy")
             == static_cast<int>(ES_QuadraticTermsExtractStrategy::ExtractToEqualityConstraintAlways));
 
     maxBilinearIntegerReformulationDomain
-        = env->settings->getSetting<int>("Reformulation.Bilinear.IntegerFormulation.MaxDomain", "Model");
+        = env->settings->getSetting<int>("Model.Reformulation.Bilinear.IntegerFormulation.MaxDomain");
 
     auxVariableCounter = env->problem->properties.numberOfVariables;
     auxConstraintCounter = env->problem->properties.numberOfNumericConstraints;
@@ -266,10 +266,10 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
 
     env->reformulatedProblem = reformulatedProblem;
 
-    if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+    if(env->settings->getSetting<bool>("Output.Debug.Enable"))
     {
         std::stringstream filename;
-        filename << env->settings->getSetting<std::string>("Debug.Path", "Output");
+        filename << env->settings->getSetting<std::string>("Output.Debug.Path");
         filename << "/reformulatedproblem";
         filename << ".txt";
 
@@ -532,7 +532,7 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
     }
 
     if(env->problem->objectiveFunction->properties.classification >= E_ObjectiveFunctionClassification::Quadratic
-        && env->settings->getSetting<bool>("Reformulation.ObjectiveFunction.Epigraph.Use", "Model"))
+        && env->settings->getSetting<bool>("Model.Reformulation.ObjectiveFunction.Epigraph.Use"))
     {
         // Rewrite objective as objective constraint, aka epigraph
         createEpigraphConstraint();
@@ -591,7 +591,7 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
         auto [tmpLinearTerms, tmpQuadraticTerms] = reformulateAndPartitionQuadraticSum(sourceObjective->quadraticTerms,
             isSignReversed,
             static_cast<ES_PartitionNonlinearSums>(
-                env->settings->getSetting<int>("Reformulation.ObjectiveFunction.PartitionQuadraticTerms", "Model")));
+                env->settings->getSetting<int>("Model.Reformulation.ObjectiveFunction.PartitionQuadraticTerms")));
 
         destinationLinearTerms.add(tmpLinearTerms);
         destinationQuadraticTerms.add(tmpQuadraticTerms);
@@ -602,7 +602,7 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
         auto sourceObjective = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->problem->objectiveFunction);
 
         if(static_cast<ES_PartitionNonlinearSums>(
-               env->settings->getSetting<int>("Reformulation.ObjectiveFunction.PartitionNonlinearTerms", "Model"))
+               env->settings->getSetting<int>("Model.Reformulation.ObjectiveFunction.PartitionNonlinearTerms"))
                 == ES_PartitionNonlinearSums::Always
             && sourceObjective->monomialTerms.size() > 1)
         {
@@ -621,14 +621,14 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
         auto sourceObjective = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->problem->objectiveFunction);
 
         if(static_cast<ES_PartitionNonlinearSums>(
-               env->settings->getSetting<int>("Reformulation.ObjectiveFunction.PartitionNonlinearTerms", "Model"))
+               env->settings->getSetting<int>("Model.Reformulation.ObjectiveFunction.PartitionNonlinearTerms"))
             == ES_PartitionNonlinearSums::Always)
         {
             auto tmpLinearTerms = partitionSignomialTerms(sourceObjective->signomialTerms, isSignReversed);
             destinationLinearTerms.add(tmpLinearTerms);
         }
         else if(static_cast<ES_PartitionNonlinearSums>(
-                    env->settings->getSetting<int>("Reformulation.ObjectiveFunction.PartitionNonlinearTerms", "Model"))
+                    env->settings->getSetting<int>("Model.Reformulation.ObjectiveFunction.PartitionNonlinearTerms"))
             == ES_PartitionNonlinearSums::IfConvex)
         {
             bool areAllConvex = false;
@@ -661,7 +661,7 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
         auto sourceObjective = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->problem->objectiveFunction);
 
         if(static_cast<ES_PartitionNonlinearSums>(
-               env->settings->getSetting<int>("Reformulation.ObjectiveFunction.PartitionNonlinearTerms", "Model"))
+               env->settings->getSetting<int>("Model.Reformulation.ObjectiveFunction.PartitionNonlinearTerms"))
                 == ES_PartitionNonlinearSums::Always
             && sourceObjective->nonlinearExpression->getType() == E_NonlinearExpressionTypes::Sum)
         {
@@ -670,7 +670,7 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
             destinationLinearTerms.add(tmpLinearTerms);
         }
         else if(static_cast<ES_PartitionNonlinearSums>(
-                    env->settings->getSetting<int>("Reformulation.ObjectiveFunction.PartitionNonlinearTerms", "Model"))
+                    env->settings->getSetting<int>("Model.Reformulation.ObjectiveFunction.PartitionNonlinearTerms"))
                 == ES_PartitionNonlinearSums::IfConvex
             && sourceObjective->nonlinearExpression->getType() == E_NonlinearExpressionTypes::Sum)
         {
@@ -767,7 +767,7 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
 
 void TaskReformulateProblem::createEpigraphConstraint()
 {
-    double objVarBound = env->settings->getSetting<double>("Variables.NonlinearObjectiveVariable.Bound", "Model");
+    double objVarBound = env->settings->getSetting<double>("Model.Variables.NonlinearObjectiveVariable.Bound");
 
     Interval objectiveBound;
 
@@ -977,7 +977,7 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
     bool isSignReversed = false;
 
     auto partitionQuadraticTermsStrategy = static_cast<ES_PartitionNonlinearSums>(
-        env->settings->getSetting<int>("Reformulation.Constraint.PartitionQuadraticTerms", "Model"));
+        env->settings->getSetting<int>("Model.Reformulation.Constraint.PartitionQuadraticTerms"));
 
     if(C->properties.hasLinearTerms)
     {
@@ -1000,7 +1000,7 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
     {
         auto sourceConstraint = std::dynamic_pointer_cast<NonlinearConstraint>(C);
 
-        if(env->settings->getSetting<int>("Reformulation.Monomials.Formulation", "Model")
+        if(env->settings->getSetting<int>("Model.Reformulation.Monomials.Formulation")
             != static_cast<int>(ES_ReformulationBinaryMonomials::None))
         {
             auto [tmpLinearTerms, tmpMonomialTerms]
@@ -1014,7 +1014,7 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
             else
             {
                 if(static_cast<ES_PartitionNonlinearSums>(
-                       env->settings->getSetting<int>("Reformulation.Constraint.PartitionNonlinearTerms", "Model"))
+                       env->settings->getSetting<int>("Model.Reformulation.Constraint.PartitionNonlinearTerms"))
                         == ES_PartitionNonlinearSums::Always
                     && tmpMonomialTerms.size() > 1)
                 {
@@ -1031,7 +1031,7 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
         else
         {
             if(static_cast<ES_PartitionNonlinearSums>(
-                   env->settings->getSetting<int>("Reformulation.Constraint.PartitionNonlinearTerms", "Model"))
+                   env->settings->getSetting<int>("Model.Reformulation.Constraint.PartitionNonlinearTerms"))
                     == ES_PartitionNonlinearSums::Always
                 && destinationMonomialTerms.size() > 1)
             {
@@ -1051,7 +1051,7 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
         auto sourceConstraint = std::dynamic_pointer_cast<NonlinearConstraint>(C);
 
         if(static_cast<ES_PartitionNonlinearSums>(
-               env->settings->getSetting<int>("Reformulation.Constraint.PartitionNonlinearTerms", "Model"))
+               env->settings->getSetting<int>("Model.Reformulation.Constraint.PartitionNonlinearTerms"))
                 == ES_PartitionNonlinearSums::Always
             && sourceConstraint->signomialTerms.size() > 1)
         {
@@ -1059,7 +1059,7 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
             destinationLinearTerms.add(tmpLinearTerms);
         }
         else if(static_cast<ES_PartitionNonlinearSums>(
-                    env->settings->getSetting<int>("Reformulation.Constraint.PartitionNonlinearTerms", "Model"))
+                    env->settings->getSetting<int>("Model.Reformulation.Constraint.PartitionNonlinearTerms"))
                 == ES_PartitionNonlinearSums::IfConvex
             && sourceConstraint->signomialTerms.size() > 1)
         {
@@ -1126,7 +1126,7 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
     if(destinationExpression)
     {
         if(static_cast<ES_PartitionNonlinearSums>(
-               env->settings->getSetting<int>("Reformulation.Constraint.PartitionNonlinearTerms", "Model"))
+               env->settings->getSetting<int>("Model.Reformulation.Constraint.PartitionNonlinearTerms"))
                 == ES_PartitionNonlinearSums::Always
             && destinationExpression->getType() == E_NonlinearExpressionTypes::Sum)
         {
@@ -1135,7 +1135,7 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
             destinationLinearTerms.add(tmpLinearTerms);
         }
         else if(static_cast<ES_PartitionNonlinearSums>(
-                    env->settings->getSetting<int>("Reformulation.Constraint.PartitionNonlinearTerms", "Model"))
+                    env->settings->getSetting<int>("Model.Reformulation.Constraint.PartitionNonlinearTerms"))
                 == ES_PartitionNonlinearSums::IfConvex
             && destinationExpression->getType() == E_NonlinearExpressionTypes::Sum)
         {
@@ -1399,14 +1399,14 @@ LinearTerms TaskReformulateProblem::partitionNonlinearSum(
     bool allNonlinearExpressionsReformulated = false;
 
     auto partitionNonlinearTermsStrategy = static_cast<ES_PartitionNonlinearSums>(
-        env->settings->getSetting<int>("Reformulation.Constraint.PartitionNonlinearTerms", "Model"));
-    auto monomialFormulation = env->settings->getSetting<int>("Reformulation.Monomials.Formulation", "Model");
-    double varLowerBound = env->settings->getSetting<double>("Variables.Continuous.MinimumLowerBound", "Model");
-    double varUpperBound = env->settings->getSetting<double>("Variables.Continuous.MaximumUpperBound", "Model");
+        env->settings->getSetting<int>("Model.Reformulation.Constraint.PartitionNonlinearTerms"));
+    auto monomialFormulation = env->settings->getSetting<int>("Model.Reformulation.Monomials.Formulation");
+    double varLowerBound = env->settings->getSetting<double>("Model.Variables.Continuous.MinimumLowerBound");
+    double varUpperBound = env->settings->getSetting<double>("Model.Variables.Continuous.MaximumUpperBound");
     auto extractQuadraticTermsSetting
-        = env->settings->getSetting<int>("Reformulation.Quadratics.ExtractStrategy", "Model");
+        = env->settings->getSetting<int>("Model.Reformulation.Quadratics.ExtractStrategy");
     auto quadraticStrategy = static_cast<ES_QuadraticProblemStrategy>(
-        env->settings->getSetting<int>("Reformulation.Quadratics.Strategy", "Model"));
+        env->settings->getSetting<int>("Model.Reformulation.Quadratics.Strategy"));
 
     for(auto& T : source->children)
     {
@@ -1573,8 +1573,8 @@ LinearTerms TaskReformulateProblem::partitionMonomialTerms(const MonomialTerms s
     if(sourceTerms.size() == 0)
         return (resultLinearTerms);
 
-    double varLowerBound = env->settings->getSetting<double>("Variables.Continuous.MinimumLowerBound", "Model");
-    double varUpperBound = env->settings->getSetting<double>("Variables.Continuous.MaximumUpperBound", "Model");
+    double varLowerBound = env->settings->getSetting<double>("Model.Variables.Continuous.MinimumLowerBound");
+    double varUpperBound = env->settings->getSetting<double>("Model.Variables.Continuous.MaximumUpperBound");
 
     for(auto& T : sourceTerms)
     {
@@ -1629,8 +1629,8 @@ LinearTerms TaskReformulateProblem::partitionSignomialTerms(const SignomialTerms
     if(sourceTerms.size() == 0)
         return (resultLinearTerms);
 
-    double varLowerBound = env->settings->getSetting<double>("Variables.Continuous.MinimumLowerBound", "Model");
-    double varUpperBound = env->settings->getSetting<double>("Variables.Continuous.MaximumUpperBound", "Model");
+    double varLowerBound = env->settings->getSetting<double>("Model.Variables.Continuous.MinimumLowerBound");
+    double varUpperBound = env->settings->getSetting<double>("Model.Variables.Continuous.MaximumUpperBound");
 
     for(auto& T : sourceTerms)
     {
@@ -1760,8 +1760,7 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
     bool allTermsConvex = quadraticTerms.checkAllForConvexityType(E_Convexity::Convex);
     bool allTermsConcave = quadraticTerms.checkAllForConvexityType(E_Convexity::Concave);
 
-    auto quadraticDecompositionMethod = (ES_QuadraticDecomposition)env->settings->getSetting<int>(
-        "Reformulation.Quadratics.Decomposition.Method", "Model");
+    auto quadraticDecompositionMethod = (ES_QuadraticDecomposition)env->settings->getSetting<int>("Model.Reformulation.Quadratics.Decomposition.Method");
 
     if(quadraticDecompositionMethod != ES_QuadraticDecomposition::None
         && partitionStrategy <= ES_PartitionNonlinearSums::IfConvex && quadraticSumConvex
@@ -1872,7 +1871,7 @@ std::tuple<LinearTerms, MonomialTerms> TaskReformulateProblem::reformulateMonomi
     resultMonomialTerms.takeOwnership(reformulatedProblem);
 
     double signfactor = reversedSigns ? -1.0 : 1.0;
-    auto monomialFormulation = env->settings->getSetting<int>("Reformulation.Monomials.Formulation", "Model");
+    auto monomialFormulation = env->settings->getSetting<int>("Model.Reformulation.Monomials.Formulation");
 
     for(auto& T : monomialTerms)
     {
@@ -2239,10 +2238,9 @@ LinearTerms TaskReformulateProblem::doEigenvalueDecomposition(QuadraticTerms qua
     resultLinearTerms.takeOwnership(reformulatedProblem);
 
     auto eigenValueTolerance
-        = env->settings->getSetting<double>("Reformulation.Quadratics.Decomposition.Tolerance", "Model");
+        = env->settings->getSetting<double>("Model.Reformulation.Quadratics.Decomposition.Tolerance");
 
-    auto quadraticDecompositionFormulation = (ES_QuadraticDecompositionFormulation)env->settings->getSetting<int>(
-        "Reformulation.Quadratics.Decomposition.Formulation", "Model");
+    auto quadraticDecompositionFormulation = (ES_QuadraticDecompositionFormulation)env->settings->getSetting<int>("Model.Reformulation.Quadratics.Decomposition.Formulation");
 
     for(size_t i = 0; i < quadraticTerms.variableMap.size(); i++)
     {
@@ -2307,10 +2305,9 @@ LinearTerms TaskReformulateProblem::doLDLDecomposition(QuadraticTerms quadraticT
     }
 
     auto eigenValueTolerance
-        = env->settings->getSetting<double>("Reformulation.Quadratics.Decomposition.Tolerance", "Model");
+        = env->settings->getSetting<double>("Model.Reformulation.Quadratics.Decomposition.Tolerance");
 
-    auto quadraticDecompositionFormulation = (ES_QuadraticDecompositionFormulation)env->settings->getSetting<int>(
-        "Reformulation.Quadratics.Decomposition.Formulation", "Model");
+    auto quadraticDecompositionFormulation = (ES_QuadraticDecompositionFormulation)env->settings->getSetting<int>("Model.Reformulation.Quadratics.Decomposition.Formulation");
 
     for(size_t i = 0; i < quadraticTerms.variableMap.size(); i++)
     {
@@ -3136,7 +3133,7 @@ void TaskReformulateProblem::reformulateRealBilinearTerm(
 
         reformulatedProblem->add(std::move(auxConstraint));
 
-        if(env->settings->getSetting<bool>("Reformulation.Bilinear.AddConvexEnvelope", "Model"))
+        if(env->settings->getSetting<bool>("Model.Reformulation.Bilinear.AddConvexEnvelope"))
         {
             addBilinearMcCormickEnvelope(usedAuxVariable, firstVariable, secondVariable);
         }
