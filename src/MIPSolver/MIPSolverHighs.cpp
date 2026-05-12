@@ -12,11 +12,13 @@
 #include "MIPSolverCallbackBase.h"
 
 #include "../DualSolver.h"
+#include "../EventHandler.h"
 #include "../Iteration.h"
 #include "../Output.h"
 #include "../PrimalSolver.h"
 #include "../Results.h"
 #include "../Settings.h"
+#include "../TaskHandler.h"
 #include "../Timing.h"
 #include "../Utilities.h"
 
@@ -29,87 +31,91 @@ namespace SHOT
 // Callback that correctly indents Highs log messages and prints them using SHOT's logging functionality
 HighsCallbackFunctionType highsCallback
     = [](int callback_type, const std::string& message, const HighsCallbackOutput* data_out,
-          HighsCallbackInput* data_in, void* user_callback_data) {
-          HighsMipData callback_data = *(static_cast<HighsMipData*>(user_callback_data));
-          auto env = callback_data.env;
+          HighsCallbackInput* data_in, void* user_callback_data)
+{
+    HighsMipData callback_data = *(static_cast<HighsMipData*>(user_callback_data));
+    auto env = callback_data.env;
 
-          if(callback_type == kCallbackLogging)
-          {
-              if(!env->settings->getSetting<bool>("Output.Console.DualSolver.Show"))
-                  return;
+    env->events->notify(E_EventType::UserTerminationCheck);
 
-              auto lines = Utilities::splitStringByCharacter(std::string(message), '\n');
+    if(env->tasks->isTerminated())
+        data_in->user_interrupt = true;
 
-              for(auto const& line : lines)
-                  env->output->outputInfo(fmt::format("      | {} ", line));
+    if(callback_type == kCallbackLogging)
+    {
+        if(!env->settings->getSetting<bool>("Output.Console.DualSolver.Show"))
+            return;
 
-              return;
-          }
+        auto lines = Utilities::splitStringByCharacter(std::string(message), '\n');
 
-          // Set user_interrupt to false by default for all MIP callba'cks
-          data_in->user_interrupt = false;
+        for(auto const& line : lines)
+            env->output->outputInfo(fmt::format("      | {} ", line));
 
-          auto MIPSolver = std::dynamic_pointer_cast<MIPSolverHighs>(env->dualSolver->MIPSolver);
+        return;
+    }
 
-          if(callback_type == kCallbackMipInterrupt)
-          {
-              if(MIPSolver->currentSolutions.size() >= MIPSolver->getSolutionLimit())
-              {
-                  env->output->outputDebug(fmt::format("      | solution limit reached "));
-                  data_in->user_interrupt = true;
-              }
+    // Set user_interrupt to false by default for all MIP callba'cks
+    data_in->user_interrupt = false;
 
-              return;
-          }
+    auto MIPSolver = std::dynamic_pointer_cast<MIPSolverHighs>(env->dualSolver->MIPSolver);
 
-          if(callback_type == kCallbackMipSolution)
-          {
-              std::vector<double> solution = data_out->mip_solution;
+    if(callback_type == kCallbackMipInterrupt)
+    {
+        if(MIPSolver->currentSolutions.size() >= MIPSolver->getSolutionLimit())
+        {
+            env->output->outputDebug(fmt::format("      | solution limit reached "));
+            data_in->user_interrupt = true;
+        }
 
-              // Remove auxiliary variables if present (e.g., shot_dual_objvar and variables from integer cuts)
-              // Only keep the first numberOfVariables elements that correspond to the reformulated problem
-              solution.resize(env->reformulatedProblem->properties.numberOfVariables);
+        return;
+    }
 
-              double hashValue = Utilities::calculateHash(solution);
+    if(callback_type == kCallbackMipSolution)
+    {
+        std::vector<double> solution = data_out->mip_solution;
 
-              for(int i = 0; i < MIPSolver->currentSolutions.size(); i++)
-              {
-                  if(MIPSolver->currentSolutions[i].hashValue == hashValue)
-                  {
-                      return;
-                  }
-              }
+        // Remove auxiliary variables if present (e.g., shot_dual_objvar and variables from integer cuts)
+        // Only keep the first numberOfVariables elements that correspond to the reformulated problem
+        solution.resize(env->reformulatedProblem->properties.numberOfVariables);
 
-              SolutionPoint currentSolution;
+        double hashValue = Utilities::calculateHash(solution);
 
-              // Use HiGHS's reported objective value directly
-              currentSolution.objectiveValue = data_out->objective_function_value;
-              currentSolution.point = solution;
-              currentSolution.hashValue = hashValue;
-              MIPSolver->currentSolutions.push_back(currentSolution);
+        for(int i = 0; i < MIPSolver->currentSolutions.size(); i++)
+        {
+            if(MIPSolver->currentSolutions[i].hashValue == hashValue)
+            {
+                return;
+            }
+        }
 
-              env->output->outputDebug(fmt::format("      | #sols: {} \t obj.val: {:.4f} \t gap: {:.4f} ",
-                  MIPSolver->currentSolutions.size(), data_out->objective_function_value, data_out->mip_gap));
+        SolutionPoint currentSolution;
 
-              // Sorts the solutions so that the best one is at the first position
-              if(env->reformulatedProblem->objectiveFunction->properties.isMinimize)
-              {
-                  std::sort(MIPSolver->currentSolutions.begin(), MIPSolver->currentSolutions.end(),
-                      [](const SolutionPoint& firstSolution, const SolutionPoint& secondSolution) {
-                          return (firstSolution.objectiveValue < secondSolution.objectiveValue);
-                      });
-              }
-              else
-              {
-                  std::sort(MIPSolver->currentSolutions.begin(), MIPSolver->currentSolutions.end(),
-                      [](const SolutionPoint& firstSolution, const SolutionPoint& secondSolution) {
-                          return (firstSolution.objectiveValue > secondSolution.objectiveValue);
-                      });
-              }
+        // Use HiGHS's reported objective value directly
+        currentSolution.objectiveValue = data_out->objective_function_value;
+        currentSolution.point = solution;
+        currentSolution.hashValue = hashValue;
+        MIPSolver->currentSolutions.push_back(currentSolution);
 
-              return;
-          }
-      };
+        env->output->outputDebug(fmt::format("      | #sols: {} \t obj.val: {:.4f} \t gap: {:.4f} ",
+            MIPSolver->currentSolutions.size(), data_out->objective_function_value, data_out->mip_gap));
+
+        // Sorts the solutions so that the best one is at the first position
+        if(env->reformulatedProblem->objectiveFunction->properties.isMinimize)
+        {
+            std::sort(MIPSolver->currentSolutions.begin(), MIPSolver->currentSolutions.end(),
+                [](const SolutionPoint& firstSolution, const SolutionPoint& secondSolution)
+                { return (firstSolution.objectiveValue < secondSolution.objectiveValue); });
+        }
+        else
+        {
+            std::sort(MIPSolver->currentSolutions.begin(), MIPSolver->currentSolutions.end(),
+                [](const SolutionPoint& firstSolution, const SolutionPoint& secondSolution)
+                { return (firstSolution.objectiveValue > secondSolution.objectiveValue); });
+        }
+
+        return;
+    }
+};
 
 MIPSolverHighs::MIPSolverHighs(EnvironmentPtr envPtr) { env = envPtr; }
 
@@ -307,10 +313,8 @@ bool MIPSolverHighs::finalizeProblem()
 
 void MIPSolverHighs::initializeSolverSettings()
 {
-    highsInstance.setOptionValue(
-        "mip_rel_gap", env->settings->getSetting<double>("Termination.ObjectiveGap.Relative"));
-    highsInstance.setOptionValue(
-        "mip_abs_gap", env->settings->getSetting<double>("Termination.ObjectiveGap.Absolute"));
+    highsInstance.setOptionValue("mip_rel_gap", env->settings->getSetting<double>("Termination.ObjectiveGap.Relative"));
+    highsInstance.setOptionValue("mip_abs_gap", env->settings->getSetting<double>("Termination.ObjectiveGap.Absolute"));
     highsInstance.setOptionValue(
         "mip_feasibility_tolerance", env->settings->getSetting<double>("Primal.Tolerance.Integer"));
 
@@ -559,8 +563,8 @@ E_ProblemSolutionStatus MIPSolverHighs::getSolutionStatus()
     else
     {
         MIPSolutionStatus = E_ProblemSolutionStatus::Error;
-        env->output->outputError(
-            fmt::format("        MIP solver return status unknown (HiGHS returned status {}).", static_cast<int>(modelStatus)));
+        env->output->outputError(fmt::format(
+            "        MIP solver return status unknown (HiGHS returned status {}).", static_cast<int>(modelStatus)));
     }
 
     return (MIPSolutionStatus);
@@ -584,11 +588,11 @@ E_ProblemSolutionStatus MIPSolverHighs::solveProblem()
         if((env->reformulatedProblem->objectiveFunction->properties.classification
                    == E_ObjectiveFunctionClassification::Linear
                && std::dynamic_pointer_cast<LinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                      ->isDualUnbounded())
+                   ->isDualUnbounded())
             || (env->reformulatedProblem->objectiveFunction->properties.classification
                     == E_ObjectiveFunctionClassification::Quadratic
                 && std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                       ->isDualUnbounded()))
+                    ->isDualUnbounded()))
         {
             for(auto& V : env->reformulatedProblem->allVariables)
             {
@@ -782,9 +786,9 @@ bool MIPSolverHighs::repairInfeasibility()
 
         if(env->settings->getSetting<bool>("Output.Debug.Enable"))
         {
-            auto filename = fmt::format("{}/dualiter{}_repaired.lp",
-                env->settings->getSetting<std::string>("Output.Debug.Path"),
-                env->results->getCurrentIteration()->iterationNumber - 1);
+            auto filename
+                = fmt::format("{}/dualiter{}_repaired.lp", env->settings->getSetting<std::string>("Output.Debug.Path"),
+                    env->results->getCurrentIteration()->iterationNumber - 1);
 
             writeProblemToFile(filename);
         }
