@@ -189,7 +189,6 @@ void TaskPerformBoundTightening::createPOA()
     int hyperplaneCounter = 0;
     auto POADualSolver = this->POASolver->solver->getEnvironment()->dualSolver;
     auto objectiveFunction = sourceProblem->objectiveFunction;
-    int baseConstraintIndex = sourceProblem->properties.numberOfLinearConstraints;
 
     for(auto& HP : POADualSolver->generatedHyperplanes)
     {

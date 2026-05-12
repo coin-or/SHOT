@@ -138,8 +138,6 @@ bool MIPSolverHighs::initializeProblem()
 bool MIPSolverHighs::addVariable(
     std::string name, E_VariableType type, double lowerBound, double upperBound, double semiBound)
 {
-    int index = numberOfVariables;
-
     if(lowerBound < -getUnboundedVariableBoundValue())
         lowerBound = -getUnboundedVariableBoundValue();
 
@@ -868,8 +866,6 @@ void MIPSolverHighs::setCutOffAsConstraint(double cutOff)
     {
         VectorInteger variableIndexes;
         VectorDouble coefficients;
-
-        int numConstraintsBefore = highsInstance.getNumRow();
 
         for(size_t i = 0; i < variableCosts.size(); i++)
         {
