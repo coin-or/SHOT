@@ -44,6 +44,10 @@ bool ModelTestFinalizeNoObjective();
 bool ModelTestFinalizeNoVariables();
 bool ModelTestMeanvarxscWithSolver(ES_MIPSolver mipSolver);
 bool ModelTestSemiContinuous();
+bool ModelTestSOS1WithSolver(ES_MIPSolver mipSolver);
+bool ModelTestSOS1();
+bool ModelTestSOS2WithSolver(ES_MIPSolver mipSolver);
+bool ModelTestSOS2();
 
 bool TestReadProblem(const std::string& problemFile);
 bool TestRootsearch(const std::string& problemFile);
@@ -119,6 +123,12 @@ int ModelTest(int argc, char* argv[])
         break;
     case 17:
         passed = ModelTestSemiContinuous();
+        break;
+    case 18:
+        passed = ModelTestSOS1();
+        break;
+    case 19:
+        passed = ModelTestSOS2();
         break;
     default:
         passed = false;
@@ -1677,6 +1687,281 @@ bool ModelTestSemiContinuous()
 #endif
 #ifdef HAS_GUROBI
     passed = ModelTestMeanvarxscWithSolver(ES_MIPSolver::Gurobi) && passed;
+#endif
+    return passed;
+}
+
+bool ModelTestSOS1WithSolver(ES_MIPSolver mipSolver)
+{
+    bool passed = true;
+
+    std::string solverName;
+    switch(mipSolver)
+    {
+    case ES_MIPSolver::Cbc:
+        solverName = "CBC";
+        break;
+    case ES_MIPSolver::Highs:
+        solverName = "HiGHS";
+        break;
+    case ES_MIPSolver::Cplex:
+        solverName = "CPLEX";
+        break;
+    case ES_MIPSolver::Gurobi:
+        solverName = "Gurobi";
+        break;
+    default:
+        solverName = "unknown";
+        break;
+    }
+
+    std::cout << "\n=== Testing SOS1 (sos1a) with " << solverName << " ===\n\n";
+
+    // Simple capacitated transportation problem:
+    // maximize  0.9*x1 + 1.0*x2 + 1.1*x3
+    // s.t.      x1 + x2 + x3 <= 1
+    //           x1 in [0, 0.8], x2 in [0, 0.6], x3 in [0, 0.6]
+    //           SOS1: {x1, x2, x3}
+    // Optimal:  x1 = 0.8, obj = 0.72
+
+    auto solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Info));
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(mipSolver));
+
+    auto problem = std::make_shared<Problem>(env);
+    problem->name = "sos1a";
+
+    auto x1 = std::make_shared<Variable>("x1", 0, E_VariableType::Real, 0.0, 0.8);
+    auto x2 = std::make_shared<Variable>("x2", 1, E_VariableType::Real, 0.0, 0.6);
+    auto x3 = std::make_shared<Variable>("x3", 2, E_VariableType::Real, 0.0, 0.6);
+    problem->add({ x1, x2, x3 });
+
+    auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Maximize);
+    objective->add(std::make_shared<LinearTerm>(0.9, x1));
+    objective->add(std::make_shared<LinearTerm>(1.0, x2));
+    objective->add(std::make_shared<LinearTerm>(1.1, x3));
+    problem->add(objective);
+
+    auto c1 = std::make_shared<LinearConstraint>(0, "xsum", SHOT_DBL_MIN, 1.0);
+    c1->add(std::make_shared<LinearTerm>(1.0, x1));
+    c1->add(std::make_shared<LinearTerm>(1.0, x2));
+    c1->add(std::make_shared<LinearTerm>(1.0, x3));
+    problem->add(c1);
+
+    auto sos1
+        = std::make_shared<SpecialOrderedSet>(E_SOSType::One, Variables { x1, x2, x3 }, VectorDouble { 1.0, 2.0, 3.0 });
+    problem->add(sos1);
+
+    problem->finalize();
+    solver->setProblem(problem);
+
+    std::cout << "\nSolving...\n";
+
+    if(!solver->solveProblem())
+    {
+        std::cout << "Failed to solve problem!\n";
+        passed = false;
+    }
+    else
+    {
+        auto solutions = env->results->primalSolutions;
+        if(solutions.empty())
+        {
+            std::cout << "No solution found!\n";
+            passed = false;
+        }
+        else
+        {
+            double objValue = solutions[0].objValue;
+            double expectedObj = 0.72;
+            std::cout << "\nSolution found:\n";
+            std::cout << "  Objective value: " << objValue << "\n";
+            std::cout << "  Expected value:  " << expectedObj << "\n";
+            if(std::abs(objValue - expectedObj) < 0.01)
+                std::cout << "\n*** TEST PASSED: Objective matches expected value! ***\n";
+            else
+            {
+                std::cout << "\n*** TEST FAILED: Objective differs from expected! ***\n";
+                std::cout << "  Difference: " << std::abs(objValue - expectedObj) << "\n";
+                passed = false;
+            }
+        }
+    }
+
+    return passed;
+}
+
+bool ModelTestSOS1()
+{
+    bool passed = true;
+#ifdef HAS_CBC
+    passed = ModelTestSOS1WithSolver(ES_MIPSolver::Cbc) && passed;
+#endif
+#ifdef HAS_HIGHS
+    try
+    {
+        passed = ModelTestSOS1WithSolver(ES_MIPSolver::Highs) && passed;
+    }
+    catch(OperationNotImplementedException*)
+    {
+        std::cout << "   HiGHS does not support SOS — skipping.\n";
+    }
+#endif
+#ifdef HAS_CPLEX
+    passed = ModelTestSOS1WithSolver(ES_MIPSolver::Cplex) && passed;
+#endif
+#ifdef HAS_GUROBI
+    passed = ModelTestSOS1WithSolver(ES_MIPSolver::Gurobi) && passed;
+#endif
+    return passed;
+}
+
+bool ModelTestSOS2WithSolver(ES_MIPSolver mipSolver)
+{
+    bool passed = true;
+
+    std::string solverName;
+    switch(mipSolver)
+    {
+    case ES_MIPSolver::Cbc:
+        solverName = "CBC";
+        break;
+    case ES_MIPSolver::Highs:
+        solverName = "HiGHS";
+        break;
+    case ES_MIPSolver::Cplex:
+        solverName = "CPLEX";
+        break;
+    case ES_MIPSolver::Gurobi:
+        solverName = "Gurobi";
+        break;
+    default:
+        solverName = "unknown";
+        break;
+    }
+
+    std::cout << "\n=== Testing SOS2 (sos2a) with " << solverName << " ===\n\n";
+
+    // Linear interpolation problem:
+    // minimize  fplus + fminus
+    // s.t.      w1 + w2 + w3 = 1
+    //           fplus  >= (w1 + 2*w2 + 3*w3) - 1.3   (fplus  >= fx - Fbar)
+    //           fminus >= 1.3 - (w1 + 2*w2 + 3*w3)   (fminus >= Fbar - fx)
+    //           w1, w2, w3 >= 0
+    //           fplus, fminus >= 0
+    //           SOS2: {w1, w2, w3}
+    // Optimal:  w1 = 0.7, w2 = 0.3, fx = 1.3, obj = 0.0
+
+    auto solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Info));
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(mipSolver));
+
+    auto problem = std::make_shared<Problem>(env);
+    problem->name = "sos2a";
+
+    auto w1 = std::make_shared<Variable>("w1", 0, E_VariableType::Real, 0.0, SHOT_DBL_MAX);
+    auto w2 = std::make_shared<Variable>("w2", 1, E_VariableType::Real, 0.0, SHOT_DBL_MAX);
+    auto w3 = std::make_shared<Variable>("w3", 2, E_VariableType::Real, 0.0, SHOT_DBL_MAX);
+    auto fplus = std::make_shared<Variable>("fplus", 3, E_VariableType::Real, 0.0, SHOT_DBL_MAX);
+    auto fminus = std::make_shared<Variable>("fminus", 4, E_VariableType::Real, 0.0, SHOT_DBL_MAX);
+    problem->add({ w1, w2, w3, fplus, fminus });
+
+    auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<LinearTerm>(1.0, fplus));
+    objective->add(std::make_shared<LinearTerm>(1.0, fminus));
+    problem->add(objective);
+
+    // w1 + w2 + w3 = 1
+    auto cwsum = std::make_shared<LinearConstraint>(0, "wsum", 1.0, 1.0);
+    cwsum->add(std::make_shared<LinearTerm>(1.0, w1));
+    cwsum->add(std::make_shared<LinearTerm>(1.0, w2));
+    cwsum->add(std::make_shared<LinearTerm>(1.0, w3));
+    problem->add(cwsum);
+
+    // fplus - w1 - 2*w2 - 3*w3 >= -1.3  (fplus >= fx - 1.3)
+    auto cgapplus = std::make_shared<LinearConstraint>(1, "gapplus", -1.3, SHOT_DBL_MAX);
+    cgapplus->add(std::make_shared<LinearTerm>(1.0, fplus));
+    cgapplus->add(std::make_shared<LinearTerm>(-1.0, w1));
+    cgapplus->add(std::make_shared<LinearTerm>(-2.0, w2));
+    cgapplus->add(std::make_shared<LinearTerm>(-3.0, w3));
+    problem->add(cgapplus);
+
+    // fminus + w1 + 2*w2 + 3*w3 >= 1.3  (fminus >= 1.3 - fx)
+    auto cgapminus = std::make_shared<LinearConstraint>(2, "gapminus", 1.3, SHOT_DBL_MAX);
+    cgapminus->add(std::make_shared<LinearTerm>(1.0, fminus));
+    cgapminus->add(std::make_shared<LinearTerm>(1.0, w1));
+    cgapminus->add(std::make_shared<LinearTerm>(2.0, w2));
+    cgapminus->add(std::make_shared<LinearTerm>(3.0, w3));
+    problem->add(cgapminus);
+
+    auto sos2
+        = std::make_shared<SpecialOrderedSet>(E_SOSType::Two, Variables { w1, w2, w3 }, VectorDouble { 1.0, 2.0, 3.0 });
+    problem->add(sos2);
+
+    problem->finalize();
+    solver->setProblem(problem);
+
+    std::cout << "\nSolving...\n";
+
+    if(!solver->solveProblem())
+    {
+        std::cout << "Failed to solve problem!\n";
+        passed = false;
+    }
+    else
+    {
+        auto solutions = env->results->primalSolutions;
+        if(solutions.empty())
+        {
+            std::cout << "No solution found!\n";
+            passed = false;
+        }
+        else
+        {
+            double objValue = solutions[0].objValue;
+            double expectedObj = 0.0;
+            std::cout << "\nSolution found:\n";
+            std::cout << "  Objective value: " << objValue << "\n";
+            std::cout << "  Expected value:  " << expectedObj << "\n";
+            if(std::abs(objValue - expectedObj) < 0.01)
+                std::cout << "\n*** TEST PASSED: Objective matches expected value! ***\n";
+            else
+            {
+                std::cout << "\n*** TEST FAILED: Objective differs from expected! ***\n";
+                std::cout << "  Difference: " << std::abs(objValue - expectedObj) << "\n";
+                passed = false;
+            }
+        }
+    }
+
+    return passed;
+}
+
+bool ModelTestSOS2()
+{
+    bool passed = true;
+#ifdef HAS_CBC
+    passed = ModelTestSOS2WithSolver(ES_MIPSolver::Cbc) && passed;
+#endif
+#ifdef HAS_HIGHS
+    try
+    {
+        passed = ModelTestSOS2WithSolver(ES_MIPSolver::Highs) && passed;
+    }
+    catch(OperationNotImplementedException*)
+    {
+        std::cout << "   HiGHS does not support SOS — skipping.\n";
+    }
+#endif
+#ifdef HAS_CPLEX
+    passed = ModelTestSOS2WithSolver(ES_MIPSolver::Cplex) && passed;
+#endif
+#ifdef HAS_GUROBI
+    passed = ModelTestSOS2WithSolver(ES_MIPSolver::Gurobi) && passed;
 #endif
     return passed;
 }

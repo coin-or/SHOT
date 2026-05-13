@@ -22,36 +22,33 @@ extern template class CppAD::ADFun<double>;
 
 // Custom CppAD error handler to avoid abort on cleanup errors
 // This is needed because CppAD's thread_alloc has ODR issues with shared libraries
-namespace {
-    void cppad_python_error_handler(
-        bool known,
-        int line,
-        const char* file,
-        const char* exp,
-        const char* msg)
+namespace
+{
+void cppad_python_error_handler(bool known, int line, const char* file, const char* exp, const char* msg)
+{
+    // Check if this is the known cleanup error in thread_alloc
+    std::string fileStr(file ? file : "");
+    std::string expStr(exp ? exp : "");
+    if(fileStr.find("thread_alloc.hpp") != std::string::npos && expStr.find("count_inuse_") != std::string::npos)
     {
-        // Check if this is the known cleanup error in thread_alloc
-        std::string fileStr(file ? file : "");
-        std::string expStr(exp ? exp : "");
-        if(fileStr.find("thread_alloc.hpp") != std::string::npos 
-           && expStr.find("count_inuse_") != std::string::npos)
-        {
-            // Suppress this error - it's a harmless ODR issue during cleanup
-            return;
-        }
-        
-        // For other errors, throw an exception
-        std::string error_msg = std::string("CppAD error at ") + file + ":" + std::to_string(line);
-        if(msg) error_msg += std::string(" - ") + msg;
-        throw std::runtime_error(error_msg);
+        // Suppress this error - it's a harmless ODR issue during cleanup
+        return;
     }
-    
-    // Register the custom error handler at module load time
-    struct CppADErrorHandlerRegistrar {
-        CppAD::ErrorHandler handler;
-        CppADErrorHandlerRegistrar() : handler(cppad_python_error_handler) {}
-    };
-    static CppADErrorHandlerRegistrar cppad_error_handler_registrar;
+
+    // For other errors, throw an exception
+    std::string error_msg = std::string("CppAD error at ") + file + ":" + std::to_string(line);
+    if(msg)
+        error_msg += std::string(" - ") + msg;
+    throw std::runtime_error(error_msg);
+}
+
+// Register the custom error handler at module load time
+struct CppADErrorHandlerRegistrar
+{
+    CppAD::ErrorHandler handler;
+    CppADErrorHandlerRegistrar() : handler(cppad_python_error_handler) { }
+};
+static CppADErrorHandlerRegistrar cppad_error_handler_registrar;
 }
 
 #include "Solver.h"
@@ -222,6 +219,9 @@ PYBIND11_MODULE(SHOTpy, m)
         .value("Semicontinuous", E_VariableType::Semicontinuous)
         .value("Semiinteger", E_VariableType::Semiinteger);
 
+    // ===== SOS Type Enum =====
+    py::enum_<E_SOSType>(m, "SOSType").value("One", E_SOSType::One).value("Two", E_SOSType::Two);
+
     // ===== Objective Direction Enum =====
     py::enum_<E_ObjectiveFunctionDirection>(m, "ObjectiveDirection")
         .value("Minimize", E_ObjectiveFunctionDirection::Minimize)
@@ -319,142 +319,103 @@ PYBIND11_MODULE(SHOTpy, m)
             [](const Variable& v) { return "<Variable '" + v.name + "' index=" + std::to_string(v.index) + ">"; })
         // Operator overloads for natural expression building
         .def(
-            "__add__",
-            [](VariablePtr self, VariablePtr other) -> NonlinearExpressionPtr {
-                return std::make_shared<ExpressionSum>(wrapInExpression(self), wrapInExpression(other));
-            },
+            "__add__", [](VariablePtr self, VariablePtr other) -> NonlinearExpressionPtr
+            { return std::make_shared<ExpressionSum>(wrapInExpression(self), wrapInExpression(other)); },
             py::is_operator())
         .def(
-            "__add__",
-            [](VariablePtr self, double other) -> NonlinearExpressionPtr {
-                return std::make_shared<ExpressionSum>(wrapInExpression(self), wrapInExpression(other));
-            },
+            "__add__", [](VariablePtr self, double other) -> NonlinearExpressionPtr
+            { return std::make_shared<ExpressionSum>(wrapInExpression(self), wrapInExpression(other)); },
             py::is_operator())
         .def(
-            "__radd__",
-            [](VariablePtr self, double other) -> NonlinearExpressionPtr {
-                return std::make_shared<ExpressionSum>(wrapInExpression(other), wrapInExpression(self));
-            },
+            "__radd__", [](VariablePtr self, double other) -> NonlinearExpressionPtr
+            { return std::make_shared<ExpressionSum>(wrapInExpression(other), wrapInExpression(self)); },
             py::is_operator())
         .def(
-            "__add__",
-            [](VariablePtr self, NonlinearExpressionPtr other) -> NonlinearExpressionPtr {
-                return std::make_shared<ExpressionSum>(wrapInExpression(self), other);
-            },
-            py::is_operator())
+            "__add__", [](VariablePtr self, NonlinearExpressionPtr other) -> NonlinearExpressionPtr
+            { return std::make_shared<ExpressionSum>(wrapInExpression(self), other); }, py::is_operator())
         .def(
-            "__radd__",
-            [](VariablePtr self, NonlinearExpressionPtr other) -> NonlinearExpressionPtr {
-                return std::make_shared<ExpressionSum>(other, wrapInExpression(self));
-            },
-            py::is_operator())
+            "__radd__", [](VariablePtr self, NonlinearExpressionPtr other) -> NonlinearExpressionPtr
+            { return std::make_shared<ExpressionSum>(other, wrapInExpression(self)); }, py::is_operator())
         .def(
             "__sub__",
-            [](VariablePtr self, VariablePtr other) -> NonlinearExpressionPtr {
+            [](VariablePtr self, VariablePtr other) -> NonlinearExpressionPtr
+            {
                 return std::make_shared<ExpressionSum>(
                     wrapInExpression(self), std::make_shared<ExpressionNegate>(wrapInExpression(other)));
             },
             py::is_operator())
         .def(
-            "__sub__",
-            [](VariablePtr self, double other) -> NonlinearExpressionPtr {
-                return std::make_shared<ExpressionSum>(wrapInExpression(self), wrapInExpression(-other));
-            },
+            "__sub__", [](VariablePtr self, double other) -> NonlinearExpressionPtr
+            { return std::make_shared<ExpressionSum>(wrapInExpression(self), wrapInExpression(-other)); },
             py::is_operator())
         .def(
             "__rsub__",
-            [](VariablePtr self, double other) -> NonlinearExpressionPtr {
+            [](VariablePtr self, double other) -> NonlinearExpressionPtr
+            {
                 return std::make_shared<ExpressionSum>(
                     wrapInExpression(other), std::make_shared<ExpressionNegate>(wrapInExpression(self)));
             },
             py::is_operator())
         .def(
             "__sub__",
-            [](VariablePtr self, NonlinearExpressionPtr other) -> NonlinearExpressionPtr {
+            [](VariablePtr self, NonlinearExpressionPtr other) -> NonlinearExpressionPtr
+            {
                 return std::make_shared<ExpressionSum>(
                     wrapInExpression(self), std::make_shared<ExpressionNegate>(other));
             },
             py::is_operator())
         .def(
-            "__mul__",
-            [](VariablePtr self, VariablePtr other) -> NonlinearExpressionPtr {
-                return std::make_shared<ExpressionProduct>(wrapInExpression(self), wrapInExpression(other));
-            },
+            "__mul__", [](VariablePtr self, VariablePtr other) -> NonlinearExpressionPtr
+            { return std::make_shared<ExpressionProduct>(wrapInExpression(self), wrapInExpression(other)); },
             py::is_operator())
         .def(
-            "__mul__",
-            [](VariablePtr self, double other) -> NonlinearExpressionPtr {
-                return std::make_shared<ExpressionProduct>(wrapInExpression(self), wrapInExpression(other));
-            },
+            "__mul__", [](VariablePtr self, double other) -> NonlinearExpressionPtr
+            { return std::make_shared<ExpressionProduct>(wrapInExpression(self), wrapInExpression(other)); },
             py::is_operator())
         .def(
-            "__rmul__",
-            [](VariablePtr self, double other) -> NonlinearExpressionPtr {
-                return std::make_shared<ExpressionProduct>(wrapInExpression(other), wrapInExpression(self));
-            },
+            "__rmul__", [](VariablePtr self, double other) -> NonlinearExpressionPtr
+            { return std::make_shared<ExpressionProduct>(wrapInExpression(other), wrapInExpression(self)); },
             py::is_operator())
         .def(
-            "__mul__",
-            [](VariablePtr self, NonlinearExpressionPtr other) -> NonlinearExpressionPtr {
-                return std::make_shared<ExpressionProduct>(wrapInExpression(self), other);
-            },
+            "__mul__", [](VariablePtr self, NonlinearExpressionPtr other) -> NonlinearExpressionPtr
+            { return std::make_shared<ExpressionProduct>(wrapInExpression(self), other); }, py::is_operator())
+        .def(
+            "__rmul__", [](VariablePtr self, NonlinearExpressionPtr other) -> NonlinearExpressionPtr
+            { return std::make_shared<ExpressionProduct>(other, wrapInExpression(self)); }, py::is_operator())
+        .def(
+            "__truediv__", [](VariablePtr self, VariablePtr other) -> NonlinearExpressionPtr
+            { return std::make_shared<ExpressionDivide>(wrapInExpression(self), wrapInExpression(other)); },
             py::is_operator())
         .def(
-            "__rmul__",
-            [](VariablePtr self, NonlinearExpressionPtr other) -> NonlinearExpressionPtr {
-                return std::make_shared<ExpressionProduct>(other, wrapInExpression(self));
-            },
+            "__truediv__", [](VariablePtr self, double other) -> NonlinearExpressionPtr
+            { return std::make_shared<ExpressionDivide>(wrapInExpression(self), wrapInExpression(other)); },
             py::is_operator())
         .def(
-            "__truediv__",
-            [](VariablePtr self, VariablePtr other) -> NonlinearExpressionPtr {
-                return std::make_shared<ExpressionDivide>(wrapInExpression(self), wrapInExpression(other));
-            },
+            "__rtruediv__", [](VariablePtr self, double other) -> NonlinearExpressionPtr
+            { return std::make_shared<ExpressionDivide>(wrapInExpression(other), wrapInExpression(self)); },
             py::is_operator())
         .def(
-            "__truediv__",
-            [](VariablePtr self, double other) -> NonlinearExpressionPtr {
-                return std::make_shared<ExpressionDivide>(wrapInExpression(self), wrapInExpression(other));
-            },
-            py::is_operator())
-        .def(
-            "__rtruediv__",
-            [](VariablePtr self, double other) -> NonlinearExpressionPtr {
-                return std::make_shared<ExpressionDivide>(wrapInExpression(other), wrapInExpression(self));
-            },
-            py::is_operator())
-        .def(
-            "__truediv__",
-            [](VariablePtr self, NonlinearExpressionPtr other) -> NonlinearExpressionPtr {
-                return std::make_shared<ExpressionDivide>(wrapInExpression(self), other);
-            },
-            py::is_operator())
+            "__truediv__", [](VariablePtr self, NonlinearExpressionPtr other) -> NonlinearExpressionPtr
+            { return std::make_shared<ExpressionDivide>(wrapInExpression(self), other); }, py::is_operator())
         .def(
             "__pow__",
-            [](VariablePtr self, double exponent) -> NonlinearExpressionPtr {
+            [](VariablePtr self, double exponent) -> NonlinearExpressionPtr
+            {
                 if(exponent == 2.0)
                     return std::make_shared<ExpressionSquare>(wrapInExpression(self));
                 return std::make_shared<ExpressionPower>(wrapInExpression(self), wrapInExpression(exponent));
             },
             py::is_operator())
         .def(
-            "__pow__",
-            [](VariablePtr self, VariablePtr other) -> NonlinearExpressionPtr {
-                return std::make_shared<ExpressionPower>(wrapInExpression(self), wrapInExpression(other));
-            },
+            "__pow__", [](VariablePtr self, VariablePtr other) -> NonlinearExpressionPtr
+            { return std::make_shared<ExpressionPower>(wrapInExpression(self), wrapInExpression(other)); },
             py::is_operator())
         .def(
-            "__pow__",
-            [](VariablePtr self, NonlinearExpressionPtr other) -> NonlinearExpressionPtr {
-                return std::make_shared<ExpressionPower>(wrapInExpression(self), other);
-            },
-            py::is_operator())
+            "__pow__", [](VariablePtr self, NonlinearExpressionPtr other) -> NonlinearExpressionPtr
+            { return std::make_shared<ExpressionPower>(wrapInExpression(self), other); }, py::is_operator())
         .def(
-            "__neg__",
-            [](VariablePtr self) -> NonlinearExpressionPtr {
-                return std::make_shared<ExpressionNegate>(wrapInExpression(self));
-            },
-            py::is_operator());
+            "__neg__", [](VariablePtr self) -> NonlinearExpressionPtr
+            { return std::make_shared<ExpressionNegate>(wrapInExpression(self)); }, py::is_operator());
 
     // ===== VariableProperties Struct =====
     py::class_<VariableProperties>(m, "VariableProperties")
@@ -471,136 +432,90 @@ PYBIND11_MODULE(SHOTpy, m)
         .def("getType", &NonlinearExpression::getType)
         .def("getConvexity", &NonlinearExpression::getConvexity)
         .def("__repr__",
-            [](NonlinearExpressionPtr self) {
+            [](NonlinearExpressionPtr self)
+            {
                 std::ostringstream oss;
                 oss << *self;
                 return "<Expression: " + oss.str() + ">";
             })
         // Operator overloads for expressions
         .def(
-            "__add__",
-            [](NonlinearExpressionPtr self, NonlinearExpressionPtr other) -> NonlinearExpressionPtr {
-                return std::make_shared<ExpressionSum>(self, other);
-            },
+            "__add__", [](NonlinearExpressionPtr self, NonlinearExpressionPtr other) -> NonlinearExpressionPtr
+            { return std::make_shared<ExpressionSum>(self, other); }, py::is_operator())
+        .def(
+            "__add__", [](NonlinearExpressionPtr self, double other) -> NonlinearExpressionPtr
+            { return std::make_shared<ExpressionSum>(self, wrapInExpression(other)); }, py::is_operator())
+        .def(
+            "__radd__", [](NonlinearExpressionPtr self, double other) -> NonlinearExpressionPtr
+            { return std::make_shared<ExpressionSum>(wrapInExpression(other), self); }, py::is_operator())
+        .def(
+            "__add__", [](NonlinearExpressionPtr self, VariablePtr other) -> NonlinearExpressionPtr
+            { return std::make_shared<ExpressionSum>(self, wrapInExpression(other)); }, py::is_operator())
+        .def(
+            "__sub__", [](NonlinearExpressionPtr self, NonlinearExpressionPtr other) -> NonlinearExpressionPtr
+            { return std::make_shared<ExpressionSum>(self, std::make_shared<ExpressionNegate>(other)); },
             py::is_operator())
         .def(
-            "__add__",
-            [](NonlinearExpressionPtr self, double other) -> NonlinearExpressionPtr {
-                return std::make_shared<ExpressionSum>(self, wrapInExpression(other));
-            },
-            py::is_operator())
-        .def(
-            "__radd__",
-            [](NonlinearExpressionPtr self, double other) -> NonlinearExpressionPtr {
-                return std::make_shared<ExpressionSum>(wrapInExpression(other), self);
-            },
-            py::is_operator())
-        .def(
-            "__add__",
-            [](NonlinearExpressionPtr self, VariablePtr other) -> NonlinearExpressionPtr {
-                return std::make_shared<ExpressionSum>(self, wrapInExpression(other));
-            },
-            py::is_operator())
-        .def(
-            "__sub__",
-            [](NonlinearExpressionPtr self, NonlinearExpressionPtr other) -> NonlinearExpressionPtr {
-                return std::make_shared<ExpressionSum>(self, std::make_shared<ExpressionNegate>(other));
-            },
-            py::is_operator())
-        .def(
-            "__sub__",
-            [](NonlinearExpressionPtr self, double other) -> NonlinearExpressionPtr {
-                return std::make_shared<ExpressionSum>(self, wrapInExpression(-other));
-            },
-            py::is_operator())
+            "__sub__", [](NonlinearExpressionPtr self, double other) -> NonlinearExpressionPtr
+            { return std::make_shared<ExpressionSum>(self, wrapInExpression(-other)); }, py::is_operator())
         .def(
             "__rsub__",
-            [](NonlinearExpressionPtr self, double other) -> NonlinearExpressionPtr {
+            [](NonlinearExpressionPtr self, double other) -> NonlinearExpressionPtr
+            {
                 return std::make_shared<ExpressionSum>(
                     wrapInExpression(other), std::make_shared<ExpressionNegate>(self));
             },
             py::is_operator())
         .def(
             "__sub__",
-            [](NonlinearExpressionPtr self, VariablePtr other) -> NonlinearExpressionPtr {
+            [](NonlinearExpressionPtr self, VariablePtr other) -> NonlinearExpressionPtr
+            {
                 return std::make_shared<ExpressionSum>(
                     self, std::make_shared<ExpressionNegate>(wrapInExpression(other)));
             },
             py::is_operator())
         .def(
-            "__mul__",
-            [](NonlinearExpressionPtr self, NonlinearExpressionPtr other) -> NonlinearExpressionPtr {
-                return std::make_shared<ExpressionProduct>(self, other);
-            },
-            py::is_operator())
+            "__mul__", [](NonlinearExpressionPtr self, NonlinearExpressionPtr other) -> NonlinearExpressionPtr
+            { return std::make_shared<ExpressionProduct>(self, other); }, py::is_operator())
         .def(
-            "__mul__",
-            [](NonlinearExpressionPtr self, double other) -> NonlinearExpressionPtr {
-                return std::make_shared<ExpressionProduct>(self, wrapInExpression(other));
-            },
-            py::is_operator())
+            "__mul__", [](NonlinearExpressionPtr self, double other) -> NonlinearExpressionPtr
+            { return std::make_shared<ExpressionProduct>(self, wrapInExpression(other)); }, py::is_operator())
         .def(
-            "__rmul__",
-            [](NonlinearExpressionPtr self, double other) -> NonlinearExpressionPtr {
-                return std::make_shared<ExpressionProduct>(wrapInExpression(other), self);
-            },
-            py::is_operator())
+            "__rmul__", [](NonlinearExpressionPtr self, double other) -> NonlinearExpressionPtr
+            { return std::make_shared<ExpressionProduct>(wrapInExpression(other), self); }, py::is_operator())
         .def(
-            "__mul__",
-            [](NonlinearExpressionPtr self, VariablePtr other) -> NonlinearExpressionPtr {
-                return std::make_shared<ExpressionProduct>(self, wrapInExpression(other));
-            },
-            py::is_operator())
+            "__mul__", [](NonlinearExpressionPtr self, VariablePtr other) -> NonlinearExpressionPtr
+            { return std::make_shared<ExpressionProduct>(self, wrapInExpression(other)); }, py::is_operator())
         .def(
-            "__truediv__",
-            [](NonlinearExpressionPtr self, NonlinearExpressionPtr other) -> NonlinearExpressionPtr {
-                return std::make_shared<ExpressionDivide>(self, other);
-            },
-            py::is_operator())
+            "__truediv__", [](NonlinearExpressionPtr self, NonlinearExpressionPtr other) -> NonlinearExpressionPtr
+            { return std::make_shared<ExpressionDivide>(self, other); }, py::is_operator())
         .def(
-            "__truediv__",
-            [](NonlinearExpressionPtr self, double other) -> NonlinearExpressionPtr {
-                return std::make_shared<ExpressionDivide>(self, wrapInExpression(other));
-            },
-            py::is_operator())
+            "__truediv__", [](NonlinearExpressionPtr self, double other) -> NonlinearExpressionPtr
+            { return std::make_shared<ExpressionDivide>(self, wrapInExpression(other)); }, py::is_operator())
         .def(
-            "__rtruediv__",
-            [](NonlinearExpressionPtr self, double other) -> NonlinearExpressionPtr {
-                return std::make_shared<ExpressionDivide>(wrapInExpression(other), self);
-            },
-            py::is_operator())
+            "__rtruediv__", [](NonlinearExpressionPtr self, double other) -> NonlinearExpressionPtr
+            { return std::make_shared<ExpressionDivide>(wrapInExpression(other), self); }, py::is_operator())
         .def(
-            "__truediv__",
-            [](NonlinearExpressionPtr self, VariablePtr other) -> NonlinearExpressionPtr {
-                return std::make_shared<ExpressionDivide>(self, wrapInExpression(other));
-            },
-            py::is_operator())
+            "__truediv__", [](NonlinearExpressionPtr self, VariablePtr other) -> NonlinearExpressionPtr
+            { return std::make_shared<ExpressionDivide>(self, wrapInExpression(other)); }, py::is_operator())
         .def(
             "__pow__",
-            [](NonlinearExpressionPtr self, double exponent) -> NonlinearExpressionPtr {
+            [](NonlinearExpressionPtr self, double exponent) -> NonlinearExpressionPtr
+            {
                 if(exponent == 2.0)
                     return std::make_shared<ExpressionSquare>(self);
                 return std::make_shared<ExpressionPower>(self, wrapInExpression(exponent));
             },
             py::is_operator())
         .def(
-            "__pow__",
-            [](NonlinearExpressionPtr self, NonlinearExpressionPtr other) -> NonlinearExpressionPtr {
-                return std::make_shared<ExpressionPower>(self, other);
-            },
-            py::is_operator())
+            "__pow__", [](NonlinearExpressionPtr self, NonlinearExpressionPtr other) -> NonlinearExpressionPtr
+            { return std::make_shared<ExpressionPower>(self, other); }, py::is_operator())
         .def(
-            "__pow__",
-            [](NonlinearExpressionPtr self, VariablePtr other) -> NonlinearExpressionPtr {
-                return std::make_shared<ExpressionPower>(self, wrapInExpression(other));
-            },
-            py::is_operator())
+            "__pow__", [](NonlinearExpressionPtr self, VariablePtr other) -> NonlinearExpressionPtr
+            { return std::make_shared<ExpressionPower>(self, wrapInExpression(other)); }, py::is_operator())
         .def(
-            "__neg__",
-            [](NonlinearExpressionPtr self) -> NonlinearExpressionPtr {
-                return std::make_shared<ExpressionNegate>(self);
-            },
-            py::is_operator());
+            "__neg__", [](NonlinearExpressionPtr self) -> NonlinearExpressionPtr
+            { return std::make_shared<ExpressionNegate>(self); }, py::is_operator());
 
     // ===== NonlinearExpression Type Enum =====
     py::enum_<E_NonlinearExpressionTypes>(m, "ExpressionType")
@@ -627,147 +542,100 @@ PYBIND11_MODULE(SHOTpy, m)
 
     // ===== Nonlinear Expression Helper Functions =====
     m.def(
-        "exp",
-        [](VariablePtr var) -> NonlinearExpressionPtr {
-            return std::make_shared<ExpressionExp>(wrapInExpression(var));
-        },
-        "Exponential function", py::arg("x"));
+        "exp", [](VariablePtr var) -> NonlinearExpressionPtr
+        { return std::make_shared<ExpressionExp>(wrapInExpression(var)); }, "Exponential function", py::arg("x"));
 
     m.def(
-        "exp",
-        [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr { return std::make_shared<ExpressionExp>(expr); },
-        "Exponential function", py::arg("x"));
+        "exp", [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr
+        { return std::make_shared<ExpressionExp>(expr); }, "Exponential function", py::arg("x"));
 
     m.def(
-        "log",
-        [](VariablePtr var) -> NonlinearExpressionPtr {
-            return std::make_shared<ExpressionLog>(wrapInExpression(var));
-        },
-        "Natural logarithm", py::arg("x"));
+        "log", [](VariablePtr var) -> NonlinearExpressionPtr
+        { return std::make_shared<ExpressionLog>(wrapInExpression(var)); }, "Natural logarithm", py::arg("x"));
 
     m.def(
-        "log",
-        [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr { return std::make_shared<ExpressionLog>(expr); },
-        "Natural logarithm", py::arg("x"));
+        "log", [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr
+        { return std::make_shared<ExpressionLog>(expr); }, "Natural logarithm", py::arg("x"));
 
     m.def(
-        "sqrt",
-        [](VariablePtr var) -> NonlinearExpressionPtr {
-            return std::make_shared<ExpressionSquareRoot>(wrapInExpression(var));
-        },
-        "Square root", py::arg("x"));
+        "sqrt", [](VariablePtr var) -> NonlinearExpressionPtr
+        { return std::make_shared<ExpressionSquareRoot>(wrapInExpression(var)); }, "Square root", py::arg("x"));
 
     m.def(
-        "sqrt",
-        [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr {
-            return std::make_shared<ExpressionSquareRoot>(expr);
-        },
-        "Square root", py::arg("x"));
+        "sqrt", [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr
+        { return std::make_shared<ExpressionSquareRoot>(expr); }, "Square root", py::arg("x"));
 
     m.def(
-        "sin",
-        [](VariablePtr var) -> NonlinearExpressionPtr {
-            return std::make_shared<ExpressionSin>(wrapInExpression(var));
-        },
-        "Sine function", py::arg("x"));
+        "sin", [](VariablePtr var) -> NonlinearExpressionPtr
+        { return std::make_shared<ExpressionSin>(wrapInExpression(var)); }, "Sine function", py::arg("x"));
 
     m.def(
-        "sin",
-        [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr { return std::make_shared<ExpressionSin>(expr); },
-        "Sine function", py::arg("x"));
+        "sin", [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr
+        { return std::make_shared<ExpressionSin>(expr); }, "Sine function", py::arg("x"));
 
     m.def(
-        "cos",
-        [](VariablePtr var) -> NonlinearExpressionPtr {
-            return std::make_shared<ExpressionCos>(wrapInExpression(var));
-        },
-        "Cosine function", py::arg("x"));
+        "cos", [](VariablePtr var) -> NonlinearExpressionPtr
+        { return std::make_shared<ExpressionCos>(wrapInExpression(var)); }, "Cosine function", py::arg("x"));
 
     m.def(
-        "cos",
-        [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr { return std::make_shared<ExpressionCos>(expr); },
-        "Cosine function", py::arg("x"));
+        "cos", [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr
+        { return std::make_shared<ExpressionCos>(expr); }, "Cosine function", py::arg("x"));
 
     m.def(
-        "tan",
-        [](VariablePtr var) -> NonlinearExpressionPtr {
-            return std::make_shared<ExpressionTan>(wrapInExpression(var));
-        },
-        "Tangent function", py::arg("x"));
+        "tan", [](VariablePtr var) -> NonlinearExpressionPtr
+        { return std::make_shared<ExpressionTan>(wrapInExpression(var)); }, "Tangent function", py::arg("x"));
 
     m.def(
-        "tan",
-        [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr { return std::make_shared<ExpressionTan>(expr); },
-        "Tangent function", py::arg("x"));
+        "tan", [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr
+        { return std::make_shared<ExpressionTan>(expr); }, "Tangent function", py::arg("x"));
 
     m.def(
-        "asin",
-        [](VariablePtr var) -> NonlinearExpressionPtr {
-            return std::make_shared<ExpressionArcSin>(wrapInExpression(var));
-        },
-        "Arc sine function", py::arg("x"));
+        "asin", [](VariablePtr var) -> NonlinearExpressionPtr
+        { return std::make_shared<ExpressionArcSin>(wrapInExpression(var)); }, "Arc sine function", py::arg("x"));
 
     m.def(
-        "asin",
-        [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr { return std::make_shared<ExpressionArcSin>(expr); },
-        "Arc sine function", py::arg("x"));
+        "asin", [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr
+        { return std::make_shared<ExpressionArcSin>(expr); }, "Arc sine function", py::arg("x"));
 
     m.def(
-        "acos",
-        [](VariablePtr var) -> NonlinearExpressionPtr {
-            return std::make_shared<ExpressionArcCos>(wrapInExpression(var));
-        },
-        "Arc cosine function", py::arg("x"));
+        "acos", [](VariablePtr var) -> NonlinearExpressionPtr
+        { return std::make_shared<ExpressionArcCos>(wrapInExpression(var)); }, "Arc cosine function", py::arg("x"));
 
     m.def(
-        "acos",
-        [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr { return std::make_shared<ExpressionArcCos>(expr); },
-        "Arc cosine function", py::arg("x"));
+        "acos", [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr
+        { return std::make_shared<ExpressionArcCos>(expr); }, "Arc cosine function", py::arg("x"));
 
     m.def(
-        "atan",
-        [](VariablePtr var) -> NonlinearExpressionPtr {
-            return std::make_shared<ExpressionArcTan>(wrapInExpression(var));
-        },
-        "Arc tangent function", py::arg("x"));
+        "atan", [](VariablePtr var) -> NonlinearExpressionPtr
+        { return std::make_shared<ExpressionArcTan>(wrapInExpression(var)); }, "Arc tangent function", py::arg("x"));
 
     m.def(
-        "atan",
-        [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr { return std::make_shared<ExpressionArcTan>(expr); },
-        "Arc tangent function", py::arg("x"));
+        "atan", [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr
+        { return std::make_shared<ExpressionArcTan>(expr); }, "Arc tangent function", py::arg("x"));
 
     m.def(
-        "abs",
-        [](VariablePtr var) -> NonlinearExpressionPtr {
-            return std::make_shared<ExpressionAbs>(wrapInExpression(var));
-        },
-        "Absolute value", py::arg("x"));
+        "abs", [](VariablePtr var) -> NonlinearExpressionPtr
+        { return std::make_shared<ExpressionAbs>(wrapInExpression(var)); }, "Absolute value", py::arg("x"));
 
     m.def(
-        "abs",
-        [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr { return std::make_shared<ExpressionAbs>(expr); },
-        "Absolute value", py::arg("x"));
+        "abs", [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr
+        { return std::make_shared<ExpressionAbs>(expr); }, "Absolute value", py::arg("x"));
 
     m.def(
-        "square",
-        [](VariablePtr var) -> NonlinearExpressionPtr {
-            return std::make_shared<ExpressionSquare>(wrapInExpression(var));
-        },
-        "Square function", py::arg("x"));
+        "square", [](VariablePtr var) -> NonlinearExpressionPtr
+        { return std::make_shared<ExpressionSquare>(wrapInExpression(var)); }, "Square function", py::arg("x"));
 
     m.def(
-        "square",
-        [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr { return std::make_shared<ExpressionSquare>(expr); },
-        "Square function", py::arg("x"));
+        "square", [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr
+        { return std::make_shared<ExpressionSquare>(expr); }, "Square function", py::arg("x"));
 
     // ===== LinearTerm Class =====
     py::class_<LinearTerm, std::shared_ptr<LinearTerm>>(m, "LinearTerm")
         .def(py::init<double, VariablePtr>(), py::arg("coefficient"), py::arg("variable"))
         .def_readwrite("coefficient", &LinearTerm::coefficient)
         .def_readwrite("variable", &LinearTerm::variable)
-        .def("__repr__", [](const LinearTerm& t) {
-            return "<LinearTerm: " + std::to_string(t.coefficient) + "*" + t.variable->name + ">";
-        });
+        .def("__repr__", [](const LinearTerm& t)
+            { return "<LinearTerm: " + std::to_string(t.coefficient) + "*" + t.variable->name + ">"; });
 
     // ===== QuadraticTerm Class =====
     py::class_<QuadraticTerm, std::shared_ptr<QuadraticTerm>>(m, "QuadraticTerm")
@@ -778,10 +646,12 @@ PYBIND11_MODULE(SHOTpy, m)
         .def_readwrite("secondVariable", &QuadraticTerm::secondVariable)
         .def_readonly("isBilinear", &QuadraticTerm::isBilinear)
         .def_readonly("isSquare", &QuadraticTerm::isSquare)
-        .def("__repr__", [](const QuadraticTerm& t) {
-            return "<QuadraticTerm: " + std::to_string(t.coefficient) + "*" + t.firstVariable->name + "*"
-                + t.secondVariable->name + ">";
-        });
+        .def("__repr__",
+            [](const QuadraticTerm& t)
+            {
+                return "<QuadraticTerm: " + std::to_string(t.coefficient) + "*" + t.firstVariable->name + "*"
+                    + t.secondVariable->name + ">";
+            });
 
     // ===== LinearTerms Collection =====
     py::class_<LinearTerms>(m, "LinearTerms")
@@ -806,54 +676,61 @@ PYBIND11_MODULE(SHOTpy, m)
         .def(py::init<VariablePtr, double>(), py::arg("variable"), py::arg("power"))
         .def_readwrite("variable", &SignomialElement::variable)
         .def_readwrite("power", &SignomialElement::power)
-        .def("__repr__", [](const SignomialElement& e) {
-            if(e.power == 1.0)
-                return "<SignomialElement: " + e.variable->name + ">";
-            else
-                return "<SignomialElement: " + e.variable->name + "^" + std::to_string(e.power) + ">";
-        });
+        .def("__repr__",
+            [](const SignomialElement& e)
+            {
+                if(e.power == 1.0)
+                    return "<SignomialElement: " + e.variable->name + ">";
+                else
+                    return "<SignomialElement: " + e.variable->name + "^" + std::to_string(e.power) + ">";
+            });
 
     // ===== SignomialElements Collection =====
     // Note: SignomialElements is a typedef for std::vector<SignomialElementPtr>
     // We expose it as a simple value-type container
     py::class_<SignomialElements>(m, "SignomialElements")
         .def(py::init<>())
-        .def("append", [](SignomialElements& self, SignomialElementPtr elem) {
-            self.push_back(elem);
-        })
+        .def("append", [](SignomialElements& self, SignomialElementPtr elem) { self.push_back(elem); })
         .def("__len__", [](const SignomialElements& self) { return self.size(); })
-        .def("__getitem__", [](const SignomialElements& self, size_t i) {
-            if (i >= self.size()) throw py::index_error();
-            return self[i];
-        });
+        .def("__getitem__",
+            [](const SignomialElements& self, size_t i)
+            {
+                if(i >= self.size())
+                    throw py::index_error();
+                return self[i];
+            });
 
     // ===== SignomialTerm Class =====
     py::class_<SignomialTerm, std::shared_ptr<SignomialTerm>>(m, "SignomialTerm")
         .def(py::init<double, SignomialElements>(), py::arg("coefficient"), py::arg("elements"))
-        .def(py::init([](double coeff, std::vector<std::pair<VariablePtr, double>>& varPowerPairs) {
-            SignomialElements elements;
-            for(auto& [var, power] : varPowerPairs)
-            {
-                elements.push_back(std::make_shared<SignomialElement>(var, power));
-            }
-            return std::make_shared<SignomialTerm>(coeff, elements);
-        }),
+        .def(py::init(
+                 [](double coeff, std::vector<std::pair<VariablePtr, double>>& varPowerPairs)
+                 {
+                     SignomialElements elements;
+                     for(auto& [var, power] : varPowerPairs)
+                     {
+                         elements.push_back(std::make_shared<SignomialElement>(var, power));
+                     }
+                     return std::make_shared<SignomialTerm>(coeff, elements);
+                 }),
             py::arg("coefficient"), py::arg("variable_power_pairs"),
             "Create a signomial term from coefficient and list of (variable, power) tuples")
         .def_readwrite("coefficient", &SignomialTerm::coefficient)
         .def_readwrite("elements", &SignomialTerm::elements)
-        .def("__repr__", [](const SignomialTerm& t) {
-            std::ostringstream oss;
-            oss << "<SignomialTerm: " << t.coefficient;
-            for(auto& e : t.elements)
+        .def("__repr__",
+            [](const SignomialTerm& t)
             {
-                oss << " * " << e->variable->name;
-                if(e->power != 1.0)
-                    oss << "^" << e->power;
-            }
-            oss << ">";
-            return oss.str();
-        });
+                std::ostringstream oss;
+                oss << "<SignomialTerm: " << t.coefficient;
+                for(auto& e : t.elements)
+                {
+                    oss << " * " << e->variable->name;
+                    if(e->power != 1.0)
+                        oss << "^" << e->power;
+                }
+                oss << ">";
+                return oss.str();
+            });
 
     // ===== SignomialTerms Collection =====
     py::class_<SignomialTerms>(m, "SignomialTerms")
@@ -867,19 +744,22 @@ PYBIND11_MODULE(SHOTpy, m)
     // ===== MonomialTerm Class =====
     // Note: MonomialTerm uses Variables (each variable has implicit power 1)
     py::class_<MonomialTerm, std::shared_ptr<MonomialTerm>>(m, "MonomialTerm")
-        .def(py::init([](double coeff, std::vector<VariablePtr>& varList) {
-            Variables vars;
-            for(auto& v : varList)
-            {
-                vars.push_back(v);
-            }
-            return std::make_shared<MonomialTerm>(coeff, vars);
-        }),
+        .def(py::init(
+                 [](double coeff, std::vector<VariablePtr>& varList)
+                 {
+                     Variables vars;
+                     for(auto& v : varList)
+                     {
+                         vars.push_back(v);
+                     }
+                     return std::make_shared<MonomialTerm>(coeff, vars);
+                 }),
             py::arg("coefficient"), py::arg("variables"),
             "Create a monomial term from coefficient and list of variables")
         .def_readwrite("coefficient", &MonomialTerm::coefficient)
         .def_property_readonly("variables",
-            [](const MonomialTerm& t) {
+            [](const MonomialTerm& t)
+            {
                 std::vector<VariablePtr> result;
                 for(auto& v : t.variables)
                     result.push_back(v);
@@ -888,16 +768,18 @@ PYBIND11_MODULE(SHOTpy, m)
         .def_readonly("isBilinear", &MonomialTerm::isBilinear)
         .def_readonly("isSquare", &MonomialTerm::isSquare)
         .def_readonly("isBinary", &MonomialTerm::isBinary)
-        .def("__repr__", [](const MonomialTerm& t) {
-            std::ostringstream oss;
-            oss << "<MonomialTerm: " << t.coefficient;
-            for(auto& v : t.variables)
+        .def("__repr__",
+            [](const MonomialTerm& t)
             {
-                oss << " * " << v->name;
-            }
-            oss << ">";
-            return oss.str();
-        });
+                std::ostringstream oss;
+                oss << "<MonomialTerm: " << t.coefficient;
+                for(auto& v : t.variables)
+                {
+                    oss << " * " << v->name;
+                }
+                oss << ">";
+                return oss.str();
+            });
 
     // ===== MonomialTerms Collection =====
     py::class_<MonomialTerms>(m, "MonomialTerms")
@@ -927,7 +809,8 @@ PYBIND11_MODULE(SHOTpy, m)
         .def_readonly("properties", &NumericConstraint::properties)
         .def(
             "calculateGradient",
-            [](NumericConstraint& self, const std::vector<double>& point) {
+            [](NumericConstraint& self, const std::vector<double>& point)
+            {
                 auto gradient = self.calculateGradient(point, true);
                 std::map<int, double> result;
                 for(auto& G : gradient)
@@ -937,7 +820,8 @@ PYBIND11_MODULE(SHOTpy, m)
             py::arg("point"), "Calculate gradient at point, returns dict of {var_index: value}")
         .def(
             "calculateHessian",
-            [](NumericConstraint& self, const std::vector<double>& point) {
+            [](NumericConstraint& self, const std::vector<double>& point)
+            {
                 auto hessian = self.calculateHessian(point, true);
                 std::map<std::pair<int, int>, double> result;
                 for(auto& H : hessian)
@@ -947,7 +831,8 @@ PYBIND11_MODULE(SHOTpy, m)
             py::arg("point"), "Calculate Hessian at point, returns dict of {(var1_index, var2_index): value}")
         .def(
             "getGradientSparsityPattern",
-            [](NumericConstraint& self) {
+            [](NumericConstraint& self)
+            {
                 auto pattern = self.getGradientSparsityPattern();
                 std::vector<int> result;
                 for(auto& V : *pattern)
@@ -957,7 +842,8 @@ PYBIND11_MODULE(SHOTpy, m)
             "Get gradient sparsity pattern as list of variable indices")
         .def(
             "getHessianSparsityPattern",
-            [](NumericConstraint& self) {
+            [](NumericConstraint& self)
+            {
                 auto pattern = self.getHessianSparsityPattern();
                 std::vector<std::pair<int, int>> result;
                 for(auto& E : *pattern)
@@ -975,11 +861,13 @@ PYBIND11_MODULE(SHOTpy, m)
         .def_readwrite("linearTerms", &LinearConstraint::linearTerms)
         .def("add", py::overload_cast<LinearTerms>(&LinearConstraint::add))
         .def("add", py::overload_cast<LinearTermPtr>(&LinearConstraint::add))
-        .def("__repr__", [](LinearConstraintPtr c) {
-            std::ostringstream oss;
-            oss << *c;
-            return "<LinearConstraint '" + c->name + "': " + oss.str() + ">";
-        });
+        .def("__repr__",
+            [](LinearConstraintPtr c)
+            {
+                std::ostringstream oss;
+                oss << *c;
+                return "<LinearConstraint '" + c->name + "': " + oss.str() + ">";
+            });
 
     // ===== QuadraticConstraint Class =====
     py::class_<QuadraticConstraint, LinearConstraint, std::shared_ptr<QuadraticConstraint>>(m, "QuadraticConstraint")
@@ -994,11 +882,13 @@ PYBIND11_MODULE(SHOTpy, m)
         // QuadraticConstraint-specific add methods
         .def("add", py::overload_cast<QuadraticTerms>(&QuadraticConstraint::add))
         .def("add", py::overload_cast<QuadraticTermPtr>(&QuadraticConstraint::add))
-        .def("__repr__", [](QuadraticConstraintPtr c) {
-            std::ostringstream oss;
-            oss << *c;
-            return "<QuadraticConstraint '" + c->name + "': " + oss.str() + ">";
-        });
+        .def("__repr__",
+            [](QuadraticConstraintPtr c)
+            {
+                std::ostringstream oss;
+                oss << *c;
+                return "<QuadraticConstraint '" + c->name + "': " + oss.str() + ">";
+            });
 
     // ===== NonlinearConstraint Class =====
     py::class_<NonlinearConstraint, QuadraticConstraint, std::shared_ptr<NonlinearConstraint>>(m, "NonlinearConstraint")
@@ -1026,11 +916,13 @@ PYBIND11_MODULE(SHOTpy, m)
         .def("add", py::overload_cast<MonomialTermPtr>(&NonlinearConstraint::add))
         .def("add", py::overload_cast<SignomialTerms>(&NonlinearConstraint::add))
         .def("add", py::overload_cast<SignomialTermPtr>(&NonlinearConstraint::add))
-        .def("__repr__", [](NonlinearConstraintPtr c) {
-            std::ostringstream oss;
-            oss << *c;
-            return "<NonlinearConstraint '" + c->name + "': " + oss.str() + ">";
-        });
+        .def("__repr__",
+            [](NonlinearConstraintPtr c)
+            {
+                std::ostringstream oss;
+                oss << *c;
+                return "<NonlinearConstraint '" + c->name + "': " + oss.str() + ">";
+            });
 
     // ===== ObjectiveFunctionProperties Struct =====
     py::class_<ObjectiveFunctionProperties>(m, "ObjectiveFunctionProperties")
@@ -1050,7 +942,8 @@ PYBIND11_MODULE(SHOTpy, m)
         .def_readonly("properties", &ObjectiveFunction::properties)
         .def(
             "calculateGradient",
-            [](ObjectiveFunction& self, const std::vector<double>& point) {
+            [](ObjectiveFunction& self, const std::vector<double>& point)
+            {
                 auto gradient = self.calculateGradient(point, true);
                 std::map<int, double> result;
                 for(auto& G : gradient)
@@ -1060,7 +953,8 @@ PYBIND11_MODULE(SHOTpy, m)
             py::arg("point"), "Calculate gradient at point, returns dict of {var_index: value}")
         .def(
             "calculateHessian",
-            [](ObjectiveFunction& self, const std::vector<double>& point) {
+            [](ObjectiveFunction& self, const std::vector<double>& point)
+            {
                 auto hessian = self.calculateHessian(point, true);
                 std::map<std::pair<int, int>, double> result;
                 for(auto& H : hessian)
@@ -1070,7 +964,8 @@ PYBIND11_MODULE(SHOTpy, m)
             py::arg("point"), "Calculate Hessian at point, returns dict of {(var1_index, var2_index): value}")
         .def(
             "getGradientSparsityPattern",
-            [](ObjectiveFunction& self) {
+            [](ObjectiveFunction& self)
+            {
                 auto pattern = self.getGradientSparsityPattern();
                 std::vector<int> result;
                 for(auto& V : *pattern)
@@ -1080,7 +975,8 @@ PYBIND11_MODULE(SHOTpy, m)
             "Get gradient sparsity pattern as list of variable indices")
         .def(
             "getHessianSparsityPattern",
-            [](ObjectiveFunction& self) {
+            [](ObjectiveFunction& self)
+            {
                 auto pattern = self.getHessianSparsityPattern();
                 std::vector<std::pair<int, int>> result;
                 for(auto& E : *pattern)
@@ -1165,6 +1061,7 @@ PYBIND11_MODULE(SHOTpy, m)
         .def_readonly("numberOfBinaryVariables", &ProblemProperties::numberOfBinaryVariables)
         .def_readonly("numberOfIntegerVariables", &ProblemProperties::numberOfIntegerVariables)
         .def_readonly("numberOfSemicontinuousVariables", &ProblemProperties::numberOfSemicontinuousVariables)
+        .def_readonly("numberOfSpecialOrderedSets", &ProblemProperties::numberOfSpecialOrderedSets)
         .def_readonly("numberOfNumericConstraints", &ProblemProperties::numberOfNumericConstraints)
         .def_readonly("numberOfLinearConstraints", &ProblemProperties::numberOfLinearConstraints)
         .def_readonly("numberOfQuadraticConstraints", &ProblemProperties::numberOfQuadraticConstraints)
@@ -1181,6 +1078,29 @@ PYBIND11_MODULE(SHOTpy, m)
         .def_readonly("name", &ProblemProperties::name)
         .def_readonly("description", &ProblemProperties::description)
         .def_readonly("isReformulated", &ProblemProperties::isReformulated);
+
+    // ===== SpecialOrderedSet Class =====
+    py::class_<SpecialOrderedSet, std::shared_ptr<SpecialOrderedSet>>(m, "SpecialOrderedSet")
+        .def(py::init(
+                 [](E_SOSType type, std::vector<VariablePtr> varList, VectorDouble weights)
+                 {
+                     Variables vars;
+                     for(auto& v : varList)
+                         vars.push_back(v);
+                     return std::make_shared<SpecialOrderedSet>(type, vars, weights);
+                 }),
+            py::arg("sosType"), py::arg("variables"), py::arg("weights") = VectorDouble { })
+        .def_readwrite("type", &SpecialOrderedSet::type)
+        .def_property(
+            "variables",
+            [](const SpecialOrderedSet& s) { return std::vector<VariablePtr>(s.variables.begin(), s.variables.end()); },
+            [](SpecialOrderedSet& s, std::vector<VariablePtr> varList)
+            {
+                s.variables.clear();
+                for(auto& v : varList)
+                    s.variables.push_back(v);
+            })
+        .def_readwrite("weights", &SpecialOrderedSet::weights);
 
     // ===== Problem Class =====
     // Problem uses enable_shared_from_this, pybind11 handles this automatically
@@ -1213,6 +1133,8 @@ PYBIND11_MODULE(SHOTpy, m)
             "addConstraint", [](Problem& self, LinearConstraintPtr c) { self.add(c); }, py::arg("constraint"))
         .def(
             "addConstraint", [](Problem& self, NumericConstraintPtr c) { self.add(c); }, py::arg("constraint"))
+        .def(
+            "addSpecialOrderedSet", [](Problem& self, SpecialOrderedSetPtr sos) { self.add(sos); }, py::arg("sos"))
         // Order matters for pybind11 overload resolution - most specific types first
         .def(
             "setObjective", [](Problem& self, NonlinearObjectiveFunctionPtr obj) { self.add(obj); },
@@ -1243,7 +1165,8 @@ PYBIND11_MODULE(SHOTpy, m)
         // Sparsity patterns
         .def(
             "getConstraintsJacobianSparsityPattern",
-            [](Problem& self) {
+            [](Problem& self)
+            {
                 auto pattern = self.getConstraintsJacobianSparsityPattern();
                 std::vector<std::pair<int, std::vector<int>>> result;
                 for(auto& E : *pattern)
@@ -1258,7 +1181,8 @@ PYBIND11_MODULE(SHOTpy, m)
             "Get Jacobian sparsity pattern as list of (constraint_index, [variable_indices])")
         .def(
             "getConstraintsHessianSparsityPattern",
-            [](Problem& self) {
+            [](Problem& self)
+            {
                 auto pattern = self.getConstraintsHessianSparsityPattern();
                 std::vector<std::pair<int, int>> result;
                 for(auto& E : *pattern)
@@ -1268,7 +1192,8 @@ PYBIND11_MODULE(SHOTpy, m)
             "Get Hessian sparsity pattern for constraints only as list of (var1_index, var2_index)")
         .def(
             "getLagrangianHessianSparsityPattern",
-            [](Problem& self) {
+            [](Problem& self)
+            {
                 auto pattern = self.getLagrangianHessianSparsityPattern();
                 std::vector<std::pair<int, int>> result;
                 for(auto& E : *pattern)
@@ -1278,7 +1203,8 @@ PYBIND11_MODULE(SHOTpy, m)
             "Get Hessian sparsity pattern including objective as list of (var1_index, var2_index)")
         // String representation
         .def("__repr__",
-            [](ProblemPtr p) {
+            [](ProblemPtr p)
+            {
                 std::string repr = "<Problem";
                 if(!p->name.empty())
                     repr += " '" + p->name + "'";
@@ -1288,14 +1214,16 @@ PYBIND11_MODULE(SHOTpy, m)
                 return repr;
             })
         .def("__str__",
-            [](ProblemPtr p) {
+            [](ProblemPtr p)
+            {
                 std::ostringstream oss;
                 oss << p;
                 return oss.str();
             })
         .def(
             "toString",
-            [](ProblemPtr p) {
+            [](ProblemPtr p)
+            {
                 std::ostringstream oss;
                 oss << p;
                 return oss.str();
@@ -1362,11 +1290,9 @@ PYBIND11_MODULE(SHOTpy, m)
             "setProblem", [](Solver& self, ProblemPtr problem) { return self.setProblem(problem, nullptr, nullptr); },
             "Set problem from Problem object", py::arg("problem"))
         .def(
-            "setProblem",
-            [](Solver& self, ProblemPtr problem, ProblemPtr reformulatedProblem) {
-                return self.setProblem(problem, reformulatedProblem, nullptr);
-            },
-            "Set problem with reformulated problem", py::arg("problem"), py::arg("reformulatedProblem"))
+            "setProblem", [](Solver& self, ProblemPtr problem, ProblemPtr reformulatedProblem)
+            { return self.setProblem(problem, reformulatedProblem, nullptr); }, "Set problem with reformulated problem",
+            py::arg("problem"), py::arg("reformulatedProblem"))
         .def("solveProblem", &Solver::solveProblem)
         .def("updateLogLevels", &Solver::updateLogLevels)
         .def("updateSetting", py::overload_cast<std::string, bool>(&Solver::updateSetting))
@@ -1375,79 +1301,91 @@ PYBIND11_MODULE(SHOTpy, m)
         .def("updateSetting", py::overload_cast<std::string, double>(&Solver::updateSetting))
         .def(
             "registerCallback",
-            [](Solver& self, E_EventType event, py::function callback) {
+            [](Solver& self, E_EventType event, py::function callback)
+            {
                 switch(event)
                 {
                 case E_EventType::NewPrimalSolution:
-                    self.registerCallback(event, [callback](std::any args) {
-                        py::gil_scoped_acquire gil;
-                        auto data = std::any_cast<PrimalSolutionCallbackData>(args);
-                        callback(data);
-                    });
+                    self.registerCallback(event,
+                        [callback](std::any args)
+                        {
+                            py::gil_scoped_acquire gil;
+                            auto data = std::any_cast<PrimalSolutionCallbackData>(args);
+                            callback(data);
+                        });
                     break;
                 case E_EventType::PrimalSolutionCandidateSelection:
-                    self.registerCallback(event, [callback](std::any args) -> bool {
-                        py::gil_scoped_acquire gil;
-                        auto data = std::any_cast<PrimalSolutionCallbackData>(args);
-                        py::object result = callback(data);
-                        if(result.is_none())
-                            return true; // None means accept
-                        return result.cast<bool>();
-                    });
-                    break;
-                case E_EventType::UserTerminationCheck:
-                    self.registerCallback(event, [callback](std::any args) -> bool {
-                        py::gil_scoped_acquire gil;
-                        auto data = std::any_cast<TerminationCallbackData>(args);
-                        py::object result = callback(data);
-                        if(result.is_none())
-                            return false;
-                        return result.cast<bool>();
-                    });
-                    break;
-                case E_EventType::ExternalDualBound:
-                    self.registerCallback(event, [callback](std::any args) -> double {
-                        py::gil_scoped_acquire gil;
-                        auto data = std::any_cast<DualBoundCallbackData>(args);
-                        py::object result = callback(data);
-                        if(result.is_none())
-                            return std::numeric_limits<double>::quiet_NaN();
-                        return result.cast<double>();
-                    });
-                    break;
-                case E_EventType::ExternalHyperplaneSelection:
-                    self.registerCallback(
-                        event, [callback](std::any args) -> std::vector<ExternalHyperplane> {
+                    self.registerCallback(event,
+                        [callback](std::any args) -> bool
+                        {
                             py::gil_scoped_acquire gil;
-                            auto data
-                                = std::any_cast<ExternalHyperplaneSelectionCallbackData>(args);
+                            auto data = std::any_cast<PrimalSolutionCallbackData>(args);
                             py::object result = callback(data);
                             if(result.is_none())
-                                return {};
+                                return true; // None means accept
+                            return result.cast<bool>();
+                        });
+                    break;
+                case E_EventType::UserTerminationCheck:
+                    self.registerCallback(event,
+                        [callback](std::any args) -> bool
+                        {
+                            py::gil_scoped_acquire gil;
+                            auto data = std::any_cast<TerminationCallbackData>(args);
+                            py::object result = callback(data);
+                            if(result.is_none())
+                                return false;
+                            return result.cast<bool>();
+                        });
+                    break;
+                case E_EventType::ExternalDualBound:
+                    self.registerCallback(event,
+                        [callback](std::any args) -> double
+                        {
+                            py::gil_scoped_acquire gil;
+                            auto data = std::any_cast<DualBoundCallbackData>(args);
+                            py::object result = callback(data);
+                            if(result.is_none())
+                                return std::numeric_limits<double>::quiet_NaN();
+                            return result.cast<double>();
+                        });
+                    break;
+                case E_EventType::ExternalHyperplaneSelection:
+                    self.registerCallback(event,
+                        [callback](std::any args) -> std::vector<ExternalHyperplane>
+                        {
+                            py::gil_scoped_acquire gil;
+                            auto data = std::any_cast<ExternalHyperplaneSelectionCallbackData>(args);
+                            py::object result = callback(data);
+                            if(result.is_none())
+                                return { };
                             return result.cast<std::vector<ExternalHyperplane>>();
                         });
                     break;
                 case E_EventType::ExternalPrimalSolution:
-                    self.registerCallback(event, [callback](std::any args) -> std::vector<VectorDouble> {
-                        py::gil_scoped_acquire gil;
-                        auto data = std::any_cast<ExternalPrimalSolutionCallbackData>(args);
-                        py::object result = callback(data);
-                        if(result.is_none())
-                            return {};
-                        auto point = result.cast<VectorDouble>();
-                        if(point.empty())
-                            return {};
-                        return { point }; // wrap single solution in a vector as the task expects
-                    });
+                    self.registerCallback(event,
+                        [callback](std::any args) -> std::vector<VectorDouble>
+                        {
+                            py::gil_scoped_acquire gil;
+                            auto data = std::any_cast<ExternalPrimalSolutionCallbackData>(args);
+                            py::object result = callback(data);
+                            if(result.is_none())
+                                return { };
+                            auto point = result.cast<VectorDouble>();
+                            if(point.empty())
+                                return { };
+                            return { point }; // wrap single solution in a vector as the task expects
+                        });
                     break;
                 case E_EventType::ExternalESHRootsearchPointsSelection:
-                    self.registerCallback(
-                        event, [callback](std::any args) -> std::vector<VectorDouble> {
+                    self.registerCallback(event,
+                        [callback](std::any args) -> std::vector<VectorDouble>
+                        {
                             py::gil_scoped_acquire gil;
                             auto data = std::any_cast<ESHInteriorPointCallbackData>(args);
                             py::object result = callback(data);
                             if(result.is_none())
-                                return {};
+                                return { };
                             return result.cast<std::vector<VectorDouble>>();
                         });
                     break;
@@ -1464,7 +1402,8 @@ PYBIND11_MODULE(SHOTpy, m)
             "    Return True to stop, False to continue. Return None to continue.\n"
             "  EventType.ExternalDualBound: fn(DualBoundCallbackData) -> float\n"
             "    Return a new dual bound value, or None to skip.\n"
-            "  EventType.ExternalHyperplaneSelection: fn(ExternalHyperplaneSelectionCallbackData) -> list[ExternalHyperplane]\n"
+            "  EventType.ExternalHyperplaneSelection: fn(ExternalHyperplaneSelectionCallbackData) -> "
+            "list[ExternalHyperplane]\n"
             "    Return a list of hyperplanes to add, or None/[] to add none.\n"
             "  EventType.ExternalPrimalSolution: fn(ExternalPrimalSolutionCallbackData) -> list[float]\n"
             "    Return a new primal solution point, or None/[] to skip.\n"
@@ -1491,8 +1430,7 @@ PYBIND11_MODULE(SHOTpy, m)
         .value("LPRelaxedSolutionPoint", E_HyperplaneSource::LPRelaxedSolutionPoint)
         .value("LPFixedIntegers", E_HyperplaneSource::LPFixedIntegers)
         .value("PrimalSolutionSearch", E_HyperplaneSource::PrimalSolutionSearch)
-        .value("PrimalSolutionSearchInteriorObjective",
-            E_HyperplaneSource::PrimalSolutionSearchInteriorObjective)
+        .value("PrimalSolutionSearchInteriorObjective", E_HyperplaneSource::PrimalSolutionSearchInteriorObjective)
         .value("InteriorPointSearch", E_HyperplaneSource::InteriorPointSearch)
         .value("MIPCallbackRelaxed", E_HyperplaneSource::MIPCallbackRelaxed)
         .value("ObjectiveRootsearch", E_HyperplaneSource::ObjectiveRootsearch)
@@ -1692,12 +1630,9 @@ PYBIND11_MODULE(SHOTpy, m)
         .def_readonly("absoluteGap", &ExternalHyperplaneSelectionCallbackData::absoluteGap)
         .def_readonly("solutionPoints", &ExternalHyperplaneSelectionCallbackData::solutionPoints)
         .def_readonly("originalProblem", &ExternalHyperplaneSelectionCallbackData::originalProblem)
-        .def_readonly(
-            "reformulatedProblem", &ExternalHyperplaneSelectionCallbackData::reformulatedProblem)
-        .def_readonly(
-            "isObjectiveNonlinear", &ExternalHyperplaneSelectionCallbackData::isObjectiveNonlinear)
-        .def_readonly(
-            "solutionStatistics", &ExternalHyperplaneSelectionCallbackData::solutionStatistics);
+        .def_readonly("reformulatedProblem", &ExternalHyperplaneSelectionCallbackData::reformulatedProblem)
+        .def_readonly("isObjectiveNonlinear", &ExternalHyperplaneSelectionCallbackData::isObjectiveNonlinear)
+        .def_readonly("solutionStatistics", &ExternalHyperplaneSelectionCallbackData::solutionStatistics);
 
     py::class_<ESHInteriorPointCallbackData>(m, "ESHInteriorPointCallbackData")
         .def_readonly("currentInteriorPoints", &ESHInteriorPointCallbackData::currentInteriorPoints)

@@ -414,6 +414,157 @@ class TestMeanvarxsc(OptimizationTestBase):
         assert problem.properties.numberOfNumericConstraints == 30
 
 
+def build_sos1a(env, problem):
+    """
+    Build the sos1a problem (SOS1 constraint).
+
+    Maximize 0.9*x1 + 1.0*x2 + 1.1*x3
+    subject to:
+        x1 + x2 + x3 <= 1
+        SOS1: {x1, x2, x3} with weights {1, 2, 3}
+        0 <= x1 <= 0.8, 0 <= x2 <= 0.6, 0 <= x3 <= 0.6
+
+    Optimal: x1 = 0.8, obj = 0.72
+    """
+    INF = SHOTpy.SHOT_DBL_MAX
+
+    x1 = SHOTpy.Variable("x1", 0, SHOTpy.VariableType.Real, 0.0, 0.8)
+    x2 = SHOTpy.Variable("x2", 1, SHOTpy.VariableType.Real, 0.0, 0.6)
+    x3 = SHOTpy.Variable("x3", 2, SHOTpy.VariableType.Real, 0.0, 0.6)
+    problem.addVariable(x1)
+    problem.addVariable(x2)
+    problem.addVariable(x3)
+
+    obj = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Maximize)
+    obj.add(SHOTpy.LinearTerm(0.9, x1))
+    obj.add(SHOTpy.LinearTerm(1.0, x2))
+    obj.add(SHOTpy.LinearTerm(1.1, x3))
+    problem.setObjective(obj)
+
+    c1 = SHOTpy.LinearConstraint(0, "xsum", -INF, 1.0)
+    c1.add(SHOTpy.LinearTerm(1.0, x1))
+    c1.add(SHOTpy.LinearTerm(1.0, x2))
+    c1.add(SHOTpy.LinearTerm(1.0, x3))
+    problem.addConstraint(c1)
+
+    sos = SHOTpy.SpecialOrderedSet(SHOTpy.SOSType.One, [x1, x2, x3], [1.0, 2.0, 3.0])
+    problem.addSpecialOrderedSet(sos)
+
+    return problem
+
+
+def build_sos2a(env, problem):
+    """
+    Build the sos2a problem (SOS2 constraint).
+
+    Minimize fplus + fminus
+    subject to:
+        w1 + w2 + w3 = 1
+        fplus  - w1 - 2*w2 - 3*w3 >= -1.3
+        fminus + w1 + 2*w2 + 3*w3 >=  1.3
+        SOS2: {w1, w2, w3} with weights {1, 2, 3}
+        w1, w2, w3, fplus, fminus >= 0
+
+    Optimal: w1=0.7, w2=0.3, fplus=fminus=0, obj=0.0
+    """
+    INF = SHOTpy.SHOT_DBL_MAX
+
+    w1 = SHOTpy.Variable("w1", 0, SHOTpy.VariableType.Real, 0.0, INF)
+    w2 = SHOTpy.Variable("w2", 1, SHOTpy.VariableType.Real, 0.0, INF)
+    w3 = SHOTpy.Variable("w3", 2, SHOTpy.VariableType.Real, 0.0, INF)
+    fplus = SHOTpy.Variable("fplus", 3, SHOTpy.VariableType.Real, 0.0, INF)
+    fminus = SHOTpy.Variable("fminus", 4, SHOTpy.VariableType.Real, 0.0, INF)
+    for v in [w1, w2, w3, fplus, fminus]:
+        problem.addVariable(v)
+
+    obj = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
+    obj.add(SHOTpy.LinearTerm(1.0, fplus))
+    obj.add(SHOTpy.LinearTerm(1.0, fminus))
+    problem.setObjective(obj)
+
+    # w1 + w2 + w3 = 1
+    c1 = SHOTpy.LinearConstraint(0, "wsum", 1.0, 1.0)
+    c1.add(SHOTpy.LinearTerm(1.0, w1))
+    c1.add(SHOTpy.LinearTerm(1.0, w2))
+    c1.add(SHOTpy.LinearTerm(1.0, w3))
+    problem.addConstraint(c1)
+
+    # fplus - w1 - 2*w2 - 3*w3 >= -1.3
+    c2 = SHOTpy.LinearConstraint(1, "fpos", -1.3, INF)
+    c2.add(SHOTpy.LinearTerm(1.0, fplus))
+    c2.add(SHOTpy.LinearTerm(-1.0, w1))
+    c2.add(SHOTpy.LinearTerm(-2.0, w2))
+    c2.add(SHOTpy.LinearTerm(-3.0, w3))
+    problem.addConstraint(c2)
+
+    # fminus + w1 + 2*w2 + 3*w3 >= 1.3
+    c3 = SHOTpy.LinearConstraint(2, "fneg", 1.3, INF)
+    c3.add(SHOTpy.LinearTerm(1.0, fminus))
+    c3.add(SHOTpy.LinearTerm(1.0, w1))
+    c3.add(SHOTpy.LinearTerm(2.0, w2))
+    c3.add(SHOTpy.LinearTerm(3.0, w3))
+    problem.addConstraint(c3)
+
+    sos = SHOTpy.SpecialOrderedSet(SHOTpy.SOSType.Two, [w1, w2, w3], [1.0, 2.0, 3.0])
+    problem.addSpecialOrderedSet(sos)
+
+    return problem
+
+
+class TestSOS1(OptimizationTestBase):
+    """Tests for the sos1a problem (SOS1 constraint)."""
+
+    EXPECTED_OBJECTIVE = 0.72
+    OBJECTIVE_TOLERANCE = 0.01
+
+    def test_sos1_solve_exact(self):
+        """Test solving sos1a and verify optimal objective."""
+        solver, env, problem = self.create_solver_and_problem()
+        build_sos1a(env, problem)
+        self.solve_and_verify(
+            solver, problem,
+            expected_obj=self.EXPECTED_OBJECTIVE,
+            tolerance=self.OBJECTIVE_TOLERANCE,
+        )
+
+    def test_sos1_problem_structure(self):
+        """Test that sos1a problem has correct structure."""
+        solver, env, problem = self.create_solver_and_problem()
+        build_sos1a(env, problem)
+        problem.finalize()
+
+        assert problem.properties.numberOfVariables == 3
+        assert problem.properties.numberOfSpecialOrderedSets == 1
+        assert problem.properties.numberOfNumericConstraints == 1
+
+
+class TestSOS2(OptimizationTestBase):
+    """Tests for the sos2a problem (SOS2 constraint)."""
+
+    EXPECTED_OBJECTIVE = 0.0
+    OBJECTIVE_TOLERANCE = 0.01
+
+    def test_sos2_solve_exact(self):
+        """Test solving sos2a and verify optimal objective."""
+        solver, env, problem = self.create_solver_and_problem()
+        build_sos2a(env, problem)
+        self.solve_and_verify(
+            solver, problem,
+            expected_obj=self.EXPECTED_OBJECTIVE,
+            tolerance=self.OBJECTIVE_TOLERANCE,
+        )
+
+    def test_sos2_problem_structure(self):
+        """Test that sos2a problem has correct structure."""
+        solver, env, problem = self.create_solver_and_problem()
+        build_sos2a(env, problem)
+        problem.finalize()
+
+        assert problem.properties.numberOfVariables == 5
+        assert problem.properties.numberOfSpecialOrderedSets == 1
+        assert problem.properties.numberOfNumericConstraints == 3
+
+
 # =============================================================================
 # File-based Problem Tests
 # =============================================================================
