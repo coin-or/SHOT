@@ -126,10 +126,10 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
     if(GAMScheckIpoptLicense(auditLicensing, false))
     {
         GamsHSLInit();
-        env->settings->updateSetting("Subsolver.Ipopt.LinearSolver", static_cast<int>(ES_IpoptSolver::ma27));
+        env->settings->updateSetting("Subsolver.Ipopt.LinearSolver", static_cast<int>(ES_IpoptSolver::ma27), E_SettingPriority::Default);
     }
     else
-        env->settings->updateSetting("Subsolver.Ipopt.LinearSolver", static_cast<int>(ES_IpoptSolver::mumps));
+        env->settings->updateSetting("Subsolver.Ipopt.LinearSolver", static_cast<int>(ES_IpoptSolver::mumps), E_SettingPriority::Default);
 #endif
 
     // Process GAMS options.
@@ -137,14 +137,14 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
     if(!createdgmo)
     {
         // Sets time limit
-        env->settings->updateSetting("Termination.TimeLimit", gevGetDblOpt(modelingEnvironment, gevResLim));
+        env->settings->updateSetting("Termination.TimeLimit", gevGetDblOpt(modelingEnvironment, gevResLim), E_SettingPriority::OptionsFile);
         env->output->outputDebug(fmt::format(
             " Time limit set to {} by GAMS", env->settings->getSetting<double>("Termination.TimeLimit")));
 
         // Sets iteration limit, if different than SHOT default
         if(gevGetIntOpt(modelingEnvironment, gevIterLim) < INT_MAX)
         {
-            env->settings->updateSetting("Termination.IterationLimit", gevGetIntOpt(modelingEnvironment, gevIterLim));
+            env->settings->updateSetting("Termination.IterationLimit", gevGetIntOpt(modelingEnvironment, gevIterLim), E_SettingPriority::OptionsFile);
             env->output->outputDebug(fmt::format(
                 " Iteration limit set to {} by GAMS", env->settings->getSetting<int>("Termination.IterationLimit")));
         }
@@ -154,12 +154,12 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
         }
 
         // Sets absolute objective gap tolerance
-        env->settings->updateSetting("Termination.ObjectiveGap.Absolute", gevGetDblOpt(modelingEnvironment, gevOptCA));
+        env->settings->updateSetting("Termination.ObjectiveGap.Absolute", gevGetDblOpt(modelingEnvironment, gevOptCA), E_SettingPriority::OptionsFile);
         env->output->outputDebug(fmt::format(" Absolute termination tolerance set to {} by GAMS",
             env->settings->getSetting<double>("Termination.ObjectiveGap.Absolute")));
 
         // Sets relative objective gap tolerance
-        env->settings->updateSetting("Termination.ObjectiveGap.Relative", gevGetDblOpt(modelingEnvironment, gevOptCR));
+        env->settings->updateSetting("Termination.ObjectiveGap.Relative", gevGetDblOpt(modelingEnvironment, gevOptCR), E_SettingPriority::OptionsFile);
         env->output->outputDebug(fmt::format(" Relative termination tolerance set to {} by GAMS",
             env->settings->getSetting<double>("Termination.ObjectiveGap.Relative")));
 
@@ -167,13 +167,13 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
         if(gevGetIntOpt(modelingEnvironment, gevUseCutOff) == 1)
         {
             env->settings->updateSetting("Dual.MIP.CutOff.UseInitialValue", true);
-            env->settings->updateSetting("Dual.MIP.CutOff.InitialValue", gevGetDblOpt(modelingEnvironment, gevCutOff));
+            env->settings->updateSetting("Dual.MIP.CutOff.InitialValue", gevGetDblOpt(modelingEnvironment, gevCutOff), E_SettingPriority::OptionsFile);
         }
 
         // Sets node limit for dual solver
         if(gevGetIntOpt(modelingEnvironment, gevNodeLim) > 0)
         {
-            env->settings->updateSetting("Dual.MIP.NodeLimit", (double)gevGetIntOpt(modelingEnvironment, gevNodeLim));
+            env->settings->updateSetting("Dual.MIP.NodeLimit", (double)gevGetIntOpt(modelingEnvironment, gevNodeLim), E_SettingPriority::OptionsFile);
         }
 
         // Sets the number of threads
@@ -182,19 +182,19 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
         int nthreads = gevGetIntOpt(modelingEnvironment, gevThreadsRaw);
         if( nthreads < 0 )
            nthreads = gevThreads(modelingEnvironment);
-        env->settings->updateSetting("Dual.MIP.NumberOfThreads", nthreads);
+        env->settings->updateSetting("Dual.MIP.NumberOfThreads", nthreads, E_SettingPriority::OptionsFile);
         env->output->outputDebug(fmt::format(
             " MIP number of threads set to {} by GAMS", env->settings->getSetting<int>("Dual.MIP.NumberOfThreads")));
 
         // Uses NLP solver in GAMS by default, Ipopt can be used directly if value set by user in options file (read
         // below)
-        env->settings->updateSetting("Primal.FixedInteger.Solver", static_cast<int>(ES_PrimalNLPSolver::GAMS));
+        env->settings->updateSetting("Primal.FixedInteger.Solver", static_cast<int>(ES_PrimalNLPSolver::GAMS), E_SettingPriority::Default);
 
 #ifdef GAMS_BUILD
         // Change default MIP solver to CPLEX, which may then be changed to CBC below if no license is available
         // The original default of Gurobi would lead to SHOT stopping with a license error if no Gurobi license is
         // available
-        env->settings->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cplex));
+        env->settings->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cplex), E_SettingPriority::Default);
 #endif
     }
 
@@ -233,7 +233,7 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
         {
             env->output->outputInfo(
                 " CPLEX chosen as MIP solver, but no GAMS/CPLEX license available. Changing to CBC.");
-            env->settings->updateSetting("Dual.MIP.Solver", (int)ES_MIPSolver::Cbc);
+            env->settings->updateSetting("Dual.MIP.Solver", (int)ES_MIPSolver::Cbc, E_SettingPriority::SolverCompatibility);
         }
     }
 #endif
