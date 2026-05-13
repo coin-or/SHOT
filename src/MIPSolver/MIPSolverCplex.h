@@ -15,6 +15,7 @@
 #ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wignored-attributes"
 #endif
+#include <cstring>  // required for compiling ILOG CPLEX headers on some platforms
 #include <ilcplex/ilocplex.h>
 #ifdef __GNUC__
 #pragma GCC diagnostic warning "-Wignored-attributes"
