@@ -171,11 +171,13 @@ bool MIPSolverHighs::addVariable(
 
     case E_VariableType::Semiinteger:
         isProblemDiscrete = true;
-        variableTypesHighs.push_back(HighsVarType::kContinuous);
+        variableLowerBounds.back() = semiBound;
+        variableTypesHighs.push_back(HighsVarType::kSemiInteger);
         break;
     case E_VariableType::Semicontinuous:
     {
         isProblemDiscrete = true;
+        variableLowerBounds.back() = semiBound;
         variableTypesHighs.push_back(HighsVarType::kSemiContinuous);
         break;
     }
@@ -493,6 +495,11 @@ void MIPSolverHighs::activateDiscreteVariables(bool activate)
             {
                 this->variableTypesHighs.at(i) = HighsVarType::kInteger;
                 highsInstance.changeColIntegrality(i, HighsVarType::kInteger);
+            }
+            else if(variableTypes.at(i) == E_VariableType::Semiinteger)
+            {
+                this->variableTypesHighs.at(i) = HighsVarType::kSemiContinuous;
+                highsInstance.changeColIntegrality(i, HighsVarType::kSemiContinuous);
             }
         }
 

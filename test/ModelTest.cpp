@@ -42,6 +42,8 @@ bool ModelTestGradientsAndHessians();
 bool ModelTestFinalizeCalledTwice();
 bool ModelTestFinalizeNoObjective();
 bool ModelTestFinalizeNoVariables();
+bool ModelTestMeanvarxscWithSolver(ES_MIPSolver mipSolver);
+bool ModelTestSemiContinuous();
 
 bool TestReadProblem(const std::string& problemFile);
 bool TestRootsearch(const std::string& problemFile);
@@ -114,6 +116,9 @@ int ModelTest(int argc, char* argv[])
         break;
     case 16:
         passed = ModelTestFinalizeNoVariables();
+        break;
+    case 17:
+        passed = ModelTestSemiContinuous();
         break;
     default:
         passed = false;
@@ -1417,6 +1422,262 @@ bool ModelTestEx1223b()
         }
     }
 
+    return passed;
+}
+
+bool ModelTestMeanvarxscWithSolver(ES_MIPSolver mipSolver)
+{
+    bool passed = true;
+
+    std::string solverName;
+    switch(mipSolver)
+    {
+    case ES_MIPSolver::Cbc:
+        solverName = "CBC";
+        break;
+    case ES_MIPSolver::Highs:
+        solverName = "HiGHS";
+        break;
+    case ES_MIPSolver::Cplex:
+        solverName = "CPLEX";
+        break;
+    case ES_MIPSolver::Gurobi:
+        solverName = "Gurobi";
+        break;
+    default:
+        solverName = "unknown";
+        break;
+    }
+
+    std::cout << "\n=== Testing meanvarxsc problem with " << solverName << " ===\n\n";
+
+    auto solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Info));
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(mipSolver));
+
+    auto problem = std::make_shared<Problem>(env);
+    problem->name = "meanvarxsc";
+
+    auto x2 = std::make_shared<Variable>("x2", 0, E_VariableType::Real, 0.0, SHOT_DBL_MAX);
+    auto x3 = std::make_shared<Variable>("x3", 1, E_VariableType::Real, 0.0, SHOT_DBL_MAX);
+    auto x4 = std::make_shared<Variable>("x4", 2, E_VariableType::Real, 0.0, SHOT_DBL_MAX);
+    auto x5 = std::make_shared<Variable>("x5", 3, E_VariableType::Real, 0.0, SHOT_DBL_MAX);
+    auto x6 = std::make_shared<Variable>("x6", 4, E_VariableType::Real, 0.0, SHOT_DBL_MAX);
+    auto x7 = std::make_shared<Variable>("x7", 5, E_VariableType::Real, 0.0, SHOT_DBL_MAX);
+    auto x8 = std::make_shared<Variable>("x8", 6, E_VariableType::Real, 0.0, SHOT_DBL_MAX);
+
+    auto sc9 = std::make_shared<Variable>("sc9", 7, E_VariableType::Semicontinuous, 0.0, 0.11, 0.03);
+    auto sc10 = std::make_shared<Variable>("sc10", 8, E_VariableType::Semicontinuous, 0.0, 0.10, 0.04);
+    auto sc11 = std::make_shared<Variable>("sc11", 9, E_VariableType::Semicontinuous, 0.0, 0.07, 0.04);
+    auto sc12 = std::make_shared<Variable>("sc12", 10, E_VariableType::Semicontinuous, 0.0, 0.11, 0.03);
+    auto sc13 = std::make_shared<Variable>("sc13", 11, E_VariableType::Semicontinuous, 0.0, 0.20, 0.03);
+    auto sc14 = std::make_shared<Variable>("sc14", 12, E_VariableType::Semicontinuous, 0.0, 0.10, 0.03);
+    auto sc15 = std::make_shared<Variable>("sc15", 13, E_VariableType::Semicontinuous, 0.0, 0.10, 0.03);
+    auto sc16 = std::make_shared<Variable>("sc16", 14, E_VariableType::Semicontinuous, 0.0, 0.20, 0.02);
+    auto sc17 = std::make_shared<Variable>("sc17", 15, E_VariableType::Semicontinuous, 0.0, 0.15, 0.02);
+    auto sc18 = std::make_shared<Variable>("sc18", 16, E_VariableType::Real, 0.0, 0.0);
+    auto sc19 = std::make_shared<Variable>("sc19", 17, E_VariableType::Real, 0.0, 0.0);
+    auto sc20 = std::make_shared<Variable>("sc20", 18, E_VariableType::Semicontinuous, 0.0, 0.10, 0.04);
+    auto sc21 = std::make_shared<Variable>("sc21", 19, E_VariableType::Semicontinuous, 0.0, 0.15, 0.04);
+    auto sc22 = std::make_shared<Variable>("sc22", 20, E_VariableType::Semicontinuous, 0.0, 0.20, 0.04);
+
+    auto b23 = std::make_shared<Variable>("b23", 21, E_VariableType::Binary);
+    auto b24 = std::make_shared<Variable>("b24", 22, E_VariableType::Binary);
+    auto b25 = std::make_shared<Variable>("b25", 23, E_VariableType::Binary);
+    auto b26 = std::make_shared<Variable>("b26", 24, E_VariableType::Binary);
+    auto b27 = std::make_shared<Variable>("b27", 25, E_VariableType::Binary);
+    auto b28 = std::make_shared<Variable>("b28", 26, E_VariableType::Binary);
+    auto b29 = std::make_shared<Variable>("b29", 27, E_VariableType::Binary);
+    auto b30 = std::make_shared<Variable>("b30", 28, E_VariableType::Binary);
+    auto b31 = std::make_shared<Variable>("b31", 29, E_VariableType::Binary);
+    auto b32 = std::make_shared<Variable>("b32", 30, E_VariableType::Binary);
+    auto b33 = std::make_shared<Variable>("b33", 31, E_VariableType::Binary);
+    auto b34 = std::make_shared<Variable>("b34", 32, E_VariableType::Binary);
+    auto b35 = std::make_shared<Variable>("b35", 33, E_VariableType::Binary);
+    auto b36 = std::make_shared<Variable>("b36", 34, E_VariableType::Binary);
+
+    problem->add({ x2, x3, x4, x5, x6, x7, x8, sc9, sc10, sc11, sc12, sc13, sc14, sc15, sc16, sc17, sc18, sc19, sc20,
+        sc21, sc22, b23, b24, b25, b26, b27, b28, b29, b30, b31, b32, b33, b34, b35, b36 });
+
+    auto objective = std::make_shared<QuadraticObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<QuadraticTerm>(42.18, x2, x2));
+    objective->add(std::make_shared<QuadraticTerm>(40.36, x2, x3));
+    objective->add(std::make_shared<QuadraticTerm>(21.76, x2, x4));
+    objective->add(std::make_shared<QuadraticTerm>(10.6, x2, x5));
+    objective->add(std::make_shared<QuadraticTerm>(24.64, x2, x6));
+    objective->add(std::make_shared<QuadraticTerm>(47.68, x2, x7));
+    objective->add(std::make_shared<QuadraticTerm>(34.82, x2, x8));
+    objective->add(std::make_shared<QuadraticTerm>(70.89, x3, x3));
+    objective->add(std::make_shared<QuadraticTerm>(43.16, x3, x4));
+    objective->add(std::make_shared<QuadraticTerm>(30.82, x3, x5));
+    objective->add(std::make_shared<QuadraticTerm>(46.48, x3, x6));
+    objective->add(std::make_shared<QuadraticTerm>(47.6, x3, x7));
+    objective->add(std::make_shared<QuadraticTerm>(25.24, x3, x8));
+    objective->add(std::make_shared<QuadraticTerm>(25.51, x4, x4));
+    objective->add(std::make_shared<QuadraticTerm>(19.2, x4, x5));
+    objective->add(std::make_shared<QuadraticTerm>(45.26, x4, x6));
+    objective->add(std::make_shared<QuadraticTerm>(26.44, x4, x7));
+    objective->add(std::make_shared<QuadraticTerm>(9.4, x4, x8));
+    objective->add(std::make_shared<QuadraticTerm>(22.33, x5, x5));
+    objective->add(std::make_shared<QuadraticTerm>(20.64, x5, x6));
+    objective->add(std::make_shared<QuadraticTerm>(20.92, x5, x7));
+    objective->add(std::make_shared<QuadraticTerm>(2.0, x5, x8));
+    objective->add(std::make_shared<QuadraticTerm>(30.01, x6, x6));
+    objective->add(std::make_shared<QuadraticTerm>(32.72, x6, x7));
+    objective->add(std::make_shared<QuadraticTerm>(14.4, x6, x8));
+    objective->add(std::make_shared<QuadraticTerm>(42.23, x7, x7));
+    objective->add(std::make_shared<QuadraticTerm>(19.8, x7, x8));
+    objective->add(std::make_shared<QuadraticTerm>(16.42, x8, x8));
+    objective->add(std::make_shared<LinearTerm>(-0.06435, x2));
+    objective->add(std::make_shared<LinearTerm>(-0.0548, x3));
+    objective->add(std::make_shared<LinearTerm>(-0.02505, x4));
+    objective->add(std::make_shared<LinearTerm>(-0.0762, x5));
+    objective->add(std::make_shared<LinearTerm>(-0.03815, x6));
+    objective->add(std::make_shared<LinearTerm>(-0.0927, x7));
+    objective->add(std::make_shared<LinearTerm>(-0.031, x8));
+    problem->add(objective);
+
+    auto ce1 = std::make_shared<LinearConstraint>(0, "e1", 1.0, 1.0);
+    for(auto& v : { x2, x3, x4, x5, x6, x7, x8 })
+        ce1->add(std::make_shared<LinearTerm>(1.0, v));
+    problem->add(ce1);
+
+    auto makeBalance
+        = [&](int idx, const std::string& name, VariablePtr xi, VariablePtr scs, VariablePtr scb, double rhs)
+    {
+        auto c = std::make_shared<LinearConstraint>(idx, name, rhs, rhs);
+        c->add(std::make_shared<LinearTerm>(1.0, xi));
+        c->add(std::make_shared<LinearTerm>(-1.0, scs));
+        c->add(std::make_shared<LinearTerm>(1.0, scb));
+        problem->add(c);
+    };
+    makeBalance(1, "e2", x2, sc9, sc16, 0.2);
+    makeBalance(2, "e3", x3, sc10, sc17, 0.2);
+    makeBalance(3, "e4", x4, sc11, sc18, 0.0);
+    makeBalance(4, "e5", x5, sc12, sc19, 0.0);
+    makeBalance(5, "e6", x6, sc13, sc20, 0.2);
+    makeBalance(6, "e7", x7, sc14, sc21, 0.2);
+    makeBalance(7, "e8", x8, sc15, sc22, 0.2);
+
+    auto ce9 = std::make_shared<LinearConstraint>(8, "e9", SHOT_DBL_MIN, 0.3);
+    for(auto& v : { sc9, sc10, sc11, sc12, sc13, sc14, sc15 })
+        ce9->add(std::make_shared<LinearTerm>(1.0, v));
+    problem->add(ce9);
+
+    struct BM
+    {
+        int idx;
+        std::string name;
+        VariablePtr scv;
+        VariablePtr bv;
+        double coeff;
+    };
+    std::vector<BM> bmData = {
+        { 9, "e10", sc9, b23, 0.11 },
+        { 10, "e11", sc10, b24, 0.10 },
+        { 11, "e12", sc11, b25, 0.07 },
+        { 12, "e13", sc12, b26, 0.11 },
+        { 13, "e14", sc13, b27, 0.20 },
+        { 14, "e15", sc14, b28, 0.10 },
+        { 15, "e16", sc15, b29, 0.10 },
+        { 16, "e17", sc16, b30, 0.20 },
+        { 17, "e18", sc17, b31, 0.15 },
+        { 18, "e19", sc18, nullptr, 0.0 },
+        { 19, "e20", sc19, nullptr, 0.0 },
+        { 20, "e21", sc20, b34, 0.10 },
+        { 21, "e22", sc21, b35, 0.15 },
+        { 22, "e23", sc22, b36, 0.20 },
+    };
+    for(auto& b : bmData)
+    {
+        auto c = std::make_shared<LinearConstraint>(b.idx, b.name, SHOT_DBL_MIN, 0.0);
+        c->add(std::make_shared<LinearTerm>(1.0, b.scv));
+        if(b.bv)
+            c->add(std::make_shared<LinearTerm>(-b.coeff, b.bv));
+        problem->add(c);
+    }
+
+    struct BP
+    {
+        int idx;
+        std::string name;
+        VariablePtr b1;
+        VariablePtr b2;
+    };
+    std::vector<BP> bpData = {
+        { 23, "e24", b23, b30 },
+        { 24, "e25", b24, b31 },
+        { 25, "e26", b25, b32 },
+        { 26, "e27", b26, b33 },
+        { 27, "e28", b27, b34 },
+        { 28, "e29", b28, b35 },
+        { 29, "e30", b29, b36 },
+    };
+    for(auto& p : bpData)
+    {
+        auto c = std::make_shared<LinearConstraint>(p.idx, p.name, SHOT_DBL_MIN, 1.0);
+        c->add(std::make_shared<LinearTerm>(1.0, p.b1));
+        c->add(std::make_shared<LinearTerm>(1.0, p.b2));
+        problem->add(c);
+    }
+
+    problem->finalize();
+    solver->setProblem(problem);
+
+    std::cout << "\nSolving...\n";
+
+    if(!solver->solveProblem())
+    {
+        std::cout << "Failed to solve problem!\n";
+        passed = false;
+    }
+    else
+    {
+        auto solutions = env->results->primalSolutions;
+        if(solutions.empty())
+        {
+            std::cout << "No solution found!\n";
+            passed = false;
+        }
+        else
+        {
+            double objValue = solutions[0].objValue;
+            double expectedObj = 14.36923211;
+            std::cout << "\nSolution found:\n";
+            std::cout << "  Objective value: " << objValue << "\n";
+            std::cout << "  Expected value:  " << expectedObj << "\n";
+            if(std::abs(objValue - expectedObj) < 0.01)
+                std::cout << "\n*** TEST PASSED: Objective matches expected value! ***\n";
+            else
+            {
+                std::cout << "\n*** TEST FAILED: Objective differs from expected! ***\n";
+                std::cout << "  Difference: " << std::abs(objValue - expectedObj) << "\n";
+                passed = false;
+            }
+        }
+    }
+
+    return passed;
+}
+
+bool ModelTestSemiContinuous()
+{
+    bool passed = true;
+#ifdef HAS_CBC
+    passed = ModelTestMeanvarxscWithSolver(ES_MIPSolver::Cbc) && passed;
+#endif
+    // TODO: HiGHS semi-continuous support needs further investigation
+#ifdef HAS_HIGHS
+    passed = ModelTestMeanvarxscWithSolver(ES_MIPSolver::Highs) && passed;
+#endif
+#ifdef HAS_CPLEX
+    passed = ModelTestMeanvarxscWithSolver(ES_MIPSolver::Cplex) && passed;
+#endif
+#ifdef HAS_GUROBI
+    passed = ModelTestMeanvarxscWithSolver(ES_MIPSolver::Gurobi) && passed;
+#endif
     return passed;
 }
 
