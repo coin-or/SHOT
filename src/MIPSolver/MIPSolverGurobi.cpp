@@ -466,7 +466,7 @@ int MIPSolverGurobi::addLinearConstraint(
 
         if(isGreaterThan)
         {
-            gurobiModel->addConstr(-constant >= *expr, name);
+            gurobiModel->addConstr(*expr >= -constant, name);
         }
         else
         {
