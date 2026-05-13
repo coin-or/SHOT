@@ -38,7 +38,7 @@ HighsCallbackFunctionType highsCallback
 
     if(callback_type == kCallbackLogging)
     {
-        if(!env->settings->getSetting<bool>("Output.Console.DualSolver.Show"))
+        if(message.empty() || !env->settings->getSetting<bool>("Output.Console.DualSolver.Show"))
             return;
 
         auto lines = Utilities::splitStringByCharacter(std::string(message), '\n');
@@ -49,9 +49,8 @@ HighsCallbackFunctionType highsCallback
         return;
     }
 
-    // data_in is valid for all non-logging callbacks
-    if(!data_in)
-        return;
+    // data_in should be valid for all non-logging callbacks
+    assert(data_in != nullptr);
 
     // Set user_interrupt to false by default for all non-logging callbacks
     data_in->user_interrupt = false;
