@@ -10,6 +10,7 @@
 
 #pragma once
 #include "MIPSolverBase.h"
+#include "MIPSolverCallbackBase.h"
 
 #include <optional>
 
@@ -17,9 +18,17 @@
 
 namespace SHOT
 {
+class HighsTerminationHelper : public MIPSolverCallbackBase
+{
+public:
+    HighsTerminationHelper(EnvironmentPtr envPtr) { env = envPtr; }
+    bool checkTermination() { return checkUserTermination(); }
+};
+
 struct HighsMipData
 {
     EnvironmentPtr env;
+    HighsTerminationHelper* terminationHandler = nullptr;
 };
 
 class MIPSolverHighs : public IMIPSolver, MIPSolverBase
@@ -169,6 +178,7 @@ private:
     Highs highsInstance;
     HighsStatus highsReturnStatus;
     HighsMipData highsCallbackData;
+    std::unique_ptr<HighsTerminationHelper> terminationHelper;
 
     long int solutionLimit;
     double objectiveConstant = 0.0;

@@ -36,11 +36,6 @@ HighsCallbackFunctionType highsCallback
     HighsMipData callback_data = *(static_cast<HighsMipData*>(user_callback_data));
     auto env = callback_data.env;
 
-    env->events->notify(E_EventType::UserTerminationCheck);
-
-    if(env->tasks->isTerminated())
-        data_in->user_interrupt = true;
-
     if(callback_type == kCallbackLogging)
     {
         if(!env->settings->getSetting<bool>("Output.Console.DualSolver.Show"))
@@ -54,19 +49,39 @@ HighsCallbackFunctionType highsCallback
         return;
     }
 
-    // Set user_interrupt to false by default for all MIP callba'cks
+    // data_in is valid for all non-logging callbacks
+    if(!data_in)
+        return;
+
+    // Set user_interrupt to false by default for all non-logging callbacks
     data_in->user_interrupt = false;
 
     auto MIPSolver = std::dynamic_pointer_cast<MIPSolverHighs>(env->dualSolver->MIPSolver);
 
-    if(callback_type == kCallbackMipInterrupt)
+    // Check for user termination
+    if(callback_type == kCallbackSimplexInterrupt || callback_type == kCallbackIpmInterrupt
+        || callback_type == kCallbackMipInterrupt)
     {
-        if(MIPSolver->currentSolutions.size() >= MIPSolver->getSolutionLimit())
-        {
-            env->output->outputDebug(fmt::format("      | solution limit reached "));
-            data_in->user_interrupt = true;
-        }
+        // For LP/IPM solves, only check termination every 1000 iterations to avoid overhead
+        if(callback_type == kCallbackSimplexInterrupt && data_out->simplex_iteration_count % 1000 != 0)
+            return;
 
+        if(callback_type == kCallbackIpmInterrupt && data_out->ipm_iteration_count % 1000 != 0)
+            return;
+
+        if(callback_data.terminationHandler && callback_data.terminationHandler->checkTermination())
+        {
+            env->output->outputDebug("        Terminated by user.");
+            data_in->user_interrupt = true;
+            return;
+        }
+    }
+
+    // Solution limit only applies to MIP solves
+    if(callback_type == kCallbackMipInterrupt && MIPSolver->currentSolutions.size() >= MIPSolver->getSolutionLimit())
+    {
+        env->output->outputDebug(fmt::format("      | solution limit reached "));
+        data_in->user_interrupt = true;
         return;
     }
 
@@ -417,10 +432,14 @@ void MIPSolverHighs::initializeSolverSettings()
     // highsInstance.setOptionValue("mip_report_level", 2);
 
     highsCallbackData.env = env;
+    terminationHelper = std::make_unique<HighsTerminationHelper>(env);
+    highsCallbackData.terminationHandler = terminationHelper.get();
 
     highsInstance.setCallback(highsCallback, reinterpret_cast<void*>(&highsCallbackData));
     highsInstance.startCallback(kCallbackMipSolution);
     highsInstance.startCallback(kCallbackMipInterrupt);
+    highsInstance.startCallback(kCallbackSimplexInterrupt);
+    highsInstance.startCallback(kCallbackIpmInterrupt);
     highsInstance.startCallback(kCallbackLogging);
 }
 
