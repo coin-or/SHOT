@@ -168,6 +168,164 @@ def build_ex1223b(env, problem):
     return problem
 
 
+def build_meanvarxsc(env, problem):
+    """
+    Build the meanvarxsc problem.
+
+    Mean-variance portfolio selection with semicontinuous trade variables.
+    Source: https://www.minlplib.org/meanvarxsc.html
+
+    Problem type: MBQP (Mixed-Binary Quadratic Program)
+    #Variables: 35 (7 continuous, 12 semicontinuous, 2 fixed-at-zero, 14 binary)
+    #Constraints: 30 (all linear)
+    Optimal objective: 14.36923211
+    """
+    problem.name = "meanvarxsc"
+
+    # Portfolio weights: x2..x8 (positive continuous)
+    x2 = SHOTpy.Variable("x2", 0, SHOTpy.VariableType.Real, 0.0, SHOTpy.SHOT_DBL_MAX)
+    x3 = SHOTpy.Variable("x3", 1, SHOTpy.VariableType.Real, 0.0, SHOTpy.SHOT_DBL_MAX)
+    x4 = SHOTpy.Variable("x4", 2, SHOTpy.VariableType.Real, 0.0, SHOTpy.SHOT_DBL_MAX)
+    x5 = SHOTpy.Variable("x5", 3, SHOTpy.VariableType.Real, 0.0, SHOTpy.SHOT_DBL_MAX)
+    x6 = SHOTpy.Variable("x6", 4, SHOTpy.VariableType.Real, 0.0, SHOTpy.SHOT_DBL_MAX)
+    x7 = SHOTpy.Variable("x7", 5, SHOTpy.VariableType.Real, 0.0, SHOTpy.SHOT_DBL_MAX)
+    x8 = SHOTpy.Variable("x8", 6, SHOTpy.VariableType.Real, 0.0, SHOTpy.SHOT_DBL_MAX)
+
+    # Semicontinuous sell/buy amounts: either 0 or in [semiBound, upperBound]
+    sc9  = SHOTpy.Variable("sc9",   7,  SHOTpy.VariableType.Semicontinuous, 0.0, 0.11, 0.03)
+    sc10 = SHOTpy.Variable("sc10",  8,  SHOTpy.VariableType.Semicontinuous, 0.0, 0.10, 0.04)
+    sc11 = SHOTpy.Variable("sc11",  9,  SHOTpy.VariableType.Semicontinuous, 0.0, 0.07, 0.04)
+    sc12 = SHOTpy.Variable("sc12", 10,  SHOTpy.VariableType.Semicontinuous, 0.0, 0.11, 0.03)
+    sc13 = SHOTpy.Variable("sc13", 11,  SHOTpy.VariableType.Semicontinuous, 0.0, 0.20, 0.03)
+    sc14 = SHOTpy.Variable("sc14", 12,  SHOTpy.VariableType.Semicontinuous, 0.0, 0.10, 0.03)
+    sc15 = SHOTpy.Variable("sc15", 13,  SHOTpy.VariableType.Semicontinuous, 0.0, 0.10, 0.03)
+    sc16 = SHOTpy.Variable("sc16", 14,  SHOTpy.VariableType.Semicontinuous, 0.0, 0.20, 0.02)
+    sc17 = SHOTpy.Variable("sc17", 15,  SHOTpy.VariableType.Semicontinuous, 0.0, 0.15, 0.02)
+    sc18 = SHOTpy.Variable("sc18", 16, SHOTpy.VariableType.Real, 0.0, 0.0)  # fixed at 0
+    sc19 = SHOTpy.Variable("sc19", 17, SHOTpy.VariableType.Real, 0.0, 0.0)  # fixed at 0
+    sc20 = SHOTpy.Variable("sc20", 18,  SHOTpy.VariableType.Semicontinuous, 0.0, 0.10, 0.04)
+    sc21 = SHOTpy.Variable("sc21", 19,  SHOTpy.VariableType.Semicontinuous, 0.0, 0.15, 0.04)
+    sc22 = SHOTpy.Variable("sc22", 20,  SHOTpy.VariableType.Semicontinuous, 0.0, 0.20, 0.04)
+
+    # Binary indicator variables
+    b23 = SHOTpy.Variable("b23", 21, SHOTpy.VariableType.Binary, 0.0, 1.0)
+    b24 = SHOTpy.Variable("b24", 22, SHOTpy.VariableType.Binary, 0.0, 1.0)
+    b25 = SHOTpy.Variable("b25", 23, SHOTpy.VariableType.Binary, 0.0, 1.0)
+    b26 = SHOTpy.Variable("b26", 24, SHOTpy.VariableType.Binary, 0.0, 1.0)
+    b27 = SHOTpy.Variable("b27", 25, SHOTpy.VariableType.Binary, 0.0, 1.0)
+    b28 = SHOTpy.Variable("b28", 26, SHOTpy.VariableType.Binary, 0.0, 1.0)
+    b29 = SHOTpy.Variable("b29", 27, SHOTpy.VariableType.Binary, 0.0, 1.0)
+    b30 = SHOTpy.Variable("b30", 28, SHOTpy.VariableType.Binary, 0.0, 1.0)
+    b31 = SHOTpy.Variable("b31", 29, SHOTpy.VariableType.Binary, 0.0, 1.0)
+    b32 = SHOTpy.Variable("b32", 30, SHOTpy.VariableType.Binary, 0.0, 1.0)
+    b33 = SHOTpy.Variable("b33", 31, SHOTpy.VariableType.Binary, 0.0, 1.0)
+    b34 = SHOTpy.Variable("b34", 32, SHOTpy.VariableType.Binary, 0.0, 1.0)
+    b35 = SHOTpy.Variable("b35", 33, SHOTpy.VariableType.Binary, 0.0, 1.0)
+    b36 = SHOTpy.Variable("b36", 34, SHOTpy.VariableType.Binary, 0.0, 1.0)
+
+    for v in [x2, x3, x4, x5, x6, x7, x8,
+              sc9, sc10, sc11, sc12, sc13, sc14, sc15, sc16, sc17, sc18, sc19, sc20, sc21, sc22,
+              b23, b24, b25, b26, b27, b28, b29, b30, b31, b32, b33, b34, b35, b36]:
+        problem.addVariable(v)
+
+    # ---- Objective: minimize portfolio variance minus expected return ----
+    obj = SHOTpy.QuadraticObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
+
+    # Quadratic (covariance) terms
+    for coeff, v1, v2 in [
+        (42.18, x2, x2), (40.36, x2, x3), (21.76, x2, x4), (10.6,  x2, x5),
+        (24.64, x2, x6), (47.68, x2, x7), (34.82, x2, x8),
+        (70.89, x3, x3), (43.16, x3, x4), (30.82, x3, x5), (46.48, x3, x6),
+        (47.6,  x3, x7), (25.24, x3, x8),
+        (25.51, x4, x4), (19.2,  x4, x5), (45.26, x4, x6), (26.44, x4, x7), (9.4,   x4, x8),
+        (22.33, x5, x5), (20.64, x5, x6), (20.92, x5, x7), (2.0,   x5, x8),
+        (30.01, x6, x6), (32.72, x6, x7), (14.4,  x6, x8),
+        (42.23, x7, x7), (19.8,  x7, x8),
+        (16.42, x8, x8),
+    ]:
+        obj.add(SHOTpy.QuadraticTerm(coeff, v1, v2))
+
+    # Linear (expected return) terms
+    for coeff, v in [(-0.06435, x2), (-0.0548, x3), (-0.02505, x4),
+                     (-0.0762, x5), (-0.03815, x6), (-0.0927, x7), (-0.031, x8)]:
+        obj.add(SHOTpy.LinearTerm(coeff, v))
+
+    problem.setObjective(obj)
+
+    # ---- Constraints ----
+    INF = SHOTpy.SHOT_DBL_MAX
+
+    # e1: x2+x3+x4+x5+x6+x7+x8 = 1
+    e1 = SHOTpy.LinearConstraint(0, "e1", 1.0, 1.0)
+    for v in [x2, x3, x4, x5, x6, x7, x8]:
+        e1.add(SHOTpy.LinearTerm(1.0, v))
+    problem.addConstraint(e1)
+
+    # e2-e8: balance constraints (equality)
+    for idx, (xi, scs, scb, rhs) in enumerate([
+        (x2, sc9,  sc16, 0.2),
+        (x3, sc10, sc17, 0.2),
+        (x4, sc11, sc18, 0.0),
+        (x5, sc12, sc19, 0.0),
+        (x6, sc13, sc20, 0.2),
+        (x7, sc14, sc21, 0.2),
+        (x8, sc15, sc22, 0.2),
+    ], start=1):
+        c = SHOTpy.LinearConstraint(idx, f"e{idx + 1}", rhs, rhs)
+        c.add(SHOTpy.LinearTerm(1.0,  xi))
+        c.add(SHOTpy.LinearTerm(-1.0, scs))
+        c.add(SHOTpy.LinearTerm(1.0,  scb))
+        problem.addConstraint(c)
+
+    # e9: sc9+...+sc15 <= 0.3
+    e9 = SHOTpy.LinearConstraint(8, "e9", -INF, 0.3)
+    for v in [sc9, sc10, sc11, sc12, sc13, sc14, sc15]:
+        e9.add(SHOTpy.LinearTerm(1.0, v))
+    problem.addConstraint(e9)
+
+    # e10-e23: big-M bounds linking sc vars to binary indicators
+    bm_data = [
+        (9,  "e10",  sc9,  b23, 0.11),
+        (10, "e11", sc10,  b24, 0.10),
+        (11, "e12", sc11,  b25, 0.07),
+        (12, "e13", sc12,  b26, 0.11),
+        (13, "e14", sc13,  b27, 0.20),
+        (14, "e15", sc14,  b28, 0.10),
+        (15, "e16", sc15,  b29, 0.10),
+        (16, "e17", sc16,  b30, 0.20),
+        (17, "e18", sc17,  b31, 0.15),
+        (18, "e19", sc18, None, 0.0),   # sc18 fixed at 0
+        (19, "e20", sc19, None, 0.0),   # sc19 fixed at 0
+        (20, "e21", sc20,  b34, 0.10),
+        (21, "e22", sc21,  b35, 0.15),
+        (22, "e23", sc22,  b36, 0.20),
+    ]
+    for idx, name, scv, bv, coeff in bm_data:
+        c = SHOTpy.LinearConstraint(idx, name, -INF, 0.0)
+        c.add(SHOTpy.LinearTerm(1.0, scv))
+        if bv is not None:
+            c.add(SHOTpy.LinearTerm(-coeff, bv))
+        problem.addConstraint(c)
+
+    # e24-e30: at-most-one constraints on binary pairs
+    binary_pairs = [
+        (23, "e24", b23, b30),
+        (24, "e25", b24, b31),
+        (25, "e26", b25, b32),
+        (26, "e27", b26, b33),
+        (27, "e28", b27, b34),
+        (28, "e29", b28, b35),
+        (29, "e30", b29, b36),
+    ]
+    for idx, name, bv1, bv2 in binary_pairs:
+        c = SHOTpy.LinearConstraint(idx, name, -INF, 1.0)
+        c.add(SHOTpy.LinearTerm(1.0, bv1))
+        c.add(SHOTpy.LinearTerm(1.0, bv2))
+        problem.addConstraint(c)
+
+    return problem
+
+
 # =============================================================================
 # Test Classes - Add new problem tests here
 # =============================================================================
@@ -226,6 +384,34 @@ class TestEx1223b(OptimizationTestBase):
         # Verify constraints are present
         assert "e1" in problem_str
         assert "e2" in problem_str
+
+
+class TestMeanvarxsc(OptimizationTestBase):
+    """Tests for the meanvarxsc problem (semicontinuous variables)."""
+
+    EXPECTED_OBJECTIVE = 14.36923211
+    OBJECTIVE_TOLERANCE = 0.01
+
+    def test_meanvarxsc_solve_exact(self):
+        """Test solving meanvarxsc and verify optimal objective."""
+        solver, env, problem = self.create_solver_and_problem()
+        build_meanvarxsc(env, problem)
+        self.solve_and_verify(
+            solver, problem,
+            expected_obj=self.EXPECTED_OBJECTIVE,
+            tolerance=self.OBJECTIVE_TOLERANCE
+        )
+
+    def test_meanvarxsc_problem_structure(self):
+        """Test that meanvarxsc problem has correct structure."""
+        solver, env, problem = self.create_solver_and_problem()
+        build_meanvarxsc(env, problem)
+        problem.finalize()
+
+        assert problem.properties.numberOfVariables == 35
+        assert problem.properties.numberOfBinaryVariables == 14
+        assert problem.properties.numberOfSemicontinuousVariables == 12
+        assert problem.properties.numberOfNumericConstraints == 30
 
 
 # =============================================================================

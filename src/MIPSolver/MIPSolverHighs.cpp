@@ -496,11 +496,6 @@ void MIPSolverHighs::activateDiscreteVariables(bool activate)
                 this->variableTypesHighs.at(i) = HighsVarType::kInteger;
                 highsInstance.changeColIntegrality(i, HighsVarType::kInteger);
             }
-            else if(variableTypes.at(i) == E_VariableType::Semiinteger)
-            {
-                this->variableTypesHighs.at(i) = HighsVarType::kSemiContinuous;
-                highsInstance.changeColIntegrality(i, HighsVarType::kSemiContinuous);
-            }
         }
 
         discreteVariablesActivated = true;
