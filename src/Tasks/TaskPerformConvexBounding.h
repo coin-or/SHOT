@@ -32,6 +32,6 @@ private:
     std::shared_ptr<TaskCreateMIPProblem> taskCreateMIPProblem;
     int lastNumberOfHyperplanesWithConvexSource = 0;
     int lastNumberOfHyperplanesWithNonconvexSource = 0;
-    int idleIterations = 0;
+    /* int idleIterations = 0; */
 };
 } // namespace SHOT
