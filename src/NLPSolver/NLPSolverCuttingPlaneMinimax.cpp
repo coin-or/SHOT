@@ -209,14 +209,20 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             statusCode = E_NLPSolutionStatus::Optimal;
         }
 
+        if(LPSolver->getNumberOfSolutions() == 0)
+        {
+            statusCode = E_NLPSolutionStatus::Error;
+            break;
+        }
+
         auto LPVarSol = LPSolver->getVariableSolution(0);
         LPObjVar = LPSolver->getObjectiveValue();
 
         // Saves the LP solution to file if in debug mode
         if(env->settings->getSetting<bool>("Output.Debug.Enable"))
         {
-            auto filename = fmt::format(
-                "{}/minimax{}_solpt.txt", env->settings->getSetting<std::string>("Output.Debug.Path"), i);
+            auto filename
+                = fmt::format("{}/minimax{}_solpt.txt", env->settings->getSetting<std::string>("Output.Debug.Path"), i);
 
             Utilities::saveVariablePointVectorToFile(LPVarSol, variableNames, filename);
         }
