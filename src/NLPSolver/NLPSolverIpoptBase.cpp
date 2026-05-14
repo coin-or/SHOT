@@ -176,12 +176,16 @@ bool IpoptProblem::get_list_of_nonlinear_variables(
     [[maybe_unused]] Ipopt::Index num_nonlin_vars, Ipopt::Index* pos_nonlin_vars)
 {
     VectorInteger nonlinearVariables;
+#ifndef NDEBUG
     int count = 0;
+#endif
 
     for(int i = 0; i < sourceProblem->properties.numberOfNonlinearVariables; i++)
     {
         pos_nonlin_vars[i] = sourceProblem->nonlinearVariables[i]->index;
+#ifndef NDEBUG
         count++;
+#endif
     }
 
     assert(count == num_nonlin_vars);

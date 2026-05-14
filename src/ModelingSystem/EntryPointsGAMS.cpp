@@ -30,6 +30,10 @@
 #include "ilcplex/cplex.h"
 #endif
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 using namespace SHOT;
 
 extern "C"
@@ -40,9 +44,10 @@ extern "C"
         gmoHandle_t gmo;
     } gamsshot;
 
-    // old+new API
-    DllExport void STDCALL shtInitialize(void);
-    DllExport void STDCALL shtInitialize(void)
+#ifndef _WIN32
+    __attribute__((constructor))
+#endif
+    static void shtInit(void)
     {
 #if defined(__linux) && defined(HAS_CPLEX)
         CPXinitialize();
@@ -53,9 +58,10 @@ extern "C"
         palInitMutexes();
     }
 
-    // old+new API
-    DllExport void STDCALL shtFinalize(void);
-    DllExport void STDCALL shtFinalize(void)
+#ifndef _WIN32
+    __attribute__((destructor))
+#endif
+    static void shtFini(void)
     {
 #if defined(__linux) && defined(HAS_CPLEX)
         CPXfinalize();
@@ -65,6 +71,28 @@ extern "C"
         gevFiniMutexes();
         palFiniMutexes();
     }
+
+#ifdef _WIN32
+    BOOL WINAPI DllMain(HINSTANCE hInst, DWORD reason, LPVOID reserved)
+    {
+       switch( reason )
+       {
+          case DLL_PROCESS_ATTACH:
+             shtInit();
+             break;
+          case DLL_PROCESS_DETACH:
+             shtFini();
+             break;
+          case DLL_THREAD_ATTACH:
+             /* ignored */
+             break;
+          case DLL_THREAD_DETACH:
+             /* ignored */
+             break;
+       }
+       return TRUE;
+    }
+#endif
 
     // old API
     DllExport int STDCALL shtcreate(void** Cptr, char* msgBuf, int msgBufLen);
@@ -236,14 +264,6 @@ extern "C"
 
         return 0;
     }
-
-    // old API
-    DllExport void STDCALL C__shtInitialize(void);
-    DllExport void STDCALL C__shtInitialize(void) { shtInitialize(); }
-
-    // old API
-    DllExport void STDCALL C__shtFinalize(void);
-    DllExport void STDCALL C__shtFinalize(void) { shtFinalize(); }
 
     // old API
     DllExport void STDCALL shtXCreate(void** Cptr);
