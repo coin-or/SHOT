@@ -8,7 +8,9 @@
    Please see the README and LICENSE files for more information.
 */
 
+#include "../src/CallbackData.h"
 #include "../src/Environment.h"
+#include "../src/PrimalSolver.h"
 #include "../src/Results.h"
 #include "../src/Solver.h"
 #include "../src/Structs.h"
@@ -255,6 +257,103 @@ bool TestReformulateProblemGAMS(const std::string& problemFile)
     return passed;
 }
 
+bool SolveProblemWithStartingPointGAMS(std::string filename)
+{
+    bool passed = true;
+
+    std::cout << "The following test solves a problem with a provided starting point and verifies\n"
+                 "that the starting-point solution is accepted as a primal solution via callback.\n";
+
+    auto solver = std::make_unique<SHOT::Solver>();
+    auto env = solver->getEnvironment();
+
+    if(!solver->setProblem(filename))
+    {
+        return (false);
+    }
+
+    bool startingPointAccepted = false;
+    bool startingPointPosted = false;
+
+    // Subscribe to PrimalSolutionCandidateSelection to verify the starting point is posted as a candidate
+    solver->registerCallback(E_EventType::PrimalSolutionCandidateSelection,
+        [&startingPointPosted](std::any args) -> bool
+        {
+            try
+            {
+                auto data = std::any_cast<PrimalSolutionCallbackData>(args);
+                if(data.sourceType == E_PrimalSolutionSource::ExternalPrimalSolution)
+                {
+                    std::cout << "Starting point posted as candidate: objective = " << data.objectiveValue << '\n';
+                    startingPointPosted = true;
+                }
+            }
+            catch(const std::bad_any_cast&)
+            {
+            }
+            return true; // accept all candidates
+        });
+
+    // Subscribe to NewPrimalSolution to verify the starting point is accepted
+    solver->registerCallback(E_EventType::NewPrimalSolution,
+        [&startingPointAccepted](std::any args)
+        {
+            try
+            {
+                auto data = std::any_cast<PrimalSolutionCallbackData>(args);
+                if(data.sourceType == E_PrimalSolutionSource::ExternalPrimalSolution)
+                {
+                    std::cout << "Starting point accepted as primal solution: objective = " << data.objectiveValue
+                              << '\n';
+                    startingPointAccepted = true;
+                }
+            }
+            catch(const std::bad_any_cast&)
+            {
+            }
+        });
+
+    // Read the .l (level) values from the GAMS modeling object and post them as a primal candidate,
+    // mirroring what EntryPointsGAMS.cpp does before solveProblem(). Without this step the starting
+    // point is never submitted when setProblem(filename) is used directly.
+    auto gamsModelingSystem = std::dynamic_pointer_cast<ModelingSystemGAMS>(env->modelingSystem);
+    if(gamsModelingSystem)
+    {
+        VectorDouble variableStarts(gmoN(gamsModelingSystem->modelingObject));
+        gmoGetVarL(gamsModelingSystem->modelingObject, variableStarts.data());
+        env->primalSolver->addPrimalSolutionCandidate(
+            variableStarts, E_PrimalSolutionSource::ExternalPrimalSolution, 0);
+    }
+
+    if(!solver->solveProblem())
+    {
+        std::cout << "Error while solving problem\n";
+        return (false);
+    }
+
+    if(!startingPointPosted)
+    {
+        std::cout << "Starting point was not posted as an ExternalPrimalSolution candidate\n";
+        passed = false;
+    }
+    else
+    {
+        std::cout << "Starting point was successfully posted as an ExternalPrimalSolution candidate.\n";
+    }
+
+    if(!startingPointAccepted)
+    {
+        std::cout << "Starting point was not accepted as a primal solution via callback\n";
+        passed = false;
+    }
+    else
+    {
+        std::cout << "Starting point was successfully accepted as a primal solution.\n";
+    }
+
+    return passed;
+}
+
 bool TestCallbackGAMS(std::string filename)
 {
     bool passed = true;
@@ -271,20 +370,22 @@ bool TestCallbackGAMS(std::string filename)
     }
 
     // Registers a callback that terminates when a primal solution has been found
-    solver->registerCallback(E_EventType::UserTerminationCheck, [&env](std::any args) -> bool {
-        std::cout << "Checking whether to terminate SHOT... ";
+    solver->registerCallback(E_EventType::UserTerminationCheck,
+        [&env](std::any args) -> bool
+        {
+            std::cout << "Checking whether to terminate SHOT... ";
 
-        if(env->results->hasPrimalSolution())
-        {
-            std::cout << "Sure, do it.\n";
-            return (true);
-        }
-        else
-        {
-            std::cout << "Not yet!\n";
-            return (false);
-        }
-    });
+            if(env->results->hasPrimalSolution())
+            {
+                std::cout << "Sure, do it.\n";
+                return (true);
+            }
+            else
+            {
+                std::cout << "Not yet!\n";
+                return (false);
+            }
+        });
 
     // Solving the problem
     if(!solver->solveProblem())
@@ -368,6 +469,13 @@ int GAMSTest(int argc, char* argv[])
                   << std::endl;
         passed = SolveProblemGAMS("data/meanvarxsc.gms");
         std::cout << "Finished test to solve problem meanvarxsc with semi continuous variables in GAMS syntax."
+                  << std::endl;
+        break;
+    case 12:
+        std::cout << "Starting test to solve tls2 with MINLPLib starting point p1 and verify primal solution callback:"
+                  << std::endl;
+        passed = SolveProblemWithStartingPointGAMS("data/tls2_sp.gms");
+        std::cout << "Finished test to solve tls2 with MINLPLib starting point p1 and verify primal solution callback."
                   << std::endl;
         break;
     default:
