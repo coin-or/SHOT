@@ -2013,6 +2013,14 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
                 break;
             }
 
+            case fntan:
+            {
+                auto expression = std::make_shared<ExpressionTan>(std::move(stack.rbegin()[0]));
+                stack.pop_back();
+                stack.push_back(expression);
+                break;
+            }
+
             case fnpower:
             case fnrpower: // x ^ y
             case fncvpower: // constant ^ x
@@ -2093,7 +2101,6 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
             case fnncpvusin /* veelken-ulbrich */:
             case fnncpvupow /* veelken-ulbrich */:
             case fnbinomial:
-            case fntan:
             case fnarccos:
             case fnarcsin:
             case fnarctan2 /* arctan(x2/x1) */:
