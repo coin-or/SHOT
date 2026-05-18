@@ -410,6 +410,11 @@ void Report::outputOptionsReport()
         dualSolver = "HiGHS";
 #endif
 
+#ifdef HAS_SCIP
+    if(solver == ES_MIPSolver::Scip)
+        dualSolver = "SCIP";
+#endif
+
     switch(static_cast<E_SolutionStrategy>(env->results->usedSolutionStrategy))
     {
     case(E_SolutionStrategy::SingleTree):

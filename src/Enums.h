@@ -357,6 +357,7 @@ enum class ES_MIPSolver
     Gurobi,
     Cbc,
     Highs,
+    Scip,
     None
 };
 

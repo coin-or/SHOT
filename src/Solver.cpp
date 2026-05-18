@@ -296,6 +296,13 @@ bool Solver::setProblem(std::string fileName)
     }
 #endif
 
+#ifdef HAS_SCIP
+    if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Scip)
+    {
+        env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy", (int)ES_QuadraticProblemStrategy::Nonlinear, E_SettingPriority::SolverCompatibility);
+    }
+#endif
+
     try
     {
         if(problemExtension == ".osil" || problemExtension == ".xml")
@@ -500,6 +507,13 @@ bool Solver::setProblem(
     }
 #endif
 
+#ifdef HAS_SCIP
+    if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Scip)
+    {
+        env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy", (int)ES_QuadraticProblemStrategy::Nonlinear, E_SettingPriority::SolverCompatibility);
+    }
+#endif
+
     setConvexityBasedSettingsPreReformulation();
     verifySettings();
 
@@ -535,7 +549,8 @@ bool Solver::selectStrategy()
     try
     {
         if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Cbc
-            || static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Highs)
+            || static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Highs
+            || static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Scip)
         {
             if(env->problem->properties.numberOfDiscreteVariables == 0
                 && env->problem->properties.numberOfSemicontinuousVariables == 0)
@@ -911,6 +926,7 @@ void Solver::initializeSettings()
     enumMIPSolver.push_back("Gurobi");
     enumMIPSolver.push_back("Cbc");
     enumMIPSolver.push_back("Highs");
+    enumMIPSolver.push_back("Scip");
 
     ES_MIPSolver usedMIPSolver;
 
@@ -922,6 +938,8 @@ void Solver::initializeSettings()
     usedMIPSolver = ES_MIPSolver::Cbc;
 #elif HAS_HIGHS
     usedMIPSolver = ES_MIPSolver::Highs;
+#elif HAS_SCIP
+    usedMIPSolver = ES_MIPSolver::Scip;
 #else
     env->output->outputCritical(" SHOT has not been compiled with support for any MIP solver.");
 #endif
@@ -1598,6 +1616,23 @@ void Solver::initializeSettings()
 
 #endif
 
+#ifdef HAS_SCIP
+
+    env->settings->createSettingGroup("Subsolver", "Scip", "Scip", "");
+
+    env->settings->createSetting("Subsolver.Scip.MIPAllowRestart", true, "Whether MIP restart is permitted");
+
+    env->settings->createSetting("Subsolver.Scip.MIPDetectSymmetry", true, "Whether MIP symmetry should be detected");
+
+    VectorString enumScipPresolve;
+    enumScipPresolve.push_back("off");
+    enumScipPresolve.push_back("choose");
+    enumScipPresolve.push_back("on");
+    env->settings->createSetting("Subsolver.Scip.Presolve", 1, "Use presolve", enumScipPresolve, 0);
+    enumScipPresolve.clear();
+
+#endif
+
     // Subsolver settings: Ipopt
 
 #ifdef HAS_IPOPT
@@ -1886,6 +1921,30 @@ void Solver::verifySettings()
     }
 #endif
 
+#ifdef HAS_SCIP
+    if(solver == ES_MIPSolver::Scip)
+    {
+        MIPSolverDefined = true;
+        unboundedVariableBound = 1e50;
+
+        // Some features are not available in Scip yet
+        env->settings->updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::MultiTree),
+            E_SettingPriority::SolverCompatibility);
+        env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy", static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear),
+            E_SettingPriority::SolverCompatibility);
+        env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy", (int)ES_QuadraticTermsExtractStrategy::DoNotExtract,
+            E_SettingPriority::SolverCompatibility);
+    }
+#endif
+
+    // Some features are not available in Scip yet
+    env->settings->updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::MultiTree),
+        E_SettingPriority::SolverCompatibility);
+    env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy", static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear),
+        E_SettingPriority::SolverCompatibility);
+    env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy", (int)ES_QuadraticTermsExtractStrategy::DoNotExtract,
+        E_SettingPriority::SolverCompatibility);
+
     if(!MIPSolverDefined)
     {
         env->output->outputWarning(" SHOT has not been compiled with support for selected MIP solver.");
@@ -1900,6 +1959,10 @@ void Solver::verifySettings()
         unboundedVariableBound = 1e20;
 #elif HAS_HIGHS
         env->settings->updateSetting("Dual.MIP.Solver", (int)ES_MIPSolver::Highs,
+            E_SettingPriority::RecommendedInternal);
+        unboundedVariableBound = 1e20;
+#elif HAS_SCIP
+        env->settings->updateSetting("Dual.MIP.Solver", (int)ES_MIPSolver::Scip,
             E_SettingPriority::RecommendedInternal);
         unboundedVariableBound = 1e20;
 #elif HAS_CBC
@@ -2001,6 +2064,14 @@ void Solver::setConvexityBasedSettingsPreReformulation()
                     E_SettingPriority::RecommendedInternal);
             }
 #endif
+
+#ifdef HAS_SCIP
+            if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Scip)
+            {
+                env->settings->updateSetting("Model.Reformulation.Quadratics.Decomposition.Method", (int)ES_QuadraticDecomposition::LDLDecomposition,
+                    E_SettingPriority::RecommendedInternal);
+            }
+#endif
         }
     }
 }
@@ -2097,6 +2168,16 @@ void Solver::setConvexityBasedSettings()
                 (int)ES_PartitionNonlinearSums::IfConvex, E_SettingPriority::RecommendedInternal);
         }
 #endif
+
+#ifdef HAS_SCIP
+        if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Scip)
+        {
+            env->settings->updateSetting("Model.Reformulation.Constraint.PartitionNonlinearTerms", (int)ES_PartitionNonlinearSums::IfConvex,
+                E_SettingPriority::RecommendedInternal);
+            env->settings->updateSetting("Model.Reformulation.ObjectiveFunction.PartitionNonlinearTerms",
+                (int)ES_PartitionNonlinearSums::IfConvex, E_SettingPriority::RecommendedInternal);
+        }
+#endif
     }
 }
 
@@ -2153,6 +2234,9 @@ std::vector<ES_MIPSolver> Solver::getSupportedMIPSolvers()
 #endif
 #ifdef HAS_HIGHS
     solvers.push_back(ES_MIPSolver::Highs);
+#endif
+#ifdef HAS_SCIP
+    solvers.push_back(ES_MIPSolver::Scip);
 #endif
     return solvers;
 }

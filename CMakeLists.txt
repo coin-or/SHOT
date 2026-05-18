@@ -354,6 +354,10 @@ if(HAS_HIGHS AND USE_EXTERNAL_HIGHS)
     endif()
 endif()
 
+add_definitions(-DHAS_SCIP)
+set(DUAL_SOURCES ${DUAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverScip.cpp")
+set(DUAL_HEADERS ${DUAL_HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverScip.h")
+
 # Ipopt
 
 if(HAS_IPOPT)

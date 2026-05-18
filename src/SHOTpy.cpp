@@ -185,6 +185,12 @@ PYBIND11_MODULE(SHOTpy, m)
     m.attr("HAS_HIGHS") = false;
 #endif
 
+#ifdef HAS_SCIP
+    m.attr("HAS_SCIP") = true;
+#else
+    m.attr("HAS_SCIP") = false;
+#endif
+
     // Function to get list of supported MIP solvers - uses C++ API directly
     m.def("getSupportedMIPSolvers", &Solver::getSupportedMIPSolvers,
         "Returns a list of MIP solvers supported in this build");

@@ -34,6 +34,10 @@
 #include "MIPSolver/MIPSolverHighs.h"
 #endif
 
+#ifdef HAS_SCIP
+#include "MIPSolver/MIPSolverScip.h"
+#endif
+
 #include <functional>
 #include <map>
 
@@ -108,6 +112,14 @@ NLPSolverCuttingPlaneMinimax::NLPSolverCuttingPlaneMinimax(EnvironmentPtr envPtr
     {
         LPSolver = std::make_unique<MIPSolverHighs>(env);
         env->output->outputDebug(" Highs selected as MIP solver for minimax solver.");
+    }
+#endif
+
+#ifdef HAS_SCIP
+    if(solver == ES_MIPSolver::Scip)
+    {
+        LPSolver = std::make_unique<MIPSolverScip>(env);
+        env->output->outputDebug(" Scip selected as MIP solver for minimax solver.");
     }
 #endif
 
