@@ -232,6 +232,7 @@ void Solver::initializeSettings()
     enumMIPSolver.push_back("Gurobi");
     enumMIPSolver.push_back("Cbc");
     enumMIPSolver.push_back("Highs");
+    enumMIPSolver.push_back("Scip");
 
     // Without any MIP solver, this value is never used, since no problem can be solved
     ES_MIPSolver usedMIPSolver = ES_MIPSolver::Cbc;
@@ -243,6 +244,8 @@ void Solver::initializeSettings()
 #elif HAS_HIGHS
     // HiGHS before Cbc, as when the MIP solver chosen is not available
     usedMIPSolver = ES_MIPSolver::Highs;
+#elif HAS_SCIP
+    usedMIPSolver = ES_MIPSolver::Scip;
 #elif HAS_CBC
     usedMIPSolver = ES_MIPSolver::Cbc;
 #else
@@ -250,7 +253,8 @@ void Solver::initializeSettings()
 #endif
 
     env->settings->createSetting("Dual.MIP.Solver", static_cast<int>(usedMIPSolver),
-        "Which MIP solver to use. Default: the first available of Gurobi, Cplex, Highs and Cbc", enumMIPSolver, 0);
+        "Which MIP solver to use. Default: the first available of Gurobi, Cplex, Highs, Scip and Cbc", enumMIPSolver,
+        0);
     enumMIPSolver.clear();
 
     env->settings->createSetting(
@@ -1110,6 +1114,21 @@ void Solver::initializeSettings()
     enumHighsPresolve.push_back("on");
     env->settings->createSetting("Subsolver.Highs.Presolve", 1, "Use presolve", enumHighsPresolve, 0);
     enumHighsPresolve.clear();
+
+    // Subsolver settings: SCIP
+
+    env->settings->createSettingGroup("Subsolver", "Scip", "Scip", "Requires SHOT compiled with SCIP.");
+
+    env->settings->createSetting("Subsolver.Scip.MIPAllowRestart", true, "Whether MIP restart is permitted");
+
+    env->settings->createSetting("Subsolver.Scip.MIPDetectSymmetry", true, "Whether MIP symmetry should be detected");
+
+    VectorString enumScipPresolve;
+    enumScipPresolve.push_back("off");
+    enumScipPresolve.push_back("choose");
+    enumScipPresolve.push_back("on");
+    env->settings->createSetting("Subsolver.Scip.Presolve", 1, "Use presolve", enumScipPresolve, 0);
+    enumScipPresolve.clear();
 
     // Subsolver settings: CONOPT
 

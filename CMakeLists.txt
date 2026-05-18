@@ -120,6 +120,9 @@ option(HAS_PYTHON "Is Python available" OFF)
 # HiGHS
 option(HAS_HIGHS "Is HiGHS available" ON)
 option(USE_EXTERNAL_HIGHS "Use precompiled, external HiGHS libraries" OFF)
+
+# SCIP
+option(HAS_SCIP "Is SCIP available" OFF)
 set(HIGHS_EXTERNAL_DIR
     "/opt/highs"
     CACHE STRING "The external directory where HiGHS is located)."
@@ -410,15 +413,22 @@ if(HAS_HIGHS AND USE_EXTERNAL_HIGHS)
     endif()
 endif()
 
+# SCIP
+if(HAS_SCIP)
+    set(DUAL_SOURCES ${DUAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverScip.cpp")
+    set(DUAL_HEADERS ${DUAL_HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverScip.h")
+endif()
+
 # Check the backends that were actually found, after optional solvers may
 # have been disabled by their discovery steps.
 if(NOT
    (HAS_CPLEX
     OR HAS_GUROBI
     OR HAS_CBC
-    OR HAS_HIGHS)
+    OR HAS_HIGHS
+    OR HAS_SCIP)
 )
-    message(FATAL_ERROR "No MIP solver available. Enable HiGHS or install Cbc, CPLEX, or Gurobi.")
+    message(FATAL_ERROR "No MIP solver available. Enable HiGHS or install Cbc, CPLEX, Gurobi, or SCIP.")
 endif()
 
 # Ipopt
@@ -588,6 +598,7 @@ foreach(
     CPLEX
     GUROBI
     HIGHS
+    SCIP
     IPOPT
     UNO
     CONOPT
