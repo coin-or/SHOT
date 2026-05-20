@@ -76,9 +76,6 @@ public:
     virtual double getObjectiveValue(int i) = 0;
     virtual double getObjectiveValue();
 
-    virtual void presolveAndUpdateBounds();
-    virtual std::pair<VectorDouble, VectorDouble> presolveAndGetNewBounds() = 0;
-
     virtual PairDouble getCurrentVariableBounds(int varIndex) = 0;
 
     virtual void fixVariable(int varIndex, double value) = 0;
@@ -88,13 +85,11 @@ public:
 
     virtual int addLinearConstraint(std::map<int, double>& elements, double constant, std::string name) = 0;
     virtual int addLinearConstraint(
-        const std::map<int, double>& elements, double constant, std::string name, bool isGreaterThan)
-        = 0;
-    virtual int addLinearConstraint(
-        const std::map<int, double>& elements, double constant, std::string name, bool isGreaterThan, bool allowRepair)
-        = 0;
+        const std::map<int, double>& elements, double constant, std::string name, bool isGreaterThan) = 0;
+    virtual int addLinearConstraint(const std::map<int, double>& elements, double constant, std::string name,
+        bool isGreaterThan, bool allowRepair) = 0;
 
-    virtual bool addSpecialOrderedSet(E_SOSType type, VectorInteger variableIndexes, VectorDouble variableWeights = {})
+    virtual bool addSpecialOrderedSet(E_SOSType type, VectorInteger variableIndexes, VectorDouble variableWeights = { })
         = 0;
 
     virtual void activateDiscreteVariables(bool activate) = 0;

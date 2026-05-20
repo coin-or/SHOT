@@ -1277,16 +1277,6 @@ double MIPSolverHighs::getDualObjectiveValue()
     return (objVal);
 }
 
-std::pair<VectorDouble, VectorDouble> MIPSolverHighs::presolveAndGetNewBounds()
-{
-    return (std::make_pair(variableLowerBounds, variableUpperBounds));
-}
-
-void MIPSolverHighs::writePresolvedToFile([[maybe_unused]] std::string filename)
-{
-    // Not implemented
-}
-
 void MIPSolverHighs::checkParameters() { }
 
 int MIPSolverHighs::getNumberOfExploredNodes() { return (highsInstance.getInfo().mip_node_count); }

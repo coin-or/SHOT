@@ -882,20 +882,6 @@ void Solver::initializeSettings()
     env->settings->createSetting(
         "Dual.MIP.NumberOfThreads", 0, "Number of threads to use in MIP solver: 0: Automatic", 0, 999);
 
-    VectorString enumPresolve;
-    enumPresolve.push_back("Never");
-    enumPresolve.push_back("Once");
-    enumPresolve.push_back("Always");
-    env->settings->createSetting("Dual.MIP.Presolve.Frequency", static_cast<int>(ES_MIPPresolveStrategy::Once),
-        "When to call the MIP presolve", enumPresolve, 0);
-    enumPresolve.clear();
-
-    env->settings->createSetting("Dual.MIP.Presolve.RemoveRedundantConstraints", false,
-        "Remove redundant constraints (as determined by presolve)");
-
-    env->settings->createSetting(
-        "Dual.MIP.Presolve.UpdateObtainedBounds", true, "Update bounds (from presolve) to the MIP model");
-
     env->settings->createSetting("Dual.MIP.SolutionLimit.ForceOptimal.Iteration", 10000,
         "Iterations without dual bound updates for forcing optimal MIP solution", 0, SHOT_INT_MAX);
 
@@ -1362,9 +1348,6 @@ void Solver::initializeSettings()
         "Primal.FixedInteger.TimeLimit", 10.0, "Time limit (s) per NLP problem", 0, SHOT_DBL_MAX);
 
     env->settings->createSetting("Primal.FixedInteger.Use", true, "Use the fixed integer primal strategy");
-
-    env->settings->createSetting("Primal.FixedInteger.UsePresolveBounds", false,
-        "Use variable bounds from MIP in NLP problems. Warning! Does not seem to work", true);
 
     env->settings->createSetting("Primal.FixedInteger.Warmstart", true, "Warm start the NLP solver");
 
@@ -2083,8 +2066,6 @@ void Solver::setConvexityBasedSettings()
             env->settings->updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::MultiTree),
                 E_SettingPriority::SolverCompatibility);
 
-            env->settings->updateSetting(
-                "Dual.MIP.Presolve.UpdateObtainedBounds", false, E_SettingPriority::RecommendedInternal);
             env->settings->updateSetting(
                 "Dual.MIP.SolutionLimit.Initial", SHOT_INT_MAX, E_SettingPriority::RecommendedInternal);
 

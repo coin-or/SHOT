@@ -58,7 +58,6 @@ public:
     void initializeSolverSettings() override;
 
     void writeProblemToFile(std::string filename) override;
-    void writePresolvedToFile(std::string filename) override;
 
     int addLinearConstraint(std::map<int, double>& elements, double constant, std::string name) override
     {
@@ -75,7 +74,7 @@ public:
         bool isGreaterThan, bool allowRepair) override;
 
     bool addSpecialOrderedSet(
-        E_SOSType type, VectorInteger variableIndexes, VectorDouble variableWeights = {}) override;
+        E_SOSType type, VectorInteger variableIndexes, VectorDouble variableWeights = { }) override;
 
     bool createHyperplane(HyperplanePtr hyperplane) override { return (MIPSolverBase::createHyperplane(hyperplane)); }
 
@@ -105,10 +104,6 @@ public:
     void updateVariableUpperBound(int varIndex, double upperBound) override;
 
     PairDouble getCurrentVariableBounds(int varIndex) override;
-
-    void presolveAndUpdateBounds() override { return (MIPSolverBase::presolveAndUpdateBounds()); }
-
-    std::pair<VectorDouble, VectorDouble> presolveAndGetNewBounds() override;
 
     void activateDiscreteVariables(bool activate) override;
     bool getDiscreteVariableStatus() override { return (MIPSolverBase::getDiscreteVariableStatus()); }

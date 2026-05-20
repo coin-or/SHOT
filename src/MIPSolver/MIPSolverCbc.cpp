@@ -39,9 +39,9 @@ class TerminationEventHandler : public CbcEventHandler, public MIPSolverCallback
 public:
     TerminationEventHandler(EnvironmentPtr envPtr) { env = envPtr; };
 
-    virtual ~TerminationEventHandler() {};
+    virtual ~TerminationEventHandler() { };
 
-    TerminationEventHandler(const TerminationEventHandler& rhs) : CbcEventHandler(rhs) {};
+    TerminationEventHandler(const TerminationEventHandler& rhs) : CbcEventHandler(rhs) { };
 
     TerminationEventHandler& operator=(const TerminationEventHandler& rhs)
     {
@@ -762,11 +762,11 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
         if((env->reformulatedProblem->objectiveFunction->properties.classification
                    == E_ObjectiveFunctionClassification::Linear
                && std::dynamic_pointer_cast<LinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                      ->isDualUnbounded())
+                   ->isDualUnbounded())
             || (env->reformulatedProblem->objectiveFunction->properties.classification
                     == E_ObjectiveFunctionClassification::Quadratic
                 && std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                       ->isDualUnbounded()))
+                    ->isDualUnbounded()))
         {
             for(auto& V : env->reformulatedProblem->allVariables)
             {
@@ -1695,16 +1695,6 @@ double MIPSolverCbc::getDualObjectiveValue()
     }
 
     return (objVal);
-}
-
-std::pair<VectorDouble, VectorDouble> MIPSolverCbc::presolveAndGetNewBounds()
-{
-    return (std::make_pair(variableLowerBounds, variableUpperBounds));
-}
-
-void MIPSolverCbc::writePresolvedToFile([[maybe_unused]] std::string filename)
-{
-    // Not implemented
 }
 
 void MIPSolverCbc::checkParameters()
