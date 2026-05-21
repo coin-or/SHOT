@@ -1260,12 +1260,11 @@ void MIPSolverCbc::setCutOffAsConstraint([[maybe_unused]] double cutOff)
 
 void MIPSolverCbc::addMIPStart(VectorDouble point)
 {
-    assert(point.size() == env->dualSolver->MIPSolver->getNumberOfVariables());
-    assert(variableNames.size() == point.size());
+    assert(point.size() == this->numberOfVariables - numberOfIntegerCutVariables);
 
     MIPStart.clear();
 
-    for(size_t i = 0; i < variableNames.size(); i++)
+    for(size_t i = 0; i < point.size(); i++)
     {
         MIPStart.emplace_back(variableNames.at(i).c_str(), point.at(i));
     }
@@ -1413,6 +1412,7 @@ bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
                     int wIndex = numberOfVariables;
                     int vIndex = numberOfVariables + 1;
                     numberOfVariables += 2;
+                    numberOfIntegerCutVariables += 2;
 
                     double M1 = 2 * (variableValue - VAR->lowerBound);
                     double M2 = 2 * (VAR->upperBound - variableValue);

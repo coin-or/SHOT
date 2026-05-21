@@ -39,7 +39,8 @@ private:
     bool warningMessageShownLargeRHS = false;
 
 protected:
-    int numberOfVariables = 0;
+    int numberOfVariables = 0; // These include auxiliary variables added for integer cuts
+    int numberOfIntegerCutVariables = 0;
     int numberOfConstraints = 0;
     bool isMinimizationProblem;
     bool isProblemDiscrete = false;

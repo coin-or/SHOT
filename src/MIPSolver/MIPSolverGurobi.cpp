@@ -563,6 +563,7 @@ bool MIPSolverGurobi::createIntegerCut(IntegerCut& integerCut)
             else
             {
                 numberOfVariables += 2;
+                numberOfIntegerCutVariables += 2;
 
                 auto w = gurobiModel->addVar(0, getUnboundedVariableBoundValue(), 0.0, GRB_CONTINUOUS,
                     fmt::format("wIC{}_{}", env->solutionStatistics.numberOfIntegerCuts, index));
@@ -1182,8 +1183,7 @@ void MIPSolverGurobi::setCutOffAsConstraint(double cutOff)
 
 void MIPSolverGurobi::addMIPStart(VectorDouble point)
 {
-    assert(point.size() == env->dualSolver->MIPSolver->getNumberOfVariables());
-    assert(variableNames.size() == point.size());
+    assert(point.size() == this->numberOfVariables - numberOfIntegerCutVariables);
 
     try
     {

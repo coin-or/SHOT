@@ -924,15 +924,13 @@ void MIPSolverHighs::setCutOffAsConstraint(double cutOff)
 
 void MIPSolverHighs::addMIPStart(VectorDouble point)
 {
-    assert(point.size() == env->dualSolver->MIPSolver->getNumberOfVariables());
-    assert(variableNames.size() == point.size());
+    assert(point.size() == this->numberOfVariables - numberOfIntegerCutVariables);
 
-    HighsSolution solution;
-    solution.col_value = point;
+    std::vector<HighsInt> indices(point.size());
+    for(HighsInt i = 0; i < static_cast<HighsInt>(point.size()); i++)
+        indices[i] = i;
 
-    assert(point.size() == (size_t)numberOfVariables);
-
-    auto return_status = highsInstance.setSolution(solution);
+    auto return_status = highsInstance.setSolution(static_cast<HighsInt>(point.size()), indices.data(), point.data());
 
     if(return_status != HighsStatus::kOk)
         env->output->outputDebug("        Could not add MIP start in Highs.");
@@ -1075,6 +1073,7 @@ bool MIPSolverHighs::createIntegerCut(IntegerCut& integerCut)
                     int wIndex = numberOfVariables;
                     int vIndex = numberOfVariables + 1;
                     numberOfVariables += 2;
+                    numberOfIntegerCutVariables += 2;
 
                     double M1 = 2 * (variableValue - VAR->lowerBound);
                     double M2 = 2 * (VAR->upperBound - variableValue);

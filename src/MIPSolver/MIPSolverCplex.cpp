@@ -1253,8 +1253,7 @@ void MIPSolverCplex::setCutOffAsConstraint(double cutOff)
 
 void MIPSolverCplex::addMIPStart(VectorDouble point)
 {
-    assert(point.size() == env->dualSolver->MIPSolver->getNumberOfVariables());
-    assert(variableNames.size() == point.size());
+    assert(point.size() == this->numberOfVariables - numberOfIntegerCutVariables);
 
     IloNumArray startVal(cplexEnv);
 
@@ -1536,6 +1535,7 @@ bool MIPSolverCplex::createIntegerCut(IntegerCut& integerCut)
             else
             {
                 numberOfVariables += 2;
+                numberOfIntegerCutVariables += 2;
 
                 auto w = IloNumVar(cplexEnv, 0, getUnboundedVariableBoundValue(), ILOFLOAT,
                     fmt::format("wIC{}_{}", env->solutionStatistics.numberOfIntegerCuts, index).c_str());

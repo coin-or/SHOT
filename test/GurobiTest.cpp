@@ -118,6 +118,31 @@ bool GurobiTest1(std::string filename, double correctObjectiveValue)
     return passed;
 }
 
+// For nonconvex problems where finding a primal solution is not guaranteed;
+// only verifies the solver terminates without crashing.
+bool GurobiTestNocrash(std::string filename)
+{
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Gurobi));
+
+    try
+    {
+        if(!solver->setProblem(filename))
+            return false;
+    }
+    catch(Exception& e)
+    {
+        std::cout << "Error: " << e.what() << std::endl;
+        return false;
+    }
+
+    solver->solveProblem();
+
+    return true;
+}
+
 bool GurobiTerminationCallbackTest(std::string filename)
 {
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
@@ -620,6 +645,21 @@ int GurobiTest(int argc, char* argv[])
         std::cout << "Starting test for termination callback in single-tree strategy" << std::endl;
         passed = GurobiTerminationCallbackSingleTreeTest("data/synthes1.osil");
         std::cout << "Finished test for termination callback in single-tree strategy.";
+        break;
+    case 13:
+        std::cout << "Starting test to solve gear.osil with Gurobi." << std::endl;
+        passed = GurobiTestNocrash("data/gear.osil");
+        std::cout << "Finished test to solve gear.osil with Gurobi." << std::endl;
+        break;
+    case 14:
+        std::cout << "Starting test to solve windfac.osil with Gurobi." << std::endl;
+        passed = GurobiTestNocrash("data/windfac.osil");
+        std::cout << "Finished test to solve windfac.osil with Gurobi." << std::endl;
+        break;
+    case 15:
+        std::cout << "Starting test to solve ex1252a.osil with Gurobi." << std::endl;
+        passed = GurobiTestNocrash("data/ex1252a.osil");
+        std::cout << "Finished test to solve ex1252a.osil with Gurobi." << std::endl;
         break;
     default:
         passed = false;
