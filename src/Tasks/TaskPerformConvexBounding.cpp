@@ -32,6 +32,10 @@
 #include "../MIPSolver/MIPSolverCbc.h"
 #endif
 
+#ifdef HAS_HIGHS
+#include "../MIPSolver/MIPSolverHighs.h"
+#endif
+
 #include "../Results.h"
 #include "../Tasks/TaskCreateMIPProblem.h"
 
@@ -106,7 +110,14 @@ void TaskPerformConvexBounding::run()
     }
 #endif
 
-    assert(MIPSolver);
+#ifdef HAS_HIGHS
+    if(env->results->usedMIPSolver == ES_MIPSolver::Highs)
+    {
+        MIPSolver = MIPSolverPtr(std::make_shared<MIPSolverHighs>(env));
+    }
+#endif
+
+    assert(MIPSolver != nullptr);
 
     if(!MIPSolver->initializeProblem())
         throw Exception(" Cannot initialize selected MIP solver.");
@@ -161,7 +172,7 @@ void TaskPerformConvexBounding::run()
 
     MIPSolver->setSolutionLimit(2100000000);
 
-    env->output->outputInfo("  Convex bounding problem created");
+    env->output->outputDebug("  Convex bounding problem created");
     auto solutionStatus = MIPSolver->solveProblem();
 
     env->output->outputDebug(
