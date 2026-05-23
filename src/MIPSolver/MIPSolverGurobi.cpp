@@ -412,8 +412,7 @@ void MIPSolverGurobi::initializeSolverSettings()
             GRB_IntParam_SolutionNumber, env->settings->getSetting<int>("Dual.MIP.SolutionPool.Capacity") + 1);
         gurobiModel->set(
             GRB_IntParam_PoolSearchMode, env->settings->getSetting<int>("Subsolver.Gurobi.PoolSearchMode"));
-        gurobiModel->set(
-            GRB_IntParam_PoolSolutions, env->settings->getSetting<int>("Subsolver.Gurobi.PoolSolutions"));
+        gurobiModel->set(GRB_IntParam_PoolSolutions, env->settings->getSetting<int>("Subsolver.Gurobi.PoolSolutions"));
 
         // Set solver emphasis
         gurobiModel->set(GRB_IntParam_NumericFocus, env->settings->getSetting<int>("Subsolver.Gurobi.NumericFocus"));
@@ -435,8 +434,7 @@ void MIPSolverGurobi::initializeSolverSettings()
         // Set various solver specific MIP settings
         gurobiModel->set(GRB_IntParam_ScaleFlag, env->settings->getSetting<int>("Subsolver.Gurobi.ScaleFlag"));
         gurobiModel->set(GRB_IntParam_MIPFocus, env->settings->getSetting<int>("Subsolver.Gurobi.MIPFocus"));
-        gurobiModel->set(
-            GRB_DoubleParam_Heuristics, env->settings->getSetting<double>("Subsolver.Gurobi.Heuristics"));
+        gurobiModel->set(GRB_DoubleParam_Heuristics, env->settings->getSetting<double>("Subsolver.Gurobi.Heuristics"));
 
         // Set number of threads
         gurobiModel->set(GRB_IntParam_Threads, env->settings->getSetting<int>("Dual.MIP.NumberOfThreads"));
@@ -565,6 +563,7 @@ bool MIPSolverGurobi::createIntegerCut(IntegerCut& integerCut)
             else
             {
                 numberOfVariables += 2;
+                numberOfIntegerCutVariables += 2;
 
                 auto w = gurobiModel->addVar(0, getUnboundedVariableBoundValue(), 0.0, GRB_CONTINUOUS,
                     fmt::format("wIC{}_{}", env->solutionStatistics.numberOfIntegerCuts, index));
@@ -853,11 +852,11 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
         if((env->reformulatedProblem->objectiveFunction->properties.classification
                    == E_ObjectiveFunctionClassification::Linear
                && std::dynamic_pointer_cast<LinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                      ->isDualUnbounded())
+                   ->isDualUnbounded())
             || (env->reformulatedProblem->objectiveFunction->properties.classification
                     == E_ObjectiveFunctionClassification::Quadratic
                 && std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                       ->isDualUnbounded()))
+                    ->isDualUnbounded()))
         {
             for(auto& V : env->reformulatedProblem->allVariables)
             {
@@ -1184,8 +1183,7 @@ void MIPSolverGurobi::setCutOffAsConstraint(double cutOff)
 
 void MIPSolverGurobi::addMIPStart(VectorDouble point)
 {
-    assert(point.size() == env->dualSolver->MIPSolver->getNumberOfVariables());
-    assert(variableNames.size() == point.size());
+    assert(point.size() == this->numberOfVariables - numberOfIntegerCutVariables);
 
     try
     {
@@ -1415,17 +1413,7 @@ double MIPSolverGurobi::getDualObjectiveValue()
     return (objVal);
 }
 
-void MIPSolverGurobi::writePresolvedToFile([[maybe_unused]] std::string filename) { }
-
 void MIPSolverGurobi::checkParameters() { }
-
-std::pair<VectorDouble, VectorDouble> MIPSolverGurobi::presolveAndGetNewBounds()
-{
-    // TODO
-    // auto m = gurobiModel->presolve();
-
-    return (std::make_pair(variableLowerBounds, variableUpperBounds));
-}
 
 int MIPSolverGurobi::getNumberOfExploredNodes()
 {

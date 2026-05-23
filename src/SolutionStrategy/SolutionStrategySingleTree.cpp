@@ -33,7 +33,6 @@
 #include "../Tasks/TaskPrintIterationReport.h"
 
 #include "../Tasks/TaskSolveIteration.h"
-#include "../Tasks/TaskPresolve.h"
 
 #include "../Tasks/TaskRepairInfeasibleDualProblem.h"
 
@@ -130,13 +129,6 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
     {
         auto tExecuteRelaxStrategy = std::make_shared<TaskExecuteRelaxationStrategy>(env);
         env->tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategyInitial");
-    }
-
-    if(static_cast<ES_MIPPresolveStrategy>(env->settings->getSetting<int>("Dual.MIP.Presolve.Frequency"))
-        != ES_MIPPresolveStrategy::Never)
-    {
-        auto tPresolve = std::make_shared<TaskPresolve>(env);
-        env->tasks->addTask(tPresolve, "Presolve");
     }
 
     auto tSolveIteration = std::make_shared<TaskSolveIteration>(env);

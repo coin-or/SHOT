@@ -39,9 +39,9 @@ class TerminationEventHandler : public CbcEventHandler, public MIPSolverCallback
 public:
     TerminationEventHandler(EnvironmentPtr envPtr) { env = envPtr; };
 
-    virtual ~TerminationEventHandler() {};
+    virtual ~TerminationEventHandler() { };
 
-    TerminationEventHandler(const TerminationEventHandler& rhs) : CbcEventHandler(rhs) {};
+    TerminationEventHandler(const TerminationEventHandler& rhs) : CbcEventHandler(rhs) { };
 
     TerminationEventHandler& operator=(const TerminationEventHandler& rhs)
     {
@@ -762,11 +762,11 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
         if((env->reformulatedProblem->objectiveFunction->properties.classification
                    == E_ObjectiveFunctionClassification::Linear
                && std::dynamic_pointer_cast<LinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                      ->isDualUnbounded())
+                   ->isDualUnbounded())
             || (env->reformulatedProblem->objectiveFunction->properties.classification
                     == E_ObjectiveFunctionClassification::Quadratic
                 && std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                       ->isDualUnbounded()))
+                    ->isDualUnbounded()))
         {
             for(auto& V : env->reformulatedProblem->allVariables)
             {
@@ -1260,12 +1260,11 @@ void MIPSolverCbc::setCutOffAsConstraint([[maybe_unused]] double cutOff)
 
 void MIPSolverCbc::addMIPStart(VectorDouble point)
 {
-    assert(point.size() == env->dualSolver->MIPSolver->getNumberOfVariables());
-    assert(variableNames.size() == point.size());
+    assert(point.size() == this->numberOfVariables - numberOfIntegerCutVariables);
 
     MIPStart.clear();
 
-    for(size_t i = 0; i < variableNames.size(); i++)
+    for(size_t i = 0; i < point.size(); i++)
     {
         MIPStart.emplace_back(variableNames.at(i).c_str(), point.at(i));
     }
@@ -1413,6 +1412,7 @@ bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
                     int wIndex = numberOfVariables;
                     int vIndex = numberOfVariables + 1;
                     numberOfVariables += 2;
+                    numberOfIntegerCutVariables += 2;
 
                     double M1 = 2 * (variableValue - VAR->lowerBound);
                     double M2 = 2 * (VAR->upperBound - variableValue);
@@ -1695,16 +1695,6 @@ double MIPSolverCbc::getDualObjectiveValue()
     }
 
     return (objVal);
-}
-
-std::pair<VectorDouble, VectorDouble> MIPSolverCbc::presolveAndGetNewBounds()
-{
-    return (std::make_pair(variableLowerBounds, variableUpperBounds));
-}
-
-void MIPSolverCbc::writePresolvedToFile([[maybe_unused]] std::string filename)
-{
-    // Not implemented
 }
 
 void MIPSolverCbc::checkParameters()

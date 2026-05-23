@@ -31,8 +31,7 @@ public:
     virtual void checkParameters() = 0;
 
     virtual bool addVariable(
-        std::string name, E_VariableType type, double lowerBound, double upperBound, double semiBound)
-        = 0;
+        std::string name, E_VariableType type, double lowerBound, double upperBound, double semiBound) = 0;
 
     virtual bool initializeObjective() = 0;
     virtual bool addLinearTermToObjective(double coefficient, int variableIndex) = 0;
@@ -73,18 +72,15 @@ public:
     virtual int getSolutionLimit() = 0;
 
     virtual void writeProblemToFile(std::string filename) = 0;
-    virtual void writePresolvedToFile(std::string filename) = 0;
 
     virtual std::vector<SolutionPoint> getAllVariableSolutions() = 0;
     virtual int addLinearConstraint(std::map<int, double>& elements, double constant, std::string name) = 0;
     virtual int addLinearConstraint(
-        const std::map<int, double>& elements, double constant, std::string name, bool isGreaterThan)
-        = 0;
-    virtual int addLinearConstraint(
-        const std::map<int, double>& elements, double constant, std::string name, bool isGreaterThan, bool allowRepair)
-        = 0;
+        const std::map<int, double>& elements, double constant, std::string name, bool isGreaterThan) = 0;
+    virtual int addLinearConstraint(const std::map<int, double>& elements, double constant, std::string name,
+        bool isGreaterThan, bool allowRepair) = 0;
 
-    virtual bool addSpecialOrderedSet(E_SOSType type, VectorInteger variableIndexes, VectorDouble variableWeights = {})
+    virtual bool addSpecialOrderedSet(E_SOSType type, VectorInteger variableIndexes, VectorDouble variableWeights = { })
         = 0;
 
     virtual void setTimeLimit(double seconds) = 0;
@@ -104,9 +100,6 @@ public:
     virtual void updateVariableUpperBound(int varIndex, double upperBound) = 0;
 
     virtual PairDouble getCurrentVariableBounds(int varIndex) = 0;
-
-    virtual void presolveAndUpdateBounds() = 0;
-    virtual std::pair<VectorDouble, VectorDouble> presolveAndGetNewBounds() = 0;
 
     virtual bool createHyperplane(HyperplanePtr hyperplane) = 0;
     virtual bool createInteriorHyperplane(HyperplanePtr hyperplane) = 0;

@@ -119,7 +119,7 @@ struct PairIndexValue
 
 public:
     PairIndexValue() = default;
-    PairIndexValue(int index, double value) : index(index), value(value) {};
+    PairIndexValue(int index, double value) : index(index), value(value) { };
 };
 
 struct PairCoordinateValue
@@ -272,9 +272,6 @@ struct SolutionStatistics
     int numberOfProblemsMinimaxLP = 0;
 
     int numberOfProblemsFixedNLP = 0;
-
-    int numberOfConstraintsRemovedInPresolve = 0;
-    int numberOfVariableBoundsTightenedInPresolve = 0;
 
     int numberOfHyperplanesWithConvexSource = 0;
     int numberOfHyperplanesWithNonconvexSource = 0;

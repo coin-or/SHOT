@@ -211,27 +211,6 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
 
         int sizeOfVariableVector = sourceProblem->properties.numberOfVariables;
 
-        // TODO: remove?
-        if(env->settings->getSetting<bool>("Primal.FixedInteger.UsePresolveBounds"))
-        {
-            env->output->outputDebug("         Updating variable bounds from MIP presolve.");
-            for(auto& V : env->reformulatedProblem->allVariables)
-            {
-                if(V->index > sizeOfVariableVector)
-                    continue;
-
-                if(V->properties.hasUpperBoundBeenTightened)
-                {
-                    NLPSolver->updateVariableUpperBound(V->index, V->upperBound);
-                }
-
-                if(V->properties.hasLowerBoundBeenTightened)
-                {
-                    NLPSolver->updateVariableLowerBound(V->index, V->upperBound);
-                }
-            }
-        }
-
         VectorInteger startingPointIndexes(sizeOfVariableVector);
         VectorDouble startingPointValues(sizeOfVariableVector);
 
@@ -477,8 +456,7 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
             }
             else
             {
-                int iters
-                    = std::ceil(env->settings->getSetting<int>("Primal.FixedInteger.Frequency.Iteration") * 1.02);
+                int iters = std::ceil(env->settings->getSetting<int>("Primal.FixedInteger.Frequency.Iteration") * 1.02);
 
                 if(iters < 10 * this->originalIterFrequency)
                     env->settings->updateSetting("Primal.FixedInteger.Frequency.Iteration", iters);

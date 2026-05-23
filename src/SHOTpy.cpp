@@ -1507,10 +1507,6 @@ PYBIND11_MODULE(SHOTpy, m)
         .def_readwrite("numberOfGradientEvaluations", &SolutionStatistics::numberOfGradientEvaluations)
         .def_readwrite("numberOfProblemsMinimaxLP", &SolutionStatistics::numberOfProblemsMinimaxLP)
         .def_readwrite("numberOfProblemsFixedNLP", &SolutionStatistics::numberOfProblemsFixedNLP)
-        .def_readwrite(
-            "numberOfConstraintsRemovedInPresolve", &SolutionStatistics::numberOfConstraintsRemovedInPresolve)
-        .def_readwrite(
-            "numberOfVariableBoundsTightenedInPresolve", &SolutionStatistics::numberOfVariableBoundsTightenedInPresolve)
         .def_readwrite("numberOfHyperplanesWithConvexSource", &SolutionStatistics::numberOfHyperplanesWithConvexSource)
         .def_readwrite(
             "numberOfHyperplanesWithNonconvexSource", &SolutionStatistics::numberOfHyperplanesWithNonconvexSource)
