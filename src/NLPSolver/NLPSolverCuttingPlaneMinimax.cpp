@@ -135,7 +135,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 
     // Sets the maximal number of iterations
     int maxIter = env->settings->getSetting<int>("Dual.ESH.InteriorPoint.CuttingPlane.IterationLimit");
-    int timeLimit = env->settings->getSetting<double>("Dual.ESH.InteriorPoint.CuttingPlane.TimeLimit");
+    double timeLimit = env->settings->getSetting<double>("Dual.ESH.InteriorPoint.CuttingPlane.TimeLimit");
     LPSolver->setTimeLimit(timeLimit);
 
     double termObjTolAbs
