@@ -48,7 +48,7 @@ namespace SHOT
 using MPProblem = mp::Problem;
 using MPProblemPtr = std::shared_ptr<MPProblem>;
 
-class AMPLProblemHandler : public mp::NullNLHandler<NonlinearExpressionPtr>
+class AMPLProblemHandler : public mp::NLHandler<AMPLProblemHandler, NonlinearExpressionPtr>
 {
 private:
     EnvironmentPtr env;
