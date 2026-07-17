@@ -181,7 +181,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
         }
 
         // Updates the time limit for the LP solver
-        timeLimit = max(0.0, timeLimit - env->timing->getElapsedTime("Total"));
+        timeLimit = std::max(0.0, timeLimit - env->timing->getElapsedTime("Total"));
         LPSolver->setTimeLimit(timeLimit);
 
         // Solves the problem and obtains the solution
