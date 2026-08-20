@@ -937,7 +937,7 @@ bool TestCallbackESHInteriorPoint()
                 pointsReceived = data.currentInteriorPoints.size();
                 std::cout << "  ESH interior point callback fired with " << pointsReceived << " current point(s)\n";
                 // Return empty to keep current points unchanged
-                return std::any(std::vector<VectorDouble> { });
+                return std::any(std::vector<VectorDouble> {});
             });
 
         solver->solveProblem();
