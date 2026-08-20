@@ -48,7 +48,7 @@ namespace SHOT
 using MPProblem = mp::Problem;
 using MPProblemPtr = std::shared_ptr<MPProblem>;
 
-class AMPLProblemHandler : public mp::NullNLHandler<NonlinearExpressionPtr>
+class AMPLProblemHandler : public mp::NLHandler<AMPLProblemHandler, NonlinearExpressionPtr>
 {
 private:
     EnvironmentPtr env;
@@ -416,6 +416,18 @@ public:
 
         destination->numericConstraints[index]->valueLHS = lb;
         destination->numericConstraints[index]->valueRHS = ub;
+    }
+
+    /** initial values are ignored for now */
+    void OnInitialValue(int var_index, double value) { }
+
+    /** initial dual values are ignored */
+    void OnInitialDualValue(int con_index, double value) { }
+
+    /** Jacobian column sizes are ignored */
+    ColumnSizeHandler OnColumnSizes() {
+        // return NLHandler's handler that does nothing
+        return ColumnSizeHandler();
     }
 
     /// handling of suffices for variable and constraint flags and SOS constraints
