@@ -226,7 +226,6 @@ file(
     "${PROJECT_SOURCE_DIR}/src/Tasks/TaskCheckPrimalStagnation.h"
     "${PROJECT_SOURCE_DIR}/src/Tasks/TaskSelectPrimalCandidatesFromRootsearch.h"
     "${PROJECT_SOURCE_DIR}/src/Tasks/TaskCheckConstraintTolerance.h"
-    "${PROJECT_SOURCE_DIR}/src/Tasks/TaskPresolve.h"
     "${PROJECT_SOURCE_DIR}/src/Tasks/TaskCheckRelativeGap.h"
     "${PROJECT_SOURCE_DIR}/src/Tasks/TaskSequential.h"
     "${PROJECT_SOURCE_DIR}/src/Tasks/TaskCheckIterationError.h"
@@ -699,8 +698,6 @@ add_library(
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskPerformBoundTightening.h
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskPerformConvexBounding.cpp
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskPerformConvexBounding.h
-    ${PROJECT_SOURCE_DIR}/src/Tasks/TaskPresolve.cpp
-    ${PROJECT_SOURCE_DIR}/src/Tasks/TaskPresolve.h
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskPrintIterationReport.cpp
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskPrintIterationReport.h
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskReformulateProblem.cpp

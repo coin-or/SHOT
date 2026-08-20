@@ -94,7 +94,7 @@ HighsCallbackFunctionType highsCallback
 
         double hashValue = Utilities::calculateHash(solution);
 
-        for(int i = 0; i < MIPSolver->currentSolutions.size(); i++)
+        for(int i = 0; i < (int)MIPSolver->currentSolutions.size(); i++)
         {
             if(MIPSolver->currentSolutions[i].hashValue == hashValue)
             {
@@ -152,8 +152,6 @@ bool MIPSolverHighs::initializeProblem()
 bool MIPSolverHighs::addVariable(
     std::string name, E_VariableType type, double lowerBound, double upperBound, double semiBound)
 {
-    int index = numberOfVariables;
-
     if(lowerBound < -getUnboundedVariableBoundValue())
         lowerBound = -getUnboundedVariableBoundValue();
 
@@ -185,11 +183,13 @@ bool MIPSolverHighs::addVariable(
 
     case E_VariableType::Semiinteger:
         isProblemDiscrete = true;
-        variableTypesHighs.push_back(HighsVarType::kContinuous);
+        variableLowerBounds.back() = semiBound;
+        variableTypesHighs.push_back(HighsVarType::kSemiInteger);
         break;
     case E_VariableType::Semicontinuous:
     {
         isProblemDiscrete = true;
+        variableLowerBounds.back() = semiBound;
         variableTypesHighs.push_back(HighsVarType::kSemiContinuous);
         break;
     }
@@ -492,10 +492,6 @@ bool MIPSolverHighs::addSpecialOrderedSet(E_SOSType type, VectorInteger variable
 
 void MIPSolverHighs::activateDiscreteVariables(bool activate)
 {
-    if(env->reformulatedProblem->properties.numberOfSemiintegerVariables > 0
-        || env->reformulatedProblem->properties.numberOfSemicontinuousVariables > 0)
-        return;
-
     assert(variableTypes.size() == variableTypesHighs.size());
 
     if(activate)
@@ -504,13 +500,24 @@ void MIPSolverHighs::activateDiscreteVariables(bool activate)
 
         for(int i = 0; i < numberOfVariables; i++)
         {
-            assert(variableTypes.at(i) != E_VariableType::Semicontinuous
-                && variableTypes.at(i) != E_VariableType::Semiinteger);
-
             if(variableTypes.at(i) == E_VariableType::Integer || variableTypes.at(i) == E_VariableType::Binary)
             {
                 this->variableTypesHighs.at(i) = HighsVarType::kInteger;
                 highsInstance.changeColIntegrality(i, HighsVarType::kInteger);
+            }
+            else if(variableTypes.at(i) == E_VariableType::Semicontinuous)
+            {
+                // Restore kSemiContinuous type and the original semicontinuous lower bound
+                this->variableTypesHighs.at(i) = HighsVarType::kSemiContinuous;
+                highsInstance.changeColIntegrality(i, HighsVarType::kSemiContinuous);
+                highsInstance.changeColBounds(i, variableLowerBounds.at(i), variableUpperBounds.at(i));
+            }
+            else if(variableTypes.at(i) == E_VariableType::Semiinteger)
+            {
+                // Restore kSemiInteger type and the original semiinteger lower bound
+                this->variableTypesHighs.at(i) = HighsVarType::kSemiInteger;
+                highsInstance.changeColIntegrality(i, HighsVarType::kSemiInteger);
+                highsInstance.changeColBounds(i, variableLowerBounds.at(i), variableUpperBounds.at(i));
             }
         }
 
@@ -521,13 +528,18 @@ void MIPSolverHighs::activateDiscreteVariables(bool activate)
         env->output->outputDebug("        Activating LP strategy");
         for(int i = 0; i < numberOfVariables; i++)
         {
-            assert(variableTypes.at(i) != E_VariableType::Semicontinuous
-                && variableTypes.at(i) != E_VariableType::Semiinteger);
-
             if(variableTypes.at(i) == E_VariableType::Integer || variableTypes.at(i) == E_VariableType::Binary)
             {
                 this->variableTypesHighs.at(i) = HighsVarType::kContinuous;
                 highsInstance.changeColIntegrality(i, HighsVarType::kContinuous);
+            }
+            else if(variableTypes.at(i) == E_VariableType::Semicontinuous
+                || variableTypes.at(i) == E_VariableType::Semiinteger)
+            {
+                // x=0 must be feasible, so reset lower bound to 0
+                this->variableTypesHighs.at(i) = HighsVarType::kContinuous;
+                highsInstance.changeColIntegrality(i, HighsVarType::kContinuous);
+                highsInstance.changeColBounds(i, 0.0, variableUpperBounds.at(i));
             }
         }
 
@@ -887,8 +899,6 @@ void MIPSolverHighs::setCutOffAsConstraint(double cutOff)
         VectorInteger variableIndexes;
         VectorDouble coefficients;
 
-        int numConstraintsBefore = highsInstance.getNumRow();
-
         for(size_t i = 0; i < variableCosts.size(); i++)
         {
             if(variableCosts[i] != 0.0)
@@ -942,15 +952,13 @@ void MIPSolverHighs::setCutOffAsConstraint(double cutOff)
 
 void MIPSolverHighs::addMIPStart(VectorDouble point)
 {
-    assert(point.size() == env->dualSolver->MIPSolver->getNumberOfVariables());
-    assert(variableNames.size() == point.size());
+    assert(point.size() == this->numberOfVariables - numberOfIntegerCutVariables);
 
-    HighsSolution solution;
-    solution.col_value = point;
+    std::vector<HighsInt> indices(point.size());
+    for(HighsInt i = 0; i < static_cast<HighsInt>(point.size()); i++)
+        indices[i] = i;
 
-    assert(point.size() == (size_t)numberOfVariables);
-
-    auto return_status = highsInstance.setSolution(solution);
+    auto return_status = highsInstance.setSolution(static_cast<HighsInt>(point.size()), indices.data(), point.data());
 
     if(return_status != HighsStatus::kOk)
         env->output->outputDebug("        Could not add MIP start in Highs.");
@@ -1093,6 +1101,7 @@ bool MIPSolverHighs::createIntegerCut(IntegerCut& integerCut)
                     int wIndex = numberOfVariables;
                     int vIndex = numberOfVariables + 1;
                     numberOfVariables += 2;
+                    numberOfIntegerCutVariables += 2;
 
                     double M1 = 2 * (variableValue - VAR->lowerBound);
                     double M2 = 2 * (VAR->upperBound - variableValue);
@@ -1293,16 +1302,6 @@ double MIPSolverHighs::getDualObjectiveValue()
     }
 
     return (objVal);
-}
-
-std::pair<VectorDouble, VectorDouble> MIPSolverHighs::presolveAndGetNewBounds()
-{
-    return (std::make_pair(variableLowerBounds, variableUpperBounds));
-}
-
-void MIPSolverHighs::writePresolvedToFile([[maybe_unused]] std::string filename)
-{
-    // Not implemented
 }
 
 void MIPSolverHighs::checkParameters() { }

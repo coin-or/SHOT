@@ -114,6 +114,31 @@ bool CbcTest1(std::string filename, double correctObjectiveValue)
     return passed;
 }
 
+// For nonconvex problems where finding a primal solution is not guaranteed;
+// only verifies the solver terminates without crashing.
+bool CbcTestNocrash(std::string filename)
+{
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cbc));
+
+    try
+    {
+        if(!solver->setProblem(filename))
+            return false;
+    }
+    catch(Exception& e)
+    {
+        std::cout << "Error: " << e.what() << std::endl;
+        return false;
+    }
+
+    solver->solveProblem();
+
+    return true;
+}
+
 bool CbcTerminationCallbackTest(std::string filename)
 {
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
@@ -371,6 +396,21 @@ int CbcTest(int argc, char* argv[])
         std::cout << "Finished test for callbacks getting and setting primal solutions and dual bounds through a "
                      "callback with multi-tree strategy."
                   << std::endl;
+        break;
+    case 9:
+        std::cout << "Starting test to solve gear.osil with Cbc." << std::endl;
+        passed = CbcTestNocrash("data/gear.osil");
+        std::cout << "Finished test to solve gear.osil with Cbc." << std::endl;
+        break;
+    case 10:
+        std::cout << "Starting test to solve windfac.osil with Cbc." << std::endl;
+        passed = CbcTestNocrash("data/windfac.osil");
+        std::cout << "Finished test to solve windfac.osil with Cbc." << std::endl;
+        break;
+    case 11:
+        std::cout << "Starting test to solve ex1252a.osil with Cbc." << std::endl;
+        passed = CbcTestNocrash("data/ex1252a.osil");
+        std::cout << "Finished test to solve ex1252a.osil with Cbc." << std::endl;
         break;
     default:
         passed = false;

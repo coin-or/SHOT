@@ -406,56 +406,6 @@ bool MIPSolverBase::createInteriorHyperplane([[maybe_unused]] HyperplanePtr hype
     return (false);
 }
 
-void MIPSolverBase::presolveAndUpdateBounds()
-{
-    auto newBounds = this->presolveAndGetNewBounds();
-
-    for(int i = 0; i < env->reformulatedProblem->properties.numberOfVariables; i++)
-    {
-        auto currBounds = this->getCurrentVariableBounds(i);
-
-        bool newLB = false;
-        bool newUB = false;
-
-        if(newBounds.first.at(i) > currBounds.first)
-            newLB = true;
-        if(newBounds.second.at(i) > currBounds.second)
-            newUB = true;
-
-        if(newLB)
-        {
-            env->reformulatedProblem->getVariable(i)->lowerBound = newBounds.first.at(i);
-            env->output->outputDebug("        Lower bound for variable (" + std::to_string(i) + ") updated from "
-                + Utilities::toString(currBounds.first) + " to " + Utilities::toString(newBounds.first.at(i)));
-
-            if(!env->reformulatedProblem->allVariables[i]->properties.hasLowerBoundBeenTightened)
-            {
-                env->reformulatedProblem->allVariables[i]->properties.hasLowerBoundBeenTightened = true;
-                env->solutionStatistics.numberOfVariableBoundsTightenedInPresolve++;
-            }
-        }
-
-        if(newUB)
-        {
-            env->reformulatedProblem->getVariable(i)->upperBound = newBounds.second.at(i);
-            env->output->outputDebug("        Upper bound for variable (" + std::to_string(i) + ") updated from "
-                + Utilities::toString(currBounds.second) + " to " + Utilities::toString(newBounds.second.at(i)));
-
-            if(!env->reformulatedProblem->allVariables[i]->properties.hasUpperBoundBeenTightened)
-            {
-                env->reformulatedProblem->allVariables[i]->properties.hasUpperBoundBeenTightened = true;
-                env->solutionStatistics.numberOfVariableBoundsTightenedInPresolve++;
-            }
-        }
-
-        if(env->settings->getSetting<bool>("Dual.MIP.Presolve.UpdateObtainedBounds") && (newLB || newUB))
-        {
-            updateVariableBound(i, newBounds.first.at(i), newBounds.second.at(i));
-            env->output->outputDebug("        Bounds updated also in MIP problem");
-        }
-    }
-}
-
 void MIPSolverBase::fixVariables(VectorInteger variableIndexes, VectorDouble variableValues)
 {
     if(isVariablesFixed)

@@ -69,14 +69,12 @@ void TaskSolveIteration::run()
 
         if(isMinimization)
         {
-            cutOffValue
-                = env->dualSolver->cutOffToUse + env->settings->getSetting<double>("Dual.MIP.CutOff.Tolerance");
+            cutOffValue = env->dualSolver->cutOffToUse + env->settings->getSetting<double>("Dual.MIP.CutOff.Tolerance");
             cutOffValueConstraint = env->dualSolver->cutOffToUse;
         }
         else
         {
-            cutOffValue
-                = env->dualSolver->cutOffToUse - env->settings->getSetting<double>("Dual.MIP.CutOff.Tolerance");
+            cutOffValue = env->dualSolver->cutOffToUse - env->settings->getSetting<double>("Dual.MIP.CutOff.Tolerance");
             cutOffValueConstraint = env->dualSolver->cutOffToUse;
         }
 
@@ -119,8 +117,6 @@ void TaskSolveIteration::run()
             primalSol.push_back(env->results->getPrimalBound());
         }
 
-        assert(primalSol.size() == env->dualSolver->MIPSolver->getNumberOfVariables());
-
         env->dualSolver->MIPSolver->addMIPStart(primalSol);
 
         if(env->settings->getSetting<bool>("Output.Debug.Enable"))
@@ -150,8 +146,7 @@ void TaskSolveIteration::run()
 
     // Must update the pointer to the current iteration if we use the lazy
     // strategy since new iterations have been created when solving
-    if(static_cast<ES_TreeStrategy>(env->settings->getSetting<int>("Dual.TreeStrategy"))
-        == ES_TreeStrategy::SingleTree)
+    if(static_cast<ES_TreeStrategy>(env->settings->getSetting<int>("Dual.TreeStrategy")) == ES_TreeStrategy::SingleTree)
     {
         currIter = env->results->getCurrentIteration();
     }
@@ -259,7 +254,7 @@ void TaskSolveIteration::run()
     {
         env->output->outputDebug("        Dual solver reports no solutions found.");
 
-        DualSolution sol = { {}, E_DualSolutionSource::MIPSolverBound,
+        DualSolution sol = { { }, E_DualSolutionSource::MIPSolverBound,
             env->dualSolver->MIPSolver->getDualObjectiveValue(), currIter->iterationNumber, false };
         env->dualSolver->addDualSolutionCandidate(sol);
     }

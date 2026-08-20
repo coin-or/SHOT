@@ -112,6 +112,31 @@ bool CplexTest1(std::string filename, double correctObjectiveValue)
     return passed;
 }
 
+// For nonconvex problems where finding a primal solution is not guaranteed;
+// only verifies the solver terminates without crashing.
+bool CplexTestNocrash(std::string filename)
+{
+    auto solver = std::make_unique<SHOT::Solver>();
+    auto env = solver->getEnvironment();
+
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cplex));
+
+    try
+    {
+        if(!solver->setProblem(filename))
+            return false;
+    }
+    catch(SHOT::Exception& e)
+    {
+        std::cout << "Error: " << e.what() << std::endl;
+        return false;
+    }
+
+    solver->solveProblem();
+
+    return true;
+}
+
 bool CplexTerminationCallbackTest(std::string filename)
 {
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
@@ -612,6 +637,21 @@ int CplexTest(int argc, char* argv[])
         std::cout << "Starting test for termination callback in single-tree strategy" << std::endl;
         passed = CplexTerminationCallbackSingleTreeTest("data/synthes1.osil");
         std::cout << "Finished test for termination callback in single-tree strategy.";
+        break;
+    case 13:
+        std::cout << "Starting test to solve gear.osil with Cplex." << std::endl;
+        passed = CplexTestNocrash("data/gear.osil");
+        std::cout << "Finished test to solve gear.osil with Cplex." << std::endl;
+        break;
+    case 14:
+        std::cout << "Starting test to solve windfac.osil with Cplex." << std::endl;
+        passed = CplexTestNocrash("data/windfac.osil");
+        std::cout << "Finished test to solve windfac.osil with Cplex." << std::endl;
+        break;
+    case 15:
+        std::cout << "Starting test to solve ex1252a.osil with Cplex." << std::endl;
+        passed = CplexTestNocrash("data/ex1252a.osil");
+        std::cout << "Finished test to solve ex1252a.osil with Cplex." << std::endl;
         break;
     default:
         passed = false;

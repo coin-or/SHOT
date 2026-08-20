@@ -11,6 +11,7 @@
 #include "ModelingSystemAMPL.h"
 
 #include "../Output.h"
+#include "../PrimalSolver.h"
 #include "../Results.h"
 #include "../Settings.h"
 #include "../Timing.h"
@@ -48,7 +49,7 @@ namespace SHOT
 using MPProblem = mp::Problem;
 using MPProblemPtr = std::shared_ptr<MPProblem>;
 
-class AMPLProblemHandler : public mp::NullNLHandler<NonlinearExpressionPtr>
+class AMPLProblemHandler : public mp::NLHandler<AMPLProblemHandler, NonlinearExpressionPtr>
 {
 private:
     EnvironmentPtr env;
@@ -79,8 +80,12 @@ public:
         this->maxUBInt = env->settings->getSetting<double>("Model.Variables.Integer.MaximumUpperBound");
     }
 
+    VectorDouble initialValues;
+
     void OnHeader(const mp::NLHeader& h)
     {
+        initialValues.assign(h.num_vars, std::numeric_limits<double>::quiet_NaN());
+
         destination->allVariables.reserve(h.num_vars);
         destination->integerVariables.reserve(h.num_integer_vars());
         destination->realVariables.reserve(h.num_continuous_vars());
@@ -279,7 +284,8 @@ public:
             return std::make_shared<ExpressionArcTan>(child);
 
         default:
-            throw OperationNotImplementedException(fmt::format("Error: Unsupported AMPL function {}", static_cast<int>(kind)));
+            throw OperationNotImplementedException(
+                fmt::format("Error: Unsupported AMPL function {}", static_cast<int>(kind)));
             break;
         }
 
@@ -313,7 +319,8 @@ public:
             return std::make_shared<ExpressionPower>(firstChild, secondChild);
 
         default:
-            throw OperationNotImplementedException(fmt::format("Error: Unsupported AMPL function {}", static_cast<int>(kind)));
+            throw OperationNotImplementedException(
+                fmt::format("Error: Unsupported AMPL function {}", static_cast<int>(kind)));
             break;
         }
 
@@ -416,6 +423,18 @@ public:
 
         destination->numericConstraints[index]->valueLHS = lb;
         destination->numericConstraints[index]->valueRHS = ub;
+    }
+
+    void OnInitialValue(int var_index, double value) { initialValues[var_index] = value; }
+
+    /** initial dual values are ignored */
+    void OnInitialDualValue(int con_index, double value) { }
+
+    /** Jacobian column sizes are ignored */
+    ColumnSizeHandler OnColumnSizes()
+    {
+        // return NLHandler's handler that does nothing
+        return ColumnSizeHandler();
     }
 
     /// handling of suffices for variable and constraint flags and SOS constraints
@@ -564,8 +583,7 @@ public:
                         += coefficient * variable->lowerBound;
                 else
                     std::dynamic_pointer_cast<LinearConstraint>(destination->numericConstraints[constraintIndex])
-                        ->constant
-                        += coefficient * variable->lowerBound;
+                        ->constant += coefficient * variable->lowerBound;
             }
             else
             {
@@ -647,8 +665,8 @@ ModelingSystemAMPL::~ModelingSystemAMPL() = default;
 
 void ModelingSystemAMPL::augmentSettings(SettingsPtr settings)
 {
-    settings->createSetting("ModelingSystem.AMPL.OptionsHeader", std::string("0\n"),
-        "The AMPL options header for the solution file", true);
+    settings->createSetting(
+        "ModelingSystem.AMPL.OptionsHeader", std::string("0\n"), "The AMPL options header for the solution file", true);
     settings->createSetting("ModelingSystem.AMPL.NumberOfOriginalConstraints", 0,
         "The number of constraints in the original problem submitted to SHOT", 0, SHOT_INT_MAX, true);
 }
@@ -670,10 +688,33 @@ E_ProblemCreationStatus ModelingSystemAMPL::createProblem(ProblemPtr& problem, c
     fs::filesystem::path problemFile(filename);
     fs::filesystem::path problemPath = problemFile.parent_path();
 
+    VectorDouble initialValues;
+
     try
     {
         AMPLProblemHandler handler(env, problem);
         mp::ReadNLFile(filename, handler);
+
+        // Fill defaults for unspecified variables; only store if at least one was provided in the x segment
+        bool hasAny = false;
+        for(size_t i = 0; i < handler.initialValues.size(); i++)
+        {
+            if(std::isnan(handler.initialValues[i]))
+            {
+                double lb = problem->allVariables[i]->lowerBound;
+                double ub = problem->allVariables[i]->upperBound;
+                if(lb > SHOT_DBL_MIN)
+                    handler.initialValues[i] = lb;
+                else if(ub < SHOT_DBL_MAX)
+                    handler.initialValues[i] = ub;
+                else
+                    handler.initialValues[i] = 0.0;
+            }
+            else
+                hasAny = true;
+        }
+        if(hasAny)
+            initialValues = std::move(handler.initialValues);
     }
     catch(const std::exception& e)
     {
@@ -719,6 +760,10 @@ E_ProblemCreationStatus ModelingSystemAMPL::createProblem(ProblemPtr& problem, c
     }
 
     problem->finalize();
+
+    env->problem = problem;
+    if(!initialValues.empty())
+        env->primalSolver->addPrimalSolutionCandidate(initialValues, E_PrimalSolutionSource::ExternalPrimalSolution, 0);
 
     env->timing->stopTimer("ProblemInitialization");
     return (E_ProblemCreationStatus::NormalCompletion);

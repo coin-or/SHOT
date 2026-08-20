@@ -39,9 +39,9 @@ struct DualBoundCallbackData
         : isMinimization(minimize)
         , currentDualBound(dualBound)
         , currentPrimalBound(primalBound)
-        , iterationNumber(iteration)
         , relativeGap(relGap)
         , absoluteGap(absGap)
+        , iterationNumber(iteration)
         , solutionStatistics(stats)
     {
     }

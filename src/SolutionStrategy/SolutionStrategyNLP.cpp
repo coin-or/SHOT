@@ -30,7 +30,6 @@
 #include "../Tasks/TaskPrintIterationReport.h"
 
 #include "../Tasks/TaskSolveIteration.h"
-#include "../Tasks/TaskPresolve.h"
 
 #include "../Tasks/TaskRepairInfeasibleDualProblem.h"
 
@@ -117,13 +116,6 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr)
 
     auto tUpdateExternalDualBound = std::make_shared<TaskUpdateExternalDualBound>(env);
     env->tasks->addTask(tUpdateExternalDualBound, "UpdateExternalDualBound");
-
-    if(static_cast<ES_MIPPresolveStrategy>(env->settings->getSetting<int>("Dual.MIP.Presolve.Frequency"))
-        != ES_MIPPresolveStrategy::Never)
-    {
-        auto tPresolve = std::make_shared<TaskPresolve>(env);
-        env->tasks->addTask(tPresolve, "Presolve");
-    }
 
     auto tSolveIteration = std::make_shared<TaskSolveIteration>(env);
     env->tasks->addTask(tSolveIteration, "SolveIter");

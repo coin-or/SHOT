@@ -15,6 +15,7 @@
 #include <limits>
 #include <random>
 #include <numeric>
+#include <algorithm>
 
 #include "Utilities.h"
 

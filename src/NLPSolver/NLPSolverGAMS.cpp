@@ -15,6 +15,7 @@
 
 #include <cstdio>
 #include <cstring>
+#include <algorithm>
 
 namespace SHOT
 {

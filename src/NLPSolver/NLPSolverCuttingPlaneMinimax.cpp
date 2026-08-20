@@ -135,6 +135,9 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 
     // Sets the maximal number of iterations
     int maxIter = env->settings->getSetting<int>("Dual.ESH.InteriorPoint.CuttingPlane.IterationLimit");
+    double timeLimit = env->settings->getSetting<double>("Dual.ESH.InteriorPoint.CuttingPlane.TimeLimit");
+    LPSolver->setTimeLimit(timeLimit);
+
     double termObjTolAbs
         = env->settings->getSetting<double>("Dual.ESH.InteriorPoint.CuttingPlane.TerminationToleranceAbs");
     double termObjTolRel
@@ -177,6 +180,10 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             LPSolver->writeProblemToFile(filename);
         }
 
+        // Updates the time limit for the LP solver
+        timeLimit = std::max(0.0, timeLimit - env->timing->getElapsedTime("Total"));
+        LPSolver->setTimeLimit(timeLimit);
+
         // Solves the problem and obtains the solution
         auto solStatus = LPSolver->solveProblem();
         env->solutionStatistics.numberOfProblemsMinimaxLP++;
@@ -209,14 +216,20 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             statusCode = E_NLPSolutionStatus::Optimal;
         }
 
+        if(LPSolver->getNumberOfSolutions() == 0)
+        {
+            statusCode = E_NLPSolutionStatus::Error;
+            break;
+        }
+
         auto LPVarSol = LPSolver->getVariableSolution(0);
         LPObjVar = LPSolver->getObjectiveValue();
 
         // Saves the LP solution to file if in debug mode
         if(env->settings->getSetting<bool>("Output.Debug.Enable"))
         {
-            auto filename = fmt::format(
-                "{}/minimax{}_solpt.txt", env->settings->getSetting<std::string>("Output.Debug.Path"), i);
+            auto filename
+                = fmt::format("{}/minimax{}_solpt.txt", env->settings->getSetting<std::string>("Output.Debug.Path"), i);
 
             Utilities::saveVariablePointVectorToFile(LPVarSol, variableNames, filename);
         }

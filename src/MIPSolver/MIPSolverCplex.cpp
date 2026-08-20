@@ -435,10 +435,10 @@ void MIPSolverCplex::initializeSolverSettings()
         // Set solution pool settings
         cplexInstance.setParam(IloCplex::Param::MIP::Pool::Intensity,
             env->settings->getSetting<int>("Subsolver.Cplex.SolutionPoolIntensity")); // Don't use 3 with heuristics
-        cplexInstance.setParam(IloCplex::Param::MIP::Pool::Replace,
-            env->settings->getSetting<int>("Subsolver.Cplex.SolutionPoolReplace"));
-        cplexInstance.setParam(IloCplex::Param::MIP::Pool::RelGap,
-            env->settings->getSetting<double>("Subsolver.Cplex.SolutionPoolGap"));
+        cplexInstance.setParam(
+            IloCplex::Param::MIP::Pool::Replace, env->settings->getSetting<int>("Subsolver.Cplex.SolutionPoolReplace"));
+        cplexInstance.setParam(
+            IloCplex::Param::MIP::Pool::RelGap, env->settings->getSetting<double>("Subsolver.Cplex.SolutionPoolGap"));
         cplexInstance.setParam(
             IloCplex::Param::MIP::Pool::Capacity, env->settings->getSetting<int>("Dual.MIP.SolutionPool.Capacity"));
 
@@ -454,8 +454,8 @@ void MIPSolverCplex::initializeSolverSettings()
         }
 
         // Set solver emphasis
-        cplexInstance.setParam(IloCplex::Param::Emphasis::Numerical,
-            env->settings->getSetting<int>("Subsolver.Cplex.NumericalEmphasis"));
+        cplexInstance.setParam(
+            IloCplex::Param::Emphasis::Numerical, env->settings->getSetting<int>("Subsolver.Cplex.NumericalEmphasis"));
         cplexInstance.setParam(
             IloCplex::Param::Emphasis::Memory, env->settings->getSetting<int>("Subsolver.Cplex.MemoryEmphasis"));
 
@@ -1139,7 +1139,9 @@ void MIPSolverCplex::setTimeLimit(double seconds)
 {
     try
     {
-        if(seconds > 1e+75) { }
+        if(seconds > 1e+75)
+        {
+        }
         else if(seconds > 0)
         {
             cplexInstance.setParam(IloCplex::Param::TimeLimit, seconds);
@@ -1251,8 +1253,7 @@ void MIPSolverCplex::setCutOffAsConstraint(double cutOff)
 
 void MIPSolverCplex::addMIPStart(VectorDouble point)
 {
-    assert(point.size() == env->dualSolver->MIPSolver->getNumberOfVariables());
-    assert(variableNames.size() == point.size());
+    assert(point.size() == this->numberOfVariables - numberOfIntegerCutVariables);
 
     IloNumArray startVal(cplexEnv);
 
@@ -1443,86 +1444,6 @@ double MIPSolverCplex::getDualObjectiveValue()
     return (objVal);
 }
 
-std::pair<VectorDouble, VectorDouble> MIPSolverCplex::presolveAndGetNewBounds()
-{
-    IloNumArray redubs(cplexEnv, numberOfVariables);
-    IloNumArray redlbs(cplexEnv, numberOfVariables);
-
-    IloBoolArray redund(cplexEnv);
-
-    try
-    {
-        bool isUpdated = false;
-
-        cplexInstance.basicPresolve(cplexVars, redlbs, redubs, cplexConstrs, redund);
-
-        VectorDouble newLBs;
-        VectorDouble newUBs;
-
-        newLBs.reserve(numberOfVariables);
-        newUBs.reserve(numberOfVariables);
-
-        for(int i = 0; i < numberOfVariables; i++)
-        {
-            newLBs.push_back(redlbs[i]);
-            newUBs.push_back(redubs[i]);
-        }
-
-        if(env->settings->getSetting<bool>("Dual.MIP.Presolve.RemoveRedundantConstraints"))
-        {
-            int numconstr = 0;
-
-            for(int j = 0; j < cplexConstrs.getSize(); j++)
-            {
-                if(redund[j] == 0)
-                {
-                    cplexModel.remove(cplexConstrs[j]);
-                    cplexConstrs[j].asConstraint().removeFromAll();
-
-                    numconstr++;
-                    isUpdated = true;
-                }
-            }
-
-            if(isUpdated)
-            {
-                cplexInstance.extract(cplexModel);
-                env->output->outputDebug(
-                    "        Removed " + std::to_string(numconstr) + " redundant constraints from MIP model.");
-                env->solutionStatistics.numberOfConstraintsRemovedInPresolve = numconstr;
-            }
-        }
-
-        redlbs.end();
-        redubs.end();
-        redund.end();
-
-        return (std::make_pair(newLBs, newUBs));
-    }
-    catch(IloException& e)
-    {
-        redlbs.end();
-        redubs.end();
-        redund.end();
-
-        env->output->outputError("        Error during presolve", e.getMessage());
-
-        return (std::make_pair(variableLowerBounds, variableUpperBounds));
-    }
-}
-
-void MIPSolverCplex::writePresolvedToFile([[maybe_unused]] std::string filename)
-{
-    try
-    {
-        // Not implemented
-    }
-    catch(IloException& e)
-    {
-        env->output->outputError("        Error when saving presolved model to file", e.getMessage());
-    }
-}
-
 void MIPSolverCplex::checkParameters() { }
 
 bool MIPSolverCplex::createHyperplane(
@@ -1614,6 +1535,7 @@ bool MIPSolverCplex::createIntegerCut(IntegerCut& integerCut)
             else
             {
                 numberOfVariables += 2;
+                numberOfIntegerCutVariables += 2;
 
                 auto w = IloNumVar(cplexEnv, 0, getUnboundedVariableBoundValue(), ILOFLOAT,
                     fmt::format("wIC{}_{}", env->solutionStatistics.numberOfIntegerCuts, index).c_str());
