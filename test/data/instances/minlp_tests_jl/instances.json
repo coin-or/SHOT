@@ -1,0 +1,417 @@
+{
+    "source": "MINLPTests.jl",
+    "url": "https://github.com/jump-dev/MINLPTests.jl",
+    "description": "Unit and integration tests for JuMP NLP and MINLP solvers. This collection includes nonlinear and polynomial test models with and without discrete variables. Categories: nlp (nonconvex NLP), nlp-cvx (convex NLP), nlp-mi (nonconvex MINLP). Naming: 0xx=unit tests, 1xx=2D properties, 2xx=3D properties, 5xx=nD properties, 9xx=integration tests.",
+    "instances": [
+        {
+            "file": "nlp_001_010.jl.nl",
+            "objective": -1.3678794486503105,
+            "description": "Nonlinear objective only with partial starting values"
+        },
+        {
+            "file": "nlp_002_010.jl.nl",
+            "objective": 0.0,
+            "description": "Nonlinear constraints only with starting values"
+        },
+        {
+            "file": "nlp_003_010.jl.nl",
+            "objective": 1.8320787790166984,
+            "description": "Nonlinear objective and constraints without starting values"
+        },
+        {
+            "file": "nlp_003_011.jl.nl",
+            "objective": 4.973671432569242,
+            "description": "Nonlinear objective (with offset) and nonlinear constraints"
+        },
+        {
+            "file": "nlp_003_012.jl.nl",
+            "objective": 3.256512665824449,
+            "description": "Linear objective with nonlinear constraints"
+        },
+        {
+            "file": "nlp_003_013.jl.nl",
+            "objective": 3.256512665824449,
+            "description": "Linear objective (as NL format) with nonlinear constraints"
+        },
+        {
+            "file": "nlp_003_014.jl.nl",
+            "objective": 12.618023354784961,
+            "description": "Quadratic objective with nonlinear constraints"
+        },
+        {
+            "file": "nlp_003_015.jl.nl",
+            "objective": 12.618023354784961,
+            "description": "Quadratic objective (as NL format) with nonlinear constraints"
+        },
+        {
+            "file": "nlp_003_016.jl.nl",
+            "objective": 6.398105319414242,
+            "description": "Objective with offset constant and nonlinear constraints"
+        },
+        {
+            "file": "nlp_004_010.jl.nl",
+            "objective": -4.87215904079771,
+            "description": "Nonlinear objective with linear constraints; tests quadratic and absolute value functions"
+        },
+        {
+            "file": "nlp_004_011.jl.nl",
+            "objective": -4.87215904079771,
+            "description": "Nonlinear objective with linear constraints (as NL format)"
+        },
+        {
+            "file": "nlp_005_010.jl.nl",
+            "objective": 1.5449760741521967,
+            "description": "Tests division operator in objective function"
+        },
+        {
+            "file": "nlp_008_010.jl.nl",
+            "objective": -0.3755859312158738,
+            "description": "Dual variable test case"
+        },
+        {
+            "file": "nlp_008_011.jl.nl",
+            "objective": -0.3755859312158738,
+            "description": "Dual variable test case (variant)"
+        },
+        {
+            "file": "nlp_009_010.jl.nl",
+            "objective": 0.75,
+            "description": "Maximization objective test"
+        },
+        {
+            "file": "nlp_009_011.jl.nl",
+            "objective": 0.75,
+            "description": "Maximization objective test (variant)"
+        },
+        {
+            "file": "nlp-cvx_001_010.jl.nl",
+            "objective": -2.0430107680954848,
+            "description": "Convex NLP unit test with nonlinear objective and constraints"
+        },
+        {
+            "file": "nlp-cvx_001_011.jl.nl",
+            "objective": 0.0,
+            "description": "Convex NLP unit test (variant)"
+        },
+        {
+            "file": "nlp-cvx_002_010.jl.nl",
+            "objective": 3.9655172067026196,
+            "description": "Convex NLP unit test with convex objective"
+        },
+        {
+            "file": "nlp-cvx_002_011.jl.nl",
+            "objective": 0.0,
+            "description": "Convex NLP unit test (variant)"
+        },
+        {
+            "file": "nlp-cvx_101_010.jl.nl",
+            "objective": -1.414213562373095,
+            "description": "2D convex NLP mathematical property test"
+        },
+        {
+            "file": "nlp-cvx_101_011.jl.nl",
+            "objective": -1.0,
+            "description": "2D convex NLP mathematical property test (variant)"
+        },
+        {
+            "file": "nlp-cvx_101_012.jl.nl",
+            "objective": 1.0,
+            "description": "2D convex NLP mathematical property test (variant)"
+        },
+        {
+            "file": "nlp-cvx_102_010.jl.nl",
+            "objective": -0.974165743715913,
+            "description": "2D convex NLP mathematical property test"
+        },
+        {
+            "file": "nlp-cvx_102_011.jl.nl",
+            "objective": 1.2,
+            "description": "2D convex NLP mathematical property test (variant)"
+        },
+        {
+            "file": "nlp-cvx_102_012.jl.nl",
+            "objective": 1.414213562373095,
+            "description": "2D convex NLP mathematical property test (variant)"
+        },
+        {
+            "file": "nlp-cvx_102_013.jl.nl",
+            "objective": 0.72,
+            "description": "2D convex NLP mathematical property test (variant)"
+        },
+        {
+            "file": "nlp-cvx_102_014.jl.nl",
+            "objective": 0.0,
+            "description": "2D convex NLP mathematical property test (variant)"
+        },
+        {
+            "file": "nlp-cvx_103_010.jl.nl",
+            "objective": 0.0,
+            "description": "2D convex NLP mathematical property test"
+        },
+        {
+            "file": "nlp-cvx_103_011.jl.nl",
+            "objective": -1.0,
+            "description": "2D convex NLP mathematical property test (variant)"
+        },
+        {
+            "file": "nlp-cvx_103_012.jl.nl",
+            "objective": -1.25,
+            "description": "2D convex NLP mathematical property test (variant)"
+        },
+        {
+            "file": "nlp-cvx_103_013.jl.nl",
+            "objective": -0.25,
+            "description": "2D convex NLP mathematical property test (variant)"
+        },
+        {
+            "file": "nlp-cvx_103_014.jl.nl",
+            "objective": -0.7071067811865475,
+            "description": "2D convex NLP mathematical property test (variant)"
+        },
+        {
+            "file": "nlp-cvx_104_010.jl.nl",
+            "objective": -0.7071067811865475,
+            "description": "2D convex NLP mathematical property test"
+        },
+        {
+            "file": "nlp-cvx_105_010.jl.nl",
+            "objective": -4.176004405036646,
+            "description": "2D convex NLP mathematical property test"
+        },
+        {
+            "file": "nlp-cvx_105_011.jl.nl",
+            "objective": 0.16878271368156372,
+            "description": "2D convex NLP mathematical property test (variant)"
+        },
+        {
+            "file": "nlp-cvx_105_012.jl.nl",
+            "objective": 0.5,
+            "description": "2D convex NLP mathematical property test (variant)"
+        },
+        {
+            "file": "nlp-cvx_105_013.jl.nl",
+            "objective": -1.5,
+            "description": "2D convex NLP mathematical property test (variant)"
+        },
+        {
+            "file": "nlp-cvx_106_010.jl.nl",
+            "objective": -1.8572155128552428,
+            "description": "2D convex NLP mathematical property test"
+        },
+        {
+            "file": "nlp-cvx_106_011.jl.nl",
+            "objective": -0.7868226265935826,
+            "description": "2D convex NLP mathematical property test (variant)"
+        },
+        {
+            "file": "nlp-cvx_107_010.jl.nl",
+            "objective": 0.0,
+            "description": "2D convex NLP mathematical property test"
+        },
+        {
+            "file": "nlp-cvx_107_011.jl.nl",
+            "objective": 0.17157287363083387,
+            "description": "2D convex NLP mathematical property test (variant)"
+        },
+        {
+            "file": "nlp-cvx_107_012.jl.nl",
+            "objective": 0.17157287363083387,
+            "description": "2D convex NLP mathematical property test (variant)"
+        },
+        {
+            "file": "nlp-cvx_108_010.jl.nl",
+            "objective": 0.0,
+            "description": "2D convex NLP mathematical property test"
+        },
+        {
+            "file": "nlp-cvx_108_011.jl.nl",
+            "objective": 1.5240966871955863,
+            "description": "2D convex NLP mathematical property test (variant)"
+        },
+        {
+            "file": "nlp-cvx_108_012.jl.nl",
+            "objective": 0.5927195187027438,
+            "description": "2D convex NLP mathematical property test (variant)"
+        },
+        {
+            "file": "nlp-cvx_108_013.jl.nl",
+            "objective": 0.8112507770394088,
+            "description": "2D convex NLP mathematical property test (variant)"
+        },
+        {
+            "file": "nlp-cvx_109_010.jl.nl",
+            "objective": 0.6931471805599453,
+            "description": "2D convex NLP mathematical property test"
+        },
+        {
+            "file": "nlp-cvx_109_011.jl.nl",
+            "objective": 1.4853479762665618,
+            "description": "2D convex NLP mathematical property test (variant)"
+        },
+        {
+            "file": "nlp-cvx_109_012.jl.nl",
+            "objective": 1.4469189829363254,
+            "description": "2D convex NLP mathematical property test (variant)"
+        },
+        {
+            "file": "nlp-cvx_110_010.jl.nl",
+            "objective": 0.36787944117144233,
+            "description": "2D convex NLP mathematical property test"
+        },
+        {
+            "file": "nlp-cvx_110_011.jl.nl",
+            "objective": 0.9861373827904797,
+            "description": "2D convex NLP mathematical property test (variant)"
+        },
+        {
+            "file": "nlp-cvx_110_012.jl.nl",
+            "objective": 0.24311673443421425,
+            "description": "2D convex NLP mathematical property test (variant)"
+        },
+        {
+            "file": "nlp-cvx_201_010.jl.nl",
+            "objective": -1.7320508075688774,
+            "description": "3D convex NLP mathematical property test"
+        },
+        {
+            "file": "nlp-cvx_201_011.jl.nl",
+            "objective": -1.0,
+            "description": "3D convex NLP mathematical property test (variant)"
+        },
+        {
+            "file": "nlp-cvx_202_010.jl.nl",
+            "objective": -1.0,
+            "description": "3D convex NLP mathematical property test"
+        },
+        {
+            "file": "nlp-cvx_202_011.jl.nl",
+            "objective": 0.0,
+            "description": "3D convex NLP mathematical property test (variant)"
+        },
+        {
+            "file": "nlp-cvx_202_012.jl.nl",
+            "objective": -2.25,
+            "description": "3D convex NLP mathematical property test (variant)"
+        },
+        {
+            "file": "nlp-cvx_202_013.jl.nl",
+            "objective": -0.25,
+            "description": "3D convex NLP mathematical property test (variant)"
+        },
+        {
+            "file": "nlp-cvx_202_014.jl.nl",
+            "objective": -1.0,
+            "description": "3D convex NLP mathematical property test (variant)"
+        },
+        {
+            "file": "nlp-cvx_203_010.jl.nl",
+            "objective": -0.7071067811865475,
+            "description": "3D convex NLP mathematical property test"
+        },
+        {
+            "file": "nlp-cvx_204_010.jl.nl",
+            "objective": -1.2071067837918394,
+            "description": "3D convex NLP mathematical property test"
+        },
+        {
+            "file": "nlp-cvx_205_010.jl.nl",
+            "objective": 1.7912878443121907,
+            "description": "3D convex NLP mathematical property test"
+        },
+        {
+            "file": "nlp-cvx_206_010.jl.nl",
+            "objective": 4.0,
+            "description": "3D convex NLP mathematical property test"
+        },
+        {
+            "file": "nlp-cvx_210_010.jl.nl",
+            "objective": 0.0,
+            "description": "3D convex NLP mathematical property test"
+        },
+        {
+            "file": "nlp-cvx_210_011.jl.nl",
+            "objective": 0.535898380052066,
+            "description": "3D convex NLP mathematical property test (variant)"
+        },
+        {
+            "file": "nlp-cvx_210_012.jl.nl",
+            "objective": 0.535898380052066,
+            "description": "3D convex NLP mathematical property test (variant)"
+        },
+        {
+            "file": "nlp-cvx_501_010.jl.nl",
+            "objective": -1.0,
+            "description": "nD convex NLP mathematical property test; only one NL file available for parametric family"
+        },
+        {
+            "file": "nlp-cvx_501_011.jl.nl",
+            "objective": -1.0,
+            "description": "nD convex NLP mathematical property test (variant); only one NL file available for parametric family"
+        },
+        {
+            "file": "nlp-mi_001_010.jl.nl",
+            "objective": -1.35787195018718,
+            "description": "Nonconvex MINLP with integer variables and partial starting values"
+        },
+        {
+            "file": "nlp-mi_002_010.jl.nl",
+            "objective": 0.0,
+            "description": "Nonconvex MINLP with binary variables and nonlinear constraints"
+        },
+        {
+            "file": "nlp-mi_003_010.jl.nl",
+            "objective": 1.7606816937762844,
+            "description": "Nonconvex MINLP with mixed continuous and discrete variables"
+        },
+        {
+            "file": "nlp-mi_003_011.jl.nl",
+            "objective": 4.9022743473660775,
+            "description": "Nonconvex MINLP with offset constant in objective"
+        },
+        {
+            "file": "nlp-mi_003_012.jl.nl",
+            "objective": 3.0,
+            "description": "Nonconvex MINLP with linear objective and nonlinear constraints"
+        },
+        {
+            "file": "nlp-mi_003_013.jl.nl",
+            "objective": 3.0,
+            "description": "Nonconvex MINLP with linear objective (as NL) and nonlinear constraints"
+        },
+        {
+            "file": "nlp-mi_003_014.jl.nl",
+            "objective": 11.0,
+            "description": "Nonconvex MINLP with quadratic objective and nonlinear constraints"
+        },
+        {
+            "file": "nlp-mi_003_015.jl.nl",
+            "objective": 11.0,
+            "description": "Nonconvex MINLP with quadratic objective (as NL) and nonlinear constraints"
+        },
+        {
+            "file": "nlp-mi_003_016.jl.nl",
+            "objective": 6.141592682680717,
+            "description": "Nonconvex MINLP with offset objective and nonlinear constraints"
+        },
+        {
+            "file": "nlp-mi_004_010.jl.nl",
+            "objective": -4.576881309190901,
+            "description": "Nonconvex MINLP with nonlinear objective and linear constraints; tests quadratic and absolute value"
+        },
+        {
+            "file": "nlp-mi_004_011.jl.nl",
+            "objective": -4.5768813091909015,
+            "description": "Nonconvex MINLP with nonlinear objective and linear constraints (as NL)"
+        },
+        {
+            "file": "nlp-mi_004_012.jl.nl",
+            "objective": 0.0,
+            "description": "Nonconvex MINLP with integer constraint"
+        },
+        {
+            "file": "nlp-mi_005_010.jl.nl",
+            "objective": 1.8164965727459055,
+            "description": "Nonconvex MINLP testing division operator"
+        }
+    ]
+}
