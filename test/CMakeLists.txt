@@ -88,6 +88,31 @@ if(HAS_IPOPT)
   set(Ipopt_parts 1 2)
 endif()
 
+# Instance tests: one case per (MIP solver x NLP solver) combination
+# Format support (.nl, .gms) is checked at runtime; guards here are MIP+NLP only
+set(Instance_parts)
+if(HAS_HIGHS AND HAS_IPOPT)
+  list(APPEND Instance_parts 1)
+endif()
+if(HAS_GUROBI AND HAS_IPOPT)
+  list(APPEND Instance_parts 2)
+endif()
+if(HAS_CPLEX AND HAS_IPOPT)
+  list(APPEND Instance_parts 3)
+endif()
+if(HAS_CBC AND HAS_IPOPT)
+  list(APPEND Instance_parts 4)
+endif()
+if(HAS_HIGHS)
+  list(APPEND Instance_parts 5)
+endif()
+if(HAS_GUROBI)
+  list(APPEND Instance_parts 6)
+endif()
+if(Instance_parts)
+  set(cpptests ${cpptests} Instance)
+endif()
+
 # Adds a "1" to tests without parts
 foreach(cpptest ${cpptests})
   if(NOT DEFINED "${cpptest}_parts")
@@ -108,10 +133,16 @@ if(HAS_CPLEX) # To make CPLEX build
   add_definitions(-LDFLAGS="-Wl,--no-as-needed")
 endif(HAS_CPLEX)
 
+# nlohmann/json header-only library for InstanceTest
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../ThirdParty)
+
 # Creates the test executable
 create_test_sourcelist(srclist test_runner.cpp ${cpptestsrc})
 add_executable(${TEST_EXE_NAME} ${srclist})
 target_link_libraries(${TEST_EXE_NAME} ${libs})
+
+target_include_directories(${TEST_EXE_NAME} PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../ThirdParty)
 
 target_link_libraries(${TEST_EXE_NAME} SHOTSolver)
 
