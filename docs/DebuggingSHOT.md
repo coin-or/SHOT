@@ -100,8 +100,9 @@ determines which debug files you should expect to see at all:
   full `dualiter{N}_*` sequence described below.
 - **Single-tree strategy** — solves one branch-and-cut MIP tree, adding
   cuts via callbacks during the search rather than resolving from scratch
-  each iteration (only available with MIP solvers that support solver
-  callbacks). Selected via the `Dual.TreeStrategy` setting
+  each iteration (requires solver callback support — currently only CPLEX
+  and Gurobi; Cbc and HiGHS are always forced to multi-tree, regardless of
+  `Dual.TreeStrategy`). Selected via the `Dual.TreeStrategy` setting
   (`0`=multi-tree, `1`=single-tree) when the problem is discrete and
   convex; still produces `dualiter{N}_*` files, but "iteration" here
   corresponds to callback invocations within the single tree rather than

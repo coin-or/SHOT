@@ -51,7 +51,7 @@ pass `--AMPL` (or `-AMPL`) in addition to the problem file (only valid for
 | `--debug` / `--debug=<directory>` | Enables debug-output mode; see [DebuggingSHOT.md](DebuggingSHOT.md) |
 | `--mip=<cbc\|highs\|cplex\|gurobi>` | Selects the MIP (dual) solver — only the ones the build was compiled with are available |
 | `--nlp=<ipopt\|gams\|shot>` | Selects the primal NLP solver |
-| `--tree=<single\|multi>` | Selects single-tree (branch-and-cut) vs. multi-tree dual strategy — only meaningful for MIP solvers that support the required callbacks (currently Cplex/Gurobi builds) |
+| `--tree=<single\|multi>` | Selects single-tree (branch-and-cut) vs. multi-tree dual strategy — single-tree requires solver callback support, currently only available with CPLEX or Gurobi; Cbc and HiGHS are always forced to multi-tree |
 | `--threads=<n>` | Maximum number of threads (`Dual.MIP.NumberOfThreads`) |
 | `--absgap=<value>` | Absolute objective gap termination tolerance (`Termination.ObjectiveGap.Absolute`) |
 | `--relgap=<value>` | Relative objective gap termination tolerance (`Termination.ObjectiveGap.Relative`) |
