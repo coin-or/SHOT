@@ -112,7 +112,14 @@ void NLPSolverSHOT::initializeMIPProblem()
     solver->updateSetting("Output.Debug.Path", subproblemDebugPath.string());
 
     relaxedProblem = sourceProblem->createCopy(solver->getEnvironment(), true, false, false);
-    solver->setProblem(relaxedProblem, relaxedProblem);
+
+    // Solver::selectStrategy() (called by setProblem()) catches its own initialization exceptions and returns
+    // false rather than propagating them, so a failure here would otherwise be silently swallowed: this object
+    // would be considered successfully constructed with no solution strategy set, and later crash on the
+    // assert in Solver::solveProblem() instead. Throw here so the caller can catch it and disable this NLP
+    // solver instead.
+    if(!solver->setProblem(relaxedProblem, relaxedProblem))
+        throw Exception("Could not initialize the nested SHOT solver for the fixed-integer NLP problem.");
 }
 
 void NLPSolverSHOT::setStartingPoint(VectorInteger variableIndexes, VectorDouble variableValues) { }

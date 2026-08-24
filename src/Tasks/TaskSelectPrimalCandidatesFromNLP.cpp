@@ -106,8 +106,19 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(Environment
         sourceProblem = env->reformulatedProblem;
 
         env->results->usedPrimalNLPSolver = ES_PrimalNLPSolver::SHOT;
-        NLPSolver = std::make_shared<NLPSolverSHOT>(env, sourceProblem);
         sourceIsReformulatedProblem = true;
+
+        try
+        {
+            NLPSolver = std::make_shared<NLPSolverSHOT>(env, sourceProblem);
+        }
+        catch(const std::exception& e)
+        {
+            env->output->outputWarning(fmt::format(
+                " Could not initialize SHOT as the fixed-integer NLP solver, disabling this primal heuristic: {}",
+                e.what()));
+            NLPSolver = nullptr;
+        }
 
         break;
     }
@@ -115,6 +126,13 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(Environment
     default:
         // We should never get here since there is a check in Solver.cpp that makes sure that the correct solver is used
         break;
+    }
+
+    if(!NLPSolver)
+    {
+        env->timing->stopTimer("PrimalBoundStrategyNLP");
+        env->timing->stopTimer("PrimalStrategy");
+        return;
     }
 
     env->results->usedPrimalNLPSolverDescription = NLPSolver->getSolverDescription();
@@ -159,6 +177,9 @@ TaskSelectPrimalCandidatesFromNLP::~TaskSelectPrimalCandidatesFromNLP() = defaul
 
 void TaskSelectPrimalCandidatesFromNLP::run()
 {
+    if(!NLPSolver)
+        return;
+
     if(env->primalSolver->fixedPrimalNLPCandidates.size() == 0)
     {
         env->solutionStatistics.numberOfIterationsWithoutNLPCallMIP++;

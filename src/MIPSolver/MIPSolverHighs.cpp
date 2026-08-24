@@ -214,7 +214,7 @@ bool MIPSolverHighs::addQuadraticTermToObjective([[maybe_unused]] double coeffic
     [[maybe_unused]] int firstVariableIndex, [[maybe_unused]] int secondVariableIndex)
 {
     // TODO: Not implemented
-    throw new OperationNotImplementedException("Quadratic objective functions not yet implemented in HiGHS interface.");
+    throw OperationNotImplementedException("Quadratic objective functions not yet implemented in HiGHS interface.");
     return (false);
 }
 
@@ -260,7 +260,7 @@ bool MIPSolverHighs::addQuadraticTermToConstraint([[maybe_unused]] double coeffi
     [[maybe_unused]] int firstVariableIndex, [[maybe_unused]] int secondVariableIndex)
 {
     // TODO: Not implemented
-    throw new OperationNotImplementedException("Quadratic constraints not yet implemented in HiGHS interface.");
+    throw OperationNotImplementedException("Quadratic constraints not yet implemented in HiGHS interface.");
     return (false);
 }
 
@@ -485,7 +485,7 @@ int MIPSolverHighs::addLinearConstraint(
 bool MIPSolverHighs::addSpecialOrderedSet(E_SOSType type, VectorInteger variableIndexes, VectorDouble variableWeights)
 {
     // TODO: Not implemented
-    throw new OperationNotImplementedException(
+    throw OperationNotImplementedException(
         "Special ordered set functionality not yet implemented in HiGHS interface.");
     return (false);
 }

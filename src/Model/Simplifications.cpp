@@ -546,7 +546,7 @@ NonlinearExpressionPtr copyNonlinearExpression(NonlinearExpression* expression, 
     }
     default:
     {
-        throw new OperationNotImplementedException(
+        throw OperationNotImplementedException(
             fmt::format("The following operation is not implemented {}", (int)(expression->getType())));
         break;
     }
