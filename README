@@ -6,53 +6,71 @@ Originally SHOT was intended for convex MINLP problems only, but as of version 1
 
 SHOT can be used
 - as a console application,
-- from GAMS (https://www.gams.com),
+- from GAMS (https://www.gams.com) - the easiest way to use SHOT is through GAMSPy (https://gamspy.readthedocs.io),
+- on the NEOS Server (https://neos-server.org/neos/solvers/minco:SHOT/GAMS.html),
 - from any modeling system that can use ASL, such as
-  - Pyomo/Python (https://www.pyomo.org), 
-  - JuMP/Julia (https://github.com/JuliaOpt/AmplNLWriter.jl), and 
-  -  AMPL (https://www.ampl.com),
-- using its API implemented in C++.
+  - Pyomo/Python (https://www.pyomo.org),
+  - JuMP/Julia (https://github.com/JuliaOpt/AmplNLWriter.jl), and
+  - AMPL (https://www.ampl.com),
+- through its own Python API (SHOTpy, see docs/SHOTpy_Tutorial.ipynb in the source repository) - build with -DHAS_PYTHON=on (see docs/CompilationInstructions.md); a "pip install SHOTpy" package is planned for release, or
+- using its API implemented in C++, both of which support callbacks for customizing SHOT's behavior (e.g. injecting primal solutions, warm-starting, or adding custom cuts).
 
-SHOT requires a MILP solver: Cplex (https://www.ibm.com/analytics/cplex-optimizer), Gurobi(https://www.gurobi.com) or Cbc (https://www.github.com/coin-or/Cbc). In addition an NLP solver is required; currently only Ipopt (https://www.github.com/coin-or/Ipopt) is supported. If SHOT is interfaced with GAMS, any licensed NLP solver can be used.
+SHOT requires a MILP solver: Cplex (https://www.ibm.com/analytics/cplex-optimizer), Gurobi (https://www.gurobi.com), Cbc (https://www.github.com/coin-or/Cbc) or HiGHS (https://highs.dev). In addition an NLP solver is required; currently only Ipopt (https://www.github.com/coin-or/Ipopt) is supported. If SHOT is interfaced with GAMS, any licensed NLP solver can be used.
 
 The documentation is provided at the project website at https://www.shotsolver.dev.
 
-SHOT is a COIN-OR project.Project manager is Andreas Lundell. A full list of contributors is available on the  project website (https://shotsolver.dev/shot/about-shot/contributors).
+SHOT is a COIN-OR project (https://www.coin-or.org), and won the COIN-OR Cup 2018 (https://www.coin-or.org/2018-coin-or-cup-winner/). Project manager is Andreas Lundell. A full list of contributors is available on the project website (https://shotsolver.dev/shot/about-shot/contributors).
 
 Dual bound through polyhedral (outer) approximation
 
-SHOT is based on iteratively creating a tighter polyhedral approximation of the nonlinear feasible set by generating supporting hyperplanes or cutting planes. These linearized problems are then solved with an mixed-integer linear programming (MILP) solver such as CPLEX, Gurobi or Cbc. If CPLEX or Gurobi is used, the subproblems can also include quadratic and bilinear nonlinearities directly; then MIQP or MIQCQP subproblems are solved. 
+SHOT is based on iteratively creating a tighter polyhedral approximation of the nonlinear feasible set by generating supporting hyperplanes or cutting planes. These linearized problems are then solved with a mixed-integer linear programming (MILP) solver such as CPLEX, Gurobi, Cbc or HiGHS. If CPLEX or Gurobi is used, the subproblems can also include quadratic and bilinear nonlinearities directly; then MIQP or MIQCQP subproblems are solved. The dual strategy can be run either as a multi-tree search (repeatedly re-solving the MIP relaxation) or, with CPLEX or Gurobi, as a single-tree (branch-and-cut) search that adds cuts via callbacks during one search tree; Cbc and HiGHS currently only support the multi-tree strategy.
+
+The problem types that can be solved to global optimality depend on which MIP solver is used:
+
+  Problem type          CPLEX   Gurobi   Cbc   HiGHS
+  Convex MIQP            Y*       Y*      Y      Y
+  Convex MIQCQP          Y*       Y*      Y      Y
+  Convex MINLP            Y        Y      Y      Y
+  Nonconvex MIQP         Y*       Y*      ?      ?
+  Nonconvex MIQCQP        ?       Y*      ?      ?
+  Nonconvex MINLP         ?        ?      ?      ?
+
+  Y = solved to global optimality, ? = no guarantee that a solution is found,
+  * = the problem can be handled directly by the subsolver (native quadratic/bilinear support).
 
 Primal bound using heuristics
 
-The solution to the outer approximation problem provides a lower (dual) bound (when solving a minimization problem) to the original problem if the problem is convex. If the problem is nonconvex, convergence to the global optimal solution cannot be guaranteed (but might be achieved for certain classes of problems, cf. http://www.optimization-online.org/DB_HTML/2020/03/7691.html. 
+The solution to the outer approximation problem provides a lower (dual) bound (when solving a minimization problem) to the original problem if the problem is convex. If the problem is nonconvex, convergence to the global optimal solution cannot be guaranteed (but might be achieved for certain classes of problems, cf. this paper: http://www.optimization-online.org/DB_HTML/2020/03/7691.html).
 
 To get an upper (primal) bound (when solving a minimization problem) on the optimal solution SHOT utilizes the following heuristics:
 - Solving nonlinear programming (NLP) problems where the integer variables have been fixed to valid values. This is done by calling an external NLP solver (e.g. Ipopt).
 - By checking solutions from the MIP solver's solution pool for points that fulfill also the nonlinearities in the original MINLP problem.
-- By performing root searches. 
+- By performing root searches.
 
 Termination
 
-When the relative or absolute difference (objective gap) between the primal and dual bounds is less than a user-specified value, SHOT terminates with the current primal solution. If the original problem is convex, this is a global solution to the problem. If it is nonconvex, there is normally no guarantee that such a solution can be found, however SHOT will always in addition to the primal solution give a valid lower bound on the solution. 
+When the relative or absolute difference (objective gap) between the primal and dual bounds is less than a user-specified value, SHOT terminates with the current primal solution. If the original problem is convex, this is a global solution to the problem. If it is nonconvex, there is normally no guarantee that such a solution can be found, however SHOT will always in addition to the primal solution give a valid lower bound on the solution.
 
 Compilation instructions
 
-Instructions for compiling SHOT is available at the project website (https://shotsolver.dev/shot/about-shot/compiling).
+Instructions for compiling SHOT are available in docs/CompilationInstructions.md in the source repository, and also at the project website (https://shotsolver.dev/shot/about-shot/compiling).
 
 Solver manual
 
-Instructions for how to use SHOT, e.g. call it from different environments, are provided on the project website (https://shotsolver.dev/shot/using-shot/getting-started).
+Instructions for how to use SHOT, e.g. call it from different environments, are provided in docs/CommandLineUsage.md in the source repository and on the project website (https://shotsolver.dev/shot/using-shot/getting-started). For troubleshooting solver behavior, see docs/DebuggingSHOT.md in the source repository.
 
 Publications
 
 SHOT is best described in the paper:
 
-Lundell, A. Kronqvist, J. and Westerlund, T. *The Supporting Hyperplane Optimization Toolkit: A Polyhedral Outer Approximation Based 
-Convex MINLP Solver Utilizing a Single Branching Tree Approach* (2018). http://www.optimization-online.org/DB_FILE/2018/06/6680.pdf
+Lundell, A. Kronqvist, J. and Westerlund, T. The supporting hyperplane optimization toolkit for convex MINLP. Journal of Global Optimization (2022). https://link.springer.com/article/10.1007/s10898-022-01128-0
 
 The features for solving nonconvex MINLP problems are described in the papers:
 
-Lundell, A. and Kronqvist, J., Polyhedral Approximation Strategies in Nonconvex Mixed-Integer Nonlinear Programming. Optimization Online (2020). http://www.optimization-online.org/DB_HTML/2020/03/7691.html
+Lundell, A. and Kronqvist, J., Polyhedral approximation strategies for nonconvex mixed-integer nonlinear programming in SHOT. Journal of Global Optimization (2021). https://doi.org/10.1007/s10898-021-01006-1
 
 Lundell, A. and Kronqvist, J. On Solving Nonconvex MINLP Problems with SHOT (2019). In: Le Thi H., Le H., Pham Dinh T. (editors) Optimization of Complex Systems: Theory, Models, Algorithms and Applications. WCGO 2019. Advances in Intelligent Systems and Computing, vol 991. Springer, Cham.
+
+Reformulation of nonseparable convex quadratic expressions (preprint):
+
+Blomqvist, J., Tamm, E., Kronqvist, J. and Lundell, A. Decomposition-Based Reformulation of Nonseparable Quadratic Expressions in Convex MINLP. Optimization Online (2026). https://optimization-online.org/?p=34367

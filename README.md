@@ -10,15 +10,16 @@ Originally SHOT was intended for convex MINLP problems only, but as of version 1
 
 **SHOT can be used**
 - as a console application,
-- from [GAMS](https://www.gams.com),
+- from [GAMS](https://www.gams.com) — the easiest way to use SHOT is through [GAMSPy](https://gamspy.readthedocs.io),
 - on the [NEOS Server](https://neos-server.org/neos/solvers/minco:SHOT/GAMS.html),
 - from any modeling system that can use ASL, such as
   - [Pyomo/Python](https://www.pyomo.org), 
   - [JuMP/Julia](https://github.com/JuliaOpt/AmplNLWriter.jl), and 
   - [AMPL](https://www.ampl.com),
-- using its API implemented in C++.
+- through its own Python API ([SHOTpy](docs/SHOTpy_Tutorial.ipynb)) — build with `-DHAS_PYTHON=on` (see [docs/CompilationInstructions.md](docs/CompilationInstructions.md)); a `pip install SHOTpy` package is planned for release, or
+- using its API implemented in C++, both of which support callbacks for customizing SHOT's behavior (e.g. injecting primal solutions, warm-starting, or adding custom cuts).
 
-SHOT requires a MILP solver: [Cplex](https://www.ibm.com/analytics/cplex-optimizer), [Gurobi](https://www.gurobi.com) or [Cbc](https://www.github.com/coin-or/Cbc). In addition an NLP solver is required; currently only [Ipopt](https://www.github.com/coin-or/Ipopt) is supported. If SHOT is interfaced with GAMS, any licensed NLP solver can be used.
+SHOT requires a MILP solver: [Cplex](https://www.ibm.com/analytics/cplex-optimizer), [Gurobi](https://www.gurobi.com), [Cbc](https://www.github.com/coin-or/Cbc) or [HiGHS](https://highs.dev). In addition an NLP solver is required; currently only [Ipopt](https://www.github.com/coin-or/Ipopt) is supported. If SHOT is interfaced with GAMS, any licensed NLP solver can be used.
 
 The documentation is provided at the project website at https://www.shotsolver.dev.
 
@@ -26,7 +27,20 @@ SHOT is a [COIN-OR project](https://www.coin-or.org), and won the [COIN-OR Cup 2
 
 ## Dual bound through polyhedral (outer) approximation
 
-SHOT is based on iteratively creating a tighter polyhedral approximation of the nonlinear feasible set by generating supporting hyperplanes or cutting planes. These linearized problems are then solved with an mixed-integer linear programming (MILP) solver such as CPLEX, Gurobi or Cbc. If CPLEX or Gurobi is used, the subproblems can also include quadratic and bilinear nonlinearities directly; then MIQP or MIQCQP subproblems are solved. 
+SHOT is based on iteratively creating a tighter polyhedral approximation of the nonlinear feasible set by generating supporting hyperplanes or cutting planes. These linearized problems are then solved with a mixed-integer linear programming (MILP) solver such as CPLEX, Gurobi, Cbc or HiGHS. If CPLEX or Gurobi is used, the subproblems can also include quadratic and bilinear nonlinearities directly; then MIQP or MIQCQP subproblems are solved. The dual strategy can be run either as a multi-tree search (repeatedly re-solving the MIP relaxation) or, with CPLEX or Gurobi, as a single-tree (branch-and-cut) search that adds cuts via callbacks during one search tree; Cbc and HiGHS currently only support the multi-tree strategy.
+
+The problem types that can be solved to global optimality depend on which MIP solver is used:
+
+| Problem type | CPLEX | Gurobi | Cbc | HiGHS |
+| --- | --- | --- | --- | --- |
+| Convex MIQP | ✓* | ✓* | ✓ | ✓ |
+| Convex MIQCQP | ✓* | ✓* | ✓ | ✓ |
+| Convex MINLP | ✓ | ✓ | ✓ | ✓ |
+| Nonconvex MIQP | ✓* | ✓* | ? | ? |
+| Nonconvex MIQCQP | ? | ✓* | ? | ? |
+| Nonconvex MINLP | ? | ? | ? | ? |
+
+✓ = solved to global optimality, ? = no guarantee that a solution is found, * = the problem can be handled directly by the subsolver (native quadratic/bilinear support).
 
 ## Primal bound using heuristics
 
@@ -43,11 +57,11 @@ When the relative or absolute difference (objective gap) between the primal and 
 
 ## Compilation instructions
 
-Instructions for compiling SHOT is available at the [project website](https://shotsolver.dev/shot/about-shot/compiling).
+Instructions for compiling SHOT are available in [docs/CompilationInstructions.md](docs/CompilationInstructions.md), and also at the [project website](https://shotsolver.dev/shot/about-shot/compiling).
 
 ## Solver manual
 
-Instructions for how to use SHOT, e.g. call it from different environments, are provided on the [project website](https://shotsolver.dev/shot/using-shot/getting-started).
+Instructions for how to use SHOT, e.g. call it from different environments, are provided in [docs/CommandLineUsage.md](docs/CommandLineUsage.md) and on the [project website](https://shotsolver.dev/shot/using-shot/getting-started). For troubleshooting solver behavior, see [docs/DebuggingSHOT.md](docs/DebuggingSHOT.md).
 
 ## Publications
 
@@ -60,3 +74,7 @@ Lundell, A. Kronqvist, J. and Westerlund, T. *The supporting hyperplane optimiza
 Lundell, A. and Kronqvist, J., *Polyhedral approximation strategies for nonconvex mixed-integer nonlinear programming in SHOT*. Journal of Global Optimization (2021). https://doi.org/10.1007/s10898-021-01006-1
 
 Lundell, A. and Kronqvist, J. *On Solving Nonconvex MINLP Problems with SHOT* (2019). In: Le Thi H., Le H., Pham Dinh T. (editors) Optimization of Complex Systems: Theory, Models, Algorithms and Applications. WCGO 2019. Advances in Intelligent Systems and Computing, vol 991. Springer, Cham.
+
+**Reformulation of nonseparable convex quadratic expressions (preprint):**
+
+Blomqvist, J., Tamm, E., Kronqvist, J. and Lundell, A. *Decomposition-Based Reformulation of Nonseparable Quadratic Expressions in Convex MINLP*. Optimization Online (2026). https://optimization-online.org/?p=34367
