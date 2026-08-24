@@ -400,12 +400,16 @@ bool Solver::setProblem(std::string fileName)
         if(env->reformulatedProblem->objectiveFunction->properties.isMinimize)
         {
             env->results->setDualBound(SHOT_DBL_MIN);
-            env->results->setPrimalBound(SHOT_DBL_MAX);
+
+            if(!env->results->hasPrimalSolution())
+                env->results->setPrimalBound(SHOT_DBL_MAX);
         }
         else
         {
             env->results->setDualBound(SHOT_DBL_MAX);
-            env->results->setPrimalBound(SHOT_DBL_MIN);
+
+            if(!env->results->hasPrimalSolution())
+                env->results->setPrimalBound(SHOT_DBL_MIN);
         }
 
         if(env->settings->getSetting<bool>("Output.Debug.Enable"))
@@ -522,12 +526,16 @@ bool Solver::setProblem(
     if(env->reformulatedProblem->objectiveFunction->properties.isMinimize)
     {
         env->results->setDualBound(SHOT_DBL_MIN);
-        env->results->setPrimalBound(SHOT_DBL_MAX);
+
+        if(!env->results->hasPrimalSolution())
+            env->results->setPrimalBound(SHOT_DBL_MAX);
     }
     else
     {
         env->results->setDualBound(SHOT_DBL_MAX);
-        env->results->setPrimalBound(SHOT_DBL_MIN);
+
+        if(!env->results->hasPrimalSolution())
+            env->results->setPrimalBound(SHOT_DBL_MIN);
     }
 
     setConvexityBasedSettings();
