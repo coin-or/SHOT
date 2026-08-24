@@ -1326,7 +1326,10 @@ void MIPSolverCbc::deleteMIPStarts() { MIPStart.clear(); }
 
 bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
 {
-    assert(integerCut.variableValues.size() == (size_t)env->reformulatedProblem->properties.numberOfDiscreteVariables);
+    // Not necessarily all discrete variables in the reformulated problem: e.g. an NLP-sourced cut built against the
+    // original problem (Primal.FixedInteger.SourceProblem = OriginalProblem, the default) only lists the original
+    // problem's discrete variables, while reformulation may have added auxiliary discrete variables.
+    assert(integerCut.variableValues.size() == integerCut.variableIndexes.size());
     bool allowIntegerCutRepair = env->settings->getSetting<bool>("Dual.MIP.InfeasibilityRepair.IntegerCuts");
 
     int numConstraintsBefore = osiInterface->getNumRows();
@@ -1349,12 +1352,9 @@ bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
             size_t index = 0;
             CoinPackedVector cut;
 
-            for(auto& VAR : env->reformulatedProblem->allVariables)
+            for(auto& I : integerCut.variableIndexes)
             {
-                if(!(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer
-                       || VAR->properties.type == E_VariableType::Semiinteger))
-                    continue;
-
+                auto VAR = env->reformulatedProblem->getVariable(I);
                 int variableValue = integerCut.variableValues[index];
 
                 if(variableValue == 1.0)
