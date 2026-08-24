@@ -1245,9 +1245,22 @@ int MIPSolverHighs::getNumberOfSolutions()
     }
     else
     {
-        // LP problem
-        numSols = 1;
-        // TODO better way?
+        // LP problem: col_value only holds a meaningful point when HiGHS actually found one. For
+        // Infeasible/Unbounded/Error, it may hold stale data from a previous solve.
+        switch(getSolutionStatus())
+        {
+        case E_ProblemSolutionStatus::Optimal:
+        case E_ProblemSolutionStatus::Feasible:
+        case E_ProblemSolutionStatus::TimeLimit:
+        case E_ProblemSolutionStatus::IterationLimit:
+        case E_ProblemSolutionStatus::SolutionLimit:
+        case E_ProblemSolutionStatus::CutOff:
+            numSols = 1;
+            break;
+        default:
+            numSols = 0;
+            break;
+        }
     }
 
     return (numSols);
