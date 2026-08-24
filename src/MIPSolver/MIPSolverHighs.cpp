@@ -1272,16 +1272,19 @@ void MIPSolverHighs::updateVariableBound(int varIndex, double lowerBound, double
 {
     variableLowerBounds[varIndex] = lowerBound;
     variableUpperBounds[varIndex] = upperBound;
+    highsInstance.changeColBounds(varIndex, lowerBound, upperBound);
 }
 
 void MIPSolverHighs::updateVariableLowerBound(int varIndex, double lowerBound)
 {
     variableLowerBounds[varIndex] = lowerBound;
+    highsInstance.changeColBounds(varIndex, lowerBound, variableUpperBounds[varIndex]);
 }
 
 void MIPSolverHighs::updateVariableUpperBound(int varIndex, double upperBound)
 {
     variableUpperBounds[varIndex] = upperBound;
+    highsInstance.changeColBounds(varIndex, variableLowerBounds[varIndex], upperBound);
 }
 
 PairDouble MIPSolverHighs::getCurrentVariableBounds(int varIndex)
