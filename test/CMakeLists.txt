@@ -248,8 +248,8 @@ target_link_libraries(${TEST_EXE_NAME} ${Boost_LIBRARIES})
 # Adds each test
 foreach(cpptest ${cpptests})
   foreach(part ${${cpptest}_parts})
-    add_test(${cpptest}_${part}
-             ${TEST_PATH}/test_runner
+    add_test(NAME ${cpptest}_${part}
+             COMMAND $<TARGET_FILE:${TEST_EXE_NAME}>
              ${cpptest}test
              ${part})
     set_tests_properties(${cpptest}_${part}
