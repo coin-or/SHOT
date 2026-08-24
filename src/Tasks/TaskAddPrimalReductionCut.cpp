@@ -41,6 +41,17 @@ void TaskAddPrimalReductionCut::run()
         return;
     }
 
+    // isTerminated() only covers user/callback abort, not a time/iteration/gap limit having been reached, since those
+    // checks redirect to FinalizeSolution without calling env->tasks->terminate(). This task is also run as the last
+    // step of FinalizeSolution's own sequence (see SolutionStrategyMultiTree), so without this check it would jump
+    // back to "InitIter2" and resume solving whenever a cut still looked useful, silently overriding whatever
+    // criterion had just decided to stop.
+    if(env->results->terminationReason != E_TerminationReason::None)
+    {
+        env->tasks->setNextTask(taskIDIfFalse);
+        return;
+    }
+
     if(!env->results->hasPrimalSolution())
     {
         env->tasks->setNextTask(taskIDIfFalse);
