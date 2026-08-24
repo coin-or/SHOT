@@ -40,7 +40,7 @@ public:
 
     void addPrimalSolution(PrimalSolution solution);
     double getPrimalBound();
-    void setPrimalBound(double value);
+    void setPrimalBound(double value, bool resetStagnationCounters = true);
 
     std::vector<DualSolution> dualSolutions;
     void addDualSolution(DualSolution solution);

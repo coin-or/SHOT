@@ -16,7 +16,8 @@ namespace SHOT
 class TaskAddPrimalReductionCut : public TaskBase
 {
 public:
-    TaskAddPrimalReductionCut(EnvironmentPtr envPtr, std::string taskIDTrue, std::string taskIDFalse);
+    TaskAddPrimalReductionCut(
+        EnvironmentPtr envPtr, std::string taskIDTrue, std::string taskIDFalse, bool isFinalAttempt = false);
     ~TaskAddPrimalReductionCut() override;
 
     void run() override;
@@ -26,6 +27,8 @@ public:
 private:
     std::string taskIDIfTrue;
     std::string taskIDIfFalse;
+
+    bool isFinalAttempt;
     int totalReductionCutUpdates = 0;
     double currentLowerBoundForReductionCut = SHOT_DBL_INF;
 };

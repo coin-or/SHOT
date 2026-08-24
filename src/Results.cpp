@@ -93,10 +93,13 @@ void Results::addPrimalSolution(PrimalSolution solution)
             < std::max({ primalsol.maxDevatingConstraintLinear.value, primalsol.maxDevatingConstraintQuadratic.value,
                 primalsol.maxDevatingConstraintNonlinear.value })))
     {
-        // Have a solution which is similar to the best known, but with smaller constraint error
+        // Have a solution which is similar to the best known, but with smaller constraint error. This is not a
+        // genuine objective improvement, so it must not reset the primal-stagnation / reduction-cut-without-effect
+        // counters, or repeatedly finding near-duplicate points with shrinking numerical error would perpetually
+        // reset those counters and prevent the stagnation-based termination criteria from ever triggering.
         this->primalSolutions.back() = solution;
         this->primalSolution = solution.point;
-        this->setPrimalBound(solution.objValue);
+        this->setPrimalBound(solution.objValue, false);
 
         env->output->outputDebug(fmt::format("        New (currently best) primal solution {} from {} found.",
             solution.objValue, solution.sourceDescription));
@@ -1483,7 +1486,7 @@ double Results::getPrimalBound()
         return (SHOT_DBL_MIN);
 }
 
-void Results::setPrimalBound(double value)
+void Results::setPrimalBound(double value, bool resetStagnationCounters)
 {
     this->currentPrimalBound = value;
 
@@ -1522,10 +1525,13 @@ void Results::setPrimalBound(double value)
         }
     }
 
-    env->solutionStatistics.numberOfIterationsWithPrimalStagnation = 0;
-    env->solutionStatistics.lastIterationWithSignificantPrimalUpdate = getNumberOfIterations() - 1;
-    env->solutionStatistics.numberOfPrimalReductionCutsUpdatesWithoutEffect = 0;
-    env->solutionStatistics.numberOfDualRepairsSinceLastPrimalUpdate = 0;
+    if(resetStagnationCounters)
+    {
+        env->solutionStatistics.numberOfIterationsWithPrimalStagnation = 0;
+        env->solutionStatistics.lastIterationWithSignificantPrimalUpdate = getNumberOfIterations() - 1;
+        env->solutionStatistics.numberOfPrimalReductionCutsUpdatesWithoutEffect = 0;
+        env->solutionStatistics.numberOfDualRepairsSinceLastPrimalUpdate = 0;
+    }
 }
 
 double Results::getCurrentDualBound() { return (this->currentDualBound); }

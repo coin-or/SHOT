@@ -26,8 +26,8 @@ namespace SHOT
 {
 
 TaskAddPrimalReductionCut::TaskAddPrimalReductionCut(
-    EnvironmentPtr envPtr, std::string taskIDTrue, std::string taskIDFalse)
-    : TaskBase(envPtr), taskIDIfTrue(taskIDTrue), taskIDIfFalse(taskIDFalse)
+    EnvironmentPtr envPtr, std::string taskIDTrue, std::string taskIDFalse, bool isFinalAttempt)
+    : TaskBase(envPtr), taskIDIfTrue(taskIDTrue), taskIDIfFalse(taskIDFalse), isFinalAttempt(isFinalAttempt)
 {
 }
 
@@ -41,12 +41,15 @@ void TaskAddPrimalReductionCut::run()
         return;
     }
 
-    // isTerminated() only covers user/callback abort, not a time/iteration/gap limit having been reached, since those
-    // checks redirect to FinalizeSolution without calling env->tasks->terminate(). This task is also run as the last
-    // step of FinalizeSolution's own sequence (see SolutionStrategyMultiTree), so without this check it would jump
-    // back to "InitIter2" and resume solving whenever a cut still looked useful, silently overriding whatever
-    // criterion had just decided to stop.
-    if(env->results->terminationReason != E_TerminationReason::None)
+    // isTerminated() only covers user/callback abort. This instance runs as the last step of FinalizeSolution's own
+    // sequence (see SolutionStrategyMultiTree) as a final attempt to reduce the cutoff once more before giving up;
+    // it must not do so if FinalizeSolution was reached because of a time/iteration/gap limit rather than because
+    // this same reduction-cut mechanism ran out of budget, or it would jump back to "InitIter2" and resume solving,
+    // silently overriding whatever criterion had just decided to stop. The main-loop instance (reached via
+    // TaskCheckPrimalStagnation's "AddObjectiveCut" redirect) legitimately runs with terminationReason already set
+    // to ObjectiveStagnation as part of its own normal "try one more reduction cut" signaling, so this check must
+    // not apply there.
+    if(isFinalAttempt && env->results->terminationReason != E_TerminationReason::None)
     {
         env->tasks->setNextTask(taskIDIfFalse);
         return;
