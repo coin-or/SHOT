@@ -84,6 +84,7 @@ set(ARGH_DIR "ThirdParty/argh")
 set(BOOST_DIR "ThirdParty/boost")
 set(CPPAD_DIR "ThirdParty/CppAD")
 set(EIGEN_DIR "ThirdParty/eigen")
+set(HIGHS_DIR "ThirdParty/HiGHS")
 set(MCPP_DIR "ThirdParty/mc++")
 set(PYBIND11_DIR "ThirdParty/pybind11")
 set(SPDLOG_DIR "ThirdParty/spdlog")
@@ -317,20 +318,19 @@ endif(HAS_GUROBI)
 
 # HiGHS
 
-# Case 1: Use FetchContent to download HiGHS
+# Case 1: Use the HiGHS submodule
 if(HAS_HIGHS AND NOT USE_EXTERNAL_HIGHS)
+    if(NOT EXISTS "${PROJECT_SOURCE_DIR}/${HIGHS_DIR}/CMakeLists.txt")
+        message(FATAL_ERROR "HiGHS submodule not found in ${HIGHS_DIR}. "
+                             "Run 'git submodule update --init --recursive' to fetch it, "
+                             "or configure with -DUSE_EXTERNAL_HIGHS=on to use a precompiled HiGHS instead.")
+    endif()
+
     add_definitions(-DHAS_HIGHS)
     set(DUAL_SOURCES ${DUAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverHighs.cpp")
     set(DUAL_HEADERS ${DUAL_HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverHighs.h")
-    
-    include(FetchContent)
-    FetchContent_Declare(
-        highs
-        GIT_REPOSITORY "https://github.com/ERGO-Code/HiGHS.git"
-        GIT_TAG        "latest"
-    )
 
-    FetchContent_MakeAvailable(highs)
+    add_subdirectory(${HIGHS_DIR})
 
     # Disable HiGHS assertions even in debug builds
     # target_compile_definitions(highs PRIVATE NDEBUG)
