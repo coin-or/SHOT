@@ -864,6 +864,14 @@ void Problem::updateFactorableFunctions()
     if(factorableFunctions.size() > 0)
     {
         ADFunctions.Dependent(factorableFunctionVariables, factorableFunctions);
+
+        // Evaluating a nonlinear expression at a point outside its domain (e.g. division by a variable that is
+        // zero, or the gradient of a Euclidean-norm term at the origin) is expected to happen during the search
+        // and produces NaN values, not a programming error. CppAD's debug-build NaN check (compiled out entirely
+        // in release builds, see check_for_nan_ in forward.hpp/subgraph_reverse.hpp) would otherwise throw and
+        // crash. Disabling it lets NaN flow through to the callers, which already check for it and discard the
+        // resulting candidate point/cut instead of using it.
+        ADFunctions.check_for_nan(false);
     }
 
     CppAD::AD<double>::abort_recording();
