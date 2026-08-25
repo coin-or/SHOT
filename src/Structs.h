@@ -316,9 +316,9 @@ struct SolutionStatistics
 
     int getNumberOfTotalDualProblems()
     {
-        return (numberOfProblemsLP + numberOfProblemsQP + numberOfProblemsFeasibleMILP + numberOfProblemsOptimalMILP
-            + numberOfProblemsFeasibleMIQP + numberOfProblemsOptimalMIQP + numberOfProblemsOptimalMIQCQP
-            + numberOfProblemsFeasibleMIQCQP);
+        return (numberOfProblemsLP + numberOfProblemsQP + numberOfProblemsQCQP + numberOfProblemsFeasibleMILP
+            + numberOfProblemsOptimalMILP + numberOfProblemsFeasibleMIQP + numberOfProblemsOptimalMIQP
+            + numberOfProblemsOptimalMIQCQP + numberOfProblemsFeasibleMIQCQP);
     };
 };
 

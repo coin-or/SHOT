@@ -30,7 +30,7 @@ TaskCheckPrimalStagnation::~TaskCheckPrimalStagnation() = default;
 
 void TaskCheckPrimalStagnation::run()
 {
-    if(env->solutionStatistics.numberOfProblemsFeasibleMILP + env->solutionStatistics.numberOfProblemsOptimalMILP
+    if(env->solutionStatistics.getNumberOfTotalDualProblems()
         <= env->settings->getSetting<int>("Termination.PrimalStagnation.IterationLimit"))
     {
         env->tasks->setNextTask(taskIDIfFalse);
