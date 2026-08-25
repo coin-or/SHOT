@@ -324,6 +324,15 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem)
         return (E_ProblemCreationStatus::CapabilityProblem);
     }
 #endif
+
+#if GEVAPIVERSION >= 10
+   if( gevGetIntOpt(modelingEnvironment, gevRequestMarginals) == 2 )
+   {
+      gevLogStat(modelingEnvironment, "Capability error: SHOT does not provide dual solutions, but requestMarginals has been set to 2.");
+      return (E_ProblemCreationStatus::CapabilityProblem);
+   }
+#endif
+
     try
     {
         gmoNameInput(modelingObject, buffer);
