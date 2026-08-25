@@ -183,8 +183,8 @@ bool MIPSolverCbc::addLinearTermToObjective(double coefficient, int variableInde
 bool MIPSolverCbc::addQuadraticTermToObjective([[maybe_unused]] double coefficient,
     [[maybe_unused]] int firstVariableIndex, [[maybe_unused]] int secondVariableIndex)
 {
-    // Not implemented
-    return (false);
+    // TODO: Not implemented
+    throw OperationNotImplementedException("Quadratic objective functions not yet implemented in Cbc interface.");
 }
 
 bool MIPSolverCbc::finalizeObjective(bool isMinimize, double constant)
@@ -247,8 +247,8 @@ bool MIPSolverCbc::addLinearTermToConstraint(double coefficient, int variableInd
 bool MIPSolverCbc::addQuadraticTermToConstraint([[maybe_unused]] double coefficient,
     [[maybe_unused]] int firstVariableIndex, [[maybe_unused]] int secondVariableIndex)
 {
-    // Not implemented
-    return (false);
+    // TODO: Not implemented
+    throw OperationNotImplementedException("Quadratic constraints not yet implemented in Cbc interface.");
 }
 
 bool MIPSolverCbc::finalizeConstraint(std::string name, double valueLHS, double valueRHS, double constant)

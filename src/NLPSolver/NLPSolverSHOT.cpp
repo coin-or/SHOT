@@ -296,7 +296,13 @@ E_NLPSolutionStatus NLPSolverSHOT::solveProblemInstance()
 
     auto terminationReason = solver->getEnvironment()->results->terminationReason;
 
-    if(terminationReason == E_TerminationReason::AbsoluteGap || terminationReason == E_TerminationReason::RelativeGap)
+    // A gap-tolerance-based termination does not by itself guarantee a primal solution exists: both the dual and
+    // primal bounds default to the same "unset" sentinel value when neither has been established, which can
+    // trivially satisfy an absolute/relative gap tolerance of (near) zero. Without this check, callers would be
+    // told the nested solve was "Optimal" and then get an empty solution point from getSolution().
+    if(solver->hasPrimalSolution()
+        && (terminationReason == E_TerminationReason::AbsoluteGap
+            || terminationReason == E_TerminationReason::RelativeGap))
         status = E_NLPSolutionStatus::Optimal;
     else if(solver->hasPrimalSolution())
         status = E_NLPSolutionStatus::Feasible;
