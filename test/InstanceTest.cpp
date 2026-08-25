@@ -19,6 +19,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include <cmath>
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -106,8 +107,36 @@ static bool isFormatSupported(Solver& solver, const std::string& extension)
     return (extension == ".osil" || extension == ".xml");
 }
 
+static std::string convexityToString(E_ProblemConvexity convexity)
+{
+    switch(convexity)
+    {
+    case E_ProblemConvexity::Convex:
+        return "convex";
+    case E_ProblemConvexity::Nonconvex:
+        return "nonconvex";
+    default:
+        return "convexity not set";
+    }
+}
+
+static std::string formatBoundValue(double value)
+{
+    return (std::isnan(value) || std::abs(value) >= 1e100) ? "n/a" : fmt::format("{:.6g}", value);
+}
+
+// Formats the [primal, dual] bound obtained so far, so it can be checked against the expected objective by eye.
+static std::string formatBounds(Solver& solver)
+{
+    double primal = solver.hasPrimalSolution() ? solver.getPrimalBound() : NAN;
+    double dual = solver.getGlobalDualBound();
+    return fmt::format("bound: [{}, {}]", formatBoundValue(primal), formatBoundValue(dual));
+}
+
+// detailOut is filled with exactly the text shown after "<file>: " in the per-instance console line, so the
+// final Warned/Failed summary can reuse it verbatim and show the same information as the individual run.
 static E_InstanceResult solveInstance(const InstanceEntry& entry, const std::string& filepath, ES_MIPSolver mipSolver,
-    ES_PrimalNLPSolver nlpSolver, bool verbose, const std::string& solverDesc)
+    ES_PrimalNLPSolver nlpSolver, bool verbose, const std::string& solverDesc, std::string& detailOut)
 {
     constexpr double tolerance = 1e-2;
     constexpr double timeLimit = 10.0;
@@ -122,25 +151,48 @@ static E_InstanceResult solveInstance(const InstanceEntry& entry, const std::str
     solver->updateSetting("Primal.FixedInteger.Solver", static_cast<int>(nlpSolver));
     solver->updateSetting("Termination.TimeLimit", timeLimit);
 
+    std::string convexityDesc = "convexity not set";
+    std::string boundsDesc = "bound: [n/a, n/a]";
+
     try
     {
         if(!solver->setProblem(filepath))
         {
-            std::cout << fmt::format("  [WARN] {}: failed to load\n", entry.file);
+            detailOut = "failed to load";
+            std::cout << fmt::format("  [WARN] {}: {}\n", entry.file, detailOut);
             return E_InstanceResult::WarnNoSolution;
         }
+
+        convexityDesc = convexityToString(solver->getReformulatedProblem()->properties.convexity);
+
+        solver->outputProblemInstanceReport();
+        solver->outputOptionsReport();
 
         solver->solveProblem();
     }
     catch(const std::exception& ex)
     {
         double elapsed = solver->getEnvironment()->timing->getElapsedTime("Total");
-        std::cout << fmt::format("  [FAIL] {}: exception: {} ({:.1f}s)\n", entry.file, ex.what(), elapsed);
+
+        try
+        {
+            boundsDesc = formatBounds(*solver);
+        }
+        catch(...)
+        {
+        }
+
+        detailOut = fmt::format("exception: {} ({}, {}, {:.1f}s)", ex.what(), convexityDesc, boundsDesc, elapsed);
+        std::cout << fmt::format("  [FAIL] {}: {}\n", entry.file, detailOut);
         return E_InstanceResult::FailCrash;
     }
 
+    solver->outputSolutionReport();
+
     double elapsed = solver->getEnvironment()->timing->getElapsedTime("Total");
     auto status = solver->getModelReturnStatus();
+
+    boundsDesc = formatBounds(*solver);
 
     if(entry.isInfeasible)
     {
@@ -148,25 +200,28 @@ static E_InstanceResult solveInstance(const InstanceEntry& entry, const std::str
             = (status == E_ModelReturnStatus::InfeasibleGlobal || status == E_ModelReturnStatus::InfeasibleLocal);
         if(confirmed)
         {
-            std::cout << fmt::format("  [PASS] {}: infeasible confirmed ({:.1f}s)\n", entry.file, elapsed);
+            detailOut = fmt::format("infeasible confirmed ({}, {:.1f}s)", convexityDesc, elapsed);
+            std::cout << fmt::format("  [PASS] {}: {}\n", entry.file, detailOut);
             return E_InstanceResult::Pass;
         }
         else
         {
-            std::cout << fmt::format("  [WARN] {}: expected infeasible, got status {} ({:.1f}s)\n", entry.file,
-                static_cast<int>(status), elapsed);
+            detailOut = fmt::format("expected infeasible, got status {} ({}, {}, {:.1f}s)",
+                static_cast<int>(status), convexityDesc, boundsDesc, elapsed);
+            std::cout << fmt::format("  [WARN] {}: {}\n", entry.file, detailOut);
             return E_InstanceResult::WarnFeasibility;
         }
     }
 
     if(!solver->hasPrimalSolution())
     {
-        std::cout << fmt::format("  [WARN] {}: no primal solution ({:.1f}s)\n", entry.file, elapsed);
+        detailOut = fmt::format("no primal solution ({}, {}, {:.1f}s)", convexityDesc, boundsDesc, elapsed);
+        std::cout << fmt::format("  [WARN] {}: {}\n", entry.file, detailOut);
         return E_InstanceResult::WarnNoSolution;
     }
 
     double primal = solver->getPrimalBound();
-    double dual = solver->getCurrentDualBound();
+    double dual = solver->getGlobalDualBound();
     double obj = entry.expectedObjective;
 
     bool isMin = solver->getOriginalProblem()->objectiveFunction->properties.isMinimize;
@@ -175,14 +230,16 @@ static E_InstanceResult solveInstance(const InstanceEntry& entry, const std::str
 
     if(withinBounds)
     {
-        std::cout << fmt::format(
-            "  [PASS] {}: objective = {:.6g} (expected {:.6g}), {:.1f}s\n", entry.file, primal, obj, elapsed);
+        detailOut = fmt::format(
+            "objective = {:.6g} (expected {:.6g}), {}, {}, {:.1f}s", primal, obj, convexityDesc, boundsDesc, elapsed);
+        std::cout << fmt::format("  [PASS] {}: {}\n", entry.file, detailOut);
         return E_InstanceResult::Pass;
     }
     else
     {
-        std::cout << fmt::format("  [WARN] {}: primal = {:.6g}, dual = {:.6g}, expected {:.6g}, {:.1f}s\n", entry.file,
-            primal, dual, obj, elapsed);
+        detailOut = fmt::format("primal = {:.6g}, dual = {:.6g}, expected {:.6g}, {}, {}, {:.1f}s", primal, dual, obj,
+            convexityDesc, boundsDesc, elapsed);
+        std::cout << fmt::format("  [WARN] {}: {}\n", entry.file, detailOut);
         return E_InstanceResult::WarnObjective;
     }
 }
@@ -237,7 +294,8 @@ static bool runInstanceTests(
                 continue;
             }
 
-            auto result = solveInstance(entry, filepath, mipSolver, nlpSolver, verbose, solverDesc);
+            std::string detail;
+            auto result = solveInstance(entry, filepath, mipSolver, nlpSolver, verbose, solverDesc, detail);
 
             switch(result)
             {
@@ -246,26 +304,20 @@ static bool runInstanceTests(
                 break;
             case E_InstanceResult::FailCrash:
                 fail++;
-                failList.emplace_back(entry.file, "crash/exception");
+                failList.emplace_back(entry.file, detail);
                 break;
             case E_InstanceResult::WarnObjective:
-                warn++;
-                warnList.emplace_back(entry.file, "objective mismatch");
-                break;
             case E_InstanceResult::WarnNoSolution:
-                warn++;
-                warnList.emplace_back(entry.file, "no primal solution");
-                break;
             case E_InstanceResult::WarnFeasibility:
                 warn++;
-                warnList.emplace_back(entry.file, "infeasibility not confirmed");
+                warnList.emplace_back(entry.file, detail);
                 break;
             case E_InstanceResult::Skipped:
                 skip++;
                 break;
             default:
                 warn++;
-                warnList.emplace_back(entry.file, "unknown");
+                warnList.emplace_back(entry.file, detail);
                 break;
             }
         }
@@ -276,15 +328,15 @@ static bool runInstanceTests(
     if(!warnList.empty())
     {
         std::cout << "\n  Warned:\n";
-        for(const auto& [f, reason] : warnList)
-            std::cout << fmt::format("    - {} ({})", f, reason) << '\n';
+        for(const auto& [f, detail] : warnList)
+            std::cout << fmt::format("    - {}: {}", f, detail) << '\n';
     }
 
     if(!failList.empty())
     {
         std::cout << "\n  Failed:\n";
-        for(const auto& [f, reason] : failList)
-            std::cout << fmt::format("    - {} ({})", f, reason) << '\n';
+        for(const auto& [f, detail] : failList)
+            std::cout << fmt::format("    - {}: {}", f, detail) << '\n';
     }
 
     return fail == 0;

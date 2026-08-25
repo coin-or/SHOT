@@ -1723,7 +1723,7 @@ void Solver::initializeSettings()
         "Min absolute difference between max nonlinear constraint errors in subsequent iterations for termination", 0,
         SHOT_DBL_MAX);
 
-    env->settings->createSetting("Termination.DualStagnation.IterationLimit", SHOT_INT_MAX,
+    env->settings->createSetting("Termination.DualStagnation.IterationLimit", 1000,
         "Max number of iterations without significant dual objective value improvement", 0, SHOT_INT_MAX);
 
     env->settings->createSetting("Termination.PrimalStagnation.IterationLimit", 50,
@@ -2143,6 +2143,8 @@ void Solver::setConvexityBasedSettings()
 VectorString Solver::getSettingIdentifiers(E_SettingType type) { return (env->settings->getSettingIdentifiers(type)); }
 
 double Solver::getCurrentDualBound() { return (env->results->getCurrentDualBound()); }
+
+double Solver::getGlobalDualBound() { return (env->results->getGlobalDualBound()); }
 
 double Solver::getPrimalBound() { return (env->results->getPrimalBound()); }
 
