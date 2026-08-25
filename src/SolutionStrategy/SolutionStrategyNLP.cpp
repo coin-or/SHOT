@@ -169,6 +169,10 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr)
     if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex
         && env->settings->getSetting<bool>("Dual.ReductionCut.Use"))
     {
+        auto tCheckMaxNumberOfObjectiveCuts
+            = std::make_shared<TaskCheckMaxNumberOfPrimalReductionCuts>(env, "FinalizeSolution");
+        env->tasks->addTask(tCheckMaxNumberOfObjectiveCuts, "CheckMaxObjectiveCuts");
+
         auto tCheckPrimalStag = std::make_shared<TaskCheckPrimalStagnation>(env, "AddObjectiveCut", "CheckDualStag");
         env->tasks->addTask(tCheckPrimalStag, "CheckPrimalStag");
 
