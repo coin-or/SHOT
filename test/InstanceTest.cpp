@@ -110,7 +110,7 @@ static E_InstanceResult solveInstance(const InstanceEntry& entry, const std::str
     ES_PrimalNLPSolver nlpSolver, bool verbose, const std::string& solverDesc)
 {
     constexpr double tolerance = 1e-2;
-    constexpr double timeLimit = 30.0;
+    constexpr double timeLimit = 10.0;
 
     std::cout << fmt::format("  Solving {} [{}]...\n", entry.file, solverDesc);
     std::cout.flush();
@@ -336,6 +336,14 @@ int InstanceTest(int argc, char* argv[])
     case 6:
         std::cout << "Instance tests: Gurobi + SHOT (NLP)\n";
         passed = runInstanceTests(ES_MIPSolver::Gurobi, ES_PrimalNLPSolver::SHOT, verbose, "Gurobi + SHOT");
+        break;
+    case 7:
+        std::cout << "Instance tests: Cplex + SHOT (NLP)\n";
+        passed = runInstanceTests(ES_MIPSolver::Cplex, ES_PrimalNLPSolver::SHOT, verbose, "Cplex + SHOT");
+        break;
+    case 8:
+        std::cout << "Instance tests: Cbc + SHOT (NLP)\n";
+        passed = runInstanceTests(ES_MIPSolver::Cbc, ES_PrimalNLPSolver::SHOT, verbose, "Cbc + SHOT");
         break;
     default:
         std::cout << "Test #" << choice << " does not exist!\n";
