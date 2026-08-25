@@ -266,9 +266,10 @@ introduced, or reproduce a failure in isolation instead of debugging a full
   a summary with lists of warned/failed instances. The numeric part
   selects the MIP+NLP solver combination (`1`=HiGHS+Ipopt, `2`=Gurobi+Ipopt,
   `3`=Cplex+Ipopt, `4`=Cbc+Ipopt, `5`=HiGHS+SHOT-as-NLP,
-  `6`=Gurobi+SHOT-as-NLP — only the combinations matching what's actually
-  compiled in are registered). Add `-v` for verbose per-instance solver
-  output:
+  `6`=Gurobi+SHOT-as-NLP, `7`=Cplex+SHOT-as-NLP, `8`=Cbc+SHOT-as-NLP — this
+  is a fixed, hand-registered list in a `switch` statement, not every
+  theoretically valid pairing; see section 9 below). Add `-v` for verbose
+  per-instance solver output:
 
   ```bash
   ./test/test_runner Instancetest 1 -v
@@ -286,7 +287,135 @@ introduced, or reproduce a failure in isolation instead of debugging a full
   core solve algorithm, so they're more useful for API-layer bugs than
   solver-behavior ones.
 
-## 8. If this doc is stale
+## 8. Lessons from real debugging sessions
+
+These are specific, non-obvious traps encountered while actually chasing bugs
+in this codebase — add to this list as you find more.
+
+### Build hygiene
+
+- Rebuild every binary that exercises your change, not just `SHOT`.
+  `test_runner` statically links `libSHOTTasks.a`, `libSHOTDualStrategy.a`,
+  etc.; `make SHOT` alone does not relink it. A fix that "doesn't seem to
+  work" under `test_runner` may just be stale object code — after any
+  `src/` edit, run the default `make -j` target, or explicitly
+  `make SHOT test_runner`, rather than building only the one target you
+  think you need.
+
+### Settings pitfalls
+
+- An unrecognized `Key=Value` CLI argument (a typo, or a missing prefix
+  like `Dual.`) is silently dropped, not rejected — SHOT falls back to
+  that setting's default with no warning. Don't trust that a flag "took"
+  just because the run didn't error; confirm via the console header
+  (`Running HiGHS 1.15.1...`, `Dual strategy: ... solver: HiGHS`) or
+  `usedsettings.opt` that the solver/setting you intended is actually the
+  one in effect.
+
+### CppAD / numerical domain errors
+
+- A crash mentioning CppAD and "nan" (`forward.hpp`, `subgraph_reverse.hpp`)
+  is usually evaluating a nonlinear expression outside its domain (division
+  by a variable that is zero, the gradient of a Euclidean-norm term at the
+  origin, log of a negative number, etc.) — not a logic bug in SHOT's own
+  code. Before patching individual call sites, check `ADFun::check_for_nan()`:
+  the assertion that throws is wrapped in `#ifndef NDEBUG`, so it is
+  compiled out entirely in release builds, which already rely on NaN
+  flowing through silently to the several existing downstream NaN checks
+  (`NLPSolverCuttingPlaneMinimax.cpp`, `MIPSolverBase::createHyperplaneTerms`).
+  Calling `ADFunctions.check_for_nan(false)` once, in `Problem.cpp` right
+  after `Dependent()`, is usually the correct, general fix — not scattered
+  try/catch at every call site.
+
+### Exception-handling pitfalls specific to this codebase
+
+- Grep for `throw new` before assuming a `catch(const std::exception&)`
+  will actually catch a thrown `SHOT::Exception` subclass. Some throw sites
+  throw a heap-allocated *pointer* (`throw new X(...)`) instead of the
+  exception object — a pointer never matches `catch(const std::exception&)`,
+  so the exception propagates uncaught no matter how much catching you add
+  upstream. Fix the throw site itself (`throw X(...)`, no `new`) before
+  wrapping callers in try/catch.
+- A `false`/silent-failure return from a `bool`-returning setup function
+  (`setProblem()`, `createProblem()`, `selectStrategy()`) is very often
+  ignored by its caller several layers up (e.g. `TaskCreateMIPProblem::run()`
+  never checks `createProblem()`'s return value). `Solver::selectStrategy()`
+  itself has an internal try/catch that swallows initialization exceptions
+  and returns `false` rather than propagating them. So when a crash or
+  assert happens deep inside a *second* use of an object (e.g. `solveProblem()`
+  called well after construction, on an already-"successfully constructed"
+  solver), don't assume construction actually succeeded just because nothing
+  threw — walk backward through the chain of `bool` returns to find where a
+  failure was silently dropped.
+
+### Task-graph state (`SolutionStrategyMultiTree` and friends)
+
+- `TaskHandler` is a flat, mutable "next task" pointer — any task can call
+  `setNextTask()`, and fields like `Results::terminationReason` are not
+  exclusively a "we've decided to stop" signal: some tasks (e.g.
+  `TaskCheckPrimalStagnation`) reuse it as an internal marker for their own
+  retry logic while redirecting elsewhere in the loop, not to
+  `FinalizeSolution`. Before gating a task on a shared/global field like
+  `terminationReason` or `isTerminated()`, grep every place that sets *and*
+  reads it, not just the one call site of the bug you're chasing — an
+  overly broad guard can silently break a legitimate internal loop instead
+  of the one you meant to fix. If a task class is reused in two different
+  structural roles (e.g. main-loop vs. `FinalizeSolution`-embedded),
+  consider a constructor flag to scope the fix to the role that's actually
+  broken, the way `TaskAddPrimalReductionCut`'s `isFinalAttempt` does.
+
+### Nested/recursive solves (`NLPSolverSHOT`, `TaskPerformBoundTightening`)
+
+- Some code paths construct an entire second `Solver` internally
+  (`NLPSolverSHOT` for the SHOT-as-NLP primal heuristic,
+  `TaskPerformBoundTightening`'s `POASolver`). These deliberately call
+  `Problem::createCopy(..., copyAuxiliary=false)` and pass the *same*
+  problem object as both `problem` and `reformulatedProblem` to
+  `setProblem()`, which skips `TaskReformulateProblem` — this is
+  intentional, not an oversight: reformulating would construct entirely
+  new `Variable` objects, breaking the later `setVariableBounds()` /
+  `fixVariables()` calls these classes rely on to mutate the *same*
+  variables the nested solver actually solves against. "Just let it
+  reformulate" looks like the natural fix for a nested-solve bug but
+  silently breaks correctness (bounds mutated on a now-disconnected copy)
+  instead of crashing, which is a worse failure mode. Grep for
+  `setVariableBounds`/`fixVariables` calls on the same member before
+  changing how a nested solve is initialized.
+
+### Verification discipline
+
+- `InstanceTest`'s solver combinations are a fixed, hand-registered list in
+  a `switch` (`test/InstanceTest.cpp`) — not every theoretically valid
+  `Dual.MIP.Solver` × `Primal.FixedInteger.Solver` pairing is actually
+  tested. "All instance tests pass" only means the *registered* combos
+  pass; check the switch statement before trusting that a specific pairing
+  has ever been exercised. Adding an untested combo is a cheap, high-yield
+  way to find real bugs.
+- A fix that stops a crash is not the same as a fix that makes the instance
+  solve correctly — check both separately. `[WARN] no primal solution`, or
+  an objective far from the instance's expected value in `instances.json`,
+  after a crash fix usually means there's a second, often pre-existing,
+  issue; don't conflate "no longer crashes" with "now works."
+- Any change to shared, widely-reused numerical machinery (the
+  interior-point/cutting-plane search in `NLPSolverCuttingPlaneMinimax.cpp`,
+  the CppAD tape, anything touched by many call paths) needs a full
+  `InstanceTest` regression sweep across *all* registered combos, not just
+  the instance you're fixing — its blast radius is the whole suite. A
+  targeted change that "fixes" one instance can silently break others.
+
+### Fast, targeted crash diagnosis
+
+- Reach for `lldb -b -s <script>` early, not after several rounds of
+  `fprintf`/rebuild. A batch script with
+  `breakpoint set --func-regex <ExceptionClassName>` (for an uncaught
+  exception) or `breakpoint set --file X.cpp --line N` (for a specific
+  `assert`), followed by `run ...` and `bt`, gets a definitive, full-frame
+  stack trace in one pass — far faster than iterating on print statements
+  across multiple rebuild cycles. Note macOS has no `timeout` shell
+  command; use the Bash tool's own timeout parameter, `lldb -b` batch mode
+  (which exits on its own), or background the process and poll instead.
+
+## 9. If this doc is stale
 
 File names and which task writes them are derived from the source and can
 drift as SHOT evolves. If a described file is missing or looks different,
