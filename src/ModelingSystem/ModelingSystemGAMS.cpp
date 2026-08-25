@@ -718,6 +718,9 @@ void ModelingSystemGAMS::finalizeSolution()
 
     // set some more statistics, etc
     gmoSetHeadnTail(modelingObject, gmoTmipbest, r->getGlobalDualBound());
+#if GMOAPIVERSION >= 30
+    gmoSetHeadnTail(modelingObject, gmoTrelgap, r->getRelativeGlobalObjectiveGap());
+#endif
     gmoSetHeadnTail(modelingObject, gmoHiterused, r->getCurrentIteration()->iterationNumber);
     // TODO this seems to be 0: gmoSetHeadnTail(modelingObject, gmoHiterused,
     // env->solutionStatistics.numberOfIterations);
