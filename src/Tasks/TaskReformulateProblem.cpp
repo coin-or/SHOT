@@ -308,7 +308,8 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
         // Let's check if we can do an anti-epigraph reformulation. Only performed when the direct-objective-
         // function form is explicitly requested: Unchanged leaves an epigraph-shaped objective as given, and
         // EpigraphConstraint is exactly what this reformulation would undo.
-        if(epigraphStrategy == ES_ObjectiveEpigraphStrategy::ObjectiveFunction && sourceObjective->linearTerms.size() == 1)
+        if(epigraphStrategy == ES_ObjectiveEpigraphStrategy::ObjectiveFunction
+            && sourceObjective->linearTerms.size() == 1)
         {
             auto originalObjectiveVariable = sourceObjective->linearTerms.at(0)->variable;
             double originalObjectiveCoefficient = sourceObjective->linearTerms.at(0)->coefficient;
@@ -316,7 +317,7 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
             if(originalObjectiveVariable->properties.inNumberOfLinearTerms == 2 // Objective function and constraint
                 && (originalObjectiveVariable->properties.inQuadraticConstraints
                     || originalObjectiveVariable->properties
-                           .inNonlinearConstraints) // In quadratic or nonlinear constraint
+                        .inNonlinearConstraints) // In quadratic or nonlinear constraint
                 && (!originalObjectiveVariable->properties.inQuadraticTerms // Not in quadratic terms
                     && !originalObjectiveVariable->properties.inNonlinearExpression // Not in nonlinear expressions
                     && !originalObjectiveVariable->properties.inMonomialTerms // Not in monomial terms
@@ -593,10 +594,10 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
     {
         auto sourceObjective = std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->problem->objectiveFunction);
 
-        auto [tmpLinearTerms, tmpQuadraticTerms] = reformulateAndPartitionQuadraticSum(sourceObjective->quadraticTerms,
-            isSignReversed,
-            static_cast<ES_PartitionNonlinearSums>(
-                env->settings->getSetting<int>("Model.Reformulation.ObjectiveFunction.PartitionQuadraticTerms")));
+        auto [tmpLinearTerms, tmpQuadraticTerms]
+            = reformulateAndPartitionQuadraticSum(sourceObjective->quadraticTerms, isSignReversed,
+                static_cast<ES_PartitionNonlinearSums>(
+                    env->settings->getSetting<int>("Model.Reformulation.ObjectiveFunction.PartitionQuadraticTerms")));
 
         destinationLinearTerms.add(tmpLinearTerms);
         destinationQuadraticTerms.add(tmpQuadraticTerms);
@@ -787,8 +788,16 @@ void TaskReformulateProblem::createEpigraphConstraint()
         objectiveBound = Interval(-objVarBound, objVarBound);
     }
 
-    auto objectiveVariable = std::make_shared<AuxiliaryVariable>(
-        "shot_objvar", auxVariableCounter, E_VariableType::Real, objectiveBound.l(), objectiveBound.u());
+    bool isSignReversed = env->problem->objectiveFunction->properties.isMaximize;
+
+    // shot_objvar represents the objective value in the reformulated (always-minimize) sense, i.e. -f(x) when
+    // the original problem is Maximize. objectiveBound is f(x)'s own interval, so it must be negated and
+    // swapped for the sign-reversed case
+    Interval objectiveVariableBound
+        = isSignReversed ? Interval(-objectiveBound.u(), -objectiveBound.l()) : objectiveBound;
+
+    auto objectiveVariable = std::make_shared<AuxiliaryVariable>("shot_objvar", auxVariableCounter,
+        E_VariableType::Real, objectiveVariableBound.l(), objectiveVariableBound.u());
     auxVariableCounter++;
     objectiveVariable->properties.auxiliaryType = E_AuxiliaryVariableType::NonlinearObjectiveFunction;
     env->results->increaseAuxiliaryVariableCounter(E_AuxiliaryVariableType::NonlinearObjectiveFunction);
@@ -838,7 +847,6 @@ void TaskReformulateProblem::createEpigraphConstraint()
                   ->nonlinearExpression;
     }
 
-    bool isSignReversed = env->problem->objectiveFunction->properties.isMaximize;
     double signfactor = (env->problem->objectiveFunction->properties.isMinimize) ? 1.0 : -1.0;
 
     // Adding new linear objective function
@@ -1105,8 +1113,7 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
             copyNonlinearExpression(sourceConstraint->nonlinearExpression.get(), reformulatedProblem)));
 
         auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression,
-            tmpConstant]
-            = extractTermsAndConstant(reformulatedExpression, true, true, true, true);
+            tmpConstant] = extractTermsAndConstant(reformulatedExpression, true, true, true, true);
 
         if(tmpLinearTerms.size() > 0)
             destinationLinearTerms.add(tmpLinearTerms);
@@ -1723,7 +1730,8 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
 
             if((!reversedSigns && (convexity == E_Convexity::Convex))
                 || (reversedSigns && (convexity == E_Convexity::Concave)))
-            { }
+            {
+            }
             else if(T->isSquare && T->isBinary) // Square term b^2 -> b
             {
             }
@@ -1766,7 +1774,8 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
     bool allTermsConvex = quadraticTerms.checkAllForConvexityType(E_Convexity::Convex);
     bool allTermsConcave = quadraticTerms.checkAllForConvexityType(E_Convexity::Concave);
 
-    auto quadraticDecompositionMethod = (ES_QuadraticDecomposition)env->settings->getSetting<int>("Model.Reformulation.Quadratics.Decomposition.Method");
+    auto quadraticDecompositionMethod = (ES_QuadraticDecomposition)env->settings->getSetting<int>(
+        "Model.Reformulation.Quadratics.Decomposition.Method");
 
     if(quadraticDecompositionMethod != ES_QuadraticDecomposition::None
         && partitionStrategy <= ES_PartitionNonlinearSums::IfConvex && quadraticSumConvex
@@ -2246,7 +2255,8 @@ LinearTerms TaskReformulateProblem::doEigenvalueDecomposition(QuadraticTerms qua
     auto eigenValueTolerance
         = env->settings->getSetting<double>("Model.Reformulation.Quadratics.Decomposition.Tolerance");
 
-    auto quadraticDecompositionFormulation = (ES_QuadraticDecompositionFormulation)env->settings->getSetting<int>("Model.Reformulation.Quadratics.Decomposition.Formulation");
+    auto quadraticDecompositionFormulation = (ES_QuadraticDecompositionFormulation)env->settings->getSetting<int>(
+        "Model.Reformulation.Quadratics.Decomposition.Formulation");
 
     for(size_t i = 0; i < quadraticTerms.variableMap.size(); i++)
     {
@@ -2313,7 +2323,8 @@ LinearTerms TaskReformulateProblem::doLDLDecomposition(QuadraticTerms quadraticT
     auto eigenValueTolerance
         = env->settings->getSetting<double>("Model.Reformulation.Quadratics.Decomposition.Tolerance");
 
-    auto quadraticDecompositionFormulation = (ES_QuadraticDecompositionFormulation)env->settings->getSetting<int>("Model.Reformulation.Quadratics.Decomposition.Formulation");
+    auto quadraticDecompositionFormulation = (ES_QuadraticDecompositionFormulation)env->settings->getSetting<int>(
+        "Model.Reformulation.Quadratics.Decomposition.Formulation");
 
     for(size_t i = 0; i < quadraticTerms.variableMap.size(); i++)
     {
@@ -2581,8 +2592,7 @@ NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(st
         || (extractQuadraticTermsFromConvexExpressions && convexity == E_Convexity::Convex))
     {
         auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression,
-            tmpConstant]
-            = extractTermsAndConstant(source, false, false, true, false);
+            tmpConstant] = extractTermsAndConstant(source, false, false, true, false);
 
         if(tmpQuadraticTerms.size() > 0)
         {
@@ -2616,8 +2626,7 @@ NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(st
         || extractQuadraticTermsFromConvexExpressions)
     {
         auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression,
-            tmpConstant]
-            = extractTermsAndConstant(source, false, false, true, false);
+            tmpConstant] = extractTermsAndConstant(source, false, false, true, false);
 
         if(tmpQuadraticTerms.size() > 0)
         {

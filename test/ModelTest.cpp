@@ -3318,30 +3318,6 @@ static bool CheckSolvedObjective(
     return true;
 }
 
-// KNOWN ISSUE: a maximize quadratic objective represented as a native epigraph constraint (e.g. "maximize z
-// s.t. z <= -x^2+6x", turned into a sign-reversed minimize epigraph) converges to the wrong (suboptimal)
-// objective on Gurobi when the quadratic term is partitioned into an auxiliary variable, and on Cplex
-// regardless of partitioning. Confirmed solver/scenario-specific, not a general native-quadratics-epigraph
-// problem: ModelTestAntiEpigraphReformulation's pure-square-term epigraph case ("maximize z s.t. z <= -x^2")
-// solves correctly on every solver, and the non-epigraph ("direct objective function") form of this exact
-// -x^2+6x problem is also unaffected on every solver. Root cause not yet identified; logged here without
-// asserting so ctest stays green. Pass isKnownIssue=true only for the specific (solver, scenario) combinations
-// that have actually been observed to fail — never guess ahead of evidence.
-// (Deliberately not using CheckSolvedObjective/the word "FAILED" when isKnownIssue: ctest matches that literal
-// substring in test output as a failure regardless of exit code.)
-static bool CheckSolvedObjectiveOrKnownIssue(const std::shared_ptr<SHOT::Environment>& env, double expectedValue,
-    const std::string& description, bool isKnownIssue)
-{
-    if(!isKnownIssue)
-        return CheckSolvedObjective(env, expectedValue, description);
-
-    double objValue
-        = env->results->primalSolutions.size() > 0 ? env->results->primalSolutions[0].objValue : std::nan("");
-    std::cout << "  " << description << ": objective = " << objValue << " (expected " << expectedValue
-              << ") -- KNOWN ISSUE, not asserted, see comment above\n";
-    return true;
-}
-
 // Verifies that Model.Reformulation.ObjectiveFunction.EpigraphStrategy correctly controls whether a
 // nonlinear/quadratic objective is reformulated into an epigraph auxiliary-variable constraint, and that a
 // linear objective is left untouched either way. Also solves each variant and checks the objective against its
@@ -3456,12 +3432,8 @@ bool ModelTestObjectiveEpigraphStrategy()
                 passed = false;
             }
 
-            // KNOWN ISSUE (see CheckSolvedObjectiveOrKnownIssue comment): Cplex mishandles this maximize
-            // quadratic native epigraph constraint even without partitioning (the default here).
-            bool isKnownIssue = isMaximize && mipSolver == ES_MIPSolver::Cplex;
-
-            passed = CheckSolvedObjectiveOrKnownIssue(env, expected,
-                         "[" + solverName + "] quadratic " + dirName + " via epigraph constraint", isKnownIssue)
+            passed = CheckSolvedObjective(
+                         env, expected, "[" + solverName + "] quadratic " + dirName + " via epigraph constraint")
                 && passed;
         }
 
@@ -4226,12 +4198,8 @@ bool ModelTestObjectivePartitioningStrategy()
                 passed = false;
             }
 
-            // KNOWN ISSUE (see CheckSolvedObjectiveOrKnownIssue comment): both Gurobi and Cplex mishandle this
-            // maximize quadratic native epigraph constraint when its quadratic term is partitioned.
-            bool isKnownIssue = mipSolver == ES_MIPSolver::Gurobi || mipSolver == ES_MIPSolver::Cplex;
-
-            passed = CheckSolvedObjectiveOrKnownIssue(env, quadraticExpected,
-                         "[" + solverName + "] quadratic epigraph, partitioning forced", isKnownIssue)
+            passed = CheckSolvedObjective(
+                         env, quadraticExpected, "[" + solverName + "] quadratic epigraph, partitioning forced")
                 && passed;
         }
 
@@ -4250,11 +4218,8 @@ bool ModelTestObjectivePartitioningStrategy()
                 passed = false;
             }
 
-            // KNOWN ISSUE (see CheckSolvedObjectiveOrKnownIssue comment): Cplex mishandles this maximize
-            // quadratic native epigraph constraint even without partitioning.
-            passed = CheckSolvedObjectiveOrKnownIssue(env, quadraticExpected,
-                         "[" + solverName + "] quadratic epigraph, partitioning disabled",
-                         mipSolver == ES_MIPSolver::Cplex)
+            passed = CheckSolvedObjective(
+                         env, quadraticExpected, "[" + solverName + "] quadratic epigraph, partitioning disabled")
                 && passed;
         }
 
