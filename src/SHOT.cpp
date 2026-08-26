@@ -36,6 +36,7 @@ int main(int argc, char* argv[])
     auto env = solver.getEnvironment();
     bool useASL = false;
     bool headerPrinted = false;
+    VectorString rejectedOptions;
 
     argh::parser cmdl;
     cmdl.add_params({ "--opt", "--osol" });
@@ -369,7 +370,8 @@ int main(int argc, char* argv[])
         useASL = true;
 
         // We always want to write to where the problem is when called by ASL
-        solver.updateSetting("Output.OutputDirectory", static_cast<int>(ES_OutputDirectory::Problem), E_SettingPriority::UserAPI);
+        solver.updateSetting(
+            "Output.OutputDirectory", static_cast<int>(ES_OutputDirectory::Problem), E_SettingPriority::UserAPI);
     }
 #endif
 
@@ -413,29 +415,36 @@ int main(int argc, char* argv[])
     {
 #ifdef HAS_GAMS
         if(argValue == "gams")
-            solver.updateSetting("Primal.FixedInteger.Solver", static_cast<int>(ES_PrimalNLPSolver::GAMS), E_SettingPriority::UserAPI);
+            solver.updateSetting(
+                "Primal.FixedInteger.Solver", static_cast<int>(ES_PrimalNLPSolver::GAMS), E_SettingPriority::UserAPI);
 #endif
 #ifdef HAS_IPOPT
         if(argValue == "ipopt")
-            solver.updateSetting("Primal.FixedInteger.Solver", static_cast<int>(ES_PrimalNLPSolver::Ipopt), E_SettingPriority::UserAPI);
+            solver.updateSetting(
+                "Primal.FixedInteger.Solver", static_cast<int>(ES_PrimalNLPSolver::Ipopt), E_SettingPriority::UserAPI);
 #endif
         if(argValue == "shot")
-            solver.updateSetting("Primal.FixedInteger.Solver", static_cast<int>(ES_PrimalNLPSolver::SHOT), E_SettingPriority::UserAPI);
+            solver.updateSetting(
+                "Primal.FixedInteger.Solver", static_cast<int>(ES_PrimalNLPSolver::SHOT), E_SettingPriority::UserAPI);
     }
 
     if(cmdl("--tree") >> argValue)
     {
 #ifdef HAS_CPLEX
         if(argValue == "single")
-            solver.updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::SingleTree), E_SettingPriority::UserAPI);
+            solver.updateSetting(
+                "Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::SingleTree), E_SettingPriority::UserAPI);
         else if(argValue == "multi")
-            solver.updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::MultiTree), E_SettingPriority::UserAPI);
+            solver.updateSetting(
+                "Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::MultiTree), E_SettingPriority::UserAPI);
 #endif
 #ifdef HAS_GUROBI
         if(argValue == "single")
-            solver.updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::SingleTree), E_SettingPriority::UserAPI);
+            solver.updateSetting(
+                "Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::SingleTree), E_SettingPriority::UserAPI);
         else if(argValue == "multi")
-            solver.updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::MultiTree), E_SettingPriority::UserAPI);
+            solver.updateSetting(
+                "Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::MultiTree), E_SettingPriority::UserAPI);
 #endif
     }
 
@@ -588,6 +597,11 @@ int main(int argc, char* argv[])
                 break;
             }
         }
+
+        if(!found)
+        {
+            rejectedOptions.push_back(settingName);
+        }
     }
 
     // Need to set the log levels after we have read the options from file and console
@@ -684,6 +698,18 @@ int main(int argc, char* argv[])
 
     solver.outputProblemInstanceReport();
     solver.outputOptionsReport();
+
+    if(!rejectedOptions.empty())
+    {
+        env->output->outputWarning("");
+        env->output->outputWarning(" Unrecognized options (ignored, check spelling):");
+        env->output->outputWarning("");
+
+        for(auto& option : rejectedOptions)
+            env->output->outputWarning("  - " + option);
+
+        env->output->outputWarning("");
+    }
 
     if(!solver.solveProblem()) // Solve the problem
     {
