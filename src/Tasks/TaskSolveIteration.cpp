@@ -58,6 +58,15 @@ void TaskSolveIteration::run()
     bool isMinimization
         = env->reformulatedProblem->objectiveFunction->direction == E_ObjectiveFunctionDirection::Minimize;
 
+    // The reformulated problem's objective can have a different direction than the original problem's (e.g. a
+    // maximize objective reformulated into an equivalent minimize one); raw values read off the MIP/LP solver are
+    // in the reformulated problem's sense, while DualSolver/Results interpret DualSolution values in the
+    // original problem's sense, so they need to be translated here.
+    double objectiveSignFactor
+        = (env->reformulatedProblem->objectiveFunction->direction == env->problem->objectiveFunction->direction)
+        ? 1.0
+        : -1.0;
+
     // Sets the iteration time limit
     auto timeLim = env->settings->getSetting<double>("Termination.TimeLimit") - env->timing->getElapsedTime("Total");
     env->dualSolver->MIPSolver->setTimeLimit(timeLim);
@@ -67,18 +76,22 @@ void TaskSolveIteration::run()
         double cutOffValue;
         double cutOffValueConstraint;
 
+        // cutOffToUse is a primal bound in the original problem's sense; translate it into the reformulated
+        // problem's sense before using it to bound the reformulated MIP's own objective/objective variable.
+        double reformulatedCutOff = objectiveSignFactor * env->dualSolver->cutOffToUse;
+
         if(isMinimization)
         {
-            cutOffValue = env->dualSolver->cutOffToUse + env->settings->getSetting<double>("Dual.MIP.CutOff.Tolerance");
-            cutOffValueConstraint = env->dualSolver->cutOffToUse;
+            cutOffValue = reformulatedCutOff + env->settings->getSetting<double>("Dual.MIP.CutOff.Tolerance");
+            cutOffValueConstraint = reformulatedCutOff;
         }
         else
         {
-            cutOffValue = env->dualSolver->cutOffToUse - env->settings->getSetting<double>("Dual.MIP.CutOff.Tolerance");
-            cutOffValueConstraint = env->dualSolver->cutOffToUse;
+            cutOffValue = reformulatedCutOff - env->settings->getSetting<double>("Dual.MIP.CutOff.Tolerance");
+            cutOffValueConstraint = reformulatedCutOff;
         }
 
-        env->output->outputDebug(fmt::format("        Setting cutoff value to {}.", env->dualSolver->cutOffToUse));
+        env->output->outputDebug(fmt::format("        Setting cutoff value to {}.", reformulatedCutOff));
 
         env->dualSolver->MIPSolver->setCutOff(cutOffValue);
 
@@ -225,14 +238,14 @@ void TaskSolveIteration::run()
 
         if(!env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed)
         {
-            double currentDualBound = env->dualSolver->MIPSolver->getDualObjectiveValue();
+            double currentDualBound = objectiveSignFactor * env->dualSolver->MIPSolver->getDualObjectiveValue();
 
             if(currIter->isMIP())
             {
                 if(currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
                 {
                     DualSolution sol = { sols.at(0).point, E_DualSolutionSource::MIPSolutionOptimal,
-                        currIter->objectiveValue, currIter->iterationNumber, false };
+                        objectiveSignFactor * currIter->objectiveValue, currIter->iterationNumber, false };
                     env->dualSolver->addDualSolutionCandidate(sol);
                 }
                 else
@@ -255,7 +268,8 @@ void TaskSolveIteration::run()
         env->output->outputDebug("        Dual solver reports no solutions found.");
 
         DualSolution sol = { { }, E_DualSolutionSource::MIPSolverBound,
-            env->dualSolver->MIPSolver->getDualObjectiveValue(), currIter->iterationNumber, false };
+            objectiveSignFactor * env->dualSolver->MIPSolver->getDualObjectiveValue(), currIter->iterationNumber,
+            false };
         env->dualSolver->addDualSolutionCandidate(sol);
     }
 

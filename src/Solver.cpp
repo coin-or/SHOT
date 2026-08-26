@@ -397,7 +397,7 @@ bool Solver::setProblem(std::string fileName)
         auto taskReformulateProblem = std::make_unique<TaskReformulateProblem>(env);
         taskReformulateProblem->run();
 
-        if(env->reformulatedProblem->objectiveFunction->properties.isMinimize)
+        if(env->problem->objectiveFunction->properties.isMinimize)
         {
             env->results->setDualBound(SHOT_DBL_MIN);
 
@@ -523,7 +523,7 @@ bool Solver::setProblem(
         taskReformulateProblem->run();
     }
 
-    if(env->reformulatedProblem->objectiveFunction->properties.isMinimize)
+    if(env->problem->objectiveFunction->properties.isMinimize)
     {
         env->results->setDualBound(SHOT_DBL_MIN);
 
@@ -1159,8 +1159,18 @@ void Solver::initializeSettings()
     enumBinaryMonomialReformulation.clear();
 
     // Reformulations for objective functions
-    env->settings->createSetting("Model.Reformulation.ObjectiveFunction.Epigraph.Use", false,
-        "Reformulates a nonlinear objective as an auxiliary constraint");
+    VectorString enumObjectiveEpigraphStrategy;
+    enumObjectiveEpigraphStrategy.push_back("Unchanged");
+    enumObjectiveEpigraphStrategy.push_back("Objective function");
+    enumObjectiveEpigraphStrategy.push_back("Epigraph constraint");
+    env->settings->createSetting("Model.Reformulation.ObjectiveFunction.EpigraphStrategy",
+        static_cast<int>(ES_ObjectiveEpigraphStrategy::Unchanged),
+        "How to choose between objective-function and epigraph-constraint form for the objective. 'Unchanged' "
+        "performs no epigraph or anti-epigraph reformulation, keeping the objective function exactly as given; "
+        "'Objective function' always keeps (or folds back to) a direct objective function; 'Epigraph constraint' "
+        "always introduces an epigraph auxiliary-variable constraint for nonlinear or quadratic objectives",
+        enumObjectiveEpigraphStrategy, 0);
+    enumObjectiveEpigraphStrategy.clear();
 
     env->settings->createSetting("Model.Reformulation.ObjectiveFunction.PartitionNonlinearTerms",
         static_cast<int>(ES_PartitionNonlinearSums::IfConvex), "When to partition nonlinear sums in objective function",

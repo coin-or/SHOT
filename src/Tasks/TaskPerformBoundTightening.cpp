@@ -137,25 +137,40 @@ void TaskPerformBoundTightening::run()
             env->output->outputInfo(fmt::format(
                 "  - Objective bounds are: [{:g}, {:g}]", objectiveBoundsAfter.l(), objectiveBoundsAfter.u()));
 
-            if(sourceProblem->objectiveFunction->properties.isMinimize)
+            // sourceProblem is either env->problem or env->reformulatedProblem, and the latter's objective can
+            // have a different direction than env->problem's (e.g. a maximize objective reformulated into an
+            // equivalent minimize one, with its expression negated to match). objectiveBoundsAfter is then an
+            // interval of the *negated* function, so translate it back to env->problem's sense (negating and
+            // swapping l()/u()) before using it as a DualSolution value or cutoff, both of which are always
+            // interpreted in env->problem's sense.
+            bool sourceIsSignReversed
+                = sourceProblem->objectiveFunction->direction != env->problem->objectiveFunction->direction;
+
+            Interval originalSenseBounds = sourceIsSignReversed
+                ? Interval(-objectiveBoundsAfter.u(), -objectiveBoundsAfter.l())
+                : objectiveBoundsAfter;
+
+            if(env->problem->objectiveFunction->properties.isMinimize)
             {
-                DualSolution sol = { {}, E_DualSolutionSource::MIPSolverBound, objectiveBoundsAfter.l(), 0, false };
+                DualSolution sol
+                    = { {}, E_DualSolutionSource::MIPSolverBound, originalSenseBounds.l(), 0, false };
                 env->dualSolver->addDualSolutionCandidate(sol);
 
-                if(objectiveBoundsAfter.u() < env->dualSolver->cutOffToUse) // Update MIP cutoff
+                if(originalSenseBounds.u() < env->dualSolver->cutOffToUse) // Update MIP cutoff
                 {
-                    env->dualSolver->cutOffToUse = objectiveBoundsAfter.u();
+                    env->dualSolver->cutOffToUse = originalSenseBounds.u();
                     env->dualSolver->useCutOff = true;
                 }
             }
-            else if(sourceProblem->objectiveFunction->properties.isMaximize)
+            else if(env->problem->objectiveFunction->properties.isMaximize)
             {
-                DualSolution sol = { {}, E_DualSolutionSource::MIPSolverBound, objectiveBoundsAfter.u(), 0, false };
+                DualSolution sol
+                    = { {}, E_DualSolutionSource::MIPSolverBound, originalSenseBounds.u(), 0, false };
                 env->dualSolver->addDualSolutionCandidate(sol);
 
-                if(objectiveBoundsAfter.l() > env->dualSolver->cutOffToUse) // Update MIP cutoff
+                if(originalSenseBounds.l() > env->dualSolver->cutOffToUse) // Update MIP cutoff
                 {
-                    env->dualSolver->cutOffToUse = objectiveBoundsAfter.l();
+                    env->dualSolver->cutOffToUse = originalSenseBounds.l();
                     env->dualSolver->useCutOff = true;
                 }
             }

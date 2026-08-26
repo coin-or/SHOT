@@ -78,7 +78,9 @@ void TaskAddPrimalReductionCut::run()
 
     auto currIter = env->results->getCurrentIteration(); // The solved iteration
 
-    if(currIter->forceObjectiveReductionCut) { }
+    if(currIter->forceObjectiveReductionCut)
+    {
+    }
     else if(currIter->solutionStatus == E_ProblemSolutionStatus::Infeasible
         && !currIter->wasInfeasibilityRepairSuccessful)
     {
@@ -104,7 +106,9 @@ void TaskAddPrimalReductionCut::run()
         {
             double reductionFactor = env->settings->getSetting<double>("Dual.ReductionCut.ReductionFactor");
 
-            if(env->reformulatedProblem->objectiveFunction->properties.isMinimize)
+            // cutOffToUse is always in the original problem's sense, so the direction check must be too (it can
+            // differ from the reformulated problem's direction when the objective was sign-reversed).
+            if(env->problem->objectiveFunction->properties.isMinimize)
             {
                 cutOffToUse = env->dualSolver->cutOffToUse - reductionFactor * std::abs(env->dualSolver->cutOffToUse);
             }
@@ -114,15 +118,15 @@ void TaskAddPrimalReductionCut::run()
             }
         }
     }
-    else if(env->settings->getSetting<int>("Dual.ReductionCut.Strategy")
-        == (int)ES_ReductionCutStrategy::GoldenRatio)
+    else if(env->settings->getSetting<int>("Dual.ReductionCut.Strategy") == (int)ES_ReductionCutStrategy::GoldenRatio)
     {
         double factor = 0.618;
 
         // If first cut iteration after PB update
         if(env->solutionStatistics.numberOfPrimalReductionCutsUpdatesWithoutEffect == 0)
         {
-            if(env->reformulatedProblem->objectiveFunction->properties.isMinimize)
+            // globalDualBound is in the original problem's sense
+            if(env->problem->objectiveFunction->properties.isMinimize)
             {
                 currentLowerBoundForReductionCut = std::max(SHOT_DBL_MIN, env->results->globalDualBound);
             }
@@ -153,7 +157,9 @@ void TaskAddPrimalReductionCut::run()
 
     env->dualSolver->cutOffToUse = cutOffToUse;
 
-    if(env->reformulatedProblem->objectiveFunction->properties.isMinimize)
+    // currentDualBound is in the original problem's sense, so resetting it to the "no bound found yet"
+    // must use the original direction too
+    if(env->problem->objectiveFunction->properties.isMinimize)
     {
         env->results->currentDualBound = SHOT_DBL_MIN;
     }

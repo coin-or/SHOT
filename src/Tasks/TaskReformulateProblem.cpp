@@ -297,13 +297,18 @@ std::string TaskReformulateProblem::getType()
 
 void TaskReformulateProblem::reformulateObjectiveFunction()
 {
+    auto epigraphStrategy = static_cast<ES_ObjectiveEpigraphStrategy>(
+        env->settings->getSetting<int>("Model.Reformulation.ObjectiveFunction.EpigraphStrategy"));
+
     if(env->problem->objectiveFunction->properties.classification == E_ObjectiveFunctionClassification::Linear)
     {
         // Linear objective function
         auto sourceObjective = std::dynamic_pointer_cast<LinearObjectiveFunction>(env->problem->objectiveFunction);
 
-        // Let's check if we can do an anti-epigraph reformulation
-        if(sourceObjective->linearTerms.size() == 1)
+        // Let's check if we can do an anti-epigraph reformulation. Only performed when the direct-objective-
+        // function form is explicitly requested: Unchanged leaves an epigraph-shaped objective as given, and
+        // EpigraphConstraint is exactly what this reformulation would undo.
+        if(epigraphStrategy == ES_ObjectiveEpigraphStrategy::ObjectiveFunction && sourceObjective->linearTerms.size() == 1)
         {
             auto originalObjectiveVariable = sourceObjective->linearTerms.at(0)->variable;
             double originalObjectiveCoefficient = sourceObjective->linearTerms.at(0)->coefficient;
@@ -532,7 +537,7 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
     }
 
     if(env->problem->objectiveFunction->properties.classification >= E_ObjectiveFunctionClassification::Quadratic
-        && env->settings->getSetting<bool>("Model.Reformulation.ObjectiveFunction.Epigraph.Use"))
+        && epigraphStrategy == ES_ObjectiveEpigraphStrategy::EpigraphConstraint)
     {
         // Rewrite objective as objective constraint, aka epigraph
         createEpigraphConstraint();
@@ -715,13 +720,15 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
 
     objective->ownerProblem = reformulatedProblem;
 
-    objective->constant = env->problem->objectiveFunction->constant;
-    objective->direction = env->problem->objectiveFunction->direction;
+    objective->constant
+        = isSignReversed ? -env->problem->objectiveFunction->constant : env->problem->objectiveFunction->constant;
+    objective->direction
+        = isSignReversed ? E_ObjectiveFunctionDirection::Minimize : env->problem->objectiveFunction->direction;
 
     if(copyOriginalLinearTerms)
         copyLinearTermsToObjectiveFunction(
             std::dynamic_pointer_cast<LinearObjectiveFunction>(env->problem->objectiveFunction)->linearTerms,
-            std::dynamic_pointer_cast<LinearObjectiveFunction>(objective));
+            std::dynamic_pointer_cast<LinearObjectiveFunction>(objective), isSignReversed);
 
     if(destinationLinearTerms.size() > 0)
         std::dynamic_pointer_cast<LinearObjectiveFunction>(objective)->add(destinationLinearTerms);
@@ -901,7 +908,6 @@ void TaskReformulateProblem::createEpigraphConstraint()
         reformulatedProblem->add(std::move(RC));
     }
 
-    objectiveVariable->index = auxVariableCounter;
     reformulatedProblem->add(std::move(objective));
 }
 

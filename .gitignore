@@ -37,3 +37,4 @@ build/*
 /.vs
 /out/build
 /.cache/
+.DS_Store
