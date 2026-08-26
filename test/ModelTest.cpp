@@ -54,6 +54,9 @@ bool ModelTestSOS2();
 bool ModelTestObjectiveEpigraphStrategy();
 bool ModelTestAntiEpigraphReformulation();
 bool ModelTestObjectivePartitioningStrategy();
+bool ModelTestSignomialElementBounds();
+bool ModelTestTermAndExpressionBounds();
+bool ModelTestMixedTermBoundTightening();
 
 bool TestReadProblem(const std::string& problemFile);
 bool TestRootsearch(const std::string& problemFile);
@@ -144,6 +147,15 @@ int ModelTest(int argc, char* argv[])
         break;
     case 22:
         passed = ModelTestObjectivePartitioningStrategy();
+        break;
+    case 23:
+        passed = ModelTestSignomialElementBounds();
+        break;
+    case 24:
+        passed = ModelTestTermAndExpressionBounds();
+        break;
+    case 25:
+        passed = ModelTestMixedTermBoundTightening();
         break;
     default:
         passed = false;
@@ -4412,6 +4424,602 @@ bool ModelTestObjectivePartitioningStrategy()
                          env, nonlinearSumExpected, "[" + solverName + "] nonlinear sum direct, partitioning disabled")
                 && passed;
         }
+    }
+
+    return passed;
+}
+
+// Verifies SHOT::SignomialElement::getBounds() (forward: the bound of variable^power, given the variable's own
+// bound) and ::tightenBounds() (reverse: given a target bound for variable^power, tighten the variable's own
+// bound) directly, for a range of integer, negative, and fractional powers -- both on domains that cross zero
+// and ones that don't.
+bool ModelTestSignomialElementBounds()
+{
+    bool passed = true;
+    constexpr double tolerance = 1e-6;
+
+    auto makeVariable = [](double lb, double ub)
+    { return std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, lb, ub); };
+
+    auto checkInterval
+        = [&passed](const std::string& description, SHOT::Interval actual, double expectedLower, double expectedUpper)
+    {
+        std::cout << "  " << description << ": [" << actual.l() << ", " << actual.u() << "] (expected ["
+                  << expectedLower << ", " << expectedUpper << "])\n";
+
+        if(std::abs(actual.l() - expectedLower) > tolerance || std::abs(actual.u() - expectedUpper) > tolerance)
+        {
+            std::cout << "  FAILED: " << description << " did not match the expected interval.\n";
+            passed = false;
+        }
+    };
+
+    // ── getBounds(): forward bound of variable^power ────────────────────────────────────────────────
+    std::cout << "\nSub-test: SignomialElement::getBounds() (forward: variable^power)\n";
+    {
+        struct Case
+        {
+            std::string description;
+            double lb, ub, power, expectedLower, expectedUpper;
+        };
+
+        std::vector<Case> cases = {
+            { "power=2 (even), domain crosses zero: x in [-3,4]", -3.0, 4.0, 2.0, 0.0, 16.0 },
+            { "power=2 (even), positive-only domain: x in [2,5]", 2.0, 5.0, 2.0, 4.0, 25.0 },
+            { "power=2 (even), negative-only domain: x in [-5,-2]", -5.0, -2.0, 2.0, 4.0, 25.0 },
+            { "power=3 (odd), domain crosses zero: x in [-3,4]", -3.0, 4.0, 3.0, -27.0, 64.0 },
+            { "power=3 (odd), negative-only domain: x in [-4,-2]", -4.0, -2.0, 3.0, -64.0, -8.0 },
+            { "power=4 (even), domain crosses zero: x in [-3,2]", -3.0, 2.0, 4.0, 0.0, 81.0 },
+            { "power=5 (odd), domain crosses zero: x in [-2,3]", -2.0, 3.0, 5.0, -32.0, 243.0 },
+            { "power=-1, positive-only domain: x in [2,4]", 2.0, 4.0, -1.0, 0.25, 0.5 },
+            { "power=0.5 (sqrt), positive-only domain: x in [4,9]", 4.0, 9.0, 0.5, 2.0, 3.0 },
+            { "power=1.5, positive-only domain: x in [1,4]", 1.0, 4.0, 1.5, 1.0, 8.0 },
+        };
+
+        for(auto& C : cases)
+        {
+            auto variable = makeVariable(C.lb, C.ub);
+            SHOT::SignomialElement element(variable, C.power);
+            checkInterval(C.description, element.getBounds(), C.expectedLower, C.expectedUpper);
+        }
+    }
+
+    // ── tightenBounds(): reverse -- given a target bound for variable^power, tighten variable itself ─
+    std::cout << "\nSub-test: SignomialElement::tightenBounds() (reverse: variable from a variable^power bound)\n";
+    {
+        struct Case
+        {
+            std::string description;
+            double initialLb, initialUb, power, targetLower, targetUpper, expectedLower, expectedUpper;
+        };
+
+        std::vector<Case> cases = {
+            // An odd power's target bound crosses zero, so the tightened variable bound must too (not get clamped to
+            // non-negative).
+            { "power=3 (odd), target crosses zero: x^3 in [-27,8]", -100.0, 100.0, 3.0, -27.0, 8.0, -3.0, 2.0 },
+            { "power=5 (odd), target crosses zero: x^5 in [-32,243]", -100.0, 100.0, 5.0, -32.0, 243.0, -2.0, 3.0 },
+            // Even powers: only meaningful to tighten unambiguously when the variable's domain is already
+            // one-signed (otherwise the positive and negative root branches can't both be represented by a
+            // single interval).
+            { "power=2 (even), non-negative domain: x^2 in [4,16]", 0.0, 100.0, 2.0, 4.0, 16.0, 2.0, 4.0 },
+            { "power=4 (even), non-negative domain: x^4 in [16,81]", 0.0, 100.0, 4.0, 16.0, 81.0, 2.0, 3.0 },
+            { "power=-1, target x^-1 in [0.25,0.5]", 1.0, 10.0, -1.0, 0.25, 0.5, 2.0, 4.0 },
+            { "power=0.5 (sqrt), target sqrt(x) in [2,3]", 0.0, 100.0, 0.5, 2.0, 3.0, 4.0, 9.0 },
+        };
+
+        for(auto& C : cases)
+        {
+            auto variable = makeVariable(C.initialLb, C.initialUb);
+            SHOT::SignomialElement element(variable, C.power);
+            element.tightenBounds(SHOT::Interval(C.targetLower, C.targetUpper));
+            checkInterval(C.description, SHOT::Interval(variable->lowerBound, variable->upperBound), C.expectedLower,
+                C.expectedUpper);
+        }
+    }
+
+    return passed;
+}
+
+// Verifies bound computation for LinearTerm, QuadraticTerm, and a representative set of NonlinearExpression
+// subclasses -- complementing ModelTestSignomialElementBounds's coverage of SignomialElement.
+bool ModelTestTermAndExpressionBounds()
+{
+    bool passed = true;
+    constexpr double tolerance = 1e-6;
+
+    auto makeVariable = [](double lb, double ub, int index = 0)
+    { return std::make_shared<SHOT::Variable>("x", index, SHOT::E_VariableType::Real, lb, ub); };
+
+    auto checkInterval
+        = [&passed](const std::string& description, SHOT::Interval actual, double expectedLower, double expectedUpper)
+    {
+        std::cout << "  " << description << ": [" << actual.l() << ", " << actual.u() << "] (expected ["
+                  << expectedLower << ", " << expectedUpper << "])\n";
+
+        if(std::abs(actual.l() - expectedLower) > tolerance || std::abs(actual.u() - expectedUpper) > tolerance)
+        {
+            std::cout << "  FAILED: " << description << " did not match the expected interval.\n";
+            passed = false;
+        }
+    };
+
+    // ── LinearTerm: coefficient * variable ───────────────────────────────────────────────────────────
+    std::cout << "\nSub-test: LinearTerm bounds (coefficient * variable)\n";
+    {
+        struct Case
+        {
+            std::string description;
+            double coefficient, lb, ub, expectedLower, expectedUpper;
+        };
+
+        std::vector<Case> cases = {
+            { "positive coefficient: 3*x, x in [-2,5]", 3.0, -2.0, 5.0, -6.0, 15.0 },
+            { "negative coefficient, domain crosses zero: -2*x, x in [-2,5]", -2.0, -2.0, 5.0, -10.0, 4.0 },
+            { "negative coefficient, positive-only domain: -2*x, x in [1,5]", -2.0, 1.0, 5.0, -10.0, -2.0 },
+        };
+
+        for(auto& C : cases)
+        {
+            auto variable = makeVariable(C.lb, C.ub);
+            SHOT::LinearTerm term(C.coefficient, variable);
+            SHOT::IntervalVector intervalVector = { variable->getBound() };
+            checkInterval(C.description, term.calculate(intervalVector), C.expectedLower, C.expectedUpper);
+        }
+    }
+
+    // ── QuadraticTerm: coefficient * variable1 * variable2 (square when variable1 == variable2) ──────
+    std::cout << "\nSub-test: QuadraticTerm bounds (coefficient * variable1 * variable2)\n";
+    {
+        // Square term, domain crosses zero: coefficient * x^2, x in [-3,4].
+        {
+            auto var_x = makeVariable(-3.0, 4.0, 0);
+            SHOT::QuadraticTerm term(1.0, var_x, var_x);
+            SHOT::IntervalVector intervalVector = { var_x->getBound() };
+            checkInterval("square term, positive coefficient: x^2, x in [-3,4] (loose: dependency problem)",
+                term.calculate(intervalVector), -12.0, 16.0);
+        }
+        {
+            auto var_x = makeVariable(-3.0, 4.0, 0);
+            SHOT::QuadraticTerm term(-2.0, var_x, var_x);
+            SHOT::IntervalVector intervalVector = { var_x->getBound() };
+            checkInterval("square term, negative coefficient: -2*x^2, x in [-3,4] (loose: dependency problem)",
+                term.calculate(intervalVector), -32.0, 24.0);
+        }
+
+        // Bilinear terms: coefficient * x * y, x and y distinct variables at indexes 0 and 1
+        {
+            auto var_x = makeVariable(1.0, 3.0, 0);
+            auto var_y = makeVariable(2.0, 4.0, 1);
+            SHOT::QuadraticTerm term(1.0, var_x, var_y);
+            SHOT::IntervalVector intervalVector = { var_x->getBound(), var_y->getBound() };
+            checkInterval("bilinear term, both positive domains: x*y, x in [1,3], y in [2,4]",
+                term.calculate(intervalVector), 2.0, 12.0);
+        }
+        {
+            auto var_x = makeVariable(-2.0, 3.0, 0);
+            auto var_y = makeVariable(1.0, 4.0, 1);
+            SHOT::QuadraticTerm term(1.0, var_x, var_y);
+            SHOT::IntervalVector intervalVector = { var_x->getBound(), var_y->getBound() };
+            checkInterval("bilinear term, one domain crosses zero: x*y, x in [-2,3], y in [1,4]",
+                term.calculate(intervalVector), -8.0, 12.0);
+        }
+        {
+            auto var_x = makeVariable(1.0, 3.0, 0);
+            auto var_y = makeVariable(2.0, 4.0, 1);
+            SHOT::QuadraticTerm term(-1.0, var_x, var_y);
+            SHOT::IntervalVector intervalVector = { var_x->getBound(), var_y->getBound() };
+            checkInterval("bilinear term, negative coefficient: -1*x*y, x in [1,3], y in [2,4]",
+                term.calculate(intervalVector), -12.0, -2.0);
+        }
+    }
+
+    // ── MonomialTerm: coefficient * variable1 * variable2 * ... (each variable implicitly to the power 1) ────
+    std::cout << "\nSub-test: MonomialTerm bounds (coefficient * variable1 * variable2 * ...)\n";
+    {
+        {
+            auto var_x = makeVariable(1.0, 3.0, 0);
+            auto var_y = makeVariable(2.0, 4.0, 1);
+            SHOT::MonomialTerm term(2.0, SHOT::Variables { var_x, var_y });
+            SHOT::IntervalVector intervalVector = { var_x->getBound(), var_y->getBound() };
+            checkInterval("two variables, both positive domains: 2*x*y, x in [1,3], y in [2,4]",
+                term.calculate(intervalVector), 4.0, 24.0);
+        }
+        {
+            auto var_x = makeVariable(-2.0, 3.0, 0);
+            auto var_y = makeVariable(1.0, 2.0, 1);
+            auto var_z = makeVariable(-1.0, 4.0, 2);
+            SHOT::MonomialTerm term(1.0, SHOT::Variables { var_x, var_y, var_z });
+            SHOT::IntervalVector intervalVector = { var_x->getBound(), var_y->getBound(), var_z->getBound() };
+            checkInterval("three variables, mixed-sign domains: x*y*z, x in [-2,3], y in [1,2], z in [-1,4]",
+                term.calculate(intervalVector), -16.0, 24.0);
+        }
+        {
+            auto var_x = makeVariable(1.0, 3.0, 0);
+            auto var_y = makeVariable(2.0, 4.0, 1);
+            SHOT::MonomialTerm term(-1.0, SHOT::Variables { var_x, var_y });
+            SHOT::IntervalVector intervalVector = { var_x->getBound(), var_y->getBound() };
+            checkInterval(
+                "negative coefficient: -1*x*y, x in [1,3], y in [2,4]", term.calculate(intervalVector), -12.0, -2.0);
+        }
+    }
+
+    // ── SignomialTerm: coefficient * product of variable^power elements ─────────────────────────────
+    // Complements ModelTestSignomialElementBounds's per-element coverage by combining several elements (with
+    // different powers) into a single term, the way a real signomial expression like x^3*y^2 would appear.
+    std::cout << "\nSub-test: SignomialTerm bounds (coefficient * product of variable^power elements)\n";
+    {
+        {
+            auto var_e = makeVariable(-2.0, 1.0, 0);
+            auto var_f = makeVariable(1.0, 2.0, 1);
+            SHOT::SignomialElements elements = { std::make_shared<SHOT::SignomialElement>(var_e, 3.0),
+                std::make_shared<SHOT::SignomialElement>(var_f, 2.0) };
+            SHOT::SignomialTerm term(1.0, elements);
+            SHOT::IntervalVector intervalVector = { var_e->getBound(), var_f->getBound() };
+            checkInterval("e^3 * f^2, e in [-2,1] (odd power), f in [1,2] (even power)", term.calculate(intervalVector),
+                -32.0, 4.0);
+        }
+        {
+            auto var_e = makeVariable(-2.0, 1.0, 0);
+            auto var_f = makeVariable(1.0, 2.0, 1);
+            SHOT::SignomialElements elements = { std::make_shared<SHOT::SignomialElement>(var_e, 3.0),
+                std::make_shared<SHOT::SignomialElement>(var_f, 2.0) };
+            SHOT::SignomialTerm term(-1.0, elements);
+            SHOT::IntervalVector intervalVector = { var_e->getBound(), var_f->getBound() };
+            checkInterval(
+                "negative coefficient: -1 * e^3 * f^2, same domains", term.calculate(intervalVector), -4.0, 32.0);
+        }
+    }
+
+    // ── NonlinearExpressions: getBounds() (forward) and tightenBounds() (reverse), where supported ───
+    std::cout << "\nSub-test: NonlinearExpression bounds (Exp, Log, SquareRoot, Square, Invert, Negate)\n";
+    {
+        struct Case
+        {
+            std::string description;
+            std::function<SHOT::NonlinearExpressionPtr(SHOT::VariablePtr)> build;
+            double lb, ub;
+            double expectedLower, expectedUpper;
+            // For the reverse (tightenBounds) check: the initial (wide) variable domain to tighten from.
+            double tightenFromLb, tightenFromUb;
+        };
+
+        std::vector<Case> cases = {
+            { "exp(x), x in [0,2]", [](SHOT::VariablePtr v)
+                { return std::make_shared<SHOT::ExpressionExp>(std::make_shared<SHOT::ExpressionVariable>(v)); }, 0.0,
+                2.0, 1.0, std::exp(2.0), -10.0, 10.0 },
+            { "log(x), x in [1,10]", [](SHOT::VariablePtr v)
+                { return std::make_shared<SHOT::ExpressionLog>(std::make_shared<SHOT::ExpressionVariable>(v)); }, 1.0,
+                10.0, 0.0, std::log(10.0), 0.001, 1000.0 },
+            { "sqrt(x), x in [4,9]", [](SHOT::VariablePtr v)
+                { return std::make_shared<SHOT::ExpressionSquareRoot>(std::make_shared<SHOT::ExpressionVariable>(v)); },
+                4.0, 9.0, 2.0, 3.0, 0.0, 100.0 },
+            { "1/x, x in [2,4]", [](SHOT::VariablePtr v)
+                { return std::make_shared<SHOT::ExpressionInvert>(std::make_shared<SHOT::ExpressionVariable>(v)); },
+                2.0, 4.0, 0.25, 0.5, 1.0, 10.0 },
+            { "-x, x in [-3,4]", [](SHOT::VariablePtr v)
+                { return std::make_shared<SHOT::ExpressionNegate>(std::make_shared<SHOT::ExpressionVariable>(v)); },
+                -3.0, 4.0, -4.0, 3.0, -100.0, 100.0 },
+        };
+
+        for(auto& C : cases)
+        {
+            // Forward: getBounds() from the expression's own (tight) domain.
+            auto forwardVariable = makeVariable(C.lb, C.ub);
+            auto forwardExpression = C.build(forwardVariable);
+            checkInterval("forward " + C.description, forwardExpression->getBounds(), C.expectedLower, C.expectedUpper);
+
+            // Reverse: tightenBounds() from a wide domain down to the same expected variable range.
+            auto reverseVariable = makeVariable(C.tightenFromLb, C.tightenFromUb);
+            auto reverseExpression = C.build(reverseVariable);
+            reverseExpression->tightenBounds(SHOT::Interval(C.expectedLower, C.expectedUpper));
+            checkInterval("reverse " + C.description,
+                SHOT::Interval(reverseVariable->lowerBound, reverseVariable->upperBound), C.lb, C.ub);
+        }
+
+        // Square is tested separately since tightenBounds() can only unambiguously recover a variable domain
+        // that's already one-signed (an even power's inverse can't represent two disjoint sign branches with a
+        // single interval) -- same documented limitation as SignomialElement's even-power cases.
+        {
+            auto forwardVariable = makeVariable(-3.0, 4.0);
+            SHOT::ExpressionSquare forwardExpression(std::make_shared<SHOT::ExpressionVariable>(forwardVariable));
+            checkInterval("forward x^2, domain crosses zero: x in [-3,4]", forwardExpression.getBounds(), 0.0, 16.0);
+
+            auto reverseVariable = makeVariable(0.0, 100.0);
+            SHOT::ExpressionSquare reverseExpression(std::make_shared<SHOT::ExpressionVariable>(reverseVariable));
+            reverseExpression.tightenBounds(SHOT::Interval(4.0, 16.0));
+            checkInterval("reverse x^2, non-negative domain: target [4,16]",
+                SHOT::Interval(reverseVariable->lowerBound, reverseVariable->upperBound), 2.0, 4.0);
+        }
+    }
+
+    std::cout << "\nSub-test: ExpressionPower bounds (base^exponent, constant exponent)\n";
+    {
+        struct Case
+        {
+            std::string description;
+            double power, lb, ub, expectedLower, expectedUpper;
+        };
+
+        std::vector<Case> forwardCases = {
+            { "power=2 (even), domain crosses zero: x in [-3,4]", 2.0, -3.0, 4.0, 0.0, 16.0 },
+            { "power=3 (odd), domain crosses zero: x in [-3,4]", 3.0, -3.0, 4.0, -27.0, 64.0 },
+            { "power=5 (odd), domain crosses zero: x in [-2,3]", 5.0, -2.0, 3.0, -32.0, 243.0 },
+        };
+
+        for(auto& C : forwardCases)
+        {
+            auto baseVariable = makeVariable(C.lb, C.ub);
+            SHOT::ExpressionPower expression(std::make_shared<SHOT::ExpressionVariable>(baseVariable),
+                std::make_shared<SHOT::ExpressionConstant>(C.power));
+            checkInterval("forward " + C.description, expression.getBounds(), C.expectedLower, C.expectedUpper);
+        }
+
+        // Reverse (tightenBounds()): an odd power's target bound crosses zero, so
+        // the tightened base variable's bound must too, not get clamped to non-negative.
+        struct ReverseCase
+        {
+            std::string description;
+            double power, initialLb, initialUb, targetLower, targetUpper, expectedLower, expectedUpper;
+        };
+
+        std::vector<ReverseCase> reverseCases = {
+            { "power=3 (odd), target crosses zero: base^3 in [-27,8]", 3.0, -100.0, 100.0, -27.0, 8.0, -3.0, 2.0 },
+            { "power=5 (odd), target crosses zero: base^5 in [-32,243]", 5.0, -100.0, 100.0, -32.0, 243.0, -2.0, 3.0 },
+            { "power=2 (even), non-negative domain: base^2 in [4,16]", 2.0, 0.0, 100.0, 4.0, 16.0, 2.0, 4.0 },
+        };
+
+        for(auto& C : reverseCases)
+        {
+            auto baseVariable = makeVariable(C.initialLb, C.initialUb);
+            SHOT::ExpressionPower expression(std::make_shared<SHOT::ExpressionVariable>(baseVariable),
+                std::make_shared<SHOT::ExpressionConstant>(C.power));
+
+            expression.tightenBounds(SHOT::Interval(C.targetLower, C.targetUpper));
+            checkInterval(C.description, SHOT::Interval(baseVariable->lowerBound, baseVariable->upperBound),
+                C.expectedLower, C.expectedUpper);
+        }
+    }
+
+    // ── ExpressionConstant and ExpressionVariable: the two leaf expression types ─────────────────────
+    std::cout << "\nSub-test: ExpressionConstant and ExpressionVariable bounds\n";
+    {
+        SHOT::ExpressionConstant constantExpression(7.0);
+        checkInterval("ExpressionConstant(7.0)", constantExpression.getBounds(), 7.0, 7.0);
+
+        if(constantExpression.tightenBounds(SHOT::Interval(1.0, 2.0)))
+        {
+            std::cout << "  FAILED: ExpressionConstant::tightenBounds() should never report a change.\n";
+            passed = false;
+        }
+
+        auto variable = makeVariable(-3.0, 4.0);
+        SHOT::ExpressionVariable variableExpression(variable);
+        checkInterval("ExpressionVariable, x in [-3,4]", variableExpression.getBounds(), -3.0, 4.0);
+
+        variableExpression.tightenBounds(SHOT::Interval(0.0, 2.0));
+        checkInterval("ExpressionVariable after tightenBounds([0,2])",
+            SHOT::Interval(variable->lowerBound, variable->upperBound), 0.0, 2.0);
+    }
+
+    // ── ExpressionDivide: firstChild / secondChild ───────────────────────────────────────────────────
+    std::cout << "\nSub-test: ExpressionDivide bounds (firstChild / secondChild)\n";
+    {
+        auto var_a = makeVariable(4.0, 10.0, 0);
+        auto var_b = makeVariable(2.0, 5.0, 1);
+        SHOT::ExpressionDivide forwardExpression(
+            std::make_shared<SHOT::ExpressionVariable>(var_a), std::make_shared<SHOT::ExpressionVariable>(var_b));
+        checkInterval("forward a/b, a in [4,10], b in [2,5]", forwardExpression.getBounds(), 0.8, 5.0);
+
+        // Reverse: b is fixed at a single point here so the resulting target for a is unambiguous -- when both
+        // operands are themselves ranges, tightening one still depends on the other's current range, same as
+        // for any two-variable relationship.
+        auto reverse_a = makeVariable(0.0, 100.0, 0);
+        auto reverse_b = makeVariable(2.0, 2.0, 1);
+        SHOT::ExpressionDivide reverseExpression(std::make_shared<SHOT::ExpressionVariable>(reverse_a),
+            std::make_shared<SHOT::ExpressionVariable>(reverse_b));
+        reverseExpression.tightenBounds(SHOT::Interval(2.0, 5.0));
+        checkInterval("reverse a/b in [2,5], b fixed at 2 -> tighten a",
+            SHOT::Interval(reverse_a->lowerBound, reverse_a->upperBound), 4.0, 10.0);
+    }
+
+    // ── ExpressionSum: sum of several child expressions ──────────────────────────────────────────────
+    std::cout << "\nSub-test: ExpressionSum bounds (sum of children)\n";
+    {
+        auto var_x = makeVariable(-2.0, 3.0, 0);
+        auto var_y = makeVariable(1.0, 4.0, 1);
+        auto var_z = makeVariable(0.0, 2.0, 2);
+
+        SHOT::NonlinearExpressions forwardChildren;
+        forwardChildren.add(std::make_shared<SHOT::ExpressionVariable>(var_x));
+        forwardChildren.add(std::make_shared<SHOT::ExpressionVariable>(var_y));
+        forwardChildren.add(std::make_shared<SHOT::ExpressionVariable>(var_z));
+        SHOT::ExpressionSum forwardExpression(forwardChildren);
+        checkInterval("forward x+y+z, x in [-2,3], y in [1,4], z in [0,2]", forwardExpression.getBounds(), -1.0, 9.0);
+
+        // Reverse: y and z are fixed, so the target range for the sum translates directly into a target range
+        // for x alone.
+        auto reverse_x = makeVariable(0.0, 100.0, 0);
+        auto reverse_y = makeVariable(3.0, 3.0, 1);
+        auto reverse_z = makeVariable(5.0, 5.0, 2);
+
+        SHOT::NonlinearExpressions reverseChildren;
+        reverseChildren.add(std::make_shared<SHOT::ExpressionVariable>(reverse_x));
+        reverseChildren.add(std::make_shared<SHOT::ExpressionVariable>(reverse_y));
+        reverseChildren.add(std::make_shared<SHOT::ExpressionVariable>(reverse_z));
+        SHOT::ExpressionSum reverseExpression(reverseChildren);
+        reverseExpression.tightenBounds(SHOT::Interval(12.0, 20.0));
+        checkInterval("reverse x+3+5 in [12,20] -> tighten x",
+            SHOT::Interval(reverse_x->lowerBound, reverse_x->upperBound), 4.0, 12.0);
+    }
+
+    // ── ExpressionProduct: product of several child expressions ─────────────────────────────────────
+    std::cout << "\nSub-test: ExpressionProduct bounds (product of children)\n";
+    {
+        auto var_x = makeVariable(1.0, 3.0, 0);
+        auto var_y = makeVariable(2.0, 4.0, 1);
+        auto var_z = makeVariable(-1.0, 2.0, 2);
+
+        SHOT::NonlinearExpressions forwardChildren;
+        forwardChildren.add(std::make_shared<SHOT::ExpressionVariable>(var_x));
+        forwardChildren.add(std::make_shared<SHOT::ExpressionVariable>(var_y));
+        forwardChildren.add(std::make_shared<SHOT::ExpressionVariable>(var_z));
+        SHOT::ExpressionProduct forwardExpression(forwardChildren);
+        checkInterval("forward x*y*z, x in [1,3], y in [2,4], z in [-1,2]", forwardExpression.getBounds(), -12.0, 24.0);
+
+        // Reverse: y and z are fixed, so the target range for the product translates directly into a target
+        // range for x alone.
+        auto reverse_x = makeVariable(0.0, 100.0, 0);
+        auto reverse_y = makeVariable(2.0, 2.0, 1);
+        auto reverse_z = makeVariable(3.0, 3.0, 2);
+
+        SHOT::NonlinearExpressions reverseChildren;
+        reverseChildren.add(std::make_shared<SHOT::ExpressionVariable>(reverse_x));
+        reverseChildren.add(std::make_shared<SHOT::ExpressionVariable>(reverse_y));
+        reverseChildren.add(std::make_shared<SHOT::ExpressionVariable>(reverse_z));
+        SHOT::ExpressionProduct reverseExpression(reverseChildren);
+        reverseExpression.tightenBounds(SHOT::Interval(24.0, 60.0));
+        checkInterval("reverse x*2*3 in [24,60] -> tighten x",
+            SHOT::Interval(reverse_x->lowerBound, reverse_x->upperBound), 4.0, 10.0);
+    }
+
+    // ── Trigonometric and absolute-value expressions: forward getBounds() only ──────────────────────
+    // These expressions don't support reverse bound tightening at all (tightenBounds() always returns false
+    // for each of them), so only the forward direction is meaningful to test here. Domains are chosen within a
+    // single monotonic branch of each function to keep the expected interval unambiguous.
+    std::cout << "\nSub-test: trigonometric and absolute-value expression bounds (forward only)\n";
+    {
+        double pi = M_PI;
+
+        struct Case
+        {
+            std::string description;
+            std::function<SHOT::NonlinearExpressionPtr(SHOT::VariablePtr)> build;
+            double lb, ub, expectedLower, expectedUpper;
+        };
+
+        std::vector<Case> cases = {
+            { "sin(x), x in [0,pi/2]", [](SHOT::VariablePtr v)
+                { return std::make_shared<SHOT::ExpressionSin>(std::make_shared<SHOT::ExpressionVariable>(v)); }, 0.0,
+                pi / 2.0, 0.0, 1.0 },
+            { "cos(x), x in [0,pi/2]", [](SHOT::VariablePtr v)
+                { return std::make_shared<SHOT::ExpressionCos>(std::make_shared<SHOT::ExpressionVariable>(v)); }, 0.0,
+                pi / 2.0, 0.0, 1.0 },
+            { "tan(x), x in [0,pi/4]", [](SHOT::VariablePtr v)
+                { return std::make_shared<SHOT::ExpressionTan>(std::make_shared<SHOT::ExpressionVariable>(v)); }, 0.0,
+                pi / 4.0, 0.0, 1.0 },
+            { "asin(x), x in [0,1]", [](SHOT::VariablePtr v)
+                { return std::make_shared<SHOT::ExpressionArcSin>(std::make_shared<SHOT::ExpressionVariable>(v)); },
+                0.0, 1.0, 0.0, pi / 2.0 },
+            { "acos(x), x in [0,1]", [](SHOT::VariablePtr v)
+                { return std::make_shared<SHOT::ExpressionArcCos>(std::make_shared<SHOT::ExpressionVariable>(v)); },
+                0.0, 1.0, 0.0, pi / 2.0 },
+            { "atan(x), x in [0,1]", [](SHOT::VariablePtr v)
+                { return std::make_shared<SHOT::ExpressionArcTan>(std::make_shared<SHOT::ExpressionVariable>(v)); },
+                0.0, 1.0, 0.0, pi / 4.0 },
+            { "abs(x), x in [-3,4]", [](SHOT::VariablePtr v)
+                { return std::make_shared<SHOT::ExpressionAbs>(std::make_shared<SHOT::ExpressionVariable>(v)); }, -3.0,
+                4.0, 0.0, 4.0 },
+        };
+
+        for(auto& C : cases)
+        {
+            auto variable = makeVariable(C.lb, C.ub);
+            auto expression = C.build(variable);
+            checkInterval(C.description, expression->getBounds(), C.expectedLower, C.expectedUpper);
+
+            if(expression->tightenBounds(SHOT::Interval(C.expectedLower, C.expectedUpper)))
+            {
+                std::cout << "  FAILED: " << C.description << ": tightenBounds() should always return false.\n";
+                passed = false;
+            }
+        }
+    }
+
+    return passed;
+}
+
+// Verifies bound tightening on a single constraint that combines all five term categories at once -- linear,
+// quadratic, monomial, signomial, and a general nonlinear expression -- exercising the actual production bound
+// tightening pass (Problem::doFBBT()) rather than the individual term/expression classes in isolation, the way
+// the tests above do.
+//
+// The constraint is total - 3*a - b^2 - c*d - e^3*f^2 - exp(g) = 0, i.e. total = 3*a + b^2 + c*d + e^3*f^2 +
+// exp(g), with each variable's own domain chosen so every term's contribution is independently hand-computable:
+//   3*a,        a in [1,2]             -> [3,6]
+//   b^2,        b in [2,3]             -> [4,9]
+//   c*d,        c in [1,2], d in [3,4] -> [3,8]
+//   e^3*f^2,    e in [-2,1], f in [1,2] -> [-32,4]
+//   exp(g),     g in [0,1]             -> [1, e]
+// Summing these gives total's expected tightened bound: [-21, 27+e] ~= [-21, 29.71828].
+bool ModelTestMixedTermBoundTightening()
+{
+    bool passed = true;
+
+    auto solver = std::make_unique<SHOT::Solver>();
+    auto env = solver->getEnvironment();
+
+    auto problem = std::make_shared<SHOT::Problem>(env);
+
+    auto var_total = std::make_shared<SHOT::Variable>("total", 0, SHOT::E_VariableType::Real, -1000.0, 1000.0);
+    auto var_a = std::make_shared<SHOT::Variable>("a", 1, SHOT::E_VariableType::Real, 1.0, 2.0);
+    auto var_b = std::make_shared<SHOT::Variable>("b", 2, SHOT::E_VariableType::Real, 2.0, 3.0);
+    auto var_c = std::make_shared<SHOT::Variable>("c", 3, SHOT::E_VariableType::Real, 1.0, 2.0);
+    auto var_d = std::make_shared<SHOT::Variable>("d", 4, SHOT::E_VariableType::Real, 3.0, 4.0);
+    auto var_e = std::make_shared<SHOT::Variable>("e", 5, SHOT::E_VariableType::Real, -2.0, 1.0);
+    auto var_f = std::make_shared<SHOT::Variable>("f", 6, SHOT::E_VariableType::Real, 1.0, 2.0);
+    auto var_g = std::make_shared<SHOT::Variable>("g", 7, SHOT::E_VariableType::Real, 0.0, 1.0);
+    problem->add(SHOT::Variables { var_total, var_a, var_b, var_c, var_d, var_e, var_f, var_g });
+
+    // A dummy objective is required for a valid problem; it plays no part in the bound tightening being tested.
+    auto objective = std::make_shared<SHOT::LinearObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<SHOT::LinearTerm>(1.0, var_total));
+    problem->add(objective);
+
+    auto constraint = std::make_shared<SHOT::NonlinearConstraint>(0, "mixed", 0.0, 0.0);
+    constraint->add(std::make_shared<SHOT::LinearTerm>(1.0, var_total));
+    constraint->add(std::make_shared<SHOT::LinearTerm>(-3.0, var_a));
+    constraint->add(std::make_shared<SHOT::QuadraticTerm>(-1.0, var_b, var_b));
+    constraint->add(std::make_shared<SHOT::MonomialTerm>(-1.0, SHOT::Variables { var_c, var_d }));
+    constraint->add(std::make_shared<SHOT::SignomialTerm>(-1.0,
+        SHOT::SignomialElements { std::make_shared<SHOT::SignomialElement>(var_e, 3.0),
+            std::make_shared<SHOT::SignomialElement>(var_f, 2.0) }));
+    constraint->add(std::make_shared<SHOT::ExpressionNegate>(
+        std::make_shared<SHOT::ExpressionExp>(std::make_shared<SHOT::ExpressionVariable>(var_g))));
+    problem->add(constraint);
+
+    problem->finalize();
+    problem->doFBBT();
+
+    double expectedLower = -21.0;
+    double expectedUpper = 6.0 + 9.0 + 8.0 + 4.0 + std::exp(1.0);
+    constexpr double tolerance = 0.1;
+
+    std::cout << "\nSub-test: bound tightening on a constraint mixing linear, quadratic, monomial, signomial, "
+                 "and nonlinear-expression terms\n";
+    std::cout << "  total: [" << var_total->lowerBound << ", " << var_total->upperBound << "] (expected ["
+              << expectedLower << ", " << expectedUpper << "])\n";
+    std::cout << "  a: [" << var_a->lowerBound << ", " << var_a->upperBound << "]\n";
+    std::cout << "  b: [" << var_b->lowerBound << ", " << var_b->upperBound << "]\n";
+    std::cout << "  c: [" << var_c->lowerBound << ", " << var_c->upperBound << "]\n";
+    std::cout << "  d: [" << var_d->lowerBound << ", " << var_d->upperBound << "]\n";
+    std::cout << "  e: [" << var_e->lowerBound << ", " << var_e->upperBound << "]\n";
+    std::cout << "  f: [" << var_f->lowerBound << ", " << var_f->upperBound << "]\n";
+    std::cout << "  g: [" << var_g->lowerBound << ", " << var_g->upperBound << "]\n";
+
+    if(std::abs(var_total->lowerBound - expectedLower) > tolerance
+        || std::abs(var_total->upperBound - expectedUpper) > tolerance)
+    {
+        std::cout << "  FAILED: expected total to be tightened to approximately [" << expectedLower << ", "
+                  << expectedUpper << "].\n";
+        passed = false;
+    }
+
+    // None of the individual contributing variables should have been affected -- only total's own bound
+    // depends on all of the others combined.
+    if(var_a->lowerBound != 1.0 || var_a->upperBound != 2.0)
+    {
+        std::cout << "  FAILED: variable a's bound should not have changed.\n";
+        passed = false;
     }
 
     return passed;

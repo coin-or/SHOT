@@ -807,7 +807,7 @@ public:
     VariablePtr variable;
     double power;
 
-    SignomialElement(VariablePtr variable, double power) : variable(variable), power(power) {};
+    SignomialElement(VariablePtr variable, double power) : variable(variable), power(power) { };
 
     inline double calculate(const VectorDouble& point) const { return pow(variable->calculate(point), power); }
 
@@ -853,37 +853,20 @@ public:
 
         double intpart;
         bool isInteger = (std::modf(power, &intpart) == 0.0);
+        int integerValue = (int)round(intpart);
+        bool isEven = (integerValue % 2 == 0);
 
-        if(isInteger && power > 0 && variableBound.l() < 0.0)
-            variableBound.l(0.0);
-        else if(!isInteger && variableBound.l() <= 0.0)
+        if(variableBound.l() <= 0.0 && (!isInteger || power < 0.0))
             variableBound.l(SHOT_DBL_EPS);
-        else if(power < 0.0 && variableBound.l() <= 0.0)
-            variableBound.l(SHOT_DBL_EPS);
-        else if(variableBound.l() <= 0)
-            variableBound.l(0.0);
 
         Interval bounds;
 
-        if(isInteger && power > 0)
-        {
-            double lower = sqrt(variableBound.l());
-            double upper = sqrt(variableBound.u());
-
-            return (Interval(std::min(lower, upper), std::max(lower, upper)));
-        }
-
-        if(power == -1.0)
-        {
-            bounds = 1 / variableBound;
-
-            if(bounds.l() < 1e-10 && bounds.u() > 1e-10)
-                bounds.l(1e-10);
-        }
+        if(isInteger)
+            bounds = pow(variableBound, (int)power);
         else
-            bounds = pow(variableBound, 1.0 / power);
+            bounds = pow(variableBound, power);
 
-        if(bounds.l() <= 0.0)
+        if(isInteger && isEven && bounds.l() <= 0.0)
             bounds.l(0.0);
 
         return (bounds);
@@ -902,26 +885,28 @@ public:
         int integerValue = (int)round(intpart);
         bool isEven = (integerValue % 2 == 0);
 
-        if(isInteger && isEven && power > 0 && bound.l() <= 0.0)
-            bound.l(0.0);
-        else if(!isInteger && bound.l() <= 0.0)
-            bound.l(SHOT_DBL_SIG_MIN);
-        else if(power < 0.0 && bound.l() <= 0.0)
-            bound.l(SHOT_DBL_SIG_MIN);
-        else if(bound.l() <= 0)
-            bound.l(0.0);
+        // An odd positive integer power must not be forced non-negative, since it preserves the sign of a negative
+        // base.
+        bool needsNonNegativeBase = (isInteger && isEven && power > 0) || !isInteger || power < 0.0;
+
+        if(needsNonNegativeBase && bound.l() <= 0.0)
+            bound.l((!isInteger || power < 0.0) ? SHOT_DBL_SIG_MIN : 0.0);
 
         Interval interval;
 
-        if(bound.l() < 0.0)
+        if(needsNonNegativeBase && bound.l() < 0.0)
             return (false);
 
         if(isInteger && power > 0)
         {
             interval = bound;
 
-            double lower = sqrt(interval.l());
-            double upper = sqrt(interval.u());
+            // Signed n-th root -- see the matching comment in getBounds().
+            auto nthRoot = [power = this->power](double x)
+            { return (x < 0.0 ? -std::pow(-x, 1.0 / power) : std::pow(x, 1.0 / power)); };
+
+            double lower = nthRoot(interval.l());
+            double upper = nthRoot(interval.u());
 
             return (variable->tightenBounds(Interval(std::min(lower, upper), std::max(lower, upper))));
         }

@@ -208,7 +208,7 @@ class ExpressionConstant : public NonlinearExpression
 {
 public:
     double constant = 0;
-    ExpressionConstant(double constant) : constant(constant) {};
+    ExpressionConstant(double constant) : constant(constant) { };
 
     inline double calculate([[maybe_unused]] const VectorDouble& point) const override { return constant; };
 
@@ -232,7 +232,7 @@ public:
 
     inline int getNumberOfChildren() const override { return 0; }
 
-    inline void appendNonlinearVariables([[maybe_unused]] Variables& nonlinearVariables) override {};
+    inline void appendNonlinearVariables([[maybe_unused]] Variables& nonlinearVariables) override { };
 
     inline bool operator==(const NonlinearExpression& rhs) const override
     {
@@ -248,7 +248,7 @@ class ExpressionVariable : public NonlinearExpression
 public:
     VariablePtr variable;
 
-    ExpressionVariable(VariablePtr variable) : variable(variable) {};
+    ExpressionVariable(VariablePtr variable) : variable(variable) { };
 
     inline void takeOwnership(ProblemPtr owner) override
     {
@@ -1884,11 +1884,16 @@ public:
         int integerValue = (int)round(intpart);
         bool isEven = (integerValue % 2 == 0);
 
+        // An odd positive integer power (e.g. a cube) preserves the sign of a negative base, so -- unlike an
+        // even power, e.g. a square -- its target bound must not be forced non-negative, and the base must be
+        // recovered via a signed n-th root rather than pow()/sqrt()
+        bool isOddPositiveIntegerPower = isInteger && !isEven && power > 0;
+
         if(isInteger && isEven && power > 0 && bound.l() <= 0.0)
             bound.l(0.0);
-        else if(bound.l() <= 0.0 && bound.u() > SHOT_DBL_SIG_MIN)
+        else if(!isOddPositiveIntegerPower && bound.l() <= 0.0 && bound.u() > SHOT_DBL_SIG_MIN)
             bound.l(SHOT_DBL_SIG_MIN);
-        else if(bound.u() < 0)
+        else if(!isOddPositiveIntegerPower && bound.u() < 0)
             return (false);
 
         Interval interval;
@@ -1901,6 +1906,16 @@ public:
 
             if(interval.l() < 1e-10 && interval.u() > 1e-10)
                 interval.l(1e-10);
+        }
+        else if(isOddPositiveIntegerPower)
+        {
+            auto nthRoot
+                = [power](double x) { return (x < 0.0 ? -std::pow(-x, 1.0 / power) : std::pow(x, 1.0 / power)); };
+
+            double lower = nthRoot(bound.l());
+            double upper = nthRoot(bound.u());
+
+            interval = Interval(std::min(lower, upper), std::max(lower, upper));
         }
         else
             interval = pow(bound, 1.0 / power);
@@ -2892,7 +2907,9 @@ public:
     {
         for(auto& C : children)
         {
-            if(C->getType() == E_NonlinearExpressionTypes::Variable) { }
+            if(C->getType() == E_NonlinearExpressionTypes::Variable)
+            {
+            }
             else if(C->getType() == E_NonlinearExpressionTypes::Constant)
             {
             }
