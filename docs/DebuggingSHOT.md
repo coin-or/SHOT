@@ -312,6 +312,23 @@ in this codebase — add to this list as you find more.
   `usedsettings.opt` that the solver/setting you intended is actually the
   one in effect.
 
+### Reproducing a bug found via the C++ test suite
+
+- If a failure was first found through `ModelTest`/the C++ `Problem` API
+  (not a `.gms`/`.osil`/`.nl` file), **reproduce it the same way** — don't
+  hand-write an equivalent input file and assume it produces the identical
+  `Problem` structure. A file reader's default bound handling, presolve, or
+  field population can differ from the C++ API in ways that change the
+  numeric outcome, even when every explicit setting matches.
+- The fastest way to get an isolated, debuggable repro of a C++-API-found bug
+  is a tiny standalone `.cpp` file that builds the `Problem` exactly as the
+  test does and links against `libSHOTSolver.dylib`/`libSHOTTasks.a`/etc. —
+  get the exact compile/link flags by touching `src/SHOT.cpp` and running
+  `make VERBOSE=1 SHOT`, then reuse those flags for the new file. `Output.Debug.Enable=true`
+  / `Output.Debug.Path=<dir>` work as `solver->updateSetting(...)` calls in
+  such a program exactly like the CLI flags, so you get the full debug-file
+  dump (section 5) without touching the CLI at all.
+
 ### CppAD / numerical domain errors
 
 - A crash mentioning CppAD and "nan" (`forward.hpp`, `subgraph_reverse.hpp`)
@@ -382,6 +399,27 @@ in this codebase — add to this list as you find more.
   `setVariableBounds`/`fixVariables` calls on the same member before
   changing how a nested solve is initialized.
 
+### False convergence (0 gap, wrong answer) vs. stalling
+
+- A run that terminates with "globally optimal, gap 0" is not proof the
+  answer is right — cross-check the reported objective against an
+  independently hand-computed (or closed-form) optimum for small repro
+  problems. This is the way to catch a bug that produces a plausible-looking,
+  confidently-reported wrong number rather than an obvious crash or stall.
+- When the reported value is wrong but the gap is 0, suspect an **invalid
+  bound on a reformulated/auxiliary variable**, not just wrong constraint
+  coefficients — check the `variables:` section of `reformulatedproblem.txt`
+  and the `Bounds` section of `dualiter{N}_problem.lp`, not just the
+  constraint rows. A too-tight box bound on an auxiliary variable silently
+  removes the true optimum from the feasible region and produces a
+  confident-but-wrong "optimal" report, since nothing about the *solve*
+  itself looks wrong.
+- Bounds derived from interval arithmetic (`getBounds()` and similar) are
+  *expected* to be loose/conservative — a loose bound isn't itself a red
+  flag. What's suspicious is a bound that's tighter than the true achievable
+  range; check that the printed bound is a valid superset of the
+  closed-form range, not that it's tight.
+
 ### Verification discipline
 
 - `InstanceTest`'s solver combinations are a fixed, hand-registered list in
@@ -402,6 +440,20 @@ in this codebase — add to this list as you find more.
   `InstanceTest` regression sweep across *all* registered combos, not just
   the instance you're fixing — its blast radius is the whole suite. A
   targeted change that "fixes" one instance can silently break others.
+- SHOT routes the same logical problem through materially different code
+  paths depending on `Dual.MIP.Solver`'s capabilities (native quadratics
+  support, single-tree callback support, etc. — see section 3). A bug
+  confined to one path is completely invisible if you only ever test with
+  the default solver. When a fix "doesn't seem to help," or a suspected bug
+  "won't reproduce," try it under each of Cbc/HiGHS/Gurobi/Cplex (whichever
+  are compiled in) before concluding either way.
+- If the problem has a quadratic part and the bug is suspected to be
+  related to it, also try toggling `Model.Reformulation.Quadratics.Strategy`
+  between letting Gurobi/Cplex handle the quadratic terms natively and
+  forcing them through the generic nonlinear/hyperplane-cut path — a bug 
+  specific to native quadratic handling will only show up in one of the two 
+  configurations, and testing only the default for a given solver can miss it 
+  entirely.
 
 ### Fast, targeted crash diagnosis
 
