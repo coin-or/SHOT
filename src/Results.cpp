@@ -1562,30 +1562,30 @@ void Results::setDualBound(double value, bool forceGlobal)
 
 double Results::getAbsoluteGlobalObjectiveGap()
 {
-    double gap = std::abs(getGlobalDualBound() - getPrimalBound());
-
-    return (gap);
+    if(std::abs(getGlobalDualBound()) == SHOT_DBL_MAX || std::abs(getPrimalBound()) == SHOT_DBL_MAX)
+        return SHOT_DBL_MAX;
+    return std::abs(getGlobalDualBound() - getPrimalBound());
 }
 
 double Results::getRelativeGlobalObjectiveGap()
 {
-    double gap = std::abs(getGlobalDualBound() - getPrimalBound()) / ((1e-10) + std::abs(getPrimalBound()));
-
-    return (gap);
+    if(std::abs(getGlobalDualBound()) == SHOT_DBL_MAX || std::abs(getPrimalBound()) == SHOT_DBL_MAX)
+        return SHOT_DBL_MAX;
+    return std::abs(getGlobalDualBound() - getPrimalBound()) / ((1e-10) + std::abs(getPrimalBound()));
 }
 
 double Results::getAbsoluteCurrentObjectiveGap()
 {
-    double gap = std::abs(getCurrentDualBound() - getPrimalBound());
-
-    return (gap);
+    if(std::abs(getCurrentDualBound()) == SHOT_DBL_MAX || std::abs(getPrimalBound()) == SHOT_DBL_MAX)
+        return SHOT_DBL_MAX;
+    return std::abs(getCurrentDualBound() - getPrimalBound());
 }
 
 double Results::getRelativeCurrentObjectiveGap()
 {
-    double gap = std::abs(getCurrentDualBound() - getPrimalBound()) / ((1e-10) + std::abs(getPrimalBound()));
-
-    return (gap);
+    if(std::abs(getCurrentDualBound()) == SHOT_DBL_MAX || std::abs(getPrimalBound()) == SHOT_DBL_MAX)
+        return SHOT_DBL_MAX;
+    return std::abs(getCurrentDualBound() - getPrimalBound()) / ((1e-10) + std::abs(getPrimalBound()));
 }
 
 E_ModelReturnStatus Results::getModelReturnStatus()
