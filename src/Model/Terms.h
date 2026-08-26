@@ -356,6 +356,9 @@ public:
 
     inline Interval calculate(const IntervalVector& intervalVector) const override
     {
+        if(isSquare)
+            return (coefficient * pow(firstVariable->calculate(intervalVector), 2));
+
         Interval value
             = coefficient * firstVariable->calculate(intervalVector) * secondVariable->calculate(intervalVector);
         return value;

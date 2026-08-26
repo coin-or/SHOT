@@ -4575,15 +4575,15 @@ bool ModelTestTermAndExpressionBounds()
             auto var_x = makeVariable(-3.0, 4.0, 0);
             SHOT::QuadraticTerm term(1.0, var_x, var_x);
             SHOT::IntervalVector intervalVector = { var_x->getBound() };
-            checkInterval("square term, positive coefficient: x^2, x in [-3,4] (loose: dependency problem)",
-                term.calculate(intervalVector), -12.0, 16.0);
+            checkInterval(
+                "square term, positive coefficient: x^2, x in [-3,4]", term.calculate(intervalVector), 0.0, 16.0);
         }
         {
             auto var_x = makeVariable(-3.0, 4.0, 0);
             SHOT::QuadraticTerm term(-2.0, var_x, var_x);
             SHOT::IntervalVector intervalVector = { var_x->getBound() };
-            checkInterval("square term, negative coefficient: -2*x^2, x in [-3,4] (loose: dependency problem)",
-                term.calculate(intervalVector), -32.0, 24.0);
+            checkInterval(
+                "square term, negative coefficient: -2*x^2, x in [-3,4]", term.calculate(intervalVector), -32.0, 0.0);
         }
 
         // Bilinear terms: coefficient * x * y, x and y distinct variables at indexes 0 and 1
