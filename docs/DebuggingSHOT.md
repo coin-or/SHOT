@@ -229,7 +229,9 @@ introduced, or reproduce a failure in isolation instead of debugging a full
 
 - **How it's built**: `test/CMakeLists.txt` compiles every `*Test.cpp` file
   under `test/` (e.g. `ModelTest.cpp`, `SettingsTest.cpp`, `SolverTest.cpp`,
-  `InstanceTest.cpp`, plus `CbcTest.cpp`/`CplexTest.cpp`/`GurobiTest.cpp`/
+  `InstanceTest.cpp`, `FullInstanceTest.cpp` (the opt-in counterpart of
+  `InstanceTest.cpp`, sharing its implementation via `InstanceTestCommon.h`),
+  plus `CbcTest.cpp`/`CplexTest.cpp`/`GurobiTest.cpp`/
   `HighsTest.cpp`/`IpoptTest.cpp`/`GAMSTest.cpp` for whichever
   subsolvers were compiled in) into a single `test_runner` executable
   (CMake's `create_test_sourcelist` mechanism). Each file defines an
@@ -280,6 +282,34 @@ introduced, or reproduce a failure in isolation instead of debugging a full
   `./SHOT test/data/instances/<group>/<file> --debug=<dir>
   Output.Console.Iteration.Detail=0`, and work through the debugging
   workflow in section 6 above.
+- **Core vs. full instance tests**: the `test/data/instances/` subfolders are
+  split into two CTest groups (see `kCoreInstanceFolders` in
+  `test/InstanceTestCommon.h`). **Core** (`Instance_1`..`Instance_6`) scans
+  only `minlp_tests_jl` and `MINLP-convex-small` — small, fast, and always
+  run, including under a bare `ctest` (which is what CI does). **Full**
+  (`FullInstance_1`..`FullInstance_6`) scans every other
+  `test/data/instances/` subfolder (currently `MINLP-convex`,
+  `MINLP-nonconvex`, `MIQCQP-convex`) using the identical solver-combination
+  matrix and numeric part mapping as `Instance`, but is registered
+  `DISABLED` by default so it never runs as part of a normal/CI `ctest`
+  invocation. To run the full set on demand, from the build directory:
+
+  ```bash
+  cmake . -DENABLE_FULL_INSTANCE_TESTS=ON
+  cmake --build . -j <N>                      # relinks test_runner
+  ctest -R FullInstance --output-on-failure
+  ```
+
+  `ctest -N` shows `FullInstance_*` as `Not Run (Disabled)` when the option
+  is off, and as normal runnable tests once it's on. Turn it back off the
+  same way (`-DENABLE_FULL_INSTANCE_TESTS=OFF`, reconfigure) so subsequent
+  plain `ctest` runs stay fast. To iterate on a single full-set combination
+  directly, bypassing CTest and the cache option entirely:
+
+  ```bash
+  ./test/test_runner FullInstancetest 1 -v
+  ```
+
 - **Python API tests** (`test/python/*.py`, run via `pytest`) only register
   if Python bindings are built (`-DHAS_PYTHON=on`, target `SHOTpy`) and
   `pytest` is importable; they cover the Python/SHOTpy binding surface

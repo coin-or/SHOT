@@ -1,0 +1,438 @@
+/**
+   The Supporting Hyperplane Optimization Toolkit (SHOT).
+
+   @author Andreas Lundell, Åbo Akademi University
+
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
+   Please see the README and LICENSE files for more information.
+*/
+
+#pragma once
+
+#include "../src/Enums.h"
+#include "../src/Results.h"
+#include "../src/Solver.h"
+#include "../src/Utilities.h"
+
+#include "../src/Model/ObjectiveFunction.h"
+#include "../src/Model/Problem.h"
+#include "../src/Timing.h"
+
+#include <nlohmann/json.hpp>
+
+#include <algorithm>
+#include <cmath>
+#include <cstdio>
+#include <fstream>
+#include <iostream>
+#include <string>
+#include <vector>
+
+#ifdef HAS_STD_FILESYSTEM
+#include <filesystem>
+namespace fs = std;
+#endif
+
+#ifdef HAS_STD_EXPERIMENTAL_FILESYSTEM
+#include <experimental/filesystem>
+namespace fs = std::experimental;
+#endif
+
+using namespace SHOT;
+using json = nlohmann::json;
+
+enum class E_InstanceResult
+{
+    Pass,
+    WarnObjective,
+    WarnNoSolution,
+    WarnFeasibility,
+    FailCrash,
+    Skipped
+};
+
+// Folder names making up the "core" instance set: small/fast, always exercised, including under a
+// bare/unfiltered `ctest` run (e.g. CI). Any data/instances/ subfolder NOT listed here defaults to
+// "full" (opt-in only, see FullInstanceTest.cpp) -- this is deliberate so future benchmark folders
+// default to opt-in exercise rather than silently getting no coverage.
+static const std::vector<std::string> kCoreInstanceFolders = { "minlp_tests_jl", "MINLP-convex-small" };
+
+enum class InstanceTestScope
+{
+    Core,
+    Full
+};
+
+struct InstanceEntry
+{
+    std::string file;
+    double expectedObjective = 0.0;
+    bool isInfeasible = false;
+    std::string description;
+};
+
+static std::vector<InstanceEntry> parseInstancesJson(const std::string& directory)
+{
+    std::vector<InstanceEntry> entries;
+    std::string jsonPath = directory + "/instances.json";
+
+    if(!fs::filesystem::exists(jsonPath))
+        return entries;
+
+    try
+    {
+        std::ifstream f(jsonPath);
+        json j = json::parse(f);
+
+        for(const auto& inst : j.at("instances"))
+        {
+            InstanceEntry e;
+            e.file = inst.at("file").get<std::string>();
+
+            if(inst.contains("status") && inst["status"].get<std::string>() == "infeasible")
+            {
+                e.isInfeasible = true;
+            }
+            else if(inst.contains("objective"))
+            {
+                e.expectedObjective = inst["objective"].get<double>();
+            }
+
+            if(inst.contains("description"))
+                e.description = inst["description"].get<std::string>();
+
+            entries.push_back(e);
+        }
+    }
+    catch(const std::exception& ex)
+    {
+        std::cout << "  Error parsing " << jsonPath << ": " << ex.what() << '\n';
+    }
+
+    return entries;
+}
+
+static bool isFormatSupported(Solver& solver, const std::string& extension)
+{
+    if(extension == ".nl")
+        return solver.hasModelingSystem(ES_ModelingSystem::AMPL);
+    if(extension == ".gms")
+        return solver.hasModelingSystem(ES_ModelingSystem::GAMS);
+    // .osil and .xml are always available
+    return (extension == ".osil" || extension == ".xml");
+}
+
+static std::string convexityToString(E_ProblemConvexity convexity)
+{
+    switch(convexity)
+    {
+    case E_ProblemConvexity::Convex:
+        return "convex";
+    case E_ProblemConvexity::Nonconvex:
+        return "nonconvex";
+    default:
+        return "convexity not set";
+    }
+}
+
+static std::string formatBoundValue(double value)
+{
+    return (std::isnan(value) || std::abs(value) >= 1e100) ? "n/a" : fmt::format("{:.6g}", value);
+}
+
+// Formats the [primal, dual] bound obtained so far, so it can be checked against the expected objective by eye.
+static std::string formatBounds(Solver& solver)
+{
+    double primal = solver.hasPrimalSolution() ? solver.getPrimalBound() : NAN;
+    double dual = solver.getGlobalDualBound();
+    return fmt::format("bound: [{}, {}]", formatBoundValue(primal), formatBoundValue(dual));
+}
+
+// detailOut is filled with exactly the text shown after "<file>: " in the per-instance console line, so the
+// final Warned/Failed summary can reuse it verbatim and show the same information as the individual run.
+static E_InstanceResult solveInstance(const InstanceEntry& entry, const std::string& filepath, ES_MIPSolver mipSolver,
+    ES_PrimalNLPSolver nlpSolver, bool verbose, const std::string& solverDesc, std::string& detailOut)
+{
+    constexpr double tolerance = 1e-2;
+    constexpr double timeLimit = 10.0;
+
+    std::cout << fmt::format("  Solving {} [{}]...\n", entry.file, solverDesc);
+    std::cout.flush();
+
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(verbose ? E_LogLevel::Info : E_LogLevel::Off));
+    solver->updateLogLevels();
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(mipSolver));
+    solver->updateSetting("Primal.FixedInteger.Solver", static_cast<int>(nlpSolver));
+    solver->updateSetting("Termination.TimeLimit", timeLimit);
+
+    std::string convexityDesc = "convexity not set";
+    std::string boundsDesc = "bound: [n/a, n/a]";
+
+    try
+    {
+        if(!solver->setProblem(filepath))
+        {
+            detailOut = "failed to load";
+            std::cout << fmt::format("  [WARN] {}: {}\n", entry.file, detailOut);
+            return E_InstanceResult::WarnNoSolution;
+        }
+
+        convexityDesc = convexityToString(solver->getReformulatedProblem()->properties.convexity);
+
+        solver->outputProblemInstanceReport();
+        solver->outputOptionsReport();
+
+        solver->solveProblem();
+    }
+    catch(const std::exception& ex)
+    {
+        double elapsed = solver->getEnvironment()->timing->getElapsedTime("Total");
+
+        try
+        {
+            boundsDesc = formatBounds(*solver);
+        }
+        catch(...)
+        {
+        }
+
+        detailOut = fmt::format("exception: {} ({}, {}, {:.1f}s)", ex.what(), convexityDesc, boundsDesc, elapsed);
+        std::cout << fmt::format("  [FAIL] {}: {}\n", entry.file, detailOut);
+        return E_InstanceResult::FailCrash;
+    }
+
+    solver->outputSolutionReport();
+
+    double elapsed = solver->getEnvironment()->timing->getElapsedTime("Total");
+    auto status = solver->getModelReturnStatus();
+
+    boundsDesc = formatBounds(*solver);
+
+    if(entry.isInfeasible)
+    {
+        bool confirmed
+            = (status == E_ModelReturnStatus::InfeasibleGlobal || status == E_ModelReturnStatus::InfeasibleLocal);
+        if(confirmed)
+        {
+            detailOut = fmt::format("infeasible confirmed ({}, {:.1f}s)", convexityDesc, elapsed);
+            std::cout << fmt::format("  [PASS] {}: {}\n", entry.file, detailOut);
+            return E_InstanceResult::Pass;
+        }
+        else
+        {
+            detailOut = fmt::format("expected infeasible, got status {} ({}, {}, {:.1f}s)",
+                static_cast<int>(status), convexityDesc, boundsDesc, elapsed);
+            std::cout << fmt::format("  [WARN] {}: {}\n", entry.file, detailOut);
+            return E_InstanceResult::WarnFeasibility;
+        }
+    }
+
+    if(!solver->hasPrimalSolution())
+    {
+        detailOut = fmt::format("no primal solution ({}, {}, {:.1f}s)", convexityDesc, boundsDesc, elapsed);
+        std::cout << fmt::format("  [WARN] {}: {}\n", entry.file, detailOut);
+        return E_InstanceResult::WarnNoSolution;
+    }
+
+    double primal = solver->getPrimalBound();
+    double dual = solver->getGlobalDualBound();
+    double obj = entry.expectedObjective;
+
+    bool isMin = solver->getOriginalProblem()->objectiveFunction->properties.isMinimize;
+    bool withinBounds = isMin ? (obj <= primal + tolerance && obj >= dual - tolerance)
+                              : (obj >= primal - tolerance && obj <= dual + tolerance);
+
+    if(withinBounds)
+    {
+        detailOut = fmt::format(
+            "objective = {:.6g} (expected {:.6g}), {}, {}, {:.1f}s", primal, obj, convexityDesc, boundsDesc, elapsed);
+        std::cout << fmt::format("  [PASS] {}: {}\n", entry.file, detailOut);
+        return E_InstanceResult::Pass;
+    }
+    else
+    {
+        detailOut = fmt::format("primal = {:.6g}, dual = {:.6g}, expected {:.6g}, {}, {}, {:.1f}s", primal, dual, obj,
+            convexityDesc, boundsDesc, elapsed);
+        std::cout << fmt::format("  [WARN] {}: {}\n", entry.file, detailOut);
+        return E_InstanceResult::WarnObjective;
+    }
+}
+
+static bool runInstanceTests(ES_MIPSolver mipSolver, ES_PrimalNLPSolver nlpSolver, bool verbose,
+    const std::string& solverDesc, InstanceTestScope scope)
+{
+    const std::string instancesRoot = "data/instances";
+
+    if(!fs::filesystem::exists(instancesRoot))
+    {
+        std::cout << "  Instance test directory '" << instancesRoot << "' not found\n";
+        return false;
+    }
+
+    int pass = 0, warn = 0, fail = 0, skip = 0;
+    std::vector<std::pair<std::string, std::string>> warnList, failList;
+
+    // probe once to check format support without loading a problem
+    Solver probe;
+
+    for(auto& subdir : fs::filesystem::directory_iterator(instancesRoot))
+    {
+        if(!subdir.is_directory())
+            continue;
+
+        std::string folderName = subdir.path().filename().string();
+        bool isCore = std::find(kCoreInstanceFolders.begin(), kCoreInstanceFolders.end(), folderName)
+            != kCoreInstanceFolders.end();
+
+        if(scope == InstanceTestScope::Core && !isCore)
+            continue;
+        if(scope == InstanceTestScope::Full && isCore)
+            continue;
+
+        std::string dir = subdir.path().string();
+        auto entries = parseInstancesJson(dir);
+
+        if(entries.empty())
+            continue;
+
+        std::cout << "\n  --- " << folderName << " ---\n";
+
+        for(const auto& entry : entries)
+        {
+            std::string ext = fs::filesystem::path(entry.file).extension().string();
+
+            if(!isFormatSupported(probe, ext))
+            {
+                std::cout << fmt::format("  [SKIP] {}: format '{}' not compiled in\n", entry.file, ext);
+                skip++;
+                continue;
+            }
+
+            std::string filepath = dir + "/" + entry.file;
+
+            if(!fs::filesystem::exists(filepath))
+            {
+                std::cout << fmt::format("  [SKIP] {}: file not found\n", entry.file);
+                skip++;
+                continue;
+            }
+
+            std::string detail;
+            auto result = solveInstance(entry, filepath, mipSolver, nlpSolver, verbose, solverDesc, detail);
+
+            switch(result)
+            {
+            case E_InstanceResult::Pass:
+                pass++;
+                break;
+            case E_InstanceResult::FailCrash:
+                fail++;
+                failList.emplace_back(entry.file, detail);
+                break;
+            case E_InstanceResult::WarnObjective:
+            case E_InstanceResult::WarnNoSolution:
+            case E_InstanceResult::WarnFeasibility:
+                warn++;
+                warnList.emplace_back(entry.file, detail);
+                break;
+            case E_InstanceResult::Skipped:
+                skip++;
+                break;
+            default:
+                warn++;
+                warnList.emplace_back(entry.file, detail);
+                break;
+            }
+        }
+    }
+
+    std::cout << fmt::format("\n  Results: {} passed, {} warned, {} failed, {} skipped\n", pass, warn, fail, skip);
+
+    if(!warnList.empty())
+    {
+        std::cout << "\n  Warned:\n";
+        for(const auto& [f, detail] : warnList)
+            std::cout << fmt::format("    - {}: {}", f, detail) << '\n';
+    }
+
+    if(!failList.empty())
+    {
+        std::cout << "\n  Failed:\n";
+        for(const auto& [f, detail] : failList)
+            std::cout << fmt::format("    - {}: {}", f, detail) << '\n';
+    }
+
+    return fail == 0;
+}
+
+// Shared CLI dispatch for both InstanceTest (core) and FullInstanceTest (full/extended). `label` is used only
+// in the printed banner/summary lines.
+static int runInstanceTestMain(int argc, char* argv[], InstanceTestScope scope, const std::string& label)
+{
+    int defaultchoice = 1;
+    int choice = defaultchoice;
+
+    if(argc > 1)
+    {
+        if(sscanf(argv[1], "%d", &choice) != 1)
+        {
+            printf("Couldn't parse that input as a number\n");
+            return -1;
+        }
+    }
+
+    bool verbose = false;
+    for(int i = 2; i < argc; i++)
+        if(std::string(argv[i]) == "-v")
+            verbose = true;
+
+    bool passed = false;
+
+    switch(choice)
+    {
+    case 1:
+        std::cout << label << " tests: HiGHS + Ipopt\n";
+        passed = runInstanceTests(ES_MIPSolver::Highs, ES_PrimalNLPSolver::Ipopt, verbose, "HiGHS + Ipopt", scope);
+        break;
+    case 2:
+        std::cout << label << " tests: Gurobi + Ipopt\n";
+        passed = runInstanceTests(ES_MIPSolver::Gurobi, ES_PrimalNLPSolver::Ipopt, verbose, "Gurobi + Ipopt", scope);
+        break;
+    case 3:
+        std::cout << label << " tests: Cplex + Ipopt\n";
+        passed = runInstanceTests(ES_MIPSolver::Cplex, ES_PrimalNLPSolver::Ipopt, verbose, "Cplex + Ipopt", scope);
+        break;
+    case 4:
+        std::cout << label << " tests: Cbc + Ipopt\n";
+        passed = runInstanceTests(ES_MIPSolver::Cbc, ES_PrimalNLPSolver::Ipopt, verbose, "Cbc + Ipopt", scope);
+        break;
+    case 5:
+        std::cout << label << " tests: HiGHS + SHOT (NLP)\n";
+        passed = runInstanceTests(ES_MIPSolver::Highs, ES_PrimalNLPSolver::SHOT, verbose, "HiGHS + SHOT", scope);
+        break;
+    case 6:
+        std::cout << label << " tests: Gurobi + SHOT (NLP)\n";
+        passed = runInstanceTests(ES_MIPSolver::Gurobi, ES_PrimalNLPSolver::SHOT, verbose, "Gurobi + SHOT", scope);
+        break;
+    case 7:
+        std::cout << label << " tests: Cplex + SHOT (NLP)\n";
+        passed = runInstanceTests(ES_MIPSolver::Cplex, ES_PrimalNLPSolver::SHOT, verbose, "Cplex + SHOT", scope);
+        break;
+    case 8:
+        std::cout << label << " tests: Cbc + SHOT (NLP)\n";
+        passed = runInstanceTests(ES_MIPSolver::Cbc, ES_PrimalNLPSolver::SHOT, verbose, "Cbc + SHOT", scope);
+        break;
+    default:
+        std::cout << "Test #" << choice << " does not exist!\n";
+        return -1;
+    }
+
+    if(!passed)
+        std::cout << "\n" << label << " tests FAILED (crashes occurred)\n";
+    else
+        std::cout << "\n" << label << " tests PASSED (no crashes)\n";
+
+    return passed ? 0 : -1;
+}

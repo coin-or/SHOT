@@ -1,0 +1,171 @@
+{
+    "source": "SHOT_benchmark_problems",
+    "url": "https://github.com/andreaslundell/SHOT_benchmark_problems",
+    "description": "MINLP-convex category (osil format). Objectives sourced from https://www.minlplib.org/minlplib.solu.",
+    "instances": [
+        {
+            "file": "ball_mk2_10.osil",
+            "objective": 0.0
+        },
+        {
+            "file": "ball_mk3_30.osil",
+            "status": "infeasible"
+        },
+        {
+            "file": "batch.osil",
+            "objective": 285506.5082
+        },
+        {
+            "file": "batchs101006m.osil",
+            "objective": 769440.4204
+        },
+        {
+            "file": "cvxnonsep_normcon20.osil",
+            "objective": -21.74914736
+        },
+        {
+            "file": "cvxnonsep_nsig20.osil",
+            "objective": 80.94929546
+        },
+        {
+            "file": "cvxnonsep_pcon20.osil",
+            "objective": -21.5123012
+        },
+        {
+            "file": "cvxnonsep_psig20r.osil",
+            "objective": 95.89738736
+        },
+        {
+            "file": "enpro48pb.osil",
+            "objective": 187277.2594
+        },
+        {
+            "file": "ex1223.osil",
+            "objective": 4.579582402
+        },
+        {
+            "file": "fac1.osil",
+            "objective": 160912612.4
+        },
+        {
+            "file": "flay02h.osil",
+            "objective": 37.94733192
+        },
+        {
+            "file": "flay03m.osil",
+            "objective": 48.98979486
+        },
+        {
+            "file": "fo7.osil",
+            "objective": 20.72982507
+        },
+        {
+            "file": "m3.osil",
+            "objective": 37.8
+        },
+        {
+            "file": "nvs03.osil",
+            "objective": 16.0
+        },
+        {
+            "file": "nvs10.osil",
+            "objective": -310.8
+        },
+        {
+            "file": "nvs11.osil",
+            "objective": -431.0
+        },
+        {
+            "file": "nvs12.osil",
+            "objective": -481.2
+        },
+        {
+            "file": "nvs15.osil",
+            "objective": 1.0
+        },
+        {
+            "file": "o7_2.osil",
+            "objective": 116.9459316
+        },
+        {
+            "file": "p_ball_10b_5p_2d_h.osil",
+            "objective": 18.71857799
+        },
+        {
+            "file": "portfol_buyin.osil",
+            "objective": 0.0294237999
+        },
+        {
+            "file": "portfol_card.osil",
+            "objective": 0.0322176618
+        },
+        {
+            "file": "ravempb.osil",
+            "objective": 269590.2193
+        },
+        {
+            "file": "rsyn0810hfsg.osil",
+            "objective": 1721.447711
+        },
+        {
+            "file": "rsyn0810m.osil",
+            "objective": 1721.447711
+        },
+        {
+            "file": "slay04h.osil",
+            "objective": 9859.659708
+        },
+        {
+            "file": "slay05m.osil",
+            "objective": 22664.67865
+        },
+        {
+            "file": "smallinvDAXr1b010-011.osil",
+            "objective": 0.398797498
+        },
+        {
+            "file": "sssd12-05.osil",
+            "objective": 281408.6352
+        },
+        {
+            "file": "st_e14.osil",
+            "objective": 4.579582402
+        },
+        {
+            "file": "st_test1.osil",
+            "objective": 0.0
+        },
+        {
+            "file": "st_testgr1.osil",
+            "objective": -12.8116
+        },
+        {
+            "file": "st_testph4.osil",
+            "objective": -80.5
+        },
+        {
+            "file": "stockcycle.osil",
+            "objective": 119948.6883
+        },
+        {
+            "file": "syn05hfsg.osil",
+            "objective": 837.7324009
+        },
+        {
+            "file": "syn20m.osil",
+            "objective": 924.2633105
+        },
+        {
+            "file": "synthes1.osil",
+            "objective": 6.00975909
+        },
+        {
+            "file": "tls4.osil",
+            "objective": 8.3
+        },
+        {
+            "file": "watercontamination0202r.osil",
+            "objective": 97.90445517
+        }
+    ]
+}

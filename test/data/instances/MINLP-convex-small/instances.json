@@ -1,0 +1,63 @@
+{
+    "source": "SHOT_benchmark_problems",
+    "url": "https://github.com/andreaslundell/SHOT_benchmark_problems",
+    "description": "MINLP-convex-small category (osil format). Objectives sourced from https://www.minlplib.org/minlplib.solu.",
+    "instances": [
+        {
+            "file": "batch.osil",
+            "objective": 285506.5082
+        },
+        {
+            "file": "m3.osil",
+            "objective": 37.8
+        },
+        {
+            "file": "nvs03.osil",
+            "objective": 16.0
+        },
+        {
+            "file": "nvs10.osil",
+            "objective": -310.8
+        },
+        {
+            "file": "nvs11.osil",
+            "objective": -431.0
+        },
+        {
+            "file": "nvs12.osil",
+            "objective": -481.2
+        },
+        {
+            "file": "nvs15.osil",
+            "objective": 1.0
+        },
+        {
+            "file": "portfol_buyin.osil",
+            "objective": 0.0294237999
+        },
+        {
+            "file": "portfol_card.osil",
+            "objective": 0.0322176618
+        },
+        {
+            "file": "st_e14.osil",
+            "objective": 4.579582402
+        },
+        {
+            "file": "st_test1.osil",
+            "objective": 0.0
+        },
+        {
+            "file": "st_testgr1.osil",
+            "objective": -12.8116
+        },
+        {
+            "file": "st_testph4.osil",
+            "objective": -80.5
+        },
+        {
+            "file": "synthes1.osil",
+            "objective": 6.00975909
+        }
+    ]
+}

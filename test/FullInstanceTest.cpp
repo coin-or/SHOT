@@ -10,7 +10,7 @@
 
 #include "InstanceTestCommon.h"
 
-int InstanceTest(int argc, char* argv[])
+int FullInstanceTest(int argc, char* argv[])
 {
-    return runInstanceTestMain(argc, argv, InstanceTestScope::Core, "Instance");
+    return runInstanceTestMain(argc, argv, InstanceTestScope::Full, "FullInstance");
 }

@@ -119,6 +119,22 @@ if(Instance_parts)
   set(cpptests ${cpptests} Instance)
 endif()
 
+# FullInstance tests: same (MIP solver x NLP solver) matrix as Instance, but scans the larger
+# opt-in benchmark folders (MINLP-convex, MINLP-nonconvex, MIQCQP-convex) instead of the small
+# "core" set (see test/InstanceTestCommon.h). Registered under the same guards as Instance, but
+# each registered test is marked DISABLED unless ENABLE_FULL_INSTANCE_TESTS is ON, so a bare
+# `ctest` run (as used in CI) never executes them. See docs/DebuggingSHOT.md.
+option(ENABLE_FULL_INSTANCE_TESTS
+       "Enable the FullInstance CTest group (large opt-in MINLP benchmark instance sets). When OFF \
+(default), FullInstance_* tests are registered but DISABLED, so they are skipped by a plain 'ctest' \
+run; reconfigure with this ON to run them via 'ctest -R FullInstance'."
+       OFF)
+
+set(FullInstance_parts ${Instance_parts})
+if(FullInstance_parts)
+  set(cpptests ${cpptests} FullInstance)
+endif()
+
 # Adds a "1" to tests without parts
 foreach(cpptest ${cpptests})
   if(NOT DEFINED "${cpptest}_parts")
@@ -261,6 +277,9 @@ foreach(cpptest ${cpptests})
     set_tests_properties(${cpptest}_${part}
                          PROPERTIES FAIL_REGULAR_EXPRESSION
                                     "ERROR;FAIL;Test failed")
+    if(cpptest STREQUAL "FullInstance" AND NOT ENABLE_FULL_INSTANCE_TESTS)
+      set_tests_properties(${cpptest}_${part} PROPERTIES DISABLED TRUE)
+    endif()
   endforeach()
 endforeach()
 
