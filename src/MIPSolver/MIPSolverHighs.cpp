@@ -714,6 +714,34 @@ bool MIPSolverHighs::repairInfeasibility()
             return (false);
         }
 
+        // Guard against a limitation in HiGHS's elasticityFilter (used internally by
+        // feasibilityRelaxation below): it assumes that solving the elastic problem always
+        // results in an Optimal or Unbounded model status, but if the constraints that are
+        // *not* eligible for repair (i.e. that keep a -1 local penalty) are contradictory on
+        // their own, the elastic problem stays Infeasible and HiGHS hits an assertion instead
+        // of returning gracefully. Detect that case up front by fully relaxing the repairable
+        // rows and checking that what remains is at least LP-feasible; if it is not, there is
+        // nothing the repair can fix.
+        {
+            Highs feasibilityCheckModel;
+            feasibilityCheckModel.passModel(feasModel.getModel());
+            feasibilityCheckModel.setOptionValue("output_flag", false);
+
+            double checkInfinity = feasibilityCheckModel.getInfinity();
+
+            for(int constraintIdx : repairConstraints)
+                feasibilityCheckModel.changeRowBounds(constraintIdx, -checkInfinity, checkInfinity);
+
+            feasibilityCheckModel.run();
+            auto checkStatus = feasibilityCheckModel.getModelStatus();
+
+            if(checkStatus != HighsModelStatus::kOptimal && checkStatus != HighsModelStatus::kUnbounded)
+            {
+                env->output->outputDebug("        Could not repair the infeasible dual problem.");
+                return (false);
+            }
+        }
+
         // Saves the relaxation weights to a file
         if(env->settings->getSetting<bool>("Output.Debug.Enable"))
         {
