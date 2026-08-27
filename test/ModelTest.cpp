@@ -2234,9 +2234,11 @@ bool ModelTestGradientsAndHessians()
             std::cout << "  PASSED\n";
     }
 
-    // ========== Test 5: Quadratic x^2 + 2*x*y + y^2 ==========
+    // ========== Test 5: Quadratic 3*x^2 + 2*x*y + 4*y^2 ==========
+    // Non-unit coefficients on every term, including the square terms -- a coefficient of exactly 1.0 can't
+    // distinguish "multiplied by the coefficient" from "coefficient silently ignored".
     {
-        std::cout << "\nTest 5: Gradient and Hessian of x^2 + 2*x*y + y^2\n";
+        std::cout << "\nTest 5: Gradient and Hessian of 3*x^2 + 2*x*y + 4*y^2\n";
 
         auto problem = std::make_shared<Problem>(env);
         problem->name = "quadratic_test";
@@ -2247,9 +2249,9 @@ bool ModelTestGradientsAndHessians()
         problem->add(y);
 
         QuadraticTerms quadTerms;
-        quadTerms.add(std::make_shared<QuadraticTerm>(1.0, x, x)); // x^2
+        quadTerms.add(std::make_shared<QuadraticTerm>(3.0, x, x)); // 3*x^2
         quadTerms.add(std::make_shared<QuadraticTerm>(2.0, x, y)); // 2*x*y
-        quadTerms.add(std::make_shared<QuadraticTerm>(1.0, y, y)); // y^2
+        quadTerms.add(std::make_shared<QuadraticTerm>(4.0, y, y)); // 4*y^2
 
         auto objective = std::make_shared<QuadraticObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
         objective->add(quadTerms);
@@ -2258,13 +2260,13 @@ bool ModelTestGradientsAndHessians()
         problem->finalize();
 
         VectorDouble point = { 1.0, 2.0 };
-        // d/dx = 2*x + 2*y = 2 + 4 = 6
-        // d/dy = 2*x + 2*y = 2 + 4 = 6
-        double expected_grad_x = 6.0;
-        double expected_grad_y = 6.0;
-        // d^2/dx^2 = 2, d^2/dy^2 = 2, d^2/dxdy = 2
-        double expected_hess_xx = 2.0;
-        double expected_hess_yy = 2.0;
+        // d/dx = 6*x + 2*y = 6 + 4 = 10
+        // d/dy = 2*x + 8*y = 2 + 16 = 18
+        double expected_grad_x = 10.0;
+        double expected_grad_y = 18.0;
+        // d^2/dx^2 = 6, d^2/dy^2 = 8, d^2/dxdy = 2
+        double expected_hess_xx = 6.0;
+        double expected_hess_yy = 8.0;
         double expected_hess_xy = 2.0;
 
         auto gradient = objective->calculateGradient(point, true);
@@ -2285,7 +2287,8 @@ bool ModelTestGradientsAndHessians()
 
         std::cout << "  Hessian: [[" << hessian[key_xx] << ", " << hessian[key_xy] << "], [";
         std::cout << hessian[key_xy] << ", " << hessian[key_yy] << "]]\n";
-        std::cout << "  Expected: [[2, 2], [2, 2]]\n";
+        std::cout << "  Expected: [[" << expected_hess_xx << ", " << expected_hess_xy << "], [" << expected_hess_xy
+                  << ", " << expected_hess_yy << "]]\n";
 
         if(std::abs(hessian[key_xx] - expected_hess_xx) > tolerance
             || std::abs(hessian[key_yy] - expected_hess_yy) > tolerance
@@ -2494,9 +2497,10 @@ bool ModelTestGradientsAndHessians()
             std::cout << "  PASSED\n";
     }
 
-    // ========== Test 9: Signomial term x^0.5 * y^1.5 ==========
+    // ========== Test 9: Signomial term 2 * x^0.5 * y^1.5 ==========
+    // Non-unit coefficient so a silently-dropped coefficient can't hide behind coefficient=1.0.
     {
-        std::cout << "\nTest 9: Gradient and Hessian of signomial x^0.5 * y^1.5\n";
+        std::cout << "\nTest 9: Gradient and Hessian of signomial 2 * x^0.5 * y^1.5\n";
 
         auto problem = std::make_shared<Problem>(env);
         problem->name = "signomial_test";
@@ -2506,12 +2510,12 @@ bool ModelTestGradientsAndHessians()
         problem->add(x);
         problem->add(y);
 
-        // Create signomial: x^0.5 * y^1.5
+        // Create signomial: 2 * x^0.5 * y^1.5
         SignomialElements sigElements;
         sigElements.push_back(std::make_shared<SignomialElement>(x, 0.5));
         sigElements.push_back(std::make_shared<SignomialElement>(y, 1.5));
         SignomialTerms sigTerms;
-        sigTerms.add(std::make_shared<SignomialTerm>(1.0, sigElements));
+        sigTerms.add(std::make_shared<SignomialTerm>(2.0, sigElements));
 
         auto objective = std::make_shared<NonlinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
         objective->add(sigTerms);
@@ -2520,11 +2524,11 @@ bool ModelTestGradientsAndHessians()
         problem->finalize();
 
         VectorDouble point = { 4.0, 1.0 };
-        // f = x^0.5 * y^1.5 = 2 * 1 = 2
-        // df/dx = 0.5 * x^(-0.5) * y^1.5 = 0.5 * 0.5 * 1 = 0.25
-        // df/dy = 1.5 * x^0.5 * y^0.5 = 1.5 * 2 * 1 = 3.0
-        double expected_grad_x = 0.25;
-        double expected_grad_y = 3.0;
+        // f = 2 * x^0.5 * y^1.5 = 2 * 2 * 1 = 4
+        // df/dx = 2 * 0.5 * x^(-0.5) * y^1.5 = 2 * 0.5 * 0.5 * 1 = 0.5
+        // df/dy = 2 * 1.5 * x^0.5 * y^0.5 = 2 * 1.5 * 2 * 1 = 6.0
+        double expected_grad_x = 0.5;
+        double expected_grad_y = 6.0;
 
         auto gradient = objective->calculateGradient(point, true);
 
@@ -2541,9 +2545,10 @@ bool ModelTestGradientsAndHessians()
             std::cout << "  PASSED\n";
     }
 
-    // ========== Test 10: Monomial term x*y*z ==========
+    // ========== Test 10: Monomial term -2*x*y*z ==========
+    // Negative, non-unit coefficient
     {
-        std::cout << "\nTest 10: Gradient and Hessian of monomial x*y*z\n";
+        std::cout << "\nTest 10: Gradient and Hessian of monomial -2*x*y*z\n";
 
         auto problem = std::make_shared<Problem>(env);
         problem->name = "monomial_test";
@@ -2555,13 +2560,13 @@ bool ModelTestGradientsAndHessians()
         problem->add(y);
         problem->add(z);
 
-        // Create monomial: x*y*z
+        // Create monomial: -2*x*y*z
         Variables monomialVars;
         monomialVars.push_back(x);
         monomialVars.push_back(y);
         monomialVars.push_back(z);
         MonomialTerms monomialTerms;
-        monomialTerms.add(std::make_shared<MonomialTerm>(1.0, monomialVars));
+        monomialTerms.add(std::make_shared<MonomialTerm>(-2.0, monomialVars));
 
         auto objective = std::make_shared<NonlinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
         objective->add(monomialTerms);
@@ -2570,13 +2575,13 @@ bool ModelTestGradientsAndHessians()
         problem->finalize();
 
         VectorDouble point = { 2.0, 3.0, 4.0 };
-        // f = x*y*z
-        // df/dx = y*z = 12
-        // df/dy = x*z = 8
-        // df/dz = x*y = 6
-        double expected_grad_x = 12.0;
-        double expected_grad_y = 8.0;
-        double expected_grad_z = 6.0;
+        // f = -2*x*y*z
+        // df/dx = -2*y*z = -24
+        // df/dy = -2*x*z = -16
+        // df/dz = -2*x*y = -12
+        double expected_grad_x = -24.0;
+        double expected_grad_y = -16.0;
+        double expected_grad_z = -12.0;
 
         auto gradient = objective->calculateGradient(point, true);
         auto hessian = objective->calculateHessian(point, true);
@@ -2591,23 +2596,84 @@ bool ModelTestGradientsAndHessians()
             passed = false;
         }
 
-        // Hessian: d^2/dxdy = z = 4, d^2/dxdz = y = 3, d^2/dydz = x = 2
+        // Hessian: d^2/dxdy = -2*z = -8, d^2/dxdz = -2*y = -6, d^2/dydz = -2*x = -4
         auto key_xy = std::make_pair(x, y);
         auto key_xz = std::make_pair(x, z);
         auto key_yz = std::make_pair(y, z);
 
         if(hessian.find(key_xy) != hessian.end())
-            std::cout << "  Hessian[x,y] = " << hessian[key_xy] << " (expected: 4)\n";
+            std::cout << "  Hessian[x,y] = " << hessian[key_xy] << " (expected: -8)\n";
         if(hessian.find(key_xz) != hessian.end())
-            std::cout << "  Hessian[x,z] = " << hessian[key_xz] << " (expected: 3)\n";
+            std::cout << "  Hessian[x,z] = " << hessian[key_xz] << " (expected: -6)\n";
         if(hessian.find(key_yz) != hessian.end())
-            std::cout << "  Hessian[y,z] = " << hessian[key_yz] << " (expected: 2)\n";
+            std::cout << "  Hessian[y,z] = " << hessian[key_yz] << " (expected: -4)\n";
 
-        if(hessian.find(key_xy) == hessian.end() || std::abs(hessian[key_xy] - 4.0) > tolerance
-            || hessian.find(key_xz) == hessian.end() || std::abs(hessian[key_xz] - 3.0) > tolerance
-            || hessian.find(key_yz) == hessian.end() || std::abs(hessian[key_yz] - 2.0) > tolerance)
+        if(hessian.find(key_xy) == hessian.end() || std::abs(hessian[key_xy] - (-8.0)) > tolerance
+            || hessian.find(key_xz) == hessian.end() || std::abs(hessian[key_xz] - (-6.0)) > tolerance
+            || hessian.find(key_yz) == hessian.end() || std::abs(hessian[key_yz] - (-4.0)) > tolerance)
         {
             std::cout << "  FAILED: Hessian mismatch!\n";
+            passed = false;
+        }
+
+        if(passed)
+            std::cout << "  PASSED\n";
+    }
+
+    // ========== Test 10b: Two monomial terms sharing a variable: 2*x*y + 3*x*z ==========
+    // Exercises the accumulation branch of MonomialTerms::calculateGradient() -- a variable (x here) that
+    // appears in more than one monomial term within the same sum must have its per-term contributions added
+    // together, not have the second term's contribution silently dropped (std::map::emplace() is a no-op if
+    // the key already exists).
+    {
+        std::cout << "\nTest 10b: Gradient of monomial sum 2*x*y + 3*x*z (shared variable x)\n";
+
+        auto problem = std::make_shared<Problem>(env);
+        problem->name = "monomial_shared_var_test";
+
+        auto x = std::make_shared<Variable>("x", 0, E_VariableType::Real, 0.1, 10.0);
+        auto y = std::make_shared<Variable>("y", 1, E_VariableType::Real, 0.1, 10.0);
+        auto z = std::make_shared<Variable>("z", 2, E_VariableType::Real, 0.1, 10.0);
+        problem->add(x);
+        problem->add(y);
+        problem->add(z);
+
+        Variables termVarsXY;
+        termVarsXY.push_back(x);
+        termVarsXY.push_back(y);
+
+        Variables termVarsXZ;
+        termVarsXZ.push_back(x);
+        termVarsXZ.push_back(z);
+
+        MonomialTerms monomialTerms;
+        monomialTerms.add(std::make_shared<MonomialTerm>(2.0, termVarsXY)); // 2*x*y
+        monomialTerms.add(std::make_shared<MonomialTerm>(3.0, termVarsXZ)); // 3*x*z
+
+        auto objective = std::make_shared<NonlinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+        objective->add(monomialTerms);
+        problem->add(objective);
+
+        problem->finalize();
+
+        VectorDouble point = { 2.0, 3.0, 4.0 };
+        // f = 2*x*y + 3*x*z
+        // df/dx = 2*y + 3*z = 6 + 12 = 18   (accumulated across both terms)
+        // df/dy = 2*x = 4
+        // df/dz = 3*x = 6
+        double expected_grad_x = 18.0;
+        double expected_grad_y = 4.0;
+        double expected_grad_z = 6.0;
+
+        auto gradient = objective->calculateGradient(point, true);
+
+        std::cout << "  At (2,3,4): gradient = [" << gradient[x] << ", " << gradient[y] << ", " << gradient[z] << "]";
+        std::cout << " (expected: [" << expected_grad_x << ", " << expected_grad_y << ", " << expected_grad_z << "])\n";
+
+        if(std::abs(gradient[x] - expected_grad_x) > tolerance || std::abs(gradient[y] - expected_grad_y) > tolerance
+            || std::abs(gradient[z] - expected_grad_z) > tolerance)
+        {
+            std::cout << "  FAILED: Gradient mismatch!\n";
             passed = false;
         }
 
