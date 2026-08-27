@@ -193,11 +193,14 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
     auto tCheckConstrTol = std::make_shared<TaskCheckConstraintTolerance>(env, "FinalizeSolution");
     // env->tasks->addTask(tCheckConstrTol, "CheckConstrTol");
 
-    auto tCheckIterError = std::make_shared<TaskCheckIterationError>(env, "FinalizeSolution");
+    bool useReductionCuts = env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex
+        && env->settings->getSetting<bool>("Dual.ReductionCut.Use");
+
+    auto tCheckIterError = std::make_shared<TaskCheckIterationError>(
+        env, "FinalizeSolution", useReductionCuts ? "AddObjectiveCut" : "");
     env->tasks->addTask(tCheckIterError, "CheckIterError");
 
-    if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex
-        && env->settings->getSetting<bool>("Dual.ReductionCut.Use"))
+    if(useReductionCuts)
     {
         auto tCheckMaxNumberOfObjectiveCuts
             = std::make_shared<TaskCheckMaxNumberOfPrimalReductionCuts>(env, "FinalizeSolution");
@@ -313,8 +316,7 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
 
     env->tasks->addTask(tFinalizeSolution, "FinalizeSolution");
 
-    if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex
-        && env->settings->getSetting<bool>("Dual.ReductionCut.Use"))
+    if(useReductionCuts)
     {
         auto tAddObjectiveCutFinal = std::make_shared<TaskAddPrimalReductionCut>(env, "InitIter2", "Terminate", true);
         std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tAddObjectiveCutFinal);
