@@ -155,6 +155,7 @@ public:
             break;
         case E_HyperplaneSource::ObjectiveRootsearch:
             identifier = "H_RS_OBJ";
+            break;
         case E_HyperplaneSource::ObjectiveCuttingPlane:
             identifier = "H_CP_OBJ";
             break;

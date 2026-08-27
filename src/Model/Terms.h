@@ -743,7 +743,7 @@ public:
 
             for(auto& V1 : T->variables)
             {
-                double value = 1.0;
+                double value = T->coefficient;
 
                 for(auto& V2 : T->variables)
                 {
@@ -753,7 +753,13 @@ public:
                     value *= V2->calculate(point);
                 }
 
-                gradient.emplace(V1, value);
+                auto element = gradient.emplace(V1, value);
+
+                if(!element.second)
+                {
+                    // Element already exists for the variable (e.g. it also appears in another monomial term)
+                    element.first->second += value;
+                }
             }
         };
 
