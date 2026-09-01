@@ -773,12 +773,14 @@ public:
     inline bool tightenBounds(Interval bound) override
     {
         if(bound.u() <= 0)
-            return false;
+            return false; // exp() > 0 always; a nonpositive upper bound means infeasible, nothing to propagate
 
-        if(bound.l() <= 0)
-            bound.l(SHOT_DBL_EPS);
+        // A nonpositive lower bound carries no information (exp(x) can get arbitrarily close to 0 for x -> -inf,
+        // satisfying any positive upper cap), so it must map to -inf, not to log() of some small positive floor --
+        // the latter would fabricate a lower bound on the child that the constraint never actually implied.
+        double newLower = (bound.l() <= 0) ? -SHOT_DBL_INF : std::log(bound.l());
 
-        return (child->tightenBounds(log(bound)));
+        return (child->tightenBounds(Interval(newLower, std::log(bound.u()))));
     };
 
     inline FactorableFunction getFactorableFunction() override { return (exp(child->getFactorableFunction())); }

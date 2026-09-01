@@ -4782,6 +4782,26 @@ bool ModelTestTermAndExpressionBounds()
                 SHOT::Interval(reverseVariable->lowerBound, reverseVariable->upperBound), C.lb, C.ub);
         }
 
+        // One-sided (upper-bound-only) candidates: the shape produced by isolating a positive nonlinear term in
+        // a "<=" constraint, e.g. coef*exp(x) <= RHS. Regression coverage for the fix that made
+        // ExpressionExp/ExpressionSquareRoot::tightenBounds() clamp the vacuous (non-positive) side of the
+        // candidate instead of bailing out entirely whenever its lower bound is <= 0 -- that one-sided shape is
+        // the normal, common case for such constraints, not a degenerate edge case, so bailing on it silently
+        // disabled tightening for a whole class of models.
+        {
+            auto expVariable = makeVariable(-100.0, 100.0);
+            SHOT::ExpressionExp expExpression(std::make_shared<SHOT::ExpressionVariable>(expVariable));
+            expExpression.tightenBounds(SHOT::Interval(-SHOT_DBL_INF, std::exp(3.0)));
+            checkInterval("reverse exp(x), one-sided candidate exp(x) <= e^3",
+                SHOT::Interval(expVariable->lowerBound, expVariable->upperBound), -100.0, 3.0);
+
+            auto sqrtVariable = makeVariable(0.0, 1000.0);
+            SHOT::ExpressionSquareRoot sqrtExpression(std::make_shared<SHOT::ExpressionVariable>(sqrtVariable));
+            sqrtExpression.tightenBounds(SHOT::Interval(-SHOT_DBL_INF, 3.0));
+            checkInterval("reverse sqrt(x), one-sided candidate sqrt(x) <= 3",
+                SHOT::Interval(sqrtVariable->lowerBound, sqrtVariable->upperBound), 0.0, 9.0);
+        }
+
         // Square is tested separately since tightenBounds() can only unambiguously recover a variable domain
         // that's already one-signed (an even power's inverse can't represent two disjoint sign branches with a
         // single interval) -- same documented limitation as SignomialElement's even-power cases.
