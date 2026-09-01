@@ -982,6 +982,20 @@ void MIPSolverHighs::addMIPStart(VectorDouble point)
 {
     assert(point.size() == this->numberOfVariables - numberOfIntegerCutVariables);
 
+    // Clamp to the live column bounds: a warm-start value that is (even marginally) outside a variable's current
+    // bound, e.g. due to a bound having been tightened since this point was found, is rejected by HiGHS's own
+    // internal consistency check (an assert in debug builds of HiGHS) rather than just being treated as infeasible.
+    const auto& colLower = highsInstance.getLp().col_lower_;
+    const auto& colUpper = highsInstance.getLp().col_upper_;
+
+    for(size_t i = 0; i < point.size() && i < colLower.size(); i++)
+    {
+        if(point[i] < colLower[i])
+            point[i] = colLower[i];
+        else if(point[i] > colUpper[i])
+            point[i] = colUpper[i];
+    }
+
     std::vector<HighsInt> indices(point.size());
     for(HighsInt i = 0; i < static_cast<HighsInt>(point.size()); i++)
         indices[i] = i;

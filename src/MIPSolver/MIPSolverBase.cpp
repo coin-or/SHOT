@@ -168,11 +168,24 @@ bool MIPSolverBase::createHyperplane(HyperplanePtr hyperplane)
         }
     }
 
-    // Small fix to fix badly scaled cuts.
-    // TODO: this should be made so it also takes into account small/large coefficients of the linear terms
-    if(abs(tmpPair.second) > 1e15)
+    if(tmpPair.second != tmpPair.second || std::isinf(tmpPair.second)) // Check for NaN or inf
     {
-        double scalingFactor = abs(tmpPair.second) - 1e15;
+        env->output->outputError("        Warning: hyperplane not generated, NaN or inf found in RHS.");
+        return (false);
+    }
+
+    // Small fix to fix badly scaled cuts. Considers both the RHS and the linear term coefficients, since a cut
+    // gradient evaluated far out on a loosely bounded nonlinear term (e.g. exp() of a large argument) can have
+    // large coefficients even when the RHS itself is modest, and handing such a cut to the MIP solver as-is
+    // can crash or numerically break it.
+    double maxAbsCutValue = abs(tmpPair.second);
+
+    for(auto& E : tmpPair.first)
+        maxAbsCutValue = std::max(maxAbsCutValue, abs(E.second));
+
+    if(maxAbsCutValue > 1e9)
+    {
+        double scalingFactor = maxAbsCutValue / 1e9;
 
         for(auto& E : tmpPair.first)
             E.second /= scalingFactor;
@@ -182,7 +195,7 @@ bool MIPSolverBase::createHyperplane(HyperplanePtr hyperplane)
         if(!warningMessageShownLargeRHS)
         {
             env->output->outputWarning(
-                "        Large values found in RHS of cut, you might want to consider reducing the "
+                "        Large values found in RHS or coefficients of cut, you might want to consider reducing the "
                 "bounds of the nonlinear variables.");
             warningMessageShownLargeRHS = true;
         }
