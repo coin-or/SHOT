@@ -189,6 +189,7 @@ private:
     CoinPackedVector objectiveLinearExpression;
 
     long int solLimit;
+    bool forceUnlimitedSolutionLimitNextSolve = false;
     double timeLimit = 1e100;
     double cutOff;
     int numberOfThreads = 1;

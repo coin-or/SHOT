@@ -327,7 +327,15 @@ void MIPSolverCbc::initializeSolverSettings()
     }
 
     // Set solution pool settings
-    cbcModel->setMaximumSolutions(solLimit);
+    if(forceUnlimitedSolutionLimitNextSolve)
+    {
+        cbcModel->setMaximumSolutions(2100000000);
+        forceUnlimitedSolutionLimitNextSolve = false;
+    }
+    else
+    {
+        cbcModel->setMaximumSolutions(solLimit);
+    }
     cbcModel->setMaximumSavedSolutions(env->settings->getSetting<int>("Dual.MIP.SolutionPool.Capacity"));
 
     // Set number of threads
@@ -711,6 +719,16 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
         CbcMain1(numArguments, const_cast<const char**>(argv), *cbcModel, dummyCallback, solverData);
 
         MIPSolutionStatus = getSolutionStatus();
+
+        // Cbc's own optimality proof cannot be fully trusted when a finite solution-count cap was active for
+        // this solve (see investigation): downgrade the status so this iteration's incumbent isn't used as a
+        // rigorous dual bound, and force the next solve to use an unlimited solution cap so it gets a chance
+        // to correct course on the (by-then cut-augmented) problem.
+        if(MIPSolutionStatus == E_ProblemSolutionStatus::Optimal && solLimit < 2100000000)
+        {
+            MIPSolutionStatus = E_ProblemSolutionStatus::SolutionLimit;
+            forceUnlimitedSolutionLimitNextSolve = true;
+        }
     }
     catch(std::exception& e)
     {
