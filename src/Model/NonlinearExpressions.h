@@ -767,8 +767,11 @@ public:
 
     inline bool tightenBounds(Interval bound) override
     {
-        if(bound.l() <= 0)
+        if(bound.u() <= 0)
             return false;
+
+        if(bound.l() <= 0)
+            bound.l(SHOT_DBL_EPS);
 
         return (child->tightenBounds(log(bound)));
     };
