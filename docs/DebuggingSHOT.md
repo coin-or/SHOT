@@ -497,6 +497,21 @@ in this codebase — add to this list as you find more.
   command; use the Bash tool's own timeout parameter, `lldb -b` batch mode
   (which exits on its own), or background the process and poll instead.
 
+### Debug vs. Release builds change which crashes you can even see
+
+- Bundled third-party solver libraries often carry their own internal
+  consistency `assert()`s that are compiled out under `NDEBUG` in a Release
+  build. Check `CMAKE_BUILD_TYPE` in `CMakeCache.txt` before concluding a fix
+  "still doesn't work" — if a fix resolves a crash on some instances but a
+  different instance now aborts inside a dependency's own assert, rebuild a
+  Release configuration and re-run the same failing case there before
+  treating it as a blocking regression (note a fresh CMake configure may
+  default to a different generator, e.g. Makefiles instead of Ninja — check
+  `CMAKE_GENERATOR` in the new cache). The underlying data-quality issue is
+  usually still worth fixing regardless, since a Release build wouldn't
+  crash but could still silently produce a worse or wrong result — but it
+  changes how urgently the assert failure needs to block shipping.
+
 ## 9. If this doc is stale
 
 File names and which task writes them are derived from the source and can
