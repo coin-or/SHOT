@@ -615,9 +615,39 @@ public:
             isValid = false;
         }
 
+        // A term counts as a (Euclidean-norm-compatible) square if it is either a bare Square(affine), or a
+        // Product of a non-negative Constant and a Square(affine) -- e.g. GAMS's "0.5*sqr(...)" parses as
+        // Product(Constant(0.5), Square(...)), not as a bare Square node. Scaling a convex Square by a
+        // non-negative constant preserves convexity, so this remains within the SOCP-representable special case
+        auto isNonnegativelyScaledSquare = [](const NonlinearExpressionPtr& expr)
+        {
+            if(expr->getType() == E_NonlinearExpressionTypes::Square)
+                return true;
+
+            if(expr->getType() != E_NonlinearExpressionTypes::Product)
+                return false;
+
+            auto product = std::static_pointer_cast<ExpressionGeneral>(expr);
+
+            if(product->children.size() != 2)
+                return false;
+
+            for(int i = 0; i < 2; i++)
+            {
+                auto& factor = product->children.at(i);
+                auto& other = product->children.at(1 - i);
+
+                if(factor->getType() == E_NonlinearExpressionTypes::Constant && factor->getBounds().l() >= 0
+                    && other->getType() == E_NonlinearExpressionTypes::Square)
+                    return true;
+            }
+
+            return false;
+        };
+
         for(auto& C : children)
         {
-            if(!(C->getType() == E_NonlinearExpressionTypes::Square && C->getBounds().l() >= 0
+            if(!(isNonnegativelyScaledSquare(C) && C->getBounds().l() >= 0
                    && (C->getConvexity() == E_Convexity::Convex)))
             {
                 isValid = false;
