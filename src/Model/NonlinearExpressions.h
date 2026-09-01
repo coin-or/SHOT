@@ -582,6 +582,11 @@ public:
         if(bound.l() < 0.0 && bound.u() < 0.0)
             return (false);
 
+        // sqrt(child) is never negative, so a negative lower part of the candidate is vacuous -- clamp it away
+        // instead of letting it inflate pow(bound, 2)'s upper bound to infinity.
+        if(bound.l() < 0.0)
+            bound.l(0.0);
+
         auto interval = pow(bound, 2);
 
         return (child->tightenBounds(interval));
