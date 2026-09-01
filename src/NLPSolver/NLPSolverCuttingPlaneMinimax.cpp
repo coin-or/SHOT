@@ -320,27 +320,14 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             // Adding the objective term
             elements.emplace(numVar, -1.0);
 
-            // Small fix to fix badly scaled cuts.
-            // TODO: this should be made so it also takes into account small/large coefficients of the linear terms
-            if(abs(constant) > 1e15)
+            bool cutHasNoNaNsorInfs = !(constant != constant || std::isinf(constant)); // Check for NaN or inf in RHS
+
+            if(!cutHasNoNaNsorInfs)
             {
-                double scalingFactor = abs(constant) - 1e15;
-                for(auto& E : elements)
-                    E.second /= scalingFactor;
-
-                constant /= scalingFactor;
-
-                if(!NaNWarningPrinted)
-                {
-                    env->output->outputWarning(
-                        "        Large values found in RHS of cut, you might want to consider reducing the "
-                        "bounds of the nonlinear variables.");
-
-                    NaNWarningPrinted = true;
-                }
+                env->output->outputWarning(
+                    fmt::format("        Hyperplane for constraint {} not generated, NaN or inf found in RHS.",
+                        NCV.constraint->name));
             }
-
-            bool cutHasNoNaNsorInfs = true;
 
             for(auto& E : elements)
             {
@@ -353,6 +340,35 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
                             std::to_string(currSol.at(E.first))));
 
                     cutHasNoNaNsorInfs = false;
+                }
+            }
+
+            // Small fix to fix badly scaled cuts. Considers both the RHS and the linear term coefficients, since a
+            // cut gradient evaluated far out on a loosely bounded nonlinear term can have enormous coefficients
+            // even when the RHS itself is modest.
+            if(cutHasNoNaNsorInfs)
+            {
+                double maxAbsCutValue = abs(constant);
+
+                for(auto& E : elements)
+                    maxAbsCutValue = std::max(maxAbsCutValue, abs(E.second));
+
+                if(maxAbsCutValue > 1e9)
+                {
+                    double scalingFactor = maxAbsCutValue / 1e9;
+                    for(auto& E : elements)
+                        E.second /= scalingFactor;
+
+                    constant /= scalingFactor;
+
+                    if(!NaNWarningPrinted)
+                    {
+                        env->output->outputWarning(
+                            "        Large values found in RHS or coefficients of cut, you might want to consider "
+                            "reducing the bounds of the nonlinear variables.");
+
+                        NaNWarningPrinted = true;
+                    }
                 }
             }
 
