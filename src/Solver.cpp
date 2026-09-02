@@ -1931,7 +1931,7 @@ void Solver::verifySettings()
     if(solver == ES_MIPSolver::Highs)
     {
         MIPSolverDefined = true;
-        unboundedVariableBound = 1e50;
+        unboundedVariableBound = 1e20;
 
         // Some features are not available in Highs
         env->settings->updateSetting(
