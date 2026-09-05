@@ -13,6 +13,7 @@
 #include "../Enums.h"
 #include "../Structs.h"
 
+#include <algorithm>
 #include <map>
 #include <memory>
 #include <ostream>
@@ -80,16 +81,18 @@ public:
         upperBound = SHOT_DBL_MAX;
     }
 
-    Variable(std::string variableName, int variableIndex, E_VariableType variableType, [[maybe_unused]] double LB,
-        [[maybe_unused]] double UB, double variableSemiBound = NAN)
+    Variable(std::string variableName, int variableIndex, E_VariableType variableType, double LB, double UB,
+        double variableSemiBound = NAN)
     {
         index = variableIndex;
         name = variableName;
 
         if(variableType == E_VariableType::Binary)
         {
-            lowerBound = 0;
-            upperBound = 1;
+            // A binary variable is restricted to [0,1], but a tighter bound given by the caller is kept, since it
+            // may e.g. have been fixed to one of its bounds by bound tightening
+            lowerBound = std::max(LB, 0.0);
+            upperBound = std::min(UB, 1.0);
         }
         else
         {

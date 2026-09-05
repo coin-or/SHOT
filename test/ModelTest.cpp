@@ -59,6 +59,8 @@ bool ModelTestTermAndExpressionBounds();
 bool ModelTestMixedTermBoundTightening();
 bool ModelTestUnboundedQCQPWithSolver(ES_MIPSolver mipSolver);
 bool ModelTestUnboundedQCQP();
+bool ModelTestFixedVariableConstantFolding();
+bool ModelTestFixedBinaryVariableBounds();
 
 bool TestReadProblem(const std::string& problemFile);
 bool TestRootsearch(const std::string& problemFile);
@@ -161,6 +163,12 @@ int ModelTest(int argc, char* argv[])
         break;
     case 26:
         passed = ModelTestUnboundedQCQP();
+        break;
+    case 27:
+        passed = ModelTestFixedVariableConstantFolding();
+        break;
+    case 28:
+        passed = ModelTestFixedBinaryVariableBounds();
         break;
     default:
         passed = false;
@@ -5219,5 +5227,261 @@ bool ModelTestUnboundedQCQP()
 #ifdef HAS_GUROBI
     passed = ModelTestUnboundedQCQPWithSolver(ES_MIPSolver::Gurobi) && passed;
 #endif
+    return passed;
+}
+
+bool ModelTestFixedVariableConstantFolding()
+{
+    // Regression test: when bound tightening fixes every variable in a nonlinear subexpression, the
+    // reformulation constant folds that subexpression into a number -- and that number used to be silently
+    // dropped, because reformulateConstraint discarded the constant returned by extractTermsAndConstant.
+    //
+    // The model below (from MINLPTests.jl's nlp_mi_002_010) is where this surfaced:
+    //
+    //   minimize x
+    //   s.t.     y - log(x) + 0.1 <= 0
+    //            x - cos(y)^2 - 1.5 <= 0
+    //            x integer in [0.9, 10], y binary
+    //
+    // Bound tightening derives x in [2,2] and y in [0,0]. Reformulation then folds log(x) -> log(2) and
+    // cos(y)^2 -> 1, so the constraints must become y - 0.5931 <= 0 and x - 2.5 <= 0. With the constants
+    // dropped they instead became y + 0.1 <= 0 and x - 1.5 <= 0, both violated by the fixed variables, so
+    // SHOT reported the (feasible) problem as infeasible.
+
+    bool passed = true;
+
+    auto buildProblem = [](const std::shared_ptr<SHOT::Environment>& env)
+    {
+        auto problem = std::make_shared<SHOT::Problem>(env);
+
+        auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Integer, 0.9, 10.0);
+        auto var_y = std::make_shared<SHOT::Variable>("y", 1, SHOT::E_VariableType::Binary, 0.0, 1.0);
+        problem->add(SHOT::Variables({ var_x, var_y }));
+
+        auto objective = std::make_shared<SHOT::LinearObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize);
+        objective->add(std::make_shared<SHOT::LinearTerm>(1.0, var_x));
+        problem->add(objective);
+
+        // y - log(x) + 0.1 <= 0
+        auto constraint1 = std::make_shared<SHOT::NonlinearConstraint>(0, "logconstr", SHOT_DBL_MIN, 0.0);
+        constraint1->add(std::make_shared<SHOT::LinearTerm>(1.0, var_y));
+        constraint1->add(std::make_shared<SHOT::ExpressionNegate>(
+            std::make_shared<SHOT::ExpressionLog>(std::make_shared<SHOT::ExpressionVariable>(var_x))));
+        constraint1->constant = 0.1;
+        problem->add(constraint1);
+
+        // x - cos(y)^2 - 1.5 <= 0
+        auto constraint2 = std::make_shared<SHOT::NonlinearConstraint>(1, "cosconstr", SHOT_DBL_MIN, 0.0);
+        constraint2->add(std::make_shared<SHOT::LinearTerm>(1.0, var_x));
+        constraint2->add(std::make_shared<SHOT::ExpressionNegate>(std::make_shared<SHOT::ExpressionSquare>(
+            std::make_shared<SHOT::ExpressionCos>(std::make_shared<SHOT::ExpressionVariable>(var_y)))));
+        constraint2->constant = -1.5;
+        problem->add(constraint2);
+
+        return problem;
+    };
+
+    for(auto& [mipSolver, solverName] : AvailableMIPSolversForEpigraphTests())
+    {
+        std::cout << "\n===== MIP solver: " << solverName << " =====\n";
+
+        auto [solver, env] = SolveWithEpigraphStrategy(
+            ES_ObjectiveEpigraphStrategy::Unchanged, buildProblem, /*solve*/ true, mipSolver);
+
+        // Bound tightening must have fixed both variables -- this is the precondition for the constant
+        // folding that the rest of the test checks. If it ever stops fixing them the test below would pass
+        // vacuously, so it is asserted explicitly.
+        auto original_x = env->problem->getVariable(0);
+        auto original_y = env->problem->getVariable(1);
+
+        std::cout << "  original x: [" << original_x->lowerBound << ", " << original_x->upperBound << "]"
+                  << " (expected [2, 2])\n";
+        std::cout << "  original y: [" << original_y->lowerBound << ", " << original_y->upperBound << "]"
+                  << " (expected [0, 0])\n";
+
+        if(original_x->lowerBound != 2.0 || original_x->upperBound != 2.0 || original_y->lowerBound != 0.0
+            || original_y->upperBound != 0.0)
+        {
+            std::cout << "  FAILED: bound tightening did not fix both variables as expected.\n";
+            passed = false;
+        }
+
+        // The reformulated constraints must still hold at the fixed point (x, y) = (2, 0). With the folded
+        // constants dropped, "logconstr" evaluated to 0.1 > 0 and "cosconstr" to 0.5 > 0 here.
+        SHOT::VectorDouble fixedPoint = { 2.0, 0.0 };
+
+        // Both constraints fold down to linear ones over the original two variables, so no auxiliary variables
+        // are expected. Checked explicitly since the point above is indexed by the reformulated variables.
+        if(env->reformulatedProblem->allVariables.size() != fixedPoint.size())
+        {
+            std::cout << "  FAILED: expected the reformulated problem to have " << fixedPoint.size()
+                      << " variables, found " << env->reformulatedProblem->allVariables.size() << ".\n";
+            passed = false;
+            continue;
+        }
+
+        for(auto& constraint : env->reformulatedProblem->numericConstraints)
+        {
+            auto value = constraint->calculateNumericValue(fixedPoint);
+
+            std::cout << "  reformulated " << constraint->name << " at (x,y)=(2,0): error = " << value.error << '\n';
+
+            if(!value.isFulfilled)
+            {
+                std::cout << "  FAILED: reformulated constraint " << constraint->name
+                          << " is violated at the point bound tightening proved feasible (error = " << value.error
+                          << "). A constant folded out of the nonlinear expression was likely dropped.\n";
+                passed = false;
+            }
+        }
+
+        if(env->results->terminationReason == E_TerminationReason::InfeasibleProblem)
+        {
+            std::cout << "  FAILED: the problem was reported infeasible, but x=2, y=0 is feasible.\n";
+            passed = false;
+        }
+
+        passed = CheckSolvedObjective(env, 2.0, "[" + solverName + "] fixed-variable constant folding") && passed;
+    }
+
+    return passed;
+}
+
+bool ModelTestFixedBinaryVariableBounds()
+{
+    // Regression test: the Variable constructor taking bounds used to ignore them for binary variables and
+    // always store [0,1]. A binary fixed to one of its bounds -- by the user, by a modeling system reading
+    // "b.fx = 1", or by bound tightening -- was therefore silently unfixed again whenever the variable was
+    // rebuilt through that constructor, most importantly when the reformulated problem is created.
+    //
+    // That is unsound rather than merely weak: the reformulation constant folds the fixed variable's value
+    // into the nonlinear expressions, so an unfixed copy lets the dual (MIP) problem move a variable whose
+    // value has already been baked into the constraints it is supposed to satisfy.
+
+    bool passed = true;
+
+    std::cout << "\nSub-test 1: the constructor keeps bounds tighter than [0,1] for binary variables\n";
+    {
+        struct BoundCase
+        {
+            double lowerBound;
+            double upperBound;
+            double expectedLowerBound;
+            double expectedUpperBound;
+            std::string description;
+        };
+
+        // Bounds outside [0,1] are still clamped to it -- the point is that a *tighter* bound survives.
+        std::vector<BoundCase> cases = { { 1.0, 1.0, 1.0, 1.0, "binary fixed to one" },
+            { 0.0, 0.0, 0.0, 0.0, "binary fixed to zero" }, { 0.0, 1.0, 0.0, 1.0, "ordinary binary" },
+            { -5.0, 7.0, 0.0, 1.0, "binary with bounds outside [0,1]" } };
+
+        for(auto& boundCase : cases)
+        {
+            auto variable = std::make_shared<SHOT::Variable>(
+                "b", 0, SHOT::E_VariableType::Binary, boundCase.lowerBound, boundCase.upperBound);
+
+            std::cout << "  " << boundCase.description << ": [" << boundCase.lowerBound << ", "
+                      << boundCase.upperBound << "] -> [" << variable->lowerBound << ", " << variable->upperBound
+                      << "] (expected [" << boundCase.expectedLowerBound << ", " << boundCase.expectedUpperBound
+                      << "])\n";
+
+            if(variable->lowerBound != boundCase.expectedLowerBound
+                || variable->upperBound != boundCase.expectedUpperBound)
+            {
+                std::cout << "  FAILED: wrong bounds for " << boundCase.description << ".\n";
+                passed = false;
+            }
+        }
+
+        // The constructor without bounds still defaults a binary variable to [0,1].
+        auto defaultVariable = std::make_shared<SHOT::Variable>("b", 0, SHOT::E_VariableType::Binary);
+
+        std::cout << "  binary without given bounds: [" << defaultVariable->lowerBound << ", "
+                  << defaultVariable->upperBound << "] (expected [0, 1])\n";
+
+        if(defaultVariable->lowerBound != 0.0 || defaultVariable->upperBound != 1.0)
+        {
+            std::cout << "  FAILED: a binary variable created without bounds should default to [0,1].\n";
+            passed = false;
+        }
+    }
+
+    // A binary fixed by bound tightening must stay fixed in the reformulated problem:
+    //
+    //   minimize -y
+    //   s.t.     exp(y) <= 1.5
+    //            x + y <= 5
+    //            x real in [0, 1], y binary
+    //
+    // exp(y) <= 1.5 forces y = 0, so the optimum is 0. When the reformulated copy of y was unfixed back to
+    // [0,1], the dual problem could pick y = 1 while exp(y) had already been folded at y = 0, leaving a dual
+    // bound of -1 that no primal solution could ever meet: the solve ended on dual-bound stagnation with a
+    // 100% gap instead of proving optimality.
+    std::cout << "\nSub-test 2: a binary fixed by bound tightening stays fixed in the reformulated problem\n";
+    {
+        auto buildProblem = [](const std::shared_ptr<SHOT::Environment>& env)
+        {
+            auto problem = std::make_shared<SHOT::Problem>(env);
+
+            auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 1.0);
+            auto var_y = std::make_shared<SHOT::Variable>("y", 1, SHOT::E_VariableType::Binary, 0.0, 1.0);
+            problem->add(SHOT::Variables({ var_x, var_y }));
+
+            auto objective
+                = std::make_shared<SHOT::LinearObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize);
+            objective->add(std::make_shared<SHOT::LinearTerm>(-1.0, var_y));
+            problem->add(objective);
+
+            // exp(y) - 1.5 <= 0
+            auto constraint1 = std::make_shared<SHOT::NonlinearConstraint>(0, "expconstr", SHOT_DBL_MIN, 0.0);
+            constraint1->add(std::make_shared<SHOT::ExpressionExp>(std::make_shared<SHOT::ExpressionVariable>(var_y)));
+            constraint1->constant = -1.5;
+            problem->add(constraint1);
+
+            // x + y <= 5
+            auto constraint2 = std::make_shared<SHOT::LinearConstraint>(1, "linconstr", SHOT_DBL_MIN, 5.0);
+            constraint2->add(std::make_shared<SHOT::LinearTerm>(1.0, var_x));
+            constraint2->add(std::make_shared<SHOT::LinearTerm>(1.0, var_y));
+            problem->add(constraint2);
+
+            return problem;
+        };
+
+        for(auto& [mipSolver, solverName] : AvailableMIPSolversForEpigraphTests())
+        {
+            std::cout << "\n===== MIP solver: " << solverName << " =====\n";
+
+            auto [solver, env] = SolveWithEpigraphStrategy(
+                ES_ObjectiveEpigraphStrategy::Unchanged, buildProblem, /*solve*/ true, mipSolver);
+
+            // Bound tightening (run by setProblem) fixes y before the reformulation, so exp(y) is folded to a
+            // constant and the reformulated problem is purely linear. Bound tightening is skipped on MILP
+            // problems, so nothing re-derives the fixed bound afterwards: the reformulated copy of y has to
+            // carry it over itself.
+            auto original_y = env->problem->getVariable(1);
+            auto reformulated_y = env->reformulatedProblem->getVariable(1);
+
+            std::cout << "  original y: [" << original_y->lowerBound << ", " << original_y->upperBound << "]"
+                      << " (expected [0, 0])\n";
+            std::cout << "  reformulated y: [" << reformulated_y->lowerBound << ", " << reformulated_y->upperBound
+                      << "] (expected [0, 0])\n";
+
+            if(original_y->lowerBound != 0.0 || original_y->upperBound != 0.0)
+            {
+                std::cout << "  FAILED: bound tightening did not fix y as expected.\n";
+                passed = false;
+            }
+            else if(reformulated_y->lowerBound != original_y->lowerBound
+                || reformulated_y->upperBound != original_y->upperBound)
+            {
+                std::cout << "  FAILED: the reformulated problem lost the fixed bounds of the binary variable.\n";
+                passed = false;
+            }
+
+            passed = CheckSolvedObjective(env, 0.0, "[" + solverName + "] fixed binary variable bounds") && passed;
+        }
+    }
+
     return passed;
 }
