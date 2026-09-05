@@ -61,6 +61,7 @@ bool ModelTestUnboundedQCQPWithSolver(ES_MIPSolver mipSolver);
 bool ModelTestUnboundedQCQP();
 bool ModelTestFixedVariableConstantFolding();
 bool ModelTestFixedBinaryVariableBounds();
+bool ModelTestConstantInFunctionValues();
 
 bool TestReadProblem(const std::string& problemFile);
 bool TestRootsearch(const std::string& problemFile);
@@ -169,6 +170,9 @@ int ModelTest(int argc, char* argv[])
         break;
     case 28:
         passed = ModelTestFixedBinaryVariableBounds();
+        break;
+    case 29:
+        passed = ModelTestConstantInFunctionValues();
         break;
     default:
         passed = false;
@@ -5481,6 +5485,179 @@ bool ModelTestFixedBinaryVariableBounds()
 
             passed = CheckSolvedObjective(env, 0.0, "[" + solverName + "] fixed binary variable bounds") && passed;
         }
+    }
+
+    return passed;
+}
+
+bool ModelTestConstantInFunctionValues()
+{
+    // Regression test: LinearObjectiveFunction::calculateValue(const IntervalVector&) omitted the objective
+    // constant, while the VectorDouble overload included it. Since the quadratic and nonlinear objectives build
+    // on the linear one, every interval evaluation of an objective -- and therefore ObjectiveFunction::getBounds()
+    // -- was off by exactly the constant.
+    //
+    // That matters because the reformulation moves constants into the objective: expanding (x-a)^2 contributes
+    // a^2, so an objective built from shifted squares carries a large constant. The dual problem bounds its
+    // objective variable with getBounds(), so a too-low upper bound there makes the dual problem infeasible as
+    // soon as a hyperplane cut is generated at a point whose objective value exceeds it.
+    //
+    // The constraint counterparts already added the constant; they are covered here as well so the two cannot
+    // drift apart again.
+
+    bool passed = true;
+    constexpr double tolerance = 1e-6;
+
+    auto checkValue = [&passed](const std::string& description, double actual, double expected)
+    {
+        std::cout << "  " << description << ": " << actual << " (expected " << expected << ")\n";
+
+        if(std::abs(actual - expected) > tolerance)
+        {
+            std::cout << "  FAILED: " << description << " did not match the expected value.\n";
+            passed = false;
+        }
+    };
+
+    auto checkInterval
+        = [&passed](const std::string& description, SHOT::Interval actual, double expectedLower, double expectedUpper)
+    {
+        std::cout << "  " << description << ": [" << actual.l() << ", " << actual.u() << "] (expected ["
+                  << expectedLower << ", " << expectedUpper << "])\n";
+
+        if(std::abs(actual.l() - expectedLower) > tolerance || std::abs(actual.u() - expectedUpper) > tolerance)
+        {
+            std::cout << "  FAILED: " << description << " did not match the expected interval.\n";
+            passed = false;
+        }
+    };
+
+    // x in [1,2] throughout, so every expected value below is a plain hand calculation.
+    constexpr double constant = 7.0;
+    SHOT::VectorDouble point = { 2.0 };
+
+    // Builds a problem holding a single variable x in [1,2], so that the objective/constraint added to it can be
+    // evaluated both at a point and over the variable's bounds.
+    auto makeProblem = [](const std::shared_ptr<SHOT::Environment>& env)
+    {
+        auto problem = std::make_shared<SHOT::Problem>(env);
+        auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 1.0, 2.0);
+        problem->add(SHOT::Variables({ var_x }));
+        return std::make_pair(problem, var_x);
+    };
+
+    // ── Objective functions ──────────────────────────────────────────────────────────────────────────
+    // 3*x + 7                     at x=2 -> 13,  over x in [1,2] -> [10, 13]
+    std::cout << "\nSub-test 1: linear objective constant\n";
+    {
+        auto solver = std::make_unique<SHOT::Solver>();
+        auto [problem, var_x] = makeProblem(solver->getEnvironment());
+
+        auto objective = std::make_shared<SHOT::LinearObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize);
+        objective->add(std::make_shared<SHOT::LinearTerm>(3.0, var_x));
+        objective->constant = constant;
+        problem->add(objective);
+        problem->finalize();
+
+        checkValue("3*x + 7 at x=2", objective->calculateValue(point), 13.0);
+        checkInterval("3*x + 7 over x in [1,2]", objective->getBounds(), 10.0, 13.0);
+    }
+
+    // 3*x + x^2 + 7               at x=2 -> 17,  over x in [1,2] -> [11, 17]
+    std::cout << "\nSub-test 2: quadratic objective constant\n";
+    {
+        auto solver = std::make_unique<SHOT::Solver>();
+        auto [problem, var_x] = makeProblem(solver->getEnvironment());
+
+        auto objective
+            = std::make_shared<SHOT::QuadraticObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize);
+        objective->add(std::make_shared<SHOT::LinearTerm>(3.0, var_x));
+        objective->add(std::make_shared<SHOT::QuadraticTerm>(1.0, var_x, var_x));
+        objective->constant = constant;
+        problem->add(objective);
+        problem->finalize();
+
+        checkValue("3*x + x^2 + 7 at x=2", objective->calculateValue(point), 17.0);
+        checkInterval("3*x + x^2 + 7 over x in [1,2]", objective->getBounds(), 11.0, 17.0);
+    }
+
+    // 3*x + exp(x) + 7            at x=2 -> 13 + e^2,  over x in [1,2] -> [10 + e, 13 + e^2]
+    std::cout << "\nSub-test 3: nonlinear objective constant\n";
+    {
+        auto solver = std::make_unique<SHOT::Solver>();
+        auto [problem, var_x] = makeProblem(solver->getEnvironment());
+
+        auto objective
+            = std::make_shared<SHOT::NonlinearObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize);
+        objective->add(std::make_shared<SHOT::LinearTerm>(3.0, var_x));
+        objective->add(std::make_shared<SHOT::ExpressionExp>(std::make_shared<SHOT::ExpressionVariable>(var_x)));
+        objective->constant = constant;
+        problem->add(objective);
+        problem->finalize();
+
+        checkValue("3*x + exp(x) + 7 at x=2", objective->calculateValue(point), 13.0 + std::exp(2.0));
+        checkInterval("3*x + exp(x) + 7 over x in [1,2]", objective->getBounds(), 10.0 + std::exp(1.0),
+            13.0 + std::exp(2.0));
+    }
+
+    // ── Constraints (the counterparts that were already correct) ─────────────────────────────────────
+    // A dummy objective is required for a valid problem; it plays no part in the constraints being checked.
+    auto addDummyObjective = [](const SHOT::ProblemPtr& problem, const SHOT::VariablePtr& var_x)
+    {
+        auto objective = std::make_shared<SHOT::LinearObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize);
+        objective->add(std::make_shared<SHOT::LinearTerm>(1.0, var_x));
+        problem->add(objective);
+    };
+
+    std::cout << "\nSub-test 4: linear constraint constant\n";
+    {
+        auto solver = std::make_unique<SHOT::Solver>();
+        auto [problem, var_x] = makeProblem(solver->getEnvironment());
+        addDummyObjective(problem, var_x);
+
+        auto constraint = std::make_shared<SHOT::LinearConstraint>(0, "lc", SHOT_DBL_MIN, 100.0);
+        constraint->add(std::make_shared<SHOT::LinearTerm>(3.0, var_x));
+        constraint->constant = constant;
+        problem->add(constraint);
+        problem->finalize();
+
+        checkValue("3*x + 7 at x=2", constraint->calculateFunctionValue(point), 13.0);
+        checkInterval("3*x + 7 over x in [1,2]", constraint->getConstraintFunctionBounds(), 10.0, 13.0);
+    }
+
+    std::cout << "\nSub-test 5: quadratic constraint constant\n";
+    {
+        auto solver = std::make_unique<SHOT::Solver>();
+        auto [problem, var_x] = makeProblem(solver->getEnvironment());
+        addDummyObjective(problem, var_x);
+
+        auto constraint = std::make_shared<SHOT::QuadraticConstraint>(0, "qc", SHOT_DBL_MIN, 100.0);
+        constraint->add(std::make_shared<SHOT::LinearTerm>(3.0, var_x));
+        constraint->add(std::make_shared<SHOT::QuadraticTerm>(1.0, var_x, var_x));
+        constraint->constant = constant;
+        problem->add(constraint);
+        problem->finalize();
+
+        checkValue("3*x + x^2 + 7 at x=2", constraint->calculateFunctionValue(point), 17.0);
+        checkInterval("3*x + x^2 + 7 over x in [1,2]", constraint->getConstraintFunctionBounds(), 11.0, 17.0);
+    }
+
+    std::cout << "\nSub-test 6: nonlinear constraint constant\n";
+    {
+        auto solver = std::make_unique<SHOT::Solver>();
+        auto [problem, var_x] = makeProblem(solver->getEnvironment());
+        addDummyObjective(problem, var_x);
+
+        auto constraint = std::make_shared<SHOT::NonlinearConstraint>(0, "nlc", SHOT_DBL_MIN, 100.0);
+        constraint->add(std::make_shared<SHOT::LinearTerm>(3.0, var_x));
+        constraint->add(std::make_shared<SHOT::ExpressionExp>(std::make_shared<SHOT::ExpressionVariable>(var_x)));
+        constraint->constant = constant;
+        problem->add(constraint);
+        problem->finalize();
+
+        checkValue("3*x + exp(x) + 7 at x=2", constraint->calculateFunctionValue(point), 13.0 + std::exp(2.0));
+        checkInterval("3*x + exp(x) + 7 over x in [1,2]", constraint->getConstraintFunctionBounds(),
+            10.0 + std::exp(1.0), 13.0 + std::exp(2.0));
     }
 
     return passed;
