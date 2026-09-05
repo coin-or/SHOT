@@ -106,6 +106,9 @@ SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(EnvironmentPtr envPtr)
     auto tPrintIterReport = std::make_shared<TaskPrintIterationReport>(env);
     env->tasks->addTask(tPrintIterReport, "PrintIterReport");
 
+    auto tCheckIterError = std::make_shared<TaskCheckIterationError>(env, "FinalizeSolution");
+    env->tasks->addTask(tCheckIterError, "CheckIterError");
+
     auto tCheckAbsGap = std::make_shared<TaskCheckAbsoluteGap>(env, "FinalizeSolution");
     env->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
 
@@ -156,9 +159,6 @@ SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(EnvironmentPtr envPtr)
 
     auto tCheckIterLim = std::make_shared<TaskCheckIterationLimit>(env, "FinalizeSolution");
     env->tasks->addTask(tCheckIterLim, "CheckIterLim");
-
-    auto tCheckIterError = std::make_shared<TaskCheckIterationError>(env, "FinalizeSolution");
-    env->tasks->addTask(tCheckIterError, "CheckIterError");
 
     auto tCheckDualStag = std::make_shared<TaskCheckDualStagnation>(env, "FinalizeSolution");
     env->tasks->addTask(tCheckDualStag, "CheckDualStag");

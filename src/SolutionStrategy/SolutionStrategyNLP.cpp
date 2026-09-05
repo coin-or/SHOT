@@ -141,9 +141,13 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr)
 
     if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex)
     {
-        auto tRepairInfeasibility = std::make_shared<TaskRepairInfeasibleDualProblem>(env, "SolveIter", "CheckAbsGap");
+        auto tRepairInfeasibility
+            = std::make_shared<TaskRepairInfeasibleDualProblem>(env, "SolveIter", "CheckIterError");
         env->tasks->addTask(tRepairInfeasibility, "RepairInfeasibility");
     }
+
+    auto tCheckIterError = std::make_shared<TaskCheckIterationError>(env, "FinalizeSolution");
+    env->tasks->addTask(tCheckIterError, "CheckIterError");
 
     auto tCheckAbsGap = std::make_shared<TaskCheckAbsoluteGap>(env, "FinalizeSolution");
     env->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
@@ -159,9 +163,6 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr)
 
     auto tCheckUserTerm = std::make_shared<TaskCheckUserTermination>(env, "FinalizeSolution");
     env->tasks->addTask(tCheckUserTerm, "CheckUserTermination");
-
-    auto tCheckIterError = std::make_shared<TaskCheckIterationError>(env, "FinalizeSolution");
-    env->tasks->addTask(tCheckIterError, "CheckIterError");
 
     auto tCheckConstrTol = std::make_shared<TaskCheckConstraintTolerance>(env, "FinalizeSolution");
     env->tasks->addTask(tCheckConstrTol, "CheckConstrTol");

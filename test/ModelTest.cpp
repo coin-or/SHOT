@@ -57,6 +57,8 @@ bool ModelTestObjectivePartitioningStrategy();
 bool ModelTestSignomialElementBounds();
 bool ModelTestTermAndExpressionBounds();
 bool ModelTestMixedTermBoundTightening();
+bool ModelTestUnboundedQCQPWithSolver(ES_MIPSolver mipSolver);
+bool ModelTestUnboundedQCQP();
 
 bool TestReadProblem(const std::string& problemFile);
 bool TestRootsearch(const std::string& problemFile);
@@ -156,6 +158,9 @@ int ModelTest(int argc, char* argv[])
         break;
     case 25:
         passed = ModelTestMixedTermBoundTightening();
+        break;
+    case 26:
+        passed = ModelTestUnboundedQCQP();
         break;
     default:
         passed = false;
@@ -5108,5 +5113,111 @@ bool ModelTestMixedTermBoundTightening()
         passed = false;
     }
 
+    return passed;
+}
+
+bool ModelTestUnboundedQCQPWithSolver(ES_MIPSolver mipSolver)
+{
+    // Regression test for https://github.com/coin-or/SHOT/issues/133: SHOT incorrectly reported a globally
+    // optimal solution for a genuinely unbounded problem:
+    //
+    //   minimize x
+    //   s.t.     x^2 >= 1
+    //
+    // The problem is unbounded: any x <= -1 is feasible, and the objective decreases without bound as
+    // x -> -infinity. SHOT must recognize this as unbounded rather than converging to a finite "optimal" point.
+
+    bool passed = true;
+
+    std::string solverName;
+    switch(mipSolver)
+    {
+    case ES_MIPSolver::Cbc:
+        solverName = "CBC";
+        break;
+    case ES_MIPSolver::Highs:
+        solverName = "HiGHS";
+        break;
+    case ES_MIPSolver::Cplex:
+        solverName = "CPLEX";
+        break;
+    case ES_MIPSolver::Gurobi:
+        solverName = "Gurobi";
+        break;
+    default:
+        solverName = "unknown";
+        break;
+    }
+
+    std::cout << "\n=== Testing unbounded nonconvex QCQP (minimize x s.t. x^2 >= 1) with " << solverName
+              << " ===\n\n";
+
+    auto solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Info));
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(mipSolver));
+
+    auto problem = std::make_shared<Problem>(env);
+    problem->name = "unbounded_qcqp";
+
+    // x is a genuinely free variable, matching the original AMPL reproducer where x has no explicit bound.
+    auto x = std::make_shared<Variable>("x", 0, E_VariableType::Real, SHOT_DBL_MIN, SHOT_DBL_MAX);
+    problem->add({ x });
+
+    auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<LinearTerm>(1.0, x));
+    problem->add(objective);
+
+    // e1: x^2 >= 1
+    auto e1 = std::make_shared<QuadraticConstraint>(0, "e1", 1.0, SHOT_DBL_MAX);
+    e1->add(std::make_shared<QuadraticTerm>(1.0, x, x));
+    problem->add(e1);
+
+    problem->finalize();
+    solver->setProblem(problem);
+
+    std::cout << "\nSolving...\n";
+
+    if(!solver->solveProblem())
+    {
+        std::cout << "Failed to solve problem!\n";
+        passed = false;
+    }
+    else if(env->results->terminationReason != E_TerminationReason::UnboundedProblem)
+    {
+        std::cout << "\n*** TEST FAILED: expected the problem to terminate as unbounded, but termination reason "
+                      "was "
+                   << static_cast<int>(env->results->terminationReason) << " instead. ***\n";
+
+        if(!env->results->primalSolutions.empty())
+            std::cout << "  A primal solution was (incorrectly) reported: objective = "
+                      << env->results->primalSolutions[0].objValue << "\n";
+
+        passed = false;
+    }
+    else
+    {
+        std::cout << "\n*** TEST PASSED: problem correctly recognized as unbounded. ***\n";
+    }
+
+    return passed;
+}
+
+bool ModelTestUnboundedQCQP()
+{
+    bool passed = true;
+#ifdef HAS_CBC
+    passed = ModelTestUnboundedQCQPWithSolver(ES_MIPSolver::Cbc) && passed;
+#endif
+#ifdef HAS_HIGHS
+    passed = ModelTestUnboundedQCQPWithSolver(ES_MIPSolver::Highs) && passed;
+#endif
+#ifdef HAS_CPLEX
+    passed = ModelTestUnboundedQCQPWithSolver(ES_MIPSolver::Cplex) && passed;
+#endif
+#ifdef HAS_GUROBI
+    passed = ModelTestUnboundedQCQPWithSolver(ES_MIPSolver::Gurobi) && passed;
+#endif
     return passed;
 }

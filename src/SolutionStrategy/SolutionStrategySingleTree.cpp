@@ -156,9 +156,17 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
     if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex
         && env->settings->getSetting<bool>("Dual.MIP.InfeasibilityRepair.Use"))
     {
-        auto tRepairInfeasibility = std::make_shared<TaskRepairInfeasibleDualProblem>(env, "SolveIter", "CheckAbsGap");
+        auto tRepairInfeasibility
+            = std::make_shared<TaskRepairInfeasibleDualProblem>(env, "SolveIter", "CheckIterError");
         env->tasks->addTask(tRepairInfeasibility, "RepairInfeasibility");
     }
+
+    bool useReductionCuts = env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex
+        && env->settings->getSetting<bool>("Dual.ReductionCut.Use");
+
+    auto tCheckIterError
+        = std::make_shared<TaskCheckIterationError>(env, "FinalizeSolution", useReductionCuts ? "AddObjectiveCut" : "");
+    env->tasks->addTask(tCheckIterError, "CheckIterError");
 
     auto tCheckAbsGap = std::make_shared<TaskCheckAbsoluteGap>(env, "FinalizeSolution");
     env->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
@@ -178,13 +186,6 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
     // Remove?
     auto tCheckConstrTol = std::make_shared<TaskCheckConstraintTolerance>(env, "FinalizeSolution");
     env->tasks->addTask(tCheckConstrTol, "CheckConstrTol");
-
-    bool useReductionCuts = env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex
-        && env->settings->getSetting<bool>("Dual.ReductionCut.Use");
-
-    auto tCheckIterError = std::make_shared<TaskCheckIterationError>(
-        env, "FinalizeSolution", useReductionCuts ? "AddObjectiveCut" : "");
-    env->tasks->addTask(tCheckIterError, "CheckIterError");
 
     if(useReductionCuts)
     {
