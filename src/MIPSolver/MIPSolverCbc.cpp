@@ -780,15 +780,15 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
         if((env->reformulatedProblem->objectiveFunction->properties.classification
                    == E_ObjectiveFunctionClassification::Linear
                && std::dynamic_pointer_cast<LinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                   ->isDualUnbounded())
+                   ->isUnbounded())
             || (env->reformulatedProblem->objectiveFunction->properties.classification
                     == E_ObjectiveFunctionClassification::Quadratic
                 && std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                    ->isDualUnbounded()))
+                    ->isUnbounded()))
         {
             for(auto& V : env->reformulatedProblem->allVariables)
             {
-                if(V->isDualUnbounded())
+                if(V->isUnbounded())
                 {
                     // Temporarily introduce bounds [-1e20,1e20] for unbounded variables in objective
                     updateVariableBound(V->index, -1e20, 1e20);

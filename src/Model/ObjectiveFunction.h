@@ -95,6 +95,11 @@ public:
 
     virtual Interval getBounds();
 
+    // Whether the objective function's value range (per getBounds(), i.e. accounting for term coefficients/signs
+    // and, for a nonlinear objective, the full expression tree -- not just linear/quadratic terms) extends beyond
+    // what the active solver treats as practically infinite.
+    bool isUnbounded();
+
     virtual SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) = 0;
     virtual std::shared_ptr<Variables> getGradientSparsityPattern();
 
@@ -157,8 +162,6 @@ public:
 
     void add(LinearTermPtr term);
     void updateProperties() override;
-
-    virtual bool isDualUnbounded();
 
     void takeOwnership(ProblemPtr owner) override;
 
@@ -240,8 +243,6 @@ public:
     void add(QuadraticTermPtr term);
 
     void updateProperties() override;
-
-    virtual bool isDualUnbounded() override;
 
     double calculateValue(const VectorDouble& point) override;
     Interval calculateValue(const IntervalVector& intervalVector) override;

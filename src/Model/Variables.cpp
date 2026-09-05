@@ -90,32 +90,23 @@ bool Variable::tightenBounds(const Interval bound)
     return tightened;
 }
 
-bool Variable::isDualUnbounded()
+bool Variable::isUnbounded()
 {
-    if(properties.inLinearConstraints || properties.inQuadraticConstraints)
-        return false;
+    double minLB;
+    double maxUB;
 
-    if(auto sharedOwnerProblem = ownerProblem.lock())
+    if(auto sharedOwnerProblem = ownerProblem.lock(); sharedOwnerProblem && sharedOwnerProblem->env->settings)
     {
-        double minLB;
-        double maxUB;
-
-        if(sharedOwnerProblem->env->settings)
-        {
-            minLB = sharedOwnerProblem->env->settings->getSetting<double>("Model.Variables.Continuous.MinimumLowerBound");
-            maxUB = sharedOwnerProblem->env->settings->getSetting<double>("Model.Variables.Continuous.MaximumUpperBound");
-        }
-        else
-        {
-            minLB = -1e50;
-            maxUB = 1e50;
-        }
-
-        if(lowerBound > minLB && upperBound < maxUB)
-            return false;
+        minLB = sharedOwnerProblem->env->settings->getSetting<double>("Model.Variables.Continuous.MinimumLowerBound");
+        maxUB = sharedOwnerProblem->env->settings->getSetting<double>("Model.Variables.Continuous.MaximumUpperBound");
+    }
+    else
+    {
+        minLB = -1e50;
+        maxUB = 1e50;
     }
 
-    return true;
+    return !(lowerBound > minLB && upperBound < maxUB);
 }
 
 void Variable::takeOwnership(ProblemPtr owner) { ownerProblem = owner; }

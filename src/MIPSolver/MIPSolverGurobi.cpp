@@ -852,18 +852,18 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
         if((env->reformulatedProblem->objectiveFunction->properties.classification
                    == E_ObjectiveFunctionClassification::Linear
                && std::dynamic_pointer_cast<LinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                   ->isDualUnbounded())
+                   ->isUnbounded())
             || (env->reformulatedProblem->objectiveFunction->properties.classification
                     == E_ObjectiveFunctionClassification::Quadratic
                 && std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                    ->isDualUnbounded()))
+                    ->isUnbounded()))
         {
             for(auto& V : env->reformulatedProblem->allVariables)
             {
                 if(!V->properties.inObjectiveFunction)
                     continue;
 
-                if(V->isDualUnbounded())
+                if(V->isUnbounded())
                 {
                     // Temporarily remove unbounded terms from objective
                     originalObjectiveCoefficients.emplace_back(

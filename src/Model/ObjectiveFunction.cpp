@@ -46,6 +46,27 @@ Interval ObjectiveFunction::getBounds()
     return (interval);
 }
 
+bool ObjectiveFunction::isUnbounded()
+{
+    auto bounds = getBounds();
+
+    double minLB;
+    double maxUB;
+
+    if(auto sharedOwnerProblem = ownerProblem.lock(); sharedOwnerProblem && sharedOwnerProblem->env->settings)
+    {
+        minLB = sharedOwnerProblem->env->settings->getSetting<double>("Model.Variables.Continuous.MinimumLowerBound");
+        maxUB = sharedOwnerProblem->env->settings->getSetting<double>("Model.Variables.Continuous.MaximumUpperBound");
+    }
+    else
+    {
+        minLB = -1e50;
+        maxUB = 1e50;
+    }
+
+    return (bounds.l() <= minLB || bounds.u() >= maxUB);
+}
+
 void ObjectiveFunction::initializeGradientSparsityPattern() { gradientSparsityPattern = std::make_shared<Variables>(); }
 
 std::shared_ptr<Variables> ObjectiveFunction::getGradientSparsityPattern()
@@ -222,20 +243,6 @@ void LinearObjectiveFunction::updateProperties()
     ObjectiveFunction::updateProperties();
 }
 
-bool LinearObjectiveFunction::isDualUnbounded()
-{
-    for(auto& T : linearTerms)
-    {
-        if(T->coefficient == 0)
-            continue;
-
-        if(T->variable->isDualUnbounded())
-            return true;
-    }
-
-    return false;
-}
-
 void LinearObjectiveFunction::takeOwnership(ProblemPtr owner)
 {
     ownerProblem = owner;
@@ -390,26 +397,6 @@ void QuadraticObjectiveFunction::updateProperties()
     {
         properties.hasQuadraticTerms = false;
     }
-}
-
-bool QuadraticObjectiveFunction::isDualUnbounded()
-{
-    if(LinearObjectiveFunction::isDualUnbounded())
-        return true;
-
-    for(auto& T : quadraticTerms)
-    {
-        if(T->coefficient == 0)
-            continue;
-
-        if(T->firstVariable->isDualUnbounded())
-            return true;
-
-        if(T->secondVariable->isDualUnbounded())
-            return true;
-    }
-
-    return false;
 }
 
 void QuadraticObjectiveFunction::takeOwnership(ProblemPtr owner)

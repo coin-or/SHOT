@@ -131,7 +131,7 @@ public:
 
     bool tightenBounds(const Interval bound);
 
-    bool isDualUnbounded();
+    bool isUnbounded();
 
     void takeOwnership(ProblemPtr owner);
 };
