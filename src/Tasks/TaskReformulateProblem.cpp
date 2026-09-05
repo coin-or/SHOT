@@ -1115,6 +1115,10 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
         auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression,
             tmpConstant] = extractTermsAndConstant(reformulatedExpression, true, true, true, true);
 
+        // The constant part extracted from the nonlinear expression must be kept, otherwise it is silently lost.
+        // This e.g. happens when a subexpression is constant folded because all its variables are fixed.
+        constant += tmpConstant;
+
         if(tmpLinearTerms.size() > 0)
             destinationLinearTerms.add(tmpLinearTerms);
 
