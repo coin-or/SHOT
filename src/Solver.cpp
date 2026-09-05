@@ -474,14 +474,6 @@ bool Solver::setProblem(
     if(env->settings->getSetting<bool>("Output.Debug.Enable"))
     {
         initializeDebugMode();
-
-        fs::filesystem::path filename(env->settings->getSetting<std::string>("Output.Debug.Path"));
-        filename /= "originalproblem.txt";
-
-        std::stringstream problem;
-        problem << env->problem;
-
-        Utilities::writeStringToFile(filename.string(), problem.str());
     }
 
     // Do not do convexifying reformulations if the problem is assumed to be convex
@@ -510,6 +502,35 @@ bool Solver::setProblem(
     }
 #endif
 
+    // The cutoff the dual solver starts from, as in the overload reading the problem from a file. Without this
+    // Dual.MIP.CutOff.InitialValue would silently have no effect on this path.
+    if(env->settings->getSetting<bool>("Dual.MIP.CutOff.UseInitialValue")
+        && std::abs(env->settings->getSetting<double>("Dual.MIP.CutOff.InitialValue")) < SHOT_DBL_MAX)
+    {
+        env->dualSolver->cutOffToUse = env->settings->getSetting<double>("Dual.MIP.CutOff.InitialValue");
+        env->dualSolver->useCutOff = true;
+        env->output->outputDebug(
+            fmt::format("  Setting user defined cutoff value to {}.", env->dualSolver->cutOffToUse));
+    }
+    else
+    {
+        env->dualSolver->cutOffToUse = env->results->getPrimalBound();
+    }
+
+    // Bound tightening is performed here as well as in the overload that reads the problem from a file, so that
+    // a problem provided directly through the API (e.g. from the Python interface or the GAMS entry point) is
+    // treated the same way. It is controlled by Model.BoundTightening.FeasibilityBased.Use like everywhere else.
+    //
+    // It is skipped when the caller supplies its own reformulated problem: no reformulation is performed in that
+    // case either, and the nested solver created by NLPSolverSHOT -- which the bound tightening task itself
+    // creates when Model.BoundTightening.InitialPOA.Use is active -- passes its problem that way, so it would
+    // otherwise recurse indefinitely.
+    if(!reformulatedProblem)
+    {
+        auto taskPerformBoundTightening = std::make_unique<TaskPerformBoundTightening>(env, env->problem);
+        taskPerformBoundTightening->run();
+    }
+
     setConvexityBasedSettingsPreReformulation();
     verifySettings();
 
@@ -536,6 +557,19 @@ bool Solver::setProblem(
 
         if(!env->results->hasPrimalSolution())
             env->results->setPrimalBound(SHOT_DBL_MIN);
+    }
+
+    // Written after the reformulation, as in the overload reading the problem from a file, so that the dumped
+    // problem reflects the bound tightening performed above.
+    if(env->settings->getSetting<bool>("Output.Debug.Enable"))
+    {
+        fs::filesystem::path filename(env->settings->getSetting<std::string>("Output.Debug.Path"));
+        filename /= "originalproblem.txt";
+
+        std::stringstream problemText;
+        problemText << env->problem;
+
+        Utilities::writeStringToFile(filename.string(), problemText.str());
     }
 
     setConvexityBasedSettings();
