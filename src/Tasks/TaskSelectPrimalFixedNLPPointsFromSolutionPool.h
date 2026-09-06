@@ -16,12 +16,15 @@ namespace SHOT
 class TaskSelectPrimalFixedNLPPointsFromSolutionPool : public TaskBase
 {
 public:
-    TaskSelectPrimalFixedNLPPointsFromSolutionPool(EnvironmentPtr envPtr);
+    // isFinalPolish marks the instance added to the finalize sequence, which polishes the solution once the
+    // search is over rather than acting as a primal heuristic during it.
+    TaskSelectPrimalFixedNLPPointsFromSolutionPool(EnvironmentPtr envPtr, bool isFinalPolish = false);
     ~TaskSelectPrimalFixedNLPPointsFromSolutionPool() override;
 
     void run() override;
     std::string getType() override;
 
 private:
+    bool isFinalPolish;
 };
 } // namespace SHOT

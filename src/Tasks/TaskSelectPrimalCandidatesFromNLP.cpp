@@ -41,8 +41,9 @@
 namespace SHOT
 {
 
-TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(EnvironmentPtr envPtr, bool useReformulatedProblem)
-    : TaskBase(envPtr)
+TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(
+    EnvironmentPtr envPtr, bool useReformulatedProblem, bool isFinalPolish)
+    : TaskBase(envPtr), isFinalPolish(isFinalPolish)
 {
     env->timing->startTimer("PrimalStrategy");
     env->timing->startTimer("PrimalBoundStrategyNLP");
@@ -186,7 +187,10 @@ void TaskSelectPrimalCandidatesFromNLP::run()
         return;
     }
 
-    if(env->results->getRelativeGlobalObjectiveGap() < 1e-10)
+    // A closed gap means there is nothing left for this heuristic to find during a search. The final polish is
+    // the opposite case: it runs precisely because the search is over, and refines a point whose objective has
+    // converged even though the point itself may still be some way off.
+    if(env->results->getRelativeGlobalObjectiveGap() < 1e-10 && !isFinalPolish)
     {
         env->solutionStatistics.numberOfIterationsWithoutNLPCallMIP++;
         return;

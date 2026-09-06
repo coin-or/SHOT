@@ -10,6 +10,8 @@
 
 #include "TaskSelectPrimalFixedNLPPointsFromSolutionPool.h"
 
+#include "../Model/Problem.h"
+
 #include "../Iteration.h"
 #include "../Results.h"
 #include "../PrimalSolver.h"
@@ -19,8 +21,9 @@
 namespace SHOT
 {
 
-TaskSelectPrimalFixedNLPPointsFromSolutionPool::TaskSelectPrimalFixedNLPPointsFromSolutionPool(EnvironmentPtr envPtr)
-    : TaskBase(envPtr)
+TaskSelectPrimalFixedNLPPointsFromSolutionPool::TaskSelectPrimalFixedNLPPointsFromSolutionPool(
+    EnvironmentPtr envPtr, bool isFinalPolish)
+    : TaskBase(envPtr), isFinalPolish(isFinalPolish)
 {
 }
 
@@ -37,7 +40,7 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
     bool callNLPSolver = false;
     bool useFeasibleSolutionExtra = false;
 
-    if(!currIter->isMIP())
+    if(!currIter->isMIP() && env->reformulatedProblem->properties.isDiscrete)
     {
         return;
     }
@@ -58,7 +61,21 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
 
     auto dualBound = env->results->getCurrentDualBound();
 
-    if(currIter->solutionStatus == E_ProblemSolutionStatus::Optimal
+    if(isFinalPolish)
+    {
+        // The polish runs once, after the search, so the iteration- and time-based pacing below does not apply.
+        // There is only something to improve if a primal solution was found at all.
+        if(!env->results->hasPrimalSolution())
+        {
+            env->timing->stopTimer("PrimalBoundStrategyNLP");
+            env->timing->stopTimer("PrimalStrategy");
+            return;
+        }
+
+        callNLPSolver = true;
+        useFeasibleSolutionExtra = true;
+    }
+    else if(currIter->solutionStatus == E_ProblemSolutionStatus::Optimal
         && std::abs(allSolutions.at(0).objectiveValue - env->results->getCurrentDualBound())
                 / ((1e-10) + std::abs(dualBound))
             < env->settings->getSetting<double>("Primal.FixedInteger.DualPointGap.Relative"))

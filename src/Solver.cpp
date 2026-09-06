@@ -1403,6 +1403,9 @@ void Solver::initializeSettings()
 
     env->settings->createSetting("Primal.FixedInteger.Warmstart", true, "Warm start the NLP solver");
 
+    env->settings->createSetting("Primal.PolishSolution", true,
+        "Solve an NLP problem from the final solution to try to improve it");
+
     // Primal settings: rootsearch
 
     env->settings->createSettingGroup("Primal", "Rootsearch", "Primal root search",
