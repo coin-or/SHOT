@@ -58,6 +58,8 @@
 #include "../Tasks/TaskSelectPrimalCandidatesFromSolutionPool.h"
 #include "../Tasks/TaskSelectPrimalCandidatesFromRootsearch.h"
 #include "../Tasks/TaskSelectPrimalFixedNLPPointsFromSolutionPool.h"
+#include "../Tasks/TaskSelectPrimalCandidatesFromNLP.h"
+#include "../Tasks/TaskClearFixedPrimalCandidates.h"
 #include "../Tasks/TaskSelectPrimalCandidatesFromExternalSource.h"
 
 #include "../Tasks/TaskUpdateInteriorPoint.h"
@@ -135,6 +137,26 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr)
     auto tSelectPrimExternal = std::make_shared<TaskSelectPrimalCandidatesFromExternalSource>(env);
     env->tasks->addTask(tSelectPrimExternal, "SelectPrimExternal");
     std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tSelectPrimExternal);
+
+    // Once the search has finished, solve an NLP problem starting from the solution found to try to improve it.
+    // The dual solver's own tolerances bound how accurate its point is, and near an optimum the objective is
+    // often flat, so a converged objective can still sit on a point that is some way off. This is a separate
+    // task instance from any used during the search: it must not be paced by the iteration and time heuristics
+    // that apply there.
+    if(env->settings->getSetting<bool>("Primal.PolishSolution"))
+    {
+        auto tPolishPoint = std::make_shared<TaskSelectPrimalFixedNLPPointsFromSolutionPool>(env, true);
+        std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tPolishPoint);
+
+        auto tPolishNLP = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env,
+            static_cast<ES_PrimalNLPProblemSource>(env->settings->getSetting<int>("Primal.FixedInteger.SourceProblem"))
+                == ES_PrimalNLPProblemSource::ReformulatedProblem,
+            true);
+        std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tPolishNLP);
+
+        auto tPolishClear = std::make_shared<TaskClearFixedPrimalCandidates>(env);
+        std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tPolishClear);
+    }
 
     auto tPrintIterReport = std::make_shared<TaskPrintIterationReport>(env);
     env->tasks->addTask(tPrintIterReport, "PrintIterReport");
