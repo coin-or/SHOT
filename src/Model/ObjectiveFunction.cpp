@@ -105,11 +105,10 @@ std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> ObjectiveFunct
     std::sort(hessianSparsityPattern->begin(), hessianSparsityPattern->end(),
         [](const std::pair<VariablePtr, VariablePtr>& elementOne,
             const std::pair<VariablePtr, VariablePtr>& elementTwo) {
-            if(elementOne.first->index < elementTwo.first->index)
-                return (true);
-            if(elementOne.second->index == elementTwo.second->index)
+            if(elementOne.first->index != elementTwo.first->index)
                 return (elementOne.first->index < elementTwo.first->index);
-            return (false);
+
+            return (elementOne.second->index < elementTwo.second->index);
         });
 
     return (hessianSparsityPattern);

@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <map>
 #include <memory>
+#include <tuple>
 #include <ostream>
 #include <string>
 
@@ -140,6 +141,37 @@ public:
 };
 
 using VariablePtr = std::shared_ptr<Variable>;
+
+// std::shared_ptr compares on the stored address, which differs between runs, so any map keyed on variables
+// needs an explicit comparator ordering on the variable index instead. Without one the entries are visited in
+// an order that follows the heap layout, and anything generated while iterating -- auxiliary variables,
+// constraint terms, or a sum of interval bounds -- comes out differently from one run to the next.
+struct VariableIndexComparator
+{
+    bool operator()(const VariablePtr& firstKey, const VariablePtr& secondKey) const
+    {
+        return (firstKey->index < secondKey->index);
+    }
+
+    bool operator()(
+        const std::pair<VariablePtr, double>& firstKey, const std::pair<VariablePtr, double>& secondKey) const
+    {
+        if(firstKey.first->index != secondKey.first->index)
+            return (firstKey.first->index < secondKey.first->index);
+
+        return (firstKey.second < secondKey.second);
+    }
+
+    bool operator()(
+        const std::tuple<VariablePtr, VariablePtr>& firstKey, const std::tuple<VariablePtr, VariablePtr>& secondKey) const
+    {
+        if(std::get<0>(firstKey)->index != std::get<0>(secondKey)->index)
+            return (std::get<0>(firstKey)->index < std::get<0>(secondKey)->index);
+
+        return (std::get<1>(firstKey)->index < std::get<1>(secondKey)->index);
+    }
+};
+
 using SparseVariableVector = std::map<VariablePtr, double>;
 using SparseVariableMatrix = std::map<std::pair<VariablePtr, VariablePtr>, double>;
 

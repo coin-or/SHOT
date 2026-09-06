@@ -466,7 +466,7 @@ public:
     bool LDLFactorizationSuccessful = false;
 
     std::vector<Eigen::Triplet<double>> elements;
-    std::map<VariablePtr, int> variableMap;
+    std::map<VariablePtr, int, VariableIndexComparator> variableMap;
 
     using std::vector<QuadraticTermPtr>::operator[];
 
@@ -851,8 +851,7 @@ public:
                 {
                     double valueAtEndpoint = std::pow(base.l(), power);
 
-                    return (isEven ? Interval(valueAtEndpoint, SHOT_DBL_MAX)
-                                   : Interval(SHOT_DBL_MIN, valueAtEndpoint));
+                    return (isEven ? Interval(valueAtEndpoint, SHOT_DBL_MAX) : Interval(SHOT_DBL_MIN, valueAtEndpoint));
                 }
 
                 return (Interval(SHOT_DBL_MIN, SHOT_DBL_MAX));
