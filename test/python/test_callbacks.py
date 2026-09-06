@@ -336,8 +336,8 @@ class TestPrimalSolutionCandidateSelectionCallback:
             "Expected no primal solutions when every candidate is rejected"
         )
 
-    def test_selective_rejection_reduces_accepted_count(self, solver, env):
-        """Rejecting a subset of candidates results in fewer incumbents than accepting all."""
+    def test_selective_rejection_filters_accepted_candidates(self, solver, env):
+        """Rejected candidates never become incumbents, and the filter does not change the optimum."""
         import SHOTpy
 
         # ── Run 1: accept everything ──────────────────────────────────────────
@@ -366,8 +366,20 @@ class TestPrimalSolutionCandidateSelectionCallback:
         solver2.solveProblem()
 
         print(f"\n  accepted (all): {len(accepted_log1)}  accepted (filtered): {len(accepted_log2)}")
-        assert len(accepted_log2) <= len(accepted_log1), (
-            "Rejecting sub-optimal candidates should not produce more incumbents"
+
+        # The number of incumbents is not a meaningful invariant: it depends on the order in which the
+        # search happens to encounter improving solutions, and rejecting a candidate changes that order.
+        # With bound tightening the unfiltered run reaches the optimum as its very first incumbent, so
+        # there is no headroom for the filtered run to accept fewer. What the callback does guarantee is
+        # that a rejected candidate never becomes an incumbent, and that filtering out only candidates
+        # worse than the optimum still leaves the optimum reachable.
+        assert accepted_log2, "The filter rejected every candidate, so it cannot be verified"
+        assert all(value <= 5.0 + 1e-6 for value in accepted_log2), (
+            f"A candidate rejected by the callback became an incumbent: {accepted_log2}"
+        )
+        assert abs(solver1.getPrimalBound() - solver2.getPrimalBound()) < 1e-4, (
+            "Rejecting only candidates worse than the optimum must not change the optimum found: "
+            f"{solver1.getPrimalBound()} vs {solver2.getPrimalBound()}"
         )
 
 
