@@ -140,11 +140,42 @@ private:
     int auxVariableCounter = 0;
     int auxConstraintCounter = 0;
 
-    std::map<VariablePtr, Variables> integerAuxiliaryBinaryVariables;
+    // std::shared_ptr compares on the stored address, which differs between runs, so maps keyed on variables
+    // are given an explicit comparator ordering on the variable index instead. Without it the auxiliary
+    // variables and constraints generated from these maps are emitted in a different order from one run to the
+    // next, making the reformulated problem -- and with it the whole solution path -- nondeterministic.
+    struct VariableIndexComparator
+    {
+        bool operator()(const VariablePtr& firstKey, const VariablePtr& secondKey) const
+        {
+            return (firstKey->index < secondKey->index);
+        }
 
-    std::map<std::pair<VariablePtr, double>, AuxiliaryVariablePtr> squareAuxVariables;
+        bool operator()(
+            const std::pair<VariablePtr, double>& firstKey, const std::pair<VariablePtr, double>& secondKey) const
+        {
+            if(firstKey.first->index != secondKey.first->index)
+                return (firstKey.first->index < secondKey.first->index);
 
-    std::map<std::tuple<VariablePtr, VariablePtr>, AuxiliaryVariablePtr> bilinearAuxVariables;
+            return (firstKey.second < secondKey.second);
+        }
+
+        bool operator()(const std::tuple<VariablePtr, VariablePtr>& firstKey,
+            const std::tuple<VariablePtr, VariablePtr>& secondKey) const
+        {
+            if(std::get<0>(firstKey)->index != std::get<0>(secondKey)->index)
+                return (std::get<0>(firstKey)->index < std::get<0>(secondKey)->index);
+
+            return (std::get<1>(firstKey)->index < std::get<1>(secondKey)->index);
+        }
+    };
+
+    std::map<VariablePtr, Variables, VariableIndexComparator> integerAuxiliaryBinaryVariables;
+
+    std::map<std::pair<VariablePtr, double>, AuxiliaryVariablePtr, VariableIndexComparator> squareAuxVariables;
+
+    std::map<std::tuple<VariablePtr, VariablePtr>, AuxiliaryVariablePtr, VariableIndexComparator>
+        bilinearAuxVariables;
 
     std::map<std::string, AuxiliaryVariablePtr> absoluteExpressionsAuxVariables;
 
