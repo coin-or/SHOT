@@ -62,6 +62,7 @@ bool ModelTestUnboundedQCQP();
 bool ModelTestFixedVariableConstantFolding();
 bool ModelTestFixedBinaryVariableBounds();
 bool ModelTestConstantInFunctionValues();
+bool ModelTestPolishSolution();
 
 bool TestReadProblem(const std::string& problemFile);
 bool TestRootsearch(const std::string& problemFile);
@@ -173,6 +174,9 @@ int ModelTest(int argc, char* argv[])
         break;
     case 29:
         passed = ModelTestConstantInFunctionValues();
+        break;
+    case 30:
+        passed = ModelTestPolishSolution();
         break;
     default:
         passed = false;
@@ -5658,6 +5662,162 @@ bool ModelTestConstantInFunctionValues()
         checkValue("3*x + exp(x) + 7 at x=2", constraint->calculateFunctionValue(point), 13.0 + std::exp(2.0));
         checkInterval("3*x + exp(x) + 7 over x in [1,2]", constraint->getConstraintFunctionBounds(),
             10.0 + std::exp(1.0), 13.0 + std::exp(2.0));
+    }
+
+    return passed;
+}
+
+static std::pair<std::unique_ptr<SHOT::Solver>, std::shared_ptr<SHOT::Environment>> SolveWithPolishSetting(bool polish,
+    const std::function<SHOT::ProblemPtr(const std::shared_ptr<SHOT::Environment>&)>& buildProblem,
+    ES_MIPSolver mipSolver)
+{
+    auto solver = std::make_unique<SHOT::Solver>();
+    auto env = solver->getEnvironment();
+
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Warning));
+    solver->updateSetting("Termination.TimeLimit", 20.0);
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(mipSolver));
+    solver->updateSetting("Primal.PolishSolution", polish);
+
+    auto problem = buildProblem(env);
+    problem->finalize();
+
+    if(!solver->setProblem(problem))
+        std::cout << "  FAILED: solver->setProblem() failed.\n";
+    else if(!solver->solveProblem())
+        std::cout << "  FAILED: solver->solveProblem() failed.\n";
+
+    return { std::move(solver), env };
+}
+
+bool ModelTestPolishSolution()
+{
+    // The dual solver only resolves its solution to its own internal tolerances -- for a MIQCQP solver those are
+    // barrier tolerances that SHOT's termination settings do not reach. Near an optimum the objective is flat, so
+    // a converged objective value can still sit on a point that is orders of magnitude less accurate. Solving an
+    // NLP problem from that point, with any discrete variables fixed at the values found, refines it.
+    //
+    // Both sub-tests below check the polished point directly rather than the objective, since it is the point
+    // that is imprecise: the objective is already correct to ~1e-10 without any polishing.
+
+    bool passed = true;
+
+    // minimize (x-0.65)^2 + (y-0.65)^2   s.t.   x^2 + y^2 <= 1,  x + y >= 1.2
+    // The unconstrained minimum (0.65, 0.65) satisfies both constraints, so it is the optimum, and the objective
+    // there is exactly 0. An optional binary variable is appended to the objective to exercise the path where
+    // discrete variables have to be fixed before the NLP problem is solved; its optimal value is 0.
+    auto makeProblem = [](bool withBinary)
+    {
+        return [withBinary](const std::shared_ptr<SHOT::Environment>& env)
+        {
+            auto problem = std::make_shared<SHOT::Problem>(env);
+
+            auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, -10.0, 10.0);
+            auto var_y = std::make_shared<SHOT::Variable>("y", 1, SHOT::E_VariableType::Real, -10.0, 10.0);
+            problem->add(SHOT::Variables({ var_x, var_y }));
+
+            auto objective
+                = std::make_shared<SHOT::QuadraticObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize);
+            objective->add(std::make_shared<SHOT::QuadraticTerm>(1.0, var_x, var_x));
+            objective->add(std::make_shared<SHOT::QuadraticTerm>(1.0, var_y, var_y));
+            objective->add(std::make_shared<SHOT::LinearTerm>(-1.3, var_x));
+            objective->add(std::make_shared<SHOT::LinearTerm>(-1.3, var_y));
+            objective->constant = 0.845;
+
+            if(withBinary)
+            {
+                auto var_b = std::make_shared<SHOT::Variable>("b", 2, SHOT::E_VariableType::Binary, 0.0, 1.0);
+                problem->add(var_b);
+                objective->add(std::make_shared<SHOT::LinearTerm>(1.0, var_b));
+            }
+
+            problem->add(objective);
+
+            auto ballConstraint = std::make_shared<SHOT::QuadraticConstraint>(0, "ball", SHOT_DBL_MIN, 1.0);
+            ballConstraint->add(std::make_shared<SHOT::QuadraticTerm>(1.0, var_x, var_x));
+            ballConstraint->add(std::make_shared<SHOT::QuadraticTerm>(1.0, var_y, var_y));
+            problem->add(ballConstraint);
+
+            auto cutConstraint = std::make_shared<SHOT::LinearConstraint>(1, "cut", 1.2, SHOT_DBL_MAX);
+            cutConstraint->add(std::make_shared<SHOT::LinearTerm>(1.0, var_x));
+            cutConstraint->add(std::make_shared<SHOT::LinearTerm>(1.0, var_y));
+            problem->add(cutConstraint);
+
+            return problem;
+        };
+    };
+
+    constexpr double optimalValue = 0.65;
+    constexpr double polishedTolerance = 1e-7;
+
+    for(auto& [mipSolver, solverName] : AvailableMIPSolversForEpigraphTests())
+    {
+        std::cout << "\n===== MIP solver: " << solverName << " =====\n";
+
+        for(bool withBinary : { false, true })
+        {
+            std::cout << "\nSub-test: " << (withBinary ? "problem with a binary variable" : "continuous problem")
+                      << "\n";
+
+            auto buildProblem = makeProblem(withBinary);
+
+            auto [polishedSolver, polishedEnv] = SolveWithPolishSetting(true, buildProblem, mipSolver);
+            auto [unpolishedSolver, unpolishedEnv] = SolveWithPolishSetting(false, buildProblem, mipSolver);
+
+            if(polishedEnv->results->primalSolutions.size() == 0
+                || unpolishedEnv->results->primalSolutions.size() == 0)
+            {
+                std::cout << "  FAILED: no primal solution found.\n";
+                passed = false;
+                continue;
+            }
+
+            double polishedError = std::abs(polishedEnv->results->primalSolution.at(0) - optimalValue);
+            double unpolishedError = std::abs(unpolishedEnv->results->primalSolution.at(0) - optimalValue);
+
+            std::cout << "  x with polishing:    " << polishedEnv->results->primalSolution.at(0) << " (error "
+                      << polishedError << ", " << polishedEnv->solutionStatistics.numberOfProblemsFixedNLP
+                      << " NLP problems solved)\n";
+            std::cout << "  x without polishing: " << unpolishedEnv->results->primalSolution.at(0) << " (error "
+                      << unpolishedError << ", " << unpolishedEnv->solutionStatistics.numberOfProblemsFixedNLP
+                      << " NLP problems solved)\n";
+
+            // Checked directly rather than only through the resulting accuracy, since for a small problem the
+            // dual solver may happen to return an accurate point on its own, which would let a silently
+            // disabled polishing step pass the tolerance check below. Only meaningful when the search did not
+            // already solve this fixed NLP problem itself: the polishing step deliberately skips a point whose
+            // discrete assignment has been solved for already, rather than repeating identical work.
+            if(unpolishedEnv->solutionStatistics.numberOfProblemsFixedNLP == 0
+                && polishedEnv->solutionStatistics.numberOfProblemsFixedNLP == 0)
+            {
+                std::cout << "  FAILED: enabling Primal.PolishSolution did not result in an NLP problem being "
+                             "solved.\n";
+                passed = false;
+            }
+
+            if(polishedEnv->solutionStatistics.numberOfProblemsFixedNLP
+                < unpolishedEnv->solutionStatistics.numberOfProblemsFixedNLP)
+            {
+                std::cout << "  FAILED: enabling Primal.PolishSolution resulted in fewer NLP problems being "
+                             "solved.\n";
+                passed = false;
+            }
+
+            if(polishedError > polishedTolerance)
+            {
+                std::cout << "  FAILED: the polished solution is not accurate to " << polishedTolerance
+                          << ", so the NLP polishing step did not take effect.\n";
+                passed = false;
+            }
+
+            // Polishing must never make the solution worse. This holds trivially if the dual solver already
+            // returned an exact point, so it is a non-strict comparison.
+            if(polishedError > unpolishedError + polishedTolerance)
+            {
+                std::cout << "  FAILED: polishing made the solution less accurate.\n";
+                passed = false;
+            }
+        }
     }
 
     return passed;
