@@ -777,11 +777,11 @@ E_ProblemSolutionStatus MIPSolverGurobi::getSolutionStatus()
     }
     else if(status == GRB_ITERATION_LIMIT)
     {
-        MIPSolutionStatus = E_ProblemSolutionStatus::Unbounded;
+        MIPSolutionStatus = E_ProblemSolutionStatus::IterationLimit;
     }
     else if(status == GRB_NODE_LIMIT)
     {
-        MIPSolutionStatus = E_ProblemSolutionStatus::Unbounded;
+        MIPSolutionStatus = E_ProblemSolutionStatus::NodeLimit;
     }
     else if(status == GRB_TIME_LIMIT)
     {
@@ -809,7 +809,8 @@ E_ProblemSolutionStatus MIPSolverGurobi::getSolutionStatus()
     }
     else if(status == GRB_LOADED)
     {
-        MIPSolutionStatus = E_ProblemSolutionStatus::Infeasible;
+        // The model has been loaded but not solved, so nothing is known about it
+        MIPSolutionStatus = E_ProblemSolutionStatus::Error;
     }
     else
     {
