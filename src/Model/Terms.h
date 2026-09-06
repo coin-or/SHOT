@@ -1040,6 +1040,8 @@ public:
     {
         size_t numberPositivePowers = 0;
         double sumPowers = 0.0;
+        bool allVariablesNonNegative = true;
+        bool allVariablesNegative = true;
 
         for(auto& E : elements)
         {
@@ -1049,10 +1051,58 @@ public:
             }
 
             sumPowers += E->power;
+
+            if(E->variable->lowerBound < 0.0)
+                allVariablesNonNegative = false;
+
+            if(E->variable->upperBound >= 0.0)
+                allVariablesNegative = false;
         }
 
         if(elements.size() == 1 && sumPowers == 1.0)
             return (E_Convexity::Linear);
+
+        // The rules below are the standard results for a monomial on the non-negative orthant and do not hold
+        // elsewhere: 1/x for example is convex for x > 0 but concave for x < 0, so a sum of such terms over a
+        // negative domain describes a nonconvex feasible set. A domain reaching zero is still fine, since the
+        // term keeps its curvature wherever it is defined.
+        if(!allVariablesNonNegative)
+        {
+            // A single variable raised to an integer power is still tractable on a wholly negative domain,
+            // where it is convex for an even power and concave for an odd one.
+            if(elements.size() == 1 && allVariablesNegative)
+            {
+                double intpart;
+
+                if(std::modf(elements[0]->power, &intpart) == 0.0)
+                {
+                    bool isEven = (((int)round(intpart)) % 2 == 0);
+
+                    if(coefficient > 0)
+                        return (isEven ? E_Convexity::Convex : E_Convexity::Concave);
+
+                    if(coefficient < 0)
+                        return (isEven ? E_Convexity::Concave : E_Convexity::Convex);
+                }
+            }
+
+            // An even positive integer power is convex over any domain, one containing zero included.
+            if(elements.size() == 1 && elements[0]->power > 0.0)
+            {
+                double intpart;
+
+                if(std::modf(elements[0]->power, &intpart) == 0.0 && (((int)round(intpart)) % 2 == 0))
+                {
+                    if(coefficient > 0)
+                        return (E_Convexity::Convex);
+
+                    if(coefficient < 0)
+                        return (E_Convexity::Concave);
+                }
+            }
+
+            return (E_Convexity::Nonconvex);
+        }
 
         if(coefficient > 0)
         {

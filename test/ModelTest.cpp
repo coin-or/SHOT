@@ -63,6 +63,7 @@ bool ModelTestFixedVariableConstantFolding();
 bool ModelTestFixedBinaryVariableBounds();
 bool ModelTestConstantInFunctionValues();
 bool ModelTestPolishSolution();
+bool ModelTestSignomialTermConvexity();
 
 bool TestReadProblem(const std::string& problemFile);
 bool TestRootsearch(const std::string& problemFile);
@@ -177,6 +178,9 @@ int ModelTest(int argc, char* argv[])
         break;
     case 30:
         passed = ModelTestPolishSolution();
+        break;
+    case 31:
+        passed = ModelTestSignomialTermConvexity();
         break;
     default:
         passed = false;
@@ -5940,6 +5944,99 @@ bool ModelTestPolishSolution()
                 std::cout << "  FAILED: polishing made the solution less accurate.\n";
                 passed = false;
             }
+        }
+    }
+
+    return passed;
+}
+
+bool ModelTestSignomialTermConvexity()
+{
+    // The convexity results for a monomial -- convex when every power is non-positive, and so on -- hold on the
+    // non-negative orthant and not outside it. 1/x is convex for x > 0 but concave for x < 0, so a sum of such
+    // terms over a negative domain describes a nonconvex feasible set. Classifying one as convex lets the solver
+    // linearise it and cut away feasible points, which is how minimising x+y subject to 1/x + 1/y <= -1 over
+    // [-5,-1]^2 returned -2 instead of the true optimum -6.25.
+
+    bool passed = true;
+
+    struct Case
+    {
+        std::string description;
+        double coefficient;
+        // Each element is a variable domain paired with the power it is raised to
+        std::vector<std::tuple<double, double, double>> elements;
+        E_Convexity expectedConvexity;
+    };
+
+    auto convexityName = [](E_Convexity convexity)
+    {
+        switch(convexity)
+        {
+        case E_Convexity::Linear:
+            return "linear";
+        case E_Convexity::Convex:
+            return "convex";
+        case E_Convexity::Concave:
+            return "concave";
+        case E_Convexity::Nonconvex:
+            return "nonconvex";
+        default:
+            return "unknown";
+        }
+    };
+
+    std::vector<Case> cases = {
+        // On the non-negative orthant the established results apply unchanged
+        { "1/x, x in [1,5]", 1.0, { { 1.0, 5.0, -1.0 } }, E_Convexity::Convex },
+        { "1/x, x in [0,5] (domain reaching zero)", 1.0, { { 0.0, 5.0, -1.0 } }, E_Convexity::Convex },
+        { "x^2, x in [1,5]", 1.0, { { 1.0, 5.0, 2.0 } }, E_Convexity::Convex },
+        { "x^0.5, x in [1,5]", 1.0, { { 1.0, 5.0, 0.5 } }, E_Convexity::Concave },
+        { "-x^0.5, x in [1,5]", -1.0, { { 1.0, 5.0, 0.5 } }, E_Convexity::Convex },
+        { "1/(x*y), x,y in [1,5]", 1.0, { { 1.0, 5.0, -1.0 }, { 1.0, 5.0, -1.0 } }, E_Convexity::Convex },
+
+        // A single variable over a wholly negative domain stays tractable for an integer power
+        { "1/x, x in [-5,-1] (concave there)", 1.0, { { -5.0, -1.0, -1.0 } }, E_Convexity::Concave },
+        { "x^-2, x in [-5,-1]", 1.0, { { -5.0, -1.0, -2.0 } }, E_Convexity::Convex },
+        { "x^-3, x in [-5,-1]", 1.0, { { -5.0, -1.0, -3.0 } }, E_Convexity::Concave },
+        { "x^2, x in [-5,-1]", 1.0, { { -5.0, -1.0, 2.0 } }, E_Convexity::Convex },
+        { "x^3, x in [-5,-1]", 1.0, { { -5.0, -1.0, 3.0 } }, E_Convexity::Concave },
+        { "-1/x, x in [-5,-1]", -1.0, { { -5.0, -1.0, -1.0 } }, E_Convexity::Convex },
+
+        // An even positive integer power is convex over any domain, one containing zero included
+        { "x^2, x in [-2,3] (domain crossing zero)", 1.0, { { -2.0, 3.0, 2.0 } }, E_Convexity::Convex },
+        { "x^3, x in [-2,3] (domain crossing zero)", 1.0, { { -2.0, 3.0, 3.0 } }, E_Convexity::Nonconvex },
+        { "1/x, x in [-2,3] (domain crossing zero)", 1.0, { { -2.0, 3.0, -1.0 } }, E_Convexity::Nonconvex },
+
+        // Several variables away from the non-negative orthant are not classified
+        { "1/(x*y), x,y in [-5,-1]", 1.0, { { -5.0, -1.0, -1.0 }, { -5.0, -1.0, -1.0 } },
+            E_Convexity::Nonconvex },
+    };
+
+    for(auto& C : cases)
+    {
+        SHOT::SignomialElements elements;
+        int index = 0;
+
+        for(auto& [lb, ub, power] : C.elements)
+        {
+            auto variable
+                = std::make_shared<SHOT::Variable>("x" + std::to_string(index), index, SHOT::E_VariableType::Real,
+                    lb, ub);
+            elements.push_back(std::make_shared<SHOT::SignomialElement>(variable, power));
+            index++;
+        }
+
+        SHOT::SignomialTerm term(C.coefficient, elements);
+        auto convexity = term.getConvexity();
+
+        std::cout << "  " << C.description << ": " << convexityName(convexity) << " (expected "
+                  << convexityName(C.expectedConvexity) << ")\n";
+
+        if(convexity != C.expectedConvexity)
+        {
+            std::cout << "  FAILED: " << C.description << " was not classified as expected.\n";
+            passed = false;
         }
     }
 
