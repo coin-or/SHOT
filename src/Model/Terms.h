@@ -820,66 +820,101 @@ public:
 
     inline double calculate(const VectorDouble& point) const { return pow(variable->calculate(point), power); }
 
-    inline Interval calculate(const IntervalVector& intervalVector) const
-    {
-        auto variableBound = variable->calculate(intervalVector);
-
-        double intpart;
-        bool isInteger = (std::modf(power, &intpart) == 0.0);
-        int integerValue = (int)round(intpart);
-        bool isEven = (integerValue % 2 == 0);
-
-        if(variableBound.l() <= 0)
-        {
-            if(!isInteger)
-                variableBound.l(SHOT_DBL_EPS);
-            else if(isInteger && power < 0)
-                variableBound.l(SHOT_DBL_EPS);
-        }
-
-        Interval bounds;
-
-        if(isInteger)
-            bounds = pow(variableBound, (int)power);
-        else
-            bounds = pow(variableBound, power);
-
-        if(isInteger && isEven && bounds.l() <= 0.0)
-            bounds.l(0.0);
-
-        return (bounds);
-    }
-
-    inline Interval getBounds()
+    // Evaluates base^power over an interval. Shared by both evaluations below
+    inline Interval calculatePower(Interval base) const
     {
         if(power == 0.0)
             return (Interval(1.0));
 
-        auto variableBound = variable->getBound();
-
         if(power == 1.0)
-            return (variableBound);
+            return (base);
 
         double intpart;
         bool isInteger = (std::modf(power, &intpart) == 0.0);
         int integerValue = (int)round(intpart);
         bool isEven = (integerValue % 2 == 0);
 
-        if(variableBound.l() <= 0.0 && (!isInteger || power < 0.0))
-            variableBound.l(SHOT_DBL_EPS);
+        if(isInteger)
+        {
+            // An integer power is defined for a negative base as well, so a wholly negative domain needs no
+            // adjustment at all. Only a base containing zero is a problem, and then only for a negative power,
+            // where the expression grows without bound as the base approaches zero.
+            if(power < 0.0 && base.l() <= 0.0 && base.u() >= 0.0)
+            {
+                // Only the end nearest zero is unbounded, so a domain lying on one side of zero still has a
+                // bound on its other end, attained at the endpoint furthest from zero. A domain with values on
+                // both sides gives a disconnected range whose hull is everything.
+                if(base.l() == 0.0 && base.u() > 0.0)
+                    return (Interval(std::pow(base.u(), power), SHOT_DBL_MAX));
+
+                if(base.u() == 0.0 && base.l() < 0.0)
+                {
+                    double valueAtEndpoint = std::pow(base.l(), power);
+
+                    return (isEven ? Interval(valueAtEndpoint, SHOT_DBL_MAX)
+                                   : Interval(SHOT_DBL_MIN, valueAtEndpoint));
+                }
+
+                return (Interval(SHOT_DBL_MIN, SHOT_DBL_MAX));
+            }
+        }
+        bool baseReachesZero = false;
+
+        if(!isInteger)
+        {
+            // A non-integer power has no real value for a negative base, so there is nothing to return if the
+            // domain is wholly negative, and the negative part is cut away otherwise.
+            if(base.u() < 0.0)
+                return (Interval(SHOT_DBL_MIN, SHOT_DBL_MAX));
+
+            // base^power grows without bound as the base approaches zero from above when the power is negative,
+            // but is still bounded at the upper end of the domain. Only the non-negative part of the domain
+            // contributes, so there is no real value at all if the domain does not extend above zero.
+            if(power < 0.0 && base.l() <= 0.0)
+            {
+                if(base.u() <= 0.0)
+                    return (Interval(SHOT_DBL_MIN, SHOT_DBL_MAX));
+
+                return (Interval(std::pow(base.u(), power), SHOT_DBL_MAX));
+            }
+
+            // The power is positive here, so the expression tends to zero as the base does. The base is still
+            // moved off zero before evaluating, since the interval library raises to a non-integer power via a
+            // logarithm and rejects a base reaching zero.
+            if(base.l() <= 0.0)
+            {
+                baseReachesZero = true;
+                base.l(SHOT_DBL_EPS);
+            }
+        }
 
         Interval bounds;
 
-        if(isInteger)
-            bounds = pow(variableBound, (int)power);
-        else
-            bounds = pow(variableBound, power);
+        try
+        {
+            bounds = isInteger ? pow(base, integerValue) : pow(base, power);
+        }
+        catch(const mc::Interval::Exceptions&)
+        {
+            return (Interval(SHOT_DBL_MIN, SHOT_DBL_MAX));
+        }
 
-        if(isInteger && isEven && bounds.l() <= 0.0)
+        if(baseReachesZero)
+            bounds.l(0.0);
+
+        // An even integer power cannot be negative; guards against rounding in the interval library.
+        if(isInteger && isEven && bounds.l() < 0.0)
             bounds.l(0.0);
 
         return (bounds);
     }
+
+    inline Interval calculate(const IntervalVector& intervalVector) const
+    {
+        return (calculatePower(variable->calculate(intervalVector)));
+    }
+
+    inline Interval getBounds() { return (calculatePower(variable->getBound())); }
 
     inline bool tightenBounds(Interval bound)
     {

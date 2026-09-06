@@ -4571,6 +4571,129 @@ bool ModelTestSignomialElementBounds()
         }
     }
 
+    // ── getBounds() over domains that are not strictly positive ────────────────────────────────────
+    // The usual signomial results assume a positive base, and the code used to force one by raising the lower
+    // bound to a small positive number whenever it was not. On a wholly negative domain that produced a
+    // reversed interval and, for x^-2, a lower bound of 1 where the true minimum is 0.04 -- an unsound bound
+    // that removed the optimum from the feasible region. An integer power is perfectly well defined for a
+    // negative base; a non-integer one is not, and a negative power is unbounded around zero.
+    std::cout << "\nSub-test: SignomialElement::getBounds() over domains that are not strictly positive\n";
+    {
+        // A negative power is unbounded only at the end of the domain nearest zero, so a domain lying on one
+        // side of zero keeps a bound at its other end. A domain with values on both sides gives a disconnected
+        // range whose interval hull is everything.
+        struct Case
+        {
+            std::string description;
+            double lb, ub, power;
+            bool lowerUnbounded, upperUnbounded;
+            double expectedLower, expectedUpper;
+        };
+
+        std::vector<Case> cases = {
+            { "power=-1 (odd), negative-only domain: x in [-5,-1]", -5.0, -1.0, -1.0, false, false, -1.0, -0.2 },
+            { "power=-2 (even), negative-only domain: x in [-5,-1]", -5.0, -1.0, -2.0, false, false, 0.04, 1.0 },
+            { "power=-3 (odd), negative-only domain: x in [-5,-1]", -5.0, -1.0, -3.0, false, false, -1.0, -0.008 },
+            { "power=2 (even), negative-only domain: x in [-5,-1]", -5.0, -1.0, 2.0, false, false, 1.0, 25.0 },
+            { "power=0.5, domain reaching zero: x in [0,4]", 0.0, 4.0, 0.5, false, false, 0.0, 2.0 },
+            { "power=-1, domain reaching zero from above: x in [0,4]", 0.0, 4.0, -1.0, false, true, 0.25, 0.0 },
+            { "power=-0.5, domain reaching zero from above: x in [0,4]", 0.0, 4.0, -0.5, false, true, 0.5, 0.0 },
+            { "power=-1 (odd), domain reaching zero from below: x in [-4,0]", -4.0, 0.0, -1.0, true, false, 0.0,
+                -0.25 },
+            { "power=-2 (even), domain reaching zero from below: x in [-4,0]", -4.0, 0.0, -2.0, false, true, 0.0625,
+                0.0 },
+            { "power=-1, domain crossing zero: x in [-2,3]", -2.0, 3.0, -1.0, true, true, 0.0, 0.0 },
+            { "power=-2, domain crossing zero: x in [-2,3]", -2.0, 3.0, -2.0, true, true, 0.0, 0.0 },
+            { "power=0.5, negative-only domain (no real value): x in [-4,-1]", -4.0, -1.0, 0.5, true, true, 0.0,
+                0.0 },
+        };
+
+        for(auto& C : cases)
+        {
+            auto variable = makeVariable(C.lb, C.ub);
+            SHOT::SignomialElement element(variable, C.power);
+            auto bounds = element.getBounds();
+
+            std::cout << "  " << C.description << ": [" << bounds.l() << ", " << bounds.u() << "] (expected ["
+                      << (C.lowerUnbounded ? "unbounded" : std::to_string(C.expectedLower)) << ", "
+                      << (C.upperUnbounded ? "unbounded" : std::to_string(C.expectedUpper)) << "])\n";
+
+            bool lowerOk = C.lowerUnbounded ? (bounds.l() <= SHOT_DBL_MIN)
+                                            : (std::abs(bounds.l() - C.expectedLower) <= tolerance);
+            bool upperOk = C.upperUnbounded ? (bounds.u() >= SHOT_DBL_MAX)
+                                            : (std::abs(bounds.u() - C.expectedUpper) <= tolerance);
+
+            if(!lowerOk || !upperOk)
+            {
+                std::cout << "  FAILED: " << C.description << " did not match the expected interval.\n";
+                passed = false;
+            }
+        }
+    }
+
+    // ── getBounds() must enclose every value the expression actually takes ──────────────────────────
+    // Tightness is checked above; this checks the property that actually matters for correctness, since a
+    // bound that excludes attainable values silently removes feasible points from the problem.
+    std::cout << "\nSub-test: SignomialElement::getBounds() encloses the values sampled from its domain\n";
+    {
+        std::vector<std::pair<double, double>> domains = { { -5.0, -1.0 }, { 1.0, 5.0 }, { -2.0, 3.0 },
+            { 0.0, 4.0 } };
+        std::vector<double> powers = { -3.0, -2.0, -1.0, -0.5, 0.5, 2.0, 3.0 };
+
+        int checkedCases = 0;
+
+        for(auto& [lb, ub] : domains)
+        {
+            for(double power : powers)
+            {
+                auto variable = makeVariable(lb, ub);
+                SHOT::SignomialElement element(variable, power);
+                auto bounds = element.getBounds();
+
+                constexpr int numberOfSamples = 501;
+                bool anySampleOutside = false;
+                double worstSample = 0.0;
+                double intpart = 0.0;
+                bool isIntegerPower = (std::modf(power, &intpart) == 0.0);
+
+                for(int i = 0; i < numberOfSamples; i++)
+                {
+                    double x = lb + (ub - lb) * i / (numberOfSamples - 1);
+
+                    // Skip points where the expression has no real value
+                    if(x == 0.0 && power < 0.0)
+                        continue;
+
+                    if(x < 0.0 && !isIntegerPower)
+                        continue;
+
+                    double value = std::pow(x, power);
+
+                    if(!std::isfinite(value))
+                        continue;
+
+                    if(value < bounds.l() - 1e-9 || value > bounds.u() + 1e-9)
+                    {
+                        anySampleOutside = true;
+                        worstSample = value;
+                    }
+                }
+
+                checkedCases++;
+
+                if(anySampleOutside)
+                {
+                    std::cout << "  FAILED: x^" << power << " over [" << lb << "," << ub << "] gives bounds ["
+                              << bounds.l() << ", " << bounds.u() << "], which exclude the attainable value "
+                              << worstSample << ".\n";
+                    passed = false;
+                }
+            }
+        }
+
+        std::cout << "  " << checkedCases << " power/domain combinations checked for enclosure.\n";
+    }
+
     // ── tightenBounds(): reverse -- given a target bound for variable^power, tighten variable itself ─
     std::cout << "\nSub-test: SignomialElement::tightenBounds() (reverse: variable from a variable^power bound)\n";
     {
