@@ -6011,6 +6011,22 @@ bool ModelTestSignomialTermConvexity()
         // Several variables away from the non-negative orthant are not classified
         { "1/(x*y), x,y in [-5,-1]", 1.0, { { -5.0, -1.0, -1.0 }, { -5.0, -1.0, -1.0 } },
             E_Convexity::Nonconvex },
+
+        // With a single positive power the monomial is convex once the powers sum to at least one. The boundary
+        // itself is the quadratic-over-linear family, whose Hessian is positive semidefinite with a zero
+        // determinant, and x^2/z <= y is the standard rotated second order cone.
+        { "x^2/z, x,z in [0,5] (power sum exactly one)", 1.0, { { 0.0, 5.0, 2.0 }, { 0.0, 5.0, -1.0 } },
+            E_Convexity::Convex },
+        { "x^3/y^2, x,y in [1,5] (power sum exactly one)", 1.0, { { 1.0, 5.0, 3.0 }, { 1.0, 5.0, -2.0 } },
+            E_Convexity::Convex },
+        { "-x^2/z, x,z in [1,5] (power sum exactly one)", -1.0, { { 1.0, 5.0, 2.0 }, { 1.0, 5.0, -1.0 } },
+            E_Convexity::Concave },
+
+        // Just below the boundary the Hessian becomes indefinite, so the sum must not be relaxed further
+        { "x^2/y^1.5, x,y in [1,5] (power sum below one)", 1.0, { { 1.0, 5.0, 2.0 }, { 1.0, 5.0, -1.5 } },
+            E_Convexity::Nonconvex },
+        { "x^2/(y*z), x,y,z in [1,5] (power sum zero)", 1.0,
+            { { 1.0, 5.0, 2.0 }, { 1.0, 5.0, -1.0 }, { 1.0, 5.0, -1.0 } }, E_Convexity::Nonconvex },
     };
 
     for(auto& C : cases)

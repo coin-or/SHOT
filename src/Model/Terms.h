@@ -1105,7 +1105,10 @@ public:
 
         if(coefficient > 0)
         {
-            if(numberPositivePowers == 1 && sumPowers > 1.0)
+            // The bound is inclusive: with a single positive power, a power sum of exactly one gives the
+            // quadratic-over-linear family (x^2/z, x^3/y^2, ...), whose Hessian is positive semidefinite with a
+            // determinant of zero. These are convex, and x^2/z <= y is the standard rotated second order cone.
+            if(numberPositivePowers == 1 && sumPowers >= 1.0)
                 return (E_Convexity::Convex);
 
             if(elements.size() == 1 && sumPowers > 0.0 && sumPowers < 1.0)
@@ -1118,7 +1121,7 @@ public:
         }
         else if(coefficient < 0)
         {
-            if(numberPositivePowers == 1 && sumPowers > 1.0)
+            if(numberPositivePowers == 1 && sumPowers >= 1.0)
                 return (E_Convexity::Concave);
 
             if(numberPositivePowers == elements.size() && sumPowers > 0.0 && sumPowers <= 1.0)
