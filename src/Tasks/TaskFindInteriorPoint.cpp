@@ -22,6 +22,8 @@
 
 #include "../NLPSolver/NLPSolverCuttingPlaneMinimax.h"
 
+#include <cmath>
+
 namespace SHOT
 {
 
@@ -65,9 +67,14 @@ void TaskFindInteriorPoint::run()
                 tmpIP->point, env->reformulatedProblem->nonlinearConstraints);
             tmpIP->maxDevatingConstraint = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
 
-            if(maxDev.normalizedValue >= 0)
+            // A point is only usable if it lies strictly inside every constraint. A nonfinite deviation
+            // compares false against any bound, so testing only for a too large value would let such a point
+            // through as an interior one and poison the hyperplane generation with it.
+            bool isInteriorPoint = (std::isfinite(maxDev.normalizedValue) && maxDev.normalizedValue < 0);
+
+            if(!isInteriorPoint)
             {
-                env->output->outputWarning(" Maximum deviation in interior point is too large: "
+                env->output->outputWarning(" Maximum deviation in interior point is not usable: "
                     + Utilities::toString(maxDev.normalizedValue));
 
                 if(env->settings->getSetting<bool>("Output.Debug.Enable"))
@@ -215,11 +222,15 @@ void TaskFindInteriorPoint::run()
             tmpIP->point, env->reformulatedProblem->nonlinearConstraints);
         tmpIP->maxDevatingConstraint = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
 
-        if(maxDev.normalizedValue >= 0)
+        // As above. Whether the point is kept and whether it counts as a point found must be decided by the same
+        // condition, otherwise a point on the boundary is discarded but still ends the search as a success.
+        bool isInteriorPoint = (std::isfinite(maxDev.normalizedValue) && maxDev.normalizedValue < 0);
+
+        if(!isInteriorPoint)
         {
             env->output->outputWarning("");
             env->output->outputWarning(
-                " Maximum deviation in interior point is too large: " + Utilities::toString(maxDev.normalizedValue));
+                " Maximum deviation in interior point is not usable: " + Utilities::toString(maxDev.normalizedValue));
 
             if(env->settings->getSetting<bool>("Output.Debug.Enable"))
             {
@@ -244,7 +255,7 @@ void TaskFindInteriorPoint::run()
             }
         }
 
-        foundNLPPoint = (foundNLPPoint || (maxDev.normalizedValue <= 0));
+        foundNLPPoint = (foundNLPPoint || isInteriorPoint);
     }
 
     if(!foundNLPPoint)
