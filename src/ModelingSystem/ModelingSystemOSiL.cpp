@@ -230,6 +230,18 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
                 QT = QT->NextSiblingElement("qTerm"))
             {
                 int constraintIndex = std::stoi(QT->Attribute("idx"));
+
+                // A term with a fixed variable is folded into a linear term or into the constant when the terms are
+                // added below, so it does not make the constraint quadratic. Flagging it regardless would create a
+                // quadratic constraint that never receives a quadratic term, leaving a linear constraint among the
+                // quadratic ones and unaccounted for in the problem properties.
+                VariablePtr firstVariable = problem->getVariable(std::stoi(QT->Attribute("idxOne")));
+                VariablePtr secondVariable = problem->getVariable(std::stoi(QT->Attribute("idxTwo")));
+
+                if(firstVariable->lowerBound == firstVariable->upperBound
+                    || secondVariable->lowerBound == secondVariable->upperBound)
+                    continue;
+
                 containsQuadraticTerms.emplace(constraintIndex, true);
             }
         }
