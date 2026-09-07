@@ -77,6 +77,7 @@ private:
     bool copyVariables(ProblemPtr destination);
     bool copyObjectiveFunction(ProblemPtr destination);
     bool copyConstraints(ProblemPtr destination);
+    bool rowHasNonfixedQuadraticTerms(ProblemPtr destination, int rowIndex);
     bool copyLinearTerms(ProblemPtr destination);
     bool copyQuadraticTerms(ProblemPtr destination);
     bool copyNonlinearExpressions(ProblemPtr destination);

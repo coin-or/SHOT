@@ -1145,8 +1145,17 @@ bool ModelingSystemGAMS::copyConstraints(ProblemPtr destination)
             }
             case(gmoorder_Q):
             {
-                QuadraticConstraintPtr constraint = std::make_shared<QuadraticConstraint>(i, buffer, lb, ub);
-                destination->add(std::move(constraint));
+                if(rowHasNonfixedQuadraticTerms(destination, i))
+                {
+                    QuadraticConstraintPtr constraint = std::make_shared<QuadraticConstraint>(i, buffer, lb, ub);
+                    destination->add(std::move(constraint));
+                }
+                else
+                {
+                    LinearConstraintPtr constraint = std::make_shared<LinearConstraint>(i, buffer, lb, ub);
+                    destination->add(std::move(constraint));
+                }
+
                 break;
             }
             case(gmoorder_NL):
@@ -1169,6 +1178,48 @@ bool ModelingSystemGAMS::copyConstraints(ProblemPtr destination)
     env->output->outputTrace(" Finished copying constraints between GAMS modeling and SHOT problem objects.");
 
     return (true);
+}
+
+// A quadratic term with a fixed variable is folded into a linear term or into the constant when the terms are
+// copied, so it does not make the equation quadratic. Creating a quadratic constraint for such an equation would
+// leave a linear constraint among the quadratic ones, counted in none of the constraint classes.
+bool ModelingSystemGAMS::rowHasNonfixedQuadraticTerms(ProblemPtr destination, int rowIndex)
+{
+    int numQuadraticTerms = gmoGetRowQNZOne(modelingObject, rowIndex);
+
+    if(numQuadraticTerms == 0)
+        return (false);
+
+    std::vector<int> variableOneIndexes(numQuadraticTerms);
+    std::vector<int> variableTwoIndexes(numQuadraticTerms);
+    std::vector<double> quadraticCoefficients(numQuadraticTerms);
+
+#if GMOAPIVERSION <= 19
+    gmoGetRowQ(modelingObject, rowIndex, variableOneIndexes.data(), variableTwoIndexes.data(),
+        quadraticCoefficients.data());
+#else
+    gmoGetRowQMat(modelingObject, rowIndex, variableOneIndexes.data(), variableTwoIndexes.data(),
+        quadraticCoefficients.data());
+#endif
+
+    for(int j = 0; j < numQuadraticTerms; ++j)
+    {
+        try
+        {
+            VariablePtr firstVariable = destination->getVariable(variableOneIndexes[j]);
+            VariablePtr secondVariable = destination->getVariable(variableTwoIndexes[j]);
+
+            if(firstVariable->lowerBound != firstVariable->upperBound
+                && secondVariable->lowerBound != secondVariable->upperBound)
+                return (true);
+        }
+        catch(const VariableNotFoundException&)
+        {
+            return (true);
+        }
+    }
+
+    return (false);
 }
 
 bool ModelingSystemGAMS::copyLinearTerms(ProblemPtr destination)
