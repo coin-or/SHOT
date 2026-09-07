@@ -942,6 +942,30 @@ public:
 
         if(isInteger && power > 0)
         {
+            // An even power discards the sign of the base, so a bound on the value only restricts the magnitude of
+            // the variable and says nothing about which side of zero it lies on. Taking the signed root of the value
+            // interval instead would raise the lower bound to zero and cut away every negative base: x^2/z <= y with
+            // x in [-5,5], y in [0,1] and z in [1,2] then loses its optimum at x = -sqrt(2).
+            if(isEven)
+            {
+                if(bound.u() < 0.0)
+                    return (false);
+
+                double magnitudeUpper = std::pow(bound.u(), 1.0 / power);
+                double magnitudeLower = (bound.l() > 0.0) ? std::pow(bound.l(), 1.0 / power) : 0.0;
+
+                // The value bound restricts the magnitude of the variable, and which side of zero it lies on can
+                // only be decided from the bounds it already has. A domain straddling zero must keep both branches,
+                // since the negative one cannot be excluded by an interval.
+                if(variable->lowerBound >= 0.0)
+                    return (variable->tightenBounds(Interval(magnitudeLower, magnitudeUpper)));
+
+                if(variable->upperBound <= 0.0)
+                    return (variable->tightenBounds(Interval(-magnitudeUpper, -magnitudeLower)));
+
+                return (variable->tightenBounds(Interval(-magnitudeUpper, magnitudeUpper)));
+            }
+
             interval = bound;
 
             // Signed n-th root -- see the matching comment in getBounds().

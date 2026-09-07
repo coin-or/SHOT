@@ -63,7 +63,72 @@ bool ModelTestFixedVariableConstantFolding();
 bool ModelTestFixedBinaryVariableBounds();
 bool ModelTestConstantInFunctionValues();
 bool ModelTestPolishSolution();
+bool ModelTestSignomialElementBoundTightening()
+{
+    // Propagating a bound on the value of a signomial element back onto its variable must not assume the base is
+    // non-negative. An even power discards the sign, so a value bound only restricts the magnitude: x^2 in [0,2]
+    // means x in [-sqrt(2), sqrt(2)], not [0, sqrt(2)]. Taking the signed root of the value interval raised the
+    // lower bound to zero and silently cut away every negative base, which made minimising x subject to
+    // x^2/z <= y over x in [-5,5], y in [0,1], z in [1,2] return 0 instead of the true optimum -sqrt(2).
+
+    bool passed = true;
+
+    struct Case
+    {
+        std::string description;
+        double variableLowerBound;
+        double variableUpperBound;
+        double power;
+        double valueLowerBound;
+        double valueUpperBound;
+        double expectedLowerBound;
+        double expectedUpperBound;
+    };
+
+    double root2 = std::sqrt(2.0);
+
+    std::vector<Case> cases = {
+        // An even power keeps both signs of the base
+        { "x^2 in [0,2], x in [-5,5]", -5.0, 5.0, 2.0, 0.0, 2.0, -root2, root2 },
+        { "x^2 in [0,2], x in [-1,5]", -1.0, 5.0, 2.0, 0.0, 2.0, -1.0, root2 },
+        { "x^2 in [0,2], x in [0,5] (already non-negative)", 0.0, 5.0, 2.0, 0.0, 2.0, 0.0, root2 },
+        { "x^4 in [0,16], x in [-5,5]", -5.0, 5.0, 4.0, 0.0, 16.0, -2.0, 2.0 },
+
+        // A domain on one side of zero still resolves the sign, so the lower value bound must be kept
+        { "x^2 in [4,16], x in [0,10] (non-negative domain)", 0.0, 10.0, 2.0, 4.0, 16.0, 2.0, 4.0 },
+        { "x^2 in [4,16], x in [-10,0] (negative domain)", -10.0, 0.0, 2.0, 4.0, 16.0, -4.0, -2.0 },
+        { "x^4 in [16,81], x in [0,10] (non-negative domain)", 0.0, 10.0, 4.0, 16.0, 81.0, 2.0, 3.0 },
+        { "x^2 in [4,16], x in [-10,10] (both branches kept)", -10.0, 10.0, 2.0, 4.0, 16.0, -4.0, 4.0 },
+
+        // An odd power preserves the sign, so the signed root is the right back-propagation
+        { "x^3 in [-8,8], x in [-5,5]", -5.0, 5.0, 3.0, -8.0, 8.0, -2.0, 2.0 },
+        { "x^3 in [1,8], x in [-5,5]", -5.0, 5.0, 3.0, 1.0, 8.0, 1.0, 2.0 },
+    };
+
+    for(auto& C : cases)
+    {
+        auto variable = std::make_shared<SHOT::Variable>(
+            "x", 0, SHOT::E_VariableType::Real, C.variableLowerBound, C.variableUpperBound);
+        SHOT::SignomialElement element(variable, C.power);
+
+        element.tightenBounds(SHOT::Interval(C.valueLowerBound, C.valueUpperBound));
+
+        std::cout << "  " << C.description << ": [" << variable->lowerBound << ", " << variable->upperBound
+                  << "] (expected [" << C.expectedLowerBound << ", " << C.expectedUpperBound << "])\n";
+
+        if(std::abs(variable->lowerBound - C.expectedLowerBound) > 1e-9
+            || std::abs(variable->upperBound - C.expectedUpperBound) > 1e-9)
+        {
+            std::cout << "  FAILED: " << C.description << " was not tightened as expected.\n";
+            passed = false;
+        }
+    }
+
+    return passed;
+}
+
 bool ModelTestSignomialTermConvexity();
+bool ModelTestSignomialElementBoundTightening();
 
 bool TestReadProblem(const std::string& problemFile);
 bool TestRootsearch(const std::string& problemFile);
@@ -181,6 +246,9 @@ int ModelTest(int argc, char* argv[])
         break;
     case 31:
         passed = ModelTestSignomialTermConvexity();
+        break;
+    case 32:
+        passed = ModelTestSignomialElementBoundTightening();
         break;
     default:
         passed = false;
