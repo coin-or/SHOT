@@ -190,6 +190,12 @@ bool HighsTerminationCallbackTest(std::string filename)
         return (false);
     }
 
+    if(env->results->terminationReason != E_TerminationReason::UserAbort)
+    {
+        std::cout << "Termination reason is not UserAbort as expected\n";
+        return (false);
+    }
+
     return (true);
 }
 

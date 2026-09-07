@@ -71,6 +71,7 @@ HighsCallbackFunctionType highsCallback
         if(callback_data.terminationHandler && callback_data.terminationHandler->checkTermination())
         {
             env->output->outputDebug("        Terminated by user.");
+            MIPSolver->interruptedByTermination = true;
             data_in->user_interrupt = true;
             return;
         }
@@ -80,6 +81,7 @@ HighsCallbackFunctionType highsCallback
     if(callback_type == kCallbackMipInterrupt && MIPSolver->currentSolutions.size() >= MIPSolver->getSolutionLimit())
     {
         env->output->outputDebug(fmt::format("      | solution limit reached "));
+        MIPSolver->interruptedBySolutionLimit = true;
         data_in->user_interrupt = true;
         return;
     }
@@ -587,8 +589,11 @@ E_ProblemSolutionStatus MIPSolverHighs::getSolutionStatus()
     }
     else if(modelStatus == HighsModelStatus::kInterrupt)
     {
-        // Since we interrup in the callback
-        MIPSolutionStatus = E_ProblemSolutionStatus::SolutionLimit;
+        // HiGHS only reports that it was interrupted, so the cause recorded by the callback decides the status
+        if(!interruptedByTermination && interruptedBySolutionLimit)
+            MIPSolutionStatus = E_ProblemSolutionStatus::SolutionLimit;
+        else
+            MIPSolutionStatus = E_ProblemSolutionStatus::Abort;
     }
     else
     {
@@ -605,6 +610,9 @@ E_ProblemSolutionStatus MIPSolverHighs::solveProblem()
     E_ProblemSolutionStatus MIPSolutionStatus;
     cachedSolutionHasChanged = true;
     currentSolutions.clear();
+
+    interruptedBySolutionLimit = false;
+    interruptedByTermination = false;
 
     highsReturnStatus = highsInstance.run();
     MIPSolutionStatus = getSolutionStatus();

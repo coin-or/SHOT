@@ -309,7 +309,8 @@ void TaskSolveIteration::run()
     else if(currIter->isDualProblemDiscrete
         && (currIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit
             || currIter->solutionStatus == E_ProblemSolutionStatus::TimeLimit
-            || currIter->solutionStatus == E_ProblemSolutionStatus::NodeLimit))
+            || currIter->solutionStatus == E_ProblemSolutionStatus::NodeLimit
+            || currIter->solutionStatus == E_ProblemSolutionStatus::Abort))
     {
 
         if(env->reformulatedProblem->properties.isMIQPProblem)

@@ -510,7 +510,8 @@ E_ProblemSolutionStatus MIPSolverCbc::getSolutionStatus()
     }
     else if(cbcModel->isAbandoned())
     {
-        MIPSolutionStatus = E_ProblemSolutionStatus::Abort;
+        // Cbc abandons the problem when it runs into numerical difficulties, which is not an interruption
+        MIPSolutionStatus = E_ProblemSolutionStatus::Numeric;
     }
     else if(cbcModel->isContinuousUnbounded())
     {
@@ -518,6 +519,7 @@ E_ProblemSolutionStatus MIPSolverCbc::getSolutionStatus()
     }
     else if(cbcModel->status() == 5)
     {
+        // Stopped by the event handler, i.e. interrupted
         MIPSolutionStatus = E_ProblemSolutionStatus::Abort;
     }
     else

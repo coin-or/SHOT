@@ -107,6 +107,20 @@ void TaskPrintIterationReport::run()
         tmpType << "-U";
         forcePrint = true;
     }
+    else if(currIter->solutionStatus == E_ProblemSolutionStatus::NodeLimit)
+    {
+        tmpType << "-NL";
+        forcePrint = true;
+    }
+    else if(currIter->solutionStatus == E_ProblemSolutionStatus::Numeric)
+    {
+        tmpType << "-N";
+        forcePrint = true;
+    }
+    else if(currIter->solutionStatus == E_ProblemSolutionStatus::Abort)
+    {
+        tmpType << "-A";
+    }
     else
     {
         tmpType << "";

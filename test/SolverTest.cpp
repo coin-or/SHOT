@@ -492,6 +492,13 @@ bool TestCallbackUserTermination()
         passed = false;
     }
 
+    // A termination requested through the callback must be reported as a user abort
+    if(passed && env->results->terminationReason != E_TerminationReason::UserAbort)
+    {
+        std::cout << "Termination reason is not UserAbort as expected" << std::endl;
+        passed = false;
+    }
+
     if(!passed)
         std::cout << "Could not terminate problem with callback!\n";
     else
@@ -1311,6 +1318,50 @@ bool TestAMPLInitialValuesOutOfBounds()
     return passed;
 }
 
+// Verifies that an ordinary solve is never reported as a user abort. The dual solver is interrupted by SHOT itself
+// whenever a termination criterion is met in a callback, and that interruption used to be indistinguishable from a
+// termination requested by the user.
+bool TestTerminationReasonOfOrdinarySolve()
+{
+    auto [solver, env] = MakeEx1223bSolver();
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Critical));
+
+    if(!solver->solveProblem())
+    {
+        std::cout << "Error while solving problem\n";
+        return (false);
+    }
+
+    if(env->results->terminationReason == E_TerminationReason::UserAbort)
+    {
+        std::cout << "An ordinary solve was reported as a user abort: " << env->results->terminationReasonDescription
+                  << '\n';
+        return (false);
+    }
+
+    if(env->results->terminationReason != E_TerminationReason::AbsoluteGap
+        && env->results->terminationReason != E_TerminationReason::RelativeGap
+        && env->results->terminationReason != E_TerminationReason::ConstraintTolerance)
+    {
+        std::cout << "Unexpected termination reason: " << env->results->terminationReasonDescription << '\n';
+        return (false);
+    }
+
+    // The interrupted dual problem must still be accounted for in the statistics
+    auto& stats = env->solutionStatistics;
+    int solvedDiscreteDualProblems = stats.numberOfProblemsOptimalMILP + stats.numberOfProblemsFeasibleMILP
+        + stats.numberOfProblemsOptimalMIQP + stats.numberOfProblemsFeasibleMIQP
+        + stats.numberOfProblemsOptimalMIQCQP + stats.numberOfProblemsFeasibleMIQCQP;
+
+    if(solvedDiscreteDualProblems == 0)
+    {
+        std::cout << "No discrete dual problems were counted in the solution statistics\n";
+        return (false);
+    }
+
+    return (true);
+}
+
 int SolverTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -1396,6 +1447,11 @@ int SolverTest(int argc, char* argv[])
         std::cout << "Starting test for AMPL initial values out of bounds" << std::endl;
         passed = TestAMPLInitialValuesOutOfBounds();
         std::cout << "Finished test for AMPL initial values out of bounds." << std::endl;
+        break;
+    case 14:
+        std::cout << "Starting test for the termination reason of an ordinary solve" << std::endl;
+        passed = TestTerminationReasonOfOrdinarySolve();
+        std::cout << "Finished test for the termination reason of an ordinary solve." << std::endl;
         break;
     default:
         passed = false;

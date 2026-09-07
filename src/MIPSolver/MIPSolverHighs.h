@@ -168,6 +168,10 @@ public:
     // Objective value, solution point has, solution point
     std::vector<SolutionPoint> currentSolutions;
 
+    // HiGHS reports the same status regardless of why the callback interrupted it, so the cause is recorded here
+    bool interruptedBySolutionLimit = false;
+    bool interruptedByTermination = false;
+
 private:
     HighsModel highsModel;
     Highs highsInstance;
