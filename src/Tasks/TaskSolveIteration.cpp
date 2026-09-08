@@ -268,10 +268,19 @@ void TaskSolveIteration::run()
     {
         env->output->outputDebug("        Dual solver reports no solutions found.");
 
-        DualSolution sol = { { }, E_DualSolutionSource::MIPSolverBound,
-            objectiveSignFactor * env->dualSolver->MIPSolver->getDualObjectiveValue(), currIter->iterationNumber,
-            false };
-        env->dualSolver->addDualSolutionCandidate(sol);
+        // The bound returned by the MIP solver is not valid for the original problem if the dual problem has been
+        // repaired, e.g. by replacing its objective function with a constant one
+        if(!currIter->hasInfeasibilityRepairBeenPerformed)
+        {
+            DualSolution sol = { { }, E_DualSolutionSource::MIPSolverBound,
+                objectiveSignFactor * env->dualSolver->MIPSolver->getDualObjectiveValue(), currIter->iterationNumber,
+                false };
+            env->dualSolver->addDualSolutionCandidate(sol);
+        }
+        else
+        {
+            env->output->outputDebug("        Dual bound ignored since the dual problem has been repaired.");
+        }
     }
 
     currIter->usedMIPSolutionLimit = env->dualSolver->MIPSolver->getSolutionLimit();
