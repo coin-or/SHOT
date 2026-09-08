@@ -928,12 +928,45 @@ public:
         int integerValue = (int)round(intpart);
         bool isEven = (integerValue % 2 == 0);
 
+        if(power < 0.0)
+        {
+            // A negative power grows without bound as the base approaches zero and tends to zero as the magnitude of
+            // the base grows, so the upper end of the value interval bounds the magnitude of the base from below and
+            // the lower end bounds it from above. A lower end at or below zero is only attained in the limit and
+            // therefore leaves the magnitude unbounded: substituting the smallest allowed base for it, as the guard
+            // for evaluating a power does, would fabricate an upper bound.
+            if(bound.u() <= 0.0)
+                return (false);
+
+            double magnitudeLower = std::pow(bound.u(), 1.0 / power);
+            double magnitudeUpper = (bound.l() > 0.0) ? std::pow(bound.l(), 1.0 / power) : SHOT_DBL_MAX;
+
+            // An odd power preserves the sign of the base, so a value interval straddling zero says nothing at all.
+            if(isInteger && !isEven)
+                return (bound.l() > 0.0 ? variable->tightenBounds(Interval(magnitudeLower, magnitudeUpper)) : false);
+
+            // What remains discards the sign of the base, so which side of zero the variable lies on can only be
+            // decided from the bounds it already has, as for an even positive power below.
+            if(variable->lowerBound >= 0.0)
+                return (variable->tightenBounds(Interval(magnitudeLower, magnitudeUpper)));
+
+            // A non-integer power has no real value for a negative base, but the negative part of the domain cannot
+            // be cut away here without also claiming the magnitude bounds for it.
+            if(!isInteger)
+                return (false);
+
+            if(variable->upperBound <= 0.0)
+                return (variable->tightenBounds(Interval(-magnitudeUpper, -magnitudeLower)));
+
+            return (variable->tightenBounds(Interval(-magnitudeUpper, magnitudeUpper)));
+        }
+
         // An odd positive integer power must not be forced non-negative, since it preserves the sign of a negative
         // base.
-        bool needsNonNegativeBase = (isInteger && isEven && power > 0) || !isInteger || power < 0.0;
+        bool needsNonNegativeBase = (isInteger && isEven) || !isInteger;
 
         if(needsNonNegativeBase && bound.l() <= 0.0)
-            bound.l((!isInteger || power < 0.0) ? SHOT_DBL_SIG_MIN : 0.0);
+            bound.l(!isInteger ? SHOT_DBL_SIG_MIN : 0.0);
 
         Interval interval;
 
@@ -978,15 +1011,7 @@ public:
             return (variable->tightenBounds(Interval(std::min(lower, upper), std::max(lower, upper))));
         }
 
-        if(power == -1.0)
-        {
-            interval = 1 / bound;
-
-            if(interval.l() < 1e-10 && interval.u() > 1e-10)
-                interval.l(1e-10);
-        }
-        else
-            interval = pow(bound, 1.0 / power);
+        interval = pow(bound, 1.0 / power);
 
         return (variable->tightenBounds(interval));
     }
