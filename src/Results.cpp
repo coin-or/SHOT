@@ -1245,6 +1245,9 @@ std::string Results::getResultsTrace()
     case(ES_MIPSolver::Cbc):
         ss << "CBC";
         break;
+    case(ES_MIPSolver::Highs):
+        ss << "HIGHS";
+        break;
     default:
         ss << "NONE";
         break;

@@ -140,6 +140,10 @@ int main(int argc, char* argv[])
         env->output->outputCritical("   --nlp=gams               Use primal NLP solver from GAMS");
 #endif
 
+#ifdef HAS_UNO
+        env->output->outputCritical("   --nlp=uno                Sets the primal NLP solver to Uno");
+#endif
+
         env->output->outputCritical("   --nlp=shot               Use SHOT as primal NLP solver");
 
 #ifdef HAS_CPLEX
