@@ -680,20 +680,14 @@ void Problem::updateProperties()
         }
 
         if(C->properties.hasNonlinearExpression)
-        {
-            assert(C->variablesInNonlinearExpression.size() > 0);
             properties.numberOfNonlinearExpressions++;
-        }
     }
 
     if(objectiveFunction->properties.hasNonlinearExpression)
     {
         auto objective = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objectiveFunction);
         if(objective)
-        {
-            assert(objective->variablesInNonlinearExpression.size() > 0);
             properties.numberOfNonlinearExpressions++;
-        }
     }
 
     assert(properties.numberOfNumericConstraints
