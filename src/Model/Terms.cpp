@@ -338,7 +338,7 @@ MonomialTerm::MonomialTerm(const MonomialTerm* term, ProblemPtr destinationProbl
 
     for(auto& V : term->variables)
     {
-        this->variables.push_back(destinationProblem->getVariable(V->index));
+        this->variables.push_back(destinationProblem->getVariable(V->getIndex()));
     }
 }
 
@@ -349,7 +349,7 @@ SignomialTerm::SignomialTerm(const SignomialTerm* term, ProblemPtr destinationPr
     for(auto& E : term->elements)
     {
         this->elements.push_back(
-            std::make_shared<SignomialElement>(destinationProblem->getVariable(E->variable->index), E->power));
+            std::make_shared<SignomialElement>(destinationProblem->getVariable(E->variable->getIndex()), E->power));
     }
 }
 } // namespace SHOT

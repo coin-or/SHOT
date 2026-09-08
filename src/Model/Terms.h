@@ -533,7 +533,7 @@ public:
 
             if(T->firstVariable == T->secondVariable) // variable squared
             {
-                auto value = 2 * T->coefficient * point[T->firstVariable->index];
+                auto value = 2 * T->coefficient * point[T->firstVariable->getIndex()];
                 auto element = gradient.emplace(T->firstVariable, value);
 
                 if(!element.second)
@@ -544,7 +544,7 @@ public:
             }
             else
             {
-                auto value = T->coefficient * point[T->secondVariable->index];
+                auto value = T->coefficient * point[T->secondVariable->getIndex()];
                 auto element = gradient.emplace(T->firstVariable, value);
 
                 if(!element.second)
@@ -553,7 +553,7 @@ public:
                     element.first->second += value;
                 }
 
-                value = T->coefficient * point[T->firstVariable->index];
+                value = T->coefficient * point[T->firstVariable->getIndex()];
 
                 element = gradient.emplace(T->secondVariable, value);
 
@@ -779,7 +779,7 @@ public:
             {
                 for(auto& V2 : T->variables)
                 {
-                    if(V1->index >= V2->index)
+                    if(V1->getIndex() >= V2->getIndex())
                         continue;
 
                     double value = T->coefficient;
@@ -1359,12 +1359,12 @@ public:
             {
                 for(auto& E2 : T->elements)
                 {
-                    if(E1->variable->index > E2->variable->index)
+                    if(E1->variable->getIndex() > E2->variable->getIndex())
                         continue;
 
                     double corrFactor;
 
-                    if(E1->variable->index == E2->variable->index)
+                    if(E1->variable->getIndex() == E2->variable->getIndex())
                     {
                         corrFactor = E1->power * (E1->power - 1.0)
                             / (E1->variable->calculate(point) * E1->variable->calculate(point));

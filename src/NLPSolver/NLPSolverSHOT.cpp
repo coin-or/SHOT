@@ -136,14 +136,14 @@ void NLPSolverSHOT::unfixVariables()
 {
     for(auto& VAR : sourceProblem->allVariables)
     {
-        relaxedProblem->setVariableBounds(VAR->index, VAR->lowerBound, VAR->upperBound);
+        relaxedProblem->setVariableBounds(VAR->getIndex(), VAR->lowerBound, VAR->upperBound);
         VAR->properties.hasLowerBoundBeenTightened = false;
         VAR->properties.hasUpperBoundBeenTightened = false;
     }
 
     for(auto& VAR : relaxedProblem->allVariables)
         solver->getEnvironment()->dualSolver->MIPSolver->updateVariableBound(
-            VAR->index, VAR->lowerBound, VAR->upperBound);
+            VAR->getIndex(), VAR->lowerBound, VAR->upperBound);
 
     fixedVariableIndexes.clear();
     fixedVariableValues.clear();
@@ -210,7 +210,7 @@ E_NLPSolutionStatus NLPSolverSHOT::solveProblemInstance()
     // Update the bounds to the MIP solver
     for(auto& VAR : relaxedProblem->allVariables)
         solver->getEnvironment()->dualSolver->MIPSolver->updateVariableBound(
-            VAR->index, VAR->lowerBound, VAR->upperBound);
+            VAR->getIndex(), VAR->lowerBound, VAR->upperBound);
 
     // Setting the cutoff value from currently best known solution
     if(env->dualSolver->cutOffToUse != SHOT_DBL_MAX)
@@ -258,7 +258,7 @@ E_NLPSolutionStatus NLPSolverSHOT::solveProblemInstance()
                 auto hyperplane = std::make_shared<ConstraintHyperplane>();
                 hyperplane->generatedPoint = tmpSolPt;
                 hyperplane->sourceConstraint = std::dynamic_pointer_cast<NumericConstraint>(
-                    env->reformulatedProblem->getConstraint(constraintHP->sourceConstraint->index));
+                    env->reformulatedProblem->getConstraint(constraintHP->sourceConstraint->getIndex()));
                 hyperplane->isGlobal = HP->sourceHyperplane->isGlobal;
                 hyperplane->source = E_HyperplaneSource::PrimalSolutionSearch;
 

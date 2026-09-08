@@ -197,7 +197,7 @@ void TaskPerformConvexBounding::run()
         if(env->reformulatedProblem->antiEpigraphObjectiveVariable)
         {
             for(auto& SOL : solutionPoints)
-                SOL.point.at(env->reformulatedProblem->antiEpigraphObjectiveVariable->index) = objectiveValue;
+                SOL.point.at(env->reformulatedProblem->antiEpigraphObjectiveVariable->getIndex()) = objectiveValue;
         }
 
         env->primalSolver->addPrimalSolutionCandidates(solutionPoints, E_PrimalSolutionSource::ConvexBounding);

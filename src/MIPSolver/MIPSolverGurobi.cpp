@@ -868,9 +868,9 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
                 {
                     // Temporarily remove unbounded terms from objective
                     originalObjectiveCoefficients.emplace_back(
-                        V->index, gurobiModel->getVar(V->index).get(GRB_DoubleAttr_Obj));
+                        V->getIndex(), gurobiModel->getVar(V->getIndex()).get(GRB_DoubleAttr_Obj));
 
-                    gurobiModel->getVar(V->index).set(GRB_DoubleAttr_Obj, 0.0);
+                    gurobiModel->getVar(V->getIndex()).set(GRB_DoubleAttr_Obj, 0.0);
                     problemUpdated = true;
                 }
             }

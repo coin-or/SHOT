@@ -65,7 +65,7 @@ void TaskFindInteriorPoint::run()
 
             auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
                 tmpIP->point, env->reformulatedProblem->nonlinearConstraints);
-            tmpIP->maxDevatingConstraint = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+            tmpIP->maxDevatingConstraint = PairIndexValue(maxDev.constraint->getIndex(), maxDev.normalizedValue);
 
             // A point is only usable if it lies strictly inside every constraint. A nonfinite deviation
             // compares false against any bound, so testing only for a too large value would let such a point
@@ -156,7 +156,7 @@ void TaskFindInteriorPoint::run()
             auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
                 tmpIP->point, env->reformulatedProblem->nonlinearConstraints);
             tmpIP->maxDevatingConstraint
-                = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+                = PairIndexValue(maxDev.constraint->getIndex(), maxDev.normalizedValue);
 
             if(maxDev.normalizedValue >= 0)
             {
@@ -220,7 +220,7 @@ void TaskFindInteriorPoint::run()
 
         auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
             tmpIP->point, env->reformulatedProblem->nonlinearConstraints);
-        tmpIP->maxDevatingConstraint = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+        tmpIP->maxDevatingConstraint = PairIndexValue(maxDev.constraint->getIndex(), maxDev.normalizedValue);
 
         // As above. Whether the point is kept and whether it counts as a point found must be decided by the same
         // condition, otherwise a point on the boundary is discarded but still ends the search as a success.
@@ -309,7 +309,7 @@ void TaskFindInteriorPoint::run()
                 auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
                     tmpIP->point, env->reformulatedProblem->nonlinearConstraints);
                 tmpIP->maxDevatingConstraint
-                    = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+                    = PairIndexValue(maxDev.constraint->getIndex(), maxDev.normalizedValue);
 
                 if(maxDev.normalizedValue >= 0)
                 {

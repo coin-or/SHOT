@@ -18,6 +18,7 @@
 
 #include "../Tasks/TaskReformulateProblem.h"
 
+#include <algorithm>
 #include <stdexcept>
 
 // Explicit template instantiation for CppAD::AD<double>
@@ -87,7 +88,8 @@ void Problem::updateConstraints()
         }
     }
 
-    auto useNonconvexQuadraticStrategy = static_cast<ES_QuadraticProblemStrategy>(env->settings->getSetting<int>("Model.Reformulation.Quadratics.Strategy"))
+    auto useNonconvexQuadraticStrategy = static_cast<ES_QuadraticProblemStrategy>(
+                                             env->settings->getSetting<int>("Model.Reformulation.Quadratics.Strategy"))
         != ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained;
 
     env->output->outputTrace(" Standardizing quadratic constraints");
@@ -124,7 +126,6 @@ void Problem::updateConstraints()
 
             auxConstraint->name = C->name + "_rf";
             auxConstraint->ownerProblem = C->ownerProblem;
-            auxConstraint->index = this->numericConstraints.size() - 1;
 
             for(auto& T : C->linearTerms)
                 auxConstraint->add(std::make_shared<LinearTerm>(-1.0 * T->coefficient, T->variable));
@@ -174,7 +175,7 @@ void Problem::updateConstraints()
             // Will rewrite as ()^2 <=c^2
 
             auto auxConstraint = std::make_shared<NonlinearConstraint>(
-                this->numericConstraints.size(), C->name + "_eqrf", SHOT_DBL_MIN, C->valueRHS * C->valueRHS);
+                C->name + "_eqrf", SHOT_DBL_MIN, C->valueRHS * C->valueRHS);
 
             auxConstraint->properties.classification = E_ConstraintClassification::Nonlinear;
 
@@ -286,7 +287,6 @@ void Problem::updateConstraints()
 
             auxConstraint->name = C->name + "_rf";
             auxConstraint->ownerProblem = C->ownerProblem;
-            auxConstraint->index = this->numericConstraints.size() - 1;
 
             for(auto& T : C->linearTerms)
                 auxConstraint->add(std::make_shared<LinearTerm>(-1.0 * T->coefficient, T->variable));
@@ -908,15 +908,13 @@ void Problem::finalize()
 {
     if(isFinalized)
     {
-        env->output->outputWarning(
-            " Problem has already been finalized. Calling it again has no effect.");
+        env->output->outputWarning(" Problem has already been finalized. Calling it again has no effect.");
         return;
     }
 
     if(!objectiveFunction)
     {
-        env->output->outputError(
-            " Problem has no objective function defined. Cannot finalize the problem.");
+        env->output->outputError(" Problem has no objective function defined. Cannot finalize the problem.");
         throw std::runtime_error("Problem has no objective function defined. Cannot finalize the problem.");
     }
 
@@ -939,10 +937,21 @@ void Problem::finalize()
     simplifyNonlinearExpressions(
         shared_from_this(), extractMonomialTerms, extractSignomialTerms, extractQuadraticTerms);
 
+    // Restore the invariant that a constraint's index is its position, before anything is built from those
+    // indexes. A reformulation may have removed a constraint from the middle of the list, and a constraint that
+    // simplified into another type was just replaced in place by a newly constructed one that is not numbered yet.
+    renumberConstraints();
+
     // Update properties again after simplification since constraint types may have changed
     updateProperties();
     updateFactorableFunctions();
     assert(verifyOwnership());
+
+    // check that the same variable was not added twice
+    assert(!auxiliaryObjectiveVariable
+        || std::count(
+               allVariables.begin(), allVariables.end(), std::static_pointer_cast<Variable>(auxiliaryObjectiveVariable))
+            == 1);
 
     if(env->settings->getSetting<bool>("Output.Debug.Enable"))
         getConstraintsJacobianSparsityPattern();
@@ -953,6 +962,17 @@ void Problem::finalize()
     isFinalized = true;
 }
 
+void Problem::renumberConstraints()
+{
+    int index = 0;
+
+    for(auto& C : numericConstraints)
+    {
+        C->index = index;
+        index++;
+    }
+}
+
 void Problem::add(Variables variables)
 {
     for(auto& V : variables)
@@ -961,6 +981,7 @@ void Problem::add(Variables variables)
 
 void Problem::add(VariablePtr variable)
 {
+    variable->index = allVariables.size();
     allVariables.push_back(variable);
 
     switch(variable->properties.type)
@@ -984,8 +1005,6 @@ void Problem::add(VariablePtr variable)
         break;
     }
 
-    assert(variable->index + 1 == allVariables.size());
-
     variable->takeOwnership(shared_from_this());
     variablesUpdated = false;
 
@@ -1000,6 +1019,7 @@ void Problem::add(AuxiliaryVariables variables)
 
 void Problem::add(AuxiliaryVariablePtr variable)
 {
+    variable->index = allVariables.size();
     allVariables.push_back(std::dynamic_pointer_cast<Variable>(variable));
 
     if(variable->properties.auxiliaryType == E_AuxiliaryVariableType::NonlinearObjectiveFunction)
@@ -1027,8 +1047,6 @@ void Problem::add(AuxiliaryVariablePtr variable)
     default:
         break;
     }
-
-    assert(variable->index + 1 == allVariables.size());
 
     variable->takeOwnership(shared_from_this());
     variablesUpdated = false;
@@ -1160,7 +1178,7 @@ template <class T> void Problem::add(std::vector<T> elements)
 
 VariablePtr Problem::getVariable(int variableIndex)
 {
-    if(variableIndex > (int)allVariables.size())
+    if(variableIndex < 0 || variableIndex >= (int)allVariables.size())
     {
         throw VariableNotFoundException(
             fmt::format("Cannot find variable with index {} ", std::to_string(variableIndex)));
@@ -1171,7 +1189,7 @@ VariablePtr Problem::getVariable(int variableIndex)
 
 ConstraintPtr Problem::getConstraint(int constraintIndex)
 {
-    if(constraintIndex > (int)numericConstraints.size())
+    if(constraintIndex < 0 || constraintIndex >= (int)numericConstraints.size())
     {
         throw ConstraintNotFoundException(
             fmt::format("Cannot find constraint with index {}", std::to_string(constraintIndex)));
@@ -1310,12 +1328,12 @@ std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> Problem::getCo
 
     // Sorts the elements
     std::sort(constraintsHessianSparsityPattern->begin(), constraintsHessianSparsityPattern->end(),
-        [](const std::pair<VariablePtr, VariablePtr>& elementOne,
-            const std::pair<VariablePtr, VariablePtr>& elementTwo) {
-            if(elementOne.first->index != elementTwo.first->index)
-                return (elementOne.first->index < elementTwo.first->index);
+        [](const std::pair<VariablePtr, VariablePtr>& elementOne, const std::pair<VariablePtr, VariablePtr>& elementTwo)
+        {
+            if(elementOne.first->getIndex() != elementTwo.first->getIndex())
+                return (elementOne.first->getIndex() < elementTwo.first->getIndex());
 
-            return (elementOne.second->index < elementTwo.second->index);
+            return (elementOne.second->getIndex() < elementTwo.second->getIndex());
         });
 
     // Remove duplicates
@@ -1379,12 +1397,12 @@ std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> Problem::getLa
 
     // Sorts the elements
     std::sort(lagrangianHessianSparsityPattern->begin(), lagrangianHessianSparsityPattern->end(),
-        [](const std::pair<VariablePtr, VariablePtr>& elementOne,
-            const std::pair<VariablePtr, VariablePtr>& elementTwo) {
-            if(elementOne.first->index < elementTwo.first->index)
+        [](const std::pair<VariablePtr, VariablePtr>& elementOne, const std::pair<VariablePtr, VariablePtr>& elementTwo)
+        {
+            if(elementOne.first->getIndex() < elementTwo.first->getIndex())
                 return (true);
-            if(elementOne.first->index == elementTwo.first->index)
-                return (elementOne.second->index < elementTwo.second->index);
+            if(elementOne.first->getIndex() == elementTwo.first->getIndex())
+                return (elementOne.second->getIndex() < elementTwo.second->getIndex());
             return (false);
         });
 
@@ -1745,13 +1763,13 @@ bool Problem::areIntegralityConstraintsFulfilled(VectorDouble point, double tole
 {
     for(auto& V : integerVariables)
     {
-        if(abs(point.at(V->index) - round(point.at(V->index))) > tolerance)
+        if(abs(point.at(V->getIndex()) - round(point.at(V->getIndex()))) > tolerance)
             return false;
     }
 
     for(auto& V : semiintegerVariables)
     {
-        if(abs(point.at(V->index) - round(point.at(V->index))) > tolerance)
+        if(abs(point.at(V->getIndex()) - round(point.at(V->getIndex()))) > tolerance)
             return false;
     }
 
@@ -1785,7 +1803,7 @@ bool Problem::areSpecialOrderedSetsFulfilled(VectorDouble point, double toleranc
 
             for(auto& V : S->variables)
             {
-                if(abs(point.at(V->index)) > tolerance)
+                if(abs(point.at(V->getIndex())) > tolerance)
                 {
                     if(found)
                         return false;
@@ -1801,7 +1819,7 @@ bool Problem::areSpecialOrderedSetsFulfilled(VectorDouble point, double toleranc
 
             for(size_t i = 0; i < S->variables.size(); i++)
             {
-                if(abs(point.at(S->variables[i]->index)) > tolerance)
+                if(abs(point.at(S->variables[i]->getIndex())) > tolerance)
                 {
                     if(numFound == 0)
                     {
@@ -2510,18 +2528,22 @@ ProblemPtr Problem::createCopy(
 
         VariablePtr variable;
 
-        if(V->properties.isAuxiliary && copyAuxiliary)
+        // The auxiliary objective variable is copied as an auxiliary variable even when the auxiliary ones are
+        // not kept, since the destination problem needs it to evaluate its objective
+        if(V->properties.isAuxiliary && (copyAuxiliary || V == this->auxiliaryObjectiveVariable))
         {
-            variable = std::make_shared<AuxiliaryVariable>(
-                V->name, V->index, variableType, V->lowerBound, V->upperBound, V->semiBound);
-            destinationProblem->add(variable);
+            auto auxiliaryVariable = std::make_shared<AuxiliaryVariable>(
+                V->name, variableType, V->lowerBound, V->upperBound, V->semiBound);
 
-            variable->properties.auxiliaryType = V->properties.auxiliaryType;
+            // Set before adding, since the type is what decides which list the variable is added to
+            auxiliaryVariable->properties.auxiliaryType = V->properties.auxiliaryType;
+
+            destinationProblem->add(auxiliaryVariable);
+            variable = auxiliaryVariable;
         }
         else
         {
-            variable = std::make_shared<Variable>(
-                V->name, V->index, variableType, V->lowerBound, V->upperBound, V->semiBound);
+            variable = std::make_shared<Variable>(V->name, variableType, V->lowerBound, V->upperBound, V->semiBound);
 
             destinationProblem->add(variable);
         }
@@ -2553,46 +2575,6 @@ ProblemPtr Problem::createCopy(
             variable->lowerBound = std::max(V->lowerBound, minLBInt);
             variable->upperBound = std::min(V->upperBound, maxUBInt);
         }
-    }
-
-    if(this->auxiliaryObjectiveVariable)
-    {
-        auto variableType = integerRelaxed ? E_VariableType::Real : this->auxiliaryObjectiveVariable->properties.type;
-
-        auto variable = std::make_shared<AuxiliaryVariable>(this->auxiliaryObjectiveVariable->name,
-            this->auxiliaryObjectiveVariable->index, variableType, this->auxiliaryObjectiveVariable->lowerBound,
-            this->auxiliaryObjectiveVariable->upperBound);
-
-        if(this->auxiliaryObjectiveVariable->properties.type == E_VariableType::Real)
-        {
-            variable->lowerBound = std::max(this->auxiliaryObjectiveVariable->lowerBound, minLBCont);
-            variable->upperBound = std::min(this->auxiliaryObjectiveVariable->upperBound, maxUBCont);
-        }
-        else if(this->auxiliaryObjectiveVariable->properties.type == E_VariableType::Binary)
-        {
-            variable->lowerBound = std::max(this->auxiliaryObjectiveVariable->lowerBound, 0.0);
-            variable->upperBound = std::min(this->auxiliaryObjectiveVariable->upperBound, 1.0);
-        }
-        else if(this->auxiliaryObjectiveVariable->properties.type == E_VariableType::Integer)
-        {
-            variable->lowerBound = std::max(this->auxiliaryObjectiveVariable->lowerBound, minLBInt);
-            variable->upperBound = std::min(this->auxiliaryObjectiveVariable->upperBound, maxUBInt);
-        }
-        else if(this->auxiliaryObjectiveVariable->properties.type == E_VariableType::Semicontinuous)
-        {
-            variable->lowerBound = std::max(this->auxiliaryObjectiveVariable->lowerBound, minLBCont);
-            variable->upperBound = std::min(this->auxiliaryObjectiveVariable->upperBound, maxUBCont);
-        }
-        else if(this->auxiliaryObjectiveVariable->properties.type == E_VariableType::Semiinteger)
-        {
-            variable->lowerBound = std::max(this->auxiliaryObjectiveVariable->lowerBound, minLBInt);
-            variable->upperBound = std::min(this->auxiliaryObjectiveVariable->upperBound, maxUBInt);
-        }
-
-        variable->properties.auxiliaryType = this->auxiliaryObjectiveVariable->properties.auxiliaryType;
-        this->auxiliaryObjectiveVariable = variable;
-
-        destinationProblem->add(std::move(variable));
     }
 
     ObjectiveFunctionPtr destinationObjective;
@@ -2636,7 +2618,7 @@ ProblemPtr Problem::createCopy(
         {
             for(auto& LT : std::dynamic_pointer_cast<LinearObjectiveFunction>(this->objectiveFunction)->linearTerms)
             {
-                auto variable = destinationProblem->getVariable(LT->variable->index);
+                auto variable = destinationProblem->getVariable(LT->variable->getIndex());
 
                 std::dynamic_pointer_cast<LinearObjectiveFunction>(destinationObjective)
                     ->add(std::make_shared<LinearTerm>(LT->coefficient, variable));
@@ -2649,8 +2631,8 @@ ProblemPtr Problem::createCopy(
             for(auto& QT :
                 std::dynamic_pointer_cast<QuadraticObjectiveFunction>(this->objectiveFunction)->quadraticTerms)
             {
-                auto firstVariable = destinationProblem->getVariable(QT->firstVariable->index);
-                auto secondVariable = destinationProblem->getVariable(QT->secondVariable->index);
+                auto firstVariable = destinationProblem->getVariable(QT->firstVariable->getIndex());
+                auto secondVariable = destinationProblem->getVariable(QT->secondVariable->getIndex());
 
                 std::dynamic_pointer_cast<QuadraticObjectiveFunction>(destinationObjective)
                     ->add(std::make_shared<QuadraticTerm>(QT->coefficient, firstVariable, secondVariable));
@@ -2666,7 +2648,7 @@ ProblemPtr Problem::createCopy(
                 Variables variables;
 
                 for(auto& V : MT->variables)
-                    variables.push_back(destinationProblem->getVariable(V->index));
+                    variables.push_back(destinationProblem->getVariable(V->getIndex()));
 
                 std::dynamic_pointer_cast<NonlinearObjectiveFunction>(destinationObjective)
                     ->add(std::make_shared<MonomialTerm>(MT->coefficient, variables));
@@ -2683,7 +2665,7 @@ ProblemPtr Problem::createCopy(
 
                 for(auto& E : ST->elements)
                     elements.push_back(std::make_shared<SignomialElement>(
-                        destinationProblem->getVariable(E->variable->index), E->power));
+                        destinationProblem->getVariable(E->variable->getIndex()), E->power));
 
                 std::dynamic_pointer_cast<NonlinearObjectiveFunction>(destinationObjective)
                     ->add(std::make_shared<SignomialTerm>(ST->coefficient, elements));
@@ -2709,13 +2691,13 @@ ProblemPtr Problem::createCopy(
         if(convexityRelaxed && C->valueLHS == C->valueRHS && C->properties.convexity > E_Convexity::Linear)
         {
             // Empty linear constraint instead of nonconvex equality constraint to get indexing correct
-            destinationConstraint = std::make_shared<LinearConstraint>(C->index, C->name, SHOT_DBL_MIN, 0.0);
+            destinationConstraint = std::make_shared<LinearConstraint>(C->name, SHOT_DBL_MIN, 0.0);
             destinationConstraint->properties.classification = E_ConstraintClassification::Linear;
         }
         else if(convexityRelaxed && C->properties.convexity > E_Convexity::Convex)
         {
             // Empty linear constraint instead of nonconvex constraint to get indexing correct
-            destinationConstraint = std::make_shared<LinearConstraint>(C->index, C->name, SHOT_DBL_MIN, 0.0);
+            destinationConstraint = std::make_shared<LinearConstraint>(C->name, SHOT_DBL_MIN, 0.0);
             destinationConstraint->properties.classification = E_ConstraintClassification::Linear;
         }
         else
@@ -2728,7 +2710,7 @@ ProblemPtr Problem::createCopy(
                     && !C->properties.hasMonomialTerms && !C->properties.hasSignomialTerms))
             {
                 // Linear constraint
-                destinationConstraint = std::make_shared<LinearConstraint>(C->index, C->name, valueLHS, valueRHS);
+                destinationConstraint = std::make_shared<LinearConstraint>(C->name, valueLHS, valueRHS);
                 destinationConstraint->properties.classification = E_ConstraintClassification::Linear;
             }
             else if(C->properties.classification == E_ConstraintClassification::Quadratic
@@ -2736,13 +2718,13 @@ ProblemPtr Problem::createCopy(
                     && !C->properties.hasSignomialTerms))
             {
                 // Quadratic constraint
-                destinationConstraint = std::make_shared<QuadraticConstraint>(C->index, C->name, valueLHS, valueRHS);
+                destinationConstraint = std::make_shared<QuadraticConstraint>(C->name, valueLHS, valueRHS);
                 destinationConstraint->properties.classification = E_ConstraintClassification::Quadratic;
             }
             else
             {
                 // Nonlinear constraint
-                destinationConstraint = std::make_shared<NonlinearConstraint>(C->index, C->name, valueLHS, valueRHS);
+                destinationConstraint = std::make_shared<NonlinearConstraint>(C->name, valueLHS, valueRHS);
                 destinationConstraint->properties.classification = E_ConstraintClassification::Quadratic;
             }
 
@@ -2753,7 +2735,7 @@ ProblemPtr Problem::createCopy(
             {
                 for(auto& LT : std::dynamic_pointer_cast<LinearConstraint>(C)->linearTerms)
                 {
-                    auto variable = destinationProblem->getVariable(LT->variable->index);
+                    auto variable = destinationProblem->getVariable(LT->variable->getIndex());
 
                     std::dynamic_pointer_cast<LinearConstraint>(destinationConstraint)
                         ->add(std::make_shared<LinearTerm>(LT->coefficient, variable));
@@ -2765,8 +2747,8 @@ ProblemPtr Problem::createCopy(
             {
                 for(auto& QT : std::dynamic_pointer_cast<QuadraticConstraint>(C)->quadraticTerms)
                 {
-                    auto firstVariable = destinationProblem->getVariable(QT->firstVariable->index);
-                    auto secondVariable = destinationProblem->getVariable(QT->secondVariable->index);
+                    auto firstVariable = destinationProblem->getVariable(QT->firstVariable->getIndex());
+                    auto secondVariable = destinationProblem->getVariable(QT->secondVariable->getIndex());
 
                     std::dynamic_pointer_cast<QuadraticConstraint>(destinationConstraint)
                         ->add(std::make_shared<QuadraticTerm>(QT->coefficient, firstVariable, secondVariable));
@@ -2781,7 +2763,7 @@ ProblemPtr Problem::createCopy(
                     Variables variables;
 
                     for(auto& V : MT->variables)
-                        variables.push_back(destinationProblem->getVariable(V->index));
+                        variables.push_back(destinationProblem->getVariable(V->getIndex()));
 
                     std::dynamic_pointer_cast<NonlinearConstraint>(destinationConstraint)
                         ->add(std::make_shared<MonomialTerm>(MT->coefficient, variables));
@@ -2797,7 +2779,7 @@ ProblemPtr Problem::createCopy(
 
                     for(auto& E : ST->elements)
                         elements.push_back(std::make_shared<SignomialElement>(
-                            destinationProblem->getVariable(E->variable->index), E->power));
+                            destinationProblem->getVariable(E->variable->getIndex()), E->power));
 
                     std::dynamic_pointer_cast<NonlinearConstraint>(destinationConstraint)
                         ->add(std::make_shared<SignomialTerm>(ST->coefficient, elements));
@@ -2823,7 +2805,7 @@ ProblemPtr Problem::createCopy(
         SOS->weights = S->weights;
 
         for(auto& VAR : S->variables)
-            SOS->variables.push_back(destinationProblem->getVariable(VAR->index));
+            SOS->variables.push_back(destinationProblem->getVariable(VAR->getIndex()));
 
         destinationProblem->add(std::move(SOS));
     }
@@ -2860,7 +2842,7 @@ void Problem::augmentAuxiliaryVariableValues(VectorDouble& point)
     }
 
     if(this->antiEpigraphObjectiveVariable)
-        point.at(this->antiEpigraphObjectiveVariable->index) = this->objectiveFunction->calculateValue(point);
+        point.at(this->antiEpigraphObjectiveVariable->getIndex()) = this->objectiveFunction->calculateValue(point);
 
     assert(point.size() == this->properties.numberOfVariables);
 

@@ -119,6 +119,10 @@ private:
     void updateConvexity();
     void updateFactorableFunctions();
 
+    // Restores the invariant that a constraint's index is its position in numericConstraints. Adding a
+    // constraint already assigns it, but a reformulation may have removed one from the middle of the list.
+    void renumberConstraints();
+
     bool verifyOwnership();
 
 public:

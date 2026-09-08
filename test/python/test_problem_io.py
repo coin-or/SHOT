@@ -103,14 +103,14 @@ class TestProblemInfo:
         """Test converting problem to string representation."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         
         obj = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
         obj.add(SHOTpy.LinearTerm(1.0, x))
         problem.setObjective(obj)
         
-        c = SHOTpy.LinearConstraint(0, "c1", 0.0, 5.0)
+        c = SHOTpy.LinearConstraint("c1", 0.0, 5.0)
         c.add(SHOTpy.LinearTerm(1.0, x))
         problem.addConstraint(c)
         

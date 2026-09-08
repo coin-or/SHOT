@@ -13,11 +13,11 @@ class TestLinearConstraints:
         """Test creating a basic linear constraint."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         
         # x <= 5
-        c = SHOTpy.LinearConstraint(0, "c1", -SHOTpy.SHOT_DBL_MAX, 5.0)
+        c = SHOTpy.LinearConstraint("c1", -SHOTpy.SHOT_DBL_MAX, 5.0)
         c.add(SHOTpy.LinearTerm(1.0, x))
         problem.addConstraint(c)
         
@@ -31,13 +31,13 @@ class TestLinearConstraints:
         """Test creating an equality constraint."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
         # x + y = 5
-        c = SHOTpy.LinearConstraint(0, "eq1", 5.0, 5.0)
+        c = SHOTpy.LinearConstraint("eq1", 5.0, 5.0)
         c.add(SHOTpy.LinearTerm(1.0, x))
         c.add(SHOTpy.LinearTerm(1.0, y))
         problem.addConstraint(c)
@@ -51,15 +51,15 @@ class TestLinearConstraints:
         """Test constraint with multiple linear terms."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
-        z = SHOTpy.Variable("z", 2, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.0, 10.0)
+        z = SHOTpy.Variable("z", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         problem.addVariable(z)
         
         # 2x + 3y - z <= 10
-        c = SHOTpy.LinearConstraint(0, "c1", -SHOTpy.SHOT_DBL_MAX, 10.0)
+        c = SHOTpy.LinearConstraint("c1", -SHOTpy.SHOT_DBL_MAX, 10.0)
         c.add(SHOTpy.LinearTerm(2.0, x))
         c.add(SHOTpy.LinearTerm(3.0, y))
         c.add(SHOTpy.LinearTerm(-1.0, z))
@@ -80,11 +80,11 @@ class TestQuadraticConstraints:
         """Test creating a basic quadratic constraint."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         
         # x^2 <= 25
-        c = SHOTpy.QuadraticConstraint(0, "q1", -SHOTpy.SHOT_DBL_MAX, 25.0)
+        c = SHOTpy.QuadraticConstraint("q1", -SHOTpy.SHOT_DBL_MAX, 25.0)
         c.add(SHOTpy.QuadraticTerm(1.0, x, x))
         problem.addConstraint(c)
         
@@ -98,13 +98,13 @@ class TestQuadraticConstraints:
         """Test quadratic constraint with cross term."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
         # x^2 + 2xy + y^2 <= 100 (i.e., (x+y)^2 <= 100)
-        c = SHOTpy.QuadraticConstraint(0, "q1", -SHOTpy.SHOT_DBL_MAX, 100.0)
+        c = SHOTpy.QuadraticConstraint("q1", -SHOTpy.SHOT_DBL_MAX, 100.0)
         c.add(SHOTpy.QuadraticTerm(1.0, x, x))
         c.add(SHOTpy.QuadraticTerm(2.0, x, y))
         c.add(SHOTpy.QuadraticTerm(1.0, y, y))
@@ -126,13 +126,13 @@ class TestQuadraticConstraints:
         """
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
         # x^2 + y^2 <= 10 (pure quadratic)
-        c = SHOTpy.QuadraticConstraint(0, "q1", -SHOTpy.SHOT_DBL_MAX, 10.0)
+        c = SHOTpy.QuadraticConstraint("q1", -SHOTpy.SHOT_DBL_MAX, 10.0)
         c.add(SHOTpy.QuadraticTerm(1.0, x, x))
         c.add(SHOTpy.QuadraticTerm(1.0, y, y))
         problem.addConstraint(c)
@@ -151,11 +151,11 @@ class TestNonlinearConstraints:
         """Test creating a basic nonlinear constraint."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 1.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 1.0, 10.0)
         problem.addVariable(x)
         
         # log(x) <= 2
-        c = SHOTpy.NonlinearConstraint(0, "nl1", -SHOTpy.SHOT_DBL_MAX, 2.0)
+        c = SHOTpy.NonlinearConstraint("nl1", -SHOTpy.SHOT_DBL_MAX, 2.0)
         c.add(SHOTpy.log(x))
         problem.addConstraint(c)
         
@@ -169,13 +169,13 @@ class TestNonlinearConstraints:
         """Test nonlinear constraint with multiple variables."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
         # exp(x) + exp(y) <= 100
-        c = SHOTpy.NonlinearConstraint(0, "nl1", -SHOTpy.SHOT_DBL_MAX, 100.0)
+        c = SHOTpy.NonlinearConstraint("nl1", -SHOTpy.SHOT_DBL_MAX, 100.0)
         c.add(SHOTpy.exp(x) + SHOTpy.exp(y))
         problem.addConstraint(c)
         
@@ -192,19 +192,19 @@ class TestMixedConstraints:
         """Test problem with both linear and quadratic constraints."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
         # Linear: x + y <= 5
-        c1 = SHOTpy.LinearConstraint(0, "lin1", -SHOTpy.SHOT_DBL_MAX, 5.0)
+        c1 = SHOTpy.LinearConstraint("lin1", -SHOTpy.SHOT_DBL_MAX, 5.0)
         c1.add(SHOTpy.LinearTerm(1.0, x))
         c1.add(SHOTpy.LinearTerm(1.0, y))
         problem.addConstraint(c1)
         
         # Quadratic: x^2 + y^2 <= 10
-        c2 = SHOTpy.QuadraticConstraint(1, "quad1", -SHOTpy.SHOT_DBL_MAX, 10.0)
+        c2 = SHOTpy.QuadraticConstraint("quad1", -SHOTpy.SHOT_DBL_MAX, 10.0)
         c2.add(SHOTpy.QuadraticTerm(1.0, x, x))
         c2.add(SHOTpy.QuadraticTerm(1.0, y, y))
         problem.addConstraint(c2)
@@ -219,8 +219,8 @@ class TestMixedConstraints:
         """Test problem with linear, quadratic, and nonlinear constraints."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 1.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 1.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 1.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 1.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -231,19 +231,19 @@ class TestMixedConstraints:
         problem.setObjective(obj)
         
         # Linear: x + y <= 10
-        c1 = SHOTpy.LinearConstraint(0, "lin", -SHOTpy.SHOT_DBL_MAX, 10.0)
+        c1 = SHOTpy.LinearConstraint("lin", -SHOTpy.SHOT_DBL_MAX, 10.0)
         c1.add(SHOTpy.LinearTerm(1.0, x))
         c1.add(SHOTpy.LinearTerm(1.0, y))
         problem.addConstraint(c1)
         
         # Quadratic: x^2 + y^2 <= 50
-        c2 = SHOTpy.QuadraticConstraint(1, "quad", -SHOTpy.SHOT_DBL_MAX, 50.0)
+        c2 = SHOTpy.QuadraticConstraint("quad", -SHOTpy.SHOT_DBL_MAX, 50.0)
         c2.add(SHOTpy.QuadraticTerm(1.0, x, x))
         c2.add(SHOTpy.QuadraticTerm(1.0, y, y))
         problem.addConstraint(c2)
         
         # Nonlinear: log(x*y) >= 0
-        c3 = SHOTpy.NonlinearConstraint(2, "nonlin", 0.0, SHOTpy.SHOT_DBL_MAX)
+        c3 = SHOTpy.NonlinearConstraint("nonlin", 0.0, SHOTpy.SHOT_DBL_MAX)
         c3.add(SHOTpy.log(x * y))
         problem.addConstraint(c3)
         

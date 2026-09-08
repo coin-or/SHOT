@@ -97,7 +97,7 @@ std::vector<SolutionPoint> MIPSolverBase::getAllVariableSolutions()
         {
             auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
                 tmpPt, env->reformulatedProblem->nonlinearConstraints);
-            tmpSolPt.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+            tmpSolPt.maxDeviation = PairIndexValue(maxDev.constraint->getIndex(), maxDev.normalizedValue);
         }
         else
         {
@@ -275,8 +275,8 @@ std::optional<std::pair<std::map<int, double>, double>> MIPSolverBase::createHyp
         }
 
         env->output->outputTrace("        HP point generated for constraint index "
-            + std::to_string(constraintHyperplane->sourceConstraint->index) + " with " + std::to_string(gradient.size())
-            + " elements.");
+            + std::to_string(constraintHyperplane->sourceConstraint->getIndex()) + " with "
+            + std::to_string(gradient.size()) + " elements.");
     }
     else if(auto externalHyperplane = std::dynamic_pointer_cast<ExternalHyperplane>(hyperplane))
     {
@@ -319,7 +319,7 @@ std::optional<std::pair<std::map<int, double>, double>> MIPSolverBase::createHyp
         for(auto const& G : gradient)
         {
             double coefficient = signFactor * G.second;
-            int variableIndex = G.first->index;
+            int variableIndex = G.first->getIndex();
 
             auto element = elements.emplace(variableIndex, coefficient);
 

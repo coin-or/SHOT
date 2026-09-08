@@ -529,8 +529,8 @@ bool TestCallbackExternalHyperplane()
     problem->name = "ex1223b";
 
     // Creating the variables
-    auto x1 = std::make_shared<Variable>("x1", 0, E_VariableType::Integer, 0.0, 3.0);
-    auto x2 = std::make_shared<Variable>("x2", 1, E_VariableType::Integer, 1.0, 3.0);
+    auto x1 = std::make_shared<Variable>("x1", E_VariableType::Integer, 0.0, 3.0);
+    auto x2 = std::make_shared<Variable>("x2", E_VariableType::Integer, 1.0, 3.0);
 
     // All variables are nonlinear, so need to add expression variables as well
     auto nl_x1 = std::make_shared<ExpressionVariable>(x1);
@@ -549,7 +549,7 @@ bool TestCallbackExternalHyperplane()
     objective->add(std::make_shared<LinearTerm>(-2.0, x2));
 
     // Creating the constraint e1: 0.1 e^x2 + x1^2 + x2 <= 10;
-    auto e1 = std::make_shared<NonlinearConstraint>(0, "e1", SHOT_DBL_MIN, 10.0);
+    auto e1 = std::make_shared<NonlinearConstraint>("e1", SHOT_DBL_MIN, 10.0);
     e1->add(std::make_shared<QuadraticTerm>(1.0, x1, x1));
     e1->add(std::make_shared<LinearTerm>(1.0, x2));
 
@@ -558,7 +558,7 @@ bool TestCallbackExternalHyperplane()
     problem->add(e1);
 
     // Creating the constraint e2: e^x1 / x2  <= 3;
-    auto e2 = std::make_shared<NonlinearConstraint>(1, "e2", SHOT_DBL_MIN, 3.0);
+    auto e2 = std::make_shared<NonlinearConstraint>("e2", SHOT_DBL_MIN, 3.0);
 
     e2->add(std::make_shared<ExpressionDivide>(std::make_shared<ExpressionExp>(nl_x1), nl_x2));
     problem->add(e2);
@@ -687,13 +687,13 @@ static std::pair<std::unique_ptr<SHOT::Solver>, std::shared_ptr<SHOT::Environmen
     auto problem = std::make_shared<SHOT::Problem>(env);
     problem->name = "ex1223b";
 
-    auto x1 = std::make_shared<Variable>("x1", 0, E_VariableType::Real, 0.0, 10.0);
-    auto x2 = std::make_shared<Variable>("x2", 1, E_VariableType::Real, 0.0, 10.0);
-    auto x3 = std::make_shared<Variable>("x3", 2, E_VariableType::Real, 0.0, 10.0);
-    auto b4 = std::make_shared<Variable>("b4", 3, E_VariableType::Binary);
-    auto b5 = std::make_shared<Variable>("b5", 4, E_VariableType::Binary);
-    auto b6 = std::make_shared<Variable>("b6", 5, E_VariableType::Binary);
-    auto b7 = std::make_shared<Variable>("b7", 6, E_VariableType::Binary);
+    auto x1 = std::make_shared<Variable>("x1", E_VariableType::Real, 0.0, 10.0);
+    auto x2 = std::make_shared<Variable>("x2", E_VariableType::Real, 0.0, 10.0);
+    auto x3 = std::make_shared<Variable>("x3", E_VariableType::Real, 0.0, 10.0);
+    auto b4 = std::make_shared<Variable>("b4", E_VariableType::Binary);
+    auto b5 = std::make_shared<Variable>("b5", E_VariableType::Binary);
+    auto b6 = std::make_shared<Variable>("b6", E_VariableType::Binary);
+    auto b7 = std::make_shared<Variable>("b7", E_VariableType::Binary);
 
     auto nl_x1 = std::make_shared<ExpressionVariable>(x1);
     auto nl_x2 = std::make_shared<ExpressionVariable>(x2);
@@ -722,7 +722,7 @@ static std::pair<std::unique_ptr<SHOT::Solver>, std::shared_ptr<SHOT::Environmen
     objective->add(std::make_shared<ExpressionSquare>(
         std::make_shared<ExpressionSum>(std::make_shared<ExpressionConstant>(-3), nl_x3)));
 
-    auto e1 = std::make_shared<LinearConstraint>(0, "e1", SHOT_DBL_MIN, 5.0);
+    auto e1 = std::make_shared<LinearConstraint>("e1", SHOT_DBL_MIN, 5.0);
     e1->add(std::make_shared<LinearTerm>(1.0, x1));
     e1->add(std::make_shared<LinearTerm>(1.0, x2));
     e1->add(std::make_shared<LinearTerm>(1.0, x3));
@@ -731,44 +731,44 @@ static std::pair<std::unique_ptr<SHOT::Solver>, std::shared_ptr<SHOT::Environmen
     e1->add(std::make_shared<LinearTerm>(1.0, b6));
     problem->add(e1);
 
-    auto e2 = std::make_shared<QuadraticConstraint>(1, "e2", SHOT_DBL_MIN, 5.5);
+    auto e2 = std::make_shared<QuadraticConstraint>("e2", SHOT_DBL_MIN, 5.5);
     e2->add(std::make_shared<QuadraticTerm>(1.0, b6, b6));
     e2->add(std::make_shared<QuadraticTerm>(1.0, x1, x1));
     e2->add(std::make_shared<QuadraticTerm>(1.0, x2, x2));
     e2->add(std::make_shared<QuadraticTerm>(1.0, x3, x3));
     problem->add(e2);
 
-    auto e3 = std::make_shared<LinearConstraint>(2, "e3", SHOT_DBL_MIN, 1.2);
+    auto e3 = std::make_shared<LinearConstraint>("e3", SHOT_DBL_MIN, 1.2);
     e3->add(std::make_shared<LinearTerm>(1.0, x1));
     e3->add(std::make_shared<LinearTerm>(1.0, b4));
     problem->add(e3);
 
-    auto e4 = std::make_shared<LinearConstraint>(3, "e4", SHOT_DBL_MIN, 1.8);
+    auto e4 = std::make_shared<LinearConstraint>("e4", SHOT_DBL_MIN, 1.8);
     e4->add(std::make_shared<LinearTerm>(1.0, x2));
     e4->add(std::make_shared<LinearTerm>(1.0, b5));
     problem->add(e4);
 
-    auto e5 = std::make_shared<LinearConstraint>(4, "e5", SHOT_DBL_MIN, 2.5);
+    auto e5 = std::make_shared<LinearConstraint>("e5", SHOT_DBL_MIN, 2.5);
     e5->add(std::make_shared<LinearTerm>(1.0, x3));
     e5->add(std::make_shared<LinearTerm>(1.0, b6));
     problem->add(e5);
 
-    auto e6 = std::make_shared<LinearConstraint>(5, "e6", SHOT_DBL_MIN, 1.2);
+    auto e6 = std::make_shared<LinearConstraint>("e6", SHOT_DBL_MIN, 1.2);
     e6->add(std::make_shared<LinearTerm>(1.0, x1));
     e6->add(std::make_shared<LinearTerm>(1.0, b7));
     problem->add(e6);
 
-    auto e7 = std::make_shared<QuadraticConstraint>(6, "e7", SHOT_DBL_MIN, 1.64);
+    auto e7 = std::make_shared<QuadraticConstraint>("e7", SHOT_DBL_MIN, 1.64);
     e7->add(std::make_shared<QuadraticTerm>(1.0, b5, b5));
     e7->add(std::make_shared<QuadraticTerm>(1.0, x2, x2));
     problem->add(e7);
 
-    auto e8 = std::make_shared<QuadraticConstraint>(7, "e8", SHOT_DBL_MIN, 4.25);
+    auto e8 = std::make_shared<QuadraticConstraint>("e8", SHOT_DBL_MIN, 4.25);
     e8->add(std::make_shared<QuadraticTerm>(1.0, b6, b6));
     e8->add(std::make_shared<QuadraticTerm>(1.0, x3, x3));
     problem->add(e8);
 
-    auto e9 = std::make_shared<QuadraticConstraint>(8, "e9", SHOT_DBL_MIN, 4.64);
+    auto e9 = std::make_shared<QuadraticConstraint>("e9", SHOT_DBL_MIN, 4.64);
     e9->add(std::make_shared<QuadraticTerm>(1.0, b5, b5));
     e9->add(std::make_shared<QuadraticTerm>(1.0, x3, x3));
     problem->add(e9);
@@ -1042,16 +1042,16 @@ static std::pair<std::unique_ptr<SHOT::Solver>, std::shared_ptr<SHOT::Environmen
     problem->name = "ex1223b_interior";
 
     // Original variables — all continuous (binary variables relaxed to [0,1])
-    auto x1 = std::make_shared<Variable>("x1", 0, E_VariableType::Real, 0.0, 10.0);
-    auto x2 = std::make_shared<Variable>("x2", 1, E_VariableType::Real, 0.0, 10.0);
-    auto x3 = std::make_shared<Variable>("x3", 2, E_VariableType::Real, 0.0, 10.0);
-    auto b4 = std::make_shared<Variable>("b4", 3, E_VariableType::Real, 0.0, 1.0);
-    auto b5 = std::make_shared<Variable>("b5", 4, E_VariableType::Real, 0.0, 1.0);
-    auto b6 = std::make_shared<Variable>("b6", 5, E_VariableType::Real, 0.0, 1.0);
-    auto b7 = std::make_shared<Variable>("b7", 6, E_VariableType::Real, 0.0, 1.0);
+    auto x1 = std::make_shared<Variable>("x1", E_VariableType::Real, 0.0, 10.0);
+    auto x2 = std::make_shared<Variable>("x2", E_VariableType::Real, 0.0, 10.0);
+    auto x3 = std::make_shared<Variable>("x3", E_VariableType::Real, 0.0, 10.0);
+    auto b4 = std::make_shared<Variable>("b4", E_VariableType::Real, 0.0, 1.0);
+    auto b5 = std::make_shared<Variable>("b5", E_VariableType::Real, 0.0, 1.0);
+    auto b6 = std::make_shared<Variable>("b6", E_VariableType::Real, 0.0, 1.0);
+    auto b7 = std::make_shared<Variable>("b7", E_VariableType::Real, 0.0, 1.0);
 
     // Auxiliary variable mu: the objective is to minimize mu
-    auto mu = std::make_shared<Variable>("mu", 7, E_VariableType::Real, -100.0, 100.0);
+    auto mu = std::make_shared<Variable>("mu", E_VariableType::Real, -100.0, 100.0);
 
     problem->add({ x1, x2, x3, b4, b5, b6, b7, mu });
 
@@ -1061,7 +1061,7 @@ static std::pair<std::unique_ptr<SHOT::Solver>, std::shared_ptr<SHOT::Environmen
     problem->add(objective);
 
     // Linear constraints: unchanged from ex1223b
-    auto e1 = std::make_shared<LinearConstraint>(0, "e1", SHOT_DBL_MIN, 5.0);
+    auto e1 = std::make_shared<LinearConstraint>("e1", SHOT_DBL_MIN, 5.0);
     e1->add(std::make_shared<LinearTerm>(1.0, x1));
     e1->add(std::make_shared<LinearTerm>(1.0, x2));
     e1->add(std::make_shared<LinearTerm>(1.0, x3));
@@ -1071,7 +1071,7 @@ static std::pair<std::unique_ptr<SHOT::Solver>, std::shared_ptr<SHOT::Environmen
     problem->add(e1);
 
     // Quadratic constraints with -mu added: f(x) - mu <= rhs
-    auto e2 = std::make_shared<QuadraticConstraint>(1, "e2", SHOT_DBL_MIN, 5.5);
+    auto e2 = std::make_shared<QuadraticConstraint>("e2", SHOT_DBL_MIN, 5.5);
     e2->add(std::make_shared<QuadraticTerm>(1.0, b6, b6));
     e2->add(std::make_shared<QuadraticTerm>(1.0, x1, x1));
     e2->add(std::make_shared<QuadraticTerm>(1.0, x2, x2));
@@ -1079,39 +1079,39 @@ static std::pair<std::unique_ptr<SHOT::Solver>, std::shared_ptr<SHOT::Environmen
     e2->add(std::make_shared<LinearTerm>(-1.0, mu));
     problem->add(e2);
 
-    auto e3 = std::make_shared<LinearConstraint>(2, "e3", SHOT_DBL_MIN, 1.2);
+    auto e3 = std::make_shared<LinearConstraint>("e3", SHOT_DBL_MIN, 1.2);
     e3->add(std::make_shared<LinearTerm>(1.0, x1));
     e3->add(std::make_shared<LinearTerm>(1.0, b4));
     problem->add(e3);
 
-    auto e4 = std::make_shared<LinearConstraint>(3, "e4", SHOT_DBL_MIN, 1.8);
+    auto e4 = std::make_shared<LinearConstraint>("e4", SHOT_DBL_MIN, 1.8);
     e4->add(std::make_shared<LinearTerm>(1.0, x2));
     e4->add(std::make_shared<LinearTerm>(1.0, b5));
     problem->add(e4);
 
-    auto e5 = std::make_shared<LinearConstraint>(4, "e5", SHOT_DBL_MIN, 2.5);
+    auto e5 = std::make_shared<LinearConstraint>("e5", SHOT_DBL_MIN, 2.5);
     e5->add(std::make_shared<LinearTerm>(1.0, x3));
     e5->add(std::make_shared<LinearTerm>(1.0, b6));
     problem->add(e5);
 
-    auto e6 = std::make_shared<LinearConstraint>(5, "e6", SHOT_DBL_MIN, 1.2);
+    auto e6 = std::make_shared<LinearConstraint>("e6", SHOT_DBL_MIN, 1.2);
     e6->add(std::make_shared<LinearTerm>(1.0, x1));
     e6->add(std::make_shared<LinearTerm>(1.0, b7));
     problem->add(e6);
 
-    auto e7 = std::make_shared<QuadraticConstraint>(6, "e7", SHOT_DBL_MIN, 1.64);
+    auto e7 = std::make_shared<QuadraticConstraint>("e7", SHOT_DBL_MIN, 1.64);
     e7->add(std::make_shared<QuadraticTerm>(1.0, b5, b5));
     e7->add(std::make_shared<QuadraticTerm>(1.0, x2, x2));
     e7->add(std::make_shared<LinearTerm>(-1.0, mu));
     problem->add(e7);
 
-    auto e8 = std::make_shared<QuadraticConstraint>(7, "e8", SHOT_DBL_MIN, 4.25);
+    auto e8 = std::make_shared<QuadraticConstraint>("e8", SHOT_DBL_MIN, 4.25);
     e8->add(std::make_shared<QuadraticTerm>(1.0, b6, b6));
     e8->add(std::make_shared<QuadraticTerm>(1.0, x3, x3));
     e8->add(std::make_shared<LinearTerm>(-1.0, mu));
     problem->add(e8);
 
-    auto e9 = std::make_shared<QuadraticConstraint>(8, "e9", SHOT_DBL_MIN, 4.64);
+    auto e9 = std::make_shared<QuadraticConstraint>("e9", SHOT_DBL_MIN, 4.64);
     e9->add(std::make_shared<QuadraticTerm>(1.0, b5, b5));
     e9->add(std::make_shared<QuadraticTerm>(1.0, x3, x3));
     e9->add(std::make_shared<LinearTerm>(-1.0, mu));

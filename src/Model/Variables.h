@@ -62,9 +62,17 @@ struct VariableProperties
 
 class Variable
 {
+    // Only the problem a variable belongs to may number it, since the index is the variable's position in that
+    // problem and everything from solution points to solver columns is addressed by it
+    friend class Problem;
+
+private:
+    int index = -1;
+
 public:
     std::string name = "";
-    int index;
+
+    inline int getIndex() const { return index; }
 
     VariableProperties properties;
 
@@ -82,10 +90,9 @@ public:
         upperBound = SHOT_DBL_MAX;
     }
 
-    Variable(std::string variableName, int variableIndex, E_VariableType variableType, double LB, double UB,
+    Variable(std::string variableName, E_VariableType variableType, double LB, double UB,
         double variableSemiBound = NAN)
     {
-        index = variableIndex;
         name = variableName;
 
         if(variableType == E_VariableType::Binary)
@@ -105,9 +112,8 @@ public:
         semiBound = variableSemiBound;
     };
 
-    Variable(std::string variableName, int variableIndex, E_VariableType variableType)
+    Variable(std::string variableName, E_VariableType variableType)
     {
-        index = variableIndex;
         name = variableName;
 
         if(variableType == E_VariableType::Binary)
@@ -150,14 +156,14 @@ struct VariableIndexComparator
 {
     bool operator()(const VariablePtr& firstKey, const VariablePtr& secondKey) const
     {
-        return (firstKey->index < secondKey->index);
+        return (firstKey->getIndex() < secondKey->getIndex());
     }
 
     bool operator()(
         const std::pair<VariablePtr, double>& firstKey, const std::pair<VariablePtr, double>& secondKey) const
     {
-        if(firstKey.first->index != secondKey.first->index)
-            return (firstKey.first->index < secondKey.first->index);
+        if(firstKey.first->getIndex() != secondKey.first->getIndex())
+            return (firstKey.first->getIndex() < secondKey.first->getIndex());
 
         return (firstKey.second < secondKey.second);
     }
@@ -165,10 +171,10 @@ struct VariableIndexComparator
     bool operator()(
         const std::tuple<VariablePtr, VariablePtr>& firstKey, const std::tuple<VariablePtr, VariablePtr>& secondKey) const
     {
-        if(std::get<0>(firstKey)->index != std::get<0>(secondKey)->index)
-            return (std::get<0>(firstKey)->index < std::get<0>(secondKey)->index);
+        if(std::get<0>(firstKey)->getIndex() != std::get<0>(secondKey)->getIndex())
+            return (std::get<0>(firstKey)->getIndex() < std::get<0>(secondKey)->getIndex());
 
-        return (std::get<1>(firstKey)->index < std::get<1>(secondKey)->index);
+        return (std::get<1>(firstKey)->getIndex() < std::get<1>(secondKey)->getIndex());
     }
 };
 
@@ -213,7 +219,7 @@ public:
     inline void sortByIndex()
     {
         std::sort(this->begin(), this->end(), [](const VariablePtr& variableOne, const VariablePtr& variableTwo) {
-            return (variableOne->index < variableTwo->index);
+            return (variableOne->getIndex() < variableTwo->getIndex());
         });
     }
 };

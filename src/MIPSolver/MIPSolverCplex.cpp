@@ -1519,7 +1519,7 @@ bool MIPSolverCplex::createIntegerCut(IntegerCut& integerCut)
         {
             auto VAR = env->reformulatedProblem->getVariable(I);
             int variableValue = integerCut.variableValues[index];
-            auto variable = cplexVars[VAR->index];
+            auto variable = cplexVars[VAR->getIndex()];
 
             assert(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer
                 || VAR->properties.type == E_VariableType::Semiinteger);

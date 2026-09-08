@@ -295,7 +295,7 @@ bool ModelingSystemOS::copyVariables(OSInstance* source, ProblemPtr destination)
             }
 
             auto variable = std::make_shared<SHOT::Variable>(
-                source->instanceData->variables->var[i]->name, i, variableType, variableLB, variableUB);
+                source->instanceData->variables->var[i]->name, variableType, variableLB, variableUB);
             destination->add(variable);
         }
     }
@@ -393,27 +393,27 @@ bool ModelingSystemOS::copyConstraints(OSInstance* source, ProblemPtr destinatio
             {
             case(E_ConstraintClassification::Linear):
             {
-                LinearConstraintPtr constraint
-                    = std::make_shared<LinearConstraint>(i, source->instanceData->constraints->con[i]->name,
-                        source->instanceData->constraints->con[i]->lb, source->instanceData->constraints->con[i]->ub);
+                LinearConstraintPtr constraint = std::make_shared<LinearConstraint>(
+                    source->instanceData->constraints->con[i]->name, source->instanceData->constraints->con[i]->lb,
+                    source->instanceData->constraints->con[i]->ub);
                 constraint->constant = source->instanceData->constraints->con[i]->constant;
                 destination->add(std::move(constraint));
                 break;
             }
             case(E_ConstraintClassification::Quadratic):
             {
-                QuadraticConstraintPtr constraint
-                    = std::make_shared<QuadraticConstraint>(i, source->instanceData->constraints->con[i]->name,
-                        source->instanceData->constraints->con[i]->lb, source->instanceData->constraints->con[i]->ub);
+                QuadraticConstraintPtr constraint = std::make_shared<QuadraticConstraint>(
+                    source->instanceData->constraints->con[i]->name, source->instanceData->constraints->con[i]->lb,
+                    source->instanceData->constraints->con[i]->ub);
                 constraint->constant = source->instanceData->constraints->con[i]->constant;
                 destination->add(std::move(constraint));
                 break;
             }
             case(E_ConstraintClassification::Nonlinear):
             {
-                NonlinearConstraintPtr constraint
-                    = std::make_shared<NonlinearConstraint>(i, source->instanceData->constraints->con[i]->name,
-                        source->instanceData->constraints->con[i]->lb, source->instanceData->constraints->con[i]->ub);
+                NonlinearConstraintPtr constraint = std::make_shared<NonlinearConstraint>(
+                    source->instanceData->constraints->con[i]->name, source->instanceData->constraints->con[i]->lb,
+                    source->instanceData->constraints->con[i]->ub);
                 constraint->constant = source->instanceData->constraints->con[i]->constant;
                 destination->add(std::move(constraint));
                 break;

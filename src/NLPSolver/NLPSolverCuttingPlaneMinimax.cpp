@@ -303,7 +303,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 
             for(auto& G : gradient)
             {
-                int variableIndex = G.first->index;
+                int variableIndex = G.first->getIndex();
                 double coefficient = G.second;
 
                 auto element = elements.emplace(variableIndex, coefficient);
@@ -375,7 +375,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             // Adds the linear constraint
             if(cutHasNoNaNsorInfs
                 && LPSolver->addLinearConstraint(elements, constant,
-                       "minimax_" + std::to_string(NCV.constraint->index) + "_" + std::to_string(numHyperTot))
+                       "minimax_" + std::to_string(NCV.constraint->getIndex()) + "_" + std::to_string(numHyperTot))
                     >= 0)
             {
                 numHyperTot++;
@@ -497,7 +497,7 @@ bool NLPSolverCuttingPlaneMinimax::createProblem(IMIPSolver* destination, Proble
             for(auto& T : C->linearTerms)
             {
                 constraintsInitialized = constraintsInitialized
-                    && destination->addLinearTermToConstraint(T->coefficient, T->variable->index);
+                    && destination->addLinearTermToConstraint(T->coefficient, T->variable->getIndex());
             }
         }
 

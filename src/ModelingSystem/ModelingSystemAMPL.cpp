@@ -112,7 +112,7 @@ public:
         for(int i = 0; i < number; i++)
         {
             destination->add(std::make_shared<SHOT::Variable>(
-                "x_" + std::to_string(variableIndex), variableIndex, E_VariableType::Real, SHOT_DBL_MIN, SHOT_DBL_MAX));
+                "x_" + std::to_string(variableIndex), E_VariableType::Real, SHOT_DBL_MIN, SHOT_DBL_MAX));
             variableIndex++;
         }
 
@@ -120,8 +120,8 @@ public:
 
         for(int i = 0; i < number; i++)
         {
-            destination->add(std::make_shared<SHOT::Variable>("i_" + std::to_string(variableIndex), variableIndex,
-                E_VariableType::Integer, SHOT_DBL_MIN, SHOT_DBL_MAX));
+            destination->add(std::make_shared<SHOT::Variable>(
+                "i_" + std::to_string(variableIndex), E_VariableType::Integer, SHOT_DBL_MIN, SHOT_DBL_MAX));
             variableIndex++;
         }
 
@@ -132,7 +132,7 @@ public:
         for(int i = 0; i < number; i++)
         {
             destination->add(std::make_shared<SHOT::Variable>(
-                "x_" + std::to_string(variableIndex), variableIndex, E_VariableType::Real, SHOT_DBL_MIN, SHOT_DBL_MAX));
+                "x_" + std::to_string(variableIndex), E_VariableType::Real, SHOT_DBL_MIN, SHOT_DBL_MAX));
             variableIndex++;
         }
 
@@ -140,8 +140,8 @@ public:
 
         for(int i = 0; i < number; i++)
         {
-            destination->add(std::make_shared<SHOT::Variable>("i_" + std::to_string(variableIndex), variableIndex,
-                E_VariableType::Integer, SHOT_DBL_MIN, SHOT_DBL_MAX));
+            destination->add(std::make_shared<SHOT::Variable>(
+                "i_" + std::to_string(variableIndex), E_VariableType::Integer, SHOT_DBL_MIN, SHOT_DBL_MAX));
             variableIndex++;
         }
 
@@ -152,7 +152,7 @@ public:
         for(int i = 0; i < number; i++)
         {
             destination->add(std::make_shared<SHOT::Variable>(
-                "x_" + std::to_string(variableIndex), variableIndex, E_VariableType::Real, SHOT_DBL_MIN, SHOT_DBL_MAX));
+                "x_" + std::to_string(variableIndex), E_VariableType::Real, SHOT_DBL_MIN, SHOT_DBL_MAX));
             variableIndex++;
         }
 
@@ -160,8 +160,8 @@ public:
 
         for(int i = 0; i < number; i++)
         {
-            destination->add(std::make_shared<SHOT::Variable>("i_" + std::to_string(variableIndex), variableIndex,
-                E_VariableType::Integer, SHOT_DBL_MIN, SHOT_DBL_MAX));
+            destination->add(std::make_shared<SHOT::Variable>(
+                "i_" + std::to_string(variableIndex), E_VariableType::Integer, SHOT_DBL_MIN, SHOT_DBL_MAX));
             variableIndex++;
         }
 
@@ -172,7 +172,7 @@ public:
         for(int i = 0; i < number; i++)
         {
             destination->add(std::make_shared<SHOT::Variable>(
-                "x_" + std::to_string(variableIndex), variableIndex, E_VariableType::Real, SHOT_DBL_MIN, SHOT_DBL_MAX));
+                "x_" + std::to_string(variableIndex), E_VariableType::Real, SHOT_DBL_MIN, SHOT_DBL_MAX));
             variableIndex++;
         }
 
@@ -182,8 +182,8 @@ public:
 
         for(int i = 0; i < number; i++)
         {
-            destination->add(std::make_shared<SHOT::Variable>(
-                "b_" + std::to_string(variableIndex), variableIndex, E_VariableType::Binary));
+            destination->add(
+                std::make_shared<SHOT::Variable>("b_" + std::to_string(variableIndex), E_VariableType::Binary));
             variableIndex++;
         }
 
@@ -191,8 +191,8 @@ public:
 
         for(int i = 0; i < number; i++)
         {
-            destination->add(std::make_shared<SHOT::Variable>("i_" + std::to_string(variableIndex), variableIndex,
-                E_VariableType::Integer, -SHOT_INT_MAX, SHOT_INT_MAX));
+            destination->add(std::make_shared<SHOT::Variable>(
+                "i_" + std::to_string(variableIndex), E_VariableType::Integer, -SHOT_INT_MAX, SHOT_INT_MAX));
             variableIndex++;
         }
 
@@ -207,13 +207,12 @@ public:
         for(int i = 0; i < h.num_nl_cons; i++)
         {
             destination->add(
-                std::make_shared<NonlinearConstraint>(i, "nlc_" + std::to_string(i), SHOT_DBL_MIN, SHOT_DBL_MAX));
+                std::make_shared<NonlinearConstraint>("nlc_" + std::to_string(i), SHOT_DBL_MIN, SHOT_DBL_MAX));
         }
 
         for(int i = h.num_nl_cons; i < h.num_algebraic_cons; i++)
         {
-            destination->add(
-                std::make_shared<LinearConstraint>(i, "lc_" + std::to_string(i), SHOT_DBL_MIN, SHOT_DBL_MAX));
+            destination->add(std::make_shared<LinearConstraint>("lc_" + std::to_string(i), SHOT_DBL_MIN, SHOT_DBL_MAX));
         }
 
         if(h.num_nl_objs == 1)

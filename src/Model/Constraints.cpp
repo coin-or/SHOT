@@ -96,7 +96,7 @@ std::ostream& operator<<(std::ostream& stream, const Constraint& constraint)
         contains << " ";
 
     stream << fmt::format(
-        "[{:>5d},{:<12s}] [{:<5s}] {:>12s}:", constraint.index, type.str(), contains.str(), constraint.name);
+        "[{:>5d},{:<12s}] [{:<5s}] {:>12s}:", constraint.getIndex(), type.str(), contains.str(), constraint.name);
 
     return constraint.print(stream); // polymorphic print via reference
 }
@@ -119,7 +119,7 @@ std::shared_ptr<Variables> NumericConstraint::getGradientSparsityPattern()
     // Sorts the variables
     std::sort(gradientSparsityPattern->begin(), gradientSparsityPattern->end(),
         [](const VariablePtr& variableOne, const VariablePtr& variableTwo) {
-            return (variableOne->index < variableTwo->index);
+            return (variableOne->getIndex() < variableTwo->getIndex());
         });
 
     // Remove duplicates
@@ -145,10 +145,10 @@ std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> NumericConstra
     std::sort(hessianSparsityPattern->begin(), hessianSparsityPattern->end(),
         [](const std::pair<VariablePtr, VariablePtr>& elementOne,
             const std::pair<VariablePtr, VariablePtr>& elementTwo) {
-            if(elementOne.first->index != elementTwo.first->index)
-                return (elementOne.first->index < elementTwo.first->index);
+            if(elementOne.first->getIndex() != elementTwo.first->getIndex())
+                return (elementOne.first->getIndex() < elementTwo.first->getIndex());
 
-            return (elementOne.second->index < elementTwo.second->index);
+            return (elementOne.second->getIndex() < elementTwo.second->getIndex());
         });
 
     return (hessianSparsityPattern);
@@ -404,7 +404,7 @@ SparseVariableMatrix QuadraticConstraint::calculateHessian(
         else
         {
             // Only save elements above the diagonal since the Hessian is symmetric
-            if(T->firstVariable->index < T->secondVariable->index)
+            if(T->firstVariable->getIndex() < T->secondVariable->getIndex())
             {
                 auto value = T->coefficient;
                 auto element = hessian.emplace(std::make_pair(T->firstVariable, T->secondVariable), value);
@@ -442,9 +442,9 @@ void QuadraticConstraint::initializeHessianSparsityPattern()
             continue;
 
         auto firstVariable
-            = (T->firstVariable->index < T->secondVariable->index) ? T->firstVariable : T->secondVariable;
+            = (T->firstVariable->getIndex() < T->secondVariable->getIndex()) ? T->firstVariable : T->secondVariable;
         auto secondVariable
-            = (T->firstVariable->index < T->secondVariable->index) ? T->secondVariable : T->firstVariable;
+            = (T->firstVariable->getIndex() < T->secondVariable->getIndex()) ? T->secondVariable : T->firstVariable;
 
         auto key = std::make_pair(firstVariable, secondVariable);
 
@@ -674,7 +674,7 @@ SparseVariableVector NonlinearConstraint::calculateGradient(const VectorDouble& 
             std::vector<double> pointNonlinearSubset(numberOfNonlinearVariables, 0.0);
 
             for(auto& VAR : sharedOwnerProblem->nonlinearExpressionVariables)
-                pointNonlinearSubset[VAR->properties.nonlinearVariableIndex] = point[VAR->index];
+                pointNonlinearSubset[VAR->properties.nonlinearVariableIndex] = point[VAR->getIndex()];
 
             CppAD::sparse_rcv<std::vector<size_t>, std::vector<double>> subset(nonlinearGradientSparsityPattern);
             sharedOwnerProblem->ADFunctions.subgraph_jac_rev(pointNonlinearSubset, subset);
@@ -829,7 +829,7 @@ SparseVariableMatrix NonlinearConstraint::calculateHessian(const VectorDouble& p
             weights[this->nonlinearExpressionIndex] = 1.0;
 
             for(auto& VAR : sharedOwnerProblem->nonlinearExpressionVariables)
-                pointNonlinearSubset[VAR->properties.nonlinearVariableIndex] = point[VAR->index];
+                pointNonlinearSubset[VAR->properties.nonlinearVariableIndex] = point[VAR->getIndex()];
 
             // TODO: utilize sparsity pattern
             auto calculatedHessian = sharedOwnerProblem->ADFunctions.SparseHessian(pointNonlinearSubset, weights);
@@ -847,7 +847,7 @@ SparseVariableMatrix NonlinearConstraint::calculateHessian(const VectorDouble& p
                         continue;
 
                     // Only save elements above the diagonal since the Hessian is symmetric
-                    if(V1->index <= V2->index)
+                    if(V1->getIndex() <= V2->getIndex())
                     {
                         auto element = hessian.emplace(std::make_pair(V1, V2), hessianValue);
 
@@ -883,7 +883,7 @@ void NonlinearConstraint::initializeHessianSparsityPattern()
             {
                 std::pair<VariablePtr, VariablePtr> variablePair;
 
-                if(V1->index < V2->index)
+                if(V1->getIndex() < V2->getIndex())
                     variablePair = std::make_pair(V1, V2);
                 else
                 {
@@ -908,7 +908,7 @@ void NonlinearConstraint::initializeHessianSparsityPattern()
             {
                 std::pair<VariablePtr, VariablePtr> variablePair;
 
-                if(E1->variable->index < E2->variable->index)
+                if(E1->variable->getIndex() < E2->variable->getIndex())
                     variablePair = std::make_pair(E1->variable, E2->variable);
                 else
                 {
@@ -962,7 +962,7 @@ void NonlinearConstraint::initializeHessianSparsityPattern()
                         {
                             std::pair<VariablePtr, VariablePtr> variablePair;
 
-                            if(V1->index < V2->index)
+                            if(V1->getIndex() < V2->getIndex())
                                 variablePair = std::make_pair(V1, V2);
                             else
                                 variablePair = std::make_pair(V2, V1);
@@ -1099,7 +1099,7 @@ void NonlinearConstraint::updateProperties()
 
     std::sort(variablesInNonlinearExpression.begin(), variablesInNonlinearExpression.end(),
         [](const VariablePtr& variableOne, const VariablePtr& variableTwo) {
-            return (variableOne->index < variableTwo->index);
+            return (variableOne->getIndex() < variableTwo->getIndex());
         });
 }
 

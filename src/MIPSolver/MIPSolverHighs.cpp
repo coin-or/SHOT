@@ -640,9 +640,9 @@ E_ProblemSolutionStatus MIPSolverHighs::solveProblem()
                 if(V->isUnbounded())
                 {
                     // Temporarily remove unbounded terms from objective
-                    originalObjectiveCoefficients.emplace_back(V->index, variableCosts.at(V->index));
+                    originalObjectiveCoefficients.emplace_back(V->getIndex(), variableCosts.at(V->getIndex()));
 
-                    highsInstance.changeColCost(V->index, 0.0);
+                    highsInstance.changeColCost(V->getIndex(), 0.0);
                     problemUpdated = true;
                 }
             }
@@ -1086,12 +1086,12 @@ bool MIPSolverHighs::createIntegerCut(IntegerCut& integerCut)
 
                 if(variableValue == 1.0)
                 {
-                    cutIndexes.push_back(VAR->index);
+                    cutIndexes.push_back(VAR->getIndex());
                     cutCoeffs.push_back(1.0);
                 }
                 else if(variableValue == 0.0)
                 {
-                    cutIndexes.push_back(VAR->index);
+                    cutIndexes.push_back(VAR->getIndex());
                     cutCoeffs.push_back(-1.0);
                 }
                 else
@@ -1137,13 +1137,13 @@ bool MIPSolverHighs::createIntegerCut(IntegerCut& integerCut)
                 if(variableValue == VAR->upperBound)
                 {
                     sumUB += VAR->upperBound;
-                    cutIndexes.push_back(VAR->index);
+                    cutIndexes.push_back(VAR->getIndex());
                     cutCoeffs.push_back(-1.0);
                 }
                 else if(variableValue == VAR->lowerBound)
                 {
                     sumLB -= VAR->lowerBound;
-                    cutIndexes.push_back(VAR->index);
+                    cutIndexes.push_back(VAR->getIndex());
                     cutCoeffs.push_back(1.0);
                 }
                 else
@@ -1170,7 +1170,7 @@ bool MIPSolverHighs::createIntegerCut(IntegerCut& integerCut)
                     cutCoeffs.push_back(1.0);
 
                     // Constraint 1a: x + w >= variableValue  =>  -w <= x - variableValue
-                    VectorInteger cut1aIndexes = { VAR->index, wIndex };
+                    VectorInteger cut1aIndexes = { VAR->getIndex(), wIndex };
                     VectorDouble cut1aCoeffs = { 1.0, 1.0 };
                     int tmpNumConstraints = highsInstance.getNumRow();
                     highsInstance.addRow(variableValue, highsInstance.getInfinity(), cut1aIndexes.size(),
@@ -1186,7 +1186,7 @@ bool MIPSolverHighs::createIntegerCut(IntegerCut& integerCut)
                     }
 
                     // Constraint 1b: x - w <= variableValue
-                    VectorInteger cut1bIndexes = { VAR->index, wIndex };
+                    VectorInteger cut1bIndexes = { VAR->getIndex(), wIndex };
                     VectorDouble cut1bCoeffs = { 1.0, -1.0 };
                     tmpNumConstraints = highsInstance.getNumRow();
                     highsInstance.addRow(-highsInstance.getInfinity(), variableValue, cut1bIndexes.size(),
@@ -1202,7 +1202,7 @@ bool MIPSolverHighs::createIntegerCut(IntegerCut& integerCut)
                     }
 
                     // Constraint 2: w - x + M1*v <= -variableValue + M1
-                    VectorInteger cut2Indexes = { wIndex, VAR->index, vIndex };
+                    VectorInteger cut2Indexes = { wIndex, VAR->getIndex(), vIndex };
                     VectorDouble cut2Coeffs = { 1.0, -1.0, M1 };
                     tmpNumConstraints = highsInstance.getNumRow();
                     highsInstance.addRow(-highsInstance.getInfinity(), -variableValue + M1, cut2Indexes.size(),
@@ -1218,7 +1218,7 @@ bool MIPSolverHighs::createIntegerCut(IntegerCut& integerCut)
                     }
 
                     // Constraint 3: w + x - M2*v <= variableValue
-                    VectorInteger cut3Indexes = { wIndex, VAR->index, vIndex };
+                    VectorInteger cut3Indexes = { wIndex, VAR->getIndex(), vIndex };
                     VectorDouble cut3Coeffs = { 1.0, 1.0, -M2 };
                     tmpNumConstraints = highsInstance.getNumRow();
                     highsInstance.addRow(-highsInstance.getInfinity(), variableValue, cut3Indexes.size(),

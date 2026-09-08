@@ -16,7 +16,7 @@ class TestSignomialTerms:
 
     def test_signomial_element_creation(self):
         """Test creating a signomial element with variable and power."""
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
         
         # Create element with fractional power: x^0.5
         elem = SHOTpy.SignomialElement(x, 0.5)
@@ -26,7 +26,7 @@ class TestSignomialTerms:
 
     def test_signomial_element_negative_power(self):
         """Test signomial element with negative power: x^(-1)."""
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
         
         elem = SHOTpy.SignomialElement(x, -1.0)
         
@@ -34,7 +34,7 @@ class TestSignomialTerms:
 
     def test_signomial_term_single_element(self):
         """Test creating signomial term: 2 * x^0.5."""
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
         elem = SHOTpy.SignomialElement(x, 0.5)
         
         term = SHOTpy.SignomialTerm(2.0, [elem])
@@ -44,8 +44,8 @@ class TestSignomialTerms:
 
     def test_signomial_term_multiple_elements(self):
         """Test creating signomial term: 3 * x^0.5 * y^(-0.3)."""
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 10.0)
         
         elem_x = SHOTpy.SignomialElement(x, 0.5)
         elem_y = SHOTpy.SignomialElement(y, -0.3)
@@ -57,8 +57,8 @@ class TestSignomialTerms:
 
     def test_signomial_term_from_tuples(self):
         """Test creating signomial term from (variable, power) tuples."""
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 10.0)
         
         # Create term: 5 * x^2.5 * y^(-1)
         term = SHOTpy.SignomialTerm(5.0, [(x, 2.5), (y, -1.0)])
@@ -68,7 +68,7 @@ class TestSignomialTerms:
 
     def test_signomial_terms_collection(self):
         """Test SignomialTerms collection."""
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
         
         term1 = SHOTpy.SignomialTerm(2.0, [(x, 0.5)])
         term2 = SHOTpy.SignomialTerm(3.0, [(x, -0.5)])
@@ -81,7 +81,7 @@ class TestSignomialTerms:
 
     def test_signomial_repr(self):
         """Test string representation of signomial terms."""
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
         term = SHOTpy.SignomialTerm(2.0, [(x, 0.5)])
         
         repr_str = repr(term)
@@ -94,9 +94,9 @@ class TestMonomialTerms:
 
     def test_monomial_term_creation(self):
         """Test creating a monomial term: 2*x*y*z."""
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, -10.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, -10.0, 10.0)
-        z = SHOTpy.Variable("z", 2, SHOTpy.VariableType.Real, -10.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, -10.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, -10.0, 10.0)
+        z = SHOTpy.Variable("z", SHOTpy.VariableType.Real, -10.0, 10.0)
         
         term = SHOTpy.MonomialTerm(2.0, [x, y, z])
         
@@ -105,9 +105,9 @@ class TestMonomialTerms:
 
     def test_monomial_term_binary(self):
         """Test monomial term with binary variables."""
-        b1 = SHOTpy.Variable("b1", 0, SHOTpy.VariableType.Binary, 0.0, 1.0)
-        b2 = SHOTpy.Variable("b2", 1, SHOTpy.VariableType.Binary, 0.0, 1.0)
-        b3 = SHOTpy.Variable("b3", 2, SHOTpy.VariableType.Binary, 0.0, 1.0)
+        b1 = SHOTpy.Variable("b1", SHOTpy.VariableType.Binary, 0.0, 1.0)
+        b2 = SHOTpy.Variable("b2", SHOTpy.VariableType.Binary, 0.0, 1.0)
+        b3 = SHOTpy.Variable("b3", SHOTpy.VariableType.Binary, 0.0, 1.0)
         
         term = SHOTpy.MonomialTerm(1.0, [b1, b2, b3])
         
@@ -115,8 +115,8 @@ class TestMonomialTerms:
 
     def test_monomial_terms_collection(self):
         """Test MonomialTerms collection."""
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, -10.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, -10.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, -10.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, -10.0, 10.0)
         
         term1 = SHOTpy.MonomialTerm(2.0, [x, y])
         term2 = SHOTpy.MonomialTerm(3.0, [x, x, y])
@@ -129,8 +129,8 @@ class TestMonomialTerms:
 
     def test_monomial_repr(self):
         """Test string representation of monomial terms."""
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, -10.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, -10.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, -10.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, -10.0, 10.0)
         term = SHOTpy.MonomialTerm(2.0, [x, y])
         
         repr_str = repr(term)
@@ -144,9 +144,9 @@ class TestConstraintWithSignomialTerms:
 
     def test_nonlinear_constraint_add_signomial(self):
         """Test adding signomial terms to a nonlinear constraint."""
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
         
-        constraint = SHOTpy.NonlinearConstraint(0, "c1", -SHOTpy.SHOT_DBL_MAX, 10.0)
+        constraint = SHOTpy.NonlinearConstraint("c1", -SHOTpy.SHOT_DBL_MAX, 10.0)
         
         # Add signomial term: x^0.5 <= 10
         term = SHOTpy.SignomialTerm(1.0, [(x, 0.5)])
@@ -157,10 +157,10 @@ class TestConstraintWithSignomialTerms:
 
     def test_nonlinear_constraint_signomial_terms_direct(self):
         """Test adding signomial terms collection to constraint."""
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 10.0)
         
-        constraint = SHOTpy.NonlinearConstraint(0, "c1", -SHOTpy.SHOT_DBL_MAX, 5.0)
+        constraint = SHOTpy.NonlinearConstraint("c1", -SHOTpy.SHOT_DBL_MAX, 5.0)
         
         terms = SHOTpy.SignomialTerms()
         terms.add(SHOTpy.SignomialTerm(1.0, [(x, 0.5)]))
@@ -176,11 +176,11 @@ class TestConstraintWithMonomialTerms:
 
     def test_nonlinear_constraint_add_monomial(self):
         """Test adding monomial terms to a nonlinear constraint."""
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, -10.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, -10.0, 10.0)
-        z = SHOTpy.Variable("z", 2, SHOTpy.VariableType.Real, -10.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, -10.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, -10.0, 10.0)
+        z = SHOTpy.Variable("z", SHOTpy.VariableType.Real, -10.0, 10.0)
         
-        constraint = SHOTpy.NonlinearConstraint(0, "c1", -SHOTpy.SHOT_DBL_MAX, 100.0)
+        constraint = SHOTpy.NonlinearConstraint("c1", -SHOTpy.SHOT_DBL_MAX, 100.0)
         
         # Add monomial term: x*y*z <= 100
         term = SHOTpy.MonomialTerm(1.0, [x, y, z])
@@ -194,11 +194,11 @@ class TestCombinedTermTypes:
 
     def test_linear_and_quadratic_terms(self):
         """Test constraint with linear and quadratic terms."""
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, -10.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, -10.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, -10.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, -10.0, 10.0)
         
         # Quadratic constraint inherits from Linear, so can have both
-        constraint = SHOTpy.QuadraticConstraint(0, "c1", -SHOTpy.SHOT_DBL_MAX, 10.0)
+        constraint = SHOTpy.QuadraticConstraint("c1", -SHOTpy.SHOT_DBL_MAX, 10.0)
         
         # Add linear term: 2*x
         constraint.add(SHOTpy.LinearTerm(2.0, x))
@@ -211,8 +211,8 @@ class TestCombinedTermTypes:
 
     def test_linear_quadratic_and_nonlinear(self):
         """Test nonlinear constraint with linear, quadratic, and nonlinear parts."""
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 10.0)
         
         # Create with linear and quadratic terms, then add nonlinear expression
         linear_terms = SHOTpy.LinearTerms()
@@ -224,7 +224,7 @@ class TestCombinedTermTypes:
         # Nonlinear expression: log(y)
         expr = SHOTpy.log(y)
         
-        constraint = SHOTpy.NonlinearConstraint(0, "c1", linear_terms, quad_terms, expr, 
+        constraint = SHOTpy.NonlinearConstraint("c1", linear_terms, quad_terms, expr, 
                                                  -SHOTpy.SHOT_DBL_MAX, 20.0)
         
         assert len(constraint.linearTerms) == 1
@@ -233,12 +233,12 @@ class TestCombinedTermTypes:
 
     def test_all_term_types_combined(self):
         """Test constraint with all term types: linear, quadratic, monomial, signomial, nonlinear."""
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 10.0)
-        z = SHOTpy.Variable("z", 2, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 10.0)
+        z = SHOTpy.Variable("z", SHOTpy.VariableType.Real, 0.1, 10.0)
         
         # Start with empty nonlinear constraint
-        constraint = SHOTpy.NonlinearConstraint(0, "c1", -SHOTpy.SHOT_DBL_MAX, 100.0)
+        constraint = SHOTpy.NonlinearConstraint("c1", -SHOTpy.SHOT_DBL_MAX, 100.0)
         
         # Add linear term: 2*x
         constraint.add(SHOTpy.LinearTerm(2.0, x))
@@ -263,11 +263,11 @@ class TestCombinedTermTypes:
 
     def test_multiple_terms_each_type(self):
         """Test constraint with multiple terms of each type."""
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 10.0)
-        z = SHOTpy.Variable("z", 2, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 10.0)
+        z = SHOTpy.Variable("z", SHOTpy.VariableType.Real, 0.1, 10.0)
         
-        constraint = SHOTpy.NonlinearConstraint(0, "c1", 0.0, 50.0)
+        constraint = SHOTpy.NonlinearConstraint("c1", 0.0, 50.0)
         
         # Multiple linear terms
         constraint.add(SHOTpy.LinearTerm(1.0, x))
@@ -293,8 +293,8 @@ class TestObjectiveWithTermTypes:
 
     def test_linear_objective(self):
         """Test linear objective function."""
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, -10.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, -10.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, -10.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, -10.0, 10.0)
         
         obj = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
         obj.add(SHOTpy.LinearTerm(1.0, x))
@@ -304,8 +304,8 @@ class TestObjectiveWithTermTypes:
 
     def test_quadratic_objective(self):
         """Test quadratic objective function."""
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, -10.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, -10.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, -10.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, -10.0, 10.0)
         
         obj = SHOTpy.QuadraticObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
         obj.add(SHOTpy.LinearTerm(1.0, x))
@@ -317,8 +317,8 @@ class TestObjectiveWithTermTypes:
 
     def test_nonlinear_objective_with_signomial(self):
         """Test nonlinear objective with signomial terms."""
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 10.0)
         
         obj = SHOTpy.NonlinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
         
@@ -333,9 +333,9 @@ class TestObjectiveWithTermTypes:
 
     def test_nonlinear_objective_all_term_types(self):
         """Test nonlinear objective with all term types."""
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 10.0)
-        z = SHOTpy.Variable("z", 2, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 10.0)
+        z = SHOTpy.Variable("z", SHOTpy.VariableType.Real, 0.1, 10.0)
         
         obj = SHOTpy.NonlinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
         
@@ -374,8 +374,8 @@ class TestProblemWithMixedTerms:
         problem.name = "signomial_test"
         
         # Variables with positive bounds (required for signomials with fractional powers)
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -386,7 +386,7 @@ class TestProblemWithMixedTerms:
         problem.setObjective(obj)
         
         # Signomial constraint: x^0.5 + y^0.5 >= 2
-        constraint = SHOTpy.NonlinearConstraint(0, "c1", 2.0, SHOTpy.SHOT_DBL_MAX)
+        constraint = SHOTpy.NonlinearConstraint("c1", 2.0, SHOTpy.SHOT_DBL_MAX)
         constraint.add(SHOTpy.SignomialTerm(1.0, [(x, 0.5)]))
         constraint.add(SHOTpy.SignomialTerm(1.0, [(y, 0.5)]))
         problem.addConstraint(constraint)
@@ -402,9 +402,9 @@ class TestProblemWithMixedTerms:
         problem = SHOTpy.Problem(env)
         problem.name = "mixed_constraints"
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 10.0)
-        z = SHOTpy.Variable("z", 2, SHOTpy.VariableType.Integer, 0, 5)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 10.0)
+        z = SHOTpy.Variable("z", SHOTpy.VariableType.Integer, 0, 5)
         problem.addVariable(x)
         problem.addVariable(y)
         problem.addVariable(z)
@@ -417,19 +417,19 @@ class TestProblemWithMixedTerms:
         problem.setObjective(obj)
         
         # Linear constraint: x + y >= 1
-        c1 = SHOTpy.LinearConstraint(0, "linear", 1.0, SHOTpy.SHOT_DBL_MAX)
+        c1 = SHOTpy.LinearConstraint("linear", 1.0, SHOTpy.SHOT_DBL_MAX)
         c1.add(SHOTpy.LinearTerm(1.0, x))
         c1.add(SHOTpy.LinearTerm(1.0, y))
         problem.addConstraint(c1)
         
         # Quadratic constraint: x^2 + y^2 <= 10
-        c2 = SHOTpy.QuadraticConstraint(1, "quadratic", -SHOTpy.SHOT_DBL_MAX, 10.0)
+        c2 = SHOTpy.QuadraticConstraint("quadratic", -SHOTpy.SHOT_DBL_MAX, 10.0)
         c2.add(SHOTpy.QuadraticTerm(1.0, x, x))
         c2.add(SHOTpy.QuadraticTerm(1.0, y, y))
         problem.addConstraint(c2)
         
         # Nonlinear constraint with signomial: x^0.5 * y^0.5 >= 0.5
-        c3 = SHOTpy.NonlinearConstraint(2, "signomial", 0.5, SHOTpy.SHOT_DBL_MAX)
+        c3 = SHOTpy.NonlinearConstraint("signomial", 0.5, SHOTpy.SHOT_DBL_MAX)
         c3.add(SHOTpy.SignomialTerm(1.0, [(x, 0.5), (y, 0.5)]))
         problem.addConstraint(c3)
         
@@ -449,8 +449,8 @@ class TestProblemWithMixedTerms:
         problem.name = "geometric_prog"
         
         # Variables (must be positive for GP)
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.01, 100.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.01, 100.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.01, 100.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.01, 100.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -460,13 +460,13 @@ class TestProblemWithMixedTerms:
         problem.setObjective(obj)
         
         # Constraint: x^(-1) + y^(-1) <= 1
-        c1 = SHOTpy.NonlinearConstraint(0, "c1", -SHOTpy.SHOT_DBL_MAX, 1.0)
+        c1 = SHOTpy.NonlinearConstraint("c1", -SHOTpy.SHOT_DBL_MAX, 1.0)
         c1.add(SHOTpy.SignomialTerm(1.0, [(x, -1.0)]))
         c1.add(SHOTpy.SignomialTerm(1.0, [(y, -1.0)]))
         problem.addConstraint(c1)
         
         # Constraint: x * y >= 1
-        c2 = SHOTpy.NonlinearConstraint(1, "c2", 1.0, SHOTpy.SHOT_DBL_MAX)
+        c2 = SHOTpy.NonlinearConstraint("c2", 1.0, SHOTpy.SHOT_DBL_MAX)
         c2.add(SHOTpy.SignomialTerm(1.0, [(x, 1.0), (y, 1.0)]))
         problem.addConstraint(c2)
         
@@ -480,8 +480,8 @@ class TestTermsWithExpressions:
 
     def test_expression_plus_linear_terms(self):
         """Test nonlinear expression combined with linear terms in constraint."""
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 10.0)
         
         # Create: log(x) + 2*y <= 5
         linear_terms = SHOTpy.LinearTerms()
@@ -489,7 +489,7 @@ class TestTermsWithExpressions:
         
         expr = SHOTpy.log(x)
         
-        constraint = SHOTpy.NonlinearConstraint(0, "c1", linear_terms, expr, 
+        constraint = SHOTpy.NonlinearConstraint("c1", linear_terms, expr, 
                                                  -SHOTpy.SHOT_DBL_MAX, 5.0)
         
         assert len(constraint.linearTerms) == 1
@@ -497,8 +497,8 @@ class TestTermsWithExpressions:
 
     def test_expression_plus_quadratic_terms(self):
         """Test nonlinear expression combined with quadratic terms."""
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 10.0)
         
         linear_terms = SHOTpy.LinearTerms()
         linear_terms.add(SHOTpy.LinearTerm(1.0, x))
@@ -508,7 +508,7 @@ class TestTermsWithExpressions:
         
         expr = SHOTpy.exp(x)
         
-        constraint = SHOTpy.NonlinearConstraint(0, "c1", linear_terms, quad_terms, expr,
+        constraint = SHOTpy.NonlinearConstraint("c1", linear_terms, quad_terms, expr,
                                                  -SHOTpy.SHOT_DBL_MAX, 100.0)
         
         assert len(constraint.linearTerms) == 1
@@ -517,11 +517,11 @@ class TestTermsWithExpressions:
 
     def test_complex_expression_with_all_terms(self):
         """Test complex constraint with expression and all term types."""
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 10.0)
-        z = SHOTpy.Variable("z", 2, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 10.0)
+        z = SHOTpy.Variable("z", SHOTpy.VariableType.Real, 0.1, 10.0)
         
-        constraint = SHOTpy.NonlinearConstraint(0, "complex", 0.0, 100.0)
+        constraint = SHOTpy.NonlinearConstraint("complex", 0.0, 100.0)
         
         # Linear: x
         constraint.add(SHOTpy.LinearTerm(1.0, x))
@@ -561,14 +561,14 @@ class TestTermTypeIndicatorsInOutput:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         
         obj = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
         obj.add(SHOTpy.LinearTerm(1.0, x))
         problem.setObjective(obj)
         
-        c = SHOTpy.LinearConstraint(0, "linear_test", 1.0, SHOTpy.SHOT_DBL_MAX)
+        c = SHOTpy.LinearConstraint("linear_test", 1.0, SHOTpy.SHOT_DBL_MAX)
         c.add(SHOTpy.LinearTerm(1.0, x))
         problem.addConstraint(c)
         
@@ -589,14 +589,14 @@ class TestTermTypeIndicatorsInOutput:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         
         obj = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
         obj.add(SHOTpy.LinearTerm(1.0, x))
         problem.setObjective(obj)
         
-        c = SHOTpy.QuadraticConstraint(0, "quadratic_test", -SHOTpy.SHOT_DBL_MAX, 10.0)
+        c = SHOTpy.QuadraticConstraint("quadratic_test", -SHOTpy.SHOT_DBL_MAX, 10.0)
         c.add(SHOTpy.QuadraticTerm(1.0, x, x))
         problem.addConstraint(c)
         
@@ -618,14 +618,14 @@ class TestTermTypeIndicatorsInOutput:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
         problem.addVariable(x)
         
         obj = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
         obj.add(SHOTpy.LinearTerm(1.0, x))
         problem.setObjective(obj)
         
-        c = SHOTpy.NonlinearConstraint(0, "signomial_test", 0.5, SHOTpy.SHOT_DBL_MAX)
+        c = SHOTpy.NonlinearConstraint("signomial_test", 0.5, SHOTpy.SHOT_DBL_MAX)
         c.add(SHOTpy.SignomialTerm(1.0, [(x, 0.5)]))
         problem.addConstraint(c)
         
@@ -645,8 +645,8 @@ class TestTermTypeIndicatorsInOutput:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -655,7 +655,7 @@ class TestTermTypeIndicatorsInOutput:
         problem.setObjective(obj)
         
         # Monomial: x * y^2
-        c = SHOTpy.NonlinearConstraint(0, "monomial_test", -SHOTpy.SHOT_DBL_MAX, 10.0)
+        c = SHOTpy.NonlinearConstraint("monomial_test", -SHOTpy.SHOT_DBL_MAX, 10.0)
         c.add(SHOTpy.MonomialTerm(1.0, [x, y, y]))
         problem.addConstraint(c)
         
@@ -675,14 +675,14 @@ class TestTermTypeIndicatorsInOutput:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
         problem.addVariable(x)
         
         obj = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
         obj.add(SHOTpy.LinearTerm(1.0, x))
         problem.setObjective(obj)
         
-        c = SHOTpy.NonlinearConstraint(0, "expression_test", -SHOTpy.SHOT_DBL_MAX, 5.0)
+        c = SHOTpy.NonlinearConstraint("expression_test", -SHOTpy.SHOT_DBL_MAX, 5.0)
         c.add(SHOTpy.log(x))
         problem.addConstraint(c)
         
@@ -702,7 +702,7 @@ class TestTermTypeIndicatorsInOutput:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         
         obj = SHOTpy.QuadraticObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
@@ -710,7 +710,7 @@ class TestTermTypeIndicatorsInOutput:
         problem.setObjective(obj)
         
         # Need at least one constraint
-        c = SHOTpy.LinearConstraint(0, "dummy", 0.0, SHOTpy.SHOT_DBL_MAX)
+        c = SHOTpy.LinearConstraint("dummy", 0.0, SHOTpy.SHOT_DBL_MAX)
         c.add(SHOTpy.LinearTerm(1.0, x))
         problem.addConstraint(c)
         
@@ -731,7 +731,7 @@ class TestTermTypeIndicatorsInOutput:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
         problem.addVariable(x)
         
         obj = SHOTpy.NonlinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
@@ -739,7 +739,7 @@ class TestTermTypeIndicatorsInOutput:
         problem.setObjective(obj)
         
         # Need at least one constraint
-        c = SHOTpy.LinearConstraint(0, "dummy", 0.1, SHOTpy.SHOT_DBL_MAX)
+        c = SHOTpy.LinearConstraint("dummy", 0.1, SHOTpy.SHOT_DBL_MAX)
         c.add(SHOTpy.LinearTerm(1.0, x))
         problem.addConstraint(c)
         
@@ -758,14 +758,14 @@ class TestTermTypeIndicatorsInOutput:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         
         obj = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
         obj.add(SHOTpy.LinearTerm(1.0, x))
         problem.setObjective(obj)
         
-        c = SHOTpy.LinearConstraint(0, "dummy", 0.0, SHOTpy.SHOT_DBL_MAX)
+        c = SHOTpy.LinearConstraint("dummy", 0.0, SHOTpy.SHOT_DBL_MAX)
         c.add(SHOTpy.LinearTerm(1.0, x))
         problem.addConstraint(c)
         
@@ -784,14 +784,14 @@ class TestTermTypeIndicatorsInOutput:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
         problem.addVariable(x)
         
         obj = SHOTpy.NonlinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
         obj.add(SHOTpy.log(x))
         problem.setObjective(obj)
         
-        c = SHOTpy.LinearConstraint(0, "dummy", 0.1, SHOTpy.SHOT_DBL_MAX)
+        c = SHOTpy.LinearConstraint("dummy", 0.1, SHOTpy.SHOT_DBL_MAX)
         c.add(SHOTpy.LinearTerm(1.0, x))
         problem.addConstraint(c)
         
@@ -810,8 +810,8 @@ class TestTermTypeIndicatorsInOutput:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -820,7 +820,7 @@ class TestTermTypeIndicatorsInOutput:
         obj.add(SHOTpy.MonomialTerm(1.0, [x, y, y]))
         problem.setObjective(obj)
         
-        c = SHOTpy.LinearConstraint(0, "dummy", 0.1, SHOTpy.SHOT_DBL_MAX)
+        c = SHOTpy.LinearConstraint("dummy", 0.1, SHOTpy.SHOT_DBL_MAX)
         c.add(SHOTpy.LinearTerm(1.0, x))
         problem.addConstraint(c)
         
@@ -839,8 +839,8 @@ class TestTermTypeIndicatorsInOutput:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -851,7 +851,7 @@ class TestTermTypeIndicatorsInOutput:
         obj.add(SHOTpy.SignomialTerm(1.0, [(x, 0.5)])) # Signomial
         problem.setObjective(obj)
         
-        c = SHOTpy.LinearConstraint(0, "dummy", 0.1, SHOTpy.SHOT_DBL_MAX)
+        c = SHOTpy.LinearConstraint("dummy", 0.1, SHOTpy.SHOT_DBL_MAX)
         c.add(SHOTpy.LinearTerm(1.0, x))
         problem.addConstraint(c)
         
@@ -882,11 +882,11 @@ class TestTermTypeIndicatorsInOutput:
         
         for obj_type, expected_indicator, description, needs_two_vars in test_cases:
             problem = SHOTpy.Problem(env)
-            x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
+            x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
             problem.addVariable(x)
             
             if needs_two_vars:
-                y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 10.0)
+                y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 10.0)
                 problem.addVariable(y)
             
             if obj_type == 'linear':
@@ -907,7 +907,7 @@ class TestTermTypeIndicatorsInOutput:
             
             problem.setObjective(obj)
             
-            c = SHOTpy.LinearConstraint(0, "dummy", 0.1, SHOTpy.SHOT_DBL_MAX)
+            c = SHOTpy.LinearConstraint("dummy", 0.1, SHOTpy.SHOT_DBL_MAX)
             c.add(SHOTpy.LinearTerm(1.0, x))
             problem.addConstraint(c)
             
@@ -927,8 +927,8 @@ class TestTermTypeIndicatorsInOutput:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -937,7 +937,7 @@ class TestTermTypeIndicatorsInOutput:
         problem.setObjective(obj)
         
         # Constraint with linear + quadratic + signomial terms
-        c = SHOTpy.NonlinearConstraint(0, "mixed_test", -SHOTpy.SHOT_DBL_MAX, 100.0)
+        c = SHOTpy.NonlinearConstraint("mixed_test", -SHOTpy.SHOT_DBL_MAX, 100.0)
         c.add(SHOTpy.LinearTerm(1.0, x))           # Linear
         c.add(SHOTpy.QuadraticTerm(1.0, y, y))     # Quadratic
         c.add(SHOTpy.SignomialTerm(1.0, [(x, 0.5)])) # Signomial
@@ -962,8 +962,8 @@ class TestTermTypeIndicatorsInOutput:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -972,27 +972,27 @@ class TestTermTypeIndicatorsInOutput:
         problem.setObjective(obj)
         
         # Linear constraint
-        c1 = SHOTpy.LinearConstraint(0, "c_linear", 0.1, SHOTpy.SHOT_DBL_MAX)
+        c1 = SHOTpy.LinearConstraint("c_linear", 0.1, SHOTpy.SHOT_DBL_MAX)
         c1.add(SHOTpy.LinearTerm(1.0, x))
         problem.addConstraint(c1)
         
         # Quadratic constraint
-        c2 = SHOTpy.QuadraticConstraint(1, "c_quadratic", -SHOTpy.SHOT_DBL_MAX, 50.0)
+        c2 = SHOTpy.QuadraticConstraint("c_quadratic", -SHOTpy.SHOT_DBL_MAX, 50.0)
         c2.add(SHOTpy.QuadraticTerm(1.0, x, x))
         problem.addConstraint(c2)
         
         # Monomial constraint
-        c3 = SHOTpy.NonlinearConstraint(2, "c_monomial", -SHOTpy.SHOT_DBL_MAX, 50.0)
+        c3 = SHOTpy.NonlinearConstraint("c_monomial", -SHOTpy.SHOT_DBL_MAX, 50.0)
         c3.add(SHOTpy.MonomialTerm(1.0, [x, y, y]))  # x * y^2
         problem.addConstraint(c3)
         
         # Signomial constraint
-        c4 = SHOTpy.NonlinearConstraint(3, "c_signomial", 0.1, SHOTpy.SHOT_DBL_MAX)
+        c4 = SHOTpy.NonlinearConstraint("c_signomial", 0.1, SHOTpy.SHOT_DBL_MAX)
         c4.add(SHOTpy.SignomialTerm(1.0, [(x, 0.5)]))
         problem.addConstraint(c4)
         
         # Nonlinear expression constraint
-        c5 = SHOTpy.NonlinearConstraint(4, "c_expression", -SHOTpy.SHOT_DBL_MAX, 3.0)
+        c5 = SHOTpy.NonlinearConstraint("c_expression", -SHOTpy.SHOT_DBL_MAX, 3.0)
         c5.add(SHOTpy.log(x))
         problem.addConstraint(c5)
         
@@ -1031,7 +1031,7 @@ class TestExpressionSimplification:
         
         problem = SHOTpy.Problem(env)
         # x must be > 0 for log(x) to be valid
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
         problem.addVariable(x)
         
         # exp(log(x)) should simplify to x
@@ -1041,7 +1041,7 @@ class TestExpressionSimplification:
         obj.add(expr)
         problem.setObjective(obj)
         
-        c = SHOTpy.LinearConstraint(0, "bound", 0.1, SHOTpy.SHOT_DBL_MAX)
+        c = SHOTpy.LinearConstraint("bound", 0.1, SHOTpy.SHOT_DBL_MAX)
         c.add(SHOTpy.LinearTerm(1.0, x))
         problem.addConstraint(c)
         
@@ -1061,7 +1061,7 @@ class TestExpressionSimplification:
         
         problem = SHOTpy.Problem(env)
         # y can be any real value
-        y = SHOTpy.Variable("y", 0, SHOTpy.VariableType.Real, -5.0, 5.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, -5.0, 5.0)
         problem.addVariable(y)
         
         # log(exp(y)) should simplify to y
@@ -1071,7 +1071,7 @@ class TestExpressionSimplification:
         obj.add(expr)
         problem.setObjective(obj)
         
-        c = SHOTpy.LinearConstraint(0, "bound", -5.0, SHOTpy.SHOT_DBL_MAX)
+        c = SHOTpy.LinearConstraint("bound", -5.0, SHOTpy.SHOT_DBL_MAX)
         c.add(SHOTpy.LinearTerm(1.0, y))
         problem.addConstraint(c)
         
@@ -1090,7 +1090,7 @@ class TestExpressionSimplification:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         
         # -x + x should cancel to 0
@@ -1100,7 +1100,7 @@ class TestExpressionSimplification:
         obj.add(expr)
         problem.setObjective(obj)
         
-        c = SHOTpy.LinearConstraint(0, "bound", 0.0, SHOTpy.SHOT_DBL_MAX)
+        c = SHOTpy.LinearConstraint("bound", 0.0, SHOTpy.SHOT_DBL_MAX)
         c.add(SHOTpy.LinearTerm(1.0, x))
         problem.addConstraint(c)
         
@@ -1123,7 +1123,7 @@ class TestExpressionSimplification:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         
         # x - x should cancel to 0
@@ -1133,7 +1133,7 @@ class TestExpressionSimplification:
         obj.add(expr)
         problem.setObjective(obj)
         
-        c = SHOTpy.LinearConstraint(0, "bound", 0.0, SHOTpy.SHOT_DBL_MAX)
+        c = SHOTpy.LinearConstraint("bound", 0.0, SHOTpy.SHOT_DBL_MAX)
         c.add(SHOTpy.LinearTerm(1.0, x))
         problem.addConstraint(c)
         
@@ -1155,7 +1155,7 @@ class TestExpressionSimplification:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         
         # 2*x + 3*x should combine to 5*x
@@ -1165,7 +1165,7 @@ class TestExpressionSimplification:
         obj.add(expr)
         problem.setObjective(obj)
         
-        c = SHOTpy.LinearConstraint(0, "bound", 0.0, SHOTpy.SHOT_DBL_MAX)
+        c = SHOTpy.LinearConstraint("bound", 0.0, SHOTpy.SHOT_DBL_MAX)
         c.add(SHOTpy.LinearTerm(1.0, x))
         problem.addConstraint(c)
         
@@ -1182,8 +1182,8 @@ class TestExpressionSimplification:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -1194,7 +1194,7 @@ class TestExpressionSimplification:
         obj.add(expr)
         problem.setObjective(obj)
         
-        c = SHOTpy.LinearConstraint(0, "bound", 0.1, SHOTpy.SHOT_DBL_MAX)
+        c = SHOTpy.LinearConstraint("bound", 0.1, SHOTpy.SHOT_DBL_MAX)
         c.add(SHOTpy.LinearTerm(1.0, x))
         problem.addConstraint(c)
         
@@ -1215,7 +1215,7 @@ class TestDeepNonlinearExpressions:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 3.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 3.0)
         problem.addVariable(x)
         
         # 3 levels: log(exp(sin(x))) - this simplifies to sin(x) because log(exp(y)) = y
@@ -1225,7 +1225,7 @@ class TestDeepNonlinearExpressions:
         obj.add(expr)
         problem.setObjective(obj)
         
-        c = SHOTpy.LinearConstraint(0, "bound", 0.1, SHOTpy.SHOT_DBL_MAX)
+        c = SHOTpy.LinearConstraint("bound", 0.1, SHOTpy.SHOT_DBL_MAX)
         c.add(SHOTpy.LinearTerm(1.0, x))
         problem.addConstraint(c)
         
@@ -1241,7 +1241,7 @@ class TestDeepNonlinearExpressions:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 1.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 1.0, 10.0)
         problem.addVariable(x)
         
         # 4 levels: sqrt(abs(cos(log(x))))
@@ -1251,7 +1251,7 @@ class TestDeepNonlinearExpressions:
         obj.add(expr)
         problem.setObjective(obj)
         
-        c = SHOTpy.LinearConstraint(0, "bound", 1.0, SHOTpy.SHOT_DBL_MAX)
+        c = SHOTpy.LinearConstraint("bound", 1.0, SHOTpy.SHOT_DBL_MAX)
         c.add(SHOTpy.LinearTerm(1.0, x))
         problem.addConstraint(c)
         
@@ -1271,9 +1271,9 @@ class TestDeepNonlinearExpressions:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 3.14)
-        z = SHOTpy.Variable("z", 2, SHOTpy.VariableType.Real, 1.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 3.14)
+        z = SHOTpy.Variable("z", SHOTpy.VariableType.Real, 1.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         problem.addVariable(z)
@@ -1285,7 +1285,7 @@ class TestDeepNonlinearExpressions:
         obj.add(expr)
         problem.setObjective(obj)
         
-        c = SHOTpy.LinearConstraint(0, "bound", 0.1, SHOTpy.SHOT_DBL_MAX)
+        c = SHOTpy.LinearConstraint("bound", 0.1, SHOTpy.SHOT_DBL_MAX)
         c.add(SHOTpy.LinearTerm(1.0, x))
         problem.addConstraint(c)
         
@@ -1302,10 +1302,10 @@ class TestDeepNonlinearExpressions:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        a = SHOTpy.Variable("a", 0, SHOTpy.VariableType.Real, 0.1, 2.0)
-        b = SHOTpy.Variable("b", 1, SHOTpy.VariableType.Real, 0.1, 3.14)
-        c = SHOTpy.Variable("c", 2, SHOTpy.VariableType.Real, 0.1, 3.14)
-        d = SHOTpy.Variable("d", 3, SHOTpy.VariableType.Real, 1.0, 10.0)
+        a = SHOTpy.Variable("a", SHOTpy.VariableType.Real, 0.1, 2.0)
+        b = SHOTpy.Variable("b", SHOTpy.VariableType.Real, 0.1, 3.14)
+        c = SHOTpy.Variable("c", SHOTpy.VariableType.Real, 0.1, 3.14)
+        d = SHOTpy.Variable("d", SHOTpy.VariableType.Real, 1.0, 10.0)
         problem.addVariable(a)
         problem.addVariable(b)
         problem.addVariable(c)
@@ -1318,7 +1318,7 @@ class TestDeepNonlinearExpressions:
         obj.add(expr)
         problem.setObjective(obj)
         
-        constraint = SHOTpy.LinearConstraint(0, "bound", 0.1, SHOTpy.SHOT_DBL_MAX)
+        constraint = SHOTpy.LinearConstraint("bound", 0.1, SHOTpy.SHOT_DBL_MAX)
         constraint.add(SHOTpy.LinearTerm(1.0, a))
         problem.addConstraint(constraint)
         
@@ -1334,9 +1334,9 @@ class TestDeepNonlinearExpressions:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 2.0)
-        z = SHOTpy.Variable("z", 2, SHOTpy.VariableType.Real, 0.1, 3.14)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 2.0)
+        z = SHOTpy.Variable("z", SHOTpy.VariableType.Real, 0.1, 3.14)
         problem.addVariable(x)
         problem.addVariable(y)
         problem.addVariable(z)
@@ -1348,7 +1348,7 @@ class TestDeepNonlinearExpressions:
         obj.add(expr)
         problem.setObjective(obj)
         
-        c = SHOTpy.LinearConstraint(0, "bound", 0.1, SHOTpy.SHOT_DBL_MAX)
+        c = SHOTpy.LinearConstraint("bound", 0.1, SHOTpy.SHOT_DBL_MAX)
         c.add(SHOTpy.LinearTerm(1.0, x))
         problem.addConstraint(c)
         
@@ -1368,8 +1368,8 @@ class TestDeepNonlinearExpressions:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -1380,7 +1380,7 @@ class TestDeepNonlinearExpressions:
         obj.add(expr)
         problem.setObjective(obj)
         
-        c = SHOTpy.LinearConstraint(0, "bound", 0.1, SHOTpy.SHOT_DBL_MAX)
+        c = SHOTpy.LinearConstraint("bound", 0.1, SHOTpy.SHOT_DBL_MAX)
         c.add(SHOTpy.LinearTerm(1.0, x))
         problem.addConstraint(c)
         
@@ -1395,9 +1395,9 @@ class TestDeepNonlinearExpressions:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 10.0)
-        z = SHOTpy.Variable("z", 2, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 10.0)
+        z = SHOTpy.Variable("z", SHOTpy.VariableType.Real, 0.1, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         problem.addVariable(z)
@@ -1408,7 +1408,7 @@ class TestDeepNonlinearExpressions:
         
         # Constraint: log(x * exp(y) + sin(z)) <= 5
         expr = SHOTpy.log(x * SHOTpy.exp(y) + SHOTpy.sin(z))
-        c = SHOTpy.NonlinearConstraint(0, "deep_constraint", -SHOTpy.SHOT_DBL_MAX, 5.0)
+        c = SHOTpy.NonlinearConstraint("deep_constraint", -SHOTpy.SHOT_DBL_MAX, 5.0)
         c.add(expr)
         problem.addConstraint(c)
         
@@ -1427,9 +1427,9 @@ class TestDeepNonlinearExpressions:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 10.0)
-        z = SHOTpy.Variable("z", 2, SHOTpy.VariableType.Real, 0.1, 3.14)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 10.0)
+        z = SHOTpy.Variable("z", SHOTpy.VariableType.Real, 0.1, 3.14)
         problem.addVariable(x)
         problem.addVariable(y)
         problem.addVariable(z)
@@ -1441,18 +1441,18 @@ class TestDeepNonlinearExpressions:
         problem.setObjective(obj)
         
         # Constraint 1: exp(log(x) + log(y)) <= 50
-        c1 = SHOTpy.NonlinearConstraint(0, "c1_deep", -SHOTpy.SHOT_DBL_MAX, 50.0)
+        c1 = SHOTpy.NonlinearConstraint("c1_deep", -SHOTpy.SHOT_DBL_MAX, 50.0)
         c1.add(SHOTpy.exp(SHOTpy.log(x) + SHOTpy.log(y)))
         problem.addConstraint(c1)
         
         # Constraint 2: sin(cos(z)) + x >= 0.5
-        c2 = SHOTpy.NonlinearConstraint(1, "c2_deep", 0.5, SHOTpy.SHOT_DBL_MAX)
+        c2 = SHOTpy.NonlinearConstraint("c2_deep", 0.5, SHOTpy.SHOT_DBL_MAX)
         c2.add(SHOTpy.sin(SHOTpy.cos(z)))
         c2.add(SHOTpy.LinearTerm(1.0, x))
         problem.addConstraint(c2)
         
         # Constraint 3: exp(x) + log(y) + sin(z) <= 15
-        c3 = SHOTpy.NonlinearConstraint(2, "c3_deep", -SHOTpy.SHOT_DBL_MAX, 15.0)
+        c3 = SHOTpy.NonlinearConstraint("c3_deep", -SHOTpy.SHOT_DBL_MAX, 15.0)
         c3.add(SHOTpy.exp(x) + SHOTpy.log(y) + SHOTpy.sin(z))
         problem.addConstraint(c3)
         
@@ -1473,11 +1473,11 @@ class TestDeepNonlinearExpressions:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        v1 = SHOTpy.Variable("v1", 0, SHOTpy.VariableType.Real, 0.1, 5.0)
-        v2 = SHOTpy.Variable("v2", 1, SHOTpy.VariableType.Real, 0.1, 5.0)
-        v3 = SHOTpy.Variable("v3", 2, SHOTpy.VariableType.Real, 0.1, 3.14)
-        v4 = SHOTpy.Variable("v4", 3, SHOTpy.VariableType.Real, 1.0, 10.0)
-        v5 = SHOTpy.Variable("v5", 4, SHOTpy.VariableType.Real, 0.1, 5.0)
+        v1 = SHOTpy.Variable("v1", SHOTpy.VariableType.Real, 0.1, 5.0)
+        v2 = SHOTpy.Variable("v2", SHOTpy.VariableType.Real, 0.1, 5.0)
+        v3 = SHOTpy.Variable("v3", SHOTpy.VariableType.Real, 0.1, 3.14)
+        v4 = SHOTpy.Variable("v4", SHOTpy.VariableType.Real, 1.0, 10.0)
+        v5 = SHOTpy.Variable("v5", SHOTpy.VariableType.Real, 0.1, 5.0)
         problem.addVariable(v1)
         problem.addVariable(v2)
         problem.addVariable(v3)
@@ -1491,7 +1491,7 @@ class TestDeepNonlinearExpressions:
         obj.add(expr)
         problem.setObjective(obj)
         
-        c = SHOTpy.LinearConstraint(0, "bound", 0.1, SHOTpy.SHOT_DBL_MAX)
+        c = SHOTpy.LinearConstraint("bound", 0.1, SHOTpy.SHOT_DBL_MAX)
         c.add(SHOTpy.LinearTerm(1.0, v1))
         problem.addConstraint(c)
         
@@ -1507,7 +1507,7 @@ class TestDeepNonlinearExpressions:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 1.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 1.0)
         problem.addVariable(x)
         
         # Chain: sin(cos(tan(x))) - requires tan if available, else use sin(cos(sin(x)))
@@ -1522,7 +1522,7 @@ class TestDeepNonlinearExpressions:
         obj.add(expr)
         problem.setObjective(obj)
         
-        c = SHOTpy.LinearConstraint(0, "bound", 0.1, SHOTpy.SHOT_DBL_MAX)
+        c = SHOTpy.LinearConstraint("bound", 0.1, SHOTpy.SHOT_DBL_MAX)
         c.add(SHOTpy.LinearTerm(1.0, x))
         problem.addConstraint(c)
         
@@ -1542,9 +1542,9 @@ class TestDeepNonlinearExpressions:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 1.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 1.0, 10.0)
-        z = SHOTpy.Variable("z", 2, SHOTpy.VariableType.Real, 1.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 1.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 1.0, 10.0)
+        z = SHOTpy.Variable("z", SHOTpy.VariableType.Real, 1.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         problem.addVariable(z)
@@ -1556,7 +1556,7 @@ class TestDeepNonlinearExpressions:
         obj.add(expr)
         problem.setObjective(obj)
         
-        c = SHOTpy.LinearConstraint(0, "bound", 1.0, SHOTpy.SHOT_DBL_MAX)
+        c = SHOTpy.LinearConstraint("bound", 1.0, SHOTpy.SHOT_DBL_MAX)
         c.add(SHOTpy.LinearTerm(1.0, x))
         problem.addConstraint(c)
         
@@ -1576,8 +1576,8 @@ class TestSumsOfNonlinearExpressions:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 1.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 5.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 1.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 5.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -1587,7 +1587,7 @@ class TestSumsOfNonlinearExpressions:
         obj.add(expr)
         problem.setObjective(obj)
         
-        c = SHOTpy.LinearConstraint(0, "bound", 1.0, SHOTpy.SHOT_DBL_MAX)
+        c = SHOTpy.LinearConstraint("bound", 1.0, SHOTpy.SHOT_DBL_MAX)
         c.add(SHOTpy.LinearTerm(1.0, x))
         problem.addConstraint(c)
         
@@ -1607,9 +1607,9 @@ class TestSumsOfNonlinearExpressions:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 3.14)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 3.14)
-        z = SHOTpy.Variable("z", 2, SHOTpy.VariableType.Real, 1.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 3.14)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 3.14)
+        z = SHOTpy.Variable("z", SHOTpy.VariableType.Real, 1.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         problem.addVariable(z)
@@ -1620,7 +1620,7 @@ class TestSumsOfNonlinearExpressions:
         obj.add(expr)
         problem.setObjective(obj)
         
-        c = SHOTpy.LinearConstraint(0, "bound", 0.1, SHOTpy.SHOT_DBL_MAX)
+        c = SHOTpy.LinearConstraint("bound", 0.1, SHOTpy.SHOT_DBL_MAX)
         c.add(SHOTpy.LinearTerm(1.0, x))
         problem.addConstraint(c)
         
@@ -1636,10 +1636,10 @@ class TestSumsOfNonlinearExpressions:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        a = SHOTpy.Variable("a", 0, SHOTpy.VariableType.Real, 0.1, 2.0)
-        b = SHOTpy.Variable("b", 1, SHOTpy.VariableType.Real, 0.1, 10.0)
-        c = SHOTpy.Variable("c", 2, SHOTpy.VariableType.Real, 0.1, 3.14)
-        d = SHOTpy.Variable("d", 3, SHOTpy.VariableType.Real, 1.0, 10.0)
+        a = SHOTpy.Variable("a", SHOTpy.VariableType.Real, 0.1, 2.0)
+        b = SHOTpy.Variable("b", SHOTpy.VariableType.Real, 0.1, 10.0)
+        c = SHOTpy.Variable("c", SHOTpy.VariableType.Real, 0.1, 3.14)
+        d = SHOTpy.Variable("d", SHOTpy.VariableType.Real, 1.0, 10.0)
         problem.addVariable(a)
         problem.addVariable(b)
         problem.addVariable(c)
@@ -1651,7 +1651,7 @@ class TestSumsOfNonlinearExpressions:
         obj.add(expr)
         problem.setObjective(obj)
         
-        constraint = SHOTpy.LinearConstraint(0, "bound", 0.1, SHOTpy.SHOT_DBL_MAX)
+        constraint = SHOTpy.LinearConstraint("bound", 0.1, SHOTpy.SHOT_DBL_MAX)
         constraint.add(SHOTpy.LinearTerm(1.0, a))
         problem.addConstraint(constraint)
         
@@ -1666,9 +1666,9 @@ class TestSumsOfNonlinearExpressions:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 5.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 3.14)
-        z = SHOTpy.Variable("z", 2, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 5.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 3.14)
+        z = SHOTpy.Variable("z", SHOTpy.VariableType.Real, 0.1, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         problem.addVariable(z)
@@ -1679,7 +1679,7 @@ class TestSumsOfNonlinearExpressions:
         obj.add(expr)
         problem.setObjective(obj)
         
-        c = SHOTpy.LinearConstraint(0, "bound", 0.1, SHOTpy.SHOT_DBL_MAX)
+        c = SHOTpy.LinearConstraint("bound", 0.1, SHOTpy.SHOT_DBL_MAX)
         c.add(SHOTpy.LinearTerm(1.0, x))
         problem.addConstraint(c)
         
@@ -1698,9 +1698,9 @@ class TestSumsOfNonlinearExpressions:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 1.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 3.14)
-        z = SHOTpy.Variable("z", 2, SHOTpy.VariableType.Real, 0.1, 5.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 1.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 3.14)
+        z = SHOTpy.Variable("z", SHOTpy.VariableType.Real, 0.1, 5.0)
         problem.addVariable(x)
         problem.addVariable(y)
         problem.addVariable(z)
@@ -1711,7 +1711,7 @@ class TestSumsOfNonlinearExpressions:
         obj.add(SHOTpy.exp(z))      # Third expression
         problem.setObjective(obj)
         
-        c = SHOTpy.LinearConstraint(0, "bound", 1.0, SHOTpy.SHOT_DBL_MAX)
+        c = SHOTpy.LinearConstraint("bound", 1.0, SHOTpy.SHOT_DBL_MAX)
         c.add(SHOTpy.LinearTerm(1.0, x))
         problem.addConstraint(c)
         
@@ -1728,9 +1728,9 @@ class TestSumsOfNonlinearExpressions:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 1.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 3.14)
-        z = SHOTpy.Variable("z", 2, SHOTpy.VariableType.Real, 0.1, 5.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 1.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 3.14)
+        z = SHOTpy.Variable("z", SHOTpy.VariableType.Real, 0.1, 5.0)
         problem.addVariable(x)
         problem.addVariable(y)
         problem.addVariable(z)
@@ -1739,7 +1739,7 @@ class TestSumsOfNonlinearExpressions:
         obj.add(SHOTpy.LinearTerm(1.0, x))
         problem.setObjective(obj)
         
-        c = SHOTpy.NonlinearConstraint(0, "sum_constraint", -SHOTpy.SHOT_DBL_MAX, 10.0)
+        c = SHOTpy.NonlinearConstraint("sum_constraint", -SHOTpy.SHOT_DBL_MAX, 10.0)
         c.add(SHOTpy.log(x))        # First expression
         c.add(SHOTpy.sin(y))        # Second expression
         c.add(SHOTpy.exp(z))        # Third expression
@@ -1760,11 +1760,11 @@ class TestSumsOfNonlinearExpressions:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        v1 = SHOTpy.Variable("v1", 0, SHOTpy.VariableType.Real, 1.0, 10.0)
-        v2 = SHOTpy.Variable("v2", 1, SHOTpy.VariableType.Real, 0.1, 3.14)
-        v3 = SHOTpy.Variable("v3", 2, SHOTpy.VariableType.Real, 0.1, 3.14)
-        v4 = SHOTpy.Variable("v4", 3, SHOTpy.VariableType.Real, 0.1, 10.0)
-        v5 = SHOTpy.Variable("v5", 4, SHOTpy.VariableType.Real, 0.1, 5.0)
+        v1 = SHOTpy.Variable("v1", SHOTpy.VariableType.Real, 1.0, 10.0)
+        v2 = SHOTpy.Variable("v2", SHOTpy.VariableType.Real, 0.1, 3.14)
+        v3 = SHOTpy.Variable("v3", SHOTpy.VariableType.Real, 0.1, 3.14)
+        v4 = SHOTpy.Variable("v4", SHOTpy.VariableType.Real, 0.1, 10.0)
+        v5 = SHOTpy.Variable("v5", SHOTpy.VariableType.Real, 0.1, 5.0)
         problem.addVariable(v1)
         problem.addVariable(v2)
         problem.addVariable(v3)
@@ -1778,7 +1778,7 @@ class TestSumsOfNonlinearExpressions:
         obj.add(expr)
         problem.setObjective(obj)
         
-        c = SHOTpy.LinearConstraint(0, "bound", 1.0, SHOTpy.SHOT_DBL_MAX)
+        c = SHOTpy.LinearConstraint("bound", 1.0, SHOTpy.SHOT_DBL_MAX)
         c.add(SHOTpy.LinearTerm(1.0, v1))
         problem.addConstraint(c)
         
@@ -1793,9 +1793,9 @@ class TestSumsOfNonlinearExpressions:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 1.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 10.0)
-        z = SHOTpy.Variable("z", 2, SHOTpy.VariableType.Real, 0.1, 3.14)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 1.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 10.0)
+        z = SHOTpy.Variable("z", SHOTpy.VariableType.Real, 0.1, 3.14)
         problem.addVariable(x)
         problem.addVariable(y)
         problem.addVariable(z)
@@ -1807,7 +1807,7 @@ class TestSumsOfNonlinearExpressions:
         obj.add(SHOTpy.sin(z))                      # Another nonlinear expression
         problem.setObjective(obj)
         
-        c = SHOTpy.LinearConstraint(0, "bound", 1.0, SHOTpy.SHOT_DBL_MAX)
+        c = SHOTpy.LinearConstraint("bound", 1.0, SHOTpy.SHOT_DBL_MAX)
         c.add(SHOTpy.LinearTerm(1.0, x))
         problem.addConstraint(c)
         
@@ -1838,7 +1838,7 @@ class TestExpressionVsExplicitTerms:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         
         obj = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
@@ -1846,7 +1846,7 @@ class TestExpressionVsExplicitTerms:
         problem.setObjective(obj)
         
         # Explicit LinearTerm
-        c = SHOTpy.LinearConstraint(0, "explicit_linear", -SHOTpy.SHOT_DBL_MAX, 10.0)
+        c = SHOTpy.LinearConstraint("explicit_linear", -SHOTpy.SHOT_DBL_MAX, 10.0)
         c.add(SHOTpy.LinearTerm(2.0, x))
         problem.addConstraint(c)
         
@@ -1865,7 +1865,7 @@ class TestExpressionVsExplicitTerms:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         
         obj = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
@@ -1873,7 +1873,7 @@ class TestExpressionVsExplicitTerms:
         problem.setObjective(obj)
         
         # Linear expression via operators (not explicit term)
-        c = SHOTpy.NonlinearConstraint(0, "expr_linear", -SHOTpy.SHOT_DBL_MAX, 10.0)
+        c = SHOTpy.NonlinearConstraint("expr_linear", -SHOTpy.SHOT_DBL_MAX, 10.0)
         c.add(2.0 * x)  # Expression, gets extracted to LinearTerm in finalize()
         problem.addConstraint(c)
         
@@ -1893,7 +1893,7 @@ class TestExpressionVsExplicitTerms:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         
         obj = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
@@ -1901,7 +1901,7 @@ class TestExpressionVsExplicitTerms:
         problem.setObjective(obj)
         
         # Explicit QuadraticTerm
-        c = SHOTpy.QuadraticConstraint(0, "explicit_quadratic", -SHOTpy.SHOT_DBL_MAX, 10.0)
+        c = SHOTpy.QuadraticConstraint("explicit_quadratic", -SHOTpy.SHOT_DBL_MAX, 10.0)
         c.add(SHOTpy.QuadraticTerm(1.0, x, x))
         problem.addConstraint(c)
         
@@ -1920,7 +1920,7 @@ class TestExpressionVsExplicitTerms:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         
         obj = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
@@ -1928,7 +1928,7 @@ class TestExpressionVsExplicitTerms:
         problem.setObjective(obj)
         
         # Quadratic expression via operators (not explicit term)
-        c = SHOTpy.NonlinearConstraint(0, "expr_quadratic", -SHOTpy.SHOT_DBL_MAX, 10.0)
+        c = SHOTpy.NonlinearConstraint("expr_quadratic", -SHOTpy.SHOT_DBL_MAX, 10.0)
         c.add(x ** 2)  # Expression, gets extracted to QuadraticTerm in finalize()
         problem.addConstraint(c)
         
@@ -1948,7 +1948,7 @@ class TestExpressionVsExplicitTerms:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
         problem.addVariable(x)
         
         obj = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
@@ -1956,7 +1956,7 @@ class TestExpressionVsExplicitTerms:
         problem.setObjective(obj)
         
         # Explicit SignomialTerm
-        c = SHOTpy.NonlinearConstraint(0, "explicit_signomial", 0.1, SHOTpy.SHOT_DBL_MAX)
+        c = SHOTpy.NonlinearConstraint("explicit_signomial", 0.1, SHOTpy.SHOT_DBL_MAX)
         c.add(SHOTpy.SignomialTerm(1.0, [(x, 0.5)]))
         problem.addConstraint(c)
         
@@ -1975,8 +1975,8 @@ class TestExpressionVsExplicitTerms:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -1985,7 +1985,7 @@ class TestExpressionVsExplicitTerms:
         problem.setObjective(obj)
         
         # Explicit MonomialTerm
-        c = SHOTpy.NonlinearConstraint(0, "explicit_monomial", -SHOTpy.SHOT_DBL_MAX, 10.0)
+        c = SHOTpy.NonlinearConstraint("explicit_monomial", -SHOTpy.SHOT_DBL_MAX, 10.0)
         c.add(SHOTpy.MonomialTerm(1.0, [x, y, y]))  # x * y^2
         problem.addConstraint(c)
         
@@ -2004,8 +2004,8 @@ class TestExpressionVsExplicitTerms:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -2014,7 +2014,7 @@ class TestExpressionVsExplicitTerms:
         problem.setObjective(obj)
         
         # Bilinear expression via operators
-        c = SHOTpy.NonlinearConstraint(0, "expr_bilinear", -SHOTpy.SHOT_DBL_MAX, 10.0)
+        c = SHOTpy.NonlinearConstraint("expr_bilinear", -SHOTpy.SHOT_DBL_MAX, 10.0)
         c.add(x * y)  # Expression, gets extracted to QuadraticTerm in finalize()
         problem.addConstraint(c)
         
@@ -2034,8 +2034,8 @@ class TestExpressionVsExplicitTerms:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -2045,7 +2045,7 @@ class TestExpressionVsExplicitTerms:
         obj.add(SHOTpy.log(x))                     # Expression -> E
         problem.setObjective(obj)
         
-        c = SHOTpy.LinearConstraint(0, "bound", 0.1, SHOTpy.SHOT_DBL_MAX)
+        c = SHOTpy.LinearConstraint("bound", 0.1, SHOTpy.SHOT_DBL_MAX)
         c.add(SHOTpy.LinearTerm(1.0, x))
         problem.addConstraint(c)
         
@@ -2066,8 +2066,8 @@ class TestExpressionVsExplicitTerms:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -2076,7 +2076,7 @@ class TestExpressionVsExplicitTerms:
         problem.setObjective(obj)
         
         # Constraint with explicit terms of each type
-        c = SHOTpy.NonlinearConstraint(0, "multi_term", -SHOTpy.SHOT_DBL_MAX, 100.0)
+        c = SHOTpy.NonlinearConstraint("multi_term", -SHOTpy.SHOT_DBL_MAX, 100.0)
         c.add(SHOTpy.LinearTerm(1.0, x))
         c.add(SHOTpy.QuadraticTerm(1.0, y, y))
         c.add(SHOTpy.SignomialTerm(1.0, [(x, 0.5)]))
@@ -2096,7 +2096,7 @@ class TestExpressionVsExplicitTerms:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
         problem.addVariable(x)
         
         obj = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
@@ -2104,7 +2104,7 @@ class TestExpressionVsExplicitTerms:
         problem.setObjective(obj)
         
         # Constraint with expression only
-        c = SHOTpy.NonlinearConstraint(0, "expr_only", -SHOTpy.SHOT_DBL_MAX, 10.0)
+        c = SHOTpy.NonlinearConstraint("expr_only", -SHOTpy.SHOT_DBL_MAX, 10.0)
         c.add(2.0 * x + x**2)  # Expressions only
         problem.addConstraint(c)
         

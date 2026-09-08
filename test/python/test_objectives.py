@@ -12,8 +12,8 @@ class TestLinearObjective:
         """Test creating a linear minimization objective."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -32,7 +32,7 @@ class TestLinearObjective:
         """Test creating a linear maximization objective."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         
         obj = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Maximize)
@@ -51,8 +51,8 @@ class TestQuadraticObjective:
         """Test creating a quadratic objective."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -74,7 +74,7 @@ class TestQuadraticObjective:
         """
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         
         # x^2 + 4 (pure quadratic with constant)
@@ -95,7 +95,7 @@ class TestNonlinearObjective:
         """Test creating a nonlinear objective."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 1.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 1.0, 10.0)
         problem.addVariable(x)
         
         obj = SHOTpy.NonlinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
@@ -110,8 +110,8 @@ class TestNonlinearObjective:
         """Test nonlinear objective built with expression operators."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -129,8 +129,8 @@ class TestNonlinearObjective:
         """Test objective with logarithm term."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
-        b = SHOTpy.Variable("b", 1, SHOTpy.VariableType.Binary, 0.0, 1.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+        b = SHOTpy.Variable("b", SHOTpy.VariableType.Binary, 0.0, 1.0)
         problem.addVariable(x)
         problem.addVariable(b)
         
@@ -150,10 +150,10 @@ class TestNonlinearObjective:
         import SHOTpy
         
         # Create variables
-        x1 = SHOTpy.Variable("x1", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
-        x2 = SHOTpy.Variable("x2", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
-        b1 = SHOTpy.Variable("b1", 2, SHOTpy.VariableType.Binary, 0.0, 1.0)
-        b2 = SHOTpy.Variable("b2", 3, SHOTpy.VariableType.Binary, 0.0, 1.0)
+        x1 = SHOTpy.Variable("x1", SHOTpy.VariableType.Real, 0.0, 10.0)
+        x2 = SHOTpy.Variable("x2", SHOTpy.VariableType.Real, 0.0, 10.0)
+        b1 = SHOTpy.Variable("b1", SHOTpy.VariableType.Binary, 0.0, 1.0)
+        b2 = SHOTpy.Variable("b2", SHOTpy.VariableType.Binary, 0.0, 1.0)
         
         problem.addVariable(x1)
         problem.addVariable(x2)

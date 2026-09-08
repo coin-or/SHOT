@@ -108,7 +108,7 @@ bool ModelTestSignomialElementBoundTightening()
     for(auto& C : cases)
     {
         auto variable = std::make_shared<SHOT::Variable>(
-            "x", 0, SHOT::E_VariableType::Real, C.variableLowerBound, C.variableUpperBound);
+            "x", SHOT::E_VariableType::Real, C.variableLowerBound, C.variableUpperBound);
         SHOT::SignomialElement element(variable, C.power);
 
         element.tightenBounds(SHOT::Interval(C.valueLowerBound, C.valueUpperBound));
@@ -265,8 +265,13 @@ bool ModelTestVariables()
 {
     bool passed = true;
 
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+    SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
+
     std::cout << "Creating variable:\n";
-    SHOT::VariablePtr var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 100.0);
+    SHOT::VariablePtr var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 100.0);
+    problem->add(var_x);
     std::cout << "Variable " << var_x << " created.\n";
 
     SHOT::VectorDouble point;
@@ -287,8 +292,14 @@ bool ModelTestTerms()
 {
     bool passed = true;
 
-    SHOT::VariablePtr var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 100.0);
-    SHOT::VariablePtr var_y = std::make_shared<SHOT::Variable>("y", 1, SHOT::E_VariableType::Integer, 0.0, 1.0);
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+    SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
+
+    SHOT::VariablePtr var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 100.0);
+    SHOT::VariablePtr var_y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Integer, 0.0, 1.0);
+    problem->add(var_x);
+    problem->add(var_y);
 
     SHOT::VectorDouble point;
     point.push_back(3.0);
@@ -340,10 +351,16 @@ bool ModelTestNonlinearExpressions()
 {
     bool passed = true;
 
-    auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 100.0);
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+    SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
+
+    auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 100.0);
+    problem->add(var_x);
     SHOT::ExpressionVariablePtr expressionVariable_x = std::make_shared<SHOT::ExpressionVariable>(var_x);
 
-    auto var_y = std::make_shared<SHOT::Variable>("y", 1, SHOT::E_VariableType::Integer, 0.0, 1.0);
+    auto var_y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Integer, 0.0, 1.0);
+    problem->add(var_y);
     SHOT::ExpressionVariablePtr expressionVariable_y = std::make_shared<SHOT::ExpressionVariable>(var_y);
 
     SHOT::VectorDouble point;
@@ -395,10 +412,16 @@ bool ModelTestObjective()
 {
     bool passed = true;
 
-    auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 100.0);
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+    SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
+
+    auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 100.0);
+    problem->add(var_x);
     SHOT::ExpressionVariablePtr expressionVariable_x = std::make_shared<SHOT::ExpressionVariable>(var_x);
 
-    auto var_y = std::make_shared<SHOT::Variable>("y", 1, SHOT::E_VariableType::Integer, 0.0, 1.0);
+    auto var_y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Integer, 0.0, 1.0);
+    problem->add(var_y);
     SHOT::ExpressionVariablePtr expressionVariable_y = std::make_shared<SHOT::ExpressionVariable>(var_y);
 
     std::cout << "Creating linear terms\n";
@@ -451,10 +474,16 @@ bool ModelTestConstraints()
 {
     bool passed = true;
 
-    auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 100.0);
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+    SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
+
+    auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 100.0);
+    problem->add(var_x);
     SHOT::ExpressionVariablePtr expressionVariable_x = std::make_shared<SHOT::ExpressionVariable>(var_x);
 
-    auto var_y = std::make_shared<SHOT::Variable>("y", 1, SHOT::E_VariableType::Integer, 0.0, 1.0);
+    auto var_y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Integer, 0.0, 1.0);
+    problem->add(var_y);
     SHOT::ExpressionVariablePtr expressionVariable_y = std::make_shared<SHOT::ExpressionVariable>(var_y);
 
     std::cout << "Creating linear terms\n";
@@ -474,8 +503,8 @@ bool ModelTestConstraints()
     std::cout << "Quadratic terms " << quadraticTerms << " created\n";
 
     std::cout << "Creating quadratic constraint:\n";
-    SHOT::QuadraticConstraintPtr quadraticConstraint
-        = std::make_shared<SHOT::QuadraticConstraint>(0, "quadconstr", linearTerms, quadraticTerms, -10.0, 20.0);
+    SHOT::QuadraticConstraintPtr quadraticConstraint = std::make_shared<SHOT::QuadraticConstraint>(
+        "quadconstr", linearTerms, quadraticTerms, -10.0, 20.0);
     std::cout << "Quadratic constraint created\n";
 
     SHOT::VectorDouble point;
@@ -503,7 +532,7 @@ bool ModelTestConstraints()
 
     std::cout << "Creating nonlinear constraint:\n";
     SHOT::NonlinearConstraintPtr nonlinearConstraint = std::make_shared<SHOT::NonlinearConstraint>(
-        0, "nlconstr", linearTerms, quadraticTerms, exprProduct, -10.0, 20.0);
+        "nlconstr", linearTerms, quadraticTerms, exprProduct, -10.0, 20.0);
     std::cout << "Nonlinear constraint " << nonlinearConstraint << " created\n";
 
     constraintValue = nonlinearConstraint->calculateNumericValue(point);
@@ -554,13 +583,13 @@ bool ModelTestCreateProblem()
 
     // Creating variables
 
-    auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 100.0);
+    auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 100.0);
     SHOT::ExpressionVariablePtr expressionVariable_x = std::make_shared<SHOT::ExpressionVariable>(var_x);
 
-    auto var_y = std::make_shared<SHOT::Variable>("y", 1, SHOT::E_VariableType::Integer, 0.0, 1.0);
+    auto var_y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Integer, 0.0, 1.0);
     SHOT::ExpressionVariablePtr expressionVariable_y = std::make_shared<SHOT::ExpressionVariable>(var_y);
 
-    auto var_z = std::make_shared<SHOT::Variable>("z", 2, SHOT::E_VariableType::Integer, 0.0, 2.0);
+    auto var_z = std::make_shared<SHOT::Variable>("z", SHOT::E_VariableType::Integer, 0.0, 2.0);
     SHOT::ExpressionVariablePtr expressionVariable_z = std::make_shared<SHOT::ExpressionVariable>(var_z);
 
     SHOT::Variables variables = { var_x, var_y, var_z };
@@ -598,8 +627,8 @@ bool ModelTestCreateProblem()
     SHOT::LinearTerms linearTerms;
     linearTerms.add(linearTerm1);
     linearTerms.add(linearTerm2);
-    SHOT::LinearConstraintPtr linearConstraint
-        = std::make_shared<SHOT::LinearConstraint>(0, "linconstr", linearTerms, -2.0, 4.0);
+    SHOT::LinearConstraintPtr linearConstraint = std::make_shared<SHOT::LinearConstraint>(
+        "linconstr", linearTerms, -2.0, 4.0);
     problem->add(linearConstraint);
 
     std::cout << '\n';
@@ -610,8 +639,8 @@ bool ModelTestCreateProblem()
     SHOT::QuadraticTerms quadraticTerms;
     quadraticTerms.add(quadraticTerm1);
     quadraticTerms.add(quadraticTerm2);
-    SHOT::QuadraticConstraintPtr quadraticConstraint
-        = std::make_shared<SHOT::QuadraticConstraint>(1, "quadconstr", quadraticTerms, -10.0, 20.0);
+    SHOT::QuadraticConstraintPtr quadraticConstraint = std::make_shared<SHOT::QuadraticConstraint>(
+        "quadconstr", quadraticTerms, -10.0, 20.0);
     problem->add(quadraticConstraint);
 
     std::cout << '\n';
@@ -636,8 +665,8 @@ bool ModelTestCreateProblem()
 
     SHOT::NonlinearExpressionPtr exprSum = std::make_shared<SHOT::ExpressionSum>(expressions);
 
-    SHOT::NonlinearConstraintPtr nonlinearConstraint
-        = std::make_shared<SHOT::NonlinearConstraint>(2, "nlconstr", nlLinearTerms, exprSum, -10.0, 20.0);
+    SHOT::NonlinearConstraintPtr nonlinearConstraint = std::make_shared<SHOT::NonlinearConstraint>(
+        "nlconstr", nlLinearTerms, exprSum, -10.0, 20.0);
     problem->add(nonlinearConstraint);
 
     std::cout << '\n';
@@ -648,8 +677,8 @@ bool ModelTestCreateProblem()
         = std::make_shared<SHOT::ExpressionProduct>(exprConstant2, expressionVariable_x);
     SHOT::NonlinearExpressionPtr exprPlus2 = std::make_shared<SHOT::ExpressionProduct>(exprTimes, expressionVariable_y);
 
-    SHOT::NonlinearConstraintPtr nonlinearConstraint2
-        = std::make_shared<SHOT::NonlinearConstraint>(3, "nlconstr2", exprPlus2, -1000.0, 0);
+    SHOT::NonlinearConstraintPtr nonlinearConstraint2 = std::make_shared<SHOT::NonlinearConstraint>(
+        "nlconstr2", exprPlus2, -1000.0, 0);
     problem->add(nonlinearConstraint2);
 
     std::cout << '\n';
@@ -684,7 +713,7 @@ bool ModelTestCreateProblem()
     for(auto& E : *jacobianSparsityPattern)
     {
         for(auto& V : E.second)
-            std::cout << "(" << E.first->index << "," << V->index << ")\n";
+            std::cout << "(" << E.first->getIndex() << "," << V->getIndex() << ")\n";
     }
 
     std::cout << '\n';
@@ -693,7 +722,7 @@ bool ModelTestCreateProblem()
 
     for(auto& E : *lagrangianSparsityPattern)
     {
-        std::cout << "(" << E.first->index << "," << E.second->index << ")\n";
+        std::cout << "(" << E.first->getIndex() << "," << E.second->getIndex() << ")\n";
     }
 
     std::cout << "\nCalculating gradient for function in linear constraint:\n";
@@ -885,8 +914,8 @@ bool ModelTestCreateProblem2()
     env->problem = problem;
 
     // Creating variables
-    auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 100.0);
-    auto var_y = std::make_shared<SHOT::Variable>("y", 1, SHOT::E_VariableType::Integer, 0.0, 1.0);
+    auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 100.0);
+    auto var_y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Integer, 0.0, 1.0);
     SHOT::ExpressionVariablePtr expressionVariable_y = std::make_shared<SHOT::ExpressionVariable>(var_y);
 
     SHOT::Variables variables = { var_x, var_y };
@@ -908,8 +937,8 @@ bool ModelTestCreateProblem2()
     SHOT::NonlinearExpressionPtr exprPower
         = std::make_shared<SHOT::ExpressionPower>(expressionVariable_y, exprConstant);
 
-    SHOT::NonlinearConstraintPtr nonlinearConstraint
-        = std::make_shared<SHOT::NonlinearConstraint>(0, "nlconstr", exprPower, -10.0, 20.0);
+    SHOT::NonlinearConstraintPtr nonlinearConstraint = std::make_shared<SHOT::NonlinearConstraint>(
+        "nlconstr", exprPower, -10.0, 20.0);
     problem->add(nonlinearConstraint);
 
     std::cout << '\n';
@@ -934,10 +963,11 @@ bool ModelTestCreateProblem2()
     for(auto& E : *jacobianSparsityPattern)
     {
         for(auto& V : E.second)
-            std::cout << "(" << E.first->index << "," << V->index << ")\n";
+            std::cout << "(" << E.first->getIndex() << "," << V->getIndex() << ")\n";
     }
 
-    if(!(jacobianSparsityPattern->at(0).first->index == 0 && jacobianSparsityPattern->at(0).second.at(0)->index == 1))
+    if(!(jacobianSparsityPattern->at(0).first->getIndex() == 0 &&
+        jacobianSparsityPattern->at(0).second.at(0)->getIndex() == 1))
     {
         std::cout << "The sparsity pattern is wrong!\n";
         passed = false;
@@ -949,10 +979,11 @@ bool ModelTestCreateProblem2()
 
     for(auto& E : *lagrangianSparsityPattern)
     {
-        std::cout << "(" << E.first->index << "," << E.second->index << ")\n";
+        std::cout << "(" << E.first->getIndex() << "," << E.second->getIndex() << ")\n";
     }
 
-    if(!(lagrangianSparsityPattern->at(0).first->index == 1 && lagrangianSparsityPattern->at(0).second->index == 1))
+    if(!(lagrangianSparsityPattern->at(0).first->getIndex() == 1 &&
+        lagrangianSparsityPattern->at(0).second->getIndex() == 1))
     {
         std::cout << "The sparsity pattern is wrong!\n";
         passed = false;
@@ -989,10 +1020,10 @@ bool ModelTestCreateProblem3()
 
     // Creating variables
 
-    auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 100.0);
+    auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 100.0);
     SHOT::ExpressionVariablePtr expressionVariable_x = std::make_shared<SHOT::ExpressionVariable>(var_x);
 
-    auto var_y = std::make_shared<SHOT::Variable>("y", 1, SHOT::E_VariableType::Integer, 0.0, 1.0);
+    auto var_y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Integer, 0.0, 1.0);
     SHOT::ExpressionVariablePtr expressionVariable_y = std::make_shared<SHOT::ExpressionVariable>(var_y);
 
     SHOT::Variables variables = { var_x, var_y };
@@ -1018,16 +1049,16 @@ bool ModelTestCreateProblem3()
     SHOT::NonlinearExpressionPtr exprPower
         = std::make_shared<SHOT::ExpressionPower>(expressionVariable_y, exprConstant);
 
-    SHOT::NonlinearConstraintPtr nonlinearConstraint
-        = std::make_shared<SHOT::NonlinearConstraint>(0, "nlconstr", exprPower, -10.0, 20.0);
+    SHOT::NonlinearConstraintPtr nonlinearConstraint = std::make_shared<SHOT::NonlinearConstraint>(
+        "nlconstr", exprPower, -10.0, 20.0);
     problem->add(nonlinearConstraint);
 
     SHOT::NonlinearExpressionPtr exprConstant2 = std::make_shared<SHOT::ExpressionConstant>(4);
     SHOT::NonlinearExpressionPtr exprPower2
         = std::make_shared<SHOT::ExpressionPower>(expressionVariable_x, exprConstant2);
 
-    SHOT::NonlinearConstraintPtr nonlinearConstraint2
-        = std::make_shared<SHOT::NonlinearConstraint>(1, "nlconstr2", exprPower2, -10.0, 20.0);
+    SHOT::NonlinearConstraintPtr nonlinearConstraint2 = std::make_shared<SHOT::NonlinearConstraint>(
+        "nlconstr2", exprPower2, -10.0, 20.0);
     problem->add(nonlinearConstraint2);
 
     std::cout << '\n';
@@ -1052,12 +1083,13 @@ bool ModelTestCreateProblem3()
     for(auto& E : *jacobianSparsityPattern)
     {
         for(auto& V : E.second)
-            std::cout << "(" << E.first->index << "," << V->index << ")\n";
+            std::cout << "(" << E.first->getIndex() << "," << V->getIndex() << ")\n";
     }
 
-    if(!(jacobianSparsityPattern->at(0).first->index == 0 && jacobianSparsityPattern->at(0).second.at(0)->index == 1
-           && jacobianSparsityPattern->at(1).first->index == 1
-           && jacobianSparsityPattern->at(1).second.at(0)->index == 0))
+    if(!(jacobianSparsityPattern->at(0).first->getIndex() == 0
+           && jacobianSparsityPattern->at(0).second.at(0)->getIndex() == 1
+           && jacobianSparsityPattern->at(1).first->getIndex() == 1
+           && jacobianSparsityPattern->at(1).second.at(0)->getIndex() == 0))
     {
         std::cout << "The sparsity pattern is wrong!\n";
         passed = false;
@@ -1069,12 +1101,13 @@ bool ModelTestCreateProblem3()
 
     for(auto& E : *lagrangianSparsityPattern)
     {
-        std::cout << "(" << E.first->index << "," << E.second->index << ")\n";
+        std::cout << "(" << E.first->getIndex() << "," << E.second->getIndex() << ")\n";
     }
 
-    if(!(lagrangianSparsityPattern->at(0).first->index == 0 && lagrangianSparsityPattern->at(0).second->index == 0
-           && lagrangianSparsityPattern->at(1).first->index == 1
-           && lagrangianSparsityPattern->at(1).second->index == 1))
+    if(!(lagrangianSparsityPattern->at(0).first->getIndex() == 0
+           && lagrangianSparsityPattern->at(0).second->getIndex() == 0
+           && lagrangianSparsityPattern->at(1).first->getIndex() == 1
+           && lagrangianSparsityPattern->at(1).second->getIndex() == 1))
     {
         std::cout << "The sparsity pattern is wrong!\n";
         passed = false;
@@ -1086,13 +1119,15 @@ bool ModelTestCreateProblem3()
 
     for(auto& E : *lagrangianSparsityPattern)
     {
-        std::cout << "(" << E.first->index << "," << E.second->index << ")\n";
+        std::cout << "(" << E.first->getIndex() << "," << E.second->getIndex() << ")\n";
     }
 
-    if(!(lagrangianSparsityPattern->at(0).first->index == 0 && lagrangianSparsityPattern->at(0).second->index == 0
-           && lagrangianSparsityPattern->at(1).first->index == 0 && lagrangianSparsityPattern->at(1).second->index == 1
-           && lagrangianSparsityPattern->at(2).first->index == 1
-           && lagrangianSparsityPattern->at(2).second->index == 1))
+    if(!(lagrangianSparsityPattern->at(0).first->getIndex() == 0
+           && lagrangianSparsityPattern->at(0).second->getIndex() == 0
+           && lagrangianSparsityPattern->at(1).first->getIndex() == 0
+           && lagrangianSparsityPattern->at(1).second->getIndex() == 1
+           && lagrangianSparsityPattern->at(2).first->getIndex() == 1
+           && lagrangianSparsityPattern->at(2).second->getIndex() == 1))
     {
         std::cout << "The sparsity pattern is wrong!\n";
         passed = false;
@@ -1144,10 +1179,10 @@ bool ModelTestConvexity()
 
     // Creating variables
 
-    auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 100.0);
+    auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 100.0);
     SHOT::ExpressionVariablePtr expressionVariable_x = std::make_shared<SHOT::ExpressionVariable>(var_x);
 
-    auto var_y = std::make_shared<SHOT::Variable>("y", 1, SHOT::E_VariableType::Integer, 0.0, 1.0);
+    auto var_y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Integer, 0.0, 1.0);
     SHOT::ExpressionVariablePtr expressionVariable_y = std::make_shared<SHOT::ExpressionVariable>(var_y);
 
     SHOT::Variables variables = { var_x, var_y };
@@ -1179,8 +1214,8 @@ bool ModelTestConvexity()
     quadraticTerms.add(quadraticTerm2);
     quadraticTerms.add(quadraticTerm3);
 
-    SHOT::QuadraticConstraintPtr quadraticConstraint
-        = std::make_shared<SHOT::QuadraticConstraint>(0, "quadconstr", quadraticTerms, -10.0, 20.0);
+    SHOT::QuadraticConstraintPtr quadraticConstraint = std::make_shared<SHOT::QuadraticConstraint>(
+        "quadconstr", quadraticTerms, -10.0, 20.0);
 
     problem->add(objectiveFunction);
 
@@ -1258,13 +1293,13 @@ bool ModelTestCopy()
 
     // Creating variables
 
-    auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 100.0);
+    auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 100.0);
     SHOT::ExpressionVariablePtr expressionVariable_x = std::make_shared<SHOT::ExpressionVariable>(var_x);
 
-    auto var_y = std::make_shared<SHOT::Variable>("y", 1, SHOT::E_VariableType::Integer, 0.0, 1.0);
+    auto var_y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Integer, 0.0, 1.0);
     SHOT::ExpressionVariablePtr expressionVariable_y = std::make_shared<SHOT::ExpressionVariable>(var_y);
 
-    auto var_z = std::make_shared<SHOT::Variable>("z", 2, SHOT::E_VariableType::Integer, 0.0, 2.0);
+    auto var_z = std::make_shared<SHOT::Variable>("z", SHOT::E_VariableType::Integer, 0.0, 2.0);
     SHOT::ExpressionVariablePtr expressionVariable_z = std::make_shared<SHOT::ExpressionVariable>(var_z);
 
     SHOT::Variables variables = { var_x, var_y, var_z };
@@ -1300,8 +1335,8 @@ bool ModelTestCopy()
     SHOT::LinearTerms linearTerms;
     linearTerms.add(linearTerm1);
     linearTerms.add(linearTerm2);
-    SHOT::LinearConstraintPtr linearConstraint
-        = std::make_shared<SHOT::LinearConstraint>(0, "linconstr", linearTerms, -2.0, 4.0);
+    SHOT::LinearConstraintPtr linearConstraint = std::make_shared<SHOT::LinearConstraint>(
+        "linconstr", linearTerms, -2.0, 4.0);
     problem->add(linearConstraint);
 
     SHOT::QuadraticTermPtr quadraticTerm1 = std::make_shared<SHOT::QuadraticTerm>(1, var_x, var_y);
@@ -1309,8 +1344,8 @@ bool ModelTestCopy()
     SHOT::QuadraticTerms quadraticTerms;
     quadraticTerms.add(quadraticTerm1);
     quadraticTerms.add(quadraticTerm2);
-    SHOT::QuadraticConstraintPtr quadraticConstraint
-        = std::make_shared<SHOT::QuadraticConstraint>(1, "quadconstr", quadraticTerms, -10.0, 20.0);
+    SHOT::QuadraticConstraintPtr quadraticConstraint = std::make_shared<SHOT::QuadraticConstraint>(
+        "quadconstr", quadraticTerms, -10.0, 20.0);
     problem->add(quadraticConstraint);
 
     SHOT::NonlinearExpressionPtr exprPlus
@@ -1325,8 +1360,8 @@ bool ModelTestCopy()
 
     SHOT::NonlinearExpressionPtr exprSum = std::make_shared<SHOT::ExpressionSum>(expressions);
 
-    SHOT::NonlinearConstraintPtr nonlinearConstraint
-        = std::make_shared<SHOT::NonlinearConstraint>(2, "nlconstr", linearTerms, exprSum, -10.0, 20.0);
+    SHOT::NonlinearConstraintPtr nonlinearConstraint = std::make_shared<SHOT::NonlinearConstraint>(
+        "nlconstr", linearTerms, exprSum, -10.0, 20.0);
     problem->add(nonlinearConstraint);
 
     SHOT::NonlinearExpressionPtr exprConstant2 = std::make_shared<SHOT::ExpressionConstant>(40.0);
@@ -1334,8 +1369,8 @@ bool ModelTestCopy()
         = std::make_shared<SHOT::ExpressionProduct>(exprConstant2, expressionVariable_x);
     SHOT::NonlinearExpressionPtr exprPlus2 = std::make_shared<SHOT::ExpressionProduct>(exprTimes, expressionVariable_y);
 
-    SHOT::NonlinearConstraintPtr nonlinearConstraint2
-        = std::make_shared<SHOT::NonlinearConstraint>(3, "nlconstr2", exprPlus2, -1000.0, 0);
+    SHOT::NonlinearConstraintPtr nonlinearConstraint2 = std::make_shared<SHOT::NonlinearConstraint>(
+        "nlconstr2", exprPlus2, -1000.0, 0);
     problem->add(nonlinearConstraint2);
 
     problem->finalize();
@@ -1387,13 +1422,13 @@ bool ModelTestEx1223b()
     problem->name = "ex1223b";
 
     // Creating the variables
-    auto x1 = std::make_shared<Variable>("x1", 0, E_VariableType::Real, 0.0, 10.0);
-    auto x2 = std::make_shared<Variable>("x2", 1, E_VariableType::Real, 0.0, 10.0);
-    auto x3 = std::make_shared<Variable>("x3", 2, E_VariableType::Real, 0.0, 10.0);
-    auto b4 = std::make_shared<Variable>("b4", 3, E_VariableType::Binary);
-    auto b5 = std::make_shared<Variable>("b5", 4, E_VariableType::Binary);
-    auto b6 = std::make_shared<Variable>("b6", 5, E_VariableType::Binary);
-    auto b7 = std::make_shared<Variable>("b7", 6, E_VariableType::Binary);
+    auto x1 = std::make_shared<Variable>("x1", E_VariableType::Real, 0.0, 10.0);
+    auto x2 = std::make_shared<Variable>("x2", E_VariableType::Real, 0.0, 10.0);
+    auto x3 = std::make_shared<Variable>("x3", E_VariableType::Real, 0.0, 10.0);
+    auto b4 = std::make_shared<Variable>("b4", E_VariableType::Binary);
+    auto b5 = std::make_shared<Variable>("b5", E_VariableType::Binary);
+    auto b6 = std::make_shared<Variable>("b6", E_VariableType::Binary);
+    auto b7 = std::make_shared<Variable>("b7", E_VariableType::Binary);
 
     // Expression variables for nonlinear terms
     auto nl_x1 = std::make_shared<ExpressionVariable>(x1);
@@ -1435,7 +1470,7 @@ bool ModelTestEx1223b()
         std::make_shared<ExpressionSum>(std::make_shared<ExpressionConstant>(-3), nl_x3)));
 
     // e1: x1 + x2 + x3 + b4 + b5 + b6 <= 5
-    auto e1 = std::make_shared<LinearConstraint>(0, "e1", SHOT_DBL_MIN, 5.0);
+    auto e1 = std::make_shared<LinearConstraint>("e1", SHOT_DBL_MIN, 5.0);
     e1->add(std::make_shared<LinearTerm>(1.0, x1));
     e1->add(std::make_shared<LinearTerm>(1.0, x2));
     e1->add(std::make_shared<LinearTerm>(1.0, x3));
@@ -1445,7 +1480,7 @@ bool ModelTestEx1223b()
     problem->add(e1);
 
     // e2: b6^2 + x1^2 + x2^2 + x3^2 <= 5.5
-    auto e2 = std::make_shared<QuadraticConstraint>(1, "e2", SHOT_DBL_MIN, 5.5);
+    auto e2 = std::make_shared<QuadraticConstraint>("e2", SHOT_DBL_MIN, 5.5);
     e2->add(std::make_shared<QuadraticTerm>(1.0, b6, b6));
     e2->add(std::make_shared<QuadraticTerm>(1.0, x1, x1));
     e2->add(std::make_shared<QuadraticTerm>(1.0, x2, x2));
@@ -1453,43 +1488,43 @@ bool ModelTestEx1223b()
     problem->add(e2);
 
     // e3: x1 + b4 <= 1.2
-    auto e3 = std::make_shared<LinearConstraint>(2, "e3", SHOT_DBL_MIN, 1.2);
+    auto e3 = std::make_shared<LinearConstraint>("e3", SHOT_DBL_MIN, 1.2);
     e3->add(std::make_shared<LinearTerm>(1.0, x1));
     e3->add(std::make_shared<LinearTerm>(1.0, b4));
     problem->add(e3);
 
     // e4: x2 + b5 <= 1.8
-    auto e4 = std::make_shared<LinearConstraint>(3, "e4", SHOT_DBL_MIN, 1.8);
+    auto e4 = std::make_shared<LinearConstraint>("e4", SHOT_DBL_MIN, 1.8);
     e4->add(std::make_shared<LinearTerm>(1.0, x2));
     e4->add(std::make_shared<LinearTerm>(1.0, b5));
     problem->add(e4);
 
     // e5: x3 + b6 <= 2.5
-    auto e5 = std::make_shared<LinearConstraint>(4, "e5", SHOT_DBL_MIN, 2.5);
+    auto e5 = std::make_shared<LinearConstraint>("e5", SHOT_DBL_MIN, 2.5);
     e5->add(std::make_shared<LinearTerm>(1.0, x3));
     e5->add(std::make_shared<LinearTerm>(1.0, b6));
     problem->add(e5);
 
     // e6: x1 + b7 <= 1.2
-    auto e6 = std::make_shared<LinearConstraint>(5, "e6", SHOT_DBL_MIN, 1.2);
+    auto e6 = std::make_shared<LinearConstraint>("e6", SHOT_DBL_MIN, 1.2);
     e6->add(std::make_shared<LinearTerm>(1.0, x1));
     e6->add(std::make_shared<LinearTerm>(1.0, b7));
     problem->add(e6);
 
     // e7: b5^2 + x2^2 <= 1.64
-    auto e7 = std::make_shared<QuadraticConstraint>(6, "e7", SHOT_DBL_MIN, 1.64);
+    auto e7 = std::make_shared<QuadraticConstraint>("e7", SHOT_DBL_MIN, 1.64);
     e7->add(std::make_shared<QuadraticTerm>(1.0, b5, b5));
     e7->add(std::make_shared<QuadraticTerm>(1.0, x2, x2));
     problem->add(e7);
 
     // e8: b6^2 + x3^2 <= 4.25
-    auto e8 = std::make_shared<QuadraticConstraint>(7, "e8", SHOT_DBL_MIN, 4.25);
+    auto e8 = std::make_shared<QuadraticConstraint>("e8", SHOT_DBL_MIN, 4.25);
     e8->add(std::make_shared<QuadraticTerm>(1.0, b6, b6));
     e8->add(std::make_shared<QuadraticTerm>(1.0, x3, x3));
     problem->add(e8);
 
     // e9: b5^2 + x3^2 <= 4.64
-    auto e9 = std::make_shared<QuadraticConstraint>(8, "e9", SHOT_DBL_MIN, 4.64);
+    auto e9 = std::make_shared<QuadraticConstraint>("e9", SHOT_DBL_MIN, 4.64);
     e9->add(std::make_shared<QuadraticTerm>(1.0, b5, b5));
     e9->add(std::make_shared<QuadraticTerm>(1.0, x3, x3));
     problem->add(e9);
@@ -1590,43 +1625,43 @@ bool ModelTestMeanvarxscWithSolver(ES_MIPSolver mipSolver)
     auto problem = std::make_shared<Problem>(env);
     problem->name = "meanvarxsc";
 
-    auto x2 = std::make_shared<Variable>("x2", 0, E_VariableType::Real, 0.0, SHOT_DBL_MAX);
-    auto x3 = std::make_shared<Variable>("x3", 1, E_VariableType::Real, 0.0, SHOT_DBL_MAX);
-    auto x4 = std::make_shared<Variable>("x4", 2, E_VariableType::Real, 0.0, SHOT_DBL_MAX);
-    auto x5 = std::make_shared<Variable>("x5", 3, E_VariableType::Real, 0.0, SHOT_DBL_MAX);
-    auto x6 = std::make_shared<Variable>("x6", 4, E_VariableType::Real, 0.0, SHOT_DBL_MAX);
-    auto x7 = std::make_shared<Variable>("x7", 5, E_VariableType::Real, 0.0, SHOT_DBL_MAX);
-    auto x8 = std::make_shared<Variable>("x8", 6, E_VariableType::Real, 0.0, SHOT_DBL_MAX);
+    auto x2 = std::make_shared<Variable>("x2", E_VariableType::Real, 0.0, SHOT_DBL_MAX);
+    auto x3 = std::make_shared<Variable>("x3", E_VariableType::Real, 0.0, SHOT_DBL_MAX);
+    auto x4 = std::make_shared<Variable>("x4", E_VariableType::Real, 0.0, SHOT_DBL_MAX);
+    auto x5 = std::make_shared<Variable>("x5", E_VariableType::Real, 0.0, SHOT_DBL_MAX);
+    auto x6 = std::make_shared<Variable>("x6", E_VariableType::Real, 0.0, SHOT_DBL_MAX);
+    auto x7 = std::make_shared<Variable>("x7", E_VariableType::Real, 0.0, SHOT_DBL_MAX);
+    auto x8 = std::make_shared<Variable>("x8", E_VariableType::Real, 0.0, SHOT_DBL_MAX);
 
-    auto sc9 = std::make_shared<Variable>("sc9", 7, E_VariableType::Semicontinuous, 0.0, 0.11, 0.03);
-    auto sc10 = std::make_shared<Variable>("sc10", 8, E_VariableType::Semicontinuous, 0.0, 0.10, 0.04);
-    auto sc11 = std::make_shared<Variable>("sc11", 9, E_VariableType::Semicontinuous, 0.0, 0.07, 0.04);
-    auto sc12 = std::make_shared<Variable>("sc12", 10, E_VariableType::Semicontinuous, 0.0, 0.11, 0.03);
-    auto sc13 = std::make_shared<Variable>("sc13", 11, E_VariableType::Semicontinuous, 0.0, 0.20, 0.03);
-    auto sc14 = std::make_shared<Variable>("sc14", 12, E_VariableType::Semicontinuous, 0.0, 0.10, 0.03);
-    auto sc15 = std::make_shared<Variable>("sc15", 13, E_VariableType::Semicontinuous, 0.0, 0.10, 0.03);
-    auto sc16 = std::make_shared<Variable>("sc16", 14, E_VariableType::Semicontinuous, 0.0, 0.20, 0.02);
-    auto sc17 = std::make_shared<Variable>("sc17", 15, E_VariableType::Semicontinuous, 0.0, 0.15, 0.02);
-    auto sc18 = std::make_shared<Variable>("sc18", 16, E_VariableType::Real, 0.0, 0.0);
-    auto sc19 = std::make_shared<Variable>("sc19", 17, E_VariableType::Real, 0.0, 0.0);
-    auto sc20 = std::make_shared<Variable>("sc20", 18, E_VariableType::Semicontinuous, 0.0, 0.10, 0.04);
-    auto sc21 = std::make_shared<Variable>("sc21", 19, E_VariableType::Semicontinuous, 0.0, 0.15, 0.04);
-    auto sc22 = std::make_shared<Variable>("sc22", 20, E_VariableType::Semicontinuous, 0.0, 0.20, 0.04);
+    auto sc9 = std::make_shared<Variable>("sc9", E_VariableType::Semicontinuous, 0.0, 0.11, 0.03);
+    auto sc10 = std::make_shared<Variable>("sc10", E_VariableType::Semicontinuous, 0.0, 0.10, 0.04);
+    auto sc11 = std::make_shared<Variable>("sc11", E_VariableType::Semicontinuous, 0.0, 0.07, 0.04);
+    auto sc12 = std::make_shared<Variable>("sc12", E_VariableType::Semicontinuous, 0.0, 0.11, 0.03);
+    auto sc13 = std::make_shared<Variable>("sc13", E_VariableType::Semicontinuous, 0.0, 0.20, 0.03);
+    auto sc14 = std::make_shared<Variable>("sc14", E_VariableType::Semicontinuous, 0.0, 0.10, 0.03);
+    auto sc15 = std::make_shared<Variable>("sc15", E_VariableType::Semicontinuous, 0.0, 0.10, 0.03);
+    auto sc16 = std::make_shared<Variable>("sc16", E_VariableType::Semicontinuous, 0.0, 0.20, 0.02);
+    auto sc17 = std::make_shared<Variable>("sc17", E_VariableType::Semicontinuous, 0.0, 0.15, 0.02);
+    auto sc18 = std::make_shared<Variable>("sc18", E_VariableType::Real, 0.0, 0.0);
+    auto sc19 = std::make_shared<Variable>("sc19", E_VariableType::Real, 0.0, 0.0);
+    auto sc20 = std::make_shared<Variable>("sc20", E_VariableType::Semicontinuous, 0.0, 0.10, 0.04);
+    auto sc21 = std::make_shared<Variable>("sc21", E_VariableType::Semicontinuous, 0.0, 0.15, 0.04);
+    auto sc22 = std::make_shared<Variable>("sc22", E_VariableType::Semicontinuous, 0.0, 0.20, 0.04);
 
-    auto b23 = std::make_shared<Variable>("b23", 21, E_VariableType::Binary);
-    auto b24 = std::make_shared<Variable>("b24", 22, E_VariableType::Binary);
-    auto b25 = std::make_shared<Variable>("b25", 23, E_VariableType::Binary);
-    auto b26 = std::make_shared<Variable>("b26", 24, E_VariableType::Binary);
-    auto b27 = std::make_shared<Variable>("b27", 25, E_VariableType::Binary);
-    auto b28 = std::make_shared<Variable>("b28", 26, E_VariableType::Binary);
-    auto b29 = std::make_shared<Variable>("b29", 27, E_VariableType::Binary);
-    auto b30 = std::make_shared<Variable>("b30", 28, E_VariableType::Binary);
-    auto b31 = std::make_shared<Variable>("b31", 29, E_VariableType::Binary);
-    auto b32 = std::make_shared<Variable>("b32", 30, E_VariableType::Binary);
-    auto b33 = std::make_shared<Variable>("b33", 31, E_VariableType::Binary);
-    auto b34 = std::make_shared<Variable>("b34", 32, E_VariableType::Binary);
-    auto b35 = std::make_shared<Variable>("b35", 33, E_VariableType::Binary);
-    auto b36 = std::make_shared<Variable>("b36", 34, E_VariableType::Binary);
+    auto b23 = std::make_shared<Variable>("b23", E_VariableType::Binary);
+    auto b24 = std::make_shared<Variable>("b24", E_VariableType::Binary);
+    auto b25 = std::make_shared<Variable>("b25", E_VariableType::Binary);
+    auto b26 = std::make_shared<Variable>("b26", E_VariableType::Binary);
+    auto b27 = std::make_shared<Variable>("b27", E_VariableType::Binary);
+    auto b28 = std::make_shared<Variable>("b28", E_VariableType::Binary);
+    auto b29 = std::make_shared<Variable>("b29", E_VariableType::Binary);
+    auto b30 = std::make_shared<Variable>("b30", E_VariableType::Binary);
+    auto b31 = std::make_shared<Variable>("b31", E_VariableType::Binary);
+    auto b32 = std::make_shared<Variable>("b32", E_VariableType::Binary);
+    auto b33 = std::make_shared<Variable>("b33", E_VariableType::Binary);
+    auto b34 = std::make_shared<Variable>("b34", E_VariableType::Binary);
+    auto b35 = std::make_shared<Variable>("b35", E_VariableType::Binary);
+    auto b36 = std::make_shared<Variable>("b36", E_VariableType::Binary);
 
     problem->add({ x2, x3, x4, x5, x6, x7, x8, sc9, sc10, sc11, sc12, sc13, sc14, sc15, sc16, sc17, sc18, sc19, sc20,
         sc21, sc22, b23, b24, b25, b26, b27, b28, b29, b30, b31, b32, b33, b34, b35, b36 });
@@ -1669,7 +1704,7 @@ bool ModelTestMeanvarxscWithSolver(ES_MIPSolver mipSolver)
     objective->add(std::make_shared<LinearTerm>(-0.031, x8));
     problem->add(objective);
 
-    auto ce1 = std::make_shared<LinearConstraint>(0, "e1", 1.0, 1.0);
+    auto ce1 = std::make_shared<LinearConstraint>("e1", 1.0, 1.0);
     for(auto& v : { x2, x3, x4, x5, x6, x7, x8 })
         ce1->add(std::make_shared<LinearTerm>(1.0, v));
     problem->add(ce1);
@@ -1677,7 +1712,7 @@ bool ModelTestMeanvarxscWithSolver(ES_MIPSolver mipSolver)
     auto makeBalance
         = [&](int idx, const std::string& name, VariablePtr xi, VariablePtr scs, VariablePtr scb, double rhs)
     {
-        auto c = std::make_shared<LinearConstraint>(idx, name, rhs, rhs);
+        auto c = std::make_shared<LinearConstraint>(name, rhs, rhs);
         c->add(std::make_shared<LinearTerm>(1.0, xi));
         c->add(std::make_shared<LinearTerm>(-1.0, scs));
         c->add(std::make_shared<LinearTerm>(1.0, scb));
@@ -1691,7 +1726,7 @@ bool ModelTestMeanvarxscWithSolver(ES_MIPSolver mipSolver)
     makeBalance(6, "e7", x7, sc14, sc21, 0.2);
     makeBalance(7, "e8", x8, sc15, sc22, 0.2);
 
-    auto ce9 = std::make_shared<LinearConstraint>(8, "e9", SHOT_DBL_MIN, 0.3);
+    auto ce9 = std::make_shared<LinearConstraint>("e9", SHOT_DBL_MIN, 0.3);
     for(auto& v : { sc9, sc10, sc11, sc12, sc13, sc14, sc15 })
         ce9->add(std::make_shared<LinearTerm>(1.0, v));
     problem->add(ce9);
@@ -1722,7 +1757,7 @@ bool ModelTestMeanvarxscWithSolver(ES_MIPSolver mipSolver)
     };
     for(auto& b : bmData)
     {
-        auto c = std::make_shared<LinearConstraint>(b.idx, b.name, SHOT_DBL_MIN, 0.0);
+        auto c = std::make_shared<LinearConstraint>(b.name, SHOT_DBL_MIN, 0.0);
         c->add(std::make_shared<LinearTerm>(1.0, b.scv));
         if(b.bv)
             c->add(std::make_shared<LinearTerm>(-b.coeff, b.bv));
@@ -1747,7 +1782,7 @@ bool ModelTestMeanvarxscWithSolver(ES_MIPSolver mipSolver)
     };
     for(auto& p : bpData)
     {
-        auto c = std::make_shared<LinearConstraint>(p.idx, p.name, SHOT_DBL_MIN, 1.0);
+        auto c = std::make_shared<LinearConstraint>(p.name, SHOT_DBL_MIN, 1.0);
         c->add(std::make_shared<LinearTerm>(1.0, p.b1));
         c->add(std::make_shared<LinearTerm>(1.0, p.b2));
         problem->add(c);
@@ -1853,9 +1888,9 @@ bool ModelTestSOS1WithSolver(ES_MIPSolver mipSolver)
     auto problem = std::make_shared<Problem>(env);
     problem->name = "sos1a";
 
-    auto x1 = std::make_shared<Variable>("x1", 0, E_VariableType::Real, 0.0, 0.8);
-    auto x2 = std::make_shared<Variable>("x2", 1, E_VariableType::Real, 0.0, 0.6);
-    auto x3 = std::make_shared<Variable>("x3", 2, E_VariableType::Real, 0.0, 0.6);
+    auto x1 = std::make_shared<Variable>("x1", E_VariableType::Real, 0.0, 0.8);
+    auto x2 = std::make_shared<Variable>("x2", E_VariableType::Real, 0.0, 0.6);
+    auto x3 = std::make_shared<Variable>("x3", E_VariableType::Real, 0.0, 0.6);
     problem->add({ x1, x2, x3 });
 
     auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Maximize);
@@ -1864,7 +1899,7 @@ bool ModelTestSOS1WithSolver(ES_MIPSolver mipSolver)
     objective->add(std::make_shared<LinearTerm>(1.1, x3));
     problem->add(objective);
 
-    auto c1 = std::make_shared<LinearConstraint>(0, "xsum", SHOT_DBL_MIN, 1.0);
+    auto c1 = std::make_shared<LinearConstraint>("xsum", SHOT_DBL_MIN, 1.0);
     c1->add(std::make_shared<LinearTerm>(1.0, x1));
     c1->add(std::make_shared<LinearTerm>(1.0, x2));
     c1->add(std::make_shared<LinearTerm>(1.0, x3));
@@ -1983,11 +2018,11 @@ bool ModelTestSOS2WithSolver(ES_MIPSolver mipSolver)
     auto problem = std::make_shared<Problem>(env);
     problem->name = "sos2a";
 
-    auto w1 = std::make_shared<Variable>("w1", 0, E_VariableType::Real, 0.0, SHOT_DBL_MAX);
-    auto w2 = std::make_shared<Variable>("w2", 1, E_VariableType::Real, 0.0, SHOT_DBL_MAX);
-    auto w3 = std::make_shared<Variable>("w3", 2, E_VariableType::Real, 0.0, SHOT_DBL_MAX);
-    auto fplus = std::make_shared<Variable>("fplus", 3, E_VariableType::Real, 0.0, SHOT_DBL_MAX);
-    auto fminus = std::make_shared<Variable>("fminus", 4, E_VariableType::Real, 0.0, SHOT_DBL_MAX);
+    auto w1 = std::make_shared<Variable>("w1", E_VariableType::Real, 0.0, SHOT_DBL_MAX);
+    auto w2 = std::make_shared<Variable>("w2", E_VariableType::Real, 0.0, SHOT_DBL_MAX);
+    auto w3 = std::make_shared<Variable>("w3", E_VariableType::Real, 0.0, SHOT_DBL_MAX);
+    auto fplus = std::make_shared<Variable>("fplus", E_VariableType::Real, 0.0, SHOT_DBL_MAX);
+    auto fminus = std::make_shared<Variable>("fminus", E_VariableType::Real, 0.0, SHOT_DBL_MAX);
     problem->add({ w1, w2, w3, fplus, fminus });
 
     auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
@@ -1996,14 +2031,14 @@ bool ModelTestSOS2WithSolver(ES_MIPSolver mipSolver)
     problem->add(objective);
 
     // w1 + w2 + w3 = 1
-    auto cwsum = std::make_shared<LinearConstraint>(0, "wsum", 1.0, 1.0);
+    auto cwsum = std::make_shared<LinearConstraint>("wsum", 1.0, 1.0);
     cwsum->add(std::make_shared<LinearTerm>(1.0, w1));
     cwsum->add(std::make_shared<LinearTerm>(1.0, w2));
     cwsum->add(std::make_shared<LinearTerm>(1.0, w3));
     problem->add(cwsum);
 
     // fplus - w1 - 2*w2 - 3*w3 >= -1.3  (fplus >= fx - 1.3)
-    auto cgapplus = std::make_shared<LinearConstraint>(1, "gapplus", -1.3, SHOT_DBL_MAX);
+    auto cgapplus = std::make_shared<LinearConstraint>("gapplus", -1.3, SHOT_DBL_MAX);
     cgapplus->add(std::make_shared<LinearTerm>(1.0, fplus));
     cgapplus->add(std::make_shared<LinearTerm>(-1.0, w1));
     cgapplus->add(std::make_shared<LinearTerm>(-2.0, w2));
@@ -2011,7 +2046,7 @@ bool ModelTestSOS2WithSolver(ES_MIPSolver mipSolver)
     problem->add(cgapplus);
 
     // fminus + w1 + 2*w2 + 3*w3 >= 1.3  (fminus >= 1.3 - fx)
-    auto cgapminus = std::make_shared<LinearConstraint>(2, "gapminus", 1.3, SHOT_DBL_MAX);
+    auto cgapminus = std::make_shared<LinearConstraint>("gapminus", 1.3, SHOT_DBL_MAX);
     cgapminus->add(std::make_shared<LinearTerm>(1.0, fminus));
     cgapminus->add(std::make_shared<LinearTerm>(1.0, w1));
     cgapminus->add(std::make_shared<LinearTerm>(2.0, w2));
@@ -2109,7 +2144,7 @@ bool ModelTestGradientsAndHessians()
         auto problem = std::make_shared<Problem>(env);
         problem->name = "exp_test";
 
-        auto x = std::make_shared<Variable>("x", 0, E_VariableType::Real, -10.0, 10.0);
+        auto x = std::make_shared<Variable>("x", E_VariableType::Real, -10.0, 10.0);
         problem->add(x);
 
         auto nl_x = std::make_shared<ExpressionVariable>(x);
@@ -2163,7 +2198,7 @@ bool ModelTestGradientsAndHessians()
         auto problem = std::make_shared<Problem>(env);
         problem->name = "log_test";
 
-        auto x = std::make_shared<Variable>("x", 0, E_VariableType::Real, 0.1, 10.0);
+        auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.1, 10.0);
         problem->add(x);
 
         auto nl_x = std::make_shared<ExpressionVariable>(x);
@@ -2217,8 +2252,8 @@ bool ModelTestGradientsAndHessians()
         auto problem = std::make_shared<Problem>(env);
         problem->name = "sincos_test";
 
-        auto x = std::make_shared<Variable>("x", 0, E_VariableType::Real, -10.0, 10.0);
-        auto y = std::make_shared<Variable>("y", 1, E_VariableType::Real, -10.0, 10.0);
+        auto x = std::make_shared<Variable>("x", E_VariableType::Real, -10.0, 10.0);
+        auto y = std::make_shared<Variable>("y", E_VariableType::Real, -10.0, 10.0);
         problem->add(x);
         problem->add(y);
 
@@ -2279,7 +2314,7 @@ bool ModelTestGradientsAndHessians()
         auto problem = std::make_shared<Problem>(env);
         problem->name = "power_test";
 
-        auto x = std::make_shared<Variable>("x", 0, E_VariableType::Real, 0.1, 10.0);
+        auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.1, 10.0);
         problem->add(x);
 
         auto nl_x = std::make_shared<ExpressionVariable>(x);
@@ -2336,8 +2371,8 @@ bool ModelTestGradientsAndHessians()
         auto problem = std::make_shared<Problem>(env);
         problem->name = "quadratic_test";
 
-        auto x = std::make_shared<Variable>("x", 0, E_VariableType::Real, -10.0, 10.0);
-        auto y = std::make_shared<Variable>("y", 1, E_VariableType::Real, -10.0, 10.0);
+        auto x = std::make_shared<Variable>("x", E_VariableType::Real, -10.0, 10.0);
+        auto y = std::make_shared<Variable>("y", E_VariableType::Real, -10.0, 10.0);
         problem->add(x);
         problem->add(y);
 
@@ -2402,7 +2437,7 @@ bool ModelTestGradientsAndHessians()
         auto problem = std::make_shared<Problem>(env);
         problem->name = "sqrt_test";
 
-        auto x = std::make_shared<Variable>("x", 0, E_VariableType::Real, 0.1, 10.0);
+        auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.1, 10.0);
         problem->add(x);
 
         auto nl_x = std::make_shared<ExpressionVariable>(x);
@@ -2456,8 +2491,8 @@ bool ModelTestGradientsAndHessians()
         auto problem = std::make_shared<Problem>(env);
         problem->name = "composite_test";
 
-        auto x = std::make_shared<Variable>("x", 0, E_VariableType::Real, -10.0, 10.0);
-        auto y = std::make_shared<Variable>("y", 1, E_VariableType::Real, -10.0, 10.0);
+        auto x = std::make_shared<Variable>("x", E_VariableType::Real, -10.0, 10.0);
+        auto y = std::make_shared<Variable>("y", E_VariableType::Real, -10.0, 10.0);
         problem->add(x);
         problem->add(y);
 
@@ -2525,8 +2560,8 @@ bool ModelTestGradientsAndHessians()
         auto problem = std::make_shared<Problem>(env);
         problem->name = "constraint_test";
 
-        auto x = std::make_shared<Variable>("x", 0, E_VariableType::Real, 0.1, 10.0);
-        auto y = std::make_shared<Variable>("y", 1, E_VariableType::Real, -10.0, 10.0);
+        auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.1, 10.0);
+        auto y = std::make_shared<Variable>("y", E_VariableType::Real, -10.0, 10.0);
         problem->add(x);
         problem->add(y);
 
@@ -2536,7 +2571,7 @@ bool ModelTestGradientsAndHessians()
         auto expr_exp = std::make_shared<ExpressionExp>(nl_y);
         auto expr_sum = std::make_shared<ExpressionSum>(expr_log, expr_exp);
 
-        auto constraint = std::make_shared<NonlinearConstraint>(0, "nl_constr", expr_sum, SHOT_DBL_MIN, 10.0);
+        auto constraint = std::make_shared<NonlinearConstraint>("nl_constr", expr_sum, SHOT_DBL_MIN, 10.0);
         problem->add(constraint);
 
         // Need an objective
@@ -2598,8 +2633,8 @@ bool ModelTestGradientsAndHessians()
         auto problem = std::make_shared<Problem>(env);
         problem->name = "signomial_test";
 
-        auto x = std::make_shared<Variable>("x", 0, E_VariableType::Real, 0.1, 10.0);
-        auto y = std::make_shared<Variable>("y", 1, E_VariableType::Real, 0.1, 10.0);
+        auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.1, 10.0);
+        auto y = std::make_shared<Variable>("y", E_VariableType::Real, 0.1, 10.0);
         problem->add(x);
         problem->add(y);
 
@@ -2646,9 +2681,9 @@ bool ModelTestGradientsAndHessians()
         auto problem = std::make_shared<Problem>(env);
         problem->name = "monomial_test";
 
-        auto x = std::make_shared<Variable>("x", 0, E_VariableType::Real, 0.1, 10.0);
-        auto y = std::make_shared<Variable>("y", 1, E_VariableType::Real, 0.1, 10.0);
-        auto z = std::make_shared<Variable>("z", 2, E_VariableType::Real, 0.1, 10.0);
+        auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.1, 10.0);
+        auto y = std::make_shared<Variable>("y", E_VariableType::Real, 0.1, 10.0);
+        auto z = std::make_shared<Variable>("z", E_VariableType::Real, 0.1, 10.0);
         problem->add(x);
         problem->add(y);
         problem->add(z);
@@ -2724,9 +2759,9 @@ bool ModelTestGradientsAndHessians()
         auto problem = std::make_shared<Problem>(env);
         problem->name = "monomial_shared_var_test";
 
-        auto x = std::make_shared<Variable>("x", 0, E_VariableType::Real, 0.1, 10.0);
-        auto y = std::make_shared<Variable>("y", 1, E_VariableType::Real, 0.1, 10.0);
-        auto z = std::make_shared<Variable>("z", 2, E_VariableType::Real, 0.1, 10.0);
+        auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.1, 10.0);
+        auto y = std::make_shared<Variable>("y", E_VariableType::Real, 0.1, 10.0);
+        auto z = std::make_shared<Variable>("z", E_VariableType::Real, 0.1, 10.0);
         problem->add(x);
         problem->add(y);
         problem->add(z);
@@ -2781,8 +2816,8 @@ bool ModelTestGradientsAndHessians()
         auto problem = std::make_shared<Problem>(env);
         problem->name = "mixed_objective_test";
 
-        auto x = std::make_shared<Variable>("x", 0, E_VariableType::Real, -10.0, 10.0);
-        auto y = std::make_shared<Variable>("y", 1, E_VariableType::Real, -10.0, 10.0);
+        auto x = std::make_shared<Variable>("x", E_VariableType::Real, -10.0, 10.0);
+        auto y = std::make_shared<Variable>("y", E_VariableType::Real, -10.0, 10.0);
         problem->add(x);
         problem->add(y);
 
@@ -2851,8 +2886,8 @@ bool ModelTestGradientsAndHessians()
         auto problem = std::make_shared<Problem>(env);
         problem->name = "mixed_constraint_test";
 
-        auto x = std::make_shared<Variable>("x", 0, E_VariableType::Real, 0.1, 10.0);
-        auto y = std::make_shared<Variable>("y", 1, E_VariableType::Real, -10.0, 10.0);
+        auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.1, 10.0);
+        auto y = std::make_shared<Variable>("y", E_VariableType::Real, -10.0, 10.0);
         problem->add(x);
         problem->add(y);
 
@@ -2865,7 +2900,7 @@ bool ModelTestGradientsAndHessians()
         QuadraticTerms quadTerms;
         quadTerms.add(std::make_shared<QuadraticTerm>(1.0, y, y));
 
-        auto constraint = std::make_shared<NonlinearConstraint>(0, "mixed_constr", SHOT_DBL_MIN, 10.0);
+        auto constraint = std::make_shared<NonlinearConstraint>("mixed_constr", SHOT_DBL_MIN, 10.0);
         constraint->add(sigTerms);
         constraint->add(quadTerms);
         problem->add(constraint);
@@ -2926,8 +2961,8 @@ bool ModelTestGradientsAndHessians()
         auto problem = std::make_shared<Problem>(env);
         problem->name = "full_problem_test";
 
-        auto x = std::make_shared<Variable>("x", 0, E_VariableType::Real, 0.1, 10.0);
-        auto y = std::make_shared<Variable>("y", 1, E_VariableType::Real, -10.0, 10.0);
+        auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.1, 10.0);
+        auto y = std::make_shared<Variable>("y", E_VariableType::Real, -10.0, 10.0);
         problem->add(x);
         problem->add(y);
 
@@ -2950,7 +2985,7 @@ bool ModelTestGradientsAndHessians()
         QuadraticTerms constrQuadTerms;
         constrQuadTerms.add(std::make_shared<QuadraticTerm>(1.0, y, y));
 
-        auto constraint = std::make_shared<NonlinearConstraint>(0, "nl_constr", SHOT_DBL_MIN, 20.0);
+        auto constraint = std::make_shared<NonlinearConstraint>("nl_constr", SHOT_DBL_MIN, 20.0);
         constraint->add(constrQuadTerms);
         constraint->add(expr_exp);
         problem->add(constraint);
@@ -3038,10 +3073,10 @@ bool ModelTestSquareRootReformulation()
     env->problem = problem;
 
     // Creating variables
-    auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 100.0);
+    auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 100.0);
     SHOT::ExpressionVariablePtr expressionVariable_x = std::make_shared<SHOT::ExpressionVariable>(var_x);
 
-    auto var_y = std::make_shared<SHOT::Variable>("y", 1, SHOT::E_VariableType::Real, 0.0, 100.0);
+    auto var_y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Real, 0.0, 100.0);
     SHOT::ExpressionVariablePtr expressionVariable_y = std::make_shared<SHOT::ExpressionVariable>(var_y);
 
     SHOT::Variables variables = { var_x, var_y };
@@ -3055,8 +3090,8 @@ bool ModelTestSquareRootReformulation()
     problem->add(objectiveFunction);
 
     // Add a linear constraint before the nonlinear one
-    SHOT::LinearConstraintPtr linearConstraint1
-        = std::make_shared<SHOT::LinearConstraint>(0, "linearconstr1", SHOT_DBL_MIN, 50.0);
+    SHOT::LinearConstraintPtr linearConstraint1 = std::make_shared<SHOT::LinearConstraint>(
+        "linearconstr1", SHOT_DBL_MIN, 50.0);
     SHOT::LinearTermPtr linTerm1 = std::make_shared<SHOT::LinearTerm>(1.0, var_x);
     linearConstraint1->add(linTerm1);
     problem->add(linearConstraint1);
@@ -3074,8 +3109,8 @@ bool ModelTestSquareRootReformulation()
     SHOT::NonlinearExpressionPtr exprSqrt = std::make_shared<SHOT::ExpressionSquareRoot>(exprSum);
 
     // Create constraint: sqrt(x^2 + y^2) <= 10
-    SHOT::NonlinearConstraintPtr nonlinearConstraint
-        = std::make_shared<SHOT::NonlinearConstraint>(0, "sqrtconstr", exprSqrt, -SHOT_DBL_MAX, 10.0);
+    SHOT::NonlinearConstraintPtr nonlinearConstraint = std::make_shared<SHOT::NonlinearConstraint>(
+        "sqrtconstr", exprSqrt, -SHOT_DBL_MAX, 10.0);
     problem->add(nonlinearConstraint);
 
     // Create constraint: sqrt(x + y) <= 5
@@ -3086,13 +3121,13 @@ bool ModelTestSquareRootReformulation()
     SHOT::NonlinearExpressionPtr exprLinearSum = std::make_shared<SHOT::ExpressionSum>(sumLinearExpressions);
     SHOT::NonlinearExpressionPtr exprSqrtLinear = std::make_shared<SHOT::ExpressionSquareRoot>(exprLinearSum);
 
-    SHOT::NonlinearConstraintPtr nonlinearConstraint2
-        = std::make_shared<SHOT::NonlinearConstraint>(1, "sqrtlinearconstr", exprSqrtLinear, -SHOT_DBL_MAX, 5.0);
+    SHOT::NonlinearConstraintPtr nonlinearConstraint2 = std::make_shared<SHOT::NonlinearConstraint>(
+        "sqrtlinearconstr", exprSqrtLinear, -SHOT_DBL_MAX, 5.0);
     problem->add(nonlinearConstraint2);
 
     // Add a linear constraint after the nonlinear one
-    SHOT::LinearConstraintPtr linearConstraint2
-        = std::make_shared<SHOT::LinearConstraint>(1, "linearconstr2", 0.0, SHOT_DBL_MAX);
+    SHOT::LinearConstraintPtr linearConstraint2 = std::make_shared<SHOT::LinearConstraint>(
+        "linearconstr2", 0.0, SHOT_DBL_MAX);
     SHOT::LinearTermPtr linTerm2 = std::make_shared<SHOT::LinearTerm>(1.0, var_y);
     linearConstraint2->add(linTerm2);
     problem->add(linearConstraint2);
@@ -3263,8 +3298,8 @@ bool ModelTestFinalizeCalledTwice()
     problem->name = "FinalizeTwiceTest";
     env->problem = problem;
 
-    auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 100.0);
-    auto var_y = std::make_shared<SHOT::Variable>("y", 1, SHOT::E_VariableType::Integer, 0.0, 1.0);
+    auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 100.0);
+    auto var_y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Integer, 0.0, 1.0);
     SHOT::ExpressionVariablePtr expressionVariable_y = std::make_shared<SHOT::ExpressionVariable>(var_y);
 
     problem->add(SHOT::Variables({ var_x, var_y }));
@@ -3282,8 +3317,8 @@ bool ModelTestFinalizeCalledTwice()
     SHOT::NonlinearExpressionPtr exprConstant = std::make_shared<SHOT::ExpressionConstant>(3);
     SHOT::NonlinearExpressionPtr exprPower
         = std::make_shared<SHOT::ExpressionPower>(expressionVariable_y, exprConstant);
-    SHOT::NonlinearConstraintPtr nonlinearConstraint
-        = std::make_shared<SHOT::NonlinearConstraint>(0, "nlconstr", exprPower, -10.0, 20.0);
+    SHOT::NonlinearConstraintPtr nonlinearConstraint = std::make_shared<SHOT::NonlinearConstraint>(
+        "nlconstr", exprPower, -10.0, 20.0);
     problem->add(nonlinearConstraint);
 
     std::cout << "\nCalling finalize() for the first time:\n";
@@ -3341,7 +3376,7 @@ bool ModelTestFinalizeNoObjective()
     problem->name = "NoObjectiveTest";
     env->problem = problem;
 
-    auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 100.0);
+    auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 100.0);
     problem->add(SHOT::Variables({ var_x }));
 
     // Intentionally no objective function added
@@ -3514,7 +3549,7 @@ bool ModelTestObjectiveEpigraphStrategy()
                 [](const std::shared_ptr<SHOT::Environment>& env)
                 {
                     auto problem = std::make_shared<SHOT::Problem>(env);
-                    auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 7.0);
+                    auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 7.0);
                     problem->add(SHOT::Variables({ var_x }));
 
                     auto objective
@@ -3569,7 +3604,7 @@ bool ModelTestObjectiveEpigraphStrategy()
                 [isMaximize, ub](const std::shared_ptr<SHOT::Environment>& env)
                 {
                     auto problem = std::make_shared<SHOT::Problem>(env);
-                    auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, ub);
+                    auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, ub);
                     problem->add(SHOT::Variables({ var_x }));
 
                     auto objective = std::make_shared<SHOT::QuadraticObjectiveFunction>(isMaximize
@@ -3631,7 +3666,7 @@ bool ModelTestObjectiveEpigraphStrategy()
                 [isMaximize, lb, ub](const std::shared_ptr<SHOT::Environment>& env)
                 {
                     auto problem = std::make_shared<SHOT::Problem>(env);
-                    auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, lb, ub);
+                    auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, lb, ub);
                     problem->add(SHOT::Variables({ var_x }));
 
                     auto nl_x = std::make_shared<SHOT::ExpressionVariable>(var_x);
@@ -3683,7 +3718,7 @@ bool ModelTestObjectiveEpigraphStrategy()
                 [](const std::shared_ptr<SHOT::Environment>& env)
                 {
                     auto problem = std::make_shared<SHOT::Problem>(env);
-                    auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 2.0);
+                    auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 2.0);
                     problem->add(SHOT::Variables({ var_x }));
 
                     auto objective = std::make_shared<SHOT::QuadraticObjectiveFunction>(
@@ -3738,7 +3773,7 @@ bool ModelTestObjectiveEpigraphStrategy()
                 [](const std::shared_ptr<SHOT::Environment>& env)
                 {
                     auto problem = std::make_shared<SHOT::Problem>(env);
-                    auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.1, 5.0);
+                    auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.1, 5.0);
                     problem->add(SHOT::Variables({ var_x }));
 
                     auto nl_x = std::make_shared<SHOT::ExpressionVariable>(var_x);
@@ -3791,10 +3826,10 @@ bool ModelTestObjectiveEpigraphStrategy()
             {
                 auto problem = std::make_shared<SHOT::Problem>(env);
                 auto var_x = std::make_shared<SHOT::Variable>(
-                    "x", 0, SHOT::E_VariableType::Real, 0.0, isMaximize ? 2.0 : 10.0);
-                auto var_w = std::make_shared<SHOT::Variable>("w", 1, SHOT::E_VariableType::Real, 0.0, 3.0);
+                    "x", SHOT::E_VariableType::Real, 0.0, isMaximize ? 2.0 : 10.0);
+                auto var_w = std::make_shared<SHOT::Variable>("w", SHOT::E_VariableType::Real, 0.0, 3.0);
                 auto var_z = std::make_shared<SHOT::Variable>(
-                    "z", 2, SHOT::E_VariableType::Real, isMaximize ? 1.0 : 0.0, isMaximize ? 5.0 : 2.0);
+                    "z", SHOT::E_VariableType::Real, isMaximize ? 1.0 : 0.0, isMaximize ? 5.0 : 2.0);
                 problem->add(SHOT::Variables({ var_x, var_w, var_z }));
 
                 auto objective = std::make_shared<SHOT::NonlinearObjectiveFunction>(isMaximize
@@ -3845,10 +3880,10 @@ bool ModelTestObjectiveEpigraphStrategy()
             {
                 auto problem = std::make_shared<SHOT::Problem>(env);
                 auto var_x = std::make_shared<SHOT::Variable>(
-                    "x", 0, SHOT::E_VariableType::Real, 0.0, isMaximize ? 2.0 : 10.0);
-                auto var_w = std::make_shared<SHOT::Variable>("w", 1, SHOT::E_VariableType::Real, 0.0, 3.0);
+                    "x", SHOT::E_VariableType::Real, 0.0, isMaximize ? 2.0 : 10.0);
+                auto var_w = std::make_shared<SHOT::Variable>("w", SHOT::E_VariableType::Real, 0.0, 3.0);
                 auto var_z = std::make_shared<SHOT::Variable>(
-                    "z", 2, SHOT::E_VariableType::Real, isMaximize ? 1.0 : 0.0, isMaximize ? 5.0 : 2.0);
+                    "z", SHOT::E_VariableType::Real, isMaximize ? 1.0 : 0.0, isMaximize ? 5.0 : 2.0);
                 problem->add(SHOT::Variables({ var_x, var_w, var_z }));
 
                 auto objective = std::make_shared<SHOT::NonlinearObjectiveFunction>(isMaximize
@@ -3905,7 +3940,7 @@ bool ModelTestObjectiveEpigraphStrategy()
 
                     if(isQuadratic)
                     {
-                        auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 2.0);
+                        auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 2.0);
                         problem->add(SHOT::Variables({ var_x }));
 
                         auto objective = std::make_shared<SHOT::QuadraticObjectiveFunction>(
@@ -3916,7 +3951,7 @@ bool ModelTestObjectiveEpigraphStrategy()
                     }
                     else
                     {
-                        auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.1, 5.0);
+                        auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.1, 5.0);
                         problem->add(SHOT::Variables({ var_x }));
 
                         auto nl_x = std::make_shared<SHOT::ExpressionVariable>(var_x);
@@ -4000,8 +4035,8 @@ bool ModelTestAntiEpigraphReformulation()
             auto buildProblem = [](const std::shared_ptr<SHOT::Environment>& env)
             {
                 auto problem = std::make_shared<SHOT::Problem>(env);
-                auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 2.0);
-                auto var_z = std::make_shared<SHOT::Variable>("z", 1, SHOT::E_VariableType::Real, -100.0, 100.0);
+                auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 2.0);
+                auto var_z = std::make_shared<SHOT::Variable>("z", SHOT::E_VariableType::Real, -100.0, 100.0);
                 problem->add(SHOT::Variables({ var_x, var_z }));
 
                 auto objective
@@ -4011,7 +4046,7 @@ bool ModelTestAntiEpigraphReformulation()
 
                 // z - exp(x) >= 0  <=>  z >= exp(x)
                 auto nl_x = std::make_shared<SHOT::ExpressionVariable>(var_x);
-                auto constraint = std::make_shared<SHOT::NonlinearConstraint>(0, "epidef", 0.0, SHOT_DBL_MAX);
+                auto constraint = std::make_shared<SHOT::NonlinearConstraint>("epidef", 0.0, SHOT_DBL_MAX);
                 constraint->add(std::make_shared<SHOT::LinearTerm>(1.0, var_z));
                 constraint->add(std::make_shared<SHOT::ExpressionNegate>(std::make_shared<SHOT::ExpressionExp>(nl_x)));
                 problem->add(constraint);
@@ -4106,8 +4141,8 @@ bool ModelTestAntiEpigraphReformulation()
             auto buildProblem = [](const std::shared_ptr<SHOT::Environment>& env)
             {
                 auto problem = std::make_shared<SHOT::Problem>(env);
-                auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 1.0, 3.0);
-                auto var_z = std::make_shared<SHOT::Variable>("z", 1, SHOT::E_VariableType::Real, -100.0, 100.0);
+                auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 1.0, 3.0);
+                auto var_z = std::make_shared<SHOT::Variable>("z", SHOT::E_VariableType::Real, -100.0, 100.0);
                 problem->add(SHOT::Variables({ var_x, var_z }));
 
                 auto objective
@@ -4116,7 +4151,7 @@ bool ModelTestAntiEpigraphReformulation()
                 problem->add(objective);
 
                 // z - (-x^2) <= 0  <=>  z + x^2 <= 0  <=>  z <= -x^2
-                auto constraint = std::make_shared<SHOT::QuadraticConstraint>(0, "epidef", SHOT_DBL_MIN, 0.0);
+                auto constraint = std::make_shared<SHOT::QuadraticConstraint>("epidef", SHOT_DBL_MIN, 0.0);
                 constraint->add(std::make_shared<SHOT::LinearTerm>(1.0, var_z));
                 constraint->add(std::make_shared<SHOT::QuadraticTerm>(1.0, var_x, var_x));
                 problem->add(constraint);
@@ -4185,10 +4220,10 @@ bool ModelTestAntiEpigraphReformulation()
             auto buildProblem = [](const std::shared_ptr<SHOT::Environment>& env)
             {
                 auto problem = std::make_shared<SHOT::Problem>(env);
-                auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 10.0);
-                auto var_w = std::make_shared<SHOT::Variable>("w", 1, SHOT::E_VariableType::Real, 0.0, 3.0);
-                auto var_y = std::make_shared<SHOT::Variable>("y", 2, SHOT::E_VariableType::Real, 0.0, 2.0);
-                auto var_z = std::make_shared<SHOT::Variable>("z", 3, SHOT::E_VariableType::Real, -100.0, 100.0);
+                auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 10.0);
+                auto var_w = std::make_shared<SHOT::Variable>("w", SHOT::E_VariableType::Real, 0.0, 3.0);
+                auto var_y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Real, 0.0, 2.0);
+                auto var_z = std::make_shared<SHOT::Variable>("z", SHOT::E_VariableType::Real, -100.0, 100.0);
                 problem->add(SHOT::Variables({ var_x, var_w, var_y, var_z }));
 
                 auto objective
@@ -4198,7 +4233,7 @@ bool ModelTestAntiEpigraphReformulation()
 
                 // z - x^2 + 4x - 2w - exp(y) >= 0  <=>  z >= (x^2-4x) + 2w + exp(y)
                 auto nl_y = std::make_shared<SHOT::ExpressionVariable>(var_y);
-                auto constraint = std::make_shared<SHOT::NonlinearConstraint>(0, "epidef", 0.0, SHOT_DBL_MAX);
+                auto constraint = std::make_shared<SHOT::NonlinearConstraint>("epidef", 0.0, SHOT_DBL_MAX);
                 constraint->add(std::make_shared<SHOT::LinearTerm>(1.0, var_z));
                 constraint->add(std::make_shared<SHOT::QuadraticTerm>(-1.0, var_x, var_x));
                 constraint->add(std::make_shared<SHOT::LinearTerm>(4.0, var_x));
@@ -4306,7 +4341,7 @@ bool ModelTestObjectivePartitioningStrategy()
     {
         // maximize -x^2 + 6x, x in [0, 2] -> concave, convex problem, optimum at x=2, value 8
         auto problem = std::make_shared<SHOT::Problem>(env);
-        auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 2.0);
+        auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 2.0);
         problem->add(SHOT::Variables({ var_x }));
 
         auto objective
@@ -4323,8 +4358,8 @@ bool ModelTestObjectivePartitioningStrategy()
     {
         // maximize log(x) + log(y), x, y in [1, 5] -> concave sum, convex problem, optimum at x=y=5
         auto problem = std::make_shared<SHOT::Problem>(env);
-        auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 1.0, 5.0);
-        auto var_y = std::make_shared<SHOT::Variable>("y", 1, SHOT::E_VariableType::Real, 1.0, 5.0);
+        auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 1.0, 5.0);
+        auto var_y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Real, 1.0, 5.0);
         problem->add(SHOT::Variables({ var_x, var_y }));
 
         auto nl_x = std::make_shared<SHOT::ExpressionVariable>(var_x);
@@ -4597,8 +4632,8 @@ bool ModelTestSignomialElementBounds()
     bool passed = true;
     constexpr double tolerance = 1e-6;
 
-    auto makeVariable = [](double lb, double ub)
-    { return std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, lb, ub); };
+    auto makeVariable = [](
+        double lb, double ub) { return std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, lb, ub); };
 
     auto checkInterval
         = [&passed](const std::string& description, SHOT::Interval actual, double expectedLower, double expectedUpper)
@@ -4809,8 +4844,25 @@ bool ModelTestTermAndExpressionBounds()
     bool passed = true;
     constexpr double tolerance = 1e-6;
 
-    auto makeVariable = [](double lb, double ub, int index = 0)
-    { return std::make_shared<SHOT::Variable>("x", index, SHOT::E_VariableType::Real, lb, ub); };
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+
+    // A variable's index is its position in the problem it belongs to, and the sub-tests below evaluate terms
+    // against interval vectors they build by hand. Give each variable a problem of its own, padded so that the
+    // variable lands on the position the surrounding interval vector expects it at.
+    auto makeVariable = [&env](double lb, double ub, int index = 0)
+    {
+        auto problem = std::make_shared<SHOT::Problem>(env);
+
+        for(int i = 0; i < index; i++)
+            problem->add(std::make_shared<SHOT::Variable>(
+                "pad_" + std::to_string(i), SHOT::E_VariableType::Real, 0.0, 0.0));
+
+        auto variable = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, lb, ub);
+        problem->add(variable);
+
+        return variable;
+    };
 
     auto checkInterval
         = [&passed](const std::string& description, SHOT::Interval actual, double expectedLower, double expectedUpper)
@@ -5262,14 +5314,14 @@ bool ModelTestMixedTermBoundTightening()
 
     auto problem = std::make_shared<SHOT::Problem>(env);
 
-    auto var_total = std::make_shared<SHOT::Variable>("total", 0, SHOT::E_VariableType::Real, -1000.0, 1000.0);
-    auto var_a = std::make_shared<SHOT::Variable>("a", 1, SHOT::E_VariableType::Real, 1.0, 2.0);
-    auto var_b = std::make_shared<SHOT::Variable>("b", 2, SHOT::E_VariableType::Real, 2.0, 3.0);
-    auto var_c = std::make_shared<SHOT::Variable>("c", 3, SHOT::E_VariableType::Real, 1.0, 2.0);
-    auto var_d = std::make_shared<SHOT::Variable>("d", 4, SHOT::E_VariableType::Real, 3.0, 4.0);
-    auto var_e = std::make_shared<SHOT::Variable>("e", 5, SHOT::E_VariableType::Real, -2.0, 1.0);
-    auto var_f = std::make_shared<SHOT::Variable>("f", 6, SHOT::E_VariableType::Real, 1.0, 2.0);
-    auto var_g = std::make_shared<SHOT::Variable>("g", 7, SHOT::E_VariableType::Real, 0.0, 1.0);
+    auto var_total = std::make_shared<SHOT::Variable>("total", SHOT::E_VariableType::Real, -1000.0, 1000.0);
+    auto var_a = std::make_shared<SHOT::Variable>("a", SHOT::E_VariableType::Real, 1.0, 2.0);
+    auto var_b = std::make_shared<SHOT::Variable>("b", SHOT::E_VariableType::Real, 2.0, 3.0);
+    auto var_c = std::make_shared<SHOT::Variable>("c", SHOT::E_VariableType::Real, 1.0, 2.0);
+    auto var_d = std::make_shared<SHOT::Variable>("d", SHOT::E_VariableType::Real, 3.0, 4.0);
+    auto var_e = std::make_shared<SHOT::Variable>("e", SHOT::E_VariableType::Real, -2.0, 1.0);
+    auto var_f = std::make_shared<SHOT::Variable>("f", SHOT::E_VariableType::Real, 1.0, 2.0);
+    auto var_g = std::make_shared<SHOT::Variable>("g", SHOT::E_VariableType::Real, 0.0, 1.0);
     problem->add(SHOT::Variables { var_total, var_a, var_b, var_c, var_d, var_e, var_f, var_g });
 
     // A dummy objective is required for a valid problem; it plays no part in the bound tightening being tested.
@@ -5277,7 +5329,7 @@ bool ModelTestMixedTermBoundTightening()
     objective->add(std::make_shared<SHOT::LinearTerm>(1.0, var_total));
     problem->add(objective);
 
-    auto constraint = std::make_shared<SHOT::NonlinearConstraint>(0, "mixed", 0.0, 0.0);
+    auto constraint = std::make_shared<SHOT::NonlinearConstraint>("mixed", 0.0, 0.0);
     constraint->add(std::make_shared<SHOT::LinearTerm>(1.0, var_total));
     constraint->add(std::make_shared<SHOT::LinearTerm>(-3.0, var_a));
     constraint->add(std::make_shared<SHOT::QuadraticTerm>(-1.0, var_b, var_b));
@@ -5373,7 +5425,7 @@ bool ModelTestUnboundedQCQPWithSolver(ES_MIPSolver mipSolver)
     problem->name = "unbounded_qcqp";
 
     // x is a genuinely free variable, matching the original AMPL reproducer where x has no explicit bound.
-    auto x = std::make_shared<Variable>("x", 0, E_VariableType::Real, SHOT_DBL_MIN, SHOT_DBL_MAX);
+    auto x = std::make_shared<Variable>("x", E_VariableType::Real, SHOT_DBL_MIN, SHOT_DBL_MAX);
     problem->add({ x });
 
     auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
@@ -5381,7 +5433,7 @@ bool ModelTestUnboundedQCQPWithSolver(ES_MIPSolver mipSolver)
     problem->add(objective);
 
     // e1: x^2 >= 1
-    auto e1 = std::make_shared<QuadraticConstraint>(0, "e1", 1.0, SHOT_DBL_MAX);
+    auto e1 = std::make_shared<QuadraticConstraint>("e1", 1.0, SHOT_DBL_MAX);
     e1->add(std::make_shared<QuadraticTerm>(1.0, x, x));
     problem->add(e1);
 
@@ -5457,8 +5509,8 @@ bool ModelTestFixedVariableConstantFolding()
     {
         auto problem = std::make_shared<SHOT::Problem>(env);
 
-        auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Integer, 0.9, 10.0);
-        auto var_y = std::make_shared<SHOT::Variable>("y", 1, SHOT::E_VariableType::Binary, 0.0, 1.0);
+        auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Integer, 0.9, 10.0);
+        auto var_y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Binary, 0.0, 1.0);
         problem->add(SHOT::Variables({ var_x, var_y }));
 
         auto objective = std::make_shared<SHOT::LinearObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize);
@@ -5466,7 +5518,7 @@ bool ModelTestFixedVariableConstantFolding()
         problem->add(objective);
 
         // y - log(x) + 0.1 <= 0
-        auto constraint1 = std::make_shared<SHOT::NonlinearConstraint>(0, "logconstr", SHOT_DBL_MIN, 0.0);
+        auto constraint1 = std::make_shared<SHOT::NonlinearConstraint>("logconstr", SHOT_DBL_MIN, 0.0);
         constraint1->add(std::make_shared<SHOT::LinearTerm>(1.0, var_y));
         constraint1->add(std::make_shared<SHOT::ExpressionNegate>(
             std::make_shared<SHOT::ExpressionLog>(std::make_shared<SHOT::ExpressionVariable>(var_x))));
@@ -5474,7 +5526,7 @@ bool ModelTestFixedVariableConstantFolding()
         problem->add(constraint1);
 
         // x - cos(y)^2 - 1.5 <= 0
-        auto constraint2 = std::make_shared<SHOT::NonlinearConstraint>(1, "cosconstr", SHOT_DBL_MIN, 0.0);
+        auto constraint2 = std::make_shared<SHOT::NonlinearConstraint>("cosconstr", SHOT_DBL_MIN, 0.0);
         constraint2->add(std::make_shared<SHOT::LinearTerm>(1.0, var_x));
         constraint2->add(std::make_shared<SHOT::ExpressionNegate>(std::make_shared<SHOT::ExpressionSquare>(
             std::make_shared<SHOT::ExpressionCos>(std::make_shared<SHOT::ExpressionVariable>(var_y)))));
@@ -5582,7 +5634,7 @@ bool ModelTestFixedBinaryVariableBounds()
         for(auto& boundCase : cases)
         {
             auto variable = std::make_shared<SHOT::Variable>(
-                "b", 0, SHOT::E_VariableType::Binary, boundCase.lowerBound, boundCase.upperBound);
+                "b", SHOT::E_VariableType::Binary, boundCase.lowerBound, boundCase.upperBound);
 
             std::cout << "  " << boundCase.description << ": [" << boundCase.lowerBound << ", "
                       << boundCase.upperBound << "] -> [" << variable->lowerBound << ", " << variable->upperBound
@@ -5598,7 +5650,7 @@ bool ModelTestFixedBinaryVariableBounds()
         }
 
         // The constructor without bounds still defaults a binary variable to [0,1].
-        auto defaultVariable = std::make_shared<SHOT::Variable>("b", 0, SHOT::E_VariableType::Binary);
+        auto defaultVariable = std::make_shared<SHOT::Variable>("b", SHOT::E_VariableType::Binary);
 
         std::cout << "  binary without given bounds: [" << defaultVariable->lowerBound << ", "
                   << defaultVariable->upperBound << "] (expected [0, 1])\n";
@@ -5627,8 +5679,8 @@ bool ModelTestFixedBinaryVariableBounds()
         {
             auto problem = std::make_shared<SHOT::Problem>(env);
 
-            auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 1.0);
-            auto var_y = std::make_shared<SHOT::Variable>("y", 1, SHOT::E_VariableType::Binary, 0.0, 1.0);
+            auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 1.0);
+            auto var_y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Binary, 0.0, 1.0);
             problem->add(SHOT::Variables({ var_x, var_y }));
 
             auto objective
@@ -5637,13 +5689,13 @@ bool ModelTestFixedBinaryVariableBounds()
             problem->add(objective);
 
             // exp(y) - 1.5 <= 0
-            auto constraint1 = std::make_shared<SHOT::NonlinearConstraint>(0, "expconstr", SHOT_DBL_MIN, 0.0);
+            auto constraint1 = std::make_shared<SHOT::NonlinearConstraint>("expconstr", SHOT_DBL_MIN, 0.0);
             constraint1->add(std::make_shared<SHOT::ExpressionExp>(std::make_shared<SHOT::ExpressionVariable>(var_y)));
             constraint1->constant = -1.5;
             problem->add(constraint1);
 
             // x + y <= 5
-            auto constraint2 = std::make_shared<SHOT::LinearConstraint>(1, "linconstr", SHOT_DBL_MIN, 5.0);
+            auto constraint2 = std::make_shared<SHOT::LinearConstraint>("linconstr", SHOT_DBL_MIN, 5.0);
             constraint2->add(std::make_shared<SHOT::LinearTerm>(1.0, var_x));
             constraint2->add(std::make_shared<SHOT::LinearTerm>(1.0, var_y));
             problem->add(constraint2);
@@ -5740,7 +5792,7 @@ bool ModelTestConstantInFunctionValues()
     auto makeProblem = [](const std::shared_ptr<SHOT::Environment>& env)
     {
         auto problem = std::make_shared<SHOT::Problem>(env);
-        auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 1.0, 2.0);
+        auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 1.0, 2.0);
         problem->add(SHOT::Variables({ var_x }));
         return std::make_pair(problem, var_x);
     };
@@ -5814,7 +5866,7 @@ bool ModelTestConstantInFunctionValues()
         auto [problem, var_x] = makeProblem(solver->getEnvironment());
         addDummyObjective(problem, var_x);
 
-        auto constraint = std::make_shared<SHOT::LinearConstraint>(0, "lc", SHOT_DBL_MIN, 100.0);
+        auto constraint = std::make_shared<SHOT::LinearConstraint>("lc", SHOT_DBL_MIN, 100.0);
         constraint->add(std::make_shared<SHOT::LinearTerm>(3.0, var_x));
         constraint->constant = constant;
         problem->add(constraint);
@@ -5830,7 +5882,7 @@ bool ModelTestConstantInFunctionValues()
         auto [problem, var_x] = makeProblem(solver->getEnvironment());
         addDummyObjective(problem, var_x);
 
-        auto constraint = std::make_shared<SHOT::QuadraticConstraint>(0, "qc", SHOT_DBL_MIN, 100.0);
+        auto constraint = std::make_shared<SHOT::QuadraticConstraint>("qc", SHOT_DBL_MIN, 100.0);
         constraint->add(std::make_shared<SHOT::LinearTerm>(3.0, var_x));
         constraint->add(std::make_shared<SHOT::QuadraticTerm>(1.0, var_x, var_x));
         constraint->constant = constant;
@@ -5847,7 +5899,7 @@ bool ModelTestConstantInFunctionValues()
         auto [problem, var_x] = makeProblem(solver->getEnvironment());
         addDummyObjective(problem, var_x);
 
-        auto constraint = std::make_shared<SHOT::NonlinearConstraint>(0, "nlc", SHOT_DBL_MIN, 100.0);
+        auto constraint = std::make_shared<SHOT::NonlinearConstraint>("nlc", SHOT_DBL_MIN, 100.0);
         constraint->add(std::make_shared<SHOT::LinearTerm>(3.0, var_x));
         constraint->add(std::make_shared<SHOT::ExpressionExp>(std::make_shared<SHOT::ExpressionVariable>(var_x)));
         constraint->constant = constant;
@@ -5907,8 +5959,8 @@ bool ModelTestPolishSolution()
         {
             auto problem = std::make_shared<SHOT::Problem>(env);
 
-            auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, -10.0, 10.0);
-            auto var_y = std::make_shared<SHOT::Variable>("y", 1, SHOT::E_VariableType::Real, -10.0, 10.0);
+            auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, -10.0, 10.0);
+            auto var_y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Real, -10.0, 10.0);
             problem->add(SHOT::Variables({ var_x, var_y }));
 
             auto objective
@@ -5921,19 +5973,19 @@ bool ModelTestPolishSolution()
 
             if(withBinary)
             {
-                auto var_b = std::make_shared<SHOT::Variable>("b", 2, SHOT::E_VariableType::Binary, 0.0, 1.0);
+                auto var_b = std::make_shared<SHOT::Variable>("b", SHOT::E_VariableType::Binary, 0.0, 1.0);
                 problem->add(var_b);
                 objective->add(std::make_shared<SHOT::LinearTerm>(1.0, var_b));
             }
 
             problem->add(objective);
 
-            auto ballConstraint = std::make_shared<SHOT::QuadraticConstraint>(0, "ball", SHOT_DBL_MIN, 1.0);
+            auto ballConstraint = std::make_shared<SHOT::QuadraticConstraint>("ball", SHOT_DBL_MIN, 1.0);
             ballConstraint->add(std::make_shared<SHOT::QuadraticTerm>(1.0, var_x, var_x));
             ballConstraint->add(std::make_shared<SHOT::QuadraticTerm>(1.0, var_y, var_y));
             problem->add(ballConstraint);
 
-            auto cutConstraint = std::make_shared<SHOT::LinearConstraint>(1, "cut", 1.2, SHOT_DBL_MAX);
+            auto cutConstraint = std::make_shared<SHOT::LinearConstraint>("cut", 1.2, SHOT_DBL_MAX);
             cutConstraint->add(std::make_shared<SHOT::LinearTerm>(1.0, var_x));
             cutConstraint->add(std::make_shared<SHOT::LinearTerm>(1.0, var_y));
             problem->add(cutConstraint);
@@ -6104,9 +6156,8 @@ bool ModelTestSignomialTermConvexity()
 
         for(auto& [lb, ub, power] : C.elements)
         {
-            auto variable
-                = std::make_shared<SHOT::Variable>("x" + std::to_string(index), index, SHOT::E_VariableType::Real,
-                    lb, ub);
+            auto variable = std::make_shared<SHOT::Variable>(
+                "x" + std::to_string(index), SHOT::E_VariableType::Real, lb, ub);
             elements.push_back(std::make_shared<SHOT::SignomialElement>(variable, power));
             index++;
         }

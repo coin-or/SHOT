@@ -182,7 +182,7 @@ bool IpoptProblem::get_list_of_nonlinear_variables(
 
     for(int i = 0; i < sourceProblem->properties.numberOfNonlinearVariables; i++)
     {
-        pos_nonlin_vars[i] = sourceProblem->nonlinearVariables[i]->index;
+        pos_nonlin_vars[i] = sourceProblem->nonlinearVariables[i]->getIndex();
 #ifndef NDEBUG
         count++;
 #endif
@@ -319,7 +319,7 @@ bool IpoptProblem::eval_grad_f(Index n, const Number* x, [[maybe_unused]] bool n
     std::memset(grad_f, 0, n * sizeof(Number));
 
     for(auto& G : sourceProblem->objectiveFunction->calculateGradient(vectorPoint, false))
-        grad_f[G.first->index] = G.second;
+        grad_f[G.first->getIndex()] = G.second;
 
     return (true);
 }
@@ -352,10 +352,10 @@ bool IpoptProblem::eval_jac_g(Index n, const Number* x, [[maybe_unused]] bool ne
 
             for(auto& G : *jacobian)
             {
-                iRow[counter] = C->index;
-                jCol[counter] = G->index;
+                iRow[counter] = C->getIndex();
+                jCol[counter] = G->getIndex();
 
-                jacobianCounterPlacement.emplace(std::make_pair(C->index, G->index), counter);
+                jacobianCounterPlacement.emplace(std::make_pair(C->getIndex(), G->getIndex()), counter);
                 counter++;
             }
 
@@ -377,7 +377,7 @@ bool IpoptProblem::eval_jac_g(Index n, const Number* x, [[maybe_unused]] bool ne
 
         for(auto& G : jacobian)
         {
-            int location = jacobianCounterPlacement[std::make_pair(C->index, G.first->index)];
+            int location = jacobianCounterPlacement[std::make_pair(C->getIndex(), G.first->getIndex())];
 
             values[location] += G.second;
 
@@ -402,12 +402,13 @@ bool IpoptProblem::eval_h(Index n, const Number* x, [[maybe_unused]] bool new_x,
 
         for(auto& E : *sourceProblem->getLagrangianHessianSparsityPattern())
         {
-            assert(E.first->index <= E.second->index);
+            assert(E.first->getIndex() <= E.second->getIndex());
 
-            iRow[counter] = E.first->index;
-            jCol[counter] = E.second->index;
+            iRow[counter] = E.first->getIndex();
+            jCol[counter] = E.second->getIndex();
 
-            lagrangianHessianCounterPlacement.emplace(std::make_pair(E.first->index, E.second->index), counter);
+            lagrangianHessianCounterPlacement.emplace(
+                std::make_pair(E.first->getIndex(), E.second->getIndex()), counter);
 
             counter++;
         }
@@ -425,8 +426,8 @@ bool IpoptProblem::eval_h(Index n, const Number* x, [[maybe_unused]] bool new_x,
     {
         for(auto& E : sourceProblem->objectiveFunction->calculateHessian(vectorPoint, false))
         {
-            int location
-                = lagrangianHessianCounterPlacement[std::make_pair(E.first.first->index, E.first.second->index)];
+            int location = lagrangianHessianCounterPlacement[std::make_pair(
+                E.first.first->getIndex(), E.first.second->getIndex())];
 
             assert(location < nele_hess);
             assert(location >= 0);
@@ -440,18 +441,18 @@ bool IpoptProblem::eval_h(Index n, const Number* x, [[maybe_unused]] bool new_x,
         if(C->properties.classification == E_ConstraintClassification::Linear)
             continue;
 
-        if(lambda[C->index] == 0.0)
+        if(lambda[C->getIndex()] == 0.0)
             continue;
 
         for(auto& E : C->calculateHessian(vectorPoint, false))
         {
-            int location
-                = lagrangianHessianCounterPlacement[std::make_pair(E.first.first->index, E.first.second->index)];
+            int location = lagrangianHessianCounterPlacement[std::make_pair(
+                E.first.first->getIndex(), E.first.second->getIndex())];
 
             assert(location < nele_hess);
             assert(location >= 0);
 
-            values[location] += lambda[C->index] * E.second;
+            values[location] += lambda[C->getIndex()] * E.second;
         }
     }
 

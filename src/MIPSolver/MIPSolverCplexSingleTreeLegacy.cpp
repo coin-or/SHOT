@@ -130,7 +130,7 @@ void HCallbackI::main() // Called at each node...
         {
             auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
                 solution, env->reformulatedProblem->nonlinearConstraints);
-            tmpSolPt.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+            tmpSolPt.maxDeviation = PairIndexValue(maxDev.constraint->getIndex(), maxDev.normalizedValue);
         }
         else
         {
@@ -318,7 +318,7 @@ void CtCallbackI::main()
         auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
             solution, env->reformulatedProblem->nonlinearConstraints);
 
-        solutionCandidate.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+        solutionCandidate.maxDeviation = PairIndexValue(maxDev.constraint->getIndex(), maxDev.normalizedValue);
     }
     else
     {
@@ -363,7 +363,7 @@ void CtCallbackI::main()
             if(env->problem->properties.numberOfNonlinearConstraints > 0)
             {
                 auto maxDev = env->problem->getMaxNumericConstraintValue(solution, env->problem->nonlinearConstraints);
-                tmpPt.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+                tmpPt.maxDeviation = PairIndexValue(maxDev.constraint->getIndex(), maxDev.normalizedValue);
             }
             else
             {
@@ -645,11 +645,11 @@ bool CtCallbackI::createIntegerCut(IntegerCut& integerCut)
 
             if(variableValue == VAR->upperBound)
             {
-                expr += (variableValue - cplexVars[VAR->index]);
+                expr += (variableValue - cplexVars[VAR->getIndex()]);
             }
             else if(variableValue == VAR->lowerBound)
             {
-                expr += cplexVars[VAR->index];
+                expr += cplexVars[VAR->getIndex()];
             }
 
             index++;

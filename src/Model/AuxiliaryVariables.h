@@ -37,25 +37,23 @@ public:
         properties.isAuxiliary = true;
     }
 
-    AuxiliaryVariable(std::string variableName, int variableIndex, E_VariableType variableType, double LB, double UB,
+    AuxiliaryVariable(std::string variableName, E_VariableType variableType, double LB, double UB,
         [[maybe_unused]] double variableSemiBound = NAN)
     {
         assert(variableType != E_VariableType::Semicontinuous); // not supported yet
         assert(variableType != E_VariableType::Semiinteger); // not supported yet
         Variable::name = variableName;
-        Variable::index = variableIndex;
         properties.type = variableType;
         Variable::lowerBound = LB;
         Variable::upperBound = UB;
         properties.isAuxiliary = true;
     }
 
-    AuxiliaryVariable(std::string variableName, int variableIndex, E_VariableType variableType)
+    AuxiliaryVariable(std::string variableName, E_VariableType variableType)
     {
         assert(variableType != E_VariableType::Semicontinuous); // not supported yet
         assert(variableType != E_VariableType::Semiinteger); // not supported yet
         Variable::name = variableName;
-        Variable::index = variableIndex;
         properties.type = variableType;
         Variable::lowerBound = SHOT_DBL_MIN;
         Variable::upperBound = SHOT_DBL_MAX;
@@ -106,7 +104,7 @@ public:
     inline void sortByIndex()
     {
         std::sort(this->begin(), this->end(), [](const VariablePtr& variableOne, const VariablePtr& variableTwo) {
-            return (variableOne->index < variableTwo->index);
+            return (variableOne->getIndex() < variableTwo->getIndex());
         });
     }
 };

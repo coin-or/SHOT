@@ -194,8 +194,8 @@ void TaskPerformBoundTightening::createPOA()
 
     for(auto& V : sourceProblem->allVariables)
     {
-        POASolver->updateVariableLowerBound(V->index, V->lowerBound);
-        POASolver->updateVariableUpperBound(V->index, V->upperBound);
+        POASolver->updateVariableLowerBound(V->getIndex(), V->lowerBound);
+        POASolver->updateVariableUpperBound(V->getIndex(), V->upperBound);
     }
 
     // TODO handle return code?
@@ -213,7 +213,7 @@ void TaskPerformBoundTightening::createPOA()
         {
             newHP->source = sourceHP->source;
             newHP->sourceConstraint = std::dynamic_pointer_cast<NumericConstraint>(
-                sourceProblem->getConstraint(sourceHP->sourceConstraint->index));
+                sourceProblem->getConstraint(sourceHP->sourceConstraint->getIndex()));
             newHP->generatedPoint = sourceHP->generatedPoint;
             newHP->isGlobal = sourceHP->isGlobal;
 
@@ -254,10 +254,8 @@ void TaskPerformBoundTightening::createPOA()
                 tmpPair.second /= scalingFactor;
             }
 
-            auto linearConstraint = std::make_shared<LinearConstraint>(
-                sourceProblem->properties.numberOfLinearConstraints + hyperplaneCounter,
-                fmt::format("initPOA_{}_{}", newHP->sourceConstraint->name, hyperplaneCounter), SHOT_DBL_MIN,
-                -tmpPair.second);
+            auto linearConstraint = std::make_shared<LinearConstraint>(fmt::format(
+                "initPOA_{}_{}", newHP->sourceConstraint->name, hyperplaneCounter), SHOT_DBL_MIN, -tmpPair.second);
 
             linearConstraint->properties.classification = E_ConstraintClassification::Linear;
             linearConstraint->properties.convexity = E_Convexity::Linear;

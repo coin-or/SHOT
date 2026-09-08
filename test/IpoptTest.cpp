@@ -44,10 +44,10 @@ bool IpoptTest1()
      *       -1 <= x1 <= 1
      */
 
-    auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, -1.0, 1.0);
+    auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, -1.0, 1.0);
     SHOT::ExpressionVariablePtr expressionVariable_x = std::make_shared<SHOT::ExpressionVariable>(var_x);
 
-    auto var_y = std::make_shared<SHOT::Variable>("y", 1, SHOT::E_VariableType::Real, -10.0, 10.0);
+    auto var_y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Real, -10.0, 10.0);
     SHOT::ExpressionVariablePtr expressionVariable_y = std::make_shared<SHOT::ExpressionVariable>(var_y);
 
     SHOT::Variables variables = { var_x, var_y };
@@ -67,8 +67,8 @@ bool IpoptTest1()
 
     SHOT::NonlinearExpressionPtr exprSquared2 = std::make_shared<SHOT::ExpressionSquare>(expressionVariable_x);
     SHOT::NonlinearExpressionPtr exprPlus = std::make_shared<SHOT::ExpressionSum>(exprSquared2, expressionVariable_y);
-    SHOT::NonlinearConstraintPtr nonlinearConstraint
-        = std::make_shared<SHOT::NonlinearConstraint>(0, "nlconstr", exprPlus, 1.0, 1.0);
+    SHOT::NonlinearConstraintPtr nonlinearConstraint = std::make_shared<SHOT::NonlinearConstraint>(
+        "nlconstr", exprPlus, 1.0, 1.0);
     problem->add(nonlinearConstraint);
 
     std::cout << '\n';
@@ -86,7 +86,7 @@ bool IpoptTest1()
     for(auto& E : *jacobianSparsityPattern)
     {
         for(auto& V : E.second)
-            std::cout << "(" << E.first->index << "," << V->index << ")\n";
+            std::cout << "(" << E.first->getIndex() << "," << V->getIndex() << ")\n";
     }
 
     std::cout << '\n';
@@ -95,7 +95,7 @@ bool IpoptTest1()
 
     for(auto& E : *objectiveSparsityPattern)
     {
-        std::cout << "(" << E.first->index << "," << E.second->index << ")\n";
+        std::cout << "(" << E.first->getIndex() << "," << E.second->getIndex() << ")\n";
     }
 
     std::cout << '\n';
@@ -104,7 +104,7 @@ bool IpoptTest1()
 
     for(auto& E : *constraintsSparsityPattern)
     {
-        std::cout << "(" << E.first->index << "," << E.second->index << ")\n";
+        std::cout << "(" << E.first->getIndex() << "," << E.second->getIndex() << ")\n";
     }
 
     auto NLPSolver = std::make_shared<NLPSolverIpoptRelaxed>(env, problem);
@@ -162,10 +162,10 @@ bool IpoptTest2()
 
     env->problem = problem;
 
-    auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.1, 2.0);
+    auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.1, 2.0);
     SHOT::ExpressionVariablePtr expressionVariable_x = std::make_shared<SHOT::ExpressionVariable>(var_x);
 
-    auto var_y = std::make_shared<SHOT::Variable>("y", 1, SHOT::E_VariableType::Real, 0.1, 10.0);
+    auto var_y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Real, 0.1, 10.0);
     SHOT::ExpressionVariablePtr expressionVariable_y = std::make_shared<SHOT::ExpressionVariable>(var_y);
 
     SHOT::Variables variables = { var_x, var_y };
@@ -185,7 +185,7 @@ bool IpoptTest2()
     SHOT::LinearTerms linearTerms;
     linearTerms.add(std::make_shared<LinearTerm>(1.0, var_x));
     linearTerms.add(std::make_shared<LinearTerm>(1.0, var_y));
-    auto linearConstraint = std::make_shared<SHOT::LinearConstraint>(0, "linconstr", linearTerms, 3.0, 3.0);
+    auto linearConstraint = std::make_shared<SHOT::LinearConstraint>("linconstr", linearTerms, 3.0, 3.0);
 
     linearConstraint->add(linearTerms);
     problem->add(linearConstraint);
@@ -207,7 +207,7 @@ bool IpoptTest2()
 
     for(auto& E : *lagrangianSparsityPattern)
     {
-        std::cout << "(" << E.first->index << "," << E.second->index << ")\n";
+        std::cout << "(" << E.first->getIndex() << "," << E.second->getIndex() << ")\n";
     }
 
     auto NLPSolver = std::make_shared<NLPSolverIpoptRelaxed>(env, problem);

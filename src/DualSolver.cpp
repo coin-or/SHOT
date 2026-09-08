@@ -153,7 +153,7 @@ void DualSolver::addHyperplane(HyperplanePtr hyperplane)
 
         constraintHP->pointHash = Utilities::calculateHash(constraintHP->generatedPoint);
 
-        if(!hasHyperplaneBeenAdded(constraintHP->pointHash, constraintHP->sourceConstraint->index))
+        if(!hasHyperplaneBeenAdded(constraintHP->pointHash, constraintHP->sourceConstraint->getIndex()))
         {
             this->hyperplaneWaitingList.push_back(hyperplane);
         }
@@ -270,7 +270,7 @@ bool DualSolver::hasHyperplaneBeenAdded(double hash, int constraintIndex)
         }
         else if(auto constraintHP = std::dynamic_pointer_cast<ConstraintHyperplane>(H))
         {
-            if(constraintHP->sourceConstraint->index == constraintIndex
+            if(constraintHP->sourceConstraint->getIndex() == constraintIndex
                 && Utilities::isAlmostEqual(constraintHP->pointHash, hash, 1e-8))
             {
                 return (true);

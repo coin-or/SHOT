@@ -136,7 +136,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
                 {
                     auto maxDev = env->problem->getMaxNumericConstraintValue(
                         primalSolution, env->problem->nonlinearConstraints);
-                    tmpPt.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+                    tmpPt.maxDeviation = PairIndexValue(maxDev.constraint->getIndex(), maxDev.normalizedValue);
                 }
                 else
                 {
@@ -198,7 +198,8 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
                 {
                     auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
                         solution, env->reformulatedProblem->nonlinearConstraints);
-                    solutionRelaxed.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+                    solutionRelaxed.maxDeviation
+                        = PairIndexValue(maxDev.constraint->getIndex(), maxDev.normalizedValue);
                 }
                 else
                 {
@@ -285,7 +286,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
                 auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
                     solution, env->reformulatedProblem->nonlinearConstraints);
 
-                solutionCandidate.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+                solutionCandidate.maxDeviation = PairIndexValue(maxDev.constraint->getIndex(), maxDev.normalizedValue);
             }
             else
             {
@@ -535,7 +536,7 @@ bool CplexCallback::createIntegerCut(IntegerCut& integerCut, const IloCplex::Cal
                 continue;
 
             int variableValue = integerCut.variableValues[index];
-            auto variable = cplexVars[VAR->index];
+            auto variable = cplexVars[VAR->getIndex()];
 
             if(variableValue == VAR->upperBound)
             {
@@ -814,7 +815,7 @@ void CplexCallback::addExternalDualBoundLazyConstraint(const IloCplex::Callback:
             if(linObj)
             {
                 for(auto& T : linObj->linearTerms)
-                    objExpr += T->coefficient * cplexVars[T->variable->index];
+                    objExpr += T->coefficient * cplexVars[T->variable->getIndex()];
             }
 
             env->output->outputDebug(

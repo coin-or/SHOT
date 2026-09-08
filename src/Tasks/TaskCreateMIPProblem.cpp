@@ -60,7 +60,7 @@ bool TaskCreateMIPProblem::createProblem(MIPSolverPtr destination, ProblemPtr so
 
     if(sourceProblem->auxiliaryObjectiveVariable) // The source problem already has a nonlinear objective variable
     {
-        destination->setDualAuxiliaryObjectiveVariableIndex(sourceProblem->auxiliaryObjectiveVariable->index);
+        destination->setDualAuxiliaryObjectiveVariableIndex(sourceProblem->auxiliaryObjectiveVariable->getIndex());
     }
     else if(sourceProblem->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic)
     {
@@ -105,8 +105,8 @@ bool TaskCreateMIPProblem::createProblem(MIPSolverPtr destination, ProblemPtr so
         // Linear terms
         for(auto& T : std::dynamic_pointer_cast<LinearObjectiveFunction>(sourceProblem->objectiveFunction)->linearTerms)
         {
-            objectiveInitialized
-                = objectiveInitialized && destination->addLinearTermToObjective(T->coefficient, T->variable->index);
+            objectiveInitialized = objectiveInitialized
+                && destination->addLinearTermToObjective(T->coefficient, T->variable->getIndex());
         }
 
         // Quadratic terms
@@ -117,7 +117,7 @@ bool TaskCreateMIPProblem::createProblem(MIPSolverPtr destination, ProblemPtr so
             {
                 objectiveInitialized = objectiveInitialized
                     && destination->addQuadraticTermToObjective(
-                        T->coefficient, T->firstVariable->index, T->secondVariable->index);
+                        T->coefficient, T->firstVariable->getIndex(), T->secondVariable->getIndex());
             }
         }
 
@@ -142,7 +142,7 @@ bool TaskCreateMIPProblem::createProblem(MIPSolverPtr destination, ProblemPtr so
             for(auto& T : C->linearTerms)
             {
                 constraintsInitialized = constraintsInitialized
-                    && destination->addLinearTermToConstraint(T->coefficient, T->variable->index);
+                    && destination->addLinearTermToConstraint(T->coefficient, T->variable->getIndex());
             }
         }
 
@@ -159,7 +159,7 @@ bool TaskCreateMIPProblem::createProblem(MIPSolverPtr destination, ProblemPtr so
             for(auto& T : C->linearTerms)
             {
                 constraintsInitialized = constraintsInitialized
-                    && destination->addLinearTermToConstraint(T->coefficient, T->variable->index);
+                    && destination->addLinearTermToConstraint(T->coefficient, T->variable->getIndex());
             }
         }
 
@@ -169,7 +169,7 @@ bool TaskCreateMIPProblem::createProblem(MIPSolverPtr destination, ProblemPtr so
             {
                 constraintsInitialized = constraintsInitialized
                     && destination->addQuadraticTermToConstraint(
-                        T->coefficient, T->firstVariable->index, T->secondVariable->index);
+                        T->coefficient, T->firstVariable->getIndex(), T->secondVariable->getIndex());
             }
         }
 
@@ -188,7 +188,7 @@ bool TaskCreateMIPProblem::createProblem(MIPSolverPtr destination, ProblemPtr so
         std::vector<double> variableWeights;
 
         for(auto& V : S->variables)
-            variableIndexes.push_back(V->index);
+            variableIndexes.push_back(V->getIndex());
 
         if(S->weights.size() > 0)
         {

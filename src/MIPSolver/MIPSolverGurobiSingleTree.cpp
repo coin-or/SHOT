@@ -126,7 +126,7 @@ E_ProblemSolutionStatus MIPSolverGurobiSingleTree::solveProblem()
                 if(V->isUnbounded())
                 {
                     updateVariableBound(
-                        V->index, -getUnboundedVariableBoundValue() / 1.1, getUnboundedVariableBoundValue() / 1.1);
+                        V->getIndex(), -getUnboundedVariableBoundValue() / 1.1, getUnboundedVariableBoundValue() / 1.1);
                     variableBoundsUpdated = true;
                 }
             }
@@ -161,7 +161,7 @@ E_ProblemSolutionStatus MIPSolverGurobiSingleTree::solveProblem()
             for(auto& V : env->reformulatedProblem->allVariables)
             {
                 if(V->isUnbounded())
-                    updateVariableBound(V->index, V->lowerBound, V->upperBound);
+                    updateVariableBound(V->getIndex(), V->lowerBound, V->upperBound);
             }
 
             env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed = true;
@@ -268,7 +268,7 @@ void GurobiCallbackSingleTree::callback()
                 {
                     auto maxDev = env->problem->getMaxNumericConstraintValue(
                         primalSolution, env->problem->nonlinearConstraints);
-                    tmpPt.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+                    tmpPt.maxDeviation = PairIndexValue(maxDev.constraint->getIndex(), maxDev.normalizedValue);
                 }
                 else
                 {
@@ -317,7 +317,8 @@ void GurobiCallbackSingleTree::callback()
                 {
                     auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
                         solution, env->reformulatedProblem->nonlinearConstraints);
-                    solutionRelaxed.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+                    solutionRelaxed.maxDeviation
+                        = PairIndexValue(maxDev.constraint->getIndex(), maxDev.normalizedValue);
                 }
                 else
                 {
@@ -388,7 +389,7 @@ void GurobiCallbackSingleTree::callback()
                 auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
                     solution, env->reformulatedProblem->nonlinearConstraints);
 
-                solutionCandidate.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+                solutionCandidate.maxDeviation = PairIndexValue(maxDev.constraint->getIndex(), maxDev.normalizedValue);
             }
             else
             {
@@ -661,7 +662,7 @@ bool GurobiCallbackSingleTree::createIntegerCut(IntegerCut& integerCut)
                 continue;
 
             int variableValue = integerCut.variableValues[index];
-            auto variable = vars[VAR->index];
+            auto variable = vars[VAR->getIndex()];
 
             if(variableValue == VAR->upperBound)
             {
@@ -754,7 +755,7 @@ void GurobiCallbackSingleTree::addExternalDualBoundLazyConstraint()
             if(linObj)
             {
                 for(auto& T : linObj->linearTerms)
-                    objExpr += T->coefficient * vars[T->variable->index];
+                    objExpr += T->coefficient * vars[T->variable->getIndex()];
             }
 
             env->output->outputDebug(

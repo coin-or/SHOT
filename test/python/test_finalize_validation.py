@@ -17,7 +17,7 @@ class TestFinalizeNoObjective:
 
     def test_raises_runtime_error(self):
         ctx = SHOTContext()
-        var_x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 100.0)
+        var_x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 100.0)
         ctx.problem.addVariable(var_x)
 
         # No objective set
@@ -26,7 +26,7 @@ class TestFinalizeNoObjective:
 
     def test_no_raise_when_objective_present(self):
         ctx = SHOTContext()
-        var_x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 100.0)
+        var_x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 100.0)
         ctx.problem.addVariable(var_x)
 
         obj = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
@@ -52,7 +52,7 @@ class TestFinalizeNoVariables:
 
     def test_no_raise_when_variables_present(self):
         ctx = SHOTContext()
-        var_x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 100.0)
+        var_x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 100.0)
         ctx.problem.addVariable(var_x)
 
         obj = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
@@ -68,7 +68,7 @@ class TestFinalizeCalledTwice:
 
     def test_second_call_does_not_raise(self):
         ctx = SHOTContext()
-        var_x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 100.0)
+        var_x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 100.0)
         ctx.problem.addVariable(var_x)
 
         obj = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
@@ -82,8 +82,8 @@ class TestFinalizeCalledTwice:
 
     def test_properties_unchanged_after_second_call(self):
         ctx = SHOTContext()
-        var_x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 100.0)
-        var_y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Integer, 0.0, 1.0)
+        var_x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 100.0)
+        var_y = SHOTpy.Variable("y", SHOTpy.VariableType.Integer, 0.0, 1.0)
         ctx.problem.addVariable(var_x)
         ctx.problem.addVariable(var_y)
 

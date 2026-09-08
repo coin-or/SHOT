@@ -16,7 +16,7 @@ class TestExpObjectiveVsConstraint:
         """Test gradient of exp(x) when in objective function."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, -10.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, -10.0, 10.0)
         problem.addVariable(x)
         
         # Create exp(x) as objective
@@ -39,12 +39,12 @@ class TestExpObjectiveVsConstraint:
         """Test gradient of exp(x) when in constraint."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, -10.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, -10.0, 10.0)
         problem.addVariable(x)
         
         # Create exp(x) <= 100 as constraint
         expr = SHOTpy.exp(x)
-        constr = SHOTpy.NonlinearConstraint(0, "exp_constr", expr, -1e20, 100.0)
+        constr = SHOTpy.NonlinearConstraint("exp_constr", expr, -1e20, 100.0)
         problem.addConstraint(constr)
         
         # Need an objective
@@ -69,7 +69,7 @@ class TestExpObjectiveVsConstraint:
         
         # Create problem with exp(x) in objective
         problem_obj = shot_context.problem
-        x_obj = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, -10.0, 10.0)
+        x_obj = SHOTpy.Variable("x", SHOTpy.VariableType.Real, -10.0, 10.0)
         problem_obj.addVariable(x_obj)
         
         expr_obj = SHOTpy.exp(x_obj)
@@ -82,11 +82,11 @@ class TestExpObjectiveVsConstraint:
         ctx2 = SHOTpy.Solver()
         env2 = ctx2.getEnvironment()
         problem_constr = SHOTpy.Problem(env2)
-        x_constr = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, -10.0, 10.0)
+        x_constr = SHOTpy.Variable("x", SHOTpy.VariableType.Real, -10.0, 10.0)
         problem_constr.addVariable(x_constr)
         
         expr_constr = SHOTpy.exp(x_constr)
-        constr = SHOTpy.NonlinearConstraint(0, "exp_constr", expr_constr, -1e20, 100.0)
+        constr = SHOTpy.NonlinearConstraint("exp_constr", expr_constr, -1e20, 100.0)
         problem_constr.addConstraint(constr)
         
         obj_linear = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
@@ -111,7 +111,7 @@ class TestExpObjectiveVsConstraint:
         """Test Hessian of exp(x) when in objective function."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, -10.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, -10.0, 10.0)
         problem.addVariable(x)
         
         expr = SHOTpy.exp(x)
@@ -134,11 +134,11 @@ class TestExpObjectiveVsConstraint:
         """Test Hessian of exp(x) when in constraint."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, -10.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, -10.0, 10.0)
         problem.addVariable(x)
         
         expr = SHOTpy.exp(x)
-        constr = SHOTpy.NonlinearConstraint(0, "exp_constr", expr, -1e20, 100.0)
+        constr = SHOTpy.NonlinearConstraint("exp_constr", expr, -1e20, 100.0)
         problem.addConstraint(constr)
         
         obj = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
@@ -162,7 +162,7 @@ class TestExpObjectiveVsConstraint:
         
         # Create problem with exp(x) in objective
         problem_obj = shot_context.problem
-        x_obj = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, -10.0, 10.0)
+        x_obj = SHOTpy.Variable("x", SHOTpy.VariableType.Real, -10.0, 10.0)
         problem_obj.addVariable(x_obj)
         
         expr_obj = SHOTpy.exp(x_obj)
@@ -175,11 +175,11 @@ class TestExpObjectiveVsConstraint:
         ctx2 = SHOTpy.Solver()
         env2 = ctx2.getEnvironment()
         problem_constr = SHOTpy.Problem(env2)
-        x_constr = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, -10.0, 10.0)
+        x_constr = SHOTpy.Variable("x", SHOTpy.VariableType.Real, -10.0, 10.0)
         problem_constr.addVariable(x_constr)
         
         expr_constr = SHOTpy.exp(x_constr)
-        constr = SHOTpy.NonlinearConstraint(0, "exp_constr", expr_constr, -1e20, 100.0)
+        constr = SHOTpy.NonlinearConstraint("exp_constr", expr_constr, -1e20, 100.0)
         problem_constr.addConstraint(constr)
         
         obj_linear = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
@@ -208,7 +208,7 @@ class TestSinCosObjectiveVsConstraint:
         """Test gradient of sin(x) when in objective function."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, -10.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, -10.0, 10.0)
         problem.addVariable(x)
         
         expr = SHOTpy.sin(x)
@@ -230,11 +230,11 @@ class TestSinCosObjectiveVsConstraint:
         """Test gradient of sin(x) when in constraint."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, -10.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, -10.0, 10.0)
         problem.addVariable(x)
         
         expr = SHOTpy.sin(x)
-        constr = SHOTpy.NonlinearConstraint(0, "sin_constr", expr, -1e20, 1.0)
+        constr = SHOTpy.NonlinearConstraint("sin_constr", expr, -1e20, 1.0)
         problem.addConstraint(constr)
         
         obj = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
@@ -255,7 +255,7 @@ class TestSinCosObjectiveVsConstraint:
         """Test Hessian of sin(x) when in objective - should be -sin(x)."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, -10.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, -10.0, 10.0)
         problem.addVariable(x)
         
         expr = SHOTpy.sin(x)
@@ -279,11 +279,11 @@ class TestSinCosObjectiveVsConstraint:
         """Test Hessian of sin(x) when in constraint - should be -sin(x)."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, -10.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, -10.0, 10.0)
         problem.addVariable(x)
         
         expr = SHOTpy.sin(x)
-        constr = SHOTpy.NonlinearConstraint(0, "sin_constr", expr, -1e20, 1.0)
+        constr = SHOTpy.NonlinearConstraint("sin_constr", expr, -1e20, 1.0)
         problem.addConstraint(constr)
         
         obj = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
@@ -310,7 +310,7 @@ class TestLogObjectiveVsConstraint:
         """Test gradient of log(x) when in objective function."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
         problem.addVariable(x)
         
         expr = SHOTpy.log(x)
@@ -332,11 +332,11 @@ class TestLogObjectiveVsConstraint:
         """Test gradient of log(x) when in constraint."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
         problem.addVariable(x)
         
         expr = SHOTpy.log(x)
-        constr = SHOTpy.NonlinearConstraint(0, "log_constr", expr, -1e20, 10.0)
+        constr = SHOTpy.NonlinearConstraint("log_constr", expr, -1e20, 10.0)
         problem.addConstraint(constr)
         
         obj = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
@@ -357,7 +357,7 @@ class TestLogObjectiveVsConstraint:
         """Test Hessian of log(x) when in objective - should be -1/x^2."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
         problem.addVariable(x)
         
         expr = SHOTpy.log(x)
@@ -380,11 +380,11 @@ class TestLogObjectiveVsConstraint:
         """Test Hessian of log(x) when in constraint - should be -1/x^2."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
         problem.addVariable(x)
         
         expr = SHOTpy.log(x)
-        constr = SHOTpy.NonlinearConstraint(0, "log_constr", expr, -1e20, 10.0)
+        constr = SHOTpy.NonlinearConstraint("log_constr", expr, -1e20, 10.0)
         problem.addConstraint(constr)
         
         obj = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
@@ -410,8 +410,8 @@ class TestMultiVariableNonlinear:
         """Test gradient of exp(x) * y in objective."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, -5.0, 5.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, -5.0, 5.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -441,13 +441,13 @@ class TestMultiVariableNonlinear:
         """Test gradient of exp(x) * y in constraint."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, -5.0, 5.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, -5.0, 5.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
         expr = SHOTpy.exp(x) * y
-        constr = SHOTpy.NonlinearConstraint(0, "nl_constr", expr, -1e20, 100.0)
+        constr = SHOTpy.NonlinearConstraint("nl_constr", expr, -1e20, 100.0)
         problem.addConstraint(constr)
         
         obj = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
@@ -472,8 +472,8 @@ class TestMultiVariableNonlinear:
         """Test Hessian of exp(x) * y in objective."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, -5.0, 5.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, -5.0, 5.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -506,13 +506,13 @@ class TestMultiVariableNonlinear:
         """Test Hessian of exp(x) * y in constraint."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, -5.0, 5.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, -5.0, 5.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
         expr = SHOTpy.exp(x) * y
-        constr = SHOTpy.NonlinearConstraint(0, "nl_constr", expr, -1e20, 100.0)
+        constr = SHOTpy.NonlinearConstraint("nl_constr", expr, -1e20, 100.0)
         problem.addConstraint(constr)
         
         obj = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
@@ -544,8 +544,8 @@ class TestSparsityPatterns:
         """Test gradient sparsity pattern for exp(x) in objective."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, -10.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, -10.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, -10.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, -10.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -566,13 +566,13 @@ class TestSparsityPatterns:
         """Test gradient sparsity pattern for exp(x) in constraint."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, -10.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, -10.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, -10.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, -10.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
         expr = SHOTpy.exp(x)
-        constr = SHOTpy.NonlinearConstraint(0, "exp_constr", expr, -1e20, 100.0)
+        constr = SHOTpy.NonlinearConstraint("exp_constr", expr, -1e20, 100.0)
         problem.addConstraint(constr)
         
         obj = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
@@ -591,8 +591,8 @@ class TestSparsityPatterns:
         """Test Lagrangian Hessian sparsity includes both objective and constraint."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, -10.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, -10.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -604,7 +604,7 @@ class TestSparsityPatterns:
         
         # Constraint: log(y) <= 10
         expr_constr = SHOTpy.log(y)
-        constr = SHOTpy.NonlinearConstraint(0, "log_constr", expr_constr, -1e20, 10.0)
+        constr = SHOTpy.NonlinearConstraint("log_constr", expr_constr, -1e20, 10.0)
         problem.addConstraint(constr)
         
         problem.finalize()

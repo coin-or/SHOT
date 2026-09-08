@@ -971,13 +971,13 @@ bool ModelingSystemGAMS::copyVariables(ProblemPtr destination)
             if(isSemi)
             {
                 auto variable = std::make_shared<SHOT::Variable>(
-                    variableName, i, variableType, variableLBs[i], variableUBs[i], semiBound);
+                    variableName, variableType, variableLBs[i], variableUBs[i], semiBound);
                 destination->add(std::move(variable));
             }
             else
             {
-                auto variable
-                    = std::make_shared<SHOT::Variable>(variableName, i, variableType, variableLBs[i], variableUBs[i]);
+                auto variable = std::make_shared<SHOT::Variable>(
+                    variableName, variableType, variableLBs[i], variableUBs[i]);
                 destination->add(std::move(variable));
             }
         }
@@ -1139,7 +1139,7 @@ bool ModelingSystemGAMS::copyConstraints(ProblemPtr destination)
             {
             case(gmoorder_L):
             {
-                LinearConstraintPtr constraint = std::make_shared<LinearConstraint>(i, buffer, lb, ub);
+                LinearConstraintPtr constraint = std::make_shared<LinearConstraint>(buffer, lb, ub);
                 destination->add(std::move(constraint));
                 break;
             }
@@ -1147,12 +1147,12 @@ bool ModelingSystemGAMS::copyConstraints(ProblemPtr destination)
             {
                 if(rowHasNonfixedQuadraticTerms(destination, i))
                 {
-                    QuadraticConstraintPtr constraint = std::make_shared<QuadraticConstraint>(i, buffer, lb, ub);
+                    QuadraticConstraintPtr constraint = std::make_shared<QuadraticConstraint>(buffer, lb, ub);
                     destination->add(std::move(constraint));
                 }
                 else
                 {
-                    LinearConstraintPtr constraint = std::make_shared<LinearConstraint>(i, buffer, lb, ub);
+                    LinearConstraintPtr constraint = std::make_shared<LinearConstraint>(buffer, lb, ub);
                     destination->add(std::move(constraint));
                 }
 
@@ -1160,7 +1160,7 @@ bool ModelingSystemGAMS::copyConstraints(ProblemPtr destination)
             }
             case(gmoorder_NL):
             {
-                NonlinearConstraintPtr constraint = std::make_shared<NonlinearConstraint>(i, buffer, lb, ub);
+                NonlinearConstraintPtr constraint = std::make_shared<NonlinearConstraint>(buffer, lb, ub);
                 destination->add(std::move(constraint));
                 break;
             }

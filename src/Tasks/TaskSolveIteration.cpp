@@ -207,7 +207,8 @@ void TaskSolveIteration::run()
         if(env->reformulatedProblem->antiEpigraphObjectiveVariable)
         {
             for(auto& SOL : sols)
-                SOL.point.at(env->reformulatedProblem->antiEpigraphObjectiveVariable->index) = currIter->objectiveValue;
+                SOL.point.at(env->reformulatedProblem->antiEpigraphObjectiveVariable->getIndex())
+                    = currIter->objectiveValue;
         }
 
         currIter->solutionPoints = sols;
@@ -217,7 +218,7 @@ void TaskSolveIteration::run()
             auto mostDevConstr = env->reformulatedProblem->getMaxNumericConstraintValue(
                 sols.at(0).point, env->reformulatedProblem->nonlinearConstraints);
 
-            currIter->maxDeviationConstraint = mostDevConstr.constraint->index;
+            currIter->maxDeviationConstraint = mostDevConstr.constraint->getIndex();
             currIter->maxDeviation = mostDevConstr.normalizedValue;
 
             if(env->settings->getSetting<bool>("Output.Debug.Enable"))

@@ -128,7 +128,6 @@ void checkAndConvertObjectivesAndConstraints(
                 // The constraint is quadratic
 
                 auto newConstraint = std::make_shared<QuadraticConstraint>();
-                newConstraint->index = nonlinearConstraint->index;
                 newConstraint->name = nonlinearConstraint->name;
                 newConstraint->valueLHS = nonlinearConstraint->valueLHS;
                 newConstraint->valueRHS = nonlinearConstraint->valueRHS;
@@ -153,7 +152,6 @@ void checkAndConvertObjectivesAndConstraints(
                 // The constraint is linear
 
                 auto newConstraint = std::make_shared<LinearConstraint>();
-                newConstraint->index = nonlinearConstraint->index;
                 newConstraint->name = nonlinearConstraint->name;
                 newConstraint->valueLHS = nonlinearConstraint->valueLHS;
                 newConstraint->valueRHS = nonlinearConstraint->valueRHS;
@@ -541,7 +539,8 @@ NonlinearExpressionPtr copyNonlinearExpression(NonlinearExpression* expression, 
             if(exprVariable->variable->lowerBound == exprVariable->variable->upperBound)
                 return std::make_shared<ExpressionConstant>(exprVariable->variable->lowerBound);
             else
-                return std::make_shared<ExpressionVariable>(destination->getVariable(exprVariable->variable->index));
+                return std::make_shared<ExpressionVariable>(
+                    destination->getVariable(exprVariable->variable->getIndex()));
         }
     }
     default:

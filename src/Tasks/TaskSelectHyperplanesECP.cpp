@@ -73,7 +73,7 @@ void TaskSelectHyperplanesECP::run(std::vector<SolutionPoint> solPoints)
             }
 
             // Do not add hyperplane if one has been added for this constraint already
-            if(useUniqueConstraints && hyperplaneAddedToConstraint.at(NCV.constraint->index))
+            if(useUniqueConstraints && hyperplaneAddedToConstraint.at(NCV.constraint->getIndex()))
             {
                 continue;
             }
@@ -92,10 +92,10 @@ void TaskSelectHyperplanesECP::run(std::vector<SolutionPoint> solPoints)
 
             double hash = Utilities::calculateHash(solPoints.at(i).point);
 
-            if(env->dualSolver->hasHyperplaneBeenAdded(hash, NCV.constraint->index))
+            if(env->dualSolver->hasHyperplaneBeenAdded(hash, NCV.constraint->getIndex()))
             {
                 env->output->outputDebug("         Hyperplane already added for constraint "
-                    + std::to_string(NCV.constraint->index) + " and hash " + std::to_string(hash));
+                    + std::to_string(NCV.constraint->getIndex()) + " and hash " + std::to_string(hash));
                 continue;
             }
 
@@ -139,7 +139,7 @@ void TaskSelectHyperplanesECP::run(std::vector<SolutionPoint> solPoints)
         env->dualSolver->addHyperplane(hyperplane);
 
         addedHyperplanes++;
-        hyperplaneAddedToConstraint.at(NCV.constraint->index) = true;
+        hyperplaneAddedToConstraint.at(NCV.constraint->getIndex()) = true;
 
         env->output->outputDebug(
             fmt::format("         Added hyperplane for constraint {} to waiting list with deviation {}",
@@ -212,7 +212,7 @@ void TaskSelectHyperplanesECP::run(std::vector<SolutionPoint> solPoints)
                         NCV.constraint->name, NCV.error));
 
                 env->dualSolver->addHyperplane(hyperplane);
-                hyperplaneAddedToConstraint.at(NCV.constraint->index) = true;
+                hyperplaneAddedToConstraint.at(NCV.constraint->getIndex()) = true;
                 addedHyperplanes++;
             }
         }
@@ -226,11 +226,11 @@ void TaskSelectHyperplanesECP::run(std::vector<SolutionPoint> solPoints)
         for(auto& HP : hyperplanesCuttingAwayPrimals)
         {
             env->dualSolver->addHyperplane(HP.first);
-            hyperplaneAddedToConstraint.at(HP.first->sourceConstraint->index) = true;
+            hyperplaneAddedToConstraint.at(HP.first->sourceConstraint->getIndex()) = true;
             addedHyperplanes++;
             env->output->outputDebug(fmt::format("         Selected hyperplane cut for constraint {} that cuts away "
                                                  "previous primal solution with error {}",
-                HP.first->sourceConstraint->index, HP.second));
+                HP.first->sourceConstraint->getIndex(), HP.second));
 
             addedHyperplanes++;
 

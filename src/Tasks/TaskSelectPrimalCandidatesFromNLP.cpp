@@ -143,17 +143,17 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(
 
     for(auto& V : sourceProblem->binaryVariables)
     {
-        discreteVariableIndexes.push_back(V->index);
+        discreteVariableIndexes.push_back(V->getIndex());
     }
 
     for(auto& V : sourceProblem->integerVariables)
     {
-        discreteVariableIndexes.push_back(V->index);
+        discreteVariableIndexes.push_back(V->getIndex());
     }
 
     for(auto& V : sourceProblem->semiintegerVariables)
     {
-        discreteVariableIndexes.push_back(V->index);
+        discreteVariableIndexes.push_back(V->getIndex());
     }
 
     if(env->settings->getSetting<bool>("Output.Debug.Enable"))
@@ -166,8 +166,8 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(
 
     for(auto& V : sourceProblem->allVariables)
     {
-        NLPSolver->updateVariableLowerBound(V->index, V->lowerBound);
-        NLPSolver->updateVariableUpperBound(V->index, V->upperBound);
+        NLPSolver->updateVariableLowerBound(V->getIndex(), V->lowerBound);
+        NLPSolver->updateVariableUpperBound(V->getIndex(), V->upperBound);
     }
 
     env->timing->stopTimer("PrimalBoundStrategyNLP");
@@ -263,8 +263,8 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
 
             for(auto& V : sourceProblem->realVariables)
             {
-                startingPointIndexes.at(V->index) = V->index;
-                startingPointValues.at(V->index) = CAND.point.at(V->index);
+                startingPointIndexes.at(V->getIndex()) = V->getIndex();
+                startingPointValues.at(V->getIndex()) = CAND.point.at(V->getIndex());
             }
 
             if(env->settings->getSetting<bool>("Output.Debug.Enable"))
@@ -382,7 +382,7 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
                     ("NLP" + sourceDesc), env->timing->getElapsedTime("Total"), currIter->numHyperplanesAdded,
                     currIter->totNumHyperplanes, env->results->getCurrentDualBound(), env->results->getPrimalBound(),
                     env->results->getAbsoluteGlobalObjectiveGap(), env->results->getRelativeGlobalObjectiveGap(),
-                    tmpObj, mostDevConstr->constraint->index, mostDevConstr->normalizedValue,
+                    tmpObj, mostDevConstr->constraint->getIndex(), mostDevConstr->normalizedValue,
                     E_IterationLineType::PrimalNLP);
             }
             else
@@ -432,7 +432,7 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
                     ("NLP" + sourceDesc), env->timing->getElapsedTime("Total"), currIter->numHyperplanesAdded,
                     currIter->totNumHyperplanes, env->results->getCurrentDualBound(), env->results->getPrimalBound(),
                     env->results->getAbsoluteGlobalObjectiveGap(), env->results->getRelativeGlobalObjectiveGap(),
-                    tmpObj, mostDevConstr->constraint->index, mostDevConstr->normalizedValue,
+                    tmpObj, mostDevConstr->constraint->getIndex(), mostDevConstr->normalizedValue,
                     E_IterationLineType::PrimalNLP);
             }
             else
@@ -517,7 +517,7 @@ void TaskSelectPrimalCandidatesFromNLP::createInfeasibilityCut(const VectorDoubl
 
     if(auto mostDevConstr = sourceProblem->getMostDeviatingNonlinearOrQuadraticConstraint(variableSolution);
         mostDevConstr)
-        tmpSolPt.maxDeviation = PairIndexValue(mostDevConstr->constraint->index, mostDevConstr->normalizedValue);
+        tmpSolPt.maxDeviation = PairIndexValue(mostDevConstr->constraint->getIndex(), mostDevConstr->normalizedValue);
 
     if(!sourceIsReformulatedProblem) // Need to calculate values for the auxiliary variables in this
                                      // case

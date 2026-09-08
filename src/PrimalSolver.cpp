@@ -41,13 +41,14 @@ void PrimalSolver::addPrimalSolutionCandidate(VectorDouble pt, E_PrimalSolutionS
     {
         auto maxDevNonlinear = env->problem->getMaxNumericConstraintValue(pt, env->problem->nonlinearConstraints);
         sol.maxDevatingConstraintNonlinear
-            = PairIndexValue(maxDevNonlinear.constraint->index, maxDevNonlinear.normalizedValue);
+            = PairIndexValue(maxDevNonlinear.constraint->getIndex(), maxDevNonlinear.normalizedValue);
     }
 
     if(env->problem->properties.numberOfLinearConstraints > 0)
     {
         auto maxDevLinear = env->problem->getMaxNumericConstraintValue(pt, env->problem->linearConstraints);
-        sol.maxDevatingConstraintLinear = PairIndexValue(maxDevLinear.constraint->index, maxDevLinear.normalizedValue);
+        sol.maxDevatingConstraintLinear
+            = PairIndexValue(maxDevLinear.constraint->getIndex(), maxDevLinear.normalizedValue);
     }
 
     env->primalSolver->primalSolutionCandidates.push_back(sol);
@@ -193,12 +194,12 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
         if(value > V->upperBound)
         {
             isVariableBoundsFulfilled = false;
-            tmpPoint.at(V->index) = V->upperBound;
+            tmpPoint.at(V->getIndex()) = V->upperBound;
         }
         else if(value < V->lowerBound)
         {
             isVariableBoundsFulfilled = false;
-            tmpPoint.at(V->index) = V->lowerBound;
+            tmpPoint.at(V->getIndex()) = V->lowerBound;
         }
     }
 
@@ -209,7 +210,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
         if(value == 0.0) { }
         else if(Utilities::isAlmostZero(value, 1e-7))
         {
-            tmpPoint.at(V->index) = 0.0;
+            tmpPoint.at(V->getIndex()) = 0.0;
             isVariableBoundsFulfilled = false;
         }
         else
@@ -234,9 +235,9 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
                 double diffToLowerBound = std::abs(V->lowerBound - value);
 
                 if(diffToZero < diffToLowerBound)
-                    tmpPoint.at(V->index) = 0.0;
+                    tmpPoint.at(V->getIndex()) = 0.0;
                 else
-                    tmpPoint.at(V->index) = ub;
+                    tmpPoint.at(V->getIndex()) = ub;
             }
             else if(value < lb)
             {
@@ -245,9 +246,9 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
                 double diffToLowerBound = std::abs(V->lowerBound - value);
 
                 if(diffToZero < diffToLowerBound)
-                    tmpPoint.at(V->index) = 0.0;
+                    tmpPoint.at(V->getIndex()) = 0.0;
                 else
-                    tmpPoint.at(V->index) = lb;
+                    tmpPoint.at(V->getIndex()) = lb;
             }
         }
     }
@@ -259,7 +260,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
         if(value == 0.0) { }
         else if(Utilities::isAlmostZero(value, 1e-7))
         {
-            tmpPoint.at(V->index) = 0.0;
+            tmpPoint.at(V->getIndex()) = 0.0;
             isVariableBoundsFulfilled = false;
         }
         else
@@ -283,9 +284,9 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
                 double diffToLowerBound = std::abs(V->lowerBound - value);
 
                 if(diffToZero < diffToLowerBound)
-                    tmpPoint.at(V->index) = 0.0;
+                    tmpPoint.at(V->getIndex()) = 0.0;
                 else
-                    tmpPoint.at(V->index) = round(ub - 0.5);
+                    tmpPoint.at(V->getIndex()) = round(ub - 0.5);
             }
             else if(value < lb)
             {
@@ -294,9 +295,9 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
                 double diffToLowerBound = std::abs(V->lowerBound - value);
 
                 if(diffToZero < diffToLowerBound)
-                    tmpPoint.at(V->index) = 0.0;
+                    tmpPoint.at(V->getIndex()) = 0.0;
                 else
-                    tmpPoint.at(V->index) = round(lb + 0.5);
+                    tmpPoint.at(V->getIndex()) = round(lb + 0.5);
             }
         }
     }
@@ -308,12 +309,12 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
         if(value > V->upperBound)
         {
             isVariableBoundsFulfilled = false;
-            tmpPoint.at(V->index) = round(V->upperBound - 0.5);
+            tmpPoint.at(V->getIndex()) = round(V->upperBound - 0.5);
         }
         else if(value < V->lowerBound)
         {
             isVariableBoundsFulfilled = false;
-            tmpPoint.at(V->index) = round(V->lowerBound + 0.5);
+            tmpPoint.at(V->getIndex()) = round(V->lowerBound + 0.5);
         }
     }
 
@@ -324,12 +325,12 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
         if(value > V->upperBound)
         {
             isVariableBoundsFulfilled = false;
-            tmpPoint.at(V->index) = 1.0;
+            tmpPoint.at(V->getIndex()) = 1.0;
         }
         else if(value < V->lowerBound)
         {
             isVariableBoundsFulfilled = false;
-            tmpPoint.at(V->index) = 0.0;
+            tmpPoint.at(V->getIndex()) = 0.0;
         }
     }
 
@@ -359,7 +360,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
         for(auto& V : env->problem->integerVariables)
         {
             auto value = V->calculate(tmpPoint);
-            int index = V->index;
+            int index = V->getIndex();
 
             double rounded = std::round(value);
             double error = std::abs(rounded - value);
@@ -376,7 +377,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
         for(auto& V : env->problem->binaryVariables)
         {
             auto value = V->calculate(tmpPoint);
-            int index = V->index;
+            int index = V->getIndex();
 
             double rounded = std::round(value);
             double error = std::abs(rounded - value);
@@ -393,7 +394,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
         for(auto& V : env->problem->semiintegerVariables)
         {
             auto value = V->calculate(tmpPoint);
-            int index = V->index;
+            int index = V->getIndex();
 
             double rounded = std::round(value);
             double error = std::abs(rounded - value);
@@ -464,7 +465,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
             auto maxLinearConstraintValue
                 = env->problem->getMaxNumericConstraintValue(tmpPoint, env->problem->linearConstraints);
 
-            mostDevLinearConstraints.index = maxLinearConstraintValue.constraint->index;
+            mostDevLinearConstraints.index = maxLinearConstraintValue.constraint->getIndex();
             mostDevLinearConstraints.value = maxLinearConstraintValue.normalizedValue;
 
             auto linTol = env->settings->getSetting<double>("Primal.Tolerance.LinearConstraint");
@@ -480,7 +481,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
             else
             {
                 auto tmpLine = fmt::format("         Linear constraints are fulfilled. Most deviating {}: {} < {}.",
-                    maxLinearConstraintValue.constraint->index, maxLinearConstraintValue.error, linTol);
+                    maxLinearConstraintValue.constraint->getIndex(), maxLinearConstraintValue.error, linTol);
                 env->output->outputDebug(tmpLine);
             }
         }
@@ -496,7 +497,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
         auto maxQuadraticConstraintValue
             = env->problem->getMaxNumericConstraintValue(tmpPoint, env->problem->quadraticConstraints);
 
-        mostDevQuadraticConstraints.index = maxQuadraticConstraintValue.constraint->index;
+        mostDevQuadraticConstraints.index = maxQuadraticConstraintValue.constraint->getIndex();
         mostDevQuadraticConstraints.value = maxQuadraticConstraintValue.normalizedValue;
 
         auto nonlinTol = env->settings->getSetting<double>("Primal.Tolerance.NonlinearConstraint");
@@ -504,7 +505,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
         if(mostDevQuadraticConstraints.value > nonlinTol)
         {
             auto tmpLine = fmt::format("         Quadratic constraints are not fulfilled. Most deviating {}: {} > {}.",
-                maxQuadraticConstraintValue.constraint->index, maxQuadraticConstraintValue.error, nonlinTol);
+                maxQuadraticConstraintValue.constraint->getIndex(), maxQuadraticConstraintValue.error, nonlinTol);
             env->output->outputDebug(tmpLine);
 
             return (false);
@@ -512,7 +513,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
         else
         {
             auto tmpLine = fmt::format("         Quadratic constraints are fulfilled. Most deviating {}: {} < {}.",
-                maxQuadraticConstraintValue.constraint->index, maxQuadraticConstraintValue.error, nonlinTol);
+                maxQuadraticConstraintValue.constraint->getIndex(), maxQuadraticConstraintValue.error, nonlinTol);
             env->output->outputDebug(tmpLine);
         }
 
@@ -527,7 +528,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
         auto maxNonlinearConstraintValue
             = env->problem->getMaxNumericConstraintValue(tmpPoint, env->problem->nonlinearConstraints);
 
-        mostDevNonlinearConstraints.index = maxNonlinearConstraintValue.constraint->index;
+        mostDevNonlinearConstraints.index = maxNonlinearConstraintValue.constraint->getIndex();
         mostDevNonlinearConstraints.value = maxNonlinearConstraintValue.normalizedValue;
 
         auto nonlinTol = env->settings->getSetting<double>("Primal.Tolerance.NonlinearConstraint");
@@ -535,7 +536,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
         if(mostDevNonlinearConstraints.value > nonlinTol)
         {
             auto tmpLine = fmt::format("         Nonlinear constraints are not fulfilled. Most deviating {}: {} > {}.",
-                maxNonlinearConstraintValue.constraint->index, mostDevNonlinearConstraints.value, nonlinTol);
+                maxNonlinearConstraintValue.constraint->getIndex(), mostDevNonlinearConstraints.value, nonlinTol);
             env->output->outputDebug(tmpLine);
 
             return (false);
@@ -543,7 +544,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
         else
         {
             auto tmpLine = fmt::format("         Nonlinear constraints are fulfilled. Most deviating {}: {} < {}.",
-                maxNonlinearConstraintValue.constraint->index, mostDevNonlinearConstraints.value, nonlinTol);
+                maxNonlinearConstraintValue.constraint->getIndex(), mostDevNonlinearConstraints.value, nonlinTol);
             env->output->outputDebug(tmpLine);
         }
 
@@ -580,7 +581,7 @@ void PrimalSolver::addFixedNLPCandidate(
     {
         if(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer
             || VAR->properties.type == E_VariableType::Semiinteger)
-            discretVariableValues.push_back(candidate[VAR->index]);
+            discretVariableValues.push_back(candidate[VAR->getIndex()]);
     }
 
     double pointHash;

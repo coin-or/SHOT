@@ -305,18 +305,19 @@ PYBIND11_MODULE(SHOTpy, m)
 
     // ===== Variable Class =====
     py::class_<Variable, std::shared_ptr<Variable>>(m, "Variable")
-        .def(py::init<std::string, int, E_VariableType, double, double>(), py::arg("name"), py::arg("index"),
-            py::arg("type"), py::arg("lower_bound"), py::arg("upper_bound"))
-        .def(py::init<std::string, int, E_VariableType, double, double, double>(), py::arg("name"), py::arg("index"),
-            py::arg("type"), py::arg("lower_bound"), py::arg("upper_bound"), py::arg("semi_bound"))
+        .def(py::init<std::string, E_VariableType, double, double>(), py::arg("name"), py::arg("type"),
+            py::arg("lower_bound"), py::arg("upper_bound"))
+        .def(py::init<std::string, E_VariableType, double, double, double>(), py::arg("name"), py::arg("type"),
+            py::arg("lower_bound"), py::arg("upper_bound"), py::arg("semi_bound"))
         .def_readwrite("name", &Variable::name)
-        .def_readwrite("index", &Variable::index)
+        // Assigned by the problem the variable is added to, so read only
+        .def_property_readonly("index", &Variable::getIndex)
         .def_readwrite("lowerBound", &Variable::lowerBound)
         .def_readwrite("upperBound", &Variable::upperBound)
         .def_readwrite("semiBound", &Variable::semiBound)
         .def_readonly("properties", &Variable::properties)
         .def("__repr__",
-            [](const Variable& v) { return "<Variable '" + v.name + "' index=" + std::to_string(v.index) + ">"; })
+            [](const Variable& v) { return "<Variable '" + v.name + "' index=" + std::to_string(v.getIndex()) + ">"; })
         // Operator overloads for natural expression building
         .def(
             "__add__", [](VariablePtr self, VariablePtr other) -> NonlinearExpressionPtr
@@ -801,7 +802,8 @@ PYBIND11_MODULE(SHOTpy, m)
 
     // ===== NumericConstraint Base Class =====
     py::class_<NumericConstraint, std::shared_ptr<NumericConstraint>>(m, "NumericConstraint")
-        .def_readwrite("index", &NumericConstraint::index)
+        // Assigned by the problem the constraint is added to, so read only
+        .def_property_readonly("index", &NumericConstraint::getIndex)
         .def_readwrite("name", &NumericConstraint::name)
         .def_readwrite("valueLHS", &NumericConstraint::valueLHS)
         .def_readwrite("valueRHS", &NumericConstraint::valueRHS)
@@ -814,7 +816,7 @@ PYBIND11_MODULE(SHOTpy, m)
                 auto gradient = self.calculateGradient(point, true);
                 std::map<int, double> result;
                 for(auto& G : gradient)
-                    result[G.first->index] = G.second;
+                    result[G.first->getIndex()] = G.second;
                 return result;
             },
             py::arg("point"), "Calculate gradient at point, returns dict of {var_index: value}")
@@ -825,7 +827,7 @@ PYBIND11_MODULE(SHOTpy, m)
                 auto hessian = self.calculateHessian(point, true);
                 std::map<std::pair<int, int>, double> result;
                 for(auto& H : hessian)
-                    result[std::make_pair(H.first.first->index, H.first.second->index)] = H.second;
+                    result[std::make_pair(H.first.first->getIndex(), H.first.second->getIndex())] = H.second;
                 return result;
             },
             py::arg("point"), "Calculate Hessian at point, returns dict of {(var1_index, var2_index): value}")
@@ -836,7 +838,7 @@ PYBIND11_MODULE(SHOTpy, m)
                 auto pattern = self.getGradientSparsityPattern();
                 std::vector<int> result;
                 for(auto& V : *pattern)
-                    result.push_back(V->index);
+                    result.push_back(V->getIndex());
                 return result;
             },
             "Get gradient sparsity pattern as list of variable indices")
@@ -847,17 +849,16 @@ PYBIND11_MODULE(SHOTpy, m)
                 auto pattern = self.getHessianSparsityPattern();
                 std::vector<std::pair<int, int>> result;
                 for(auto& E : *pattern)
-                    result.push_back(std::make_pair(E.first->index, E.second->index));
+                    result.push_back(std::make_pair(E.first->getIndex(), E.second->getIndex()));
                 return result;
             },
             "Get Hessian sparsity pattern as list of (var1_index, var2_index)");
 
     // ===== LinearConstraint Class =====
     py::class_<LinearConstraint, NumericConstraint, std::shared_ptr<LinearConstraint>>(m, "LinearConstraint")
-        .def(py::init<int, std::string, double, double>(), py::arg("index"), py::arg("name"), py::arg("lhs"),
-            py::arg("rhs"))
-        .def(py::init<int, std::string, LinearTerms, double, double>(), py::arg("index"), py::arg("name"),
-            py::arg("linearTerms"), py::arg("lhs"), py::arg("rhs"))
+        .def(py::init<std::string, double, double>(), py::arg("name"), py::arg("lhs"), py::arg("rhs"))
+        .def(py::init<std::string, LinearTerms, double, double>(), py::arg("name"), py::arg("linearTerms"),
+            py::arg("lhs"), py::arg("rhs"))
         .def_readwrite("linearTerms", &LinearConstraint::linearTerms)
         .def("add", py::overload_cast<LinearTerms>(&LinearConstraint::add))
         .def("add", py::overload_cast<LinearTermPtr>(&LinearConstraint::add))
@@ -871,10 +872,9 @@ PYBIND11_MODULE(SHOTpy, m)
 
     // ===== QuadraticConstraint Class =====
     py::class_<QuadraticConstraint, LinearConstraint, std::shared_ptr<QuadraticConstraint>>(m, "QuadraticConstraint")
-        .def(py::init<int, std::string, double, double>(), py::arg("index"), py::arg("name"), py::arg("lhs"),
-            py::arg("rhs"))
-        .def(py::init<int, std::string, LinearTerms, QuadraticTerms, double, double>(), py::arg("index"),
-            py::arg("name"), py::arg("linearTerms"), py::arg("quadraticTerms"), py::arg("lhs"), py::arg("rhs"))
+        .def(py::init<std::string, double, double>(), py::arg("name"), py::arg("lhs"), py::arg("rhs"))
+        .def(py::init<std::string, LinearTerms, QuadraticTerms, double, double>(), py::arg("name"),
+            py::arg("linearTerms"), py::arg("quadraticTerms"), py::arg("lhs"), py::arg("rhs"))
         .def_readwrite("quadraticTerms", &QuadraticConstraint::quadraticTerms)
         // Inherited add methods from LinearConstraint
         .def("add", py::overload_cast<LinearTerms>(&QuadraticConstraint::add))
@@ -892,15 +892,14 @@ PYBIND11_MODULE(SHOTpy, m)
 
     // ===== NonlinearConstraint Class =====
     py::class_<NonlinearConstraint, QuadraticConstraint, std::shared_ptr<NonlinearConstraint>>(m, "NonlinearConstraint")
-        .def(py::init<int, std::string, double, double>(), py::arg("index"), py::arg("name"), py::arg("lhs"),
-            py::arg("rhs"))
-        .def(py::init<int, std::string, NonlinearExpressionPtr, double, double>(), py::arg("index"), py::arg("name"),
-            py::arg("expression"), py::arg("lhs"), py::arg("rhs"))
-        .def(py::init<int, std::string, LinearTerms, NonlinearExpressionPtr, double, double>(), py::arg("index"),
-            py::arg("name"), py::arg("linearTerms"), py::arg("expression"), py::arg("lhs"), py::arg("rhs"))
-        .def(py::init<int, std::string, LinearTerms, QuadraticTerms, NonlinearExpressionPtr, double, double>(),
-            py::arg("index"), py::arg("name"), py::arg("linearTerms"), py::arg("quadraticTerms"), py::arg("expression"),
+        .def(py::init<std::string, double, double>(), py::arg("name"), py::arg("lhs"), py::arg("rhs"))
+        .def(py::init<std::string, NonlinearExpressionPtr, double, double>(), py::arg("name"), py::arg("expression"),
             py::arg("lhs"), py::arg("rhs"))
+        .def(py::init<std::string, LinearTerms, NonlinearExpressionPtr, double, double>(), py::arg("name"),
+            py::arg("linearTerms"), py::arg("expression"), py::arg("lhs"), py::arg("rhs"))
+        .def(py::init<std::string, LinearTerms, QuadraticTerms, NonlinearExpressionPtr, double, double>(),
+            py::arg("name"), py::arg("linearTerms"), py::arg("quadraticTerms"), py::arg("expression"), py::arg("lhs"),
+            py::arg("rhs"))
         .def_readwrite("nonlinearExpression", &NonlinearConstraint::nonlinearExpression)
         .def_readwrite("monomialTerms", &NonlinearConstraint::monomialTerms)
         .def_readwrite("signomialTerms", &NonlinearConstraint::signomialTerms)
@@ -947,7 +946,7 @@ PYBIND11_MODULE(SHOTpy, m)
                 auto gradient = self.calculateGradient(point, true);
                 std::map<int, double> result;
                 for(auto& G : gradient)
-                    result[G.first->index] = G.second;
+                    result[G.first->getIndex()] = G.second;
                 return result;
             },
             py::arg("point"), "Calculate gradient at point, returns dict of {var_index: value}")
@@ -958,7 +957,7 @@ PYBIND11_MODULE(SHOTpy, m)
                 auto hessian = self.calculateHessian(point, true);
                 std::map<std::pair<int, int>, double> result;
                 for(auto& H : hessian)
-                    result[std::make_pair(H.first.first->index, H.first.second->index)] = H.second;
+                    result[std::make_pair(H.first.first->getIndex(), H.first.second->getIndex())] = H.second;
                 return result;
             },
             py::arg("point"), "Calculate Hessian at point, returns dict of {(var1_index, var2_index): value}")
@@ -969,7 +968,7 @@ PYBIND11_MODULE(SHOTpy, m)
                 auto pattern = self.getGradientSparsityPattern();
                 std::vector<int> result;
                 for(auto& V : *pattern)
-                    result.push_back(V->index);
+                    result.push_back(V->getIndex());
                 return result;
             },
             "Get gradient sparsity pattern as list of variable indices")
@@ -980,7 +979,7 @@ PYBIND11_MODULE(SHOTpy, m)
                 auto pattern = self.getHessianSparsityPattern();
                 std::vector<std::pair<int, int>> result;
                 for(auto& E : *pattern)
-                    result.push_back(std::make_pair(E.first->index, E.second->index));
+                    result.push_back(std::make_pair(E.first->getIndex(), E.second->getIndex()));
                 return result;
             },
             "Get Hessian sparsity pattern as list of (var1_index, var2_index)");
@@ -1173,8 +1172,8 @@ PYBIND11_MODULE(SHOTpy, m)
                 {
                     std::vector<int> varIndices;
                     for(auto& V : E.second)
-                        varIndices.push_back(V->index);
-                    result.push_back(std::make_pair(E.first->index, varIndices));
+                        varIndices.push_back(V->getIndex());
+                    result.push_back(std::make_pair(E.first->getIndex(), varIndices));
                 }
                 return result;
             },
@@ -1186,7 +1185,7 @@ PYBIND11_MODULE(SHOTpy, m)
                 auto pattern = self.getConstraintsHessianSparsityPattern();
                 std::vector<std::pair<int, int>> result;
                 for(auto& E : *pattern)
-                    result.push_back(std::make_pair(E.first->index, E.second->index));
+                    result.push_back(std::make_pair(E.first->getIndex(), E.second->getIndex()));
                 return result;
             },
             "Get Hessian sparsity pattern for constraints only as list of (var1_index, var2_index)")
@@ -1197,7 +1196,7 @@ PYBIND11_MODULE(SHOTpy, m)
                 auto pattern = self.getLagrangianHessianSparsityPattern();
                 std::vector<std::pair<int, int>> result;
                 for(auto& E : *pattern)
-                    result.push_back(std::make_pair(E.first->index, E.second->index));
+                    result.push_back(std::make_pair(E.first->getIndex(), E.second->getIndex()));
                 return result;
             },
             "Get Hessian sparsity pattern including objective as list of (var1_index, var2_index)")

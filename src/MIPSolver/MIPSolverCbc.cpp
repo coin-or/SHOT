@@ -793,8 +793,8 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
                 if(V->isUnbounded())
                 {
                     // Temporarily introduce bounds [-1e20,1e20] for unbounded variables in objective
-                    updateVariableBound(V->index, -1e20, 1e20);
-                    variablesWithChangedBounds.push_back(V->index);
+                    updateVariableBound(V->getIndex(), -1e20, 1e20);
+                    variablesWithChangedBounds.push_back(V->getIndex());
                     problemUpdated = true;
                 }
             }
@@ -1378,9 +1378,9 @@ bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
                 int variableValue = integerCut.variableValues[index];
 
                 if(variableValue == 1.0)
-                    cut.insert(VAR->index, 1.0);
+                    cut.insert(VAR->getIndex(), 1.0);
                 else if(variableValue == 0.0)
-                    cut.insert(VAR->index, -1.0);
+                    cut.insert(VAR->getIndex(), -1.0);
                 else
                 {
                     env->output->outputDebug("        Integer cut not added by Cbc ");
@@ -1420,12 +1420,12 @@ bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
                 if(variableValue == VAR->upperBound)
                 {
                     sumUB += VAR->upperBound;
-                    cut.insert(VAR->index, -1.0);
+                    cut.insert(VAR->getIndex(), -1.0);
                 }
                 else if(variableValue == VAR->lowerBound)
                 {
                     sumLB -= VAR->lowerBound;
-                    cut.insert(VAR->index, 1.0);
+                    cut.insert(VAR->getIndex(), 1.0);
                 }
                 else
                 {
@@ -1449,7 +1449,7 @@ bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
                     CoinPackedVector cut1a, cut1b, cut2, cut3;
 
                     int tmpNumConstraints = osiInterface->getNumRows();
-                    cut1a.insert(VAR->index, 1.0);
+                    cut1a.insert(VAR->getIndex(), 1.0);
                     cut1a.insert(wIndex, 1.0);
                     osiInterface->addRow(cut1a, variableValue, osiInterface->getInfinity(),
                         fmt::format("IC{}_{}_1a", env->solutionStatistics.numberOfIntegerCuts, index));
@@ -1462,7 +1462,7 @@ bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
                     }
 
                     tmpNumConstraints = osiInterface->getNumRows();
-                    cut1b.insert(VAR->index, 1.0);
+                    cut1b.insert(VAR->getIndex(), 1.0);
                     cut1b.insert(wIndex, -1.0);
 
                     osiInterface->addRow(cut1b, -osiInterface->getInfinity(), variableValue,
@@ -1477,7 +1477,7 @@ bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
 
                     tmpNumConstraints = osiInterface->getNumRows();
                     cut2.insert(wIndex, 1.0);
-                    cut2.insert(VAR->index, -1.0);
+                    cut2.insert(VAR->getIndex(), -1.0);
                     cut2.insert(vIndex, M1);
                     osiInterface->addRow(cut2, -osiInterface->getInfinity(), -variableValue + M1,
                         fmt::format("IC{}_{}_2", env->solutionStatistics.numberOfIntegerCuts, index));
@@ -1491,7 +1491,7 @@ bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
 
                     tmpNumConstraints = osiInterface->getNumRows();
                     cut3.insert(wIndex, 1.0);
-                    cut3.insert(VAR->index, 1.0);
+                    cut3.insert(VAR->getIndex(), 1.0);
                     cut3.insert(vIndex, -M2);
                     osiInterface->addRow(cut3, -osiInterface->getInfinity(), variableValue,
                         fmt::format("IC{}_{}_3", env->solutionStatistics.numberOfIntegerCuts, index));

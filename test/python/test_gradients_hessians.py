@@ -19,8 +19,8 @@ class TestJacobianSparsityPattern:
         """Test Jacobian sparsity for a linear constraint: 2*x + 3*y <= 10."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -28,7 +28,7 @@ class TestJacobianSparsityPattern:
         linear_terms.add(SHOTpy.LinearTerm(2.0, x))
         linear_terms.add(SHOTpy.LinearTerm(3.0, y))
         
-        constr = SHOTpy.LinearConstraint(0, "lin_constr", linear_terms, -1e20, 10.0)
+        constr = SHOTpy.LinearConstraint("lin_constr", linear_terms, -1e20, 10.0)
         problem.addConstraint(constr)
         
         obj = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
@@ -49,8 +49,8 @@ class TestJacobianSparsityPattern:
         """Test Jacobian sparsity for a quadratic constraint: x^2 + x*y <= 10."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -58,7 +58,7 @@ class TestJacobianSparsityPattern:
         quad_terms.add(SHOTpy.QuadraticTerm(1.0, x, x))  # x^2
         quad_terms.add(SHOTpy.QuadraticTerm(1.0, x, y))  # x*y
         
-        constr = SHOTpy.QuadraticConstraint(0, "quad_constr", -1e20, 10.0)
+        constr = SHOTpy.QuadraticConstraint("quad_constr", -1e20, 10.0)
         constr.add(quad_terms)
         problem.addConstraint(constr)
         
@@ -81,14 +81,14 @@ class TestJacobianSparsityPattern:
         """Test Jacobian sparsity for a nonlinear constraint: y^3 <= 20."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
         expr_power = y ** 3  # y^3
         
-        constr = SHOTpy.NonlinearConstraint(0, "nl_constr", expr_power, -1e20, 20.0)
+        constr = SHOTpy.NonlinearConstraint("nl_constr", expr_power, -1e20, 20.0)
         problem.addConstraint(constr)
         
         obj = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
@@ -114,8 +114,8 @@ class TestHessianSparsityPattern:
         """Test that linear objective has empty Hessian."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -135,8 +135,8 @@ class TestHessianSparsityPattern:
         """Test Hessian for x^2 + y^2 - should have diagonal elements."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -162,8 +162,8 @@ class TestHessianSparsityPattern:
         """Test Hessian for x + y + x*y - should include off-diagonal element."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 100.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Binary, 0.0, 1.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 100.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Binary, 0.0, 1.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -191,8 +191,8 @@ class TestHessianSparsityPattern:
         """Test Hessian for x^2 + y^2 + x*y - should have all three elements."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -219,15 +219,15 @@ class TestHessianSparsityPattern:
         """Test that constraint Hessian is computed separately from objective."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
         # Constraint: x^2 <= 10
         quad_terms = SHOTpy.QuadraticTerms()
         quad_terms.add(SHOTpy.QuadraticTerm(1.0, x, x))  # x^2
-        constr = SHOTpy.QuadraticConstraint(0, "quad_constr", -1e20, 10.0)
+        constr = SHOTpy.QuadraticConstraint("quad_constr", -1e20, 10.0)
         constr.add(quad_terms)
         problem.addConstraint(constr)
         
@@ -255,8 +255,8 @@ class TestGradientValues:
         """Test gradient of 2*x + 3*y at any point is [2, 3]."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -264,7 +264,7 @@ class TestGradientValues:
         linear_terms.add(SHOTpy.LinearTerm(2.0, x))
         linear_terms.add(SHOTpy.LinearTerm(3.0, y))
         
-        constr = SHOTpy.LinearConstraint(0, "lin_constr", linear_terms, -1e20, 10.0)
+        constr = SHOTpy.LinearConstraint("lin_constr", linear_terms, -1e20, 10.0)
         problem.addConstraint(constr)
         
         obj = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
@@ -282,8 +282,8 @@ class TestGradientValues:
         """Test gradient of x^2 + 2*x*y at point (2, 3) is [2*2 + 2*3, 2*2] = [10, 4]."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -291,7 +291,7 @@ class TestGradientValues:
         quad_terms.add(SHOTpy.QuadraticTerm(1.0, x, x))  # x^2
         quad_terms.add(SHOTpy.QuadraticTerm(2.0, x, y))  # 2*x*y
         
-        constr = SHOTpy.QuadraticConstraint(0, "quad_constr", -1e20, 10.0)
+        constr = SHOTpy.QuadraticConstraint("quad_constr", -1e20, 10.0)
         constr.add(quad_terms)
         problem.addConstraint(constr)
         
@@ -310,8 +310,8 @@ class TestGradientValues:
         """Test gradient of objective x^2 + 3*y at point (2, 1) is [4, 3]."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -341,8 +341,8 @@ class TestHessianValues:
         """Test that linear constraint has empty Hessian."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -350,7 +350,7 @@ class TestHessianValues:
         linear_terms.add(SHOTpy.LinearTerm(2.0, x))
         linear_terms.add(SHOTpy.LinearTerm(3.0, y))
         
-        constr = SHOTpy.LinearConstraint(0, "lin_constr", linear_terms, -1e20, 10.0)
+        constr = SHOTpy.LinearConstraint("lin_constr", linear_terms, -1e20, 10.0)
         problem.addConstraint(constr)
         
         obj = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
@@ -366,8 +366,8 @@ class TestHessianValues:
         """Test Hessian of x^2 + y^2 is [[2, 0], [0, 2]]."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -375,7 +375,7 @@ class TestHessianValues:
         quad_terms.add(SHOTpy.QuadraticTerm(1.0, x, x))  # x^2
         quad_terms.add(SHOTpy.QuadraticTerm(1.0, y, y))  # y^2
         
-        constr = SHOTpy.QuadraticConstraint(0, "quad_constr", -1e20, 10.0)
+        constr = SHOTpy.QuadraticConstraint("quad_constr", -1e20, 10.0)
         constr.add(quad_terms)
         problem.addConstraint(constr)
         
@@ -394,15 +394,15 @@ class TestHessianValues:
         """Test Hessian of x*y is [[0, 1], [1, 0]]."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
         quad_terms = SHOTpy.QuadraticTerms()
         quad_terms.add(SHOTpy.QuadraticTerm(1.0, x, y))  # x*y
         
-        constr = SHOTpy.QuadraticConstraint(0, "quad_constr", -1e20, 10.0)
+        constr = SHOTpy.QuadraticConstraint("quad_constr", -1e20, 10.0)
         constr.add(quad_terms)
         problem.addConstraint(constr)
         
@@ -421,8 +421,8 @@ class TestHessianValues:
         """Test Hessian of 2*x^2 + 3*y^2 + 4*x*y is [[4, 4], [4, 6]]."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -451,9 +451,9 @@ class TestThreeVariableHessian:
         """Test Hessian sparsity for x*y + y*z + x*z with three variables."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
-        z = SHOTpy.Variable("z", 2, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.0, 10.0)
+        z = SHOTpy.Variable("z", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         problem.addVariable(z)
@@ -481,8 +481,8 @@ class TestThreeVariableHessian:
         """Test that y*x is stored as (0,1) not (1,0)."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -507,9 +507,9 @@ class TestThreeVariableHessian:
         """Test Hessian for x^2 + y^2 + z^2 + x*y + y*z."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
-        z = SHOTpy.Variable("z", 2, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.0, 10.0)
+        z = SHOTpy.Variable("z", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         problem.addVariable(z)
@@ -544,9 +544,9 @@ class TestThreeVariableHessian:
         """Test Hessian values for 2*x*y + 3*y*z + 4*x*z."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
-        z = SHOTpy.Variable("z", 2, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.0, 10.0)
+        z = SHOTpy.Variable("z", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         problem.addVariable(z)
@@ -579,8 +579,8 @@ class TestExpressionSimplificationHessian:
         """Test that x*y created via operator has correct Hessian."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -605,7 +605,7 @@ class TestExpressionSimplificationHessian:
         """Test that x^2 created via operator has correct Hessian."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         
         expr_square = x ** 2  # x^2 using operator overloading
@@ -628,8 +628,8 @@ class TestExpressionSimplificationHessian:
         """Test Hessian for x^2 + y^2 + 2*x*y created via expressions."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -665,9 +665,9 @@ class TestMonomialTerms:
         """Test monomial term x*y*z in objective."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 10.0)
-        z = SHOTpy.Variable("z", 2, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 10.0)
+        z = SHOTpy.Variable("z", SHOTpy.VariableType.Real, 0.1, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         problem.addVariable(z)
@@ -696,8 +696,8 @@ class TestMonomialTerms:
         """Test x^2*y in constraint using SignomialTerm for repeated variable powers."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -706,7 +706,7 @@ class TestMonomialTerms:
         signomial_terms = SHOTpy.SignomialTerms()
         signomial_terms.add(signomial)
         
-        constr = SHOTpy.NonlinearConstraint(0, "sig_constr", -1e20, 10.0)
+        constr = SHOTpy.NonlinearConstraint("sig_constr", -1e20, 10.0)
         constr.add(signomial_terms)
         problem.addConstraint(constr)
         
@@ -726,9 +726,9 @@ class TestMonomialTerms:
         """Test Hessian values for monomial x*y*z at point (2, 3, 4)."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 10.0)
-        z = SHOTpy.Variable("z", 2, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 10.0)
+        z = SHOTpy.Variable("z", SHOTpy.VariableType.Real, 0.1, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         problem.addVariable(z)
@@ -761,7 +761,7 @@ class TestSignomialTerms:
         """Test signomial term x^0.5 (square root) in objective."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
         problem.addVariable(x)
         
         # Create signomial: x^0.5 using (variable, power) tuple syntax
@@ -783,7 +783,7 @@ class TestSignomialTerms:
         """Test signomial term 1/x = x^(-1) in constraint."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
         problem.addVariable(x)
         
         # Create signomial: x^(-1) using (variable, power) tuple syntax
@@ -791,7 +791,7 @@ class TestSignomialTerms:
         signomial_terms = SHOTpy.SignomialTerms()
         signomial_terms.add(signomial)
         
-        constr = SHOTpy.NonlinearConstraint(0, "sig_constr", -1e20, 10.0)
+        constr = SHOTpy.NonlinearConstraint("sig_constr", -1e20, 10.0)
         constr.add(signomial_terms)
         problem.addConstraint(constr)
         
@@ -810,8 +810,8 @@ class TestSignomialTerms:
         """Test signomial x^0.5 * y^1.5 with two variables."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -842,7 +842,7 @@ class TestNonlinearExpressions:
         """Test exponential exp(x) in objective."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, -10.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, -10.0, 10.0)
         problem.addVariable(x)
         
         # Create exp(x)
@@ -868,14 +868,14 @@ class TestNonlinearExpressions:
         """Test logarithm log(x) in constraint."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
         problem.addVariable(x)
         
         # Create log(x)
         import math
         expr = SHOTpy.log(x)
         
-        constr = SHOTpy.NonlinearConstraint(0, "log_constr", expr, -1e20, 10.0)
+        constr = SHOTpy.NonlinearConstraint("log_constr", expr, -1e20, 10.0)
         problem.addConstraint(constr)
         
         obj = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
@@ -898,8 +898,8 @@ class TestNonlinearExpressions:
         """Test sin(x) + cos(y) in objective."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, -10.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, -10.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, -10.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, -10.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -922,7 +922,7 @@ class TestNonlinearExpressions:
         """Test x^3 created as power expression."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
         problem.addVariable(x)
         
         # Create x^3
@@ -947,8 +947,8 @@ class TestNonlinearExpressions:
         """Test composite expression exp(x) * y^2."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, -5.0, 5.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, -5.0, 5.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -977,9 +977,9 @@ class TestMixedTermTypes:
         """Test objective with linear + quadratic + monomial terms."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 10.0)
-        z = SHOTpy.Variable("z", 2, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 10.0)
+        z = SHOTpy.Variable("z", SHOTpy.VariableType.Real, 0.1, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         problem.addVariable(z)
@@ -1018,8 +1018,8 @@ class TestMixedTermTypes:
         """Test constraint with linear + quadratic + signomial terms."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -1035,7 +1035,7 @@ class TestMixedTermTypes:
         signomial_terms = SHOTpy.SignomialTerms()
         signomial_terms.add(signomial)
         
-        constr = SHOTpy.NonlinearConstraint(0, "mixed_constr", -1e20, 20.0)
+        constr = SHOTpy.NonlinearConstraint("mixed_constr", -1e20, 20.0)
         constr.add(linear_terms)
         constr.add(quad_terms)
         constr.add(signomial_terms)
@@ -1061,8 +1061,8 @@ class TestMixedTermTypes:
         """Test problem with linear, quadratic, and nonlinear constraints."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -1070,20 +1070,20 @@ class TestMixedTermTypes:
         lin_terms = SHOTpy.LinearTerms()
         lin_terms.add(SHOTpy.LinearTerm(2.0, x))
         lin_terms.add(SHOTpy.LinearTerm(1.0, y))
-        lin_constr = SHOTpy.LinearConstraint(0, "lin_constr", lin_terms, -1e20, 10.0)
+        lin_constr = SHOTpy.LinearConstraint("lin_constr", lin_terms, -1e20, 10.0)
         problem.addConstraint(lin_constr)
         
         # Quadratic constraint: x^2 + y^2 <= 25
         quad_terms = SHOTpy.QuadraticTerms()
         quad_terms.add(SHOTpy.QuadraticTerm(1.0, x, x))
         quad_terms.add(SHOTpy.QuadraticTerm(1.0, y, y))
-        quad_constr = SHOTpy.QuadraticConstraint(1, "quad_constr", -1e20, 25.0)
+        quad_constr = SHOTpy.QuadraticConstraint("quad_constr", -1e20, 25.0)
         quad_constr.add(quad_terms)
         problem.addConstraint(quad_constr)
         
         # Nonlinear constraint: x^3 <= 27
         expr = x ** 3
-        nl_constr = SHOTpy.NonlinearConstraint(2, "nl_constr", expr, -1e20, 27.0)
+        nl_constr = SHOTpy.NonlinearConstraint("nl_constr", expr, -1e20, 27.0)
         problem.addConstraint(nl_constr)
         
         # Linear objective
@@ -1112,8 +1112,8 @@ class TestMixedTermTypes:
         """Test objective with both nonlinear expression and extracted terms."""
         import SHOTpy
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         

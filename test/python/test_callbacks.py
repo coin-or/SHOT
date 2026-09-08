@@ -25,13 +25,13 @@ def build_ex1223b(env):
     problem = SHOTpy.Problem(env)
     problem.name = "ex1223b"
 
-    x1 = SHOTpy.Variable("x1", 0, SHOTpy.VariableType.Real,   0.0, 10.0)
-    x2 = SHOTpy.Variable("x2", 1, SHOTpy.VariableType.Real,   0.0, 10.0)
-    x3 = SHOTpy.Variable("x3", 2, SHOTpy.VariableType.Real,   0.0, 10.0)
-    b4 = SHOTpy.Variable("b4", 3, SHOTpy.VariableType.Binary, 0.0, 1.0)
-    b5 = SHOTpy.Variable("b5", 4, SHOTpy.VariableType.Binary, 0.0, 1.0)
-    b6 = SHOTpy.Variable("b6", 5, SHOTpy.VariableType.Binary, 0.0, 1.0)
-    b7 = SHOTpy.Variable("b7", 6, SHOTpy.VariableType.Binary, 0.0, 1.0)
+    x1 = SHOTpy.Variable("x1", SHOTpy.VariableType.Real,   0.0, 10.0)
+    x2 = SHOTpy.Variable("x2", SHOTpy.VariableType.Real,   0.0, 10.0)
+    x3 = SHOTpy.Variable("x3", SHOTpy.VariableType.Real,   0.0, 10.0)
+    b4 = SHOTpy.Variable("b4", SHOTpy.VariableType.Binary, 0.0, 1.0)
+    b5 = SHOTpy.Variable("b5", SHOTpy.VariableType.Binary, 0.0, 1.0)
+    b6 = SHOTpy.Variable("b6", SHOTpy.VariableType.Binary, 0.0, 1.0)
+    b7 = SHOTpy.Variable("b7", SHOTpy.VariableType.Binary, 0.0, 1.0)
     for v in [x1, x2, x3, b4, b5, b6, b7]:
         problem.addVariable(v)
 
@@ -47,48 +47,48 @@ def build_ex1223b(env):
     lt1 = SHOTpy.LinearTerms()
     for v in [x1, x2, x3, b4, b5, b6]:
         lt1.add(SHOTpy.LinearTerm(1.0, v))
-    e1 = SHOTpy.LinearConstraint(0, "e1", lt1, SHOTpy.SHOT_DBL_MIN, 5.0)
+    e1 = SHOTpy.LinearConstraint("e1", lt1, SHOTpy.SHOT_DBL_MIN, 5.0)
     problem.addConstraint(e1)
 
     # e2: b6^2+x1^2+x2^2+x3^2 <= 5.5
-    e2 = SHOTpy.NonlinearConstraint(1, "e2", b6**2 + x1**2 + x2**2 + x3**2,
+    e2 = SHOTpy.NonlinearConstraint("e2", b6**2 + x1**2 + x2**2 + x3**2,
                                      SHOTpy.SHOT_DBL_MIN, 5.5)
     problem.addConstraint(e2)
 
     # e3: x1+b4 <= 1.2
     lt3 = SHOTpy.LinearTerms()
     lt3.add(SHOTpy.LinearTerm(1.0, x1)); lt3.add(SHOTpy.LinearTerm(1.0, b4))
-    e3 = SHOTpy.LinearConstraint(2, "e3", lt3, SHOTpy.SHOT_DBL_MIN, 1.2)
+    e3 = SHOTpy.LinearConstraint("e3", lt3, SHOTpy.SHOT_DBL_MIN, 1.2)
     problem.addConstraint(e3)
 
     # e4: x2+b5 <= 1.8
     lt4 = SHOTpy.LinearTerms()
     lt4.add(SHOTpy.LinearTerm(1.0, x2)); lt4.add(SHOTpy.LinearTerm(1.0, b5))
-    e4 = SHOTpy.LinearConstraint(3, "e4", lt4, SHOTpy.SHOT_DBL_MIN, 1.8)
+    e4 = SHOTpy.LinearConstraint("e4", lt4, SHOTpy.SHOT_DBL_MIN, 1.8)
     problem.addConstraint(e4)
 
     # e5: x3+b6 <= 2.5
     lt5 = SHOTpy.LinearTerms()
     lt5.add(SHOTpy.LinearTerm(1.0, x3)); lt5.add(SHOTpy.LinearTerm(1.0, b6))
-    e5 = SHOTpy.LinearConstraint(4, "e5", lt5, SHOTpy.SHOT_DBL_MIN, 2.5)
+    e5 = SHOTpy.LinearConstraint("e5", lt5, SHOTpy.SHOT_DBL_MIN, 2.5)
     problem.addConstraint(e5)
 
     # e6: x1+b7 <= 1.2
     lt6 = SHOTpy.LinearTerms()
     lt6.add(SHOTpy.LinearTerm(1.0, x1)); lt6.add(SHOTpy.LinearTerm(1.0, b7))
-    e6 = SHOTpy.LinearConstraint(5, "e6", lt6, SHOTpy.SHOT_DBL_MIN, 1.2)
+    e6 = SHOTpy.LinearConstraint("e6", lt6, SHOTpy.SHOT_DBL_MIN, 1.2)
     problem.addConstraint(e6)
 
     # e7: b5^2+x2^2 <= 1.64
-    e7 = SHOTpy.NonlinearConstraint(6, "e7", b5**2 + x2**2, SHOTpy.SHOT_DBL_MIN, 1.64)
+    e7 = SHOTpy.NonlinearConstraint("e7", b5**2 + x2**2, SHOTpy.SHOT_DBL_MIN, 1.64)
     problem.addConstraint(e7)
 
     # e8: b6^2+x3^2 <= 4.25
-    e8 = SHOTpy.NonlinearConstraint(7, "e8", b6**2 + x3**2, SHOTpy.SHOT_DBL_MIN, 4.25)
+    e8 = SHOTpy.NonlinearConstraint("e8", b6**2 + x3**2, SHOTpy.SHOT_DBL_MIN, 4.25)
     problem.addConstraint(e8)
 
     # e9: b5^2+x3^2 <= 4.64
-    e9 = SHOTpy.NonlinearConstraint(8, "e9", b5**2 + x3**2, SHOTpy.SHOT_DBL_MIN, 4.64)
+    e9 = SHOTpy.NonlinearConstraint("e9", b5**2 + x3**2, SHOTpy.SHOT_DBL_MIN, 4.64)
     problem.addConstraint(e9)
 
     problem.finalize()
@@ -111,8 +111,8 @@ def build_small_convex(env):
     problem = SHOTpy.Problem(env)
     problem.name = "small_convex"
 
-    x1 = SHOTpy.Variable("x1", 0, SHOTpy.VariableType.Integer, 0.0, 3.0)
-    x2 = SHOTpy.Variable("x2", 1, SHOTpy.VariableType.Integer, 1.0, 3.0)
+    x1 = SHOTpy.Variable("x1", SHOTpy.VariableType.Integer, 0.0, 3.0)
+    x2 = SHOTpy.Variable("x2", SHOTpy.VariableType.Integer, 1.0, 3.0)
     for v in [x1, x2]:
         problem.addVariable(v)
 
@@ -125,12 +125,12 @@ def build_small_convex(env):
 
     # e1: x1^2 + x2 + 0.1*exp(x2) <= 10
     e1_expr = x1**2 + x2 + 0.1 * SHOTpy.exp(x2)
-    e1 = SHOTpy.NonlinearConstraint(0, "e1", e1_expr, SHOTpy.SHOT_DBL_MIN, 10.0)
+    e1 = SHOTpy.NonlinearConstraint("e1", e1_expr, SHOTpy.SHOT_DBL_MIN, 10.0)
     problem.addConstraint(e1)
 
     # e2: exp(x1) / x2 <= 3
     e2_expr = SHOTpy.exp(x1) / x2
-    e2 = SHOTpy.NonlinearConstraint(1, "e2", e2_expr, SHOTpy.SHOT_DBL_MIN, 3.0)
+    e2 = SHOTpy.NonlinearConstraint("e2", e2_expr, SHOTpy.SHOT_DBL_MIN, 3.0)
     problem.addConstraint(e2)
 
     problem.finalize()
@@ -539,8 +539,8 @@ class TestExternalHyperplaneGradientCuts:
         problem = SHOTpy.Problem(env)
         problem.name = "shot_ex_jogo"
 
-        x1 = SHOTpy.Variable("x1", 0, SHOTpy.VariableType.Real,    1.0, 20.0)
-        x2 = SHOTpy.Variable("x2", 1, SHOTpy.VariableType.Integer, 1.0, 20.0)
+        x1 = SHOTpy.Variable("x1", SHOTpy.VariableType.Real,    1.0, 20.0)
+        x2 = SHOTpy.Variable("x2", SHOTpy.VariableType.Integer, 1.0, 20.0)
         problem.addVariable(x1)
         problem.addVariable(x2)
 
@@ -553,15 +553,15 @@ class TestExternalHyperplaneGradientCuts:
         lt_l = SHOTpy.LinearTerms()
         lt_l.add(SHOTpy.LinearTerm( 2.0, x1))
         lt_l.add(SHOTpy.LinearTerm(-3.0, x2))
-        problem.addConstraint(SHOTpy.LinearConstraint(0, "l", lt_l, SHOTpy.SHOT_DBL_MIN, 2.0))
+        problem.addConstraint(SHOTpy.LinearConstraint("l", lt_l, SHOTpy.SHOT_DBL_MIN, 2.0))
 
         # Constraint c1 (index 1): 0.15*(x1-8)^2 + 0.1*(x2-6)^2 + 0.025*exp(x1)/x2^2 <= 5
-        c1 = SHOTpy.NonlinearConstraint(1, "c1", SHOTpy.SHOT_DBL_MIN, 5.0)
+        c1 = SHOTpy.NonlinearConstraint("c1", SHOTpy.SHOT_DBL_MIN, 5.0)
         c1.add(0.15 * (x1 - 8.0)**2 + 0.1 * (x2 - 6.0)**2 + 0.025 * SHOTpy.exp(x1) / x2**2)
         problem.addConstraint(c1)
 
         # Constraint c2 (index 2): 1/x1 + 1/x2 - sqrt(x1)*sqrt(x2) <= -4
-        c2 = SHOTpy.NonlinearConstraint(2, "c2", SHOTpy.SHOT_DBL_MIN, -4.0)
+        c2 = SHOTpy.NonlinearConstraint("c2", SHOTpy.SHOT_DBL_MIN, -4.0)
         c2.add(SHOTpy.SignomialTerm( 1.0, [(x1, -1.0)]))
         c2.add(SHOTpy.SignomialTerm( 1.0, [(x2, -1.0)]))
         c2.add(SHOTpy.SignomialTerm(-1.0, [(x1, 0.5), (x2, 0.5)]))
@@ -715,8 +715,8 @@ class TestExternalBoundCallbacks:
         problem = SHOTpy.Problem(env)
         problem.name = "shot_ex_jogo"
 
-        x1 = SHOTpy.Variable("x1", 0, SHOTpy.VariableType.Real,    1.0, 20.0)
-        x2 = SHOTpy.Variable("x2", 1, SHOTpy.VariableType.Integer, 1.0, 20.0)
+        x1 = SHOTpy.Variable("x1", SHOTpy.VariableType.Real,    1.0, 20.0)
+        x2 = SHOTpy.Variable("x2", SHOTpy.VariableType.Integer, 1.0, 20.0)
         problem.addVariable(x1)
         problem.addVariable(x2)
 
@@ -728,13 +728,13 @@ class TestExternalBoundCallbacks:
         lt_l = SHOTpy.LinearTerms()
         lt_l.add(SHOTpy.LinearTerm( 2.0, x1))
         lt_l.add(SHOTpy.LinearTerm(-3.0, x2))
-        problem.addConstraint(SHOTpy.LinearConstraint(0, "l", lt_l, SHOTpy.SHOT_DBL_MIN, 2.0))
+        problem.addConstraint(SHOTpy.LinearConstraint("l", lt_l, SHOTpy.SHOT_DBL_MIN, 2.0))
 
-        c1 = SHOTpy.NonlinearConstraint(1, "c1", SHOTpy.SHOT_DBL_MIN, 5.0)
+        c1 = SHOTpy.NonlinearConstraint("c1", SHOTpy.SHOT_DBL_MIN, 5.0)
         c1.add(0.15 * (x1 - 8.0)**2 + 0.1 * (x2 - 6.0)**2 + 0.025 * SHOTpy.exp(x1) / x2**2)
         problem.addConstraint(c1)
 
-        c2 = SHOTpy.NonlinearConstraint(2, "c2", SHOTpy.SHOT_DBL_MIN, -4.0)
+        c2 = SHOTpy.NonlinearConstraint("c2", SHOTpy.SHOT_DBL_MIN, -4.0)
         c2.add(SHOTpy.SignomialTerm( 1.0, [(x1, -1.0)]))
         c2.add(SHOTpy.SignomialTerm( 1.0, [(x2, -1.0)]))
         c2.add(SHOTpy.SignomialTerm(-1.0, [(x1, 0.5), (x2, 0.5)]))
@@ -1171,14 +1171,14 @@ class TestCallbackESHInteriorPoint:
         problem_aux.name = "ex1223b_interior"
 
         # Original 7 variables, b4-b7 relaxed to Real [0, 1]
-        x1 = SHOTpy.Variable("x1", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
-        x2 = SHOTpy.Variable("x2", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
-        x3 = SHOTpy.Variable("x3", 2, SHOTpy.VariableType.Real, 0.0, 10.0)
-        b4 = SHOTpy.Variable("b4", 3, SHOTpy.VariableType.Real, 0.0, 1.0)
-        b5 = SHOTpy.Variable("b5", 4, SHOTpy.VariableType.Real, 0.0, 1.0)
-        b6 = SHOTpy.Variable("b6", 5, SHOTpy.VariableType.Real, 0.0, 1.0)
-        b7 = SHOTpy.Variable("b7", 6, SHOTpy.VariableType.Real, 0.0, 1.0)
-        mu = SHOTpy.Variable("mu", 7, SHOTpy.VariableType.Real, -100.0, 100.0)
+        x1 = SHOTpy.Variable("x1", SHOTpy.VariableType.Real, 0.0, 10.0)
+        x2 = SHOTpy.Variable("x2", SHOTpy.VariableType.Real, 0.0, 10.0)
+        x3 = SHOTpy.Variable("x3", SHOTpy.VariableType.Real, 0.0, 10.0)
+        b4 = SHOTpy.Variable("b4", SHOTpy.VariableType.Real, 0.0, 1.0)
+        b5 = SHOTpy.Variable("b5", SHOTpy.VariableType.Real, 0.0, 1.0)
+        b6 = SHOTpy.Variable("b6", SHOTpy.VariableType.Real, 0.0, 1.0)
+        b7 = SHOTpy.Variable("b7", SHOTpy.VariableType.Real, 0.0, 1.0)
+        mu = SHOTpy.Variable("mu", SHOTpy.VariableType.Real, -100.0, 100.0)
         for v in [x1, x2, x3, b4, b5, b6, b7, mu]:
             problem_aux.addVariable(v)
 
@@ -1194,12 +1194,11 @@ class TestCallbackESHInteriorPoint:
         for v in [x1, x2, x3, b4, b5, b6]:
             lt1.add(SHOTpy.LinearTerm(1.0, v))
         problem_aux.addConstraint(
-            SHOTpy.LinearConstraint(0, "e1", lt1, SHOTpy.SHOT_DBL_MIN, 5.0)
+            SHOTpy.LinearConstraint("e1", lt1, SHOTpy.SHOT_DBL_MIN, 5.0)
         )
 
         # e2: b6^2+x1^2+x2^2+x3^2 - mu <= 5.5  (quadratic - mu)
-        problem_aux.addConstraint(SHOTpy.NonlinearConstraint(
-            1, "e2", b6**2 + x1**2 + x2**2 + x3**2 - mu, SHOTpy.SHOT_DBL_MIN, 5.5
+        problem_aux.addConstraint(SHOTpy.NonlinearConstraint("e2", b6**2 + x1**2 + x2**2 + x3**2 - mu, SHOTpy.SHOT_DBL_MIN, 5.5
         ))
 
         # e3-e6: linear constraints, unchanged
@@ -1210,20 +1209,17 @@ class TestCallbackESHInteriorPoint:
             lt.add(SHOTpy.LinearTerm(1.0, va))
             lt.add(SHOTpy.LinearTerm(1.0, vb))
             problem_aux.addConstraint(
-                SHOTpy.LinearConstraint(idx, nm, lt, SHOTpy.SHOT_DBL_MIN, rhs)
+                SHOTpy.LinearConstraint(nm, lt, SHOTpy.SHOT_DBL_MIN, rhs)
             )
 
         # e7: b5^2+x2^2 - mu <= 1.64
-        problem_aux.addConstraint(SHOTpy.NonlinearConstraint(
-            6, "e7", b5**2 + x2**2 - mu, SHOTpy.SHOT_DBL_MIN, 1.64
+        problem_aux.addConstraint(SHOTpy.NonlinearConstraint("e7", b5**2 + x2**2 - mu, SHOTpy.SHOT_DBL_MIN, 1.64
         ))
         # e8: b6^2+x3^2 - mu <= 4.25
-        problem_aux.addConstraint(SHOTpy.NonlinearConstraint(
-            7, "e8", b6**2 + x3**2 - mu, SHOTpy.SHOT_DBL_MIN, 4.25
+        problem_aux.addConstraint(SHOTpy.NonlinearConstraint("e8", b6**2 + x3**2 - mu, SHOTpy.SHOT_DBL_MIN, 4.25
         ))
         # e9: b5^2+x3^2 - mu <= 4.64
-        problem_aux.addConstraint(SHOTpy.NonlinearConstraint(
-            8, "e9", b5**2 + x3**2 - mu, SHOTpy.SHOT_DBL_MIN, 4.64
+        problem_aux.addConstraint(SHOTpy.NonlinearConstraint("e9", b5**2 + x3**2 - mu, SHOTpy.SHOT_DBL_MIN, 4.64
         ))
 
         problem_aux.finalize()
