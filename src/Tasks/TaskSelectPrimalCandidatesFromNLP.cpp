@@ -36,6 +36,10 @@
 #include "../ModelingSystem/ModelingSystemGAMS.h"
 #endif
 
+#ifdef HAS_UNO
+#include "../NLPSolver/NLPSolverUno.h"
+#endif
+
 #include "../NLPSolver/NLPSolverSHOT.h"
 
 namespace SHOT
@@ -96,6 +100,38 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(
         NLPSolver = std::make_shared<NLPSolverGAMS>(env,
             (std::dynamic_pointer_cast<ModelingSystemGAMS>(env->modelingSystem))->modelingObject,
             (std::dynamic_pointer_cast<ModelingSystemGAMS>(env->modelingSystem))->auditLicensing);
+
+        break;
+    }
+#endif
+
+#ifdef HAS_UNO
+    case(ES_PrimalNLPSolver::Uno):
+    {
+        if(useReformulatedProblem)
+        {
+            sourceProblem = env->reformulatedProblem;
+            sourceIsReformulatedProblem = true;
+        }
+        else
+        {
+            sourceProblem = env->problem;
+            sourceIsReformulatedProblem = false;
+        }
+
+        env->results->usedPrimalNLPSolver = ES_PrimalNLPSolver::Uno;
+
+        try
+        {
+            NLPSolver = std::make_shared<NLPSolverUno>(env, sourceProblem);
+        }
+        catch(const std::exception& e)
+        {
+            env->output->outputWarning(fmt::format(
+                " Could not initialize Uno as the fixed-integer NLP solver, disabling this primal heuristic: {}",
+                e.what()));
+            NLPSolver = nullptr;
+        }
 
         break;
     }

@@ -317,6 +317,20 @@ enum class ES_IpoptSolver
     mumps
 };
 
+enum class ES_UnoPreset
+{
+    UnoAuto,
+    ipopt,
+    filtersqp
+};
+
+enum class ES_UnoHessianModel
+{
+    exact,
+    LBFGS,
+    LSR1
+};
+
 enum class ES_IterationOutputDetail
 {
     Full,
@@ -387,6 +401,7 @@ enum class ES_PrimalNLPSolver
     Ipopt,
     GAMS,
     SHOT,
+    Uno,
     None
 };
 

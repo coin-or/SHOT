@@ -66,6 +66,9 @@ set(CBC_DIR "/opt/cbc" CACHE STRING "The base directory where Cbc is located (if
 option(HAS_IPOPT "Is Ipopt available" ON)
 set(IPOPT_DIR "/opt/ipopt" CACHE STRING "The base directory where Ipopt is located (if available).")
 
+option(HAS_UNO "Is Uno available" OFF)
+set(UNO_DIR "/opt/uno" CACHE STRING "The base directory where Uno is located (if available).")
+
 # Python
 option(HAS_PYTHON "Is Python available" OFF)
 
@@ -371,6 +374,24 @@ if(HAS_IPOPT)
     set(PRIMAL_HEADERS "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverIpoptBase.h")
     set(PRIMAL_HEADERS ${PRIMAL_HEADERS} "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverIpoptRelaxed.h")
 endif(HAS_IPOPT)
+
+if(HAS_UNO)
+    find_package(Uno)
+
+    if(NOT UNO_FOUND)
+        message(WARNING "Uno not found, setting HAS_UNO to OFF")
+        set(HAS_UNO OFF)
+    endif()
+
+    if(UNO_FOUND)
+        # Defined here rather than in the linking section further down so that the definition reaches every
+        # target declared after this point, including the test executables.
+        add_definitions(-DHAS_UNO)
+
+        set(PRIMAL_SOURCES ${PRIMAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverUno.cpp")
+        set(PRIMAL_HEADERS ${PRIMAL_HEADERS} "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverUno.h")
+    endif()
+endif(HAS_UNO)
 
 # AMPL interface
 
@@ -847,6 +868,16 @@ if(HAS_IPOPT)
     message("-- The following Ipopt libraries will be used from: ${IPOPT_LIBRARY_DIRS}")
     message("   ${IPOPT_LIBRARIES}")
 endif(HAS_IPOPT)
+
+# Uno linking
+if(HAS_UNO)
+    message("-- Uno include files will be used from: ${UNO_INCLUDE_DIR}")
+    target_link_libraries(SHOTPrimalStrategy ${UNO_LIBRARIES})
+    target_include_directories(SHOTPrimalStrategy SYSTEM PUBLIC "${UNO_INCLUDE_DIR}")
+
+    message("-- The following Uno libraries will be used:")
+    message("   ${UNO_LIBRARIES}")
+endif(HAS_UNO)
 
 # GAMS linking
 if(HAS_GAMS)

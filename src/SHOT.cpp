@@ -423,6 +423,11 @@ int main(int argc, char* argv[])
             solver.updateSetting(
                 "Primal.FixedInteger.Solver", static_cast<int>(ES_PrimalNLPSolver::Ipopt), E_SettingPriority::UserAPI);
 #endif
+#ifdef HAS_UNO
+        if(argValue == "uno")
+            solver.updateSetting(
+                "Primal.FixedInteger.Solver", static_cast<int>(ES_PrimalNLPSolver::Uno), E_SettingPriority::UserAPI);
+#endif
         if(argValue == "shot")
             solver.updateSetting(
                 "Primal.FixedInteger.Solver", static_cast<int>(ES_PrimalNLPSolver::SHOT), E_SettingPriority::UserAPI);

@@ -342,6 +342,16 @@ in this codebase — add to this list as you find more.
   `usedsettings.opt` that the solver/setting you intended is actually the
   one in effect.
 
+- `createSetting(name, "", description)` does **not** create a string
+  setting. A string literal is a `const char*`, and converting that to
+  `bool` is a standard conversion while converting it to `std::string` is
+  a user-defined one, so overload resolution picks the `bool` overload
+  and silently creates a boolean setting. Reading it back with
+  `getSetting<std::string>` then fails with "Setting ... not found",
+  which reads like a missing `createSetting` call rather than a wrong
+  one. Write `std::string()` for an empty default, as
+  `Output.GAMS.AlternateSolutionsFile` does.
+
 ### Reproducing a bug found via the C++ test suite
 
 - If a failure was first found through `ModelTest`/the C++ `Problem` API

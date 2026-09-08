@@ -1371,6 +1371,7 @@ void Solver::initializeSettings()
     enumPrimalNLPSolver.push_back("Ipopt");
     enumPrimalNLPSolver.push_back("GAMS");
     enumPrimalNLPSolver.push_back("SHOT");
+    enumPrimalNLPSolver.push_back("Uno");
 
     env->settings->createSetting("Primal.FixedInteger.Solver", static_cast<int>(ES_PrimalNLPSolver::Ipopt),
         "NLP solver to use", enumPrimalNLPSolver, 0);
@@ -1403,8 +1404,8 @@ void Solver::initializeSettings()
 
     env->settings->createSetting("Primal.FixedInteger.Warmstart", true, "Warm start the NLP solver");
 
-    env->settings->createSetting("Primal.PolishSolution", true,
-        "Solve an NLP problem from the final solution to try to improve it");
+    env->settings->createSetting(
+        "Primal.PolishSolution", true, "Solve an NLP problem from the final solution to try to improve it");
 
     // Primal settings: rootsearch
 
@@ -1716,6 +1717,43 @@ void Solver::initializeSettings()
 
 #endif
 
+    // Subsolver settings: Uno
+
+#ifdef HAS_UNO
+
+    env->settings->createSettingGroup("Subsolver", "Uno", "Uno", "");
+
+    /* These default to Uno's own tolerances rather than to the tighter ones used for Ipopt. Uno reports an
+       algorithmic error, rather than the point it reached, when it cannot certify stationarity to the requested
+       tolerance, and the accuracy of SHOT's function evaluations does not always allow 1e-8 to be reached. */
+    env->settings->createSetting("Subsolver.Uno.ConstraintViolationTolerance", 1E-6,
+        "Constraint violation tolerance in Uno", SHOT_DBL_MIN, SHOT_DBL_MAX);
+
+    VectorString enumUnoHessianModel;
+    enumUnoHessianModel.push_back("Exact");
+    enumUnoHessianModel.push_back("L-BFGS");
+    enumUnoHessianModel.push_back("L-SR1");
+    env->settings->createSetting("Subsolver.Uno.HessianModel", static_cast<int>(ES_UnoHessianModel::exact),
+        "How Uno models the Hessian", enumUnoHessianModel, 0);
+    enumUnoHessianModel.clear();
+
+    env->settings->createSetting("Subsolver.Uno.MaxIterations", 1000, "Maximum number of iterations");
+
+    env->settings->createSetting(
+        "Subsolver.Uno.OptionsFile", std::string(), "Uno option file to read additional options from");
+
+    VectorString enumUnoPreset;
+    enumUnoPreset.push_back("Automatic");
+    enumUnoPreset.push_back("Ipopt");
+    enumUnoPreset.push_back("filterSQP");
+    env->settings->createSetting(
+        "Subsolver.Uno.Preset", static_cast<int>(ES_UnoPreset::UnoAuto), "The Uno algorithm to use", enumUnoPreset, 0);
+    enumUnoPreset.clear();
+
+    env->settings->createSetting("Subsolver.Uno.RelativeConvergenceTolerance", 1E-6, "Relative convergence tolerance");
+
+#endif
+
     env->settings->createSettingGroup("Subsolver", "SHOT", "SHOT primal NLP solver", "");
 
     env->settings->createSetting(
@@ -1877,6 +1915,15 @@ void Solver::verifySettings()
     }
 #endif
 
+#ifndef HAS_UNO
+    if(static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("Primal.FixedInteger.Solver"))
+        == ES_PrimalNLPSolver::Uno)
+    {
+        env->output->outputWarning(" SHOT has not been compiled with support for the Uno NLP solver.");
+        NLPSolverDefined = false;
+    }
+#endif
+
 #ifdef HAS_GAMS
     if((static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("Primal.FixedInteger.Solver"))
            == ES_PrimalNLPSolver::GAMS)
@@ -1912,6 +1959,11 @@ void Solver::verifySettings()
         env->settings->updateSetting(
             "Primal.FixedInteger.Solver", (int)ES_PrimalNLPSolver::GAMS, E_SettingPriority::SolverCompatibility);
         env->output->outputWarning(" Using GAMS NLP solvers instead.");
+
+#elif HAS_UNO
+        env->settings->updateSetting(
+            "Primal.FixedInteger.Solver", (int)ES_PrimalNLPSolver::Uno, E_SettingPriority::SolverCompatibility);
+        env->output->outputWarning(" Using Uno as NLP solver instead.");
 
 #else
         env->settings->updateSetting(
@@ -2256,6 +2308,9 @@ std::vector<ES_PrimalNLPSolver> Solver::getSupportedNLPSolvers()
 #ifdef HAS_GAMS
     solvers.push_back(ES_PrimalNLPSolver::GAMS);
 #endif
+#ifdef HAS_UNO
+    solvers.push_back(ES_PrimalNLPSolver::Uno);
+#endif
     return solvers;
 }
 
@@ -2323,6 +2378,12 @@ bool Solver::hasNLPSolver(ES_PrimalNLPSolver solver)
 #endif
     case ES_PrimalNLPSolver::GAMS:
 #ifdef HAS_GAMS
+        return true;
+#else
+        return false;
+#endif
+    case ES_PrimalNLPSolver::Uno:
+#ifdef HAS_UNO
         return true;
 #else
         return false;
