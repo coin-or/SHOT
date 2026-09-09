@@ -82,6 +82,60 @@ public:
 
     VectorDouble initialValues;
 
+    // The constraints are held here while the file is read and only added to the problem once their contents are
+    // known, since a row declared nonlinear can turn out to hold nothing nonlinear and the problem decides which
+    // type specific list a constraint belongs to when it is added
+    NumericConstraints readConstraints;
+
+    // Adds the constraints that were read to the problem, in the order they appear in the file since the problem
+    // numbers them by their position. A row declared nonlinear can hold an expression that is constant, which is
+    // what remains when every variable in it is fixed. Such a constraint has nothing nonlinear in it, so the value
+    // is folded into the constant and the constraint is added as the linear one it actually is, rather than being
+    // left among the nonlinear constraints belonging to none of the constraint classes.
+    void addConstraintsToProblem()
+    {
+        for(auto& C : readConstraints)
+        {
+            auto nonlinearConstraint = std::dynamic_pointer_cast<NonlinearConstraint>(C);
+
+            // Only linear terms and a nonlinear expression are ever put on a constraint when reading, so nothing
+            // but the expression can make it nonlinear. The other kinds of terms are still checked for, so that
+            // none of them would be dropped were that to change.
+            if(nonlinearConstraint && nonlinearConstraint->nonlinearExpression
+                && nonlinearConstraint->quadraticTerms.size() == 0
+                && nonlinearConstraint->monomialTerms.size() == 0
+                && nonlinearConstraint->signomialTerms.size() == 0)
+            {
+                // Simplifying the expression to see whether it is constant is not an option here, since that
+                // rewrites the expression in place and the problem has not been given the chance to standardize
+                // it yet. The bounds decide instead: an expression enclosed by a single point takes that value
+                // everywhere, which is what remains when every variable in it is fixed.
+                auto expressionBounds = nonlinearConstraint->nonlinearExpression->getBounds();
+
+                if(expressionBounds.l() == expressionBounds.u())
+                {
+                    // Nothing nonlinear is left, so the constraint is handed over as the linear one it is
+                    auto linearConstraint = std::make_shared<LinearConstraint>();
+                    linearConstraint->name = nonlinearConstraint->name;
+                    linearConstraint->valueLHS = nonlinearConstraint->valueLHS;
+                    linearConstraint->valueRHS = nonlinearConstraint->valueRHS;
+                    linearConstraint->constant = nonlinearConstraint->constant + expressionBounds.l();
+                    linearConstraint->linearTerms = nonlinearConstraint->linearTerms;
+
+                    destination->add(linearConstraint);
+                    continue;
+                }
+            }
+
+            if(nonlinearConstraint)
+                destination->add(nonlinearConstraint);
+            else
+                destination->add(std::dynamic_pointer_cast<LinearConstraint>(C));
+        }
+
+        readConstraints.clear();
+    }
+
     void OnHeader(const mp::NLHeader& h)
     {
         initialValues.assign(h.num_vars, std::numeric_limits<double>::quiet_NaN());
@@ -204,15 +258,18 @@ public:
         destination->linearConstraints.reserve(h.num_algebraic_cons - h.num_nl_cons);
         destination->nonlinearConstraints.reserve(h.num_nl_cons);
 
+        readConstraints.reserve(h.num_algebraic_cons);
+
         for(int i = 0; i < h.num_nl_cons; i++)
         {
-            destination->add(
+            readConstraints.push_back(
                 std::make_shared<NonlinearConstraint>("nlc_" + std::to_string(i), SHOT_DBL_MIN, SHOT_DBL_MAX));
         }
 
         for(int i = h.num_nl_cons; i < h.num_algebraic_cons; i++)
         {
-            destination->add(std::make_shared<LinearConstraint>("lc_" + std::to_string(i), SHOT_DBL_MIN, SHOT_DBL_MAX));
+            readConstraints.push_back(
+                std::make_shared<LinearConstraint>("lc_" + std::to_string(i), SHOT_DBL_MIN, SHOT_DBL_MAX));
         }
 
         if(h.num_nl_objs == 1)
@@ -365,7 +422,7 @@ public:
     {
         if(nonlinearExpression)
         {
-            std::dynamic_pointer_cast<NonlinearConstraint>(destination->numericConstraints[constraintIndex])
+            std::dynamic_pointer_cast<NonlinearConstraint>(readConstraints[constraintIndex])
                 ->add(nonlinearExpression);
         }
 
@@ -420,8 +477,8 @@ public:
         if(ub == SHOT_DBL_INF)
             ub = SHOT_DBL_MAX;
 
-        destination->numericConstraints[index]->valueLHS = lb;
-        destination->numericConstraints[index]->valueRHS = ub;
+        readConstraints[index]->valueLHS = lb;
+        readConstraints[index]->valueRHS = ub;
     }
 
     void OnInitialValue(int var_index, double value) { initialValues[var_index] = value; }
@@ -553,18 +610,17 @@ public:
         EnvironmentPtr env;
         ProblemPtr destination;
 
-        int constraintIndex;
+        NumericConstraintPtr constraint;
         bool inObjectiveFunction = false;
 
     public:
-        explicit LinearPartHandler(EnvironmentPtr envPtr, ProblemPtr problem, int constraintIndex)
-            : env(envPtr), destination(problem), constraintIndex(constraintIndex)
+        explicit LinearPartHandler(EnvironmentPtr envPtr, ProblemPtr problem, NumericConstraintPtr constraint)
+            : env(envPtr), destination(problem), constraint(constraint)
         {
         }
 
         explicit LinearPartHandler(EnvironmentPtr envPtr, ProblemPtr problem) : env(envPtr), destination(problem)
         {
-            constraintIndex = -1;
             inObjectiveFunction = true;
         }
 
@@ -581,8 +637,8 @@ public:
                     std::dynamic_pointer_cast<LinearObjectiveFunction>(destination->objectiveFunction)->constant
                         += coefficient * variable->lowerBound;
                 else
-                    std::dynamic_pointer_cast<LinearConstraint>(destination->numericConstraints[constraintIndex])
-                        ->constant += coefficient * variable->lowerBound;
+                    std::dynamic_pointer_cast<LinearConstraint>(constraint)->constant
+                        += coefficient * variable->lowerBound;
             }
             else
             {
@@ -590,7 +646,7 @@ public:
                     std::dynamic_pointer_cast<LinearObjectiveFunction>(destination->objectiveFunction)
                         ->add(std::make_shared<LinearTerm>(coefficient, variable));
                 else
-                    std::dynamic_pointer_cast<LinearConstraint>(destination->numericConstraints[constraintIndex])
+                    std::dynamic_pointer_cast<LinearConstraint>(constraint)
                         ->add(std::make_shared<LinearTerm>(coefficient, variable));
             }
         }
@@ -607,7 +663,7 @@ public:
 
     LinearConHandler OnLinearConExpr(int constraintIndex, [[maybe_unused]] int numLinearTerms)
     {
-        return LinearConHandler(env, destination, constraintIndex);
+        return LinearConHandler(env, destination, readConstraints[constraintIndex]);
     }
 
     /// receive notification about the end of the input
@@ -693,6 +749,8 @@ E_ProblemCreationStatus ModelingSystemAMPL::createProblem(ProblemPtr& problem, c
     {
         AMPLProblemHandler handler(env, problem);
         mp::ReadNLFile(filename, handler);
+
+        handler.addConstraintsToProblem();
 
         // Fill defaults for unspecified variables; only store if at least one was provided in the x segment
         bool hasAny = false;
