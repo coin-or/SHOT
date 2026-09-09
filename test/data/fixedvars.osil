@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osil xmlns="os.optimizationservices.org">
+<instanceHeader><name>fixedvars</name>
+<description>Every variable in the quadratic term is fixed, so the term is a constant and the constraint holds nothing quadratic. Optimal objective is 1.</description>
+</instanceHeader>
+<instanceData>
+<variables numberOfVariables="3">
+<var lb="2" ub="2" name="x" type="C"/>
+<var lb="3" ub="3" name="y" type="C"/>
+<var lb="0" ub="10" name="z" type="C"/>
+</variables>
+<objectives numberOfObjectives="1">
+<obj maxOrMin="min" name="obj" numberOfObjCoef="1">
+<coef idx="2">1.0</coef>
+</obj>
+</objectives>
+<constraints numberOfConstraints="1">
+<con name="c0" lb="7"/>
+</constraints>
+<linearConstraintCoefficients numberOfValues="1">
+<start><el>0</el><el>0</el><el>0</el><el>1</el></start>
+<rowIdx><el>0</el></rowIdx>
+<value><el>1.0</el></value>
+</linearConstraintCoefficients>
+<quadraticCoefficients numberOfQuadraticTerms="1">
+<qTerm idx="0" idxOne="0" idxTwo="1" coef="1.0"/>
+</quadraticCoefficients>
+</instanceData>
+</osil>

@@ -76,7 +76,8 @@ if(HAS_GAMS)
       8
       9
       10
-      11)
+      11
+      13)
   set(cpptests ${cpptests} GAMS)
 endif()
 
@@ -94,7 +95,9 @@ set(Solver_parts
     11
     12
     13
-    14)
+    14
+    15
+    16)
 set(cpptests ${cpptests} Solver)
 
 if(HAS_IPOPT)

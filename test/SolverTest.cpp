@@ -1362,6 +1362,66 @@ bool TestTerminationReasonOfOrdinarySolve()
     return (true);
 }
 
+// A constraint whose nonlinear or quadratic terms only involve fixed variables holds nothing nonlinear once those
+// terms are folded into the constant, and must be classified as the linear constraint it has become. Leaving it
+// among the nonlinear or quadratic constraints puts it in a class it does not belong to, where it is counted in
+// none of them and, in the nl case, is carried along with no variables left in its expression.
+bool TestConstraintClassesForFixedVariables(const std::string& problemFile)
+{
+    auto solver = std::make_unique<SHOT::Solver>();
+    auto env = solver->getEnvironment();
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Critical));
+
+    if(!solver->setProblem(problemFile))
+    {
+        std::cout << "Error while reading " << problemFile << '\n';
+        return (false);
+    }
+
+    bool passed = true;
+
+    for(auto& problem : { env->problem, env->reformulatedProblem })
+    {
+        auto& properties = problem->properties;
+
+        if(properties.numberOfNumericConstraints
+            != properties.numberOfLinearConstraints + properties.numberOfQuadraticConstraints
+                + properties.numberOfNonlinearConstraints)
+        {
+            std::cout << "The constraint classes do not add up to the number of constraints: "
+                      << properties.numberOfNumericConstraints << " != " << properties.numberOfLinearConstraints
+                      << " + " << properties.numberOfQuadraticConstraints << " + "
+                      << properties.numberOfNonlinearConstraints << '\n';
+            passed = false;
+        }
+
+        for(auto& C : problem->nonlinearConstraints)
+        {
+            if(C->properties.hasNonlinearExpression && C->variablesInNonlinearExpression.size() == 0)
+            {
+                std::cout << "Constraint " << C->name << " is nonlinear but its expression has no variables\n";
+                passed = false;
+            }
+        }
+    }
+
+    if(!solver->solveProblem())
+    {
+        std::cout << "Error while solving " << problemFile << '\n';
+        return (false);
+    }
+
+    double objectiveValue = env->results->getPrimalBound();
+
+    if(std::abs(objectiveValue - 1.0) > 1e-6)
+    {
+        std::cout << "Expected an objective value of 1, got " << objectiveValue << '\n';
+        passed = false;
+    }
+
+    return passed;
+}
+
 int SolverTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -1452,6 +1512,16 @@ int SolverTest(int argc, char* argv[])
         std::cout << "Starting test for the termination reason of an ordinary solve" << std::endl;
         passed = TestTerminationReasonOfOrdinarySolve();
         std::cout << "Finished test for the termination reason of an ordinary solve." << std::endl;
+        break;
+    case 15:
+        std::cout << "Starting test for constraint classes with fixed variables (nl format)" << std::endl;
+        passed = TestConstraintClassesForFixedVariables("data/fixedvars.nl");
+        std::cout << "Finished test for constraint classes with fixed variables (nl format)." << std::endl;
+        break;
+    case 16:
+        std::cout << "Starting test for constraint classes with fixed variables (osil format)" << std::endl;
+        passed = TestConstraintClassesForFixedVariables("data/fixedvars.osil");
+        std::cout << "Finished test for constraint classes with fixed variables (osil format)." << std::endl;
         break;
     default:
         passed = false;
