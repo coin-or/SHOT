@@ -2707,9 +2707,12 @@ ProblemPtr Problem::createCopy(
                 destinationConstraint = std::make_shared<LinearConstraint>(C->name, valueLHS, valueRHS);
                 destinationConstraint->properties.classification = E_ConstraintClassification::Linear;
             }
-            else if(C->properties.classification == E_ConstraintClassification::Quadratic
-                || (!C->properties.hasNonlinearExpression && !C->properties.hasMonomialTerms
-                    && !C->properties.hasSignomialTerms))
+            // A constraint with only quadratic terms is kept nonlinear if the source problem treats it as such, e.g.
+            // a nonconvex quadratic constraint in a reformulated problem that must not be passed to the MIP solver
+            else if(C->properties.classification < E_ConstraintClassification::QuadraticConsideredAsNonlinear
+                && (C->properties.classification == E_ConstraintClassification::Quadratic
+                    || (!C->properties.hasNonlinearExpression && !C->properties.hasMonomialTerms
+                        && !C->properties.hasSignomialTerms)))
             {
                 // Quadratic constraint
                 destinationConstraint = std::make_shared<QuadraticConstraint>(C->name, valueLHS, valueRHS);
@@ -2719,7 +2722,7 @@ ProblemPtr Problem::createCopy(
             {
                 // Nonlinear constraint
                 destinationConstraint = std::make_shared<NonlinearConstraint>(C->name, valueLHS, valueRHS);
-                destinationConstraint->properties.classification = E_ConstraintClassification::Quadratic;
+                destinationConstraint->properties.classification = E_ConstraintClassification::Nonlinear;
             }
 
             destinationConstraint->constant = std::dynamic_pointer_cast<NumericConstraint>(C)->constant;

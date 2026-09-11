@@ -851,7 +851,10 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
     {
         std::string errorString = e.getMessage();
 
-        if(errorString.rfind("CPLEX Error  5002", 0) == 0)
+        // Retry once if the problem is nonconvex. The optimality target only helps for nonconvex objectives, so a
+        // nonconvex quadratic constraint gives the same error again, which would otherwise recurse indefinitely
+        if(errorString.rfind("CPLEX Error  5002", 0) == 0
+            && cplexInstance.getParam(IloCplex::Param::OptimalityTarget) != CPX_OPTIMALITYTARGET_OPTIMALGLOBAL)
         {
             cplexInstance.setParam(IloCplex::Param::OptimalityTarget, CPX_OPTIMALITYTARGET_OPTIMALGLOBAL);
             return (solveProblem());

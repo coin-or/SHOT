@@ -25,6 +25,7 @@
 #include <algorithm>
 #include <cmath>
 #include <functional>
+#include <set>
 #include <sstream>
 
 using namespace SHOT;
@@ -129,6 +130,7 @@ bool ModelTestSignomialElementBoundTightening()
 
 bool ModelTestSignomialTermConvexity();
 bool ModelTestSignomialElementBoundTightening();
+bool ModelTestCopyKeepsNonlinearQuadraticConstraints();
 
 bool TestReadProblem(const std::string& problemFile);
 bool TestRootsearch(const std::string& problemFile);
@@ -249,6 +251,9 @@ int ModelTest(int argc, char* argv[])
         break;
     case 32:
         passed = ModelTestSignomialElementBoundTightening();
+        break;
+    case 33:
+        passed = ModelTestCopyKeepsNonlinearQuadraticConstraints();
         break;
     default:
         passed = false;
@@ -6173,6 +6178,122 @@ bool ModelTestSignomialTermConvexity()
             std::cout << "  FAILED: " << C.description << " was not classified as expected.\n";
             passed = false;
         }
+    }
+
+    return passed;
+}
+
+// A copy of a reformulated problem must keep the constraints that the reformulation treats as nonlinear, e.g.
+// nonconvex quadratic constraints, as nonlinear. Otherwise they are passed on to the MIP solver as quadratic
+// constraints, e.g. in the SHOT NLP solver, which makes CPLEX fail since the problem is not convex.
+bool ModelTestCopyKeepsNonlinearQuadraticConstraints()
+{
+    bool passed = true;
+
+    auto solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+
+    // Use a MIP solver that does not support nonconvex quadratic constraints, so these are considered as nonlinear
+    // by the reformulation while the convex ones are kept as quadratic
+#if defined(HAS_CPLEX)
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cplex));
+#elif defined(HAS_HIGHS)
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Highs));
+#elif defined(HAS_CBC)
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cbc));
+#endif
+
+    solver->updateSetting("Model.Reformulation.Quadratics.Strategy",
+        static_cast<int>(ES_QuadraticProblemStrategy::ConvexQuadraticallyConstrained));
+
+    auto problem = std::make_shared<Problem>(env);
+    problem->name = "copy_quadratic_classes";
+
+    auto x = std::make_shared<Variable>("x", E_VariableType::Real, -5.0, 5.0);
+    auto y = std::make_shared<Variable>("y", E_VariableType::Real, -5.0, 5.0);
+    auto b = std::make_shared<Variable>("b", E_VariableType::Binary, 0.0, 1.0);
+    problem->add({ x, y, b });
+
+    auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<LinearTerm>(1.0, x));
+    objective->add(std::make_shared<LinearTerm>(1.0, b));
+    problem->add(objective);
+
+    // Convex: x^2 + y^2 <= 20
+    auto convex = std::make_shared<QuadraticConstraint>("convex", SHOT_DBL_MIN, 20.0);
+    convex->add(std::make_shared<QuadraticTerm>(1.0, x, x));
+    convex->add(std::make_shared<QuadraticTerm>(1.0, y, y));
+    problem->add(convex);
+
+    // Nonconvex: x^2 >= 1
+    auto reverseConvex = std::make_shared<QuadraticConstraint>("reverseconvex", 1.0, SHOT_DBL_MAX);
+    reverseConvex->add(std::make_shared<QuadraticTerm>(1.0, x, x));
+    problem->add(reverseConvex);
+
+    // Nonconvex: x*y + b <= 2
+    auto bilinear = std::make_shared<QuadraticConstraint>("bilinear", SHOT_DBL_MIN, 2.0);
+    bilinear->add(std::make_shared<LinearTerm>(1.0, b));
+    bilinear->add(std::make_shared<QuadraticTerm>(1.0, x, y));
+    problem->add(bilinear);
+
+    problem->finalize();
+
+    if(!solver->setProblem(problem))
+    {
+        std::cout << "  FAILED: could not set problem.\n";
+        return false;
+    }
+
+    auto source = env->reformulatedProblem;
+
+    // Create the copy in the same way as the SHOT NLP solver
+    auto copySolver = std::make_unique<Solver>();
+    copySolver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+    auto copy = source->createCopy(copySolver->getEnvironment(), true, false, false);
+
+    auto names = [](const auto& constraints)
+    {
+        std::set<std::string> result;
+
+        for(auto& C : constraints)
+            result.insert(C->name);
+
+        return result;
+    };
+
+    int quadraticOnlyNonlinearConstraints = 0;
+
+    for(auto& C : source->nonlinearConstraints)
+    {
+        if(C->properties.hasQuadraticTerms && !C->properties.hasNonlinearExpression
+            && !C->properties.hasMonomialTerms && !C->properties.hasSignomialTerms)
+            quadraticOnlyNonlinearConstraints++;
+    }
+
+    std::cout << "  Reformulated problem: " << source->quadraticConstraints.size() << " quadratic, "
+              << source->nonlinearConstraints.size() << " nonlinear (" << quadraticOnlyNonlinearConstraints
+              << " with only quadratic terms)\n";
+    std::cout << "  Copied problem:       " << copy->quadraticConstraints.size() << " quadratic, "
+              << copy->nonlinearConstraints.size() << " nonlinear\n";
+
+    if(quadraticOnlyNonlinearConstraints == 0)
+    {
+        std::cout << "  FAILED: the reformulated problem has no nonlinear constraints with only quadratic terms, so "
+                     "the test does not test anything.\n";
+        passed = false;
+    }
+
+    if(names(copy->nonlinearConstraints) != names(source->nonlinearConstraints))
+    {
+        std::cout << "  FAILED: the nonlinear constraints differ between the reformulated and the copied problem.\n";
+        passed = false;
+    }
+
+    if(names(copy->quadraticConstraints) != names(source->quadraticConstraints))
+    {
+        std::cout << "  FAILED: the quadratic constraints differ between the reformulated and the copied problem.\n";
+        passed = false;
     }
 
     return passed;
