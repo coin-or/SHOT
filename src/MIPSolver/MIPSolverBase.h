@@ -55,6 +55,9 @@ protected:
     bool hasQuadraticObjective = false;
     bool hasQudraticConstraint = false;
 
+    // Whether a solve with the given status provides a bound that is valid for the dual problem
+    bool isDualBoundAvailable(E_ProblemSolutionStatus status, bool isMIP);
+
 public:
     ~MIPSolverBase();
 

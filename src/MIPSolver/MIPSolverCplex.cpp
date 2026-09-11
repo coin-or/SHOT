@@ -1425,6 +1425,9 @@ double MIPSolverCplex::getDualObjectiveValue()
     bool isMIP = getDiscreteVariableStatus();
     double objVal = (isMinimizationProblem ? SHOT_DBL_MIN : SHOT_DBL_MAX);
 
+    if(!isDualBoundAvailable(getSolutionStatus(), isMIP))
+        return (objVal);
+
     try
     {
         if(isMIP)

@@ -459,4 +459,27 @@ void MIPSolverBase::unfixVariables()
 }
 
 int MIPSolverBase::getNumberOfOpenNodes() { return (env->solutionStatistics.numberOfOpenNodes); }
+
+bool MIPSolverBase::isDualBoundAvailable(E_ProblemSolutionStatus status, bool isMIP)
+{
+    switch(status)
+    {
+    case E_ProblemSolutionStatus::Optimal:
+        return (true);
+
+    // An interrupted branch-and-bound search still has a valid bound over its open nodes, while an interrupted
+    // continuous solve only has the objective value of its current point, which is not a bound
+    case E_ProblemSolutionStatus::Feasible:
+    case E_ProblemSolutionStatus::IterationLimit:
+    case E_ProblemSolutionStatus::TimeLimit:
+    case E_ProblemSolutionStatus::SolutionLimit:
+    case E_ProblemSolutionStatus::NodeLimit:
+    case E_ProblemSolutionStatus::Abort:
+        return (isMIP);
+
+    // The solvers may return default or stale values in these cases, e.g. zero for HiGHS
+    default:
+        return (false);
+    }
+}
 } // namespace SHOT
