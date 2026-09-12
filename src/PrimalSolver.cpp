@@ -584,32 +584,32 @@ void PrimalSolver::addFixedNLPCandidate(
             discretVariableValues.push_back(candidate[VAR->getIndex()]);
     }
 
-    double pointHash;
+    PairDouble pointHashes;
 
     if(env->settings->getSetting<bool>("Primal.FixedInteger.OnlyUniqueIntegerCombinations"))
     {
-        pointHash = Utilities::calculateHash(discretVariableValues);
+        pointHashes = Utilities::calculateHashes(discretVariableValues);
     }
     else
     {
-        pointHash = Utilities::calculateHash(candidate);
+        pointHashes = Utilities::calculateHashes(candidate);
     }
 
-    if(!hasFixedNLPCandidateBeenTested(pointHash))
+    if(!hasFixedNLPCandidateBeenTested(pointHashes))
     {
         fixedPrimalNLPCandidates.push_back(
-            PrimalFixedNLPCandidate { candidate, source, objVal, iter, maxConstrDev, pointHash });
+            PrimalFixedNLPCandidate { candidate, source, objVal, iter, maxConstrDev, pointHashes });
     }
     else
-        env->output->outputDebug(
-            fmt::format("        Candidate for fixed integer search with hash {} has been used already.", pointHash));
+        env->output->outputDebug(fmt::format(
+            "        Candidate for fixed integer search with hash {} has been used already.", pointHashes.first));
 }
 
-bool PrimalSolver::hasFixedNLPCandidateBeenTested(double hash)
+bool PrimalSolver::hasFixedNLPCandidateBeenTested(const PairDouble& hashes)
 {
     for(auto& IC : usedPrimalNLPCandidates)
     {
-        if(Utilities::isAlmostEqual(IC.discreteVariablePointHash, hash, 1e-8))
+        if(Utilities::haveSameHashes(IC.discreteVariablePointHashes, hashes))
         {
             return (true);
         }

@@ -138,24 +138,7 @@ void DualSolver::checkDualSolutionCandidates()
 
 std::pair<double, double> DualSolver::calculateHashes(const VectorDouble& point)
 {
-    double first = 0.0;
-    double second = 0.0;
-
-    for(size_t i = 0; i < point.size(); i++)
-    {
-        // The value is mapped into (-1, 1) before it is hashed, so that a variable of large magnitude does not
-        // dominate the hash. Otherwise a change in a variable of small magnitude, e.g. a binary one, is lost next
-        // to it, and two points differing in such variables are taken for the same point.
-        double value = point[i] / (1.0 + std::abs(point[i]));
-
-        // The coefficients are calculated where they are used rather than kept in a vector that is extended when
-        // a longer point is hashed, since the hyperplanes are generated in the callbacks of the MIP solver, which
-        // run in parallel, and extending the vector could reallocate it while another thread was reading it
-        first += Utilities::fixedPseudoRandomNumber(i, 0, 1.0, 101.0) * value;
-        second += Utilities::fixedPseudoRandomNumber(i, 1, 1.0, 101.0) * value;
-    }
-
-    return (std::make_pair(first, second));
+    return (Utilities::calculateHashes(point));
 }
 
 std::pair<double, double> DualSolver::calculateHyperplaneHashes(NumericHyperplanePtr hyperplane)
@@ -379,13 +362,13 @@ void DualSolver::addIntegerCut(IntegerCut integerCut)
         integerCut.areAllVariablesBinary = true;
     }
 
-    integerCut.pointHash = Utilities::calculateHash(integerCut.variableValues);
+    integerCut.pointHashes = Utilities::calculateHashes(integerCut.variableValues);
 
-    if(!hasIntegerCutBeenAdded(integerCut.pointHash))
+    if(!hasIntegerCutBeenAdded(integerCut.pointHashes))
         this->integerCutWaitingList.push_back(integerCut);
     else
         env->output->outputDebug(
-            fmt::format("        Integer cut with hash {} has been added already.", integerCut.pointHash));
+            fmt::format("        Integer cut with hash {} has been added already.", integerCut.pointHashes.first));
 }
 
 void DualSolver::addGeneratedIntegerCut(IntegerCut integerCut)
@@ -410,7 +393,8 @@ void DualSolver::addGeneratedIntegerCut(IntegerCut integerCut)
         env->output->outputInfo("        Solution is no longer global since integer cut has been added.");
     }
 
-    env->output->outputDebug(fmt::format("        Added integer cut with hash {}", integerCut.pointHash));
+    env->output->outputDebug(
+        fmt::format("        Added integer cut with hash {}", integerCut.pointHashes.first));
 
     generatedIntegerCuts.push_back(integerCut);
 
@@ -423,11 +407,11 @@ void DualSolver::addGeneratedIntegerCut(IntegerCut integerCut)
     env->output->outputDebug("        Integer cut generated from: " + source);
 }
 
-bool DualSolver::hasIntegerCutBeenAdded(double hash)
+bool DualSolver::hasIntegerCutBeenAdded(const PairDouble& hashes)
 {
     for(auto& IC : generatedIntegerCuts)
     {
-        if(Utilities::isAlmostEqual(IC.pointHash, hash, 1e-8))
+        if(Utilities::haveSameHashes(IC.pointHashes, hashes))
         {
             return (true);
         }

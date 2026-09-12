@@ -167,7 +167,7 @@ struct PrimalFixedNLPCandidate
     double objValue;
     int iterFound;
     PairIndexValue maxDevatingConstraint;
-    double discreteVariablePointHash;
+    PairDouble discreteVariablePointHashes;
 };
 
 struct DualSolution
@@ -250,7 +250,7 @@ struct IntegerCut
     E_IntegerCutSource source = E_IntegerCutSource::None;
     bool areAllVariablesBinary = false;
     int iterationGenerated = -1;
-    double pointHash;
+    PairDouble pointHashes;
 };
 
 struct SolutionStatistics

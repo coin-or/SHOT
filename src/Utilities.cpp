@@ -9,6 +9,7 @@
 */
 
 #include <chrono>
+#include <cmath>
 #include <cstdint>
 #include <fstream>
 #include <iomanip>
@@ -532,6 +533,31 @@ template <typename T> double calculateHash(std::vector<T> const& point)
         scalarProduct += fixedPseudoRandomNumber(i, 0, 1.0, 101.0) * point[i];
 
     return (scalarProduct);
+}
+
+template PairDouble calculateHashes(VectorDouble const& point);
+template PairDouble calculateHashes(VectorInteger const& point);
+
+template <typename T> PairDouble calculateHashes(std::vector<T> const& point)
+{
+    double first = 0.0;
+    double second = 0.0;
+
+    for(size_t i = 0; i < point.size(); i++)
+    {
+        double value = point[i] / (1.0 + std::abs((double)point[i]));
+
+        first += fixedPseudoRandomNumber(i, 0, 1.0, 101.0) * value;
+        second += fixedPseudoRandomNumber(i, 1, 1.0, 101.0) * value;
+    }
+
+    return (std::make_pair(first, second));
+}
+
+bool haveSameHashes(const PairDouble& first, const PairDouble& second)
+{
+    return (std::abs(first.first - second.first) <= 1e-10 * std::max(1.0, std::abs(first.first))
+        && std::abs(first.second - second.second) <= 1e-10 * std::max(1.0, std::abs(first.second)));
 }
 
 bool isAlmostEqual(double x, double y, const double epsilon) { return std::abs(x - y) <= epsilon * std::abs(x); }

@@ -36,7 +36,7 @@ public:
 
     void addIntegerCut(IntegerCut integerCut);
     void addGeneratedIntegerCut(IntegerCut integerCut);
-    bool hasIntegerCutBeenAdded(double hash);
+    bool hasIntegerCutBeenAdded(const PairDouble& hashes);
 
     std::vector<GeneratedHyperplanePtr> generatedHyperplanes;
     std::vector<HyperplanePtr> hyperplaneWaitingList;

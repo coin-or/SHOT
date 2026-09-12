@@ -110,6 +110,17 @@ double fixedPseudoRandomNumber(size_t index, size_t stream, double low, double h
 
 template <typename T> double calculateHash(std::vector<T> const& point);
 
+// Two hashes of a point, where each value is mapped into (-1, 1) before it is hashed, so that a variable of large
+// magnitude does not dominate them. Otherwise a difference in a variable of small magnitude, e.g. a binary one, is
+// lost next to it and two points differing only in such variables are taken for the same point. Two hashes are
+// used because two different points can match in one of them.
+template <typename T> std::pair<double, double> calculateHashes(std::vector<T> const& point);
+
+// Whether two points hashed with calculateHashes are the same point. The hashes of the same point only differ by
+// rounding errors, which are relative to the magnitude of the hash, while two different points differ by much
+// more than that.
+bool haveSameHashes(const PairDouble& first, const PairDouble& second);
+
 bool isAlmostEqual(double x, double y, const double epsilon);
 
 bool isAlmostZero(double x, const double epsilon = std::numeric_limits<double>::epsilon());
