@@ -22,6 +22,8 @@
 #include "../Model/ObjectiveFunction.h"
 #include "../Model/Problem.h"
 
+#include <unordered_map>
+
 #ifdef HAS_STD_FILESYSTEM
 #include <filesystem>
 namespace fs = std;
@@ -87,9 +89,6 @@ void NLPSolverSHOT::initializeMIPProblem()
         "Termination.IterationLimit", env->settings->getSetting<int>("Primal.FixedInteger.IterationLimit"));
 
     solver->updateSetting("Termination.DualStagnation.IterationLimit", 20);
-
-    if(env->settings->getSetting<bool>("Subsolver.SHOT.ReuseHyperplanes.Use"))
-        solver->updateSetting("Dual.HyperplaneCuts.SaveHyperplanePoints", true);
 
     solver->updateSetting(
         "Model.BoundTightening.FeasibilityBased.Use", env->settings->getSetting<bool>("Subsolver.SHOT.UseFBBT"));
@@ -235,50 +234,78 @@ E_NLPSolutionStatus NLPSolverSHOT::solveProblemInstance()
 
     int hyperplaneCounter = 0;
 
-    if(env->settings->getSetting<bool>("Subsolver.SHOT.ReuseHyperplanes.Use"))
+    if(reuseHyperplanes && env->settings->getSetting<bool>("Subsolver.SHOT.ReuseHyperplanes.Use"))
     {
-        int numHyperplanesToCopy = solver->getEnvironment()->dualSolver->generatedHyperplanes.size()
+        auto& subsolverHyperplanes = solver->getEnvironment()->dualSolver->generatedHyperplanes;
+
+        int numHyperplanesToCopy = subsolverHyperplanes.size()
             * env->settings->getSetting<double>("Subsolver.SHOT.ReuseHyperplanes.Fraction");
 
-        for(auto& HP : solver->getEnvironment()->dualSolver->generatedHyperplanes)
+        // The nested solver reformulates its problem again, so its constraint indices do not match the ones in the
+        // main reformulated problem. Constraints are matched by name instead, and the cut is then generated from the
+        // main problem's constraint, so it is a valid linearization even if the matched function is not the same.
+        // Only cuts for convex constraints are valid everywhere, so the other ones are not reused.
+        std::unordered_map<std::string, NonlinearConstraintPtr> mainConstraints;
+
+        for(auto& C : env->reformulatedProblem->nonlinearConstraints)
+        {
+            if(C->properties.convexity <= E_Convexity::Convex)
+                mainConstraints.emplace(C->name, C);
+        }
+
+        auto mainObjective = env->reformulatedProblem->objectiveFunction;
+
+        bool isObjectiveConvex = mainObjective->properties.convexity == E_Convexity::Linear
+            || (mainObjective->properties.isMinimize && mainObjective->properties.convexity == E_Convexity::Convex)
+            || (mainObjective->properties.isMaximize && mainObjective->properties.convexity == E_Convexity::Concave);
+
+        for(auto& GHP : subsolverHyperplanes)
         {
             if(hyperplaneCounter >= numHyperplanesToCopy)
                 break;
 
-            if(auto constraintHP = std::dynamic_pointer_cast<ConstraintHyperplane>(HP))
+            auto numericHP = std::dynamic_pointer_cast<NumericHyperplane>(GHP->sourceHyperplane);
+
+            if(!numericHP)
+                continue;
+
+            // The nested solver's original variables are those of the main reformulated problem, and the auxiliary
+            // variables of the main reformulation are recalculated from the original ones
+            VectorDouble point(numericHP->generatedPoint.begin(),
+                numericHP->generatedPoint.begin() + env->problem->properties.numberOfVariables);
+
+            if((int)point.size() < env->reformulatedProblem->properties.numberOfVariables)
+                env->reformulatedProblem->augmentAuxiliaryVariableValues(point);
+
+            assert((int)point.size() == env->reformulatedProblem->properties.numberOfVariables);
+
+            if(auto constraintHP = std::dynamic_pointer_cast<ConstraintHyperplane>(numericHP))
             {
-                std::vector<double> tmpSolPt(constraintHP->generatedPoint.begin(),
-                    constraintHP->generatedPoint.begin() + env->problem->properties.numberOfVariables);
+                auto mainConstraint = mainConstraints.find(constraintHP->sourceConstraint->name);
 
-                if((int)tmpSolPt.size() < env->reformulatedProblem->properties.numberOfVariables)
-                    env->reformulatedProblem->augmentAuxiliaryVariableValues(tmpSolPt);
-
-                assert(tmpSolPt.size() == env->reformulatedProblem->properties.numberOfVariables);
+                if(mainConstraint == mainConstraints.end())
+                    continue;
 
                 auto hyperplane = std::make_shared<ConstraintHyperplane>();
-                hyperplane->generatedPoint = tmpSolPt;
-                hyperplane->sourceConstraint = std::dynamic_pointer_cast<NumericConstraint>(
-                    env->reformulatedProblem->getConstraint(constraintHP->sourceConstraint->getIndex()));
-                hyperplane->isGlobal = HP->sourceHyperplane->isGlobal;
+                hyperplane->generatedPoint = point;
+                hyperplane->sourceConstraint = mainConstraint->second;
+                hyperplane->isGlobal = true;
                 hyperplane->source = E_HyperplaneSource::PrimalSolutionSearch;
 
                 env->dualSolver->addHyperplane(hyperplane);
                 hyperplaneCounter++;
             }
-            else if(auto objectiveHP = std::dynamic_pointer_cast<ObjectiveHyperplane>(HP))
+            else if(std::dynamic_pointer_cast<ObjectiveHyperplane>(numericHP))
             {
-                std::vector<double> tmpSolPt(objectiveHP->generatedPoint.begin(),
-                    objectiveHP->generatedPoint.begin() + env->problem->properties.numberOfVariables);
+                // Objective cuts are expressed using the auxiliary objective variable in the main dual problem, and
+                // are only valid everywhere if the objective function is convex
+                if(!isObjectiveConvex || !env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
+                    continue;
 
-                if((int)tmpSolPt.size() < env->reformulatedProblem->properties.numberOfVariables)
-                    env->reformulatedProblem->augmentAuxiliaryVariableValues(tmpSolPt);
-
-                assert(tmpSolPt.size() == env->reformulatedProblem->properties.numberOfVariables);
-
-                ObjectiveHyperplanePtr hyperplane;
-                hyperplane->generatedPoint = tmpSolPt;
-                hyperplane->objectiveFunctionValue = sourceProblem->objectiveFunction->calculateValue(tmpSolPt);
-                hyperplane->isGlobal = sourceProblem->objectiveFunction->properties.convexity <= E_Convexity::Convex;
+                auto hyperplane = std::make_shared<ObjectiveHyperplane>();
+                hyperplane->generatedPoint = point;
+                hyperplane->objectiveFunctionValue = mainObjective->calculateValue(point);
+                hyperplane->isGlobal = true;
                 hyperplane->source = E_HyperplaneSource::PrimalSolutionSearch;
 
                 env->dualSolver->addHyperplane(hyperplane);
@@ -286,7 +313,7 @@ E_NLPSolutionStatus NLPSolverSHOT::solveProblemInstance()
             }
         }
 
-        solver->getEnvironment()->dualSolver->generatedHyperplanes.clear();
+        subsolverHyperplanes.clear();
 
         solver->getEnvironment()->output->outputInfo(
             fmt::format(" Added {} hyperplanes generated by SHOT primal NLP solver.", hyperplaneCounter));

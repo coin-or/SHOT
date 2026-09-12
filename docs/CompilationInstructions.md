@@ -228,6 +228,13 @@ and disables it. Keep the SDK's `lib` directory, including its bundled runtime
 libraries, available at runtime. The SDK library directory is included in build
 and install rpaths; binaries do not bundle or redistribute CONOPT.
 
+On Linux, install into a chosen prefix with `cmake --install build --prefix /path/to/prefix`.
+The executable in `bin` finds SHOT and its built CppAD runtime in the prefix's
+`lib` directory. External solver SDKs must remain at their configured locations.
+When `HAS_PYTHON=ON`, the installation also includes `lib/SHOTpy*.so`; add that
+directory to `PYTHONPATH` to import the installed module. No `LD_LIBRARY_PATH`
+setting is needed for these installed targets.
+
 For a full license, set all four environment variables before starting SHOT:
 `CONOPT_LICENSE_INT_1`, `CONOPT_LICENSE_INT_2`, `CONOPT_LICENSE_INT_3`, and
 `CONOPT_LICENSE_TEXT`. SHOT does not persist license values in model or option files.

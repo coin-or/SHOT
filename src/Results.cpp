@@ -1544,16 +1544,25 @@ double Results::getGlobalDualBound() { return (globalDualBound); }
 void Results::setDualBound(double value, bool forceGlobal)
 {
     double primalBound = this->getPrimalBound();
+    bool isMinimize = env->problem->objectiveFunction->direction == E_ObjectiveFunctionDirection::Minimize;
 
-    if(env->problem->objectiveFunction->direction == E_ObjectiveFunctionDirection::Minimize)
+    // The optimal value lies between the dual and the primal bound, so a valid dual bound can only pass the primal
+    // bound by numerical error, and it is then used as the primal bound. A value that has passed it by more is not
+    // a bound for the problem, and using it would close the objective gap by force, so it is ignored.
+    double crossoverTolerance = 1e-10 * std::max(1.0, std::abs(primalBound));
+
+    if(isMinimize ? (value > primalBound) : (value < primalBound))
     {
-        if(value > primalBound)
+        if(isMinimize ? (value <= primalBound + crossoverTolerance) : (value >= primalBound - crossoverTolerance))
+        {
             value = primalBound;
-    }
-    else
-    {
-        if(value < primalBound)
-            value = primalBound;
+        }
+        else
+        {
+            env->output->outputDebug(fmt::format(
+                "        Dual bound {} ignored since it has passed the primal bound {}.", value, primalBound));
+            return;
+        }
     }
 
     this->currentDualBound = value;

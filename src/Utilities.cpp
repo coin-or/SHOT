@@ -9,6 +9,7 @@
 */
 
 #include <chrono>
+#include <cstdint>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -501,13 +502,21 @@ VectorString getLinesInFile(const std::string& fileName)
     return (lines);
 }
 
-auto randomNumberBetween = [](double low, double high) {
-    auto randomFunc = [distribution_ = std::uniform_real_distribution<double>(low, high),
-                          random_engine_ = std::mt19937 { std::random_device {}() }]() mutable {
-        return distribution_(random_engine_);
-    };
-    return randomFunc;
-};
+double fixedPseudoRandomNumber(size_t index, size_t stream, double low, double high)
+{
+    // The bits of the index are mixed with SplitMix64, which gives well spread out values without keeping any
+    // state, so the number for an index is the same however many numbers have been generated before it
+    uint64_t value = static_cast<uint64_t>(index) * 2 + stream + 0x9E3779B97F4A7C15ULL;
+    value = (value ^ (value >> 30)) * 0xBF58476D1CE4E5B9ULL;
+    value = (value ^ (value >> 27)) * 0x94D049BB133111EBULL;
+    value = value ^ (value >> 31);
+
+    // The 53 significant bits are mapped onto [0, 1) here rather than by a distribution from the standard
+    // library, since those are allowed to differ between implementations
+    double unitValue = static_cast<double>(value >> 11) / static_cast<double>(1ULL << 53);
+
+    return (low + (high - low) * unitValue);
+}
 
 VectorDouble hashComparisonVector;
 
@@ -518,11 +527,8 @@ template <typename T> double calculateHash(std::vector<T> const& point)
 {
     auto length = point.size();
 
-    if(hashComparisonVector.size() < length)
-    {
-        std::generate_n(std::back_inserter(hashComparisonVector), length - hashComparisonVector.size(),
-            randomNumberBetween(1.0, 101.0));
-    }
+    while(hashComparisonVector.size() < length)
+        hashComparisonVector.push_back(fixedPseudoRandomNumber(hashComparisonVector.size(), 0, 1.0, 101.0));
 
     double scalarProduct = std::inner_product(point.begin(), point.end(), hashComparisonVector.begin(), 0.0);
 

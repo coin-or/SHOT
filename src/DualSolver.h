@@ -12,6 +12,9 @@
 #include "Environment.h"
 #include "Structs.h"
 
+#include <map>
+#include <utility>
+
 namespace SHOT
 {
 class DualSolver
@@ -29,7 +32,7 @@ public:
 
     void addHyperplane(HyperplanePtr hyperplane);
     void addGeneratedHyperplane(const HyperplanePtr hyperplane);
-    bool hasHyperplaneBeenAdded(double hash, int constraintIndex);
+    bool hasHyperplaneBeenAdded(const VectorDouble& generatedPoint, int constraintIndex);
 
     void addIntegerCut(IntegerCut integerCut);
     void addGeneratedIntegerCut(IntegerCut integerCut);
@@ -50,6 +53,29 @@ public:
 
 private:
     EnvironmentPtr env;
+
+    // The hashes of the generated hyperplanes for each constraint index, where -1 is used for the objective
+    // function. Two hashes are kept for each point, so that two different points are only taken for the same one
+    // when both of them match.
+    std::map<int, std::multimap<double, double>> generatedHyperplaneHashes;
+
+    // The coefficients of the two hashes, generated from their position so that they are the same in every run
+    VectorDouble hashCoefficients[2];
+
+    // Counts hyperplanes generated again for a point they have already been generated in, to detect that the dual
+    // problem is not making progress
+    int numberOfRepeatedHyperplanes = 0;
+    bool repeatedHyperplaneWarningShown = false;
+
+    void extendHashCoefficients(size_t length);
+
+    std::pair<double, double> calculateHashes(const VectorDouble& point);
+    std::pair<double, double> calculateHyperplaneHashes(NumericHyperplanePtr hyperplane);
+
+    bool hasHyperplaneBeenAdded(const std::pair<double, double>& hashes, int constraintIndex);
+
+    // Whether the hyperplane is in the list of generated ones, regardless of the solution strategy used
+    bool isHyperplaneInGeneratedList(const std::pair<double, double>& hashes, int constraintIndex);
 };
 
 } // namespace SHOT

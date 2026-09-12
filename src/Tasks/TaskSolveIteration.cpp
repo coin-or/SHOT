@@ -243,18 +243,17 @@ void TaskSolveIteration::run()
 
             if(currIter->isMIP())
             {
-                if(currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
-                {
-                    DualSolution sol = { sols.at(0).point, E_DualSolutionSource::MIPSolutionOptimal,
-                        objectiveSignFactor * currIter->objectiveValue, currIter->iterationNumber, false };
-                    env->dualSolver->addDualSolutionCandidate(sol);
-                }
-                else
-                {
-                    DualSolution sol = { sols.at(0).point, E_DualSolutionSource::MIPSolverBound, currentDualBound,
-                        currIter->iterationNumber, false };
-                    env->dualSolver->addDualSolutionCandidate(sol);
-                }
+                // The objective value of the solution is only a valid dual bound if the dual problem has been solved
+                // to proven optimality. The MIP solvers however also report optimality when their own gap tolerance
+                // has been met, in which case the optimal value can be anywhere between the bound reported by the
+                // solver and the objective value of its solution, so the reported bound is used in both cases.
+                auto source = (currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
+                    ? E_DualSolutionSource::MIPSolutionOptimal
+                    : E_DualSolutionSource::MIPSolverBound;
+
+                DualSolution sol
+                    = { sols.at(0).point, source, currentDualBound, currIter->iterationNumber, false };
+                env->dualSolver->addDualSolutionCandidate(sol);
             }
             else
             {

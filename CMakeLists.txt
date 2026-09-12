@@ -1028,6 +1028,25 @@ install(
 # Need to install the library as well
 install(TARGETS SHOTSolver DESTINATION lib)
 
+# Installed Linux targets must find this installation's libraries before any
+# system SHOT installation. Retain external solver SDK paths without retaining
+# build-tree paths; CppAD is built privately and needs to be installed as well.
+if(UNIX AND NOT APPLE)
+    set(SHOT_INSTALL_TARGETS SHOTSolver)
+    if(GENERATE_EXE)
+        list(APPEND SHOT_INSTALL_TARGETS ${PROJECT_NAME})
+    endif()
+    if(HAS_PYTHON)
+        list(APPEND SHOT_INSTALL_TARGETS SHOTpy)
+        install(TARGETS SHOTpy LIBRARY DESTINATION lib)
+    endif()
+    set_target_properties(${SHOT_INSTALL_TARGETS} PROPERTIES
+        INSTALL_RPATH "$ORIGIN;$ORIGIN/../lib;${CMAKE_INSTALL_RPATH}"
+        INSTALL_RPATH_USE_LINK_PATH TRUE)
+    install(DIRECTORY "${CPPAD_LIB_DIR}/" DESTINATION lib
+        FILES_MATCHING PATTERN "libcppad_lib.so*")
+endif()
+
 install(
     EXPORT SHOTTargets
     FILE SHOTTargets.cmake

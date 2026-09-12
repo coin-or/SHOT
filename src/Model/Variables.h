@@ -176,10 +176,19 @@ struct VariableIndexComparator
 
         return (std::get<1>(firstKey)->getIndex() < std::get<1>(secondKey)->getIndex());
     }
+
+    bool operator()(const std::pair<VariablePtr, VariablePtr>& firstKey,
+        const std::pair<VariablePtr, VariablePtr>& secondKey) const
+    {
+        if(firstKey.first->getIndex() != secondKey.first->getIndex())
+            return (firstKey.first->getIndex() < secondKey.first->getIndex());
+
+        return (firstKey.second->getIndex() < secondKey.second->getIndex());
+    }
 };
 
-using SparseVariableVector = std::map<VariablePtr, double>;
-using SparseVariableMatrix = std::map<std::pair<VariablePtr, VariablePtr>, double>;
+using SparseVariableVector = std::map<VariablePtr, double, VariableIndexComparator>;
+using SparseVariableMatrix = std::map<std::pair<VariablePtr, VariablePtr>, double, VariableIndexComparator>;
 
 class Variables : private std::vector<VariablePtr>
 {
