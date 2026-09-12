@@ -14,6 +14,7 @@
 
 #include "../src/Solver.h"
 #include "../src/Environment.h"
+#include "../src/Results.h"
 #include "../src/Settings.h"
 #include "../src/Utilities.h"
 
@@ -24,7 +25,10 @@
 #include "../src/Model/Terms.h"
 #include "../src/Model/Variables.h"
 
+#include <cmath>
 #include <iomanip>
+#include <optional>
+#include <tuple>
 #include <cstdio>
 #include <iostream>
 #include <set>
@@ -39,6 +43,77 @@ static_assert(std::is_same<SparseVariableVector::key_compare, VariableIndexCompa
     "The sparse variable vector must be ordered on the variable index");
 static_assert(std::is_same<SparseVariableMatrix::key_compare, VariableIndexComparator>::value,
     "The sparse variable matrix must be ordered on the variable index");
+
+namespace
+{
+
+std::vector<ES_MIPSolver> compiledSolvers()
+{
+    std::vector<ES_MIPSolver> solvers;
+#ifdef HAS_CBC
+    solvers.push_back(ES_MIPSolver::Cbc);
+#endif
+#ifdef HAS_CPLEX
+    solvers.push_back(ES_MIPSolver::Cplex);
+#endif
+#ifdef HAS_GUROBI
+    solvers.push_back(ES_MIPSolver::Gurobi);
+#endif
+#ifdef HAS_HIGHS
+    solvers.push_back(ES_MIPSolver::Highs);
+#endif
+    return solvers;
+}
+
+std::string name(ES_MIPSolver mipSolver)
+{
+    switch(mipSolver)
+    {
+    case ES_MIPSolver::Cbc:
+        return "Cbc";
+    case ES_MIPSolver::Cplex:
+        return "Cplex";
+    case ES_MIPSolver::Gurobi:
+        return "Gurobi";
+    case ES_MIPSolver::Highs:
+        return "Highs";
+    default:
+        return "unknown";
+    }
+}
+
+// Solves the instance with the given seed and returns the iterations and the bounds it ended at
+std::optional<std::tuple<int, double, double>> solveWithSeed(ES_MIPSolver mipSolver, int seed)
+{
+    const std::string problemFile = "data/instances/MINLP-convex-small/synthes1.osil";
+
+    auto solver = std::make_shared<Solver>();
+
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(mipSolver));
+    solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+    solver->updateSetting("Dual.MIP.RandomSeed", seed);
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+    solver->updateSetting("Termination.TimeLimit", 60.0);
+
+    if(!solver->setProblem(problemFile))
+    {
+        std::cout << "  " << name(mipSolver) << ": could not read " << problemFile << '\n';
+        return std::nullopt;
+    }
+
+    if(!solver->solveProblem())
+    {
+        std::cout << "  " << name(mipSolver) << ": could not solve " << problemFile << '\n';
+        return std::nullopt;
+    }
+
+    auto env = solver->getEnvironment();
+
+    return std::make_tuple(static_cast<int>(env->results->iterations.size()), env->results->getGlobalDualBound(),
+        env->results->getPrimalBound());
+}
+
+}
 
 bool testGradientsAreOrderedOnVariableIndex()
 {
@@ -224,6 +299,59 @@ bool testHashCoefficientsAreTheSameInEveryRun()
     return passed;
 }
 
+bool testTheSameSeedGivesTheSameSolve(ES_MIPSolver mipSolver)
+{
+    const double optimalValue = 6.00975891;
+
+    auto first = solveWithSeed(mipSolver, 1);
+    auto second = solveWithSeed(mipSolver, 1);
+
+    if(!first || !second)
+        return false;
+
+    if(*first != *second)
+    {
+        std::cout << "  FAILED: " << name(mipSolver) << " solved the same problem with the same seed in "
+                  << std::get<0>(*first) << " iterations ending at [" << std::get<1>(*first) << ", "
+                  << std::get<2>(*first) << "] the first time and in " << std::get<0>(*second)
+                  << " iterations ending at [" << std::get<1>(*second) << ", " << std::get<2>(*second)
+                  << "] the second time.\n";
+        return false;
+    }
+
+    // Another seed is a different but equally valid solve, so it has to reach the same optimum
+    auto other = solveWithSeed(mipSolver, 4711);
+
+    if(!other)
+        return false;
+
+    // A seed of zero leaves the solver at its own default, which has to solve the problem just as well
+    auto solverDefault = solveWithSeed(mipSolver, 0);
+
+    if(!solverDefault)
+        return false;
+
+    if(std::abs(std::get<2>(*solverDefault) - optimalValue) > 1e-4 * std::max(1.0, std::abs(optimalValue)))
+    {
+        std::cout << "  FAILED: " << name(mipSolver) << " returned " << std::get<2>(*solverDefault)
+                  << " instead of " << optimalValue << " when the seed was left at the default of the solver.\n";
+        return false;
+    }
+
+    if(std::abs(std::get<2>(*other) - optimalValue) > 1e-4 * std::max(1.0, std::abs(optimalValue)))
+    {
+        std::cout << "  FAILED: " << name(mipSolver) << " returned " << std::get<2>(*other) << " instead of "
+                  << optimalValue << " when the seed was changed.\n";
+        return false;
+    }
+
+    std::cout << "  " << name(mipSolver) << ": both solves with seed 1 took " << std::get<0>(*first)
+              << " iterations, seed 4711 took " << std::get<0>(*other) << " and the default of the solver "
+              << std::get<0>(*solverDefault) << ", all reaching the same optimum.\n";
+
+    return true;
+}
+
 int DeterminismTest(int argc, char* argv[])
 {
     int choice = 1;
@@ -250,6 +378,12 @@ int DeterminismTest(int argc, char* argv[])
         std::cout << "Starting test that the hash coefficients are the same in every run:\n";
         passed = testHashCoefficientsAreTheSameInEveryRun();
         std::cout << "Finished test that the hash coefficients are the same in every run.\n";
+        break;
+    case 3:
+        std::cout << "Starting test that the same random seed gives the same solve:\n";
+        for(auto mipSolver : compiledSolvers())
+            passed = testTheSameSeedGivesTheSameSolve(mipSolver) && passed;
+        std::cout << "Finished test that the same random seed gives the same solve.\n";
         break;
     default:
         passed = false;

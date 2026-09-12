@@ -438,6 +438,10 @@ void MIPSolverGurobi::initializeSolverSettings()
 
         // Set number of threads
         gurobiModel->set(GRB_IntParam_Threads, env->settings->getSetting<int>("Dual.MIP.NumberOfThreads"));
+
+        // Set the random seed, where zero means that the default of the solver is kept
+        if(int randomSeed = env->settings->getSetting<int>("Dual.MIP.RandomSeed"); randomSeed != 0)
+            gurobiModel->set(GRB_IntParam_Seed, randomSeed);
     }
     catch(GRBException& e)
     {

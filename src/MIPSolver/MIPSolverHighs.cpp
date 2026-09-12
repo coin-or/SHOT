@@ -408,6 +408,10 @@ void MIPSolverHighs::initializeSolverSettings()
 
     highsInstance.setOptionValue("threads", env->settings->getSetting<int>("Dual.MIP.NumberOfThreads"));
 
+    // The random seed is only set when it is not left at the default of the solver
+    if(int randomSeed = env->settings->getSetting<int>("Dual.MIP.RandomSeed"); randomSeed != 0)
+        highsInstance.setOptionValue("random_seed", randomSeed);
+
     switch(env->settings->getSetting<int>("Subsolver.Highs.RunCrossover"))
     {
     case 0:

@@ -474,6 +474,10 @@ void MIPSolverCplex::initializeSolverSettings()
         // Set number of threads
         cplexInstance.setParam(IloCplex::Param::Threads, env->settings->getSetting<int>("Dual.MIP.NumberOfThreads"));
 
+        // Set the random seed, where zero means that the default of the solver is kept
+        if(int randomSeed = env->settings->getSetting<int>("Dual.MIP.RandomSeed"); randomSeed != 0)
+            cplexInstance.setParam(IloCplex::Param::RandomSeed, randomSeed);
+
         // Options for using swap file
         if(auto workdir = env->settings->getSetting<std::string>("Subsolver.Cplex.WorkDirectory"); workdir != "")
             cplexInstance.setParam(IloCplex::Param::WorkDir, workdir.c_str());
