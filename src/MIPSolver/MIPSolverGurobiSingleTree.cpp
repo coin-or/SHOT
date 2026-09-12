@@ -352,6 +352,10 @@ void GurobiCallbackSingleTree::callback()
 
                 taskSelectExternalHPs->run(solutionPoints);
 
+                // The hyperplanes of the iteration have all been generated here, so the distance to the point
+                // of the previous one can be calculated
+                taskCalculateSolutionChangeNorm->run();
+
                 env->results->getCurrentIteration()->relaxedLazyHyperplanesAdded
                     += (env->dualSolver->hyperplaneWaitingList.size() - waitingListSize);
             }
@@ -605,6 +609,8 @@ GurobiCallbackSingleTree::GurobiCallbackSingleTree(GRBVar* xvars, EnvironmentPtr
 
     taskSelectExternalHPs = std::make_shared<TaskSelectHyperplanesExternal>(env);
 
+    taskCalculateSolutionChangeNorm = std::make_shared<TaskCalculateSolutionChangeNorm>(env);
+
     auto NLPProblemSource = static_cast<ES_PrimalNLPProblemSource>(
         env->settings->getSetting<int>("Primal.FixedInteger.SourceProblem"));
 
@@ -713,6 +719,10 @@ void GurobiCallbackSingleTree::addLazyConstraint(std::vector<SolutionPoint> cand
         }
 
         taskSelectExternalHPs->run(candidatePoints);
+
+        // The hyperplanes of the iteration have all been generated here, so the distance to the point
+        // of the previous one can be calculated
+        taskCalculateSolutionChangeNorm->run();
 
         for(auto& hp : env->dualSolver->hyperplaneWaitingList)
         {

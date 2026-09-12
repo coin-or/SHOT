@@ -38,6 +38,31 @@ void TaskCheckDualStagnation::run()
         return;
     }
 
+    // The hyperplanes are generated in points on the boundary of the nonlinear feasible set, and when those
+    // points stop moving the linearization no longer changes, however many cuts are still being added. The dual
+    // bound can keep creeping in that state without the dual problem getting anywhere.
+    if(double solutionChangeTolerance
+        = env->settings->getSetting<double>("Termination.DualStagnation.SolutionChangeTolerance");
+        solutionChangeTolerance > 0.0 && currIter->boundaryDistance != SHOT_DBL_MAX)
+    {
+        if(currIter->boundaryDistance < solutionChangeTolerance)
+            numberOfIterationsWithStagnantSolution++;
+        else
+            numberOfIterationsWithStagnantSolution = 0;
+
+        // The limit is separate from the one for the dual bound, since the two criteria are unrelated and lowering
+        // one should not make the other terminate earlier
+        if(numberOfIterationsWithStagnantSolution
+            >= env->settings->getSetting<int>("Termination.DualStagnation.SolutionChangeIterationLimit"))
+        {
+            env->results->terminationReason = E_TerminationReason::ObjectiveStagnation;
+            env->tasks->setNextTask(taskIDIfTrue);
+            env->results->terminationReasonDescription
+                = "Terminated since the points the hyperplanes are generated in have stopped moving.";
+            return;
+        }
+    }
+
     // To avoid unnecessary termination when there are many subsequent dual problems with the same objective value
     // but different nonlinear constraint errors
     if(env->results->getNumberOfIterations() > 1

@@ -1031,6 +1031,11 @@ void Solver::initializeSettings()
     env->settings->createSetting(
         "Dual.Relaxation.TerminationTolerance", 0.5, "Time limit (s) when solving LP problems initially");
 
+    env->settings->createSetting("Dual.Relaxation.SolutionChangeTolerance", 0.0,
+        "End the initial LP phase when the hyperplanes are generated in points this close to each other: 0: "
+        "Disable",
+        0.0, SHOT_DBL_MAX);
+
     env->settings->createSetting(
         "Dual.Relaxation.TimeLimit", 30.0, "Time limit (s) when solving LP problems initially", 0, SHOT_DBL_MAX);
 
@@ -1773,6 +1778,15 @@ void Solver::initializeSettings()
 
     env->settings->createSetting("Termination.DualStagnation.IterationLimit", 1000,
         "Max number of iterations without significant dual objective value improvement", 0, SHOT_INT_MAX);
+
+    env->settings->createSetting("Termination.DualStagnation.SolutionChangeIterationLimit", 10,
+        "Number of iterations in a row the hyperplane points may stay within the tolerance before termination", 1,
+        SHOT_INT_MAX);
+
+    env->settings->createSetting("Termination.DualStagnation.SolutionChangeTolerance", 0.0,
+        "Max distance between the points the hyperplanes are generated in for the dual problem to have stagnated: "
+        "0: Disable",
+        0.0, SHOT_DBL_MAX);
 
     env->settings->createSetting("Termination.PrimalStagnation.IterationLimit", 50,
         "Max number of iterations without significant primal objective value improvement", 0, SHOT_INT_MAX);
