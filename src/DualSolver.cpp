@@ -21,7 +21,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <random>
 
 namespace SHOT
 {
@@ -142,13 +141,14 @@ void DualSolver::extendHashCoefficients(size_t length)
     if(hashCoefficients[0].size() >= length)
         return;
 
-    static std::mt19937 randomEngine(std::random_device {}());
-    std::uniform_real_distribution<double> distribution(1.0, 101.0);
-
-    for(auto& coefficients : hashCoefficients)
+    // The coefficients are generated from the position rather than drawn from a randomly seeded engine, so that
+    // two runs of the same problem detect the same hyperplanes as duplicates and follow the same search path
+    for(size_t stream = 0; stream < 2; stream++)
     {
+        auto& coefficients = hashCoefficients[stream];
+
         while(coefficients.size() < length)
-            coefficients.push_back(distribution(randomEngine));
+            coefficients.push_back(Utilities::fixedPseudoRandomNumber(coefficients.size(), stream, 1.0, 101.0));
     }
 }
 

@@ -59,7 +59,7 @@ private:
     // when both of them match.
     std::map<int, std::multimap<double, double>> generatedHyperplaneHashes;
 
-    // The coefficients of the two hashes, drawn once and extended when a longer point is hashed
+    // The coefficients of the two hashes, generated from their position so that they are the same in every run
     VectorDouble hashCoefficients[2];
 
     // Counts hyperplanes generated again for a point they have already been generated in, to detect that the dual

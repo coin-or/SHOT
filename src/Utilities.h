@@ -103,6 +103,11 @@ template <typename K, typename V, typename C> inline void erase_if(std::map<K, V
     }
 }
 
+// Returns a fixed pseudorandom number in [low, high) for the given index in the given stream. The value depends
+// only on the arguments, so that every hash built from these coefficients is the same in every run, and in every
+// solver instance, regardless of how many coefficients have been requested before.
+double fixedPseudoRandomNumber(size_t index, size_t stream, double low, double high);
+
 template <typename T> double calculateHash(std::vector<T> const& point);
 
 bool isAlmostEqual(double x, double y, const double epsilon);
