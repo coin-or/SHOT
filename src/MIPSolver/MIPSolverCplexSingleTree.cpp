@@ -596,6 +596,58 @@ void CplexCallback::addLazyConstraint(
 
         taskSelectExternalHPs->run(candidatePoints);
 
+        // Cplex discards the candidate when it is rejected, whether or not the constraints added with it are
+        // violated there. A candidate fulfilling the nonlinear constraints must therefore not be rejected unless
+        // one of the hyperplanes actually cuts it off, since the hyperplanes are also generated for the relaxed
+        // points of the callback, which the candidate need not violate. A candidate not fulfilling them is always
+        // rejected, since accepting it would make an infeasible point the incumbent of the MIP solver.
+        bool candidateIsFeasible = false;
+        bool candidateIsCutOff = false;
+
+        if(candidatePoints.size() > 0)
+        {
+            auto& candidate = candidatePoints.at(0);
+
+            candidateIsFeasible = (candidate.maxDeviation.value
+                <= env->settings->getSetting<double>("Termination.ConstraintTolerance"));
+
+            for(auto& hp : env->dualSolver->hyperplaneWaitingList)
+            {
+                auto terms = env->dualSolver->MIPSolver->createHyperplaneTerms(hp);
+
+                if(!terms)
+                    continue;
+
+                double value = terms->second;
+
+                for(auto& E : terms->first)
+                {
+                    value += E.second
+                        * ((E.first < (int)candidate.point.size()) ? candidate.point.at(E.first)
+                                                                   : candidate.objectiveValue);
+                }
+
+                if(value > 0.0)
+                {
+                    candidateIsCutOff = true;
+                    break;
+                }
+            }
+        }
+
+        if(candidateIsFeasible && !candidateIsCutOff)
+        {
+            if(env->dualSolver->hyperplaneWaitingList.size() > 0)
+            {
+                env->output->outputDebug("        Not rejecting the candidate fulfilling the constraints, since "
+                                         "none of the "
+                    + std::to_string(env->dualSolver->hyperplaneWaitingList.size())
+                    + " hyperplanes in the waiting list cuts it off.");
+            }
+
+            return;
+        }
+
         for(auto& hp : env->dualSolver->hyperplaneWaitingList)
         {
             if(this->createHyperplane(hp, context))
