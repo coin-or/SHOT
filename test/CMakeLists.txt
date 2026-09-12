@@ -109,6 +109,11 @@ if(HAS_IPOPT)
   set(Ipopt_parts 1 2)
 endif()
 
+if(HAS_UNO)
+  set(cpptests ${cpptests} Uno)
+  set(Uno_parts 1 2 3)
+endif()
+
 # Instance tests: one case per (MIP solver x NLP solver) combination
 # Format support (.nl, .gms) is checked at runtime; guards here are MIP+NLP only
 set(Instance_parts)
