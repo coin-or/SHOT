@@ -306,8 +306,28 @@ void DualSolver::addGeneratedHyperplane(const HyperplanePtr hyperplane)
         numericHP->pointHash = hashes.first;
 
         auto constraintHP = std::dynamic_pointer_cast<ConstraintHyperplane>(numericHP);
-        generatedHyperplaneHashes[constraintHP ? constraintHP->sourceConstraint->getIndex() : -1].emplace(
-            hashes.first, hashes.second);
+        int constraintIndex = constraintHP ? constraintHP->sourceConstraint->getIndex() : -1;
+
+        bool isRepeatedHyperplane = isHyperplaneInGeneratedList(hashes, constraintIndex);
+        generatedHyperplaneHashes[constraintIndex].emplace(hashes.first, hashes.second);
+
+        // A hyperplane generated again for a point it has already been generated in does not cut off the solution
+        // point it was generated for, so the dual problem is not making any progress. Duplicates are not rejected
+        // in the single-tree strategy, since a lazy constraint is not always kept by the MIP solver, and this is
+        // therefore only reported.
+        if(isRepeatedHyperplane)
+        {
+            numberOfRepeatedHyperplanes++;
+
+            if(numberOfRepeatedHyperplanes == 100 && !repeatedHyperplaneWarningShown)
+            {
+                env->output->outputWarning(
+                    fmt::format("        {} hyperplanes have been generated in points they were already generated "
+                                "in, the last one for constraint {}. The dual problem is not making progress.",
+                        numberOfRepeatedHyperplanes, constraintIndex));
+                repeatedHyperplaneWarningShown = true;
+            }
+        }
     }
 
     auto currentIteration = env->results->getCurrentIteration();
@@ -330,6 +350,11 @@ bool DualSolver::hasHyperplaneBeenAdded(const std::pair<double, double>& hashes,
     if(env->settings->getSetting<int>("Dual.TreeStrategy") == static_cast<int>(ES_TreeStrategy::SingleTree))
         return false;
 
+    return (isHyperplaneInGeneratedList(hashes, constraintIndex));
+}
+
+bool DualSolver::isHyperplaneInGeneratedList(const std::pair<double, double>& hashes, int constraintIndex)
+{
     auto generated = generatedHyperplaneHashes.find(constraintIndex);
 
     if(generated == generatedHyperplaneHashes.end())

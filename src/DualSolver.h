@@ -62,12 +62,20 @@ private:
     // The coefficients of the two hashes, drawn once and extended when a longer point is hashed
     VectorDouble hashCoefficients[2];
 
+    // Counts hyperplanes generated again for a point they have already been generated in, to detect that the dual
+    // problem is not making progress
+    int numberOfRepeatedHyperplanes = 0;
+    bool repeatedHyperplaneWarningShown = false;
+
     void extendHashCoefficients(size_t length);
 
     std::pair<double, double> calculateHashes(const VectorDouble& point);
     std::pair<double, double> calculateHyperplaneHashes(NumericHyperplanePtr hyperplane);
 
     bool hasHyperplaneBeenAdded(const std::pair<double, double>& hashes, int constraintIndex);
+
+    // Whether the hyperplane is in the list of generated ones, regardless of the solution strategy used
+    bool isHyperplaneInGeneratedList(const std::pair<double, double>& hashes, int constraintIndex);
 };
 
 } // namespace SHOT
