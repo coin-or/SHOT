@@ -550,6 +550,66 @@ bool testHyperplanesDifferingInSmallVariables(ES_MIPSolver mipSolver)
     return passed;
 }
 
+// A dual bound that has passed the primal bound can only be valid within numerical error. Setting one that has
+// passed it by more must not move the dual bound to the primal bound, since the objective gap would then be closed
+// on a bound that does not hold for the problem.
+bool testDualBoundPastPrimalBoundIsNotUsed(ES_MIPSolver mipSolver)
+{
+    bool passed = true;
+
+    for(bool minimize : { true, false })
+    {
+        auto solver = makeSolver(mipSolver, ModelKind::Bounded, minimize);
+
+        if(!solver)
+        {
+            std::cout << "Could not create problem for " << name(mipSolver) << '\n';
+            return false;
+        }
+
+        auto env = solver->getEnvironment();
+        env->results->createIteration();
+
+        const double primalValue = minimize ? 10.0 : -10.0;
+
+        PrimalSolution primalSolution;
+        primalSolution.point = VectorDouble(env->reformulatedProblem->properties.numberOfVariables, 0.0);
+        primalSolution.sourceType = E_PrimalSolutionSource::MIPSolutionPool;
+        primalSolution.sourceDescription = "test";
+        primalSolution.objValue = primalValue;
+        primalSolution.iterFound = 0;
+        primalSolution.maxIntegerToleranceError = 0.0;
+
+        env->results->addPrimalSolution(primalSolution);
+
+        auto check = [&](const std::string& description, double expected) {
+            double dualBound = env->results->getCurrentDualBound();
+
+            if(std::abs(dualBound - expected) > 1e-8)
+            {
+                std::cout << name(mipSolver) << (minimize ? " (min)" : " (max)") << ": " << description
+                          << ", dual bound is " << dualBound << " instead of " << expected << '\n';
+                passed = false;
+            }
+        };
+
+        // A bound on the correct side of the primal bound is used as it is
+        double validBound = minimize ? primalValue - 1.0 : primalValue + 1.0;
+        env->results->setDualBound(validBound);
+        check("a valid dual bound was not used", validBound);
+
+        // Passing the primal bound by more than numerical error means the value is not a bound for the problem
+        env->results->setDualBound(minimize ? primalValue + 0.005 : primalValue - 0.005);
+        check("a dual bound past the primal bound was used", validBound);
+
+        // Passing it by numerical error only means that the primal solution is optimal
+        env->results->setDualBound(minimize ? primalValue + 1e-12 : primalValue - 1e-12);
+        check("a dual bound within numerical error of the primal bound was not used", primalValue);
+    }
+
+    return passed;
+}
+
 std::vector<ES_MIPSolver> compiledSolvers()
 {
     std::vector<ES_MIPSolver> solvers;
@@ -625,6 +685,12 @@ int DualBoundTest(int argc, char* argv[])
         for(auto mipSolver : compiledSolvers())
             passed = testHyperplanesDifferingInSmallVariables(mipSolver) && passed;
         std::cout << "Finished test that points differing in variables of small magnitude are kept apart.\n";
+        break;
+    case 8:
+        std::cout << "Starting test that a dual bound past the primal bound is not used:\n";
+        for(auto mipSolver : compiledSolvers())
+            passed = testDualBoundPastPrimalBoundIsNotUsed(mipSolver) && passed;
+        std::cout << "Finished test that a dual bound past the primal bound is not used.\n";
         break;
     default:
         passed = false;
