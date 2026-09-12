@@ -34,6 +34,7 @@
 
 #include "../src/Tasks/TaskReformulateProblem.h"
 #include "../src/Tasks/TaskCalculateSolutionChangeNorm.h"
+#include "../src/Tasks/TaskCheckDualStagnation.h"
 #include "../src/Iteration.h"
 
 using namespace SHOT;
@@ -1508,6 +1509,84 @@ bool TestSolutionChangeNorm()
     return passed;
 }
 
+bool TestDualStagnationOnSolutionChange()
+{
+    bool passed = true;
+
+    auto solver = std::make_unique<Solver>();
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+    solver->updateSetting("Termination.DualStagnation.SolutionChangeTolerance", 1e-3);
+    solver->updateSetting("Termination.DualStagnation.SolutionChangeIterationLimit", 3);
+
+    if(!solver->setProblem("data/tls2.osil"))
+    {
+        std::cout << "  FAILED: could not read the problem.\n";
+        return false;
+    }
+
+    auto env = solver->getEnvironment();
+
+    // The task jumps to another task when it terminates, so one has to exist under that name
+    env->tasks->addTask(std::make_shared<TaskCalculateSolutionChangeNorm>(env), "Dummy");
+    auto task = std::make_unique<TaskCheckDualStagnation>(env, "Dummy");
+
+    auto runIterationWithDistance = [&](double distance) {
+        env->results->createIteration();
+        auto iteration = env->results->getCurrentIteration();
+        iteration->isDualProblemDiscrete = true;
+        iteration->boundaryDistance = distance;
+
+        // Keeps the criterion for cuts that cannot be added from terminating first
+        env->solutionStatistics.iterationLastDualCutAdded = iteration->iterationNumber;
+
+        task->run();
+    };
+
+    // Points that keep moving are not a stagnation, however many iterations there are
+    for(int i = 0; i < 5; i++)
+        runIterationWithDistance(1.0);
+
+    if(env->results->terminationReason != E_TerminationReason::None)
+    {
+        std::cout << "  FAILED: terminated although the hyperplane points kept moving.\n";
+        passed = false;
+    }
+
+    // Two iterations where they hardly move is still below the limit of three
+    runIterationWithDistance(1e-9);
+    runIterationWithDistance(1e-9);
+
+    if(env->results->terminationReason != E_TerminationReason::None)
+    {
+        std::cout << "  FAILED: terminated before the iteration limit was reached.\n";
+        passed = false;
+    }
+
+    // A point that moves again starts the count over
+    runIterationWithDistance(1.0);
+    runIterationWithDistance(1e-9);
+    runIterationWithDistance(1e-9);
+
+    if(env->results->terminationReason != E_TerminationReason::None)
+    {
+        std::cout << "  FAILED: a point that moved did not start the count over.\n";
+        passed = false;
+    }
+
+    runIterationWithDistance(1e-9);
+
+    if(env->results->terminationReason != E_TerminationReason::ObjectiveStagnation)
+    {
+        std::cout << "  FAILED: did not terminate although the hyperplane points stopped moving.\n";
+        passed = false;
+    }
+
+    if(passed)
+        std::cout << "  The dual problem is stagnant once the hyperplane points stop moving.\n";
+
+    return passed;
+}
+
 int SolverTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -1613,6 +1692,11 @@ int SolverTest(int argc, char* argv[])
         std::cout << "Starting test for the norm of the change between hyperplane points" << std::endl;
         passed = TestSolutionChangeNorm();
         std::cout << "Finished test for the norm of the change between hyperplane points." << std::endl;
+        break;
+    case 18:
+        std::cout << "Starting test for dual stagnation when the hyperplane points stop moving" << std::endl;
+        passed = TestDualStagnationOnSolutionChange();
+        std::cout << "Finished test for dual stagnation when the hyperplane points stop moving." << std::endl;
         break;
     default:
         passed = false;

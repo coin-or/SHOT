@@ -1779,6 +1779,15 @@ void Solver::initializeSettings()
     env->settings->createSetting("Termination.DualStagnation.IterationLimit", 1000,
         "Max number of iterations without significant dual objective value improvement", 0, SHOT_INT_MAX);
 
+    env->settings->createSetting("Termination.DualStagnation.SolutionChangeIterationLimit", 10,
+        "Number of iterations in a row the hyperplane points may stay within the tolerance before termination", 1,
+        SHOT_INT_MAX);
+
+    env->settings->createSetting("Termination.DualStagnation.SolutionChangeTolerance", 0.0,
+        "Max distance between the points the hyperplanes are generated in for the dual problem to have stagnated: "
+        "0: Disable",
+        0.0, SHOT_DBL_MAX);
+
     env->settings->createSetting("Termination.PrimalStagnation.IterationLimit", 50,
         "Max number of iterations without significant primal objective value improvement", 0, SHOT_INT_MAX);
 

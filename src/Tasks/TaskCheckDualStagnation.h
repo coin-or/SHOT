@@ -24,5 +24,8 @@ public:
 
 private:
     std::string taskIDIfTrue;
+
+    // Counts the iterations in a row where the hyperplanes have been generated in practically the same point
+    int numberOfIterationsWithStagnantSolution = 0;
 };
 } // namespace SHOT
