@@ -12,6 +12,9 @@
 #include "Environment.h"
 #include "Structs.h"
 
+#include <map>
+#include <set>
+
 namespace SHOT
 {
 class DualSolver
@@ -50,6 +53,11 @@ public:
 
 private:
     EnvironmentPtr env;
+
+    // The hashes of the generated hyperplanes for each constraint index, where -1 is used for the objective function
+    std::map<int, std::set<double>> generatedHyperplaneHashes;
+
+    double calculateHyperplaneHash(NumericHyperplanePtr hyperplane);
 };
 
 } // namespace SHOT

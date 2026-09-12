@@ -19,6 +19,8 @@
 #include "ObjectiveFunction.h"
 #include "MIPSolver/IMIPSolver.h"
 
+#include <cmath>
+
 namespace SHOT
 {
 
@@ -129,13 +131,26 @@ void DualSolver::checkDualSolutionCandidates()
     this->dualSolutionCandidates.clear();
 }
 
+double DualSolver::calculateHyperplaneHash(NumericHyperplanePtr hyperplane)
+{
+    // A constraint cut is determined by its point, but an objective cut also depends on the objective value used
+    if(auto objectiveHP = std::dynamic_pointer_cast<ObjectiveHyperplane>(hyperplane))
+    {
+        auto pointAndValue = objectiveHP->generatedPoint;
+        pointAndValue.push_back(objectiveHP->objectiveFunctionValue);
+        return (Utilities::calculateHash(pointAndValue));
+    }
+
+    return (Utilities::calculateHash(hyperplane->generatedPoint));
+}
+
 void DualSolver::addHyperplane(HyperplanePtr hyperplane)
 {
     if(auto objectiveHP = std::dynamic_pointer_cast<ObjectiveHyperplane>(hyperplane))
     {
         assert((int)objectiveHP->generatedPoint.size() == env->reformulatedProblem->properties.numberOfVariables);
 
-        objectiveHP->pointHash = Utilities::calculateHash(objectiveHP->generatedPoint);
+        objectiveHP->pointHash = calculateHyperplaneHash(objectiveHP);
 
         if(!hasHyperplaneBeenAdded(objectiveHP->pointHash, -1))
         {
@@ -239,6 +254,16 @@ void DualSolver::addGeneratedHyperplane(const HyperplanePtr hyperplane)
 
     generatedHyperplanes.push_back(genHyperplane);
 
+    if(auto numericHP = std::dynamic_pointer_cast<NumericHyperplane>(hyperplane))
+    {
+        // The hash is recalculated since not all hyperplanes pass through addHyperplane(), e.g. in single-tree callbacks
+        numericHP->pointHash = calculateHyperplaneHash(numericHP);
+
+        auto constraintHP = std::dynamic_pointer_cast<ConstraintHyperplane>(numericHP);
+        generatedHyperplaneHashes[constraintHP ? constraintHP->sourceConstraint->getIndex() : -1].insert(
+            numericHP->pointHash);
+    }
+
     auto currentIteration = env->results->getCurrentIteration();
     currentIteration->numHyperplanesAdded++;
     currentIteration->totNumHyperplanes++;
@@ -259,26 +284,16 @@ bool DualSolver::hasHyperplaneBeenAdded(double hash, int constraintIndex)
     if(env->settings->getSetting<int>("Dual.TreeStrategy") == static_cast<int>(ES_TreeStrategy::SingleTree))
         return false;
 
-    for(auto& H : generatedHyperplanes)
-    {
-        if(auto objectiveHP = std::dynamic_pointer_cast<ObjectiveHyperplane>(H))
-        {
-            if(constraintIndex == -1 && Utilities::isAlmostEqual(objectiveHP->pointHash, hash, 1e-8))
-            {
-                return (true);
-            }
-        }
-        else if(auto constraintHP = std::dynamic_pointer_cast<ConstraintHyperplane>(H))
-        {
-            if(constraintHP->sourceConstraint->getIndex() == constraintIndex
-                && Utilities::isAlmostEqual(constraintHP->pointHash, hash, 1e-8))
-            {
-                return (true);
-            }
-        }
-    }
+    auto hashes = generatedHyperplaneHashes.find(constraintIndex);
 
-    return (false);
+    if(hashes == generatedHyperplaneHashes.end())
+        return (false);
+
+    // Hashes of (almost) identical points are within a small relative tolerance of each other
+    double tolerance = 1e-8 * std::abs(hash);
+    auto closestHash = hashes->second.lower_bound(hash - tolerance);
+
+    return (closestHash != hashes->second.end() && *closestHash <= hash + tolerance);
 }
 
 void DualSolver::addIntegerCut(IntegerCut integerCut)

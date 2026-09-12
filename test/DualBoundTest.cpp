@@ -30,6 +30,8 @@
 #include "../src/MIPSolver/IMIPSolver.h"
 #include "../src/Tasks/TaskCreateMIPProblem.h"
 #include "../src/Tasks/TaskPerformConvexBounding.h"
+#include "../src/DualSolver.h"
+#include "../src/Utilities.h"
 
 #ifdef HAS_CBC
 #include "../src/MIPSolver/MIPSolverCbc.h"
@@ -258,6 +260,110 @@ bool testConvexBoundingRejectsUnboundedModel(ES_MIPSolver mipSolver)
     return passed;
 }
 
+// A hyperplane must be detected as already added when it is generated again in (almost) the same point for the
+// same constraint, but not for another constraint or point, or for an objective cut with another objective value.
+bool testDuplicateHyperplanesAreDetected(ES_MIPSolver mipSolver)
+{
+    // Only the two linear constraints of the model are needed, the problem is never solved
+    auto solver = makeSolver(mipSolver, ModelKind::Infeasible, true);
+
+    if(!solver)
+    {
+        std::cout << "Could not create problem for " << name(mipSolver) << '\n';
+        return false;
+    }
+
+    auto env = solver->getEnvironment();
+
+    // Duplicates are not checked in single-tree mode, since lazy constraints are not always added
+    solver->updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::MultiTree));
+    env->results->createIteration();
+
+    auto& constraints = env->reformulatedProblem->numericConstraints;
+
+    if(constraints.size() < 2)
+    {
+        std::cout << name(mipSolver) << ": expected two constraints in the reformulated problem, got "
+                  << constraints.size() << '\n';
+        return false;
+    }
+
+    bool passed = true;
+
+    auto check = [&](bool condition, const std::string& description)
+    {
+        if(!condition)
+        {
+            std::cout << name(mipSolver) << ": " << description << '\n';
+            passed = false;
+        }
+    };
+
+    auto dualSolver = env->dualSolver;
+    int firstIndex = constraints[0]->getIndex();
+    int secondIndex = constraints[1]->getIndex();
+
+    VectorDouble point(env->reformulatedProblem->properties.numberOfVariables, 1.0);
+    VectorDouble otherPoint = point;
+    otherPoint[0] = 2.0;
+
+    auto createConstraintHyperplane = [&](NumericConstraintPtr constraint)
+    {
+        auto hyperplane = std::make_shared<ConstraintHyperplane>();
+        hyperplane->source = E_HyperplaneSource::External;
+        hyperplane->sourceConstraint = constraint;
+        hyperplane->generatedPoint = point;
+        hyperplane->isGlobal = true;
+        return hyperplane;
+    };
+
+    auto createObjectiveHyperplane = [&](double objectiveValue)
+    {
+        auto hyperplane = std::make_shared<ObjectiveHyperplane>();
+        hyperplane->source = E_HyperplaneSource::External;
+        hyperplane->generatedPoint = point;
+        hyperplane->objectiveFunctionValue = objectiveValue;
+        hyperplane->isGlobal = true;
+        return hyperplane;
+    };
+
+    double hash = Utilities::calculateHash(point);
+
+    check(!dualSolver->hasHyperplaneBeenAdded(hash, firstIndex), "hyperplane detected before it was generated");
+
+    dualSolver->addGeneratedHyperplane(createConstraintHyperplane(constraints[0]));
+
+    check(dualSolver->hasHyperplaneBeenAdded(hash, firstIndex), "generated hyperplane not detected");
+    check(dualSolver->hasHyperplaneBeenAdded(hash * (1.0 + 1e-12), firstIndex),
+        "hyperplane in an almost identical point not detected");
+    check(!dualSolver->hasHyperplaneBeenAdded(hash, secondIndex), "hyperplane detected for another constraint");
+    check(!dualSolver->hasHyperplaneBeenAdded(Utilities::calculateHash(otherPoint), firstIndex),
+        "hyperplane detected for another point");
+
+    auto waitingListSize = dualSolver->hyperplaneWaitingList.size();
+
+    dualSolver->addHyperplane(createConstraintHyperplane(constraints[0]));
+    check(dualSolver->hyperplaneWaitingList.size() == waitingListSize, "duplicate hyperplane added to waiting list");
+
+    dualSolver->addHyperplane(createConstraintHyperplane(constraints[1]));
+    check(dualSolver->hyperplaneWaitingList.size() == waitingListSize + 1,
+        "hyperplane for another constraint not added to waiting list");
+
+    // Objective cuts in the same point are different cuts if their objective values differ
+    dualSolver->addGeneratedHyperplane(createObjectiveHyperplane(1.0));
+    waitingListSize = dualSolver->hyperplaneWaitingList.size();
+
+    dualSolver->addHyperplane(createObjectiveHyperplane(1.0));
+    check(dualSolver->hyperplaneWaitingList.size() == waitingListSize,
+        "duplicate objective hyperplane added to waiting list");
+
+    dualSolver->addHyperplane(createObjectiveHyperplane(2.0));
+    check(dualSolver->hyperplaneWaitingList.size() == waitingListSize + 1,
+        "objective hyperplane with another objective value not added to waiting list");
+
+    return passed;
+}
+
 std::vector<ES_MIPSolver> compiledSolvers()
 {
     std::vector<ES_MIPSolver> solvers;
@@ -309,6 +415,12 @@ int DualBoundTest(int argc, char* argv[])
         for(auto mipSolver : compiledSolvers())
             passed = testConvexBoundingRejectsUnboundedModel(mipSolver) && passed;
         std::cout << "Finished test that convex bounding rejects an unbounded bounding problem.\n";
+        break;
+    case 4:
+        std::cout << "Starting test that duplicate hyperplanes are detected:\n";
+        for(auto mipSolver : compiledSolvers())
+            passed = testDuplicateHyperplanesAreDetected(mipSolver) && passed;
+        std::cout << "Finished test that duplicate hyperplanes are detected.\n";
         break;
     default:
         passed = false;
