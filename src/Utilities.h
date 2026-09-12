@@ -18,13 +18,9 @@
 
 #include "Structs.h"
 
-namespace SHOT
-{
-class Variable;
-using VariablePtr = std::shared_ptr<Variable>;
-using SparseVariableVector = std::map<VariablePtr, double>;
-using SparseVariableMatrix = std::map<std::pair<VariablePtr, VariablePtr>, double>;
-}
+// The sparse variable containers are declared together with the comparator that orders them on the variable
+// index, so that they are not redeclared here with the default one ordering on the pointer address
+#include "Model/Variables.h"
 
 namespace SHOT::Utilities
 {
@@ -86,7 +82,7 @@ VectorString getLinesInFile(const std::string& fileName);
  * that entry and move to next.
  * From: https://thispointer.com/
  */
-template <typename K, typename V> inline void erase_if(std::map<K, V>& mapOfElement, V value)
+template <typename K, typename V, typename C> inline void erase_if(std::map<K, V, C>& mapOfElement, V value)
 {
     auto it = mapOfElement.begin();
     // Iterate through the map

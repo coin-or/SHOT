@@ -85,6 +85,9 @@ endif()
 set(DualBound_parts 1 2 3 4 5 6 7 8)
 set(cpptests ${cpptests} DualBound)
 
+set(Determinism_parts 1)
+set(cpptests ${cpptests} Determinism)
+
 set(Solver_parts
     1
     2
