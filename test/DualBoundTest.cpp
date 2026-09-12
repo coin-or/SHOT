@@ -364,6 +364,50 @@ bool testDuplicateHyperplanesAreDetected(ES_MIPSolver mipSolver)
     return passed;
 }
 
+// The objective value of a solution to the dual problem is only a valid dual bound if the problem was solved to
+// proven optimality. The MIP solvers also report optimality when their own gap tolerance has been met, so a loose
+// gap tolerance must not result in a dual bound that has passed the known optimal value.
+bool testDualBoundWithLooseGapTolerance(ES_MIPSolver mipSolver)
+{
+    const std::string problemFile = "data/instances/MINLP-convex-small/nvs12.osil";
+    const double optimalValue = -481.2;
+
+    auto solver = std::make_shared<Solver>();
+
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(mipSolver));
+    solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+    solver->updateSetting("Termination.ObjectiveGap.Relative", 0.05);
+    solver->updateSetting("Termination.TimeLimit", 60.0);
+
+    if(!solver->setProblem(problemFile))
+    {
+        std::cout << name(mipSolver) << ": could not read " << problemFile << '\n';
+        return false;
+    }
+
+    if(!solver->solveProblem())
+    {
+        std::cout << name(mipSolver) << ": could not solve " << problemFile << '\n';
+        return false;
+    }
+
+    auto env = solver->getEnvironment();
+    double dualBound = env->results->getGlobalDualBound();
+    double tolerance = 1e-4 * std::max(1.0, std::abs(optimalValue));
+
+    bool passed = env->problem->objectiveFunction->properties.isMinimize ? dualBound <= optimalValue + tolerance
+                                                                        : dualBound >= optimalValue - tolerance;
+
+    if(!passed)
+    {
+        std::cout << name(mipSolver) << ": dual bound " << dualBound << " has passed the optimal value "
+                  << optimalValue << '\n';
+    }
+
+    return passed;
+}
+
 std::vector<ES_MIPSolver> compiledSolvers()
 {
     std::vector<ES_MIPSolver> solvers;
@@ -421,6 +465,12 @@ int DualBoundTest(int argc, char* argv[])
         for(auto mipSolver : compiledSolvers())
             passed = testDuplicateHyperplanesAreDetected(mipSolver) && passed;
         std::cout << "Finished test that duplicate hyperplanes are detected.\n";
+        break;
+    case 5:
+        std::cout << "Starting test that a loose gap tolerance does not give an invalid dual bound:\n";
+        for(auto mipSolver : compiledSolvers())
+            passed = testDualBoundWithLooseGapTolerance(mipSolver) && passed;
+        std::cout << "Finished test that a loose gap tolerance does not give an invalid dual bound.\n";
         break;
     default:
         passed = false;
