@@ -872,9 +872,6 @@ void Solver::initializeSettings()
     env->settings->createSetting("Dual.HyperplaneCuts.UseIntegerCuts", false,
         "Add integer cuts for infeasible integer-combinations for binary problems");
 
-    env->settings->createSetting("Dual.HyperplaneCuts.SaveHyperplanePoints", false,
-        "Whether to save the points in the generated hyperplanes list", false);
-
     VectorString enumObjectiveRootsearch;
     enumObjectiveRootsearch.push_back("Always");
     enumObjectiveRootsearch.push_back("IfConvex");
@@ -2147,9 +2144,6 @@ void Solver::setConvexityBasedSettings()
 
             env->settings->updateSetting(
                 "Model.BoundTightening.FeasibilityBased.TimeLimit", 5.0, E_SettingPriority::RecommendedInternal);
-
-            // Need to save these to perform dual bound updates
-            // env->settings->updateSetting("Dual.HyperplaneCuts.SaveHyperplanePoints", true);
 
 #ifdef HAS_CPLEX
 

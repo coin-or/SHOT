@@ -88,9 +88,6 @@ void NLPSolverSHOT::initializeMIPProblem()
 
     solver->updateSetting("Termination.DualStagnation.IterationLimit", 20);
 
-    if(env->settings->getSetting<bool>("Subsolver.SHOT.ReuseHyperplanes.Use"))
-        solver->updateSetting("Dual.HyperplaneCuts.SaveHyperplanePoints", true);
-
     solver->updateSetting(
         "Model.BoundTightening.FeasibilityBased.Use", env->settings->getSetting<bool>("Subsolver.SHOT.UseFBBT"));
 
