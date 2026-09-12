@@ -208,16 +208,42 @@ void TaskPerformBoundTightening::createPOA()
     auto POADualSolver = this->POASolver->solver->getEnvironment()->dualSolver;
     auto objectiveFunction = sourceProblem->objectiveFunction;
 
+    // The solver generating the outer approximation reformulates the problem it is given, so the constraint
+    // indices of its hyperplanes are not the ones of the problem the linearizations are added to: a constraint
+    // index from it identifies another constraint here, or none at all. The constraints are matched by name
+    // instead, and the cut is then generated from the constraint of this problem, so it is a valid linearization
+    // of it even if the function it was generated for is not the same one. Only cuts for convex constraints are
+    // valid everywhere, so no others are reused.
+    std::map<std::string, NonlinearConstraintPtr> constraintsByName;
+
+    for(auto& C : sourceProblem->nonlinearConstraints)
+    {
+        if(C->properties.convexity <= E_Convexity::Convex)
+            constraintsByName.emplace(C->name, C);
+    }
+
     for(auto& HP : POADualSolver->generatedHyperplanes)
     {
         auto newHP = std::make_shared<ConstraintHyperplane>();
 
         if(auto sourceHP = std::dynamic_pointer_cast<ConstraintHyperplane>(HP->sourceHyperplane))
         {
+            if(!sourceHP->isGlobal)
+                continue;
+
+            auto match = constraintsByName.find(sourceHP->sourceConstraint->name);
+
+            if(match == constraintsByName.end())
+                continue;
+
+            // The variables of this problem are the first ones of the reformulated problem the point comes from
+            if((int)sourceHP->generatedPoint.size() < sourceProblem->properties.numberOfVariables)
+                continue;
+
             newHP->source = sourceHP->source;
-            newHP->sourceConstraint = std::dynamic_pointer_cast<NumericConstraint>(
-                sourceProblem->getConstraint(sourceHP->sourceConstraint->getIndex()));
-            newHP->generatedPoint = sourceHP->generatedPoint;
+            newHP->sourceConstraint = match->second;
+            newHP->generatedPoint = VectorDouble(sourceHP->generatedPoint.begin(),
+                sourceHP->generatedPoint.begin() + sourceProblem->properties.numberOfVariables);
             newHP->isGlobal = sourceHP->isGlobal;
 
             auto optional
