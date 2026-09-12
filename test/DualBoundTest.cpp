@@ -610,6 +610,56 @@ bool testDualBoundPastPrimalBoundIsNotUsed(ES_MIPSolver mipSolver)
     return passed;
 }
 
+bool testGlobalDualBoundIsCappedByThePrimalBound(ES_MIPSolver mipSolver)
+{
+    bool passed = true;
+
+    for(bool minimize : { true, false })
+    {
+        auto solver = makeSolver(mipSolver, ModelKind::Bounded, minimize);
+
+        if(!solver)
+        {
+            std::cout << "Could not create problem for " << name(mipSolver) << '\n';
+            return false;
+        }
+
+        auto env = solver->getEnvironment();
+        env->results->createIteration();
+
+        const double dualValue = minimize ? 5.0 : -5.0;
+        const double primalValue = minimize ? 4.0 : -4.0;
+
+        env->results->setDualBound(dualValue);
+
+        // An integer cut leaves the dual problem without a relaxation of the original problem, so the global dual
+        // bound is no longer updated from it
+        env->results->solutionIsGlobal = false;
+
+        env->results->setPrimalBound(primalValue);
+
+        double globalDualBound = env->results->getGlobalDualBound();
+
+        if(std::abs(globalDualBound - primalValue) > 1e-8)
+        {
+            std::cout << name(mipSolver) << (minimize ? " (min)" : " (max)")
+                      << ": the global dual bound is " << globalDualBound << " although the primal bound "
+                      << primalValue << " has passed it\n";
+            passed = false;
+        }
+
+        if(std::abs(env->results->getCurrentDualBound() - primalValue) > 1e-8)
+        {
+            std::cout << name(mipSolver) << (minimize ? " (min)" : " (max)") << ": the dual bound is "
+                      << env->results->getCurrentDualBound() << " although the primal bound " << primalValue
+                      << " has passed it\n";
+            passed = false;
+        }
+    }
+
+    return passed;
+}
+
 std::vector<ES_MIPSolver> compiledSolvers()
 {
     std::vector<ES_MIPSolver> solvers;
@@ -691,6 +741,12 @@ int DualBoundTest(int argc, char* argv[])
         for(auto mipSolver : compiledSolvers())
             passed = testDualBoundPastPrimalBoundIsNotUsed(mipSolver) && passed;
         std::cout << "Finished test that a dual bound past the primal bound is not used.\n";
+        break;
+    case 9:
+        std::cout << "Starting test that the global dual bound is capped by the primal bound:\n";
+        for(auto mipSolver : compiledSolvers())
+            passed = testGlobalDualBoundIsCappedByThePrimalBound(mipSolver) && passed;
+        std::cout << "Finished test that the global dual bound is capped by the primal bound.\n";
         break;
     default:
         passed = false;
