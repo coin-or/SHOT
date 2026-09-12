@@ -19,6 +19,7 @@
 #include "ObjectiveFunction.h"
 #include "MIPSolver/IMIPSolver.h"
 
+#include <algorithm>
 #include <cmath>
 
 namespace SHOT
@@ -38,7 +39,11 @@ void DualSolver::checkDualSolutionCandidates()
     double currDualBound = env->results->getCurrentDualBound();
     double currPrimalBound = env->results->getPrimalBound();
 
-    double gapRelTolerance = env->settings->getSetting<double>("Termination.ObjectiveGap.Relative");
+    // The optimal value lies between the dual and the primal bound, so a valid dual bound can only pass the primal
+    // bound by numerical error. Such a candidate is accepted as the primal bound, but only when it is within this
+    // tolerance; passing the primal bound by more means that the candidate is not a valid bound for the problem,
+    // and it is then ignored instead of closing the objective gap by force.
+    double crossoverTolerance = 1e-10 * std::max(1.0, std::abs(currPrimalBound));
 
     for(auto& C : this->dualSolutionCandidates)
     {
@@ -46,7 +51,7 @@ void DualSolver::checkDualSolutionCandidates()
 
         if(env->problem->objectiveFunction->properties.isMinimize)
         {
-            if(C.objValue < currPrimalBound * (1 + gapRelTolerance) && C.objValue > currPrimalBound)
+            if(C.objValue > currPrimalBound && C.objValue <= currPrimalBound + crossoverTolerance)
             {
                 C.objValue = currPrimalBound;
                 updateDual = true;
@@ -58,7 +63,7 @@ void DualSolver::checkDualSolutionCandidates()
         }
         else
         {
-            if(C.objValue > currPrimalBound * (1 + gapRelTolerance) && C.objValue < currPrimalBound)
+            if(C.objValue < currPrimalBound && C.objValue >= currPrimalBound - crossoverTolerance)
             {
                 C.objValue = currPrimalBound;
                 updateDual = true;

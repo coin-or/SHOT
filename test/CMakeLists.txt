@@ -82,7 +82,7 @@ if(HAS_GAMS)
   set(cpptests ${cpptests} GAMS)
 endif()
 
-set(DualBound_parts 1 2 3 4 5)
+set(DualBound_parts 1 2 3 4 5 6)
 set(cpptests ${cpptests} DualBound)
 
 set(Solver_parts

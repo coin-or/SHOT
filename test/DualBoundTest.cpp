@@ -408,6 +408,74 @@ bool testDualBoundWithLooseGapTolerance(ES_MIPSolver mipSolver)
     return passed;
 }
 
+// The optimal value lies between the dual and the primal bound, so a dual bound candidate can only pass the primal
+// bound by numerical error. A candidate that passes it by more is not a bound for the problem and must not be
+// accepted, since that would close the objective gap by force.
+bool testDualBoundCandidatePastPrimalBound(ES_MIPSolver mipSolver)
+{
+    bool passed = true;
+
+    for(bool minimize : { true, false })
+    {
+        auto solver = makeSolver(mipSolver, ModelKind::Bounded, minimize);
+
+        if(!solver)
+        {
+            std::cout << "Could not create problem for " << name(mipSolver) << '\n';
+            return false;
+        }
+
+        auto env = solver->getEnvironment();
+        env->results->createIteration();
+
+        const double primalValue = minimize ? 10.0 : -10.0;
+
+        PrimalSolution primalSolution;
+        primalSolution.point = VectorDouble(env->reformulatedProblem->properties.numberOfVariables, 0.0);
+        primalSolution.sourceType = E_PrimalSolutionSource::MIPSolutionPool;
+        primalSolution.sourceDescription = "test";
+        primalSolution.objValue = primalValue;
+        primalSolution.iterFound = 0;
+        primalSolution.maxIntegerToleranceError = 0.0;
+
+        env->results->addPrimalSolution(primalSolution);
+
+        auto addCandidate = [&](double objValue) {
+            DualSolution candidate = { VectorDouble {}, E_DualSolutionSource::MIPSolverBound, objValue, 0, false };
+            env->dualSolver->addDualSolutionCandidate(candidate);
+            env->dualSolver->checkDualSolutionCandidates();
+        };
+
+        auto check = [&](const std::string& description, double expected) {
+            double dualBound = env->results->getCurrentDualBound();
+
+            if(std::abs(dualBound - expected) > 1e-8)
+            {
+                std::cout << name(mipSolver) << (minimize ? " (min)" : " (max)") << ": " << description
+                          << ", dual bound is " << dualBound << " instead of " << expected << '\n';
+                passed = false;
+            }
+        };
+
+        // A bound on the correct side of the primal bound is used as it is
+        double validBound = minimize ? primalValue - 1.0 : primalValue + 1.0;
+        addCandidate(validBound);
+        check("a valid dual bound was not accepted", validBound);
+
+        // Passing the primal bound by more than numerical error means the candidate is not a valid bound. The
+        // difference is kept within the relative objective gap tolerance, since that is the window in which the
+        // candidate used to be accepted as the primal bound.
+        addCandidate(minimize ? primalValue + 0.005 : primalValue - 0.005);
+        check("a dual bound past the primal bound was accepted", validBound);
+
+        // Passing it by numerical error only means that the primal solution is optimal
+        addCandidate(minimize ? primalValue + 1e-12 : primalValue - 1e-12);
+        check("a dual bound within numerical error of the primal bound was not accepted", primalValue);
+    }
+
+    return passed;
+}
+
 std::vector<ES_MIPSolver> compiledSolvers()
 {
     std::vector<ES_MIPSolver> solvers;
@@ -471,6 +539,12 @@ int DualBoundTest(int argc, char* argv[])
         for(auto mipSolver : compiledSolvers())
             passed = testDualBoundWithLooseGapTolerance(mipSolver) && passed;
         std::cout << "Finished test that a loose gap tolerance does not give an invalid dual bound.\n";
+        break;
+    case 6:
+        std::cout << "Starting test that a dual bound past the primal bound is not accepted:\n";
+        for(auto mipSolver : compiledSolvers())
+            passed = testDualBoundCandidatePastPrimalBound(mipSolver) && passed;
+        std::cout << "Finished test that a dual bound past the primal bound is not accepted.\n";
         break;
     default:
         passed = false;
