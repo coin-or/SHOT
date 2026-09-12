@@ -13,7 +13,7 @@
 #include "Structs.h"
 
 #include <map>
-#include <set>
+#include <utility>
 
 namespace SHOT
 {
@@ -32,7 +32,7 @@ public:
 
     void addHyperplane(HyperplanePtr hyperplane);
     void addGeneratedHyperplane(const HyperplanePtr hyperplane);
-    bool hasHyperplaneBeenAdded(double hash, int constraintIndex);
+    bool hasHyperplaneBeenAdded(const VectorDouble& generatedPoint, int constraintIndex);
 
     void addIntegerCut(IntegerCut integerCut);
     void addGeneratedIntegerCut(IntegerCut integerCut);
@@ -54,10 +54,20 @@ public:
 private:
     EnvironmentPtr env;
 
-    // The hashes of the generated hyperplanes for each constraint index, where -1 is used for the objective function
-    std::map<int, std::set<double>> generatedHyperplaneHashes;
+    // The hashes of the generated hyperplanes for each constraint index, where -1 is used for the objective
+    // function. Two hashes are kept for each point, so that two different points are only taken for the same one
+    // when both of them match.
+    std::map<int, std::multimap<double, double>> generatedHyperplaneHashes;
 
-    double calculateHyperplaneHash(NumericHyperplanePtr hyperplane);
+    // The coefficients of the two hashes, drawn once and extended when a longer point is hashed
+    VectorDouble hashCoefficients[2];
+
+    void extendHashCoefficients(size_t length);
+
+    std::pair<double, double> calculateHashes(const VectorDouble& point);
+    std::pair<double, double> calculateHyperplaneHashes(NumericHyperplanePtr hyperplane);
+
+    bool hasHyperplaneBeenAdded(const std::pair<double, double>& hashes, int constraintIndex);
 };
 
 } // namespace SHOT

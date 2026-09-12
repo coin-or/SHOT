@@ -327,18 +327,19 @@ bool testDuplicateHyperplanesAreDetected(ES_MIPSolver mipSolver)
         return hyperplane;
     };
 
-    double hash = Utilities::calculateHash(point);
+    // The same point, but differing by an amount of the size of a rounding error
+    VectorDouble roundedPoint = point;
+    roundedPoint[0] += 1e-15;
 
-    check(!dualSolver->hasHyperplaneBeenAdded(hash, firstIndex), "hyperplane detected before it was generated");
+    check(!dualSolver->hasHyperplaneBeenAdded(point, firstIndex), "hyperplane detected before it was generated");
 
     dualSolver->addGeneratedHyperplane(createConstraintHyperplane(constraints[0]));
 
-    check(dualSolver->hasHyperplaneBeenAdded(hash, firstIndex), "generated hyperplane not detected");
-    check(dualSolver->hasHyperplaneBeenAdded(hash * (1.0 + 1e-12), firstIndex),
+    check(dualSolver->hasHyperplaneBeenAdded(point, firstIndex), "generated hyperplane not detected");
+    check(dualSolver->hasHyperplaneBeenAdded(roundedPoint, firstIndex),
         "hyperplane in an almost identical point not detected");
-    check(!dualSolver->hasHyperplaneBeenAdded(hash, secondIndex), "hyperplane detected for another constraint");
-    check(!dualSolver->hasHyperplaneBeenAdded(Utilities::calculateHash(otherPoint), firstIndex),
-        "hyperplane detected for another point");
+    check(!dualSolver->hasHyperplaneBeenAdded(point, secondIndex), "hyperplane detected for another constraint");
+    check(!dualSolver->hasHyperplaneBeenAdded(otherPoint, firstIndex), "hyperplane detected for another point");
 
     auto waitingListSize = dualSolver->hyperplaneWaitingList.size();
 
@@ -476,6 +477,79 @@ bool testDualBoundCandidatePastPrimalBound(ES_MIPSolver mipSolver)
     return passed;
 }
 
+// Two points that differ in variables of small magnitude, e.g. binary ones, must not be taken for the same point
+// when the point also holds a variable of large magnitude, since that variable would otherwise dominate the hash.
+bool testHyperplanesDifferingInSmallVariables(ES_MIPSolver mipSolver)
+{
+    // Only the constraints of the model are needed, the problem is never solved
+    auto solver = makeSolver(mipSolver, ModelKind::Infeasible, true);
+
+    if(!solver)
+    {
+        std::cout << "Could not create problem for " << name(mipSolver) << '\n';
+        return false;
+    }
+
+    auto env = solver->getEnvironment();
+
+    // Duplicates are not checked in single-tree mode, since lazy constraints are not always added
+    solver->updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::MultiTree));
+    env->results->createIteration();
+
+    auto& constraints = env->reformulatedProblem->numericConstraints;
+
+    if(constraints.size() < 2)
+    {
+        std::cout << name(mipSolver) << ": expected two constraints in the reformulated problem, got "
+                  << constraints.size() << '\n';
+        return false;
+    }
+
+    bool passed = true;
+
+    auto check = [&](bool condition, const std::string& description) {
+        if(!condition)
+        {
+            std::cout << name(mipSolver) << ": " << description << '\n';
+            passed = false;
+        }
+    };
+
+    // A point holding a variable of large magnitude next to variables of the magnitude of binary ones
+    VectorDouble point { 1.01e9, 1.0, 0.0, 0.5, 0.25, 3.0 };
+
+    auto hyperplane = std::make_shared<ConstraintHyperplane>();
+    hyperplane->source = E_HyperplaneSource::External;
+    hyperplane->sourceConstraint = constraints[0];
+    hyperplane->generatedPoint = point;
+    hyperplane->isGlobal = true;
+
+    env->dualSolver->addGeneratedHyperplane(hyperplane);
+
+    int firstIndex = constraints[0]->getIndex();
+    int secondIndex = constraints[1]->getIndex();
+
+    check(env->dualSolver->hasHyperplaneBeenAdded(point, firstIndex), "the same point was not detected");
+    check(!env->dualSolver->hasHyperplaneBeenAdded(point, secondIndex), "the point was detected for another "
+                                                                       "constraint");
+
+    // Changing the variable of large magnitude by an amount that is insignificant for it keeps the same point
+    VectorDouble rounded = point;
+    rounded[0] += 1e-11;
+    check(env->dualSolver->hasHyperplaneBeenAdded(rounded, firstIndex),
+        "a point differing within rounding error was not detected");
+
+    // Two binary variables differing makes it another point, also when the variable of large magnitude changes
+    VectorDouble flipped = point;
+    flipped[0] -= 0.0558;
+    flipped[1] = 0.0;
+    flipped[2] = 1.0;
+    check(!env->dualSolver->hasHyperplaneBeenAdded(flipped, firstIndex),
+        "a point differing in variables of small magnitude was taken for the same point");
+
+    return passed;
+}
+
 std::vector<ES_MIPSolver> compiledSolvers()
 {
     std::vector<ES_MIPSolver> solvers;
@@ -545,6 +619,12 @@ int DualBoundTest(int argc, char* argv[])
         for(auto mipSolver : compiledSolvers())
             passed = testDualBoundCandidatePastPrimalBound(mipSolver) && passed;
         std::cout << "Finished test that a dual bound past the primal bound is not accepted.\n";
+        break;
+    case 7:
+        std::cout << "Starting test that points differing in variables of small magnitude are kept apart:\n";
+        for(auto mipSolver : compiledSolvers())
+            passed = testHyperplanesDifferingInSmallVariables(mipSolver) && passed;
+        std::cout << "Finished test that points differing in variables of small magnitude are kept apart.\n";
         break;
     default:
         passed = false;

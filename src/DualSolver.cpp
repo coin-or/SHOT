@@ -21,6 +21,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <random>
 
 namespace SHOT
 {
@@ -136,17 +137,53 @@ void DualSolver::checkDualSolutionCandidates()
     this->dualSolutionCandidates.clear();
 }
 
-double DualSolver::calculateHyperplaneHash(NumericHyperplanePtr hyperplane)
+void DualSolver::extendHashCoefficients(size_t length)
+{
+    if(hashCoefficients[0].size() >= length)
+        return;
+
+    static std::mt19937 randomEngine(std::random_device {}());
+    std::uniform_real_distribution<double> distribution(1.0, 101.0);
+
+    for(auto& coefficients : hashCoefficients)
+    {
+        while(coefficients.size() < length)
+            coefficients.push_back(distribution(randomEngine));
+    }
+}
+
+std::pair<double, double> DualSolver::calculateHashes(const VectorDouble& point)
+{
+    extendHashCoefficients(point.size());
+
+    double first = 0.0;
+    double second = 0.0;
+
+    for(size_t i = 0; i < point.size(); i++)
+    {
+        // The value is mapped into (-1, 1) before it is hashed, so that a variable of large magnitude does not
+        // dominate the hash. Otherwise a change in a variable of small magnitude, e.g. a binary one, is lost next
+        // to it, and two points differing in such variables are taken for the same point.
+        double value = point[i] / (1.0 + std::abs(point[i]));
+
+        first += hashCoefficients[0][i] * value;
+        second += hashCoefficients[1][i] * value;
+    }
+
+    return (std::make_pair(first, second));
+}
+
+std::pair<double, double> DualSolver::calculateHyperplaneHashes(NumericHyperplanePtr hyperplane)
 {
     // A constraint cut is determined by its point, but an objective cut also depends on the objective value used
     if(auto objectiveHP = std::dynamic_pointer_cast<ObjectiveHyperplane>(hyperplane))
     {
         auto pointAndValue = objectiveHP->generatedPoint;
         pointAndValue.push_back(objectiveHP->objectiveFunctionValue);
-        return (Utilities::calculateHash(pointAndValue));
+        return (calculateHashes(pointAndValue));
     }
 
-    return (Utilities::calculateHash(hyperplane->generatedPoint));
+    return (calculateHashes(hyperplane->generatedPoint));
 }
 
 void DualSolver::addHyperplane(HyperplanePtr hyperplane)
@@ -155,9 +192,10 @@ void DualSolver::addHyperplane(HyperplanePtr hyperplane)
     {
         assert((int)objectiveHP->generatedPoint.size() == env->reformulatedProblem->properties.numberOfVariables);
 
-        objectiveHP->pointHash = calculateHyperplaneHash(objectiveHP);
+        auto hashes = calculateHyperplaneHashes(objectiveHP);
+        objectiveHP->pointHash = hashes.first;
 
-        if(!hasHyperplaneBeenAdded(objectiveHP->pointHash, -1))
+        if(!hasHyperplaneBeenAdded(hashes, -1))
         {
             this->hyperplaneWaitingList.push_back(hyperplane);
         }
@@ -171,9 +209,10 @@ void DualSolver::addHyperplane(HyperplanePtr hyperplane)
     {
         assert((int)constraintHP->generatedPoint.size() == env->reformulatedProblem->properties.numberOfVariables);
 
-        constraintHP->pointHash = Utilities::calculateHash(constraintHP->generatedPoint);
+        auto hashes = calculateHyperplaneHashes(constraintHP);
+        constraintHP->pointHash = hashes.first;
 
-        if(!hasHyperplaneBeenAdded(constraintHP->pointHash, constraintHP->sourceConstraint->getIndex()))
+        if(!hasHyperplaneBeenAdded(hashes, constraintHP->sourceConstraint->getIndex()))
         {
             this->hyperplaneWaitingList.push_back(hyperplane);
         }
@@ -261,12 +300,14 @@ void DualSolver::addGeneratedHyperplane(const HyperplanePtr hyperplane)
 
     if(auto numericHP = std::dynamic_pointer_cast<NumericHyperplane>(hyperplane))
     {
-        // The hash is recalculated since not all hyperplanes pass through addHyperplane(), e.g. in single-tree callbacks
-        numericHP->pointHash = calculateHyperplaneHash(numericHP);
+        // The hashes are recalculated since not all hyperplanes pass through addHyperplane(), e.g. in single-tree
+        // callbacks
+        auto hashes = calculateHyperplaneHashes(numericHP);
+        numericHP->pointHash = hashes.first;
 
         auto constraintHP = std::dynamic_pointer_cast<ConstraintHyperplane>(numericHP);
-        generatedHyperplaneHashes[constraintHP ? constraintHP->sourceConstraint->getIndex() : -1].insert(
-            numericHP->pointHash);
+        generatedHyperplaneHashes[constraintHP ? constraintHP->sourceConstraint->getIndex() : -1].emplace(
+            hashes.first, hashes.second);
     }
 
     auto currentIteration = env->results->getCurrentIteration();
@@ -282,23 +323,38 @@ void DualSolver::addGeneratedHyperplane(const HyperplanePtr hyperplane)
     env->output->outputTrace("        Hyperplane generated from: " + source);
 }
 
-bool DualSolver::hasHyperplaneBeenAdded(double hash, int constraintIndex)
+bool DualSolver::hasHyperplaneBeenAdded(const std::pair<double, double>& hashes, int constraintIndex)
 {
     // Cuts added as lazy might not actually always be added (e.g. in different threads), thus we have to allow them
     // to be added again
     if(env->settings->getSetting<int>("Dual.TreeStrategy") == static_cast<int>(ES_TreeStrategy::SingleTree))
         return false;
 
-    auto hashes = generatedHyperplaneHashes.find(constraintIndex);
+    auto generated = generatedHyperplaneHashes.find(constraintIndex);
 
-    if(hashes == generatedHyperplaneHashes.end())
+    if(generated == generatedHyperplaneHashes.end())
         return (false);
 
-    // Hashes of (almost) identical points are within a small relative tolerance of each other
-    double tolerance = 1e-8 * std::abs(hash);
-    auto closestHash = hashes->second.lower_bound(hash - tolerance);
+    // The hashes of two identical points only differ by rounding errors, and since the values are mapped into
+    // (-1, 1) before they are hashed, a point differing in any single variable differs by much more than this.
+    double firstTolerance = 1e-10 * std::max(1.0, std::abs(hashes.first));
+    double secondTolerance = 1e-10 * std::max(1.0, std::abs(hashes.second));
 
-    return (closestHash != hashes->second.end() && *closestHash <= hash + tolerance);
+    auto candidate = generated->second.lower_bound(hashes.first - firstTolerance);
+
+    for(; candidate != generated->second.end() && candidate->first <= hashes.first + firstTolerance; candidate++)
+    {
+        // Both hashes are compared, since two different points can match in one of them
+        if(std::abs(candidate->second - hashes.second) <= secondTolerance)
+            return (true);
+    }
+
+    return (false);
+}
+
+bool DualSolver::hasHyperplaneBeenAdded(const VectorDouble& generatedPoint, int constraintIndex)
+{
+    return (hasHyperplaneBeenAdded(calculateHashes(generatedPoint), constraintIndex));
 }
 
 void DualSolver::addIntegerCut(IntegerCut integerCut)

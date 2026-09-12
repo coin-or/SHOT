@@ -246,13 +246,11 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
 
             if(externalConstraintValue.normalizedValue >= 0)
             {
-                double hash = Utilities::calculateHash(externalPoint);
-
-                if(env->dualSolver->hasHyperplaneBeenAdded(hash, externalConstraintValue.constraint->getIndex()))
+                if(env->dualSolver->hasHyperplaneBeenAdded(
+                       externalPoint, externalConstraintValue.constraint->getIndex()))
                 {
                     env->output->outputDebug("         Hyperplane already added for constraint "
-                        + std::to_string(externalConstraintValue.constraint->getIndex()) + " and hash "
-                        + std::to_string(hash));
+                        + std::to_string(externalConstraintValue.constraint->getIndex()));
                     continue;
                 }
 
@@ -330,13 +328,11 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
 
                 if(externalConstraintValue.normalizedValue >= 0)
                 {
-                    double hash = Utilities::calculateHash(externalPoint);
-
-                    if(env->dualSolver->hasHyperplaneBeenAdded(hash, externalConstraintValue.constraint->getIndex()))
+                    if(env->dualSolver->hasHyperplaneBeenAdded(
+                           externalPoint, externalConstraintValue.constraint->getIndex()))
                     {
                         env->output->outputDebug("         Hyperplane already added for constraint "
-                            + std::to_string(externalConstraintValue.constraint->getIndex()) + " and hash "
-                            + std::to_string(hash));
+                            + std::to_string(externalConstraintValue.constraint->getIndex()));
                         continue;
                     }
 
@@ -432,13 +428,11 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
 
                 if(externalConstraintValue.normalizedValue >= 0)
                 {
-                    double hash = Utilities::calculateHash(externalPoint);
-
-                    if(env->dualSolver->hasHyperplaneBeenAdded(hash, externalConstraintValue.constraint->getIndex()))
+                    if(env->dualSolver->hasHyperplaneBeenAdded(
+                           externalPoint, externalConstraintValue.constraint->getIndex()))
                     {
                         env->output->outputDebug("         Hyperplane already added for constraint "
-                            + std::to_string(externalConstraintValue.constraint->getIndex()) + " and hash "
-                            + std::to_string(hash));
+                            + std::to_string(externalConstraintValue.constraint->getIndex()));
                         continue;
                     }
 
@@ -544,14 +538,11 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
 
                     if(externalConstraintValue.normalizedValue >= 0)
                     {
-                        double hash = Utilities::calculateHash(externalPoint);
-
                         if(env->dualSolver->hasHyperplaneBeenAdded(
-                               hash, externalConstraintValue.constraint->getIndex()))
+                               externalPoint, externalConstraintValue.constraint->getIndex()))
                         {
                             env->output->outputTrace("         Hyperplane already added for constraint "
-                                + std::to_string(externalConstraintValue.constraint->getIndex()) + " and hash "
-                                + std::to_string(hash));
+                                + std::to_string(externalConstraintValue.constraint->getIndex()));
                             continue;
                         }
 
@@ -630,12 +621,11 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
 
         for(auto& HP : hyperplanesCuttingAwayPrimals)
         {
-            double hash = Utilities::calculateHash(HP.first->generatedPoint);
-
-            if(env->dualSolver->hasHyperplaneBeenAdded(hash, HP.first->sourceConstraint->getIndex()))
+            if(env->dualSolver->hasHyperplaneBeenAdded(
+                   HP.first->generatedPoint, HP.first->sourceConstraint->getIndex()))
             {
                 env->output->outputTrace("         Hyperplane already added for constraint "
-                    + std::to_string(HP.first->sourceConstraint->getIndex()) + " and hash " + std::to_string(hash));
+                    + std::to_string(HP.first->sourceConstraint->getIndex()));
                 continue;
             }
 
