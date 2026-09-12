@@ -54,6 +54,8 @@ HCallbackI::HCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx2)
     }
 
     taskSelectExternalHPs = std::make_shared<TaskSelectHyperplanesExternal>(env);
+
+    taskCalculateSolutionChangeNorm = std::make_shared<TaskCalculateSolutionChangeNorm>(env);
 }
 
 IloCplex::CallbackI* HCallbackI::duplicateCallback() const { return (new(getEnv()) HCallbackI(*this)); }
@@ -157,6 +159,10 @@ void HCallbackI::main() // Called at each node...
 
         taskSelectExternalHPs->run(solutionPoints);
 
+        // The hyperplanes of the iteration have all been generated here, so the distance to the point
+        // of the previous one can be calculated
+        taskCalculateSolutionChangeNorm->run();
+
         env->results->getCurrentIteration()->relaxedLazyHyperplanesAdded
             += (env->dualSolver->hyperplaneWaitingList.size() - waitingListSize);
     }
@@ -242,6 +248,8 @@ CtCallbackI::CtCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx
     }
 
     taskSelectExternalHPs = std::make_shared<TaskSelectHyperplanesExternal>(env);
+
+    taskCalculateSolutionChangeNorm = std::make_shared<TaskCalculateSolutionChangeNorm>(env);
 
     auto NLPProblemSource = static_cast<ES_PrimalNLPProblemSource>(
         env->settings->getSetting<int>("Primal.FixedInteger.SourceProblem"));
@@ -509,6 +517,10 @@ void CtCallbackI::main()
     }
 
     taskSelectExternalHPs->run(candidatePoints);
+
+    // The hyperplanes of the iteration have all been generated here, so the distance to the point
+    // of the previous one can be calculated
+    taskCalculateSolutionChangeNorm->run();
 
     for(auto& hp : env->dualSolver->hyperplaneWaitingList)
     {

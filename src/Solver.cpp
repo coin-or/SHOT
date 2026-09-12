@@ -1031,6 +1031,11 @@ void Solver::initializeSettings()
     env->settings->createSetting(
         "Dual.Relaxation.TerminationTolerance", 0.5, "Time limit (s) when solving LP problems initially");
 
+    env->settings->createSetting("Dual.Relaxation.SolutionChangeTolerance", 0.0,
+        "End the initial LP phase when the hyperplanes are generated in points this close to each other: 0: "
+        "Disable",
+        0.0, SHOT_DBL_MAX);
+
     env->settings->createSetting(
         "Dual.Relaxation.TimeLimit", 30.0, "Time limit (s) when solving LP problems initially", 0, SHOT_DBL_MAX);
 

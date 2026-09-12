@@ -11,9 +11,13 @@
 #include "TaskCalculateSolutionChangeNorm.h"
 
 #include "../Iteration.h"
+#include "../Output.h"
 #include "../Results.h"
 #include "../Settings.h"
 #include "../TaskHandler.h"
+#include "../Utilities.h"
+
+#include <cmath>
 
 namespace SHOT
 {
@@ -29,44 +33,36 @@ void TaskCalculateSolutionChangeNorm::run()
     currIter->boundaryDistance = SHOT_DBL_MAX;
 
     if(env->results->getNumberOfIterations() < 3)
-    {
         return;
-    }
 
-    if(env->results->getCurrentIteration()->hyperplanePoints.size() == 0
-        || env->results->getCurrentIteration()->isMIP())
-    {
+    if(currIter->hyperplanePoints.size() == 0)
         return;
-    }
 
-    auto currIterSol = env->results->getCurrentIteration()->hyperplanePoints.at(0);
+    auto currIterSol = currIter->hyperplanePoints.at(0);
 
+    // The distance is calculated to the last iteration that also generated a hyperplane, whether the dual
+    // problem was a relaxation there or not
     for(int i = env->results->getNumberOfIterations() - 2; i >= 1; i--)
     {
-        if(env->results->getNumberOfIterations() > 0 && !env->results->iterations.at(i)->isMIP())
-        {
-            auto prevIterSol = env->results->iterations.at(i)->hyperplanePoints.at(0);
+        auto previousIteration = env->results->iterations.at(i);
 
-            double distance = 0;
+        if(previousIteration->hyperplanePoints.size() == 0)
+            continue;
 
-            for(size_t j = 0; j < currIterSol.size(); j++)
-            {
-                distance = distance + (currIterSol.at(j) - prevIterSol.at(j)) * (currIterSol.at(j) - prevIterSol.at(j));
-            }
+        auto prevIterSol = previousIteration->hyperplanePoints.at(0);
 
-            distance = sqrt(distance + 0.001);
+        if(prevIterSol.size() != currIterSol.size())
+            continue;
 
-            if(std::isnan(distance)) // Checks for INF, do not remove!
-            {
-                currIter->boundaryDistance = SHOT_DBL_MAX;
-            }
-            else
-            {
-                currIter->boundaryDistance = distance;
-            }
+        double distance = Utilities::L2Norm(currIterSol, prevIterSol);
 
-            return;
-        }
+        // Checks for INF, do not remove!
+        currIter->boundaryDistance = std::isnan(distance) ? SHOT_DBL_MAX : distance;
+
+        env->output->outputDebug(fmt::format("        The hyperplane generation point moved {} from iteration {}.",
+            currIter->boundaryDistance, previousIteration->iterationNumber));
+
+        return;
     }
 }
 

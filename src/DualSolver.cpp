@@ -156,6 +156,17 @@ std::pair<double, double> DualSolver::calculateHyperplaneHashes(NumericHyperplan
 
 void DualSolver::addHyperplane(HyperplanePtr hyperplane)
 {
+    // The point the hyperplane is generated in is kept, so that the distance the points move between iterations
+    // can be calculated. Only the first point of an iteration is kept, since that is the one the distance is
+    // calculated from, and keeping every point would grow with the number of hyperplanes generated.
+    if(auto numericHP = std::dynamic_pointer_cast<NumericHyperplane>(hyperplane))
+    {
+        auto currentIteration = env->results->getCurrentIteration();
+
+        if(currentIteration->hyperplanePoints.size() == 0)
+            currentIteration->hyperplanePoints.push_back(numericHP->generatedPoint);
+    }
+
     if(auto objectiveHP = std::dynamic_pointer_cast<ObjectiveHyperplane>(hyperplane))
     {
         assert((int)objectiveHP->generatedPoint.size() == env->reformulatedProblem->properties.numberOfVariables);
