@@ -30,6 +30,8 @@
 #include "../src/MIPSolver/IMIPSolver.h"
 #include "../src/Tasks/TaskCreateMIPProblem.h"
 #include "../src/Tasks/TaskPerformConvexBounding.h"
+#include "../src/DualSolver.h"
+#include "../src/Utilities.h"
 
 #ifdef HAS_CBC
 #include "../src/MIPSolver/MIPSolverCbc.h"
@@ -258,6 +260,356 @@ bool testConvexBoundingRejectsUnboundedModel(ES_MIPSolver mipSolver)
     return passed;
 }
 
+// A hyperplane must be detected as already added when it is generated again in (almost) the same point for the
+// same constraint, but not for another constraint or point, or for an objective cut with another objective value.
+bool testDuplicateHyperplanesAreDetected(ES_MIPSolver mipSolver)
+{
+    // Only the two linear constraints of the model are needed, the problem is never solved
+    auto solver = makeSolver(mipSolver, ModelKind::Infeasible, true);
+
+    if(!solver)
+    {
+        std::cout << "Could not create problem for " << name(mipSolver) << '\n';
+        return false;
+    }
+
+    auto env = solver->getEnvironment();
+
+    // Duplicates are not checked in single-tree mode, since lazy constraints are not always added
+    solver->updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::MultiTree));
+    env->results->createIteration();
+
+    auto& constraints = env->reformulatedProblem->numericConstraints;
+
+    if(constraints.size() < 2)
+    {
+        std::cout << name(mipSolver) << ": expected two constraints in the reformulated problem, got "
+                  << constraints.size() << '\n';
+        return false;
+    }
+
+    bool passed = true;
+
+    auto check = [&](bool condition, const std::string& description)
+    {
+        if(!condition)
+        {
+            std::cout << name(mipSolver) << ": " << description << '\n';
+            passed = false;
+        }
+    };
+
+    auto dualSolver = env->dualSolver;
+    int firstIndex = constraints[0]->getIndex();
+    int secondIndex = constraints[1]->getIndex();
+
+    VectorDouble point(env->reformulatedProblem->properties.numberOfVariables, 1.0);
+    VectorDouble otherPoint = point;
+    otherPoint[0] = 2.0;
+
+    auto createConstraintHyperplane = [&](NumericConstraintPtr constraint)
+    {
+        auto hyperplane = std::make_shared<ConstraintHyperplane>();
+        hyperplane->source = E_HyperplaneSource::External;
+        hyperplane->sourceConstraint = constraint;
+        hyperplane->generatedPoint = point;
+        hyperplane->isGlobal = true;
+        return hyperplane;
+    };
+
+    auto createObjectiveHyperplane = [&](double objectiveValue)
+    {
+        auto hyperplane = std::make_shared<ObjectiveHyperplane>();
+        hyperplane->source = E_HyperplaneSource::External;
+        hyperplane->generatedPoint = point;
+        hyperplane->objectiveFunctionValue = objectiveValue;
+        hyperplane->isGlobal = true;
+        return hyperplane;
+    };
+
+    // The same point, but differing by an amount of the size of a rounding error
+    VectorDouble roundedPoint = point;
+    roundedPoint[0] += 1e-15;
+
+    check(!dualSolver->hasHyperplaneBeenAdded(point, firstIndex), "hyperplane detected before it was generated");
+
+    dualSolver->addGeneratedHyperplane(createConstraintHyperplane(constraints[0]));
+
+    check(dualSolver->hasHyperplaneBeenAdded(point, firstIndex), "generated hyperplane not detected");
+    check(dualSolver->hasHyperplaneBeenAdded(roundedPoint, firstIndex),
+        "hyperplane in an almost identical point not detected");
+    check(!dualSolver->hasHyperplaneBeenAdded(point, secondIndex), "hyperplane detected for another constraint");
+    check(!dualSolver->hasHyperplaneBeenAdded(otherPoint, firstIndex), "hyperplane detected for another point");
+
+    auto waitingListSize = dualSolver->hyperplaneWaitingList.size();
+
+    dualSolver->addHyperplane(createConstraintHyperplane(constraints[0]));
+    check(dualSolver->hyperplaneWaitingList.size() == waitingListSize, "duplicate hyperplane added to waiting list");
+
+    dualSolver->addHyperplane(createConstraintHyperplane(constraints[1]));
+    check(dualSolver->hyperplaneWaitingList.size() == waitingListSize + 1,
+        "hyperplane for another constraint not added to waiting list");
+
+    // Objective cuts in the same point are different cuts if their objective values differ
+    dualSolver->addGeneratedHyperplane(createObjectiveHyperplane(1.0));
+    waitingListSize = dualSolver->hyperplaneWaitingList.size();
+
+    dualSolver->addHyperplane(createObjectiveHyperplane(1.0));
+    check(dualSolver->hyperplaneWaitingList.size() == waitingListSize,
+        "duplicate objective hyperplane added to waiting list");
+
+    dualSolver->addHyperplane(createObjectiveHyperplane(2.0));
+    check(dualSolver->hyperplaneWaitingList.size() == waitingListSize + 1,
+        "objective hyperplane with another objective value not added to waiting list");
+
+    return passed;
+}
+
+// The objective value of a solution to the dual problem is only a valid dual bound if the problem was solved to
+// proven optimality. The MIP solvers also report optimality when their own gap tolerance has been met, so a loose
+// gap tolerance must not result in a dual bound that has passed the known optimal value.
+bool testDualBoundWithLooseGapTolerance(ES_MIPSolver mipSolver)
+{
+    const std::string problemFile = "data/instances/MINLP-convex-small/nvs12.osil";
+    const double optimalValue = -481.2;
+
+    auto solver = std::make_shared<Solver>();
+
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(mipSolver));
+    solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+    solver->updateSetting("Termination.ObjectiveGap.Relative", 0.05);
+    solver->updateSetting("Termination.TimeLimit", 60.0);
+
+    if(!solver->setProblem(problemFile))
+    {
+        std::cout << name(mipSolver) << ": could not read " << problemFile << '\n';
+        return false;
+    }
+
+    if(!solver->solveProblem())
+    {
+        std::cout << name(mipSolver) << ": could not solve " << problemFile << '\n';
+        return false;
+    }
+
+    auto env = solver->getEnvironment();
+    double dualBound = env->results->getGlobalDualBound();
+    double tolerance = 1e-4 * std::max(1.0, std::abs(optimalValue));
+
+    bool passed = env->problem->objectiveFunction->properties.isMinimize ? dualBound <= optimalValue + tolerance
+                                                                        : dualBound >= optimalValue - tolerance;
+
+    if(!passed)
+    {
+        std::cout << name(mipSolver) << ": dual bound " << dualBound << " has passed the optimal value "
+                  << optimalValue << '\n';
+    }
+
+    return passed;
+}
+
+// The optimal value lies between the dual and the primal bound, so a dual bound candidate can only pass the primal
+// bound by numerical error. A candidate that passes it by more is not a bound for the problem and must not be
+// accepted, since that would close the objective gap by force.
+bool testDualBoundCandidatePastPrimalBound(ES_MIPSolver mipSolver)
+{
+    bool passed = true;
+
+    for(bool minimize : { true, false })
+    {
+        auto solver = makeSolver(mipSolver, ModelKind::Bounded, minimize);
+
+        if(!solver)
+        {
+            std::cout << "Could not create problem for " << name(mipSolver) << '\n';
+            return false;
+        }
+
+        auto env = solver->getEnvironment();
+        env->results->createIteration();
+
+        const double primalValue = minimize ? 10.0 : -10.0;
+
+        PrimalSolution primalSolution;
+        primalSolution.point = VectorDouble(env->reformulatedProblem->properties.numberOfVariables, 0.0);
+        primalSolution.sourceType = E_PrimalSolutionSource::MIPSolutionPool;
+        primalSolution.sourceDescription = "test";
+        primalSolution.objValue = primalValue;
+        primalSolution.iterFound = 0;
+        primalSolution.maxIntegerToleranceError = 0.0;
+
+        env->results->addPrimalSolution(primalSolution);
+
+        auto addCandidate = [&](double objValue) {
+            DualSolution candidate = { VectorDouble {}, E_DualSolutionSource::MIPSolverBound, objValue, 0, false };
+            env->dualSolver->addDualSolutionCandidate(candidate);
+            env->dualSolver->checkDualSolutionCandidates();
+        };
+
+        auto check = [&](const std::string& description, double expected) {
+            double dualBound = env->results->getCurrentDualBound();
+
+            if(std::abs(dualBound - expected) > 1e-8)
+            {
+                std::cout << name(mipSolver) << (minimize ? " (min)" : " (max)") << ": " << description
+                          << ", dual bound is " << dualBound << " instead of " << expected << '\n';
+                passed = false;
+            }
+        };
+
+        // A bound on the correct side of the primal bound is used as it is
+        double validBound = minimize ? primalValue - 1.0 : primalValue + 1.0;
+        addCandidate(validBound);
+        check("a valid dual bound was not accepted", validBound);
+
+        // Passing the primal bound by more than numerical error means the candidate is not a valid bound. The
+        // difference is kept within the relative objective gap tolerance, since that is the window in which the
+        // candidate used to be accepted as the primal bound.
+        addCandidate(minimize ? primalValue + 0.005 : primalValue - 0.005);
+        check("a dual bound past the primal bound was accepted", validBound);
+
+        // Passing it by numerical error only means that the primal solution is optimal
+        addCandidate(minimize ? primalValue + 1e-12 : primalValue - 1e-12);
+        check("a dual bound within numerical error of the primal bound was not accepted", primalValue);
+    }
+
+    return passed;
+}
+
+// Two points that differ in variables of small magnitude, e.g. binary ones, must not be taken for the same point
+// when the point also holds a variable of large magnitude, since that variable would otherwise dominate the hash.
+bool testHyperplanesDifferingInSmallVariables(ES_MIPSolver mipSolver)
+{
+    // Only the constraints of the model are needed, the problem is never solved
+    auto solver = makeSolver(mipSolver, ModelKind::Infeasible, true);
+
+    if(!solver)
+    {
+        std::cout << "Could not create problem for " << name(mipSolver) << '\n';
+        return false;
+    }
+
+    auto env = solver->getEnvironment();
+
+    // Duplicates are not checked in single-tree mode, since lazy constraints are not always added
+    solver->updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::MultiTree));
+    env->results->createIteration();
+
+    auto& constraints = env->reformulatedProblem->numericConstraints;
+
+    if(constraints.size() < 2)
+    {
+        std::cout << name(mipSolver) << ": expected two constraints in the reformulated problem, got "
+                  << constraints.size() << '\n';
+        return false;
+    }
+
+    bool passed = true;
+
+    auto check = [&](bool condition, const std::string& description) {
+        if(!condition)
+        {
+            std::cout << name(mipSolver) << ": " << description << '\n';
+            passed = false;
+        }
+    };
+
+    // A point holding a variable of large magnitude next to variables of the magnitude of binary ones
+    VectorDouble point { 1.01e9, 1.0, 0.0, 0.5, 0.25, 3.0 };
+
+    auto hyperplane = std::make_shared<ConstraintHyperplane>();
+    hyperplane->source = E_HyperplaneSource::External;
+    hyperplane->sourceConstraint = constraints[0];
+    hyperplane->generatedPoint = point;
+    hyperplane->isGlobal = true;
+
+    env->dualSolver->addGeneratedHyperplane(hyperplane);
+
+    int firstIndex = constraints[0]->getIndex();
+    int secondIndex = constraints[1]->getIndex();
+
+    check(env->dualSolver->hasHyperplaneBeenAdded(point, firstIndex), "the same point was not detected");
+    check(!env->dualSolver->hasHyperplaneBeenAdded(point, secondIndex), "the point was detected for another "
+                                                                       "constraint");
+
+    // Changing the variable of large magnitude by an amount that is insignificant for it keeps the same point
+    VectorDouble rounded = point;
+    rounded[0] += 1e-11;
+    check(env->dualSolver->hasHyperplaneBeenAdded(rounded, firstIndex),
+        "a point differing within rounding error was not detected");
+
+    // Two binary variables differing makes it another point, also when the variable of large magnitude changes
+    VectorDouble flipped = point;
+    flipped[0] -= 0.0558;
+    flipped[1] = 0.0;
+    flipped[2] = 1.0;
+    check(!env->dualSolver->hasHyperplaneBeenAdded(flipped, firstIndex),
+        "a point differing in variables of small magnitude was taken for the same point");
+
+    return passed;
+}
+
+// A dual bound that has passed the primal bound can only be valid within numerical error. Setting one that has
+// passed it by more must not move the dual bound to the primal bound, since the objective gap would then be closed
+// on a bound that does not hold for the problem.
+bool testDualBoundPastPrimalBoundIsNotUsed(ES_MIPSolver mipSolver)
+{
+    bool passed = true;
+
+    for(bool minimize : { true, false })
+    {
+        auto solver = makeSolver(mipSolver, ModelKind::Bounded, minimize);
+
+        if(!solver)
+        {
+            std::cout << "Could not create problem for " << name(mipSolver) << '\n';
+            return false;
+        }
+
+        auto env = solver->getEnvironment();
+        env->results->createIteration();
+
+        const double primalValue = minimize ? 10.0 : -10.0;
+
+        PrimalSolution primalSolution;
+        primalSolution.point = VectorDouble(env->reformulatedProblem->properties.numberOfVariables, 0.0);
+        primalSolution.sourceType = E_PrimalSolutionSource::MIPSolutionPool;
+        primalSolution.sourceDescription = "test";
+        primalSolution.objValue = primalValue;
+        primalSolution.iterFound = 0;
+        primalSolution.maxIntegerToleranceError = 0.0;
+
+        env->results->addPrimalSolution(primalSolution);
+
+        auto check = [&](const std::string& description, double expected) {
+            double dualBound = env->results->getCurrentDualBound();
+
+            if(std::abs(dualBound - expected) > 1e-8)
+            {
+                std::cout << name(mipSolver) << (minimize ? " (min)" : " (max)") << ": " << description
+                          << ", dual bound is " << dualBound << " instead of " << expected << '\n';
+                passed = false;
+            }
+        };
+
+        // A bound on the correct side of the primal bound is used as it is
+        double validBound = minimize ? primalValue - 1.0 : primalValue + 1.0;
+        env->results->setDualBound(validBound);
+        check("a valid dual bound was not used", validBound);
+
+        // Passing the primal bound by more than numerical error means the value is not a bound for the problem
+        env->results->setDualBound(minimize ? primalValue + 0.005 : primalValue - 0.005);
+        check("a dual bound past the primal bound was used", validBound);
+
+        // Passing it by numerical error only means that the primal solution is optimal
+        env->results->setDualBound(minimize ? primalValue + 1e-12 : primalValue - 1e-12);
+        check("a dual bound within numerical error of the primal bound was not used", primalValue);
+    }
+
+    return passed;
+}
+
 std::vector<ES_MIPSolver> compiledSolvers()
 {
     std::vector<ES_MIPSolver> solvers;
@@ -309,6 +661,36 @@ int DualBoundTest(int argc, char* argv[])
         for(auto mipSolver : compiledSolvers())
             passed = testConvexBoundingRejectsUnboundedModel(mipSolver) && passed;
         std::cout << "Finished test that convex bounding rejects an unbounded bounding problem.\n";
+        break;
+    case 4:
+        std::cout << "Starting test that duplicate hyperplanes are detected:\n";
+        for(auto mipSolver : compiledSolvers())
+            passed = testDuplicateHyperplanesAreDetected(mipSolver) && passed;
+        std::cout << "Finished test that duplicate hyperplanes are detected.\n";
+        break;
+    case 5:
+        std::cout << "Starting test that a loose gap tolerance does not give an invalid dual bound:\n";
+        for(auto mipSolver : compiledSolvers())
+            passed = testDualBoundWithLooseGapTolerance(mipSolver) && passed;
+        std::cout << "Finished test that a loose gap tolerance does not give an invalid dual bound.\n";
+        break;
+    case 6:
+        std::cout << "Starting test that a dual bound past the primal bound is not accepted:\n";
+        for(auto mipSolver : compiledSolvers())
+            passed = testDualBoundCandidatePastPrimalBound(mipSolver) && passed;
+        std::cout << "Finished test that a dual bound past the primal bound is not accepted.\n";
+        break;
+    case 7:
+        std::cout << "Starting test that points differing in variables of small magnitude are kept apart:\n";
+        for(auto mipSolver : compiledSolvers())
+            passed = testHyperplanesDifferingInSmallVariables(mipSolver) && passed;
+        std::cout << "Finished test that points differing in variables of small magnitude are kept apart.\n";
+        break;
+    case 8:
+        std::cout << "Starting test that a dual bound past the primal bound is not used:\n";
+        for(auto mipSolver : compiledSolvers())
+            passed = testDualBoundPastPrimalBoundIsNotUsed(mipSolver) && passed;
+        std::cout << "Finished test that a dual bound past the primal bound is not used.\n";
         break;
     default:
         passed = false;

@@ -677,7 +677,7 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionSum> 
 
     NonlinearExpressions children;
 
-    std::map<VariablePtr, double> linearVariableCoefficients;
+    SparseVariableVector linearVariableCoefficients;
 
     for(auto& C : expression->children)
     {

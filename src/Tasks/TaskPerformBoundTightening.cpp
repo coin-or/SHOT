@@ -45,6 +45,9 @@ TaskPerformBoundTightening::TaskPerformBoundTightening(EnvironmentPtr envPtr, Pr
         relaxedProblem = sourceProblem->createCopy(env, true, true);
         POASolver = std::make_shared<NLPSolverSHOT>(env, relaxedProblem);
 
+        // The generated hyperplanes are instead added as linear constraints to the source problem in createPOA()
+        POASolver->reuseHyperplanes = false;
+
         POASolver->solver->updateSetting("Termination.ConstraintTolerance",
             env->settings->getSetting<double>("Model.BoundTightening.InitialPOA.ConstraintTolerance"));
         POASolver->solver->updateSetting("Termination.ObjectiveConstraintTolerance",

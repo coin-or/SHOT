@@ -538,18 +538,20 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
     E_ProblemSolutionStatus MIPSolutionStatus;
     cachedSolutionHasChanged = true;
 
-    const int numArguments = 17;
-    char* argv[numArguments];
+    // The arguments are counted as they are added, since some of them are only passed on conditionally
+    const int maxArguments = 21;
+    char* argv[maxArguments];
+    int numArguments = 0;
     std::string arg;
 
-    argv[0] = strdup("");
-    argv[1] = strdup("-autoscale");
+    argv[numArguments++] = strdup("");
+    argv[numArguments++] = strdup("-autoscale");
     if(env->settings->getSetting<bool>("Subsolver.Cbc.AutoScale"))
-        argv[2] = strdup("on");
+        argv[numArguments++] = strdup("on");
     else
-        argv[2] = strdup("off");
+        argv[numArguments++] = strdup("off");
 
-    argv[3] = strdup("-nodestrategy");
+    argv[numArguments++] = strdup("-nodestrategy");
 
     switch(env->settings->getSetting<int>("Subsolver.Cbc.NodeStrategy"))
     {
@@ -586,9 +588,9 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
         break;
     }
 
-    argv[4] = strdup(arg.c_str());
+    argv[numArguments++] = strdup(arg.c_str());
 
-    argv[5] = strdup("-scaling");
+    argv[numArguments++] = strdup("-scaling");
 
     switch(env->settings->getSetting<int>("Subsolver.Cbc.Scaling"))
     {
@@ -621,18 +623,18 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
         break;
     }
 
-    argv[6] = strdup(arg.c_str());
+    argv[numArguments++] = strdup(arg.c_str());
 
-    argv[7] = strdup("-strategy");
+    argv[numArguments++] = strdup("-strategy");
     arg = std::to_string(env->settings->getSetting<int>("Subsolver.Cbc.Strategy"));
-    argv[8] = strdup(arg.c_str());
+    argv[numArguments++] = strdup(arg.c_str());
 
     /*
         TODO: Adding cutoffs seems to have stability-issues (status changes from unbounded -> infeasible in some
         cases, cf. https://github.com/coin-or/SHOT/issues/133). As the cutoff is added as a constraint, this can be
         deactivated here.
 
-        argv[9] = strdup("-cutoff");
+        argv[numArguments++] = strdup("-cutoff");
 
         if(this->cutOff > 1e100)
             arg = "1e100";
@@ -641,33 +643,33 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
         else
             arg = fmt::format("{}", this->cutOff);
 
-        argv[10] = strdup(arg.c_str());*/
+        argv[numArguments++] = strdup(arg.c_str());*/
 
-    argv[9] = strdup("-sec");
+    argv[numArguments++] = strdup("-sec");
     arg = fmt::format("{}", this->timeLimit);
-    argv[10] = strdup(arg.c_str());
+    argv[numArguments++] = strdup(arg.c_str());
+
+    // A seed of zero leaves Cbc and Clp at their own defaults. Otherwise both of them are given it, since
+    // they draw from separate generators: Cbc's covers the heuristics and Clp's the simplex perturbation.
+    if(int randomSeed = env->settings->getSetting<int>("Dual.MIP.RandomSeed"); randomSeed != 0)
+    {
+        arg = std::to_string(randomSeed);
+        argv[numArguments++] = strdup("-randomCbcSeed");
+        argv[numArguments++] = strdup(arg.c_str());
+        argv[numArguments++] = strdup("-randomSeed");
+        argv[numArguments++] = strdup(arg.c_str());
+    }
 
     // pass threads option if not running single-threaded (101 = 1 thread + deterministic multithreading)
     if(numberOfThreads != 1 && numberOfThreads != 101)
     {
-        argv[11] = strdup("-threads");
+        argv[numArguments++] = strdup("-threads");
         arg = std::to_string(numberOfThreads);
-        argv[12] = strdup(arg.c_str());
+        argv[numArguments++] = strdup(arg.c_str());
+    }
 
-        argv[13] = strdup("-solve");
-        argv[14] = strdup("-quit");
-        argv[15] = strdup("");
-        argv[16] = strdup("");
-    }
-    else
-    {
-        argv[11] = strdup("-solve");
-        argv[12] = strdup("-quit");
-        argv[13] = strdup("");
-        argv[14] = strdup("");
-        argv[15] = strdup("");
-        argv[16] = strdup("");
-    }
+    argv[numArguments++] = strdup("-solve");
+    argv[numArguments++] = strdup("-quit");
 
     try
     {
@@ -972,18 +974,20 @@ bool MIPSolverCbc::repairInfeasibility()
 
         cachedSolutionHasChanged = true;
 
-        const int numArguments = 17;
-        char* argv[numArguments];
+        // The arguments are counted as they are added, since some of them are only passed on conditionally
+        const int maxArguments = 21;
+        char* argv[maxArguments];
+        int numArguments = 0;
         std::string arg;
 
-        argv[0] = strdup("");
-        argv[1] = strdup("-autoscale");
+        argv[numArguments++] = strdup("");
+        argv[numArguments++] = strdup("-autoscale");
         if(env->settings->getSetting<bool>("Subsolver.Cbc.AutoScale"))
-            argv[2] = strdup("on");
+            argv[numArguments++] = strdup("on");
         else
-            argv[2] = strdup("off");
+            argv[numArguments++] = strdup("off");
 
-        argv[3] = strdup("-nodestrategy");
+        argv[numArguments++] = strdup("-nodestrategy");
 
         switch(env->settings->getSetting<int>("Subsolver.Cbc.NodeStrategy"))
         {
@@ -1020,9 +1024,9 @@ bool MIPSolverCbc::repairInfeasibility()
             break;
         }
 
-        argv[4] = strdup(arg.c_str());
+        argv[numArguments++] = strdup(arg.c_str());
 
-        argv[5] = strdup("-scaling");
+        argv[numArguments++] = strdup("-scaling");
 
         switch(env->settings->getSetting<int>("Subsolver.Cbc.Scaling"))
         {
@@ -1055,14 +1059,14 @@ bool MIPSolverCbc::repairInfeasibility()
             break;
         }
 
-        argv[6] = strdup(arg.c_str());
+        argv[numArguments++] = strdup(arg.c_str());
 
-        argv[7] = strdup("-strategy");
+        argv[numArguments++] = strdup("-strategy");
         arg = std::to_string(env->settings->getSetting<int>("Subsolver.Cbc.Strategy"));
-        argv[8] = strdup(arg.c_str());
+        argv[numArguments++] = strdup(arg.c_str());
 
         /*
-        argv[9] = strdup("-cutoff");
+        argv[numArguments++] = strdup("-cutoff");
 
         if(this->cutOff > 1e100)
             arg = "1e100";
@@ -1071,33 +1075,33 @@ bool MIPSolverCbc::repairInfeasibility()
         else
             arg = fmt::format("{}", this->cutOff);
 
-        argv[10] = strdup(arg.c_str());*/
+        argv[numArguments++] = strdup(arg.c_str());*/
 
-        argv[9] = strdup("-sec");
+        argv[numArguments++] = strdup("-sec");
         arg = fmt::format("{}", this->timeLimit);
-        argv[10] = strdup(arg.c_str());
+        argv[numArguments++] = strdup(arg.c_str());
+
+        // A seed of zero leaves Cbc and Clp at their own defaults. Otherwise both of them are given it, since
+        // they draw from separate generators: Cbc's covers the heuristics and Clp's the simplex perturbation.
+        if(int randomSeed = env->settings->getSetting<int>("Dual.MIP.RandomSeed"); randomSeed != 0)
+        {
+            arg = std::to_string(randomSeed);
+            argv[numArguments++] = strdup("-randomCbcSeed");
+            argv[numArguments++] = strdup(arg.c_str());
+            argv[numArguments++] = strdup("-randomSeed");
+            argv[numArguments++] = strdup(arg.c_str());
+        }
 
         // pass threads option if not running single-threaded (101 = 1 thread + deterministic multithreading)
         if(numberOfThreads != 1 && numberOfThreads != 101)
         {
-            argv[11] = strdup("-threads");
+            argv[numArguments++] = strdup("-threads");
             arg = std::to_string(numberOfThreads);
-            argv[12] = strdup(arg.c_str());
+            argv[numArguments++] = strdup(arg.c_str());
+        }
 
-            argv[13] = strdup("-solve");
-            argv[14] = strdup("-quit");
-            argv[15] = strdup("");
-            argv[16] = strdup("");
-        }
-        else
-        {
-            argv[11] = strdup("-solve");
-            argv[12] = strdup("-quit");
-            argv[13] = strdup("");
-            argv[14] = strdup("");
-            argv[15] = strdup("");
-            argv[16] = strdup("");
-        }
+        argv[numArguments++] = strdup("-solve");
+        argv[numArguments++] = strdup("-quit");
 
         CbcMain1(numArguments, const_cast<const char**>(argv), *cbcModel, dummyCallback, solverData);
 

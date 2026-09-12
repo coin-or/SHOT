@@ -90,12 +90,10 @@ void TaskSelectHyperplanesECP::run(std::vector<SolutionPoint> solPoints)
                 continue;
             }
 
-            double hash = Utilities::calculateHash(solPoints.at(i).point);
-
-            if(env->dualSolver->hasHyperplaneBeenAdded(hash, NCV.constraint->getIndex()))
+            if(env->dualSolver->hasHyperplaneBeenAdded(solPoints.at(i).point, NCV.constraint->getIndex()))
             {
                 env->output->outputDebug("         Hyperplane already added for constraint "
-                    + std::to_string(NCV.constraint->getIndex()) + " and hash " + std::to_string(hash));
+                    + std::to_string(NCV.constraint->getIndex()));
                 continue;
             }
 
