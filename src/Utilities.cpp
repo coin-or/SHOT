@@ -15,7 +15,6 @@
 #include <iostream>
 #include <limits>
 #include <random>
-#include <numeric>
 #include <algorithm>
 
 #include "Utilities.h"
@@ -518,19 +517,19 @@ double fixedPseudoRandomNumber(size_t index, size_t stream, double low, double h
     return (low + (high - low) * unitValue);
 }
 
-VectorDouble hashComparisonVector;
-
 template double calculateHash(VectorDouble const& point);
 template double calculateHash(VectorInteger const& point);
 
 template <typename T> double calculateHash(std::vector<T> const& point)
 {
-    auto length = point.size();
+    // The coefficients are calculated where they are used instead of being kept in a vector that grows as longer
+    // points are hashed. That vector was shared by every solver in the process, and the hashes are calculated in
+    // the callbacks of the MIP solver, which run in parallel, so extending it could reallocate it while another
+    // thread was reading it.
+    double scalarProduct = 0.0;
 
-    while(hashComparisonVector.size() < length)
-        hashComparisonVector.push_back(fixedPseudoRandomNumber(hashComparisonVector.size(), 0, 1.0, 101.0));
-
-    double scalarProduct = std::inner_product(point.begin(), point.end(), hashComparisonVector.begin(), 0.0);
+    for(size_t i = 0; i < point.size(); i++)
+        scalarProduct += fixedPseudoRandomNumber(i, 0, 1.0, 101.0) * point[i];
 
     return (scalarProduct);
 }

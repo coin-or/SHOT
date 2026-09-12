@@ -136,26 +136,8 @@ void DualSolver::checkDualSolutionCandidates()
     this->dualSolutionCandidates.clear();
 }
 
-void DualSolver::extendHashCoefficients(size_t length)
-{
-    if(hashCoefficients[0].size() >= length)
-        return;
-
-    // The coefficients are generated from the position rather than drawn from a randomly seeded engine, so that
-    // two runs of the same problem detect the same hyperplanes as duplicates and follow the same search path
-    for(size_t stream = 0; stream < 2; stream++)
-    {
-        auto& coefficients = hashCoefficients[stream];
-
-        while(coefficients.size() < length)
-            coefficients.push_back(Utilities::fixedPseudoRandomNumber(coefficients.size(), stream, 1.0, 101.0));
-    }
-}
-
 std::pair<double, double> DualSolver::calculateHashes(const VectorDouble& point)
 {
-    extendHashCoefficients(point.size());
-
     double first = 0.0;
     double second = 0.0;
 
@@ -166,8 +148,11 @@ std::pair<double, double> DualSolver::calculateHashes(const VectorDouble& point)
         // to it, and two points differing in such variables are taken for the same point.
         double value = point[i] / (1.0 + std::abs(point[i]));
 
-        first += hashCoefficients[0][i] * value;
-        second += hashCoefficients[1][i] * value;
+        // The coefficients are calculated where they are used rather than kept in a vector that is extended when
+        // a longer point is hashed, since the hyperplanes are generated in the callbacks of the MIP solver, which
+        // run in parallel, and extending the vector could reallocate it while another thread was reading it
+        first += Utilities::fixedPseudoRandomNumber(i, 0, 1.0, 101.0) * value;
+        second += Utilities::fixedPseudoRandomNumber(i, 1, 1.0, 101.0) * value;
     }
 
     return (std::make_pair(first, second));

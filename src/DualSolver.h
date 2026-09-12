@@ -59,15 +59,10 @@ private:
     // when both of them match.
     std::map<int, std::multimap<double, double>> generatedHyperplaneHashes;
 
-    // The coefficients of the two hashes, generated from their position so that they are the same in every run
-    VectorDouble hashCoefficients[2];
-
     // Counts hyperplanes generated again for a point they have already been generated in, to detect that the dual
     // problem is not making progress
     int numberOfRepeatedHyperplanes = 0;
     bool repeatedHyperplaneWarningShown = false;
-
-    void extendHashCoefficients(size_t length);
 
     std::pair<double, double> calculateHashes(const VectorDouble& point);
     std::pair<double, double> calculateHyperplaneHashes(NumericHyperplanePtr hyperplane);
