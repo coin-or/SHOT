@@ -15,6 +15,7 @@ namespace SHOT
 {
 
 class Constraint;
+class NumericConstraint;
 class TaskSelectHyperplanesECP;
 
 class TaskSelectHyperplanesESH : public TaskBase
@@ -31,5 +32,10 @@ public:
 private:
     std::unique_ptr<TaskSelectHyperplanesECP> tSelectHPPts;
     std::vector<Constraint*> nonlinearConstraints;
+
+    // The point the hyperplane for the constraint is generated in, which is the point from the root search unless
+    // the hyperplane there does not cut off the solution point
+    VectorDouble selectHyperplanePoint(
+        const VectorDouble& externalPoint, const VectorDouble& solutionPoint, NumericConstraint* constraint);
 };
 } // namespace SHOT

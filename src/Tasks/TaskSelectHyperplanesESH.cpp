@@ -36,6 +36,43 @@ TaskSelectHyperplanesESH::~TaskSelectHyperplanesESH() = default;
 
 void TaskSelectHyperplanesESH::run() { this->run(env->results->getPreviousIteration()->solutionPoints); }
 
+VectorDouble TaskSelectHyperplanesESH::selectHyperplanePoint(
+    const VectorDouble& externalPoint, const VectorDouble& solutionPoint, NumericConstraint* constraint)
+{
+    // The linearization of a constraint in a point only cuts off a solution point on the other side of it. The
+    // root search can return a point where this is not the case, e.g. when the interior point is not strictly
+    // interior, and the hyperplane then makes no progress: the same solution point is returned again, and with it
+    // the same hyperplane. Since the linearization in the solution point itself cuts the point off whenever the
+    // constraint is violated there, that point is used instead.
+    auto nonlinearConstraint = dynamic_cast<NonlinearConstraint*>(constraint);
+
+    if(!nonlinearConstraint)
+        return (externalPoint);
+
+    auto constraintValue = nonlinearConstraint->calculateNumericValue(externalPoint);
+
+    // The hyperplane is generated for the side of the constraint that is violated, and it is the negated function
+    // that is linearized for the lower bound, the same way as when the hyperplane is created for the dual problem
+    double signFactor = (constraintValue.isFulfilledRHS && !constraintValue.isFulfilledLHS) ? -1.0 : 1.0;
+
+    double valueInSolutionPoint
+        = (signFactor < 0.0) ? constraintValue.normalizedLHSValue : constraintValue.normalizedRHSValue;
+
+    for(auto& G : nonlinearConstraint->calculateGradient(externalPoint, true))
+    {
+        valueInSolutionPoint += signFactor * G.second
+            * (solutionPoint.at(G.first->getIndex()) - externalPoint.at(G.first->getIndex()));
+    }
+
+    if(valueInSolutionPoint > 0.0)
+        return (externalPoint);
+
+    env->output->outputDebug("         Hyperplane in the point from the root search does not cut off the solution "
+                             "point, using the solution point instead.");
+
+    return (solutionPoint);
+}
+
 void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
 {
     if(env->reformulatedProblem->properties.numberOfNonlinearConstraints == 0)
@@ -256,7 +293,8 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
 
                 auto hyperplane = std::make_shared<ConstraintHyperplane>();
                 hyperplane->sourceConstraint = externalConstraintValue.constraint;
-                hyperplane->generatedPoint = externalPoint;
+                hyperplane->generatedPoint = selectHyperplanePoint(
+                    externalPoint, solPoints.at(solutionPtIndex).point, externalConstraintValue.constraint.get());
                 hyperplane->isGlobal = true; // Only convex constraints used so far
 
                 if(solPoints.at(solutionPtIndex).isRelaxedPoint)
@@ -338,7 +376,8 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
 
                     auto hyperplane = std::make_shared<ConstraintHyperplane>();
                     hyperplane->sourceConstraint = externalConstraintValue.constraint;
-                    hyperplane->generatedPoint = externalPoint;
+                    hyperplane->generatedPoint = selectHyperplanePoint(
+                        externalPoint, solPoints.at(solutionPtIndex).point, externalConstraintValue.constraint.get());
                     hyperplane->isGlobal
                         = (externalConstraintValue.constraint->properties.convexity <= E_Convexity::Convex);
 
@@ -438,7 +477,8 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
 
                     auto hyperplane = std::make_shared<ConstraintHyperplane>();
                     hyperplane->sourceConstraint = externalConstraintValue.constraint;
-                    hyperplane->generatedPoint = externalPoint;
+                    hyperplane->generatedPoint = selectHyperplanePoint(
+                        externalPoint, solPoints.at(solutionPtIndex).point, externalConstraintValue.constraint.get());
                     hyperplane->isGlobal
                         = (externalConstraintValue.constraint->properties.convexity == E_Convexity::Convex);
 
@@ -548,7 +588,9 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
 
                         auto hyperplane = std::make_shared<ConstraintHyperplane>();
                         hyperplane->sourceConstraint = externalConstraintValue.constraint;
-                        hyperplane->generatedPoint = externalPoint;
+                        hyperplane->generatedPoint = selectHyperplanePoint(
+                            externalPoint, solPoints.at(solutionPtIndex).point,
+                            externalConstraintValue.constraint.get());
                         hyperplane->isGlobal = (NCV.constraint->properties.convexity <= E_Convexity::Convex);
 
                         if(solPoints.at(solutionPtIndex).isRelaxedPoint)
