@@ -528,10 +528,16 @@ E_NLPSolutionStatus NLPSolverConopt::solveProblemInstance()
         if(feasible)
             return status == 1 && (modelStatus == 1 || modelStatus == 2) ? E_NLPSolutionStatus::Optimal
                                                                          : E_NLPSolutionStatus::Feasible;
+        // Do not expose an unvalidated iterate through the solution accessors.
+        solution.clear();
         if(status == 2)
             return E_NLPSolutionStatus::IterationLimit;
         if(status == 3 || output.timedOut)
             return E_NLPSolutionStatus::TimeLimit;
+        // A solver error or user interruption is not an infeasibility proof,
+        // even when the last model status describes a locally infeasible point.
+        if(status >= 6 && status != 15)
+            return E_NLPSolutionStatus::Error;
         if(modelStatus == 4 || modelStatus == 5)
             return E_NLPSolutionStatus::Infeasible;
         if(modelStatus == 3)

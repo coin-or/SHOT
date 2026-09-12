@@ -106,7 +106,7 @@ set(cpptests ${cpptests} Solver)
 
 if(HAS_CONOPT)
   list(APPEND cpptests Conopt)
-  set(Conopt_parts 1 2 3 4 5 6 7 8 9 10)
+  set(Conopt_parts 1 2 3 4 5 6 7 8 9 10 11 12)
 endif()
 
 if(HAS_IPOPT)

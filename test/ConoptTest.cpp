@@ -182,6 +182,43 @@ int ConoptTest(int argc, char* argv[])
             NLPSolverConopt limited(env, large);
             require(limited.solveProblem() == E_NLPSolutionStatus::Error, "Expected demo limit error");
             require(limited.getSolution().empty(), "Demo failure returned a point");
+            env->problem = large;
+            env->reformulatedProblem = large;
+            env->settings->updateSetting("Primal.FixedInteger.Solver", static_cast<int>(ES_PrimalNLPSolver::Conopt));
+            env->settings->updateSetting("Primal.FixedInteger.CreateInfeasibilityCut", false);
+            env->settings->updateSetting("Dual.HyperplaneCuts.UseIntegerCuts", false);
+            env->results->createIteration();
+            PrimalFixedNLPCandidate candidate { };
+            candidate.point = { 1.5 };
+            candidate.sourceType = E_PrimalNLPSource::FirstSolution;
+            env->primalSolver->fixedPrimalNLPCandidates.push_back(candidate);
+            TaskSelectPrimalCandidatesFromNLP task(env, false, true);
+            task.run();
+            require(!env->tasks->isTerminated(), "Demo failure terminated the overall solve");
+            require(!env->results->hasPrimalSolution(), "Demo failure submitted a candidate");
+            expect(nlp, 6.0); // A subsequent, smaller NLP must still work.
+        }
+        else if(part == 11 || part == 12)
+        {
+            env->settings->updateSetting("Primal.FixedInteger.IterationLimit", 0);
+            nlp.setStartingPoint({ 0, 1 }, { 0.0, part == 11 ? 0.1 : 1.5 });
+            auto status = nlp.solveProblem();
+            if(part == 11)
+            {
+                // Conopt 4.39.2 can report solver status 11 at a zero iteration
+                // limit. Neither that nor an iteration interrupt proves infeasibility.
+                require(status == E_NLPSolutionStatus::IterationLimit || status == E_NLPSolutionStatus::Error,
+                    "Interrupted solve incorrectly classified as infeasible");
+                require(nlp.getSolution().empty(), "Infeasible iterate exposed after iteration limit");
+                require(std::isnan(nlp.getObjectiveValue()), "Failed solve exposed an objective");
+            }
+            else
+            {
+                require(status == E_NLPSolutionStatus::Feasible, "Feasible limit candidate discarded");
+                require(std::abs(nlp.getObjectiveValue() - 7.25) < 1e-5, "Incorrect limit candidate");
+            }
+            env->settings->updateSetting("Primal.FixedInteger.IterationLimit", 10000000);
+            expect(nlp, 6.0);
         }
         else if(part == 10)
         {
