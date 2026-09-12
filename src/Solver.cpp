@@ -1371,6 +1371,7 @@ void Solver::initializeSettings()
     enumPrimalNLPSolver.push_back("Ipopt");
     enumPrimalNLPSolver.push_back("GAMS");
     enumPrimalNLPSolver.push_back("SHOT");
+    enumPrimalNLPSolver.push_back("Conopt");
 
     env->settings->createSetting("Primal.FixedInteger.Solver", static_cast<int>(ES_PrimalNLPSolver::Ipopt),
         "NLP solver to use", enumPrimalNLPSolver, 0);
@@ -1689,8 +1690,17 @@ void Solver::initializeSettings()
 
 #endif
 
-    // Subsolver settings: Ipopt
+    // Subsolver settings: CONOPT
 
+#ifdef HAS_CONOPT
+    env->settings->createSettingGroup("Subsolver", "Conopt", "CONOPT settings", "Options for the CONOPT NLP solver");
+    env->settings->createSetting("Subsolver.Conopt.FeasibilityTolerance", 1e-9,
+        "CONOPT feasibility tolerance (Rtnwma)", 1e-12, 1e-2);
+    env->settings->createSetting("Subsolver.Conopt.OptimalityTolerance", 1e-9,
+        "CONOPT reduced-gradient tolerance (Rtredg)", 1e-12, 1e-2);
+#endif
+
+    // Subsolver settings: Ipopt
 #ifdef HAS_IPOPT
 
     env->settings->createSettingGroup("Subsolver", "Ipopt", "Ipopt", "");
@@ -1858,6 +1868,14 @@ void Solver::verifySettings()
     // Checking for errors in NLP solver selection
 
     bool NLPSolverDefined = true;
+#ifndef HAS_CONOPT
+    if(static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("Primal.FixedInteger.Solver"))
+        == ES_PrimalNLPSolver::Conopt)
+    {
+        env->output->outputWarning(" SHOT has not been compiled with support for CONOPT.");
+        NLPSolverDefined = false;
+    }
+#endif
 
 #ifndef HAS_IPOPT
     if(static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("Primal.FixedInteger.Solver"))
@@ -1908,6 +1926,10 @@ void Solver::verifySettings()
             "Primal.FixedInteger.Solver", (int)ES_PrimalNLPSolver::Ipopt, E_SettingPriority::SolverCompatibility);
         env->output->outputWarning(" Using Ipopt as NLP solver instead.");
 
+#elif defined(HAS_CONOPT)
+        env->settings->updateSetting(
+            "Primal.FixedInteger.Solver", (int)ES_PrimalNLPSolver::Conopt, E_SettingPriority::SolverCompatibility);
+        env->output->outputWarning(" Using CONOPT as NLP solver instead.");
 #elif HAS_GAMS
         env->settings->updateSetting(
             "Primal.FixedInteger.Solver", (int)ES_PrimalNLPSolver::GAMS, E_SettingPriority::SolverCompatibility);
@@ -2250,6 +2272,9 @@ std::vector<ES_PrimalNLPSolver> Solver::getSupportedNLPSolvers()
 {
     std::vector<ES_PrimalNLPSolver> solvers;
     solvers.push_back(ES_PrimalNLPSolver::SHOT); // Always available
+#ifdef HAS_CONOPT
+    solvers.push_back(ES_PrimalNLPSolver::Conopt);
+#endif
 #ifdef HAS_IPOPT
     solvers.push_back(ES_PrimalNLPSolver::Ipopt);
 #endif
@@ -2313,6 +2338,12 @@ bool Solver::hasNLPSolver(ES_PrimalNLPSolver solver)
 {
     switch(solver)
     {
+    case ES_PrimalNLPSolver::Conopt:
+#ifdef HAS_CONOPT
+        return true;
+#else
+        return false;
+#endif
     case ES_PrimalNLPSolver::SHOT:
         return true; // Always available
     case ES_PrimalNLPSolver::Ipopt:

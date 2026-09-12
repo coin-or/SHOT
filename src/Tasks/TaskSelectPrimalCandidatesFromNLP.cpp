@@ -27,6 +27,10 @@
 #include "../Tasks/TaskSelectHyperplanesESH.h"
 #include "../Tasks/TaskSelectHyperplanesECP.h"
 
+#ifdef HAS_CONOPT
+#include "../NLPSolver/NLPSolverConopt.h"
+#endif
+
 #ifdef HAS_IPOPT
 #include "../NLPSolver/NLPSolverIpoptRelaxed.h"
 #endif
@@ -101,6 +105,12 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(
     }
 #endif
 
+#ifdef HAS_CONOPT
+    case ES_PrimalNLPSolver::Conopt:
+        env->results->usedPrimalNLPSolver = ES_PrimalNLPSolver::Conopt;
+        NLPSolver = std::make_shared<NLPSolverConopt>(env, sourceProblem);
+        break;
+#endif
     case(ES_PrimalNLPSolver::SHOT):
     {
         // Always use the reformulated problem with SHOT

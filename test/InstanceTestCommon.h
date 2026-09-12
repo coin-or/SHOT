@@ -163,6 +163,8 @@ static E_InstanceResult solveInstance(const InstanceEntry& entry, const std::str
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
     solver->updateSetting("Output.Console.LogLevel", static_cast<int>(verbose ? E_LogLevel::Info : E_LogLevel::Off));
     solver->updateLogLevels();
+    if(verbose)
+        solver->updateSetting("Output.Console.DualSolver.Show", true);
     solver->updateSetting("Dual.MIP.Solver", static_cast<int>(mipSolver));
     solver->updateSetting("Primal.FixedInteger.Solver", static_cast<int>(nlpSolver));
     solver->updateSetting("Termination.TimeLimit", timeLimit);
@@ -419,6 +421,9 @@ static int runInstanceTestMain(int argc, char* argv[], InstanceTestScope scope, 
     case 7:
         std::cout << label << " tests: Cplex + SHOT (NLP)\n";
         passed = runInstanceTests(ES_MIPSolver::Cplex, ES_PrimalNLPSolver::SHOT, verbose, "Cplex + SHOT", scope);
+        break;
+    case 9:
+        passed = runInstanceTests(ES_MIPSolver::Highs, ES_PrimalNLPSolver::Conopt, verbose, "HiGHS + CONOPT", scope);
         break;
     case 8:
         std::cout << label << " tests: Cbc + SHOT (NLP)\n";

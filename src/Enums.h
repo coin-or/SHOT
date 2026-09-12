@@ -387,6 +387,7 @@ enum class ES_PrimalNLPSolver
     Ipopt,
     GAMS,
     SHOT,
+    Conopt,
     None
 };
 

@@ -1218,6 +1218,9 @@ std::string Results::getResultsTrace()
     case(ES_PrimalNLPSolver::GAMS):
         ss << env->settings->getSetting<std::string>("Subsolver.GAMS.NLP.Solver");
         break;
+    case ES_PrimalNLPSolver::Conopt:
+        ss << "CONOPT";
+        break;
     case(ES_PrimalNLPSolver::Ipopt):
         ss << "Ipopt";
         break;

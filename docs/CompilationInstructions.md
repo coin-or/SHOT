@@ -207,3 +207,45 @@ drive a `--debug` investigation, see
 
 - Running the compiled solver: [docs/CommandLineUsage.md](CommandLineUsage.md).
 - Debugging solver behavior: [docs/DebuggingSHOT.md](DebuggingSHOT.md).
+
+
+## CONOPT primal NLP solver
+
+CONOPT is an optional commercial NLP backend for fixed-integer subproblems from
+AMPL, OSiL, GAMS, and API models. Download
+and extract the [CONOPT SDK](https://conopt.gams.com/download/) for your platform.
+The 4.39.2 SDK provides `include/conopt.hpp`, `libconoptcpp`, and `libconopt`.
+The compiled C++ wrapper is used directly; Ipopt is not required by this backend.
+
+```sh
+cmake -S . -B build -DHAS_CONOPT=ON -DCONOPT_DIR=/path/to/conopt-sdk
+cmake --build build -j
+./build/SHOT problem.nl --nlp=conopt
+```
+
+`HAS_CONOPT` defaults to `OFF`. If requested but the SDK is not found, CMake warns
+and disables it. Keep the SDK's `lib` directory, including its bundled runtime
+libraries, available at runtime. The SDK library directory is included in build
+and install rpaths; binaries do not bundle or redistribute CONOPT.
+
+For a full license, set all four environment variables before starting SHOT:
+`CONOPT_LICENSE_INT_1`, `CONOPT_LICENSE_INT_2`, `CONOPT_LICENSE_INT_3`, and
+`CONOPT_LICENSE_TEXT`. SHOT does not persist license values in model or option files.
+With no license configuration, CONOPT uses demo mode. Incomplete configuration
+produces a warning. See [CONOPT licensing](https://conopt.gams.com/licensing/)
+for demo and academic eligibility and usage terms. The NLP demo limit is 1000
+variables and 1000 rows, counting generated ranged-constraint slacks and the
+objective row (a constant objective also uses a fixed auxiliary column). A license or size failure skips that primal NLP attempt; it does
+not switch the running heuristic to another backend.
+
+CONOPT uses `Primal.FixedInteger.IterationLimit` and
+`Primal.FixedInteger.TimeLimit`. `Subsolver.Conopt.FeasibilityTolerance` (Rtnwma)
+and `Subsolver.Conopt.OptimalityTolerance` (Rtredg) default to `1e-9`. Solutions
+are checked against SHOT's bounds and linear/nonlinear feasibility tolerances
+before submission, including feasible solutions at an iteration or time limit.
+Logging honors `Output.Console.PrimalSolver.Show`. Callback evaluations run
+serially. Debug output includes the source model/current bounds and CONOPT
+option values.
+
+Enable `COMPILE_TESTS` and run `ctest --test-dir build -R '^Conopt_' --output-on-failure` for the backend tests. `Instance_9` uses HiGHS with CONOPT
+when both are enabled; larger instance collections may exceed demo limits.

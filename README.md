@@ -19,7 +19,7 @@ Originally SHOT was intended for convex MINLP problems only, but as of version 1
 - through its own Python API ([SHOTpy](docs/SHOTpy_Tutorial.ipynb)) — build with `-DHAS_PYTHON=on` (see [docs/CompilationInstructions.md](docs/CompilationInstructions.md)); a `pip install SHOTpy` package is planned for release, or
 - using its API implemented in C++, both of which support callbacks for customizing SHOT's behavior (e.g. injecting primal solutions, warm-starting, or adding custom cuts).
 
-SHOT requires a MILP solver: [Cplex](https://www.ibm.com/analytics/cplex-optimizer), [Gurobi](https://www.gurobi.com), [Cbc](https://www.github.com/coin-or/Cbc) or [HiGHS](https://highs.dev). In addition an NLP solver is required; currently only [Ipopt](https://www.github.com/coin-or/Ipopt) is supported. If SHOT is interfaced with GAMS, any licensed NLP solver can be used.
+SHOT requires a MILP solver: [Cplex](https://www.ibm.com/analytics/cplex-optimizer), [Gurobi](https://www.gurobi.com), [Cbc](https://www.github.com/coin-or/Cbc) or [HiGHS](https://highs.dev). For fixed-integer primal NLP subproblems, SHOT supports [Ipopt](https://www.github.com/coin-or/Ipopt), the optional [CONOPT](https://conopt.gams.com) C++ API, and SHOT itself. If SHOT is interfaced with GAMS, licensed GAMS NLP solvers can also be used.
 
 The documentation is provided at the project website at https://www.shotsolver.dev.
 

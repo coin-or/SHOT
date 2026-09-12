@@ -66,6 +66,9 @@ set(CBC_DIR "/opt/cbc" CACHE STRING "The base directory where Cbc is located (if
 option(HAS_IPOPT "Is Ipopt available" ON)
 set(IPOPT_DIR "/opt/ipopt" CACHE STRING "The base directory where Ipopt is located (if available).")
 
+option(HAS_CONOPT "Enable the CONOPT primal NLP solver" OFF)
+set(CONOPT_DIR "/opt/conopt" CACHE PATH "CONOPT SDK directory")
+
 # Python
 option(HAS_PYTHON "Is Python available" OFF)
 
@@ -372,6 +375,21 @@ if(HAS_IPOPT)
     set(PRIMAL_HEADERS ${PRIMAL_HEADERS} "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverIpoptRelaxed.h")
 endif(HAS_IPOPT)
 
+if(HAS_CONOPT)
+    find_package(CONOPT QUIET)
+    if(CONOPT_FOUND)
+        list(APPEND PRIMAL_SOURCES "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverConopt.cpp")
+        list(APPEND PRIMAL_HEADERS "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverConopt.h")
+        add_definitions(-DHAS_CONOPT)
+        get_filename_component(CONOPT_LIBRARY_DIR "${CONOPT_CPP_LIBRARY}" DIRECTORY)
+        list(APPEND CMAKE_BUILD_RPATH "${CONOPT_LIBRARY_DIR}")
+        list(APPEND CMAKE_INSTALL_RPATH "${CONOPT_LIBRARY_DIR}")
+    else()
+        message(WARNING "CONOPT C++ SDK not found; disabling HAS_CONOPT")
+        set(HAS_CONOPT OFF)
+    endif()
+endif()
+
 # AMPL interface
 
 if(HAS_AMPL)
@@ -612,6 +630,15 @@ add_library(
     ${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverSHOT.cpp
 )
 target_link_libraries(SHOTPrimalStrategy SHOTModel)
+if(HAS_CONOPT)
+    target_link_libraries(SHOTPrimalStrategy CONOPT::CONOPT)
+endif()
+
+# HiGHS also uses the shared termination callback, including in HiGHS-only builds.
+if(HAS_HIGHS)
+    list(APPEND DUAL_SOURCES "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.cpp")
+    list(REMOVE_DUPLICATES DUAL_SOURCES)
+endif()
 
 # Creates the dual strategy library
 add_library(
@@ -912,7 +939,7 @@ if(GENERATE_EXE)
 
     # Set rpath for finding dynamic libraries on macOS
     if(APPLE)
-        set(RPATH_DIRS "${CPPAD_LIB_DIR}")
+        set(RPATH_DIRS "${CPPAD_LIB_DIR};${CONOPT_LIBRARY_DIR}")
         
         if(HAS_GUROBI AND GUROBI_FOUND)
             list(APPEND RPATH_DIRS "${GUROBI_LIB_DIR}")

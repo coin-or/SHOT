@@ -132,6 +132,9 @@ int main(int argc, char* argv[])
 #ifdef HAS_GUROBI
         env->output->outputCritical("   --mip=gurobi             Sets the MIP solver to Gurobi");
 #endif
+#ifdef HAS_CONOPT
+        env->output->outputCritical("   --nlp=conopt             Sets the primal NLP solver to CONOPT");
+#endif
 #ifdef HAS_IPOPT
         env->output->outputCritical("   --nlp=ipopt              Sets the primal NLP solver to Ipopt");
 #endif
@@ -423,6 +426,9 @@ int main(int argc, char* argv[])
             solver.updateSetting(
                 "Primal.FixedInteger.Solver", static_cast<int>(ES_PrimalNLPSolver::Ipopt), E_SettingPriority::UserAPI);
 #endif
+        if(argValue == "conopt")
+            solver.updateSetting(
+                "Primal.FixedInteger.Solver", static_cast<int>(ES_PrimalNLPSolver::Conopt), E_SettingPriority::UserAPI);
         if(argValue == "shot")
             solver.updateSetting(
                 "Primal.FixedInteger.Solver", static_cast<int>(ES_PrimalNLPSolver::SHOT), E_SettingPriority::UserAPI);

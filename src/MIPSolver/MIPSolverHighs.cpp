@@ -333,6 +333,10 @@ void MIPSolverHighs::initializeSolverSettings()
     highsInstance.setOptionValue("mip_abs_gap", env->settings->getSetting<double>("Termination.ObjectiveGap.Absolute"));
     highsInstance.setOptionValue(
         "mip_feasibility_tolerance", env->settings->getSetting<double>("Primal.Tolerance.Integer"));
+    // Use SHOT's linear feasibility contract also for LP solves used to complete MIP starts.
+    // HiGHS validates postsolve row residuals against this tolerance before its MIP search.
+    highsInstance.setOptionValue(
+        "primal_feasibility_tolerance", env->settings->getSetting<double>("Primal.Tolerance.LinearConstraint"));
 
     // Adds a user-provided node limit
     if(auto nodeLimit = env->settings->getSetting<double>("Dual.MIP.NodeLimit"); nodeLimit > 0)

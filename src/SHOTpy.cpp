@@ -191,6 +191,11 @@ PYBIND11_MODULE(SHOTpy, m)
 
     // ===== NLP Solver Availability =====
     // These constants indicate which NLP solvers are available in this build
+#ifdef HAS_CONOPT
+    m.attr("HAS_CONOPT") = true;
+#else
+    m.attr("HAS_CONOPT") = false;
+#endif
 #ifdef HAS_IPOPT
     m.attr("HAS_IPOPT") = true;
 #else
@@ -280,6 +285,7 @@ PYBIND11_MODULE(SHOTpy, m)
 
     // NLP solver selection
     py::enum_<ES_PrimalNLPSolver>(m, "PrimalNLPSolver")
+        .value("Conopt", ES_PrimalNLPSolver::Conopt)
         .value("Ipopt", ES_PrimalNLPSolver::Ipopt)
         .value("GAMS", ES_PrimalNLPSolver::GAMS)
         .value("SHOT", ES_PrimalNLPSolver::SHOT)
