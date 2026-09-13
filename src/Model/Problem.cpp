@@ -1241,21 +1241,26 @@ AuxiliaryVariables Problem::getAuxiliaryVariablesOfType(E_AuxiliaryVariableType 
 
 void Problem::setVariableLowerBound(int variableIndex, double bound)
 {
-    allVariables.at(variableIndex)->lowerBound = bound;
-    variablesUpdated = true;
+    setVariableBounds(variableIndex, bound, allVariables.at(variableIndex)->upperBound);
 }
 
 void Problem::setVariableUpperBound(int variableIndex, double bound)
 {
-    allVariables.at(variableIndex)->upperBound = bound;
-    variablesUpdated = true;
+    setVariableBounds(variableIndex, allVariables.at(variableIndex)->lowerBound, bound);
 }
 
 void Problem::setVariableBounds(int variableIndex, double lowerBound, double upperBound)
 {
     allVariables.at(variableIndex)->lowerBound = lowerBound;
     allVariables.at(variableIndex)->upperBound = upperBound;
-    variablesUpdated = true;
+
+    // The bound vectors are kept up to date, since they are otherwise only recalculated when the variables change
+    if(variablesUpdated && variableIndex < (int)variableBounds.size())
+    {
+        variableLowerBounds[variableIndex] = lowerBound;
+        variableUpperBounds[variableIndex] = upperBound;
+        variableBounds[variableIndex] = Interval(lowerBound, upperBound);
+    }
 }
 
 std::shared_ptr<std::vector<std::pair<NumericConstraintPtr, Variables>>>

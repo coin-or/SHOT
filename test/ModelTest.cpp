@@ -150,6 +150,7 @@ bool ModelTestCopyKeepsNonlinearQuadraticConstraints();
 bool ModelTestPerspectiveConvexity();
 bool ModelTestInitialPOAConvexRelaxation();
 bool ModelTestArtificialIntegerBounds();
+bool ModelTestVariableBoundCache();
 
 bool TestReadProblem(const std::string& problemFile);
 bool TestRootsearch(const std::string& problemFile);
@@ -288,6 +289,9 @@ int ModelTest(int argc, char* argv[])
         break;
     case 38:
         passed = ModelTestArtificialIntegerBounds();
+        break;
+    case 39:
+        passed = ModelTestVariableBoundCache();
         break;
     default:
         passed = false;
@@ -6950,6 +6954,55 @@ bool ModelTestArtificialIntegerBounds()
 
     std::error_code errorCode;
     fs::filesystem::remove_all(temporaryDirectory, errorCode);
+
+    return passed;
+}
+
+bool ModelTestVariableBoundCache()
+{
+    // The bounds of the variables are also kept in vectors, e.g. used when calculating the bounds of the objective
+    // function. Setting a bound must update them, otherwise, e.g., a variable whose bound has been removed is still
+    // considered bounded.
+
+    bool passed = true;
+
+    auto solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+
+    auto problem = std::make_shared<Problem>(env);
+    auto x = std::make_shared<Variable>("x", E_VariableType::Real, -2.0, 2.0);
+    auto y = std::make_shared<Variable>("y", E_VariableType::Real, 0.0, 1.0);
+    problem->add({ x, y });
+
+    auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<LinearTerm>(1.0, x));
+    problem->add(objective);
+    problem->finalize();
+
+    // Makes sure that the vectors have been calculated before the bounds are changed
+    problem->getVariableBounds();
+
+    problem->setVariableBounds(0, -5.0, 5.0);
+    problem->setVariableLowerBound(1, -1.0);
+    problem->setVariableUpperBound(1, 3.0);
+
+    auto bounds = problem->getVariableBounds();
+
+    if(bounds[0].l() != -5.0 || bounds[0].u() != 5.0 || bounds[1].l() != -1.0 || bounds[1].u() != 3.0)
+    {
+        std::cout << "  FAILED: the variable bounds were not updated: [" << bounds[0].l() << ", " << bounds[0].u()
+                  << "] and [" << bounds[1].l() << ", " << bounds[1].u() << "].\n";
+        passed = false;
+    }
+
+    auto objectiveBounds = problem->objectiveFunction->getBounds();
+
+    if(objectiveBounds.l() != -5.0 || objectiveBounds.u() != 5.0)
+    {
+        std::cout << "  FAILED: the objective function bounds [" << objectiveBounds.l() << ", " << objectiveBounds.u()
+                  << "] do not use the updated variable bounds.\n";
+        passed = false;
+    }
 
     return passed;
 }
