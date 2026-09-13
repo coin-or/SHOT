@@ -1096,6 +1096,11 @@ void Solver::initializeSettings()
         static_cast<int>(ES_HyperplaneCutStrategy::ECP), "Dual cut strategy", enumCutStrategy, 0);
     enumCutStrategy.clear();
 
+    env->settings->createSetting("Model.BoundTightening.InitialPOA.DirectionalSolves", 10,
+        "Maximum number of additional solves minimizing or maximizing a variable in a convex constraint without "
+        "cuts",
+        0, SHOT_INT_MAX);
+
     env->settings->createSetting("Model.BoundTightening.InitialPOA.IterationLimit", 50, "Iteration limit for POA");
 
     env->settings->createSetting("Model.BoundTightening.InitialPOA.ObjectiveConstraintTolerance", 1e-3,
@@ -1116,7 +1121,8 @@ void Solver::initializeSettings()
     env->settings->createSetting(
         "Model.BoundTightening.InitialPOA.Use", false, "Create an initial polyhedral outer approximation");
 
-    env->settings->createSetting("Model.BoundTightening.InitialPOA.TimeLimit", 5.0, "Time limit for initial POA");
+    env->settings->createSetting("Model.BoundTightening.InitialPOA.TimeLimit", 5.0,
+        "Time limit for all the problems solved for the initial POA");
 
     // Convexity settings
 

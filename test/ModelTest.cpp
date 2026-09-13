@@ -133,6 +133,7 @@ bool ModelTestSignomialTermConvexity();
 bool ModelTestSignomialElementBoundTightening();
 bool ModelTestCopyKeepsNonlinearQuadraticConstraints();
 bool ModelTestPerspectiveConvexity();
+bool ModelTestInitialPOAConvexRelaxation();
 
 bool TestReadProblem(const std::string& problemFile);
 bool TestRootsearch(const std::string& problemFile);
@@ -259,6 +260,9 @@ int ModelTest(int argc, char* argv[])
         break;
     case 34:
         passed = ModelTestPerspectiveConvexity();
+        break;
+    case 35:
+        passed = ModelTestInitialPOAConvexRelaxation();
         break;
     default:
         passed = false;
@@ -6466,6 +6470,143 @@ bool ModelTestPerspectiveConvexity()
             std::cout << "  FAILED: " << C.description << " was not classified as expected.\n";
             passed = false;
         }
+    }
+
+    return passed;
+}
+
+bool ModelTestInitialPOAConvexRelaxation()
+{
+    // The initial polyhedral outer approximation is generated from a convex relaxation of the problem, where the
+    // nonconvex constraints are removed and only the linear and convex parts (concave when maximizing) of the
+    // objective function are kept. Only the cuts for the convex constraints are valid for the problem, so no cuts may
+    // be added for the nonconvex constraints or the relaxed objective function.
+
+    bool passed = true;
+
+    auto createProblem = [](EnvironmentPtr env, E_ObjectiveFunctionDirection direction)
+    {
+        auto problem = std::make_shared<Problem>(env);
+
+        auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.1, 5.0);
+        auto y = std::make_shared<Variable>("y", E_VariableType::Real, 0.1, 5.0);
+        problem->add({ x, y });
+
+        auto variableX = std::make_shared<ExpressionVariable>(x);
+        auto variableY = std::make_shared<ExpressionVariable>(y);
+
+        auto objective = std::make_shared<NonlinearObjectiveFunction>(direction);
+        objective->add(std::make_shared<LinearTerm>(1.0, x));
+
+        if(direction == E_ObjectiveFunctionDirection::Minimize)
+        {
+            // x + x^2 + exp(y) + sin(x), where sin(x) is not convex
+            objective->add(std::make_shared<QuadraticTerm>(1.0, x, x));
+            objective->add(std::make_shared<ExpressionSum>(
+                std::make_shared<ExpressionExp>(variableY), std::make_shared<ExpressionSin>(variableX)));
+        }
+        else
+        {
+            // x - x^2 + log(y) + exp(x), where exp(x) is not concave
+            objective->add(std::make_shared<QuadraticTerm>(-1.0, x, x));
+            objective->add(std::make_shared<ExpressionSum>(
+                std::make_shared<ExpressionLog>(variableY), std::make_shared<ExpressionExp>(variableX)));
+        }
+
+        problem->add(objective);
+
+        // exp(x) + y <= 5 is convex
+        LinearTerms linearTerms;
+        linearTerms.add(std::make_shared<LinearTerm>(1.0, y));
+        problem->add(std::make_shared<NonlinearConstraint>(
+            "c_convex", linearTerms, std::make_shared<ExpressionExp>(variableX), SHOT_DBL_MIN, 5.0));
+
+        // x * y >= 1 is not convex
+        problem->add(std::make_shared<NonlinearConstraint>(
+            "c_nonconvex", std::make_shared<ExpressionProduct>(variableX, variableY), 1.0, SHOT_DBL_MAX));
+
+        problem->finalize();
+
+        return (problem);
+    };
+
+    VectorDouble point = { 1.0, 2.0 };
+
+    struct Case
+    {
+        E_ObjectiveFunctionDirection direction;
+        double expectedValue;
+    };
+
+    std::vector<Case> cases = { { E_ObjectiveFunctionDirection::Minimize, 1.0 + 1.0 + std::exp(2.0) },
+        { E_ObjectiveFunctionDirection::Maximize, 1.0 - 1.0 + std::log(2.0) } };
+
+    for(auto& C : cases)
+    {
+        auto solver = std::make_unique<Solver>();
+        auto problem = createProblem(solver->getEnvironment(), C.direction);
+        auto relaxedProblem = problem->createCopy(solver->getEnvironment(), true, true);
+
+        double value = relaxedProblem->objectiveFunction->calculateValue(point);
+        std::string description
+            = (C.direction == E_ObjectiveFunctionDirection::Minimize) ? "minimization" : "maximization";
+
+        std::cout << "  Relaxed objective function value for " << description << ": " << value << " (expected "
+                  << C.expectedValue << ")\n";
+
+        if(std::abs(value - C.expectedValue) > 1e-8)
+        {
+            std::cout << "  FAILED: the relaxed objective function does not consist of the expected parts.\n";
+            passed = false;
+        }
+
+        if(relaxedProblem->objectiveFunction->direction != C.direction)
+        {
+            std::cout << "  FAILED: the relaxed objective function has another direction.\n";
+            passed = false;
+        }
+    }
+
+    // The outer approximation generated when solving the minimization problem
+    auto solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Info));
+    solver->updateSetting("Model.BoundTightening.InitialPOA.Use", true);
+
+    if(!solver->setProblem(createProblem(env, E_ObjectiveFunctionDirection::Minimize)))
+    {
+        std::cout << "  FAILED: could not set the problem.\n";
+        return (false);
+    }
+
+    int convexCuts = 0;
+    int otherCuts = 0;
+
+    for(auto& C : env->reformulatedProblem->linearConstraints)
+    {
+        if(C->name.rfind("initPOA_", 0) != 0)
+            continue;
+
+        if(C->name.rfind("initPOA_c_convex_", 0) == 0)
+            convexCuts++;
+        else
+            otherCuts++;
+    }
+
+    std::cout << "  Initial POA cuts for the convex constraint: " << convexCuts << ", for others: " << otherCuts
+              << "\n";
+
+    if(convexCuts == 0)
+    {
+        std::cout << "  FAILED: no cuts were generated for the convex constraint.\n";
+        passed = false;
+    }
+
+    if(otherCuts > 0)
+    {
+        std::cout << "  FAILED: cuts were generated for other than the convex constraint.\n";
+        passed = false;
     }
 
     return passed;
