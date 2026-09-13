@@ -41,8 +41,20 @@ void TaskCheckIterationError::run()
     }
     else if(currIter->solutionStatus == E_ProblemSolutionStatus::Infeasible && currIter->solutionPoints.size() == 0)
     {
-        env->results->terminationReason = E_TerminationReason::InfeasibleProblem;
-        env->results->terminationReasonDescription = "Terminated since the dual problem is infeasible.";
+        // A reduction cut excludes the objective values that are not better than the reduced cutoff, so the dual
+        // problem being infeasible afterwards only means that no better solution was found, not that the problem is
+        // infeasible
+        if(env->solutionStatistics.hasReductionCutBeenAddedSincePrimalImprovement)
+        {
+            env->results->terminationReason = E_TerminationReason::ObjectiveStagnation;
+            env->results->terminationReasonDescription
+                = "Terminated since the dual problem is infeasible after an objective reduction cut.";
+        }
+        else
+        {
+            env->results->terminationReason = E_TerminationReason::InfeasibleProblem;
+            env->results->terminationReasonDescription = "Terminated since the dual problem is infeasible.";
+        }
 
         // The infeasibility repair loop (TaskRepairInfeasibleDualProblem) sets forceObjectiveReductionCut when it
         // detects it is looping without making progress, i.e. no more repairs can be done. In that situation the
