@@ -494,12 +494,6 @@ if(APPLE)
     )
 endif()
 
-ExternalProject_Add(cppad
-    PREFIX cppad
-    SOURCE_DIR ${PROJECT_SOURCE_DIR}/${CPPAD_DIR}
-    CMAKE_ARGS ${CPPAD_CMAKE_ARGS}
-)
-
 # Set CppAD library path
 set(CPPAD_LIB_DIR "${CMAKE_CURRENT_BINARY_DIR}/CppAD/lib")
 if(APPLE)
@@ -507,6 +501,15 @@ if(APPLE)
 else()
     set(CPPAD_LIBRARY "${CPPAD_LIB_DIR}/libcppad_lib.so")
 endif()
+
+# The library is declared as a byproduct so that generators such as Ninja know that it is created by the external
+# project, otherwise a clean build fails since no rule creates it
+ExternalProject_Add(cppad
+    PREFIX cppad
+    SOURCE_DIR ${PROJECT_SOURCE_DIR}/${CPPAD_DIR}
+    CMAKE_ARGS ${CPPAD_CMAKE_ARGS}
+    BUILD_BYPRODUCTS ${CPPAD_LIBRARY}
+)
 
 # Creates the helper library
 add_library(
