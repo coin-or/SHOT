@@ -9,6 +9,7 @@
 */
 
 #include "../src/Solver.h"
+#include "../src/DualSolver.h"
 #include "../src/Environment.h"
 #include "../src/Settings.h"
 #include "../src/Results.h"
@@ -5423,7 +5424,10 @@ bool ModelTestUnboundedQCQPWithSolver(ES_MIPSolver mipSolver)
     //   s.t.     x^2 >= 1
     //
     // The problem is unbounded: any x <= -1 is feasible, and the objective decreases without bound as
-    // x -> -infinity. SHOT must recognize this as unbounded rather than converging to a finite "optimal" point.
+    // x -> -infinity. If the MIP solver handles the quadratic constraint itself, the dual problem is exact and its
+    // unboundedness shows that the problem is unbounded, so SHOT must terminate as unbounded. Otherwise the dual
+    // problem is only a relaxation, which proves nothing when it is unbounded, so SHOT must then only not claim that
+    // the problem is solved to optimality or infeasible. Feasible primal solutions may be reported in both cases.
 
     bool passed = true;
 
@@ -5473,31 +5477,52 @@ bool ModelTestUnboundedQCQPWithSolver(ES_MIPSolver mipSolver)
     problem->add(e1);
 
     problem->finalize();
-    solver->setProblem(problem);
+
+    if(!solver->setProblem(problem))
+    {
+        std::cout << "Failed to set problem!\n";
+        return false;
+    }
 
     std::cout << "\nSolving...\n";
 
     if(!solver->solveProblem())
     {
         std::cout << "Failed to solve problem!\n";
+        return false;
+    }
+
+    auto terminationReason = env->results->terminationReason;
+    bool isDualProblemExact = env->dualSolver->isDualProblemExact();
+
+    if(isDualProblemExact && terminationReason != E_TerminationReason::UnboundedProblem)
+    {
+        std::cout << "\n*** TEST FAILED: the dual problem is exact, so the problem should terminate as unbounded, "
+                     "but the termination reason was "
+                  << static_cast<int>(terminationReason) << " instead. ***\n";
         passed = false;
     }
-    else if(env->results->terminationReason != E_TerminationReason::UnboundedProblem)
+    else if(terminationReason == E_TerminationReason::AbsoluteGap
+        || terminationReason == E_TerminationReason::RelativeGap
+        || terminationReason == E_TerminationReason::ConstraintTolerance
+        || terminationReason == E_TerminationReason::InfeasibleProblem
+        || env->results->getModelReturnStatus() == E_ModelReturnStatus::OptimalGlobal)
     {
-        std::cout << "\n*** TEST FAILED: expected the problem to terminate as unbounded, but termination reason "
-                      "was "
-                   << static_cast<int>(env->results->terminationReason) << " instead. ***\n";
-
-        if(!env->results->primalSolutions.empty())
-            std::cout << "  A primal solution was (incorrectly) reported: objective = "
-                      << env->results->primalSolutions[0].objValue << "\n";
-
+        std::cout << "\n*** TEST FAILED: the problem was incorrectly claimed to be solved or infeasible, termination "
+                     "reason "
+                  << static_cast<int>(terminationReason) << ". ***\n";
         passed = false;
     }
     else
     {
-        std::cout << "\n*** TEST PASSED: problem correctly recognized as unbounded. ***\n";
+        std::cout << "\n*** TEST PASSED: "
+                  << (isDualProblemExact ? "problem correctly recognized as unbounded"
+                                         : "no optimality claimed for the relaxed dual problem")
+                  << ", termination reason " << static_cast<int>(terminationReason) << ". ***\n";
     }
+
+    if(env->results->hasPrimalSolution())
+        std::cout << "  Feasible primal solution reported: primal bound = " << env->results->getPrimalBound() << "\n";
 
     return passed;
 }
