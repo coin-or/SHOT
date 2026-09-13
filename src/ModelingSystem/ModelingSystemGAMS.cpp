@@ -845,6 +845,10 @@ bool ModelingSystemGAMS::copyVariables(ProblemPtr destination)
             double semiBound = NAN;
             bool isSemi = false;
 
+            // Whether a missing or too large integer bound is replaced with the limit from the settings
+            bool hasArtificialLowerBound = false;
+            bool hasArtificialUpperBound = false;
+
             switch(gmoGetVarTypeOne(modelingObject, i))
             {
             case gmovar_X:
@@ -885,11 +889,13 @@ bool ModelingSystemGAMS::copyVariables(ProblemPtr destination)
                 if(variableLBs[i] < minLBInt)
                 {
                     variableLBs[i] = minLBInt;
+                    hasArtificialLowerBound = true;
                 }
 
                 if(variableUBs[i] > maxUBInt)
                 {
                     variableUBs[i] = maxUBInt;
+                    hasArtificialUpperBound = true;
                 }
 
                 break;
@@ -948,11 +954,13 @@ bool ModelingSystemGAMS::copyVariables(ProblemPtr destination)
                 if(variableLBs[i] < minLBInt)
                 {
                     variableLBs[i] = minLBInt;
+                    hasArtificialLowerBound = true;
                 }
 
                 if(variableUBs[i] > maxUBInt)
                 {
                     variableUBs[i] = maxUBInt;
+                    hasArtificialUpperBound = true;
                 }
 
                 isSemi = true;
@@ -972,12 +980,16 @@ bool ModelingSystemGAMS::copyVariables(ProblemPtr destination)
             {
                 auto variable = std::make_shared<SHOT::Variable>(
                     variableName, variableType, variableLBs[i], variableUBs[i], semiBound);
+                variable->properties.hasArtificialLowerBound = hasArtificialLowerBound;
+                variable->properties.hasArtificialUpperBound = hasArtificialUpperBound;
                 destination->add(std::move(variable));
             }
             else
             {
                 auto variable = std::make_shared<SHOT::Variable>(
                     variableName, variableType, variableLBs[i], variableUBs[i]);
+                variable->properties.hasArtificialLowerBound = hasArtificialLowerBound;
+                variable->properties.hasArtificialUpperBound = hasArtificialUpperBound;
                 destination->add(std::move(variable));
             }
         }

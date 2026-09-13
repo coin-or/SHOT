@@ -454,11 +454,18 @@ public:
 
         case(E_VariableType::Integer):
 
+            // A missing or too large integer bound is replaced with the limit from the settings
             if(variableLB < minLBInt)
+            {
                 variableLB = minLBInt;
+                destination->allVariables[variableIndex]->properties.hasArtificialLowerBound = true;
+            }
 
             if(variableUB > maxUBInt)
+            {
                 variableUB = maxUBInt;
+                destination->allVariables[variableIndex]->properties.hasArtificialUpperBound = true;
+            }
 
             break;
 

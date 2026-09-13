@@ -57,6 +57,11 @@ struct VariableProperties
     bool hasUpperBoundBeenTightened = false;
     bool hasLowerBoundBeenTightened = false;
 
+    // Whether the bound is not the one of the problem given, but the limit it has been replaced with when reading the
+    // problem, e.g. Model.Variables.Integer.MinimumLowerBound for an integer variable without a lower bound
+    bool hasArtificialLowerBound = false;
+    bool hasArtificialUpperBound = false;
+
     int nonlinearVariableIndex = -1;
 };
 

@@ -13,6 +13,7 @@
 #include "../src/Environment.h"
 #include "../src/Settings.h"
 #include "../src/Results.h"
+#include "../src/Utilities.h"
 
 #include "../src/Model/Variables.h"
 #include "../src/Model/Terms.h"
@@ -138,6 +139,7 @@ bool ModelTestSignomialElementBoundTightening();
 bool ModelTestCopyKeepsNonlinearQuadraticConstraints();
 bool ModelTestPerspectiveConvexity();
 bool ModelTestInitialPOAConvexRelaxation();
+bool ModelTestArtificialIntegerBounds();
 
 bool TestReadProblem(const std::string& problemFile);
 bool TestRootsearch(const std::string& problemFile);
@@ -273,6 +275,9 @@ int ModelTest(int argc, char* argv[])
         break;
     case 37:
         passed = ModelTestPolishWithoutPrimal();
+        break;
+    case 38:
+        passed = ModelTestArtificialIntegerBounds();
         break;
     default:
         passed = false;
@@ -6794,4 +6799,144 @@ bool ModelTestPolishWithoutPrimal()
     }
 
     return true;
+}
+
+bool ModelTestArtificialIntegerBounds()
+{
+    // When a problem is read, a missing integer bound is replaced with Model.Variables.Integer.MinimumLowerBound or
+    // MaximumUpperBound. A solution at such a bound must not be taken as the optimum: the problem may be unbounded or
+    // have its optimum beyond the bound. If the dual problem is exact, the bound is removed and the problem is solved
+    // again, and otherwise no optimality may be claimed.
+
+    bool passed = true;
+
+    auto temporaryDirectory = Utilities::createTemporaryDirectory("SHOT_artificial_bounds_");
+
+    if(temporaryDirectory == "")
+    {
+        std::cout << "  FAILED: could not create a temporary directory.\n";
+        return (false);
+    }
+
+    std::string header = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><osil xmlns=\"os.optimizationservices.org\">"
+                         "<instanceHeader><name>artificialbounds</name></instanceHeader><instanceData>";
+
+    // The integer variable x has no bounds and b is a binary variable, so the problems are MILPs
+    auto linearProblem = [&](std::string direction, std::string constraintBound, double coefficient)
+    {
+        return (header
+            + "<variables numberOfVariables=\"2\"><var name=\"x\" type=\"I\" lb=\"-INF\"/><var name=\"b\" type=\"B\"/>"
+              "</variables><objectives><obj maxOrMin=\"" + direction
+            + "\" numberOfObjCoef=\"1\"><coef idx=\"0\">1</coef></obj></objectives><constraints "
+              "numberOfConstraints=\"1\"><con name=\"c\" " + constraintBound
+            + "/></constraints><linearConstraintCoefficients numberOfValues=\"2\"><start><el>0</el><el>1</el>"
+              "<el>2</el></start><rowIdx><el>0</el><el>0</el></rowIdx><value><el>1</el><el>"
+            + std::to_string(coefficient) + "</el></value></linearConstraintCoefficients></instanceData></osil>");
+    };
+
+    // minimize x s.t. x^2 >= 1, where the quadratic constraint is nonconvex
+    std::string nonconvexProblem = header
+        + "<variables numberOfVariables=\"1\"><var name=\"x\" type=\"I\" lb=\"-INF\"/></variables><objectives><obj "
+          "maxOrMin=\"min\" numberOfObjCoef=\"1\"><coef idx=\"0\">1</coef></obj></objectives><constraints "
+          "numberOfConstraints=\"1\"><con name=\"e1\" lb=\"1\"/></constraints><quadraticCoefficients "
+          "numberOfQuadraticTerms=\"1\"><qTerm idx=\"0\" idxOne=\"0\" idxTwo=\"0\" coef=\"1\"/>"
+          "</quadraticCoefficients></instanceData></osil>";
+
+    enum class Expected
+    {
+        Unbounded,
+        Optimum,
+        UnboundedIfExact
+    };
+
+    struct Case
+    {
+        std::string name;
+        std::string contents;
+        Expected expected;
+        double optimum;
+    };
+
+    std::vector<Case> cases = {
+        { "unbounded", linearProblem("min", "ub=\"0\"", -1.0), Expected::Unbounded, 0.0 },
+        { "minimum_beyond_bound", linearProblem("min", "lb=\"-3e9\"", -1.0), Expected::Optimum, -3e9 },
+        { "maximum_beyond_bound", linearProblem("max", "ub=\"5e9\"", 1.0), Expected::Optimum, 5e9 },
+        { "nonconvex_unbounded", nonconvexProblem, Expected::UnboundedIfExact, 0.0 },
+    };
+
+    std::vector<std::pair<ES_MIPSolver, std::string>> mipSolvers;
+
+#ifdef HAS_CBC
+    mipSolvers.emplace_back(ES_MIPSolver::Cbc, "Cbc");
+#endif
+#ifdef HAS_HIGHS
+    mipSolvers.emplace_back(ES_MIPSolver::Highs, "HiGHS");
+#endif
+#ifdef HAS_CPLEX
+    mipSolvers.emplace_back(ES_MIPSolver::Cplex, "CPLEX");
+#endif
+#ifdef HAS_GUROBI
+    mipSolvers.emplace_back(ES_MIPSolver::Gurobi, "Gurobi");
+#endif
+
+    for(auto& C : cases)
+    {
+        auto filename = temporaryDirectory + "/" + C.name + ".osil";
+
+        if(!Utilities::writeStringToFile(filename, C.contents))
+        {
+            std::cout << "  FAILED: could not write " << filename << ".\n";
+            passed = false;
+            continue;
+        }
+
+        for(auto& [mipSolver, solverName] : mipSolvers)
+        {
+            auto solver = std::make_unique<Solver>();
+            auto env = solver->getEnvironment();
+
+            solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+            solver->updateSetting("Dual.MIP.Solver", static_cast<int>(mipSolver));
+            solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+            solver->updateSetting("Termination.TimeLimit", 30.0);
+
+            if(!solver->setProblem(filename) || !solver->solveProblem())
+            {
+                std::cout << "  FAILED: " << C.name << " with " << solverName << " could not be solved.\n";
+                passed = false;
+                continue;
+            }
+
+            auto reason = env->results->terminationReason;
+            bool claimsOptimality = reason == E_TerminationReason::AbsoluteGap
+                || reason == E_TerminationReason::RelativeGap || reason == E_TerminationReason::ConstraintTolerance;
+            bool isCasePassed = true;
+
+            switch(C.expected)
+            {
+            case Expected::Unbounded:
+                isCasePassed = (reason == E_TerminationReason::UnboundedProblem);
+                break;
+
+            case Expected::Optimum:
+                isCasePassed = claimsOptimality && env->results->hasPrimalSolution()
+                    && std::abs(env->results->getPrimalBound() - C.optimum) < 1.0;
+                break;
+
+            case Expected::UnboundedIfExact:
+                isCasePassed = env->dualSolver->isDualProblemExact()
+                    ? reason == E_TerminationReason::UnboundedProblem
+                    : !claimsOptimality;
+                break;
+            }
+
+            std::cout << "  " << C.name << " with " << solverName << ": termination reason "
+                      << static_cast<int>(reason) << ", primal bound " << env->results->getPrimalBound() << " "
+                      << (isCasePassed ? "(as expected)" : "(FAILED)") << "\n";
+
+            passed = passed && isCasePassed;
+        }
+    }
+
+    return passed;
 }

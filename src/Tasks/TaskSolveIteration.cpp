@@ -26,6 +26,30 @@
 namespace SHOT
 {
 
+namespace
+{
+// The variables of the problem that are at a bound that has replaced a missing bound in the point
+std::vector<VariablePtr> getVariablesAtArtificialBounds(EnvironmentPtr env, const VectorDouble& point)
+{
+    std::vector<VariablePtr> variables;
+
+    for(auto& V : env->problem->allVariables)
+    {
+        if(V->getIndex() >= (int)point.size())
+            continue;
+
+        double value = point.at(V->getIndex());
+
+        // The variables are integer, so a smaller difference means that the variable is at the bound
+        if((V->properties.hasArtificialLowerBound && value < V->lowerBound + 0.5)
+            || (V->properties.hasArtificialUpperBound && value > V->upperBound - 0.5))
+            variables.push_back(V);
+    }
+
+    return (variables);
+}
+} // namespace
+
 TaskSolveIteration::TaskSolveIteration(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
     if(env->settings->getSetting<bool>("Output.Debug.Enable"))
@@ -177,6 +201,62 @@ void TaskSolveIteration::run()
 
     auto sols = env->dualSolver->MIPSolver->getAllVariableSolutions();
 
+    // A solution with a variable at a bound that has only replaced a missing bound of the problem does not show what
+    // the optimal objective value is, since the problem may be unbounded or have its optimum beyond the bound. If the
+    // dual problem is exact, the bounds are removed and it is solved again, and otherwise the solution gives no dual
+    // bound.
+    bool isSolutionAtArtificialBound = false;
+
+    if(sols.size() > 0)
+    {
+        auto variables = getVariablesAtArtificialBounds(env, sols.at(0).point);
+
+        if(variables.size() > 0 && env->dualSolver->isDualProblemExact())
+        {
+            double lowerLimit = env->settings->getSetting<double>("Model.Variables.Continuous.MinimumLowerBound");
+            double upperLimit = env->settings->getSetting<double>("Model.Variables.Continuous.MaximumUpperBound");
+            double unboundedValue = env->dualSolver->MIPSolver->getUnboundedVariableBoundValue();
+
+            for(auto& V : variables)
+            {
+                env->output->outputDebug(fmt::format(
+                    "        Removing artificial bounds of variable {} since the solution is at them.", V->name));
+
+                if(V->properties.hasArtificialLowerBound)
+                    V->lowerBound = lowerLimit;
+
+                if(V->properties.hasArtificialUpperBound)
+                    V->upperBound = upperLimit;
+
+                auto reformulatedVariable = env->reformulatedProblem->getVariable(V->getIndex());
+                reformulatedVariable->lowerBound = V->lowerBound;
+                reformulatedVariable->upperBound = V->upperBound;
+
+                env->dualSolver->MIPSolver->updateVariableBound(V->getIndex(),
+                    V->properties.hasArtificialLowerBound ? -unboundedValue : V->lowerBound,
+                    V->properties.hasArtificialUpperBound ? unboundedValue : V->upperBound);
+
+                V->properties.hasArtificialLowerBound = false;
+                V->properties.hasArtificialUpperBound = false;
+            }
+
+            solStatus = env->dualSolver->MIPSolver->solveProblem();
+            currIter->solutionStatus = solStatus;
+
+            env->output->outputDebug(
+                fmt::format("        Dual problem solved again with return code: {}", (int)solStatus));
+
+            sols = env->dualSolver->MIPSolver->getAllVariableSolutions();
+
+            if(sols.size() > 0)
+                variables = getVariablesAtArtificialBounds(env, sols.at(0).point);
+            else
+                variables.clear();
+        }
+
+        isSolutionAtArtificialBound = variables.size() > 0;
+    }
+
     if(sols.size() > 0)
     {
         env->output->outputDebug(fmt::format("        Number of solutions in solution pool: {} ", sols.size()));
@@ -237,7 +317,12 @@ void TaskSolveIteration::run()
             currIter->maxDeviation = 0.0;
         }
 
-        if(!env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed)
+        if(isSolutionAtArtificialBound)
+        {
+            env->output->outputDebug(
+                "        Dual bound ignored since the solution is at an artificial bound of a variable.");
+        }
+        else if(!env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed)
         {
             double currentDualBound = objectiveSignFactor * env->dualSolver->MIPSolver->getDualObjectiveValue();
 

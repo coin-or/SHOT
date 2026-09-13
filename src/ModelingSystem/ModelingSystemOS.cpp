@@ -192,6 +192,10 @@ bool ModelingSystemOS::copyVariables(OSInstance* source, ProblemPtr destination)
             double variableLB = source->instanceData->variables->var[i]->lb;
             double variableUB = source->instanceData->variables->var[i]->ub;
 
+            // Whether a missing or too large integer bound is replaced with the limit from the settings
+            bool hasArtificialLowerBound = false;
+            bool hasArtificialUpperBound = false;
+
             switch(source->instanceData->variables->var[i]->type)
             {
             case 'C':
@@ -240,6 +244,7 @@ bool ModelingSystemOS::copyVariables(OSInstance* source, ProblemPtr destination)
                     // env->output->outputDebug("Corrected lower bound for variable " + variableNames[i] + " from " +
                     // std::to_string(variableLBs[i]) + " to " + std::to_string(minLBInt));
                     variableLB = minLBInt;
+                    hasArtificialLowerBound = true;
                 }
 
                 if(variableUB > maxUBInt)
@@ -247,6 +252,7 @@ bool ModelingSystemOS::copyVariables(OSInstance* source, ProblemPtr destination)
                     // env->output->outputDebug("Corrected upper bound for variable " + variableNames[i] + " from " +
                     // std::to_string(variableUBs[i]) + " to " + std::to_string(maxUBInt));
                     variableUB = maxUBInt;
+                    hasArtificialUpperBound = true;
                 }
 
                 break;
@@ -278,6 +284,7 @@ bool ModelingSystemOS::copyVariables(OSInstance* source, ProblemPtr destination)
                     // env->output->outputDebug("Corrected lower bound for variable " + variableNames[i] + " from " +
                     // std::to_string(variableLBs[i]) + " to " + std::to_string(minLBInt));
                     variableLB = minLBInt;
+                    hasArtificialLowerBound = true;
                 }
 
                 if(variableUB > maxUBInt)
@@ -285,6 +292,7 @@ bool ModelingSystemOS::copyVariables(OSInstance* source, ProblemPtr destination)
                     // env->output->outputDebug("Corrected upper bound for variable " + variableNames[i] + " from " +
                     // std::to_string(variableUBs[i]) + " to " + std::to_string(maxUBInt));
                     variableUB = maxUBInt;
+                    hasArtificialUpperBound = true;
                 }
 
                 break;
@@ -296,6 +304,8 @@ bool ModelingSystemOS::copyVariables(OSInstance* source, ProblemPtr destination)
 
             auto variable = std::make_shared<SHOT::Variable>(
                 source->instanceData->variables->var[i]->name, variableType, variableLB, variableUB);
+            variable->properties.hasArtificialLowerBound = hasArtificialLowerBound;
+            variable->properties.hasArtificialUpperBound = hasArtificialUpperBound;
             destination->add(variable);
         }
     }

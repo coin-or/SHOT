@@ -38,6 +38,7 @@ bool Variable::tightenBounds(const Interval bound)
     {
         tightened = true;
         this->properties.hasLowerBoundBeenTightened = true;
+        this->properties.hasArtificialLowerBound = false;
 
         if(bound.l() == 0.0 && std::signbit(bound.l()))
         {
@@ -58,6 +59,7 @@ bool Variable::tightenBounds(const Interval bound)
     {
         tightened = true;
         this->properties.hasUpperBoundBeenTightened = true;
+        this->properties.hasArtificialUpperBound = false;
 
         if(bound.u() == 0.0 && std::signbit(bound.u()))
         {

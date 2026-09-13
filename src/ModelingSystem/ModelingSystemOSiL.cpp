@@ -104,6 +104,10 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
         double variableUB = (V->Attribute("ub") != NULL) ? std::stod(V->Attribute("ub")) : SHOT_DBL_MAX;
         double semiBound = NAN;
 
+        // Whether a missing or too large integer bound is replaced with the limit from the settings
+        bool hasArtificialLowerBound = false;
+        bool hasArtificialUpperBound = false;
+
         E_VariableType variableType;
 
         switch(type)
@@ -134,10 +138,16 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
             variableType = E_VariableType::Integer;
 
             if(variableLB < minLBInt)
+            {
                 variableLB = minLBInt;
+                hasArtificialLowerBound = true;
+            }
 
             if(variableUB > maxUBInt)
+            {
                 variableUB = maxUBInt;
+                hasArtificialUpperBound = true;
+            }
 
             break;
 
@@ -172,10 +182,16 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
             variableType = E_VariableType::Semiinteger;
 
             if(variableLB < minLBInt)
+            {
                 variableLB = minLBInt;
+                hasArtificialLowerBound = true;
+            }
 
             if(variableUB > maxUBInt)
+            {
                 variableUB = maxUBInt;
+                hasArtificialUpperBound = true;
+            }
 
             if(variableLB > 0.0)
             {
@@ -201,7 +217,10 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
             break;
         }
 
-        problem->add(std::make_shared<SHOT::Variable>(variableName, variableType, variableLB, variableUB, semiBound));
+        auto variable = std::make_shared<SHOT::Variable>(variableName, variableType, variableLB, variableUB, semiBound);
+        variable->properties.hasArtificialLowerBound = hasArtificialLowerBound;
+        variable->properties.hasArtificialUpperBound = hasArtificialUpperBound;
+        problem->add(std::move(variable));
 
         variableIndex++;
     }
