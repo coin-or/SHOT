@@ -31,30 +31,41 @@ TaskSelectPrimalFixedNLPPointsFromSolutionPool::~TaskSelectPrimalFixedNLPPointsF
 
 void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
 {
-    env->timing->startTimer("PrimalStrategy");
-    env->timing->startTimer("PrimalBoundStrategyNLP");
-
     auto currIter = env->results->getCurrentIteration();
-    auto allSolutions = env->results->getCurrentIteration()->solutionPoints;
+    auto sourceIter = currIter;
+
+    // The final dual problem may have no solutions, e.g. if it is infeasible, so the polish then uses the latest
+    // iteration with solutions
+    if(isFinalPolish && currIter->solutionPoints.empty())
+    {
+        for(auto it = env->results->iterations.rbegin(); it != env->results->iterations.rend(); ++it)
+        {
+            if(!(*it)->solutionPoints.empty()
+                && ((*it)->isMIP() || !env->reformulatedProblem->properties.isDiscrete))
+            {
+                sourceIter = *it;
+                break;
+            }
+        }
+    }
+
+    auto allSolutions = sourceIter->solutionPoints;
 
     bool callNLPSolver = false;
     bool useFeasibleSolutionExtra = false;
 
-    if(!currIter->isMIP() && env->reformulatedProblem->properties.isDiscrete)
-    {
+    if((!sourceIter->isMIP() && env->reformulatedProblem->properties.isDiscrete) || allSolutions.empty())
         return;
-    }
 
-    if(allSolutions.size() == 0)
-    {
-        return;
-    }
-
-    if(currIter->MIPSolutionLimitUpdated && currIter->solutionStatus != E_ProblemSolutionStatus::Optimal)
+    if(!isFinalPolish && currIter->MIPSolutionLimitUpdated
+        && currIter->solutionStatus != E_ProblemSolutionStatus::Optimal)
     {
         env->solutionStatistics.numberOfIterationsWithoutNLPCallMIP++;
         return;
     }
+
+    env->timing->startTimer("PrimalStrategy");
+    env->timing->startTimer("PrimalBoundStrategyNLP");
 
     auto userSettingStrategy = env->settings->getSetting<int>("Primal.FixedInteger.CallStrategy");
     auto userSetting = env->settings->getSetting<int>("Primal.FixedInteger.Source");
@@ -63,15 +74,8 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
 
     if(isFinalPolish)
     {
-        // The polish runs once, after the search, so the iteration- and time-based pacing below does not apply.
-        // There is only something to improve if a primal solution was found at all.
-        if(!env->results->hasPrimalSolution())
-        {
-            env->timing->stopTimer("PrimalBoundStrategyNLP");
-            env->timing->stopTimer("PrimalStrategy");
-            return;
-        }
-
+        // The polish runs once, after the search, so the iteration- and time-based pacing below does not apply. It is
+        // also used without a primal solution, since the NLP solver may find one where the search did not.
         callNLPSolver = true;
         useFeasibleSolutionExtra = true;
     }
@@ -114,7 +118,7 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
     }
     else if(callNLPSolver && userSetting == static_cast<int>(ES_PrimalNLPFixedPoint::SmallestDeviationSolution))
     {
-        auto tmpSol = currIter->getSolutionPointWithSmallestDeviation();
+        auto tmpSol = sourceIter->getSolutionPointWithSmallestDeviation();
         env->primalSolver->addFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::SmallestDeviationSolution,
             tmpSol.objectiveValue, tmpSol.iterFound, tmpSol.maxDeviation);
     }
@@ -130,7 +134,7 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
         env->primalSolver->addFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::FirstSolution, tmpSol.objectiveValue,
             tmpSol.iterFound, tmpSol.maxDeviation);
 
-        auto smallestDevSolIdx = currIter->getSolutionPointWithSmallestDeviationIndex();
+        auto smallestDevSolIdx = sourceIter->getSolutionPointWithSmallestDeviationIndex();
 
         if(smallestDevSolIdx != 0)
         {

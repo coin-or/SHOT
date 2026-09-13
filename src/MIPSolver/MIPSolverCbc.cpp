@@ -794,8 +794,8 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
             {
                 if(V->isUnbounded())
                 {
-                    // Temporarily introduce bounds [-1e20,1e20] for unbounded variables in objective
-                    updateVariableBound(V->getIndex(), -1e20, 1e20);
+                    auto bounds = getTemporaryBoundsForUnboundedVariable(V->lowerBound, V->upperBound);
+                    updateVariableBound(V->getIndex(), bounds.first, bounds.second);
                     variablesWithChangedBounds.push_back(V->getIndex());
                     problemUpdated = true;
                 }

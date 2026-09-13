@@ -58,6 +58,22 @@ protected:
     // Whether a solve with the given status provides a bound that is valid for the dual problem
     bool isDualBoundAvailable(E_ProblemSolutionStatus status, bool isMIP);
 
+    // The finite bounds temporarily given to an unbounded variable to find a point of an unbounded dual problem. The
+    // point is only used to generate cuts, so it is kept at a moderate magnitude: LP solvers treat values from 1e20 as
+    // infinite, and cuts for, e.g., square terms generated far away are badly scaled.
+    static PairDouble getTemporaryBoundsForUnboundedVariable(double lowerBound, double upperBound)
+    {
+        const double maxMagnitude = 1e4;
+
+        if(lowerBound > maxMagnitude)
+            return (PairDouble(lowerBound, lowerBound + maxMagnitude));
+
+        if(upperBound < -maxMagnitude)
+            return (PairDouble(upperBound - maxMagnitude, upperBound));
+
+        return (PairDouble(std::max(lowerBound, -maxMagnitude), std::min(upperBound, maxMagnitude)));
+    }
+
 public:
     ~MIPSolverBase();
 

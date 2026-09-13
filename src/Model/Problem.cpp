@@ -2033,6 +2033,7 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint, double timeLim
                     += std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->nonlinearExpression->getBounds();
 
             auto terms = std::dynamic_pointer_cast<QuadraticConstraint>(constraint)->quadraticTerms;
+            double maxUpperBound = env->settings->getSetting<double>("Model.Variables.Continuous.MaximumUpperBound");
 
             for(auto& T : terms)
             {
@@ -2056,12 +2057,15 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint, double timeLim
 
                 termBound = termBound / T->coefficient;
 
-                if(T->firstVariable == T->secondVariable && (T->firstVariable->lowerBound > 0))
+                if(T->firstVariable == T->secondVariable)
                 {
-                    if(termBound.l() < 0)
+                    // A term bound of unbounded magnitude comes from other unbounded terms, and its square root would
+                    // give a finite-looking but meaningless bound
+                    if(termBound.u() >= maxUpperBound)
                         continue;
 
-                    if(T->firstVariable->tightenBounds(sqrt(termBound)))
+                    ExpressionSquare square(std::make_shared<ExpressionVariable>(T->firstVariable));
+                    if(square.tightenBounds(termBound))
                     {
                         boundsUpdated = true;
                         env->output->outputDebug(

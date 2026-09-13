@@ -200,9 +200,9 @@ private:
     ObjSense objectiveSense;
     VectorDouble variableCosts;
 
-    // The objective coefficients removed to find a feasible point of an unbounded dual problem. They are restored
-    // before the next solve, since changing the model discards the point found.
-    std::vector<PairIndexValue> objectiveCoefficientsToRestore;
+    // The variables temporarily bounded to find a feasible point of an unbounded dual problem. Their bounds are
+    // restored before the next solve, since changing the model discards the point found.
+    VectorInteger variableBoundsToRestore;
 
     // HiGHS can only tell whether a problem is infeasible or unbounded if presolve is not used, so such a problem is
     // solved again without it

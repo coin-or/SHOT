@@ -22,6 +22,8 @@
 #include "../src/Model/Simplifications.h"
 
 #include "../src/Tasks/TaskReformulateProblem.h"
+#include "../src/Tasks/TaskSelectPrimalFixedNLPPointsFromSolutionPool.h"
+#include "../src/PrimalSolver.h"
 
 #include <algorithm>
 #include <cmath>
@@ -59,6 +61,8 @@ bool ModelTestObjectivePartitioningStrategy();
 bool ModelTestSignomialElementBounds();
 bool ModelTestTermAndExpressionBounds();
 bool ModelTestMixedTermBoundTightening();
+bool ModelTestSquareBoundTightening();
+bool ModelTestPolishWithoutPrimal();
 bool ModelTestUnboundedQCQPWithSolver(ES_MIPSolver mipSolver);
 bool ModelTestUnboundedQCQP();
 bool ModelTestFixedVariableConstantFolding();
@@ -263,6 +267,12 @@ int ModelTest(int argc, char* argv[])
         break;
     case 35:
         passed = ModelTestInitialPOAConvexRelaxation();
+        break;
+    case 36:
+        passed = ModelTestSquareBoundTightening();
+        break;
+    case 37:
+        passed = ModelTestPolishWithoutPrimal();
         break;
     default:
         passed = false;
@@ -6610,4 +6620,178 @@ bool ModelTestInitialPOAConvexRelaxation()
     }
 
     return passed;
+}
+
+bool ModelTestSquareBoundTightening()
+{
+    // Propagating a bound on x^2 back onto x must keep both signs of x when its domain contains zero: x^2 <= 4 means
+    // x in [-2,2]. Squares were previously only tightened when x > 0, so, e.g., x^2/9 + y^2 <= 1 with x and y free
+    // gave no bounds and the first dual problem was unbounded. Both representations of a square are checked: a
+    // quadratic term and a nonlinear expression.
+
+    bool passed = true;
+
+    struct Case
+    {
+        std::string description;
+        double variableLowerBound;
+        double variableUpperBound;
+        double expectedLowerBound;
+        double expectedUpperBound;
+    };
+
+    std::vector<Case> cases = {
+        { "x^2 <= 4, x free", -1e50, 1e50, -2.0, 2.0 },
+        { "x^2 <= 4, x in [-1,10]", -1.0, 10.0, -1.0, 2.0 },
+        { "x^2 <= 4, x in [0,10] (non-negative domain)", 0.0, 10.0, 0.0, 2.0 },
+        { "x^2 <= 4, x in [-10,-1] (negative domain)", -10.0, -1.0, -2.0, -1.0 },
+    };
+
+    for(bool useExpression : { false, true })
+    {
+        for(auto& C : cases)
+        {
+            auto solver = std::make_unique<SHOT::Solver>();
+            auto problem = std::make_shared<SHOT::Problem>(solver->getEnvironment());
+
+            auto x = std::make_shared<SHOT::Variable>(
+                "x", SHOT::E_VariableType::Real, C.variableLowerBound, C.variableUpperBound);
+            problem->add(x);
+            problem->add(std::make_shared<SHOT::LinearObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize));
+
+            auto constraint = std::make_shared<SHOT::NonlinearConstraint>("square", SHOT_DBL_MIN, 4.0);
+
+            if(useExpression)
+            {
+                constraint->add(
+                    std::make_shared<SHOT::ExpressionSquare>(std::make_shared<SHOT::ExpressionVariable>(x)));
+            }
+            else
+            {
+                constraint->add(std::make_shared<SHOT::QuadraticTerm>(1.0, x, x));
+            }
+
+            problem->add(constraint);
+            problem->finalize();
+            problem->doFBBT();
+
+            std::string description = C.description + (useExpression ? " (expression)" : " (quadratic term)");
+
+            std::cout << "  " << description << ": [" << x->lowerBound << ", " << x->upperBound << "] (expected ["
+                      << C.expectedLowerBound << ", " << C.expectedUpperBound << "])\n";
+
+            if(std::abs(x->lowerBound - C.expectedLowerBound) > 1e-9
+                || std::abs(x->upperBound - C.expectedUpperBound) > 1e-9)
+            {
+                std::cout << "  FAILED: " << description << " was not tightened as expected.\n";
+                passed = false;
+            }
+        }
+    }
+
+    // An impossible or unbounded bound on the square must not change the variable
+    auto freeVariable = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, -1e50, 1e50);
+    SHOT::ExpressionSquare square(std::make_shared<SHOT::ExpressionVariable>(freeVariable));
+
+    if(square.tightenBounds(SHOT::Interval(-4.0, -1.0)) || square.tightenBounds(SHOT::Interval(-1e100, 1e100)))
+    {
+        std::cout << "  FAILED: an impossible or unbounded bound on x^2 tightened x to [" << freeVariable->lowerBound
+                  << ", " << freeVariable->upperBound << "].\n";
+        passed = false;
+    }
+
+    // x^2/9 + y^2 <= 1 bounds both variables, while in x^2 + z <= 1 the bound on x^2 comes from the unbounded z, so
+    // taking its square root would only give a meaningless bound of magnitude 1e25
+    auto solver = std::make_unique<SHOT::Solver>();
+    auto problem = std::make_shared<SHOT::Problem>(solver->getEnvironment());
+
+    auto x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, -1e50, 1e50);
+    auto y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Real, -1e50, 1e50);
+    auto u = std::make_shared<SHOT::Variable>("u", SHOT::E_VariableType::Real, -1e50, 1e50);
+    auto z = std::make_shared<SHOT::Variable>("z", SHOT::E_VariableType::Real, -1e50, 1e50);
+    problem->add(SHOT::Variables { x, y, u, z });
+    problem->add(std::make_shared<SHOT::LinearObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize));
+
+    auto ellipse = std::make_shared<SHOT::QuadraticConstraint>("ellipse", SHOT_DBL_MIN, 1.0);
+    ellipse->add(std::make_shared<SHOT::QuadraticTerm>(1.0 / 9.0, x, x));
+    ellipse->add(std::make_shared<SHOT::QuadraticTerm>(1.0, y, y));
+    problem->add(ellipse);
+
+    auto unboundedPartner = std::make_shared<SHOT::QuadraticConstraint>("unbounded_partner", SHOT_DBL_MIN, 1.0);
+    unboundedPartner->add(std::make_shared<SHOT::LinearTerm>(1.0, z));
+    unboundedPartner->add(std::make_shared<SHOT::QuadraticTerm>(1.0, u, u));
+    problem->add(unboundedPartner);
+
+    problem->finalize();
+    problem->doFBBT();
+
+    std::cout << "  x^2/9 + y^2 <= 1: x in [" << x->lowerBound << ", " << x->upperBound << "], y in [" << y->lowerBound
+              << ", " << y->upperBound << "] (expected [-3, 3] and [-1, 1])\n";
+    std::cout << "  u^2 + z <= 1: u in [" << u->lowerBound << ", " << u->upperBound << "] (expected unchanged)\n";
+
+    if(std::abs(x->lowerBound + 3.0) > 1e-9 || std::abs(x->upperBound - 3.0) > 1e-9
+        || std::abs(y->lowerBound + 1.0) > 1e-9 || std::abs(y->upperBound - 1.0) > 1e-9)
+    {
+        std::cout << "  FAILED: the ellipse did not bound x and y.\n";
+        passed = false;
+    }
+
+    if(u->lowerBound != -1e50 || u->upperBound != 1e50)
+    {
+        std::cout << "  FAILED: an unbounded partner term gave u a bound.\n";
+        passed = false;
+    }
+
+    return passed;
+}
+
+bool ModelTestPolishWithoutPrimal()
+{
+    // A search can end without any primal solution, e.g. when a cut for a nonconvex constraint cuts away the whole
+    // domain and the repaired dual problem keeps returning the same point. The final polish must then still solve an
+    // NLP problem from the dual solution, also when the final dual problem gave no solution at all, since the NLP
+    // solver may find a feasible point. Previously it was skipped whenever there was no primal solution.
+
+    auto solver = std::make_unique<SHOT::Solver>();
+    auto env = solver->getEnvironment();
+
+    auto problem = std::make_shared<SHOT::Problem>(env);
+    problem->add(std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, -1.0, 1.0));
+    problem->add(std::make_shared<SHOT::LinearObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize));
+    problem->finalize();
+
+    env->problem = problem;
+    env->reformulatedProblem = problem;
+
+    // A solution-limited iteration with a point, but no primal solution
+    env->results->createIteration();
+    auto iteration = env->results->getCurrentIteration();
+    iteration->solutionPoints.push_back(SHOT::SolutionPoint { { -1.0 }, 0.0, 1, { 0, 1.0 } });
+    iteration->MIPSolutionLimitUpdated = true;
+    iteration->solutionStatus = SHOT::E_ProblemSolutionStatus::SolutionLimit;
+
+    SHOT::TaskSelectPrimalFixedNLPPointsFromSolutionPool polish(env, true);
+    polish.run();
+
+    if(env->primalSolver->fixedPrimalNLPCandidates.size() != 1)
+    {
+        std::cout << "  FAILED: no NLP candidate was selected without a primal solution.\n";
+        return false;
+    }
+
+    env->primalSolver->fixedPrimalNLPCandidates.clear();
+
+    // A final iteration without solutions, e.g. an infeasible dual problem, uses the point of the previous one
+    env->results->createIteration();
+    env->results->getCurrentIteration()->solutionStatus = SHOT::E_ProblemSolutionStatus::Infeasible;
+    polish.run();
+
+    if(env->primalSolver->fixedPrimalNLPCandidates.size() != 1
+        || env->primalSolver->fixedPrimalNLPCandidates.front().point.front() != -1.0)
+    {
+        std::cout << "  FAILED: the point of the previous iteration was not selected.\n";
+        return false;
+    }
+
+    return true;
 }
