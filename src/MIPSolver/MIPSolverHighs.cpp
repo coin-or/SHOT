@@ -618,6 +618,11 @@ E_ProblemSolutionStatus MIPSolverHighs::solveProblem()
     interruptedBySolutionLimit = false;
     interruptedByTermination = false;
 
+    for(auto& P : objectiveCoefficientsToRestore)
+        highsInstance.changeColCost(P.index, P.value);
+
+    objectiveCoefficientsToRestore.clear();
+
     highsReturnStatus = highsInstance.run();
     MIPSolutionStatus = getSolutionStatus();
 
@@ -673,9 +678,11 @@ E_ProblemSolutionStatus MIPSolverHighs::solveProblem()
             highsReturnStatus = highsInstance.run();
             MIPSolutionStatus = getSolutionStatus();
 
-            // Restore original objective coefficients
-            for(auto& P : originalObjectiveCoefficients)
-                highsInstance.changeColCost(P.index, P.value);
+            // The point is only feasible since the objective has been changed
+            if(MIPSolutionStatus == E_ProblemSolutionStatus::Optimal)
+                MIPSolutionStatus = E_ProblemSolutionStatus::Feasible;
+
+            objectiveCoefficientsToRestore = originalObjectiveCoefficients;
 
             if(env->results->iterations.size() > 0) // Might not have iterations if we are using the minimax solver
                 env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed = true;

@@ -832,6 +832,14 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
 
     try
     {
+        for(auto& P : objectiveCoefficientsToRestore)
+        {
+            gurobiModel->getVar(P.index).set(GRB_DoubleAttr_Obj, P.value);
+            modelUpdated = true;
+        }
+
+        objectiveCoefficientsToRestore.clear();
+
         if(modelUpdated)
         {
             gurobiModel->update();
@@ -903,10 +911,11 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
 
             MIPSolutionStatus = getSolutionStatus();
 
-            for(auto& P : originalObjectiveCoefficients)
-                gurobiModel->getVar(P.index).set(GRB_DoubleAttr_Obj, P.value);
+            // The point is only feasible since the objective has been changed
+            if(MIPSolutionStatus == E_ProblemSolutionStatus::Optimal)
+                MIPSolutionStatus = E_ProblemSolutionStatus::Feasible;
 
-            gurobiModel->update();
+            objectiveCoefficientsToRestore = originalObjectiveCoefficients;
 
             if(env->results->iterations.size() > 0) // Might not have iterations if we are using the minimax solver
                 env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed = true;

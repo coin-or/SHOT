@@ -177,6 +177,9 @@ public:
     E_ProblemSolutionStatus resolveInfeasibleOrUnbounded(E_ProblemSolutionStatus status);
 
 private:
+    // The objective coefficients removed to find a feasible point of an unbounded dual problem. They are restored
+    // before the next solve, since changing the model discards the point found.
+    std::vector<PairIndexValue> objectiveCoefficientsToRestore;
 };
 
 } // namespace SHOT
