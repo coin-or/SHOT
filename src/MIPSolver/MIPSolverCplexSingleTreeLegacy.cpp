@@ -752,8 +752,15 @@ E_ProblemSolutionStatus MIPSolverCplexSingleTreeLegacy::solveProblem()
         cplexInstance.solve();
         MIPSolutionStatus = getSolutionStatus();
 
+        // An unbounded exact dual problem means that the problem is unbounded, so no point is needed
+        bool isUnboundedExactDualProblem
+            = MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded && env->dualSolver->isDualProblemExact();
+
+        if(isUnboundedExactDualProblem)
+            MIPSolutionStatus = resolveInfeasibleOrUnbounded(MIPSolutionStatus);
+
         // Try to solve a feasibility problem to get a valid solution point if unbounded
-        if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
+        if(!isUnboundedExactDualProblem && MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
         {
             cplexModel.remove(cplexInstance.getObjective());
 
@@ -773,7 +780,7 @@ E_ProblemSolutionStatus MIPSolverCplexSingleTreeLegacy::solveProblem()
             modelUpdated = true;
         }
 
-        if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
+        if(!isUnboundedExactDualProblem && MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
         {
             repairInfeasibility();
             MIPSolutionStatus = E_ProblemSolutionStatus::Unbounded;

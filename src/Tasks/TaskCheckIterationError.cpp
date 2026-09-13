@@ -10,6 +10,7 @@
 
 #include "TaskCheckIterationError.h"
 
+#include "../DualSolver.h"
 #include "../Iteration.h"
 #include "../Results.h"
 #include "../Settings.h"
@@ -52,7 +53,10 @@ void TaskCheckIterationError::run()
         else
             env->tasks->setNextTask(taskIDIfTrue);
     }
-    else if(currIter->solutionStatus == E_ProblemSolutionStatus::Unbounded && currIter->solutionPoints.size() == 0)
+    // Solution points of an unbounded relaxation are used to find cuts, while an exact dual problem that is unbounded
+    // shows that the problem is unbounded even if the MIP solver has found solutions to it
+    else if(currIter->solutionStatus == E_ProblemSolutionStatus::Unbounded
+        && (currIter->solutionPoints.size() == 0 || env->dualSolver->isDualProblemExact()))
     {
         env->results->terminationReason = E_TerminationReason::UnboundedProblem;
         env->tasks->setNextTask(taskIDIfTrue);

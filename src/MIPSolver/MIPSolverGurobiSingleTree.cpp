@@ -107,8 +107,13 @@ E_ProblemSolutionStatus MIPSolverGurobiSingleTree::solveProblem()
         MIPSolutionStatus = E_ProblemSolutionStatus::Error;
     }
 
+    // An unbounded exact dual problem means that the problem is unbounded, so no point is needed
+    if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded && env->dualSolver->isDualProblemExact())
+    {
+        MIPSolutionStatus = resolveInfeasibleOrUnbounded(MIPSolutionStatus);
+    }
     // To find a feasible point for an unbounded dual problem
-    if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
+    else if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
     {
         bool variableBoundsUpdated = false;
 

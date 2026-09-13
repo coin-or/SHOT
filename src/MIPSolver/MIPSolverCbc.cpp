@@ -859,6 +859,15 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
                     env->reformulatedProblem->getVariableUpperBound(I));
             }
 
+            // Cbc reports an unbounded continuous relaxation, so for an exact dual problem the bounded one only shows
+            // whether the problem is feasible. A feasible MILP with an unbounded continuous relaxation is unbounded.
+            if(env->dualSolver->isDualProblemExact()
+                && (MIPSolutionStatus == E_ProblemSolutionStatus::Feasible
+                    || MIPSolutionStatus == E_ProblemSolutionStatus::SolutionLimit))
+            {
+                MIPSolutionStatus = E_ProblemSolutionStatus::Unbounded;
+            }
+
             env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed = true;
         }
     }

@@ -420,4 +420,12 @@ bool DualSolver::hasIntegerCutBeenAdded(const PairDouble& hashes)
     return (false);
 }
 
+bool DualSolver::isDualProblemExact()
+{
+    // Nonlinear constraints and nonlinear objectives are only represented by cuts in the dual problem
+    return (env->reformulatedProblem->properties.numberOfNonlinearConstraints == 0
+        && env->reformulatedProblem->objectiveFunction->properties.classification
+            <= E_ObjectiveFunctionClassification::Quadratic);
+}
+
 } // namespace SHOT

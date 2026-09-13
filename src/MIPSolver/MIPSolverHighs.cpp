@@ -621,8 +621,14 @@ E_ProblemSolutionStatus MIPSolverHighs::solveProblem()
     highsReturnStatus = highsInstance.run();
     MIPSolutionStatus = getSolutionStatus();
 
+    // An unbounded exact dual problem means that the problem is unbounded, so no point is needed
+    if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded && env->results->getNumberOfIterations() > 0
+        && env->dualSolver->isDualProblemExact())
+    {
+        MIPSolutionStatus = resolveInfeasibleOrUnbounded(MIPSolutionStatus);
+    }
     // To find a feasible point for an unbounded dual problem and not when solving the minimax-problem
-    if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded && env->results->getNumberOfIterations() > 0)
+    else if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded && env->results->getNumberOfIterations() > 0)
     {
         std::vector<PairIndexValue> originalObjectiveCoefficients;
         bool problemUpdated = false;
@@ -677,6 +683,22 @@ E_ProblemSolutionStatus MIPSolverHighs::solveProblem()
     }
 
     return (MIPSolutionStatus);
+}
+
+E_ProblemSolutionStatus MIPSolverHighs::resolveInfeasibleOrUnbounded(E_ProblemSolutionStatus status)
+{
+    if(highsInstance.getModelStatus() != HighsModelStatus::kUnboundedOrInfeasible)
+        return (status);
+
+    std::string presolve;
+    highsInstance.getOptionValue("presolve", presolve);
+
+    highsInstance.setOptionValue("presolve", "off");
+    highsReturnStatus = highsInstance.run();
+    status = getSolutionStatus();
+    highsInstance.setOptionValue("presolve", presolve);
+
+    return (status);
 }
 
 bool MIPSolverHighs::repairInfeasibility()

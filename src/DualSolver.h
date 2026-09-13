@@ -51,6 +51,11 @@ public:
     bool useCutOff = false;
     bool isSingleTree = false;
 
+    // Whether the dual problem contains the whole reformulated problem instead of only being a relaxation of it. What
+    // is added to it while solving, e.g. the cutoff constraint and integer cuts, only restricts it, so the problem is
+    // unbounded if the dual problem is.
+    bool isDualProblemExact();
+
 private:
     EnvironmentPtr env;
 

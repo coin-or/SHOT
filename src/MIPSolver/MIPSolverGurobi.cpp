@@ -848,8 +848,14 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
         MIPSolutionStatus = E_ProblemSolutionStatus::Error;
     }
 
+    // An unbounded exact dual problem means that the problem is unbounded, so no point is needed
+    if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded && env->results->getNumberOfIterations() > 0
+        && env->dualSolver->isDualProblemExact())
+    {
+        MIPSolutionStatus = resolveInfeasibleOrUnbounded(MIPSolutionStatus);
+    }
     // To find a feasible point for an unbounded dual problem and not when solving the minimax-problem
-    if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded && env->results->getNumberOfIterations() > 0)
+    else if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded && env->results->getNumberOfIterations() > 0)
     {
         std::vector<PairIndexValue> originalObjectiveCoefficients;
         bool problemUpdated = false;
@@ -908,6 +914,29 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
     }
 
     return (MIPSolutionStatus);
+}
+
+E_ProblemSolutionStatus MIPSolverGurobi::resolveInfeasibleOrUnbounded(E_ProblemSolutionStatus status)
+{
+    try
+    {
+        if(gurobiModel->get(GRB_IntAttr_Status) != GRB_INF_OR_UNBD)
+            return (status);
+
+        int dualReductions = gurobiModel->get(GRB_IntParam_DualReductions);
+
+        gurobiModel->set(GRB_IntParam_DualReductions, 0);
+        gurobiModel->optimize();
+        status = getSolutionStatus();
+        gurobiModel->set(GRB_IntParam_DualReductions, dualReductions);
+    }
+    catch(GRBException& e)
+    {
+        env->output->outputError("        Error when solving MIP/LP problem without dual reductions", e.getMessage());
+        status = E_ProblemSolutionStatus::Error;
+    }
+
+    return (status);
 }
 
 bool MIPSolverGurobi::repairInfeasibility()

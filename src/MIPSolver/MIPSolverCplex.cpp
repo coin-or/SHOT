@@ -812,9 +812,17 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
             MIPSolutionStatus = getSolutionStatus();
         }
 
+        // An unbounded exact dual problem means that the problem is unbounded, so no point is needed
+        bool isUnboundedExactDualProblem = MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded
+            && env->results->getNumberOfIterations() > 0 && env->dualSolver->isDualProblemExact();
+
+        if(isUnboundedExactDualProblem)
+            MIPSolutionStatus = resolveInfeasibleOrUnbounded(MIPSolutionStatus);
+
         // Try to solve a feasibility problem to get a valid solution point if unbounded and not when solving the
         // minimax-problem
-        if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded && env->results->getNumberOfIterations() > 0)
+        if(!isUnboundedExactDualProblem && MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded
+            && env->results->getNumberOfIterations() > 0)
         {
             cplexModel.remove(cplexInstance.getObjective());
 
@@ -836,7 +844,8 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
         }
 
         // If the previous repair failed, we can try this
-        if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded && env->results->getNumberOfIterations() > 0)
+        if(!isUnboundedExactDualProblem && MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded
+            && env->results->getNumberOfIterations() > 0)
         {
             repairInfeasibility();
             MIPSolutionStatus = E_ProblemSolutionStatus::Unbounded;
@@ -869,6 +878,30 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
     }
 
     return (MIPSolutionStatus);
+}
+
+E_ProblemSolutionStatus MIPSolverCplex::resolveInfeasibleOrUnbounded(E_ProblemSolutionStatus status)
+{
+    try
+    {
+        if(cplexInstance.getCplexStatus() != IloCplex::CplexStatus::InfOrUnbd)
+            return (status);
+
+        auto reduce = cplexInstance.getParam(IloCplex::Param::Preprocessing::Reduce);
+
+        cplexInstance.setParam(IloCplex::Param::Preprocessing::Reduce, 0);
+        cplexInstance.solve();
+        status = MIPSolverCplex::getSolutionStatus();
+        cplexInstance.setParam(IloCplex::Param::Preprocessing::Reduce, reduce);
+    }
+    catch(IloException& e)
+    {
+        env->output->outputError(
+            "        Error when solving MIP/LP problem without presolve reductions", e.getMessage());
+        status = E_ProblemSolutionStatus::Error;
+    }
+
+    return (status);
 }
 
 bool MIPSolverCplex::repairInfeasibility()

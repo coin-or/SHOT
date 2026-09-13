@@ -172,6 +172,10 @@ public:
     GRBLinExpr constraintLinearExpression;
     GRBQuadExpr constraintQuadraticExpression;
 
+    // Gurobi can only tell whether a problem is infeasible or unbounded if dual reductions are not used in presolve,
+    // so such a problem is solved again without them
+    E_ProblemSolutionStatus resolveInfeasibleOrUnbounded(E_ProblemSolutionStatus status);
+
 private:
 };
 

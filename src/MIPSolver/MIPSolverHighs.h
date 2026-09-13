@@ -200,6 +200,10 @@ private:
     ObjSense objectiveSense;
     VectorDouble variableCosts;
 
+    // HiGHS can only tell whether a problem is infeasible or unbounded if presolve is not used, so such a problem is
+    // solved again without it
+    E_ProblemSolutionStatus resolveInfeasibleOrUnbounded(E_ProblemSolutionStatus status);
+
 protected:
     std::vector<HighsVarType> variableTypesHighs;
 };
