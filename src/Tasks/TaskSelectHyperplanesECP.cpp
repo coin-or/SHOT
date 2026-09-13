@@ -59,10 +59,16 @@ void TaskSelectHyperplanesECP::run(std::vector<SolutionPoint> solPoints)
     std::vector<std::tuple<int, NumericConstraintValue>> selectedNumericValues;
     std::vector<std::tuple<int, NumericConstraintValue>> nonconvexSelectedNumericValues;
 
+    // Used to explain why no cuts were added
+    size_t numberOfDeviatingValues = 0;
+    size_t numberOfValuesAlreadyCut = 0;
+
     for(size_t i = 0; i < solPoints.size(); i++)
     {
         auto numericConstraintValues = env->reformulatedProblem->getFractionOfDeviatingNonlinearConstraints(
             solPoints.at(i).point, 0.0, constraintSelectionFactor);
+
+        numberOfDeviatingValues += numericConstraintValues.size();
 
         for(auto& NCV : numericConstraintValues)
         {
@@ -92,8 +98,9 @@ void TaskSelectHyperplanesECP::run(std::vector<SolutionPoint> solPoints)
 
             if(env->dualSolver->hasHyperplaneBeenAdded(solPoints.at(i).point, NCV.constraint->getIndex()))
             {
-                env->output->outputDebug("         Hyperplane already added for constraint "
-                    + std::to_string(NCV.constraint->getIndex()));
+                env->output->outputDebug(fmt::format(
+                    "         Hyperplane already added for constraint {} in this point.", NCV.constraint->name));
+                numberOfValuesAlreadyCut++;
                 continue;
             }
 
@@ -148,8 +155,10 @@ void TaskSelectHyperplanesECP::run(std::vector<SolutionPoint> solPoints)
 
     if(addedHyperplanes == 0)
     {
-        env->output->outputDebug("         Could not add hyperplane for convex constraints, number of nonconvex: "
-            + std::to_string(nonconvexSelectedNumericValues.size()));
+        env->output->outputDebug(
+            fmt::format("         No cutting planes added for convex constraints, {} candidates from nonconvex "
+                        "constraints.",
+                nonconvexSelectedNumericValues.size()));
 
         for(auto& values : nonconvexSelectedNumericValues)
         {
@@ -237,9 +246,16 @@ void TaskSelectHyperplanesECP::run(std::vector<SolutionPoint> solPoints)
         }
     }
 
-    if(addedHyperplanes == 0)
+    if(addedHyperplanes == 0 && numberOfDeviatingValues == 0)
     {
         env->output->outputDebug("         All nonlinear constraints fulfilled, so no constraint cuts added.");
+    }
+    else if(addedHyperplanes == 0)
+    {
+        env->output->outputDebug(fmt::format("         No constraint cuts added although {} constraint values "
+                                             "deviate in the solution points, {} of them already cut in the same "
+                                             "point.",
+            numberOfDeviatingValues, numberOfValuesAlreadyCut));
     }
 
     env->timing->stopTimer("DualCutGenerationRootSearch");
