@@ -618,10 +618,10 @@ E_ProblemSolutionStatus MIPSolverHighs::solveProblem()
     interruptedBySolutionLimit = false;
     interruptedByTermination = false;
 
-    for(auto& P : objectiveCoefficientsToRestore)
-        highsInstance.changeColCost(P.index, P.value);
+    for(auto& I : variableBoundsToRestore)
+        highsInstance.changeColBounds(I, variableLowerBounds[I], variableUpperBounds[I]);
 
-    objectiveCoefficientsToRestore.clear();
+    variableBoundsToRestore.clear();
 
     highsReturnStatus = highsInstance.run();
     MIPSolutionStatus = getSolutionStatus();
@@ -635,7 +635,6 @@ E_ProblemSolutionStatus MIPSolverHighs::solveProblem()
     // To find a feasible point for an unbounded dual problem and not when solving the minimax-problem
     else if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded && env->results->getNumberOfIterations() > 0)
     {
-        std::vector<PairIndexValue> originalObjectiveCoefficients;
         bool problemUpdated = false;
 
         if((env->reformulatedProblem->objectiveFunction->properties.classification
@@ -654,10 +653,12 @@ E_ProblemSolutionStatus MIPSolverHighs::solveProblem()
 
                 if(V->isUnbounded())
                 {
-                    // Temporarily remove unbounded terms from objective
-                    originalObjectiveCoefficients.emplace_back(V->getIndex(), variableCosts.at(V->getIndex()));
-
-                    highsInstance.changeColCost(V->getIndex(), 0.0);
+                    // Temporarily bound the variable, keeping the objective so that the point found is in the
+                    // direction of improvement
+                    auto bounds = getTemporaryBoundsForUnboundedVariable(
+                        variableLowerBounds[V->getIndex()], variableUpperBounds[V->getIndex()]);
+                    highsInstance.changeColBounds(V->getIndex(), bounds.first, bounds.second);
+                    variableBoundsToRestore.push_back(V->getIndex());
                     problemUpdated = true;
                 }
             }
@@ -678,11 +679,9 @@ E_ProblemSolutionStatus MIPSolverHighs::solveProblem()
             highsReturnStatus = highsInstance.run();
             MIPSolutionStatus = getSolutionStatus();
 
-            // The point is only feasible since the objective has been changed
+            // The point is only feasible since the problem has been changed
             if(MIPSolutionStatus == E_ProblemSolutionStatus::Optimal)
                 MIPSolutionStatus = E_ProblemSolutionStatus::Feasible;
-
-            objectiveCoefficientsToRestore = originalObjectiveCoefficients;
 
             if(env->results->iterations.size() > 0) // Might not have iterations if we are using the minimax solver
                 env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed = true;

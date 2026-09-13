@@ -851,10 +851,22 @@ public:
 
     inline bool tightenBounds(Interval bound) override
     {
-        if(bound.l() < 0)
-            return false;
+        if(bound.u() < 0)
+            return (false);
 
-        return (child->tightenBounds(sqrt(bound)));
+        // The square discards the sign of the child, so a bound on the square only resolves it if the child's domain
+        // is on one side of zero. Otherwise only the upper bound can be used, since a positive lower bound would
+        // exclude an interval around zero, which cannot be represented.
+        auto roots = sqrt(Interval(std::max(0.0, bound.l()), bound.u()));
+        auto childBound = child->getBounds();
+
+        if(childBound.l() >= 0)
+            return (child->tightenBounds(roots));
+
+        if(childBound.u() <= 0)
+            return (child->tightenBounds(-roots));
+
+        return (child->tightenBounds(Interval(-roots.u(), roots.u())));
     };
 
     inline FactorableFunction getFactorableFunction() override

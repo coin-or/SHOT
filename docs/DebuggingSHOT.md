@@ -282,6 +282,15 @@ introduced, or reproduce a failure in isolation instead of debugging a full
   `./SHOT test/data/instances/<group>/<file> --debug=<dir>
   Output.Console.Iteration.Detail=0`, and work through the debugging
   workflow in section 6 above.
+- **`InstanceTest` only fails on wrong results for strict instances**:
+  otherwise only a crash fails it. A missing primal solution or an objective
+  outside the `[dual, primal]` range only warns, and a solve that ends with a
+  poor primal solution and no dual bound still passes. When a small instance
+  exposes a solver bug, add it with `"strict": true` in `instances.json`
+  (e.g. in `test/data/instances/ampl_mp/`, which is in the core set): it then
+  fails the test unless the primal bound is the objective and the dual bound
+  is valid, for every registered solver combination. Check that the instance
+  fails without the fix, and that it is solved with all combinations.
 - **Core vs. full instance tests**: the `test/data/instances/` subfolders are
   split into two CTest groups (see `kCoreInstanceFolders` in
   `test/InstanceTestCommon.h`). **Core** (`Instance_1`..`Instance_6`) scans
@@ -449,6 +458,38 @@ in this codebase — add to this list as you find more.
   flag. What's suspicious is a bound that's tighter than the true achievable
   range; check that the printed bound is a valid superset of the
   closed-form range, not that it's tight.
+
+### Unbounded initial relaxations and square bounds
+
+- A bounded quadratic feasible region can have an unbounded first LP relaxation
+  when the MIP solver does not handle quadratics itself (Cbc, HiGHS). For
+  `x^2/9 + y^2 <= 1` with free `x` and `y`, check the bound tightening output:
+  it should give `x in [-3,3]` and `y in [-1,1]`. Inverting a square must keep
+  both signs when the variable's domain contains zero.
+- Interval bound propagation happily turns the `1e50` sentinel of an unbounded
+  variable into finite-looking bounds, e.g. `x in [-1e25,1e25]` from
+  `x^2 + z <= 1` with free `z`. Such a bound is useless, and it hides that the
+  variable is unbounded from `Variable::isUnbounded()`, so the unbounded dual
+  problem handling below skips it. Look for bounds of magnitude `1e20`–`1e50`
+  in the bound tightening output.
+- When the dual problem is unbounded, the Cbc and HiGHS backends temporarily
+  bound the unbounded objective variables
+  (`MIPSolverBase::getTemporaryBoundsForUnboundedVariable`) and solve again to
+  get a point to generate cuts in. Run with
+  `Model.BoundTightening.FeasibilityBased.Use=false` to exercise this path, and
+  look for `dualiter*_unbounded.lp` in the debug directory (Cbc). LP solvers
+  treat values from `1e20` as infinite, so larger temporary bounds do not help,
+  and cuts for square terms generated at points far away are badly scaled.
+- Changing bounds or costs discards the solution in Gurobi and HiGHS, so the
+  temporary changes are only undone at the start of the next solve. The
+  objective value of that solve is not a dual bound; it is ignored since
+  `hasInfeasibilityRepairBeenPerformed` is set.
+- A cut for a nonconvex constraint can cut away the whole domain, after which
+  the infeasibility repair admits the same point again and SHOT terminates
+  since no additional cuts can be added. That does not mean the problem is
+  infeasible. The final polish (`Primal.PolishSolution`) then still solves an
+  NLP problem from the last dual solution, also without a primal solution;
+  check `primalnlp*_warmstart_*` in the debug directory to see that it ran.
 
 ### Verification discipline
 

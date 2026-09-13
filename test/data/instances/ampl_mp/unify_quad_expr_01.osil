@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osil xmlns="os.optimizationservices.org" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="os.optimizationservices.org http://www.optimizationservices.org/schemas/2.0/OSiL.xsd">
+  <instanceHeader>
+    <name>unify_quad_expr_01</name>
+    <description>From https://github.com/ampl/mp/tree/develop/test/end2end/cases/categorized/fast/qp/unify_quad_expr_01.mod. Maximize exp(q) subject to cos(q) - sin(q) &lt;= 0.5 and x1 x2 + x1 + x3 &lt;= 1.5, where q = x1 x2 + x2 x3 + x1 + 1.5 x2 and x in [-1,1]^3. Nonconvex: a cut for the trigonometric constraint at the corner (-1,-1,-1) excludes the whole domain. Optimal objective is 20.0855369.</description>
+  </instanceHeader>
+  <instanceData>
+    <variables numberOfVariables="3">
+      <var name="x1" lb="-1" ub="1"/>
+      <var name="x2" lb="-1" ub="1"/>
+      <var name="x3" lb="-1" ub="1"/>
+    </variables>
+    <objectives>
+      <obj maxOrMin="max" name="defObj_z" numberOfObjCoef="0"/>
+    </objectives>
+    <constraints numberOfConstraints="2">
+      <con name="c1" ub=".5"/>
+      <con name="c2" ub="1.5"/>
+    </constraints>
+    <linearConstraintCoefficients numberOfValues="1">
+      <start>
+        <el mult="2">0</el>
+        <el>1</el>
+      </start>
+      <colIdx>
+        <el>2</el>
+      </colIdx>
+      <value>
+        <el>1</el>
+      </value>
+    </linearConstraintCoefficients>
+    <nonlinearExpressions numberOfNonlinearExpressions="3">
+      <nl idx="-1">
+        <exp>
+          <sum>
+            <product>
+              <variable idx="1"/>
+              <variable idx="0"/>
+            </product>
+            <variable idx="0"/>
+            <sum>
+              <product>
+                <variable idx="1"/>
+                <variable idx="2"/>
+              </product>
+              <variable idx="1" coef="1.5"/>
+            </sum>
+          </sum>
+        </exp>
+      </nl>
+      <nl idx="0">
+        <sum>
+          <cos>
+            <sum>
+              <product>
+                <variable idx="0"/>
+                <variable idx="1"/>
+              </product>
+              <variable idx="1" coef="1.5"/>
+              <variable idx="0"/>
+              <product>
+                <variable idx="2"/>
+                <variable idx="1"/>
+              </product>
+            </sum>
+          </cos>
+          <negate>
+            <sin>
+              <sum>
+                <product>
+                  <variable idx="1"/>
+                  <variable idx="2"/>
+                </product>
+                <variable idx="1" coef="1.5"/>
+                <product>
+                  <variable idx="0"/>
+                  <variable idx="1"/>
+                </product>
+                <variable idx="0"/>
+              </sum>
+            </sin>
+          </negate>
+        </sum>
+      </nl>
+      <nl idx="1">
+        <sum>
+          <product>
+            <variable idx="0"/>
+            <variable idx="1"/>
+          </product>
+          <variable idx="0"/>
+        </sum>
+      </nl>
+    </nonlinearExpressions>
+  </instanceData>
+</osil>
