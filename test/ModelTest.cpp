@@ -1919,7 +1919,27 @@ bool ModelTestSOS1WithSolver(ES_MIPSolver mipSolver)
     problem->add(sos1);
 
     problem->finalize();
-    solver->setProblem(problem);
+
+    if(!solver->setProblem(problem))
+    {
+        // The HiGHS interface does not support special ordered sets, so the problem cannot be set
+        if(mipSolver == ES_MIPSolver::Highs)
+        {
+            std::cout << "HiGHS does not support SOS, skipping.\n";
+
+            // Solving a problem that could not be set must fail instead of crashing
+            if(solver->solveProblem())
+            {
+                std::cout << "Solving a problem that was not set successfully did not fail!\n";
+                passed = false;
+            }
+
+            return passed;
+        }
+
+        std::cout << "Failed to set problem!\n";
+        return false;
+    }
 
     std::cout << "\nSolving...\n";
 
@@ -1964,14 +1984,7 @@ bool ModelTestSOS1()
     passed = ModelTestSOS1WithSolver(ES_MIPSolver::Cbc) && passed;
 #endif
 #ifdef HAS_HIGHS
-    try
-    {
-        passed = ModelTestSOS1WithSolver(ES_MIPSolver::Highs) && passed;
-    }
-    catch(OperationNotImplementedException*)
-    {
-        std::cout << "   HiGHS does not support SOS — skipping.\n";
-    }
+    passed = ModelTestSOS1WithSolver(ES_MIPSolver::Highs) && passed;
 #endif
 #ifdef HAS_CPLEX
     passed = ModelTestSOS1WithSolver(ES_MIPSolver::Cplex) && passed;
@@ -2067,7 +2080,27 @@ bool ModelTestSOS2WithSolver(ES_MIPSolver mipSolver)
     problem->add(sos2);
 
     problem->finalize();
-    solver->setProblem(problem);
+
+    if(!solver->setProblem(problem))
+    {
+        // The HiGHS interface does not support special ordered sets, so the problem cannot be set
+        if(mipSolver == ES_MIPSolver::Highs)
+        {
+            std::cout << "HiGHS does not support SOS, skipping.\n";
+
+            // Solving a problem that could not be set must fail instead of crashing
+            if(solver->solveProblem())
+            {
+                std::cout << "Solving a problem that was not set successfully did not fail!\n";
+                passed = false;
+            }
+
+            return passed;
+        }
+
+        std::cout << "Failed to set problem!\n";
+        return false;
+    }
 
     std::cout << "\nSolving...\n";
 
@@ -2112,14 +2145,7 @@ bool ModelTestSOS2()
     passed = ModelTestSOS2WithSolver(ES_MIPSolver::Cbc) && passed;
 #endif
 #ifdef HAS_HIGHS
-    try
-    {
-        passed = ModelTestSOS2WithSolver(ES_MIPSolver::Highs) && passed;
-    }
-    catch(OperationNotImplementedException*)
-    {
-        std::cout << "   HiGHS does not support SOS — skipping.\n";
-    }
+    passed = ModelTestSOS2WithSolver(ES_MIPSolver::Highs) && passed;
 #endif
 #ifdef HAS_CPLEX
     passed = ModelTestSOS2WithSolver(ES_MIPSolver::Cplex) && passed;

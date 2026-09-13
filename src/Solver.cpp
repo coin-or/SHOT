@@ -709,6 +709,14 @@ bool Solver::selectStrategy()
 
 bool Solver::solveProblem()
 {
+    // No strategy exists if setProblem() failed or was not called, e.g. when the MIP solver does not support the
+    // problem
+    if(solutionStrategy == nullptr)
+    {
+        env->output->outputCritical(" Cannot solve the problem since it has not been set successfully.");
+        return (false);
+    }
+
     // Verify settings in case they were changed after setProblem() was called
     verifySettings();
 
@@ -722,7 +730,6 @@ bool Solver::solveProblem()
         Utilities::writeStringToFile(filename.string(), usedSettings);
     }
 
-    assert(solutionStrategy != nullptr); /* would be NULL if setProblem failed */
     isProblemSolved = solutionStrategy->solveProblem();
 
     this->finalizeSolution();
