@@ -39,6 +39,12 @@ void TaskCheckIterationError::run()
         env->tasks->setNextTask(taskIDIfTrue);
         env->results->terminationReasonDescription = "Terminated since an error occured when solving the dual problem.";
     }
+    // A dual problem that is infeasible with the cutoff can give a dual bound that closes the gap, and the problem is
+    // then solved instead of infeasible
+    else if(currIter->solutionStatus == E_ProblemSolutionStatus::Infeasible && currIter->solutionPoints.size() == 0
+        && (env->results->isAbsoluteObjectiveGapToleranceMet() || env->results->isRelativeObjectiveGapToleranceMet()))
+    {
+    }
     else if(currIter->solutionStatus == E_ProblemSolutionStatus::Infeasible && currIter->solutionPoints.size() == 0)
     {
         // A reduction cut excludes the objective values that are not better than the reduced cutoff, so the dual

@@ -48,7 +48,8 @@ enum class E_DualSolutionSource
     MIPSolutionOptimal,
     ObjectiveConstraint,
     MIPSolverBound,
-    ConvexBounding
+    ConvexBounding,
+    InfeasibleWithCutOff
 };
 
 enum class E_EventType

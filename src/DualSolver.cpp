@@ -118,6 +118,9 @@ void DualSolver::checkDualSolutionCandidates()
             case E_DualSolutionSource::ConvexBounding:
                 sourceDesc = "Convex MIP bounding";
                 break;
+            case E_DualSolutionSource::InfeasibleWithCutOff:
+                sourceDesc = "infeasible dual problem with cutoff";
+                break;
             default:
                 break;
             }
