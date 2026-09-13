@@ -246,7 +246,11 @@ void TaskSelectHyperplanesECP::run(std::vector<SolutionPoint> solPoints)
         }
     }
 
-    if(addedHyperplanes == 0 && numberOfDeviatingValues == 0)
+    if(addedHyperplanes == 0 && solPoints.size() == 0)
+    {
+        env->output->outputDebug("         No solution points to generate constraint cuts in.");
+    }
+    else if(addedHyperplanes == 0 && numberOfDeviatingValues == 0)
     {
         env->output->outputDebug("         All nonlinear constraints fulfilled, so no constraint cuts added.");
     }
