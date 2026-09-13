@@ -1028,8 +1028,8 @@ void Solver::initializeSettings()
     env->settings->createSetting("Dual.Relaxation.MaxLazyConstraints", 0,
         "Max number of lazy constraints to add in relaxed solutions in single-tree strategy", 0, SHOT_INT_MAX);
 
-    env->settings->createSetting(
-        "Dual.Relaxation.TerminationTolerance", 0.5, "Time limit (s) when solving LP problems initially");
+    env->settings->createSetting("Dual.Relaxation.TerminationTolerance", 0.5,
+        "Stop solving relaxed problems when the maximum constraint deviation is at most this value");
 
     env->settings->createSetting(
         "Dual.Relaxation.TimeLimit", 30.0, "Time limit (s) when solving LP problems initially", 0, SHOT_DBL_MAX);
