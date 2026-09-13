@@ -32,6 +32,16 @@
 #include <set>
 #include <sstream>
 
+#ifdef HAS_STD_FILESYSTEM
+#include <filesystem>
+namespace fs = std;
+#endif
+
+#ifdef HAS_STD_EXPERIMENTAL_FILESYSTEM
+#include <experimental/filesystem>
+namespace fs = std::experimental;
+#endif
+
 using namespace SHOT;
 
 bool ModelTestVariables();
@@ -6937,6 +6947,9 @@ bool ModelTestArtificialIntegerBounds()
             passed = passed && isCasePassed;
         }
     }
+
+    std::error_code errorCode;
+    fs::filesystem::remove_all(temporaryDirectory, errorCode);
 
     return passed;
 }
