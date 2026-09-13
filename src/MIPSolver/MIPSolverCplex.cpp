@@ -832,8 +832,17 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
                 cplexModel.add(IloMaximize(cplexEnv, 0.0));
 
             cplexInstance.extract(cplexModel);
+
+            // The cutoff applies to the objective function value, which is now zero, so it would cut off all points
+            auto cutOffParameter = isMinimizationProblem ? IloCplex::Param::MIP::Tolerances::UpperCutoff
+                                                         : IloCplex::Param::MIP::Tolerances::LowerCutoff;
+            double cutOff = cplexInstance.getParam(cutOffParameter);
+            cplexInstance.setParam(cutOffParameter, isMinimizationProblem ? 1e75 : -1e75);
+
             cplexInstance.solve();
             MIPSolutionStatus = getSolutionStatus();
+
+            cplexInstance.setParam(cutOffParameter, cutOff);
 
             if(MIPSolutionStatus == E_ProblemSolutionStatus::Optimal)
                 MIPSolutionStatus = E_ProblemSolutionStatus::Feasible;

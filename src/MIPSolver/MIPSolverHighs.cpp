@@ -655,8 +655,13 @@ E_ProblemSolutionStatus MIPSolverHighs::solveProblem()
                 {
                     // Temporarily bound the variable, keeping the objective so that the point found is in the
                     // direction of improvement
+                    // The primal solution only contains the variables of the original problem
+                    double center = (V->getIndex() < (int)env->results->primalSolution.size())
+                        ? env->results->primalSolution[V->getIndex()]
+                        : 0.0;
+
                     auto bounds = getTemporaryBoundsForUnboundedVariable(
-                        variableLowerBounds[V->getIndex()], variableUpperBounds[V->getIndex()]);
+                        variableLowerBounds[V->getIndex()], variableUpperBounds[V->getIndex()], center);
                     highsInstance.changeColBounds(V->getIndex(), bounds.first, bounds.second);
                     variableBoundsToRestore.push_back(V->getIndex());
                     problemUpdated = true;

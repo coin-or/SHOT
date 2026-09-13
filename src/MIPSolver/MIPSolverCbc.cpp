@@ -794,7 +794,12 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
             {
                 if(V->isUnbounded())
                 {
-                    auto bounds = getTemporaryBoundsForUnboundedVariable(V->lowerBound, V->upperBound);
+                    // The primal solution only contains the variables of the original problem
+                    double center = (V->getIndex() < (int)env->results->primalSolution.size())
+                        ? env->results->primalSolution[V->getIndex()]
+                        : 0.0;
+
+                    auto bounds = getTemporaryBoundsForUnboundedVariable(V->lowerBound, V->upperBound, center);
                     updateVariableBound(V->getIndex(), bounds.first, bounds.second);
                     variablesWithChangedBounds.push_back(V->getIndex());
                     problemUpdated = true;
