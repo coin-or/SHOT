@@ -6856,11 +6856,22 @@ bool ModelTestArtificialIntegerBounds()
           "numberOfQuadraticTerms=\"1\"><qTerm idx=\"0\" idxOne=\"0\" idxTwo=\"0\" coef=\"1\"/>"
           "</quadraticCoefficients></instanceData></osil>";
 
+    // minimize x s.t. exp(-x/1e9 - 4) <= 1, i.e. x >= -4e9, where the nonlinear constraint gives a single-tree solve
+    // with the solvers that support it and the optimum is beyond the artificial bound
+    std::string nonlinearProblem = header
+        + "<variables numberOfVariables=\"2\"><var name=\"x\" type=\"I\" lb=\"-INF\"/><var name=\"b\" type=\"B\"/>"
+          "</variables><objectives><obj maxOrMin=\"min\" numberOfObjCoef=\"2\"><coef idx=\"0\">1</coef><coef "
+          "idx=\"1\">1</coef></obj></objectives><constraints numberOfConstraints=\"1\"><con name=\"c\" ub=\"1\"/>"
+          "</constraints><nonlinearExpressions numberOfNonlinearExpressions=\"1\"><nl idx=\"0\"><exp><sum><times>"
+          "<number value=\"-1e-9\"/><variable idx=\"0\"/></times><number value=\"-4\"/></sum></exp></nl>"
+          "</nonlinearExpressions></instanceData></osil>";
+
     enum class Expected
     {
         Unbounded,
         Optimum,
-        UnboundedIfExact
+        UnboundedIfExact,
+        NoClaim
     };
 
     struct Case
@@ -6876,6 +6887,7 @@ bool ModelTestArtificialIntegerBounds()
         { "minimum_beyond_bound", linearProblem("min", "lb=\"-3e9\"", -1.0), Expected::Optimum, -3e9 },
         { "maximum_beyond_bound", linearProblem("max", "ub=\"5e9\"", 1.0), Expected::Optimum, 5e9 },
         { "nonconvex_unbounded", nonconvexProblem, Expected::UnboundedIfExact, 0.0 },
+        { "nonlinear_beyond_bound", nonlinearProblem, Expected::NoClaim, -4e9 },
     };
 
     std::vector<std::pair<ES_MIPSolver, std::string>> mipSolvers;
@@ -6941,6 +6953,14 @@ bool ModelTestArtificialIntegerBounds()
                 isCasePassed = env->dualSolver->isDualProblemExact()
                     ? reason == E_TerminationReason::UnboundedProblem
                     : !claimsOptimality;
+                break;
+
+            // The optimum may not be found, but a solution at the artificial bound may not be claimed optimal
+            case Expected::NoClaim:
+                isCasePassed = (claimsOptimality
+                                   ? std::abs(env->results->getPrimalBound() - C.optimum) < 1.0
+                                   : reason != E_TerminationReason::InfeasibleProblem
+                                       && reason != E_TerminationReason::UnboundedProblem);
                 break;
             }
 

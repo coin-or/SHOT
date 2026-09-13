@@ -219,8 +219,17 @@ void Results::addPrimalSolution(PrimalSolution solution)
     }
 }
 
+bool Results::isPrimalSolutionAtArtificialBound()
+{
+    return (hasPrimalSolution() && env->problem->getVariablesAtArtificialBounds(primalSolution).size() > 0);
+}
+
 bool Results::isRelativeObjectiveGapToleranceMet()
 {
+    // The dual bound may only be valid with the artificial bounds, beyond which there may be better solutions
+    if(isPrimalSolutionAtArtificialBound())
+        return (false);
+
     if(this->getRelativeGlobalObjectiveGap()
         <= env->settings->getSetting<double>("Termination.ObjectiveGap.Relative"))
     {
@@ -234,6 +243,9 @@ bool Results::isRelativeObjectiveGapToleranceMet()
 
 bool Results::isAbsoluteObjectiveGapToleranceMet()
 {
+    if(isPrimalSolutionAtArtificialBound())
+        return (false);
+
     if(this->getAbsoluteGlobalObjectiveGap()
         <= env->settings->getSetting<double>("Termination.ObjectiveGap.Absolute"))
     {

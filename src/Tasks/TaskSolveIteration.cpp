@@ -29,30 +29,6 @@
 namespace SHOT
 {
 
-namespace
-{
-// The variables of the problem that are at a bound that has replaced a missing bound in the point
-std::vector<VariablePtr> getVariablesAtArtificialBounds(EnvironmentPtr env, const VectorDouble& point)
-{
-    std::vector<VariablePtr> variables;
-
-    for(auto& V : env->problem->allVariables)
-    {
-        if(V->getIndex() >= (int)point.size())
-            continue;
-
-        double value = point.at(V->getIndex());
-
-        // The variables are integer, so a smaller difference means that the variable is at the bound
-        if((V->properties.hasArtificialLowerBound && value < V->lowerBound + 0.5)
-            || (V->properties.hasArtificialUpperBound && value > V->upperBound - 0.5))
-            variables.push_back(V);
-    }
-
-    return (variables);
-}
-} // namespace
-
 TaskSolveIteration::TaskSolveIteration(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
     if(env->settings->getSetting<bool>("Output.Debug.Enable"))
@@ -210,60 +186,64 @@ void TaskSolveIteration::run()
     auto sols = env->dualSolver->MIPSolver->getAllVariableSolutions();
 
     // A solution with a variable at a bound that has only replaced a missing bound of the problem does not show what
-    // the optimal objective value is, since the problem may be unbounded or have its optimum beyond the bound. If the
-    // dual problem is exact, the bounds are removed and it is solved again, and otherwise the solution gives no dual
-    // bound.
-    bool isSolutionAtArtificialBound = false;
-
-    if(sols.size() > 0)
+    // the optimal objective value is, since the problem may be unbounded or have its optimum beyond the bound. The
+    // bounds are then removed and the problem is solved again, which is valid also for a relaxation since it only
+    // becomes larger. In a single-tree solve, the callback has interrupted the MIP solver and recorded the variables.
+    auto resolveProblem = [&]()
     {
-        auto variables = getVariablesAtArtificialBounds(env, sols.at(0).point);
+        solStatus = env->dualSolver->MIPSolver->solveProblem();
 
-        if(variables.size() > 0 && env->dualSolver->isDualProblemExact())
+        if(static_cast<ES_TreeStrategy>(env->settings->getSetting<int>("Dual.TreeStrategy"))
+            == ES_TreeStrategy::SingleTree)
+            currIter = env->results->getCurrentIteration();
+
+        currIter->solutionStatus = solStatus;
+        env->output->outputDebug(fmt::format("        Dual problem solved again with return code: {}", (int)solStatus));
+
+        sols = env->dualSolver->MIPSolver->getAllVariableSolutions();
+    };
+
+    while(true)
+    {
+        auto variables = env->dualSolver->variablesAtArtificialBounds;
+        env->dualSolver->variablesAtArtificialBounds.clear();
+
+        if(sols.size() > 0)
         {
-            double lowerLimit = env->settings->getSetting<double>("Model.Variables.Continuous.MinimumLowerBound");
-            double upperLimit = env->settings->getSetting<double>("Model.Variables.Continuous.MaximumUpperBound");
-            double unboundedValue = env->dualSolver->MIPSolver->getUnboundedVariableBoundValue();
-
-            for(auto& V : variables)
+            for(auto& V : env->problem->getVariablesAtArtificialBounds(sols.at(0).point))
             {
-                env->output->outputDebug(fmt::format(
-                    "        Removing artificial bounds of variable {} since the solution is at them.", V->name));
-
-                if(V->properties.hasArtificialLowerBound)
-                    V->lowerBound = lowerLimit;
-
-                if(V->properties.hasArtificialUpperBound)
-                    V->upperBound = upperLimit;
-
-                auto reformulatedVariable = env->reformulatedProblem->getVariable(V->getIndex());
-                reformulatedVariable->lowerBound = V->lowerBound;
-                reformulatedVariable->upperBound = V->upperBound;
-
-                env->dualSolver->MIPSolver->updateVariableBound(V->getIndex(),
-                    V->properties.hasArtificialLowerBound ? -unboundedValue : V->lowerBound,
-                    V->properties.hasArtificialUpperBound ? unboundedValue : V->upperBound);
-
-                V->properties.hasArtificialLowerBound = false;
-                V->properties.hasArtificialUpperBound = false;
+                if(std::find(variables.begin(), variables.end(), V) == variables.end())
+                    variables.push_back(V);
             }
-
-            solStatus = env->dualSolver->MIPSolver->solveProblem();
-            currIter->solutionStatus = solStatus;
-
-            env->output->outputDebug(
-                fmt::format("        Dual problem solved again with return code: {}", (int)solStatus));
-
-            sols = env->dualSolver->MIPSolver->getAllVariableSolutions();
-
-            if(sols.size() > 0)
-                variables = getVariablesAtArtificialBounds(env, sols.at(0).point);
-            else
-                variables.clear();
         }
 
-        isSolutionAtArtificialBound = variables.size() > 0;
+        if(variables.size() == 0)
+            break;
+
+        env->dualSolver->removeArtificialBounds(variables);
+        resolveProblem();
     }
+
+    // If the dual problem is infeasible with the cutoff, it is solved again without the artificial bounds, since they
+    // restrict the problem and the cutoff can only be used as dual bound for a relaxation
+    if(solStatus == E_ProblemSolutionStatus::Infeasible && sols.size() == 0 && usedCutOff
+        && env->results->solutionIsGlobal && !currIter->hasInfeasibilityRepairBeenPerformed
+        && env->results->hasPrimalSolution() && env->problem->hasArtificialBounds())
+    {
+        std::vector<VariablePtr> variables;
+
+        for(auto& V : env->problem->allVariables)
+        {
+            if(V->properties.hasArtificialLowerBound || V->properties.hasArtificialUpperBound)
+                variables.push_back(V);
+        }
+
+        env->dualSolver->removeArtificialBounds(variables);
+        resolveProblem();
+    }
+
+    bool isSolutionAtArtificialBound
+        = sols.size() > 0 && env->problem->getVariablesAtArtificialBounds(sols.at(0).point).size() > 0;
 
     if(sols.size() > 0)
     {
@@ -364,9 +344,7 @@ void TaskSolveIteration::run()
         // and it has not been repaired, it being infeasible with the cutoff shows that no solution is better than the
         // cutoff. The cutoff is then a dual bound, which e.g. closes the gap when it is the primal bound. Artificial
         // bounds restrict the problem, so the dual problem is then not a relaxation.
-        bool hasArtificialBounds = std::any_of(env->problem->allVariables.begin(), env->problem->allVariables.end(),
-            [](const VariablePtr& V)
-            { return (V->properties.hasArtificialLowerBound || V->properties.hasArtificialUpperBound); });
+        bool hasArtificialBounds = env->problem->hasArtificialBounds();
 
         if(solStatus == E_ProblemSolutionStatus::Infeasible && usedCutOff && env->results->solutionIsGlobal
             && !currIter->hasInfeasibilityRepairBeenPerformed && env->results->hasPrimalSolution()

@@ -311,6 +311,15 @@ void CtCallbackI::main()
 
     tmpVals.end();
 
+    // The bounds cannot be changed in the callback, so the MIP solver is interrupted and the artificial bounds are
+    // removed before it solves again
+    if(auto variables = env->problem->getVariablesAtArtificialBounds(solution); variables.size() > 0)
+    {
+        env->dualSolver->variablesAtArtificialBounds = variables;
+        this->abort();
+        return;
+    }
+
     SolutionPoint solutionCandidate;
 
     if(env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)

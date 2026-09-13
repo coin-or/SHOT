@@ -192,6 +192,13 @@ public:
     template <class T> void add(std::vector<T> elements);
 
     VariablePtr getVariable(int variableIndex);
+
+    // The variables at a bound that has replaced a missing bound when the problem was read, see
+    // VariableProperties::hasArtificialLowerBound, in a point whose first values are the values of the variables
+    std::vector<VariablePtr> getVariablesAtArtificialBounds(const VectorDouble& point);
+
+    // Whether a variable still has a bound that has replaced a missing bound when the problem was read
+    bool hasArtificialBounds();
     ConstraintPtr getConstraint(int constraintIndex);
 
     double getVariableLowerBound(int variableIndex);

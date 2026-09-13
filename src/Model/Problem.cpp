@@ -1170,6 +1170,36 @@ template <class T> void Problem::add(std::vector<T> elements)
     }
 }
 
+std::vector<VariablePtr> Problem::getVariablesAtArtificialBounds(const VectorDouble& point)
+{
+    std::vector<VariablePtr> variables;
+
+    for(auto& V : allVariables)
+    {
+        if(!V->properties.hasArtificialLowerBound && !V->properties.hasArtificialUpperBound)
+            continue;
+
+        if(V->getIndex() >= (int)point.size())
+            continue;
+
+        double value = point[V->getIndex()];
+
+        // The variables are integer, so a smaller difference means that the variable is at the bound
+        if((V->properties.hasArtificialLowerBound && value < V->lowerBound + 0.5)
+            || (V->properties.hasArtificialUpperBound && value > V->upperBound - 0.5))
+            variables.push_back(V);
+    }
+
+    return (variables);
+}
+
+bool Problem::hasArtificialBounds()
+{
+    return (std::any_of(allVariables.begin(), allVariables.end(),
+        [](const VariablePtr& V)
+        { return (V->properties.hasArtificialLowerBound || V->properties.hasArtificialUpperBound); }));
+}
+
 VariablePtr Problem::getVariable(int variableIndex)
 {
     if(variableIndex < 0 || variableIndex >= (int)allVariables.size())

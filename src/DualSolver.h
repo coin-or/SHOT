@@ -17,6 +17,8 @@
 
 namespace SHOT
 {
+class Variable;
+
 class DualSolver
 {
 public:
@@ -55,6 +57,15 @@ public:
     // is added to it while solving, e.g. the cutoff constraint and integer cuts, only restricts it, so the problem is
     // unbounded if the dual problem is.
     bool isDualProblemExact();
+
+    // Removes the bounds that have replaced missing bounds of the variables when the problem was read, in the problem,
+    // the reformulated problem and the MIP solver. The dual bounds found so far may be too strong since they are
+    // bounds for the problem with the artificial bounds, so they are reset.
+    void removeArtificialBounds(const std::vector<std::shared_ptr<Variable>>& variables);
+
+    // The variables found at artificial bounds in a callback, where the bounds cannot be changed. The MIP solver is
+    // then interrupted, and the bounds are removed before solving again.
+    std::vector<std::shared_ptr<Variable>> variablesAtArtificialBounds;
 
 private:
     EnvironmentPtr env;

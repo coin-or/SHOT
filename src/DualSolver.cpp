@@ -423,6 +423,49 @@ bool DualSolver::hasIntegerCutBeenAdded(const PairDouble& hashes)
     return (false);
 }
 
+void DualSolver::removeArtificialBounds(const std::vector<VariablePtr>& variables)
+{
+    if(variables.size() == 0)
+        return;
+
+    double lowerLimit = env->settings->getSetting<double>("Model.Variables.Continuous.MinimumLowerBound");
+    double upperLimit = env->settings->getSetting<double>("Model.Variables.Continuous.MaximumUpperBound");
+    double unboundedValue = MIPSolver->getUnboundedVariableBoundValue();
+
+    for(auto& V : variables)
+    {
+        if(!V->properties.hasArtificialLowerBound && !V->properties.hasArtificialUpperBound)
+            continue;
+
+        env->output->outputDebug(fmt::format("        Removing the artificial bounds of variable {}.", V->name));
+
+        env->problem->setVariableBounds(V->getIndex(), V->properties.hasArtificialLowerBound ? lowerLimit : V->lowerBound,
+            V->properties.hasArtificialUpperBound ? upperLimit : V->upperBound);
+
+        if(env->reformulatedProblem)
+            env->reformulatedProblem->setVariableBounds(V->getIndex(), V->lowerBound, V->upperBound);
+
+        MIPSolver->updateVariableBound(V->getIndex(),
+            V->properties.hasArtificialLowerBound ? -unboundedValue : V->lowerBound,
+            V->properties.hasArtificialUpperBound ? unboundedValue : V->upperBound);
+
+        V->properties.hasArtificialLowerBound = false;
+        V->properties.hasArtificialUpperBound = false;
+    }
+
+    // The dual bounds may only be valid with the artificial bounds
+    bool isMinimize = env->problem->objectiveFunction->properties.isMinimize;
+    env->results->currentDualBound = isMinimize ? SHOT_DBL_MIN : SHOT_DBL_MAX;
+    env->results->globalDualBound = isMinimize ? SHOT_DBL_MIN : SHOT_DBL_MAX;
+
+    if(MIPSolver->hasDualAuxiliaryObjectiveVariable())
+    {
+        auto bounds = MIPSolver->getCurrentVariableBounds(MIPSolver->getDualAuxiliaryObjectiveVariableIndex());
+        MIPSolver->updateVariableBound(
+            MIPSolver->getDualAuxiliaryObjectiveVariableIndex(), -unboundedValue, bounds.second);
+    }
+}
+
 bool DualSolver::isDualProblemExact()
 {
     // Nonlinear constraints and nonlinear objectives are only represented by cuts in the dual problem
