@@ -332,8 +332,9 @@ if(HAS_HIGHS AND NOT USE_EXTERNAL_HIGHS)
 
     add_subdirectory(${HIGHS_DIR})
 
-    # Disable HiGHS assertions even in debug builds
-    # target_compile_definitions(highs PRIVATE NDEBUG)
+    # Disable HiGHS assertions even in debug builds, since some of its internal consistency checks abort on badly
+    # scaled problems that release builds get through
+    target_compile_definitions(highs PRIVATE NDEBUG)
 endif()
 
 # Case 2: Use external HiGHS
