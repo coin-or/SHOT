@@ -212,7 +212,7 @@ E_NLPSolutionStatus NLPSolverSHOT::solveProblemInstance()
             VAR->getIndex(), VAR->lowerBound, VAR->upperBound);
 
     // Setting the cutoff value from currently best known solution
-    if(env->dualSolver->cutOffToUse != SHOT_DBL_MAX)
+    if(useCutOff && env->dualSolver->cutOffToUse != SHOT_DBL_MAX)
     {
         solver->updateSetting("Dual.MIP.CutOff.InitialValue", env->dualSolver->cutOffToUse);
         solver->updateSetting("Dual.MIP.CutOff.UseInitialValue", true);
