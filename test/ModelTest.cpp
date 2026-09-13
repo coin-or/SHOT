@@ -131,6 +131,7 @@ bool ModelTestSignomialElementBoundTightening()
 bool ModelTestSignomialTermConvexity();
 bool ModelTestSignomialElementBoundTightening();
 bool ModelTestCopyKeepsNonlinearQuadraticConstraints();
+bool ModelTestPerspectiveConvexity();
 
 bool TestReadProblem(const std::string& problemFile);
 bool TestRootsearch(const std::string& problemFile);
@@ -254,6 +255,9 @@ int ModelTest(int argc, char* argv[])
         break;
     case 33:
         passed = ModelTestCopyKeepsNonlinearQuadraticConstraints();
+        break;
+    case 34:
+        passed = ModelTestPerspectiveConvexity();
         break;
     default:
         passed = false;
@@ -6294,6 +6298,123 @@ bool ModelTestCopyKeepsNonlinearQuadraticConstraints()
     {
         std::cout << "  FAILED: the quadratic constraints differ between the reformulated and the copied problem.\n";
         passed = false;
+    }
+
+    return passed;
+}
+
+bool ModelTestPerspectiveConvexity()
+{
+    // Convex hull reformulations write a convex function f as s * f(x/s), where s = 0.001 + 0.999 * b is positive.
+    // The perspective is convex, but the expression must be recognised as such for the problem to be treated as convex.
+    // The terms may appear in any order, e.g. log(x/s + 1), and the scaled function may contain constants and squared
+    // affine expressions. Concave scaled functions, a linear factor that can be zero and a linear factor with a
+    // nonlinear term must not be classified as convex.
+
+    bool passed = true;
+
+    auto b = std::make_shared<SHOT::Variable>("b", SHOT::E_VariableType::Binary, 0.0, 1.0);
+    auto c = std::make_shared<SHOT::Variable>("c", SHOT::E_VariableType::Real, 1.0, 2.0);
+    auto x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 10.0);
+    auto y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Real, 0.0, 10.0);
+
+    auto number = [](double value) { return std::make_shared<ExpressionConstant>(value); };
+    auto variable = [](VariablePtr v) { return std::make_shared<ExpressionVariable>(v); };
+
+    // The linear factor constant + coefficient * b
+    auto linearFactor = [&](double constant, double coefficient)
+    {
+        return std::make_shared<ExpressionSum>(
+            number(constant), std::make_shared<ExpressionProduct>(number(coefficient), variable(b)));
+    };
+
+    auto s = [&]() { return linearFactor(0.001, 0.999); };
+    auto scaled = [&](VariablePtr v) { return std::make_shared<ExpressionDivide>(variable(v), s()); };
+
+    struct Case
+    {
+        std::string description;
+        NonlinearExpressionPtr expression;
+        bool expectConvex;
+    };
+
+    std::vector<Case> cases = {
+        { "(x/s - 1.2*log(y/s + 1)) * s",
+            std::make_shared<ExpressionProduct>(
+                std::make_shared<ExpressionSum>(scaled(x),
+                    std::make_shared<ExpressionProduct>(std::make_shared<ExpressionLog>(
+                                                            std::make_shared<ExpressionSum>(scaled(y), number(1.0))),
+                        number(-1.2))),
+                s()),
+            true },
+        { "s * (x/s - log(1 + y/s))",
+            std::make_shared<ExpressionProduct>(s(),
+                std::make_shared<ExpressionSum>(scaled(x),
+                    std::make_shared<ExpressionNegate>(std::make_shared<ExpressionLog>(
+                        std::make_shared<ExpressionSum>(number(1.0), scaled(y)))))),
+            true },
+        { "((-x/s + 0.6)^2 + (-y/s + 5.3)^2 - 1) * s",
+            std::make_shared<ExpressionProduct>(
+                std::make_shared<ExpressionSum>(NonlinearExpressions({ std::make_shared<ExpressionSquare>(
+                                                                           std::make_shared<ExpressionSum>(
+                                                                               std::make_shared<ExpressionNegate>(
+                                                                                   scaled(x)),
+                                                                               number(0.6))),
+                    std::make_shared<ExpressionSquare>(
+                        std::make_shared<ExpressionSum>(std::make_shared<ExpressionNegate>(scaled(y)), number(5.3))),
+                    number(-1.0) })),
+                s()),
+            true },
+        { "(x/s + 1.2*log(y/s + 1)) * s (concave logarithm)",
+            std::make_shared<ExpressionProduct>(
+                std::make_shared<ExpressionSum>(scaled(x),
+                    std::make_shared<ExpressionProduct>(number(1.2),
+                        std::make_shared<ExpressionLog>(std::make_shared<ExpressionSum>(scaled(y), number(1.0))))),
+                s()),
+            false },
+        { "log(1 + y/s) * s (concave logarithm)",
+            std::make_shared<ExpressionProduct>(
+                std::make_shared<ExpressionLog>(std::make_shared<ExpressionSum>(number(1.0), scaled(y))), s()),
+            false },
+        { "-(x/s)^2 * s (concave square)",
+            std::make_shared<ExpressionProduct>(
+                std::make_shared<ExpressionNegate>(std::make_shared<ExpressionSquare>(scaled(x))), s()),
+            false },
+        { "(x/b)^2 * b (linear factor can be zero)",
+            std::make_shared<ExpressionProduct>(
+                std::make_shared<ExpressionSquare>(
+                    std::make_shared<ExpressionDivide>(variable(x), linearFactor(0.0, 1.0))),
+                linearFactor(0.0, 1.0)),
+            false },
+        { "(x/(0.002 + 0.999*b))^2 * s (different denominator)",
+            std::make_shared<ExpressionProduct>(
+                std::make_shared<ExpressionSquare>(
+                    std::make_shared<ExpressionDivide>(variable(x), linearFactor(0.002, 0.999))),
+                s()),
+            false },
+        { "-log(1 + y/(c + x^2)) * (c + x^2) (nonlinear term in the factor)",
+            std::make_shared<ExpressionProduct>(
+                std::make_shared<ExpressionSum>(variable(c), std::make_shared<ExpressionSquare>(variable(x))),
+                std::make_shared<ExpressionNegate>(std::make_shared<ExpressionLog>(std::make_shared<ExpressionSum>(
+                    number(1.0),
+                    std::make_shared<ExpressionDivide>(variable(y),
+                        std::make_shared<ExpressionSum>(
+                            variable(c), std::make_shared<ExpressionSquare>(variable(x)))))))),
+            false },
+    };
+
+    for(auto& C : cases)
+    {
+        bool isConvex = (C.expression->getConvexity() == E_Convexity::Convex);
+
+        std::cout << "  " << C.description << ": " << (isConvex ? "convex" : "not convex") << " (expected "
+                  << (C.expectConvex ? "convex" : "not convex") << ")\n";
+
+        if(isConvex != C.expectConvex)
+        {
+            std::cout << "  FAILED: " << C.description << " was not classified as expected.\n";
+            passed = false;
+        }
     }
 
     return passed;

@@ -12,7 +12,7 @@
 
 namespace SHOT
 {
-std::optional<std::tuple<double, VariablePtr, double>> ExpressionSum::getLinearTermAndConstant()
+std::optional<std::tuple<double, VariablePtr, double>> ExpressionSum::getAsLinearTermPlusConstant()
 {
     std::optional<std::tuple<double, VariablePtr, double>> result;
 
@@ -55,6 +55,14 @@ std::optional<std::tuple<double, VariablePtr, double>> ExpressionSum::getLinearT
                 coefficient = std::dynamic_pointer_cast<ExpressionConstant>(product->children[1])->constant;
                 variable = std::dynamic_pointer_cast<ExpressionVariable>(product->children[0])->variable;
             }
+            else
+            {
+                return (result);
+            }
+        }
+        else
+        {
+            return (result);
         }
     }
 
@@ -64,169 +72,153 @@ std::optional<std::tuple<double, VariablePtr, double>> ExpressionSum::getLinearT
     return (result);
 }
 
-bool checkPerspectiveConvexity(
-    NonlinearExpressionPtr expression, double linearCoefficient, VariablePtr linearVariable, double constant)
+namespace
 {
-    auto isConvex = false;
+// Checks whether the expression is an affine function of the scaled variables x/s, where s = linearCoefficient *
+// linearVariable + constant is the linear factor of the perspective, i.e. whether s times the expression is linear
+bool isAffineInPerspectiveVariables(const NonlinearExpressionPtr& expression, double linearCoefficient,
+    const VariablePtr& linearVariable, double constant)
+{
+    switch(expression->getType())
+    {
+    case E_NonlinearExpressionTypes::Constant:
+        return (true);
+
+    case E_NonlinearExpressionTypes::Divide:
+    {
+        auto divide = std::dynamic_pointer_cast<ExpressionDivide>(expression);
+        auto nominator = divide->firstChild;
+        auto denominator = divide->secondChild;
+
+        if(nominator->getType() != E_NonlinearExpressionTypes::Variable
+            && !(nominator->getType() == E_NonlinearExpressionTypes::Product
+                && std::dynamic_pointer_cast<ExpressionProduct>(nominator)->isLinearTerm()))
+            return (false);
+
+        if(denominator->getType() != E_NonlinearExpressionTypes::Sum)
+            return (false);
+
+        auto linearTermAndConstant
+            = std::dynamic_pointer_cast<ExpressionSum>(denominator)->getAsLinearTermPlusConstant();
+
+        return (linearTermAndConstant && std::get<0>(*linearTermAndConstant) == linearCoefficient
+            && std::get<1>(*linearTermAndConstant) == linearVariable
+            && std::get<2>(*linearTermAndConstant) == constant);
+    }
+
+    case E_NonlinearExpressionTypes::Negate:
+        return (isAffineInPerspectiveVariables(std::dynamic_pointer_cast<ExpressionNegate>(expression)->child,
+            linearCoefficient, linearVariable, constant));
+
+    case E_NonlinearExpressionTypes::Product:
+    {
+        if(expression->getNumberOfChildren() != 2)
+            return (false);
+
+        auto product = std::dynamic_pointer_cast<ExpressionProduct>(expression);
+
+        if(product->children[0]->getType() == E_NonlinearExpressionTypes::Constant)
+            return (isAffineInPerspectiveVariables(product->children[1], linearCoefficient, linearVariable, constant));
+
+        if(product->children[1]->getType() == E_NonlinearExpressionTypes::Constant)
+            return (isAffineInPerspectiveVariables(product->children[0], linearCoefficient, linearVariable, constant));
+
+        return (false);
+    }
+
+    case E_NonlinearExpressionTypes::Sum:
+    {
+        for(auto& C : std::dynamic_pointer_cast<ExpressionSum>(expression)->children)
+        {
+            if(!isAffineInPerspectiveVariables(C, linearCoefficient, linearVariable, constant))
+                return (false);
+        }
+
+        return (true);
+    }
+
+    default:
+        return (false);
+    }
+}
+
+// Checks whether s times the expression is convex (sign > 0) or concave (sign < 0), where s is the linear factor of
+// the perspective. This holds if the expression is a convex (concave) function of the scaled variables x/s.
+bool isPerspectiveConvex(const NonlinearExpressionPtr& expression, double sign, double linearCoefficient,
+    const VariablePtr& linearVariable, double constant)
+{
+    if(isAffineInPerspectiveVariables(expression, linearCoefficient, linearVariable, constant))
+        return (true);
 
     switch(expression->getType())
     {
-    case E_NonlinearExpressionTypes::Divide:
-        isConvex = checkPerspectiveConvexity(
-            std::dynamic_pointer_cast<ExpressionDivide>(expression), linearCoefficient, linearVariable, constant);
-        break;
+    case E_NonlinearExpressionTypes::Variable:
+    {
+        // s * y = constant * y + linearCoefficient * y^2 if y is the variable in the linear factor
+        if(std::dynamic_pointer_cast<ExpressionVariable>(expression)->variable != linearVariable)
+            return (false);
+
+        return (sign * linearCoefficient >= 0);
+    }
+
     case E_NonlinearExpressionTypes::Negate:
-        isConvex = checkPerspectiveConvexity(
-            std::dynamic_pointer_cast<ExpressionNegate>(expression), linearCoefficient, linearVariable, constant);
-        break;
-    case E_NonlinearExpressionTypes::Log:
-        isConvex = checkPerspectiveConvexity(
-            std::dynamic_pointer_cast<ExpressionLog>(expression), linearCoefficient, linearVariable, constant);
-        break;
-    case E_NonlinearExpressionTypes::Square:
-        isConvex = checkPerspectiveConvexity(
-            std::dynamic_pointer_cast<ExpressionSquare>(expression), linearCoefficient, linearVariable, constant);
-        break;
+        return (isPerspectiveConvex(std::dynamic_pointer_cast<ExpressionNegate>(expression)->child, -sign,
+            linearCoefficient, linearVariable, constant));
+
     case E_NonlinearExpressionTypes::Product:
-        isConvex = checkPerspectiveConvexity(
-            std::dynamic_pointer_cast<ExpressionProduct>(expression), linearCoefficient, linearVariable, constant);
-        break;
-    default:
-        break;
-    }
-
-    return (isConvex);
-}
-
-bool checkPerspectiveConvexity(
-    std::shared_ptr<ExpressionDivide> expression, double linearCoefficient, VariablePtr linearVariable, double constant)
-{
-    auto nominator = expression->firstChild;
-    auto denominator = expression->secondChild;
-
-    if(nominator->getType() == E_NonlinearExpressionTypes::Variable) { }
-    else if(nominator->getType() == E_NonlinearExpressionTypes::Product
-        && std::dynamic_pointer_cast<ExpressionProduct>(nominator)->isLinearTerm())
     {
-    }
-    else
-    {
-        return (false);
-    }
+        if(expression->getNumberOfChildren() != 2)
+            return (false);
 
-    if(denominator->getType() != E_NonlinearExpressionTypes::Sum)
-        return (false);
+        auto product = std::dynamic_pointer_cast<ExpressionProduct>(expression);
 
-    if(auto linearTermAndConstant = std::dynamic_pointer_cast<ExpressionSum>(denominator)->getLinearTermAndConstant();
-        linearTermAndConstant)
-    {
-        double denominatorCoefficient = std::get<0>(*linearTermAndConstant);
-        VariablePtr denominatorVariable = std::get<1>(*linearTermAndConstant);
-        double denominatorConstant = std::get<2>(*linearTermAndConstant);
-
-        if(denominatorCoefficient == linearCoefficient && denominatorVariable == linearVariable
-            && denominatorConstant == constant)
+        for(int i = 0; i < 2; i++)
         {
-            return (true);
-        }
-    }
+            if(product->children[i]->getType() != E_NonlinearExpressionTypes::Constant)
+                continue;
 
-    return (false);
-}
+            double factor = std::dynamic_pointer_cast<ExpressionConstant>(product->children[i])->constant;
 
-bool checkPerspectiveConvexity(
-    std::shared_ptr<ExpressionNegate> expression, double linearCoefficient, VariablePtr linearVariable, double constant)
-{
-    if(expression->child->getType() == E_NonlinearExpressionTypes::Log)
-    {
-        return (checkPerspectiveConvexity(
-            std::dynamic_pointer_cast<ExpressionLog>(expression->child), linearCoefficient, linearVariable, constant));
-    }
-
-    if(expression->child->getType() == E_NonlinearExpressionTypes::Product)
-    {
-        auto product = std::dynamic_pointer_cast<ExpressionProduct>(expression->child);
-
-        if(product->children[0]->getType() == E_NonlinearExpressionTypes::Constant
-            && product->children[0]->getBounds().l() > 0
-            && product->children[1]->getType() == E_NonlinearExpressionTypes::Log)
-        {
-            return (checkPerspectiveConvexity(std::dynamic_pointer_cast<ExpressionLog>(product->children[1]),
-                linearCoefficient, linearVariable, constant));
-        }
-    }
-
-    if(expression->child->getType() == E_NonlinearExpressionTypes::Divide)
-    {
-        return (checkPerspectiveConvexity(std::dynamic_pointer_cast<ExpressionDivide>(expression->child),
-            linearCoefficient, linearVariable, constant));
-    }
-
-    return (false);
-}
-
-bool checkPerspectiveConvexity(
-    std::shared_ptr<ExpressionSquare> expression, double linearCoefficient, VariablePtr linearVariable, double constant)
-{
-    if(expression->child->getType() == E_NonlinearExpressionTypes::Divide)
-    {
-        return (checkPerspectiveConvexity(std::dynamic_pointer_cast<ExpressionDivide>(expression->child),
-            linearCoefficient, linearVariable, constant));
-    }
-
-    return (false);
-}
-
-bool checkPerspectiveConvexity(
-    std::shared_ptr<ExpressionLog> expression, double linearCoefficient, VariablePtr linearVariable, double constant)
-{
-    if(expression->child->getType() == E_NonlinearExpressionTypes::Sum && expression->child->getNumberOfChildren() == 2)
-    {
-        auto sum = std::dynamic_pointer_cast<ExpressionSum>(expression->child);
-
-        if(sum->children[0]->getType() == E_NonlinearExpressionTypes::Constant
-            && sum->children[0]->getBounds().l() == 1.0
-            && sum->children[1]->getType() == E_NonlinearExpressionTypes::Divide)
-        {
-            return (checkPerspectiveConvexity(std::dynamic_pointer_cast<ExpressionDivide>(sum->children[1]),
-                linearCoefficient, linearVariable, constant));
-        }
-    }
-
-    return (false);
-}
-
-bool checkPerspectiveConvexity(std::shared_ptr<ExpressionProduct> expression, double linearCoefficient,
-    VariablePtr linearVariable, double constant)
-{
-    if(expression->getNumberOfChildren() == 2)
-    {
-        if(expression->children[0]->getType() == E_NonlinearExpressionTypes::Constant
-            && expression->children[0]->getBounds().l() < 0
-            && expression->children[1]->getType() == E_NonlinearExpressionTypes::Divide)
-        {
-            return (checkPerspectiveConvexity(std::dynamic_pointer_cast<ExpressionDivide>(expression->children[1]),
-                linearCoefficient, linearVariable, constant));
-        }
-
-        if(expression->children[0]->getType() == E_NonlinearExpressionTypes::Constant
-            && expression->children[0]->getBounds().l() < 0
-            && expression->children[1]->getType() == E_NonlinearExpressionTypes::Log)
-        {
-            return (checkPerspectiveConvexity(std::dynamic_pointer_cast<ExpressionLog>(expression->children[1]),
-                linearCoefficient, linearVariable, constant));
-        }
-
-        if(auto linearTerm = std::dynamic_pointer_cast<ExpressionProduct>(expression)->getLinearTerm(); linearTerm)
-        {
-            double coefficient = std::get<0>(*linearTerm);
-            VariablePtr variable = std::get<1>(*linearTerm);
-
-            if(linearCoefficient * coefficient > 0 && linearVariable == variable)
+            if(factor == 0.0)
                 return (true);
+
+            return (isPerspectiveConvex(product->children[1 - i], factor > 0 ? sign : -sign, linearCoefficient,
+                linearVariable, constant));
         }
+
+        return (false);
     }
 
-    return (false);
+    case E_NonlinearExpressionTypes::Sum:
+    {
+        for(auto& C : std::dynamic_pointer_cast<ExpressionSum>(expression)->children)
+        {
+            if(!isPerspectiveConvex(C, sign, linearCoefficient, linearVariable, constant))
+                return (false);
+        }
+
+        return (true);
+    }
+
+    case E_NonlinearExpressionTypes::Square:
+        return (sign > 0
+            && isAffineInPerspectiveVariables(std::dynamic_pointer_cast<ExpressionSquare>(expression)->child,
+                linearCoefficient, linearVariable, constant));
+
+    case E_NonlinearExpressionTypes::Log:
+        return (sign < 0
+            && isAffineInPerspectiveVariables(std::dynamic_pointer_cast<ExpressionLog>(expression)->child,
+                linearCoefficient, linearVariable, constant));
+
+    default:
+        return (false);
+    }
 }
+} // namespace
+
+bool checkPerspectiveConvexity(
+    NonlinearExpressionPtr expression, double linearCoefficient, VariablePtr linearVariable, double constant)
+{
+    return (isPerspectiveConvex(expression, 1.0, linearCoefficient, linearVariable, constant));
 }
+} // namespace SHOT

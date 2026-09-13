@@ -2459,7 +2459,9 @@ public:
         return true;
     };
 
-    std::optional<std::tuple<double, VariablePtr, double>> getLinearTermAndConstant();
+    // Returns (coefficient, variable, constant) if the sum is exactly one linear term plus an optional constant,
+    // otherwise nothing
+    std::optional<std::tuple<double, VariablePtr, double>> getAsLinearTermPlusConstant();
 };
 
 class ExpressionProduct : public ExpressionGeneral, public std::enable_shared_from_this<ExpressionProduct>
@@ -2727,7 +2729,7 @@ public:
 
         if(children.size() == 2)
         {
-            bool isConvex = true;
+            bool isConvex = false;
             bool isValid = true;
 
             NonlinearExpressionPtr otherFactor;
@@ -2742,17 +2744,17 @@ public:
             {
                 if(C->getType() == E_NonlinearExpressionTypes::Sum && C->getNumberOfChildren() == 2)
                 {
-                    if(linearFactor) // Double linear factor found
-                    {
-                        isValid = false;
-                        isConvex = false;
-                        break;
-                    }
-
                     if(auto linearTermAndConstant
-                        = std::dynamic_pointer_cast<ExpressionSum>(C)->getLinearTermAndConstant();
+                        = std::dynamic_pointer_cast<ExpressionSum>(C)->getAsLinearTermPlusConstant();
                         linearTermAndConstant)
                     {
+                        if(linearFactor) // Double linear factor found
+                        {
+                            isValid = false;
+                            isConvex = false;
+                            break;
+                        }
+
                         linearCoefficient = std::get<0>(*linearTermAndConstant);
                         linearVariable = std::get<1>(*linearTermAndConstant);
                         constant = std::get<2>(*linearTermAndConstant);
@@ -2772,8 +2774,10 @@ public:
                 otherFactor = C;
             }
 
-            if(isValid && linearFactor && otherFactor)
+            // The perspective is only convex if the linear factor is positive
+            if(isValid && linearFactor && otherFactor && linearFactor->getBounds().l() > 0)
             {
+                isConvex = true;
                 NonlinearExpressions terms;
 
                 if(otherFactor->getType() == E_NonlinearExpressionTypes::Sum)
@@ -2988,16 +2992,5 @@ public:
     }
 };
 // End general operations
-
-bool checkPerspectiveConvexity(std::shared_ptr<ExpressionDivide> expression, double linearCoefficient,
-    VariablePtr linearVariable, double constant);
-bool checkPerspectiveConvexity(std::shared_ptr<ExpressionNegate> expression, double linearCoefficient,
-    VariablePtr linearVariable, double constant);
-bool checkPerspectiveConvexity(std::shared_ptr<ExpressionProduct> expression, double linearCoefficient,
-    VariablePtr linearVariable, double constant);
-bool checkPerspectiveConvexity(std::shared_ptr<ExpressionSquare> expression, double linearCoefficient,
-    VariablePtr linearVariable, double constant);
-bool checkPerspectiveConvexity(
-    std::shared_ptr<ExpressionLog> expression, double linearCoefficient, VariablePtr linearVariable, double constant);
 
 } // namespace SHOT
