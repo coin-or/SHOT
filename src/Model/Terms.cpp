@@ -192,7 +192,8 @@ void QuadraticTerms::updateConvexity()
     {
         if(sharedOwnerProblem->env->settings)
         {
-            eigenvalueTolerance = sharedOwnerProblem->env->settings->getSetting<double>("Model.Convexity.Quadratics.EigenValueTolerance");
+            eigenvalueTolerance = sharedOwnerProblem->env->settings->getSetting<double>(
+                "Model.Convexity.Quadratics.EigenValueTolerance");
         }
         else
         {
@@ -258,12 +259,15 @@ void QuadraticTerms::performLDLFactorization()
 
     Eigen::SparseMatrix<std::complex<double>> matrix(numberOfVariables, numberOfVariables);
 
-    for(const auto& E : elements)
-    {
-        matrix.insert(E.row(), E.col()) = std::complex<double>(E.value(), 0.0);
-    }
+    // Inserting the elements one by one into the matrix without reserving space moves the following elements at each
+    // insertion
+    std::vector<Eigen::Triplet<std::complex<double>>> complexElements;
+    complexElements.reserve(elements.size());
 
-    matrix.makeCompressed();
+    for(const auto& E : elements)
+        complexElements.emplace_back(E.row(), E.col(), std::complex<double>(E.value(), 0.0));
+
+    matrix.setFromTriplets(complexElements.begin(), complexElements.end());
     // std::cout << "Original matrix: \n" << matrix << std::endl;
 
     Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>> eigenSolverLDL(matrix);

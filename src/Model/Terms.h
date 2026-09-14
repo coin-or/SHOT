@@ -18,6 +18,7 @@
 
 #include <Eigen/Eigenvalues>
 #include <Eigen/Sparse>
+#include <unordered_map>
 #include <vector>
 
 namespace SHOT
@@ -510,16 +511,45 @@ public:
 
     void add(QuadraticTerms terms)
     {
+        if(terms.size() == 0)
+            return;
+
+        // The terms are found through a hash map instead of the linear search in add(term)
+        using VariablePair = std::pair<Variable*, Variable*>;
+
+        struct VariablePairHash
+        {
+            size_t operator()(const VariablePair& pair) const
+            {
+                return (std::hash<Variable*>()(pair.first) * 31 + std::hash<Variable*>()(pair.second));
+            }
+        };
+
+        auto getKey = [](const QuadraticTermPtr& term)
+        {
+            auto first = term->firstVariable.get();
+            auto second = term->secondVariable.get();
+            return (std::less<Variable*>()(first, second) ? VariablePair(first, second) : VariablePair(second, first));
+        };
+
+        std::unordered_map<VariablePair, size_t, VariablePairHash> termIndexes;
+        termIndexes.reserve(size() + terms.size());
+
+        for(size_t i = 0; i < size(); i++)
+            termIndexes.emplace(getKey((*this)[i]), i);
+
         for(auto& TERM : terms)
         {
-            add(TERM);
+            auto [it, isNew] = termIndexes.emplace(getKey(TERM), size());
+
+            if(isNew)
+                (*this).push_back(TERM);
+            else
+                (*this)[it->second]->coefficient += TERM->coefficient;
         }
 
-        if(terms.size() > 0)
-        {
-            convexity = E_Convexity::NotSet;
-            monotonicity = E_Monotonicity::NotSet;
-        }
+        convexity = E_Convexity::NotSet;
+        monotonicity = E_Monotonicity::NotSet;
     }
 
     SparseVariableVector calculateGradient(const VectorDouble& point) const
