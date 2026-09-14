@@ -59,17 +59,20 @@ protected:
     bool isDualBoundAvailable(E_ProblemSolutionStatus status, bool isMIP);
 
     // The finite bounds temporarily given to an unbounded variable to find a point of an unbounded dual problem. The
-    // point is only used to generate cuts, so it is kept at a moderate distance from the center: LP solvers treat
-    // values from 1e20 as infinite, and cuts for, e.g., square terms generated far away are badly scaled. The center is
-    // the value of the variable in the best known solution, if any, since the cutoff from that solution may otherwise
-    // make the problem with the temporary bounds infeasible.
+    // point is only used to generate cuts, so it is kept at a moderate magnitude: LP solvers treat values from 1e20 as
+    // infinite, and cuts for, e.g., square terms generated far away are badly scaled. The bounds also contain the
+    // center, which is the value of the variable in the best known solution, if any, since the cutoff from that
+    // solution may otherwise make the problem with the temporary bounds infeasible. They are not only placed around
+    // the center, since a poor solution, e.g. with a huge objective variable value from the interior point, would then
+    // give points where all nonlinear constraints are fulfilled, and no cuts can be generated.
     static PairDouble getTemporaryBoundsForUnboundedVariable(double lowerBound, double upperBound, double center = 0.0)
     {
         const double maxDistance = 1e4;
 
         center = std::min(std::max(center, lowerBound), upperBound);
 
-        return (PairDouble(std::max(lowerBound, center - maxDistance), std::min(upperBound, center + maxDistance)));
+        return (PairDouble(std::max(lowerBound, std::min(center, 0.0) - maxDistance),
+            std::min(upperBound, std::max(center, 0.0) + maxDistance)));
     }
 
 public:

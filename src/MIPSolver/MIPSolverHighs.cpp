@@ -672,9 +672,13 @@ E_ProblemSolutionStatus MIPSolverHighs::solveProblem()
                 >= E_ObjectiveFunctionClassification::QuadraticConsideredAsNonlinear
             && hasDualAuxiliaryObjectiveVariable())
         {
-            // The auxiliary variable in the dual problem is unbounded
-            updateVariableBound(getDualAuxiliaryObjectiveVariableIndex(), -getUnboundedVariableBoundValue() / 1.1,
-                getUnboundedVariableBoundValue() / 1.1);
+            // The auxiliary variable in the dual problem is unbounded. It is temporarily given finite bounds, since
+            // HiGHS' infinity is inf, and bounds from 1e20 are treated as infinite anyway
+            int objectiveVariableIndex = getDualAuxiliaryObjectiveVariableIndex();
+            highsInstance.changeColBounds(objectiveVariableIndex,
+                std::max(variableLowerBounds[objectiveVariableIndex], -1e9),
+                std::min(variableUpperBounds[objectiveVariableIndex], 1e9));
+            variableBoundsToRestore.push_back(objectiveVariableIndex);
             problemUpdated = true;
         }
 
