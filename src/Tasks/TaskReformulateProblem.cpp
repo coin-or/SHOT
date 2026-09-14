@@ -1855,22 +1855,21 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
     }
     else
     {
+        // The terms are added all at once, since adding them one by one takes quadratic time in the number of terms
+        QuadraticTerms copiedTerms;
+        copiedTerms.reserve(quadraticTerms.size());
+        double signfactor = reversedSigns ? -1.0 : 1.0;
+
         for(auto& T : quadraticTerms)
         {
             auto firstVariable = reformulatedProblem->getVariable(T->firstVariable->getIndex());
             auto secondVariable = reformulatedProblem->getVariable(T->secondVariable->getIndex());
 
-            if(reversedSigns)
-            {
-                resultQuadraticTerms.add(
-                    std::make_shared<QuadraticTerm>(-1.0 * T->coefficient, firstVariable, secondVariable));
-            }
-            else
-            {
-                resultQuadraticTerms.add(
-                    std::make_shared<QuadraticTerm>(T->coefficient, firstVariable, secondVariable));
-            }
+            copiedTerms.push_back(
+                std::make_shared<QuadraticTerm>(signfactor * T->coefficient, firstVariable, secondVariable));
         }
+
+        resultQuadraticTerms.add(copiedTerms);
     }
 
     return std::tuple(resultLinearTerms, resultQuadraticTerms);
