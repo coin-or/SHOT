@@ -1772,8 +1772,9 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
     auto quadraticDecompositionMethod = (ES_QuadraticDecomposition)env->settings->getSetting<int>(
         "Model.Reformulation.Quadratics.Decomposition.Method");
 
+    // The decompositions do not reverse the signs of the terms, so they are only used when the signs are kept
     if(quadraticDecompositionMethod != ES_QuadraticDecomposition::None
-        && partitionStrategy <= ES_PartitionNonlinearSums::IfConvex && quadraticSumConvex
+        && partitionStrategy <= ES_PartitionNonlinearSums::IfConvex && quadraticSumConvex && !reversedSigns
         && !quadraticTerms.allSquares) // Use one of the quadratic decompositions
     {
         if(quadraticDecompositionMethod == ES_QuadraticDecomposition::EigenValueDecomposition)
@@ -1795,6 +1796,9 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
         || (reversedSigns && !quadraticSumConcave // should not reformulate if sum is concave unless forced
             && performPartitioning && partitionStrategy == ES_PartitionNonlinearSums::IfConvex))
     {
+        // The linear terms returned are added as they are, so they must have their signs reversed here
+        double signfactor = reversedSigns ? -1.0 : 1.0;
+
         for(auto& T : quadraticTerms)
         {
             auto firstVariable = reformulatedProblem->getVariable(T->firstVariable->getIndex());
@@ -1802,18 +1806,18 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
 
             if(T->isSquare && T->isBinary) // Square term b^2 -> b
             {
-                resultLinearTerms.add(std::make_shared<LinearTerm>(T->coefficient, firstVariable));
+                resultLinearTerms.add(std::make_shared<LinearTerm>(signfactor * T->coefficient, firstVariable));
             }
             else if(T->isSquare)
             {
                 auto [auxVariable, newVariable]
                     = getSquareAuxiliaryVariable(firstVariable, 1.0, E_AuxiliaryVariableType::SquareTermsPartitioning);
-                resultLinearTerms.add(std::make_shared<LinearTerm>(T->coefficient, auxVariable));
+                resultLinearTerms.add(std::make_shared<LinearTerm>(signfactor * T->coefficient, auxVariable));
             }
             else if(T->isBilinear && T->isBinary) // Bilinear term b1*b2
             {
                 auto [auxVariable, newVariable] = getBilinearAuxiliaryVariable(firstVariable, secondVariable);
-                resultLinearTerms.add(std::make_shared<LinearTerm>(T->coefficient, auxVariable));
+                resultLinearTerms.add(std::make_shared<LinearTerm>(signfactor * T->coefficient, auxVariable));
             }
             else if(T->isBilinear
                 && (firstVariable->properties.type == E_VariableType::Binary
@@ -1821,7 +1825,7 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
             // Bilinear term b1*x2 or x1*b2
             {
                 auto [auxVariable, newVariable] = getBilinearAuxiliaryVariable(firstVariable, secondVariable);
-                resultLinearTerms.add(std::make_shared<LinearTerm>(T->coefficient, auxVariable));
+                resultLinearTerms.add(std::make_shared<LinearTerm>(signfactor * T->coefficient, auxVariable));
             }
             else if(useIntegerBilinearTermReformulation && T->isBilinear
                 && (((firstVariable->properties.type == E_VariableType::Integer
@@ -1835,13 +1839,13 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
             // bilinear term i1*i2 or i1*x2
             {
                 auto [auxVariable, newVariable] = getBilinearAuxiliaryVariable(firstVariable, secondVariable);
-                resultLinearTerms.add(std::make_shared<LinearTerm>(T->coefficient, auxVariable));
+                resultLinearTerms.add(std::make_shared<LinearTerm>(signfactor * T->coefficient, auxVariable));
             }
             else if(extractQuadraticTermsFromNonconvexExpressions) // Bilinear term +x1*x2 which will be extracted
             // to equality constraint
             {
                 auto [auxVariable, newVariable] = getBilinearAuxiliaryVariable(firstVariable, secondVariable);
-                resultLinearTerms.add(std::make_shared<LinearTerm>(T->coefficient, auxVariable));
+                resultLinearTerms.add(std::make_shared<LinearTerm>(signfactor * T->coefficient, auxVariable));
             }
             else // Square term x1^2 or general bilinear term x1*x2 will remain as is
             {

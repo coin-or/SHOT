@@ -151,6 +151,7 @@ bool ModelTestPerspectiveConvexity();
 bool ModelTestInitialPOAConvexRelaxation();
 bool ModelTestArtificialIntegerBounds();
 bool ModelTestVariableBoundCache();
+bool ModelTestMaximizePartitionedSquares();
 
 bool TestReadProblem(const std::string& problemFile);
 bool TestRootsearch(const std::string& problemFile);
@@ -292,6 +293,9 @@ int ModelTest(int argc, char* argv[])
         break;
     case 39:
         passed = ModelTestVariableBoundCache();
+        break;
+    case 40:
+        passed = ModelTestMaximizePartitionedSquares();
         break;
     default:
         passed = false;
@@ -7022,6 +7026,119 @@ bool ModelTestVariableBoundCache()
         std::cout << "  FAILED: the objective function bounds [" << objectiveBounds.l() << ", " << objectiveBounds.u()
                   << "] do not use the updated variable bounds.\n";
         passed = false;
+    }
+
+    return passed;
+}
+
+bool ModelTestMaximizePartitionedSquares()
+{
+    // When the square terms of a maximized concave objective are partitioned, the objective is minimized with the
+    // signs reversed, so -x^2 must become +s_sq_x with s_sq_x >= x^2. With the sign kept, the auxiliary variables go to
+    // their upper bounds and the dual bound is invalid. The optimum is in the interior of the variable bounds, since the
+    // primal solution is otherwise correct anyway.
+
+    bool passed = true;
+
+    // maximize 4x + 2y - x^2 - y^2 + b s.t. x + b <= 3, x, y in [0, 10], b binary -> optimum x=2, y=1, b=1, value 6
+    auto buildProblem = [](const std::shared_ptr<Environment>& env)
+    {
+        auto problem = std::make_shared<Problem>(env);
+        auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.0, 10.0);
+        auto y = std::make_shared<Variable>("y", E_VariableType::Real, 0.0, 10.0);
+        auto b = std::make_shared<Variable>("b", E_VariableType::Binary, 0.0, 1.0);
+        problem->add({ x, y, b });
+
+        auto objective = std::make_shared<QuadraticObjectiveFunction>(E_ObjectiveFunctionDirection::Maximize);
+        objective->add(std::make_shared<LinearTerm>(4.0, x));
+        objective->add(std::make_shared<LinearTerm>(2.0, y));
+        objective->add(std::make_shared<LinearTerm>(1.0, b));
+        objective->add(std::make_shared<QuadraticTerm>(-1.0, x, x));
+        objective->add(std::make_shared<QuadraticTerm>(-1.0, y, y));
+        problem->add(objective);
+
+        auto constraint = std::make_shared<LinearConstraint>("c", SHOT_DBL_MIN, 3.0);
+        constraint->add(std::make_shared<LinearTerm>(1.0, x));
+        constraint->add(std::make_shared<LinearTerm>(1.0, b));
+        problem->add(constraint);
+
+        return problem;
+    };
+
+    const double expectedObjective = 6.0;
+    const double tolerance = 0.01;
+
+    for(auto& [mipSolver, solverName] : AvailableMIPSolversForEpigraphTests())
+    {
+        std::cout << "\n===== MIP solver: " << solverName << " =====\n";
+
+        auto solver = std::make_unique<Solver>();
+        auto env = solver->getEnvironment();
+
+        solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Warning));
+        solver->updateSetting("Termination.TimeLimit", 20.0);
+        solver->updateSetting("Dual.MIP.Solver", static_cast<int>(mipSolver));
+        solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+
+        auto problem = buildProblem(env);
+        problem->finalize();
+
+        if(!solver->setProblem(problem))
+        {
+            std::cout << "  FAILED: solver->setProblem() failed.\n";
+            passed = false;
+            continue;
+        }
+
+        // Gurobi and Cplex keep the convex quadratic objective as it is, so there are only partitioned terms with Cbc
+        // and HiGHS
+        int numberOfPartitionedTerms = 0;
+
+        if(auto reformulatedObjective
+            = std::dynamic_pointer_cast<LinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction))
+        {
+            for(auto& T : reformulatedObjective->linearTerms)
+            {
+                if(T->variable->properties.auxiliaryType != E_AuxiliaryVariableType::SquareTermsPartitioning)
+                    continue;
+
+                numberOfPartitionedTerms++;
+
+                if(T->coefficient <= 0.0)
+                {
+                    std::cout << "  FAILED: the partitioned term " << T->coefficient << "*" << T->variable->name
+                              << " in the minimized objective should have a positive coefficient.\n";
+                    passed = false;
+                }
+            }
+        }
+
+        if((mipSolver == ES_MIPSolver::Cbc || mipSolver == ES_MIPSolver::Highs) && numberOfPartitionedTerms != 2)
+        {
+            std::cout << "  FAILED: expected 2 partitioned square terms in the objective, found "
+                      << numberOfPartitionedTerms << ".\n";
+            passed = false;
+        }
+
+        if(!solver->solveProblem())
+        {
+            std::cout << "  FAILED: solver->solveProblem() failed.\n";
+            passed = false;
+            continue;
+        }
+
+        passed = CheckSolvedObjective(env, expectedObjective, "[" + solverName + "] maximized partitioned squares")
+            && passed;
+
+        double dualBound = env->results->getGlobalDualBound();
+        std::cout << "  [" << solverName << "] dual bound = " << dualBound << "\n";
+
+        if(dualBound < expectedObjective - 1e-6 || dualBound > expectedObjective + tolerance)
+        {
+            std::cout << "  FAILED: the dual bound " << dualBound << " is not a valid and tight bound for the optimum "
+                      << expectedObjective << ".\n";
+            passed = false;
+        }
     }
 
     return passed;
