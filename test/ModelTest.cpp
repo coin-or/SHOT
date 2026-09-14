@@ -152,6 +152,7 @@ bool ModelTestInitialPOAConvexRelaxation();
 bool ModelTestArtificialIntegerBounds();
 bool ModelTestVariableBoundCache();
 bool ModelTestMaximizePartitionedSquares();
+bool ModelTestLDLFactorizationScaling();
 
 bool TestReadProblem(const std::string& problemFile);
 bool TestRootsearch(const std::string& problemFile);
@@ -296,6 +297,9 @@ int ModelTest(int argc, char* argv[])
         break;
     case 40:
         passed = ModelTestMaximizePartitionedSquares();
+        break;
+    case 41:
+        passed = ModelTestLDLFactorizationScaling();
         break;
     default:
         passed = false;
@@ -7137,6 +7141,103 @@ bool ModelTestMaximizePartitionedSquares()
         {
             std::cout << "  FAILED: the dual bound " << dualBound << " is not a valid and tight bound for the optimum "
                       << expectedObjective << ".\n";
+            passed = false;
+        }
+    }
+
+    return passed;
+}
+
+bool ModelTestLDLFactorizationScaling()
+{
+    // The LDL factorization is only used if the matrix reconstructed from it is close to the original one. The
+    // tolerance must be relative to the size of the elements, otherwise the round-off error for a matrix with large
+    // coefficients rejects a correct factorization, and the eigenvalue decomposition is used instead.
+
+    bool passed = true;
+
+    const int numberOfVariables = 30;
+
+    for(double scale : { 1.0, 1e6 })
+    {
+        auto solver = std::make_unique<Solver>();
+        auto env = solver->getEnvironment();
+        auto problem = std::make_shared<Problem>(env);
+
+        Variables variables;
+
+        for(int i = 0; i < numberOfVariables; i++)
+            variables.push_back(
+                std::make_shared<Variable>("x" + std::to_string(i), E_VariableType::Real, -10.0, 10.0));
+
+        problem->add(variables);
+
+        // Q = A^T A + I is positive definite, with A a dense matrix with deterministic pseudo-random elements
+        Eigen::MatrixXd A(numberOfVariables, numberOfVariables);
+
+        for(int i = 0; i < numberOfVariables; i++)
+        {
+            for(int j = 0; j < numberOfVariables; j++)
+                A(i, j) = std::sin(1.0 + 7.0 * i + 13.0 * j * j);
+        }
+
+        Eigen::MatrixXd Q = (A.transpose() * A + Eigen::MatrixXd::Identity(numberOfVariables, numberOfVariables)) * scale;
+
+        // x^T Q x as terms, with the off-diagonal elements combined into one bilinear term
+        QuadraticTerms terms;
+
+        for(int i = 0; i < numberOfVariables; i++)
+        {
+            terms.add(std::make_shared<QuadraticTerm>(Q(i, i), variables[i], variables[i]));
+
+            for(int j = i + 1; j < numberOfVariables; j++)
+                terms.add(std::make_shared<QuadraticTerm>(2.0 * Q(i, j), variables[i], variables[j]));
+        }
+
+        terms.takeOwnership(problem);
+
+        std::cout << "\nScale " << scale << ":\n";
+
+        if(terms.getConvexity() != E_Convexity::Convex)
+        {
+            std::cout << "  FAILED: the quadratic terms should be convex.\n";
+            passed = false;
+            continue;
+        }
+
+        terms.performLDLFactorization();
+
+        if(!terms.LDLFactorizationSuccessful)
+        {
+            std::cout << "  FAILED: the LDL factorization was rejected.\n";
+            passed = false;
+            continue;
+        }
+
+        // The decomposition used in the reformulation is 0.5 * sum_i d_i * (sum_j L_ji * x_j)^2
+        VectorDouble point(numberOfVariables);
+
+        for(int i = 0; i < numberOfVariables; i++)
+            point[i] = std::cos(3.0 * i);
+
+        double value = terms.calculate(point);
+        double decomposedValue = 0.0;
+
+        for(int i = 0; i < numberOfVariables; i++)
+        {
+            double sum = 0.0;
+
+            for(auto [variable, j] : terms.variableMap)
+                sum += terms.LDLMatrixL(j, i) * point[variable->getIndex()];
+
+            decomposedValue += 0.5 * terms.LDLDiag[i] * sum * sum;
+        }
+
+        std::cout << "  x^T Q x = " << value << ", from the LDL factorization = " << decomposedValue << "\n";
+
+        if(std::abs(value - decomposedValue) > 1e-9 * std::max(1.0, std::abs(value)))
+        {
+            std::cout << "  FAILED: the LDL factorization does not give the same value.\n";
             passed = false;
         }
     }

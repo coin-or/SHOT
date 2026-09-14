@@ -321,8 +321,11 @@ void QuadraticTerms::performLDLFactorization()
     // std::cout << "max-error " << error.maxCoeff() << std::endl;
     // std::cout << "min-value " << error.minCoeff() << std::endl;
 
-    // The error to the reconstructed matrix is too large, will not use the decomposition
-    if(std::abs(error.maxCoeff()) > 1e-12 || std::abs(error.minCoeff()) < -1e-12)
+    // The error to the reconstructed matrix is too large, will not use the decomposition. The tolerance is relative to
+    // the largest element, since the round-off error grows with the elements, but not smaller than for elements of 1.
+    double errorTolerance = 1e-12 * std::max(1.0, original.real().cwiseAbs().maxCoeff());
+
+    if(error.cwiseAbs().maxCoeff() > errorTolerance)
     {
         LDLFactorizationPerformed = true;
         LDLFactorizationSuccessful = false;
