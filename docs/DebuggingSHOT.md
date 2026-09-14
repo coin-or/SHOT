@@ -508,6 +508,19 @@ in this codebase — add to this list as you find more.
   constraints from `originalproblem.txt` (e.g. with numpy) and compare the
   smallest one with `Model.Convexity.Quadratics.EigenValueTolerance`, or rerun
   without `--convex` and see whether SHOT reports nonconvex constraints.
+- To find where an invalid dual bound comes from, take a known optimal
+  solution (e.g. `primal_solpt{N}.txt` from a run with another solver
+  combination), add rows fixing the original variables to it before the
+  `bounds` section of each `dualiter{N}_problem.lp`, and solve them with
+  `build/bin/highs --model_file <file>`. If every problem stays feasible with
+  an objective at least as good as the optimum, no cut is invalid, and the
+  MIP solver's own solve is wrong: solve the unchanged file standalone, then
+  add the MIP start (`dualiter{N}_mipstart.txt`, via `--read_solution_file`)
+  and the options SHOT sets in `initializeSolverSettings()` one at a time.
+- A nonconvex constraint does not by itself explain an invalid dual bound: it
+  can be redundant, and its cuts can still be valid for the feasible set (e.g.
+  `-(mu^T x)^2 <= z` next to `(mu^T x)^2 <= z`). Remove the constraint from a
+  copy of the model and rerun before blaming it.
 
 ### Verification discipline
 

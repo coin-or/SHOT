@@ -331,8 +331,12 @@ void MIPSolverHighs::initializeSolverSettings()
 {
     highsInstance.setOptionValue("mip_rel_gap", env->settings->getSetting<double>("Termination.ObjectiveGap.Relative"));
     highsInstance.setOptionValue("mip_abs_gap", env->settings->getSetting<double>("Termination.ObjectiveGap.Absolute"));
-    highsInstance.setOptionValue(
-        "mip_feasibility_tolerance", env->settings->getSetting<double>("Primal.Tolerance.Integer"));
+    // HiGHS does not only use mip_feasibility_tolerance for integrality, but as the feasibility tolerance of the rows and
+    // cuts in the whole MIP solver, e.g. in the domain propagation. A larger value than its default can therefore make
+    // HiGHS report a solution as optimal that is not (e.g. with RPOPwCaTC5_100, whose rows have coefficients up to 1e5),
+    // so the integer tolerance is only used when it is smaller than the default.
+    highsInstance.setOptionValue("mip_feasibility_tolerance",
+        std::min(env->settings->getSetting<double>("Primal.Tolerance.Integer"), kDefaultMipTolerance));
 
     // Adds a user-provided node limit
     if(auto nodeLimit = env->settings->getSetting<double>("Dual.MIP.NodeLimit"); nodeLimit > 0)
