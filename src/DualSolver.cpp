@@ -292,11 +292,20 @@ void DualSolver::addGeneratedHyperplane(const HyperplanePtr hyperplane)
 
             if(numberOfRepeatedHyperplanes == 100 && !repeatedHyperplaneWarningShown)
             {
+                bool isMultiTree = env->settings->getSetting<int>("Dual.TreeStrategy")
+                    == static_cast<int>(ES_TreeStrategy::MultiTree);
+
                 env->output->outputWarning(
                     fmt::format("        {} hyperplanes have been generated in points they were already generated "
-                                "in, the last one for constraint {}. The dual problem is not making progress.",
-                        numberOfRepeatedHyperplanes, constraintIndex));
+                                "in, the last one for constraint {}. The dual problem is not making progress.{}",
+                        numberOfRepeatedHyperplanes, constraintIndex,
+                        isMultiTree ? " Solving the remaining MIP problems to optimality." : ""));
                 repeatedHyperplaneWarningShown = true;
+
+                // Solutions found at the solution limit do not give new cuts, so the remaining MIP problems are solved
+                // to optimality
+                if(isMultiTree)
+                    MIPSolver->setSolutionLimit(2100000000);
             }
         }
     }
