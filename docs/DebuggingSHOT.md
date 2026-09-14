@@ -491,6 +491,24 @@ in this codebase — add to this list as you find more.
   NLP problem from the last dual solution, also without a primal solution;
   check `primalnlp*_warmstart_*` in the debug directory to see that it ran.
 
+### Large dense quadratics (thousands of variables, millions of terms)
+
+- A run that never leaves `TaskReformulateProblem` (no "Interior point search"
+  section printed) is usually quadratic-time work over the terms, not a
+  stuck solver. Use `sample <pid> 10` on macOS: in a Release build the hot
+  loop is often inlined, so read the return address in the leaf frame with
+  `lldb -b -o 'disassemble -n <function>'` to see which call it follows.
+
+### `--convex` on instances that are not convex
+
+- `Model.Convexity.AssumeConvex` makes SHOT generate cuts for every
+  constraint, so an instance that is only nearly convex can give a dual bound
+  that is worse than the optimum, with no other sign of trouble. Before
+  debugging such a result, compute the eigenvalues of the quadratic
+  constraints from `originalproblem.txt` (e.g. with numpy) and compare the
+  smallest one with `Model.Convexity.Quadratics.EigenValueTolerance`, or rerun
+  without `--convex` and see whether SHOT reports nonconvex constraints.
+
 ### Verification discipline
 
 - `InstanceTest`'s solver combinations are a fixed, hand-registered list in
