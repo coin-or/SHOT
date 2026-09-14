@@ -180,9 +180,8 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             LPSolver->writeProblemToFile(filename);
         }
 
-        // Updates the time limit for the LP solver
-        timeLimit = std::max(0.0, timeLimit - env->timing->getElapsedTime("Total"));
-        LPSolver->setTimeLimit(timeLimit);
+        // Updates the time limit for the LP solver with the time remaining of the interior point search
+        LPSolver->setTimeLimit(std::max(0.0, timeLimit - env->timing->getElapsedTime("InteriorPointSearch")));
 
         // Solves the problem and obtains the solution
         auto solStatus = LPSolver->solveProblem();
