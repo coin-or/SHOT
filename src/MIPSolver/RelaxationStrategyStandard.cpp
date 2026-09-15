@@ -77,6 +77,10 @@ void RelaxationStrategyStandard::executeStrategy()
     {
         this->setInactive();
     }
+    else if(isSolutionChangeStagnant())
+    {
+        this->setInactive();
+    }
     else
     {
         this->setActive();
@@ -140,6 +144,27 @@ bool RelaxationStrategyStandard::isTimeLimitReached()
 }
 
 bool RelaxationStrategyStandard::isLPStepFinished() { return (LPFinished); }
+
+bool RelaxationStrategyStandard::isSolutionChangeStagnant()
+{
+    double tolerance = env->settings->getSetting<double>("Dual.Relaxation.SolutionChangeTolerance");
+
+    if(tolerance <= 0.0)
+        return (false);
+
+    if(env->results->getNumberOfIterations() < 2)
+        return (false);
+
+    // The hyperplanes of the relaxed problems are generated in points on the boundary of the nonlinear feasible
+    // set, so when those points stop moving the linearization is no longer improving and there is nothing more to
+    // gain from continuing with relaxed problems
+    auto prevIter = env->results->getPreviousIteration();
+
+    if(prevIter->boundaryDistance == SHOT_DBL_MAX)
+        return (false);
+
+    return (prevIter->boundaryDistance < tolerance);
+}
 
 bool RelaxationStrategyStandard::isObjectiveStagnant()
 {

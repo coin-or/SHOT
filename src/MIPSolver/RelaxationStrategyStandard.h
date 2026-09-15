@@ -33,6 +33,7 @@ private:
     bool isIterationLimitReached();
     bool isTimeLimitReached();
     bool isLPStepFinished();
+    bool isSolutionChangeStagnant();
     bool isObjectiveStagnant();
 
     bool LPFinished;

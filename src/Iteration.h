@@ -61,6 +61,8 @@ public:
 
     bool forceObjectiveReductionCut = false;
 
+    // The point the first hyperplane of the iteration was generated in, used to calculate how far the points
+    // move between iterations
     std::vector<VectorDouble> hyperplanePoints;
 
     SolutionPoint getSolutionPointWithSmallestDeviation();

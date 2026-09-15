@@ -52,6 +52,7 @@
 #include "../Tasks/TaskSelectHyperplanesObjectiveFunction.h"
 #include "../Tasks/TaskSelectHyperplanesExternal.h"
 #include "../Tasks/TaskAddHyperplanes.h"
+#include "../Tasks/TaskCalculateSolutionChangeNorm.h"
 
 #include "../Tasks/TaskAddIntegerCuts.h"
 
@@ -297,6 +298,14 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
     env->tasks->addTask(tSelectExternalHPs, "SelectExternalHPs");
 
     env->tasks->addTask(tAddHPs, "AddHPs");
+
+    // The distance between the points the hyperplanes are generated in is calculated once they have been
+    // generated
+    if(env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
+    {
+        auto tCalculateSolutionChangeNorm = std::make_shared<TaskCalculateSolutionChangeNorm>(env);
+        env->tasks->addTask(tCalculateSolutionChangeNorm, "CalculateSolutionChangeNorm");
+    }
 
     if(env->settings->getSetting<bool>("Dual.HyperplaneCuts.UseIntegerCuts"))
     {
