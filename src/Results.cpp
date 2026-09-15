@@ -1233,6 +1233,12 @@ std::string Results::getResultsTrace()
     case(ES_PrimalNLPSolver::Ipopt):
         ss << "Ipopt";
         break;
+    case(ES_PrimalNLPSolver::SHOT):
+        ss << "SHOT";
+        break;
+    case(ES_PrimalNLPSolver::Uno):
+        ss << "Uno";
+        break;
     default:
         ss << "NONE";
         break;
@@ -1250,6 +1256,9 @@ std::string Results::getResultsTrace()
         break;
     case(ES_MIPSolver::Cbc):
         ss << "CBC";
+        break;
+    case(ES_MIPSolver::Highs):
+        ss << "HIGHS";
         break;
     default:
         ss << "NONE";

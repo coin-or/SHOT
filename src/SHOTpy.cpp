@@ -283,6 +283,7 @@ PYBIND11_MODULE(SHOTpy, m)
         .value("Ipopt", ES_PrimalNLPSolver::Ipopt)
         .value("GAMS", ES_PrimalNLPSolver::GAMS)
         .value("SHOT", ES_PrimalNLPSolver::SHOT)
+        .value("Uno", ES_PrimalNLPSolver::Uno)
         .value("None", ES_PrimalNLPSolver::None);
 
     // NLP solver call strategy
