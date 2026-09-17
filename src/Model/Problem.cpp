@@ -1928,6 +1928,7 @@ void Problem::doFBBT()
         [](auto V) { return (V->properties.hasLowerBoundBeenTightened || V->properties.hasUpperBoundBeenTightened); });
 
     int i = 0;
+    bool anyBoundsUpdated = false;
 
     for(i = 0; i < numberOfIterations; i++)
     {
@@ -1946,6 +1947,8 @@ void Problem::doFBBT()
             boundsUpdated = doFBBTOnConstraint(C, timeEnd) || boundsUpdated;
         }
 
+        anyBoundsUpdated = anyBoundsUpdated || boundsUpdated;
+
         if(stopTightening)
             break;
 
@@ -1959,6 +1962,8 @@ void Problem::doFBBT()
 
             boundsUpdated = doFBBTOnConstraint(C, timeEnd) || boundsUpdated;
         }
+
+        anyBoundsUpdated = anyBoundsUpdated || boundsUpdated;
 
         if(stopTightening)
             break;
@@ -1977,8 +1982,25 @@ void Problem::doFBBT()
             }
         }
 
+        anyBoundsUpdated = anyBoundsUpdated || boundsUpdated;
+
         if(stopTightening || !boundsUpdated)
             break;
+    }
+
+    // The bounds of the original variables tightened in the reformulated problem are also bounds in the original problem
+    if(anyBoundsUpdated && properties.isReformulated)
+    {
+        for(size_t k = 0; k < env->problem->allVariables.size(); k++)
+        {
+            auto& original = env->problem->allVariables[k];
+
+            double lowerBound = std::max(original->lowerBound, allVariables[k]->lowerBound);
+            double upperBound = std::min(original->upperBound, allVariables[k]->upperBound);
+
+            if(lowerBound != original->lowerBound || upperBound != original->upperBound)
+                env->problem->setVariableBounds(k, lowerBound, upperBound);
+        }
     }
 
     int numberOfTightenedVariablesAfter = std::count_if(allVariables.begin(), allVariables.end(),
@@ -2493,19 +2515,6 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint, double timeEnd
     {
         env->output->outputDebug(
             fmt::format("  error when tightening bound in constraint {}: {}", constraint->name, e.what()));
-    }
-
-    // Update variable bounds for original variables also in original problem if tightened in reformulated one
-    if(boundsUpdated && this->properties.isReformulated)
-    {
-        for(size_t i = 0; i < env->problem->allVariables.size(); i++)
-        {
-            if(allVariables[i]->lowerBound > env->problem->allVariables[i]->lowerBound)
-                env->problem->allVariables[i]->lowerBound = allVariables[i]->lowerBound;
-
-            if(allVariables[i]->upperBound < env->problem->allVariables[i]->upperBound)
-                env->problem->allVariables[i]->upperBound = allVariables[i]->upperBound;
-        }
     }
 
     return (boundsUpdated);
