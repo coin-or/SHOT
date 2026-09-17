@@ -19,7 +19,10 @@
 #include "../Tasks/TaskReformulateProblem.h"
 
 #include <algorithm>
+#include <exception>
+#include <map>
 #include <stdexcept>
+#include <unordered_map>
 
 // Explicit template instantiation for CppAD::AD<double>
 // This ensures the template is instantiated here and not duplicated in SHOTpy.so
@@ -1986,6 +1989,188 @@ void Problem::doFBBT()
     env->timing->stopTimer("BoundTightening");
 }
 
+// These are only used by the bound tightening below, and are in an anonymous namespace so that they are not exported
+// from the library, where e.g. the overloaded appendVariables could easily clash with another name
+namespace
+{
+// The variables whose bounds the bound of a term depends on
+void appendVariables(const LinearTermPtr& term, std::vector<Variable*>& variables)
+{
+    variables.push_back(term->variable.get());
+}
+
+void appendVariables(const QuadraticTermPtr& term, std::vector<Variable*>& variables)
+{
+    variables.push_back(term->firstVariable.get());
+
+    if(term->secondVariable != term->firstVariable)
+        variables.push_back(term->secondVariable.get());
+}
+
+void appendVariables(const MonomialTermPtr& term, std::vector<Variable*>& variables)
+{
+    for(auto& V : term->variables)
+        variables.push_back(V.get());
+}
+
+void appendVariables(const SignomialTermPtr& term, std::vector<Variable*>& variables)
+{
+    for(auto& E : term->elements)
+        variables.push_back(E->variable.get());
+}
+
+// For each term in a constraint, the sum of the bounds of the other terms of the same type plus the bound of the terms
+// of other types. Summing all the other terms for each term takes quadratic time in the number of terms, so the bounds
+// of the terms are kept in a segment tree, where the sum of the terms before and after a term is found in logarithmic
+// time. When a variable bound has been tightened, the bounds of the terms with the variable are updated in the tree,
+// so that the following terms use the tightened bound.
+//
+// The intervals are summed with +=, as when summing term by term, since the constructor used by + swaps the bounds when
+// one of them is NaN.
+template <typename TermsType> class OtherTermsBounds
+{
+public:
+    OtherTermsBounds(const TermsType& terms, const Interval& otherTypesBound) :
+        terms(terms), otherTypesBound(otherTypesBound)
+    {
+        while(numberOfLeaves < terms.size())
+            numberOfLeaves *= 2;
+
+        nodes.assign(2 * numberOfLeaves, Interval(0.0));
+
+        for(size_t i = 0; i < terms.size(); i++)
+            setLeaf(i);
+
+        for(size_t node = numberOfLeaves - 1; node > 0; node--)
+            updateNode(node);
+    }
+
+    Interval getWithoutTerm(size_t termIndex) const
+    {
+        // Summing the other terms fails if the bound of one of them could not be calculated
+        for(const auto& [index, exception] : failedTerms)
+        {
+            if(index != termIndex)
+                std::rethrow_exception(exception);
+        }
+
+        Interval sum = otherTypesBound;
+        sum += getSum(0, termIndex);
+        sum += getSum(termIndex + 1, terms.size());
+
+        return (sum);
+    }
+
+    // Saves the bounds of the variables in a term before they are tightened with the term
+    void saveVariableBounds(size_t termIndex)
+    {
+        savedVariables.clear();
+        appendVariables(terms[termIndex], savedVariables);
+
+        savedBounds.clear();
+
+        for(auto& V : savedVariables)
+            savedBounds.emplace_back(V->lowerBound, V->upperBound);
+    }
+
+    // Updates the bounds of the terms with a variable whose bounds have changed since saveVariableBounds was called
+    void updateTightenedVariables()
+    {
+        for(size_t i = 0; i < savedVariables.size(); i++)
+        {
+            auto variable = savedVariables[i];
+
+            if(variable->lowerBound == savedBounds[i].first && variable->upperBound == savedBounds[i].second)
+                continue;
+
+            if(termsWithVariable.empty())
+                createTermsWithVariable();
+
+            for(auto termIndex : termsWithVariable[variable])
+            {
+                setLeaf(termIndex);
+
+                for(size_t node = (numberOfLeaves + termIndex) / 2; node > 0; node /= 2)
+                    updateNode(node);
+            }
+        }
+    }
+
+private:
+    const TermsType& terms;
+    Interval otherTypesBound;
+
+    size_t numberOfLeaves = 1;
+    std::vector<Interval> nodes; // Node k is the sum of nodes 2k and 2k+1, and the leaves are the term bounds
+    std::map<size_t, std::exception_ptr> failedTerms;
+
+    std::unordered_map<Variable*, std::vector<size_t>> termsWithVariable;
+    std::vector<Variable*> savedVariables;
+    std::vector<std::pair<double, double>> savedBounds;
+
+    void setLeaf(size_t termIndex)
+    {
+        auto& leaf = nodes[numberOfLeaves + termIndex];
+
+        try
+        {
+            leaf = terms[termIndex]->getBounds();
+            failedTerms.erase(termIndex);
+        }
+        catch(mc::Interval::Exceptions&)
+        {
+            leaf = Interval(0.0);
+            failedTerms[termIndex] = std::current_exception();
+        }
+    }
+
+    void updateNode(size_t node)
+    {
+        nodes[node] = nodes[2 * node];
+        nodes[node] += nodes[2 * node + 1];
+    }
+
+    // The sum of the bounds of the terms from the first index up to, but not including, the last one
+    Interval getSum(size_t first, size_t last) const
+    {
+        Interval sumFromLeft(0.0);
+        Interval sumFromRight(0.0);
+
+        for(first += numberOfLeaves, last += numberOfLeaves; first < last; first /= 2, last /= 2)
+        {
+            if(first % 2 == 1)
+                sumFromLeft += nodes[first++];
+
+            if(last % 2 == 1)
+                sumFromRight += nodes[--last];
+        }
+
+        sumFromLeft += sumFromRight;
+        return (sumFromLeft);
+    }
+
+    void createTermsWithVariable()
+    {
+        std::vector<Variable*> variables;
+
+        for(size_t i = 0; i < terms.size(); i++)
+        {
+            variables.clear();
+            appendVariables(terms[i], variables);
+
+            for(auto& V : variables)
+            {
+                auto& termIndexes = termsWithVariable[V];
+
+                // A variable is in a monomial or signomial term at most once, but may be listed several times
+                if(termIndexes.empty() || termIndexes.back() != i)
+                    termIndexes.push_back(i);
+            }
+        }
+    }
+};
+} // namespace
+
 bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint, double timeEnd)
 {
     bool boundsUpdated = false;
@@ -2012,25 +2197,21 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint, double timeEnd
                 otherTermsBound
                     += std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->nonlinearExpression->getBounds();
 
-            auto terms = std::dynamic_pointer_cast<LinearConstraint>(constraint)->linearTerms;
+            auto& terms = std::dynamic_pointer_cast<LinearConstraint>(constraint)->linearTerms;
+            OtherTermsBounds otherTermsBounds(terms, otherTermsBound);
 
-            for(auto& T : terms)
+            for(size_t i = 0; i < terms.size(); i++)
             {
+                auto& T = terms[i];
+
                 if(env->timing->getElapsedTime("BoundTightening") > timeEnd)
                     break;
 
                 if(Utilities::isAlmostZero(T->coefficient))
                     continue;
 
-                Interval newBound = otherTermsBound;
-
-                for(auto& T2 : terms)
-                {
-                    if(T2 == T)
-                        continue;
-
-                    newBound += T2->getBounds();
-                }
+                Interval newBound = otherTermsBounds.getWithoutTerm(i);
+                otherTermsBounds.saveVariableBounds(i);
 
                 Interval termBound = Interval(constraint->valueLHS, constraint->valueRHS) - newBound;
 
@@ -2042,6 +2223,8 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint, double timeEnd
                     env->output->outputDebug(
                         fmt::format("  bound tightened using linear term in constraint {}.", constraint->name));
                 }
+
+                otherTermsBounds.updateTightenedVariables();
             }
         }
 
@@ -2064,26 +2247,22 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint, double timeEnd
                 otherTermsBound
                     += std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->nonlinearExpression->getBounds();
 
-            auto terms = std::dynamic_pointer_cast<QuadraticConstraint>(constraint)->quadraticTerms;
+            auto& terms = std::dynamic_pointer_cast<QuadraticConstraint>(constraint)->quadraticTerms;
             double maxUpperBound = env->settings->getSetting<double>("Model.Variables.Continuous.MaximumUpperBound");
+            OtherTermsBounds otherTermsBounds(terms, otherTermsBound);
 
-            for(auto& T : terms)
+            for(size_t i = 0; i < terms.size(); i++)
             {
+                auto& T = terms[i];
+
                 if(env->timing->getElapsedTime("BoundTightening") > timeEnd)
                     break;
 
                 if(Utilities::isAlmostZero(T->coefficient))
                     continue;
 
-                Interval newBound = otherTermsBound;
-
-                for(auto& T2 : terms)
-                {
-                    if(T2 == T)
-                        continue;
-
-                    newBound += T2->getBounds();
-                }
+                Interval newBound = otherTermsBounds.getWithoutTerm(i);
+                otherTermsBounds.saveVariableBounds(i);
 
                 Interval termBound = Interval(constraint->valueLHS, constraint->valueRHS) - newBound;
 
@@ -2125,6 +2304,8 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint, double timeEnd
                             fmt::format("  bound tightened using quadratic term in constraint {}.", constraint->name));
                     }
                 }
+
+                otherTermsBounds.updateTightenedVariables();
             }
         }
 
@@ -2147,25 +2328,21 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint, double timeEnd
                 otherTermsBound
                     += std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->nonlinearExpression->getBounds();
 
-            auto terms = std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->monomialTerms;
+            auto& terms = std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->monomialTerms;
+            OtherTermsBounds otherTermsBounds(terms, otherTermsBound);
 
-            for(auto& T : terms)
+            for(size_t i = 0; i < terms.size(); i++)
             {
+                auto& T = terms[i];
+
                 if(env->timing->getElapsedTime("BoundTightening") > timeEnd)
                     break;
 
                 if(Utilities::isAlmostZero(T->coefficient))
                     continue;
 
-                Interval newBound = otherTermsBound;
-
-                for(auto& T2 : terms)
-                {
-                    if(T2 == T)
-                        continue;
-
-                    newBound += T2->getBounds();
-                }
+                Interval newBound = otherTermsBounds.getWithoutTerm(i);
+                otherTermsBounds.saveVariableBounds(i);
 
                 Interval termBound = Interval(constraint->valueLHS, constraint->valueRHS) - newBound;
                 termBound = termBound / T->coefficient;
@@ -2195,6 +2372,8 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint, double timeEnd
                             fmt::format("  bound tightened using monomial term in constraint {}.", constraint->name));
                     }
                 }
+
+                otherTermsBounds.updateTightenedVariables();
             }
         }
 
@@ -2217,25 +2396,21 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint, double timeEnd
                 otherTermsBound
                     += std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->nonlinearExpression->getBounds();
 
-            auto terms = std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->signomialTerms;
+            auto& terms = std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->signomialTerms;
+            OtherTermsBounds otherTermsBounds(terms, otherTermsBound);
 
-            for(auto& T : terms)
+            for(size_t i = 0; i < terms.size(); i++)
             {
+                auto& T = terms[i];
+
                 if(env->timing->getElapsedTime("BoundTightening") > timeEnd)
                     break;
 
                 if(Utilities::isAlmostZero(T->coefficient))
                     continue;
 
-                Interval newBound = otherTermsBound;
-
-                for(auto& T2 : terms)
-                {
-                    if(T2 == T)
-                        continue;
-
-                    newBound += T2->getBounds();
-                }
+                Interval newBound = otherTermsBounds.getWithoutTerm(i);
+                otherTermsBounds.saveVariableBounds(i);
 
                 Interval termBound = Interval(constraint->valueLHS, constraint->valueRHS) - newBound;
 
@@ -2266,6 +2441,8 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint, double timeEnd
                             fmt::format("  bound tightened using signomial term in constraint {}.", constraint->name));
                     }
                 }
+
+                otherTermsBounds.updateTightenedVariables();
             }
         }
 

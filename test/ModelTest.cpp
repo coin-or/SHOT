@@ -24,12 +24,15 @@
 #include "../src/Model/Simplifications.h"
 
 #include "../src/Tasks/TaskReformulateProblem.h"
+#include "../src/ModelingSystem/ModelingSystemOSiL.h"
 #include "../src/Tasks/TaskSelectPrimalFixedNLPPointsFromSolutionPool.h"
 #include "../src/PrimalSolver.h"
 
 #include <algorithm>
 #include <cmath>
 #include <functional>
+#include <iomanip>
+#include <random>
 #include <set>
 #include <sstream>
 #include <thread>
@@ -155,6 +158,8 @@ bool ModelTestArtificialIntegerBounds();
 bool ModelTestVariableBoundCache();
 bool ModelTestMaximizePartitionedSquares();
 bool ModelTestLDLFactorizationScaling();
+bool ModelTestBoundTighteningMatchesReference();
+bool ModelTestBoundTighteningMatchesReferenceOnInstances();
 bool ModelTestBoundTighteningTimeLimit();
 
 bool TestReadProblem(const std::string& problemFile);
@@ -303,6 +308,12 @@ int ModelTest(int argc, char* argv[])
         break;
     case 41:
         passed = ModelTestLDLFactorizationScaling();
+        break;
+    case 42:
+        passed = ModelTestBoundTighteningMatchesReference();
+        break;
+    case 43:
+        passed = ModelTestBoundTighteningMatchesReferenceOnInstances();
         break;
     case 46:
         passed = ModelTestBoundTighteningTimeLimit();
@@ -7250,6 +7261,721 @@ bool ModelTestLDLFactorizationScaling()
 
     return passed;
 }
+
+// Feasibility-based bound tightening implemented directly, by summing the bounds of all the other terms in a constraint
+// for each term, as it was before Problem::doFBBT kept these sums in a segment tree. It is a reference for that faster
+// implementation, which must tighten the same bounds. The time limit checks are left out, so it is compared with a run
+// of Problem::doFBBT that does not reach its time limit, and the bounds of the original problem are updated after each
+// constraint instead of once at the end.
+namespace BoundTighteningReference
+{
+bool tightenConstraint(ProblemPtr problem, NumericConstraintPtr constraint)
+{
+    auto env = problem->env;
+    bool boundsUpdated = false;
+
+    try
+    {
+        if(constraint->properties.hasLinearTerms)
+        {
+            Interval otherTermsBound(constraint->constant);
+
+            if(constraint->properties.hasQuadraticTerms)
+                otherTermsBound
+                    += std::dynamic_pointer_cast<QuadraticConstraint>(constraint)->quadraticTerms.getBounds();
+
+            if(constraint->properties.hasMonomialTerms)
+                otherTermsBound
+                    += std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->monomialTerms.getBounds();
+
+            if(constraint->properties.hasSignomialTerms)
+                otherTermsBound
+                    += std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->signomialTerms.getBounds();
+
+            if(constraint->properties.hasNonlinearExpression)
+                otherTermsBound
+                    += std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->nonlinearExpression->getBounds();
+
+            auto terms = std::dynamic_pointer_cast<LinearConstraint>(constraint)->linearTerms;
+
+            for(auto& T : terms)
+            {
+                if(Utilities::isAlmostZero(T->coefficient))
+                    continue;
+
+                Interval newBound = otherTermsBound;
+
+                for(auto& T2 : terms)
+                {
+                    if(T2 == T)
+                        continue;
+
+                    newBound += T2->getBounds();
+                }
+
+                Interval termBound = Interval(constraint->valueLHS, constraint->valueRHS) - newBound;
+
+                termBound = termBound / T->coefficient;
+
+                if(T->variable->tightenBounds(termBound))
+                    boundsUpdated = true;
+            }
+        }
+
+        if(constraint->properties.hasQuadraticTerms)
+        {
+            Interval otherTermsBound(constraint->constant);
+
+            if(constraint->properties.hasLinearTerms)
+                otherTermsBound += std::dynamic_pointer_cast<LinearConstraint>(constraint)->linearTerms.getBounds();
+
+            if(constraint->properties.hasMonomialTerms)
+                otherTermsBound
+                    += std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->monomialTerms.getBounds();
+
+            if(constraint->properties.hasSignomialTerms)
+                otherTermsBound
+                    += std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->signomialTerms.getBounds();
+
+            if(constraint->properties.hasNonlinearExpression)
+                otherTermsBound
+                    += std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->nonlinearExpression->getBounds();
+
+            auto terms = std::dynamic_pointer_cast<QuadraticConstraint>(constraint)->quadraticTerms;
+            double maxUpperBound = env->settings->getSetting<double>("Model.Variables.Continuous.MaximumUpperBound");
+
+            for(auto& T : terms)
+            {
+                if(Utilities::isAlmostZero(T->coefficient))
+                    continue;
+
+                Interval newBound = otherTermsBound;
+
+                for(auto& T2 : terms)
+                {
+                    if(T2 == T)
+                        continue;
+
+                    newBound += T2->getBounds();
+                }
+
+                Interval termBound = Interval(constraint->valueLHS, constraint->valueRHS) - newBound;
+
+                termBound = termBound / T->coefficient;
+
+                if(T->firstVariable == T->secondVariable)
+                {
+                    if(termBound.u() >= maxUpperBound)
+                        continue;
+
+                    ExpressionSquare square(std::make_shared<ExpressionVariable>(T->firstVariable));
+
+                    if(square.tightenBounds(termBound))
+                        boundsUpdated = true;
+                }
+                else
+                {
+                    Interval firstVariableBound = T->firstVariable->getBound();
+                    Interval secondVariableBound = T->secondVariable->getBound();
+
+                    if((firstVariableBound.l() > 0 || firstVariableBound.u() < 0)
+                        && T->secondVariable->tightenBounds(termBound / firstVariableBound))
+                        boundsUpdated = true;
+
+                    if((secondVariableBound.l() > 0 || secondVariableBound.u() < 0)
+                        && T->firstVariable->tightenBounds(termBound / secondVariableBound))
+                        boundsUpdated = true;
+                }
+            }
+        }
+
+        if(constraint->properties.hasMonomialTerms)
+        {
+            Interval otherTermsBound(constraint->constant);
+
+            if(constraint->properties.hasLinearTerms)
+                otherTermsBound += std::dynamic_pointer_cast<LinearConstraint>(constraint)->linearTerms.getBounds();
+
+            if(constraint->properties.hasQuadraticTerms)
+                otherTermsBound
+                    += std::dynamic_pointer_cast<QuadraticConstraint>(constraint)->quadraticTerms.getBounds();
+
+            if(constraint->properties.hasSignomialTerms)
+                otherTermsBound
+                    += std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->signomialTerms.getBounds();
+
+            if(constraint->properties.hasNonlinearExpression)
+                otherTermsBound
+                    += std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->nonlinearExpression->getBounds();
+
+            auto terms = std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->monomialTerms;
+
+            for(auto& T : terms)
+            {
+                if(Utilities::isAlmostZero(T->coefficient))
+                    continue;
+
+                Interval newBound = otherTermsBound;
+
+                for(auto& T2 : terms)
+                {
+                    if(T2 == T)
+                        continue;
+
+                    newBound += T2->getBounds();
+                }
+
+                Interval termBound = Interval(constraint->valueLHS, constraint->valueRHS) - newBound;
+                termBound = termBound / T->coefficient;
+
+                for(auto& V1 : T->variables)
+                {
+                    Interval othersBound(1.0);
+
+                    for(auto& V2 : T->variables)
+                    {
+                        if(V1 == V2)
+                            continue;
+
+                        othersBound *= V2->getBound();
+                    }
+
+                    if(othersBound.l() <= 0 && othersBound.u() >= 0)
+                        continue;
+
+                    if(V1->tightenBounds(termBound / othersBound))
+                        boundsUpdated = true;
+                }
+            }
+        }
+
+        if(constraint->properties.hasSignomialTerms)
+        {
+            Interval otherTermsBound(constraint->constant);
+
+            if(constraint->properties.hasLinearTerms)
+                otherTermsBound += std::dynamic_pointer_cast<LinearConstraint>(constraint)->linearTerms.getBounds();
+
+            if(constraint->properties.hasQuadraticTerms)
+                otherTermsBound
+                    += std::dynamic_pointer_cast<QuadraticConstraint>(constraint)->quadraticTerms.getBounds();
+
+            if(constraint->properties.hasMonomialTerms)
+                otherTermsBound
+                    += std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->monomialTerms.getBounds();
+
+            if(constraint->properties.hasNonlinearExpression)
+                otherTermsBound
+                    += std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->nonlinearExpression->getBounds();
+
+            auto terms = std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->signomialTerms;
+
+            for(auto& T : terms)
+            {
+                if(Utilities::isAlmostZero(T->coefficient))
+                    continue;
+
+                Interval newBound = otherTermsBound;
+
+                for(auto& T2 : terms)
+                {
+                    if(T2 == T)
+                        continue;
+
+                    newBound += T2->getBounds();
+                }
+
+                Interval termBound = Interval(constraint->valueLHS, constraint->valueRHS) - newBound;
+
+                termBound = termBound / T->coefficient;
+
+                for(auto& E1 : T->elements)
+                {
+                    Interval othersBound(1.0);
+
+                    for(auto& E2 : T->elements)
+                    {
+                        if(E1 == E2)
+                            continue;
+
+                        othersBound *= E2->getBounds();
+                    }
+
+                    if(othersBound.l() <= 0 && othersBound.u() >= 0)
+                        continue;
+
+                    if(E1->tightenBounds(termBound / othersBound))
+                        boundsUpdated = true;
+                }
+            }
+        }
+
+        if(constraint->properties.hasNonlinearExpression)
+        {
+            Interval otherTermsBound(constraint->constant);
+
+            if(constraint->properties.hasLinearTerms)
+                otherTermsBound += std::dynamic_pointer_cast<LinearConstraint>(constraint)->linearTerms.getBounds();
+
+            if(constraint->properties.hasQuadraticTerms)
+                otherTermsBound
+                    += std::dynamic_pointer_cast<QuadraticConstraint>(constraint)->quadraticTerms.getBounds();
+
+            if(constraint->properties.hasMonomialTerms)
+                otherTermsBound
+                    += std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->monomialTerms.getBounds();
+
+            if(constraint->properties.hasSignomialTerms)
+                otherTermsBound
+                    += std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->signomialTerms.getBounds();
+
+            Interval candidate = Interval(constraint->valueLHS, constraint->valueRHS) - otherTermsBound;
+
+            if(std::dynamic_pointer_cast<NonlinearConstraint>(constraint)
+                    ->nonlinearExpression->tightenBounds(candidate))
+                boundsUpdated = true;
+        }
+    }
+    catch(mc::Interval::Exceptions&)
+    {
+    }
+
+    if(boundsUpdated && problem->properties.isReformulated)
+    {
+        for(size_t i = 0; i < env->problem->allVariables.size(); i++)
+        {
+            if(problem->allVariables[i]->lowerBound > env->problem->allVariables[i]->lowerBound)
+                env->problem->allVariables[i]->lowerBound = problem->allVariables[i]->lowerBound;
+
+            if(problem->allVariables[i]->upperBound < env->problem->allVariables[i]->upperBound)
+                env->problem->allVariables[i]->upperBound = problem->allVariables[i]->upperBound;
+        }
+    }
+
+    return (boundsUpdated);
+}
+
+void tighten(ProblemPtr problem)
+{
+    auto env = problem->env;
+
+    int numberOfIterations = env->settings->getSetting<int>("Model.BoundTightening.FeasibilityBased.MaxIterations");
+    bool useNonlinearBoundTightening
+        = env->settings->getSetting<bool>("Model.BoundTightening.FeasibilityBased.UseNonlinear");
+
+    for(int i = 0; i < numberOfIterations; i++)
+    {
+        bool boundsUpdated = false;
+
+        for(auto& C : problem->linearConstraints)
+            boundsUpdated = tightenConstraint(problem, C) || boundsUpdated;
+
+        for(auto& C : problem->quadraticConstraints)
+            boundsUpdated = tightenConstraint(problem, C) || boundsUpdated;
+
+        if(useNonlinearBoundTightening)
+        {
+            for(auto& C : problem->nonlinearConstraints)
+                boundsUpdated = tightenConstraint(problem, C) || boundsUpdated;
+        }
+
+        if(!boundsUpdated)
+            break;
+    }
+}
+} // namespace BoundTighteningReference
+
+// Bound tightening must not stop on its time limit when compared with the reference, which has none
+void DisableBoundTighteningTimeLimit(EnvironmentPtr env)
+{
+    env->settings->updateSetting("Model.BoundTightening.FeasibilityBased.TimeLimit", 1e9);
+}
+
+bool AreBoundsEqual(double first, double second)
+{
+    if(first == second || (std::isnan(first) && std::isnan(second)))
+        return (true);
+
+    // The sums of the term bounds may be added in a different order, which can change the last digits
+    return (std::abs(first - second) <= 1e-9 * std::max({ 1.0, std::abs(first), std::abs(second) }));
+}
+
+bool AreVariableBoundsEqual(const Variables& variables, const Variables& referenceVariables, const std::string& name)
+{
+    if(variables.size() != referenceVariables.size())
+    {
+        std::cout << "  FAILED: " << name << " has " << variables.size() << " variables, but the reference has "
+                  << referenceVariables.size() << ".\n";
+        return (false);
+    }
+
+    int numberOfDifferences = 0;
+
+    for(size_t i = 0; i < variables.size(); i++)
+    {
+        auto& V = variables[i];
+        auto& R = referenceVariables[i];
+
+        if(AreBoundsEqual(V->lowerBound, R->lowerBound) && AreBoundsEqual(V->upperBound, R->upperBound)
+            && V->properties.hasLowerBoundBeenTightened == R->properties.hasLowerBoundBeenTightened
+            && V->properties.hasUpperBoundBeenTightened == R->properties.hasUpperBoundBeenTightened)
+            continue;
+
+        if(numberOfDifferences < 10)
+        {
+            std::cout << std::setprecision(17) << "  FAILED: " << name << ", variable " << V->name << ": ["
+                      << V->lowerBound << ", " << V->upperBound << "] (tightened " << V->properties.hasLowerBoundBeenTightened
+                      << V->properties.hasUpperBoundBeenTightened << "), reference [" << R->lowerBound << ", "
+                      << R->upperBound << "] (tightened " << R->properties.hasLowerBoundBeenTightened
+                      << R->properties.hasUpperBoundBeenTightened << ")\n";
+        }
+
+        numberOfDifferences++;
+    }
+
+    if(numberOfDifferences > 0)
+        std::cout << "  " << numberOfDifferences << " variables differ in " << name << ".\n";
+
+    return (numberOfDifferences == 0);
+}
+
+int CountTightenedVariables(const Variables& variables)
+{
+    return (std::count_if(variables.begin(), variables.end(),
+        [](const VariablePtr& V)
+        { return (V->properties.hasLowerBoundBeenTightened || V->properties.hasUpperBoundBeenTightened); }));
+}
+
+// A problem with all the kinds of terms bound tightening handles, generated from a seed so that the same problem can be
+// created twice. Some variables are unbounded or fixed, and some coefficients are zero or almost zero, since these are
+// the cases where the sums of the term bounds are infinite or terms are skipped.
+ProblemPtr CreateRandomBoundTighteningProblem(EnvironmentPtr env, unsigned int seed, int numberOfVariables,
+    int numberOfConstraints, int maxNumberOfTerms)
+{
+    std::mt19937 generator(seed);
+
+    auto randomInteger = [&generator](int min, int max) { return (std::uniform_int_distribution<int>(min, max)(generator)); };
+    auto randomReal = [&generator](double min, double max)
+    { return (std::uniform_real_distribution<double>(min, max)(generator)); };
+
+    auto problem = std::make_shared<Problem>(env);
+    problem->name = "random_fbbt_" + std::to_string(seed);
+
+    Variables variables;
+
+    for(int i = 0; i < numberOfVariables; i++)
+    {
+        int typeChoice = randomInteger(0, 9);
+        auto type = (typeChoice < 7) ? E_VariableType::Real
+                                     : ((typeChoice < 9) ? E_VariableType::Integer : E_VariableType::Binary);
+
+        double lowerBound = std::round(randomReal(-10.0, 5.0));
+        double upperBound = lowerBound + std::round(randomReal(0.0, 15.0));
+
+        if(type == E_VariableType::Real)
+        {
+            lowerBound = randomReal(-10.0, 5.0);
+            upperBound = lowerBound + randomReal(0.0, 15.0);
+        }
+
+        int boundChoice = randomInteger(0, 19);
+
+        if(boundChoice == 0)
+            lowerBound = SHOT_DBL_MIN;
+        else if(boundChoice == 1)
+            upperBound = SHOT_DBL_MAX;
+        else if(boundChoice == 2)
+        {
+            lowerBound = SHOT_DBL_MIN;
+            upperBound = SHOT_DBL_MAX;
+        }
+        else if(boundChoice == 3)
+            upperBound = lowerBound;
+
+        auto variable = std::make_shared<Variable>("x" + std::to_string(i), type, lowerBound, upperBound);
+        variables.push_back(variable);
+    }
+
+    problem->add(variables);
+
+    auto randomVariable = [&]() { return (variables[randomInteger(0, numberOfVariables - 1)]); };
+
+    auto randomCoefficient = [&]()
+    {
+        int choice = randomInteger(0, 19);
+
+        if(choice == 0)
+            return (0.0);
+
+        if(choice == 1)
+            return (1e-18);
+
+        return (randomReal(-5.0, 5.0));
+    };
+
+    auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<LinearTerm>(1.0, variables[0]));
+    problem->add(objective);
+
+    for(int c = 0; c < numberOfConstraints; c++)
+    {
+        int kind = randomInteger(0, 2);
+        std::string name = "c" + std::to_string(c);
+
+        double valueLHS = SHOT_DBL_MIN;
+        double valueRHS = SHOT_DBL_MAX;
+        int senseChoice = randomInteger(0, 3);
+
+        if(senseChoice == 0)
+            valueRHS = randomReal(-20.0, 20.0);
+        else if(senseChoice == 1)
+            valueLHS = randomReal(-20.0, 20.0);
+        else if(senseChoice == 2)
+        {
+            valueLHS = randomReal(-20.0, 20.0);
+            valueRHS = valueLHS;
+        }
+        else
+        {
+            valueLHS = randomReal(-40.0, 0.0);
+            valueRHS = valueLHS + randomReal(0.0, 40.0);
+        }
+
+        int numberOfLinearTerms = randomInteger(1, maxNumberOfTerms);
+        int numberOfQuadraticTerms = (kind >= 1) ? randomInteger(1, maxNumberOfTerms) : 0;
+
+        LinearTerms linearTerms;
+
+        for(int t = 0; t < numberOfLinearTerms; t++)
+            linearTerms.add(std::make_shared<LinearTerm>(randomCoefficient(), randomVariable()));
+
+        QuadraticTerms quadraticTerms;
+
+        for(int t = 0; t < numberOfQuadraticTerms; t++)
+        {
+            auto firstVariable = randomVariable();
+            auto secondVariable = (randomInteger(0, 2) == 0) ? firstVariable : randomVariable();
+            quadraticTerms.add(std::make_shared<QuadraticTerm>(randomCoefficient(), firstVariable, secondVariable));
+        }
+
+        if(kind == 0)
+        {
+            problem->add(std::make_shared<LinearConstraint>(name, linearTerms, valueLHS, valueRHS));
+        }
+        else if(kind == 1)
+        {
+            problem->add(std::make_shared<QuadraticConstraint>(name, linearTerms, quadraticTerms, valueLHS, valueRHS));
+        }
+        else
+        {
+            auto constraint = std::make_shared<NonlinearConstraint>(name, valueLHS, valueRHS);
+            constraint->add(linearTerms);
+            constraint->add(quadraticTerms);
+
+            int numberOfMonomialTerms = randomInteger(0, 3);
+
+            for(int t = 0; t < numberOfMonomialTerms; t++)
+            {
+                Variables monomialVariables { randomVariable(), randomVariable(), randomVariable() };
+                constraint->add(std::make_shared<MonomialTerm>(randomCoefficient(), monomialVariables));
+            }
+
+            int numberOfSignomialTerms = randomInteger(0, 3);
+            std::vector<double> powers { 2.0, 3.0, 0.5, -1.0, 1.5, -2.0 };
+
+            for(int t = 0; t < numberOfSignomialTerms; t++)
+            {
+                SignomialElements elements;
+                int numberOfElements = randomInteger(1, 2);
+
+                for(int e = 0; e < numberOfElements; e++)
+                {
+                    elements.push_back(std::make_shared<SignomialElement>(
+                        randomVariable(), powers[randomInteger(0, (int)powers.size() - 1)]));
+                }
+
+                constraint->add(std::make_shared<SignomialTerm>(randomCoefficient(), elements));
+            }
+
+            if(randomInteger(0, 1) == 0)
+            {
+                constraint->add(std::make_shared<ExpressionExp>(
+                    std::make_shared<ExpressionProduct>(std::make_shared<ExpressionConstant>(randomReal(-0.5, 0.5)),
+                        std::make_shared<ExpressionVariable>(randomVariable()))));
+            }
+
+            problem->add(constraint);
+        }
+    }
+
+    problem->finalize();
+
+    return (problem);
+}
+
+bool ModelTestBoundTighteningMatchesReference()
+{
+    // Bound tightening sums the bounds of all the other terms in a constraint for each term. Doing this once per
+    // constraint instead must not change which bounds are tightened, including when term bounds are infinite, terms
+    // are skipped because of a zero coefficient, or a variable is in several terms.
+
+    bool passed = true;
+
+    struct Size
+    {
+        int numberOfVariables;
+        int numberOfConstraints;
+        int maxNumberOfTerms;
+        int numberOfProblems;
+    };
+
+    std::vector<Size> sizes = { { 4, 3, 3, 150 }, { 10, 8, 8, 100 }, { 40, 20, 40, 20 }, { 300, 4, 400, 3 } };
+
+    int numberOfProblems = 0;
+    int numberOfTightenedVariables = 0;
+    unsigned int seed = 1;
+
+    for(auto& S : sizes)
+    {
+        for(int p = 0; p < S.numberOfProblems; p++, seed++)
+        {
+            auto solver = std::make_unique<Solver>();
+            auto env = solver->getEnvironment();
+            DisableBoundTighteningTimeLimit(env);
+
+            auto referenceSolver = std::make_unique<Solver>();
+            auto referenceEnv = referenceSolver->getEnvironment();
+            DisableBoundTighteningTimeLimit(referenceEnv);
+
+            auto problem = CreateRandomBoundTighteningProblem(
+                env, seed, S.numberOfVariables, S.numberOfConstraints, S.maxNumberOfTerms);
+            auto referenceProblem = CreateRandomBoundTighteningProblem(
+                referenceEnv, seed, S.numberOfVariables, S.numberOfConstraints, S.maxNumberOfTerms);
+
+            problem->doFBBT();
+            BoundTighteningReference::tighten(referenceProblem);
+
+            numberOfProblems++;
+            numberOfTightenedVariables += CountTightenedVariables(problem->allVariables);
+
+            if(!AreVariableBoundsEqual(problem->allVariables, referenceProblem->allVariables, problem->name))
+                passed = false;
+        }
+    }
+
+    std::cout << "  Compared bound tightening with the reference on " << numberOfProblems << " problems, where "
+              << numberOfTightenedVariables << " variables were tightened.\n";
+
+    // The comparison is only meaningful if bounds are actually tightened
+    if(numberOfTightenedVariables == 0)
+    {
+        std::cout << "  FAILED: no bounds were tightened in the generated problems.\n";
+        passed = false;
+    }
+
+    return passed;
+}
+
+bool ModelTestBoundTighteningMatchesReferenceOnInstances()
+{
+    // As ModelTestBoundTighteningMatchesReference, but on problems read from files, and also on their reformulated
+    // problems, where bound tightening also updates the bounds of the original problem.
+
+    bool passed = true;
+
+    std::vector<std::string> problemFiles = { "data/tls2.osil", "data/synthes1.osil", "data/fo7.osil",
+        "data/flay02h.osil", "data/ex1252a.osil", "data/clay0305h.osil", "data/gear.osil", "data/windfac.osil",
+        "data/ex4.osil", "data/alan.osil", "data/meanvarxsc.osil", "data/instances/MINLP-convex-small/batch.osil",
+        "data/instances/MINLP-convex-small/portfol_card.osil", "data/instances/MINLP-nonconvex/ex1244.osil",
+        "data/instances/MINLP-nonconvex/ex1263.osil" };
+
+    int numberOfTightenedVariables = 0;
+
+    for(auto& file : problemFiles)
+    {
+        // Original problem, read without the bound tightening that Solver::setProblem performs
+        {
+            auto solver = std::make_unique<Solver>();
+            auto env = solver->getEnvironment();
+            DisableBoundTighteningTimeLimit(env);
+
+            auto referenceSolver = std::make_unique<Solver>();
+            auto referenceEnv = referenceSolver->getEnvironment();
+            DisableBoundTighteningTimeLimit(referenceEnv);
+
+            auto problem = std::make_shared<Problem>(env);
+            auto referenceProblem = std::make_shared<Problem>(referenceEnv);
+
+            if(ModelingSystemOSiL(env).createProblem(problem, file) != E_ProblemCreationStatus::NormalCompletion
+                || ModelingSystemOSiL(referenceEnv).createProblem(referenceProblem, file)
+                    != E_ProblemCreationStatus::NormalCompletion)
+            {
+                std::cout << "  FAILED: could not read " << file << ".\n";
+                passed = false;
+                continue;
+            }
+
+            problem->doFBBT();
+            BoundTighteningReference::tighten(referenceProblem);
+
+            int tightened = CountTightenedVariables(problem->allVariables);
+            numberOfTightenedVariables += tightened;
+            std::cout << "  " << file << ": " << tightened << " variables tightened in the original problem.\n";
+
+            if(!AreVariableBoundsEqual(problem->allVariables, referenceProblem->allVariables, file))
+                passed = false;
+        }
+
+        // Reformulated problem
+        {
+            auto createReformulatedProblem = [&file](Solver* solver)
+            {
+                auto env = solver->getEnvironment();
+                DisableBoundTighteningTimeLimit(env);
+                solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+                solver->updateSetting("Model.BoundTightening.InitialPOA.Use", false);
+                return (solver->setProblem(file));
+            };
+
+            auto solver = std::make_unique<Solver>();
+            auto referenceSolver = std::make_unique<Solver>();
+
+            if(!createReformulatedProblem(solver.get()) || !createReformulatedProblem(referenceSolver.get()))
+            {
+                std::cout << "  FAILED: could not reformulate " << file << ".\n";
+                passed = false;
+                continue;
+            }
+
+            auto env = solver->getEnvironment();
+            auto referenceEnv = referenceSolver->getEnvironment();
+
+            env->reformulatedProblem->doFBBT();
+            BoundTighteningReference::tighten(referenceEnv->reformulatedProblem);
+
+            int tightened = CountTightenedVariables(env->reformulatedProblem->allVariables);
+            numberOfTightenedVariables += tightened;
+            std::cout << "  " << file << ": " << tightened << " variables tightened in the reformulated problem.\n";
+
+            if(!AreVariableBoundsEqual(env->reformulatedProblem->allVariables,
+                   referenceEnv->reformulatedProblem->allVariables, file + " (reformulated)"))
+                passed = false;
+
+            if(!AreVariableBoundsEqual(
+                   env->problem->allVariables, referenceEnv->problem->allVariables, file + " (original, updated)"))
+                passed = false;
+        }
+    }
+
+    if(numberOfTightenedVariables == 0)
+    {
+        std::cout << "  FAILED: no bounds were tightened in the instances.\n";
+        passed = false;
+    }
+
+    return passed;
+}
+
 
 bool ModelTestBoundTighteningTimeLimit()
 {
