@@ -161,6 +161,7 @@ bool ModelTestLDLFactorizationScaling();
 bool ModelTestBoundTighteningMatchesReference();
 bool ModelTestBoundTighteningMatchesReferenceOnInstances();
 bool ModelTestBoundTighteningPropagation();
+bool ModelTestProductBoundTighteningResult();
 bool ModelTestBoundTighteningTimeLimit();
 
 bool TestReadProblem(const std::string& problemFile);
@@ -318,6 +319,9 @@ int ModelTest(int argc, char* argv[])
         break;
     case 44:
         passed = ModelTestBoundTighteningPropagation();
+        break;
+    case 45:
+        passed = ModelTestProductBoundTighteningResult();
         break;
     case 46:
         passed = ModelTestBoundTighteningTimeLimit();
@@ -8039,6 +8043,43 @@ bool ModelTestBoundTighteningPropagation()
             std::cout << "  FAILED: the stored bounds of " << V->name << " were not updated.\n";
             passed = false;
         }
+    }
+
+    return passed;
+}
+
+bool ModelTestProductBoundTighteningResult()
+{
+    // Bound tightening of a product must report a tightened child bound even if the children after it are not
+    // tightened, since e.g. the bounds of the original problem are only updated when a tightening is reported.
+    // x * y * z in [0, 4] with x in [1, 10] and y, z in [1, 2] tightens x to [1, 4] but neither y nor z.
+
+    bool passed = true;
+
+    auto x = std::make_shared<Variable>("x", E_VariableType::Real, 1.0, 10.0);
+    auto y = std::make_shared<Variable>("y", E_VariableType::Real, 1.0, 2.0);
+    auto z = std::make_shared<Variable>("z", E_VariableType::Real, 1.0, 2.0);
+
+    NonlinearExpressions children;
+    children.add(std::make_shared<ExpressionVariable>(x));
+    children.add(std::make_shared<ExpressionVariable>(y));
+    children.add(std::make_shared<ExpressionVariable>(z));
+    ExpressionProduct product(children);
+
+    bool tightened = product.tightenBounds(Interval(0.0, 4.0));
+
+    std::cout << "  x: [" << x->lowerBound << ", " << x->upperBound << "], reported tightened: " << tightened << "\n";
+
+    if(x->upperBound != 4.0)
+    {
+        std::cout << "  FAILED: x was not tightened to [1, 4].\n";
+        passed = false;
+    }
+
+    if(!tightened)
+    {
+        std::cout << "  FAILED: the tightening of x was not reported.\n";
+        passed = false;
     }
 
     return passed;

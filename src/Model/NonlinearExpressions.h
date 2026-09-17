@@ -2573,7 +2573,7 @@ public:
 
             auto childBound = bound / othersBound;
 
-            tightened = C1->tightenBounds(childBound);
+            tightened = C1->tightenBounds(childBound) || tightened;
         }
 
         return (tightened);
