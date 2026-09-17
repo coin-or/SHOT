@@ -19,16 +19,11 @@ namespace SHOT
 {
 Interval Term::getBounds()
 {
-    IntervalVector variableBounds;
-
+    // The bound vector of the problem is not copied, since this is called for every term, e.g. in bound tightening
     if(auto sharedOwnerProblem = ownerProblem.lock())
-    {
-        variableBounds = sharedOwnerProblem->getVariableBounds();
-    }
+        return (calculate(sharedOwnerProblem->getVariableBounds()));
 
-    auto interval = calculate(variableBounds);
-
-    return (interval);
+    return (calculate(IntervalVector()));
 }
 
 void QuadraticTerms::updateConvexity()

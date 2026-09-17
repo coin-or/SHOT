@@ -34,16 +34,10 @@ void ObjectiveFunction::updateProperties()
 
 Interval ObjectiveFunction::getBounds()
 {
-    IntervalVector variableBounds;
-
     if(auto sharedOwnerProblem = ownerProblem.lock())
-    {
-        variableBounds = sharedOwnerProblem->getVariableBounds();
-    }
+        return (calculateValue(sharedOwnerProblem->getVariableBounds()));
 
-    auto interval = calculateValue(variableBounds);
-
-    return (interval);
+    return (calculateValue(IntervalVector()));
 }
 
 bool ObjectiveFunction::isUnbounded()

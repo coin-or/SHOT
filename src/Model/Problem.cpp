@@ -1246,7 +1246,7 @@ VectorDouble Problem::getVariableUpperBounds()
     return variableUpperBounds;
 }
 
-IntervalVector Problem::getVariableBounds()
+const IntervalVector& Problem::getVariableBounds()
 {
     if(!variablesUpdated)
     {

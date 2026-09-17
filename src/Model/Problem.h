@@ -207,7 +207,7 @@ public:
     VectorDouble getVariableLowerBounds();
     VectorDouble getVariableUpperBounds();
 
-    IntervalVector getVariableBounds();
+    const IntervalVector& getVariableBounds();
 
     AuxiliaryVariables getAuxiliaryVariablesOfType(E_AuxiliaryVariableType type);
 
