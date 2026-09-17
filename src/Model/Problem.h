@@ -215,6 +215,10 @@ public:
     void setVariableUpperBound(int variableIndex, double bound);
     void setVariableBounds(int variableIndex, double lowerBound, double upperBound);
 
+    // Updates the stored bound vectors after the bounds of a variable in the problem have been changed on the variable
+    // itself, e.g. when they have been tightened
+    void updateVariableBoundVectors(const Variable& variable);
+
     std::shared_ptr<std::vector<std::pair<NumericConstraintPtr, Variables>>> getConstraintsJacobianSparsityPattern();
     std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> getConstraintsHessianSparsityPattern();
     std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> getLagrangianHessianSparsityPattern();

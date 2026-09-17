@@ -80,6 +80,9 @@ bool Variable::tightenBounds(const Interval bound)
     {
         if(auto sharedOwnerProblem = ownerProblem.lock())
         {
+            // Otherwise, e.g. the bounds of the terms in the problem are still calculated with the old bounds
+            sharedOwnerProblem->updateVariableBoundVectors(*this);
+
             if(sharedOwnerProblem->env->output)
             {
                 sharedOwnerProblem->env->output->outputDebug(

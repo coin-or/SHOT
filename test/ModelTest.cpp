@@ -160,6 +160,7 @@ bool ModelTestMaximizePartitionedSquares();
 bool ModelTestLDLFactorizationScaling();
 bool ModelTestBoundTighteningMatchesReference();
 bool ModelTestBoundTighteningMatchesReferenceOnInstances();
+bool ModelTestBoundTighteningPropagation();
 bool ModelTestBoundTighteningTimeLimit();
 
 bool TestReadProblem(const std::string& problemFile);
@@ -314,6 +315,9 @@ int ModelTest(int argc, char* argv[])
         break;
     case 43:
         passed = ModelTestBoundTighteningMatchesReferenceOnInstances();
+        break;
+    case 44:
+        passed = ModelTestBoundTighteningPropagation();
         break;
     case 46:
         passed = ModelTestBoundTighteningTimeLimit();
@@ -6628,6 +6632,11 @@ bool ModelTestInitialPOAConvexRelaxation()
     solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Info));
     solver->updateSetting("Model.BoundTightening.InitialPOA.Use", true);
 
+    // Feasibility-based bound tightening shrinks the bounds of x and y until exp(x) + y = 5 at the corners of the
+    // variable bounds, so the outer approximation problems end in points already fulfilling the convex constraint and
+    // need no cuts for it
+    solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+
     if(!solver->setProblem(createProblem(env, E_ObjectiveFunctionDirection::Minimize)))
     {
         std::cout << "  FAILED: could not set the problem.\n";
@@ -7976,6 +7985,64 @@ bool ModelTestBoundTighteningMatchesReferenceOnInstances()
     return passed;
 }
 
+bool ModelTestBoundTighteningPropagation()
+{
+    // The terms are bounded with the bound vectors stored in the problem, so tightening the bound of a variable must also
+    // update these. Otherwise a bound tightened in one constraint is never used for the terms of the others: with
+    // x - y = 0 and y - z = 0, the bound z in [0, 1] tightens y, but x kept its bound [-10, 10].
+
+    bool passed = true;
+
+    auto solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+    DisableBoundTighteningTimeLimit(env);
+
+    auto problem = std::make_shared<Problem>(env);
+    auto x = std::make_shared<Variable>("x", E_VariableType::Real, -10.0, 10.0);
+    auto y = std::make_shared<Variable>("y", E_VariableType::Real, -10.0, 10.0);
+    auto z = std::make_shared<Variable>("z", E_VariableType::Real, 0.0, 1.0);
+    problem->add({ x, y, z });
+
+    auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<LinearTerm>(1.0, x));
+    problem->add(objective);
+
+    auto first = std::make_shared<LinearConstraint>("x_equals_y", 0.0, 0.0);
+    first->add(std::make_shared<LinearTerm>(1.0, x));
+    first->add(std::make_shared<LinearTerm>(-1.0, y));
+    problem->add(first);
+
+    auto second = std::make_shared<LinearConstraint>("y_equals_z", 0.0, 0.0);
+    second->add(std::make_shared<LinearTerm>(1.0, y));
+    second->add(std::make_shared<LinearTerm>(-1.0, z));
+    problem->add(second);
+
+    problem->finalize();
+    problem->doFBBT();
+
+    std::cout << "  x: [" << x->lowerBound << ", " << x->upperBound << "], y: [" << y->lowerBound << ", "
+              << y->upperBound << "]\n";
+
+    for(auto& V : { x, y })
+    {
+        if(V->lowerBound != 0.0 || V->upperBound != 1.0)
+        {
+            std::cout << "  FAILED: " << V->name << " was not tightened to [0, 1].\n";
+            passed = false;
+        }
+
+        auto& bound = problem->getVariableBounds()[V->getIndex()];
+
+        if(bound.l() != V->lowerBound || bound.u() != V->upperBound || problem->getVariableLowerBounds()[V->getIndex()] != V->lowerBound
+            || problem->getVariableUpperBounds()[V->getIndex()] != V->upperBound)
+        {
+            std::cout << "  FAILED: the stored bounds of " << V->name << " were not updated.\n";
+            passed = false;
+        }
+    }
+
+    return passed;
+}
 
 bool ModelTestBoundTighteningTimeLimit()
 {

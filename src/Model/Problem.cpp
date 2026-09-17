@@ -1296,6 +1296,19 @@ void Problem::setVariableBounds(int variableIndex, double lowerBound, double upp
     }
 }
 
+void Problem::updateVariableBoundVectors(const Variable& variable)
+{
+    int index = variable.getIndex();
+
+    // The vectors are recalculated from the variables anyway when the variables have changed since then
+    if(!variablesUpdated || index < 0 || index >= (int)variableBounds.size() || allVariables[index].get() != &variable)
+        return;
+
+    variableLowerBounds[index] = variable.lowerBound;
+    variableUpperBounds[index] = variable.upperBound;
+    variableBounds[index] = Interval(variable.lowerBound, variable.upperBound);
+}
+
 std::shared_ptr<std::vector<std::pair<NumericConstraintPtr, Variables>>>
     Problem::getConstraintsJacobianSparsityPattern()
 {
