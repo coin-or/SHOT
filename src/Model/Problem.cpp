@@ -1927,8 +1927,7 @@ void Problem::doFBBT()
                 break;
             }
 
-            boundsUpdated
-                = doFBBTOnConstraint(C, timeEnd - env->timing->getElapsedTime("BoundTightening")) || boundsUpdated;
+            boundsUpdated = doFBBTOnConstraint(C, timeEnd) || boundsUpdated;
         }
 
         if(stopTightening)
@@ -1942,8 +1941,7 @@ void Problem::doFBBT()
                 break;
             }
 
-            boundsUpdated
-                = doFBBTOnConstraint(C, timeEnd - env->timing->getElapsedTime("BoundTightening")) || boundsUpdated;
+            boundsUpdated = doFBBTOnConstraint(C, timeEnd) || boundsUpdated;
         }
 
         if(stopTightening)
@@ -1959,8 +1957,7 @@ void Problem::doFBBT()
                     break;
                 }
 
-                boundsUpdated
-                    = doFBBTOnConstraint(C, timeEnd - env->timing->getElapsedTime("BoundTightening")) || boundsUpdated;
+                boundsUpdated = doFBBTOnConstraint(C, timeEnd) || boundsUpdated;
             }
         }
 
@@ -1989,7 +1986,7 @@ void Problem::doFBBT()
     env->timing->stopTimer("BoundTightening");
 }
 
-bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint, double timeLimit)
+bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint, double timeEnd)
 {
     bool boundsUpdated = false;
 
@@ -2019,7 +2016,7 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint, double timeLim
 
             for(auto& T : terms)
             {
-                if(env->timing->getElapsedTime("BoundTightening") > timeLimit)
+                if(env->timing->getElapsedTime("BoundTightening") > timeEnd)
                     break;
 
                 if(Utilities::isAlmostZero(T->coefficient))
@@ -2048,7 +2045,7 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint, double timeLim
             }
         }
 
-        if(constraint->properties.hasQuadraticTerms && env->timing->getElapsedTime("BoundTightening") < timeLimit)
+        if(constraint->properties.hasQuadraticTerms && env->timing->getElapsedTime("BoundTightening") < timeEnd)
         {
             Interval otherTermsBound(constraint->constant);
 
@@ -2072,7 +2069,7 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint, double timeLim
 
             for(auto& T : terms)
             {
-                if(env->timing->getElapsedTime("BoundTightening") > timeLimit)
+                if(env->timing->getElapsedTime("BoundTightening") > timeEnd)
                     break;
 
                 if(Utilities::isAlmostZero(T->coefficient))
@@ -2131,7 +2128,7 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint, double timeLim
             }
         }
 
-        if(constraint->properties.hasMonomialTerms && env->timing->getElapsedTime("BoundTightening") < timeLimit)
+        if(constraint->properties.hasMonomialTerms && env->timing->getElapsedTime("BoundTightening") < timeEnd)
         {
             Interval otherTermsBound(constraint->constant);
 
@@ -2154,7 +2151,7 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint, double timeLim
 
             for(auto& T : terms)
             {
-                if(env->timing->getElapsedTime("BoundTightening") > timeLimit)
+                if(env->timing->getElapsedTime("BoundTightening") > timeEnd)
                     break;
 
                 if(Utilities::isAlmostZero(T->coefficient))
@@ -2201,7 +2198,7 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint, double timeLim
             }
         }
 
-        if(constraint->properties.hasSignomialTerms && env->timing->getElapsedTime("BoundTightening") < timeLimit)
+        if(constraint->properties.hasSignomialTerms && env->timing->getElapsedTime("BoundTightening") < timeEnd)
         {
             Interval otherTermsBound(constraint->constant);
 
@@ -2224,7 +2221,7 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint, double timeLim
 
             for(auto& T : terms)
             {
-                if(env->timing->getElapsedTime("BoundTightening") > timeLimit)
+                if(env->timing->getElapsedTime("BoundTightening") > timeEnd)
                     break;
 
                 if(Utilities::isAlmostZero(T->coefficient))
@@ -2272,7 +2269,7 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint, double timeLim
             }
         }
 
-        if(constraint->properties.hasNonlinearExpression && env->timing->getElapsedTime("BoundTightening") < timeLimit)
+        if(constraint->properties.hasNonlinearExpression && env->timing->getElapsedTime("BoundTightening") < timeEnd)
         {
             Interval otherTermsBound(constraint->constant);
 

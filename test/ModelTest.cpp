@@ -13,6 +13,7 @@
 #include "../src/Environment.h"
 #include "../src/Settings.h"
 #include "../src/Results.h"
+#include "../src/Timing.h"
 #include "../src/Utilities.h"
 
 #include "../src/Model/Variables.h"
@@ -31,6 +32,7 @@
 #include <functional>
 #include <set>
 #include <sstream>
+#include <thread>
 
 #ifdef HAS_STD_FILESYSTEM
 #include <filesystem>
@@ -153,6 +155,7 @@ bool ModelTestArtificialIntegerBounds();
 bool ModelTestVariableBoundCache();
 bool ModelTestMaximizePartitionedSquares();
 bool ModelTestLDLFactorizationScaling();
+bool ModelTestBoundTighteningTimeLimit();
 
 bool TestReadProblem(const std::string& problemFile);
 bool TestRootsearch(const std::string& problemFile);
@@ -300,6 +303,9 @@ int ModelTest(int argc, char* argv[])
         break;
     case 41:
         passed = ModelTestLDLFactorizationScaling();
+        break;
+    case 46:
+        passed = ModelTestBoundTighteningTimeLimit();
         break;
     default:
         passed = false;
@@ -7240,6 +7246,54 @@ bool ModelTestLDLFactorizationScaling()
             std::cout << "  FAILED: the LDL factorization does not give the same value.\n";
             passed = false;
         }
+    }
+
+    return passed;
+}
+
+bool ModelTestBoundTighteningTimeLimit()
+{
+    // The bound tightening timer accumulates over all uses of bound tightening, e.g. on the original and then on the
+    // reformulated problem, so the time limit is relative to its value when bound tightening starts. The time already
+    // spent was compared with the remaining time, which stopped the tightening of the terms immediately once more time
+    // than the limit had been spent before.
+
+    bool passed = true;
+
+    auto solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+    solver->updateSetting("Model.BoundTightening.FeasibilityBased.TimeLimit", 1.0);
+
+    auto problem = std::make_shared<Problem>(env);
+    auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.0, 10.0);
+    auto y = std::make_shared<Variable>("y", E_VariableType::Real, 0.0, 10.0);
+    problem->add({ x, y });
+
+    auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<LinearTerm>(1.0, x));
+    problem->add(objective);
+
+    auto constraint = std::make_shared<LinearConstraint>("sum", SHOT_DBL_MIN, 1.0);
+    constraint->add(std::make_shared<LinearTerm>(1.0, x));
+    constraint->add(std::make_shared<LinearTerm>(1.0, y));
+    problem->add(constraint);
+
+    problem->finalize();
+
+    // Time spent in an earlier use of bound tightening, more than the limit but not more than twice it
+    env->timing->startTimer("BoundTightening");
+    std::this_thread::sleep_for(std::chrono::milliseconds(1200));
+    env->timing->stopTimer("BoundTightening");
+
+    problem->doFBBT();
+
+    std::cout << "  x: [" << x->lowerBound << ", " << x->upperBound << "], y: [" << y->lowerBound << ", "
+              << y->upperBound << "]\n";
+
+    if(x->upperBound != 1.0 || y->upperBound != 1.0)
+    {
+        std::cout << "  FAILED: the bounds were not tightened to x, y <= 1 after earlier bound tightening.\n";
+        passed = false;
     }
 
     return passed;

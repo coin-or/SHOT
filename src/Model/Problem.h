@@ -282,7 +282,8 @@ public:
     void saveProblemToFile(std::string filename);
 
     void doFBBT();
-    bool doFBBTOnConstraint(NumericConstraintPtr constraint, double timeLimit);
+    // The bounds are tightened until the BoundTightening timer reaches timeEnd
+    bool doFBBTOnConstraint(NumericConstraintPtr constraint, double timeEnd);
 
     void augmentAuxiliaryVariableValues(VectorDouble& point);
 
