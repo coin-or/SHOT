@@ -74,6 +74,9 @@ public:
     int addLinearConstraint(const std::map<int, double>& elements, double constant, std::string name,
         bool isGreaterThan, bool allowRepair) override;
 
+    VectorInteger addLinearConstraints(const std::vector<std::map<int, double>>& elements,
+        const VectorDouble& constants, const VectorString& names, bool isGreaterThan, bool allowRepair) override;
+
     bool addSpecialOrderedSet(
         E_SOSType type, VectorInteger variableIndexes, VectorDouble variableWeights = { }) override;
 

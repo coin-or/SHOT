@@ -68,32 +68,32 @@ private:
 
     NumericConstraints reformulateConstraint(NumericConstraintPtr constraint);
 
-    template <class T> void copyLinearTermsToConstraint(LinearTerms terms, T destination, bool reversedSigns = false);
+    template <class T> void copyLinearTermsToConstraint(const LinearTerms& terms, T destination, bool reversedSigns = false);
 
     template <class T>
-    void copyQuadraticTermsToConstraint(QuadraticTerms terms, T destination, bool reversedSigns = false);
+    void copyQuadraticTermsToConstraint(const QuadraticTerms& terms, T destination, bool reversedSigns = false);
 
     template <class T>
-    void copyMonomialTermsToConstraint(MonomialTerms terms, T destination, bool reversedSigns = false);
+    void copyMonomialTermsToConstraint(const MonomialTerms& terms, T destination, bool reversedSigns = false);
 
     template <class T>
-    void copySignomialTermsToConstraint(SignomialTerms terms, T destination, bool reversedSigns = false);
+    void copySignomialTermsToConstraint(const SignomialTerms& terms, T destination, bool reversedSigns = false);
 
     template <class T>
-    void copyLinearTermsToObjectiveFunction(LinearTerms terms, T destination, bool reversedSigns = false);
+    void copyLinearTermsToObjectiveFunction(const LinearTerms& terms, T destination, bool reversedSigns = false);
 
     template <class T>
-    void copyQuadraticTermsToObjectiveFunction(QuadraticTerms terms, T destination, bool reversedSigns = false);
+    void copyQuadraticTermsToObjectiveFunction(const QuadraticTerms& terms, T destination, bool reversedSigns = false);
 
     template <class T>
-    void copyMonomialTermsToObjectiveFunction(MonomialTerms terms, T destination, bool reversedSigns = false);
+    void copyMonomialTermsToObjectiveFunction(const MonomialTerms& terms, T destination, bool reversedSigns = false);
 
     template <class T>
-    void copySignomialTermsToObjectiveFunction(SignomialTerms terms, T destination, bool reversedSigns = false);
+    void copySignomialTermsToObjectiveFunction(const SignomialTerms& terms, T destination, bool reversedSigns = false);
 
-    LinearTerms partitionNonlinearSum(const std::shared_ptr<ExpressionSum> source, bool reversedSigns);
-    LinearTerms partitionMonomialTerms(const MonomialTerms sourceTerms, bool reversedSigns);
-    LinearTerms partitionSignomialTerms(const SignomialTerms sourceTerms, bool reversedSigns);
+    LinearTerms partitionNonlinearSum(const std::shared_ptr<ExpressionSum>& source, bool reversedSigns);
+    LinearTerms partitionMonomialTerms(const MonomialTerms& sourceTerms, bool reversedSigns);
+    LinearTerms partitionSignomialTerms(const SignomialTerms& sourceTerms, bool reversedSigns);
 
     LinearTerms partitionNonlinearBinaryProduct(const std::shared_ptr<ExpressionSum> source, bool reversedSigns);
 

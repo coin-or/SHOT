@@ -20,6 +20,18 @@
 namespace SHOT
 {
 
+VectorInteger MIPSolverBase::addLinearConstraints(const std::vector<std::map<int, double>>& elements,
+    const VectorDouble& constants, const VectorString& names, bool isGreaterThan, bool allowRepair)
+{
+    VectorInteger constraintIndexes;
+    constraintIndexes.reserve(elements.size());
+
+    for(size_t i = 0; i < elements.size(); i++)
+        constraintIndexes.push_back(addLinearConstraint(elements[i], constants[i], names[i], isGreaterThan, allowRepair));
+
+    return (constraintIndexes);
+}
+
 MIPSolverBase::~MIPSolverBase() { lastSolutions.clear(); }
 
 double MIPSolverBase::getObjectiveValue()

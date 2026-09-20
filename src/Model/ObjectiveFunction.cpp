@@ -668,6 +668,13 @@ void NonlinearObjectiveFunction::updateProperties()
         properties.hasNonlinearExpression = false;
     }
 
+    // The variables are collected again, and found through a set instead of by searching the ones collected so far
+    variablesInMonomialTerms.clear();
+    variablesInSignomialTerms.clear();
+
+    std::set<Variable*> collectedMonomialVariables;
+    std::set<Variable*> collectedSignomialVariables;
+
     if(monomialTerms.size() > 0)
     {
         properties.hasMonomialTerms = true;
@@ -677,8 +684,7 @@ void NonlinearObjectiveFunction::updateProperties()
         {
             for(auto& V : T->variables)
             {
-                if(std::find(variablesInMonomialTerms.begin(), variablesInMonomialTerms.end(), V)
-                    == variablesInMonomialTerms.end())
+                if(collectedMonomialVariables.insert(V.get()).second)
                     variablesInMonomialTerms.push_back(V);
             }
         }
@@ -700,8 +706,7 @@ void NonlinearObjectiveFunction::updateProperties()
         {
             for(auto& E : T->elements)
             {
-                if(std::find(variablesInSignomialTerms.begin(), variablesInSignomialTerms.end(), E->variable)
-                    == variablesInSignomialTerms.end())
+                if(collectedSignomialVariables.insert(E->variable.get()).second)
                     variablesInSignomialTerms.push_back(E->variable);
             }
 

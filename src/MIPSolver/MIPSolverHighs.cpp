@@ -452,6 +452,63 @@ void MIPSolverHighs::initializeSolverSettings()
     highsInstance.startCallback(kCallbackLogging);
 }
 
+VectorInteger MIPSolverHighs::addLinearConstraints(const std::vector<std::map<int, double>>& elements,
+    const VectorDouble& constants, const VectorString& names, bool isGreaterThan, bool allowRepair)
+{
+    // The rows are added in one call, since HiGHS copies the matrix of the model for every call to addRow
+    VectorInteger constraintIndexes;
+
+    if(elements.size() == 0)
+        return (constraintIndexes);
+
+    VectorInteger rowStarts;
+    VectorInteger variableIndexes;
+    VectorDouble coefficients;
+    VectorDouble lowerBounds;
+    VectorDouble upperBounds;
+
+    rowStarts.reserve(elements.size());
+    lowerBounds.reserve(elements.size());
+    upperBounds.reserve(elements.size());
+
+    for(size_t i = 0; i < elements.size(); i++)
+    {
+        rowStarts.push_back(variableIndexes.size());
+
+        for(auto& E : elements[i])
+        {
+            variableIndexes.push_back(E.first);
+            coefficients.push_back(E.second);
+        }
+
+        lowerBounds.push_back(isGreaterThan ? -constants[i] : -highsInstance.getInfinity());
+        upperBounds.push_back(isGreaterThan ? highsInstance.getInfinity() : -constants[i]);
+    }
+
+    int numConstraintsBefore = highsInstance.getNumRow();
+
+    highsInstance.addRows(elements.size(), &lowerBounds[0], &upperBounds[0], variableIndexes.size(), &rowStarts[0],
+        &variableIndexes[0], &coefficients[0]);
+
+    if(highsInstance.getNumRow() != numConstraintsBefore + (int)elements.size())
+    {
+        env->output->outputWarning("        Linear constraints not added by Highs");
+        return (VectorInteger(elements.size(), -1));
+    }
+
+    constraintIndexes.reserve(elements.size());
+
+    for(size_t i = 0; i < elements.size(); i++)
+    {
+        int constraintIndex = numConstraintsBefore + i;
+        highsInstance.passRowName(constraintIndex, names[i]);
+        allowRepairOfConstraint.push_back(allowRepair);
+        constraintIndexes.push_back(constraintIndex);
+    }
+
+    return (constraintIndexes);
+}
+
 int MIPSolverHighs::addLinearConstraint(
     const std::map<int, double>& elements, double constant, std::string name, bool isGreaterThan, bool allowRepair)
 {

@@ -1409,7 +1409,7 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
 }
 
 LinearTerms TaskReformulateProblem::partitionNonlinearSum(
-    const std::shared_ptr<ExpressionSum> source, bool reversedSigns)
+    const std::shared_ptr<ExpressionSum>& source, bool reversedSigns)
 {
     LinearTerms resultLinearTerms;
     resultLinearTerms.takeOwnership(reformulatedProblem);
@@ -1586,7 +1586,7 @@ LinearTerms TaskReformulateProblem::partitionNonlinearSum(
     return (resultLinearTerms);
 }
 
-LinearTerms TaskReformulateProblem::partitionMonomialTerms(const MonomialTerms sourceTerms, bool reversedSigns)
+LinearTerms TaskReformulateProblem::partitionMonomialTerms(const MonomialTerms& sourceTerms, bool reversedSigns)
 {
     LinearTerms resultLinearTerms;
     resultLinearTerms.takeOwnership(reformulatedProblem);
@@ -1642,7 +1642,7 @@ LinearTerms TaskReformulateProblem::partitionMonomialTerms(const MonomialTerms s
     return (resultLinearTerms);
 }
 
-LinearTerms TaskReformulateProblem::partitionSignomialTerms(const SignomialTerms sourceTerms, bool reversedSigns)
+LinearTerms TaskReformulateProblem::partitionSignomialTerms(const SignomialTerms& sourceTerms, bool reversedSigns)
 {
     LinearTerms resultLinearTerms;
     resultLinearTerms.takeOwnership(reformulatedProblem);
@@ -2044,7 +2044,7 @@ std::tuple<LinearTerms, MonomialTerms> TaskReformulateProblem::reformulateMonomi
 }
 
 template <class T>
-void TaskReformulateProblem::copyLinearTermsToConstraint(LinearTerms terms, T destination, bool reversedSigns)
+void TaskReformulateProblem::copyLinearTermsToConstraint(const LinearTerms& terms, T destination, bool reversedSigns)
 {
     double signCoefficient = (reversedSigns) ? -1.0 : 1.0;
     auto linearConstraint = std::dynamic_pointer_cast<LinearConstraint>(destination);
@@ -2071,7 +2071,7 @@ void TaskReformulateProblem::copyLinearTermsToConstraint(LinearTerms terms, T de
 }
 
 template <class T>
-void TaskReformulateProblem::copyQuadraticTermsToConstraint(QuadraticTerms terms, T destination, bool reversedSigns)
+void TaskReformulateProblem::copyQuadraticTermsToConstraint(const QuadraticTerms& terms, T destination, bool reversedSigns)
 {
     double signCoefficient = (reversedSigns) ? -1.0 : 1.0;
     auto linearConstraint = std::static_pointer_cast<LinearConstraint>(destination);
@@ -2119,7 +2119,7 @@ void TaskReformulateProblem::copyQuadraticTermsToConstraint(QuadraticTerms terms
 }
 
 template <class T>
-void TaskReformulateProblem::copyMonomialTermsToConstraint(MonomialTerms terms, T destination, bool reversedSigns)
+void TaskReformulateProblem::copyMonomialTermsToConstraint(const MonomialTerms& terms, T destination, bool reversedSigns)
 {
     double signCoefficient = (reversedSigns) ? -1.0 : 1.0;
 
@@ -2142,7 +2142,7 @@ void TaskReformulateProblem::copyMonomialTermsToConstraint(MonomialTerms terms, 
 }
 
 template <class T>
-void TaskReformulateProblem::copySignomialTermsToConstraint(SignomialTerms terms, T destination, bool reversedSigns)
+void TaskReformulateProblem::copySignomialTermsToConstraint(const SignomialTerms& terms, T destination, bool reversedSigns)
 {
     double signCoefficient = (reversedSigns) ? -1.0 : 1.0;
 
@@ -2164,7 +2164,7 @@ void TaskReformulateProblem::copySignomialTermsToConstraint(SignomialTerms terms
 }
 
 template <class T>
-void TaskReformulateProblem::copyLinearTermsToObjectiveFunction(LinearTerms terms, T destination, bool reversedSigns)
+void TaskReformulateProblem::copyLinearTermsToObjectiveFunction(const LinearTerms& terms, T destination, bool reversedSigns)
 {
     double signCoefficient = (reversedSigns) ? -1.0 : 1.0;
     auto linearObjective = std::dynamic_pointer_cast<LinearObjectiveFunction>(destination);
@@ -2192,7 +2192,7 @@ void TaskReformulateProblem::copyLinearTermsToObjectiveFunction(LinearTerms term
 
 template <class T>
 void TaskReformulateProblem::copyQuadraticTermsToObjectiveFunction(
-    QuadraticTerms terms, T destination, bool reversedSigns)
+    const QuadraticTerms& terms, T destination, bool reversedSigns)
 {
     double signCoefficient = (reversedSigns) ? -1.0 : 1.0;
     auto linearObjective = std::static_pointer_cast<LinearObjectiveFunction>(destination);
@@ -2241,7 +2241,7 @@ void TaskReformulateProblem::copyQuadraticTermsToObjectiveFunction(
 
 template <class T>
 void TaskReformulateProblem::copyMonomialTermsToObjectiveFunction(
-    MonomialTerms terms, T destination, bool reversedSigns)
+    const MonomialTerms& terms, T destination, bool reversedSigns)
 {
     double signCoefficient = (reversedSigns) ? -1.0 : 1.0;
 
@@ -2265,7 +2265,7 @@ void TaskReformulateProblem::copyMonomialTermsToObjectiveFunction(
 
 template <class T>
 void TaskReformulateProblem::copySignomialTermsToObjectiveFunction(
-    SignomialTerms terms, T destination, bool reversedSigns)
+    const SignomialTerms& terms, T destination, bool reversedSigns)
 {
     double signCoefficient = (reversedSigns) ? -1.0 : 1.0;
 

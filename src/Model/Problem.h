@@ -229,24 +229,24 @@ public:
 
     template <typename T>
     std::optional<NumericConstraintValue> getMostDeviatingNumericConstraint(
-        const VectorDouble& point, std::vector<T> constraintSelection);
+        const VectorDouble& point, const std::vector<T>& constraintSelection);
 
     template <typename T>
     std::optional<NumericConstraintValue> getMostDeviatingNumericConstraint(const VectorDouble& point,
-        std::vector<std::shared_ptr<T>> constraintSelection, std::vector<T*>& activeConstraints);
+        const std::vector<std::shared_ptr<T>>& constraintSelection, std::vector<T*>& activeConstraints);
 
     template <typename T>
     std::optional<NumericConstraintValue> getMostDeviatingNumericConstraint(const VectorDouble& point,
-        std::vector<std::shared_ptr<T>> constraintSelection, std::vector<std::shared_ptr<T>>& activeConstraints);
+        const std::vector<std::shared_ptr<T>>& constraintSelection, std::vector<std::shared_ptr<T>>& activeConstraints);
 
     NumericConstraintValue getMaxNumericConstraintValue(
-        const VectorDouble& point, const LinearConstraints constraintSelection);
+        const VectorDouble& point, const LinearConstraints& constraintSelection);
     NumericConstraintValue getMaxNumericConstraintValue(
-        const VectorDouble& point, const QuadraticConstraints constraintSelection);
+        const VectorDouble& point, const QuadraticConstraints& constraintSelection);
     NumericConstraintValue getMaxNumericConstraintValue(
-        const VectorDouble& point, const NonlinearConstraints constraintSelection, double correction = 0.0);
+        const VectorDouble& point, const NonlinearConstraints& constraintSelection, double correction = 0.0);
     NumericConstraintValue getMaxNumericConstraintValue(
-        const VectorDouble& point, const NumericConstraints constraintSelection);
+        const VectorDouble& point, const NumericConstraints& constraintSelection);
 
     template <typename T>
     NumericConstraintValue getMaxNumericConstraintValue(
@@ -257,7 +257,7 @@ public:
 
     template <typename T>
     NumericConstraintValues getAllDeviatingConstraints(
-        const VectorDouble& point, double tolerance, std::vector<T> constraintSelection, double correction = 0.0);
+        const VectorDouble& point, double tolerance, const std::vector<T>& constraintSelection, double correction = 0.0);
 
     NumericConstraintValues getFractionOfDeviatingNonlinearConstraints(
         const VectorDouble& point, double tolerance, double fraction, double correction = 0.0);
@@ -269,19 +269,19 @@ public:
 
     virtual NumericConstraintValues getAllDeviatingNonlinearConstraints(const VectorDouble& point, double tolerance);
 
-    virtual bool areLinearConstraintsFulfilled(VectorDouble point, double tolerance);
+    virtual bool areLinearConstraintsFulfilled(const VectorDouble& point, double tolerance);
 
-    virtual bool areQuadraticConstraintsFulfilled(VectorDouble point, double tolerance);
+    virtual bool areQuadraticConstraintsFulfilled(const VectorDouble& point, double tolerance);
 
-    virtual bool areNonlinearConstraintsFulfilled(VectorDouble point, double tolerance);
+    virtual bool areNonlinearConstraintsFulfilled(const VectorDouble& point, double tolerance);
 
-    virtual bool areNumericConstraintsFulfilled(VectorDouble point, double tolerance);
+    virtual bool areNumericConstraintsFulfilled(const VectorDouble& point, double tolerance);
 
-    virtual bool areIntegralityConstraintsFulfilled(VectorDouble point, double tolerance);
+    virtual bool areIntegralityConstraintsFulfilled(const VectorDouble& point, double tolerance);
 
-    virtual bool areSpecialOrderedSetsFulfilled(VectorDouble point, double tolerance);
+    virtual bool areSpecialOrderedSetsFulfilled(const VectorDouble& point, double tolerance);
 
-    bool areVariableBoundsFulfilled(VectorDouble point, double tolerance);
+    bool areVariableBoundsFulfilled(const VectorDouble& point, double tolerance);
 
     void saveProblemToFile(std::string filename);
 

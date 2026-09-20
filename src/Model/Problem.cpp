@@ -1019,7 +1019,8 @@ void Problem::add(VariablePtr variable)
     variable->takeOwnership(shared_from_this());
     variablesUpdated = false;
 
-    env->output->outputTrace("Added variable to problem: " + variable->name);
+    if(env->output->isTraceActive())
+        env->output->outputTrace("Added variable to problem: " + variable->name);
 }
 
 void Problem::add(AuxiliaryVariables variables)
@@ -1062,7 +1063,8 @@ void Problem::add(AuxiliaryVariablePtr variable)
     variable->takeOwnership(shared_from_this());
     variablesUpdated = false;
 
-    env->output->outputTrace("Added variable to problem: " + variable->name);
+    if(env->output->isTraceActive())
+        env->output->outputTrace("Added variable to problem: " + variable->name);
 }
 
 void Problem::add(NumericConstraintPtr constraint)
@@ -1091,7 +1093,8 @@ void Problem::add(NumericConstraintPtr constraint)
 
     constraint->takeOwnership(shared_from_this());
 
-    env->output->outputTrace("Added numeric constraint to problem: " + constraint->name);
+    if(env->output->isTraceActive())
+        env->output->outputTrace("Added numeric constraint to problem: " + constraint->name);
 }
 
 void Problem::add(LinearConstraintPtr constraint)
@@ -1102,7 +1105,8 @@ void Problem::add(LinearConstraintPtr constraint)
 
     constraint->takeOwnership(shared_from_this());
 
-    env->output->outputTrace("Added linear constraint to problem: " + constraint->name);
+    if(env->output->isTraceActive())
+        env->output->outputTrace("Added linear constraint to problem: " + constraint->name);
 }
 
 void Problem::add(QuadraticConstraintPtr constraint)
@@ -1113,7 +1117,8 @@ void Problem::add(QuadraticConstraintPtr constraint)
 
     constraint->takeOwnership(shared_from_this());
 
-    env->output->outputTrace("Added quadratic constraint to problem: " + constraint->name);
+    if(env->output->isTraceActive())
+        env->output->outputTrace("Added quadratic constraint to problem: " + constraint->name);
 }
 
 void Problem::add(NonlinearConstraintPtr constraint)
@@ -1124,7 +1129,8 @@ void Problem::add(NonlinearConstraintPtr constraint)
 
     constraint->takeOwnership(shared_from_this());
 
-    env->output->outputTrace("Added nonlinear constraint to problem: " + constraint->name);
+    if(env->output->isTraceActive())
+        env->output->outputTrace("Added nonlinear constraint to problem: " + constraint->name);
 }
 
 void Problem::add(ObjectiveFunctionPtr objective)
@@ -1508,7 +1514,7 @@ std::optional<NumericConstraintValue> Problem::getMostDeviatingNonlinearConstrai
 
 template <typename T>
 std::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstraint(
-    const VectorDouble& point, std::vector<T> constraintSelection)
+    const VectorDouble& point, const std::vector<T>& constraintSelection)
 {
     std::optional<NumericConstraintValue> optional;
     double error = 0;
@@ -1537,7 +1543,7 @@ std::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstraint
 
 template <typename T>
 std::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstraint(
-    const VectorDouble& point, std::vector<std::shared_ptr<T>> constraintSelection, std::vector<T*>& activeConstraints)
+    const VectorDouble& point, const std::vector<std::shared_ptr<T>>& constraintSelection, std::vector<T*>& activeConstraints)
 {
     assert(activeConstraints.size() == 0);
 
@@ -1570,7 +1576,7 @@ std::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstraint
 
 template <typename T>
 std::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstraint(const VectorDouble& point,
-    std::vector<std::shared_ptr<T>> constraintSelection, std::vector<std::shared_ptr<T>>& activeConstraints)
+    const std::vector<std::shared_ptr<T>>& constraintSelection, std::vector<std::shared_ptr<T>>& activeConstraints)
 {
     assert(activeConstraints.size() == 0);
 
@@ -1603,7 +1609,7 @@ std::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstraint
 
 template <typename T>
 NumericConstraintValue getMaxNumericConstraintValue(const VectorDouble& point,
-    const std::vector<std::shared_ptr<T>> constraintSelection, std::vector<T*>& activeConstraints)
+    const std::vector<std::shared_ptr<T>>& constraintSelection, std::vector<T*>& activeConstraints)
 {
     assert(activeConstraints.size() == 0);
     assert(constraintSelection.size() > 0);
@@ -1630,7 +1636,7 @@ NumericConstraintValue getMaxNumericConstraintValue(const VectorDouble& point,
 }
 
 NumericConstraintValue Problem::getMaxNumericConstraintValue(
-    const VectorDouble& point, const LinearConstraints constraintSelection)
+    const VectorDouble& point, const LinearConstraints& constraintSelection)
 {
     assert(constraintSelection.size() > 0);
 
@@ -1650,7 +1656,7 @@ NumericConstraintValue Problem::getMaxNumericConstraintValue(
 }
 
 NumericConstraintValue Problem::getMaxNumericConstraintValue(
-    const VectorDouble& point, const QuadraticConstraints constraintSelection)
+    const VectorDouble& point, const QuadraticConstraints& constraintSelection)
 {
     assert(constraintSelection.size() > 0);
 
@@ -1670,7 +1676,7 @@ NumericConstraintValue Problem::getMaxNumericConstraintValue(
 }
 
 NumericConstraintValue Problem::getMaxNumericConstraintValue(
-    const VectorDouble& point, const NonlinearConstraints constraintSelection, double correction)
+    const VectorDouble& point, const NonlinearConstraints& constraintSelection, double correction)
 {
     assert(constraintSelection.size() > 0);
 
@@ -1690,7 +1696,7 @@ NumericConstraintValue Problem::getMaxNumericConstraintValue(
 }
 
 NumericConstraintValue Problem::getMaxNumericConstraintValue(
-    const VectorDouble& point, const NumericConstraints constraintSelection)
+    const VectorDouble& point, const NumericConstraints& constraintSelection)
 {
     assert(constraintSelection.size() > 0);
 
@@ -1738,7 +1744,7 @@ NumericConstraintValue Problem::getMaxNumericConstraintValue(const VectorDouble&
 
 template <typename T>
 NumericConstraintValues Problem::getAllDeviatingConstraints(
-    const VectorDouble& point, double tolerance, std::vector<T> constraintSelection, double correction)
+    const VectorDouble& point, double tolerance, const std::vector<T>& constraintSelection, double correction)
 {
     NumericConstraintValues constraintValues;
     for(auto& C : constraintSelection)
@@ -1794,31 +1800,31 @@ NumericConstraintValues Problem::getAllDeviatingNonlinearConstraints(const Vecto
     return getAllDeviatingConstraints(point, tolerance, nonlinearConstraints);
 }
 
-bool Problem::areLinearConstraintsFulfilled(VectorDouble point, double tolerance)
+bool Problem::areLinearConstraintsFulfilled(const VectorDouble& point, double tolerance)
 {
     auto deviatingConstraints = getAllDeviatingLinearConstraints(point, tolerance);
     return (deviatingConstraints.size() == 0);
 }
 
-bool Problem::areQuadraticConstraintsFulfilled(VectorDouble point, double tolerance)
+bool Problem::areQuadraticConstraintsFulfilled(const VectorDouble& point, double tolerance)
 {
     auto deviatingConstraints = getAllDeviatingQuadraticConstraints(point, tolerance);
     return (deviatingConstraints.size() == 0);
 }
 
-bool Problem::areNonlinearConstraintsFulfilled(VectorDouble point, double tolerance)
+bool Problem::areNonlinearConstraintsFulfilled(const VectorDouble& point, double tolerance)
 {
     auto deviatingConstraints = getAllDeviatingNonlinearConstraints(point, tolerance);
     return (deviatingConstraints.size() == 0);
 }
 
-bool Problem::areNumericConstraintsFulfilled(VectorDouble point, double tolerance)
+bool Problem::areNumericConstraintsFulfilled(const VectorDouble& point, double tolerance)
 {
     auto deviatingConstraints = getAllDeviatingNumericConstraints(point, tolerance);
     return (deviatingConstraints.size() == 0);
 }
 
-bool Problem::areIntegralityConstraintsFulfilled(VectorDouble point, double tolerance)
+bool Problem::areIntegralityConstraintsFulfilled(const VectorDouble& point, double tolerance)
 {
     for(auto& V : integerVariables)
     {
@@ -1835,7 +1841,7 @@ bool Problem::areIntegralityConstraintsFulfilled(VectorDouble point, double tole
     return true;
 }
 
-bool Problem::areVariableBoundsFulfilled(VectorDouble point, double tolerance)
+bool Problem::areVariableBoundsFulfilled(const VectorDouble& point, double tolerance)
 {
     for(int i = 0; i < properties.numberOfVariables; ++i)
     {
@@ -1852,7 +1858,7 @@ bool Problem::areVariableBoundsFulfilled(VectorDouble point, double tolerance)
     return true;
 }
 
-bool Problem::areSpecialOrderedSetsFulfilled(VectorDouble point, double tolerance)
+bool Problem::areSpecialOrderedSetsFulfilled(const VectorDouble& point, double tolerance)
 {
     for(auto& S : specialOrderedSets)
     {

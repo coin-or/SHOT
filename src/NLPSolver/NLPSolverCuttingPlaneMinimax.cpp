@@ -292,6 +292,13 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 
         numHyperAdded = 0;
 
+        // The cuts of the iteration are added to the LP problem all at once, since some solvers copy the matrix of
+        // the problem for every added constraint
+        std::vector<std::map<int, double>> cutElements;
+        VectorDouble cutConstants;
+        VectorString cutNames;
+        std::vector<NumericConstraintValue> cutConstraintValues;
+
         for(auto& NCV : constraintValues)
         {
             // Contains the coefficient and variable index for the terms in the generated cut
@@ -371,29 +378,42 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
                 }
             }
 
-            // Adds the linear constraint
-            if(cutHasNoNaNsorInfs
-                && LPSolver->addLinearConstraint(elements, constant,
-                       "minimax_" + std::to_string(NCV.constraint->getIndex()) + "_" + std::to_string(numHyperTot))
-                    >= 0)
+            // Collects the linear constraint
+            if(cutHasNoNaNsorInfs)
             {
-                numHyperTot++;
-                numHyperAdded++;
+                cutElements.push_back(elements);
+                cutConstants.push_back(constant);
+                cutNames.push_back("minimax_" + std::to_string(NCV.constraint->getIndex()) + "_"
+                    + std::to_string(numHyperTot + cutElements.size() - 1));
+                cutConstraintValues.push_back(NCV);
+            }
+        }
 
-                if(mu >= 0 && env->settings->getSetting<bool>("Dual.ESH.InteriorPoint.CuttingPlane.Reuse")
-                    && NCV.constraint->properties.convexity == E_Convexity::Convex)
-                {
-                    auto tmpPoint = currSol;
-                    tmpPoint.pop_back();
+        auto addedConstraints = LPSolver->addLinearConstraints(cutElements, cutConstants, cutNames, false, true);
 
-                    auto hyperplane = std::make_shared<ConstraintHyperplane>();
-                    hyperplane->sourceConstraint = NCV.constraint;
-                    hyperplane->generatedPoint = tmpPoint;
-                    hyperplane->source = E_HyperplaneSource::InteriorPointSearch;
-                    hyperplane->isGlobal = true;
+        for(size_t k = 0; k < addedConstraints.size(); k++)
+        {
+            if(addedConstraints[k] < 0)
+                continue;
 
-                    env->dualSolver->addHyperplane(hyperplane);
-                }
+            auto& NCV = cutConstraintValues[k];
+
+            numHyperTot++;
+            numHyperAdded++;
+
+            if(mu >= 0 && env->settings->getSetting<bool>("Dual.ESH.InteriorPoint.CuttingPlane.Reuse")
+                && NCV.constraint->properties.convexity == E_Convexity::Convex)
+            {
+                auto tmpPoint = currSol;
+                tmpPoint.pop_back();
+
+                auto hyperplane = std::make_shared<ConstraintHyperplane>();
+                hyperplane->sourceConstraint = NCV.constraint;
+                hyperplane->generatedPoint = tmpPoint;
+                hyperplane->source = E_HyperplaneSource::InteriorPointSearch;
+                hyperplane->isGlobal = true;
+
+                env->dualSolver->addHyperplane(hyperplane);
             }
         }
 

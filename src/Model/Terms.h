@@ -1468,7 +1468,7 @@ public:
     };
 };
 
-inline std::ostream& operator<<(std::ostream& stream, LinearTerms terms)
+inline std::ostream& operator<<(std::ostream& stream, const LinearTerms& terms)
 {
     if(terms.size() == 0)
         return stream;
@@ -1483,7 +1483,7 @@ inline std::ostream& operator<<(std::ostream& stream, LinearTerms terms)
     return stream;
 }
 
-inline std::ostream& operator<<(std::ostream& stream, QuadraticTerms terms)
+inline std::ostream& operator<<(std::ostream& stream, const QuadraticTerms& terms)
 {
     if(terms.size() == 0)
         return stream;
@@ -1498,7 +1498,7 @@ inline std::ostream& operator<<(std::ostream& stream, QuadraticTerms terms)
     return stream;
 }
 
-inline std::ostream& operator<<(std::ostream& stream, MonomialTerms terms)
+inline std::ostream& operator<<(std::ostream& stream, const MonomialTerms& terms)
 {
     if(terms.size() == 0)
         return stream;
@@ -1513,7 +1513,7 @@ inline std::ostream& operator<<(std::ostream& stream, MonomialTerms terms)
     return stream;
 }
 
-inline std::ostream& operator<<(std::ostream& stream, SignomialTerms terms)
+inline std::ostream& operator<<(std::ostream& stream, const SignomialTerms& terms)
 {
     if(terms.size() == 0)
         return stream;
