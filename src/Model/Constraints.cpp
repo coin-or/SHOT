@@ -346,10 +346,10 @@ void QuadraticConstraint::takeOwnership(ProblemPtr owner)
 
 SparseVariableVector QuadraticConstraint::calculateGradient(const VectorDouble& point, bool eraseZeroes = true)
 {
-    SparseVariableVector linearGradient = LinearConstraint::calculateGradient(point, eraseZeroes);
-    SparseVariableVector quadraticGradient = quadraticTerms.calculateGradient(point);
+    SparseVariableVector gradient = LinearConstraint::calculateGradient(point, eraseZeroes);
+    Utilities::addSparseVariableVector(gradient, quadraticTerms.calculateGradient(point));
 
-    return (Utilities::combineSparseVariableVectors(linearGradient, quadraticGradient));
+    return (gradient);
 }
 
 void QuadraticConstraint::initializeGradientSparsityPattern()
@@ -692,12 +692,13 @@ SparseVariableVector NonlinearConstraint::calculateGradient(const VectorDouble& 
         }
     }
 
-    auto result = Utilities::combineSparseVariableVectors(gradient, monomialGradient, signomialGradient);
+    Utilities::addSparseVariableVector(gradient, std::move(monomialGradient));
+    Utilities::addSparseVariableVector(gradient, std::move(signomialGradient));
 
     if(eraseZeroes)
-        Utilities::erase_if<VariablePtr, double>(result, 0.0);
+        Utilities::erase_if<VariablePtr, double>(gradient, 0.0);
 
-    return result;
+    return gradient;
 }
 
 void NonlinearConstraint::initializeGradientSparsityPattern()
@@ -785,12 +786,12 @@ SparseVariableMatrix NonlinearConstraint::calculateHessian(const VectorDouble& p
 
     if(properties.hasMonomialTerms)
     {
-        hessian = Utilities::combineSparseVariableMatrices(monomialTerms.calculateHessian(point), hessian);
+        Utilities::addSparseVariableMatrix(hessian, monomialTerms.calculateHessian(point));
     }
 
     if(properties.hasSignomialTerms)
     {
-        hessian = Utilities::combineSparseVariableMatrices(signomialTerms.calculateHessian(point), hessian);
+        Utilities::addSparseVariableMatrix(hessian, signomialTerms.calculateHessian(point));
     }
 
     if(this->properties.hasNonlinearExpression)

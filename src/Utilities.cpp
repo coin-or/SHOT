@@ -579,6 +579,39 @@ bool isInteger(double value)
     return (std::modf(value, &intpart) == 0.0);
 }
 
+void addSparseVariableVector(SparseVariableVector& target, SparseVariableVector&& source)
+{
+    if(target.size() == 0)
+    {
+        target = std::move(source);
+        return;
+    }
+
+    // The elements whose variables are not in the target are moved into it, so only the duplicates are left
+    target.merge(source);
+
+    for(auto& E : source)
+        target[E.first] += E.second;
+
+    source.clear();
+}
+
+void addSparseVariableMatrix(SparseVariableMatrix& target, SparseVariableMatrix&& source)
+{
+    if(target.size() == 0)
+    {
+        target = std::move(source);
+        return;
+    }
+
+    target.merge(source);
+
+    for(auto& E : source)
+        target[E.first] += E.second;
+
+    source.clear();
+}
+
 SparseVariableVector combineSparseVariableVectors(const SparseVariableVector& first, const SparseVariableVector& second)
 {
     SparseVariableVector result;

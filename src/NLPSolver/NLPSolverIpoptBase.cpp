@@ -301,6 +301,12 @@ bool IpoptProblem::get_starting_point(Index n, [[maybe_unused]] bool init_x, [[m
     return (true);
 }
 
+// The key of a (row, column) pair in the Jacobian and Hessian placement maps
+static inline long getElementKey(int row, int column, int numberOfVariables)
+{
+    return ((long)row * numberOfVariables + column);
+}
+
 // Returns the value of the objective function
 bool IpoptProblem::eval_f(Index n, const Number* x, [[maybe_unused]] bool new_x, Number& obj_value)
 {
@@ -345,6 +351,7 @@ bool IpoptProblem::eval_jac_g(Index n, const Number* x, [[maybe_unused]] bool ne
         int counter = 0;
 
         jacobianCounterPlacement.clear();
+        constantJacobianElements.clear();
 
         for(auto& C : sourceProblem->numericConstraints)
         {
@@ -355,11 +362,26 @@ bool IpoptProblem::eval_jac_g(Index n, const Number* x, [[maybe_unused]] bool ne
                 iRow[counter] = C->getIndex();
                 jCol[counter] = G->getIndex();
 
-                jacobianCounterPlacement.emplace(std::make_pair(C->getIndex(), G->getIndex()), counter);
+                jacobianCounterPlacement.emplace(getElementKey(C->getIndex(), G->getIndex(), n), counter);
                 counter++;
             }
 
             assert(counter <= nele_jac);
+        }
+
+        // The gradients of the linear constraints do not depend on the point, so they are calculated once here
+        VectorDouble emptyPoint(n, 0.0);
+
+        for(auto& C : sourceProblem->numericConstraints)
+        {
+            if(C->properties.classification != E_ConstraintClassification::Linear)
+                continue;
+
+            for(auto& G : C->calculateGradient(emptyPoint, false))
+            {
+                int location = jacobianCounterPlacement[getElementKey(C->getIndex(), G.first->getIndex(), n)];
+                constantJacobianElements.emplace_back(location, G.second);
+            }
         }
 
         return (true);
@@ -371,13 +393,19 @@ bool IpoptProblem::eval_jac_g(Index n, const Number* x, [[maybe_unused]] bool ne
 
     std::memset(values, 0, nele_jac * sizeof(Number));
 
+    for(auto& E : constantJacobianElements)
+        values[E.first] += E.second;
+
     for(auto& C : sourceProblem->numericConstraints)
     {
+        if(C->properties.classification == E_ConstraintClassification::Linear)
+            continue;
+
         auto jacobian = C->calculateGradient(vectorPoint, false);
 
         for(auto& G : jacobian)
         {
-            int location = jacobianCounterPlacement[std::make_pair(C->getIndex(), G.first->getIndex())];
+            int location = jacobianCounterPlacement[getElementKey(C->getIndex(), G.first->getIndex(), n)];
 
             values[location] += G.second;
 
@@ -408,7 +436,7 @@ bool IpoptProblem::eval_h(Index n, const Number* x, [[maybe_unused]] bool new_x,
             jCol[counter] = E.second->getIndex();
 
             lagrangianHessianCounterPlacement.emplace(
-                std::make_pair(E.first->getIndex(), E.second->getIndex()), counter);
+                getElementKey(E.first->getIndex(), E.second->getIndex(), n), counter);
 
             counter++;
         }
@@ -426,8 +454,8 @@ bool IpoptProblem::eval_h(Index n, const Number* x, [[maybe_unused]] bool new_x,
     {
         for(auto& E : sourceProblem->objectiveFunction->calculateHessian(vectorPoint, false))
         {
-            int location = lagrangianHessianCounterPlacement[std::make_pair(
-                E.first.first->getIndex(), E.first.second->getIndex())];
+            int location = lagrangianHessianCounterPlacement[getElementKey(
+                E.first.first->getIndex(), E.first.second->getIndex(), n)];
 
             assert(location < nele_hess);
             assert(location >= 0);
@@ -446,8 +474,8 @@ bool IpoptProblem::eval_h(Index n, const Number* x, [[maybe_unused]] bool new_x,
 
         for(auto& E : C->calculateHessian(vectorPoint, false))
         {
-            int location = lagrangianHessianCounterPlacement[std::make_pair(
-                E.first.first->getIndex(), E.first.second->getIndex())];
+            int location = lagrangianHessianCounterPlacement[getElementKey(
+                E.first.first->getIndex(), E.first.second->getIndex(), n)];
 
             assert(location < nele_hess);
             assert(location >= 0);

@@ -128,6 +128,13 @@ bool isAlmostZero(double x, const double epsilon = std::numeric_limits<double>::
 bool isInteger(double value);
 std::string trim(std::string& str);
 
+// Adds the elements of the source into the target, moving the elements whose variables are not already in it. Used
+// instead of the combine functions below when the target is not needed afterwards, since they copy both arguments
+// into a new map.
+void addSparseVariableVector(SparseVariableVector& target, SparseVariableVector&& source);
+
+void addSparseVariableMatrix(SparseVariableMatrix& target, SparseVariableMatrix&& source);
+
 SparseVariableVector combineSparseVariableVectors(
     const SparseVariableVector& first, const SparseVariableVector& second);
 

@@ -817,12 +817,14 @@ SparseVariableVector NonlinearObjectiveFunction::calculateGradient(const VectorD
         signomialGradient = signomialTerms.calculateGradient(point);
     }
 
-    auto result = Utilities::combineSparseVariableVectors(gradient, monomialGradient, signomialGradient);
+    Utilities::addSparseVariableVector(gradient, std::move(monomialGradient));
+    Utilities::addSparseVariableVector(gradient, std::move(signomialGradient));
 
+    // The zeroes were previously erased from a copy of the gradient that was not returned
     if(eraseZeroes)
         Utilities::erase_if<VariablePtr, double>(gradient, 0.0);
 
-    return result;
+    return gradient;
 }
 
 void NonlinearObjectiveFunction::initializeGradientSparsityPattern()
@@ -944,12 +946,12 @@ SparseVariableMatrix NonlinearObjectiveFunction::calculateHessian(const VectorDo
 
     if(properties.hasMonomialTerms)
     {
-        hessian = Utilities::combineSparseVariableMatrices(monomialTerms.calculateHessian(point), hessian);
+        Utilities::addSparseVariableMatrix(hessian, monomialTerms.calculateHessian(point));
     }
 
     if(properties.hasSignomialTerms)
     {
-        hessian = Utilities::combineSparseVariableMatrices(signomialTerms.calculateHessian(point), hessian);
+        Utilities::addSparseVariableMatrix(hessian, signomialTerms.calculateHessian(point));
     }
 
     if(this->properties.hasNonlinearExpression)
