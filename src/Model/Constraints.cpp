@@ -151,6 +151,10 @@ std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> NumericConstra
             return (elementOne.second->getIndex() < elementTwo.second->getIndex());
         });
 
+    // Remove duplicates
+    auto last = std::unique(hessianSparsityPattern->begin(), hessianSparsityPattern->end());
+    hessianSparsityPattern->erase(last, hessianSparsityPattern->end());
+
     return (hessianSparsityPattern);
 }
 
@@ -252,9 +256,7 @@ void LinearConstraint::initializeGradientSparsityPattern()
         if(T->coefficient == 0.0)
             continue;
 
-        if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), T->variable)
-            == gradientSparsityPattern->end())
-            gradientSparsityPattern->push_back(T->variable);
+        gradientSparsityPattern->push_back(T->variable);
     }
 }
 
@@ -367,16 +369,12 @@ void QuadraticConstraint::initializeGradientSparsityPattern()
         if(T->coefficient == 0.0)
             continue;
 
-        if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), T->firstVariable)
-            == gradientSparsityPattern->end())
-            gradientSparsityPattern->push_back(T->firstVariable);
+        gradientSparsityPattern->push_back(T->firstVariable);
 
         if(T->firstVariable == T->secondVariable)
             continue;
 
-        if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), T->secondVariable)
-            == gradientSparsityPattern->end())
-            gradientSparsityPattern->push_back(T->secondVariable);
+        gradientSparsityPattern->push_back(T->secondVariable);
     }
 }
 
@@ -448,9 +446,7 @@ void QuadraticConstraint::initializeHessianSparsityPattern()
 
         auto key = std::make_pair(firstVariable, secondVariable);
 
-        if(std::find(hessianSparsityPattern->begin(), hessianSparsityPattern->end(), key)
-            == hessianSparsityPattern->end())
-            hessianSparsityPattern->push_back(key);
+        hessianSparsityPattern->push_back(key);
     }
 }
 
@@ -725,9 +721,7 @@ void NonlinearConstraint::initializeGradientSparsityPattern()
 
             for(auto& V : T->variables)
             {
-                if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), V)
-                    == gradientSparsityPattern->end())
-                    gradientSparsityPattern->push_back(V);
+                gradientSparsityPattern->push_back(V);
             }
         }
     }
@@ -741,9 +735,7 @@ void NonlinearConstraint::initializeGradientSparsityPattern()
 
             for(auto& E : T->elements)
             {
-                if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), E->variable)
-                    == gradientSparsityPattern->end())
-                    gradientSparsityPattern->push_back(E->variable);
+                gradientSparsityPattern->push_back(E->variable);
             }
         }
     }
@@ -780,19 +772,14 @@ void NonlinearConstraint::initializeGradientSparsityPattern()
 
             const std::vector<size_t>& variableIndices(nonlinearGradientSparsityPattern.col());
 
+            // The nonlinear variable index of a variable is its position in the problem's list of variables in
+            // nonlinear expressions
             for(size_t i = 0; i < nonlinearGradientSparsityPattern.nnz(); i++)
             {
-                for(auto& VAR : variablesInNonlinearExpression)
-                {
-                    if((size_t)VAR->properties.nonlinearVariableIndex == variableIndices[i])
-                    {
-                        if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), VAR)
-                            == gradientSparsityPattern->end())
-                            gradientSparsityPattern->push_back(VAR);
+                assert(variableIndices[i] < sharedOwnerProblem->nonlinearExpressionVariables.size());
 
-                        continue;
-                    }
-                }
+                gradientSparsityPattern->push_back(
+                    sharedOwnerProblem->nonlinearExpressionVariables[variableIndices[i]]);
             }
         }
     }
@@ -890,9 +877,7 @@ void NonlinearConstraint::initializeHessianSparsityPattern()
                     variablePair = std::make_pair(V2, V1);
                 }
 
-                if(std::find(hessianSparsityPattern->begin(), hessianSparsityPattern->end(), variablePair)
-                    == hessianSparsityPattern->end())
-                    hessianSparsityPattern->push_back(variablePair);
+                hessianSparsityPattern->push_back(variablePair);
             }
         }
     }
@@ -915,9 +900,7 @@ void NonlinearConstraint::initializeHessianSparsityPattern()
                     variablePair = std::make_pair(E2->variable, E1->variable);
                 }
 
-                if(std::find(hessianSparsityPattern->begin(), hessianSparsityPattern->end(), variablePair)
-                    == hessianSparsityPattern->end())
-                    hessianSparsityPattern->push_back(variablePair);
+                hessianSparsityPattern->push_back(variablePair);
             }
         }
     }
@@ -946,36 +929,18 @@ void NonlinearConstraint::initializeHessianSparsityPattern()
             const std::vector<size_t>& rowIndices(nonlinearHessianSparsityPattern.row());
             const std::vector<size_t>& colIndices(nonlinearHessianSparsityPattern.col());
 
+            // The nonlinear variable index of a variable is its position in the problem's list of variables in
+            // nonlinear expressions
             for(size_t i = 0; i < nonlinearHessianSparsityPattern.nnz(); i++)
             {
-                size_t targetRowIndex = rowIndices[i];
-                size_t targetColIndex = colIndices[i];
+                assert(rowIndices[i] < sharedOwnerProblem->nonlinearExpressionVariables.size());
+                assert(colIndices[i] < sharedOwnerProblem->nonlinearExpressionVariables.size());
 
-                for(auto& V1 : variablesInNonlinearExpression)
-                {
-                    if((size_t)V1->properties.nonlinearVariableIndex != targetRowIndex)
-                        continue;
+                auto& V1 = sharedOwnerProblem->nonlinearExpressionVariables[rowIndices[i]];
+                auto& V2 = sharedOwnerProblem->nonlinearExpressionVariables[colIndices[i]];
 
-                    for(auto& V2 : variablesInNonlinearExpression)
-                    {
-                        if((size_t)V2->properties.nonlinearVariableIndex == targetColIndex)
-                        {
-                            std::pair<VariablePtr, VariablePtr> variablePair;
-
-                            if(V1->getIndex() < V2->getIndex())
-                                variablePair = std::make_pair(V1, V2);
-                            else
-                                variablePair = std::make_pair(V2, V1);
-
-                            if(std::find(hessianSparsityPattern->begin(), hessianSparsityPattern->end(), variablePair)
-                                == hessianSparsityPattern->end())
-                                hessianSparsityPattern->push_back(variablePair);
-
-                            goto next_sparsity_element;
-                        }
-                    }
-                }
-            next_sparsity_element:;
+                hessianSparsityPattern->push_back(
+                    (V1->getIndex() < V2->getIndex()) ? std::make_pair(V1, V2) : std::make_pair(V2, V1));
             }
         }
     }
