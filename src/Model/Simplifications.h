@@ -1798,8 +1798,14 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
                 tmpConstant]
                 = extractTermsAndConstant(C, extractMonomials, extractSignomials, extractQuadratics, extractLinears);
 
-            linearTerms.add(tmpLinearTerms);
-            quadraticTerms.add(tmpQuadraticTerms);
+            // The terms are not merged here, since building the index of the terms added so far for every child
+            // is quadratic in the number of terms. They are merged in the pass over all terms below.
+            for(auto& T : tmpLinearTerms)
+                linearTerms.push_back(T);
+
+            for(auto& T : tmpQuadraticTerms)
+                quadraticTerms.push_back(T);
+
             monomialTerms.add(tmpMonomialTerms);
             signomialTerms.add(tmpSignomialTerms);
             constant += tmpConstant;
@@ -1835,12 +1841,41 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
     SignomialTerms newSignomialTerms;
     double newConstant = constant;
 
+    // The terms of the same variables are merged here through a hash map, so that the terms are only gone through
+    // once, instead of searching the terms added so far for every term
+    std::unordered_map<Variable*, size_t> linearTermIndexes;
+    std::unordered_map<VariablePair, size_t, VariablePairHash> quadraticTermIndexes;
+
+    linearTermIndexes.reserve(linearTerms.size() + quadraticTerms.size());
+    quadraticTermIndexes.reserve(quadraticTerms.size());
+
+    auto addLinearTerm = [&newLinearTerms, &linearTermIndexes](LinearTermPtr term)
+    {
+        auto [it, isNew] = linearTermIndexes.emplace(term->variable.get(), newLinearTerms.size());
+
+        if(isNew)
+            newLinearTerms.push_back(term);
+        else
+            newLinearTerms[it->second]->coefficient += term->coefficient;
+    };
+
+    auto addQuadraticTerm = [&newQuadraticTerms, &quadraticTermIndexes](QuadraticTermPtr term)
+    {
+        auto [it, isNew] = quadraticTermIndexes.emplace(
+            getVariablePair(term->firstVariable, term->secondVariable), newQuadraticTerms.size());
+
+        if(isNew)
+            newQuadraticTerms.push_back(term);
+        else
+            newQuadraticTerms[it->second]->coefficient += term->coefficient;
+    };
+
     for(auto& LT : linearTerms)
     {
         if(LT->variable->lowerBound == LT->variable->upperBound)
             newConstant += LT->coefficient * LT->variable->lowerBound;
         else
-            newLinearTerms.add(LT);
+            addLinearTerm(LT);
     }
 
     for(auto& QT : quadraticTerms)
@@ -1854,13 +1889,11 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
         if(firstVariableFixed && secondVariableFixed)
             newConstant += QT->coefficient * firstVariable->lowerBound * secondVariable->lowerBound;
         else if(firstVariableFixed)
-            newLinearTerms.add(
-                std::make_shared<LinearTerm>(QT->coefficient * firstVariable->lowerBound, secondVariable));
+            addLinearTerm(std::make_shared<LinearTerm>(QT->coefficient * firstVariable->lowerBound, secondVariable));
         else if(secondVariableFixed)
-            newLinearTerms.add(
-                std::make_shared<LinearTerm>(QT->coefficient * secondVariable->lowerBound, firstVariable));
+            addLinearTerm(std::make_shared<LinearTerm>(QT->coefficient * secondVariable->lowerBound, firstVariable));
         else
-            newQuadraticTerms.add(QT);
+            addQuadraticTerm(QT);
     }
 
     for(auto& MT : monomialTerms)
@@ -1879,7 +1912,7 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
         if(variables.size() == 0)
             newConstant += coefficient;
         else if(variables.size() == 1)
-            newLinearTerms.add(std::make_shared<LinearTerm>(coefficient, variables[0]));
+            addLinearTerm(std::make_shared<LinearTerm>(coefficient, variables[0]));
         else
             newMonomialTerms.add(std::make_shared<MonomialTerm>(coefficient, variables));
     }
@@ -1900,9 +1933,9 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
         else if(elements.size() == 1)
         {
             if(elements[0]->power == 1.0)
-                newLinearTerms.add(std::make_shared<LinearTerm>(coefficient, elements[0]->variable));
+                addLinearTerm(std::make_shared<LinearTerm>(coefficient, elements[0]->variable));
             else if(elements[0]->power == 2.0)
-                newQuadraticTerms.add(
+                addQuadraticTerm(
                     std::make_shared<QuadraticTerm>(coefficient, elements[0]->variable, elements[0]->variable));
             else
                 newSignomialTerms.add(std::make_shared<SignomialTerm>(coefficient, elements));

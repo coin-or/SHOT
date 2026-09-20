@@ -203,18 +203,14 @@ std::ostream& operator<<(std::ostream& stream, ObjectiveFunctionPtr objective)
 
 void LinearObjectiveFunction::add(LinearTerms terms)
 {
-    if(linearTerms.size() == 0)
-    {
-        linearTerms = terms;
-        properties.isValid = false;
-    }
-    else
-    {
-        for(auto& T : terms)
-        {
-            add(T);
-        }
-    }
+    if(terms.size() == 0)
+        return;
+
+    // Merges the terms through a hash map, instead of searching all terms for every added term. The terms given
+    // are merged as well, since they may contain several terms of the same variable.
+    linearTerms.add(terms);
+
+    properties.isValid = false;
 }
 
 void LinearObjectiveFunction::add(LinearTermPtr term)
@@ -331,18 +327,14 @@ std::ostream& LinearObjectiveFunction::print(std::ostream& stream) const
 
 void QuadraticObjectiveFunction::add(QuadraticTerms terms)
 {
-    if(quadraticTerms.size() == 0)
-    {
-        quadraticTerms = terms;
-        properties.isValid = false;
-    }
-    else
-    {
-        for(auto& T : terms)
-        {
-            add(T);
-        }
-    }
+    if(terms.size() == 0)
+        return;
+
+    // Merges the terms through a hash map, instead of searching all terms for every added term. The terms given
+    // are merged as well, since they may contain several terms of the same variables.
+    quadraticTerms.add(terms);
+
+    properties.isValid = false;
 }
 
 void QuadraticObjectiveFunction::add(QuadraticTermPtr term)

@@ -188,18 +188,14 @@ bool NumericConstraint::isFulfilled(const VectorDouble& point)
 
 void LinearConstraint::add(LinearTerms terms)
 {
-    if(linearTerms.size() == 0)
-    {
-        linearTerms = terms;
-        properties.hasLinearTerms = true;
-    }
-    else
-    {
-        for(auto& T : terms)
-        {
-            add(T);
-        }
-    }
+    if(terms.size() == 0)
+        return;
+
+    // Merges the terms through a hash map, instead of searching all terms for every added term. The terms given
+    // are merged as well, since they may contain several terms of the same variable.
+    linearTerms.add(terms);
+
+    properties.hasLinearTerms = true;
 }
 
 void LinearConstraint::add(LinearTermPtr term)
@@ -302,18 +298,14 @@ void QuadraticConstraint::add(LinearTermPtr term) { LinearConstraint::add(term);
 
 void QuadraticConstraint::add(QuadraticTerms terms)
 {
-    if(quadraticTerms.size() == 0)
-    {
-        quadraticTerms = terms;
-        properties.hasQuadraticTerms = true;
-    }
-    else
-    {
-        for(auto& T : terms)
-        {
-            add(T);
-        }
-    }
+    if(terms.size() == 0)
+        return;
+
+    // Merges the terms through a hash map, instead of searching all terms for every added term. The terms given
+    // are merged as well, since they may contain several terms of the same variables.
+    quadraticTerms.add(terms);
+
+    properties.hasQuadraticTerms = true;
 }
 
 void QuadraticConstraint::add(QuadraticTermPtr term)

@@ -291,6 +291,11 @@ void simplifyNonlinearExpressions(
             // Removes linear terms, quadratics and constants
             auto sumExpression = std::dynamic_pointer_cast<ExpressionSum>(C->nonlinearExpression);
 
+            // The extracted terms are added to the constraint all at once, since adding them one by one searches
+            // the terms of the constraint for every added term
+            LinearTerms extractedLinearTerms;
+            QuadraticTerms extractedQuadraticTerms;
+
             for(auto& T : sumExpression->children)
             {
                 if(T->getType() == E_NonlinearExpressionTypes::Constant)
@@ -303,7 +308,7 @@ void simplifyNonlinearExpressions(
                 {
                     auto variable = std::dynamic_pointer_cast<ExpressionVariable>(T);
 
-                    C->linearTerms.add(std::make_shared<LinearTerm>(1.0, variable->variable));
+                    extractedLinearTerms.push_back(std::make_shared<LinearTerm>(1.0, variable->variable));
                     T = std::make_shared<ExpressionConstant>(0.0); // Will be removed during simplification later on
                 }
                 else if(T->getType() == E_NonlinearExpressionTypes::Product && T->getNumberOfChildren() == 2)
@@ -320,7 +325,7 @@ void simplifyNonlinearExpressions(
                         double constant = std::dynamic_pointer_cast<ExpressionConstant>(child0)->constant;
                         auto variable = std::dynamic_pointer_cast<ExpressionVariable>(child1)->variable;
 
-                        C->linearTerms.add(std::make_shared<LinearTerm>(constant, variable));
+                        extractedLinearTerms.push_back(std::make_shared<LinearTerm>(constant, variable));
                         T = std::make_shared<ExpressionConstant>(0.0); // Will be removed during simplification later on
                     }
                     else if(child1Type == E_NonlinearExpressionTypes::Constant
@@ -329,7 +334,7 @@ void simplifyNonlinearExpressions(
                         double constant = std::dynamic_pointer_cast<ExpressionConstant>(child1)->constant;
                         auto variable = std::dynamic_pointer_cast<ExpressionVariable>(child0)->variable;
 
-                        C->linearTerms.add(std::make_shared<LinearTerm>(constant, variable));
+                        extractedLinearTerms.push_back(std::make_shared<LinearTerm>(constant, variable));
                         T = std::make_shared<ExpressionConstant>(0.0); // Will be removed during simplification later on
                     }
                     else if(child1Type == E_NonlinearExpressionTypes::Variable
@@ -338,7 +343,7 @@ void simplifyNonlinearExpressions(
                         auto firstVariable = std::dynamic_pointer_cast<ExpressionVariable>(child0)->variable;
                         auto secondVariable = std::dynamic_pointer_cast<ExpressionVariable>(child1)->variable;
 
-                        C->quadraticTerms.add(std::make_shared<QuadraticTerm>(1.0, firstVariable, secondVariable));
+                        extractedQuadraticTerms.push_back(std::make_shared<QuadraticTerm>(1.0, firstVariable, secondVariable));
                         T = std::make_shared<ExpressionConstant>(0.0); // Will be removed during simplification later on
                     }
                 }
@@ -372,18 +377,24 @@ void simplifyNonlinearExpressions(
 
                     if(numVariables == 1)
                     {
-                        C->linearTerms.add(std::make_shared<LinearTerm>(constant, variables.at(0)));
+                        extractedLinearTerms.push_back(std::make_shared<LinearTerm>(constant, variables.at(0)));
                     }
 
                     if(numVariables == 2)
                     {
-                        C->quadraticTerms.add(
+                        extractedQuadraticTerms.push_back(
                             std::make_shared<QuadraticTerm>(constant, variables.at(0), variables.at(1)));
                     }
 
                     T = std::make_shared<ExpressionConstant>(0.0); // Will be removed during simplification later on
                 }
             }
+
+            if(extractedLinearTerms.size() > 0)
+                C->add(extractedLinearTerms);
+
+            if(extractedQuadraticTerms.size() > 0)
+                C->add(extractedQuadraticTerms);
         }
     }
 

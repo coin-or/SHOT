@@ -27,6 +27,26 @@ namespace SHOT
 using Interval = mc::Interval;
 using IntervalVector = std::vector<Interval>;
 
+// The variables of e.g. a quadratic term, used as the key when terms of the same variables are merged. The pointers
+// are used directly, since a variable is represented by one object in a problem.
+using VariablePair = std::pair<Variable*, Variable*>;
+
+struct VariablePairHash
+{
+    size_t operator()(const VariablePair& pair) const
+    {
+        return (std::hash<Variable*>()(pair.first) * 31 + std::hash<Variable*>()(pair.second));
+    }
+};
+
+// The variables in the order that makes the pair independent of the order they are given in
+inline VariablePair getVariablePair(const VariablePtr& firstVariable, const VariablePtr& secondVariable)
+{
+    return (std::less<Variable*>()(firstVariable.get(), secondVariable.get())
+            ? VariablePair(firstVariable.get(), secondVariable.get())
+            : VariablePair(secondVariable.get(), firstVariable.get()));
+}
+
 class Term
 {
 public:
@@ -272,15 +292,27 @@ public:
 
     void add(LinearTerms terms)
     {
+        if(terms.size() == 0)
+            return;
+
+        // The terms are found through a hash map instead of the linear search in add(term)
+        std::unordered_map<Variable*, size_t> termIndexes;
+        termIndexes.reserve(size() + terms.size());
+
+        for(size_t i = 0; i < size(); i++)
+            termIndexes.emplace((*this)[i]->variable.get(), i);
+
         for(auto& TERM : terms)
         {
-            add(TERM);
+            auto [it, isNew] = termIndexes.emplace(TERM->variable.get(), size());
+
+            if(isNew)
+                (*this).push_back(TERM);
+            else
+                (*this)[it->second]->coefficient += TERM->coefficient;
         }
 
-        if(terms.size() > 0)
-        {
-            monotonicity = E_Monotonicity::NotSet;
-        }
+        monotonicity = E_Monotonicity::NotSet;
     }
 
     SparseVariableVector calculateGradient([[maybe_unused]] const VectorDouble& point) const
@@ -515,32 +547,15 @@ public:
             return;
 
         // The terms are found through a hash map instead of the linear search in add(term)
-        using VariablePair = std::pair<Variable*, Variable*>;
-
-        struct VariablePairHash
-        {
-            size_t operator()(const VariablePair& pair) const
-            {
-                return (std::hash<Variable*>()(pair.first) * 31 + std::hash<Variable*>()(pair.second));
-            }
-        };
-
-        auto getKey = [](const QuadraticTermPtr& term)
-        {
-            auto first = term->firstVariable.get();
-            auto second = term->secondVariable.get();
-            return (std::less<Variable*>()(first, second) ? VariablePair(first, second) : VariablePair(second, first));
-        };
-
         std::unordered_map<VariablePair, size_t, VariablePairHash> termIndexes;
         termIndexes.reserve(size() + terms.size());
 
         for(size_t i = 0; i < size(); i++)
-            termIndexes.emplace(getKey((*this)[i]), i);
+            termIndexes.emplace(getVariablePair((*this)[i]->firstVariable, (*this)[i]->secondVariable), i);
 
         for(auto& TERM : terms)
         {
-            auto [it, isNew] = termIndexes.emplace(getKey(TERM), size());
+            auto [it, isNew] = termIndexes.emplace(getVariablePair(TERM->firstVariable, TERM->secondVariable), size());
 
             if(isNew)
                 (*this).push_back(TERM);
