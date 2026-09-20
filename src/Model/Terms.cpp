@@ -155,8 +155,10 @@ void QuadraticTerms::updateConvexity()
         sharedOwnerProblem->env->timing->startTimer("EigenvalueComputation");
     }
 
+    // The eigenvectors are only needed by the eigenvalue decomposition of the reformulation, and computing them
+    // takes a large part of the time for a dense matrix, so they are computed on demand in computeEigenvectors()
     Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eigenSolver(
-        matrix, Eigen::DecompositionOptions::ComputeEigenvectors);
+        matrix, Eigen::DecompositionOptions::EigenvaluesOnly);
 
     if(eigenSolver.info() != Eigen::Success)
     {
@@ -166,8 +168,8 @@ void QuadraticTerms::updateConvexity()
         return;
     }
 
-    eigenvalues = eigenSolver.eigenvalues().real();
-    eigenvectors = eigenSolver.eigenvectors();
+    eigenvalues = eigenSolver.eigenvalues();
+    eigenvectorsComputed = false;
 
     if(auto sharedOwnerProblem = ownerProblem.lock())
     {
@@ -198,7 +200,7 @@ void QuadraticTerms::updateConvexity()
 
     for(int i = 0; i < numberOfVariables; i++)
     {
-        double eigenvalue = eigenvalues[i].real();
+        double eigenvalue = eigenvalues[i];
 
         this->minEigenValue = std::min(this->minEigenValue, eigenvalue);
         this->maxEigenValue = std::max(this->maxEigenValue, eigenvalue);
@@ -219,6 +221,39 @@ void QuadraticTerms::updateConvexity()
 
     if(this->maxEigenValue <= eigenvalueTolerance)
         maxEigenValueWithinTolerance = true;
+}
+
+void QuadraticTerms::computeEigenvectors()
+{
+    if(eigenvectorsComputed)
+        return;
+
+    assert(convexity != E_Convexity::NotSet);
+
+    int numberOfVariables = variableMap.size();
+
+    Eigen::SparseMatrix<double> matrix(numberOfVariables, numberOfVariables);
+    matrix.setFromTriplets(elements.begin(), elements.end());
+
+    if(auto sharedOwnerProblem = ownerProblem.lock())
+    {
+        sharedOwnerProblem->env->timing->startTimer("EigenvalueComputation");
+    }
+
+    Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eigenSolver(
+        matrix, Eigen::DecompositionOptions::ComputeEigenvectors);
+
+    if(auto sharedOwnerProblem = ownerProblem.lock())
+    {
+        sharedOwnerProblem->env->timing->stopTimer("EigenvalueComputation");
+    }
+
+    if(eigenSolver.info() != Eigen::Success)
+        return;
+
+    eigenvalues = eigenSolver.eigenvalues();
+    eigenvectors = eigenSolver.eigenvectors();
+    eigenvectorsComputed = true;
 }
 
 void QuadraticTerms::performLDLFactorization()
@@ -252,20 +287,11 @@ void QuadraticTerms::performLDLFactorization()
 
     int numberOfVariables = variableMap.size();
 
-    Eigen::SparseMatrix<std::complex<double>> matrix(numberOfVariables, numberOfVariables);
+    // The matrix is symmetric with real elements, so the factorization does not need complex arithmetic
+    Eigen::SparseMatrix<double> matrix(numberOfVariables, numberOfVariables);
+    matrix.setFromTriplets(elements.begin(), elements.end());
 
-    // Inserting the elements one by one into the matrix without reserving space moves the following elements at each
-    // insertion
-    std::vector<Eigen::Triplet<std::complex<double>>> complexElements;
-    complexElements.reserve(elements.size());
-
-    for(const auto& E : elements)
-        complexElements.emplace_back(E.row(), E.col(), std::complex<double>(E.value(), 0.0));
-
-    matrix.setFromTriplets(complexElements.begin(), complexElements.end());
-    // std::cout << "Original matrix: \n" << matrix << std::endl;
-
-    Eigen::SimplicialLDLT<Eigen::SparseMatrix<std::complex<double>>> eigenSolverLDL(matrix);
+    Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> eigenSolverLDL;
 
     eigenSolverLDL.compute(matrix);
 
@@ -281,44 +307,27 @@ void QuadraticTerms::performLDLFactorization()
         return;
     }
 
-    Eigen::MatrixXd ident(numberOfVariables, numberOfVariables);
-    ident.setIdentity();
-
-    auto matrixL = (eigenSolverLDL.matrixL()).real();
-
+    Eigen::SparseMatrix<double> matrixL = eigenSolverLDL.matrixL();
     auto permInv = eigenSolverLDL.permutationPinv();
 
-    LDLMatrixL = (permInv * (matrixL * ident)).eval();
-    auto LDLMatrixLT = ((matrixL * ident).transpose() * permInv.transpose()).eval();
+    LDLMatrixL = (permInv * matrixL).eval();
 
-    // std::cout << perm * ident << std::endl;
+    Eigen::VectorXd diagonalD = eigenSolverLDL.vectorD();
 
-    for(const auto& diag : eigenSolverLDL.vectorD())
-        LDLDiag.push_back(diag.real());
+    for(int i = 0; i < diagonalD.size(); i++)
+        LDLDiag.push_back(diagonalD[i]);
 
-    auto diagonal = matrix.diagonal();
-    auto original = (matrix * ident).eval();
-    original += matrix.transpose();
-    original -= diagonal.asDiagonal();
+    // The matrix only holds the lower triangular elements, so the upper ones are added to compare with the
+    // reconstructed matrix
+    Eigen::SparseMatrix<double> original = matrix;
+    original += Eigen::SparseMatrix<double>(matrix.transpose());
+    original -= Eigen::SparseMatrix<double>(matrix.diagonal().asDiagonal());
 
-    // std::cout << "original \n" << original.real() << std::endl;
-
-    // std::cout << "diagonal \n" << (eigenSolverLDL.vectorD().asDiagonal()) * ident << std::endl;
-
-    // std::cout << "L-matrix 1: \n" << LDLMatrixL << std::endl;
-    // std::cout << "L-matrix 2: \n" << LDLMatrixLT << std::endl;
-
-    Eigen::MatrixXcd reconstructed = LDLMatrixL * eigenSolverLDL.vectorD().asDiagonal() * LDLMatrixLT;
-    Eigen::MatrixXd error = reconstructed.real() - original.real();
-
-    // std::cout << "error \n" << error << std::endl;
-
-    // std::cout << "max-error " << error.maxCoeff() << std::endl;
-    // std::cout << "min-value " << error.minCoeff() << std::endl;
+    Eigen::MatrixXd error = LDLMatrixL * diagonalD.asDiagonal() * LDLMatrixL.transpose() - original;
 
     // The error to the reconstructed matrix is too large, will not use the decomposition. The tolerance is relative to
     // the largest element, since the round-off error grows with the elements, but not smaller than for elements of 1.
-    double errorTolerance = 1e-12 * std::max(1.0, original.real().cwiseAbs().maxCoeff());
+    double errorTolerance = 1e-12 * std::max(1.0, Eigen::MatrixXd(original).cwiseAbs().maxCoeff());
 
     if(error.cwiseAbs().maxCoeff() > errorTolerance)
     {

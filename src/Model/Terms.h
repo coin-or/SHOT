@@ -491,8 +491,11 @@ public:
     bool allNegative = false;
     bool allBilinear = false;
 
-    Eigen::VectorXcd eigenvalues;
-    Eigen::MatrixXcd eigenvectors;
+    Eigen::VectorXd eigenvalues;
+
+    // Only computed on demand by computeEigenvectors(), since they are only needed by the eigenvalue decomposition
+    Eigen::MatrixXd eigenvectors;
+    bool eigenvectorsComputed = false;
     Eigen::MatrixXd LDLMatrixL;
     VectorDouble LDLDiag;
     bool LDLFactorizationPerformed = false;
@@ -614,6 +617,9 @@ public:
     };
 
     void performLDLFactorization();
+
+    // Computes the eigenvectors, and the eigenvalues if they are not computed yet
+    void computeEigenvectors();
 };
 
 class MonomialTerm : public Term

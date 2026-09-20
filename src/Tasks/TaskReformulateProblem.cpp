@@ -2286,7 +2286,7 @@ void TaskReformulateProblem::copySignomialTermsToObjectiveFunction(
     }
 }
 
-LinearTerms TaskReformulateProblem::doEigenvalueDecomposition(QuadraticTerms quadraticTerms)
+LinearTerms TaskReformulateProblem::doEigenvalueDecomposition(QuadraticTerms& quadraticTerms)
 {
     env->timing->startTimer("ProblemReformulationEigenDecomp");
 
@@ -2299,9 +2299,11 @@ LinearTerms TaskReformulateProblem::doEigenvalueDecomposition(QuadraticTerms qua
     auto quadraticDecompositionFormulation = (ES_QuadraticDecompositionFormulation)env->settings->getSetting<int>(
         "Model.Reformulation.Quadratics.Decomposition.Formulation");
 
+    quadraticTerms.computeEigenvectors();
+
     for(size_t i = 0; i < quadraticTerms.variableMap.size(); i++)
     {
-        double eigenvalue = quadraticTerms.eigenvalues[i].real();
+        double eigenvalue = quadraticTerms.eigenvalues[i];
 
         if(std::abs(eigenvalue) < eigenValueTolerance)
             continue;
@@ -2309,11 +2311,15 @@ LinearTerms TaskReformulateProblem::doEigenvalueDecomposition(QuadraticTerms qua
         auto auxConstraint = std::make_shared<LinearConstraint>("q_evd" + std::to_string(auxConstraintCounter), 0, 0);
         auxConstraintCounter++;
 
+        LinearTerms auxConstraintTerms;
+
         for(auto [VAR, j] : quadraticTerms.variableMap)
         {
-            if(quadraticTerms.eigenvectors(j, i).real() != 0.0)
-                auxConstraint->add(std::make_shared<LinearTerm>(quadraticTerms.eigenvectors(j, i).real(), VAR));
+            if(quadraticTerms.eigenvectors(j, i) != 0.0)
+                auxConstraintTerms.push_back(std::make_shared<LinearTerm>(quadraticTerms.eigenvectors(j, i), VAR));
         }
+
+        auxConstraint->add(auxConstraintTerms);
 
         auto bounds = auxConstraint->linearTerms.calculate(env->problem->getVariableBounds());
 
@@ -2344,7 +2350,7 @@ LinearTerms TaskReformulateProblem::doEigenvalueDecomposition(QuadraticTerms qua
     return (resultLinearTerms);
 }
 
-LinearTerms TaskReformulateProblem::doLDLDecomposition(QuadraticTerms quadraticTerms)
+LinearTerms TaskReformulateProblem::doLDLDecomposition(QuadraticTerms& quadraticTerms)
 {
     env->timing->startTimer("ProblemReformulationLDLDecomp");
 
@@ -2376,11 +2382,15 @@ LinearTerms TaskReformulateProblem::doLDLDecomposition(QuadraticTerms quadraticT
         auto auxConstraint = std::make_shared<LinearConstraint>("q_ldl" + std::to_string(auxConstraintCounter), 0, 0);
         auxConstraintCounter++;
 
+        LinearTerms auxConstraintTerms;
+
         for(auto [VAR, j] : quadraticTerms.variableMap)
         {
             if(quadraticTerms.LDLMatrixL(j, i) != 0.0)
-                auxConstraint->add(std::make_shared<LinearTerm>(quadraticTerms.LDLMatrixL(j, i), VAR));
+                auxConstraintTerms.push_back(std::make_shared<LinearTerm>(quadraticTerms.LDLMatrixL(j, i), VAR));
         }
+
+        auxConstraint->add(auxConstraintTerms);
 
         auto bounds = auxConstraint->linearTerms.calculate(env->problem->getVariableBounds());
 

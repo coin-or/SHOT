@@ -102,8 +102,8 @@ private:
     std::tuple<LinearTerms, MonomialTerms> reformulateMonomialSum(
         const MonomialTerms& monomialTerms, bool reversedSigns);
 
-    LinearTerms doEigenvalueDecomposition(QuadraticTerms quadraticTerms);
-    LinearTerms doLDLDecomposition(QuadraticTerms quadraticTerms);
+    LinearTerms doEigenvalueDecomposition(QuadraticTerms& quadraticTerms);
+    LinearTerms doLDLDecomposition(QuadraticTerms& quadraticTerms);
 
     NonlinearExpressionPtr reformulateNonlinearExpression(NonlinearExpressionPtr source);
     NonlinearExpressionPtr reformulateNonlinearExpression(std::shared_ptr<ExpressionAbs> source);
