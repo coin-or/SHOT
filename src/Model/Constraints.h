@@ -305,6 +305,9 @@ public:
     CppAD::sparse_rc<std::vector<size_t>> nonlinearGradientSparsityPattern;
     CppAD::sparse_rc<std::vector<size_t>> nonlinearHessianSparsityPattern;
 
+    // Reused between the Hessian evaluations, since it holds the coloring of the sparsity pattern
+    CppAD::sparse_hes_work nonlinearHessianWork;
+
     bool nonlinearGradientSparsityMapGenerated = false;
     bool nonlinearHessianSparsityMapGenerated = false;
 

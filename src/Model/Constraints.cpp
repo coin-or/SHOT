@@ -811,32 +811,38 @@ SparseVariableMatrix NonlinearConstraint::calculateHessian(const VectorDouble& p
             for(auto& VAR : sharedOwnerProblem->nonlinearExpressionVariables)
                 pointNonlinearSubset[VAR->properties.nonlinearVariableIndex] = point[VAR->getIndex()];
 
-            // TODO: utilize sparsity pattern
-            auto calculatedHessian = sharedOwnerProblem->ADFunctions.SparseHessian(pointNonlinearSubset, weights);
+            // The elements of the sparsity pattern are calculated, instead of using SparseHessian, which
+            // recalculates the sparsity pattern and returns the whole dense Hessian at every call. The work of the
+            // coloring is kept between the calls.
+            CppAD::sparse_rcv<std::vector<size_t>, std::vector<double>> subset(nonlinearHessianSparsityPattern);
 
-            for(auto& V1 : variablesInNonlinearExpression)
+            sharedOwnerProblem->ADFunctions.sparse_hes(pointNonlinearSubset, weights, subset,
+                nonlinearHessianSparsityPattern, "cppad.symmetric", nonlinearHessianWork);
+
+            const std::vector<size_t>& rowIndices(subset.row());
+            const std::vector<size_t>& columnIndices(subset.col());
+            const std::vector<double>& values(subset.val());
+
+            for(size_t k = 0; k < subset.nnz(); k++)
             {
-                int v1Index = V1->properties.nonlinearVariableIndex;
-                for(auto& V2 : variablesInNonlinearExpression)
+                double hessianValue = values[k];
+
+                if(hessianValue == 0.0)
+                    continue;
+
+                auto& V1 = sharedOwnerProblem->nonlinearExpressionVariables[rowIndices[k]];
+                auto& V2 = sharedOwnerProblem->nonlinearExpressionVariables[columnIndices[k]];
+
+                // Only save elements above the diagonal since the Hessian is symmetric
+                if(V1->getIndex() > V2->getIndex())
+                    continue;
+
+                auto element = hessian.emplace(std::make_pair(V1, V2), hessianValue);
+
+                if(!element.second)
                 {
-                    size_t hessianIndex = v1Index * numberOfNonlinearVariables + V2->properties.nonlinearVariableIndex;
-
-                    double hessianValue = calculatedHessian[hessianIndex];
-
-                    if(hessianValue == 0.0)
-                        continue;
-
-                    // Only save elements above the diagonal since the Hessian is symmetric
-                    if(V1->getIndex() <= V2->getIndex())
-                    {
-                        auto element = hessian.emplace(std::make_pair(V1, V2), hessianValue);
-
-                        if(!element.second)
-                        {
-                            // Element already exists for the variable
-                            element.first->second += hessianValue;
-                        }
-                    }
+                    // Element already exists for the variable
+                    element.first->second += hessianValue;
                 }
             }
         }
