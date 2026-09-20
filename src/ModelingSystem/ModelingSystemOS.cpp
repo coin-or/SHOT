@@ -466,6 +466,10 @@ bool ModelingSystemOS::copyLinearTerms(OSInstance* source, ProblemPtr destinatio
                 LinearConstraintPtr constraint
                     = std::static_pointer_cast<LinearConstraint>(destination->getConstraint(constraintIndex));
 
+                // The terms are added all at once, since adding them one by one searches the terms of the constraint
+                LinearTerms linearTerms;
+                linearTerms.reserve(numConstraintElements);
+
                 for(int j = 0; j < numConstraintElements; j++)
                 {
                     double coefficient = linearConstraintCoefficients
@@ -473,8 +477,11 @@ bool ModelingSystemOS::copyLinearTerms(OSInstance* source, ProblemPtr destinatio
                     variableIndex = linearConstraintCoefficients
                                         ->indexes[linearConstraintCoefficients->starts[constraintIndex] + j];
 
-                    constraint->add(std::make_shared<LinearTerm>(coefficient, destination->getVariable(variableIndex)));
+                    linearTerms.push_back(
+                        std::make_shared<LinearTerm>(coefficient, destination->getVariable(variableIndex)));
                 }
+
+                constraint->add(linearTerms);
             }
             catch(const VariableNotFoundException& e)
             {

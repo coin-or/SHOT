@@ -130,12 +130,19 @@ void Problem::updateConstraints()
             auxConstraint->name = C->name + "_rf";
             auxConstraint->ownerProblem = C->ownerProblem;
 
+            // The terms are added all at once, since adding them one by one searches the terms added so far
+            LinearTerms negatedLinearTerms;
+            QuadraticTerms negatedQuadraticTerms;
+
             for(auto& T : C->linearTerms)
-                auxConstraint->add(std::make_shared<LinearTerm>(-1.0 * T->coefficient, T->variable));
+                negatedLinearTerms.push_back(std::make_shared<LinearTerm>(-1.0 * T->coefficient, T->variable));
 
             for(auto& T : C->quadraticTerms)
-                auxConstraint->add(
+                negatedQuadraticTerms.push_back(
                     std::make_shared<QuadraticTerm>(-1.0 * T->coefficient, T->firstVariable, T->secondVariable));
+
+            auxConstraint->add(negatedLinearTerms);
+            auxConstraint->add(negatedQuadraticTerms);
 
             auxConstraint->updateProperties();
             auxConstraints.push_back(auxConstraint);
@@ -291,12 +298,19 @@ void Problem::updateConstraints()
             auxConstraint->name = C->name + "_rf";
             auxConstraint->ownerProblem = C->ownerProblem;
 
+            // The terms are added all at once, since adding them one by one searches the terms added so far
+            LinearTerms negatedLinearTerms;
+            QuadraticTerms negatedQuadraticTerms;
+
             for(auto& T : C->linearTerms)
-                auxConstraint->add(std::make_shared<LinearTerm>(-1.0 * T->coefficient, T->variable));
+                negatedLinearTerms.push_back(std::make_shared<LinearTerm>(-1.0 * T->coefficient, T->variable));
 
             for(auto& T : C->quadraticTerms)
-                auxConstraint->add(
+                negatedQuadraticTerms.push_back(
                     std::make_shared<QuadraticTerm>(-1.0 * T->coefficient, T->firstVariable, T->secondVariable));
+
+            auxConstraint->add(negatedLinearTerms);
+            auxConstraint->add(negatedQuadraticTerms);
 
             for(auto& T : C->monomialTerms)
                 auxConstraint->add(std::make_shared<MonomialTerm>(-1.0 * T->coefficient, T->variables));
@@ -2887,26 +2901,34 @@ ProblemPtr Problem::createCopy(
     // Copy linear terms to objective
     if(this->objectiveFunction->properties.hasLinearTerms)
     {
+        // The terms are added all at once, since adding them one by one searches the terms added so far
+        LinearTerms copiedLinearTerms;
+
         for(auto& LT : std::dynamic_pointer_cast<LinearObjectiveFunction>(this->objectiveFunction)->linearTerms)
         {
             auto variable = destinationProblem->getVariable(LT->variable->getIndex());
 
-            std::dynamic_pointer_cast<LinearObjectiveFunction>(destinationObjective)
-                ->add(std::make_shared<LinearTerm>(LT->coefficient, variable));
+            copiedLinearTerms.push_back(std::make_shared<LinearTerm>(LT->coefficient, variable));
         }
+
+        std::dynamic_pointer_cast<LinearObjectiveFunction>(destinationObjective)->add(copiedLinearTerms);
     }
 
     // Copy quadratic terms to objective
     if(keepQuadraticTerms)
     {
+        QuadraticTerms copiedQuadraticTerms;
+
         for(auto& QT : std::dynamic_pointer_cast<QuadraticObjectiveFunction>(this->objectiveFunction)->quadraticTerms)
         {
             auto firstVariable = destinationProblem->getVariable(QT->firstVariable->getIndex());
             auto secondVariable = destinationProblem->getVariable(QT->secondVariable->getIndex());
 
-            std::dynamic_pointer_cast<QuadraticObjectiveFunction>(destinationObjective)
-                ->add(std::make_shared<QuadraticTerm>(QT->coefficient, firstVariable, secondVariable));
+            copiedQuadraticTerms.push_back(
+                std::make_shared<QuadraticTerm>(QT->coefficient, firstVariable, secondVariable));
         }
+
+        std::dynamic_pointer_cast<QuadraticObjectiveFunction>(destinationObjective)->add(copiedQuadraticTerms);
     }
 
     // Copy monomial terms to objective
@@ -2997,26 +3019,34 @@ ProblemPtr Problem::createCopy(
             // Copy linear terms
             if(C->properties.hasLinearTerms)
             {
+                // The terms are added all at once, since adding them one by one searches the terms added so far
+                LinearTerms copiedLinearTerms;
+
                 for(auto& LT : std::dynamic_pointer_cast<LinearConstraint>(C)->linearTerms)
                 {
                     auto variable = destinationProblem->getVariable(LT->variable->getIndex());
 
-                    std::dynamic_pointer_cast<LinearConstraint>(destinationConstraint)
-                        ->add(std::make_shared<LinearTerm>(LT->coefficient, variable));
+                    copiedLinearTerms.push_back(std::make_shared<LinearTerm>(LT->coefficient, variable));
                 }
+
+                std::dynamic_pointer_cast<LinearConstraint>(destinationConstraint)->add(copiedLinearTerms);
             }
 
             // Copy quadratic terms
             if(C->properties.hasQuadraticTerms)
             {
+                QuadraticTerms copiedQuadraticTerms;
+
                 for(auto& QT : std::dynamic_pointer_cast<QuadraticConstraint>(C)->quadraticTerms)
                 {
                     auto firstVariable = destinationProblem->getVariable(QT->firstVariable->getIndex());
                     auto secondVariable = destinationProblem->getVariable(QT->secondVariable->getIndex());
 
-                    std::dynamic_pointer_cast<QuadraticConstraint>(destinationConstraint)
-                        ->add(std::make_shared<QuadraticTerm>(QT->coefficient, firstVariable, secondVariable));
+                    copiedQuadraticTerms.push_back(
+                        std::make_shared<QuadraticTerm>(QT->coefficient, firstVariable, secondVariable));
                 }
+
+                std::dynamic_pointer_cast<QuadraticConstraint>(destinationConstraint)->add(copiedQuadraticTerms);
             }
 
             // Copy monomial terms

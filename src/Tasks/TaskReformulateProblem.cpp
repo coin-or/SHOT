@@ -795,24 +795,33 @@ void TaskReformulateProblem::createEpigraphConstraint()
     objectiveVariable->properties.auxiliaryType = E_AuxiliaryVariableType::NonlinearObjectiveFunction;
     env->results->increaseAuxiliaryVariableCounter(E_AuxiliaryVariableType::NonlinearObjectiveFunction);
 
+    // The terms are added all at once, since adding them one by one searches the terms added so far for every term
     if(env->problem->objectiveFunction->properties.hasLinearTerms)
     {
+        LinearTerms linearTerms;
+
         for(auto& T : std::dynamic_pointer_cast<LinearObjectiveFunction>(env->problem->objectiveFunction)->linearTerms)
         {
-            objectiveVariable->linearTerms.add(std::make_shared<LinearTerm>(
+            linearTerms.push_back(std::make_shared<LinearTerm>(
                 T->coefficient, reformulatedProblem->getVariable(T->variable->getIndex())));
         }
+
+        objectiveVariable->linearTerms.add(linearTerms);
     }
 
     if(env->problem->objectiveFunction->properties.hasQuadraticTerms)
     {
+        QuadraticTerms quadraticTerms;
+
         for(auto& T :
             std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->problem->objectiveFunction)->quadraticTerms)
         {
-            objectiveVariable->quadraticTerms.add(std::make_shared<QuadraticTerm>(T->coefficient,
+            quadraticTerms.push_back(std::make_shared<QuadraticTerm>(T->coefficient,
                 reformulatedProblem->getVariable(T->firstVariable->getIndex()),
                 reformulatedProblem->getVariable(T->secondVariable->getIndex())));
         }
+
+        objectiveVariable->quadraticTerms.add(quadraticTerms);
     }
 
     if(env->problem->objectiveFunction->properties.hasMonomialTerms)
@@ -987,8 +996,12 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
 
     if(C->properties.hasLinearTerms)
     {
+        LinearTerms copiedTerms;
+
         for(auto& T : std::dynamic_pointer_cast<LinearConstraint>(C)->linearTerms)
-            destinationLinearTerms.add(std::make_shared<LinearTerm>(T->coefficient, T->variable));
+            copiedTerms.push_back(std::make_shared<LinearTerm>(T->coefficient, T->variable));
+
+        destinationLinearTerms.add(copiedTerms);
     }
 
     if(C->properties.hasQuadraticTerms)
@@ -2036,6 +2049,9 @@ void TaskReformulateProblem::copyLinearTermsToConstraint(LinearTerms terms, T de
     double signCoefficient = (reversedSigns) ? -1.0 : 1.0;
     auto linearConstraint = std::dynamic_pointer_cast<LinearConstraint>(destination);
 
+    // The terms are added all at once, since adding them one by one searches the terms added so far for every term
+    LinearTerms copiedLinearTerms;
+
     for(auto& LT : terms)
     {
         auto variable = reformulatedProblem->getVariable(LT->variable->getIndex());
@@ -2046,9 +2062,12 @@ void TaskReformulateProblem::copyLinearTermsToConstraint(LinearTerms terms, T de
         }
         else
         {
-            linearConstraint->add(std::make_shared<LinearTerm>(signCoefficient * LT->coefficient, variable));
+            copiedLinearTerms.push_back(std::make_shared<LinearTerm>(signCoefficient * LT->coefficient, variable));
         }
     }
+
+    if(copiedLinearTerms.size() > 0)
+        linearConstraint->add(copiedLinearTerms);
 }
 
 template <class T>
@@ -2057,6 +2076,10 @@ void TaskReformulateProblem::copyQuadraticTermsToConstraint(QuadraticTerms terms
     double signCoefficient = (reversedSigns) ? -1.0 : 1.0;
     auto linearConstraint = std::static_pointer_cast<LinearConstraint>(destination);
     auto quadraticConstraint = std::dynamic_pointer_cast<QuadraticConstraint>(destination);
+
+    // The terms are added all at once, since adding them one by one searches the terms added so far for every term
+    LinearTerms copiedLinearTerms;
+    QuadraticTerms copiedQuadraticTerms;
 
     for(auto& QT : terms)
     {
@@ -2073,20 +2096,26 @@ void TaskReformulateProblem::copyQuadraticTermsToConstraint(QuadraticTerms terms
         }
         else if(firstVariableFixed)
         {
-            linearConstraint->add(std::make_shared<LinearTerm>(
+            copiedLinearTerms.push_back(std::make_shared<LinearTerm>(
                 signCoefficient * QT->coefficient * firstVariable->lowerBound, secondVariable));
         }
         else if(secondVariableFixed)
         {
-            linearConstraint->add(std::make_shared<LinearTerm>(
+            copiedLinearTerms.push_back(std::make_shared<LinearTerm>(
                 signCoefficient * QT->coefficient * secondVariable->lowerBound, firstVariable));
         }
         else
         {
-            quadraticConstraint->add(
+            copiedQuadraticTerms.push_back(
                 std::make_shared<QuadraticTerm>(signCoefficient * QT->coefficient, firstVariable, secondVariable));
         }
     }
+
+    if(copiedLinearTerms.size() > 0)
+        linearConstraint->add(copiedLinearTerms);
+
+    if(copiedQuadraticTerms.size() > 0)
+        quadraticConstraint->add(copiedQuadraticTerms);
 }
 
 template <class T>
@@ -2140,6 +2169,9 @@ void TaskReformulateProblem::copyLinearTermsToObjectiveFunction(LinearTerms term
     double signCoefficient = (reversedSigns) ? -1.0 : 1.0;
     auto linearObjective = std::dynamic_pointer_cast<LinearObjectiveFunction>(destination);
 
+    // The terms are added all at once, since adding them one by one searches the terms added so far for every term
+    LinearTerms copiedLinearTerms;
+
     for(auto& LT : terms)
     {
         auto variable = reformulatedProblem->getVariable(LT->variable->getIndex());
@@ -2150,9 +2182,12 @@ void TaskReformulateProblem::copyLinearTermsToObjectiveFunction(LinearTerms term
         }
         else
         {
-            linearObjective->add(std::make_shared<LinearTerm>(signCoefficient * LT->coefficient, variable));
+            copiedLinearTerms.push_back(std::make_shared<LinearTerm>(signCoefficient * LT->coefficient, variable));
         }
     }
+
+    if(copiedLinearTerms.size() > 0)
+        linearObjective->add(copiedLinearTerms);
 }
 
 template <class T>
@@ -2162,6 +2197,10 @@ void TaskReformulateProblem::copyQuadraticTermsToObjectiveFunction(
     double signCoefficient = (reversedSigns) ? -1.0 : 1.0;
     auto linearObjective = std::static_pointer_cast<LinearObjectiveFunction>(destination);
     auto quadraticObjective = std::dynamic_pointer_cast<QuadraticObjectiveFunction>(destination);
+
+    // The terms are added all at once, since adding them one by one searches the terms added so far for every term
+    LinearTerms copiedLinearTerms;
+    QuadraticTerms copiedQuadraticTerms;
 
     for(auto& QT : terms)
     {
@@ -2178,20 +2217,26 @@ void TaskReformulateProblem::copyQuadraticTermsToObjectiveFunction(
         }
         else if(firstVariableFixed)
         {
-            linearObjective->add(std::make_shared<LinearTerm>(
+            copiedLinearTerms.push_back(std::make_shared<LinearTerm>(
                 signCoefficient * QT->coefficient * firstVariable->lowerBound, secondVariable));
         }
         else if(secondVariableFixed)
         {
-            linearObjective->add(std::make_shared<LinearTerm>(
+            copiedLinearTerms.push_back(std::make_shared<LinearTerm>(
                 signCoefficient * QT->coefficient * secondVariable->lowerBound, firstVariable));
         }
         else
         {
-            quadraticObjective->add(
+            copiedQuadraticTerms.push_back(
                 std::make_shared<QuadraticTerm>(signCoefficient * QT->coefficient, firstVariable, secondVariable));
         }
     }
+
+    if(copiedLinearTerms.size() > 0)
+        linearObjective->add(copiedLinearTerms);
+
+    if(copiedQuadraticTerms.size() > 0)
+        quadraticObjective->add(copiedQuadraticTerms);
 }
 
 template <class T>

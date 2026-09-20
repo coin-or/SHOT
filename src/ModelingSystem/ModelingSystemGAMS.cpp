@@ -1257,6 +1257,10 @@ bool ModelingSystemGAMS::copyLinearTerms(ProblemPtr destination)
             LinearConstraintPtr constraint
                 = std::static_pointer_cast<LinearConstraint>(destination->getConstraint(row));
 
+            // The terms are added all at once, since adding them one by one searches the terms of the constraint
+            LinearTerms linearTerms;
+            linearTerms.reserve(rownz);
+
             for(int j = 0; j < rownz; j++)
             {
                 auto variable = destination->getVariable(variableIndexes[j]);
@@ -1264,8 +1268,10 @@ bool ModelingSystemGAMS::copyLinearTerms(ProblemPtr destination)
                 if(variable->lowerBound == variable->upperBound)
                     constraint->constant += variable->lowerBound * linearCoefficients[j];
                 else
-                    constraint->add(std::make_shared<LinearTerm>(linearCoefficients[j], variable));
+                    linearTerms.push_back(std::make_shared<LinearTerm>(linearCoefficients[j], variable));
             }
+
+            constraint->add(linearTerms);
         }
         catch(const VariableNotFoundException&)
         {

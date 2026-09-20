@@ -539,6 +539,10 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
 
             counter = 0;
 
+            // The terms of a constraint are added all at once, since adding them one by one searches the terms
+            // added to the constraint so far for every term
+            std::vector<LinearTerms> constraintLinearTerms(problem->numericConstraints.size());
+
             if(isRowFormat)
             {
                 for(size_t i = 0; i < problem->numericConstraints.size(); i++)
@@ -551,8 +555,8 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
                             std::dynamic_pointer_cast<LinearConstraint>(problem->numericConstraints[i])->constant
                                 += coefficients[counter] * variable->lowerBound;
                         else
-                            std::dynamic_pointer_cast<LinearConstraint>(problem->numericConstraints[i])
-                                ->add(std::make_shared<LinearTerm>(coefficients[counter], variable));
+                            constraintLinearTerms[i].push_back(
+                                std::make_shared<LinearTerm>(coefficients[counter], variable));
 
                         counter++;
                     }
@@ -571,12 +575,19 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
                                 ->constant
                                 += coefficients[counter] * variable->lowerBound;
                         else
-                            std::dynamic_pointer_cast<LinearConstraint>(problem->numericConstraints[indices[counter]])
-                                ->add(std::make_shared<LinearTerm>(coefficients[counter], variable));
+                            constraintLinearTerms[indices[counter]].push_back(
+                                std::make_shared<LinearTerm>(coefficients[counter], variable));
 
                         counter++;
                     }
                 }
+            }
+
+            for(size_t i = 0; i < problem->numericConstraints.size(); i++)
+            {
+                if(constraintLinearTerms[i].size() > 0)
+                    std::dynamic_pointer_cast<LinearConstraint>(problem->numericConstraints[i])
+                        ->add(constraintLinearTerms[i]);
             }
         }
     }
