@@ -462,6 +462,9 @@ void Problem::updateVariables()
         V->properties.inMonomialTerms = false;
         V->properties.inSignomialTerms = false;
         V->properties.inNonlinearExpression = false;
+        V->properties.inLinearTerms = false;
+        V->properties.inQuadraticTerms = false;
+        V->properties.inNumberOfLinearTerms = 0;
     }
 
     updateVariableBounds();
@@ -476,6 +479,7 @@ void Problem::updateVariables()
         {
             T->variable->properties.inObjectiveFunction = true;
             T->variable->properties.inLinearTerms = true;
+            T->variable->properties.inNumberOfLinearTerms++;
         }
     }
 
