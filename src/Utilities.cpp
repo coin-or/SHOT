@@ -596,6 +596,23 @@ void addSparseVariableVector(SparseVariableVector& target, SparseVariableVector&
     source.clear();
 }
 
+void addSparseVariableVector(SparseVariableVector& target, const SparseVariableVector& source)
+{
+    if(target.size() == 0)
+    {
+        target = source;
+        return;
+    }
+
+    for(auto& E : source)
+    {
+        auto element = target.emplace(E.first, E.second);
+
+        if(!element.second)
+            element.first->second += E.second;
+    }
+}
+
 void addSparseVariableMatrix(SparseVariableMatrix& target, SparseVariableMatrix&& source)
 {
     if(target.size() == 0)

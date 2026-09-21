@@ -487,6 +487,27 @@ class QuadraticTerms : public Terms<QuadraticTermPtr>
 private:
     void updateConvexity() override;
 
+    // Where a term adds its values in the gradient of the terms
+    struct GradientElement
+    {
+        QuadraticTerm* term;
+        double* firstElement;
+        double* secondElement; // Is nullptr when the variable of the term is squared, since there is only one then
+    };
+
+    // The Hessian, which does not depend on the point since the function is quadratic
+    SparseVariableMatrix cachedHessian;
+    bool hessianCalculated = false;
+
+    // The gradient and, for each term, where in it the term adds its values. The structure only depends on the
+    // variables of the terms, so it is kept and only the values are updated in the following points.
+    SparseVariableVector cachedGradient;
+    std::vector<GradientElement> gradientElements;
+    bool gradientStructureCreated = false;
+
+    // Creates the map of the gradient and finds the elements of it that each term adds to
+    void createGradientStructure();
+
 public:
     double minEigenValue = SHOT::SHOT_DBL_MAX;
     double maxEigenValue = SHOT::SHOT_DBL_MIN;
@@ -525,6 +546,21 @@ public:
 
     QuadraticTerms() = default;
 
+    // Also marks the values calculated from the terms as not valid
+    inline void invalidateProperties()
+    {
+        Terms<QuadraticTermPtr>::invalidateProperties();
+        invalidateCachedValues();
+    }
+
+    // The cached Hessian and the structure of the cached gradient are only valid as long as the terms and their
+    // coefficients are unchanged
+    inline void invalidateCachedValues()
+    {
+        hessianCalculated = false;
+        gradientStructureCreated = false;
+    }
+
     void add(QuadraticTermPtr term)
     {
         auto firstVariable = term->firstVariable;
@@ -549,6 +585,7 @@ public:
 
         convexity = E_Convexity::NotSet;
         monotonicity = E_Monotonicity::NotSet;
+        invalidateCachedValues();
     }
 
     void add(QuadraticTerms terms)
@@ -575,53 +612,67 @@ public:
 
         convexity = E_Convexity::NotSet;
         monotonicity = E_Monotonicity::NotSet;
+        invalidateCachedValues();
     }
 
-    SparseVariableVector calculateGradient(const VectorDouble& point) const
+    SparseVariableVector calculateGradient(const VectorDouble& point) { return (getGradient(point)); }
+
+    // The gradient has the same structure in every point, since it only depends on the variables of the terms, so
+    // the map and the elements each term adds to are only created once. Invalidated by invalidateProperties().
+    const SparseVariableVector& getGradient(const VectorDouble& point)
     {
-        SparseVariableVector gradient;
+        if(!gradientStructureCreated)
+            createGradientStructure();
+
+        for(auto& E : cachedGradient)
+            E.second = 0.0;
+
+        for(auto& E : gradientElements)
+        {
+            if(E.secondElement == nullptr) // variable squared
+            {
+                *E.firstElement += 2 * E.term->coefficient * point[E.term->firstVariable->getIndex()];
+            }
+            else
+            {
+                *E.firstElement += E.term->coefficient * point[E.term->secondVariable->getIndex()];
+                *E.secondElement += E.term->coefficient * point[E.term->firstVariable->getIndex()];
+            }
+        }
+
+        return (cachedGradient);
+    }
+
+    // The Hessian does not depend on the point, since the function is quadratic, so it is only calculated once.
+    // Invalidated by invalidateProperties(), which is called when a term is added or changed.
+    const SparseVariableMatrix& getHessian()
+    {
+        if(hessianCalculated)
+            return (cachedHessian);
+
+        cachedHessian.clear();
 
         for(auto& T : (*this))
         {
             if(T->coefficient == 0.0)
                 continue;
 
-            if(T->firstVariable == T->secondVariable) // variable squared
-            {
-                auto value = 2 * T->coefficient * point[T->firstVariable->getIndex()];
-                auto element = gradient.emplace(T->firstVariable, value);
+            auto value = (T->firstVariable == T->secondVariable) ? 2 * T->coefficient : T->coefficient;
 
-                if(!element.second)
-                {
-                    // Element already exists for the variable
-                    element.first->second += value;
-                }
-            }
-            else
-            {
-                auto value = T->coefficient * point[T->secondVariable->getIndex()];
-                auto element = gradient.emplace(T->firstVariable, value);
+            // Only the elements above the diagonal are saved, since the Hessian is symmetric
+            auto key = (T->firstVariable->getIndex() <= T->secondVariable->getIndex())
+                ? std::make_pair(T->firstVariable, T->secondVariable)
+                : std::make_pair(T->secondVariable, T->firstVariable);
 
-                if(!element.second)
-                {
-                    // Element already exists for the variable
-                    element.first->second += value;
-                }
+            auto element = cachedHessian.emplace(key, value);
 
-                value = T->coefficient * point[T->firstVariable->getIndex()];
-
-                element = gradient.emplace(T->secondVariable, value);
-
-                if(!element.second)
-                {
-                    // Element already exists for the variable
-                    element.first->second += value;
-                }
-            }
+            if(!element.second)
+                element.first->second += value;
         }
 
-        return gradient;
-    };
+        hessianCalculated = true;
+        return (cachedHessian);
+    }
 
     void performLDLFactorization();
 

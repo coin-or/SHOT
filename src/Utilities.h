@@ -133,6 +133,9 @@ std::string trim(std::string& str);
 // into a new map.
 void addSparseVariableVector(SparseVariableVector& target, SparseVariableVector&& source);
 
+// Adds the elements of a source that is kept, e.g. a cached gradient
+void addSparseVariableVector(SparseVariableVector& target, const SparseVariableVector& source);
+
 void addSparseVariableMatrix(SparseVariableMatrix& target, SparseVariableMatrix&& source);
 
 SparseVariableVector combineSparseVariableVectors(

@@ -104,6 +104,10 @@ public:
     virtual std::shared_ptr<Variables> getGradientSparsityPattern();
 
     virtual SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes) = 0;
+
+    // The Hessian when it does not depend on the point, and can be used without being recalculated or copied,
+    // otherwise nullptr
+    virtual const SparseVariableMatrix* getConstantHessian() { return (nullptr); }
     virtual std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> getHessianSparsityPattern();
 
     virtual std::ostream& print(std::ostream&) const = 0;
@@ -252,6 +256,9 @@ public:
     SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) override;
     SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes) override;
 
+    // The quadratic terms have a constant Hessian, which they cache
+    const SparseVariableMatrix* getConstantHessian() override;
+
     std::ostream& print(std::ostream& stream) const override;
 
 protected:
@@ -387,6 +394,9 @@ public:
 
     SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) override;
     SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes) override;
+
+    // The nonlinear expression makes the Hessian depend on the point
+    const SparseVariableMatrix* getConstantHessian() override { return (nullptr); }
 
     std::ostream& print(std::ostream& stream) const override;
 

@@ -452,7 +452,14 @@ bool IpoptProblem::eval_h(Index n, const Number* x, [[maybe_unused]] bool new_x,
 
     if(obj_factor != 0.0)
     {
-        for(auto& E : sourceProblem->objectiveFunction->calculateHessian(vectorPoint, false))
+        // A constant Hessian, e.g. of a quadratic objective function, is used as it is instead of being copied
+        auto constantHessian = sourceProblem->objectiveFunction->getConstantHessian();
+        SparseVariableMatrix calculatedHessian;
+
+        if(!constantHessian)
+            calculatedHessian = sourceProblem->objectiveFunction->calculateHessian(vectorPoint, false);
+
+        for(auto& E : (constantHessian ? *constantHessian : calculatedHessian))
         {
             int location = lagrangianHessianCounterPlacement[getElementKey(
                 E.first.first->getIndex(), E.first.second->getIndex(), n)];
@@ -472,7 +479,13 @@ bool IpoptProblem::eval_h(Index n, const Number* x, [[maybe_unused]] bool new_x,
         if(lambda[C->getIndex()] == 0.0)
             continue;
 
-        for(auto& E : C->calculateHessian(vectorPoint, false))
+        auto constantHessian = C->getConstantHessian();
+        SparseVariableMatrix calculatedHessian;
+
+        if(!constantHessian)
+            calculatedHessian = C->calculateHessian(vectorPoint, false);
+
+        for(auto& E : (constantHessian ? *constantHessian : calculatedHessian))
         {
             int location = lagrangianHessianCounterPlacement[getElementKey(
                 E.first.first->getIndex(), E.first.second->getIndex(), n)];

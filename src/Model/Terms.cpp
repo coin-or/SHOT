@@ -270,6 +270,30 @@ void QuadraticTerms::computeEigenvectors()
     eigenvectorsComputed = true;
 }
 
+void QuadraticTerms::createGradientStructure()
+{
+    cachedGradient.clear();
+    gradientElements.clear();
+    gradientElements.reserve(size());
+
+    for(auto& T : (*this))
+    {
+        if(T->coefficient == 0.0)
+            continue;
+
+        // Inserting into a map does not invalidate pointers to the values of the other elements, so the pointers
+        // are valid also after the following terms have been added
+        auto firstElement = &(cachedGradient.emplace(T->firstVariable, 0.0).first->second);
+        auto secondElement = (T->firstVariable == T->secondVariable)
+            ? nullptr
+            : &(cachedGradient.emplace(T->secondVariable, 0.0).first->second);
+
+        gradientElements.push_back({ T.get(), firstElement, secondElement });
+    }
+
+    gradientStructureCreated = true;
+}
+
 void QuadraticTerms::performLDLFactorization()
 {
     if(LDLFactorizationPerformed)

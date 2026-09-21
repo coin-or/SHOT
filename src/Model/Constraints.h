@@ -143,6 +143,10 @@ public:
 
     // Returns the upper triagonal part of the Hessian matrix is sparse representation
     virtual SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes) = 0;
+
+    // The Hessian when it does not depend on the point, and can be used without being recalculated or copied,
+    // otherwise nullptr
+    virtual const SparseVariableMatrix* getConstantHessian() { return (nullptr); }
     virtual std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> getHessianSparsityPattern();
 
     virtual NumericConstraintValue calculateNumericValue(const VectorDouble& point, double correction = 0.0);
@@ -275,6 +279,9 @@ public:
     // Returns the upper triagonal part of the Hessian matrix is sparse representation
     SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes) override;
 
+    // The quadratic terms have a constant Hessian, which they cache
+    const SparseVariableMatrix* getConstantHessian() override;
+
     NumericConstraintValue calculateNumericValue(const VectorDouble& point, double correction = 0.0) override;
 
     std::shared_ptr<NumericConstraint> getPointer() override;
@@ -397,6 +404,9 @@ public:
 
     // Returns the upper triagonal part of the Hessian matrix is sparse representation
     SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes) override;
+
+    // The nonlinear expression makes the Hessian depend on the point
+    const SparseVariableMatrix* getConstantHessian() override { return (nullptr); }
 
     Interval calculateFunctionValue(const IntervalVector& intervalVector) override;
 

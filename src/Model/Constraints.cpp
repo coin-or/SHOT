@@ -350,7 +350,7 @@ void QuadraticConstraint::takeOwnership(ProblemPtr owner)
 SparseVariableVector QuadraticConstraint::calculateGradient(const VectorDouble& point, bool eraseZeroes = true)
 {
     SparseVariableVector gradient = LinearConstraint::calculateGradient(point, eraseZeroes);
-    Utilities::addSparseVariableVector(gradient, quadraticTerms.calculateGradient(point));
+    Utilities::addSparseVariableVector(gradient, quadraticTerms.getGradient(point));
 
     return (gradient);
 }
@@ -376,53 +376,13 @@ void QuadraticConstraint::initializeGradientSparsityPattern()
 SparseVariableMatrix QuadraticConstraint::calculateHessian(
     [[maybe_unused]] const VectorDouble& point, [[maybe_unused]] bool eraseZeroes = true)
 {
-    SparseVariableMatrix hessian;
+    return (quadraticTerms.getHessian());
+}
 
-    for(auto& T : quadraticTerms)
-    {
-        if(T->coefficient == 0.0)
-            continue;
-
-        if(T->firstVariable == T->secondVariable) // variable squared
-        {
-            auto value = 2 * T->coefficient;
-            auto element = hessian.emplace(std::make_pair(T->firstVariable, T->secondVariable), value);
-
-            if(!element.second)
-            {
-                // Element already exists for the variable
-                element.first->second += value;
-            }
-        }
-        else
-        {
-            // Only save elements above the diagonal since the Hessian is symmetric
-            if(T->firstVariable->getIndex() < T->secondVariable->getIndex())
-            {
-                auto value = T->coefficient;
-                auto element = hessian.emplace(std::make_pair(T->firstVariable, T->secondVariable), value);
-
-                if(!element.second)
-                {
-                    // Element already exists for the variable
-                    element.first->second += value;
-                }
-            }
-            else
-            {
-                auto value = T->coefficient;
-                auto element = hessian.emplace(std::make_pair(T->secondVariable, T->firstVariable), value);
-
-                if(!element.second)
-                {
-                    // Element already exists for the variable
-                    element.first->second += value;
-                }
-            }
-        }
-    }
-
-    return hessian;
+// The Hessian of a quadratic constraint is constant, and is cached by the terms
+const SparseVariableMatrix* QuadraticConstraint::getConstantHessian()
+{
+    return (&quadraticTerms.getHessian());
 }
 
 void QuadraticConstraint::initializeHessianSparsityPattern()
