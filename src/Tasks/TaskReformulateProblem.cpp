@@ -2314,10 +2314,13 @@ LinearTerms TaskReformulateProblem::doEigenvalueDecomposition(QuadraticTerms& qu
 
         LinearTerms auxConstraintTerms;
 
+        // The variables of the terms belong to the original problem, so the ones of the reformulated problem
+        // are looked up by their index
         for(auto [VAR, j] : quadraticTerms.variableMap)
         {
             if(quadraticTerms.eigenvectors(j, i) != 0.0)
-                auxConstraintTerms.push_back(std::make_shared<LinearTerm>(quadraticTerms.eigenvectors(j, i), VAR));
+                auxConstraintTerms.push_back(std::make_shared<LinearTerm>(
+                    quadraticTerms.eigenvectors(j, i), reformulatedProblem->getVariable(VAR->getIndex())));
         }
 
         auxConstraint->add(auxConstraintTerms);
@@ -2385,10 +2388,13 @@ LinearTerms TaskReformulateProblem::doLDLDecomposition(QuadraticTerms& quadratic
 
         LinearTerms auxConstraintTerms;
 
+        // The variables of the terms belong to the original problem, so the ones of the reformulated problem
+        // are looked up by their index
         for(auto [VAR, j] : quadraticTerms.variableMap)
         {
             if(quadraticTerms.LDLMatrixL(j, i) != 0.0)
-                auxConstraintTerms.push_back(std::make_shared<LinearTerm>(quadraticTerms.LDLMatrixL(j, i), VAR));
+                auxConstraintTerms.push_back(std::make_shared<LinearTerm>(
+                    quadraticTerms.LDLMatrixL(j, i), reformulatedProblem->getVariable(VAR->getIndex())));
         }
 
         auxConstraint->add(auxConstraintTerms);
