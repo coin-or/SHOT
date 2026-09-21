@@ -1214,6 +1214,11 @@ void MIPSolverCbc::setTimeLimit(double seconds)
         timeLimit = 0.00001;
     else
         timeLimit = seconds;
+
+    // The time limit given to Cbc as -sec only applies to the branch and bound, so it is given to Clp as well,
+    // which otherwise solves the LP problems without any time limit
+    if(osiInterface)
+        osiInterface->getModelPtr()->setMaximumSeconds(timeLimit);
 }
 
 void MIPSolverCbc::setCutOff(double cutOff)
