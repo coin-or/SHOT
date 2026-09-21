@@ -33,6 +33,9 @@ bool HighsTest1(std::string filename, double correctObjectiveValue)
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
     auto env = solver->getEnvironment();
 
+    // A time limit so that a test that does not converge cannot stop the test suite
+    solver->updateSetting("Termination.TimeLimit", 60.0);
+
     solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Highs));
 
     try
@@ -121,6 +124,9 @@ bool HighsTestNocrash(std::string filename)
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
     auto env = solver->getEnvironment();
 
+    // A time limit so that a test that does not converge cannot stop the test suite
+    solver->updateSetting("Termination.TimeLimit", 60.0);
+
     solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Highs));
 
     try
@@ -143,6 +149,9 @@ bool HighsTerminationCallbackTest(std::string filename)
 {
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
     auto env = solver->getEnvironment();
+
+    // A time limit so that a test that does not converge cannot stop the test suite
+    solver->updateSetting("Termination.TimeLimit", 60.0);
 
     solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Error));
     solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Highs));
@@ -204,6 +213,9 @@ bool HighsExternalDualBoundCallbackTest(std::string filename, double dualBoundTo
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
     auto env = solver->getEnvironment();
 
+    // A time limit so that a test that does not converge cannot stop the test suite
+    solver->updateSetting("Termination.TimeLimit", 60.0);
+
     solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Info));
     solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Highs));
     solver->updateSetting("Dual.TreeStrategy", static_cast<int>(treeStrategy));
@@ -249,6 +261,9 @@ bool HighsExternalDualBoundCallbackTest(std::string filename, double dualBoundTo
     // Create a new solver instance
     solver = std::make_unique<Solver>();
     env = solver->getEnvironment();
+
+    // A time limit so that a test that does not converge cannot stop the test suite
+    solver->updateSetting("Termination.TimeLimit", 60.0);
 
     solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Info));
     solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Highs));
