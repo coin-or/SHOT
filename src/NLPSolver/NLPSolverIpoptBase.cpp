@@ -15,6 +15,7 @@
 
 #include "../Output.h"
 #include "../Settings.h"
+#include "../Timing.h"
 #include "../Utilities.h"
 
 namespace SHOT
@@ -722,6 +723,12 @@ E_NLPSolutionStatus NLPSolverIpoptBase::solveProblemInstance()
 
     E_NLPSolutionStatus status;
     ipoptProblem->variableSolution.clear();
+
+    // Ipopt is given the time left of the time limit of SHOT, since it otherwise solves without any limit of its
+    // own: a single NLP problem could then take longer than the whole solution time allowed, e.g. when its linear
+    // solver runs into difficulties. The limit is kept positive, since a nonpositive one is rejected.
+    double timeLeft = env->settings->getSetting<double>("Termination.TimeLimit") - env->timing->getElapsedTime("Total");
+    ipoptApplication->Options()->SetNumericValue("max_wall_time", std::max(timeLeft, 0.00001));
 
     try
     {
