@@ -164,6 +164,7 @@ bool ModelTestBoundTighteningPropagation();
 bool ModelTestProductBoundTighteningResult();
 bool ModelTestBoundTighteningTimeLimit();
 bool ModelTestConvexityAfterAddedTerm();
+bool ModelTestSignomialGradientOfRepeatedVariable();
 
 bool TestReadProblem(const std::string& problemFile);
 bool TestRootsearch(const std::string& problemFile);
@@ -329,6 +330,9 @@ int ModelTest(int argc, char* argv[])
         break;
     case 47:
         passed = ModelTestConvexityAfterAddedTerm();
+        break;
+    case 48:
+        passed = ModelTestSignomialGradientOfRepeatedVariable();
         break;
     default:
         passed = false;
@@ -8185,6 +8189,46 @@ bool ModelTestConvexityAfterAddedTerm()
     if(convexity != E_Convexity::Nonconvex)
     {
         std::cout << "  FAILED: -0.5x^2 + y^2 - 0.1xy should be nonconvex.\n";
+        passed = false;
+    }
+
+    return passed;
+}
+
+bool ModelTestSignomialGradientOfRepeatedVariable()
+{
+    // The coefficient of the term must be used for every element of the gradient, also when the variable already has
+    // an element, which happens when the same variable is in several elements of the term.
+
+    bool passed = true;
+
+    auto solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+    auto problem = std::make_shared<Problem>(env);
+
+    auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.5, 10.0);
+    problem->add(Variables({ x }));
+
+    // 3 * x^0.5 * x^1.5, whose derivative is 3 * (0.5 * x^-0.5 * x^1.5 + x^0.5 * 1.5 * x^0.5) = 3 * 2 * x = 6x
+    SignomialElements elements;
+    elements.push_back(std::make_shared<SignomialElement>(x, 0.5));
+    elements.push_back(std::make_shared<SignomialElement>(x, 1.5));
+
+    SignomialTerms terms;
+    terms.add(std::make_shared<SignomialTerm>(3.0, elements));
+    terms.takeOwnership(problem);
+
+    VectorDouble point = { 2.0 };
+    auto gradient = terms.calculateGradient(point);
+
+    double expected = 6.0 * point[0];
+    double value = gradient.begin()->second;
+
+    std::cout << "  gradient = " << value << " (expected " << expected << ")\n";
+
+    if(std::abs(value - expected) > 1e-9)
+    {
+        std::cout << "  FAILED: the coefficient of the term was not used for both elements.\n";
         passed = false;
     }
 

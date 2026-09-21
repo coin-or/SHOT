@@ -1419,7 +1419,7 @@ public:
                 if(!element.second)
                 {
                     // Element already exists for the variable
-                    element.first->second += value;
+                    element.first->second += T->coefficient * value;
                 }
             }
         };
