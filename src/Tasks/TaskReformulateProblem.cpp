@@ -1692,10 +1692,11 @@ LinearTerms TaskReformulateProblem::partitionSignomialTerms(const SignomialTerms
             signomialTerm->coefficient *= -1.0;
         }
 
+        // The bounds are set through the problem, so that its stored bound vectors are updated as well
         if(signomialTerm->coefficient < 0.0 && auxVariable->upperBound > 0.0)
-            auxVariable->upperBound = 0.0;
+            reformulatedProblem->setVariableUpperBound(auxVariable->getIndex(), 0.0);
         else if(signomialTerm->coefficient > 0.0 && auxVariable->lowerBound < 0.0)
-            auxVariable->lowerBound = 0.0;
+            reformulatedProblem->setVariableLowerBound(auxVariable->getIndex(), 0.0);
 
         auxConstraint->add(signomialTerm);
 

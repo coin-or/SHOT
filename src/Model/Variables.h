@@ -83,6 +83,8 @@ public:
 
     std::weak_ptr<Problem> ownerProblem;
 
+    // Set these through Problem::setVariableBounds or tightenBounds, which also update the bound vectors stored in
+    // the problem, e.g. used when the bounds of the terms are calculated
     double upperBound;
     double lowerBound;
     double semiBound;
