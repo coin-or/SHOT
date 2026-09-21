@@ -242,6 +242,13 @@ public:
         return (monotonicity);
     }
 
+    // Marks the convexity and monotonicity as not calculated, for when a term is added without add()
+    inline void invalidateProperties()
+    {
+        convexity = E_Convexity::NotSet;
+        monotonicity = E_Monotonicity::NotSet;
+    }
+
     inline bool checkAllForConvexityType(E_Convexity convexityType)
     {
         for(auto& TERM : (*this))

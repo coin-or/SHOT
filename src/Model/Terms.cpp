@@ -34,7 +34,21 @@ void QuadraticTerms::updateConvexity()
         return;
     }
 
+    // The state of the previous calculation is cleared, since the convexity is recalculated when terms have been
+    // added. Otherwise the matrix contains both the old and the new elements, and e.g. x^2 merged with -1.5x^2 into
+    // the term -0.5x^2 gives the matrix element 2 + (-1) = 1, which is classified as convex.
+    elements.clear();
     elements.reserve(2 * size());
+
+    minEigenValue = SHOT::SHOT_DBL_MAX;
+    maxEigenValue = SHOT::SHOT_DBL_MIN;
+    minEigenValueWithinTolerance = false;
+    maxEigenValueWithinTolerance = false;
+
+    eigenvectorsComputed = false;
+    LDLFactorizationPerformed = false;
+    LDLFactorizationSuccessful = false;
+    LDLDiag.clear();
 
     allSquares = true;
     allPositive = true;

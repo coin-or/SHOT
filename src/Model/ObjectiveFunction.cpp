@@ -339,7 +339,10 @@ void QuadraticObjectiveFunction::add(QuadraticTerms terms)
 
 void QuadraticObjectiveFunction::add(QuadraticTermPtr term)
 {
+    // The term is not merged with a term of the same variables, since searching all terms for every added term is
+    // quadratic in the number of terms, and the duplicates are summed wherever the terms are used
     quadraticTerms.push_back(term);
+    quadraticTerms.invalidateProperties();
     properties.isValid = false;
 }
 

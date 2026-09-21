@@ -163,6 +163,7 @@ bool ModelTestBoundTighteningMatchesReferenceOnInstances();
 bool ModelTestBoundTighteningPropagation();
 bool ModelTestProductBoundTighteningResult();
 bool ModelTestBoundTighteningTimeLimit();
+bool ModelTestConvexityAfterAddedTerm();
 
 bool TestReadProblem(const std::string& problemFile);
 bool TestRootsearch(const std::string& problemFile);
@@ -325,6 +326,9 @@ int ModelTest(int argc, char* argv[])
         break;
     case 46:
         passed = ModelTestBoundTighteningTimeLimit();
+        break;
+    case 47:
+        passed = ModelTestConvexityAfterAddedTerm();
         break;
     default:
         passed = false;
@@ -8127,6 +8131,60 @@ bool ModelTestBoundTighteningTimeLimit()
     if(x->upperBound != 1.0 || y->upperBound != 1.0)
     {
         std::cout << "  FAILED: the bounds were not tightened to x, y <= 1 after earlier bound tightening.\n";
+        passed = false;
+    }
+
+    return passed;
+}
+
+bool ModelTestConvexityAfterAddedTerm()
+{
+    // The convexity is calculated again when a term has been added, so the elements of the matrix of the previous
+    // calculation must be cleared. Otherwise the matrix contains both the old and the new elements, and x^2 merged
+    // with -1.5x^2 into the term -0.5x^2 gives the element 2 + (-1) = 1, which makes the sum look convex.
+
+    bool passed = true;
+
+    auto solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+    auto problem = std::make_shared<Problem>(env);
+
+    auto x = std::make_shared<Variable>("x", E_VariableType::Real, -10.0, 10.0);
+    auto y = std::make_shared<Variable>("y", E_VariableType::Real, -10.0, 10.0);
+    problem->add(Variables({ x, y }));
+
+    // x^2 + y^2 - 0.1xy is convex, and the bilinear term makes the convexity be decided by the eigenvalues
+    QuadraticTerms terms;
+    terms.add(std::make_shared<QuadraticTerm>(1.0, x, x));
+    terms.add(std::make_shared<QuadraticTerm>(1.0, y, y));
+    terms.add(std::make_shared<QuadraticTerm>(-0.1, x, y));
+    terms.takeOwnership(problem);
+
+    if(terms.getConvexity() != E_Convexity::Convex)
+    {
+        std::cout << "  FAILED: x^2 + y^2 - 0.1xy should be convex.\n";
+        passed = false;
+    }
+
+    // Merges into -0.5x^2 + y^2 - 0.1xy, which is nonconvex
+    terms.add(std::make_shared<QuadraticTerm>(-1.5, x, x));
+
+    std::cout << "  after adding -1.5x^2 the first term is " << terms[0]->coefficient << "x^2\n";
+
+    if(terms[0]->coefficient != -0.5)
+    {
+        std::cout << "  FAILED: the terms should have been merged into -0.5x^2.\n";
+        passed = false;
+    }
+
+    auto convexity = terms.getConvexity();
+
+    std::cout << "  convexity = " << (int)convexity << " (expected " << (int)E_Convexity::Nonconvex << "), smallest "
+              << "eigenvalue = " << terms.minEigenValue << "\n";
+
+    if(convexity != E_Convexity::Nonconvex)
+    {
+        std::cout << "  FAILED: -0.5x^2 + y^2 - 0.1xy should be nonconvex.\n";
         passed = false;
     }
 
