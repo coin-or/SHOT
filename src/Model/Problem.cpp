@@ -87,6 +87,10 @@ void Problem::updateConstraints()
             for(auto& T : C->linearTerms)
                 T->coefficient *= -1.0;
 
+            // The coefficients are changed directly, so the properties calculated from the terms, e.g. their
+            // convexity and the cached Hessian of quadratic terms, are no longer valid
+            C->linearTerms.invalidateProperties();
+
             C->constant *= -1.0;
         }
     }
@@ -108,8 +112,12 @@ void Problem::updateConstraints()
             for(auto& T : C->linearTerms)
                 T->coefficient *= -1.0;
 
+            C->linearTerms.invalidateProperties();
+
             for(auto& T : C->quadraticTerms)
                 T->coefficient *= -1.0;
+
+            C->quadraticTerms.invalidateProperties();
 
             C->constant *= -1.0;
         }
@@ -164,14 +172,22 @@ void Problem::updateConstraints()
             for(auto& T : C->linearTerms)
                 T->coefficient *= -1.0;
 
+            C->linearTerms.invalidateProperties();
+
             for(auto& T : C->quadraticTerms)
                 T->coefficient *= -1.0;
+
+            C->quadraticTerms.invalidateProperties();
 
             for(auto& T : C->monomialTerms)
                 T->coefficient *= -1.0;
 
+            C->monomialTerms.invalidateProperties();
+
             for(auto& T : C->signomialTerms)
                 T->coefficient *= -1.0;
+
+            C->signomialTerms.invalidateProperties();
 
             if(C->nonlinearExpression)
                 C->nonlinearExpression = simplify(std::make_shared<ExpressionNegate>(C->nonlinearExpression));
