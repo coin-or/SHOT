@@ -614,6 +614,14 @@ void MIPSolverHighs::activateDiscreteVariables(bool activate)
     }
 }
 
+// Whether HiGHS ran into trouble instead of solving the problem: it leaves the status unset when it gives up
+// inside the simplex, e.g. when the ratio test fails on excessive dual values
+bool MIPSolverHighs::isFailedSolve(HighsModelStatus modelStatus)
+{
+    return (modelStatus == HighsModelStatus::kUnknown || modelStatus == HighsModelStatus::kSolveError
+        || modelStatus == HighsModelStatus::kNotset);
+}
+
 E_ProblemSolutionStatus MIPSolverHighs::getSolutionStatus()
 {
     E_ProblemSolutionStatus MIPSolutionStatus;
@@ -652,6 +660,17 @@ E_ProblemSolutionStatus MIPSolverHighs::getSolutionStatus()
     {
         MIPSolutionStatus = E_ProblemSolutionStatus::SolutionLimit;
     }
+    else if(isFailedSolve(modelStatus))
+    {
+        // HiGHS ends without a status, or with a solve error, when it runs into numerical trouble, and solveProblem
+        // has then already tried to solve again from a clean state. The iteration has no solution to generate cuts
+        // in, but this is a numerical issue and not an error of the solver.
+        MIPSolutionStatus = E_ProblemSolutionStatus::Numeric;
+        env->output->outputWarning(fmt::format(
+            "        The MIP solver did not return a solution (HiGHS returned status {}), which is treated as a "
+            "numerical issue.",
+            static_cast<int>(modelStatus)));
+    }
     else if(modelStatus == HighsModelStatus::kInterrupt)
     {
         // HiGHS only reports that it was interrupted, so the cause recorded by the callback decides the status
@@ -685,6 +704,18 @@ E_ProblemSolutionStatus MIPSolverHighs::solveProblem()
     variableBoundsToRestore.clear();
 
     highsReturnStatus = highsInstance.run();
+
+    // HiGHS gives no status, or a solve error, when it runs into numerical trouble, which it does e.g. when a warm
+    // started simplex does not converge on a badly scaled problem. Solving again from a clean state, which lets it
+    // presolve and factorize from scratch, often succeeds.
+    if(isFailedSolve(highsInstance.getModelStatus()))
+    {
+        env->output->outputDebug(
+            "        The MIP solver did not return a solution, solving again from a clean state.");
+        highsInstance.clearSolver();
+        highsReturnStatus = highsInstance.run();
+    }
+
     MIPSolutionStatus = getSolutionStatus();
 
     // An unbounded exact dual problem means that the problem is unbounded, so no point is needed

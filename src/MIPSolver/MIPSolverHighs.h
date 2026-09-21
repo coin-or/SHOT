@@ -120,6 +120,8 @@ public:
     bool repairInfeasibility() override;
 
     E_ProblemSolutionStatus getSolutionStatus() override;
+
+    static bool isFailedSolve(HighsModelStatus modelStatus);
     int getNumberOfSolutions() override;
     VectorDouble getVariableSolution(int solIdx) override;
     std::vector<SolutionPoint> getAllVariableSolutions() override { return (MIPSolverBase::getAllVariableSolutions()); }
