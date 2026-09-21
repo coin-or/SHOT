@@ -342,7 +342,18 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
             auto threadId = std::to_string(context.getIntInfo(IloCplex::Callback::Context::Info::ThreadId));
             printIterationReport(candidatePoints.at(0), threadId);
 
-            if(checkFixedNLPStrategy(candidatePoints.at(0)))
+            // Cplex reports every candidate in the Candidate context, also those that are not better than the best
+            // solution found so far and those it reports again after a lazy constraint has cut one off, while e.g.
+            // Gurobi only reports new incumbents. The fixed NLP problem is therefore only solved for a candidate
+            // that improves the primal bound, so that how often the heuristic is called does not depend on how
+            // often the solver reports candidates. The lazy constraints are still added for every candidate.
+            double candidateObjective = context.getCandidateObjective();
+
+            bool candidateImprovesPrimalBound = (candidateObjective < 1e74)
+                && ((isMinimization && candidateObjective < env->results->getPrimalBound())
+                    || (!isMinimization && candidateObjective > env->results->getPrimalBound()));
+
+            if(candidateImprovesPrimalBound && checkFixedNLPStrategy(candidatePoints.at(0)))
             {
 
                 if(taskSelectPrimNLPOriginal)
