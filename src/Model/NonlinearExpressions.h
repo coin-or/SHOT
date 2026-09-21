@@ -1508,8 +1508,10 @@ public:
         bool firstTightened = firstChild->tightenBounds(secondChild->getBounds() * bound);
         bool secondTightened = secondChild->tightenBounds(firstChild->getBounds() / bound);
 
+        // The numerator is tightened again with the tightened bounds of the denominator. The call is made first, so
+        // that it is not skipped when the numerator has already been tightened.
         if(secondTightened)
-            firstTightened = firstTightened || firstChild->tightenBounds(secondChild->getBounds() * bound);
+            firstTightened = firstChild->tightenBounds(secondChild->getBounds() * bound) || firstTightened;
 
         return (firstTightened || secondTightened);
     }
