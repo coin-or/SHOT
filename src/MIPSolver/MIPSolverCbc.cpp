@@ -522,12 +522,29 @@ E_ProblemSolutionStatus MIPSolverCbc::getSolutionStatus()
         // Stopped by the event handler, i.e. interrupted
         MIPSolutionStatus = E_ProblemSolutionStatus::Abort;
     }
+    // A finished search that has not proven anything is explained by the secondary status. Cbc stops as soon as the
+    // gap between its bound and the cutoff is within the gap tolerance, which can happen already in the root node
+    // and without a solution, since the cutoff of SHOT is the best solution found so far.
+    else if(cbcModel->status() == 0 && cbcModel->secondaryStatus() == 2)
+    {
+        MIPSolutionStatus = E_ProblemSolutionStatus::CutOff;
+    }
+    else if(cbcModel->status() == 0 && cbcModel->secondaryStatus() == 1)
+    {
+        MIPSolutionStatus = E_ProblemSolutionStatus::Infeasible;
+    }
+    else if(cbcModel->status() == 0 && cbcModel->secondaryStatus() == 7)
+    {
+        MIPSolutionStatus = E_ProblemSolutionStatus::Unbounded;
+    }
     else
     {
-        auto status = cbcModel->status();
         MIPSolutionStatus = E_ProblemSolutionStatus::Error;
         env->output->outputError(
-            fmt::format("        MIP solver return status unknown (Cbc returned status {}).", status));
+            fmt::format("        MIP solver return status unknown (Cbc returned status {} and secondary status {}, "
+                        "with {} solutions and {} nodes).",
+                cbcModel->status(), cbcModel->secondaryStatus(), cbcModel->numberSavedSolutions(),
+                cbcModel->getNodeCount()));
     }
 
     return (MIPSolutionStatus);
