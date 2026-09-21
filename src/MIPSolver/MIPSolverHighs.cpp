@@ -1000,7 +1000,13 @@ void MIPSolverHighs::setSolutionLimit(long int limit)
 
 int MIPSolverHighs::getSolutionLimit() { return (this->solutionLimit); }
 
-void MIPSolverHighs::setTimeLimit(double seconds) { highsInstance.setOptionValue("time_limit", seconds); }
+void MIPSolverHighs::setTimeLimit(double seconds)
+{
+    // HiGHS only accepts nonnegative time limits, and rejecting the value leaves the previous one, e.g. the default
+    // of no limit at all, so the problem would then be solved without a time limit. The other solvers do the same
+    // with a nonpositive limit.
+    highsInstance.setOptionValue("time_limit", seconds > 0 ? seconds : 0.00001);
+}
 
 void MIPSolverHighs::setCutOff(double cutOff)
 {
