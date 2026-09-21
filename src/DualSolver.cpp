@@ -34,6 +34,25 @@ void DualSolver::addDualSolutionCandidate(DualSolution solution)
     this->checkDualSolutionCandidates();
 }
 
+// A dual bound that passes the primal bound by more than the tolerance is not valid for the problem: the cuts of the
+// dual problem have then cut off the optimal solution, or the problem is so badly scaled that the bound is
+// meaningless. The bound is ignored, which is only visible as an objective gap that does not close, so it is reported.
+void DualSolver::warnAboutInvalidDualBound(double dualBound, double primalBound, double tolerance)
+{
+    auto message = fmt::format("        Dual bound {} passes the primal bound {} by more than the tolerance {}, so it "
+                               "is not a valid bound for the problem and is ignored.",
+        dualBound, primalBound, tolerance);
+
+    if(invalidDualBoundWarningShown)
+    {
+        env->output->outputDebug(message);
+        return;
+    }
+
+    env->output->outputWarning(message);
+    invalidDualBoundWarningShown = true;
+}
+
 void DualSolver::checkDualSolutionCandidates()
 {
     double currDualBound = env->results->getCurrentDualBound();
@@ -43,7 +62,15 @@ void DualSolver::checkDualSolutionCandidates()
     // bound by numerical error. Such a candidate is accepted as the primal bound, but only when it is within this
     // tolerance; passing the primal bound by more means that the candidate is not a valid bound for the problem,
     // and it is then ignored instead of closing the objective gap by force.
-    double crossoverTolerance = 1e-10 * std::max(1.0, std::abs(currPrimalBound));
+    //
+    // The error is the one the primal solutions are accepted with: a primal solution whose constraint violations are
+    // within the primal tolerances can have an objective value slightly better than the optimum of the problem,
+    // while the dual bound is valid for the problem itself. How large the difference in the objective value is
+    // depends on the problem, so the violation is scaled by the magnitude of the bound.
+    double primalTolerance = std::max(env->settings->getSetting<double>("Primal.Tolerance.NonlinearConstraint"),
+        env->settings->getSetting<double>("Primal.Tolerance.LinearConstraint"));
+
+    double crossoverTolerance = primalTolerance * std::max(1.0, std::abs(currPrimalBound));
 
     for(auto& C : this->dualSolutionCandidates)
     {
@@ -60,6 +87,10 @@ void DualSolver::checkDualSolutionCandidates()
             {
                 updateDual = true;
             }
+            else if(C.objValue > currPrimalBound + crossoverTolerance)
+            {
+                warnAboutInvalidDualBound(C.objValue, currPrimalBound, crossoverTolerance);
+            }
         }
         else
         {
@@ -71,6 +102,10 @@ void DualSolver::checkDualSolutionCandidates()
             else if(C.objValue < currDualBound && (C.objValue >= currPrimalBound))
             {
                 updateDual = true;
+            }
+            else if(C.objValue < currPrimalBound - crossoverTolerance)
+            {
+                warnAboutInvalidDualBound(C.objValue, currPrimalBound, crossoverTolerance);
             }
         }
 

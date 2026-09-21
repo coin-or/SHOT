@@ -32,6 +32,9 @@ public:
     void addDualSolutionCandidate(DualSolution solution);
     void checkDualSolutionCandidates();
 
+    // Reports a dual bound that is not valid for the problem, the first time at warning level
+    void warnAboutInvalidDualBound(double dualBound, double primalBound, double tolerance);
+
     void addHyperplane(HyperplanePtr hyperplane);
     void addGeneratedHyperplane(const HyperplanePtr hyperplane);
     bool hasHyperplaneBeenAdded(const VectorDouble& generatedPoint, int constraintIndex);
@@ -79,6 +82,10 @@ private:
     // problem is not making progress
     int numberOfRepeatedHyperplanes = 0;
     bool repeatedHyperplaneWarningShown = false;
+
+    // A dual bound that passes the primal bound by more than the tolerance is not valid for the problem, which is
+    // worth a warning, but only the first time since the cause is the same for the following ones
+    bool invalidDualBoundWarningShown = false;
 
     std::pair<double, double> calculateHashes(const VectorDouble& point);
     std::pair<double, double> calculateHyperplaneHashes(NumericHyperplanePtr hyperplane);
