@@ -6273,6 +6273,22 @@ bool ModelTestSignomialTermConvexity()
             E_Convexity::Convex },
         { "x^3/y^2, x,y in [1,5] (power sum exactly one)", 1.0, { { 1.0, 5.0, 3.0 }, { 1.0, 5.0, -2.0 } },
             E_Convexity::Convex },
+
+        // An even positive integer power discards the sign of its base, so the rules for the non-negative orthant
+        // hold although the base can be negative: x^2/z is the perspective of x^2 and convex for every real x when
+        // z is positive. The instance nlp-cvx_204_010 of MINLPTests is x^2/z <= y with x in [-1,1], and was
+        // classified as nonconvex, which made SHOT solve a convex problem with the strategy for nonconvex ones.
+        { "x^2/z, x in [-5,5], z in [0,5] (base can be negative)", 1.0,
+            { { -5.0, 5.0, 2.0 }, { 0.0, 5.0, -1.0 } }, E_Convexity::Convex },
+        { "x^4/z, x in [-5,5], z in [1,5] (base can be negative)", 1.0,
+            { { -5.0, 5.0, 4.0 }, { 1.0, 5.0, -1.0 } }, E_Convexity::Convex },
+        { "-x^2/z, x in [-5,5], z in [1,5] (base can be negative)", -1.0,
+            { { -5.0, 5.0, 2.0 }, { 1.0, 5.0, -1.0 } }, E_Convexity::Concave },
+
+        // An even negative power does not discard the sign in the same way, since the term is not defined in zero
+        // and the rules would be used over a domain it is not continuous on
+        { "x^-2/z, x in [-5,5], z in [1,5] (even negative power)", 1.0,
+            { { -5.0, 5.0, -2.0 }, { 1.0, 5.0, -1.0 } }, E_Convexity::Nonconvex },
         { "-x^2/z, x,z in [1,5] (power sum exactly one)", -1.0, { { 1.0, 5.0, 2.0 }, { 1.0, 5.0, -1.0 } },
             E_Convexity::Concave },
 

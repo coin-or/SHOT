@@ -1209,7 +1209,18 @@ public:
 
             sumPowers += E->power;
 
-            if(E->variable->lowerBound < 0.0)
+            // A base raised to an even positive integer power discards the sign of the variable, so the term has the
+            // same value as the one where the variable is replaced by its absolute value. That term is nondecreasing
+            // in the replaced variable, since the power is positive, so composing it with the absolute value keeps it
+            // convex, and the rules for the non-negative orthant hold although the variable can be negative. The
+            // power must be positive: an even negative power, e.g. x^-2, is not defined in zero, and the rules would
+            // then be used over a domain the term is not even continuous on.
+            bool signDiscardedByPower = false;
+
+            if(double intpart; E->power > 0.0 && std::modf(E->power, &intpart) == 0.0)
+                signDiscardedByPower = (((int)round(intpart)) % 2 == 0);
+
+            if(E->variable->lowerBound < 0.0 && !signDiscardedByPower)
                 allVariablesNonNegative = false;
 
             if(E->variable->upperBound >= 0.0)
