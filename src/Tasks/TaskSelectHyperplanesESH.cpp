@@ -60,8 +60,8 @@ VectorDouble TaskSelectHyperplanesESH::selectHyperplanePoint(
 
     for(auto& G : nonlinearConstraint->calculateGradient(externalPoint, true))
     {
-        valueInSolutionPoint += signFactor * G.second
-            * (solutionPoint.at(G.first->getIndex()) - externalPoint.at(G.first->getIndex()));
+        valueInSolutionPoint
+            += signFactor * G.second * (solutionPoint.at(G.first->getIndex()) - externalPoint.at(G.first->getIndex()));
     }
 
     if(valueInSolutionPoint > 0.0)
@@ -109,8 +109,7 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
     int addedHyperplanes = 0;
     auto currIter = env->results->getCurrentIteration(); // The unsolved new iteration
 
-    auto constraintSelectionFactor
-        = env->settings->getSetting<double>("Dual.HyperplaneCuts.ConstraintSelectionFactor");
+    auto constraintSelectionFactor = env->settings->getSetting<double>("Dual.HyperplaneCuts.ConstraintSelectionFactor");
     bool useUniqueConstraints = env->settings->getSetting<bool>("Dual.ESH.Rootsearch.UniqueConstraints");
 
     int rootMaxIter = env->settings->getSetting<int>("Subsolver.Rootsearch.MaxIterations");
@@ -118,10 +117,8 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
     double rootActiveConstraintTolerance
         = env->settings->getSetting<double>("Subsolver.Rootsearch.ActiveConstraintTolerance");
     int maxHyperplanesPerIter = env->settings->getSetting<int>("Dual.HyperplaneCuts.MaxPerIteration");
-    double rootsearchConstraintTolerance
-        = env->settings->getSetting<double>("Dual.ESH.Rootsearch.ConstraintTolerance");
-    double constraintMaxSelectionFactor
-        = env->settings->getSetting<double>("Dual.HyperplaneCuts.MaxConstraintFactor");
+    double rootsearchConstraintTolerance = env->settings->getSetting<double>("Dual.ESH.Rootsearch.ConstraintTolerance");
+    double constraintMaxSelectionFactor = env->settings->getSetting<double>("Dual.HyperplaneCuts.MaxConstraintFactor");
 
     // Contains boolean array that indicates if a constraint has been added or not
     std::vector<bool> hyperplaneAddedToConstraint(
@@ -289,20 +286,44 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
 
             if(externalConstraintValue.normalizedValue >= 0)
             {
-                if(env->dualSolver->hasHyperplaneBeenAdded(
-                       externalPoint, externalConstraintValue.constraint->getIndex()))
+                auto& solutionPoint = solPoints.at(solutionPtIndex).point;
+                auto constraintIndex = externalConstraintValue.constraint->getIndex();
+
+                auto hyperplanePoint
+                    = selectHyperplanePoint(externalPoint, solutionPoint, externalConstraintValue.constraint.get());
+
+                // The rootsearch returns the same point over and over when it cannot make progress, e.g. when the
+                // interior point is not strictly interior, and the hyperplane there has then already been added. The
+                // solution point is used instead whenever the constraint is violated in it, since the linearization
+                // in a point always cuts off that point, and the solution point is a new one as long as the dual
+                // problem changes. Without this nothing is added, and the solution stops with the message that no
+                // additional dual cuts can be added although the constraint is violated by a large amount.
+                if(env->dualSolver->hasHyperplaneBeenAdded(hyperplanePoint, constraintIndex))
                 {
-                    env->output->outputDebug(fmt::format("         Hyperplane already added for constraint {} "
-                                                         "in this point.",
-                        externalConstraintValue.constraint->name));
-                    numberOfValuesAlreadyCut++;
-                    continue;
+                    auto valueInSolutionPoint
+                        = externalConstraintValue.constraint->calculateNumericValue(solutionPoint);
+
+                    if(valueInSolutionPoint.normalizedValue <= 0
+                        || env->dualSolver->hasHyperplaneBeenAdded(solutionPoint, constraintIndex))
+                    {
+                        env->output->outputDebug(fmt::format("         Hyperplane already added for constraint {} "
+                                                             "in this point.",
+                            externalConstraintValue.constraint->name));
+                        numberOfValuesAlreadyCut++;
+                        continue;
+                    }
+
+                    env->output->outputDebug(
+                        fmt::format("         Hyperplane already added for constraint {} in the point from the "
+                                    "rootsearch, using the solution point, where the deviation is {}, instead.",
+                            externalConstraintValue.constraint->name, valueInSolutionPoint.normalizedValue));
+
+                    hyperplanePoint = solutionPoint;
                 }
 
                 auto hyperplane = std::make_shared<ConstraintHyperplane>();
                 hyperplane->sourceConstraint = externalConstraintValue.constraint;
-                hyperplane->generatedPoint = selectHyperplanePoint(
-                    externalPoint, solPoints.at(solutionPtIndex).point, externalConstraintValue.constraint.get());
+                hyperplane->generatedPoint = hyperplanePoint;
                 hyperplane->isGlobal = true; // Only convex constraints used so far
 
                 if(solPoints.at(solutionPtIndex).isRelaxedPoint)
@@ -374,20 +395,44 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
 
                 if(externalConstraintValue.normalizedValue >= 0)
                 {
-                    if(env->dualSolver->hasHyperplaneBeenAdded(
-                           externalPoint, externalConstraintValue.constraint->getIndex()))
+                    auto& solutionPoint = solPoints.at(solutionPtIndex).point;
+                    auto constraintIndex = externalConstraintValue.constraint->getIndex();
+
+                    auto hyperplanePoint
+                        = selectHyperplanePoint(externalPoint, solutionPoint, externalConstraintValue.constraint.get());
+
+                    // The rootsearch returns the same point over and over when it cannot make progress, e.g. when
+                    // the interior point is not strictly interior, and the hyperplane there has then already been
+                    // added. The solution point is used instead whenever the constraint is violated in it, since the
+                    // linearization in a point always cuts off that point, and the solution point is a new one as
+                    // long as the dual problem changes. Without this nothing is added and the solution stops with
+                    // the message that no additional dual cuts can be added, although the constraint is violated.
+                    if(env->dualSolver->hasHyperplaneBeenAdded(hyperplanePoint, constraintIndex))
                     {
-                        env->output->outputDebug(fmt::format("         Hyperplane already added for constraint {} "
-                                                             "in this point.",
-                            externalConstraintValue.constraint->name));
-                        numberOfValuesAlreadyCut++;
-                        continue;
+                        auto valueInSolutionPoint
+                            = externalConstraintValue.constraint->calculateNumericValue(solutionPoint);
+
+                        if(valueInSolutionPoint.normalizedValue <= 0
+                            || env->dualSolver->hasHyperplaneBeenAdded(solutionPoint, constraintIndex))
+                        {
+                            env->output->outputDebug(fmt::format("         Hyperplane already added for constraint {} "
+                                                                 "in this point.",
+                                externalConstraintValue.constraint->name));
+                            numberOfValuesAlreadyCut++;
+                            continue;
+                        }
+
+                        env->output->outputDebug(fmt::format(
+                            "         Hyperplane already added for constraint {} in the point from the rootsearch, "
+                            "using the solution point, where the deviation is {}, instead.",
+                            externalConstraintValue.constraint->name, valueInSolutionPoint.normalizedValue));
+
+                        hyperplanePoint = solutionPoint;
                     }
 
                     auto hyperplane = std::make_shared<ConstraintHyperplane>();
                     hyperplane->sourceConstraint = externalConstraintValue.constraint;
-                    hyperplane->generatedPoint = selectHyperplanePoint(
-                        externalPoint, solPoints.at(solutionPtIndex).point, externalConstraintValue.constraint.get());
+                    hyperplane->generatedPoint = hyperplanePoint;
                     hyperplane->isGlobal
                         = (externalConstraintValue.constraint->properties.convexity <= E_Convexity::Convex);
 
@@ -610,9 +655,8 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
 
                         auto hyperplane = std::make_shared<ConstraintHyperplane>();
                         hyperplane->sourceConstraint = externalConstraintValue.constraint;
-                        hyperplane->generatedPoint = selectHyperplanePoint(
-                            externalPoint, solPoints.at(solutionPtIndex).point,
-                            externalConstraintValue.constraint.get());
+                        hyperplane->generatedPoint = selectHyperplanePoint(externalPoint,
+                            solPoints.at(solutionPtIndex).point, externalConstraintValue.constraint.get());
                         hyperplane->isGlobal = (NCV.constraint->properties.convexity <= E_Convexity::Convex);
 
                         if(solPoints.at(solutionPtIndex).isRelaxedPoint)
