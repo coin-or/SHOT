@@ -37,19 +37,34 @@ TaskSelectHyperplanesESH::~TaskSelectHyperplanesESH() = default;
 void TaskSelectHyperplanesESH::run() { this->run(env->results->getPreviousIteration()->solutionPoints); }
 
 VectorDouble TaskSelectHyperplanesESH::selectHyperplanePoint(
-    const VectorDouble& externalPoint, const VectorDouble& solutionPoint, NumericConstraint* constraint)
+    const VectorDouble& externalPoint, const VectorDouble& solutionPoint, const NumericConstraintPtr& constraint)
 {
     // The linearization of a constraint in a point only cuts off a solution point on the other side of it. The
     // root search can return a point where this is not the case, e.g. when the interior point is not strictly
     // interior, and the hyperplane then makes no progress: the same solution point is returned again, and with it
     // the same hyperplane. Since the linearization in the solution point itself cuts the point off whenever the
     // constraint is violated there, that point is used instead.
-    auto nonlinearConstraint = dynamic_cast<NonlinearConstraint*>(constraint);
+    auto nonlinearConstraint = std::dynamic_pointer_cast<NonlinearConstraint>(constraint);
 
     if(!nonlinearConstraint)
         return (externalPoint);
 
     auto constraintValue = nonlinearConstraint->calculateNumericValue(externalPoint);
+
+    // A convex constraint is infinite outside its domain, e.g. a perspective whose denominator is zero, and
+    // neither its value nor its gradient can be used for a hyperplane there. The point is then moved toward one
+    // where the constraint is finite, and the hyperplane generated there still cuts the point off.
+    if(!std::isfinite(constraintValue.normalizedValue))
+    {
+        if(auto point = env->dualSolver->getHyperplaneGenerationPoint(externalPoint, constraint))
+        {
+            env->output->outputDebug("         The constraint is not finite in the point from the root search, "
+                                     "using a point where it is finite instead.");
+            return (*point);
+        }
+
+        return (externalPoint);
+    }
 
     // The hyperplane is generated for the side of the constraint that is violated, and it is the negated function
     // that is linearized for the lower bound, the same way as when the hyperplane is created for the dual problem
@@ -69,6 +84,17 @@ VectorDouble TaskSelectHyperplanesESH::selectHyperplanePoint(
 
     env->output->outputDebug("         Hyperplane in the point from the root search does not cut off the solution "
                              "point, using the solution point instead.");
+
+    // The solution point can be the one the constraint is not finite in, e.g. when the root search could not be
+    // performed and the solution point was used as the external point as well
+    if(auto value = nonlinearConstraint->calculateNumericValue(solutionPoint);
+        !std::isfinite(value.normalizedValue))
+    {
+        if(auto point = env->dualSolver->getHyperplaneGenerationPoint(solutionPoint, constraint))
+            return (*point);
+
+        return (externalPoint);
+    }
 
     return (solutionPoint);
 }
@@ -290,7 +316,7 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
                 auto constraintIndex = externalConstraintValue.constraint->getIndex();
 
                 auto hyperplanePoint
-                    = selectHyperplanePoint(externalPoint, solutionPoint, externalConstraintValue.constraint.get());
+                    = selectHyperplanePoint(externalPoint, solutionPoint, externalConstraintValue.constraint);
 
                 // The rootsearch returns the same point over and over when it cannot make progress, e.g. when the
                 // interior point is not strictly interior, and the hyperplane there has then already been added. The
@@ -399,7 +425,7 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
                     auto constraintIndex = externalConstraintValue.constraint->getIndex();
 
                     auto hyperplanePoint
-                        = selectHyperplanePoint(externalPoint, solutionPoint, externalConstraintValue.constraint.get());
+                        = selectHyperplanePoint(externalPoint, solutionPoint, externalConstraintValue.constraint);
 
                     // The rootsearch returns the same point over and over when it cannot make progress, e.g. when
                     // the interior point is not strictly interior, and the hyperplane there has then already been
@@ -538,7 +564,7 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
                     auto hyperplane = std::make_shared<ConstraintHyperplane>();
                     hyperplane->sourceConstraint = externalConstraintValue.constraint;
                     hyperplane->generatedPoint = selectHyperplanePoint(
-                        externalPoint, solPoints.at(solutionPtIndex).point, externalConstraintValue.constraint.get());
+                        externalPoint, solPoints.at(solutionPtIndex).point, externalConstraintValue.constraint);
                     hyperplane->isGlobal
                         = (externalConstraintValue.constraint->properties.convexity == E_Convexity::Convex);
 
@@ -656,7 +682,7 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
                         auto hyperplane = std::make_shared<ConstraintHyperplane>();
                         hyperplane->sourceConstraint = externalConstraintValue.constraint;
                         hyperplane->generatedPoint = selectHyperplanePoint(externalPoint,
-                            solPoints.at(solutionPtIndex).point, externalConstraintValue.constraint.get());
+                            solPoints.at(solutionPtIndex).point, externalConstraintValue.constraint);
                         hyperplane->isGlobal = (NCV.constraint->properties.convexity <= E_Convexity::Convex);
 
                         if(solPoints.at(solutionPtIndex).isRelaxedPoint)

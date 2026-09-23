@@ -119,9 +119,22 @@ void TaskSelectHyperplanesECP::run(std::vector<SolutionPoint> solPoints)
         int i = std::get<0>(values);
         auto NCV = std::get<1>(values);
 
+        // The constraint can be infinite in the solution point, e.g. a perspective outside its domain, and no
+        // hyperplane can then be generated there. A point a short distance toward one where the constraint is
+        // finite is used instead, which still cuts the solution point off.
+        auto generationPoint = env->dualSolver->getHyperplaneGenerationPoint(solPoints.at(i).point, NCV.constraint);
+
+        if(!generationPoint)
+        {
+            env->output->outputDebug(
+                fmt::format("         No point found where a hyperplane can be generated for constraint {}.",
+                    NCV.constraint->name));
+            continue;
+        }
+
         auto hyperplane = std::make_shared<ConstraintHyperplane>();
         hyperplane->sourceConstraint = NCV.constraint;
-        hyperplane->generatedPoint = solPoints.at(i).point;
+        hyperplane->generatedPoint = *generationPoint;
         hyperplane->isGlobal = (NCV.constraint->properties.convexity <= E_Convexity::Convex);
 
         if(solPoints.at(i).isRelaxedPoint)
@@ -168,9 +181,23 @@ void TaskSelectHyperplanesECP::run(std::vector<SolutionPoint> solPoints)
             int i = std::get<0>(values);
             auto NCV = std::get<1>(values);
 
+            // As for the convex constraints, no hyperplane can be generated in a point where the constraint is
+            // not finite, and the point is then moved toward one where it is. The check below that the hyperplane
+            // does not cut away a primal solution is made for the hyperplane of the point that is used.
+            auto generationPoint
+                = env->dualSolver->getHyperplaneGenerationPoint(solPoints.at(i).point, NCV.constraint);
+
+            if(!generationPoint)
+            {
+                env->output->outputDebug(
+                    fmt::format("         No point found where a hyperplane can be generated for constraint {}.",
+                        NCV.constraint->name));
+                continue;
+            }
+
             auto hyperplane = std::make_shared<ConstraintHyperplane>();
             hyperplane->sourceConstraint = NCV.constraint;
-            hyperplane->generatedPoint = solPoints.at(i).point;
+            hyperplane->generatedPoint = *generationPoint;
             hyperplane->isGlobal = (NCV.constraint->properties.convexity <= E_Convexity::Convex);
 
             if(solPoints.at(i).isRelaxedPoint)

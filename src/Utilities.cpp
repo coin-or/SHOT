@@ -284,6 +284,40 @@ VectorDouble L2Norms(const std::vector<VectorDouble>& ptsA, const VectorDouble& 
     return (norms);
 }
 
+VectorDouble getPointOnSegment(const VectorDouble& fromPoint, const VectorDouble& toPoint, double fraction)
+{
+    assert(fromPoint.size() == toPoint.size());
+
+    VectorDouble point;
+    point.reserve(fromPoint.size());
+
+    for(size_t i = 0; i < fromPoint.size(); i++)
+        point.push_back((1.0 - fraction) * fromPoint.at(i) + fraction * toPoint.at(i));
+
+    return (point);
+}
+
+VectorDouble calculateBoxCenterPoint(
+    const VectorDouble& lowerBounds, const VectorDouble& upperBounds, double maxMagnitude)
+{
+    assert(lowerBounds.size() == upperBounds.size());
+
+    VectorDouble point;
+    point.reserve(lowerBounds.size());
+
+    for(size_t i = 0; i < lowerBounds.size(); i++)
+    {
+        double lowerBound = std::max(lowerBounds.at(i), -maxMagnitude);
+        double upperBound = std::min(upperBounds.at(i), maxMagnitude);
+
+        // The bounds can be in the same direction, e.g. when a variable is fixed far away or bounded below by a
+        // value larger than the magnitude, and the center is then the bound that is closest to the origin
+        point.push_back((lowerBound <= upperBound) ? 0.5 * (lowerBound + upperBound) : lowerBound);
+    }
+
+    return (point);
+}
+
 VectorDouble calculateCenterPoint(const std::vector<VectorDouble>& pts)
 {
     int ptSize = pts.at(0).size();

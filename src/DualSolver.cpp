@@ -392,6 +392,102 @@ bool DualSolver::isHyperplaneInGeneratedList(const std::pair<double, double>& ha
     return (false);
 }
 
+std::optional<std::pair<double, double>> DualSolver::evaluateHyperplaneTerms(
+    const VectorDouble& generationPoint, const VectorDouble& pointToCutOff, const NumericConstraintPtr& constraint)
+{
+    auto hyperplane = std::make_shared<ConstraintHyperplane>();
+    hyperplane->sourceConstraint = constraint;
+    hyperplane->generatedPoint = generationPoint;
+    hyperplane->isGlobal = (constraint->properties.convexity <= E_Convexity::Convex);
+
+    auto terms = MIPSolver->createHyperplaneTerms(hyperplane);
+
+    if(!terms)
+        return (std::nullopt);
+
+    double magnitude = std::abs(terms->second);
+    double valueInPointToCutOff = terms->second;
+
+    for(auto& E : terms->first)
+    {
+        magnitude = std::max(magnitude, std::abs(E.second));
+
+        // The objective variable of the dual problem is after the variables of the problem, and the point does not
+        // contain a value for it, so its term is left out of the value. A hyperplane for a constraint does not
+        // contain it, and the value is only used to see whether the point is cut off.
+        if(E.first < (int)pointToCutOff.size())
+            valueInPointToCutOff += E.second * pointToCutOff.at(E.first);
+    }
+
+    return (std::make_pair(magnitude, valueInPointToCutOff));
+}
+
+std::vector<VectorDouble> DualSolver::getFinitePointCandidates()
+{
+    std::vector<VectorDouble> candidates;
+
+    for(auto& IP : interiorPts)
+        candidates.push_back(IP->point);
+
+    if(env->results->hasPrimalSolution())
+        candidates.push_back(env->results->primalSolution);
+
+    candidates.push_back(Utilities::calculateBoxCenterPoint(
+        env->reformulatedProblem->getVariableLowerBounds(), env->reformulatedProblem->getVariableUpperBounds()));
+
+    return (candidates);
+}
+
+std::optional<VectorDouble> DualSolver::getHyperplaneGenerationPoint(
+    const VectorDouble& point, const NumericConstraintPtr& constraint)
+{
+    // The largest magnitude accepted of a hyperplane generated in a point that has been moved. A hyperplane whose
+    // largest value is above 1e9 is rescaled by MIPSolverBase::createHyperplane, so this keeps the generated
+    // constraint within a few orders of magnitude of the rest of the dual problem, where the MIP solvers behave.
+    const double maximumMagnitude = 1e6;
+    const double fractionMultiplier = 10.0;
+    const int maximumNumberOfTrials = 10;
+
+    if(auto terms = evaluateHyperplaneTerms(point, point, constraint); terms && std::isfinite(terms->first))
+        return (point);
+
+    double smallestFraction = env->settings->getSetting<double>("Dual.HyperplaneCuts.NonfinitePointRetreatFactor");
+    int constraintIndex = constraint->getIndex();
+
+    for(auto& target : getFinitePointCandidates())
+    {
+        if(target.size() != point.size())
+            continue;
+
+        std::optional<VectorDouble> firstFinitePoint;
+        double fraction = smallestFraction;
+
+        for(int i = 0; i < maximumNumberOfTrials && fraction <= 0.5; i++, fraction *= fractionMultiplier)
+        {
+            auto trialPoint = Utilities::getPointOnSegment(point, target, fraction);
+            auto terms = evaluateHyperplaneTerms(trialPoint, point, constraint);
+
+            // The constraint is still outside its domain in the point, or a hyperplane has already been generated
+            // there, which would only repeat a cut that did not help
+            if(!terms || !std::isfinite(terms->first) || hasHyperplaneBeenAdded(trialPoint, constraintIndex))
+                continue;
+
+            if(!firstFinitePoint)
+                firstFinitePoint = trialPoint;
+
+            // The hyperplanes get flatter the further away the point is, so the first one that is both usable by
+            // the MIP solver and cuts the point off is the tightest one of those
+            if(terms->first <= maximumMagnitude && terms->second > 0.0)
+                return (trialPoint);
+        }
+
+        if(firstFinitePoint)
+            return (firstFinitePoint);
+    }
+
+    return (std::nullopt);
+}
+
 bool DualSolver::hasHyperplaneBeenAdded(const VectorDouble& generatedPoint, int constraintIndex)
 {
     return (hasHyperplaneBeenAdded(calculateHashes(generatedPoint), constraintIndex));

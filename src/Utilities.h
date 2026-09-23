@@ -52,6 +52,16 @@ double L2Norm(const VectorDouble& ptA, const VectorDouble& ptB);
 VectorDouble L2Norms(const std::vector<VectorDouble>& ptsA, const VectorDouble& ptB);
 VectorDouble calculateCenterPoint(const std::vector<VectorDouble>& pts);
 
+// The point (1 - fraction) * fromPoint + fraction * toPoint, i.e. fromPoint for the fraction zero and toPoint
+// for the fraction one
+VectorDouble getPointOnSegment(const VectorDouble& fromPoint, const VectorDouble& toPoint, double fraction);
+
+// The center of the box given by the bounds, where a bound larger in magnitude than maxMagnitude is replaced by
+// it. A variable that is unbounded in the problem has been given an artificial bound of e.g. 1e20, and the center
+// of that box is of no use, so the center is kept where the values of the problem are.
+VectorDouble calculateBoxCenterPoint(
+    const VectorDouble& lowerBounds, const VectorDouble& upperBounds, double maxMagnitude = 1.0e4);
+
 int numDifferentRoundedSelectedElements(
     const VectorDouble& firstPt, const VectorDouble& secondPt, const VectorInteger& indexes);
 bool isDifferentRoundedSelectedElements(

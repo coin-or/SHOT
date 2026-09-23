@@ -13,6 +13,7 @@
 #include "Structs.h"
 
 #include <map>
+#include <optional>
 #include <utility>
 
 namespace SHOT
@@ -38,6 +39,14 @@ public:
     void addHyperplane(HyperplanePtr hyperplane);
     void addGeneratedHyperplane(const HyperplanePtr hyperplane);
     bool hasHyperplaneBeenAdded(const VectorDouble& generatedPoint, int constraintIndex);
+
+    // Where to generate the hyperplane for the constraint, which is the given point unless the constraint is not
+    // finite there: x^2/s is infinite where s is zero, although it is convex, and neither its value nor its
+    // gradient can be used. The point is then moved toward one where the constraint is finite, which a convex
+    // constraint allows, since its linearization is valid wherever it is defined. Returns nothing when there is
+    // no such point.
+    std::optional<VectorDouble> getHyperplaneGenerationPoint(
+        const VectorDouble& point, const NumericConstraintPtr& constraint);
 
     void addIntegerCut(IntegerCut integerCut);
     void addGeneratedIntegerCut(IntegerCut integerCut);
@@ -91,6 +100,15 @@ private:
     std::pair<double, double> calculateHyperplaneHashes(NumericHyperplanePtr hyperplane);
 
     bool hasHyperplaneBeenAdded(const std::pair<double, double>& hashes, int constraintIndex);
+
+    // The largest magnitude of the hyperplane in the point, and its value in the point to cut off, which is
+    // positive when that point is cut off. The terms are the ones the hyperplane is built from, so that a point
+    // accepted here is not rejected by MIPSolverBase::createHyperplane.
+    std::optional<std::pair<double, double>> evaluateHyperplaneTerms(
+        const VectorDouble& generationPoint, const VectorDouble& pointToCutOff, const NumericConstraintPtr& constraint);
+
+    // The points to move toward, the ones deepest inside the constraints first
+    std::vector<VectorDouble> getFinitePointCandidates();
 
     // Whether the hyperplane is in the list of generated ones, regardless of the solution strategy used
     bool isHyperplaneInGeneratedList(const std::pair<double, double>& hashes, int constraintIndex);

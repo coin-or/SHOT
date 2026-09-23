@@ -876,6 +876,11 @@ void Solver::initializeSettings()
     env->settings->createSetting("Dual.HyperplaneCuts.MaxPerIteration", 200,
         "Maximal number of hyperplanes to add per iteration", 0, SHOT_INT_MAX);
 
+    env->settings->createSetting("Dual.HyperplaneCuts.NonfinitePointRetreatFactor", 1e-3,
+        "The smallest fraction of the distance to a point where the constraint is finite that the point a "
+        "hyperplane is generated in is moved, when the constraint is not finite in it",
+        1e-12, 0.5);
+
     env->settings->createSetting("Dual.HyperplaneCuts.UseIntegerCuts", false,
         "Add integer cuts for infeasible integer-combinations for binary problems");
 

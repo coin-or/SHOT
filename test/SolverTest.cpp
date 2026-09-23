@@ -1327,6 +1327,56 @@ bool TestAMPLInitialValuesOutOfBounds()
 // Verifies that an ordinary solve is never reported as a user abort. The dual solver is interrupted by SHOT itself
 // whenever a termination criterion is met in a callback, and that interruption used to be indistinguishable from a
 // termination requested by the user.
+// The dual bound of a convex problem must be closed even when a constraint is infinite outside its domain. The
+// perspective x^2/z of nlp-cvx_204_010 is infinite where z is zero, and both the interior point search and the
+// generation of the hyperplanes ended up in such a point: no interior point was found, the hyperplanes generated
+// in the solution point had infinite coefficients and were thrown away, and the solve stopped with the dual bound
+// -2 for the optimum -1.207 and the message that no additional dual cuts can be added. Note that the instance
+// tests accept that outcome, since they only require the optimum to lie between the bounds.
+bool TestDualBoundOfPerspectiveConstraint()
+{
+    const double expectedObjective = -1.2071067837918394;
+
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Critical));
+    solver->updateSetting("Termination.TimeLimit", 30.0);
+
+    if(!solver->setProblem("data/instances/minlp_tests_jl/nlp-cvx_204_010.jl.nl"))
+    {
+        std::cout << "Could not set problem!\n";
+        return (false);
+    }
+
+    if(!solver->solveProblem())
+    {
+        std::cout << "Error while solving problem\n";
+        return (false);
+    }
+
+    if(env->results->terminationReason != E_TerminationReason::AbsoluteGap
+        && env->results->terminationReason != E_TerminationReason::RelativeGap)
+    {
+        std::cout << "The objective gap was not closed: " << env->results->terminationReasonDescription << '\n';
+        return (false);
+    }
+
+    double primalBound = solver->getPrimalBound();
+    double dualBound = solver->getGlobalDualBound();
+
+    std::cout << "  Objective bounds are [" << dualBound << ", " << primalBound << "], the optimum is "
+              << expectedObjective << '\n';
+
+    if(std::abs(primalBound - expectedObjective) > 1e-2 || std::abs(dualBound - expectedObjective) > 1e-2)
+    {
+        std::cout << "The bounds do not agree with the optimum.\n";
+        return (false);
+    }
+
+    return (true);
+}
+
 bool TestTerminationReasonOfOrdinarySolve()
 {
     auto [solver, env] = MakeEx1223bSolver();
@@ -1528,6 +1578,13 @@ int SolverTest(int argc, char* argv[])
         std::cout << "Starting test for constraint classes with fixed variables (osil format)" << std::endl;
         passed = TestConstraintClassesForFixedVariables("data/fixedvars.osil");
         std::cout << "Finished test for constraint classes with fixed variables (osil format)." << std::endl;
+        break;
+    case 17:
+        std::cout << "Starting test for the dual bound of a constraint that is infinite outside its domain"
+                  << std::endl;
+        passed = TestDualBoundOfPerspectiveConstraint();
+        std::cout << "Finished test for the dual bound of a constraint that is infinite outside its domain."
+                  << std::endl;
         break;
     default:
         passed = false;
