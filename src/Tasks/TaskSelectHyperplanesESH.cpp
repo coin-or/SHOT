@@ -551,8 +551,13 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
 
                 if(externalConstraintValue.normalizedValue >= 0)
                 {
+                    // The check is made for the point the hyperplane is generated in, which is not always the
+                    // point from the root search
+                    auto hyperplanePoint = selectHyperplanePoint(
+                        externalPoint, solPoints.at(solutionPtIndex).point, externalConstraintValue.constraint);
+
                     if(env->dualSolver->hasHyperplaneBeenAdded(
-                           externalPoint, externalConstraintValue.constraint->getIndex()))
+                           hyperplanePoint, externalConstraintValue.constraint->getIndex()))
                     {
                         env->output->outputDebug(fmt::format("         Hyperplane already added for constraint {} "
                                                              "in this point.",
@@ -563,8 +568,7 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
 
                     auto hyperplane = std::make_shared<ConstraintHyperplane>();
                     hyperplane->sourceConstraint = externalConstraintValue.constraint;
-                    hyperplane->generatedPoint = selectHyperplanePoint(
-                        externalPoint, solPoints.at(solutionPtIndex).point, externalConstraintValue.constraint);
+                    hyperplane->generatedPoint = hyperplanePoint;
                     hyperplane->isGlobal
                         = (externalConstraintValue.constraint->properties.convexity == E_Convexity::Convex);
 
@@ -669,8 +673,13 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
 
                     if(externalConstraintValue.normalizedValue >= 0)
                     {
+                        // The check is made for the point the hyperplane is generated in, which is not always the
+                        // point from the root search
+                        auto hyperplanePoint = selectHyperplanePoint(externalPoint,
+                            solPoints.at(solutionPtIndex).point, externalConstraintValue.constraint);
+
                         if(env->dualSolver->hasHyperplaneBeenAdded(
-                               externalPoint, externalConstraintValue.constraint->getIndex()))
+                               hyperplanePoint, externalConstraintValue.constraint->getIndex()))
                         {
                             env->output->outputTrace(fmt::format("         Hyperplane already added for constraint {} "
                                                                  "in this point.",
@@ -681,8 +690,7 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
 
                         auto hyperplane = std::make_shared<ConstraintHyperplane>();
                         hyperplane->sourceConstraint = externalConstraintValue.constraint;
-                        hyperplane->generatedPoint = selectHyperplanePoint(externalPoint,
-                            solPoints.at(solutionPtIndex).point, externalConstraintValue.constraint);
+                        hyperplane->generatedPoint = hyperplanePoint;
                         hyperplane->isGlobal = (NCV.constraint->properties.convexity <= E_Convexity::Convex);
 
                         if(solPoints.at(solutionPtIndex).isRelaxedPoint)
