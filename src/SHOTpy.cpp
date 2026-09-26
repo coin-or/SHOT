@@ -657,20 +657,101 @@ PYBIND11_MODULE(SHOTpy, m)
     // ===== LinearTerms Collection =====
     py::class_<LinearTerms>(m, "LinearTerms")
         .def(py::init<>())
-        .def("add", py::overload_cast<LinearTermPtr>(&LinearTerms::add))
-        .def("add", py::overload_cast<const LinearTerms&>(&LinearTerms::add))
+        // Creating the whole container at once is what a problem of any size should use. The terms are taken as they
+        // are here, and merged in one pass when the container is given to a constraint or an objective function
+        .def(py::init<std::vector<LinearTermPtr>>(), py::arg("terms"))
+        .def(py::init(
+                 [](const VectorDouble& coefficients, const std::vector<VariablePtr>& variables)
+                 {
+                     if(coefficients.size() != variables.size())
+                         throw py::value_error("The number of coefficients and the number of variables must be equal");
+
+                     std::vector<LinearTermPtr> terms;
+                     terms.reserve(coefficients.size());
+
+                     for(size_t i = 0; i < coefficients.size(); i++)
+                         terms.push_back(std::make_shared<LinearTerm>(coefficients[i], variables[i]));
+
+                     return LinearTerms(std::move(terms));
+                 }),
+            py::arg("coefficients"), py::arg("variables"),
+            "Create the terms from a list of coefficients and a list of variables, without a Python object per term")
+        .def("add", py::overload_cast<LinearTermPtr>(&LinearTerms::add), py::arg("term"),
+            "Add a single term, merging it with an existing term of the same variable. All existing terms are "
+            "searched, so adding T terms one at a time is quadratic in T: build the container from a list instead")
+        .def("add", py::overload_cast<const LinearTerms&>(&LinearTerms::add), py::arg("terms"),
+            "Add all the terms of another container at once, which is how a large number of terms is added")
+        .def(
+            "append", [](LinearTerms& self, LinearTermPtr term) { self.push_back(term); }, py::arg("term"),
+            "Append a term without merging it with an existing term of the same variable")
+        .def(
+            "extend",
+            [](LinearTerms& self, const std::vector<LinearTermPtr>& terms)
+            {
+                self.reserve(self.size() + terms.size());
+                for(auto& T : terms)
+                    self.push_back(T);
+            },
+            py::arg("terms"), "Append the terms of a list without merging them")
+        .def(
+            "reserve", [](LinearTerms& self, size_t size) { self.reserve(size); }, py::arg("size"),
+            "Reserve room for the given total number of terms")
         .def("size", [](LinearTerms& self) { return self.size(); })
         .def("__len__", [](LinearTerms& self) { return self.size(); })
         .def("__getitem__", [](LinearTerms& self, size_t i) { return self[i]; });
 
+    py::implicitly_convertible<py::list, LinearTerms>();
+
     // ===== QuadraticTerms Collection =====
     py::class_<QuadraticTerms>(m, "QuadraticTerms")
         .def(py::init<>())
-        .def("add", py::overload_cast<QuadraticTermPtr>(&QuadraticTerms::add))
-        .def("add", py::overload_cast<const QuadraticTerms&>(&QuadraticTerms::add))
+        // Creating the whole container at once is what a problem of any size should use. The terms are taken as they
+        // are here, and merged in one pass when the container is given to a constraint or an objective function
+        .def(py::init<std::vector<QuadraticTermPtr>>(), py::arg("terms"))
+        .def(py::init(
+                 [](const VectorDouble& coefficients, const std::vector<VariablePtr>& firstVariables,
+                     const std::vector<VariablePtr>& secondVariables)
+                 {
+                     if(coefficients.size() != firstVariables.size() || coefficients.size() != secondVariables.size())
+                         throw py::value_error("The number of coefficients and the numbers of variables must be equal");
+
+                     std::vector<QuadraticTermPtr> terms;
+                     terms.reserve(coefficients.size());
+
+                     for(size_t i = 0; i < coefficients.size(); i++)
+                         terms.push_back(
+                             std::make_shared<QuadraticTerm>(coefficients[i], firstVariables[i], secondVariables[i]));
+
+                     return QuadraticTerms(std::move(terms));
+                 }),
+            py::arg("coefficients"), py::arg("firstVariables"), py::arg("secondVariables"),
+            "Create the terms from a list of coefficients and two lists of variables, without a Python object per "
+            "term")
+        .def("add", py::overload_cast<QuadraticTermPtr>(&QuadraticTerms::add), py::arg("term"),
+            "Add a single term. The terms are not merged here, since searching all terms for every added term is "
+            "quadratic in the number of terms")
+        .def("add", py::overload_cast<const QuadraticTerms&>(&QuadraticTerms::add), py::arg("terms"),
+            "Add all the terms of another container at once, which is how a large number of terms is added")
+        .def(
+            "append", [](QuadraticTerms& self, QuadraticTermPtr term) { self.push_back(term); }, py::arg("term"),
+            "Append a term without merging it with an existing term of the same variables")
+        .def(
+            "extend",
+            [](QuadraticTerms& self, const std::vector<QuadraticTermPtr>& terms)
+            {
+                self.reserve(self.size() + terms.size());
+                for(auto& T : terms)
+                    self.push_back(T);
+            },
+            py::arg("terms"), "Append the terms of a list without merging them")
+        .def(
+            "reserve", [](QuadraticTerms& self, size_t size) { self.reserve(size); }, py::arg("size"),
+            "Reserve room for the given total number of terms")
         .def("size", [](QuadraticTerms& self) { return self.size(); })
         .def("__len__", [](QuadraticTerms& self) { return self.size(); })
         .def("__getitem__", [](QuadraticTerms& self, size_t i) { return self[i]; });
+
+    py::implicitly_convertible<py::list, QuadraticTerms>();
 
     // ===== SignomialElement Class =====
     py::class_<SignomialElement, std::shared_ptr<SignomialElement>>(m, "SignomialElement")
@@ -736,11 +817,31 @@ PYBIND11_MODULE(SHOTpy, m)
     // ===== SignomialTerms Collection =====
     py::class_<SignomialTerms>(m, "SignomialTerms")
         .def(py::init<>())
-        .def("add", py::overload_cast<SignomialTermPtr>(&SignomialTerms::add))
-        .def("add", py::overload_cast<const SignomialTerms&>(&SignomialTerms::add))
+        // Creating the whole container at once is what a problem of any size should use
+        .def(py::init<std::vector<SignomialTermPtr>>(), py::arg("terms"))
+        .def("add", py::overload_cast<SignomialTermPtr>(&SignomialTerms::add), py::arg("term"), "Add a single term")
+        .def("add", py::overload_cast<const SignomialTerms&>(&SignomialTerms::add), py::arg("terms"),
+            "Add all the terms of another container at once, which is how a large number of terms is added")
+        .def(
+            "append", [](SignomialTerms& self, SignomialTermPtr term) { self.push_back(term); }, py::arg("term"),
+            "Append a term without merging it with an existing term of the same variables")
+        .def(
+            "extend",
+            [](SignomialTerms& self, const std::vector<SignomialTermPtr>& terms)
+            {
+                self.reserve(self.size() + terms.size());
+                for(auto& T : terms)
+                    self.push_back(T);
+            },
+            py::arg("terms"), "Append the terms of a list without merging them")
+        .def(
+            "reserve", [](SignomialTerms& self, size_t size) { self.reserve(size); }, py::arg("size"),
+            "Reserve room for the given total number of terms")
         .def("size", [](SignomialTerms& self) { return self.size(); })
         .def("__len__", [](SignomialTerms& self) { return self.size(); })
         .def("__getitem__", [](SignomialTerms& self, size_t i) { return self[i]; });
+
+    py::implicitly_convertible<py::list, SignomialTerms>();
 
     // ===== MonomialTerm Class =====
     // Note: MonomialTerm uses Variables (each variable has implicit power 1)
@@ -785,11 +886,31 @@ PYBIND11_MODULE(SHOTpy, m)
     // ===== MonomialTerms Collection =====
     py::class_<MonomialTerms>(m, "MonomialTerms")
         .def(py::init<>())
-        .def("add", py::overload_cast<MonomialTermPtr>(&MonomialTerms::add))
-        .def("add", py::overload_cast<const MonomialTerms&>(&MonomialTerms::add))
+        // Creating the whole container at once is what a problem of any size should use
+        .def(py::init<std::vector<MonomialTermPtr>>(), py::arg("terms"))
+        .def("add", py::overload_cast<MonomialTermPtr>(&MonomialTerms::add), py::arg("term"), "Add a single term")
+        .def("add", py::overload_cast<const MonomialTerms&>(&MonomialTerms::add), py::arg("terms"),
+            "Add all the terms of another container at once, which is how a large number of terms is added")
+        .def(
+            "append", [](MonomialTerms& self, MonomialTermPtr term) { self.push_back(term); }, py::arg("term"),
+            "Append a term without merging it with an existing term of the same variables")
+        .def(
+            "extend",
+            [](MonomialTerms& self, const std::vector<MonomialTermPtr>& terms)
+            {
+                self.reserve(self.size() + terms.size());
+                for(auto& T : terms)
+                    self.push_back(T);
+            },
+            py::arg("terms"), "Append the terms of a list without merging them")
+        .def(
+            "reserve", [](MonomialTerms& self, size_t size) { self.reserve(size); }, py::arg("size"),
+            "Reserve room for the given total number of terms")
         .def("size", [](MonomialTerms& self) { return self.size(); })
         .def("__len__", [](MonomialTerms& self) { return self.size(); })
         .def("__getitem__", [](MonomialTerms& self, size_t i) { return self[i]; });
+
+    py::implicitly_convertible<py::list, MonomialTerms>();
 
     // ===== ConstraintProperties Struct =====
     py::class_<ConstraintProperties>(m, "ConstraintProperties")
@@ -1132,6 +1253,16 @@ PYBIND11_MODULE(SHOTpy, m)
             "addConstraint", [](Problem& self, LinearConstraintPtr c) { self.add(c); }, py::arg("constraint"))
         .def(
             "addConstraint", [](Problem& self, NumericConstraintPtr c) { self.add(c); }, py::arg("constraint"))
+        // Problem::add(NumericConstraintPtr) dispatches on the properties of the constraint, so one overload takes
+        // every kind. Adding a constraint is constant time, so this only saves the calls across the binding
+        .def(
+            "addConstraints",
+            [](Problem& self, const std::vector<NumericConstraintPtr>& constraints)
+            {
+                for(auto& C : constraints)
+                    self.add(C);
+            },
+            py::arg("constraints"), "Add all the constraints of a list")
         .def(
             "addSpecialOrderedSet", [](Problem& self, SpecialOrderedSetPtr sos) { self.add(sos); }, py::arg("sos"))
         // Order matters for pybind11 overload resolution - most specific types first
@@ -1232,12 +1363,31 @@ PYBIND11_MODULE(SHOTpy, m)
     // ===== Variables Collection =====
     py::class_<Variables>(m, "Variables")
         .def(py::init<>())
+        // Without this, the container could not be filled from Python at all, which left Problem.addVariables
+        // unreachable. A plain list is converted to it, since Variables inherits std::vector privately
+        .def(py::init<std::vector<VariablePtr>>(), py::arg("variables"))
+        .def(
+            "append", [](Variables& self, VariablePtr variable) { self.push_back(variable); }, py::arg("variable"))
+        .def(
+            "extend",
+            [](Variables& self, const std::vector<VariablePtr>& variables)
+            {
+                self.reserve(self.size() + variables.size());
+                for(auto& V : variables)
+                    self.push_back(V);
+            },
+            py::arg("variables"))
+        .def(
+            "reserve", [](Variables& self, size_t size) { self.reserve(size); }, py::arg("size"),
+            "Reserve room for the given total number of variables")
         .def("size", [](Variables& self) { return self.size(); })
         .def("__len__", [](Variables& self) { return self.size(); })
         .def("__getitem__", [](Variables& self, size_t i) { return self[i]; })
         .def(
             "__iter__", [](Variables& self) { return py::make_iterator(self.begin(), self.end()); },
             py::keep_alive<0, 1>());
+
+    py::implicitly_convertible<py::list, Variables>();
 
     // ===== Environment Class =====
     py::class_<Environment, std::shared_ptr<Environment>>(m, "Environment")
