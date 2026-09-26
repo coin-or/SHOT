@@ -1404,6 +1404,13 @@ bool ModelingSystemGAMS::copyQuadraticTerms(ProblemPtr destination)
             gmoGetRowQMat(modelingObject, i, variableOneIndexes, variableTwoIndexes, quadraticCoefficients);
 #endif
 
+            // The linear terms of the fixed variables are collected and added at once, since
+            // LinearConstraint::add(term) searches every term already in the constraint, which is quadratic in the
+            // number of terms of a row of mostly fixed variables. The constraint is kept from the loop, where the
+            // exception of a missing one is already handled
+            std::vector<LinearTermPtr> collectedLinearTerms;
+            LinearConstraintPtr linearConstraint;
+
             for(int j = 0; j < numQuadraticTerms; ++j)
             {
                 if(variableOneIndexes[j] == variableTwoIndexes[j])
@@ -1418,22 +1425,22 @@ bool ModelingSystemGAMS::copyQuadraticTerms(ProblemPtr destination)
                     bool firstVariableFixed = firstVariable->lowerBound == firstVariable->upperBound;
                     bool secondVariableFixed = secondVariable->lowerBound == secondVariable->upperBound;
 
+                    linearConstraint = std::static_pointer_cast<LinearConstraint>(destination->getConstraint(i));
+
                     if(firstVariableFixed && secondVariableFixed)
                     {
-                        (std::static_pointer_cast<LinearConstraint>(destination->getConstraint(i)))->constant
+                        linearConstraint->constant
                             += quadraticCoefficients[j] * firstVariable->lowerBound * secondVariable->lowerBound;
                     }
                     else if(firstVariableFixed)
                     {
-                        (std::static_pointer_cast<LinearConstraint>(destination->getConstraint(i)))
-                            ->add(std::make_shared<LinearTerm>(
-                                quadraticCoefficients[j] * firstVariable->lowerBound, secondVariable));
+                        collectedLinearTerms.push_back(std::make_shared<LinearTerm>(
+                            quadraticCoefficients[j] * firstVariable->lowerBound, secondVariable));
                     }
                     else if(secondVariableFixed)
                     {
-                        (std::static_pointer_cast<LinearConstraint>(destination->getConstraint(i)))
-                            ->add(std::make_shared<LinearTerm>(
-                                quadraticCoefficients[j] * secondVariable->lowerBound, firstVariable));
+                        collectedLinearTerms.push_back(std::make_shared<LinearTerm>(
+                            quadraticCoefficients[j] * secondVariable->lowerBound, firstVariable));
                     }
                     else
                     {
@@ -1459,6 +1466,9 @@ bool ModelingSystemGAMS::copyQuadraticTerms(ProblemPtr destination)
                     return (false);
                 }
             }
+
+            if(collectedLinearTerms.size() > 0)
+                linearConstraint->add(LinearTerms(std::move(collectedLinearTerms)));
 
             delete[] variableOneIndexes;
             delete[] variableTwoIndexes;
