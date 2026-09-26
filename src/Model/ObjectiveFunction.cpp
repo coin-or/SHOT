@@ -215,7 +215,9 @@ void LinearObjectiveFunction::add(const LinearTerms& terms)
 
 void LinearObjectiveFunction::add(LinearTermPtr term)
 {
-    linearTerms.push_back(term);
+    // Merges the term with an existing term of the same variable, as LinearConstraint::add does. push_back here would
+    // also leave the monotonicity of the terms as it was calculated before the term was added
+    linearTerms.add(term);
     properties.isValid = false;
 }
 

@@ -8362,9 +8362,7 @@ bool ModelTestBulkTermAdding()
 
     compareLinearTerms("the linear terms of a container", singleLinear, bulkLinear);
 
-    // LinearObjectiveFunction::add(term) pushes the term back without merging it, unlike the constraint, so the bulk
-    // add of an objective function gives fewer terms than its single adds. The values are the same either way, since
-    // duplicates are summed wherever the terms are used, but a change to this should be a deliberate one
+    // And the linear terms of an objective function, which merges them as the constraint does
     auto singleObjective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
 
     for(auto& T : makeLinearTerms())
@@ -8373,17 +8371,12 @@ bool ModelTestBulkTermAdding()
     auto bulkObjective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
     bulkObjective->add(LinearTerms(makeLinearTerms()));
 
-    VectorDouble point = { 1.0, 2.0, 3.0, 4.0 };
+    compareLinearTerms(
+        "the linear terms of an objective function", singleObjective->linearTerms, bulkObjective->linearTerms);
 
-    if(singleObjective->linearTerms.size() != 5 || bulkObjective->linearTerms.size() != 3
-        || singleObjective->linearTerms.calculate(point) != bulkObjective->linearTerms.calculate(point))
-    {
-        std::cout << "  FAILED: the objective function has " << singleObjective->linearTerms.size()
-                  << " terms of value " << singleObjective->linearTerms.calculate(point) << " one at a time and "
-                  << bulkObjective->linearTerms.size() << " of value " << bulkObjective->linearTerms.calculate(point)
-                  << " in bulk.\n";
-        passed = false;
-    }
+    // The objective function and the constraint must agree, since both merge
+    compareLinearTerms(
+        "the objective function against the constraint", singleConstraint->linearTerms, bulkObjective->linearTerms);
 
     // The quadratic terms are compared in the container, since QuadraticConstraint::add(term) does not merge
     QuadraticTerms singleQuadratic;
