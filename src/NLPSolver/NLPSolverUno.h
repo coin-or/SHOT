@@ -16,6 +16,7 @@
 #include <map>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace SHOT
 {
@@ -58,6 +59,12 @@ private:
        evaluation callback, so these are built in the constructor and then reused by every evaluation. */
     std::map<std::pair<int, int>, int> jacobianCounterPlacement;
     std::map<std::pair<int, int>, int> lagrangianHessianCounterPlacement;
+
+    /* The gradients of the linear constraints do not depend on the point, so they are calculated once and only
+       written into the value array by every Jacobian evaluation. Position in the value array and value. */
+    std::vector<std::pair<int, double>> constantJacobianElements;
+
+    void calculateConstantJacobianElements();
 
     int numberOfJacobianNonzeros = 0;
     int numberOfHessianNonzeros = 0;

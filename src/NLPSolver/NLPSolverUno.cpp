@@ -10,6 +10,7 @@
 
 #include "NLPSolverUno.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstring>
 #include <limits>
@@ -17,6 +18,7 @@
 
 #include "../Output.h"
 #include "../Settings.h"
+#include "../Timing.h"
 #include "../Utilities.h"
 
 #include "Uno_C_API.h"
@@ -222,7 +224,8 @@ void NLPSolverUno::createModel()
         for(auto& G : *C->getGradientSparsityPattern())
         {
             jacobianCounterPlacement.emplace(
-                std::make_pair(C->getIndex(), G->getIndex()), static_cast<int>(jacobianRows.size()));
+                std::make_pair(C->getIndex(), G->getIndex()),
+                static_cast<int>(jacobianRows.size()));
 
             jacobianRows.push_back(C->getIndex());
             jacobianColumns.push_back(G->getIndex());
@@ -245,7 +248,8 @@ void NLPSolverUno::createModel()
         assert(E.first->getIndex() <= E.second->getIndex());
 
         lagrangianHessianCounterPlacement.emplace(
-            std::make_pair(E.first->getIndex(), E.second->getIndex()), static_cast<int>(hessianRows.size()));
+            std::make_pair(E.first->getIndex(), E.second->getIndex()),
+            static_cast<int>(hessianRows.size()));
 
         hessianRows.push_back(E.first->getIndex());
         hessianColumns.push_back(E.second->getIndex());
@@ -258,7 +262,33 @@ void NLPSolverUno::createModel()
     uno_set_lagrangian_hessian(unoModel, numberOfHessianNonzeros, UNO_UPPER_TRIANGLE, hessianRows.data(),
         hessianColumns.data(), lagrangianHessianCallback);
 
+    calculateConstantJacobianElements();
+
     // Uno copies the bounds and the sparsity patterns, so the local arrays do not need to be kept alive.
+}
+
+/* The Jacobian of a linear constraint is the same in every point, so it is calculated once here and every evaluation
+   only writes the values into the array Uno is given. Requires jacobianCounterPlacement to be built. */
+void NLPSolverUno::calculateConstantJacobianElements()
+{
+    int numberOfVariables = sourceProblem->properties.numberOfVariables;
+
+    constantJacobianElements.clear();
+
+    VectorDouble emptyPoint(numberOfVariables, 0.0);
+
+    for(auto& C : sourceProblem->numericConstraints)
+    {
+        if(C->properties.classification != E_ConstraintClassification::Linear)
+            continue;
+
+        for(auto& G : C->calculateGradient(emptyPoint, false))
+        {
+            int location = jacobianCounterPlacement[std::make_pair(C->getIndex(), G.first->getIndex())];
+
+            constantJacobianElements.emplace_back(location, G.second);
+        }
+    }
 }
 
 void NLPSolverUno::setInitialSettings()
@@ -462,8 +492,19 @@ bool NLPSolverUno::evaluateJacobian(int numberOfVariables, int numberOfNonzeros,
 
     std::memset(values, 0, numberOfNonzeros * sizeof(double));
 
+    for(auto& E : constantJacobianElements)
+    {
+        assert(E.first < numberOfNonzeros);
+        assert(E.first >= 0);
+
+        values[E.first] += E.second;
+    }
+
     for(auto& C : sourceProblem->numericConstraints)
     {
+        if(C->properties.classification == E_ConstraintClassification::Linear)
+            continue;
+
         for(auto& G : C->calculateGradient(vectorPoint, false))
         {
             int location = jacobianCounterPlacement[std::make_pair(C->getIndex(), G.first->getIndex())];
@@ -487,10 +528,17 @@ bool NLPSolverUno::evaluateLagrangianHessian(int numberOfVariables, [[maybe_unus
 
     if(objectiveMultiplier != 0.0)
     {
-        for(auto& E : sourceProblem->objectiveFunction->calculateHessian(vectorPoint, false))
+        /* The Hessian of a quadratic function is the same in every point, and getConstantHessian gives the stored
+           one, so that nothing is calculated or copied for it here */
+        auto constantHessian = sourceProblem->objectiveFunction->getConstantHessian();
+        SparseVariableMatrix calculatedHessian;
+
+        if(!constantHessian)
+            calculatedHessian = sourceProblem->objectiveFunction->calculateHessian(vectorPoint, false);
+
+        for(auto& E : (constantHessian ? *constantHessian : calculatedHessian))
         {
-            int location = lagrangianHessianCounterPlacement[std::make_pair(
-                E.first.first->getIndex(), E.first.second->getIndex())];
+            int location = lagrangianHessianCounterPlacement[std::make_pair(E.first.first->getIndex(), E.first.second->getIndex())];
 
             assert(location < numberOfNonzeros);
             assert(location >= 0);
@@ -507,10 +555,15 @@ bool NLPSolverUno::evaluateLagrangianHessian(int numberOfVariables, [[maybe_unus
         if(multipliers[C->getIndex()] == 0.0)
             continue;
 
-        for(auto& E : C->calculateHessian(vectorPoint, false))
+        auto constantHessian = C->getConstantHessian();
+        SparseVariableMatrix calculatedHessian;
+
+        if(!constantHessian)
+            calculatedHessian = C->calculateHessian(vectorPoint, false);
+
+        for(auto& E : (constantHessian ? *constantHessian : calculatedHessian))
         {
-            int location = lagrangianHessianCounterPlacement[std::make_pair(
-                E.first.first->getIndex(), E.first.second->getIndex())];
+            int location = lagrangianHessianCounterPlacement[std::make_pair(E.first.first->getIndex(), E.first.second->getIndex())];
 
             assert(location < numberOfNonzeros);
             assert(location >= 0);
@@ -572,6 +625,14 @@ E_NLPSolutionStatus NLPSolverUno::solveProblemInstance()
     {
         pushBoundsToModel();
         pushStartingPointToModel();
+
+        /* The limit of a single solve is set once in setInitialSettings, but it can still be longer than the time
+           left of the overall limit, so it is capped here before every solve, as in the Ipopt interface. Uno rejects
+           a nonpositive limit, so it is kept positive. */
+        double timeLeft
+            = env->settings->getSetting<double>("Termination.TimeLimit") - env->timing->getElapsedTime("Total");
+        uno_set_solver_double_option(unoSolver, "time_limit",
+            std::max(std::min(env->settings->getSetting<double>("Primal.FixedInteger.TimeLimit"), timeLeft), 1e-5));
 
         uno_optimize(unoSolver, unoModel);
 
