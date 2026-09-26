@@ -2562,12 +2562,21 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint, double timeEnd
 
 std::ostream& operator<<(std::ostream& stream, const Problem& problem)
 {
-    if(problem.objectiveFunction->properties.isMinimize)
-        stream << "minimize:\n";
+    // A problem can be printed before an objective function has been set, e.g. while it is being built through the
+    // Python interface, where dereferencing it here is a crash in the interpreter
+    if(!problem.objectiveFunction)
+    {
+        stream << "no objective function\n\n";
+    }
     else
-        stream << "maximize:\n";
+    {
+        if(problem.objectiveFunction->properties.isMinimize)
+            stream << "minimize:\n";
+        else
+            stream << "maximize:\n";
 
-    stream << problem.objectiveFunction << "\n\n";
+        stream << problem.objectiveFunction << "\n\n";
+    }
 
     if(problem.numericConstraints.size() > 0)
         stream << "subject to:\n";
