@@ -77,6 +77,47 @@ cd coinbrew
 then point CMake at them with `-DCBC_DIR=<SHOT>/ThirdParty/Cbc
 -DIPOPT_DIR=<SHOT>/ThirdParty/Ipopt` (see section 3).
 
+#### Uno (optional)
+
+[Uno](https://github.com/cvanaret/Uno) is an alternative NLP solver for the
+fixed-integer primal heuristic. It is off by default and has to be built from
+source; there is no distribution package.
+
+Building Uno requires a **Fortran compiler** and BLAS/LAPACK. Beyond that, Uno
+needs at least one subproblem solver to be compiled into it, or it cannot solve
+constrained NLPs at all:
+
+* an **interior-point** method (the `ipopt` preset) needs MUMPS, HSL or SPRAL
+  SSIDS — note that MUMPS has to provide `dmumps_c.h`, which the MUMPS shipped
+  inside some Ipopt distributions does not;
+* an **SQP** method (the `filtersqp` preset) needs BQPD or HiGHS.
+
+Which of these is available matters for how much of SHOT's workload Uno can
+take on: HiGHS refuses negative curvature outright, so an Uno built with only
+HiGHS solves convex fixed NLPs but fails on the nonconvex ones that SHOT
+frequently produces. BQPD, or an interior-point build with MUMPS or HSL, is the
+better fit.
+
+Uno installs neither a CMake package configuration file nor a pkg-config file,
+so SHOT locates it with `misc/FindUno.cmake` and the `UNO_DIR` cache variable.
+A shared build is easiest, since a static `libuno.a` has to be linked together
+with BLAS/LAPACK and the Fortran runtime.
+
+```bash
+git clone https://github.com/cvanaret/Uno
+cmake -S Uno -B Uno/build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON \
+    -DBUILD_STATIC_LIBS=OFF -DCMAKE_INSTALL_PREFIX=<SHOT>/ThirdParty/Uno
+cmake --build Uno/build -j && cmake --install Uno/build
+```
+
+then configure SHOT with `-DHAS_UNO=on -DUNO_DIR=<SHOT>/ThirdParty/Uno`.
+
+If Uno reports `Found HIGHS` but then fails to compile with `'Highs.h' file not
+found`, pass `-DHIGHS_INCLUDE_DIR=<path to the HiGHS headers>` as well: Uno
+locates the HiGHS library and its headers independently. On macOS, a Homebrew
+GCC also needs `-DCMAKE_SHARED_LINKER_FLAGS=-L$(brew --prefix gcc)/lib/gcc/current`
+so that the linker finds `libgfortran`.
+
 ### macOS (Homebrew)
 
 ```bash
@@ -133,6 +174,7 @@ Key options (all `option(...)` declarations live at the top of the root
 | `HAS_GUROBI` | `ON` | Gurobi MIP solver |
 | `HAS_HIGHS` | `ON` | HiGHS MIP solver — like the others, optional; turn off with `-DHAS_HIGHS=off` (see section 1 re: `USE_EXTERNAL_HIGHS`) |
 | `HAS_IPOPT` | `ON` | Ipopt NLP solver |
+| `HAS_UNO` | `OFF` | Uno NLP solver (see section 2) — off by default because building Uno needs a Fortran compiler |
 | `HAS_GAMS` | `ON` | GAMS interface (modeling system + NLP solver) |
 | `HAS_AMPL` | `ON` | AMPL/ASL `.nl` file interface |
 | `HAS_PYTHON` | `OFF` | Build the `SHOTpy` Python bindings (needs Python3 dev headers; pybind11 comes from the submodule) |
