@@ -182,6 +182,11 @@ public:
             (*this).push_back(TE);
     };
 
+    // The terms are taken as they are, as push_back does, so several terms of the same variables are kept. They are
+    // merged when the container is given to the add(Terms) of another container, which is what such a container is
+    // built for
+    explicit Terms(std::vector<T> terms) : std::vector<T>(std::move(terms)) {};
+
     double calculate(const VectorDouble& point) const
     {
         double value = 0.0;
@@ -280,6 +285,7 @@ public:
     using std::vector<LinearTermPtr>::size;
 
     LinearTerms() = default;
+    explicit LinearTerms(std::vector<LinearTermPtr> terms) : Terms<LinearTermPtr>(std::move(terms)) {};
 
     void add(LinearTermPtr term)
     {
@@ -297,10 +303,18 @@ public:
         monotonicity = E_Monotonicity::NotSet;
     }
 
-    void add(LinearTerms terms)
+    void add(const LinearTerms& terms)
     {
         if(terms.size() == 0)
             return;
+
+        // Adding the terms to themselves would push_back into the container being iterated over, so a copy is added
+        if(&terms == this)
+        {
+            LinearTerms ownTerms = terms;
+            add(ownTerms);
+            return;
+        }
 
         // The terms are found through a hash map instead of the linear search in add(term)
         std::unordered_map<Variable*, size_t> termIndexes;
@@ -545,6 +559,7 @@ public:
     using std::vector<QuadraticTermPtr>::size;
 
     QuadraticTerms() = default;
+    explicit QuadraticTerms(std::vector<QuadraticTermPtr> terms) : Terms<QuadraticTermPtr>(std::move(terms)) {};
 
     // Also marks the values calculated from the terms as not valid
     inline void invalidateProperties()
@@ -588,10 +603,18 @@ public:
         invalidateCachedValues();
     }
 
-    void add(QuadraticTerms terms)
+    void add(const QuadraticTerms& terms)
     {
         if(terms.size() == 0)
             return;
+
+        // Adding the terms to themselves would push_back into the container being iterated over, so a copy is added
+        if(&terms == this)
+        {
+            QuadraticTerms ownTerms = terms;
+            add(ownTerms);
+            return;
+        }
 
         // The terms are found through a hash map instead of the linear search in add(term)
         std::unordered_map<VariablePair, size_t, VariablePairHash> termIndexes;
@@ -819,6 +842,7 @@ public:
     using std::vector<MonomialTermPtr>::size;
 
     MonomialTerms() = default;
+    explicit MonomialTerms(std::vector<MonomialTermPtr> terms) : Terms<MonomialTermPtr>(std::move(terms)) {};
 
     void add(MonomialTermPtr term)
     {
@@ -827,14 +851,19 @@ public:
         monotonicity = E_Monotonicity::NotSet;
     }
 
-    void add(MonomialTerms terms)
+    void add(const MonomialTerms& terms)
     {
-        for(auto& TERM : terms)
+        // The number of terms and the capacity are taken before the first term is added, so that adding the terms
+        // to themselves neither reallocates the container being read nor reads the terms it has just added
+        size_t numberOfTerms = terms.size();
+        (*this).reserve(size() + numberOfTerms);
+
+        for(size_t i = 0; i < numberOfTerms; i++)
         {
-            (*this).push_back(TERM);
+            (*this).push_back(terms[i]);
         }
 
-        if(terms.size() > 0)
+        if(numberOfTerms > 0)
         {
             convexity = E_Convexity::NotSet;
             monotonicity = E_Monotonicity::NotSet;
@@ -1428,6 +1457,7 @@ public:
     using std::vector<SignomialTermPtr>::size;
 
     SignomialTerms() = default;
+    explicit SignomialTerms(std::vector<SignomialTermPtr> terms) : Terms<SignomialTermPtr>(std::move(terms)) {};
 
     void add(SignomialTermPtr term)
     {
@@ -1436,14 +1466,19 @@ public:
         monotonicity = E_Monotonicity::NotSet;
     }
 
-    void add(SignomialTerms terms)
+    void add(const SignomialTerms& terms)
     {
-        for(auto& TERM : terms)
+        // The number of terms and the capacity are taken before the first term is added, so that adding the terms
+        // to themselves neither reallocates the container being read nor reads the terms it has just added
+        size_t numberOfTerms = terms.size();
+        (*this).reserve(size() + numberOfTerms);
+
+        for(size_t i = 0; i < numberOfTerms; i++)
         {
-            (*this).push_back(TERM);
+            (*this).push_back(terms[i]);
         }
 
-        if(terms.size() > 0)
+        if(numberOfTerms > 0)
         {
             convexity = E_Convexity::NotSet;
             monotonicity = E_Monotonicity::NotSet;

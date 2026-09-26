@@ -1004,10 +1004,14 @@ void Problem::renumberConstraints()
     }
 }
 
-void Problem::add(Variables variables)
+void Problem::add(const Variables& variables)
 {
-    for(auto& V : variables)
-        add(V);
+    // The number of variables is taken before the first one is added, since the container given may be one of the
+    // variable containers of the problem itself, which add(variable) pushes into
+    size_t numberOfVariables = variables.size();
+
+    for(size_t i = 0; i < numberOfVariables; i++)
+        add(variables[i]);
 }
 
 void Problem::add(VariablePtr variable)
@@ -1043,10 +1047,14 @@ void Problem::add(VariablePtr variable)
         env->output->outputTrace("Added variable to problem: " + variable->name);
 }
 
-void Problem::add(AuxiliaryVariables variables)
+void Problem::add(const AuxiliaryVariables& variables)
 {
-    for(auto& V : variables)
-        add(V);
+    // The number of variables is taken before the first one is added, since the container given may be one of the
+    // variable containers of the problem itself, which add(variable) pushes into
+    size_t numberOfVariables = variables.size();
+
+    for(size_t i = 0; i < numberOfVariables; i++)
+        add(variables[i]);
 }
 
 void Problem::add(AuxiliaryVariablePtr variable)

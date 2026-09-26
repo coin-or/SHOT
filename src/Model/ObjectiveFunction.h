@@ -162,7 +162,7 @@ public:
 
     LinearTerms linearTerms;
 
-    void add(LinearTerms terms);
+    void add(const LinearTerms& terms);
 
     void add(LinearTermPtr term);
     void updateProperties() override;
@@ -239,11 +239,11 @@ public:
 
     QuadraticTerms quadraticTerms;
 
-    void add(LinearTerms terms) { LinearObjectiveFunction::add(terms); }
+    void add(const LinearTerms& terms) { LinearObjectiveFunction::add(terms); }
 
     void add(LinearTermPtr term) { LinearObjectiveFunction::add(term); }
 
-    void add(QuadraticTerms terms);
+    void add(const QuadraticTerms& terms);
     void add(QuadraticTermPtr term);
 
     void updateProperties() override;
@@ -367,18 +367,18 @@ public:
 
     int nonlinearExpressionIndex = -1;
 
-    void add(LinearTerms terms) { LinearObjectiveFunction::add(terms); }
+    void add(const LinearTerms& terms) { LinearObjectiveFunction::add(terms); }
 
     void add(LinearTermPtr term) { LinearObjectiveFunction::add(term); }
 
-    void add(QuadraticTerms terms) { QuadraticObjectiveFunction::add(terms); }
+    void add(const QuadraticTerms& terms) { QuadraticObjectiveFunction::add(terms); }
 
     void add(QuadraticTermPtr term) { QuadraticObjectiveFunction::add(term); }
 
-    void add(MonomialTerms terms);
+    void add(const MonomialTerms& terms);
     void add(MonomialTermPtr term);
 
-    void add(SignomialTerms terms);
+    void add(const SignomialTerms& terms);
     void add(SignomialTermPtr term);
 
     void add(NonlinearExpressionPtr expression);

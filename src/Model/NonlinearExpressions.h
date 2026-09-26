@@ -196,11 +196,19 @@ public:
             (*this).push_back(E);
     };
 
+    explicit NonlinearExpressions(std::vector<NonlinearExpressionPtr> expressions)
+        : std::vector<NonlinearExpressionPtr>(std::move(expressions)) {};
+
     inline void add(NonlinearExpressionPtr expression) { (*this).push_back(expression); };
-    inline void add(NonlinearExpressions expressions)
+    inline void add(const NonlinearExpressions& expressions)
     {
-        for(auto& E : expressions)
-            (*this).push_back(E);
+        // The number of expressions and the capacity are taken before the first one is added, so that adding the
+        // expressions to themselves neither reallocates the container being read nor reads what has just been added
+        size_t numberOfExpressions = expressions.size();
+        (*this).reserve(size() + numberOfExpressions);
+
+        for(size_t i = 0; i < numberOfExpressions; i++)
+            (*this).push_back(expressions[i]);
     };
 };
 

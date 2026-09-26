@@ -188,7 +188,7 @@ public:
         properties.hasLinearTerms = linearTerms.size() > 0 ? true : false;
     };
 
-    void add(LinearTerms terms);
+    void add(const LinearTerms& terms);
     void add(LinearTermPtr term);
 
     double calculateFunctionValue(const VectorDouble& point) override;
@@ -260,9 +260,9 @@ public:
         properties.hasQuadraticTerms = quadraticTerms.size() > 0 ? true : false;
     };
 
-    void add(LinearTerms terms);
+    void add(const LinearTerms& terms);
     void add(LinearTermPtr term);
-    void add(QuadraticTerms terms);
+    void add(const QuadraticTerms& terms);
     void add(QuadraticTermPtr term);
 
     double calculateFunctionValue(const VectorDouble& point) override;
@@ -384,13 +384,13 @@ public:
         properties.hasNonlinearExpression = true;
     };
 
-    void add(LinearTerms terms);
+    void add(const LinearTerms& terms);
     void add(LinearTermPtr term);
-    void add(QuadraticTerms terms);
+    void add(const QuadraticTerms& terms);
     void add(QuadraticTermPtr term);
-    void add(MonomialTerms terms);
+    void add(const MonomialTerms& terms);
     void add(MonomialTermPtr term);
-    void add(SignomialTerms terms);
+    void add(const SignomialTerms& terms);
     void add(SignomialTermPtr term);
     void add(NonlinearExpressionPtr expression);
 

@@ -172,10 +172,10 @@ public:
     void finalize();
 
     void add(VariablePtr variable);
-    void add(Variables variables);
+    void add(const Variables& variables);
 
     void add(AuxiliaryVariablePtr variable);
-    void add(AuxiliaryVariables variables);
+    void add(const AuxiliaryVariables& variables);
 
     void add(LinearConstraintPtr constraint);
     void add(QuadraticConstraintPtr constraint);

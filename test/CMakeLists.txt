@@ -55,7 +55,8 @@ set(Model_parts
     45
     46
     47
-    48) # The different parts of each test (if any)
+    48
+    49) # The different parts of each test (if any)
 
 set(Settings_parts 1 2 3 4 5 6 7 8 9)
 

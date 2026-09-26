@@ -222,6 +222,8 @@ public:
             (*this).push_back(V);
     };
 
+    explicit Variables(std::vector<VariablePtr> variables) : std::vector<VariablePtr>(std::move(variables)) {};
+
     inline void takeOwnership(ProblemPtr owner)
     {
         ownerProblem = owner;

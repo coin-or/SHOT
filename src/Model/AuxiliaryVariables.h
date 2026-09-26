@@ -91,6 +91,9 @@ public:
             (*this).push_back(V);
     };
 
+    explicit AuxiliaryVariables(std::vector<AuxiliaryVariablePtr> variables)
+        : std::vector<AuxiliaryVariablePtr>(std::move(variables)) {};
+
     inline void takeOwnership(ProblemPtr owner)
     {
         ownerProblem = owner;

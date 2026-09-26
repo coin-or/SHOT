@@ -186,7 +186,7 @@ bool NumericConstraint::isFulfilled(const VectorDouble& point)
     return (constraintValue.isFulfilledLHS && constraintValue.isFulfilledRHS);
 }
 
-void LinearConstraint::add(LinearTerms terms)
+void LinearConstraint::add(const LinearTerms& terms)
 {
     if(terms.size() == 0)
         return;
@@ -292,11 +292,11 @@ void LinearConstraint::updateProperties()
     properties.monotonicity = linearTerms.getMonotonicity();
 }
 
-void QuadraticConstraint::add(LinearTerms terms) { LinearConstraint::add(terms); }
+void QuadraticConstraint::add(const LinearTerms& terms) { LinearConstraint::add(terms); }
 
 void QuadraticConstraint::add(LinearTermPtr term) { LinearConstraint::add(term); }
 
-void QuadraticConstraint::add(QuadraticTerms terms)
+void QuadraticConstraint::add(const QuadraticTerms& terms)
 {
     if(terms.size() == 0)
         return;
@@ -439,15 +439,15 @@ void QuadraticConstraint::updateProperties()
     properties.monotonicity = Utilities::combineMonotonicity(properties.monotonicity, quadraticTerms.getMonotonicity());
 }
 
-void NonlinearConstraint::add(LinearTerms terms) { LinearConstraint::add(terms); }
+void NonlinearConstraint::add(const LinearTerms& terms) { LinearConstraint::add(terms); }
 
 void NonlinearConstraint::add(LinearTermPtr term) { LinearConstraint::add(term); }
 
-void NonlinearConstraint::add(QuadraticTerms terms) { QuadraticConstraint::add(terms); }
+void NonlinearConstraint::add(const QuadraticTerms& terms) { QuadraticConstraint::add(terms); }
 
 void NonlinearConstraint::add(QuadraticTermPtr term) { QuadraticConstraint::add(term); }
 
-void NonlinearConstraint::add(MonomialTerms terms)
+void NonlinearConstraint::add(const MonomialTerms& terms)
 {
     if(monomialTerms.size() == 0)
     {
@@ -472,7 +472,7 @@ void NonlinearConstraint::add(MonomialTermPtr term)
     properties.classification = E_ConstraintClassification::Nonlinear;
 }
 
-void NonlinearConstraint::add(SignomialTerms terms)
+void NonlinearConstraint::add(const SignomialTerms& terms)
 {
     if(signomialTerms.size() == 0)
     {

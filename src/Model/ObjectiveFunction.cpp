@@ -201,7 +201,7 @@ std::ostream& operator<<(std::ostream& stream, ObjectiveFunctionPtr objective)
     return stream;
 }
 
-void LinearObjectiveFunction::add(LinearTerms terms)
+void LinearObjectiveFunction::add(const LinearTerms& terms)
 {
     if(terms.size() == 0)
         return;
@@ -325,7 +325,7 @@ std::ostream& LinearObjectiveFunction::print(std::ostream& stream) const
     return stream;
 }
 
-void QuadraticObjectiveFunction::add(QuadraticTerms terms)
+void QuadraticObjectiveFunction::add(const QuadraticTerms& terms)
 {
     if(terms.size() == 0)
         return;
@@ -485,7 +485,7 @@ std::ostream& QuadraticObjectiveFunction::print(std::ostream& stream) const
     return stream;
 }
 
-void NonlinearObjectiveFunction::add(MonomialTerms terms)
+void NonlinearObjectiveFunction::add(const MonomialTerms& terms)
 {
     if(monomialTerms.size() == 0)
     {
@@ -507,7 +507,7 @@ void NonlinearObjectiveFunction::add(MonomialTermPtr term)
     properties.isValid = false;
 }
 
-void NonlinearObjectiveFunction::add(SignomialTerms terms)
+void NonlinearObjectiveFunction::add(const SignomialTerms& terms)
 {
     if(signomialTerms.size() == 0)
     {

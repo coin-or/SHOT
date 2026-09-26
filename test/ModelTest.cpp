@@ -165,6 +165,7 @@ bool ModelTestProductBoundTighteningResult();
 bool ModelTestBoundTighteningTimeLimit();
 bool ModelTestConvexityAfterAddedTerm();
 bool ModelTestSignomialGradientOfRepeatedVariable();
+bool ModelTestBulkTermAdding();
 
 bool TestReadProblem(const std::string& problemFile);
 bool TestRootsearch(const std::string& problemFile);
@@ -333,6 +334,9 @@ int ModelTest(int argc, char* argv[])
         break;
     case 48:
         passed = ModelTestSignomialGradientOfRepeatedVariable();
+        break;
+    case 49:
+        passed = ModelTestBulkTermAdding();
         break;
     default:
         passed = false;
@@ -8245,6 +8249,204 @@ bool ModelTestSignomialGradientOfRepeatedVariable()
     if(std::abs(value - expected) > 1e-9)
     {
         std::cout << "  FAILED: the coefficient of the term was not used for both elements.\n";
+        passed = false;
+    }
+
+    return passed;
+}
+
+bool ModelTestBulkTermAdding()
+{
+    // The bulk add of a term container merges the terms through a hash map, while add(term) searches all existing
+    // terms and is quadratic in the number of terms. The C++ and Python interfaces build a container and add it at
+    // once for that reason, so the terms that result must be exactly the ones the one-at-a-time adds give.
+
+    bool passed = true;
+
+    auto solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+    auto problem = std::make_shared<Problem>(env);
+
+    std::vector<VariablePtr> variableVector;
+
+    for(int i = 0; i < 4; i++)
+        variableVector.push_back(
+            std::make_shared<Variable>("x" + std::to_string(i), E_VariableType::Real, -10.0, 10.0));
+
+    // The constructor from a vector is what the Python interface uses to turn a list into a container
+    problem->add(Variables(variableVector));
+
+    if(problem->allVariables.size() != variableVector.size())
+    {
+        std::cout << "  FAILED: the problem should have " << variableVector.size() << " variables, not "
+                  << problem->allVariables.size() << ".\n";
+        passed = false;
+    }
+
+    for(size_t i = 0; i < problem->allVariables.size(); i++)
+    {
+        if(problem->allVariables[i] != variableVector[i] || problem->allVariables[i]->getIndex() != (int)i)
+        {
+            std::cout << "  FAILED: variable " << i << " has index " << problem->allVariables[i]->getIndex() << ".\n";
+            passed = false;
+        }
+    }
+
+    auto x0 = variableVector[0];
+    auto x1 = variableVector[1];
+    auto x2 = variableVector[2];
+
+    // The terms are created again for each path, since merging changes the coefficient of the term object itself
+    auto makeLinearTerms = [&x0, &x1, &x2]()
+    {
+        // x0 and x1 appear twice, so both paths have something to merge
+        return std::vector<LinearTermPtr> { std::make_shared<LinearTerm>(1.0, x0),
+            std::make_shared<LinearTerm>(2.0, x1), std::make_shared<LinearTerm>(3.0, x2),
+            std::make_shared<LinearTerm>(0.5, x0), std::make_shared<LinearTerm>(-2.0, x1) };
+    };
+
+    auto makeQuadraticTerms = [&x0, &x1, &x2]()
+    {
+        // x1x0 is the reversed pair of x0x1 and is merged with it, and x0^2 appears twice
+        return std::vector<QuadraticTermPtr> { std::make_shared<QuadraticTerm>(1.0, x0, x0),
+            std::make_shared<QuadraticTerm>(2.0, x0, x1), std::make_shared<QuadraticTerm>(3.0, x1, x0),
+            std::make_shared<QuadraticTerm>(4.0, x2, x2), std::make_shared<QuadraticTerm>(1.5, x0, x0) };
+    };
+
+    auto compareLinearTerms = [&passed](const std::string& what, const LinearTerms& single, const LinearTerms& bulk)
+    {
+        if(single.size() != bulk.size())
+        {
+            std::cout << "  FAILED: " << what << " gave " << bulk.size() << " terms in bulk and " << single.size()
+                      << " one at a time.\n";
+            passed = false;
+            return;
+        }
+
+        for(size_t i = 0; i < single.size(); i++)
+        {
+            if(single[i]->variable != bulk[i]->variable || single[i]->coefficient != bulk[i]->coefficient)
+            {
+                std::cout << "  FAILED: " << what << " term " << i << " is " << bulk[i]->coefficient << "*"
+                          << bulk[i]->variable->name << " in bulk and " << single[i]->coefficient << "*"
+                          << single[i]->variable->name << " one at a time.\n";
+                passed = false;
+            }
+        }
+    };
+
+    // The linear terms of a constraint are merged by both paths
+    auto singleConstraint = std::make_shared<LinearConstraint>("single", -10.0, 10.0);
+
+    for(auto& T : makeLinearTerms())
+        singleConstraint->add(T);
+
+    auto bulkConstraint = std::make_shared<LinearConstraint>("bulk", -10.0, 10.0);
+    bulkConstraint->add(LinearTerms(makeLinearTerms()));
+
+    compareLinearTerms("the linear terms of a constraint", singleConstraint->linearTerms, bulkConstraint->linearTerms);
+
+    std::cout << "  the linear terms of the constraint are " << bulkConstraint->linearTerms.size() << ": ";
+    for(auto& T : bulkConstraint->linearTerms)
+        std::cout << T->coefficient << "*" << T->variable->name << " ";
+    std::cout << "\n";
+
+    // The same in the container itself, which is what the interfaces fill before they add it
+    LinearTerms singleLinear;
+
+    for(auto& T : makeLinearTerms())
+        singleLinear.add(T);
+
+    LinearTerms bulkLinear;
+    bulkLinear.add(LinearTerms(makeLinearTerms()));
+
+    compareLinearTerms("the linear terms of a container", singleLinear, bulkLinear);
+
+    // LinearObjectiveFunction::add(term) pushes the term back without merging it, unlike the constraint, so the bulk
+    // add of an objective function gives fewer terms than its single adds. The values are the same either way, since
+    // duplicates are summed wherever the terms are used, but a change to this should be a deliberate one
+    auto singleObjective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+
+    for(auto& T : makeLinearTerms())
+        singleObjective->add(T);
+
+    auto bulkObjective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    bulkObjective->add(LinearTerms(makeLinearTerms()));
+
+    VectorDouble point = { 1.0, 2.0, 3.0, 4.0 };
+
+    if(singleObjective->linearTerms.size() != 5 || bulkObjective->linearTerms.size() != 3
+        || singleObjective->linearTerms.calculate(point) != bulkObjective->linearTerms.calculate(point))
+    {
+        std::cout << "  FAILED: the objective function has " << singleObjective->linearTerms.size()
+                  << " terms of value " << singleObjective->linearTerms.calculate(point) << " one at a time and "
+                  << bulkObjective->linearTerms.size() << " of value " << bulkObjective->linearTerms.calculate(point)
+                  << " in bulk.\n";
+        passed = false;
+    }
+
+    // The quadratic terms are compared in the container, since QuadraticConstraint::add(term) does not merge
+    QuadraticTerms singleQuadratic;
+
+    for(auto& T : makeQuadraticTerms())
+        singleQuadratic.add(T);
+
+    QuadraticTerms bulkQuadratic;
+    bulkQuadratic.add(QuadraticTerms(makeQuadraticTerms()));
+
+    if(singleQuadratic.size() != bulkQuadratic.size())
+    {
+        std::cout << "  FAILED: the quadratic terms gave " << bulkQuadratic.size() << " terms in bulk and "
+                  << singleQuadratic.size() << " one at a time.\n";
+        passed = false;
+    }
+    else
+    {
+        for(size_t i = 0; i < singleQuadratic.size(); i++)
+        {
+            if(singleQuadratic[i]->firstVariable != bulkQuadratic[i]->firstVariable
+                || singleQuadratic[i]->secondVariable != bulkQuadratic[i]->secondVariable
+                || singleQuadratic[i]->coefficient != bulkQuadratic[i]->coefficient)
+            {
+                std::cout << "  FAILED: quadratic term " << i << " is " << bulkQuadratic[i]->coefficient << "*"
+                          << bulkQuadratic[i]->firstVariable->name << "*" << bulkQuadratic[i]->secondVariable->name
+                          << " in bulk and " << singleQuadratic[i]->coefficient << "*"
+                          << singleQuadratic[i]->firstVariable->name << "*" << singleQuadratic[i]->secondVariable->name
+                          << " one at a time.\n";
+                passed = false;
+            }
+        }
+    }
+
+    std::cout << "  the quadratic terms are " << bulkQuadratic.size() << ": ";
+    for(auto& T : bulkQuadratic)
+        std::cout << T->coefficient << "*" << T->firstVariable->name << "*" << T->secondVariable->name << " ";
+    std::cout << "\n";
+
+    // The bulk adds take their argument by reference, so adding a container to itself must still work: it merges the
+    // terms with themselves, which doubles the coefficients, as it did when the argument was taken by value
+    LinearTerms selfAdded(
+        std::vector<LinearTermPtr> { std::make_shared<LinearTerm>(1.0, x0), std::make_shared<LinearTerm>(2.0, x1) });
+    selfAdded.add(selfAdded);
+
+    if(selfAdded.size() != 2 || selfAdded[0]->coefficient != 2.0 || selfAdded[1]->coefficient != 4.0)
+    {
+        std::cout << "  FAILED: adding the linear terms to themselves gave " << selfAdded.size() << " terms, the "
+                  << "first one " << selfAdded[0]->coefficient << "*" << selfAdded[0]->variable->name << ".\n";
+        passed = false;
+    }
+
+    // The monomial and signomial terms are not merged, so the terms are repeated instead
+    MonomialTerms selfAddedMonomials(
+        std::vector<MonomialTermPtr> { std::make_shared<MonomialTerm>(1.0, Variables({ x0, x1 })),
+            std::make_shared<MonomialTerm>(2.0, Variables({ x2 })) });
+    selfAddedMonomials.add(selfAddedMonomials);
+
+    if(selfAddedMonomials.size() != 4 || selfAddedMonomials[2]->coefficient != 1.0
+        || selfAddedMonomials[3]->coefficient != 2.0)
+    {
+        std::cout << "  FAILED: adding the monomial terms to themselves gave " << selfAddedMonomials.size()
+                  << " terms.\n";
         passed = false;
     }
 
