@@ -65,10 +65,17 @@ struct ConstraintProperties
 
 class Constraint
 {
+    // Only the problem a constraint belongs to may number it -- see the note on Variable::index
+    friend class Problem;
+
+private:
+    int index = -1;
+
 public:
     virtual ~Constraint() = default;
 
-    int index = -1;
+    inline int getIndex() const { return index; }
+
     std::string name;
 
     ConstraintProperties properties;
@@ -136,6 +143,10 @@ public:
 
     // Returns the upper triagonal part of the Hessian matrix is sparse representation
     virtual SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes) = 0;
+
+    // The Hessian when it does not depend on the point, and can be used without being recalculated or copied,
+    // otherwise nullptr
+    virtual const SparseVariableMatrix* getConstantHessian() { return (nullptr); }
     virtual std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> getHessianSparsityPattern();
 
     virtual NumericConstraintValue calculateNumericValue(const VectorDouble& point, double correction = 0.0);
@@ -160,17 +171,15 @@ public:
 
     LinearConstraint() = default;
 
-    LinearConstraint(int constraintIndex, std::string constraintName, double LHS, double RHS)
+    LinearConstraint(std::string constraintName, double LHS, double RHS)
     {
-        index = constraintIndex;
         name = constraintName;
         valueLHS = LHS;
         valueRHS = RHS;
     };
 
-    LinearConstraint(int constraintIndex, std::string constraintName, LinearTerms linTerms, double LHS, double RHS)
+    LinearConstraint(std::string constraintName, LinearTerms linTerms, double LHS, double RHS)
     {
-        index = constraintIndex;
         name = constraintName;
         linearTerms = linTerms;
         valueLHS = LHS;
@@ -179,7 +188,7 @@ public:
         properties.hasLinearTerms = linearTerms.size() > 0 ? true : false;
     };
 
-    void add(LinearTerms terms);
+    void add(const LinearTerms& terms);
     void add(LinearTermPtr term);
 
     double calculateFunctionValue(const VectorDouble& point) override;
@@ -221,18 +230,15 @@ public:
 
     QuadraticConstraint() : LinearConstraint() {};
 
-    QuadraticConstraint(int constraintIndex, std::string constraintName, double LHS, double RHS)
+    QuadraticConstraint(std::string constraintName, double LHS, double RHS)
     {
-        index = constraintIndex;
         name = constraintName;
         valueLHS = LHS;
         valueRHS = RHS;
     };
 
-    QuadraticConstraint(
-        int constraintIndex, std::string constraintName, QuadraticTerms quadTerms, double LHS, double RHS)
+    QuadraticConstraint(std::string constraintName, QuadraticTerms quadTerms, double LHS, double RHS)
     {
-        index = constraintIndex;
         name = constraintName;
         quadraticTerms = quadTerms;
         valueLHS = LHS;
@@ -241,10 +247,9 @@ public:
         properties.hasQuadraticTerms = quadraticTerms.size() > 0 ? true : false;
     };
 
-    QuadraticConstraint(int constraintIndex, std::string constraintName, LinearTerms linTerms, QuadraticTerms quadTerms,
-        double LHS, double RHS)
+    QuadraticConstraint(std::string constraintName, LinearTerms linTerms, QuadraticTerms quadTerms, double LHS,
+        double RHS)
     {
-        index = constraintIndex;
         name = constraintName;
         linearTerms = linTerms;
         quadraticTerms = quadTerms;
@@ -255,9 +260,9 @@ public:
         properties.hasQuadraticTerms = quadraticTerms.size() > 0 ? true : false;
     };
 
-    void add(LinearTerms terms);
+    void add(const LinearTerms& terms);
     void add(LinearTermPtr term);
-    void add(QuadraticTerms terms);
+    void add(const QuadraticTerms& terms);
     void add(QuadraticTermPtr term);
 
     double calculateFunctionValue(const VectorDouble& point) override;
@@ -273,6 +278,9 @@ public:
 
     // Returns the upper triagonal part of the Hessian matrix is sparse representation
     SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes) override;
+
+    // The quadratic terms have a constant Hessian, which they cache
+    const SparseVariableMatrix* getConstantHessian() override;
 
     NumericConstraintValue calculateNumericValue(const VectorDouble& point, double correction = 0.0) override;
 
@@ -304,6 +312,9 @@ public:
     CppAD::sparse_rc<std::vector<size_t>> nonlinearGradientSparsityPattern;
     CppAD::sparse_rc<std::vector<size_t>> nonlinearHessianSparsityPattern;
 
+    // Reused between the Hessian evaluations, since it holds the coloring of the sparsity pattern
+    CppAD::sparse_hes_work nonlinearHessianWork;
+
     bool nonlinearGradientSparsityMapGenerated = false;
     bool nonlinearHessianSparsityMapGenerated = false;
 
@@ -315,18 +326,15 @@ public:
 
     NonlinearConstraint() = default;
 
-    NonlinearConstraint(int constraintIndex, std::string constraintName, double LHS, double RHS)
+    NonlinearConstraint(std::string constraintName, double LHS, double RHS)
     {
-        index = constraintIndex;
         name = constraintName;
         valueLHS = LHS;
         valueRHS = RHS;
     };
 
-    NonlinearConstraint(
-        int constraintIndex, std::string constraintName, NonlinearExpressionPtr expression, double LHS, double RHS)
+    NonlinearConstraint(std::string constraintName, NonlinearExpressionPtr expression, double LHS, double RHS)
     {
-        index = constraintIndex;
         name = constraintName;
         nonlinearExpression = expression;
         valueLHS = LHS;
@@ -335,10 +343,9 @@ public:
         properties.hasNonlinearExpression = true;
     };
 
-    NonlinearConstraint(int constraintIndex, std::string constraintName, QuadraticTerms quadTerms,
-        NonlinearExpressionPtr expression, double LHS, double RHS)
+    NonlinearConstraint(std::string constraintName, QuadraticTerms quadTerms, NonlinearExpressionPtr expression,
+        double LHS, double RHS)
     {
-        index = constraintIndex;
         name = constraintName;
         quadraticTerms = quadTerms;
         nonlinearExpression = expression;
@@ -349,10 +356,9 @@ public:
         properties.hasNonlinearExpression = true;
     };
 
-    NonlinearConstraint(int constraintIndex, std::string constraintName, LinearTerms linTerms,
-        NonlinearExpressionPtr expression, double LHS, double RHS)
+    NonlinearConstraint(std::string constraintName, LinearTerms linTerms, NonlinearExpressionPtr expression,
+        double LHS, double RHS)
     {
-        index = constraintIndex;
         name = constraintName;
         linearTerms = linTerms;
         nonlinearExpression = expression;
@@ -363,10 +369,9 @@ public:
         properties.hasNonlinearExpression = true;
     };
 
-    NonlinearConstraint(int constraintIndex, std::string constraintName, LinearTerms linTerms, QuadraticTerms quadTerms,
+    NonlinearConstraint(std::string constraintName, LinearTerms linTerms, QuadraticTerms quadTerms,
         NonlinearExpressionPtr expression, double LHS, double RHS)
     {
-        index = constraintIndex;
         name = constraintName;
         linearTerms = linTerms;
         quadraticTerms = quadTerms;
@@ -379,13 +384,13 @@ public:
         properties.hasNonlinearExpression = true;
     };
 
-    void add(LinearTerms terms);
+    void add(const LinearTerms& terms);
     void add(LinearTermPtr term);
-    void add(QuadraticTerms terms);
+    void add(const QuadraticTerms& terms);
     void add(QuadraticTermPtr term);
-    void add(MonomialTerms terms);
+    void add(const MonomialTerms& terms);
     void add(MonomialTermPtr term);
-    void add(SignomialTerms terms);
+    void add(const SignomialTerms& terms);
     void add(SignomialTermPtr term);
     void add(NonlinearExpressionPtr expression);
 
@@ -399,6 +404,9 @@ public:
 
     // Returns the upper triagonal part of the Hessian matrix is sparse representation
     SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes) override;
+
+    // The nonlinear expression makes the Hessian depend on the point
+    const SparseVariableMatrix* getConstantHessian() override { return (nullptr); }
 
     Interval calculateFunctionValue(const IntervalVector& intervalVector) override;
 

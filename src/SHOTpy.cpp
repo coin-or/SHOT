@@ -305,18 +305,19 @@ PYBIND11_MODULE(SHOTpy, m)
 
     // ===== Variable Class =====
     py::class_<Variable, std::shared_ptr<Variable>>(m, "Variable")
-        .def(py::init<std::string, int, E_VariableType, double, double>(), py::arg("name"), py::arg("index"),
-            py::arg("type"), py::arg("lower_bound"), py::arg("upper_bound"))
-        .def(py::init<std::string, int, E_VariableType, double, double, double>(), py::arg("name"), py::arg("index"),
-            py::arg("type"), py::arg("lower_bound"), py::arg("upper_bound"), py::arg("semi_bound"))
+        .def(py::init<std::string, E_VariableType, double, double>(), py::arg("name"), py::arg("type"),
+            py::arg("lower_bound"), py::arg("upper_bound"))
+        .def(py::init<std::string, E_VariableType, double, double, double>(), py::arg("name"), py::arg("type"),
+            py::arg("lower_bound"), py::arg("upper_bound"), py::arg("semi_bound"))
         .def_readwrite("name", &Variable::name)
-        .def_readwrite("index", &Variable::index)
+        // Assigned by the problem the variable is added to, so read only
+        .def_property_readonly("index", &Variable::getIndex)
         .def_readwrite("lowerBound", &Variable::lowerBound)
         .def_readwrite("upperBound", &Variable::upperBound)
         .def_readwrite("semiBound", &Variable::semiBound)
         .def_readonly("properties", &Variable::properties)
         .def("__repr__",
-            [](const Variable& v) { return "<Variable '" + v.name + "' index=" + std::to_string(v.index) + ">"; })
+            [](const Variable& v) { return "<Variable '" + v.name + "' index=" + std::to_string(v.getIndex()) + ">"; })
         // Operator overloads for natural expression building
         .def(
             "__add__", [](VariablePtr self, VariablePtr other) -> NonlinearExpressionPtr
@@ -656,20 +657,101 @@ PYBIND11_MODULE(SHOTpy, m)
     // ===== LinearTerms Collection =====
     py::class_<LinearTerms>(m, "LinearTerms")
         .def(py::init<>())
-        .def("add", py::overload_cast<LinearTermPtr>(&LinearTerms::add))
-        .def("add", py::overload_cast<LinearTerms>(&LinearTerms::add))
+        // Creating the whole container at once is what a problem of any size should use. The terms are taken as they
+        // are here, and merged in one pass when the container is given to a constraint or an objective function
+        .def(py::init<std::vector<LinearTermPtr>>(), py::arg("terms"))
+        .def(py::init(
+                 [](const VectorDouble& coefficients, const std::vector<VariablePtr>& variables)
+                 {
+                     if(coefficients.size() != variables.size())
+                         throw py::value_error("The number of coefficients and the number of variables must be equal");
+
+                     std::vector<LinearTermPtr> terms;
+                     terms.reserve(coefficients.size());
+
+                     for(size_t i = 0; i < coefficients.size(); i++)
+                         terms.push_back(std::make_shared<LinearTerm>(coefficients[i], variables[i]));
+
+                     return LinearTerms(std::move(terms));
+                 }),
+            py::arg("coefficients"), py::arg("variables"),
+            "Create the terms from a list of coefficients and a list of variables, without a Python object per term")
+        .def("add", py::overload_cast<LinearTermPtr>(&LinearTerms::add), py::arg("term"),
+            "Add a single term, merging it with an existing term of the same variable. All existing terms are "
+            "searched, so adding T terms one at a time is quadratic in T: build the container from a list instead")
+        .def("add", py::overload_cast<const LinearTerms&>(&LinearTerms::add), py::arg("terms"),
+            "Add all the terms of another container at once, which is how a large number of terms is added")
+        .def(
+            "append", [](LinearTerms& self, LinearTermPtr term) { self.push_back(term); }, py::arg("term"),
+            "Append a term without merging it with an existing term of the same variable")
+        .def(
+            "extend",
+            [](LinearTerms& self, const std::vector<LinearTermPtr>& terms)
+            {
+                self.reserve(self.size() + terms.size());
+                for(auto& T : terms)
+                    self.push_back(T);
+            },
+            py::arg("terms"), "Append the terms of a list without merging them")
+        .def(
+            "reserve", [](LinearTerms& self, size_t size) { self.reserve(size); }, py::arg("size"),
+            "Reserve room for the given total number of terms")
         .def("size", [](LinearTerms& self) { return self.size(); })
         .def("__len__", [](LinearTerms& self) { return self.size(); })
         .def("__getitem__", [](LinearTerms& self, size_t i) { return self[i]; });
 
+    py::implicitly_convertible<py::list, LinearTerms>();
+
     // ===== QuadraticTerms Collection =====
     py::class_<QuadraticTerms>(m, "QuadraticTerms")
         .def(py::init<>())
-        .def("add", py::overload_cast<QuadraticTermPtr>(&QuadraticTerms::add))
-        .def("add", py::overload_cast<QuadraticTerms>(&QuadraticTerms::add))
+        // Creating the whole container at once is what a problem of any size should use. The terms are taken as they
+        // are here, and merged in one pass when the container is given to a constraint or an objective function
+        .def(py::init<std::vector<QuadraticTermPtr>>(), py::arg("terms"))
+        .def(py::init(
+                 [](const VectorDouble& coefficients, const std::vector<VariablePtr>& firstVariables,
+                     const std::vector<VariablePtr>& secondVariables)
+                 {
+                     if(coefficients.size() != firstVariables.size() || coefficients.size() != secondVariables.size())
+                         throw py::value_error("The number of coefficients and the numbers of variables must be equal");
+
+                     std::vector<QuadraticTermPtr> terms;
+                     terms.reserve(coefficients.size());
+
+                     for(size_t i = 0; i < coefficients.size(); i++)
+                         terms.push_back(
+                             std::make_shared<QuadraticTerm>(coefficients[i], firstVariables[i], secondVariables[i]));
+
+                     return QuadraticTerms(std::move(terms));
+                 }),
+            py::arg("coefficients"), py::arg("firstVariables"), py::arg("secondVariables"),
+            "Create the terms from a list of coefficients and two lists of variables, without a Python object per "
+            "term")
+        .def("add", py::overload_cast<QuadraticTermPtr>(&QuadraticTerms::add), py::arg("term"),
+            "Add a single term. The terms are not merged here, since searching all terms for every added term is "
+            "quadratic in the number of terms")
+        .def("add", py::overload_cast<const QuadraticTerms&>(&QuadraticTerms::add), py::arg("terms"),
+            "Add all the terms of another container at once, which is how a large number of terms is added")
+        .def(
+            "append", [](QuadraticTerms& self, QuadraticTermPtr term) { self.push_back(term); }, py::arg("term"),
+            "Append a term without merging it with an existing term of the same variables")
+        .def(
+            "extend",
+            [](QuadraticTerms& self, const std::vector<QuadraticTermPtr>& terms)
+            {
+                self.reserve(self.size() + terms.size());
+                for(auto& T : terms)
+                    self.push_back(T);
+            },
+            py::arg("terms"), "Append the terms of a list without merging them")
+        .def(
+            "reserve", [](QuadraticTerms& self, size_t size) { self.reserve(size); }, py::arg("size"),
+            "Reserve room for the given total number of terms")
         .def("size", [](QuadraticTerms& self) { return self.size(); })
         .def("__len__", [](QuadraticTerms& self) { return self.size(); })
         .def("__getitem__", [](QuadraticTerms& self, size_t i) { return self[i]; });
+
+    py::implicitly_convertible<py::list, QuadraticTerms>();
 
     // ===== SignomialElement Class =====
     py::class_<SignomialElement, std::shared_ptr<SignomialElement>>(m, "SignomialElement")
@@ -735,11 +817,31 @@ PYBIND11_MODULE(SHOTpy, m)
     // ===== SignomialTerms Collection =====
     py::class_<SignomialTerms>(m, "SignomialTerms")
         .def(py::init<>())
-        .def("add", py::overload_cast<SignomialTermPtr>(&SignomialTerms::add))
-        .def("add", py::overload_cast<SignomialTerms>(&SignomialTerms::add))
+        // Creating the whole container at once is what a problem of any size should use
+        .def(py::init<std::vector<SignomialTermPtr>>(), py::arg("terms"))
+        .def("add", py::overload_cast<SignomialTermPtr>(&SignomialTerms::add), py::arg("term"), "Add a single term")
+        .def("add", py::overload_cast<const SignomialTerms&>(&SignomialTerms::add), py::arg("terms"),
+            "Add all the terms of another container at once, which is how a large number of terms is added")
+        .def(
+            "append", [](SignomialTerms& self, SignomialTermPtr term) { self.push_back(term); }, py::arg("term"),
+            "Append a term without merging it with an existing term of the same variables")
+        .def(
+            "extend",
+            [](SignomialTerms& self, const std::vector<SignomialTermPtr>& terms)
+            {
+                self.reserve(self.size() + terms.size());
+                for(auto& T : terms)
+                    self.push_back(T);
+            },
+            py::arg("terms"), "Append the terms of a list without merging them")
+        .def(
+            "reserve", [](SignomialTerms& self, size_t size) { self.reserve(size); }, py::arg("size"),
+            "Reserve room for the given total number of terms")
         .def("size", [](SignomialTerms& self) { return self.size(); })
         .def("__len__", [](SignomialTerms& self) { return self.size(); })
         .def("__getitem__", [](SignomialTerms& self, size_t i) { return self[i]; });
+
+    py::implicitly_convertible<py::list, SignomialTerms>();
 
     // ===== MonomialTerm Class =====
     // Note: MonomialTerm uses Variables (each variable has implicit power 1)
@@ -784,11 +886,31 @@ PYBIND11_MODULE(SHOTpy, m)
     // ===== MonomialTerms Collection =====
     py::class_<MonomialTerms>(m, "MonomialTerms")
         .def(py::init<>())
-        .def("add", py::overload_cast<MonomialTermPtr>(&MonomialTerms::add))
-        .def("add", py::overload_cast<MonomialTerms>(&MonomialTerms::add))
+        // Creating the whole container at once is what a problem of any size should use
+        .def(py::init<std::vector<MonomialTermPtr>>(), py::arg("terms"))
+        .def("add", py::overload_cast<MonomialTermPtr>(&MonomialTerms::add), py::arg("term"), "Add a single term")
+        .def("add", py::overload_cast<const MonomialTerms&>(&MonomialTerms::add), py::arg("terms"),
+            "Add all the terms of another container at once, which is how a large number of terms is added")
+        .def(
+            "append", [](MonomialTerms& self, MonomialTermPtr term) { self.push_back(term); }, py::arg("term"),
+            "Append a term without merging it with an existing term of the same variables")
+        .def(
+            "extend",
+            [](MonomialTerms& self, const std::vector<MonomialTermPtr>& terms)
+            {
+                self.reserve(self.size() + terms.size());
+                for(auto& T : terms)
+                    self.push_back(T);
+            },
+            py::arg("terms"), "Append the terms of a list without merging them")
+        .def(
+            "reserve", [](MonomialTerms& self, size_t size) { self.reserve(size); }, py::arg("size"),
+            "Reserve room for the given total number of terms")
         .def("size", [](MonomialTerms& self) { return self.size(); })
         .def("__len__", [](MonomialTerms& self) { return self.size(); })
         .def("__getitem__", [](MonomialTerms& self, size_t i) { return self[i]; });
+
+    py::implicitly_convertible<py::list, MonomialTerms>();
 
     // ===== ConstraintProperties Struct =====
     py::class_<ConstraintProperties>(m, "ConstraintProperties")
@@ -801,7 +923,8 @@ PYBIND11_MODULE(SHOTpy, m)
 
     // ===== NumericConstraint Base Class =====
     py::class_<NumericConstraint, std::shared_ptr<NumericConstraint>>(m, "NumericConstraint")
-        .def_readwrite("index", &NumericConstraint::index)
+        // Assigned by the problem the constraint is added to, so read only
+        .def_property_readonly("index", &NumericConstraint::getIndex)
         .def_readwrite("name", &NumericConstraint::name)
         .def_readwrite("valueLHS", &NumericConstraint::valueLHS)
         .def_readwrite("valueRHS", &NumericConstraint::valueRHS)
@@ -814,7 +937,7 @@ PYBIND11_MODULE(SHOTpy, m)
                 auto gradient = self.calculateGradient(point, true);
                 std::map<int, double> result;
                 for(auto& G : gradient)
-                    result[G.first->index] = G.second;
+                    result[G.first->getIndex()] = G.second;
                 return result;
             },
             py::arg("point"), "Calculate gradient at point, returns dict of {var_index: value}")
@@ -825,7 +948,7 @@ PYBIND11_MODULE(SHOTpy, m)
                 auto hessian = self.calculateHessian(point, true);
                 std::map<std::pair<int, int>, double> result;
                 for(auto& H : hessian)
-                    result[std::make_pair(H.first.first->index, H.first.second->index)] = H.second;
+                    result[std::make_pair(H.first.first->getIndex(), H.first.second->getIndex())] = H.second;
                 return result;
             },
             py::arg("point"), "Calculate Hessian at point, returns dict of {(var1_index, var2_index): value}")
@@ -836,7 +959,7 @@ PYBIND11_MODULE(SHOTpy, m)
                 auto pattern = self.getGradientSparsityPattern();
                 std::vector<int> result;
                 for(auto& V : *pattern)
-                    result.push_back(V->index);
+                    result.push_back(V->getIndex());
                 return result;
             },
             "Get gradient sparsity pattern as list of variable indices")
@@ -847,19 +970,18 @@ PYBIND11_MODULE(SHOTpy, m)
                 auto pattern = self.getHessianSparsityPattern();
                 std::vector<std::pair<int, int>> result;
                 for(auto& E : *pattern)
-                    result.push_back(std::make_pair(E.first->index, E.second->index));
+                    result.push_back(std::make_pair(E.first->getIndex(), E.second->getIndex()));
                 return result;
             },
             "Get Hessian sparsity pattern as list of (var1_index, var2_index)");
 
     // ===== LinearConstraint Class =====
     py::class_<LinearConstraint, NumericConstraint, std::shared_ptr<LinearConstraint>>(m, "LinearConstraint")
-        .def(py::init<int, std::string, double, double>(), py::arg("index"), py::arg("name"), py::arg("lhs"),
-            py::arg("rhs"))
-        .def(py::init<int, std::string, LinearTerms, double, double>(), py::arg("index"), py::arg("name"),
-            py::arg("linearTerms"), py::arg("lhs"), py::arg("rhs"))
+        .def(py::init<std::string, double, double>(), py::arg("name"), py::arg("lhs"), py::arg("rhs"))
+        .def(py::init<std::string, LinearTerms, double, double>(), py::arg("name"), py::arg("linearTerms"),
+            py::arg("lhs"), py::arg("rhs"))
         .def_readwrite("linearTerms", &LinearConstraint::linearTerms)
-        .def("add", py::overload_cast<LinearTerms>(&LinearConstraint::add))
+        .def("add", py::overload_cast<const LinearTerms&>(&LinearConstraint::add))
         .def("add", py::overload_cast<LinearTermPtr>(&LinearConstraint::add))
         .def("__repr__",
             [](LinearConstraintPtr c)
@@ -871,16 +993,15 @@ PYBIND11_MODULE(SHOTpy, m)
 
     // ===== QuadraticConstraint Class =====
     py::class_<QuadraticConstraint, LinearConstraint, std::shared_ptr<QuadraticConstraint>>(m, "QuadraticConstraint")
-        .def(py::init<int, std::string, double, double>(), py::arg("index"), py::arg("name"), py::arg("lhs"),
-            py::arg("rhs"))
-        .def(py::init<int, std::string, LinearTerms, QuadraticTerms, double, double>(), py::arg("index"),
-            py::arg("name"), py::arg("linearTerms"), py::arg("quadraticTerms"), py::arg("lhs"), py::arg("rhs"))
+        .def(py::init<std::string, double, double>(), py::arg("name"), py::arg("lhs"), py::arg("rhs"))
+        .def(py::init<std::string, LinearTerms, QuadraticTerms, double, double>(), py::arg("name"),
+            py::arg("linearTerms"), py::arg("quadraticTerms"), py::arg("lhs"), py::arg("rhs"))
         .def_readwrite("quadraticTerms", &QuadraticConstraint::quadraticTerms)
         // Inherited add methods from LinearConstraint
-        .def("add", py::overload_cast<LinearTerms>(&QuadraticConstraint::add))
+        .def("add", py::overload_cast<const LinearTerms&>(&QuadraticConstraint::add))
         .def("add", py::overload_cast<LinearTermPtr>(&QuadraticConstraint::add))
         // QuadraticConstraint-specific add methods
-        .def("add", py::overload_cast<QuadraticTerms>(&QuadraticConstraint::add))
+        .def("add", py::overload_cast<const QuadraticTerms&>(&QuadraticConstraint::add))
         .def("add", py::overload_cast<QuadraticTermPtr>(&QuadraticConstraint::add))
         .def("__repr__",
             [](QuadraticConstraintPtr c)
@@ -892,29 +1013,28 @@ PYBIND11_MODULE(SHOTpy, m)
 
     // ===== NonlinearConstraint Class =====
     py::class_<NonlinearConstraint, QuadraticConstraint, std::shared_ptr<NonlinearConstraint>>(m, "NonlinearConstraint")
-        .def(py::init<int, std::string, double, double>(), py::arg("index"), py::arg("name"), py::arg("lhs"),
-            py::arg("rhs"))
-        .def(py::init<int, std::string, NonlinearExpressionPtr, double, double>(), py::arg("index"), py::arg("name"),
-            py::arg("expression"), py::arg("lhs"), py::arg("rhs"))
-        .def(py::init<int, std::string, LinearTerms, NonlinearExpressionPtr, double, double>(), py::arg("index"),
-            py::arg("name"), py::arg("linearTerms"), py::arg("expression"), py::arg("lhs"), py::arg("rhs"))
-        .def(py::init<int, std::string, LinearTerms, QuadraticTerms, NonlinearExpressionPtr, double, double>(),
-            py::arg("index"), py::arg("name"), py::arg("linearTerms"), py::arg("quadraticTerms"), py::arg("expression"),
+        .def(py::init<std::string, double, double>(), py::arg("name"), py::arg("lhs"), py::arg("rhs"))
+        .def(py::init<std::string, NonlinearExpressionPtr, double, double>(), py::arg("name"), py::arg("expression"),
             py::arg("lhs"), py::arg("rhs"))
+        .def(py::init<std::string, LinearTerms, NonlinearExpressionPtr, double, double>(), py::arg("name"),
+            py::arg("linearTerms"), py::arg("expression"), py::arg("lhs"), py::arg("rhs"))
+        .def(py::init<std::string, LinearTerms, QuadraticTerms, NonlinearExpressionPtr, double, double>(),
+            py::arg("name"), py::arg("linearTerms"), py::arg("quadraticTerms"), py::arg("expression"), py::arg("lhs"),
+            py::arg("rhs"))
         .def_readwrite("nonlinearExpression", &NonlinearConstraint::nonlinearExpression)
         .def_readwrite("monomialTerms", &NonlinearConstraint::monomialTerms)
         .def_readwrite("signomialTerms", &NonlinearConstraint::signomialTerms)
         // Inherited add methods from LinearConstraint
-        .def("add", py::overload_cast<LinearTerms>(&NonlinearConstraint::add))
+        .def("add", py::overload_cast<const LinearTerms&>(&NonlinearConstraint::add))
         .def("add", py::overload_cast<LinearTermPtr>(&NonlinearConstraint::add))
         // Inherited add methods from QuadraticConstraint
-        .def("add", py::overload_cast<QuadraticTerms>(&NonlinearConstraint::add))
+        .def("add", py::overload_cast<const QuadraticTerms&>(&NonlinearConstraint::add))
         .def("add", py::overload_cast<QuadraticTermPtr>(&NonlinearConstraint::add))
         // NonlinearConstraint-specific add methods
         .def("add", py::overload_cast<NonlinearExpressionPtr>(&NonlinearConstraint::add))
-        .def("add", py::overload_cast<MonomialTerms>(&NonlinearConstraint::add))
+        .def("add", py::overload_cast<const MonomialTerms&>(&NonlinearConstraint::add))
         .def("add", py::overload_cast<MonomialTermPtr>(&NonlinearConstraint::add))
-        .def("add", py::overload_cast<SignomialTerms>(&NonlinearConstraint::add))
+        .def("add", py::overload_cast<const SignomialTerms&>(&NonlinearConstraint::add))
         .def("add", py::overload_cast<SignomialTermPtr>(&NonlinearConstraint::add))
         .def("__repr__",
             [](NonlinearConstraintPtr c)
@@ -947,7 +1067,7 @@ PYBIND11_MODULE(SHOTpy, m)
                 auto gradient = self.calculateGradient(point, true);
                 std::map<int, double> result;
                 for(auto& G : gradient)
-                    result[G.first->index] = G.second;
+                    result[G.first->getIndex()] = G.second;
                 return result;
             },
             py::arg("point"), "Calculate gradient at point, returns dict of {var_index: value}")
@@ -958,7 +1078,7 @@ PYBIND11_MODULE(SHOTpy, m)
                 auto hessian = self.calculateHessian(point, true);
                 std::map<std::pair<int, int>, double> result;
                 for(auto& H : hessian)
-                    result[std::make_pair(H.first.first->index, H.first.second->index)] = H.second;
+                    result[std::make_pair(H.first.first->getIndex(), H.first.second->getIndex())] = H.second;
                 return result;
             },
             py::arg("point"), "Calculate Hessian at point, returns dict of {(var1_index, var2_index): value}")
@@ -969,7 +1089,7 @@ PYBIND11_MODULE(SHOTpy, m)
                 auto pattern = self.getGradientSparsityPattern();
                 std::vector<int> result;
                 for(auto& V : *pattern)
-                    result.push_back(V->index);
+                    result.push_back(V->getIndex());
                 return result;
             },
             "Get gradient sparsity pattern as list of variable indices")
@@ -980,7 +1100,7 @@ PYBIND11_MODULE(SHOTpy, m)
                 auto pattern = self.getHessianSparsityPattern();
                 std::vector<std::pair<int, int>> result;
                 for(auto& E : *pattern)
-                    result.push_back(std::make_pair(E.first->index, E.second->index));
+                    result.push_back(std::make_pair(E.first->getIndex(), E.second->getIndex()));
                 return result;
             },
             "Get Hessian sparsity pattern as list of (var1_index, var2_index)");
@@ -993,7 +1113,7 @@ PYBIND11_MODULE(SHOTpy, m)
         .def(py::init<E_ObjectiveFunctionDirection, LinearTerms, double>(), py::arg("direction"),
             py::arg("linearTerms"), py::arg("constant"))
         .def_readwrite("linearTerms", &LinearObjectiveFunction::linearTerms)
-        .def("add", py::overload_cast<LinearTerms>(&LinearObjectiveFunction::add))
+        .def("add", py::overload_cast<const LinearTerms&>(&LinearObjectiveFunction::add))
         .def("add", py::overload_cast<LinearTermPtr>(&LinearObjectiveFunction::add));
 
     // ===== QuadraticObjectiveFunction Class =====
@@ -1005,10 +1125,10 @@ PYBIND11_MODULE(SHOTpy, m)
             py::arg("linearTerms"), py::arg("quadraticTerms"), py::arg("constant"))
         .def_readwrite("quadraticTerms", &QuadraticObjectiveFunction::quadraticTerms)
         // Inherited add methods from LinearObjectiveFunction
-        .def("add", py::overload_cast<LinearTerms>(&QuadraticObjectiveFunction::add))
+        .def("add", py::overload_cast<const LinearTerms&>(&QuadraticObjectiveFunction::add))
         .def("add", py::overload_cast<LinearTermPtr>(&QuadraticObjectiveFunction::add))
         // QuadraticObjectiveFunction-specific add methods
-        .def("add", py::overload_cast<QuadraticTerms>(&QuadraticObjectiveFunction::add))
+        .def("add", py::overload_cast<const QuadraticTerms&>(&QuadraticObjectiveFunction::add))
         .def("add", py::overload_cast<QuadraticTermPtr>(&QuadraticObjectiveFunction::add));
 
     // ===== NonlinearObjectiveFunction Class =====
@@ -1029,16 +1149,16 @@ PYBIND11_MODULE(SHOTpy, m)
         .def_readonly("variablesInNonlinearExpression", &NonlinearObjectiveFunction::variablesInNonlinearExpression)
         .def_readonly("nonlinearExpressionIndex", &NonlinearObjectiveFunction::nonlinearExpressionIndex)
         // Inherited add methods from LinearObjectiveFunction
-        .def("add", py::overload_cast<LinearTerms>(&NonlinearObjectiveFunction::add))
+        .def("add", py::overload_cast<const LinearTerms&>(&NonlinearObjectiveFunction::add))
         .def("add", py::overload_cast<LinearTermPtr>(&NonlinearObjectiveFunction::add))
         // Inherited add methods from QuadraticObjectiveFunction
-        .def("add", py::overload_cast<QuadraticTerms>(&NonlinearObjectiveFunction::add))
+        .def("add", py::overload_cast<const QuadraticTerms&>(&NonlinearObjectiveFunction::add))
         .def("add", py::overload_cast<QuadraticTermPtr>(&NonlinearObjectiveFunction::add))
         // NonlinearObjectiveFunction-specific add methods
         .def("add", py::overload_cast<NonlinearExpressionPtr>(&NonlinearObjectiveFunction::add))
-        .def("add", py::overload_cast<MonomialTerms>(&NonlinearObjectiveFunction::add))
+        .def("add", py::overload_cast<const MonomialTerms&>(&NonlinearObjectiveFunction::add))
         .def("add", py::overload_cast<MonomialTermPtr>(&NonlinearObjectiveFunction::add))
-        .def("add", py::overload_cast<SignomialTerms>(&NonlinearObjectiveFunction::add))
+        .def("add", py::overload_cast<const SignomialTerms&>(&NonlinearObjectiveFunction::add))
         .def("add", py::overload_cast<SignomialTermPtr>(&NonlinearObjectiveFunction::add));
 
     // ===== ProblemProperties Struct =====
@@ -1133,6 +1253,16 @@ PYBIND11_MODULE(SHOTpy, m)
             "addConstraint", [](Problem& self, LinearConstraintPtr c) { self.add(c); }, py::arg("constraint"))
         .def(
             "addConstraint", [](Problem& self, NumericConstraintPtr c) { self.add(c); }, py::arg("constraint"))
+        // Problem::add(NumericConstraintPtr) dispatches on the properties of the constraint, so one overload takes
+        // every kind. Adding a constraint is constant time, so this only saves the calls across the binding
+        .def(
+            "addConstraints",
+            [](Problem& self, const std::vector<NumericConstraintPtr>& constraints)
+            {
+                for(auto& C : constraints)
+                    self.add(C);
+            },
+            py::arg("constraints"), "Add all the constraints of a list")
         .def(
             "addSpecialOrderedSet", [](Problem& self, SpecialOrderedSetPtr sos) { self.add(sos); }, py::arg("sos"))
         // Order matters for pybind11 overload resolution - most specific types first
@@ -1173,8 +1303,8 @@ PYBIND11_MODULE(SHOTpy, m)
                 {
                     std::vector<int> varIndices;
                     for(auto& V : E.second)
-                        varIndices.push_back(V->index);
-                    result.push_back(std::make_pair(E.first->index, varIndices));
+                        varIndices.push_back(V->getIndex());
+                    result.push_back(std::make_pair(E.first->getIndex(), varIndices));
                 }
                 return result;
             },
@@ -1186,7 +1316,7 @@ PYBIND11_MODULE(SHOTpy, m)
                 auto pattern = self.getConstraintsHessianSparsityPattern();
                 std::vector<std::pair<int, int>> result;
                 for(auto& E : *pattern)
-                    result.push_back(std::make_pair(E.first->index, E.second->index));
+                    result.push_back(std::make_pair(E.first->getIndex(), E.second->getIndex()));
                 return result;
             },
             "Get Hessian sparsity pattern for constraints only as list of (var1_index, var2_index)")
@@ -1197,7 +1327,7 @@ PYBIND11_MODULE(SHOTpy, m)
                 auto pattern = self.getLagrangianHessianSparsityPattern();
                 std::vector<std::pair<int, int>> result;
                 for(auto& E : *pattern)
-                    result.push_back(std::make_pair(E.first->index, E.second->index));
+                    result.push_back(std::make_pair(E.first->getIndex(), E.second->getIndex()));
                 return result;
             },
             "Get Hessian sparsity pattern including objective as list of (var1_index, var2_index)")
@@ -1233,12 +1363,31 @@ PYBIND11_MODULE(SHOTpy, m)
     // ===== Variables Collection =====
     py::class_<Variables>(m, "Variables")
         .def(py::init<>())
+        // Without this, the container could not be filled from Python at all, which left Problem.addVariables
+        // unreachable. A plain list is converted to it, since Variables inherits std::vector privately
+        .def(py::init<std::vector<VariablePtr>>(), py::arg("variables"))
+        .def(
+            "append", [](Variables& self, VariablePtr variable) { self.push_back(variable); }, py::arg("variable"))
+        .def(
+            "extend",
+            [](Variables& self, const std::vector<VariablePtr>& variables)
+            {
+                self.reserve(self.size() + variables.size());
+                for(auto& V : variables)
+                    self.push_back(V);
+            },
+            py::arg("variables"))
+        .def(
+            "reserve", [](Variables& self, size_t size) { self.reserve(size); }, py::arg("size"),
+            "Reserve room for the given total number of variables")
         .def("size", [](Variables& self) { return self.size(); })
         .def("__len__", [](Variables& self) { return self.size(); })
         .def("__getitem__", [](Variables& self, size_t i) { return self[i]; })
         .def(
             "__iter__", [](Variables& self) { return py::make_iterator(self.begin(), self.end()); },
             py::keep_alive<0, 1>());
+
+    py::implicitly_convertible<py::list, Variables>();
 
     // ===== Environment Class =====
     py::class_<Environment, std::shared_ptr<Environment>>(m, "Environment")

@@ -32,5 +32,8 @@ private:
     std::vector<std::unique_ptr<INLPSolver>> NLPSolvers;
 
     VectorString variableNames;
+
+    // A usable interior point found by moving from a candidate toward the center of the variable box
+    std::shared_ptr<InteriorPoint> retreatToUsableInteriorPoint(const VectorDouble& candidatePoint);
 };
 } // namespace SHOT

@@ -857,6 +857,10 @@ bool ModelingSystemGAMS::copyVariables(ProblemPtr destination)
             double semiBound = NAN;
             bool isSemi = false;
 
+            // Whether a missing or too large integer bound is replaced with the limit from the settings
+            bool hasArtificialLowerBound = false;
+            bool hasArtificialUpperBound = false;
+
             switch(gmoGetVarTypeOne(modelingObject, i))
             {
             case gmovar_X:
@@ -897,11 +901,13 @@ bool ModelingSystemGAMS::copyVariables(ProblemPtr destination)
                 if(variableLBs[i] < minLBInt)
                 {
                     variableLBs[i] = minLBInt;
+                    hasArtificialLowerBound = true;
                 }
 
                 if(variableUBs[i] > maxUBInt)
                 {
                     variableUBs[i] = maxUBInt;
+                    hasArtificialUpperBound = true;
                 }
 
                 break;
@@ -960,11 +966,13 @@ bool ModelingSystemGAMS::copyVariables(ProblemPtr destination)
                 if(variableLBs[i] < minLBInt)
                 {
                     variableLBs[i] = minLBInt;
+                    hasArtificialLowerBound = true;
                 }
 
                 if(variableUBs[i] > maxUBInt)
                 {
                     variableUBs[i] = maxUBInt;
+                    hasArtificialUpperBound = true;
                 }
 
                 isSemi = true;
@@ -983,13 +991,17 @@ bool ModelingSystemGAMS::copyVariables(ProblemPtr destination)
             if(isSemi)
             {
                 auto variable = std::make_shared<SHOT::Variable>(
-                    variableName, i, variableType, variableLBs[i], variableUBs[i], semiBound);
+                    variableName, variableType, variableLBs[i], variableUBs[i], semiBound);
+                variable->properties.hasArtificialLowerBound = hasArtificialLowerBound;
+                variable->properties.hasArtificialUpperBound = hasArtificialUpperBound;
                 destination->add(std::move(variable));
             }
             else
             {
-                auto variable
-                    = std::make_shared<SHOT::Variable>(variableName, i, variableType, variableLBs[i], variableUBs[i]);
+                auto variable = std::make_shared<SHOT::Variable>(
+                    variableName, variableType, variableLBs[i], variableUBs[i]);
+                variable->properties.hasArtificialLowerBound = hasArtificialLowerBound;
+                variable->properties.hasArtificialUpperBound = hasArtificialUpperBound;
                 destination->add(std::move(variable));
             }
         }
@@ -1151,19 +1163,28 @@ bool ModelingSystemGAMS::copyConstraints(ProblemPtr destination)
             {
             case(gmoorder_L):
             {
-                LinearConstraintPtr constraint = std::make_shared<LinearConstraint>(i, buffer, lb, ub);
+                LinearConstraintPtr constraint = std::make_shared<LinearConstraint>(buffer, lb, ub);
                 destination->add(std::move(constraint));
                 break;
             }
             case(gmoorder_Q):
             {
-                QuadraticConstraintPtr constraint = std::make_shared<QuadraticConstraint>(i, buffer, lb, ub);
-                destination->add(std::move(constraint));
+                if(rowHasNonfixedQuadraticTerms(destination, i))
+                {
+                    QuadraticConstraintPtr constraint = std::make_shared<QuadraticConstraint>(buffer, lb, ub);
+                    destination->add(std::move(constraint));
+                }
+                else
+                {
+                    LinearConstraintPtr constraint = std::make_shared<LinearConstraint>(buffer, lb, ub);
+                    destination->add(std::move(constraint));
+                }
+
                 break;
             }
             case(gmoorder_NL):
             {
-                NonlinearConstraintPtr constraint = std::make_shared<NonlinearConstraint>(i, buffer, lb, ub);
+                NonlinearConstraintPtr constraint = std::make_shared<NonlinearConstraint>(buffer, lb, ub);
                 destination->add(std::move(constraint));
                 break;
             }
@@ -1181,6 +1202,48 @@ bool ModelingSystemGAMS::copyConstraints(ProblemPtr destination)
     env->output->outputTrace(" Finished copying constraints between GAMS modeling and SHOT problem objects.");
 
     return (true);
+}
+
+// A quadratic term with a fixed variable is folded into a linear term or into the constant when the terms are
+// copied, so it does not make the equation quadratic. Creating a quadratic constraint for such an equation would
+// leave a linear constraint among the quadratic ones, counted in none of the constraint classes.
+bool ModelingSystemGAMS::rowHasNonfixedQuadraticTerms(ProblemPtr destination, int rowIndex)
+{
+    int numQuadraticTerms = gmoGetRowQNZOne(modelingObject, rowIndex);
+
+    if(numQuadraticTerms == 0)
+        return (false);
+
+    std::vector<int> variableOneIndexes(numQuadraticTerms);
+    std::vector<int> variableTwoIndexes(numQuadraticTerms);
+    std::vector<double> quadraticCoefficients(numQuadraticTerms);
+
+#if GMOAPIVERSION <= 19
+    gmoGetRowQ(modelingObject, rowIndex, variableOneIndexes.data(), variableTwoIndexes.data(),
+        quadraticCoefficients.data());
+#else
+    gmoGetRowQMat(modelingObject, rowIndex, variableOneIndexes.data(), variableTwoIndexes.data(),
+        quadraticCoefficients.data());
+#endif
+
+    for(int j = 0; j < numQuadraticTerms; ++j)
+    {
+        try
+        {
+            VariablePtr firstVariable = destination->getVariable(variableOneIndexes[j]);
+            VariablePtr secondVariable = destination->getVariable(variableTwoIndexes[j]);
+
+            if(firstVariable->lowerBound != firstVariable->upperBound
+                && secondVariable->lowerBound != secondVariable->upperBound)
+                return (true);
+        }
+        catch(const VariableNotFoundException&)
+        {
+            return (true);
+        }
+    }
+
+    return (false);
 }
 
 bool ModelingSystemGAMS::copyLinearTerms(ProblemPtr destination)
@@ -1206,6 +1269,10 @@ bool ModelingSystemGAMS::copyLinearTerms(ProblemPtr destination)
             LinearConstraintPtr constraint
                 = std::static_pointer_cast<LinearConstraint>(destination->getConstraint(row));
 
+            // The terms are added all at once, since adding them one by one searches the terms of the constraint
+            LinearTerms linearTerms;
+            linearTerms.reserve(rownz);
+
             for(int j = 0; j < rownz; j++)
             {
                 auto variable = destination->getVariable(variableIndexes[j]);
@@ -1213,8 +1280,10 @@ bool ModelingSystemGAMS::copyLinearTerms(ProblemPtr destination)
                 if(variable->lowerBound == variable->upperBound)
                     constraint->constant += variable->lowerBound * linearCoefficients[j];
                 else
-                    constraint->add(std::make_shared<LinearTerm>(linearCoefficients[j], variable));
+                    linearTerms.push_back(std::make_shared<LinearTerm>(linearCoefficients[j], variable));
             }
+
+            constraint->add(linearTerms);
         }
         catch(const VariableNotFoundException&)
         {

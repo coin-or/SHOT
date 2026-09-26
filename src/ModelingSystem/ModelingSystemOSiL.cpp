@@ -104,6 +104,10 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
         double variableUB = (V->Attribute("ub") != NULL) ? std::stod(V->Attribute("ub")) : SHOT_DBL_MAX;
         double semiBound = NAN;
 
+        // Whether a missing or too large integer bound is replaced with the limit from the settings
+        bool hasArtificialLowerBound = false;
+        bool hasArtificialUpperBound = false;
+
         E_VariableType variableType;
 
         switch(type)
@@ -134,10 +138,16 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
             variableType = E_VariableType::Integer;
 
             if(variableLB < minLBInt)
+            {
                 variableLB = minLBInt;
+                hasArtificialLowerBound = true;
+            }
 
             if(variableUB > maxUBInt)
+            {
                 variableUB = maxUBInt;
+                hasArtificialUpperBound = true;
+            }
 
             break;
 
@@ -172,10 +182,16 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
             variableType = E_VariableType::Semiinteger;
 
             if(variableLB < minLBInt)
+            {
                 variableLB = minLBInt;
+                hasArtificialLowerBound = true;
+            }
 
             if(variableUB > maxUBInt)
+            {
                 variableUB = maxUBInt;
+                hasArtificialUpperBound = true;
+            }
 
             if(variableLB > 0.0)
             {
@@ -201,8 +217,10 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
             break;
         }
 
-        problem->add(std::make_shared<SHOT::Variable>(
-            variableName, variableIndex, variableType, variableLB, variableUB, semiBound));
+        auto variable = std::make_shared<SHOT::Variable>(variableName, variableType, variableLB, variableUB, semiBound);
+        variable->properties.hasArtificialLowerBound = hasArtificialLowerBound;
+        variable->properties.hasArtificialUpperBound = hasArtificialUpperBound;
+        problem->add(std::move(variable));
 
         variableIndex++;
     }
@@ -230,6 +248,18 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
                 QT = QT->NextSiblingElement("qTerm"))
             {
                 int constraintIndex = std::stoi(QT->Attribute("idx"));
+
+                // A term with a fixed variable is folded into a linear term or into the constant when the terms are
+                // added below, so it does not make the constraint quadratic. Flagging it regardless would create a
+                // quadratic constraint that never receives a quadratic term, leaving a linear constraint among the
+                // quadratic ones and unaccounted for in the problem properties.
+                VariablePtr firstVariable = problem->getVariable(std::stoi(QT->Attribute("idxOne")));
+                VariablePtr secondVariable = problem->getVariable(std::stoi(QT->Attribute("idxTwo")));
+
+                if(firstVariable->lowerBound == firstVariable->upperBound
+                    || secondVariable->lowerBound == secondVariable->upperBound)
+                    continue;
+
                 containsQuadraticTerms.emplace(constraintIndex, true);
             }
         }
@@ -289,14 +319,11 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
                 auto nonlinearExpression = nonlinearConstraints.find(constraintCounter);
                 auto hasQuadraticTerms = containsQuadraticTerms.find(constraintCounter);
 
-                if(nonlinearExpression != nonlinearConstraints.end())
-                    problem->add(std::make_shared<NonlinearConstraint>(
-                        constraintCounter, name, nonlinearExpression->second, lowerBound, upperBound));
-                else if(hasQuadraticTerms != containsQuadraticTerms.end())
-                    problem->add(
-                        std::make_shared<QuadraticConstraint>(constraintCounter, name, lowerBound, upperBound));
-                else
-                    problem->add(std::make_shared<LinearConstraint>(constraintCounter, name, lowerBound, upperBound));
+                if(nonlinearExpression != nonlinearConstraints.end()) problem->add(
+                    std::make_shared<NonlinearConstraint>(name, nonlinearExpression->second, lowerBound, upperBound));
+                else if(hasQuadraticTerms != containsQuadraticTerms.end(
+                    )) problem->add(std::make_shared<QuadraticConstraint>(name, lowerBound, upperBound));
+                else problem->add(std::make_shared<LinearConstraint>(name, lowerBound, upperBound));
 
                 constraintCounter++;
             }
@@ -512,6 +539,10 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
 
             counter = 0;
 
+            // The terms of a constraint are added all at once, since adding them one by one searches the terms
+            // added to the constraint so far for every term
+            std::vector<LinearTerms> constraintLinearTerms(problem->numericConstraints.size());
+
             if(isRowFormat)
             {
                 for(size_t i = 0; i < problem->numericConstraints.size(); i++)
@@ -524,8 +555,8 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
                             std::dynamic_pointer_cast<LinearConstraint>(problem->numericConstraints[i])->constant
                                 += coefficients[counter] * variable->lowerBound;
                         else
-                            std::dynamic_pointer_cast<LinearConstraint>(problem->numericConstraints[i])
-                                ->add(std::make_shared<LinearTerm>(coefficients[counter], variable));
+                            constraintLinearTerms[i].push_back(
+                                std::make_shared<LinearTerm>(coefficients[counter], variable));
 
                         counter++;
                     }
@@ -544,12 +575,19 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
                                 ->constant
                                 += coefficients[counter] * variable->lowerBound;
                         else
-                            std::dynamic_pointer_cast<LinearConstraint>(problem->numericConstraints[indices[counter]])
-                                ->add(std::make_shared<LinearTerm>(coefficients[counter], variable));
+                            constraintLinearTerms[indices[counter]].push_back(
+                                std::make_shared<LinearTerm>(coefficients[counter], variable));
 
                         counter++;
                     }
                 }
+            }
+
+            for(size_t i = 0; i < problem->numericConstraints.size(); i++)
+            {
+                if(constraintLinearTerms[i].size() > 0)
+                    std::dynamic_pointer_cast<LinearConstraint>(problem->numericConstraints[i])
+                        ->add(constraintLinearTerms[i]);
             }
         }
     }

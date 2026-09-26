@@ -438,6 +438,10 @@ void MIPSolverGurobi::initializeSolverSettings()
 
         // Set number of threads
         gurobiModel->set(GRB_IntParam_Threads, env->settings->getSetting<int>("Dual.MIP.NumberOfThreads"));
+
+        // Set the random seed, where zero means that the default of the solver is kept
+        if(int randomSeed = env->settings->getSetting<int>("Dual.MIP.RandomSeed"); randomSeed != 0)
+            gurobiModel->set(GRB_IntParam_Seed, randomSeed);
     }
     catch(GRBException& e)
     {
@@ -777,11 +781,11 @@ E_ProblemSolutionStatus MIPSolverGurobi::getSolutionStatus()
     }
     else if(status == GRB_ITERATION_LIMIT)
     {
-        MIPSolutionStatus = E_ProblemSolutionStatus::Unbounded;
+        MIPSolutionStatus = E_ProblemSolutionStatus::IterationLimit;
     }
     else if(status == GRB_NODE_LIMIT)
     {
-        MIPSolutionStatus = E_ProblemSolutionStatus::Unbounded;
+        MIPSolutionStatus = E_ProblemSolutionStatus::NodeLimit;
     }
     else if(status == GRB_TIME_LIMIT)
     {
@@ -809,7 +813,8 @@ E_ProblemSolutionStatus MIPSolverGurobi::getSolutionStatus()
     }
     else if(status == GRB_LOADED)
     {
-        MIPSolutionStatus = E_ProblemSolutionStatus::Infeasible;
+        // The model has been loaded but not solved, so nothing is known about it
+        MIPSolutionStatus = E_ProblemSolutionStatus::Error;
     }
     else
     {
@@ -827,6 +832,14 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
 
     try
     {
+        for(auto& P : objectiveCoefficientsToRestore)
+        {
+            gurobiModel->getVar(P.index).set(GRB_DoubleAttr_Obj, P.value);
+            modelUpdated = true;
+        }
+
+        objectiveCoefficientsToRestore.clear();
+
         if(modelUpdated)
         {
             gurobiModel->update();
@@ -843,8 +856,14 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
         MIPSolutionStatus = E_ProblemSolutionStatus::Error;
     }
 
+    // An unbounded exact dual problem means that the problem is unbounded, so no point is needed
+    if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded && env->results->getNumberOfIterations() > 0
+        && env->dualSolver->isDualProblemExact())
+    {
+        MIPSolutionStatus = resolveInfeasibleOrUnbounded(MIPSolutionStatus);
+    }
     // To find a feasible point for an unbounded dual problem and not when solving the minimax-problem
-    if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded && env->results->getNumberOfIterations() > 0)
+    else if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded && env->results->getNumberOfIterations() > 0)
     {
         std::vector<PairIndexValue> originalObjectiveCoefficients;
         bool problemUpdated = false;
@@ -852,24 +871,24 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
         if((env->reformulatedProblem->objectiveFunction->properties.classification
                    == E_ObjectiveFunctionClassification::Linear
                && std::dynamic_pointer_cast<LinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                   ->isDualUnbounded())
+                   ->isUnbounded())
             || (env->reformulatedProblem->objectiveFunction->properties.classification
                     == E_ObjectiveFunctionClassification::Quadratic
                 && std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                    ->isDualUnbounded()))
+                    ->isUnbounded()))
         {
             for(auto& V : env->reformulatedProblem->allVariables)
             {
                 if(!V->properties.inObjectiveFunction)
                     continue;
 
-                if(V->isDualUnbounded())
+                if(V->isUnbounded())
                 {
                     // Temporarily remove unbounded terms from objective
                     originalObjectiveCoefficients.emplace_back(
-                        V->index, gurobiModel->getVar(V->index).get(GRB_DoubleAttr_Obj));
+                        V->getIndex(), gurobiModel->getVar(V->getIndex()).get(GRB_DoubleAttr_Obj));
 
-                    gurobiModel->getVar(V->index).set(GRB_DoubleAttr_Obj, 0.0);
+                    gurobiModel->getVar(V->getIndex()).set(GRB_DoubleAttr_Obj, 0.0);
                     problemUpdated = true;
                 }
             }
@@ -892,10 +911,11 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
 
             MIPSolutionStatus = getSolutionStatus();
 
-            for(auto& P : originalObjectiveCoefficients)
-                gurobiModel->getVar(P.index).set(GRB_DoubleAttr_Obj, P.value);
+            // The point is only feasible since the objective has been changed
+            if(MIPSolutionStatus == E_ProblemSolutionStatus::Optimal)
+                MIPSolutionStatus = E_ProblemSolutionStatus::Feasible;
 
-            gurobiModel->update();
+            objectiveCoefficientsToRestore = originalObjectiveCoefficients;
 
             if(env->results->iterations.size() > 0) // Might not have iterations if we are using the minimax solver
                 env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed = true;
@@ -903,6 +923,29 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
     }
 
     return (MIPSolutionStatus);
+}
+
+E_ProblemSolutionStatus MIPSolverGurobi::resolveInfeasibleOrUnbounded(E_ProblemSolutionStatus status)
+{
+    try
+    {
+        if(gurobiModel->get(GRB_IntAttr_Status) != GRB_INF_OR_UNBD)
+            return (status);
+
+        int dualReductions = gurobiModel->get(GRB_IntParam_DualReductions);
+
+        gurobiModel->set(GRB_IntParam_DualReductions, 0);
+        gurobiModel->optimize();
+        status = getSolutionStatus();
+        gurobiModel->set(GRB_IntParam_DualReductions, dualReductions);
+    }
+    catch(GRBException& e)
+    {
+        env->output->outputError("        Error when solving MIP/LP problem without dual reductions", e.getMessage());
+        status = E_ProblemSolutionStatus::Error;
+    }
+
+    return (status);
 }
 
 bool MIPSolverGurobi::repairInfeasibility()
@@ -1392,6 +1435,9 @@ double MIPSolverGurobi::getDualObjectiveValue()
 {
     bool isMIP = getDiscreteVariableStatus();
     double objVal = (isMinimizationProblem ? SHOT_DBL_MIN : SHOT_DBL_MAX);
+
+    if(!isDualBoundAvailable(getSolutionStatus(), isMIP))
+        return (objVal);
 
     try
     {

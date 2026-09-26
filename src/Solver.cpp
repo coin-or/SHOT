@@ -397,15 +397,19 @@ bool Solver::setProblem(std::string fileName)
         auto taskReformulateProblem = std::make_unique<TaskReformulateProblem>(env);
         taskReformulateProblem->run();
 
-        if(env->reformulatedProblem->objectiveFunction->properties.isMinimize)
+        if(env->problem->objectiveFunction->properties.isMinimize)
         {
             env->results->setDualBound(SHOT_DBL_MIN);
-            env->results->setPrimalBound(SHOT_DBL_MAX);
+
+            if(!env->results->hasPrimalSolution())
+                env->results->setPrimalBound(SHOT_DBL_MAX);
         }
         else
         {
             env->results->setDualBound(SHOT_DBL_MAX);
-            env->results->setPrimalBound(SHOT_DBL_MIN);
+
+            if(!env->results->hasPrimalSolution())
+                env->results->setPrimalBound(SHOT_DBL_MIN);
         }
 
         if(env->settings->getSetting<bool>("Output.Debug.Enable"))
@@ -470,14 +474,6 @@ bool Solver::setProblem(
     if(env->settings->getSetting<bool>("Output.Debug.Enable"))
     {
         initializeDebugMode();
-
-        fs::filesystem::path filename(env->settings->getSetting<std::string>("Output.Debug.Path"));
-        filename /= "originalproblem.txt";
-
-        std::stringstream problem;
-        problem << env->problem;
-
-        Utilities::writeStringToFile(filename.string(), problem.str());
     }
 
     // Do not do convexifying reformulations if the problem is assumed to be convex
@@ -506,6 +502,35 @@ bool Solver::setProblem(
     }
 #endif
 
+    // The cutoff the dual solver starts from, as in the overload reading the problem from a file. Without this
+    // Dual.MIP.CutOff.InitialValue would silently have no effect on this path.
+    if(env->settings->getSetting<bool>("Dual.MIP.CutOff.UseInitialValue")
+        && std::abs(env->settings->getSetting<double>("Dual.MIP.CutOff.InitialValue")) < SHOT_DBL_MAX)
+    {
+        env->dualSolver->cutOffToUse = env->settings->getSetting<double>("Dual.MIP.CutOff.InitialValue");
+        env->dualSolver->useCutOff = true;
+        env->output->outputDebug(
+            fmt::format("  Setting user defined cutoff value to {}.", env->dualSolver->cutOffToUse));
+    }
+    else
+    {
+        env->dualSolver->cutOffToUse = env->results->getPrimalBound();
+    }
+
+    // Bound tightening is performed here as well as in the overload that reads the problem from a file, so that
+    // a problem provided directly through the API (e.g. from the Python interface or the GAMS entry point) is
+    // treated the same way. It is controlled by Model.BoundTightening.FeasibilityBased.Use like everywhere else.
+    //
+    // It is skipped when the caller supplies its own reformulated problem: no reformulation is performed in that
+    // case either, and the nested solver created by NLPSolverSHOT -- which the bound tightening task itself
+    // creates when Model.BoundTightening.InitialPOA.Use is active -- passes its problem that way, so it would
+    // otherwise recurse indefinitely.
+    if(!reformulatedProblem)
+    {
+        auto taskPerformBoundTightening = std::make_unique<TaskPerformBoundTightening>(env, env->problem);
+        taskPerformBoundTightening->run();
+    }
+
     setConvexityBasedSettingsPreReformulation();
     verifySettings();
 
@@ -519,15 +544,32 @@ bool Solver::setProblem(
         taskReformulateProblem->run();
     }
 
-    if(env->reformulatedProblem->objectiveFunction->properties.isMinimize)
+    if(env->problem->objectiveFunction->properties.isMinimize)
     {
         env->results->setDualBound(SHOT_DBL_MIN);
-        env->results->setPrimalBound(SHOT_DBL_MAX);
+
+        if(!env->results->hasPrimalSolution())
+            env->results->setPrimalBound(SHOT_DBL_MAX);
     }
     else
     {
         env->results->setDualBound(SHOT_DBL_MAX);
-        env->results->setPrimalBound(SHOT_DBL_MIN);
+
+        if(!env->results->hasPrimalSolution())
+            env->results->setPrimalBound(SHOT_DBL_MIN);
+    }
+
+    // Written after the reformulation, as in the overload reading the problem from a file, so that the dumped
+    // problem reflects the bound tightening performed above.
+    if(env->settings->getSetting<bool>("Output.Debug.Enable"))
+    {
+        fs::filesystem::path filename(env->settings->getSetting<std::string>("Output.Debug.Path"));
+        filename /= "originalproblem.txt";
+
+        std::stringstream problemText;
+        problemText << env->problem;
+
+        Utilities::writeStringToFile(filename.string(), problemText.str());
     }
 
     setConvexityBasedSettings();
@@ -667,6 +709,14 @@ bool Solver::selectStrategy()
 
 bool Solver::solveProblem()
 {
+    // No strategy exists if setProblem() failed or was not called, e.g. when the MIP solver does not support the
+    // problem
+    if(solutionStrategy == nullptr)
+    {
+        env->output->outputCritical(" Cannot solve the problem since it has not been set successfully.");
+        return (false);
+    }
+
     // Verify settings in case they were changed after setProblem() was called
     verifySettings();
 
@@ -680,7 +730,6 @@ bool Solver::solveProblem()
         Utilities::writeStringToFile(filename.string(), usedSettings);
     }
 
-    assert(solutionStrategy != nullptr); /* would be NULL if setProblem failed */
     isProblemSolved = solutionStrategy->solveProblem();
 
     this->finalizeSolution();
@@ -827,11 +876,13 @@ void Solver::initializeSettings()
     env->settings->createSetting("Dual.HyperplaneCuts.MaxPerIteration", 200,
         "Maximal number of hyperplanes to add per iteration", 0, SHOT_INT_MAX);
 
+    env->settings->createSetting("Dual.HyperplaneCuts.NonfinitePointRetreatFactor", 1e-3,
+        "The smallest fraction of the distance to a point where the constraint is finite that the point a "
+        "hyperplane is generated in is moved, when the constraint is not finite in it",
+        1e-12, 0.5);
+
     env->settings->createSetting("Dual.HyperplaneCuts.UseIntegerCuts", false,
         "Add integer cuts for infeasible integer-combinations for binary problems");
-
-    env->settings->createSetting("Dual.HyperplaneCuts.SaveHyperplanePoints", false,
-        "Whether to save the points in the generated hyperplanes list", false);
 
     VectorString enumObjectiveRootsearch;
     enumObjectiveRootsearch.push_back("Always");
@@ -881,6 +932,10 @@ void Solver::initializeSettings()
 
     env->settings->createSetting(
         "Dual.MIP.NumberOfThreads", 0, "Number of threads to use in MIP solver: 0: Automatic", 0, 999);
+
+    env->settings->createSetting("Dual.MIP.RandomSeed", 0,
+        "Random seed for the pseudorandom choices in the MIP solver: 0: The default of the solver used", 0,
+        SHOT_INT_MAX);
 
     env->settings->createSetting("Dual.MIP.SolutionLimit.ForceOptimal.Iteration", 10000,
         "Iterations without dual bound updates for forcing optimal MIP solution", 0, SHOT_INT_MAX);
@@ -985,8 +1040,8 @@ void Solver::initializeSettings()
     env->settings->createSetting("Dual.Relaxation.MaxLazyConstraints", 0,
         "Max number of lazy constraints to add in relaxed solutions in single-tree strategy", 0, SHOT_INT_MAX);
 
-    env->settings->createSetting(
-        "Dual.Relaxation.TerminationTolerance", 0.5, "Time limit (s) when solving LP problems initially");
+    env->settings->createSetting("Dual.Relaxation.TerminationTolerance", 0.5,
+        "Stop solving relaxed problems when the maximum constraint deviation is at most this value");
 
     env->settings->createSetting(
         "Dual.Relaxation.TimeLimit", 30.0, "Time limit (s) when solving LP problems initially", 0, SHOT_DBL_MAX);
@@ -1046,6 +1101,11 @@ void Solver::initializeSettings()
         static_cast<int>(ES_HyperplaneCutStrategy::ECP), "Dual cut strategy", enumCutStrategy, 0);
     enumCutStrategy.clear();
 
+    env->settings->createSetting("Model.BoundTightening.InitialPOA.DirectionalSolves", 10,
+        "Maximum number of additional solves minimizing or maximizing a variable in a convex constraint without "
+        "cuts",
+        0, SHOT_INT_MAX);
+
     env->settings->createSetting("Model.BoundTightening.InitialPOA.IterationLimit", 50, "Iteration limit for POA");
 
     env->settings->createSetting("Model.BoundTightening.InitialPOA.ObjectiveConstraintTolerance", 1e-3,
@@ -1066,7 +1126,8 @@ void Solver::initializeSettings()
     env->settings->createSetting(
         "Model.BoundTightening.InitialPOA.Use", false, "Create an initial polyhedral outer approximation");
 
-    env->settings->createSetting("Model.BoundTightening.InitialPOA.TimeLimit", 5.0, "Time limit for initial POA");
+    env->settings->createSetting("Model.BoundTightening.InitialPOA.TimeLimit", 5.0,
+        "Time limit for all the problems solved for the initial POA");
 
     // Convexity settings
 
@@ -1151,8 +1212,18 @@ void Solver::initializeSettings()
     enumBinaryMonomialReformulation.clear();
 
     // Reformulations for objective functions
-    env->settings->createSetting("Model.Reformulation.ObjectiveFunction.Epigraph.Use", false,
-        "Reformulates a nonlinear objective as an auxiliary constraint");
+    VectorString enumObjectiveEpigraphStrategy;
+    enumObjectiveEpigraphStrategy.push_back("Unchanged");
+    enumObjectiveEpigraphStrategy.push_back("Objective function");
+    enumObjectiveEpigraphStrategy.push_back("Epigraph constraint");
+    env->settings->createSetting("Model.Reformulation.ObjectiveFunction.EpigraphStrategy",
+        static_cast<int>(ES_ObjectiveEpigraphStrategy::Unchanged),
+        "How to choose between objective-function and epigraph-constraint form for the objective. 'Unchanged' "
+        "performs no epigraph or anti-epigraph reformulation, keeping the objective function exactly as given; "
+        "'Objective function' always keeps (or folds back to) a direct objective function; 'Epigraph constraint' "
+        "always introduces an epigraph auxiliary-variable constraint for nonlinear or quadratic objectives",
+        enumObjectiveEpigraphStrategy, 0);
+    enumObjectiveEpigraphStrategy.clear();
 
     env->settings->createSetting("Model.Reformulation.ObjectiveFunction.PartitionNonlinearTerms",
         static_cast<int>(ES_PartitionNonlinearSums::IfConvex), "When to partition nonlinear sums in objective function",
@@ -1350,6 +1421,9 @@ void Solver::initializeSettings()
     env->settings->createSetting("Primal.FixedInteger.Use", true, "Use the fixed integer primal strategy");
 
     env->settings->createSetting("Primal.FixedInteger.Warmstart", true, "Warm start the NLP solver");
+
+    env->settings->createSetting("Primal.PolishSolution", true,
+        "Solve an NLP problem from the final solution to try to improve it");
 
     // Primal settings: rootsearch
 
@@ -1715,7 +1789,7 @@ void Solver::initializeSettings()
         "Min absolute difference between max nonlinear constraint errors in subsequent iterations for termination", 0,
         SHOT_DBL_MAX);
 
-    env->settings->createSetting("Termination.DualStagnation.IterationLimit", SHOT_INT_MAX,
+    env->settings->createSetting("Termination.DualStagnation.IterationLimit", 1000,
         "Max number of iterations without significant dual objective value improvement", 0, SHOT_INT_MAX);
 
     env->settings->createSetting("Termination.PrimalStagnation.IterationLimit", 50,
@@ -1913,7 +1987,7 @@ void Solver::verifySettings()
     if(solver == ES_MIPSolver::Highs)
     {
         MIPSolverDefined = true;
-        unboundedVariableBound = 1e50;
+        unboundedVariableBound = 1e20;
 
         // Some features are not available in Highs
         env->settings->updateSetting(
@@ -2093,9 +2167,6 @@ void Solver::setConvexityBasedSettings()
             env->settings->updateSetting(
                 "Model.BoundTightening.FeasibilityBased.TimeLimit", 5.0, E_SettingPriority::RecommendedInternal);
 
-            // Need to save these to perform dual bound updates
-            // env->settings->updateSetting("Dual.HyperplaneCuts.SaveHyperplanePoints", true);
-
 #ifdef HAS_CPLEX
 
             if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Cplex)
@@ -2135,6 +2206,8 @@ void Solver::setConvexityBasedSettings()
 VectorString Solver::getSettingIdentifiers(E_SettingType type) { return (env->settings->getSettingIdentifiers(type)); }
 
 double Solver::getCurrentDualBound() { return (env->results->getCurrentDualBound()); }
+
+double Solver::getGlobalDualBound() { return (env->results->getGlobalDualBound()); }
 
 double Solver::getPrimalBound() { return (env->results->getPrimalBound()); }
 

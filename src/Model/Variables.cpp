@@ -38,6 +38,7 @@ bool Variable::tightenBounds(const Interval bound)
     {
         tightened = true;
         this->properties.hasLowerBoundBeenTightened = true;
+        this->properties.hasArtificialLowerBound = false;
 
         if(bound.l() == 0.0 && std::signbit(bound.l()))
         {
@@ -58,6 +59,7 @@ bool Variable::tightenBounds(const Interval bound)
     {
         tightened = true;
         this->properties.hasUpperBoundBeenTightened = true;
+        this->properties.hasArtificialUpperBound = false;
 
         if(bound.u() == 0.0 && std::signbit(bound.u()))
         {
@@ -78,6 +80,9 @@ bool Variable::tightenBounds(const Interval bound)
     {
         if(auto sharedOwnerProblem = ownerProblem.lock())
         {
+            // Otherwise, e.g. the bounds of the terms in the problem are still calculated with the old bounds
+            sharedOwnerProblem->updateVariableBoundVectors(*this);
+
             if(sharedOwnerProblem->env->output)
             {
                 sharedOwnerProblem->env->output->outputDebug(
@@ -90,32 +95,23 @@ bool Variable::tightenBounds(const Interval bound)
     return tightened;
 }
 
-bool Variable::isDualUnbounded()
+bool Variable::isUnbounded()
 {
-    if(properties.inLinearConstraints || properties.inQuadraticConstraints)
-        return false;
+    double minLB;
+    double maxUB;
 
-    if(auto sharedOwnerProblem = ownerProblem.lock())
+    if(auto sharedOwnerProblem = ownerProblem.lock(); sharedOwnerProblem && sharedOwnerProblem->env->settings)
     {
-        double minLB;
-        double maxUB;
-
-        if(sharedOwnerProblem->env->settings)
-        {
-            minLB = sharedOwnerProblem->env->settings->getSetting<double>("Model.Variables.Continuous.MinimumLowerBound");
-            maxUB = sharedOwnerProblem->env->settings->getSetting<double>("Model.Variables.Continuous.MaximumUpperBound");
-        }
-        else
-        {
-            minLB = -1e50;
-            maxUB = 1e50;
-        }
-
-        if(lowerBound > minLB && upperBound < maxUB)
-            return false;
+        minLB = sharedOwnerProblem->env->settings->getSetting<double>("Model.Variables.Continuous.MinimumLowerBound");
+        maxUB = sharedOwnerProblem->env->settings->getSetting<double>("Model.Variables.Continuous.MaximumUpperBound");
+    }
+    else
+    {
+        minLB = -1e50;
+        maxUB = 1e50;
     }
 
-    return true;
+    return !(lowerBound > minLB && upperBound < maxUB);
 }
 
 void Variable::takeOwnership(ProblemPtr owner) { ownerProblem = owner; }
@@ -200,8 +196,8 @@ std::ostream& operator<<(std::ostream& stream, VariablePtr var)
     else
         inTerms << " ";
 
-    stream << fmt::format("[{:>6d},{:<1s}] [{:<4s}] [{:<5s}]\t{:>12f}  {:1s} <= {:^16s}  <= {:1s} {:<12f}", var->index,
-        type.str(), contains.str(), inTerms.str(),
+    stream << fmt::format("[{:>6d},{:<1s}] [{:<4s}] [{:<5s}]\t{:>12f}  {:1s} <= {:^16s}  <= {:1s} {:<12f}",
+        var->getIndex(), type.str(), contains.str(), inTerms.str(),
         (var->properties.type == E_VariableType::Semicontinuous || var->properties.type == E_VariableType::Semiinteger)
             ? var->semiBound
             : var->lowerBound,

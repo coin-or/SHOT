@@ -22,6 +22,8 @@
 #include "../Model/ObjectiveFunction.h"
 #include "../Model/Problem.h"
 
+#include <unordered_map>
+
 #ifdef HAS_STD_FILESYSTEM
 #include <filesystem>
 namespace fs = std;
@@ -88,9 +90,6 @@ void NLPSolverSHOT::initializeMIPProblem()
 
     solver->updateSetting("Termination.DualStagnation.IterationLimit", 20);
 
-    if(env->settings->getSetting<bool>("Subsolver.SHOT.ReuseHyperplanes.Use"))
-        solver->updateSetting("Dual.HyperplaneCuts.SaveHyperplanePoints", true);
-
     solver->updateSetting(
         "Model.BoundTightening.FeasibilityBased.Use", env->settings->getSetting<bool>("Subsolver.SHOT.UseFBBT"));
 
@@ -112,7 +111,14 @@ void NLPSolverSHOT::initializeMIPProblem()
     solver->updateSetting("Output.Debug.Path", subproblemDebugPath.string());
 
     relaxedProblem = sourceProblem->createCopy(solver->getEnvironment(), true, false, false);
-    solver->setProblem(relaxedProblem, relaxedProblem);
+
+    // Solver::selectStrategy() (called by setProblem()) catches its own initialization exceptions and returns
+    // false rather than propagating them, so a failure here would otherwise be silently swallowed: this object
+    // would be considered successfully constructed with no solution strategy set, and later crash on the
+    // assert in Solver::solveProblem() instead. Throw here so the caller can catch it and disable this NLP
+    // solver instead.
+    if(!solver->setProblem(relaxedProblem, relaxedProblem))
+        throw Exception("Could not initialize the nested SHOT solver for the fixed-integer NLP problem.");
 }
 
 void NLPSolverSHOT::setStartingPoint(VectorInteger variableIndexes, VectorDouble variableValues) { }
@@ -129,14 +135,14 @@ void NLPSolverSHOT::unfixVariables()
 {
     for(auto& VAR : sourceProblem->allVariables)
     {
-        relaxedProblem->setVariableBounds(VAR->index, VAR->lowerBound, VAR->upperBound);
+        relaxedProblem->setVariableBounds(VAR->getIndex(), VAR->lowerBound, VAR->upperBound);
         VAR->properties.hasLowerBoundBeenTightened = false;
         VAR->properties.hasUpperBoundBeenTightened = false;
     }
 
     for(auto& VAR : relaxedProblem->allVariables)
         solver->getEnvironment()->dualSolver->MIPSolver->updateVariableBound(
-            VAR->index, VAR->lowerBound, VAR->upperBound);
+            VAR->getIndex(), VAR->lowerBound, VAR->upperBound);
 
     fixedVariableIndexes.clear();
     fixedVariableValues.clear();
@@ -203,10 +209,10 @@ E_NLPSolutionStatus NLPSolverSHOT::solveProblemInstance()
     // Update the bounds to the MIP solver
     for(auto& VAR : relaxedProblem->allVariables)
         solver->getEnvironment()->dualSolver->MIPSolver->updateVariableBound(
-            VAR->index, VAR->lowerBound, VAR->upperBound);
+            VAR->getIndex(), VAR->lowerBound, VAR->upperBound);
 
     // Setting the cutoff value from currently best known solution
-    if(env->dualSolver->cutOffToUse != SHOT_DBL_MAX)
+    if(useCutOff && env->dualSolver->cutOffToUse != SHOT_DBL_MAX)
     {
         solver->updateSetting("Dual.MIP.CutOff.InitialValue", env->dualSolver->cutOffToUse);
         solver->updateSetting("Dual.MIP.CutOff.UseInitialValue", true);
@@ -228,50 +234,78 @@ E_NLPSolutionStatus NLPSolverSHOT::solveProblemInstance()
 
     int hyperplaneCounter = 0;
 
-    if(env->settings->getSetting<bool>("Subsolver.SHOT.ReuseHyperplanes.Use"))
+    if(reuseHyperplanes && env->settings->getSetting<bool>("Subsolver.SHOT.ReuseHyperplanes.Use"))
     {
-        int numHyperplanesToCopy = solver->getEnvironment()->dualSolver->generatedHyperplanes.size()
+        auto& subsolverHyperplanes = solver->getEnvironment()->dualSolver->generatedHyperplanes;
+
+        int numHyperplanesToCopy = subsolverHyperplanes.size()
             * env->settings->getSetting<double>("Subsolver.SHOT.ReuseHyperplanes.Fraction");
 
-        for(auto& HP : solver->getEnvironment()->dualSolver->generatedHyperplanes)
+        // The nested solver reformulates its problem again, so its constraint indices do not match the ones in the
+        // main reformulated problem. Constraints are matched by name instead, and the cut is then generated from the
+        // main problem's constraint, so it is a valid linearization even if the matched function is not the same.
+        // Only cuts for convex constraints are valid everywhere, so the other ones are not reused.
+        std::unordered_map<std::string, NonlinearConstraintPtr> mainConstraints;
+
+        for(auto& C : env->reformulatedProblem->nonlinearConstraints)
+        {
+            if(C->properties.convexity <= E_Convexity::Convex)
+                mainConstraints.emplace(C->name, C);
+        }
+
+        auto mainObjective = env->reformulatedProblem->objectiveFunction;
+
+        bool isObjectiveConvex = mainObjective->properties.convexity == E_Convexity::Linear
+            || (mainObjective->properties.isMinimize && mainObjective->properties.convexity == E_Convexity::Convex)
+            || (mainObjective->properties.isMaximize && mainObjective->properties.convexity == E_Convexity::Concave);
+
+        for(auto& GHP : subsolverHyperplanes)
         {
             if(hyperplaneCounter >= numHyperplanesToCopy)
                 break;
 
-            if(auto constraintHP = std::dynamic_pointer_cast<ConstraintHyperplane>(HP))
+            auto numericHP = std::dynamic_pointer_cast<NumericHyperplane>(GHP->sourceHyperplane);
+
+            if(!numericHP)
+                continue;
+
+            // The nested solver's original variables are those of the main reformulated problem, and the auxiliary
+            // variables of the main reformulation are recalculated from the original ones
+            VectorDouble point(numericHP->generatedPoint.begin(),
+                numericHP->generatedPoint.begin() + env->problem->properties.numberOfVariables);
+
+            if((int)point.size() < env->reformulatedProblem->properties.numberOfVariables)
+                env->reformulatedProblem->augmentAuxiliaryVariableValues(point);
+
+            assert((int)point.size() == env->reformulatedProblem->properties.numberOfVariables);
+
+            if(auto constraintHP = std::dynamic_pointer_cast<ConstraintHyperplane>(numericHP))
             {
-                std::vector<double> tmpSolPt(constraintHP->generatedPoint.begin(),
-                    constraintHP->generatedPoint.begin() + env->problem->properties.numberOfVariables);
+                auto mainConstraint = mainConstraints.find(constraintHP->sourceConstraint->name);
 
-                if((int)tmpSolPt.size() < env->reformulatedProblem->properties.numberOfVariables)
-                    env->reformulatedProblem->augmentAuxiliaryVariableValues(tmpSolPt);
-
-                assert(tmpSolPt.size() == env->reformulatedProblem->properties.numberOfVariables);
+                if(mainConstraint == mainConstraints.end())
+                    continue;
 
                 auto hyperplane = std::make_shared<ConstraintHyperplane>();
-                hyperplane->generatedPoint = tmpSolPt;
-                hyperplane->sourceConstraint = std::dynamic_pointer_cast<NumericConstraint>(
-                    env->reformulatedProblem->getConstraint(constraintHP->sourceConstraint->index));
-                hyperplane->isGlobal = HP->sourceHyperplane->isGlobal;
+                hyperplane->generatedPoint = point;
+                hyperplane->sourceConstraint = mainConstraint->second;
+                hyperplane->isGlobal = true;
                 hyperplane->source = E_HyperplaneSource::PrimalSolutionSearch;
 
                 env->dualSolver->addHyperplane(hyperplane);
                 hyperplaneCounter++;
             }
-            else if(auto objectiveHP = std::dynamic_pointer_cast<ObjectiveHyperplane>(HP))
+            else if(std::dynamic_pointer_cast<ObjectiveHyperplane>(numericHP))
             {
-                std::vector<double> tmpSolPt(objectiveHP->generatedPoint.begin(),
-                    objectiveHP->generatedPoint.begin() + env->problem->properties.numberOfVariables);
+                // Objective cuts are expressed using the auxiliary objective variable in the main dual problem, and
+                // are only valid everywhere if the objective function is convex
+                if(!isObjectiveConvex || !env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
+                    continue;
 
-                if((int)tmpSolPt.size() < env->reformulatedProblem->properties.numberOfVariables)
-                    env->reformulatedProblem->augmentAuxiliaryVariableValues(tmpSolPt);
-
-                assert(tmpSolPt.size() == env->reformulatedProblem->properties.numberOfVariables);
-
-                ObjectiveHyperplanePtr hyperplane;
-                hyperplane->generatedPoint = tmpSolPt;
-                hyperplane->objectiveFunctionValue = sourceProblem->objectiveFunction->calculateValue(tmpSolPt);
-                hyperplane->isGlobal = sourceProblem->objectiveFunction->properties.convexity <= E_Convexity::Convex;
+                auto hyperplane = std::make_shared<ObjectiveHyperplane>();
+                hyperplane->generatedPoint = point;
+                hyperplane->objectiveFunctionValue = mainObjective->calculateValue(point);
+                hyperplane->isGlobal = true;
                 hyperplane->source = E_HyperplaneSource::PrimalSolutionSearch;
 
                 env->dualSolver->addHyperplane(hyperplane);
@@ -279,7 +313,7 @@ E_NLPSolutionStatus NLPSolverSHOT::solveProblemInstance()
             }
         }
 
-        solver->getEnvironment()->dualSolver->generatedHyperplanes.clear();
+        subsolverHyperplanes.clear();
 
         solver->getEnvironment()->output->outputInfo(
             fmt::format(" Added {} hyperplanes generated by SHOT primal NLP solver.", hyperplaneCounter));
@@ -289,7 +323,13 @@ E_NLPSolutionStatus NLPSolverSHOT::solveProblemInstance()
 
     auto terminationReason = solver->getEnvironment()->results->terminationReason;
 
-    if(terminationReason == E_TerminationReason::AbsoluteGap || terminationReason == E_TerminationReason::RelativeGap)
+    // A gap-tolerance-based termination does not by itself guarantee a primal solution exists: both the dual and
+    // primal bounds default to the same "unset" sentinel value when neither has been established, which can
+    // trivially satisfy an absolute/relative gap tolerance of (near) zero. Without this check, callers would be
+    // told the nested solve was "Optimal" and then get an empty solution point from getSolution().
+    if(solver->hasPrimalSolution()
+        && (terminationReason == E_TerminationReason::AbsoluteGap
+            || terminationReason == E_TerminationReason::RelativeGap))
         status = E_NLPSolutionStatus::Optimal;
     else if(solver->hasPrimalSolution())
         status = E_NLPSolutionStatus::Feasible;

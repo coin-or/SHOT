@@ -17,6 +17,8 @@
 
 #include "../Model/Problem.h"
 
+#include <unordered_map>
+
 namespace SHOT
 {
 
@@ -136,8 +138,13 @@ private:
 
     ProblemPtr sourceProblem;
 
-    std::map<std::pair<int, int>, int> lagrangianHessianCounterPlacement;
-    std::map<std::pair<int, int>, int> jacobianCounterPlacement;
+    // The position in the Jacobian and Hessian of Ipopt of a (row, column) pair, keyed on row * numberOfVariables +
+    // column, since these are looked up for every nonzero in every evaluation
+    std::unordered_map<long, int> lagrangianHessianCounterPlacement;
+    std::unordered_map<long, int> jacobianCounterPlacement;
+
+    // The Jacobian elements of the linear constraints, which are the same in every evaluation
+    std::vector<std::pair<int, double>> constantJacobianElements;
 };
 
 class NLPSolverIpoptBase : virtual public INLPSolver

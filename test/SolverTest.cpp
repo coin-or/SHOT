@@ -109,6 +109,9 @@ bool TestRootsearch(const std::string& problemFile)
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
     auto env = solver->getEnvironment();
 
+    // A time limit so that a test that does not converge cannot stop the test suite
+    solver->updateSetting("Termination.TimeLimit", 60.0);
+
     solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Error));
 
     std::cout << "Reading problem:  " << problemFile << '\n';
@@ -184,6 +187,9 @@ bool TestGradient(const std::string& problemFile)
 
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
     auto env = solver->getEnvironment();
+
+    // A time limit so that a test that does not converge cannot stop the test suite
+    solver->updateSetting("Termination.TimeLimit", 60.0);
 
     solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Error));
 
@@ -492,6 +498,13 @@ bool TestCallbackUserTermination()
         passed = false;
     }
 
+    // A termination requested through the callback must be reported as a user abort
+    if(passed && env->results->terminationReason != E_TerminationReason::UserAbort)
+    {
+        std::cout << "Termination reason is not UserAbort as expected" << std::endl;
+        passed = false;
+    }
+
     if(!passed)
         std::cout << "Could not terminate problem with callback!\n";
     else
@@ -522,8 +535,8 @@ bool TestCallbackExternalHyperplane()
     problem->name = "ex1223b";
 
     // Creating the variables
-    auto x1 = std::make_shared<Variable>("x1", 0, E_VariableType::Integer, 0.0, 3.0);
-    auto x2 = std::make_shared<Variable>("x2", 1, E_VariableType::Integer, 1.0, 3.0);
+    auto x1 = std::make_shared<Variable>("x1", E_VariableType::Integer, 0.0, 3.0);
+    auto x2 = std::make_shared<Variable>("x2", E_VariableType::Integer, 1.0, 3.0);
 
     // All variables are nonlinear, so need to add expression variables as well
     auto nl_x1 = std::make_shared<ExpressionVariable>(x1);
@@ -542,7 +555,7 @@ bool TestCallbackExternalHyperplane()
     objective->add(std::make_shared<LinearTerm>(-2.0, x2));
 
     // Creating the constraint e1: 0.1 e^x2 + x1^2 + x2 <= 10;
-    auto e1 = std::make_shared<NonlinearConstraint>(0, "e1", SHOT_DBL_MIN, 10.0);
+    auto e1 = std::make_shared<NonlinearConstraint>("e1", SHOT_DBL_MIN, 10.0);
     e1->add(std::make_shared<QuadraticTerm>(1.0, x1, x1));
     e1->add(std::make_shared<LinearTerm>(1.0, x2));
 
@@ -551,7 +564,7 @@ bool TestCallbackExternalHyperplane()
     problem->add(e1);
 
     // Creating the constraint e2: e^x1 / x2  <= 3;
-    auto e2 = std::make_shared<NonlinearConstraint>(1, "e2", SHOT_DBL_MIN, 3.0);
+    auto e2 = std::make_shared<NonlinearConstraint>("e2", SHOT_DBL_MIN, 3.0);
 
     e2->add(std::make_shared<ExpressionDivide>(std::make_shared<ExpressionExp>(nl_x1), nl_x2));
     problem->add(e2);
@@ -680,13 +693,13 @@ static std::pair<std::unique_ptr<SHOT::Solver>, std::shared_ptr<SHOT::Environmen
     auto problem = std::make_shared<SHOT::Problem>(env);
     problem->name = "ex1223b";
 
-    auto x1 = std::make_shared<Variable>("x1", 0, E_VariableType::Real, 0.0, 10.0);
-    auto x2 = std::make_shared<Variable>("x2", 1, E_VariableType::Real, 0.0, 10.0);
-    auto x3 = std::make_shared<Variable>("x3", 2, E_VariableType::Real, 0.0, 10.0);
-    auto b4 = std::make_shared<Variable>("b4", 3, E_VariableType::Binary);
-    auto b5 = std::make_shared<Variable>("b5", 4, E_VariableType::Binary);
-    auto b6 = std::make_shared<Variable>("b6", 5, E_VariableType::Binary);
-    auto b7 = std::make_shared<Variable>("b7", 6, E_VariableType::Binary);
+    auto x1 = std::make_shared<Variable>("x1", E_VariableType::Real, 0.0, 10.0);
+    auto x2 = std::make_shared<Variable>("x2", E_VariableType::Real, 0.0, 10.0);
+    auto x3 = std::make_shared<Variable>("x3", E_VariableType::Real, 0.0, 10.0);
+    auto b4 = std::make_shared<Variable>("b4", E_VariableType::Binary);
+    auto b5 = std::make_shared<Variable>("b5", E_VariableType::Binary);
+    auto b6 = std::make_shared<Variable>("b6", E_VariableType::Binary);
+    auto b7 = std::make_shared<Variable>("b7", E_VariableType::Binary);
 
     auto nl_x1 = std::make_shared<ExpressionVariable>(x1);
     auto nl_x2 = std::make_shared<ExpressionVariable>(x2);
@@ -715,7 +728,7 @@ static std::pair<std::unique_ptr<SHOT::Solver>, std::shared_ptr<SHOT::Environmen
     objective->add(std::make_shared<ExpressionSquare>(
         std::make_shared<ExpressionSum>(std::make_shared<ExpressionConstant>(-3), nl_x3)));
 
-    auto e1 = std::make_shared<LinearConstraint>(0, "e1", SHOT_DBL_MIN, 5.0);
+    auto e1 = std::make_shared<LinearConstraint>("e1", SHOT_DBL_MIN, 5.0);
     e1->add(std::make_shared<LinearTerm>(1.0, x1));
     e1->add(std::make_shared<LinearTerm>(1.0, x2));
     e1->add(std::make_shared<LinearTerm>(1.0, x3));
@@ -724,44 +737,44 @@ static std::pair<std::unique_ptr<SHOT::Solver>, std::shared_ptr<SHOT::Environmen
     e1->add(std::make_shared<LinearTerm>(1.0, b6));
     problem->add(e1);
 
-    auto e2 = std::make_shared<QuadraticConstraint>(1, "e2", SHOT_DBL_MIN, 5.5);
+    auto e2 = std::make_shared<QuadraticConstraint>("e2", SHOT_DBL_MIN, 5.5);
     e2->add(std::make_shared<QuadraticTerm>(1.0, b6, b6));
     e2->add(std::make_shared<QuadraticTerm>(1.0, x1, x1));
     e2->add(std::make_shared<QuadraticTerm>(1.0, x2, x2));
     e2->add(std::make_shared<QuadraticTerm>(1.0, x3, x3));
     problem->add(e2);
 
-    auto e3 = std::make_shared<LinearConstraint>(2, "e3", SHOT_DBL_MIN, 1.2);
+    auto e3 = std::make_shared<LinearConstraint>("e3", SHOT_DBL_MIN, 1.2);
     e3->add(std::make_shared<LinearTerm>(1.0, x1));
     e3->add(std::make_shared<LinearTerm>(1.0, b4));
     problem->add(e3);
 
-    auto e4 = std::make_shared<LinearConstraint>(3, "e4", SHOT_DBL_MIN, 1.8);
+    auto e4 = std::make_shared<LinearConstraint>("e4", SHOT_DBL_MIN, 1.8);
     e4->add(std::make_shared<LinearTerm>(1.0, x2));
     e4->add(std::make_shared<LinearTerm>(1.0, b5));
     problem->add(e4);
 
-    auto e5 = std::make_shared<LinearConstraint>(4, "e5", SHOT_DBL_MIN, 2.5);
+    auto e5 = std::make_shared<LinearConstraint>("e5", SHOT_DBL_MIN, 2.5);
     e5->add(std::make_shared<LinearTerm>(1.0, x3));
     e5->add(std::make_shared<LinearTerm>(1.0, b6));
     problem->add(e5);
 
-    auto e6 = std::make_shared<LinearConstraint>(5, "e6", SHOT_DBL_MIN, 1.2);
+    auto e6 = std::make_shared<LinearConstraint>("e6", SHOT_DBL_MIN, 1.2);
     e6->add(std::make_shared<LinearTerm>(1.0, x1));
     e6->add(std::make_shared<LinearTerm>(1.0, b7));
     problem->add(e6);
 
-    auto e7 = std::make_shared<QuadraticConstraint>(6, "e7", SHOT_DBL_MIN, 1.64);
+    auto e7 = std::make_shared<QuadraticConstraint>("e7", SHOT_DBL_MIN, 1.64);
     e7->add(std::make_shared<QuadraticTerm>(1.0, b5, b5));
     e7->add(std::make_shared<QuadraticTerm>(1.0, x2, x2));
     problem->add(e7);
 
-    auto e8 = std::make_shared<QuadraticConstraint>(7, "e8", SHOT_DBL_MIN, 4.25);
+    auto e8 = std::make_shared<QuadraticConstraint>("e8", SHOT_DBL_MIN, 4.25);
     e8->add(std::make_shared<QuadraticTerm>(1.0, b6, b6));
     e8->add(std::make_shared<QuadraticTerm>(1.0, x3, x3));
     problem->add(e8);
 
-    auto e9 = std::make_shared<QuadraticConstraint>(8, "e9", SHOT_DBL_MIN, 4.64);
+    auto e9 = std::make_shared<QuadraticConstraint>("e9", SHOT_DBL_MIN, 4.64);
     e9->add(std::make_shared<QuadraticTerm>(1.0, b5, b5));
     e9->add(std::make_shared<QuadraticTerm>(1.0, x3, x3));
     problem->add(e9);
@@ -1035,16 +1048,16 @@ static std::pair<std::unique_ptr<SHOT::Solver>, std::shared_ptr<SHOT::Environmen
     problem->name = "ex1223b_interior";
 
     // Original variables — all continuous (binary variables relaxed to [0,1])
-    auto x1 = std::make_shared<Variable>("x1", 0, E_VariableType::Real, 0.0, 10.0);
-    auto x2 = std::make_shared<Variable>("x2", 1, E_VariableType::Real, 0.0, 10.0);
-    auto x3 = std::make_shared<Variable>("x3", 2, E_VariableType::Real, 0.0, 10.0);
-    auto b4 = std::make_shared<Variable>("b4", 3, E_VariableType::Real, 0.0, 1.0);
-    auto b5 = std::make_shared<Variable>("b5", 4, E_VariableType::Real, 0.0, 1.0);
-    auto b6 = std::make_shared<Variable>("b6", 5, E_VariableType::Real, 0.0, 1.0);
-    auto b7 = std::make_shared<Variable>("b7", 6, E_VariableType::Real, 0.0, 1.0);
+    auto x1 = std::make_shared<Variable>("x1", E_VariableType::Real, 0.0, 10.0);
+    auto x2 = std::make_shared<Variable>("x2", E_VariableType::Real, 0.0, 10.0);
+    auto x3 = std::make_shared<Variable>("x3", E_VariableType::Real, 0.0, 10.0);
+    auto b4 = std::make_shared<Variable>("b4", E_VariableType::Real, 0.0, 1.0);
+    auto b5 = std::make_shared<Variable>("b5", E_VariableType::Real, 0.0, 1.0);
+    auto b6 = std::make_shared<Variable>("b6", E_VariableType::Real, 0.0, 1.0);
+    auto b7 = std::make_shared<Variable>("b7", E_VariableType::Real, 0.0, 1.0);
 
     // Auxiliary variable mu: the objective is to minimize mu
-    auto mu = std::make_shared<Variable>("mu", 7, E_VariableType::Real, -100.0, 100.0);
+    auto mu = std::make_shared<Variable>("mu", E_VariableType::Real, -100.0, 100.0);
 
     problem->add({ x1, x2, x3, b4, b5, b6, b7, mu });
 
@@ -1054,7 +1067,7 @@ static std::pair<std::unique_ptr<SHOT::Solver>, std::shared_ptr<SHOT::Environmen
     problem->add(objective);
 
     // Linear constraints: unchanged from ex1223b
-    auto e1 = std::make_shared<LinearConstraint>(0, "e1", SHOT_DBL_MIN, 5.0);
+    auto e1 = std::make_shared<LinearConstraint>("e1", SHOT_DBL_MIN, 5.0);
     e1->add(std::make_shared<LinearTerm>(1.0, x1));
     e1->add(std::make_shared<LinearTerm>(1.0, x2));
     e1->add(std::make_shared<LinearTerm>(1.0, x3));
@@ -1064,7 +1077,7 @@ static std::pair<std::unique_ptr<SHOT::Solver>, std::shared_ptr<SHOT::Environmen
     problem->add(e1);
 
     // Quadratic constraints with -mu added: f(x) - mu <= rhs
-    auto e2 = std::make_shared<QuadraticConstraint>(1, "e2", SHOT_DBL_MIN, 5.5);
+    auto e2 = std::make_shared<QuadraticConstraint>("e2", SHOT_DBL_MIN, 5.5);
     e2->add(std::make_shared<QuadraticTerm>(1.0, b6, b6));
     e2->add(std::make_shared<QuadraticTerm>(1.0, x1, x1));
     e2->add(std::make_shared<QuadraticTerm>(1.0, x2, x2));
@@ -1072,39 +1085,39 @@ static std::pair<std::unique_ptr<SHOT::Solver>, std::shared_ptr<SHOT::Environmen
     e2->add(std::make_shared<LinearTerm>(-1.0, mu));
     problem->add(e2);
 
-    auto e3 = std::make_shared<LinearConstraint>(2, "e3", SHOT_DBL_MIN, 1.2);
+    auto e3 = std::make_shared<LinearConstraint>("e3", SHOT_DBL_MIN, 1.2);
     e3->add(std::make_shared<LinearTerm>(1.0, x1));
     e3->add(std::make_shared<LinearTerm>(1.0, b4));
     problem->add(e3);
 
-    auto e4 = std::make_shared<LinearConstraint>(3, "e4", SHOT_DBL_MIN, 1.8);
+    auto e4 = std::make_shared<LinearConstraint>("e4", SHOT_DBL_MIN, 1.8);
     e4->add(std::make_shared<LinearTerm>(1.0, x2));
     e4->add(std::make_shared<LinearTerm>(1.0, b5));
     problem->add(e4);
 
-    auto e5 = std::make_shared<LinearConstraint>(4, "e5", SHOT_DBL_MIN, 2.5);
+    auto e5 = std::make_shared<LinearConstraint>("e5", SHOT_DBL_MIN, 2.5);
     e5->add(std::make_shared<LinearTerm>(1.0, x3));
     e5->add(std::make_shared<LinearTerm>(1.0, b6));
     problem->add(e5);
 
-    auto e6 = std::make_shared<LinearConstraint>(5, "e6", SHOT_DBL_MIN, 1.2);
+    auto e6 = std::make_shared<LinearConstraint>("e6", SHOT_DBL_MIN, 1.2);
     e6->add(std::make_shared<LinearTerm>(1.0, x1));
     e6->add(std::make_shared<LinearTerm>(1.0, b7));
     problem->add(e6);
 
-    auto e7 = std::make_shared<QuadraticConstraint>(6, "e7", SHOT_DBL_MIN, 1.64);
+    auto e7 = std::make_shared<QuadraticConstraint>("e7", SHOT_DBL_MIN, 1.64);
     e7->add(std::make_shared<QuadraticTerm>(1.0, b5, b5));
     e7->add(std::make_shared<QuadraticTerm>(1.0, x2, x2));
     e7->add(std::make_shared<LinearTerm>(-1.0, mu));
     problem->add(e7);
 
-    auto e8 = std::make_shared<QuadraticConstraint>(7, "e8", SHOT_DBL_MIN, 4.25);
+    auto e8 = std::make_shared<QuadraticConstraint>("e8", SHOT_DBL_MIN, 4.25);
     e8->add(std::make_shared<QuadraticTerm>(1.0, b6, b6));
     e8->add(std::make_shared<QuadraticTerm>(1.0, x3, x3));
     e8->add(std::make_shared<LinearTerm>(-1.0, mu));
     problem->add(e8);
 
-    auto e9 = std::make_shared<QuadraticConstraint>(8, "e9", SHOT_DBL_MIN, 4.64);
+    auto e9 = std::make_shared<QuadraticConstraint>("e9", SHOT_DBL_MIN, 4.64);
     e9->add(std::make_shared<QuadraticTerm>(1.0, b5, b5));
     e9->add(std::make_shared<QuadraticTerm>(1.0, x3, x3));
     e9->add(std::make_shared<LinearTerm>(-1.0, mu));
@@ -1311,6 +1324,160 @@ bool TestAMPLInitialValuesOutOfBounds()
     return passed;
 }
 
+// Verifies that an ordinary solve is never reported as a user abort. The dual solver is interrupted by SHOT itself
+// whenever a termination criterion is met in a callback, and that interruption used to be indistinguishable from a
+// termination requested by the user.
+// The dual bound of a convex problem must be closed even when a constraint is infinite outside its domain. The
+// perspective x^2/z of nlp-cvx_204_010 is infinite where z is zero, and both the interior point search and the
+// generation of the hyperplanes ended up in such a point: no interior point was found, the hyperplanes generated
+// in the solution point had infinite coefficients and were thrown away, and the solve stopped with the dual bound
+// -2 for the optimum -1.207 and the message that no additional dual cuts can be added. Note that the instance
+// tests accept that outcome, since they only require the optimum to lie between the bounds.
+bool TestDualBoundOfPerspectiveConstraint()
+{
+    const double expectedObjective = -1.2071067837918394;
+
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Critical));
+    solver->updateSetting("Termination.TimeLimit", 30.0);
+
+    if(!solver->setProblem("data/instances/minlp_tests_jl/nlp-cvx_204_010.jl.nl"))
+    {
+        std::cout << "Could not set problem!\n";
+        return (false);
+    }
+
+    if(!solver->solveProblem())
+    {
+        std::cout << "Error while solving problem\n";
+        return (false);
+    }
+
+    if(env->results->terminationReason != E_TerminationReason::AbsoluteGap
+        && env->results->terminationReason != E_TerminationReason::RelativeGap)
+    {
+        std::cout << "The objective gap was not closed: " << env->results->terminationReasonDescription << '\n';
+        return (false);
+    }
+
+    double primalBound = solver->getPrimalBound();
+    double dualBound = solver->getGlobalDualBound();
+
+    std::cout << "  Objective bounds are [" << dualBound << ", " << primalBound << "], the optimum is "
+              << expectedObjective << '\n';
+
+    if(std::abs(primalBound - expectedObjective) > 1e-2 || std::abs(dualBound - expectedObjective) > 1e-2)
+    {
+        std::cout << "The bounds do not agree with the optimum.\n";
+        return (false);
+    }
+
+    return (true);
+}
+
+bool TestTerminationReasonOfOrdinarySolve()
+{
+    auto [solver, env] = MakeEx1223bSolver();
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Critical));
+
+    if(!solver->solveProblem())
+    {
+        std::cout << "Error while solving problem\n";
+        return (false);
+    }
+
+    if(env->results->terminationReason == E_TerminationReason::UserAbort)
+    {
+        std::cout << "An ordinary solve was reported as a user abort: " << env->results->terminationReasonDescription
+                  << '\n';
+        return (false);
+    }
+
+    if(env->results->terminationReason != E_TerminationReason::AbsoluteGap
+        && env->results->terminationReason != E_TerminationReason::RelativeGap
+        && env->results->terminationReason != E_TerminationReason::ConstraintTolerance)
+    {
+        std::cout << "Unexpected termination reason: " << env->results->terminationReasonDescription << '\n';
+        return (false);
+    }
+
+    // The interrupted dual problem must still be accounted for in the statistics
+    auto& stats = env->solutionStatistics;
+    int solvedDiscreteDualProblems = stats.numberOfProblemsOptimalMILP + stats.numberOfProblemsFeasibleMILP
+        + stats.numberOfProblemsOptimalMIQP + stats.numberOfProblemsFeasibleMIQP
+        + stats.numberOfProblemsOptimalMIQCQP + stats.numberOfProblemsFeasibleMIQCQP;
+
+    if(solvedDiscreteDualProblems == 0)
+    {
+        std::cout << "No discrete dual problems were counted in the solution statistics\n";
+        return (false);
+    }
+
+    return (true);
+}
+
+// A constraint whose nonlinear or quadratic terms only involve fixed variables holds nothing nonlinear once those
+// terms are folded into the constant, and must be classified as the linear constraint it has become. Leaving it
+// among the nonlinear or quadratic constraints puts it in a class it does not belong to, where it is counted in
+// none of them and, in the nl case, is carried along with no variables left in its expression.
+bool TestConstraintClassesForFixedVariables(const std::string& problemFile)
+{
+    auto solver = std::make_unique<SHOT::Solver>();
+    auto env = solver->getEnvironment();
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Critical));
+
+    if(!solver->setProblem(problemFile))
+    {
+        std::cout << "Error while reading " << problemFile << '\n';
+        return (false);
+    }
+
+    bool passed = true;
+
+    for(auto& problem : { env->problem, env->reformulatedProblem })
+    {
+        auto& properties = problem->properties;
+
+        if(properties.numberOfNumericConstraints
+            != properties.numberOfLinearConstraints + properties.numberOfQuadraticConstraints
+                + properties.numberOfNonlinearConstraints)
+        {
+            std::cout << "The constraint classes do not add up to the number of constraints: "
+                      << properties.numberOfNumericConstraints << " != " << properties.numberOfLinearConstraints
+                      << " + " << properties.numberOfQuadraticConstraints << " + "
+                      << properties.numberOfNonlinearConstraints << '\n';
+            passed = false;
+        }
+
+        for(auto& C : problem->nonlinearConstraints)
+        {
+            if(C->properties.hasNonlinearExpression && C->variablesInNonlinearExpression.size() == 0)
+            {
+                std::cout << "Constraint " << C->name << " is nonlinear but its expression has no variables\n";
+                passed = false;
+            }
+        }
+    }
+
+    if(!solver->solveProblem())
+    {
+        std::cout << "Error while solving " << problemFile << '\n';
+        return (false);
+    }
+
+    double objectiveValue = env->results->getPrimalBound();
+
+    if(std::abs(objectiveValue - 1.0) > 1e-6)
+    {
+        std::cout << "Expected an objective value of 1, got " << objectiveValue << '\n';
+        passed = false;
+    }
+
+    return passed;
+}
+
 int SolverTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -1396,6 +1563,28 @@ int SolverTest(int argc, char* argv[])
         std::cout << "Starting test for AMPL initial values out of bounds" << std::endl;
         passed = TestAMPLInitialValuesOutOfBounds();
         std::cout << "Finished test for AMPL initial values out of bounds." << std::endl;
+        break;
+    case 14:
+        std::cout << "Starting test for the termination reason of an ordinary solve" << std::endl;
+        passed = TestTerminationReasonOfOrdinarySolve();
+        std::cout << "Finished test for the termination reason of an ordinary solve." << std::endl;
+        break;
+    case 15:
+        std::cout << "Starting test for constraint classes with fixed variables (nl format)" << std::endl;
+        passed = TestConstraintClassesForFixedVariables("data/fixedvars.nl");
+        std::cout << "Finished test for constraint classes with fixed variables (nl format)." << std::endl;
+        break;
+    case 16:
+        std::cout << "Starting test for constraint classes with fixed variables (osil format)" << std::endl;
+        passed = TestConstraintClassesForFixedVariables("data/fixedvars.osil");
+        std::cout << "Finished test for constraint classes with fixed variables (osil format)." << std::endl;
+        break;
+    case 17:
+        std::cout << "Starting test for the dual bound of a constraint that is infinite outside its domain"
+                  << std::endl;
+        passed = TestDualBoundOfPerspectiveConstraint();
+        std::cout << "Finished test for the dual bound of a constraint that is infinite outside its domain."
+                  << std::endl;
         break;
     default:
         passed = false;

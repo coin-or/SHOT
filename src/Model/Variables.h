@@ -13,8 +13,10 @@
 #include "../Enums.h"
 #include "../Structs.h"
 
+#include <algorithm>
 #include <map>
 #include <memory>
+#include <tuple>
 #include <ostream>
 #include <string>
 
@@ -55,19 +57,34 @@ struct VariableProperties
     bool hasUpperBoundBeenTightened = false;
     bool hasLowerBoundBeenTightened = false;
 
+    // Whether the bound is not the one of the problem given, but the limit it has been replaced with when reading the
+    // problem, e.g. Model.Variables.Integer.MinimumLowerBound for an integer variable without a lower bound
+    bool hasArtificialLowerBound = false;
+    bool hasArtificialUpperBound = false;
+
     int nonlinearVariableIndex = -1;
 };
 
 class Variable
 {
+    // Only the problem a variable belongs to may number it, since the index is the variable's position in that
+    // problem and everything from solution points to solver columns is addressed by it
+    friend class Problem;
+
+private:
+    int index = -1;
+
 public:
     std::string name = "";
-    int index;
+
+    inline int getIndex() const { return index; }
 
     VariableProperties properties;
 
     std::weak_ptr<Problem> ownerProblem;
 
+    // Set these through Problem::setVariableBounds or tightenBounds, which also update the bound vectors stored in
+    // the problem, e.g. used when the bounds of the terms are calculated
     double upperBound;
     double lowerBound;
     double semiBound;
@@ -80,16 +97,17 @@ public:
         upperBound = SHOT_DBL_MAX;
     }
 
-    Variable(std::string variableName, int variableIndex, E_VariableType variableType, [[maybe_unused]] double LB,
-        [[maybe_unused]] double UB, double variableSemiBound = NAN)
+    Variable(std::string variableName, E_VariableType variableType, double LB, double UB,
+        double variableSemiBound = NAN)
     {
-        index = variableIndex;
         name = variableName;
 
         if(variableType == E_VariableType::Binary)
         {
-            lowerBound = 0;
-            upperBound = 1;
+            // A binary variable is restricted to [0,1], but a tighter bound given by the caller is kept, since it
+            // may e.g. have been fixed to one of its bounds by bound tightening
+            lowerBound = std::max(LB, 0.0);
+            upperBound = std::min(UB, 1.0);
         }
         else
         {
@@ -101,9 +119,8 @@ public:
         semiBound = variableSemiBound;
     };
 
-    Variable(std::string variableName, int variableIndex, E_VariableType variableType)
+    Variable(std::string variableName, E_VariableType variableType)
     {
-        index = variableIndex;
         name = variableName;
 
         if(variableType == E_VariableType::Binary)
@@ -131,14 +148,54 @@ public:
 
     bool tightenBounds(const Interval bound);
 
-    bool isDualUnbounded();
+    bool isUnbounded();
 
     void takeOwnership(ProblemPtr owner);
 };
 
 using VariablePtr = std::shared_ptr<Variable>;
-using SparseVariableVector = std::map<VariablePtr, double>;
-using SparseVariableMatrix = std::map<std::pair<VariablePtr, VariablePtr>, double>;
+
+// std::shared_ptr compares on the stored address, which differs between runs, so any map keyed on variables
+// needs an explicit comparator ordering on the variable index instead. Without one the entries are visited in
+// an order that follows the heap layout, and anything generated while iterating -- auxiliary variables,
+// constraint terms, or a sum of interval bounds -- comes out differently from one run to the next.
+struct VariableIndexComparator
+{
+    bool operator()(const VariablePtr& firstKey, const VariablePtr& secondKey) const
+    {
+        return (firstKey->getIndex() < secondKey->getIndex());
+    }
+
+    bool operator()(
+        const std::pair<VariablePtr, double>& firstKey, const std::pair<VariablePtr, double>& secondKey) const
+    {
+        if(firstKey.first->getIndex() != secondKey.first->getIndex())
+            return (firstKey.first->getIndex() < secondKey.first->getIndex());
+
+        return (firstKey.second < secondKey.second);
+    }
+
+    bool operator()(
+        const std::tuple<VariablePtr, VariablePtr>& firstKey, const std::tuple<VariablePtr, VariablePtr>& secondKey) const
+    {
+        if(std::get<0>(firstKey)->getIndex() != std::get<0>(secondKey)->getIndex())
+            return (std::get<0>(firstKey)->getIndex() < std::get<0>(secondKey)->getIndex());
+
+        return (std::get<1>(firstKey)->getIndex() < std::get<1>(secondKey)->getIndex());
+    }
+
+    bool operator()(const std::pair<VariablePtr, VariablePtr>& firstKey,
+        const std::pair<VariablePtr, VariablePtr>& secondKey) const
+    {
+        if(firstKey.first->getIndex() != secondKey.first->getIndex())
+            return (firstKey.first->getIndex() < secondKey.first->getIndex());
+
+        return (firstKey.second->getIndex() < secondKey.second->getIndex());
+    }
+};
+
+using SparseVariableVector = std::map<VariablePtr, double, VariableIndexComparator>;
+using SparseVariableMatrix = std::map<std::pair<VariablePtr, VariablePtr>, double, VariableIndexComparator>;
 
 class Variables : private std::vector<VariablePtr>
 {
@@ -165,6 +222,8 @@ public:
             (*this).push_back(V);
     };
 
+    explicit Variables(std::vector<VariablePtr> variables) : std::vector<VariablePtr>(std::move(variables)) {};
+
     inline void takeOwnership(ProblemPtr owner)
     {
         ownerProblem = owner;
@@ -178,7 +237,7 @@ public:
     inline void sortByIndex()
     {
         std::sort(this->begin(), this->end(), [](const VariablePtr& variableOne, const VariablePtr& variableTwo) {
-            return (variableOne->index < variableTwo->index);
+            return (variableOne->getIndex() < variableTwo->getIndex());
         });
     }
 };

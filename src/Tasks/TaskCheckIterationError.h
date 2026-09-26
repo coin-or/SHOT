@@ -16,7 +16,7 @@ namespace SHOT
 class TaskCheckIterationError : public TaskBase
 {
 public:
-    TaskCheckIterationError(EnvironmentPtr envPtr, std::string taskIDTrue);
+    TaskCheckIterationError(EnvironmentPtr envPtr, std::string taskIDTrue, std::string taskIDForcedReductionCut = "");
     ~TaskCheckIterationError() override;
 
     void run() override;
@@ -25,5 +25,6 @@ public:
 
 private:
     std::string taskIDIfTrue;
+    std::string taskIDForcedReductionCut;
 };
 } // namespace SHOT

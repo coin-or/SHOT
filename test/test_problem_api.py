@@ -34,8 +34,8 @@ def example_linear_problem():
     problem.name = "LinearExample"
     
     # Create variables (index, name, type, lb, ub)
-    x = shot.Variable("x", 0, shot.VariableType.Real, 0.0, 100.0)
-    y = shot.Variable("y", 1, shot.VariableType.Real, 0.0, 100.0)
+    x = shot.Variable("x", shot.VariableType.Real, 0.0, 100.0)
+    y = shot.Variable("y", shot.VariableType.Real, 0.0, 100.0)
     problem.addVariable(x)
     problem.addVariable(y)
     
@@ -50,14 +50,14 @@ def example_linear_problem():
     lt1 = shot.LinearTerms()
     lt1.add(shot.LinearTerm(1.0, x))
     lt1.add(shot.LinearTerm(1.0, y))
-    c1 = shot.LinearConstraint(0, "c1", lt1, 10.0, 1e20)
+    c1 = shot.LinearConstraint("c1", lt1, 10.0, 1e20)
     problem.addConstraint(c1)
     
     # Constraint: x - y <= 5  =>  -inf <= x - y <= 5
     lt2 = shot.LinearTerms()
     lt2.add(shot.LinearTerm(1.0, x))
     lt2.add(shot.LinearTerm(-1.0, y))
-    c2 = shot.LinearConstraint(1, "c2", lt2, -1e20, 5.0)
+    c2 = shot.LinearConstraint("c2", lt2, -1e20, 5.0)
     problem.addConstraint(c2)
     
     # Finalize and solve
@@ -83,8 +83,8 @@ def example_quadratic_problem():
     problem.name = "QuadraticExample"
     
     # Create variables
-    x = shot.Variable("x", 0, shot.VariableType.Real, -10.0, 10.0)
-    y = shot.Variable("y", 1, shot.VariableType.Real, -10.0, 10.0)
+    x = shot.Variable("x", shot.VariableType.Real, -10.0, 10.0)
+    y = shot.Variable("y", shot.VariableType.Real, -10.0, 10.0)
     problem.addVariable(x)
     problem.addVariable(y)
     
@@ -98,7 +98,7 @@ def example_quadratic_problem():
     lt = shot.LinearTerms()
     lt.add(shot.LinearTerm(1.0, x))
     lt.add(shot.LinearTerm(1.0, y))
-    c1 = shot.LinearConstraint(0, "sum_ge_1", lt, 1.0, 1e20)
+    c1 = shot.LinearConstraint("sum_ge_1", lt, 1.0, 1e20)
     problem.addConstraint(c1)
     
     problem.finalize()
@@ -122,8 +122,8 @@ def example_nonlinear_expressions():
     problem.name = "NonlinearExample"
     
     # Create variables
-    x = shot.Variable("x", 0, shot.VariableType.Real, 0.1, 10.0)
-    y = shot.Variable("y", 1, shot.VariableType.Integer, 1, 10)
+    x = shot.Variable("x", shot.VariableType.Real, 0.1, 10.0)
+    y = shot.Variable("y", shot.VariableType.Integer, 1, 10)
     problem.addVariable(x)
     problem.addVariable(y)
     
@@ -137,12 +137,12 @@ def example_nonlinear_expressions():
     
     # Constraint using operators: x^2 + y <= 20
     constr_expr = x**2 + y
-    c1 = shot.NonlinearConstraint(0, "quad_constr", constr_expr, -1e20, 20.0)
+    c1 = shot.NonlinearConstraint("quad_constr", constr_expr, -1e20, 20.0)
     problem.addConstraint(c1)
     
     # Constraint: sin(x) + y >= 0
     trig_expr = shot.sin(x) + y
-    c2 = shot.NonlinearConstraint(1, "trig_constr", trig_expr, 0.0, 1e20)
+    c2 = shot.NonlinearConstraint("trig_constr", trig_expr, 0.0, 1e20)
     problem.addConstraint(c2)
     
     problem.finalize()
@@ -169,8 +169,8 @@ def example_inspect_reformulation():
     problem.name = "ReformulationExample"
     
     # Create a nonconvex problem
-    x = shot.Variable("x", 0, shot.VariableType.Real, 0.0, 5.0)
-    y = shot.Variable("y", 1, shot.VariableType.Real, 0.0, 5.0)
+    x = shot.Variable("x", shot.VariableType.Real, 0.0, 5.0)
+    y = shot.Variable("y", shot.VariableType.Real, 0.0, 5.0)
     problem.addVariable(x)
     problem.addVariable(y)
     
@@ -183,7 +183,7 @@ def example_inspect_reformulation():
     lt = shot.LinearTerms()
     lt.add(shot.LinearTerm(1.0, x))
     lt.add(shot.LinearTerm(1.0, y))
-    c1 = shot.LinearConstraint(0, "sum_constr", lt, 2.0, 1e20)
+    c1 = shot.LinearConstraint("sum_constr", lt, 2.0, 1e20)
     problem.addConstraint(c1)
     
     problem.finalize()
@@ -214,7 +214,7 @@ def example_complex_expressions():
     env = solver.getEnvironment()
     problem = shot.Problem(env)
     
-    x = shot.Variable("x", 0, shot.VariableType.Real, 0.1, 2.0)
+    x = shot.Variable("x", shot.VariableType.Real, 0.1, 2.0)
     problem.addVariable(x)
     
     # Demonstrate various expression types
@@ -308,8 +308,8 @@ def example_nvs03():
     problem.name = "nvs03"
     
     # Variables: i1, i2 are integers in [0, 200]
-    i1 = shot.Variable("i1", 0, shot.VariableType.Integer, 0, 200)
-    i2 = shot.Variable("i2", 1, shot.VariableType.Integer, 0, 200)
+    i1 = shot.Variable("i1", shot.VariableType.Integer, 0, 200)
+    i2 = shot.Variable("i2", shot.VariableType.Integer, 0, 200)
     problem.addVariable(i1)
     problem.addVariable(i2)
     
@@ -321,7 +321,7 @@ def example_nvs03():
     # Constraint e1: -0.1 * i1^2 + i2 >= 0
     # Reformulated as convex: 0.1 * i1^2 - i2 <= 0
     e1_expr = 0.1 * (i1**2) - i2
-    e1 = shot.NonlinearConstraint(0, "e1", e1_expr, shot.SHOT_DBL_MIN, 0.0)
+    e1 = shot.NonlinearConstraint("e1", e1_expr, shot.SHOT_DBL_MIN, 0.0)
     problem.addConstraint(e1)
     
     # Constraint e2: -1/3 * i1 - i2 >= -4.5
@@ -329,7 +329,7 @@ def example_nvs03():
     lt2 = shot.LinearTerms()
     lt2.add(shot.LinearTerm(1.0/3.0, i1))
     lt2.add(shot.LinearTerm(1.0, i2))
-    e2 = shot.LinearConstraint(1, "e2", lt2, shot.SHOT_DBL_MIN, 4.5)
+    e2 = shot.LinearConstraint("e2", lt2, shot.SHOT_DBL_MIN, 4.5)
     problem.addConstraint(e2)
     
     problem.finalize()
@@ -375,13 +375,13 @@ def example_ex1223b():
     problem.name = "ex1223b"
     
     # Variables
-    x1 = shot.Variable("x1", 0, shot.VariableType.Real, 0, 10)
-    x2 = shot.Variable("x2", 1, shot.VariableType.Real, 0, 10)
-    x3 = shot.Variable("x3", 2, shot.VariableType.Real, 0, 10)
-    b4 = shot.Variable("b4", 3, shot.VariableType.Binary, 0, 1)
-    b5 = shot.Variable("b5", 4, shot.VariableType.Binary, 0, 1)
-    b6 = shot.Variable("b6", 5, shot.VariableType.Binary, 0, 1)
-    b7 = shot.Variable("b7", 6, shot.VariableType.Binary, 0, 1)
+    x1 = shot.Variable("x1", shot.VariableType.Real, 0, 10)
+    x2 = shot.Variable("x2", shot.VariableType.Real, 0, 10)
+    x3 = shot.Variable("x3", shot.VariableType.Real, 0, 10)
+    b4 = shot.Variable("b4", shot.VariableType.Binary, 0, 1)
+    b5 = shot.Variable("b5", shot.VariableType.Binary, 0, 1)
+    b6 = shot.Variable("b6", shot.VariableType.Binary, 0, 1)
+    b7 = shot.Variable("b7", shot.VariableType.Binary, 0, 1)
     
     for v in [x1, x2, x3, b4, b5, b6, b7]:
         problem.addVariable(v)
@@ -398,55 +398,55 @@ def example_ex1223b():
     lt1 = shot.LinearTerms()
     for v in [x1, x2, x3, b4, b5, b6]:
         lt1.add(shot.LinearTerm(1.0, v))
-    e1 = shot.LinearConstraint(0, "e1", lt1, shot.SHOT_DBL_MIN, 5.0)
+    e1 = shot.LinearConstraint("e1", lt1, shot.SHOT_DBL_MIN, 5.0)
     problem.addConstraint(e1)
     
     # e2: b6^2 + x1^2 + x2^2 + x3^2 <= 5.5
     e2_expr = b6**2 + x1**2 + x2**2 + x3**2
-    e2 = shot.NonlinearConstraint(1, "e2", e2_expr, shot.SHOT_DBL_MIN, 5.5)
+    e2 = shot.NonlinearConstraint("e2", e2_expr, shot.SHOT_DBL_MIN, 5.5)
     problem.addConstraint(e2)
     
     # e3: x1 + b4 <= 1.2
     lt3 = shot.LinearTerms()
     lt3.add(shot.LinearTerm(1.0, x1))
     lt3.add(shot.LinearTerm(1.0, b4))
-    e3 = shot.LinearConstraint(2, "e3", lt3, shot.SHOT_DBL_MIN, 1.2)
+    e3 = shot.LinearConstraint("e3", lt3, shot.SHOT_DBL_MIN, 1.2)
     problem.addConstraint(e3)
     
     # e4: x2 + b5 <= 1.8
     lt4 = shot.LinearTerms()
     lt4.add(shot.LinearTerm(1.0, x2))
     lt4.add(shot.LinearTerm(1.0, b5))
-    e4 = shot.LinearConstraint(3, "e4", lt4, shot.SHOT_DBL_MIN, 1.8)
+    e4 = shot.LinearConstraint("e4", lt4, shot.SHOT_DBL_MIN, 1.8)
     problem.addConstraint(e4)
     
     # e5: x3 + b6 <= 2.5
     lt5 = shot.LinearTerms()
     lt5.add(shot.LinearTerm(1.0, x3))
     lt5.add(shot.LinearTerm(1.0, b6))
-    e5 = shot.LinearConstraint(4, "e5", lt5, shot.SHOT_DBL_MIN, 2.5)
+    e5 = shot.LinearConstraint("e5", lt5, shot.SHOT_DBL_MIN, 2.5)
     problem.addConstraint(e5)
     
     # e6: x1 + b7 <= 1.2
     lt6 = shot.LinearTerms()
     lt6.add(shot.LinearTerm(1.0, x1))
     lt6.add(shot.LinearTerm(1.0, b7))
-    e6 = shot.LinearConstraint(5, "e6", lt6, shot.SHOT_DBL_MIN, 1.2)
+    e6 = shot.LinearConstraint("e6", lt6, shot.SHOT_DBL_MIN, 1.2)
     problem.addConstraint(e6)
     
     # e7: b5^2 + x2^2 <= 1.64
     e7_expr = b5**2 + x2**2
-    e7 = shot.NonlinearConstraint(6, "e7", e7_expr, shot.SHOT_DBL_MIN, 1.64)
+    e7 = shot.NonlinearConstraint("e7", e7_expr, shot.SHOT_DBL_MIN, 1.64)
     problem.addConstraint(e7)
     
     # e8: b6^2 + x3^2 <= 4.25
     e8_expr = b6**2 + x3**2
-    e8 = shot.NonlinearConstraint(7, "e8", e8_expr, shot.SHOT_DBL_MIN, 4.25)
+    e8 = shot.NonlinearConstraint("e8", e8_expr, shot.SHOT_DBL_MIN, 4.25)
     problem.addConstraint(e8)
     
     # e9: b5^2 + x3^2 <= 4.64
     e9_expr = b5**2 + x3**2
-    e9 = shot.NonlinearConstraint(8, "e9", e9_expr, shot.SHOT_DBL_MIN, 4.64)
+    e9 = shot.NonlinearConstraint("e9", e9_expr, shot.SHOT_DBL_MIN, 4.64)
     problem.addConstraint(e9)
     
     problem.finalize()
@@ -519,20 +519,20 @@ def example_flay02m():
     # Variables x5,x6,x7,x8 (with bounds, lo=1)
     # Binary Variables b11,b12,b13,b14
     
-    x1 = shot.Variable("x1", 0, shot.VariableType.Real, 0, 29)
-    x2 = shot.Variable("x2", 1, shot.VariableType.Real, 0, 29)
-    x3 = shot.Variable("x3", 2, shot.VariableType.Real, 0, 29)
-    x4 = shot.Variable("x4", 3, shot.VariableType.Real, 0, 29)
-    x5 = shot.Variable("x5", 4, shot.VariableType.Real, 1, 40)
-    x6 = shot.Variable("x6", 5, shot.VariableType.Real, 1, 50)
-    x7 = shot.Variable("x7", 6, shot.VariableType.Real, 1, 40)
-    x8 = shot.Variable("x8", 7, shot.VariableType.Real, 1, 50)
-    x9 = shot.Variable("x9", 8, shot.VariableType.Real, 0, 30)
-    x10 = shot.Variable("x10", 9, shot.VariableType.Real, 0, 30)
-    b11 = shot.Variable("b11", 10, shot.VariableType.Binary, 0, 1)
-    b12 = shot.Variable("b12", 11, shot.VariableType.Binary, 0, 1)
-    b13 = shot.Variable("b13", 12, shot.VariableType.Binary, 0, 1)
-    b14 = shot.Variable("b14", 13, shot.VariableType.Binary, 0, 1)
+    x1 = shot.Variable("x1", shot.VariableType.Real, 0, 29)
+    x2 = shot.Variable("x2", shot.VariableType.Real, 0, 29)
+    x3 = shot.Variable("x3", shot.VariableType.Real, 0, 29)
+    x4 = shot.Variable("x4", shot.VariableType.Real, 0, 29)
+    x5 = shot.Variable("x5", shot.VariableType.Real, 1, 40)
+    x6 = shot.Variable("x6", shot.VariableType.Real, 1, 50)
+    x7 = shot.Variable("x7", shot.VariableType.Real, 1, 40)
+    x8 = shot.Variable("x8", shot.VariableType.Real, 1, 50)
+    x9 = shot.Variable("x9", shot.VariableType.Real, 0, 30)
+    x10 = shot.Variable("x10", shot.VariableType.Real, 0, 30)
+    b11 = shot.Variable("b11", shot.VariableType.Binary, 0, 1)
+    b12 = shot.Variable("b12", shot.VariableType.Binary, 0, 1)
+    b13 = shot.Variable("b13", shot.VariableType.Binary, 0, 1)
+    b14 = shot.Variable("b14", shot.VariableType.Binary, 0, 1)
     
     for v in [x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, b11, b12, b13, b14]:
         problem.addVariable(v)
@@ -551,7 +551,7 @@ def example_flay02m():
     lt2.add(shot.LinearTerm(1.0, x1))
     lt2.add(shot.LinearTerm(1.0, x5))
     lt2.add(shot.LinearTerm(-1.0, x9))
-    e2 = shot.LinearConstraint(0, "e2", lt2, shot.SHOT_DBL_MIN, 0.0)
+    e2 = shot.LinearConstraint("e2", lt2, shot.SHOT_DBL_MIN, 0.0)
     problem.addConstraint(e2)
     
     # e3: -x2 - x6 + x9 >= 0  =>  x2 + x6 - x9 <= 0
@@ -559,7 +559,7 @@ def example_flay02m():
     lt3.add(shot.LinearTerm(1.0, x2))
     lt3.add(shot.LinearTerm(1.0, x6))
     lt3.add(shot.LinearTerm(-1.0, x9))
-    e3 = shot.LinearConstraint(1, "e3", lt3, shot.SHOT_DBL_MIN, 0.0)
+    e3 = shot.LinearConstraint("e3", lt3, shot.SHOT_DBL_MIN, 0.0)
     problem.addConstraint(e3)
     
     # e4: -x3 - x7 + x10 >= 0  =>  x3 + x7 - x10 <= 0
@@ -567,7 +567,7 @@ def example_flay02m():
     lt4.add(shot.LinearTerm(1.0, x3))
     lt4.add(shot.LinearTerm(1.0, x7))
     lt4.add(shot.LinearTerm(-1.0, x10))
-    e4 = shot.LinearConstraint(2, "e4", lt4, shot.SHOT_DBL_MIN, 0.0)
+    e4 = shot.LinearConstraint("e4", lt4, shot.SHOT_DBL_MIN, 0.0)
     problem.addConstraint(e4)
     
     # e5: -x4 - x8 + x10 >= 0  =>  x4 + x8 - x10 <= 0
@@ -575,18 +575,18 @@ def example_flay02m():
     lt5.add(shot.LinearTerm(1.0, x4))
     lt5.add(shot.LinearTerm(1.0, x8))
     lt5.add(shot.LinearTerm(-1.0, x10))
-    e5 = shot.LinearConstraint(3, "e5", lt5, shot.SHOT_DBL_MIN, 0.0)
+    e5 = shot.LinearConstraint("e5", lt5, shot.SHOT_DBL_MIN, 0.0)
     problem.addConstraint(e5)
     
     # e6: 40/x7 - x5 <= 0  =>  40/x7 <= x5
     # This is a signomial constraint: 40*x7^(-1) - x5 <= 0
     e6_expr = 40.0 / x7 - x5
-    e6 = shot.NonlinearConstraint(4, "e6", e6_expr, shot.SHOT_DBL_MIN, 0.0)
+    e6 = shot.NonlinearConstraint("e6", e6_expr, shot.SHOT_DBL_MIN, 0.0)
     problem.addConstraint(e6)
     
     # e7: 50/x8 - x6 <= 0  =>  50/x8 <= x6
     e7_expr = 50.0 / x8 - x6
-    e7 = shot.NonlinearConstraint(5, "e7", e7_expr, shot.SHOT_DBL_MIN, 0.0)
+    e7 = shot.NonlinearConstraint("e7", e7_expr, shot.SHOT_DBL_MIN, 0.0)
     problem.addConstraint(e7)
     
     # e8: x1 - x2 + x5 + 69*b11 <= 69
@@ -595,7 +595,7 @@ def example_flay02m():
     lt8.add(shot.LinearTerm(-1.0, x2))
     lt8.add(shot.LinearTerm(1.0, x5))
     lt8.add(shot.LinearTerm(69.0, b11))
-    e8 = shot.LinearConstraint(6, "e8", lt8, shot.SHOT_DBL_MIN, 69.0)
+    e8 = shot.LinearConstraint("e8", lt8, shot.SHOT_DBL_MIN, 69.0)
     problem.addConstraint(e8)
     
     # e9: -x1 + x2 + x6 + 79*b12 <= 79
@@ -604,7 +604,7 @@ def example_flay02m():
     lt9.add(shot.LinearTerm(1.0, x2))
     lt9.add(shot.LinearTerm(1.0, x6))
     lt9.add(shot.LinearTerm(79.0, b12))
-    e9 = shot.LinearConstraint(7, "e9", lt9, shot.SHOT_DBL_MIN, 79.0)
+    e9 = shot.LinearConstraint("e9", lt9, shot.SHOT_DBL_MIN, 79.0)
     problem.addConstraint(e9)
     
     # e10: x3 - x4 + x7 + 69*b13 <= 69
@@ -613,7 +613,7 @@ def example_flay02m():
     lt10.add(shot.LinearTerm(-1.0, x4))
     lt10.add(shot.LinearTerm(1.0, x7))
     lt10.add(shot.LinearTerm(69.0, b13))
-    e10 = shot.LinearConstraint(8, "e10", lt10, shot.SHOT_DBL_MIN, 69.0)
+    e10 = shot.LinearConstraint("e10", lt10, shot.SHOT_DBL_MIN, 69.0)
     problem.addConstraint(e10)
     
     # e11: -x3 + x4 + x8 + 79*b14 <= 79
@@ -622,7 +622,7 @@ def example_flay02m():
     lt11.add(shot.LinearTerm(1.0, x4))
     lt11.add(shot.LinearTerm(1.0, x8))
     lt11.add(shot.LinearTerm(79.0, b14))
-    e11 = shot.LinearConstraint(9, "e11", lt11, shot.SHOT_DBL_MIN, 79.0)
+    e11 = shot.LinearConstraint("e11", lt11, shot.SHOT_DBL_MIN, 79.0)
     problem.addConstraint(e11)
     
     # e12: b11 + b12 + b13 + b14 = 1
@@ -631,7 +631,7 @@ def example_flay02m():
     lt12.add(shot.LinearTerm(1.0, b12))
     lt12.add(shot.LinearTerm(1.0, b13))
     lt12.add(shot.LinearTerm(1.0, b14))
-    e12 = shot.LinearConstraint(10, "e12", lt12, 1.0, 1.0)
+    e12 = shot.LinearConstraint("e12", lt12, 1.0, 1.0)
     problem.addConstraint(e12)
     
     problem.finalize()
@@ -714,20 +714,20 @@ def example_flay02m_expr():
     problem.name = "flay02m_expr"
     
     # Variables
-    x1 = shot.Variable("x1", 0, shot.VariableType.Real, 0, 29)
-    x2 = shot.Variable("x2", 1, shot.VariableType.Real, 0, 29)
-    x3 = shot.Variable("x3", 2, shot.VariableType.Real, 0, 29)
-    x4 = shot.Variable("x4", 3, shot.VariableType.Real, 0, 29)
-    x5 = shot.Variable("x5", 4, shot.VariableType.Real, 1, 40)
-    x6 = shot.Variable("x6", 5, shot.VariableType.Real, 1, 50)
-    x7 = shot.Variable("x7", 6, shot.VariableType.Real, 1, 40)
-    x8 = shot.Variable("x8", 7, shot.VariableType.Real, 1, 50)
-    x9 = shot.Variable("x9", 8, shot.VariableType.Real, 0, 30)
-    x10 = shot.Variable("x10", 9, shot.VariableType.Real, 0, 30)
-    b11 = shot.Variable("b11", 10, shot.VariableType.Binary, 0, 1)
-    b12 = shot.Variable("b12", 11, shot.VariableType.Binary, 0, 1)
-    b13 = shot.Variable("b13", 12, shot.VariableType.Binary, 0, 1)
-    b14 = shot.Variable("b14", 13, shot.VariableType.Binary, 0, 1)
+    x1 = shot.Variable("x1", shot.VariableType.Real, 0, 29)
+    x2 = shot.Variable("x2", shot.VariableType.Real, 0, 29)
+    x3 = shot.Variable("x3", shot.VariableType.Real, 0, 29)
+    x4 = shot.Variable("x4", shot.VariableType.Real, 0, 29)
+    x5 = shot.Variable("x5", shot.VariableType.Real, 1, 40)
+    x6 = shot.Variable("x6", shot.VariableType.Real, 1, 50)
+    x7 = shot.Variable("x7", shot.VariableType.Real, 1, 40)
+    x8 = shot.Variable("x8", shot.VariableType.Real, 1, 50)
+    x9 = shot.Variable("x9", shot.VariableType.Real, 0, 30)
+    x10 = shot.Variable("x10", shot.VariableType.Real, 0, 30)
+    b11 = shot.Variable("b11", shot.VariableType.Binary, 0, 1)
+    b12 = shot.Variable("b12", shot.VariableType.Binary, 0, 1)
+    b13 = shot.Variable("b13", shot.VariableType.Binary, 0, 1)
+    b14 = shot.Variable("b14", shot.VariableType.Binary, 0, 1)
     
     for v in [x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, b11, b12, b13, b14]:
         problem.addVariable(v)
@@ -746,47 +746,47 @@ def example_flay02m_expr():
     # Using NonlinearConstraint - SHOT will detect the actual constraint type.
     
     # e2: x1 + x5 - x9 <= 0
-    e2 = shot.NonlinearConstraint(0, "e2", 1.0*x1 + 1.0*x5 - 1.0*x9, shot.SHOT_DBL_MIN, 0.0)
+    e2 = shot.NonlinearConstraint("e2", 1.0*x1 + 1.0*x5 - 1.0*x9, shot.SHOT_DBL_MIN, 0.0)
     problem.addConstraint(e2)
     
     # e3: x2 + x6 - x9 <= 0
-    e3 = shot.NonlinearConstraint(1, "e3", 1.0*x2 + 1.0*x6 - 1.0*x9, shot.SHOT_DBL_MIN, 0.0)
+    e3 = shot.NonlinearConstraint("e3", 1.0*x2 + 1.0*x6 - 1.0*x9, shot.SHOT_DBL_MIN, 0.0)
     problem.addConstraint(e3)
     
     # e4: x3 + x7 - x10 <= 0
-    e4 = shot.NonlinearConstraint(2, "e4", 1.0*x3 + 1.0*x7 - 1.0*x10, shot.SHOT_DBL_MIN, 0.0)
+    e4 = shot.NonlinearConstraint("e4", 1.0*x3 + 1.0*x7 - 1.0*x10, shot.SHOT_DBL_MIN, 0.0)
     problem.addConstraint(e4)
     
     # e5: x4 + x8 - x10 <= 0
-    e5 = shot.NonlinearConstraint(3, "e5", 1.0*x4 + 1.0*x8 - 1.0*x10, shot.SHOT_DBL_MIN, 0.0)
+    e5 = shot.NonlinearConstraint("e5", 1.0*x4 + 1.0*x8 - 1.0*x10, shot.SHOT_DBL_MIN, 0.0)
     problem.addConstraint(e5)
     
     # e6: 40/x7 - x5 <= 0 (truly nonlinear - signomial)
-    e6 = shot.NonlinearConstraint(4, "e6", 40.0/x7 - x5, shot.SHOT_DBL_MIN, 0.0)
+    e6 = shot.NonlinearConstraint("e6", 40.0/x7 - x5, shot.SHOT_DBL_MIN, 0.0)
     problem.addConstraint(e6)
     
     # e7: 50/x8 - x6 <= 0 (truly nonlinear - signomial)
-    e7 = shot.NonlinearConstraint(5, "e7", 50.0/x8 - x6, shot.SHOT_DBL_MIN, 0.0)
+    e7 = shot.NonlinearConstraint("e7", 50.0/x8 - x6, shot.SHOT_DBL_MIN, 0.0)
     problem.addConstraint(e7)
     
     # e8: x1 - x2 + x5 + 69*b11 <= 69
-    e8 = shot.NonlinearConstraint(6, "e8", 1.0*x1 - 1.0*x2 + 1.0*x5 + 69.0*b11, shot.SHOT_DBL_MIN, 69.0)
+    e8 = shot.NonlinearConstraint("e8", 1.0*x1 - 1.0*x2 + 1.0*x5 + 69.0*b11, shot.SHOT_DBL_MIN, 69.0)
     problem.addConstraint(e8)
     
     # e9: -x1 + x2 + x6 + 79*b12 <= 79
-    e9 = shot.NonlinearConstraint(7, "e9", -1.0*x1 + 1.0*x2 + 1.0*x6 + 79.0*b12, shot.SHOT_DBL_MIN, 79.0)
+    e9 = shot.NonlinearConstraint("e9", -1.0*x1 + 1.0*x2 + 1.0*x6 + 79.0*b12, shot.SHOT_DBL_MIN, 79.0)
     problem.addConstraint(e9)
     
     # e10: x3 - x4 + x7 + 69*b13 <= 69
-    e10 = shot.NonlinearConstraint(8, "e10", 1.0*x3 - 1.0*x4 + 1.0*x7 + 69.0*b13, shot.SHOT_DBL_MIN, 69.0)
+    e10 = shot.NonlinearConstraint("e10", 1.0*x3 - 1.0*x4 + 1.0*x7 + 69.0*b13, shot.SHOT_DBL_MIN, 69.0)
     problem.addConstraint(e10)
     
     # e11: -x3 + x4 + x8 + 79*b14 <= 79
-    e11 = shot.NonlinearConstraint(9, "e11", -1.0*x3 + 1.0*x4 + 1.0*x8 + 79.0*b14, shot.SHOT_DBL_MIN, 79.0)
+    e11 = shot.NonlinearConstraint("e11", -1.0*x3 + 1.0*x4 + 1.0*x8 + 79.0*b14, shot.SHOT_DBL_MIN, 79.0)
     problem.addConstraint(e11)
     
     # e12: b11 + b12 + b13 + b14 = 1
-    e12 = shot.NonlinearConstraint(10, "e12", 1.0*b11 + 1.0*b12 + 1.0*b13 + 1.0*b14, 1.0, 1.0)
+    e12 = shot.NonlinearConstraint("e12", 1.0*b11 + 1.0*b12 + 1.0*b13 + 1.0*b14, 1.0, 1.0)
     problem.addConstraint(e12)
     
     problem.finalize()

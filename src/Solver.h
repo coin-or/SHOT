@@ -156,6 +156,7 @@ public:
     VectorString getSettingIdentifiers(E_SettingType type);
 
     double getCurrentDualBound();
+    double getGlobalDualBound();
     double getPrimalBound();
     double getAbsoluteObjectiveGap();
     double getRelativeObjectiveGap();

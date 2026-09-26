@@ -41,8 +41,9 @@
 namespace SHOT
 {
 
-TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(EnvironmentPtr envPtr, bool useReformulatedProblem)
-    : TaskBase(envPtr)
+TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(
+    EnvironmentPtr envPtr, bool useReformulatedProblem, bool isFinalPolish)
+    : TaskBase(envPtr), isFinalPolish(isFinalPolish)
 {
     env->timing->startTimer("PrimalStrategy");
     env->timing->startTimer("PrimalBoundStrategyNLP");
@@ -106,8 +107,19 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(Environment
         sourceProblem = env->reformulatedProblem;
 
         env->results->usedPrimalNLPSolver = ES_PrimalNLPSolver::SHOT;
-        NLPSolver = std::make_shared<NLPSolverSHOT>(env, sourceProblem);
         sourceIsReformulatedProblem = true;
+
+        try
+        {
+            NLPSolver = std::make_shared<NLPSolverSHOT>(env, sourceProblem);
+        }
+        catch(const std::exception& e)
+        {
+            env->output->outputWarning(fmt::format(
+                " Could not initialize SHOT as the fixed-integer NLP solver, disabling this primal heuristic: {}",
+                e.what()));
+            NLPSolver = nullptr;
+        }
 
         break;
     }
@@ -117,6 +129,13 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(Environment
         break;
     }
 
+    if(!NLPSolver)
+    {
+        env->timing->stopTimer("PrimalBoundStrategyNLP");
+        env->timing->stopTimer("PrimalStrategy");
+        return;
+    }
+
     env->results->usedPrimalNLPSolverDescription = NLPSolver->getSolverDescription();
 
     this->originalIterFrequency = env->settings->getSetting<int>("Primal.FixedInteger.Frequency.Iteration");
@@ -124,17 +143,17 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(Environment
 
     for(auto& V : sourceProblem->binaryVariables)
     {
-        discreteVariableIndexes.push_back(V->index);
+        discreteVariableIndexes.push_back(V->getIndex());
     }
 
     for(auto& V : sourceProblem->integerVariables)
     {
-        discreteVariableIndexes.push_back(V->index);
+        discreteVariableIndexes.push_back(V->getIndex());
     }
 
     for(auto& V : sourceProblem->semiintegerVariables)
     {
-        discreteVariableIndexes.push_back(V->index);
+        discreteVariableIndexes.push_back(V->getIndex());
     }
 
     if(env->settings->getSetting<bool>("Output.Debug.Enable"))
@@ -147,8 +166,8 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(Environment
 
     for(auto& V : sourceProblem->allVariables)
     {
-        NLPSolver->updateVariableLowerBound(V->index, V->lowerBound);
-        NLPSolver->updateVariableUpperBound(V->index, V->upperBound);
+        NLPSolver->updateVariableLowerBound(V->getIndex(), V->lowerBound);
+        NLPSolver->updateVariableUpperBound(V->getIndex(), V->upperBound);
     }
 
     env->timing->stopTimer("PrimalBoundStrategyNLP");
@@ -159,13 +178,19 @@ TaskSelectPrimalCandidatesFromNLP::~TaskSelectPrimalCandidatesFromNLP() = defaul
 
 void TaskSelectPrimalCandidatesFromNLP::run()
 {
+    if(!NLPSolver)
+        return;
+
     if(env->primalSolver->fixedPrimalNLPCandidates.size() == 0)
     {
         env->solutionStatistics.numberOfIterationsWithoutNLPCallMIP++;
         return;
     }
 
-    if(env->results->getRelativeGlobalObjectiveGap() < 1e-10)
+    // A closed gap means there is nothing left for this heuristic to find during a search. The final polish is
+    // the opposite case: it runs precisely because the search is over, and refines a point whose objective has
+    // converged even though the point itself may still be some way off.
+    if(env->results->getRelativeGlobalObjectiveGap() < 1e-10 && !isFinalPolish)
     {
         env->solutionStatistics.numberOfIterationsWithoutNLPCallMIP++;
         return;
@@ -238,8 +263,8 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
 
             for(auto& V : sourceProblem->realVariables)
             {
-                startingPointIndexes.at(V->index) = V->index;
-                startingPointValues.at(V->index) = CAND.point.at(V->index);
+                startingPointIndexes.at(V->getIndex()) = V->getIndex();
+                startingPointValues.at(V->getIndex()) = CAND.point.at(V->getIndex());
             }
 
             if(env->settings->getSetting<bool>("Output.Debug.Enable"))
@@ -357,7 +382,7 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
                     ("NLP" + sourceDesc), env->timing->getElapsedTime("Total"), currIter->numHyperplanesAdded,
                     currIter->totNumHyperplanes, env->results->getCurrentDualBound(), env->results->getPrimalBound(),
                     env->results->getAbsoluteGlobalObjectiveGap(), env->results->getRelativeGlobalObjectiveGap(),
-                    tmpObj, mostDevConstr->constraint->index, mostDevConstr->normalizedValue,
+                    tmpObj, mostDevConstr->constraint->getIndex(), mostDevConstr->normalizedValue,
                     E_IterationLineType::PrimalNLP);
             }
             else
@@ -407,7 +432,7 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
                     ("NLP" + sourceDesc), env->timing->getElapsedTime("Total"), currIter->numHyperplanesAdded,
                     currIter->totNumHyperplanes, env->results->getCurrentDualBound(), env->results->getPrimalBound(),
                     env->results->getAbsoluteGlobalObjectiveGap(), env->results->getRelativeGlobalObjectiveGap(),
-                    tmpObj, mostDevConstr->constraint->index, mostDevConstr->normalizedValue,
+                    tmpObj, mostDevConstr->constraint->getIndex(), mostDevConstr->normalizedValue,
                     E_IterationLineType::PrimalNLP);
             }
             else
@@ -492,7 +517,7 @@ void TaskSelectPrimalCandidatesFromNLP::createInfeasibilityCut(const VectorDoubl
 
     if(auto mostDevConstr = sourceProblem->getMostDeviatingNonlinearOrQuadraticConstraint(variableSolution);
         mostDevConstr)
-        tmpSolPt.maxDeviation = PairIndexValue(mostDevConstr->constraint->index, mostDevConstr->normalizedValue);
+        tmpSolPt.maxDeviation = PairIndexValue(mostDevConstr->constraint->getIndex(), mostDevConstr->normalizedValue);
 
     if(!sourceIsReformulatedProblem) // Need to calculate values for the auxiliary variables in this
                                      // case

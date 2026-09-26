@@ -26,8 +26,8 @@ namespace SHOT
 {
 
 TaskAddPrimalReductionCut::TaskAddPrimalReductionCut(
-    EnvironmentPtr envPtr, std::string taskIDTrue, std::string taskIDFalse)
-    : TaskBase(envPtr), taskIDIfTrue(taskIDTrue), taskIDIfFalse(taskIDFalse)
+    EnvironmentPtr envPtr, std::string taskIDTrue, std::string taskIDFalse, bool isFinalAttempt)
+    : TaskBase(envPtr), taskIDIfTrue(taskIDTrue), taskIDIfFalse(taskIDFalse), isFinalAttempt(isFinalAttempt)
 {
 }
 
@@ -36,6 +36,20 @@ TaskAddPrimalReductionCut::~TaskAddPrimalReductionCut() = default;
 void TaskAddPrimalReductionCut::run()
 {
     if(env->tasks->isTerminated())
+    {
+        env->tasks->setNextTask(taskIDIfFalse);
+        return;
+    }
+
+    // isTerminated() only covers user/callback abort. This instance runs as the last step of FinalizeSolution's own
+    // sequence (see SolutionStrategyMultiTree) as a final attempt to reduce the cutoff once more before giving up;
+    // it must not do so if FinalizeSolution was reached because of a time/iteration/gap limit rather than because
+    // this same reduction-cut mechanism ran out of budget, or it would jump back to "InitIter2" and resume solving,
+    // silently overriding whatever criterion had just decided to stop. The main-loop instance (reached via
+    // TaskCheckPrimalStagnation's "AddObjectiveCut" redirect) legitimately runs with terminationReason already set
+    // to ObjectiveStagnation as part of its own normal "try one more reduction cut" signaling, so this check must
+    // not apply there.
+    if(isFinalAttempt && env->results->terminationReason != E_TerminationReason::None)
     {
         env->tasks->setNextTask(taskIDIfFalse);
         return;
@@ -64,7 +78,9 @@ void TaskAddPrimalReductionCut::run()
 
     auto currIter = env->results->getCurrentIteration(); // The solved iteration
 
-    if(currIter->forceObjectiveReductionCut) { }
+    if(currIter->forceObjectiveReductionCut)
+    {
+    }
     else if(currIter->solutionStatus == E_ProblemSolutionStatus::Infeasible
         && !currIter->wasInfeasibilityRepairSuccessful)
     {
@@ -90,7 +106,9 @@ void TaskAddPrimalReductionCut::run()
         {
             double reductionFactor = env->settings->getSetting<double>("Dual.ReductionCut.ReductionFactor");
 
-            if(env->reformulatedProblem->objectiveFunction->properties.isMinimize)
+            // cutOffToUse is always in the original problem's sense, so the direction check must be too (it can
+            // differ from the reformulated problem's direction when the objective was sign-reversed).
+            if(env->problem->objectiveFunction->properties.isMinimize)
             {
                 cutOffToUse = env->dualSolver->cutOffToUse - reductionFactor * std::abs(env->dualSolver->cutOffToUse);
             }
@@ -100,15 +118,15 @@ void TaskAddPrimalReductionCut::run()
             }
         }
     }
-    else if(env->settings->getSetting<int>("Dual.ReductionCut.Strategy")
-        == (int)ES_ReductionCutStrategy::GoldenRatio)
+    else if(env->settings->getSetting<int>("Dual.ReductionCut.Strategy") == (int)ES_ReductionCutStrategy::GoldenRatio)
     {
         double factor = 0.618;
 
         // If first cut iteration after PB update
         if(env->solutionStatistics.numberOfPrimalReductionCutsUpdatesWithoutEffect == 0)
         {
-            if(env->reformulatedProblem->objectiveFunction->properties.isMinimize)
+            // globalDualBound is in the original problem's sense
+            if(env->problem->objectiveFunction->properties.isMinimize)
             {
                 currentLowerBoundForReductionCut = std::max(SHOT_DBL_MIN, env->results->globalDualBound);
             }
@@ -139,7 +157,9 @@ void TaskAddPrimalReductionCut::run()
 
     env->dualSolver->cutOffToUse = cutOffToUse;
 
-    if(env->reformulatedProblem->objectiveFunction->properties.isMinimize)
+    // currentDualBound is in the original problem's sense, so resetting it to the "no bound found yet"
+    // must use the original direction too
+    if(env->problem->objectiveFunction->properties.isMinimize)
     {
         env->results->currentDualBound = SHOT_DBL_MIN;
     }

@@ -20,6 +20,18 @@
 namespace SHOT
 {
 
+VectorInteger MIPSolverBase::addLinearConstraints(const std::vector<std::map<int, double>>& elements,
+    const VectorDouble& constants, const VectorString& names, bool isGreaterThan, bool allowRepair)
+{
+    VectorInteger constraintIndexes;
+    constraintIndexes.reserve(elements.size());
+
+    for(size_t i = 0; i < elements.size(); i++)
+        constraintIndexes.push_back(addLinearConstraint(elements[i], constants[i], names[i], isGreaterThan, allowRepair));
+
+    return (constraintIndexes);
+}
+
 MIPSolverBase::~MIPSolverBase() { lastSolutions.clear(); }
 
 double MIPSolverBase::getObjectiveValue()
@@ -97,7 +109,7 @@ std::vector<SolutionPoint> MIPSolverBase::getAllVariableSolutions()
         {
             auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
                 tmpPt, env->reformulatedProblem->nonlinearConstraints);
-            tmpSolPt.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+            tmpSolPt.maxDeviation = PairIndexValue(maxDev.constraint->getIndex(), maxDev.normalizedValue);
         }
         else
         {
@@ -168,11 +180,24 @@ bool MIPSolverBase::createHyperplane(HyperplanePtr hyperplane)
         }
     }
 
-    // Small fix to fix badly scaled cuts.
-    // TODO: this should be made so it also takes into account small/large coefficients of the linear terms
-    if(abs(tmpPair.second) > 1e15)
+    if(tmpPair.second != tmpPair.second || std::isinf(tmpPair.second)) // Check for NaN or inf
     {
-        double scalingFactor = abs(tmpPair.second) - 1e15;
+        env->output->outputError("        Warning: hyperplane not generated, NaN or inf found in RHS.");
+        return (false);
+    }
+
+    // Small fix to fix badly scaled cuts. Considers both the RHS and the linear term coefficients, since a cut
+    // gradient evaluated far out on a loosely bounded nonlinear term (e.g. exp() of a large argument) can have
+    // large coefficients even when the RHS itself is modest, and handing such a cut to the MIP solver as-is
+    // can crash or numerically break it.
+    double maxAbsCutValue = abs(tmpPair.second);
+
+    for(auto& E : tmpPair.first)
+        maxAbsCutValue = std::max(maxAbsCutValue, abs(E.second));
+
+    if(maxAbsCutValue > 1e9)
+    {
+        double scalingFactor = maxAbsCutValue / 1e9;
 
         for(auto& E : tmpPair.first)
             E.second /= scalingFactor;
@@ -182,7 +207,7 @@ bool MIPSolverBase::createHyperplane(HyperplanePtr hyperplane)
         if(!warningMessageShownLargeRHS)
         {
             env->output->outputWarning(
-                "        Large values found in RHS of cut, you might want to consider reducing the "
+                "        Large values found in RHS or coefficients of cut, you might want to consider reducing the "
                 "bounds of the nonlinear variables.");
             warningMessageShownLargeRHS = true;
         }
@@ -262,8 +287,8 @@ std::optional<std::pair<std::map<int, double>, double>> MIPSolverBase::createHyp
         }
 
         env->output->outputTrace("        HP point generated for constraint index "
-            + std::to_string(constraintHyperplane->sourceConstraint->index) + " with " + std::to_string(gradient.size())
-            + " elements.");
+            + std::to_string(constraintHyperplane->sourceConstraint->getIndex()) + " with "
+            + std::to_string(gradient.size()) + " elements.");
     }
     else if(auto externalHyperplane = std::dynamic_pointer_cast<ExternalHyperplane>(hyperplane))
     {
@@ -306,7 +331,7 @@ std::optional<std::pair<std::map<int, double>, double>> MIPSolverBase::createHyp
         for(auto const& G : gradient)
         {
             double coefficient = signFactor * G.second;
-            int variableIndex = G.first->index;
+            int variableIndex = G.first->getIndex();
 
             auto element = elements.emplace(variableIndex, coefficient);
 
@@ -446,4 +471,27 @@ void MIPSolverBase::unfixVariables()
 }
 
 int MIPSolverBase::getNumberOfOpenNodes() { return (env->solutionStatistics.numberOfOpenNodes); }
+
+bool MIPSolverBase::isDualBoundAvailable(E_ProblemSolutionStatus status, bool isMIP)
+{
+    switch(status)
+    {
+    case E_ProblemSolutionStatus::Optimal:
+        return (true);
+
+    // An interrupted branch-and-bound search still has a valid bound over its open nodes, while an interrupted
+    // continuous solve only has the objective value of its current point, which is not a bound
+    case E_ProblemSolutionStatus::Feasible:
+    case E_ProblemSolutionStatus::IterationLimit:
+    case E_ProblemSolutionStatus::TimeLimit:
+    case E_ProblemSolutionStatus::SolutionLimit:
+    case E_ProblemSolutionStatus::NodeLimit:
+    case E_ProblemSolutionStatus::Abort:
+        return (isMIP);
+
+    // The solvers may return default or stale values in these cases, e.g. zero for HiGHS
+    default:
+        return (false);
+    }
+}
 } // namespace SHOT

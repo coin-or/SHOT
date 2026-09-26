@@ -93,10 +93,13 @@ void Results::addPrimalSolution(PrimalSolution solution)
             < std::max({ primalsol.maxDevatingConstraintLinear.value, primalsol.maxDevatingConstraintQuadratic.value,
                 primalsol.maxDevatingConstraintNonlinear.value })))
     {
-        // Have a solution which is similar to the best known, but with smaller constraint error
+        // Have a solution which is similar to the best known, but with smaller constraint error. This is not a
+        // genuine objective improvement, so it must not reset the primal-stagnation / reduction-cut-without-effect
+        // counters, or repeatedly finding near-duplicate points with shrinking numerical error would perpetually
+        // reset those counters and prevent the stagnation-based termination criteria from ever triggering.
         this->primalSolutions.back() = solution;
         this->primalSolution = solution.point;
-        this->setPrimalBound(solution.objValue);
+        this->setPrimalBound(solution.objValue, false);
 
         env->output->outputDebug(fmt::format("        New (currently best) primal solution {} from {} found.",
             solution.objValue, solution.sourceDescription));
@@ -216,8 +219,17 @@ void Results::addPrimalSolution(PrimalSolution solution)
     }
 }
 
+bool Results::isPrimalSolutionAtArtificialBound()
+{
+    return (hasPrimalSolution() && env->problem->getVariablesAtArtificialBounds(primalSolution).size() > 0);
+}
+
 bool Results::isRelativeObjectiveGapToleranceMet()
 {
+    // The dual bound may only be valid with the artificial bounds, beyond which there may be better solutions
+    if(isPrimalSolutionAtArtificialBound())
+        return (false);
+
     if(this->getRelativeGlobalObjectiveGap()
         <= env->settings->getSetting<double>("Termination.ObjectiveGap.Relative"))
     {
@@ -231,6 +243,9 @@ bool Results::isRelativeObjectiveGapToleranceMet()
 
 bool Results::isAbsoluteObjectiveGapToleranceMet()
 {
+    if(isPrimalSolutionAtArtificialBound())
+        return (false);
+
     if(this->getAbsoluteGlobalObjectiveGap()
         <= env->settings->getSetting<double>("Termination.ObjectiveGap.Absolute"))
     {
@@ -1483,27 +1498,41 @@ double Results::getPrimalBound()
         return (SHOT_DBL_MIN);
 }
 
-void Results::setPrimalBound(double value)
+void Results::setPrimalBound(double value, bool resetStagnationCounters)
 {
     this->currentPrimalBound = value;
 
-    // In case we have crossover
-    if(env->problem->objectiveFunction->direction == E_ObjectiveFunctionDirection::Minimize)
-    {
-        if(value < this->globalDualBound && this->solutionIsGlobal)
-            this->globalDualBound = value;
+    bool isMinimize = env->problem->objectiveFunction->direction == E_ObjectiveFunctionDirection::Minimize;
 
-        if(value < this->currentDualBound)
-            this->currentDualBound = value;
-    }
-    else
-    {
-        if(value > this->globalDualBound && this->solutionIsGlobal)
-            this->globalDualBound = value;
+    // The optimal value lies between the dual and the primal bound, so a primal bound can only pass the dual
+    // bound by numerical error, and the dual bound is then set to it. A primal bound that has passed it by more
+    // comes from a feasible solution the dual bound excluded, so that bound was never one for the problem. It is
+    // still set to the primal bound to keep the two consistent, but since that closes the objective gap and the
+    // solution is reported as optimal, it is reported.
+    double crossoverTolerance = 1e-10 * std::max(1.0, std::abs(value));
 
-        if(value > this->currentDualBound)
-            this->currentDualBound = value;
+    auto hasPassed = [&isMinimize](double primalBound, double dualBound) {
+        return (isMinimize ? (primalBound < dualBound) : (primalBound > dualBound));
+    };
+
+    if(hasPassed(value, this->currentDualBound))
+    {
+        if(hasPassed(value, isMinimize ? this->currentDualBound - crossoverTolerance
+                                       : this->currentDualBound + crossoverTolerance))
+        {
+            env->output->outputDebug(
+                fmt::format("        Dual bound {} set to the primal bound {}, which has passed it.",
+                    this->currentDualBound, value));
+        }
+
+        this->currentDualBound = value;
     }
+
+    // The global dual bound is capped whether or not the dual problem is still a relaxation of the original
+    // problem, since a primal bound comes from a point that is feasible in it either way, and a global dual bound
+    // that a feasible solution has passed is reported together with a negative objective gap
+    if(hasPassed(value, this->globalDualBound))
+        this->globalDualBound = value;
 
     if(env->problem->objectiveFunction->properties.isMinimize)
     {
@@ -1522,10 +1551,13 @@ void Results::setPrimalBound(double value)
         }
     }
 
-    env->solutionStatistics.numberOfIterationsWithPrimalStagnation = 0;
-    env->solutionStatistics.lastIterationWithSignificantPrimalUpdate = getNumberOfIterations() - 1;
-    env->solutionStatistics.numberOfPrimalReductionCutsUpdatesWithoutEffect = 0;
-    env->solutionStatistics.numberOfDualRepairsSinceLastPrimalUpdate = 0;
+    if(resetStagnationCounters)
+    {
+        env->solutionStatistics.numberOfIterationsWithPrimalStagnation = 0;
+        env->solutionStatistics.lastIterationWithSignificantPrimalUpdate = getNumberOfIterations() - 1;
+        env->solutionStatistics.numberOfPrimalReductionCutsUpdatesWithoutEffect = 0;
+        env->solutionStatistics.numberOfDualRepairsSinceLastPrimalUpdate = 0;
+    }
 }
 
 double Results::getCurrentDualBound() { return (this->currentDualBound); }
@@ -1535,16 +1567,25 @@ double Results::getGlobalDualBound() { return (globalDualBound); }
 void Results::setDualBound(double value, bool forceGlobal)
 {
     double primalBound = this->getPrimalBound();
+    bool isMinimize = env->problem->objectiveFunction->direction == E_ObjectiveFunctionDirection::Minimize;
 
-    if(env->problem->objectiveFunction->direction == E_ObjectiveFunctionDirection::Minimize)
+    // The optimal value lies between the dual and the primal bound, so a valid dual bound can only pass the primal
+    // bound by numerical error, and it is then used as the primal bound. A value that has passed it by more is not
+    // a bound for the problem, and using it would close the objective gap by force, so it is ignored.
+    double crossoverTolerance = 1e-10 * std::max(1.0, std::abs(primalBound));
+
+    if(isMinimize ? (value > primalBound) : (value < primalBound))
     {
-        if(value > primalBound)
+        if(isMinimize ? (value <= primalBound + crossoverTolerance) : (value >= primalBound - crossoverTolerance))
+        {
             value = primalBound;
-    }
-    else
-    {
-        if(value < primalBound)
-            value = primalBound;
+        }
+        else
+        {
+            env->output->outputDebug(fmt::format(
+                "        Dual bound {} ignored since it has passed the primal bound {}.", value, primalBound));
+            return;
+        }
     }
 
     this->currentDualBound = value;

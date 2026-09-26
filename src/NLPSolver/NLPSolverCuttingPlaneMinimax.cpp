@@ -180,9 +180,8 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             LPSolver->writeProblemToFile(filename);
         }
 
-        // Updates the time limit for the LP solver
-        timeLimit = std::max(0.0, timeLimit - env->timing->getElapsedTime("Total"));
-        LPSolver->setTimeLimit(timeLimit);
+        // Updates the time limit for the LP solver with the time remaining of the interior point search
+        LPSolver->setTimeLimit(std::max(0.0, timeLimit - env->timing->getElapsedTime("InteriorPointSearch")));
 
         // Solves the problem and obtains the solution
         auto solStatus = LPSolver->solveProblem();
@@ -293,6 +292,13 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 
         numHyperAdded = 0;
 
+        // The cuts of the iteration are added to the LP problem all at once, since some solvers copy the matrix of
+        // the problem for every added constraint
+        std::vector<std::map<int, double>> cutElements;
+        VectorDouble cutConstants;
+        VectorString cutNames;
+        std::vector<NumericConstraintValue> cutConstraintValues;
+
         for(auto& NCV : constraintValues)
         {
             // Contains the coefficient and variable index for the terms in the generated cut
@@ -303,7 +309,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 
             for(auto& G : gradient)
             {
-                int variableIndex = G.first->index;
+                int variableIndex = G.first->getIndex();
                 double coefficient = G.second;
 
                 auto element = elements.emplace(variableIndex, coefficient);
@@ -320,27 +326,14 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             // Adding the objective term
             elements.emplace(numVar, -1.0);
 
-            // Small fix to fix badly scaled cuts.
-            // TODO: this should be made so it also takes into account small/large coefficients of the linear terms
-            if(abs(constant) > 1e15)
+            bool cutHasNoNaNsorInfs = !(constant != constant || std::isinf(constant)); // Check for NaN or inf in RHS
+
+            if(!cutHasNoNaNsorInfs)
             {
-                double scalingFactor = abs(constant) - 1e15;
-                for(auto& E : elements)
-                    E.second /= scalingFactor;
-
-                constant /= scalingFactor;
-
-                if(!NaNWarningPrinted)
-                {
-                    env->output->outputWarning(
-                        "        Large values found in RHS of cut, you might want to consider reducing the "
-                        "bounds of the nonlinear variables.");
-
-                    NaNWarningPrinted = true;
-                }
+                env->output->outputWarning(
+                    fmt::format("        Hyperplane for constraint {} not generated, NaN or inf found in RHS.",
+                        NCV.constraint->name));
             }
-
-            bool cutHasNoNaNsorInfs = true;
 
             for(auto& E : elements)
             {
@@ -356,29 +349,71 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
                 }
             }
 
-            // Adds the linear constraint
-            if(cutHasNoNaNsorInfs
-                && LPSolver->addLinearConstraint(elements, constant,
-                       "minimax_" + std::to_string(NCV.constraint->index) + "_" + std::to_string(numHyperTot))
-                    >= 0)
+            // Small fix to fix badly scaled cuts. Considers both the RHS and the linear term coefficients, since a
+            // cut gradient evaluated far out on a loosely bounded nonlinear term can have enormous coefficients
+            // even when the RHS itself is modest.
+            if(cutHasNoNaNsorInfs)
             {
-                numHyperTot++;
-                numHyperAdded++;
+                double maxAbsCutValue = abs(constant);
 
-                if(mu >= 0 && env->settings->getSetting<bool>("Dual.ESH.InteriorPoint.CuttingPlane.Reuse")
-                    && NCV.constraint->properties.convexity == E_Convexity::Convex)
+                for(auto& E : elements)
+                    maxAbsCutValue = std::max(maxAbsCutValue, abs(E.second));
+
+                if(maxAbsCutValue > 1e9)
                 {
-                    auto tmpPoint = currSol;
-                    tmpPoint.pop_back();
+                    double scalingFactor = maxAbsCutValue / 1e9;
+                    for(auto& E : elements)
+                        E.second /= scalingFactor;
 
-                    auto hyperplane = std::make_shared<ConstraintHyperplane>();
-                    hyperplane->sourceConstraint = NCV.constraint;
-                    hyperplane->generatedPoint = tmpPoint;
-                    hyperplane->source = E_HyperplaneSource::InteriorPointSearch;
-                    hyperplane->isGlobal = true;
+                    constant /= scalingFactor;
 
-                    env->dualSolver->addHyperplane(hyperplane);
+                    if(!NaNWarningPrinted)
+                    {
+                        env->output->outputWarning(
+                            "        Large values found in RHS or coefficients of cut, you might want to consider "
+                            "reducing the bounds of the nonlinear variables.");
+
+                        NaNWarningPrinted = true;
+                    }
                 }
+            }
+
+            // Collects the linear constraint
+            if(cutHasNoNaNsorInfs)
+            {
+                cutElements.push_back(elements);
+                cutConstants.push_back(constant);
+                cutNames.push_back("minimax_" + std::to_string(NCV.constraint->getIndex()) + "_"
+                    + std::to_string(numHyperTot + cutElements.size() - 1));
+                cutConstraintValues.push_back(NCV);
+            }
+        }
+
+        auto addedConstraints = LPSolver->addLinearConstraints(cutElements, cutConstants, cutNames, false, true);
+
+        for(size_t k = 0; k < addedConstraints.size(); k++)
+        {
+            if(addedConstraints[k] < 0)
+                continue;
+
+            auto& NCV = cutConstraintValues[k];
+
+            numHyperTot++;
+            numHyperAdded++;
+
+            if(mu >= 0 && env->settings->getSetting<bool>("Dual.ESH.InteriorPoint.CuttingPlane.Reuse")
+                && NCV.constraint->properties.convexity == E_Convexity::Convex)
+            {
+                auto tmpPoint = currSol;
+                tmpPoint.pop_back();
+
+                auto hyperplane = std::make_shared<ConstraintHyperplane>();
+                hyperplane->sourceConstraint = NCV.constraint;
+                hyperplane->generatedPoint = tmpPoint;
+                hyperplane->source = E_HyperplaneSource::InteriorPointSearch;
+                hyperplane->isGlobal = true;
+
+                env->dualSolver->addHyperplane(hyperplane);
             }
         }
 
@@ -481,7 +516,7 @@ bool NLPSolverCuttingPlaneMinimax::createProblem(IMIPSolver* destination, Proble
             for(auto& T : C->linearTerms)
             {
                 constraintsInitialized = constraintsInitialized
-                    && destination->addLinearTermToConstraint(T->coefficient, T->variable->index);
+                    && destination->addLinearTermToConstraint(T->coefficient, T->variable->getIndex());
             }
         }
 

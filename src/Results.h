@@ -40,7 +40,7 @@ public:
 
     void addPrimalSolution(PrimalSolution solution);
     double getPrimalBound();
-    void setPrimalBound(double value);
+    void setPrimalBound(double value, bool resetStagnationCounters = true);
 
     std::vector<DualSolution> dualSolutions;
     void addDualSolution(DualSolution solution);
@@ -54,6 +54,10 @@ public:
     double currentPrimalBound = NAN;
 
     double globalDualBound;
+
+    // Whether the best primal solution has a variable at a bound that has replaced a missing bound when the problem was
+    // read, in which case the gap is not considered closed
+    bool isPrimalSolutionAtArtificialBound();
 
     bool isRelativeObjectiveGapToleranceMet();
     bool isAbsoluteObjectiveGapToleranceMet();

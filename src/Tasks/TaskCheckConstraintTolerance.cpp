@@ -46,7 +46,7 @@ void TaskCheckConstraintTolerance::run()
             - currIter->objectiveValue);
 
     // Checks it the nonlinear objective is fulfilled
-    if(env->problem->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic
+    if(env->problem->objectiveFunction->properties.classification >= E_ObjectiveFunctionClassification::Quadratic
         && objectiveValueDifference > constraintTolerance)
     {
         env->output->outputDebug(

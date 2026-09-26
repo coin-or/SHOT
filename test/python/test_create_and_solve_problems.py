@@ -19,8 +19,8 @@ class TestSolveLinearProblems:
         
         problem = SHOTpy.Problem(env)
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -31,7 +31,7 @@ class TestSolveLinearProblems:
         problem.setObjective(obj)
         
         # x + y >= 5
-        c = SHOTpy.LinearConstraint(0, "c1", 5.0, SHOTpy.SHOT_DBL_MAX)
+        c = SHOTpy.LinearConstraint("c1", 5.0, SHOTpy.SHOT_DBL_MAX)
         c.add(SHOTpy.LinearTerm(1.0, x))
         c.add(SHOTpy.LinearTerm(1.0, y))
         problem.addConstraint(c)
@@ -52,8 +52,8 @@ class TestSolveLinearProblems:
         
         problem = SHOTpy.Problem(env)
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 5.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 5.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 5.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.0, 5.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -64,7 +64,7 @@ class TestSolveLinearProblems:
         problem.setObjective(obj)
         
         # x + y <= 6
-        c = SHOTpy.LinearConstraint(0, "c1", -SHOTpy.SHOT_DBL_MAX, 6.0)
+        c = SHOTpy.LinearConstraint("c1", -SHOTpy.SHOT_DBL_MAX, 6.0)
         c.add(SHOTpy.LinearTerm(1.0, x))
         c.add(SHOTpy.LinearTerm(1.0, y))
         problem.addConstraint(c)
@@ -90,8 +90,8 @@ class TestSolveMIPProblems:
         
         problem = SHOTpy.Problem(env)
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
-        b = SHOTpy.Variable("b", 1, SHOTpy.VariableType.Binary, 0.0, 1.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+        b = SHOTpy.Variable("b", SHOTpy.VariableType.Binary, 0.0, 1.0)
         problem.addVariable(x)
         problem.addVariable(b)
         
@@ -102,7 +102,7 @@ class TestSolveMIPProblems:
         problem.setObjective(obj)
         
         # x + 5*b >= 4
-        c = SHOTpy.LinearConstraint(0, "c1", 4.0, SHOTpy.SHOT_DBL_MAX)
+        c = SHOTpy.LinearConstraint("c1", 4.0, SHOTpy.SHOT_DBL_MAX)
         c.add(SHOTpy.LinearTerm(1.0, x))
         c.add(SHOTpy.LinearTerm(5.0, b))
         problem.addConstraint(c)
@@ -129,7 +129,7 @@ class TestSolveQCQPProblems:
         
         problem = SHOTpy.Problem(env)
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         
         # minimize x^2 (pure quadratic)
@@ -160,7 +160,7 @@ class TestSolveQCQPProblems:
         
         problem = SHOTpy.Problem(env)
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, -10.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, -10.0, 10.0)
         problem.addVariable(x)
         
         # minimize (x-2)^2 using nonlinear objective
@@ -192,8 +192,8 @@ class TestSolveQCQPProblems:
         
         problem = SHOTpy.Problem(env)
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -204,7 +204,7 @@ class TestSolveQCQPProblems:
         problem.setObjective(obj)
         
         # x^2 + y^2 >= 2  (unit circle constraint)
-        c = SHOTpy.QuadraticConstraint(0, "circle", 2.0, SHOTpy.SHOT_DBL_MAX)
+        c = SHOTpy.QuadraticConstraint("circle", 2.0, SHOTpy.SHOT_DBL_MAX)
         c.add(SHOTpy.QuadraticTerm(1.0, x, x))
         c.add(SHOTpy.QuadraticTerm(1.0, y, y))
         problem.addConstraint(c)
@@ -249,14 +249,14 @@ class TestSolverStatus:
         
         problem = SHOTpy.Problem(env)
         
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         
         obj = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
         obj.add(SHOTpy.LinearTerm(1.0, x))
         problem.setObjective(obj)
         
-        c = SHOTpy.LinearConstraint(0, "c1", 1.0, SHOTpy.SHOT_DBL_MAX)
+        c = SHOTpy.LinearConstraint("c1", 1.0, SHOTpy.SHOT_DBL_MAX)
         c.add(SHOTpy.LinearTerm(1.0, x))
         problem.addConstraint(c)
         
@@ -279,8 +279,8 @@ class TestFinalizeIdempotency:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
-        y = SHOTpy.Variable("y", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.0, 10.0)
         problem.addVariable(x)
         problem.addVariable(y)
         
@@ -291,7 +291,7 @@ class TestFinalizeIdempotency:
         obj.add(2.0 * y)  # Linear expression
         problem.setObjective(obj)
         
-        c = SHOTpy.NonlinearConstraint(0, "c1", -SHOTpy.SHOT_DBL_MAX, 10.0)
+        c = SHOTpy.NonlinearConstraint("c1", -SHOTpy.SHOT_DBL_MAX, 10.0)
         c.add(x * y)  # Bilinear
         c.add(SHOTpy.exp(y))  # Nonlinear
         problem.addConstraint(c)
@@ -313,7 +313,7 @@ class TestFinalizeIdempotency:
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
-        x = SHOTpy.Variable("x", 0, SHOTpy.VariableType.Real, 0.1, 10.0)
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
         problem.addVariable(x)
         
         # Expression that gets simplified: exp(log(x)) -> x
@@ -321,7 +321,7 @@ class TestFinalizeIdempotency:
         obj.add(SHOTpy.exp(SHOTpy.log(x)))
         problem.setObjective(obj)
         
-        c = SHOTpy.LinearConstraint(0, "bound", 0.1, SHOTpy.SHOT_DBL_MAX)
+        c = SHOTpy.LinearConstraint("bound", 0.1, SHOTpy.SHOT_DBL_MAX)
         c.add(SHOTpy.LinearTerm(1.0, x))
         problem.addConstraint(c)
         

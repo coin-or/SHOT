@@ -1,0 +1,115 @@
+{
+    "source": "SHOT_benchmark_problems",
+    "url": "https://github.com/andreaslundell/SHOT_benchmark_problems",
+    "description": "MIQCQP-convex category (osil format). Objectives sourced from https://www.minlplib.org/minlplib.solu.",
+    "instances": [
+        {
+            "file": "alan.osil",
+            "objective": 2.925
+        },
+        {
+            "file": "ex1223a.osil",
+            "objective": 4.579582402
+        },
+        {
+            "file": "ex4.osil",
+            "objective": -8.064136165
+        },
+        {
+            "file": "fac3.osil",
+            "objective": 31982309.85
+        },
+        {
+            "file": "nvs03.osil",
+            "objective": 16.0
+        },
+        {
+            "file": "nvs10.osil",
+            "objective": -310.8
+        },
+        {
+            "file": "nvs11.osil",
+            "objective": -431.0
+        },
+        {
+            "file": "nvs12.osil",
+            "objective": -481.2
+        },
+        {
+            "file": "nvs15.osil",
+            "objective": 1.0
+        },
+        {
+            "file": "slay04h.osil",
+            "objective": 9859.659708
+        },
+        {
+            "file": "slay04m.osil",
+            "objective": 9859.659708
+        },
+        {
+            "file": "squfl010-025.osil",
+            "objective": 214.1109952
+        },
+        {
+            "file": "st_miqp1.osil",
+            "objective": 281.0
+        },
+        {
+            "file": "st_miqp2.osil",
+            "objective": 2.0
+        },
+        {
+            "file": "st_miqp3.osil",
+            "objective": -6.0
+        },
+        {
+            "file": "st_miqp4.osil",
+            "objective": -4574.0
+        },
+        {
+            "file": "st_miqp5.osil",
+            "objective": -333.8888889
+        },
+        {
+            "file": "st_test1.osil",
+            "objective": 0.0
+        },
+        {
+            "file": "st_test2.osil",
+            "objective": -9.25
+        },
+        {
+            "file": "st_test3.osil",
+            "objective": -7.0
+        },
+        {
+            "file": "st_test4.osil",
+            "objective": -7.0
+        },
+        {
+            "file": "st_test5.osil",
+            "objective": -110.0
+        },
+        {
+            "file": "st_test6.osil",
+            "objective": 471.0
+        },
+        {
+            "file": "st_test8.osil",
+            "objective": -29605.0
+        },
+        {
+            "file": "st_testgr1.osil",
+            "objective": -12.8116
+        },
+        {
+            "file": "st_testgr3.osil",
+            "objective": -20.59
+        },
+        {
+            "file": "st_testph4.osil",
+            "objective": -80.5
+        }
+    ]
+}

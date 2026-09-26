@@ -71,6 +71,7 @@ HighsCallbackFunctionType highsCallback
         if(callback_data.terminationHandler && callback_data.terminationHandler->checkTermination())
         {
             env->output->outputDebug("        Terminated by user.");
+            MIPSolver->interruptedByTermination = true;
             data_in->user_interrupt = true;
             return;
         }
@@ -80,6 +81,7 @@ HighsCallbackFunctionType highsCallback
     if(callback_type == kCallbackMipInterrupt && MIPSolver->currentSolutions.size() >= MIPSolver->getSolutionLimit())
     {
         env->output->outputDebug(fmt::format("      | solution limit reached "));
+        MIPSolver->interruptedBySolutionLimit = true;
         data_in->user_interrupt = true;
         return;
     }
@@ -214,7 +216,7 @@ bool MIPSolverHighs::addQuadraticTermToObjective([[maybe_unused]] double coeffic
     [[maybe_unused]] int firstVariableIndex, [[maybe_unused]] int secondVariableIndex)
 {
     // TODO: Not implemented
-    throw new OperationNotImplementedException("Quadratic objective functions not yet implemented in HiGHS interface.");
+    throw OperationNotImplementedException("Quadratic objective functions not yet implemented in HiGHS interface.");
     return (false);
 }
 
@@ -260,7 +262,7 @@ bool MIPSolverHighs::addQuadraticTermToConstraint([[maybe_unused]] double coeffi
     [[maybe_unused]] int firstVariableIndex, [[maybe_unused]] int secondVariableIndex)
 {
     // TODO: Not implemented
-    throw new OperationNotImplementedException("Quadratic constraints not yet implemented in HiGHS interface.");
+    throw OperationNotImplementedException("Quadratic constraints not yet implemented in HiGHS interface.");
     return (false);
 }
 
@@ -329,8 +331,12 @@ void MIPSolverHighs::initializeSolverSettings()
 {
     highsInstance.setOptionValue("mip_rel_gap", env->settings->getSetting<double>("Termination.ObjectiveGap.Relative"));
     highsInstance.setOptionValue("mip_abs_gap", env->settings->getSetting<double>("Termination.ObjectiveGap.Absolute"));
-    highsInstance.setOptionValue(
-        "mip_feasibility_tolerance", env->settings->getSetting<double>("Primal.Tolerance.Integer"));
+    // HiGHS does not only use mip_feasibility_tolerance for integrality, but as the feasibility tolerance of the rows and
+    // cuts in the whole MIP solver, e.g. in the domain propagation. A larger value than its default can therefore make
+    // HiGHS report a solution as optimal that is not (e.g. with RPOPwCaTC5_100, whose rows have coefficients up to 1e5),
+    // so the integer tolerance is only used when it is smaller than the default.
+    highsInstance.setOptionValue("mip_feasibility_tolerance",
+        std::min(env->settings->getSetting<double>("Primal.Tolerance.Integer"), kDefaultMipTolerance));
 
     // Adds a user-provided node limit
     if(auto nodeLimit = env->settings->getSetting<double>("Dual.MIP.NodeLimit"); nodeLimit > 0)
@@ -406,6 +412,10 @@ void MIPSolverHighs::initializeSolverSettings()
 
     highsInstance.setOptionValue("threads", env->settings->getSetting<int>("Dual.MIP.NumberOfThreads"));
 
+    // The random seed is only set when it is not left at the default of the solver
+    if(int randomSeed = env->settings->getSetting<int>("Dual.MIP.RandomSeed"); randomSeed != 0)
+        highsInstance.setOptionValue("random_seed", randomSeed);
+
     switch(env->settings->getSetting<int>("Subsolver.Highs.RunCrossover"))
     {
     case 0:
@@ -440,6 +450,63 @@ void MIPSolverHighs::initializeSolverSettings()
     highsInstance.startCallback(kCallbackSimplexInterrupt);
     highsInstance.startCallback(kCallbackIpmInterrupt);
     highsInstance.startCallback(kCallbackLogging);
+}
+
+VectorInteger MIPSolverHighs::addLinearConstraints(const std::vector<std::map<int, double>>& elements,
+    const VectorDouble& constants, const VectorString& names, bool isGreaterThan, bool allowRepair)
+{
+    // The rows are added in one call, since HiGHS copies the matrix of the model for every call to addRow
+    VectorInteger constraintIndexes;
+
+    if(elements.size() == 0)
+        return (constraintIndexes);
+
+    VectorInteger rowStarts;
+    VectorInteger variableIndexes;
+    VectorDouble coefficients;
+    VectorDouble lowerBounds;
+    VectorDouble upperBounds;
+
+    rowStarts.reserve(elements.size());
+    lowerBounds.reserve(elements.size());
+    upperBounds.reserve(elements.size());
+
+    for(size_t i = 0; i < elements.size(); i++)
+    {
+        rowStarts.push_back(variableIndexes.size());
+
+        for(auto& E : elements[i])
+        {
+            variableIndexes.push_back(E.first);
+            coefficients.push_back(E.second);
+        }
+
+        lowerBounds.push_back(isGreaterThan ? -constants[i] : -highsInstance.getInfinity());
+        upperBounds.push_back(isGreaterThan ? highsInstance.getInfinity() : -constants[i]);
+    }
+
+    int numConstraintsBefore = highsInstance.getNumRow();
+
+    highsInstance.addRows(elements.size(), &lowerBounds[0], &upperBounds[0], variableIndexes.size(), &rowStarts[0],
+        &variableIndexes[0], &coefficients[0]);
+
+    if(highsInstance.getNumRow() != numConstraintsBefore + (int)elements.size())
+    {
+        env->output->outputWarning("        Linear constraints not added by Highs");
+        return (VectorInteger(elements.size(), -1));
+    }
+
+    constraintIndexes.reserve(elements.size());
+
+    for(size_t i = 0; i < elements.size(); i++)
+    {
+        int constraintIndex = numConstraintsBefore + i;
+        highsInstance.passRowName(constraintIndex, names[i]);
+        allowRepairOfConstraint.push_back(allowRepair);
+        constraintIndexes.push_back(constraintIndex);
+    }
+
+    return (constraintIndexes);
 }
 
 int MIPSolverHighs::addLinearConstraint(
@@ -485,7 +552,7 @@ int MIPSolverHighs::addLinearConstraint(
 bool MIPSolverHighs::addSpecialOrderedSet(E_SOSType type, VectorInteger variableIndexes, VectorDouble variableWeights)
 {
     // TODO: Not implemented
-    throw new OperationNotImplementedException(
+    throw OperationNotImplementedException(
         "Special ordered set functionality not yet implemented in HiGHS interface.");
     return (false);
 }
@@ -547,6 +614,14 @@ void MIPSolverHighs::activateDiscreteVariables(bool activate)
     }
 }
 
+// Whether HiGHS ran into trouble instead of solving the problem: it leaves the status unset when it gives up
+// inside the simplex, e.g. when the ratio test fails on excessive dual values
+bool MIPSolverHighs::isFailedSolve(HighsModelStatus modelStatus)
+{
+    return (modelStatus == HighsModelStatus::kUnknown || modelStatus == HighsModelStatus::kSolveError
+        || modelStatus == HighsModelStatus::kNotset);
+}
+
 E_ProblemSolutionStatus MIPSolverHighs::getSolutionStatus()
 {
     E_ProblemSolutionStatus MIPSolutionStatus;
@@ -585,10 +660,24 @@ E_ProblemSolutionStatus MIPSolverHighs::getSolutionStatus()
     {
         MIPSolutionStatus = E_ProblemSolutionStatus::SolutionLimit;
     }
+    else if(isFailedSolve(modelStatus))
+    {
+        // HiGHS ends without a status, or with a solve error, when it runs into numerical trouble, and solveProblem
+        // has then already tried to solve again from a clean state. The iteration has no solution to generate cuts
+        // in, but this is a numerical issue and not an error of the solver.
+        MIPSolutionStatus = E_ProblemSolutionStatus::Numeric;
+        env->output->outputWarning(fmt::format(
+            "        The MIP solver did not return a solution (HiGHS returned status {}), which is treated as a "
+            "numerical issue.",
+            static_cast<int>(modelStatus)));
+    }
     else if(modelStatus == HighsModelStatus::kInterrupt)
     {
-        // Since we interrup in the callback
-        MIPSolutionStatus = E_ProblemSolutionStatus::SolutionLimit;
+        // HiGHS only reports that it was interrupted, so the cause recorded by the callback decides the status
+        if(!interruptedByTermination && interruptedBySolutionLimit)
+            MIPSolutionStatus = E_ProblemSolutionStatus::SolutionLimit;
+        else
+            MIPSolutionStatus = E_ProblemSolutionStatus::Abort;
     }
     else
     {
@@ -606,35 +695,67 @@ E_ProblemSolutionStatus MIPSolverHighs::solveProblem()
     cachedSolutionHasChanged = true;
     currentSolutions.clear();
 
+    interruptedBySolutionLimit = false;
+    interruptedByTermination = false;
+
+    for(auto& I : variableBoundsToRestore)
+        highsInstance.changeColBounds(I, variableLowerBounds[I], variableUpperBounds[I]);
+
+    variableBoundsToRestore.clear();
+
     highsReturnStatus = highsInstance.run();
+
+    // HiGHS gives no status, or a solve error, when it runs into numerical trouble, which it does e.g. when a warm
+    // started simplex does not converge on a badly scaled problem. Solving again from a clean state, which lets it
+    // presolve and factorize from scratch, often succeeds.
+    if(isFailedSolve(highsInstance.getModelStatus()))
+    {
+        env->output->outputDebug(
+            "        The MIP solver did not return a solution, solving again from a clean state.");
+        highsInstance.clearSolver();
+        highsReturnStatus = highsInstance.run();
+    }
+
     MIPSolutionStatus = getSolutionStatus();
 
-    // To find a feasible point for an unbounded dual problem and not when solving the minimax-problem
-    if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded && env->results->getNumberOfIterations() > 0)
+    // An unbounded exact dual problem means that the problem is unbounded, so no point is needed
+    if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded && env->results->getNumberOfIterations() > 0
+        && env->dualSolver->isDualProblemExact())
     {
-        std::vector<PairIndexValue> originalObjectiveCoefficients;
+        MIPSolutionStatus = resolveInfeasibleOrUnbounded(MIPSolutionStatus);
+    }
+    // To find a feasible point for an unbounded dual problem and not when solving the minimax-problem
+    else if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded && env->results->getNumberOfIterations() > 0)
+    {
         bool problemUpdated = false;
 
         if((env->reformulatedProblem->objectiveFunction->properties.classification
                    == E_ObjectiveFunctionClassification::Linear
                && std::dynamic_pointer_cast<LinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                   ->isDualUnbounded())
+                   ->isUnbounded())
             || (env->reformulatedProblem->objectiveFunction->properties.classification
                     == E_ObjectiveFunctionClassification::Quadratic
                 && std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                    ->isDualUnbounded()))
+                    ->isUnbounded()))
         {
             for(auto& V : env->reformulatedProblem->allVariables)
             {
                 if(!V->properties.inObjectiveFunction)
                     continue;
 
-                if(V->isDualUnbounded())
+                if(V->isUnbounded())
                 {
-                    // Temporarily remove unbounded terms from objective
-                    originalObjectiveCoefficients.emplace_back(V->index, variableCosts.at(V->index));
+                    // Temporarily bound the variable, keeping the objective so that the point found is in the
+                    // direction of improvement
+                    // The primal solution only contains the variables of the original problem
+                    double center = (V->getIndex() < (int)env->results->primalSolution.size())
+                        ? env->results->primalSolution[V->getIndex()]
+                        : 0.0;
 
-                    highsInstance.changeColCost(V->index, 0.0);
+                    auto bounds = getTemporaryBoundsForUnboundedVariable(
+                        variableLowerBounds[V->getIndex()], variableUpperBounds[V->getIndex()], center);
+                    highsInstance.changeColBounds(V->getIndex(), bounds.first, bounds.second);
+                    variableBoundsToRestore.push_back(V->getIndex());
                     problemUpdated = true;
                 }
             }
@@ -643,9 +764,13 @@ E_ProblemSolutionStatus MIPSolverHighs::solveProblem()
                 >= E_ObjectiveFunctionClassification::QuadraticConsideredAsNonlinear
             && hasDualAuxiliaryObjectiveVariable())
         {
-            // The auxiliary variable in the dual problem is unbounded
-            updateVariableBound(getDualAuxiliaryObjectiveVariableIndex(), -getUnboundedVariableBoundValue() / 1.1,
-                getUnboundedVariableBoundValue() / 1.1);
+            // The auxiliary variable in the dual problem is unbounded. It is temporarily given finite bounds, since
+            // HiGHS' infinity is inf, and bounds from 1e20 are treated as infinite anyway
+            int objectiveVariableIndex = getDualAuxiliaryObjectiveVariableIndex();
+            highsInstance.changeColBounds(objectiveVariableIndex,
+                std::max(variableLowerBounds[objectiveVariableIndex], -1e9),
+                std::min(variableUpperBounds[objectiveVariableIndex], 1e9));
+            variableBoundsToRestore.push_back(objectiveVariableIndex);
             problemUpdated = true;
         }
 
@@ -655,9 +780,9 @@ E_ProblemSolutionStatus MIPSolverHighs::solveProblem()
             highsReturnStatus = highsInstance.run();
             MIPSolutionStatus = getSolutionStatus();
 
-            // Restore original objective coefficients
-            for(auto& P : originalObjectiveCoefficients)
-                highsInstance.changeColCost(P.index, P.value);
+            // The point is only feasible since the problem has been changed
+            if(MIPSolutionStatus == E_ProblemSolutionStatus::Optimal)
+                MIPSolutionStatus = E_ProblemSolutionStatus::Feasible;
 
             if(env->results->iterations.size() > 0) // Might not have iterations if we are using the minimax solver
                 env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed = true;
@@ -665,6 +790,22 @@ E_ProblemSolutionStatus MIPSolverHighs::solveProblem()
     }
 
     return (MIPSolutionStatus);
+}
+
+E_ProblemSolutionStatus MIPSolverHighs::resolveInfeasibleOrUnbounded(E_ProblemSolutionStatus status)
+{
+    if(highsInstance.getModelStatus() != HighsModelStatus::kUnboundedOrInfeasible)
+        return (status);
+
+    std::string presolve;
+    highsInstance.getOptionValue("presolve", presolve);
+
+    highsInstance.setOptionValue("presolve", "off");
+    highsReturnStatus = highsInstance.run();
+    status = getSolutionStatus();
+    highsInstance.setOptionValue("presolve", presolve);
+
+    return (status);
 }
 
 bool MIPSolverHighs::repairInfeasibility()
@@ -712,6 +853,34 @@ bool MIPSolverHighs::repairInfeasibility()
         {
             env->output->outputDebug("        No constraints available for repair.");
             return (false);
+        }
+
+        // Guard against a limitation in HiGHS's elasticityFilter (used internally by
+        // feasibilityRelaxation below): it assumes that solving the elastic problem always
+        // results in an Optimal or Unbounded model status, but if the constraints that are
+        // *not* eligible for repair (i.e. that keep a -1 local penalty) are contradictory on
+        // their own, the elastic problem stays Infeasible and HiGHS hits an assertion instead
+        // of returning gracefully. Detect that case up front by fully relaxing the repairable
+        // rows and checking that what remains is at least LP-feasible; if it is not, there is
+        // nothing the repair can fix.
+        {
+            Highs feasibilityCheckModel;
+            feasibilityCheckModel.passModel(feasModel.getModel());
+            feasibilityCheckModel.setOptionValue("output_flag", false);
+
+            double checkInfinity = feasibilityCheckModel.getInfinity();
+
+            for(int constraintIdx : repairConstraints)
+                feasibilityCheckModel.changeRowBounds(constraintIdx, -checkInfinity, checkInfinity);
+
+            feasibilityCheckModel.run();
+            auto checkStatus = feasibilityCheckModel.getModelStatus();
+
+            if(checkStatus != HighsModelStatus::kOptimal && checkStatus != HighsModelStatus::kUnbounded)
+            {
+                env->output->outputDebug("        Could not repair the infeasible dual problem.");
+                return (false);
+            }
         }
 
         // Saves the relaxation weights to a file
@@ -862,7 +1031,13 @@ void MIPSolverHighs::setSolutionLimit(long int limit)
 
 int MIPSolverHighs::getSolutionLimit() { return (this->solutionLimit); }
 
-void MIPSolverHighs::setTimeLimit(double seconds) { highsInstance.setOptionValue("time_limit", seconds); }
+void MIPSolverHighs::setTimeLimit(double seconds)
+{
+    // HiGHS only accepts nonnegative time limits, and rejecting the value leaves the previous one, e.g. the default
+    // of no limit at all, so the problem would then be solved without a time limit. The other solvers do the same
+    // with a nonpositive limit.
+    highsInstance.setOptionValue("time_limit", seconds > 0 ? seconds : 0.00001);
+}
 
 void MIPSolverHighs::setCutOff(double cutOff)
 {
@@ -954,6 +1129,20 @@ void MIPSolverHighs::addMIPStart(VectorDouble point)
 {
     assert(point.size() == this->numberOfVariables - numberOfIntegerCutVariables);
 
+    // Clamp to the live column bounds: a warm-start value that is (even marginally) outside a variable's current
+    // bound, e.g. due to a bound having been tightened since this point was found, is rejected by HiGHS's own
+    // internal consistency check (an assert in debug builds of HiGHS) rather than just being treated as infeasible.
+    const auto& colLower = highsInstance.getLp().col_lower_;
+    const auto& colUpper = highsInstance.getLp().col_upper_;
+
+    for(size_t i = 0; i < point.size() && i < colLower.size(); i++)
+    {
+        if(point[i] < colLower[i])
+            point[i] = colLower[i];
+        else if(point[i] > colUpper[i])
+            point[i] = colUpper[i];
+    }
+
     std::vector<HighsInt> indices(point.size());
     for(HighsInt i = 0; i < static_cast<HighsInt>(point.size()); i++)
         indices[i] = i;
@@ -1002,7 +1191,10 @@ void MIPSolverHighs::deleteMIPStarts()
 
 bool MIPSolverHighs::createIntegerCut(IntegerCut& integerCut)
 {
-    assert(integerCut.variableValues.size() == (size_t)env->reformulatedProblem->properties.numberOfDiscreteVariables);
+    // Not necessarily all discrete variables in the reformulated problem: e.g. an NLP-sourced cut built against the
+    // original problem (Primal.FixedInteger.SourceProblem = OriginalProblem, the default) only lists the original
+    // problem's discrete variables, while reformulation may have added auxiliary discrete variables.
+    assert(integerCut.variableValues.size() == integerCut.variableIndexes.size());
     bool allowIntegerCutRepair = env->settings->getSetting<bool>("Dual.MIP.InfeasibilityRepair.IntegerCuts");
 
     int numConstraintsBefore = highsInstance.getNumRow();
@@ -1026,22 +1218,19 @@ bool MIPSolverHighs::createIntegerCut(IntegerCut& integerCut)
             VectorInteger cutIndexes;
             VectorDouble cutCoeffs;
 
-            for(auto& VAR : env->reformulatedProblem->allVariables)
+            for(auto& I : integerCut.variableIndexes)
             {
-                if(!(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer
-                       || VAR->properties.type == E_VariableType::Semiinteger))
-                    continue;
-
+                auto VAR = env->reformulatedProblem->getVariable(I);
                 int variableValue = integerCut.variableValues[index];
 
                 if(variableValue == 1.0)
                 {
-                    cutIndexes.push_back(VAR->index);
+                    cutIndexes.push_back(VAR->getIndex());
                     cutCoeffs.push_back(1.0);
                 }
                 else if(variableValue == 0.0)
                 {
-                    cutIndexes.push_back(VAR->index);
+                    cutIndexes.push_back(VAR->getIndex());
                     cutCoeffs.push_back(-1.0);
                 }
                 else
@@ -1087,13 +1276,13 @@ bool MIPSolverHighs::createIntegerCut(IntegerCut& integerCut)
                 if(variableValue == VAR->upperBound)
                 {
                     sumUB += VAR->upperBound;
-                    cutIndexes.push_back(VAR->index);
+                    cutIndexes.push_back(VAR->getIndex());
                     cutCoeffs.push_back(-1.0);
                 }
                 else if(variableValue == VAR->lowerBound)
                 {
                     sumLB -= VAR->lowerBound;
-                    cutIndexes.push_back(VAR->index);
+                    cutIndexes.push_back(VAR->getIndex());
                     cutCoeffs.push_back(1.0);
                 }
                 else
@@ -1120,7 +1309,7 @@ bool MIPSolverHighs::createIntegerCut(IntegerCut& integerCut)
                     cutCoeffs.push_back(1.0);
 
                     // Constraint 1a: x + w >= variableValue  =>  -w <= x - variableValue
-                    VectorInteger cut1aIndexes = { VAR->index, wIndex };
+                    VectorInteger cut1aIndexes = { VAR->getIndex(), wIndex };
                     VectorDouble cut1aCoeffs = { 1.0, 1.0 };
                     int tmpNumConstraints = highsInstance.getNumRow();
                     highsInstance.addRow(variableValue, highsInstance.getInfinity(), cut1aIndexes.size(),
@@ -1136,7 +1325,7 @@ bool MIPSolverHighs::createIntegerCut(IntegerCut& integerCut)
                     }
 
                     // Constraint 1b: x - w <= variableValue
-                    VectorInteger cut1bIndexes = { VAR->index, wIndex };
+                    VectorInteger cut1bIndexes = { VAR->getIndex(), wIndex };
                     VectorDouble cut1bCoeffs = { 1.0, -1.0 };
                     tmpNumConstraints = highsInstance.getNumRow();
                     highsInstance.addRow(-highsInstance.getInfinity(), variableValue, cut1bIndexes.size(),
@@ -1152,7 +1341,7 @@ bool MIPSolverHighs::createIntegerCut(IntegerCut& integerCut)
                     }
 
                     // Constraint 2: w - x + M1*v <= -variableValue + M1
-                    VectorInteger cut2Indexes = { wIndex, VAR->index, vIndex };
+                    VectorInteger cut2Indexes = { wIndex, VAR->getIndex(), vIndex };
                     VectorDouble cut2Coeffs = { 1.0, -1.0, M1 };
                     tmpNumConstraints = highsInstance.getNumRow();
                     highsInstance.addRow(-highsInstance.getInfinity(), -variableValue + M1, cut2Indexes.size(),
@@ -1168,7 +1357,7 @@ bool MIPSolverHighs::createIntegerCut(IntegerCut& integerCut)
                     }
 
                     // Constraint 3: w + x - M2*v <= variableValue
-                    VectorInteger cut3Indexes = { wIndex, VAR->index, vIndex };
+                    VectorInteger cut3Indexes = { wIndex, VAR->getIndex(), vIndex };
                     VectorDouble cut3Coeffs = { 1.0, 1.0, -M2 };
                     tmpNumConstraints = highsInstance.getNumRow();
                     highsInstance.addRow(-highsInstance.getInfinity(), variableValue, cut3Indexes.size(),
@@ -1245,9 +1434,22 @@ int MIPSolverHighs::getNumberOfSolutions()
     }
     else
     {
-        // LP problem
-        numSols = 1;
-        // TODO better way?
+        // LP problem: col_value only holds a meaningful point when HiGHS actually found one. For
+        // Infeasible/Unbounded/Error, it may hold stale data from a previous solve.
+        switch(getSolutionStatus())
+        {
+        case E_ProblemSolutionStatus::Optimal:
+        case E_ProblemSolutionStatus::Feasible:
+        case E_ProblemSolutionStatus::TimeLimit:
+        case E_ProblemSolutionStatus::IterationLimit:
+        case E_ProblemSolutionStatus::SolutionLimit:
+        case E_ProblemSolutionStatus::CutOff:
+            numSols = 1;
+            break;
+        default:
+            numSols = 0;
+            break;
+        }
     }
 
     return (numSols);
@@ -1259,16 +1461,19 @@ void MIPSolverHighs::updateVariableBound(int varIndex, double lowerBound, double
 {
     variableLowerBounds[varIndex] = lowerBound;
     variableUpperBounds[varIndex] = upperBound;
+    highsInstance.changeColBounds(varIndex, lowerBound, upperBound);
 }
 
 void MIPSolverHighs::updateVariableLowerBound(int varIndex, double lowerBound)
 {
     variableLowerBounds[varIndex] = lowerBound;
+    highsInstance.changeColBounds(varIndex, lowerBound, variableUpperBounds[varIndex]);
 }
 
 void MIPSolverHighs::updateVariableUpperBound(int varIndex, double upperBound)
 {
     variableUpperBounds[varIndex] = upperBound;
+    highsInstance.changeColBounds(varIndex, variableLowerBounds[varIndex], upperBound);
 }
 
 PairDouble MIPSolverHighs::getCurrentVariableBounds(int varIndex)
@@ -1291,6 +1496,9 @@ double MIPSolverHighs::getDualObjectiveValue()
 {
     bool isMIP = getDiscreteVariableStatus();
     double objVal = (isMinimizationProblem ? SHOT_DBL_MIN : SHOT_DBL_MAX);
+
+    if(!isDualBoundAvailable(getSolutionStatus(), isMIP))
+        return (objVal);
 
     if(isMIP)
     {

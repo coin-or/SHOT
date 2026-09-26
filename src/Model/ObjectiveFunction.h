@@ -95,10 +95,19 @@ public:
 
     virtual Interval getBounds();
 
+    // Whether the objective function's value range (per getBounds(), i.e. accounting for term coefficients/signs
+    // and, for a nonlinear objective, the full expression tree -- not just linear/quadratic terms) extends beyond
+    // what the active solver treats as practically infinite.
+    bool isUnbounded();
+
     virtual SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) = 0;
     virtual std::shared_ptr<Variables> getGradientSparsityPattern();
 
     virtual SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes) = 0;
+
+    // The Hessian when it does not depend on the point, and can be used without being recalculated or copied,
+    // otherwise nullptr
+    virtual const SparseVariableMatrix* getConstantHessian() { return (nullptr); }
     virtual std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> getHessianSparsityPattern();
 
     virtual std::ostream& print(std::ostream&) const = 0;
@@ -153,12 +162,10 @@ public:
 
     LinearTerms linearTerms;
 
-    void add(LinearTerms terms);
+    void add(const LinearTerms& terms);
 
     void add(LinearTermPtr term);
     void updateProperties() override;
-
-    virtual bool isDualUnbounded();
 
     void takeOwnership(ProblemPtr owner) override;
 
@@ -232,16 +239,14 @@ public:
 
     QuadraticTerms quadraticTerms;
 
-    void add(LinearTerms terms) { LinearObjectiveFunction::add(terms); }
+    void add(const LinearTerms& terms) { LinearObjectiveFunction::add(terms); }
 
     void add(LinearTermPtr term) { LinearObjectiveFunction::add(term); }
 
-    void add(QuadraticTerms terms);
+    void add(const QuadraticTerms& terms);
     void add(QuadraticTermPtr term);
 
     void updateProperties() override;
-
-    virtual bool isDualUnbounded() override;
 
     double calculateValue(const VectorDouble& point) override;
     Interval calculateValue(const IntervalVector& intervalVector) override;
@@ -250,6 +255,9 @@ public:
 
     SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) override;
     SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes) override;
+
+    // The quadratic terms have a constant Hessian, which they cache
+    const SparseVariableMatrix* getConstantHessian() override;
 
     std::ostream& print(std::ostream& stream) const override;
 
@@ -347,6 +355,9 @@ public:
     CppAD::sparse_rc<std::vector<size_t>> nonlinearGradientSparsityPattern;
     CppAD::sparse_rc<std::vector<size_t>> nonlinearHessianSparsityPattern;
 
+    // Reused between the Hessian evaluations, since it holds the coloring of the sparsity pattern
+    CppAD::sparse_hes_work nonlinearHessianWork;
+
     bool nonlinearGradientSparsityMapGenerated = false;
     bool nonlinearHessianSparsityMapGenerated = false;
 
@@ -356,18 +367,18 @@ public:
 
     int nonlinearExpressionIndex = -1;
 
-    void add(LinearTerms terms) { LinearObjectiveFunction::add(terms); }
+    void add(const LinearTerms& terms) { LinearObjectiveFunction::add(terms); }
 
     void add(LinearTermPtr term) { LinearObjectiveFunction::add(term); }
 
-    void add(QuadraticTerms terms) { QuadraticObjectiveFunction::add(terms); }
+    void add(const QuadraticTerms& terms) { QuadraticObjectiveFunction::add(terms); }
 
     void add(QuadraticTermPtr term) { QuadraticObjectiveFunction::add(term); }
 
-    void add(MonomialTerms terms);
+    void add(const MonomialTerms& terms);
     void add(MonomialTermPtr term);
 
-    void add(SignomialTerms terms);
+    void add(const SignomialTerms& terms);
     void add(SignomialTermPtr term);
 
     void add(NonlinearExpressionPtr expression);
@@ -383,6 +394,9 @@ public:
 
     SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) override;
     SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes) override;
+
+    // The nonlinear expression makes the Hessian depend on the point
+    const SparseVariableMatrix* getConstantHessian() override { return (nullptr); }
 
     std::ostream& print(std::ostream& stream) const override;
 

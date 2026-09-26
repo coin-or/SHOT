@@ -90,13 +90,13 @@ def build_ex1223b(env, problem):
     problem.name = "ex1223b"
     
     # Create variables
-    x1 = SHOTpy.Variable("x1", 0, SHOTpy.VariableType.Real, 0.0, 10.0)
-    x2 = SHOTpy.Variable("x2", 1, SHOTpy.VariableType.Real, 0.0, 10.0)
-    x3 = SHOTpy.Variable("x3", 2, SHOTpy.VariableType.Real, 0.0, 10.0)
-    b4 = SHOTpy.Variable("b4", 3, SHOTpy.VariableType.Binary, 0.0, 1.0)
-    b5 = SHOTpy.Variable("b5", 4, SHOTpy.VariableType.Binary, 0.0, 1.0)
-    b6 = SHOTpy.Variable("b6", 5, SHOTpy.VariableType.Binary, 0.0, 1.0)
-    b7 = SHOTpy.Variable("b7", 6, SHOTpy.VariableType.Binary, 0.0, 1.0)
+    x1 = SHOTpy.Variable("x1", SHOTpy.VariableType.Real, 0.0, 10.0)
+    x2 = SHOTpy.Variable("x2", SHOTpy.VariableType.Real, 0.0, 10.0)
+    x3 = SHOTpy.Variable("x3", SHOTpy.VariableType.Real, 0.0, 10.0)
+    b4 = SHOTpy.Variable("b4", SHOTpy.VariableType.Binary, 0.0, 1.0)
+    b5 = SHOTpy.Variable("b5", SHOTpy.VariableType.Binary, 0.0, 1.0)
+    b6 = SHOTpy.Variable("b6", SHOTpy.VariableType.Binary, 0.0, 1.0)
+    b7 = SHOTpy.Variable("b7", SHOTpy.VariableType.Binary, 0.0, 1.0)
     
     # Add variables to problem
     for var in [x1, x2, x3, b4, b5, b6, b7]:
@@ -112,55 +112,55 @@ def build_ex1223b(env, problem):
     problem.setObjective(objective)
     
     # e1: x1 + x2 + x3 + b4 + b5 + b6 <= 5
-    e1 = SHOTpy.LinearConstraint(0, "e1", -SHOTpy.SHOT_DBL_MAX, 5.0)
+    e1 = SHOTpy.LinearConstraint("e1", -SHOTpy.SHOT_DBL_MAX, 5.0)
     for var in [x1, x2, x3, b4, b5, b6]:
         e1.add(SHOTpy.LinearTerm(1.0, var))
     problem.addConstraint(e1)
     
     # e2: b6^2 + x1^2 + x2^2 + x3^2 <= 5.5
-    e2 = SHOTpy.QuadraticConstraint(1, "e2", -SHOTpy.SHOT_DBL_MAX, 5.5)
+    e2 = SHOTpy.QuadraticConstraint("e2", -SHOTpy.SHOT_DBL_MAX, 5.5)
     for var in [b6, x1, x2, x3]:
         e2.add(SHOTpy.QuadraticTerm(1.0, var, var))
     problem.addConstraint(e2)
     
     # e3: x1 + b4 <= 1.2
-    e3 = SHOTpy.LinearConstraint(2, "e3", -SHOTpy.SHOT_DBL_MAX, 1.2)
+    e3 = SHOTpy.LinearConstraint("e3", -SHOTpy.SHOT_DBL_MAX, 1.2)
     e3.add(SHOTpy.LinearTerm(1.0, x1))
     e3.add(SHOTpy.LinearTerm(1.0, b4))
     problem.addConstraint(e3)
     
     # e4: x2 + b5 <= 1.8
-    e4 = SHOTpy.LinearConstraint(3, "e4", -SHOTpy.SHOT_DBL_MAX, 1.8)
+    e4 = SHOTpy.LinearConstraint("e4", -SHOTpy.SHOT_DBL_MAX, 1.8)
     e4.add(SHOTpy.LinearTerm(1.0, x2))
     e4.add(SHOTpy.LinearTerm(1.0, b5))
     problem.addConstraint(e4)
     
     # e5: x3 + b6 <= 2.5
-    e5 = SHOTpy.LinearConstraint(4, "e5", -SHOTpy.SHOT_DBL_MAX, 2.5)
+    e5 = SHOTpy.LinearConstraint("e5", -SHOTpy.SHOT_DBL_MAX, 2.5)
     e5.add(SHOTpy.LinearTerm(1.0, x3))
     e5.add(SHOTpy.LinearTerm(1.0, b6))
     problem.addConstraint(e5)
     
     # e6: x1 + b7 <= 1.2
-    e6 = SHOTpy.LinearConstraint(5, "e6", -SHOTpy.SHOT_DBL_MAX, 1.2)
+    e6 = SHOTpy.LinearConstraint("e6", -SHOTpy.SHOT_DBL_MAX, 1.2)
     e6.add(SHOTpy.LinearTerm(1.0, x1))
     e6.add(SHOTpy.LinearTerm(1.0, b7))
     problem.addConstraint(e6)
     
     # e7: b5^2 + x2^2 <= 1.64
-    e7 = SHOTpy.QuadraticConstraint(6, "e7", -SHOTpy.SHOT_DBL_MAX, 1.64)
+    e7 = SHOTpy.QuadraticConstraint("e7", -SHOTpy.SHOT_DBL_MAX, 1.64)
     e7.add(SHOTpy.QuadraticTerm(1.0, b5, b5))
     e7.add(SHOTpy.QuadraticTerm(1.0, x2, x2))
     problem.addConstraint(e7)
     
     # e8: b6^2 + x3^2 <= 4.25
-    e8 = SHOTpy.QuadraticConstraint(7, "e8", -SHOTpy.SHOT_DBL_MAX, 4.25)
+    e8 = SHOTpy.QuadraticConstraint("e8", -SHOTpy.SHOT_DBL_MAX, 4.25)
     e8.add(SHOTpy.QuadraticTerm(1.0, b6, b6))
     e8.add(SHOTpy.QuadraticTerm(1.0, x3, x3))
     problem.addConstraint(e8)
     
     # e9: b5^2 + x3^2 <= 4.64
-    e9 = SHOTpy.QuadraticConstraint(8, "e9", -SHOTpy.SHOT_DBL_MAX, 4.64)
+    e9 = SHOTpy.QuadraticConstraint("e9", -SHOTpy.SHOT_DBL_MAX, 4.64)
     e9.add(SHOTpy.QuadraticTerm(1.0, b5, b5))
     e9.add(SHOTpy.QuadraticTerm(1.0, x3, x3))
     problem.addConstraint(e9)
@@ -183,45 +183,45 @@ def build_meanvarxsc(env, problem):
     problem.name = "meanvarxsc"
 
     # Portfolio weights: x2..x8 (positive continuous)
-    x2 = SHOTpy.Variable("x2", 0, SHOTpy.VariableType.Real, 0.0, SHOTpy.SHOT_DBL_MAX)
-    x3 = SHOTpy.Variable("x3", 1, SHOTpy.VariableType.Real, 0.0, SHOTpy.SHOT_DBL_MAX)
-    x4 = SHOTpy.Variable("x4", 2, SHOTpy.VariableType.Real, 0.0, SHOTpy.SHOT_DBL_MAX)
-    x5 = SHOTpy.Variable("x5", 3, SHOTpy.VariableType.Real, 0.0, SHOTpy.SHOT_DBL_MAX)
-    x6 = SHOTpy.Variable("x6", 4, SHOTpy.VariableType.Real, 0.0, SHOTpy.SHOT_DBL_MAX)
-    x7 = SHOTpy.Variable("x7", 5, SHOTpy.VariableType.Real, 0.0, SHOTpy.SHOT_DBL_MAX)
-    x8 = SHOTpy.Variable("x8", 6, SHOTpy.VariableType.Real, 0.0, SHOTpy.SHOT_DBL_MAX)
+    x2 = SHOTpy.Variable("x2", SHOTpy.VariableType.Real, 0.0, SHOTpy.SHOT_DBL_MAX)
+    x3 = SHOTpy.Variable("x3", SHOTpy.VariableType.Real, 0.0, SHOTpy.SHOT_DBL_MAX)
+    x4 = SHOTpy.Variable("x4", SHOTpy.VariableType.Real, 0.0, SHOTpy.SHOT_DBL_MAX)
+    x5 = SHOTpy.Variable("x5", SHOTpy.VariableType.Real, 0.0, SHOTpy.SHOT_DBL_MAX)
+    x6 = SHOTpy.Variable("x6", SHOTpy.VariableType.Real, 0.0, SHOTpy.SHOT_DBL_MAX)
+    x7 = SHOTpy.Variable("x7", SHOTpy.VariableType.Real, 0.0, SHOTpy.SHOT_DBL_MAX)
+    x8 = SHOTpy.Variable("x8", SHOTpy.VariableType.Real, 0.0, SHOTpy.SHOT_DBL_MAX)
 
     # Semicontinuous sell/buy amounts: either 0 or in [semiBound, upperBound]
-    sc9  = SHOTpy.Variable("sc9",   7,  SHOTpy.VariableType.Semicontinuous, 0.0, 0.11, 0.03)
-    sc10 = SHOTpy.Variable("sc10",  8,  SHOTpy.VariableType.Semicontinuous, 0.0, 0.10, 0.04)
-    sc11 = SHOTpy.Variable("sc11",  9,  SHOTpy.VariableType.Semicontinuous, 0.0, 0.07, 0.04)
-    sc12 = SHOTpy.Variable("sc12", 10,  SHOTpy.VariableType.Semicontinuous, 0.0, 0.11, 0.03)
-    sc13 = SHOTpy.Variable("sc13", 11,  SHOTpy.VariableType.Semicontinuous, 0.0, 0.20, 0.03)
-    sc14 = SHOTpy.Variable("sc14", 12,  SHOTpy.VariableType.Semicontinuous, 0.0, 0.10, 0.03)
-    sc15 = SHOTpy.Variable("sc15", 13,  SHOTpy.VariableType.Semicontinuous, 0.0, 0.10, 0.03)
-    sc16 = SHOTpy.Variable("sc16", 14,  SHOTpy.VariableType.Semicontinuous, 0.0, 0.20, 0.02)
-    sc17 = SHOTpy.Variable("sc17", 15,  SHOTpy.VariableType.Semicontinuous, 0.0, 0.15, 0.02)
-    sc18 = SHOTpy.Variable("sc18", 16, SHOTpy.VariableType.Real, 0.0, 0.0)  # fixed at 0
-    sc19 = SHOTpy.Variable("sc19", 17, SHOTpy.VariableType.Real, 0.0, 0.0)  # fixed at 0
-    sc20 = SHOTpy.Variable("sc20", 18,  SHOTpy.VariableType.Semicontinuous, 0.0, 0.10, 0.04)
-    sc21 = SHOTpy.Variable("sc21", 19,  SHOTpy.VariableType.Semicontinuous, 0.0, 0.15, 0.04)
-    sc22 = SHOTpy.Variable("sc22", 20,  SHOTpy.VariableType.Semicontinuous, 0.0, 0.20, 0.04)
+    sc9  = SHOTpy.Variable("sc9",  SHOTpy.VariableType.Semicontinuous, 0.0, 0.11, 0.03)
+    sc10 = SHOTpy.Variable("sc10",  SHOTpy.VariableType.Semicontinuous, 0.0, 0.10, 0.04)
+    sc11 = SHOTpy.Variable("sc11",  SHOTpy.VariableType.Semicontinuous, 0.0, 0.07, 0.04)
+    sc12 = SHOTpy.Variable("sc12",  SHOTpy.VariableType.Semicontinuous, 0.0, 0.11, 0.03)
+    sc13 = SHOTpy.Variable("sc13",  SHOTpy.VariableType.Semicontinuous, 0.0, 0.20, 0.03)
+    sc14 = SHOTpy.Variable("sc14",  SHOTpy.VariableType.Semicontinuous, 0.0, 0.10, 0.03)
+    sc15 = SHOTpy.Variable("sc15",  SHOTpy.VariableType.Semicontinuous, 0.0, 0.10, 0.03)
+    sc16 = SHOTpy.Variable("sc16",  SHOTpy.VariableType.Semicontinuous, 0.0, 0.20, 0.02)
+    sc17 = SHOTpy.Variable("sc17",  SHOTpy.VariableType.Semicontinuous, 0.0, 0.15, 0.02)
+    sc18 = SHOTpy.Variable("sc18", SHOTpy.VariableType.Real, 0.0, 0.0)  # fixed at 0
+    sc19 = SHOTpy.Variable("sc19", SHOTpy.VariableType.Real, 0.0, 0.0)  # fixed at 0
+    sc20 = SHOTpy.Variable("sc20",  SHOTpy.VariableType.Semicontinuous, 0.0, 0.10, 0.04)
+    sc21 = SHOTpy.Variable("sc21",  SHOTpy.VariableType.Semicontinuous, 0.0, 0.15, 0.04)
+    sc22 = SHOTpy.Variable("sc22",  SHOTpy.VariableType.Semicontinuous, 0.0, 0.20, 0.04)
 
     # Binary indicator variables
-    b23 = SHOTpy.Variable("b23", 21, SHOTpy.VariableType.Binary, 0.0, 1.0)
-    b24 = SHOTpy.Variable("b24", 22, SHOTpy.VariableType.Binary, 0.0, 1.0)
-    b25 = SHOTpy.Variable("b25", 23, SHOTpy.VariableType.Binary, 0.0, 1.0)
-    b26 = SHOTpy.Variable("b26", 24, SHOTpy.VariableType.Binary, 0.0, 1.0)
-    b27 = SHOTpy.Variable("b27", 25, SHOTpy.VariableType.Binary, 0.0, 1.0)
-    b28 = SHOTpy.Variable("b28", 26, SHOTpy.VariableType.Binary, 0.0, 1.0)
-    b29 = SHOTpy.Variable("b29", 27, SHOTpy.VariableType.Binary, 0.0, 1.0)
-    b30 = SHOTpy.Variable("b30", 28, SHOTpy.VariableType.Binary, 0.0, 1.0)
-    b31 = SHOTpy.Variable("b31", 29, SHOTpy.VariableType.Binary, 0.0, 1.0)
-    b32 = SHOTpy.Variable("b32", 30, SHOTpy.VariableType.Binary, 0.0, 1.0)
-    b33 = SHOTpy.Variable("b33", 31, SHOTpy.VariableType.Binary, 0.0, 1.0)
-    b34 = SHOTpy.Variable("b34", 32, SHOTpy.VariableType.Binary, 0.0, 1.0)
-    b35 = SHOTpy.Variable("b35", 33, SHOTpy.VariableType.Binary, 0.0, 1.0)
-    b36 = SHOTpy.Variable("b36", 34, SHOTpy.VariableType.Binary, 0.0, 1.0)
+    b23 = SHOTpy.Variable("b23", SHOTpy.VariableType.Binary, 0.0, 1.0)
+    b24 = SHOTpy.Variable("b24", SHOTpy.VariableType.Binary, 0.0, 1.0)
+    b25 = SHOTpy.Variable("b25", SHOTpy.VariableType.Binary, 0.0, 1.0)
+    b26 = SHOTpy.Variable("b26", SHOTpy.VariableType.Binary, 0.0, 1.0)
+    b27 = SHOTpy.Variable("b27", SHOTpy.VariableType.Binary, 0.0, 1.0)
+    b28 = SHOTpy.Variable("b28", SHOTpy.VariableType.Binary, 0.0, 1.0)
+    b29 = SHOTpy.Variable("b29", SHOTpy.VariableType.Binary, 0.0, 1.0)
+    b30 = SHOTpy.Variable("b30", SHOTpy.VariableType.Binary, 0.0, 1.0)
+    b31 = SHOTpy.Variable("b31", SHOTpy.VariableType.Binary, 0.0, 1.0)
+    b32 = SHOTpy.Variable("b32", SHOTpy.VariableType.Binary, 0.0, 1.0)
+    b33 = SHOTpy.Variable("b33", SHOTpy.VariableType.Binary, 0.0, 1.0)
+    b34 = SHOTpy.Variable("b34", SHOTpy.VariableType.Binary, 0.0, 1.0)
+    b35 = SHOTpy.Variable("b35", SHOTpy.VariableType.Binary, 0.0, 1.0)
+    b36 = SHOTpy.Variable("b36", SHOTpy.VariableType.Binary, 0.0, 1.0)
 
     for v in [x2, x3, x4, x5, x6, x7, x8,
               sc9, sc10, sc11, sc12, sc13, sc14, sc15, sc16, sc17, sc18, sc19, sc20, sc21, sc22,
@@ -256,7 +256,7 @@ def build_meanvarxsc(env, problem):
     INF = SHOTpy.SHOT_DBL_MAX
 
     # e1: x2+x3+x4+x5+x6+x7+x8 = 1
-    e1 = SHOTpy.LinearConstraint(0, "e1", 1.0, 1.0)
+    e1 = SHOTpy.LinearConstraint("e1", 1.0, 1.0)
     for v in [x2, x3, x4, x5, x6, x7, x8]:
         e1.add(SHOTpy.LinearTerm(1.0, v))
     problem.addConstraint(e1)
@@ -271,14 +271,14 @@ def build_meanvarxsc(env, problem):
         (x7, sc14, sc21, 0.2),
         (x8, sc15, sc22, 0.2),
     ], start=1):
-        c = SHOTpy.LinearConstraint(idx, f"e{idx + 1}", rhs, rhs)
+        c = SHOTpy.LinearConstraint(f"e{idx + 1}", rhs, rhs)
         c.add(SHOTpy.LinearTerm(1.0,  xi))
         c.add(SHOTpy.LinearTerm(-1.0, scs))
         c.add(SHOTpy.LinearTerm(1.0,  scb))
         problem.addConstraint(c)
 
     # e9: sc9+...+sc15 <= 0.3
-    e9 = SHOTpy.LinearConstraint(8, "e9", -INF, 0.3)
+    e9 = SHOTpy.LinearConstraint("e9", -INF, 0.3)
     for v in [sc9, sc10, sc11, sc12, sc13, sc14, sc15]:
         e9.add(SHOTpy.LinearTerm(1.0, v))
     problem.addConstraint(e9)
@@ -301,7 +301,7 @@ def build_meanvarxsc(env, problem):
         (22, "e23", sc22,  b36, 0.20),
     ]
     for idx, name, scv, bv, coeff in bm_data:
-        c = SHOTpy.LinearConstraint(idx, name, -INF, 0.0)
+        c = SHOTpy.LinearConstraint(name, -INF, 0.0)
         c.add(SHOTpy.LinearTerm(1.0, scv))
         if bv is not None:
             c.add(SHOTpy.LinearTerm(-coeff, bv))
@@ -318,7 +318,7 @@ def build_meanvarxsc(env, problem):
         (29, "e30", b29, b36),
     ]
     for idx, name, bv1, bv2 in binary_pairs:
-        c = SHOTpy.LinearConstraint(idx, name, -INF, 1.0)
+        c = SHOTpy.LinearConstraint(name, -INF, 1.0)
         c.add(SHOTpy.LinearTerm(1.0, bv1))
         c.add(SHOTpy.LinearTerm(1.0, bv2))
         problem.addConstraint(c)
@@ -428,9 +428,9 @@ def build_sos1a(env, problem):
     """
     INF = SHOTpy.SHOT_DBL_MAX
 
-    x1 = SHOTpy.Variable("x1", 0, SHOTpy.VariableType.Real, 0.0, 0.8)
-    x2 = SHOTpy.Variable("x2", 1, SHOTpy.VariableType.Real, 0.0, 0.6)
-    x3 = SHOTpy.Variable("x3", 2, SHOTpy.VariableType.Real, 0.0, 0.6)
+    x1 = SHOTpy.Variable("x1", SHOTpy.VariableType.Real, 0.0, 0.8)
+    x2 = SHOTpy.Variable("x2", SHOTpy.VariableType.Real, 0.0, 0.6)
+    x3 = SHOTpy.Variable("x3", SHOTpy.VariableType.Real, 0.0, 0.6)
     problem.addVariable(x1)
     problem.addVariable(x2)
     problem.addVariable(x3)
@@ -441,7 +441,7 @@ def build_sos1a(env, problem):
     obj.add(SHOTpy.LinearTerm(1.1, x3))
     problem.setObjective(obj)
 
-    c1 = SHOTpy.LinearConstraint(0, "xsum", -INF, 1.0)
+    c1 = SHOTpy.LinearConstraint("xsum", -INF, 1.0)
     c1.add(SHOTpy.LinearTerm(1.0, x1))
     c1.add(SHOTpy.LinearTerm(1.0, x2))
     c1.add(SHOTpy.LinearTerm(1.0, x3))
@@ -469,11 +469,11 @@ def build_sos2a(env, problem):
     """
     INF = SHOTpy.SHOT_DBL_MAX
 
-    w1 = SHOTpy.Variable("w1", 0, SHOTpy.VariableType.Real, 0.0, INF)
-    w2 = SHOTpy.Variable("w2", 1, SHOTpy.VariableType.Real, 0.0, INF)
-    w3 = SHOTpy.Variable("w3", 2, SHOTpy.VariableType.Real, 0.0, INF)
-    fplus = SHOTpy.Variable("fplus", 3, SHOTpy.VariableType.Real, 0.0, INF)
-    fminus = SHOTpy.Variable("fminus", 4, SHOTpy.VariableType.Real, 0.0, INF)
+    w1 = SHOTpy.Variable("w1", SHOTpy.VariableType.Real, 0.0, INF)
+    w2 = SHOTpy.Variable("w2", SHOTpy.VariableType.Real, 0.0, INF)
+    w3 = SHOTpy.Variable("w3", SHOTpy.VariableType.Real, 0.0, INF)
+    fplus = SHOTpy.Variable("fplus", SHOTpy.VariableType.Real, 0.0, INF)
+    fminus = SHOTpy.Variable("fminus", SHOTpy.VariableType.Real, 0.0, INF)
     for v in [w1, w2, w3, fplus, fminus]:
         problem.addVariable(v)
 
@@ -483,14 +483,14 @@ def build_sos2a(env, problem):
     problem.setObjective(obj)
 
     # w1 + w2 + w3 = 1
-    c1 = SHOTpy.LinearConstraint(0, "wsum", 1.0, 1.0)
+    c1 = SHOTpy.LinearConstraint("wsum", 1.0, 1.0)
     c1.add(SHOTpy.LinearTerm(1.0, w1))
     c1.add(SHOTpy.LinearTerm(1.0, w2))
     c1.add(SHOTpy.LinearTerm(1.0, w3))
     problem.addConstraint(c1)
 
     # fplus - w1 - 2*w2 - 3*w3 >= -1.3
-    c2 = SHOTpy.LinearConstraint(1, "fpos", -1.3, INF)
+    c2 = SHOTpy.LinearConstraint("fpos", -1.3, INF)
     c2.add(SHOTpy.LinearTerm(1.0, fplus))
     c2.add(SHOTpy.LinearTerm(-1.0, w1))
     c2.add(SHOTpy.LinearTerm(-2.0, w2))
@@ -498,7 +498,7 @@ def build_sos2a(env, problem):
     problem.addConstraint(c2)
 
     # fminus + w1 + 2*w2 + 3*w3 >= 1.3
-    c3 = SHOTpy.LinearConstraint(2, "fneg", 1.3, INF)
+    c3 = SHOTpy.LinearConstraint("fneg", 1.3, INF)
     c3.add(SHOTpy.LinearTerm(1.0, fminus))
     c3.add(SHOTpy.LinearTerm(1.0, w1))
     c3.add(SHOTpy.LinearTerm(2.0, w2))

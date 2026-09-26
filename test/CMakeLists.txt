@@ -26,7 +26,37 @@ set(Model_parts
     16
     17
     18
-    19) # The different parts of each test (if any)
+    19
+    20
+    21
+    22
+    23
+    24
+    25
+    26
+    27
+    28
+    29
+    30
+    31
+    32
+    33
+    34
+    35
+    36
+    37
+    38
+    39
+    40
+    41
+    42
+    43
+    44
+    45
+    46
+    47
+    48
+    49) # The different parts of each test (if any)
 
 set(Settings_parts 1 2 3 4 5 6 7 8 9)
 
@@ -63,9 +93,16 @@ if(HAS_GAMS)
       8
       9
       10
-      11)
+      11
+      13)
   set(cpptests ${cpptests} GAMS)
 endif()
+
+set(DualBound_parts 1 2 3 4 5 6 7 8 9 10)
+set(cpptests ${cpptests} DualBound)
+
+set(Determinism_parts 1 2 3)
+set(cpptests ${cpptests} Determinism)
 
 set(Solver_parts
     1
@@ -80,7 +117,11 @@ set(Solver_parts
     10
     11
     12
-    13)
+    13
+    14
+    15
+    16
+    17)
 set(cpptests ${cpptests} Solver)
 
 if(HAS_IPOPT)
@@ -109,8 +150,30 @@ endif()
 if(HAS_GUROBI)
   list(APPEND Instance_parts 6)
 endif()
+if(HAS_CPLEX)
+  list(APPEND Instance_parts 7)
+endif()
+if(HAS_CBC)
+  list(APPEND Instance_parts 8)
+endif()
 if(Instance_parts)
   set(cpptests ${cpptests} Instance)
+endif()
+
+# FullInstance tests: same (MIP solver x NLP solver) matrix as Instance, but scans the larger
+# opt-in benchmark folders (MINLP-convex, MINLP-nonconvex, MIQCQP-convex) instead of the small
+# "core" set (see test/InstanceTestCommon.h). Registered under the same guards as Instance, but
+# each registered test is marked DISABLED unless ENABLE_FULL_INSTANCE_TESTS is ON, so a bare
+# `ctest` run (as used in CI) never executes them. See docs/DebuggingSHOT.md.
+option(ENABLE_FULL_INSTANCE_TESTS
+       "Enable the FullInstance CTest group (large opt-in MINLP benchmark instance sets). When OFF \
+(default), FullInstance_* tests are registered but DISABLED, so they are skipped by a plain 'ctest' \
+run; reconfigure with this ON to run them via 'ctest -R FullInstance'."
+       OFF)
+
+set(FullInstance_parts ${Instance_parts})
+if(FullInstance_parts)
+  set(cpptests ${cpptests} FullInstance)
 endif()
 
 # Adds a "1" to tests without parts
@@ -255,6 +318,9 @@ foreach(cpptest ${cpptests})
     set_tests_properties(${cpptest}_${part}
                          PROPERTIES FAIL_REGULAR_EXPRESSION
                                     "ERROR;FAIL;Test failed")
+    if(cpptest STREQUAL "FullInstance" AND NOT ENABLE_FULL_INSTANCE_TESTS)
+      set_tests_properties(${cpptest}_${part} PROPERTIES DISABLED TRUE)
+    endif()
   endforeach()
 endforeach()
 

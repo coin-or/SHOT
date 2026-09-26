@@ -9,12 +9,13 @@
 */
 
 #include <chrono>
+#include <cmath>
+#include <cstdint>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <limits>
 #include <random>
-#include <numeric>
 #include <algorithm>
 
 #include "Utilities.h"
@@ -283,6 +284,40 @@ VectorDouble L2Norms(const std::vector<VectorDouble>& ptsA, const VectorDouble& 
     return (norms);
 }
 
+VectorDouble getPointOnSegment(const VectorDouble& fromPoint, const VectorDouble& toPoint, double fraction)
+{
+    assert(fromPoint.size() == toPoint.size());
+
+    VectorDouble point;
+    point.reserve(fromPoint.size());
+
+    for(size_t i = 0; i < fromPoint.size(); i++)
+        point.push_back((1.0 - fraction) * fromPoint.at(i) + fraction * toPoint.at(i));
+
+    return (point);
+}
+
+VectorDouble calculateBoxCenterPoint(
+    const VectorDouble& lowerBounds, const VectorDouble& upperBounds, double maxMagnitude)
+{
+    assert(lowerBounds.size() == upperBounds.size());
+
+    VectorDouble point;
+    point.reserve(lowerBounds.size());
+
+    for(size_t i = 0; i < lowerBounds.size(); i++)
+    {
+        double lowerBound = std::max(lowerBounds.at(i), -maxMagnitude);
+        double upperBound = std::min(upperBounds.at(i), maxMagnitude);
+
+        // The bounds can be in the same direction, e.g. when a variable is fixed far away or bounded below by a
+        // value larger than the magnitude, and the center is then the bound that is closest to the origin
+        point.push_back((lowerBound <= upperBound) ? 0.5 * (lowerBound + upperBound) : lowerBound);
+    }
+
+    return (point);
+}
+
 VectorDouble calculateCenterPoint(const std::vector<VectorDouble>& pts)
 {
     int ptSize = pts.at(0).size();
@@ -501,32 +536,62 @@ VectorString getLinesInFile(const std::string& fileName)
     return (lines);
 }
 
-auto randomNumberBetween = [](double low, double high) {
-    auto randomFunc = [distribution_ = std::uniform_real_distribution<double>(low, high),
-                          random_engine_ = std::mt19937 { std::random_device {}() }]() mutable {
-        return distribution_(random_engine_);
-    };
-    return randomFunc;
-};
+double fixedPseudoRandomNumber(size_t index, size_t stream, double low, double high)
+{
+    // The bits of the index are mixed with SplitMix64, which gives well spread out values without keeping any
+    // state, so the number for an index is the same however many numbers have been generated before it
+    uint64_t value = static_cast<uint64_t>(index) * 2 + stream + 0x9E3779B97F4A7C15ULL;
+    value = (value ^ (value >> 30)) * 0xBF58476D1CE4E5B9ULL;
+    value = (value ^ (value >> 27)) * 0x94D049BB133111EBULL;
+    value = value ^ (value >> 31);
 
-VectorDouble hashComparisonVector;
+    // The 53 significant bits are mapped onto [0, 1) here rather than by a distribution from the standard
+    // library, since those are allowed to differ between implementations
+    double unitValue = static_cast<double>(value >> 11) / static_cast<double>(1ULL << 53);
+
+    return (low + (high - low) * unitValue);
+}
 
 template double calculateHash(VectorDouble const& point);
 template double calculateHash(VectorInteger const& point);
 
 template <typename T> double calculateHash(std::vector<T> const& point)
 {
-    auto length = point.size();
+    // The coefficients are calculated where they are used instead of being kept in a vector that grows as longer
+    // points are hashed. That vector was shared by every solver in the process, and the hashes are calculated in
+    // the callbacks of the MIP solver, which run in parallel, so extending it could reallocate it while another
+    // thread was reading it.
+    double scalarProduct = 0.0;
 
-    if(hashComparisonVector.size() < length)
-    {
-        std::generate_n(std::back_inserter(hashComparisonVector), length - hashComparisonVector.size(),
-            randomNumberBetween(1.0, 101.0));
-    }
-
-    double scalarProduct = std::inner_product(point.begin(), point.end(), hashComparisonVector.begin(), 0.0);
+    for(size_t i = 0; i < point.size(); i++)
+        scalarProduct += fixedPseudoRandomNumber(i, 0, 1.0, 101.0) * point[i];
 
     return (scalarProduct);
+}
+
+template PairDouble calculateHashes(VectorDouble const& point);
+template PairDouble calculateHashes(VectorInteger const& point);
+
+template <typename T> PairDouble calculateHashes(std::vector<T> const& point)
+{
+    double first = 0.0;
+    double second = 0.0;
+
+    for(size_t i = 0; i < point.size(); i++)
+    {
+        double value = point[i] / (1.0 + std::abs((double)point[i]));
+
+        first += fixedPseudoRandomNumber(i, 0, 1.0, 101.0) * value;
+        second += fixedPseudoRandomNumber(i, 1, 1.0, 101.0) * value;
+    }
+
+    return (std::make_pair(first, second));
+}
+
+bool haveSameHashes(const PairDouble& first, const PairDouble& second)
+{
+    return (std::abs(first.first - second.first) <= 1e-10 * std::max(1.0, std::abs(first.first))
+        && std::abs(first.second - second.second) <= 1e-10 * std::max(1.0, std::abs(first.second)));
 }
 
 bool isAlmostEqual(double x, double y, const double epsilon) { return std::abs(x - y) <= epsilon * std::abs(x); }
@@ -546,6 +611,56 @@ bool isInteger(double value)
     double intpart;
 
     return (std::modf(value, &intpart) == 0.0);
+}
+
+void addSparseVariableVector(SparseVariableVector& target, SparseVariableVector&& source)
+{
+    if(target.size() == 0)
+    {
+        target = std::move(source);
+        return;
+    }
+
+    // The elements whose variables are not in the target are moved into it, so only the duplicates are left
+    target.merge(source);
+
+    for(auto& E : source)
+        target[E.first] += E.second;
+
+    source.clear();
+}
+
+void addSparseVariableVector(SparseVariableVector& target, const SparseVariableVector& source)
+{
+    if(target.size() == 0)
+    {
+        target = source;
+        return;
+    }
+
+    for(auto& E : source)
+    {
+        auto element = target.emplace(E.first, E.second);
+
+        if(!element.second)
+            element.first->second += E.second;
+    }
+}
+
+void addSparseVariableMatrix(SparseVariableMatrix& target, SparseVariableMatrix&& source)
+{
+    if(target.size() == 0)
+    {
+        target = std::move(source);
+        return;
+    }
+
+    target.merge(source);
+
+    for(auto& E : source)
+        target[E.first] += E.second;
+
+    source.clear();
 }
 
 SparseVariableVector combineSparseVariableVectors(const SparseVariableVector& first, const SparseVariableVector& second)

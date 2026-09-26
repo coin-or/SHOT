@@ -156,9 +156,17 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
     if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex
         && env->settings->getSetting<bool>("Dual.MIP.InfeasibilityRepair.Use"))
     {
-        auto tRepairInfeasibility = std::make_shared<TaskRepairInfeasibleDualProblem>(env, "SolveIter", "CheckAbsGap");
+        auto tRepairInfeasibility
+            = std::make_shared<TaskRepairInfeasibleDualProblem>(env, "SolveIter", "CheckIterError");
         env->tasks->addTask(tRepairInfeasibility, "RepairInfeasibility");
     }
+
+    bool useReductionCuts = env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex
+        && env->settings->getSetting<bool>("Dual.ReductionCut.Use");
+
+    auto tCheckIterError
+        = std::make_shared<TaskCheckIterationError>(env, "FinalizeSolution", useReductionCuts ? "AddObjectiveCut" : "");
+    env->tasks->addTask(tCheckIterError, "CheckIterError");
 
     auto tCheckAbsGap = std::make_shared<TaskCheckAbsoluteGap>(env, "FinalizeSolution");
     env->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
@@ -179,11 +187,7 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
     auto tCheckConstrTol = std::make_shared<TaskCheckConstraintTolerance>(env, "FinalizeSolution");
     env->tasks->addTask(tCheckConstrTol, "CheckConstrTol");
 
-    auto tCheckIterError = std::make_shared<TaskCheckIterationError>(env, "FinalizeSolution");
-    env->tasks->addTask(tCheckIterError, "CheckIterError");
-
-    if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex
-        && env->settings->getSetting<bool>("Dual.ReductionCut.Use"))
+    if(useReductionCuts)
     {
         auto tCheckMaxNumberOfObjectiveCuts
             = std::make_shared<TaskCheckMaxNumberOfPrimalReductionCuts>(env, "FinalizeSolution");
@@ -230,6 +234,28 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
 
         env->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
         env->tasks->addTask(tCheckRelGap, "CheckRelGap");
+    }
+
+    // Once the search has finished, solve an NLP problem starting from the solution found to try to improve it.
+    // The dual solver's own tolerances bound how accurate its point is -- for a MIQCQP solver those are its
+    // internal (barrier) tolerances, which SHOT's termination settings do not control -- and near an optimum the
+    // objective is often flat, so a converged objective can still sit on a point that is some way off. Discrete
+    // variables, when there are any, are fixed at the values found, so the NLP solved is the continuous problem
+    // that remains. This is a separate task instance from any used during the search: it must not be paced by
+    // the iteration and time heuristics that apply there.
+    if(env->settings->getSetting<bool>("Primal.PolishSolution"))
+    {
+        auto tPolishPoint = std::make_shared<TaskSelectPrimalFixedNLPPointsFromSolutionPool>(env, true);
+        std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tPolishPoint);
+
+        auto tPolishNLP = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env,
+            static_cast<ES_PrimalNLPProblemSource>(env->settings->getSetting<int>("Primal.FixedInteger.SourceProblem"))
+                == ES_PrimalNLPProblemSource::ReformulatedProblem,
+            true);
+        std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tPolishNLP);
+
+        auto tPolishClear = std::make_shared<TaskClearFixedPrimalCandidates>(env);
+        std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tPolishClear);
     }
 
     env->tasks->addTask(tInitializeIteration, "InitIter2");
@@ -285,8 +311,7 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
 
     env->tasks->addTask(tFinalizeSolution, "FinalizeSolution");
 
-    if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex
-        && env->settings->getSetting<bool>("Dual.ReductionCut.Use"))
+    if(useReductionCuts)
     {
         auto tAddObjectiveCutFinal = std::make_shared<TaskAddPrimalReductionCut>(env, "InitIter2", "Terminate");
         std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tAddObjectiveCutFinal);

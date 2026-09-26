@@ -74,6 +74,9 @@ public:
     int addLinearConstraint(const std::map<int, double>& elements, double constant, std::string name,
         bool isGreaterThan, bool allowRepair) override;
 
+    VectorInteger addLinearConstraints(const std::vector<std::map<int, double>>& elements,
+        const VectorDouble& constants, const VectorString& names, bool isGreaterThan, bool allowRepair) override;
+
     bool addSpecialOrderedSet(
         E_SOSType type, VectorInteger variableIndexes, VectorDouble variableWeights = { }) override;
 
@@ -117,6 +120,8 @@ public:
     bool repairInfeasibility() override;
 
     E_ProblemSolutionStatus getSolutionStatus() override;
+
+    static bool isFailedSolve(HighsModelStatus modelStatus);
     int getNumberOfSolutions() override;
     VectorDouble getVariableSolution(int solIdx) override;
     std::vector<SolutionPoint> getAllVariableSolutions() override { return (MIPSolverBase::getAllVariableSolutions()); }
@@ -168,6 +173,10 @@ public:
     // Objective value, solution point has, solution point
     std::vector<SolutionPoint> currentSolutions;
 
+    // HiGHS reports the same status regardless of why the callback interrupted it, so the cause is recorded here
+    bool interruptedBySolutionLimit = false;
+    bool interruptedByTermination = false;
+
 private:
     HighsModel highsModel;
     Highs highsInstance;
@@ -195,6 +204,14 @@ private:
 
     ObjSense objectiveSense;
     VectorDouble variableCosts;
+
+    // The variables temporarily bounded to find a feasible point of an unbounded dual problem. Their bounds are
+    // restored before the next solve, since changing the model discards the point found.
+    VectorInteger variableBoundsToRestore;
+
+    // HiGHS can only tell whether a problem is infeasible or unbounded if presolve is not used, so such a problem is
+    // solved again without it
+    E_ProblemSolutionStatus resolveInfeasibleOrUnbounded(E_ProblemSolutionStatus status);
 
 protected:
     std::vector<HighsVarType> variableTypesHighs;

@@ -142,6 +142,14 @@ struct InteriorPoint
 {
     VectorDouble point;
     PairIndexValue maxDevatingConstraint;
+
+    // A point is only usable as an interior point when it is strictly inside every nonlinear constraint. A
+    // nonfinite deviation compares false against any bound, so a test that only looks for a value that is too
+    // large lets a point on the boundary of the domain of a function, where it is infinite, through.
+    static bool isUsableDeviation(double maxDeviation)
+    {
+        return (std::isfinite(maxDeviation) && maxDeviation < 0);
+    }
 };
 
 struct PrimalSolution
@@ -167,7 +175,7 @@ struct PrimalFixedNLPCandidate
     double objValue;
     int iterFound;
     PairIndexValue maxDevatingConstraint;
-    double discreteVariablePointHash;
+    PairDouble discreteVariablePointHashes;
 };
 
 struct DualSolution
@@ -250,7 +258,7 @@ struct IntegerCut
     E_IntegerCutSource source = E_IntegerCutSource::None;
     bool areAllVariablesBinary = false;
     int iterationGenerated = -1;
-    double pointHash;
+    PairDouble pointHashes;
 };
 
 struct SolutionStatistics
@@ -316,9 +324,9 @@ struct SolutionStatistics
 
     int getNumberOfTotalDualProblems()
     {
-        return (numberOfProblemsLP + numberOfProblemsQP + numberOfProblemsFeasibleMILP + numberOfProblemsOptimalMILP
-            + numberOfProblemsFeasibleMIQP + numberOfProblemsOptimalMIQP + numberOfProblemsOptimalMIQCQP
-            + numberOfProblemsFeasibleMIQCQP);
+        return (numberOfProblemsLP + numberOfProblemsQP + numberOfProblemsQCQP + numberOfProblemsFeasibleMILP
+            + numberOfProblemsOptimalMILP + numberOfProblemsFeasibleMIQP + numberOfProblemsOptimalMIQP
+            + numberOfProblemsOptimalMIQCQP + numberOfProblemsFeasibleMIQCQP);
     };
 };
 

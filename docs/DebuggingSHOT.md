@@ -229,7 +229,9 @@ introduced, or reproduce a failure in isolation instead of debugging a full
 
 - **How it's built**: `test/CMakeLists.txt` compiles every `*Test.cpp` file
   under `test/` (e.g. `ModelTest.cpp`, `SettingsTest.cpp`, `SolverTest.cpp`,
-  `InstanceTest.cpp`, plus `CbcTest.cpp`/`CplexTest.cpp`/`GurobiTest.cpp`/
+  `InstanceTest.cpp`, `FullInstanceTest.cpp` (the opt-in counterpart of
+  `InstanceTest.cpp`, sharing its implementation via `InstanceTestCommon.h`),
+  plus `CbcTest.cpp`/`CplexTest.cpp`/`GurobiTest.cpp`/
   `HighsTest.cpp`/`IpoptTest.cpp`/`GAMSTest.cpp` for whichever
   subsolvers were compiled in) into a single `test_runner` executable
   (CMake's `create_test_sourcelist` mechanism). Each file defines an
@@ -266,9 +268,10 @@ introduced, or reproduce a failure in isolation instead of debugging a full
   a summary with lists of warned/failed instances. The numeric part
   selects the MIP+NLP solver combination (`1`=HiGHS+Ipopt, `2`=Gurobi+Ipopt,
   `3`=Cplex+Ipopt, `4`=Cbc+Ipopt, `5`=HiGHS+SHOT-as-NLP,
-  `6`=Gurobi+SHOT-as-NLP — only the combinations matching what's actually
-  compiled in are registered). Add `-v` for verbose per-instance solver
-  output:
+  `6`=Gurobi+SHOT-as-NLP, `7`=Cplex+SHOT-as-NLP, `8`=Cbc+SHOT-as-NLP — this
+  is a fixed, hand-registered list in a `switch` statement, not every
+  theoretically valid pairing; see section 9 below). Add `-v` for verbose
+  per-instance solver output:
 
   ```bash
   ./test/test_runner Instancetest 1 -v
@@ -279,6 +282,43 @@ introduced, or reproduce a failure in isolation instead of debugging a full
   `./SHOT test/data/instances/<group>/<file> --debug=<dir>
   Output.Console.Iteration.Detail=0`, and work through the debugging
   workflow in section 6 above.
+- **`InstanceTest` only fails on wrong results for strict instances**:
+  otherwise only a crash fails it. A missing primal solution or an objective
+  outside the `[dual, primal]` range only warns, and a solve that ends with a
+  poor primal solution and no dual bound still passes. When a small instance
+  exposes a solver bug, add it with `"strict": true` in `instances.json`
+  (e.g. in `test/data/instances/ampl_mp/`, which is in the core set): it then
+  fails the test unless the primal bound is the objective and the dual bound
+  is valid, for every registered solver combination. Check that the instance
+  fails without the fix, and that it is solved with all combinations.
+- **Core vs. full instance tests**: the `test/data/instances/` subfolders are
+  split into two CTest groups (see `kCoreInstanceFolders` in
+  `test/InstanceTestCommon.h`). **Core** (`Instance_1`..`Instance_6`) scans
+  only `minlp_tests_jl` and `MINLP-convex-small` — small, fast, and always
+  run, including under a bare `ctest` (which is what CI does). **Full**
+  (`FullInstance_1`..`FullInstance_6`) scans every other
+  `test/data/instances/` subfolder (currently `MINLP-convex`,
+  `MINLP-nonconvex`, `MIQCQP-convex`) using the identical solver-combination
+  matrix and numeric part mapping as `Instance`, but is registered
+  `DISABLED` by default so it never runs as part of a normal/CI `ctest`
+  invocation. To run the full set on demand, from the build directory:
+
+  ```bash
+  cmake . -DENABLE_FULL_INSTANCE_TESTS=ON
+  cmake --build . -j <N>                      # relinks test_runner
+  ctest -R FullInstance --output-on-failure
+  ```
+
+  `ctest -N` shows `FullInstance_*` as `Not Run (Disabled)` when the option
+  is off, and as normal runnable tests once it's on. Turn it back off the
+  same way (`-DENABLE_FULL_INSTANCE_TESTS=OFF`, reconfigure) so subsequent
+  plain `ctest` runs stay fast. To iterate on a single full-set combination
+  directly, bypassing CTest and the cache option entirely:
+
+  ```bash
+  ./test/test_runner FullInstancetest 1 -v
+  ```
+
 - **Python API tests** (`test/python/*.py`, run via `pytest`) only register
   if Python bindings are built (`-DHAS_PYTHON=on`, target `SHOTpy`) and
   `pytest` is importable; they cover the Python/SHOTpy binding surface
@@ -286,7 +326,290 @@ introduced, or reproduce a failure in isolation instead of debugging a full
   core solve algorithm, so they're more useful for API-layer bugs than
   solver-behavior ones.
 
-## 8. If this doc is stale
+## 8. Lessons from real debugging sessions
+
+These are specific, non-obvious traps encountered while actually chasing bugs
+in this codebase — add to this list as you find more.
+
+### Build hygiene
+
+- Rebuild every binary that exercises your change, not just `SHOT`.
+  `test_runner` statically links `libSHOTTasks.a`, `libSHOTDualStrategy.a`,
+  etc.; `make SHOT` alone does not relink it. A fix that "doesn't seem to
+  work" under `test_runner` may just be stale object code — after any
+  `src/` edit, run the default `make -j` target, or explicitly
+  `make SHOT test_runner`, rather than building only the one target you
+  think you need.
+
+### Settings pitfalls
+
+- An unrecognized `Key=Value` CLI argument (a typo, or a missing prefix
+  like `Dual.`) is silently dropped, not rejected — SHOT falls back to
+  that setting's default with no warning. Don't trust that a flag "took"
+  just because the run didn't error; confirm via the console header
+  (`Running HiGHS 1.15.1...`, `Dual strategy: ... solver: HiGHS`) or
+  `usedsettings.opt` that the solver/setting you intended is actually the
+  one in effect.
+
+### Reproducing a bug found via the C++ test suite
+
+- If a failure was first found through `ModelTest`/the C++ `Problem` API
+  (not a `.gms`/`.osil`/`.nl` file), **reproduce it the same way** — don't
+  hand-write an equivalent input file and assume it produces the identical
+  `Problem` structure. A file reader's default bound handling, presolve, or
+  field population can differ from the C++ API in ways that change the
+  numeric outcome, even when every explicit setting matches.
+- The fastest way to get an isolated, debuggable repro of a C++-API-found bug
+  is a tiny standalone `.cpp` file that builds the `Problem` exactly as the
+  test does and links against `libSHOTSolver.dylib`/`libSHOTTasks.a`/etc. —
+  get the exact compile/link flags by touching `src/SHOT.cpp` and running
+  `make VERBOSE=1 SHOT`, then reuse those flags for the new file. `Output.Debug.Enable=true`
+  / `Output.Debug.Path=<dir>` work as `solver->updateSetting(...)` calls in
+  such a program exactly like the CLI flags, so you get the full debug-file
+  dump (section 5) without touching the CLI at all.
+
+### CppAD / numerical domain errors
+
+- A crash mentioning CppAD and "nan" (`forward.hpp`, `subgraph_reverse.hpp`)
+  is usually evaluating a nonlinear expression outside its domain (division
+  by a variable that is zero, the gradient of a Euclidean-norm term at the
+  origin, log of a negative number, etc.) — not a logic bug in SHOT's own
+  code. Before patching individual call sites, check `ADFun::check_for_nan()`:
+  the assertion that throws is wrapped in `#ifndef NDEBUG`, so it is
+  compiled out entirely in release builds, which already rely on NaN
+  flowing through silently to the several existing downstream NaN checks
+  (`NLPSolverCuttingPlaneMinimax.cpp`, `MIPSolverBase::createHyperplaneTerms`).
+  Calling `ADFunctions.check_for_nan(false)` once, in `Problem.cpp` right
+  after `Dependent()`, is usually the correct, general fix — not scattered
+  try/catch at every call site.
+
+### Exception-handling pitfalls specific to this codebase
+
+- Grep for `throw new` before assuming a `catch(const std::exception&)`
+  will actually catch a thrown `SHOT::Exception` subclass. Some throw sites
+  throw a heap-allocated *pointer* (`throw new X(...)`) instead of the
+  exception object — a pointer never matches `catch(const std::exception&)`,
+  so the exception propagates uncaught no matter how much catching you add
+  upstream. Fix the throw site itself (`throw X(...)`, no `new`) before
+  wrapping callers in try/catch.
+- A `false`/silent-failure return from a `bool`-returning setup function
+  (`setProblem()`, `createProblem()`, `selectStrategy()`) is very often
+  ignored by its caller several layers up (e.g. `TaskCreateMIPProblem::run()`
+  never checks `createProblem()`'s return value). `Solver::selectStrategy()`
+  itself has an internal try/catch that swallows initialization exceptions
+  and returns `false` rather than propagating them. So when a crash or
+  assert happens deep inside a *second* use of an object (e.g. `solveProblem()`
+  called well after construction, on an already-"successfully constructed"
+  solver), don't assume construction actually succeeded just because nothing
+  threw — walk backward through the chain of `bool` returns to find where a
+  failure was silently dropped.
+
+### Task-graph state (`SolutionStrategyMultiTree` and friends)
+
+- `TaskHandler` is a flat, mutable "next task" pointer — any task can call
+  `setNextTask()`, and fields like `Results::terminationReason` are not
+  exclusively a "we've decided to stop" signal: some tasks (e.g.
+  `TaskCheckPrimalStagnation`) reuse it as an internal marker for their own
+  retry logic while redirecting elsewhere in the loop, not to
+  `FinalizeSolution`. Before gating a task on a shared/global field like
+  `terminationReason` or `isTerminated()`, grep every place that sets *and*
+  reads it, not just the one call site of the bug you're chasing — an
+  overly broad guard can silently break a legitimate internal loop instead
+  of the one you meant to fix. If a task class is reused in two different
+  structural roles (e.g. main-loop vs. `FinalizeSolution`-embedded),
+  consider a constructor flag to scope the fix to the role that's actually
+  broken, the way `TaskAddPrimalReductionCut`'s `isFinalAttempt` does.
+
+### Nested/recursive solves (`NLPSolverSHOT`, `TaskPerformBoundTightening`)
+
+- Some code paths construct an entire second `Solver` internally
+  (`NLPSolverSHOT` for the SHOT-as-NLP primal heuristic,
+  `TaskPerformBoundTightening`'s `POASolver`). These deliberately call
+  `Problem::createCopy(..., copyAuxiliary=false)` and pass the *same*
+  problem object as both `problem` and `reformulatedProblem` to
+  `setProblem()`, which skips `TaskReformulateProblem` — this is
+  intentional, not an oversight: reformulating would construct entirely
+  new `Variable` objects, breaking the later `setVariableBounds()` /
+  `fixVariables()` calls these classes rely on to mutate the *same*
+  variables the nested solver actually solves against. "Just let it
+  reformulate" looks like the natural fix for a nested-solve bug but
+  silently breaks correctness (bounds mutated on a now-disconnected copy)
+  instead of crashing, which is a worse failure mode. Grep for
+  `setVariableBounds`/`fixVariables` calls on the same member before
+  changing how a nested solve is initialized.
+
+### False convergence (0 gap, wrong answer) vs. stalling
+
+- A run that terminates with "globally optimal, gap 0" is not proof the
+  answer is right — cross-check the reported objective against an
+  independently hand-computed (or closed-form) optimum for small repro
+  problems. This is the way to catch a bug that produces a plausible-looking,
+  confidently-reported wrong number rather than an obvious crash or stall.
+- When the reported value is wrong but the gap is 0, suspect an **invalid
+  bound on a reformulated/auxiliary variable**, not just wrong constraint
+  coefficients — check the `variables:` section of `reformulatedproblem.txt`
+  and the `Bounds` section of `dualiter{N}_problem.lp`, not just the
+  constraint rows. A too-tight box bound on an auxiliary variable silently
+  removes the true optimum from the feasible region and produces a
+  confident-but-wrong "optimal" report, since nothing about the *solve*
+  itself looks wrong.
+- Bounds derived from interval arithmetic (`getBounds()` and similar) are
+  *expected* to be loose/conservative — a loose bound isn't itself a red
+  flag. What's suspicious is a bound that's tighter than the true achievable
+  range; check that the printed bound is a valid superset of the
+  closed-form range, not that it's tight.
+
+### Unbounded initial relaxations and square bounds
+
+- A bounded quadratic feasible region can have an unbounded first LP relaxation
+  when the MIP solver does not handle quadratics itself (Cbc, HiGHS). For
+  `x^2/9 + y^2 <= 1` with free `x` and `y`, check the bound tightening output:
+  it should give `x in [-3,3]` and `y in [-1,1]`. Inverting a square must keep
+  both signs when the variable's domain contains zero.
+- Interval bound propagation happily turns the `1e50` sentinel of an unbounded
+  variable into finite-looking bounds, e.g. `x in [-1e25,1e25]` from
+  `x^2 + z <= 1` with free `z`. Such a bound is useless, and it hides that the
+  variable is unbounded from `Variable::isUnbounded()`, so the unbounded dual
+  problem handling below skips it. Look for bounds of magnitude `1e20`–`1e50`
+  in the bound tightening output.
+- When the dual problem is unbounded, the Cbc and HiGHS backends temporarily
+  bound the unbounded objective variables
+  (`MIPSolverBase::getTemporaryBoundsForUnboundedVariable`) and solve again to
+  get a point to generate cuts in. Run with
+  `Model.BoundTightening.FeasibilityBased.Use=false` to exercise this path, and
+  look for `dualiter*_unbounded.lp` in the debug directory (Cbc). LP solvers
+  treat values from `1e20` as infinite, so larger temporary bounds do not help,
+  and cuts for square terms generated at points far away are badly scaled.
+- Changing bounds or costs discards the solution in Gurobi and HiGHS, so the
+  temporary changes are only undone at the start of the next solve. The
+  objective value of that solve is not a dual bound; it is ignored since
+  `hasInfeasibilityRepairBeenPerformed` is set.
+- A cut for a nonconvex constraint can cut away the whole domain, after which
+  the infeasibility repair admits the same point again and SHOT terminates
+  since no additional cuts can be added. That does not mean the problem is
+  infeasible. The final polish (`Primal.PolishSolution`) then still solves an
+  NLP problem from the last dual solution, also without a primal solution;
+  check `primalnlp*_warmstart_*` in the debug directory to see that it ran.
+
+### Large dense quadratics (thousands of variables, millions of terms)
+
+- A run that never leaves `TaskReformulateProblem` (no "Interior point search"
+  section printed) is usually quadratic-time work over the terms, not a
+  stuck solver. Use `sample <pid> 10` on macOS: in a Release build the hot
+  loop is often inlined, so read the return address in the leaf frame with
+  `lldb -b -o 'disassemble -n <function>'` to see which call it follows.
+
+### `--convex` on instances that are not convex
+
+- `Model.Convexity.AssumeConvex` makes SHOT generate cuts for every
+  constraint, so an instance that is only nearly convex can give a dual bound
+  that is worse than the optimum, with no other sign of trouble. Before
+  debugging such a result, compute the eigenvalues of the quadratic
+  constraints from `originalproblem.txt` (e.g. with numpy) and compare the
+  smallest one with `Model.Convexity.Quadratics.EigenValueTolerance`, or rerun
+  without `--convex` and see whether SHOT reports nonconvex constraints.
+- To find where an invalid dual bound comes from, take a known optimal
+  solution (e.g. `primal_solpt{N}.txt` from a run with another solver
+  combination), add rows fixing the original variables to it before the
+  `bounds` section of each `dualiter{N}_problem.lp`, and solve them with
+  `build/bin/highs --model_file <file>`. If every problem stays feasible with
+  an objective at least as good as the optimum, no cut is invalid, and the
+  MIP solver's own solve is wrong: solve the unchanged file standalone, then
+  add the MIP start (`dualiter{N}_mipstart.txt`, via `--read_solution_file`)
+  and the options SHOT sets in `initializeSolverSettings()` one at a time.
+- A nonconvex constraint does not by itself explain an invalid dual bound: it
+  can be redundant, and its cuts can still be valid for the feasible set (e.g.
+  `-(mu^T x)^2 <= z` next to `(mu^T x)^2 <= z`). Remove the constraint from a
+  copy of the model and rerun before blaming it.
+
+### Verification discipline
+
+- `InstanceTest`'s solver combinations are a fixed, hand-registered list in
+  a `switch` (`test/InstanceTest.cpp`) — not every theoretically valid
+  `Dual.MIP.Solver` × `Primal.FixedInteger.Solver` pairing is actually
+  tested. "All instance tests pass" only means the *registered* combos
+  pass; check the switch statement before trusting that a specific pairing
+  has ever been exercised. Adding an untested combo is a cheap, high-yield
+  way to find real bugs.
+- A fix that stops a crash is not the same as a fix that makes the instance
+  solve correctly — check both separately. `[WARN] no primal solution`, or
+  an objective far from the instance's expected value in `instances.json`,
+  after a crash fix usually means there's a second, often pre-existing,
+  issue; don't conflate "no longer crashes" with "now works."
+- Any change to shared, widely-reused numerical machinery (the
+  interior-point/cutting-plane search in `NLPSolverCuttingPlaneMinimax.cpp`,
+  the CppAD tape, anything touched by many call paths) needs a full
+  `InstanceTest` regression sweep across *all* registered combos, not just
+  the instance you're fixing — its blast radius is the whole suite. A
+  targeted change that "fixes" one instance can silently break others.
+- SHOT routes the same logical problem through materially different code
+  paths depending on `Dual.MIP.Solver`'s capabilities (native quadratics
+  support, single-tree callback support, etc. — see section 3). A bug
+  confined to one path is completely invisible if you only ever test with
+  the default solver. When a fix "doesn't seem to help," or a suspected bug
+  "won't reproduce," try it under each of Cbc/HiGHS/Gurobi/Cplex (whichever
+  are compiled in) before concluding either way.
+- If the problem has a quadratic part and the bug is suspected to be
+  related to it, also try toggling `Model.Reformulation.Quadratics.Strategy`
+  between letting Gurobi/Cplex handle the quadratic terms natively and
+  forcing them through the generic nonlinear/hyperplane-cut path — a bug 
+  specific to native quadratic handling will only show up in one of the two 
+  configurations, and testing only the default for a given solver can miss it 
+  entirely.
+- A change that is only meant to be faster or tidier can be *proved* to leave
+  behaviour alone instead of argued about, using the whole-problem dumps as an
+  oracle. Dump `reformulatedproblem.txt` for a set of instances and, since the
+  reformulation has several branches, once per setting that selects them
+  (`Model.Reformulation.Quadratics.Decomposition.Method` 0/1/2 and
+  `Model.Reformulation.Constraint.PartitionNonlinearTerms`). Then put the one
+  changed file back with `git show HEAD:<file> > <file>`, rebuild, dump into a
+  second directory, restore your version, and `diff -rq` the two trees.
+  `Termination.TimeLimit=1` is enough, since the dumps are written before the
+  solve. Checksum the file after restoring it, so you know your version came
+  back.
+- Before making a per-element operation more expensive, grep for callers inside
+  a loop. `LinearObjectiveFunction::add(term)` was changed to merge duplicates,
+  for consistency with `LinearConstraint::add(term)`, which turned the loop in
+  `ModelingSystemGAMS::copyQuadraticTerms` over every quadratic term of the
+  objective into quadratic-time work. The term containers in `src/Model/Terms.h`
+  search all existing terms on a single `add`, so one call costs the size of the
+  container.
+- A model property that is wrong but only sometimes is often a cached value that
+  nobody invalidated. `Terms` caches `convexity` and `monotonicity`, and the
+  quadratic terms also cache a gradient structure and Hessian; `add()` resets
+  them, the inherited `push_back` does not. When a convexity or a bound looks
+  right on a fresh problem and wrong after a reformulation, look for a
+  `push_back` on a term container that should have been an `add` or should have
+  been followed by `invalidateProperties()`.
+
+### Fast, targeted crash diagnosis
+
+- Reach for `lldb -b -s <script>` early, not after several rounds of
+  `fprintf`/rebuild. A batch script with
+  `breakpoint set --func-regex <ExceptionClassName>` (for an uncaught
+  exception) or `breakpoint set --file X.cpp --line N` (for a specific
+  `assert`), followed by `run ...` and `bt`, gets a definitive, full-frame
+  stack trace in one pass — far faster than iterating on print statements
+  across multiple rebuild cycles. Note macOS has no `timeout` shell
+  command; use the Bash tool's own timeout parameter, `lldb -b` batch mode
+  (which exits on its own), or background the process and poll instead.
+
+### Debug vs. Release builds change which crashes you can even see
+
+- Bundled third-party solver libraries often carry their own internal
+  consistency `assert()`s that are compiled out under `NDEBUG` in a Release
+  build. Check `CMAKE_BUILD_TYPE` in `CMakeCache.txt` before concluding a fix
+  "still doesn't work" — if a fix resolves a crash on some instances but a
+  different instance now aborts inside a dependency's own assert, rebuild a
+  Release configuration and re-run the same failing case there before
+  treating it as a blocking regression (note a fresh CMake configure may
+  default to a different generator, e.g. Makefiles instead of Ninja — check
+  `CMAKE_GENERATOR` in the new cache). The underlying data-quality issue is
+  usually still worth fixing regardless, since a Release build wouldn't
+  crash but could still silently produce a worse or wrong result — but it
+  changes how urgently the assert failure needs to block shipping.
+
+## 9. If this doc is stale
 
 File names and which task writes them are derived from the source and can
 drift as SHOT evolves. If a described file is missing or looks different,

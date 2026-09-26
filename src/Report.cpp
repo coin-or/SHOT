@@ -1019,8 +1019,8 @@ void Report::outputSolutionReport()
 
         for(auto& V : env->problem->realVariables)
         {
-            if(env->results->primalSolution.at(V->index) == minLBCont
-                || env->results->primalSolution.at(V->index) == maxUBCont)
+            if(env->results->primalSolution.at(V->getIndex()) == minLBCont
+                || env->results->primalSolution.at(V->getIndex()) == maxUBCont)
             {
                 variablesAreBounded = false;
                 break;
@@ -1031,8 +1031,8 @@ void Report::outputSolutionReport()
         {
             for(auto& V : env->problem->integerVariables)
             {
-                if(env->results->primalSolution.at(V->index) == minLBInt
-                    || env->results->primalSolution.at(V->index) == maxUBInt)
+                if(env->results->primalSolution.at(V->getIndex()) == minLBInt
+                    || env->results->primalSolution.at(V->getIndex()) == maxUBInt)
                 {
                     variablesAreBounded = false;
                     break;

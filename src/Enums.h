@@ -48,7 +48,8 @@ enum class E_DualSolutionSource
     MIPSolutionOptimal,
     ObjectiveConstraint,
     MIPSolverBound,
-    ConvexBounding
+    ConvexBounding,
+    InfeasibleWithCutOff
 };
 
 enum class E_EventType
@@ -430,6 +431,18 @@ enum class ES_QuadraticProblemStrategy
     QuadraticObjective,
     ConvexQuadraticallyConstrained,
     NonconvexQuadraticallyConstrained
+};
+
+enum class ES_ObjectiveEpigraphStrategy
+{
+    Unchanged, // Perform no epigraph or anti-epigraph reformulation at all; the objective function is kept
+               // exactly as given (an already epigraph-shaped objective stays an epigraph-shaped objective, a
+               // direct nonlinear/quadratic objective stays direct)
+    ObjectiveFunction, // Always represent the objective as a direct objective function; folds an epigraph-shaped
+                       // objective back into a real objective when structurally possible, and never introduces an
+                       // epigraph auxiliary-variable constraint
+    EpigraphConstraint // Always represent a nonlinear or quadratic objective as an epigraph auxiliary-variable
+                       // constraint; linear objectives are unaffected
 };
 
 enum class ES_QuadraticDecompositionFormulation

@@ -9,9 +9,12 @@
 */
 
 #include "../src/Solver.h"
+#include "../src/DualSolver.h"
 #include "../src/Environment.h"
 #include "../src/Settings.h"
 #include "../src/Results.h"
+#include "../src/Timing.h"
+#include "../src/Utilities.h"
 
 #include "../src/Model/Variables.h"
 #include "../src/Model/Terms.h"
@@ -21,8 +24,28 @@
 #include "../src/Model/Simplifications.h"
 
 #include "../src/Tasks/TaskReformulateProblem.h"
+#include "../src/ModelingSystem/ModelingSystemOSiL.h"
+#include "../src/Tasks/TaskSelectPrimalFixedNLPPointsFromSolutionPool.h"
+#include "../src/PrimalSolver.h"
 
+#include <algorithm>
+#include <cmath>
+#include <functional>
+#include <iomanip>
+#include <random>
+#include <set>
 #include <sstream>
+#include <thread>
+
+#ifdef HAS_STD_FILESYSTEM
+#include <filesystem>
+namespace fs = std;
+#endif
+
+#ifdef HAS_STD_EXPERIMENTAL_FILESYSTEM
+#include <experimental/filesystem>
+namespace fs = std::experimental;
+#endif
 
 using namespace SHOT;
 
@@ -48,6 +71,101 @@ bool ModelTestSOS1WithSolver(ES_MIPSolver mipSolver);
 bool ModelTestSOS1();
 bool ModelTestSOS2WithSolver(ES_MIPSolver mipSolver);
 bool ModelTestSOS2();
+bool ModelTestObjectiveEpigraphStrategy();
+bool ModelTestAntiEpigraphReformulation();
+bool ModelTestObjectivePartitioningStrategy();
+bool ModelTestSignomialElementBounds();
+bool ModelTestTermAndExpressionBounds();
+bool ModelTestMixedTermBoundTightening();
+bool ModelTestSquareBoundTightening();
+bool ModelTestPolishWithoutPrimal();
+bool ModelTestUnboundedQCQPWithSolver(ES_MIPSolver mipSolver);
+bool ModelTestUnboundedQCQP();
+bool ModelTestFixedVariableConstantFolding();
+bool ModelTestFixedBinaryVariableBounds();
+bool ModelTestConstantInFunctionValues();
+bool ModelTestPolishSolution();
+bool ModelTestSignomialElementBoundTightening()
+{
+    // Propagating a bound on the value of a signomial element back onto its variable must not assume the base is
+    // non-negative. An even power discards the sign, so a value bound only restricts the magnitude: x^2 in [0,2]
+    // means x in [-sqrt(2), sqrt(2)], not [0, sqrt(2)]. Taking the signed root of the value interval raised the
+    // lower bound to zero and silently cut away every negative base, which made minimising x subject to
+    // x^2/z <= y over x in [-5,5], y in [0,1], z in [1,2] return 0 instead of the true optimum -sqrt(2).
+
+    bool passed = true;
+
+    struct Case
+    {
+        std::string description;
+        double variableLowerBound;
+        double variableUpperBound;
+        double power;
+        double valueLowerBound;
+        double valueUpperBound;
+        double expectedLowerBound;
+        double expectedUpperBound;
+    };
+
+    double root2 = std::sqrt(2.0);
+
+    std::vector<Case> cases = {
+        // An even power keeps both signs of the base
+        { "x^2 in [0,2], x in [-5,5]", -5.0, 5.0, 2.0, 0.0, 2.0, -root2, root2 },
+        { "x^2 in [0,2], x in [-1,5]", -1.0, 5.0, 2.0, 0.0, 2.0, -1.0, root2 },
+        { "x^2 in [0,2], x in [0,5] (already non-negative)", 0.0, 5.0, 2.0, 0.0, 2.0, 0.0, root2 },
+        { "x^4 in [0,16], x in [-5,5]", -5.0, 5.0, 4.0, 0.0, 16.0, -2.0, 2.0 },
+
+        // A domain on one side of zero still resolves the sign, so the lower value bound must be kept
+        { "x^2 in [4,16], x in [0,10] (non-negative domain)", 0.0, 10.0, 2.0, 4.0, 16.0, 2.0, 4.0 },
+        { "x^2 in [4,16], x in [-10,0] (negative domain)", -10.0, 0.0, 2.0, 4.0, 16.0, -4.0, -2.0 },
+        { "x^4 in [16,81], x in [0,10] (non-negative domain)", 0.0, 10.0, 4.0, 16.0, 81.0, 2.0, 3.0 },
+        { "x^2 in [4,16], x in [-10,10] (both branches kept)", -10.0, 10.0, 2.0, 4.0, 16.0, -4.0, 4.0 },
+
+        // An odd power preserves the sign, so the signed root is the right back-propagation
+        { "x^3 in [-8,8], x in [-5,5]", -5.0, 5.0, 3.0, -8.0, 8.0, -2.0, 2.0 },
+        { "x^3 in [1,8], x in [-5,5]", -5.0, 5.0, 3.0, 1.0, 8.0, 1.0, 2.0 },
+    };
+
+    for(auto& C : cases)
+    {
+        auto variable = std::make_shared<SHOT::Variable>(
+            "x", SHOT::E_VariableType::Real, C.variableLowerBound, C.variableUpperBound);
+        SHOT::SignomialElement element(variable, C.power);
+
+        element.tightenBounds(SHOT::Interval(C.valueLowerBound, C.valueUpperBound));
+
+        std::cout << "  " << C.description << ": [" << variable->lowerBound << ", " << variable->upperBound
+                  << "] (expected [" << C.expectedLowerBound << ", " << C.expectedUpperBound << "])\n";
+
+        if(std::abs(variable->lowerBound - C.expectedLowerBound) > 1e-9
+            || std::abs(variable->upperBound - C.expectedUpperBound) > 1e-9)
+        {
+            std::cout << "  FAILED: " << C.description << " was not tightened as expected.\n";
+            passed = false;
+        }
+    }
+
+    return passed;
+}
+
+bool ModelTestSignomialTermConvexity();
+bool ModelTestSignomialElementBoundTightening();
+bool ModelTestCopyKeepsNonlinearQuadraticConstraints();
+bool ModelTestPerspectiveConvexity();
+bool ModelTestInitialPOAConvexRelaxation();
+bool ModelTestArtificialIntegerBounds();
+bool ModelTestVariableBoundCache();
+bool ModelTestMaximizePartitionedSquares();
+bool ModelTestLDLFactorizationScaling();
+bool ModelTestBoundTighteningMatchesReference();
+bool ModelTestBoundTighteningMatchesReferenceOnInstances();
+bool ModelTestBoundTighteningPropagation();
+bool ModelTestProductBoundTighteningResult();
+bool ModelTestBoundTighteningTimeLimit();
+bool ModelTestConvexityAfterAddedTerm();
+bool ModelTestSignomialGradientOfRepeatedVariable();
+bool ModelTestBulkTermAdding();
 
 bool TestReadProblem(const std::string& problemFile);
 bool TestRootsearch(const std::string& problemFile);
@@ -130,6 +248,96 @@ int ModelTest(int argc, char* argv[])
     case 19:
         passed = ModelTestSOS2();
         break;
+    case 20:
+        passed = ModelTestObjectiveEpigraphStrategy();
+        break;
+    case 21:
+        passed = ModelTestAntiEpigraphReformulation();
+        break;
+    case 22:
+        passed = ModelTestObjectivePartitioningStrategy();
+        break;
+    case 23:
+        passed = ModelTestSignomialElementBounds();
+        break;
+    case 24:
+        passed = ModelTestTermAndExpressionBounds();
+        break;
+    case 25:
+        passed = ModelTestMixedTermBoundTightening();
+        break;
+    case 26:
+        passed = ModelTestUnboundedQCQP();
+        break;
+    case 27:
+        passed = ModelTestFixedVariableConstantFolding();
+        break;
+    case 28:
+        passed = ModelTestFixedBinaryVariableBounds();
+        break;
+    case 29:
+        passed = ModelTestConstantInFunctionValues();
+        break;
+    case 30:
+        passed = ModelTestPolishSolution();
+        break;
+    case 31:
+        passed = ModelTestSignomialTermConvexity();
+        break;
+    case 32:
+        passed = ModelTestSignomialElementBoundTightening();
+        break;
+    case 33:
+        passed = ModelTestCopyKeepsNonlinearQuadraticConstraints();
+        break;
+    case 34:
+        passed = ModelTestPerspectiveConvexity();
+        break;
+    case 35:
+        passed = ModelTestInitialPOAConvexRelaxation();
+        break;
+    case 36:
+        passed = ModelTestSquareBoundTightening();
+        break;
+    case 37:
+        passed = ModelTestPolishWithoutPrimal();
+        break;
+    case 38:
+        passed = ModelTestArtificialIntegerBounds();
+        break;
+    case 39:
+        passed = ModelTestVariableBoundCache();
+        break;
+    case 40:
+        passed = ModelTestMaximizePartitionedSquares();
+        break;
+    case 41:
+        passed = ModelTestLDLFactorizationScaling();
+        break;
+    case 42:
+        passed = ModelTestBoundTighteningMatchesReference();
+        break;
+    case 43:
+        passed = ModelTestBoundTighteningMatchesReferenceOnInstances();
+        break;
+    case 44:
+        passed = ModelTestBoundTighteningPropagation();
+        break;
+    case 45:
+        passed = ModelTestProductBoundTighteningResult();
+        break;
+    case 46:
+        passed = ModelTestBoundTighteningTimeLimit();
+        break;
+    case 47:
+        passed = ModelTestConvexityAfterAddedTerm();
+        break;
+    case 48:
+        passed = ModelTestSignomialGradientOfRepeatedVariable();
+        break;
+    case 49:
+        passed = ModelTestBulkTermAdding();
+        break;
     default:
         passed = false;
         std::cout << "Test #" << choice << " does not exist!\n";
@@ -145,8 +353,13 @@ bool ModelTestVariables()
 {
     bool passed = true;
 
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+    SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
+
     std::cout << "Creating variable:\n";
-    SHOT::VariablePtr var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 100.0);
+    SHOT::VariablePtr var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 100.0);
+    problem->add(var_x);
     std::cout << "Variable " << var_x << " created.\n";
 
     SHOT::VectorDouble point;
@@ -167,8 +380,14 @@ bool ModelTestTerms()
 {
     bool passed = true;
 
-    SHOT::VariablePtr var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 100.0);
-    SHOT::VariablePtr var_y = std::make_shared<SHOT::Variable>("y", 1, SHOT::E_VariableType::Integer, 0.0, 1.0);
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+    SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
+
+    SHOT::VariablePtr var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 100.0);
+    SHOT::VariablePtr var_y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Integer, 0.0, 1.0);
+    problem->add(var_x);
+    problem->add(var_y);
 
     SHOT::VectorDouble point;
     point.push_back(3.0);
@@ -220,10 +439,16 @@ bool ModelTestNonlinearExpressions()
 {
     bool passed = true;
 
-    auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 100.0);
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+    SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
+
+    auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 100.0);
+    problem->add(var_x);
     SHOT::ExpressionVariablePtr expressionVariable_x = std::make_shared<SHOT::ExpressionVariable>(var_x);
 
-    auto var_y = std::make_shared<SHOT::Variable>("y", 1, SHOT::E_VariableType::Integer, 0.0, 1.0);
+    auto var_y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Integer, 0.0, 1.0);
+    problem->add(var_y);
     SHOT::ExpressionVariablePtr expressionVariable_y = std::make_shared<SHOT::ExpressionVariable>(var_y);
 
     SHOT::VectorDouble point;
@@ -275,10 +500,16 @@ bool ModelTestObjective()
 {
     bool passed = true;
 
-    auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 100.0);
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+    SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
+
+    auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 100.0);
+    problem->add(var_x);
     SHOT::ExpressionVariablePtr expressionVariable_x = std::make_shared<SHOT::ExpressionVariable>(var_x);
 
-    auto var_y = std::make_shared<SHOT::Variable>("y", 1, SHOT::E_VariableType::Integer, 0.0, 1.0);
+    auto var_y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Integer, 0.0, 1.0);
+    problem->add(var_y);
     SHOT::ExpressionVariablePtr expressionVariable_y = std::make_shared<SHOT::ExpressionVariable>(var_y);
 
     std::cout << "Creating linear terms\n";
@@ -331,10 +562,16 @@ bool ModelTestConstraints()
 {
     bool passed = true;
 
-    auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 100.0);
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+    SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
+
+    auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 100.0);
+    problem->add(var_x);
     SHOT::ExpressionVariablePtr expressionVariable_x = std::make_shared<SHOT::ExpressionVariable>(var_x);
 
-    auto var_y = std::make_shared<SHOT::Variable>("y", 1, SHOT::E_VariableType::Integer, 0.0, 1.0);
+    auto var_y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Integer, 0.0, 1.0);
+    problem->add(var_y);
     SHOT::ExpressionVariablePtr expressionVariable_y = std::make_shared<SHOT::ExpressionVariable>(var_y);
 
     std::cout << "Creating linear terms\n";
@@ -354,8 +591,8 @@ bool ModelTestConstraints()
     std::cout << "Quadratic terms " << quadraticTerms << " created\n";
 
     std::cout << "Creating quadratic constraint:\n";
-    SHOT::QuadraticConstraintPtr quadraticConstraint
-        = std::make_shared<SHOT::QuadraticConstraint>(0, "quadconstr", linearTerms, quadraticTerms, -10.0, 20.0);
+    SHOT::QuadraticConstraintPtr quadraticConstraint = std::make_shared<SHOT::QuadraticConstraint>(
+        "quadconstr", linearTerms, quadraticTerms, -10.0, 20.0);
     std::cout << "Quadratic constraint created\n";
 
     SHOT::VectorDouble point;
@@ -383,7 +620,7 @@ bool ModelTestConstraints()
 
     std::cout << "Creating nonlinear constraint:\n";
     SHOT::NonlinearConstraintPtr nonlinearConstraint = std::make_shared<SHOT::NonlinearConstraint>(
-        0, "nlconstr", linearTerms, quadraticTerms, exprProduct, -10.0, 20.0);
+        "nlconstr", linearTerms, quadraticTerms, exprProduct, -10.0, 20.0);
     std::cout << "Nonlinear constraint " << nonlinearConstraint << " created\n";
 
     constraintValue = nonlinearConstraint->calculateNumericValue(point);
@@ -434,13 +671,13 @@ bool ModelTestCreateProblem()
 
     // Creating variables
 
-    auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 100.0);
+    auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 100.0);
     SHOT::ExpressionVariablePtr expressionVariable_x = std::make_shared<SHOT::ExpressionVariable>(var_x);
 
-    auto var_y = std::make_shared<SHOT::Variable>("y", 1, SHOT::E_VariableType::Integer, 0.0, 1.0);
+    auto var_y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Integer, 0.0, 1.0);
     SHOT::ExpressionVariablePtr expressionVariable_y = std::make_shared<SHOT::ExpressionVariable>(var_y);
 
-    auto var_z = std::make_shared<SHOT::Variable>("z", 2, SHOT::E_VariableType::Integer, 0.0, 2.0);
+    auto var_z = std::make_shared<SHOT::Variable>("z", SHOT::E_VariableType::Integer, 0.0, 2.0);
     SHOT::ExpressionVariablePtr expressionVariable_z = std::make_shared<SHOT::ExpressionVariable>(var_z);
 
     SHOT::Variables variables = { var_x, var_y, var_z };
@@ -478,8 +715,8 @@ bool ModelTestCreateProblem()
     SHOT::LinearTerms linearTerms;
     linearTerms.add(linearTerm1);
     linearTerms.add(linearTerm2);
-    SHOT::LinearConstraintPtr linearConstraint
-        = std::make_shared<SHOT::LinearConstraint>(0, "linconstr", linearTerms, -2.0, 4.0);
+    SHOT::LinearConstraintPtr linearConstraint = std::make_shared<SHOT::LinearConstraint>(
+        "linconstr", linearTerms, -2.0, 4.0);
     problem->add(linearConstraint);
 
     std::cout << '\n';
@@ -490,8 +727,8 @@ bool ModelTestCreateProblem()
     SHOT::QuadraticTerms quadraticTerms;
     quadraticTerms.add(quadraticTerm1);
     quadraticTerms.add(quadraticTerm2);
-    SHOT::QuadraticConstraintPtr quadraticConstraint
-        = std::make_shared<SHOT::QuadraticConstraint>(1, "quadconstr", quadraticTerms, -10.0, 20.0);
+    SHOT::QuadraticConstraintPtr quadraticConstraint = std::make_shared<SHOT::QuadraticConstraint>(
+        "quadconstr", quadraticTerms, -10.0, 20.0);
     problem->add(quadraticConstraint);
 
     std::cout << '\n';
@@ -516,8 +753,8 @@ bool ModelTestCreateProblem()
 
     SHOT::NonlinearExpressionPtr exprSum = std::make_shared<SHOT::ExpressionSum>(expressions);
 
-    SHOT::NonlinearConstraintPtr nonlinearConstraint
-        = std::make_shared<SHOT::NonlinearConstraint>(2, "nlconstr", nlLinearTerms, exprSum, -10.0, 20.0);
+    SHOT::NonlinearConstraintPtr nonlinearConstraint = std::make_shared<SHOT::NonlinearConstraint>(
+        "nlconstr", nlLinearTerms, exprSum, -10.0, 20.0);
     problem->add(nonlinearConstraint);
 
     std::cout << '\n';
@@ -528,8 +765,8 @@ bool ModelTestCreateProblem()
         = std::make_shared<SHOT::ExpressionProduct>(exprConstant2, expressionVariable_x);
     SHOT::NonlinearExpressionPtr exprPlus2 = std::make_shared<SHOT::ExpressionProduct>(exprTimes, expressionVariable_y);
 
-    SHOT::NonlinearConstraintPtr nonlinearConstraint2
-        = std::make_shared<SHOT::NonlinearConstraint>(3, "nlconstr2", exprPlus2, -1000.0, 0);
+    SHOT::NonlinearConstraintPtr nonlinearConstraint2 = std::make_shared<SHOT::NonlinearConstraint>(
+        "nlconstr2", exprPlus2, -1000.0, 0);
     problem->add(nonlinearConstraint2);
 
     std::cout << '\n';
@@ -564,7 +801,7 @@ bool ModelTestCreateProblem()
     for(auto& E : *jacobianSparsityPattern)
     {
         for(auto& V : E.second)
-            std::cout << "(" << E.first->index << "," << V->index << ")\n";
+            std::cout << "(" << E.first->getIndex() << "," << V->getIndex() << ")\n";
     }
 
     std::cout << '\n';
@@ -573,7 +810,7 @@ bool ModelTestCreateProblem()
 
     for(auto& E : *lagrangianSparsityPattern)
     {
-        std::cout << "(" << E.first->index << "," << E.second->index << ")\n";
+        std::cout << "(" << E.first->getIndex() << "," << E.second->getIndex() << ")\n";
     }
 
     std::cout << "\nCalculating gradient for function in linear constraint:\n";
@@ -765,8 +1002,8 @@ bool ModelTestCreateProblem2()
     env->problem = problem;
 
     // Creating variables
-    auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 100.0);
-    auto var_y = std::make_shared<SHOT::Variable>("y", 1, SHOT::E_VariableType::Integer, 0.0, 1.0);
+    auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 100.0);
+    auto var_y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Integer, 0.0, 1.0);
     SHOT::ExpressionVariablePtr expressionVariable_y = std::make_shared<SHOT::ExpressionVariable>(var_y);
 
     SHOT::Variables variables = { var_x, var_y };
@@ -788,8 +1025,8 @@ bool ModelTestCreateProblem2()
     SHOT::NonlinearExpressionPtr exprPower
         = std::make_shared<SHOT::ExpressionPower>(expressionVariable_y, exprConstant);
 
-    SHOT::NonlinearConstraintPtr nonlinearConstraint
-        = std::make_shared<SHOT::NonlinearConstraint>(0, "nlconstr", exprPower, -10.0, 20.0);
+    SHOT::NonlinearConstraintPtr nonlinearConstraint = std::make_shared<SHOT::NonlinearConstraint>(
+        "nlconstr", exprPower, -10.0, 20.0);
     problem->add(nonlinearConstraint);
 
     std::cout << '\n';
@@ -814,10 +1051,11 @@ bool ModelTestCreateProblem2()
     for(auto& E : *jacobianSparsityPattern)
     {
         for(auto& V : E.second)
-            std::cout << "(" << E.first->index << "," << V->index << ")\n";
+            std::cout << "(" << E.first->getIndex() << "," << V->getIndex() << ")\n";
     }
 
-    if(!(jacobianSparsityPattern->at(0).first->index == 0 && jacobianSparsityPattern->at(0).second.at(0)->index == 1))
+    if(!(jacobianSparsityPattern->at(0).first->getIndex() == 0 &&
+        jacobianSparsityPattern->at(0).second.at(0)->getIndex() == 1))
     {
         std::cout << "The sparsity pattern is wrong!\n";
         passed = false;
@@ -829,10 +1067,11 @@ bool ModelTestCreateProblem2()
 
     for(auto& E : *lagrangianSparsityPattern)
     {
-        std::cout << "(" << E.first->index << "," << E.second->index << ")\n";
+        std::cout << "(" << E.first->getIndex() << "," << E.second->getIndex() << ")\n";
     }
 
-    if(!(lagrangianSparsityPattern->at(0).first->index == 1 && lagrangianSparsityPattern->at(0).second->index == 1))
+    if(!(lagrangianSparsityPattern->at(0).first->getIndex() == 1 &&
+        lagrangianSparsityPattern->at(0).second->getIndex() == 1))
     {
         std::cout << "The sparsity pattern is wrong!\n";
         passed = false;
@@ -869,10 +1108,10 @@ bool ModelTestCreateProblem3()
 
     // Creating variables
 
-    auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 100.0);
+    auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 100.0);
     SHOT::ExpressionVariablePtr expressionVariable_x = std::make_shared<SHOT::ExpressionVariable>(var_x);
 
-    auto var_y = std::make_shared<SHOT::Variable>("y", 1, SHOT::E_VariableType::Integer, 0.0, 1.0);
+    auto var_y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Integer, 0.0, 1.0);
     SHOT::ExpressionVariablePtr expressionVariable_y = std::make_shared<SHOT::ExpressionVariable>(var_y);
 
     SHOT::Variables variables = { var_x, var_y };
@@ -898,16 +1137,16 @@ bool ModelTestCreateProblem3()
     SHOT::NonlinearExpressionPtr exprPower
         = std::make_shared<SHOT::ExpressionPower>(expressionVariable_y, exprConstant);
 
-    SHOT::NonlinearConstraintPtr nonlinearConstraint
-        = std::make_shared<SHOT::NonlinearConstraint>(0, "nlconstr", exprPower, -10.0, 20.0);
+    SHOT::NonlinearConstraintPtr nonlinearConstraint = std::make_shared<SHOT::NonlinearConstraint>(
+        "nlconstr", exprPower, -10.0, 20.0);
     problem->add(nonlinearConstraint);
 
     SHOT::NonlinearExpressionPtr exprConstant2 = std::make_shared<SHOT::ExpressionConstant>(4);
     SHOT::NonlinearExpressionPtr exprPower2
         = std::make_shared<SHOT::ExpressionPower>(expressionVariable_x, exprConstant2);
 
-    SHOT::NonlinearConstraintPtr nonlinearConstraint2
-        = std::make_shared<SHOT::NonlinearConstraint>(1, "nlconstr2", exprPower2, -10.0, 20.0);
+    SHOT::NonlinearConstraintPtr nonlinearConstraint2 = std::make_shared<SHOT::NonlinearConstraint>(
+        "nlconstr2", exprPower2, -10.0, 20.0);
     problem->add(nonlinearConstraint2);
 
     std::cout << '\n';
@@ -932,12 +1171,13 @@ bool ModelTestCreateProblem3()
     for(auto& E : *jacobianSparsityPattern)
     {
         for(auto& V : E.second)
-            std::cout << "(" << E.first->index << "," << V->index << ")\n";
+            std::cout << "(" << E.first->getIndex() << "," << V->getIndex() << ")\n";
     }
 
-    if(!(jacobianSparsityPattern->at(0).first->index == 0 && jacobianSparsityPattern->at(0).second.at(0)->index == 1
-           && jacobianSparsityPattern->at(1).first->index == 1
-           && jacobianSparsityPattern->at(1).second.at(0)->index == 0))
+    if(!(jacobianSparsityPattern->at(0).first->getIndex() == 0
+           && jacobianSparsityPattern->at(0).second.at(0)->getIndex() == 1
+           && jacobianSparsityPattern->at(1).first->getIndex() == 1
+           && jacobianSparsityPattern->at(1).second.at(0)->getIndex() == 0))
     {
         std::cout << "The sparsity pattern is wrong!\n";
         passed = false;
@@ -949,12 +1189,13 @@ bool ModelTestCreateProblem3()
 
     for(auto& E : *lagrangianSparsityPattern)
     {
-        std::cout << "(" << E.first->index << "," << E.second->index << ")\n";
+        std::cout << "(" << E.first->getIndex() << "," << E.second->getIndex() << ")\n";
     }
 
-    if(!(lagrangianSparsityPattern->at(0).first->index == 0 && lagrangianSparsityPattern->at(0).second->index == 0
-           && lagrangianSparsityPattern->at(1).first->index == 1
-           && lagrangianSparsityPattern->at(1).second->index == 1))
+    if(!(lagrangianSparsityPattern->at(0).first->getIndex() == 0
+           && lagrangianSparsityPattern->at(0).second->getIndex() == 0
+           && lagrangianSparsityPattern->at(1).first->getIndex() == 1
+           && lagrangianSparsityPattern->at(1).second->getIndex() == 1))
     {
         std::cout << "The sparsity pattern is wrong!\n";
         passed = false;
@@ -966,13 +1207,15 @@ bool ModelTestCreateProblem3()
 
     for(auto& E : *lagrangianSparsityPattern)
     {
-        std::cout << "(" << E.first->index << "," << E.second->index << ")\n";
+        std::cout << "(" << E.first->getIndex() << "," << E.second->getIndex() << ")\n";
     }
 
-    if(!(lagrangianSparsityPattern->at(0).first->index == 0 && lagrangianSparsityPattern->at(0).second->index == 0
-           && lagrangianSparsityPattern->at(1).first->index == 0 && lagrangianSparsityPattern->at(1).second->index == 1
-           && lagrangianSparsityPattern->at(2).first->index == 1
-           && lagrangianSparsityPattern->at(2).second->index == 1))
+    if(!(lagrangianSparsityPattern->at(0).first->getIndex() == 0
+           && lagrangianSparsityPattern->at(0).second->getIndex() == 0
+           && lagrangianSparsityPattern->at(1).first->getIndex() == 0
+           && lagrangianSparsityPattern->at(1).second->getIndex() == 1
+           && lagrangianSparsityPattern->at(2).first->getIndex() == 1
+           && lagrangianSparsityPattern->at(2).second->getIndex() == 1))
     {
         std::cout << "The sparsity pattern is wrong!\n";
         passed = false;
@@ -1024,10 +1267,10 @@ bool ModelTestConvexity()
 
     // Creating variables
 
-    auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 100.0);
+    auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 100.0);
     SHOT::ExpressionVariablePtr expressionVariable_x = std::make_shared<SHOT::ExpressionVariable>(var_x);
 
-    auto var_y = std::make_shared<SHOT::Variable>("y", 1, SHOT::E_VariableType::Integer, 0.0, 1.0);
+    auto var_y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Integer, 0.0, 1.0);
     SHOT::ExpressionVariablePtr expressionVariable_y = std::make_shared<SHOT::ExpressionVariable>(var_y);
 
     SHOT::Variables variables = { var_x, var_y };
@@ -1059,8 +1302,8 @@ bool ModelTestConvexity()
     quadraticTerms.add(quadraticTerm2);
     quadraticTerms.add(quadraticTerm3);
 
-    SHOT::QuadraticConstraintPtr quadraticConstraint
-        = std::make_shared<SHOT::QuadraticConstraint>(0, "quadconstr", quadraticTerms, -10.0, 20.0);
+    SHOT::QuadraticConstraintPtr quadraticConstraint = std::make_shared<SHOT::QuadraticConstraint>(
+        "quadconstr", quadraticTerms, -10.0, 20.0);
 
     problem->add(objectiveFunction);
 
@@ -1138,13 +1381,13 @@ bool ModelTestCopy()
 
     // Creating variables
 
-    auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 100.0);
+    auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 100.0);
     SHOT::ExpressionVariablePtr expressionVariable_x = std::make_shared<SHOT::ExpressionVariable>(var_x);
 
-    auto var_y = std::make_shared<SHOT::Variable>("y", 1, SHOT::E_VariableType::Integer, 0.0, 1.0);
+    auto var_y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Integer, 0.0, 1.0);
     SHOT::ExpressionVariablePtr expressionVariable_y = std::make_shared<SHOT::ExpressionVariable>(var_y);
 
-    auto var_z = std::make_shared<SHOT::Variable>("z", 2, SHOT::E_VariableType::Integer, 0.0, 2.0);
+    auto var_z = std::make_shared<SHOT::Variable>("z", SHOT::E_VariableType::Integer, 0.0, 2.0);
     SHOT::ExpressionVariablePtr expressionVariable_z = std::make_shared<SHOT::ExpressionVariable>(var_z);
 
     SHOT::Variables variables = { var_x, var_y, var_z };
@@ -1180,8 +1423,8 @@ bool ModelTestCopy()
     SHOT::LinearTerms linearTerms;
     linearTerms.add(linearTerm1);
     linearTerms.add(linearTerm2);
-    SHOT::LinearConstraintPtr linearConstraint
-        = std::make_shared<SHOT::LinearConstraint>(0, "linconstr", linearTerms, -2.0, 4.0);
+    SHOT::LinearConstraintPtr linearConstraint = std::make_shared<SHOT::LinearConstraint>(
+        "linconstr", linearTerms, -2.0, 4.0);
     problem->add(linearConstraint);
 
     SHOT::QuadraticTermPtr quadraticTerm1 = std::make_shared<SHOT::QuadraticTerm>(1, var_x, var_y);
@@ -1189,8 +1432,8 @@ bool ModelTestCopy()
     SHOT::QuadraticTerms quadraticTerms;
     quadraticTerms.add(quadraticTerm1);
     quadraticTerms.add(quadraticTerm2);
-    SHOT::QuadraticConstraintPtr quadraticConstraint
-        = std::make_shared<SHOT::QuadraticConstraint>(1, "quadconstr", quadraticTerms, -10.0, 20.0);
+    SHOT::QuadraticConstraintPtr quadraticConstraint = std::make_shared<SHOT::QuadraticConstraint>(
+        "quadconstr", quadraticTerms, -10.0, 20.0);
     problem->add(quadraticConstraint);
 
     SHOT::NonlinearExpressionPtr exprPlus
@@ -1205,8 +1448,8 @@ bool ModelTestCopy()
 
     SHOT::NonlinearExpressionPtr exprSum = std::make_shared<SHOT::ExpressionSum>(expressions);
 
-    SHOT::NonlinearConstraintPtr nonlinearConstraint
-        = std::make_shared<SHOT::NonlinearConstraint>(2, "nlconstr", linearTerms, exprSum, -10.0, 20.0);
+    SHOT::NonlinearConstraintPtr nonlinearConstraint = std::make_shared<SHOT::NonlinearConstraint>(
+        "nlconstr", linearTerms, exprSum, -10.0, 20.0);
     problem->add(nonlinearConstraint);
 
     SHOT::NonlinearExpressionPtr exprConstant2 = std::make_shared<SHOT::ExpressionConstant>(40.0);
@@ -1214,8 +1457,8 @@ bool ModelTestCopy()
         = std::make_shared<SHOT::ExpressionProduct>(exprConstant2, expressionVariable_x);
     SHOT::NonlinearExpressionPtr exprPlus2 = std::make_shared<SHOT::ExpressionProduct>(exprTimes, expressionVariable_y);
 
-    SHOT::NonlinearConstraintPtr nonlinearConstraint2
-        = std::make_shared<SHOT::NonlinearConstraint>(3, "nlconstr2", exprPlus2, -1000.0, 0);
+    SHOT::NonlinearConstraintPtr nonlinearConstraint2 = std::make_shared<SHOT::NonlinearConstraint>(
+        "nlconstr2", exprPlus2, -1000.0, 0);
     problem->add(nonlinearConstraint2);
 
     problem->finalize();
@@ -1267,13 +1510,13 @@ bool ModelTestEx1223b()
     problem->name = "ex1223b";
 
     // Creating the variables
-    auto x1 = std::make_shared<Variable>("x1", 0, E_VariableType::Real, 0.0, 10.0);
-    auto x2 = std::make_shared<Variable>("x2", 1, E_VariableType::Real, 0.0, 10.0);
-    auto x3 = std::make_shared<Variable>("x3", 2, E_VariableType::Real, 0.0, 10.0);
-    auto b4 = std::make_shared<Variable>("b4", 3, E_VariableType::Binary);
-    auto b5 = std::make_shared<Variable>("b5", 4, E_VariableType::Binary);
-    auto b6 = std::make_shared<Variable>("b6", 5, E_VariableType::Binary);
-    auto b7 = std::make_shared<Variable>("b7", 6, E_VariableType::Binary);
+    auto x1 = std::make_shared<Variable>("x1", E_VariableType::Real, 0.0, 10.0);
+    auto x2 = std::make_shared<Variable>("x2", E_VariableType::Real, 0.0, 10.0);
+    auto x3 = std::make_shared<Variable>("x3", E_VariableType::Real, 0.0, 10.0);
+    auto b4 = std::make_shared<Variable>("b4", E_VariableType::Binary);
+    auto b5 = std::make_shared<Variable>("b5", E_VariableType::Binary);
+    auto b6 = std::make_shared<Variable>("b6", E_VariableType::Binary);
+    auto b7 = std::make_shared<Variable>("b7", E_VariableType::Binary);
 
     // Expression variables for nonlinear terms
     auto nl_x1 = std::make_shared<ExpressionVariable>(x1);
@@ -1315,7 +1558,7 @@ bool ModelTestEx1223b()
         std::make_shared<ExpressionSum>(std::make_shared<ExpressionConstant>(-3), nl_x3)));
 
     // e1: x1 + x2 + x3 + b4 + b5 + b6 <= 5
-    auto e1 = std::make_shared<LinearConstraint>(0, "e1", SHOT_DBL_MIN, 5.0);
+    auto e1 = std::make_shared<LinearConstraint>("e1", SHOT_DBL_MIN, 5.0);
     e1->add(std::make_shared<LinearTerm>(1.0, x1));
     e1->add(std::make_shared<LinearTerm>(1.0, x2));
     e1->add(std::make_shared<LinearTerm>(1.0, x3));
@@ -1325,7 +1568,7 @@ bool ModelTestEx1223b()
     problem->add(e1);
 
     // e2: b6^2 + x1^2 + x2^2 + x3^2 <= 5.5
-    auto e2 = std::make_shared<QuadraticConstraint>(1, "e2", SHOT_DBL_MIN, 5.5);
+    auto e2 = std::make_shared<QuadraticConstraint>("e2", SHOT_DBL_MIN, 5.5);
     e2->add(std::make_shared<QuadraticTerm>(1.0, b6, b6));
     e2->add(std::make_shared<QuadraticTerm>(1.0, x1, x1));
     e2->add(std::make_shared<QuadraticTerm>(1.0, x2, x2));
@@ -1333,43 +1576,43 @@ bool ModelTestEx1223b()
     problem->add(e2);
 
     // e3: x1 + b4 <= 1.2
-    auto e3 = std::make_shared<LinearConstraint>(2, "e3", SHOT_DBL_MIN, 1.2);
+    auto e3 = std::make_shared<LinearConstraint>("e3", SHOT_DBL_MIN, 1.2);
     e3->add(std::make_shared<LinearTerm>(1.0, x1));
     e3->add(std::make_shared<LinearTerm>(1.0, b4));
     problem->add(e3);
 
     // e4: x2 + b5 <= 1.8
-    auto e4 = std::make_shared<LinearConstraint>(3, "e4", SHOT_DBL_MIN, 1.8);
+    auto e4 = std::make_shared<LinearConstraint>("e4", SHOT_DBL_MIN, 1.8);
     e4->add(std::make_shared<LinearTerm>(1.0, x2));
     e4->add(std::make_shared<LinearTerm>(1.0, b5));
     problem->add(e4);
 
     // e5: x3 + b6 <= 2.5
-    auto e5 = std::make_shared<LinearConstraint>(4, "e5", SHOT_DBL_MIN, 2.5);
+    auto e5 = std::make_shared<LinearConstraint>("e5", SHOT_DBL_MIN, 2.5);
     e5->add(std::make_shared<LinearTerm>(1.0, x3));
     e5->add(std::make_shared<LinearTerm>(1.0, b6));
     problem->add(e5);
 
     // e6: x1 + b7 <= 1.2
-    auto e6 = std::make_shared<LinearConstraint>(5, "e6", SHOT_DBL_MIN, 1.2);
+    auto e6 = std::make_shared<LinearConstraint>("e6", SHOT_DBL_MIN, 1.2);
     e6->add(std::make_shared<LinearTerm>(1.0, x1));
     e6->add(std::make_shared<LinearTerm>(1.0, b7));
     problem->add(e6);
 
     // e7: b5^2 + x2^2 <= 1.64
-    auto e7 = std::make_shared<QuadraticConstraint>(6, "e7", SHOT_DBL_MIN, 1.64);
+    auto e7 = std::make_shared<QuadraticConstraint>("e7", SHOT_DBL_MIN, 1.64);
     e7->add(std::make_shared<QuadraticTerm>(1.0, b5, b5));
     e7->add(std::make_shared<QuadraticTerm>(1.0, x2, x2));
     problem->add(e7);
 
     // e8: b6^2 + x3^2 <= 4.25
-    auto e8 = std::make_shared<QuadraticConstraint>(7, "e8", SHOT_DBL_MIN, 4.25);
+    auto e8 = std::make_shared<QuadraticConstraint>("e8", SHOT_DBL_MIN, 4.25);
     e8->add(std::make_shared<QuadraticTerm>(1.0, b6, b6));
     e8->add(std::make_shared<QuadraticTerm>(1.0, x3, x3));
     problem->add(e8);
 
     // e9: b5^2 + x3^2 <= 4.64
-    auto e9 = std::make_shared<QuadraticConstraint>(8, "e9", SHOT_DBL_MIN, 4.64);
+    auto e9 = std::make_shared<QuadraticConstraint>("e9", SHOT_DBL_MIN, 4.64);
     e9->add(std::make_shared<QuadraticTerm>(1.0, b5, b5));
     e9->add(std::make_shared<QuadraticTerm>(1.0, x3, x3));
     problem->add(e9);
@@ -1470,43 +1713,43 @@ bool ModelTestMeanvarxscWithSolver(ES_MIPSolver mipSolver)
     auto problem = std::make_shared<Problem>(env);
     problem->name = "meanvarxsc";
 
-    auto x2 = std::make_shared<Variable>("x2", 0, E_VariableType::Real, 0.0, SHOT_DBL_MAX);
-    auto x3 = std::make_shared<Variable>("x3", 1, E_VariableType::Real, 0.0, SHOT_DBL_MAX);
-    auto x4 = std::make_shared<Variable>("x4", 2, E_VariableType::Real, 0.0, SHOT_DBL_MAX);
-    auto x5 = std::make_shared<Variable>("x5", 3, E_VariableType::Real, 0.0, SHOT_DBL_MAX);
-    auto x6 = std::make_shared<Variable>("x6", 4, E_VariableType::Real, 0.0, SHOT_DBL_MAX);
-    auto x7 = std::make_shared<Variable>("x7", 5, E_VariableType::Real, 0.0, SHOT_DBL_MAX);
-    auto x8 = std::make_shared<Variable>("x8", 6, E_VariableType::Real, 0.0, SHOT_DBL_MAX);
+    auto x2 = std::make_shared<Variable>("x2", E_VariableType::Real, 0.0, SHOT_DBL_MAX);
+    auto x3 = std::make_shared<Variable>("x3", E_VariableType::Real, 0.0, SHOT_DBL_MAX);
+    auto x4 = std::make_shared<Variable>("x4", E_VariableType::Real, 0.0, SHOT_DBL_MAX);
+    auto x5 = std::make_shared<Variable>("x5", E_VariableType::Real, 0.0, SHOT_DBL_MAX);
+    auto x6 = std::make_shared<Variable>("x6", E_VariableType::Real, 0.0, SHOT_DBL_MAX);
+    auto x7 = std::make_shared<Variable>("x7", E_VariableType::Real, 0.0, SHOT_DBL_MAX);
+    auto x8 = std::make_shared<Variable>("x8", E_VariableType::Real, 0.0, SHOT_DBL_MAX);
 
-    auto sc9 = std::make_shared<Variable>("sc9", 7, E_VariableType::Semicontinuous, 0.0, 0.11, 0.03);
-    auto sc10 = std::make_shared<Variable>("sc10", 8, E_VariableType::Semicontinuous, 0.0, 0.10, 0.04);
-    auto sc11 = std::make_shared<Variable>("sc11", 9, E_VariableType::Semicontinuous, 0.0, 0.07, 0.04);
-    auto sc12 = std::make_shared<Variable>("sc12", 10, E_VariableType::Semicontinuous, 0.0, 0.11, 0.03);
-    auto sc13 = std::make_shared<Variable>("sc13", 11, E_VariableType::Semicontinuous, 0.0, 0.20, 0.03);
-    auto sc14 = std::make_shared<Variable>("sc14", 12, E_VariableType::Semicontinuous, 0.0, 0.10, 0.03);
-    auto sc15 = std::make_shared<Variable>("sc15", 13, E_VariableType::Semicontinuous, 0.0, 0.10, 0.03);
-    auto sc16 = std::make_shared<Variable>("sc16", 14, E_VariableType::Semicontinuous, 0.0, 0.20, 0.02);
-    auto sc17 = std::make_shared<Variable>("sc17", 15, E_VariableType::Semicontinuous, 0.0, 0.15, 0.02);
-    auto sc18 = std::make_shared<Variable>("sc18", 16, E_VariableType::Real, 0.0, 0.0);
-    auto sc19 = std::make_shared<Variable>("sc19", 17, E_VariableType::Real, 0.0, 0.0);
-    auto sc20 = std::make_shared<Variable>("sc20", 18, E_VariableType::Semicontinuous, 0.0, 0.10, 0.04);
-    auto sc21 = std::make_shared<Variable>("sc21", 19, E_VariableType::Semicontinuous, 0.0, 0.15, 0.04);
-    auto sc22 = std::make_shared<Variable>("sc22", 20, E_VariableType::Semicontinuous, 0.0, 0.20, 0.04);
+    auto sc9 = std::make_shared<Variable>("sc9", E_VariableType::Semicontinuous, 0.0, 0.11, 0.03);
+    auto sc10 = std::make_shared<Variable>("sc10", E_VariableType::Semicontinuous, 0.0, 0.10, 0.04);
+    auto sc11 = std::make_shared<Variable>("sc11", E_VariableType::Semicontinuous, 0.0, 0.07, 0.04);
+    auto sc12 = std::make_shared<Variable>("sc12", E_VariableType::Semicontinuous, 0.0, 0.11, 0.03);
+    auto sc13 = std::make_shared<Variable>("sc13", E_VariableType::Semicontinuous, 0.0, 0.20, 0.03);
+    auto sc14 = std::make_shared<Variable>("sc14", E_VariableType::Semicontinuous, 0.0, 0.10, 0.03);
+    auto sc15 = std::make_shared<Variable>("sc15", E_VariableType::Semicontinuous, 0.0, 0.10, 0.03);
+    auto sc16 = std::make_shared<Variable>("sc16", E_VariableType::Semicontinuous, 0.0, 0.20, 0.02);
+    auto sc17 = std::make_shared<Variable>("sc17", E_VariableType::Semicontinuous, 0.0, 0.15, 0.02);
+    auto sc18 = std::make_shared<Variable>("sc18", E_VariableType::Real, 0.0, 0.0);
+    auto sc19 = std::make_shared<Variable>("sc19", E_VariableType::Real, 0.0, 0.0);
+    auto sc20 = std::make_shared<Variable>("sc20", E_VariableType::Semicontinuous, 0.0, 0.10, 0.04);
+    auto sc21 = std::make_shared<Variable>("sc21", E_VariableType::Semicontinuous, 0.0, 0.15, 0.04);
+    auto sc22 = std::make_shared<Variable>("sc22", E_VariableType::Semicontinuous, 0.0, 0.20, 0.04);
 
-    auto b23 = std::make_shared<Variable>("b23", 21, E_VariableType::Binary);
-    auto b24 = std::make_shared<Variable>("b24", 22, E_VariableType::Binary);
-    auto b25 = std::make_shared<Variable>("b25", 23, E_VariableType::Binary);
-    auto b26 = std::make_shared<Variable>("b26", 24, E_VariableType::Binary);
-    auto b27 = std::make_shared<Variable>("b27", 25, E_VariableType::Binary);
-    auto b28 = std::make_shared<Variable>("b28", 26, E_VariableType::Binary);
-    auto b29 = std::make_shared<Variable>("b29", 27, E_VariableType::Binary);
-    auto b30 = std::make_shared<Variable>("b30", 28, E_VariableType::Binary);
-    auto b31 = std::make_shared<Variable>("b31", 29, E_VariableType::Binary);
-    auto b32 = std::make_shared<Variable>("b32", 30, E_VariableType::Binary);
-    auto b33 = std::make_shared<Variable>("b33", 31, E_VariableType::Binary);
-    auto b34 = std::make_shared<Variable>("b34", 32, E_VariableType::Binary);
-    auto b35 = std::make_shared<Variable>("b35", 33, E_VariableType::Binary);
-    auto b36 = std::make_shared<Variable>("b36", 34, E_VariableType::Binary);
+    auto b23 = std::make_shared<Variable>("b23", E_VariableType::Binary);
+    auto b24 = std::make_shared<Variable>("b24", E_VariableType::Binary);
+    auto b25 = std::make_shared<Variable>("b25", E_VariableType::Binary);
+    auto b26 = std::make_shared<Variable>("b26", E_VariableType::Binary);
+    auto b27 = std::make_shared<Variable>("b27", E_VariableType::Binary);
+    auto b28 = std::make_shared<Variable>("b28", E_VariableType::Binary);
+    auto b29 = std::make_shared<Variable>("b29", E_VariableType::Binary);
+    auto b30 = std::make_shared<Variable>("b30", E_VariableType::Binary);
+    auto b31 = std::make_shared<Variable>("b31", E_VariableType::Binary);
+    auto b32 = std::make_shared<Variable>("b32", E_VariableType::Binary);
+    auto b33 = std::make_shared<Variable>("b33", E_VariableType::Binary);
+    auto b34 = std::make_shared<Variable>("b34", E_VariableType::Binary);
+    auto b35 = std::make_shared<Variable>("b35", E_VariableType::Binary);
+    auto b36 = std::make_shared<Variable>("b36", E_VariableType::Binary);
 
     problem->add({ x2, x3, x4, x5, x6, x7, x8, sc9, sc10, sc11, sc12, sc13, sc14, sc15, sc16, sc17, sc18, sc19, sc20,
         sc21, sc22, b23, b24, b25, b26, b27, b28, b29, b30, b31, b32, b33, b34, b35, b36 });
@@ -1549,7 +1792,7 @@ bool ModelTestMeanvarxscWithSolver(ES_MIPSolver mipSolver)
     objective->add(std::make_shared<LinearTerm>(-0.031, x8));
     problem->add(objective);
 
-    auto ce1 = std::make_shared<LinearConstraint>(0, "e1", 1.0, 1.0);
+    auto ce1 = std::make_shared<LinearConstraint>("e1", 1.0, 1.0);
     for(auto& v : { x2, x3, x4, x5, x6, x7, x8 })
         ce1->add(std::make_shared<LinearTerm>(1.0, v));
     problem->add(ce1);
@@ -1557,7 +1800,7 @@ bool ModelTestMeanvarxscWithSolver(ES_MIPSolver mipSolver)
     auto makeBalance
         = [&](int idx, const std::string& name, VariablePtr xi, VariablePtr scs, VariablePtr scb, double rhs)
     {
-        auto c = std::make_shared<LinearConstraint>(idx, name, rhs, rhs);
+        auto c = std::make_shared<LinearConstraint>(name, rhs, rhs);
         c->add(std::make_shared<LinearTerm>(1.0, xi));
         c->add(std::make_shared<LinearTerm>(-1.0, scs));
         c->add(std::make_shared<LinearTerm>(1.0, scb));
@@ -1571,7 +1814,7 @@ bool ModelTestMeanvarxscWithSolver(ES_MIPSolver mipSolver)
     makeBalance(6, "e7", x7, sc14, sc21, 0.2);
     makeBalance(7, "e8", x8, sc15, sc22, 0.2);
 
-    auto ce9 = std::make_shared<LinearConstraint>(8, "e9", SHOT_DBL_MIN, 0.3);
+    auto ce9 = std::make_shared<LinearConstraint>("e9", SHOT_DBL_MIN, 0.3);
     for(auto& v : { sc9, sc10, sc11, sc12, sc13, sc14, sc15 })
         ce9->add(std::make_shared<LinearTerm>(1.0, v));
     problem->add(ce9);
@@ -1602,7 +1845,7 @@ bool ModelTestMeanvarxscWithSolver(ES_MIPSolver mipSolver)
     };
     for(auto& b : bmData)
     {
-        auto c = std::make_shared<LinearConstraint>(b.idx, b.name, SHOT_DBL_MIN, 0.0);
+        auto c = std::make_shared<LinearConstraint>(b.name, SHOT_DBL_MIN, 0.0);
         c->add(std::make_shared<LinearTerm>(1.0, b.scv));
         if(b.bv)
             c->add(std::make_shared<LinearTerm>(-b.coeff, b.bv));
@@ -1627,7 +1870,7 @@ bool ModelTestMeanvarxscWithSolver(ES_MIPSolver mipSolver)
     };
     for(auto& p : bpData)
     {
-        auto c = std::make_shared<LinearConstraint>(p.idx, p.name, SHOT_DBL_MIN, 1.0);
+        auto c = std::make_shared<LinearConstraint>(p.name, SHOT_DBL_MIN, 1.0);
         c->add(std::make_shared<LinearTerm>(1.0, p.b1));
         c->add(std::make_shared<LinearTerm>(1.0, p.b2));
         problem->add(c);
@@ -1733,9 +1976,9 @@ bool ModelTestSOS1WithSolver(ES_MIPSolver mipSolver)
     auto problem = std::make_shared<Problem>(env);
     problem->name = "sos1a";
 
-    auto x1 = std::make_shared<Variable>("x1", 0, E_VariableType::Real, 0.0, 0.8);
-    auto x2 = std::make_shared<Variable>("x2", 1, E_VariableType::Real, 0.0, 0.6);
-    auto x3 = std::make_shared<Variable>("x3", 2, E_VariableType::Real, 0.0, 0.6);
+    auto x1 = std::make_shared<Variable>("x1", E_VariableType::Real, 0.0, 0.8);
+    auto x2 = std::make_shared<Variable>("x2", E_VariableType::Real, 0.0, 0.6);
+    auto x3 = std::make_shared<Variable>("x3", E_VariableType::Real, 0.0, 0.6);
     problem->add({ x1, x2, x3 });
 
     auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Maximize);
@@ -1744,7 +1987,7 @@ bool ModelTestSOS1WithSolver(ES_MIPSolver mipSolver)
     objective->add(std::make_shared<LinearTerm>(1.1, x3));
     problem->add(objective);
 
-    auto c1 = std::make_shared<LinearConstraint>(0, "xsum", SHOT_DBL_MIN, 1.0);
+    auto c1 = std::make_shared<LinearConstraint>("xsum", SHOT_DBL_MIN, 1.0);
     c1->add(std::make_shared<LinearTerm>(1.0, x1));
     c1->add(std::make_shared<LinearTerm>(1.0, x2));
     c1->add(std::make_shared<LinearTerm>(1.0, x3));
@@ -1755,7 +1998,27 @@ bool ModelTestSOS1WithSolver(ES_MIPSolver mipSolver)
     problem->add(sos1);
 
     problem->finalize();
-    solver->setProblem(problem);
+
+    if(!solver->setProblem(problem))
+    {
+        // The HiGHS interface does not support special ordered sets, so the problem cannot be set
+        if(mipSolver == ES_MIPSolver::Highs)
+        {
+            std::cout << "HiGHS does not support SOS, skipping.\n";
+
+            // Solving a problem that could not be set must fail instead of crashing
+            if(solver->solveProblem())
+            {
+                std::cout << "Solving a problem that was not set successfully did not fail!\n";
+                passed = false;
+            }
+
+            return passed;
+        }
+
+        std::cout << "Failed to set problem!\n";
+        return false;
+    }
 
     std::cout << "\nSolving...\n";
 
@@ -1800,14 +2063,7 @@ bool ModelTestSOS1()
     passed = ModelTestSOS1WithSolver(ES_MIPSolver::Cbc) && passed;
 #endif
 #ifdef HAS_HIGHS
-    try
-    {
-        passed = ModelTestSOS1WithSolver(ES_MIPSolver::Highs) && passed;
-    }
-    catch(OperationNotImplementedException*)
-    {
-        std::cout << "   HiGHS does not support SOS — skipping.\n";
-    }
+    passed = ModelTestSOS1WithSolver(ES_MIPSolver::Highs) && passed;
 #endif
 #ifdef HAS_CPLEX
     passed = ModelTestSOS1WithSolver(ES_MIPSolver::Cplex) && passed;
@@ -1863,11 +2119,11 @@ bool ModelTestSOS2WithSolver(ES_MIPSolver mipSolver)
     auto problem = std::make_shared<Problem>(env);
     problem->name = "sos2a";
 
-    auto w1 = std::make_shared<Variable>("w1", 0, E_VariableType::Real, 0.0, SHOT_DBL_MAX);
-    auto w2 = std::make_shared<Variable>("w2", 1, E_VariableType::Real, 0.0, SHOT_DBL_MAX);
-    auto w3 = std::make_shared<Variable>("w3", 2, E_VariableType::Real, 0.0, SHOT_DBL_MAX);
-    auto fplus = std::make_shared<Variable>("fplus", 3, E_VariableType::Real, 0.0, SHOT_DBL_MAX);
-    auto fminus = std::make_shared<Variable>("fminus", 4, E_VariableType::Real, 0.0, SHOT_DBL_MAX);
+    auto w1 = std::make_shared<Variable>("w1", E_VariableType::Real, 0.0, SHOT_DBL_MAX);
+    auto w2 = std::make_shared<Variable>("w2", E_VariableType::Real, 0.0, SHOT_DBL_MAX);
+    auto w3 = std::make_shared<Variable>("w3", E_VariableType::Real, 0.0, SHOT_DBL_MAX);
+    auto fplus = std::make_shared<Variable>("fplus", E_VariableType::Real, 0.0, SHOT_DBL_MAX);
+    auto fminus = std::make_shared<Variable>("fminus", E_VariableType::Real, 0.0, SHOT_DBL_MAX);
     problem->add({ w1, w2, w3, fplus, fminus });
 
     auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
@@ -1876,14 +2132,14 @@ bool ModelTestSOS2WithSolver(ES_MIPSolver mipSolver)
     problem->add(objective);
 
     // w1 + w2 + w3 = 1
-    auto cwsum = std::make_shared<LinearConstraint>(0, "wsum", 1.0, 1.0);
+    auto cwsum = std::make_shared<LinearConstraint>("wsum", 1.0, 1.0);
     cwsum->add(std::make_shared<LinearTerm>(1.0, w1));
     cwsum->add(std::make_shared<LinearTerm>(1.0, w2));
     cwsum->add(std::make_shared<LinearTerm>(1.0, w3));
     problem->add(cwsum);
 
     // fplus - w1 - 2*w2 - 3*w3 >= -1.3  (fplus >= fx - 1.3)
-    auto cgapplus = std::make_shared<LinearConstraint>(1, "gapplus", -1.3, SHOT_DBL_MAX);
+    auto cgapplus = std::make_shared<LinearConstraint>("gapplus", -1.3, SHOT_DBL_MAX);
     cgapplus->add(std::make_shared<LinearTerm>(1.0, fplus));
     cgapplus->add(std::make_shared<LinearTerm>(-1.0, w1));
     cgapplus->add(std::make_shared<LinearTerm>(-2.0, w2));
@@ -1891,7 +2147,7 @@ bool ModelTestSOS2WithSolver(ES_MIPSolver mipSolver)
     problem->add(cgapplus);
 
     // fminus + w1 + 2*w2 + 3*w3 >= 1.3  (fminus >= 1.3 - fx)
-    auto cgapminus = std::make_shared<LinearConstraint>(2, "gapminus", 1.3, SHOT_DBL_MAX);
+    auto cgapminus = std::make_shared<LinearConstraint>("gapminus", 1.3, SHOT_DBL_MAX);
     cgapminus->add(std::make_shared<LinearTerm>(1.0, fminus));
     cgapminus->add(std::make_shared<LinearTerm>(1.0, w1));
     cgapminus->add(std::make_shared<LinearTerm>(2.0, w2));
@@ -1903,7 +2159,27 @@ bool ModelTestSOS2WithSolver(ES_MIPSolver mipSolver)
     problem->add(sos2);
 
     problem->finalize();
-    solver->setProblem(problem);
+
+    if(!solver->setProblem(problem))
+    {
+        // The HiGHS interface does not support special ordered sets, so the problem cannot be set
+        if(mipSolver == ES_MIPSolver::Highs)
+        {
+            std::cout << "HiGHS does not support SOS, skipping.\n";
+
+            // Solving a problem that could not be set must fail instead of crashing
+            if(solver->solveProblem())
+            {
+                std::cout << "Solving a problem that was not set successfully did not fail!\n";
+                passed = false;
+            }
+
+            return passed;
+        }
+
+        std::cout << "Failed to set problem!\n";
+        return false;
+    }
 
     std::cout << "\nSolving...\n";
 
@@ -1948,14 +2224,7 @@ bool ModelTestSOS2()
     passed = ModelTestSOS2WithSolver(ES_MIPSolver::Cbc) && passed;
 #endif
 #ifdef HAS_HIGHS
-    try
-    {
-        passed = ModelTestSOS2WithSolver(ES_MIPSolver::Highs) && passed;
-    }
-    catch(OperationNotImplementedException*)
-    {
-        std::cout << "   HiGHS does not support SOS — skipping.\n";
-    }
+    passed = ModelTestSOS2WithSolver(ES_MIPSolver::Highs) && passed;
 #endif
 #ifdef HAS_CPLEX
     passed = ModelTestSOS2WithSolver(ES_MIPSolver::Cplex) && passed;
@@ -1989,7 +2258,7 @@ bool ModelTestGradientsAndHessians()
         auto problem = std::make_shared<Problem>(env);
         problem->name = "exp_test";
 
-        auto x = std::make_shared<Variable>("x", 0, E_VariableType::Real, -10.0, 10.0);
+        auto x = std::make_shared<Variable>("x", E_VariableType::Real, -10.0, 10.0);
         problem->add(x);
 
         auto nl_x = std::make_shared<ExpressionVariable>(x);
@@ -2043,7 +2312,7 @@ bool ModelTestGradientsAndHessians()
         auto problem = std::make_shared<Problem>(env);
         problem->name = "log_test";
 
-        auto x = std::make_shared<Variable>("x", 0, E_VariableType::Real, 0.1, 10.0);
+        auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.1, 10.0);
         problem->add(x);
 
         auto nl_x = std::make_shared<ExpressionVariable>(x);
@@ -2097,8 +2366,8 @@ bool ModelTestGradientsAndHessians()
         auto problem = std::make_shared<Problem>(env);
         problem->name = "sincos_test";
 
-        auto x = std::make_shared<Variable>("x", 0, E_VariableType::Real, -10.0, 10.0);
-        auto y = std::make_shared<Variable>("y", 1, E_VariableType::Real, -10.0, 10.0);
+        auto x = std::make_shared<Variable>("x", E_VariableType::Real, -10.0, 10.0);
+        auto y = std::make_shared<Variable>("y", E_VariableType::Real, -10.0, 10.0);
         problem->add(x);
         problem->add(y);
 
@@ -2159,7 +2428,7 @@ bool ModelTestGradientsAndHessians()
         auto problem = std::make_shared<Problem>(env);
         problem->name = "power_test";
 
-        auto x = std::make_shared<Variable>("x", 0, E_VariableType::Real, 0.1, 10.0);
+        auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.1, 10.0);
         problem->add(x);
 
         auto nl_x = std::make_shared<ExpressionVariable>(x);
@@ -2207,22 +2476,24 @@ bool ModelTestGradientsAndHessians()
             std::cout << "  PASSED\n";
     }
 
-    // ========== Test 5: Quadratic x^2 + 2*x*y + y^2 ==========
+    // ========== Test 5: Quadratic 3*x^2 + 2*x*y + 4*y^2 ==========
+    // Non-unit coefficients on every term, including the square terms -- a coefficient of exactly 1.0 can't
+    // distinguish "multiplied by the coefficient" from "coefficient silently ignored".
     {
-        std::cout << "\nTest 5: Gradient and Hessian of x^2 + 2*x*y + y^2\n";
+        std::cout << "\nTest 5: Gradient and Hessian of 3*x^2 + 2*x*y + 4*y^2\n";
 
         auto problem = std::make_shared<Problem>(env);
         problem->name = "quadratic_test";
 
-        auto x = std::make_shared<Variable>("x", 0, E_VariableType::Real, -10.0, 10.0);
-        auto y = std::make_shared<Variable>("y", 1, E_VariableType::Real, -10.0, 10.0);
+        auto x = std::make_shared<Variable>("x", E_VariableType::Real, -10.0, 10.0);
+        auto y = std::make_shared<Variable>("y", E_VariableType::Real, -10.0, 10.0);
         problem->add(x);
         problem->add(y);
 
         QuadraticTerms quadTerms;
-        quadTerms.add(std::make_shared<QuadraticTerm>(1.0, x, x)); // x^2
+        quadTerms.add(std::make_shared<QuadraticTerm>(3.0, x, x)); // 3*x^2
         quadTerms.add(std::make_shared<QuadraticTerm>(2.0, x, y)); // 2*x*y
-        quadTerms.add(std::make_shared<QuadraticTerm>(1.0, y, y)); // y^2
+        quadTerms.add(std::make_shared<QuadraticTerm>(4.0, y, y)); // 4*y^2
 
         auto objective = std::make_shared<QuadraticObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
         objective->add(quadTerms);
@@ -2231,13 +2502,13 @@ bool ModelTestGradientsAndHessians()
         problem->finalize();
 
         VectorDouble point = { 1.0, 2.0 };
-        // d/dx = 2*x + 2*y = 2 + 4 = 6
-        // d/dy = 2*x + 2*y = 2 + 4 = 6
-        double expected_grad_x = 6.0;
-        double expected_grad_y = 6.0;
-        // d^2/dx^2 = 2, d^2/dy^2 = 2, d^2/dxdy = 2
-        double expected_hess_xx = 2.0;
-        double expected_hess_yy = 2.0;
+        // d/dx = 6*x + 2*y = 6 + 4 = 10
+        // d/dy = 2*x + 8*y = 2 + 16 = 18
+        double expected_grad_x = 10.0;
+        double expected_grad_y = 18.0;
+        // d^2/dx^2 = 6, d^2/dy^2 = 8, d^2/dxdy = 2
+        double expected_hess_xx = 6.0;
+        double expected_hess_yy = 8.0;
         double expected_hess_xy = 2.0;
 
         auto gradient = objective->calculateGradient(point, true);
@@ -2258,7 +2529,8 @@ bool ModelTestGradientsAndHessians()
 
         std::cout << "  Hessian: [[" << hessian[key_xx] << ", " << hessian[key_xy] << "], [";
         std::cout << hessian[key_xy] << ", " << hessian[key_yy] << "]]\n";
-        std::cout << "  Expected: [[2, 2], [2, 2]]\n";
+        std::cout << "  Expected: [[" << expected_hess_xx << ", " << expected_hess_xy << "], [" << expected_hess_xy
+                  << ", " << expected_hess_yy << "]]\n";
 
         if(std::abs(hessian[key_xx] - expected_hess_xx) > tolerance
             || std::abs(hessian[key_yy] - expected_hess_yy) > tolerance
@@ -2279,7 +2551,7 @@ bool ModelTestGradientsAndHessians()
         auto problem = std::make_shared<Problem>(env);
         problem->name = "sqrt_test";
 
-        auto x = std::make_shared<Variable>("x", 0, E_VariableType::Real, 0.1, 10.0);
+        auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.1, 10.0);
         problem->add(x);
 
         auto nl_x = std::make_shared<ExpressionVariable>(x);
@@ -2333,8 +2605,8 @@ bool ModelTestGradientsAndHessians()
         auto problem = std::make_shared<Problem>(env);
         problem->name = "composite_test";
 
-        auto x = std::make_shared<Variable>("x", 0, E_VariableType::Real, -10.0, 10.0);
-        auto y = std::make_shared<Variable>("y", 1, E_VariableType::Real, -10.0, 10.0);
+        auto x = std::make_shared<Variable>("x", E_VariableType::Real, -10.0, 10.0);
+        auto y = std::make_shared<Variable>("y", E_VariableType::Real, -10.0, 10.0);
         problem->add(x);
         problem->add(y);
 
@@ -2402,8 +2674,8 @@ bool ModelTestGradientsAndHessians()
         auto problem = std::make_shared<Problem>(env);
         problem->name = "constraint_test";
 
-        auto x = std::make_shared<Variable>("x", 0, E_VariableType::Real, 0.1, 10.0);
-        auto y = std::make_shared<Variable>("y", 1, E_VariableType::Real, -10.0, 10.0);
+        auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.1, 10.0);
+        auto y = std::make_shared<Variable>("y", E_VariableType::Real, -10.0, 10.0);
         problem->add(x);
         problem->add(y);
 
@@ -2413,7 +2685,7 @@ bool ModelTestGradientsAndHessians()
         auto expr_exp = std::make_shared<ExpressionExp>(nl_y);
         auto expr_sum = std::make_shared<ExpressionSum>(expr_log, expr_exp);
 
-        auto constraint = std::make_shared<NonlinearConstraint>(0, "nl_constr", expr_sum, SHOT_DBL_MIN, 10.0);
+        auto constraint = std::make_shared<NonlinearConstraint>("nl_constr", expr_sum, SHOT_DBL_MIN, 10.0);
         problem->add(constraint);
 
         // Need an objective
@@ -2467,24 +2739,25 @@ bool ModelTestGradientsAndHessians()
             std::cout << "  PASSED\n";
     }
 
-    // ========== Test 9: Signomial term x^0.5 * y^1.5 ==========
+    // ========== Test 9: Signomial term 2 * x^0.5 * y^1.5 ==========
+    // Non-unit coefficient so a silently-dropped coefficient can't hide behind coefficient=1.0.
     {
-        std::cout << "\nTest 9: Gradient and Hessian of signomial x^0.5 * y^1.5\n";
+        std::cout << "\nTest 9: Gradient and Hessian of signomial 2 * x^0.5 * y^1.5\n";
 
         auto problem = std::make_shared<Problem>(env);
         problem->name = "signomial_test";
 
-        auto x = std::make_shared<Variable>("x", 0, E_VariableType::Real, 0.1, 10.0);
-        auto y = std::make_shared<Variable>("y", 1, E_VariableType::Real, 0.1, 10.0);
+        auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.1, 10.0);
+        auto y = std::make_shared<Variable>("y", E_VariableType::Real, 0.1, 10.0);
         problem->add(x);
         problem->add(y);
 
-        // Create signomial: x^0.5 * y^1.5
+        // Create signomial: 2 * x^0.5 * y^1.5
         SignomialElements sigElements;
         sigElements.push_back(std::make_shared<SignomialElement>(x, 0.5));
         sigElements.push_back(std::make_shared<SignomialElement>(y, 1.5));
         SignomialTerms sigTerms;
-        sigTerms.add(std::make_shared<SignomialTerm>(1.0, sigElements));
+        sigTerms.add(std::make_shared<SignomialTerm>(2.0, sigElements));
 
         auto objective = std::make_shared<NonlinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
         objective->add(sigTerms);
@@ -2493,11 +2766,11 @@ bool ModelTestGradientsAndHessians()
         problem->finalize();
 
         VectorDouble point = { 4.0, 1.0 };
-        // f = x^0.5 * y^1.5 = 2 * 1 = 2
-        // df/dx = 0.5 * x^(-0.5) * y^1.5 = 0.5 * 0.5 * 1 = 0.25
-        // df/dy = 1.5 * x^0.5 * y^0.5 = 1.5 * 2 * 1 = 3.0
-        double expected_grad_x = 0.25;
-        double expected_grad_y = 3.0;
+        // f = 2 * x^0.5 * y^1.5 = 2 * 2 * 1 = 4
+        // df/dx = 2 * 0.5 * x^(-0.5) * y^1.5 = 2 * 0.5 * 0.5 * 1 = 0.5
+        // df/dy = 2 * 1.5 * x^0.5 * y^0.5 = 2 * 1.5 * 2 * 1 = 6.0
+        double expected_grad_x = 0.5;
+        double expected_grad_y = 6.0;
 
         auto gradient = objective->calculateGradient(point, true);
 
@@ -2514,27 +2787,28 @@ bool ModelTestGradientsAndHessians()
             std::cout << "  PASSED\n";
     }
 
-    // ========== Test 10: Monomial term x*y*z ==========
+    // ========== Test 10: Monomial term -2*x*y*z ==========
+    // Negative, non-unit coefficient
     {
-        std::cout << "\nTest 10: Gradient and Hessian of monomial x*y*z\n";
+        std::cout << "\nTest 10: Gradient and Hessian of monomial -2*x*y*z\n";
 
         auto problem = std::make_shared<Problem>(env);
         problem->name = "monomial_test";
 
-        auto x = std::make_shared<Variable>("x", 0, E_VariableType::Real, 0.1, 10.0);
-        auto y = std::make_shared<Variable>("y", 1, E_VariableType::Real, 0.1, 10.0);
-        auto z = std::make_shared<Variable>("z", 2, E_VariableType::Real, 0.1, 10.0);
+        auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.1, 10.0);
+        auto y = std::make_shared<Variable>("y", E_VariableType::Real, 0.1, 10.0);
+        auto z = std::make_shared<Variable>("z", E_VariableType::Real, 0.1, 10.0);
         problem->add(x);
         problem->add(y);
         problem->add(z);
 
-        // Create monomial: x*y*z
+        // Create monomial: -2*x*y*z
         Variables monomialVars;
         monomialVars.push_back(x);
         monomialVars.push_back(y);
         monomialVars.push_back(z);
         MonomialTerms monomialTerms;
-        monomialTerms.add(std::make_shared<MonomialTerm>(1.0, monomialVars));
+        monomialTerms.add(std::make_shared<MonomialTerm>(-2.0, monomialVars));
 
         auto objective = std::make_shared<NonlinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
         objective->add(monomialTerms);
@@ -2543,13 +2817,13 @@ bool ModelTestGradientsAndHessians()
         problem->finalize();
 
         VectorDouble point = { 2.0, 3.0, 4.0 };
-        // f = x*y*z
-        // df/dx = y*z = 12
-        // df/dy = x*z = 8
-        // df/dz = x*y = 6
-        double expected_grad_x = 12.0;
-        double expected_grad_y = 8.0;
-        double expected_grad_z = 6.0;
+        // f = -2*x*y*z
+        // df/dx = -2*y*z = -24
+        // df/dy = -2*x*z = -16
+        // df/dz = -2*x*y = -12
+        double expected_grad_x = -24.0;
+        double expected_grad_y = -16.0;
+        double expected_grad_z = -12.0;
 
         auto gradient = objective->calculateGradient(point, true);
         auto hessian = objective->calculateHessian(point, true);
@@ -2564,23 +2838,84 @@ bool ModelTestGradientsAndHessians()
             passed = false;
         }
 
-        // Hessian: d^2/dxdy = z = 4, d^2/dxdz = y = 3, d^2/dydz = x = 2
+        // Hessian: d^2/dxdy = -2*z = -8, d^2/dxdz = -2*y = -6, d^2/dydz = -2*x = -4
         auto key_xy = std::make_pair(x, y);
         auto key_xz = std::make_pair(x, z);
         auto key_yz = std::make_pair(y, z);
 
         if(hessian.find(key_xy) != hessian.end())
-            std::cout << "  Hessian[x,y] = " << hessian[key_xy] << " (expected: 4)\n";
+            std::cout << "  Hessian[x,y] = " << hessian[key_xy] << " (expected: -8)\n";
         if(hessian.find(key_xz) != hessian.end())
-            std::cout << "  Hessian[x,z] = " << hessian[key_xz] << " (expected: 3)\n";
+            std::cout << "  Hessian[x,z] = " << hessian[key_xz] << " (expected: -6)\n";
         if(hessian.find(key_yz) != hessian.end())
-            std::cout << "  Hessian[y,z] = " << hessian[key_yz] << " (expected: 2)\n";
+            std::cout << "  Hessian[y,z] = " << hessian[key_yz] << " (expected: -4)\n";
 
-        if(hessian.find(key_xy) == hessian.end() || std::abs(hessian[key_xy] - 4.0) > tolerance
-            || hessian.find(key_xz) == hessian.end() || std::abs(hessian[key_xz] - 3.0) > tolerance
-            || hessian.find(key_yz) == hessian.end() || std::abs(hessian[key_yz] - 2.0) > tolerance)
+        if(hessian.find(key_xy) == hessian.end() || std::abs(hessian[key_xy] - (-8.0)) > tolerance
+            || hessian.find(key_xz) == hessian.end() || std::abs(hessian[key_xz] - (-6.0)) > tolerance
+            || hessian.find(key_yz) == hessian.end() || std::abs(hessian[key_yz] - (-4.0)) > tolerance)
         {
             std::cout << "  FAILED: Hessian mismatch!\n";
+            passed = false;
+        }
+
+        if(passed)
+            std::cout << "  PASSED\n";
+    }
+
+    // ========== Test 10b: Two monomial terms sharing a variable: 2*x*y + 3*x*z ==========
+    // Exercises the accumulation branch of MonomialTerms::calculateGradient() -- a variable (x here) that
+    // appears in more than one monomial term within the same sum must have its per-term contributions added
+    // together, not have the second term's contribution silently dropped (std::map::emplace() is a no-op if
+    // the key already exists).
+    {
+        std::cout << "\nTest 10b: Gradient of monomial sum 2*x*y + 3*x*z (shared variable x)\n";
+
+        auto problem = std::make_shared<Problem>(env);
+        problem->name = "monomial_shared_var_test";
+
+        auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.1, 10.0);
+        auto y = std::make_shared<Variable>("y", E_VariableType::Real, 0.1, 10.0);
+        auto z = std::make_shared<Variable>("z", E_VariableType::Real, 0.1, 10.0);
+        problem->add(x);
+        problem->add(y);
+        problem->add(z);
+
+        Variables termVarsXY;
+        termVarsXY.push_back(x);
+        termVarsXY.push_back(y);
+
+        Variables termVarsXZ;
+        termVarsXZ.push_back(x);
+        termVarsXZ.push_back(z);
+
+        MonomialTerms monomialTerms;
+        monomialTerms.add(std::make_shared<MonomialTerm>(2.0, termVarsXY)); // 2*x*y
+        monomialTerms.add(std::make_shared<MonomialTerm>(3.0, termVarsXZ)); // 3*x*z
+
+        auto objective = std::make_shared<NonlinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+        objective->add(monomialTerms);
+        problem->add(objective);
+
+        problem->finalize();
+
+        VectorDouble point = { 2.0, 3.0, 4.0 };
+        // f = 2*x*y + 3*x*z
+        // df/dx = 2*y + 3*z = 6 + 12 = 18   (accumulated across both terms)
+        // df/dy = 2*x = 4
+        // df/dz = 3*x = 6
+        double expected_grad_x = 18.0;
+        double expected_grad_y = 4.0;
+        double expected_grad_z = 6.0;
+
+        auto gradient = objective->calculateGradient(point, true);
+
+        std::cout << "  At (2,3,4): gradient = [" << gradient[x] << ", " << gradient[y] << ", " << gradient[z] << "]";
+        std::cout << " (expected: [" << expected_grad_x << ", " << expected_grad_y << ", " << expected_grad_z << "])\n";
+
+        if(std::abs(gradient[x] - expected_grad_x) > tolerance || std::abs(gradient[y] - expected_grad_y) > tolerance
+            || std::abs(gradient[z] - expected_grad_z) > tolerance)
+        {
+            std::cout << "  FAILED: Gradient mismatch!\n";
             passed = false;
         }
 
@@ -2595,8 +2930,8 @@ bool ModelTestGradientsAndHessians()
         auto problem = std::make_shared<Problem>(env);
         problem->name = "mixed_objective_test";
 
-        auto x = std::make_shared<Variable>("x", 0, E_VariableType::Real, -10.0, 10.0);
-        auto y = std::make_shared<Variable>("y", 1, E_VariableType::Real, -10.0, 10.0);
+        auto x = std::make_shared<Variable>("x", E_VariableType::Real, -10.0, 10.0);
+        auto y = std::make_shared<Variable>("y", E_VariableType::Real, -10.0, 10.0);
         problem->add(x);
         problem->add(y);
 
@@ -2665,8 +3000,8 @@ bool ModelTestGradientsAndHessians()
         auto problem = std::make_shared<Problem>(env);
         problem->name = "mixed_constraint_test";
 
-        auto x = std::make_shared<Variable>("x", 0, E_VariableType::Real, 0.1, 10.0);
-        auto y = std::make_shared<Variable>("y", 1, E_VariableType::Real, -10.0, 10.0);
+        auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.1, 10.0);
+        auto y = std::make_shared<Variable>("y", E_VariableType::Real, -10.0, 10.0);
         problem->add(x);
         problem->add(y);
 
@@ -2679,7 +3014,7 @@ bool ModelTestGradientsAndHessians()
         QuadraticTerms quadTerms;
         quadTerms.add(std::make_shared<QuadraticTerm>(1.0, y, y));
 
-        auto constraint = std::make_shared<NonlinearConstraint>(0, "mixed_constr", SHOT_DBL_MIN, 10.0);
+        auto constraint = std::make_shared<NonlinearConstraint>("mixed_constr", SHOT_DBL_MIN, 10.0);
         constraint->add(sigTerms);
         constraint->add(quadTerms);
         problem->add(constraint);
@@ -2740,8 +3075,8 @@ bool ModelTestGradientsAndHessians()
         auto problem = std::make_shared<Problem>(env);
         problem->name = "full_problem_test";
 
-        auto x = std::make_shared<Variable>("x", 0, E_VariableType::Real, 0.1, 10.0);
-        auto y = std::make_shared<Variable>("y", 1, E_VariableType::Real, -10.0, 10.0);
+        auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.1, 10.0);
+        auto y = std::make_shared<Variable>("y", E_VariableType::Real, -10.0, 10.0);
         problem->add(x);
         problem->add(y);
 
@@ -2764,7 +3099,7 @@ bool ModelTestGradientsAndHessians()
         QuadraticTerms constrQuadTerms;
         constrQuadTerms.add(std::make_shared<QuadraticTerm>(1.0, y, y));
 
-        auto constraint = std::make_shared<NonlinearConstraint>(0, "nl_constr", SHOT_DBL_MIN, 20.0);
+        auto constraint = std::make_shared<NonlinearConstraint>("nl_constr", SHOT_DBL_MIN, 20.0);
         constraint->add(constrQuadTerms);
         constraint->add(expr_exp);
         problem->add(constraint);
@@ -2852,10 +3187,10 @@ bool ModelTestSquareRootReformulation()
     env->problem = problem;
 
     // Creating variables
-    auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 100.0);
+    auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 100.0);
     SHOT::ExpressionVariablePtr expressionVariable_x = std::make_shared<SHOT::ExpressionVariable>(var_x);
 
-    auto var_y = std::make_shared<SHOT::Variable>("y", 1, SHOT::E_VariableType::Real, 0.0, 100.0);
+    auto var_y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Real, 0.0, 100.0);
     SHOT::ExpressionVariablePtr expressionVariable_y = std::make_shared<SHOT::ExpressionVariable>(var_y);
 
     SHOT::Variables variables = { var_x, var_y };
@@ -2869,8 +3204,8 @@ bool ModelTestSquareRootReformulation()
     problem->add(objectiveFunction);
 
     // Add a linear constraint before the nonlinear one
-    SHOT::LinearConstraintPtr linearConstraint1
-        = std::make_shared<SHOT::LinearConstraint>(0, "linearconstr1", SHOT_DBL_MIN, 50.0);
+    SHOT::LinearConstraintPtr linearConstraint1 = std::make_shared<SHOT::LinearConstraint>(
+        "linearconstr1", SHOT_DBL_MIN, 50.0);
     SHOT::LinearTermPtr linTerm1 = std::make_shared<SHOT::LinearTerm>(1.0, var_x);
     linearConstraint1->add(linTerm1);
     problem->add(linearConstraint1);
@@ -2888,8 +3223,8 @@ bool ModelTestSquareRootReformulation()
     SHOT::NonlinearExpressionPtr exprSqrt = std::make_shared<SHOT::ExpressionSquareRoot>(exprSum);
 
     // Create constraint: sqrt(x^2 + y^2) <= 10
-    SHOT::NonlinearConstraintPtr nonlinearConstraint
-        = std::make_shared<SHOT::NonlinearConstraint>(0, "sqrtconstr", exprSqrt, -SHOT_DBL_MAX, 10.0);
+    SHOT::NonlinearConstraintPtr nonlinearConstraint = std::make_shared<SHOT::NonlinearConstraint>(
+        "sqrtconstr", exprSqrt, -SHOT_DBL_MAX, 10.0);
     problem->add(nonlinearConstraint);
 
     // Create constraint: sqrt(x + y) <= 5
@@ -2900,13 +3235,13 @@ bool ModelTestSquareRootReformulation()
     SHOT::NonlinearExpressionPtr exprLinearSum = std::make_shared<SHOT::ExpressionSum>(sumLinearExpressions);
     SHOT::NonlinearExpressionPtr exprSqrtLinear = std::make_shared<SHOT::ExpressionSquareRoot>(exprLinearSum);
 
-    SHOT::NonlinearConstraintPtr nonlinearConstraint2
-        = std::make_shared<SHOT::NonlinearConstraint>(1, "sqrtlinearconstr", exprSqrtLinear, -SHOT_DBL_MAX, 5.0);
+    SHOT::NonlinearConstraintPtr nonlinearConstraint2 = std::make_shared<SHOT::NonlinearConstraint>(
+        "sqrtlinearconstr", exprSqrtLinear, -SHOT_DBL_MAX, 5.0);
     problem->add(nonlinearConstraint2);
 
     // Add a linear constraint after the nonlinear one
-    SHOT::LinearConstraintPtr linearConstraint2
-        = std::make_shared<SHOT::LinearConstraint>(1, "linearconstr2", 0.0, SHOT_DBL_MAX);
+    SHOT::LinearConstraintPtr linearConstraint2 = std::make_shared<SHOT::LinearConstraint>(
+        "linearconstr2", 0.0, SHOT_DBL_MAX);
     SHOT::LinearTermPtr linTerm2 = std::make_shared<SHOT::LinearTerm>(1.0, var_y);
     linearConstraint2->add(linTerm2);
     problem->add(linearConstraint2);
@@ -3077,8 +3412,8 @@ bool ModelTestFinalizeCalledTwice()
     problem->name = "FinalizeTwiceTest";
     env->problem = problem;
 
-    auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 100.0);
-    auto var_y = std::make_shared<SHOT::Variable>("y", 1, SHOT::E_VariableType::Integer, 0.0, 1.0);
+    auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 100.0);
+    auto var_y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Integer, 0.0, 1.0);
     SHOT::ExpressionVariablePtr expressionVariable_y = std::make_shared<SHOT::ExpressionVariable>(var_y);
 
     problem->add(SHOT::Variables({ var_x, var_y }));
@@ -3096,8 +3431,8 @@ bool ModelTestFinalizeCalledTwice()
     SHOT::NonlinearExpressionPtr exprConstant = std::make_shared<SHOT::ExpressionConstant>(3);
     SHOT::NonlinearExpressionPtr exprPower
         = std::make_shared<SHOT::ExpressionPower>(expressionVariable_y, exprConstant);
-    SHOT::NonlinearConstraintPtr nonlinearConstraint
-        = std::make_shared<SHOT::NonlinearConstraint>(0, "nlconstr", exprPower, -10.0, 20.0);
+    SHOT::NonlinearConstraintPtr nonlinearConstraint = std::make_shared<SHOT::NonlinearConstraint>(
+        "nlconstr", exprPower, -10.0, 20.0);
     problem->add(nonlinearConstraint);
 
     std::cout << "\nCalling finalize() for the first time:\n";
@@ -3155,7 +3490,7 @@ bool ModelTestFinalizeNoObjective()
     problem->name = "NoObjectiveTest";
     env->problem = problem;
 
-    auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 100.0);
+    auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 100.0);
     problem->add(SHOT::Variables({ var_x }));
 
     // Intentionally no objective function added
@@ -3202,6 +3537,4921 @@ bool ModelTestFinalizeNoVariables()
     catch(const std::runtime_error& e)
     {
         std::cout << "SUCCESS: finalize() threw std::runtime_error as expected: " << e.what() << "\n";
+    }
+
+    return passed;
+}
+
+// Builds a Solver + Problem via buildProblem(env), applies the given objective-epigraph strategy, reformulates
+// (and optionally solves) it. Shared plumbing for
+// ModelTestObjectiveEpigraphStrategy/ModelTestAntiEpigraphReformulation. All MIP solvers compiled into this build, so
+// the epigraph/anti-epigraph/partitioning tests below can run against every one of them rather than just a single
+// default.
+static std::vector<std::pair<ES_MIPSolver, std::string>> AvailableMIPSolversForEpigraphTests()
+{
+    std::vector<std::pair<ES_MIPSolver, std::string>> solvers;
+#if defined(HAS_CBC)
+    solvers.push_back({ ES_MIPSolver::Cbc, "Cbc" });
+#endif
+#if defined(HAS_HIGHS)
+    solvers.push_back({ ES_MIPSolver::Highs, "Highs" });
+#endif
+#if defined(HAS_GUROBI)
+    solvers.push_back({ ES_MIPSolver::Gurobi, "Gurobi" });
+#endif
+#if defined(HAS_CPLEX)
+    solvers.push_back({ ES_MIPSolver::Cplex, "Cplex" });
+#endif
+    return solvers;
+}
+
+static std::pair<std::unique_ptr<SHOT::Solver>, std::shared_ptr<SHOT::Environment>> SolveWithEpigraphStrategy(
+    ES_ObjectiveEpigraphStrategy epigraphStrategy,
+    const std::function<SHOT::ProblemPtr(const std::shared_ptr<SHOT::Environment>&)>& buildProblem, bool solve,
+    ES_MIPSolver mipSolver, const std::function<void(SHOT::Solver&)>& extraSettings = nullptr)
+{
+    auto solver = std::make_unique<SHOT::Solver>();
+    auto env = solver->getEnvironment();
+
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Warning));
+    solver->updateSetting("Model.Reformulation.ObjectiveFunction.EpigraphStrategy", static_cast<int>(epigraphStrategy));
+    solver->updateSetting("Termination.TimeLimit", 20.0);
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(mipSolver));
+
+    // Partitioning of quadratic/nonlinear-sum terms is disabled by default so the resulting model structure
+    // (constraint counts, objective term composition) is identical across every MIP solver, regardless of
+    // whether that solver supports native quadratics — without this, HiGHS/Cbc's forced
+    // Model.Reformulation.Quadratics.Strategy=Nonlinear (SolverCompatibility) would partition quadratic terms
+    // that Gurobi/Cplex leave untouched, making the same test assert different structures per solver.
+    // ModelTestObjectivePartitioningStrategy, which specifically exercises these settings, overrides them below
+    // via extraSettings.
+    solver->updateSetting(
+        "Model.Reformulation.Constraint.PartitionQuadraticTerms", static_cast<int>(ES_PartitionNonlinearSums::Never));
+    solver->updateSetting(
+        "Model.Reformulation.Constraint.PartitionNonlinearTerms", static_cast<int>(ES_PartitionNonlinearSums::Never));
+    solver->updateSetting("Model.Reformulation.ObjectiveFunction.PartitionQuadraticTerms",
+        static_cast<int>(ES_PartitionNonlinearSums::Never));
+    solver->updateSetting("Model.Reformulation.ObjectiveFunction.PartitionNonlinearTerms",
+        static_cast<int>(ES_PartitionNonlinearSums::Never));
+
+    if(extraSettings)
+        extraSettings(*solver);
+
+    auto problem = buildProblem(env);
+    problem->finalize();
+
+    if(!solver->setProblem(problem))
+    {
+        std::cout << "  FAILED: solver->setProblem() failed.\n";
+        return { std::move(solver), env };
+    }
+
+    if(solve && !solver->solveProblem())
+    {
+        std::cout << "  FAILED: solver->solveProblem() failed.\n";
+    }
+
+    return { std::move(solver), env };
+}
+
+static bool CheckSolvedObjective(
+    const std::shared_ptr<SHOT::Environment>& env, double expectedValue, const std::string& description)
+{
+    constexpr double tolerance = 0.01;
+
+    if(env->results->primalSolutions.size() == 0)
+    {
+        std::cout << "  FAILED (" << description << "): no primal solution found.\n";
+        return false;
+    }
+
+    double objValue = env->results->primalSolutions[0].objValue;
+    std::cout << "  " << description << ": objective = " << objValue << " (expected " << expectedValue << ")\n";
+
+    if(std::abs(objValue - expectedValue) > tolerance)
+    {
+        std::cout << "  FAILED (" << description << "): objective differs from expected by "
+                  << std::abs(objValue - expectedValue) << ".\n";
+        return false;
+    }
+
+    return true;
+}
+
+// Verifies that Model.Reformulation.ObjectiveFunction.EpigraphStrategy correctly controls whether a
+// nonlinear/quadratic objective is reformulated into an epigraph auxiliary-variable constraint, and that a
+// linear objective is left untouched either way. Also solves each variant and checks the objective against its
+// known closed-form optimum, since a structurally-plausible reformulation can still be mathematically wrong
+// (e.g. a sign error introduced only for maximize objectives).
+bool ModelTestObjectiveEpigraphStrategy()
+{
+    bool passed = true;
+
+    // Every sub-test below runs once per MIP solver available in this build. Quadratic/nonlinear-sum term
+    // partitioning is disabled by default in SolveWithEpigraphStrategy, so the resulting model structure
+    // (constraint counts, objective term composition) is identical across solvers regardless of native
+    // quadratic-constraint support — only the numeric solve outcome should ever vary by solver.
+    for(auto& [mipSolver, solverName] : AvailableMIPSolversForEpigraphTests())
+    {
+        std::cout << "\n===== MIP solver: " << solverName << " =====\n";
+
+        // ── Sub-test 1: linear objective must never become an epigraph constraint ──────────────────
+        std::cout << "\nSub-test 1: linear objective is unaffected by EpigraphStrategy=EpigraphConstraint\n";
+        {
+            auto [solver, env] = SolveWithEpigraphStrategy(
+                ES_ObjectiveEpigraphStrategy::EpigraphConstraint,
+                [](const std::shared_ptr<SHOT::Environment>& env)
+                {
+                    auto problem = std::make_shared<SHOT::Problem>(env);
+                    auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 7.0);
+                    problem->add(SHOT::Variables({ var_x }));
+
+                    auto objective
+                        = std::make_shared<SHOT::LinearObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Maximize);
+                    objective->add(std::make_shared<SHOT::LinearTerm>(1.0, var_x));
+                    problem->add(objective);
+
+                    return problem;
+                },
+                /*solve*/ false, mipSolver);
+
+            auto reformulatedObjective
+                = std::dynamic_pointer_cast<SHOT::LinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction);
+
+            if(!reformulatedObjective)
+            {
+                std::cout << "  FAILED: reformulated objective is not a direct LinearObjectiveFunction.\n";
+                passed = false;
+            }
+            else if(reformulatedObjective->direction != SHOT::E_ObjectiveFunctionDirection::Maximize)
+            {
+                std::cout << "  FAILED: reformulated linear objective's direction changed unexpectedly.\n";
+                passed = false;
+            }
+            else if(reformulatedObjective->linearTerms.size() != 1)
+            {
+                std::cout << "  FAILED: reformulated linear objective should still have exactly one term.\n";
+                passed = false;
+            }
+
+            if(env->reformulatedProblem->numericConstraints.size() != 0)
+            {
+                std::cout << "  FAILED: an epigraph constraint was created for a linear objective ("
+                          << env->reformulatedProblem->numericConstraints.size() << " constraints found).\n";
+                passed = false;
+            }
+        }
+
+        // ── Sub-tests 2-3: quadratic objective -> epigraph constraint, minimize and maximize ────────
+        for(bool isMaximize : { false, true })
+        {
+            std::string dirName = isMaximize ? "maximize" : "minimize";
+            std::cout << "\nSub-test: quadratic " << dirName << " objective -> epigraph constraint\n";
+
+            // minimize:  x^2 - 4x = (x-2)^2 - 4, over x in [0, 10] -> optimum at x=2, value -4
+            // maximize: -x^2 + 6x,               over x in [0, 2]  -> optimum at x=2, value  8
+            double ub = isMaximize ? 2.0 : 10.0;
+            double expected = isMaximize ? 8.0 : -4.0;
+
+            auto [solver, env] = SolveWithEpigraphStrategy(
+                ES_ObjectiveEpigraphStrategy::EpigraphConstraint,
+                [isMaximize, ub](const std::shared_ptr<SHOT::Environment>& env)
+                {
+                    auto problem = std::make_shared<SHOT::Problem>(env);
+                    auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, ub);
+                    problem->add(SHOT::Variables({ var_x }));
+
+                    auto objective = std::make_shared<SHOT::QuadraticObjectiveFunction>(isMaximize
+                            ? SHOT::E_ObjectiveFunctionDirection::Maximize
+                            : SHOT::E_ObjectiveFunctionDirection::Minimize);
+                    objective->add(std::make_shared<SHOT::QuadraticTerm>(isMaximize ? -1.0 : 1.0, var_x, var_x));
+                    objective->add(std::make_shared<SHOT::LinearTerm>(isMaximize ? 6.0 : -4.0, var_x));
+                    problem->add(objective);
+
+                    return problem;
+                },
+                /*solve*/ true, mipSolver);
+
+            auto reformulatedObjective
+                = std::dynamic_pointer_cast<SHOT::LinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction);
+
+            if(!reformulatedObjective || reformulatedObjective->linearTerms.size() != 1
+                || reformulatedObjective->direction != SHOT::E_ObjectiveFunctionDirection::Minimize)
+            {
+                std::cout << "  FAILED: reformulated quadratic objective is not a single-term minimize epigraph "
+                             "objective.\n";
+                passed = false;
+            }
+
+            // With partitioning disabled, the quadratic term stays inline on the epigraph-defining constraint
+            // itself, so exactly one constraint (no separate square-term partition) should have been created.
+            if(env->reformulatedProblem->numericConstraints.size() != 1)
+            {
+                std::cout << "  FAILED: expected exactly 1 epigraph constraint, found "
+                          << env->reformulatedProblem->numericConstraints.size() << ".\n";
+                passed = false;
+            }
+
+            passed = CheckSolvedObjective(
+                         env, expected, "[" + solverName + "] quadratic " + dirName + " via epigraph constraint")
+                && passed;
+        }
+
+        // ── Sub-test 4: nonlinear minimize objective (exp, convex) -> epigraph constraint ───────────
+        // ── Sub-test 5: nonlinear maximize objective (log, concave) -> epigraph constraint ───────────
+        // exp(x) is convex, so "minimize exp(x)" is a convex problem; log(x) is concave, so "maximize log(x)"
+        // is a convex problem too ("minimize log(x)"/"maximize exp(x)" would both be nonconvex and are
+        // deliberately not tested here).
+        for(bool isMaximize : { false, true })
+        {
+            std::string dirName = isMaximize ? "maximize" : "minimize";
+            std::string fnName = isMaximize ? "log" : "exp";
+            std::cout << "\nSub-test: nonlinear " << dirName << " objective (" << fnName
+                      << ") -> epigraph constraint\n";
+
+            // maximize log(x), x in [0.1, 5] -> x=5, value log(5)
+            // minimize exp(x), x in [0, 2]   -> x=0, value exp(0) = 1
+            double lb = isMaximize ? 0.1 : 0.0;
+            double ub = isMaximize ? 5.0 : 2.0;
+            double expected = isMaximize ? std::log(5.0) : 1.0;
+
+            auto [solver, env] = SolveWithEpigraphStrategy(
+                ES_ObjectiveEpigraphStrategy::EpigraphConstraint,
+                [isMaximize, lb, ub](const std::shared_ptr<SHOT::Environment>& env)
+                {
+                    auto problem = std::make_shared<SHOT::Problem>(env);
+                    auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, lb, ub);
+                    problem->add(SHOT::Variables({ var_x }));
+
+                    auto nl_x = std::make_shared<SHOT::ExpressionVariable>(var_x);
+                    SHOT::NonlinearExpressionPtr expr = isMaximize
+                        ? std::static_pointer_cast<SHOT::NonlinearExpression>(
+                              std::make_shared<SHOT::ExpressionLog>(nl_x))
+                        : std::static_pointer_cast<SHOT::NonlinearExpression>(
+                              std::make_shared<SHOT::ExpressionExp>(nl_x));
+                    auto objective = std::make_shared<SHOT::NonlinearObjectiveFunction>(isMaximize
+                            ? SHOT::E_ObjectiveFunctionDirection::Maximize
+                            : SHOT::E_ObjectiveFunctionDirection::Minimize,
+                        expr, 0.0);
+                    problem->add(objective);
+
+                    return problem;
+                },
+                /*solve*/ true, mipSolver);
+
+            auto reformulatedObjective
+                = std::dynamic_pointer_cast<SHOT::LinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction);
+
+            if(!reformulatedObjective || reformulatedObjective->linearTerms.size() != 1
+                || reformulatedObjective->direction != SHOT::E_ObjectiveFunctionDirection::Minimize)
+            {
+                std::cout << "  FAILED: reformulated nonlinear objective is not a single-term minimize epigraph "
+                             "objective.\n";
+                passed = false;
+            }
+
+            // A plain (non-sum) nonlinear expression term needs no square/sum partitioning, so exactly one
+            // constraint (the epigraph-defining one) should have been created.
+            if(env->reformulatedProblem->numericConstraints.size() != 1)
+            {
+                std::cout << "  FAILED: expected exactly 1 epigraph constraint, found "
+                          << env->reformulatedProblem->numericConstraints.size() << ".\n";
+                passed = false;
+            }
+
+            passed = CheckSolvedObjective(
+                         env, expected, "[" + solverName + "] nonlinear " + dirName + " via epigraph constraint")
+                && passed;
+        }
+
+        // ── Sub-test 6: quadratic maximize objective, forced to stay a direct objective function ────
+        std::cout << "\nSub-test 6: quadratic maximize objective stays a direct objective function\n";
+        {
+            auto [solver, env] = SolveWithEpigraphStrategy(
+                ES_ObjectiveEpigraphStrategy::ObjectiveFunction,
+                [](const std::shared_ptr<SHOT::Environment>& env)
+                {
+                    auto problem = std::make_shared<SHOT::Problem>(env);
+                    auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 2.0);
+                    problem->add(SHOT::Variables({ var_x }));
+
+                    auto objective = std::make_shared<SHOT::QuadraticObjectiveFunction>(
+                        SHOT::E_ObjectiveFunctionDirection::Maximize);
+                    objective->add(std::make_shared<SHOT::QuadraticTerm>(-1.0, var_x, var_x));
+                    objective->add(std::make_shared<SHOT::LinearTerm>(6.0, var_x));
+                    problem->add(objective);
+
+                    return problem;
+                },
+                /*solve*/ true, mipSolver);
+
+            bool hasEpigraphConstraint = std::any_of(env->reformulatedProblem->numericConstraints.begin(),
+                env->reformulatedProblem->numericConstraints.end(),
+                [](auto& C) { return C->name == "shot_objconstr"; });
+
+            if(hasEpigraphConstraint)
+            {
+                std::cout
+                    << "  FAILED: an epigraph constraint was created despite EpigraphStrategy=ObjectiveFunction.\n";
+                passed = false;
+            }
+
+            // With partitioning disabled, the quadratic term stays inline: the direct objective keeps its
+            // native quadratic term and no partition constraint is created. (QuadraticObjectiveFunction derives
+            // from LinearObjectiveFunction in this model hierarchy, so a dynamic_pointer_cast<LinearObjectiveFunction>
+            // alone can't distinguish them — hasQuadraticTerms is the correct check.)
+            if(!env->reformulatedProblem->objectiveFunction->properties.hasQuadraticTerms)
+            {
+                std::cout << "  FAILED: expected a direct objective function retaining its native quadratic "
+                             "term.\n";
+                passed = false;
+            }
+
+            if(env->reformulatedProblem->numericConstraints.size() != 0)
+            {
+                std::cout << "  FAILED: expected 0 constraints (no square-term partitioning), found "
+                          << env->reformulatedProblem->numericConstraints.size() << ".\n";
+                passed = false;
+            }
+
+            passed = CheckSolvedObjective(
+                         env, 8.0, "[" + solverName + "] quadratic maximize via direct objective function")
+                && passed;
+        }
+
+        // ── Sub-test 7: nonlinear (log) maximize objective, forced to stay a direct objective function
+        std::cout << "\nSub-test 7: nonlinear maximize objective (log) stays a direct objective function\n";
+        {
+            auto [solver, env] = SolveWithEpigraphStrategy(
+                ES_ObjectiveEpigraphStrategy::ObjectiveFunction,
+                [](const std::shared_ptr<SHOT::Environment>& env)
+                {
+                    auto problem = std::make_shared<SHOT::Problem>(env);
+                    auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.1, 5.0);
+                    problem->add(SHOT::Variables({ var_x }));
+
+                    auto nl_x = std::make_shared<SHOT::ExpressionVariable>(var_x);
+                    auto objective = std::make_shared<SHOT::NonlinearObjectiveFunction>(
+                        SHOT::E_ObjectiveFunctionDirection::Maximize, std::make_shared<SHOT::ExpressionLog>(nl_x), 0.0);
+                    problem->add(objective);
+
+                    return problem;
+                },
+                /*solve*/ true, mipSolver);
+
+            if(env->reformulatedProblem->numericConstraints.size() != 0)
+            {
+                std::cout << "  FAILED: an epigraph constraint was created despite EpigraphStrategy=ObjectiveFunction ("
+                          << env->reformulatedProblem->numericConstraints.size() << " constraints found).\n";
+                passed = false;
+            }
+
+            // A plain log(x) term needs no sum-partitioning, so the direct objective stays a
+            // NonlinearObjectiveFunction wrapping the (negated, since the original is a maximize objective)
+            // nonlinear expression.
+            auto reformulatedObjective = std::dynamic_pointer_cast<SHOT::NonlinearObjectiveFunction>(
+                env->reformulatedProblem->objectiveFunction);
+
+            if(!reformulatedObjective || !reformulatedObjective->properties.hasNonlinearExpression)
+            {
+                std::cout << "  FAILED: expected a direct NonlinearObjectiveFunction wrapping the log expression.\n";
+                passed = false;
+            }
+
+            passed = CheckSolvedObjective(
+                         env, std::log(5.0), "[" + solverName + "] nonlinear maximize via direct objective function")
+                && passed;
+        }
+
+        // ── Sub-tests 8-9: mixed linear + quadratic + nonlinear objective -> epigraph constraint ────
+        // minimize: (x^2 - 4x) + 2w + exp(z), x in [0,10], w in [0,3], z in [0,2]
+        //   -> convex (x^2-4x convex, 2w affine, exp(z) convex); optimum x=2,w=0,z=0 -> -4 + 0 + 1 = -3
+        // maximize: (-x^2 + 6x) + 4w + log(z), x in [0,2], w in [0,3], z in [1,5]
+        //   -> concave (-x^2+6x concave, 4w affine, log(z) concave); optimum x=2,w=3,z=5 -> 8 + 12 + log(5)
+        for(bool isMaximize : { false, true })
+        {
+            std::string dirName = isMaximize ? "maximize" : "minimize";
+            std::cout << "\nSub-test: mixed linear+quadratic+nonlinear " << dirName
+                      << " objective -> epigraph constraint\n";
+
+            double expected = isMaximize ? (8.0 + 12.0 + std::log(5.0)) : (-4.0 + 0.0 + 1.0);
+
+            auto buildMixed = [isMaximize](const std::shared_ptr<SHOT::Environment>& env)
+            {
+                auto problem = std::make_shared<SHOT::Problem>(env);
+                auto var_x = std::make_shared<SHOT::Variable>(
+                    "x", SHOT::E_VariableType::Real, 0.0, isMaximize ? 2.0 : 10.0);
+                auto var_w = std::make_shared<SHOT::Variable>("w", SHOT::E_VariableType::Real, 0.0, 3.0);
+                auto var_z = std::make_shared<SHOT::Variable>(
+                    "z", SHOT::E_VariableType::Real, isMaximize ? 1.0 : 0.0, isMaximize ? 5.0 : 2.0);
+                problem->add(SHOT::Variables({ var_x, var_w, var_z }));
+
+                auto objective = std::make_shared<SHOT::NonlinearObjectiveFunction>(isMaximize
+                        ? SHOT::E_ObjectiveFunctionDirection::Maximize
+                        : SHOT::E_ObjectiveFunctionDirection::Minimize);
+                objective->add(std::make_shared<SHOT::QuadraticTerm>(isMaximize ? -1.0 : 1.0, var_x, var_x));
+                objective->add(std::make_shared<SHOT::LinearTerm>(isMaximize ? 6.0 : -4.0, var_x));
+                objective->add(std::make_shared<SHOT::LinearTerm>(isMaximize ? 4.0 : 2.0, var_w));
+                auto nl_z = std::make_shared<SHOT::ExpressionVariable>(var_z);
+                objective->add(isMaximize ? std::static_pointer_cast<SHOT::NonlinearExpression>(
+                                                std::make_shared<SHOT::ExpressionLog>(nl_z))
+                                          : std::static_pointer_cast<SHOT::NonlinearExpression>(
+                                                std::make_shared<SHOT::ExpressionExp>(nl_z)));
+                problem->add(objective);
+
+                return problem;
+            };
+
+            auto [solver, env] = SolveWithEpigraphStrategy(
+                ES_ObjectiveEpigraphStrategy::EpigraphConstraint, buildMixed, /*solve*/ true, mipSolver);
+
+            auto reformulatedObjective
+                = std::dynamic_pointer_cast<SHOT::LinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction);
+
+            if(!reformulatedObjective || reformulatedObjective->linearTerms.size() != 1
+                || reformulatedObjective->direction != SHOT::E_ObjectiveFunctionDirection::Minimize)
+            {
+                std::cout << "  FAILED: reformulated mixed objective is not a single-term minimize epigraph "
+                             "objective.\n";
+                passed = false;
+            }
+
+            passed = CheckSolvedObjective(
+                         env, expected, "[" + solverName + "] mixed " + dirName + " via epigraph constraint")
+                && passed;
+        }
+
+        // ── Sub-tests 10-11: mixed linear + quadratic + nonlinear objective, direct objective function
+        for(bool isMaximize : { false, true })
+        {
+            std::string dirName = isMaximize ? "maximize" : "minimize";
+            std::cout << "\nSub-test: mixed linear+quadratic+nonlinear " << dirName
+                      << " objective stays a direct objective function\n";
+
+            double expected = isMaximize ? (8.0 + 12.0 + std::log(5.0)) : (-4.0 + 0.0 + 1.0);
+
+            auto buildMixed = [isMaximize](const std::shared_ptr<SHOT::Environment>& env)
+            {
+                auto problem = std::make_shared<SHOT::Problem>(env);
+                auto var_x = std::make_shared<SHOT::Variable>(
+                    "x", SHOT::E_VariableType::Real, 0.0, isMaximize ? 2.0 : 10.0);
+                auto var_w = std::make_shared<SHOT::Variable>("w", SHOT::E_VariableType::Real, 0.0, 3.0);
+                auto var_z = std::make_shared<SHOT::Variable>(
+                    "z", SHOT::E_VariableType::Real, isMaximize ? 1.0 : 0.0, isMaximize ? 5.0 : 2.0);
+                problem->add(SHOT::Variables({ var_x, var_w, var_z }));
+
+                auto objective = std::make_shared<SHOT::NonlinearObjectiveFunction>(isMaximize
+                        ? SHOT::E_ObjectiveFunctionDirection::Maximize
+                        : SHOT::E_ObjectiveFunctionDirection::Minimize);
+                objective->add(std::make_shared<SHOT::QuadraticTerm>(isMaximize ? -1.0 : 1.0, var_x, var_x));
+                objective->add(std::make_shared<SHOT::LinearTerm>(isMaximize ? 6.0 : -4.0, var_x));
+                objective->add(std::make_shared<SHOT::LinearTerm>(isMaximize ? 4.0 : 2.0, var_w));
+                auto nl_z = std::make_shared<SHOT::ExpressionVariable>(var_z);
+                objective->add(isMaximize ? std::static_pointer_cast<SHOT::NonlinearExpression>(
+                                                std::make_shared<SHOT::ExpressionLog>(nl_z))
+                                          : std::static_pointer_cast<SHOT::NonlinearExpression>(
+                                                std::make_shared<SHOT::ExpressionExp>(nl_z)));
+                problem->add(objective);
+
+                return problem;
+            };
+
+            auto [solver, env] = SolveWithEpigraphStrategy(
+                ES_ObjectiveEpigraphStrategy::ObjectiveFunction, buildMixed, /*solve*/ true, mipSolver);
+
+            bool hasEpigraphConstraint = std::any_of(env->reformulatedProblem->numericConstraints.begin(),
+                env->reformulatedProblem->numericConstraints.end(),
+                [](auto& C) { return C->name == "shot_objconstr"; });
+
+            if(hasEpigraphConstraint)
+            {
+                std::cout
+                    << "  FAILED: an epigraph constraint was created despite EpigraphStrategy=ObjectiveFunction.\n";
+                passed = false;
+            }
+
+            passed = CheckSolvedObjective(
+                         env, expected, "[" + solverName + "] mixed " + dirName + " via direct objective function")
+                && passed;
+        }
+
+        // ── Sub-test 12: EpigraphStrategy=Unchanged leaves a direct quadratic/nonlinear objective exactly as
+        // given — no epigraph constraint is introduced. This must produce the same result as sub-tests 6/7
+        // above (which force the same outcome via EpigraphStrategy=ObjectiveFunction), since there is nothing
+        // here for Unchanged to fold FROM other than an already-direct objective function.
+        for(bool isQuadratic : { true, false })
+        {
+            std::string kindName = isQuadratic ? "quadratic" : "nonlinear (log)";
+            std::cout << "\nSub-test 12: " << kindName
+                      << " maximize objective is left as a direct objective function by "
+                         "EpigraphStrategy=Unchanged\n";
+
+            auto [solver, env] = SolveWithEpigraphStrategy(
+                ES_ObjectiveEpigraphStrategy::Unchanged,
+                [isQuadratic](const std::shared_ptr<SHOT::Environment>& env)
+                {
+                    auto problem = std::make_shared<SHOT::Problem>(env);
+
+                    if(isQuadratic)
+                    {
+                        auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 2.0);
+                        problem->add(SHOT::Variables({ var_x }));
+
+                        auto objective = std::make_shared<SHOT::QuadraticObjectiveFunction>(
+                            SHOT::E_ObjectiveFunctionDirection::Maximize);
+                        objective->add(std::make_shared<SHOT::QuadraticTerm>(-1.0, var_x, var_x));
+                        objective->add(std::make_shared<SHOT::LinearTerm>(6.0, var_x));
+                        problem->add(objective);
+                    }
+                    else
+                    {
+                        auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.1, 5.0);
+                        problem->add(SHOT::Variables({ var_x }));
+
+                        auto nl_x = std::make_shared<SHOT::ExpressionVariable>(var_x);
+                        auto objective = std::make_shared<SHOT::NonlinearObjectiveFunction>(
+                            SHOT::E_ObjectiveFunctionDirection::Maximize, std::make_shared<SHOT::ExpressionLog>(nl_x),
+                            0.0);
+                        problem->add(objective);
+                    }
+
+                    return problem;
+                },
+                /*solve*/ true, mipSolver);
+
+            bool hasEpigraphConstraint = std::any_of(env->reformulatedProblem->numericConstraints.begin(),
+                env->reformulatedProblem->numericConstraints.end(),
+                [](auto& C) { return C->name == "shot_objconstr"; });
+
+            if(hasEpigraphConstraint)
+            {
+                std::cout << "  FAILED: an epigraph constraint was created despite EpigraphStrategy=Unchanged.\n";
+                passed = false;
+            }
+
+            if(isQuadratic)
+            {
+                // With partitioning disabled, the quadratic term stays inline (native).
+                if(!env->reformulatedProblem->objectiveFunction->properties.hasQuadraticTerms)
+                {
+                    std::cout << "  FAILED: expected a direct objective function retaining its native quadratic "
+                                 "term.\n";
+                    passed = false;
+                }
+
+                passed = CheckSolvedObjective(
+                             env, 8.0, "[" + solverName + "] quadratic maximize, EpigraphStrategy=Unchanged")
+                    && passed;
+            }
+            else
+            {
+                auto reformulatedObjective = std::dynamic_pointer_cast<SHOT::NonlinearObjectiveFunction>(
+                    env->reformulatedProblem->objectiveFunction);
+
+                if(!reformulatedObjective || !reformulatedObjective->properties.hasNonlinearExpression)
+                {
+                    std::cout
+                        << "  FAILED: expected a direct NonlinearObjectiveFunction wrapping the log expression.\n";
+                    passed = false;
+                }
+
+                passed = CheckSolvedObjective(
+                             env, std::log(5.0), "[" + solverName + "] nonlinear maximize, EpigraphStrategy=Unchanged")
+                    && passed;
+            }
+        }
+    }
+
+    return passed;
+}
+
+// Verifies the "anti-epigraph" direction: a linear objective that is a thin wrapper around an epigraph-style
+// defining constraint (single objective variable, appearing linearly in exactly one nonlinear/quadratic
+// constraint) should be folded back into a direct nonlinear/quadratic objective function, with the defining
+// constraint removed — unless EpigraphStrategy=EpigraphConstraint explicitly asks to keep it as a constraint.
+bool ModelTestAntiEpigraphReformulation()
+{
+    bool passed = true;
+
+    // Every sub-test below runs once per MIP solver available in this build. Term partitioning is disabled by
+    // default in SolveWithEpigraphStrategy, so the epigraph-defining constraint's quadratic term stays inline
+    // (never pre-split into an auxiliary variable) and the anti-epigraph fold's pattern-match sees the same
+    // structure regardless of solver.
+    for(auto& [mipSolver, solverName] : AvailableMIPSolversForEpigraphTests())
+    {
+        std::cout << "\n===== MIP solver: " << solverName << " =====\n";
+
+        // ── Sub-test 1: minimize z s.t. z >= exp(x), x in [0, 2] -> should fold to minimize exp(x), x=0 ─
+        // exp(x) is convex, so "z >= exp(x)" is a convex epigraph constraint and "minimize exp(x)" is a convex
+        // problem (log(x) is concave, which would make this nonconvex, so it is deliberately not used here).
+        std::cout << "\nSub-test 1: anti-epigraph folds 'minimize z s.t. z >= exp(x)' into 'minimize exp(x)'\n";
+        {
+            auto buildProblem = [](const std::shared_ptr<SHOT::Environment>& env)
+            {
+                auto problem = std::make_shared<SHOT::Problem>(env);
+                auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 2.0);
+                auto var_z = std::make_shared<SHOT::Variable>("z", SHOT::E_VariableType::Real, -100.0, 100.0);
+                problem->add(SHOT::Variables({ var_x, var_z }));
+
+                auto objective
+                    = std::make_shared<SHOT::LinearObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize);
+                objective->add(std::make_shared<SHOT::LinearTerm>(1.0, var_z));
+                problem->add(objective);
+
+                // z - exp(x) >= 0  <=>  z >= exp(x)
+                auto nl_x = std::make_shared<SHOT::ExpressionVariable>(var_x);
+                auto constraint = std::make_shared<SHOT::NonlinearConstraint>("epidef", 0.0, SHOT_DBL_MAX);
+                constraint->add(std::make_shared<SHOT::LinearTerm>(1.0, var_z));
+                constraint->add(std::make_shared<SHOT::ExpressionNegate>(std::make_shared<SHOT::ExpressionExp>(nl_x)));
+                problem->add(constraint);
+
+                return problem;
+            };
+
+            double expected = 1.0;
+
+            // ObjectiveFunction: the fold should happen, leaving a direct NonlinearObjectiveFunction and no
+            // constraints.
+            {
+                auto [solver, env] = SolveWithEpigraphStrategy(
+                    ES_ObjectiveEpigraphStrategy::ObjectiveFunction, buildProblem, /*solve*/ true, mipSolver);
+
+                if(!env->reformulatedProblem->antiEpigraphObjectiveVariable)
+                {
+                    std::cout
+                        << "  FAILED: anti-epigraph fold did not happen (antiEpigraphObjectiveVariable not set).\n";
+                    passed = false;
+                }
+
+                auto reformulatedObjective = std::dynamic_pointer_cast<SHOT::NonlinearObjectiveFunction>(
+                    env->reformulatedProblem->objectiveFunction);
+
+                if(!reformulatedObjective || !reformulatedObjective->properties.hasNonlinearExpression)
+                {
+                    std::cout << "  FAILED: expected a direct NonlinearObjectiveFunction wrapping exp(x).\n";
+                    passed = false;
+                }
+
+                if(env->reformulatedProblem->numericConstraints.size() != 0)
+                {
+                    std::cout << "  FAILED: expected the defining constraint to be removed by the fold, found "
+                              << env->reformulatedProblem->numericConstraints.size() << " constraint(s).\n";
+                    passed = false;
+                }
+
+                passed = CheckSolvedObjective(env, expected,
+                             "[" + solverName + "] anti-epigraph fold, EpigraphStrategy=ObjectiveFunction")
+                    && passed;
+            }
+
+            // Unchanged and EpigraphConstraint: the fold should be skipped either way, keeping the objective as
+            // "minimize z" and the defining constraint as-is (1 constraint) — Unchanged because it performs no
+            // epigraph/anti-epigraph reformulation at all, EpigraphConstraint because that form is exactly what
+            // the fold would undo.
+            for(auto strategy :
+                { ES_ObjectiveEpigraphStrategy::Unchanged, ES_ObjectiveEpigraphStrategy::EpigraphConstraint })
+            {
+                std::string strategyName
+                    = strategy == ES_ObjectiveEpigraphStrategy::Unchanged ? "Unchanged" : "EpigraphConstraint";
+
+                auto [solver, env] = SolveWithEpigraphStrategy(strategy, buildProblem, /*solve*/ true, mipSolver);
+
+                if(env->reformulatedProblem->antiEpigraphObjectiveVariable)
+                {
+                    std::cout << "  FAILED: anti-epigraph fold happened despite EpigraphStrategy=" << strategyName
+                              << ".\n";
+                    passed = false;
+                }
+
+                auto reformulatedObjective = std::dynamic_pointer_cast<SHOT::LinearObjectiveFunction>(
+                    env->reformulatedProblem->objectiveFunction);
+
+                if(!reformulatedObjective || reformulatedObjective->linearTerms.size() != 1
+                    || reformulatedObjective->direction != SHOT::E_ObjectiveFunctionDirection::Minimize)
+                {
+                    std::cout << "  FAILED: expected the objective to remain 'minimize z' unchanged.\n";
+                    passed = false;
+                }
+
+                if(env->reformulatedProblem->numericConstraints.size() != 1)
+                {
+                    std::cout << "  FAILED: expected the defining constraint to remain (1 constraint), found "
+                              << env->reformulatedProblem->numericConstraints.size() << ".\n";
+                    passed = false;
+                }
+
+                passed = CheckSolvedObjective(env, expected,
+                             "[" + solverName + "] anti-epigraph kept as constraint, EpigraphStrategy=" + strategyName)
+                    && passed;
+            }
+        }
+
+        // ── Sub-test 2: maximize z s.t. z <= -x^2, x in [1, 3] -> should fold to maximize -x^2, x=1 ─────
+        // -x^2 is concave, so "z <= -x^2" is a convex (hypograph) constraint and "maximize -x^2" is a convex
+        // problem (x^2 is convex, which would make "maximize x^2" nonconvex, so it is deliberately not used
+        // here).
+        std::cout << "\nSub-test 2: anti-epigraph folds 'maximize z s.t. z <= -x^2' into 'maximize -x^2'\n";
+        {
+            auto buildProblem = [](const std::shared_ptr<SHOT::Environment>& env)
+            {
+                auto problem = std::make_shared<SHOT::Problem>(env);
+                auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 1.0, 3.0);
+                auto var_z = std::make_shared<SHOT::Variable>("z", SHOT::E_VariableType::Real, -100.0, 100.0);
+                problem->add(SHOT::Variables({ var_x, var_z }));
+
+                auto objective
+                    = std::make_shared<SHOT::LinearObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Maximize);
+                objective->add(std::make_shared<SHOT::LinearTerm>(1.0, var_z));
+                problem->add(objective);
+
+                // z - (-x^2) <= 0  <=>  z + x^2 <= 0  <=>  z <= -x^2
+                auto constraint = std::make_shared<SHOT::QuadraticConstraint>("epidef", SHOT_DBL_MIN, 0.0);
+                constraint->add(std::make_shared<SHOT::LinearTerm>(1.0, var_z));
+                constraint->add(std::make_shared<SHOT::QuadraticTerm>(1.0, var_x, var_x));
+                problem->add(constraint);
+
+                return problem;
+            };
+
+            double expected = -1.0;
+
+            // ObjectiveFunction: the fold should happen, leaving a direct native-quadratic objective (matches
+            // ModelTestObjectiveEpigraphStrategy's sub-test 6 structure, which solves correctly on every solver).
+            {
+                auto [solver, env] = SolveWithEpigraphStrategy(
+                    ES_ObjectiveEpigraphStrategy::ObjectiveFunction, buildProblem, /*solve*/ true, mipSolver);
+
+                if(!env->reformulatedProblem->antiEpigraphObjectiveVariable)
+                {
+                    std::cout << "  FAILED: anti-epigraph fold did not happen for the quadratic case.\n";
+                    passed = false;
+                }
+
+                if(env->reformulatedProblem->numericConstraints.size() != 0)
+                {
+                    std::cout << "  FAILED: expected the defining constraint to be removed by the fold, found "
+                              << env->reformulatedProblem->numericConstraints.size() << " constraint(s).\n";
+                    passed = false;
+                }
+
+                passed = CheckSolvedObjective(env, expected, "[" + solverName + "] anti-epigraph fold, quadratic")
+                    && passed;
+            }
+
+            // Unchanged: no reformulation, so the fold must not happen and the defining constraint (a native
+            // maximize quadratic epigraph constraint) must remain.
+            {
+                auto [solver, env] = SolveWithEpigraphStrategy(
+                    ES_ObjectiveEpigraphStrategy::Unchanged, buildProblem, /*solve*/ true, mipSolver);
+
+                if(env->reformulatedProblem->antiEpigraphObjectiveVariable)
+                {
+                    std::cout << "  FAILED: anti-epigraph fold happened despite EpigraphStrategy=Unchanged.\n";
+                    passed = false;
+                }
+
+                if(env->reformulatedProblem->numericConstraints.size() != 1)
+                {
+                    std::cout << "  FAILED: expected the defining constraint to remain (1 constraint), found "
+                              << env->reformulatedProblem->numericConstraints.size() << ".\n";
+                    passed = false;
+                }
+
+                passed = CheckSolvedObjective(env, expected,
+                             "[" + solverName + "] anti-epigraph kept as constraint, quadratic, Unchanged")
+                    && passed;
+            }
+        }
+
+        // ── Sub-test 3: minimize z s.t. z >= (x^2-4x) + 2w + exp(y) -> should fold to a direct mixed
+        // linear+quadratic+nonlinear objective ────────────────────────────────────────────────────────
+        // (x^2-4x) + 2w + exp(y) is convex (x^2-4x convex, 2w affine, exp(y) convex), so "z >= ..." is a convex
+        // epigraph constraint and the folded-back objective is a convex minimization. x in [0,10], w in [0,3],
+        // y in [0,2] -> optimum at x=2, w=0, y=0 -> -4 + 0 + 1 = -3.
+        std::cout << "\nSub-test 3: anti-epigraph folds 'minimize z s.t. z >= (x^2-4x)+2w+exp(y)' into a direct mixed "
+                     "linear+quadratic+nonlinear objective\n";
+        {
+            auto buildProblem = [](const std::shared_ptr<SHOT::Environment>& env)
+            {
+                auto problem = std::make_shared<SHOT::Problem>(env);
+                auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 10.0);
+                auto var_w = std::make_shared<SHOT::Variable>("w", SHOT::E_VariableType::Real, 0.0, 3.0);
+                auto var_y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Real, 0.0, 2.0);
+                auto var_z = std::make_shared<SHOT::Variable>("z", SHOT::E_VariableType::Real, -100.0, 100.0);
+                problem->add(SHOT::Variables({ var_x, var_w, var_y, var_z }));
+
+                auto objective
+                    = std::make_shared<SHOT::LinearObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize);
+                objective->add(std::make_shared<SHOT::LinearTerm>(1.0, var_z));
+                problem->add(objective);
+
+                // z - x^2 + 4x - 2w - exp(y) >= 0  <=>  z >= (x^2-4x) + 2w + exp(y)
+                auto nl_y = std::make_shared<SHOT::ExpressionVariable>(var_y);
+                auto constraint = std::make_shared<SHOT::NonlinearConstraint>("epidef", 0.0, SHOT_DBL_MAX);
+                constraint->add(std::make_shared<SHOT::LinearTerm>(1.0, var_z));
+                constraint->add(std::make_shared<SHOT::QuadraticTerm>(-1.0, var_x, var_x));
+                constraint->add(std::make_shared<SHOT::LinearTerm>(4.0, var_x));
+                constraint->add(std::make_shared<SHOT::LinearTerm>(-2.0, var_w));
+                constraint->add(std::make_shared<SHOT::ExpressionNegate>(std::make_shared<SHOT::ExpressionExp>(nl_y)));
+                problem->add(constraint);
+
+                return problem;
+            };
+
+            double expected = -4.0 + 0.0 + 1.0;
+
+            // ObjectiveFunction: the fold should happen, leaving a direct NonlinearObjectiveFunction (mixing
+            // quadratic, linear and nonlinear terms) and no constraints.
+            {
+                auto [solver, env] = SolveWithEpigraphStrategy(
+                    ES_ObjectiveEpigraphStrategy::ObjectiveFunction, buildProblem, /*solve*/ true, mipSolver);
+
+                if(!env->reformulatedProblem->antiEpigraphObjectiveVariable)
+                {
+                    std::cout << "  FAILED: anti-epigraph fold did not happen for the mixed-term case "
+                                 "(antiEpigraphObjectiveVariable not set).\n";
+                    passed = false;
+                }
+
+                auto reformulatedObjective = std::dynamic_pointer_cast<SHOT::NonlinearObjectiveFunction>(
+                    env->reformulatedProblem->objectiveFunction);
+
+                if(!reformulatedObjective || !reformulatedObjective->properties.hasNonlinearExpression
+                    || !reformulatedObjective->properties.hasQuadraticTerms)
+                {
+                    std::cout << "  FAILED: expected a direct NonlinearObjectiveFunction with both quadratic and "
+                                 "nonlinear parts.\n";
+                    passed = false;
+                }
+
+                if(env->reformulatedProblem->numericConstraints.size() != 0)
+                {
+                    std::cout << "  FAILED: expected the defining constraint to be removed by the fold, found "
+                              << env->reformulatedProblem->numericConstraints.size() << " constraint(s).\n";
+                    passed = false;
+                }
+
+                passed = CheckSolvedObjective(env, expected,
+                             "[" + solverName + "] mixed-term anti-epigraph fold, EpigraphStrategy=ObjectiveFunction")
+                    && passed;
+            }
+
+            // Unchanged and EpigraphConstraint: the fold should be skipped either way, keeping the objective as
+            // "minimize z" and the defining constraint as-is (1 constraint).
+            for(auto strategy :
+                { ES_ObjectiveEpigraphStrategy::Unchanged, ES_ObjectiveEpigraphStrategy::EpigraphConstraint })
+            {
+                std::string strategyName
+                    = strategy == ES_ObjectiveEpigraphStrategy::Unchanged ? "Unchanged" : "EpigraphConstraint";
+
+                auto [solver, env] = SolveWithEpigraphStrategy(strategy, buildProblem, /*solve*/ true, mipSolver);
+
+                if(env->reformulatedProblem->antiEpigraphObjectiveVariable)
+                {
+                    std::cout << "  FAILED: anti-epigraph fold happened despite EpigraphStrategy=" << strategyName
+                              << " for the mixed-term case.\n";
+                    passed = false;
+                }
+
+                auto reformulatedObjective = std::dynamic_pointer_cast<SHOT::LinearObjectiveFunction>(
+                    env->reformulatedProblem->objectiveFunction);
+
+                if(!reformulatedObjective || reformulatedObjective->linearTerms.size() != 1
+                    || reformulatedObjective->direction != SHOT::E_ObjectiveFunctionDirection::Minimize)
+                {
+                    std::cout << "  FAILED: expected the mixed-term objective to remain 'minimize z' unchanged.\n";
+                    passed = false;
+                }
+
+                if(env->reformulatedProblem->numericConstraints.size() != 1)
+                {
+                    std::cout << "  FAILED: expected the mixed-term defining constraint to remain (1 "
+                                 "constraint), found "
+                              << env->reformulatedProblem->numericConstraints.size() << ".\n";
+                    passed = false;
+                }
+
+                passed = CheckSolvedObjective(env, expected,
+                             "[" + solverName
+                                 + "] mixed-term anti-epigraph kept as constraint, EpigraphStrategy=" + strategyName)
+                    && passed;
+            }
+        }
+    }
+
+    return passed;
+}
+
+// Verifies Model.Reformulation.{Constraint,ObjectiveFunction}.Partition{Quadratic,Nonlinear}Terms: forcing
+// partitioning (Always) vs disabling it (Never), for both the epigraph-constraint and direct-objective-function
+// representations. Partitioning is what creates extra square-term/sum-term auxiliary constraints beyond the
+// single defining constraint (epigraph) or none at all (direct); disabling it should always leave exactly the
+// minimum: 1 constraint for epigraph form, 0 for direct form.
+bool ModelTestObjectivePartitioningStrategy()
+{
+    bool passed = true;
+
+    auto buildQuadratic = [](const std::shared_ptr<SHOT::Environment>& env)
+    {
+        // maximize -x^2 + 6x, x in [0, 2] -> concave, convex problem, optimum at x=2, value 8
+        auto problem = std::make_shared<SHOT::Problem>(env);
+        auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 2.0);
+        problem->add(SHOT::Variables({ var_x }));
+
+        auto objective
+            = std::make_shared<SHOT::QuadraticObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Maximize);
+        objective->add(std::make_shared<SHOT::QuadraticTerm>(-1.0, var_x, var_x));
+        objective->add(std::make_shared<SHOT::LinearTerm>(6.0, var_x));
+        problem->add(objective);
+
+        return problem;
+    };
+    const double quadraticExpected = 8.0;
+
+    auto buildNonlinearSum = [](const std::shared_ptr<SHOT::Environment>& env)
+    {
+        // maximize log(x) + log(y), x, y in [1, 5] -> concave sum, convex problem, optimum at x=y=5
+        auto problem = std::make_shared<SHOT::Problem>(env);
+        auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 1.0, 5.0);
+        auto var_y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Real, 1.0, 5.0);
+        problem->add(SHOT::Variables({ var_x, var_y }));
+
+        auto nl_x = std::make_shared<SHOT::ExpressionVariable>(var_x);
+        auto nl_y = std::make_shared<SHOT::ExpressionVariable>(var_y);
+        SHOT::NonlinearExpressions terms;
+        terms.add(std::make_shared<SHOT::ExpressionLog>(nl_x));
+        terms.add(std::make_shared<SHOT::ExpressionLog>(nl_y));
+        auto sum = std::make_shared<SHOT::ExpressionSum>(terms);
+
+        auto objective = std::make_shared<SHOT::NonlinearObjectiveFunction>(
+            SHOT::E_ObjectiveFunctionDirection::Maximize, sum, 0.0);
+        problem->add(objective);
+
+        return problem;
+    };
+    const double nonlinearSumExpected = 2.0 * std::log(5.0);
+
+    auto setPartitioning
+        = [](const std::string& settingName, ES_PartitionNonlinearSums strategy) -> std::function<void(SHOT::Solver&)>
+    {
+        return [settingName, strategy](SHOT::Solver& solver)
+        { solver.updateSetting(settingName, static_cast<int>(strategy)); };
+    };
+
+    // Every sub-test below runs once per MIP solver available in this build.
+    for(auto& [mipSolver, solverName] : AvailableMIPSolversForEpigraphTests())
+    {
+        std::cout << "\n===== MIP solver: " << solverName << " =====\n";
+
+        // ── Quadratic, epigraph constraint, partitioning forced ─────────────────────────────────────
+        std::cout << "\nSub-test: quadratic epigraph constraint, Constraint.PartitionQuadraticTerms=Always\n";
+        {
+            auto [solver, env] = SolveWithEpigraphStrategy(ES_ObjectiveEpigraphStrategy::EpigraphConstraint,
+                buildQuadratic, /*solve*/ true, mipSolver,
+                setPartitioning(
+                    "Model.Reformulation.Constraint.PartitionQuadraticTerms", ES_PartitionNonlinearSums::Always));
+
+            if(env->reformulatedProblem->numericConstraints.size() != 2)
+            {
+                std::cout << "  FAILED: expected 2 constraints (epigraph + square-term partition), found "
+                          << env->reformulatedProblem->numericConstraints.size() << ".\n";
+                passed = false;
+            }
+
+            passed = CheckSolvedObjective(
+                         env, quadraticExpected, "[" + solverName + "] quadratic epigraph, partitioning forced")
+                && passed;
+        }
+
+        // ── Quadratic, epigraph constraint, partitioning disabled -> exactly 1 constraint ───────────
+        std::cout << "\nSub-test: quadratic epigraph constraint, Constraint.PartitionQuadraticTerms=Never\n";
+        {
+            auto [solver, env] = SolveWithEpigraphStrategy(ES_ObjectiveEpigraphStrategy::EpigraphConstraint,
+                buildQuadratic, /*solve*/ true, mipSolver,
+                setPartitioning(
+                    "Model.Reformulation.Constraint.PartitionQuadraticTerms", ES_PartitionNonlinearSums::Never));
+
+            if(env->reformulatedProblem->numericConstraints.size() != 1)
+            {
+                std::cout << "  FAILED: expected exactly 1 constraint (epigraph only, no partitioning), found "
+                          << env->reformulatedProblem->numericConstraints.size() << ".\n";
+                passed = false;
+            }
+
+            passed = CheckSolvedObjective(
+                         env, quadraticExpected, "[" + solverName + "] quadratic epigraph, partitioning disabled")
+                && passed;
+        }
+
+        // ── Quadratic, direct objective function, partitioning forced ───────────────────────────────
+        std::cout
+            << "\nSub-test: quadratic direct objective function, ObjectiveFunction.PartitionQuadraticTerms=Always\n";
+        {
+            auto [solver, env] = SolveWithEpigraphStrategy(ES_ObjectiveEpigraphStrategy::ObjectiveFunction,
+                buildQuadratic, /*solve*/ true, mipSolver,
+                setPartitioning("Model.Reformulation.ObjectiveFunction.PartitionQuadraticTerms",
+                    ES_PartitionNonlinearSums::Always));
+
+            // Gurobi/Cplex support native convex quadratic objectives, so for a convex problem
+            // TaskReformulateProblem::reformulateObjectiveFunction takes a dedicated shortcut
+            // (useConvexQuadraticObjective, ~line 547) that copies the quadratic objective straight through —
+            // it never consults PartitionQuadraticTerms at all, so "Always" is a no-op there. Cbc/HiGHS lack
+            // that native support and fall through to the generic path, which does respect the setting.
+            bool solverBypassesObjectivePartitioning
+                = mipSolver == ES_MIPSolver::Gurobi || mipSolver == ES_MIPSolver::Cplex;
+
+            if(solverBypassesObjectivePartitioning)
+            {
+                if(!env->reformulatedProblem->objectiveFunction->properties.hasQuadraticTerms)
+                {
+                    std::cout << "  FAILED: expected the quadratic term to stay native (PartitionQuadraticTerms "
+                                 "is bypassed for this solver's convex quadratic objective support).\n";
+                    passed = false;
+                }
+
+                if(env->reformulatedProblem->numericConstraints.size() != 0)
+                {
+                    std::cout << "  FAILED: expected exactly 0 constraints (no partitioning applied), found "
+                              << env->reformulatedProblem->numericConstraints.size() << ".\n";
+                    passed = false;
+                }
+            }
+            else
+            {
+                auto reformulatedObjective = std::dynamic_pointer_cast<SHOT::LinearObjectiveFunction>(
+                    env->reformulatedProblem->objectiveFunction);
+
+                if(!reformulatedObjective || reformulatedObjective->linearTerms.size() != 2)
+                {
+                    std::cout << "  FAILED: expected a 2-term direct LinearObjectiveFunction (quadratic term "
+                                 "partitioned away).\n";
+                    passed = false;
+                }
+
+                if(env->reformulatedProblem->numericConstraints.size() != 1)
+                {
+                    std::cout << "  FAILED: expected exactly 1 constraint (square-term partition), found "
+                              << env->reformulatedProblem->numericConstraints.size() << ".\n";
+                    passed = false;
+                }
+            }
+
+            passed = CheckSolvedObjective(
+                         env, quadraticExpected, "[" + solverName + "] quadratic direct, partitioning forced")
+                && passed;
+        }
+
+        // ── Quadratic, direct objective function, partitioning disabled -> exactly 0 constraints ────
+        std::cout
+            << "\nSub-test: quadratic direct objective function, ObjectiveFunction.PartitionQuadraticTerms=Never\n";
+        {
+            auto [solver, env] = SolveWithEpigraphStrategy(ES_ObjectiveEpigraphStrategy::ObjectiveFunction,
+                buildQuadratic, /*solve*/ true, mipSolver,
+                setPartitioning(
+                    "Model.Reformulation.ObjectiveFunction.PartitionQuadraticTerms", ES_PartitionNonlinearSums::Never));
+
+            if(!env->reformulatedProblem->objectiveFunction->properties.hasQuadraticTerms)
+            {
+                std::cout << "  FAILED: expected the quadratic term to stay in a direct objective function.\n";
+                passed = false;
+            }
+
+            if(env->reformulatedProblem->numericConstraints.size() != 0)
+            {
+                std::cout << "  FAILED: expected exactly 0 constraints (no partitioning, no epigraph), found "
+                          << env->reformulatedProblem->numericConstraints.size() << ".\n";
+                passed = false;
+            }
+
+            passed = CheckSolvedObjective(
+                         env, quadraticExpected, "[" + solverName + "] quadratic direct, partitioning disabled")
+                && passed;
+        }
+
+        // ── Nonlinear sum, epigraph constraint, partitioning forced ─────────────────────────────────
+        std::cout << "\nSub-test: nonlinear sum epigraph constraint, Constraint.PartitionNonlinearTerms=Always\n";
+        {
+            auto [solver, env] = SolveWithEpigraphStrategy(ES_ObjectiveEpigraphStrategy::EpigraphConstraint,
+                buildNonlinearSum, /*solve*/ true, mipSolver,
+                setPartitioning(
+                    "Model.Reformulation.Constraint.PartitionNonlinearTerms", ES_PartitionNonlinearSums::Always));
+
+            // Each of the 2 summands gets its own auxiliary variable + constraint, plus the epigraph-defining
+            // constraint itself: 3 constraints in total.
+            if(env->reformulatedProblem->numericConstraints.size() != 3)
+            {
+                std::cout << "  FAILED: expected 3 constraints (epigraph + 2 sum-term partitions), found "
+                          << env->reformulatedProblem->numericConstraints.size() << ".\n";
+                passed = false;
+            }
+
+            passed = CheckSolvedObjective(
+                         env, nonlinearSumExpected, "[" + solverName + "] nonlinear sum epigraph, partitioning forced")
+                && passed;
+        }
+
+        // ── Nonlinear sum, epigraph constraint, partitioning disabled -> exactly 1 constraint ────────
+        std::cout << "\nSub-test: nonlinear sum epigraph constraint, Constraint.PartitionNonlinearTerms=Never\n";
+        {
+            auto [solver, env] = SolveWithEpigraphStrategy(ES_ObjectiveEpigraphStrategy::EpigraphConstraint,
+                buildNonlinearSum, /*solve*/ true, mipSolver,
+                setPartitioning(
+                    "Model.Reformulation.Constraint.PartitionNonlinearTerms", ES_PartitionNonlinearSums::Never));
+
+            if(env->reformulatedProblem->numericConstraints.size() != 1)
+            {
+                std::cout << "  FAILED: expected exactly 1 constraint (epigraph only, no partitioning), found "
+                          << env->reformulatedProblem->numericConstraints.size() << ".\n";
+                passed = false;
+            }
+
+            passed = CheckSolvedObjective(env, nonlinearSumExpected,
+                         "[" + solverName + "] nonlinear sum epigraph, partitioning disabled")
+                && passed;
+        }
+
+        // ── Nonlinear sum, direct objective function, partitioning forced ───────────────────────────
+        std::cout << "\nSub-test: nonlinear sum direct objective function, "
+                     "ObjectiveFunction.PartitionNonlinearTerms=Always\n";
+        {
+            auto [solver, env] = SolveWithEpigraphStrategy(ES_ObjectiveEpigraphStrategy::ObjectiveFunction,
+                buildNonlinearSum, /*solve*/ true, mipSolver,
+                setPartitioning("Model.Reformulation.ObjectiveFunction.PartitionNonlinearTerms",
+                    ES_PartitionNonlinearSums::Always));
+
+            // Each of the 2 summands gets its own auxiliary variable + constraint, and (no epigraph here) the
+            // objective becomes a direct 2-term LinearObjectiveFunction referencing both auxiliary variables.
+            auto reformulatedObjective
+                = std::dynamic_pointer_cast<SHOT::LinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction);
+
+            if(!reformulatedObjective || reformulatedObjective->linearTerms.size() != 2)
+            {
+                std::cout << "  FAILED: expected a 2-term direct LinearObjectiveFunction (sum terms partitioned "
+                             "away).\n";
+                passed = false;
+            }
+
+            if(env->reformulatedProblem->numericConstraints.size() != 2)
+            {
+                std::cout << "  FAILED: expected 2 constraints (one per sum-term partition), found "
+                          << env->reformulatedProblem->numericConstraints.size() << ".\n";
+                passed = false;
+            }
+
+            passed = CheckSolvedObjective(
+                         env, nonlinearSumExpected, "[" + solverName + "] nonlinear sum direct, partitioning forced")
+                && passed;
+        }
+
+        // ── Nonlinear sum, direct objective function, partitioning disabled -> exactly 0 constraints ─
+        std::cout << "\nSub-test: nonlinear sum direct objective function, "
+                     "ObjectiveFunction.PartitionNonlinearTerms=Never\n";
+        {
+            auto [solver, env] = SolveWithEpigraphStrategy(ES_ObjectiveEpigraphStrategy::ObjectiveFunction,
+                buildNonlinearSum, /*solve*/ true, mipSolver,
+                setPartitioning(
+                    "Model.Reformulation.ObjectiveFunction.PartitionNonlinearTerms", ES_PartitionNonlinearSums::Never));
+
+            auto reformulatedObjective = std::dynamic_pointer_cast<SHOT::NonlinearObjectiveFunction>(
+                env->reformulatedProblem->objectiveFunction);
+
+            if(!reformulatedObjective || !reformulatedObjective->properties.hasNonlinearExpression)
+            {
+                std::cout << "  FAILED: expected the sum to stay in a direct NonlinearObjectiveFunction.\n";
+                passed = false;
+            }
+
+            if(env->reformulatedProblem->numericConstraints.size() != 0)
+            {
+                std::cout << "  FAILED: expected exactly 0 constraints (no partitioning, no epigraph), found "
+                          << env->reformulatedProblem->numericConstraints.size() << ".\n";
+                passed = false;
+            }
+
+            passed = CheckSolvedObjective(
+                         env, nonlinearSumExpected, "[" + solverName + "] nonlinear sum direct, partitioning disabled")
+                && passed;
+        }
+    }
+
+    return passed;
+}
+
+// Verifies SHOT::SignomialElement::getBounds() (forward: the bound of variable^power, given the variable's own
+// bound) and ::tightenBounds() (reverse: given a target bound for variable^power, tighten the variable's own
+// bound) directly, for a range of integer, negative, and fractional powers -- both on domains that cross zero
+// and ones that don't.
+bool ModelTestSignomialElementBounds()
+{
+    bool passed = true;
+    constexpr double tolerance = 1e-6;
+
+    auto makeVariable = [](
+        double lb, double ub) { return std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, lb, ub); };
+
+    auto checkInterval
+        = [&passed](const std::string& description, SHOT::Interval actual, double expectedLower, double expectedUpper)
+    {
+        std::cout << "  " << description << ": [" << actual.l() << ", " << actual.u() << "] (expected ["
+                  << expectedLower << ", " << expectedUpper << "])\n";
+
+        if(std::abs(actual.l() - expectedLower) > tolerance || std::abs(actual.u() - expectedUpper) > tolerance)
+        {
+            std::cout << "  FAILED: " << description << " did not match the expected interval.\n";
+            passed = false;
+        }
+    };
+
+    // ── getBounds(): forward bound of variable^power ────────────────────────────────────────────────
+    std::cout << "\nSub-test: SignomialElement::getBounds() (forward: variable^power)\n";
+    {
+        struct Case
+        {
+            std::string description;
+            double lb, ub, power, expectedLower, expectedUpper;
+        };
+
+        std::vector<Case> cases = {
+            { "power=2 (even), domain crosses zero: x in [-3,4]", -3.0, 4.0, 2.0, 0.0, 16.0 },
+            { "power=2 (even), positive-only domain: x in [2,5]", 2.0, 5.0, 2.0, 4.0, 25.0 },
+            { "power=2 (even), negative-only domain: x in [-5,-2]", -5.0, -2.0, 2.0, 4.0, 25.0 },
+            { "power=3 (odd), domain crosses zero: x in [-3,4]", -3.0, 4.0, 3.0, -27.0, 64.0 },
+            { "power=3 (odd), negative-only domain: x in [-4,-2]", -4.0, -2.0, 3.0, -64.0, -8.0 },
+            { "power=4 (even), domain crosses zero: x in [-3,2]", -3.0, 2.0, 4.0, 0.0, 81.0 },
+            { "power=5 (odd), domain crosses zero: x in [-2,3]", -2.0, 3.0, 5.0, -32.0, 243.0 },
+            { "power=-1, positive-only domain: x in [2,4]", 2.0, 4.0, -1.0, 0.25, 0.5 },
+            { "power=0.5 (sqrt), positive-only domain: x in [4,9]", 4.0, 9.0, 0.5, 2.0, 3.0 },
+            { "power=1.5, positive-only domain: x in [1,4]", 1.0, 4.0, 1.5, 1.0, 8.0 },
+        };
+
+        for(auto& C : cases)
+        {
+            auto variable = makeVariable(C.lb, C.ub);
+            SHOT::SignomialElement element(variable, C.power);
+            checkInterval(C.description, element.getBounds(), C.expectedLower, C.expectedUpper);
+        }
+    }
+
+    // ── getBounds() over domains that are not strictly positive ────────────────────────────────────
+    // The usual signomial results assume a positive base, and the code used to force one by raising the lower
+    // bound to a small positive number whenever it was not. On a wholly negative domain that produced a
+    // reversed interval and, for x^-2, a lower bound of 1 where the true minimum is 0.04 -- an unsound bound
+    // that removed the optimum from the feasible region. An integer power is perfectly well defined for a
+    // negative base; a non-integer one is not, and a negative power is unbounded around zero.
+    std::cout << "\nSub-test: SignomialElement::getBounds() over domains that are not strictly positive\n";
+    {
+        // A negative power is unbounded only at the end of the domain nearest zero, so a domain lying on one
+        // side of zero keeps a bound at its other end. A domain with values on both sides gives a disconnected
+        // range whose interval hull is everything.
+        struct Case
+        {
+            std::string description;
+            double lb, ub, power;
+            bool lowerUnbounded, upperUnbounded;
+            double expectedLower, expectedUpper;
+        };
+
+        std::vector<Case> cases = {
+            { "power=-1 (odd), negative-only domain: x in [-5,-1]", -5.0, -1.0, -1.0, false, false, -1.0, -0.2 },
+            { "power=-2 (even), negative-only domain: x in [-5,-1]", -5.0, -1.0, -2.0, false, false, 0.04, 1.0 },
+            { "power=-3 (odd), negative-only domain: x in [-5,-1]", -5.0, -1.0, -3.0, false, false, -1.0, -0.008 },
+            { "power=2 (even), negative-only domain: x in [-5,-1]", -5.0, -1.0, 2.0, false, false, 1.0, 25.0 },
+            { "power=0.5, domain reaching zero: x in [0,4]", 0.0, 4.0, 0.5, false, false, 0.0, 2.0 },
+            { "power=-1, domain reaching zero from above: x in [0,4]", 0.0, 4.0, -1.0, false, true, 0.25, 0.0 },
+            { "power=-0.5, domain reaching zero from above: x in [0,4]", 0.0, 4.0, -0.5, false, true, 0.5, 0.0 },
+            { "power=-1 (odd), domain reaching zero from below: x in [-4,0]", -4.0, 0.0, -1.0, true, false, 0.0,
+                -0.25 },
+            { "power=-2 (even), domain reaching zero from below: x in [-4,0]", -4.0, 0.0, -2.0, false, true, 0.0625,
+                0.0 },
+            { "power=-1, domain crossing zero: x in [-2,3]", -2.0, 3.0, -1.0, true, true, 0.0, 0.0 },
+            { "power=-2, domain crossing zero: x in [-2,3]", -2.0, 3.0, -2.0, true, true, 0.0, 0.0 },
+            { "power=0.5, negative-only domain (no real value): x in [-4,-1]", -4.0, -1.0, 0.5, true, true, 0.0,
+                0.0 },
+        };
+
+        for(auto& C : cases)
+        {
+            auto variable = makeVariable(C.lb, C.ub);
+            SHOT::SignomialElement element(variable, C.power);
+            auto bounds = element.getBounds();
+
+            std::cout << "  " << C.description << ": [" << bounds.l() << ", " << bounds.u() << "] (expected ["
+                      << (C.lowerUnbounded ? "unbounded" : std::to_string(C.expectedLower)) << ", "
+                      << (C.upperUnbounded ? "unbounded" : std::to_string(C.expectedUpper)) << "])\n";
+
+            bool lowerOk = C.lowerUnbounded ? (bounds.l() <= SHOT_DBL_MIN)
+                                            : (std::abs(bounds.l() - C.expectedLower) <= tolerance);
+            bool upperOk = C.upperUnbounded ? (bounds.u() >= SHOT_DBL_MAX)
+                                            : (std::abs(bounds.u() - C.expectedUpper) <= tolerance);
+
+            if(!lowerOk || !upperOk)
+            {
+                std::cout << "  FAILED: " << C.description << " did not match the expected interval.\n";
+                passed = false;
+            }
+        }
+    }
+
+    // ── getBounds() must enclose every value the expression actually takes ──────────────────────────
+    // Tightness is checked above; this checks the property that actually matters for correctness, since a
+    // bound that excludes attainable values silently removes feasible points from the problem.
+    std::cout << "\nSub-test: SignomialElement::getBounds() encloses the values sampled from its domain\n";
+    {
+        std::vector<std::pair<double, double>> domains = { { -5.0, -1.0 }, { 1.0, 5.0 }, { -2.0, 3.0 },
+            { 0.0, 4.0 } };
+        std::vector<double> powers = { -3.0, -2.0, -1.0, -0.5, 0.5, 2.0, 3.0 };
+
+        int checkedCases = 0;
+
+        for(auto& [lb, ub] : domains)
+        {
+            for(double power : powers)
+            {
+                auto variable = makeVariable(lb, ub);
+                SHOT::SignomialElement element(variable, power);
+                auto bounds = element.getBounds();
+
+                constexpr int numberOfSamples = 501;
+                bool anySampleOutside = false;
+                double worstSample = 0.0;
+                double intpart = 0.0;
+                bool isIntegerPower = (std::modf(power, &intpart) == 0.0);
+
+                for(int i = 0; i < numberOfSamples; i++)
+                {
+                    double x = lb + (ub - lb) * i / (numberOfSamples - 1);
+
+                    // Skip points where the expression has no real value
+                    if(x == 0.0 && power < 0.0)
+                        continue;
+
+                    if(x < 0.0 && !isIntegerPower)
+                        continue;
+
+                    double value = std::pow(x, power);
+
+                    if(!std::isfinite(value))
+                        continue;
+
+                    if(value < bounds.l() - 1e-9 || value > bounds.u() + 1e-9)
+                    {
+                        anySampleOutside = true;
+                        worstSample = value;
+                    }
+                }
+
+                checkedCases++;
+
+                if(anySampleOutside)
+                {
+                    std::cout << "  FAILED: x^" << power << " over [" << lb << "," << ub << "] gives bounds ["
+                              << bounds.l() << ", " << bounds.u() << "], which exclude the attainable value "
+                              << worstSample << ".\n";
+                    passed = false;
+                }
+            }
+        }
+
+        std::cout << "  " << checkedCases << " power/domain combinations checked for enclosure.\n";
+    }
+
+    // ── tightenBounds(): reverse -- given a target bound for variable^power, tighten variable itself ─
+    std::cout << "\nSub-test: SignomialElement::tightenBounds() (reverse: variable from a variable^power bound)\n";
+    {
+        struct Case
+        {
+            std::string description;
+            double initialLb, initialUb, power, targetLower, targetUpper, expectedLower, expectedUpper;
+        };
+
+        std::vector<Case> cases = {
+            // An odd power's target bound crosses zero, so the tightened variable bound must too (not get clamped to
+            // non-negative).
+            { "power=3 (odd), target crosses zero: x^3 in [-27,8]", -100.0, 100.0, 3.0, -27.0, 8.0, -3.0, 2.0 },
+            { "power=5 (odd), target crosses zero: x^5 in [-32,243]", -100.0, 100.0, 5.0, -32.0, 243.0, -2.0, 3.0 },
+            // Even powers: only meaningful to tighten unambiguously when the variable's domain is already
+            // one-signed (otherwise the positive and negative root branches can't both be represented by a
+            // single interval).
+            { "power=2 (even), non-negative domain: x^2 in [4,16]", 0.0, 100.0, 2.0, 4.0, 16.0, 2.0, 4.0 },
+            { "power=4 (even), non-negative domain: x^4 in [16,81]", 0.0, 100.0, 4.0, 16.0, 81.0, 2.0, 3.0 },
+            { "power=-1, target x^-1 in [0.25,0.5]", 1.0, 10.0, -1.0, 0.25, 0.5, 2.0, 4.0 },
+            { "power=0.5 (sqrt), target sqrt(x) in [2,3]", 0.0, 100.0, 0.5, 2.0, 3.0, 4.0, 9.0 },
+        };
+
+        for(auto& C : cases)
+        {
+            auto variable = makeVariable(C.initialLb, C.initialUb);
+            SHOT::SignomialElement element(variable, C.power);
+            element.tightenBounds(SHOT::Interval(C.targetLower, C.targetUpper));
+            checkInterval(C.description, SHOT::Interval(variable->lowerBound, variable->upperBound), C.expectedLower,
+                C.expectedUpper);
+        }
+    }
+
+    return passed;
+}
+
+// Verifies bound computation for LinearTerm, QuadraticTerm, and a representative set of NonlinearExpression
+// subclasses -- complementing ModelTestSignomialElementBounds's coverage of SignomialElement.
+bool ModelTestTermAndExpressionBounds()
+{
+    bool passed = true;
+    constexpr double tolerance = 1e-6;
+
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+
+    // A variable's index is its position in the problem it belongs to, and the sub-tests below evaluate terms
+    // against interval vectors they build by hand. Give each variable a problem of its own, padded so that the
+    // variable lands on the position the surrounding interval vector expects it at.
+    auto makeVariable = [&env](double lb, double ub, int index = 0)
+    {
+        auto problem = std::make_shared<SHOT::Problem>(env);
+
+        for(int i = 0; i < index; i++)
+            problem->add(std::make_shared<SHOT::Variable>(
+                "pad_" + std::to_string(i), SHOT::E_VariableType::Real, 0.0, 0.0));
+
+        auto variable = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, lb, ub);
+        problem->add(variable);
+
+        return variable;
+    };
+
+    auto checkInterval
+        = [&passed](const std::string& description, SHOT::Interval actual, double expectedLower, double expectedUpper)
+    {
+        std::cout << "  " << description << ": [" << actual.l() << ", " << actual.u() << "] (expected ["
+                  << expectedLower << ", " << expectedUpper << "])\n";
+
+        if(std::abs(actual.l() - expectedLower) > tolerance || std::abs(actual.u() - expectedUpper) > tolerance)
+        {
+            std::cout << "  FAILED: " << description << " did not match the expected interval.\n";
+            passed = false;
+        }
+    };
+
+    // ── LinearTerm: coefficient * variable ───────────────────────────────────────────────────────────
+    std::cout << "\nSub-test: LinearTerm bounds (coefficient * variable)\n";
+    {
+        struct Case
+        {
+            std::string description;
+            double coefficient, lb, ub, expectedLower, expectedUpper;
+        };
+
+        std::vector<Case> cases = {
+            { "positive coefficient: 3*x, x in [-2,5]", 3.0, -2.0, 5.0, -6.0, 15.0 },
+            { "negative coefficient, domain crosses zero: -2*x, x in [-2,5]", -2.0, -2.0, 5.0, -10.0, 4.0 },
+            { "negative coefficient, positive-only domain: -2*x, x in [1,5]", -2.0, 1.0, 5.0, -10.0, -2.0 },
+        };
+
+        for(auto& C : cases)
+        {
+            auto variable = makeVariable(C.lb, C.ub);
+            SHOT::LinearTerm term(C.coefficient, variable);
+            SHOT::IntervalVector intervalVector = { variable->getBound() };
+            checkInterval(C.description, term.calculate(intervalVector), C.expectedLower, C.expectedUpper);
+        }
+    }
+
+    // ── QuadraticTerm: coefficient * variable1 * variable2 (square when variable1 == variable2) ──────
+    std::cout << "\nSub-test: QuadraticTerm bounds (coefficient * variable1 * variable2)\n";
+    {
+        // Square term, domain crosses zero: coefficient * x^2, x in [-3,4].
+        {
+            auto var_x = makeVariable(-3.0, 4.0, 0);
+            SHOT::QuadraticTerm term(1.0, var_x, var_x);
+            SHOT::IntervalVector intervalVector = { var_x->getBound() };
+            checkInterval(
+                "square term, positive coefficient: x^2, x in [-3,4]", term.calculate(intervalVector), 0.0, 16.0);
+        }
+        {
+            auto var_x = makeVariable(-3.0, 4.0, 0);
+            SHOT::QuadraticTerm term(-2.0, var_x, var_x);
+            SHOT::IntervalVector intervalVector = { var_x->getBound() };
+            checkInterval(
+                "square term, negative coefficient: -2*x^2, x in [-3,4]", term.calculate(intervalVector), -32.0, 0.0);
+        }
+
+        // Bilinear terms: coefficient * x * y, x and y distinct variables at indexes 0 and 1
+        {
+            auto var_x = makeVariable(1.0, 3.0, 0);
+            auto var_y = makeVariable(2.0, 4.0, 1);
+            SHOT::QuadraticTerm term(1.0, var_x, var_y);
+            SHOT::IntervalVector intervalVector = { var_x->getBound(), var_y->getBound() };
+            checkInterval("bilinear term, both positive domains: x*y, x in [1,3], y in [2,4]",
+                term.calculate(intervalVector), 2.0, 12.0);
+        }
+        {
+            auto var_x = makeVariable(-2.0, 3.0, 0);
+            auto var_y = makeVariable(1.0, 4.0, 1);
+            SHOT::QuadraticTerm term(1.0, var_x, var_y);
+            SHOT::IntervalVector intervalVector = { var_x->getBound(), var_y->getBound() };
+            checkInterval("bilinear term, one domain crosses zero: x*y, x in [-2,3], y in [1,4]",
+                term.calculate(intervalVector), -8.0, 12.0);
+        }
+        {
+            auto var_x = makeVariable(1.0, 3.0, 0);
+            auto var_y = makeVariable(2.0, 4.0, 1);
+            SHOT::QuadraticTerm term(-1.0, var_x, var_y);
+            SHOT::IntervalVector intervalVector = { var_x->getBound(), var_y->getBound() };
+            checkInterval("bilinear term, negative coefficient: -1*x*y, x in [1,3], y in [2,4]",
+                term.calculate(intervalVector), -12.0, -2.0);
+        }
+    }
+
+    // ── MonomialTerm: coefficient * variable1 * variable2 * ... (each variable implicitly to the power 1) ────
+    std::cout << "\nSub-test: MonomialTerm bounds (coefficient * variable1 * variable2 * ...)\n";
+    {
+        {
+            auto var_x = makeVariable(1.0, 3.0, 0);
+            auto var_y = makeVariable(2.0, 4.0, 1);
+            SHOT::MonomialTerm term(2.0, SHOT::Variables { var_x, var_y });
+            SHOT::IntervalVector intervalVector = { var_x->getBound(), var_y->getBound() };
+            checkInterval("two variables, both positive domains: 2*x*y, x in [1,3], y in [2,4]",
+                term.calculate(intervalVector), 4.0, 24.0);
+        }
+        {
+            auto var_x = makeVariable(-2.0, 3.0, 0);
+            auto var_y = makeVariable(1.0, 2.0, 1);
+            auto var_z = makeVariable(-1.0, 4.0, 2);
+            SHOT::MonomialTerm term(1.0, SHOT::Variables { var_x, var_y, var_z });
+            SHOT::IntervalVector intervalVector = { var_x->getBound(), var_y->getBound(), var_z->getBound() };
+            checkInterval("three variables, mixed-sign domains: x*y*z, x in [-2,3], y in [1,2], z in [-1,4]",
+                term.calculate(intervalVector), -16.0, 24.0);
+        }
+        {
+            auto var_x = makeVariable(1.0, 3.0, 0);
+            auto var_y = makeVariable(2.0, 4.0, 1);
+            SHOT::MonomialTerm term(-1.0, SHOT::Variables { var_x, var_y });
+            SHOT::IntervalVector intervalVector = { var_x->getBound(), var_y->getBound() };
+            checkInterval(
+                "negative coefficient: -1*x*y, x in [1,3], y in [2,4]", term.calculate(intervalVector), -12.0, -2.0);
+        }
+    }
+
+    // ── SignomialTerm: coefficient * product of variable^power elements ─────────────────────────────
+    // Complements ModelTestSignomialElementBounds's per-element coverage by combining several elements (with
+    // different powers) into a single term, the way a real signomial expression like x^3*y^2 would appear.
+    std::cout << "\nSub-test: SignomialTerm bounds (coefficient * product of variable^power elements)\n";
+    {
+        {
+            auto var_e = makeVariable(-2.0, 1.0, 0);
+            auto var_f = makeVariable(1.0, 2.0, 1);
+            SHOT::SignomialElements elements = { std::make_shared<SHOT::SignomialElement>(var_e, 3.0),
+                std::make_shared<SHOT::SignomialElement>(var_f, 2.0) };
+            SHOT::SignomialTerm term(1.0, elements);
+            SHOT::IntervalVector intervalVector = { var_e->getBound(), var_f->getBound() };
+            checkInterval("e^3 * f^2, e in [-2,1] (odd power), f in [1,2] (even power)", term.calculate(intervalVector),
+                -32.0, 4.0);
+        }
+        {
+            auto var_e = makeVariable(-2.0, 1.0, 0);
+            auto var_f = makeVariable(1.0, 2.0, 1);
+            SHOT::SignomialElements elements = { std::make_shared<SHOT::SignomialElement>(var_e, 3.0),
+                std::make_shared<SHOT::SignomialElement>(var_f, 2.0) };
+            SHOT::SignomialTerm term(-1.0, elements);
+            SHOT::IntervalVector intervalVector = { var_e->getBound(), var_f->getBound() };
+            checkInterval(
+                "negative coefficient: -1 * e^3 * f^2, same domains", term.calculate(intervalVector), -4.0, 32.0);
+        }
+    }
+
+    // ── NonlinearExpressions: getBounds() (forward) and tightenBounds() (reverse), where supported ───
+    std::cout << "\nSub-test: NonlinearExpression bounds (Exp, Log, SquareRoot, Square, Invert, Negate)\n";
+    {
+        struct Case
+        {
+            std::string description;
+            std::function<SHOT::NonlinearExpressionPtr(SHOT::VariablePtr)> build;
+            double lb, ub;
+            double expectedLower, expectedUpper;
+            // For the reverse (tightenBounds) check: the initial (wide) variable domain to tighten from.
+            double tightenFromLb, tightenFromUb;
+        };
+
+        std::vector<Case> cases = {
+            { "exp(x), x in [0,2]", [](SHOT::VariablePtr v)
+                { return std::make_shared<SHOT::ExpressionExp>(std::make_shared<SHOT::ExpressionVariable>(v)); }, 0.0,
+                2.0, 1.0, std::exp(2.0), -10.0, 10.0 },
+            { "log(x), x in [1,10]", [](SHOT::VariablePtr v)
+                { return std::make_shared<SHOT::ExpressionLog>(std::make_shared<SHOT::ExpressionVariable>(v)); }, 1.0,
+                10.0, 0.0, std::log(10.0), 0.001, 1000.0 },
+            { "sqrt(x), x in [4,9]", [](SHOT::VariablePtr v)
+                { return std::make_shared<SHOT::ExpressionSquareRoot>(std::make_shared<SHOT::ExpressionVariable>(v)); },
+                4.0, 9.0, 2.0, 3.0, 0.0, 100.0 },
+            { "1/x, x in [2,4]", [](SHOT::VariablePtr v)
+                { return std::make_shared<SHOT::ExpressionInvert>(std::make_shared<SHOT::ExpressionVariable>(v)); },
+                2.0, 4.0, 0.25, 0.5, 1.0, 10.0 },
+            { "-x, x in [-3,4]", [](SHOT::VariablePtr v)
+                { return std::make_shared<SHOT::ExpressionNegate>(std::make_shared<SHOT::ExpressionVariable>(v)); },
+                -3.0, 4.0, -4.0, 3.0, -100.0, 100.0 },
+        };
+
+        for(auto& C : cases)
+        {
+            // Forward: getBounds() from the expression's own (tight) domain.
+            auto forwardVariable = makeVariable(C.lb, C.ub);
+            auto forwardExpression = C.build(forwardVariable);
+            checkInterval("forward " + C.description, forwardExpression->getBounds(), C.expectedLower, C.expectedUpper);
+
+            // Reverse: tightenBounds() from a wide domain down to the same expected variable range.
+            auto reverseVariable = makeVariable(C.tightenFromLb, C.tightenFromUb);
+            auto reverseExpression = C.build(reverseVariable);
+            reverseExpression->tightenBounds(SHOT::Interval(C.expectedLower, C.expectedUpper));
+            checkInterval("reverse " + C.description,
+                SHOT::Interval(reverseVariable->lowerBound, reverseVariable->upperBound), C.lb, C.ub);
+        }
+
+        // One-sided (upper-bound-only) candidates: the shape produced by isolating a positive nonlinear term in
+        // a "<=" constraint, e.g. coef*exp(x) <= RHS. Regression coverage for the fix that made
+        // ExpressionExp/ExpressionSquareRoot::tightenBounds() clamp the vacuous (non-positive) side of the
+        // candidate instead of bailing out entirely whenever its lower bound is <= 0 -- that one-sided shape is
+        // the normal, common case for such constraints, not a degenerate edge case, so bailing on it silently
+        // disabled tightening for a whole class of models.
+        {
+            auto expVariable = makeVariable(-100.0, 100.0);
+            SHOT::ExpressionExp expExpression(std::make_shared<SHOT::ExpressionVariable>(expVariable));
+            expExpression.tightenBounds(SHOT::Interval(-SHOT_DBL_INF, std::exp(3.0)));
+            checkInterval("reverse exp(x), one-sided candidate exp(x) <= e^3",
+                SHOT::Interval(expVariable->lowerBound, expVariable->upperBound), -100.0, 3.0);
+
+            auto sqrtVariable = makeVariable(0.0, 1000.0);
+            SHOT::ExpressionSquareRoot sqrtExpression(std::make_shared<SHOT::ExpressionVariable>(sqrtVariable));
+            sqrtExpression.tightenBounds(SHOT::Interval(-SHOT_DBL_INF, 3.0));
+            checkInterval("reverse sqrt(x), one-sided candidate sqrt(x) <= 3",
+                SHOT::Interval(sqrtVariable->lowerBound, sqrtVariable->upperBound), 0.0, 9.0);
+        }
+
+        // Square is tested separately since tightenBounds() can only unambiguously recover a variable domain
+        // that's already one-signed (an even power's inverse can't represent two disjoint sign branches with a
+        // single interval) -- same documented limitation as SignomialElement's even-power cases.
+        {
+            auto forwardVariable = makeVariable(-3.0, 4.0);
+            SHOT::ExpressionSquare forwardExpression(std::make_shared<SHOT::ExpressionVariable>(forwardVariable));
+            checkInterval("forward x^2, domain crosses zero: x in [-3,4]", forwardExpression.getBounds(), 0.0, 16.0);
+
+            auto reverseVariable = makeVariable(0.0, 100.0);
+            SHOT::ExpressionSquare reverseExpression(std::make_shared<SHOT::ExpressionVariable>(reverseVariable));
+            reverseExpression.tightenBounds(SHOT::Interval(4.0, 16.0));
+            checkInterval("reverse x^2, non-negative domain: target [4,16]",
+                SHOT::Interval(reverseVariable->lowerBound, reverseVariable->upperBound), 2.0, 4.0);
+        }
+    }
+
+    std::cout << "\nSub-test: ExpressionPower bounds (base^exponent, constant exponent)\n";
+    {
+        struct Case
+        {
+            std::string description;
+            double power, lb, ub, expectedLower, expectedUpper;
+        };
+
+        std::vector<Case> forwardCases = {
+            { "power=2 (even), domain crosses zero: x in [-3,4]", 2.0, -3.0, 4.0, 0.0, 16.0 },
+            { "power=3 (odd), domain crosses zero: x in [-3,4]", 3.0, -3.0, 4.0, -27.0, 64.0 },
+            { "power=5 (odd), domain crosses zero: x in [-2,3]", 5.0, -2.0, 3.0, -32.0, 243.0 },
+        };
+
+        for(auto& C : forwardCases)
+        {
+            auto baseVariable = makeVariable(C.lb, C.ub);
+            SHOT::ExpressionPower expression(std::make_shared<SHOT::ExpressionVariable>(baseVariable),
+                std::make_shared<SHOT::ExpressionConstant>(C.power));
+            checkInterval("forward " + C.description, expression.getBounds(), C.expectedLower, C.expectedUpper);
+        }
+
+        // Reverse (tightenBounds()): an odd power's target bound crosses zero, so
+        // the tightened base variable's bound must too, not get clamped to non-negative.
+        struct ReverseCase
+        {
+            std::string description;
+            double power, initialLb, initialUb, targetLower, targetUpper, expectedLower, expectedUpper;
+        };
+
+        std::vector<ReverseCase> reverseCases = {
+            { "power=3 (odd), target crosses zero: base^3 in [-27,8]", 3.0, -100.0, 100.0, -27.0, 8.0, -3.0, 2.0 },
+            { "power=5 (odd), target crosses zero: base^5 in [-32,243]", 5.0, -100.0, 100.0, -32.0, 243.0, -2.0, 3.0 },
+            { "power=2 (even), non-negative domain: base^2 in [4,16]", 2.0, 0.0, 100.0, 4.0, 16.0, 2.0, 4.0 },
+        };
+
+        for(auto& C : reverseCases)
+        {
+            auto baseVariable = makeVariable(C.initialLb, C.initialUb);
+            SHOT::ExpressionPower expression(std::make_shared<SHOT::ExpressionVariable>(baseVariable),
+                std::make_shared<SHOT::ExpressionConstant>(C.power));
+
+            expression.tightenBounds(SHOT::Interval(C.targetLower, C.targetUpper));
+            checkInterval(C.description, SHOT::Interval(baseVariable->lowerBound, baseVariable->upperBound),
+                C.expectedLower, C.expectedUpper);
+        }
+    }
+
+    // ── ExpressionConstant and ExpressionVariable: the two leaf expression types ─────────────────────
+    std::cout << "\nSub-test: ExpressionConstant and ExpressionVariable bounds\n";
+    {
+        SHOT::ExpressionConstant constantExpression(7.0);
+        checkInterval("ExpressionConstant(7.0)", constantExpression.getBounds(), 7.0, 7.0);
+
+        if(constantExpression.tightenBounds(SHOT::Interval(1.0, 2.0)))
+        {
+            std::cout << "  FAILED: ExpressionConstant::tightenBounds() should never report a change.\n";
+            passed = false;
+        }
+
+        auto variable = makeVariable(-3.0, 4.0);
+        SHOT::ExpressionVariable variableExpression(variable);
+        checkInterval("ExpressionVariable, x in [-3,4]", variableExpression.getBounds(), -3.0, 4.0);
+
+        variableExpression.tightenBounds(SHOT::Interval(0.0, 2.0));
+        checkInterval("ExpressionVariable after tightenBounds([0,2])",
+            SHOT::Interval(variable->lowerBound, variable->upperBound), 0.0, 2.0);
+    }
+
+    // ── ExpressionDivide: firstChild / secondChild ───────────────────────────────────────────────────
+    std::cout << "\nSub-test: ExpressionDivide bounds (firstChild / secondChild)\n";
+    {
+        auto var_a = makeVariable(4.0, 10.0, 0);
+        auto var_b = makeVariable(2.0, 5.0, 1);
+        SHOT::ExpressionDivide forwardExpression(
+            std::make_shared<SHOT::ExpressionVariable>(var_a), std::make_shared<SHOT::ExpressionVariable>(var_b));
+        checkInterval("forward a/b, a in [4,10], b in [2,5]", forwardExpression.getBounds(), 0.8, 5.0);
+
+        // Reverse: b is fixed at a single point here so the resulting target for a is unambiguous -- when both
+        // operands are themselves ranges, tightening one still depends on the other's current range, same as
+        // for any two-variable relationship.
+        auto reverse_a = makeVariable(0.0, 100.0, 0);
+        auto reverse_b = makeVariable(2.0, 2.0, 1);
+        SHOT::ExpressionDivide reverseExpression(std::make_shared<SHOT::ExpressionVariable>(reverse_a),
+            std::make_shared<SHOT::ExpressionVariable>(reverse_b));
+        reverseExpression.tightenBounds(SHOT::Interval(2.0, 5.0));
+        checkInterval("reverse a/b in [2,5], b fixed at 2 -> tighten a",
+            SHOT::Interval(reverse_a->lowerBound, reverse_a->upperBound), 4.0, 10.0);
+    }
+
+    // ── ExpressionSum: sum of several child expressions ──────────────────────────────────────────────
+    std::cout << "\nSub-test: ExpressionSum bounds (sum of children)\n";
+    {
+        auto var_x = makeVariable(-2.0, 3.0, 0);
+        auto var_y = makeVariable(1.0, 4.0, 1);
+        auto var_z = makeVariable(0.0, 2.0, 2);
+
+        SHOT::NonlinearExpressions forwardChildren;
+        forwardChildren.add(std::make_shared<SHOT::ExpressionVariable>(var_x));
+        forwardChildren.add(std::make_shared<SHOT::ExpressionVariable>(var_y));
+        forwardChildren.add(std::make_shared<SHOT::ExpressionVariable>(var_z));
+        SHOT::ExpressionSum forwardExpression(forwardChildren);
+        checkInterval("forward x+y+z, x in [-2,3], y in [1,4], z in [0,2]", forwardExpression.getBounds(), -1.0, 9.0);
+
+        // Reverse: y and z are fixed, so the target range for the sum translates directly into a target range
+        // for x alone.
+        auto reverse_x = makeVariable(0.0, 100.0, 0);
+        auto reverse_y = makeVariable(3.0, 3.0, 1);
+        auto reverse_z = makeVariable(5.0, 5.0, 2);
+
+        SHOT::NonlinearExpressions reverseChildren;
+        reverseChildren.add(std::make_shared<SHOT::ExpressionVariable>(reverse_x));
+        reverseChildren.add(std::make_shared<SHOT::ExpressionVariable>(reverse_y));
+        reverseChildren.add(std::make_shared<SHOT::ExpressionVariable>(reverse_z));
+        SHOT::ExpressionSum reverseExpression(reverseChildren);
+        reverseExpression.tightenBounds(SHOT::Interval(12.0, 20.0));
+        checkInterval("reverse x+3+5 in [12,20] -> tighten x",
+            SHOT::Interval(reverse_x->lowerBound, reverse_x->upperBound), 4.0, 12.0);
+    }
+
+    // ── ExpressionProduct: product of several child expressions ─────────────────────────────────────
+    std::cout << "\nSub-test: ExpressionProduct bounds (product of children)\n";
+    {
+        auto var_x = makeVariable(1.0, 3.0, 0);
+        auto var_y = makeVariable(2.0, 4.0, 1);
+        auto var_z = makeVariable(-1.0, 2.0, 2);
+
+        SHOT::NonlinearExpressions forwardChildren;
+        forwardChildren.add(std::make_shared<SHOT::ExpressionVariable>(var_x));
+        forwardChildren.add(std::make_shared<SHOT::ExpressionVariable>(var_y));
+        forwardChildren.add(std::make_shared<SHOT::ExpressionVariable>(var_z));
+        SHOT::ExpressionProduct forwardExpression(forwardChildren);
+        checkInterval("forward x*y*z, x in [1,3], y in [2,4], z in [-1,2]", forwardExpression.getBounds(), -12.0, 24.0);
+
+        // Reverse: y and z are fixed, so the target range for the product translates directly into a target
+        // range for x alone.
+        auto reverse_x = makeVariable(0.0, 100.0, 0);
+        auto reverse_y = makeVariable(2.0, 2.0, 1);
+        auto reverse_z = makeVariable(3.0, 3.0, 2);
+
+        SHOT::NonlinearExpressions reverseChildren;
+        reverseChildren.add(std::make_shared<SHOT::ExpressionVariable>(reverse_x));
+        reverseChildren.add(std::make_shared<SHOT::ExpressionVariable>(reverse_y));
+        reverseChildren.add(std::make_shared<SHOT::ExpressionVariable>(reverse_z));
+        SHOT::ExpressionProduct reverseExpression(reverseChildren);
+        reverseExpression.tightenBounds(SHOT::Interval(24.0, 60.0));
+        checkInterval("reverse x*2*3 in [24,60] -> tighten x",
+            SHOT::Interval(reverse_x->lowerBound, reverse_x->upperBound), 4.0, 10.0);
+    }
+
+    // ── Trigonometric and absolute-value expressions: forward getBounds() only ──────────────────────
+    // These expressions don't support reverse bound tightening at all (tightenBounds() always returns false
+    // for each of them), so only the forward direction is meaningful to test here. Domains are chosen within a
+    // single monotonic branch of each function to keep the expected interval unambiguous.
+    std::cout << "\nSub-test: trigonometric and absolute-value expression bounds (forward only)\n";
+    {
+        double pi = M_PI;
+
+        struct Case
+        {
+            std::string description;
+            std::function<SHOT::NonlinearExpressionPtr(SHOT::VariablePtr)> build;
+            double lb, ub, expectedLower, expectedUpper;
+        };
+
+        std::vector<Case> cases = {
+            { "sin(x), x in [0,pi/2]", [](SHOT::VariablePtr v)
+                { return std::make_shared<SHOT::ExpressionSin>(std::make_shared<SHOT::ExpressionVariable>(v)); }, 0.0,
+                pi / 2.0, 0.0, 1.0 },
+            { "cos(x), x in [0,pi/2]", [](SHOT::VariablePtr v)
+                { return std::make_shared<SHOT::ExpressionCos>(std::make_shared<SHOT::ExpressionVariable>(v)); }, 0.0,
+                pi / 2.0, 0.0, 1.0 },
+            { "tan(x), x in [0,pi/4]", [](SHOT::VariablePtr v)
+                { return std::make_shared<SHOT::ExpressionTan>(std::make_shared<SHOT::ExpressionVariable>(v)); }, 0.0,
+                pi / 4.0, 0.0, 1.0 },
+            { "asin(x), x in [0,1]", [](SHOT::VariablePtr v)
+                { return std::make_shared<SHOT::ExpressionArcSin>(std::make_shared<SHOT::ExpressionVariable>(v)); },
+                0.0, 1.0, 0.0, pi / 2.0 },
+            { "acos(x), x in [0,1]", [](SHOT::VariablePtr v)
+                { return std::make_shared<SHOT::ExpressionArcCos>(std::make_shared<SHOT::ExpressionVariable>(v)); },
+                0.0, 1.0, 0.0, pi / 2.0 },
+            { "atan(x), x in [0,1]", [](SHOT::VariablePtr v)
+                { return std::make_shared<SHOT::ExpressionArcTan>(std::make_shared<SHOT::ExpressionVariable>(v)); },
+                0.0, 1.0, 0.0, pi / 4.0 },
+            { "abs(x), x in [-3,4]", [](SHOT::VariablePtr v)
+                { return std::make_shared<SHOT::ExpressionAbs>(std::make_shared<SHOT::ExpressionVariable>(v)); }, -3.0,
+                4.0, 0.0, 4.0 },
+        };
+
+        for(auto& C : cases)
+        {
+            auto variable = makeVariable(C.lb, C.ub);
+            auto expression = C.build(variable);
+            checkInterval(C.description, expression->getBounds(), C.expectedLower, C.expectedUpper);
+
+            if(expression->tightenBounds(SHOT::Interval(C.expectedLower, C.expectedUpper)))
+            {
+                std::cout << "  FAILED: " << C.description << ": tightenBounds() should always return false.\n";
+                passed = false;
+            }
+        }
+    }
+
+    return passed;
+}
+
+// Verifies bound tightening on a single constraint that combines all five term categories at once -- linear,
+// quadratic, monomial, signomial, and a general nonlinear expression -- exercising the actual production bound
+// tightening pass (Problem::doFBBT()) rather than the individual term/expression classes in isolation, the way
+// the tests above do.
+//
+// The constraint is total - 3*a - b^2 - c*d - e^3*f^2 - exp(g) = 0, i.e. total = 3*a + b^2 + c*d + e^3*f^2 +
+// exp(g), with each variable's own domain chosen so every term's contribution is independently hand-computable:
+//   3*a,        a in [1,2]             -> [3,6]
+//   b^2,        b in [2,3]             -> [4,9]
+//   c*d,        c in [1,2], d in [3,4] -> [3,8]
+//   e^3*f^2,    e in [-2,1], f in [1,2] -> [-32,4]
+//   exp(g),     g in [0,1]             -> [1, e]
+// Summing these gives total's expected tightened bound: [-21, 27+e] ~= [-21, 29.71828].
+bool ModelTestMixedTermBoundTightening()
+{
+    bool passed = true;
+
+    auto solver = std::make_unique<SHOT::Solver>();
+    auto env = solver->getEnvironment();
+
+    auto problem = std::make_shared<SHOT::Problem>(env);
+
+    auto var_total = std::make_shared<SHOT::Variable>("total", SHOT::E_VariableType::Real, -1000.0, 1000.0);
+    auto var_a = std::make_shared<SHOT::Variable>("a", SHOT::E_VariableType::Real, 1.0, 2.0);
+    auto var_b = std::make_shared<SHOT::Variable>("b", SHOT::E_VariableType::Real, 2.0, 3.0);
+    auto var_c = std::make_shared<SHOT::Variable>("c", SHOT::E_VariableType::Real, 1.0, 2.0);
+    auto var_d = std::make_shared<SHOT::Variable>("d", SHOT::E_VariableType::Real, 3.0, 4.0);
+    auto var_e = std::make_shared<SHOT::Variable>("e", SHOT::E_VariableType::Real, -2.0, 1.0);
+    auto var_f = std::make_shared<SHOT::Variable>("f", SHOT::E_VariableType::Real, 1.0, 2.0);
+    auto var_g = std::make_shared<SHOT::Variable>("g", SHOT::E_VariableType::Real, 0.0, 1.0);
+    problem->add(SHOT::Variables { var_total, var_a, var_b, var_c, var_d, var_e, var_f, var_g });
+
+    // A dummy objective is required for a valid problem; it plays no part in the bound tightening being tested.
+    auto objective = std::make_shared<SHOT::LinearObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<SHOT::LinearTerm>(1.0, var_total));
+    problem->add(objective);
+
+    auto constraint = std::make_shared<SHOT::NonlinearConstraint>("mixed", 0.0, 0.0);
+    constraint->add(std::make_shared<SHOT::LinearTerm>(1.0, var_total));
+    constraint->add(std::make_shared<SHOT::LinearTerm>(-3.0, var_a));
+    constraint->add(std::make_shared<SHOT::QuadraticTerm>(-1.0, var_b, var_b));
+    constraint->add(std::make_shared<SHOT::MonomialTerm>(-1.0, SHOT::Variables { var_c, var_d }));
+    constraint->add(std::make_shared<SHOT::SignomialTerm>(-1.0,
+        SHOT::SignomialElements { std::make_shared<SHOT::SignomialElement>(var_e, 3.0),
+            std::make_shared<SHOT::SignomialElement>(var_f, 2.0) }));
+    constraint->add(std::make_shared<SHOT::ExpressionNegate>(
+        std::make_shared<SHOT::ExpressionExp>(std::make_shared<SHOT::ExpressionVariable>(var_g))));
+    problem->add(constraint);
+
+    problem->finalize();
+    problem->doFBBT();
+
+    double expectedLower = -21.0;
+    double expectedUpper = 6.0 + 9.0 + 8.0 + 4.0 + std::exp(1.0);
+    constexpr double tolerance = 0.1;
+
+    std::cout << "\nSub-test: bound tightening on a constraint mixing linear, quadratic, monomial, signomial, "
+                 "and nonlinear-expression terms\n";
+    std::cout << "  total: [" << var_total->lowerBound << ", " << var_total->upperBound << "] (expected ["
+              << expectedLower << ", " << expectedUpper << "])\n";
+    std::cout << "  a: [" << var_a->lowerBound << ", " << var_a->upperBound << "]\n";
+    std::cout << "  b: [" << var_b->lowerBound << ", " << var_b->upperBound << "]\n";
+    std::cout << "  c: [" << var_c->lowerBound << ", " << var_c->upperBound << "]\n";
+    std::cout << "  d: [" << var_d->lowerBound << ", " << var_d->upperBound << "]\n";
+    std::cout << "  e: [" << var_e->lowerBound << ", " << var_e->upperBound << "]\n";
+    std::cout << "  f: [" << var_f->lowerBound << ", " << var_f->upperBound << "]\n";
+    std::cout << "  g: [" << var_g->lowerBound << ", " << var_g->upperBound << "]\n";
+
+    if(std::abs(var_total->lowerBound - expectedLower) > tolerance
+        || std::abs(var_total->upperBound - expectedUpper) > tolerance)
+    {
+        std::cout << "  FAILED: expected total to be tightened to approximately [" << expectedLower << ", "
+                  << expectedUpper << "].\n";
+        passed = false;
+    }
+
+    // None of the individual contributing variables should have been affected -- only total's own bound
+    // depends on all of the others combined.
+    if(var_a->lowerBound != 1.0 || var_a->upperBound != 2.0)
+    {
+        std::cout << "  FAILED: variable a's bound should not have changed.\n";
+        passed = false;
+    }
+
+    return passed;
+}
+
+bool ModelTestUnboundedQCQPWithSolver(ES_MIPSolver mipSolver)
+{
+    // Regression test for https://github.com/coin-or/SHOT/issues/133: SHOT incorrectly reported a globally
+    // optimal solution for a genuinely unbounded problem:
+    //
+    //   minimize x
+    //   s.t.     x^2 >= 1
+    //
+    // The problem is unbounded: any x <= -1 is feasible, and the objective decreases without bound as
+    // x -> -infinity. If the MIP solver handles the quadratic constraint itself, the dual problem is exact and its
+    // unboundedness shows that the problem is unbounded, so SHOT must terminate as unbounded. Otherwise the dual
+    // problem is only a relaxation, which proves nothing when it is unbounded, so SHOT must then only not claim that
+    // the problem is solved to optimality or infeasible. Feasible primal solutions may be reported in both cases.
+
+    bool passed = true;
+
+    std::string solverName;
+    switch(mipSolver)
+    {
+    case ES_MIPSolver::Cbc:
+        solverName = "CBC";
+        break;
+    case ES_MIPSolver::Highs:
+        solverName = "HiGHS";
+        break;
+    case ES_MIPSolver::Cplex:
+        solverName = "CPLEX";
+        break;
+    case ES_MIPSolver::Gurobi:
+        solverName = "Gurobi";
+        break;
+    default:
+        solverName = "unknown";
+        break;
+    }
+
+    std::cout << "\n=== Testing unbounded nonconvex QCQP (minimize x s.t. x^2 >= 1) with " << solverName
+              << " ===\n\n";
+
+    auto solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Info));
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(mipSolver));
+
+    auto problem = std::make_shared<Problem>(env);
+    problem->name = "unbounded_qcqp";
+
+    // x is a genuinely free variable, matching the original AMPL reproducer where x has no explicit bound.
+    auto x = std::make_shared<Variable>("x", E_VariableType::Real, SHOT_DBL_MIN, SHOT_DBL_MAX);
+    problem->add({ x });
+
+    auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<LinearTerm>(1.0, x));
+    problem->add(objective);
+
+    // e1: x^2 >= 1
+    auto e1 = std::make_shared<QuadraticConstraint>("e1", 1.0, SHOT_DBL_MAX);
+    e1->add(std::make_shared<QuadraticTerm>(1.0, x, x));
+    problem->add(e1);
+
+    problem->finalize();
+
+    if(!solver->setProblem(problem))
+    {
+        std::cout << "Failed to set problem!\n";
+        return false;
+    }
+
+    std::cout << "\nSolving...\n";
+
+    if(!solver->solveProblem())
+    {
+        std::cout << "Failed to solve problem!\n";
+        return false;
+    }
+
+    auto terminationReason = env->results->terminationReason;
+    bool isDualProblemExact = env->dualSolver->isDualProblemExact();
+
+    if(isDualProblemExact && terminationReason != E_TerminationReason::UnboundedProblem)
+    {
+        std::cout << "\n*** TEST FAILED: the dual problem is exact, so the problem should terminate as unbounded, "
+                     "but the termination reason was "
+                  << static_cast<int>(terminationReason) << " instead. ***\n";
+        passed = false;
+    }
+    else if(terminationReason == E_TerminationReason::AbsoluteGap
+        || terminationReason == E_TerminationReason::RelativeGap
+        || terminationReason == E_TerminationReason::ConstraintTolerance
+        || terminationReason == E_TerminationReason::InfeasibleProblem
+        || env->results->getModelReturnStatus() == E_ModelReturnStatus::OptimalGlobal)
+    {
+        std::cout << "\n*** TEST FAILED: the problem was incorrectly claimed to be solved or infeasible, termination "
+                     "reason "
+                  << static_cast<int>(terminationReason) << ". ***\n";
+        passed = false;
+    }
+    else
+    {
+        std::cout << "\n*** TEST PASSED: "
+                  << (isDualProblemExact ? "problem correctly recognized as unbounded"
+                                         : "no optimality claimed for the relaxed dual problem")
+                  << ", termination reason " << static_cast<int>(terminationReason) << ". ***\n";
+    }
+
+    if(env->results->hasPrimalSolution())
+        std::cout << "  Feasible primal solution reported: primal bound = " << env->results->getPrimalBound() << "\n";
+
+    return passed;
+}
+
+bool ModelTestUnboundedQCQP()
+{
+    bool passed = true;
+#ifdef HAS_CBC
+    passed = ModelTestUnboundedQCQPWithSolver(ES_MIPSolver::Cbc) && passed;
+#endif
+#ifdef HAS_HIGHS
+    passed = ModelTestUnboundedQCQPWithSolver(ES_MIPSolver::Highs) && passed;
+#endif
+#ifdef HAS_CPLEX
+    passed = ModelTestUnboundedQCQPWithSolver(ES_MIPSolver::Cplex) && passed;
+#endif
+#ifdef HAS_GUROBI
+    passed = ModelTestUnboundedQCQPWithSolver(ES_MIPSolver::Gurobi) && passed;
+#endif
+    return passed;
+}
+
+bool ModelTestFixedVariableConstantFolding()
+{
+    // Regression test: when bound tightening fixes every variable in a nonlinear subexpression, the
+    // reformulation constant folds that subexpression into a number -- and that number used to be silently
+    // dropped, because reformulateConstraint discarded the constant returned by extractTermsAndConstant.
+    //
+    // The model below (from MINLPTests.jl's nlp_mi_002_010) is where this surfaced:
+    //
+    //   minimize x
+    //   s.t.     y - log(x) + 0.1 <= 0
+    //            x - cos(y)^2 - 1.5 <= 0
+    //            x integer in [0.9, 10], y binary
+    //
+    // Bound tightening derives x in [2,2] and y in [0,0]. Reformulation then folds log(x) -> log(2) and
+    // cos(y)^2 -> 1, so the constraints must become y - 0.5931 <= 0 and x - 2.5 <= 0. With the constants
+    // dropped they instead became y + 0.1 <= 0 and x - 1.5 <= 0, both violated by the fixed variables, so
+    // SHOT reported the (feasible) problem as infeasible.
+
+    bool passed = true;
+
+    auto buildProblem = [](const std::shared_ptr<SHOT::Environment>& env)
+    {
+        auto problem = std::make_shared<SHOT::Problem>(env);
+
+        auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Integer, 0.9, 10.0);
+        auto var_y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Binary, 0.0, 1.0);
+        problem->add(SHOT::Variables({ var_x, var_y }));
+
+        auto objective = std::make_shared<SHOT::LinearObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize);
+        objective->add(std::make_shared<SHOT::LinearTerm>(1.0, var_x));
+        problem->add(objective);
+
+        // y - log(x) + 0.1 <= 0
+        auto constraint1 = std::make_shared<SHOT::NonlinearConstraint>("logconstr", SHOT_DBL_MIN, 0.0);
+        constraint1->add(std::make_shared<SHOT::LinearTerm>(1.0, var_y));
+        constraint1->add(std::make_shared<SHOT::ExpressionNegate>(
+            std::make_shared<SHOT::ExpressionLog>(std::make_shared<SHOT::ExpressionVariable>(var_x))));
+        constraint1->constant = 0.1;
+        problem->add(constraint1);
+
+        // x - cos(y)^2 - 1.5 <= 0
+        auto constraint2 = std::make_shared<SHOT::NonlinearConstraint>("cosconstr", SHOT_DBL_MIN, 0.0);
+        constraint2->add(std::make_shared<SHOT::LinearTerm>(1.0, var_x));
+        constraint2->add(std::make_shared<SHOT::ExpressionNegate>(std::make_shared<SHOT::ExpressionSquare>(
+            std::make_shared<SHOT::ExpressionCos>(std::make_shared<SHOT::ExpressionVariable>(var_y)))));
+        constraint2->constant = -1.5;
+        problem->add(constraint2);
+
+        return problem;
+    };
+
+    for(auto& [mipSolver, solverName] : AvailableMIPSolversForEpigraphTests())
+    {
+        std::cout << "\n===== MIP solver: " << solverName << " =====\n";
+
+        auto [solver, env] = SolveWithEpigraphStrategy(
+            ES_ObjectiveEpigraphStrategy::Unchanged, buildProblem, /*solve*/ true, mipSolver);
+
+        // Bound tightening must have fixed both variables -- this is the precondition for the constant
+        // folding that the rest of the test checks. If it ever stops fixing them the test below would pass
+        // vacuously, so it is asserted explicitly.
+        auto original_x = env->problem->getVariable(0);
+        auto original_y = env->problem->getVariable(1);
+
+        std::cout << "  original x: [" << original_x->lowerBound << ", " << original_x->upperBound << "]"
+                  << " (expected [2, 2])\n";
+        std::cout << "  original y: [" << original_y->lowerBound << ", " << original_y->upperBound << "]"
+                  << " (expected [0, 0])\n";
+
+        if(original_x->lowerBound != 2.0 || original_x->upperBound != 2.0 || original_y->lowerBound != 0.0
+            || original_y->upperBound != 0.0)
+        {
+            std::cout << "  FAILED: bound tightening did not fix both variables as expected.\n";
+            passed = false;
+        }
+
+        // The reformulated constraints must still hold at the fixed point (x, y) = (2, 0). With the folded
+        // constants dropped, "logconstr" evaluated to 0.1 > 0 and "cosconstr" to 0.5 > 0 here.
+        SHOT::VectorDouble fixedPoint = { 2.0, 0.0 };
+
+        // Both constraints fold down to linear ones over the original two variables, so no auxiliary variables
+        // are expected. Checked explicitly since the point above is indexed by the reformulated variables.
+        if(env->reformulatedProblem->allVariables.size() != fixedPoint.size())
+        {
+            std::cout << "  FAILED: expected the reformulated problem to have " << fixedPoint.size()
+                      << " variables, found " << env->reformulatedProblem->allVariables.size() << ".\n";
+            passed = false;
+            continue;
+        }
+
+        for(auto& constraint : env->reformulatedProblem->numericConstraints)
+        {
+            auto value = constraint->calculateNumericValue(fixedPoint);
+
+            std::cout << "  reformulated " << constraint->name << " at (x,y)=(2,0): error = " << value.error << '\n';
+
+            if(!value.isFulfilled)
+            {
+                std::cout << "  FAILED: reformulated constraint " << constraint->name
+                          << " is violated at the point bound tightening proved feasible (error = " << value.error
+                          << "). A constant folded out of the nonlinear expression was likely dropped.\n";
+                passed = false;
+            }
+        }
+
+        if(env->results->terminationReason == E_TerminationReason::InfeasibleProblem)
+        {
+            std::cout << "  FAILED: the problem was reported infeasible, but x=2, y=0 is feasible.\n";
+            passed = false;
+        }
+
+        passed = CheckSolvedObjective(env, 2.0, "[" + solverName + "] fixed-variable constant folding") && passed;
+    }
+
+    return passed;
+}
+
+bool ModelTestFixedBinaryVariableBounds()
+{
+    // Regression test: the Variable constructor taking bounds used to ignore them for binary variables and
+    // always store [0,1]. A binary fixed to one of its bounds -- by the user, by a modeling system reading
+    // "b.fx = 1", or by bound tightening -- was therefore silently unfixed again whenever the variable was
+    // rebuilt through that constructor, most importantly when the reformulated problem is created.
+    //
+    // That is unsound rather than merely weak: the reformulation constant folds the fixed variable's value
+    // into the nonlinear expressions, so an unfixed copy lets the dual (MIP) problem move a variable whose
+    // value has already been baked into the constraints it is supposed to satisfy.
+
+    bool passed = true;
+
+    std::cout << "\nSub-test 1: the constructor keeps bounds tighter than [0,1] for binary variables\n";
+    {
+        struct BoundCase
+        {
+            double lowerBound;
+            double upperBound;
+            double expectedLowerBound;
+            double expectedUpperBound;
+            std::string description;
+        };
+
+        // Bounds outside [0,1] are still clamped to it -- the point is that a *tighter* bound survives.
+        std::vector<BoundCase> cases = { { 1.0, 1.0, 1.0, 1.0, "binary fixed to one" },
+            { 0.0, 0.0, 0.0, 0.0, "binary fixed to zero" }, { 0.0, 1.0, 0.0, 1.0, "ordinary binary" },
+            { -5.0, 7.0, 0.0, 1.0, "binary with bounds outside [0,1]" } };
+
+        for(auto& boundCase : cases)
+        {
+            auto variable = std::make_shared<SHOT::Variable>(
+                "b", SHOT::E_VariableType::Binary, boundCase.lowerBound, boundCase.upperBound);
+
+            std::cout << "  " << boundCase.description << ": [" << boundCase.lowerBound << ", "
+                      << boundCase.upperBound << "] -> [" << variable->lowerBound << ", " << variable->upperBound
+                      << "] (expected [" << boundCase.expectedLowerBound << ", " << boundCase.expectedUpperBound
+                      << "])\n";
+
+            if(variable->lowerBound != boundCase.expectedLowerBound
+                || variable->upperBound != boundCase.expectedUpperBound)
+            {
+                std::cout << "  FAILED: wrong bounds for " << boundCase.description << ".\n";
+                passed = false;
+            }
+        }
+
+        // The constructor without bounds still defaults a binary variable to [0,1].
+        auto defaultVariable = std::make_shared<SHOT::Variable>("b", SHOT::E_VariableType::Binary);
+
+        std::cout << "  binary without given bounds: [" << defaultVariable->lowerBound << ", "
+                  << defaultVariable->upperBound << "] (expected [0, 1])\n";
+
+        if(defaultVariable->lowerBound != 0.0 || defaultVariable->upperBound != 1.0)
+        {
+            std::cout << "  FAILED: a binary variable created without bounds should default to [0,1].\n";
+            passed = false;
+        }
+    }
+
+    // A binary fixed by bound tightening must stay fixed in the reformulated problem:
+    //
+    //   minimize -y
+    //   s.t.     exp(y) <= 1.5
+    //            x + y <= 5
+    //            x real in [0, 1], y binary
+    //
+    // exp(y) <= 1.5 forces y = 0, so the optimum is 0. When the reformulated copy of y was unfixed back to
+    // [0,1], the dual problem could pick y = 1 while exp(y) had already been folded at y = 0, leaving a dual
+    // bound of -1 that no primal solution could ever meet: the solve ended on dual-bound stagnation with a
+    // 100% gap instead of proving optimality.
+    std::cout << "\nSub-test 2: a binary fixed by bound tightening stays fixed in the reformulated problem\n";
+    {
+        auto buildProblem = [](const std::shared_ptr<SHOT::Environment>& env)
+        {
+            auto problem = std::make_shared<SHOT::Problem>(env);
+
+            auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 1.0);
+            auto var_y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Binary, 0.0, 1.0);
+            problem->add(SHOT::Variables({ var_x, var_y }));
+
+            auto objective
+                = std::make_shared<SHOT::LinearObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize);
+            objective->add(std::make_shared<SHOT::LinearTerm>(-1.0, var_y));
+            problem->add(objective);
+
+            // exp(y) - 1.5 <= 0
+            auto constraint1 = std::make_shared<SHOT::NonlinearConstraint>("expconstr", SHOT_DBL_MIN, 0.0);
+            constraint1->add(std::make_shared<SHOT::ExpressionExp>(std::make_shared<SHOT::ExpressionVariable>(var_y)));
+            constraint1->constant = -1.5;
+            problem->add(constraint1);
+
+            // x + y <= 5
+            auto constraint2 = std::make_shared<SHOT::LinearConstraint>("linconstr", SHOT_DBL_MIN, 5.0);
+            constraint2->add(std::make_shared<SHOT::LinearTerm>(1.0, var_x));
+            constraint2->add(std::make_shared<SHOT::LinearTerm>(1.0, var_y));
+            problem->add(constraint2);
+
+            return problem;
+        };
+
+        for(auto& [mipSolver, solverName] : AvailableMIPSolversForEpigraphTests())
+        {
+            std::cout << "\n===== MIP solver: " << solverName << " =====\n";
+
+            auto [solver, env] = SolveWithEpigraphStrategy(
+                ES_ObjectiveEpigraphStrategy::Unchanged, buildProblem, /*solve*/ true, mipSolver);
+
+            // Bound tightening (run by setProblem) fixes y before the reformulation, so exp(y) is folded to a
+            // constant and the reformulated problem is purely linear. Bound tightening is skipped on MILP
+            // problems, so nothing re-derives the fixed bound afterwards: the reformulated copy of y has to
+            // carry it over itself.
+            auto original_y = env->problem->getVariable(1);
+            auto reformulated_y = env->reformulatedProblem->getVariable(1);
+
+            std::cout << "  original y: [" << original_y->lowerBound << ", " << original_y->upperBound << "]"
+                      << " (expected [0, 0])\n";
+            std::cout << "  reformulated y: [" << reformulated_y->lowerBound << ", " << reformulated_y->upperBound
+                      << "] (expected [0, 0])\n";
+
+            if(original_y->lowerBound != 0.0 || original_y->upperBound != 0.0)
+            {
+                std::cout << "  FAILED: bound tightening did not fix y as expected.\n";
+                passed = false;
+            }
+            else if(reformulated_y->lowerBound != original_y->lowerBound
+                || reformulated_y->upperBound != original_y->upperBound)
+            {
+                std::cout << "  FAILED: the reformulated problem lost the fixed bounds of the binary variable.\n";
+                passed = false;
+            }
+
+            passed = CheckSolvedObjective(env, 0.0, "[" + solverName + "] fixed binary variable bounds") && passed;
+        }
+    }
+
+    return passed;
+}
+
+bool ModelTestConstantInFunctionValues()
+{
+    // Regression test: LinearObjectiveFunction::calculateValue(const IntervalVector&) omitted the objective
+    // constant, while the VectorDouble overload included it. Since the quadratic and nonlinear objectives build
+    // on the linear one, every interval evaluation of an objective -- and therefore ObjectiveFunction::getBounds()
+    // -- was off by exactly the constant.
+    //
+    // That matters because the reformulation moves constants into the objective: expanding (x-a)^2 contributes
+    // a^2, so an objective built from shifted squares carries a large constant. The dual problem bounds its
+    // objective variable with getBounds(), so a too-low upper bound there makes the dual problem infeasible as
+    // soon as a hyperplane cut is generated at a point whose objective value exceeds it.
+    //
+    // The constraint counterparts already added the constant; they are covered here as well so the two cannot
+    // drift apart again.
+
+    bool passed = true;
+    constexpr double tolerance = 1e-6;
+
+    auto checkValue = [&passed](const std::string& description, double actual, double expected)
+    {
+        std::cout << "  " << description << ": " << actual << " (expected " << expected << ")\n";
+
+        if(std::abs(actual - expected) > tolerance)
+        {
+            std::cout << "  FAILED: " << description << " did not match the expected value.\n";
+            passed = false;
+        }
+    };
+
+    auto checkInterval
+        = [&passed](const std::string& description, SHOT::Interval actual, double expectedLower, double expectedUpper)
+    {
+        std::cout << "  " << description << ": [" << actual.l() << ", " << actual.u() << "] (expected ["
+                  << expectedLower << ", " << expectedUpper << "])\n";
+
+        if(std::abs(actual.l() - expectedLower) > tolerance || std::abs(actual.u() - expectedUpper) > tolerance)
+        {
+            std::cout << "  FAILED: " << description << " did not match the expected interval.\n";
+            passed = false;
+        }
+    };
+
+    // x in [1,2] throughout, so every expected value below is a plain hand calculation.
+    constexpr double constant = 7.0;
+    SHOT::VectorDouble point = { 2.0 };
+
+    // Builds a problem holding a single variable x in [1,2], so that the objective/constraint added to it can be
+    // evaluated both at a point and over the variable's bounds.
+    auto makeProblem = [](const std::shared_ptr<SHOT::Environment>& env)
+    {
+        auto problem = std::make_shared<SHOT::Problem>(env);
+        auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 1.0, 2.0);
+        problem->add(SHOT::Variables({ var_x }));
+        return std::make_pair(problem, var_x);
+    };
+
+    // ── Objective functions ──────────────────────────────────────────────────────────────────────────
+    // 3*x + 7                     at x=2 -> 13,  over x in [1,2] -> [10, 13]
+    std::cout << "\nSub-test 1: linear objective constant\n";
+    {
+        auto solver = std::make_unique<SHOT::Solver>();
+        auto [problem, var_x] = makeProblem(solver->getEnvironment());
+
+        auto objective = std::make_shared<SHOT::LinearObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize);
+        objective->add(std::make_shared<SHOT::LinearTerm>(3.0, var_x));
+        objective->constant = constant;
+        problem->add(objective);
+        problem->finalize();
+
+        checkValue("3*x + 7 at x=2", objective->calculateValue(point), 13.0);
+        checkInterval("3*x + 7 over x in [1,2]", objective->getBounds(), 10.0, 13.0);
+    }
+
+    // 3*x + x^2 + 7               at x=2 -> 17,  over x in [1,2] -> [11, 17]
+    std::cout << "\nSub-test 2: quadratic objective constant\n";
+    {
+        auto solver = std::make_unique<SHOT::Solver>();
+        auto [problem, var_x] = makeProblem(solver->getEnvironment());
+
+        auto objective
+            = std::make_shared<SHOT::QuadraticObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize);
+        objective->add(std::make_shared<SHOT::LinearTerm>(3.0, var_x));
+        objective->add(std::make_shared<SHOT::QuadraticTerm>(1.0, var_x, var_x));
+        objective->constant = constant;
+        problem->add(objective);
+        problem->finalize();
+
+        checkValue("3*x + x^2 + 7 at x=2", objective->calculateValue(point), 17.0);
+        checkInterval("3*x + x^2 + 7 over x in [1,2]", objective->getBounds(), 11.0, 17.0);
+    }
+
+    // 3*x + exp(x) + 7            at x=2 -> 13 + e^2,  over x in [1,2] -> [10 + e, 13 + e^2]
+    std::cout << "\nSub-test 3: nonlinear objective constant\n";
+    {
+        auto solver = std::make_unique<SHOT::Solver>();
+        auto [problem, var_x] = makeProblem(solver->getEnvironment());
+
+        auto objective
+            = std::make_shared<SHOT::NonlinearObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize);
+        objective->add(std::make_shared<SHOT::LinearTerm>(3.0, var_x));
+        objective->add(std::make_shared<SHOT::ExpressionExp>(std::make_shared<SHOT::ExpressionVariable>(var_x)));
+        objective->constant = constant;
+        problem->add(objective);
+        problem->finalize();
+
+        checkValue("3*x + exp(x) + 7 at x=2", objective->calculateValue(point), 13.0 + std::exp(2.0));
+        checkInterval("3*x + exp(x) + 7 over x in [1,2]", objective->getBounds(), 10.0 + std::exp(1.0),
+            13.0 + std::exp(2.0));
+    }
+
+    // ── Constraints (the counterparts that were already correct) ─────────────────────────────────────
+    // A dummy objective is required for a valid problem; it plays no part in the constraints being checked.
+    auto addDummyObjective = [](const SHOT::ProblemPtr& problem, const SHOT::VariablePtr& var_x)
+    {
+        auto objective = std::make_shared<SHOT::LinearObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize);
+        objective->add(std::make_shared<SHOT::LinearTerm>(1.0, var_x));
+        problem->add(objective);
+    };
+
+    std::cout << "\nSub-test 4: linear constraint constant\n";
+    {
+        auto solver = std::make_unique<SHOT::Solver>();
+        auto [problem, var_x] = makeProblem(solver->getEnvironment());
+        addDummyObjective(problem, var_x);
+
+        auto constraint = std::make_shared<SHOT::LinearConstraint>("lc", SHOT_DBL_MIN, 100.0);
+        constraint->add(std::make_shared<SHOT::LinearTerm>(3.0, var_x));
+        constraint->constant = constant;
+        problem->add(constraint);
+        problem->finalize();
+
+        checkValue("3*x + 7 at x=2", constraint->calculateFunctionValue(point), 13.0);
+        checkInterval("3*x + 7 over x in [1,2]", constraint->getConstraintFunctionBounds(), 10.0, 13.0);
+    }
+
+    std::cout << "\nSub-test 5: quadratic constraint constant\n";
+    {
+        auto solver = std::make_unique<SHOT::Solver>();
+        auto [problem, var_x] = makeProblem(solver->getEnvironment());
+        addDummyObjective(problem, var_x);
+
+        auto constraint = std::make_shared<SHOT::QuadraticConstraint>("qc", SHOT_DBL_MIN, 100.0);
+        constraint->add(std::make_shared<SHOT::LinearTerm>(3.0, var_x));
+        constraint->add(std::make_shared<SHOT::QuadraticTerm>(1.0, var_x, var_x));
+        constraint->constant = constant;
+        problem->add(constraint);
+        problem->finalize();
+
+        checkValue("3*x + x^2 + 7 at x=2", constraint->calculateFunctionValue(point), 17.0);
+        checkInterval("3*x + x^2 + 7 over x in [1,2]", constraint->getConstraintFunctionBounds(), 11.0, 17.0);
+    }
+
+    std::cout << "\nSub-test 6: nonlinear constraint constant\n";
+    {
+        auto solver = std::make_unique<SHOT::Solver>();
+        auto [problem, var_x] = makeProblem(solver->getEnvironment());
+        addDummyObjective(problem, var_x);
+
+        auto constraint = std::make_shared<SHOT::NonlinearConstraint>("nlc", SHOT_DBL_MIN, 100.0);
+        constraint->add(std::make_shared<SHOT::LinearTerm>(3.0, var_x));
+        constraint->add(std::make_shared<SHOT::ExpressionExp>(std::make_shared<SHOT::ExpressionVariable>(var_x)));
+        constraint->constant = constant;
+        problem->add(constraint);
+        problem->finalize();
+
+        checkValue("3*x + exp(x) + 7 at x=2", constraint->calculateFunctionValue(point), 13.0 + std::exp(2.0));
+        checkInterval("3*x + exp(x) + 7 over x in [1,2]", constraint->getConstraintFunctionBounds(),
+            10.0 + std::exp(1.0), 13.0 + std::exp(2.0));
+    }
+
+    return passed;
+}
+
+static std::pair<std::unique_ptr<SHOT::Solver>, std::shared_ptr<SHOT::Environment>> SolveWithPolishSetting(bool polish,
+    const std::function<SHOT::ProblemPtr(const std::shared_ptr<SHOT::Environment>&)>& buildProblem,
+    ES_MIPSolver mipSolver)
+{
+    auto solver = std::make_unique<SHOT::Solver>();
+    auto env = solver->getEnvironment();
+
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Warning));
+    solver->updateSetting("Termination.TimeLimit", 20.0);
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(mipSolver));
+    solver->updateSetting("Primal.PolishSolution", polish);
+
+    auto problem = buildProblem(env);
+    problem->finalize();
+
+    if(!solver->setProblem(problem))
+        std::cout << "  FAILED: solver->setProblem() failed.\n";
+    else if(!solver->solveProblem())
+        std::cout << "  FAILED: solver->solveProblem() failed.\n";
+
+    return { std::move(solver), env };
+}
+
+bool ModelTestPolishSolution()
+{
+    // The dual solver only resolves its solution to its own internal tolerances -- for a MIQCQP solver those are
+    // barrier tolerances that SHOT's termination settings do not reach. Near an optimum the objective is flat, so
+    // a converged objective value can still sit on a point that is orders of magnitude less accurate. Solving an
+    // NLP problem from that point, with any discrete variables fixed at the values found, refines it.
+    //
+    // Both sub-tests below check the polished point directly rather than the objective, since it is the point
+    // that is imprecise: the objective is already correct to ~1e-10 without any polishing.
+
+    bool passed = true;
+
+    // minimize (x-0.65)^2 + (y-0.65)^2   s.t.   x^2 + y^2 <= 1,  x + y >= 1.2
+    // The unconstrained minimum (0.65, 0.65) satisfies both constraints, so it is the optimum, and the objective
+    // there is exactly 0. An optional binary variable is appended to the objective to exercise the path where
+    // discrete variables have to be fixed before the NLP problem is solved; its optimal value is 0.
+    auto makeProblem = [](bool withBinary)
+    {
+        return [withBinary](const std::shared_ptr<SHOT::Environment>& env)
+        {
+            auto problem = std::make_shared<SHOT::Problem>(env);
+
+            auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, -10.0, 10.0);
+            auto var_y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Real, -10.0, 10.0);
+            problem->add(SHOT::Variables({ var_x, var_y }));
+
+            auto objective
+                = std::make_shared<SHOT::QuadraticObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize);
+            objective->add(std::make_shared<SHOT::QuadraticTerm>(1.0, var_x, var_x));
+            objective->add(std::make_shared<SHOT::QuadraticTerm>(1.0, var_y, var_y));
+            objective->add(std::make_shared<SHOT::LinearTerm>(-1.3, var_x));
+            objective->add(std::make_shared<SHOT::LinearTerm>(-1.3, var_y));
+            objective->constant = 0.845;
+
+            if(withBinary)
+            {
+                auto var_b = std::make_shared<SHOT::Variable>("b", SHOT::E_VariableType::Binary, 0.0, 1.0);
+                problem->add(var_b);
+                objective->add(std::make_shared<SHOT::LinearTerm>(1.0, var_b));
+            }
+
+            problem->add(objective);
+
+            auto ballConstraint = std::make_shared<SHOT::QuadraticConstraint>("ball", SHOT_DBL_MIN, 1.0);
+            ballConstraint->add(std::make_shared<SHOT::QuadraticTerm>(1.0, var_x, var_x));
+            ballConstraint->add(std::make_shared<SHOT::QuadraticTerm>(1.0, var_y, var_y));
+            problem->add(ballConstraint);
+
+            auto cutConstraint = std::make_shared<SHOT::LinearConstraint>("cut", 1.2, SHOT_DBL_MAX);
+            cutConstraint->add(std::make_shared<SHOT::LinearTerm>(1.0, var_x));
+            cutConstraint->add(std::make_shared<SHOT::LinearTerm>(1.0, var_y));
+            problem->add(cutConstraint);
+
+            return problem;
+        };
+    };
+
+    constexpr double optimalValue = 0.65;
+    constexpr double polishedTolerance = 1e-7;
+
+    for(auto& [mipSolver, solverName] : AvailableMIPSolversForEpigraphTests())
+    {
+        std::cout << "\n===== MIP solver: " << solverName << " =====\n";
+
+        for(bool withBinary : { false, true })
+        {
+            std::cout << "\nSub-test: " << (withBinary ? "problem with a binary variable" : "continuous problem")
+                      << "\n";
+
+            auto buildProblem = makeProblem(withBinary);
+
+            auto [polishedSolver, polishedEnv] = SolveWithPolishSetting(true, buildProblem, mipSolver);
+            auto [unpolishedSolver, unpolishedEnv] = SolveWithPolishSetting(false, buildProblem, mipSolver);
+
+            if(polishedEnv->results->primalSolutions.size() == 0
+                || unpolishedEnv->results->primalSolutions.size() == 0)
+            {
+                std::cout << "  FAILED: no primal solution found.\n";
+                passed = false;
+                continue;
+            }
+
+            double polishedError = std::abs(polishedEnv->results->primalSolution.at(0) - optimalValue);
+            double unpolishedError = std::abs(unpolishedEnv->results->primalSolution.at(0) - optimalValue);
+
+            std::cout << "  x with polishing:    " << polishedEnv->results->primalSolution.at(0) << " (error "
+                      << polishedError << ", " << polishedEnv->solutionStatistics.numberOfProblemsFixedNLP
+                      << " NLP problems solved)\n";
+            std::cout << "  x without polishing: " << unpolishedEnv->results->primalSolution.at(0) << " (error "
+                      << unpolishedError << ", " << unpolishedEnv->solutionStatistics.numberOfProblemsFixedNLP
+                      << " NLP problems solved)\n";
+
+            // Checked directly rather than only through the resulting accuracy, since for a small problem the
+            // dual solver may happen to return an accurate point on its own, which would let a silently
+            // disabled polishing step pass the tolerance check below. Only meaningful when the search did not
+            // already solve this fixed NLP problem itself: the polishing step deliberately skips a point whose
+            // discrete assignment has been solved for already, rather than repeating identical work.
+            if(unpolishedEnv->solutionStatistics.numberOfProblemsFixedNLP == 0
+                && polishedEnv->solutionStatistics.numberOfProblemsFixedNLP == 0)
+            {
+                std::cout << "  FAILED: enabling Primal.PolishSolution did not result in an NLP problem being "
+                             "solved.\n";
+                passed = false;
+            }
+
+            if(polishedEnv->solutionStatistics.numberOfProblemsFixedNLP
+                < unpolishedEnv->solutionStatistics.numberOfProblemsFixedNLP)
+            {
+                std::cout << "  FAILED: enabling Primal.PolishSolution resulted in fewer NLP problems being "
+                             "solved.\n";
+                passed = false;
+            }
+
+            if(polishedError > polishedTolerance)
+            {
+                std::cout << "  FAILED: the polished solution is not accurate to " << polishedTolerance
+                          << ", so the NLP polishing step did not take effect.\n";
+                passed = false;
+            }
+
+            // Polishing must never make the solution worse. This holds trivially if the dual solver already
+            // returned an exact point, so it is a non-strict comparison.
+            if(polishedError > unpolishedError + polishedTolerance)
+            {
+                std::cout << "  FAILED: polishing made the solution less accurate.\n";
+                passed = false;
+            }
+        }
+    }
+
+    return passed;
+}
+
+bool ModelTestSignomialTermConvexity()
+{
+    // The convexity results for a monomial -- convex when every power is non-positive, and so on -- hold on the
+    // non-negative orthant and not outside it. 1/x is convex for x > 0 but concave for x < 0, so a sum of such
+    // terms over a negative domain describes a nonconvex feasible set. Classifying one as convex lets the solver
+    // linearise it and cut away feasible points, which is how minimising x+y subject to 1/x + 1/y <= -1 over
+    // [-5,-1]^2 returned -2 instead of the true optimum -6.25.
+
+    bool passed = true;
+
+    struct Case
+    {
+        std::string description;
+        double coefficient;
+        // Each element is a variable domain paired with the power it is raised to
+        std::vector<std::tuple<double, double, double>> elements;
+        E_Convexity expectedConvexity;
+    };
+
+    auto convexityName = [](E_Convexity convexity)
+    {
+        switch(convexity)
+        {
+        case E_Convexity::Linear:
+            return "linear";
+        case E_Convexity::Convex:
+            return "convex";
+        case E_Convexity::Concave:
+            return "concave";
+        case E_Convexity::Nonconvex:
+            return "nonconvex";
+        default:
+            return "unknown";
+        }
+    };
+
+    std::vector<Case> cases = {
+        // On the non-negative orthant the established results apply unchanged
+        { "1/x, x in [1,5]", 1.0, { { 1.0, 5.0, -1.0 } }, E_Convexity::Convex },
+        { "1/x, x in [0,5] (domain reaching zero)", 1.0, { { 0.0, 5.0, -1.0 } }, E_Convexity::Convex },
+        { "x^2, x in [1,5]", 1.0, { { 1.0, 5.0, 2.0 } }, E_Convexity::Convex },
+        { "x^0.5, x in [1,5]", 1.0, { { 1.0, 5.0, 0.5 } }, E_Convexity::Concave },
+        { "-x^0.5, x in [1,5]", -1.0, { { 1.0, 5.0, 0.5 } }, E_Convexity::Convex },
+        { "1/(x*y), x,y in [1,5]", 1.0, { { 1.0, 5.0, -1.0 }, { 1.0, 5.0, -1.0 } }, E_Convexity::Convex },
+
+        // A single variable over a wholly negative domain stays tractable for an integer power
+        { "1/x, x in [-5,-1] (concave there)", 1.0, { { -5.0, -1.0, -1.0 } }, E_Convexity::Concave },
+        { "x^-2, x in [-5,-1]", 1.0, { { -5.0, -1.0, -2.0 } }, E_Convexity::Convex },
+        { "x^-3, x in [-5,-1]", 1.0, { { -5.0, -1.0, -3.0 } }, E_Convexity::Concave },
+        { "x^2, x in [-5,-1]", 1.0, { { -5.0, -1.0, 2.0 } }, E_Convexity::Convex },
+        { "x^3, x in [-5,-1]", 1.0, { { -5.0, -1.0, 3.0 } }, E_Convexity::Concave },
+        { "-1/x, x in [-5,-1]", -1.0, { { -5.0, -1.0, -1.0 } }, E_Convexity::Convex },
+
+        // An even positive integer power is convex over any domain, one containing zero included
+        { "x^2, x in [-2,3] (domain crossing zero)", 1.0, { { -2.0, 3.0, 2.0 } }, E_Convexity::Convex },
+        { "x^3, x in [-2,3] (domain crossing zero)", 1.0, { { -2.0, 3.0, 3.0 } }, E_Convexity::Nonconvex },
+        { "1/x, x in [-2,3] (domain crossing zero)", 1.0, { { -2.0, 3.0, -1.0 } }, E_Convexity::Nonconvex },
+
+        // Several variables away from the non-negative orthant are not classified
+        { "1/(x*y), x,y in [-5,-1]", 1.0, { { -5.0, -1.0, -1.0 }, { -5.0, -1.0, -1.0 } },
+            E_Convexity::Nonconvex },
+
+        // With a single positive power the monomial is convex once the powers sum to at least one. The boundary
+        // itself is the quadratic-over-linear family, whose Hessian is positive semidefinite with a zero
+        // determinant, and x^2/z <= y is the standard rotated second order cone.
+        { "x^2/z, x,z in [0,5] (power sum exactly one)", 1.0, { { 0.0, 5.0, 2.0 }, { 0.0, 5.0, -1.0 } },
+            E_Convexity::Convex },
+        { "x^3/y^2, x,y in [1,5] (power sum exactly one)", 1.0, { { 1.0, 5.0, 3.0 }, { 1.0, 5.0, -2.0 } },
+            E_Convexity::Convex },
+
+        // An even positive integer power discards the sign of its base, so the rules for the non-negative orthant
+        // hold although the base can be negative: x^2/z is the perspective of x^2 and convex for every real x when
+        // z is positive. The instance nlp-cvx_204_010 of MINLPTests is x^2/z <= y with x in [-1,1], and was
+        // classified as nonconvex, which made SHOT solve a convex problem with the strategy for nonconvex ones.
+        { "x^2/z, x in [-5,5], z in [0,5] (base can be negative)", 1.0,
+            { { -5.0, 5.0, 2.0 }, { 0.0, 5.0, -1.0 } }, E_Convexity::Convex },
+        { "x^4/z, x in [-5,5], z in [1,5] (base can be negative)", 1.0,
+            { { -5.0, 5.0, 4.0 }, { 1.0, 5.0, -1.0 } }, E_Convexity::Convex },
+        { "-x^2/z, x in [-5,5], z in [1,5] (base can be negative)", -1.0,
+            { { -5.0, 5.0, 2.0 }, { 1.0, 5.0, -1.0 } }, E_Convexity::Concave },
+
+        // An even negative power does not discard the sign in the same way, since the term is not defined in zero
+        // and the rules would be used over a domain it is not continuous on
+        { "x^-2/z, x in [-5,5], z in [1,5] (even negative power)", 1.0,
+            { { -5.0, 5.0, -2.0 }, { 1.0, 5.0, -1.0 } }, E_Convexity::Nonconvex },
+        { "-x^2/z, x,z in [1,5] (power sum exactly one)", -1.0, { { 1.0, 5.0, 2.0 }, { 1.0, 5.0, -1.0 } },
+            E_Convexity::Concave },
+
+        // Just below the boundary the Hessian becomes indefinite, so the sum must not be relaxed further
+        { "x^2/y^1.5, x,y in [1,5] (power sum below one)", 1.0, { { 1.0, 5.0, 2.0 }, { 1.0, 5.0, -1.5 } },
+            E_Convexity::Nonconvex },
+        { "x^2/(y*z), x,y,z in [1,5] (power sum zero)", 1.0,
+            { { 1.0, 5.0, 2.0 }, { 1.0, 5.0, -1.0 }, { 1.0, 5.0, -1.0 } }, E_Convexity::Nonconvex },
+    };
+
+    for(auto& C : cases)
+    {
+        SHOT::SignomialElements elements;
+        int index = 0;
+
+        for(auto& [lb, ub, power] : C.elements)
+        {
+            auto variable = std::make_shared<SHOT::Variable>(
+                "x" + std::to_string(index), SHOT::E_VariableType::Real, lb, ub);
+            elements.push_back(std::make_shared<SHOT::SignomialElement>(variable, power));
+            index++;
+        }
+
+        SHOT::SignomialTerm term(C.coefficient, elements);
+        auto convexity = term.getConvexity();
+
+        std::cout << "  " << C.description << ": " << convexityName(convexity) << " (expected "
+                  << convexityName(C.expectedConvexity) << ")\n";
+
+        if(convexity != C.expectedConvexity)
+        {
+            std::cout << "  FAILED: " << C.description << " was not classified as expected.\n";
+            passed = false;
+        }
+    }
+
+    return passed;
+}
+
+// A copy of a reformulated problem must keep the constraints that the reformulation treats as nonlinear, e.g.
+// nonconvex quadratic constraints, as nonlinear. Otherwise they are passed on to the MIP solver as quadratic
+// constraints, e.g. in the SHOT NLP solver, which makes CPLEX fail since the problem is not convex.
+bool ModelTestCopyKeepsNonlinearQuadraticConstraints()
+{
+    bool passed = true;
+
+    auto solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+
+    // Use a MIP solver that does not support nonconvex quadratic constraints, so these are considered as nonlinear
+    // by the reformulation while the convex ones are kept as quadratic
+#if defined(HAS_CPLEX)
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cplex));
+#elif defined(HAS_HIGHS)
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Highs));
+#elif defined(HAS_CBC)
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cbc));
+#endif
+
+    solver->updateSetting("Model.Reformulation.Quadratics.Strategy",
+        static_cast<int>(ES_QuadraticProblemStrategy::ConvexQuadraticallyConstrained));
+
+    auto problem = std::make_shared<Problem>(env);
+    problem->name = "copy_quadratic_classes";
+
+    auto x = std::make_shared<Variable>("x", E_VariableType::Real, -5.0, 5.0);
+    auto y = std::make_shared<Variable>("y", E_VariableType::Real, -5.0, 5.0);
+    auto b = std::make_shared<Variable>("b", E_VariableType::Binary, 0.0, 1.0);
+    problem->add({ x, y, b });
+
+    auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<LinearTerm>(1.0, x));
+    objective->add(std::make_shared<LinearTerm>(1.0, b));
+    problem->add(objective);
+
+    // Convex: x^2 + y^2 <= 20
+    auto convex = std::make_shared<QuadraticConstraint>("convex", SHOT_DBL_MIN, 20.0);
+    convex->add(std::make_shared<QuadraticTerm>(1.0, x, x));
+    convex->add(std::make_shared<QuadraticTerm>(1.0, y, y));
+    problem->add(convex);
+
+    // Nonconvex: x^2 >= 1
+    auto reverseConvex = std::make_shared<QuadraticConstraint>("reverseconvex", 1.0, SHOT_DBL_MAX);
+    reverseConvex->add(std::make_shared<QuadraticTerm>(1.0, x, x));
+    problem->add(reverseConvex);
+
+    // Nonconvex: x*y + b <= 2
+    auto bilinear = std::make_shared<QuadraticConstraint>("bilinear", SHOT_DBL_MIN, 2.0);
+    bilinear->add(std::make_shared<LinearTerm>(1.0, b));
+    bilinear->add(std::make_shared<QuadraticTerm>(1.0, x, y));
+    problem->add(bilinear);
+
+    problem->finalize();
+
+    if(!solver->setProblem(problem))
+    {
+        std::cout << "  FAILED: could not set problem.\n";
+        return false;
+    }
+
+    auto source = env->reformulatedProblem;
+
+    // Create the copy in the same way as the SHOT NLP solver
+    auto copySolver = std::make_unique<Solver>();
+    copySolver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+    auto copy = source->createCopy(copySolver->getEnvironment(), true, false, false);
+
+    auto names = [](const auto& constraints)
+    {
+        std::set<std::string> result;
+
+        for(auto& C : constraints)
+            result.insert(C->name);
+
+        return result;
+    };
+
+    int quadraticOnlyNonlinearConstraints = 0;
+
+    for(auto& C : source->nonlinearConstraints)
+    {
+        if(C->properties.hasQuadraticTerms && !C->properties.hasNonlinearExpression
+            && !C->properties.hasMonomialTerms && !C->properties.hasSignomialTerms)
+            quadraticOnlyNonlinearConstraints++;
+    }
+
+    std::cout << "  Reformulated problem: " << source->quadraticConstraints.size() << " quadratic, "
+              << source->nonlinearConstraints.size() << " nonlinear (" << quadraticOnlyNonlinearConstraints
+              << " with only quadratic terms)\n";
+    std::cout << "  Copied problem:       " << copy->quadraticConstraints.size() << " quadratic, "
+              << copy->nonlinearConstraints.size() << " nonlinear\n";
+
+    if(quadraticOnlyNonlinearConstraints == 0)
+    {
+        std::cout << "  FAILED: the reformulated problem has no nonlinear constraints with only quadratic terms, so "
+                     "the test does not test anything.\n";
+        passed = false;
+    }
+
+    if(names(copy->nonlinearConstraints) != names(source->nonlinearConstraints))
+    {
+        std::cout << "  FAILED: the nonlinear constraints differ between the reformulated and the copied problem.\n";
+        passed = false;
+    }
+
+    if(names(copy->quadraticConstraints) != names(source->quadraticConstraints))
+    {
+        std::cout << "  FAILED: the quadratic constraints differ between the reformulated and the copied problem.\n";
+        passed = false;
+    }
+
+    return passed;
+}
+
+bool ModelTestPerspectiveConvexity()
+{
+    // Convex hull reformulations write a convex function f as s * f(x/s), where s = 0.001 + 0.999 * b is positive.
+    // The perspective is convex, but the expression must be recognised as such for the problem to be treated as convex.
+    // The terms may appear in any order, e.g. log(x/s + 1), and the scaled function may contain constants and squared
+    // affine expressions. Concave scaled functions, a linear factor that can be zero and a linear factor with a
+    // nonlinear term must not be classified as convex.
+
+    bool passed = true;
+
+    auto b = std::make_shared<SHOT::Variable>("b", SHOT::E_VariableType::Binary, 0.0, 1.0);
+    auto c = std::make_shared<SHOT::Variable>("c", SHOT::E_VariableType::Real, 1.0, 2.0);
+    auto x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 10.0);
+    auto y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Real, 0.0, 10.0);
+
+    auto number = [](double value) { return std::make_shared<ExpressionConstant>(value); };
+    auto variable = [](VariablePtr v) { return std::make_shared<ExpressionVariable>(v); };
+
+    // The linear factor constant + coefficient * b
+    auto linearFactor = [&](double constant, double coefficient)
+    {
+        return std::make_shared<ExpressionSum>(
+            number(constant), std::make_shared<ExpressionProduct>(number(coefficient), variable(b)));
+    };
+
+    auto s = [&]() { return linearFactor(0.001, 0.999); };
+    auto scaled = [&](VariablePtr v) { return std::make_shared<ExpressionDivide>(variable(v), s()); };
+
+    struct Case
+    {
+        std::string description;
+        NonlinearExpressionPtr expression;
+        bool expectConvex;
+    };
+
+    std::vector<Case> cases = {
+        { "(x/s - 1.2*log(y/s + 1)) * s",
+            std::make_shared<ExpressionProduct>(
+                std::make_shared<ExpressionSum>(scaled(x),
+                    std::make_shared<ExpressionProduct>(std::make_shared<ExpressionLog>(
+                                                            std::make_shared<ExpressionSum>(scaled(y), number(1.0))),
+                        number(-1.2))),
+                s()),
+            true },
+        { "s * (x/s - log(1 + y/s))",
+            std::make_shared<ExpressionProduct>(s(),
+                std::make_shared<ExpressionSum>(scaled(x),
+                    std::make_shared<ExpressionNegate>(std::make_shared<ExpressionLog>(
+                        std::make_shared<ExpressionSum>(number(1.0), scaled(y)))))),
+            true },
+        { "((-x/s + 0.6)^2 + (-y/s + 5.3)^2 - 1) * s",
+            std::make_shared<ExpressionProduct>(
+                std::make_shared<ExpressionSum>(NonlinearExpressions({ std::make_shared<ExpressionSquare>(
+                                                                           std::make_shared<ExpressionSum>(
+                                                                               std::make_shared<ExpressionNegate>(
+                                                                                   scaled(x)),
+                                                                               number(0.6))),
+                    std::make_shared<ExpressionSquare>(
+                        std::make_shared<ExpressionSum>(std::make_shared<ExpressionNegate>(scaled(y)), number(5.3))),
+                    number(-1.0) })),
+                s()),
+            true },
+        { "(x/s + 1.2*log(y/s + 1)) * s (concave logarithm)",
+            std::make_shared<ExpressionProduct>(
+                std::make_shared<ExpressionSum>(scaled(x),
+                    std::make_shared<ExpressionProduct>(number(1.2),
+                        std::make_shared<ExpressionLog>(std::make_shared<ExpressionSum>(scaled(y), number(1.0))))),
+                s()),
+            false },
+        { "log(1 + y/s) * s (concave logarithm)",
+            std::make_shared<ExpressionProduct>(
+                std::make_shared<ExpressionLog>(std::make_shared<ExpressionSum>(number(1.0), scaled(y))), s()),
+            false },
+        { "-(x/s)^2 * s (concave square)",
+            std::make_shared<ExpressionProduct>(
+                std::make_shared<ExpressionNegate>(std::make_shared<ExpressionSquare>(scaled(x))), s()),
+            false },
+        { "(x/b)^2 * b (linear factor can be zero)",
+            std::make_shared<ExpressionProduct>(
+                std::make_shared<ExpressionSquare>(
+                    std::make_shared<ExpressionDivide>(variable(x), linearFactor(0.0, 1.0))),
+                linearFactor(0.0, 1.0)),
+            false },
+        { "(x/(0.002 + 0.999*b))^2 * s (different denominator)",
+            std::make_shared<ExpressionProduct>(
+                std::make_shared<ExpressionSquare>(
+                    std::make_shared<ExpressionDivide>(variable(x), linearFactor(0.002, 0.999))),
+                s()),
+            false },
+        { "-log(1 + y/(c + x^2)) * (c + x^2) (nonlinear term in the factor)",
+            std::make_shared<ExpressionProduct>(
+                std::make_shared<ExpressionSum>(variable(c), std::make_shared<ExpressionSquare>(variable(x))),
+                std::make_shared<ExpressionNegate>(std::make_shared<ExpressionLog>(std::make_shared<ExpressionSum>(
+                    number(1.0),
+                    std::make_shared<ExpressionDivide>(variable(y),
+                        std::make_shared<ExpressionSum>(
+                            variable(c), std::make_shared<ExpressionSquare>(variable(x)))))))),
+            false },
+    };
+
+    for(auto& C : cases)
+    {
+        bool isConvex = (C.expression->getConvexity() == E_Convexity::Convex);
+
+        std::cout << "  " << C.description << ": " << (isConvex ? "convex" : "not convex") << " (expected "
+                  << (C.expectConvex ? "convex" : "not convex") << ")\n";
+
+        if(isConvex != C.expectConvex)
+        {
+            std::cout << "  FAILED: " << C.description << " was not classified as expected.\n";
+            passed = false;
+        }
+    }
+
+    return passed;
+}
+
+bool ModelTestInitialPOAConvexRelaxation()
+{
+    // The initial polyhedral outer approximation is generated from a convex relaxation of the problem, where the
+    // nonconvex constraints are removed and only the linear and convex parts (concave when maximizing) of the
+    // objective function are kept. Only the cuts for the convex constraints are valid for the problem, so no cuts may
+    // be added for the nonconvex constraints or the relaxed objective function.
+
+    bool passed = true;
+
+    auto createProblem = [](EnvironmentPtr env, E_ObjectiveFunctionDirection direction)
+    {
+        auto problem = std::make_shared<Problem>(env);
+
+        auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.1, 5.0);
+        auto y = std::make_shared<Variable>("y", E_VariableType::Real, 0.1, 5.0);
+        problem->add({ x, y });
+
+        auto variableX = std::make_shared<ExpressionVariable>(x);
+        auto variableY = std::make_shared<ExpressionVariable>(y);
+
+        auto objective = std::make_shared<NonlinearObjectiveFunction>(direction);
+        objective->add(std::make_shared<LinearTerm>(1.0, x));
+
+        if(direction == E_ObjectiveFunctionDirection::Minimize)
+        {
+            // x + x^2 + exp(y) + sin(x), where sin(x) is not convex
+            objective->add(std::make_shared<QuadraticTerm>(1.0, x, x));
+            objective->add(std::make_shared<ExpressionSum>(
+                std::make_shared<ExpressionExp>(variableY), std::make_shared<ExpressionSin>(variableX)));
+        }
+        else
+        {
+            // x - x^2 + log(y) + exp(x), where exp(x) is not concave
+            objective->add(std::make_shared<QuadraticTerm>(-1.0, x, x));
+            objective->add(std::make_shared<ExpressionSum>(
+                std::make_shared<ExpressionLog>(variableY), std::make_shared<ExpressionExp>(variableX)));
+        }
+
+        problem->add(objective);
+
+        // exp(x) + y <= 5 is convex
+        LinearTerms linearTerms;
+        linearTerms.add(std::make_shared<LinearTerm>(1.0, y));
+        problem->add(std::make_shared<NonlinearConstraint>(
+            "c_convex", linearTerms, std::make_shared<ExpressionExp>(variableX), SHOT_DBL_MIN, 5.0));
+
+        // x * y >= 1 is not convex
+        problem->add(std::make_shared<NonlinearConstraint>(
+            "c_nonconvex", std::make_shared<ExpressionProduct>(variableX, variableY), 1.0, SHOT_DBL_MAX));
+
+        problem->finalize();
+
+        return (problem);
+    };
+
+    VectorDouble point = { 1.0, 2.0 };
+
+    struct Case
+    {
+        E_ObjectiveFunctionDirection direction;
+        double expectedValue;
+    };
+
+    std::vector<Case> cases = { { E_ObjectiveFunctionDirection::Minimize, 1.0 + 1.0 + std::exp(2.0) },
+        { E_ObjectiveFunctionDirection::Maximize, 1.0 - 1.0 + std::log(2.0) } };
+
+    for(auto& C : cases)
+    {
+        auto solver = std::make_unique<Solver>();
+        auto problem = createProblem(solver->getEnvironment(), C.direction);
+        auto relaxedProblem = problem->createCopy(solver->getEnvironment(), true, true);
+
+        double value = relaxedProblem->objectiveFunction->calculateValue(point);
+        std::string description
+            = (C.direction == E_ObjectiveFunctionDirection::Minimize) ? "minimization" : "maximization";
+
+        std::cout << "  Relaxed objective function value for " << description << ": " << value << " (expected "
+                  << C.expectedValue << ")\n";
+
+        if(std::abs(value - C.expectedValue) > 1e-8)
+        {
+            std::cout << "  FAILED: the relaxed objective function does not consist of the expected parts.\n";
+            passed = false;
+        }
+
+        if(relaxedProblem->objectiveFunction->direction != C.direction)
+        {
+            std::cout << "  FAILED: the relaxed objective function has another direction.\n";
+            passed = false;
+        }
+    }
+
+    // The outer approximation generated when solving the minimization problem
+    auto solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Info));
+    solver->updateSetting("Model.BoundTightening.InitialPOA.Use", true);
+
+    // Feasibility-based bound tightening shrinks the bounds of x and y until exp(x) + y = 5 at the corners of the
+    // variable bounds, so the outer approximation problems end in points already fulfilling the convex constraint and
+    // need no cuts for it
+    solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+
+    if(!solver->setProblem(createProblem(env, E_ObjectiveFunctionDirection::Minimize)))
+    {
+        std::cout << "  FAILED: could not set the problem.\n";
+        return (false);
+    }
+
+    int convexCuts = 0;
+    int otherCuts = 0;
+
+    for(auto& C : env->reformulatedProblem->linearConstraints)
+    {
+        if(C->name.rfind("initPOA_", 0) != 0)
+            continue;
+
+        if(C->name.rfind("initPOA_c_convex_", 0) == 0)
+            convexCuts++;
+        else
+            otherCuts++;
+    }
+
+    std::cout << "  Initial POA cuts for the convex constraint: " << convexCuts << ", for others: " << otherCuts
+              << "\n";
+
+    if(convexCuts == 0)
+    {
+        std::cout << "  FAILED: no cuts were generated for the convex constraint.\n";
+        passed = false;
+    }
+
+    if(otherCuts > 0)
+    {
+        std::cout << "  FAILED: cuts were generated for other than the convex constraint.\n";
+        passed = false;
+    }
+
+    return passed;
+}
+
+bool ModelTestSquareBoundTightening()
+{
+    // Propagating a bound on x^2 back onto x must keep both signs of x when its domain contains zero: x^2 <= 4 means
+    // x in [-2,2]. Squares were previously only tightened when x > 0, so, e.g., x^2/9 + y^2 <= 1 with x and y free
+    // gave no bounds and the first dual problem was unbounded. Both representations of a square are checked: a
+    // quadratic term and a nonlinear expression.
+
+    bool passed = true;
+
+    struct Case
+    {
+        std::string description;
+        double variableLowerBound;
+        double variableUpperBound;
+        double expectedLowerBound;
+        double expectedUpperBound;
+    };
+
+    std::vector<Case> cases = {
+        { "x^2 <= 4, x free", -1e50, 1e50, -2.0, 2.0 },
+        { "x^2 <= 4, x in [-1,10]", -1.0, 10.0, -1.0, 2.0 },
+        { "x^2 <= 4, x in [0,10] (non-negative domain)", 0.0, 10.0, 0.0, 2.0 },
+        { "x^2 <= 4, x in [-10,-1] (negative domain)", -10.0, -1.0, -2.0, -1.0 },
+    };
+
+    for(bool useExpression : { false, true })
+    {
+        for(auto& C : cases)
+        {
+            auto solver = std::make_unique<SHOT::Solver>();
+            auto problem = std::make_shared<SHOT::Problem>(solver->getEnvironment());
+
+            auto x = std::make_shared<SHOT::Variable>(
+                "x", SHOT::E_VariableType::Real, C.variableLowerBound, C.variableUpperBound);
+            problem->add(x);
+            problem->add(std::make_shared<SHOT::LinearObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize));
+
+            auto constraint = std::make_shared<SHOT::NonlinearConstraint>("square", SHOT_DBL_MIN, 4.0);
+
+            if(useExpression)
+            {
+                constraint->add(
+                    std::make_shared<SHOT::ExpressionSquare>(std::make_shared<SHOT::ExpressionVariable>(x)));
+            }
+            else
+            {
+                constraint->add(std::make_shared<SHOT::QuadraticTerm>(1.0, x, x));
+            }
+
+            problem->add(constraint);
+            problem->finalize();
+            problem->doFBBT();
+
+            std::string description = C.description + (useExpression ? " (expression)" : " (quadratic term)");
+
+            std::cout << "  " << description << ": [" << x->lowerBound << ", " << x->upperBound << "] (expected ["
+                      << C.expectedLowerBound << ", " << C.expectedUpperBound << "])\n";
+
+            if(std::abs(x->lowerBound - C.expectedLowerBound) > 1e-9
+                || std::abs(x->upperBound - C.expectedUpperBound) > 1e-9)
+            {
+                std::cout << "  FAILED: " << description << " was not tightened as expected.\n";
+                passed = false;
+            }
+        }
+    }
+
+    // An impossible or unbounded bound on the square must not change the variable
+    auto freeVariable = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, -1e50, 1e50);
+    SHOT::ExpressionSquare square(std::make_shared<SHOT::ExpressionVariable>(freeVariable));
+
+    if(square.tightenBounds(SHOT::Interval(-4.0, -1.0)) || square.tightenBounds(SHOT::Interval(-1e100, 1e100)))
+    {
+        std::cout << "  FAILED: an impossible or unbounded bound on x^2 tightened x to [" << freeVariable->lowerBound
+                  << ", " << freeVariable->upperBound << "].\n";
+        passed = false;
+    }
+
+    // x^2/9 + y^2 <= 1 bounds both variables, while in x^2 + z <= 1 the bound on x^2 comes from the unbounded z, so
+    // taking its square root would only give a meaningless bound of magnitude 1e25
+    auto solver = std::make_unique<SHOT::Solver>();
+    auto problem = std::make_shared<SHOT::Problem>(solver->getEnvironment());
+
+    auto x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, -1e50, 1e50);
+    auto y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Real, -1e50, 1e50);
+    auto u = std::make_shared<SHOT::Variable>("u", SHOT::E_VariableType::Real, -1e50, 1e50);
+    auto z = std::make_shared<SHOT::Variable>("z", SHOT::E_VariableType::Real, -1e50, 1e50);
+    problem->add(SHOT::Variables { x, y, u, z });
+    problem->add(std::make_shared<SHOT::LinearObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize));
+
+    auto ellipse = std::make_shared<SHOT::QuadraticConstraint>("ellipse", SHOT_DBL_MIN, 1.0);
+    ellipse->add(std::make_shared<SHOT::QuadraticTerm>(1.0 / 9.0, x, x));
+    ellipse->add(std::make_shared<SHOT::QuadraticTerm>(1.0, y, y));
+    problem->add(ellipse);
+
+    auto unboundedPartner = std::make_shared<SHOT::QuadraticConstraint>("unbounded_partner", SHOT_DBL_MIN, 1.0);
+    unboundedPartner->add(std::make_shared<SHOT::LinearTerm>(1.0, z));
+    unboundedPartner->add(std::make_shared<SHOT::QuadraticTerm>(1.0, u, u));
+    problem->add(unboundedPartner);
+
+    problem->finalize();
+    problem->doFBBT();
+
+    std::cout << "  x^2/9 + y^2 <= 1: x in [" << x->lowerBound << ", " << x->upperBound << "], y in [" << y->lowerBound
+              << ", " << y->upperBound << "] (expected [-3, 3] and [-1, 1])\n";
+    std::cout << "  u^2 + z <= 1: u in [" << u->lowerBound << ", " << u->upperBound << "] (expected unchanged)\n";
+
+    if(std::abs(x->lowerBound + 3.0) > 1e-9 || std::abs(x->upperBound - 3.0) > 1e-9
+        || std::abs(y->lowerBound + 1.0) > 1e-9 || std::abs(y->upperBound - 1.0) > 1e-9)
+    {
+        std::cout << "  FAILED: the ellipse did not bound x and y.\n";
+        passed = false;
+    }
+
+    if(u->lowerBound != -1e50 || u->upperBound != 1e50)
+    {
+        std::cout << "  FAILED: an unbounded partner term gave u a bound.\n";
+        passed = false;
+    }
+
+    return passed;
+}
+
+bool ModelTestPolishWithoutPrimal()
+{
+    // A search can end without any primal solution, e.g. when a cut for a nonconvex constraint cuts away the whole
+    // domain and the repaired dual problem keeps returning the same point. The final polish must then still solve an
+    // NLP problem from the dual solution, also when the final dual problem gave no solution at all, since the NLP
+    // solver may find a feasible point. Previously it was skipped whenever there was no primal solution.
+
+    auto solver = std::make_unique<SHOT::Solver>();
+    auto env = solver->getEnvironment();
+
+    auto problem = std::make_shared<SHOT::Problem>(env);
+    problem->add(std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, -1.0, 1.0));
+    problem->add(std::make_shared<SHOT::LinearObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize));
+    problem->finalize();
+
+    env->problem = problem;
+    env->reformulatedProblem = problem;
+
+    // A solution-limited iteration with a point, but no primal solution
+    env->results->createIteration();
+    auto iteration = env->results->getCurrentIteration();
+    iteration->solutionPoints.push_back(SHOT::SolutionPoint { { -1.0 }, 0.0, 1, { 0, 1.0 } });
+    iteration->MIPSolutionLimitUpdated = true;
+    iteration->solutionStatus = SHOT::E_ProblemSolutionStatus::SolutionLimit;
+
+    SHOT::TaskSelectPrimalFixedNLPPointsFromSolutionPool polish(env, true);
+    polish.run();
+
+    if(env->primalSolver->fixedPrimalNLPCandidates.size() != 1)
+    {
+        std::cout << "  FAILED: no NLP candidate was selected without a primal solution.\n";
+        return false;
+    }
+
+    env->primalSolver->fixedPrimalNLPCandidates.clear();
+
+    // A final iteration without solutions, e.g. an infeasible dual problem, uses the point of the previous one
+    env->results->createIteration();
+    env->results->getCurrentIteration()->solutionStatus = SHOT::E_ProblemSolutionStatus::Infeasible;
+    polish.run();
+
+    if(env->primalSolver->fixedPrimalNLPCandidates.size() != 1
+        || env->primalSolver->fixedPrimalNLPCandidates.front().point.front() != -1.0)
+    {
+        std::cout << "  FAILED: the point of the previous iteration was not selected.\n";
+        return false;
+    }
+
+    return true;
+}
+
+bool ModelTestArtificialIntegerBounds()
+{
+    // When a problem is read, a missing integer bound is replaced with Model.Variables.Integer.MinimumLowerBound or
+    // MaximumUpperBound. A solution at such a bound must not be taken as the optimum: the problem may be unbounded or
+    // have its optimum beyond the bound. If the dual problem is exact, the bound is removed and the problem is solved
+    // again, and otherwise no optimality may be claimed.
+
+    bool passed = true;
+
+    auto temporaryDirectory = Utilities::createTemporaryDirectory("SHOT_artificial_bounds_");
+
+    if(temporaryDirectory == "")
+    {
+        std::cout << "  FAILED: could not create a temporary directory.\n";
+        return (false);
+    }
+
+    std::string header = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><osil xmlns=\"os.optimizationservices.org\">"
+                         "<instanceHeader><name>artificialbounds</name></instanceHeader><instanceData>";
+
+    // The integer variable x has no bounds and b is a binary variable, so the problems are MILPs
+    auto linearProblem = [&](std::string direction, std::string constraintBound, double coefficient)
+    {
+        return (header
+            + "<variables numberOfVariables=\"2\"><var name=\"x\" type=\"I\" lb=\"-INF\"/><var name=\"b\" type=\"B\"/>"
+              "</variables><objectives><obj maxOrMin=\"" + direction
+            + "\" numberOfObjCoef=\"1\"><coef idx=\"0\">1</coef></obj></objectives><constraints "
+              "numberOfConstraints=\"1\"><con name=\"c\" " + constraintBound
+            + "/></constraints><linearConstraintCoefficients numberOfValues=\"2\"><start><el>0</el><el>1</el>"
+              "<el>2</el></start><rowIdx><el>0</el><el>0</el></rowIdx><value><el>1</el><el>"
+            + std::to_string(coefficient) + "</el></value></linearConstraintCoefficients></instanceData></osil>");
+    };
+
+    // minimize x s.t. x^2 >= 1, where the quadratic constraint is nonconvex
+    std::string nonconvexProblem = header
+        + "<variables numberOfVariables=\"1\"><var name=\"x\" type=\"I\" lb=\"-INF\"/></variables><objectives><obj "
+          "maxOrMin=\"min\" numberOfObjCoef=\"1\"><coef idx=\"0\">1</coef></obj></objectives><constraints "
+          "numberOfConstraints=\"1\"><con name=\"e1\" lb=\"1\"/></constraints><quadraticCoefficients "
+          "numberOfQuadraticTerms=\"1\"><qTerm idx=\"0\" idxOne=\"0\" idxTwo=\"0\" coef=\"1\"/>"
+          "</quadraticCoefficients></instanceData></osil>";
+
+    // minimize x s.t. exp(-x/1e9 - 4) <= 1, i.e. x >= -4e9, where the nonlinear constraint gives a single-tree solve
+    // with the solvers that support it and the optimum is beyond the artificial bound
+    std::string nonlinearProblem = header
+        + "<variables numberOfVariables=\"2\"><var name=\"x\" type=\"I\" lb=\"-INF\"/><var name=\"b\" type=\"B\"/>"
+          "</variables><objectives><obj maxOrMin=\"min\" numberOfObjCoef=\"2\"><coef idx=\"0\">1</coef><coef "
+          "idx=\"1\">1</coef></obj></objectives><constraints numberOfConstraints=\"1\"><con name=\"c\" ub=\"1\"/>"
+          "</constraints><nonlinearExpressions numberOfNonlinearExpressions=\"1\"><nl idx=\"0\"><exp><sum><times>"
+          "<number value=\"-1e-9\"/><variable idx=\"0\"/></times><number value=\"-4\"/></sum></exp></nl>"
+          "</nonlinearExpressions></instanceData></osil>";
+
+    enum class Expected
+    {
+        Unbounded,
+        Optimum,
+        UnboundedIfExact,
+        NoClaim
+    };
+
+    struct Case
+    {
+        std::string name;
+        std::string contents;
+        Expected expected;
+        double optimum;
+    };
+
+    std::vector<Case> cases = {
+        { "unbounded", linearProblem("min", "ub=\"0\"", -1.0), Expected::Unbounded, 0.0 },
+        { "minimum_beyond_bound", linearProblem("min", "lb=\"-3e9\"", -1.0), Expected::Optimum, -3e9 },
+        { "maximum_beyond_bound", linearProblem("max", "ub=\"5e9\"", 1.0), Expected::Optimum, 5e9 },
+        { "nonconvex_unbounded", nonconvexProblem, Expected::UnboundedIfExact, 0.0 },
+        { "nonlinear_beyond_bound", nonlinearProblem, Expected::NoClaim, -4e9 },
+    };
+
+    std::vector<std::pair<ES_MIPSolver, std::string>> mipSolvers;
+
+#ifdef HAS_CBC
+    mipSolvers.emplace_back(ES_MIPSolver::Cbc, "Cbc");
+#endif
+#ifdef HAS_HIGHS
+    mipSolvers.emplace_back(ES_MIPSolver::Highs, "HiGHS");
+#endif
+#ifdef HAS_CPLEX
+    mipSolvers.emplace_back(ES_MIPSolver::Cplex, "CPLEX");
+#endif
+#ifdef HAS_GUROBI
+    mipSolvers.emplace_back(ES_MIPSolver::Gurobi, "Gurobi");
+#endif
+
+    for(auto& C : cases)
+    {
+        auto filename = temporaryDirectory + "/" + C.name + ".osil";
+
+        if(!Utilities::writeStringToFile(filename, C.contents))
+        {
+            std::cout << "  FAILED: could not write " << filename << ".\n";
+            passed = false;
+            continue;
+        }
+
+        for(auto& [mipSolver, solverName] : mipSolvers)
+        {
+            auto solver = std::make_unique<Solver>();
+            auto env = solver->getEnvironment();
+
+            solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+            solver->updateSetting("Dual.MIP.Solver", static_cast<int>(mipSolver));
+            solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+            solver->updateSetting("Termination.TimeLimit", 30.0);
+
+            if(!solver->setProblem(filename) || !solver->solveProblem())
+            {
+                std::cout << "  FAILED: " << C.name << " with " << solverName << " could not be solved.\n";
+                passed = false;
+                continue;
+            }
+
+            auto reason = env->results->terminationReason;
+            bool claimsOptimality = reason == E_TerminationReason::AbsoluteGap
+                || reason == E_TerminationReason::RelativeGap || reason == E_TerminationReason::ConstraintTolerance;
+            bool isCasePassed = true;
+
+            switch(C.expected)
+            {
+            case Expected::Unbounded:
+                isCasePassed = (reason == E_TerminationReason::UnboundedProblem);
+                break;
+
+            case Expected::Optimum:
+                isCasePassed = claimsOptimality && env->results->hasPrimalSolution()
+                    && std::abs(env->results->getPrimalBound() - C.optimum) < 1.0;
+                break;
+
+            case Expected::UnboundedIfExact:
+                isCasePassed = env->dualSolver->isDualProblemExact()
+                    ? reason == E_TerminationReason::UnboundedProblem
+                    : !claimsOptimality;
+                break;
+
+            // The optimum may not be found, but a solution at the artificial bound may not be claimed optimal
+            case Expected::NoClaim:
+                isCasePassed = (claimsOptimality
+                                   ? std::abs(env->results->getPrimalBound() - C.optimum) < 1.0
+                                   : reason != E_TerminationReason::InfeasibleProblem
+                                       && reason != E_TerminationReason::UnboundedProblem);
+                break;
+            }
+
+            std::cout << "  " << C.name << " with " << solverName << ": termination reason "
+                      << static_cast<int>(reason) << ", primal bound " << env->results->getPrimalBound() << " "
+                      << (isCasePassed ? "(as expected)" : "(FAILED)") << "\n";
+
+            passed = passed && isCasePassed;
+        }
+    }
+
+    std::error_code errorCode;
+    fs::filesystem::remove_all(temporaryDirectory, errorCode);
+
+    return passed;
+}
+
+bool ModelTestVariableBoundCache()
+{
+    // The bounds of the variables are also kept in vectors, e.g. used when calculating the bounds of the objective
+    // function. Setting a bound must update them, otherwise, e.g., a variable whose bound has been removed is still
+    // considered bounded.
+
+    bool passed = true;
+
+    auto solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+
+    auto problem = std::make_shared<Problem>(env);
+    auto x = std::make_shared<Variable>("x", E_VariableType::Real, -2.0, 2.0);
+    auto y = std::make_shared<Variable>("y", E_VariableType::Real, 0.0, 1.0);
+    problem->add({ x, y });
+
+    auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<LinearTerm>(1.0, x));
+    problem->add(objective);
+    problem->finalize();
+
+    // Makes sure that the vectors have been calculated before the bounds are changed
+    problem->getVariableBounds();
+
+    problem->setVariableBounds(0, -5.0, 5.0);
+    problem->setVariableLowerBound(1, -1.0);
+    problem->setVariableUpperBound(1, 3.0);
+
+    auto bounds = problem->getVariableBounds();
+
+    if(bounds[0].l() != -5.0 || bounds[0].u() != 5.0 || bounds[1].l() != -1.0 || bounds[1].u() != 3.0)
+    {
+        std::cout << "  FAILED: the variable bounds were not updated: [" << bounds[0].l() << ", " << bounds[0].u()
+                  << "] and [" << bounds[1].l() << ", " << bounds[1].u() << "].\n";
+        passed = false;
+    }
+
+    auto objectiveBounds = problem->objectiveFunction->getBounds();
+
+    if(objectiveBounds.l() != -5.0 || objectiveBounds.u() != 5.0)
+    {
+        std::cout << "  FAILED: the objective function bounds [" << objectiveBounds.l() << ", " << objectiveBounds.u()
+                  << "] do not use the updated variable bounds.\n";
+        passed = false;
+    }
+
+    return passed;
+}
+
+bool ModelTestMaximizePartitionedSquares()
+{
+    // When the square terms of a maximized concave objective are partitioned, the objective is minimized with the
+    // signs reversed, so -x^2 must become +s_sq_x with s_sq_x >= x^2. With the sign kept, the auxiliary variables go to
+    // their upper bounds and the dual bound is invalid. The optimum is in the interior of the variable bounds, since the
+    // primal solution is otherwise correct anyway.
+
+    bool passed = true;
+
+    // maximize 4x + 2y - x^2 - y^2 + b s.t. x + b <= 3, x, y in [0, 10], b binary -> optimum x=2, y=1, b=1, value 6
+    auto buildProblem = [](const std::shared_ptr<Environment>& env)
+    {
+        auto problem = std::make_shared<Problem>(env);
+        auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.0, 10.0);
+        auto y = std::make_shared<Variable>("y", E_VariableType::Real, 0.0, 10.0);
+        auto b = std::make_shared<Variable>("b", E_VariableType::Binary, 0.0, 1.0);
+        problem->add({ x, y, b });
+
+        auto objective = std::make_shared<QuadraticObjectiveFunction>(E_ObjectiveFunctionDirection::Maximize);
+        objective->add(std::make_shared<LinearTerm>(4.0, x));
+        objective->add(std::make_shared<LinearTerm>(2.0, y));
+        objective->add(std::make_shared<LinearTerm>(1.0, b));
+        objective->add(std::make_shared<QuadraticTerm>(-1.0, x, x));
+        objective->add(std::make_shared<QuadraticTerm>(-1.0, y, y));
+        problem->add(objective);
+
+        auto constraint = std::make_shared<LinearConstraint>("c", SHOT_DBL_MIN, 3.0);
+        constraint->add(std::make_shared<LinearTerm>(1.0, x));
+        constraint->add(std::make_shared<LinearTerm>(1.0, b));
+        problem->add(constraint);
+
+        return problem;
+    };
+
+    const double expectedObjective = 6.0;
+    const double tolerance = 0.01;
+
+    for(auto& [mipSolver, solverName] : AvailableMIPSolversForEpigraphTests())
+    {
+        std::cout << "\n===== MIP solver: " << solverName << " =====\n";
+
+        auto solver = std::make_unique<Solver>();
+        auto env = solver->getEnvironment();
+
+        solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Warning));
+        solver->updateSetting("Termination.TimeLimit", 20.0);
+        solver->updateSetting("Dual.MIP.Solver", static_cast<int>(mipSolver));
+        solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+
+        auto problem = buildProblem(env);
+        problem->finalize();
+
+        if(!solver->setProblem(problem))
+        {
+            std::cout << "  FAILED: solver->setProblem() failed.\n";
+            passed = false;
+            continue;
+        }
+
+        // Gurobi and Cplex keep the convex quadratic objective as it is, so there are only partitioned terms with Cbc
+        // and HiGHS
+        int numberOfPartitionedTerms = 0;
+
+        if(auto reformulatedObjective
+            = std::dynamic_pointer_cast<LinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction))
+        {
+            for(auto& T : reformulatedObjective->linearTerms)
+            {
+                if(T->variable->properties.auxiliaryType != E_AuxiliaryVariableType::SquareTermsPartitioning)
+                    continue;
+
+                numberOfPartitionedTerms++;
+
+                if(T->coefficient <= 0.0)
+                {
+                    std::cout << "  FAILED: the partitioned term " << T->coefficient << "*" << T->variable->name
+                              << " in the minimized objective should have a positive coefficient.\n";
+                    passed = false;
+                }
+            }
+        }
+
+        if((mipSolver == ES_MIPSolver::Cbc || mipSolver == ES_MIPSolver::Highs) && numberOfPartitionedTerms != 2)
+        {
+            std::cout << "  FAILED: expected 2 partitioned square terms in the objective, found "
+                      << numberOfPartitionedTerms << ".\n";
+            passed = false;
+        }
+
+        if(!solver->solveProblem())
+        {
+            std::cout << "  FAILED: solver->solveProblem() failed.\n";
+            passed = false;
+            continue;
+        }
+
+        passed = CheckSolvedObjective(env, expectedObjective, "[" + solverName + "] maximized partitioned squares")
+            && passed;
+
+        double dualBound = env->results->getGlobalDualBound();
+        std::cout << "  [" << solverName << "] dual bound = " << dualBound << "\n";
+
+        if(dualBound < expectedObjective - 1e-6 || dualBound > expectedObjective + tolerance)
+        {
+            std::cout << "  FAILED: the dual bound " << dualBound << " is not a valid and tight bound for the optimum "
+                      << expectedObjective << ".\n";
+            passed = false;
+        }
+    }
+
+    return passed;
+}
+
+bool ModelTestLDLFactorizationScaling()
+{
+    // The LDL factorization is only used if the matrix reconstructed from it is close to the original one. The
+    // tolerance must be relative to the size of the elements, otherwise the round-off error for a matrix with large
+    // coefficients rejects a correct factorization, and the eigenvalue decomposition is used instead.
+
+    bool passed = true;
+
+    const int numberOfVariables = 30;
+
+    for(double scale : { 1.0, 1e6 })
+    {
+        auto solver = std::make_unique<Solver>();
+        auto env = solver->getEnvironment();
+        auto problem = std::make_shared<Problem>(env);
+
+        Variables variables;
+
+        for(int i = 0; i < numberOfVariables; i++)
+            variables.push_back(
+                std::make_shared<Variable>("x" + std::to_string(i), E_VariableType::Real, -10.0, 10.0));
+
+        problem->add(variables);
+
+        // Q = A^T A + I is positive definite, with A a dense matrix with deterministic pseudo-random elements
+        Eigen::MatrixXd A(numberOfVariables, numberOfVariables);
+
+        for(int i = 0; i < numberOfVariables; i++)
+        {
+            for(int j = 0; j < numberOfVariables; j++)
+                A(i, j) = std::sin(1.0 + 7.0 * i + 13.0 * j * j);
+        }
+
+        Eigen::MatrixXd Q = (A.transpose() * A + Eigen::MatrixXd::Identity(numberOfVariables, numberOfVariables)) * scale;
+
+        // x^T Q x as terms, with the off-diagonal elements combined into one bilinear term
+        QuadraticTerms terms;
+
+        for(int i = 0; i < numberOfVariables; i++)
+        {
+            terms.add(std::make_shared<QuadraticTerm>(Q(i, i), variables[i], variables[i]));
+
+            for(int j = i + 1; j < numberOfVariables; j++)
+                terms.add(std::make_shared<QuadraticTerm>(2.0 * Q(i, j), variables[i], variables[j]));
+        }
+
+        terms.takeOwnership(problem);
+
+        std::cout << "\nScale " << scale << ":\n";
+
+        if(terms.getConvexity() != E_Convexity::Convex)
+        {
+            std::cout << "  FAILED: the quadratic terms should be convex.\n";
+            passed = false;
+            continue;
+        }
+
+        terms.performLDLFactorization();
+
+        if(!terms.LDLFactorizationSuccessful)
+        {
+            std::cout << "  FAILED: the LDL factorization was rejected.\n";
+            passed = false;
+            continue;
+        }
+
+        // The decomposition used in the reformulation is 0.5 * sum_i d_i * (sum_j L_ji * x_j)^2
+        VectorDouble point(numberOfVariables);
+
+        for(int i = 0; i < numberOfVariables; i++)
+            point[i] = std::cos(3.0 * i);
+
+        double value = terms.calculate(point);
+        double decomposedValue = 0.0;
+
+        for(int i = 0; i < numberOfVariables; i++)
+        {
+            double sum = 0.0;
+
+            for(auto [variable, j] : terms.variableMap)
+                sum += terms.LDLMatrixL(j, i) * point[variable->getIndex()];
+
+            decomposedValue += 0.5 * terms.LDLDiag[i] * sum * sum;
+        }
+
+        std::cout << "  x^T Q x = " << value << ", from the LDL factorization = " << decomposedValue << "\n";
+
+        if(std::abs(value - decomposedValue) > 1e-9 * std::max(1.0, std::abs(value)))
+        {
+            std::cout << "  FAILED: the LDL factorization does not give the same value.\n";
+            passed = false;
+        }
+    }
+
+    return passed;
+}
+
+// Feasibility-based bound tightening implemented directly, by summing the bounds of all the other terms in a constraint
+// for each term, as it was before Problem::doFBBT kept these sums in a segment tree. It is a reference for that faster
+// implementation, which must tighten the same bounds. The time limit checks are left out, so it is compared with a run
+// of Problem::doFBBT that does not reach its time limit, and the bounds of the original problem are updated after each
+// constraint instead of once at the end.
+namespace BoundTighteningReference
+{
+bool tightenConstraint(ProblemPtr problem, NumericConstraintPtr constraint)
+{
+    auto env = problem->env;
+    bool boundsUpdated = false;
+
+    try
+    {
+        if(constraint->properties.hasLinearTerms)
+        {
+            Interval otherTermsBound(constraint->constant);
+
+            if(constraint->properties.hasQuadraticTerms)
+                otherTermsBound
+                    += std::dynamic_pointer_cast<QuadraticConstraint>(constraint)->quadraticTerms.getBounds();
+
+            if(constraint->properties.hasMonomialTerms)
+                otherTermsBound
+                    += std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->monomialTerms.getBounds();
+
+            if(constraint->properties.hasSignomialTerms)
+                otherTermsBound
+                    += std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->signomialTerms.getBounds();
+
+            if(constraint->properties.hasNonlinearExpression)
+                otherTermsBound
+                    += std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->nonlinearExpression->getBounds();
+
+            auto terms = std::dynamic_pointer_cast<LinearConstraint>(constraint)->linearTerms;
+
+            for(auto& T : terms)
+            {
+                if(Utilities::isAlmostZero(T->coefficient))
+                    continue;
+
+                Interval newBound = otherTermsBound;
+
+                for(auto& T2 : terms)
+                {
+                    if(T2 == T)
+                        continue;
+
+                    newBound += T2->getBounds();
+                }
+
+                Interval termBound = Interval(constraint->valueLHS, constraint->valueRHS) - newBound;
+
+                termBound = termBound / T->coefficient;
+
+                if(T->variable->tightenBounds(termBound))
+                    boundsUpdated = true;
+            }
+        }
+
+        if(constraint->properties.hasQuadraticTerms)
+        {
+            Interval otherTermsBound(constraint->constant);
+
+            if(constraint->properties.hasLinearTerms)
+                otherTermsBound += std::dynamic_pointer_cast<LinearConstraint>(constraint)->linearTerms.getBounds();
+
+            if(constraint->properties.hasMonomialTerms)
+                otherTermsBound
+                    += std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->monomialTerms.getBounds();
+
+            if(constraint->properties.hasSignomialTerms)
+                otherTermsBound
+                    += std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->signomialTerms.getBounds();
+
+            if(constraint->properties.hasNonlinearExpression)
+                otherTermsBound
+                    += std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->nonlinearExpression->getBounds();
+
+            auto terms = std::dynamic_pointer_cast<QuadraticConstraint>(constraint)->quadraticTerms;
+            double maxUpperBound = env->settings->getSetting<double>("Model.Variables.Continuous.MaximumUpperBound");
+
+            for(auto& T : terms)
+            {
+                if(Utilities::isAlmostZero(T->coefficient))
+                    continue;
+
+                Interval newBound = otherTermsBound;
+
+                for(auto& T2 : terms)
+                {
+                    if(T2 == T)
+                        continue;
+
+                    newBound += T2->getBounds();
+                }
+
+                Interval termBound = Interval(constraint->valueLHS, constraint->valueRHS) - newBound;
+
+                termBound = termBound / T->coefficient;
+
+                if(T->firstVariable == T->secondVariable)
+                {
+                    if(termBound.u() >= maxUpperBound)
+                        continue;
+
+                    ExpressionSquare square(std::make_shared<ExpressionVariable>(T->firstVariable));
+
+                    if(square.tightenBounds(termBound))
+                        boundsUpdated = true;
+                }
+                else
+                {
+                    Interval firstVariableBound = T->firstVariable->getBound();
+                    Interval secondVariableBound = T->secondVariable->getBound();
+
+                    if((firstVariableBound.l() > 0 || firstVariableBound.u() < 0)
+                        && T->secondVariable->tightenBounds(termBound / firstVariableBound))
+                        boundsUpdated = true;
+
+                    if((secondVariableBound.l() > 0 || secondVariableBound.u() < 0)
+                        && T->firstVariable->tightenBounds(termBound / secondVariableBound))
+                        boundsUpdated = true;
+                }
+            }
+        }
+
+        if(constraint->properties.hasMonomialTerms)
+        {
+            Interval otherTermsBound(constraint->constant);
+
+            if(constraint->properties.hasLinearTerms)
+                otherTermsBound += std::dynamic_pointer_cast<LinearConstraint>(constraint)->linearTerms.getBounds();
+
+            if(constraint->properties.hasQuadraticTerms)
+                otherTermsBound
+                    += std::dynamic_pointer_cast<QuadraticConstraint>(constraint)->quadraticTerms.getBounds();
+
+            if(constraint->properties.hasSignomialTerms)
+                otherTermsBound
+                    += std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->signomialTerms.getBounds();
+
+            if(constraint->properties.hasNonlinearExpression)
+                otherTermsBound
+                    += std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->nonlinearExpression->getBounds();
+
+            auto terms = std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->monomialTerms;
+
+            for(auto& T : terms)
+            {
+                if(Utilities::isAlmostZero(T->coefficient))
+                    continue;
+
+                Interval newBound = otherTermsBound;
+
+                for(auto& T2 : terms)
+                {
+                    if(T2 == T)
+                        continue;
+
+                    newBound += T2->getBounds();
+                }
+
+                Interval termBound = Interval(constraint->valueLHS, constraint->valueRHS) - newBound;
+                termBound = termBound / T->coefficient;
+
+                for(auto& V1 : T->variables)
+                {
+                    Interval othersBound(1.0);
+
+                    for(auto& V2 : T->variables)
+                    {
+                        if(V1 == V2)
+                            continue;
+
+                        othersBound *= V2->getBound();
+                    }
+
+                    if(othersBound.l() <= 0 && othersBound.u() >= 0)
+                        continue;
+
+                    if(V1->tightenBounds(termBound / othersBound))
+                        boundsUpdated = true;
+                }
+            }
+        }
+
+        if(constraint->properties.hasSignomialTerms)
+        {
+            Interval otherTermsBound(constraint->constant);
+
+            if(constraint->properties.hasLinearTerms)
+                otherTermsBound += std::dynamic_pointer_cast<LinearConstraint>(constraint)->linearTerms.getBounds();
+
+            if(constraint->properties.hasQuadraticTerms)
+                otherTermsBound
+                    += std::dynamic_pointer_cast<QuadraticConstraint>(constraint)->quadraticTerms.getBounds();
+
+            if(constraint->properties.hasMonomialTerms)
+                otherTermsBound
+                    += std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->monomialTerms.getBounds();
+
+            if(constraint->properties.hasNonlinearExpression)
+                otherTermsBound
+                    += std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->nonlinearExpression->getBounds();
+
+            auto terms = std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->signomialTerms;
+
+            for(auto& T : terms)
+            {
+                if(Utilities::isAlmostZero(T->coefficient))
+                    continue;
+
+                Interval newBound = otherTermsBound;
+
+                for(auto& T2 : terms)
+                {
+                    if(T2 == T)
+                        continue;
+
+                    newBound += T2->getBounds();
+                }
+
+                Interval termBound = Interval(constraint->valueLHS, constraint->valueRHS) - newBound;
+
+                termBound = termBound / T->coefficient;
+
+                for(auto& E1 : T->elements)
+                {
+                    Interval othersBound(1.0);
+
+                    for(auto& E2 : T->elements)
+                    {
+                        if(E1 == E2)
+                            continue;
+
+                        othersBound *= E2->getBounds();
+                    }
+
+                    if(othersBound.l() <= 0 && othersBound.u() >= 0)
+                        continue;
+
+                    if(E1->tightenBounds(termBound / othersBound))
+                        boundsUpdated = true;
+                }
+            }
+        }
+
+        if(constraint->properties.hasNonlinearExpression)
+        {
+            Interval otherTermsBound(constraint->constant);
+
+            if(constraint->properties.hasLinearTerms)
+                otherTermsBound += std::dynamic_pointer_cast<LinearConstraint>(constraint)->linearTerms.getBounds();
+
+            if(constraint->properties.hasQuadraticTerms)
+                otherTermsBound
+                    += std::dynamic_pointer_cast<QuadraticConstraint>(constraint)->quadraticTerms.getBounds();
+
+            if(constraint->properties.hasMonomialTerms)
+                otherTermsBound
+                    += std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->monomialTerms.getBounds();
+
+            if(constraint->properties.hasSignomialTerms)
+                otherTermsBound
+                    += std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->signomialTerms.getBounds();
+
+            Interval candidate = Interval(constraint->valueLHS, constraint->valueRHS) - otherTermsBound;
+
+            if(std::dynamic_pointer_cast<NonlinearConstraint>(constraint)
+                    ->nonlinearExpression->tightenBounds(candidate))
+                boundsUpdated = true;
+        }
+    }
+    catch(mc::Interval::Exceptions&)
+    {
+    }
+
+    if(boundsUpdated && problem->properties.isReformulated)
+    {
+        for(size_t i = 0; i < env->problem->allVariables.size(); i++)
+        {
+            if(problem->allVariables[i]->lowerBound > env->problem->allVariables[i]->lowerBound)
+                env->problem->allVariables[i]->lowerBound = problem->allVariables[i]->lowerBound;
+
+            if(problem->allVariables[i]->upperBound < env->problem->allVariables[i]->upperBound)
+                env->problem->allVariables[i]->upperBound = problem->allVariables[i]->upperBound;
+        }
+    }
+
+    return (boundsUpdated);
+}
+
+void tighten(ProblemPtr problem)
+{
+    auto env = problem->env;
+
+    int numberOfIterations = env->settings->getSetting<int>("Model.BoundTightening.FeasibilityBased.MaxIterations");
+    bool useNonlinearBoundTightening
+        = env->settings->getSetting<bool>("Model.BoundTightening.FeasibilityBased.UseNonlinear");
+
+    for(int i = 0; i < numberOfIterations; i++)
+    {
+        bool boundsUpdated = false;
+
+        for(auto& C : problem->linearConstraints)
+            boundsUpdated = tightenConstraint(problem, C) || boundsUpdated;
+
+        for(auto& C : problem->quadraticConstraints)
+            boundsUpdated = tightenConstraint(problem, C) || boundsUpdated;
+
+        if(useNonlinearBoundTightening)
+        {
+            for(auto& C : problem->nonlinearConstraints)
+                boundsUpdated = tightenConstraint(problem, C) || boundsUpdated;
+        }
+
+        if(!boundsUpdated)
+            break;
+    }
+}
+} // namespace BoundTighteningReference
+
+// Bound tightening must not stop on its time limit when compared with the reference, which has none
+void DisableBoundTighteningTimeLimit(EnvironmentPtr env)
+{
+    env->settings->updateSetting("Model.BoundTightening.FeasibilityBased.TimeLimit", 1e9);
+}
+
+bool AreBoundsEqual(double first, double second)
+{
+    if(first == second || (std::isnan(first) && std::isnan(second)))
+        return (true);
+
+    // The sums of the term bounds may be added in a different order, which can change the last digits
+    return (std::abs(first - second) <= 1e-9 * std::max({ 1.0, std::abs(first), std::abs(second) }));
+}
+
+bool AreVariableBoundsEqual(const Variables& variables, const Variables& referenceVariables, const std::string& name)
+{
+    if(variables.size() != referenceVariables.size())
+    {
+        std::cout << "  FAILED: " << name << " has " << variables.size() << " variables, but the reference has "
+                  << referenceVariables.size() << ".\n";
+        return (false);
+    }
+
+    int numberOfDifferences = 0;
+
+    for(size_t i = 0; i < variables.size(); i++)
+    {
+        auto& V = variables[i];
+        auto& R = referenceVariables[i];
+
+        if(AreBoundsEqual(V->lowerBound, R->lowerBound) && AreBoundsEqual(V->upperBound, R->upperBound)
+            && V->properties.hasLowerBoundBeenTightened == R->properties.hasLowerBoundBeenTightened
+            && V->properties.hasUpperBoundBeenTightened == R->properties.hasUpperBoundBeenTightened)
+            continue;
+
+        if(numberOfDifferences < 10)
+        {
+            std::cout << std::setprecision(17) << "  FAILED: " << name << ", variable " << V->name << ": ["
+                      << V->lowerBound << ", " << V->upperBound << "] (tightened " << V->properties.hasLowerBoundBeenTightened
+                      << V->properties.hasUpperBoundBeenTightened << "), reference [" << R->lowerBound << ", "
+                      << R->upperBound << "] (tightened " << R->properties.hasLowerBoundBeenTightened
+                      << R->properties.hasUpperBoundBeenTightened << ")\n";
+        }
+
+        numberOfDifferences++;
+    }
+
+    if(numberOfDifferences > 0)
+        std::cout << "  " << numberOfDifferences << " variables differ in " << name << ".\n";
+
+    return (numberOfDifferences == 0);
+}
+
+int CountTightenedVariables(const Variables& variables)
+{
+    return (std::count_if(variables.begin(), variables.end(),
+        [](const VariablePtr& V)
+        { return (V->properties.hasLowerBoundBeenTightened || V->properties.hasUpperBoundBeenTightened); }));
+}
+
+// A problem with all the kinds of terms bound tightening handles, generated from a seed so that the same problem can be
+// created twice. Some variables are unbounded or fixed, and some coefficients are zero or almost zero, since these are
+// the cases where the sums of the term bounds are infinite or terms are skipped.
+ProblemPtr CreateRandomBoundTighteningProblem(EnvironmentPtr env, unsigned int seed, int numberOfVariables,
+    int numberOfConstraints, int maxNumberOfTerms)
+{
+    std::mt19937 generator(seed);
+
+    auto randomInteger = [&generator](int min, int max) { return (std::uniform_int_distribution<int>(min, max)(generator)); };
+    auto randomReal = [&generator](double min, double max)
+    { return (std::uniform_real_distribution<double>(min, max)(generator)); };
+
+    auto problem = std::make_shared<Problem>(env);
+    problem->name = "random_fbbt_" + std::to_string(seed);
+
+    Variables variables;
+
+    for(int i = 0; i < numberOfVariables; i++)
+    {
+        int typeChoice = randomInteger(0, 9);
+        auto type = (typeChoice < 7) ? E_VariableType::Real
+                                     : ((typeChoice < 9) ? E_VariableType::Integer : E_VariableType::Binary);
+
+        double lowerBound = std::round(randomReal(-10.0, 5.0));
+        double upperBound = lowerBound + std::round(randomReal(0.0, 15.0));
+
+        if(type == E_VariableType::Real)
+        {
+            lowerBound = randomReal(-10.0, 5.0);
+            upperBound = lowerBound + randomReal(0.0, 15.0);
+        }
+
+        int boundChoice = randomInteger(0, 19);
+
+        if(boundChoice == 0)
+            lowerBound = SHOT_DBL_MIN;
+        else if(boundChoice == 1)
+            upperBound = SHOT_DBL_MAX;
+        else if(boundChoice == 2)
+        {
+            lowerBound = SHOT_DBL_MIN;
+            upperBound = SHOT_DBL_MAX;
+        }
+        else if(boundChoice == 3)
+            upperBound = lowerBound;
+
+        auto variable = std::make_shared<Variable>("x" + std::to_string(i), type, lowerBound, upperBound);
+        variables.push_back(variable);
+    }
+
+    problem->add(variables);
+
+    auto randomVariable = [&]() { return (variables[randomInteger(0, numberOfVariables - 1)]); };
+
+    auto randomCoefficient = [&]()
+    {
+        int choice = randomInteger(0, 19);
+
+        if(choice == 0)
+            return (0.0);
+
+        if(choice == 1)
+            return (1e-18);
+
+        return (randomReal(-5.0, 5.0));
+    };
+
+    auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<LinearTerm>(1.0, variables[0]));
+    problem->add(objective);
+
+    for(int c = 0; c < numberOfConstraints; c++)
+    {
+        int kind = randomInteger(0, 2);
+        std::string name = "c" + std::to_string(c);
+
+        double valueLHS = SHOT_DBL_MIN;
+        double valueRHS = SHOT_DBL_MAX;
+        int senseChoice = randomInteger(0, 3);
+
+        if(senseChoice == 0)
+            valueRHS = randomReal(-20.0, 20.0);
+        else if(senseChoice == 1)
+            valueLHS = randomReal(-20.0, 20.0);
+        else if(senseChoice == 2)
+        {
+            valueLHS = randomReal(-20.0, 20.0);
+            valueRHS = valueLHS;
+        }
+        else
+        {
+            valueLHS = randomReal(-40.0, 0.0);
+            valueRHS = valueLHS + randomReal(0.0, 40.0);
+        }
+
+        int numberOfLinearTerms = randomInteger(1, maxNumberOfTerms);
+        int numberOfQuadraticTerms = (kind >= 1) ? randomInteger(1, maxNumberOfTerms) : 0;
+
+        LinearTerms linearTerms;
+
+        for(int t = 0; t < numberOfLinearTerms; t++)
+            linearTerms.add(std::make_shared<LinearTerm>(randomCoefficient(), randomVariable()));
+
+        QuadraticTerms quadraticTerms;
+
+        for(int t = 0; t < numberOfQuadraticTerms; t++)
+        {
+            auto firstVariable = randomVariable();
+            auto secondVariable = (randomInteger(0, 2) == 0) ? firstVariable : randomVariable();
+            quadraticTerms.add(std::make_shared<QuadraticTerm>(randomCoefficient(), firstVariable, secondVariable));
+        }
+
+        if(kind == 0)
+        {
+            problem->add(std::make_shared<LinearConstraint>(name, linearTerms, valueLHS, valueRHS));
+        }
+        else if(kind == 1)
+        {
+            problem->add(std::make_shared<QuadraticConstraint>(name, linearTerms, quadraticTerms, valueLHS, valueRHS));
+        }
+        else
+        {
+            auto constraint = std::make_shared<NonlinearConstraint>(name, valueLHS, valueRHS);
+            constraint->add(linearTerms);
+            constraint->add(quadraticTerms);
+
+            int numberOfMonomialTerms = randomInteger(0, 3);
+
+            for(int t = 0; t < numberOfMonomialTerms; t++)
+            {
+                Variables monomialVariables { randomVariable(), randomVariable(), randomVariable() };
+                constraint->add(std::make_shared<MonomialTerm>(randomCoefficient(), monomialVariables));
+            }
+
+            int numberOfSignomialTerms = randomInteger(0, 3);
+            std::vector<double> powers { 2.0, 3.0, 0.5, -1.0, 1.5, -2.0 };
+
+            for(int t = 0; t < numberOfSignomialTerms; t++)
+            {
+                SignomialElements elements;
+                int numberOfElements = randomInteger(1, 2);
+
+                for(int e = 0; e < numberOfElements; e++)
+                {
+                    elements.push_back(std::make_shared<SignomialElement>(
+                        randomVariable(), powers[randomInteger(0, (int)powers.size() - 1)]));
+                }
+
+                constraint->add(std::make_shared<SignomialTerm>(randomCoefficient(), elements));
+            }
+
+            if(randomInteger(0, 1) == 0)
+            {
+                constraint->add(std::make_shared<ExpressionExp>(
+                    std::make_shared<ExpressionProduct>(std::make_shared<ExpressionConstant>(randomReal(-0.5, 0.5)),
+                        std::make_shared<ExpressionVariable>(randomVariable()))));
+            }
+
+            problem->add(constraint);
+        }
+    }
+
+    problem->finalize();
+
+    return (problem);
+}
+
+bool ModelTestBoundTighteningMatchesReference()
+{
+    // Bound tightening sums the bounds of all the other terms in a constraint for each term. Doing this once per
+    // constraint instead must not change which bounds are tightened, including when term bounds are infinite, terms
+    // are skipped because of a zero coefficient, or a variable is in several terms.
+
+    bool passed = true;
+
+    struct Size
+    {
+        int numberOfVariables;
+        int numberOfConstraints;
+        int maxNumberOfTerms;
+        int numberOfProblems;
+    };
+
+    std::vector<Size> sizes = { { 4, 3, 3, 150 }, { 10, 8, 8, 100 }, { 40, 20, 40, 20 }, { 300, 4, 400, 3 } };
+
+    int numberOfProblems = 0;
+    int numberOfTightenedVariables = 0;
+    unsigned int seed = 1;
+
+    for(auto& S : sizes)
+    {
+        for(int p = 0; p < S.numberOfProblems; p++, seed++)
+        {
+            auto solver = std::make_unique<Solver>();
+            auto env = solver->getEnvironment();
+            DisableBoundTighteningTimeLimit(env);
+
+            auto referenceSolver = std::make_unique<Solver>();
+            auto referenceEnv = referenceSolver->getEnvironment();
+            DisableBoundTighteningTimeLimit(referenceEnv);
+
+            auto problem = CreateRandomBoundTighteningProblem(
+                env, seed, S.numberOfVariables, S.numberOfConstraints, S.maxNumberOfTerms);
+            auto referenceProblem = CreateRandomBoundTighteningProblem(
+                referenceEnv, seed, S.numberOfVariables, S.numberOfConstraints, S.maxNumberOfTerms);
+
+            problem->doFBBT();
+            BoundTighteningReference::tighten(referenceProblem);
+
+            numberOfProblems++;
+            numberOfTightenedVariables += CountTightenedVariables(problem->allVariables);
+
+            if(!AreVariableBoundsEqual(problem->allVariables, referenceProblem->allVariables, problem->name))
+                passed = false;
+        }
+    }
+
+    std::cout << "  Compared bound tightening with the reference on " << numberOfProblems << " problems, where "
+              << numberOfTightenedVariables << " variables were tightened.\n";
+
+    // The comparison is only meaningful if bounds are actually tightened
+    if(numberOfTightenedVariables == 0)
+    {
+        std::cout << "  FAILED: no bounds were tightened in the generated problems.\n";
+        passed = false;
+    }
+
+    return passed;
+}
+
+bool ModelTestBoundTighteningMatchesReferenceOnInstances()
+{
+    // As ModelTestBoundTighteningMatchesReference, but on problems read from files, and also on their reformulated
+    // problems, where bound tightening also updates the bounds of the original problem.
+
+    bool passed = true;
+
+    std::vector<std::string> problemFiles = { "data/tls2.osil", "data/synthes1.osil", "data/fo7.osil",
+        "data/flay02h.osil", "data/ex1252a.osil", "data/clay0305h.osil", "data/gear.osil", "data/windfac.osil",
+        "data/ex4.osil", "data/alan.osil", "data/meanvarxsc.osil", "data/instances/MINLP-convex-small/batch.osil",
+        "data/instances/MINLP-convex-small/portfol_card.osil", "data/instances/MINLP-nonconvex/ex1244.osil",
+        "data/instances/MINLP-nonconvex/ex1263.osil" };
+
+    int numberOfTightenedVariables = 0;
+
+    for(auto& file : problemFiles)
+    {
+        // Original problem, read without the bound tightening that Solver::setProblem performs
+        {
+            auto solver = std::make_unique<Solver>();
+            auto env = solver->getEnvironment();
+            DisableBoundTighteningTimeLimit(env);
+
+            auto referenceSolver = std::make_unique<Solver>();
+            auto referenceEnv = referenceSolver->getEnvironment();
+            DisableBoundTighteningTimeLimit(referenceEnv);
+
+            auto problem = std::make_shared<Problem>(env);
+            auto referenceProblem = std::make_shared<Problem>(referenceEnv);
+
+            if(ModelingSystemOSiL(env).createProblem(problem, file) != E_ProblemCreationStatus::NormalCompletion
+                || ModelingSystemOSiL(referenceEnv).createProblem(referenceProblem, file)
+                    != E_ProblemCreationStatus::NormalCompletion)
+            {
+                std::cout << "  FAILED: could not read " << file << ".\n";
+                passed = false;
+                continue;
+            }
+
+            problem->doFBBT();
+            BoundTighteningReference::tighten(referenceProblem);
+
+            int tightened = CountTightenedVariables(problem->allVariables);
+            numberOfTightenedVariables += tightened;
+            std::cout << "  " << file << ": " << tightened << " variables tightened in the original problem.\n";
+
+            if(!AreVariableBoundsEqual(problem->allVariables, referenceProblem->allVariables, file))
+                passed = false;
+        }
+
+        // Reformulated problem
+        {
+            auto createReformulatedProblem = [&file](Solver* solver)
+            {
+                auto env = solver->getEnvironment();
+                DisableBoundTighteningTimeLimit(env);
+                solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+                solver->updateSetting("Model.BoundTightening.InitialPOA.Use", false);
+                return (solver->setProblem(file));
+            };
+
+            auto solver = std::make_unique<Solver>();
+            auto referenceSolver = std::make_unique<Solver>();
+
+            if(!createReformulatedProblem(solver.get()) || !createReformulatedProblem(referenceSolver.get()))
+            {
+                std::cout << "  FAILED: could not reformulate " << file << ".\n";
+                passed = false;
+                continue;
+            }
+
+            auto env = solver->getEnvironment();
+            auto referenceEnv = referenceSolver->getEnvironment();
+
+            env->reformulatedProblem->doFBBT();
+            BoundTighteningReference::tighten(referenceEnv->reformulatedProblem);
+
+            int tightened = CountTightenedVariables(env->reformulatedProblem->allVariables);
+            numberOfTightenedVariables += tightened;
+            std::cout << "  " << file << ": " << tightened << " variables tightened in the reformulated problem.\n";
+
+            if(!AreVariableBoundsEqual(env->reformulatedProblem->allVariables,
+                   referenceEnv->reformulatedProblem->allVariables, file + " (reformulated)"))
+                passed = false;
+
+            if(!AreVariableBoundsEqual(
+                   env->problem->allVariables, referenceEnv->problem->allVariables, file + " (original, updated)"))
+                passed = false;
+        }
+    }
+
+    if(numberOfTightenedVariables == 0)
+    {
+        std::cout << "  FAILED: no bounds were tightened in the instances.\n";
+        passed = false;
+    }
+
+    return passed;
+}
+
+bool ModelTestBoundTighteningPropagation()
+{
+    // The terms are bounded with the bound vectors stored in the problem, so tightening the bound of a variable must also
+    // update these. Otherwise a bound tightened in one constraint is never used for the terms of the others: with
+    // x - y = 0 and y - z = 0, the bound z in [0, 1] tightens y, but x kept its bound [-10, 10].
+
+    bool passed = true;
+
+    auto solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+    DisableBoundTighteningTimeLimit(env);
+
+    auto problem = std::make_shared<Problem>(env);
+    auto x = std::make_shared<Variable>("x", E_VariableType::Real, -10.0, 10.0);
+    auto y = std::make_shared<Variable>("y", E_VariableType::Real, -10.0, 10.0);
+    auto z = std::make_shared<Variable>("z", E_VariableType::Real, 0.0, 1.0);
+    problem->add({ x, y, z });
+
+    auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<LinearTerm>(1.0, x));
+    problem->add(objective);
+
+    auto first = std::make_shared<LinearConstraint>("x_equals_y", 0.0, 0.0);
+    first->add(std::make_shared<LinearTerm>(1.0, x));
+    first->add(std::make_shared<LinearTerm>(-1.0, y));
+    problem->add(first);
+
+    auto second = std::make_shared<LinearConstraint>("y_equals_z", 0.0, 0.0);
+    second->add(std::make_shared<LinearTerm>(1.0, y));
+    second->add(std::make_shared<LinearTerm>(-1.0, z));
+    problem->add(second);
+
+    problem->finalize();
+    problem->doFBBT();
+
+    std::cout << "  x: [" << x->lowerBound << ", " << x->upperBound << "], y: [" << y->lowerBound << ", "
+              << y->upperBound << "]\n";
+
+    for(auto& V : { x, y })
+    {
+        if(V->lowerBound != 0.0 || V->upperBound != 1.0)
+        {
+            std::cout << "  FAILED: " << V->name << " was not tightened to [0, 1].\n";
+            passed = false;
+        }
+
+        auto& bound = problem->getVariableBounds()[V->getIndex()];
+
+        if(bound.l() != V->lowerBound || bound.u() != V->upperBound || problem->getVariableLowerBounds()[V->getIndex()] != V->lowerBound
+            || problem->getVariableUpperBounds()[V->getIndex()] != V->upperBound)
+        {
+            std::cout << "  FAILED: the stored bounds of " << V->name << " were not updated.\n";
+            passed = false;
+        }
+    }
+
+    return passed;
+}
+
+bool ModelTestProductBoundTighteningResult()
+{
+    // Bound tightening of a product must report a tightened child bound even if the children after it are not
+    // tightened, since e.g. the bounds of the original problem are only updated when a tightening is reported.
+    // x * y * z in [0, 4] with x in [1, 10] and y, z in [1, 2] tightens x to [1, 4] but neither y nor z.
+
+    bool passed = true;
+
+    auto x = std::make_shared<Variable>("x", E_VariableType::Real, 1.0, 10.0);
+    auto y = std::make_shared<Variable>("y", E_VariableType::Real, 1.0, 2.0);
+    auto z = std::make_shared<Variable>("z", E_VariableType::Real, 1.0, 2.0);
+
+    NonlinearExpressions children;
+    children.add(std::make_shared<ExpressionVariable>(x));
+    children.add(std::make_shared<ExpressionVariable>(y));
+    children.add(std::make_shared<ExpressionVariable>(z));
+    ExpressionProduct product(children);
+
+    bool tightened = product.tightenBounds(Interval(0.0, 4.0));
+
+    std::cout << "  x: [" << x->lowerBound << ", " << x->upperBound << "], reported tightened: " << tightened << "\n";
+
+    if(x->upperBound != 4.0)
+    {
+        std::cout << "  FAILED: x was not tightened to [1, 4].\n";
+        passed = false;
+    }
+
+    if(!tightened)
+    {
+        std::cout << "  FAILED: the tightening of x was not reported.\n";
+        passed = false;
+    }
+
+    return passed;
+}
+
+bool ModelTestBoundTighteningTimeLimit()
+{
+    // The bound tightening timer accumulates over all uses of bound tightening, e.g. on the original and then on the
+    // reformulated problem, so the time limit is relative to its value when bound tightening starts. The time already
+    // spent was compared with the remaining time, which stopped the tightening of the terms immediately once more time
+    // than the limit had been spent before.
+
+    bool passed = true;
+
+    auto solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+    solver->updateSetting("Model.BoundTightening.FeasibilityBased.TimeLimit", 1.0);
+
+    auto problem = std::make_shared<Problem>(env);
+    auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.0, 10.0);
+    auto y = std::make_shared<Variable>("y", E_VariableType::Real, 0.0, 10.0);
+    problem->add({ x, y });
+
+    auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<LinearTerm>(1.0, x));
+    problem->add(objective);
+
+    auto constraint = std::make_shared<LinearConstraint>("sum", SHOT_DBL_MIN, 1.0);
+    constraint->add(std::make_shared<LinearTerm>(1.0, x));
+    constraint->add(std::make_shared<LinearTerm>(1.0, y));
+    problem->add(constraint);
+
+    problem->finalize();
+
+    // Time spent in an earlier use of bound tightening, more than the limit but not more than twice it
+    env->timing->startTimer("BoundTightening");
+    std::this_thread::sleep_for(std::chrono::milliseconds(1200));
+    env->timing->stopTimer("BoundTightening");
+
+    problem->doFBBT();
+
+    std::cout << "  x: [" << x->lowerBound << ", " << x->upperBound << "], y: [" << y->lowerBound << ", "
+              << y->upperBound << "]\n";
+
+    if(x->upperBound != 1.0 || y->upperBound != 1.0)
+    {
+        std::cout << "  FAILED: the bounds were not tightened to x, y <= 1 after earlier bound tightening.\n";
+        passed = false;
+    }
+
+    return passed;
+}
+
+bool ModelTestConvexityAfterAddedTerm()
+{
+    // The convexity is calculated again when a term has been added, so the elements of the matrix of the previous
+    // calculation must be cleared. Otherwise the matrix contains both the old and the new elements, and x^2 merged
+    // with -1.5x^2 into the term -0.5x^2 gives the element 2 + (-1) = 1, which makes the sum look convex.
+
+    bool passed = true;
+
+    auto solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+    auto problem = std::make_shared<Problem>(env);
+
+    auto x = std::make_shared<Variable>("x", E_VariableType::Real, -10.0, 10.0);
+    auto y = std::make_shared<Variable>("y", E_VariableType::Real, -10.0, 10.0);
+    problem->add(Variables({ x, y }));
+
+    // x^2 + y^2 - 0.1xy is convex, and the bilinear term makes the convexity be decided by the eigenvalues
+    QuadraticTerms terms;
+    terms.add(std::make_shared<QuadraticTerm>(1.0, x, x));
+    terms.add(std::make_shared<QuadraticTerm>(1.0, y, y));
+    terms.add(std::make_shared<QuadraticTerm>(-0.1, x, y));
+    terms.takeOwnership(problem);
+
+    if(terms.getConvexity() != E_Convexity::Convex)
+    {
+        std::cout << "  FAILED: x^2 + y^2 - 0.1xy should be convex.\n";
+        passed = false;
+    }
+
+    // Merges into -0.5x^2 + y^2 - 0.1xy, which is nonconvex
+    terms.add(std::make_shared<QuadraticTerm>(-1.5, x, x));
+
+    std::cout << "  after adding -1.5x^2 the first term is " << terms[0]->coefficient << "x^2\n";
+
+    if(terms[0]->coefficient != -0.5)
+    {
+        std::cout << "  FAILED: the terms should have been merged into -0.5x^2.\n";
+        passed = false;
+    }
+
+    auto convexity = terms.getConvexity();
+
+    std::cout << "  convexity = " << (int)convexity << " (expected " << (int)E_Convexity::Nonconvex << "), smallest "
+              << "eigenvalue = " << terms.minEigenValue << "\n";
+
+    if(convexity != E_Convexity::Nonconvex)
+    {
+        std::cout << "  FAILED: -0.5x^2 + y^2 - 0.1xy should be nonconvex.\n";
+        passed = false;
+    }
+
+    return passed;
+}
+
+bool ModelTestSignomialGradientOfRepeatedVariable()
+{
+    // The coefficient of the term must be used for every element of the gradient, also when the variable already has
+    // an element, which happens when the same variable is in several elements of the term.
+
+    bool passed = true;
+
+    auto solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+    auto problem = std::make_shared<Problem>(env);
+
+    auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.5, 10.0);
+    problem->add(Variables({ x }));
+
+    // 3 * x^0.5 * x^1.5, whose derivative is 3 * (0.5 * x^-0.5 * x^1.5 + x^0.5 * 1.5 * x^0.5) = 3 * 2 * x = 6x
+    SignomialElements elements;
+    elements.push_back(std::make_shared<SignomialElement>(x, 0.5));
+    elements.push_back(std::make_shared<SignomialElement>(x, 1.5));
+
+    SignomialTerms terms;
+    terms.add(std::make_shared<SignomialTerm>(3.0, elements));
+    terms.takeOwnership(problem);
+
+    VectorDouble point = { 2.0 };
+    auto gradient = terms.calculateGradient(point);
+
+    double expected = 6.0 * point[0];
+    double value = gradient.begin()->second;
+
+    std::cout << "  gradient = " << value << " (expected " << expected << ")\n";
+
+    if(std::abs(value - expected) > 1e-9)
+    {
+        std::cout << "  FAILED: the coefficient of the term was not used for both elements.\n";
+        passed = false;
+    }
+
+    return passed;
+}
+
+bool ModelTestBulkTermAdding()
+{
+    // The bulk add of a term container merges the terms through a hash map, while add(term) searches all existing
+    // terms and is quadratic in the number of terms. The C++ and Python interfaces build a container and add it at
+    // once for that reason, so the terms that result must be exactly the ones the one-at-a-time adds give.
+
+    bool passed = true;
+
+    auto solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+    auto problem = std::make_shared<Problem>(env);
+
+    std::vector<VariablePtr> variableVector;
+
+    for(int i = 0; i < 4; i++)
+        variableVector.push_back(
+            std::make_shared<Variable>("x" + std::to_string(i), E_VariableType::Real, -10.0, 10.0));
+
+    // The constructor from a vector is what the Python interface uses to turn a list into a container
+    problem->add(Variables(variableVector));
+
+    if(problem->allVariables.size() != variableVector.size())
+    {
+        std::cout << "  FAILED: the problem should have " << variableVector.size() << " variables, not "
+                  << problem->allVariables.size() << ".\n";
+        passed = false;
+    }
+
+    for(size_t i = 0; i < problem->allVariables.size(); i++)
+    {
+        if(problem->allVariables[i] != variableVector[i] || problem->allVariables[i]->getIndex() != (int)i)
+        {
+            std::cout << "  FAILED: variable " << i << " has index " << problem->allVariables[i]->getIndex() << ".\n";
+            passed = false;
+        }
+    }
+
+    auto x0 = variableVector[0];
+    auto x1 = variableVector[1];
+    auto x2 = variableVector[2];
+
+    // The terms are created again for each path, since merging changes the coefficient of the term object itself
+    auto makeLinearTerms = [&x0, &x1, &x2]()
+    {
+        // x0 and x1 appear twice, so both paths have something to merge
+        return std::vector<LinearTermPtr> { std::make_shared<LinearTerm>(1.0, x0),
+            std::make_shared<LinearTerm>(2.0, x1), std::make_shared<LinearTerm>(3.0, x2),
+            std::make_shared<LinearTerm>(0.5, x0), std::make_shared<LinearTerm>(-2.0, x1) };
+    };
+
+    auto makeQuadraticTerms = [&x0, &x1, &x2]()
+    {
+        // x1x0 is the reversed pair of x0x1 and is merged with it, and x0^2 appears twice
+        return std::vector<QuadraticTermPtr> { std::make_shared<QuadraticTerm>(1.0, x0, x0),
+            std::make_shared<QuadraticTerm>(2.0, x0, x1), std::make_shared<QuadraticTerm>(3.0, x1, x0),
+            std::make_shared<QuadraticTerm>(4.0, x2, x2), std::make_shared<QuadraticTerm>(1.5, x0, x0) };
+    };
+
+    auto compareLinearTerms = [&passed](const std::string& what, const LinearTerms& single, const LinearTerms& bulk)
+    {
+        if(single.size() != bulk.size())
+        {
+            std::cout << "  FAILED: " << what << " gave " << bulk.size() << " terms in bulk and " << single.size()
+                      << " one at a time.\n";
+            passed = false;
+            return;
+        }
+
+        for(size_t i = 0; i < single.size(); i++)
+        {
+            if(single[i]->variable != bulk[i]->variable || single[i]->coefficient != bulk[i]->coefficient)
+            {
+                std::cout << "  FAILED: " << what << " term " << i << " is " << bulk[i]->coefficient << "*"
+                          << bulk[i]->variable->name << " in bulk and " << single[i]->coefficient << "*"
+                          << single[i]->variable->name << " one at a time.\n";
+                passed = false;
+            }
+        }
+    };
+
+    // The linear terms of a constraint are merged by both paths
+    auto singleConstraint = std::make_shared<LinearConstraint>("single", -10.0, 10.0);
+
+    for(auto& T : makeLinearTerms())
+        singleConstraint->add(T);
+
+    auto bulkConstraint = std::make_shared<LinearConstraint>("bulk", -10.0, 10.0);
+    bulkConstraint->add(LinearTerms(makeLinearTerms()));
+
+    compareLinearTerms("the linear terms of a constraint", singleConstraint->linearTerms, bulkConstraint->linearTerms);
+
+    std::cout << "  the linear terms of the constraint are " << bulkConstraint->linearTerms.size() << ": ";
+    for(auto& T : bulkConstraint->linearTerms)
+        std::cout << T->coefficient << "*" << T->variable->name << " ";
+    std::cout << "\n";
+
+    // The same in the container itself, which is what the interfaces fill before they add it
+    LinearTerms singleLinear;
+
+    for(auto& T : makeLinearTerms())
+        singleLinear.add(T);
+
+    LinearTerms bulkLinear;
+    bulkLinear.add(LinearTerms(makeLinearTerms()));
+
+    compareLinearTerms("the linear terms of a container", singleLinear, bulkLinear);
+
+    // LinearObjectiveFunction::add(term) pushes the term back without merging it, unlike the constraint, so the bulk
+    // add of an objective function gives fewer terms than its single adds. The values are the same either way, since
+    // duplicates are summed wherever the terms are used, but a change to this should be a deliberate one
+    auto singleObjective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+
+    for(auto& T : makeLinearTerms())
+        singleObjective->add(T);
+
+    auto bulkObjective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    bulkObjective->add(LinearTerms(makeLinearTerms()));
+
+    VectorDouble point = { 1.0, 2.0, 3.0, 4.0 };
+
+    if(singleObjective->linearTerms.size() != 5 || bulkObjective->linearTerms.size() != 3
+        || singleObjective->linearTerms.calculate(point) != bulkObjective->linearTerms.calculate(point))
+    {
+        std::cout << "  FAILED: the objective function has " << singleObjective->linearTerms.size()
+                  << " terms of value " << singleObjective->linearTerms.calculate(point) << " one at a time and "
+                  << bulkObjective->linearTerms.size() << " of value " << bulkObjective->linearTerms.calculate(point)
+                  << " in bulk.\n";
+        passed = false;
+    }
+
+    // The bulk add of an objective function must still agree with the constraint, which merges as well
+    compareLinearTerms(
+        "the objective function against the constraint", singleConstraint->linearTerms, bulkObjective->linearTerms);
+
+    // The quadratic terms are compared in the container, since QuadraticConstraint::add(term) does not merge
+    QuadraticTerms singleQuadratic;
+
+    for(auto& T : makeQuadraticTerms())
+        singleQuadratic.add(T);
+
+    QuadraticTerms bulkQuadratic;
+    bulkQuadratic.add(QuadraticTerms(makeQuadraticTerms()));
+
+    if(singleQuadratic.size() != bulkQuadratic.size())
+    {
+        std::cout << "  FAILED: the quadratic terms gave " << bulkQuadratic.size() << " terms in bulk and "
+                  << singleQuadratic.size() << " one at a time.\n";
+        passed = false;
+    }
+    else
+    {
+        for(size_t i = 0; i < singleQuadratic.size(); i++)
+        {
+            if(singleQuadratic[i]->firstVariable != bulkQuadratic[i]->firstVariable
+                || singleQuadratic[i]->secondVariable != bulkQuadratic[i]->secondVariable
+                || singleQuadratic[i]->coefficient != bulkQuadratic[i]->coefficient)
+            {
+                std::cout << "  FAILED: quadratic term " << i << " is " << bulkQuadratic[i]->coefficient << "*"
+                          << bulkQuadratic[i]->firstVariable->name << "*" << bulkQuadratic[i]->secondVariable->name
+                          << " in bulk and " << singleQuadratic[i]->coefficient << "*"
+                          << singleQuadratic[i]->firstVariable->name << "*" << singleQuadratic[i]->secondVariable->name
+                          << " one at a time.\n";
+                passed = false;
+            }
+        }
+    }
+
+    std::cout << "  the quadratic terms are " << bulkQuadratic.size() << ": ";
+    for(auto& T : bulkQuadratic)
+        std::cout << T->coefficient << "*" << T->firstVariable->name << "*" << T->secondVariable->name << " ";
+    std::cout << "\n";
+
+    // The bulk adds take their argument by reference, so adding a container to itself must still work: it merges the
+    // terms with themselves, which doubles the coefficients, as it did when the argument was taken by value
+    LinearTerms selfAdded(
+        std::vector<LinearTermPtr> { std::make_shared<LinearTerm>(1.0, x0), std::make_shared<LinearTerm>(2.0, x1) });
+    selfAdded.add(selfAdded);
+
+    if(selfAdded.size() != 2 || selfAdded[0]->coefficient != 2.0 || selfAdded[1]->coefficient != 4.0)
+    {
+        std::cout << "  FAILED: adding the linear terms to themselves gave " << selfAdded.size() << " terms, the "
+                  << "first one " << selfAdded[0]->coefficient << "*" << selfAdded[0]->variable->name << ".\n";
+        passed = false;
+    }
+
+    // The monomial and signomial terms are not merged, so the terms are repeated instead
+    MonomialTerms selfAddedMonomials(
+        std::vector<MonomialTermPtr> { std::make_shared<MonomialTerm>(1.0, Variables({ x0, x1 })),
+            std::make_shared<MonomialTerm>(2.0, Variables({ x2 })) });
+    selfAddedMonomials.add(selfAddedMonomials);
+
+    if(selfAddedMonomials.size() != 4 || selfAddedMonomials[2]->coefficient != 1.0
+        || selfAddedMonomials[3]->coefficient != 2.0)
+    {
+        std::cout << "  FAILED: adding the monomial terms to themselves gave " << selfAddedMonomials.size()
+                  << " terms.\n";
+        passed = false;
     }
 
     return passed;

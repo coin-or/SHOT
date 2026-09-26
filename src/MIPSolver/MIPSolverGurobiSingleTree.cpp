@@ -107,26 +107,31 @@ E_ProblemSolutionStatus MIPSolverGurobiSingleTree::solveProblem()
         MIPSolutionStatus = E_ProblemSolutionStatus::Error;
     }
 
+    // An unbounded exact dual problem means that the problem is unbounded, so no point is needed
+    if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded && env->dualSolver->isDualProblemExact())
+    {
+        MIPSolutionStatus = resolveInfeasibleOrUnbounded(MIPSolutionStatus);
+    }
     // To find a feasible point for an unbounded dual problem
-    if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
+    else if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
     {
         bool variableBoundsUpdated = false;
 
         if((env->reformulatedProblem->objectiveFunction->properties.classification
                    == E_ObjectiveFunctionClassification::Linear
                && std::dynamic_pointer_cast<LinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                      ->isDualUnbounded())
+                      ->isUnbounded())
             || (env->reformulatedProblem->objectiveFunction->properties.classification
                     == E_ObjectiveFunctionClassification::Quadratic
                 && std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                       ->isDualUnbounded()))
+                       ->isUnbounded()))
         {
             for(auto& V : env->reformulatedProblem->allVariables)
             {
-                if(V->isDualUnbounded())
+                if(V->isUnbounded())
                 {
                     updateVariableBound(
-                        V->index, -getUnboundedVariableBoundValue() / 1.1, getUnboundedVariableBoundValue() / 1.1);
+                        V->getIndex(), -getUnboundedVariableBoundValue() / 1.1, getUnboundedVariableBoundValue() / 1.1);
                     variableBoundsUpdated = true;
                 }
             }
@@ -160,8 +165,8 @@ E_ProblemSolutionStatus MIPSolverGurobiSingleTree::solveProblem()
 
             for(auto& V : env->reformulatedProblem->allVariables)
             {
-                if(V->isDualUnbounded())
-                    updateVariableBound(V->index, V->lowerBound, V->upperBound);
+                if(V->isUnbounded())
+                    updateVariableBound(V->getIndex(), V->lowerBound, V->upperBound);
             }
 
             env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed = true;
@@ -268,7 +273,7 @@ void GurobiCallbackSingleTree::callback()
                 {
                     auto maxDev = env->problem->getMaxNumericConstraintValue(
                         primalSolution, env->problem->nonlinearConstraints);
-                    tmpPt.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+                    tmpPt.maxDeviation = PairIndexValue(maxDev.constraint->getIndex(), maxDev.normalizedValue);
                 }
                 else
                 {
@@ -317,7 +322,8 @@ void GurobiCallbackSingleTree::callback()
                 {
                     auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
                         solution, env->reformulatedProblem->nonlinearConstraints);
-                    solutionRelaxed.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+                    solutionRelaxed.maxDeviation
+                        = PairIndexValue(maxDev.constraint->getIndex(), maxDev.normalizedValue);
                 }
                 else
                 {
@@ -381,6 +387,15 @@ void GurobiCallbackSingleTree::callback()
                 solution.at(i) = getSolution(vars[i]);
             }
 
+            // The bounds cannot be changed in the callback, so the MIP solver is interrupted and the artificial
+            // bounds are removed before it solves again
+            if(auto variables = env->problem->getVariablesAtArtificialBounds(solution); variables.size() > 0)
+            {
+                env->dualSolver->variablesAtArtificialBounds = variables;
+                abort();
+                return;
+            }
+
             SolutionPoint solutionCandidate;
 
             if(env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
@@ -388,7 +403,7 @@ void GurobiCallbackSingleTree::callback()
                 auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
                     solution, env->reformulatedProblem->nonlinearConstraints);
 
-                solutionCandidate.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+                solutionCandidate.maxDeviation = PairIndexValue(maxDev.constraint->getIndex(), maxDev.normalizedValue);
             }
             else
             {
@@ -661,7 +676,7 @@ bool GurobiCallbackSingleTree::createIntegerCut(IntegerCut& integerCut)
                 continue;
 
             int variableValue = integerCut.variableValues[index];
-            auto variable = vars[VAR->index];
+            auto variable = vars[VAR->getIndex()];
 
             if(variableValue == VAR->upperBound)
             {
@@ -754,7 +769,7 @@ void GurobiCallbackSingleTree::addExternalDualBoundLazyConstraint()
             if(linObj)
             {
                 for(auto& T : linObj->linearTerms)
-                    objExpr += T->coefficient * vars[T->variable->index];
+                    objExpr += T->coefficient * vars[T->variable->getIndex()];
             }
 
             env->output->outputDebug(

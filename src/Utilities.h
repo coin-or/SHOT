@@ -18,13 +18,9 @@
 
 #include "Structs.h"
 
-namespace SHOT
-{
-class Variable;
-using VariablePtr = std::shared_ptr<Variable>;
-using SparseVariableVector = std::map<VariablePtr, double>;
-using SparseVariableMatrix = std::map<std::pair<VariablePtr, VariablePtr>, double>;
-}
+// The sparse variable containers are declared together with the comparator that orders them on the variable
+// index, so that they are not redeclared here with the default one ordering on the pointer address
+#include "Model/Variables.h"
 
 namespace SHOT::Utilities
 {
@@ -56,6 +52,16 @@ double L2Norm(const VectorDouble& ptA, const VectorDouble& ptB);
 VectorDouble L2Norms(const std::vector<VectorDouble>& ptsA, const VectorDouble& ptB);
 VectorDouble calculateCenterPoint(const std::vector<VectorDouble>& pts);
 
+// The point (1 - fraction) * fromPoint + fraction * toPoint, i.e. fromPoint for the fraction zero and toPoint
+// for the fraction one
+VectorDouble getPointOnSegment(const VectorDouble& fromPoint, const VectorDouble& toPoint, double fraction);
+
+// The center of the box given by the bounds, where a bound larger in magnitude than maxMagnitude is replaced by
+// it. A variable that is unbounded in the problem has been given an artificial bound of e.g. 1e20, and the center
+// of that box is of no use, so the center is kept where the values of the problem are.
+VectorDouble calculateBoxCenterPoint(
+    const VectorDouble& lowerBounds, const VectorDouble& upperBounds, double maxMagnitude = 1.0e4);
+
 int numDifferentRoundedSelectedElements(
     const VectorDouble& firstPt, const VectorDouble& secondPt, const VectorInteger& indexes);
 bool isDifferentRoundedSelectedElements(
@@ -86,7 +92,7 @@ VectorString getLinesInFile(const std::string& fileName);
  * that entry and move to next.
  * From: https://thispointer.com/
  */
-template <typename K, typename V> inline void erase_if(std::map<K, V>& mapOfElement, V value)
+template <typename K, typename V, typename C> inline void erase_if(std::map<K, V, C>& mapOfElement, V value)
 {
     auto it = mapOfElement.begin();
     // Iterate through the map
@@ -107,7 +113,23 @@ template <typename K, typename V> inline void erase_if(std::map<K, V>& mapOfElem
     }
 }
 
+// Returns a fixed pseudorandom number in [low, high) for the given index in the given stream. The value depends
+// only on the arguments, so that every hash built from these coefficients is the same in every run, and in every
+// solver instance, regardless of how many coefficients have been requested before.
+double fixedPseudoRandomNumber(size_t index, size_t stream, double low, double high);
+
 template <typename T> double calculateHash(std::vector<T> const& point);
+
+// Two hashes of a point, where each value is mapped into (-1, 1) before it is hashed, so that a variable of large
+// magnitude does not dominate them. Otherwise a difference in a variable of small magnitude, e.g. a binary one, is
+// lost next to it and two points differing only in such variables are taken for the same point. Two hashes are
+// used because two different points can match in one of them.
+template <typename T> std::pair<double, double> calculateHashes(std::vector<T> const& point);
+
+// Whether two points hashed with calculateHashes are the same point. The hashes of the same point only differ by
+// rounding errors, which are relative to the magnitude of the hash, while two different points differ by much
+// more than that.
+bool haveSameHashes(const PairDouble& first, const PairDouble& second);
 
 bool isAlmostEqual(double x, double y, const double epsilon);
 
@@ -115,6 +137,16 @@ bool isAlmostZero(double x, const double epsilon = std::numeric_limits<double>::
 
 bool isInteger(double value);
 std::string trim(std::string& str);
+
+// Adds the elements of the source into the target, moving the elements whose variables are not already in it. Used
+// instead of the combine functions below when the target is not needed afterwards, since they copy both arguments
+// into a new map.
+void addSparseVariableVector(SparseVariableVector& target, SparseVariableVector&& source);
+
+// Adds the elements of a source that is kept, e.g. a cached gradient
+void addSparseVariableVector(SparseVariableVector& target, const SparseVariableVector& source);
+
+void addSparseVariableMatrix(SparseVariableMatrix& target, SparseVariableMatrix&& source);
 
 SparseVariableVector combineSparseVariableVectors(
     const SparseVariableVector& first, const SparseVariableVector& second);

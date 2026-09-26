@@ -15,6 +15,7 @@
 
 #include "../Output.h"
 #include "../Settings.h"
+#include "../Timing.h"
 #include "../Utilities.h"
 
 namespace SHOT
@@ -182,7 +183,7 @@ bool IpoptProblem::get_list_of_nonlinear_variables(
 
     for(int i = 0; i < sourceProblem->properties.numberOfNonlinearVariables; i++)
     {
-        pos_nonlin_vars[i] = sourceProblem->nonlinearVariables[i]->index;
+        pos_nonlin_vars[i] = sourceProblem->nonlinearVariables[i]->getIndex();
 #ifndef NDEBUG
         count++;
 #endif
@@ -301,6 +302,12 @@ bool IpoptProblem::get_starting_point(Index n, [[maybe_unused]] bool init_x, [[m
     return (true);
 }
 
+// The key of a (row, column) pair in the Jacobian and Hessian placement maps
+static inline long getElementKey(int row, int column, int numberOfVariables)
+{
+    return ((long)row * numberOfVariables + column);
+}
+
 // Returns the value of the objective function
 bool IpoptProblem::eval_f(Index n, const Number* x, [[maybe_unused]] bool new_x, Number& obj_value)
 {
@@ -319,7 +326,7 @@ bool IpoptProblem::eval_grad_f(Index n, const Number* x, [[maybe_unused]] bool n
     std::memset(grad_f, 0, n * sizeof(Number));
 
     for(auto& G : sourceProblem->objectiveFunction->calculateGradient(vectorPoint, false))
-        grad_f[G.first->index] = G.second;
+        grad_f[G.first->getIndex()] = G.second;
 
     return (true);
 }
@@ -345,6 +352,7 @@ bool IpoptProblem::eval_jac_g(Index n, const Number* x, [[maybe_unused]] bool ne
         int counter = 0;
 
         jacobianCounterPlacement.clear();
+        constantJacobianElements.clear();
 
         for(auto& C : sourceProblem->numericConstraints)
         {
@@ -352,14 +360,29 @@ bool IpoptProblem::eval_jac_g(Index n, const Number* x, [[maybe_unused]] bool ne
 
             for(auto& G : *jacobian)
             {
-                iRow[counter] = C->index;
-                jCol[counter] = G->index;
+                iRow[counter] = C->getIndex();
+                jCol[counter] = G->getIndex();
 
-                jacobianCounterPlacement.emplace(std::make_pair(C->index, G->index), counter);
+                jacobianCounterPlacement.emplace(getElementKey(C->getIndex(), G->getIndex(), n), counter);
                 counter++;
             }
 
             assert(counter <= nele_jac);
+        }
+
+        // The gradients of the linear constraints do not depend on the point, so they are calculated once here
+        VectorDouble emptyPoint(n, 0.0);
+
+        for(auto& C : sourceProblem->numericConstraints)
+        {
+            if(C->properties.classification != E_ConstraintClassification::Linear)
+                continue;
+
+            for(auto& G : C->calculateGradient(emptyPoint, false))
+            {
+                int location = jacobianCounterPlacement[getElementKey(C->getIndex(), G.first->getIndex(), n)];
+                constantJacobianElements.emplace_back(location, G.second);
+            }
         }
 
         return (true);
@@ -371,13 +394,19 @@ bool IpoptProblem::eval_jac_g(Index n, const Number* x, [[maybe_unused]] bool ne
 
     std::memset(values, 0, nele_jac * sizeof(Number));
 
+    for(auto& E : constantJacobianElements)
+        values[E.first] += E.second;
+
     for(auto& C : sourceProblem->numericConstraints)
     {
+        if(C->properties.classification == E_ConstraintClassification::Linear)
+            continue;
+
         auto jacobian = C->calculateGradient(vectorPoint, false);
 
         for(auto& G : jacobian)
         {
-            int location = jacobianCounterPlacement[std::make_pair(C->index, G.first->index)];
+            int location = jacobianCounterPlacement[getElementKey(C->getIndex(), G.first->getIndex(), n)];
 
             values[location] += G.second;
 
@@ -402,12 +431,13 @@ bool IpoptProblem::eval_h(Index n, const Number* x, [[maybe_unused]] bool new_x,
 
         for(auto& E : *sourceProblem->getLagrangianHessianSparsityPattern())
         {
-            assert(E.first->index <= E.second->index);
+            assert(E.first->getIndex() <= E.second->getIndex());
 
-            iRow[counter] = E.first->index;
-            jCol[counter] = E.second->index;
+            iRow[counter] = E.first->getIndex();
+            jCol[counter] = E.second->getIndex();
 
-            lagrangianHessianCounterPlacement.emplace(std::make_pair(E.first->index, E.second->index), counter);
+            lagrangianHessianCounterPlacement.emplace(
+                getElementKey(E.first->getIndex(), E.second->getIndex(), n), counter);
 
             counter++;
         }
@@ -423,10 +453,17 @@ bool IpoptProblem::eval_h(Index n, const Number* x, [[maybe_unused]] bool new_x,
 
     if(obj_factor != 0.0)
     {
-        for(auto& E : sourceProblem->objectiveFunction->calculateHessian(vectorPoint, false))
+        // A constant Hessian, e.g. of a quadratic objective function, is used as it is instead of being copied
+        auto constantHessian = sourceProblem->objectiveFunction->getConstantHessian();
+        SparseVariableMatrix calculatedHessian;
+
+        if(!constantHessian)
+            calculatedHessian = sourceProblem->objectiveFunction->calculateHessian(vectorPoint, false);
+
+        for(auto& E : (constantHessian ? *constantHessian : calculatedHessian))
         {
-            int location
-                = lagrangianHessianCounterPlacement[std::make_pair(E.first.first->index, E.first.second->index)];
+            int location = lagrangianHessianCounterPlacement[getElementKey(
+                E.first.first->getIndex(), E.first.second->getIndex(), n)];
 
             assert(location < nele_hess);
             assert(location >= 0);
@@ -440,18 +477,24 @@ bool IpoptProblem::eval_h(Index n, const Number* x, [[maybe_unused]] bool new_x,
         if(C->properties.classification == E_ConstraintClassification::Linear)
             continue;
 
-        if(lambda[C->index] == 0.0)
+        if(lambda[C->getIndex()] == 0.0)
             continue;
 
-        for(auto& E : C->calculateHessian(vectorPoint, false))
+        auto constantHessian = C->getConstantHessian();
+        SparseVariableMatrix calculatedHessian;
+
+        if(!constantHessian)
+            calculatedHessian = C->calculateHessian(vectorPoint, false);
+
+        for(auto& E : (constantHessian ? *constantHessian : calculatedHessian))
         {
-            int location
-                = lagrangianHessianCounterPlacement[std::make_pair(E.first.first->index, E.first.second->index)];
+            int location = lagrangianHessianCounterPlacement[getElementKey(
+                E.first.first->getIndex(), E.first.second->getIndex(), n)];
 
             assert(location < nele_hess);
             assert(location >= 0);
 
-            values[location] += lambda[C->index] * E.second;
+            values[location] += lambda[C->getIndex()] * E.second;
         }
     }
 
@@ -680,6 +723,12 @@ E_NLPSolutionStatus NLPSolverIpoptBase::solveProblemInstance()
 
     E_NLPSolutionStatus status;
     ipoptProblem->variableSolution.clear();
+
+    // Ipopt is given the time left of the time limit of SHOT, since it otherwise solves without any limit of its
+    // own: a single NLP problem could then take longer than the whole solution time allowed, e.g. when its linear
+    // solver runs into difficulties. The limit is kept positive, since a nonpositive one is rejected.
+    double timeLeft = env->settings->getSetting<double>("Termination.TimeLimit") - env->timing->getElapsedTime("Total");
+    ipoptApplication->Options()->SetNumericValue("max_wall_time", std::max(timeLeft, 0.00001));
 
     try
     {

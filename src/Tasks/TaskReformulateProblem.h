@@ -68,32 +68,32 @@ private:
 
     NumericConstraints reformulateConstraint(NumericConstraintPtr constraint);
 
-    template <class T> void copyLinearTermsToConstraint(LinearTerms terms, T destination, bool reversedSigns = false);
+    template <class T> void copyLinearTermsToConstraint(const LinearTerms& terms, T destination, bool reversedSigns = false);
 
     template <class T>
-    void copyQuadraticTermsToConstraint(QuadraticTerms terms, T destination, bool reversedSigns = false);
+    void copyQuadraticTermsToConstraint(const QuadraticTerms& terms, T destination, bool reversedSigns = false);
 
     template <class T>
-    void copyMonomialTermsToConstraint(MonomialTerms terms, T destination, bool reversedSigns = false);
+    void copyMonomialTermsToConstraint(const MonomialTerms& terms, T destination, bool reversedSigns = false);
 
     template <class T>
-    void copySignomialTermsToConstraint(SignomialTerms terms, T destination, bool reversedSigns = false);
+    void copySignomialTermsToConstraint(const SignomialTerms& terms, T destination, bool reversedSigns = false);
 
     template <class T>
-    void copyLinearTermsToObjectiveFunction(LinearTerms terms, T destination, bool reversedSigns = false);
+    void copyLinearTermsToObjectiveFunction(const LinearTerms& terms, T destination, bool reversedSigns = false);
 
     template <class T>
-    void copyQuadraticTermsToObjectiveFunction(QuadraticTerms terms, T destination, bool reversedSigns = false);
+    void copyQuadraticTermsToObjectiveFunction(const QuadraticTerms& terms, T destination, bool reversedSigns = false);
 
     template <class T>
-    void copyMonomialTermsToObjectiveFunction(MonomialTerms terms, T destination, bool reversedSigns = false);
+    void copyMonomialTermsToObjectiveFunction(const MonomialTerms& terms, T destination, bool reversedSigns = false);
 
     template <class T>
-    void copySignomialTermsToObjectiveFunction(SignomialTerms terms, T destination, bool reversedSigns = false);
+    void copySignomialTermsToObjectiveFunction(const SignomialTerms& terms, T destination, bool reversedSigns = false);
 
-    LinearTerms partitionNonlinearSum(const std::shared_ptr<ExpressionSum> source, bool reversedSigns);
-    LinearTerms partitionMonomialTerms(const MonomialTerms sourceTerms, bool reversedSigns);
-    LinearTerms partitionSignomialTerms(const SignomialTerms sourceTerms, bool reversedSigns);
+    LinearTerms partitionNonlinearSum(const std::shared_ptr<ExpressionSum>& source, bool reversedSigns);
+    LinearTerms partitionMonomialTerms(const MonomialTerms& sourceTerms, bool reversedSigns);
+    LinearTerms partitionSignomialTerms(const SignomialTerms& sourceTerms, bool reversedSigns);
 
     LinearTerms partitionNonlinearBinaryProduct(const std::shared_ptr<ExpressionSum> source, bool reversedSigns);
 
@@ -102,8 +102,8 @@ private:
     std::tuple<LinearTerms, MonomialTerms> reformulateMonomialSum(
         const MonomialTerms& monomialTerms, bool reversedSigns);
 
-    LinearTerms doEigenvalueDecomposition(QuadraticTerms quadraticTerms);
-    LinearTerms doLDLDecomposition(QuadraticTerms quadraticTerms);
+    LinearTerms doEigenvalueDecomposition(QuadraticTerms& quadraticTerms);
+    LinearTerms doLDLDecomposition(QuadraticTerms& quadraticTerms);
 
     NonlinearExpressionPtr reformulateNonlinearExpression(NonlinearExpressionPtr source);
     NonlinearExpressionPtr reformulateNonlinearExpression(std::shared_ptr<ExpressionAbs> source);
@@ -140,11 +140,12 @@ private:
     int auxVariableCounter = 0;
     int auxConstraintCounter = 0;
 
-    std::map<VariablePtr, Variables> integerAuxiliaryBinaryVariables;
+    std::map<VariablePtr, Variables, VariableIndexComparator> integerAuxiliaryBinaryVariables;
 
-    std::map<std::pair<VariablePtr, double>, AuxiliaryVariablePtr> squareAuxVariables;
+    std::map<std::pair<VariablePtr, double>, AuxiliaryVariablePtr, VariableIndexComparator> squareAuxVariables;
 
-    std::map<std::tuple<VariablePtr, VariablePtr>, AuxiliaryVariablePtr> bilinearAuxVariables;
+    std::map<std::tuple<VariablePtr, VariablePtr>, AuxiliaryVariablePtr, VariableIndexComparator>
+        bilinearAuxVariables;
 
     std::map<std::string, AuxiliaryVariablePtr> absoluteExpressionsAuxVariables;
 

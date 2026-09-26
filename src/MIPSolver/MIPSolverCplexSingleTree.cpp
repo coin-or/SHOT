@@ -136,7 +136,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
                 {
                     auto maxDev = env->problem->getMaxNumericConstraintValue(
                         primalSolution, env->problem->nonlinearConstraints);
-                    tmpPt.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+                    tmpPt.maxDeviation = PairIndexValue(maxDev.constraint->getIndex(), maxDev.normalizedValue);
                 }
                 else
                 {
@@ -198,7 +198,8 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
                 {
                     auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
                         solution, env->reformulatedProblem->nonlinearConstraints);
-                    solutionRelaxed.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+                    solutionRelaxed.maxDeviation
+                        = PairIndexValue(maxDev.constraint->getIndex(), maxDev.normalizedValue);
                 }
                 else
                 {
@@ -278,6 +279,15 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
 
             tmpVals.end();
 
+            // The bounds cannot be changed in the callback, so the MIP solver is interrupted and the artificial
+            // bounds are removed before it solves again
+            if(auto variables = env->problem->getVariablesAtArtificialBounds(solution); variables.size() > 0)
+            {
+                env->dualSolver->variablesAtArtificialBounds = variables;
+                context.abort();
+                return;
+            }
+
             SolutionPoint solutionCandidate;
 
             if(env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
@@ -285,7 +295,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
                 auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
                     solution, env->reformulatedProblem->nonlinearConstraints);
 
-                solutionCandidate.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+                solutionCandidate.maxDeviation = PairIndexValue(maxDev.constraint->getIndex(), maxDev.normalizedValue);
             }
             else
             {
@@ -332,7 +342,18 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
             auto threadId = std::to_string(context.getIntInfo(IloCplex::Callback::Context::Info::ThreadId));
             printIterationReport(candidatePoints.at(0), threadId);
 
-            if(checkFixedNLPStrategy(candidatePoints.at(0)))
+            // Cplex reports every candidate in the Candidate context, also those that are not better than the best
+            // solution found so far and those it reports again after a lazy constraint has cut one off, while e.g.
+            // Gurobi only reports new incumbents. The fixed NLP problem is therefore only solved for a candidate
+            // that improves the primal bound, so that how often the heuristic is called does not depend on how
+            // often the solver reports candidates. The lazy constraints are still added for every candidate.
+            double candidateObjective = context.getCandidateObjective();
+
+            bool candidateImprovesPrimalBound = (candidateObjective < 1e74)
+                && ((isMinimization && candidateObjective < env->results->getPrimalBound())
+                    || (!isMinimization && candidateObjective > env->results->getPrimalBound()));
+
+            if(candidateImprovesPrimalBound && checkFixedNLPStrategy(candidatePoints.at(0)))
             {
 
                 if(taskSelectPrimNLPOriginal)
@@ -535,7 +556,7 @@ bool CplexCallback::createIntegerCut(IntegerCut& integerCut, const IloCplex::Cal
                 continue;
 
             int variableValue = integerCut.variableValues[index];
-            auto variable = cplexVars[VAR->index];
+            auto variable = cplexVars[VAR->getIndex()];
 
             if(variableValue == VAR->upperBound)
             {
@@ -594,6 +615,59 @@ void CplexCallback::addLazyConstraint(
         }
 
         taskSelectExternalHPs->run(candidatePoints);
+
+        // Cplex discards the candidate when it is rejected, whether or not the constraints added with it are
+        // violated there. A candidate fulfilling the nonlinear constraints must therefore not be rejected unless
+        // one of the hyperplanes actually cuts it off, since the hyperplanes are also generated for the relaxed
+        // points of the callback, which the candidate need not violate. A candidate not fulfilling them is always
+        // rejected, since accepting it would make an infeasible point the incumbent of the MIP solver.
+        bool candidateIsFeasible = candidatePoints.size() > 0
+            && (candidatePoints.at(0).maxDeviation.value
+                <= env->settings->getSetting<double>("Termination.ConstraintTolerance"));
+        bool candidateIsCutOff = false;
+
+        // The hyperplanes only need to be checked for a candidate fulfilling the constraints, since one that does
+        // not is rejected in any case
+        if(candidateIsFeasible)
+        {
+            auto& candidate = candidatePoints.at(0);
+
+            for(auto& hp : env->dualSolver->hyperplaneWaitingList)
+            {
+                auto terms = env->dualSolver->MIPSolver->createHyperplaneTerms(hp);
+
+                if(!terms)
+                    continue;
+
+                double value = terms->second;
+
+                for(auto& E : terms->first)
+                {
+                    value += E.second
+                        * ((E.first < (int)candidate.point.size()) ? candidate.point.at(E.first)
+                                                                   : candidate.objectiveValue);
+                }
+
+                if(value > 0.0)
+                {
+                    candidateIsCutOff = true;
+                    break;
+                }
+            }
+        }
+
+        if(candidateIsFeasible && !candidateIsCutOff)
+        {
+            if(env->dualSolver->hyperplaneWaitingList.size() > 0)
+            {
+                env->output->outputDebug("        Not rejecting the candidate fulfilling the constraints, since "
+                                         "none of the "
+                    + std::to_string(env->dualSolver->hyperplaneWaitingList.size())
+                    + " hyperplanes in the waiting list cuts it off.");
+            }
+
+            return;
+        }
 
         for(auto& hp : env->dualSolver->hyperplaneWaitingList)
         {
@@ -701,8 +775,15 @@ E_ProblemSolutionStatus MIPSolverCplexSingleTree::solveProblem()
             MIPSolutionStatus = MIPSolverCplex::getSolutionStatus();
         }
 
+        // An unbounded exact dual problem means that the problem is unbounded, so no point is needed
+        bool isUnboundedExactDualProblem
+            = MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded && env->dualSolver->isDualProblemExact();
+
+        if(isUnboundedExactDualProblem)
+            MIPSolutionStatus = resolveInfeasibleOrUnbounded(MIPSolutionStatus);
+
         // Try to solve a feasibility problem to get a valid solution point if unbounded
-        if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
+        if(!isUnboundedExactDualProblem && MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
         {
             cplexModel.remove(cplexInstance.getObjective());
 
@@ -724,7 +805,7 @@ E_ProblemSolutionStatus MIPSolverCplexSingleTree::solveProblem()
         }
 
         // If the previous repair failed, we can try this
-        if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
+        if(!isUnboundedExactDualProblem && MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
         {
             repairInfeasibility();
             MIPSolutionStatus = E_ProblemSolutionStatus::Unbounded;
@@ -814,7 +895,7 @@ void CplexCallback::addExternalDualBoundLazyConstraint(const IloCplex::Callback:
             if(linObj)
             {
                 for(auto& T : linObj->linearTerms)
-                    objExpr += T->coefficient * cplexVars[T->variable->index];
+                    objExpr += T->coefficient * cplexVars[T->variable->getIndex()];
             }
 
             env->output->outputDebug(

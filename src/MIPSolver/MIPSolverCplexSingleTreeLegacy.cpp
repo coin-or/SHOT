@@ -130,7 +130,7 @@ void HCallbackI::main() // Called at each node...
         {
             auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
                 solution, env->reformulatedProblem->nonlinearConstraints);
-            tmpSolPt.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+            tmpSolPt.maxDeviation = PairIndexValue(maxDev.constraint->getIndex(), maxDev.normalizedValue);
         }
         else
         {
@@ -311,6 +311,15 @@ void CtCallbackI::main()
 
     tmpVals.end();
 
+    // The bounds cannot be changed in the callback, so the MIP solver is interrupted and the artificial bounds are
+    // removed before it solves again
+    if(auto variables = env->problem->getVariablesAtArtificialBounds(solution); variables.size() > 0)
+    {
+        env->dualSolver->variablesAtArtificialBounds = variables;
+        this->abort();
+        return;
+    }
+
     SolutionPoint solutionCandidate;
 
     if(env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
@@ -318,7 +327,7 @@ void CtCallbackI::main()
         auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
             solution, env->reformulatedProblem->nonlinearConstraints);
 
-        solutionCandidate.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+        solutionCandidate.maxDeviation = PairIndexValue(maxDev.constraint->getIndex(), maxDev.normalizedValue);
     }
     else
     {
@@ -363,7 +372,7 @@ void CtCallbackI::main()
             if(env->problem->properties.numberOfNonlinearConstraints > 0)
             {
                 auto maxDev = env->problem->getMaxNumericConstraintValue(solution, env->problem->nonlinearConstraints);
-                tmpPt.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+                tmpPt.maxDeviation = PairIndexValue(maxDev.constraint->getIndex(), maxDev.normalizedValue);
             }
             else
             {
@@ -645,11 +654,11 @@ bool CtCallbackI::createIntegerCut(IntegerCut& integerCut)
 
             if(variableValue == VAR->upperBound)
             {
-                expr += (variableValue - cplexVars[VAR->index]);
+                expr += (variableValue - cplexVars[VAR->getIndex()]);
             }
             else if(variableValue == VAR->lowerBound)
             {
-                expr += cplexVars[VAR->index];
+                expr += cplexVars[VAR->getIndex()];
             }
 
             index++;
@@ -752,8 +761,15 @@ E_ProblemSolutionStatus MIPSolverCplexSingleTreeLegacy::solveProblem()
         cplexInstance.solve();
         MIPSolutionStatus = getSolutionStatus();
 
+        // An unbounded exact dual problem means that the problem is unbounded, so no point is needed
+        bool isUnboundedExactDualProblem
+            = MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded && env->dualSolver->isDualProblemExact();
+
+        if(isUnboundedExactDualProblem)
+            MIPSolutionStatus = resolveInfeasibleOrUnbounded(MIPSolutionStatus);
+
         // Try to solve a feasibility problem to get a valid solution point if unbounded
-        if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
+        if(!isUnboundedExactDualProblem && MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
         {
             cplexModel.remove(cplexInstance.getObjective());
 
@@ -773,7 +789,7 @@ E_ProblemSolutionStatus MIPSolverCplexSingleTreeLegacy::solveProblem()
             modelUpdated = true;
         }
 
-        if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
+        if(!isUnboundedExactDualProblem && MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
         {
             repairInfeasibility();
             MIPSolutionStatus = E_ProblemSolutionStatus::Unbounded;

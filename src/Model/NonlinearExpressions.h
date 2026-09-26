@@ -196,11 +196,19 @@ public:
             (*this).push_back(E);
     };
 
+    explicit NonlinearExpressions(std::vector<NonlinearExpressionPtr> expressions)
+        : std::vector<NonlinearExpressionPtr>(std::move(expressions)) {};
+
     inline void add(NonlinearExpressionPtr expression) { (*this).push_back(expression); };
-    inline void add(NonlinearExpressions expressions)
+    inline void add(const NonlinearExpressions& expressions)
     {
-        for(auto& E : expressions)
-            (*this).push_back(E);
+        // The number of expressions and the capacity are taken before the first one is added, so that adding the
+        // expressions to themselves neither reallocates the container being read nor reads what has just been added
+        size_t numberOfExpressions = expressions.size();
+        (*this).reserve(size() + numberOfExpressions);
+
+        for(size_t i = 0; i < numberOfExpressions; i++)
+            (*this).push_back(expressions[i]);
     };
 };
 
@@ -208,7 +216,7 @@ class ExpressionConstant : public NonlinearExpression
 {
 public:
     double constant = 0;
-    ExpressionConstant(double constant) : constant(constant) {};
+    ExpressionConstant(double constant) : constant(constant) { };
 
     inline double calculate([[maybe_unused]] const VectorDouble& point) const override { return constant; };
 
@@ -232,7 +240,7 @@ public:
 
     inline int getNumberOfChildren() const override { return 0; }
 
-    inline void appendNonlinearVariables([[maybe_unused]] Variables& nonlinearVariables) override {};
+    inline void appendNonlinearVariables([[maybe_unused]] Variables& nonlinearVariables) override { };
 
     inline bool operator==(const NonlinearExpression& rhs) const override
     {
@@ -248,7 +256,7 @@ class ExpressionVariable : public NonlinearExpression
 public:
     VariablePtr variable;
 
-    ExpressionVariable(VariablePtr variable) : variable(variable) {};
+    ExpressionVariable(VariablePtr variable) : variable(variable) { };
 
     inline void takeOwnership(ProblemPtr owner) override
     {
@@ -582,6 +590,11 @@ public:
         if(bound.l() < 0.0 && bound.u() < 0.0)
             return (false);
 
+        // sqrt(child) is never negative, so a negative lower part of the candidate is vacuous -- clamp it away
+        // instead of letting it inflate pow(bound, 2)'s upper bound to infinity.
+        if(bound.l() < 0.0)
+            bound.l(0.0);
+
         auto interval = pow(bound, 2);
 
         return (child->tightenBounds(interval));
@@ -615,9 +628,39 @@ public:
             isValid = false;
         }
 
+        // A term counts as a (Euclidean-norm-compatible) square if it is either a bare Square(affine), or a
+        // Product of a non-negative Constant and a Square(affine) -- e.g. GAMS's "0.5*sqr(...)" parses as
+        // Product(Constant(0.5), Square(...)), not as a bare Square node. Scaling a convex Square by a
+        // non-negative constant preserves convexity, so this remains within the SOCP-representable special case
+        auto isNonnegativelyScaledSquare = [](const NonlinearExpressionPtr& expr)
+        {
+            if(expr->getType() == E_NonlinearExpressionTypes::Square)
+                return true;
+
+            if(expr->getType() != E_NonlinearExpressionTypes::Product)
+                return false;
+
+            auto product = std::static_pointer_cast<ExpressionGeneral>(expr);
+
+            if(product->children.size() != 2)
+                return false;
+
+            for(int i = 0; i < 2; i++)
+            {
+                auto& factor = product->children.at(i);
+                auto& other = product->children.at(1 - i);
+
+                if(factor->getType() == E_NonlinearExpressionTypes::Constant && factor->getBounds().l() >= 0
+                    && other->getType() == E_NonlinearExpressionTypes::Square)
+                    return true;
+            }
+
+            return false;
+        };
+
         for(auto& C : children)
         {
-            if(!(C->getType() == E_NonlinearExpressionTypes::Square && C->getBounds().l() >= 0
+            if(!(isNonnegativelyScaledSquare(C) && C->getBounds().l() >= 0
                    && (C->getConvexity() == E_Convexity::Convex)))
             {
                 isValid = false;
@@ -737,10 +780,15 @@ public:
 
     inline bool tightenBounds(Interval bound) override
     {
-        if(bound.l() <= 0)
-            return false;
+        if(bound.u() <= 0)
+            return false; // exp() > 0 always; a nonpositive upper bound means infeasible, nothing to propagate
 
-        return (child->tightenBounds(log(bound)));
+        // A nonpositive lower bound carries no information (exp(x) can get arbitrarily close to 0 for x -> -inf,
+        // satisfying any positive upper cap), so it must map to -inf, not to log() of some small positive floor --
+        // the latter would fabricate a lower bound on the child that the constraint never actually implied.
+        double newLower = (bound.l() <= 0) ? -SHOT_DBL_INF : std::log(bound.l());
+
+        return (child->tightenBounds(Interval(newLower, std::log(bound.u()))));
     };
 
     inline FactorableFunction getFactorableFunction() override { return (exp(child->getFactorableFunction())); }
@@ -811,10 +859,22 @@ public:
 
     inline bool tightenBounds(Interval bound) override
     {
-        if(bound.l() < 0)
-            return false;
+        if(bound.u() < 0)
+            return (false);
 
-        return (child->tightenBounds(sqrt(bound)));
+        // The square discards the sign of the child, so a bound on the square only resolves it if the child's domain
+        // is on one side of zero. Otherwise only the upper bound can be used, since a positive lower bound would
+        // exclude an interval around zero, which cannot be represented.
+        auto roots = sqrt(Interval(std::max(0.0, bound.l()), bound.u()));
+        auto childBound = child->getBounds();
+
+        if(childBound.l() >= 0)
+            return (child->tightenBounds(roots));
+
+        if(childBound.u() <= 0)
+            return (child->tightenBounds(-roots));
+
+        return (child->tightenBounds(Interval(-roots.u(), roots.u())));
     };
 
     inline FactorableFunction getFactorableFunction() override
@@ -1456,8 +1516,10 @@ public:
         bool firstTightened = firstChild->tightenBounds(secondChild->getBounds() * bound);
         bool secondTightened = secondChild->tightenBounds(firstChild->getBounds() / bound);
 
+        // The numerator is tightened again with the tightened bounds of the denominator. The call is made first, so
+        // that it is not skipped when the numerator has already been tightened.
         if(secondTightened)
-            firstTightened = firstTightened || firstChild->tightenBounds(secondChild->getBounds() * bound);
+            firstTightened = firstChild->tightenBounds(secondChild->getBounds() * bound) || firstTightened;
 
         return (firstTightened || secondTightened);
     }
@@ -1884,11 +1946,16 @@ public:
         int integerValue = (int)round(intpart);
         bool isEven = (integerValue % 2 == 0);
 
+        // An odd positive integer power (e.g. a cube) preserves the sign of a negative base, so -- unlike an
+        // even power, e.g. a square -- its target bound must not be forced non-negative, and the base must be
+        // recovered via a signed n-th root rather than pow()/sqrt()
+        bool isOddPositiveIntegerPower = isInteger && !isEven && power > 0;
+
         if(isInteger && isEven && power > 0 && bound.l() <= 0.0)
             bound.l(0.0);
-        else if(bound.l() <= 0.0 && bound.u() > SHOT_DBL_SIG_MIN)
+        else if(!isOddPositiveIntegerPower && bound.l() <= 0.0 && bound.u() > SHOT_DBL_SIG_MIN)
             bound.l(SHOT_DBL_SIG_MIN);
-        else if(bound.u() < 0)
+        else if(!isOddPositiveIntegerPower && bound.u() < 0)
             return (false);
 
         Interval interval;
@@ -1901,6 +1968,16 @@ public:
 
             if(interval.l() < 1e-10 && interval.u() > 1e-10)
                 interval.l(1e-10);
+        }
+        else if(isOddPositiveIntegerPower)
+        {
+            auto nthRoot
+                = [power](double x) { return (x < 0.0 ? -std::pow(-x, 1.0 / power) : std::pow(x, 1.0 / power)); };
+
+            double lower = nthRoot(bound.l());
+            double upper = nthRoot(bound.u());
+
+            interval = Interval(std::min(lower, upper), std::max(lower, upper));
         }
         else
             interval = pow(bound, 1.0 / power);
@@ -2404,7 +2481,9 @@ public:
         return true;
     };
 
-    std::optional<std::tuple<double, VariablePtr, double>> getLinearTermAndConstant();
+    // Returns (coefficient, variable, constant) if the sum is exactly one linear term plus an optional constant,
+    // otherwise nothing
+    std::optional<std::tuple<double, VariablePtr, double>> getAsLinearTermPlusConstant();
 };
 
 class ExpressionProduct : public ExpressionGeneral, public std::enable_shared_from_this<ExpressionProduct>
@@ -2504,7 +2583,7 @@ public:
 
             auto childBound = bound / othersBound;
 
-            tightened = C1->tightenBounds(childBound);
+            tightened = C1->tightenBounds(childBound) || tightened;
         }
 
         return (tightened);
@@ -2672,7 +2751,7 @@ public:
 
         if(children.size() == 2)
         {
-            bool isConvex = true;
+            bool isConvex = false;
             bool isValid = true;
 
             NonlinearExpressionPtr otherFactor;
@@ -2687,17 +2766,17 @@ public:
             {
                 if(C->getType() == E_NonlinearExpressionTypes::Sum && C->getNumberOfChildren() == 2)
                 {
-                    if(linearFactor) // Double linear factor found
-                    {
-                        isValid = false;
-                        isConvex = false;
-                        break;
-                    }
-
                     if(auto linearTermAndConstant
-                        = std::dynamic_pointer_cast<ExpressionSum>(C)->getLinearTermAndConstant();
+                        = std::dynamic_pointer_cast<ExpressionSum>(C)->getAsLinearTermPlusConstant();
                         linearTermAndConstant)
                     {
+                        if(linearFactor) // Double linear factor found
+                        {
+                            isValid = false;
+                            isConvex = false;
+                            break;
+                        }
+
                         linearCoefficient = std::get<0>(*linearTermAndConstant);
                         linearVariable = std::get<1>(*linearTermAndConstant);
                         constant = std::get<2>(*linearTermAndConstant);
@@ -2717,8 +2796,10 @@ public:
                 otherFactor = C;
             }
 
-            if(isValid && linearFactor && otherFactor)
+            // The perspective is only convex if the linear factor is positive
+            if(isValid && linearFactor && otherFactor && linearFactor->getBounds().l() > 0)
             {
+                isConvex = true;
                 NonlinearExpressions terms;
 
                 if(otherFactor->getType() == E_NonlinearExpressionTypes::Sum)
@@ -2892,7 +2973,9 @@ public:
     {
         for(auto& C : children)
         {
-            if(C->getType() == E_NonlinearExpressionTypes::Variable) { }
+            if(C->getType() == E_NonlinearExpressionTypes::Variable)
+            {
+            }
             else if(C->getType() == E_NonlinearExpressionTypes::Constant)
             {
             }
@@ -2931,16 +3014,5 @@ public:
     }
 };
 // End general operations
-
-bool checkPerspectiveConvexity(std::shared_ptr<ExpressionDivide> expression, double linearCoefficient,
-    VariablePtr linearVariable, double constant);
-bool checkPerspectiveConvexity(std::shared_ptr<ExpressionNegate> expression, double linearCoefficient,
-    VariablePtr linearVariable, double constant);
-bool checkPerspectiveConvexity(std::shared_ptr<ExpressionProduct> expression, double linearCoefficient,
-    VariablePtr linearVariable, double constant);
-bool checkPerspectiveConvexity(std::shared_ptr<ExpressionSquare> expression, double linearCoefficient,
-    VariablePtr linearVariable, double constant);
-bool checkPerspectiveConvexity(
-    std::shared_ptr<ExpressionLog> expression, double linearCoefficient, VariablePtr linearVariable, double constant);
 
 } // namespace SHOT

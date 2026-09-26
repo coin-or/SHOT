@@ -18,6 +18,7 @@
 
 #include <Eigen/Eigenvalues>
 #include <Eigen/Sparse>
+#include <unordered_map>
 #include <vector>
 
 namespace SHOT
@@ -25,6 +26,26 @@ namespace SHOT
 
 using Interval = mc::Interval;
 using IntervalVector = std::vector<Interval>;
+
+// The variables of e.g. a quadratic term, used as the key when terms of the same variables are merged. The pointers
+// are used directly, since a variable is represented by one object in a problem.
+using VariablePair = std::pair<Variable*, Variable*>;
+
+struct VariablePairHash
+{
+    size_t operator()(const VariablePair& pair) const
+    {
+        return (std::hash<Variable*>()(pair.first) * 31 + std::hash<Variable*>()(pair.second));
+    }
+};
+
+// The variables in the order that makes the pair independent of the order they are given in
+inline VariablePair getVariablePair(const VariablePtr& firstVariable, const VariablePtr& secondVariable)
+{
+    return (std::less<Variable*>()(firstVariable.get(), secondVariable.get())
+            ? VariablePair(firstVariable.get(), secondVariable.get())
+            : VariablePair(secondVariable.get(), firstVariable.get()));
+}
 
 class Term
 {
@@ -161,6 +182,11 @@ public:
             (*this).push_back(TE);
     };
 
+    // The terms are taken as they are, as push_back does, so several terms of the same variables are kept. They are
+    // merged when the container is given to the add(Terms) of another container, which is what such a container is
+    // built for
+    explicit Terms(std::vector<T> terms) : std::vector<T>(std::move(terms)) {};
+
     double calculate(const VectorDouble& point) const
     {
         double value = 0.0;
@@ -221,6 +247,13 @@ public:
         return (monotonicity);
     }
 
+    // Marks the convexity and monotonicity as not calculated, for when a term is added without add()
+    inline void invalidateProperties()
+    {
+        convexity = E_Convexity::NotSet;
+        monotonicity = E_Monotonicity::NotSet;
+    }
+
     inline bool checkAllForConvexityType(E_Convexity convexityType)
     {
         for(auto& TERM : (*this))
@@ -252,6 +285,7 @@ public:
     using std::vector<LinearTermPtr>::size;
 
     LinearTerms() = default;
+    explicit LinearTerms(std::vector<LinearTermPtr> terms) : Terms<LinearTermPtr>(std::move(terms)) {};
 
     void add(LinearTermPtr term)
     {
@@ -269,17 +303,37 @@ public:
         monotonicity = E_Monotonicity::NotSet;
     }
 
-    void add(LinearTerms terms)
+    void add(const LinearTerms& terms)
     {
-        for(auto& TERM : terms)
+        if(terms.size() == 0)
+            return;
+
+        // Adding the terms to themselves would push_back into the container being iterated over, so a copy is added
+        if(&terms == this)
         {
-            add(TERM);
+            LinearTerms ownTerms = terms;
+            add(ownTerms);
+            return;
         }
 
-        if(terms.size() > 0)
+        // The terms are found through a hash map instead of the linear search in add(term)
+        std::unordered_map<Variable*, size_t> termIndexes;
+        termIndexes.reserve(size() + terms.size());
+
+        for(size_t i = 0; i < size(); i++)
+            termIndexes.emplace((*this)[i]->variable.get(), i);
+
+        for(auto& TERM : terms)
         {
-            monotonicity = E_Monotonicity::NotSet;
+            auto [it, isNew] = termIndexes.emplace(TERM->variable.get(), size());
+
+            if(isNew)
+                (*this).push_back(TERM);
+            else
+                (*this)[it->second]->coefficient += TERM->coefficient;
         }
+
+        monotonicity = E_Monotonicity::NotSet;
     }
 
     SparseVariableVector calculateGradient([[maybe_unused]] const VectorDouble& point) const
@@ -356,6 +410,9 @@ public:
 
     inline Interval calculate(const IntervalVector& intervalVector) const override
     {
+        if(isSquare)
+            return (coefficient * pow(firstVariable->calculate(intervalVector), 2));
+
         Interval value
             = coefficient * firstVariable->calculate(intervalVector) * secondVariable->calculate(intervalVector);
         return value;
@@ -444,6 +501,27 @@ class QuadraticTerms : public Terms<QuadraticTermPtr>
 private:
     void updateConvexity() override;
 
+    // Where a term adds its values in the gradient of the terms
+    struct GradientElement
+    {
+        QuadraticTerm* term;
+        double* firstElement;
+        double* secondElement; // Is nullptr when the variable of the term is squared, since there is only one then
+    };
+
+    // The Hessian, which does not depend on the point since the function is quadratic
+    SparseVariableMatrix cachedHessian;
+    bool hessianCalculated = false;
+
+    // The gradient and, for each term, where in it the term adds its values. The structure only depends on the
+    // variables of the terms, so it is kept and only the values are updated in the following points.
+    SparseVariableVector cachedGradient;
+    std::vector<GradientElement> gradientElements;
+    bool gradientStructureCreated = false;
+
+    // Creates the map of the gradient and finds the elements of it that each term adds to
+    void createGradientStructure();
+
 public:
     double minEigenValue = SHOT::SHOT_DBL_MAX;
     double maxEigenValue = SHOT::SHOT_DBL_MIN;
@@ -455,15 +533,18 @@ public:
     bool allNegative = false;
     bool allBilinear = false;
 
-    Eigen::VectorXcd eigenvalues;
-    Eigen::MatrixXcd eigenvectors;
+    Eigen::VectorXd eigenvalues;
+
+    // Only computed on demand by computeEigenvectors(), since they are only needed by the eigenvalue decomposition
+    Eigen::MatrixXd eigenvectors;
+    bool eigenvectorsComputed = false;
     Eigen::MatrixXd LDLMatrixL;
     VectorDouble LDLDiag;
     bool LDLFactorizationPerformed = false;
     bool LDLFactorizationSuccessful = false;
 
     std::vector<Eigen::Triplet<double>> elements;
-    std::map<VariablePtr, int> variableMap;
+    std::map<VariablePtr, int, VariableIndexComparator> variableMap;
 
     using std::vector<QuadraticTermPtr>::operator[];
 
@@ -478,6 +559,22 @@ public:
     using std::vector<QuadraticTermPtr>::size;
 
     QuadraticTerms() = default;
+    explicit QuadraticTerms(std::vector<QuadraticTermPtr> terms) : Terms<QuadraticTermPtr>(std::move(terms)) {};
+
+    // Also marks the values calculated from the terms as not valid
+    inline void invalidateProperties()
+    {
+        Terms<QuadraticTermPtr>::invalidateProperties();
+        invalidateCachedValues();
+    }
+
+    // The cached Hessian and the structure of the cached gradient are only valid as long as the terms and their
+    // coefficients are unchanged
+    inline void invalidateCachedValues()
+    {
+        hessianCalculated = false;
+        gradientStructureCreated = false;
+    }
 
     void add(QuadraticTermPtr term)
     {
@@ -503,69 +600,107 @@ public:
 
         convexity = E_Convexity::NotSet;
         monotonicity = E_Monotonicity::NotSet;
+        invalidateCachedValues();
     }
 
-    void add(QuadraticTerms terms)
+    void add(const QuadraticTerms& terms)
     {
+        if(terms.size() == 0)
+            return;
+
+        // Adding the terms to themselves would push_back into the container being iterated over, so a copy is added
+        if(&terms == this)
+        {
+            QuadraticTerms ownTerms = terms;
+            add(ownTerms);
+            return;
+        }
+
+        // The terms are found through a hash map instead of the linear search in add(term)
+        std::unordered_map<VariablePair, size_t, VariablePairHash> termIndexes;
+        termIndexes.reserve(size() + terms.size());
+
+        for(size_t i = 0; i < size(); i++)
+            termIndexes.emplace(getVariablePair((*this)[i]->firstVariable, (*this)[i]->secondVariable), i);
+
         for(auto& TERM : terms)
         {
-            add(TERM);
+            auto [it, isNew] = termIndexes.emplace(getVariablePair(TERM->firstVariable, TERM->secondVariable), size());
+
+            if(isNew)
+                (*this).push_back(TERM);
+            else
+                (*this)[it->second]->coefficient += TERM->coefficient;
         }
 
-        if(terms.size() > 0)
-        {
-            convexity = E_Convexity::NotSet;
-            monotonicity = E_Monotonicity::NotSet;
-        }
+        convexity = E_Convexity::NotSet;
+        monotonicity = E_Monotonicity::NotSet;
+        invalidateCachedValues();
     }
 
-    SparseVariableVector calculateGradient(const VectorDouble& point) const
+    SparseVariableVector calculateGradient(const VectorDouble& point) { return (getGradient(point)); }
+
+    // The gradient has the same structure in every point, since it only depends on the variables of the terms, so
+    // the map and the elements each term adds to are only created once. Invalidated by invalidateProperties().
+    const SparseVariableVector& getGradient(const VectorDouble& point)
     {
-        SparseVariableVector gradient;
+        if(!gradientStructureCreated)
+            createGradientStructure();
+
+        for(auto& E : cachedGradient)
+            E.second = 0.0;
+
+        for(auto& E : gradientElements)
+        {
+            if(E.secondElement == nullptr) // variable squared
+            {
+                *E.firstElement += 2 * E.term->coefficient * point[E.term->firstVariable->getIndex()];
+            }
+            else
+            {
+                *E.firstElement += E.term->coefficient * point[E.term->secondVariable->getIndex()];
+                *E.secondElement += E.term->coefficient * point[E.term->firstVariable->getIndex()];
+            }
+        }
+
+        return (cachedGradient);
+    }
+
+    // The Hessian does not depend on the point, since the function is quadratic, so it is only calculated once.
+    // Invalidated by invalidateProperties(), which is called when a term is added or changed.
+    const SparseVariableMatrix& getHessian()
+    {
+        if(hessianCalculated)
+            return (cachedHessian);
+
+        cachedHessian.clear();
 
         for(auto& T : (*this))
         {
             if(T->coefficient == 0.0)
                 continue;
 
-            if(T->firstVariable == T->secondVariable) // variable squared
-            {
-                auto value = 2 * T->coefficient * point[T->firstVariable->index];
-                auto element = gradient.emplace(T->firstVariable, value);
+            auto value = (T->firstVariable == T->secondVariable) ? 2 * T->coefficient : T->coefficient;
 
-                if(!element.second)
-                {
-                    // Element already exists for the variable
-                    element.first->second += value;
-                }
-            }
-            else
-            {
-                auto value = T->coefficient * point[T->secondVariable->index];
-                auto element = gradient.emplace(T->firstVariable, value);
+            // Only the elements above the diagonal are saved, since the Hessian is symmetric
+            auto key = (T->firstVariable->getIndex() <= T->secondVariable->getIndex())
+                ? std::make_pair(T->firstVariable, T->secondVariable)
+                : std::make_pair(T->secondVariable, T->firstVariable);
 
-                if(!element.second)
-                {
-                    // Element already exists for the variable
-                    element.first->second += value;
-                }
+            auto element = cachedHessian.emplace(key, value);
 
-                value = T->coefficient * point[T->firstVariable->index];
-
-                element = gradient.emplace(T->secondVariable, value);
-
-                if(!element.second)
-                {
-                    // Element already exists for the variable
-                    element.first->second += value;
-                }
-            }
+            if(!element.second)
+                element.first->second += value;
         }
 
-        return gradient;
-    };
+        hessianCalculated = true;
+        return (cachedHessian);
+    }
 
     void performLDLFactorization();
+
+    // Computes the eigenvectors, and the eigenvalues if they are not computed yet
+    void computeEigenvectors();
 };
 
 class MonomialTerm : public Term
@@ -707,6 +842,7 @@ public:
     using std::vector<MonomialTermPtr>::size;
 
     MonomialTerms() = default;
+    explicit MonomialTerms(std::vector<MonomialTermPtr> terms) : Terms<MonomialTermPtr>(std::move(terms)) {};
 
     void add(MonomialTermPtr term)
     {
@@ -715,14 +851,19 @@ public:
         monotonicity = E_Monotonicity::NotSet;
     }
 
-    void add(MonomialTerms terms)
+    void add(const MonomialTerms& terms)
     {
-        for(auto& TERM : terms)
+        // The number of terms and the capacity are taken before the first term is added, so that adding the terms
+        // to themselves neither reallocates the container being read nor reads the terms it has just added
+        size_t numberOfTerms = terms.size();
+        (*this).reserve(size() + numberOfTerms);
+
+        for(size_t i = 0; i < numberOfTerms; i++)
         {
-            (*this).push_back(TERM);
+            (*this).push_back(terms[i]);
         }
 
-        if(terms.size() > 0)
+        if(numberOfTerms > 0)
         {
             convexity = E_Convexity::NotSet;
             monotonicity = E_Monotonicity::NotSet;
@@ -740,7 +881,7 @@ public:
 
             for(auto& V1 : T->variables)
             {
-                double value = 1.0;
+                double value = T->coefficient;
 
                 for(auto& V2 : T->variables)
                 {
@@ -750,7 +891,13 @@ public:
                     value *= V2->calculate(point);
                 }
 
-                gradient.emplace(V1, value);
+                auto element = gradient.emplace(V1, value);
+
+                if(!element.second)
+                {
+                    // Element already exists for the variable (e.g. it also appears in another monomial term)
+                    element.first->second += value;
+                }
             }
         };
 
@@ -770,7 +917,7 @@ public:
             {
                 for(auto& V2 : T->variables)
                 {
-                    if(V1->index >= V2->index)
+                    if(V1->getIndex() >= V2->getIndex())
                         continue;
 
                     double value = T->coefficient;
@@ -807,87 +954,104 @@ public:
     VariablePtr variable;
     double power;
 
-    SignomialElement(VariablePtr variable, double power) : variable(variable), power(power) {};
+    SignomialElement(VariablePtr variable, double power) : variable(variable), power(power) { };
 
     inline double calculate(const VectorDouble& point) const { return pow(variable->calculate(point), power); }
 
-    inline Interval calculate(const IntervalVector& intervalVector) const
+    // Evaluates base^power over an interval. Shared by both evaluations below
+    inline Interval calculatePower(Interval base) const
     {
-        auto variableBound = variable->calculate(intervalVector);
+        if(power == 0.0)
+            return (Interval(1.0));
+
+        if(power == 1.0)
+            return (base);
 
         double intpart;
         bool isInteger = (std::modf(power, &intpart) == 0.0);
         int integerValue = (int)round(intpart);
         bool isEven = (integerValue % 2 == 0);
 
-        if(variableBound.l() <= 0)
-        {
-            if(!isInteger)
-                variableBound.l(SHOT_DBL_EPS);
-            else if(isInteger && power < 0)
-                variableBound.l(SHOT_DBL_EPS);
-        }
-
-        Interval bounds;
-
         if(isInteger)
-            bounds = pow(variableBound, (int)power);
-        else
-            bounds = pow(variableBound, power);
+        {
+            // An integer power is defined for a negative base as well, so a wholly negative domain needs no
+            // adjustment at all. Only a base containing zero is a problem, and then only for a negative power,
+            // where the expression grows without bound as the base approaches zero.
+            if(power < 0.0 && base.l() <= 0.0 && base.u() >= 0.0)
+            {
+                // Only the end nearest zero is unbounded, so a domain lying on one side of zero still has a
+                // bound on its other end, attained at the endpoint furthest from zero. A domain with values on
+                // both sides gives a disconnected range whose hull is everything.
+                if(base.l() == 0.0 && base.u() > 0.0)
+                    return (Interval(std::pow(base.u(), power), SHOT_DBL_MAX));
 
-        if(isInteger && isEven && bounds.l() <= 0.0)
-            bounds.l(0.0);
+                if(base.u() == 0.0 && base.l() < 0.0)
+                {
+                    double valueAtEndpoint = std::pow(base.l(), power);
 
-        return (bounds);
-    }
+                    return (isEven ? Interval(valueAtEndpoint, SHOT_DBL_MAX) : Interval(SHOT_DBL_MIN, valueAtEndpoint));
+                }
 
-    inline Interval getBounds()
-    {
-        if(power == 0.0)
-            return (Interval(1.0));
+                return (Interval(SHOT_DBL_MIN, SHOT_DBL_MAX));
+            }
+        }
+        bool baseReachesZero = false;
 
-        auto variableBound = variable->getBound();
+        if(!isInteger)
+        {
+            // A non-integer power has no real value for a negative base, so there is nothing to return if the
+            // domain is wholly negative, and the negative part is cut away otherwise.
+            if(base.u() < 0.0)
+                return (Interval(SHOT_DBL_MIN, SHOT_DBL_MAX));
 
-        if(power == 1.0)
-            return (variableBound);
+            // base^power grows without bound as the base approaches zero from above when the power is negative,
+            // but is still bounded at the upper end of the domain. Only the non-negative part of the domain
+            // contributes, so there is no real value at all if the domain does not extend above zero.
+            if(power < 0.0 && base.l() <= 0.0)
+            {
+                if(base.u() <= 0.0)
+                    return (Interval(SHOT_DBL_MIN, SHOT_DBL_MAX));
 
-        double intpart;
-        bool isInteger = (std::modf(power, &intpart) == 0.0);
+                return (Interval(std::pow(base.u(), power), SHOT_DBL_MAX));
+            }
 
-        if(isInteger && power > 0 && variableBound.l() < 0.0)
-            variableBound.l(0.0);
-        else if(!isInteger && variableBound.l() <= 0.0)
-            variableBound.l(SHOT_DBL_EPS);
-        else if(power < 0.0 && variableBound.l() <= 0.0)
-            variableBound.l(SHOT_DBL_EPS);
-        else if(variableBound.l() <= 0)
-            variableBound.l(0.0);
+            // The power is positive here, so the expression tends to zero as the base does. The base is still
+            // moved off zero before evaluating, since the interval library raises to a non-integer power via a
+            // logarithm and rejects a base reaching zero.
+            if(base.l() <= 0.0)
+            {
+                baseReachesZero = true;
+                base.l(SHOT_DBL_EPS);
+            }
+        }
 
         Interval bounds;
 
-        if(isInteger && power > 0)
+        try
         {
-            double lower = sqrt(variableBound.l());
-            double upper = sqrt(variableBound.u());
-
-            return (Interval(std::min(lower, upper), std::max(lower, upper)));
+            bounds = isInteger ? pow(base, integerValue) : pow(base, power);
+        }
+        catch(const mc::Interval::Exceptions&)
+        {
+            return (Interval(SHOT_DBL_MIN, SHOT_DBL_MAX));
         }
 
-        if(power == -1.0)
-        {
-            bounds = 1 / variableBound;
+        if(baseReachesZero)
+            bounds.l(0.0);
 
-            if(bounds.l() < 1e-10 && bounds.u() > 1e-10)
-                bounds.l(1e-10);
-        }
-        else
-            bounds = pow(variableBound, 1.0 / power);
-
-        if(bounds.l() <= 0.0)
+        // An even integer power cannot be negative; guards against rounding in the interval library.
+        if(isInteger && isEven && bounds.l() < 0.0)
             bounds.l(0.0);
 
         return (bounds);
     }
+
+    inline Interval calculate(const IntervalVector& intervalVector) const
+    {
+        return (calculatePower(variable->calculate(intervalVector)));
+    }
+
+    inline Interval getBounds() { return (calculatePower(variable->getBound())); }
 
     inline bool tightenBounds(Interval bound)
     {
@@ -902,39 +1066,90 @@ public:
         int integerValue = (int)round(intpart);
         bool isEven = (integerValue % 2 == 0);
 
-        if(isInteger && isEven && power > 0 && bound.l() <= 0.0)
-            bound.l(0.0);
-        else if(!isInteger && bound.l() <= 0.0)
-            bound.l(SHOT_DBL_SIG_MIN);
-        else if(power < 0.0 && bound.l() <= 0.0)
-            bound.l(SHOT_DBL_SIG_MIN);
-        else if(bound.l() <= 0)
-            bound.l(0.0);
+        if(power < 0.0)
+        {
+            // A negative power grows without bound as the base approaches zero and tends to zero as the magnitude of
+            // the base grows, so the upper end of the value interval bounds the magnitude of the base from below and
+            // the lower end bounds it from above. A lower end at or below zero is only attained in the limit and
+            // therefore leaves the magnitude unbounded: substituting the smallest allowed base for it, as the guard
+            // for evaluating a power does, would fabricate an upper bound.
+            if(bound.u() <= 0.0)
+                return (false);
+
+            double magnitudeLower = std::pow(bound.u(), 1.0 / power);
+            double magnitudeUpper = (bound.l() > 0.0) ? std::pow(bound.l(), 1.0 / power) : SHOT_DBL_MAX;
+
+            // An odd power preserves the sign of the base, so a value interval straddling zero says nothing at all.
+            if(isInteger && !isEven)
+                return (bound.l() > 0.0 ? variable->tightenBounds(Interval(magnitudeLower, magnitudeUpper)) : false);
+
+            // What remains discards the sign of the base, so which side of zero the variable lies on can only be
+            // decided from the bounds it already has, as for an even positive power below.
+            if(variable->lowerBound >= 0.0)
+                return (variable->tightenBounds(Interval(magnitudeLower, magnitudeUpper)));
+
+            // A non-integer power has no real value for a negative base, but the negative part of the domain cannot
+            // be cut away here without also claiming the magnitude bounds for it.
+            if(!isInteger)
+                return (false);
+
+            if(variable->upperBound <= 0.0)
+                return (variable->tightenBounds(Interval(-magnitudeUpper, -magnitudeLower)));
+
+            return (variable->tightenBounds(Interval(-magnitudeUpper, magnitudeUpper)));
+        }
+
+        // An odd positive integer power must not be forced non-negative, since it preserves the sign of a negative
+        // base.
+        bool needsNonNegativeBase = (isInteger && isEven) || !isInteger;
+
+        if(needsNonNegativeBase && bound.l() <= 0.0)
+            bound.l(!isInteger ? SHOT_DBL_SIG_MIN : 0.0);
 
         Interval interval;
 
-        if(bound.l() < 0.0)
+        if(needsNonNegativeBase && bound.l() < 0.0)
             return (false);
 
         if(isInteger && power > 0)
         {
+            // An even power discards the sign of the base, so a bound on the value only restricts the magnitude of
+            // the variable and says nothing about which side of zero it lies on. Taking the signed root of the value
+            // interval instead would raise the lower bound to zero and cut away every negative base: x^2/z <= y with
+            // x in [-5,5], y in [0,1] and z in [1,2] then loses its optimum at x = -sqrt(2).
+            if(isEven)
+            {
+                if(bound.u() < 0.0)
+                    return (false);
+
+                double magnitudeUpper = std::pow(bound.u(), 1.0 / power);
+                double magnitudeLower = (bound.l() > 0.0) ? std::pow(bound.l(), 1.0 / power) : 0.0;
+
+                // The value bound restricts the magnitude of the variable, and which side of zero it lies on can
+                // only be decided from the bounds it already has. A domain straddling zero must keep both branches,
+                // since the negative one cannot be excluded by an interval.
+                if(variable->lowerBound >= 0.0)
+                    return (variable->tightenBounds(Interval(magnitudeLower, magnitudeUpper)));
+
+                if(variable->upperBound <= 0.0)
+                    return (variable->tightenBounds(Interval(-magnitudeUpper, -magnitudeLower)));
+
+                return (variable->tightenBounds(Interval(-magnitudeUpper, magnitudeUpper)));
+            }
+
             interval = bound;
 
-            double lower = sqrt(interval.l());
-            double upper = sqrt(interval.u());
+            // Signed n-th root -- see the matching comment in getBounds().
+            auto nthRoot = [power = this->power](double x)
+            { return (x < 0.0 ? -std::pow(-x, 1.0 / power) : std::pow(x, 1.0 / power)); };
+
+            double lower = nthRoot(interval.l());
+            double upper = nthRoot(interval.u());
 
             return (variable->tightenBounds(Interval(std::min(lower, upper), std::max(lower, upper))));
         }
 
-        if(power == -1.0)
-        {
-            interval = 1 / bound;
-
-            if(interval.l() < 1e-10 && interval.u() > 1e-10)
-                interval.l(1e-10);
-        }
-        else
-            interval = pow(bound, 1.0 / power);
+        interval = pow(bound, 1.0 / power);
 
         return (variable->tightenBounds(interval));
     }
@@ -1011,6 +1226,8 @@ public:
     {
         size_t numberPositivePowers = 0;
         double sumPowers = 0.0;
+        bool allVariablesNonNegative = true;
+        bool allVariablesNegative = true;
 
         for(auto& E : elements)
         {
@@ -1020,14 +1237,76 @@ public:
             }
 
             sumPowers += E->power;
+
+            // A base raised to an even positive integer power discards the sign of the variable, so the term has the
+            // same value as the one where the variable is replaced by its absolute value. That term is nondecreasing
+            // in the replaced variable, since the power is positive, so composing it with the absolute value keeps it
+            // convex, and the rules for the non-negative orthant hold although the variable can be negative. The
+            // power must be positive: an even negative power, e.g. x^-2, is not defined in zero, and the rules would
+            // then be used over a domain the term is not even continuous on.
+            bool signDiscardedByPower = false;
+
+            if(double intpart; E->power > 0.0 && std::modf(E->power, &intpart) == 0.0)
+                signDiscardedByPower = (((int)round(intpart)) % 2 == 0);
+
+            if(E->variable->lowerBound < 0.0 && !signDiscardedByPower)
+                allVariablesNonNegative = false;
+
+            if(E->variable->upperBound >= 0.0)
+                allVariablesNegative = false;
         }
 
         if(elements.size() == 1 && sumPowers == 1.0)
             return (E_Convexity::Linear);
 
+        // The rules below are the standard results for a monomial on the non-negative orthant and do not hold
+        // elsewhere: 1/x for example is convex for x > 0 but concave for x < 0, so a sum of such terms over a
+        // negative domain describes a nonconvex feasible set. A domain reaching zero is still fine, since the
+        // term keeps its curvature wherever it is defined.
+        if(!allVariablesNonNegative)
+        {
+            // A single variable raised to an integer power is still tractable on a wholly negative domain,
+            // where it is convex for an even power and concave for an odd one.
+            if(elements.size() == 1 && allVariablesNegative)
+            {
+                double intpart;
+
+                if(std::modf(elements[0]->power, &intpart) == 0.0)
+                {
+                    bool isEven = (((int)round(intpart)) % 2 == 0);
+
+                    if(coefficient > 0)
+                        return (isEven ? E_Convexity::Convex : E_Convexity::Concave);
+
+                    if(coefficient < 0)
+                        return (isEven ? E_Convexity::Concave : E_Convexity::Convex);
+                }
+            }
+
+            // An even positive integer power is convex over any domain, one containing zero included.
+            if(elements.size() == 1 && elements[0]->power > 0.0)
+            {
+                double intpart;
+
+                if(std::modf(elements[0]->power, &intpart) == 0.0 && (((int)round(intpart)) % 2 == 0))
+                {
+                    if(coefficient > 0)
+                        return (E_Convexity::Convex);
+
+                    if(coefficient < 0)
+                        return (E_Convexity::Concave);
+                }
+            }
+
+            return (E_Convexity::Nonconvex);
+        }
+
         if(coefficient > 0)
         {
-            if(numberPositivePowers == 1 && sumPowers > 1.0)
+            // The bound is inclusive: with a single positive power, a power sum of exactly one gives the
+            // quadratic-over-linear family (x^2/z, x^3/y^2, ...), whose Hessian is positive semidefinite with a
+            // determinant of zero. These are convex, and x^2/z <= y is the standard rotated second order cone.
+            if(numberPositivePowers == 1 && sumPowers >= 1.0)
                 return (E_Convexity::Convex);
 
             if(elements.size() == 1 && sumPowers > 0.0 && sumPowers < 1.0)
@@ -1040,7 +1319,7 @@ public:
         }
         else if(coefficient < 0)
         {
-            if(numberPositivePowers == 1 && sumPowers > 1.0)
+            if(numberPositivePowers == 1 && sumPowers >= 1.0)
                 return (E_Convexity::Concave);
 
             if(numberPositivePowers == elements.size() && sumPowers > 0.0 && sumPowers <= 1.0)
@@ -1178,6 +1457,7 @@ public:
     using std::vector<SignomialTermPtr>::size;
 
     SignomialTerms() = default;
+    explicit SignomialTerms(std::vector<SignomialTermPtr> terms) : Terms<SignomialTermPtr>(std::move(terms)) {};
 
     void add(SignomialTermPtr term)
     {
@@ -1186,14 +1466,19 @@ public:
         monotonicity = E_Monotonicity::NotSet;
     }
 
-    void add(SignomialTerms terms)
+    void add(const SignomialTerms& terms)
     {
-        for(auto& TERM : terms)
+        // The number of terms and the capacity are taken before the first term is added, so that adding the terms
+        // to themselves neither reallocates the container being read nor reads the terms it has just added
+        size_t numberOfTerms = terms.size();
+        (*this).reserve(size() + numberOfTerms);
+
+        for(size_t i = 0; i < numberOfTerms; i++)
         {
-            (*this).push_back(TERM);
+            (*this).push_back(terms[i]);
         }
 
-        if(terms.size() > 0)
+        if(numberOfTerms > 0)
         {
             convexity = E_Convexity::NotSet;
             monotonicity = E_Monotonicity::NotSet;
@@ -1231,7 +1516,7 @@ public:
                 if(!element.second)
                 {
                     // Element already exists for the variable
-                    element.first->second += value;
+                    element.first->second += T->coefficient * value;
                 }
             }
         };
@@ -1254,12 +1539,12 @@ public:
             {
                 for(auto& E2 : T->elements)
                 {
-                    if(E1->variable->index > E2->variable->index)
+                    if(E1->variable->getIndex() > E2->variable->getIndex())
                         continue;
 
                     double corrFactor;
 
-                    if(E1->variable->index == E2->variable->index)
+                    if(E1->variable->getIndex() == E2->variable->getIndex())
                     {
                         corrFactor = E1->power * (E1->power - 1.0)
                             / (E1->variable->calculate(point) * E1->variable->calculate(point));
@@ -1287,7 +1572,7 @@ public:
     };
 };
 
-inline std::ostream& operator<<(std::ostream& stream, LinearTerms terms)
+inline std::ostream& operator<<(std::ostream& stream, const LinearTerms& terms)
 {
     if(terms.size() == 0)
         return stream;
@@ -1302,7 +1587,7 @@ inline std::ostream& operator<<(std::ostream& stream, LinearTerms terms)
     return stream;
 }
 
-inline std::ostream& operator<<(std::ostream& stream, QuadraticTerms terms)
+inline std::ostream& operator<<(std::ostream& stream, const QuadraticTerms& terms)
 {
     if(terms.size() == 0)
         return stream;
@@ -1317,7 +1602,7 @@ inline std::ostream& operator<<(std::ostream& stream, QuadraticTerms terms)
     return stream;
 }
 
-inline std::ostream& operator<<(std::ostream& stream, MonomialTerms terms)
+inline std::ostream& operator<<(std::ostream& stream, const MonomialTerms& terms)
 {
     if(terms.size() == 0)
         return stream;
@@ -1332,7 +1617,7 @@ inline std::ostream& operator<<(std::ostream& stream, MonomialTerms terms)
     return stream;
 }
 
-inline std::ostream& operator<<(std::ostream& stream, SignomialTerms terms)
+inline std::ostream& operator<<(std::ostream& stream, const SignomialTerms& terms)
 {
     if(terms.size() == 0)
         return stream;

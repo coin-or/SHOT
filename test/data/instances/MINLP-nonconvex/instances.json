@@ -1,0 +1,99 @@
+{
+    "source": "SHOT_benchmark_problems",
+    "url": "https://github.com/andreaslundell/SHOT_benchmark_problems",
+    "description": "MINLP-nonconvex category (osil format). Objectives sourced from https://www.minlplib.org/minlplib.solu.",
+    "instances": [
+        {
+            "file": "edgecross10-010.osil",
+            "objective": 1.0
+        },
+        {
+            "file": "ex1221.osil",
+            "objective": 7.667180069
+        },
+        {
+            "file": "ex1222.osil",
+            "objective": 1.076543083
+        },
+        {
+            "file": "ex1224.osil",
+            "objective": -0.9434705
+        },
+        {
+            "file": "ex1225.osil",
+            "objective": 31.0
+        },
+        {
+            "file": "ex1226.osil",
+            "objective": -17.0
+        },
+        {
+            "file": "ex1244.osil",
+            "objective": 82042.90522
+        },
+        {
+            "file": "ex1252.osil",
+            "objective": 128893.741
+        },
+        {
+            "file": "ex1252a.osil",
+            "objective": 128893.741
+        },
+        {
+            "file": "ex1263.osil",
+            "objective": 19.6
+        },
+        {
+            "file": "ex1263a.osil",
+            "objective": 19.6
+        },
+        {
+            "file": "ex1264.osil",
+            "objective": 8.6
+        },
+        {
+            "file": "ex1264a.osil",
+            "objective": 8.6
+        },
+        {
+            "file": "ex1265.osil",
+            "objective": 10.3
+        },
+        {
+            "file": "ex1265a.osil",
+            "objective": 10.3
+        },
+        {
+            "file": "ex1266.osil",
+            "objective": 16.3
+        },
+        {
+            "file": "ex1266a.osil",
+            "objective": 16.3
+        },
+        {
+            "file": "nvs01.osil",
+            "objective": 12.46966882
+        },
+        {
+            "file": "nvs05.osil",
+            "objective": 5.470934108
+        },
+        {
+            "file": "nvs16.osil",
+            "objective": 0.703125
+        },
+        {
+            "file": "nvs21.osil",
+            "objective": -5.6847825
+        },
+        {
+            "file": "nvs22.osil",
+            "objective": 6.05822
+        },
+        {
+            "file": "tln2.osil",
+            "objective": 5.3
+        }
+    ]
+}

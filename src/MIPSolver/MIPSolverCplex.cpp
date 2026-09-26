@@ -474,6 +474,10 @@ void MIPSolverCplex::initializeSolverSettings()
         // Set number of threads
         cplexInstance.setParam(IloCplex::Param::Threads, env->settings->getSetting<int>("Dual.MIP.NumberOfThreads"));
 
+        // Set the random seed, where zero means that the default of the solver is kept
+        if(int randomSeed = env->settings->getSetting<int>("Dual.MIP.RandomSeed"); randomSeed != 0)
+            cplexInstance.setParam(IloCplex::Param::RandomSeed, randomSeed);
+
         // Options for using swap file
         if(auto workdir = env->settings->getSetting<std::string>("Subsolver.Cplex.WorkDirectory"); workdir != "")
             cplexInstance.setParam(IloCplex::Param::WorkDir, workdir.c_str());
@@ -808,9 +812,17 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
             MIPSolutionStatus = getSolutionStatus();
         }
 
+        // An unbounded exact dual problem means that the problem is unbounded, so no point is needed
+        bool isUnboundedExactDualProblem = MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded
+            && env->results->getNumberOfIterations() > 0 && env->dualSolver->isDualProblemExact();
+
+        if(isUnboundedExactDualProblem)
+            MIPSolutionStatus = resolveInfeasibleOrUnbounded(MIPSolutionStatus);
+
         // Try to solve a feasibility problem to get a valid solution point if unbounded and not when solving the
         // minimax-problem
-        if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded && env->results->getNumberOfIterations() > 0)
+        if(!isUnboundedExactDualProblem && MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded
+            && env->results->getNumberOfIterations() > 0)
         {
             cplexModel.remove(cplexInstance.getObjective());
 
@@ -820,8 +832,17 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
                 cplexModel.add(IloMaximize(cplexEnv, 0.0));
 
             cplexInstance.extract(cplexModel);
+
+            // The cutoff applies to the objective function value, which is now zero, so it would cut off all points
+            auto cutOffParameter = isMinimizationProblem ? IloCplex::Param::MIP::Tolerances::UpperCutoff
+                                                         : IloCplex::Param::MIP::Tolerances::LowerCutoff;
+            double cutOff = cplexInstance.getParam(cutOffParameter);
+            cplexInstance.setParam(cutOffParameter, isMinimizationProblem ? 1e75 : -1e75);
+
             cplexInstance.solve();
             MIPSolutionStatus = getSolutionStatus();
+
+            cplexInstance.setParam(cutOffParameter, cutOff);
 
             if(MIPSolutionStatus == E_ProblemSolutionStatus::Optimal)
                 MIPSolutionStatus = E_ProblemSolutionStatus::Feasible;
@@ -832,7 +853,8 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
         }
 
         // If the previous repair failed, we can try this
-        if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded && env->results->getNumberOfIterations() > 0)
+        if(!isUnboundedExactDualProblem && MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded
+            && env->results->getNumberOfIterations() > 0)
         {
             repairInfeasibility();
             MIPSolutionStatus = E_ProblemSolutionStatus::Unbounded;
@@ -851,7 +873,10 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
     {
         std::string errorString = e.getMessage();
 
-        if(errorString.rfind("CPLEX Error  5002", 0) == 0)
+        // Retry once if the problem is nonconvex. The optimality target only helps for nonconvex objectives, so a
+        // nonconvex quadratic constraint gives the same error again, which would otherwise recurse indefinitely
+        if(errorString.rfind("CPLEX Error  5002", 0) == 0
+            && cplexInstance.getParam(IloCplex::Param::OptimalityTarget) != CPX_OPTIMALITYTARGET_OPTIMALGLOBAL)
         {
             cplexInstance.setParam(IloCplex::Param::OptimalityTarget, CPX_OPTIMALITYTARGET_OPTIMALGLOBAL);
             return (solveProblem());
@@ -862,6 +887,30 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
     }
 
     return (MIPSolutionStatus);
+}
+
+E_ProblemSolutionStatus MIPSolverCplex::resolveInfeasibleOrUnbounded(E_ProblemSolutionStatus status)
+{
+    try
+    {
+        if(cplexInstance.getCplexStatus() != IloCplex::CplexStatus::InfOrUnbd)
+            return (status);
+
+        auto reduce = cplexInstance.getParam(IloCplex::Param::Preprocessing::Reduce);
+
+        cplexInstance.setParam(IloCplex::Param::Preprocessing::Reduce, 0);
+        cplexInstance.solve();
+        status = MIPSolverCplex::getSolutionStatus();
+        cplexInstance.setParam(IloCplex::Param::Preprocessing::Reduce, reduce);
+    }
+    catch(IloException& e)
+    {
+        env->output->outputError(
+            "        Error when solving MIP/LP problem without presolve reductions", e.getMessage());
+        status = E_ProblemSolutionStatus::Error;
+    }
+
+    return (status);
 }
 
 bool MIPSolverCplex::repairInfeasibility()
@@ -1425,6 +1474,9 @@ double MIPSolverCplex::getDualObjectiveValue()
     bool isMIP = getDiscreteVariableStatus();
     double objVal = (isMinimizationProblem ? SHOT_DBL_MIN : SHOT_DBL_MAX);
 
+    if(!isDualBoundAvailable(getSolutionStatus(), isMIP))
+        return (objVal);
+
     try
     {
         if(isMIP)
@@ -1519,7 +1571,7 @@ bool MIPSolverCplex::createIntegerCut(IntegerCut& integerCut)
         {
             auto VAR = env->reformulatedProblem->getVariable(I);
             int variableValue = integerCut.variableValues[index];
-            auto variable = cplexVars[VAR->index];
+            auto variable = cplexVars[VAR->getIndex()];
 
             assert(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer
                 || VAR->properties.type == E_VariableType::Semiinteger);

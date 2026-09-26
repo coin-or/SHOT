@@ -54,7 +54,7 @@ void TaskUpdateInteriorPoint::run()
 
         auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
             tmpIP->point, env->reformulatedProblem->nonlinearConstraints);
-        tmpIP->maxDevatingConstraint = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+        tmpIP->maxDevatingConstraint = PairIndexValue(maxDev.constraint->getIndex(), maxDev.normalizedValue);
 
         env->output->outputDebug("     Interior point replaced with primal solution point since no interior point was "
                                  "previously available.");
@@ -82,7 +82,7 @@ void TaskUpdateInteriorPoint::run()
 
     auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
         tmpIP->point, env->reformulatedProblem->nonlinearConstraints);
-    tmpIP->maxDevatingConstraint = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+    tmpIP->maxDevatingConstraint = PairIndexValue(maxDev.constraint->getIndex(), maxDev.normalizedValue);
 
     // Replace the current point with the new point if it is deeper within the feasible region
     if(maxDev.normalizedValue < env->dualSolver->interiorPts.at(0)->maxDevatingConstraint.value)
@@ -136,7 +136,7 @@ void TaskUpdateInteriorPoint::run()
 
         auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
             tmpIP->point, env->reformulatedProblem->nonlinearConstraints);
-        tmpIP->maxDevatingConstraint = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+        tmpIP->maxDevatingConstraint = PairIndexValue(maxDev.constraint->getIndex(), maxDev.normalizedValue);
 
         env->output->outputDebug("     Interior point replaced with primal solution point.");
 

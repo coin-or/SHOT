@@ -183,8 +183,8 @@ bool MIPSolverCbc::addLinearTermToObjective(double coefficient, int variableInde
 bool MIPSolverCbc::addQuadraticTermToObjective([[maybe_unused]] double coefficient,
     [[maybe_unused]] int firstVariableIndex, [[maybe_unused]] int secondVariableIndex)
 {
-    // Not implemented
-    return (false);
+    // TODO: Not implemented
+    throw OperationNotImplementedException("Quadratic objective functions not yet implemented in Cbc interface.");
 }
 
 bool MIPSolverCbc::finalizeObjective(bool isMinimize, double constant)
@@ -247,8 +247,8 @@ bool MIPSolverCbc::addLinearTermToConstraint(double coefficient, int variableInd
 bool MIPSolverCbc::addQuadraticTermToConstraint([[maybe_unused]] double coefficient,
     [[maybe_unused]] int firstVariableIndex, [[maybe_unused]] int secondVariableIndex)
 {
-    // Not implemented
-    return (false);
+    // TODO: Not implemented
+    throw OperationNotImplementedException("Quadratic constraints not yet implemented in Cbc interface.");
 }
 
 bool MIPSolverCbc::finalizeConstraint(std::string name, double valueLHS, double valueRHS, double constant)
@@ -327,7 +327,15 @@ void MIPSolverCbc::initializeSolverSettings()
     }
 
     // Set solution pool settings
-    cbcModel->setMaximumSolutions(solLimit);
+    if(forceUnlimitedSolutionLimitNextSolve)
+    {
+        cbcModel->setMaximumSolutions(2100000000);
+        forceUnlimitedSolutionLimitNextSolve = false;
+    }
+    else
+    {
+        cbcModel->setMaximumSolutions(solLimit);
+    }
     cbcModel->setMaximumSavedSolutions(env->settings->getSetting<int>("Dual.MIP.SolutionPool.Capacity"));
 
     // Set number of threads
@@ -502,7 +510,8 @@ E_ProblemSolutionStatus MIPSolverCbc::getSolutionStatus()
     }
     else if(cbcModel->isAbandoned())
     {
-        MIPSolutionStatus = E_ProblemSolutionStatus::Abort;
+        // Cbc abandons the problem when it runs into numerical difficulties, which is not an interruption
+        MIPSolutionStatus = E_ProblemSolutionStatus::Numeric;
     }
     else if(cbcModel->isContinuousUnbounded())
     {
@@ -510,14 +519,32 @@ E_ProblemSolutionStatus MIPSolverCbc::getSolutionStatus()
     }
     else if(cbcModel->status() == 5)
     {
+        // Stopped by the event handler, i.e. interrupted
         MIPSolutionStatus = E_ProblemSolutionStatus::Abort;
+    }
+    // A finished search that has not proven anything is explained by the secondary status. Cbc stops as soon as the
+    // gap between its bound and the cutoff is within the gap tolerance, which can happen already in the root node
+    // and without a solution, since the cutoff of SHOT is the best solution found so far.
+    else if(cbcModel->status() == 0 && cbcModel->secondaryStatus() == 2)
+    {
+        MIPSolutionStatus = E_ProblemSolutionStatus::CutOff;
+    }
+    else if(cbcModel->status() == 0 && cbcModel->secondaryStatus() == 1)
+    {
+        MIPSolutionStatus = E_ProblemSolutionStatus::Infeasible;
+    }
+    else if(cbcModel->status() == 0 && cbcModel->secondaryStatus() == 7)
+    {
+        MIPSolutionStatus = E_ProblemSolutionStatus::Unbounded;
     }
     else
     {
-        auto status = cbcModel->status();
         MIPSolutionStatus = E_ProblemSolutionStatus::Error;
         env->output->outputError(
-            fmt::format("        MIP solver return status unknown (Cbc returned status {}).", status));
+            fmt::format("        MIP solver return status unknown (Cbc returned status {} and secondary status {}, "
+                        "with {} solutions and {} nodes).",
+                cbcModel->status(), cbcModel->secondaryStatus(), cbcModel->numberSavedSolutions(),
+                cbcModel->getNodeCount()));
     }
 
     return (MIPSolutionStatus);
@@ -528,18 +555,20 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
     E_ProblemSolutionStatus MIPSolutionStatus;
     cachedSolutionHasChanged = true;
 
-    const int numArguments = 17;
-    char* argv[numArguments];
+    // The arguments are counted as they are added, since some of them are only passed on conditionally
+    const int maxArguments = 21;
+    char* argv[maxArguments];
+    int numArguments = 0;
     std::string arg;
 
-    argv[0] = strdup("");
-    argv[1] = strdup("-autoscale");
+    argv[numArguments++] = strdup("");
+    argv[numArguments++] = strdup("-autoscale");
     if(env->settings->getSetting<bool>("Subsolver.Cbc.AutoScale"))
-        argv[2] = strdup("on");
+        argv[numArguments++] = strdup("on");
     else
-        argv[2] = strdup("off");
+        argv[numArguments++] = strdup("off");
 
-    argv[3] = strdup("-nodestrategy");
+    argv[numArguments++] = strdup("-nodestrategy");
 
     switch(env->settings->getSetting<int>("Subsolver.Cbc.NodeStrategy"))
     {
@@ -576,9 +605,9 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
         break;
     }
 
-    argv[4] = strdup(arg.c_str());
+    argv[numArguments++] = strdup(arg.c_str());
 
-    argv[5] = strdup("-scaling");
+    argv[numArguments++] = strdup("-scaling");
 
     switch(env->settings->getSetting<int>("Subsolver.Cbc.Scaling"))
     {
@@ -611,18 +640,18 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
         break;
     }
 
-    argv[6] = strdup(arg.c_str());
+    argv[numArguments++] = strdup(arg.c_str());
 
-    argv[7] = strdup("-strategy");
+    argv[numArguments++] = strdup("-strategy");
     arg = std::to_string(env->settings->getSetting<int>("Subsolver.Cbc.Strategy"));
-    argv[8] = strdup(arg.c_str());
+    argv[numArguments++] = strdup(arg.c_str());
 
     /*
         TODO: Adding cutoffs seems to have stability-issues (status changes from unbounded -> infeasible in some
         cases, cf. https://github.com/coin-or/SHOT/issues/133). As the cutoff is added as a constraint, this can be
         deactivated here.
 
-        argv[9] = strdup("-cutoff");
+        argv[numArguments++] = strdup("-cutoff");
 
         if(this->cutOff > 1e100)
             arg = "1e100";
@@ -631,33 +660,33 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
         else
             arg = fmt::format("{}", this->cutOff);
 
-        argv[10] = strdup(arg.c_str());*/
+        argv[numArguments++] = strdup(arg.c_str());*/
 
-    argv[9] = strdup("-sec");
+    argv[numArguments++] = strdup("-sec");
     arg = fmt::format("{}", this->timeLimit);
-    argv[10] = strdup(arg.c_str());
+    argv[numArguments++] = strdup(arg.c_str());
+
+    // A seed of zero leaves Cbc and Clp at their own defaults. Otherwise both of them are given it, since
+    // they draw from separate generators: Cbc's covers the heuristics and Clp's the simplex perturbation.
+    if(int randomSeed = env->settings->getSetting<int>("Dual.MIP.RandomSeed"); randomSeed != 0)
+    {
+        arg = std::to_string(randomSeed);
+        argv[numArguments++] = strdup("-randomCbcSeed");
+        argv[numArguments++] = strdup(arg.c_str());
+        argv[numArguments++] = strdup("-randomSeed");
+        argv[numArguments++] = strdup(arg.c_str());
+    }
 
     // pass threads option if not running single-threaded (101 = 1 thread + deterministic multithreading)
     if(numberOfThreads != 1 && numberOfThreads != 101)
     {
-        argv[11] = strdup("-threads");
+        argv[numArguments++] = strdup("-threads");
         arg = std::to_string(numberOfThreads);
-        argv[12] = strdup(arg.c_str());
+        argv[numArguments++] = strdup(arg.c_str());
+    }
 
-        argv[13] = strdup("-solve");
-        argv[14] = strdup("-quit");
-        argv[15] = strdup("");
-        argv[16] = strdup("");
-    }
-    else
-    {
-        argv[11] = strdup("-solve");
-        argv[12] = strdup("-quit");
-        argv[13] = strdup("");
-        argv[14] = strdup("");
-        argv[15] = strdup("");
-        argv[16] = strdup("");
-    }
+    argv[numArguments++] = strdup("-solve");
+    argv[numArguments++] = strdup("-quit");
 
     try
     {
@@ -711,6 +740,16 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
         CbcMain1(numArguments, const_cast<const char**>(argv), *cbcModel, dummyCallback, solverData);
 
         MIPSolutionStatus = getSolutionStatus();
+
+        // Cbc's own optimality proof cannot be fully trusted when a finite solution-count cap was active for
+        // this solve (see investigation): downgrade the status so this iteration's incumbent isn't used as a
+        // rigorous dual bound, and force the next solve to use an unlimited solution cap so it gets a chance
+        // to correct course on the (by-then cut-augmented) problem.
+        if(MIPSolutionStatus == E_ProblemSolutionStatus::Optimal && solLimit < 2100000000)
+        {
+            MIPSolutionStatus = E_ProblemSolutionStatus::SolutionLimit;
+            forceUnlimitedSolutionLimitNextSolve = true;
+        }
     }
     catch(std::exception& e)
     {
@@ -762,19 +801,24 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
         if((env->reformulatedProblem->objectiveFunction->properties.classification
                    == E_ObjectiveFunctionClassification::Linear
                && std::dynamic_pointer_cast<LinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                   ->isDualUnbounded())
+                   ->isUnbounded())
             || (env->reformulatedProblem->objectiveFunction->properties.classification
                     == E_ObjectiveFunctionClassification::Quadratic
                 && std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                    ->isDualUnbounded()))
+                    ->isUnbounded()))
         {
             for(auto& V : env->reformulatedProblem->allVariables)
             {
-                if(V->isDualUnbounded())
+                if(V->isUnbounded())
                 {
-                    // Temporarily introduce bounds [-1e20,1e20] for unbounded variables in objective
-                    updateVariableBound(V->index, -1e20, 1e20);
-                    variablesWithChangedBounds.push_back(V->index);
+                    // The primal solution only contains the variables of the original problem
+                    double center = (V->getIndex() < (int)env->results->primalSolution.size())
+                        ? env->results->primalSolution[V->getIndex()]
+                        : 0.0;
+
+                    auto bounds = getTemporaryBoundsForUnboundedVariable(V->lowerBound, V->upperBound, center);
+                    updateVariableBound(V->getIndex(), bounds.first, bounds.second);
+                    variablesWithChangedBounds.push_back(V->getIndex());
                     problemUpdated = true;
                 }
             }
@@ -835,6 +879,15 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
             {
                 updateVariableBound(I, env->reformulatedProblem->getVariableLowerBound(I),
                     env->reformulatedProblem->getVariableUpperBound(I));
+            }
+
+            // Cbc reports an unbounded continuous relaxation, so for an exact dual problem the bounded one only shows
+            // whether the problem is feasible. A feasible MILP with an unbounded continuous relaxation is unbounded.
+            if(env->dualSolver->isDualProblemExact()
+                && (MIPSolutionStatus == E_ProblemSolutionStatus::Feasible
+                    || MIPSolutionStatus == E_ProblemSolutionStatus::SolutionLimit))
+            {
+                MIPSolutionStatus = E_ProblemSolutionStatus::Unbounded;
             }
 
             env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed = true;
@@ -952,18 +1005,20 @@ bool MIPSolverCbc::repairInfeasibility()
 
         cachedSolutionHasChanged = true;
 
-        const int numArguments = 17;
-        char* argv[numArguments];
+        // The arguments are counted as they are added, since some of them are only passed on conditionally
+        const int maxArguments = 21;
+        char* argv[maxArguments];
+        int numArguments = 0;
         std::string arg;
 
-        argv[0] = strdup("");
-        argv[1] = strdup("-autoscale");
+        argv[numArguments++] = strdup("");
+        argv[numArguments++] = strdup("-autoscale");
         if(env->settings->getSetting<bool>("Subsolver.Cbc.AutoScale"))
-            argv[2] = strdup("on");
+            argv[numArguments++] = strdup("on");
         else
-            argv[2] = strdup("off");
+            argv[numArguments++] = strdup("off");
 
-        argv[3] = strdup("-nodestrategy");
+        argv[numArguments++] = strdup("-nodestrategy");
 
         switch(env->settings->getSetting<int>("Subsolver.Cbc.NodeStrategy"))
         {
@@ -1000,9 +1055,9 @@ bool MIPSolverCbc::repairInfeasibility()
             break;
         }
 
-        argv[4] = strdup(arg.c_str());
+        argv[numArguments++] = strdup(arg.c_str());
 
-        argv[5] = strdup("-scaling");
+        argv[numArguments++] = strdup("-scaling");
 
         switch(env->settings->getSetting<int>("Subsolver.Cbc.Scaling"))
         {
@@ -1035,14 +1090,14 @@ bool MIPSolverCbc::repairInfeasibility()
             break;
         }
 
-        argv[6] = strdup(arg.c_str());
+        argv[numArguments++] = strdup(arg.c_str());
 
-        argv[7] = strdup("-strategy");
+        argv[numArguments++] = strdup("-strategy");
         arg = std::to_string(env->settings->getSetting<int>("Subsolver.Cbc.Strategy"));
-        argv[8] = strdup(arg.c_str());
+        argv[numArguments++] = strdup(arg.c_str());
 
         /*
-        argv[9] = strdup("-cutoff");
+        argv[numArguments++] = strdup("-cutoff");
 
         if(this->cutOff > 1e100)
             arg = "1e100";
@@ -1051,33 +1106,33 @@ bool MIPSolverCbc::repairInfeasibility()
         else
             arg = fmt::format("{}", this->cutOff);
 
-        argv[10] = strdup(arg.c_str());*/
+        argv[numArguments++] = strdup(arg.c_str());*/
 
-        argv[9] = strdup("-sec");
+        argv[numArguments++] = strdup("-sec");
         arg = fmt::format("{}", this->timeLimit);
-        argv[10] = strdup(arg.c_str());
+        argv[numArguments++] = strdup(arg.c_str());
+
+        // A seed of zero leaves Cbc and Clp at their own defaults. Otherwise both of them are given it, since
+        // they draw from separate generators: Cbc's covers the heuristics and Clp's the simplex perturbation.
+        if(int randomSeed = env->settings->getSetting<int>("Dual.MIP.RandomSeed"); randomSeed != 0)
+        {
+            arg = std::to_string(randomSeed);
+            argv[numArguments++] = strdup("-randomCbcSeed");
+            argv[numArguments++] = strdup(arg.c_str());
+            argv[numArguments++] = strdup("-randomSeed");
+            argv[numArguments++] = strdup(arg.c_str());
+        }
 
         // pass threads option if not running single-threaded (101 = 1 thread + deterministic multithreading)
         if(numberOfThreads != 1 && numberOfThreads != 101)
         {
-            argv[11] = strdup("-threads");
+            argv[numArguments++] = strdup("-threads");
             arg = std::to_string(numberOfThreads);
-            argv[12] = strdup(arg.c_str());
+            argv[numArguments++] = strdup(arg.c_str());
+        }
 
-            argv[13] = strdup("-solve");
-            argv[14] = strdup("-quit");
-            argv[15] = strdup("");
-            argv[16] = strdup("");
-        }
-        else
-        {
-            argv[11] = strdup("-solve");
-            argv[12] = strdup("-quit");
-            argv[13] = strdup("");
-            argv[14] = strdup("");
-            argv[15] = strdup("");
-            argv[16] = strdup("");
-        }
+        argv[numArguments++] = strdup("-solve");
+        argv[numArguments++] = strdup("-quit");
 
         CbcMain1(numArguments, const_cast<const char**>(argv), *cbcModel, dummyCallback, solverData);
 
@@ -1176,6 +1231,11 @@ void MIPSolverCbc::setTimeLimit(double seconds)
         timeLimit = 0.00001;
     else
         timeLimit = seconds;
+
+    // The time limit given to Cbc as -sec only applies to the branch and bound, so it is given to Clp as well,
+    // which otherwise solves the LP problems without any time limit
+    if(osiInterface)
+        osiInterface->getModelPtr()->setMaximumSeconds(timeLimit);
 }
 
 void MIPSolverCbc::setCutOff(double cutOff)
@@ -1326,7 +1386,10 @@ void MIPSolverCbc::deleteMIPStarts() { MIPStart.clear(); }
 
 bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
 {
-    assert(integerCut.variableValues.size() == (size_t)env->reformulatedProblem->properties.numberOfDiscreteVariables);
+    // Not necessarily all discrete variables in the reformulated problem: e.g. an NLP-sourced cut built against the
+    // original problem (Primal.FixedInteger.SourceProblem = OriginalProblem, the default) only lists the original
+    // problem's discrete variables, while reformulation may have added auxiliary discrete variables.
+    assert(integerCut.variableValues.size() == integerCut.variableIndexes.size());
     bool allowIntegerCutRepair = env->settings->getSetting<bool>("Dual.MIP.InfeasibilityRepair.IntegerCuts");
 
     int numConstraintsBefore = osiInterface->getNumRows();
@@ -1349,18 +1412,15 @@ bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
             size_t index = 0;
             CoinPackedVector cut;
 
-            for(auto& VAR : env->reformulatedProblem->allVariables)
+            for(auto& I : integerCut.variableIndexes)
             {
-                if(!(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer
-                       || VAR->properties.type == E_VariableType::Semiinteger))
-                    continue;
-
+                auto VAR = env->reformulatedProblem->getVariable(I);
                 int variableValue = integerCut.variableValues[index];
 
                 if(variableValue == 1.0)
-                    cut.insert(VAR->index, 1.0);
+                    cut.insert(VAR->getIndex(), 1.0);
                 else if(variableValue == 0.0)
-                    cut.insert(VAR->index, -1.0);
+                    cut.insert(VAR->getIndex(), -1.0);
                 else
                 {
                     env->output->outputDebug("        Integer cut not added by Cbc ");
@@ -1400,12 +1460,12 @@ bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
                 if(variableValue == VAR->upperBound)
                 {
                     sumUB += VAR->upperBound;
-                    cut.insert(VAR->index, -1.0);
+                    cut.insert(VAR->getIndex(), -1.0);
                 }
                 else if(variableValue == VAR->lowerBound)
                 {
                     sumLB -= VAR->lowerBound;
-                    cut.insert(VAR->index, 1.0);
+                    cut.insert(VAR->getIndex(), 1.0);
                 }
                 else
                 {
@@ -1429,7 +1489,7 @@ bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
                     CoinPackedVector cut1a, cut1b, cut2, cut3;
 
                     int tmpNumConstraints = osiInterface->getNumRows();
-                    cut1a.insert(VAR->index, 1.0);
+                    cut1a.insert(VAR->getIndex(), 1.0);
                     cut1a.insert(wIndex, 1.0);
                     osiInterface->addRow(cut1a, variableValue, osiInterface->getInfinity(),
                         fmt::format("IC{}_{}_1a", env->solutionStatistics.numberOfIntegerCuts, index));
@@ -1442,7 +1502,7 @@ bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
                     }
 
                     tmpNumConstraints = osiInterface->getNumRows();
-                    cut1b.insert(VAR->index, 1.0);
+                    cut1b.insert(VAR->getIndex(), 1.0);
                     cut1b.insert(wIndex, -1.0);
 
                     osiInterface->addRow(cut1b, -osiInterface->getInfinity(), variableValue,
@@ -1457,7 +1517,7 @@ bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
 
                     tmpNumConstraints = osiInterface->getNumRows();
                     cut2.insert(wIndex, 1.0);
-                    cut2.insert(VAR->index, -1.0);
+                    cut2.insert(VAR->getIndex(), -1.0);
                     cut2.insert(vIndex, M1);
                     osiInterface->addRow(cut2, -osiInterface->getInfinity(), -variableValue + M1,
                         fmt::format("IC{}_{}_2", env->solutionStatistics.numberOfIntegerCuts, index));
@@ -1471,7 +1531,7 @@ bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
 
                     tmpNumConstraints = osiInterface->getNumRows();
                     cut3.insert(wIndex, 1.0);
-                    cut3.insert(VAR->index, 1.0);
+                    cut3.insert(VAR->getIndex(), 1.0);
                     cut3.insert(vIndex, -M2);
                     osiInterface->addRow(cut3, -osiInterface->getInfinity(), variableValue,
                         fmt::format("IC{}_{}_3", env->solutionStatistics.numberOfIntegerCuts, index));
@@ -1671,6 +1731,9 @@ double MIPSolverCbc::getDualObjectiveValue()
 {
     bool isMIP = getDiscreteVariableStatus();
     double objVal = (isMinimizationProblem ? SHOT_DBL_MIN : SHOT_DBL_MAX);
+
+    if(!isDualBoundAvailable(getSolutionStatus(), isMIP))
+        return (objVal);
 
     try
     {

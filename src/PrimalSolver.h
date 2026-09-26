@@ -40,7 +40,7 @@ public:
     void addFixedNLPCandidate(
         VectorDouble pt, E_PrimalNLPSource source, double objVal, int iter, PairIndexValue maxConstrDev);
 
-    bool hasFixedNLPCandidateBeenTested(double hash);
+    bool hasFixedNLPCandidateBeenTested(const PairDouble& hashes);
 
     std::vector<PrimalSolution> primalSolutionCandidates;
     std::vector<PrimalFixedNLPCandidate> fixedPrimalNLPCandidates;

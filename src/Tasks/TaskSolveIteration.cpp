@@ -23,6 +23,9 @@
 
 #include "../Model/Problem.h"
 
+#include <algorithm>
+#include <optional>
+
 namespace SHOT
 {
 
@@ -58,27 +61,45 @@ void TaskSolveIteration::run()
     bool isMinimization
         = env->reformulatedProblem->objectiveFunction->direction == E_ObjectiveFunctionDirection::Minimize;
 
+    // The reformulated problem's objective can have a different direction than the original problem's (e.g. a
+    // maximize objective reformulated into an equivalent minimize one); raw values read off the MIP/LP solver are
+    // in the reformulated problem's sense, while DualSolver/Results interpret DualSolution values in the
+    // original problem's sense, so they need to be translated here.
+    double objectiveSignFactor
+        = (env->reformulatedProblem->objectiveFunction->direction == env->problem->objectiveFunction->direction)
+        ? 1.0
+        : -1.0;
+
     // Sets the iteration time limit
     auto timeLim = env->settings->getSetting<double>("Termination.TimeLimit") - env->timing->getElapsedTime("Total");
     env->dualSolver->MIPSolver->setTimeLimit(timeLim);
 
+    // The cutoff in the original problem's sense, if one is used when solving
+    std::optional<double> usedCutOff;
+
     if(env->dualSolver->useCutOff && !currIter->MIPSolutionLimitUpdated)
     {
+        usedCutOff = env->dualSolver->cutOffToUse;
+
         double cutOffValue;
         double cutOffValueConstraint;
 
+        // cutOffToUse is a primal bound in the original problem's sense; translate it into the reformulated
+        // problem's sense before using it to bound the reformulated MIP's own objective/objective variable.
+        double reformulatedCutOff = objectiveSignFactor * env->dualSolver->cutOffToUse;
+
         if(isMinimization)
         {
-            cutOffValue = env->dualSolver->cutOffToUse + env->settings->getSetting<double>("Dual.MIP.CutOff.Tolerance");
-            cutOffValueConstraint = env->dualSolver->cutOffToUse;
+            cutOffValue = reformulatedCutOff + env->settings->getSetting<double>("Dual.MIP.CutOff.Tolerance");
+            cutOffValueConstraint = reformulatedCutOff;
         }
         else
         {
-            cutOffValue = env->dualSolver->cutOffToUse - env->settings->getSetting<double>("Dual.MIP.CutOff.Tolerance");
-            cutOffValueConstraint = env->dualSolver->cutOffToUse;
+            cutOffValue = reformulatedCutOff - env->settings->getSetting<double>("Dual.MIP.CutOff.Tolerance");
+            cutOffValueConstraint = reformulatedCutOff;
         }
 
-        env->output->outputDebug(fmt::format("        Setting cutoff value to {}.", env->dualSolver->cutOffToUse));
+        env->output->outputDebug(fmt::format("        Setting cutoff value to {}.", reformulatedCutOff));
 
         env->dualSolver->MIPSolver->setCutOff(cutOffValue);
 
@@ -164,6 +185,66 @@ void TaskSolveIteration::run()
 
     auto sols = env->dualSolver->MIPSolver->getAllVariableSolutions();
 
+    // A solution with a variable at a bound that has only replaced a missing bound of the problem does not show what
+    // the optimal objective value is, since the problem may be unbounded or have its optimum beyond the bound. The
+    // bounds are then removed and the problem is solved again, which is valid also for a relaxation since it only
+    // becomes larger. In a single-tree solve, the callback has interrupted the MIP solver and recorded the variables.
+    auto resolveProblem = [&]()
+    {
+        solStatus = env->dualSolver->MIPSolver->solveProblem();
+
+        if(static_cast<ES_TreeStrategy>(env->settings->getSetting<int>("Dual.TreeStrategy"))
+            == ES_TreeStrategy::SingleTree)
+            currIter = env->results->getCurrentIteration();
+
+        currIter->solutionStatus = solStatus;
+        env->output->outputDebug(fmt::format("        Dual problem solved again with return code: {}", (int)solStatus));
+
+        sols = env->dualSolver->MIPSolver->getAllVariableSolutions();
+    };
+
+    while(true)
+    {
+        auto variables = env->dualSolver->variablesAtArtificialBounds;
+        env->dualSolver->variablesAtArtificialBounds.clear();
+
+        if(sols.size() > 0)
+        {
+            for(auto& V : env->problem->getVariablesAtArtificialBounds(sols.at(0).point))
+            {
+                if(std::find(variables.begin(), variables.end(), V) == variables.end())
+                    variables.push_back(V);
+            }
+        }
+
+        if(variables.size() == 0)
+            break;
+
+        env->dualSolver->removeArtificialBounds(variables);
+        resolveProblem();
+    }
+
+    // If the dual problem is infeasible with the cutoff, it is solved again without the artificial bounds, since they
+    // restrict the problem and the cutoff can only be used as dual bound for a relaxation
+    if(solStatus == E_ProblemSolutionStatus::Infeasible && sols.size() == 0 && usedCutOff
+        && env->results->solutionIsGlobal && !currIter->hasInfeasibilityRepairBeenPerformed
+        && env->results->hasPrimalSolution() && env->problem->hasArtificialBounds())
+    {
+        std::vector<VariablePtr> variables;
+
+        for(auto& V : env->problem->allVariables)
+        {
+            if(V->properties.hasArtificialLowerBound || V->properties.hasArtificialUpperBound)
+                variables.push_back(V);
+        }
+
+        env->dualSolver->removeArtificialBounds(variables);
+        resolveProblem();
+    }
+
+    bool isSolutionAtArtificialBound
+        = sols.size() > 0 && env->problem->getVariablesAtArtificialBounds(sols.at(0).point).size() > 0;
+
     if(sols.size() > 0)
     {
         env->output->outputDebug(fmt::format("        Number of solutions in solution pool: {} ", sols.size()));
@@ -194,7 +275,8 @@ void TaskSolveIteration::run()
         if(env->reformulatedProblem->antiEpigraphObjectiveVariable)
         {
             for(auto& SOL : sols)
-                SOL.point.at(env->reformulatedProblem->antiEpigraphObjectiveVariable->index) = currIter->objectiveValue;
+                SOL.point.at(env->reformulatedProblem->antiEpigraphObjectiveVariable->getIndex())
+                    = currIter->objectiveValue;
         }
 
         currIter->solutionPoints = sols;
@@ -204,7 +286,7 @@ void TaskSolveIteration::run()
             auto mostDevConstr = env->reformulatedProblem->getMaxNumericConstraintValue(
                 sols.at(0).point, env->reformulatedProblem->nonlinearConstraints);
 
-            currIter->maxDeviationConstraint = mostDevConstr.constraint->index;
+            currIter->maxDeviationConstraint = mostDevConstr.constraint->getIndex();
             currIter->maxDeviation = mostDevConstr.normalizedValue;
 
             if(env->settings->getSetting<bool>("Output.Debug.Enable"))
@@ -223,24 +305,28 @@ void TaskSolveIteration::run()
             currIter->maxDeviation = 0.0;
         }
 
-        if(!env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed)
+        if(isSolutionAtArtificialBound)
         {
-            double currentDualBound = env->dualSolver->MIPSolver->getDualObjectiveValue();
+            env->output->outputDebug(
+                "        Dual bound ignored since the solution is at an artificial bound of a variable.");
+        }
+        else if(!env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed)
+        {
+            double currentDualBound = objectiveSignFactor * env->dualSolver->MIPSolver->getDualObjectiveValue();
 
             if(currIter->isMIP())
             {
-                if(currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
-                {
-                    DualSolution sol = { sols.at(0).point, E_DualSolutionSource::MIPSolutionOptimal,
-                        currIter->objectiveValue, currIter->iterationNumber, false };
-                    env->dualSolver->addDualSolutionCandidate(sol);
-                }
-                else
-                {
-                    DualSolution sol = { sols.at(0).point, E_DualSolutionSource::MIPSolverBound, currentDualBound,
-                        currIter->iterationNumber, false };
-                    env->dualSolver->addDualSolutionCandidate(sol);
-                }
+                // The objective value of the solution is only a valid dual bound if the dual problem has been solved
+                // to proven optimality. The MIP solvers however also report optimality when their own gap tolerance
+                // has been met, in which case the optimal value can be anywhere between the bound reported by the
+                // solver and the objective value of its solution, so the reported bound is used in both cases.
+                auto source = (currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
+                    ? E_DualSolutionSource::MIPSolutionOptimal
+                    : E_DualSolutionSource::MIPSolverBound;
+
+                DualSolution sol
+                    = { sols.at(0).point, source, currentDualBound, currIter->iterationNumber, false };
+                env->dualSolver->addDualSolutionCandidate(sol);
             }
             else
             {
@@ -254,9 +340,36 @@ void TaskSolveIteration::run()
     {
         env->output->outputDebug("        Dual solver reports no solutions found.");
 
-        DualSolution sol = { { }, E_DualSolutionSource::MIPSolverBound,
-            env->dualSolver->MIPSolver->getDualObjectiveValue(), currIter->iterationNumber, false };
-        env->dualSolver->addDualSolutionCandidate(sol);
+        // If the dual problem is a relaxation of the problem, which it is as long as all cuts are valid everywhere
+        // and it has not been repaired, it being infeasible with the cutoff shows that no solution is better than the
+        // cutoff. The cutoff is then a dual bound, which e.g. closes the gap when it is the primal bound. Artificial
+        // bounds restrict the problem, so the dual problem is then not a relaxation.
+        bool hasArtificialBounds = env->problem->hasArtificialBounds();
+
+        if(solStatus == E_ProblemSolutionStatus::Infeasible && usedCutOff && env->results->solutionIsGlobal
+            && !currIter->hasInfeasibilityRepairBeenPerformed && env->results->hasPrimalSolution()
+            && !hasArtificialBounds)
+        {
+            env->output->outputDebug(
+                fmt::format("        Dual problem infeasible with the cutoff, so {} is a dual bound.", *usedCutOff));
+
+            DualSolution sol
+                = { { }, E_DualSolutionSource::InfeasibleWithCutOff, *usedCutOff, currIter->iterationNumber, false };
+            env->dualSolver->addDualSolutionCandidate(sol);
+        }
+        // The bound returned by the MIP solver is not valid for the original problem if the dual problem has been
+        // repaired, e.g. by replacing its objective function with a constant one
+        else if(!currIter->hasInfeasibilityRepairBeenPerformed)
+        {
+            DualSolution sol = { { }, E_DualSolutionSource::MIPSolverBound,
+                objectiveSignFactor * env->dualSolver->MIPSolver->getDualObjectiveValue(), currIter->iterationNumber,
+                false };
+            env->dualSolver->addDualSolutionCandidate(sol);
+        }
+        else
+        {
+            env->output->outputDebug("        Dual bound ignored since the dual problem has been repaired.");
+        }
     }
 
     currIter->usedMIPSolutionLimit = env->dualSolver->MIPSolver->getSolutionLimit();
@@ -295,7 +408,8 @@ void TaskSolveIteration::run()
     else if(currIter->isDualProblemDiscrete
         && (currIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit
             || currIter->solutionStatus == E_ProblemSolutionStatus::TimeLimit
-            || currIter->solutionStatus == E_ProblemSolutionStatus::NodeLimit))
+            || currIter->solutionStatus == E_ProblemSolutionStatus::NodeLimit
+            || currIter->solutionStatus == E_ProblemSolutionStatus::Abort))
     {
 
         if(env->reformulatedProblem->properties.isMIQPProblem)

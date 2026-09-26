@@ -21,6 +21,8 @@
 
 #include "../src/ModelingSystem/ModelingSystemGAMS.h"
 
+#include "../src/Model/Problem.h"
+
 #include "../src/Tasks/TaskReformulateProblem.h"
 
 using namespace SHOT;
@@ -403,6 +405,56 @@ bool TestCallbackGAMS(std::string filename)
     return passed;
 }
 
+// A constraint whose quadratic terms only involve fixed variables holds nothing quadratic once those terms are
+// folded into the constant, and must be classified as the linear constraint it has become rather than being left
+// among the quadratic constraints where it is counted in none of the classes.
+bool TestConstraintClassesForFixedVariablesGAMS(const std::string& problemFile)
+{
+    auto solver = std::make_unique<SHOT::Solver>();
+    auto env = solver->getEnvironment();
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Critical));
+
+    if(!solver->setProblem(problemFile))
+    {
+        std::cout << "Error while reading " << problemFile << '\n';
+        return (false);
+    }
+
+    bool passed = true;
+
+    for(auto& problem : { env->problem, env->reformulatedProblem })
+    {
+        auto& properties = problem->properties;
+
+        if(properties.numberOfNumericConstraints
+            != properties.numberOfLinearConstraints + properties.numberOfQuadraticConstraints
+                + properties.numberOfNonlinearConstraints)
+        {
+            std::cout << "The constraint classes do not add up to the number of constraints: "
+                      << properties.numberOfNumericConstraints << " != " << properties.numberOfLinearConstraints
+                      << " + " << properties.numberOfQuadraticConstraints << " + "
+                      << properties.numberOfNonlinearConstraints << '\n';
+            passed = false;
+        }
+    }
+
+    if(!solver->solveProblem())
+    {
+        std::cout << "Error while solving " << problemFile << '\n';
+        return (false);
+    }
+
+    double objectiveValue = env->results->getPrimalBound();
+
+    if(std::abs(objectiveValue - 1.0) > 1e-6)
+    {
+        std::cout << "Expected an objective value of 1, got " << objectiveValue << '\n';
+        passed = false;
+    }
+
+    return passed;
+}
+
 int GAMSTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -477,6 +529,11 @@ int GAMSTest(int argc, char* argv[])
         passed = SolveProblemWithStartingPointGAMS("data/tls2_sp.gms");
         std::cout << "Finished test to solve tls2 with MINLPLib starting point p1 and verify primal solution callback."
                   << std::endl;
+        break;
+    case 13:
+        std::cout << "Starting test for constraint classes with fixed variables in GAMS syntax:" << std::endl;
+        passed = TestConstraintClassesForFixedVariablesGAMS("data/fixedvars.gms");
+        std::cout << "Finished test for constraint classes with fixed variables in GAMS syntax." << std::endl;
         break;
     default:
         passed = false;

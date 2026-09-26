@@ -82,6 +82,12 @@ public:
     int addLinearConstraint(const std::map<int, double>& elements, double constant, std::string name,
         bool isGreaterThan, bool allowRepair) override;
 
+    VectorInteger addLinearConstraints(const std::vector<std::map<int, double>>& elements,
+        const VectorDouble& constants, const VectorString& names, bool isGreaterThan, bool allowRepair) override
+    {
+        return (MIPSolverBase::addLinearConstraints(elements, constants, names, isGreaterThan, allowRepair));
+    }
+
     bool addSpecialOrderedSet(
         E_SOSType type, VectorInteger variableIndexes, VectorDouble variableWeights = { }) override;
 
@@ -198,5 +204,9 @@ protected:
     IloExpr constrExpression;
 
     bool objectiveFunctionReplacedWithZero = false;
+
+    // CPLEX can only tell whether a problem is infeasible or unbounded if presolve reductions are not used, so such a
+    // problem is solved again without them
+    E_ProblemSolutionStatus resolveInfeasibleOrUnbounded(E_ProblemSolutionStatus status);
 };
 } // namespace SHOT

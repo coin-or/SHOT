@@ -119,6 +119,10 @@ private:
     void updateConvexity();
     void updateFactorableFunctions();
 
+    // Restores the invariant that a constraint's index is its position in numericConstraints. Adding a
+    // constraint already assigns it, but a reformulation may have removed one from the middle of the list.
+    void renumberConstraints();
+
     bool verifyOwnership();
 
 public:
@@ -168,10 +172,10 @@ public:
     void finalize();
 
     void add(VariablePtr variable);
-    void add(Variables variables);
+    void add(const Variables& variables);
 
     void add(AuxiliaryVariablePtr variable);
-    void add(AuxiliaryVariables variables);
+    void add(const AuxiliaryVariables& variables);
 
     void add(LinearConstraintPtr constraint);
     void add(QuadraticConstraintPtr constraint);
@@ -188,6 +192,13 @@ public:
     template <class T> void add(std::vector<T> elements);
 
     VariablePtr getVariable(int variableIndex);
+
+    // The variables at a bound that has replaced a missing bound when the problem was read, see
+    // VariableProperties::hasArtificialLowerBound, in a point whose first values are the values of the variables
+    std::vector<VariablePtr> getVariablesAtArtificialBounds(const VectorDouble& point);
+
+    // Whether a variable still has a bound that has replaced a missing bound when the problem was read
+    bool hasArtificialBounds();
     ConstraintPtr getConstraint(int constraintIndex);
 
     double getVariableLowerBound(int variableIndex);
@@ -196,13 +207,17 @@ public:
     VectorDouble getVariableLowerBounds();
     VectorDouble getVariableUpperBounds();
 
-    IntervalVector getVariableBounds();
+    const IntervalVector& getVariableBounds();
 
     AuxiliaryVariables getAuxiliaryVariablesOfType(E_AuxiliaryVariableType type);
 
     void setVariableLowerBound(int variableIndex, double bound);
     void setVariableUpperBound(int variableIndex, double bound);
     void setVariableBounds(int variableIndex, double lowerBound, double upperBound);
+
+    // Updates the stored bound vectors after the bounds of a variable in the problem have been changed on the variable
+    // itself, e.g. when they have been tightened
+    void updateVariableBoundVectors(const Variable& variable);
 
     std::shared_ptr<std::vector<std::pair<NumericConstraintPtr, Variables>>> getConstraintsJacobianSparsityPattern();
     std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> getConstraintsHessianSparsityPattern();
@@ -214,24 +229,24 @@ public:
 
     template <typename T>
     std::optional<NumericConstraintValue> getMostDeviatingNumericConstraint(
-        const VectorDouble& point, std::vector<T> constraintSelection);
+        const VectorDouble& point, const std::vector<T>& constraintSelection);
 
     template <typename T>
     std::optional<NumericConstraintValue> getMostDeviatingNumericConstraint(const VectorDouble& point,
-        std::vector<std::shared_ptr<T>> constraintSelection, std::vector<T*>& activeConstraints);
+        const std::vector<std::shared_ptr<T>>& constraintSelection, std::vector<T*>& activeConstraints);
 
     template <typename T>
     std::optional<NumericConstraintValue> getMostDeviatingNumericConstraint(const VectorDouble& point,
-        std::vector<std::shared_ptr<T>> constraintSelection, std::vector<std::shared_ptr<T>>& activeConstraints);
+        const std::vector<std::shared_ptr<T>>& constraintSelection, std::vector<std::shared_ptr<T>>& activeConstraints);
 
     NumericConstraintValue getMaxNumericConstraintValue(
-        const VectorDouble& point, const LinearConstraints constraintSelection);
+        const VectorDouble& point, const LinearConstraints& constraintSelection);
     NumericConstraintValue getMaxNumericConstraintValue(
-        const VectorDouble& point, const QuadraticConstraints constraintSelection);
+        const VectorDouble& point, const QuadraticConstraints& constraintSelection);
     NumericConstraintValue getMaxNumericConstraintValue(
-        const VectorDouble& point, const NonlinearConstraints constraintSelection, double correction = 0.0);
+        const VectorDouble& point, const NonlinearConstraints& constraintSelection, double correction = 0.0);
     NumericConstraintValue getMaxNumericConstraintValue(
-        const VectorDouble& point, const NumericConstraints constraintSelection);
+        const VectorDouble& point, const NumericConstraints& constraintSelection);
 
     template <typename T>
     NumericConstraintValue getMaxNumericConstraintValue(
@@ -242,7 +257,7 @@ public:
 
     template <typename T>
     NumericConstraintValues getAllDeviatingConstraints(
-        const VectorDouble& point, double tolerance, std::vector<T> constraintSelection, double correction = 0.0);
+        const VectorDouble& point, double tolerance, const std::vector<T>& constraintSelection, double correction = 0.0);
 
     NumericConstraintValues getFractionOfDeviatingNonlinearConstraints(
         const VectorDouble& point, double tolerance, double fraction, double correction = 0.0);
@@ -254,24 +269,25 @@ public:
 
     virtual NumericConstraintValues getAllDeviatingNonlinearConstraints(const VectorDouble& point, double tolerance);
 
-    virtual bool areLinearConstraintsFulfilled(VectorDouble point, double tolerance);
+    virtual bool areLinearConstraintsFulfilled(const VectorDouble& point, double tolerance);
 
-    virtual bool areQuadraticConstraintsFulfilled(VectorDouble point, double tolerance);
+    virtual bool areQuadraticConstraintsFulfilled(const VectorDouble& point, double tolerance);
 
-    virtual bool areNonlinearConstraintsFulfilled(VectorDouble point, double tolerance);
+    virtual bool areNonlinearConstraintsFulfilled(const VectorDouble& point, double tolerance);
 
-    virtual bool areNumericConstraintsFulfilled(VectorDouble point, double tolerance);
+    virtual bool areNumericConstraintsFulfilled(const VectorDouble& point, double tolerance);
 
-    virtual bool areIntegralityConstraintsFulfilled(VectorDouble point, double tolerance);
+    virtual bool areIntegralityConstraintsFulfilled(const VectorDouble& point, double tolerance);
 
-    virtual bool areSpecialOrderedSetsFulfilled(VectorDouble point, double tolerance);
+    virtual bool areSpecialOrderedSetsFulfilled(const VectorDouble& point, double tolerance);
 
-    bool areVariableBoundsFulfilled(VectorDouble point, double tolerance);
+    bool areVariableBoundsFulfilled(const VectorDouble& point, double tolerance);
 
     void saveProblemToFile(std::string filename);
 
     void doFBBT();
-    bool doFBBTOnConstraint(NumericConstraintPtr constraint, double timeLimit);
+    // The bounds are tightened until the BoundTightening timer reaches timeEnd
+    bool doFBBTOnConstraint(NumericConstraintPtr constraint, double timeEnd);
 
     void augmentAuxiliaryVariableValues(VectorDouble& point);
 

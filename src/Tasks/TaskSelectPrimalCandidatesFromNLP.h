@@ -24,12 +24,15 @@ class INLPSolver;
 class TaskSelectPrimalCandidatesFromNLP : public TaskBase
 {
 public:
-    TaskSelectPrimalCandidatesFromNLP(EnvironmentPtr envPtr, bool useReformulatedProblem);
+    // isFinalPolish marks the instance added to the finalize sequence
+    TaskSelectPrimalCandidatesFromNLP(EnvironmentPtr envPtr, bool useReformulatedProblem, bool isFinalPolish = false);
     ~TaskSelectPrimalCandidatesFromNLP() override;
     void run() override;
     std::string getType() override;
 
 private:
+    bool isFinalPolish;
+
     virtual bool solveFixedNLP();
 
     void createInfeasibilityCut(const VectorDouble point);

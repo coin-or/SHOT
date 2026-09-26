@@ -35,46 +35,6 @@ TaskPerformBoundTightening::TaskPerformBoundTightening(EnvironmentPtr envPtr, Pr
 
     sourceProblem = source;
 
-    if(env->settings->getSetting<bool>("Model.BoundTightening.InitialPOA.Use")
-        && (sourceProblem->properties.numberOfNonlinearConstraints > 0
-            || sourceProblem->objectiveFunction->properties.classification
-                > E_ObjectiveFunctionClassification::Quadratic))
-    {
-        env->timing->startTimer("BoundTighteningPOA");
-
-        relaxedProblem = sourceProblem->createCopy(env, true, true);
-        POASolver = std::make_shared<NLPSolverSHOT>(env, relaxedProblem);
-
-        POASolver->solver->updateSetting("Termination.ConstraintTolerance",
-            env->settings->getSetting<double>("Model.BoundTightening.InitialPOA.ConstraintTolerance"));
-        POASolver->solver->updateSetting("Termination.ObjectiveConstraintTolerance",
-            env->settings->getSetting<double>("Model.BoundTightening.InitialPOA.ObjectiveConstraintTolerance"));
-
-        POASolver->solver->updateSetting("Termination.DualStagnation.ConstraintTolerance",
-            env->settings->getSetting<double>("Model.BoundTightening.InitialPOA.StagnationConstraintTolerance"));
-        POASolver->solver->updateSetting("Termination.DualStagnation.IterationLimit",
-            env->settings->getSetting<int>("Model.BoundTightening.InitialPOA.StagnationIterationLimit"));
-
-        POASolver->solver->updateSetting("Termination.TimeLimit",
-            env->settings->getSetting<double>("Model.BoundTightening.InitialPOA.TimeLimit"));
-
-        POASolver->solver->updateSetting("Termination.IterationLimit",
-            env->settings->getSetting<int>("Model.BoundTightening.InitialPOA.IterationLimit"));
-
-        POASolver->solver->updateSetting("Termination.ObjectiveGap.Absolute",
-            env->settings->getSetting<double>("Model.BoundTightening.InitialPOA.ObjectiveGapAbsolute"));
-        POASolver->solver->updateSetting("Termination.ObjectiveGap.Relative",
-            env->settings->getSetting<double>("Model.BoundTightening.InitialPOA.ObjectiveGapRelative"));
-
-        POASolver->solver->updateSetting(
-            "Dual.CutStrategy", env->settings->getSetting<int>("Model.BoundTightening.InitialPOA.CutStrategy"));
-
-        POASolver->solver->updateSetting("Dual.ESH.InteriorPoint.UsePrimalSolution",
-            static_cast<int>(ES_AddPrimalPointAsInteriorPoint::KeepOriginal));
-
-        env->timing->stopTimer("BoundTighteningPOA");
-    }
-
     env->timing->stopTimer("BoundTightening");
 }
 
@@ -137,25 +97,40 @@ void TaskPerformBoundTightening::run()
             env->output->outputInfo(fmt::format(
                 "  - Objective bounds are: [{:g}, {:g}]", objectiveBoundsAfter.l(), objectiveBoundsAfter.u()));
 
-            if(sourceProblem->objectiveFunction->properties.isMinimize)
+            // sourceProblem is either env->problem or env->reformulatedProblem, and the latter's objective can
+            // have a different direction than env->problem's (e.g. a maximize objective reformulated into an
+            // equivalent minimize one, with its expression negated to match). objectiveBoundsAfter is then an
+            // interval of the *negated* function, so translate it back to env->problem's sense (negating and
+            // swapping l()/u()) before using it as a DualSolution value or cutoff, both of which are always
+            // interpreted in env->problem's sense.
+            bool sourceIsSignReversed
+                = sourceProblem->objectiveFunction->direction != env->problem->objectiveFunction->direction;
+
+            Interval originalSenseBounds = sourceIsSignReversed
+                ? Interval(-objectiveBoundsAfter.u(), -objectiveBoundsAfter.l())
+                : objectiveBoundsAfter;
+
+            if(env->problem->objectiveFunction->properties.isMinimize)
             {
-                DualSolution sol = { {}, E_DualSolutionSource::MIPSolverBound, objectiveBoundsAfter.l(), 0, false };
+                DualSolution sol
+                    = { {}, E_DualSolutionSource::MIPSolverBound, originalSenseBounds.l(), 0, false };
                 env->dualSolver->addDualSolutionCandidate(sol);
 
-                if(objectiveBoundsAfter.u() < env->dualSolver->cutOffToUse) // Update MIP cutoff
+                if(originalSenseBounds.u() < env->dualSolver->cutOffToUse) // Update MIP cutoff
                 {
-                    env->dualSolver->cutOffToUse = objectiveBoundsAfter.u();
+                    env->dualSolver->cutOffToUse = originalSenseBounds.u();
                     env->dualSolver->useCutOff = true;
                 }
             }
-            else if(sourceProblem->objectiveFunction->properties.isMaximize)
+            else if(env->problem->objectiveFunction->properties.isMaximize)
             {
-                DualSolution sol = { {}, E_DualSolutionSource::MIPSolverBound, objectiveBoundsAfter.u(), 0, false };
+                DualSolution sol
+                    = { {}, E_DualSolutionSource::MIPSolverBound, originalSenseBounds.u(), 0, false };
                 env->dualSolver->addDualSolutionCandidate(sol);
 
-                if(objectiveBoundsAfter.l() > env->dualSolver->cutOffToUse) // Update MIP cutoff
+                if(originalSenseBounds.l() > env->dualSolver->cutOffToUse) // Update MIP cutoff
                 {
-                    env->dualSolver->cutOffToUse = objectiveBoundsAfter.l();
+                    env->dualSolver->cutOffToUse = originalSenseBounds.l();
                     env->dualSolver->useCutOff = true;
                 }
             }
@@ -171,39 +146,99 @@ std::string TaskPerformBoundTightening::getType()
     return (type);
 }
 
-void TaskPerformBoundTightening::createPOA()
+std::shared_ptr<NLPSolverSHOT> TaskPerformBoundTightening::createPOASolver(ProblemPtr problem)
 {
-    env->timing->startTimer("BoundTighteningPOA");
+    auto solver = std::make_shared<NLPSolverSHOT>(env, problem);
 
-    env->output->outputInfo(" Generating initial polyhedral outer approximation of nonlinear feasible set.");
+    // The generated hyperplanes are instead added as linear constraints to the source problem in createPOA()
+    solver->reuseHyperplanes = false;
 
+    // The objective function of the relaxation is not the one of the source problem, so its cutoff does not apply
+    solver->useCutOff = false;
+
+    solver->solver->updateSetting("Termination.ConstraintTolerance",
+        env->settings->getSetting<double>("Model.BoundTightening.InitialPOA.ConstraintTolerance"));
+    solver->solver->updateSetting("Termination.ObjectiveConstraintTolerance",
+        env->settings->getSetting<double>("Model.BoundTightening.InitialPOA.ObjectiveConstraintTolerance"));
+
+    solver->solver->updateSetting("Termination.DualStagnation.ConstraintTolerance",
+        env->settings->getSetting<double>("Model.BoundTightening.InitialPOA.StagnationConstraintTolerance"));
+    solver->solver->updateSetting("Termination.DualStagnation.IterationLimit",
+        env->settings->getSetting<int>("Model.BoundTightening.InitialPOA.StagnationIterationLimit"));
+
+    solver->solver->updateSetting("Termination.IterationLimit",
+        env->settings->getSetting<int>("Model.BoundTightening.InitialPOA.IterationLimit"));
+
+    solver->solver->updateSetting("Termination.ObjectiveGap.Absolute",
+        env->settings->getSetting<double>("Model.BoundTightening.InitialPOA.ObjectiveGapAbsolute"));
+    solver->solver->updateSetting("Termination.ObjectiveGap.Relative",
+        env->settings->getSetting<double>("Model.BoundTightening.InitialPOA.ObjectiveGapRelative"));
+
+    solver->solver->updateSetting(
+        "Dual.CutStrategy", env->settings->getSetting<int>("Model.BoundTightening.InitialPOA.CutStrategy"));
+
+    solver->solver->updateSetting("Dual.ESH.InteriorPoint.UsePrimalSolution",
+        static_cast<int>(ES_AddPrimalPointAsInteriorPoint::KeepOriginal));
+
+    return (solver);
+}
+
+void TaskPerformBoundTightening::solvePOAProblem(std::shared_ptr<NLPSolverSHOT> solver)
+{
     for(auto& V : sourceProblem->allVariables)
     {
-        POASolver->updateVariableLowerBound(V->index, V->lowerBound);
-        POASolver->updateVariableUpperBound(V->index, V->upperBound);
+        solver->updateVariableLowerBound(V->getIndex(), V->lowerBound);
+        solver->updateVariableUpperBound(V->getIndex(), V->upperBound);
     }
 
+    // The time limit is shared by all the problems solved for the outer approximation
+    solver->solver->updateSetting("Termination.TimeLimit",
+        std::max(0.0,
+            env->settings->getSetting<double>("Model.BoundTightening.InitialPOA.TimeLimit")
+                - env->timing->getElapsedTime("BoundTighteningPOA")));
+
     // TODO handle return code?
-    POASolver->solveProblem();
+    solver->solveProblem();
+}
 
-    int hyperplaneCounter = 0;
-    auto POADualSolver = this->POASolver->solver->getEnvironment()->dualSolver;
-    auto objectiveFunction = sourceProblem->objectiveFunction;
+void TaskPerformBoundTightening::addPOACuts(std::shared_ptr<NLPSolverSHOT> solver,
+    const std::map<std::string, NonlinearConstraintPtr>& convexConstraints, std::set<std::string>& constraintsWithCuts,
+    int& hyperplaneCounter)
+{
+    auto solverDualSolver = solver->solver->getEnvironment()->dualSolver;
 
-    for(auto& HP : POADualSolver->generatedHyperplanes)
+    // The solver generating the outer approximation reformulates the problem it is given, so the constraint
+    // indices of its hyperplanes are not the ones of the problem the linearizations are added to: a constraint
+    // index from it identifies another constraint here, or none at all. The constraints are matched by name
+    // instead, and the cut is then generated from the constraint of this problem, so it is a valid linearization
+    // of it even if the function it was generated for is not the same one. Only cuts for convex constraints are
+    // valid everywhere, so no others are reused. Cuts for the objective function are not reused either, since the
+    // objective function of the relaxation is not the one of the source problem.
+    for(auto& HP : solverDualSolver->generatedHyperplanes)
     {
         auto newHP = std::make_shared<ConstraintHyperplane>();
 
         if(auto sourceHP = std::dynamic_pointer_cast<ConstraintHyperplane>(HP->sourceHyperplane))
         {
+            if(!sourceHP->isGlobal)
+                continue;
+
+            auto match = convexConstraints.find(sourceHP->sourceConstraint->name);
+
+            if(match == convexConstraints.end())
+                continue;
+
+            // The variables of this problem are the first ones of the reformulated problem the point comes from
+            if((int)sourceHP->generatedPoint.size() < sourceProblem->properties.numberOfVariables)
+                continue;
+
             newHP->source = sourceHP->source;
-            newHP->sourceConstraint = std::dynamic_pointer_cast<NumericConstraint>(
-                sourceProblem->getConstraint(sourceHP->sourceConstraint->index));
-            newHP->generatedPoint = sourceHP->generatedPoint;
+            newHP->sourceConstraint = match->second;
+            newHP->generatedPoint = VectorDouble(sourceHP->generatedPoint.begin(),
+                sourceHP->generatedPoint.begin() + sourceProblem->properties.numberOfVariables);
             newHP->isGlobal = sourceHP->isGlobal;
 
-            auto optional
-                = this->POASolver->solver->getEnvironment()->dualSolver->MIPSolver->createHyperplaneTerms(newHP);
+            auto optional = solverDualSolver->MIPSolver->createHyperplaneTerms(newHP);
 
             if(!optional)
                 continue;
@@ -239,10 +274,8 @@ void TaskPerformBoundTightening::createPOA()
                 tmpPair.second /= scalingFactor;
             }
 
-            auto linearConstraint = std::make_shared<LinearConstraint>(
-                sourceProblem->properties.numberOfLinearConstraints + hyperplaneCounter,
-                fmt::format("initPOA_{}_{}", newHP->sourceConstraint->name, hyperplaneCounter), SHOT_DBL_MIN,
-                -tmpPair.second);
+            auto linearConstraint = std::make_shared<LinearConstraint>(fmt::format(
+                "initPOA_{}_{}", newHP->sourceConstraint->name, hyperplaneCounter), SHOT_DBL_MIN, -tmpPair.second);
 
             linearConstraint->properties.classification = E_ConstraintClassification::Linear;
             linearConstraint->properties.convexity = E_Convexity::Linear;
@@ -252,17 +285,146 @@ void TaskPerformBoundTightening::createPOA()
                 linearConstraint->add(std::make_shared<LinearTerm>(E.second, sourceProblem->getVariable(E.first)));
 
             hyperplaneCounter++;
+            constraintsWithCuts.insert(match->first);
 
             sourceProblem->add(std::move(linearConstraint));
         }
     }
+}
 
-    auto& interiorPts = POADualSolver->interiorPts;
+void TaskPerformBoundTightening::createPOA()
+{
+    env->timing->startTimer("BoundTighteningPOA");
+
+    env->output->outputInfo(" Generating initial polyhedral outer approximation of nonlinear feasible set.");
+
+    // Only the convex constraints are part of the relaxation, and the cuts generated for them are valid everywhere
+    std::map<std::string, NonlinearConstraintPtr> convexConstraints;
+
+    for(auto& C : sourceProblem->nonlinearConstraints)
+    {
+        if(C->properties.convexity <= E_Convexity::Convex)
+            convexConstraints.emplace(C->name, C);
+    }
+
+    std::set<std::string> constraintsWithCuts;
+    int hyperplaneCounter = 0;
+
+    // The solver is only created here, since the task is also created for the original problem, which the MIP
+    // solver may not be able to handle, e.g. with quadratic constraints for Cbc
+    relaxedProblem = sourceProblem->createCopy(env, true, true);
+
+    try
+    {
+        POASolver = createPOASolver(relaxedProblem);
+    }
+    catch(Exception& e)
+    {
+        env->output->outputWarning(
+            fmt::format("  - Initial polyhedral outer approximation not generated: {}", e.what()));
+        env->timing->stopTimer("BoundTighteningPOA");
+        return;
+    }
+
+    solvePOAProblem(POASolver);
+    addPOACuts(POASolver, convexConstraints, constraintsWithCuts, hyperplaneCounter);
+
+    auto& interiorPts = POASolver->solver->getEnvironment()->dualSolver->interiorPts;
     env->dualSolver->interiorPointCandidates.reserve(
         env->dualSolver->interiorPointCandidates.size() + interiorPts.size());
 
     for(auto& PT : interiorPts)
         env->dualSolver->interiorPointCandidates.push_back(PT);
+
+    // The objective function only steers the cuts to where its optimum is, so the convex constraints without cuts
+    // are also approximated by minimizing and maximizing the variables in their nonlinear terms
+    auto variablesInConstraint = [](const NonlinearConstraintPtr& constraint)
+    {
+        std::set<int> indexes;
+
+        for(auto& QT : constraint->quadraticTerms)
+        {
+            indexes.insert(QT->firstVariable->getIndex());
+            indexes.insert(QT->secondVariable->getIndex());
+        }
+
+        for(auto& V : constraint->variablesInMonomialTerms)
+            indexes.insert(V->getIndex());
+
+        for(auto& V : constraint->variablesInSignomialTerms)
+            indexes.insert(V->getIndex());
+
+        for(auto& V : constraint->variablesInNonlinearExpression)
+            indexes.insert(V->getIndex());
+
+        return (indexes);
+    };
+
+    std::set<int> directionalVariables;
+
+    for(auto& [name, constraint] : convexConstraints)
+    {
+        if(constraintsWithCuts.count(name) == 0)
+        {
+            auto indexes = variablesInConstraint(constraint);
+            directionalVariables.insert(indexes.begin(), indexes.end());
+        }
+    }
+
+    int maxDirectionalSolves = env->settings->getSetting<int>("Model.BoundTightening.InitialPOA.DirectionalSolves");
+    double timeLimit = env->settings->getSetting<double>("Model.BoundTightening.InitialPOA.TimeLimit");
+    int numberOfDirectionalSolves = 0;
+
+    for(int variableIndex : directionalVariables)
+    {
+        for(auto direction : { E_ObjectiveFunctionDirection::Minimize, E_ObjectiveFunctionDirection::Maximize })
+        {
+            if(numberOfDirectionalSolves >= maxDirectionalSolves
+                || env->timing->getElapsedTime("BoundTighteningPOA") >= timeLimit)
+                break;
+
+            // The variable is skipped if the constraints it is in have gotten cuts from the previous solves
+            bool isInConstraintWithoutCuts = false;
+
+            for(auto& [name, constraint] : convexConstraints)
+            {
+                if(constraintsWithCuts.count(name) == 0 && variablesInConstraint(constraint).count(variableIndex) > 0)
+                {
+                    isInConstraintWithoutCuts = true;
+                    break;
+                }
+            }
+
+            if(!isInConstraintWithoutCuts)
+                break;
+
+            auto directionalProblem = relaxedProblem->createCopy(env, false, false);
+
+            auto objective = std::make_shared<LinearObjectiveFunction>(direction);
+            objective->add(std::make_shared<LinearTerm>(1.0, directionalProblem->getVariable(variableIndex)));
+            directionalProblem->add(std::move(objective));
+            directionalProblem->updateProperties();
+
+            std::shared_ptr<NLPSolverSHOT> directionalSolver;
+
+            try
+            {
+                directionalSolver = createPOASolver(directionalProblem);
+            }
+            catch(Exception& e)
+            {
+                env->output->outputWarning(fmt::format("  - Directional solve for the initial polyhedral outer "
+                                                       "approximation not performed: {}",
+                    e.what()));
+                continue;
+            }
+
+            solvePOAProblem(directionalSolver);
+            addPOACuts(directionalSolver, convexConstraints, constraintsWithCuts, hyperplaneCounter);
+
+            numberOfDirectionalSolves++;
+        }
+    }
 
     if(hyperplaneCounter > 0)
     {
@@ -273,8 +435,8 @@ void TaskPerformBoundTightening::createPOA()
 
     env->timing->stopTimer("BoundTighteningPOA");
 
-    env->output->outputInfo(fmt::format("  - {} linear constraints generated in {:.2f} s.", hyperplaneCounter,
-        env->timing->getElapsedTime("BoundTighteningPOA")));
+    env->output->outputInfo(fmt::format("  - {} linear constraints generated in {:.2f} s ({} directional solves).",
+        hyperplaneCounter, env->timing->getElapsedTime("BoundTighteningPOA"), numberOfDirectionalSolves));
 }
 
 } // namespace SHOT

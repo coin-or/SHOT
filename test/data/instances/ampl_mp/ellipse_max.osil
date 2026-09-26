@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osil xmlns="os.optimizationservices.org" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="os.optimizationservices.org http://www.optimizationservices.org/schemas/2.0/OSiL.xsd">
+  <instanceHeader>
+    <name>ellipse_max</name>
+    <description>From https://github.com/ampl/mp/tree/develop/test/end2end/cases/categorized/fast/qp/ellipse_max.mod. Maximize x1 + x2 subject to x1^2/9 + x2^2 &lt;= 1 and 2 x1 + x2 &lt;= 2 with x1 and x2 free. The variables are only bounded through the quadratic constraint, so without bounds from it the first dual problem is unbounded. Optimal objective is 1.4928017587.</description>
+  </instanceHeader>
+  <instanceData>
+    <variables numberOfVariables="2">
+      <var name="x1" lb="-INF"/>
+      <var name="x2" lb="-INF"/>
+    </variables>
+    <objectives>
+      <obj maxOrMin="max" name="defObj_z" numberOfObjCoef="2">
+        <coef idx="0">1</coef>
+        <coef idx="1">1</coef>
+      </obj>
+    </objectives>
+    <constraints numberOfConstraints="2">
+      <con name="c1" ub="1"/>
+      <con name="c2" ub="2"/>
+    </constraints>
+    <linearConstraintCoefficients numberOfValues="2">
+      <start>
+        <el mult="2">0</el>
+        <el>2</el>
+      </start>
+      <colIdx>
+        <el>0</el>
+        <el>1</el>
+      </colIdx>
+      <value>
+        <el>2</el>
+        <el>1</el>
+      </value>
+    </linearConstraintCoefficients>
+    <nonlinearExpressions numberOfNonlinearExpressions="1">
+      <nl idx="0">
+        <sum>
+          <product>
+            <number value=".1111111111111111"/>
+            <square>
+              <variable idx="0"/>
+            </square>
+          </product>
+          <square>
+            <variable idx="1"/>
+          </square>
+        </sum>
+      </nl>
+    </nonlinearExpressions>
+  </instanceData>
+</osil>
