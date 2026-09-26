@@ -556,6 +556,31 @@ in this codebase — add to this list as you find more.
   specific to native quadratic handling will only show up in one of the two 
   configurations, and testing only the default for a given solver can miss it 
   entirely.
+- A change that is only meant to be faster or tidier can be *proved* to leave
+  behaviour alone instead of argued about, using the whole-problem dumps as an
+  oracle. Dump `reformulatedproblem.txt` for a set of instances and, since the
+  reformulation has several branches, once per setting that selects them
+  (`Model.Reformulation.Quadratics.Decomposition.Method` 0/1/2 and
+  `Model.Reformulation.Constraint.PartitionNonlinearTerms`). Then put the one
+  changed file back with `git show HEAD:<file> > <file>`, rebuild, dump into a
+  second directory, restore your version, and `diff -rq` the two trees.
+  `Termination.TimeLimit=1` is enough, since the dumps are written before the
+  solve. Checksum the file after restoring it, so you know your version came
+  back.
+- Before making a per-element operation more expensive, grep for callers inside
+  a loop. `LinearObjectiveFunction::add(term)` was changed to merge duplicates,
+  for consistency with `LinearConstraint::add(term)`, which turned the loop in
+  `ModelingSystemGAMS::copyQuadraticTerms` over every quadratic term of the
+  objective into quadratic-time work. The term containers in `src/Model/Terms.h`
+  search all existing terms on a single `add`, so one call costs the size of the
+  container.
+- A model property that is wrong but only sometimes is often a cached value that
+  nobody invalidated. `Terms` caches `convexity` and `monotonicity`, and the
+  quadratic terms also cache a gradient structure and Hessian; `add()` resets
+  them, the inherited `push_back` does not. When a convexity or a bound looks
+  right on a fresh problem and wrong after a reformulation, look for a
+  `push_back` on a term container that should have been an `add` or should have
+  been followed by `invalidateProperties()`.
 
 ### Fast, targeted crash diagnosis
 
