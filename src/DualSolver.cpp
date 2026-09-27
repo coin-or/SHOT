@@ -368,6 +368,18 @@ bool DualSolver::hasHyperplaneBeenAdded(const std::pair<double, double>& hashes,
     return (isHyperplaneInGeneratedList(hashes, constraintIndex));
 }
 
+bool DualSolver::hasHyperplaneBeenAdded(const HyperplanePtr& hyperplane)
+{
+    if(auto objectiveHP = std::dynamic_pointer_cast<ObjectiveHyperplane>(hyperplane))
+        return (hasHyperplaneBeenAdded(calculateHyperplaneHashes(objectiveHP), -1));
+
+    if(auto constraintHP = std::dynamic_pointer_cast<ConstraintHyperplane>(hyperplane))
+        return (hasHyperplaneBeenAdded(
+            calculateHyperplaneHashes(constraintHP), constraintHP->sourceConstraint->getIndex()));
+
+    return (false);
+}
+
 bool DualSolver::isHyperplaneInGeneratedList(const std::pair<double, double>& hashes, int constraintIndex)
 {
     auto generated = generatedHyperplaneHashes.find(constraintIndex);
