@@ -40,6 +40,10 @@ public:
     void addGeneratedHyperplane(const HyperplanePtr hyperplane);
     bool hasHyperplaneBeenAdded(const VectorDouble& generatedPoint, int constraintIndex);
 
+    // Whether a hyperplane for the same constraint or objective function has been generated in the same point, which
+    // is always false for an external hyperplane and in the single-tree strategy
+    bool hasHyperplaneBeenAdded(const HyperplanePtr& hyperplane);
+
     // Where to generate the hyperplane for the constraint, which is the given point unless the constraint is not
     // finite there: x^2/s is infinite where s is zero, although it is convex, and neither its value nor its
     // gradient can be used. The point is then moved toward one where the constraint is finite, which a convex
