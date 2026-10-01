@@ -123,6 +123,133 @@ NonlinearExpressionPtr wrapInExpression(double value) { return std::make_shared<
 // Pass-through for expressions
 NonlinearExpressionPtr wrapInExpression(NonlinearExpressionPtr expr) { return expr; }
 
+// A constraint L <= f(x) <= U given by comparing variables, expressions and numbers, e.g., x1 * x2 <= 5, which
+// Problem.addConstraint() turns into a constraint of the problem
+struct ConstraintExpression
+{
+    NonlinearExpressionPtr expression;
+    double lowerBound = SHOT_DBL_MIN;
+    double upperBound = SHOT_DBL_MAX;
+};
+
+// SHOT marks a missing bound with SHOT_DBL_MIN or SHOT_DBL_MAX and compares with these values exactly, so an infinite
+// bound is given that value. A bound that is NaN, or that no value can fulfil, e.g., f <= -inf, raises ValueError
+double toLowerBound(double value)
+{
+    if(std::isnan(value))
+        throw py::value_error("The bound of a constraint cannot be NaN.");
+
+    if(value == std::numeric_limits<double>::infinity())
+        throw py::value_error("No value is larger than or equal to inf, so the constraint cannot be fulfilled.");
+
+    return (value <= SHOT_DBL_MIN ? SHOT_DBL_MIN : value);
+}
+
+double toUpperBound(double value)
+{
+    if(std::isnan(value))
+        throw py::value_error("The bound of a constraint cannot be NaN.");
+
+    if(value == -std::numeric_limits<double>::infinity())
+        throw py::value_error("No value is smaller than or equal to -inf, so the constraint cannot be fulfilled.");
+
+    return (value >= SHOT_DBL_MAX ? SHOT_DBL_MAX : value);
+}
+
+double toEqualityValue(double value)
+{
+    if(!std::isfinite(value))
+        throw py::value_error(
+            "The value of an equality constraint must be finite, but it is " + Utilities::toString(value) + ".");
+
+    return (value);
+}
+
+const char* constraintExpressionInBooleanContext
+    = "A comparison of SHOTpy variables or expressions creates a constraint, not a truth value. Use 'is' or 'is not' "
+      "to check whether two variables are the same object, and SHOTpy.inequality(lower, expression, upper) instead of "
+      "a chained comparison such as lower <= expression <= upper.";
+
+// Adds the comparison operators <=, >= and ==, which create a ConstraintExpression, to the class of variables or
+// expressions. A comparison with a variable or an expression on both sides moves everything to the left side, e.g.,
+// f <= g becomes f - g <= 0
+template <typename Self, typename Class> void addComparisonOperators(Class& pythonClass)
+{
+    auto difference = [](NonlinearExpressionPtr first, NonlinearExpressionPtr second) -> NonlinearExpressionPtr
+    { return std::make_shared<ExpressionSum>(first, std::make_shared<ExpressionNegate>(second)); };
+
+    // pybind11 passes None as a null pointer to an argument of a class, so the operators with a variable or an
+    // expression on the other side do not accept None, and Python compares the objects instead, e.g., x == None is
+    // False
+    auto other = py::arg("other").none(false);
+
+    pythonClass
+        .def(
+            "__le__", [](Self self, double value)
+            { return ConstraintExpression { wrapInExpression(self), SHOT_DBL_MIN, toUpperBound(value) }; },
+            py::is_operator())
+        .def(
+            "__le__",
+            [difference](Self self, VariablePtr variable)
+            {
+                return ConstraintExpression { difference(wrapInExpression(self), wrapInExpression(variable)),
+                    SHOT_DBL_MIN, 0.0 };
+            },
+            py::is_operator(), other)
+        .def(
+            "__le__", [difference](Self self, NonlinearExpressionPtr expression)
+            { return ConstraintExpression { difference(wrapInExpression(self), expression), SHOT_DBL_MIN, 0.0 }; },
+            py::is_operator(), other)
+        .def(
+            "__ge__", [](Self self, double value)
+            { return ConstraintExpression { wrapInExpression(self), toLowerBound(value), SHOT_DBL_MAX }; },
+            py::is_operator())
+        .def(
+            "__ge__",
+            [difference](Self self, VariablePtr variable)
+            {
+                return ConstraintExpression { difference(wrapInExpression(self), wrapInExpression(variable)), 0.0,
+                    SHOT_DBL_MAX };
+            },
+            py::is_operator(), other)
+        .def(
+            "__ge__", [difference](Self self, NonlinearExpressionPtr expression)
+            { return ConstraintExpression { difference(wrapInExpression(self), expression), 0.0, SHOT_DBL_MAX }; },
+            py::is_operator(), other)
+        .def(
+            "__eq__",
+            [](Self self, double value)
+            {
+                auto equalityValue = toEqualityValue(value);
+                return ConstraintExpression { wrapInExpression(self), equalityValue, equalityValue };
+            },
+            py::is_operator())
+        .def(
+            "__eq__",
+            [difference](Self self, VariablePtr variable)
+            {
+                return ConstraintExpression { difference(wrapInExpression(self), wrapInExpression(variable)), 0.0,
+                    0.0 };
+            },
+            py::is_operator(), other)
+        .def(
+            "__eq__", [difference](Self self, NonlinearExpressionPtr expression)
+            { return ConstraintExpression { difference(wrapInExpression(self), expression), 0.0, 0.0 }; },
+            py::is_operator(), other)
+        // != would negate the ConstraintExpression of ==, which is not a truth value
+        .def(
+            "__ne__", [](Self, double) -> bool { throw py::type_error(constraintExpressionInBooleanContext); },
+            py::is_operator())
+        .def(
+            "__ne__", [](Self, VariablePtr) -> bool { throw py::type_error(constraintExpressionInBooleanContext); },
+            py::is_operator(), other)
+        .def(
+            "__ne__", [](Self, NonlinearExpressionPtr) -> bool
+            { throw py::type_error(constraintExpressionInBooleanContext); }, py::is_operator(), other)
+        // Defining __eq__ removes the hash, which keeps variables and expressions usable in sets and as dict keys
+        .def("__hash__", [](Self self) { return std::hash<const void*>()(self.get()); });
+}
+
 // Throws ValueError if the point does not have a value for every variable of the problem, since the functions index the
 // point by the indexes of the variables without checking it. A longer point is allowed: the reformulated problem has
 // the variables of the original problem first, so a function of the original problem can be evaluated at its points
@@ -365,7 +492,8 @@ PYBIND11_MODULE(SHOTpy, m)
         .value("SingleTree", ES_TreeStrategy::SingleTree);
 
     // ===== Variable Class =====
-    py::class_<Variable, std::shared_ptr<Variable>>(m, "Variable")
+    py::class_<Variable, std::shared_ptr<Variable>> variableClass(m, "Variable");
+    variableClass
         .def(py::init<std::string, E_VariableType, double, double>(), py::arg("name"), py::arg("type"),
             py::arg("lower_bound"), py::arg("upper_bound"))
         .def(py::init<std::string, E_VariableType, double, double, double>(), py::arg("name"), py::arg("type"),
@@ -479,6 +607,8 @@ PYBIND11_MODULE(SHOTpy, m)
             "__neg__", [](VariablePtr self) -> NonlinearExpressionPtr
             { return std::make_shared<ExpressionNegate>(wrapInExpression(self)); }, py::is_operator());
 
+    addComparisonOperators<VariablePtr>(variableClass);
+
     // ===== VariableProperties Struct =====
     py::class_<VariableProperties>(m, "VariableProperties")
         .def_readonly("type", &VariableProperties::type)
@@ -490,8 +620,8 @@ PYBIND11_MODULE(SHOTpy, m)
         .def_readonly("inNonlinearConstraints", &VariableProperties::inNonlinearConstraints);
 
     // ===== NonlinearExpression Base Class =====
-    py::class_<NonlinearExpression, NonlinearExpressionPtr>(m, "Expression")
-        .def("getType", &NonlinearExpression::getType)
+    py::class_<NonlinearExpression, NonlinearExpressionPtr> expressionClass(m, "Expression");
+    expressionClass.def("getType", &NonlinearExpression::getType)
         .def("getConvexity", &NonlinearExpression::getConvexity)
         .def("__repr__",
             [](NonlinearExpressionPtr self)
@@ -578,6 +708,57 @@ PYBIND11_MODULE(SHOTpy, m)
         .def(
             "__neg__", [](NonlinearExpressionPtr self) -> NonlinearExpressionPtr
             { return std::make_shared<ExpressionNegate>(self); }, py::is_operator());
+
+    addComparisonOperators<NonlinearExpressionPtr>(expressionClass);
+
+    // ===== Constraints given by comparisons =====
+    py::class_<ConstraintExpression>(m, "ConstraintExpression",
+        "A constraint lowerBound <= expression <= upperBound created by comparing variables, expressions and numbers,\n"
+        "e.g., x1 * x2 <= 5, which Problem.addConstraint() adds to the problem")
+        .def_readonly("expression", &ConstraintExpression::expression)
+        .def_readonly("lowerBound", &ConstraintExpression::lowerBound)
+        .def_readonly("upperBound", &ConstraintExpression::upperBound)
+        .def("__repr__",
+            [](const ConstraintExpression& self)
+            {
+                auto bound = [](double value)
+                {
+                    if(value <= SHOT_DBL_MIN)
+                        return std::string("-inf");
+                    if(value >= SHOT_DBL_MAX)
+                        return std::string("inf");
+                    return Utilities::toString(value);
+                };
+
+                std::ostringstream oss;
+                oss << *self.expression;
+                return "<ConstraintExpression: " + bound(self.lowerBound) + " <= " + oss.str()
+                    + " <= " + bound(self.upperBound) + ">";
+            })
+        // A chained comparison, e.g., 1 <= f <= 5, is evaluated as (1 <= f) and (f <= 5), which needs the truth value
+        // of 1 <= f and would drop its bound
+        .def("__bool__",
+            [](const ConstraintExpression&) -> bool { throw py::type_error(constraintExpressionInBooleanContext); });
+
+    auto inequality = [](double lowerBound, NonlinearExpressionPtr expression, double upperBound)
+    {
+        lowerBound = toLowerBound(lowerBound);
+        upperBound = toUpperBound(upperBound);
+
+        if(lowerBound > upperBound)
+            throw py::value_error("The lower bound " + Utilities::toString(lowerBound)
+                + " is larger than the upper bound " + Utilities::toString(upperBound) + ".");
+
+        return ConstraintExpression { expression, lowerBound, upperBound };
+    };
+
+    m.def(
+        "inequality", [inequality](double lowerBound, VariablePtr variable, double upperBound)
+        { return inequality(lowerBound, wrapInExpression(variable), upperBound); },
+        "The constraint lower <= variable <= upper", py::arg("lower"), py::arg("expression").none(false),
+        py::arg("upper"));
+    m.def("inequality", inequality, "The constraint lower <= expression <= upper", py::arg("lower"),
+        py::arg("expression").none(false), py::arg("upper"));
 
     // ===== NonlinearExpression Type Enum =====
     py::enum_<E_NonlinearExpressionTypes>(m, "ExpressionType")
@@ -1357,13 +1538,35 @@ PYBIND11_MODULE(SHOTpy, m)
             "addVariables", [](Problem& self, Variables vars) { self.add(vars); }, py::arg("variables"))
         // Order matters for pybind11 overload resolution - most specific types first
         .def(
-            "addConstraint", [](Problem& self, NonlinearConstraintPtr c) { self.add(c); }, py::arg("constraint"))
+            "addConstraint", [](Problem& self, NonlinearConstraintPtr c) { self.add(c); },
+            py::arg("constraint").none(false))
         .def(
-            "addConstraint", [](Problem& self, QuadraticConstraintPtr c) { self.add(c); }, py::arg("constraint"))
+            "addConstraint", [](Problem& self, QuadraticConstraintPtr c) { self.add(c); },
+            py::arg("constraint").none(false))
         .def(
-            "addConstraint", [](Problem& self, LinearConstraintPtr c) { self.add(c); }, py::arg("constraint"))
+            "addConstraint", [](Problem& self, LinearConstraintPtr c) { self.add(c); },
+            py::arg("constraint").none(false))
         .def(
-            "addConstraint", [](Problem& self, NumericConstraintPtr c) { self.add(c); }, py::arg("constraint"))
+            "addConstraint", [](Problem& self, NumericConstraintPtr c) { self.add(c); },
+            py::arg("constraint").none(false))
+        .def(
+            "addConstraint",
+            [](Problem& self, const ConstraintExpression& constraint, std::string name)
+            {
+                // A prefix that is unlikely to be used in a name the user gives, since checking the names of all the
+                // constraints would make adding constraints quadratic in their number
+                if(name.empty())
+                    name = "constraint_" + std::to_string(self.numericConstraints.size());
+
+                // finalize() extracts the terms of the expression and changes the class of the constraint if nothing
+                // nonlinear is left
+                self.add(std::make_shared<NonlinearConstraint>(
+                    name, constraint.expression, constraint.lowerBound, constraint.upperBound));
+            },
+            py::arg("constraint"), py::arg("name") = "",
+            "Add a constraint given by a comparison, e.g., x1 * x2 <= 5 or SHOTpy.inequality(1, x1 * x2, 5).\n"
+            "Without a name, it is named constraint_<index>. The class of the constraint is decided by\n"
+            "finalize(), which may replace it, so read it back from the problem afterwards, e.g., by its name.")
         // Problem::add(NumericConstraintPtr) dispatches on the properties of the constraint, so one overload takes
         // every kind. Adding a constraint is constant time, so this only saves the calls across the binding
         .def(
@@ -1379,17 +1582,39 @@ PYBIND11_MODULE(SHOTpy, m)
         // Order matters for pybind11 overload resolution - most specific types first
         .def(
             "setObjective", [](Problem& self, NonlinearObjectiveFunctionPtr obj) { self.add(obj); },
-            py::arg("objective"))
+            py::arg("objective").none(false))
         .def(
             "setObjective", [](Problem& self, QuadraticObjectiveFunctionPtr obj) { self.add(obj); },
-            py::arg("objective"))
+            py::arg("objective").none(false))
         .def(
-            "setObjective", [](Problem& self, LinearObjectiveFunctionPtr obj) { self.add(obj); }, py::arg("objective"))
+            "setObjective", [](Problem& self, LinearObjectiveFunctionPtr obj) { self.add(obj); },
+            py::arg("objective").none(false))
         .def(
-            "setObjective", [](Problem& self, ObjectiveFunctionPtr obj) { self.add(obj); }, py::arg("objective"))
+            "setObjective", [](Problem& self, ObjectiveFunctionPtr obj) { self.add(obj); },
+            py::arg("objective").none(false))
         .def(
-            "setObjective", [](Problem& self, NonlinearObjectiveFunctionPtr obj) { self.add(obj); },
-            py::arg("objective"))
+            "setObjective", [](Problem& self, NonlinearExpressionPtr expression, E_ObjectiveFunctionDirection direction)
+            { self.add(std::make_shared<NonlinearObjectiveFunction>(direction, expression, 0.0)); },
+            py::arg("expression").none(false), py::arg("direction") = E_ObjectiveFunctionDirection::Minimize,
+            "Set the objective function to an expression, e.g., SHOTpy.exp(x) + x * y. The class of the objective\n"
+            "function is decided by finalize(), which may replace it, so read it back from problem.objectiveFunction\n"
+            "afterwards.")
+        .def(
+            "setObjective", [](Problem& self, VariablePtr variable, E_ObjectiveFunctionDirection direction)
+            { self.add(std::make_shared<NonlinearObjectiveFunction>(direction, wrapInExpression(variable), 0.0)); },
+            py::arg("variable").none(false), py::arg("direction") = E_ObjectiveFunctionDirection::Minimize,
+            "Set the objective function to a variable")
+        .def(
+            "setObjective",
+            [](Problem& self, double constant, E_ObjectiveFunctionDirection direction)
+            {
+                if(!std::isfinite(constant))
+                    throw py::value_error("The objective function must be finite.");
+
+                self.add(std::make_shared<LinearObjectiveFunction>(direction, constant));
+            },
+            py::arg("constant"), py::arg("direction") = E_ObjectiveFunctionDirection::Minimize,
+            "Set the objective function to a constant")
         // Finalize: simplify expressions, extract terms (linear, quadratic, monomial, signomial),
         // update properties, and prepare factorable functions
         .def(
@@ -1399,6 +1624,32 @@ PYBIND11_MODULE(SHOTpy, m)
         // Getters
         .def("getVariable", &Problem::getVariable, py::arg("index"))
         .def("getConstraint", &Problem::getConstraint, py::arg("index"), "Get constraint by index")
+        .def(
+            "getConstraint",
+            [](Problem& self, const std::string& name)
+            {
+                NumericConstraintPtr found;
+
+                for(auto& C : self.numericConstraints)
+                {
+                    if(C->name != name)
+                        continue;
+
+                    if(found)
+                        throw py::value_error("The problem has several constraints named " + name + ".");
+
+                    found = C;
+                }
+
+                if(!found)
+                    throw py::key_error("The problem has no constraint named " + name + ".");
+
+                return (found);
+            },
+            py::arg("name"),
+            "Get the constraint with the name. Raises KeyError if there is none, and ValueError if several\n"
+            "constraints have the name. finalize() can replace a constraint or split it into <name> and <name>_rf,\n"
+            "so a constraint is read back with this after finalize()")
         .def("getVariableLowerBound", &Problem::getVariableLowerBound, py::arg("index"))
         .def("getVariableUpperBound", &Problem::getVariableUpperBound, py::arg("index"))
         .def("getVariableLowerBounds", &Problem::getVariableLowerBounds)
