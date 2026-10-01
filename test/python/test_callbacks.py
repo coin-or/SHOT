@@ -250,7 +250,7 @@ class TestContextClasses:
         for attr in ["location", "isValid", "isMinimization", "iterationNumber", "elapsedTime", "dualBound",
                      "globalDualBound", "primalBound", "relativeGap", "absoluteGap", "solutionStatistics",
                      "originalProblem", "reformulatedProblem", "hasPrimalSolution", "primalSolution",
-                     "isTerminationRequested", "terminate"]:
+                     "isTerminationRequested", "isTerminationPending", "isFinalizing", "terminate"]:
             assert hasattr(SHOTpy.CallbackContext, attr), f"CallbackContext is missing {attr}"
 
     def test_location_classes(self):
@@ -838,6 +838,65 @@ class TestTerminationCheckCallback:
                       or solver.getAbsoluteObjectiveGap() <= solver.getDoubleSetting("Termination.ObjectiveGap.Absolute"))
         if gap_closed:
             assert reason != SHOTpy.TerminationReason.UserAbort
+
+    def test_termination_pending_after_terminate(self):
+        """After terminate() at one location, callbacks at other locations see isTerminationPending until SHOT stops."""
+        import SHOTpy
+        L = SHOTpy.CallbackLocation
+
+        solver = SHOTpy.Solver()
+        solver.updateSetting("Output.Console.LogLevel", 6)
+        solver.updateSetting("Model.Reformulation.Quadratics.Strategy", 0)  # Nonlinear -> multi-tree
+        env = solver.getEnvironment()
+        solver.setProblem(build_ex1223b(env))
+
+        requested = [False]
+        calls = []
+
+        def callback(ctx):
+            calls.append((ctx.location, requested[0], ctx.isTerminationPending, ctx.isFinalizing))
+            if ctx.location == L.PrimalCandidateCheck and not requested[0]:
+                requested[0] = True
+                ctx.terminate()
+                assert ctx.isTerminationRequested
+                assert not ctx.isTerminationPending, "A request in this context is not pending yet"
+
+        solver.registerCallback(L.PrimalCandidateCheck | L.NewPrimalSolution | L.PrimalCandidateSearch, callback)
+        solver.solveProblem()
+
+        assert requested[0]
+        assert solver.getTerminationReason() == SHOTpy.TerminationReason.UserAbort
+        before = [c for c in calls if not c[1]]
+        after = [c for c in calls if c[1]][1:]  # the call that requested termination is the first one
+        assert before and all(not pending for _, _, pending, _ in before)
+        assert after, "No callback was called after termination was requested"
+        assert all(pending for _, _, pending, _ in after), calls
+        assert any(finalizing for _, _, _, finalizing in after), "The finalization was not reached"
+
+    def test_is_finalizing(self):
+        """isFinalizing is false in the main loop and true while the solution is finalized."""
+        import SHOTpy
+        L = SHOTpy.CallbackLocation
+
+        solver = SHOTpy.Solver()
+        solver.updateSetting("Output.Console.LogLevel", 6)
+        solver.updateSetting("Model.Reformulation.Quadratics.Strategy", 0)  # Nonlinear -> multi-tree
+        env = solver.getEnvironment()
+        solver.setProblem(build_ex1223b(env))
+
+        calls = []
+        solver.registerCallback(L.PrimalCandidateSearch | L.TerminationCheck,
+                                lambda ctx: calls.append((ctx.location, ctx.isFinalizing, ctx.isTerminationPending)))
+        solver.solveProblem()
+
+        assert solver.getTerminationReason() != SHOTpy.TerminationReason.UserAbort
+        assert all(not pending for _, _, pending in calls)
+        assert all(not finalizing for location, finalizing, _ in calls if location == L.TerminationCheck)
+
+        search = [finalizing for location, finalizing, _ in calls if location == L.PrimalCandidateSearch]
+        assert len(search) >= 2
+        assert search[0] is False, "The first primal search is in the main loop"
+        assert search[-1] is True, "The primal search during finalization was not reported as finalizing"
 
     def test_callback_receives_structured_data(self, solver, env):
         """The values of the context are populated correctly."""

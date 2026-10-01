@@ -143,7 +143,15 @@ public:
     /// Requests SHOT to terminate at its next termination check; available at every location
     void terminate();
 
+    /// Whether terminate() has been called in this context, by this or an earlier callback at the same location
     bool isTerminationRequested() const;
+
+    /// Whether termination was requested before SHOT reached the location, e.g., by a callback at another location,
+    /// so that SHOT is stopping. Stays true while the solution is finalized
+    bool isTerminationPending() const;
+
+    /// Whether SHOT is finalizing the solution, for any termination reason
+    bool isFinalizing() const;
 
     /// The context as the class of a location, or nullptr if the callback is called at another location
     template <typename T> T* as() { return (location == T::Location) ? static_cast<T*>(this) : nullptr; }
@@ -190,6 +198,8 @@ private:
     double relativeGap;
     double absoluteGap;
     bool primalSolutionAvailable = false;
+    bool terminationPending = false;
+    bool finalizing = false;
     SolutionStatistics solutionStatistics;
 };
 

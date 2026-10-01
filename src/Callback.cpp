@@ -114,6 +114,9 @@ CallbackContext::CallbackContext(EnvironmentPtr envPtr, E_CallbackLocation locat
         absoluteGap = env->results->getAbsoluteCurrentObjectiveGap();
     }
 
+    terminationPending = env->tasks->isTerminated();
+    finalizing = env->tasks->isFinalizing();
+
     solutionStatistics = env->solutionStatistics;
 }
 
@@ -218,6 +221,18 @@ bool CallbackContext::isTerminationRequested() const
 {
     checkValid();
     return (terminationRequested);
+}
+
+bool CallbackContext::isTerminationPending() const
+{
+    checkValid();
+    return (terminationPending);
+}
+
+bool CallbackContext::isFinalizing() const
+{
+    checkValid();
+    return (finalizing);
 }
 
 void CallbackContext::invalidate()

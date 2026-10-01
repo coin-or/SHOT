@@ -1749,7 +1749,12 @@ PYBIND11_MODULE(SHOTpy, m)
                 return (self.getPrimalSolution());
             },
             "The best primal solution in the variables of the original problem, or None if there is none")
-        .def_property_readonly("isTerminationRequested", &CallbackContext::isTerminationRequested)
+        .def_property_readonly("isTerminationRequested", &CallbackContext::isTerminationRequested,
+            "Whether terminate() has been called in this context, by this or an earlier callback at the location")
+        .def_property_readonly("isTerminationPending", &CallbackContext::isTerminationPending,
+            "Whether termination was requested before SHOT reached the location, so that SHOT is stopping")
+        .def_property_readonly(
+            "isFinalizing", &CallbackContext::isFinalizing, "Whether SHOT is finalizing the solution, for any reason")
         .def("terminate", &CallbackContext::terminate, "Request SHOT to terminate at its next termination check");
 
     py::class_<PrimalCandidateCheckContext, CallbackContext, std::shared_ptr<PrimalCandidateCheckContext>>(

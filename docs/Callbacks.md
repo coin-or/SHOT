@@ -82,6 +82,12 @@ All contexts derive from `CallbackContext`, which has:
 - `getSolutionStatistics()`: a copy of the statistics
 - `getOriginalProblem()`, `getReformulatedProblem()`
 - `hasPrimalSolution()`, `getPrimalSolution()`: the best solution, in the variables of the original problem
+- `isTerminationPending()`: termination was requested before SHOT reached the location, e.g., by a callback at
+  another location, so SHOT is stopping; it stays true while the solution is finalized
+- `isFinalizing()`: SHOT is finalizing the solution, for any termination reason; the primal strategies still run, so,
+  e.g., `PrimalCandidateSearch`, `PrimalCandidateCheck` and `NewPrimalSolution` are still reached
+- `isTerminationRequested()`: `terminate()` has been called in this context, by this or an earlier callback at the
+  same location
 
 In Python these are properties without the `get`, e.g., `ctx.dualBound`, and `ctx.primalSolution` is `None` when
 there is no primal solution.
@@ -126,6 +132,11 @@ returns `nullptr` if the callback is called at another location.
 
 The other actions of the callbacks that request termination are still applied. So, for example, adding a primal
 solution and terminating in the same call works.
+
+Until SHOT stops, callbacks at other locations are still called, e.g., `NewPrimalSolution` for the remaining candidates
+of the iteration, the callbacks of other threads of the MIP solver, and the callbacks during finalization. They see
+`isTerminationPending()` as true and can skip expensive work. `TerminationCheck` is not called once termination has
+been requested.
 
 A termination criterion that is checked earlier in the iteration takes precedence. If a gap, iteration limit or time
 limit is met in the same iteration, that is the reported termination reason. `UserAbort` is reported only when the
