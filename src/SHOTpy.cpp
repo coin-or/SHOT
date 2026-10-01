@@ -123,6 +123,24 @@ NonlinearExpressionPtr wrapInExpression(double value) { return std::make_shared<
 // Pass-through for expressions
 NonlinearExpressionPtr wrapInExpression(NonlinearExpressionPtr expr) { return expr; }
 
+// Throws ValueError if the point does not have a value for every variable of the problem, since the functions index the
+// point by the indexes of the variables without checking it. A longer point is allowed: the reformulated problem has
+// the variables of the original problem first, so a function of the original problem can be evaluated at its points
+void checkPointSize(const Problem& problem, const VectorDouble& point)
+{
+    if(point.size() < problem.allVariables.size())
+    {
+        throw py::value_error("The point has " + std::to_string(point.size()) + " values, but the problem has "
+            + std::to_string(problem.allVariables.size()) + " variables.");
+    }
+}
+
+void checkPointSize(const std::weak_ptr<Problem>& ownerProblem, const VectorDouble& point)
+{
+    if(auto problem = ownerProblem.lock())
+        checkPointSize(*problem, point);
+}
+
 // The locations of a callback, given as a CallbackLocation, an integer mask (e.g., from combining them with |), or an
 // iterable of CallbackLocation
 E_CallbackLocation toCallbackLocations(py::handle locations)
@@ -974,9 +992,35 @@ PYBIND11_MODULE(SHOTpy, m)
         .def_readwrite("constant", &NumericConstraint::constant)
         .def_readonly("properties", &NumericConstraint::properties)
         .def(
+            "calculateFunctionValue",
+            [](NumericConstraint& self, const std::vector<double>& point)
+            {
+                checkPointSize(self.ownerProblem, point);
+                return (self.calculateFunctionValue(point));
+            },
+            py::arg("point"), "Calculate the value of f(x) of the constraint L <= f(x) <= U at the point")
+        .def(
+            "calculateNumericValue",
+            [](NumericConstraint& self, const std::vector<double>& point)
+            {
+                checkPointSize(self.ownerProblem, point);
+                return (self.calculateNumericValue(point));
+            },
+            py::arg("point"),
+            "Calculate the value of the constraint and how much it deviates from its bounds at the point")
+        .def(
+            "isFulfilled",
+            [](NumericConstraint& self, const std::vector<double>& point)
+            {
+                checkPointSize(self.ownerProblem, point);
+                return (self.isFulfilled(point));
+            },
+            py::arg("point"), "Whether the constraint is fulfilled at the point")
+        .def(
             "calculateGradient",
             [](NumericConstraint& self, const std::vector<double>& point)
             {
+                checkPointSize(self.ownerProblem, point);
                 auto gradient = self.calculateGradient(point, true);
                 std::map<int, double> result;
                 for(auto& G : gradient)
@@ -988,6 +1032,7 @@ PYBIND11_MODULE(SHOTpy, m)
             "calculateHessian",
             [](NumericConstraint& self, const std::vector<double>& point)
             {
+                checkPointSize(self.ownerProblem, point);
                 auto hessian = self.calculateHessian(point, true);
                 std::map<std::pair<int, int>, double> result;
                 for(auto& H : hessian)
@@ -1017,6 +1062,19 @@ PYBIND11_MODULE(SHOTpy, m)
                 return result;
             },
             "Get Hessian sparsity pattern as list of (var1_index, var2_index)");
+
+    // ===== NumericConstraintValue =====
+    py::class_<NumericConstraintValue>(m, "NumericConstraintValue",
+        "The value of a constraint L <= f(x) <= U at a point, and how much it deviates from its bounds")
+        .def_readonly("constraint", &NumericConstraintValue::constraint)
+        .def_readonly("functionValue", &NumericConstraintValue::functionValue, "f(x)")
+        .def_readonly("isFulfilledLHS", &NumericConstraintValue::isFulfilledLHS, "Whether L <= f(x)")
+        .def_readonly("normalizedLHSValue", &NumericConstraintValue::normalizedLHSValue, "L - f(x)")
+        .def_readonly("isFulfilledRHS", &NumericConstraintValue::isFulfilledRHS, "Whether f(x) <= U")
+        .def_readonly("normalizedRHSValue", &NumericConstraintValue::normalizedRHSValue, "f(x) - U")
+        .def_readonly("isFulfilled", &NumericConstraintValue::isFulfilled, "Whether L <= f(x) <= U")
+        .def_readonly("error", &NumericConstraintValue::error, "max(0, L - f(x), f(x) - U)")
+        .def_readonly("normalizedValue", &NumericConstraintValue::normalizedValue, "max(L - f(x), f(x) - U)");
 
     // ===== LinearConstraint Class =====
     py::class_<LinearConstraint, NumericConstraint, std::shared_ptr<LinearConstraint>>(m, "LinearConstraint")
@@ -1104,9 +1162,18 @@ PYBIND11_MODULE(SHOTpy, m)
         .def_readwrite("constant", &ObjectiveFunction::constant)
         .def_readonly("properties", &ObjectiveFunction::properties)
         .def(
+            "calculateValue",
+            [](ObjectiveFunction& self, const std::vector<double>& point)
+            {
+                checkPointSize(self.ownerProblem, point);
+                return (self.calculateValue(point));
+            },
+            py::arg("point"), "Calculate the value of the objective function, including its constant, at the point")
+        .def(
             "calculateGradient",
             [](ObjectiveFunction& self, const std::vector<double>& point)
             {
+                checkPointSize(self.ownerProblem, point);
                 auto gradient = self.calculateGradient(point, true);
                 std::map<int, double> result;
                 for(auto& G : gradient)
@@ -1118,6 +1185,7 @@ PYBIND11_MODULE(SHOTpy, m)
             "calculateHessian",
             [](ObjectiveFunction& self, const std::vector<double>& point)
             {
+                checkPointSize(self.ownerProblem, point);
                 auto hessian = self.calculateHessian(point, true);
                 std::map<std::pair<int, int>, double> result;
                 for(auto& H : hessian)
@@ -1335,6 +1403,16 @@ PYBIND11_MODULE(SHOTpy, m)
         .def("getVariableUpperBound", &Problem::getVariableUpperBound, py::arg("index"))
         .def("getVariableLowerBounds", &Problem::getVariableLowerBounds)
         .def("getVariableUpperBounds", &Problem::getVariableUpperBounds)
+        .def(
+            "getMostDeviatingNumericConstraint",
+            [](Problem& self, const std::vector<double>& point)
+            {
+                checkPointSize(self, point);
+                return (self.getMostDeviatingNumericConstraint(point));
+            },
+            py::arg("point"),
+            "The value of the constraint that deviates most from its bounds at the point,\n"
+            "or None if all constraints are fulfilled")
         // Sparsity patterns
         .def(
             "getConstraintsJacobianSparsityPattern",
