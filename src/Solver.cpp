@@ -118,7 +118,14 @@ Solver::Solver(std::shared_ptr<spdlog::sinks::sink> consoleSink)
     initializeSettings();
 }
 
-Solver::Solver(EnvironmentPtr envPtr) : env(envPtr) { initializeSettings(); }
+Solver::Solver(EnvironmentPtr envPtr) : env(envPtr)
+{
+    // The environment may come from somewhere that does not register callbacks
+    if(!env->callbacks)
+        env->callbacks = std::make_shared<CallbackHandler>(env);
+
+    initializeSettings();
+}
 
 Solver::~Solver() = default;
 
