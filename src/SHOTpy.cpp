@@ -183,6 +183,145 @@ double toEqualityValue(double value)
     return (value);
 }
 
+// The value of an expression without variables, e.g., 2 * 3, or nullopt if it has a variable
+std::optional<double> constantValue(const NonlinearExpressionPtr& expression)
+{
+    switch(expression->getType())
+    {
+    case E_NonlinearExpressionTypes::Constant:
+        return (std::static_pointer_cast<ExpressionConstant>(expression)->constant);
+    case E_NonlinearExpressionTypes::Variable:
+        return (std::nullopt);
+    case E_NonlinearExpressionTypes::Negate:
+    {
+        auto value = constantValue(std::static_pointer_cast<ExpressionNegate>(expression)->child);
+        return (value ? std::optional<double>(-*value) : std::nullopt);
+    }
+    case E_NonlinearExpressionTypes::Sum:
+    case E_NonlinearExpressionTypes::Product:
+    {
+        bool isSum = (expression->getType() == E_NonlinearExpressionTypes::Sum);
+        double result = isSum ? 0.0 : 1.0;
+
+        for(auto& C : std::static_pointer_cast<ExpressionGeneral>(expression)->children)
+        {
+            auto value = constantValue(C);
+
+            if(!value)
+                return (std::nullopt);
+
+            result = isSum ? result + *value : result * *value;
+        }
+
+        return (result);
+    }
+    case E_NonlinearExpressionTypes::Divide:
+    {
+        auto divide = std::static_pointer_cast<ExpressionDivide>(expression);
+        auto numerator = constantValue(divide->firstChild);
+        auto denominator = numerator ? constantValue(divide->secondChild) : std::nullopt;
+        return (denominator ? std::optional<double>(*numerator / *denominator) : std::nullopt);
+    }
+    default:
+        // e.g. exp(2), which has a value only if its argument has no variables
+        if(auto unary = std::dynamic_pointer_cast<ExpressionUnary>(expression); unary && constantValue(unary->child))
+            return (expression->calculate(VectorDouble()));
+
+        if(auto binary = std::dynamic_pointer_cast<ExpressionBinary>(expression);
+            binary && constantValue(binary->firstChild) && constantValue(binary->secondChild))
+            return (expression->calculate(VectorDouble()));
+
+        return (std::nullopt);
+    }
+}
+
+// The terms and the constant of a linear expression, with the terms in the order their variables first appear
+struct LinearParts
+{
+    std::vector<std::pair<VariablePtr, double>> terms;
+    std::unordered_map<Variable*, size_t> positions;
+    double constant = 0.0;
+
+    void add(const VariablePtr& variable, double coefficient)
+    {
+        auto [position, isNew] = positions.emplace(variable.get(), terms.size());
+
+        if(isNew)
+            terms.emplace_back(variable, coefficient);
+        else
+            terms[position->second].second += coefficient;
+    }
+};
+
+// Adds the expression, multiplied by the factor, to the linear parts. Returns false if the expression is not linear
+bool collectLinearParts(const NonlinearExpressionPtr& expression, double factor, LinearParts& parts)
+{
+    switch(expression->getType())
+    {
+    case E_NonlinearExpressionTypes::Constant:
+        parts.constant += factor * std::static_pointer_cast<ExpressionConstant>(expression)->constant;
+        return (true);
+    case E_NonlinearExpressionTypes::Variable:
+        parts.add(std::static_pointer_cast<ExpressionVariable>(expression)->variable, factor);
+        return (true);
+    case E_NonlinearExpressionTypes::Negate:
+        return (collectLinearParts(std::static_pointer_cast<ExpressionNegate>(expression)->child, -factor, parts));
+    case E_NonlinearExpressionTypes::Sum:
+    {
+        for(auto& C : std::static_pointer_cast<ExpressionSum>(expression)->children)
+        {
+            if(!collectLinearParts(C, factor, parts))
+                return (false);
+        }
+
+        return (true);
+    }
+    case E_NonlinearExpressionTypes::Product:
+    {
+        // Linear if all factors but one are constants
+        NonlinearExpressionPtr nonconstantFactor;
+
+        for(auto& C : std::static_pointer_cast<ExpressionProduct>(expression)->children)
+        {
+            if(auto value = constantValue(C))
+                factor *= *value;
+            else if(nonconstantFactor)
+                return (false);
+            else
+                nonconstantFactor = C;
+        }
+
+        if(!nonconstantFactor)
+        {
+            parts.constant += factor;
+            return (true);
+        }
+
+        return (collectLinearParts(nonconstantFactor, factor, parts));
+    }
+    case E_NonlinearExpressionTypes::Divide:
+    {
+        auto divide = std::static_pointer_cast<ExpressionDivide>(expression);
+        auto denominator = constantValue(divide->secondChild);
+
+        if(!denominator || *denominator == 0.0)
+            return (false);
+
+        return (collectLinearParts(divide->firstChild, factor / *denominator, parts));
+    }
+    default:
+    {
+        auto value = constantValue(expression);
+
+        if(!value)
+            return (false);
+
+        parts.constant += factor * *value;
+        return (true);
+    }
+    }
+}
+
 const char* constraintExpressionInBooleanContext
     = "A comparison of SHOTpy variables or expressions creates a constraint, not a truth value. Use 'is' or 'is not' "
       "to check whether two variables are the same object, and SHOTpy.inequality(lower, expression, upper) instead of "
@@ -1617,6 +1756,26 @@ PYBIND11_MODULE(SHOTpy, m)
                 // constraints would make adding constraints quadratic in their number
                 if(name.empty())
                     name = "constraint_" + std::to_string(self.numericConstraints.size());
+
+                // A linear constraint is created as such, as it would be from its class. finalize() splits a nonlinear
+                // constraint with two bounds before it extracts its terms, so a linear range given as a nonlinear
+                // constraint would become two constraints
+                if(LinearParts parts; collectLinearParts(constraint.expression, 1.0, parts))
+                {
+                    std::vector<LinearTermPtr> terms;
+
+                    for(auto& [variable, coefficient] : parts.terms)
+                    {
+                        if(coefficient != 0.0)
+                            terms.push_back(std::make_shared<LinearTerm>(coefficient, variable));
+                    }
+
+                    auto linearConstraint = std::make_shared<LinearConstraint>(
+                        name, LinearTerms(terms), constraint.lowerBound, constraint.upperBound);
+                    linearConstraint->constant = parts.constant;
+                    self.add(linearConstraint);
+                    return;
+                }
 
                 // finalize() extracts the terms of the expression and changes the class of the constraint if nothing
                 // nonlinear is left

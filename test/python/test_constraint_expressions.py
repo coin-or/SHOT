@@ -198,6 +198,41 @@ class TestAddConstraint:
         assert problem.getConstraint("split") is not None
         assert problem.getConstraint("split_rf") is not None
 
+    def test_linear_comparison_is_a_linear_constraint(self):
+        """A linear comparison is added as a LinearConstraint, with its constant, as if created from the class."""
+        import SHOTpy
+
+        _, problem, x, y = make_problem()
+        problem.addConstraint(2 * (x - 3 * y) / 4 + 1 - x <= 5, "linear")
+
+        constraint = problem.getConstraint("linear")
+        assert type(constraint) is SHOTpy.LinearConstraint
+        # -0.5*x - 1.5*y + 1
+        assert abs(constraint.calculateFunctionValue([2.0, 1.0]) - (-1.0 - 1.5 + 1.0)) < 1e-12
+
+    def test_linear_range_is_not_split(self):
+        """finalize() splits a two-sided nonlinear constraint but not a linear one, also when given as a comparison."""
+        import SHOTpy
+
+        _, problem, x, y = make_problem()
+        problem.addConstraint(SHOTpy.inequality(1, x + 2 * y, 8), "range")
+        finalize(problem)
+
+        assert [c.name for c in problem.numericConstraints] == ["range"]
+        assert type(problem.getConstraint("range")) is SHOTpy.LinearConstraint
+        assert fulfilled(problem, "range", [1.0, 1.0])
+        assert not fulfilled(problem, "range", [0.5, 0.2]) and not fulfilled(problem, "range", [4.0, 2.1])
+
+    def test_linear_terms_of_the_same_variable_are_combined(self):
+        import SHOTpy
+
+        _, problem, x, y = make_problem()
+        problem.addConstraint(x + y - x + 2 * x <= 4, "combined")
+        constraint = problem.getConstraint("combined")
+
+        assert type(constraint) is SHOTpy.LinearConstraint
+        assert len(constraint.linearTerms) == 2
+
     def test_quadratics_left_as_expressions(self):
         """With quadratic extraction off, a quadratic comparison stays a nonlinear constraint."""
         import SHOTpy
