@@ -165,6 +165,9 @@ protected:
     void unfixVariables() override;
 
     virtual void setInitialSettings();
+
+    // Whether Ipopt can use the linear solver given by Subsolver.Ipopt.LinearSolver
+    bool isLinearSolverAvailable(ES_IpoptSolver solver);
     virtual void setSolverSpecificInitialSettings() = 0;
     virtual void updateSettings();
 

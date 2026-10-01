@@ -414,3 +414,35 @@ class TestReformulationSettings:
             assert len(point) == 3
             assert problem.getConstraint("c").calculateNumericValue(point).error <= 1e-6
             assert problem.getConstraint("d").calculateNumericValue(point).error <= 1e-6
+
+
+class TestIpoptLinearSolver:
+    def test_every_linear_solver_setting_solves(self):
+        """An HSL linear solver that Ipopt cannot load made every NLP solve fail, and MA97 crashed Ipopt. Such a
+        solver is replaced by the default one, so every setting gives the same solution."""
+        import SHOTpy
+
+        if not SHOTpy.HAS_IPOPT:
+            pytest.skip("Ipopt not available")
+
+        objectives = []
+
+        for linearSolver in range(6):
+            solver = SHOTpy.Solver()
+            solver.updateSetting("Output.Console.LogLevel", 6)
+            solver.updateSetting("Primal.FixedInteger.Solver", int(SHOTpy.PrimalNLPSolver.Ipopt))
+            solver.updateSetting("Subsolver.Ipopt.LinearSolver", linearSolver)
+
+            problem = SHOTpy.Problem(solver)
+            x = problem.addVariable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
+            y = problem.addVariable("y", SHOTpy.VariableType.Integer, 0.0, 5.0)
+            problem.setObjective(SHOTpy.exp(x) - 2 * x + (y - 2.4)**2)
+            problem.addConstraint(SHOTpy.exp(x) + y <= 8, "c")
+            problem.finalize()
+
+            assert solver.setProblem(problem)
+            assert solver.solveProblem()
+            assert solver.getModelReturnStatus() == SHOTpy.ModelReturnStatus.OptimalGlobal
+            objectives.append(solver.getPrimalBound())
+
+        assert max(objectives) - min(objectives) < 1e-4
