@@ -624,6 +624,25 @@ if(HAS_PYTHON)
             $<TARGET_FILE_DIR:SHOTpy>/SHOTpy_Tutorial.ipynb
         COMMENT "Copying SHOTpy tutorial notebook to module directory"
     )
+
+    # Type stubs (SHOTpy.pyi) next to the module, so that editors and type checkers know the classes and signatures
+    # of the compiled module. They are generated from the built module if pybind11-stubgen is installed, and a
+    # signature that cannot be written as a Python type, e.g., one with a C++ type name, fails the build
+    execute_process(
+        COMMAND ${Python3_EXECUTABLE} -c "import pybind11_stubgen"
+        RESULT_VARIABLE PYBIND11_STUBGEN_MISSING
+        OUTPUT_QUIET ERROR_QUIET)
+
+    if(NOT PYBIND11_STUBGEN_MISSING)
+        add_custom_command(TARGET SHOTpy POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E env "PYTHONPATH=$<TARGET_FILE_DIR:SHOTpy>"
+                ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/misc/GenerateSHOTpyStubs.py $<TARGET_FILE_DIR:SHOTpy>
+            COMMENT "Generating type stubs for SHOTpy"
+        )
+    else()
+        message(STATUS "pybind11-stubgen not found - type stubs for SHOTpy will not be generated")
+        message(STATUS "Install it with: pip install pybind11-stubgen")
+    endif()
 endif(HAS_PYTHON)
 
 # Creates the primal strategy library
