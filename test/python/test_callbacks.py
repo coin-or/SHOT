@@ -136,7 +136,7 @@ def build_small_convex(env):
     problem.addConstraint(e2)
 
     problem.finalize()
-    return problem, [e1, e2]
+    return problem
 
 
 def build_shot_ex_jogo(env):
@@ -948,7 +948,7 @@ class TestHyperplaneSelectionCallback:
             # Adding no hyperplanes is valid; SHOT continues with its own cuts
 
         self._make_solver(solver)
-        problem, _ = build_small_convex(env)
+        problem = build_small_convex(env)
         solver.setProblem(problem, problem)
         solver.registerCallback(SHOTpy.CallbackLocation.HyperplaneSelection, provide_hyperplanes)
         solver.solveProblem()
@@ -961,7 +961,7 @@ class TestHyperplaneSelectionCallback:
         import SHOTpy
 
         self._make_solver(solver)
-        problem, _ = build_small_convex(env)
+        problem = build_small_convex(env)
         solver.setProblem(problem, problem)
         solver.registerCallback(SHOTpy.CallbackLocation.HyperplaneSelection, lambda ctx: returned)
         solver.solveProblem()

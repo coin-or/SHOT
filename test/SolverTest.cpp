@@ -545,10 +545,6 @@ bool TestCallbackExternalHyperplane()
     e2->add(std::make_shared<ExpressionDivide>(std::make_shared<ExpressionExp>(nl_x1), nl_x2));
     problem->add(e2);
 
-    NonlinearConstraints constraints = { e1, e2 };
-
-    // Add constraints to a vector
-
     // Finalize the problem object (after this no changes should be made)
     problem->updateProperties();
     problem->finalize();
@@ -566,7 +562,7 @@ bool TestCallbackExternalHyperplane()
 
     // Register external hyperplane callback
     solver->registerCallback<HyperplaneSelectionContext>(
-        [&env, &constraints](HyperplaneSelectionContext& context)
+        [&env](HyperplaneSelectionContext& context)
         {
             std::cout << "External hyperplane callback called at iteration " << context.getIterationNumber()
                       << std::endl;
@@ -584,8 +580,10 @@ bool TestCallbackExternalHyperplane()
                     std::cout << "\nSolution point: \n";
                     Utilities::displayVector(solPoint.point);
 
-                    // Constraint with largest error
-                    auto constraint = constraints.at(solPoint.maxDeviation.index);
+                    // The constraint with the largest error, read from the problem, since setProblem() can replace
+                    // or rewrite the constraints it was given
+                    auto constraint = std::dynamic_pointer_cast<NumericConstraint>(
+                        context.getReformulatedProblem()->getConstraint(solPoint.maxDeviation.index));
 
                     double funcValue = constraint->calculateFunctionValue(solPoint.point) - constraint->valueRHS;
                     auto gradient = constraint->calculateGradient(solPoint.point, false);

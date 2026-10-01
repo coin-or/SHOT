@@ -273,6 +273,10 @@ class TestGradientValues:
         problem.setObjective(obj)
         
         problem.finalize()
+
+        # finalize() can replace or rewrite the constraint, so it is read back from the problem
+        constraints = {c.name: c for c in problem.numericConstraints}
+        constr = constraints["lin_constr"]
         
         # Gradient is constant for linear function
         gradient = constr.calculateGradient([1.0, 2.0])
@@ -301,6 +305,10 @@ class TestGradientValues:
         problem.setObjective(obj)
         
         problem.finalize()
+
+        # finalize() can replace or rewrite the constraint, so it is read back from the problem
+        constraints = {c.name: c for c in problem.numericConstraints}
+        constr = constraints["quad_constr"]
         
         # At (2, 3): d/dx = 2*x + 2*y = 4 + 6 = 10, d/dy = 2*x = 4
         gradient = constr.calculateGradient([2.0, 3.0])
@@ -359,6 +367,10 @@ class TestHessianValues:
         problem.setObjective(obj)
         
         problem.finalize()
+
+        # finalize() can replace or rewrite the constraint, so it is read back from the problem
+        constraints = {c.name: c for c in problem.numericConstraints}
+        constr = constraints["lin_constr"]
         
         hessian = constr.calculateHessian([1.0, 2.0])
         assert len(hessian) == 0
@@ -385,6 +397,10 @@ class TestHessianValues:
         problem.setObjective(obj)
         
         problem.finalize()
+
+        # finalize() can replace or rewrite the constraint, so it is read back from the problem
+        constraints = {c.name: c for c in problem.numericConstraints}
+        constr = constraints["quad_constr"]
         
         hessian = constr.calculateHessian([1.0, 2.0])
         # d^2/dx^2 of x^2 = 2, d^2/dy^2 of y^2 = 2
@@ -412,6 +428,10 @@ class TestHessianValues:
         problem.setObjective(obj)
         
         problem.finalize()
+
+        # finalize() can replace or rewrite the constraint, so it is read back from the problem
+        constraints = {c.name: c for c in problem.numericConstraints}
+        constr = constraints["quad_constr"]
         
         hessian = constr.calculateHessian([1.0, 2.0])
         # d^2/dxdy of x*y = 1 (stored in upper triangle)
@@ -718,7 +738,9 @@ class TestMonomialTerms:
         problem.finalize()
         
         # Gradient at (2, 3): d/dx = 2*x*y = 12, d/dy = x^2 = 4
-        constr_ref = problem.getConstraint(0)
+        # finalize() can replace or rewrite the constraint, so it is read back from the problem
+        constraints = {c.name: c for c in problem.numericConstraints}
+        constr_ref = constraints["sig_constr"]
         gradient = constr_ref.calculateGradient([2.0, 3.0])
         assert abs(gradient[0] - 12.0) < 1e-10
         assert abs(gradient[1] - 4.0) < 1e-10
@@ -803,7 +825,9 @@ class TestSignomialTerms:
         problem.finalize()
         
         # Gradient of x^(-1) at x=2: -x^(-2) = -0.25
-        constr_ref = problem.getConstraint(0)
+        # finalize() can replace or rewrite the constraint, so it is read back from the problem
+        constraints = {c.name: c for c in problem.numericConstraints}
+        constr_ref = constraints["sig_constr"]
         gradient = constr_ref.calculateGradient([2.0])
         assert abs(gradient[0] - (-0.25)) < 1e-10
 
@@ -886,7 +910,9 @@ class TestNonlinearExpressions:
         problem.finalize()
         
         # Gradient of log(x) at x=2 is 1/x = 0.5
-        constr_ref = problem.getConstraint(0)
+        # finalize() can replace or rewrite the constraint, so it is read back from the problem
+        constraints = {c.name: c for c in problem.numericConstraints}
+        constr_ref = constraints["log_constr"]
         gradient = constr_ref.calculateGradient([2.0])
         assert abs(gradient[0] - 0.5) < 1e-10
         
@@ -1053,7 +1079,9 @@ class TestMixedTermTypes:
         # Gradient:
         # d/dx = 1 + 0.5*x^(-0.5) = 1 + 0.25 = 1.25
         # d/dy = 2*y = 4
-        constr_ref = problem.getConstraint(0)
+        # finalize() can replace or rewrite the constraint, so it is read back from the problem
+        constraints = {c.name: c for c in problem.numericConstraints}
+        constr_ref = constraints["mixed_constr"]
         gradient = constr_ref.calculateGradient([4.0, 2.0])
         assert abs(gradient[0] - 1.25) < 1e-10
         assert abs(gradient[1] - 4.0) < 1e-10
@@ -1185,7 +1213,8 @@ def _build_problem_with_constraints(problem):
     problem.setObjective(objective)
 
     problem.finalize()
-    return {c.name: c for c in [problem.getConstraint(i) for i in range(3)]}
+    # finalize() can replace or rewrite the constraints, so they are read back from the problem
+    return {c.name: c for c in problem.numericConstraints}
 
 
 class TestFunctionValues:
