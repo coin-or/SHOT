@@ -1443,7 +1443,9 @@ PYBIND11_MODULE(SHOTpy, m)
             "setProblem", [](Solver& self, ProblemPtr problem, ProblemPtr reformulatedProblem)
             { return self.setProblem(problem, reformulatedProblem, nullptr); }, "Set problem with reformulated problem",
             py::arg("problem"), py::arg("reformulatedProblem"))
-        .def("solveProblem", &Solver::solveProblem)
+        // The GIL is released while the problem is solved, so that the MIP solver can call Python callbacks from its
+        // own threads
+        .def("solveProblem", &Solver::solveProblem, py::call_guard<py::gil_scoped_release>())
         .def("updateLogLevels", &Solver::updateLogLevels)
         .def("updateSetting", py::overload_cast<std::string, bool>(&Solver::updateSetting))
         .def("updateSetting", py::overload_cast<std::string, int>(&Solver::updateSetting))
@@ -1595,7 +1597,9 @@ PYBIND11_MODULE(SHOTpy, m)
         .value("MIPSolutionPool", E_PrimalSolutionSource::MIPSolutionPool)
         .value("LPFixedIntegers", E_PrimalSolutionSource::LPFixedIntegers)
         .value("MIPCallback", E_PrimalSolutionSource::MIPCallback)
-        .value("InteriorPointSearch", E_PrimalSolutionSource::InteriorPointSearch);
+        .value("InteriorPointSearch", E_PrimalSolutionSource::InteriorPointSearch)
+        .value("ConvexBounding", E_PrimalSolutionSource::ConvexBounding)
+        .value("ExternalPrimalSolution", E_PrimalSolutionSource::ExternalPrimalSolution);
 
     py::enum_<E_ModelReturnStatus>(m, "ModelReturnStatus", py::arithmetic())
         .value("None", E_ModelReturnStatus::None)
