@@ -924,17 +924,18 @@ class TestTerminationCheckCallback:
 
 
 class TestHyperplaneSelectionCallback:
-    """CallbackLocation.HyperplaneSelection: addHyperplane() adds a hyperplane."""
+    """CallbackLocation.HyperplaneSelection in the single-tree strategy, where the MIP solver's callback reaches it.
+    """
 
     def _make_solver(self, env_solver):
         solver = env_solver
         solver.updateSetting("Output.Console.LogLevel", 6)
-        solver.updateSetting("Dual.CutStrategy", 1)   # ECP
+        solver.updateSetting("Dual.CutStrategy", 1)   # ECP, so SHOT adds hyperplanes of its own
         solver.updateSetting("Dual.TreeStrategy", 1)  # SingleTree
         return solver
 
     def test_callback_is_called(self, solver, env):
-        """The hyperplane callback is invoked with populated data."""
+        """The hyperplane callback is called from the single-tree strategy with populated data."""
         import SHOTpy
 
         hyperplane_calls = []
@@ -956,7 +957,7 @@ class TestHyperplaneSelectionCallback:
 
     @pytest.mark.parametrize("returned", [None, []])
     def test_return_value_is_ignored(self, solver, env, returned):
-        """A value returned by the callback is ignored."""
+        """A value returned by the callback is ignored, and SHOT solves the problem with its own hyperplanes."""
         import SHOTpy
 
         self._make_solver(solver)
