@@ -94,8 +94,10 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
         // Check if better dual bound
         double tmpDualObjBound = context.getDoubleInfo(IloCplex::Callback::Context::Info::BestBound);
 
-        if((isMinimization && tmpDualObjBound > env->results->getCurrentDualBound())
-            || (!isMinimization && tmpDualObjBound < env->results->getCurrentDualBound()))
+        // CPLEX gives a missing bound as 1e75 or -1e75, which is a finite value to SHOT
+        if(std::abs(tmpDualObjBound) < 1e75
+            && ((isMinimization && tmpDualObjBound > env->results->getCurrentDualBound())
+                || (!isMinimization && tmpDualObjBound < env->results->getCurrentDualBound())))
         {
             std::lock_guard<std::mutex> lock(callbackMutex);
             VectorDouble doubleSolution; // Empty since we have no point
