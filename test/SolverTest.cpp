@@ -1669,6 +1669,39 @@ bool TestPrimalSolutionPool()
     env->results->addPrimalSolution(moreAccurate);
     check("More accurate solution", { 9.0, 9.0, 10.0 }, 6.0);
 
+    // The objective values are only compared up to a relative tolerance of 1e-10. In a full pool of two, the incumbent
+    // has the objective value 9 and the error 5, and the other solution an almost equal objective value and the
+    // error 1. A solution with the same objective value as the other one and the error 3 replaces the incumbent,
+    // although it is neither better nor more accurate than the worst solution in the pool
+    auto [solver2, env2] = MakeEx1223bSolver();
+    solver2->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+    solver2->updateSetting("Output.SaveNumberOfSolutions", 2);
+
+    auto withError = [&makeSolution](double objectiveValue, double firstValue, double error)
+    {
+        auto solution = makeSolution(objectiveValue, firstValue);
+        solution.maxDevatingConstraintLinear = PairIndexValue(-1, error);
+        solution.maxDevatingConstraintQuadratic = PairIndexValue(-1, error);
+        solution.maxDevatingConstraintNonlinear = PairIndexValue(-1, error);
+        return (solution);
+    };
+
+    double almostNine = 9.0 + 1e-10;
+
+    env2->results->addPrimalSolution(withError(almostNine, 1.0, 1.0));
+    env2->results->addPrimalSolution(withError(9.0, 2.0, 5.0));
+    env2->results->addPrimalSolution(withError(almostNine, 3.0, 3.0));
+
+    auto& pool = env2->results->primalSolutions;
+
+    if(pool.size() != 2 || pool.front().point.at(0) != 3.0 || env2->results->primalSolution.at(0) != 3.0
+        || pool.back().point.at(0) != 2.0)
+    {
+        std::cout << "A more accurate solution with an almost equal objective value did not replace the incumbent in "
+                     "a full pool\n";
+        passed = false;
+    }
+
     return passed;
 }
 

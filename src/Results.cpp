@@ -96,7 +96,9 @@ void Results::addPrimalSolution(PrimalSolution solution)
 
     if((int)this->primalSolutions.size() >= poolSize)
     {
-        if(!isBetter(solution.objValue, this->primalSolutions.back().objValue)
+        // A new incumbent is always saved. Since the objective values are only compared up to a tolerance, it can
+        // replace an incumbent whose objective value is the same but which is better than the worst one in the pool
+        if(!isPrimalImprovement && !isBetter(solution.objValue, this->primalSolutions.back().objValue)
             && !isMoreAccurateThan(this->primalSolutions.back()))
         {
             env->output->outputDebug(fmt::format(
