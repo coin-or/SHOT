@@ -1585,6 +1585,93 @@ bool TestCallbackFailure()
     return passed;
 }
 
+bool TestPrimalSolutionPool()
+{
+    bool passed = true;
+
+    // The solution pool keeps the best solutions, sorted with the incumbent first, and only a solution better than
+    // the incumbent changes the primal bound
+    auto [solver, env] = MakeEx1223bSolver();
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+    solver->updateSetting("Output.SaveNumberOfSolutions", 3);
+
+    auto makeSolution = [](double objectiveValue, double firstValue)
+    {
+        PrimalSolution solution;
+        solution.point = VectorDouble(7, 0.0);
+        solution.point[0] = firstValue;
+        solution.objValue = objectiveValue;
+        solution.sourceType = E_PrimalSolutionSource::ExternalPrimalSolution;
+        return (solution);
+    };
+
+    auto check = [&passed, &env](const std::string& step, std::vector<double> expectedObjectives,
+                     double expectedIncumbentFirstValue)
+    {
+        auto& pool = env->results->primalSolutions;
+
+        std::vector<double> objectives;
+        for(auto& S : pool)
+            objectives.push_back(S.objValue);
+
+        if(objectives != expectedObjectives)
+        {
+            std::cout << step << ": the objective values in the solution pool are not the expected ones\n";
+            passed = false;
+            return;
+        }
+
+        if(env->results->getPrimalBound() != expectedObjectives.front()
+            || env->results->primalSolution.at(0) != expectedIncumbentFirstValue
+            || pool.front().point.at(0) != expectedIncumbentFirstValue)
+        {
+            std::cout << step << ": the incumbent or the primal bound is not the expected one\n";
+            passed = false;
+        }
+    };
+
+    env->results->addPrimalSolution(makeSolution(10.0, 1.0));
+    check("First solution", { 10.0 }, 1.0);
+
+    env->results->addPrimalSolution(makeSolution(12.0, 2.0));
+    check("Worse solution", { 10.0, 12.0 }, 1.0);
+
+    // Better than the worst solution but worse than the incumbent: added to the pool, but not the incumbent
+    env->solutionStatistics.hasReductionCutBeenAddedSincePrimalImprovement = true;
+    env->results->addPrimalSolution(makeSolution(11.0, 3.0));
+    check("Solution between the best and the worst", { 10.0, 11.0, 12.0 }, 1.0);
+
+    if(!env->solutionStatistics.hasReductionCutBeenAddedSincePrimalImprovement)
+    {
+        std::cout << "A solution that is not an improvement was counted as one\n";
+        passed = false;
+    }
+
+    // The pool is full and the solution is worse than all in it
+    env->results->addPrimalSolution(makeSolution(13.0, 4.0));
+    check("Worse solution with a full pool", { 10.0, 11.0, 12.0 }, 1.0);
+
+    // A new incumbent replaces the worst solution
+    env->results->addPrimalSolution(makeSolution(9.0, 5.0));
+    check("Better solution with a full pool", { 9.0, 10.0, 11.0 }, 5.0);
+
+    if(env->solutionStatistics.hasReductionCutBeenAddedSincePrimalImprovement)
+    {
+        std::cout << "An improvement of the primal bound was not counted as one\n";
+        passed = false;
+    }
+
+    // A solution with the same objective value as the incumbent but a smaller constraint error replaces it
+    auto moreAccurate = makeSolution(9.0, 6.0);
+    moreAccurate.maxDevatingConstraintLinear = PairIndexValue(-1, 0.0);
+    moreAccurate.maxDevatingConstraintQuadratic = PairIndexValue(-1, 0.0);
+    moreAccurate.maxDevatingConstraintNonlinear = PairIndexValue(-1, 0.0);
+    env->results->addPrimalSolution(moreAccurate);
+    check("More accurate solution", { 9.0, 9.0, 10.0 }, 6.0);
+
+    return passed;
+}
+
 int SolverTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -1702,6 +1789,11 @@ int SolverTest(int argc, char* argv[])
         std::cout << "Starting test for callback system - failing callback" << std::endl;
         passed = TestCallbackFailure();
         std::cout << "Finished test for callback system - failing callback." << std::endl;
+        break;
+    case 20:
+        std::cout << "Starting test for the primal solution pool" << std::endl;
+        passed = TestPrimalSolutionPool();
+        std::cout << "Finished test for the primal solution pool." << std::endl;
         break;
     default:
         passed = false;

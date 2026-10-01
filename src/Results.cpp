@@ -63,94 +63,89 @@ void Results::addPrimalSolution(PrimalSolution solution)
         return;
     }
 
-    // Whether the solution is better than the best one before it, which is the first one since the solutions are sorted
-    bool isIncumbent = this->primalSolutions.empty()
-        || (env->problem->objectiveFunction->properties.isMinimize
-                ? solution.objValue < this->primalSolutions.front().objValue
-                : solution.objValue > this->primalSolutions.front().objValue);
+    bool isMinimize = env->problem->objectiveFunction->properties.isMinimize;
 
-    if(this->primalSolutions.size() == 0)
+    auto isBetter
+        = [isMinimize](double first, double second) { return (isMinimize ? first < second : first > second); };
+
+    auto maxError = [](const PrimalSolution& S)
     {
-        // This is the first solution, save it
-        this->primalSolutions.push_back(solution);
-        this->primalSolution = solution.point;
-        this->setPrimalBound(solution.objValue);
+        return (std::max({ S.maxDevatingConstraintLinear.value, S.maxDevatingConstraintQuadratic.value,
+            S.maxDevatingConstraintNonlinear.value }));
+    };
 
-        env->output->outputDebug(fmt::format(
-            "        First primal solution {} from {} found.", solution.objValue, solution.sourceDescription));
+    // Whether the solution has the same objective value as another one but a smaller constraint error
+    auto isMoreAccurateThan = [&solution, &maxError](const PrimalSolution& S)
+    { return (Utilities::isAlmostEqual(solution.objValue, S.objValue, 1e-10) && maxError(solution) < maxError(S)); };
+
+    // The solutions are sorted with the best one first, so the first one is the incumbent and the last one is the
+    // worst one in the solution pool
+    bool isIncumbent
+        = this->primalSolutions.empty() || isBetter(solution.objValue, this->primalSolutions.front().objValue);
+
+    // A solution similar to the incumbent but with a smaller constraint error replaces it. This is not a genuine
+    // objective improvement, so it must not reset the primal-stagnation / reduction-cut-without-effect counters, or
+    // repeatedly finding near-duplicate points with shrinking numerical error would perpetually reset those counters
+    // and prevent the stagnation-based termination criteria from ever triggering.
+    bool replacesIncumbent = !isIncumbent && isMoreAccurateThan(this->primalSolutions.front());
+
+    // A solution that is only added to the solution pool is not an improvement of the primal bound
+    bool isPrimalImprovement = isIncumbent || replacesIncumbent;
+
+    int poolSize = std::max(1, env->settings->getSetting<int>("Output.SaveNumberOfSolutions"));
+
+    if((int)this->primalSolutions.size() >= poolSize)
+    {
+        if(!isBetter(solution.objValue, this->primalSolutions.back().objValue)
+            && !isMoreAccurateThan(this->primalSolutions.back()))
+        {
+            env->output->outputDebug(fmt::format(
+                "        Primal solution {} from {} is not better than the solutions in the full solution pool, so it "
+                "will not be saved.",
+                solution.objValue, solution.sourceDescription));
+            return;
+        }
+
+        // The solution replaces the worst one in the solution pool
+        this->primalSolutions.pop_back();
     }
-    else if(auto primalsol = this->primalSolutions.back();
-            (env->problem->objectiveFunction->properties.isMinimize && solution.objValue < primalsol.objValue)
-            || (!env->problem->objectiveFunction->properties.isMinimize && solution.objValue > primalsol.objValue))
+
+    // The solution is put after those that are at least as good, except that a new incumbent is put first
+    auto position = isPrimalImprovement
+        ? this->primalSolutions.begin()
+        : std::upper_bound(this->primalSolutions.begin(), this->primalSolutions.end(), solution,
+              [&isBetter](const PrimalSolution& first, const PrimalSolution& second)
+              { return (isBetter(first.objValue, second.objValue)); });
+
+    this->primalSolutions.insert(position, solution);
+
+    if(isPrimalImprovement)
     {
-        // Have a solution which is better than the worst one in the solution pool
-        this->primalSolutions.back() = solution;
         this->primalSolution = solution.point;
-        this->setPrimalBound(solution.objValue);
+        this->setPrimalBound(solution.objValue, isIncumbent);
 
-        env->output->outputDebug(fmt::format("        New (currently best) primal solution {} from {} found.",
-            solution.objValue, solution.sourceDescription));
+        if(this->primalSolutions.size() == 1)
+            env->output->outputDebug(fmt::format(
+                "        First primal solution {} from {} found.", solution.objValue, solution.sourceDescription));
+        else
+            env->output->outputDebug(fmt::format("        New (currently best) primal solution {} from {} found.",
+                solution.objValue, solution.sourceDescription));
     }
-    else if(Utilities::isAlmostEqual(solution.objValue, primalsol.objValue, 1e-10)
-        && (std::max({ solution.maxDevatingConstraintLinear.value, solution.maxDevatingConstraintQuadratic.value,
-                solution.maxDevatingConstraintNonlinear.value })
-            < std::max({ primalsol.maxDevatingConstraintLinear.value, primalsol.maxDevatingConstraintQuadratic.value,
-                primalsol.maxDevatingConstraintNonlinear.value })))
+    else
     {
-        // Have a solution which is similar to the best known, but with smaller constraint error. This is not a
-        // genuine objective improvement, so it must not reset the primal-stagnation / reduction-cut-without-effect
-        // counters, or repeatedly finding near-duplicate points with shrinking numerical error would perpetually
-        // reset those counters and prevent the stagnation-based termination criteria from ever triggering.
-        this->primalSolutions.back() = solution;
-        this->primalSolution = solution.point;
-        this->setPrimalBound(solution.objValue, false);
-
-        env->output->outputDebug(fmt::format("        New (currently best) primal solution {} from {} found.",
-            solution.objValue, solution.sourceDescription));
-    }
-    else if((int)this->primalSolutions.size() < env->settings->getSetting<int>("Output.SaveNumberOfSolutions"))
-    {
-        // The solution pool is not yet full, save the solution
-        this->primalSolutions.push_back(solution);
-
         env->output->outputDebug(fmt::format("        New primal solution {} from {} found and added to solution pool.",
             solution.objValue, solution.sourceDescription));
-    }
-    else
-    {
-        env->output->outputDebug(fmt::format(
-            "        Primal solution {} from {} is not an improvement of the current value {} or the solution "
-            "pool is full, so it will not be saved.",
-            solution.objValue, solution.sourceDescription, primalsol.objValue));
-        // Will not save this solution
-        return;
-    }
-
-    // Sorts the solutions so that the best one is at the first position
-    if(env->problem->objectiveFunction->properties.isMinimize)
-    {
-        std::sort(this->primalSolutions.begin(), this->primalSolutions.end(),
-            [](const PrimalSolution& firstSolution, const PrimalSolution& secondSolution) {
-                return (firstSolution.objValue < secondSolution.objValue);
-            });
-    }
-    else
-    {
-        std::sort(this->primalSolutions.begin(), this->primalSolutions.end(),
-            [](const PrimalSolution& firstSolution, const PrimalSolution& secondSolution) {
-                return (firstSolution.objValue > secondSolution.objValue);
-            });
     }
 
     env->solutionStatistics.numberOfFoundPrimalSolutions++;
 
-    if(env->solutionStatistics.hasInfeasibilityRepairBeenPerformedSincePrimalImprovement)
+    if(isPrimalImprovement && env->solutionStatistics.hasInfeasibilityRepairBeenPerformedSincePrimalImprovement)
     {
         env->solutionStatistics.numberOfPrimalImprovementsAfterInfeasibilityRepair++;
         env->solutionStatistics.hasInfeasibilityRepairBeenPerformedSincePrimalImprovement = false;
     }
 
-    if(env->solutionStatistics.hasReductionCutBeenAddedSincePrimalImprovement)
+    if(isPrimalImprovement && env->solutionStatistics.hasReductionCutBeenAddedSincePrimalImprovement)
     {
         env->solutionStatistics.numberOfPrimalImprovementsAfterReductionCut++;
         env->solutionStatistics.hasReductionCutBeenAddedSincePrimalImprovement = false;
