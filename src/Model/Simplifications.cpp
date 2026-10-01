@@ -411,6 +411,29 @@ void simplifyNonlinearExpressions(
     checkAndConvertObjectivesAndConstraints(problem, extractMonomials, extractSignomials, extractQuadratics);
 }
 
+bool isSharedExpression(const NonlinearExpressionPtr& expression)
+{
+    if(expression.use_count() > 1)
+        return (true);
+
+    if(auto unary = std::dynamic_pointer_cast<ExpressionUnary>(expression))
+        return (isSharedExpression(unary->child));
+
+    if(auto binary = std::dynamic_pointer_cast<ExpressionBinary>(expression))
+        return (isSharedExpression(binary->firstChild) || isSharedExpression(binary->secondChild));
+
+    if(auto general = std::dynamic_pointer_cast<ExpressionGeneral>(expression))
+    {
+        for(auto& C : general->children)
+        {
+            if(isSharedExpression(C))
+                return (true);
+        }
+    }
+
+    return (false);
+}
+
 NonlinearExpressionPtr copyNonlinearExpression(NonlinearExpression* expression, const ProblemPtr destination)
 {
     return copyNonlinearExpression(expression, destination.get());
@@ -532,6 +555,21 @@ NonlinearExpressionPtr copyNonlinearExpression(NonlinearExpression* expression, 
     {
         return std::make_shared<ExpressionTan>(
             copyNonlinearExpression((((ExpressionTan*)expression)->child).get(), destination));
+    }
+    case E_NonlinearExpressionTypes::ArcSin:
+    {
+        return std::make_shared<ExpressionArcSin>(
+            copyNonlinearExpression((((ExpressionArcSin*)expression)->child).get(), destination));
+    }
+    case E_NonlinearExpressionTypes::ArcCos:
+    {
+        return std::make_shared<ExpressionArcCos>(
+            copyNonlinearExpression((((ExpressionArcCos*)expression)->child).get(), destination));
+    }
+    case E_NonlinearExpressionTypes::ArcTan:
+    {
+        return std::make_shared<ExpressionArcTan>(
+            copyNonlinearExpression((((ExpressionArcTan*)expression)->child).get(), destination));
     }
     case E_NonlinearExpressionTypes::Constant:
     {
