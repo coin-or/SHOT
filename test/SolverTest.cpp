@@ -17,7 +17,7 @@
 #include "../src/Structs.h"
 #include "../src/TaskHandler.h"
 #include "../src/Utilities.h"
-#include "../src/CallbackData.h"
+#include "../src/Callback.h"
 #include "../src/Model/Simplifications.h"
 
 #include "../src/Model/Variables.h"
@@ -33,6 +33,9 @@
 #include "../src/RootsearchMethod/RootsearchMethodBoost.h"
 
 #include "../src/Tasks/TaskReformulateProblem.h"
+
+#include <set>
+#include <stdexcept>
 
 using namespace SHOT;
 
@@ -290,37 +293,26 @@ bool CreateAndSolveProblem()
     solver->setProblem(problem, reformulatedProblem);
 
     // Registers a callback that is activated every time a new primal solution is found
-    solver->registerCallback(E_EventType::NewPrimalSolution,
-        [&env, &passed](std::any args)
+    solver->registerCallback<NewPrimalSolutionContext>(
+        [&env, &passed](NewPrimalSolutionContext& solution)
         {
-            try
+            std::cout << "We have a new primal solution: " << solution.getObjectiveValue()
+                      << " found at iteration: " << solution.getIterationNumber() << ". In total we now have "
+                      << env->solutionStatistics.numberOfFoundPrimalSolutions << " solutions.\n";
+
+            std::cout << "Primal solution point:\n";
+            Utilities::displayVector(solution.getPoint());
+
+            if(solution.getObjectiveValue() == env->results->getPrimalBound())
             {
-                auto solution = std::any_cast<PrimalSolutionCallbackData>(args);
-
-                std::cout << "We have a new primal solution: " << solution.objectiveValue
-                          << " found at iteration: " << solution.iterationNumber << ". In total we now have "
-                          << env->solutionStatistics.numberOfFoundPrimalSolutions << " solutions.\n";
-
-                std::cout << "Primal solution point:\n";
-                Utilities::displayVector(solution.solution);
-
-                if(solution.objectiveValue == env->results->getPrimalBound())
-                {
-                    std::cout << "Ok, new primal solution has been saved successfully. " << solution.objectiveValue
-                              << ".\n";
-                    passed = true;
-                }
-                else
-                {
-                    std::cout << "Error: new primal solution not saved successfully!\n";
-                    passed = false;
-                }
+                std::cout << "Ok, new primal solution has been saved successfully. " << solution.getObjectiveValue()
+                          << ".\n";
+                passed = true;
             }
-            catch(const std::bad_any_cast& e)
+            else
             {
-                // If the callback argument is not a PrimalSolutionCallbackData
+                std::cout << "Error: new primal solution not saved successfully!\n";
                 passed = false;
-                std::cout << "Failed to cast callback argument: " << e.what() << std::endl;
             }
         });
 
@@ -360,57 +352,44 @@ bool CreateAndSolveProblem()
     solver->setProblem(problem, reformulatedProblem);
 
     // Registers a callback that is activated every time a new primal solution is found
-    solver->registerCallback(E_EventType::NewPrimalSolution,
-        [&env, &passed](std::any args)
+    solver->registerCallback<NewPrimalSolutionContext>(
+        [&env, &passed](NewPrimalSolutionContext& solution)
         {
-            try
+            std::cout << "We have a new primal solution: " << solution.getObjectiveValue()
+                      << " found at iteration: " << solution.getIterationNumber() << ". In total we now have "
+                      << env->solutionStatistics.numberOfFoundPrimalSolutions << " solutions.\n";
+
+            std::cout << "Primal solution point:\n";
+            Utilities::displayVector(solution.getPoint());
+
+            if(solution.getObjectiveValue() == env->results->getPrimalBound())
             {
-                auto solution = std::any_cast<PrimalSolutionCallbackData>(args);
-
-                std::cout << "We have a new primal solution: " << solution.objectiveValue
-                          << " found at iteration: " << solution.iterationNumber << ". In total we now have "
-                          << env->solutionStatistics.numberOfFoundPrimalSolutions << " solutions.\n";
-
-                std::cout << "Primal solution point:\n";
-                Utilities::displayVector(solution.solution);
-
-                if(solution.objectiveValue == env->results->getPrimalBound())
-                {
-                    std::cout << "Ok, new primal solution has been saved successfully. " << solution.objectiveValue
-                              << ".\n";
-                    passed = true;
-                }
-                else
-                {
-                    std::cout << "Error: new primal solution not saved successfully!\n";
-                    passed = false;
-                }
+                std::cout << "Ok, new primal solution has been saved successfully. " << solution.getObjectiveValue()
+                          << ".\n";
+                passed = true;
             }
-            catch(const std::bad_any_cast& e)
+            else
             {
-                // If the callback argument is not a PrimalSolutionCallbackData
+                std::cout << "Error: new primal solution not saved successfully!\n";
                 passed = false;
-                std::cout << "Failed to cast callback argument: " << e.what() << std::endl;
             }
         });
 
     // Registers a callback that terminates if we have found at least one primal solution
-    solver->registerCallback(E_EventType::UserTerminationCheck,
-        [](std::any args) -> bool
+    solver->registerCallback<TerminationCheckContext>(
+        [](TerminationCheckContext& context)
         {
-            auto data = std::any_cast<TerminationCallbackData>(args);
-            std::cout << "Termination callback with structured data - iteration: " << data.iterationNumber << "\n";
+            std::cout << "Termination callback - iteration: " << context.getIterationNumber() << "\n";
 
             // If we have found one primal solution, we terminate the solver
-            if(data.iterationNumber > 0 && data.solutionStatistics.numberOfFoundPrimalSolutions > 0)
+            if(context.getIterationNumber() > 0 && context.getSolutionStatistics().numberOfFoundPrimalSolutions > 0)
             {
                 std::cout << "Termination callback activated. We have found at least one solution.\n";
-                return true;
+                context.terminate();
             }
             else
             {
                 std::cout << "Termination callback activated. We have not found a primal solution yet.\n";
-                return false;
             }
         });
 
@@ -459,25 +438,22 @@ bool TestCallbackUserTermination()
     bool terminationRequested = false;
     bool solverWasTerminated = false;
 
-    // Register user termination check - returns bool
-    solver->registerCallback(E_EventType::UserTerminationCheck,
-        [&iterationCount, &terminationRequested](std::any args) -> bool
+    // Register user termination check
+    solver->registerCallback<TerminationCheckContext>(
+        [&iterationCount, &terminationRequested](TerminationCheckContext& context)
         {
             iterationCount++;
 
-            auto data = std::any_cast<TerminationCallbackData>(args);
-            std::cout << "User termination check called with structured data (call #" << iterationCount
-                      << ", solver iteration " << data.iterationNumber << ")" << std::endl;
+            std::cout << "User termination check called (call #" << iterationCount << ", solver iteration "
+                      << context.getIterationNumber() << ")" << std::endl;
 
             // Terminate after 3 checks
             if(iterationCount >= 3)
             {
                 std::cout << "User termination check requesting termination" << std::endl;
                 terminationRequested = true;
-                return true; // Request termination
+                context.terminate();
             }
-
-            return false; // Continue
         });
 
     // Set high iteration limit so termination comes from our callback
@@ -569,10 +545,6 @@ bool TestCallbackExternalHyperplane()
     e2->add(std::make_shared<ExpressionDivide>(std::make_shared<ExpressionExp>(nl_x1), nl_x2));
     problem->add(e2);
 
-    NonlinearConstraints constraints = { e1, e2 };
-
-    // Add constraints to a vector
-
     // Finalize the problem object (after this no changes should be made)
     problem->updateProperties();
     problem->finalize();
@@ -589,28 +561,29 @@ bool TestCallbackExternalHyperplane()
     std::cout << env->reformulatedProblem << '\n';
 
     // Register external hyperplane callback
-    solver->registerCallback(E_EventType::ExternalHyperplaneSelection,
-        [&env, &constraints](std::any args) -> std::any
+    solver->registerCallback<HyperplaneSelectionContext>(
+        [&env](HyperplaneSelectionContext& context)
         {
-            auto data = std::any_cast<ExternalHyperplaneSelectionCallbackData>(args);
+            std::cout << "External hyperplane callback called at iteration " << context.getIterationNumber()
+                      << std::endl;
+            std::cout << "Current dual bound: " << context.getDualBound() << std::endl;
+            std::cout << "Current primal bound: " << context.getPrimalBound() << std::endl;
+            std::cout << "Number of solution points: " << context.getSolutionPoints().size() << std::endl;
 
-            std::cout << "External hyperplane callback called at iteration " << data.iterationNumber << std::endl;
-            std::cout << "Current dual bound: " << data.currentDualBound << std::endl;
-            std::cout << "Current primal bound: " << data.currentPrimalBound << std::endl;
-            std::cout << "Number of solution points: " << data.solutionPoints.size() << std::endl;
-
-            std::vector<ExternalHyperplane> hyperplanes;
+            int numberOfHyperplanes = 0;
 
             // Example: Add a simple cutting plane if we have solution points
-            if(!data.solutionPoints.empty() && data.iterationNumber > 0)
+            if(!context.getSolutionPoints().empty() && context.getIterationNumber() > 0)
             {
-                for(const auto& solPoint : data.solutionPoints)
+                for(const auto& solPoint : context.getSolutionPoints())
                 {
                     std::cout << "\nSolution point: \n";
                     Utilities::displayVector(solPoint.point);
 
-                    // Constraint with largest error
-                    auto constraint = constraints.at(solPoint.maxDeviation.index);
+                    // The constraint with the largest error, read from the problem, since setProblem() can replace
+                    // or rewrite the constraints it was given
+                    auto constraint = std::dynamic_pointer_cast<NumericConstraint>(
+                        context.getReformulatedProblem()->getConstraint(solPoint.maxDeviation.index));
 
                     double funcValue = constraint->calculateFunctionValue(solPoint.point) - constraint->valueRHS;
                     auto gradient = constraint->calculateGradient(solPoint.point, false);
@@ -628,10 +601,11 @@ bool TestCallbackExternalHyperplane()
                     hyperplane.variableCoefficients.emplace_back() = gradient[env->reformulatedProblem->getVariable(1)];
                     hyperplane.rhsValue = -constant; // RHS
                     hyperplane.isGlobal = true;
-                    hyperplane.description = fmt::format("hyp_{}", data.iterationNumber);
+                    hyperplane.description = fmt::format("hyp_{}", context.getIterationNumber());
                     hyperplane.source = E_HyperplaneSource::External;
 
-                    hyperplanes.push_back(hyperplane);
+                    context.addHyperplane(hyperplane);
+                    numberOfHyperplanes++;
 
                     std::cout << "Generated hyperplane variable coefficients: \n";
                     Utilities::displayVector(hyperplane.variableCoefficients);
@@ -641,8 +615,7 @@ bool TestCallbackExternalHyperplane()
                 }
             }
 
-            std::cout << "Returning " << hyperplanes.size() << " external hyperplanes" << std::endl;
-            return std::make_any<std::vector<ExternalHyperplane>>(hyperplanes);
+            std::cout << "Added " << numberOfHyperplanes << " external hyperplanes" << std::endl;
         });
 
     solver->solveProblem();
@@ -792,19 +765,18 @@ bool TestCallbackPrimalCandidateSelection()
     bool passed = true;
 
     // ── Sub-test 1: callback fires at least once ───────────────────────────
-    std::cout << "\nSub-test 1: PrimalSolutionCandidateSelection callback fires\n";
+    std::cout << "\nSub-test 1: PrimalCandidateCheck callback fires\n";
     {
         auto [solver, env] = MakeEx1223bSolver();
         int candidateCount = 0;
 
-        solver->registerCallback(E_EventType::PrimalSolutionCandidateSelection,
-            [&candidateCount](std::any args) -> bool
+        solver->registerCallback<PrimalCandidateCheckContext>(
+            [&candidateCount](PrimalCandidateCheckContext& candidate)
             {
-                auto data = std::any_cast<PrimalSolutionCallbackData>(args);
                 candidateCount++;
-                std::cout << "  Candidate #" << candidateCount << "  obj=" << data.objectiveValue
-                          << "  iter=" << data.iterationNumber << "\n";
-                return true; // accept
+                std::cout << "  Candidate #" << candidateCount << "  obj=" << candidate.getObjectiveValue()
+                          << "  iter=" << candidate.getIterationNumber() << "\n";
+                // The candidate is accepted since it is not rejected
             });
 
         solver->solveProblem();
@@ -821,20 +793,19 @@ bool TestCallbackPrimalCandidateSelection()
     }
 
     // ── Sub-test 2: returning false prevents all primal solutions ──────────
-    std::cout << "\nSub-test 2: returning false blocks all primal solutions\n";
+    std::cout << "\nSub-test 2: rejecting every candidate blocks all primal solutions\n";
     {
         auto [solver, env] = MakeEx1223bSolver();
         // Cap iterations so the test terminates quickly
         solver->updateSetting("Termination.IterationLimit", 10);
         int rejectedCount = 0;
 
-        solver->registerCallback(E_EventType::PrimalSolutionCandidateSelection,
-            [&rejectedCount](std::any args) -> bool
+        solver->registerCallback<PrimalCandidateCheckContext>(
+            [&rejectedCount](PrimalCandidateCheckContext& candidate)
             {
-                auto data = std::any_cast<PrimalSolutionCallbackData>(args);
                 rejectedCount++;
-                std::cout << "  Rejecting candidate obj=" << data.objectiveValue << "\n";
-                return false; // reject everything
+                std::cout << "  Rejecting candidate obj=" << candidate.getObjectiveValue() << "\n";
+                candidate.rejectCandidate(); // reject everything
             });
 
         solver->solveProblem();
@@ -858,9 +829,9 @@ bool TestCallbackPrimalCandidateSelection()
         int acceptedA = 0;
         {
             auto [solver, env] = MakeEx1223bSolver();
-            solver->registerCallback(
-                E_EventType::PrimalSolutionCandidateSelection, [](std::any) -> bool { return true; });
-            solver->registerCallback(E_EventType::NewPrimalSolution, [&acceptedA](std::any) { acceptedA++; });
+            solver->registerCallback<PrimalCandidateCheckContext>([](PrimalCandidateCheckContext&) { });
+            solver->registerCallback<NewPrimalSolutionContext>(
+                [&acceptedA](NewPrimalSolutionContext&) { acceptedA++; });
             solver->solveProblem();
         }
 
@@ -868,13 +839,14 @@ bool TestCallbackPrimalCandidateSelection()
         int acceptedB = 0;
         {
             auto [solver, env] = MakeEx1223bSolver();
-            solver->registerCallback(E_EventType::PrimalSolutionCandidateSelection,
-                [](std::any args) -> bool
+            solver->registerCallback<PrimalCandidateCheckContext>(
+                [](PrimalCandidateCheckContext& candidate)
                 {
-                    auto data = std::any_cast<PrimalSolutionCallbackData>(args);
-                    return data.objectiveValue <= 5.0;
+                    if(candidate.getObjectiveValue() > 5.0)
+                        candidate.rejectCandidate();
                 });
-            solver->registerCallback(E_EventType::NewPrimalSolution, [&acceptedB](std::any) { acceptedB++; });
+            solver->registerCallback<NewPrimalSolutionContext>(
+                [&acceptedB](NewPrimalSolutionContext&) { acceptedB++; });
             solver->solveProblem();
         }
 
@@ -942,15 +914,13 @@ bool TestCallbackESHInteriorPoint()
         bool callbackFired = false;
         size_t pointsReceived = 0;
 
-        solver->registerCallback(E_EventType::ExternalESHRootsearchPointsSelection,
-            [&](std::any args) -> std::any
+        solver->registerCallback<InteriorPointSearchContext>(
+            [&](InteriorPointSearchContext& context)
             {
-                auto data = std::any_cast<ESHInteriorPointCallbackData>(args);
                 callbackFired = true;
-                pointsReceived = data.currentInteriorPoints.size();
+                pointsReceived = context.getInteriorPoints().size();
                 std::cout << "  ESH interior point callback fired with " << pointsReceived << " current point(s)\n";
-                // Return empty to keep current points unchanged
-                return std::any(std::vector<VectorDouble> {});
+                // No points are set, so the current points are kept
             });
 
         solver->solveProblem();
@@ -981,16 +951,15 @@ bool TestCallbackESHInteriorPoint()
 
         bool callbackFired = false;
 
-        solver->registerCallback(E_EventType::ExternalESHRootsearchPointsSelection,
-            [&](std::any args) -> std::any
+        solver->registerCallback<InteriorPointSearchContext>(
+            [&](InteriorPointSearchContext& context)
             {
-                auto data = std::any_cast<ESHInteriorPointCallbackData>(args);
                 callbackFired = true;
                 std::cout << "  ESH interior point callback fired (OnlyExternal strategy)\n";
-                std::cout << "  currentInteriorPoints size from callback: " << data.currentInteriorPoints.size()
+                std::cout << "  interior points from callback: " << context.getInteriorPoints().size()
                           << " (should be 0)\n";
-                // Return the captured point from Phase 1
-                return std::any(std::vector<VectorDouble> { capturedInteriorPoint });
+                // Use the captured point from Phase 1
+                context.setInteriorPoints({ capturedInteriorPoint });
             });
 
         solver->solveProblem();
@@ -1212,14 +1181,13 @@ bool TestCallbackESHExternalInteriorPointFromAuxProblem()
 
         bool callbackFired = false;
 
-        solver->registerCallback(E_EventType::ExternalESHRootsearchPointsSelection,
-            [&](std::any args) -> std::any
+        solver->registerCallback<InteriorPointSearchContext>(
+            [&](InteriorPointSearchContext& context)
             {
-                auto data = std::any_cast<ESHInteriorPointCallbackData>(args);
                 callbackFired = true;
                 std::cout << "  ESH interior point callback fired (OnlyExternal strategy)\n";
                 std::cout << "  Injecting Phase 1 interior point\n";
-                return std::any(std::vector<VectorDouble> { interiorPoint });
+                context.setInteriorPoints({ interiorPoint });
             });
 
         solver->solveProblem();
@@ -1478,6 +1446,263 @@ bool TestConstraintClassesForFixedVariables(const std::string& problemFile)
     return passed;
 }
 
+bool TestCallbackGenericContext()
+{
+    bool passed = true;
+
+    // A callback registered for two locations is called at exactly those locations, with the context classes for
+    // them
+    auto [solver, env] = MakeEx1223bSolver();
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+
+    std::set<E_CallbackLocation> locations;
+    bool contextClassesMatch = true;
+
+    solver->registerCallback(E_CallbackLocation::PrimalCandidateCheck | E_CallbackLocation::TerminationCheck,
+        [&locations, &contextClassesMatch](CallbackContext& context)
+        {
+            locations.insert(context.getLocation());
+
+            auto candidate = context.as<PrimalCandidateCheckContext>();
+            auto termination = context.as<TerminationCheckContext>();
+
+            // Exactly one of the classes is that of the location
+            if((candidate != nullptr) == (termination != nullptr))
+                contextClassesMatch = false;
+
+            if(context.as<NewPrimalSolutionContext>() != nullptr)
+                contextClassesMatch = false;
+
+            if(candidate != nullptr && candidate->getPoint().size() != 7)
+                contextClassesMatch = false;
+        });
+
+    solver->solveProblem();
+
+    std::set<E_CallbackLocation> expectedLocations
+        = { E_CallbackLocation::PrimalCandidateCheck, E_CallbackLocation::TerminationCheck };
+
+    if(locations != expectedLocations)
+    {
+        std::cout << "The callback was not called at exactly the locations it was registered for\n";
+        passed = false;
+    }
+
+    if(!contextClassesMatch)
+    {
+        std::cout << "The class of a context was not that of its location\n";
+        passed = false;
+    }
+
+    return passed;
+}
+
+bool TestCallbackFailure()
+{
+    bool passed = true;
+
+    // An exception in a callback discards the actions of the callbacks at that location, stops all callbacks and
+    // SHOT, and is rethrown by solveProblem()
+    auto [solver, env] = MakeEx1223bSolver(true); // the nonlinear strategy has the PrimalCandidateSearch location
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+
+    bool failed = false;
+    int callsAfterFailure = 0;
+    int laterCallbackCalls = 0;
+
+    auto locations = E_CallbackLocation::PrimalCandidateSearch | E_CallbackLocation::NewPrimalSolution
+        | E_CallbackLocation::TerminationCheck;
+
+    solver->registerCallback(locations,
+        [&failed, &callsAfterFailure](CallbackContext& context)
+        {
+            if(failed)
+            {
+                callsAfterFailure++;
+                return;
+            }
+
+            if(auto search = context.as<PrimalCandidateSearchContext>())
+            {
+                // A feasible solution is queued, but must be discarded since the callback fails
+                search->addPrimalSolution(VectorDouble(7, 0.0));
+                failed = true;
+                throw std::runtime_error("the callback failed");
+            }
+        });
+
+    solver->registerCallback(locations,
+        [&failed, &callsAfterFailure, &laterCallbackCalls](CallbackContext& context)
+        {
+            if(context.getLocation() == E_CallbackLocation::PrimalCandidateSearch)
+                laterCallbackCalls++;
+
+            if(failed)
+                callsAfterFailure++;
+        });
+
+    bool exceptionRethrown = false;
+
+    try
+    {
+        solver->solveProblem();
+    }
+    catch(const std::runtime_error& e)
+    {
+        exceptionRethrown = (std::string(e.what()) == "the callback failed");
+    }
+
+    if(!failed || !exceptionRethrown)
+    {
+        std::cout << "The exception of the callback was not rethrown by solveProblem()\n";
+        passed = false;
+    }
+
+    if(laterCallbackCalls != 0 || callsAfterFailure != 0)
+    {
+        std::cout << "Callbacks were called after the failure: " << laterCallbackCalls << " at the failing location, "
+                  << callsAfterFailure << " in total\n";
+        passed = false;
+    }
+
+    if(env->results->terminationReason != E_TerminationReason::Error)
+    {
+        std::cout << "The termination reason is not Error\n";
+        passed = false;
+    }
+
+    for(auto& S : env->results->primalSolutions)
+    {
+        if(S.sourceType == E_PrimalSolutionSource::ExternalPrimalSolution)
+        {
+            std::cout << "The solution queued by the failing callback was added\n";
+            passed = false;
+        }
+    }
+
+    return passed;
+}
+
+bool TestPrimalSolutionPool()
+{
+    bool passed = true;
+
+    // The solution pool keeps the best solutions, sorted with the incumbent first, and only a solution better than
+    // the incumbent changes the primal bound
+    auto [solver, env] = MakeEx1223bSolver();
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+    solver->updateSetting("Output.SaveNumberOfSolutions", 3);
+
+    auto makeSolution = [](double objectiveValue, double firstValue)
+    {
+        PrimalSolution solution;
+        solution.point = VectorDouble(7, 0.0);
+        solution.point[0] = firstValue;
+        solution.objValue = objectiveValue;
+        solution.sourceType = E_PrimalSolutionSource::ExternalPrimalSolution;
+        return (solution);
+    };
+
+    auto check = [&passed, &env](const std::string& step, std::vector<double> expectedObjectives,
+                     double expectedIncumbentFirstValue)
+    {
+        auto& pool = env->results->primalSolutions;
+
+        std::vector<double> objectives;
+        for(auto& S : pool)
+            objectives.push_back(S.objValue);
+
+        if(objectives != expectedObjectives)
+        {
+            std::cout << step << ": the objective values in the solution pool are not the expected ones\n";
+            passed = false;
+            return;
+        }
+
+        if(env->results->getPrimalBound() != expectedObjectives.front()
+            || env->results->primalSolution.at(0) != expectedIncumbentFirstValue
+            || pool.front().point.at(0) != expectedIncumbentFirstValue)
+        {
+            std::cout << step << ": the incumbent or the primal bound is not the expected one\n";
+            passed = false;
+        }
+    };
+
+    env->results->addPrimalSolution(makeSolution(10.0, 1.0));
+    check("First solution", { 10.0 }, 1.0);
+
+    env->results->addPrimalSolution(makeSolution(12.0, 2.0));
+    check("Worse solution", { 10.0, 12.0 }, 1.0);
+
+    // Better than the worst solution but worse than the incumbent: added to the pool, but not the incumbent
+    env->solutionStatistics.hasReductionCutBeenAddedSincePrimalImprovement = true;
+    env->results->addPrimalSolution(makeSolution(11.0, 3.0));
+    check("Solution between the best and the worst", { 10.0, 11.0, 12.0 }, 1.0);
+
+    if(!env->solutionStatistics.hasReductionCutBeenAddedSincePrimalImprovement)
+    {
+        std::cout << "A solution that is not an improvement was counted as one\n";
+        passed = false;
+    }
+
+    // The pool is full and the solution is worse than all in it
+    env->results->addPrimalSolution(makeSolution(13.0, 4.0));
+    check("Worse solution with a full pool", { 10.0, 11.0, 12.0 }, 1.0);
+
+    // A new incumbent replaces the worst solution
+    env->results->addPrimalSolution(makeSolution(9.0, 5.0));
+    check("Better solution with a full pool", { 9.0, 10.0, 11.0 }, 5.0);
+
+    if(env->solutionStatistics.hasReductionCutBeenAddedSincePrimalImprovement)
+    {
+        std::cout << "An improvement of the primal bound was not counted as one\n";
+        passed = false;
+    }
+
+    // A solution with the same objective value as the incumbent but a smaller constraint error replaces it
+    auto moreAccurate = makeSolution(9.0, 6.0);
+    moreAccurate.maxDevatingConstraintLinear = PairIndexValue(-1, 0.0);
+    moreAccurate.maxDevatingConstraintQuadratic = PairIndexValue(-1, 0.0);
+    moreAccurate.maxDevatingConstraintNonlinear = PairIndexValue(-1, 0.0);
+    env->results->addPrimalSolution(moreAccurate);
+    check("More accurate solution", { 9.0, 9.0, 10.0 }, 6.0);
+
+    // The objective values are only compared up to a relative tolerance of 1e-10. In a full pool of two, the incumbent
+    // has the objective value 9 and the error 5, and the other solution an almost equal objective value and the
+    // error 1. A solution with the same objective value as the other one and the error 3 replaces the incumbent,
+    // although it is neither better nor more accurate than the worst solution in the pool
+    auto [solver2, env2] = MakeEx1223bSolver();
+    solver2->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+    solver2->updateSetting("Output.SaveNumberOfSolutions", 2);
+
+    auto withError = [&makeSolution](double objectiveValue, double firstValue, double error)
+    {
+        auto solution = makeSolution(objectiveValue, firstValue);
+        solution.maxDevatingConstraintLinear = PairIndexValue(-1, error);
+        solution.maxDevatingConstraintQuadratic = PairIndexValue(-1, error);
+        solution.maxDevatingConstraintNonlinear = PairIndexValue(-1, error);
+        return (solution);
+    };
+
+    double almostNine = 9.0 + 1e-10;
+
+    env2->results->addPrimalSolution(withError(almostNine, 1.0, 1.0));
+    env2->results->addPrimalSolution(withError(9.0, 2.0, 5.0));
+    env2->results->addPrimalSolution(withError(almostNine, 3.0, 3.0));
+
+    auto& pool = env2->results->primalSolutions;
+
+    if(pool.size() != 2 || pool.front().point.at(0) != 3.0 || env2->results->primalSolution.at(0) != 3.0
+        || pool.back().point.at(0) != 2.0)
+    {
+        std::cout << "A more accurate solution with an almost equal objective value did not replace the incumbent in "
+                     "a full pool\n";
+        passed = false;
+    }
+
+    return passed;
+}
+
 int SolverTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -1585,6 +1810,21 @@ int SolverTest(int argc, char* argv[])
         passed = TestDualBoundOfPerspectiveConstraint();
         std::cout << "Finished test for the dual bound of a constraint that is infinite outside its domain."
                   << std::endl;
+        break;
+    case 18:
+        std::cout << "Starting test for callback system - generic callback context" << std::endl;
+        passed = TestCallbackGenericContext();
+        std::cout << "Finished test for callback system - generic callback context." << std::endl;
+        break;
+    case 19:
+        std::cout << "Starting test for callback system - failing callback" << std::endl;
+        passed = TestCallbackFailure();
+        std::cout << "Finished test for callback system - failing callback." << std::endl;
+        break;
+    case 20:
+        std::cout << "Starting test for the primal solution pool" << std::endl;
+        passed = TestPrimalSolutionPool();
+        std::cout << "Finished test for the primal solution pool." << std::endl;
         break;
     default:
         passed = false;

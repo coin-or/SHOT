@@ -49,6 +49,19 @@ namespace fs = std::experimental;
 
 using namespace SHOT;
 
+// finalize() can replace a constraint with one of another type, or rewrite it, so a constraint is read back from the
+// problem afterwards instead of using the object it was created as
+static NumericConstraintPtr getConstraintAfterFinalize(ProblemPtr problem, const std::string& name)
+{
+    for(auto& C : problem->numericConstraints)
+    {
+        if(C->name == name)
+            return (C);
+    }
+
+    throw std::runtime_error("The problem has no constraint " + name);
+}
+
 bool ModelTestVariables();
 bool ModelTestTerms();
 bool ModelTestNonlinearExpressions();
@@ -898,7 +911,7 @@ bool ModelTestCreateProblem()
     std::cout << "y = " << Y << '\n';
     std::cout << "z = " << Z << '\n';
 
-    auto linearIntervalValue = linearConstraint->calculateFunctionValue(vector);
+    auto linearIntervalValue = finalLinearConstraint->calculateFunctionValue(vector);
     std::cout << "\nValue for linear constraint is: ";
     std::cout << linearIntervalValue << '\n';
 
@@ -908,7 +921,7 @@ bool ModelTestCreateProblem()
         passed = false;
     }
 
-    auto quadraticIntervalValue = quadraticConstraint->calculateFunctionValue(vector);
+    auto quadraticIntervalValue = finalQuadraticConstraint->calculateFunctionValue(vector);
     std::cout << "\nValue for quadratic constraint is: ";
     std::cout << quadraticIntervalValue << '\n';
 
@@ -918,7 +931,7 @@ bool ModelTestCreateProblem()
         passed = false;
     }
 
-    auto nonlinearIntervalValue = nonlinearConstraint->calculateFunctionValue(vector);
+    auto nonlinearIntervalValue = finalNonlinearConstraint->calculateFunctionValue(vector);
     std::cout << "\nValue for nonlinear constraint is: ";
     std::cout << nonlinearIntervalValue << '\n';
 
@@ -1077,8 +1090,10 @@ bool ModelTestCreateProblem2()
         passed = false;
     }
 
+    auto finalNonlinearConstraint = getConstraintAfterFinalize(problem, "nlconstr");
+
     std::cout << "\nCalculating gradient for function in first nonlinear constraint:\n";
-    auto gradientNonlinear = nonlinearConstraint->calculateGradient(point, true);
+    auto gradientNonlinear = finalNonlinearConstraint->calculateGradient(point, true);
 
     for(auto const& G : gradientNonlinear)
     {
@@ -1086,7 +1101,7 @@ bool ModelTestCreateProblem2()
     }
 
     std::cout << "\nCalculating Hessian for function in first nonlinear constraint:\n";
-    auto hessianNonlinear = nonlinearConstraint->calculateHessian(point, true);
+    auto hessianNonlinear = finalNonlinearConstraint->calculateHessian(point, true);
 
     for(auto const& H : hessianNonlinear)
     {
@@ -1221,8 +1236,10 @@ bool ModelTestCreateProblem3()
         passed = false;
     }
 
+    auto finalNonlinearConstraint = getConstraintAfterFinalize(problem, "nlconstr");
+
     std::cout << "\nCalculating gradient for function in first nonlinear constraint:\n";
-    auto gradientNonlinear = nonlinearConstraint->calculateGradient(point, true);
+    auto gradientNonlinear = finalNonlinearConstraint->calculateGradient(point, true);
 
     for(auto const& G : gradientNonlinear)
     {
@@ -1230,15 +1247,17 @@ bool ModelTestCreateProblem3()
     }
 
     std::cout << "\nCalculating Hessian for function in first nonlinear constraint:\n";
-    auto hessianNonlinear = nonlinearConstraint->calculateHessian(point, true);
+    auto hessianNonlinear = finalNonlinearConstraint->calculateHessian(point, true);
 
     for(auto const& H : hessianNonlinear)
     {
         std::cout << "(" + H.first.first->name << "," << H.first.second->name << "): " << H.second << '\n';
     }
 
+    auto finalNonlinearConstraint2 = getConstraintAfterFinalize(problem, "nlconstr2");
+
     std::cout << "\nCalculating gradient for function in second nonlinear constraint:\n";
-    gradientNonlinear = nonlinearConstraint2->calculateGradient(point, true);
+    gradientNonlinear = finalNonlinearConstraint2->calculateGradient(point, true);
 
     for(auto const& G : gradientNonlinear)
     {
@@ -1246,7 +1265,7 @@ bool ModelTestCreateProblem3()
     }
 
     std::cout << "\nCalculating hessian for function in second nonlinear constraint:\n";
-    hessianNonlinear = nonlinearConstraint2->calculateHessian(point, true);
+    hessianNonlinear = finalNonlinearConstraint2->calculateHessian(point, true);
 
     for(auto const& H : hessianNonlinear)
     {

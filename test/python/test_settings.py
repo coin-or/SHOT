@@ -190,7 +190,8 @@ class TestSettingsWithEnums:
         assert int(SHOTpy.PrimalNLPSolver.Ipopt) == 0
         assert int(SHOTpy.PrimalNLPSolver.GAMS) == 1
         assert int(SHOTpy.PrimalNLPSolver.SHOT) == 2
-        assert int(getattr(SHOTpy.PrimalNLPSolver, 'None')) == 3
+        assert int(SHOTpy.PrimalNLPSolver.Uno) == 3
+        assert int(getattr(SHOTpy.PrimalNLPSolver, 'None')) == 4
         
         # TreeStrategy values
         assert int(SHOTpy.TreeStrategy.MultiTree) == 0

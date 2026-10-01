@@ -219,12 +219,11 @@ extern "C"
             env->settings->updateSetting("Input.ModelingSystem", static_cast<int>(ES_ModelingSystem::GAMS));
             env->timing->stopTimer("ProblemInitialization");
 
-            solver.registerCallback(
-                E_EventType::UserTerminationCheck, [gev = (gevHandle_t)gmoEnvironment(gs->gmo)](std::any args) -> bool {
+            solver.registerCallback<TerminationCheckContext>(
+                [gev = (gevHandle_t)gmoEnvironment(gs->gmo)](TerminationCheckContext& context)
+                {
                     if(gevTerminateGet(gev))
-                        return (true);
-
-                    return (false);
+                        context.terminate();
                 });
 
             if(!solver.setProblem(problem, modelingSystem))

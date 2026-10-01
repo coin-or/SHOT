@@ -6,6 +6,7 @@ These tests verify that:
 2. Hessian sparsity patterns are correct for constraints and objectives
 3. Gradient values are computed correctly at given points
 4. Hessian values are computed correctly at given points
+5. Function values and constraint deviations are computed correctly at given points
 """
 
 import pytest
@@ -272,6 +273,10 @@ class TestGradientValues:
         problem.setObjective(obj)
         
         problem.finalize()
+
+        # finalize() can replace or rewrite the constraint, so it is read back from the problem
+        constraints = {c.name: c for c in problem.numericConstraints}
+        constr = constraints["lin_constr"]
         
         # Gradient is constant for linear function
         gradient = constr.calculateGradient([1.0, 2.0])
@@ -300,6 +305,10 @@ class TestGradientValues:
         problem.setObjective(obj)
         
         problem.finalize()
+
+        # finalize() can replace or rewrite the constraint, so it is read back from the problem
+        constraints = {c.name: c for c in problem.numericConstraints}
+        constr = constraints["quad_constr"]
         
         # At (2, 3): d/dx = 2*x + 2*y = 4 + 6 = 10, d/dy = 2*x = 4
         gradient = constr.calculateGradient([2.0, 3.0])
@@ -358,6 +367,10 @@ class TestHessianValues:
         problem.setObjective(obj)
         
         problem.finalize()
+
+        # finalize() can replace or rewrite the constraint, so it is read back from the problem
+        constraints = {c.name: c for c in problem.numericConstraints}
+        constr = constraints["lin_constr"]
         
         hessian = constr.calculateHessian([1.0, 2.0])
         assert len(hessian) == 0
@@ -384,6 +397,10 @@ class TestHessianValues:
         problem.setObjective(obj)
         
         problem.finalize()
+
+        # finalize() can replace or rewrite the constraint, so it is read back from the problem
+        constraints = {c.name: c for c in problem.numericConstraints}
+        constr = constraints["quad_constr"]
         
         hessian = constr.calculateHessian([1.0, 2.0])
         # d^2/dx^2 of x^2 = 2, d^2/dy^2 of y^2 = 2
@@ -411,6 +428,10 @@ class TestHessianValues:
         problem.setObjective(obj)
         
         problem.finalize()
+
+        # finalize() can replace or rewrite the constraint, so it is read back from the problem
+        constraints = {c.name: c for c in problem.numericConstraints}
+        constr = constraints["quad_constr"]
         
         hessian = constr.calculateHessian([1.0, 2.0])
         # d^2/dxdy of x*y = 1 (stored in upper triangle)
@@ -717,7 +738,9 @@ class TestMonomialTerms:
         problem.finalize()
         
         # Gradient at (2, 3): d/dx = 2*x*y = 12, d/dy = x^2 = 4
-        constr_ref = problem.getConstraint(0)
+        # finalize() can replace or rewrite the constraint, so it is read back from the problem
+        constraints = {c.name: c for c in problem.numericConstraints}
+        constr_ref = constraints["sig_constr"]
         gradient = constr_ref.calculateGradient([2.0, 3.0])
         assert abs(gradient[0] - 12.0) < 1e-10
         assert abs(gradient[1] - 4.0) < 1e-10
@@ -802,7 +825,9 @@ class TestSignomialTerms:
         problem.finalize()
         
         # Gradient of x^(-1) at x=2: -x^(-2) = -0.25
-        constr_ref = problem.getConstraint(0)
+        # finalize() can replace or rewrite the constraint, so it is read back from the problem
+        constraints = {c.name: c for c in problem.numericConstraints}
+        constr_ref = constraints["sig_constr"]
         gradient = constr_ref.calculateGradient([2.0])
         assert abs(gradient[0] - (-0.25)) < 1e-10
 
@@ -885,7 +910,9 @@ class TestNonlinearExpressions:
         problem.finalize()
         
         # Gradient of log(x) at x=2 is 1/x = 0.5
-        constr_ref = problem.getConstraint(0)
+        # finalize() can replace or rewrite the constraint, so it is read back from the problem
+        constraints = {c.name: c for c in problem.numericConstraints}
+        constr_ref = constraints["log_constr"]
         gradient = constr_ref.calculateGradient([2.0])
         assert abs(gradient[0] - 0.5) < 1e-10
         
@@ -1052,7 +1079,9 @@ class TestMixedTermTypes:
         # Gradient:
         # d/dx = 1 + 0.5*x^(-0.5) = 1 + 0.25 = 1.25
         # d/dy = 2*y = 4
-        constr_ref = problem.getConstraint(0)
+        # finalize() can replace or rewrite the constraint, so it is read back from the problem
+        constraints = {c.name: c for c in problem.numericConstraints}
+        constr_ref = constraints["mixed_constr"]
         gradient = constr_ref.calculateGradient([4.0, 2.0])
         assert abs(gradient[0] - 1.25) < 1e-10
         assert abs(gradient[1] - 4.0) < 1e-10
@@ -1148,3 +1177,166 @@ class TestMixedTermTypes:
         hessian = problem.objectiveFunction.calculateHessian([2.0, 0.0])
         assert abs(hessian[(0, 0)] - 2.0) < 1e-10
         assert abs(hessian[(1, 1)] - 1.0) < 1e-10
+
+
+def _build_problem_with_constraints(problem):
+    """Variables x, y in [0, 10] with the constraints
+        lin:  1 <= x + 2*y <= 8
+        quad: x^2 + 2*x*y <= 10
+        nl:   exp(x) + log(y) <= 5
+    and the objective 3*x - y + 4."""
+    import SHOTpy
+
+    x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+    y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.1, 10.0)
+    problem.addVariable(x)
+    problem.addVariable(y)
+
+    linear_terms = SHOTpy.LinearTerms()
+    linear_terms.add(SHOTpy.LinearTerm(1.0, x))
+    linear_terms.add(SHOTpy.LinearTerm(2.0, y))
+    problem.addConstraint(SHOTpy.LinearConstraint("lin", linear_terms, 1.0, 8.0))
+
+    quad_terms = SHOTpy.QuadraticTerms()
+    quad_terms.add(SHOTpy.QuadraticTerm(1.0, x, x))
+    quad_terms.add(SHOTpy.QuadraticTerm(2.0, x, y))
+    quad = SHOTpy.QuadraticConstraint("quad", -1e20, 10.0)
+    quad.add(quad_terms)
+    problem.addConstraint(quad)
+
+    problem.addConstraint(SHOTpy.NonlinearConstraint("nl", SHOTpy.exp(x) + SHOTpy.log(y), -1e20, 5.0))
+
+    objective = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
+    objective.add(SHOTpy.LinearTerm(3.0, x))
+    objective.add(SHOTpy.LinearTerm(-1.0, y))
+    objective.constant = 4.0
+    problem.setObjective(objective)
+
+    problem.finalize()
+    # finalize() can replace or rewrite the constraints, so they are read back from the problem
+    return {c.name: c for c in problem.numericConstraints}
+
+
+class TestFunctionValues:
+    """Tests for evaluating objective and constraint functions at given points."""
+
+    def test_linear_objective_value(self, problem):
+        """The value of 3*x - y + 4 at (2, 1) is 9, including the constant."""
+        _build_problem_with_constraints(problem)
+        assert abs(problem.objectiveFunction.calculateValue([2.0, 1.0]) - 9.0) < 1e-10
+
+    def test_quadratic_objective_value(self, problem):
+        """The value of x^2 + 3*y at (2, 1) is 7."""
+        import SHOTpy
+
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.0, 10.0)
+        problem.addVariable(x)
+        problem.addVariable(y)
+
+        objective = SHOTpy.QuadraticObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
+        quad_terms = SHOTpy.QuadraticTerms()
+        quad_terms.add(SHOTpy.QuadraticTerm(1.0, x, x))
+        objective.add(quad_terms)
+        linear_terms = SHOTpy.LinearTerms()
+        linear_terms.add(SHOTpy.LinearTerm(3.0, y))
+        objective.add(linear_terms)
+        problem.setObjective(objective)
+        problem.finalize()
+
+        assert abs(problem.objectiveFunction.calculateValue([2.0, 1.0]) - 7.0) < 1e-10
+
+    def test_nonlinear_objective_value(self, problem):
+        """The value of exp(x) + sin(y) at (1, 0.5) is e + sin(0.5)."""
+        import SHOTpy
+
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, -10.0, 10.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, -10.0, 10.0)
+        problem.addVariable(x)
+        problem.addVariable(y)
+
+        objective = SHOTpy.NonlinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
+        objective.add(SHOTpy.exp(x) + SHOTpy.sin(y))
+        problem.setObjective(objective)
+        problem.finalize()
+
+        expected = math.exp(1.0) + math.sin(0.5)
+        assert abs(problem.objectiveFunction.calculateValue([1.0, 0.5]) - expected) < 1e-10
+
+    def test_constraint_function_values(self, problem):
+        """f(x) of the linear, quadratic and nonlinear constraints at (2, 1)."""
+        constraints = _build_problem_with_constraints(problem)
+        point = [2.0, 1.0]
+
+        assert abs(constraints["lin"].calculateFunctionValue(point) - 4.0) < 1e-10
+        assert abs(constraints["quad"].calculateFunctionValue(point) - 8.0) < 1e-10
+        assert abs(constraints["nl"].calculateFunctionValue(point) - (math.exp(2.0) + math.log(1.0))) < 1e-10
+
+    def test_fulfilled_constraint(self, problem):
+        """At (2, 1), 1 <= x + 2*y = 4 <= 8 is fulfilled."""
+        constraints = _build_problem_with_constraints(problem)
+        value = constraints["lin"].calculateNumericValue([2.0, 1.0])
+
+        assert constraints["lin"].isFulfilled([2.0, 1.0])
+        assert value.constraint.name == "lin"
+        assert abs(value.functionValue - 4.0) < 1e-10
+        assert value.isFulfilled and value.isFulfilledLHS and value.isFulfilledRHS
+        assert abs(value.normalizedLHSValue - (1.0 - 4.0)) < 1e-10
+        assert abs(value.normalizedRHSValue - (4.0 - 8.0)) < 1e-10
+        assert value.error == 0.0
+        assert abs(value.normalizedValue - (-3.0)) < 1e-10
+
+    def test_violated_constraints(self, problem):
+        """At (5, 2), x + 2*y = 9 > 8 and x^2 + 2*x*y = 45 > 10; at (0, 0.2), x + 2*y = 0.4 < 1."""
+        constraints = _build_problem_with_constraints(problem)
+
+        assert not constraints["lin"].isFulfilled([5.0, 2.0])
+        upper = constraints["lin"].calculateNumericValue([5.0, 2.0])
+        assert upper.isFulfilledLHS and not upper.isFulfilledRHS and not upper.isFulfilled
+        assert abs(upper.error - 1.0) < 1e-10
+
+        lower = constraints["lin"].calculateNumericValue([0.0, 0.2])
+        assert not lower.isFulfilledLHS and lower.isFulfilledRHS
+        assert abs(lower.error - 0.6) < 1e-10
+
+        quad = constraints["quad"].calculateNumericValue([5.0, 2.0])
+        assert not quad.isFulfilled
+        assert abs(quad.error - 35.0) < 1e-10
+
+    def test_most_deviating_constraint(self, problem):
+        """At (5, 2) the nonlinear constraint deviates most: exp(5) + log(2) - 5, versus 1 and 35. At a point where all
+        constraints are fulfilled there is none."""
+        _build_problem_with_constraints(problem)
+
+        value = problem.getMostDeviatingNumericConstraint([5.0, 2.0])
+        assert value is not None
+        assert value.constraint.name == "nl"
+        assert abs(value.error - (math.exp(5.0) + math.log(2.0) - 5.0)) < 1e-8
+
+        assert problem.getMostDeviatingNumericConstraint([1.0, 1.0]) is None
+
+    def test_point_of_the_wrong_size_raises(self, problem):
+        """A point without a value for every variable raises ValueError instead of reading out of bounds."""
+        constraints = _build_problem_with_constraints(problem)
+        short = [1.0]
+
+        for evaluation in (
+            lambda: problem.objectiveFunction.calculateValue(short),
+            lambda: problem.objectiveFunction.calculateGradient(short),
+            lambda: problem.objectiveFunction.calculateHessian(short),
+            lambda: constraints["nl"].calculateFunctionValue(short),
+            lambda: constraints["nl"].calculateNumericValue(short),
+            lambda: constraints["nl"].isFulfilled(short),
+            lambda: constraints["nl"].calculateGradient(short),
+            lambda: constraints["nl"].calculateHessian([]),
+            lambda: problem.getMostDeviatingNumericConstraint(short),
+        ):
+            with pytest.raises(ValueError):
+                evaluation()
+
+    def test_longer_point_is_allowed(self, problem):
+        """A point with values for more variables, e.g., one of the reformulated problem, can be used."""
+        constraints = _build_problem_with_constraints(problem)
+
+        assert abs(constraints["lin"].calculateFunctionValue([2.0, 1.0, 7.0]) - 4.0) < 1e-10
+        assert abs(problem.objectiveFunction.calculateValue([2.0, 1.0, 7.0]) - 9.0) < 1e-10

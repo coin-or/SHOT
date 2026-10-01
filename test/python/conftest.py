@@ -9,35 +9,48 @@ import sys
 from pathlib import Path
 import pytest
 
+def _has_shotpy(directory):
+    """Whether the directory contains a built SHOTpy module."""
+    return directory.is_dir() and (any(directory.glob("SHOTpy*.so")) or any(directory.glob("SHOTpy*.pyd")))
+
+
+def _shotpy_modification_time(directory):
+    """The modification time of the newest SHOTpy module in the directory."""
+    modules = list(directory.glob("SHOTpy*.so")) + list(directory.glob("SHOTpy*.pyd"))
+    return max(module.stat().st_mtime for module in modules)
+
+
 # Add build directory to path so we can import SHOTpy
 def _setup_path():
-    """Find and add the SHOTpy module to sys.path."""
-    test_dir = Path(__file__).parent
-    repo_root = test_dir.parent.parent
-    
-    # Try different possible build locations
-    possible_builds = [
-        repo_root / "build" / "debug",
-        repo_root / "build" / "release", 
-        repo_root / "build",
-    ]
-    
-    for build_dir in possible_builds:
-        if build_dir.exists():
-            # Check if SHOTpy module exists
-            SHOTpy_files = list(build_dir.glob("SHOTpy*.so")) + list(build_dir.glob("SHOTpy*.pyd"))
-            if SHOTpy_files:
-                sys.path.insert(0, str(build_dir))
-                return str(build_dir)
-    
-    # If not found, try the current working directory
-    cwd = Path.cwd()
-    SHOTpy_files = list(cwd.glob("SHOTpy*.so")) + list(cwd.glob("SHOTpy*.pyd"))
-    if SHOTpy_files:
-        sys.path.insert(0, str(cwd))
-        return str(cwd)
-    
-    raise ImportError("Could not find SHOTpy module. Make sure SHOT is built.")
+    """Find and add the SHOTpy module to sys.path.
+
+    The module is taken from, in order:
+      1. the directory in the environment variable SHOTPY_BUILD_DIR,
+      2. the first directory in PYTHONPATH that contains it (ctest sets PYTHONPATH to the build directory),
+      3. the current working directory,
+      4. the build directories of the repository; if several contain it, the most recently built one, so that an
+         old build directory does not hide the current one.
+    """
+    explicit = os.environ.get("SHOTPY_BUILD_DIR")
+    if explicit:
+        if not _has_shotpy(Path(explicit)):
+            raise ImportError(f"SHOTPY_BUILD_DIR={explicit} does not contain a SHOTpy module.")
+        candidates = [Path(explicit)]
+    else:
+        python_path = [Path(p) for p in os.environ.get("PYTHONPATH", "").split(os.pathsep) if p]
+        candidates = [d for d in python_path + [Path.cwd()] if _has_shotpy(d)][:1]
+
+    if not candidates:
+        repo_root = Path(__file__).parent.parent.parent
+        builds = [repo_root / "build" / "debug", repo_root / "build" / "release", repo_root / "build"]
+        candidates = sorted((d for d in builds if _has_shotpy(d)), key=_shotpy_modification_time, reverse=True)
+
+    if not candidates:
+        raise ImportError("Could not find SHOTpy module. Make sure SHOT is built.")
+
+    build_dir = str(candidates[0].resolve())
+    sys.path.insert(0, build_dir)
+    return build_dir
 
 BUILD_DIR = _setup_path()
 

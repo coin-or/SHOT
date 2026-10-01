@@ -16,7 +16,9 @@ namespace SHOT
 class TaskCheckUserTermination : public TaskBase
 {
 public:
-    TaskCheckUserTermination(EnvironmentPtr envPtr, std::string taskIDTrue);
+    /// With invokeCallbacks false, the task only checks whether termination has been requested earlier, e.g., by a
+    /// callback at another location, and does not check whether the dual solver was interrupted
+    TaskCheckUserTermination(EnvironmentPtr envPtr, std::string taskIDTrue, bool invokeCallbacks = true);
     ~TaskCheckUserTermination() override;
 
     void run() override;
@@ -24,5 +26,6 @@ public:
 
 private:
     std::string taskIDIfTrue;
+    bool invokeCallbacks;
 };
 } // namespace SHOT

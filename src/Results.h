@@ -53,7 +53,7 @@ public:
     double currentDualBound = NAN;
     double currentPrimalBound = NAN;
 
-    double globalDualBound;
+    double globalDualBound = NAN;
 
     // Whether the best primal solution has a variable at a bound that has replaced a missing bound when the problem was
     // read, in which case the gap is not considered closed

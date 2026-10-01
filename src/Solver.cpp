@@ -78,7 +78,7 @@ Solver::Solver()
 
     env->settings = std::make_shared<Settings>(env->output);
     env->tasks = std::make_shared<TaskHandler>(env);
-    env->events = std::make_shared<EventHandler>(env);
+    env->callbacks = std::make_shared<CallbackHandler>(env);
     env->report = std::make_shared<Report>(env);
 
     env->dualSolver = std::make_shared<DualSolver>(env);
@@ -110,7 +110,7 @@ Solver::Solver(std::shared_ptr<spdlog::sinks::sink> consoleSink)
 
     env->settings = std::make_shared<Settings>(env->output);
     env->tasks = std::make_shared<TaskHandler>(env);
-    env->events = std::make_shared<EventHandler>(env);
+    env->callbacks = std::make_shared<CallbackHandler>(env);
     env->report = std::make_shared<Report>(env);
 
     env->dualSolver = std::make_shared<DualSolver>(env);
@@ -118,7 +118,14 @@ Solver::Solver(std::shared_ptr<spdlog::sinks::sink> consoleSink)
     initializeSettings();
 }
 
-Solver::Solver(EnvironmentPtr envPtr) : env(envPtr) { initializeSettings(); }
+Solver::Solver(EnvironmentPtr envPtr) : env(envPtr)
+{
+    // The environment may come from somewhere that does not register callbacks
+    if(!env->callbacks)
+        env->callbacks = std::make_shared<CallbackHandler>(env);
+
+    initializeSettings();
+}
 
 Solver::~Solver() = default;
 
@@ -730,11 +737,46 @@ bool Solver::solveProblem()
         Utilities::writeStringToFile(filename.string(), usedSettings);
     }
 
+    // Callbacks cannot be registered or removed while the problem is solved
+    struct SolvingGuard
+    {
+        bool& isSolving;
+        SolvingGuard(bool& flag) : isSolving(flag) { isSolving = true; }
+        ~SolvingGuard() { isSolving = false; }
+    } solvingGuard(isSolving);
+
     isProblemSolved = solutionStrategy->solveProblem();
+
+    // A failed callback overrides the reason SHOT terminated for, and its exception is passed on to the caller
+    if(env->callbacks->hasFailed())
+    {
+        isProblemSolved = false;
+        env->results->terminationReason = E_TerminationReason::Error;
+        env->results->terminationReasonDescription
+            = "Terminated since a callback failed: " + env->callbacks->getFailureMessage();
+    }
 
     this->finalizeSolution();
 
+    env->callbacks->rethrowFailure();
+
     return (isProblemSolved);
+}
+
+int Solver::registerCallback(E_CallbackLocation locations, CallbackFunction callback)
+{
+    if(isSolving)
+        throw std::logic_error("Callbacks cannot be registered while the problem is solved.");
+
+    return (env->callbacks->add(locations, std::move(callback)));
+}
+
+bool Solver::removeCallback(int handle)
+{
+    if(isSolving)
+        throw std::logic_error("Callbacks cannot be removed while the problem is solved.");
+
+    return (env->callbacks->remove(handle));
 }
 
 void Solver::finalizeSolution()

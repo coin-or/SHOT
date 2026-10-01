@@ -827,7 +827,7 @@ int main(int argc, char* argv[])
     env->report = NULL;
     env->tasks = NULL;
     env->timing = NULL;
-    env->events = NULL;
+    env->callbacks = NULL;
     env->rootsearchMethod = NULL;
 
     return (0);
