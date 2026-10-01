@@ -395,6 +395,7 @@ if(TARGET SHOTpy)
         test_gradients_hessians
         test_callbacks
         test_constraint_expressions
+        test_api_safety
       )
       
       foreach(pytest_file ${PYTHON_TEST_FILES})

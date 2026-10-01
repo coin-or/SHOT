@@ -348,12 +348,13 @@ class TestSetObjective:
         import SHOTpy
 
         _, problem, x, y = make_problem()
+        with pytest.raises(ValueError):
+            problem.setObjective(math.nan)
+
         problem.setObjective(3.0)
         problem.finalize()
 
         assert abs(problem.objectiveFunction.calculateValue([1.0, 2.0]) - 3.0) < 1e-10
-        with pytest.raises(ValueError):
-            problem.setObjective(math.nan)
 
 
 class TestSharedExpressions:

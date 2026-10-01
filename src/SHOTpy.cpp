@@ -90,6 +90,7 @@ static CppADErrorHandlerRegistrar cppad_error_handler_registrar;
 #include "../Tasks/TaskReformulateProblem.h"
 
 #include <map>
+#include <unordered_set>
 
 #ifdef HAS_STD_FILESYSTEM
 #include <filesystem>
@@ -104,6 +105,46 @@ namespace fs = std::experimental;
 #ifdef HAS_GUROBI
 #include "gurobi_c++.h"
 #endif
+
+// pybind11 converts None to an empty pointer, which SHOT dereferences without checking, e.g., when a variable or a
+// constraint of None is added to a problem or printed. For the classes of the model, None therefore does not match an
+// argument, so that a function given it, or a list containing it, raises TypeError
+#define SHOTPY_REJECT_NONE(Type)                                                                                       \
+    template <> class type_caster<std::shared_ptr<Type>> : public copyable_holder_caster<Type, std::shared_ptr<Type>>  \
+    {                                                                                                                  \
+    public:                                                                                                            \
+        bool load(handle source, bool convert)                                                                         \
+        {                                                                                                              \
+            if(source.is_none())                                                                                       \
+                return false;                                                                                          \
+                                                                                                                       \
+            return copyable_holder_caster<Type, std::shared_ptr<Type>>::load(source, convert);                         \
+        }                                                                                                              \
+    };
+
+namespace pybind11::detail
+{
+SHOTPY_REJECT_NONE(SHOT::Variable)
+SHOTPY_REJECT_NONE(SHOT::NonlinearExpression)
+SHOTPY_REJECT_NONE(SHOT::LinearTerm)
+SHOTPY_REJECT_NONE(SHOT::QuadraticTerm)
+SHOTPY_REJECT_NONE(SHOT::MonomialTerm)
+SHOTPY_REJECT_NONE(SHOT::SignomialTerm)
+SHOTPY_REJECT_NONE(SHOT::SignomialElement)
+SHOTPY_REJECT_NONE(SHOT::NumericConstraint)
+SHOTPY_REJECT_NONE(SHOT::LinearConstraint)
+SHOTPY_REJECT_NONE(SHOT::QuadraticConstraint)
+SHOTPY_REJECT_NONE(SHOT::NonlinearConstraint)
+SHOTPY_REJECT_NONE(SHOT::ObjectiveFunction)
+SHOTPY_REJECT_NONE(SHOT::LinearObjectiveFunction)
+SHOTPY_REJECT_NONE(SHOT::QuadraticObjectiveFunction)
+SHOTPY_REJECT_NONE(SHOT::NonlinearObjectiveFunction)
+SHOTPY_REJECT_NONE(SHOT::SpecialOrderedSet)
+SHOTPY_REJECT_NONE(SHOT::Problem)
+SHOTPY_REJECT_NONE(SHOT::Environment)
+} // namespace pybind11::detail
+
+#undef SHOTPY_REJECT_NONE
 
 namespace SHOT
 {
@@ -419,10 +460,110 @@ void checkPointSize(const Problem& problem, const VectorDouble& point)
     }
 }
 
+// The variables of a constraint or objective function that has not been added to a problem have no indexes in the point
 void checkPointSize(const std::weak_ptr<Problem>& ownerProblem, const VectorDouble& point)
 {
-    if(auto problem = ownerProblem.lock())
-        checkPointSize(*problem, point);
+    auto problem = ownerProblem.lock();
+
+    if(!problem)
+        throw py::value_error("The function cannot be evaluated before it has been added to a problem.");
+
+    checkPointSize(*problem, point);
+}
+
+// finalize() decides the classes of the constraints and the objective function and rewrites the model, and it is not
+// run again, so what is added after it would not be part of the model that is solved
+void checkCanAdd(const Problem& problem)
+{
+    if(problem.hasBeenFinalized())
+        throw std::runtime_error("The problem has been finalized, so nothing can be added to it.");
+}
+
+// A variable, constraint or objective function belongs to the problem it is added to, which gives it its index, so it
+// cannot be added twice or to another problem
+template <typename T> void checkNotAdded(const T& element, const std::string& description)
+{
+    if(!element.ownerProblem.expired())
+        throw py::value_error("The " + description + " has already been added to a problem.");
+}
+
+// Checks all the elements before any of them is added, so that a list that cannot be added leaves the problem unchanged
+template <typename Container, typename Describe>
+void checkNotAddedOrRepeated(const Container& elements, Describe describe)
+{
+    std::unordered_set<const void*> seen;
+
+    for(auto& E : elements)
+    {
+        checkNotAdded(*E, describe(E));
+
+        if(!seen.insert(E.get()).second)
+            throw py::value_error("The " + describe(E) + " is in the list more than once.");
+    }
+}
+
+// Adds a constraint given by a comparison. Without a name, it is named constraint_<index>
+void addConstraintExpression(Problem& problem, const ConstraintExpression& constraint, std::string name)
+{
+    // A prefix that is unlikely to be used in a name the user gives, since checking the names of all the
+    // constraints would make adding constraints quadratic in their number
+    if(name.empty())
+        name = "constraint_" + std::to_string(problem.numericConstraints.size());
+
+    // A linear constraint is created as such, as it would be from its class. finalize() splits a nonlinear
+    // constraint with two bounds before it extracts its terms, so a linear range given as a nonlinear
+    // constraint would become two constraints
+    if(LinearParts parts; collectLinearParts(constraint.expression, 1.0, parts))
+    {
+        std::vector<LinearTermPtr> terms;
+
+        for(auto& [variable, coefficient] : parts.terms)
+        {
+            if(coefficient != 0.0)
+                terms.push_back(std::make_shared<LinearTerm>(coefficient, variable));
+        }
+
+        auto linearConstraint = std::make_shared<LinearConstraint>(
+            name, LinearTerms(terms), constraint.lowerBound, constraint.upperBound);
+        linearConstraint->constant = parts.constant;
+        problem.add(linearConstraint);
+        return;
+    }
+
+    // finalize() extracts the terms of the expression and changes the class of the constraint if nothing
+    // nonlinear is left
+    problem.add(std::make_shared<NonlinearConstraint>(
+        name, constraint.expression, constraint.lowerBound, constraint.upperBound));
+}
+
+// The sequence protocol of a container of the model: len(), indexing, where a negative index counts from the end and an
+// index outside the container raises IndexError, and iteration. Without __iter__, Python iterates by indexing until
+// IndexError, so an unchecked index read past the end
+template <typename Class> Class addSequenceProtocol(Class pythonClass)
+{
+    using Container = typename Class::type;
+
+    pythonClass.def("__len__", [](const Container& self) { return self.size(); })
+        .def(
+            "__getitem__",
+            [](const Container& self, py::ssize_t index)
+            {
+                auto size = static_cast<py::ssize_t>(self.size());
+
+                if(index < 0)
+                    index += size;
+
+                if(index < 0 || index >= size)
+                    throw py::index_error("Index out of range");
+
+                return self[index];
+            },
+            py::arg("index"))
+        .def(
+            "__iter__", [](const Container& self) { return py::make_iterator(self.begin(), self.end()); },
+            py::keep_alive<0, 1>());
+
+    return pythonClass;
 }
 
 // The locations of a callback, given as a CallbackLocation, an integer mask (e.g., from combining them with |), or an
@@ -657,23 +798,37 @@ PYBIND11_MODULE(SHOTpy, m)
                      return std::make_shared<Variable>(
                          name, type, toVariableBound(lowerBound), toVariableBound(upperBound));
                  }),
-            py::arg("name"), py::arg("type"), py::arg("lower_bound"), py::arg("upper_bound"))
+            py::arg("name"), py::arg("type"), py::arg("lowerBound"), py::arg("upperBound"))
         .def(py::init(
                  [](std::string name, E_VariableType type, double lowerBound, double upperBound, double semiBound)
                  {
                      return std::make_shared<Variable>(
                          name, type, toVariableBound(lowerBound), toVariableBound(upperBound), semiBound);
                  }),
-            py::arg("name"), py::arg("type"), py::arg("lower_bound"), py::arg("upper_bound"), py::arg("semi_bound"))
+            py::arg("name"), py::arg("type"), py::arg("lowerBound"), py::arg("upperBound"), py::arg("semiBound"))
         .def_readwrite("name", &Variable::name)
         // Assigned by the problem the variable is added to, so read only
         .def_property_readonly("index", &Variable::getIndex)
+        // The bound vectors of the problem are updated as well, since they are otherwise only recalculated when
+        // variables are added
         .def_property(
             "lowerBound", [](const Variable& self) { return (self.lowerBound); },
-            [](Variable& self, double value) { self.lowerBound = toVariableBound(value); })
+            [](Variable& self, double value)
+            {
+                self.lowerBound = toVariableBound(value);
+
+                if(auto problem = self.ownerProblem.lock())
+                    problem->updateVariableBoundVectors(self);
+            })
         .def_property(
             "upperBound", [](const Variable& self) { return (self.upperBound); },
-            [](Variable& self, double value) { self.upperBound = toVariableBound(value); })
+            [](Variable& self, double value)
+            {
+                self.upperBound = toVariableBound(value);
+
+                if(auto problem = self.ownerProblem.lock())
+                    problem->updateVariableBoundVectors(self);
+            })
         .def_readwrite("semiBound", &Variable::semiBound)
         .def_readonly("properties", &Variable::properties)
         .def("__repr__",
@@ -1044,10 +1199,13 @@ PYBIND11_MODULE(SHOTpy, m)
         { return std::make_shared<ExpressionSquare>(expr); }, "Square function", py::arg("x"));
 
     // ===== LinearTerm Class =====
+    // The fields of the terms are read only, since a container caches what is calculated from them, e.g., the Hessian
+    // and the convexity of QuadraticTerms, and a term does not know the containers it is in. A term is changed by
+    // creating a new one
     py::class_<LinearTerm, std::shared_ptr<LinearTerm>>(m, "LinearTerm")
         .def(py::init<double, VariablePtr>(), py::arg("coefficient"), py::arg("variable"))
-        .def_readwrite("coefficient", &LinearTerm::coefficient)
-        .def_readwrite("variable", &LinearTerm::variable)
+        .def_readonly("coefficient", &LinearTerm::coefficient)
+        .def_readonly("variable", &LinearTerm::variable)
         .def("__repr__", [](const LinearTerm& t)
             { return "<LinearTerm: " + std::to_string(t.coefficient) + "*" + t.variable->name + ">"; });
 
@@ -1055,9 +1213,9 @@ PYBIND11_MODULE(SHOTpy, m)
     py::class_<QuadraticTerm, std::shared_ptr<QuadraticTerm>>(m, "QuadraticTerm")
         .def(py::init<double, VariablePtr, VariablePtr>(), py::arg("coefficient"), py::arg("firstVariable"),
             py::arg("secondVariable"))
-        .def_readwrite("coefficient", &QuadraticTerm::coefficient)
-        .def_readwrite("firstVariable", &QuadraticTerm::firstVariable)
-        .def_readwrite("secondVariable", &QuadraticTerm::secondVariable)
+        .def_readonly("coefficient", &QuadraticTerm::coefficient)
+        .def_readonly("firstVariable", &QuadraticTerm::firstVariable)
+        .def_readonly("secondVariable", &QuadraticTerm::secondVariable)
         .def_readonly("isBilinear", &QuadraticTerm::isBilinear)
         .def_readonly("isSquare", &QuadraticTerm::isSquare)
         .def("__repr__",
@@ -1068,7 +1226,7 @@ PYBIND11_MODULE(SHOTpy, m)
             });
 
     // ===== LinearTerms Collection =====
-    py::class_<LinearTerms>(m, "LinearTerms")
+    addSequenceProtocol(py::class_<LinearTerms>(m, "LinearTerms"))
         .def(py::init<>())
         // Creating the whole container at once is what a problem of any size should use. The terms are taken as they
         // are here, and merged in one pass when the container is given to a constraint or an objective function
@@ -1109,14 +1267,12 @@ PYBIND11_MODULE(SHOTpy, m)
         .def(
             "reserve", [](LinearTerms& self, size_t size) { self.reserve(size); }, py::arg("size"),
             "Reserve room for the given total number of terms")
-        .def("size", [](LinearTerms& self) { return self.size(); })
-        .def("__len__", [](LinearTerms& self) { return self.size(); })
-        .def("__getitem__", [](LinearTerms& self, size_t i) { return self[i]; });
+        .def("size", [](LinearTerms& self) { return self.size(); });
 
     py::implicitly_convertible<py::list, LinearTerms>();
 
     // ===== QuadraticTerms Collection =====
-    py::class_<QuadraticTerms>(m, "QuadraticTerms")
+    addSequenceProtocol(py::class_<QuadraticTerms>(m, "QuadraticTerms"))
         .def(py::init<>())
         // Creating the whole container at once is what a problem of any size should use. The terms are taken as they
         // are here, and merged in one pass when the container is given to a constraint or an objective function
@@ -1160,17 +1316,15 @@ PYBIND11_MODULE(SHOTpy, m)
         .def(
             "reserve", [](QuadraticTerms& self, size_t size) { self.reserve(size); }, py::arg("size"),
             "Reserve room for the given total number of terms")
-        .def("size", [](QuadraticTerms& self) { return self.size(); })
-        .def("__len__", [](QuadraticTerms& self) { return self.size(); })
-        .def("__getitem__", [](QuadraticTerms& self, size_t i) { return self[i]; });
+        .def("size", [](QuadraticTerms& self) { return self.size(); });
 
     py::implicitly_convertible<py::list, QuadraticTerms>();
 
     // ===== SignomialElement Class =====
     py::class_<SignomialElement, std::shared_ptr<SignomialElement>>(m, "SignomialElement")
         .def(py::init<VariablePtr, double>(), py::arg("variable"), py::arg("power"))
-        .def_readwrite("variable", &SignomialElement::variable)
-        .def_readwrite("power", &SignomialElement::power)
+        .def_readonly("variable", &SignomialElement::variable)
+        .def_readonly("power", &SignomialElement::power)
         .def("__repr__",
             [](const SignomialElement& e)
             {
@@ -1180,20 +1334,10 @@ PYBIND11_MODULE(SHOTpy, m)
                     return "<SignomialElement: " + e.variable->name + "^" + std::to_string(e.power) + ">";
             });
 
-    // ===== SignomialElements Collection =====
-    // Note: SignomialElements is a typedef for std::vector<SignomialElementPtr>
-    // We expose it as a simple value-type container
-    py::class_<SignomialElements>(m, "SignomialElements")
-        .def(py::init<>())
-        .def("append", [](SignomialElements& self, SignomialElementPtr elem) { self.push_back(elem); })
-        .def("__len__", [](const SignomialElements& self) { return self.size(); })
-        .def("__getitem__",
-            [](const SignomialElements& self, size_t i)
-            {
-                if(i >= self.size())
-                    throw py::index_error();
-                return self[i];
-            });
+    // ===== SignomialElements =====
+    // SignomialElements is a std::vector, which pybind11/stl.h converts to and from a Python list, e.g., in
+    // SignomialTerm(coefficient, [SignomialElement(x, 2.0)]) and SignomialTerm.elements. It is therefore not bound as a
+    // class: the methods of such a class would convert the object itself to a list, which calls them again
 
     // ===== SignomialTerm Class =====
     py::class_<SignomialTerm, std::shared_ptr<SignomialTerm>>(m, "SignomialTerm")
@@ -1208,10 +1352,10 @@ PYBIND11_MODULE(SHOTpy, m)
                      }
                      return std::make_shared<SignomialTerm>(coeff, elements);
                  }),
-            py::arg("coefficient"), py::arg("variable_power_pairs"),
+            py::arg("coefficient"), py::arg("variablePowerPairs"),
             "Create a signomial term from coefficient and list of (variable, power) tuples")
-        .def_readwrite("coefficient", &SignomialTerm::coefficient)
-        .def_readwrite("elements", &SignomialTerm::elements)
+        .def_readonly("coefficient", &SignomialTerm::coefficient)
+        .def_readonly("elements", &SignomialTerm::elements)
         .def("__repr__",
             [](const SignomialTerm& t)
             {
@@ -1228,7 +1372,7 @@ PYBIND11_MODULE(SHOTpy, m)
             });
 
     // ===== SignomialTerms Collection =====
-    py::class_<SignomialTerms>(m, "SignomialTerms")
+    addSequenceProtocol(py::class_<SignomialTerms>(m, "SignomialTerms"))
         .def(py::init<>())
         // Creating the whole container at once is what a problem of any size should use
         .def(py::init<std::vector<SignomialTermPtr>>(), py::arg("terms"))
@@ -1250,9 +1394,7 @@ PYBIND11_MODULE(SHOTpy, m)
         .def(
             "reserve", [](SignomialTerms& self, size_t size) { self.reserve(size); }, py::arg("size"),
             "Reserve room for the given total number of terms")
-        .def("size", [](SignomialTerms& self) { return self.size(); })
-        .def("__len__", [](SignomialTerms& self) { return self.size(); })
-        .def("__getitem__", [](SignomialTerms& self, size_t i) { return self[i]; });
+        .def("size", [](SignomialTerms& self) { return self.size(); });
 
     py::implicitly_convertible<py::list, SignomialTerms>();
 
@@ -1271,7 +1413,7 @@ PYBIND11_MODULE(SHOTpy, m)
                  }),
             py::arg("coefficient"), py::arg("variables"),
             "Create a monomial term from coefficient and list of variables")
-        .def_readwrite("coefficient", &MonomialTerm::coefficient)
+        .def_readonly("coefficient", &MonomialTerm::coefficient)
         .def_property_readonly("variables",
             [](const MonomialTerm& t)
             {
@@ -1297,7 +1439,7 @@ PYBIND11_MODULE(SHOTpy, m)
             });
 
     // ===== MonomialTerms Collection =====
-    py::class_<MonomialTerms>(m, "MonomialTerms")
+    addSequenceProtocol(py::class_<MonomialTerms>(m, "MonomialTerms"))
         .def(py::init<>())
         // Creating the whole container at once is what a problem of any size should use
         .def(py::init<std::vector<MonomialTermPtr>>(), py::arg("terms"))
@@ -1319,9 +1461,7 @@ PYBIND11_MODULE(SHOTpy, m)
         .def(
             "reserve", [](MonomialTerms& self, size_t size) { self.reserve(size); }, py::arg("size"),
             "Reserve room for the given total number of terms")
-        .def("size", [](MonomialTerms& self) { return self.size(); })
-        .def("__len__", [](MonomialTerms& self) { return self.size(); })
-        .def("__getitem__", [](MonomialTerms& self, size_t i) { return self[i]; });
+        .def("size", [](MonomialTerms& self) { return self.size(); });
 
     py::implicitly_convertible<py::list, MonomialTerms>();
 
@@ -1694,6 +1834,8 @@ PYBIND11_MODULE(SHOTpy, m)
         .def(py::init([](Solver& solver) { return std::make_shared<Problem>(solver.getEnvironment()); }),
             py::arg("solver"), "Create a problem in the environment of the solver")
         .def_readwrite("name", &Problem::name)
+        .def_property_readonly("isFinalized", &Problem::hasBeenFinalized,
+            "Whether finalize() has been called, after which nothing can be added to the problem")
         .def_readonly("properties", &Problem::properties)
         .def_readonly("allVariables", &Problem::allVariables)
         .def_readonly("realVariables", &Problem::realVariables)
@@ -1707,12 +1849,21 @@ PYBIND11_MODULE(SHOTpy, m)
         .def_readonly("numericConstraints", &Problem::numericConstraints)
         // Add methods - using lambdas since these are separate method overloads
         .def(
-            "addVariable", [](Problem& self, VariablePtr var) { self.add(var); }, py::arg("variable").none(false))
+            "addVariable",
+            [](Problem& self, VariablePtr var)
+            {
+                checkCanAdd(self);
+                checkNotAdded(*var, "variable '" + var->name + "'");
+                self.add(var);
+            },
+            py::arg("variable").none(false))
         .def(
             "addVariable",
             [](Problem& self, std::string name, E_VariableType type, std::optional<double> lowerBound,
                 std::optional<double> upperBound, std::optional<double> semiBound)
             {
+                checkCanAdd(self);
+
                 bool isBinary = (type == E_VariableType::Binary);
 
                 double lower = lowerBound ? toLowerBound(*lowerBound) : (isBinary ? 0.0 : SHOT_DBL_MIN);
@@ -1737,53 +1888,57 @@ PYBIND11_MODULE(SHOTpy, m)
             "0 and 1, and other variables have none; inf and -inf also mean no bound. Without a name, it is named\n"
             "variable_<index>.")
         .def(
-            "addVariables", [](Problem& self, Variables vars) { self.add(vars); }, py::arg("variables"))
+            "addVariables",
+            [](Problem& self, Variables vars)
+            {
+                checkCanAdd(self);
+                checkNotAddedOrRepeated(vars, [](const VariablePtr& V) { return "variable '" + V->name + "'"; });
+                self.add(vars);
+            },
+            py::arg("variables"))
         // Order matters for pybind11 overload resolution - most specific types first
         .def(
-            "addConstraint", [](Problem& self, NonlinearConstraintPtr c) { self.add(c); },
+            "addConstraint",
+            [](Problem& self, NonlinearConstraintPtr c)
+            {
+                checkCanAdd(self);
+                checkNotAdded(*c, "constraint '" + c->name + "'");
+                self.add(c);
+            },
             py::arg("constraint").none(false))
         .def(
-            "addConstraint", [](Problem& self, QuadraticConstraintPtr c) { self.add(c); },
+            "addConstraint",
+            [](Problem& self, QuadraticConstraintPtr c)
+            {
+                checkCanAdd(self);
+                checkNotAdded(*c, "constraint '" + c->name + "'");
+                self.add(c);
+            },
             py::arg("constraint").none(false))
         .def(
-            "addConstraint", [](Problem& self, LinearConstraintPtr c) { self.add(c); },
+            "addConstraint",
+            [](Problem& self, LinearConstraintPtr c)
+            {
+                checkCanAdd(self);
+                checkNotAdded(*c, "constraint '" + c->name + "'");
+                self.add(c);
+            },
             py::arg("constraint").none(false))
         .def(
-            "addConstraint", [](Problem& self, NumericConstraintPtr c) { self.add(c); },
+            "addConstraint",
+            [](Problem& self, NumericConstraintPtr c)
+            {
+                checkCanAdd(self);
+                checkNotAdded(*c, "constraint '" + c->name + "'");
+                self.add(c);
+            },
             py::arg("constraint").none(false))
         .def(
             "addConstraint",
             [](Problem& self, const ConstraintExpression& constraint, std::string name)
             {
-                // A prefix that is unlikely to be used in a name the user gives, since checking the names of all the
-                // constraints would make adding constraints quadratic in their number
-                if(name.empty())
-                    name = "constraint_" + std::to_string(self.numericConstraints.size());
-
-                // A linear constraint is created as such, as it would be from its class. finalize() splits a nonlinear
-                // constraint with two bounds before it extracts its terms, so a linear range given as a nonlinear
-                // constraint would become two constraints
-                if(LinearParts parts; collectLinearParts(constraint.expression, 1.0, parts))
-                {
-                    std::vector<LinearTermPtr> terms;
-
-                    for(auto& [variable, coefficient] : parts.terms)
-                    {
-                        if(coefficient != 0.0)
-                            terms.push_back(std::make_shared<LinearTerm>(coefficient, variable));
-                    }
-
-                    auto linearConstraint = std::make_shared<LinearConstraint>(
-                        name, LinearTerms(terms), constraint.lowerBound, constraint.upperBound);
-                    linearConstraint->constant = parts.constant;
-                    self.add(linearConstraint);
-                    return;
-                }
-
-                // finalize() extracts the terms of the expression and changes the class of the constraint if nothing
-                // nonlinear is left
-                self.add(std::make_shared<NonlinearConstraint>(
-                    name, constraint.expression, constraint.lowerBound, constraint.upperBound));
+                checkCanAdd(self);
+                addConstraintExpression(self, constraint, std::move(name));
             },
             py::arg("constraint"), py::arg("name") = "",
             "Add a constraint given by a comparison, e.g., x1 * x2 <= 5 or SHOTpy.inequality(1, x1 * x2, 5).\n"
@@ -1795,41 +1950,102 @@ PYBIND11_MODULE(SHOTpy, m)
             "addConstraints",
             [](Problem& self, const std::vector<NumericConstraintPtr>& constraints)
             {
+                checkCanAdd(self);
+                checkNotAddedOrRepeated(
+                    constraints, [](const NumericConstraintPtr& C) { return "constraint '" + C->name + "'"; });
+
                 for(auto& C : constraints)
                     self.add(C);
             },
             py::arg("constraints"), "Add all the constraints of a list")
         .def(
-            "addSpecialOrderedSet", [](Problem& self, SpecialOrderedSetPtr sos) { self.add(sos); }, py::arg("sos"))
+            "addConstraints",
+            [](Problem& self, const std::vector<ConstraintExpression>& constraints,
+                const std::vector<std::string>& names)
+            {
+                checkCanAdd(self);
+
+                if(!names.empty() && names.size() != constraints.size())
+                    throw py::value_error("The number of names and the number of constraints must be equal.");
+
+                for(size_t i = 0; i < constraints.size(); i++)
+                    addConstraintExpression(self, constraints[i], names.empty() ? "" : names[i]);
+            },
+            py::arg("constraints"), py::arg("names") = std::vector<std::string>(),
+            "Add all the constraints of a list of comparisons, e.g., [x <= 1, x + y >= 2], with the names of a list "
+            "of\n"
+            "the same length. Without names, they are named constraint_<index>.")
+        .def(
+            "addSpecialOrderedSet",
+            [](Problem& self, SpecialOrderedSetPtr sos)
+            {
+                checkCanAdd(self);
+                self.add(sos);
+            },
+            py::arg("sos"))
         // Order matters for pybind11 overload resolution - most specific types first
         .def(
-            "setObjective", [](Problem& self, NonlinearObjectiveFunctionPtr obj) { self.add(obj); },
+            "setObjective",
+            [](Problem& self, NonlinearObjectiveFunctionPtr obj)
+            {
+                checkCanAdd(self);
+                checkNotAdded(*obj, "objective function");
+                self.add(obj);
+            },
             py::arg("objective").none(false))
         .def(
-            "setObjective", [](Problem& self, QuadraticObjectiveFunctionPtr obj) { self.add(obj); },
+            "setObjective",
+            [](Problem& self, QuadraticObjectiveFunctionPtr obj)
+            {
+                checkCanAdd(self);
+                checkNotAdded(*obj, "objective function");
+                self.add(obj);
+            },
             py::arg("objective").none(false))
         .def(
-            "setObjective", [](Problem& self, LinearObjectiveFunctionPtr obj) { self.add(obj); },
+            "setObjective",
+            [](Problem& self, LinearObjectiveFunctionPtr obj)
+            {
+                checkCanAdd(self);
+                checkNotAdded(*obj, "objective function");
+                self.add(obj);
+            },
             py::arg("objective").none(false))
         .def(
-            "setObjective", [](Problem& self, ObjectiveFunctionPtr obj) { self.add(obj); },
+            "setObjective",
+            [](Problem& self, ObjectiveFunctionPtr obj)
+            {
+                checkCanAdd(self);
+                checkNotAdded(*obj, "objective function");
+                self.add(obj);
+            },
             py::arg("objective").none(false))
         .def(
-            "setObjective", [](Problem& self, NonlinearExpressionPtr expression, E_ObjectiveFunctionDirection direction)
-            { self.add(std::make_shared<NonlinearObjectiveFunction>(direction, expression, 0.0)); },
+            "setObjective",
+            [](Problem& self, NonlinearExpressionPtr expression, E_ObjectiveFunctionDirection direction)
+            {
+                checkCanAdd(self);
+                self.add(std::make_shared<NonlinearObjectiveFunction>(direction, expression, 0.0));
+            },
             py::arg("expression").none(false), py::arg("direction") = E_ObjectiveFunctionDirection::Minimize,
             "Set the objective function to an expression, e.g., SHOTpy.exp(x) + x * y. The class of the objective\n"
             "function is decided by finalize(), which may replace it, so read it back from problem.objectiveFunction\n"
             "afterwards.")
         .def(
-            "setObjective", [](Problem& self, VariablePtr variable, E_ObjectiveFunctionDirection direction)
-            { self.add(std::make_shared<NonlinearObjectiveFunction>(direction, wrapInExpression(variable), 0.0)); },
+            "setObjective",
+            [](Problem& self, VariablePtr variable, E_ObjectiveFunctionDirection direction)
+            {
+                checkCanAdd(self);
+                self.add(std::make_shared<NonlinearObjectiveFunction>(direction, wrapInExpression(variable), 0.0));
+            },
             py::arg("variable").none(false), py::arg("direction") = E_ObjectiveFunctionDirection::Minimize,
             "Set the objective function to a variable")
         .def(
             "setObjective",
             [](Problem& self, double constant, E_ObjectiveFunctionDirection direction)
             {
+                checkCanAdd(self);
+
                 if(!std::isfinite(constant))
                     throw py::value_error("The objective function must be finite.");
 
@@ -1955,7 +2171,7 @@ PYBIND11_MODULE(SHOTpy, m)
             "Get the full string representation of the problem");
 
     // ===== Variables Collection =====
-    py::class_<Variables>(m, "Variables")
+    addSequenceProtocol(py::class_<Variables>(m, "Variables"))
         .def(py::init<>())
         // Without this, the container could not be filled from Python at all, which left Problem.addVariables
         // unreachable. A plain list is converted to it, since Variables inherits std::vector privately
@@ -1974,12 +2190,7 @@ PYBIND11_MODULE(SHOTpy, m)
         .def(
             "reserve", [](Variables& self, size_t size) { self.reserve(size); }, py::arg("size"),
             "Reserve room for the given total number of variables")
-        .def("size", [](Variables& self) { return self.size(); })
-        .def("__len__", [](Variables& self) { return self.size(); })
-        .def("__getitem__", [](Variables& self, size_t i) { return self[i]; })
-        .def(
-            "__iter__", [](Variables& self) { return py::make_iterator(self.begin(), self.end()); },
-            py::keep_alive<0, 1>());
+        .def("size", [](Variables& self) { return self.size(); });
 
     py::implicitly_convertible<py::list, Variables>();
 
@@ -2187,7 +2398,7 @@ PYBIND11_MODULE(SHOTpy, m)
     py::class_<SolutionStatistics>(m, "SolutionStatistics")
         .def_readwrite("numberOfIterations", &SolutionStatistics::numberOfIterations)
         .def_readwrite("numberOfProblemsLP", &SolutionStatistics::numberOfProblemsLP)
-        .def_readwrite("numberOfProblemsQP ", &SolutionStatistics::numberOfProblemsQP)
+        .def_readwrite("numberOfProblemsQP", &SolutionStatistics::numberOfProblemsQP)
         .def_readwrite("numberOfProblemsQCQP", &SolutionStatistics::numberOfProblemsQCQP)
         .def_readwrite("numberOfProblemsFeasibleMILP", &SolutionStatistics::numberOfProblemsFeasibleMILP)
         .def_readwrite("numberOfProblemsOptimalMILP", &SolutionStatistics::numberOfProblemsOptimalMILP)
