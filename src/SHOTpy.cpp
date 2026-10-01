@@ -1690,6 +1690,9 @@ PYBIND11_MODULE(SHOTpy, m)
     // when we specify shared_ptr as the holder type
     py::class_<Problem, std::shared_ptr<Problem>>(m, "Problem")
         .def(py::init<EnvironmentPtr>(), py::arg("environment"))
+        // The problem uses the solver's environment, e.g., its settings in finalize()
+        .def(py::init([](Solver& solver) { return std::make_shared<Problem>(solver.getEnvironment()); }),
+            py::arg("solver"), "Create a problem in the environment of the solver")
         .def_readwrite("name", &Problem::name)
         .def_readonly("properties", &Problem::properties)
         .def_readonly("allVariables", &Problem::allVariables)

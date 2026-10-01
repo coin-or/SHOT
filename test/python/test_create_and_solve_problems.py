@@ -340,3 +340,25 @@ class TestFinalizeIdempotency:
         # All outputs should be identical
         assert output1 == output2 == output3, \
             f"Multiple finalize calls changed the problem!\n1st:\n{output1}\n2nd:\n{output2}\n3rd:\n{output3}"
+
+
+class TestProblemFromSolver:
+    """Tests for creating a problem in the environment of a solver."""
+
+    def test_problem_from_solver(self):
+        """Test that a problem created from a solver can be built and solved by it."""
+        import SHOTpy
+
+        solver = SHOTpy.Solver()
+        solver.updateSetting("Output.Console.LogLevel", 6)
+        problem = SHOTpy.Problem(solver)
+
+        x = problem.addVariable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = problem.addVariable("y", SHOTpy.VariableType.Real, 0.0, 10.0)
+        problem.setObjective(x + y, SHOTpy.ObjectiveDirection.Minimize)
+        problem.addConstraint(x + y >= 5, "c1")
+
+        problem.finalize()
+        solver.setProblem(problem)
+        assert solver.solveProblem()
+        assert abs(solver.getPrimalBound() - 5.0) < 0.01
