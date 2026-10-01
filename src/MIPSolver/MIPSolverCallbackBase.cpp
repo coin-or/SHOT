@@ -9,8 +9,7 @@
 */
 
 #include "MIPSolverCallbackBase.h"
-#include "../CallbackData.h"
-#include "../EventHandler.h"
+#include "../Callback.h"
 #include "../Output.h"
 #include "../Report.h"
 #include "../Results.h"
@@ -20,7 +19,6 @@
 
 #include "../Model/Problem.h"
 
-#include <any>
 #include <optional>
 
 namespace SHOT
@@ -46,24 +44,12 @@ bool MIPSolverCallbackBase::checkIterationLimit()
 
 bool MIPSolverCallbackBase::checkUserTermination()
 {
-    // Check if user termination was requested by data provider callbacks
-    if(!env->tasks->isTerminated() && env->events->hasDataProvider(E_EventType::UserTerminationCheck))
+    // A termination requested by a callback is passed on to the task handler when the callbacks are invoked
+    if(!env->tasks->isTerminated() && env->callbacks->isActive(E_CallbackLocation::TerminationCheck))
     {
-        // Create termination callback data only when needed
-        int iterationNumber = env->results->getNumberOfIterations();
-        double timeElapsed = env->timing->getElapsedTime("Total");
-        double currentDualBound = env->results->getCurrentDualBound();
-        double currentPrimalBound = env->results->getPrimalBound();
-        double relativeGap = env->results->getRelativeCurrentObjectiveGap();
-        double absoluteGap = env->results->getAbsoluteCurrentObjectiveGap();
-
-        TerminationCallbackData callbackData(iterationNumber, timeElapsed, currentDualBound, currentPrimalBound,
-            relativeGap, absoluteGap, env->solutionStatistics);
-
-        auto shouldTerminate = env->events->requestData<bool>(E_EventType::UserTerminationCheck, callbackData);
-
-        if(shouldTerminate.has_value() && *shouldTerminate)
-            env->tasks->terminate();
+        auto context = std::make_shared<TerminationCheckContext>(env);
+        env->callbacks->invoke(*context);
+        context->invalidate();
     }
 
     if(env->tasks->isTerminated())
@@ -131,24 +117,19 @@ bool MIPSolverCallbackBase::checkFixedNLPStrategy(SolutionPoint point)
 
 std::optional<double> MIPSolverCallbackBase::queryAndUpdateExternalDualBound()
 {
-    if(!env->events->hasDataProvider(E_EventType::ExternalDualBound))
+    if(!env->callbacks->isActive(E_CallbackLocation::DualBoundUpdate))
+        return std::nullopt;
+
+    auto context = std::make_shared<DualBoundUpdateContext>(env);
+    env->callbacks->invoke(*context);
+    auto externalDualBound = context->getProposedDualBound();
+    context->invalidate();
+
+    if(!externalDualBound.has_value())
         return std::nullopt;
 
     bool isMin = env->reformulatedProblem->objectiveFunction->properties.isMinimize;
     double currentDualBound = env->results->getCurrentDualBound();
-    double currentPrimalBound = env->results->getPrimalBound();
-    int iterationNumber = env->results->getNumberOfIterations();
-    double absoluteGap = env->results->getAbsoluteCurrentObjectiveGap();
-    double relativeGap = env->results->getRelativeCurrentObjectiveGap();
-
-    DualBoundCallbackData callbackData(isMin, currentDualBound, currentPrimalBound, iterationNumber, relativeGap,
-        absoluteGap, env->solutionStatistics);
-
-    auto externalDualBound = env->events->requestData<double>(E_EventType::ExternalDualBound, callbackData);
-
-    if(!externalDualBound.has_value() || std::isnan(*externalDualBound))
-        return std::nullopt;
-
     double newBound = *externalDualBound;
 
     bool isBoundImproved = isMin ? (std::isnan(currentDualBound) || newBound > currentDualBound)

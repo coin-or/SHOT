@@ -119,6 +119,11 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr)
     auto tUpdateExternalDualBound = std::make_shared<TaskUpdateExternalDualBound>(env);
     env->tasks->addTask(tUpdateExternalDualBound, "UpdateExternalDualBound");
 
+    // A termination requested by a callback before the first dual problem is solved, e.g., at the interior point
+    // search, stops the solution process here
+    auto tCheckInitialUserTerm = std::make_shared<TaskCheckUserTermination>(env, "FinalizeSolution", false);
+    env->tasks->addTask(tCheckInitialUserTerm, "CheckUserTerminationInitial");
+
     auto tSolveIteration = std::make_shared<TaskSolveIteration>(env);
     env->tasks->addTask(tSolveIteration, "SolveIter");
 

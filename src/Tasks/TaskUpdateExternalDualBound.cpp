@@ -10,10 +10,9 @@
 
 #include "TaskUpdateExternalDualBound.h"
 
-#include "../CallbackData.h"
+#include "../Callback.h"
 #include "../Enums.h"
 #include "../Environment.h"
-#include "../EventHandler.h"
 #include "../Output.h"
 #include "../Results.h"
 #include "../Settings.h"
@@ -30,27 +29,21 @@ TaskUpdateExternalDualBound::~TaskUpdateExternalDualBound() = default;
 
 void TaskUpdateExternalDualBound::run()
 {
-    // Check if external dual bound provider is available
-    if(env->events->hasDataProvider(E_EventType::ExternalDualBound))
+    if(env->callbacks->isActive(E_CallbackLocation::DualBoundUpdate))
     {
         bool isMinimization = (env->reformulatedProblem->objectiveFunction->properties.isMinimize);
+
+        auto context = std::make_shared<DualBoundUpdateContext>(env);
+        env->callbacks->invoke(*context);
+        auto externalDualBound = context->getProposedDualBound();
+        context->invalidate();
+
         double currentDualBound = env->results->getCurrentDualBound();
-        double currentPrimalBound = env->results->getPrimalBound();
-        int iterationNumber = env->results->getNumberOfIterations();
-        double absoluteGap = env->results->getAbsoluteCurrentObjectiveGap();
-        double relativeGap = env->results->getRelativeCurrentObjectiveGap();
 
-        std::optional<double> externalDualBound;
-
-        // Create structured data for callback
-        DualBoundCallbackData callbackData(isMinimization, currentDualBound, currentPrimalBound, iterationNumber,
-            relativeGap, absoluteGap, env->solutionStatistics);
-
-        // Pass the callback data and execute callback; retrieve the new dual bound
-        externalDualBound = env->events->requestData<double>(E_EventType::ExternalDualBound, callbackData);
-
-        if(double newBound = *externalDualBound; externalDualBound.has_value() && !std::isnan(newBound))
+        if(externalDualBound.has_value())
         {
+            double newBound = *externalDualBound;
+
             env->output->outputDebug(fmt::format("        External dual bound provider returned: {}", newBound));
 
             // For minimization problems, dual bound should be a lower bound
@@ -84,7 +77,7 @@ void TaskUpdateExternalDualBound::run()
         }
         else
         {
-            env->output->outputDebug("        External dual bound provider returned no value");
+            env->output->outputDebug("        No external dual bound was proposed");
         }
     }
 }

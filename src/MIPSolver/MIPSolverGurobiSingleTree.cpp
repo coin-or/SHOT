@@ -10,8 +10,8 @@
 
 #include "MIPSolverGurobiSingleTree.h"
 
+#include "../Callback.h"
 #include "../DualSolver.h"
-#include "../EventHandler.h"
 #include "../Iteration.h"
 #include "../Output.h"
 #include "../PrimalSolver.h"
@@ -464,7 +464,7 @@ void GurobiCallbackSingleTree::callback()
                 env->primalSolver->checkPrimalSolutionCandidates();
             }
 
-            if(env->events->hasDataProvider(E_EventType::ExternalPrimalSolution))
+            if(env->callbacks->isActive(E_CallbackLocation::PrimalCandidateSearch))
             {
                 taskSelectPrimalSolutionFromExternal->run();
             }
@@ -646,7 +646,7 @@ GurobiCallbackSingleTree::GurobiCallbackSingleTree(GRBVar* xvars, EnvironmentPtr
         taskSelectPrimalSolutionFromRootsearch = std::make_shared<TaskSelectPrimalCandidatesFromRootsearch>(env);
     }
 
-    if(env->events->hasDataProvider(E_EventType::ExternalPrimalSolution))
+    if(env->callbacks->isActive(E_CallbackLocation::PrimalCandidateSearch))
     {
         taskSelectPrimalSolutionFromExternal = std::make_shared<TaskSelectPrimalCandidatesFromExternalSource>(env);
     }

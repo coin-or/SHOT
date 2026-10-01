@@ -10,12 +10,10 @@
 
 #include "Results.h"
 
-#include <any>
 #include <algorithm>
 #include <limits>
 
-#include "CallbackData.h"
-#include "EventHandler.h"
+#include "Callback.h"
 #include "Iteration.h"
 #include "Output.h"
 #include "Results.h"
@@ -64,6 +62,12 @@ void Results::addPrimalSolution(PrimalSolution solution)
             "         Primal solution candidate with objective value {} already known.", solution.objValue));
         return;
     }
+
+    // Whether the solution is better than the best one before it, which is the first one since the solutions are sorted
+    bool isIncumbent = this->primalSolutions.empty()
+        || (env->problem->objectiveFunction->properties.isMinimize
+                ? solution.objValue < this->primalSolutions.front().objValue
+                : solution.objValue > this->primalSolutions.front().objValue);
 
     if(this->primalSolutions.size() == 0)
     {
@@ -202,20 +206,12 @@ void Results::addPrimalSolution(PrimalSolution solution)
         env->output->outputCritical("        Primal objective cut added.");
     }*/
 
-    // Only create callback data and notify if there are registered data provider callbacks
-    if(env->events->hasNotificationCallbacks(E_EventType::NewPrimalSolution))
+    if(env->callbacks->isActive(E_CallbackLocation::NewPrimalSolution))
     {
-        // Create structured callback data for the new primal solution
-        bool isMinimization = (env->reformulatedProblem->objectiveFunction->properties.isMinimize);
-        double currentDualBound = getCurrentDualBound();
-        double relativeGap = getRelativeCurrentObjectiveGap();
-        double absoluteGap = getAbsoluteCurrentObjectiveGap();
-        int iterationNumber = env->results->getNumberOfIterations();
-
-        PrimalSolutionCallbackData callbackData(isMinimization, solution.point, solution.objValue, currentDualBound,
-            relativeGap, absoluteGap, iterationNumber, solution.sourceType, env->solutionStatistics);
-
-        env->events->notify(E_EventType::NewPrimalSolution, callbackData);
+        auto context = std::make_shared<NewPrimalSolutionContext>(
+            env, solution.point, solution.objValue, solution.sourceType, isIncumbent);
+        env->callbacks->invoke(*context);
+        context->invalidate();
     }
 }
 

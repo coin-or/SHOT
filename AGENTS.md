@@ -20,6 +20,14 @@ For the full set of command-line switches (including which problem file
 formats a given build supports), see
 [docs/CommandLineUsage.md](docs/CommandLineUsage.md).
 
+## Callbacks
+
+SHOT calls user callbacks (C++ and Python) at locations in the solution
+process given by `E_CallbackLocation`. Each location has its own context class
+in `src/Callback.h`. For the locations, the rules for actions, termination and
+failures, and the checklist for adding a location, see
+[docs/Callbacks.md](docs/Callbacks.md).
+
 ## Debugging SHOT
 
 To debug solver behavior (wrong bounds, missing solutions, unexpected

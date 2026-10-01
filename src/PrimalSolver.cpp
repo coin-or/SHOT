@@ -10,8 +10,7 @@
 
 #include "PrimalSolver.h"
 
-#include "CallbackData.h"
-#include "EventHandler.h"
+#include "Callback.h"
 #include "Output.h"
 #include "Results.h"
 #include "Settings.h"
@@ -98,30 +97,20 @@ void PrimalSolver::checkPrimalSolutionCandidates()
     {
         bool checkCandidate = true;
 
-        if(env->events->hasDataProvider(E_EventType::PrimalSolutionCandidateSelection))
+        if(env->callbacks->isActive(E_CallbackLocation::PrimalCandidateCheck))
         {
-            bool isMinimization = env->reformulatedProblem->objectiveFunction->properties.isMinimize;
-            double currentDualBound = env->results->getCurrentDualBound();
-            double relativeGap = env->results->getRelativeCurrentObjectiveGap();
-            double absoluteGap = env->results->getAbsoluteCurrentObjectiveGap();
-            int iterationNumber = env->results->getNumberOfIterations();
+            VectorDouble candidatePoint(cand.point.begin(),
+                cand.point.begin() + std::min((int)cand.point.size(), env->problem->properties.numberOfVariables));
 
-            VectorDouble candidatePoint(
-                cand.point.begin(),
-                cand.point.begin()
-                    + std::min((int)cand.point.size(),
-                        env->problem->properties.numberOfVariables));
+            auto context = std::make_shared<PrimalCandidateCheckContext>(
+                env, std::move(candidatePoint), cand.objValue, cand.sourceType);
+            env->callbacks->invoke(*context);
 
-            PrimalSolutionCallbackData callbackData(isMinimization, candidatePoint, cand.objValue,
-                currentDualBound, relativeGap, absoluteGap, iterationNumber, cand.sourceType,
-                env->solutionStatistics);
-
-            auto result = env->events->requestData<bool>(
-                E_EventType::PrimalSolutionCandidateSelection, callbackData);
-
-            // Check if solution has been rejected by the callback
-            if(result.has_value() && !result.value())
+            // Check if the candidate has been rejected by a callback
+            if(context->isCandidateRejected())
                 checkCandidate = false;
+
+            context->invalidate();
         }
 
         if(checkCandidate)

@@ -10,8 +10,8 @@
 
 #include "MIPSolverCplexSingleTreeLegacy.h"
 
+#include "../Callback.h"
 #include "../DualSolver.h"
-#include "../EventHandler.h"
 #include "../Iteration.h"
 #include "../Output.h"
 #include "../PrimalSolver.h"
@@ -270,7 +270,7 @@ CtCallbackI::CtCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx
         taskSelectPrimalSolutionFromRootsearch = std::make_unique<TaskSelectPrimalCandidatesFromRootsearch>(env);
     }
 
-    if(env->events->hasDataProvider(E_EventType::ExternalPrimalSolution))
+    if(env->callbacks->isActive(E_CallbackLocation::PrimalCandidateSearch))
     {
         taskSelectPrimalSolutionFromExternal = std::make_shared<TaskSelectPrimalCandidatesFromExternalSource>(env);
     }
@@ -450,7 +450,7 @@ void CtCallbackI::main()
         taskSelectPrimalSolutionFromRootsearch->run(candidatePoints);
     }
 
-    if(env->events->hasDataProvider(E_EventType::ExternalPrimalSolution))
+    if(env->callbacks->isActive(E_CallbackLocation::PrimalCandidateSearch))
     {
         taskSelectPrimalSolutionFromExternal->run();
     }

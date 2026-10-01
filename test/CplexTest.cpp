@@ -6,7 +6,7 @@
    Please see the README and LICENSE files for more information.
 */
 
-#include "../src/CallbackData.h"
+#include "../src/Callback.h"
 #include "../src/DualSolver.h"
 #include "../src/Environment.h"
 #include "../src/Report.h"
@@ -158,18 +158,17 @@ bool CplexTerminationCallbackTest(std::string filename)
     }
 
     // Registers a callback that terminates after the third iteration
-    solver->registerCallback(E_EventType::UserTerminationCheck, [](std::any args) -> bool {
-        auto data = std::any_cast<TerminationCallbackData>(args);
-        std::cout << "Termination callback activated with structured data (iteration " << data.iterationNumber << ")\n";
-
-        if(data.iterationNumber > 3)
+    solver->registerCallback<TerminationCheckContext>(
+        [](TerminationCheckContext& context)
         {
-            std::cout << "Terminating after iteration " << data.iterationNumber << "\n";
-            return true;
-        }
+            std::cout << "Termination callback activated (iteration " << context.getIterationNumber() << ")\n";
 
-        return false;
-    });
+            if(context.getIterationNumber() > 3)
+            {
+                std::cout << "Terminating after iteration " << context.getIterationNumber() << "\n";
+                context.terminate();
+            }
+        });
 
     // Solving the problem
     if(!solver->solveProblem())
@@ -206,15 +205,15 @@ bool CplexTerminationCallbackSingleTreeTest(std::string filename)
         return (false);
     }
 
-    solver->registerCallback(E_EventType::UserTerminationCheck, [](std::any args) -> bool {
-        auto data = std::any_cast<TerminationCallbackData>(args);
-        if(data.iterationNumber > 10)
+    solver->registerCallback<TerminationCheckContext>(
+        [](TerminationCheckContext& context)
         {
-            std::cout << "Terminating after iteration " << data.iterationNumber << "\n";
-            return true;
-        }
-        return false;
-    });
+            if(context.getIterationNumber() > 10)
+            {
+                std::cout << "Terminating after iteration " << context.getIterationNumber() << "\n";
+                context.terminate();
+            }
+        });
 
     if(!solver->solveProblem())
     {
@@ -251,16 +250,8 @@ bool CplexExternalPrimalSolutionSingleTreeTest(std::string filename)
             return (false);
         }
 
-        solver->registerCallback(E_EventType::NewPrimalSolution, [&collectedSolutions](std::any args) {
-            try
-            {
-                auto data = std::any_cast<PrimalSolutionCallbackData>(args);
-                collectedSolutions.push_back(data.solution);
-            }
-            catch(const std::bad_any_cast&)
-            {
-            }
-        });
+        solver->registerCallback<NewPrimalSolutionContext>([&collectedSolutions](NewPrimalSolutionContext& solution)
+            { collectedSolutions.push_back(solution.getPoint()); });
 
         if(!solver->solveProblem())
         {
@@ -294,27 +285,21 @@ bool CplexExternalPrimalSolutionSingleTreeTest(std::string filename)
         return (false);
     }
 
-    solver->registerCallback(
-        E_EventType::ExternalPrimalSolution, [&collectedSolutions, &env](std::any args) -> std::vector<VectorDouble> {
+    solver->registerCallback<PrimalCandidateSearchContext>(
+        [&collectedSolutions, &env](PrimalCandidateSearchContext& context)
+        {
             if(!env->dualSolver->MIPSolver->getDiscreteVariableStatus())
-                return {};
-
-            try
-            {
-                std::any_cast<ExternalPrimalSolutionCallbackData>(args);
-            }
-            catch(const std::bad_any_cast&)
-            {
-                return {};
-            }
+                return;
 
             if(collectedSolutions.empty())
-                return {};
+                return;
 
-            std::vector<VectorDouble> toInject = collectedSolutions;
+            std::cout << "Injecting " << collectedSolutions.size() << " external primal solution(s)\n";
+
+            for(auto& solution : collectedSolutions)
+                context.addPrimalSolution(solution);
+
             collectedSolutions.clear();
-            std::cout << "Injecting " << toInject.size() << " external primal solution(s)\n";
-            return toInject;
         });
 
     if(!solver->solveProblem())
@@ -366,25 +351,16 @@ bool CplexExternalDualBoundLazyConstraintTest(std::string filename, double exter
     // starting from (externalDualBound - 0.4) up to externalDualBound, exercising the
     // incremental lazy constraint mechanism.
     double currentExternalBound = externalDualBound - 0.4;
-    solver->registerCallback(
-        E_EventType::ExternalDualBound, [externalDualBound, &currentExternalBound](std::any args) {
-            double newDualBound = std::numeric_limits<double>::quiet_NaN();
-            try
+    solver->registerCallback<DualBoundUpdateContext>(
+        [externalDualBound, &currentExternalBound](DualBoundUpdateContext& context)
+        {
+            if(currentExternalBound < externalDualBound)
             {
-                auto data = std::any_cast<DualBoundCallbackData>(args);
-                if(currentExternalBound < externalDualBound)
-                {
-                    currentExternalBound = std::min(currentExternalBound + 0.1, externalDualBound);
-                    newDualBound = currentExternalBound;
-                    std::cout << "Current dual bound is " << data.currentDualBound
-                              << ", providing external dual bound: " << newDualBound << "\n";
-                }
+                currentExternalBound = std::min(currentExternalBound + 0.1, externalDualBound);
+                std::cout << "Current dual bound is " << context.getDualBound()
+                          << ", providing external dual bound: " << currentExternalBound << "\n";
+                context.setDualBound(currentExternalBound);
             }
-            catch(const std::bad_any_cast&)
-            {
-                std::cout << "External dual bound callback executed with no valid structured data\n";
-            }
-            return (newDualBound);
         });
 
     if(!solver->solveProblem())
@@ -442,22 +418,16 @@ bool CplexExternalDualBoundCallbackTest(std::string filename, double dualBoundTo
     std::vector<VectorDouble> foundSolutions;
 
     // Registers a callback that collects all new primal solutions
-    solver->registerCallback(E_EventType::NewPrimalSolution, [&foundSolutions](std::any args) {
-        try
+    solver->registerCallback<NewPrimalSolutionContext>(
+        [&foundSolutions](NewPrimalSolutionContext& solution)
         {
-            auto data = std::any_cast<PrimalSolutionCallbackData>(args);
-            std::cout << "New primal solution found with objective value: " << data.objectiveValue
-                      << " from source: " << static_cast<int>(data.sourceType) << " (iteration " << data.iterationNumber
-                      << ")\n";
+            std::cout << "New primal solution found with objective value: " << solution.getObjectiveValue()
+                      << " from source: " << static_cast<int>(solution.getSource()) << " (iteration "
+                      << solution.getIterationNumber() << ")\n";
 
             // Add the solution to our collection
-            foundSolutions.push_back(data.solution);
-        }
-        catch(const std::bad_any_cast&)
-        {
-            std::cout << "New primal solution callback executed with no valid structured data\n";
-        }
-    });
+            foundSolutions.push_back(solution.getPoint());
+        });
 
     // Solving the problem
     if(!solver->solveProblem())
@@ -489,66 +459,43 @@ bool CplexExternalDualBoundCallbackTest(std::string filename, double dualBoundTo
     }
 
     // Registers a callback that sets the dual bound to a fixed value
-    solver->registerCallback(E_EventType::ExternalDualBound, [dualBoundToTest](std::any args) {
-        double newDualBound = std::numeric_limits<double>::quiet_NaN();
-
-        try
+    solver->registerCallback<DualBoundUpdateContext>(
+        [dualBoundToTest](DualBoundUpdateContext& context)
         {
-            auto data = std::any_cast<DualBoundCallbackData>(args);
+            if(context.getDualBound() >= dualBoundToTest)
+                return;
 
-            if(data.currentDualBound >= dualBoundToTest)
-                return (newDualBound);
-
-            newDualBound = dualBoundToTest;
-            std::cout << "Current dual bound is " << data.currentDualBound
-                      << ", new external dual bound given as = " << newDualBound << "\n";
-        }
-        catch(const std::bad_any_cast&)
-        {
-            std::cout << "External dual bound callback executed with no valid structured data\n";
-            throw std::runtime_error("Invalid data type for external dual bound callback");
-        }
-
-        return (newDualBound);
-    });
+            std::cout << "Current dual bound is " << context.getDualBound()
+                      << ", new external dual bound given as = " << dualBoundToTest << "\n";
+            context.setDualBound(dualBoundToTest);
+        });
 
     // Registers a callback that provides external primal solutions from our collected solutions
-    solver->registerCallback(
-        E_EventType::ExternalPrimalSolution, [&foundSolutions, &env](std::any args) -> std::vector<VectorDouble> {
+    solver->registerCallback<PrimalCandidateSearchContext>(
+        [&foundSolutions, &env](PrimalCandidateSearchContext& context)
+        {
             if(!env->dualSolver->MIPSolver->getDiscreteVariableStatus())
             {
                 std::cout
                     << "Still waiting to add primal solution candidates until the relaxation strategy is finished.\n";
-                return std::vector<VectorDouble>();
+                return;
             }
 
-            try
+            std::cout << "External primal solution callback requested (iteration " << context.getIterationNumber()
+                      << ", current gap: " << context.getRelativeGap() << ")\n";
+
+            if(!foundSolutions.empty())
             {
-                auto data = std::any_cast<ExternalPrimalSolutionCallbackData>(args);
-                std::cout << "External primal solution callback requested (iteration " << data.iterationNumber
-                          << ", current gap: " << data.relativeGap << ")\n";
+                std::cout << "Providing " << foundSolutions.size() << " collected solutions as external candidates\n";
 
-                if(!foundSolutions.empty())
-                {
-                    std::cout << "Providing " << foundSolutions.size()
-                              << " collected solutions as external candidates\n";
+                for(auto& solution : foundSolutions)
+                    context.addPrimalSolution(solution);
 
-                    // Create a copy of foundSolutions and clear the original
-                    std::vector<VectorDouble> solutionsToAdd = foundSolutions;
-                    foundSolutions.clear();
-
-                    return solutionsToAdd;
-                }
-                else
-                {
-                    std::cout << "No collected solutions available to provide\n";
-                    return std::vector<VectorDouble>();
-                }
+                foundSolutions.clear();
             }
-            catch(const std::bad_any_cast&)
+            else
             {
-                std::cout << "External primal solution callback executed with no valid structured data\n";
-                return std::vector<VectorDouble>();
+                std::cout << "No collected solutions available to provide\n";
             }
         });
 

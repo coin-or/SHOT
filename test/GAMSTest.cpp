@@ -8,7 +8,7 @@
    Please see the README and LICENSE files for more information.
 */
 
-#include "../src/CallbackData.h"
+#include "../src/Callback.h"
 #include "../src/Environment.h"
 #include "../src/PrimalSolver.h"
 #include "../src/Results.h"
@@ -277,41 +277,27 @@ bool SolveProblemWithStartingPointGAMS(std::string filename)
     bool startingPointAccepted = false;
     bool startingPointPosted = false;
 
-    // Subscribe to PrimalSolutionCandidateSelection to verify the starting point is posted as a candidate
-    solver->registerCallback(E_EventType::PrimalSolutionCandidateSelection,
-        [&startingPointPosted](std::any args) -> bool
+    // Subscribe to PrimalCandidateCheck to verify the starting point is posted as a candidate
+    solver->registerCallback<PrimalCandidateCheckContext>(
+        [&startingPointPosted](PrimalCandidateCheckContext& candidate)
         {
-            try
+            if(candidate.getSource() == E_PrimalSolutionSource::ExternalPrimalSolution)
             {
-                auto data = std::any_cast<PrimalSolutionCallbackData>(args);
-                if(data.sourceType == E_PrimalSolutionSource::ExternalPrimalSolution)
-                {
-                    std::cout << "Starting point posted as candidate: objective = " << data.objectiveValue << '\n';
-                    startingPointPosted = true;
-                }
+                std::cout << "Starting point posted as candidate: objective = " << candidate.getObjectiveValue()
+                          << '\n';
+                startingPointPosted = true;
             }
-            catch(const std::bad_any_cast&)
-            {
-            }
-            return true; // accept all candidates
         });
 
     // Subscribe to NewPrimalSolution to verify the starting point is accepted
-    solver->registerCallback(E_EventType::NewPrimalSolution,
-        [&startingPointAccepted](std::any args)
+    solver->registerCallback<NewPrimalSolutionContext>(
+        [&startingPointAccepted](NewPrimalSolutionContext& solution)
         {
-            try
+            if(solution.getSource() == E_PrimalSolutionSource::ExternalPrimalSolution)
             {
-                auto data = std::any_cast<PrimalSolutionCallbackData>(args);
-                if(data.sourceType == E_PrimalSolutionSource::ExternalPrimalSolution)
-                {
-                    std::cout << "Starting point accepted as primal solution: objective = " << data.objectiveValue
-                              << '\n';
-                    startingPointAccepted = true;
-                }
-            }
-            catch(const std::bad_any_cast&)
-            {
+                std::cout << "Starting point accepted as primal solution: objective = " << solution.getObjectiveValue()
+                          << '\n';
+                startingPointAccepted = true;
             }
         });
 
@@ -372,20 +358,19 @@ bool TestCallbackGAMS(std::string filename)
     }
 
     // Registers a callback that terminates when a primal solution has been found
-    solver->registerCallback(E_EventType::UserTerminationCheck,
-        [&env](std::any args) -> bool
+    solver->registerCallback<TerminationCheckContext>(
+        [](TerminationCheckContext& context)
         {
             std::cout << "Checking whether to terminate SHOT... ";
 
-            if(env->results->hasPrimalSolution())
+            if(context.hasPrimalSolution())
             {
                 std::cout << "Sure, do it.\n";
-                return (true);
+                context.terminate();
             }
             else
             {
                 std::cout << "Not yet!\n";
-                return (false);
             }
         });
 

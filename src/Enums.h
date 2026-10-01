@@ -52,17 +52,6 @@ enum class E_DualSolutionSource
     InfeasibleWithCutOff
 };
 
-enum class E_EventType
-{
-    ExternalDualBound,
-    ExternalHyperplaneSelection,
-    ExternalPrimalSolution,
-    NewPrimalSolution,
-    PrimalSolutionCandidateSelection,
-    UserTerminationCheck,
-    ExternalESHRootsearchPointsSelection
-};
-
 enum class E_HyperplaneSource
 {
     None,

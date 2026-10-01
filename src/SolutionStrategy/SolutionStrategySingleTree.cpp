@@ -123,6 +123,11 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
     auto tUpdateExternalDualBound = std::make_shared<TaskUpdateExternalDualBound>(env);
     env->tasks->addTask(tUpdateExternalDualBound, "UpdateExternalDualBound");
 
+    // A termination requested by a callback before the first dual problem is solved, e.g., at the interior point
+    // search, stops the solution process here
+    auto tCheckInitialUserTerm = std::make_shared<TaskCheckUserTermination>(env, "FinalizeSolution", false);
+    env->tasks->addTask(tCheckInitialUserTerm, "CheckUserTerminationInitial");
+
     if(env->settings->getSetting<bool>("Dual.Relaxation.Use")
         && env->reformulatedProblem->properties.numberOfSemicontinuousVariables == 0
         && env->reformulatedProblem->properties.numberOfSemiintegerVariables == 0)

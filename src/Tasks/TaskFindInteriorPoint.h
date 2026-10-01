@@ -12,6 +12,7 @@
 #include "TaskBase.h"
 
 #include <memory>
+#include <optional>
 #include <vector>
 
 namespace SHOT
@@ -35,5 +36,12 @@ private:
 
     // A usable interior point found by moving from a candidate toward the center of the variable box
     std::shared_ptr<InteriorPoint> retreatToUsableInteriorPoint(const VectorDouble& candidatePoint);
+
+    // Calls the InteriorPointSearch callbacks with the current interior points; returns the points they replace them
+    // with, or nullopt if they keep them
+    std::optional<std::vector<VectorDouble>> invokeInteriorPointCallbacks();
+
+    // Replaces the interior points with those given by a callback, keeping only those that are interior points
+    void setCallbackInteriorPoints(const std::vector<VectorDouble>& points);
 };
 } // namespace SHOT

@@ -8,7 +8,7 @@
    Please see the README and LICENSE files for more information.
 */
 
-#include "../src/CallbackData.h"
+#include "../src/Callback.h"
 #include "../src/DualSolver.h"
 #include "../src/Environment.h"
 #include "../src/Report.h"
@@ -166,18 +166,17 @@ bool CbcTerminationCallbackTest(std::string filename)
     }
 
     // Registers a callback that terminates after the third iteration
-    solver->registerCallback(E_EventType::UserTerminationCheck, [](std::any args) -> bool {
-        auto data = std::any_cast<TerminationCallbackData>(args);
-        std::cout << "Termination callback activated with structured data (iteration " << data.iterationNumber << ")\n";
-
-        if(data.iterationNumber > 3)
+    solver->registerCallback<TerminationCheckContext>(
+        [](TerminationCheckContext& context)
         {
-            std::cout << "Terminating after iteration " << data.iterationNumber << "\n";
-            return true;
-        }
+            std::cout << "Termination callback activated (iteration " << context.getIterationNumber() << ")\n";
 
-        return false;
-    });
+            if(context.getIterationNumber() > 3)
+            {
+                std::cout << "Terminating after iteration " << context.getIterationNumber() << "\n";
+                context.terminate();
+            }
+        });
 
     // Solving the problem
     if(!solver->solveProblem())
@@ -219,22 +218,16 @@ bool CbcExternalDualBoundCallbackTest(std::string filename, double dualBoundToTe
     std::vector<VectorDouble> foundSolutions;
 
     // Registers a callback that collects all new primal solutions
-    solver->registerCallback(E_EventType::NewPrimalSolution, [&foundSolutions](std::any args) {
-        try
+    solver->registerCallback<NewPrimalSolutionContext>(
+        [&foundSolutions](NewPrimalSolutionContext& solution)
         {
-            auto data = std::any_cast<PrimalSolutionCallbackData>(args);
-            std::cout << "New primal solution found with objective value: " << data.objectiveValue
-                      << " from source: " << static_cast<int>(data.sourceType) << " (iteration " << data.iterationNumber
-                      << ")\n";
+            std::cout << "New primal solution found with objective value: " << solution.getObjectiveValue()
+                      << " from source: " << static_cast<int>(solution.getSource()) << " (iteration "
+                      << solution.getIterationNumber() << ")\n";
 
             // Add the solution to our collection
-            foundSolutions.push_back(data.solution);
-        }
-        catch(const std::bad_any_cast&)
-        {
-            std::cout << "New primal solution callback executed with no valid structured data\n";
-        }
-    });
+            foundSolutions.push_back(solution.getPoint());
+        });
 
     // Solving the problem
     if(!solver->solveProblem())
@@ -266,66 +259,43 @@ bool CbcExternalDualBoundCallbackTest(std::string filename, double dualBoundToTe
     }
 
     // Registers a callback that sets the dual bound to a fixed value
-    solver->registerCallback(E_EventType::ExternalDualBound, [dualBoundToTest](std::any args) {
-        double newDualBound = std::numeric_limits<double>::quiet_NaN();
-
-        try
+    solver->registerCallback<DualBoundUpdateContext>(
+        [dualBoundToTest](DualBoundUpdateContext& context)
         {
-            auto data = std::any_cast<DualBoundCallbackData>(args);
+            if(context.getDualBound() >= dualBoundToTest)
+                return;
 
-            if(data.currentDualBound >= dualBoundToTest)
-                return (newDualBound);
-
-            newDualBound = dualBoundToTest;
-            std::cout << "Current dual bound is " << data.currentDualBound
-                      << ", new external dual bound given as = " << newDualBound << "\n";
-        }
-        catch(const std::bad_any_cast&)
-        {
-            std::cout << "External dual bound callback executed with no valid structured data\n";
-            throw std::runtime_error("Invalid data type for external dual bound callback");
-        }
-
-        return (newDualBound);
-    });
+            std::cout << "Current dual bound is " << context.getDualBound()
+                      << ", new external dual bound given as = " << dualBoundToTest << "\n";
+            context.setDualBound(dualBoundToTest);
+        });
 
     // Registers a callback that provides external primal solutions from our collected solutions
-    solver->registerCallback(
-        E_EventType::ExternalPrimalSolution, [&foundSolutions, &env](std::any args) -> std::vector<VectorDouble> {
+    solver->registerCallback<PrimalCandidateSearchContext>(
+        [&foundSolutions, &env](PrimalCandidateSearchContext& context)
+        {
             if(!env->dualSolver->MIPSolver->getDiscreteVariableStatus())
             {
                 std::cout
                     << "Still waiting to add primal solution candidates until the relaxation strategy is finished.\n";
-                return std::vector<VectorDouble>();
+                return;
             }
 
-            try
+            std::cout << "External primal solution callback requested (iteration " << context.getIterationNumber()
+                      << ", current gap: " << context.getRelativeGap() << ")\n";
+
+            if(!foundSolutions.empty())
             {
-                auto data = std::any_cast<ExternalPrimalSolutionCallbackData>(args);
-                std::cout << "External primal solution callback requested (iteration " << data.iterationNumber
-                          << ", current gap: " << data.relativeGap << ")\n";
+                std::cout << "Providing " << foundSolutions.size() << " collected solutions as external candidates\n";
 
-                if(!foundSolutions.empty())
-                {
-                    std::cout << "Providing " << foundSolutions.size()
-                              << " collected solutions as external candidates\n";
+                for(auto& solution : foundSolutions)
+                    context.addPrimalSolution(solution);
 
-                    // Create a copy of foundSolutions and clear the original
-                    std::vector<VectorDouble> solutionsToAdd = foundSolutions;
-                    foundSolutions.clear();
-
-                    return solutionsToAdd;
-                }
-                else
-                {
-                    std::cout << "No collected solutions available to provide\n";
-                    return std::vector<VectorDouble>();
-                }
+                foundSolutions.clear();
             }
-            catch(const std::bad_any_cast&)
+            else
             {
-                std::cout << "External primal solution callback executed with no valid structured data\n";
-                return std::vector<VectorDouble>();
+                std::cout << "No collected solutions available to provide\n";
             }
         });
 

@@ -150,7 +150,7 @@ file(
     "${PROJECT_SOURCE_DIR}/src/Enums.h"
     "${PROJECT_SOURCE_DIR}/src/Structs.h"
     "${PROJECT_SOURCE_DIR}/src/Environment.h"
-    "${PROJECT_SOURCE_DIR}/src/EventHandler.h"
+    "${PROJECT_SOURCE_DIR}/src/Callback.h"
     "${PROJECT_SOURCE_DIR}/src/Model/Variables.h"
     "${PROJECT_SOURCE_DIR}/src/Model/Terms.h"
     "${PROJECT_SOURCE_DIR}/src/Model/AuxiliaryVariables.h"
@@ -544,8 +544,8 @@ add_library(
     ${PROJECT_SOURCE_DIR}/src/Output.cpp
     ${PROJECT_SOURCE_DIR}/src/Utilities.h
     ${PROJECT_SOURCE_DIR}/src/Utilities.cpp
-    ${PROJECT_SOURCE_DIR}/src/EventHandler.h
-    ${PROJECT_SOURCE_DIR}/src/EventHandler.cpp
+    ${PROJECT_SOURCE_DIR}/src/Callback.h
+    ${PROJECT_SOURCE_DIR}/src/Callback.cpp
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskBase.h
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskBase.cpp
     ${PROJECT_SOURCE_DIR}/src/TaskHandler.h

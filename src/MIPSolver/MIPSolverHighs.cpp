@@ -12,7 +12,6 @@
 #include "MIPSolverCallbackBase.h"
 
 #include "../DualSolver.h"
-#include "../EventHandler.h"
 #include "../Iteration.h"
 #include "../Output.h"
 #include "../PrimalSolver.h"

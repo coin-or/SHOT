@@ -16,7 +16,7 @@
 
 #include "Environment.h"
 #include "Enums.h"
-#include "EventHandler.h"
+#include "Callback.h"
 #include "Settings.h"
 #include "Structs.h"
 
@@ -48,6 +48,7 @@ private:
 
     bool isProblemInitialized = false;
     bool isProblemSolved = false;
+    bool isSolving = false;
 
     EnvironmentPtr env;
 
@@ -86,37 +87,44 @@ public:
     void outputSolutionReport();
 
     /**
-     * @brief Callback registration method
+     * @brief Registers a callback for one or several locations in the solution process
      *
-     * This method automatically detects whether the callback is a notification callback
-     * or a data provider based on its return type:
-     * - Returns void: Notification callback
-     * - Returns a value: Data provider
+     * The callback is given a context with the state of the solver and the actions that are available at the
+     * location. The context is of the class for the location, which CallbackContext::as<T>() returns:
      *
-     * Examples:
-     * // Data provider for dual bound
-     * solver.registerCallback(E_EventType::ExternalDualBound, []() {
-     *     return computeDualBound(); // Returns double -> data provider
-     * });
+     * solver.registerCallback(E_CallbackLocation::PrimalCandidateCheck | E_CallbackLocation::TerminationCheck,
+     *     [](CallbackContext& context) {
+     *         auto candidate = context.as<PrimalCandidateCheckContext>();
      *
-     * // User termination check
-     * solver.registerCallback(E_EventType::UserTerminationCheck, []() {
-     *     return shouldTerminate(); // Returns bool -> data provider
-     * });
+     *         if(candidate != nullptr && reject(candidate->getPoint()))
+     *             candidate->rejectCandidate();
      *
-     * // Notification callback
-     * solver.registerCallback(E_EventType::NewPrimalSolution, [](std::any solution) {
-     *     processSolution(solution); // Returns void -> notification
-     * });
+     *         if(context.getElapsedTime() > 60)
+     *             context.terminate();
+     *     });
      *
-     * @tparam Callback The callback function type
-     * @param event The event type to register for
-     * @param callback The callback function
+     * Callbacks can be registered before or after setProblem(), but not while solveProblem() runs. If a callback
+     * throws, SHOT terminates and solveProblem() rethrows the exception. See docs/Callbacks.md for the locations.
+     *
+     * @param locations The locations to call the callback at, combined with operator|
+     * @param callback The callback
+     * @return A handle for removeCallback()
      */
-    template <typename Callback> inline void registerCallback(const E_EventType& event, Callback&& callback)
+    int registerCallback(E_CallbackLocation locations, CallbackFunction callback);
+
+    /**
+     * @brief Registers a callback for the location of a context class, e.g., PrimalCandidateCheckContext
+     *
+     * solver.registerCallback<TerminationCheckContext>([](TerminationCheckContext& context) { context.terminate(); });
+     */
+    template <typename T> int registerCallback(std::function<void(T&)> callback)
     {
-        env->events->registerCallback(event, std::forward<Callback>(callback));
+        return (registerCallback(
+            T::Location, [callback = std::move(callback)](CallbackContext& context) { callback(*context.as<T>()); }));
     }
+
+    /// Removes a registered callback; returns false if there is no callback with the handle
+    bool removeCallback(int handle);
 
     std::string getOptionsOSoL();
     std::string getOptions();

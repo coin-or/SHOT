@@ -52,7 +52,7 @@ static CppADErrorHandlerRegistrar cppad_error_handler_registrar;
 }
 
 #include "Solver.h"
-#include "CallbackData.h"
+#include "Callback.h"
 
 #include "DualSolver.h"
 #include "PrimalSolver.h"
@@ -122,6 +122,48 @@ NonlinearExpressionPtr wrapInExpression(double value) { return std::make_shared<
 
 // Pass-through for expressions
 NonlinearExpressionPtr wrapInExpression(NonlinearExpressionPtr expr) { return expr; }
+
+// The locations of a callback, given as a CallbackLocation, an integer mask (e.g., from combining them with |), or an
+// iterable of CallbackLocation
+E_CallbackLocation toCallbackLocations(py::handle locations)
+{
+    std::uint64_t mask = 0;
+
+    if(py::isinstance<E_CallbackLocation>(locations))
+    {
+        mask = static_cast<std::uint64_t>(locations.cast<E_CallbackLocation>());
+    }
+    else if(py::isinstance<py::int_>(locations) && !py::isinstance<py::bool_>(locations))
+    {
+        if(locations.cast<py::int_>() < py::int_(0))
+            throw py::value_error("The mask of callback locations cannot be negative.");
+
+        mask = locations.cast<std::uint64_t>();
+    }
+    else if(py::isinstance<py::iterable>(locations) && !py::isinstance<py::str>(locations))
+    {
+        for(auto location : locations)
+        {
+            if(!py::isinstance<E_CallbackLocation>(location))
+                throw py::type_error("The callback locations must be CallbackLocation values.");
+
+            mask |= static_cast<std::uint64_t>(location.cast<E_CallbackLocation>());
+        }
+    }
+    else
+    {
+        throw py::type_error(
+            "The callback locations must be a CallbackLocation, a combination of them with |, or a list of them.");
+    }
+
+    if(mask == 0)
+        throw py::value_error("At least one callback location must be given.");
+
+    if((mask & ~static_cast<std::uint64_t>(AllCallbackLocations)) != 0)
+        throw py::value_error("The mask " + std::to_string(mask) + " contains an unknown callback location.");
+
+    return (static_cast<E_CallbackLocation>(mask));
+}
 
 PYBIND11_MODULE(SHOTpy, m)
 {
@@ -1453,124 +1495,69 @@ PYBIND11_MODULE(SHOTpy, m)
         .def("updateSetting", py::overload_cast<std::string, double>(&Solver::updateSetting))
         .def(
             "registerCallback",
-            [](Solver& self, E_EventType event, py::function callback)
+            [](Solver& self, py::handle locations, py::function callback)
             {
-                switch(event)
-                {
-                case E_EventType::NewPrimalSolution:
-                    self.registerCallback(event,
-                        [callback](std::any args)
-                        {
-                            py::gil_scoped_acquire gil;
-                            auto data = std::any_cast<PrimalSolutionCallbackData>(args);
-                            callback(data);
-                        });
-                    break;
-                case E_EventType::PrimalSolutionCandidateSelection:
-                    self.registerCallback(event,
-                        [callback](std::any args) -> bool
-                        {
-                            py::gil_scoped_acquire gil;
-                            auto data = std::any_cast<PrimalSolutionCallbackData>(args);
-                            py::object result = callback(data);
-                            if(result.is_none())
-                                return true; // None means accept
-                            return result.cast<bool>();
-                        });
-                    break;
-                case E_EventType::UserTerminationCheck:
-                    self.registerCallback(event,
-                        [callback](std::any args) -> bool
-                        {
-                            py::gil_scoped_acquire gil;
-                            auto data = std::any_cast<TerminationCallbackData>(args);
-                            py::object result = callback(data);
-                            if(result.is_none())
-                                return false;
-                            return result.cast<bool>();
-                        });
-                    break;
-                case E_EventType::ExternalDualBound:
-                    self.registerCallback(event,
-                        [callback](std::any args) -> double
-                        {
-                            py::gil_scoped_acquire gil;
-                            auto data = std::any_cast<DualBoundCallbackData>(args);
-                            py::object result = callback(data);
-                            if(result.is_none())
-                                return std::numeric_limits<double>::quiet_NaN();
-                            return result.cast<double>();
-                        });
-                    break;
-                case E_EventType::ExternalHyperplaneSelection:
-                    self.registerCallback(event,
-                        [callback](std::any args) -> std::vector<ExternalHyperplane>
-                        {
-                            py::gil_scoped_acquire gil;
-                            auto data = std::any_cast<ExternalHyperplaneSelectionCallbackData>(args);
-                            py::object result = callback(data);
-                            if(result.is_none())
-                                return { };
-                            return result.cast<std::vector<ExternalHyperplane>>();
-                        });
-                    break;
-                case E_EventType::ExternalPrimalSolution:
-                    self.registerCallback(event,
-                        [callback](std::any args) -> std::vector<VectorDouble>
-                        {
-                            py::gil_scoped_acquire gil;
-                            auto data = std::any_cast<ExternalPrimalSolutionCallbackData>(args);
-                            py::object result = callback(data);
-                            if(result.is_none())
-                                return { };
-                            auto point = result.cast<VectorDouble>();
-                            if(point.empty())
-                                return { };
-                            return { point }; // wrap single solution in a vector as the task expects
-                        });
-                    break;
-                case E_EventType::ExternalESHRootsearchPointsSelection:
-                    self.registerCallback(event,
-                        [callback](std::any args) -> std::vector<VectorDouble>
-                        {
-                            py::gil_scoped_acquire gil;
-                            auto data = std::any_cast<ESHInteriorPointCallbackData>(args);
-                            py::object result = callback(data);
-                            if(result.is_none())
-                                return { };
-                            return result.cast<std::vector<VectorDouble>>();
-                        });
-                    break;
-                default:
-                    throw std::invalid_argument("Unknown event type for registerCallback");
-                }
-            },
-            "Register a Python callback for an event type.\n\n"
-            "Callback signatures by event type:\n"
-            "  EventType.NewPrimalSolution: fn(PrimalSolutionCallbackData) -> None\n"
-            "  EventType.PrimalSolutionCandidateSelection: fn(PrimalSolutionCallbackData) -> bool\n"
-            "    Return False to reject the candidate (skip feasibility check). None or True to accept.\n"
-            "  EventType.UserTerminationCheck: fn(TerminationCallbackData) -> bool\n"
-            "    Return True to stop, False to continue. Return None to continue.\n"
-            "  EventType.ExternalDualBound: fn(DualBoundCallbackData) -> float\n"
-            "    Return a new dual bound value, or None to skip.\n"
-            "  EventType.ExternalHyperplaneSelection: fn(ExternalHyperplaneSelectionCallbackData) -> "
-            "list[ExternalHyperplane]\n"
-            "    Return a list of hyperplanes to add, or None/[] to add none.\n"
-            "  EventType.ExternalPrimalSolution: fn(ExternalPrimalSolutionCallbackData) -> list[float]\n"
-            "    Return a new primal solution point, or None/[] to skip.\n"
-            "  EventType.ExternalESHRootsearchPointsSelection: fn(ESHInteriorPointCallbackData) -> list[list[float]]\n"
-            "    Return a replacement list of interior point vectors, or None/[] to keep current points.",
-            py::arg("event"), py::arg("callback"));
+                auto mask = toCallbackLocations(locations);
 
-    py::enum_<E_EventType>(m, "EventType")
-        .value("ExternalDualBound", E_EventType::ExternalDualBound)
-        .value("ExternalHyperplaneSelection", E_EventType::ExternalHyperplaneSelection)
-        .value("ExternalPrimalSolution", E_EventType::ExternalPrimalSolution)
-        .value("ExternalESHRootsearchPointsSelection", E_EventType::ExternalESHRootsearchPointsSelection)
-        .value("NewPrimalSolution", E_EventType::NewPrimalSolution)
-        .value("PrimalSolutionCandidateSelection", E_EventType::PrimalSolutionCandidateSelection)
-        .value("UserTerminationCheck", E_EventType::UserTerminationCheck);
+                // The Python function is released with the GIL held, since the callback can be removed or the solver
+                // destroyed on a thread that does not hold it
+                auto function = std::shared_ptr<py::function>(new py::function(std::move(callback)),
+                    [](py::function* F)
+                    {
+                        if(!Py_IsInitialized())
+                            return;
+
+                        py::gil_scoped_acquire gil;
+                        delete F;
+                    });
+
+                return (self.registerCallback(mask,
+                    [function](CallbackContext& context)
+                    {
+                        py::gil_scoped_acquire gil;
+                        (*function)(context.shared_from_this());
+                    }));
+            },
+            "Register a callback for one or several locations in the solution process.\n\n"
+            "The locations are given as a CallbackLocation, several combined with |, or a list of them.\n"
+            "The callback is called as fn(context), where the context is of the class for the location,\n"
+            "e.g., a PrimalCandidateCheckContext at CallbackLocation.PrimalCandidateCheck, and has the\n"
+            "state of the solver and the actions available at the location. The context can only be used\n"
+            "while the callback runs. If the callback raises an exception, SHOT terminates and\n"
+            "solveProblem() raises it.\n\n"
+            "Returns a handle for removeCallback().",
+            py::arg("locations"), py::arg("callback"))
+        .def("removeCallback", &Solver::removeCallback,
+            "Remove a registered callback; returns False if there is no callback with the handle.", py::arg("handle"));
+
+    // The operators combine the locations into an integer mask, which registerCallback() accepts; pybind11 only
+    // defines them for enums that convert implicitly to integers, which a scoped enum does not
+    py::enum_<E_CallbackLocation> callbackLocation(m, "CallbackLocation");
+    callbackLocation.value("InteriorPointSearch", E_CallbackLocation::InteriorPointSearch)
+        .value("DualBoundUpdate", E_CallbackLocation::DualBoundUpdate)
+        .value("PrimalCandidateSearch", E_CallbackLocation::PrimalCandidateSearch)
+        .value("PrimalCandidateCheck", E_CallbackLocation::PrimalCandidateCheck)
+        .value("NewPrimalSolution", E_CallbackLocation::NewPrimalSolution)
+        .value("TerminationCheck", E_CallbackLocation::TerminationCheck)
+        .value("HyperplaneSelection", E_CallbackLocation::HyperplaneSelection)
+        .def(
+            "__or__", [](E_CallbackLocation first, E_CallbackLocation second)
+            { return (static_cast<std::uint64_t>(first) | static_cast<std::uint64_t>(second)); }, py::is_operator())
+        .def(
+            "__or__", [](E_CallbackLocation first, std::uint64_t second)
+            { return (static_cast<std::uint64_t>(first) | second); }, py::is_operator())
+        .def(
+            "__ror__", [](E_CallbackLocation first, std::uint64_t second)
+            { return (static_cast<std::uint64_t>(first) | second); }, py::is_operator())
+        .def(
+            "__and__", [](E_CallbackLocation first, E_CallbackLocation second)
+            { return (static_cast<std::uint64_t>(first) & static_cast<std::uint64_t>(second)); }, py::is_operator())
+        .def(
+            "__and__", [](E_CallbackLocation first, std::uint64_t second)
+            { return (static_cast<std::uint64_t>(first) & second); }, py::is_operator())
+        .def(
+            "__rand__", [](E_CallbackLocation first, std::uint64_t second)
+            { return (static_cast<std::uint64_t>(first) & second); }, py::is_operator());
 
     py::enum_<E_HyperplaneSource>(m, "HyperplaneSource", py::arithmetic())
         .value("None", E_HyperplaneSource::None)
@@ -1729,65 +1716,101 @@ PYBIND11_MODULE(SHOTpy, m)
         .def_readwrite("rhsValue", &ExternalHyperplane::rhsValue);
 
     // -------------------------------------------------------------------------
-    // Callback data structures (passed to Python callbacks as read-only data)
+    // Callback contexts (passed to Python callbacks, only valid while the callback runs)
     // -------------------------------------------------------------------------
 
-    py::class_<DualBoundCallbackData>(m, "DualBoundCallbackData")
-        .def_readonly("isMinimization", &DualBoundCallbackData::isMinimization)
-        .def_readonly("currentDualBound", &DualBoundCallbackData::currentDualBound)
-        .def_readonly("currentPrimalBound", &DualBoundCallbackData::currentPrimalBound)
-        .def_readonly("relativeGap", &DualBoundCallbackData::relativeGap)
-        .def_readonly("absoluteGap", &DualBoundCallbackData::absoluteGap)
-        .def_readonly("iterationNumber", &DualBoundCallbackData::iterationNumber)
-        .def_readonly("solutionStatistics", &DualBoundCallbackData::solutionStatistics);
+    py::register_exception<CallbackContextExpired>(m, "CallbackContextExpired", PyExc_RuntimeError);
 
-    py::class_<TerminationCallbackData>(m, "TerminationCallbackData")
-        .def_readonly("iterationNumber", &TerminationCallbackData::iterationNumber)
-        .def_readonly("currentDualBound", &TerminationCallbackData::currentDualBound)
-        .def_readonly("currentPrimalBound", &TerminationCallbackData::currentPrimalBound)
-        .def_readonly("relativeGap", &TerminationCallbackData::relativeGap)
-        .def_readonly("absoluteGap", &TerminationCallbackData::absoluteGap)
-        .def_readonly("timeElapsed", &TerminationCallbackData::timeElapsed)
-        .def_readonly("solutionStatistics", &TerminationCallbackData::solutionStatistics);
+    // The getters return copies, so what a callback keeps from a context is still valid after it has returned
+    py::class_<CallbackContext, std::shared_ptr<CallbackContext>>(m, "CallbackContext",
+        "The state of the solver and the actions available to a callback. Values that are not available yet, e.g.,\n"
+        "the dual bound before the first dual problem has been solved, are infinite.")
+        .def_property_readonly("location", &CallbackContext::getLocation)
+        .def_property_readonly("isValid", &CallbackContext::isValid)
+        .def_property_readonly("isMinimization", &CallbackContext::isMinimization)
+        .def_property_readonly("iterationNumber", &CallbackContext::getIterationNumber)
+        .def_property_readonly("elapsedTime", &CallbackContext::getElapsedTime)
+        .def_property_readonly("dualBound", &CallbackContext::getDualBound)
+        .def_property_readonly("globalDualBound", &CallbackContext::getGlobalDualBound)
+        .def_property_readonly("primalBound", &CallbackContext::getPrimalBound)
+        .def_property_readonly("relativeGap", &CallbackContext::getRelativeGap)
+        .def_property_readonly("absoluteGap", &CallbackContext::getAbsoluteGap)
+        .def_property_readonly("solutionStatistics", &CallbackContext::getSolutionStatistics)
+        .def_property_readonly("originalProblem", &CallbackContext::getOriginalProblem)
+        .def_property_readonly("reformulatedProblem", &CallbackContext::getReformulatedProblem)
+        .def_property_readonly("hasPrimalSolution", &CallbackContext::hasPrimalSolution)
+        .def_property_readonly(
+            "primalSolution",
+            [](const CallbackContext& self) -> std::optional<VectorDouble>
+            {
+                if(!self.hasPrimalSolution())
+                    return (std::nullopt);
 
-    py::class_<PrimalSolutionCallbackData>(m, "PrimalSolutionCallbackData")
-        .def_readonly("isMinimization", &PrimalSolutionCallbackData::isMinimization)
-        .def_readonly("solution", &PrimalSolutionCallbackData::solution)
-        .def_readonly("objectiveValue", &PrimalSolutionCallbackData::objectiveValue)
-        .def_readonly("currentDualBound", &PrimalSolutionCallbackData::currentDualBound)
-        .def_readonly("relativeGap", &PrimalSolutionCallbackData::relativeGap)
-        .def_readonly("absoluteGap", &PrimalSolutionCallbackData::absoluteGap)
-        .def_readonly("iterationNumber", &PrimalSolutionCallbackData::iterationNumber)
-        .def_readonly("sourceType", &PrimalSolutionCallbackData::sourceType)
-        .def_readonly("solutionStatistics", &PrimalSolutionCallbackData::solutionStatistics);
+                return (self.getPrimalSolution());
+            },
+            "The best primal solution in the variables of the original problem, or None if there is none")
+        .def_property_readonly("isTerminationRequested", &CallbackContext::isTerminationRequested)
+        .def("terminate", &CallbackContext::terminate, "Request SHOT to terminate at its next termination check");
 
-    py::class_<ExternalPrimalSolutionCallbackData>(m, "ExternalPrimalSolutionCallbackData")
-        .def_readonly("isMinimization", &ExternalPrimalSolutionCallbackData::isMinimization)
-        .def_readonly("currentDualBound", &ExternalPrimalSolutionCallbackData::currentDualBound)
-        .def_readonly("currentPrimalBound", &ExternalPrimalSolutionCallbackData::currentPrimalBound)
-        .def_readonly("relativeGap", &ExternalPrimalSolutionCallbackData::relativeGap)
-        .def_readonly("absoluteGap", &ExternalPrimalSolutionCallbackData::absoluteGap)
-        .def_readonly("iterationNumber", &ExternalPrimalSolutionCallbackData::iterationNumber)
-        .def_readonly("currentSolution", &ExternalPrimalSolutionCallbackData::currentSolution)
-        .def_readonly("solutionStatistics", &ExternalPrimalSolutionCallbackData::solutionStatistics);
+    py::class_<PrimalCandidateCheckContext, CallbackContext, std::shared_ptr<PrimalCandidateCheckContext>>(
+        m, "PrimalCandidateCheckContext")
+        .def_property_readonly(
+            "point", [](const PrimalCandidateCheckContext& self) { return (VectorDouble(self.getPoint())); },
+            "The candidate, in the variables of the original problem")
+        .def_property_readonly("objectiveValue", &PrimalCandidateCheckContext::getObjectiveValue)
+        .def_property_readonly("source", &PrimalCandidateCheckContext::getSource)
+        .def_property_readonly("isCandidateRejected", &PrimalCandidateCheckContext::isCandidateRejected)
+        .def("rejectCandidate", &PrimalCandidateCheckContext::rejectCandidate,
+            "SHOT will not check the candidate, so it cannot become a primal solution");
 
-    py::class_<ExternalHyperplaneSelectionCallbackData>(m, "ExternalHyperplaneSelectionCallbackData")
-        .def_readonly("isMinimization", &ExternalHyperplaneSelectionCallbackData::isMinimization)
-        .def_readonly("iterationNumber", &ExternalHyperplaneSelectionCallbackData::iterationNumber)
-        .def_readonly("currentDualBound", &ExternalHyperplaneSelectionCallbackData::currentDualBound)
-        .def_readonly("currentPrimalBound", &ExternalHyperplaneSelectionCallbackData::currentPrimalBound)
-        .def_readonly("relativeGap", &ExternalHyperplaneSelectionCallbackData::relativeGap)
-        .def_readonly("absoluteGap", &ExternalHyperplaneSelectionCallbackData::absoluteGap)
-        .def_readonly("solutionPoints", &ExternalHyperplaneSelectionCallbackData::solutionPoints)
-        .def_readonly("originalProblem", &ExternalHyperplaneSelectionCallbackData::originalProblem)
-        .def_readonly("reformulatedProblem", &ExternalHyperplaneSelectionCallbackData::reformulatedProblem)
-        .def_readonly("isObjectiveNonlinear", &ExternalHyperplaneSelectionCallbackData::isObjectiveNonlinear)
-        .def_readonly("solutionStatistics", &ExternalHyperplaneSelectionCallbackData::solutionStatistics);
+    py::class_<NewPrimalSolutionContext, CallbackContext, std::shared_ptr<NewPrimalSolutionContext>>(
+        m, "NewPrimalSolutionContext")
+        .def_property_readonly(
+            "point", [](const NewPrimalSolutionContext& self) { return (VectorDouble(self.getPoint())); },
+            "The solution, in the variables of the original problem")
+        .def_property_readonly("objectiveValue", &NewPrimalSolutionContext::getObjectiveValue)
+        .def_property_readonly("source", &NewPrimalSolutionContext::getSource)
+        .def_property_readonly("isIncumbent", &NewPrimalSolutionContext::isIncumbent,
+            "Whether the solution is better than the best one SHOT had before it");
 
-    py::class_<ESHInteriorPointCallbackData>(m, "ESHInteriorPointCallbackData")
-        .def_readonly("currentInteriorPoints", &ESHInteriorPointCallbackData::currentInteriorPoints)
-        .def_readonly("originalProblem", &ESHInteriorPointCallbackData::originalProblem)
-        .def_readonly("reformulatedProblem", &ESHInteriorPointCallbackData::reformulatedProblem)
-        .def_readonly("solutionStatistics", &ESHInteriorPointCallbackData::solutionStatistics);
+    py::class_<DualBoundUpdateContext, CallbackContext, std::shared_ptr<DualBoundUpdateContext>>(
+        m, "DualBoundUpdateContext")
+        .def_property_readonly("proposedDualBound", &DualBoundUpdateContext::getProposedDualBound)
+        .def("setDualBound", &DualBoundUpdateContext::setDualBound,
+            "Propose a dual bound; SHOT uses it if it is better than the current one", py::arg("value"));
+
+    py::class_<PrimalCandidateSearchContext, CallbackContext, std::shared_ptr<PrimalCandidateSearchContext>>(
+        m, "PrimalCandidateSearchContext")
+        .def_property_readonly("addedPrimalSolutions", [](const PrimalCandidateSearchContext& self)
+            { return (std::vector<VectorDouble>(self.getAddedPrimalSolutions())); })
+        .def("addPrimalSolution", &PrimalCandidateSearchContext::addPrimalSolution,
+            "Add a primal solution candidate in the variables of the original or the reformulated problem",
+            py::arg("point"));
+
+    py::class_<HyperplaneSelectionContext, CallbackContext, std::shared_ptr<HyperplaneSelectionContext>>(
+        m, "HyperplaneSelectionContext")
+        .def_property_readonly(
+            "solutionPoints", [](const HyperplaneSelectionContext& self)
+            { return (std::vector<SolutionPoint>(self.getSolutionPoints())); },
+            "The solution points of the dual problem, in the variables of the reformulated problem")
+        .def_property_readonly("addedHyperplanes", [](const HyperplaneSelectionContext& self)
+            { return (std::vector<ExternalHyperplane>(self.getAddedHyperplanes())); })
+        .def("addHyperplane", &HyperplaneSelectionContext::addHyperplane,
+            "Add a hyperplane in the variables of the reformulated problem", py::arg("hyperplane"));
+
+    py::class_<InteriorPointSearchContext, CallbackContext, std::shared_ptr<InteriorPointSearchContext>>(
+        m, "InteriorPointSearchContext")
+        .def_property_readonly(
+            "interiorPoints", [](const InteriorPointSearchContext& self)
+            { return (std::vector<VectorDouble>(self.getInteriorPoints())); },
+            "The interior points SHOT has found, in the variables of the reformulated problem")
+        .def_property_readonly("replacementInteriorPoints", &InteriorPointSearchContext::getReplacementInteriorPoints)
+        .def("setInteriorPoints", &InteriorPointSearchContext::setInteriorPoints,
+            "Replace the interior points with at least one point in the variables of the original or the\n"
+            "reformulated problem",
+            py::arg("points"));
+
+    py::class_<TerminationCheckContext, CallbackContext, std::shared_ptr<TerminationCheckContext>>(
+        m, "TerminationCheckContext");
 }
 }
