@@ -340,9 +340,10 @@ void CtCallbackI::main()
     solutionCandidate.objectiveValue = getObjValue();
     solutionCandidate.iterFound = env->results->getCurrentIteration()->iterationNumber;
 
-    // Check if better dual bound
-    if((isMinimization && tmpDualObjBound > env->results->getCurrentDualBound())
-        || (!isMinimization && tmpDualObjBound < env->results->getCurrentDualBound()))
+    // Check if better dual bound. CPLEX gives a missing bound as 1e75 or -1e75, which is a finite value to SHOT
+    if(std::abs(tmpDualObjBound) < 1e75
+        && ((isMinimization && tmpDualObjBound > env->results->getCurrentDualBound())
+            || (!isMinimization && tmpDualObjBound < env->results->getCurrentDualBound())))
     {
         DualSolution sol = { solution, E_DualSolutionSource::MIPSolverBound, tmpDualObjBound,
             env->results->getCurrentIteration()->iterationNumber, false };
