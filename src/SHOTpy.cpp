@@ -502,6 +502,110 @@ void checkNotAddedOrRepeated(const Container& elements, Describe describe)
     }
 }
 
+// A function with a variable that has not been added to the problem would be evaluated with the index the variable has
+// in another problem, or with the index -1
+void checkVariableInProblem(const Problem& problem, const VariablePtr& variable, const std::string& owner)
+{
+    int index = variable->getIndex();
+
+    if(index < 0 || index >= (int)problem.allVariables.size() || problem.allVariables[index] != variable)
+    {
+        throw py::value_error(
+            "The variable '" + variable->name + "' in " + owner + " has not been added to the problem.");
+    }
+}
+
+void checkVariablesInProblem(const Problem& problem, const NonlinearExpressionPtr& expression, const std::string& owner)
+{
+    if(!expression)
+        return;
+
+    if(auto variable = std::dynamic_pointer_cast<ExpressionVariable>(expression))
+    {
+        checkVariableInProblem(problem, variable->variable, owner);
+    }
+    else if(auto unary = std::dynamic_pointer_cast<ExpressionUnary>(expression))
+    {
+        checkVariablesInProblem(problem, unary->child, owner);
+    }
+    else if(auto binary = std::dynamic_pointer_cast<ExpressionBinary>(expression))
+    {
+        checkVariablesInProblem(problem, binary->firstChild, owner);
+        checkVariablesInProblem(problem, binary->secondChild, owner);
+    }
+    else if(auto general = std::dynamic_pointer_cast<ExpressionGeneral>(expression))
+    {
+        for(auto& C : general->children)
+            checkVariablesInProblem(problem, C, owner);
+    }
+}
+
+// The constraints and the objective function have the same terms, in classes of their own
+template <typename Linear, typename Quadratic, typename Nonlinear, typename Function>
+void checkFunctionVariablesInProblem(const Problem& problem, const Function& function, const std::string& owner)
+{
+    if(auto linear = std::dynamic_pointer_cast<Linear>(function))
+    {
+        for(auto& T : linear->linearTerms)
+            checkVariableInProblem(problem, T->variable, owner);
+    }
+
+    if(auto quadratic = std::dynamic_pointer_cast<Quadratic>(function))
+    {
+        for(auto& T : quadratic->quadraticTerms)
+        {
+            checkVariableInProblem(problem, T->firstVariable, owner);
+            checkVariableInProblem(problem, T->secondVariable, owner);
+        }
+    }
+
+    if(auto nonlinear = std::dynamic_pointer_cast<Nonlinear>(function))
+    {
+        for(auto& T : nonlinear->monomialTerms)
+        {
+            for(auto& V : T->variables)
+                checkVariableInProblem(problem, V, owner);
+        }
+
+        for(auto& T : nonlinear->signomialTerms)
+        {
+            for(auto& E : T->elements)
+                checkVariableInProblem(problem, E->variable, owner);
+        }
+
+        checkVariablesInProblem(problem, nonlinear->nonlinearExpression, owner);
+    }
+}
+
+// The variables are checked when a constraint or the objective function is added, since the problem takes ownership of
+// the variables of its expression, and again by finalize(), since terms can be added to it afterwards
+void checkVariablesInProblem(const Problem& problem, const NumericConstraintPtr& constraint)
+{
+    checkFunctionVariablesInProblem<LinearConstraint, QuadraticConstraint, NonlinearConstraint>(
+        problem, constraint, "the constraint '" + constraint->name + "'");
+}
+
+void checkVariablesInProblem(const Problem& problem, const ObjectiveFunctionPtr& objective)
+{
+    checkFunctionVariablesInProblem<LinearObjectiveFunction, QuadraticObjectiveFunction, NonlinearObjectiveFunction>(
+        problem, objective, "the objective function");
+}
+
+void checkVariablesInProblem(const Problem& problem)
+{
+    for(auto& C : problem.numericConstraints)
+        checkVariablesInProblem(problem, C);
+
+    if(problem.objectiveFunction)
+        checkVariablesInProblem(problem, problem.objectiveFunction);
+
+    for(auto& S : problem.specialOrderedSets)
+    {
+        for(auto& V : S->variables)
+            checkVariableInProblem(problem, V, "a special ordered set");
+    }
+}
+
 // Adds a constraint given by a comparison. Without a name, it is named constraint_<index>
 void addConstraintExpression(Problem& problem, const ConstraintExpression& constraint, std::string name)
 {
@@ -509,6 +613,8 @@ void addConstraintExpression(Problem& problem, const ConstraintExpression& const
     // constraints would make adding constraints quadratic in their number
     if(name.empty())
         name = "constraint_" + std::to_string(problem.numericConstraints.size());
+
+    checkVariablesInProblem(problem, constraint.expression, "the constraint '" + name + "'");
 
     // A linear constraint is created as such, as it would be from its class. finalize() splits a nonlinear
     // constraint with two bounds before it extracts its terms, so a linear range given as a nonlinear
@@ -1903,6 +2009,7 @@ PYBIND11_MODULE(SHOTpy, m)
             {
                 checkCanAdd(self);
                 checkNotAdded(*c, "constraint '" + c->name + "'");
+                checkVariablesInProblem(self, c);
                 self.add(c);
             },
             py::arg("constraint").none(false))
@@ -1912,6 +2019,7 @@ PYBIND11_MODULE(SHOTpy, m)
             {
                 checkCanAdd(self);
                 checkNotAdded(*c, "constraint '" + c->name + "'");
+                checkVariablesInProblem(self, c);
                 self.add(c);
             },
             py::arg("constraint").none(false))
@@ -1921,6 +2029,7 @@ PYBIND11_MODULE(SHOTpy, m)
             {
                 checkCanAdd(self);
                 checkNotAdded(*c, "constraint '" + c->name + "'");
+                checkVariablesInProblem(self, c);
                 self.add(c);
             },
             py::arg("constraint").none(false))
@@ -1930,6 +2039,7 @@ PYBIND11_MODULE(SHOTpy, m)
             {
                 checkCanAdd(self);
                 checkNotAdded(*c, "constraint '" + c->name + "'");
+                checkVariablesInProblem(self, c);
                 self.add(c);
             },
             py::arg("constraint").none(false))
@@ -1955,6 +2065,9 @@ PYBIND11_MODULE(SHOTpy, m)
                     constraints, [](const NumericConstraintPtr& C) { return "constraint '" + C->name + "'"; });
 
                 for(auto& C : constraints)
+                    checkVariablesInProblem(self, C);
+
+                for(auto& C : constraints)
                     self.add(C);
             },
             py::arg("constraints"), "Add all the constraints of a list")
@@ -1968,18 +2081,28 @@ PYBIND11_MODULE(SHOTpy, m)
                 if(!names.empty() && names.size() != constraints.size())
                     throw py::value_error("The number of names and the number of constraints must be equal.");
 
+                // Checked for all the constraints before any of them is added, as in the other bulk adds
+                for(size_t i = 0; i < constraints.size(); i++)
+                {
+                    checkVariablesInProblem(self, constraints[i].expression,
+                        "the constraint at position " + std::to_string(i) + " of the list");
+                }
+
                 for(size_t i = 0; i < constraints.size(); i++)
                     addConstraintExpression(self, constraints[i], names.empty() ? "" : names[i]);
             },
             py::arg("constraints"), py::arg("names") = std::vector<std::string>(),
-            "Add all the constraints of a list of comparisons, e.g., [x <= 1, x + y >= 2], with the names of a list "
-            "of\n"
-            "the same length. Without names, they are named constraint_<index>.")
+            "Add all the constraints of a list of comparisons, e.g., [x <= 1, x + y >= 2], with the names of a\n"
+            "list of the same length. Without names, they are named constraint_<index>.")
         .def(
             "addSpecialOrderedSet",
             [](Problem& self, SpecialOrderedSetPtr sos)
             {
                 checkCanAdd(self);
+
+                for(auto& V : sos->variables)
+                    checkVariableInProblem(self, V, "the special ordered set");
+
                 self.add(sos);
             },
             py::arg("sos"))
@@ -1990,6 +2113,7 @@ PYBIND11_MODULE(SHOTpy, m)
             {
                 checkCanAdd(self);
                 checkNotAdded(*obj, "objective function");
+                checkVariablesInProblem(self, obj);
                 self.add(obj);
             },
             py::arg("objective").none(false))
@@ -1999,6 +2123,7 @@ PYBIND11_MODULE(SHOTpy, m)
             {
                 checkCanAdd(self);
                 checkNotAdded(*obj, "objective function");
+                checkVariablesInProblem(self, obj);
                 self.add(obj);
             },
             py::arg("objective").none(false))
@@ -2008,6 +2133,7 @@ PYBIND11_MODULE(SHOTpy, m)
             {
                 checkCanAdd(self);
                 checkNotAdded(*obj, "objective function");
+                checkVariablesInProblem(self, obj);
                 self.add(obj);
             },
             py::arg("objective").none(false))
@@ -2017,6 +2143,7 @@ PYBIND11_MODULE(SHOTpy, m)
             {
                 checkCanAdd(self);
                 checkNotAdded(*obj, "objective function");
+                checkVariablesInProblem(self, obj);
                 self.add(obj);
             },
             py::arg("objective").none(false))
@@ -2025,6 +2152,7 @@ PYBIND11_MODULE(SHOTpy, m)
             [](Problem& self, NonlinearExpressionPtr expression, E_ObjectiveFunctionDirection direction)
             {
                 checkCanAdd(self);
+                checkVariablesInProblem(self, expression, "the objective function");
                 self.add(std::make_shared<NonlinearObjectiveFunction>(direction, expression, 0.0));
             },
             py::arg("expression").none(false), py::arg("direction") = E_ObjectiveFunctionDirection::Minimize,
@@ -2036,6 +2164,7 @@ PYBIND11_MODULE(SHOTpy, m)
             [](Problem& self, VariablePtr variable, E_ObjectiveFunctionDirection direction)
             {
                 checkCanAdd(self);
+                checkVariableInProblem(self, variable, "the objective function");
                 self.add(std::make_shared<NonlinearObjectiveFunction>(direction, wrapInExpression(variable), 0.0));
             },
             py::arg("variable").none(false), py::arg("direction") = E_ObjectiveFunctionDirection::Minimize,
@@ -2056,8 +2185,17 @@ PYBIND11_MODULE(SHOTpy, m)
         // Finalize: simplify expressions, extract terms (linear, quadratic, monomial, signomial),
         // update properties, and prepare factorable functions
         .def(
-            "finalize", [](Problem& self) { self.finalize(); },
-            "Finalize the problem: extract terms from expressions, update properties, and prepare for solving")
+            "finalize",
+            [](Problem& self)
+            {
+                if(!self.hasBeenFinalized())
+                    checkVariablesInProblem(self);
+
+                self.finalize();
+            },
+            "Finalize the problem: extract terms from expressions, update properties, and prepare for solving.\n"
+            "Raises ValueError if a constraint or the objective function has a variable that has not been added to\n"
+            "the problem.")
         .def("updateProperties", &Problem::updateProperties, "Update problem properties")
         // Getters
         .def("getVariable", &Problem::getVariable, py::arg("index"))

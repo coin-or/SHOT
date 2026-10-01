@@ -239,8 +239,10 @@ void GurobiCallbackSingleTree::callback()
                 break;
             }
 
-            if((isMinimization && tmpDualObjBound > env->results->getCurrentDualBound())
-                || (!isMinimization && tmpDualObjBound < env->results->getCurrentDualBound()))
+            // Gurobi gives a missing bound as GRB_INFINITY or -GRB_INFINITY, which is a finite value to SHOT
+            if(std::abs(tmpDualObjBound) < GRB_INFINITY
+                && ((isMinimization && tmpDualObjBound > env->results->getCurrentDualBound())
+                    || (!isMinimization && tmpDualObjBound < env->results->getCurrentDualBound())))
             {
                 VectorDouble doubleSolution; // Empty since we have no point
 

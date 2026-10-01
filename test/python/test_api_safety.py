@@ -228,6 +228,101 @@ class TestLifecycle:
             otherProblem.setObjective(objective)
 
 
+class TestVariablesOfOtherProblems:
+    """finalize() checks that the functions only use variables of the problem."""
+
+    """The variables of a constraint or the objective function must have been added to the problem before it."""
+
+    def test_constraint_with_a_variable_of_another_problem(self):
+        _, problem, x, _ = make_problem()
+        _, _, otherX, _ = make_problem()
+
+        with pytest.raises(ValueError, match="'c'"):
+            problem.addConstraint(x + otherX <= 5, "c")
+        with pytest.raises(ValueError, match="'n'"):
+            problem.addConstraint(x * otherX <= 5, "n")
+
+        assert len(problem.numericConstraints) == 0
+
+    def test_objective_with_a_variable_not_added(self):
+        import SHOTpy
+
+        _, problem, x, _ = make_problem()
+        z = SHOTpy.Variable("z", SHOTpy.VariableType.Real, 0.0, 1.0)
+
+        with pytest.raises(ValueError, match="objective function"):
+            problem.setObjective(SHOTpy.exp(x) + z)
+        with pytest.raises(ValueError, match="objective function"):
+            problem.setObjective(z)
+
+        objective = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
+        objective.add(SHOTpy.LinearTerm(1.0, z))
+        with pytest.raises(ValueError, match="'z'"):
+            problem.setObjective(objective)
+
+    def test_constraint_class_with_a_variable_not_added(self):
+        import SHOTpy
+
+        _, problem, x, _ = make_problem()
+        z = SHOTpy.Variable("z", SHOTpy.VariableType.Real, 0.0, 1.0)
+
+        constraint = SHOTpy.QuadraticConstraint("q", 0.0, 1.0)
+        constraint.add(SHOTpy.QuadraticTerm(1.0, x, z))
+
+        with pytest.raises(ValueError, match="'z'"):
+            problem.addConstraint(constraint)
+        with pytest.raises(ValueError, match="'z'"):
+            problem.addConstraints([constraint])
+
+    def test_list_with_one_invalid_comparison_leaves_the_problem_unchanged(self):
+        import SHOTpy
+
+        _, problem, x, _ = make_problem()
+        z = SHOTpy.Variable("z", SHOTpy.VariableType.Real, 0.0, 1.0)
+
+        with pytest.raises(ValueError, match="position 1"):
+            problem.addConstraints([x <= 1, x + z <= 2])
+
+        assert len(problem.numericConstraints) == 0
+
+    def test_term_added_after_the_constraint_is_checked_by_finalize(self):
+        import SHOTpy
+
+        _, problem, x, _ = make_problem()
+        z = SHOTpy.Variable("z", SHOTpy.VariableType.Real, 0.0, 1.0)
+
+        constraint = SHOTpy.LinearConstraint("c", 0.0, 1.0)
+        constraint.add(SHOTpy.LinearTerm(1.0, x))
+        problem.addConstraint(constraint)
+        constraint.add(SHOTpy.LinearTerm(1.0, z))
+        problem.setObjective(x)
+
+        with pytest.raises(ValueError, match="'c'"):
+            problem.finalize()
+
+        assert not problem.isFinalized
+
+
+class TestCallbackBounds:
+    def test_missing_dual_bound_is_infinite(self):
+        """A MIP solver's own value for a missing bound, e.g., -1e100 for Gurobi, is given as -inf."""
+        import SHOTpy
+
+        solver, problem, x, y = make_problem()
+        b = problem.addVariable("b", SHOTpy.VariableType.Binary)
+        problem.setObjective(-x - y + b, SHOTpy.ObjectiveDirection.Minimize)
+        problem.addConstraint(SHOTpy.exp(x) + y**2 <= 20 + b, "c")
+        problem.finalize()
+        solver.setProblem(problem)
+
+        bounds = []
+        solver.registerCallback(SHOTpy.CallbackLocation.DualBoundUpdate, lambda ctx: bounds.append(ctx.dualBound))
+        assert solver.solveProblem()
+
+        assert bounds
+        assert all(math.isinf(B) or abs(B) < 1e20 for B in bounds)
+
+
 class TestAddConstraints:
     def test_comparisons(self):
         _, problem, x, y = make_problem()
