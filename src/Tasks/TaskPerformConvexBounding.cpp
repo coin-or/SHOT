@@ -164,7 +164,7 @@ void TaskPerformConvexBounding::run()
         auto primalSol = env->results->primalSolution;
         env->reformulatedProblem->augmentAuxiliaryVariableValues(primalSol);
 
-        if(env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
+        if(env->dualSolver->hasObjectiveVariableOnlyInMIPSolver())
         {
             primalSol.push_back(env->results->getPrimalBound());
         }

@@ -79,7 +79,7 @@ void HCallbackI::main() // Called at each node...
 
         assert(env->reformulatedProblem->properties.numberOfVariables == primalSol.size());
 
-        if(env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
+        if(env->dualSolver->hasObjectiveVariableOnlyInMIPSolver())
             primalSol.push_back(env->reformulatedProblem->objectiveFunction->calculateValue(primalSol));
 
         for(double P : primalSol)
@@ -300,7 +300,7 @@ void CtCallbackI::main()
     this->getValues(tmpVals, cplexVars);
 
     int numberOfVariables
-        = (env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable()) ? tmpVals.getSize() - 1 : tmpVals.getSize();
+        = (env->dualSolver->hasObjectiveVariableOnlyInMIPSolver()) ? tmpVals.getSize() - 1 : tmpVals.getSize();
 
     VectorDouble solution(numberOfVariables);
 

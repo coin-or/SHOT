@@ -362,3 +362,55 @@ class TestProblemFromSolver:
         solver.setProblem(problem)
         assert solver.solveProblem()
         assert abs(solver.getPrimalBound() - 5.0) < 0.01
+
+
+class TestReformulationSettings:
+    """Settings that change the reformulation must give the same model."""
+
+    def make_nonconvex(self, solver):
+        import SHOTpy
+
+        problem = SHOTpy.Problem(solver)
+        x = problem.addVariable("x", SHOTpy.VariableType.Real, -2.0, 3.0)
+        y = problem.addVariable("y", SHOTpy.VariableType.Real, -2.0, 3.0)
+        b = problem.addVariable("b", SHOTpy.VariableType.Binary)
+        problem.setObjective(x * y + 0.5 * b * x + SHOTpy.exp(0.2 * y))
+        problem.addConstraint(x * x + y * y <= 4 + b, "c")
+        problem.addConstraint(x * y + x >= -1, "d")
+        problem.finalize()
+        return problem
+
+    def solve(self, settings):
+        import SHOTpy
+
+        solver = SHOTpy.Solver()
+        solver.updateSetting("Output.Console.LogLevel", 6)
+        solver.updateSetting("Dual.MIP.NumberOfThreads", 1)
+        for name, value in settings.items():
+            solver.updateSetting(name, value)
+
+        problem = self.make_nonconvex(solver)
+        assert solver.setProblem(problem)
+        assert solver.solveProblem()
+
+        return solver, problem
+
+    def test_always_partition_quadratic_terms_keeps_bilinear_terms(self):
+        """A continuous bilinear term cannot be partitioned, and was left out of the reformulated problem."""
+        solver, problem = self.solve({"Model.Reformulation.Constraint.PartitionQuadraticTerms": 0,
+                                      "Model.Reformulation.ObjectiveFunction.PartitionQuadraticTerms": 0})
+
+        point = list(solver.getPrimalSolution().point)
+        assert problem.getConstraint("d").calculateNumericValue(point).error <= 1e-6
+        assert problem.objectiveFunction.calculateValue(point) == pytest.approx(solver.getPrimalBound(), abs=1e-6)
+
+    def test_epigraph_constraint_strategy(self):
+        """The objective variable of the epigraph constraint was given two values in the MIP start."""
+        for treeStrategy in (0, 1):
+            solver, problem = self.solve({"Model.Reformulation.ObjectiveFunction.EpigraphStrategy": 2,
+                                          "Dual.TreeStrategy": treeStrategy})
+
+            point = list(solver.getPrimalSolution().point)
+            assert len(point) == 3
+            assert problem.getConstraint("c").calculateNumericValue(point).error <= 1e-6
+            assert problem.getConstraint("d").calculateNumericValue(point).error <= 1e-6

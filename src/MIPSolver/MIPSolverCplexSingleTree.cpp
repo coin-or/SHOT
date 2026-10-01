@@ -181,9 +181,8 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
 
                 context.getRelaxationPoint(cplexVars, tmpVals);
 
-                int numberOfVariables = (env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
-                    ? tmpVals.getSize() - 1
-                    : tmpVals.getSize();
+                int numberOfVariables = (env->dualSolver->hasObjectiveVariableOnlyInMIPSolver()) ? tmpVals.getSize() - 1
+                                                                                                 : tmpVals.getSize();
 
                 VectorDouble solution(numberOfVariables);
 
@@ -268,9 +267,8 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
 
             context.getCandidatePoint(cplexVars, tmpVals);
 
-            int numberOfVariables = (env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
-                ? tmpVals.getSize() - 1
-                : tmpVals.getSize();
+            int numberOfVariables
+                = (env->dualSolver->hasObjectiveVariableOnlyInMIPSolver()) ? tmpVals.getSize() - 1 : tmpVals.getSize();
 
             VectorDouble solution(numberOfVariables);
 
@@ -415,7 +413,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
             if((int)primalSol.size() < env->reformulatedProblem->properties.numberOfVariables)
                 env->reformulatedProblem->augmentAuxiliaryVariableValues(primalSol);
 
-            if(env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
+            if(env->dualSolver->hasObjectiveVariableOnlyInMIPSolver())
                 primalSol.push_back(env->reformulatedProblem->objectiveFunction->calculateValue(primalSol));
 
             assert(cplexVars.getSize() == primalSol.size());

@@ -618,6 +618,11 @@ void DualSolver::removeArtificialBounds(const std::vector<VariablePtr>& variable
     }
 }
 
+bool DualSolver::hasObjectiveVariableOnlyInMIPSolver()
+{
+    return (MIPSolver->hasDualAuxiliaryObjectiveVariable() && !env->reformulatedProblem->auxiliaryObjectiveVariable);
+}
+
 bool DualSolver::isDualProblemExact()
 {
     // Nonlinear constraints and nonlinear objectives are only represented by cuts in the dual problem
