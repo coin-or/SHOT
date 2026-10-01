@@ -133,14 +133,15 @@ struct ConstraintExpression
 };
 
 // SHOT marks a missing bound with SHOT_DBL_MIN or SHOT_DBL_MAX and compares with these values exactly, so an infinite
-// bound is given that value. A bound that is NaN, or that no value can fulfil, e.g., f <= -inf, raises ValueError
+// bound of a constraint or variable is given that value. A bound that is NaN, or that no value can fulfil, e.g.,
+// f <= -inf, raises ValueError
 double toLowerBound(double value)
 {
     if(std::isnan(value))
-        throw py::value_error("The bound of a constraint cannot be NaN.");
+        throw py::value_error("A bound cannot be NaN.");
 
     if(value == std::numeric_limits<double>::infinity())
-        throw py::value_error("No value is larger than or equal to inf, so the constraint cannot be fulfilled.");
+        throw py::value_error("No value is larger than or equal to inf, so the lower bound cannot be fulfilled.");
 
     return (value <= SHOT_DBL_MIN ? SHOT_DBL_MIN : value);
 }
@@ -148,12 +149,29 @@ double toLowerBound(double value)
 double toUpperBound(double value)
 {
     if(std::isnan(value))
-        throw py::value_error("The bound of a constraint cannot be NaN.");
+        throw py::value_error("A bound cannot be NaN.");
 
     if(value == -std::numeric_limits<double>::infinity())
-        throw py::value_error("No value is smaller than or equal to -inf, so the constraint cannot be fulfilled.");
+        throw py::value_error("No value is smaller than or equal to -inf, so the upper bound cannot be fulfilled.");
 
     return (value >= SHOT_DBL_MAX ? SHOT_DBL_MAX : value);
+}
+
+// A bound given to a variable or set on it later: an infinite bound is a missing bound, and NaN raises ValueError. A
+// bound that cannot be fulfilled, e.g., a lower bound of inf, is not rejected, since the bounds may be set one at a
+// time
+double toVariableBound(double value)
+{
+    if(std::isnan(value))
+        throw py::value_error("A bound cannot be NaN.");
+
+    if(value <= SHOT_DBL_MIN)
+        return (SHOT_DBL_MIN);
+
+    if(value >= SHOT_DBL_MAX)
+        return (SHOT_DBL_MAX);
+
+    return (value);
 }
 
 double toEqualityValue(double value)
@@ -494,15 +512,29 @@ PYBIND11_MODULE(SHOTpy, m)
     // ===== Variable Class =====
     py::class_<Variable, std::shared_ptr<Variable>> variableClass(m, "Variable");
     variableClass
-        .def(py::init<std::string, E_VariableType, double, double>(), py::arg("name"), py::arg("type"),
-            py::arg("lower_bound"), py::arg("upper_bound"))
-        .def(py::init<std::string, E_VariableType, double, double, double>(), py::arg("name"), py::arg("type"),
-            py::arg("lower_bound"), py::arg("upper_bound"), py::arg("semi_bound"))
+        .def(py::init(
+                 [](std::string name, E_VariableType type, double lowerBound, double upperBound)
+                 {
+                     return std::make_shared<Variable>(
+                         name, type, toVariableBound(lowerBound), toVariableBound(upperBound));
+                 }),
+            py::arg("name"), py::arg("type"), py::arg("lower_bound"), py::arg("upper_bound"))
+        .def(py::init(
+                 [](std::string name, E_VariableType type, double lowerBound, double upperBound, double semiBound)
+                 {
+                     return std::make_shared<Variable>(
+                         name, type, toVariableBound(lowerBound), toVariableBound(upperBound), semiBound);
+                 }),
+            py::arg("name"), py::arg("type"), py::arg("lower_bound"), py::arg("upper_bound"), py::arg("semi_bound"))
         .def_readwrite("name", &Variable::name)
         // Assigned by the problem the variable is added to, so read only
         .def_property_readonly("index", &Variable::getIndex)
-        .def_readwrite("lowerBound", &Variable::lowerBound)
-        .def_readwrite("upperBound", &Variable::upperBound)
+        .def_property(
+            "lowerBound", [](const Variable& self) { return (self.lowerBound); },
+            [](Variable& self, double value) { self.lowerBound = toVariableBound(value); })
+        .def_property(
+            "upperBound", [](const Variable& self) { return (self.upperBound); },
+            [](Variable& self, double value) { self.upperBound = toVariableBound(value); })
         .def_readwrite("semiBound", &Variable::semiBound)
         .def_readonly("properties", &Variable::properties)
         .def("__repr__",
@@ -1533,7 +1565,35 @@ PYBIND11_MODULE(SHOTpy, m)
         .def_readonly("numericConstraints", &Problem::numericConstraints)
         // Add methods - using lambdas since these are separate method overloads
         .def(
-            "addVariable", [](Problem& self, VariablePtr var) { self.add(var); }, py::arg("variable"))
+            "addVariable", [](Problem& self, VariablePtr var) { self.add(var); }, py::arg("variable").none(false))
+        .def(
+            "addVariable",
+            [](Problem& self, std::string name, E_VariableType type, std::optional<double> lowerBound,
+                std::optional<double> upperBound, std::optional<double> semiBound)
+            {
+                bool isBinary = (type == E_VariableType::Binary);
+
+                double lower = lowerBound ? toLowerBound(*lowerBound) : (isBinary ? 0.0 : SHOT_DBL_MIN);
+                double upper = upperBound ? toUpperBound(*upperBound) : (isBinary ? 1.0 : SHOT_DBL_MAX);
+
+                if(lower > upper)
+                    throw py::value_error("The lower bound " + Utilities::toString(lower)
+                        + " is larger than the upper bound " + Utilities::toString(upper) + ".");
+
+                if(name.empty())
+                    name = "variable_" + std::to_string(self.allVariables.size());
+
+                auto variable = semiBound ? std::make_shared<Variable>(name, type, lower, upper, *semiBound)
+                                          : std::make_shared<Variable>(name, type, lower, upper);
+                self.add(variable);
+
+                return (variable);
+            },
+            py::arg("name") = "", py::arg("type") = E_VariableType::Real, py::arg("lowerBound") = py::none(),
+            py::arg("upperBound") = py::none(), py::arg("semiBound") = py::none(),
+            "Create a variable, add it to the problem and return it. Without bounds, a binary variable has the bounds\n"
+            "0 and 1, and other variables have none; inf and -inf also mean no bound. Without a name, it is named\n"
+            "variable_<index>.")
         .def(
             "addVariables", [](Problem& self, Variables vars) { self.add(vars); }, py::arg("variables"))
         // Order matters for pybind11 overload resolution - most specific types first
