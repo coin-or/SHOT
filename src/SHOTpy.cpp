@@ -2343,15 +2343,22 @@ PYBIND11_MODULE(SHOTpy, m)
         .def("getEnvironment", &Solver::getEnvironment)
         .def("getOriginalProblem", &Solver::getOriginalProblem)
         .def("getReformulatedProblem", &Solver::getReformulatedProblem)
-        .def("getAbsoluteObjectiveGap", &Solver::getAbsoluteObjectiveGap)
-        .def("getCurrentDualBound", &Solver::getCurrentDualBound)
+        .def("getAbsoluteObjectiveGap", &Solver::getAbsoluteObjectiveGap,
+            "The absolute difference between the primal bound and the global dual bound")
+        .def("getCurrentDualBound", &Solver::getCurrentDualBound,
+            "The dual bound of the current dual problem. For a nonconvex problem, it is not a valid bound for the\n"
+            "problem once cuts have been added to nonconvex functions; use getGlobalDualBound() for a valid bound")
+        .def("getGlobalDualBound", &Solver::getGlobalDualBound,
+            "The best dual bound that is valid for the problem, also when it is nonconvex. The objective gaps are\n"
+            "calculated from it")
         .def("getModelReturnStatus", &Solver::getModelReturnStatus)
         .def("getOptions", &Solver::getOptions)
         .def("getOptionsOSoL", &Solver::getOptionsOSoL)
         .def("getPrimalBound", &Solver::getPrimalBound)
         .def("getPrimalSolution", &Solver::getPrimalSolution)
         .def("getPrimalSolutions", &Solver::getPrimalSolutions)
-        .def("getRelativeObjectiveGap", &Solver::getRelativeObjectiveGap)
+        .def("getRelativeObjectiveGap", &Solver::getRelativeObjectiveGap,
+            "The relative difference between the primal bound and the global dual bound")
         .def("getResultsOSrL", &Solver::getResultsOSrL)
         .def("getResultsSol", &Solver::getResultsSol)
         .def("getResultsTrace", &Solver::getResultsTrace)

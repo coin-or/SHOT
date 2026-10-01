@@ -446,3 +446,41 @@ class TestIpoptLinearSolver:
             objectives.append(solver.getPrimalBound())
 
         assert max(objectives) - min(objectives) < 1e-4
+
+
+class TestDualBounds:
+    def test_global_dual_bound_of_nonconvex_problem_is_valid(self):
+        """For a nonconvex problem the dual bound of the current dual problem is not valid, but the global one is."""
+        import SHOTpy
+
+        solver = SHOTpy.Solver()
+        solver.updateSetting("Output.Console.LogLevel", 6)
+        solver.updateSetting("Dual.MIP.NumberOfThreads", 1)
+
+        problem = TestReformulationSettings().make_nonconvex(solver)
+        assert solver.setProblem(problem)
+        assert solver.solveProblem()
+
+        # x = 1.3773, y = -1.4502, b = 0 is feasible with objective -1.2491
+        globalDualBound = solver.getGlobalDualBound()
+        assert globalDualBound <= -1.2491
+        assert globalDualBound <= solver.getPrimalBound()
+        assert solver.getRelativeObjectiveGap() > 0
+
+    def test_global_dual_bound_of_convex_problem(self):
+        import SHOTpy
+
+        solver = SHOTpy.Solver()
+        solver.updateSetting("Output.Console.LogLevel", 6)
+
+        problem = SHOTpy.Problem(solver)
+        x = problem.addVariable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = problem.addVariable("y", SHOTpy.VariableType.Integer, 0.0, 10.0)
+        problem.setObjective(x**2 + (y - 1.4)**2)
+        problem.addConstraint(x + y >= 3, "c")
+        problem.finalize()
+
+        assert solver.setProblem(problem)
+        assert solver.solveProblem()
+        assert solver.getModelReturnStatus() == SHOTpy.ModelReturnStatus.OptimalGlobal
+        assert abs(solver.getGlobalDualBound() - solver.getPrimalBound()) < 1e-3
