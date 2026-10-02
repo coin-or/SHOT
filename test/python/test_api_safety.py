@@ -376,3 +376,69 @@ class TestNames:
 
         x = SHOTpy.Variable(name="x", type=SHOTpy.VariableType.Real, lowerBound=-1.0, upperBound=2.0)
         assert (x.lowerBound, x.upperBound) == (-1.0, 2.0)
+
+
+class TestResultsBeforeAndAfterSolving:
+    def test_results_before_set_problem(self, solver):
+        """The results crashed before setProblem(), since they used the objective function of the problem."""
+        import SHOTpy
+
+        assert solver.getPrimalBound() == math.inf
+        assert solver.getGlobalDualBound() == -math.inf
+        assert solver.getCurrentDualBound() == -math.inf
+        assert solver.getAbsoluteObjectiveGap() == math.inf
+        assert solver.getRelativeObjectiveGap() == math.inf
+        assert solver.getModelReturnStatus() == SHOTpy.ModelReturnStatus.NoSolutionReturned
+
+    def test_missing_bounds_are_infinite_when_maximizing(self):
+        import SHOTpy
+
+        solver, problem, x, y = make_problem()
+        problem.setObjective(x + y, SHOTpy.ObjectiveDirection.Maximize)
+        problem.finalize()
+        assert solver.setProblem(problem)
+
+        assert solver.getPrimalBound() == -math.inf
+        assert solver.getGlobalDualBound() == math.inf
+        assert solver.getRelativeObjectiveGap() == math.inf
+
+        assert solver.solveProblem()
+        assert solver.getPrimalBound() == pytest.approx(20.0)
+        assert solver.getGlobalDualBound() == pytest.approx(20.0)
+        assert solver.getAbsoluteObjectiveGap() < 1e-3
+
+
+class TestAliases:
+    def test_no_enum_value_is_named_none(self):
+        """None is a keyword, so such a value could only be reached with getattr(), and not be in the type stubs."""
+        import SHOTpy
+
+        for name, value in vars(SHOTpy).items():
+            if isinstance(value, type) and hasattr(value, "__members__"):
+                assert "None" not in value.__members__, name
+
+        assert SHOTpy.MIPSolver.NotUsed.value == 4
+        assert SHOTpy.PrimalNLPSolver.NotUsed.value == 4
+        assert SHOTpy.ModelingSystem.API.value == 3
+        assert SHOTpy.TerminationReason.NotTerminated.name == "NotTerminated"
+        assert SHOTpy.ModelReturnStatus.NotSet.value == 0
+        assert SHOTpy.HyperplaneSource.Unknown.value == 0
+
+    def test_correctly_spelled_fields(self):
+        import SHOTpy
+
+        solver, problem, x, y = make_problem()
+        problem.setObjective(SHOTpy.exp(x) + y)
+        problem.addConstraint(x + y >= 1, "c")
+        problem.finalize()
+        assert solver.setProblem(problem)
+        assert solver.solveProblem()
+
+        statistics = solver.getSolutionStatistics()
+        assert statistics.numberOfFunctionEvaluations == statistics.numberOfFunctionEvalutions
+
+        solution = solver.getPrimalSolution()
+        for kind in ("Linear", "Quadratic", "Nonlinear"):
+            correct = getattr(solution, f"maxDeviatingConstraint{kind}")
+            misspelled = getattr(solution, f"maxDevatingConstraint{kind}")
+            assert (correct.index, correct.value) == (misspelled.index, misspelled.value)

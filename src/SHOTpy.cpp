@@ -643,6 +643,20 @@ void addConstraintExpression(Problem& problem, const ConstraintExpression& const
         name, constraint.expression, constraint.lowerBound, constraint.upperBound));
 }
 
+// SHOT gives a missing bound or objective gap as SHOT_DBL_MAX or SHOT_DBL_MIN, and a dual bound that has not been set
+// yet as NaN. The results of the solver are given as inf or -inf instead, as in the callback contexts, with the sign of
+// a bound that excludes nothing. Before a problem has been set, the direction is taken to be minimization
+double toResult(double value, double missing)
+{
+    return ((std::isnan(value) || std::abs(value) >= SHOT_DBL_MAX) ? missing : value);
+}
+
+bool isMinimization(Solver& solver)
+{
+    auto problem = solver.getOriginalProblem();
+    return (!problem || !problem->objectiveFunction || problem->objectiveFunction->properties.isMinimize);
+}
+
 // The sequence protocol of a container of the model: len(), indexing, where a negative index counts from the end and an
 // index outside the container raises IndexError, and iteration. Without __iter__, Python iterates by indexing until
 // IndexError, so an unchecked index read past the end
@@ -774,7 +788,7 @@ PYBIND11_MODULE(SHOTpy, m)
         .value("OSiL", ES_ModelingSystem::OSiL)
         .value("GAMS", ES_ModelingSystem::GAMS)
         .value("AMPL", ES_ModelingSystem::AMPL)
-        .value("None", ES_ModelingSystem::None);
+        .value("API", ES_ModelingSystem::API);
 
     // Function to get list of supported modeling systems - uses C++ API directly
     m.def("getSupportedModelingSystems", &Solver::getSupportedModelingSystems,
@@ -880,7 +894,7 @@ PYBIND11_MODULE(SHOTpy, m)
         .value("Gurobi", ES_MIPSolver::Gurobi)
         .value("Cbc", ES_MIPSolver::Cbc)
         .value("Highs", ES_MIPSolver::Highs)
-        .value("None", ES_MIPSolver::None);
+        .value("NotUsed", ES_MIPSolver::NotUsed);
 
     // Source of fixed MIP solution point for NLP
     py::enum_<ES_PrimalNLPFixedPoint>(m, "PrimalNLPFixedPoint")
@@ -901,7 +915,7 @@ PYBIND11_MODULE(SHOTpy, m)
         .value("GAMS", ES_PrimalNLPSolver::GAMS)
         .value("SHOT", ES_PrimalNLPSolver::SHOT)
         .value("Uno", ES_PrimalNLPSolver::Uno)
-        .value("None", ES_PrimalNLPSolver::None);
+        .value("NotUsed", ES_PrimalNLPSolver::NotUsed);
 
     // NLP solver call strategy
     py::enum_<ES_PrimalNLPStrategy>(m, "PrimalNLPStrategy")
@@ -2575,14 +2589,31 @@ PYBIND11_MODULE(SHOTpy, m)
         .def("getReformulatedProblem", &Solver::getReformulatedProblem,
             "The problem that SHOT solves, created from the original problem by setProblem(), e.g., with\n"
             "auxiliary variables for nonlinear terms, or None before the problem has been set")
-        .def("getAbsoluteObjectiveGap", &Solver::getAbsoluteObjectiveGap,
-            "The absolute difference between the primal bound and the global dual bound")
-        .def("getCurrentDualBound", &Solver::getCurrentDualBound,
-            "The dual bound of the current dual problem. For a nonconvex problem, it is not a valid bound for the\n"
-            "problem once cuts have been added to nonconvex functions; use getGlobalDualBound() for a valid bound")
-        .def("getGlobalDualBound", &Solver::getGlobalDualBound,
-            "The best dual bound that is valid for the problem, also when it is nonconvex. The objective gaps are\n"
-            "calculated from it")
+        .def(
+            "getAbsoluteObjectiveGap", [](Solver& self)
+            { return (toResult(self.getAbsoluteObjectiveGap(), std::numeric_limits<double>::infinity())); },
+            "The absolute difference between the primal bound and the global dual bound, inf if either is missing")
+        .def(
+            "getCurrentDualBound",
+            [](Solver& self)
+            {
+                return (toResult(self.getCurrentDualBound(),
+                    isMinimization(self) ? -std::numeric_limits<double>::infinity()
+                                         : std::numeric_limits<double>::infinity()));
+            },
+            "The dual bound of the current dual problem, -inf (inf when maximizing) if there is none. For a\n"
+            "nonconvex problem, it is not a valid bound for the problem once cuts have been added to nonconvex\n"
+            "functions; use getGlobalDualBound() for a valid bound")
+        .def(
+            "getGlobalDualBound",
+            [](Solver& self)
+            {
+                return (toResult(self.getGlobalDualBound(),
+                    isMinimization(self) ? -std::numeric_limits<double>::infinity()
+                                         : std::numeric_limits<double>::infinity()));
+            },
+            "The best dual bound that is valid for the problem, also when it is nonconvex, -inf (inf when\n"
+            "maximizing) if there is none. The objective gaps are calculated from it")
         .def("getModelReturnStatus", &Solver::getModelReturnStatus,
             "The status of the solution, e.g., ModelReturnStatus.OptimalGlobal when the solution is proven\n"
             "optimal, or FeasibleSolution when a solution has been found without proving it optimal")
@@ -2590,14 +2621,22 @@ PYBIND11_MODULE(SHOTpy, m)
             "The settings that differ from their defaults, in the format of an options file")
         .def("getOptionsOSoL", &Solver::getOptionsOSoL,
             "The settings that differ from their defaults, in the OSoL format")
-        .def("getPrimalBound", &Solver::getPrimalBound,
-            "The objective value of the best solution found, or SHOT_DBL_MAX (SHOT_DBL_MIN when maximizing)\n"
-            "if none has been found")
+        .def(
+            "getPrimalBound",
+            [](Solver& self)
+            {
+                return (toResult(self.getPrimalBound(),
+                    isMinimization(self) ? std::numeric_limits<double>::infinity()
+                                         : -std::numeric_limits<double>::infinity()));
+            },
+            "The objective value of the best solution found, inf (-inf when maximizing) if none has been found")
         .def("getPrimalSolution", &Solver::getPrimalSolution,
             "The best solution found. Raises an exception if none has been found; check hasPrimalSolution() first")
         .def("getPrimalSolutions", &Solver::getPrimalSolutions, "All the solutions found, the best first")
-        .def("getRelativeObjectiveGap", &Solver::getRelativeObjectiveGap,
-            "The relative difference between the primal bound and the global dual bound")
+        .def(
+            "getRelativeObjectiveGap", [](Solver& self)
+            { return (toResult(self.getRelativeObjectiveGap(), std::numeric_limits<double>::infinity())); },
+            "The relative difference between the primal bound and the global dual bound, inf if either is missing")
         .def("getResultsOSrL", &Solver::getResultsOSrL, "The results in the OSrL format")
         .def("getResultsSol", &Solver::getResultsSol, "The results in the AMPL .sol format")
         .def("getResultsTrace", &Solver::getResultsTrace, "The results as a line in the GAMS trace file format")
@@ -2751,7 +2790,7 @@ PYBIND11_MODULE(SHOTpy, m)
             { return (static_cast<std::uint64_t>(first) & second); }, py::is_operator());
 
     py::enum_<E_HyperplaneSource>(m, "HyperplaneSource", py::arithmetic())
-        .value("None", E_HyperplaneSource::None)
+        .value("Unknown", E_HyperplaneSource::Unknown)
         .value("MIPOptimalRootsearch", E_HyperplaneSource::MIPOptimalRootsearch)
         .value("MIPSolutionPoolRootsearch", E_HyperplaneSource::MIPSolutionPoolRootsearch)
         .value("LPRelaxedRootsearch", E_HyperplaneSource::LPRelaxedRootsearch)
@@ -2779,7 +2818,7 @@ PYBIND11_MODULE(SHOTpy, m)
         .value("ConvexBounding", E_PrimalSolutionSource::ConvexBounding)
         .value("ExternalPrimalSolution", E_PrimalSolutionSource::ExternalPrimalSolution);
 
-    modelReturnStatusEnum.value("None", E_ModelReturnStatus::None)
+    modelReturnStatusEnum.value("NotSet", E_ModelReturnStatus::NotSet)
         .value("OptimalGlobal", E_ModelReturnStatus::OptimalGlobal)
         .value("Unbounded", E_ModelReturnStatus::Unbounded)
         .value("UnboundedNoSolution", E_ModelReturnStatus::UnboundedNoSolution)
@@ -2801,7 +2840,7 @@ PYBIND11_MODULE(SHOTpy, m)
         .value("RelativeGap", E_TerminationReason::RelativeGap)
         .value("UserAbort", E_TerminationReason::UserAbort)
         .value("NoDualCutsAdded", E_TerminationReason::NoDualCutsAdded)
-        .value("None", E_TerminationReason::None)
+        .value("NotTerminated", E_TerminationReason::NotTerminated)
         .value("NumericIssues", E_TerminationReason::NumericIssues);
 
     py::class_<PairIndexValue>(m, "PairIndexValue")
@@ -2816,15 +2855,21 @@ PYBIND11_MODULE(SHOTpy, m)
             "sourceDescription", &PrimalSolution::sourceDescription, "A description of where the solution comes from")
         .def_readwrite("objValue", &PrimalSolution::objValue, "The objective value of the solution")
         .def_readwrite("iterFound", &PrimalSolution::iterFound, "The iteration in which the solution was found")
-        .def_readwrite("maxDevatingConstraintLinear", &PrimalSolution::maxDevatingConstraintLinear,
+        .def_readwrite("maxDeviatingConstraintLinear", &PrimalSolution::maxDevatingConstraintLinear,
             "The index of the linear constraint the solution violates the most and the violation, index -1 if\n"
             "there is none")
-        .def_readwrite("maxDevatingConstraintQuadratic", &PrimalSolution::maxDevatingConstraintQuadratic,
+        .def_readwrite("maxDevatingConstraintLinear", &PrimalSolution::maxDevatingConstraintLinear,
+            "The same as maxDeviatingConstraintLinear; the misspelled name is kept for existing code")
+        .def_readwrite("maxDeviatingConstraintQuadratic", &PrimalSolution::maxDevatingConstraintQuadratic,
             "The index of the quadratic constraint the solution violates the most and the violation, index -1 if\n"
             "there is none")
-        .def_readwrite("maxDevatingConstraintNonlinear", &PrimalSolution::maxDevatingConstraintNonlinear,
+        .def_readwrite("maxDevatingConstraintQuadratic", &PrimalSolution::maxDevatingConstraintQuadratic,
+            "The same as maxDeviatingConstraintQuadratic; the misspelled name is kept for existing code")
+        .def_readwrite("maxDeviatingConstraintNonlinear", &PrimalSolution::maxDevatingConstraintNonlinear,
             "The index of the nonlinear constraint the solution violates the most and the violation, index -1 if\n"
             "there is none")
+        .def_readwrite("maxDevatingConstraintNonlinear", &PrimalSolution::maxDevatingConstraintNonlinear,
+            "The same as maxDeviatingConstraintNonlinear; the misspelled name is kept for existing code")
         .def_readwrite("maxIntegerToleranceError", &PrimalSolution::maxIntegerToleranceError,
             "The largest distance of an integer variable from an integer value before rounding")
         .def_readwrite("boundProjectionPerformed", &PrimalSolution::boundProjectionPerformed,
@@ -2853,8 +2898,10 @@ PYBIND11_MODULE(SHOTpy, m)
             "The number of MIQCQP problems solved until a feasible solution was found")
         .def_readwrite("numberOfProblemsOptimalMIQCQP", &SolutionStatistics::numberOfProblemsOptimalMIQCQP,
             "The number of MIQCQP problems solved to optimality")
-        .def_readwrite("numberOfFunctionEvalutions", &SolutionStatistics::numberOfFunctionEvalutions,
+        .def_readwrite("numberOfFunctionEvaluations", &SolutionStatistics::numberOfFunctionEvalutions,
             "The number of evaluations of nonlinear functions")
+        .def_readwrite("numberOfFunctionEvalutions", &SolutionStatistics::numberOfFunctionEvalutions,
+            "The same as numberOfFunctionEvaluations; the misspelled name is kept for existing code")
         .def_readwrite("numberOfGradientEvaluations", &SolutionStatistics::numberOfGradientEvaluations,
             "The number of evaluations of gradients of nonlinear functions")
         .def_readwrite("numberOfProblemsMinimaxLP", &SolutionStatistics::numberOfProblemsMinimaxLP,

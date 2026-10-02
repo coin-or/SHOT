@@ -54,7 +54,7 @@ enum class E_DualSolutionSource
 
 enum class E_HyperplaneSource
 {
-    None,
+    Unknown, // The source is not known
     MIPOptimalRootsearch,
     MIPSolutionPoolRootsearch,
     LPRelaxedRootsearch,
@@ -110,7 +110,7 @@ enum class E_LogLevel
 
 enum class E_ModelReturnStatus
 {
-    None,
+    NotSet, // No status has been set
     OptimalGlobal,
     // OptimalLocal,
     Unbounded,
@@ -263,7 +263,7 @@ enum class E_TerminationReason
     NumericIssues,
     UserAbort,
     NoDualCutsAdded,
-    None
+    NotTerminated // SHOT has not terminated
 };
 
 enum class E_VariableType
@@ -333,7 +333,7 @@ enum class ES_ModelingSystem
     OSiL,
     GAMS,
     AMPL,
-    None
+    API // The problem is built through the API, not read from a file
 };
 
 enum class ES_ObjectiveRootsearch
@@ -361,7 +361,7 @@ enum class ES_MIPSolver
     Gurobi,
     Cbc,
     Highs,
-    None
+    NotUsed // No MIP solver has been used
 };
 
 enum class ES_OutputDirectory
@@ -392,7 +392,7 @@ enum class ES_PrimalNLPSolver
     GAMS,
     SHOT,
     Uno,
-    None
+    NotUsed // No NLP solver has been used
 };
 
 enum class ES_PrimalNLPStrategy
