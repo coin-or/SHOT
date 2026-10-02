@@ -484,3 +484,82 @@ class TestDualBounds:
         assert solver.solveProblem()
         assert solver.getModelReturnStatus() == SHOTpy.ModelReturnStatus.OptimalGlobal
         assert abs(solver.getGlobalDualBound() - solver.getPrimalBound()) < 1e-3
+
+
+class TestOpenSourceMIPSolvers:
+    @pytest.mark.parametrize("mipSolver", ["Cbc", "Highs"])
+    @pytest.mark.parametrize("direction", ["Minimize", "Maximize"])
+    @pytest.mark.parametrize("constant", [-50.0, 50.0])
+    def test_convex_miqp_with_objective_constant(self, mipSolver, direction, constant):
+        """With Cbc, the constant of the objective function was given to Cbc with the wrong sign, so its dual bound
+        was off by twice the constant, and a solve that Cbc had proven optimal under a solution limit was never
+        trusted; the gap of this problem stagnated for over 1000 iterations."""
+        import SHOTpy
+
+        if not getattr(SHOTpy, f"HAS_{mipSolver.upper()}"):
+            pytest.skip(f"SHOT is not built with {mipSolver}")
+
+        solver = SHOTpy.Solver()
+        solver.updateSetting("Output.Console.LogLevel", 6)
+        solver.updateSetting("Dual.MIP.Solver", int(getattr(SHOTpy.MIPSolver, mipSolver)))
+
+        problem = SHOTpy.Problem(solver)
+        x = problem.addVariable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = problem.addVariable("y", SHOTpy.VariableType.Integer, 0.0, 10.0)
+
+        sign = 1.0 if direction == "Minimize" else -1.0
+        problem.setObjective(sign * (x**2 + (y - 1.4)**2) + constant, getattr(SHOTpy.ObjectiveDirection, direction))
+        problem.addConstraint(x + y >= 3, "c")
+        problem.finalize()
+
+        assert solver.setProblem(problem)
+        assert solver.solveProblem()
+
+        # The optimum is x = 0, y = 3, i.e., 1.36 before the sign and the constant
+        optimum = sign * 1.36 + constant
+        assert solver.getModelReturnStatus() == SHOTpy.ModelReturnStatus.OptimalGlobal
+        assert solver.getPrimalBound() == pytest.approx(optimum, abs=1e-3)
+        assert solver.getSolutionStatistics().numberOfIterations < 100
+
+        if direction == "Minimize":
+            assert optimum - 0.1 <= solver.getGlobalDualBound() <= optimum + 1e-6
+        else:
+            assert optimum - 1e-6 <= solver.getGlobalDualBound() <= optimum + 0.1
+
+
+# MINLPLib instances with a constant in the objective function, as minimization problems and as the maximization of
+# the negated objective function, with their optimal values
+CONSTANT_INSTANCES = {"nvs03": 16.0, "ex1223a": 4.579582402, "synthes2": 73.03531253}
+
+
+class TestObjectiveConstantInstances:
+    @pytest.mark.parametrize("mipSolver", ["Cbc", "Highs"])
+    @pytest.mark.parametrize("direction", ["min", "max"])
+    @pytest.mark.parametrize("instance", sorted(CONSTANT_INSTANCES))
+    def test_instance(self, data_dir, mipSolver, direction, instance):
+        """With Cbc, the constant was given with the wrong sign, so that the dual bound did not close the gap, and a
+        maximization problem with a sum of squares in the objective function gave Cbc quadratic constraints, which it
+        does not support."""
+        import SHOTpy
+
+        if not getattr(SHOTpy, f"HAS_{mipSolver.upper()}"):
+            pytest.skip(f"SHOT is not built with {mipSolver}")
+
+        solver = SHOTpy.Solver()
+        solver.updateSetting("Output.Console.LogLevel", 6)
+        solver.updateSetting("Dual.MIP.Solver", int(getattr(SHOTpy.MIPSolver, mipSolver)))
+
+        assert solver.setProblem(str(data_dir / f"constant_{instance}_{direction}.osil"))
+        assert solver.solveProblem()
+
+        optimum = CONSTANT_INSTANCES[instance] * (1.0 if direction == "min" else -1.0)
+        tolerance = 1e-3 * max(1.0, abs(optimum))
+
+        assert solver.getModelReturnStatus() == SHOTpy.ModelReturnStatus.OptimalGlobal
+        assert solver.getPrimalBound() == pytest.approx(optimum, abs=tolerance)
+
+        # The dual bound is valid, i.e., not better than the optimum
+        if direction == "min":
+            assert solver.getGlobalDualBound() <= optimum + tolerance
+        else:
+            assert solver.getGlobalDualBound() >= optimum - tolerance

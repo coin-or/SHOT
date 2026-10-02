@@ -10,6 +10,7 @@
 */
 
 #include "Simplifications.h"
+#include "../Settings.h"
 
 #include <unordered_set>
 #include "spdlog/fmt/fmt.h"
@@ -101,6 +102,15 @@ void checkAndConvertObjectivesAndConstraints(
 
     std::vector<std::pair<NumericConstraintPtr, NumericConstraintPtr>> changedConstraints; // old, new
 
+    // The reformulated problem is given to the MIP solver, which is only given quadratic constraints if the quadratic
+    // strategy allows them, e.g., not with Cbc. A constraint whose nonlinear expression turns out to be quadratic is
+    // then kept nonlinear with its quadratic terms extracted, as the reformulation creates such constraints; replacing
+    // it with a quadratic constraint made the solve fail, e.g., for a maximization problem with a sum of squares
+    bool keepQuadraticConstraintsNonlinear = problem->properties.isReformulated
+        && static_cast<ES_QuadraticProblemStrategy>(
+               problem->env->settings->getSetting<int>("Model.Reformulation.Quadratics.Strategy"))
+            < ES_QuadraticProblemStrategy::ConvexQuadraticallyConstrained;
+
     for(auto& C : problem->numericConstraints)
     {
         if(!C->properties.hasNonlinearExpression)
@@ -118,8 +128,11 @@ void checkAndConvertObjectivesAndConstraints(
             = extractTermsAndConstant(
                 nonlinearExpression, extractMonomials, extractSignomials, extractQuadratics, true);
 
+        bool isQuadratic = (tmpQuadraticTerms.size() > 0 || nonlinearConstraint->quadraticTerms.size() > 0);
+
         if(tmpMonomialTerms.size() == 0 && tmpSignomialTerms.size() == 0 && !tmpNonlinearExpression
-            && nonlinearConstraint->monomialTerms.size() == 0 && nonlinearConstraint->signomialTerms.size() == 0)
+            && nonlinearConstraint->monomialTerms.size() == 0 && nonlinearConstraint->signomialTerms.size() == 0
+            && !(isQuadratic && keepQuadraticConstraintsNonlinear))
         {
             // The constraint is no longer nonlinear
 

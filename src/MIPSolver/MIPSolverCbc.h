@@ -196,6 +196,15 @@ private:
 
     long int solLimit;
     bool forceUnlimitedSolutionLimitNextSolve = false;
+
+    // The solution limit Cbc was given for the latest solve, which may be unlimited even though solLimit is not
+    long int usedSolutionLimit = 2100000000;
+
+    // The offset that makes the objective values and bounds of Cbc include the constant of the objective function.
+    // Cbc subtracts the offset from the objective, and minimizes the objective with its signs changed when the problem
+    // is maximized. The constant was given with the wrong sign, so that the dual bound from Cbc was off by twice the
+    // constant: too weak to close the gap for a positive constant, and invalid for a negative one
+    double getCbcObjectiveOffset() const { return (isMinimizationProblem ? -objectiveConstant : objectiveConstant); }
     double timeLimit = 1e100;
     double cutOff;
     int numberOfThreads = 1;
