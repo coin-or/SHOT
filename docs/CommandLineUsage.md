@@ -77,7 +77,7 @@ string, boolean, integer, enum, then double settings) and parses `VALUE`
 accordingly — booleans must be literally `true`/`false`, enums accept
 their integer value. Unrecognized keys are silently ignored, so typos in a
 setting name will not produce an error — double check the name (e.g. via
-`--docs`, section 6) if a `KEY=VALUE` argument doesn't seem to take effect.
+`--docs`, section 7) if a `KEY=VALUE` argument doesn't seem to take effect.
 
 Options can also be read from a file instead of (or in addition to) inline
 arguments:
@@ -103,7 +103,21 @@ arguments:
   `<problemfile with .sol extension>`); written automatically when running
   in `--AMPL` mode.
 
-## 6. Full/current options reference
+## 6. Exit codes
+
+The exit code tells whether the run itself succeeded. It does not give the
+model status: an infeasible or unbounded problem, or a run stopped by a
+limit, still exits with 0, and the status is written to the result files.
+
+| Code | Meaning |
+|------|---------|
+| 0 | The problem was solved (whatever the model status), or `--help`/`--docs` was run |
+| 1 | Invalid command line, e.g. no problem file given, or `--AMPL` with a problem that is not an AMPL (`.nl`) file |
+| 2 | The problem file or the options file given by `--opt`/`--osol` cannot be found or read |
+| 3 | An error occurred while solving the problem, e.g. a callback failed |
+| 4 | A result file (OSrL, trace, `.sol`), the options file or `options.md` could not be written |
+
+## 7. Full/current options reference
 
 ```bash
 ./SHOT --docs
@@ -115,7 +129,7 @@ allowed enum values). This is the authoritative settings reference —
 prefer it over guessing a setting name, since settings can be added,
 renamed, or have their defaults changed between versions.
 
-## 7. Quick reference
+## 8. Quick reference
 
 ```bash
 ./SHOT --help
