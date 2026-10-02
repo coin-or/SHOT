@@ -38,7 +38,7 @@ TaskSolveIteration::TaskSolveIteration(EnvironmentPtr envPtr) : TaskBase(envPtr)
             variableNames.push_back(V->name);
         }
 
-        if(env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
+        if(env->dualSolver->hasObjectiveVariableOnlyInMIPSolver())
         {
             variableNames.push_back("shot_dual_objvar");
         }
@@ -133,7 +133,7 @@ void TaskSolveIteration::run()
 
         env->reformulatedProblem->augmentAuxiliaryVariableValues(primalSol);
 
-        if(env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
+        if(env->dualSolver->hasObjectiveVariableOnlyInMIPSolver())
         {
             primalSol.push_back(env->results->getPrimalBound());
         }

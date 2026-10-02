@@ -294,7 +294,7 @@ bool MIPSolverCbc::finalizeProblem()
             osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
         }
 
-        osiInterface->setDblParam(OsiObjOffset, this->objectiveConstant);
+        osiInterface->setDblParam(OsiObjOffset, getCbcObjectiveOffset());
 
         setSolutionLimit(1);
     }
@@ -329,13 +329,15 @@ void MIPSolverCbc::initializeSolverSettings()
     // Set solution pool settings
     if(forceUnlimitedSolutionLimitNextSolve)
     {
-        cbcModel->setMaximumSolutions(2100000000);
+        usedSolutionLimit = 2100000000;
         forceUnlimitedSolutionLimitNextSolve = false;
     }
     else
     {
-        cbcModel->setMaximumSolutions(solLimit);
+        usedSolutionLimit = solLimit;
     }
+
+    cbcModel->setMaximumSolutions(usedSolutionLimit);
     cbcModel->setMaximumSavedSolutions(env->settings->getSetting<int>("Dual.MIP.SolutionPool.Capacity"));
 
     // Set number of threads
@@ -732,7 +734,7 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
             osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
         }
 
-        osiInterface->setDblParam(OsiObjOffset, this->objectiveConstant);
+        osiInterface->setDblParam(OsiObjOffset, getCbcObjectiveOffset());
 
         TerminationEventHandler eventHandler(env);
         cbcModel->passInEventHandler(&eventHandler);
@@ -744,8 +746,10 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
         // Cbc's own optimality proof cannot be fully trusted when a finite solution-count cap was active for
         // this solve (see investigation): downgrade the status so this iteration's incumbent isn't used as a
         // rigorous dual bound, and force the next solve to use an unlimited solution cap so it gets a chance
-        // to correct course on the (by-then cut-augmented) problem.
-        if(MIPSolutionStatus == E_ProblemSolutionStatus::Optimal && solLimit < 2100000000)
+        // to correct course on the (by-then cut-augmented) problem. The limit is the one this solve was given:
+        // testing solLimit instead also downgraded the unlimited solve, so no solve was ever optimal and the
+        // dual bound stagnated
+        if(MIPSolutionStatus == E_ProblemSolutionStatus::Optimal && usedSolutionLimit < 2100000000)
         {
             MIPSolutionStatus = E_ProblemSolutionStatus::SolutionLimit;
             forceUnlimitedSolutionLimitNextSolve = true;
@@ -778,7 +782,7 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
                 osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
             }
 
-            osiInterface->setDblParam(OsiObjOffset, this->objectiveConstant);
+            osiInterface->setDblParam(OsiObjOffset, getCbcObjectiveOffset());
 
             CbcMain1(numArguments, const_cast<const char**>(argv), *cbcModel, dummyCallback, solverData);
 
@@ -866,7 +870,7 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
                 osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
             }
 
-            osiInterface->setDblParam(OsiObjOffset, this->objectiveConstant);
+            osiInterface->setDblParam(OsiObjOffset, getCbcObjectiveOffset());
 
             CbcMain1(numArguments, const_cast<const char**>(argv), *cbcModel, dummyCallback, solverData);
 
@@ -1001,7 +1005,7 @@ bool MIPSolverCbc::repairInfeasibility()
             osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
         }
 
-        osiInterface->setDblParam(OsiObjOffset, this->objectiveConstant);
+        osiInterface->setDblParam(OsiObjOffset, getCbcObjectiveOffset());
 
         cachedSolutionHasChanged = true;
 

@@ -677,7 +677,7 @@ void ModelingSystemGAMS::finalizeSolution()
     case E_ModelReturnStatus::ErrorUnknown:
         gmoModelStatSet(modelingObject, gmoModelStat_ErrorUnknown);
         break;
-    case E_ModelReturnStatus::None:
+    case E_ModelReturnStatus::NotSet:
     case E_ModelReturnStatus::ErrorNoSolution:
         gmoModelStatSet(modelingObject, gmoModelStat_ErrorNoSolution);
     };
@@ -709,7 +709,7 @@ void ModelingSystemGAMS::finalizeSolution()
     case E_TerminationReason::NumericIssues:
         gmoSolveStatSet(modelingObject, gmoSolveStat_SolverErr);
         break;
-    case E_TerminationReason::None:
+    case E_TerminationReason::NotTerminated:
         gmoSolveStatSet(modelingObject, gmoSolveStat_Normal);
         break;
     }

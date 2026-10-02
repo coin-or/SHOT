@@ -340,3 +340,248 @@ class TestFinalizeIdempotency:
         # All outputs should be identical
         assert output1 == output2 == output3, \
             f"Multiple finalize calls changed the problem!\n1st:\n{output1}\n2nd:\n{output2}\n3rd:\n{output3}"
+
+
+class TestProblemFromSolver:
+    """Tests for creating a problem in the environment of a solver."""
+
+    def test_problem_from_solver(self):
+        """Test that a problem created from a solver can be built and solved by it."""
+        import SHOTpy
+
+        solver = SHOTpy.Solver()
+        solver.updateSetting("Output.Console.LogLevel", 6)
+        problem = SHOTpy.Problem(solver)
+
+        x = problem.addVariable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = problem.addVariable("y", SHOTpy.VariableType.Real, 0.0, 10.0)
+        problem.setObjective(x + y, SHOTpy.ObjectiveDirection.Minimize)
+        problem.addConstraint(x + y >= 5, "c1")
+
+        problem.finalize()
+        solver.setProblem(problem)
+        assert solver.solveProblem()
+        assert abs(solver.getPrimalBound() - 5.0) < 0.01
+
+
+class TestReformulationSettings:
+    """Settings that change the reformulation must give the same model."""
+
+    def make_nonconvex(self, solver):
+        import SHOTpy
+
+        problem = SHOTpy.Problem(solver)
+        x = problem.addVariable("x", SHOTpy.VariableType.Real, -2.0, 3.0)
+        y = problem.addVariable("y", SHOTpy.VariableType.Real, -2.0, 3.0)
+        b = problem.addVariable("b", SHOTpy.VariableType.Binary)
+        problem.setObjective(x * y + 0.5 * b * x + SHOTpy.exp(0.2 * y))
+        problem.addConstraint(x * x + y * y <= 4 + b, "c")
+        problem.addConstraint(x * y + x >= -1, "d")
+        problem.finalize()
+        return problem
+
+    def solve(self, settings):
+        import SHOTpy
+
+        solver = SHOTpy.Solver()
+        solver.updateSetting("Output.Console.LogLevel", 6)
+        solver.updateSetting("Dual.MIP.NumberOfThreads", 1)
+        for name, value in settings.items():
+            solver.updateSetting(name, value)
+
+        problem = self.make_nonconvex(solver)
+        assert solver.setProblem(problem)
+        assert solver.solveProblem()
+
+        return solver, problem
+
+    def test_always_partition_quadratic_terms_keeps_bilinear_terms(self):
+        """A continuous bilinear term cannot be partitioned, and was left out of the reformulated problem."""
+        solver, problem = self.solve({"Model.Reformulation.Constraint.PartitionQuadraticTerms": 0,
+                                      "Model.Reformulation.ObjectiveFunction.PartitionQuadraticTerms": 0})
+
+        point = list(solver.getPrimalSolution().point)
+        assert problem.getConstraint("d").calculateNumericValue(point).error <= 1e-6
+        assert problem.objectiveFunction.calculateValue(point) == pytest.approx(solver.getPrimalBound(), abs=1e-6)
+
+    def test_epigraph_constraint_strategy(self):
+        """The objective variable of the epigraph constraint was given two values in the MIP start."""
+        for treeStrategy in (0, 1):
+            solver, problem = self.solve({"Model.Reformulation.ObjectiveFunction.EpigraphStrategy": 2,
+                                          "Dual.TreeStrategy": treeStrategy})
+
+            point = list(solver.getPrimalSolution().point)
+            assert len(point) == 3
+            assert problem.getConstraint("c").calculateNumericValue(point).error <= 1e-6
+            assert problem.getConstraint("d").calculateNumericValue(point).error <= 1e-6
+
+
+class TestIpoptLinearSolver:
+    def test_every_linear_solver_setting_solves(self):
+        """An HSL linear solver that Ipopt cannot load made every NLP solve fail, and MA97 crashed Ipopt. Such a
+        solver is replaced by the default one, so every setting gives the same solution."""
+        import SHOTpy
+
+        if not SHOTpy.HAS_IPOPT:
+            pytest.skip("Ipopt not available")
+
+        objectives = []
+
+        for linearSolver in range(6):
+            solver = SHOTpy.Solver()
+            solver.updateSetting("Output.Console.LogLevel", 6)
+            solver.updateSetting("Primal.FixedInteger.Solver", int(SHOTpy.PrimalNLPSolver.Ipopt))
+            solver.updateSetting("Subsolver.Ipopt.LinearSolver", linearSolver)
+
+            problem = SHOTpy.Problem(solver)
+            x = problem.addVariable("x", SHOTpy.VariableType.Real, 0.1, 10.0)
+            y = problem.addVariable("y", SHOTpy.VariableType.Integer, 0.0, 5.0)
+            problem.setObjective(SHOTpy.exp(x) - 2 * x + (y - 2.4)**2)
+            problem.addConstraint(SHOTpy.exp(x) + y <= 8, "c")
+            problem.finalize()
+
+            assert solver.setProblem(problem)
+            assert solver.solveProblem()
+            assert solver.getModelReturnStatus() == SHOTpy.ModelReturnStatus.OptimalGlobal
+            objectives.append(solver.getPrimalBound())
+
+        assert max(objectives) - min(objectives) < 1e-4
+
+
+class TestDualBounds:
+    def test_global_dual_bound_of_nonconvex_problem_is_valid(self):
+        """For a nonconvex problem the dual bound of the current dual problem is not valid, but the global one is."""
+        import SHOTpy
+
+        solver = SHOTpy.Solver()
+        solver.updateSetting("Output.Console.LogLevel", 6)
+        solver.updateSetting("Dual.MIP.NumberOfThreads", 1)
+
+        problem = TestReformulationSettings().make_nonconvex(solver)
+        assert solver.setProblem(problem)
+        assert solver.solveProblem()
+
+        # x = 1.3773, y = -1.4502, b = 0 is feasible with objective -1.2491
+        globalDualBound = solver.getGlobalDualBound()
+        assert globalDualBound <= -1.2491
+        assert globalDualBound <= solver.getPrimalBound()
+        assert solver.getRelativeObjectiveGap() > 0
+
+    def test_global_dual_bound_of_convex_problem(self):
+        import SHOTpy
+
+        solver = SHOTpy.Solver()
+        solver.updateSetting("Output.Console.LogLevel", 6)
+
+        problem = SHOTpy.Problem(solver)
+        x = problem.addVariable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = problem.addVariable("y", SHOTpy.VariableType.Integer, 0.0, 10.0)
+        problem.setObjective(x**2 + (y - 1.4)**2)
+        problem.addConstraint(x + y >= 3, "c")
+        problem.finalize()
+
+        assert solver.setProblem(problem)
+        assert solver.solveProblem()
+        assert solver.getModelReturnStatus() == SHOTpy.ModelReturnStatus.OptimalGlobal
+        assert abs(solver.getGlobalDualBound() - solver.getPrimalBound()) < 1e-3
+
+
+class TestOpenSourceMIPSolvers:
+    @pytest.mark.parametrize("mipSolver", ["Cbc", "Highs"])
+    @pytest.mark.parametrize("direction", ["Minimize", "Maximize"])
+    @pytest.mark.parametrize("constant", [-50.0, 50.0])
+    def test_convex_miqp_with_objective_constant(self, mipSolver, direction, constant):
+        """With Cbc, the constant of the objective function was given to Cbc with the wrong sign, so its dual bound
+        was off by twice the constant, and a solve that Cbc had proven optimal under a solution limit was never
+        trusted; the gap of this problem stagnated for over 1000 iterations."""
+        import SHOTpy
+
+        if not getattr(SHOTpy, f"HAS_{mipSolver.upper()}"):
+            pytest.skip(f"SHOT is not built with {mipSolver}")
+
+        solver = SHOTpy.Solver()
+        solver.updateSetting("Output.Console.LogLevel", 6)
+        solver.updateSetting("Dual.MIP.Solver", int(getattr(SHOTpy.MIPSolver, mipSolver)))
+
+        problem = SHOTpy.Problem(solver)
+        x = problem.addVariable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = problem.addVariable("y", SHOTpy.VariableType.Integer, 0.0, 10.0)
+
+        sign = 1.0 if direction == "Minimize" else -1.0
+        problem.setObjective(sign * (x**2 + (y - 1.4)**2) + constant, getattr(SHOTpy.ObjectiveDirection, direction))
+        problem.addConstraint(x + y >= 3, "c")
+        problem.finalize()
+
+        assert solver.setProblem(problem)
+        assert solver.solveProblem()
+
+        # The optimum is x = 0, y = 3, i.e., 1.36 before the sign and the constant
+        optimum = sign * 1.36 + constant
+        assert solver.getModelReturnStatus() == SHOTpy.ModelReturnStatus.OptimalGlobal
+        assert solver.getPrimalBound() == pytest.approx(optimum, abs=1e-3)
+        assert solver.getSolutionStatistics().numberOfIterations < 100
+
+        if direction == "Minimize":
+            assert optimum - 0.1 <= solver.getGlobalDualBound() <= optimum + 1e-6
+        else:
+            assert optimum - 1e-6 <= solver.getGlobalDualBound() <= optimum + 0.1
+
+
+# MINLPLib instances with a constant in the objective function, as minimization problems and as the maximization of
+# the negated objective function, with their optimal values
+CONSTANT_INSTANCES = {"nvs03": 16.0, "ex1223a": 4.579582402, "synthes2": 73.03531253}
+
+
+class TestObjectiveConstantInstances:
+    @pytest.mark.parametrize("mipSolver", ["Cbc", "Highs"])
+    @pytest.mark.parametrize("direction", ["min", "max"])
+    @pytest.mark.parametrize("instance", sorted(CONSTANT_INSTANCES))
+    def test_instance(self, data_dir, mipSolver, direction, instance):
+        """With Cbc, the constant was given with the wrong sign, so that the dual bound did not close the gap, and a
+        maximization problem with a sum of squares in the objective function gave Cbc quadratic constraints, which it
+        does not support."""
+        import SHOTpy
+
+        if not getattr(SHOTpy, f"HAS_{mipSolver.upper()}"):
+            pytest.skip(f"SHOT is not built with {mipSolver}")
+
+        solver = SHOTpy.Solver()
+        solver.updateSetting("Output.Console.LogLevel", 6)
+        solver.updateSetting("Dual.MIP.Solver", int(getattr(SHOTpy.MIPSolver, mipSolver)))
+
+        assert solver.setProblem(str(data_dir / f"constant_{instance}_{direction}.osil"))
+        assert solver.solveProblem()
+
+        optimum = CONSTANT_INSTANCES[instance] * (1.0 if direction == "min" else -1.0)
+        tolerance = 1e-3 * max(1.0, abs(optimum))
+
+        assert solver.getModelReturnStatus() == SHOTpy.ModelReturnStatus.OptimalGlobal
+        assert solver.getPrimalBound() == pytest.approx(optimum, abs=tolerance)
+
+        # The dual bound is valid, i.e., not better than the optimum
+        if direction == "min":
+            assert solver.getGlobalDualBound() <= optimum + tolerance
+        else:
+            assert solver.getGlobalDualBound() >= optimum - tolerance
+
+
+class TestHighsThreads:
+    def test_solves_with_different_numbers_of_threads_in_one_process(self, data_dir):
+        """HiGHS has one scheduler of threads for the process, and a solve that asked for another number of threads
+        than the first solve in the process failed, so that SHOT returned a worse solution without proving it optimal."""
+        import SHOTpy
+
+        if not SHOTpy.HAS_HIGHS:
+            pytest.skip("SHOT is not built with HiGHS")
+
+        for threads in (0, 1, 2, 1):
+            solver = SHOTpy.Solver()
+            solver.updateSetting("Output.Console.LogLevel", 6)
+            solver.updateSetting("Dual.MIP.Solver", int(SHOTpy.MIPSolver.Highs))
+            solver.updateSetting("Dual.MIP.NumberOfThreads", threads)
+
+            assert solver.setProblem(str(data_dir / "constant_nvs03_min.osil"))
+            assert solver.solveProblem()
+
+            assert solver.getModelReturnStatus() == SHOTpy.ModelReturnStatus.OptimalGlobal, threads
+            assert solver.getPrimalBound() == pytest.approx(16.0, abs=1e-3), threads

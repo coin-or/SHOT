@@ -1479,9 +1479,11 @@ double MIPSolverCplex::getDualObjectiveValue()
 
     try
     {
+        // CPLEX gives a missing bound as 1e75 or -1e75, which is a finite value to SHOT
         if(isMIP)
         {
-            objVal = cplexInstance.getBestObjValue();
+            if(double bound = cplexInstance.getBestObjValue(); std::abs(bound) < 1e75)
+                objVal = bound;
         }
         else if(getSolutionStatus() == E_ProblemSolutionStatus::Optimal)
         {

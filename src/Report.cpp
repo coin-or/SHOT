@@ -440,7 +440,7 @@ void Report::outputOptionsReport()
     env->output->outputInfo("");
 
     env->output->outputInfo(fmt::format(" Primal NLP solver:          {}",
-        (static_cast<ES_PrimalNLPSolver>(env->results->usedPrimalNLPSolver) == ES_PrimalNLPSolver::None)
+        (static_cast<ES_PrimalNLPSolver>(env->results->usedPrimalNLPSolver) == ES_PrimalNLPSolver::NotUsed)
             ? "none"
             : env->results->usedPrimalNLPSolverDescription));
 
@@ -476,7 +476,7 @@ void Report::outputModelingSystemReport(ES_ModelingSystem system, std::string fi
     case(ES_ModelingSystem::AMPL):
         env->output->outputInfo(" Modeling system:            AMPL");
         break;
-    case(ES_ModelingSystem::None):
+    case(ES_ModelingSystem::API):
         env->output->outputInfo(" Modeling system:            SHOT API");
         break;
 
@@ -998,7 +998,7 @@ void Report::outputSolutionReport()
     case E_ModelReturnStatus::ErrorUnknown:
         env->output->outputInfo(" An error occurred, but a primal solution was found.");
         break;
-    case E_ModelReturnStatus::None:
+    case E_ModelReturnStatus::NotSet:
     case E_ModelReturnStatus::ErrorNoSolution:
         env->output->outputInfo(" An error occurred, and no primal solution was found.");
     };

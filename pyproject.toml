@@ -1,0 +1,79 @@
+[build-system]
+# pybind11-stubgen generates the type stubs SHOTpy.pyi that are installed next to the module
+requires = ["scikit-build-core>=0.10", "pybind11-stubgen"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "SHOTpy"
+dynamic = ["version"]
+description = "Python bindings for the SHOT MINLP solver"
+readme = "README.md"
+license = "EPL-2.0"
+license-files = ["LICENSE", "AUTHORS"]
+requires-python = ">=3.9"
+authors = [{ name = "The SHOT contributors" }]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: C++",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Mathematics",
+]
+
+[project.urls]
+Homepage = "https://shotsolver.dev"
+Documentation = "https://shotsolver.dev/shot/"
+Repository = "https://github.com/coin-or/SHOT"
+Issues = "https://github.com/coin-or/SHOT/issues"
+
+[[tool.dynamic-metadata]]
+provider = "scikit_build_core.metadata.regex"
+field = "version"
+input = "CMakeLists.txt"
+regex = "project\\(SHOT VERSION (?P<value>[0-9.]+)"
+
+[tool.scikit-build]
+cmake.build-type = "Release"
+build-dir = "build/{wheel_tag}"
+cmake.args = [
+    "-DHAS_PYTHON=on",
+    "-DGENERATE_EXE=off",
+    "-DCOMPILE_TESTS=off",
+    "-DHAS_GAMS=off",
+    "-DHAS_CPLEX=off",
+    "-DHAS_GUROBI=off",
+    "-DHAS_CBC=on",
+    "-DHAS_IPOPT=on",
+    "-DHAS_HIGHS=on",
+    "-DBUILD_SHARED_LIBS=off",
+]
+wheel.packages = []
+install.components = ["Python"]
+sdist.include = [
+    "ThirdParty/CppAD/**",
+    "ThirdParty/HiGHS/**",
+    "ThirdParty/eigen/**",
+    "ThirdParty/pybind11/**",
+    "ThirdParty/spdlog/**",
+]
+sdist.exclude = ["ThirdParty/**/.git"]
+
+[tool.cibuildwheel]
+build = "cp39-* cp310-* cp311-* cp312-* cp313-*"
+skip = "*-musllinux_*"
+test-requires = ["pytest", "numpy"]
+test-command = [
+    "pytest {project}/test/python",
+    "python -c \"import numpy; import SHOTpy; s = SHOTpy.Solver(); assert s.getEnvironment() is not None\"",
+]
+
+[tool.cibuildwheel.linux]
+archs = ["x86_64"]
+manylinux-x86_64-image = "manylinux_2_28"
+before-all = "curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xj -C /usr/local/bin --strip-components=1 bin/micromamba && micromamba create -y -p /opt/shot-deps -c conda-forge coincbc ipopt pkg-config"
+environment = { CBC_DIR = "/opt/shot-deps", IPOPT_DIR = "/opt/shot-deps", LD_LIBRARY_PATH = "/opt/shot-deps/lib" }
+
+[tool.cibuildwheel.macos]
+archs = ["arm64"]
+before-all = "brew install cbc ipopt openblas"
+environment = { CBC_DIR = "/opt/homebrew/opt/cbc", IPOPT_DIR = "/opt/homebrew/opt/ipopt", PKG_CONFIG_PATH = "/opt/homebrew/opt/cbc/lib/pkgconfig:/opt/homebrew/opt/ipopt/lib/pkgconfig", DYLD_LIBRARY_PATH = "/opt/homebrew/opt/cbc/lib:/opt/homebrew/opt/ipopt/lib:/opt/homebrew/opt/openblas/lib", MACOSX_DEPLOYMENT_TARGET = "14.0" }

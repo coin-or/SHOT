@@ -74,6 +74,11 @@ public:
     // unbounded if the dual problem is.
     bool isDualProblemExact();
 
+    // Whether the MIP solver has added a variable for the objective function that is not in the reformulated problem,
+    // so that a point of the reformulated problem needs its value appended. With an epigraph constraint, the
+    // reformulated problem has the objective variable itself, and its value is already in the point.
+    bool hasObjectiveVariableOnlyInMIPSolver();
+
     // Removes the bounds that have replaced missing bounds of the variables when the problem was read, in the problem,
     // the reformulated problem and the MIP solver. The dual bounds found so far may be too strong since they are
     // bounds for the problem with the artificial bounds, so they are reset.

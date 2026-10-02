@@ -1,0 +1,444 @@
+"""
+Tests that invalid use of the Python API raises an exception instead of crashing the interpreter or giving wrong
+values, and that changes to a model reach the data calculated from it.
+"""
+
+import math
+
+import pytest
+
+
+def make_problem():
+    """A solver, a problem and the variables x and y in [0, 10]."""
+    import SHOTpy
+
+    solver = SHOTpy.Solver()
+    solver.updateSetting("Output.Console.LogLevel", 6)
+    problem = SHOTpy.Problem(solver)
+
+    x = problem.addVariable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+    y = problem.addVariable("y", SHOTpy.VariableType.Real, 0.0, 10.0)
+
+    return solver, problem, x, y
+
+
+class TestCollections:
+    """Indexing and iteration of the containers of the model."""
+
+    def test_index_outside_an_empty_container_raises(self):
+        import SHOTpy
+
+        for container in (SHOTpy.Variables(), SHOTpy.LinearTerms(), SHOTpy.QuadraticTerms(),
+                          SHOTpy.SignomialTerms(), SHOTpy.MonomialTerms()):
+            with pytest.raises(IndexError):
+                container[0]
+            with pytest.raises(IndexError):
+                container[-1]
+            assert list(container) == []
+
+    def test_negative_index_and_iteration(self):
+        import SHOTpy
+
+        _, _, x, y = make_problem()
+        terms = SHOTpy.LinearTerms([SHOTpy.LinearTerm(1.0, x), SHOTpy.LinearTerm(2.0, y)])
+
+        assert terms[-1].coefficient == 2.0
+        assert terms[-2].coefficient == 1.0
+        assert [T.coefficient for T in terms] == [1.0, 2.0]
+        with pytest.raises(IndexError):
+            terms[2]
+        with pytest.raises(IndexError):
+            terms[-3]
+
+    def test_iterate_variables_of_problem(self):
+        _, problem, x, y = make_problem()
+
+        assert [V.name for V in problem.allVariables] == ["x", "y"]
+        assert problem.allVariables[-1] is y
+
+
+def test_signomial_elements_are_a_list():
+    import SHOTpy
+
+    _, _, x, y = make_problem()
+    term = SHOTpy.SignomialTerm(2.0, [SHOTpy.SignomialElement(x, 0.5), SHOTpy.SignomialElement(y, -1.0)])
+
+    assert isinstance(term.elements, list)
+    assert [E.power for E in term.elements] == [0.5, -1.0]
+
+
+class TestNone:
+    """None is not accepted where SHOT expects an object of the model."""
+
+    def test_none_arguments_raise(self):
+        import SHOTpy
+
+        solver, problem, x, _ = make_problem()
+
+        calls = [
+            lambda: solver.setProblem(None),
+            lambda: problem.addVariables([None]),
+            lambda: problem.addConstraints([None]),
+            lambda: SHOTpy.exp(None),
+            lambda: SHOTpy.LinearTerm(1.0, None),
+            lambda: SHOTpy.QuadraticTerm(1.0, x, None),
+            lambda: SHOTpy.LinearTerms([None]),
+            lambda: SHOTpy.Problem(None),
+        ]
+
+        for call in calls:
+            with pytest.raises(TypeError):
+                call()
+
+    def test_arithmetic_with_none_raises(self):
+        _, _, x, _ = make_problem()
+
+        with pytest.raises(TypeError):
+            x + None
+        with pytest.raises(TypeError):
+            (x * x) * None
+
+
+class TestEvaluation:
+    def test_function_not_in_a_problem_cannot_be_evaluated(self):
+        import SHOTpy
+
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 1.0)
+        constraint = SHOTpy.LinearConstraint("c", 0.0, 1.0)
+        constraint.add(SHOTpy.LinearTerm(1.0, x))
+
+        with pytest.raises(ValueError):
+            constraint.calculateFunctionValue([0.5])
+
+        objective = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
+        objective.add(SHOTpy.LinearTerm(1.0, x))
+
+        with pytest.raises(ValueError):
+            objective.calculateValue([0.5])
+
+
+class TestModelChanges:
+    def test_bound_change_after_finalize_updates_the_bound_vectors(self):
+        import SHOTpy
+
+        _, problem, x, y = make_problem()
+        problem.setObjective(x + y, SHOTpy.ObjectiveDirection.Minimize)
+        problem.finalize()
+
+        x.upperBound = 3.0
+        y.lowerBound = 1.0
+
+        assert list(problem.getVariableUpperBounds()) == [3.0, 10.0]
+        assert list(problem.getVariableLowerBounds()) == [0.0, 1.0]
+
+    def test_term_fields_are_read_only(self):
+        import SHOTpy
+
+        _, _, x, y = make_problem()
+        linear = SHOTpy.LinearTerm(1.0, x)
+        quadratic = SHOTpy.QuadraticTerm(1.0, x, y)
+
+        with pytest.raises(AttributeError):
+            linear.coefficient = 3.0
+        with pytest.raises(AttributeError):
+            linear.variable = y
+        with pytest.raises(AttributeError):
+            quadratic.coefficient = 3.0
+
+
+class TestLifecycle:
+    def test_nothing_can_be_added_after_finalize(self):
+        import SHOTpy
+
+        _, problem, x, y = make_problem()
+        problem.setObjective(x + y, SHOTpy.ObjectiveDirection.Minimize)
+        assert not problem.isFinalized
+        problem.finalize()
+        assert problem.isFinalized
+
+        calls = [
+            lambda: problem.addVariable("z", SHOTpy.VariableType.Real, 0.0, 1.0),
+            lambda: problem.addVariable(SHOTpy.Variable("z", SHOTpy.VariableType.Real, 0.0, 1.0)),
+            lambda: problem.addConstraint(x <= 5, "c"),
+            lambda: problem.addConstraint(SHOTpy.LinearConstraint("c", 0.0, 1.0)),
+            lambda: problem.addConstraints([x <= 5]),
+            lambda: problem.setObjective(x),
+            lambda: problem.setObjective(1.0),
+        ]
+
+        for call in calls:
+            with pytest.raises(RuntimeError):
+                call()
+
+        assert len(problem.allVariables) == 2
+        assert len(problem.numericConstraints) == 0
+
+    def test_variable_cannot_be_added_twice(self):
+        import SHOTpy
+
+        _, problem, x, _ = make_problem()
+
+        with pytest.raises(ValueError):
+            problem.addVariable(x)
+
+        _, otherProblem, _, _ = make_problem()
+        with pytest.raises(ValueError):
+            otherProblem.addVariable(x)
+
+        assert [V.index for V in problem.allVariables] == [0, 1]
+        assert x.index == 0
+
+    def test_list_with_a_repeated_variable_leaves_the_problem_unchanged(self):
+        import SHOTpy
+
+        _, problem, _, _ = make_problem()
+        z = SHOTpy.Variable("z", SHOTpy.VariableType.Real, 0.0, 1.0)
+
+        with pytest.raises(ValueError):
+            problem.addVariables([z, z])
+
+        assert len(problem.allVariables) == 2
+        assert z.index == -1
+
+    def test_constraint_cannot_be_added_twice(self):
+        import SHOTpy
+
+        _, problem, x, _ = make_problem()
+        constraint = SHOTpy.LinearConstraint("c", 0.0, 1.0)
+        constraint.add(SHOTpy.LinearTerm(1.0, x))
+        problem.addConstraint(constraint)
+
+        with pytest.raises(ValueError):
+            problem.addConstraint(constraint)
+        with pytest.raises(ValueError):
+            problem.addConstraints([constraint])
+
+        assert len(problem.numericConstraints) == 1
+
+    def test_objective_cannot_be_used_by_two_problems(self):
+        import SHOTpy
+
+        _, problem, x, _ = make_problem()
+        objective = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
+        objective.add(SHOTpy.LinearTerm(1.0, x))
+        problem.setObjective(objective)
+
+        _, otherProblem, _, _ = make_problem()
+        with pytest.raises(ValueError):
+            otherProblem.setObjective(objective)
+
+
+class TestVariablesOfOtherProblems:
+    """finalize() checks that the functions only use variables of the problem."""
+
+    """The variables of a constraint or the objective function must have been added to the problem before it."""
+
+    def test_constraint_with_a_variable_of_another_problem(self):
+        _, problem, x, _ = make_problem()
+        _, _, otherX, _ = make_problem()
+
+        with pytest.raises(ValueError, match="'c'"):
+            problem.addConstraint(x + otherX <= 5, "c")
+        with pytest.raises(ValueError, match="'n'"):
+            problem.addConstraint(x * otherX <= 5, "n")
+
+        assert len(problem.numericConstraints) == 0
+
+    def test_objective_with_a_variable_not_added(self):
+        import SHOTpy
+
+        _, problem, x, _ = make_problem()
+        z = SHOTpy.Variable("z", SHOTpy.VariableType.Real, 0.0, 1.0)
+
+        with pytest.raises(ValueError, match="objective function"):
+            problem.setObjective(SHOTpy.exp(x) + z)
+        with pytest.raises(ValueError, match="objective function"):
+            problem.setObjective(z)
+
+        objective = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
+        objective.add(SHOTpy.LinearTerm(1.0, z))
+        with pytest.raises(ValueError, match="'z'"):
+            problem.setObjective(objective)
+
+    def test_constraint_class_with_a_variable_not_added(self):
+        import SHOTpy
+
+        _, problem, x, _ = make_problem()
+        z = SHOTpy.Variable("z", SHOTpy.VariableType.Real, 0.0, 1.0)
+
+        constraint = SHOTpy.QuadraticConstraint("q", 0.0, 1.0)
+        constraint.add(SHOTpy.QuadraticTerm(1.0, x, z))
+
+        with pytest.raises(ValueError, match="'z'"):
+            problem.addConstraint(constraint)
+        with pytest.raises(ValueError, match="'z'"):
+            problem.addConstraints([constraint])
+
+    def test_list_with_one_invalid_comparison_leaves_the_problem_unchanged(self):
+        import SHOTpy
+
+        _, problem, x, _ = make_problem()
+        z = SHOTpy.Variable("z", SHOTpy.VariableType.Real, 0.0, 1.0)
+
+        with pytest.raises(ValueError, match="position 1"):
+            problem.addConstraints([x <= 1, x + z <= 2])
+
+        assert len(problem.numericConstraints) == 0
+
+    def test_term_added_after_the_constraint_is_checked_by_finalize(self):
+        import SHOTpy
+
+        _, problem, x, _ = make_problem()
+        z = SHOTpy.Variable("z", SHOTpy.VariableType.Real, 0.0, 1.0)
+
+        constraint = SHOTpy.LinearConstraint("c", 0.0, 1.0)
+        constraint.add(SHOTpy.LinearTerm(1.0, x))
+        problem.addConstraint(constraint)
+        constraint.add(SHOTpy.LinearTerm(1.0, z))
+        problem.setObjective(x)
+
+        with pytest.raises(ValueError, match="'c'"):
+            problem.finalize()
+
+        assert not problem.isFinalized
+
+
+class TestCallbackBounds:
+    def test_missing_dual_bound_is_infinite(self):
+        """A MIP solver's own value for a missing bound, e.g., -1e100 for Gurobi, is given as -inf."""
+        import SHOTpy
+
+        solver, problem, x, y = make_problem()
+        b = problem.addVariable("b", SHOTpy.VariableType.Binary)
+        problem.setObjective(-x - y + b, SHOTpy.ObjectiveDirection.Minimize)
+        problem.addConstraint(SHOTpy.exp(x) + y**2 <= 20 + b, "c")
+        problem.finalize()
+        solver.setProblem(problem)
+
+        bounds = []
+        solver.registerCallback(SHOTpy.CallbackLocation.DualBoundUpdate, lambda ctx: bounds.append(ctx.dualBound))
+        assert solver.solveProblem()
+
+        assert bounds
+        assert all(math.isinf(B) or abs(B) < 1e20 for B in bounds)
+
+
+class TestAddConstraints:
+    def test_comparisons(self):
+        _, problem, x, y = make_problem()
+        problem.addConstraints([x <= 1, x + y >= 2])
+
+        assert [C.name for C in problem.numericConstraints] == ["constraint_0", "constraint_1"]
+
+    def test_comparisons_with_names(self):
+        _, problem, x, y = make_problem()
+        problem.addConstraints([x <= 1, x * y >= 2], ["a", "b"])
+
+        assert [C.name for C in problem.numericConstraints] == ["a", "b"]
+        assert problem.getConstraint("b").calculateFunctionValue([1.0, 3.0]) == pytest.approx(3.0)
+
+    def test_number_of_names_must_match(self):
+        _, problem, x, y = make_problem()
+
+        with pytest.raises(ValueError):
+            problem.addConstraints([x <= 1, y <= 1], ["a"])
+
+        assert len(problem.numericConstraints) == 0
+
+
+class TestSettings:
+    def test_integer_value_of_a_double_setting(self, solver):
+        solver.updateSetting("Termination.TimeLimit", 10)
+        assert solver.getDoubleSetting("Termination.TimeLimit") == 10.0
+
+    def test_unknown_setting(self, solver):
+        for value in (5, 5.0, True, "a"):
+            with pytest.raises(RuntimeError, match="not found"):
+                solver.updateSetting("Foo.Bar", value)
+
+    def test_value_of_the_wrong_type(self, solver):
+        with pytest.raises(RuntimeError, match="wrong type"):
+            solver.updateSetting("Output.Console.LogLevel", 2.5)
+        with pytest.raises(RuntimeError, match="wrong type"):
+            solver.updateSetting("Model.Reformulation.Monomials.Extract", 1)
+        with pytest.raises(RuntimeError, match="wrong type"):
+            solver.updateSetting("Termination.TimeLimit", "10")
+
+
+class TestNames:
+    def test_solution_statistics_qp(self):
+        import SHOTpy
+
+        assert hasattr(SHOTpy.SolutionStatistics, "numberOfProblemsQP")
+
+    def test_variable_keywords(self):
+        import SHOTpy
+
+        x = SHOTpy.Variable(name="x", type=SHOTpy.VariableType.Real, lowerBound=-1.0, upperBound=2.0)
+        assert (x.lowerBound, x.upperBound) == (-1.0, 2.0)
+
+
+class TestResultsBeforeAndAfterSolving:
+    def test_results_before_set_problem(self, solver):
+        """The results crashed before setProblem(), since they used the objective function of the problem."""
+        import SHOTpy
+
+        assert solver.getPrimalBound() == math.inf
+        assert solver.getGlobalDualBound() == -math.inf
+        assert solver.getCurrentDualBound() == -math.inf
+        assert solver.getAbsoluteObjectiveGap() == math.inf
+        assert solver.getRelativeObjectiveGap() == math.inf
+        assert solver.getModelReturnStatus() == SHOTpy.ModelReturnStatus.NoSolutionReturned
+
+    def test_missing_bounds_are_infinite_when_maximizing(self):
+        import SHOTpy
+
+        solver, problem, x, y = make_problem()
+        problem.setObjective(x + y, SHOTpy.ObjectiveDirection.Maximize)
+        problem.finalize()
+        assert solver.setProblem(problem)
+
+        assert solver.getPrimalBound() == -math.inf
+        assert solver.getGlobalDualBound() == math.inf
+        assert solver.getRelativeObjectiveGap() == math.inf
+
+        assert solver.solveProblem()
+        assert solver.getPrimalBound() == pytest.approx(20.0)
+        assert solver.getGlobalDualBound() == pytest.approx(20.0)
+        assert solver.getAbsoluteObjectiveGap() < 1e-3
+
+
+class TestAliases:
+    def test_no_enum_value_is_named_none(self):
+        """None is a keyword, so such a value could only be reached with getattr(), and not be in the type stubs."""
+        import SHOTpy
+
+        for name, value in vars(SHOTpy).items():
+            if isinstance(value, type) and hasattr(value, "__members__"):
+                assert "None" not in value.__members__, name
+
+        assert SHOTpy.MIPSolver.NotUsed.value == 4
+        assert SHOTpy.PrimalNLPSolver.NotUsed.value == 4
+        assert SHOTpy.ModelingSystem.API.value == 3
+        assert SHOTpy.TerminationReason.NotTerminated.name == "NotTerminated"
+        assert SHOTpy.ModelReturnStatus.NotSet.value == 0
+        assert SHOTpy.HyperplaneSource.Unknown.value == 0
+
+    def test_correctly_spelled_fields(self):
+        import SHOTpy
+
+        solver, problem, x, y = make_problem()
+        problem.setObjective(SHOTpy.exp(x) + y)
+        problem.addConstraint(x + y >= 1, "c")
+        problem.finalize()
+        assert solver.setProblem(problem)
+        assert solver.solveProblem()
+
+        statistics = solver.getSolutionStatistics()
+        assert statistics.numberOfFunctionEvaluations == statistics.numberOfFunctionEvalutions
+
+        solution = solver.getPrimalSolution()
+        for kind in ("Linear", "Quadratic", "Nonlinear"):
+            correct = getattr(solution, f"maxDeviatingConstraint{kind}")
+            misspelled = getattr(solution, f"maxDevatingConstraint{kind}")
+            assert (correct.index, correct.value) == (misspelled.index, misspelled.value)

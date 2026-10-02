@@ -1008,10 +1008,11 @@ void Solver::initializeSettings()
     usedMIPSolver = ES_MIPSolver::Gurobi;
 #elif HAS_CPLEX
     usedMIPSolver = ES_MIPSolver::Cplex;
+#elif HAS_HIGHS
+    // HiGHS before Cbc, as when the MIP solver chosen is not available
+    usedMIPSolver = ES_MIPSolver::Highs;
 #elif HAS_CBC
     usedMIPSolver = ES_MIPSolver::Cbc;
-#elif HAS_HIGHS
-    usedMIPSolver = ES_MIPSolver::Highs;
 #else
     env->output->outputCritical(" SHOT has not been compiled with support for any MIP solver.");
 #endif
@@ -1883,8 +1884,8 @@ void Solver::initializeSettings()
     enumFileFormat.push_back("OSiL");
     enumFileFormat.push_back("GAMS");
     enumFileFormat.push_back("NL");
-    enumFileFormat.push_back("None");
-    env->settings->createSetting("Input.ModelingSystem", static_cast<int>(ES_ModelingSystem::None),
+    enumFileFormat.push_back("API");
+    env->settings->createSetting("Input.ModelingSystem", static_cast<int>(ES_ModelingSystem::API),
         "The format of the problem file", enumFileFormat, 0, true);
     enumFileFormat.clear();
 
@@ -2000,7 +2001,7 @@ void Solver::verifySettings()
 
     if((env->settings->getSetting<int>("Input.ModelingSystem") == static_cast<int>(ES_ModelingSystem::OSiL)
            || env->settings->getSetting<int>("Input.ModelingSystem") == static_cast<int>(ES_ModelingSystem::AMPL)
-           || env->settings->getSetting<int>("Input.ModelingSystem") == static_cast<int>(ES_ModelingSystem::None))
+           || env->settings->getSetting<int>("Input.ModelingSystem") == static_cast<int>(ES_ModelingSystem::API))
         && static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("Primal.FixedInteger.Solver"))
             == ES_PrimalNLPSolver::GAMS)
     {

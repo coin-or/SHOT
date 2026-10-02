@@ -10,6 +10,7 @@
 */
 
 #include "Simplifications.h"
+#include "../Settings.h"
 
 #include <unordered_set>
 #include "spdlog/fmt/fmt.h"
@@ -101,6 +102,15 @@ void checkAndConvertObjectivesAndConstraints(
 
     std::vector<std::pair<NumericConstraintPtr, NumericConstraintPtr>> changedConstraints; // old, new
 
+    // The reformulated problem is given to the MIP solver, which is only given quadratic constraints if the quadratic
+    // strategy allows them, e.g., not with Cbc. A constraint whose nonlinear expression turns out to be quadratic is
+    // then kept nonlinear with its quadratic terms extracted, as the reformulation creates such constraints; replacing
+    // it with a quadratic constraint made the solve fail, e.g., for a maximization problem with a sum of squares
+    bool keepQuadraticConstraintsNonlinear = problem->properties.isReformulated
+        && static_cast<ES_QuadraticProblemStrategy>(
+               problem->env->settings->getSetting<int>("Model.Reformulation.Quadratics.Strategy"))
+            < ES_QuadraticProblemStrategy::ConvexQuadraticallyConstrained;
+
     for(auto& C : problem->numericConstraints)
     {
         if(!C->properties.hasNonlinearExpression)
@@ -118,8 +128,11 @@ void checkAndConvertObjectivesAndConstraints(
             = extractTermsAndConstant(
                 nonlinearExpression, extractMonomials, extractSignomials, extractQuadratics, true);
 
+        bool isQuadratic = (tmpQuadraticTerms.size() > 0 || nonlinearConstraint->quadraticTerms.size() > 0);
+
         if(tmpMonomialTerms.size() == 0 && tmpSignomialTerms.size() == 0 && !tmpNonlinearExpression
-            && nonlinearConstraint->monomialTerms.size() == 0 && nonlinearConstraint->signomialTerms.size() == 0)
+            && nonlinearConstraint->monomialTerms.size() == 0 && nonlinearConstraint->signomialTerms.size() == 0
+            && !(isQuadratic && keepQuadraticConstraintsNonlinear))
         {
             // The constraint is no longer nonlinear
 
@@ -411,6 +424,29 @@ void simplifyNonlinearExpressions(
     checkAndConvertObjectivesAndConstraints(problem, extractMonomials, extractSignomials, extractQuadratics);
 }
 
+bool isSharedExpression(const NonlinearExpressionPtr& expression)
+{
+    if(expression.use_count() > 1)
+        return (true);
+
+    if(auto unary = std::dynamic_pointer_cast<ExpressionUnary>(expression))
+        return (isSharedExpression(unary->child));
+
+    if(auto binary = std::dynamic_pointer_cast<ExpressionBinary>(expression))
+        return (isSharedExpression(binary->firstChild) || isSharedExpression(binary->secondChild));
+
+    if(auto general = std::dynamic_pointer_cast<ExpressionGeneral>(expression))
+    {
+        for(auto& C : general->children)
+        {
+            if(isSharedExpression(C))
+                return (true);
+        }
+    }
+
+    return (false);
+}
+
 NonlinearExpressionPtr copyNonlinearExpression(NonlinearExpression* expression, const ProblemPtr destination)
 {
     return copyNonlinearExpression(expression, destination.get());
@@ -532,6 +568,21 @@ NonlinearExpressionPtr copyNonlinearExpression(NonlinearExpression* expression, 
     {
         return std::make_shared<ExpressionTan>(
             copyNonlinearExpression((((ExpressionTan*)expression)->child).get(), destination));
+    }
+    case E_NonlinearExpressionTypes::ArcSin:
+    {
+        return std::make_shared<ExpressionArcSin>(
+            copyNonlinearExpression((((ExpressionArcSin*)expression)->child).get(), destination));
+    }
+    case E_NonlinearExpressionTypes::ArcCos:
+    {
+        return std::make_shared<ExpressionArcCos>(
+            copyNonlinearExpression((((ExpressionArcCos*)expression)->child).get(), destination));
+    }
+    case E_NonlinearExpressionTypes::ArcTan:
+    {
+        return std::make_shared<ExpressionArcTan>(
+            copyNonlinearExpression((((ExpressionArcTan*)expression)->child).get(), destination));
     }
     case E_NonlinearExpressionTypes::Constant:
     {

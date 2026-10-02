@@ -224,6 +224,13 @@ compiling HiGHS from source (`HAS_HIGHS=on`, the default) can take several
 minutes; pass `-DHAS_HIGHS=off` at configure time if you don't need it and
 want a faster build.
 
+If `pybind11-stubgen` is installed in the Python that CMake finds
+(`pip install pybind11-stubgen`), the build also generates the type stubs
+`SHOTpy.pyi` next to the module, so that editors and type checkers know the
+classes, signatures and docstrings of `SHOTpy`. A signature that cannot be
+written as a Python type, e.g., one that shows a C++ type name, then fails
+the build.
+
 ## 5. Running the tests
 
 Tests must be enabled at configure time, i.e. add `-DCOMPILE_TESTS=on` to

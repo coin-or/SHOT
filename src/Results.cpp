@@ -1217,7 +1217,7 @@ std::string Results::getResultsTrace()
 
     switch(static_cast<ES_PrimalNLPSolver>(this->usedPrimalNLPSolver))
     {
-    case(ES_PrimalNLPSolver::None):
+    case(ES_PrimalNLPSolver::NotUsed):
         ss << "NONE";
         break;
     case(ES_PrimalNLPSolver::GAMS):
@@ -1301,7 +1301,7 @@ std::string Results::getResultsTrace()
     case E_TerminationReason::NumericIssues:
         solverStatus = "10";
         break;
-    case E_TerminationReason::None:
+    case E_TerminationReason::NotTerminated:
         solverStatus = "1";
         break;
     }
@@ -1336,7 +1336,7 @@ std::string Results::getResultsTrace()
     case E_ModelReturnStatus::ErrorUnknown:
         modelStatus = "12";
         break;
-    case E_ModelReturnStatus::None:
+    case E_ModelReturnStatus::NotSet:
     case E_ModelReturnStatus::ErrorNoSolution:
         modelStatus = "13";
     };
@@ -1494,6 +1494,9 @@ double Results::getPrimalBound()
 {
     if(!std::isnan(this->currentPrimalBound))
         return (this->currentPrimalBound);
+    // Before a problem has been set, e.g., when the results are asked for before setProblem()
+    else if(!env->problem || !env->problem->objectiveFunction)
+        return (SHOT_DBL_MAX);
     else if(env->problem->objectiveFunction->direction == E_ObjectiveFunctionDirection::Minimize)
         return (SHOT_DBL_MAX);
     else

@@ -94,8 +94,10 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
         // Check if better dual bound
         double tmpDualObjBound = context.getDoubleInfo(IloCplex::Callback::Context::Info::BestBound);
 
-        if((isMinimization && tmpDualObjBound > env->results->getCurrentDualBound())
-            || (!isMinimization && tmpDualObjBound < env->results->getCurrentDualBound()))
+        // CPLEX gives a missing bound as 1e75 or -1e75, which is a finite value to SHOT
+        if(std::abs(tmpDualObjBound) < 1e75
+            && ((isMinimization && tmpDualObjBound > env->results->getCurrentDualBound())
+                || (!isMinimization && tmpDualObjBound < env->results->getCurrentDualBound())))
         {
             std::lock_guard<std::mutex> lock(callbackMutex);
             VectorDouble doubleSolution; // Empty since we have no point
@@ -179,9 +181,8 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
 
                 context.getRelaxationPoint(cplexVars, tmpVals);
 
-                int numberOfVariables = (env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
-                    ? tmpVals.getSize() - 1
-                    : tmpVals.getSize();
+                int numberOfVariables = (env->dualSolver->hasObjectiveVariableOnlyInMIPSolver()) ? tmpVals.getSize() - 1
+                                                                                                 : tmpVals.getSize();
 
                 VectorDouble solution(numberOfVariables);
 
@@ -266,9 +267,8 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
 
             context.getCandidatePoint(cplexVars, tmpVals);
 
-            int numberOfVariables = (env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
-                ? tmpVals.getSize() - 1
-                : tmpVals.getSize();
+            int numberOfVariables
+                = (env->dualSolver->hasObjectiveVariableOnlyInMIPSolver()) ? tmpVals.getSize() - 1 : tmpVals.getSize();
 
             VectorDouble solution(numberOfVariables);
 
@@ -413,7 +413,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
             if((int)primalSol.size() < env->reformulatedProblem->properties.numberOfVariables)
                 env->reformulatedProblem->augmentAuxiliaryVariableValues(primalSol);
 
-            if(env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
+            if(env->dualSolver->hasObjectiveVariableOnlyInMIPSolver())
                 primalSol.push_back(env->reformulatedProblem->objectiveFunction->calculateValue(primalSol));
 
             assert(cplexVars.getSize() == primalSol.size());

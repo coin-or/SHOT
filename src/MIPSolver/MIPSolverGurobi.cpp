@@ -1440,14 +1440,11 @@ double MIPSolverGurobi::getDualObjectiveValue()
 
     try
     {
-        if(isMIP)
-        {
-            objVal = gurobiModel->get(GRB_DoubleAttr_ObjBound);
-        }
-        else
-        {
-            objVal = gurobiModel->get(GRB_DoubleAttr_ObjVal);
-        }
+        double bound = isMIP ? gurobiModel->get(GRB_DoubleAttr_ObjBound) : gurobiModel->get(GRB_DoubleAttr_ObjVal);
+
+        // Gurobi gives a missing bound as GRB_INFINITY or -GRB_INFINITY, which is a finite value to SHOT
+        if(std::abs(bound) < GRB_INFINITY)
+            objVal = bound;
     }
     catch(GRBException& e)
     {

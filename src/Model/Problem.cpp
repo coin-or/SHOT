@@ -852,6 +852,21 @@ void Problem::finalize()
         throw std::runtime_error("Problem has no variables defined.");
     }
 
+    // Simplifying an expression changes it in place, so an expression that is also used elsewhere, e.g., by another
+    // constraint or in an expression the user keeps, is copied first. Otherwise simplifying it for one constraint
+    // would change the others, and a negation could be applied twice
+    for(auto& C : nonlinearConstraints)
+    {
+        if(C->nonlinearExpression && isSharedExpression(C->nonlinearExpression))
+            C->nonlinearExpression = copyNonlinearExpression(C->nonlinearExpression.get());
+    }
+
+    if(auto objective = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objectiveFunction);
+        objective && objective->nonlinearExpression && isSharedExpression(objective->nonlinearExpression))
+    {
+        objective->nonlinearExpression = copyNonlinearExpression(objective->nonlinearExpression.get());
+    }
+
     // Need to update properties first so that hasNonlinearExpression etc. flags are set
     // before simplifyNonlinearExpressions() checks them
     updateProperties();

@@ -4,6 +4,7 @@ Pytest configuration for SHOT Python API tests.
 This file is automatically loaded by pytest and provides common fixtures.
 """
 
+import importlib.util
 import os
 import sys
 from pathlib import Path
@@ -29,7 +30,8 @@ def _setup_path():
       2. the first directory in PYTHONPATH that contains it (ctest sets PYTHONPATH to the build directory),
       3. the current working directory,
       4. the build directories of the repository; if several contain it, the most recently built one, so that an
-         old build directory does not hide the current one.
+         old build directory does not hide the current one,
+      5. an installed SHOTpy, e.g., a wheel, which is what the tests of a wheel build use.
     """
     explicit = os.environ.get("SHOTPY_BUILD_DIR")
     if explicit:
@@ -46,7 +48,12 @@ def _setup_path():
         candidates = sorted((d for d in builds if _has_shotpy(d)), key=_shotpy_modification_time, reverse=True)
 
     if not candidates:
-        raise ImportError("Could not find SHOTpy module. Make sure SHOT is built.")
+        if importlib.util.find_spec("SHOTpy") is not None:
+            return None
+
+        raise ImportError(
+            "Could not find a SHOTpy module. Build SHOT with -DHAS_PYTHON=on, or install the package."
+        )
 
     build_dir = str(candidates[0].resolve())
     sys.path.insert(0, build_dir)

@@ -115,13 +115,50 @@ void Settings::updateSetting(std::string name, std::string category, T value, E_
 
     PairString key = make_pair(category, name);
 
+    // Checked before the bounds, since settingBounds[key] would otherwise create bounds [0,0] for an unknown setting
+    auto type = settingTypes.find(key);
+
+    if(type == settingTypes.end())
+    {
+        output->outputError("Cannot update setting " + category + "." + name + " since it has not been defined.");
+
+        throw SettingKeyNotFoundException(name, category);
+    }
+
+    // An integer is a valid value of a double setting, e.g., a time limit of 10
+    if constexpr(std::is_same_v<T, int>)
+    {
+        if(type->second == E_SettingType::Double)
+        {
+            updateSetting(name, category, (double)value, priority);
+            return;
+        }
+    }
+
     typename std::map<PairString, T>::iterator oldValue;
-    typename std::map<PairString, T>::iterator end;
+
+    bool isOfType;
+
+    if constexpr(std::is_same_v<T, std::string>)
+        isOfType = (type->second == E_SettingType::String);
+    else if constexpr(std::is_same_v<T, int>)
+        isOfType = (type->second == E_SettingType::Integer || type->second == E_SettingType::Enum);
+    else if constexpr(std::is_same_v<T, double>)
+        isOfType = (type->second == E_SettingType::Double);
+    else if constexpr(std::is_same_v<T, bool>)
+        isOfType = (type->second == E_SettingType::Boolean);
+
+    if(!isOfType)
+    {
+        output->outputError(
+            "Cannot update setting " + category + "." + name + " since the value is of the wrong type.");
+
+        throw SettingSetWrongTypeException(name, category);
+    }
 
     if constexpr(std::is_same_v<T, std::string>)
     {
         oldValue = stringSettings.find(key);
-        end = stringSettings.end();
     }
     else if constexpr(std::is_same_v<T, int>)
     {
@@ -135,7 +172,6 @@ void Settings::updateSetting(std::string name, std::string category, T value, E_
         }
 
         oldValue = integerSettings.find(key);
-        end = integerSettings.end();
     }
     else if constexpr(std::is_same_v<T, double>)
     {
@@ -149,19 +185,10 @@ void Settings::updateSetting(std::string name, std::string category, T value, E_
         }
 
         oldValue = doubleSettings.find(key);
-        end = doubleSettings.end();
     }
     else if constexpr(std::is_same_v<T, bool>)
     {
         oldValue = booleanSettings.find(key);
-        end = booleanSettings.end();
-    }
-
-    if(oldValue == end)
-    {
-        output->outputError("Cannot update setting " + category + "." + name + " since it has not been defined.");
-
-        throw SettingKeyNotFoundException(name, category);
     }
 
     int prio = static_cast<int>(priority);

@@ -376,7 +376,7 @@ if(TARGET SHOTpy)
       
       # Set environment so pytest can find SHOTpy module
       set_tests_properties(Python_API_Tests PROPERTIES
-        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}"
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR};SHOT_TUTORIAL_NOTEBOOK=${PROJECT_SOURCE_DIR}/docs/SHOTpy_Tutorial.ipynb"
         FAIL_REGULAR_EXPRESSION "FAILED;ERROR"
         TIMEOUT 300
       )
@@ -394,6 +394,9 @@ if(TARGET SHOTpy)
         test_modeling_systems
         test_gradients_hessians
         test_callbacks
+        test_constraint_expressions
+        test_api_safety
+        test_tutorial
       )
       
       foreach(pytest_file ${PYTHON_TEST_FILES})
@@ -406,7 +409,7 @@ if(TARGET SHOTpy)
           WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
         )
         set_tests_properties(Python_${pytest_file} PROPERTIES
-          ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}"
+          ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR};SHOT_TUTORIAL_NOTEBOOK=${PROJECT_SOURCE_DIR}/docs/SHOTpy_Tutorial.ipynb"
           FAIL_REGULAR_EXPRESSION "FAILED;ERROR"
           TIMEOUT 300
         )

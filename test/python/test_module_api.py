@@ -215,7 +215,7 @@ class TestEnums:
         assert hasattr(SHOTpy.ModelingSystem, 'OSiL')
         assert hasattr(SHOTpy.ModelingSystem, 'GAMS')
         assert hasattr(SHOTpy.ModelingSystem, 'AMPL')
-        assert hasattr(SHOTpy.ModelingSystem, 'None')
+        assert hasattr(SHOTpy.ModelingSystem, 'API')
 
     def test_hyperplane_cut_strategy_enum(self):
         """Test HyperplaneCutStrategy enumeration."""
@@ -242,7 +242,7 @@ class TestEnums:
         assert hasattr(SHOTpy.MIPSolver, 'Cplex')
         assert hasattr(SHOTpy.MIPSolver, 'Gurobi')
         assert hasattr(SHOTpy.MIPSolver, 'Cbc')
-        assert hasattr(SHOTpy.MIPSolver, 'None')
+        assert hasattr(SHOTpy.MIPSolver, 'NotUsed')
 
     def test_primal_nlp_fixed_point_enum(self):
         """Test PrimalNLPFixedPoint enumeration."""
@@ -272,7 +272,7 @@ class TestEnums:
         assert hasattr(SHOTpy.PrimalNLPSolver, 'Ipopt')
         assert hasattr(SHOTpy.PrimalNLPSolver, 'GAMS')
         assert hasattr(SHOTpy.PrimalNLPSolver, 'SHOT')
-        assert hasattr(SHOTpy.PrimalNLPSolver, 'None')
+        assert hasattr(SHOTpy.PrimalNLPSolver, 'NotUsed')
 
     def test_primal_nlp_strategy_enum(self):
         """Test PrimalNLPStrategy enumeration."""

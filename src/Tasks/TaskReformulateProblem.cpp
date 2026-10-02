@@ -1829,6 +1829,9 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
         std::vector<LinearTermPtr> resultTerms;
         resultTerms.reserve(quadraticTerms.size());
 
+        // Terms that cannot be partitioned, e.g., x1*x2 with continuous variables when it is not extracted
+        QuadraticTerms remainingTerms;
+
         for(auto& T : quadraticTerms)
         {
             auto firstVariable = reformulatedProblem->getVariable(T->firstVariable->getIndex());
@@ -1877,13 +1880,17 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
                 auto [auxVariable, newVariable] = getBilinearAuxiliaryVariable(firstVariable, secondVariable);
                 resultTerms.push_back(std::make_shared<LinearTerm>(signfactor * T->coefficient, auxVariable));
             }
-            else // Square term x1^2 or general bilinear term x1*x2 will remain as is
+            else // General bilinear term x1*x2 will remain as is, which only happens when partitioning is forced
             {
-                assert(false);
+                remainingTerms.push_back(
+                    std::make_shared<QuadraticTerm>(signfactor * T->coefficient, firstVariable, secondVariable));
             }
         }
 
         resultLinearTerms.add(LinearTerms(std::move(resultTerms)));
+
+        if(remainingTerms.size() > 0)
+            resultQuadraticTerms.add(remainingTerms);
     }
     else
     {

@@ -49,7 +49,7 @@ void TaskAddPrimalReductionCut::run()
     // TaskCheckPrimalStagnation's "AddObjectiveCut" redirect) legitimately runs with terminationReason already set
     // to ObjectiveStagnation as part of its own normal "try one more reduction cut" signaling, so this check must
     // not apply there.
-    if(isFinalAttempt && env->results->terminationReason != E_TerminationReason::None)
+    if(isFinalAttempt && env->results->terminationReason != E_TerminationReason::NotTerminated)
     {
         env->tasks->setNextTask(taskIDIfFalse);
         return;

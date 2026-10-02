@@ -206,7 +206,7 @@ void GurobiCallbackSingleTree::callback()
 
                 assert(env->reformulatedProblem->properties.numberOfVariables == primalSol.size());
 
-                if(env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
+                if(env->dualSolver->hasObjectiveVariableOnlyInMIPSolver())
                     primalSol.push_back(env->reformulatedProblem->objectiveFunction->calculateValue(primalSol));
 
                 for(size_t i = 0; i < primalSol.size(); i++)
@@ -239,8 +239,10 @@ void GurobiCallbackSingleTree::callback()
                 break;
             }
 
-            if((isMinimization && tmpDualObjBound > env->results->getCurrentDualBound())
-                || (!isMinimization && tmpDualObjBound < env->results->getCurrentDualBound()))
+            // Gurobi gives a missing bound as GRB_INFINITY or -GRB_INFINITY, which is a finite value to SHOT
+            if(std::abs(tmpDualObjBound) < GRB_INFINITY
+                && ((isMinimization && tmpDualObjBound > env->results->getCurrentDualBound())
+                    || (!isMinimization && tmpDualObjBound < env->results->getCurrentDualBound())))
             {
                 VectorDouble doubleSolution; // Empty since we have no point
 
@@ -305,9 +307,8 @@ void GurobiCallbackSingleTree::callback()
                 int numModelVars = static_cast<MIPSolverGurobiSingleTree*>(env->dualSolver->MIPSolver.get())
                                        ->gurobiModel->get(GRB_IntAttr_NumVars);
 
-                int numberOfVariables = (env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
-                    ? numModelVars - 1
-                    : numModelVars;
+                int numberOfVariables
+                    = (env->dualSolver->hasObjectiveVariableOnlyInMIPSolver()) ? numModelVars - 1 : numModelVars;
 
                 VectorDouble solution(numberOfVariables);
 
@@ -378,7 +379,7 @@ void GurobiCallbackSingleTree::callback()
                                    ->gurobiModel->get(GRB_IntAttr_NumVars);
 
             int numberOfVariables
-                = (env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable()) ? numModelVars - 1 : numModelVars;
+                = (env->dualSolver->hasObjectiveVariableOnlyInMIPSolver()) ? numModelVars - 1 : numModelVars;
 
             VectorDouble solution(numberOfVariables);
 

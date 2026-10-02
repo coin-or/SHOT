@@ -13,6 +13,11 @@
 #include <cstdio>
 #include <cstring>
 
+#if IPOPT_VERSION_MAJOR > 3 || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR >= 14)
+#include "IpLibraryLoader.hpp"
+#include "IpLinearSolvers.h"
+#endif
+
 #include "../Output.h"
 #include "../Settings.h"
 #include "../Timing.h"
@@ -878,12 +883,81 @@ VectorDouble NLPSolverIpoptBase::getVariableUpperBounds() { return (ipoptProblem
 
 VectorDouble NLPSolverIpoptBase::getSolution() { return (ipoptProblem->variableSolution); }
 
+// An HSL linear solver that is not linked into Ipopt is loaded from the library given by the option hsllib, and if it
+// cannot be loaded, every solve fails, and Ipopt 3.14.13 even crashes when it destroys the interface to MA97. Ipopt
+// reports all the solvers it can load as available, so whether the library can be loaded is checked here
+bool NLPSolverIpoptBase::isLinearSolverAvailable(ES_IpoptSolver solver)
+{
+#if IPOPT_VERSION_MAJOR > 3 || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR >= 14)
+    IpoptLinearSolver flag;
+
+    switch(solver)
+    {
+    case(ES_IpoptSolver::ma27):
+        flag = IPOPTLINEARSOLVER_MA27;
+        break;
+    case(ES_IpoptSolver::ma57):
+        flag = IPOPTLINEARSOLVER_MA57;
+        break;
+    case(ES_IpoptSolver::ma86):
+        flag = IPOPTLINEARSOLVER_MA86;
+        break;
+    case(ES_IpoptSolver::ma97):
+        flag = IPOPTLINEARSOLVER_MA97;
+        break;
+    case(ES_IpoptSolver::mumps):
+        flag = IPOPTLINEARSOLVER_MUMPS;
+        break;
+    default:
+        return (true);
+    }
+
+    if(IpoptGetAvailableLinearSolvers(1) & flag)
+        return (true);
+
+    if(!(IpoptGetAvailableLinearSolvers(0) & flag))
+        return (false);
+
+    std::string library;
+    ipoptApplication->Options()->GetStringValue("hsllib", library, "");
+
+    try
+    {
+        Ipopt::LibraryLoader loader(library);
+        loader.loadLibrary();
+        return (true);
+    }
+    catch(Ipopt::DYNAMIC_LIBRARY_FAILURE&)
+    {
+        return (false);
+    }
+#else
+    return (true);
+#endif
+}
+
 void NLPSolverIpoptBase::setInitialSettings()
 {
     std::string subsolver = "";
 
+    auto linearSolver = static_cast<ES_IpoptSolver>(env->settings->getSetting<int>("Subsolver.Ipopt.LinearSolver"));
+
+    if(!isLinearSolverAvailable(linearSolver))
+    {
+        const char* names[] = { "default", "MA27", "MA57", "MA86", "MA97", "MUMPS" };
+
+        env->output->outputWarning(fmt::format(
+            " The linear solver {} is not available to Ipopt. Using the default linear solver of Ipopt instead.",
+            names[static_cast<int>(linearSolver)]));
+
+        env->settings->updateSetting("Subsolver.Ipopt.LinearSolver", static_cast<int>(ES_IpoptSolver::IpoptDefault),
+            E_SettingPriority::SolverCompatibility);
+
+        linearSolver = ES_IpoptSolver::IpoptDefault;
+    }
+
     // Sets the linear solver used
-    switch(static_cast<ES_IpoptSolver>(env->settings->getSetting<int>("Subsolver.Ipopt.LinearSolver")))
+    switch(linearSolver)
     {
     case(ES_IpoptSolver::ma27):
         ipoptApplication->Options()->SetStringValue("linear_solver", "ma27");

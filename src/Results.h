@@ -75,7 +75,7 @@ public:
     std::vector<IterationPtr> iterations;
     int getNumberOfIterations();
 
-    E_TerminationReason terminationReason = E_TerminationReason::None;
+    E_TerminationReason terminationReason = E_TerminationReason::NotTerminated;
     std::string terminationReasonDescription;
 
     E_ModelReturnStatus getModelReturnStatus();
@@ -83,8 +83,8 @@ public:
 
     E_SolutionStrategy usedSolutionStrategy = E_SolutionStrategy::None;
 
-    ES_MIPSolver usedMIPSolver = ES_MIPSolver::None;
-    ES_PrimalNLPSolver usedPrimalNLPSolver = ES_PrimalNLPSolver::None;
+    ES_MIPSolver usedMIPSolver = ES_MIPSolver::NotUsed;
+    ES_PrimalNLPSolver usedPrimalNLPSolver = ES_PrimalNLPSolver::NotUsed;
     std::string usedPrimalNLPSolverDescription = "";
 
     bool solutionIsGlobal = true;

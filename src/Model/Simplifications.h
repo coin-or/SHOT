@@ -28,6 +28,12 @@ namespace SHOT
 {
 
 NonlinearExpressionPtr copyNonlinearExpression(NonlinearExpression* expression, const ProblemPtr destination);
+
+// Whether the expression, or a node in it, is also referenced from elsewhere than its parent, e.g., by another
+// constraint, by another node of the same expression, or by an expression object kept by the user. The expression is
+// counted as shared if the pointer passed has another owner than the one holding it, so it should be the pointer
+// stored in the constraint or objective, not a copy of it
+bool isSharedExpression(const NonlinearExpressionPtr& expression);
 NonlinearExpressionPtr copyNonlinearExpression(NonlinearExpression* expression, Problem* destination = nullptr);
 
 inline NonlinearExpressionPtr simplify(NonlinearExpressionPtr expression);

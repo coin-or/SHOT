@@ -79,7 +79,7 @@ void HCallbackI::main() // Called at each node...
 
         assert(env->reformulatedProblem->properties.numberOfVariables == primalSol.size());
 
-        if(env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
+        if(env->dualSolver->hasObjectiveVariableOnlyInMIPSolver())
             primalSol.push_back(env->reformulatedProblem->objectiveFunction->calculateValue(primalSol));
 
         for(double P : primalSol)
@@ -300,7 +300,7 @@ void CtCallbackI::main()
     this->getValues(tmpVals, cplexVars);
 
     int numberOfVariables
-        = (env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable()) ? tmpVals.getSize() - 1 : tmpVals.getSize();
+        = (env->dualSolver->hasObjectiveVariableOnlyInMIPSolver()) ? tmpVals.getSize() - 1 : tmpVals.getSize();
 
     VectorDouble solution(numberOfVariables);
 
@@ -340,9 +340,10 @@ void CtCallbackI::main()
     solutionCandidate.objectiveValue = getObjValue();
     solutionCandidate.iterFound = env->results->getCurrentIteration()->iterationNumber;
 
-    // Check if better dual bound
-    if((isMinimization && tmpDualObjBound > env->results->getCurrentDualBound())
-        || (!isMinimization && tmpDualObjBound < env->results->getCurrentDualBound()))
+    // Check if better dual bound. CPLEX gives a missing bound as 1e75 or -1e75, which is a finite value to SHOT
+    if(std::abs(tmpDualObjBound) < 1e75
+        && ((isMinimization && tmpDualObjBound > env->results->getCurrentDualBound())
+            || (!isMinimization && tmpDualObjBound < env->results->getCurrentDualBound())))
     {
         DualSolution sol = { solution, E_DualSolutionSource::MIPSolverBound, tmpDualObjBound,
             env->results->getCurrentIteration()->iterationNumber, false };

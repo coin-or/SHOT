@@ -224,3 +224,121 @@ class TestExpressionBuilding:
         assert "x" in expr_str
         assert "y" in expr_str
         assert "log" in expr_str.lower()
+
+
+class TestAddVariable:
+    """Tests for problem.addVariable(name, type, lowerBound, upperBound), which creates the variable and returns it."""
+
+    def test_returns_the_added_variable(self, problem):
+        import SHOTpy
+
+        x = problem.addVariable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = problem.addVariable("y", SHOTpy.VariableType.Integer, -5, 5)
+
+        assert isinstance(x, SHOTpy.Variable)
+        assert (x.name, x.index, x.lowerBound, x.upperBound) == ("x", 0, 0.0, 10.0)
+        assert (y.name, y.index, y.lowerBound, y.upperBound) == ("y", 1, -5.0, 5.0)
+        assert problem.getVariable(0) is x and problem.getVariable(1) is y
+
+    def test_default_bounds(self, problem):
+        import SHOTpy
+
+        x = problem.addVariable("x")
+        b = problem.addVariable("b", SHOTpy.VariableType.Binary)
+        i = problem.addVariable("i", SHOTpy.VariableType.Integer, lowerBound=0)
+
+        assert (x.lowerBound, x.upperBound) == (SHOTpy.SHOT_DBL_MIN, SHOTpy.SHOT_DBL_MAX)
+        assert (b.lowerBound, b.upperBound) == (0.0, 1.0)
+        assert (i.lowerBound, i.upperBound) == (0.0, SHOTpy.SHOT_DBL_MAX)
+
+    def test_infinite_bounds_are_missing_bounds(self, problem):
+        """SHOT marks a missing bound with SHOT_DBL_MIN / SHOT_DBL_MAX, so infinite bounds are given those values."""
+        import SHOTpy
+
+        x = problem.addVariable("x", lowerBound=-math.inf, upperBound=math.inf)
+        assert (x.lowerBound, x.upperBound) == (SHOTpy.SHOT_DBL_MIN, SHOTpy.SHOT_DBL_MAX)
+
+    @pytest.mark.parametrize("bounds", [
+        {"lowerBound": math.nan},
+        {"upperBound": math.nan},
+        {"lowerBound": math.inf},
+        {"upperBound": -math.inf},
+        {"lowerBound": 5, "upperBound": 1},
+    ])
+    def test_invalid_bounds(self, problem, bounds):
+        with pytest.raises(ValueError):
+            problem.addVariable("x", **bounds)
+
+    def test_default_names(self, problem):
+        x = problem.addVariable()
+        y = problem.addVariable("y")
+        z = problem.addVariable()
+
+        assert (x.name, y.name, z.name) == ("variable_0", "y", "variable_2")
+
+    def test_semicontinuous_variable(self, problem):
+        import SHOTpy
+
+        s = problem.addVariable("s", SHOTpy.VariableType.Semicontinuous, 0.0, 10.0, semiBound=2.0)
+        assert s.semiBound == 2.0
+
+    def test_add_existing_variable(self, problem):
+        """Adding a Variable created separately still works, and None is rejected."""
+        import SHOTpy
+
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 1.0)
+        problem.addVariable(x)
+        assert problem.getVariable(0) is x
+
+        with pytest.raises(TypeError):
+            problem.addVariable(None)
+
+    def test_solve_a_model_built_with_added_variables(self):
+        """A model whose variables are created with addVariable solves to its optimum: maximize x + y with
+        x^2 + y^2 <= 2 gives x = y = 1."""
+        import SHOTpy
+
+        solver = SHOTpy.Solver()
+        solver.updateSetting("Output.Console.LogLevel", 6)
+        problem = SHOTpy.Problem(solver.getEnvironment())
+
+        x = problem.addVariable("x", lowerBound=-10, upperBound=10)
+        y = problem.addVariable("y", lowerBound=-10, upperBound=10)
+        problem.addConstraint(x**2 + y**2 <= 2, "circle")
+        problem.setObjective(x + y, SHOTpy.ObjectiveDirection.Maximize)
+        problem.finalize()
+        solver.setProblem(problem)
+
+        assert solver.solveProblem()
+        assert abs(solver.getPrimalBound() - 2.0) < 1e-4
+
+
+class TestVariableBounds:
+    """Tests for the bounds given to a Variable and set on it later."""
+
+    def test_infinite_bounds_in_the_constructor(self):
+        import SHOTpy
+
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, -math.inf, math.inf)
+        assert (x.lowerBound, x.upperBound) == (SHOTpy.SHOT_DBL_MIN, SHOTpy.SHOT_DBL_MAX)
+
+    def test_infinite_bounds_set_later(self):
+        import SHOTpy
+
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 1.0)
+        x.lowerBound = -math.inf
+        x.upperBound = math.inf
+        assert (x.lowerBound, x.upperBound) == (SHOTpy.SHOT_DBL_MIN, SHOTpy.SHOT_DBL_MAX)
+
+        x.upperBound = 5.0
+        assert x.upperBound == 5.0
+
+    def test_nan_bounds(self):
+        import SHOTpy
+
+        with pytest.raises(ValueError):
+            SHOTpy.Variable("x", SHOTpy.VariableType.Real, math.nan, 1.0)
+
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 1.0)
+        with pytest.raises(ValueError):
+            x.upperBound = math.nan

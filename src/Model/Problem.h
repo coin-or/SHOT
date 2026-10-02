@@ -132,6 +132,8 @@ public:
 
     virtual ~Problem();
 
+    inline bool hasBeenFinalized() const { return isFinalized; }
+
     ProblemProperties properties;
     std::string name = "";
 

@@ -9,6 +9,8 @@
 */
 
 #include "MIPSolverHighs.h"
+
+#include <mutex>
 #include "MIPSolverCallbackBase.h"
 
 #include "../DualSolver.h"
@@ -409,7 +411,24 @@ void MIPSolverHighs::initializeSolverSettings()
         break;
     }
 
-    highsInstance.setOptionValue("threads", env->settings->getSetting<int>("Dual.MIP.NumberOfThreads"));
+    // HiGHS has one scheduler of threads for the process, which keeps the number of threads it was created with, and a
+    // solve that asks for another number fails. The scheduler is therefore reset when the number differs from the one
+    // of the previous solve in the process, e.g., between solvers with different settings in the same Python program
+    int numberOfThreads = env->settings->getSetting<int>("Dual.MIP.NumberOfThreads");
+
+    {
+        static std::mutex schedulerMutex;
+        static int schedulerThreads = -1;
+
+        std::lock_guard<std::mutex> lock(schedulerMutex);
+
+        if(schedulerThreads != -1 && schedulerThreads != numberOfThreads)
+            Highs::resetGlobalScheduler(true);
+
+        schedulerThreads = numberOfThreads;
+    }
+
+    highsInstance.setOptionValue("threads", numberOfThreads);
 
     // The random seed is only set when it is not left at the default of the solver
     if(int randomSeed = env->settings->getSetting<int>("Dual.MIP.RandomSeed"); randomSeed != 0)
