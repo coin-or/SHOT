@@ -60,11 +60,21 @@ set(GUROBI_DIR "/opt/gurobi" CACHE STRING "The base directory where Gurobi is lo
 
 # Cbc
 option(HAS_CBC "Is Cbc available" ON)
-set(CBC_DIR "/opt/cbc" CACHE STRING "The base directory where Cbc is located (if available).")
+if(DEFINED ENV{CBC_DIR} AND NOT "$ENV{CBC_DIR}" STREQUAL "")
+    set(CBC_DEFAULT_DIR "$ENV{CBC_DIR}")
+else()
+    set(CBC_DEFAULT_DIR "/opt/cbc")
+endif()
+set(CBC_DIR "${CBC_DEFAULT_DIR}" CACHE STRING "The base directory where Cbc is located (if available).")
 
 # Ipopt
 option(HAS_IPOPT "Is Ipopt available" ON)
-set(IPOPT_DIR "/opt/ipopt" CACHE STRING "The base directory where Ipopt is located (if available).")
+if(DEFINED ENV{IPOPT_DIR} AND NOT "$ENV{IPOPT_DIR}" STREQUAL "")
+    set(IPOPT_DEFAULT_DIR "$ENV{IPOPT_DIR}")
+else()
+    set(IPOPT_DEFAULT_DIR "/opt/ipopt")
+endif()
+set(IPOPT_DIR "${IPOPT_DEFAULT_DIR}" CACHE STRING "The base directory where Ipopt is located (if available).")
 
 option(HAS_UNO "Is Uno available" OFF)
 set(UNO_DIR "/opt/uno" CACHE STRING "The base directory where Uno is located (if available).")
@@ -121,15 +131,21 @@ if((GIT) AND (EXISTS ${CMAKE_CURRENT_LIST_DIR}/.git))
         WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
         OUTPUT_VARIABLE GITHASH
         OUTPUT_STRIP_TRAILING_WHITESPACE
+        RESULT_VARIABLE GIT_DESCRIBE_RESULT
+        ERROR_QUIET
     )
-    string(
-        REGEX
-        REPLACE
-            "^.*-g"
-            ""
-            GITHASH
-            ${GITHASH}
-    )
+    if(GIT_DESCRIBE_RESULT EQUAL 0 AND NOT GITHASH STREQUAL "")
+        string(
+            REGEX
+            REPLACE
+                "^.*-g"
+                ""
+                GITHASH
+                "${GITHASH}"
+        )
+    else()
+        set(GITHASH "n/a")
+    endif()
 else()
     set(GITHASH "n/a")
 endif()
@@ -504,6 +520,7 @@ set(CPPAD_CMAKE_ARGS
     -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
     -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
     -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
+    -DCMAKE_POLICY_VERSION_MINIMUM=3.5
     -Dcppad_prefix=${CMAKE_CURRENT_BINARY_DIR}/CppAD
     -Dcppad_cxx_flags="-std=c++17"
 )
@@ -591,14 +608,17 @@ target_link_libraries(SHOTResults SHOTModel)
 
 if(HAS_PYTHON)
     # Find Python before adding pybind11 to ensure correct paths are used
-    find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
+    find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module)
     # Force pybind11 to use modern FindPython3 instead of deprecated FindPythonLibs
     set(PYBIND11_FINDPYTHON ON CACHE BOOL "Force pybind11 to use FindPython3" FORCE)
     add_subdirectory(${PYBIND11_DIR})
     pybind11_add_module(SHOTpy src/SHOTpy.cpp)
+    add_dependencies(SHOTpy cppad)
     target_link_libraries(SHOTpy PRIVATE SHOTSolver ${CPPAD_LIBRARY})
-    
-    # Set rpath for finding dynamic libraries
+
+    # Set rpath for finding dynamic libraries. In the build directory they are found where they were built, which the
+    # type stubs generated after the build rely on, and when installed, e.g., in a wheel, next to the module, where
+    # auditwheel or delocate bundles the external solvers
     if(APPLE)
         set(SHOTPY_RPATH_DIRS "${CPPAD_LIB_DIR}")
         if(HAS_GUROBI AND GUROBI_FOUND)
@@ -607,7 +627,21 @@ if(HAS_PYTHON)
         set_target_properties(SHOTpy PROPERTIES
             BUILD_RPATH "${SHOTPY_RPATH_DIRS}"
             INSTALL_RPATH "@loader_path")
+    elseif(UNIX)
+        set_target_properties(SHOTpy PROPERTIES INSTALL_RPATH "$ORIGIN")
     endif()
+
+    # The Python package, built by pip through scikit-build-core (see pyproject.toml), consists of the module, the SHOT
+    # library, CppAD and the type stubs, installed in the component Python
+    install(TARGETS SHOTpy
+        LIBRARY DESTINATION . COMPONENT Python
+        RUNTIME DESTINATION . COMPONENT Python)
+    install(DIRECTORY ${CPPAD_LIB_DIR}/
+        DESTINATION .
+        COMPONENT Python
+        FILES_MATCHING
+        PATTERN "libcppad_lib*.so*"
+        PATTERN "libcppad_lib*.dylib")
     
     # Ensure CppAD symbols are shared between SHOTpy and SHOTSolver
     # This prevents ODR violations with CppAD's static local variables in templates
@@ -639,6 +673,9 @@ if(HAS_PYTHON)
                 ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/misc/GenerateSHOTpyStubs.py $<TARGET_FILE_DIR:SHOTpy>
             COMMENT "Generating type stubs for SHOTpy"
         )
+
+        # SHOTpy is a module, not a package, so the stubs are found next to it without a py.typed file
+        install(FILES $<TARGET_FILE_DIR:SHOTpy>/SHOTpy.pyi DESTINATION . COMPONENT Python)
     else()
         message(STATUS "pybind11-stubgen not found - type stubs for SHOTpy will not be generated")
         message(STATUS "Install it with: pip install pybind11-stubgen")
@@ -920,6 +957,18 @@ file(
 
 # Creates the SHOT library that is linked to the executable
 add_library(SHOTSolver SHARED ${SOURCES})
+add_dependencies(SHOTSolver cppad)
+
+if(HAS_PYTHON)
+    if(APPLE)
+        set_target_properties(SHOTSolver PROPERTIES INSTALL_RPATH "@loader_path")
+    elseif(UNIX)
+        set_target_properties(SHOTSolver PROPERTIES INSTALL_RPATH "$ORIGIN")
+    endif()
+    install(TARGETS SHOTSolver
+        LIBRARY DESTINATION . COMPONENT Python
+        RUNTIME DESTINATION . COMPONENT Python)
+endif()
 
 # Ensures class type checking works correctly between the executable and shared library
 # Without this, the program can crash when checking object types at runtime
@@ -991,15 +1040,6 @@ if(GENERATE_EXE)
 endif(GENERATE_EXE)
 
 
-if(HAS_PYTHON)
-    # Python was already found earlier before adding pybind11 subdirectory
-    include_directories(SYSTEM ${Python3_INCLUDE_DIRS})
-    target_link_libraries(${PROJECT_NAME} ${Python3_LIBRARIES})
-    message("-- The following Python libraries will be used from: ${Python3_LIBRARIES}")
-    message("   ${Python3_INCLUDE_DIRS}")
-
-endif(HAS_PYTHON)
-
 # Extra flags for Visual Studio compilers
 if(MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++17")
@@ -1033,14 +1073,16 @@ write_basic_package_version_file(
     COMPATIBILITY AnyNewerVersion
 )
 
-install(
-    TARGETS ${PROJECT_NAME}
-    EXPORT SHOTTargets
-    LIBRARY DESTINATION lib
-    ARCHIVE DESTINATION lib
-    RUNTIME DESTINATION bin
-    INCLUDES DESTINATION include
-)
+if(GENERATE_EXE)
+    install(
+        TARGETS ${PROJECT_NAME}
+        EXPORT SHOTTargets
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib
+        RUNTIME DESTINATION bin
+        INCLUDES DESTINATION include
+    )
+endif()
 
 # Copy some additional files
 install(
@@ -1055,12 +1097,14 @@ install(
 # Need to install the library as well
 install(TARGETS SHOTSolver DESTINATION lib)
 
-install(
-    EXPORT SHOTTargets
-    FILE SHOTTargets.cmake
-    NAMESPACE SHOT::
-    DESTINATION lib/cmake/SHOT
-)
+if(GENERATE_EXE)
+    install(
+        EXPORT SHOTTargets
+        FILE SHOTTargets.cmake
+        NAMESPACE SHOT::
+        DESTINATION lib/cmake/SHOT
+    )
+endif()
 
 # Copy all header files including directory structure
 install(

@@ -1190,22 +1190,24 @@ class TestDualBoundAndPrimalSearchCallbacks:
         assert first_call[1][0] >= -25.0, "The tightest proposal must have been used as the dual bound"
 
     def test_primal_candidate_search_callback_is_called(self):
-        """Injecting a pre-verified optimal solution in the first iteration leads to
-        early termination (mirrors the C++ GurobiExternalDualBoundCallbackTest pattern).
+        """A solution added in PrimalCandidateSearch becomes the incumbent.
 
         Phase 1: solve shot_ex_jogo and take the optimal primal solution that SHOT
                  has already verified as feasible (no rounding issues).
         Phase 2: post that solution through PrimalCandidateSearch at iteration 1.
-                 With the primal bound immediately tight, the solver should
-                 terminate in no more iterations than in Phase 1.
+                 It becomes the incumbent in that iteration, and the solve ends at
+                 the optimum.
         """
         import SHOTpy
         L = SHOTpy.CallbackLocation
 
         # ── Phase 1: the verified optimal primal solution ─────────────
+        # The same settings as in Phase 2, so that the numbers of iterations can be compared
         solver1 = SHOTpy.Solver()
         solver1.updateSetting("Output.Console.LogLevel", 6)
         solver1.updateSetting("Model.Convexity.AssumeConvex", True)
+        solver1.updateSetting("Dual.Relaxation.Use", False)
+        solver1.updateSetting("Dual.TreeStrategy", 0)    # MultiTree
         env1 = solver1.getEnvironment()
         solver1.setProblem(build_shot_ex_jogo(env1), build_shot_ex_jogo(env1))
 
@@ -1233,7 +1235,10 @@ class TestDualBoundAndPrimalSearchCallbacks:
         provided = [False]
         call_log  = []
 
+        new_primal_log = []
+
         def on_new_primal(ctx):
+            new_primal_log.append((ctx.iterationNumber, ctx.objectiveValue, ctx.isIncumbent))
             print(f"  [NewPrimalSolution]      iter={ctx.iterationNumber}  obj={ctx.objectiveValue:.6f}")
 
         def provide_primal_solution(ctx):
@@ -1256,12 +1261,11 @@ class TestDualBoundAndPrimalSearchCallbacks:
         assert call_log, "PrimalCandidateSearch callback never called"
         assert solver2.getPrimalSolutions(), "No primal solution found in phase 2"
         assert obj2 <= JOGO_KNOWN_OBJ * 0.99, f"Objective {obj2:.6f} far from optimum"
-        # Injecting the optimal solution up-front should mean phase 2 needs no more
-        # iterations than phase 1 (and typically fewer)
-        assert iters_phase2 <= iters_phase1, (
-            f"Expected phase 2 ({iters_phase2} iter) to be no worse than "
-            f"phase 1 ({iters_phase1} iter)"
-        )
+        # The injected solution becomes the incumbent in the iteration it is added in. The number of iterations is
+        # not compared with Phase 1, since the cutoff it gives changes the path of the MIP solver
+        injection_iteration = call_log[0]
+        assert any(it == injection_iteration and abs(obj - best_obj) < 1e-6 and incumbent
+                   for it, obj, incumbent in new_primal_log), new_primal_log
 
     def test_several_primal_solutions_can_be_added(self):
         """addPrimalSolution can be called several times in one callback."""
@@ -1569,9 +1573,46 @@ class TestCallbackFailure:
 class TestThreads:
     """Python callbacks called from the threads of a multithreaded MIP solver do not deadlock."""
 
+    def test_solve_releases_gil_and_callbacks_reacquire_it(self, solver, env):
+        """solveProblem() releases the GIL, so other Python threads run while SHOT solves, and the callbacks
+        acquire it again."""
+        import threading
+
+        import SHOTpy
+
+        start = threading.Event()
+        stop = threading.Event()
+        progress = [0]
+
+        def worker():
+            start.wait()
+            while not stop.is_set():
+                progress[0] += 1
+
+        callbackCalls = [0]
+
+        def onNewPrimalSolution(ctx):
+            callbackCalls[0] += 1
+
+        thread = threading.Thread(target=worker)
+        thread.start()
+        try:
+            solver.updateSetting("Output.Console.LogLevel", 6)
+            assert solver.setProblem(build_ex1223b(env))
+            solver.registerCallback(SHOTpy.CallbackLocation.NewPrimalSolution, onNewPrimalSolution)
+            start.set()
+            assert solver.solveProblem()
+        finally:
+            stop.set()
+            thread.join(timeout=5)
+
+        assert progress[0] > 0, "A Python thread could not run during solveProblem()"
+        assert callbackCalls[0] > 0, "The callbacks were not called with the GIL released"
+
     SCRIPT = """
 import sys
-sys.path.insert(0, {build_dir!r})
+if {build_dir!r}:
+    sys.path.insert(0, {build_dir!r})
 import SHOTpy
 
 L = SHOTpy.CallbackLocation
@@ -1604,7 +1645,13 @@ print(sorted((name, len(idents)) for name, idents in threads.items()))
     def test_cplex_single_tree_with_threads(self, data_dir):
         import subprocess
         import sys
+
+        import SHOTpy
         from conftest import BUILD_DIR
+
+        # The setting Dual.MIP.Solver keeps the value the user gave even if CPLEX is not available
+        if not SHOTpy.HAS_CPLEX:
+            pytest.skip("SHOT is not built with CPLEX")
 
         # CPLEX calls the single-tree callback of this instance from all its threads
         script = self.SCRIPT.format(build_dir=BUILD_DIR, filename=str(data_dir / "tls2.osil"))
