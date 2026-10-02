@@ -563,3 +563,25 @@ class TestObjectiveConstantInstances:
             assert solver.getGlobalDualBound() <= optimum + tolerance
         else:
             assert solver.getGlobalDualBound() >= optimum - tolerance
+
+
+class TestHighsThreads:
+    def test_solves_with_different_numbers_of_threads_in_one_process(self, data_dir):
+        """HiGHS has one scheduler of threads for the process, and a solve that asked for another number of threads
+        than the first solve in the process failed, so that SHOT returned a worse solution without proving it optimal."""
+        import SHOTpy
+
+        if not SHOTpy.HAS_HIGHS:
+            pytest.skip("SHOT is not built with HiGHS")
+
+        for threads in (0, 1, 2, 1):
+            solver = SHOTpy.Solver()
+            solver.updateSetting("Output.Console.LogLevel", 6)
+            solver.updateSetting("Dual.MIP.Solver", int(SHOTpy.MIPSolver.Highs))
+            solver.updateSetting("Dual.MIP.NumberOfThreads", threads)
+
+            assert solver.setProblem(str(data_dir / "constant_nvs03_min.osil"))
+            assert solver.solveProblem()
+
+            assert solver.getModelReturnStatus() == SHOTpy.ModelReturnStatus.OptimalGlobal, threads
+            assert solver.getPrimalBound() == pytest.approx(16.0, abs=1e-3), threads
