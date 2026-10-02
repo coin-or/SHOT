@@ -1008,10 +1008,11 @@ void Solver::initializeSettings()
     usedMIPSolver = ES_MIPSolver::Gurobi;
 #elif HAS_CPLEX
     usedMIPSolver = ES_MIPSolver::Cplex;
+#elif HAS_HIGHS
+    // HiGHS before Cbc, as when the MIP solver chosen is not available
+    usedMIPSolver = ES_MIPSolver::Highs;
 #elif HAS_CBC
     usedMIPSolver = ES_MIPSolver::Cbc;
-#elif HAS_HIGHS
-    usedMIPSolver = ES_MIPSolver::Highs;
 #else
     env->output->outputCritical(" SHOT has not been compiled with support for any MIP solver.");
 #endif
