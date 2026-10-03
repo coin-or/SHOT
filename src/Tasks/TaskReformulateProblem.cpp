@@ -534,7 +534,8 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
                     destinationObjective->ownerProblem = reformulatedProblem;
                     destinationObjective->direction = sourceObjective->direction;
 
-                    destinationObjective->constant = env->problem->objectiveFunction->constant
+                    // The constant already contains the terms of the fixed variables added above
+                    destinationObjective->constant += env->problem->objectiveFunction->constant
                         + epigraphFactor
                             * (std::dynamic_pointer_cast<LinearConstraint>(epigraphConstraint)->constant
                                 - std::dynamic_pointer_cast<LinearConstraint>(epigraphConstraint)->valueRHS);
@@ -583,7 +584,9 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
         copyLinearTermsToObjectiveFunction(sourceObjective->linearTerms, destinationObjective);
 
         destinationObjective->direction = env->problem->objectiveFunction->direction;
-        destinationObjective->constant = env->problem->objectiveFunction->constant;
+
+        // The constant already contains the terms of the fixed variables, which were added when copying the terms
+        destinationObjective->constant += env->problem->objectiveFunction->constant;
 
         reformulatedProblem->add(std::move(destinationObjective));
 
@@ -611,7 +614,9 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
         copyQuadraticTermsToObjectiveFunction(sourceObjective->quadraticTerms, destinationObjective);
 
         destinationObjective->direction = env->problem->objectiveFunction->direction;
-        destinationObjective->constant = env->problem->objectiveFunction->constant;
+
+        // The constant already contains the terms of the fixed variables, which were added when copying the terms
+        destinationObjective->constant += env->problem->objectiveFunction->constant;
 
         reformulatedProblem->add(std::move(destinationObjective));
 
