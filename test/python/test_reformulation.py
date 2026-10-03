@@ -280,3 +280,49 @@ class TestFixedVariablesInQuadraticTerms:
             assert problem.getConstraint(name).calculateNumericValue(point).error <= 1e-6
         assert problem.objectiveFunction.calculateValue(point) == pytest.approx(solver.getPrimalBound(), abs=1e-6)
 
+class TestAbsoluteValues:
+    """An absolute value |f(x)| gets an auxiliary variable w with f(x) <= w and -f(x) <= w."""
+
+    def make_problem(self, solver, shift):
+        import SHOTpy
+
+        problem = SHOTpy.Problem(solver)
+        x = problem.addVariable("x", SHOTpy.VariableType.Real, -3.0, 3.0)
+        y = problem.addVariable("y", SHOTpy.VariableType.Real, -3.0, 3.0)
+        z = problem.addVariable("z", SHOTpy.VariableType.Real, -6.0, 3.0)
+
+        # |x - 1| is in two constraints, and |y - 1 - shift| differs from |y - 1| only by the small shift
+        problem.setObjective(x + y + z)
+        problem.addConstraint(SHOTpy.abs(x - 1) + SHOTpy.abs(y - 1 - shift) <= 2, "c1")
+        problem.addConstraint(SHOTpy.abs(x - 1) - y <= 1, "c2")
+        problem.addConstraint(SHOTpy.abs(z + 2) + SHOTpy.abs(y - 1) <= 3, "c3")
+        problem.finalize()
+        return problem
+
+    def test_constants(self):
+        """The constant inside the absolute value was lost if negative, and given the wrong sign if positive."""
+        solver = make_solver({})
+        problem = self.make_problem(solver, 0.0)
+
+        assert solver.setProblem(problem)
+        assert solver.solveProblem()
+
+        # c1 gives x + y >= 0 and c3 gives z >= -5 + |y - 1|, so the optimum is at x = -1, y = 1, z = -5, where c2
+        # holds with equality
+        assert solver.getPrimalBound() == pytest.approx(-5.0, abs=1e-5)
+        assert solver.getCurrentDualBound() >= -5.0 - 1e-5
+
+        point = list(solver.getPrimalSolution().point)
+        for name in ("c1", "c2", "c3"):
+            assert problem.getConstraint(name).calculateNumericValue(point).error <= 1e-6
+
+    def test_auxiliary_variables(self):
+        """Equal absolute values share their auxiliary variable, but constants differing in the 7th digit do not."""
+        for shift, expected in ((0.0, 3), (1e-7, 4)):
+            solver = make_solver({})
+            problem = self.make_problem(solver, shift)
+            assert solver.setProblem(problem)
+
+            names = auxiliary_variable_names(solver)
+            assert sum(1 for name in names if name.startswith("s_abs_")) == expected, (shift, names)
+

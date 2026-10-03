@@ -25,8 +25,56 @@
 #include "gurobi_c.h"
 #endif
 
+#include <cstdio>
+
 namespace SHOT
 {
+
+// A key identifying an expression by its structure, i.e., its operations, the indexes of its variables and the exact
+// values of its constants. The children of sums and products are sorted, since their order does not matter.
+static std::string getStructuralKey(const NonlinearExpression* expression)
+{
+    std::string key = std::to_string(static_cast<int>(expression->getType()));
+
+    if(expression->getType() == E_NonlinearExpressionTypes::Constant)
+    {
+        // The hexadecimal format is exact, unlike the default output format with six significant digits
+        char constant[32];
+        std::snprintf(constant, sizeof(constant), "%a", static_cast<const ExpressionConstant*>(expression)->constant);
+        return (key + ":" + constant);
+    }
+
+    if(expression->getType() == E_NonlinearExpressionTypes::Variable)
+        return (key + ":" + std::to_string(static_cast<const ExpressionVariable*>(expression)->variable->getIndex()));
+
+    std::vector<std::string> childKeys;
+
+    if(auto unary = dynamic_cast<const ExpressionUnary*>(expression))
+    {
+        childKeys.push_back(getStructuralKey(unary->child.get()));
+    }
+    else if(auto binary = dynamic_cast<const ExpressionBinary*>(expression))
+    {
+        childKeys.push_back(getStructuralKey(binary->firstChild.get()));
+        childKeys.push_back(getStructuralKey(binary->secondChild.get()));
+    }
+    else if(auto general = dynamic_cast<const ExpressionGeneral*>(expression))
+    {
+        for(auto& C : general->children)
+            childKeys.push_back(getStructuralKey(C.get()));
+
+        if(expression->getType() == E_NonlinearExpressionTypes::Sum
+            || expression->getType() == E_NonlinearExpressionTypes::Product)
+            std::sort(childKeys.begin(), childKeys.end());
+    }
+
+    key += "(";
+
+    for(size_t i = 0; i < childKeys.size(); i++)
+        key += (i == 0 ? "" : ",") + childKeys[i];
+
+    return (key + ")");
+}
 
 TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
@@ -2699,10 +2747,11 @@ NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(st
         auxConstraintCounter++;
     }
 
-    if(tmpConstant > 0)
+    // The constraints are f(x) - w <= 0 and -f(x) - w <= 0, where the constant is a part of f
+    if(tmpConstant != 0.0)
     {
         std::dynamic_pointer_cast<LinearConstraint>(auxConstraint1)->constant = tmpConstant;
-        std::dynamic_pointer_cast<LinearConstraint>(auxConstraint1)->constant = -tmpConstant;
+        std::dynamic_pointer_cast<LinearConstraint>(auxConstraint2)->constant = -tmpConstant;
     }
 
     if(tmpLinearTerms.size() == 1)
@@ -2968,10 +3017,7 @@ std::pair<AuxiliaryVariablePtr, bool> TaskReformulateProblem::getBilinearAuxilia
 std::pair<AuxiliaryVariablePtr, bool> TaskReformulateProblem::getAbsoluteValueAuxiliaryVariable(
     std::shared_ptr<ExpressionAbs> source)
 {
-    std::stringstream expression;
-    expression << source->child;
-
-    auto key = expression.str();
+    auto key = getStructuralKey(source->child.get());
 
     auto auxVariableIterator = absoluteExpressionsAuxVariables.find(key);
 
