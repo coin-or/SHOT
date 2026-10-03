@@ -664,3 +664,29 @@ class TestIntegerProducts:
 
         assert solver.getPrimalBound() == pytest.approx(expected, abs=1e-6)
         assert solver.getCurrentDualBound() >= expected - 1e-6
+
+
+class TestTerminationWithPrimalSolution:
+    """A dual problem that becomes infeasible after a primal solution has been found does not make it infeasible."""
+
+    def test_not_infeasible(self):
+        """With partitioning always, the cuts of the nonconvex terms made the dual problem infeasible, which was
+        reported as an infeasible problem although the optimum had been found."""
+        import SHOTpy
+
+        solver = make_solver({"Model.Reformulation.ObjectiveFunction.PartitionNonlinearTerms": 0})
+        problem = SHOTpy.Problem(solver)
+        x = problem.addVariable("x", SHOTpy.VariableType.Real, 0.1, 3.0)
+        y = problem.addVariable("y", SHOTpy.VariableType.Real, 0.1, 3.0)
+
+        # The signomial and the monomial share both variables
+        problem.setObjective(x**0.5 * y**0.5 + 0.1 * x * y * x, SHOTpy.ObjectiveDirection.Maximize)
+        problem.addConstraint(x + y <= 2, "c")
+        problem.finalize()
+
+        assert solver.setProblem(problem)
+        assert solver.solveProblem()
+
+        assert solver.getPrimalBound() == pytest.approx(1.1041, abs=1e-3)
+        assert solver.getTerminationReason() != SHOTpy.TerminationReason.InfeasibleProblem
+        assert solver.getModelReturnStatus() == SHOTpy.ModelReturnStatus.FeasibleSolution
