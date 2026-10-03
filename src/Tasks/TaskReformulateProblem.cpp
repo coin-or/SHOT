@@ -245,9 +245,10 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
             break;
         }
     }
-    else if(env->settings->getSetting<int>("Dual.MIP.Solver") == (int)ES_MIPSolver::Cbc)
+    else if(env->settings->getSetting<int>("Dual.MIP.Solver") == (int)ES_MIPSolver::Cbc
+        || env->settings->getSetting<int>("Dual.MIP.Solver") == (int)ES_MIPSolver::Highs)
     {
-        // Cbc does not support quadratic terms
+        // Cbc and HiGHS are not given quadratic terms
         useConvexQuadraticConstraints = false;
         useConvexQuadraticConstraintsWithinTolerance = false;
         useNonconvexQuadraticConstraints = false;

@@ -617,3 +617,50 @@ class TestQuadraticDecompositions:
         # e.g. CPLEX does not accept a duplicate name
         allNames = [V.name for V in solver.getReformulatedProblem().allVariables]
         assert len(allNames) == len(set(allNames)), allNames
+
+
+class TestIntegerProducts:
+    """Products of integer variables are linearized when the MIP solver is not given quadratic terms."""
+
+    BOUNDS = {"i1": (-2, 3), "i2": (0, 4), "i3": (1, 3)}
+
+    @staticmethod
+    def objective(i1, i2, i3):
+        return i1 * i2 - i2 * i3 + i1
+
+    @staticmethod
+    def constraints(i1, i2, i3):
+        return {"c1": i1 * i3 + i2 >= 1, "c2": i1 * i2 + i2 * i3 <= 9}
+
+    @pytest.mark.parametrize("mipSolver", ["Cbc", "Highs"])
+    def test_optimal_value(self, mipSolver):
+        """With HiGHS, the products were not linearized, unlike with Cbc."""
+        import SHOTpy
+
+        if not getattr(SHOTpy, "HAS_" + mipSolver.upper()):
+            pytest.skip(f"SHOT is built without {mipSolver}")
+
+        solver = make_solver({"Dual.MIP.Solver": {"Cbc": 2, "Highs": 3}[mipSolver]})
+        problem = SHOTpy.Problem(solver)
+        i1, i2, i3 = (problem.addVariable(name, SHOTpy.VariableType.Integer, *bounds)
+                      for name, bounds in self.BOUNDS.items())
+
+        # The products share their variables, and i1*i2 is in the objective and a constraint
+        problem.setObjective(self.objective(i1, i2, i3))
+        for name, constraint in self.constraints(i1, i2, i3).items():
+            problem.addConstraint(constraint, name)
+        problem.finalize()
+
+        assert solver.setProblem(problem)
+
+        names = auxiliary_variable_names(solver)
+        assert sum(1 for name in names if name.startswith("s_bl_")) == 3, names
+
+        assert solver.solveProblem()
+
+        ranges = [range(lower, upper + 1) for lower, upper in self.BOUNDS.values()]
+        expected = min(self.objective(*point) for point in itertools.product(*ranges)
+                       if all(self.constraints(*point).values()))
+
+        assert solver.getPrimalBound() == pytest.approx(expected, abs=1e-6)
+        assert solver.getCurrentDualBound() >= expected - 1e-6
