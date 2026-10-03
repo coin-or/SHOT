@@ -106,6 +106,10 @@ private:
     LinearTerms doEigenvalueDecomposition(QuadraticTerms& quadraticTerms);
     LinearTerms doLDLDecomposition(QuadraticTerms& quadraticTerms);
 
+    // Adds the term value * y^2 of a decomposition with y given by the linear terms
+    void addDecompositionComponent(const LinearTerms& componentTerms, double value,
+        E_AuxiliaryVariableType auxVariableType, const std::string& name, std::vector<LinearTermPtr>& resultTerms);
+
     NonlinearExpressionPtr reformulateNonlinearExpression(NonlinearExpressionPtr source);
     NonlinearExpressionPtr reformulateNonlinearExpression(std::shared_ptr<ExpressionAbs> source);
     NonlinearExpressionPtr reformulateNonlinearExpression(std::shared_ptr<ExpressionSquare> source);
@@ -144,6 +148,7 @@ private:
     std::map<VariablePtr, Variables, VariableIndexComparator> integerAuxiliaryBinaryVariables;
 
     std::map<std::pair<VariablePtr, double>, AuxiliaryVariablePtr, VariableIndexComparator> squareAuxVariables;
+    std::map<int, int> squareAuxVariableCounts; // The number of square auxiliary variables of each variable
 
     std::map<std::tuple<VariablePtr, VariablePtr>, AuxiliaryVariablePtr, VariableIndexComparator>
         bilinearAuxVariables;

@@ -563,3 +563,57 @@ class TestMaximizedNonlinearObjective:
 
         point = list(solver.getPrimalSolution().point)
         assert problem.objectiveFunction.calculateValue(point) == pytest.approx(solver.getPrimalBound(), abs=1e-6)
+
+
+class TestQuadraticDecompositions:
+    """The convex quadratic terms are decomposed into squares of linear combinations of the variables."""
+
+    def make_problem(self, solver):
+        """x3, x4 and b are separate from the other variables of c1, and x3 and x4 are in both constraints."""
+        import SHOTpy
+
+        problem = SHOTpy.Problem(solver)
+        x1, x2, x3, x4, x5 = (problem.addVariable(name, SHOTpy.VariableType.Real, -2.0, 3.0)
+                              for name in ("x1", "x2", "x3", "x4", "x5"))
+        b = problem.addVariable("b", SHOTpy.VariableType.Binary)
+
+        problem.setObjective(-x1 - x2 - x3 - x4 - x5 - 2 * b)
+        problem.addConstraint(x1 * x1 + x2 * x2 + x1 * x2 + 2 * x3 * x3 + x4 * x4 + 3 * b * b <= 10, "c1")
+        problem.addConstraint(x3 * x3 + x5 * x5 + x3 * x5 + 0.5 * x4 * x4 - x1 <= 4, "c2")
+        problem.finalize()
+        return problem
+
+    def solve(self, method, formulation):
+        solver = make_solver({"Model.Reformulation.Quadratics.Strategy": 0,
+                              "Model.Reformulation.Quadratics.Decomposition.Method": method,
+                              "Model.Reformulation.Quadratics.Decomposition.Formulation": formulation})
+        problem = self.make_problem(solver)
+        assert solver.setProblem(problem)
+        names = auxiliary_variable_names(solver)
+        assert solver.solveProblem()
+
+        point = list(solver.getPrimalSolution().point)
+        for name in ("c1", "c2"):
+            assert problem.getConstraint(name).calculateNumericValue(point).error <= 1e-6
+
+        return solver, names
+
+    @pytest.mark.parametrize("formulation", [0, 1], ids=["CoefficientReformulated", "CoefficientRemains"])
+    @pytest.mark.parametrize("method", [1, 2], ids=["EigenValueDecomposition", "LDLDecomposition"])
+    def test_single_variable_components(self, method, formulation):
+        """A component with one variable is a square term of the variable, without a variable for the component."""
+        reference, _ = self.solve(0, formulation)
+        solver, names = self.solve(method, formulation)
+
+        # The problem is convex, so the decompositions give the same optimum as no decomposition
+        assert solver.getPrimalBound() == pytest.approx(reference.getPrimalBound(), rel=1e-3)
+
+        # x4 is separate in both constraints, and x3 in c1, so their squares have their own auxiliary variables
+        components = [name for name in names if name.startswith("q_evd_") or name.startswith("q_ldl_")]
+        assert "s_sq_x4" in names and "s_sq_x3" in names, names
+        assert len(components) <= 4, names
+
+        # x4 has squares with different coefficients in c1 and c2, whose variables must have unique names, since
+        # e.g. CPLEX does not accept a duplicate name
+        allNames = [V.name for V in solver.getReformulatedProblem().allVariables]
+        assert len(allNames) == len(set(allNames)), allNames

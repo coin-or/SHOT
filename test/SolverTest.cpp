@@ -2087,6 +2087,125 @@ bool TestAuxiliaryVariablesOfSharedPartitioning()
     return (passed);
 }
 
+// Two convex quadratic constraints sharing variables, where x3, x4 and b are separate from the other variables, so that
+// their components of the decompositions only have one variable
+static ProblemPtr MakeDecompositionProblem(EnvironmentPtr env)
+{
+    auto problem = std::make_shared<SHOT::Problem>(env);
+    problem->name = "decomposition";
+
+    auto x1 = std::make_shared<Variable>("x1", E_VariableType::Real, -2.0, 3.0);
+    auto x2 = std::make_shared<Variable>("x2", E_VariableType::Real, -2.0, 3.0);
+    auto x3 = std::make_shared<Variable>("x3", E_VariableType::Real, -2.0, 3.0);
+    auto x4 = std::make_shared<Variable>("x4", E_VariableType::Real, -2.0, 3.0);
+    auto x5 = std::make_shared<Variable>("x5", E_VariableType::Real, -2.0, 3.0);
+    auto b = std::make_shared<Variable>("b", E_VariableType::Binary);
+
+    problem->add({ x1, x2, x3, x4, x5, b });
+
+    auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    for(auto& V : { x1, x2, x3, x4, x5 })
+        objective->add(std::make_shared<LinearTerm>(-1.0, V));
+    objective->add(std::make_shared<LinearTerm>(-2.0, b));
+    problem->add(objective);
+
+    auto c1 = std::make_shared<QuadraticConstraint>("c1", SHOT_DBL_MIN, 10.0);
+    c1->add(std::make_shared<QuadraticTerm>(1.0, x1, x1));
+    c1->add(std::make_shared<QuadraticTerm>(1.0, x2, x2));
+    c1->add(std::make_shared<QuadraticTerm>(1.0, x1, x2));
+    c1->add(std::make_shared<QuadraticTerm>(2.0, x3, x3));
+    c1->add(std::make_shared<QuadraticTerm>(1.0, x4, x4));
+    c1->add(std::make_shared<QuadraticTerm>(3.0, b, b));
+    problem->add(c1);
+
+    auto c2 = std::make_shared<QuadraticConstraint>("c2", SHOT_DBL_MIN, 4.0);
+    c2->add(std::make_shared<LinearTerm>(-1.0, x1));
+    c2->add(std::make_shared<QuadraticTerm>(1.0, x3, x3));
+    c2->add(std::make_shared<QuadraticTerm>(1.0, x5, x5));
+    c2->add(std::make_shared<QuadraticTerm>(1.0, x3, x5));
+    c2->add(std::make_shared<QuadraticTerm>(0.5, x4, x4));
+    problem->add(c2);
+
+    problem->updateProperties();
+    problem->finalize();
+
+    return (problem);
+}
+
+bool TestAuxiliaryVariablesOfDecompositions()
+{
+    bool passed = true;
+
+    std::vector<VectorDouble> points;
+
+    for(double x1 : { -2.0, 0.5, 3.0 })
+    {
+        for(double x2 : { -1.5, 2.0 })
+        {
+            for(double x3 : { -2.0, 0.3, 3.0 })
+            {
+                for(double x4 : { -0.7, 2.5 })
+                {
+                    for(double x5 : { -2.0, 1.1 })
+                    {
+                        for(double b : { 0.0, 1.0 })
+                            points.push_back({ x1, x2, x3, x4, x5, b });
+                    }
+                }
+            }
+        }
+    }
+
+    for(auto method :
+        { ES_QuadraticDecomposition::EigenValueDecomposition, ES_QuadraticDecomposition::LDLDecomposition })
+    {
+        for(auto formulation : { ES_QuadraticDecompositionFormulation::CoefficientReformulated,
+                ES_QuadraticDecompositionFormulation::CoefficientRemains })
+        {
+            std::cout << "Decomposition " << static_cast<int>(method) << " with formulation "
+                      << static_cast<int>(formulation) << '\n';
+
+            auto solver = std::make_unique<SHOT::Solver>();
+            auto env = solver->getEnvironment();
+            solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+            solver->updateSetting(
+                "Model.Reformulation.Quadratics.Strategy", static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear));
+            solver->updateSetting("Model.Reformulation.Quadratics.Decomposition.Method", static_cast<int>(method));
+            solver->updateSetting(
+                "Model.Reformulation.Quadratics.Decomposition.Formulation", static_cast<int>(formulation));
+
+            auto problem = MakeDecompositionProblem(env);
+
+            if(!solver->setProblem(problem))
+            {
+                std::cout << "Could not set the problem\n";
+                return (false);
+            }
+
+            // The components of x3 and x4 in c1 have only one variable, and get no variable for the component
+            int numberOfComponents = 0;
+
+            for(auto& V : env->reformulatedProblem->auxiliaryVariables)
+            {
+                if(V->name.rfind("q_evd_", 0) == 0 || V->name.rfind("q_ldl_", 0) == 0)
+                    numberOfComponents++;
+            }
+
+            if(numberOfComponents > 4)
+            {
+                std::cout << "Expected at most four components with several variables, got " << numberOfComponents
+                          << '\n';
+                passed = false;
+            }
+
+            if(!CheckAuxiliaryVariableValues(problem, env->reformulatedProblem, points))
+                passed = false;
+        }
+    }
+
+    return (passed);
+}
+
 int SolverTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -2224,6 +2343,11 @@ int SolverTest(int argc, char* argv[])
         std::cout << "Starting test for the shared auxiliary variables of partitioned terms" << std::endl;
         passed = TestAuxiliaryVariablesOfSharedPartitioning();
         std::cout << "Finished test for the shared auxiliary variables of partitioned terms." << std::endl;
+        break;
+    case 24:
+        std::cout << "Starting test for the auxiliary variables of quadratic decompositions" << std::endl;
+        passed = TestAuxiliaryVariablesOfDecompositions();
+        std::cout << "Finished test for the auxiliary variables of quadratic decompositions." << std::endl;
         break;
     default:
         passed = false;

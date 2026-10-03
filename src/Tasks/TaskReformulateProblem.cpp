@@ -2620,6 +2620,70 @@ void TaskReformulateProblem::copySignomialTermsToObjectiveFunction(
     }
 }
 
+void TaskReformulateProblem::addDecompositionComponent(const LinearTerms& componentTerms, double value,
+    E_AuxiliaryVariableType auxVariableType, const std::string& name, std::vector<LinearTermPtr>& resultTerms)
+{
+    auto quadraticDecompositionFormulation = (ES_QuadraticDecompositionFormulation)env->settings->getSetting<int>(
+        "Model.Reformulation.Quadratics.Decomposition.Formulation");
+
+    // The component is value * y^2 with y = a1 * x1 + ... + an * xn. With one variable, y^2 is a^2 * x^2, which
+    // needs no variable for y and shares the auxiliary variable of x^2 with the other square terms of x
+    if(componentTerms.size() == 1)
+    {
+        auto variable = componentTerms[0]->variable;
+        double coefficient = value * componentTerms[0]->coefficient * componentTerms[0]->coefficient;
+
+        if(variable->properties.type == E_VariableType::Binary) // b^2 = b
+        {
+            resultTerms.push_back(std::make_shared<LinearTerm>(0.5 * coefficient, variable));
+        }
+        else if(quadraticDecompositionFormulation == ES_QuadraticDecompositionFormulation::CoefficientReformulated)
+        {
+            auto [auxVariable, newVariable] = getSquareAuxiliaryVariable(variable, coefficient, auxVariableType);
+            resultTerms.push_back(std::make_shared<LinearTerm>(0.5, auxVariable));
+        }
+        else
+        {
+            auto [auxVariable, newVariable] = getSquareAuxiliaryVariable(variable, 1.0, auxVariableType);
+            resultTerms.push_back(std::make_shared<LinearTerm>(0.5 * coefficient, auxVariable));
+        }
+
+        return;
+    }
+
+    auto auxConstraint = std::make_shared<LinearConstraint>(name + std::to_string(auxConstraintCounter), 0, 0);
+    auxConstraintCounter++;
+
+    auxConstraint->add(componentTerms);
+
+    auto bounds = auxConstraint->linearTerms.calculate(env->problem->getVariableBounds());
+
+    auto auxQuadVariable = std::make_shared<AuxiliaryVariable>(
+        name + "_" + std::to_string(auxVariableCounter), E_VariableType::Real, bounds.l(), bounds.u());
+    auxVariableCounter++;
+    auxQuadVariable->properties.auxiliaryType = auxVariableType;
+
+    // The value of the auxiliary variable is the value of the linear terms
+    for(auto& T : componentTerms)
+        auxQuadVariable->linearTerms.add(std::make_shared<LinearTerm>(T->coefficient, T->variable));
+
+    reformulatedProblem->add(auxQuadVariable);
+
+    if(quadraticDecompositionFormulation == ES_QuadraticDecompositionFormulation::CoefficientReformulated)
+    {
+        auto [auxVariable, newVariable] = getSquareAuxiliaryVariable(auxQuadVariable, value, auxVariableType);
+        resultTerms.push_back(std::make_shared<LinearTerm>(0.5, auxVariable));
+    }
+    else
+    {
+        auto [auxVariable, newVariable] = getSquareAuxiliaryVariable(auxQuadVariable, 1.0, auxVariableType);
+        resultTerms.push_back(std::make_shared<LinearTerm>(0.5 * value, auxVariable));
+    }
+
+    auxConstraint->add(std::make_shared<LinearTerm>(-1.0, auxQuadVariable));
+    reformulatedProblem->add(std::move(auxConstraint));
+}
+
 LinearTerms TaskReformulateProblem::doEigenvalueDecomposition(QuadraticTerms& quadraticTerms)
 {
     env->timing->startTimer("ProblemReformulationEigenDecomp");
@@ -2629,9 +2693,6 @@ LinearTerms TaskReformulateProblem::doEigenvalueDecomposition(QuadraticTerms& qu
 
     auto eigenValueTolerance
         = env->settings->getSetting<double>("Model.Reformulation.Quadratics.Decomposition.Tolerance");
-
-    auto quadraticDecompositionFormulation = (ES_QuadraticDecompositionFormulation)env->settings->getSetting<int>(
-        "Model.Reformulation.Quadratics.Decomposition.Formulation");
 
     quadraticTerms.computeEigenvectors();
 
@@ -2646,45 +2707,19 @@ LinearTerms TaskReformulateProblem::doEigenvalueDecomposition(QuadraticTerms& qu
         if(std::abs(eigenvalue) < eigenValueTolerance)
             continue;
 
-        auto auxConstraint = std::make_shared<LinearConstraint>("q_evd" + std::to_string(auxConstraintCounter), 0, 0);
-        auxConstraintCounter++;
-
-        LinearTerms auxConstraintTerms;
+        LinearTerms componentTerms;
 
         // The variables of the terms belong to the original problem, so the ones of the reformulated problem
         // are looked up by their index
         for(auto [VAR, j] : quadraticTerms.variableMap)
         {
             if(quadraticTerms.eigenvectors(j, i) != 0.0)
-                auxConstraintTerms.push_back(std::make_shared<LinearTerm>(
+                componentTerms.push_back(std::make_shared<LinearTerm>(
                     quadraticTerms.eigenvectors(j, i), reformulatedProblem->getVariable(VAR->getIndex())));
         }
 
-        auxConstraint->add(auxConstraintTerms);
-
-        auto bounds = auxConstraint->linearTerms.calculate(env->problem->getVariableBounds());
-
-        auto auxQuadVariable = std::make_shared<AuxiliaryVariable>(
-            "q_evd_" + std::to_string(auxVariableCounter), E_VariableType::Real, bounds.l(), bounds.u());
-        auxVariableCounter++;
-        auxQuadVariable->properties.auxiliaryType = E_AuxiliaryVariableType::EigenvalueDecomposition;
-        reformulatedProblem->add(auxQuadVariable);
-
-        if(quadraticDecompositionFormulation == ES_QuadraticDecompositionFormulation::CoefficientReformulated)
-        {
-            auto [auxVariable, newVariable] = getSquareAuxiliaryVariable(
-                auxQuadVariable, eigenvalue, E_AuxiliaryVariableType::EigenvalueDecomposition);
-            resultTerms.push_back(std::make_shared<LinearTerm>(0.5, auxVariable));
-        }
-        else
-        {
-            auto [auxVariable, newVariable]
-                = getSquareAuxiliaryVariable(auxQuadVariable, 1.0, E_AuxiliaryVariableType::EigenvalueDecomposition);
-            resultTerms.push_back(std::make_shared<LinearTerm>(0.5 * eigenvalue, auxVariable));
-        }
-
-        auxConstraint->add(std::make_shared<LinearTerm>(-1.0, auxQuadVariable));
-        reformulatedProblem->add(std::move(auxConstraint));
+        addDecompositionComponent(
+            componentTerms, eigenvalue, E_AuxiliaryVariableType::EigenvalueDecomposition, "q_evd", resultTerms);
     }
 
     resultLinearTerms.add(LinearTerms(std::move(resultTerms)));
@@ -2712,9 +2747,6 @@ LinearTerms TaskReformulateProblem::doLDLDecomposition(QuadraticTerms& quadratic
     auto eigenValueTolerance
         = env->settings->getSetting<double>("Model.Reformulation.Quadratics.Decomposition.Tolerance");
 
-    auto quadraticDecompositionFormulation = (ES_QuadraticDecompositionFormulation)env->settings->getSetting<int>(
-        "Model.Reformulation.Quadratics.Decomposition.Formulation");
-
     // The terms are collected and added at once, since add(term) searches every term already added
     std::vector<LinearTermPtr> resultTerms;
     resultTerms.reserve(quadraticTerms.variableMap.size());
@@ -2726,45 +2758,19 @@ LinearTerms TaskReformulateProblem::doLDLDecomposition(QuadraticTerms& quadratic
         if(std::abs(diagValue) < eigenValueTolerance)
             continue;
 
-        auto auxConstraint = std::make_shared<LinearConstraint>("q_ldl" + std::to_string(auxConstraintCounter), 0, 0);
-        auxConstraintCounter++;
-
-        LinearTerms auxConstraintTerms;
+        LinearTerms componentTerms;
 
         // The variables of the terms belong to the original problem, so the ones of the reformulated problem
         // are looked up by their index
         for(auto [VAR, j] : quadraticTerms.variableMap)
         {
             if(quadraticTerms.LDLMatrixL(j, i) != 0.0)
-                auxConstraintTerms.push_back(std::make_shared<LinearTerm>(
+                componentTerms.push_back(std::make_shared<LinearTerm>(
                     quadraticTerms.LDLMatrixL(j, i), reformulatedProblem->getVariable(VAR->getIndex())));
         }
 
-        auxConstraint->add(auxConstraintTerms);
-
-        auto bounds = auxConstraint->linearTerms.calculate(env->problem->getVariableBounds());
-
-        auto auxQuadVariable = std::make_shared<AuxiliaryVariable>(
-            "q_evd_" + std::to_string(auxVariableCounter), E_VariableType::Real, bounds.l(), bounds.u());
-        auxVariableCounter++;
-        auxQuadVariable->properties.auxiliaryType = E_AuxiliaryVariableType::LDLDecomposition;
-        reformulatedProblem->add(auxQuadVariable);
-
-        if(quadraticDecompositionFormulation == ES_QuadraticDecompositionFormulation::CoefficientReformulated)
-        {
-            auto [auxVariable, newVariable]
-                = getSquareAuxiliaryVariable(auxQuadVariable, diagValue, E_AuxiliaryVariableType::LDLDecomposition);
-            resultTerms.push_back(std::make_shared<LinearTerm>(0.5, auxVariable));
-        }
-        else
-        {
-            auto [auxVariable, newVariable]
-                = getSquareAuxiliaryVariable(auxQuadVariable, 1.0, E_AuxiliaryVariableType::LDLDecomposition);
-            resultTerms.push_back(std::make_shared<LinearTerm>(0.5 * diagValue, auxVariable));
-        }
-
-        auxConstraint->add(std::make_shared<LinearTerm>(-1.0, auxQuadVariable));
-        reformulatedProblem->add(std::move(auxConstraint));
+        addDecompositionComponent(
+            componentTerms, diagValue, E_AuxiliaryVariableType::LDLDecomposition, "q_ldl", resultTerms);
     }
 
     resultLinearTerms.add(LinearTerms(std::move(resultTerms)));
@@ -3099,8 +3105,11 @@ std::pair<AuxiliaryVariablePtr, bool> TaskReformulateProblem::getSquareAuxiliary
         variableType = E_VariableType::Real;
     }
 
-    auto auxVariable = std::make_shared<AuxiliaryVariable>(
-        "s_sq_" + variable->name, variableType, lowerBound, upperBound);
+    // A variable can have squares with different coefficients, e.g., from decompositions, which need unique names
+    int numberOfSquares = squareAuxVariableCounts[variable->getIndex()]++;
+    std::string name = "s_sq_" + variable->name + (numberOfSquares > 0 ? "_" + std::to_string(numberOfSquares) : "");
+
+    auto auxVariable = std::make_shared<AuxiliaryVariable>(name, variableType, lowerBound, upperBound);
 
     auxVariableCounter++;
     auxVariable->properties.auxiliaryType = auxVariableType;
