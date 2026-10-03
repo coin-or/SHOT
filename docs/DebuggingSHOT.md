@@ -469,6 +469,34 @@ in this codebase — add to this list as you find more.
   range; check that the printed bound is a valid superset of the
   closed-form range, not that it's tight.
 
+### "The dual problem is infeasible" on a feasible problem
+
+- First make sure the problem really is feasible. Some MINLPLib instances,
+  e.g. `ball_mk*`, are infeasible by construction, and on a nonconvex problem
+  the cuts may cut away the feasible region, which SHOT reports as
+  `InfeasibleLocal` ("globality could not be verified"). If a global solver
+  (e.g. BARON through GAMS) finds a feasible point, or SHOT does with some
+  settings, the infeasibility is wrong.
+- If the first dual problem is already infeasible, before any cut, suspect
+  the bound tightening: rerun with
+  `Model.BoundTightening.FeasibilityBased.Use=false`, and with
+  `Model.BoundTightening.FeasibilityBased.UseNonlinear=false` to see if the
+  nonlinear constraints are the cause.
+- To find the invalid bound, take a feasible point (`primal_solpt*.txt` from a
+  run without the bound tightening) and compare it with the bounds in the
+  `variables:` section of `originalproblem.txt` from a run with it, which is
+  written after the bound tightening. The first tightening that excludes the
+  point is the one to look at; `Output.Console.LogLevel=1` (debug) prints
+  every tightened bound, but not the constraint, so a breakpoint in
+  `Variable::tightenBounds` with a condition on the variable name and a
+  backtrace is the quickest way to find the constraint and the bound.
+- Rounding errors in interval arithmetic matter most for discrete variables:
+  their tightened bounds are rounded to integers, so a lower bound of `1e-8`,
+  e.g. the square root of a lower bound of `1e-16` of `sqr(b)` in
+  `sqr(b)/(c - x + d*b)`, would make a binary one. The bounds are therefore
+  only rounded past an integer by more than `1e-5`. This made
+  `routingdelay_proj` infeasible.
+
 ### Unbounded initial relaxations and square bounds
 
 - A bounded quadratic feasible region can have an unbounded first LP relaxation

@@ -395,6 +395,7 @@ if(TARGET SHOTpy)
         test_problem_io
         test_create_and_solve_problems
         test_reformulation
+        test_bound_tightening
         test_optimization_problems
         test_modeling_systems
         test_gradients_hessians

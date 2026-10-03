@@ -34,45 +34,45 @@ bool Variable::tightenBounds(const Interval bound)
     bool isDiscreteType = (this->properties.type == E_VariableType::Binary
         || this->properties.type == E_VariableType::Integer || this->properties.type == E_VariableType::Semiinteger);
 
-    if(bound.l() > this->lowerBound + epsTolerance && bound.l() <= this->upperBound)
+    // The bounds from interval arithmetic have rounding errors, which can be large, e.g., the square root of a lower
+    // bound of 1e-16 is 1e-8. The bounds of a discrete variable are therefore only rounded to the next integer when
+    // they exceed an integer by more than a tolerance, since, e.g., 1e-8 would otherwise make the lower bound of a
+    // binary variable one. Adding zero turns a negative zero into zero.
+    double integerTolerance = 1e-5;
+    double lowerBound = isDiscreteType ? std::ceil(bound.l() - integerTolerance) + 0.0 : bound.l();
+    double upperBound = isDiscreteType ? std::floor(bound.u() + integerTolerance) + 0.0 : bound.u();
+
+    if(lowerBound > this->lowerBound + epsTolerance && lowerBound <= this->upperBound)
     {
         tightened = true;
         this->properties.hasLowerBoundBeenTightened = true;
         this->properties.hasArtificialLowerBound = false;
 
-        if(bound.l() == 0.0 && std::signbit(bound.l()))
+        if(lowerBound == 0.0 && std::signbit(lowerBound))
         {
             // Special logic for negative zero
-            this->lowerBound = -bound.l();
-        }
-        else if(isDiscreteType)
-        {
-            this->lowerBound = std::ceil(bound.l());
+            this->lowerBound = -lowerBound;
         }
         else
         {
-            this->lowerBound = bound.l();
+            this->lowerBound = lowerBound;
         }
     }
 
-    if(bound.u() < this->upperBound - epsTolerance && bound.u() >= this->lowerBound)
+    if(upperBound < this->upperBound - epsTolerance && upperBound >= this->lowerBound)
     {
         tightened = true;
         this->properties.hasUpperBoundBeenTightened = true;
         this->properties.hasArtificialUpperBound = false;
 
-        if(bound.u() == 0.0 && std::signbit(bound.u()))
+        if(upperBound == 0.0 && std::signbit(upperBound))
         {
             // Special logic for negative zero
-            this->upperBound = -bound.u();
-        }
-        else if(isDiscreteType)
-        {
-            this->upperBound = std::floor(bound.u());
+            this->upperBound = -upperBound;
         }
         else
         {
-            this->upperBound = bound.u();
+            this->upperBound = upperBound;
         }
     }
 
