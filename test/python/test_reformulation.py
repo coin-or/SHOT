@@ -331,7 +331,7 @@ class TestAbsoluteValues:
 
 
 class TestSharedAuxiliaryVariables:
-    """Partitioned terms that are equal, or only differ in their coefficient, share their auxiliary variable."""
+    """Equal partitioned terms share their auxiliary variable."""
 
     ALWAYS = {"Model.Reformulation.Constraint.PartitionNonlinearTerms": 0,
               "Model.Reformulation.ObjectiveFunction.PartitionNonlinearTerms": 0}
@@ -339,7 +339,7 @@ class TestSharedAuxiliaryVariables:
              "Model.Reformulation.ObjectiveFunction.PartitionNonlinearTerms": 2}
 
     def make_convex_problem(self, solver, perturbed=False):
-        """exp(x) and the signomial x^-1*y^-0.5 are in two constraints each, with different coefficients."""
+        """exp(x), exp(y) and the signomial x^-1*y^-0.5 are in two constraints or the objective each."""
         import SHOTpy
 
         problem = SHOTpy.Problem(solver)
@@ -353,7 +353,7 @@ class TestSharedAuxiliaryVariables:
 
         problem.setObjective(x + 2 * y + z + SHOTpy.exp(0.5 * z) + SHOTpy.exp(y))
         problem.addConstraint(SHOTpy.exp(x) + SHOTpy.exp(y) <= 10, "c1")
-        problem.addConstraint(2 * SHOTpy.exp(a * x) + SHOTpy.exp(z) <= 15, "c2")
+        problem.addConstraint(SHOTpy.exp(a * x) + 2 * SHOTpy.exp(z) <= 15, "c2")
         problem.addConstraint(3 * x**-1 * y**-0.5 + x**-1 * z**-2 <= 20, "c3")
         problem.addConstraint(y**-0.5 * x**p + 0.5 * z**-2 * x**-1 <= 12, "c4")
         problem.finalize()
@@ -363,14 +363,15 @@ class TestSharedAuxiliaryVariables:
         return sum(1 for name in names if name.startswith(prefix))
 
     def test_auxiliary_variables(self):
-        """exp(x) and 2*exp(x) need one auxiliary variable, and so do 3*x^-1*y^-0.5 and y^-0.5*x^-1."""
+        """exp(x) in c1 and c2 needs one auxiliary variable, and so do 3*x^-1*y^-0.5 and y^-0.5*x^-1."""
         solver = make_solver(self.ALWAYS)
         problem = self.make_convex_problem(solver)
         assert solver.setProblem(problem)
 
         names = auxiliary_variable_names(solver)
 
-        # exp(x), exp(y), exp(z) and exp(0.5*z), where exp(y) is in both c1 and the objective
+        # exp(x), exp(y), 2*exp(z) and exp(0.5*z), where exp(y) is in both c1 and the objective; a constant factor
+        # stays in the term, so that 2*exp(x) would need another auxiliary variable
         assert self.count(names, "s_pnl_") == 4, names
         assert self.count(names, "s_psig_") == 2, names
 
@@ -425,7 +426,7 @@ class TestSharedAuxiliaryVariables:
             assert problem.getConstraint(name).calculateNumericValue(point).error <= 1e-6
 
     def test_continuous_monomials(self):
-        """x*y*z in two constraints with different coefficients, and -x*y*z, with partitioning always."""
+        """Equal monomials share their auxiliary variable, while other coefficients or signs need their own."""
         import SHOTpy
 
         solver = make_solver(self.ALWAYS)
@@ -439,9 +440,9 @@ class TestSharedAuxiliaryVariables:
         problem.finalize()
         assert solver.setProblem(problem)
 
-        # x*y*z with the sign +, y*z*u, x*z*u, and x*y*z with the sign -
+        # x*y*z, 3*x*y*z, -x*y*z, 2*y*z*u, and x*z*u, which is in both c2 and c3
         names = auxiliary_variable_names(solver)
-        assert self.count(names, "s_pmon_") == 4, names
+        assert self.count(names, "s_pmon_") == 5, names
 
         assert solver.solveProblem()
         point = list(solver.getPrimalSolution().point)

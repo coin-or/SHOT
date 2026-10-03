@@ -87,45 +87,6 @@ static SignomialTermPtr copySignomialTerm(const SignomialTermPtr& term, bool rev
     return (copiedTerm);
 }
 
-// Splits an expression c * f(x), or -f(x), into the constant c and f(x); the expression itself is not changed
-static std::pair<double, NonlinearExpressionPtr> splitConstantFactor(const NonlinearExpressionPtr& expression)
-{
-    if(expression->getType() == E_NonlinearExpressionTypes::Negate)
-    {
-        auto [factor, rest] = splitConstantFactor(std::dynamic_pointer_cast<ExpressionNegate>(expression)->child);
-        return { -factor, rest };
-    }
-
-    if(expression->getType() == E_NonlinearExpressionTypes::Product)
-    {
-        auto& children = std::dynamic_pointer_cast<ExpressionProduct>(expression)->children;
-
-        double factor = 1.0;
-        NonlinearExpressions otherChildren;
-
-        for(auto& C : children)
-        {
-            if(C->getType() == E_NonlinearExpressionTypes::Constant)
-                factor *= std::dynamic_pointer_cast<ExpressionConstant>(C)->constant;
-            else
-                otherChildren.push_back(C);
-        }
-
-        if(otherChildren.size() == children.size() || otherChildren.size() == 0)
-            return { 1.0, expression };
-
-        if(otherChildren.size() == 1)
-        {
-            auto [childFactor, rest] = splitConstantFactor(otherChildren[0]);
-            return { factor * childFactor, rest };
-        }
-
-        return { factor, std::make_shared<ExpressionProduct>(otherChildren) };
-    }
-
-    return { 1.0, expression };
-}
-
 TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
     env->timing->startTimer("ProblemReformulation");
@@ -1618,21 +1579,18 @@ LinearTerms TaskReformulateProblem::partitionNonlinearSum(
 
         if(!allNonlinearExpressionsReformulated)
         {
-            // The term is c * f(x), and the auxiliary variable w >= sign * f(x) with sign = +-1 is used as |c| * w,
-            // so that terms only differing in their constant factor share the auxiliary variable
-            auto [factor, expression] = splitConstantFactor(T);
-
-            if(factor == 0.0)
-                continue;
-
-            double sign = ((factor < 0.0) != reversedSigns) ? -1.0 : 1.0;
+            // The auxiliary variable w >= f(x), or w >= -f(x) with the signs reversed, is shared by equal terms. A
+            // constant factor of the term stays in f, since the auxiliary variable is otherwise scaled differently
+            // from the term, which can make the cuts much less accurate in the objective function or constraint.
+            const auto& expression = T;
+            double sign = reversedSigns ? -1.0 : 1.0;
             auto key = std::make_pair(sign > 0.0, getStructuralKey(expression.get()));
 
             auto auxVariableIterator = nonlinearExpressionAuxVariables.find(key);
 
             if(auxVariableIterator != nonlinearExpressionAuxVariables.end())
             {
-                resultLinearTerms.add(std::make_shared<LinearTerm>(std::abs(factor), auxVariableIterator->second));
+                resultLinearTerms.add(std::make_shared<LinearTerm>(1.0, auxVariableIterator->second));
                 continue;
             }
 
@@ -1655,7 +1613,7 @@ LinearTerms TaskReformulateProblem::partitionNonlinearSum(
 
             nonlinearExpressionAuxVariables.emplace(key, auxVariable);
 
-            resultLinearTerms.add(std::make_shared<LinearTerm>(std::abs(factor), auxVariable));
+            resultLinearTerms.add(std::make_shared<LinearTerm>(1.0, auxVariable));
 
             bool extractQuadraticTerms = (extractQuadraticTermsSetting
                 >= static_cast<int>(ES_QuadraticTermsExtractStrategy::ExtractTermsToSame));
@@ -1750,13 +1708,9 @@ LinearTerms TaskReformulateProblem::partitionMonomialTerms(const MonomialTerms& 
 
     for(auto& T : sourceTerms)
     {
-        if(T->coefficient == 0.0)
-            continue;
-
-        // The auxiliary variable w >= sign * x1 * ... * xn with sign = +-1 is used as |c| * w, so that terms only
-        // differing in their coefficient share the auxiliary variable
-        double coefficient = std::abs(T->coefficient);
-        double sign = ((T->coefficient < 0.0) != reversedSigns) ? -1.0 : 1.0;
+        // The auxiliary variable w >= c * x1 * ... * xn, or w >= -c * x1 * ... * xn with the signs reversed, is
+        // shared by equal terms; the coefficient stays in the term, as for the other partitioned terms
+        double coefficient = reversedSigns ? -T->coefficient : T->coefficient;
 
         std::vector<int> variableIndexes;
 
@@ -1765,12 +1719,12 @@ LinearTerms TaskReformulateProblem::partitionMonomialTerms(const MonomialTerms& 
 
         std::sort(variableIndexes.begin(), variableIndexes.end());
 
-        auto key = std::make_pair(sign > 0.0, variableIndexes);
+        auto key = std::make_pair(coefficient, variableIndexes);
         auto auxVariableIterator = monomialAuxVariables.find(key);
 
         if(auxVariableIterator != monomialAuxVariables.end())
         {
-            resultTerms.push_back(std::make_shared<LinearTerm>(coefficient, auxVariableIterator->second));
+            resultTerms.push_back(std::make_shared<LinearTerm>(1.0, auxVariableIterator->second));
             continue;
         }
 
@@ -1778,10 +1732,9 @@ LinearTerms TaskReformulateProblem::partitionMonomialTerms(const MonomialTerms& 
 
         try
         {
-            bounds = (sign / coefficient) * T->getBounds();
+            bounds = T->getBounds();
 
-            // The bounds of the term include its sign
-            if(T->coefficient < 0.0)
+            if(reversedSigns)
                 bounds = -1.0 * bounds;
         }
         catch(mc::Interval::Exceptions&)
@@ -1797,7 +1750,7 @@ LinearTerms TaskReformulateProblem::partitionMonomialTerms(const MonomialTerms& 
 
         monomialAuxVariables.emplace(key, auxVariable);
 
-        resultTerms.push_back(std::make_shared<LinearTerm>(coefficient, auxVariable));
+        resultTerms.push_back(std::make_shared<LinearTerm>(1.0, auxVariable));
 
         auto auxConstraint = std::make_shared<NonlinearConstraint>(
             "s_pmon_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, 0.0);
@@ -1805,7 +1758,7 @@ LinearTerms TaskReformulateProblem::partitionMonomialTerms(const MonomialTerms& 
         auxConstraintCounter++;
 
         auto monomialTerm = std::make_shared<MonomialTerm>(T.get(), reformulatedProblem);
-        monomialTerm->coefficient = sign;
+        monomialTerm->coefficient = coefficient;
 
         auxConstraint->add(monomialTerm);
 

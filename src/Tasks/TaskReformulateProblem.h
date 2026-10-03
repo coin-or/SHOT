@@ -156,9 +156,9 @@ private:
     std::map<std::string, AuxiliaryVariablePtr> absoluteExpressionsAuxVariables;
 
     // The auxiliary variables w >= f(x) or w >= -f(x) of the partitioned terms, found by whether the sign is positive
-    // and a key of the term built from the indexes of its variables
+    // and a key of the term built from the indexes of its variables, or by the coefficient of a monomial
     std::map<std::pair<bool, std::string>, AuxiliaryVariablePtr> nonlinearExpressionAuxVariables;
-    std::map<std::pair<bool, std::vector<int>>, AuxiliaryVariablePtr> monomialAuxVariables;
+    std::map<std::pair<double, std::vector<int>>, AuxiliaryVariablePtr> monomialAuxVariables;
     std::map<std::pair<bool, std::vector<std::pair<int, double>>>, AuxiliaryVariablePtr> signomialAuxVariables;
 
     // The auxiliary variables w = b1 * ... * bn of the products of binary variables, found by the variable indexes
