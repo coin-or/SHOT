@@ -237,8 +237,8 @@ introduced, or reproduce a failure in isolation instead of debugging a full
   (CMake's `create_test_sourcelist` mechanism). Each file defines an
   `int <Name>Test(int argc, char* argv[])` entry point that dispatches to
   individual test cases by a numeric "part" (`argv[1]`); the list of parts
-  per test group is in `test/CMakeLists.txt` (e.g. `Model` has parts 1–19,
-  `Solver` 1–13, `Settings` 1–9).
+  per test group is in `test/CMakeLists.txt` (e.g. `Model` has parts 1–49,
+  `Solver` 1–25, `Settings` 1–9).
 - **Running the full suite**: `ctest --output-on-failure` from the build
   directory (this is what CI does). If you're on a build configured before
   this doc's revision that fixed `test/CMakeLists.txt`'s `add_test()` call
@@ -319,6 +319,38 @@ introduced, or reproduce a failure in isolation instead of debugging a full
   ./test/test_runner FullInstancetest 1 -v
   ```
 
+- **Checking a reformulation at points: `CheckAuxiliaryVariableValues()`**
+  in `test/SolverTest.cpp`. It takes the original problem, the reformulated
+  problem from `setProblem()` and a list of points of the original problem.
+  For each point it calculates the values of the auxiliary variables with
+  `Problem::augmentAuxiliaryVariableValues()`, i.e., as for MIP starts and
+  primal solutions, and checks that
+  1. every constraint added by the reformulation holds at the calculated
+     values, and
+  2. every original constraint has the same value (`normalizedValue`) as
+     the constraints with its name in the reformulated problem.
+
+  This needs no solve, and catches lost or wrongly signed terms and
+  constants, wrong coefficients, and auxiliary variables without a correct
+  definition of their value, e.g. binaries of a linearization whose value is
+  always zero. Partitioned terms (`w >= f(x)`) are calculated with equality,
+  so they hold too. SolverTest 21–24 use it for binary monomials, binary
+  products, shared partitioned terms and quadratic decompositions: build a
+  small model with several terms of each kind that share variables (a single
+  term hides errors in sharing or ordering of auxiliary variables), choose
+  points at the bounds and in the interior (all combinations of the
+  binaries), and call it for each relevant setting. Check that the test
+  fails without the fix.
+- **Python tests of reformulations and bound tightening**:
+  `test/python/test_reformulation.py` and `test_bound_tightening.py` solve
+  small models and compare with known or brute-forced optima, and count the
+  auxiliary variables of `solver.getReformulatedProblem()` by name prefix
+  (e.g. `s_pnl_`, `s_monb`, `q_ldl_`).
+- **CTest runs copies of the Python tests and data**: `test/CMakeLists.txt`
+  copies `test/python/` and `test/data/` into the build directory when CMake
+  configures, so after editing a test file, `ctest` runs the old copy until
+  `cmake .` is run again. Running `pytest` on the source file directly, with
+  `SHOTPY_BUILD_DIR=<build dir>`, uses the current file and the given module.
 - **Python API tests** (`test/python/*.py`, run via `pytest`) only register
   if Python bindings are built (`-DHAS_PYTHON=on`, target `SHOTpy`) and
   `pytest` is importable; they cover the Python/SHOTpy binding surface
