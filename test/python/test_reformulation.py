@@ -122,6 +122,7 @@ class TestBinaryMonomials:
             for prefix, count in expected.items():
                 assert sum(1 for name in names if name.startswith(prefix)) == count, (formulation, prefix, names)
 
+
 class TestBinaryProducts:
     """Products of a binary variable and a bounded variable are linearized exactly."""
 
@@ -205,6 +206,7 @@ class TestBinaryProducts:
         # Only i1*i3 is discretized, using the variable with the smaller domain, i3 in [1, 4]
         assert sum(1 for name in names if name.startswith("s_bli")) == 4, names
 
+
 class TestFixedVariablesInQuadraticTerms:
     """Quadratic terms with a fixed variable are linear or constant, and get no auxiliary variables."""
 
@@ -280,6 +282,7 @@ class TestFixedVariablesInQuadraticTerms:
             assert problem.getConstraint(name).calculateNumericValue(point).error <= 1e-6
         assert problem.objectiveFunction.calculateValue(point) == pytest.approx(solver.getPrimalBound(), abs=1e-6)
 
+
 class TestAbsoluteValues:
     """An absolute value |f(x)| gets an auxiliary variable w with f(x) <= w and -f(x) <= w."""
 
@@ -325,6 +328,151 @@ class TestAbsoluteValues:
 
             names = auxiliary_variable_names(solver)
             assert sum(1 for name in names if name.startswith("s_abs_")) == expected, (shift, names)
+
+
+class TestSharedAuxiliaryVariables:
+    """Partitioned terms that are equal, or only differ in their coefficient, share their auxiliary variable."""
+
+    ALWAYS = {"Model.Reformulation.Constraint.PartitionNonlinearTerms": 0,
+              "Model.Reformulation.ObjectiveFunction.PartitionNonlinearTerms": 0}
+    NEVER = {"Model.Reformulation.Constraint.PartitionNonlinearTerms": 2,
+             "Model.Reformulation.ObjectiveFunction.PartitionNonlinearTerms": 2}
+
+    def make_convex_problem(self, solver, perturbed=False):
+        """exp(x) and the signomial x^-1*y^-0.5 are in two constraints each, with different coefficients."""
+        import SHOTpy
+
+        problem = SHOTpy.Problem(solver)
+        x = problem.addVariable("x", SHOTpy.VariableType.Real, 0.1, 3.0)
+        y = problem.addVariable("y", SHOTpy.VariableType.Real, 0.1, 3.0)
+        z = problem.addVariable("z", SHOTpy.VariableType.Real, 0.1, 3.0)
+
+        # Perturbed, the constant in the exponential and the power of the signomial differ in the second constraint
+        a = 1.0000001 if perturbed else 1.0
+        p = -1.0000001 if perturbed else -1.0
+
+        problem.setObjective(x + 2 * y + z + SHOTpy.exp(0.5 * z) + SHOTpy.exp(y))
+        problem.addConstraint(SHOTpy.exp(x) + SHOTpy.exp(y) <= 10, "c1")
+        problem.addConstraint(2 * SHOTpy.exp(a * x) + SHOTpy.exp(z) <= 15, "c2")
+        problem.addConstraint(3 * x**-1 * y**-0.5 + x**-1 * z**-2 <= 20, "c3")
+        problem.addConstraint(y**-0.5 * x**p + 0.5 * z**-2 * x**-1 <= 12, "c4")
+        problem.finalize()
+        return problem
+
+    def count(self, names, prefix):
+        return sum(1 for name in names if name.startswith(prefix))
+
+    def test_auxiliary_variables(self):
+        """exp(x) and 2*exp(x) need one auxiliary variable, and so do 3*x^-1*y^-0.5 and y^-0.5*x^-1."""
+        solver = make_solver(self.ALWAYS)
+        problem = self.make_convex_problem(solver)
+        assert solver.setProblem(problem)
+
+        names = auxiliary_variable_names(solver)
+
+        # exp(x), exp(y), exp(z) and exp(0.5*z), where exp(y) is in both c1 and the objective
+        assert self.count(names, "s_pnl_") == 4, names
+        assert self.count(names, "s_psig_") == 2, names
+
+    def test_distinct_constants_and_powers(self):
+        """Terms differing only in a constant or a power in the 7th digit do not share their auxiliary variable."""
+        solver = make_solver(self.ALWAYS)
+        problem = self.make_convex_problem(solver, perturbed=True)
+        assert solver.setProblem(problem)
+
+        names = auxiliary_variable_names(solver)
+        assert self.count(names, "s_pnl_") == 5, names
+        assert self.count(names, "s_psig_") == 3, names
+
+    @pytest.mark.parametrize("perturbed", [False, True], ids=["shared", "perturbed"])
+    def test_optimal_value(self, perturbed):
+        """The problem is convex, so partitioning, with shared auxiliary variables or not, gives the same optimum."""
+        results = []
+        for settings in (self.ALWAYS, self.NEVER):
+            solver = make_solver(settings)
+            problem = self.make_convex_problem(solver, perturbed)
+            assert solver.setProblem(problem)
+            assert solver.solveProblem()
+
+            point = list(solver.getPrimalSolution().point)
+            for name in ("c1", "c2", "c3", "c4"):
+                assert problem.getConstraint(name).calculateNumericValue(point).error <= 1e-6
+            results.append(solver.getPrimalBound())
+
+        assert results[0] == pytest.approx(results[1], abs=1e-3)
+
+    def test_opposite_signs_are_not_shared(self):
+        """exp(x) <= ... needs w >= exp(x), while exp(x) >= ... needs w >= -exp(x), so they cannot be shared."""
+        import SHOTpy
+
+        solver = make_solver(self.ALWAYS)
+        problem = SHOTpy.Problem(solver)
+        x = problem.addVariable("x", SHOTpy.VariableType.Real, 0.0, 2.0)
+        y = problem.addVariable("y", SHOTpy.VariableType.Real, 0.0, 2.0)
+
+        problem.setObjective(x + y)
+        problem.addConstraint(SHOTpy.exp(x) + SHOTpy.exp(y) <= 10, "c1")
+        problem.addConstraint(SHOTpy.exp(x) + SHOTpy.exp(y) >= 4, "c2")
+        problem.finalize()
+        assert solver.setProblem(problem)
+
+        names = auxiliary_variable_names(solver)
+        assert self.count(names, "s_pnl_") == 4, names
+
+        assert solver.solveProblem()
+        point = list(solver.getPrimalSolution().point)
+        for name in ("c1", "c2"):
+            assert problem.getConstraint(name).calculateNumericValue(point).error <= 1e-6
+
+    def test_continuous_monomials(self):
+        """x*y*z in two constraints with different coefficients, and -x*y*z, with partitioning always."""
+        import SHOTpy
+
+        solver = make_solver(self.ALWAYS)
+        problem = SHOTpy.Problem(solver)
+        x, y, z, u = (problem.addVariable(name, SHOTpy.VariableType.Real, 0.5, 2.0) for name in "xyzu")
+
+        problem.setObjective(-x - y - z - u)
+        problem.addConstraint(x * y * z + 2 * y * z * u <= 6, "c1")
+        problem.addConstraint(3 * z * y * x + x * z * u <= 9, "c2")
+        problem.addConstraint(-x * y * z + x * z * u <= 1, "c3")
+        problem.finalize()
+        assert solver.setProblem(problem)
+
+        # x*y*z with the sign +, y*z*u, x*z*u, and x*y*z with the sign -
+        names = auxiliary_variable_names(solver)
+        assert self.count(names, "s_pmon_") == 4, names
+
+        assert solver.solveProblem()
+        point = list(solver.getPrimalSolution().point)
+        for name in ("c1", "c2", "c3"):
+            assert problem.getConstraint(name).calculateNumericValue(point).error <= 1e-6
+
+    @pytest.mark.parametrize("formulation", MONOMIAL_FORMULATIONS.values(), ids=MONOMIAL_FORMULATIONS.keys())
+    def test_binary_monomials(self, formulation):
+        """b1*b2*b3 in two constraints and the objective, written in different orders, is linearized once."""
+        import SHOTpy
+
+        solver = make_solver({"Model.Reformulation.Monomials.Formulation": formulation})
+        problem = SHOTpy.Problem(solver)
+        b = [problem.addVariable(f"b{i}", SHOTpy.VariableType.Binary) for i in range(1, 5)]
+
+        problem.setObjective(-(b[0] + b[1] + b[2] + b[3]) + 0.5 * b[2] * b[0] * b[1])
+        problem.addConstraint(2 * b[0] * b[1] * b[2] + b[1] * b[2] * b[3] <= 1.5, "c1")
+        problem.addConstraint(b[3] * b[1] * b[2] - 0.5 * b[1] * b[0] * b[2] <= 0.5, "c2")
+        problem.finalize()
+        assert solver.setProblem(problem)
+
+        names = auxiliary_variable_names(solver)
+        products = self.count(names, "s_monb") if formulation == 1 else self.count(names, "s_monw")
+        assert products == 2, names
+
+        assert solver.solveProblem()
+
+        # b1*b2*b3 = 0 by c1 and b2*b3*b4 = 0 by c2, so at most three binaries are one
+        assert solver.getPrimalBound() == pytest.approx(-3.0, abs=1e-6)
+        assert solver.getCurrentDualBound() >= -3.0 - 1e-6
+
 
 class TestSignomialLogTransformations:
     """A single signomial in a constraint is written with logarithms, which must give the same feasible set."""

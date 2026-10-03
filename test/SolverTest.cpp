@@ -1973,6 +1973,120 @@ bool TestAuxiliaryVariablesOfBinaryProducts()
     return (CheckAuxiliaryVariableValues(problem, env->reformulatedProblem, points));
 }
 
+// Exponentials, signomials and monomials that are partitioned, where the same term is in several constraints and the
+// objective with different coefficients and signs, so that the auxiliary variables are shared
+static ProblemPtr MakeSharedPartitioningProblem(EnvironmentPtr env)
+{
+    auto problem = std::make_shared<SHOT::Problem>(env);
+    problem->name = "sharedpartitioning";
+
+    auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.2, 3.0);
+    auto y = std::make_shared<Variable>("y", E_VariableType::Real, 0.2, 3.0);
+    auto z = std::make_shared<Variable>("z", E_VariableType::Real, 0.2, 3.0);
+
+    problem->add({ x, y, z });
+
+    auto exp = [](VariablePtr variable, double factor)
+    {
+        return std::make_shared<ExpressionProduct>(std::make_shared<ExpressionConstant>(factor),
+            std::make_shared<ExpressionExp>(std::make_shared<ExpressionVariable>(variable)));
+    };
+
+    auto signomial
+        = [](double coefficient, VariablePtr first, double firstPower, VariablePtr second, double secondPower)
+    {
+        return std::make_shared<SignomialTerm>(coefficient,
+            SignomialElements({ std::make_shared<SignomialElement>(first, firstPower),
+                std::make_shared<SignomialElement>(second, secondPower) }));
+    };
+
+    auto objective = std::make_shared<NonlinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<LinearTerm>(1.0, x));
+    objective->add(std::make_shared<LinearTerm>(1.0, z));
+    objective->add(std::make_shared<ExpressionSum>(exp(y, 1.0), exp(z, 0.5)));
+    problem->add(objective);
+
+    auto c1 = std::make_shared<NonlinearConstraint>("c1", SHOT_DBL_MIN, 10.0);
+    c1->add(std::make_shared<ExpressionSum>(exp(x, 1.0), exp(y, 1.0)));
+    problem->add(c1);
+
+    auto c2 = std::make_shared<NonlinearConstraint>("c2", SHOT_DBL_MIN, 15.0);
+    c2->add(std::make_shared<ExpressionSum>(exp(x, 2.0), exp(z, 1.0)));
+    problem->add(c2);
+
+    // The negated exponential is in a constraint of the type >=, and needs its own auxiliary variable
+    auto c3 = std::make_shared<NonlinearConstraint>("c3", 3.0, SHOT_DBL_MAX);
+    c3->add(std::make_shared<ExpressionSum>(exp(x, 1.0), exp(z, 1.0)));
+    problem->add(c3);
+
+    auto c4 = std::make_shared<NonlinearConstraint>("c4", SHOT_DBL_MIN, 20.0);
+    c4->add(signomial(3.0, x, -1.0, y, -0.5));
+    c4->add(signomial(1.0, x, -1.0, z, -2.0));
+    problem->add(c4);
+
+    auto c5 = std::make_shared<NonlinearConstraint>("c5", SHOT_DBL_MIN, 12.0);
+    c5->add(signomial(1.0, y, -0.5, x, -1.0));
+    c5->add(signomial(0.5, z, -2.0, x, -1.0));
+    problem->add(c5);
+
+    auto c6 = std::make_shared<NonlinearConstraint>("c6", SHOT_DBL_MIN, 9.0);
+    c6->add(std::make_shared<MonomialTerm>(1.0, Variables({ x, y, z })));
+    c6->add(std::make_shared<MonomialTerm>(2.0, Variables({ y, z, x })));
+    c6->add(std::make_shared<MonomialTerm>(-1.0, Variables({ x, y, x })));
+    problem->add(c6);
+
+    auto c7 = std::make_shared<NonlinearConstraint>("c7", SHOT_DBL_MIN, 6.0);
+    c7->add(std::make_shared<MonomialTerm>(3.0, Variables({ z, x, y })));
+    c7->add(std::make_shared<MonomialTerm>(-2.0, Variables({ x, x, y })));
+    problem->add(c7);
+
+    problem->updateProperties();
+    problem->finalize();
+
+    return (problem);
+}
+
+bool TestAuxiliaryVariablesOfSharedPartitioning()
+{
+    bool passed = true;
+
+    std::vector<VectorDouble> points;
+
+    for(double x : { 0.2, 1.3, 3.0 })
+    {
+        for(double y : { 0.2, 0.7, 3.0 })
+        {
+            for(double z : { 0.2, 2.1, 3.0 })
+                points.push_back({ x, y, z });
+        }
+    }
+
+    for(auto partitioning : { ES_PartitionNonlinearSums::Always, ES_PartitionNonlinearSums::IfConvex })
+    {
+        std::cout << "Partitioning strategy " << static_cast<int>(partitioning) << '\n';
+
+        auto solver = std::make_unique<SHOT::Solver>();
+        auto env = solver->getEnvironment();
+        solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+        solver->updateSetting("Model.Reformulation.Constraint.PartitionNonlinearTerms", static_cast<int>(partitioning));
+        solver->updateSetting(
+            "Model.Reformulation.ObjectiveFunction.PartitionNonlinearTerms", static_cast<int>(partitioning));
+
+        auto problem = MakeSharedPartitioningProblem(env);
+
+        if(!solver->setProblem(problem))
+        {
+            std::cout << "Could not set the problem\n";
+            return (false);
+        }
+
+        if(!CheckAuxiliaryVariableValues(problem, env->reformulatedProblem, points))
+            passed = false;
+    }
+
+    return (passed);
+}
+
 int SolverTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -2105,6 +2219,11 @@ int SolverTest(int argc, char* argv[])
         std::cout << "Starting test for the auxiliary variables of reformulated binary products" << std::endl;
         passed = TestAuxiliaryVariablesOfBinaryProducts();
         std::cout << "Finished test for the auxiliary variables of reformulated binary products." << std::endl;
+        break;
+    case 23:
+        std::cout << "Starting test for the shared auxiliary variables of partitioned terms" << std::endl;
+        passed = TestAuxiliaryVariablesOfSharedPartitioning();
+        std::cout << "Finished test for the shared auxiliary variables of partitioned terms." << std::endl;
         break;
     default:
         passed = false;
