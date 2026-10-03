@@ -1019,49 +1019,36 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
     {
         auto sourceConstraint = std::dynamic_pointer_cast<NonlinearConstraint>(C);
 
+        // The monomials that are not reformulated, i.e., all of them if binary monomials are not reformulated
+        MonomialTerms remainingMonomialTerms;
+
         if(env->settings->getSetting<int>("Model.Reformulation.Monomials.Formulation")
             != static_cast<int>(ES_ReformulationBinaryMonomials::None))
         {
             auto [tmpLinearTerms, tmpMonomialTerms]
                 = reformulateMonomialSum(sourceConstraint->monomialTerms, isSignReversed);
 
-            if(tmpMonomialTerms.size() == 0)
-            {
-                // All monomials have been reformulated
-                destinationLinearTerms.add(tmpLinearTerms);
-            }
-            else
-            {
-                if(static_cast<ES_PartitionNonlinearSums>(
-                       env->settings->getSetting<int>("Model.Reformulation.Constraint.PartitionNonlinearTerms"))
-                        == ES_PartitionNonlinearSums::Always
-                    && tmpMonomialTerms.size() > 1)
-                {
-                    auto tmpLinearTerms = partitionMonomialTerms(tmpMonomialTerms, isSignReversed);
-                    destinationLinearTerms.add(tmpLinearTerms);
-                }
-                else // Monomials are always nonconvex
-                {
-                    for(auto& T : sourceConstraint->monomialTerms)
-                        destinationMonomialTerms.add(std::make_shared<MonomialTerm>(T.get(), reformulatedProblem));
-                }
-            }
+            // The linear terms replacing the reformulated monomials must be kept also when some monomials remain
+            destinationLinearTerms.add(tmpLinearTerms);
+            remainingMonomialTerms = tmpMonomialTerms;
         }
         else
         {
-            if(static_cast<ES_PartitionNonlinearSums>(
-                   env->settings->getSetting<int>("Model.Reformulation.Constraint.PartitionNonlinearTerms"))
-                    == ES_PartitionNonlinearSums::Always
-                && destinationMonomialTerms.size() > 1)
-            {
-                auto tmpLinearTerms = partitionMonomialTerms(destinationMonomialTerms, isSignReversed);
-                destinationLinearTerms.add(tmpLinearTerms);
-            }
-            else // Monomials are always nonconvex
-            {
-                for(auto& T : sourceConstraint->monomialTerms)
-                    destinationMonomialTerms.add(std::make_shared<MonomialTerm>(T.get(), reformulatedProblem));
-            }
+            remainingMonomialTerms = sourceConstraint->monomialTerms;
+        }
+
+        if(static_cast<ES_PartitionNonlinearSums>(
+               env->settings->getSetting<int>("Model.Reformulation.Constraint.PartitionNonlinearTerms"))
+                == ES_PartitionNonlinearSums::Always
+            && remainingMonomialTerms.size() > 1)
+        {
+            auto tmpLinearTerms = partitionMonomialTerms(remainingMonomialTerms, isSignReversed);
+            destinationLinearTerms.add(tmpLinearTerms);
+        }
+        else // Monomials are always nonconvex
+        {
+            for(auto& T : remainingMonomialTerms)
+                destinationMonomialTerms.add(std::make_shared<MonomialTerm>(T.get(), reformulatedProblem));
         }
     }
 
@@ -1931,14 +1918,6 @@ std::tuple<LinearTerms, MonomialTerms> TaskReformulateProblem::reformulateMonomi
 
     for(auto& T : monomialTerms)
     {
-        if(!T->isBinary)
-        {
-            break;
-        }
-    }
-
-    for(auto& T : monomialTerms)
-    {
         if(T->isBinary && monomialFormulation == static_cast<int>(ES_ReformulationBinaryMonomials::Simple))
         {
             auto N = T->variables.size();
@@ -1957,7 +1936,10 @@ std::tuple<LinearTerms, MonomialTerms> TaskReformulateProblem::reformulateMonomi
             auxbVar->properties.auxiliaryType = E_AuxiliaryVariableType::BinaryMonomial;
             env->results->increaseAuxiliaryVariableCounter(E_AuxiliaryVariableType::BinaryMonomial);
 
-            auxbVar->monomialTerms.add(T);
+            // The auxiliary variable is the product of the variables, the coefficient is in the linear term below
+            auto auxMonomialTerm = std::make_shared<MonomialTerm>(T.get(), reformulatedProblem);
+            auxMonomialTerm->coefficient = 1.0;
+            auxbVar->monomialTerms.add(auxMonomialTerm);
 
             resultTerms.push_back(std::make_shared<LinearTerm>(signfactor * T->coefficient, auxbVar));
 
@@ -1978,7 +1960,7 @@ std::tuple<LinearTerms, MonomialTerms> TaskReformulateProblem::reformulateMonomi
         {
             int k = T->variables.size();
 
-            Variables lambdas;
+            AuxiliaryVariables lambdas;
 
             auto auxLambdaSum = std::make_shared<LinearConstraint>(
                 "s_monlam" + std::to_string(auxConstraintCounter), 1.0, 1.0);
@@ -1987,12 +1969,31 @@ std::tuple<LinearTerms, MonomialTerms> TaskReformulateProblem::reformulateMonomi
             auto numLambdas = std::pow(2, k);
             int numLambdasInt = static_cast<int>(numLambdas);
 
-            for(auto i = 1; i < numLambdas; i++)
+            // One weight for each vertex of the hypercube spanned by the variables
+            for(auto i = 1; i <= numLambdasInt; i++)
             {
                 auto auxLambda = std::make_shared<AuxiliaryVariable>(
                     "s_monlam" + std::to_string(auxVariableCounter + 1), E_VariableType::Real, 0.0, 1.0);
-                auxLambda->constant = 1.0 / numLambdas;
                 auxLambda->properties.auxiliaryType = E_AuxiliaryVariableType::BinaryMonomial;
+
+                // At a binary point, the weight of the vertex is one if the point is the vertex and zero otherwise,
+                // i.e., the product of b_j for the variables at their upper bound and (1 - b_j) for the others
+                auto vertexWeight = std::make_shared<ExpressionProduct>();
+
+                for(int j = 1; j <= k; j++)
+                {
+                    double d = std::fmod(std::floor((i - 1.0) / std::pow(2, k - j)), 2.0);
+                    auto variable = std::make_shared<ExpressionVariable>(
+                        reformulatedProblem->getVariable(T->variables.at(j - 1)->getIndex()));
+
+                    if(d == 0.0)
+                        vertexWeight->children.push_back(std::make_shared<ExpressionSum>(
+                            std::make_shared<ExpressionConstant>(1.0), std::make_shared<ExpressionNegate>(variable)));
+                    else
+                        vertexWeight->children.push_back(variable);
+                }
+
+                auxLambda->nonlinearExpression = vertexWeight;
 
                 auxLambdaSum->add(std::make_shared<LinearTerm>(1.0, auxLambda));
                 lambdas.push_back(auxLambda);
@@ -2003,10 +2004,14 @@ std::tuple<LinearTerms, MonomialTerms> TaskReformulateProblem::reformulateMonomi
 
             auto auxwVar = std::make_shared<AuxiliaryVariable>(
                 "s_monw" + std::to_string(auxVariableCounter + 1), E_VariableType::Real, SHOT_DBL_MIN, SHOT_DBL_MAX);
-            auxwVar->constant = 1.0 / ((double)numLambdas);
             auxVariableCounter++;
             auxwVar->properties.auxiliaryType = E_AuxiliaryVariableType::BinaryMonomial;
             env->results->increaseAuxiliaryVariableCounter(E_AuxiliaryVariableType::BinaryMonomial);
+
+            // The auxiliary variable is the product of the variables, the coefficient is in the linear term below
+            auto auxMonomialTerm = std::make_shared<MonomialTerm>(T.get(), reformulatedProblem);
+            auxMonomialTerm->coefficient = 1.0;
+            auxwVar->monomialTerms.add(auxMonomialTerm);
 
             auto auxwSum = std::make_shared<LinearConstraint>(
                 "s_monw" + std::to_string(auxConstraintCounter), 0.0, 0.0);

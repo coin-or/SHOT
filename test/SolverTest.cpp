@@ -1703,6 +1703,191 @@ bool TestPrimalSolutionPool()
     return passed;
 }
 
+// Checks a reformulated problem at points of the original problem: the values of the auxiliary variables are
+// calculated from the point, the constraints added by the reformulation must then be fulfilled, and every original
+// constraint must have the same value as the constraints with its name in the reformulated problem
+static bool CheckAuxiliaryVariableValues(
+    ProblemPtr problem, ProblemPtr reformulatedProblem, const std::vector<VectorDouble>& points)
+{
+    bool passed = true;
+
+    for(auto& originalPoint : points)
+    {
+        auto point = originalPoint;
+        reformulatedProblem->augmentAuxiliaryVariableValues(point);
+
+        for(auto& C : reformulatedProblem->numericConstraints)
+        {
+            bool isOriginalConstraint = std::any_of(problem->numericConstraints.begin(),
+                problem->numericConstraints.end(), [&C](auto& O) { return (O->name == C->name); });
+
+            if(isOriginalConstraint)
+                continue;
+
+            auto value = C->calculateNumericValue(point);
+
+            if(value.error > 1e-8)
+            {
+                std::cout << "The auxiliary constraint " << C->name << " is violated by " << value.error
+                          << " at the calculated values of the auxiliary variables\n";
+                passed = false;
+            }
+        }
+
+        for(auto& O : problem->numericConstraints)
+        {
+            double originalValue = O->calculateNumericValue(originalPoint).normalizedValue;
+            double reformulatedValue = SHOT_DBL_MIN;
+
+            for(auto& C : reformulatedProblem->numericConstraints)
+            {
+                if(C->name == O->name)
+                    reformulatedValue = std::max(reformulatedValue, C->calculateNumericValue(point).normalizedValue);
+            }
+
+            if(std::abs(originalValue - reformulatedValue) > 1e-8)
+            {
+                std::cout << "The constraint " << O->name << " has the value " << originalValue
+                          << " in the original problem but " << reformulatedValue << " in the reformulated one\n";
+                passed = false;
+            }
+        }
+
+        if(!passed)
+        {
+            std::cout << "Point:\n";
+            Utilities::displayVector(originalPoint);
+            return (false);
+        }
+    }
+
+    return (passed);
+}
+
+// Binary and continuous monomials sharing variables, in two constraints and the objective
+static ProblemPtr MakeMonomialProblem(EnvironmentPtr env)
+{
+    auto problem = std::make_shared<SHOT::Problem>(env);
+    problem->name = "monomials";
+
+    auto b1 = std::make_shared<Variable>("b1", E_VariableType::Binary);
+    auto b2 = std::make_shared<Variable>("b2", E_VariableType::Binary);
+    auto b3 = std::make_shared<Variable>("b3", E_VariableType::Binary);
+    auto b4 = std::make_shared<Variable>("b4", E_VariableType::Binary);
+    auto x1 = std::make_shared<Variable>("x1", E_VariableType::Real, -1.0, 2.0);
+    auto x2 = std::make_shared<Variable>("x2", E_VariableType::Real, 0.0, 1.0);
+    auto x3 = std::make_shared<Variable>("x3", E_VariableType::Real, 0.0, 1.0);
+    auto y1 = std::make_shared<Variable>("y1", E_VariableType::Real, -2.0, 1.0);
+
+    problem->add({ b1, b2, b3, b4, x1, x2, x3, y1 });
+
+    auto objective = std::make_shared<NonlinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<LinearTerm>(-1.0, b1));
+    objective->add(std::make_shared<LinearTerm>(-1.0, b2));
+    objective->add(std::make_shared<LinearTerm>(-1.0, b3));
+    objective->add(std::make_shared<LinearTerm>(-1.0, b4));
+    objective->add(std::make_shared<MonomialTerm>(1.0, Variables({ x1, x2, x3 })));
+    objective->add(std::make_shared<MonomialTerm>(0.5, Variables({ x2, x3, y1 })));
+    problem->add(objective);
+
+    auto c1 = std::make_shared<NonlinearConstraint>("c1", SHOT_DBL_MIN, 3.5);
+    c1->add(std::make_shared<MonomialTerm>(3.0, Variables({ b1, b2, b3 })));
+    c1->add(std::make_shared<MonomialTerm>(1.0, Variables({ x1, x2, x3 })));
+    c1->add(std::make_shared<MonomialTerm>(-2.0, Variables({ x2, x3, y1 })));
+    problem->add(c1);
+
+    auto c2 = std::make_shared<NonlinearConstraint>("c2", SHOT_DBL_MIN, 1.2);
+    c2->add(std::make_shared<MonomialTerm>(1.0, Variables({ b2, b3, b4 })));
+    c2->add(std::make_shared<MonomialTerm>(-0.5, Variables({ b1, b2, b3 })));
+    c2->add(std::make_shared<MonomialTerm>(2.0, Variables({ x1, x2, y1 })));
+    c2->add(std::make_shared<MonomialTerm>(1.0, Variables({ x1, x3, y1 })));
+    problem->add(c2);
+
+    problem->updateProperties();
+    problem->finalize();
+
+    return (problem);
+}
+
+bool TestAuxiliaryVariablesOfMonomials()
+{
+    bool passed = true;
+
+    // All binary assignments, each combined with continuous values in the interior and at the bounds
+    std::vector<VectorDouble> points;
+
+    for(int i = 0; i < 16; i++)
+    {
+        VectorDouble binaries = { double(i & 1), double((i >> 1) & 1), double((i >> 2) & 1), double((i >> 3) & 1) };
+
+        for(auto continuous : { VectorDouble { 0.3, 0.7, 0.9, -1.5 }, VectorDouble { 2.0, 1.0, 1.0, 1.0 },
+                VectorDouble { -1.0, 0.0, 1.0, -2.0 } })
+        {
+            auto point = binaries;
+            point.insert(point.end(), continuous.begin(), continuous.end());
+            points.push_back(point);
+        }
+    }
+
+    for(auto formulation : { ES_ReformulationBinaryMonomials::Simple, ES_ReformulationBinaryMonomials::CostaLiberti })
+    {
+        for(auto partitioning : { ES_PartitionNonlinearSums::Always, ES_PartitionNonlinearSums::IfConvex,
+                ES_PartitionNonlinearSums::Never })
+        {
+            std::cout << "Binary monomial formulation " << static_cast<int>(formulation)
+                      << " and partitioning strategy " << static_cast<int>(partitioning) << '\n';
+
+            auto solver = std::make_unique<SHOT::Solver>();
+            auto env = solver->getEnvironment();
+            solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+            solver->updateSetting("Model.Reformulation.Monomials.Formulation", static_cast<int>(formulation));
+            solver->updateSetting(
+                "Model.Reformulation.Constraint.PartitionNonlinearTerms", static_cast<int>(partitioning));
+            solver->updateSetting(
+                "Model.Reformulation.ObjectiveFunction.PartitionNonlinearTerms", static_cast<int>(partitioning));
+
+            auto problem = MakeMonomialProblem(env);
+
+            if(!solver->setProblem(problem))
+            {
+                std::cout << "Could not set the problem\n";
+                return (false);
+            }
+
+            if(env->reformulatedProblem->getAuxiliaryVariablesOfType(E_AuxiliaryVariableType::BinaryMonomial).size()
+                == 0)
+            {
+                std::cout << "The binary monomials were not reformulated\n";
+                passed = false;
+            }
+
+            if(!CheckAuxiliaryVariableValues(problem, env->reformulatedProblem, points))
+                passed = false;
+
+            // The monomials are nonconvex, so only the feasibility of the solution is checked
+            if(!solver->solveProblem() || env->results->primalSolution.size() == 0)
+            {
+                std::cout << "Could not solve the problem\n";
+                passed = false;
+                continue;
+            }
+
+            auto& primalPoint = env->results->primalSolution;
+
+            for(auto& C : problem->numericConstraints)
+            {
+                if(C->calculateNumericValue(primalPoint).error > 1e-6)
+                {
+                    std::cout << "The solution violates " << C->name << '\n';
+                    passed = false;
+                }
+            }
+        }
+    }
+
+    return passed;
+}
+
 int SolverTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -1825,6 +2010,11 @@ int SolverTest(int argc, char* argv[])
         std::cout << "Starting test for the primal solution pool" << std::endl;
         passed = TestPrimalSolutionPool();
         std::cout << "Finished test for the primal solution pool." << std::endl;
+        break;
+    case 21:
+        std::cout << "Starting test for the auxiliary variables of reformulated monomials" << std::endl;
+        passed = TestAuxiliaryVariablesOfMonomials();
+        std::cout << "Finished test for the auxiliary variables of reformulated monomials." << std::endl;
         break;
     default:
         passed = false;

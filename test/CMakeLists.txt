@@ -124,7 +124,8 @@ set(Solver_parts
     17
     18
     19
-    20)
+    20
+    21)
 set(cpptests ${cpptests} Solver)
 
 if(HAS_IPOPT)
@@ -390,6 +391,7 @@ if(TARGET SHOTpy)
         test_settings
         test_problem_io
         test_create_and_solve_problems
+        test_reformulation
         test_optimization_problems
         test_modeling_systems
         test_gradients_hessians
