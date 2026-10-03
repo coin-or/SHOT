@@ -580,6 +580,9 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
 
     bool isSignReversed = env->problem->objectiveFunction->properties.isMaximize;
 
+    // The constant from quadratic terms with fixed variables, with its sign already reversed if needed
+    double quadraticConstant = 0.0;
+
     if(env->problem->objectiveFunction->properties.hasLinearTerms)
         copyOriginalLinearTerms = true;
 
@@ -587,13 +590,14 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
     {
         auto sourceObjective = std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->problem->objectiveFunction);
 
-        auto [tmpLinearTerms, tmpQuadraticTerms]
+        auto [tmpLinearTerms, tmpQuadraticTerms, tmpConstant]
             = reformulateAndPartitionQuadraticSum(sourceObjective->quadraticTerms, isSignReversed,
                 static_cast<ES_PartitionNonlinearSums>(
                     env->settings->getSetting<int>("Model.Reformulation.ObjectiveFunction.PartitionQuadraticTerms")));
 
         destinationLinearTerms.add(tmpLinearTerms);
         destinationQuadraticTerms.add(tmpQuadraticTerms);
+        quadraticConstant = tmpConstant;
     }
 
     if(env->problem->objectiveFunction->properties.hasMonomialTerms)
@@ -716,6 +720,7 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
 
     objective->constant
         = isSignReversed ? -env->problem->objectiveFunction->constant : env->problem->objectiveFunction->constant;
+    objective->constant += quadraticConstant;
     objective->direction
         = isSignReversed ? E_ObjectiveFunctionDirection::Minimize : env->problem->objectiveFunction->direction;
 
@@ -1008,11 +1013,12 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
     {
         auto sourceConstraint = std::dynamic_pointer_cast<QuadraticConstraint>(C);
 
-        auto [tmpLinearTerms, tmpQuadraticTerms] = reformulateAndPartitionQuadraticSum(
+        auto [tmpLinearTerms, tmpQuadraticTerms, tmpConstant] = reformulateAndPartitionQuadraticSum(
             sourceConstraint->quadraticTerms, isSignReversed, partitionQuadraticTermsStrategy);
 
         destinationLinearTerms.add(tmpLinearTerms);
         destinationQuadraticTerms.add(tmpQuadraticTerms);
+        constant += tmpConstant;
     }
 
     if(C->properties.hasMonomialTerms)
@@ -1116,11 +1122,12 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
 
         if(tmpQuadraticTerms.size() > 0)
         {
-            auto [tmpLinearTerms2, tmpQuadraticTerms2] = reformulateAndPartitionQuadraticSum(
+            auto [tmpLinearTerms2, tmpQuadraticTerms2, tmpConstant2] = reformulateAndPartitionQuadraticSum(
                 tmpQuadraticTerms, isSignReversed, partitionQuadraticTermsStrategy);
 
             destinationLinearTerms.add(tmpLinearTerms2);
             destinationQuadraticTerms.add(tmpQuadraticTerms2);
+            constant += tmpConstant2;
         }
 
         if(tmpMonomialTerms.size() > 0)
@@ -1430,10 +1437,12 @@ LinearTerms TaskReformulateProblem::partitionNonlinearSum(
                 quadTerms.takeOwnership(reformulatedProblem);
                 quadTerms.add(optionalQuadraticTerm.value());
 
-                auto [tmpLinearTerms, tmpQuadraticTerms]
+                auto [tmpLinearTerms, tmpQuadraticTerms, tmpConstant]
                     = reformulateAndPartitionQuadraticSum(quadTerms, reversedSigns, partitionNonlinearTermsStrategy);
 
-                if(tmpQuadraticTerms.size() == 0)
+                // A constant from a fixed variable cannot be returned here, so the term is then partitioned as a
+                // nonlinear term instead; the expressions have been simplified, so this should not happen
+                if(tmpQuadraticTerms.size() == 0 && tmpConstant == 0.0)
                 // Otherwise we cannot proceed and will continue as if nonbilinear term
                 {
                     resultLinearTerms.add(tmpLinearTerms);
@@ -1712,13 +1721,78 @@ LinearTerms TaskReformulateProblem::partitionSignomialTerms(const SignomialTerms
     return (resultLinearTerms);
 }
 
-std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPartitionQuadraticSum(
-    QuadraticTerms& quadraticTerms, bool reversedSigns, ES_PartitionNonlinearSums partitionStrategy)
+std::tuple<LinearTerms, QuadraticTerms, double> TaskReformulateProblem::reformulateAndPartitionQuadraticSum(
+    QuadraticTerms& sourceQuadraticTerms, bool reversedSigns, ES_PartitionNonlinearSums partitionStrategy)
 {
     LinearTerms resultLinearTerms;
     resultLinearTerms.takeOwnership(reformulatedProblem);
     QuadraticTerms resultQuadraticTerms;
     resultQuadraticTerms.takeOwnership(reformulatedProblem);
+    double resultConstant = 0.0;
+
+    // Terms with fixed variables are linear or constant, and should not get auxiliary variables. The source terms
+    // belong to the original problem, so the remaining terms are copied instead of changed.
+    auto isFixed = [this](const VariablePtr& variable)
+    {
+        auto reformulatedVariable = reformulatedProblem->getVariable(variable->getIndex());
+        return (reformulatedVariable->lowerBound == reformulatedVariable->upperBound);
+    };
+
+    bool hasFixedVariables = std::any_of(sourceQuadraticTerms.begin(), sourceQuadraticTerms.end(),
+        [&isFixed](const QuadraticTermPtr& T) { return (isFixed(T->firstVariable) || isFixed(T->secondVariable)); });
+
+    QuadraticTerms reducedQuadraticTerms;
+
+    if(hasFixedVariables)
+    {
+        // The linear terms and the constant returned are added as they are, so they must have their signs reversed
+        double signfactor = reversedSigns ? -1.0 : 1.0;
+
+        LinearTerms fixedLinearTerms;
+        QuadraticTerms remainingTerms;
+
+        for(auto& T : sourceQuadraticTerms)
+        {
+            auto firstVariable = reformulatedProblem->getVariable(T->firstVariable->getIndex());
+            auto secondVariable = reformulatedProblem->getVariable(T->secondVariable->getIndex());
+
+            bool firstVariableFixed = isFixed(firstVariable);
+            bool secondVariableFixed = isFixed(secondVariable);
+
+            if(firstVariableFixed && secondVariableFixed)
+                resultConstant += signfactor * T->coefficient * firstVariable->lowerBound * secondVariable->lowerBound;
+            else if(firstVariableFixed)
+                fixedLinearTerms.push_back(std::make_shared<LinearTerm>(
+                    signfactor * T->coefficient * firstVariable->lowerBound, secondVariable));
+            else if(secondVariableFixed)
+                fixedLinearTerms.push_back(std::make_shared<LinearTerm>(
+                    signfactor * T->coefficient * secondVariable->lowerBound, firstVariable));
+            else
+                remainingTerms.push_back(
+                    std::make_shared<QuadraticTerm>(T->coefficient, firstVariable, secondVariable));
+        }
+
+        // Merges duplicate terms, which only changes the copies
+        QuadraticTerms mergedTerms;
+        mergedTerms.add(remainingTerms);
+
+        for(auto& T : mergedTerms)
+        {
+            if(T->coefficient != 0.0)
+                reducedQuadraticTerms.push_back(T);
+        }
+
+        // Calculates the eigenvalues and properties of the remaining terms, used when choosing the reformulation
+        reducedQuadraticTerms.takeOwnership(reformulatedProblem);
+        reducedQuadraticTerms.getConvexity();
+
+        resultLinearTerms.add(fixedLinearTerms);
+
+        if(reducedQuadraticTerms.size() == 0)
+            return std::tuple(resultLinearTerms, resultQuadraticTerms, resultConstant);
+    }
+
+    QuadraticTerms& quadraticTerms = hasFixedVariables ? reducedQuadraticTerms : sourceQuadraticTerms;
 
     bool performPartitioning = true;
 
@@ -1898,7 +1972,7 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
         resultQuadraticTerms.add(copiedTerms);
     }
 
-    return std::tuple(resultLinearTerms, resultQuadraticTerms);
+    return std::tuple(resultLinearTerms, resultQuadraticTerms, resultConstant);
 }
 
 std::tuple<LinearTerms, MonomialTerms> TaskReformulateProblem::reformulateMonomialSum(

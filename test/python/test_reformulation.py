@@ -205,3 +205,78 @@ class TestBinaryProducts:
         # Only i1*i3 is discretized, using the variable with the smaller domain, i3 in [1, 4]
         assert sum(1 for name in names if name.startswith("s_bli")) == 4, names
 
+class TestFixedVariablesInQuadraticTerms:
+    """Quadratic terms with a fixed variable are linear or constant, and get no auxiliary variables."""
+
+    # The quadratic terms are handled as nonlinear, and either partitioned with the bilinear terms extracted, or the
+    # convex ones decomposed
+    VARIANTS = {
+        "Partitioned": {"Model.Reformulation.Quadratics.Strategy": 0,
+                        "Model.Reformulation.Constraint.PartitionQuadraticTerms": 0,
+                        "Model.Reformulation.ObjectiveFunction.PartitionQuadraticTerms": 0,
+                        "Model.Reformulation.Quadratics.ExtractStrategy": 2},
+        "EigenValueDecomposition": {"Model.Reformulation.Quadratics.Strategy": 0,
+                                    "Model.Reformulation.Quadratics.Decomposition.Method": 1},
+        "LDLDecomposition": {"Model.Reformulation.Quadratics.Strategy": 0,
+                             "Model.Reformulation.Quadratics.Decomposition.Method": 2},
+    }
+
+    def make_problem(self, solver, fixed, maximize):
+        """The variable x is fixed to 2 by a constraint, or replaced by the constant 2.
+
+        A variable with equal bounds is replaced by its value already when the model is created, so here x is only
+        fixed by the bound tightening done before the reformulation.
+        """
+        import SHOTpy
+
+        problem = SHOTpy.Problem(solver)
+        x = problem.addVariable("x", SHOTpy.VariableType.Real, 0.0, 5.0) if fixed else 2.0
+        y = problem.addVariable("y", SHOTpy.VariableType.Real, -1.0, 3.0)
+        z = problem.addVariable("z", SHOTpy.VariableType.Real, 0.0, 2.0)
+        b = problem.addVariable("b", SHOTpy.VariableType.Binary)
+
+        direction = SHOTpy.ObjectiveDirection.Maximize if maximize else SHOTpy.ObjectiveDirection.Minimize
+        sign = -1.0 if maximize else 1.0
+        problem.setObjective(sign * (0.5 * x * x + x * y - 2 * x * z + y * z + y * y) + b, direction)
+
+        # The terms with x share y and z with the terms without x, and the last constraint is convex, so that it is
+        # decomposed when a decomposition is used
+        problem.addConstraint(x * x + x * y + y * z + b <= 6, "c1")
+        problem.addConstraint(x * z - y * y + y * z >= -3 + b, "c2")
+        problem.addConstraint(x * x + y * y + z * z + x * y + y * z <= 10, "c3")
+        if fixed:
+            problem.addConstraint(x == 2, "fix")
+        problem.finalize()
+        return problem
+
+    def solve(self, fixed, maximize, settings):
+        solver = make_solver(settings)
+        problem = self.make_problem(solver, fixed, maximize)
+        assert solver.setProblem(problem)
+        names = auxiliary_variable_names(solver)
+        assert solver.solveProblem()
+        return solver, problem, names
+
+    @pytest.mark.parametrize("settings", VARIANTS.values(), ids=VARIANTS.keys())
+    @pytest.mark.parametrize("maximize", [False, True], ids=["min", "max"])
+    def test_same_as_constant(self, maximize, settings):
+        """A fixed x gave auxiliary variables for x^2 and x*y, which the same model with the constant 2 has not."""
+        solver, problem, names = self.solve(True, maximize, settings)
+        constantSolver, _, constantNames = self.solve(False, maximize, settings)
+
+        # The terms without x still get their auxiliary variables
+        assert len(constantNames) > 0
+
+        assert not any(name == "s_sq_x" or name.startswith("s_bl_x_") or name.endswith("_x") for name in names), names
+        assert len(names) == len(constantNames), (names, constantNames)
+        assert sorted(name for name in names if not name[-1].isdigit()) \
+            == sorted(name for name in constantNames if not name[-1].isdigit())
+
+        assert solver.getPrimalBound() == pytest.approx(constantSolver.getPrimalBound(), abs=1e-5)
+
+        point = list(solver.getPrimalSolution().point)
+        assert point[0] == 2.0
+        for name in ("c1", "c2", "c3"):
+            assert problem.getConstraint(name).calculateNumericValue(point).error <= 1e-6
+        assert problem.objectiveFunction.calculateValue(point) == pytest.approx(solver.getPrimalBound(), abs=1e-6)
+
