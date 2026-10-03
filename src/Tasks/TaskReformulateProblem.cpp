@@ -2953,6 +2953,15 @@ void TaskReformulateProblem::createBilinearReformulations()
             reformulateBinaryContinuousBilinearTerm(firstVariable, secondVariable, AUXVAR);
             AUXVAR->properties.auxiliaryType = E_AuxiliaryVariableType::BinaryContinuousBilinear;
         }
+        else if((firstVariableType == E_VariableType::Binary && secondVariableType == E_VariableType::Integer
+                    && secondVariable->lowerBound > SHOT_DBL_MIN && secondVariable->upperBound < SHOT_DBL_MAX)
+            || (firstVariableType == E_VariableType::Integer && secondVariableType == E_VariableType::Binary
+                && firstVariable->lowerBound > SHOT_DBL_MIN && firstVariable->upperBound < SHOT_DBL_MAX))
+        {
+            // The binary variable is already a disjunction, so the integer variable does not need to be discretized
+            reformulateBinaryContinuousBilinearTerm(firstVariable, secondVariable, AUXVAR);
+            AUXVAR->properties.auxiliaryType = E_AuxiliaryVariableType::IntegerBilinear;
+        }
         else if(firstVariableType == E_VariableType::Integer || firstVariableType == E_VariableType::Semiinteger
             || secondVariableType == E_VariableType::Integer || secondVariableType == E_VariableType::Semiinteger)
         {
@@ -3027,6 +3036,8 @@ void TaskReformulateProblem::reformulateBinaryContinuousBilinearTerm(
     auto binaryVariable = (firstVariable->properties.type == E_VariableType::Binary) ? firstVariable : secondVariable;
     auto otherVariable = (firstVariable->properties.type == E_VariableType::Binary) ? secondVariable : firstVariable;
 
+    // The product w = b * x of a binary variable b and a variable x with bounds L <= x <= U:
+    // w >= x - U(1 - b)
     auto auxConstraint1 = std::make_shared<LinearConstraint>(
         "s_blbc_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, otherVariable->upperBound);
     auxConstraint1->add(std::make_shared<LinearTerm>(-1.0, usedAuxVariable));
@@ -3035,14 +3046,16 @@ void TaskReformulateProblem::reformulateBinaryContinuousBilinearTerm(
         auxConstraint1->add(std::make_shared<LinearTerm>(otherVariable->upperBound, binaryVariable));
     auxConstraintCounter++;
 
+    // w <= x - L(1 - b)
     auto auxConstraint2 = std::make_shared<LinearConstraint>(
-        "s_blbc_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, otherVariable->upperBound);
+        "s_blbc_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, -otherVariable->lowerBound);
     auxConstraint2->add(std::make_shared<LinearTerm>(1.0, usedAuxVariable));
     auxConstraint2->add(std::make_shared<LinearTerm>(-1.0, otherVariable));
-    if(otherVariable->upperBound != 0.0)
-        auxConstraint2->add(std::make_shared<LinearTerm>(otherVariable->upperBound, binaryVariable));
+    if(otherVariable->lowerBound != 0.0)
+        auxConstraint2->add(std::make_shared<LinearTerm>(-otherVariable->lowerBound, binaryVariable));
     auxConstraintCounter++;
 
+    // w >= L b
     auto auxConstraint3 = std::make_shared<LinearConstraint>(
         "s_blbc_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, 0);
     auxConstraint3->add(std::make_shared<LinearTerm>(-1.0, usedAuxVariable));
@@ -3050,6 +3063,7 @@ void TaskReformulateProblem::reformulateBinaryContinuousBilinearTerm(
         auxConstraint3->add(std::make_shared<LinearTerm>(otherVariable->lowerBound, binaryVariable));
     auxConstraintCounter++;
 
+    // w <= U b
     auto auxConstraint4 = std::make_shared<LinearConstraint>(
         "s_blbc_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, 0);
     auxConstraint4->add(std::make_shared<LinearTerm>(1.0, usedAuxVariable));
@@ -3145,6 +3159,26 @@ void TaskReformulateProblem::reformulateIntegerBilinearTerm(
         {
             auto auxBinary = std::make_shared<AuxiliaryVariable>(
                 "s_bli" + std::to_string(auxVariableCounter + 1), E_VariableType::Binary, 0.0, 1.0);
+
+            // The binary is one if the variable has the value i, which at integer values is given by the product of
+            // (x - j) / (i - j) over the other values j; every factor is exact, so it is exactly one or zero
+            auto indicator = std::make_shared<ExpressionProduct>();
+
+            for(auto j = discretizationVariable->lowerBound; j <= discretizationVariable->upperBound; j++)
+            {
+                if(j == i)
+                    continue;
+
+                indicator->children.push_back(std::make_shared<ExpressionDivide>(
+                    std::make_shared<ExpressionSum>(std::make_shared<ExpressionVariable>(discretizationVariable),
+                        std::make_shared<ExpressionConstant>(-j)),
+                    std::make_shared<ExpressionConstant>(i - j)));
+            }
+
+            if(indicator->children.size() > 0)
+                auxBinary->nonlinearExpression = indicator;
+            else
+                auxBinary->constant = 1.0;
 
             auxFirstSum->add(std::make_shared<LinearTerm>(1.0, auxBinary));
             auxFirstSumVarDef->add(std::make_shared<LinearTerm>(i, auxBinary));

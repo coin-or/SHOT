@@ -1888,6 +1888,91 @@ bool TestAuxiliaryVariablesOfMonomials()
     return passed;
 }
 
+// Products of binary, integer and continuous variables sharing variables, in two constraints and the objective; the
+// bounds include L < -U, L > 0 and U < 0
+static ProblemPtr MakeBinaryProductProblem(EnvironmentPtr env)
+{
+    auto problem = std::make_shared<SHOT::Problem>(env);
+    problem->name = "binaryproducts";
+
+    auto b1 = std::make_shared<Variable>("b1", E_VariableType::Binary);
+    auto b2 = std::make_shared<Variable>("b2", E_VariableType::Binary);
+    auto i1 = std::make_shared<Variable>("i1", E_VariableType::Integer, -2.0, 3.0);
+    auto i2 = std::make_shared<Variable>("i2", E_VariableType::Integer, -3.0, -1.0);
+    auto i3 = std::make_shared<Variable>("i3", E_VariableType::Integer, 1.0, 4.0);
+    auto x1 = std::make_shared<Variable>("x1", E_VariableType::Real, -10.0, 1.0);
+    auto x2 = std::make_shared<Variable>("x2", E_VariableType::Real, 2.0, 5.0);
+    auto x3 = std::make_shared<Variable>("x3", E_VariableType::Real, -4.0, -1.0);
+
+    problem->add({ b1, b2, i1, i2, i3, x1, x2, x3 });
+
+    auto objective = std::make_shared<QuadraticObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<LinearTerm>(1.0, x1));
+    objective->add(std::make_shared<LinearTerm>(1.0, x3));
+    objective->add(std::make_shared<QuadraticTerm>(-3.0, b1, x1));
+    objective->add(std::make_shared<QuadraticTerm>(2.0, b2, x1));
+    objective->add(std::make_shared<QuadraticTerm>(-1.0, b1, x2));
+    objective->add(std::make_shared<QuadraticTerm>(1.5, b2, x3));
+    objective->add(std::make_shared<QuadraticTerm>(1.0, i1, b1));
+    objective->add(std::make_shared<QuadraticTerm>(-2.0, b2, i1));
+    objective->add(std::make_shared<QuadraticTerm>(1.0, b1, i2));
+    objective->add(std::make_shared<QuadraticTerm>(0.5, i1, i3));
+    problem->add(objective);
+
+    auto c1 = std::make_shared<QuadraticConstraint>("c1", -3.0, SHOT_DBL_MAX);
+    c1->add(std::make_shared<QuadraticTerm>(1.0, b1, i1));
+    c1->add(std::make_shared<QuadraticTerm>(1.0, b1, i2));
+    c1->add(std::make_shared<QuadraticTerm>(1.0, b2, i1));
+    problem->add(c1);
+
+    auto c2 = std::make_shared<QuadraticConstraint>("c2", SHOT_DBL_MIN, 4.0);
+    c2->add(std::make_shared<QuadraticTerm>(1.0, i1, b2));
+    c2->add(std::make_shared<QuadraticTerm>(-1.0, b2, i3));
+    c2->add(std::make_shared<QuadraticTerm>(1.0, i1, i3));
+    problem->add(c2);
+
+    problem->updateProperties();
+    problem->finalize();
+
+    return (problem);
+}
+
+bool TestAuxiliaryVariablesOfBinaryProducts()
+{
+    auto solver = std::make_unique<SHOT::Solver>();
+    auto env = solver->getEnvironment();
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+    solver->updateSetting(
+        "Model.Reformulation.Quadratics.Strategy", static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear));
+    solver->updateSetting(
+        "Model.Reformulation.Bilinear.IntegerFormulation", static_cast<int>(ES_ReformulateBilinearInteger::Yes));
+
+    auto problem = MakeBinaryProductProblem(env);
+
+    if(!solver->setProblem(problem))
+    {
+        std::cout << "Could not set the problem\n";
+        return (false);
+    }
+
+    // All binary assignments, with integer and continuous values at the bounds and in the interior; x1 = -5 with
+    // b = 0 is below -U for x1 in [-10, 1]
+    std::vector<VectorDouble> points;
+
+    for(int i = 0; i < 4; i++)
+    {
+        for(auto other : { VectorDouble { -2.0, -3.0, 1.0, -5.0, 3.0, -2.0 },
+                VectorDouble { 3.0, -1.0, 4.0, 1.0, 2.0, -4.0 }, VectorDouble { 0.0, -2.0, 2.0, -10.0, 5.0, -1.0 } })
+        {
+            VectorDouble point = { double(i & 1), double((i >> 1) & 1) };
+            point.insert(point.end(), other.begin(), other.end());
+            points.push_back(point);
+        }
+    }
+
+    return (CheckAuxiliaryVariableValues(problem, env->reformulatedProblem, points));
+}
+
 int SolverTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -2015,6 +2100,11 @@ int SolverTest(int argc, char* argv[])
         std::cout << "Starting test for the auxiliary variables of reformulated monomials" << std::endl;
         passed = TestAuxiliaryVariablesOfMonomials();
         std::cout << "Finished test for the auxiliary variables of reformulated monomials." << std::endl;
+        break;
+    case 22:
+        std::cout << "Starting test for the auxiliary variables of reformulated binary products" << std::endl;
+        passed = TestAuxiliaryVariablesOfBinaryProducts();
+        std::cout << "Finished test for the auxiliary variables of reformulated binary products." << std::endl;
         break;
     default:
         passed = false;
