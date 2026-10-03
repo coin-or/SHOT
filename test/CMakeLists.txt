@@ -128,7 +128,8 @@ set(Solver_parts
     21
     22
     23
-    24)
+    24
+    25)
 set(cpptests ${cpptests} Solver)
 
 if(HAS_IPOPT)

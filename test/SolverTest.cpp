@@ -12,6 +12,7 @@
 #include "../src/DualSolver.h"
 #include "../src/Environment.h"
 #include "../src/MIPSolver/IMIPSolver.h"
+#include "../src/PrimalSolver.h"
 #include "../src/Results.h"
 #include "../src/Settings.h"
 #include "../src/Structs.h"
@@ -2206,6 +2207,86 @@ bool TestAuxiliaryVariablesOfDecompositions()
     return (passed);
 }
 
+// A point from Ipopt can exceed the variable bounds by its bound relaxation, and projecting it to the bounds can then
+// violate a linear constraint with large coefficients, as in oil2 in MINLPLib
+bool TestPrimalSolutionSlightlyOutsideBounds()
+{
+    bool passed = true;
+
+    auto solver = std::make_unique<SHOT::Solver>();
+    auto env = solver->getEnvironment();
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+
+    // The bound tightening would give a the upper bound 3.9 from e1, after which a would be projected as well
+    solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+
+    auto problem = std::make_shared<SHOT::Problem>(env);
+    problem->name = "boundrelaxation";
+
+    auto a = std::make_shared<Variable>("a", E_VariableType::Real, 0.0, 10.0);
+    auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.0, 1.95);
+    auto z = std::make_shared<Variable>("z", E_VariableType::Real, 0.1, 3.0);
+    problem->add({ a, x, z });
+
+    auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<LinearTerm>(-1.0, x));
+    objective->add(std::make_shared<LinearTerm>(1.0, z));
+    problem->add(objective);
+
+    // x is in both linear constraints, and a in the linear and the nonlinear one
+    auto e1 = std::make_shared<LinearConstraint>("e1", 0.0, 0.0);
+    e1->add(std::make_shared<LinearTerm>(-500.0, a));
+    e1->add(std::make_shared<LinearTerm>(1000.0, x));
+    problem->add(e1);
+
+    auto e2 = std::make_shared<LinearConstraint>("e2", SHOT_DBL_MIN, 5.0);
+    e2->add(std::make_shared<LinearTerm>(1.0, x));
+    e2->add(std::make_shared<LinearTerm>(1.0, z));
+    problem->add(e2);
+
+    // z^2 + exp(a) = 1 + exp(3.9) = 50.4 at the points
+    auto c1 = std::make_shared<NonlinearConstraint>("c1", SHOT_DBL_MIN, 60.0);
+    c1->add(std::make_shared<ExpressionSum>(std::make_shared<ExpressionSquare>(std::make_shared<ExpressionVariable>(z)),
+        std::make_shared<ExpressionExp>(std::make_shared<ExpressionVariable>(a))));
+    problem->add(c1);
+
+    problem->updateProperties();
+    problem->finalize();
+
+    if(!solver->setProblem(problem))
+    {
+        std::cout << "Could not set the problem\n";
+        return (false);
+    }
+
+    auto makeSolution = [](double excess)
+    {
+        PrimalSolution solution;
+        double xValue = 1.95 + excess;
+        solution.point = { 2.0 * xValue, xValue, 1.0 };
+        solution.sourceType = E_PrimalSolutionSource::NLPFixedIntegers;
+        solution.objValue = -xValue + 1.0;
+        solution.iterFound = 1;
+        return (solution);
+    };
+
+    // 1e-8 is the bound relaxation of Ipopt, and projecting x would violate e1 by 1000 * 1e-8 = 1e-5
+    if(!env->primalSolver->checkPrimalSolutionPoint(makeSolution(1.95e-8)))
+    {
+        std::cout << "A point exceeding a bound by the bound relaxation of Ipopt was not accepted\n";
+        passed = false;
+    }
+
+    // A larger excess is still projected, after which e1 is violated
+    if(env->primalSolver->checkPrimalSolutionPoint(makeSolution(1e-3)))
+    {
+        std::cout << "A point exceeding a bound by 1e-3 was accepted, although its projection violates e1\n";
+        passed = false;
+    }
+
+    return (passed);
+}
+
 int SolverTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -2348,6 +2429,11 @@ int SolverTest(int argc, char* argv[])
         std::cout << "Starting test for the auxiliary variables of quadratic decompositions" << std::endl;
         passed = TestAuxiliaryVariablesOfDecompositions();
         std::cout << "Finished test for the auxiliary variables of quadratic decompositions." << std::endl;
+        break;
+    case 25:
+        std::cout << "Starting test for primal solutions slightly outside the variable bounds" << std::endl;
+        passed = TestPrimalSolutionSlightlyOutsideBounds();
+        std::cout << "Finished test for primal solutions slightly outside the variable bounds." << std::endl;
         break;
     default:
         passed = false;

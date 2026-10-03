@@ -176,16 +176,20 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
     // Check that solution fulfills bounds, project back otherwise
     bool reCalculateObjective = false;
 
+    // A continuous variable may exceed its bounds by as much as Ipopt relaxes them (bound_relax_factor), since
+    // projecting it to the bound can violate a linear constraint with a large coefficient, e.g., 1000 * 1e-8 > 1e-6
+    auto boundTolerance = [](double bound) { return (1e-8 * std::max(1.0, std::abs(bound))); };
+
     for(auto& V : env->problem->realVariables)
     {
         auto value = V->calculate(tmpPoint);
 
-        if(value > V->upperBound)
+        if(value > V->upperBound + boundTolerance(V->upperBound))
         {
             isVariableBoundsFulfilled = false;
             tmpPoint.at(V->getIndex()) = V->upperBound;
         }
-        else if(value < V->lowerBound)
+        else if(value < V->lowerBound - boundTolerance(V->lowerBound))
         {
             isVariableBoundsFulfilled = false;
             tmpPoint.at(V->getIndex()) = V->lowerBound;
