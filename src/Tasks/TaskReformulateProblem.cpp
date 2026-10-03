@@ -76,6 +76,17 @@ static std::string getStructuralKey(const NonlinearExpression* expression)
     return (key + ")");
 }
 
+// The objective function is minimized in the reformulated problem, so a maximized one has its terms negated
+static SignomialTermPtr copySignomialTerm(const SignomialTermPtr& term, bool reversedSign, ProblemPtr destination)
+{
+    auto copiedTerm = std::make_shared<SignomialTerm>(term.get(), destination);
+
+    if(reversedSign)
+        copiedTerm->coefficient *= -1.0;
+
+    return (copiedTerm);
+}
+
 TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
     env->timing->startTimer("ProblemReformulation");
@@ -652,18 +663,42 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
     {
         auto sourceObjective = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->problem->objectiveFunction);
 
+        // The binary monomials are reformulated as in the constraints, and the remaining ones partitioned or kept
+        MonomialTerms remainingMonomialTerms;
+
+        if(env->settings->getSetting<int>("Model.Reformulation.Monomials.Formulation")
+            != static_cast<int>(ES_ReformulationBinaryMonomials::None))
+        {
+            auto [tmpLinearTerms, tmpMonomialTerms]
+                = reformulateMonomialSum(sourceObjective->monomialTerms, isSignReversed);
+
+            destinationLinearTerms.add(tmpLinearTerms);
+            remainingMonomialTerms = tmpMonomialTerms;
+        }
+        else
+        {
+            remainingMonomialTerms = sourceObjective->monomialTerms;
+        }
+
         if(static_cast<ES_PartitionNonlinearSums>(
                env->settings->getSetting<int>("Model.Reformulation.ObjectiveFunction.PartitionNonlinearTerms"))
                 == ES_PartitionNonlinearSums::Always
-            && sourceObjective->monomialTerms.size() > 1)
+            && remainingMonomialTerms.size() > 1)
         {
-            auto tmpLinearTerms = partitionMonomialTerms(sourceObjective->monomialTerms, isSignReversed);
+            auto tmpLinearTerms = partitionMonomialTerms(remainingMonomialTerms, isSignReversed);
             destinationLinearTerms.add(tmpLinearTerms);
         }
         else // Monomials are always nonconvex
         {
-            for(auto& T : sourceObjective->monomialTerms)
-                destinationMonomialTerms.add(std::make_shared<MonomialTerm>(T.get(), reformulatedProblem));
+            for(auto& T : remainingMonomialTerms)
+            {
+                auto monomialTerm = std::make_shared<MonomialTerm>(T.get(), reformulatedProblem);
+
+                if(isSignReversed)
+                    monomialTerm->coefficient *= -1.0;
+
+                destinationMonomialTerms.add(monomialTerm);
+            }
         }
     }
 
@@ -697,13 +732,13 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
             else
             {
                 for(auto& T : sourceObjective->signomialTerms)
-                    destinationSignomialTerms.add(std::make_shared<SignomialTerm>(T.get(), reformulatedProblem));
+                    destinationSignomialTerms.add(copySignomialTerm(T, isSignReversed, reformulatedProblem));
             }
         }
         else
         {
             for(auto& T : sourceObjective->signomialTerms)
-                destinationSignomialTerms.add(std::make_shared<SignomialTerm>(T.get(), reformulatedProblem));
+                destinationSignomialTerms.add(copySignomialTerm(T, isSignReversed, reformulatedProblem));
         }
     }
 
@@ -1248,15 +1283,18 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
 
         if(destinationSignomialTerms.size() == 1 && destinationQuadraticTerms.size() == 0
             && destinationLinearTerms.size() == 0 && destinationSignomialTerms[0]->elements.size() > 1
-            && destinationSignomialTerms[0]->coefficient < 0.0 && valueLHS == SHOT_DBL_MIN && valueRHS < 0.0)
+            && destinationSignomialTerms[0]->coefficient < 0.0 && valueLHS == SHOT_DBL_MIN && valueRHS - constant < 0.0)
         // We can perhaps use the transformation for terms of the type  c * x1^p1 * ... xn^pn <= d, c,d < 0
         {
             if(std::all_of(destinationSignomialTerms[0]->elements.begin(), destinationSignomialTerms[0]->elements.end(),
                    [](SignomialElementPtr E) { return (E->power > 0.0 && E->variable->lowerBound > 0.0); }))
             {
-                // All coefficients are negative and variable positive, i.e. we can use the reformulation
+                // All powers are positive and the variables positive, so c * x1^p1 * ... * xn^pn <= d is
+                // x1^p1 * ... * xn^pn >= d / c, i.e. -p1 * log(x1) - ... - pn * log(xn) <= -log(d / c), where the
+                // constant of the constraint is moved to d
 
-                double remainingRHS = std::log(valueRHS * destinationSignomialTerms[0]->coefficient);
+                double remainingRHS = -std::log((valueRHS - constant) / destinationSignomialTerms[0]->coefficient);
+                constant = 0.0;
 
                 constraint = std::make_shared<LinearConstraint>(C->name, SHOT_DBL_MIN, remainingRHS);
                 constraint->properties.classification = E_ConstraintClassification::Linear;
@@ -1301,22 +1339,34 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
         else if(destinationSignomialTerms.size() == 1 && destinationQuadraticTerms.size() == 0
             && destinationLinearTerms.size() == 1 && destinationSignomialTerms[0]->elements.size() > 1
             && destinationSignomialTerms[0]->coefficient > 0.0 && destinationLinearTerms[0]->coefficient < 0
-            && valueLHS == SHOT_DBL_MIN && valueRHS <= 0.0)
+            && valueLHS == SHOT_DBL_MIN && valueRHS - constant == 0.0)
         // We can perhaps use the transformation for terms of the type  c * x1^p1 * ... xn^pn <= y, c > 0
         {
             if(std::all_of(destinationSignomialTerms[0]->elements.begin(), destinationSignomialTerms[0]->elements.end(),
                    [](SignomialElementPtr E) { return (E->power < 0.0 && E->variable->lowerBound > 0.0); }))
             {
-                // All coefficients are negative and variable positive, i.e. we can use the reformulation
+                // All powers are negative and the variables positive, so c * x1^p1 * ... * xn^pn + a * y <= 0 with
+                // a < 0 is p1 * log(x1) + ... + pn * log(xn) - log(y) <= log(-a) - log(c)
 
-                constraint = std::make_shared<LinearConstraint>(C->name, SHOT_DBL_MIN, 0.0);
+                double remainingRHS = std::log(-destinationLinearTerms[0]->coefficient)
+                    - std::log(destinationSignomialTerms[0]->coefficient);
+                constant = 0.0;
+
+                constraint = std::make_shared<LinearConstraint>(C->name, SHOT_DBL_MIN, remainingRHS);
                 constraint->properties.classification = E_ConstraintClassification::Linear;
                 constraint->ownerProblem = reformulatedProblem;
 
                 for(auto& E : destinationSignomialTerms[0]->elements)
                 {
+                    // The bounds of p * log(x), which are finite at the lower bound since it is positive
+                    double valueAtLowerBound = E->power * std::log(E->variable->lowerBound);
+                    double valueAtUpperBound = (E->variable->upperBound < SHOT_DBL_MAX)
+                        ? E->power * std::log(E->variable->upperBound)
+                        : SHOT_DBL_MIN;
+
                     auto auxVariable = std::make_shared<AuxiliaryVariable>(
-                        "s_rpsig_" + std::to_string(auxVariableCounter + 1), E_VariableType::Real, SHOT_DBL_MIN, 0.0);
+                        "s_rpsig_" + std::to_string(auxVariableCounter + 1), E_VariableType::Real,
+                        std::min(valueAtLowerBound, valueAtUpperBound), std::max(valueAtLowerBound, valueAtUpperBound));
 
                     auxVariable->properties.auxiliaryType = E_AuxiliaryVariableType::NonlinearExpressionPartitioning;
                     auxVariableCounter++;
@@ -1347,9 +1397,16 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
                     resultingConstraints.push_back(std::move(auxConstraint));
                 }
 
-                auto auxVariable = std::make_shared<AuxiliaryVariable>(
-                    "s_rpsig_" + std::to_string(auxVariableCounter + 1), E_VariableType::Real, SHOT_DBL_MIN,
-                    SHOT_DBL_MAX);
+                auto linearVariable = reformulatedProblem->getVariable(destinationLinearTerms[0]->variable->getIndex());
+
+                // The bound of -log(y) is only finite at a positive upper bound
+                double auxLowerBound = (linearVariable->upperBound > 0.0 && linearVariable->upperBound < SHOT_DBL_MAX)
+                    ? -std::log(linearVariable->upperBound)
+                    : SHOT_DBL_MIN;
+
+                auto auxVariable
+                    = std::make_shared<AuxiliaryVariable>("s_rpsig_" + std::to_string(auxVariableCounter + 1),
+                        E_VariableType::Real, auxLowerBound, SHOT_DBL_MAX);
 
                 auxVariable->properties.auxiliaryType = E_AuxiliaryVariableType::NonlinearExpressionPartitioning;
                 auxVariableCounter++;
@@ -1368,10 +1425,8 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
                 auxConstraint->properties.classification = E_ConstraintClassification::Nonlinear;
                 auxConstraintCounter++;
 
-                NonlinearExpressionPtr expression = std::make_shared<ExpressionProduct>(
-                    std::make_shared<ExpressionConstant>(destinationLinearTerms[0]->coefficient),
-                    std::make_shared<ExpressionLog>(
-                        std::make_shared<ExpressionVariable>(destinationLinearTerms[0]->variable)));
+                NonlinearExpressionPtr expression = std::make_shared<ExpressionNegate>(
+                    std::make_shared<ExpressionLog>(std::make_shared<ExpressionVariable>(linearVariable)));
 
                 auxConstraint->add(std::move(expression));
                 auxVariable->nonlinearExpression = auxConstraint->nonlinearExpression;
@@ -1746,17 +1801,18 @@ LinearTerms TaskReformulateProblem::partitionSignomialTerms(const SignomialTerms
             signomialTerm->coefficient *= -1.0;
         }
 
-        // The bounds are set through the problem, so that its stored bound vectors are updated as well
-        if(signomialTerm->coefficient < 0.0 && auxVariable->upperBound > 0.0)
-            reformulatedProblem->setVariableUpperBound(auxVariable->getIndex(), 0.0);
-        else if(signomialTerm->coefficient > 0.0 && auxVariable->lowerBound < 0.0)
-            reformulatedProblem->setVariableLowerBound(auxVariable->getIndex(), 0.0);
-
         auxConstraint->add(signomialTerm);
 
         auxVariable->signomialTerms.push_back(signomialTerm);
 
-        reformulatedProblem->add(std::move(auxVariable));
+        // The variable must be in the problem before its bounds can be set through the problem, which also updates
+        // the stored bound vectors
+        reformulatedProblem->add(auxVariable);
+
+        if(signomialTerm->coefficient < 0.0 && auxVariable->upperBound > 0.0)
+            reformulatedProblem->setVariableUpperBound(auxVariable->getIndex(), 0.0);
+        else if(signomialTerm->coefficient > 0.0 && auxVariable->lowerBound < 0.0)
+            reformulatedProblem->setVariableLowerBound(auxVariable->getIndex(), 0.0);
 
         auto numericConstraints = reformulateConstraint(auxConstraint);
 

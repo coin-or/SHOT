@@ -326,3 +326,92 @@ class TestAbsoluteValues:
             names = auxiliary_variable_names(solver)
             assert sum(1 for name in names if name.startswith("s_abs_")) == expected, (shift, names)
 
+class TestSignomialLogTransformations:
+    """A single signomial in a constraint is written with logarithms, which must give the same feasible set."""
+
+    def make_problem(self, solver):
+        import SHOTpy
+
+        problem = SHOTpy.Problem(solver)
+        x = problem.addVariable("x", SHOTpy.VariableType.Real, 0.2, 4.0)
+        y = problem.addVariable("y", SHOTpy.VariableType.Real, 0.01, 4.0)
+        z = problem.addVariable("z", SHOTpy.VariableType.Real, 0.2, 4.0)
+        w = problem.addVariable("w", SHOTpy.VariableType.Real, 0.1, 10.0)
+
+        problem.setObjective(x + y + z + w)
+
+        # -2*x^1.5*y^0.5 <= -0.6, with a constant, is x^1.5*y^0.5 >= 0.3; |d| < 1 matters since log(d*c) was used
+        # instead of log(d/c)
+        problem.addConstraint(-2 * x**1.5 * y**0.5 + 1 <= 0.4, "c1")
+
+        # 3*x^-1*z^-0.5 <= 2*w, where log(3) and log(2) were left out and the logarithms had an upper bound of 0
+        problem.addConstraint(3 * x**-1 * z**-0.5 - 2 * w <= 0, "c2")
+        problem.finalize()
+        return problem
+
+    @staticmethod
+    def optimal_value():
+        """For given x and z, the least y and w are given by the constraints, so a grid over x and z is enough."""
+        best = float("inf")
+        steps = 600
+        for i in range(steps + 1):
+            x = 0.2 + 3.8 * i / steps
+            y = min(4.0, max(0.01, (0.3 / x**1.5) ** 2))
+            if x**1.5 * y**0.5 < 0.3 - 1e-12:
+                continue
+            for j in range(steps + 1):
+                z = 0.2 + 3.8 * j / steps
+                w = max(0.1, 1.5 / (x * z**0.5))
+                if w <= 10.0:
+                    best = min(best, x + y + z + w)
+        return best
+
+    @pytest.mark.parametrize("partitioning", PARTITIONING_STRATEGIES.values(), ids=PARTITIONING_STRATEGIES.keys())
+    def test_optimal_value(self, partitioning):
+        solver = make_solver({"Model.Reformulation.Constraint.PartitionNonlinearTerms": partitioning})
+        problem = self.make_problem(solver)
+
+        assert solver.setProblem(problem)
+        assert solver.solveProblem()
+
+        # The grid gives an upper bound on the optimum, close to it
+        expected = self.optimal_value()
+        assert solver.getPrimalBound() == pytest.approx(expected, rel=2e-3)
+        assert solver.getCurrentDualBound() <= expected + 1e-6
+
+        point = list(solver.getPrimalSolution().point)
+        for name in ("c1", "c2"):
+            assert problem.getConstraint(name).calculateNumericValue(point).error <= 1e-6
+
+
+class TestMaximizedNonlinearObjective:
+    """A maximized objective is minimized with its terms negated, also its monomials and signomials."""
+
+    @pytest.mark.parametrize("partitioning", PARTITIONING_STRATEGIES.values(), ids=PARTITIONING_STRATEGIES.keys())
+    def test_monomials_and_signomials(self, partitioning):
+        """The monomials and signomials were not negated, which made the problem seem infeasible."""
+        import SHOTpy
+
+        solver = make_solver({"Model.Reformulation.ObjectiveFunction.PartitionNonlinearTerms": partitioning})
+        problem = SHOTpy.Problem(solver)
+        x = problem.addVariable("x", SHOTpy.VariableType.Real, 0.1, 3.0)
+        y = problem.addVariable("y", SHOTpy.VariableType.Real, 0.1, 3.0)
+
+        def objective(x, y):
+            return x**0.5 * y**0.5 + 0.1 * x * y * x + 0.2 * x**0.3 * y**0.7
+
+        problem.setObjective(objective(x, y), SHOTpy.ObjectiveDirection.Maximize)
+        problem.addConstraint(x + y <= 2, "c")
+        problem.finalize()
+
+        assert solver.setProblem(problem)
+        assert solver.solveProblem()
+
+        # The objective increases in both variables, so the optimum is on x + y = 2
+        expected = max(objective(0.1 + 1.8 * i / 20000, 1.9 - 1.8 * i / 20000) for i in range(20001))
+        # The bounds are within the default relative gap of the optimum
+        assert solver.getPrimalBound() == pytest.approx(expected, rel=1e-3)
+        assert solver.getCurrentDualBound() >= expected * (1.0 - 1e-3)
+
+        point = list(solver.getPrimalSolution().point)
+        assert problem.objectiveFunction.calculateValue(point) == pytest.approx(solver.getPrimalBound(), abs=1e-6)
