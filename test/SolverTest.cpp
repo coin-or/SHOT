@@ -12,6 +12,7 @@
 #include "../src/DualSolver.h"
 #include "../src/Environment.h"
 #include "../src/MIPSolver/IMIPSolver.h"
+#include "../src/PrimalSolver.h"
 #include "../src/Results.h"
 #include "../src/Settings.h"
 #include "../src/Structs.h"
@@ -1703,6 +1704,589 @@ bool TestPrimalSolutionPool()
     return passed;
 }
 
+// Checks a reformulated problem at points of the original problem: the values of the auxiliary variables are
+// calculated from the point, the constraints added by the reformulation must then be fulfilled, and every original
+// constraint must have the same value as the constraints with its name in the reformulated problem
+static bool CheckAuxiliaryVariableValues(
+    ProblemPtr problem, ProblemPtr reformulatedProblem, const std::vector<VectorDouble>& points)
+{
+    bool passed = true;
+
+    for(auto& originalPoint : points)
+    {
+        auto point = originalPoint;
+        reformulatedProblem->augmentAuxiliaryVariableValues(point);
+
+        for(auto& C : reformulatedProblem->numericConstraints)
+        {
+            bool isOriginalConstraint = std::any_of(problem->numericConstraints.begin(),
+                problem->numericConstraints.end(), [&C](auto& O) { return (O->name == C->name); });
+
+            if(isOriginalConstraint)
+                continue;
+
+            auto value = C->calculateNumericValue(point);
+
+            if(value.error > 1e-8)
+            {
+                std::cout << "The auxiliary constraint " << C->name << " is violated by " << value.error
+                          << " at the calculated values of the auxiliary variables\n";
+                passed = false;
+            }
+        }
+
+        for(auto& O : problem->numericConstraints)
+        {
+            double originalValue = O->calculateNumericValue(originalPoint).normalizedValue;
+            double reformulatedValue = SHOT_DBL_MIN;
+
+            for(auto& C : reformulatedProblem->numericConstraints)
+            {
+                if(C->name == O->name)
+                    reformulatedValue = std::max(reformulatedValue, C->calculateNumericValue(point).normalizedValue);
+            }
+
+            if(std::abs(originalValue - reformulatedValue) > 1e-8)
+            {
+                std::cout << "The constraint " << O->name << " has the value " << originalValue
+                          << " in the original problem but " << reformulatedValue << " in the reformulated one\n";
+                passed = false;
+            }
+        }
+
+        if(!passed)
+        {
+            std::cout << "Point:\n";
+            Utilities::displayVector(originalPoint);
+            return (false);
+        }
+    }
+
+    return (passed);
+}
+
+// Binary and continuous monomials sharing variables, in two constraints and the objective
+static ProblemPtr MakeMonomialProblem(EnvironmentPtr env)
+{
+    auto problem = std::make_shared<SHOT::Problem>(env);
+    problem->name = "monomials";
+
+    auto b1 = std::make_shared<Variable>("b1", E_VariableType::Binary);
+    auto b2 = std::make_shared<Variable>("b2", E_VariableType::Binary);
+    auto b3 = std::make_shared<Variable>("b3", E_VariableType::Binary);
+    auto b4 = std::make_shared<Variable>("b4", E_VariableType::Binary);
+    auto x1 = std::make_shared<Variable>("x1", E_VariableType::Real, -1.0, 2.0);
+    auto x2 = std::make_shared<Variable>("x2", E_VariableType::Real, 0.0, 1.0);
+    auto x3 = std::make_shared<Variable>("x3", E_VariableType::Real, 0.0, 1.0);
+    auto y1 = std::make_shared<Variable>("y1", E_VariableType::Real, -2.0, 1.0);
+
+    problem->add({ b1, b2, b3, b4, x1, x2, x3, y1 });
+
+    auto objective = std::make_shared<NonlinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<LinearTerm>(-1.0, b1));
+    objective->add(std::make_shared<LinearTerm>(-1.0, b2));
+    objective->add(std::make_shared<LinearTerm>(-1.0, b3));
+    objective->add(std::make_shared<LinearTerm>(-1.0, b4));
+    objective->add(std::make_shared<MonomialTerm>(1.0, Variables({ x1, x2, x3 })));
+    objective->add(std::make_shared<MonomialTerm>(0.5, Variables({ x2, x3, y1 })));
+    problem->add(objective);
+
+    auto c1 = std::make_shared<NonlinearConstraint>("c1", SHOT_DBL_MIN, 3.5);
+    c1->add(std::make_shared<MonomialTerm>(3.0, Variables({ b1, b2, b3 })));
+    c1->add(std::make_shared<MonomialTerm>(1.0, Variables({ x1, x2, x3 })));
+    c1->add(std::make_shared<MonomialTerm>(-2.0, Variables({ x2, x3, y1 })));
+    problem->add(c1);
+
+    auto c2 = std::make_shared<NonlinearConstraint>("c2", SHOT_DBL_MIN, 1.2);
+    c2->add(std::make_shared<MonomialTerm>(1.0, Variables({ b2, b3, b4 })));
+    c2->add(std::make_shared<MonomialTerm>(-0.5, Variables({ b1, b2, b3 })));
+    c2->add(std::make_shared<MonomialTerm>(2.0, Variables({ x1, x2, y1 })));
+    c2->add(std::make_shared<MonomialTerm>(1.0, Variables({ x1, x3, y1 })));
+    problem->add(c2);
+
+    problem->updateProperties();
+    problem->finalize();
+
+    return (problem);
+}
+
+bool TestAuxiliaryVariablesOfMonomials()
+{
+    bool passed = true;
+
+    // All binary assignments, each combined with continuous values in the interior and at the bounds
+    std::vector<VectorDouble> points;
+
+    for(int i = 0; i < 16; i++)
+    {
+        VectorDouble binaries = { double(i & 1), double((i >> 1) & 1), double((i >> 2) & 1), double((i >> 3) & 1) };
+
+        for(auto continuous : { VectorDouble { 0.3, 0.7, 0.9, -1.5 }, VectorDouble { 2.0, 1.0, 1.0, 1.0 },
+                VectorDouble { -1.0, 0.0, 1.0, -2.0 } })
+        {
+            auto point = binaries;
+            point.insert(point.end(), continuous.begin(), continuous.end());
+            points.push_back(point);
+        }
+    }
+
+    for(auto formulation : { ES_ReformulationBinaryMonomials::Simple, ES_ReformulationBinaryMonomials::CostaLiberti })
+    {
+        for(auto partitioning : { ES_PartitionNonlinearSums::Always, ES_PartitionNonlinearSums::IfConvex,
+                ES_PartitionNonlinearSums::Never })
+        {
+            std::cout << "Binary monomial formulation " << static_cast<int>(formulation)
+                      << " and partitioning strategy " << static_cast<int>(partitioning) << '\n';
+
+            auto solver = std::make_unique<SHOT::Solver>();
+            auto env = solver->getEnvironment();
+            solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+            solver->updateSetting("Model.Reformulation.Monomials.Formulation", static_cast<int>(formulation));
+            solver->updateSetting(
+                "Model.Reformulation.Constraint.PartitionNonlinearTerms", static_cast<int>(partitioning));
+            solver->updateSetting(
+                "Model.Reformulation.ObjectiveFunction.PartitionNonlinearTerms", static_cast<int>(partitioning));
+
+            auto problem = MakeMonomialProblem(env);
+
+            if(!solver->setProblem(problem))
+            {
+                std::cout << "Could not set the problem\n";
+                return (false);
+            }
+
+            if(env->reformulatedProblem->getAuxiliaryVariablesOfType(E_AuxiliaryVariableType::BinaryMonomial).size()
+                == 0)
+            {
+                std::cout << "The binary monomials were not reformulated\n";
+                passed = false;
+            }
+
+            if(!CheckAuxiliaryVariableValues(problem, env->reformulatedProblem, points))
+                passed = false;
+
+            // The monomials are nonconvex, so only the feasibility of the solution is checked
+            if(!solver->solveProblem() || env->results->primalSolution.size() == 0)
+            {
+                std::cout << "Could not solve the problem\n";
+                passed = false;
+                continue;
+            }
+
+            auto& primalPoint = env->results->primalSolution;
+
+            for(auto& C : problem->numericConstraints)
+            {
+                if(C->calculateNumericValue(primalPoint).error > 1e-6)
+                {
+                    std::cout << "The solution violates " << C->name << '\n';
+                    passed = false;
+                }
+            }
+        }
+    }
+
+    return passed;
+}
+
+// Products of binary, integer and continuous variables sharing variables, in two constraints and the objective; the
+// bounds include L < -U, L > 0 and U < 0
+static ProblemPtr MakeBinaryProductProblem(EnvironmentPtr env)
+{
+    auto problem = std::make_shared<SHOT::Problem>(env);
+    problem->name = "binaryproducts";
+
+    auto b1 = std::make_shared<Variable>("b1", E_VariableType::Binary);
+    auto b2 = std::make_shared<Variable>("b2", E_VariableType::Binary);
+    auto i1 = std::make_shared<Variable>("i1", E_VariableType::Integer, -2.0, 3.0);
+    auto i2 = std::make_shared<Variable>("i2", E_VariableType::Integer, -3.0, -1.0);
+    auto i3 = std::make_shared<Variable>("i3", E_VariableType::Integer, 1.0, 4.0);
+    auto x1 = std::make_shared<Variable>("x1", E_VariableType::Real, -10.0, 1.0);
+    auto x2 = std::make_shared<Variable>("x2", E_VariableType::Real, 2.0, 5.0);
+    auto x3 = std::make_shared<Variable>("x3", E_VariableType::Real, -4.0, -1.0);
+
+    problem->add({ b1, b2, i1, i2, i3, x1, x2, x3 });
+
+    auto objective = std::make_shared<QuadraticObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<LinearTerm>(1.0, x1));
+    objective->add(std::make_shared<LinearTerm>(1.0, x3));
+    objective->add(std::make_shared<QuadraticTerm>(-3.0, b1, x1));
+    objective->add(std::make_shared<QuadraticTerm>(2.0, b2, x1));
+    objective->add(std::make_shared<QuadraticTerm>(-1.0, b1, x2));
+    objective->add(std::make_shared<QuadraticTerm>(1.5, b2, x3));
+    objective->add(std::make_shared<QuadraticTerm>(1.0, i1, b1));
+    objective->add(std::make_shared<QuadraticTerm>(-2.0, b2, i1));
+    objective->add(std::make_shared<QuadraticTerm>(1.0, b1, i2));
+    objective->add(std::make_shared<QuadraticTerm>(0.5, i1, i3));
+    problem->add(objective);
+
+    auto c1 = std::make_shared<QuadraticConstraint>("c1", -3.0, SHOT_DBL_MAX);
+    c1->add(std::make_shared<QuadraticTerm>(1.0, b1, i1));
+    c1->add(std::make_shared<QuadraticTerm>(1.0, b1, i2));
+    c1->add(std::make_shared<QuadraticTerm>(1.0, b2, i1));
+    problem->add(c1);
+
+    auto c2 = std::make_shared<QuadraticConstraint>("c2", SHOT_DBL_MIN, 4.0);
+    c2->add(std::make_shared<QuadraticTerm>(1.0, i1, b2));
+    c2->add(std::make_shared<QuadraticTerm>(-1.0, b2, i3));
+    c2->add(std::make_shared<QuadraticTerm>(1.0, i1, i3));
+    problem->add(c2);
+
+    problem->updateProperties();
+    problem->finalize();
+
+    return (problem);
+}
+
+bool TestAuxiliaryVariablesOfBinaryProducts()
+{
+    auto solver = std::make_unique<SHOT::Solver>();
+    auto env = solver->getEnvironment();
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+    solver->updateSetting(
+        "Model.Reformulation.Quadratics.Strategy", static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear));
+    solver->updateSetting(
+        "Model.Reformulation.Bilinear.IntegerFormulation", static_cast<int>(ES_ReformulateBilinearInteger::Yes));
+
+    auto problem = MakeBinaryProductProblem(env);
+
+    if(!solver->setProblem(problem))
+    {
+        std::cout << "Could not set the problem\n";
+        return (false);
+    }
+
+    // All binary assignments, with integer and continuous values at the bounds and in the interior; x1 = -5 with
+    // b = 0 is below -U for x1 in [-10, 1]
+    std::vector<VectorDouble> points;
+
+    for(int i = 0; i < 4; i++)
+    {
+        for(auto other : { VectorDouble { -2.0, -3.0, 1.0, -5.0, 3.0, -2.0 },
+                VectorDouble { 3.0, -1.0, 4.0, 1.0, 2.0, -4.0 }, VectorDouble { 0.0, -2.0, 2.0, -10.0, 5.0, -1.0 } })
+        {
+            VectorDouble point = { double(i & 1), double((i >> 1) & 1) };
+            point.insert(point.end(), other.begin(), other.end());
+            points.push_back(point);
+        }
+    }
+
+    return (CheckAuxiliaryVariableValues(problem, env->reformulatedProblem, points));
+}
+
+// Exponentials, signomials and monomials that are partitioned, where the same term is in several constraints and the
+// objective with different coefficients and signs, so that the auxiliary variables are shared
+static ProblemPtr MakeSharedPartitioningProblem(EnvironmentPtr env)
+{
+    auto problem = std::make_shared<SHOT::Problem>(env);
+    problem->name = "sharedpartitioning";
+
+    auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.2, 3.0);
+    auto y = std::make_shared<Variable>("y", E_VariableType::Real, 0.2, 3.0);
+    auto z = std::make_shared<Variable>("z", E_VariableType::Real, 0.2, 3.0);
+
+    problem->add({ x, y, z });
+
+    auto exp = [](VariablePtr variable, double factor)
+    {
+        return std::make_shared<ExpressionProduct>(std::make_shared<ExpressionConstant>(factor),
+            std::make_shared<ExpressionExp>(std::make_shared<ExpressionVariable>(variable)));
+    };
+
+    auto signomial
+        = [](double coefficient, VariablePtr first, double firstPower, VariablePtr second, double secondPower)
+    {
+        return std::make_shared<SignomialTerm>(coefficient,
+            SignomialElements({ std::make_shared<SignomialElement>(first, firstPower),
+                std::make_shared<SignomialElement>(second, secondPower) }));
+    };
+
+    auto objective = std::make_shared<NonlinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<LinearTerm>(1.0, x));
+    objective->add(std::make_shared<LinearTerm>(1.0, z));
+    objective->add(std::make_shared<ExpressionSum>(exp(y, 1.0), exp(z, 0.5)));
+    problem->add(objective);
+
+    auto c1 = std::make_shared<NonlinearConstraint>("c1", SHOT_DBL_MIN, 10.0);
+    c1->add(std::make_shared<ExpressionSum>(exp(x, 1.0), exp(y, 1.0)));
+    problem->add(c1);
+
+    auto c2 = std::make_shared<NonlinearConstraint>("c2", SHOT_DBL_MIN, 15.0);
+    c2->add(std::make_shared<ExpressionSum>(exp(x, 2.0), exp(z, 1.0)));
+    problem->add(c2);
+
+    // The negated exponential is in a constraint of the type >=, and needs its own auxiliary variable
+    auto c3 = std::make_shared<NonlinearConstraint>("c3", 3.0, SHOT_DBL_MAX);
+    c3->add(std::make_shared<ExpressionSum>(exp(x, 1.0), exp(z, 1.0)));
+    problem->add(c3);
+
+    auto c4 = std::make_shared<NonlinearConstraint>("c4", SHOT_DBL_MIN, 20.0);
+    c4->add(signomial(3.0, x, -1.0, y, -0.5));
+    c4->add(signomial(1.0, x, -1.0, z, -2.0));
+    problem->add(c4);
+
+    auto c5 = std::make_shared<NonlinearConstraint>("c5", SHOT_DBL_MIN, 12.0);
+    c5->add(signomial(1.0, y, -0.5, x, -1.0));
+    c5->add(signomial(0.5, z, -2.0, x, -1.0));
+    problem->add(c5);
+
+    auto c6 = std::make_shared<NonlinearConstraint>("c6", SHOT_DBL_MIN, 9.0);
+    c6->add(std::make_shared<MonomialTerm>(1.0, Variables({ x, y, z })));
+    c6->add(std::make_shared<MonomialTerm>(2.0, Variables({ y, z, x })));
+    c6->add(std::make_shared<MonomialTerm>(-1.0, Variables({ x, y, x })));
+    problem->add(c6);
+
+    auto c7 = std::make_shared<NonlinearConstraint>("c7", SHOT_DBL_MIN, 6.0);
+    c7->add(std::make_shared<MonomialTerm>(3.0, Variables({ z, x, y })));
+    c7->add(std::make_shared<MonomialTerm>(-2.0, Variables({ x, x, y })));
+    problem->add(c7);
+
+    problem->updateProperties();
+    problem->finalize();
+
+    return (problem);
+}
+
+bool TestAuxiliaryVariablesOfSharedPartitioning()
+{
+    bool passed = true;
+
+    std::vector<VectorDouble> points;
+
+    for(double x : { 0.2, 1.3, 3.0 })
+    {
+        for(double y : { 0.2, 0.7, 3.0 })
+        {
+            for(double z : { 0.2, 2.1, 3.0 })
+                points.push_back({ x, y, z });
+        }
+    }
+
+    for(auto partitioning : { ES_PartitionNonlinearSums::Always, ES_PartitionNonlinearSums::IfConvex })
+    {
+        std::cout << "Partitioning strategy " << static_cast<int>(partitioning) << '\n';
+
+        auto solver = std::make_unique<SHOT::Solver>();
+        auto env = solver->getEnvironment();
+        solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+        solver->updateSetting("Model.Reformulation.Constraint.PartitionNonlinearTerms", static_cast<int>(partitioning));
+        solver->updateSetting(
+            "Model.Reformulation.ObjectiveFunction.PartitionNonlinearTerms", static_cast<int>(partitioning));
+
+        auto problem = MakeSharedPartitioningProblem(env);
+
+        if(!solver->setProblem(problem))
+        {
+            std::cout << "Could not set the problem\n";
+            return (false);
+        }
+
+        if(!CheckAuxiliaryVariableValues(problem, env->reformulatedProblem, points))
+            passed = false;
+    }
+
+    return (passed);
+}
+
+// Two convex quadratic constraints sharing variables, where x3, x4 and b are separate from the other variables, so that
+// their components of the decompositions only have one variable
+static ProblemPtr MakeDecompositionProblem(EnvironmentPtr env)
+{
+    auto problem = std::make_shared<SHOT::Problem>(env);
+    problem->name = "decomposition";
+
+    auto x1 = std::make_shared<Variable>("x1", E_VariableType::Real, -2.0, 3.0);
+    auto x2 = std::make_shared<Variable>("x2", E_VariableType::Real, -2.0, 3.0);
+    auto x3 = std::make_shared<Variable>("x3", E_VariableType::Real, -2.0, 3.0);
+    auto x4 = std::make_shared<Variable>("x4", E_VariableType::Real, -2.0, 3.0);
+    auto x5 = std::make_shared<Variable>("x5", E_VariableType::Real, -2.0, 3.0);
+    auto b = std::make_shared<Variable>("b", E_VariableType::Binary);
+
+    problem->add({ x1, x2, x3, x4, x5, b });
+
+    auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    for(auto& V : { x1, x2, x3, x4, x5 })
+        objective->add(std::make_shared<LinearTerm>(-1.0, V));
+    objective->add(std::make_shared<LinearTerm>(-2.0, b));
+    problem->add(objective);
+
+    auto c1 = std::make_shared<QuadraticConstraint>("c1", SHOT_DBL_MIN, 10.0);
+    c1->add(std::make_shared<QuadraticTerm>(1.0, x1, x1));
+    c1->add(std::make_shared<QuadraticTerm>(1.0, x2, x2));
+    c1->add(std::make_shared<QuadraticTerm>(1.0, x1, x2));
+    c1->add(std::make_shared<QuadraticTerm>(2.0, x3, x3));
+    c1->add(std::make_shared<QuadraticTerm>(1.0, x4, x4));
+    c1->add(std::make_shared<QuadraticTerm>(3.0, b, b));
+    problem->add(c1);
+
+    auto c2 = std::make_shared<QuadraticConstraint>("c2", SHOT_DBL_MIN, 4.0);
+    c2->add(std::make_shared<LinearTerm>(-1.0, x1));
+    c2->add(std::make_shared<QuadraticTerm>(1.0, x3, x3));
+    c2->add(std::make_shared<QuadraticTerm>(1.0, x5, x5));
+    c2->add(std::make_shared<QuadraticTerm>(1.0, x3, x5));
+    c2->add(std::make_shared<QuadraticTerm>(0.5, x4, x4));
+    problem->add(c2);
+
+    problem->updateProperties();
+    problem->finalize();
+
+    return (problem);
+}
+
+bool TestAuxiliaryVariablesOfDecompositions()
+{
+    bool passed = true;
+
+    std::vector<VectorDouble> points;
+
+    for(double x1 : { -2.0, 0.5, 3.0 })
+    {
+        for(double x2 : { -1.5, 2.0 })
+        {
+            for(double x3 : { -2.0, 0.3, 3.0 })
+            {
+                for(double x4 : { -0.7, 2.5 })
+                {
+                    for(double x5 : { -2.0, 1.1 })
+                    {
+                        for(double b : { 0.0, 1.0 })
+                            points.push_back({ x1, x2, x3, x4, x5, b });
+                    }
+                }
+            }
+        }
+    }
+
+    for(auto method :
+        { ES_QuadraticDecomposition::EigenValueDecomposition, ES_QuadraticDecomposition::LDLDecomposition })
+    {
+        for(auto formulation : { ES_QuadraticDecompositionFormulation::CoefficientReformulated,
+                ES_QuadraticDecompositionFormulation::CoefficientRemains })
+        {
+            std::cout << "Decomposition " << static_cast<int>(method) << " with formulation "
+                      << static_cast<int>(formulation) << '\n';
+
+            auto solver = std::make_unique<SHOT::Solver>();
+            auto env = solver->getEnvironment();
+            solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+            solver->updateSetting(
+                "Model.Reformulation.Quadratics.Strategy", static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear));
+            solver->updateSetting("Model.Reformulation.Quadratics.Decomposition.Method", static_cast<int>(method));
+            solver->updateSetting(
+                "Model.Reformulation.Quadratics.Decomposition.Formulation", static_cast<int>(formulation));
+
+            auto problem = MakeDecompositionProblem(env);
+
+            if(!solver->setProblem(problem))
+            {
+                std::cout << "Could not set the problem\n";
+                return (false);
+            }
+
+            // The components of x3 and x4 in c1 have only one variable, and get no variable for the component
+            int numberOfComponents = 0;
+
+            for(auto& V : env->reformulatedProblem->auxiliaryVariables)
+            {
+                if(V->name.rfind("q_evd_", 0) == 0 || V->name.rfind("q_ldl_", 0) == 0)
+                    numberOfComponents++;
+            }
+
+            if(numberOfComponents > 4)
+            {
+                std::cout << "Expected at most four components with several variables, got " << numberOfComponents
+                          << '\n';
+                passed = false;
+            }
+
+            if(!CheckAuxiliaryVariableValues(problem, env->reformulatedProblem, points))
+                passed = false;
+        }
+    }
+
+    return (passed);
+}
+
+// A point from Ipopt can exceed the variable bounds by its bound relaxation, and projecting it to the bounds can then
+// violate a linear constraint with large coefficients, as in oil2 in MINLPLib
+bool TestPrimalSolutionSlightlyOutsideBounds()
+{
+    bool passed = true;
+
+    auto solver = std::make_unique<SHOT::Solver>();
+    auto env = solver->getEnvironment();
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+
+    // The bound tightening would give a the upper bound 3.9 from e1, after which a would be projected as well
+    solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+
+    auto problem = std::make_shared<SHOT::Problem>(env);
+    problem->name = "boundrelaxation";
+
+    auto a = std::make_shared<Variable>("a", E_VariableType::Real, 0.0, 10.0);
+    auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.0, 1.95);
+    auto z = std::make_shared<Variable>("z", E_VariableType::Real, 0.1, 3.0);
+    problem->add({ a, x, z });
+
+    auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<LinearTerm>(-1.0, x));
+    objective->add(std::make_shared<LinearTerm>(1.0, z));
+    problem->add(objective);
+
+    // x is in both linear constraints, and a in the linear and the nonlinear one
+    auto e1 = std::make_shared<LinearConstraint>("e1", 0.0, 0.0);
+    e1->add(std::make_shared<LinearTerm>(-500.0, a));
+    e1->add(std::make_shared<LinearTerm>(1000.0, x));
+    problem->add(e1);
+
+    auto e2 = std::make_shared<LinearConstraint>("e2", SHOT_DBL_MIN, 5.0);
+    e2->add(std::make_shared<LinearTerm>(1.0, x));
+    e2->add(std::make_shared<LinearTerm>(1.0, z));
+    problem->add(e2);
+
+    // z^2 + exp(a) = 1 + exp(3.9) = 50.4 at the points
+    auto c1 = std::make_shared<NonlinearConstraint>("c1", SHOT_DBL_MIN, 60.0);
+    c1->add(std::make_shared<ExpressionSum>(std::make_shared<ExpressionSquare>(std::make_shared<ExpressionVariable>(z)),
+        std::make_shared<ExpressionExp>(std::make_shared<ExpressionVariable>(a))));
+    problem->add(c1);
+
+    problem->updateProperties();
+    problem->finalize();
+
+    if(!solver->setProblem(problem))
+    {
+        std::cout << "Could not set the problem\n";
+        return (false);
+    }
+
+    auto makeSolution = [](double excess)
+    {
+        PrimalSolution solution;
+        double xValue = 1.95 + excess;
+        solution.point = { 2.0 * xValue, xValue, 1.0 };
+        solution.sourceType = E_PrimalSolutionSource::NLPFixedIntegers;
+        solution.objValue = -xValue + 1.0;
+        solution.iterFound = 1;
+        return (solution);
+    };
+
+    // 1e-8 is the bound relaxation of Ipopt, and projecting x would violate e1 by 1000 * 1e-8 = 1e-5
+    if(!env->primalSolver->checkPrimalSolutionPoint(makeSolution(1.95e-8)))
+    {
+        std::cout << "A point exceeding a bound by the bound relaxation of Ipopt was not accepted\n";
+        passed = false;
+    }
+
+    // A larger excess is still projected, after which e1 is violated
+    if(env->primalSolver->checkPrimalSolutionPoint(makeSolution(1e-3)))
+    {
+        std::cout << "A point exceeding a bound by 1e-3 was accepted, although its projection violates e1\n";
+        passed = false;
+    }
+
+    return (passed);
+}
+
 int SolverTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -1825,6 +2409,31 @@ int SolverTest(int argc, char* argv[])
         std::cout << "Starting test for the primal solution pool" << std::endl;
         passed = TestPrimalSolutionPool();
         std::cout << "Finished test for the primal solution pool." << std::endl;
+        break;
+    case 21:
+        std::cout << "Starting test for the auxiliary variables of reformulated monomials" << std::endl;
+        passed = TestAuxiliaryVariablesOfMonomials();
+        std::cout << "Finished test for the auxiliary variables of reformulated monomials." << std::endl;
+        break;
+    case 22:
+        std::cout << "Starting test for the auxiliary variables of reformulated binary products" << std::endl;
+        passed = TestAuxiliaryVariablesOfBinaryProducts();
+        std::cout << "Finished test for the auxiliary variables of reformulated binary products." << std::endl;
+        break;
+    case 23:
+        std::cout << "Starting test for the shared auxiliary variables of partitioned terms" << std::endl;
+        passed = TestAuxiliaryVariablesOfSharedPartitioning();
+        std::cout << "Finished test for the shared auxiliary variables of partitioned terms." << std::endl;
+        break;
+    case 24:
+        std::cout << "Starting test for the auxiliary variables of quadratic decompositions" << std::endl;
+        passed = TestAuxiliaryVariablesOfDecompositions();
+        std::cout << "Finished test for the auxiliary variables of quadratic decompositions." << std::endl;
+        break;
+    case 25:
+        std::cout << "Starting test for primal solutions slightly outside the variable bounds" << std::endl;
+        passed = TestPrimalSolutionSlightlyOutsideBounds();
+        std::cout << "Finished test for primal solutions slightly outside the variable bounds." << std::endl;
         break;
     default:
         passed = false;

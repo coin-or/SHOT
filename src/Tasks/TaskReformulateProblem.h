@@ -97,13 +97,18 @@ private:
 
     LinearTerms partitionNonlinearBinaryProduct(const std::shared_ptr<ExpressionSum> source, bool reversedSigns);
 
-    std::tuple<LinearTerms, QuadraticTerms> reformulateAndPartitionQuadraticSum(
+    // Returns the linear terms and the quadratic terms replacing the terms, and a constant from fixed variables
+    std::tuple<LinearTerms, QuadraticTerms, double> reformulateAndPartitionQuadraticSum(
         QuadraticTerms& quadraticTerms, bool reversedSigns, ES_PartitionNonlinearSums partitionStrategy);
     std::tuple<LinearTerms, MonomialTerms> reformulateMonomialSum(
         const MonomialTerms& monomialTerms, bool reversedSigns);
 
     LinearTerms doEigenvalueDecomposition(QuadraticTerms& quadraticTerms);
     LinearTerms doLDLDecomposition(QuadraticTerms& quadraticTerms);
+
+    // Adds the term value * y^2 of a decomposition with y given by the linear terms
+    void addDecompositionComponent(const LinearTerms& componentTerms, double value,
+        E_AuxiliaryVariableType auxVariableType, const std::string& name, std::vector<LinearTermPtr>& resultTerms);
 
     NonlinearExpressionPtr reformulateNonlinearExpression(NonlinearExpressionPtr source);
     NonlinearExpressionPtr reformulateNonlinearExpression(std::shared_ptr<ExpressionAbs> source);
@@ -143,11 +148,21 @@ private:
     std::map<VariablePtr, Variables, VariableIndexComparator> integerAuxiliaryBinaryVariables;
 
     std::map<std::pair<VariablePtr, double>, AuxiliaryVariablePtr, VariableIndexComparator> squareAuxVariables;
+    std::map<int, int> squareAuxVariableCounts; // The number of square auxiliary variables of each variable
 
     std::map<std::tuple<VariablePtr, VariablePtr>, AuxiliaryVariablePtr, VariableIndexComparator>
         bilinearAuxVariables;
 
     std::map<std::string, AuxiliaryVariablePtr> absoluteExpressionsAuxVariables;
+
+    // The auxiliary variables w >= f(x) or w >= -f(x) of the partitioned terms, found by whether the sign is positive
+    // and a key of the term built from the indexes of its variables, or by the coefficient of a monomial
+    std::map<std::pair<bool, std::string>, AuxiliaryVariablePtr> nonlinearExpressionAuxVariables;
+    std::map<std::pair<double, std::vector<int>>, AuxiliaryVariablePtr> monomialAuxVariables;
+    std::map<std::pair<bool, std::vector<std::pair<int, double>>>, AuxiliaryVariablePtr> signomialAuxVariables;
+
+    // The auxiliary variables w = b1 * ... * bn of the products of binary variables, found by the variable indexes
+    std::map<std::vector<int>, AuxiliaryVariablePtr> binaryMonomialAuxVariables;
 
     ProblemPtr reformulatedProblem;
 };

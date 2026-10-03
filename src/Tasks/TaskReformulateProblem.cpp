@@ -25,8 +25,67 @@
 #include "gurobi_c.h"
 #endif
 
+#include <cstdio>
+
 namespace SHOT
 {
+
+// A key identifying an expression by its structure, i.e., its operations, the indexes of its variables and the exact
+// values of its constants. The children of sums and products are sorted, since their order does not matter.
+static std::string getStructuralKey(const NonlinearExpression* expression)
+{
+    std::string key = std::to_string(static_cast<int>(expression->getType()));
+
+    if(expression->getType() == E_NonlinearExpressionTypes::Constant)
+    {
+        // The hexadecimal format is exact, unlike the default output format with six significant digits
+        char constant[32];
+        std::snprintf(constant, sizeof(constant), "%a", static_cast<const ExpressionConstant*>(expression)->constant);
+        return (key + ":" + constant);
+    }
+
+    if(expression->getType() == E_NonlinearExpressionTypes::Variable)
+        return (key + ":" + std::to_string(static_cast<const ExpressionVariable*>(expression)->variable->getIndex()));
+
+    std::vector<std::string> childKeys;
+
+    if(auto unary = dynamic_cast<const ExpressionUnary*>(expression))
+    {
+        childKeys.push_back(getStructuralKey(unary->child.get()));
+    }
+    else if(auto binary = dynamic_cast<const ExpressionBinary*>(expression))
+    {
+        childKeys.push_back(getStructuralKey(binary->firstChild.get()));
+        childKeys.push_back(getStructuralKey(binary->secondChild.get()));
+    }
+    else if(auto general = dynamic_cast<const ExpressionGeneral*>(expression))
+    {
+        for(auto& C : general->children)
+            childKeys.push_back(getStructuralKey(C.get()));
+
+        if(expression->getType() == E_NonlinearExpressionTypes::Sum
+            || expression->getType() == E_NonlinearExpressionTypes::Product)
+            std::sort(childKeys.begin(), childKeys.end());
+    }
+
+    key += "(";
+
+    for(size_t i = 0; i < childKeys.size(); i++)
+        key += (i == 0 ? "" : ",") + childKeys[i];
+
+    return (key + ")");
+}
+
+// The objective function is minimized in the reformulated problem, so a maximized one has its terms negated
+static SignomialTermPtr copySignomialTerm(const SignomialTermPtr& term, bool reversedSign, ProblemPtr destination)
+{
+    auto copiedTerm = std::make_shared<SignomialTerm>(term.get(), destination);
+
+    if(reversedSign)
+        copiedTerm->coefficient *= -1.0;
+
+    return (copiedTerm);
+}
 
 TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
@@ -147,9 +206,10 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
             break;
         }
     }
-    else if(env->settings->getSetting<int>("Dual.MIP.Solver") == (int)ES_MIPSolver::Cbc)
+    else if(env->settings->getSetting<int>("Dual.MIP.Solver") == (int)ES_MIPSolver::Cbc
+        || env->settings->getSetting<int>("Dual.MIP.Solver") == (int)ES_MIPSolver::Highs)
     {
-        // Cbc does not support quadratic terms
+        // Cbc and HiGHS are not given quadratic terms
         useConvexQuadraticConstraints = false;
         useConvexQuadraticConstraintsWithinTolerance = false;
         useNonconvexQuadraticConstraints = false;
@@ -474,7 +534,8 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
                     destinationObjective->ownerProblem = reformulatedProblem;
                     destinationObjective->direction = sourceObjective->direction;
 
-                    destinationObjective->constant = env->problem->objectiveFunction->constant
+                    // The constant already contains the terms of the fixed variables added above
+                    destinationObjective->constant += env->problem->objectiveFunction->constant
                         + epigraphFactor
                             * (std::dynamic_pointer_cast<LinearConstraint>(epigraphConstraint)->constant
                                 - std::dynamic_pointer_cast<LinearConstraint>(epigraphConstraint)->valueRHS);
@@ -523,7 +584,9 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
         copyLinearTermsToObjectiveFunction(sourceObjective->linearTerms, destinationObjective);
 
         destinationObjective->direction = env->problem->objectiveFunction->direction;
-        destinationObjective->constant = env->problem->objectiveFunction->constant;
+
+        // The constant already contains the terms of the fixed variables, which were added when copying the terms
+        destinationObjective->constant += env->problem->objectiveFunction->constant;
 
         reformulatedProblem->add(std::move(destinationObjective));
 
@@ -551,7 +614,9 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
         copyQuadraticTermsToObjectiveFunction(sourceObjective->quadraticTerms, destinationObjective);
 
         destinationObjective->direction = env->problem->objectiveFunction->direction;
-        destinationObjective->constant = env->problem->objectiveFunction->constant;
+
+        // The constant already contains the terms of the fixed variables, which were added when copying the terms
+        destinationObjective->constant += env->problem->objectiveFunction->constant;
 
         reformulatedProblem->add(std::move(destinationObjective));
 
@@ -580,6 +645,9 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
 
     bool isSignReversed = env->problem->objectiveFunction->properties.isMaximize;
 
+    // The constant from quadratic terms with fixed variables, with its sign already reversed if needed
+    double quadraticConstant = 0.0;
+
     if(env->problem->objectiveFunction->properties.hasLinearTerms)
         copyOriginalLinearTerms = true;
 
@@ -587,31 +655,56 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
     {
         auto sourceObjective = std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->problem->objectiveFunction);
 
-        auto [tmpLinearTerms, tmpQuadraticTerms]
+        auto [tmpLinearTerms, tmpQuadraticTerms, tmpConstant]
             = reformulateAndPartitionQuadraticSum(sourceObjective->quadraticTerms, isSignReversed,
                 static_cast<ES_PartitionNonlinearSums>(
                     env->settings->getSetting<int>("Model.Reformulation.ObjectiveFunction.PartitionQuadraticTerms")));
 
         destinationLinearTerms.add(tmpLinearTerms);
         destinationQuadraticTerms.add(tmpQuadraticTerms);
+        quadraticConstant = tmpConstant;
     }
 
     if(env->problem->objectiveFunction->properties.hasMonomialTerms)
     {
         auto sourceObjective = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->problem->objectiveFunction);
 
+        // The binary monomials are reformulated as in the constraints, and the remaining ones partitioned or kept
+        MonomialTerms remainingMonomialTerms;
+
+        if(env->settings->getSetting<int>("Model.Reformulation.Monomials.Formulation")
+            != static_cast<int>(ES_ReformulationBinaryMonomials::None))
+        {
+            auto [tmpLinearTerms, tmpMonomialTerms]
+                = reformulateMonomialSum(sourceObjective->monomialTerms, isSignReversed);
+
+            destinationLinearTerms.add(tmpLinearTerms);
+            remainingMonomialTerms = tmpMonomialTerms;
+        }
+        else
+        {
+            remainingMonomialTerms = sourceObjective->monomialTerms;
+        }
+
         if(static_cast<ES_PartitionNonlinearSums>(
                env->settings->getSetting<int>("Model.Reformulation.ObjectiveFunction.PartitionNonlinearTerms"))
                 == ES_PartitionNonlinearSums::Always
-            && sourceObjective->monomialTerms.size() > 1)
+            && remainingMonomialTerms.size() > 1)
         {
-            auto tmpLinearTerms = partitionMonomialTerms(sourceObjective->monomialTerms, isSignReversed);
+            auto tmpLinearTerms = partitionMonomialTerms(remainingMonomialTerms, isSignReversed);
             destinationLinearTerms.add(tmpLinearTerms);
         }
         else // Monomials are always nonconvex
         {
-            for(auto& T : sourceObjective->monomialTerms)
-                destinationMonomialTerms.add(std::make_shared<MonomialTerm>(T.get(), reformulatedProblem));
+            for(auto& T : remainingMonomialTerms)
+            {
+                auto monomialTerm = std::make_shared<MonomialTerm>(T.get(), reformulatedProblem);
+
+                if(isSignReversed)
+                    monomialTerm->coefficient *= -1.0;
+
+                destinationMonomialTerms.add(monomialTerm);
+            }
         }
     }
 
@@ -645,13 +738,13 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
             else
             {
                 for(auto& T : sourceObjective->signomialTerms)
-                    destinationSignomialTerms.add(std::make_shared<SignomialTerm>(T.get(), reformulatedProblem));
+                    destinationSignomialTerms.add(copySignomialTerm(T, isSignReversed, reformulatedProblem));
             }
         }
         else
         {
             for(auto& T : sourceObjective->signomialTerms)
-                destinationSignomialTerms.add(std::make_shared<SignomialTerm>(T.get(), reformulatedProblem));
+                destinationSignomialTerms.add(copySignomialTerm(T, isSignReversed, reformulatedProblem));
         }
     }
 
@@ -716,6 +809,7 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
 
     objective->constant
         = isSignReversed ? -env->problem->objectiveFunction->constant : env->problem->objectiveFunction->constant;
+    objective->constant += quadraticConstant;
     objective->direction
         = isSignReversed ? E_ObjectiveFunctionDirection::Minimize : env->problem->objectiveFunction->direction;
 
@@ -1008,16 +1102,20 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
     {
         auto sourceConstraint = std::dynamic_pointer_cast<QuadraticConstraint>(C);
 
-        auto [tmpLinearTerms, tmpQuadraticTerms] = reformulateAndPartitionQuadraticSum(
+        auto [tmpLinearTerms, tmpQuadraticTerms, tmpConstant] = reformulateAndPartitionQuadraticSum(
             sourceConstraint->quadraticTerms, isSignReversed, partitionQuadraticTermsStrategy);
 
         destinationLinearTerms.add(tmpLinearTerms);
         destinationQuadraticTerms.add(tmpQuadraticTerms);
+        constant += tmpConstant;
     }
 
     if(C->properties.hasMonomialTerms)
     {
         auto sourceConstraint = std::dynamic_pointer_cast<NonlinearConstraint>(C);
+
+        // The monomials that are not reformulated, i.e., all of them if binary monomials are not reformulated
+        MonomialTerms remainingMonomialTerms;
 
         if(env->settings->getSetting<int>("Model.Reformulation.Monomials.Formulation")
             != static_cast<int>(ES_ReformulationBinaryMonomials::None))
@@ -1025,43 +1123,27 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
             auto [tmpLinearTerms, tmpMonomialTerms]
                 = reformulateMonomialSum(sourceConstraint->monomialTerms, isSignReversed);
 
-            if(tmpMonomialTerms.size() == 0)
-            {
-                // All monomials have been reformulated
-                destinationLinearTerms.add(tmpLinearTerms);
-            }
-            else
-            {
-                if(static_cast<ES_PartitionNonlinearSums>(
-                       env->settings->getSetting<int>("Model.Reformulation.Constraint.PartitionNonlinearTerms"))
-                        == ES_PartitionNonlinearSums::Always
-                    && tmpMonomialTerms.size() > 1)
-                {
-                    auto tmpLinearTerms = partitionMonomialTerms(tmpMonomialTerms, isSignReversed);
-                    destinationLinearTerms.add(tmpLinearTerms);
-                }
-                else // Monomials are always nonconvex
-                {
-                    for(auto& T : sourceConstraint->monomialTerms)
-                        destinationMonomialTerms.add(std::make_shared<MonomialTerm>(T.get(), reformulatedProblem));
-                }
-            }
+            // The linear terms replacing the reformulated monomials must be kept also when some monomials remain
+            destinationLinearTerms.add(tmpLinearTerms);
+            remainingMonomialTerms = tmpMonomialTerms;
         }
         else
         {
-            if(static_cast<ES_PartitionNonlinearSums>(
-                   env->settings->getSetting<int>("Model.Reformulation.Constraint.PartitionNonlinearTerms"))
-                    == ES_PartitionNonlinearSums::Always
-                && destinationMonomialTerms.size() > 1)
-            {
-                auto tmpLinearTerms = partitionMonomialTerms(destinationMonomialTerms, isSignReversed);
-                destinationLinearTerms.add(tmpLinearTerms);
-            }
-            else // Monomials are always nonconvex
-            {
-                for(auto& T : sourceConstraint->monomialTerms)
-                    destinationMonomialTerms.add(std::make_shared<MonomialTerm>(T.get(), reformulatedProblem));
-            }
+            remainingMonomialTerms = sourceConstraint->monomialTerms;
+        }
+
+        if(static_cast<ES_PartitionNonlinearSums>(
+               env->settings->getSetting<int>("Model.Reformulation.Constraint.PartitionNonlinearTerms"))
+                == ES_PartitionNonlinearSums::Always
+            && remainingMonomialTerms.size() > 1)
+        {
+            auto tmpLinearTerms = partitionMonomialTerms(remainingMonomialTerms, isSignReversed);
+            destinationLinearTerms.add(tmpLinearTerms);
+        }
+        else // Monomials are always nonconvex
+        {
+            for(auto& T : remainingMonomialTerms)
+                destinationMonomialTerms.add(std::make_shared<MonomialTerm>(T.get(), reformulatedProblem));
         }
     }
 
@@ -1129,11 +1211,12 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
 
         if(tmpQuadraticTerms.size() > 0)
         {
-            auto [tmpLinearTerms2, tmpQuadraticTerms2] = reformulateAndPartitionQuadraticSum(
+            auto [tmpLinearTerms2, tmpQuadraticTerms2, tmpConstant2] = reformulateAndPartitionQuadraticSum(
                 tmpQuadraticTerms, isSignReversed, partitionQuadraticTermsStrategy);
 
             destinationLinearTerms.add(tmpLinearTerms2);
             destinationQuadraticTerms.add(tmpQuadraticTerms2);
+            constant += tmpConstant2;
         }
 
         if(tmpMonomialTerms.size() > 0)
@@ -1206,15 +1289,18 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
 
         if(destinationSignomialTerms.size() == 1 && destinationQuadraticTerms.size() == 0
             && destinationLinearTerms.size() == 0 && destinationSignomialTerms[0]->elements.size() > 1
-            && destinationSignomialTerms[0]->coefficient < 0.0 && valueLHS == SHOT_DBL_MIN && valueRHS < 0.0)
+            && destinationSignomialTerms[0]->coefficient < 0.0 && valueLHS == SHOT_DBL_MIN && valueRHS - constant < 0.0)
         // We can perhaps use the transformation for terms of the type  c * x1^p1 * ... xn^pn <= d, c,d < 0
         {
             if(std::all_of(destinationSignomialTerms[0]->elements.begin(), destinationSignomialTerms[0]->elements.end(),
                    [](SignomialElementPtr E) { return (E->power > 0.0 && E->variable->lowerBound > 0.0); }))
             {
-                // All coefficients are negative and variable positive, i.e. we can use the reformulation
+                // All powers are positive and the variables positive, so c * x1^p1 * ... * xn^pn <= d is
+                // x1^p1 * ... * xn^pn >= d / c, i.e. -p1 * log(x1) - ... - pn * log(xn) <= -log(d / c), where the
+                // constant of the constraint is moved to d
 
-                double remainingRHS = std::log(valueRHS * destinationSignomialTerms[0]->coefficient);
+                double remainingRHS = -std::log((valueRHS - constant) / destinationSignomialTerms[0]->coefficient);
+                constant = 0.0;
 
                 constraint = std::make_shared<LinearConstraint>(C->name, SHOT_DBL_MIN, remainingRHS);
                 constraint->properties.classification = E_ConstraintClassification::Linear;
@@ -1259,22 +1345,34 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
         else if(destinationSignomialTerms.size() == 1 && destinationQuadraticTerms.size() == 0
             && destinationLinearTerms.size() == 1 && destinationSignomialTerms[0]->elements.size() > 1
             && destinationSignomialTerms[0]->coefficient > 0.0 && destinationLinearTerms[0]->coefficient < 0
-            && valueLHS == SHOT_DBL_MIN && valueRHS <= 0.0)
+            && valueLHS == SHOT_DBL_MIN && valueRHS - constant == 0.0)
         // We can perhaps use the transformation for terms of the type  c * x1^p1 * ... xn^pn <= y, c > 0
         {
             if(std::all_of(destinationSignomialTerms[0]->elements.begin(), destinationSignomialTerms[0]->elements.end(),
                    [](SignomialElementPtr E) { return (E->power < 0.0 && E->variable->lowerBound > 0.0); }))
             {
-                // All coefficients are negative and variable positive, i.e. we can use the reformulation
+                // All powers are negative and the variables positive, so c * x1^p1 * ... * xn^pn + a * y <= 0 with
+                // a < 0 is p1 * log(x1) + ... + pn * log(xn) - log(y) <= log(-a) - log(c)
 
-                constraint = std::make_shared<LinearConstraint>(C->name, SHOT_DBL_MIN, 0.0);
+                double remainingRHS = std::log(-destinationLinearTerms[0]->coefficient)
+                    - std::log(destinationSignomialTerms[0]->coefficient);
+                constant = 0.0;
+
+                constraint = std::make_shared<LinearConstraint>(C->name, SHOT_DBL_MIN, remainingRHS);
                 constraint->properties.classification = E_ConstraintClassification::Linear;
                 constraint->ownerProblem = reformulatedProblem;
 
                 for(auto& E : destinationSignomialTerms[0]->elements)
                 {
+                    // The bounds of p * log(x), which are finite at the lower bound since it is positive
+                    double valueAtLowerBound = E->power * std::log(E->variable->lowerBound);
+                    double valueAtUpperBound = (E->variable->upperBound < SHOT_DBL_MAX)
+                        ? E->power * std::log(E->variable->upperBound)
+                        : SHOT_DBL_MIN;
+
                     auto auxVariable = std::make_shared<AuxiliaryVariable>(
-                        "s_rpsig_" + std::to_string(auxVariableCounter + 1), E_VariableType::Real, SHOT_DBL_MIN, 0.0);
+                        "s_rpsig_" + std::to_string(auxVariableCounter + 1), E_VariableType::Real,
+                        std::min(valueAtLowerBound, valueAtUpperBound), std::max(valueAtLowerBound, valueAtUpperBound));
 
                     auxVariable->properties.auxiliaryType = E_AuxiliaryVariableType::NonlinearExpressionPartitioning;
                     auxVariableCounter++;
@@ -1305,9 +1403,16 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
                     resultingConstraints.push_back(std::move(auxConstraint));
                 }
 
-                auto auxVariable = std::make_shared<AuxiliaryVariable>(
-                    "s_rpsig_" + std::to_string(auxVariableCounter + 1), E_VariableType::Real, SHOT_DBL_MIN,
-                    SHOT_DBL_MAX);
+                auto linearVariable = reformulatedProblem->getVariable(destinationLinearTerms[0]->variable->getIndex());
+
+                // The bound of -log(y) is only finite at a positive upper bound
+                double auxLowerBound = (linearVariable->upperBound > 0.0 && linearVariable->upperBound < SHOT_DBL_MAX)
+                    ? -std::log(linearVariable->upperBound)
+                    : SHOT_DBL_MIN;
+
+                auto auxVariable
+                    = std::make_shared<AuxiliaryVariable>("s_rpsig_" + std::to_string(auxVariableCounter + 1),
+                        E_VariableType::Real, auxLowerBound, SHOT_DBL_MAX);
 
                 auxVariable->properties.auxiliaryType = E_AuxiliaryVariableType::NonlinearExpressionPartitioning;
                 auxVariableCounter++;
@@ -1326,10 +1431,8 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
                 auxConstraint->properties.classification = E_ConstraintClassification::Nonlinear;
                 auxConstraintCounter++;
 
-                NonlinearExpressionPtr expression = std::make_shared<ExpressionProduct>(
-                    std::make_shared<ExpressionConstant>(destinationLinearTerms[0]->coefficient),
-                    std::make_shared<ExpressionLog>(
-                        std::make_shared<ExpressionVariable>(destinationLinearTerms[0]->variable)));
+                NonlinearExpressionPtr expression = std::make_shared<ExpressionNegate>(
+                    std::make_shared<ExpressionLog>(std::make_shared<ExpressionVariable>(linearVariable)));
 
                 auxConstraint->add(std::move(expression));
                 auxVariable->nonlinearExpression = auxConstraint->nonlinearExpression;
@@ -1443,10 +1546,12 @@ LinearTerms TaskReformulateProblem::partitionNonlinearSum(
                 quadTerms.takeOwnership(reformulatedProblem);
                 quadTerms.add(optionalQuadraticTerm.value());
 
-                auto [tmpLinearTerms, tmpQuadraticTerms]
+                auto [tmpLinearTerms, tmpQuadraticTerms, tmpConstant]
                     = reformulateAndPartitionQuadraticSum(quadTerms, reversedSigns, partitionNonlinearTermsStrategy);
 
-                if(tmpQuadraticTerms.size() == 0)
+                // A constant from a fixed variable cannot be returned here, so the term is then partitioned as a
+                // nonlinear term instead; the expressions have been simplified, so this should not happen
+                if(tmpQuadraticTerms.size() == 0 && tmpConstant == 0.0)
                 // Otherwise we cannot proceed and will continue as if nonbilinear term
                 {
                     resultLinearTerms.add(tmpLinearTerms);
@@ -1479,14 +1584,26 @@ LinearTerms TaskReformulateProblem::partitionNonlinearSum(
 
         if(!allNonlinearExpressionsReformulated)
         {
+            // The auxiliary variable w >= f(x), or w >= -f(x) with the signs reversed, is shared by equal terms. A
+            // constant factor of the term stays in f, since the auxiliary variable is otherwise scaled differently
+            // from the term, which can make the cuts much less accurate in the objective function or constraint.
+            const auto& expression = T;
+            double sign = reversedSigns ? -1.0 : 1.0;
+            auto key = std::make_pair(sign > 0.0, getStructuralKey(expression.get()));
+
+            auto auxVariableIterator = nonlinearExpressionAuxVariables.find(key);
+
+            if(auxVariableIterator != nonlinearExpressionAuxVariables.end())
+            {
+                resultLinearTerms.add(std::make_shared<LinearTerm>(1.0, auxVariableIterator->second));
+                continue;
+            }
+
             Interval bounds;
 
             try
             {
-                bounds = T->getBounds();
-
-                if(reversedSigns)
-                    bounds = -1.0 * bounds;
+                bounds = sign * expression->getBounds();
             }
             catch(mc::Interval::Exceptions&)
             {
@@ -1499,6 +1616,8 @@ LinearTerms TaskReformulateProblem::partitionNonlinearSum(
             auxVariableCounter++;
             env->results->increaseAuxiliaryVariableCounter(E_AuxiliaryVariableType::NonlinearExpressionPartitioning);
 
+            nonlinearExpressionAuxVariables.emplace(key, auxVariable);
+
             resultLinearTerms.add(std::make_shared<LinearTerm>(1.0, auxVariable));
 
             bool extractQuadraticTerms = (extractQuadraticTermsSetting
@@ -1507,53 +1626,44 @@ LinearTerms TaskReformulateProblem::partitionNonlinearSum(
             if(quadraticStrategy < ES_QuadraticProblemStrategy::ConvexQuadraticallyConstrained)
                 extractQuadraticTerms = false;
 
+            std::optional<QuadraticTermPtr> quadraticTerm;
+
             // If the extracted term is quadratic, create a quadratic constraint instead of a nonlinear one
-            if(extractQuadraticTerms && T->getType() == E_NonlinearExpressionTypes::Product
-                && std::dynamic_pointer_cast<ExpressionProduct>(T)->isQuadraticTerm())
+            if(extractQuadraticTerms && expression->getType() == E_NonlinearExpressionTypes::Product
+                && std::dynamic_pointer_cast<ExpressionProduct>(expression)->isQuadraticTerm())
             {
-                auto quadraticTerm
-                    = reformulateProductToQuadraticTerm(std::dynamic_pointer_cast<ExpressionProduct>(T)).value();
-
-                auto auxConstraint = std::make_shared<QuadraticConstraint>(
-                    "s_pqnl_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, 0.0);
-                auxConstraint->add(std::make_shared<LinearTerm>(-1.0, auxVariable));
-                auxConstraintCounter++;
-
-                if(reversedSigns)
-                {
-                    quadraticTerm->coefficient *= -1.0;
-                    auxConstraint->add(quadraticTerm);
-                }
-                else
-                {
-                    auxConstraint->add(quadraticTerm);
-                }
-
-                reformulatedProblem->add(std::move(auxVariable));
-                reformulatedProblem->add(std::move(auxConstraint));
+                quadraticTerm
+                    = reformulateProductToQuadraticTerm(std::dynamic_pointer_cast<ExpressionProduct>(expression));
             }
-            else if(extractQuadraticTerms && T->getType() == E_NonlinearExpressionTypes::Square
-                && std::dynamic_pointer_cast<ExpressionSquare>(T)->child->getType()
+            else if(extractQuadraticTerms && expression->getType() == E_NonlinearExpressionTypes::Square
+                && std::dynamic_pointer_cast<ExpressionSquare>(expression)->child->getType()
                     == E_NonlinearExpressionTypes::Variable)
             {
                 auto variable = std::dynamic_pointer_cast<ExpressionVariable>(
-                    std::dynamic_pointer_cast<ExpressionSquare>(T)->child);
+                    std::dynamic_pointer_cast<ExpressionSquare>(expression)->child);
 
-                auto quadraticTerm = std::make_shared<QuadraticTerm>(1.0, variable->variable, variable->variable);
+                quadraticTerm = std::make_shared<QuadraticTerm>(1.0, variable->variable, variable->variable);
+            }
+
+            if(quadraticTerm)
+            {
+                // The variables of the term may belong to the original problem
+                auto term = std::make_shared<QuadraticTerm>(sign * quadraticTerm.value()->coefficient,
+                    reformulatedProblem->getVariable(quadraticTerm.value()->firstVariable->getIndex()),
+                    reformulatedProblem->getVariable(quadraticTerm.value()->secondVariable->getIndex()));
+
+                bool isSquare = (term->firstVariable == term->secondVariable);
+
                 auto auxConstraint = std::make_shared<QuadraticConstraint>(
-                    "s_psnl_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, 0.0);
+                    (isSquare ? "s_psnl_" : "s_pqnl_") + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, 0.0);
                 auxConstraint->add(std::make_shared<LinearTerm>(-1.0, auxVariable));
                 auxConstraintCounter++;
 
-                if(reversedSigns)
-                {
-                    quadraticTerm->coefficient *= -1.0;
-                    auxConstraint->add(quadraticTerm);
-                }
-                else
-                {
-                    auxConstraint->add(quadraticTerm);
-                }
+                auxConstraint->add(term);
+
+                // The value of the auxiliary variable is the value of the term
+                auxVariable->quadraticTerms.add(
+                    std::make_shared<QuadraticTerm>(term->coefficient, term->firstVariable, term->secondVariable));
 
                 reformulatedProblem->add(std::move(auxVariable));
                 reformulatedProblem->add(std::move(auxConstraint));
@@ -1565,14 +1675,14 @@ LinearTerms TaskReformulateProblem::partitionNonlinearSum(
                 auxConstraint->add(std::make_shared<LinearTerm>(-1.0, auxVariable));
                 auxConstraintCounter++;
 
-                if(reversedSigns)
+                if(sign < 0.0)
                 {
-                    auxConstraint->add(simplify(
-                        std::make_shared<ExpressionNegate>(copyNonlinearExpression(T.get(), reformulatedProblem))));
+                    auxConstraint->add(simplify(std::make_shared<ExpressionNegate>(
+                        copyNonlinearExpression(expression.get(), reformulatedProblem))));
                 }
                 else
                 {
-                    auxConstraint->add(copyNonlinearExpression(T.get(), reformulatedProblem));
+                    auxConstraint->add(copyNonlinearExpression(expression.get(), reformulatedProblem));
                 }
 
                 auxVariable->nonlinearExpression = auxConstraint->nonlinearExpression;
@@ -1603,6 +1713,26 @@ LinearTerms TaskReformulateProblem::partitionMonomialTerms(const MonomialTerms& 
 
     for(auto& T : sourceTerms)
     {
+        // The auxiliary variable w >= c * x1 * ... * xn, or w >= -c * x1 * ... * xn with the signs reversed, is
+        // shared by equal terms; the coefficient stays in the term, as for the other partitioned terms
+        double coefficient = reversedSigns ? -T->coefficient : T->coefficient;
+
+        std::vector<int> variableIndexes;
+
+        for(auto& V : T->variables)
+            variableIndexes.push_back(V->getIndex());
+
+        std::sort(variableIndexes.begin(), variableIndexes.end());
+
+        auto key = std::make_pair(coefficient, variableIndexes);
+        auto auxVariableIterator = monomialAuxVariables.find(key);
+
+        if(auxVariableIterator != monomialAuxVariables.end())
+        {
+            resultTerms.push_back(std::make_shared<LinearTerm>(1.0, auxVariableIterator->second));
+            continue;
+        }
+
         Interval bounds;
 
         try
@@ -1623,6 +1753,8 @@ LinearTerms TaskReformulateProblem::partitionMonomialTerms(const MonomialTerms& 
         auxVariableCounter++;
         env->results->increaseAuxiliaryVariableCounter(E_AuxiliaryVariableType::MonomialTermsPartitioning);
 
+        monomialAuxVariables.emplace(key, auxVariable);
+
         resultTerms.push_back(std::make_shared<LinearTerm>(1.0, auxVariable));
 
         auto auxConstraint = std::make_shared<NonlinearConstraint>(
@@ -1631,9 +1763,7 @@ LinearTerms TaskReformulateProblem::partitionMonomialTerms(const MonomialTerms& 
         auxConstraintCounter++;
 
         auto monomialTerm = std::make_shared<MonomialTerm>(T.get(), reformulatedProblem);
-
-        if(reversedSigns)
-            monomialTerm->coefficient *= -1.0;
+        monomialTerm->coefficient = coefficient;
 
         auxConstraint->add(monomialTerm);
 
@@ -1665,9 +1795,31 @@ LinearTerms TaskReformulateProblem::partitionSignomialTerms(const SignomialTerms
 
     for(auto& T : sourceTerms)
     {
+        if(T->coefficient == 0.0)
+            continue;
+
         Interval bounds;
 
         double coefficient = std::abs(T->coefficient);
+
+        // The auxiliary variable w >= sign * x1^p1 * ... * xn^pn with sign = +-1 is used as |c| * w, so that terms
+        // only differing in their coefficient share the auxiliary variable
+        bool isPositive = ((T->coefficient < 0.0) == reversedSigns);
+        std::vector<std::pair<int, double>> elements;
+
+        for(auto& E : T->elements)
+            elements.emplace_back(E->variable->getIndex(), E->power);
+
+        std::sort(elements.begin(), elements.end());
+
+        auto key = std::make_pair(isPositive, elements);
+        auto auxVariableIterator = signomialAuxVariables.find(key);
+
+        if(auxVariableIterator != signomialAuxVariables.end())
+        {
+            resultTerms.push_back(std::make_shared<LinearTerm>(coefficient, auxVariableIterator->second));
+            continue;
+        }
 
         try
         {
@@ -1687,6 +1839,8 @@ LinearTerms TaskReformulateProblem::partitionSignomialTerms(const SignomialTerms
         auxVariableCounter++;
         env->results->increaseAuxiliaryVariableCounter(E_AuxiliaryVariableType::SignomialTermsPartitioning);
 
+        signomialAuxVariables.emplace(key, auxVariable);
+
         resultTerms.push_back(std::make_shared<LinearTerm>(coefficient, auxVariable));
 
         auto auxConstraint = std::make_shared<NonlinearConstraint>(
@@ -1702,17 +1856,18 @@ LinearTerms TaskReformulateProblem::partitionSignomialTerms(const SignomialTerms
             signomialTerm->coefficient *= -1.0;
         }
 
-        // The bounds are set through the problem, so that its stored bound vectors are updated as well
-        if(signomialTerm->coefficient < 0.0 && auxVariable->upperBound > 0.0)
-            reformulatedProblem->setVariableUpperBound(auxVariable->getIndex(), 0.0);
-        else if(signomialTerm->coefficient > 0.0 && auxVariable->lowerBound < 0.0)
-            reformulatedProblem->setVariableLowerBound(auxVariable->getIndex(), 0.0);
-
         auxConstraint->add(signomialTerm);
 
         auxVariable->signomialTerms.push_back(signomialTerm);
 
-        reformulatedProblem->add(std::move(auxVariable));
+        // The variable must be in the problem before its bounds can be set through the problem, which also updates
+        // the stored bound vectors
+        reformulatedProblem->add(auxVariable);
+
+        if(signomialTerm->coefficient < 0.0 && auxVariable->upperBound > 0.0)
+            reformulatedProblem->setVariableUpperBound(auxVariable->getIndex(), 0.0);
+        else if(signomialTerm->coefficient > 0.0 && auxVariable->lowerBound < 0.0)
+            reformulatedProblem->setVariableLowerBound(auxVariable->getIndex(), 0.0);
 
         auto numericConstraints = reformulateConstraint(auxConstraint);
 
@@ -1725,13 +1880,78 @@ LinearTerms TaskReformulateProblem::partitionSignomialTerms(const SignomialTerms
     return (resultLinearTerms);
 }
 
-std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPartitionQuadraticSum(
-    QuadraticTerms& quadraticTerms, bool reversedSigns, ES_PartitionNonlinearSums partitionStrategy)
+std::tuple<LinearTerms, QuadraticTerms, double> TaskReformulateProblem::reformulateAndPartitionQuadraticSum(
+    QuadraticTerms& sourceQuadraticTerms, bool reversedSigns, ES_PartitionNonlinearSums partitionStrategy)
 {
     LinearTerms resultLinearTerms;
     resultLinearTerms.takeOwnership(reformulatedProblem);
     QuadraticTerms resultQuadraticTerms;
     resultQuadraticTerms.takeOwnership(reformulatedProblem);
+    double resultConstant = 0.0;
+
+    // Terms with fixed variables are linear or constant, and should not get auxiliary variables. The source terms
+    // belong to the original problem, so the remaining terms are copied instead of changed.
+    auto isFixed = [this](const VariablePtr& variable)
+    {
+        auto reformulatedVariable = reformulatedProblem->getVariable(variable->getIndex());
+        return (reformulatedVariable->lowerBound == reformulatedVariable->upperBound);
+    };
+
+    bool hasFixedVariables = std::any_of(sourceQuadraticTerms.begin(), sourceQuadraticTerms.end(),
+        [&isFixed](const QuadraticTermPtr& T) { return (isFixed(T->firstVariable) || isFixed(T->secondVariable)); });
+
+    QuadraticTerms reducedQuadraticTerms;
+
+    if(hasFixedVariables)
+    {
+        // The linear terms and the constant returned are added as they are, so they must have their signs reversed
+        double signfactor = reversedSigns ? -1.0 : 1.0;
+
+        LinearTerms fixedLinearTerms;
+        QuadraticTerms remainingTerms;
+
+        for(auto& T : sourceQuadraticTerms)
+        {
+            auto firstVariable = reformulatedProblem->getVariable(T->firstVariable->getIndex());
+            auto secondVariable = reformulatedProblem->getVariable(T->secondVariable->getIndex());
+
+            bool firstVariableFixed = isFixed(firstVariable);
+            bool secondVariableFixed = isFixed(secondVariable);
+
+            if(firstVariableFixed && secondVariableFixed)
+                resultConstant += signfactor * T->coefficient * firstVariable->lowerBound * secondVariable->lowerBound;
+            else if(firstVariableFixed)
+                fixedLinearTerms.push_back(std::make_shared<LinearTerm>(
+                    signfactor * T->coefficient * firstVariable->lowerBound, secondVariable));
+            else if(secondVariableFixed)
+                fixedLinearTerms.push_back(std::make_shared<LinearTerm>(
+                    signfactor * T->coefficient * secondVariable->lowerBound, firstVariable));
+            else
+                remainingTerms.push_back(
+                    std::make_shared<QuadraticTerm>(T->coefficient, firstVariable, secondVariable));
+        }
+
+        // Merges duplicate terms, which only changes the copies
+        QuadraticTerms mergedTerms;
+        mergedTerms.add(remainingTerms);
+
+        for(auto& T : mergedTerms)
+        {
+            if(T->coefficient != 0.0)
+                reducedQuadraticTerms.push_back(T);
+        }
+
+        // Calculates the eigenvalues and properties of the remaining terms, used when choosing the reformulation
+        reducedQuadraticTerms.takeOwnership(reformulatedProblem);
+        reducedQuadraticTerms.getConvexity();
+
+        resultLinearTerms.add(fixedLinearTerms);
+
+        if(reducedQuadraticTerms.size() == 0)
+            return std::tuple(resultLinearTerms, resultQuadraticTerms, resultConstant);
+    }
+
+    QuadraticTerms& quadraticTerms = hasFixedVariables ? reducedQuadraticTerms : sourceQuadraticTerms;
 
     bool performPartitioning = true;
 
@@ -1911,7 +2131,7 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
         resultQuadraticTerms.add(copiedTerms);
     }
 
-    return std::tuple(resultLinearTerms, resultQuadraticTerms);
+    return std::tuple(resultLinearTerms, resultQuadraticTerms, resultConstant);
 }
 
 std::tuple<LinearTerms, MonomialTerms> TaskReformulateProblem::reformulateMonomialSum(
@@ -1931,14 +2151,27 @@ std::tuple<LinearTerms, MonomialTerms> TaskReformulateProblem::reformulateMonomi
 
     for(auto& T : monomialTerms)
     {
-        if(!T->isBinary)
-        {
-            break;
-        }
-    }
+        std::vector<int> binaryMonomialKey;
 
-    for(auto& T : monomialTerms)
-    {
+        if(T->isBinary)
+        {
+            for(auto& V : T->variables)
+                binaryMonomialKey.push_back(V->getIndex());
+
+            std::sort(binaryMonomialKey.begin(), binaryMonomialKey.end());
+
+            // The product of the same binaries already has an auxiliary variable, defined by equality constraints
+            auto auxVariableIterator = binaryMonomialAuxVariables.find(binaryMonomialKey);
+
+            if(auxVariableIterator != binaryMonomialAuxVariables.end()
+                && monomialFormulation != static_cast<int>(ES_ReformulationBinaryMonomials::None))
+            {
+                resultTerms.push_back(
+                    std::make_shared<LinearTerm>(signfactor * T->coefficient, auxVariableIterator->second));
+                continue;
+            }
+        }
+
         if(T->isBinary && monomialFormulation == static_cast<int>(ES_ReformulationBinaryMonomials::Simple))
         {
             auto N = T->variables.size();
@@ -1957,9 +2190,13 @@ std::tuple<LinearTerms, MonomialTerms> TaskReformulateProblem::reformulateMonomi
             auxbVar->properties.auxiliaryType = E_AuxiliaryVariableType::BinaryMonomial;
             env->results->increaseAuxiliaryVariableCounter(E_AuxiliaryVariableType::BinaryMonomial);
 
-            auxbVar->monomialTerms.add(T);
+            // The auxiliary variable is the product of the variables, the coefficient is in the linear term below
+            auto auxMonomialTerm = std::make_shared<MonomialTerm>(T.get(), reformulatedProblem);
+            auxMonomialTerm->coefficient = 1.0;
+            auxbVar->monomialTerms.add(auxMonomialTerm);
 
             resultTerms.push_back(std::make_shared<LinearTerm>(signfactor * T->coefficient, auxbVar));
+            binaryMonomialAuxVariables.emplace(binaryMonomialKey, auxbVar);
 
             auxConstraint1->add(std::make_shared<LinearTerm>(N, auxbVar));
             auxConstraint2->add(std::make_shared<LinearTerm>(-1.0, auxbVar));
@@ -1978,7 +2215,7 @@ std::tuple<LinearTerms, MonomialTerms> TaskReformulateProblem::reformulateMonomi
         {
             int k = T->variables.size();
 
-            Variables lambdas;
+            AuxiliaryVariables lambdas;
 
             auto auxLambdaSum = std::make_shared<LinearConstraint>(
                 "s_monlam" + std::to_string(auxConstraintCounter), 1.0, 1.0);
@@ -1987,12 +2224,31 @@ std::tuple<LinearTerms, MonomialTerms> TaskReformulateProblem::reformulateMonomi
             auto numLambdas = std::pow(2, k);
             int numLambdasInt = static_cast<int>(numLambdas);
 
-            for(auto i = 1; i < numLambdas; i++)
+            // One weight for each vertex of the hypercube spanned by the variables
+            for(auto i = 1; i <= numLambdasInt; i++)
             {
                 auto auxLambda = std::make_shared<AuxiliaryVariable>(
                     "s_monlam" + std::to_string(auxVariableCounter + 1), E_VariableType::Real, 0.0, 1.0);
-                auxLambda->constant = 1.0 / numLambdas;
                 auxLambda->properties.auxiliaryType = E_AuxiliaryVariableType::BinaryMonomial;
+
+                // At a binary point, the weight of the vertex is one if the point is the vertex and zero otherwise,
+                // i.e., the product of b_j for the variables at their upper bound and (1 - b_j) for the others
+                auto vertexWeight = std::make_shared<ExpressionProduct>();
+
+                for(int j = 1; j <= k; j++)
+                {
+                    double d = std::fmod(std::floor((i - 1.0) / std::pow(2, k - j)), 2.0);
+                    auto variable = std::make_shared<ExpressionVariable>(
+                        reformulatedProblem->getVariable(T->variables.at(j - 1)->getIndex()));
+
+                    if(d == 0.0)
+                        vertexWeight->children.push_back(std::make_shared<ExpressionSum>(
+                            std::make_shared<ExpressionConstant>(1.0), std::make_shared<ExpressionNegate>(variable)));
+                    else
+                        vertexWeight->children.push_back(variable);
+                }
+
+                auxLambda->nonlinearExpression = vertexWeight;
 
                 auxLambdaSum->add(std::make_shared<LinearTerm>(1.0, auxLambda));
                 lambdas.push_back(auxLambda);
@@ -2003,10 +2259,14 @@ std::tuple<LinearTerms, MonomialTerms> TaskReformulateProblem::reformulateMonomi
 
             auto auxwVar = std::make_shared<AuxiliaryVariable>(
                 "s_monw" + std::to_string(auxVariableCounter + 1), E_VariableType::Real, SHOT_DBL_MIN, SHOT_DBL_MAX);
-            auxwVar->constant = 1.0 / ((double)numLambdas);
             auxVariableCounter++;
             auxwVar->properties.auxiliaryType = E_AuxiliaryVariableType::BinaryMonomial;
             env->results->increaseAuxiliaryVariableCounter(E_AuxiliaryVariableType::BinaryMonomial);
+
+            // The auxiliary variable is the product of the variables, the coefficient is in the linear term below
+            auto auxMonomialTerm = std::make_shared<MonomialTerm>(T.get(), reformulatedProblem);
+            auxMonomialTerm->coefficient = 1.0;
+            auxwVar->monomialTerms.add(auxMonomialTerm);
 
             auto auxwSum = std::make_shared<LinearConstraint>(
                 "s_monw" + std::to_string(auxConstraintCounter), 0.0, 0.0);
@@ -2014,6 +2274,7 @@ std::tuple<LinearTerms, MonomialTerms> TaskReformulateProblem::reformulateMonomi
             auxwSum->add(std::make_shared<LinearTerm>(-1.0, auxwVar));
 
             resultTerms.push_back(std::make_shared<LinearTerm>(signfactor * T->coefficient, auxwVar));
+            binaryMonomialAuxVariables.emplace(binaryMonomialKey, auxwVar);
 
             for(auto i = 1; i <= numLambdasInt; i++)
             {
@@ -2318,6 +2579,70 @@ void TaskReformulateProblem::copySignomialTermsToObjectiveFunction(
     }
 }
 
+void TaskReformulateProblem::addDecompositionComponent(const LinearTerms& componentTerms, double value,
+    E_AuxiliaryVariableType auxVariableType, const std::string& name, std::vector<LinearTermPtr>& resultTerms)
+{
+    auto quadraticDecompositionFormulation = (ES_QuadraticDecompositionFormulation)env->settings->getSetting<int>(
+        "Model.Reformulation.Quadratics.Decomposition.Formulation");
+
+    // The component is value * y^2 with y = a1 * x1 + ... + an * xn. With one variable, y^2 is a^2 * x^2, which
+    // needs no variable for y and shares the auxiliary variable of x^2 with the other square terms of x
+    if(componentTerms.size() == 1)
+    {
+        auto variable = componentTerms[0]->variable;
+        double coefficient = value * componentTerms[0]->coefficient * componentTerms[0]->coefficient;
+
+        if(variable->properties.type == E_VariableType::Binary) // b^2 = b
+        {
+            resultTerms.push_back(std::make_shared<LinearTerm>(0.5 * coefficient, variable));
+        }
+        else if(quadraticDecompositionFormulation == ES_QuadraticDecompositionFormulation::CoefficientReformulated)
+        {
+            auto [auxVariable, newVariable] = getSquareAuxiliaryVariable(variable, coefficient, auxVariableType);
+            resultTerms.push_back(std::make_shared<LinearTerm>(0.5, auxVariable));
+        }
+        else
+        {
+            auto [auxVariable, newVariable] = getSquareAuxiliaryVariable(variable, 1.0, auxVariableType);
+            resultTerms.push_back(std::make_shared<LinearTerm>(0.5 * coefficient, auxVariable));
+        }
+
+        return;
+    }
+
+    auto auxConstraint = std::make_shared<LinearConstraint>(name + std::to_string(auxConstraintCounter), 0, 0);
+    auxConstraintCounter++;
+
+    auxConstraint->add(componentTerms);
+
+    auto bounds = auxConstraint->linearTerms.calculate(env->problem->getVariableBounds());
+
+    auto auxQuadVariable = std::make_shared<AuxiliaryVariable>(
+        name + "_" + std::to_string(auxVariableCounter), E_VariableType::Real, bounds.l(), bounds.u());
+    auxVariableCounter++;
+    auxQuadVariable->properties.auxiliaryType = auxVariableType;
+
+    // The value of the auxiliary variable is the value of the linear terms
+    for(auto& T : componentTerms)
+        auxQuadVariable->linearTerms.add(std::make_shared<LinearTerm>(T->coefficient, T->variable));
+
+    reformulatedProblem->add(auxQuadVariable);
+
+    if(quadraticDecompositionFormulation == ES_QuadraticDecompositionFormulation::CoefficientReformulated)
+    {
+        auto [auxVariable, newVariable] = getSquareAuxiliaryVariable(auxQuadVariable, value, auxVariableType);
+        resultTerms.push_back(std::make_shared<LinearTerm>(0.5, auxVariable));
+    }
+    else
+    {
+        auto [auxVariable, newVariable] = getSquareAuxiliaryVariable(auxQuadVariable, 1.0, auxVariableType);
+        resultTerms.push_back(std::make_shared<LinearTerm>(0.5 * value, auxVariable));
+    }
+
+    auxConstraint->add(std::make_shared<LinearTerm>(-1.0, auxQuadVariable));
+    reformulatedProblem->add(std::move(auxConstraint));
+}
+
 LinearTerms TaskReformulateProblem::doEigenvalueDecomposition(QuadraticTerms& quadraticTerms)
 {
     env->timing->startTimer("ProblemReformulationEigenDecomp");
@@ -2327,9 +2652,6 @@ LinearTerms TaskReformulateProblem::doEigenvalueDecomposition(QuadraticTerms& qu
 
     auto eigenValueTolerance
         = env->settings->getSetting<double>("Model.Reformulation.Quadratics.Decomposition.Tolerance");
-
-    auto quadraticDecompositionFormulation = (ES_QuadraticDecompositionFormulation)env->settings->getSetting<int>(
-        "Model.Reformulation.Quadratics.Decomposition.Formulation");
 
     quadraticTerms.computeEigenvectors();
 
@@ -2344,45 +2666,19 @@ LinearTerms TaskReformulateProblem::doEigenvalueDecomposition(QuadraticTerms& qu
         if(std::abs(eigenvalue) < eigenValueTolerance)
             continue;
 
-        auto auxConstraint = std::make_shared<LinearConstraint>("q_evd" + std::to_string(auxConstraintCounter), 0, 0);
-        auxConstraintCounter++;
-
-        LinearTerms auxConstraintTerms;
+        LinearTerms componentTerms;
 
         // The variables of the terms belong to the original problem, so the ones of the reformulated problem
         // are looked up by their index
         for(auto [VAR, j] : quadraticTerms.variableMap)
         {
             if(quadraticTerms.eigenvectors(j, i) != 0.0)
-                auxConstraintTerms.push_back(std::make_shared<LinearTerm>(
+                componentTerms.push_back(std::make_shared<LinearTerm>(
                     quadraticTerms.eigenvectors(j, i), reformulatedProblem->getVariable(VAR->getIndex())));
         }
 
-        auxConstraint->add(auxConstraintTerms);
-
-        auto bounds = auxConstraint->linearTerms.calculate(env->problem->getVariableBounds());
-
-        auto auxQuadVariable = std::make_shared<AuxiliaryVariable>(
-            "q_evd_" + std::to_string(auxVariableCounter), E_VariableType::Real, bounds.l(), bounds.u());
-        auxVariableCounter++;
-        auxQuadVariable->properties.auxiliaryType = E_AuxiliaryVariableType::EigenvalueDecomposition;
-        reformulatedProblem->add(auxQuadVariable);
-
-        if(quadraticDecompositionFormulation == ES_QuadraticDecompositionFormulation::CoefficientReformulated)
-        {
-            auto [auxVariable, newVariable] = getSquareAuxiliaryVariable(
-                auxQuadVariable, eigenvalue, E_AuxiliaryVariableType::EigenvalueDecomposition);
-            resultTerms.push_back(std::make_shared<LinearTerm>(0.5, auxVariable));
-        }
-        else
-        {
-            auto [auxVariable, newVariable]
-                = getSquareAuxiliaryVariable(auxQuadVariable, 1.0, E_AuxiliaryVariableType::EigenvalueDecomposition);
-            resultTerms.push_back(std::make_shared<LinearTerm>(0.5 * eigenvalue, auxVariable));
-        }
-
-        auxConstraint->add(std::make_shared<LinearTerm>(-1.0, auxQuadVariable));
-        reformulatedProblem->add(std::move(auxConstraint));
+        addDecompositionComponent(
+            componentTerms, eigenvalue, E_AuxiliaryVariableType::EigenvalueDecomposition, "q_evd", resultTerms);
     }
 
     resultLinearTerms.add(LinearTerms(std::move(resultTerms)));
@@ -2410,9 +2706,6 @@ LinearTerms TaskReformulateProblem::doLDLDecomposition(QuadraticTerms& quadratic
     auto eigenValueTolerance
         = env->settings->getSetting<double>("Model.Reformulation.Quadratics.Decomposition.Tolerance");
 
-    auto quadraticDecompositionFormulation = (ES_QuadraticDecompositionFormulation)env->settings->getSetting<int>(
-        "Model.Reformulation.Quadratics.Decomposition.Formulation");
-
     // The terms are collected and added at once, since add(term) searches every term already added
     std::vector<LinearTermPtr> resultTerms;
     resultTerms.reserve(quadraticTerms.variableMap.size());
@@ -2424,45 +2717,19 @@ LinearTerms TaskReformulateProblem::doLDLDecomposition(QuadraticTerms& quadratic
         if(std::abs(diagValue) < eigenValueTolerance)
             continue;
 
-        auto auxConstraint = std::make_shared<LinearConstraint>("q_ldl" + std::to_string(auxConstraintCounter), 0, 0);
-        auxConstraintCounter++;
-
-        LinearTerms auxConstraintTerms;
+        LinearTerms componentTerms;
 
         // The variables of the terms belong to the original problem, so the ones of the reformulated problem
         // are looked up by their index
         for(auto [VAR, j] : quadraticTerms.variableMap)
         {
             if(quadraticTerms.LDLMatrixL(j, i) != 0.0)
-                auxConstraintTerms.push_back(std::make_shared<LinearTerm>(
+                componentTerms.push_back(std::make_shared<LinearTerm>(
                     quadraticTerms.LDLMatrixL(j, i), reformulatedProblem->getVariable(VAR->getIndex())));
         }
 
-        auxConstraint->add(auxConstraintTerms);
-
-        auto bounds = auxConstraint->linearTerms.calculate(env->problem->getVariableBounds());
-
-        auto auxQuadVariable = std::make_shared<AuxiliaryVariable>(
-            "q_evd_" + std::to_string(auxVariableCounter), E_VariableType::Real, bounds.l(), bounds.u());
-        auxVariableCounter++;
-        auxQuadVariable->properties.auxiliaryType = E_AuxiliaryVariableType::LDLDecomposition;
-        reformulatedProblem->add(auxQuadVariable);
-
-        if(quadraticDecompositionFormulation == ES_QuadraticDecompositionFormulation::CoefficientReformulated)
-        {
-            auto [auxVariable, newVariable]
-                = getSquareAuxiliaryVariable(auxQuadVariable, diagValue, E_AuxiliaryVariableType::LDLDecomposition);
-            resultTerms.push_back(std::make_shared<LinearTerm>(0.5, auxVariable));
-        }
-        else
-        {
-            auto [auxVariable, newVariable]
-                = getSquareAuxiliaryVariable(auxQuadVariable, 1.0, E_AuxiliaryVariableType::LDLDecomposition);
-            resultTerms.push_back(std::make_shared<LinearTerm>(0.5 * diagValue, auxVariable));
-        }
-
-        auxConstraint->add(std::make_shared<LinearTerm>(-1.0, auxQuadVariable));
-        reformulatedProblem->add(std::move(auxConstraint));
+        addDecompositionComponent(
+            componentTerms, diagValue, E_AuxiliaryVariableType::LDLDecomposition, "q_ldl", resultTerms);
     }
 
     resultLinearTerms.add(LinearTerms(std::move(resultTerms)));
@@ -2620,10 +2887,11 @@ NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(st
         auxConstraintCounter++;
     }
 
-    if(tmpConstant > 0)
+    // The constraints are f(x) - w <= 0 and -f(x) - w <= 0, where the constant is a part of f
+    if(tmpConstant != 0.0)
     {
         std::dynamic_pointer_cast<LinearConstraint>(auxConstraint1)->constant = tmpConstant;
-        std::dynamic_pointer_cast<LinearConstraint>(auxConstraint1)->constant = -tmpConstant;
+        std::dynamic_pointer_cast<LinearConstraint>(auxConstraint2)->constant = -tmpConstant;
     }
 
     if(tmpLinearTerms.size() == 1)
@@ -2796,8 +3064,11 @@ std::pair<AuxiliaryVariablePtr, bool> TaskReformulateProblem::getSquareAuxiliary
         variableType = E_VariableType::Real;
     }
 
-    auto auxVariable = std::make_shared<AuxiliaryVariable>(
-        "s_sq_" + variable->name, variableType, lowerBound, upperBound);
+    // A variable can have squares with different coefficients, e.g., from decompositions, which need unique names
+    int numberOfSquares = squareAuxVariableCounts[variable->getIndex()]++;
+    std::string name = "s_sq_" + variable->name + (numberOfSquares > 0 ? "_" + std::to_string(numberOfSquares) : "");
+
+    auto auxVariable = std::make_shared<AuxiliaryVariable>(name, variableType, lowerBound, upperBound);
 
     auxVariableCounter++;
     auxVariable->properties.auxiliaryType = auxVariableType;
@@ -2889,10 +3160,7 @@ std::pair<AuxiliaryVariablePtr, bool> TaskReformulateProblem::getBilinearAuxilia
 std::pair<AuxiliaryVariablePtr, bool> TaskReformulateProblem::getAbsoluteValueAuxiliaryVariable(
     std::shared_ptr<ExpressionAbs> source)
 {
-    std::stringstream expression;
-    expression << source->child;
-
-    auto key = expression.str();
+    auto key = getStructuralKey(source->child.get());
 
     auto auxVariableIterator = absoluteExpressionsAuxVariables.find(key);
 
@@ -2947,6 +3215,15 @@ void TaskReformulateProblem::createBilinearReformulations()
         {
             reformulateBinaryContinuousBilinearTerm(firstVariable, secondVariable, AUXVAR);
             AUXVAR->properties.auxiliaryType = E_AuxiliaryVariableType::BinaryContinuousBilinear;
+        }
+        else if((firstVariableType == E_VariableType::Binary && secondVariableType == E_VariableType::Integer
+                    && secondVariable->lowerBound > SHOT_DBL_MIN && secondVariable->upperBound < SHOT_DBL_MAX)
+            || (firstVariableType == E_VariableType::Integer && secondVariableType == E_VariableType::Binary
+                && firstVariable->lowerBound > SHOT_DBL_MIN && firstVariable->upperBound < SHOT_DBL_MAX))
+        {
+            // The binary variable is already a disjunction, so the integer variable does not need to be discretized
+            reformulateBinaryContinuousBilinearTerm(firstVariable, secondVariable, AUXVAR);
+            AUXVAR->properties.auxiliaryType = E_AuxiliaryVariableType::IntegerBilinear;
         }
         else if(firstVariableType == E_VariableType::Integer || firstVariableType == E_VariableType::Semiinteger
             || secondVariableType == E_VariableType::Integer || secondVariableType == E_VariableType::Semiinteger)
@@ -3022,6 +3299,8 @@ void TaskReformulateProblem::reformulateBinaryContinuousBilinearTerm(
     auto binaryVariable = (firstVariable->properties.type == E_VariableType::Binary) ? firstVariable : secondVariable;
     auto otherVariable = (firstVariable->properties.type == E_VariableType::Binary) ? secondVariable : firstVariable;
 
+    // The product w = b * x of a binary variable b and a variable x with bounds L <= x <= U:
+    // w >= x - U(1 - b)
     auto auxConstraint1 = std::make_shared<LinearConstraint>(
         "s_blbc_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, otherVariable->upperBound);
     auxConstraint1->add(std::make_shared<LinearTerm>(-1.0, usedAuxVariable));
@@ -3030,14 +3309,16 @@ void TaskReformulateProblem::reformulateBinaryContinuousBilinearTerm(
         auxConstraint1->add(std::make_shared<LinearTerm>(otherVariable->upperBound, binaryVariable));
     auxConstraintCounter++;
 
+    // w <= x - L(1 - b)
     auto auxConstraint2 = std::make_shared<LinearConstraint>(
-        "s_blbc_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, otherVariable->upperBound);
+        "s_blbc_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, -otherVariable->lowerBound);
     auxConstraint2->add(std::make_shared<LinearTerm>(1.0, usedAuxVariable));
     auxConstraint2->add(std::make_shared<LinearTerm>(-1.0, otherVariable));
-    if(otherVariable->upperBound != 0.0)
-        auxConstraint2->add(std::make_shared<LinearTerm>(otherVariable->upperBound, binaryVariable));
+    if(otherVariable->lowerBound != 0.0)
+        auxConstraint2->add(std::make_shared<LinearTerm>(-otherVariable->lowerBound, binaryVariable));
     auxConstraintCounter++;
 
+    // w >= L b
     auto auxConstraint3 = std::make_shared<LinearConstraint>(
         "s_blbc_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, 0);
     auxConstraint3->add(std::make_shared<LinearTerm>(-1.0, usedAuxVariable));
@@ -3045,6 +3326,7 @@ void TaskReformulateProblem::reformulateBinaryContinuousBilinearTerm(
         auxConstraint3->add(std::make_shared<LinearTerm>(otherVariable->lowerBound, binaryVariable));
     auxConstraintCounter++;
 
+    // w <= U b
     auto auxConstraint4 = std::make_shared<LinearConstraint>(
         "s_blbc_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, 0);
     auxConstraint4->add(std::make_shared<LinearTerm>(1.0, usedAuxVariable));
@@ -3140,6 +3422,26 @@ void TaskReformulateProblem::reformulateIntegerBilinearTerm(
         {
             auto auxBinary = std::make_shared<AuxiliaryVariable>(
                 "s_bli" + std::to_string(auxVariableCounter + 1), E_VariableType::Binary, 0.0, 1.0);
+
+            // The binary is one if the variable has the value i, which at integer values is given by the product of
+            // (x - j) / (i - j) over the other values j; every factor is exact, so it is exactly one or zero
+            auto indicator = std::make_shared<ExpressionProduct>();
+
+            for(auto j = discretizationVariable->lowerBound; j <= discretizationVariable->upperBound; j++)
+            {
+                if(j == i)
+                    continue;
+
+                indicator->children.push_back(std::make_shared<ExpressionDivide>(
+                    std::make_shared<ExpressionSum>(std::make_shared<ExpressionVariable>(discretizationVariable),
+                        std::make_shared<ExpressionConstant>(-j)),
+                    std::make_shared<ExpressionConstant>(i - j)));
+            }
+
+            if(indicator->children.size() > 0)
+                auxBinary->nonlinearExpression = indicator;
+            else
+                auxBinary->constant = 1.0;
 
             auxFirstSum->add(std::make_shared<LinearTerm>(1.0, auxBinary));
             auxFirstSumVarDef->add(std::make_shared<LinearTerm>(i, auxBinary));

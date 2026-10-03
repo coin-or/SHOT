@@ -56,6 +56,14 @@ void TaskCheckIterationError::run()
             env->results->terminationReasonDescription
                 = "Terminated since the dual problem is infeasible after an objective reduction cut.";
         }
+        // With a primal solution, the problem is not infeasible, but the cuts, e.g., of nonconvex constraints, have
+        // cut away the solutions that are not worse than it
+        else if(env->results->hasPrimalSolution())
+        {
+            env->results->terminationReason = E_TerminationReason::ObjectiveStagnation;
+            env->results->terminationReasonDescription
+                = "Terminated since the dual problem is infeasible, although a primal solution has been found.";
+        }
         else
         {
             env->results->terminationReason = E_TerminationReason::InfeasibleProblem;

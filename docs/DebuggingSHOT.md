@@ -237,8 +237,8 @@ introduced, or reproduce a failure in isolation instead of debugging a full
   (CMake's `create_test_sourcelist` mechanism). Each file defines an
   `int <Name>Test(int argc, char* argv[])` entry point that dispatches to
   individual test cases by a numeric "part" (`argv[1]`); the list of parts
-  per test group is in `test/CMakeLists.txt` (e.g. `Model` has parts 1–19,
-  `Solver` 1–13, `Settings` 1–9).
+  per test group is in `test/CMakeLists.txt` (e.g. `Model` has parts 1–49,
+  `Solver` 1–25, `Settings` 1–9).
 - **Running the full suite**: `ctest --output-on-failure` from the build
   directory (this is what CI does). If you're on a build configured before
   this doc's revision that fixed `test/CMakeLists.txt`'s `add_test()` call
@@ -319,6 +319,38 @@ introduced, or reproduce a failure in isolation instead of debugging a full
   ./test/test_runner FullInstancetest 1 -v
   ```
 
+- **Checking a reformulation at points: `CheckAuxiliaryVariableValues()`**
+  in `test/SolverTest.cpp`. It takes the original problem, the reformulated
+  problem from `setProblem()` and a list of points of the original problem.
+  For each point it calculates the values of the auxiliary variables with
+  `Problem::augmentAuxiliaryVariableValues()`, i.e., as for MIP starts and
+  primal solutions, and checks that
+  1. every constraint added by the reformulation holds at the calculated
+     values, and
+  2. every original constraint has the same value (`normalizedValue`) as
+     the constraints with its name in the reformulated problem.
+
+  This needs no solve, and catches lost or wrongly signed terms and
+  constants, wrong coefficients, and auxiliary variables without a correct
+  definition of their value, e.g. binaries of a linearization whose value is
+  always zero. Partitioned terms (`w >= f(x)`) are calculated with equality,
+  so they hold too. SolverTest 21–24 use it for binary monomials, binary
+  products, shared partitioned terms and quadratic decompositions: build a
+  small model with several terms of each kind that share variables (a single
+  term hides errors in sharing or ordering of auxiliary variables), choose
+  points at the bounds and in the interior (all combinations of the
+  binaries), and call it for each relevant setting. Check that the test
+  fails without the fix.
+- **Python tests of reformulations and bound tightening**:
+  `test/python/test_reformulation.py` and `test_bound_tightening.py` solve
+  small models and compare with known or brute-forced optima, and count the
+  auxiliary variables of `solver.getReformulatedProblem()` by name prefix
+  (e.g. `s_pnl_`, `s_monb`, `q_ldl_`).
+- **CTest runs copies of the Python tests and data**: `test/CMakeLists.txt`
+  copies `test/python/` and `test/data/` into the build directory when CMake
+  configures, so after editing a test file, `ctest` runs the old copy until
+  `cmake .` is run again. Running `pytest` on the source file directly, with
+  `SHOTPY_BUILD_DIR=<build dir>`, uses the current file and the given module.
 - **Python API tests** (`test/python/*.py`, run via `pytest`) only register
   if Python bindings are built (`-DHAS_PYTHON=on`, target `SHOTpy`) and
   `pytest` is importable; they cover the Python/SHOTpy binding surface
@@ -468,6 +500,34 @@ in this codebase — add to this list as you find more.
   flag. What's suspicious is a bound that's tighter than the true achievable
   range; check that the printed bound is a valid superset of the
   closed-form range, not that it's tight.
+
+### "The dual problem is infeasible" on a feasible problem
+
+- First make sure the problem really is feasible. Some MINLPLib instances,
+  e.g. `ball_mk*`, are infeasible by construction, and on a nonconvex problem
+  the cuts may cut away the feasible region, which SHOT reports as
+  `InfeasibleLocal` ("globality could not be verified"). If a global solver
+  (e.g. BARON through GAMS) finds a feasible point, or SHOT does with some
+  settings, the infeasibility is wrong.
+- If the first dual problem is already infeasible, before any cut, suspect
+  the bound tightening: rerun with
+  `Model.BoundTightening.FeasibilityBased.Use=false`, and with
+  `Model.BoundTightening.FeasibilityBased.UseNonlinear=false` to see if the
+  nonlinear constraints are the cause.
+- To find the invalid bound, take a feasible point (`primal_solpt*.txt` from a
+  run without the bound tightening) and compare it with the bounds in the
+  `variables:` section of `originalproblem.txt` from a run with it, which is
+  written after the bound tightening. The first tightening that excludes the
+  point is the one to look at; `Output.Console.LogLevel=1` (debug) prints
+  every tightened bound, but not the constraint, so a breakpoint in
+  `Variable::tightenBounds` with a condition on the variable name and a
+  backtrace is the quickest way to find the constraint and the bound.
+- Rounding errors in interval arithmetic matter most for discrete variables:
+  their tightened bounds are rounded to integers, so a lower bound of `1e-8`,
+  e.g. the square root of a lower bound of `1e-16` of `sqr(b)` in
+  `sqr(b)/(c - x + d*b)`, would make a binary one. The bounds are therefore
+  only rounded past an integer by more than `1e-5`. This made
+  `routingdelay_proj` infeasible.
 
 ### Unbounded initial relaxations and square bounds
 

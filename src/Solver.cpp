@@ -2073,8 +2073,6 @@ void Solver::verifySettings()
             "Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::MultiTree), E_SettingPriority::SolverCompatibility);
         env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy",
             static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear), E_SettingPriority::SolverCompatibility);
-        env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy",
-            (int)ES_QuadraticTermsExtractStrategy::DoNotExtract, E_SettingPriority::SolverCompatibility);
     }
 #endif
 
@@ -2089,8 +2087,6 @@ void Solver::verifySettings()
             "Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::MultiTree), E_SettingPriority::SolverCompatibility);
         env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy",
             static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear), E_SettingPriority::SolverCompatibility);
-        env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy",
-            (int)ES_QuadraticTermsExtractStrategy::DoNotExtract, E_SettingPriority::SolverCompatibility);
     }
 #endif
 
