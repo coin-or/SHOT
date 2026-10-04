@@ -89,6 +89,10 @@ bool TaskEnumerateFixedIntegerCombinations::isFallbackNeeded()
     case E_TerminationReason::ObjectiveStagnation:
     case E_TerminationReason::NoDualCutsAdded:
         return (true);
+    case E_TerminationReason::InfeasibleProblem:
+        // The cuts of nonconvex constraints can make the dual problem infeasible although the problem is feasible
+        return (env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex
+            && !env->results->hasPrimalSolution());
     default:
         return (false);
     }
@@ -147,7 +151,9 @@ bool TaskEnumerateFixedIntegerCombinations::initializeDomains()
         domainUpperBounds.push_back(upperBound);
     }
 
-    if(discreteVariableIndexes.size() == 0)
+    // A problem without discrete variables has one combination, the NLP problem itself. It is only solved in the
+    // fallback, where it is the problem without the starting point from the dual strategy
+    if(discreteVariableIndexes.size() == 0 && !isFallback)
         return (false);
 
     numberOfCombinations = (int)combinations;
@@ -190,7 +196,10 @@ bool TaskEnumerateFixedIntegerCombinations::selectNextCombination(VectorDouble& 
 
 bool TaskEnumerateFixedIntegerCombinations::hasCombinationBeenSolved(const PrimalFixedNLPCandidate& candidate)
 {
-    if(env->primalSolver->hasFixedNLPCandidateBeenTested(candidate.discreteVariablePointHashes))
+    // Without discrete variables, all NLP problems solved in the fixed-integer strategy have the same combination,
+    // and they were solved from another starting point
+    if(discreteVariableIndexes.size() > 0
+        && env->primalSolver->hasFixedNLPCandidateBeenTested(candidate.discreteVariablePointHashes))
         return (true);
 
     auto& hashes = env->primalSolver->enumeratedPrimalNLPCandidateHashes;

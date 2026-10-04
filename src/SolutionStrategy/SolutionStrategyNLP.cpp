@@ -58,6 +58,7 @@
 #include "../Tasks/TaskSelectPrimalCandidatesFromSolutionPool.h"
 #include "../Tasks/TaskSelectPrimalCandidatesFromRootsearch.h"
 #include "../Tasks/TaskSelectPrimalFixedNLPPointsFromSolutionPool.h"
+#include "../Tasks/TaskEnumerateFixedIntegerCombinations.h"
 #include "../Tasks/TaskSelectPrimalCandidatesFromNLP.h"
 #include "../Tasks/TaskClearFixedPrimalCandidates.h"
 #include "../Tasks/TaskSelectPrimalCandidatesFromExternalSource.h"
@@ -142,6 +143,15 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr)
     auto tSelectPrimExternal = std::make_shared<TaskSelectPrimalCandidatesFromExternalSource>(env);
     env->tasks->addTask(tSelectPrimExternal, "SelectPrimExternal");
     std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tSelectPrimExternal);
+
+    // If the objective gap could not be closed, e.g., since the cuts of nonconvex constraints made the dual problem
+    // infeasible, the NLP problem is solved without the starting point from the dual strategy
+    if(env->settings->getSetting<bool>("Primal.FixedInteger.Use")
+        && env->settings->getSetting<bool>("Primal.FixedInteger.Enumeration.UseAsFallback"))
+    {
+        auto tEnumerateFixedIntegerFallback = std::make_shared<TaskEnumerateFixedIntegerCombinations>(env, true);
+        std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tEnumerateFixedIntegerFallback);
+    }
 
     // Once the search has finished, solve an NLP problem starting from the solution found to try to improve it.
     // The dual solver's own tolerances bound how accurate its point is, and near an optimum the objective is
