@@ -1391,7 +1391,7 @@ void MIPSolverCbc::deleteMIPStarts() { MIPStart.clear(); }
 bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
 {
     // Not necessarily all discrete variables in the reformulated problem: e.g. an NLP-sourced cut built against the
-    // original problem (Primal.FixedInteger.SourceProblem = OriginalProblem, the default) only lists the original
+    // original problem (Primal.FixedInteger.SourceProblem = OriginalProblem) only lists the original
     // problem's discrete variables, while reformulation may have added auxiliary discrete variables.
     assert(integerCut.variableValues.size() == integerCut.variableIndexes.size());
     bool allowIntegerCutRepair = env->settings->getSetting<bool>("Dual.MIP.InfeasibilityRepair.IntegerCuts");

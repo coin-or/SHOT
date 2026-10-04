@@ -403,6 +403,16 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
             double tmpObj = NLPSolver->getObjectiveValue();
             auto variableSolution = NLPSolver->getSolution();
 
+            // The objective variable of an epigraph constraint that has been reformulated into an objective function
+            // is not in any constraint of the reformulated problem, so the NLP solver can give it any value. Its
+            // value is that of the objective function, as for the solution points from the MIP solver.
+            if(sourceIsReformulatedProblem && env->reformulatedProblem->antiEpigraphObjectiveVariable
+                && !variableSolution.empty())
+            {
+                variableSolution.at(env->reformulatedProblem->antiEpigraphObjectiveVariable->getIndex())
+                    = sourceProblem->objectiveFunction->calculateValue(variableSolution);
+            }
+
             env->primalSolver->addPrimalSolutionCandidate(
                 variableSolution, E_PrimalSolutionSource::NLPFixedIntegers, currIter->iterationNumber);
 

@@ -1641,6 +1641,9 @@ PYBIND11_MODULE(SHOTpy, m)
     py::class_<ConstraintProperties>(m, "ConstraintProperties")
         .def_readonly("convexity", &ConstraintProperties::convexity,
             "The convexity of the constraint as far as SHOT can determine it, which finalize() calculates")
+        .def_readonly("functionConvexity", &ConstraintProperties::functionConvexity,
+            "The convexity of the function f(x) of the constraint L <= f(x) <= U, regardless of its bounds. An\n"
+            "equality constraint with a convex function is nonconvex")
         .def_readonly("hasLinearTerms", &ConstraintProperties::hasLinearTerms, "Whether it has linear terms")
         .def_readonly("hasQuadraticTerms", &ConstraintProperties::hasQuadraticTerms, "Whether it has quadratic terms")
         .def_readonly("hasMonomialTerms", &ConstraintProperties::hasMonomialTerms, "Whether it has monomial terms")
@@ -2454,8 +2457,8 @@ PYBIND11_MODULE(SHOTpy, m)
             },
             py::arg("name"),
             "Get the constraint with the name. Raises KeyError if there is none, and ValueError if several\n"
-            "constraints have the name. finalize() can replace a constraint or split it into <name> and <name>_rf,\n"
-            "so a constraint is read back with this after finalize()")
+            "constraints have the name. finalize() can replace a constraint with one of another class, so a\n"
+            "constraint is read back with this after finalize()")
         .def("getVariableLowerBound", &Problem::getVariableLowerBound, py::arg("index"),
             "The lower bound of the variable with the index")
         .def("getVariableUpperBound", &Problem::getVariableUpperBound, py::arg("index"),

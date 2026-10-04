@@ -238,7 +238,10 @@ introduced, or reproduce a failure in isolation instead of debugging a full
   `int <Name>Test(int argc, char* argv[])` entry point that dispatches to
   individual test cases by a numeric "part" (`argv[1]`); the list of parts
   per test group is in `test/CMakeLists.txt` (e.g. `Model` has parts 1–49,
-  `Solver` 1–25, `Settings` 1–9).
+  `Solver` 1–25, `Settings` 1–9). `EqualityConstraintTest.cpp` has the tests
+  of how equality constraints and ranges are kept in the original problem
+  and rewritten in the reformulated one (see "Equality constraints and
+  ranges" in section 8).
 - **Running the full suite**: `ctest --output-on-failure` from the build
   directory (this is what CI does). If you're on a build configured before
   this doc's revision that fixed `test/CMakeLists.txt`'s `add_test()` call
@@ -372,6 +375,15 @@ in this codebase — add to this list as you find more.
   `src/` edit, run the default `make -j` target, or explicitly
   `make SHOT test_runner`, rather than building only the one target you
   think you need.
+
+- A copy of `build/SHOT` or `build/SHOTpy*.so` is not a baseline to compare
+  a change against. Both load `libSHOTSolver.dylib` from the build directory
+  through their rpath, so after the next build the copy runs the new code,
+  or a mix of old and new code that crashes when the layout of a class has
+  changed. For a baseline, build the reference commit in a separate
+  directory (`git archive <commit> | tar -x -C <dir>`, link the submodule
+  directories in `ThirdParty/`, and configure with the options in
+  `build/CMakeCache.txt`).
 
 ### Settings pitfalls
 
@@ -591,6 +603,74 @@ in this codebase — add to this list as you find more.
   can be redundant, and its cuts can still be valid for the feasible set (e.g.
   `-(mu^T x)^2 <= z` next to `(mu^T x)^2 <= z`). Remove the constraint from a
   copy of the model and rerun before blaming it.
+
+### Equality constraints and ranges
+
+- A constraint with both bounds, `L <= f(x) <= U`, is one constraint in the
+  original problem (`originalproblem.txt`), whatever its class. Only a
+  constraint with just a lower bound is rewritten there, as `-f(x) <= -L`.
+  The NLP solvers called for the original problem therefore get an equality
+  constraint as one row with equal bounds. The default of
+  `Primal.FixedInteger.SourceProblem` is the reformulated problem, where
+  they get the two inequality constraints instead: with equality
+  constraints, Ipopt found much worse local solutions for, e.g., pooling
+  problems (and better ones for a few others, so the setting is worth
+  trying when the primal solutions are poor). NLP solvers in GAMS always use
+  the original problem.
+- In the reformulated problem (`reformulatedproblem.txt`) a nonlinear
+  constraint with both bounds is two constraints: `<name>` is `f(x) <= U`
+  and `<name>_rf` is `-f(x) <= -L`. The `_rf` constraints come after the
+  other constraints from the original problem, in the same order, and the
+  ones of the auxiliary equality constraints (`s_blcc_*_rf`) are last. The number of
+  constraints and their indexes thus differ between the two problems; match
+  constraints by name, never by index. Linear constraints keep both bounds,
+  and so do quadratic ones when the MIP solver gets nonconvex quadratic
+  constraints (Gurobi with `Model.Reformulation.Quadratics.Strategy` 3).
+- The constraint is rewritten **before** its terms are partitioned, in
+  `TaskReformulateProblem::reformulateConstraints()`. An auxiliary variable
+  `w` from a partitioning is only bounded from one direction, by
+  `g(x) - w <= 0`, which is a valid reformulation of `... + g(x) <= U` but
+  not of `L <= ... + g(x)`: there `w` can take any value up to its upper
+  bound, and the lower bound no longer restricts `x`. Symptoms are a dual
+  solution point that fulfills the reformulated problem but violates an
+  equality constraint of the original one by a lot, in every iteration, and
+  no primal solution. `reformulateConstraint()` asserts that a constraint
+  reaching the partitioning has no lower bound, and a debug build checks
+  after the reformulation that no nonlinear constraint has one. For the same
+  reason a square with a negative coefficient does not get a `s_sq_*`
+  variable.
+- A hyperplane is generated for the side of the constraint that is violated
+  in the point (`MIPSolverBase::createHyperplaneTerms()`,
+  `TaskSelectHyperplanesESH`), which is decided by the exact test
+  `f(x) >= L`. This is only safe for constraints with one bound: for an
+  equality constraint with a convex function, a point from the root search
+  with `f(x)` marginally below `U` gives the cut for `L <= f(x)`, which cuts
+  off feasible points. Do not pass a constraint of the original problem
+  with both bounds as the source of a hyperplane; the initial outer
+  approximation (`TaskPerformBoundTightening::createPOA()`) uses the
+  constraints of the convex relaxation, which has the convex side only.
+- An NLP problem for the original problem can have as many equality
+  constraints as free variables, e.g. with complementarity constraints or
+  after the integer variables are fixed. Ipopt solves it as a system of
+  equations and ends with `FEASIBLE_POINT_FOUND` instead of `SUCCESS`. Any
+  status that `solveProblemInstance()` maps to a feasible or optimal
+  solution must also store the point in
+  `IpoptProblem::finalize_solution()`; otherwise an empty point becomes a
+  primal candidate (assertion on `point.size()` in
+  `ObjectiveFunction.cpp`).
+- `properties.functionConvexity` is the convexity of `f`, and
+  `properties.convexity` that of the constraint. A convex function in an
+  equality constraint gives `functionConvexity == Convex` and
+  `convexity == Nonconvex`. `Problem::createCopy()` with `convexityRelaxed`
+  uses the former to keep `f(x) <= U` (convex `f`) or `L <= f(x)` (concave
+  `f`) of a nonconvex constraint.
+- `Problem::add(NumericConstraintPtr)` chooses the list (linear, quadratic or
+  nonlinear) from the properties of the constraint, which are not set for a
+  constraint that was just created. A `NonlinearConstraint` with only
+  quadratic terms added through a `NumericConstraintPtr` ends up among the
+  quadratic constraints and is given to the MIP solver ("Quadratic
+  constraints not yet implemented in HiGHS interface"). Add it through its
+  own pointer type, or set the classification first.
 
 ### Verification discipline
 

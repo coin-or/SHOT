@@ -1454,8 +1454,11 @@ void Solver::initializeSettings()
     enumPrimalBoundNLPProblemSource.push_back("Original problem");
     enumPrimalBoundNLPProblemSource.push_back("Reformulated problem");
     enumPrimalBoundNLPProblemSource.push_back("Both");
+    // The reformulated problem is the default, since the NLP solver then gets a nonlinear equality constraint as two
+    // inequality constraints. With the equality constraints of the original problem, Ipopt found clearly worse local
+    // solutions for, e.g., pooling problems. NLP solvers in GAMS always use the original problem.
     env->settings->createSetting("Primal.FixedInteger.SourceProblem",
-        static_cast<int>(ES_PrimalNLPProblemSource::OriginalProblem),
+        static_cast<int>(ES_PrimalNLPProblemSource::ReformulatedProblem),
         "Which problem formulation to use for NLP problem", enumPrimalBoundNLPProblemSource, 0);
     enumPrimalBoundNLPProblemSource.clear();
 
@@ -1992,8 +1995,11 @@ void Solver::verifySettings()
         && (static_cast<ES_PrimalNLPProblemSource>(env->settings->getSetting<int>("Primal.FixedInteger.SourceProblem"))
             != ES_PrimalNLPProblemSource::OriginalProblem))
     {
-        env->output->outputWarning(" Cannot use GAMS NLP solvers when solving fixed NLP problems based on the "
-                                   "reformulated model. Use Ipopt instead!");
+        // The reformulated problem is the default, so the warning is only given if it has been selected
+        if(env->settings->getSettingPriority("Primal.FixedInteger.SourceProblem") > E_SettingPriority::Default)
+            env->output->outputWarning(" Cannot use GAMS NLP solvers when solving fixed NLP problems based on the "
+                                       "reformulated model. Use Ipopt instead!");
+
         env->settings->updateSetting("Primal.FixedInteger.SourceProblem",
             static_cast<int>(ES_PrimalNLPProblemSource::OriginalProblem), E_SettingPriority::SolverCompatibility);
     }

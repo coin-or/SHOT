@@ -65,7 +65,9 @@ namespace SHOT
 
 void Problem::updateConstraints()
 {
-    NumericConstraints auxConstraints;
+    // A constraint with both a lower and an upper bound, e.g. an equality constraint, is kept as it is. The dual
+    // strategy needs nonlinear constraints of the form f(x) <= U, and these are created for the reformulated problem
+    // in TaskReformulateProblem.
 
     env->output->outputTrace(" Swapping bounds");
     for(auto& C : numericConstraints)
@@ -95,10 +97,6 @@ void Problem::updateConstraints()
         }
     }
 
-    auto useNonconvexQuadraticStrategy = static_cast<ES_QuadraticProblemStrategy>(
-                                             env->settings->getSetting<int>("Model.Reformulation.Quadratics.Strategy"))
-        != ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained;
-
     env->output->outputTrace(" Standardizing quadratic constraints");
     for(auto& C : quadraticConstraints)
     {
@@ -120,40 +118,6 @@ void Problem::updateConstraints()
             C->quadraticTerms.invalidateProperties();
 
             C->constant *= -1.0;
-        }
-        else if(C->valueLHS != SHOT_DBL_MIN && C->valueRHS != SHOT_DBL_MAX && useNonconvexQuadraticStrategy)
-        {
-            double valueLHS = C->valueLHS;
-            C->valueLHS = SHOT_DBL_MIN;
-
-            auto auxConstraint = std::make_shared<QuadraticConstraint>();
-
-            auxConstraint->constant = -C->constant;
-
-            if(valueLHS != 0.0)
-                auxConstraint->valueRHS = -valueLHS;
-            else
-                auxConstraint->valueRHS = 0.0;
-
-            auxConstraint->name = C->name + "_rf";
-            auxConstraint->ownerProblem = C->ownerProblem;
-
-            // The terms are added all at once, since adding them one by one searches the terms added so far
-            LinearTerms negatedLinearTerms;
-            QuadraticTerms negatedQuadraticTerms;
-
-            for(auto& T : C->linearTerms)
-                negatedLinearTerms.push_back(std::make_shared<LinearTerm>(-1.0 * T->coefficient, T->variable));
-
-            for(auto& T : C->quadraticTerms)
-                negatedQuadraticTerms.push_back(
-                    std::make_shared<QuadraticTerm>(-1.0 * T->coefficient, T->firstVariable, T->secondVariable));
-
-            auxConstraint->add(negatedLinearTerms);
-            auxConstraint->add(negatedQuadraticTerms);
-
-            auxConstraint->updateProperties();
-            auxConstraints.push_back(auxConstraint);
         }
     }
 
@@ -194,55 +158,7 @@ void Problem::updateConstraints()
 
             C->constant *= -1.0;
         }
-        else if(C->valueLHS != SHOT_DBL_MIN && C->valueRHS != SHOT_DBL_MAX)
-        {
-            double valueLHS = C->valueLHS;
-            C->valueLHS = SHOT_DBL_MIN;
-
-            auto auxConstraint = std::make_shared<NonlinearConstraint>();
-
-            auxConstraint->constant = -C->constant;
-
-            if(valueLHS != 0.0)
-                auxConstraint->valueRHS = -valueLHS;
-            else
-                auxConstraint->valueRHS = 0.0;
-
-            auxConstraint->name = C->name + "_rf";
-            auxConstraint->ownerProblem = C->ownerProblem;
-
-            // The terms are added all at once, since adding them one by one searches the terms added so far
-            LinearTerms negatedLinearTerms;
-            QuadraticTerms negatedQuadraticTerms;
-
-            for(auto& T : C->linearTerms)
-                negatedLinearTerms.push_back(std::make_shared<LinearTerm>(-1.0 * T->coefficient, T->variable));
-
-            for(auto& T : C->quadraticTerms)
-                negatedQuadraticTerms.push_back(
-                    std::make_shared<QuadraticTerm>(-1.0 * T->coefficient, T->firstVariable, T->secondVariable));
-
-            auxConstraint->add(negatedLinearTerms);
-            auxConstraint->add(negatedQuadraticTerms);
-
-            for(auto& T : C->monomialTerms)
-                auxConstraint->add(std::make_shared<MonomialTerm>(-1.0 * T->coefficient, T->variables));
-
-            for(auto& T : C->signomialTerms)
-                auxConstraint->add(std::make_shared<SignomialTerm>(-1.0 * T->coefficient, T->elements));
-
-            if(C->nonlinearExpression)
-                auxConstraint->nonlinearExpression = simplify(
-                    std::make_shared<ExpressionNegate>(copyNonlinearExpression(C->nonlinearExpression.get(), this)));
-
-            auxConstraint->updateProperties();
-            auxConstraints.push_back(auxConstraint);
-        }
     }
-
-    env->output->outputTrace(" Adding auxiliary constraints");
-    for(auto& C : auxConstraints)
-        this->add(C);
 
     this->objectiveFunction->takeOwnership(shared_from_this());
 
@@ -2926,13 +2842,25 @@ ProblemPtr Problem::createCopy(
     {
         NumericConstraintPtr destinationConstraint;
 
-        if(convexityRelaxed && C->valueLHS == C->valueRHS && C->properties.convexity > E_Convexity::Linear)
+        double valueLHS = C->valueLHS;
+        double valueRHS = C->valueRHS;
+
+        bool isKept = true;
+
+        if(convexityRelaxed && C->properties.convexity > E_Convexity::Convex)
         {
-            // Empty linear constraint instead of nonconvex equality constraint to get indexing correct
-            destinationConstraint = std::make_shared<LinearConstraint>(C->name, SHOT_DBL_MIN, 0.0);
-            destinationConstraint->properties.classification = E_ConstraintClassification::Linear;
+            // A nonconvex constraint L <= f(x) <= U still has a convex side if its function is convex or concave:
+            // f(x) <= U for a convex function, and L <= f(x) for a concave one. Only this side is then kept. The
+            // latter is rewritten as -f(x) <= -L when the properties of the destination problem are updated.
+            if(C->properties.functionConvexity == E_Convexity::Convex && valueRHS != SHOT_DBL_MAX)
+                valueLHS = SHOT_DBL_MIN;
+            else if(C->properties.functionConvexity == E_Convexity::Concave && valueLHS != SHOT_DBL_MIN)
+                valueRHS = SHOT_DBL_MAX;
+            else
+                isKept = false;
         }
-        else if(convexityRelaxed && C->properties.convexity > E_Convexity::Convex)
+
+        if(!isKept)
         {
             // Empty linear constraint instead of nonconvex constraint to get indexing correct
             destinationConstraint = std::make_shared<LinearConstraint>(C->name, SHOT_DBL_MIN, 0.0);
@@ -2940,8 +2868,6 @@ ProblemPtr Problem::createCopy(
         }
         else
         {
-            double valueLHS = std::dynamic_pointer_cast<NumericConstraint>(C)->valueLHS;
-            double valueRHS = std::dynamic_pointer_cast<NumericConstraint>(C)->valueRHS;
 
             if(C->properties.classification == E_ConstraintClassification::Linear
                 || (!C->properties.hasNonlinearExpression && !C->properties.hasQuadraticTerms
@@ -3065,6 +2991,100 @@ ProblemPtr Problem::createCopy(
     destinationProblem->updateFactorableFunctions();
 
     return (destinationProblem);
+}
+
+NumericConstraintPtr Problem::createConstraintSide(const NumericConstraintPtr& source, E_ConstraintSide side)
+{
+    bool isUpper = (side == E_ConstraintSide::Upper);
+
+    if((isUpper && source->valueRHS == SHOT_DBL_MAX) || (!isUpper && source->valueLHS == SHOT_DBL_MIN))
+        throw std::invalid_argument(
+            fmt::format("Constraint {} does not have the bound a constraint is to be created for.", source->name));
+
+    // The upper side is f(x) <= U and the lower one is -f(x) <= -L
+    double sign = isUpper ? 1.0 : -1.0;
+    double valueRHS = isUpper ? source->valueRHS : -source->valueLHS;
+
+    if(valueRHS == 0.0)
+        valueRHS = 0.0; // Not -0.0
+
+    auto sourceLinear = std::dynamic_pointer_cast<LinearConstraint>(source);
+    auto sourceQuadratic = std::dynamic_pointer_cast<QuadraticConstraint>(source);
+    auto sourceNonlinear = std::dynamic_pointer_cast<NonlinearConstraint>(source);
+
+    NumericConstraintPtr constraint;
+
+    if(sourceNonlinear)
+        constraint = std::make_shared<NonlinearConstraint>(source->name, SHOT_DBL_MIN, valueRHS);
+    else if(sourceQuadratic)
+        constraint = std::make_shared<QuadraticConstraint>(source->name, SHOT_DBL_MIN, valueRHS);
+    else
+        constraint = std::make_shared<LinearConstraint>(source->name, SHOT_DBL_MIN, valueRHS);
+
+    constraint->constant = (source->constant == 0.0) ? 0.0 : sign * source->constant;
+
+    if(sourceLinear)
+    {
+        // The terms are added all at once, since adding them one by one searches the terms added so far
+        LinearTerms terms;
+
+        for(auto& T : sourceLinear->linearTerms)
+            terms.push_back(std::make_shared<LinearTerm>(sign * T->coefficient, getVariable(T->variable->getIndex())));
+
+        std::dynamic_pointer_cast<LinearConstraint>(constraint)->add(terms);
+    }
+
+    if(sourceQuadratic)
+    {
+        QuadraticTerms terms;
+
+        for(auto& T : sourceQuadratic->quadraticTerms)
+            terms.push_back(std::make_shared<QuadraticTerm>(sign * T->coefficient,
+                getVariable(T->firstVariable->getIndex()), getVariable(T->secondVariable->getIndex())));
+
+        std::dynamic_pointer_cast<QuadraticConstraint>(constraint)->add(terms);
+    }
+
+    if(sourceNonlinear)
+    {
+        auto nonlinearConstraint = std::dynamic_pointer_cast<NonlinearConstraint>(constraint);
+
+        for(auto& T : sourceNonlinear->monomialTerms)
+        {
+            Variables variables;
+
+            for(auto& V : T->variables)
+                variables.push_back(getVariable(V->getIndex()));
+
+            nonlinearConstraint->add(std::make_shared<MonomialTerm>(sign * T->coefficient, variables));
+        }
+
+        for(auto& T : sourceNonlinear->signomialTerms)
+        {
+            SignomialElements elements;
+
+            for(auto& E : T->elements)
+                elements.push_back(
+                    std::make_shared<SignomialElement>(getVariable(E->variable->getIndex()), E->power));
+
+            nonlinearConstraint->add(std::make_shared<SignomialTerm>(sign * T->coefficient, elements));
+        }
+
+        if(sourceNonlinear->nonlinearExpression)
+        {
+            auto expression = copyNonlinearExpression(sourceNonlinear->nonlinearExpression.get(), this);
+
+            if(isUpper)
+                nonlinearConstraint->add(expression);
+            else
+                nonlinearConstraint->add(simplify(std::make_shared<ExpressionNegate>(expression)));
+        }
+    }
+
+    constraint->takeOwnership(shared_from_this());
+    constraint->updateProperties();
+
+    return (constraint);
 }
 
 void Problem::augmentAuxiliaryVariableValues(VectorDouble& point)

@@ -46,10 +46,22 @@ enum class E_ConstraintSignType
     LessThanAndGreaterThan
 };
 
+// The sides of a constraint L <= f(x) <= U
+enum class E_ConstraintSide
+{
+    Lower, // L <= f(x)
+    Upper // f(x) <= U
+};
+
 struct ConstraintProperties
 {
     E_ConstraintClassification classification = E_ConstraintClassification::None;
     E_Convexity convexity = E_Convexity::NotSet;
+
+    // The convexity of the function f(x) in L <= f(x) <= U, regardless of the bounds. The convexity above is that
+    // of the constraint, so a constraint with a convex function is nonconvex if it has a lower bound
+    E_Convexity functionConvexity = E_Convexity::NotSet;
+
     E_ConstraintSignType type = E_ConstraintSignType::None;
     E_Monotonicity monotonicity = E_Monotonicity::NotSet;
 
@@ -287,6 +299,9 @@ public:
     std::shared_ptr<NumericConstraint> getPointer() override;
 
     void updateProperties() override;
+
+    // Sets the convexity of the constraint from the convexity of its function and its bounds
+    void updateConvexityFromBounds();
 
     std::ostream& print(std::ostream& stream) const override;
 

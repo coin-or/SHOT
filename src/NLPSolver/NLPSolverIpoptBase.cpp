@@ -598,6 +598,28 @@ void IpoptProblem::finalize_solution(SolverReturn status, [[maybe_unused]] Index
 
         break;
 
+    case FEASIBLE_POINT_FOUND:
+        // A problem with as many equality constraints as free variables, which e.g. a problem with equality
+        // constraints can be after its integer variables have been fixed, is solved by Ipopt as a system of
+        // equations. The point returned is then only known to be feasible.
+        solutionDescription = "Algorithm found a feasible point for a problem with as many equality constraints as "
+                              "free variables.";
+
+        solutionStatus = E_NLPSolutionStatus::Feasible;
+
+        if(x != nullptr)
+        {
+            hasSolution = true;
+            variableSolution = VectorDouble(numberOfVariables);
+
+            for(int i = 0; i < numberOfVariables; i++)
+                variableSolution[i] = x[i];
+
+            objectiveValue = obj_value;
+        }
+
+        break;
+
     case LOCAL_INFEASIBILITY:
         solutionDescription = "Algorithm converged to a point of local infeasibility. Problem may be infeasible.";
 
