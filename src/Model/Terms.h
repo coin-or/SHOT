@@ -856,7 +856,11 @@ public:
         // The number of terms and the capacity are taken before the first term is added, so that adding the terms
         // to themselves neither reallocates the container being read nor reads the terms it has just added
         size_t numberOfTerms = terms.size();
-        (*this).reserve(size() + numberOfTerms);
+
+        // The capacity grows geometrically, as it does in push_back, since reserving the exact size in every call
+        // copies all terms each time and makes adding many small sets of terms quadratic
+        if(size() + numberOfTerms > (*this).capacity())
+            (*this).reserve(std::max(size() + numberOfTerms, 2 * (*this).capacity()));
 
         for(size_t i = 0; i < numberOfTerms; i++)
         {
@@ -1471,7 +1475,11 @@ public:
         // The number of terms and the capacity are taken before the first term is added, so that adding the terms
         // to themselves neither reallocates the container being read nor reads the terms it has just added
         size_t numberOfTerms = terms.size();
-        (*this).reserve(size() + numberOfTerms);
+
+        // The capacity grows geometrically, as it does in push_back, since reserving the exact size in every call
+        // copies all terms each time and makes adding many small sets of terms quadratic
+        if(size() + numberOfTerms > (*this).capacity())
+            (*this).reserve(std::max(size() + numberOfTerms, 2 * (*this).capacity()));
 
         for(size_t i = 0; i < numberOfTerms; i++)
         {
