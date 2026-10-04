@@ -1448,11 +1448,16 @@ int MIPSolverHighs::getNumberOfSolutions()
         {
         case E_ProblemSolutionStatus::Optimal:
         case E_ProblemSolutionStatus::Feasible:
+            numSols = 1;
+            break;
         case E_ProblemSolutionStatus::TimeLimit:
         case E_ProblemSolutionStatus::IterationLimit:
         case E_ProblemSolutionStatus::SolutionLimit:
         case E_ProblemSolutionStatus::CutOff:
-            numSols = 1;
+            // An LP problem that ended on a limit only has a point if HiGHS reports it as primal feasible. The dual
+            // simplex method has otherwise not reached a feasible point, and col_value is then, e.g., all zeros,
+            // which would be trusted to fulfill the linear constraints as a primal solution candidate.
+            numSols = (highsInstance.getInfo().primal_solution_status == kSolutionStatusFeasible) ? 1 : 0;
             break;
         default:
             numSols = 0;
