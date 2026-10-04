@@ -1867,20 +1867,24 @@ public:
             return (bounds);
         }
 
-        if(powerBounds.l() < 0)
+        // The interval power function takes the logarithm of the base, so its bound must be positive also for a
+        // positive power, e.g., in x^2^(1+y^2). The power of a base at zero is then zero.
+        bool isBaseAtZero = (baseBounds.l() <= 0);
+
+        if(isBaseAtZero)
         {
-            if(baseBounds.l() <= 0)
-                baseBounds.l(SHOT_DBL_EPS);
-        }
-        else if(powerBounds.l() == 0.0)
-        {
-            if(baseBounds.l() < 0)
-                baseBounds.l(0.0);
-            if(baseBounds.l() <= 0)
-                baseBounds.l(SHOT_DBL_EPS);
+            baseBounds.l(SHOT_DBL_EPS);
+
+            if(baseBounds.u() < SHOT_DBL_EPS)
+                baseBounds.u(SHOT_DBL_EPS);
         }
 
-        return (pow(baseBounds, powerBounds));
+        bounds = pow(baseBounds, powerBounds);
+
+        if(isBaseAtZero && powerBounds.l() > 0)
+            bounds.l(0.0);
+
+        return (bounds);
     }
 
     inline Interval getBounds() const override
@@ -1918,20 +1922,24 @@ public:
             return (bounds);
         }
 
-        if(powerBounds.l() < 0)
+        // The interval power function takes the logarithm of the base, so its bound must be positive also for a
+        // positive power, e.g., in x^2^(1+y^2). The power of a base at zero is then zero.
+        bool isBaseAtZero = (baseBounds.l() <= 0);
+
+        if(isBaseAtZero)
         {
-            if(baseBounds.l() <= 0)
-                baseBounds.l(SHOT_DBL_SIG_MIN);
-        }
-        else if(powerBounds.l() == 0.0)
-        {
-            if(baseBounds.l() < 0)
-                baseBounds.l(0.0);
-            if(baseBounds.l() <= 0)
-                baseBounds.l(SHOT_DBL_SIG_MIN);
+            baseBounds.l(SHOT_DBL_SIG_MIN);
+
+            if(baseBounds.u() < SHOT_DBL_SIG_MIN)
+                baseBounds.u(SHOT_DBL_SIG_MIN);
         }
 
-        return (pow(baseBounds, powerBounds));
+        bounds = pow(baseBounds, powerBounds);
+
+        if(isBaseAtZero && powerBounds.l() > 0)
+            bounds.l(0.0);
+
+        return (bounds);
     }
 
     inline bool tightenBounds(Interval bound) override
@@ -1951,18 +1959,44 @@ public:
         // recovered via a signed n-th root rather than pow()/sqrt()
         bool isOddPositiveIntegerPower = isInteger && !isEven && power > 0;
 
-        if(isInteger && isEven && power > 0 && bound.l() <= 0.0)
-            bound.l(0.0);
-        else if(!isOddPositiveIntegerPower && bound.l() <= 0.0 && bound.u() > SHOT_DBL_SIG_MIN)
-            bound.l(SHOT_DBL_SIG_MIN);
-        else if(!isOddPositiveIntegerPower && bound.u() < 0)
-            return (false);
+        if(isInteger && isEven && power > 0)
+        {
+            if(bound.u() < 0)
+                return (false);
+
+            // An even power discards the sign of the base, as a square does, so the roots only give the base if its
+            // domain is on one side of zero. Otherwise only the upper bound can be used. The roots are calculated
+            // directly, since the interval power function takes the logarithm of the bound, which may start at zero.
+            Interval roots(std::pow(std::max(0.0, bound.l()), 1.0 / power), std::pow(bound.u(), 1.0 / power));
+            auto baseBound = firstChild->getBounds();
+
+            if(baseBound.l() >= 0)
+                return (firstChild->tightenBounds(roots));
+
+            if(baseBound.u() <= 0)
+                return (firstChild->tightenBounds(-roots));
+
+            return (firstChild->tightenBounds(Interval(-roots.u(), roots.u())));
+        }
+
+        if(!isOddPositiveIntegerPower)
+        {
+            if(bound.u() < 0)
+                return (false);
+
+            if(bound.l() <= 0.0)
+            {
+                // The power function below takes the logarithm of the bound, so it must be positive
+                if(bound.u() <= SHOT_DBL_SIG_MIN)
+                    return (false);
+
+                bound.l(SHOT_DBL_SIG_MIN);
+            }
+        }
 
         Interval interval;
 
-        if(power == 2.0)
-            interval = sqrt(bound);
-        else if(power == -1.0)
+        if(power == -1.0)
         {
             interval = 1 / bound;
 

@@ -1277,6 +1277,11 @@ inline std::optional<std::tuple<QuadraticTermPtr, LinearTermPtr, double>> conver
         else
             return resultingExpression;
     }
+    else
+    {
+        // A sum without a constant, e.g., (x - y)^2
+        return resultingExpression;
+    }
 
     resultingExpression = std::make_tuple(
         std::make_shared<QuadraticTerm>(variableCoefficient * variableCoefficient, variable, variable),

@@ -179,6 +179,7 @@ bool ModelTestBoundTighteningTimeLimit();
 bool ModelTestConvexityAfterAddedTerm();
 bool ModelTestSignomialGradientOfRepeatedVariable();
 bool ModelTestBulkTermAdding();
+bool ModelTestPowerBounds();
 
 bool TestReadProblem(const std::string& problemFile);
 bool TestRootsearch(const std::string& problemFile);
@@ -350,6 +351,9 @@ int ModelTest(int argc, char* argv[])
         break;
     case 49:
         passed = ModelTestBulkTermAdding();
+        break;
+    case 50:
+        passed = ModelTestPowerBounds();
         break;
     default:
         passed = false;
@@ -8471,6 +8475,188 @@ bool ModelTestBulkTermAdding()
         std::cout << "  FAILED: adding the monomial terms to themselves gave " << selfAddedMonomials.size()
                   << " terms.\n";
         passed = false;
+    }
+
+    return passed;
+}
+
+bool ModelTestPowerBounds()
+{
+    // The interval power function takes the logarithm of its argument and throws for an interval that starts at
+    // zero. Propagating a bound on an even power, e.g. x^4 <= 16, back onto x therefore ended SHOT with an uncaught
+    // exception (nvs06), as did the bounds of a power with a nonconstant exponent and a base that can be zero
+    // (lukvle10). An even power also discards the sign of the base, as a square does.
+
+    bool passed = true;
+
+    struct Case
+    {
+        std::string description;
+        double variableLowerBound;
+        double variableUpperBound;
+        double expectedLowerBound;
+        double expectedUpperBound;
+    };
+
+    std::vector<Case> cases = {
+        { "x^4 + y^4 <= 16, x and y free", -1e50, 1e50, -2.0, 2.0 },
+        { "x^4 + y^4 <= 16, x and y in [-1,10]", -1.0, 10.0, -1.0, 2.0 },
+        { "x^4 + y^4 <= 16, x and y in [0,10] (non-negative domain)", 0.0, 10.0, 0.0, 2.0 },
+        { "x^4 + y^4 <= 16, x and y in [-10,-1] (negative domain)", -10.0, -1.0, -2.0, -1.0 },
+    };
+
+    for(auto& C : cases)
+    {
+        auto solver = std::make_unique<SHOT::Solver>();
+        auto problem = std::make_shared<SHOT::Problem>(solver->getEnvironment());
+
+        auto x = std::make_shared<SHOT::Variable>(
+            "x", SHOT::E_VariableType::Real, C.variableLowerBound, C.variableUpperBound);
+        auto y = std::make_shared<SHOT::Variable>(
+            "y", SHOT::E_VariableType::Real, C.variableLowerBound, C.variableUpperBound);
+        problem->add(SHOT::Variables { x, y });
+        problem->add(std::make_shared<SHOT::LinearObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize));
+
+        // The powers are kept as expressions and tightened directly, since they are otherwise extracted as monomial
+        // terms when the problem is finalized
+        SHOT::ExpressionPower powerX(
+            std::make_shared<SHOT::ExpressionVariable>(x), std::make_shared<SHOT::ExpressionConstant>(4.0));
+        SHOT::ExpressionPower powerY(
+            std::make_shared<SHOT::ExpressionVariable>(y), std::make_shared<SHOT::ExpressionConstant>(4.0));
+
+        try
+        {
+            powerX.tightenBounds(SHOT::Interval(SHOT_DBL_MIN, 16.0));
+            powerY.tightenBounds(SHOT::Interval(0.0, 16.0));
+        }
+        catch(...)
+        {
+            std::cout << "  FAILED: " << C.description << " threw an exception.\n";
+            passed = false;
+            continue;
+        }
+
+        std::cout << "  " << C.description << ": x in [" << x->lowerBound << ", " << x->upperBound << "], y in ["
+                  << y->lowerBound << ", " << y->upperBound << "] (expected [" << C.expectedLowerBound << ", "
+                  << C.expectedUpperBound << "])\n";
+
+        for(auto& V : { x, y })
+        {
+            if(std::abs(V->lowerBound - C.expectedLowerBound) > 1e-9
+                || std::abs(V->upperBound - C.expectedUpperBound) > 1e-9)
+            {
+                std::cout << "  FAILED: " << V->name << " was not tightened as expected.\n";
+                passed = false;
+            }
+        }
+    }
+
+    // An impossible bound, or one that only allows values below the smallest value used for a nonintegral power, must
+    // not change the variable or throw
+    {
+        auto x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 10.0);
+        SHOT::ExpressionPower even(
+            std::make_shared<SHOT::ExpressionVariable>(x), std::make_shared<SHOT::ExpressionConstant>(4.0));
+        SHOT::ExpressionPower root(
+            std::make_shared<SHOT::ExpressionVariable>(x), std::make_shared<SHOT::ExpressionConstant>(0.5));
+
+        try
+        {
+            if(even.tightenBounds(SHOT::Interval(-4.0, -1.0)) || root.tightenBounds(SHOT::Interval(-1.0, 0.0)))
+            {
+                std::cout << "  FAILED: an impossible bound tightened x to [" << x->lowerBound << ", "
+                          << x->upperBound << "].\n";
+                passed = false;
+            }
+
+            root.tightenBounds(SHOT::Interval(0.0, 2.0));
+        }
+        catch(...)
+        {
+            std::cout << "  FAILED: an impossible bound on a power threw an exception.\n";
+            passed = false;
+        }
+
+        std::cout << "  x^0.5 <= 2, x in [0,10]: x in [" << x->lowerBound << ", " << x->upperBound
+                  << "] (expected upper bound 4)\n";
+
+        if(std::abs(x->upperBound - 4.0) > 1e-9 || x->lowerBound > 1e-9)
+        {
+            std::cout << "  FAILED: x^0.5 <= 2 did not give x <= 4.\n";
+            passed = false;
+        }
+    }
+
+    // (x^2)^(1+y^2) + (y^2)^(1+x^2) with x and y in [0,2]: each base can be zero, and each power is in [0, 4^5]
+    {
+        auto x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 2.0);
+        auto y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Real, 0.0, 2.0);
+
+        auto power = [](SHOT::VariablePtr base, SHOT::VariablePtr exponent)
+        {
+            return (std::make_shared<SHOT::ExpressionPower>(
+                std::make_shared<SHOT::ExpressionSquare>(std::make_shared<SHOT::ExpressionVariable>(base)),
+                std::make_shared<SHOT::ExpressionSum>(std::make_shared<SHOT::ExpressionConstant>(1.0),
+                    std::make_shared<SHOT::ExpressionSquare>(std::make_shared<SHOT::ExpressionVariable>(exponent)))));
+        };
+
+        auto sum = std::make_shared<SHOT::ExpressionSum>(power(x, y), power(y, x));
+
+        try
+        {
+            auto bounds = sum->getBounds();
+
+            std::cout << "  (x^2)^(1+y^2) + (y^2)^(1+x^2), x and y in [0,2]: [" << bounds.l() << ", " << bounds.u()
+                      << "] (expected [0, 2048])\n";
+
+            if(bounds.l() < 0.0 || bounds.l() > 1e-9 || std::abs(bounds.u() - 2048.0) > 1e-6)
+            {
+                std::cout << "  FAILED: the bounds of the powers with nonconstant exponents are wrong.\n";
+                passed = false;
+            }
+
+            sum->tightenBounds(SHOT::Interval(SHOT_DBL_MIN, 100.0));
+        }
+        catch(...)
+        {
+            std::cout << "  FAILED: the bounds of a power with a nonconstant exponent threw an exception.\n";
+            passed = false;
+        }
+    }
+
+    // (x - y)^2 + (y - z)^2 <= 4 are squares of sums without a constant, which are not univariate quadratic
+    // expressions. Converting them created a quadratic term without a variable (mhw4d, ex8_1_7, mathopt2).
+    {
+        auto solver = std::make_unique<SHOT::Solver>();
+        auto problem = std::make_shared<SHOT::Problem>(solver->getEnvironment());
+
+        auto x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, -10.0, 10.0);
+        auto y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Real, -10.0, 10.0);
+        auto z = std::make_shared<SHOT::Variable>("z", SHOT::E_VariableType::Real, -10.0, 10.0);
+        problem->add(SHOT::Variables { x, y, z });
+        problem->add(std::make_shared<SHOT::LinearObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize));
+
+        auto difference = [](SHOT::VariablePtr first, SHOT::VariablePtr second)
+        {
+            return (std::make_shared<SHOT::ExpressionSquare>(
+                std::make_shared<SHOT::ExpressionSum>(std::make_shared<SHOT::ExpressionVariable>(first),
+                    std::make_shared<SHOT::ExpressionNegate>(std::make_shared<SHOT::ExpressionVariable>(second)))));
+        };
+
+        auto constraint = std::make_shared<SHOT::NonlinearConstraint>("differences", SHOT_DBL_MIN, 4.0);
+        constraint->add(std::make_shared<SHOT::ExpressionSum>(difference(x, y), difference(y, z)));
+        problem->add(constraint);
+        problem->finalize();
+
+        double value = constraint->calculateFunctionValue(SHOT::VectorDouble { 3.0, 1.0, -2.0 });
+
+        std::cout << "  (x - y)^2 + (y - z)^2 in (3, 1, -2): " << value << " (expected 13)\n";
+
+        if(std::abs(value - 13.0) > 1e-9)
+        {
+            std::cout << "  FAILED: the squares of differences have the wrong value after simplification.\n";
+            passed = false;
+        }
     }
 
     return passed;
