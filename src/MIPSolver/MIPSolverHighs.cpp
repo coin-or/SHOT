@@ -588,23 +588,25 @@ void MIPSolverHighs::activateDiscreteVariables(bool activate)
             if(variableTypes.at(i) == E_VariableType::Integer || variableTypes.at(i) == E_VariableType::Binary)
             {
                 this->variableTypesHighs.at(i) = HighsVarType::kInteger;
-                highsInstance.changeColIntegrality(i, HighsVarType::kInteger);
             }
             else if(variableTypes.at(i) == E_VariableType::Semicontinuous)
             {
                 // Restore kSemiContinuous type and the original semicontinuous lower bound
                 this->variableTypesHighs.at(i) = HighsVarType::kSemiContinuous;
-                highsInstance.changeColIntegrality(i, HighsVarType::kSemiContinuous);
                 highsInstance.changeColBounds(i, variableLowerBounds.at(i), variableUpperBounds.at(i));
             }
             else if(variableTypes.at(i) == E_VariableType::Semiinteger)
             {
                 // Restore kSemiInteger type and the original semiinteger lower bound
                 this->variableTypesHighs.at(i) = HighsVarType::kSemiInteger;
-                highsInstance.changeColIntegrality(i, HighsVarType::kSemiInteger);
                 highsInstance.changeColBounds(i, variableLowerBounds.at(i), variableUpperBounds.at(i));
             }
         }
+
+        // The types are changed in one call, since HiGHS invalidates its solver data for every call, which takes
+        // long for a problem with many variables
+        if(numberOfVariables > 0)
+            highsInstance.changeColsIntegrality(0, numberOfVariables - 1, variableTypesHighs.data());
 
         discreteVariablesActivated = true;
     }
@@ -616,17 +618,20 @@ void MIPSolverHighs::activateDiscreteVariables(bool activate)
             if(variableTypes.at(i) == E_VariableType::Integer || variableTypes.at(i) == E_VariableType::Binary)
             {
                 this->variableTypesHighs.at(i) = HighsVarType::kContinuous;
-                highsInstance.changeColIntegrality(i, HighsVarType::kContinuous);
             }
             else if(variableTypes.at(i) == E_VariableType::Semicontinuous
                 || variableTypes.at(i) == E_VariableType::Semiinteger)
             {
                 // x=0 must be feasible, so reset lower bound to 0
                 this->variableTypesHighs.at(i) = HighsVarType::kContinuous;
-                highsInstance.changeColIntegrality(i, HighsVarType::kContinuous);
                 highsInstance.changeColBounds(i, 0.0, variableUpperBounds.at(i));
             }
         }
+
+        // The types are changed in one call, since HiGHS invalidates its solver data for every call, which takes
+        // long for a problem with many variables
+        if(numberOfVariables > 0)
+            highsInstance.changeColsIntegrality(0, numberOfVariables - 1, variableTypesHighs.data());
 
         discreteVariablesActivated = false;
     }
