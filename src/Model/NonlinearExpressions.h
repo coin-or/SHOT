@@ -1979,6 +1979,25 @@ public:
             return (firstChild->tightenBounds(Interval(-roots.u(), roots.u())));
         }
 
+        // A negative integer power is only positive for a positive base. An odd one preserves the sign of the base,
+        // so for a negative base the bound is that of the power of -x with the opposite sign, and nothing is known
+        // if the base can have both signs. An even one discards the sign, which is handled below.
+        bool isNegativeIntegerPower = isInteger && power < 0;
+        bool isMirrored = false;
+
+        if(isNegativeIntegerPower && !isEven)
+        {
+            auto baseBound = firstChild->getBounds();
+
+            if(baseBound.u() <= 0)
+            {
+                bound = -bound;
+                isMirrored = true;
+            }
+            else if(baseBound.l() < 0)
+                return (false);
+        }
+
         if(!isOddPositiveIntegerPower)
         {
             if(bound.u() < 0)
@@ -2015,6 +2034,19 @@ public:
         }
         else
             interval = pow(bound, 1.0 / power);
+
+        if(isMirrored)
+            interval = -interval;
+
+        if(isNegativeIntegerPower && isEven)
+        {
+            auto baseBound = firstChild->getBounds();
+
+            if(baseBound.u() <= 0)
+                interval = -interval;
+            else if(baseBound.l() < 0)
+                interval = Interval(-interval.u(), interval.u());
+        }
 
         return (firstChild->tightenBounds(interval));
     };

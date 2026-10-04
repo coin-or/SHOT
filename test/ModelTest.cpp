@@ -8587,6 +8587,62 @@ bool ModelTestPowerBounds()
         }
     }
 
+    // A negative integer power is positive only for a positive base: an odd one preserves the sign of the base and an
+    // even one discards it. The bound was previously made positive without regard to the domain of the base.
+    {
+        struct NegativePowerCase
+        {
+            std::string description;
+            double power;
+            double variableLowerBound;
+            double variableUpperBound;
+            double valueLowerBound;
+            double valueUpperBound;
+            double expectedLowerBound;
+            double expectedUpperBound;
+        };
+
+        std::vector<NegativePowerCase> negativePowerCases = {
+            { "x^-1 in [0.25,0.5], x in [1,10]", -1.0, 1.0, 10.0, 0.25, 0.5, 2.0, 4.0 },
+            { "x^-1 in [-0.5,-0.25], x in [-10,-1]", -1.0, -10.0, -1.0, -0.5, -0.25, -4.0, -2.0 },
+            { "x^-1 in [0.25,0.5], x in [-10,10]", -1.0, -10.0, 10.0, 0.25, 0.5, -10.0, 10.0 },
+            { "x^-3 in [-1/8,-1/64], x in [-10,-1]", -3.0, -10.0, -1.0, -0.125, -0.015625, -4.0, -2.0 },
+            { "x^-3 in [1/64,1/8], x in [1,10]", -3.0, 1.0, 10.0, 0.015625, 0.125, 2.0, 4.0 },
+            { "x^-2 in [1/16,1/4], x in [1,10]", -2.0, 1.0, 10.0, 0.0625, 0.25, 2.0, 4.0 },
+            { "x^-2 in [1/16,1/4], x in [-10,-1]", -2.0, -10.0, -1.0, 0.0625, 0.25, -4.0, -2.0 },
+            { "x^-2 in [1/16,1/4], x in [-10,10]", -2.0, -10.0, 10.0, 0.0625, 0.25, -4.0, 4.0 },
+        };
+
+        for(auto& C : negativePowerCases)
+        {
+            auto x = std::make_shared<SHOT::Variable>(
+                "x", SHOT::E_VariableType::Real, C.variableLowerBound, C.variableUpperBound);
+            SHOT::ExpressionPower power(
+                std::make_shared<SHOT::ExpressionVariable>(x), std::make_shared<SHOT::ExpressionConstant>(C.power));
+
+            try
+            {
+                power.tightenBounds(SHOT::Interval(C.valueLowerBound, C.valueUpperBound));
+            }
+            catch(...)
+            {
+                std::cout << "  FAILED: " << C.description << " threw an exception.\n";
+                passed = false;
+                continue;
+            }
+
+            std::cout << "  " << C.description << ": x in [" << x->lowerBound << ", " << x->upperBound
+                      << "] (expected [" << C.expectedLowerBound << ", " << C.expectedUpperBound << "])\n";
+
+            if(std::abs(x->lowerBound - C.expectedLowerBound) > 1e-9
+                || std::abs(x->upperBound - C.expectedUpperBound) > 1e-9)
+            {
+                std::cout << "  FAILED: " << C.description << " was not tightened as expected.\n";
+                passed = false;
+            }
+        }
+    }
+
     // (x^2)^(1+y^2) + (y^2)^(1+x^2) with x and y in [0,2]: each base can be zero, and each power is in [0, 4^5]
     {
         auto x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 2.0);
