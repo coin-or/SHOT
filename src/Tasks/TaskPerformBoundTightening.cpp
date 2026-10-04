@@ -72,7 +72,7 @@ void TaskPerformBoundTightening::run()
 
             // Updating implicit variable bounds from signomials and nonlinear expressions
 
-            auto infinteInterval = Interval(-SHOT_DBL_MAX, SHOT_DBL_MAX);
+            auto infiniteInterval = Interval(-SHOT_DBL_MAX, SHOT_DBL_MAX);
 
             if(sourceProblem->objectiveFunction->properties.hasSignomialTerms)
             {
@@ -80,14 +80,14 @@ void TaskPerformBoundTightening::run()
                                    ->signomialTerms)
                 {
                     for(auto& SE : ST->elements)
-                        SE->tightenBounds(infinteInterval);
+                        SE->tightenBounds(infiniteInterval);
                 }
             }
 
             if(sourceProblem->objectiveFunction->properties.hasNonlinearExpression)
             {
                 std::dynamic_pointer_cast<NonlinearObjectiveFunction>(sourceProblem->objectiveFunction)
-                    ->nonlinearExpression->tightenBounds(infinteInterval);
+                    ->nonlinearExpression->tightenBounds(infiniteInterval);
             }
 
             sourceProblem->doFBBT();

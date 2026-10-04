@@ -39,14 +39,14 @@ void PrimalSolver::addPrimalSolutionCandidate(VectorDouble pt, E_PrimalSolutionS
     if(env->problem->properties.numberOfNonlinearConstraints > 0)
     {
         auto maxDevNonlinear = env->problem->getMaxNumericConstraintValue(pt, env->problem->nonlinearConstraints);
-        sol.maxDevatingConstraintNonlinear
+        sol.maxDeviatingConstraintNonlinear
             = PairIndexValue(maxDevNonlinear.constraint->getIndex(), maxDevNonlinear.normalizedValue);
     }
 
     if(env->problem->properties.numberOfLinearConstraints > 0)
     {
         auto maxDevLinear = env->problem->getMaxNumericConstraintValue(pt, env->problem->linearConstraints);
-        sol.maxDevatingConstraintLinear
+        sol.maxDeviatingConstraintLinear
             = PairIndexValue(maxDevLinear.constraint->getIndex(), maxDevLinear.normalizedValue);
     }
 
@@ -479,7 +479,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
             }
         }
 
-        primalSol.maxDevatingConstraintLinear = mostDevLinearConstraints;
+        primalSol.maxDeviatingConstraintLinear = mostDevLinearConstraints;
     }
 
     // Check if quadratic constraints are fulfilled
@@ -510,7 +510,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
             env->output->outputDebug(tmpLine);
         }
 
-        primalSol.maxDevatingConstraintQuadratic = mostDevQuadraticConstraints;
+        primalSol.maxDeviatingConstraintQuadratic = mostDevQuadraticConstraints;
     }
 
     // Check if nonlinear constraints are fulfilled
@@ -541,7 +541,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
             env->output->outputDebug(tmpLine);
         }
 
-        primalSol.maxDevatingConstraintNonlinear = mostDevNonlinearConstraints;
+        primalSol.maxDeviatingConstraintNonlinear = mostDevNonlinearConstraints;
     }
 
     primalSol.objValue = tmpObjVal;
@@ -582,21 +582,21 @@ PrimalFixedNLPCandidate PrimalSolver::createFixedNLPCandidate(
 
     assert((int)candidate.size() == env->reformulatedProblem->properties.numberOfVariables);
 
-    VectorInteger discretVariableValues;
-    discretVariableValues.reserve(env->reformulatedProblem->properties.numberOfDiscreteVariables);
+    VectorInteger discreteVariableValues;
+    discreteVariableValues.reserve(env->reformulatedProblem->properties.numberOfDiscreteVariables);
 
     for(auto& VAR : env->reformulatedProblem->allVariables)
     {
         if(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer
             || VAR->properties.type == E_VariableType::Semiinteger)
-            discretVariableValues.push_back(candidate[VAR->getIndex()]);
+            discreteVariableValues.push_back(candidate[VAR->getIndex()]);
     }
 
     PairDouble pointHashes;
 
     if(env->settings->getSetting<bool>("Primal.FixedInteger.OnlyUniqueIntegerCombinations"))
     {
-        pointHashes = Utilities::calculateHashes(discretVariableValues);
+        pointHashes = Utilities::calculateHashes(discreteVariableValues);
     }
     else
     {

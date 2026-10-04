@@ -2858,20 +2858,20 @@ PYBIND11_MODULE(SHOTpy, m)
             "sourceDescription", &PrimalSolution::sourceDescription, "A description of where the solution comes from")
         .def_readwrite("objValue", &PrimalSolution::objValue, "The objective value of the solution")
         .def_readwrite("iterFound", &PrimalSolution::iterFound, "The iteration in which the solution was found")
-        .def_readwrite("maxDeviatingConstraintLinear", &PrimalSolution::maxDevatingConstraintLinear,
+        .def_readwrite("maxDeviatingConstraintLinear", &PrimalSolution::maxDeviatingConstraintLinear,
             "The index of the linear constraint the solution violates the most and the violation, index -1 if\n"
             "there is none")
-        .def_readwrite("maxDevatingConstraintLinear", &PrimalSolution::maxDevatingConstraintLinear,
+        .def_readwrite("maxDevatingConstraintLinear", &PrimalSolution::maxDeviatingConstraintLinear,
             "The same as maxDeviatingConstraintLinear; the misspelled name is kept for existing code")
-        .def_readwrite("maxDeviatingConstraintQuadratic", &PrimalSolution::maxDevatingConstraintQuadratic,
+        .def_readwrite("maxDeviatingConstraintQuadratic", &PrimalSolution::maxDeviatingConstraintQuadratic,
             "The index of the quadratic constraint the solution violates the most and the violation, index -1 if\n"
             "there is none")
-        .def_readwrite("maxDevatingConstraintQuadratic", &PrimalSolution::maxDevatingConstraintQuadratic,
+        .def_readwrite("maxDevatingConstraintQuadratic", &PrimalSolution::maxDeviatingConstraintQuadratic,
             "The same as maxDeviatingConstraintQuadratic; the misspelled name is kept for existing code")
-        .def_readwrite("maxDeviatingConstraintNonlinear", &PrimalSolution::maxDevatingConstraintNonlinear,
+        .def_readwrite("maxDeviatingConstraintNonlinear", &PrimalSolution::maxDeviatingConstraintNonlinear,
             "The index of the nonlinear constraint the solution violates the most and the violation, index -1 if\n"
             "there is none")
-        .def_readwrite("maxDevatingConstraintNonlinear", &PrimalSolution::maxDevatingConstraintNonlinear,
+        .def_readwrite("maxDevatingConstraintNonlinear", &PrimalSolution::maxDeviatingConstraintNonlinear,
             "The same as maxDeviatingConstraintNonlinear; the misspelled name is kept for existing code")
         .def_readwrite("maxIntegerToleranceError", &PrimalSolution::maxIntegerToleranceError,
             "The largest distance of an integer variable from an integer value before rounding")
@@ -2901,9 +2901,9 @@ PYBIND11_MODULE(SHOTpy, m)
             "The number of MIQCQP problems solved until a feasible solution was found")
         .def_readwrite("numberOfProblemsOptimalMIQCQP", &SolutionStatistics::numberOfProblemsOptimalMIQCQP,
             "The number of MIQCQP problems solved to optimality")
-        .def_readwrite("numberOfFunctionEvaluations", &SolutionStatistics::numberOfFunctionEvalutions,
+        .def_readwrite("numberOfFunctionEvaluations", &SolutionStatistics::numberOfFunctionEvaluations,
             "The number of evaluations of nonlinear functions")
-        .def_readwrite("numberOfFunctionEvalutions", &SolutionStatistics::numberOfFunctionEvalutions,
+        .def_readwrite("numberOfFunctionEvalutions", &SolutionStatistics::numberOfFunctionEvaluations,
             "The same as numberOfFunctionEvaluations; the misspelled name is kept for existing code")
         .def_readwrite("numberOfGradientEvaluations", &SolutionStatistics::numberOfGradientEvaluations,
             "The number of evaluations of gradients of nonlinear functions")

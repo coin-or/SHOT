@@ -141,7 +141,7 @@ struct SolutionPoint
 struct InteriorPoint
 {
     VectorDouble point;
-    PairIndexValue maxDevatingConstraint;
+    PairIndexValue maxDeviatingConstraint;
 
     // A point is only usable as an interior point when it is strictly inside every nonlinear constraint. A
     // nonfinite deviation compares false against any bound, so a test that only looks for a value that is too
@@ -159,9 +159,9 @@ struct PrimalSolution
     std::string sourceDescription;
     double objValue;
     int iterFound;
-    PairIndexValue maxDevatingConstraintLinear { -1, SHOT_DBL_INF };
-    PairIndexValue maxDevatingConstraintQuadratic { -1, SHOT_DBL_INF };
-    PairIndexValue maxDevatingConstraintNonlinear { -1, SHOT_DBL_INF };
+    PairIndexValue maxDeviatingConstraintLinear { -1, SHOT_DBL_INF };
+    PairIndexValue maxDeviatingConstraintQuadratic { -1, SHOT_DBL_INF };
+    PairIndexValue maxDeviatingConstraintNonlinear { -1, SHOT_DBL_INF };
     double maxIntegerToleranceError; // The maximum integer error before rounding
     bool boundProjectionPerformed = false; // Has the variable bounds been corrected to either upper or lower bounds?
     bool integerRoundingPerformed = false; // Has the integers been rounded?
@@ -174,7 +174,7 @@ struct PrimalFixedNLPCandidate
     E_PrimalNLPSource sourceType;
     double objValue;
     int iterFound;
-    PairIndexValue maxDevatingConstraint;
+    PairIndexValue maxDeviatingConstraint;
     PairDouble discreteVariablePointHashes;
 };
 
@@ -274,7 +274,7 @@ struct SolutionStatistics
     int numberOfProblemsFeasibleMIQCQP = 0;
     int numberOfProblemsOptimalMIQCQP = 0;
 
-    int numberOfFunctionEvalutions = 0;
+    int numberOfFunctionEvaluations = 0;
     int numberOfGradientEvaluations = 0;
 
     int numberOfProblemsMinimaxLP = 0;

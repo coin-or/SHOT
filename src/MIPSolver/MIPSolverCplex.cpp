@@ -308,7 +308,7 @@ bool MIPSolverCplex::addQuadraticTermToConstraint(double coefficient, int firstV
         return (false);
     }
 
-    hasQudraticConstraint = true;
+    hasQuadraticConstraint = true;
 
     return (true);
 }

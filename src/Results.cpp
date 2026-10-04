@@ -70,8 +70,8 @@ void Results::addPrimalSolution(PrimalSolution solution)
 
     auto maxError = [](const PrimalSolution& S)
     {
-        return (std::max({ S.maxDevatingConstraintLinear.value, S.maxDevatingConstraintQuadratic.value,
-            S.maxDevatingConstraintNonlinear.value }));
+        return (std::max({ S.maxDeviatingConstraintLinear.value, S.maxDeviatingConstraintQuadratic.value,
+            S.maxDeviatingConstraintNonlinear.value }));
     };
 
     // Whether the solution has the same objective value as another one but a smaller constraint error
@@ -1670,12 +1670,12 @@ void Results::savePrimalSolutionToFile(
     str << "Objective value: " << Utilities::toStringFormat(solution.objValue, "{:.8f}", false);
     str << '\n';
 
-    str << "Largest nonlinear error (in constraint " << solution.maxDevatingConstraintNonlinear.index
-        << "): " << Utilities::toStringFormat(solution.maxDevatingConstraintNonlinear.value, "{:.8f}", false);
+    str << "Largest nonlinear error (in constraint " << solution.maxDeviatingConstraintNonlinear.index
+        << "): " << Utilities::toStringFormat(solution.maxDeviatingConstraintNonlinear.value, "{:.8f}", false);
     str << '\n';
 
-    str << "Largest linear error (in constraint " << solution.maxDevatingConstraintLinear.index
-        << "): " << Utilities::toStringFormat(solution.maxDevatingConstraintLinear.value, "{:.8f}", false);
+    str << "Largest linear error (in constraint " << solution.maxDeviatingConstraintLinear.index
+        << "): " << Utilities::toStringFormat(solution.maxDeviatingConstraintLinear.value, "{:.8f}", false);
     str << '\n';
 
     str << "Projection to variable bounds performed: " << (solution.boundProjectionPerformed ? "true" : "false");
@@ -1720,12 +1720,12 @@ void Results::savePrimalSolutionToFile(
     str << "Objective value: " << Utilities::toStringFormat(solution.objValue, "{:.8f}", false);
     str << '\n';
 
-    str << "Largest nonlinear error (in constraint " << solution.maxDevatingConstraintNonlinear.index
-        << "): " << Utilities::toStringFormat(solution.maxDevatingConstraintNonlinear.value, "{:.8f}", false);
+    str << "Largest nonlinear error (in constraint " << solution.maxDeviatingConstraintNonlinear.index
+        << "): " << Utilities::toStringFormat(solution.maxDeviatingConstraintNonlinear.value, "{:.8f}", false);
     str << '\n';
 
-    str << "Largest linear error (in constraint " << solution.maxDevatingConstraintLinear.index
-        << "): " << Utilities::toStringFormat(solution.maxDevatingConstraintLinear.value, "{:.8f}", false);
+    str << "Largest linear error (in constraint " << solution.maxDeviatingConstraintLinear.index
+        << "): " << Utilities::toStringFormat(solution.maxDeviatingConstraintLinear.value, "{:.8f}", false);
     str << '\n';
 
     str << "Projection to variable bounds performed: " << (solution.boundProjectionPerformed ? "true" : "false");

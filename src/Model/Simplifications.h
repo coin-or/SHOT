@@ -1219,7 +1219,7 @@ inline std::optional<QuadraticTermPtr> convertSquareToQuadraticTerm(std::shared_
     return resultingQuadraticTerm;
 }
 
-inline std::optional<std::tuple<QuadraticTermPtr, LinearTermPtr, double>> convertSquareToUnivariteQuadraticExpression(
+inline std::optional<std::tuple<QuadraticTermPtr, LinearTermPtr, double>> convertSquareToUnivariateQuadraticExpression(
     std::shared_ptr<ExpressionSquare> product)
 {
     std::optional<std::tuple<QuadraticTermPtr, LinearTermPtr, double>> resultingExpression;
@@ -1642,7 +1642,7 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
         {
             quadraticTerms.add(optional.value());
         }
-        else if(auto optional = convertSquareToUnivariteQuadraticExpression(square);
+        else if(auto optional = convertSquareToUnivariateQuadraticExpression(square);
                 optional && extractQuadratics && extractLinears)
         {
             quadraticTerms.add(std::get<0>(optional.value()));

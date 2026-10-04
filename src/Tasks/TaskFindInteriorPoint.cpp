@@ -60,11 +60,11 @@ std::shared_ptr<InteriorPoint> TaskFindInteriorPoint::retreatToUsableInteriorPoi
             = env->reformulatedProblem->getMaxNumericConstraintValue(point, env->reformulatedProblem->nonlinearConstraints);
 
         if(InteriorPoint::isUsableDeviation(maxDev.normalizedValue)
-            && (!deepestPoint || maxDev.normalizedValue < deepestPoint->maxDevatingConstraint.value))
+            && (!deepestPoint || maxDev.normalizedValue < deepestPoint->maxDeviatingConstraint.value))
         {
             deepestPoint = std::make_shared<InteriorPoint>();
             deepestPoint->point = point;
-            deepestPoint->maxDevatingConstraint = PairIndexValue(maxDev.constraint->getIndex(), maxDev.normalizedValue);
+            deepestPoint->maxDeviatingConstraint = PairIndexValue(maxDev.constraint->getIndex(), maxDev.normalizedValue);
         }
 
         if(candidatePoint.size() != center.size())
@@ -99,7 +99,7 @@ void TaskFindInteriorPoint::run()
 
             auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
                 tmpIP->point, env->reformulatedProblem->nonlinearConstraints);
-            tmpIP->maxDevatingConstraint = PairIndexValue(maxDev.constraint->getIndex(), maxDev.normalizedValue);
+            tmpIP->maxDeviatingConstraint = PairIndexValue(maxDev.constraint->getIndex(), maxDev.normalizedValue);
 
             // A point is only usable if it lies strictly inside every constraint. A nonfinite deviation
             // compares false against any bound, so testing only for a too large value would let such a point
@@ -215,7 +215,7 @@ void TaskFindInteriorPoint::run()
 
         auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
             tmpIP->point, env->reformulatedProblem->nonlinearConstraints);
-        tmpIP->maxDevatingConstraint = PairIndexValue(maxDev.constraint->getIndex(), maxDev.normalizedValue);
+        tmpIP->maxDeviatingConstraint = PairIndexValue(maxDev.constraint->getIndex(), maxDev.normalizedValue);
 
         // As above. Whether the point is kept and whether it counts as a point found must be decided by the same
         // condition, otherwise a point on the boundary is discarded but still ends the search as a success.
@@ -239,7 +239,7 @@ void TaskFindInteriorPoint::run()
                 env->output->outputInfo("");
                 env->output->outputInfo(" Maximum deviation in interior point is not usable: "
                     + Utilities::toString(maxDev.normalizedValue) + ". A point with the deviation "
-                    + Utilities::toString(retreatedPoint->maxDevatingConstraint.value)
+                    + Utilities::toString(retreatedPoint->maxDeviatingConstraint.value)
                     + " was found closer to the center of the variable box.");
 
                 tmpIP = retreatedPoint;
@@ -264,7 +264,7 @@ void TaskFindInteriorPoint::run()
         {
             env->output->outputInfo("");
             env->output->outputInfo(" Valid interior point with constraint deviation "
-                + Utilities::toString(tmpIP->maxDevatingConstraint.value) + " found.");
+                + Utilities::toString(tmpIP->maxDeviatingConstraint.value) + " found.");
 
             env->dualSolver->interiorPts.push_back(tmpIP);
 
@@ -286,7 +286,7 @@ void TaskFindInteriorPoint::run()
         {
             env->output->outputInfo("");
             env->output->outputInfo(" Valid interior point with constraint deviation "
-                + Utilities::toString(centerPoint->maxDevatingConstraint.value)
+                + Utilities::toString(centerPoint->maxDeviatingConstraint.value)
                 + " found in the center of the variable box.");
 
             env->dualSolver->interiorPts.push_back(centerPoint);
@@ -357,7 +357,7 @@ void TaskFindInteriorPoint::setCallbackInteriorPoints(const std::vector<VectorDo
 
         auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
             tmpIP->point, env->reformulatedProblem->nonlinearConstraints);
-        tmpIP->maxDevatingConstraint = PairIndexValue(maxDev.constraint->getIndex(), maxDev.normalizedValue);
+        tmpIP->maxDeviatingConstraint = PairIndexValue(maxDev.constraint->getIndex(), maxDev.normalizedValue);
 
         if(maxDev.normalizedValue >= 0)
         {

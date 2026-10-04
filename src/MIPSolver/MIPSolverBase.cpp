@@ -44,11 +44,11 @@ E_DualProblemClass MIPSolverBase::getProblemClass()
 {
     bool isMIP = getDiscreteVariableStatus();
 
-    if(hasQuadraticObjective && hasQudraticConstraint)
+    if(hasQuadraticObjective && hasQuadraticConstraint)
         return (isMIP ? E_DualProblemClass::MIQCQP : E_DualProblemClass::QCQP);
     else if(hasQuadraticObjective)
         return (isMIP ? E_DualProblemClass::MIQP : E_DualProblemClass::QP);
-    else if(hasQudraticConstraint)
+    else if(hasQuadraticConstraint)
         return (isMIP ? E_DualProblemClass::MIQCQP : E_DualProblemClass::QCQP);
     else
         return (isMIP ? E_DualProblemClass::MIP : E_DualProblemClass::LP);
