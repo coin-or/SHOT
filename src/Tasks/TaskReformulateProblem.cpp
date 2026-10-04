@@ -269,15 +269,7 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
     }
 
     // Reformulating constraints
-    for(auto& C : env->problem->numericConstraints)
-    {
-        auto reformulatedConstraints = reformulateConstraint(C);
-
-        for(auto& RC : reformulatedConstraints)
-        {
-            reformulatedProblem->add(std::move(RC));
-        }
-    }
+    reformulateConstraints();
 
     // Copying special ordered sets
     for(auto& S : env->problem->specialOrderedSets)
@@ -304,7 +296,19 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
     reformulatedProblem->properties.isReformulated = true;
     reformulatedProblem->properties.numberOfAddedLinearizations = env->problem->properties.numberOfAddedLinearizations;
 
+    // The lower sides of the auxiliary equality constraints are the last constraints of the problem
+    for(auto& C : deferredConstraints)
+        reformulatedProblem->add(C);
+
+    deferredConstraints.clear();
+
     reformulatedProblem->finalize();
+
+#ifndef NDEBUG
+    // All nonlinear constraints must now be of the form f(x) <= U, which is assumed when hyperplanes are generated
+    for(auto& C : reformulatedProblem->nonlinearConstraints)
+        assert(C->valueLHS == SHOT_DBL_MIN);
+#endif
 
     // Fixing that a quadratic objective changed into a nonlinear objective is correctly identified
     if(!(useConvexQuadraticObjective || useNonconvexQuadraticObjective)
@@ -1015,6 +1019,108 @@ void TaskReformulateProblem::createEpigraphConstraint()
     reformulatedProblem->add(std::move(objective));
 }
 
+bool TaskReformulateProblem::isNonlinearWithBothBounds(const NumericConstraintPtr& C)
+{
+    if(C->valueLHS == SHOT_DBL_MIN || C->valueRHS == SHOT_DBL_MAX)
+        return (false);
+
+    // Linear constraints are given to the MIP solver with both bounds
+    if(C->properties.classification == E_ConstraintClassification::Linear
+        || (!C->properties.hasNonlinearExpression && !C->properties.hasQuadraticTerms && !C->properties.hasMonomialTerms
+            && !C->properties.hasSignomialTerms))
+        return (false);
+
+    return (true);
+}
+
+void TaskReformulateProblem::reformulateConstraints()
+{
+    // The dual strategy is based on nonlinear constraints of the form f(x) <= U, so a nonlinear constraint
+    // L <= f(x) <= U, e.g. an equality constraint, is rewritten as f(x) <= U and -f(x) <= -L. This is done before the
+    // constraint is reformulated: the auxiliary variables introduced when partitioning f(x) are only bounded from
+    // one direction by their constraints, which gives a valid reformulation of f(x) <= U but not of L <= f(x).
+    //
+    // The lower sides are added after the original constraints, but before the linearizations added to the original
+    // problem by the bound tightening.
+    NumericConstraints lowerSides;
+
+    std::set<std::string> usedNames;
+
+    for(auto& C : env->problem->numericConstraints)
+        usedNames.insert(C->name);
+
+    auto addLowerSides = [&]()
+    {
+        for(auto& C : lowerSides)
+            reformulateLowerSide(C, usedNames);
+
+        lowerSides.clear();
+    };
+
+    int firstLinearizationIndex
+        = (int)env->problem->numericConstraints.size() - env->problem->properties.numberOfAddedLinearizations;
+
+    for(auto& C : env->problem->numericConstraints)
+    {
+        if(C->getIndex() == firstLinearizationIndex)
+            addLowerSides();
+
+        NumericConstraints reformulatedConstraints;
+
+        bool isQuadraticConstraint = C->properties.classification == E_ConstraintClassification::Quadratic
+            || (!C->properties.hasNonlinearExpression && !C->properties.hasMonomialTerms
+                && !C->properties.hasSignomialTerms);
+
+        if(!isNonlinearWithBothBounds(C))
+        {
+            reformulatedConstraints = reformulateConstraint(C);
+        }
+        else if(isQuadraticConstraint && useNonconvexQuadraticConstraints)
+        {
+            // A quadratic constraint with both bounds is nonconvex, also when its quadratic terms are convex, so it
+            // can only be given to a MIP solver that supports nonconvex quadratic constraints. It is then copied as
+            // it is, without partitioning its terms.
+            auto sourceConstraint = std::dynamic_pointer_cast<QuadraticConstraint>(C);
+
+            auto constraint = std::make_shared<QuadraticConstraint>(C->name, C->valueLHS, C->valueRHS);
+            constraint->properties.classification = E_ConstraintClassification::Quadratic;
+            constraint->ownerProblem = reformulatedProblem;
+
+            copyLinearTermsToConstraint(sourceConstraint->linearTerms, constraint);
+            copyQuadraticTermsToConstraint(sourceConstraint->quadraticTerms, constraint);
+            constraint->constant += C->constant;
+
+            reformulatedConstraints.push_back(constraint);
+        }
+        else
+        {
+            lowerSides.push_back(C);
+
+            reformulatedConstraints
+                = reformulateConstraint(env->problem->createConstraintSide(C, E_ConstraintSide::Upper));
+        }
+
+        for(auto& RC : reformulatedConstraints)
+            reformulatedProblem->add(std::move(RC));
+    }
+
+    addLowerSides();
+}
+
+void TaskReformulateProblem::reformulateLowerSide(const NumericConstraintPtr& C, std::set<std::string>& usedNames)
+{
+    auto lowerSide = env->problem->createConstraintSide(C, E_ConstraintSide::Lower);
+
+    // The name must be unique, since constraints are matched by name when hyperplanes are reused in another problem
+    lowerSide->name = C->name + "_rf";
+
+    while(!usedNames.insert(lowerSide->name).second)
+        lowerSide->name += "_rf";
+
+    for(auto& RC : reformulateConstraint(lowerSide))
+        reformulatedProblem->add(std::move(RC));
+}
+
 NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstraintPtr C)
 {
     double valueLHS = std::dynamic_pointer_cast<NumericConstraint>(C)->valueLHS;
@@ -1064,6 +1170,10 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
     }
 
     // Constraint is to be regarded as nonlinear
+
+    // The auxiliary variables introduced below are only bounded from one direction by their constraints, which is
+    // only valid for a constraint f(x) <= U. A constraint with a lower bound is rewritten before it is given here.
+    assert(valueLHS == SHOT_DBL_MIN);
 
     bool copyOriginalNonlinearExpression = false;
 
@@ -2061,8 +2171,11 @@ std::tuple<LinearTerms, QuadraticTerms, double> TaskReformulateProblem::reformul
             {
                 resultTerms.push_back(std::make_shared<LinearTerm>(signfactor * T->coefficient, firstVariable));
             }
-            else if(T->isSquare)
+            else if(T->isSquare && signfactor * T->coefficient > 0.0)
             {
+                // The auxiliary variable w is only bounded from below, by x^2 <= w, so it can only replace a square
+                // with a positive coefficient. With a negative coefficient, w could be increased to its upper bound
+                // regardless of x, and the term would no longer restrict x.
                 auto [auxVariable, newVariable]
                     = getSquareAuxiliaryVariable(firstVariable, 1.0, E_AuxiliaryVariableType::SquareTermsPartitioning);
                 resultTerms.push_back(std::make_shared<LinearTerm>(signfactor * T->coefficient, auxVariable));
@@ -3526,11 +3639,14 @@ void TaskReformulateProblem::reformulateRealBilinearTerm(
 
     bool isConvex = (firstVariable == secondVariable) ? true : false;
 
-    if((useConvexQuadraticConstraints && isConvex) || useNonconvexQuadraticConstraints)
+    std::string name = "s_blcc_" + std::to_string(auxConstraintCounter);
+    auxConstraintCounter++;
+
+    if(useNonconvexQuadraticConstraints)
     {
-        auto auxConstraint = std::make_shared<QuadraticConstraint>(
-            "s_blcc_" + std::to_string(auxConstraintCounter), 0.0, 0.0);
-        auxConstraintCounter++;
+        // The equality constraint x * y - w = 0 is nonconvex, so it is only given to a MIP solver that supports
+        // nonconvex quadratic constraints
+        auto auxConstraint = std::make_shared<QuadraticConstraint>(name, 0.0, 0.0);
 
         auxConstraint->add(std::make_shared<LinearTerm>(-1.0, usedAuxVariable));
         auxConstraint->add(std::make_shared<QuadraticTerm>(1.0, firstVariable, secondVariable));
@@ -3539,14 +3655,30 @@ void TaskReformulateProblem::reformulateRealBilinearTerm(
     }
     else
     {
-        auto auxConstraint = std::make_shared<NonlinearConstraint>(
-            "s_blcc_" + std::to_string(auxConstraintCounter), 0.0, 0.0);
-        auxConstraintCounter++;
+        // The equality constraint is otherwise written as x * y - w <= 0 and -x * y + w <= 0. These constraints are
+        // not reformulated further, since that would extract the bilinear term to a new auxiliary variable again.
+        // The first constraint is convex for a square, so it can be given to a MIP solver that supports convex
+        // quadratic constraints.
+        if(useConvexQuadraticConstraints && isConvex)
+        {
+            auto upperSide = std::make_shared<QuadraticConstraint>(name, SHOT_DBL_MIN, 0.0);
+            upperSide->add(std::make_shared<LinearTerm>(-1.0, usedAuxVariable));
+            upperSide->add(std::make_shared<QuadraticTerm>(1.0, firstVariable, secondVariable));
+            reformulatedProblem->add(std::move(upperSide));
+        }
+        else
+        {
+            auto upperSide = std::make_shared<NonlinearConstraint>(name, SHOT_DBL_MIN, 0.0);
+            upperSide->add(std::make_shared<LinearTerm>(-1.0, usedAuxVariable));
+            upperSide->add(std::make_shared<QuadraticTerm>(1.0, firstVariable, secondVariable));
+            reformulatedProblem->add(std::move(upperSide));
+        }
 
-        auxConstraint->add(std::make_shared<LinearTerm>(-1.0, usedAuxVariable));
-        auxConstraint->add(std::make_shared<QuadraticTerm>(1.0, firstVariable, secondVariable));
+        auto lowerSide = std::make_shared<NonlinearConstraint>(name + "_rf", SHOT_DBL_MIN, 0.0);
+        lowerSide->add(std::make_shared<LinearTerm>(1.0, usedAuxVariable));
+        lowerSide->add(std::make_shared<QuadraticTerm>(-1.0, firstVariable, secondVariable));
 
-        reformulatedProblem->add(std::move(auxConstraint));
+        deferredConstraints.push_back(lowerSide);
 
         if(env->settings->getSetting<bool>("Model.Reformulation.Bilinear.AddConvexEnvelope"))
         {

@@ -12,6 +12,8 @@
 #include "TaskBase.h"
 
 #include <map>
+#include <set>
+#include <string>
 #include <tuple>
 
 #include "../Model/AuxiliaryVariables.h"
@@ -67,6 +69,18 @@ private:
     void createEpigraphConstraint();
 
     NumericConstraints reformulateConstraint(NumericConstraintPtr constraint);
+
+    // Constraints that are added to the reformulated problem after all the other ones
+    NonlinearConstraints deferredConstraints;
+
+    // Whether the constraint is L <= f(x) <= U with both bounds, where f is not linear
+    bool isNonlinearWithBothBounds(const NumericConstraintPtr& constraint);
+
+    // Reformulates all constraints of the original problem
+    void reformulateConstraints();
+
+    // Reformulates the lower side -f(x) <= -L of a constraint of the original problem, and adds it to the problem
+    void reformulateLowerSide(const NumericConstraintPtr& constraint, std::set<std::string>& usedNames);
 
     template <class T> void copyLinearTermsToConstraint(const LinearTerms& terms, T destination, bool reversedSigns = false);
 

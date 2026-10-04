@@ -210,10 +210,10 @@ void TaskPerformBoundTightening::addPOACuts(std::shared_ptr<NLPSolverSHOT> solve
     // The solver generating the outer approximation reformulates the problem it is given, so the constraint
     // indices of its hyperplanes are not the ones of the problem the linearizations are added to: a constraint
     // index from it identifies another constraint here, or none at all. The constraints are matched by name
-    // instead, and the cut is then generated from the constraint of this problem, so it is a valid linearization
-    // of it even if the function it was generated for is not the same one. Only cuts for convex constraints are
-    // valid everywhere, so no others are reused. Cuts for the objective function are not reused either, since the
-    // objective function of the relaxation is not the one of the source problem.
+    // instead, and the cut is then generated from the matched constraint of the relaxation, so it is a valid
+    // linearization of it even if the function it was generated for is not the same one. Only cuts for convex
+    // constraints are valid everywhere, so no others are reused. Cuts for the objective function are not reused
+    // either, since the objective function of the relaxation is not the one of the source problem.
     for(auto& HP : solverDualSolver->generatedHyperplanes)
     {
         auto newHP = std::make_shared<ConstraintHyperplane>();
@@ -298,21 +298,26 @@ void TaskPerformBoundTightening::createPOA()
 
     env->output->outputInfo(" Generating initial polyhedral outer approximation of nonlinear feasible set.");
 
-    // Only the convex constraints are part of the relaxation, and the cuts generated for them are valid everywhere
-    std::map<std::string, NonlinearConstraintPtr> convexConstraints;
-
-    for(auto& C : sourceProblem->nonlinearConstraints)
-    {
-        if(C->properties.convexity <= E_Convexity::Convex)
-            convexConstraints.emplace(C->name, C);
-    }
-
     std::set<std::string> constraintsWithCuts;
     int hyperplaneCounter = 0;
 
     // The solver is only created here, since the task is also created for the original problem, which the MIP
     // solver may not be able to handle, e.g. with quadratic constraints for Cbc
     relaxedProblem = sourceProblem->createCopy(env, true, true);
+
+    // Only the convex constraints are part of the relaxation, and the cuts generated for them are valid everywhere.
+    // The constraints are taken from the relaxation and not from the source problem: of a constraint L <= f(x) <= U
+    // in the source problem, e.g. an equality constraint, the relaxation has the side that is convex, as a constraint
+    // with only an upper bound. A cut generated from the constraint in the source problem would be for the side that
+    // is violated in the point, which is the nonconvex side for a point fulfilling the convex one. The variables have
+    // the same indices in both problems, so the cut can be added to the source problem.
+    std::map<std::string, NonlinearConstraintPtr> convexConstraints;
+
+    for(auto& C : relaxedProblem->nonlinearConstraints)
+    {
+        if(C->properties.convexity <= E_Convexity::Convex && C->valueLHS == SHOT_DBL_MIN)
+            convexConstraints.emplace(C->name, C);
+    }
 
     try
     {

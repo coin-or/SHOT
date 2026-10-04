@@ -297,6 +297,11 @@ public:
 
     ProblemPtr createCopy(EnvironmentPtr destinationEnv, bool integerRelaxed = false, bool convexityRelaxed = false,
         bool copyAuxiliary = false);
+
+    // Creates the constraint f(x) <= U (upper side) or -f(x) <= -L (lower side) from the constraint L <= f(x) <= U.
+    // The source constraint, which can belong to another problem with the same variables, is not changed. The created
+    // constraint uses the variables of this problem, but is not added to it.
+    NumericConstraintPtr createConstraintSide(const NumericConstraintPtr& source, E_ConstraintSide side);
 };
 
 inline std::ostream& operator<<(std::ostream& stream, ProblemPtr problem)

@@ -288,6 +288,7 @@ void LinearConstraint::updateProperties()
     }
 
     properties.convexity = E_Convexity::Linear;
+    properties.functionConvexity = E_Convexity::Linear;
     properties.classification = E_ConstraintClassification::Linear;
     properties.monotonicity = linearTerms.getMonotonicity();
 }
@@ -416,6 +417,18 @@ std::shared_ptr<NumericConstraint> QuadraticConstraint::getPointer()
     return std::dynamic_pointer_cast<NumericConstraint>(shared_from_this());
 }
 
+void QuadraticConstraint::updateConvexityFromBounds()
+{
+    properties.convexity = properties.functionConvexity;
+
+    // The feasible set of L <= f(x) is not convex for a convex function f, and the one of L <= f(x) <= U is neither
+    // convex for a convex nor for a concave one. The constraint is not negated here, so a concave function with only
+    // a lower bound is regarded as nonconvex as well, until the constraint has been rewritten as -f(x) <= -L.
+    if(valueLHS != SHOT_DBL_MIN && properties.functionConvexity != E_Convexity::Linear
+        && properties.functionConvexity != E_Convexity::Unknown)
+        properties.convexity = E_Convexity::Nonconvex;
+}
+
 void QuadraticConstraint::updateProperties()
 {
     LinearConstraint::updateProperties();
@@ -431,10 +444,9 @@ void QuadraticConstraint::updateProperties()
     }
 
     auto convexity = quadraticTerms.getConvexity();
-    properties.convexity = Utilities::combineConvexity(convexity, properties.convexity);
+    properties.functionConvexity = Utilities::combineConvexity(convexity, properties.functionConvexity);
 
-    if(valueLHS != SHOT_DBL_MIN)
-        properties.convexity = E_Convexity::Nonconvex;
+    updateConvexityFromBounds();
 
     properties.monotonicity = Utilities::combineMonotonicity(properties.monotonicity, quadraticTerms.getMonotonicity());
 }
@@ -953,11 +965,11 @@ void NonlinearConstraint::updateProperties()
         try
         {
             auto convexity = nonlinearExpression->getConvexity();
-            properties.convexity = Utilities::combineConvexity(convexity, properties.convexity);
+            properties.functionConvexity = Utilities::combineConvexity(convexity, properties.functionConvexity);
         }
         catch(const mc::Interval::Exceptions&)
         {
-            properties.convexity = E_Convexity::Unknown;
+            properties.functionConvexity = E_Convexity::Unknown;
         }
     }
     else
@@ -988,7 +1000,7 @@ void NonlinearConstraint::updateProperties()
         }
 
         auto convexity = monomialTerms.getConvexity();
-        properties.convexity = Utilities::combineConvexity(convexity, properties.convexity);
+        properties.functionConvexity = Utilities::combineConvexity(convexity, properties.functionConvexity);
     }
     else
     {
@@ -1009,13 +1021,15 @@ void NonlinearConstraint::updateProperties()
             }
 
             auto convexity = signomialTerms.getConvexity();
-            properties.convexity = Utilities::combineConvexity(convexity, properties.convexity);
+            properties.functionConvexity = Utilities::combineConvexity(convexity, properties.functionConvexity);
         }
     }
     else
     {
         properties.hasSignomialTerms = false;
     }
+
+    updateConvexityFromBounds();
 
     if(properties.hasMonomialTerms)
         properties.monotonicity

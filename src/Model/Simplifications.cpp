@@ -249,49 +249,73 @@ void simplifyNonlinearExpressions(
     // Apply reformulations
     for(auto& C : problem->nonlinearConstraints)
     {
-        if(C->properties.hasNonlinearExpression
-            && C->nonlinearExpression->getType() == E_NonlinearExpressionTypes::SquareRoot && C->linearTerms.size() == 0
-            && C->quadraticTerms.size() == 0 && C->monomialTerms.size() == 0 && C->signomialTerms.size() == 0)
+        // The following rewrites are for constraints L <= f(x) <= U, where f only consists of the nonlinear expression
+        if(!C->properties.hasNonlinearExpression || C->linearTerms.size() > 0 || C->quadraticTerms.size() > 0
+            || C->monomialTerms.size() > 0 || C->signomialTerms.size() > 0 || C->constant != 0.0)
+            continue;
+
+        bool hasLowerBound = (C->valueLHS != SHOT_DBL_MIN);
+        bool hasUpperBound = (C->valueRHS != SHOT_DBL_MAX);
+
+        // The constraint is infeasible if the upper bound is negative, and it must not become feasible when the
+        // bound is squared
+        if(hasUpperBound && C->valueRHS < 0.0)
+            continue;
+
+        if(C->nonlinearExpression->getType() == E_NonlinearExpressionTypes::SquareRoot)
         {
-            // Can take the square of both sides
+            // Can take the square of both sides: L <= sqrt(g(x)) <= U is max(L,0)^2 <= g(x) <= U^2. A lower bound
+            // that is not positive is redundant, but then g(x) >= 0 is kept since it is required by the square root.
 
             C->nonlinearExpression = std::dynamic_pointer_cast<ExpressionSquareRoot>(C->nonlinearExpression)->child;
-            if(abs(C->valueLHS) < SHOT_DBL_MAX)
-                C->valueLHS = C->valueLHS * C->valueLHS;
-            if(abs(C->valueRHS) < SHOT_DBL_MAX)
+
+            if(hasLowerBound)
+                C->valueLHS = (C->valueLHS > 0.0) ? C->valueLHS * C->valueLHS : 0.0;
+
+            if(hasUpperBound)
                 C->valueRHS = C->valueRHS * C->valueRHS;
 
             continue;
         }
 
-        if(C->properties.hasNonlinearExpression
-            && C->nonlinearExpression->getType() == E_NonlinearExpressionTypes::Square && C->linearTerms.size() == 0
-            && C->quadraticTerms.size() == 0 && C->monomialTerms.size() == 0 && C->signomialTerms.size() == 0
-            && C->valueLHS >= 0.0)
+        if(C->nonlinearExpression->getType() == E_NonlinearExpressionTypes::Square)
         {
-            // Can take the square root of both sides
+            // Can take the square root of both sides if the sign of g(x) is known: L <= g(x)^2 <= U is
+            // sqrt(L) <= g(x) <= sqrt(U) if g(x) > 0, and -sqrt(U) <= g(x) <= -sqrt(L) if g(x) < 0. A lower bound that
+            // is not positive is redundant.
 
-            C->nonlinearExpression = std::dynamic_pointer_cast<ExpressionSquare>(C->nonlinearExpression)->child;
-            C->valueLHS = std::sqrt(C->valueLHS);
+            auto child = std::dynamic_pointer_cast<ExpressionSquare>(C->nonlinearExpression)->child;
 
-            if(abs(C->valueRHS) < SHOT_DBL_MAX)
-                C->valueRHS = std::sqrt(C->valueRHS);
+            Interval childBounds;
 
-            continue;
-        }
+            try
+            {
+                childBounds = child->getBounds();
+            }
+            catch(const mc::Interval::Exceptions&)
+            {
+                continue;
+            }
 
-        if(C->properties.hasNonlinearExpression
-            && C->nonlinearExpression->getType() == E_NonlinearExpressionTypes::Square && C->linearTerms.size() == 0
-            && C->quadraticTerms.size() == 0 && C->monomialTerms.size() == 0 && C->signomialTerms.size() == 0
-            && C->getConstraintFunctionBounds().l() > 0.0)
-        {
-            // Can take the square root of both sides
+            bool hasPositiveLowerBound = (hasLowerBound && C->valueLHS > 0.0);
 
-            C->nonlinearExpression = std::dynamic_pointer_cast<ExpressionSquare>(C->nonlinearExpression)->child;
-            // C->valueLHS = std::sqrt(C->getConstraintFunctionBounds().l());
+            if(!hasPositiveLowerBound && !hasUpperBound)
+                continue;
 
-            if(abs(C->valueRHS) < SHOT_DBL_MAX)
-                C->valueRHS = std::sqrt(C->valueRHS);
+            if(childBounds.l() > 0.0)
+            {
+                C->nonlinearExpression = child;
+                C->valueLHS = hasPositiveLowerBound ? std::sqrt(C->valueLHS) : SHOT_DBL_MIN;
+                C->valueRHS = hasUpperBound ? std::sqrt(C->valueRHS) : SHOT_DBL_MAX;
+            }
+            else if(childBounds.u() < 0.0)
+            {
+                double valueLHS = C->valueLHS;
+
+                C->nonlinearExpression = child;
+                C->valueLHS = hasUpperBound ? -std::sqrt(C->valueRHS) : SHOT_DBL_MIN;
+                C->valueRHS = hasPositiveLowerBound ? -std::sqrt(valueLHS) : SHOT_DBL_MAX;
+            }
 
             continue;
         }

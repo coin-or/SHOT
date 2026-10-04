@@ -132,6 +132,35 @@ set(Solver_parts
     25)
 set(cpptests ${cpptests} Solver)
 
+# Equality constraints and ranges in the original and the reformulated problem
+set(EqualityConstraint_parts 1 2 3 4 5)
+
+if(HAS_HIGHS)
+  list(APPEND EqualityConstraint_parts 6)
+endif()
+
+if(HAS_CBC)
+  list(APPEND EqualityConstraint_parts 7)
+endif()
+
+if(HAS_GUROBI)
+  list(APPEND EqualityConstraint_parts 8)
+endif()
+
+if(HAS_CPLEX)
+  list(APPEND EqualityConstraint_parts 9)
+endif()
+
+if(HAS_IPOPT)
+  list(APPEND EqualityConstraint_parts 10)
+endif()
+
+if(HAS_UNO)
+  list(APPEND EqualityConstraint_parts 11)
+endif()
+
+set(cpptests ${cpptests} EqualityConstraint)
+
 if(HAS_IPOPT)
   set(cpptests ${cpptests} Ipopt)
   set(Ipopt_parts 1 2)
@@ -402,6 +431,7 @@ if(TARGET SHOTpy)
         test_gradients_hessians
         test_callbacks
         test_constraint_expressions
+        test_equality_constraints
         test_api_safety
         test_tutorial
       )

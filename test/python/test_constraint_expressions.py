@@ -3,9 +3,9 @@ Tests for writing constraints as comparisons, e.g., problem.addConstraint(x1 * x
 expressions, e.g., problem.setObjective(SHOTpy.exp(x) + x * y).
 
 The tests of a ConstraintExpression check its exact bounds before it is added. finalize() decides the class of a
-constraint and can negate it or split it into <name> and <name>_rf, so after finalize() the tests read the
-constraints back with problem.getConstraint(name) and check that they describe the same set: points on both sides of
-each bound, including constants and both sides of equalities and ranges.
+constraint and can negate it, so after finalize() the tests read the constraints back with
+problem.getConstraint(name) and check that they describe the same set: points on both sides of each bound, including
+constants and both sides of equalities and ranges.
 """
 
 import math
@@ -38,10 +38,11 @@ def finalize(problem):
 
 
 def fulfilled(problem, name, point):
-    """Whether the constraint, and its other half if finalize() has split it, is fulfilled at the point."""
-    parts = [c for c in problem.numericConstraints if c.name in (name, name + "_rf")]
-    assert parts, f"The problem has no constraint {name}"
-    return all(part.isFulfilled(point) for part in parts)
+    """Whether the constraint is fulfilled at the point. finalize() keeps equalities and ranges as one constraint."""
+    parts = [c for c in problem.numericConstraints if c.name == name]
+    assert len(parts) == 1, f"The problem has {len(parts)} constraints named {name}"
+    assert not any(c.name == name + "_rf" for c in problem.numericConstraints)
+    return parts[0].isFulfilled(point)
 
 
 class TestConstraintExpression:
@@ -179,12 +180,12 @@ class TestAddConstraint:
         assert not fulfilled(problem, "range", above)
 
     def test_class_is_chosen_by_finalize(self):
-        """The classes and the split, with the settings that decide them set explicitly."""
+        """The classes, with the settings that decide them set explicitly. A range is kept as one constraint."""
         import SHOTpy
 
         solver, problem, x, y = make_problem()
         solver.updateSetting("Model.Reformulation.Quadratics.ExtractStrategy", 1)  # extract to the same constraint
-        solver.updateSetting("Model.Reformulation.Quadratics.Strategy", 0)  # quadratics as nonlinear: split ranges
+        solver.updateSetting("Model.Reformulation.Quadratics.Strategy", 0)  # quadratics as nonlinear
 
         problem.addConstraint(2 * x * y + 3 * x <= 5, "quadratic")
         problem.addConstraint(x + 2 * y >= 1, "linear")
@@ -195,8 +196,10 @@ class TestAddConstraint:
         assert type(problem.getConstraint("quadratic")) is SHOTpy.QuadraticConstraint
         assert type(problem.getConstraint("linear")) is SHOTpy.LinearConstraint
         assert type(problem.getConstraint("nonlinear")) is SHOTpy.NonlinearConstraint
-        assert problem.getConstraint("split") is not None
-        assert problem.getConstraint("split_rf") is not None
+        split = problem.getConstraint("split")
+        assert type(split) is SHOTpy.QuadraticConstraint
+        assert (split.valueLHS, split.valueRHS) == (1.0, 5.0)
+        assert [c.name for c in problem.numericConstraints] == ["quadratic", "linear", "nonlinear", "split"]
 
     def test_linear_comparison_is_a_linear_constraint(self):
         """A linear comparison is added as a LinearConstraint, with its constant, as if created from the class."""
