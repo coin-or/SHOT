@@ -2907,6 +2907,8 @@ NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(No
     case E_NonlinearExpressionTypes::ArcSin:
     case E_NonlinearExpressionTypes::Tan:
     case E_NonlinearExpressionTypes::ArcTan:
+    case E_NonlinearExpressionTypes::ErrorFunction:
+    case E_NonlinearExpressionTypes::SignPower:
         std::dynamic_pointer_cast<ExpressionUnary>(source)->child
             = reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionUnary>(source)->child);
         break;

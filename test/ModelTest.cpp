@@ -180,6 +180,7 @@ bool ModelTestConvexityAfterAddedTerm();
 bool ModelTestSignomialGradientOfRepeatedVariable();
 bool ModelTestBulkTermAdding();
 bool ModelTestPowerBounds();
+bool ModelTestErrorFunctionAndSignPower();
 
 bool TestReadProblem(const std::string& problemFile);
 bool TestRootsearch(const std::string& problemFile);
@@ -354,6 +355,9 @@ int ModelTest(int argc, char* argv[])
         break;
     case 50:
         passed = ModelTestPowerBounds();
+        break;
+    case 51:
+        passed = ModelTestErrorFunctionAndSignPower();
         break;
     default:
         passed = false;
@@ -8713,6 +8717,232 @@ bool ModelTestPowerBounds()
             std::cout << "  FAILED: the squares of differences have the wrong value after simplification.\n";
             passed = false;
         }
+    }
+
+    return passed;
+}
+
+bool ModelTestErrorFunctionAndSignPower()
+{
+    // errorf(x) is the integral of the standard normal distribution, 0.5 * (1 + erf(x / sqrt(2))), and signpower(x, c)
+    // is sign(x) * |x|^c, both as in GAMS. Their values, gradients and Hessians in a problem are compared to the
+    // analytical ones, also where the argument of the signed power is negative or zero, and their bounds, bound
+    // tightening and convexity are checked.
+
+    bool passed = true;
+
+    const double pi = 3.14159265358979323846;
+    const double c = 1.852;
+
+    auto density = [pi](double t) { return (std::exp(-0.5 * t * t) / std::sqrt(2.0 * pi)); };
+    auto distribution = [](double t) { return (0.5 * std::erfc(-t / std::sqrt(2.0))); };
+    auto signPower = [](double t, double power) { return (t >= 0 ? std::pow(t, power) : -std::pow(-t, power)); };
+    auto sign = [](double t) { return (t > 0 ? 1.0 : (t < 0 ? -1.0 : 0.0)); };
+
+    auto solver = std::make_unique<SHOT::Solver>();
+    auto problem = std::make_shared<SHOT::Problem>(solver->getEnvironment());
+
+    auto x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, -5.0, 5.0);
+    auto y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Real, -5.0, 5.0);
+    problem->add(SHOT::Variables { x, y });
+    problem->add(std::make_shared<SHOT::LinearObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize));
+
+    auto variable = [](SHOT::VariablePtr V) { return (std::make_shared<SHOT::ExpressionVariable>(V)); };
+    auto constant = [](double value) { return (std::make_shared<SHOT::ExpressionConstant>(value)); };
+
+    // errorf(x) + errorf(2y - 1)
+    auto errorConstraint = std::make_shared<SHOT::NonlinearConstraint>("errorf", SHOT_DBL_MIN, 10.0);
+    errorConstraint->add(std::make_shared<SHOT::ExpressionSum>(
+        std::make_shared<SHOT::ExpressionErrorFunction>(variable(x)),
+        std::make_shared<SHOT::ExpressionErrorFunction>(std::make_shared<SHOT::ExpressionSum>(
+            std::make_shared<SHOT::ExpressionProduct>(constant(2.0), variable(y)), constant(-1.0)))));
+    problem->add(errorConstraint);
+
+    // signpower(x, c) + signpower(x - y, c)
+    auto signPowerConstraint = std::make_shared<SHOT::NonlinearConstraint>("signpower", SHOT_DBL_MIN, 100.0);
+    signPowerConstraint->add(
+        std::make_shared<SHOT::ExpressionSum>(std::make_shared<SHOT::ExpressionSignPower>(variable(x), c),
+            std::make_shared<SHOT::ExpressionSignPower>(
+                std::make_shared<SHOT::ExpressionSum>(
+                    variable(x), std::make_shared<SHOT::ExpressionNegate>(variable(y))),
+                c)));
+    problem->add(signPowerConstraint);
+
+    problem->finalize();
+
+    auto element = [](SHOT::SparseVariableMatrix& matrix, SHOT::VariablePtr first, SHOT::VariablePtr second)
+    {
+        double value = 0.0;
+
+        if(auto it = matrix.find(std::make_pair(first, second)); it != matrix.end())
+            value += it->second;
+        else if(auto it2 = matrix.find(std::make_pair(second, first)); it2 != matrix.end())
+            value += it2->second;
+
+        return (value);
+    };
+
+    auto check = [&passed](const std::string& description, double value, double expected)
+    {
+        if(!(std::abs(value - expected) <= 1e-9 * std::max(1.0, std::abs(expected))))
+        {
+            std::cout << "  FAILED: " << description << " is " << value << ", expected " << expected << ".\n";
+            passed = false;
+        }
+    };
+
+    std::vector<SHOT::VectorDouble> points = { { 1.5, -0.7 }, { -2.0, 0.3 }, { -0.4, 1.9 }, { 0.0, 0.0 } };
+
+    for(auto& P : points)
+    {
+        double px = P[0];
+        double py = P[1];
+        double argument = 2.0 * py - 1.0;
+        double difference = px - py;
+        std::string point = fmt::format(" in ({}, {})", px, py);
+
+        check("errorf value" + point, errorConstraint->calculateFunctionValue(P),
+            distribution(px) + distribution(argument));
+
+        auto gradient = errorConstraint->calculateGradient(P, false);
+        check("errorf gradient x" + point, gradient[x], density(px));
+        check("errorf gradient y" + point, gradient[y], 2.0 * density(argument));
+
+        auto hessian = errorConstraint->calculateHessian(P, false);
+        check("errorf Hessian xx" + point, element(hessian, x, x), -px * density(px));
+        check("errorf Hessian yy" + point, element(hessian, y, y), -4.0 * argument * density(argument));
+        check("errorf Hessian xy" + point, element(hessian, x, y), 0.0);
+
+        check("signpower value" + point, signPowerConstraint->calculateFunctionValue(P),
+            signPower(px, c) + signPower(difference, c));
+
+        double derivativeX = (px == 0.0) ? 0.0 : c * std::pow(std::abs(px), c - 1.0);
+        double derivativeDifference = (difference == 0.0) ? 0.0 : c * std::pow(std::abs(difference), c - 1.0);
+
+        gradient = signPowerConstraint->calculateGradient(P, false);
+        check("signpower gradient x" + point, gradient[x], derivativeX + derivativeDifference);
+        check("signpower gradient y" + point, gradient[y], -derivativeDifference);
+
+        // The second derivative is not finite in zero for an exponent below two
+        if(px != 0.0 && difference != 0.0)
+        {
+            double secondX = c * (c - 1.0) * sign(px) * std::pow(std::abs(px), c - 2.0);
+            double secondDifference = c * (c - 1.0) * sign(difference) * std::pow(std::abs(difference), c - 2.0);
+
+            hessian = signPowerConstraint->calculateHessian(P, false);
+            check("signpower Hessian xx" + point, element(hessian, x, x), secondX + secondDifference);
+            check("signpower Hessian xy" + point, element(hessian, x, y), -secondDifference);
+            check("signpower Hessian yy" + point, element(hessian, y, y), secondDifference);
+        }
+    }
+
+    std::cout << "  Values, gradients and Hessians compared in " << points.size() << " points.\n";
+
+    // Bounds, bound tightening and convexity
+    auto makeVariable = [](double lowerBound, double upperBound)
+    { return (std::make_shared<SHOT::Variable>("v", SHOT::E_VariableType::Real, lowerBound, upperBound)); };
+
+    {
+        auto v = makeVariable(-1.0, 1.0);
+        SHOT::ExpressionErrorFunction expression(variable(v));
+        auto bounds = expression.getBounds();
+
+        std::cout << "  errorf(x), x in [-1,1]: [" << bounds.l() << ", " << bounds.u() << "]\n";
+        check("errorf lower bound", bounds.l(), distribution(-1.0));
+        check("errorf upper bound", bounds.u(), distribution(1.0));
+
+        if(expression.getConvexity() != SHOT::E_Convexity::Unknown
+            || SHOT::ExpressionErrorFunction(variable(makeVariable(-5.0, 0.0))).getConvexity()
+                != SHOT::E_Convexity::Convex
+            || SHOT::ExpressionErrorFunction(variable(makeVariable(0.0, 5.0))).getConvexity()
+                != SHOT::E_Convexity::Concave)
+        {
+            std::cout << "  FAILED: the convexity of errorf is wrong.\n";
+            passed = false;
+        }
+
+        if(expression.getMonotonicity() != SHOT::E_Monotonicity::Nondecreasing)
+        {
+            std::cout << "  FAILED: errorf(x) is not regarded as nondecreasing.\n";
+            passed = false;
+        }
+    }
+
+    {
+        auto v = makeVariable(-2.0, 3.0);
+        SHOT::ExpressionSignPower expression(variable(v), 2.0);
+        auto bounds = expression.getBounds();
+
+        std::cout << "  signpower(x,2), x in [-2,3]: [" << bounds.l() << ", " << bounds.u() << "]\n";
+        check("signpower lower bound", bounds.l(), -4.0);
+        check("signpower upper bound", bounds.u(), 9.0);
+
+        expression.tightenBounds(SHOT::Interval(-1.0, 4.0));
+
+        std::cout << "  signpower(x,2) in [-1,4]: x in [" << v->lowerBound << ", " << v->upperBound << "]\n";
+        check("signpower tightened lower bound", v->lowerBound, -1.0);
+        check("signpower tightened upper bound", v->upperBound, 2.0);
+
+        struct ConvexityCase
+        {
+            double lowerBound;
+            double upperBound;
+            double exponent;
+            SHOT::E_Convexity expected;
+        };
+
+        std::vector<ConvexityCase> convexityCases = {
+            { 0.0, 3.0, 1.852, SHOT::E_Convexity::Convex },
+            { -3.0, 0.0, 1.852, SHOT::E_Convexity::Concave },
+            { -3.0, 3.0, 1.852, SHOT::E_Convexity::Unknown },
+            { 0.0, 3.0, 0.5, SHOT::E_Convexity::Concave },
+            { -3.0, 0.0, 0.5, SHOT::E_Convexity::Convex },
+        };
+
+        for(auto& C : convexityCases)
+        {
+            if(SHOT::ExpressionSignPower(variable(makeVariable(C.lowerBound, C.upperBound)), C.exponent)
+                    .getConvexity()
+                != C.expected)
+            {
+                std::cout << "  FAILED: the convexity of signpower(x," << C.exponent << ") for x in ["
+                          << C.lowerBound << ", " << C.upperBound << "] is wrong.\n";
+                passed = false;
+            }
+        }
+    }
+
+    // The same functions read from an OSiL file, where the error function is erf and not the distribution function,
+    // and a product with a single factor
+    {
+        auto fileSolver = std::make_unique<SHOT::Solver>();
+        fileSolver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Error));
+
+        if(!fileSolver->setProblem("data/errorf_signpower.osil"))
+        {
+            std::cout << "  FAILED: could not read data/errorf_signpower.osil.\n";
+            return (false);
+        }
+
+        auto fileProblem = fileSolver->getOriginalProblem();
+
+        for(auto& P : points)
+        {
+            double px = P[0];
+            double py = P[1];
+            std::string point = fmt::format(" in ({}, {})", px, py);
+
+            // erf(x / sqrt(2)) + erf(y)
+            check("OSiL erf value" + point, fileProblem->numericConstraints[0]->calculateFunctionValue(P),
+                std::erf(px / std::sqrt(2.0)) + std::erf(py));
+
+            // signpower(x, c) + signpower(x - y, c) + y
+            check("OSiL signpower value" + point, fileProblem->numericConstraints[1]->calculateFunctionValue(P),
+                signPower(px, c) + signPower(px - py, c) + py);
+        }
+
+        std::cout << "  Values of the functions in data/errorf_signpower.osil compared in " << points.size()
+                  << " points.\n";
     }
 
     return passed;

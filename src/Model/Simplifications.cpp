@@ -608,6 +608,17 @@ NonlinearExpressionPtr copyNonlinearExpression(NonlinearExpression* expression, 
         return std::make_shared<ExpressionArcTan>(
             copyNonlinearExpression((((ExpressionArcTan*)expression)->child).get(), destination));
     }
+    case E_NonlinearExpressionTypes::ErrorFunction:
+    {
+        return std::make_shared<ExpressionErrorFunction>(
+            copyNonlinearExpression((((ExpressionErrorFunction*)expression)->child).get(), destination));
+    }
+    case E_NonlinearExpressionTypes::SignPower:
+    {
+        return std::make_shared<ExpressionSignPower>(
+            copyNonlinearExpression((((ExpressionSignPower*)expression)->child).get(), destination),
+            ((ExpressionSignPower*)expression)->exponent);
+    }
     case E_NonlinearExpressionTypes::Constant:
     {
         return std::make_shared<ExpressionConstant>((((ExpressionConstant*)expression)->constant));

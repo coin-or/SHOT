@@ -718,7 +718,7 @@ NonlinearExpressionPtr ModelingSystemOSiL::convertNonlinearNode(tinyxml2::XMLNod
         case 0:
             return std::make_shared<ExpressionConstant>(0.);
         case 1:
-            return factors[1];
+            return factors[0];
         default:
             return std::make_shared<ExpressionProduct>(factors);
         }
@@ -728,6 +728,39 @@ NonlinearExpressionPtr ModelingSystemOSiL::convertNonlinearNode(tinyxml2::XMLNod
         auto firstChildNode = node->FirstChild();
 
         return std::make_shared<ExpressionAbs>(convertNonlinearNode(firstChildNode, destination));
+    }
+    else if(expressionType.compare("erf") == 0)
+    {
+        // The error function is given by the distribution function of the standard normal distribution, which is
+        // the function SHOT has (errorf in GAMS): erf(x) = 2 * errorf(sqrt(2) * x) - 1
+        auto firstChildNode = node->FirstChild();
+
+        auto argument = std::make_shared<ExpressionProduct>(
+            std::make_shared<ExpressionConstant>(std::sqrt(2.0)), convertNonlinearNode(firstChildNode, destination));
+
+        return std::make_shared<ExpressionSum>(
+            std::make_shared<ExpressionProduct>(
+                std::make_shared<ExpressionConstant>(2.0), std::make_shared<ExpressionErrorFunction>(argument)),
+            std::make_shared<ExpressionConstant>(-1.0));
+    }
+    else if(expressionType.compare("signpower") == 0)
+    {
+        auto firstChildNode = node->FirstChild();
+        auto secondChildNode = firstChildNode->NextSibling();
+
+        auto exponent = convertNonlinearNode(secondChildNode, destination);
+
+        if(exponent->getType() != E_NonlinearExpressionTypes::Constant)
+            throw OperationNotImplementedException(
+                "Error: The OSiL function signpower is only supported with a constant exponent");
+
+        double exponentValue = std::static_pointer_cast<ExpressionConstant>(exponent)->constant;
+
+        if(!(exponentValue > 0.0))
+            throw OperationNotImplementedException(
+                "Error: The OSiL function signpower is only supported with a positive exponent");
+
+        return std::make_shared<ExpressionSignPower>(convertNonlinearNode(firstChildNode, destination), exponentValue);
     }
     else if(expressionType.compare("square") == 0)
     {

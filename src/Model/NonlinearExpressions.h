@@ -49,6 +49,8 @@ enum class E_NonlinearExpressionTypes
     ArcSin,
     ArcTan,
     Abs,
+    ErrorFunction,
+    SignPower,
     Divide,
     Power,
     Sum,
@@ -1454,6 +1456,184 @@ public:
             return (false);
 
         return (dynamic_cast<const ExpressionAbs&>(rhs).child.get() == child.get());
+    };
+};
+
+// The integral of the standard normal distribution from minus infinity to x, 0.5 * (1 + erf(x / sqrt(2))), as errorf(x)
+// in GAMS. It is increasing, convex for x <= 0 and concave for x >= 0.
+class ExpressionErrorFunction : public ExpressionUnary
+{
+private:
+    static inline double value(double x) { return (0.5 * std::erfc(-x / std::sqrt(2.0))); }
+
+public:
+    ExpressionErrorFunction() = default;
+
+    ExpressionErrorFunction(NonlinearExpressionPtr childExpression) { child = childExpression; }
+
+    inline double calculate(const VectorDouble& point) const override { return (value(child->calculate(point))); }
+
+    inline Interval calculate(const IntervalVector& intervalVector) const override
+    {
+        auto childBounds = child->calculate(intervalVector);
+        return (Interval(value(childBounds.l()), value(childBounds.u())));
+    }
+
+    inline Interval getBounds() const override
+    {
+        auto childBounds = child->getBounds();
+        return (Interval(value(childBounds.l()), value(childBounds.u())));
+    }
+
+    inline bool tightenBounds([[maybe_unused]] Interval bound) override { return (false); };
+
+    inline FactorableFunction getFactorableFunction() override
+    {
+        return (0.5 * (1.0 + CppAD::erf(child->getFactorableFunction() / std::sqrt(2.0))));
+    }
+
+    inline std::ostream& print(std::ostream& stream) const override
+    {
+        stream << "errorf(" << child << ')';
+        return stream;
+    }
+
+    inline E_NonlinearExpressionTypes getType() const override { return E_NonlinearExpressionTypes::ErrorFunction; }
+
+    inline E_Convexity getConvexity() const override
+    {
+        auto childConvexity = child->getConvexity();
+        auto childBounds = child->getBounds();
+
+        if((childConvexity == E_Convexity::Linear || childConvexity == E_Convexity::Convex) && childBounds.u() <= 0.0)
+            return E_Convexity::Convex;
+
+        if((childConvexity == E_Convexity::Linear || childConvexity == E_Convexity::Concave)
+            && childBounds.l() >= 0.0)
+            return E_Convexity::Concave;
+
+        return E_Convexity::Unknown;
+    };
+
+    inline E_Monotonicity getMonotonicity() const override { return (child->getMonotonicity()); };
+
+    inline bool operator==(const NonlinearExpression& rhs) const override
+    {
+        if(rhs.getType() != getType())
+            return (false);
+
+        return (dynamic_cast<const ExpressionErrorFunction&>(rhs).child.get() == child.get());
+    };
+};
+
+// The signed power sign(x) * |x|^c with a constant exponent c > 0, as signpower(x, c) in GAMS. It is increasing, and
+// for c > 1 it is convex for x >= 0 and concave for x <= 0, while it is the opposite for c < 1.
+class ExpressionSignPower : public ExpressionUnary
+{
+private:
+    inline double value(double x) const { return (x >= 0.0 ? std::pow(x, exponent) : -std::pow(-x, exponent)); }
+
+public:
+    double exponent = 1.0;
+
+    ExpressionSignPower() = default;
+
+    ExpressionSignPower(NonlinearExpressionPtr childExpression, double exponent) : exponent(exponent)
+    {
+        child = childExpression;
+    }
+
+    inline double calculate(const VectorDouble& point) const override { return (value(child->calculate(point))); }
+
+    inline Interval calculate(const IntervalVector& intervalVector) const override
+    {
+        auto childBounds = child->calculate(intervalVector);
+        return (Interval(value(childBounds.l()), value(childBounds.u())));
+    }
+
+    inline Interval getBounds() const override
+    {
+        auto childBounds = child->getBounds();
+        return (Interval(value(childBounds.l()), value(childBounds.u())));
+    }
+
+    inline bool tightenBounds(Interval bound) override
+    {
+        // The inverse is the signed power with the exponent 1/c
+        auto inverse = [this](double x) {
+            return (x >= 0.0 ? std::pow(x, 1.0 / exponent) : -std::pow(-x, 1.0 / exponent));
+        };
+
+        return (child->tightenBounds(Interval(inverse(bound.l()), inverse(bound.u()))));
+    };
+
+    inline FactorableFunction getFactorableFunction() override
+    {
+        // The function is sign(x) * |x|^c. The derivative of the power is not finite in zero, so one is added to the
+        // base there, which gives the value and the derivative zero since sign(0) is zero. The conditional expression
+        // only selects between constants: the sparse derivatives of CppAD (subgraph_jac_rev and the sparsity pattern
+        // of the Hessian) do not follow a variable through the branches of a conditional expression, which gave
+        // gradients of zero for a negative x when the branches were sign(x) * |x|^c for each sign.
+        FactorableFunction x = child->getFactorableFunction();
+        FactorableFunction zero = 0.0;
+        FactorableFunction one = 1.0;
+
+        FactorableFunction absoluteValue = CppAD::abs(x);
+        FactorableFunction base = absoluteValue + CppAD::CondExpEq(absoluteValue, zero, one, zero);
+
+        return (CppAD::sign(x) * CppAD::pow(base, exponent));
+    }
+
+    inline std::ostream& print(std::ostream& stream) const override
+    {
+        stream << "signpower(" << child << ',' << exponent << ')';
+        return stream;
+    }
+
+    inline E_NonlinearExpressionTypes getType() const override { return E_NonlinearExpressionTypes::SignPower; }
+
+    inline E_Convexity getConvexity() const override
+    {
+        auto childConvexity = child->getConvexity();
+
+        if(exponent == 1.0)
+            return (childConvexity);
+
+        auto childBounds = child->getBounds();
+
+        bool isChildConvex = (childConvexity == E_Convexity::Linear || childConvexity == E_Convexity::Convex);
+        bool isChildConcave = (childConvexity == E_Convexity::Linear || childConvexity == E_Convexity::Concave);
+
+        if(exponent > 1.0)
+        {
+            if(isChildConvex && childBounds.l() >= 0.0)
+                return E_Convexity::Convex;
+
+            if(isChildConcave && childBounds.u() <= 0.0)
+                return E_Convexity::Concave;
+        }
+        else
+        {
+            if(isChildConcave && childBounds.l() >= 0.0)
+                return E_Convexity::Concave;
+
+            if(isChildConvex && childBounds.u() <= 0.0)
+                return E_Convexity::Convex;
+        }
+
+        return E_Convexity::Unknown;
+    };
+
+    inline E_Monotonicity getMonotonicity() const override { return (child->getMonotonicity()); };
+
+    inline bool operator==(const NonlinearExpression& rhs) const override
+    {
+        if(rhs.getType() != getType())
+            return (false);
+
+        auto& other = dynamic_cast<const ExpressionSignPower&>(rhs);
+
+        return (other.child.get() == child.get() && other.exponent == exponent);
     };
 };
 

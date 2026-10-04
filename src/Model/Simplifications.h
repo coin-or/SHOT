@@ -466,6 +466,42 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionAbs> 
     return expression;
 }
 
+inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionErrorFunction> expression)
+{
+    auto child = simplify(expression->child);
+
+    if(child->getType() == E_NonlinearExpressionTypes::Constant)
+    {
+        expression->child = child;
+        std::dynamic_pointer_cast<ExpressionConstant>(child)->constant = expression->calculate(VectorDouble {});
+
+        return (child);
+    }
+
+    expression->child = child;
+    return expression;
+}
+
+inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionSignPower> expression)
+{
+    auto child = simplify(expression->child);
+
+    if(child->getType() == E_NonlinearExpressionTypes::Constant)
+    {
+        expression->child = child;
+        std::dynamic_pointer_cast<ExpressionConstant>(child)->constant = expression->calculate(VectorDouble {});
+
+        return (child);
+    }
+
+    // The signed power with the exponent one is the base itself
+    if(expression->exponent == 1.0)
+        return (child);
+
+    expression->child = child;
+    return expression;
+}
+
 inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionDivide> expression)
 {
     auto firstChild = simplify(expression->firstChild);
@@ -923,6 +959,12 @@ inline NonlinearExpressionPtr simplify(NonlinearExpressionPtr expression)
     case E_NonlinearExpressionTypes::Abs:
         ss << "\nBefore simplification of abs: " << *expression << std::endl;
         break;
+    case E_NonlinearExpressionTypes::ErrorFunction:
+        ss << "\nBefore simplification of errorf: " << *expression << std::endl;
+        break;
+    case E_NonlinearExpressionTypes::SignPower:
+        ss << "\nBefore simplification of signpower: " << *expression << std::endl;
+        break;
     case E_NonlinearExpressionTypes::Divide:
         ss << "\nBefore simplification of divide: " << *expression << std::endl;
         break;
@@ -984,6 +1026,12 @@ inline NonlinearExpressionPtr simplify(NonlinearExpressionPtr expression)
         break;
     case E_NonlinearExpressionTypes::Abs:
         expression = simplifyExpression(std::dynamic_pointer_cast<ExpressionAbs>(expression));
+        break;
+    case E_NonlinearExpressionTypes::ErrorFunction:
+        expression = simplifyExpression(std::dynamic_pointer_cast<ExpressionErrorFunction>(expression));
+        break;
+    case E_NonlinearExpressionTypes::SignPower:
+        expression = simplifyExpression(std::dynamic_pointer_cast<ExpressionSignPower>(expression));
         break;
     case E_NonlinearExpressionTypes::Divide:
         expression = simplifyExpression(std::dynamic_pointer_cast<ExpressionDivide>(expression));
@@ -1047,6 +1095,12 @@ inline NonlinearExpressionPtr simplify(NonlinearExpressionPtr expression)
         break;
     case E_NonlinearExpressionTypes::Abs:
         ss << " After simplification of abs: " << *expression << std::endl;
+        break;
+    case E_NonlinearExpressionTypes::ErrorFunction:
+        ss << " After simplification of errorf: " << *expression << std::endl;
+        break;
+    case E_NonlinearExpressionTypes::SignPower:
+        ss << " After simplification of signpower: " << *expression << std::endl;
         break;
     case E_NonlinearExpressionTypes::Divide:
         ss << " After simplification of divide: " << *expression << std::endl;

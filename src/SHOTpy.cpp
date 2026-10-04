@@ -1266,6 +1266,8 @@ PYBIND11_MODULE(SHOTpy, m)
         .value("ArcSin", E_NonlinearExpressionTypes::ArcSin)
         .value("ArcTan", E_NonlinearExpressionTypes::ArcTan)
         .value("Abs", E_NonlinearExpressionTypes::Abs)
+        .value("ErrorFunction", E_NonlinearExpressionTypes::ErrorFunction)
+        .value("SignPower", E_NonlinearExpressionTypes::SignPower)
         .value("Divide", E_NonlinearExpressionTypes::Divide)
         .value("Power", E_NonlinearExpressionTypes::Power)
         .value("Sum", E_NonlinearExpressionTypes::Sum)
@@ -1352,6 +1354,42 @@ PYBIND11_MODULE(SHOTpy, m)
     m.def(
         "abs", [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr
         { return std::make_shared<ExpressionAbs>(expr); }, "Absolute value", py::arg("x"));
+
+    m.def(
+        "errorf", [](VariablePtr var) -> NonlinearExpressionPtr
+        { return std::make_shared<ExpressionErrorFunction>(wrapInExpression(var)); },
+        "The integral of the standard normal distribution from minus infinity to x, 0.5 * (1 + erf(x / sqrt(2)))",
+        py::arg("x"));
+
+    m.def(
+        "errorf", [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr
+        { return std::make_shared<ExpressionErrorFunction>(expr); },
+        "The integral of the standard normal distribution from minus infinity to x, 0.5 * (1 + erf(x / sqrt(2)))",
+        py::arg("x"));
+
+    m.def(
+        "signpower",
+        [](VariablePtr var, double exponent) -> NonlinearExpressionPtr
+        {
+            if(!(exponent > 0.0))
+                throw std::invalid_argument("The exponent of signpower must be positive");
+
+            return std::make_shared<ExpressionSignPower>(wrapInExpression(var), exponent);
+        },
+        "The signed power sign(x) * |x|^exponent with a positive constant exponent", py::arg("x"),
+        py::arg("exponent"));
+
+    m.def(
+        "signpower",
+        [](NonlinearExpressionPtr expr, double exponent) -> NonlinearExpressionPtr
+        {
+            if(!(exponent > 0.0))
+                throw std::invalid_argument("The exponent of signpower must be positive");
+
+            return std::make_shared<ExpressionSignPower>(expr, exponent);
+        },
+        "The signed power sign(x) * |x|^exponent with a positive constant exponent", py::arg("x"),
+        py::arg("exponent"));
 
     m.def(
         "square", [](VariablePtr var) -> NonlinearExpressionPtr

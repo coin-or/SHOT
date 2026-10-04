@@ -431,6 +431,26 @@ class TestSharedExpressions:
         for name in ("a", "b"):
             assert abs(problem.getConstraint(name).calculateFunctionValue([2.0, 1.0]) - expected) < 1e-12
 
+    def test_errorf_and_signpower(self):
+        """errorf is the standard normal distribution function and signpower is sign(x) * |x|^c, as in GAMS."""
+        import SHOTpy
+
+        _, problem, x, y = make_problem()
+        f = SHOTpy.errorf(x) + SHOTpy.errorf(2 * y - 3) + SHOTpy.signpower(x, 1.852) + SHOTpy.signpower(y - x, 1.852)
+        problem.addConstraint(f <= 100, "a")
+        problem.addConstraint(f <= 100, "b")
+        finalize(problem)
+
+        def distribution(t):
+            return 0.5 * math.erfc(-t / math.sqrt(2.0))
+
+        expected = distribution(2.0) + distribution(-1.0) + 2.0**1.852 - 1.0**1.852
+        for name in ("a", "b"):
+            assert abs(problem.getConstraint(name).calculateFunctionValue([2.0, 1.0]) - expected) < 1e-12
+
+        with pytest.raises(ValueError):
+            SHOTpy.signpower(x, -1.0)
+
     def test_user_expression_is_not_changed(self):
         """Simplifying a constraint does not change the expression object the user keeps."""
         _, problem, x, y = make_problem()

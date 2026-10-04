@@ -2088,6 +2088,33 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
                 break;
             }
 
+            case fnerrf:
+            {
+                auto expression = std::make_shared<ExpressionErrorFunction>(std::move(stack.rbegin()[0]));
+                stack.pop_back();
+                stack.push_back(expression);
+                break;
+            }
+
+            case fnsignpower: // sign(x) * abs(x)^c
+            {
+                if(stack.rbegin()[0]->getType() != E_NonlinearExpressionTypes::Constant)
+                    throw OperationNotImplementedException(
+                        "Error: The GAMS function signpower is only supported with a constant exponent");
+
+                double exponent = std::static_pointer_cast<ExpressionConstant>(stack.rbegin()[0])->constant;
+
+                if(!(exponent > 0.0))
+                    throw OperationNotImplementedException(
+                        "Error: The GAMS function signpower is only supported with a positive exponent");
+
+                auto expression = std::make_shared<ExpressionSignPower>(std::move(stack.rbegin()[1]), exponent);
+                stack.pop_back();
+                stack.pop_back();
+                stack.push_back(expression);
+                break;
+            }
+
             case fncos:
             {
                 auto expression = std::make_shared<ExpressionCos>(std::move(stack.rbegin()[0]));
@@ -2145,7 +2172,6 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
             case fnpoly:
             case fnmin:
             case fnmax:
-            case fnerrf:
             case fnceil:
             case fnfloor:
             case fnround:
@@ -2188,7 +2214,6 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
             case fnsinh:
             case fncosh:
             case fntanh:
-            case fnsignpower /* sign(x)*abs(x)^c */:
             case fnncpvusin /* veelken-ulbrich */:
             case fnncpvupow /* veelken-ulbrich */:
             case fnbinomial:
