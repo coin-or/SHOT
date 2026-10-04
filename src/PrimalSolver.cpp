@@ -560,6 +560,21 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
 void PrimalSolver::addFixedNLPCandidate(
     VectorDouble pt, E_PrimalNLPSource source, double objVal, int iter, PairIndexValue maxConstrDev)
 {
+    auto candidate = createFixedNLPCandidate(pt, source, objVal, iter, maxConstrDev);
+
+    if(!hasFixedNLPCandidateBeenTested(candidate.discreteVariablePointHashes))
+    {
+        fixedPrimalNLPCandidates.push_back(candidate);
+    }
+    else
+        env->output->outputDebug(
+            fmt::format("        Candidate for fixed integer search with hash {} has been used already.",
+                candidate.discreteVariablePointHashes.first));
+}
+
+PrimalFixedNLPCandidate PrimalSolver::createFixedNLPCandidate(
+    VectorDouble pt, E_PrimalNLPSource source, double objVal, int iter, PairIndexValue maxConstrDev)
+{
     VectorDouble candidate(pt);
 
     if((int)candidate.size() < env->reformulatedProblem->properties.numberOfVariables)
@@ -588,14 +603,7 @@ void PrimalSolver::addFixedNLPCandidate(
         pointHashes = Utilities::calculateHashes(candidate);
     }
 
-    if(!hasFixedNLPCandidateBeenTested(pointHashes))
-    {
-        fixedPrimalNLPCandidates.push_back(
-            PrimalFixedNLPCandidate { candidate, source, objVal, iter, maxConstrDev, pointHashes });
-    }
-    else
-        env->output->outputDebug(fmt::format(
-            "        Candidate for fixed integer search with hash {} has been used already.", pointHashes.first));
+    return (PrimalFixedNLPCandidate { candidate, source, objVal, iter, maxConstrDev, pointHashes });
 }
 
 bool PrimalSolver::hasFixedNLPCandidateBeenTested(const PairDouble& hashes)

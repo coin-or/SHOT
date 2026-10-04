@@ -161,6 +161,21 @@ endif()
 
 set(cpptests ${cpptests} EqualityConstraint)
 
+# The exhaustive search in the fixed-integer primal strategy, which needs an NLP solver
+if(HAS_HIGHS AND HAS_IPOPT)
+  set(Enumeration_parts 1 2 3 4 5 6 7)
+
+  if(HAS_GUROBI)
+    list(APPEND Enumeration_parts 8)
+  endif()
+
+  if(HAS_CPLEX)
+    list(APPEND Enumeration_parts 9)
+  endif()
+
+  set(cpptests ${cpptests} Enumeration)
+endif()
+
 if(HAS_IPOPT)
   set(cpptests ${cpptests} Ipopt)
   set(Ipopt_parts 1 2)
@@ -430,6 +445,7 @@ if(TARGET SHOTpy)
         test_modeling_systems
         test_gradients_hessians
         test_callbacks
+        test_enumeration
         test_constraint_expressions
         test_equality_constraints
         test_api_safety

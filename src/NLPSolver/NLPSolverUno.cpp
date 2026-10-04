@@ -632,7 +632,9 @@ E_NLPSolutionStatus NLPSolverUno::solveProblemInstance()
         double timeLeft
             = env->settings->getSetting<double>("Termination.TimeLimit") - env->timing->getElapsedTime("Total");
         uno_set_solver_double_option(unoSolver, "time_limit",
-            std::max(std::min(env->settings->getSetting<double>("Primal.FixedInteger.TimeLimit"), timeLeft), 1e-5));
+            std::max(
+                std::min({ env->settings->getSetting<double>("Primal.FixedInteger.TimeLimit"), timeLeft, timeLimit }),
+                1e-5));
 
         uno_optimize(unoSolver, unoModel);
 

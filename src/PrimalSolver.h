@@ -40,11 +40,20 @@ public:
     void addFixedNLPCandidate(
         VectorDouble pt, E_PrimalNLPSource source, double objVal, int iter, PairIndexValue maxConstrDev);
 
+    // Creates a candidate, with the values of the auxiliary variables in the reformulated problem and the hashes used
+    // to identify it, without adding it to the candidates
+    PrimalFixedNLPCandidate createFixedNLPCandidate(
+        VectorDouble pt, E_PrimalNLPSource source, double objVal, int iter, PairIndexValue maxConstrDev);
+
     bool hasFixedNLPCandidateBeenTested(const PairDouble& hashes);
 
     std::vector<PrimalSolution> primalSolutionCandidates;
     std::vector<PrimalFixedNLPCandidate> fixedPrimalNLPCandidates;
     std::vector<PrimalFixedNLPCandidate> usedPrimalNLPCandidates;
+
+    // The hashes of the combinations of the discrete variables whose NLP problems have been solved in the exhaustive
+    // search, whatever the result. These are not solved again if the search is run as a fallback
+    std::vector<PairDouble> enumeratedPrimalNLPCandidateHashes;
 
 private:
     EnvironmentPtr env;

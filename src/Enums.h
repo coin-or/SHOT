@@ -138,7 +138,8 @@ enum class E_PrimalNLPSource
     FeasibleSolution,
     InfeasibleSolution,
     SmallestDeviationSolution,
-    FirstSolutionNewDualBound
+    FirstSolutionNewDualBound,
+    Enumeration
 };
 
 enum class E_PrimalSolutionSource

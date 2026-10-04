@@ -223,8 +223,8 @@ E_NLPSolutionStatus NLPSolverGAMS::solveProblemInstance()
         gevSwitchLogStat(modelingEnvironment, 3, nullptr, 0, nullptr, 0, gevwritecallback, &cbdata, &cbdata.orighandle);
 
     if(gevCallSolver(modelingEnvironment, modelingObject, "", nlpsolver.c_str(), solvelink,
-           showlog ? gevSolverSameStreams : gevSolverQuiet, nullptr, nullptr, timelimit, iterlimit, 0, 0.0, 0.0,
-           nullptr, msg)
+           showlog ? gevSolverSameStreams : gevSolverQuiet, nullptr, nullptr, std::min(timelimit, timeLimit), iterlimit,
+           0, 0.0, 0.0, nullptr, msg)
         != 0)
     {
         gmoModelStatSet(modelingObject, gmoModelStat_ErrorNoSolution);

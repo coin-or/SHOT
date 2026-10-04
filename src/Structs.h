@@ -281,6 +281,18 @@ struct SolutionStatistics
 
     int numberOfProblemsFixedNLP = 0;
 
+    // The exhaustive search of the combinations of the discrete variables in the fixed-integer strategy. A combination
+    // is feasible if a solution was returned for its NLP problem, infeasible if the NLP problem was returned as
+    // infeasible, and otherwise unresolved. The skipped ones had already been used in the fixed-integer strategy
+    // The numbers are those of the last search, if it has been run both before the dual strategy and as a fallback
+    bool hasFixedIntegerEnumerationBeenRun = false;
+    bool hasFixedIntegerEnumerationFallbackBeenRun = false;
+    int numberOfFixedIntegerEnumerationCombinations = 0;
+    int numberOfFixedIntegerEnumerationCombinationsFeasible = 0;
+    int numberOfFixedIntegerEnumerationCombinationsInfeasible = 0;
+    int numberOfFixedIntegerEnumerationCombinationsUnresolved = 0;
+    int numberOfFixedIntegerEnumerationCombinationsSkipped = 0;
+
     int numberOfHyperplanesWithConvexSource = 0;
     int numberOfHyperplanesWithNonconvexSource = 0;
     int numberOfIntegerCuts = 0;

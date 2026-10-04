@@ -1408,6 +1408,19 @@ void Solver::initializeSettings()
     env->settings->createSetting(
         "Primal.FixedInteger.CreateInfeasibilityCut", false, "Create a cut from an infeasible solution point");
 
+    env->settings->createSetting("Primal.FixedInteger.Enumeration.MaxCombinations", 50,
+        "Max number of combinations of the discrete variables for the exhaustive search to be performed", 1,
+        SHOT_INT_MAX);
+
+    env->settings->createSetting("Primal.FixedInteger.Enumeration.TimeLimit", 20.0,
+        "Time limit (s) for all NLP problems in the exhaustive search", 0, SHOT_DBL_MAX);
+
+    env->settings->createSetting("Primal.FixedInteger.Enumeration.UseInitially", false,
+        "Solve NLP problems for all combinations of the discrete variables before the dual strategy");
+
+    env->settings->createSetting("Primal.FixedInteger.Enumeration.UseAsFallback", true,
+        "Solve NLP problems for all combinations of the discrete variables if the objective gap could not be closed");
+
     env->settings->createSetting(
         "Primal.FixedInteger.Frequency.Dynamic", true, "Dynamically update the call frequency based on success");
 
@@ -2254,6 +2267,8 @@ void Solver::setConvexityBasedSettings()
             env->settings->updateSetting("Primal.FixedInteger.CallStrategy", 0, E_SettingPriority::RecommendedInternal);
             env->settings->updateSetting(
                 "Primal.FixedInteger.CreateInfeasibilityCut", false, E_SettingPriority::RecommendedInternal);
+            env->settings->updateSetting(
+                "Primal.FixedInteger.Enumeration.UseInitially", true, E_SettingPriority::RecommendedInternal);
             env->settings->updateSetting("Primal.FixedInteger.Source", 0, E_SettingPriority::RecommendedInternal);
 
             env->settings->updateSetting(

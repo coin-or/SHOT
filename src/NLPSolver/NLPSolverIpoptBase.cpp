@@ -282,26 +282,13 @@ bool IpoptProblem::get_starting_point(Index n, [[maybe_unused]] bool init_x, [[m
         double variableLB = sourceProblem->getVariableLowerBound(k);
         double variableUB = sourceProblem->getVariableUpperBound(k);
 
-        if(variableUB == SHOT_DBL_MAX)
-        {
-            if(defaultInitValue > variableLB)
-                x[k] = variableLB;
-            else
-                x[k] = defaultInitValue;
-        }
-        else if(variableLB == SHOT_DBL_MIN)
-        {
-            if(defaultInitValue > variableUB)
-                x[k] = variableUB;
-            else
-                x[k] = defaultInitValue;
-        }
-        else if(variableLB <= defaultInitValue && defaultInitValue <= variableUB)
-            x[k] = variableUB;
-        else if(variableLB > defaultInitValue)
+        // The default value if it is within the bounds, and otherwise the bound closest to it
+        if(variableLB > defaultInitValue)
             x[k] = variableLB;
-        else
+        else if(variableUB < defaultInitValue)
             x[k] = variableUB;
+        else
+            x[k] = defaultInitValue;
     }
 
     return (true);
@@ -663,6 +650,14 @@ void IpoptProblem::finalize_solution(SolverReturn status, [[maybe_unused]] Index
 
         break;
 
+    case CPUTIME_EXCEEDED:
+    case WALLTIME_EXCEEDED:
+        solutionDescription = "Time limit exceeded.";
+
+        solutionStatus = E_NLPSolutionStatus::TimeLimit;
+
+        break;
+
     case RESTORATION_FAILURE:
         solutionDescription = "Restoration phase failed, algorithm doesn't know how to proceed.";
 
@@ -755,7 +750,7 @@ E_NLPSolutionStatus NLPSolverIpoptBase::solveProblemInstance()
     // own: a single NLP problem could then take longer than the whole solution time allowed, e.g. when its linear
     // solver runs into difficulties. The limit is kept positive, since a nonpositive one is rejected.
     double timeLeft = env->settings->getSetting<double>("Termination.TimeLimit") - env->timing->getElapsedTime("Total");
-    ipoptApplication->Options()->SetNumericValue("max_wall_time", std::max(timeLeft, 0.00001));
+    ipoptApplication->Options()->SetNumericValue("max_wall_time", std::max(std::min(timeLeft, timeLimit), 0.00001));
 
     try
     {
@@ -795,6 +790,7 @@ E_NLPSolutionStatus NLPSolverIpoptBase::solveProblemInstance()
             break;
 
         case Ipopt::ApplicationReturnStatus::Maximum_CpuTime_Exceeded:
+        case Ipopt::ApplicationReturnStatus::Maximum_WallTime_Exceeded:
             status = E_NLPSolutionStatus::TimeLimit;
             env->output->outputDebug("        No solution found to problem with Ipopt: Time limit exceeded.");
             break;

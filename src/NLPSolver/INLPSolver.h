@@ -27,6 +27,10 @@ public:
     virtual void setStartingPoint(VectorInteger variableIndexes, VectorDouble variableValues) = 0;
     virtual void clearStartingPoint() = 0;
 
+    // The time limit (s) of the following solves. It is used in addition to the time limits in the settings, i.e.,
+    // the smallest one of them applies
+    virtual void setTimeLimit(double seconds) { timeLimit = seconds; }
+
     virtual E_NLPSolutionStatus solveProblem() = 0;
     virtual void fixVariables(VectorInteger variableIndexes, VectorDouble variableValues) = 0;
 
@@ -49,5 +53,7 @@ public:
 
 protected:
     virtual E_NLPSolutionStatus solveProblemInstance() = 0;
+
+    double timeLimit = SHOT_DBL_MAX;
 };
 } // namespace SHOT

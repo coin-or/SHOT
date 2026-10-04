@@ -2911,6 +2911,26 @@ PYBIND11_MODULE(SHOTpy, m)
             "The number of LP problems solved in the search for an interior point")
         .def_readwrite("numberOfProblemsFixedNLP", &SolutionStatistics::numberOfProblemsFixedNLP,
             "The number of NLP problems with fixed integer variables solved to find primal solutions")
+        .def_readwrite("hasFixedIntegerEnumerationBeenRun", &SolutionStatistics::hasFixedIntegerEnumerationBeenRun,
+            "Whether NLP problems have been solved for all combinations of the discrete variables")
+        .def_readwrite("hasFixedIntegerEnumerationFallbackBeenRun",
+            &SolutionStatistics::hasFixedIntegerEnumerationFallbackBeenRun,
+            "Whether this has been done as a fallback when the objective gap could not be closed")
+        .def_readwrite("numberOfFixedIntegerEnumerationCombinations",
+            &SolutionStatistics::numberOfFixedIntegerEnumerationCombinations,
+            "The number of combinations of the discrete variables in the exhaustive search")
+        .def_readwrite("numberOfFixedIntegerEnumerationCombinationsFeasible",
+            &SolutionStatistics::numberOfFixedIntegerEnumerationCombinationsFeasible,
+            "The number of combinations whose NLP problem gave a solution")
+        .def_readwrite("numberOfFixedIntegerEnumerationCombinationsInfeasible",
+            &SolutionStatistics::numberOfFixedIntegerEnumerationCombinationsInfeasible,
+            "The number of combinations whose NLP problem was infeasible")
+        .def_readwrite("numberOfFixedIntegerEnumerationCombinationsUnresolved",
+            &SolutionStatistics::numberOfFixedIntegerEnumerationCombinationsUnresolved,
+            "The number of combinations whose NLP problem ended at a limit or with an error")
+        .def_readwrite("numberOfFixedIntegerEnumerationCombinationsSkipped",
+            &SolutionStatistics::numberOfFixedIntegerEnumerationCombinationsSkipped,
+            "The number of combinations not solved since they had been used in the fixed-integer strategy")
         .def_readwrite("numberOfHyperplanesWithConvexSource", &SolutionStatistics::numberOfHyperplanesWithConvexSource,
             "The number of cuts generated for convex functions")
         .def_readwrite("numberOfHyperplanesWithNonconvexSource",

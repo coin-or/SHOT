@@ -241,6 +241,7 @@ file(
     "${PROJECT_SOURCE_DIR}/src/Tasks/TaskSelectPrimalCandidatesFromNLP.h"
     "${PROJECT_SOURCE_DIR}/src/Tasks/TaskCheckTimeLimit.h"
     "${PROJECT_SOURCE_DIR}/src/Tasks/TaskClearFixedPrimalCandidates.h"
+    "${PROJECT_SOURCE_DIR}/src/Tasks/TaskEnumerateFixedIntegerCombinations.h"
     "${PROJECT_SOURCE_DIR}/src/Tasks/TaskSelectHyperplanesESH.h"
     "${PROJECT_SOURCE_DIR}/src/Tasks/TaskCheckUserTermination.h"
     "${PROJECT_SOURCE_DIR}/src/Tasks/TaskCheckPrimalStagnation.h"
@@ -758,6 +759,8 @@ add_library(
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskConditional.h
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskCreateDualProblem.cpp
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskCreateDualProblem.h
+    ${PROJECT_SOURCE_DIR}/src/Tasks/TaskEnumerateFixedIntegerCombinations.cpp
+    ${PROJECT_SOURCE_DIR}/src/Tasks/TaskEnumerateFixedIntegerCombinations.h
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskCreateMIPProblem.cpp
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskCreateMIPProblem.h
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskException.h
