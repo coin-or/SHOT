@@ -660,7 +660,9 @@ E_ProblemSolutionStatus MIPSolverHighs::getSolutionStatus()
     }
     else if(modelStatus == HighsModelStatus::kObjectiveBound)
     {
-        MIPSolutionStatus = E_ProblemSolutionStatus::CutOff;
+        // The dual simplex method ends an LP problem when its bound passes the cutoff, so there is no solution better
+        // than the cutoff, which is what a MIP problem being infeasible with the cutoff means as well
+        MIPSolutionStatus = E_ProblemSolutionStatus::Infeasible;
     }
     else if(modelStatus == HighsModelStatus::kObjectiveTarget)
     {
@@ -1059,27 +1061,15 @@ void MIPSolverHighs::setTimeLimit(double seconds)
 
 void MIPSolverHighs::setCutOff(double cutOff)
 {
-    // TODO: Some problems with maximization problems and cutoff, disabling for now
-    return;
-
     if(cutOff == SHOT_DBL_MAX || cutOff == SHOT_DBL_MIN)
         return;
 
-    double cutOffTol = env->settings->getSetting<double>("Dual.MIP.CutOff.Tolerance");
-    double cutOffWithTol = cutOff + cutOffTol;
+    // The bound is on the objective HiGHS minimizes, which has its signs changed when the problem is maximized. The
+    // cutoff given already includes the tolerance Dual.MIP.CutOff.Tolerance
+    highsInstance.setOptionValue("objective_bound", isMinimizationProblem ? cutOff : -cutOff);
 
-    if(isMinimizationProblem)
-    {
-        highsInstance.setOptionValue("objective_bound", cutOffWithTol);
-
-        env->output->outputDebug(fmt::format("        Setting cutoff value to {} for minimization.", cutOffWithTol));
-    }
-    else
-    {
-        highsInstance.setOptionValue("objective_bound", -cutOffWithTol);
-
-        env->output->outputDebug(fmt::format("        Setting cutoff value to {} for maximization.", cutOffWithTol));
-    }
+    env->output->outputDebug(fmt::format("        Setting cutoff value to {} for {}.", cutOff,
+        isMinimizationProblem ? "minimization" : "maximization"));
 }
 
 void MIPSolverHighs::setCutOffAsConstraint(double cutOff)

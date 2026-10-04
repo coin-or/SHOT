@@ -648,21 +648,13 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
     arg = std::to_string(env->settings->getSetting<int>("Subsolver.Cbc.Strategy"));
     argv[numArguments++] = strdup(arg.c_str());
 
-    /*
-        TODO: Adding cutoffs seems to have stability-issues (status changes from unbounded -> infeasible in some
-        cases, cf. https://github.com/coin-or/SHOT/issues/133). As the cutoff is added as a constraint, this can be
-        deactivated here.
-
+    // The cutoff is in the sense of the objective Cbc minimizes, see setCutOff
+    if(std::abs(this->cutOff) < 1e100)
+    {
         argv[numArguments++] = strdup("-cutoff");
-
-        if(this->cutOff > 1e100)
-            arg = "1e100";
-        else if(this->cutOff < -1e100)
-            arg = "-1e100";
-        else
-            arg = fmt::format("{}", this->cutOff);
-
-        argv[numArguments++] = strdup(arg.c_str());*/
+        arg = fmt::format("{}", this->cutOff);
+        argv[numArguments++] = strdup(arg.c_str());
+    }
 
     argv[numArguments++] = strdup("-sec");
     arg = fmt::format("{}", this->timeLimit);
@@ -1247,20 +1239,12 @@ void MIPSolverCbc::setCutOff(double cutOff)
     if(cutOff == SHOT_DBL_MAX || cutOff == SHOT_DBL_MIN)
         return;
 
-    double cutOffTol = env->settings->getSetting<double>("Dual.MIP.CutOff.Tolerance");
+    // Cbc minimizes also when the problem is maximized, with the signs of the objective changed, and the cutoff is
+    // on the objective it minimizes. The cutoff given already includes the tolerance Dual.MIP.CutOff.Tolerance
+    this->cutOff = isMinimizationProblem ? cutOff : -cutOff;
 
-    if(isMinimizationProblem)
-    {
-        this->cutOff = cutOff + cutOffTol;
-
-        env->output->outputDebug(fmt::format("        Setting cutoff value to {} for minimization.", this->cutOff));
-    }
-    else
-    {
-        this->cutOff = -1 * (cutOff + cutOffTol);
-
-        env->output->outputDebug(fmt::format("        Setting cutoff value to {} for maximization.", this->cutOff));
-    }
+    env->output->outputDebug(fmt::format("        Setting cutoff value to {} for {}.", cutOff,
+        isMinimizationProblem ? "minimization" : "maximization"));
 }
 
 void MIPSolverCbc::setCutOffAsConstraint([[maybe_unused]] double cutOff)
