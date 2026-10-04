@@ -299,8 +299,18 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
         VectorString cutNames;
         std::vector<NumericConstraintValue> cutConstraintValues;
 
+        // Calculating the gradients can take long for a large problem, so the time limits are also checked for every
+        // cut. The cuts created so far are still added.
+        auto isOutOfTime = [&]() {
+            return (env->timing->getElapsedTime("InteriorPointSearch") > timeLimit
+                || env->timing->getElapsedTime("Total") > env->settings->getSetting<double>("Termination.TimeLimit"));
+        };
+
         for(auto& NCV : constraintValues)
         {
+            if(isOutOfTime())
+                break;
+
             // Contains the coefficient and variable index for the terms in the generated cut
             std::map<int, double> elements;
 
@@ -425,8 +435,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             break;
         }
 
-        if(env->timing->getElapsedTime("InteriorPointSearch")
-            > env->settings->getSetting<double>("Dual.ESH.InteriorPoint.CuttingPlane.TimeLimit"))
+        if(isOutOfTime())
         {
             statusCode = E_NLPSolutionStatus::TimeLimit;
             break;
