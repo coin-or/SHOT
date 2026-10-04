@@ -736,6 +736,23 @@ E_ProblemSolutionStatus MIPSolverHighs::solveProblem()
         highsReturnStatus = highsInstance.run();
     }
 
+    // HiGHS also changes the status of a MIP problem it has solved to a solve error if the solution violates a row by
+    // more than the feasibility tolerance when it is transformed back from the presolved problem, and it then gives
+    // neither the solution nor the bound. This is not affected by the state of the solver, but solving without
+    // presolve gives a solution of the problem as it was given.
+    if(highsInstance.getModelStatus() == HighsModelStatus::kSolveError)
+    {
+        env->output->outputDebug("        The MIP solver did not return a solution, solving again without presolve.");
+
+        std::string presolve;
+        highsInstance.getOptionValue("presolve", presolve);
+        highsInstance.setOptionValue("presolve", "off");
+        currentSolutions.clear();
+        highsInstance.clearSolver();
+        highsReturnStatus = highsInstance.run();
+        highsInstance.setOptionValue("presolve", presolve);
+    }
+
     MIPSolutionStatus = getSolutionStatus();
 
     // An unbounded exact dual problem means that the problem is unbounded, so no point is needed
