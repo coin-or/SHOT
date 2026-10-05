@@ -517,9 +517,26 @@ E_ProblemSolutionStatus MIPSolverCbc::getSolutionStatus()
 {
     E_ProblemSolutionStatus MIPSolutionStatus;
 
+    // When the time limit is reached while the LP relaxation in the root node is solved, Cbc regards the relaxation
+    // as not solved to optimality and reports the problem as proven infeasible, which it does when a problem is
+    // started with very little time left. The LP solver of the model then has no infeasible problem, and its limit
+    // has expired.
+    bool isInfeasibleDueToTimeLimit = false;
+
+    if(cbcModel->isProvenInfeasible() || (cbcModel->status() == 0 && cbcModel->secondaryStatus() == 1))
+    {
+        if(auto clpInterface = dynamic_cast<OsiClpSolverInterface*>(cbcModel->solver()))
+            isInfeasibleDueToTimeLimit = !clpInterface->isProvenPrimalInfeasible()
+                && clpInterface->getModelPtr()->hitMaximumIterations();
+    }
+
     if(cbcModel->isProvenOptimal() && cbcModel->numberSavedSolutions() > 0)
     {
         MIPSolutionStatus = E_ProblemSolutionStatus::Optimal;
+    }
+    else if(isInfeasibleDueToTimeLimit)
+    {
+        MIPSolutionStatus = E_ProblemSolutionStatus::TimeLimit;
     }
     else if(cbcModel->isProvenInfeasible())
     {
