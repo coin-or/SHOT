@@ -28,6 +28,7 @@
 #include "CbcModel.hpp"
 #include "CbcSolver.hpp"
 #include "CbcBranchLotsize.hpp"
+#include "CbcSOS.hpp"
 #include "OsiClpSolverInterface.hpp"
 
 namespace SHOT
@@ -404,6 +405,40 @@ int MIPSolverCbc::addLinearConstraint(
     return (osiInterface->getNumRows() - 1);
 }
 
+void MIPSolverCbc::addBranchingObjects()
+{
+    // The objects are given to the Cbc model and not to the solver interface. Cbc creates its own objects from those
+    // of the solver interface only after it has preprocessed the problem, and the special ordered sets then referred
+    // to the columns of the problem before the preprocessing, i.e., to other variables or to columns that did not
+    // exist. Cbc updates the column indexes of the objects of its model.
+    std::vector<CbcObject*> cbcobjects;
+    cbcobjects.reserve(lotsizes.size() + specialOrderedSets.size());
+
+    for(const auto& l : lotsizes)
+    {
+        if(l.second[2] == l.second[3]) // special case where second interval is singleton, too
+            cbcobjects.push_back(new CbcLotsize(cbcModel.get(), l.first, 2, l.second.data() + 1, false));
+        else
+            cbcobjects.push_back(new CbcLotsize(cbcModel.get(), l.first, 2, l.second.data(), true));
+    }
+
+    int identifier = 0;
+
+    for(const auto& [type, variableIndexes, variableWeights] : specialOrderedSets)
+    {
+        cbcobjects.push_back(new CbcSOS(cbcModel.get(), (int)variableIndexes.size(), variableIndexes.data(),
+            variableWeights.data(), identifier++, type));
+    }
+
+    if(cbcobjects.empty())
+        return;
+
+    cbcModel->addObjects(cbcobjects.size(), cbcobjects.data());
+
+    for(CbcObject* o : cbcobjects)
+        delete o;
+}
+
 bool MIPSolverCbc::addSpecialOrderedSet(E_SOSType type, VectorInteger variableIndexes, VectorDouble variableWeights)
 {
     try
@@ -418,12 +453,8 @@ bool MIPSolverCbc::addSpecialOrderedSet(E_SOSType type, VectorInteger variableIn
 
         assert(variableWeights.size() == variableIndexes.size());
 
-        OsiObject* object = new OsiSOS(osiInterface.get(), variableIndexes.size(), &variableIndexes[0],
-            &variableWeights[0], (type == E_SOSType::One) ? 1 : 2);
-
-        osiInterface->addObjects(1, &object);
-
-        delete object;
+        // The sets are added to the Cbc model before it is solved, see addBranchingObjects()
+        specialOrderedSets.emplace_back((type == E_SOSType::One) ? 1 : 2, variableIndexes, variableWeights);
     }
     catch(std::exception& e)
     {
@@ -703,25 +734,7 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
                 == 0))
             cbcModel->setMIPStart(MIPStart);
 
-        // Create and add lotsize objects
-        if(!lotsizes.empty())
-        {
-            std::vector<CbcObject*> cbcobjects;
-            cbcobjects.reserve(lotsizes.size());
-
-            for(const auto& l : lotsizes)
-            {
-                if(l.second[2] == l.second[3]) // special case where second interval is singleton, too
-                    cbcobjects.push_back(new CbcLotsize(cbcModel.get(), l.first, 2, l.second.data() + 1, false));
-                else
-                    cbcobjects.push_back(new CbcLotsize(cbcModel.get(), l.first, 2, l.second.data(), true));
-            }
-
-            cbcModel->addObjects(cbcobjects.size(), cbcobjects.data());
-
-            for(CbcObject* o : cbcobjects)
-                delete o;
-        }
+        addBranchingObjects();
 
         CbcSolverUsefulData solverData;
         CbcMain0(*cbcModel, solverData);
@@ -770,6 +783,8 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
             cbcModel = std::make_unique<CbcModel>(*osiInterface);
 
             initializeSolverSettings();
+
+            addBranchingObjects();
 
             CbcSolverUsefulData solverData;
             CbcMain0(*cbcModel, solverData);
@@ -858,6 +873,8 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
             cbcModel = std::make_unique<CbcModel>(*osiInterface);
 
             initializeSolverSettings();
+
+            addBranchingObjects();
 
             CbcSolverUsefulData solverData;
             CbcMain0(*cbcModel, solverData);
@@ -993,6 +1010,8 @@ bool MIPSolverCbc::repairInfeasibility()
         cbcModel = std::make_unique<CbcModel>(*repairedInterface);
 
         initializeSolverSettings();
+
+        addBranchingObjects();
 
         CbcSolverUsefulData solverData;
         CbcMain0(*cbcModel, solverData);

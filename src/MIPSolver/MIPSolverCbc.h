@@ -214,6 +214,12 @@ private:
 
     std::vector<E_VariableType> variableTypes;
     std::vector<std::pair<int, std::array<double, 4>>> lotsizes;
+
+    // The type (1 or 2), the variable indexes and the weights of the special ordered sets
+    std::vector<std::tuple<int, VectorInteger, VectorDouble>> specialOrderedSets;
+
+    // Adds the lot sizes and the special ordered sets to the Cbc model
+    void addBranchingObjects();
 };
 
 } // namespace SHOT
