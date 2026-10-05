@@ -558,7 +558,7 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
     cachedSolutionHasChanged = true;
 
     // The arguments are counted as they are added, since some of them are only passed on conditionally
-    const int maxArguments = 21;
+    const int maxArguments = 23;
     char* argv[maxArguments];
     int numArguments = 0;
     std::string arg;
@@ -647,6 +647,12 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
     argv[numArguments++] = strdup("-strategy");
     arg = std::to_string(env->settings->getSetting<int>("Subsolver.Cbc.Strategy"));
     argv[numArguments++] = strdup(arg.c_str());
+
+    // Cbc fathoms nodes with a fast dual simplex method below a depth it selects for small problems, and this ends
+    // in an invalid memory access in Clp (ClpSimplex::fastDual2) when the time limit is reached during it. The value
+    // -999 is the one Cbc changes to no fast fathoming, while -1 lets it select the depth.
+    argv[numArguments++] = strdup("-depthMiniBab");
+    argv[numArguments++] = strdup("-999");
 
     // The cutoff is in the sense of the objective Cbc minimizes, see setCutOff
     if(std::abs(this->cutOff) < 1e100)
@@ -1002,7 +1008,7 @@ bool MIPSolverCbc::repairInfeasibility()
         cachedSolutionHasChanged = true;
 
         // The arguments are counted as they are added, since some of them are only passed on conditionally
-        const int maxArguments = 21;
+        const int maxArguments = 23;
         char* argv[maxArguments];
         int numArguments = 0;
         std::string arg;
@@ -1091,6 +1097,10 @@ bool MIPSolverCbc::repairInfeasibility()
         argv[numArguments++] = strdup("-strategy");
         arg = std::to_string(env->settings->getSetting<int>("Subsolver.Cbc.Strategy"));
         argv[numArguments++] = strdup(arg.c_str());
+
+        // See the comment in solveProblem()
+        argv[numArguments++] = strdup("-depthMiniBab");
+        argv[numArguments++] = strdup("-999");
 
         /*
         argv[numArguments++] = strdup("-cutoff");
