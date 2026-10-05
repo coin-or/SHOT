@@ -1769,6 +1769,12 @@ double MIPSolverCbc::getDualObjectiveValue()
     if(!isDualBoundAvailable(getSolutionStatus(), isMIP))
         return (objVal);
 
+    // When the time limit is reached before the first node has been solved, the best possible objective value of Cbc
+    // can be the objective value of an LP relaxation that was not solved, e.g., 2.8e12 for a problem with the optimal
+    // value 8092.5, so it is not a bound
+    if(cbcModel->isSecondsLimitReached() && cbcModel->getNodeCount() == 0)
+        return (objVal);
+
     try
     {
         if(isMIP)
