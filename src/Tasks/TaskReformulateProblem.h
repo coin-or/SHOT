@@ -166,8 +166,16 @@ private:
     std::map<std::pair<VariablePtr, double>, AuxiliaryVariablePtr, VariableIndexComparator> squareAuxVariables;
     std::map<int, int> squareAuxVariableCounts; // The number of square auxiliary variables of each variable
 
-    std::map<std::tuple<VariablePtr, VariablePtr>, AuxiliaryVariablePtr, VariableIndexComparator>
-        bilinearAuxVariables;
+    struct BilinearKeyHash
+    {
+        size_t operator()(const std::pair<int, int>& key) const noexcept
+        {
+            size_t hash = std::hash<int> {}(key.first);
+            return hash * 1315423911U + std::hash<int> {}(key.second);
+        }
+    };
+
+    std::unordered_map<std::pair<int, int>, AuxiliaryVariablePtr, BilinearKeyHash> bilinearAuxVariables;
 
     std::map<std::string, AuxiliaryVariablePtr> absoluteExpressionsAuxVariables;
 

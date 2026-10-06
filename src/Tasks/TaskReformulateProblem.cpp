@@ -3230,13 +3230,10 @@ std::pair<AuxiliaryVariablePtr, bool> TaskReformulateProblem::getSquareAuxiliary
 std::pair<AuxiliaryVariablePtr, bool> TaskReformulateProblem::getBilinearAuxiliaryVariable(
     VariablePtr firstVariable, VariablePtr secondVariable)
 {
-    std::tuple<VariablePtr, VariablePtr> key;
-
-    // The variable with lower index is stored first in the tuple
-    if(firstVariable->getIndex() < secondVariable->getIndex())
-        key = std::make_tuple(firstVariable, secondVariable);
-    else
-        key = std::make_tuple(secondVariable, firstVariable);
+    // The variable with lower index is stored first in the key.
+    int firstIndex = firstVariable->getIndex();
+    int secondIndex = secondVariable->getIndex();
+    auto key = std::make_pair(std::min(firstIndex, secondIndex), std::max(firstIndex, secondIndex));
 
     auto auxVariableIterator = bilinearAuxVariables.find(key);
 
@@ -3343,12 +3340,20 @@ void TaskReformulateProblem::createSquareReformulations()
 
 void TaskReformulateProblem::createBilinearReformulations()
 {
-    for(const auto& [VARS, AUXVAR] : bilinearAuxVariables)
+    // Preserve the original index order of generated constraints despite hash-table lookup during construction.
+    std::vector<std::pair<int, int>> keys;
+    keys.reserve(bilinearAuxVariables.size());
+    for(const auto& entry : bilinearAuxVariables)
+        keys.push_back(entry.first);
+    std::sort(keys.begin(), keys.end());
+
+    for(const auto& key : keys)
     {
-        auto firstVariable = std::get<0>(VARS);
+        auto AUXVAR = bilinearAuxVariables.at(key);
+        auto firstVariable = reformulatedProblem->getVariable(key.first);
         auto firstVariableType = firstVariable->properties.type;
 
-        auto secondVariable = std::get<1>(VARS);
+        auto secondVariable = reformulatedProblem->getVariable(key.second);
         auto secondVariableType = secondVariable->properties.type;
 
         if(firstVariableType == E_VariableType::Binary && secondVariableType == E_VariableType::Binary)
