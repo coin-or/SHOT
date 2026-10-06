@@ -32,7 +32,7 @@ void checkAndConvertObjectivesAndConstraints(
             auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression,
                 tmpConstant]
                 = extractTermsAndConstant(
-                    nonlinearExpression, extractMonomials, extractSignomials, extractQuadratics, true);
+                    nonlinearExpression, extractMonomials, extractSignomials, extractQuadratics, true, true);
 
             if(tmpMonomialTerms.size() == 0 && tmpSignomialTerms.size() == 0 && !tmpNonlinearExpression
                 && nonlinearObjective->monomialTerms.size() == 0 && nonlinearObjective->signomialTerms.size() == 0)
@@ -126,7 +126,7 @@ void checkAndConvertObjectivesAndConstraints(
         auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression,
             tmpConstant]
             = extractTermsAndConstant(
-                nonlinearExpression, extractMonomials, extractSignomials, extractQuadratics, true);
+                nonlinearExpression, extractMonomials, extractSignomials, extractQuadratics, true, true);
 
         bool isQuadratic = (tmpQuadraticTerms.size() > 0 || nonlinearConstraint->quadraticTerms.size() > 0);
 

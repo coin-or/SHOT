@@ -1687,9 +1687,11 @@ inline std::optional<SignomialTermPtr> convertToSignomialTerm(NonlinearExpressio
     return (resultingSignomialTerm);
 }
 
+// The caller may pass alreadySimplified when it has simplified the whole expression tree immediately before
+// extraction. Extraction can remove sum children, but it does not otherwise change the retained subexpressions.
 inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, NonlinearExpressionPtr, double>
     extractTermsAndConstant(NonlinearExpressionPtr expression, bool extractMonomials, bool extractSignomials,
-        bool extractQuadratics, bool extractLinears)
+        bool extractQuadratics, bool extractLinears, bool alreadySimplified = false)
 {
     double constant = 0.0;
     LinearTerms linearTerms;
@@ -1887,7 +1889,8 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
         {
             auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression,
                 tmpConstant]
-                = extractTermsAndConstant(C, extractMonomials, extractSignomials, extractQuadratics, extractLinears);
+                = extractTermsAndConstant(
+                    C, extractMonomials, extractSignomials, extractQuadratics, extractLinears, alreadySimplified);
 
             // The terms are not merged here, since building the index of the terms added so far for every child
             // is quadratic in the number of terms. They are merged in the pass over all terms below.
@@ -1908,6 +1911,8 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
         if(children.size() == 0)
             // The nonlinear expression has been fully extracted
             nonlinearExpression = std::make_shared<ExpressionConstant>(0.0);
+        else if(children.size() == 1 && alreadySimplified)
+            nonlinearExpression = children[0];
         else
         {
             std::dynamic_pointer_cast<ExpressionSum>(expression)->children = children;
@@ -2045,7 +2050,7 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
             newSignomialTerms.add(std::make_shared<SignomialTerm>(coefficient, elements));
     }
 
-    if(nonlinearExpression != nullptr)
+    if(nonlinearExpression != nullptr && !alreadySimplified)
         nonlinearExpression = simplify(nonlinearExpression);
 
     if(auto sharedOwnerProblem = expression->ownerProblem.lock())
