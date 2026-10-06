@@ -70,13 +70,6 @@ MIPSolverCplex::~MIPSolverCplex()
     cplexConstrs.end();
     cplexInstance.end();
     cplexEnv.end();
-
-    if(callbacksInitialized)
-    {
-        cplexInstance.remove(infoCallback);
-        delete infoCallback;
-        callbacksInitialized = false;
-    }
 }
 bool MIPSolverCplex::initializeProblem()
 {
@@ -766,6 +759,18 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
     E_ProblemSolutionStatus MIPSolutionStatus;
     cachedSolutionHasChanged = true;
 
+    // Keep the callback within this solve, including exception paths. It must be detached before a retry
+    // replaces it, and while the CPLEX instance and environment are still alive.
+    bool callbackAttached = false;
+    auto removeCallback = [&](UserTerminationCallbackI* callback)
+    {
+        if(callbackAttached)
+            cplexInstance.remove(callback);
+        delete callback;
+        callbackAttached = false;
+    };
+    std::unique_ptr<UserTerminationCallbackI, decltype(removeCallback)> infoCallback(nullptr, removeCallback);
+
     try
     {
         // If we in previous iteration solved a feasibility problem since the objective was unbounded, the original
@@ -800,10 +805,9 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
         }
         else
         {
-            infoCallback = new(cplexEnv) UserTerminationCallbackI(env, cplexEnv);
-            callbacksInitialized = true;
-
-            cplexInstance.use(infoCallback);
+            infoCallback.reset(new(cplexEnv) UserTerminationCallbackI(env, cplexEnv));
+            cplexInstance.use(infoCallback.get());
+            callbackAttached = true;
 
             // Fixes a deadlock bug in Cplex 12.7 and 12.8
             cplexEnv.setNormalizer(false);
@@ -860,17 +864,11 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
             MIPSolutionStatus = E_ProblemSolutionStatus::Unbounded;
             env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed = true;
         }
-
-        if(callbacksInitialized)
-        {
-            cplexInstance.remove(infoCallback);
-            delete infoCallback;
-            callbacksInitialized = false;
-        }
     }
 
     catch(IloException& e)
     {
+        infoCallback.reset();
         std::string errorString = e.getMessage();
 
         // Retry once if the problem is nonconvex. The optimality target only helps for nonconvex objectives, so a
