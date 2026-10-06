@@ -16,9 +16,11 @@
 #include "../src/TaskHandler.h"
 
 #include "../src/MIPSolver/IMIPSolver.h"
+#include "../src/MIPSolver/MIPSolverCplex.h"
 
 #include "../src/Model/Problem.h"
 #include "../src/Model/ObjectiveFunction.h"
+#include "../src/Tasks/TaskCreateMIPProblem.h"
 
 #include <iostream>
 
@@ -520,6 +522,64 @@ bool CplexExternalDualBoundCallbackTest(std::string filename, double dualBoundTo
     return (true);
 }
 
+// A nonconvex objective with a quadratic constraint makes CPLEX throw 5002, including on the retry with
+// OptimalityTarget=3. The termination callback must be released before another solve or backend destruction.
+bool CplexCallbackAfterSolveErrorTest(bool quadraticConstraint)
+{
+    auto solver = std::make_unique<Solver>();
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cplex));
+    solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+    auto env = solver->getEnvironment();
+
+    auto problem = std::make_shared<Problem>(env);
+    auto x = std::make_shared<Variable>("x", E_VariableType::Real, -1.0, 1.0);
+    auto b = std::make_shared<Variable>("b", E_VariableType::Binary, 0.0, 1.0);
+    problem->add({ x, b });
+    auto objective = std::make_shared<QuadraticObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<QuadraticTerm>(-1.0, x, x));
+    objective->add(std::make_shared<LinearTerm>(-1.0, b));
+    problem->add(objective);
+
+    if(quadraticConstraint)
+    {
+        auto constraint = std::make_shared<QuadraticConstraint>("ball", SHOT_DBL_MIN, 1.0);
+        constraint->add(std::make_shared<QuadraticTerm>(1.0, x, x));
+        problem->add(constraint);
+    }
+
+    problem->finalize();
+    if(!solver->setProblem(problem))
+        return false;
+
+    auto backend = std::make_shared<MIPSolverCplex>(env);
+    if(!backend->initializeProblem())
+        return false;
+
+    // Give the original quadratic model to CPLEX so SHOT's reformulation does not remove the error trigger.
+    TaskCreateMIPProblem(env, backend, problem).run();
+    backend->setTimeLimit(10.0);
+    backend->setSolutionLimit(2100000000);
+
+    for(int solve = 0; solve < 2; ++solve)
+    {
+        auto status = backend->solveProblem();
+        if(quadraticConstraint)
+        {
+            if(status != E_ProblemSolutionStatus::Error || backend->getDualObjectiveValue() != SHOT_DBL_MIN)
+                return false;
+        }
+        else if(status != E_ProblemSolutionStatus::Optimal || std::abs(backend->getObjectiveValue() + 2.0) > 1e-6
+            || std::abs(backend->getDualObjectiveValue() + 2.0) > 1e-6)
+        {
+            return false;
+        }
+    }
+
+    backend.reset(); // Previously asserted in IloCplex::remove() after the unsuccessful solve.
+    return true;
+}
+
 int CplexTest(int argc, char* argv[])
 {
 
@@ -619,6 +679,14 @@ int CplexTest(int argc, char* argv[])
         std::cout << "Starting test to solve ex1252a.osil with Cplex." << std::endl;
         passed = CplexTestNocrash("data/ex1252a.osil");
         std::cout << "Finished test to solve ex1252a.osil with Cplex." << std::endl;
+        break;
+    case 16:
+        std::cout << "Testing Cplex callback cleanup after a rejected nonconvex MIQCP.\n";
+        passed = CplexCallbackAfterSolveErrorTest(true);
+        break;
+    case 17:
+        std::cout << "Testing Cplex callback cleanup when retrying a nonconvex MIQP.\n";
+        passed = CplexCallbackAfterSolveErrorTest(false);
         break;
     default:
         passed = false;

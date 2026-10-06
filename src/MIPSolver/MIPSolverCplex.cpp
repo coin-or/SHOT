@@ -63,12 +63,13 @@ MIPSolverCplex::MIPSolverCplex(EnvironmentPtr envPtr)
 
 MIPSolverCplex::~MIPSolverCplex()
 {
-
+    // End the solver before its model; otherwise Concert removes each extracted row and column from CPLEX,
+    // which can take much longer than the solve itself for large models.
+    cplexInstance.end();
     cplexVarConvers.clear();
     cplexModel.end();
     cplexVars.end();
     cplexConstrs.end();
-    cplexInstance.end();
     cplexEnv.end();
 }
 bool MIPSolverCplex::initializeProblem()
@@ -77,11 +78,11 @@ bool MIPSolverCplex::initializeProblem()
 
     if(alreadyInitialized)
     {
+        cplexInstance.end();
         cplexVarConvers.clear();
         cplexModel.end();
         cplexVars.end();
         cplexConstrs.end();
-        cplexInstance.end();
     }
     else
     {
@@ -345,6 +346,11 @@ bool MIPSolverCplex::finalizeProblem()
 {
     try
     {
+        // TaskCreateMIPProblem may finalize the same model more than once. End the previous extractor before
+        // replacing its handle, so the environment does not retain an active CPLEX instance for the old model.
+        if(cplexInstance.getImpl())
+            cplexInstance.end();
+
         if(env->settings->getSetting<bool>("Dual.TreeStrategy.Multi.Reinitialize"))
         {
             int setSolLimit;
