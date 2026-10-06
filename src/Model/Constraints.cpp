@@ -786,39 +786,49 @@ SparseVariableMatrix NonlinearConstraint::calculateHessian(const VectorDouble& p
             for(auto& VAR : sharedOwnerProblem->nonlinearExpressionVariables)
                 pointNonlinearSubset[VAR->properties.nonlinearVariableIndex] = point[VAR->getIndex()];
 
-            // The elements of the sparsity pattern are calculated, instead of using SparseHessian, which
-            // recalculates the sparsity pattern and returns the whole dense Hessian at every call. The work of the
-            // coloring is kept between the calls.
-            CppAD::sparse_rcv<std::vector<size_t>, std::vector<double>> subset(nonlinearHessianSparsityPattern);
-
-            sharedOwnerProblem->ADFunctions.sparse_hes(pointNonlinearSubset, weights, subset,
-                nonlinearHessianSparsityPattern, "cppad.symmetric", nonlinearHessianWork);
-
-            const std::vector<size_t>& rowIndices(subset.row());
-            const std::vector<size_t>& columnIndices(subset.col());
-            const std::vector<double>& values(subset.val());
-
-            for(size_t k = 0; k < subset.nnz(); k++)
+            auto addHessianElement = [&](size_t row, size_t column, double value)
             {
-                double hessianValue = values[k];
+                if(value == 0.0)
+                    return;
 
-                if(hessianValue == 0.0)
-                    continue;
-
-                auto& V1 = sharedOwnerProblem->nonlinearExpressionVariables[rowIndices[k]];
-                auto& V2 = sharedOwnerProblem->nonlinearExpressionVariables[columnIndices[k]];
+                auto& V1 = sharedOwnerProblem->nonlinearExpressionVariables[row];
+                auto& V2 = sharedOwnerProblem->nonlinearExpressionVariables[column];
 
                 // Only save elements above the diagonal since the Hessian is symmetric
                 if(V1->getIndex() > V2->getIndex())
-                    continue;
+                    return;
 
-                auto element = hessian.emplace(std::make_pair(V1, V2), hessianValue);
+                auto element = hessian.emplace(std::make_pair(V1, V2), value);
 
                 if(!element.second)
                 {
                     // Element already exists for the variable
-                    element.first->second += hessianValue;
+                    element.first->second += value;
                 }
+            };
+
+            const size_t dimension = pointNonlinearSubset.size();
+            const auto& pattern = nonlinearHessianSparsityPattern;
+
+            if(dimension >= 64 && pattern.nnz() > dimension * dimension / 2)
+            {
+                // Coloring a dense pattern is more expensive than the Hessian itself. Keep only pattern entries.
+                auto values = sharedOwnerProblem->ADFunctions.Hessian(pointNonlinearSubset, weights);
+
+                for(size_t k = 0; k < pattern.nnz(); ++k)
+                    addHessianElement(pattern.row()[k], pattern.col()[k],
+                        values[pattern.row()[k] * dimension + pattern.col()[k]]);
+            }
+            else
+            {
+                // The work object keeps the sparse coloring between calls.
+                CppAD::sparse_rcv<std::vector<size_t>, std::vector<double>> subset(pattern);
+
+                sharedOwnerProblem->ADFunctions.sparse_hes(
+                    pointNonlinearSubset, weights, subset, pattern, "cppad.symmetric", nonlinearHessianWork);
+
+                for(size_t k = 0; k < subset.nnz(); ++k)
+                    addHessianElement(subset.row()[k], subset.col()[k], subset.val()[k]);
             }
         }
     }

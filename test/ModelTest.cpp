@@ -75,6 +75,7 @@ bool ModelTestConvexity();
 bool ModelTestCopy();
 bool ModelTestEx1223b();
 bool ModelTestGradientsAndHessians();
+bool ModelTestDenseNonlinearHessian();
 bool ModelTestFinalizeCalledTwice();
 bool ModelTestFinalizeNoObjective();
 bool ModelTestFinalizeNoVariables();
@@ -186,6 +187,68 @@ bool TestReadProblem(const std::string& problemFile);
 bool TestRootsearch(const std::string& problemFile);
 bool TestGradient(const std::string& problemFile);
 bool TestReformulateProblem(const std::string& problemFile);
+
+bool ModelTestDenseNonlinearHessian()
+{
+    // sin(sum(x)) has a nonzero Hessian entry for every pair of variables. Test both sides of the
+    // dense-Hessian threshold and repeat the evaluation at a different point.
+    for(int dimension : { 63, 70 })
+    {
+        auto solver = std::make_unique<Solver>();
+        auto env = solver->getEnvironment();
+        auto problem = std::make_shared<Problem>(env);
+        Variables variables;
+        NonlinearExpressions terms;
+
+        for(int i = 0; i < dimension; ++i)
+        {
+            auto variable = std::make_shared<Variable>("x" + std::to_string(i), E_VariableType::Real, -1.0, 1.0);
+            problem->add(variable);
+            variables.push_back(variable);
+            terms.push_back(std::make_shared<ExpressionVariable>(variable));
+        }
+
+        auto objective = std::make_shared<NonlinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+        objective->add(std::make_shared<ExpressionSin>(std::make_shared<ExpressionSum>(terms)));
+        problem->add(objective);
+        auto constraint = std::make_shared<NonlinearConstraint>("dense_constraint",
+            std::make_shared<ExpressionSin>(std::make_shared<ExpressionSum>(terms)), -1.0, 1.0);
+        problem->add(constraint);
+        problem->finalize();
+
+        for(double coordinate : { 0.01, 0.02 })
+        {
+            VectorDouble point(dimension, coordinate);
+            const double expected = -std::sin(dimension * coordinate);
+
+            for(const auto& hessian : { objective->calculateHessian(point, true),
+                    constraint->calculateHessian(point, true) })
+            {
+                if(hessian.size() != static_cast<size_t>(dimension * (dimension + 1) / 2))
+                {
+                    std::cout << "Unexpected dense Hessian size for dimension " << dimension << '\n';
+                    return false;
+                }
+
+                for(int i = 0; i < dimension; ++i)
+                {
+                    for(int j = i; j < dimension; ++j)
+                    {
+                        auto entry = hessian.find(std::make_pair(variables[i], variables[j]));
+                        if(entry == hessian.end() || std::abs(entry->second - expected) > 1e-8)
+                        {
+                            std::cout << "Incorrect Hessian entry (" << i << ", " << j << ") for dimension "
+                                      << dimension << '\n';
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return true;
+}
 
 int ModelTest(int argc, char* argv[])
 {
@@ -358,6 +421,9 @@ int ModelTest(int argc, char* argv[])
         break;
     case 51:
         passed = ModelTestErrorFunctionAndSignPower();
+        break;
+    case 52:
+        passed = ModelTestDenseNonlinearHessian();
         break;
     default:
         passed = false;
