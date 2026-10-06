@@ -64,8 +64,6 @@ private:
        written into the value array by every Jacobian evaluation. Position in the value array and value. */
     std::vector<std::pair<int, double>> constantJacobianElements;
 
-    void calculateConstantJacobianElements();
-
     int numberOfJacobianNonzeros = 0;
     int numberOfHessianNonzeros = 0;
 
