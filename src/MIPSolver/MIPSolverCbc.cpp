@@ -606,7 +606,7 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
     cachedSolutionHasChanged = true;
 
     // The arguments are counted as they are added, since some of them are only passed on conditionally
-    const int maxArguments = 23;
+    const int maxArguments = 25;
     char* argv[maxArguments];
     int numArguments = 0;
     std::string arg;
@@ -701,6 +701,15 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
     // -999 is the one Cbc changes to no fast fathoming, while -1 lets it select the depth.
     argv[numArguments++] = strdup("-depthMiniBab");
     argv[numArguments++] = strdup("-999");
+
+    // The cut generators of Cbc can together give cuts that are not valid, after which Cbc returns a solution that is
+    // not optimal as the optimal one, e.g., with the objective value 7530 instead of 6545 for a dual problem of
+    // clay0204hfsg. Each generator alone has not been seen to do this.
+    if(!env->settings->getSetting<bool>("Subsolver.Cbc.Cuts"))
+    {
+        argv[numArguments++] = strdup("-cuts");
+        argv[numArguments++] = strdup("off");
+    }
 
     // The cutoff is in the sense of the objective Cbc minimizes, see setCutOff
     if(std::abs(this->cutOff) < 1e100)
@@ -1044,7 +1053,7 @@ bool MIPSolverCbc::repairInfeasibility()
         cachedSolutionHasChanged = true;
 
         // The arguments are counted as they are added, since some of them are only passed on conditionally
-        const int maxArguments = 23;
+        const int maxArguments = 25;
         char* argv[maxArguments];
         int numArguments = 0;
         std::string arg;
@@ -1134,9 +1143,15 @@ bool MIPSolverCbc::repairInfeasibility()
         arg = std::to_string(env->settings->getSetting<int>("Subsolver.Cbc.Strategy"));
         argv[numArguments++] = strdup(arg.c_str());
 
-        // See the comment in solveProblem()
+        // See the comments in solveProblem()
         argv[numArguments++] = strdup("-depthMiniBab");
         argv[numArguments++] = strdup("-999");
+
+        if(!env->settings->getSetting<bool>("Subsolver.Cbc.Cuts"))
+        {
+            argv[numArguments++] = strdup("-cuts");
+            argv[numArguments++] = strdup("off");
+        }
 
         /*
         argv[numArguments++] = strdup("-cutoff");

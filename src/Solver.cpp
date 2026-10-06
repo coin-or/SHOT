@@ -1680,6 +1680,9 @@ void Solver::initializeSettings()
     env->settings->createSetting("Subsolver.Cbc.AutoScale", false,
         "Whether to scale objective, rhs and bounds of problem if they look odd (experimental)");
 
+    env->settings->createSetting("Subsolver.Cbc.Cuts", false,
+        "Use the cut generators of Cbc, which can give a wrong optimal value for a MILP problem");
+
     VectorString enumCbcNodeStrategy;
     enumCbcNodeStrategy.push_back("depth");
     enumCbcNodeStrategy.push_back("downdepth");
@@ -1701,7 +1704,7 @@ void Solver::initializeSettings()
     enumCbcScaling.push_back("geometric");
     enumCbcScaling.push_back("off");
     enumCbcScaling.push_back("rowsonly");
-    env->settings->createSetting("Subsolver.Cbc.Scaling", 4, "Whether to scale problem", enumCbcScaling, 0);
+    env->settings->createSetting("Subsolver.Cbc.Scaling", 0, "Whether to scale problem", enumCbcScaling, 0);
     enumCbcScaling.clear();
 
     VectorString enumStrategy;
