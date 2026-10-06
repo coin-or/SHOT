@@ -633,40 +633,17 @@ void MIPSolverCplex::activateDiscreteVariables(bool activate)
         if(activate)
         {
             env->output->outputDebug("        Activating MIP strategy.");
-
-            for(int i = 0; i < numberOfVariables; i++)
-            {
-                if(variableTypes.at(i) == E_VariableType::Integer)
-                {
-                    auto tmpVar = cplexVars[i];
-                    auto tmpConv = IloConversion(cplexEnv, tmpVar, ILOINT);
-                    cplexModel.add(tmpConv);
-                    cplexVarConvers.push_back(tmpConv);
-                }
-                else if(variableTypes.at(i) == E_VariableType::Binary)
-                {
-                    auto tmpVar = cplexVars[i];
-                    auto tmpConv = IloConversion(cplexEnv, tmpVar, ILOBOOL);
-                    cplexModel.add(tmpConv);
-                    cplexVarConvers.push_back(tmpConv);
-                }
-            }
-
+            // Discrete variables were created as integers; ending the LP conversion restores those types.
             discreteVariablesActivated = true;
         }
         else
         {
             env->output->outputDebug("        Activating LP strategy.");
-            for(int i = 0; i < numberOfVariables; i++)
-            {
-                if(variableTypes.at(i) == E_VariableType::Integer || variableTypes.at(i) == E_VariableType::Binary)
-                {
-                    auto tmpVar = cplexVars[i];
-                    auto tmpConv = IloConversion(cplexEnv, tmpVar, ILOFLOAT);
-                    cplexModel.add(tmpConv);
-                    cplexVarConvers.push_back(tmpConv);
-                }
-            }
+            // One conversion over the array avoids ending thousands of individual Concert extractables when
+            // switching back to the MIP strategy. Continuous variables already have this type.
+            auto conversion = IloConversion(cplexEnv, cplexVars, ILOFLOAT);
+            cplexModel.add(conversion);
+            cplexVarConvers.push_back(conversion);
 
             discreteVariablesActivated = false;
         }

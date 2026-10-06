@@ -69,7 +69,7 @@ if(HAS_CBC)
 endif()
 
 if(HAS_CPLEX)
-  set(Cplex_parts 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17)
+  set(Cplex_parts 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18)
   set(cpptests ${cpptests} Cplex)
 endif()
 

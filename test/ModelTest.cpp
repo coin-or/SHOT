@@ -247,6 +247,37 @@ bool ModelTestDenseNonlinearHessian()
         }
     }
 
+    // The small-support constraint path uses a conservative pattern containing an off-diagonal structural
+    // zero. Its gradient and Hessian values must still match the expression.
+    auto solver = std::make_unique<Solver>();
+    auto problem = std::make_shared<Problem>(solver->getEnvironment());
+    auto x = std::make_shared<Variable>("x", E_VariableType::Real, -1.0, 1.0);
+    auto y = std::make_shared<Variable>("y", E_VariableType::Real, -1.0, 1.0);
+    problem->add({ x, y });
+
+    auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<LinearTerm>(1.0, x));
+    problem->add(objective);
+
+    auto expression = std::make_shared<ExpressionSum>(NonlinearExpressions {
+        std::make_shared<ExpressionSin>(std::make_shared<ExpressionVariable>(x)),
+        std::make_shared<ExpressionCos>(std::make_shared<ExpressionVariable>(y)) });
+    auto constraint = std::make_shared<NonlinearConstraint>("small_support", expression, -2.0, 2.0);
+    problem->add(constraint);
+    problem->finalize();
+
+    VectorDouble point { 0.2, 0.3 };
+    auto gradient = constraint->calculateGradient(point, true);
+    auto hessian = constraint->calculateHessian(point, true);
+    if(gradient.size() != 2 || std::abs(gradient[x] - std::cos(point[0])) > 1e-8
+        || std::abs(gradient[y] + std::sin(point[1])) > 1e-8 || hessian.size() != 2
+        || std::abs(hessian[std::make_pair(x, x)] + std::sin(point[0])) > 1e-8
+        || std::abs(hessian[std::make_pair(y, y)] + std::cos(point[1])) > 1e-8)
+    {
+        std::cout << "Incorrect small-support constraint derivatives\n";
+        return false;
+    }
+
     return true;
 }
 

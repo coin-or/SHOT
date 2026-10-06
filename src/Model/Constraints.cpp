@@ -720,20 +720,16 @@ void NonlinearConstraint::initializeGradientSparsityPattern()
             assert((size_t)sharedOwnerProblem->properties.numberOfNonlinearExpressions
                 == sharedOwnerProblem->ADFunctions.Range());
 
-            // For some reason we need to have all nonlinear variables activated, otherwise not all nonzero elements
-            // of the gradient may be detected
-            auto nonlinearVariablesInExpressionMap
-                = std::vector<bool>(sharedOwnerProblem->properties.numberOfVariablesInNonlinearExpressions, true);
-
-            auto nonlinearFunctionMap
-                = std::vector<bool>(sharedOwnerProblem->properties.numberOfNonlinearExpressions, false);
-
-            nonlinearFunctionMap[this->nonlinearExpressionIndex] = true;
-
             CppAD::sparse_rc<std::vector<size_t>> pattern;
+            // Every derivative of this expression can only involve a variable in the expression tree. Building
+            // this conservative pattern avoids traversing the shared AD tape once per constraint.
+            pattern.resize(sharedOwnerProblem->properties.numberOfNonlinearExpressions,
+                sharedOwnerProblem->properties.numberOfVariablesInNonlinearExpressions,
+                variablesInNonlinearExpression.size());
 
-            sharedOwnerProblem->ADFunctions.subgraph_sparsity(
-                nonlinearVariablesInExpressionMap, nonlinearFunctionMap, false, pattern);
+            for(size_t i = 0; i < variablesInNonlinearExpression.size(); ++i)
+                pattern.set(i, this->nonlinearExpressionIndex,
+                    variablesInNonlinearExpression[i]->properties.nonlinearVariableIndex);
 
             // Save for later use when calculating gradients
             nonlinearGradientSparsityPattern = pattern;
@@ -893,20 +889,33 @@ void NonlinearConstraint::initializeHessianSparsityPattern()
     {
         if(auto sharedOwnerProblem = ownerProblem.lock())
         {
-            // For some reason we need to have all nonlinear variables activated, otherwise not all nonzero elements of
-            // the hessian may be detected
-            auto nonlinearVariablesInExpressionMap
-                = std::vector<bool>(sharedOwnerProblem->properties.numberOfVariablesInNonlinearExpressions, true);
-
-            auto nonlinearFunctionMap
-                = std::vector<bool>(sharedOwnerProblem->properties.numberOfNonlinearExpressions, false);
-
-            nonlinearFunctionMap[this->nonlinearExpressionIndex] = true;
-
             CppAD::sparse_rc<std::vector<size_t>> pattern;
+            if(variablesInNonlinearExpression.size() <= 10)
+            {
+                // Any Hessian entry must involve two variables from this expression. For small supports, a
+                // conservative pattern is cheaper than another sweep over the shared AD tape.
+                const size_t count = variablesInNonlinearExpression.size();
+                const size_t dimension = sharedOwnerProblem->properties.numberOfVariablesInNonlinearExpressions;
+                pattern.resize(dimension, dimension, count * count);
 
-            sharedOwnerProblem->ADFunctions.for_hes_sparsity(
-                nonlinearVariablesInExpressionMap, nonlinearFunctionMap, false, pattern);
+                size_t entry = 0;
+                for(auto& rowVariable : variablesInNonlinearExpression)
+                    for(auto& columnVariable : variablesInNonlinearExpression)
+                        pattern.set(entry++, rowVariable->properties.nonlinearVariableIndex,
+                            columnVariable->properties.nonlinearVariableIndex);
+            }
+            else
+            {
+                // For larger expressions, avoid storing the square of the number of variables as possible entries.
+                auto nonlinearVariablesInExpressionMap = std::vector<bool>(
+                    sharedOwnerProblem->properties.numberOfVariablesInNonlinearExpressions, true);
+                auto nonlinearFunctionMap
+                    = std::vector<bool>(sharedOwnerProblem->properties.numberOfNonlinearExpressions, false);
+                nonlinearFunctionMap[this->nonlinearExpressionIndex] = true;
+
+                sharedOwnerProblem->ADFunctions.for_hes_sparsity(
+                    nonlinearVariablesInExpressionMap, nonlinearFunctionMap, false, pattern);
+            }
 
             nonlinearHessianSparsityPattern = pattern;
 

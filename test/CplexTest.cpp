@@ -580,6 +580,60 @@ bool CplexCallbackAfterSolveErrorTest(bool quadraticConstraint)
     return true;
 }
 
+bool CplexRelaxationConversionTest()
+{
+    auto solver = std::make_unique<Solver>();
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cplex));
+    solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+    auto env = solver->getEnvironment();
+
+    auto problem = std::make_shared<Problem>(env);
+    auto binary = std::make_shared<Variable>("binary", E_VariableType::Binary, 0.0, 1.0);
+    auto integer = std::make_shared<Variable>("integer", E_VariableType::Integer, 0.0, 2.0);
+    auto continuous = std::make_shared<Variable>("continuous", E_VariableType::Real, 0.0, 1.0);
+    problem->add({ binary, integer, continuous });
+
+    auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    for(auto& variable : { binary, integer, continuous })
+        objective->add(std::make_shared<LinearTerm>(1.0, variable));
+    problem->add(objective);
+
+    for(auto& variable : { binary, integer, continuous })
+    {
+        auto constraint = std::make_shared<LinearConstraint>(variable->name + "_lower", 0.5, SHOT_DBL_MAX);
+        constraint->add(std::make_shared<LinearTerm>(1.0, variable));
+        problem->add(constraint);
+    }
+
+    problem->finalize();
+    if(!solver->setProblem(problem))
+        return false;
+
+    auto backend = std::make_shared<MIPSolverCplex>(env);
+    if(!backend->initializeProblem())
+        return false;
+
+    TaskCreateMIPProblem(env, backend, problem).run();
+    backend->setTimeLimit(10.0);
+    backend->setSolutionLimit(2100000000);
+
+    for(int repeat = 0; repeat < 2; ++repeat)
+    {
+        backend->activateDiscreteVariables(false);
+        if(backend->solveProblem() != E_ProblemSolutionStatus::Optimal
+            || std::abs(backend->getObjectiveValue() - 1.5) > 1e-6)
+            return false;
+
+        backend->activateDiscreteVariables(true);
+        if(backend->solveProblem() != E_ProblemSolutionStatus::Optimal
+            || std::abs(backend->getObjectiveValue() - 2.5) > 1e-6)
+            return false;
+    }
+
+    return true;
+}
+
 int CplexTest(int argc, char* argv[])
 {
 
@@ -687,6 +741,10 @@ int CplexTest(int argc, char* argv[])
     case 17:
         std::cout << "Testing Cplex callback cleanup when retrying a nonconvex MIQP.\n";
         passed = CplexCallbackAfterSolveErrorTest(false);
+        break;
+    case 18:
+        std::cout << "Testing Cplex LP/MIP conversion for mixed variable types.\n";
+        passed = CplexRelaxationConversionTest();
         break;
     default:
         passed = false;
