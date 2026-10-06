@@ -11,10 +11,12 @@
 #pragma once
 #include "TaskBase.h"
 
+#include <functional>
 #include <map>
 #include <set>
 #include <string>
 #include <tuple>
+#include <unordered_map>
 
 #include "../Model/AuxiliaryVariables.h"
 #include "../Model/Constraints.h"
@@ -175,8 +177,19 @@ private:
     std::map<std::pair<double, std::vector<int>>, AuxiliaryVariablePtr> monomialAuxVariables;
     std::map<std::pair<bool, std::vector<std::pair<int, double>>>, AuxiliaryVariablePtr> signomialAuxVariables;
 
+    struct BinaryMonomialKeyHash
+    {
+        size_t operator()(const std::vector<int>& indexes) const noexcept
+        {
+            size_t hash = indexes.size();
+            for(int index : indexes)
+                hash = hash * 1315423911U + std::hash<int> {}(index);
+            return hash;
+        }
+    };
+
     // The auxiliary variables w = b1 * ... * bn of the products of binary variables, found by the variable indexes
-    std::map<std::vector<int>, AuxiliaryVariablePtr> binaryMonomialAuxVariables;
+    std::unordered_map<std::vector<int>, AuxiliaryVariablePtr, BinaryMonomialKeyHash> binaryMonomialAuxVariables;
 
     ProblemPtr reformulatedProblem;
 };

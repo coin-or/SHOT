@@ -25,6 +25,7 @@
 #include "gurobi_c.h"
 #endif
 
+#include <algorithm>
 #include <cstdio>
 
 namespace SHOT
@@ -2262,12 +2263,24 @@ std::tuple<LinearTerms, MonomialTerms> TaskReformulateProblem::reformulateMonomi
     std::vector<LinearTermPtr> resultTerms;
     resultTerms.reserve(monomialTerms.size());
 
+    // Large sums often contain many distinct binary products. Reserve once for such a sum, but do not
+    // repeatedly rehash the table for the common case of many small sums in separate constraints.
+    if(monomialFormulation != static_cast<int>(ES_ReformulationBinaryMonomials::None)
+        && monomialTerms.size() > binaryMonomialAuxVariables.size())
+    {
+        size_t binaryCount = std::count_if(
+            monomialTerms.begin(), monomialTerms.end(), [](const MonomialTermPtr& term) { return term->isBinary; });
+        if(binaryCount > binaryMonomialAuxVariables.size())
+            binaryMonomialAuxVariables.reserve(binaryMonomialAuxVariables.size() + binaryCount);
+    }
+
     for(auto& T : monomialTerms)
     {
         std::vector<int> binaryMonomialKey;
 
         if(T->isBinary)
         {
+            binaryMonomialKey.reserve(T->variables.size());
             for(auto& V : T->variables)
                 binaryMonomialKey.push_back(V->getIndex());
 
@@ -2288,6 +2301,8 @@ std::tuple<LinearTerms, MonomialTerms> TaskReformulateProblem::reformulateMonomi
         if(T->isBinary && monomialFormulation == static_cast<int>(ES_ReformulationBinaryMonomials::Simple))
         {
             auto N = T->variables.size();
+            bool hasRepeatedVariables
+                = std::adjacent_find(binaryMonomialKey.begin(), binaryMonomialKey.end()) != binaryMonomialKey.end();
 
             auto auxConstraint1 = std::make_shared<LinearConstraint>(
                 "s_mon1" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, 0.0);
@@ -2311,13 +2326,29 @@ std::tuple<LinearTerms, MonomialTerms> TaskReformulateProblem::reformulateMonomi
             resultTerms.push_back(std::make_shared<LinearTerm>(signfactor * T->coefficient, auxbVar));
             binaryMonomialAuxVariables.emplace(binaryMonomialKey, auxbVar);
 
+            auxConstraint1->linearTerms.reserve(N + 1);
+            auxConstraint2->linearTerms.reserve(N + 1);
             auxConstraint1->add(std::make_shared<LinearTerm>(N, auxbVar));
             auxConstraint2->add(std::make_shared<LinearTerm>(-1.0, auxbVar));
 
             for(auto& V : T->variables)
             {
-                auxConstraint1->add(std::make_shared<LinearTerm>(-1.0, V));
-                auxConstraint2->add(std::make_shared<LinearTerm>(1.0, V));
+                auto negativeTerm = std::make_shared<LinearTerm>(-1.0, V);
+                auto positiveTerm = std::make_shared<LinearTerm>(1.0, V);
+
+                // The usual case has one copy of each binary variable. Then the terms are already
+                // distinct and the per-term search in add() is unnecessary. Keep add() for powers
+                // such as b*b, where repeated variables must be merged.
+                if(hasRepeatedVariables)
+                {
+                    auxConstraint1->add(negativeTerm);
+                    auxConstraint2->add(positiveTerm);
+                }
+                else
+                {
+                    auxConstraint1->linearTerms.push_back(negativeTerm);
+                    auxConstraint2->linearTerms.push_back(positiveTerm);
+                }
             }
 
             reformulatedProblem->add(std::move(auxbVar));

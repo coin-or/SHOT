@@ -154,7 +154,9 @@ void Problem::updateConstraints()
             C->signomialTerms.invalidateProperties();
 
             if(C->nonlinearExpression)
-                C->nonlinearExpression = simplify(std::make_shared<ExpressionNegate>(C->nonlinearExpression));
+                // finalize() simplifies the expression when it extracts its terms. Avoid walking a large
+                // expression tree here as well just to standardize the constraint's bounds.
+                C->nonlinearExpression = std::make_shared<ExpressionNegate>(C->nonlinearExpression);
 
             C->constant *= -1.0;
         }

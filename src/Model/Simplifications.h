@@ -22,6 +22,7 @@
 #include "../Model/Constraints.h"
 #include "../Model/Problem.h"
 
+#include <algorithm>
 #include <optional>
 
 namespace SHOT
@@ -49,6 +50,33 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionVaria
         return (std::make_shared<ExpressionConstant>(expression->variable->lowerBound));
 
     return (expression);
+}
+
+// The product has already been simplified by its parent. Changing its coefficient directly avoids
+// simplifying every factor again when a negation is distributed over a large sum of products.
+inline NonlinearExpressionPtr negateSimplifiedProduct(const std::shared_ptr<ExpressionProduct>& product)
+{
+    if(product->children[0]->getType() == E_NonlinearExpressionTypes::Constant)
+    {
+        auto coefficient = std::dynamic_pointer_cast<ExpressionConstant>(product->children[0]);
+        coefficient->constant *= -1.0;
+        if(coefficient->constant == 1.0)
+            product->children.erase(product->children.begin());
+    }
+    else
+    {
+        NonlinearExpressions children;
+        children.reserve(product->children.size() + 1);
+        children.add(std::make_shared<ExpressionConstant>(-1.0));
+        for(auto& child : product->children)
+            children.add(child);
+        product->children = std::move(children);
+    }
+
+    if(product->children.size() == 1)
+        return product->children[0];
+
+    return product;
 }
 
 inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionNegate> expression)
@@ -87,9 +115,7 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionNegat
                 }
                 else if(T->getType() == E_NonlinearExpressionTypes::Product)
                 {
-                    std::dynamic_pointer_cast<ExpressionProduct>(T)->children.add(
-                        std::make_shared<ExpressionConstant>(-1.0));
-                    T = simplify(T);
+                    T = negateSimplifiedProduct(std::dynamic_pointer_cast<ExpressionProduct>(T));
                 }
                 else
                 {
@@ -119,10 +145,7 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionNegat
         else if(expression->child->getType() == E_NonlinearExpressionTypes::Product)
         {
             auto product = std::dynamic_pointer_cast<ExpressionProduct>(expression->child);
-
-            product->children.add(std::make_shared<ExpressionConstant>(-1.0));
-
-            return (simplify(expression->child));
+            return negateSimplifiedProduct(product);
         }
 
         return expression;
@@ -718,6 +741,7 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionSum> 
     double constant = 0.0;
 
     NonlinearExpressions children;
+    children.reserve(expression->children.size());
 
     SparseVariableVector linearVariableCoefficients;
 
@@ -819,6 +843,7 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionProdu
 
     NonlinearExpressions children;
     NonlinearExpressions unaddedChildren;
+    children.reserve(expression->children.size());
 
     for(auto& C : expression->children)
     {
@@ -1381,6 +1406,7 @@ inline std::optional<MonomialTermPtr> convertProductToMonomialTerm(std::shared_p
 
     double coefficient = 1.0;
     Variables variables;
+    variables.reserve(product->children.size());
 
     for(auto& C : product->children)
     {
@@ -1963,6 +1989,16 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
 
     for(auto& MT : monomialTerms)
     {
+        // A term with no fixed variables is already in its final form. Reusing it avoids
+        // allocating another variable vector and monomial for every term in a large sum.
+        bool hasFixedVariable = std::any_of(MT->variables.begin(), MT->variables.end(),
+            [](const VariablePtr& variable) { return variable->lowerBound == variable->upperBound; });
+        if(!hasFixedVariable)
+        {
+            newMonomialTerms.add(MT);
+            continue;
+        }
+
         double coefficient = MT->coefficient;
         Variables variables;
 
