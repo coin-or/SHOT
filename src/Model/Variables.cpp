@@ -26,6 +26,12 @@ Interval Variable::getBound() { return Interval(lowerBound, upperBound); }
 
 bool Variable::tightenBounds(const Interval bound)
 {
+    // A bound with an end that is not a number comes from interval arithmetic with infinite values, e.g.,
+    // inf - inf, and gives no information about either end. Its other end was used before, which fixed x in [-9.8, 0]
+    // to zero when the bound of x^2 in a constraint with an unbounded signomial term was [0, NaN].
+    if(std::isnan(bound.l()) || std::isnan(bound.u()))
+        return (false);
+
     bool tightened = false;
     double originalLowerBound = this->lowerBound;
     double originalUpperBound = this->upperBound;

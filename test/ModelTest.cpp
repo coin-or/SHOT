@@ -9477,6 +9477,51 @@ bool ModelTestBoundTighteningSoundness()
             std::cout << "  " << description << ": " << failuresForExpression << " failures\n";
     }
 
+    // A problem found by the checks below: the bound of the other terms of x0^2 contained an infinite value from the
+    // signomial term, which gave the bound [0, NaN] for x0^2 and fixed x0 in [-9.8, 0] to zero
+    {
+        auto solver = std::make_unique<SHOT::Solver>();
+        solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+        auto problem = std::make_shared<SHOT::Problem>(solver->getEnvironment());
+
+        auto x0 = std::make_shared<SHOT::Variable>("x0", SHOT::E_VariableType::Real, -9.786325042448091, 0);
+        auto x1 = std::make_shared<SHOT::Variable>("x1", SHOT::E_VariableType::Real, 0, 0.8954255695924439);
+        auto x2 = std::make_shared<SHOT::Variable>("x2", SHOT::E_VariableType::Real, 0, 0.042783196234435356);
+        auto x3 = std::make_shared<SHOT::Variable>("x3", SHOT::E_VariableType::Real, 0, 0.7165346916099268);
+        SHOT::Variables variables { x0, x1, x2, x3 };
+        problem->add(variables);
+        problem->add(std::make_shared<SHOT::LinearObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize));
+
+        auto constraint = std::make_shared<SHOT::NonlinearConstraint>("c", SHOT_DBL_MIN, -21.49881236277451);
+        constraint->add(std::make_shared<SHOT::QuadraticTerm>(0.9316161314342212, x0, x1));
+        constraint->add(std::make_shared<SHOT::QuadraticTerm>(1.4341434191308537, x0, x0));
+        constraint->add(std::make_shared<SHOT::LinearTerm>(1.6815415062634513, x2));
+        constraint->add(std::make_shared<SHOT::MonomialTerm>(-1.4033955654364898, SHOT::Variables { x0, x1, x3 }));
+        constraint->add(std::make_shared<SHOT::LinearTerm>(-1.603985558727989, x1));
+        constraint->add(std::make_shared<SHOT::SignomialTerm>(-2.4423343835382387,
+            SHOT::SignomialElements { std::make_shared<SHOT::SignomialElement>(x2, -0.7294888346328927),
+                std::make_shared<SHOT::SignomialElement>(x3, 1.770165447735109) }));
+        constraint->add(std::make_shared<SHOT::LinearTerm>(-2.4750011782046673, x0));
+        problem->add(constraint);
+
+        SHOT::VectorDouble point { -4.023261309660358, 0.8133053136499558, 0.00043907802990085146, 0.3938096487783019 };
+
+        problem->finalize();
+        problem->doFBBT();
+        numberOfChecks++;
+
+        for(size_t i = 0; i < variables.size(); i++)
+        {
+            if(!isInside(point[i], variables[i]))
+            {
+                std::cout << fmt::format("  FAILED: the known problem cut off x{} = {}, bounds [{}, {}]\n", i,
+                    point[i], variables[i]->lowerBound, variables[i]->upperBound);
+                numberOfFailures++;
+                passed = false;
+            }
+        }
+    }
+
     // Whole problems: a constraint with random terms is given a range that contains its value in a random point, and
     // the point must be within the bounds after the problem has been finalized and bound tightening has been done
     const int numberOfProblems = 600;
