@@ -1267,6 +1267,9 @@ PYBIND11_MODULE(SHOTpy, m)
         .value("ArcTan", E_NonlinearExpressionTypes::ArcTan)
         .value("Abs", E_NonlinearExpressionTypes::Abs)
         .value("ErrorFunction", E_NonlinearExpressionTypes::ErrorFunction)
+        .value("Sinh", E_NonlinearExpressionTypes::Sinh)
+        .value("Cosh", E_NonlinearExpressionTypes::Cosh)
+        .value("Tanh", E_NonlinearExpressionTypes::Tanh)
         .value("SignPower", E_NonlinearExpressionTypes::SignPower)
         .value("Divide", E_NonlinearExpressionTypes::Divide)
         .value("Power", E_NonlinearExpressionTypes::Power)
@@ -1354,6 +1357,30 @@ PYBIND11_MODULE(SHOTpy, m)
     m.def(
         "abs", [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr
         { return std::make_shared<ExpressionAbs>(expr); }, "Absolute value", py::arg("x"));
+
+    m.def(
+        "sinh", [](VariablePtr var) -> NonlinearExpressionPtr
+        { return std::make_shared<ExpressionSinh>(wrapInExpression(var)); }, "Hyperbolic sine", py::arg("x"));
+
+    m.def(
+        "sinh", [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr
+        { return std::make_shared<ExpressionSinh>(expr); }, "Hyperbolic sine", py::arg("x"));
+
+    m.def(
+        "cosh", [](VariablePtr var) -> NonlinearExpressionPtr
+        { return std::make_shared<ExpressionCosh>(wrapInExpression(var)); }, "Hyperbolic cosine", py::arg("x"));
+
+    m.def(
+        "cosh", [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr
+        { return std::make_shared<ExpressionCosh>(expr); }, "Hyperbolic cosine", py::arg("x"));
+
+    m.def(
+        "tanh", [](VariablePtr var) -> NonlinearExpressionPtr
+        { return std::make_shared<ExpressionTanh>(wrapInExpression(var)); }, "Hyperbolic tangent", py::arg("x"));
+
+    m.def(
+        "tanh", [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr
+        { return std::make_shared<ExpressionTanh>(expr); }, "Hyperbolic tangent", py::arg("x"));
 
     m.def(
         "errorf", [](VariablePtr var) -> NonlinearExpressionPtr

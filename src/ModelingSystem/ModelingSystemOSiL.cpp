@@ -792,13 +792,124 @@ NonlinearExpressionPtr ModelingSystemOSiL::convertNonlinearNode(tinyxml2::XMLNod
         auto firstChildNode = node->FirstChild();
         return std::make_shared<ExpressionCos>(convertNonlinearNode(firstChildNode, destination));
     }
+    else if(expressionType.compare("tan") == 0)
+    {
+        auto firstChildNode = node->FirstChild();
+        return std::make_shared<ExpressionTan>(convertNonlinearNode(firstChildNode, destination));
+    }
+    else if(expressionType.compare("arcsin") == 0)
+    {
+        auto firstChildNode = node->FirstChild();
+        return std::make_shared<ExpressionArcSin>(convertNonlinearNode(firstChildNode, destination));
+    }
+    else if(expressionType.compare("arccos") == 0)
+    {
+        auto firstChildNode = node->FirstChild();
+        return std::make_shared<ExpressionArcCos>(convertNonlinearNode(firstChildNode, destination));
+    }
+    else if(expressionType.compare("arctan") == 0)
+    {
+        auto firstChildNode = node->FirstChild();
+        return std::make_shared<ExpressionArcTan>(convertNonlinearNode(firstChildNode, destination));
+    }
+    else if(expressionType.compare("sinh") == 0)
+    {
+        auto firstChildNode = node->FirstChild();
+        return std::make_shared<ExpressionSinh>(convertNonlinearNode(firstChildNode, destination));
+    }
+    else if(expressionType.compare("cosh") == 0)
+    {
+        auto firstChildNode = node->FirstChild();
+        return std::make_shared<ExpressionCosh>(convertNonlinearNode(firstChildNode, destination));
+    }
+    else if(expressionType.compare("tanh") == 0)
+    {
+        auto firstChildNode = node->FirstChild();
+        return std::make_shared<ExpressionTanh>(convertNonlinearNode(firstChildNode, destination));
+    }
+    else if(expressionType.compare("squareRoot") == 0)
+    {
+        auto firstChildNode = node->FirstChild();
+        return std::make_shared<ExpressionSquareRoot>(convertNonlinearNode(firstChildNode, destination));
+    }
+    else if(expressionType.compare("arcsinh") == 0)
+    {
+        auto firstChildNode = node->FirstChild();
+        return createArcSinh(convertNonlinearNode(firstChildNode, destination));
+    }
+    else if(expressionType.compare("arccosh") == 0)
+    {
+        auto firstChildNode = node->FirstChild();
+        return createArcCosh(convertNonlinearNode(firstChildNode, destination));
+    }
+    else if(expressionType.compare("arctanh") == 0)
+    {
+        auto firstChildNode = node->FirstChild();
+        return createArcTanh(convertNonlinearNode(firstChildNode, destination));
+    }
+    else if(expressionType.compare("cot") == 0)
+    {
+        auto firstChildNode = node->FirstChild();
+        return std::make_shared<ExpressionInvert>(
+            std::make_shared<ExpressionTan>(convertNonlinearNode(firstChildNode, destination)));
+    }
+    else if(expressionType.compare("sec") == 0)
+    {
+        auto firstChildNode = node->FirstChild();
+        return std::make_shared<ExpressionInvert>(
+            std::make_shared<ExpressionCos>(convertNonlinearNode(firstChildNode, destination)));
+    }
+    else if(expressionType.compare("csc") == 0)
+    {
+        auto firstChildNode = node->FirstChild();
+        return std::make_shared<ExpressionInvert>(
+            std::make_shared<ExpressionSin>(convertNonlinearNode(firstChildNode, destination)));
+    }
+    else if(expressionType.compare("coth") == 0)
+    {
+        auto firstChildNode = node->FirstChild();
+        return std::make_shared<ExpressionInvert>(
+            std::make_shared<ExpressionTanh>(convertNonlinearNode(firstChildNode, destination)));
+    }
+    else if(expressionType.compare("sech") == 0)
+    {
+        auto firstChildNode = node->FirstChild();
+        return std::make_shared<ExpressionInvert>(
+            std::make_shared<ExpressionCosh>(convertNonlinearNode(firstChildNode, destination)));
+    }
+    else if(expressionType.compare("csch") == 0)
+    {
+        auto firstChildNode = node->FirstChild();
+        return std::make_shared<ExpressionInvert>(
+            std::make_shared<ExpressionSinh>(convertNonlinearNode(firstChildNode, destination)));
+    }
+    else if(expressionType.compare("log10") == 0)
+    {
+        auto firstChildNode = node->FirstChild();
+        return std::make_shared<ExpressionProduct>(std::make_shared<ExpressionConstant>(1.0 / std::log(10.0)),
+            std::make_shared<ExpressionLog>(convertNonlinearNode(firstChildNode, destination)));
+    }
+    else if(expressionType.compare("log") == 0)
+    {
+        // log(b, x) = ln(x)/ln(b), with the base as the first child
+        auto firstChildNode = node->FirstChild();
+        auto secondChildNode = firstChildNode->NextSibling();
+
+        return std::make_shared<ExpressionDivide>(
+            std::make_shared<ExpressionLog>(convertNonlinearNode(secondChildNode, destination)),
+            std::make_shared<ExpressionLog>(convertNonlinearNode(firstChildNode, destination)));
+    }
     else if(expressionType.compare("number") == 0)
     {
         return std::make_shared<ExpressionConstant>(std::stod(node->ToElement()->Attribute("value")));
     }
-    else if(expressionType.compare("pi") == 0)
+    else if(expressionType.compare("pi") == 0 || expressionType.compare("PI") == 0)
     {
-        return std::make_shared<ExpressionConstant>(3.14159265);
+        return std::make_shared<ExpressionConstant>(M_PI);
+    }
+    else if(expressionType.compare("E") == 0)
+    {
+        return std::make_shared<ExpressionConstant>(M_E);
     }
     else if(expressionType.compare("variable") == 0)
     {

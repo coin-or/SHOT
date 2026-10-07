@@ -286,6 +286,8 @@ bool ModelTestGradientOfConstantExpression();
 
 bool ModelTestBoundTighteningSoundness();
 
+bool ModelTestHyperbolicFunctions();
+
 int ModelTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -469,6 +471,9 @@ int ModelTest(int argc, char* argv[])
         break;
     case 55:
         passed = ModelTestBoundTighteningSoundness();
+        break;
+    case 56:
+        passed = ModelTestHyperbolicFunctions();
         break;
     default:
         passed = false;
@@ -9357,6 +9362,16 @@ bool ModelTestBoundTighteningSoundness()
         { "1/cos(x)",
             [&](auto x, auto)
             { return std::make_shared<SHOT::ExpressionInvert>(std::make_shared<SHOT::ExpressionCos>(var(x))); } },
+        { "sinh(x)", [&](auto x, auto) { return std::make_shared<SHOT::ExpressionSinh>(var(x)); } },
+        { "cosh(x)", [&](auto x, auto) { return std::make_shared<SHOT::ExpressionCosh>(var(x)); } },
+        { "tanh(x)", [&](auto x, auto) { return std::make_shared<SHOT::ExpressionTanh>(var(x)); } },
+        { "tanh(2x-y)",
+            [&](auto x, auto y)
+            {
+                return std::make_shared<SHOT::ExpressionTanh>(std::make_shared<SHOT::ExpressionSum>(
+                    std::make_shared<SHOT::ExpressionProduct>(constant(2.0), var(x)),
+                    std::make_shared<SHOT::ExpressionNegate>(var(y))));
+            } },
         { "signpower(x,0.5)", [&](auto x, auto) { return std::make_shared<SHOT::ExpressionSignPower>(var(x), 0.5); } },
         { "signpower(x,1.852)",
             [&](auto x, auto) { return std::make_shared<SHOT::ExpressionSignPower>(var(x), 1.852); } },
@@ -9675,3 +9690,196 @@ bool ModelTestBoundTighteningSoundness()
 
     return passed;
 }
+
+bool ModelTestHyperbolicFunctions()
+{
+    // sinh, cosh and tanh: their values, gradients and Hessians in a problem are compared to the analytical ones, and
+    // their bounds and convexity are checked. The OSiL elements tan, arcsin, arccos, arctan, sinh, cosh, tanh,
+    // squareRoot, arcsinh, arccosh, arctanh, cot, sec, csc, coth, sech, csch, log10, log, E and PI are read from
+    // data/hyperbolic.osil, and the AMPL operators asinh, acosh, atanh and atan2 from data/inversehyperbolic.nl.
+
+    bool passed = true;
+
+    auto check = [&passed](const std::string& description, double value, double expected)
+    {
+        if(!(std::abs(value - expected) <= 1e-9 * std::max(1.0, std::abs(expected))))
+        {
+            std::cout << "  FAILED: " << description << " is " << value << ", expected " << expected << ".\n";
+            passed = false;
+        }
+    };
+
+    auto variable = [](SHOT::VariablePtr V) { return (std::make_shared<SHOT::ExpressionVariable>(V)); };
+
+    {
+        auto solver = std::make_unique<SHOT::Solver>();
+        auto problem = std::make_shared<SHOT::Problem>(solver->getEnvironment());
+
+        auto x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, -3.0, 3.0);
+        auto y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Real, -3.0, 3.0);
+        problem->add(SHOT::Variables { x, y });
+        problem->add(std::make_shared<SHOT::LinearObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize));
+
+        // sinh(x) + cosh(y) + tanh(x - y)
+        auto constraint = std::make_shared<SHOT::NonlinearConstraint>("hyperbolic", SHOT_DBL_MIN, 100.0);
+        constraint->add(std::make_shared<SHOT::ExpressionSum>(SHOT::NonlinearExpressions {
+            std::make_shared<SHOT::ExpressionSinh>(variable(x)), std::make_shared<SHOT::ExpressionCosh>(variable(y)),
+            std::make_shared<SHOT::ExpressionTanh>(std::make_shared<SHOT::ExpressionSum>(
+                variable(x), std::make_shared<SHOT::ExpressionNegate>(variable(y)))) }));
+        problem->add(constraint);
+        problem->finalize();
+
+        auto element = [](SHOT::SparseVariableMatrix& matrix, SHOT::VariablePtr first, SHOT::VariablePtr second)
+        {
+            if(auto it = matrix.find(std::make_pair(first, second)); it != matrix.end())
+                return (it->second);
+            if(auto it = matrix.find(std::make_pair(second, first)); it != matrix.end())
+                return (it->second);
+            return (0.0);
+        };
+
+        for(SHOT::VectorDouble P : { SHOT::VectorDouble { 0.7, -1.3 }, SHOT::VectorDouble { -2.0, 0.5 },
+                 SHOT::VectorDouble { 0.0, 0.0 } })
+        {
+            double px = P[0], py = P[1], d = px - py;
+            double sech2 = 1.0 - std::tanh(d) * std::tanh(d);
+            std::string point = fmt::format(" in ({}, {})", px, py);
+
+            check("value" + point, constraint->calculateFunctionValue(P),
+                std::sinh(px) + std::cosh(py) + std::tanh(d));
+
+            auto gradient = constraint->calculateGradient(P, false);
+            check("gradient x" + point, gradient[x], std::cosh(px) + sech2);
+            check("gradient y" + point, gradient[y], std::sinh(py) - sech2);
+
+            // d2/dd2 tanh(d) = -2 tanh(d) sech^2(d)
+            double tanhSecond = -2.0 * std::tanh(d) * sech2;
+            auto hessian = constraint->calculateHessian(P, false);
+            check("Hessian xx" + point, element(hessian, x, x), std::sinh(px) + tanhSecond);
+            check("Hessian yy" + point, element(hessian, y, y), std::cosh(py) + tanhSecond);
+            check("Hessian xy" + point, element(hessian, x, y), -tanhSecond);
+        }
+
+        std::cout << "  Values, gradients and Hessians of sinh, cosh and tanh compared in 3 points.\n";
+    }
+
+    // Bounds and convexity
+    {
+        auto makeVariable = [](double lowerBound, double upperBound)
+        { return (std::make_shared<SHOT::Variable>("v", SHOT::E_VariableType::Real, lowerBound, upperBound)); };
+
+        auto bounds = SHOT::ExpressionCosh(variable(makeVariable(-1.0, 2.0))).getBounds();
+        std::cout << "  cosh(x), x in [-1,2]: [" << bounds.l() << ", " << bounds.u() << "]\n";
+        check("cosh lower bound", bounds.l(), 1.0);
+        check("cosh upper bound", bounds.u(), std::cosh(2.0));
+
+        bounds = SHOT::ExpressionTanh(variable(makeVariable(-1e50, 1e50))).getBounds();
+        check("tanh lower bound", bounds.l(), -1.0);
+        check("tanh upper bound", bounds.u(), 1.0);
+
+        bounds = SHOT::ExpressionSinh(variable(makeVariable(-1e50, 1e50))).getBounds();
+        if(!(bounds.l() <= -1e300 && bounds.u() >= 1e300))
+        {
+            std::cout << "  FAILED: the bounds of sinh of a free variable are not unbounded.\n";
+            passed = false;
+        }
+
+        struct ConvexityCase
+        {
+            std::string description;
+            SHOT::E_Convexity value;
+            SHOT::E_Convexity expected;
+        };
+
+        std::vector<ConvexityCase> cases = {
+            { "sinh(x), x in [0,3]", SHOT::ExpressionSinh(variable(makeVariable(0, 3))).getConvexity(),
+                SHOT::E_Convexity::Convex },
+            { "sinh(x), x in [-3,0]", SHOT::ExpressionSinh(variable(makeVariable(-3, 0))).getConvexity(),
+                SHOT::E_Convexity::Concave },
+            { "sinh(x), x in [-3,3]", SHOT::ExpressionSinh(variable(makeVariable(-3, 3))).getConvexity(),
+                SHOT::E_Convexity::Unknown },
+            { "cosh(x), x in [-3,3]", SHOT::ExpressionCosh(variable(makeVariable(-3, 3))).getConvexity(),
+                SHOT::E_Convexity::Convex },
+            { "tanh(x), x in [-3,0]", SHOT::ExpressionTanh(variable(makeVariable(-3, 0))).getConvexity(),
+                SHOT::E_Convexity::Convex },
+            { "tanh(x), x in [0,3]", SHOT::ExpressionTanh(variable(makeVariable(0, 3))).getConvexity(),
+                SHOT::E_Convexity::Concave },
+            { "tanh(x), x in [-3,3]", SHOT::ExpressionTanh(variable(makeVariable(-3, 3))).getConvexity(),
+                SHOT::E_Convexity::Unknown },
+        };
+
+        for(auto& C : cases)
+        {
+            if(C.value != C.expected)
+            {
+                std::cout << "  FAILED: the convexity of " << C.description << " is wrong.\n";
+                passed = false;
+            }
+        }
+
+        // Tightening through the inverse functions
+        auto v = makeVariable(-10.0, 10.0);
+        SHOT::ExpressionTanh(variable(v)).tightenBounds(SHOT::Interval(-0.5, 0.5));
+        check("tanh tightened lower bound", v->lowerBound, std::atanh(-0.5));
+        check("tanh tightened upper bound", v->upperBound, std::atanh(0.5));
+
+        auto w = makeVariable(-10.0, 10.0);
+        SHOT::ExpressionCosh(variable(w)).tightenBounds(SHOT::Interval(1.0, 2.0));
+        check("cosh tightened lower bound", w->lowerBound, -std::acosh(2.0));
+        check("cosh tightened upper bound", w->upperBound, std::acosh(2.0));
+    }
+
+    // The OSiL elements
+    {
+        auto fileSolver = std::make_unique<SHOT::Solver>();
+        fileSolver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Error));
+
+        if(!fileSolver->setProblem("data/hyperbolic.osil"))
+        {
+            std::cout << "  FAILED: could not read data/hyperbolic.osil.\n";
+            return (false);
+        }
+
+        auto fileProblem = fileSolver->getOriginalProblem();
+        double x = 0.3, y = 1.7;
+        SHOT::VectorDouble P { x, y };
+
+        std::vector<double> expected = { std::tan(x), std::asin(x), std::acos(x), std::atan(y), std::sinh(y),
+            std::cosh(y), std::tanh(y), std::sqrt(y), std::asinh(y), std::acosh(y), std::atanh(x), 1.0 / std::tan(y),
+            1.0 / std::cos(y), 1.0 / std::sin(y), 1.0 / std::tanh(y), 1.0 / std::cosh(y), 1.0 / std::sinh(y),
+            std::log10(y), std::log2(y), M_E * y, M_PI * y };
+
+        for(size_t k = 0; k < expected.size(); k++)
+            check("OSiL constraint " + fileProblem->numericConstraints[k]->name,
+                fileProblem->numericConstraints[k]->calculateFunctionValue(P), expected[k]);
+
+        std::cout << "  Values of the " << expected.size() << " functions in data/hyperbolic.osil compared.\n";
+    }
+
+    // The AMPL operators
+    {
+        auto fileSolver = std::make_unique<SHOT::Solver>();
+        fileSolver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Error));
+
+        if(!fileSolver->setProblem("data/inversehyperbolic.nl"))
+        {
+            std::cout << "  FAILED: could not read data/inversehyperbolic.nl.\n";
+            return (false);
+        }
+
+        auto fileProblem = fileSolver->getOriginalProblem();
+        double x = 0.4, y = 1.7;
+        SHOT::VectorDouble P { x, y };
+
+        std::vector<double> expected = { std::asinh(x), std::acosh(y), std::atanh(x), std::atan2(x, y) };
+
+        for(size_t k = 0; k < expected.size(); k++)
+            check("AMPL constraint " + fileProblem->numericConstraints[k]->name,
+                fileProblem->numericConstraints[k]->calculateFunctionValue(P), expected[k]);
+
+        std::cout << "  Values of the " << expected.size() << " functions in data/inversehyperbolic.nl compared.\n";
+    }
+
+    return passed;
+}
+

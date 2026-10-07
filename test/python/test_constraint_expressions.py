@@ -451,6 +451,18 @@ class TestSharedExpressions:
         with pytest.raises(ValueError):
             SHOTpy.signpower(x, -1.0)
 
+    def test_hyperbolic_functions(self):
+        """sinh, cosh and tanh are available in Python."""
+        import SHOTpy
+
+        _, problem, x, y = make_problem()
+        f = SHOTpy.sinh(x) + SHOTpy.cosh(y) + SHOTpy.tanh(x - y)
+        problem.addConstraint(f <= 100, "a")
+        finalize(problem)
+
+        expected = math.sinh(2.0) + math.cosh(1.0) + math.tanh(1.0)
+        assert abs(problem.getConstraint("a").calculateFunctionValue([2.0, 1.0]) - expected) < 1e-12
+
     def test_user_expression_is_not_changed(self):
         """Simplifying a constraint does not change the expression object the user keeps."""
         _, problem, x, y = make_problem()

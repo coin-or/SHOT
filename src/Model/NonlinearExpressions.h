@@ -51,6 +51,9 @@ enum class E_NonlinearExpressionTypes
     Abs,
     ErrorFunction,
     SignPower,
+    Sinh,
+    Cosh,
+    Tanh,
     Divide,
     Power,
     Sum,
@@ -1481,6 +1484,262 @@ public:
 };
 
 // The integral of the standard normal distribution from minus infinity to x, 0.5 * (1 + erf(x / sqrt(2))), as errorf(x)
+
+// The values of sinh, cosh and tanh, with infinite values replaced by the largest finite ones, so that intervals stay
+// valid for large arguments
+inline double clampToFinite(double value)
+{
+    if(value >= SHOT_DBL_MAX)
+        return (SHOT_DBL_MAX);
+
+    if(value <= SHOT_DBL_MIN)
+        return (SHOT_DBL_MIN);
+
+    return (value);
+}
+
+// The hyperbolic sine. It is increasing, convex for x >= 0 and concave for x <= 0.
+class ExpressionSinh : public ExpressionUnary
+{
+private:
+    static inline Interval valueBounds(Interval childBounds)
+    {
+        return (Interval(clampToFinite(std::sinh(childBounds.l())), clampToFinite(std::sinh(childBounds.u()))));
+    }
+
+public:
+    ExpressionSinh() = default;
+
+    ExpressionSinh(NonlinearExpressionPtr childExpression) { child = childExpression; }
+
+    inline double calculate(const VectorDouble& point) const override { return (std::sinh(child->calculate(point))); }
+
+    inline Interval calculate(const IntervalVector& intervalVector) const override
+    {
+        return (valueBounds(child->calculate(intervalVector)));
+    }
+
+    inline Interval getBounds() const override { return (valueBounds(child->getBounds())); }
+
+    inline bool tightenBounds(Interval bound) override
+    {
+        return (child->tightenBounds(Interval(std::asinh(bound.l()), std::asinh(bound.u()))));
+    };
+
+    inline FactorableFunction getFactorableFunction() override { return (CppAD::sinh(child->getFactorableFunction())); }
+
+    inline std::ostream& print(std::ostream& stream) const override
+    {
+        stream << "sinh(" << child << ')';
+        return stream;
+    }
+
+    inline E_NonlinearExpressionTypes getType() const override { return E_NonlinearExpressionTypes::Sinh; }
+
+    inline E_Convexity getConvexity() const override
+    {
+        auto childConvexity = child->getConvexity();
+        auto childBounds = child->getBounds();
+
+        if((childConvexity == E_Convexity::Linear || childConvexity == E_Convexity::Convex) && childBounds.l() >= 0.0)
+            return E_Convexity::Convex;
+
+        if((childConvexity == E_Convexity::Linear || childConvexity == E_Convexity::Concave)
+            && childBounds.u() <= 0.0)
+            return E_Convexity::Concave;
+
+        return E_Convexity::Unknown;
+    };
+
+    inline E_Monotonicity getMonotonicity() const override { return (child->getMonotonicity()); };
+
+    inline bool operator==(const NonlinearExpression& rhs) const override
+    {
+        if(rhs.getType() != getType())
+            return (false);
+
+        return (dynamic_cast<const ExpressionSinh&>(rhs).child.get() == child.get());
+    };
+};
+
+// The hyperbolic cosine. It is convex, decreasing for x <= 0 and increasing for x >= 0, with the minimum one in zero.
+class ExpressionCosh : public ExpressionUnary
+{
+private:
+    static inline Interval valueBounds(Interval childBounds)
+    {
+        double atLower = clampToFinite(std::cosh(childBounds.l()));
+        double atUpper = clampToFinite(std::cosh(childBounds.u()));
+
+        if(childBounds.l() >= 0.0)
+            return (Interval(atLower, atUpper));
+
+        if(childBounds.u() <= 0.0)
+            return (Interval(atUpper, atLower));
+
+        return (Interval(1.0, std::max(atLower, atUpper)));
+    }
+
+public:
+    ExpressionCosh() = default;
+
+    ExpressionCosh(NonlinearExpressionPtr childExpression) { child = childExpression; }
+
+    inline double calculate(const VectorDouble& point) const override { return (std::cosh(child->calculate(point))); }
+
+    inline Interval calculate(const IntervalVector& intervalVector) const override
+    {
+        return (valueBounds(child->calculate(intervalVector)));
+    }
+
+    inline Interval getBounds() const override { return (valueBounds(child->getBounds())); }
+
+    inline bool tightenBounds(Interval bound) override
+    {
+        // cosh discards the sign of its argument, so the magnitude is bounded, and the sign is decided by the bounds
+        // the argument already has, as for a square
+        if(bound.u() < 1.0)
+            return (false);
+
+        double magnitudeUpper = std::acosh(bound.u());
+        double magnitudeLower = (bound.l() > 1.0) ? std::acosh(bound.l()) : 0.0;
+
+        auto childBounds = child->getBounds();
+
+        if(childBounds.l() >= 0.0)
+            return (child->tightenBounds(Interval(magnitudeLower, magnitudeUpper)));
+
+        if(childBounds.u() <= 0.0)
+            return (child->tightenBounds(Interval(-magnitudeUpper, -magnitudeLower)));
+
+        return (child->tightenBounds(Interval(-magnitudeUpper, magnitudeUpper)));
+    };
+
+    inline FactorableFunction getFactorableFunction() override { return (CppAD::cosh(child->getFactorableFunction())); }
+
+    inline std::ostream& print(std::ostream& stream) const override
+    {
+        stream << "cosh(" << child << ')';
+        return stream;
+    }
+
+    inline E_NonlinearExpressionTypes getType() const override { return E_NonlinearExpressionTypes::Cosh; }
+
+    inline E_Convexity getConvexity() const override
+    {
+        auto childConvexity = child->getConvexity();
+        auto childBounds = child->getBounds();
+
+        if(childConvexity == E_Convexity::Linear)
+            return E_Convexity::Convex;
+
+        // A convex function that is increasing (decreasing) of a convex (concave) function is convex
+        if(childConvexity == E_Convexity::Convex && childBounds.l() >= 0.0)
+            return E_Convexity::Convex;
+
+        if(childConvexity == E_Convexity::Concave && childBounds.u() <= 0.0)
+            return E_Convexity::Convex;
+
+        return E_Convexity::Unknown;
+    };
+
+    inline E_Monotonicity getMonotonicity() const override
+    {
+        auto childMonotonicity = child->getMonotonicity();
+        auto childBounds = child->getBounds();
+
+        if(childMonotonicity == E_Monotonicity::Constant)
+            return E_Monotonicity::Constant;
+
+        if(childBounds.l() >= 0.0)
+            return childMonotonicity;
+
+        if(childBounds.u() <= 0.0)
+            return negateMonotonicity(childMonotonicity);
+
+        return E_Monotonicity::Unknown;
+    };
+
+    inline bool operator==(const NonlinearExpression& rhs) const override
+    {
+        if(rhs.getType() != getType())
+            return (false);
+
+        return (dynamic_cast<const ExpressionCosh&>(rhs).child.get() == child.get());
+    };
+};
+
+// The hyperbolic tangent. It is increasing from -1 to 1, convex for x <= 0 and concave for x >= 0.
+class ExpressionTanh : public ExpressionUnary
+{
+private:
+    static inline Interval valueBounds(Interval childBounds)
+    {
+        return (Interval(std::tanh(childBounds.l()), std::tanh(childBounds.u())));
+    }
+
+public:
+    ExpressionTanh() = default;
+
+    ExpressionTanh(NonlinearExpressionPtr childExpression) { child = childExpression; }
+
+    inline double calculate(const VectorDouble& point) const override { return (std::tanh(child->calculate(point))); }
+
+    inline Interval calculate(const IntervalVector& intervalVector) const override
+    {
+        return (valueBounds(child->calculate(intervalVector)));
+    }
+
+    inline Interval getBounds() const override { return (valueBounds(child->getBounds())); }
+
+    inline bool tightenBounds(Interval bound) override
+    {
+        // tanh maps the real line onto (-1, 1), so a bound outside this range carries no information
+        if(bound.u() <= -1.0 || bound.l() >= 1.0)
+            return (false);
+
+        double lower = (bound.l() > -1.0) ? std::atanh(bound.l()) : SHOT_DBL_MIN;
+        double upper = (bound.u() < 1.0) ? std::atanh(bound.u()) : SHOT_DBL_MAX;
+
+        return (child->tightenBounds(Interval(lower, upper)));
+    };
+
+    inline FactorableFunction getFactorableFunction() override { return (CppAD::tanh(child->getFactorableFunction())); }
+
+    inline std::ostream& print(std::ostream& stream) const override
+    {
+        stream << "tanh(" << child << ')';
+        return stream;
+    }
+
+    inline E_NonlinearExpressionTypes getType() const override { return E_NonlinearExpressionTypes::Tanh; }
+
+    inline E_Convexity getConvexity() const override
+    {
+        auto childConvexity = child->getConvexity();
+        auto childBounds = child->getBounds();
+
+        if((childConvexity == E_Convexity::Linear || childConvexity == E_Convexity::Convex) && childBounds.u() <= 0.0)
+            return E_Convexity::Convex;
+
+        if((childConvexity == E_Convexity::Linear || childConvexity == E_Convexity::Concave)
+            && childBounds.l() >= 0.0)
+            return E_Convexity::Concave;
+
+        return E_Convexity::Unknown;
+    };
+
+    inline E_Monotonicity getMonotonicity() const override { return (child->getMonotonicity()); };
+
+    inline bool operator==(const NonlinearExpression& rhs) const override
+    {
+        if(rhs.getType() != getType())
+            return (false);
+
+        return (dynamic_cast<const ExpressionTanh&>(rhs).child.get() == child.get());
+    };
+};
+
 // in GAMS. It is increasing, convex for x <= 0 and concave for x >= 0.
 class ExpressionErrorFunction : public ExpressionUnary
 {
@@ -3309,5 +3568,48 @@ public:
     }
 };
 // End general operations
+
+
+// Functions without expressions of their own, given by other expressions. An argument used several times is the same
+// node, which Problem::finalize() copies.
+
+// asinh(x) = ln(x + sqrt(x^2 + 1))
+inline NonlinearExpressionPtr createArcSinh(NonlinearExpressionPtr x)
+{
+    return (std::make_shared<ExpressionLog>(std::make_shared<ExpressionSum>(x,
+        std::make_shared<ExpressionSquareRoot>(std::make_shared<ExpressionSum>(
+            std::make_shared<ExpressionSquare>(x), std::make_shared<ExpressionConstant>(1.0))))));
+}
+
+// acosh(x) = ln(x + sqrt(x^2 - 1)), defined for x >= 1
+inline NonlinearExpressionPtr createArcCosh(NonlinearExpressionPtr x)
+{
+    return (std::make_shared<ExpressionLog>(std::make_shared<ExpressionSum>(x,
+        std::make_shared<ExpressionSquareRoot>(std::make_shared<ExpressionSum>(
+            std::make_shared<ExpressionSquare>(x), std::make_shared<ExpressionConstant>(-1.0))))));
+}
+
+// atanh(x) = ln((1 + x)/(1 - x))/2, defined for -1 < x < 1
+inline NonlinearExpressionPtr createArcTanh(NonlinearExpressionPtr x)
+{
+    return (std::make_shared<ExpressionProduct>(std::make_shared<ExpressionConstant>(0.5),
+        std::make_shared<ExpressionLog>(std::make_shared<ExpressionDivide>(
+            std::make_shared<ExpressionSum>(std::make_shared<ExpressionConstant>(1.0), x),
+            std::make_shared<ExpressionSum>(
+                std::make_shared<ExpressionConstant>(1.0), std::make_shared<ExpressionNegate>(x))))));
+}
+
+// atan2(y, x) = 2*arctan(y/(sqrt(x^2 + y^2) + x)), the angle of (x, y), except on the negative x-axis, where the
+// denominator is zero. CppAD's atan2 is not used, since it consists of conditional expressions, through which CppAD's
+// sparse derivatives do not follow the variables.
+inline NonlinearExpressionPtr createArcTan2(NonlinearExpressionPtr y, NonlinearExpressionPtr x)
+{
+    auto radius = std::make_shared<ExpressionSquareRoot>(
+        std::make_shared<ExpressionSum>(std::make_shared<ExpressionSquare>(x), std::make_shared<ExpressionSquare>(y)));
+
+    return (std::make_shared<ExpressionProduct>(std::make_shared<ExpressionConstant>(2.0),
+        std::make_shared<ExpressionArcTan>(
+            std::make_shared<ExpressionDivide>(y, std::make_shared<ExpressionSum>(radius, x)))));
+}
 
 } // namespace SHOT

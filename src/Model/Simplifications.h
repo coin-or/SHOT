@@ -489,6 +489,54 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionAbs> 
     return expression;
 }
 
+inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionSinh> expression)
+{
+    auto child = simplify(expression->child);
+
+    if(child->getType() == E_NonlinearExpressionTypes::Constant)
+    {
+        expression->child = child;
+        std::dynamic_pointer_cast<ExpressionConstant>(child)->constant = expression->calculate(VectorDouble {});
+
+        return (child);
+    }
+
+    expression->child = child;
+    return expression;
+}
+
+inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionCosh> expression)
+{
+    auto child = simplify(expression->child);
+
+    if(child->getType() == E_NonlinearExpressionTypes::Constant)
+    {
+        expression->child = child;
+        std::dynamic_pointer_cast<ExpressionConstant>(child)->constant = expression->calculate(VectorDouble {});
+
+        return (child);
+    }
+
+    expression->child = child;
+    return expression;
+}
+
+inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionTanh> expression)
+{
+    auto child = simplify(expression->child);
+
+    if(child->getType() == E_NonlinearExpressionTypes::Constant)
+    {
+        expression->child = child;
+        std::dynamic_pointer_cast<ExpressionConstant>(child)->constant = expression->calculate(VectorDouble {});
+
+        return (child);
+    }
+
+    expression->child = child;
+    return expression;
+}
+
 inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionErrorFunction> expression)
 {
     auto child = simplify(expression->child);
@@ -987,6 +1035,15 @@ inline NonlinearExpressionPtr simplify(NonlinearExpressionPtr expression)
     case E_NonlinearExpressionTypes::ErrorFunction:
         ss << "\nBefore simplification of errorf: " << *expression << std::endl;
         break;
+    case E_NonlinearExpressionTypes::Sinh:
+        ss << "\nBefore simplification of sinh: " << *expression << std::endl;
+        break;
+    case E_NonlinearExpressionTypes::Cosh:
+        ss << "\nBefore simplification of cosh: " << *expression << std::endl;
+        break;
+    case E_NonlinearExpressionTypes::Tanh:
+        ss << "\nBefore simplification of tanh: " << *expression << std::endl;
+        break;
     case E_NonlinearExpressionTypes::SignPower:
         ss << "\nBefore simplification of signpower: " << *expression << std::endl;
         break;
@@ -1054,6 +1111,15 @@ inline NonlinearExpressionPtr simplify(NonlinearExpressionPtr expression)
         break;
     case E_NonlinearExpressionTypes::ErrorFunction:
         expression = simplifyExpression(std::dynamic_pointer_cast<ExpressionErrorFunction>(expression));
+        break;
+    case E_NonlinearExpressionTypes::Sinh:
+        expression = simplifyExpression(std::dynamic_pointer_cast<ExpressionSinh>(expression));
+        break;
+    case E_NonlinearExpressionTypes::Cosh:
+        expression = simplifyExpression(std::dynamic_pointer_cast<ExpressionCosh>(expression));
+        break;
+    case E_NonlinearExpressionTypes::Tanh:
+        expression = simplifyExpression(std::dynamic_pointer_cast<ExpressionTanh>(expression));
         break;
     case E_NonlinearExpressionTypes::SignPower:
         expression = simplifyExpression(std::dynamic_pointer_cast<ExpressionSignPower>(expression));
@@ -1123,6 +1189,15 @@ inline NonlinearExpressionPtr simplify(NonlinearExpressionPtr expression)
         break;
     case E_NonlinearExpressionTypes::ErrorFunction:
         ss << " After simplification of errorf: " << *expression << std::endl;
+        break;
+    case E_NonlinearExpressionTypes::Sinh:
+        ss << " After simplification of sinh: " << *expression << std::endl;
+        break;
+    case E_NonlinearExpressionTypes::Cosh:
+        ss << " After simplification of cosh: " << *expression << std::endl;
+        break;
+    case E_NonlinearExpressionTypes::Tanh:
+        ss << " After simplification of tanh: " << *expression << std::endl;
         break;
     case E_NonlinearExpressionTypes::SignPower:
         ss << " After simplification of signpower: " << *expression << std::endl;

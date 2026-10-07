@@ -339,6 +339,24 @@ public:
         case mp::expr::ATAN:
             return std::make_shared<ExpressionArcTan>(child);
 
+        case mp::expr::SINH:
+            return std::make_shared<ExpressionSinh>(child);
+
+        case mp::expr::COSH:
+            return std::make_shared<ExpressionCosh>(child);
+
+        case mp::expr::TANH:
+            return std::make_shared<ExpressionTanh>(child);
+
+        case mp::expr::ASINH:
+            return createArcSinh(child);
+
+        case mp::expr::ACOSH:
+            return createArcCosh(child);
+
+        case mp::expr::ATANH:
+            return createArcTanh(child);
+
         default:
             throw OperationNotImplementedException(
                 fmt::format("Error: Unsupported AMPL function {}", static_cast<int>(kind)));
@@ -373,6 +391,9 @@ public:
 
         case mp::expr::POW_CONST_EXP:
             return std::make_shared<ExpressionPower>(firstChild, secondChild);
+
+        case mp::expr::ATAN2: // atan2(y, x)
+            return createArcTan2(firstChild, secondChild);
 
         default:
             throw OperationNotImplementedException(
