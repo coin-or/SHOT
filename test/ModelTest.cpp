@@ -284,6 +284,8 @@ bool ModelTestDenseNonlinearHessian()
 bool ModelTestDivideBoundTighteningSigns();
 bool ModelTestGradientOfConstantExpression();
 
+bool ModelTestBoundTighteningSoundness();
+
 int ModelTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -464,6 +466,9 @@ int ModelTest(int argc, char* argv[])
         break;
     case 54:
         passed = ModelTestGradientOfConstantExpression();
+        break;
+    case 55:
+        passed = ModelTestBoundTighteningSoundness();
         break;
     default:
         passed = false;
@@ -8661,8 +8666,7 @@ bool ModelTestPowerBounds()
         }
     }
 
-    // An impossible bound, or one that only allows values below the smallest value used for a nonintegral power, must
-    // not change the variable or throw
+    // An impossible bound must not change the variable or throw
     {
         auto x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 10.0);
         SHOT::ExpressionPower even(
@@ -8672,7 +8676,7 @@ bool ModelTestPowerBounds()
 
         try
         {
-            if(even.tightenBounds(SHOT::Interval(-4.0, -1.0)) || root.tightenBounds(SHOT::Interval(-1.0, 0.0)))
+            if(even.tightenBounds(SHOT::Interval(-4.0, -1.0)) || root.tightenBounds(SHOT::Interval(-1.0, -0.5)))
             {
                 std::cout << "  FAILED: an impossible bound tightened x to [" << x->lowerBound << ", "
                           << x->upperBound << "].\n";
@@ -8715,7 +8719,8 @@ bool ModelTestPowerBounds()
         std::vector<NegativePowerCase> negativePowerCases = {
             { "x^-1 in [0.25,0.5], x in [1,10]", -1.0, 1.0, 10.0, 0.25, 0.5, 2.0, 4.0 },
             { "x^-1 in [-0.5,-0.25], x in [-10,-1]", -1.0, -10.0, -1.0, -0.5, -0.25, -4.0, -2.0 },
-            { "x^-1 in [0.25,0.5], x in [-10,10]", -1.0, -10.0, 10.0, 0.25, 0.5, -10.0, 10.0 },
+            { "x^-1 in [0.25,0.5], x in [-10,10] (a positive power needs a positive base)", -1.0, -10.0, 10.0, 0.25, 0.5,
+                2.0, 4.0 },
             { "x^-3 in [-1/8,-1/64], x in [-10,-1]", -3.0, -10.0, -1.0, -0.125, -0.015625, -4.0, -2.0 },
             { "x^-3 in [1/64,1/8], x in [1,10]", -3.0, 1.0, 10.0, 0.015625, 0.125, 2.0, 4.0 },
             { "x^-2 in [1/16,1/4], x in [1,10]", -2.0, 1.0, 10.0, 0.0625, 0.25, 2.0, 4.0 },
@@ -9265,6 +9270,343 @@ bool ModelTestGradientOfConstantExpression()
             }
         }
     }
+
+    return passed;
+}
+
+bool ModelTestBoundTighteningSoundness()
+{
+    // Bound tightening must not cut off a point that satisfies the bound it propagates. For random bounds of the
+    // variables, a random point within them and a bound containing the value of the expression in the point, the point
+    // must still be within the tightened bounds. This is checked for every expression type that tightens bounds, and
+    // for whole problems through Problem::finalize() and doFBBT(), which also covers the linear, quadratic, monomial and
+    // signomial terms. A failing case is printed with its seed so that it can be reproduced.
+
+    bool passed = true;
+    int numberOfFailures = 0;
+    int numberOfChecks = 0;
+    const int maxPrintedFailures = 40;
+
+    std::mt19937 generator(20261007);
+    std::uniform_real_distribution<double> unit(0.0, 1.0);
+
+    // Bounds with different signs, zero as an end point and degenerate cases
+    auto randomBounds = [&]() -> std::pair<double, double>
+    {
+        static const std::vector<std::pair<double, double>> shapes = { { -10, 10 }, { 0, 10 }, { -10, 0 }, { 1, 10 },
+            { -10, -1 }, { 0.1, 2 }, { -2, -0.1 }, { 0, 1 }, { -1, 0 }, { -0.5, 3 }, { 5, 100 }, { -100, -5 } };
+        auto shape = shapes[(size_t)(unit(generator) * shapes.size()) % shapes.size()];
+        double lower = shape.first + unit(generator) * (shape.second - shape.first) * 0.3;
+        double upper = shape.second - unit(generator) * (shape.second - shape.first) * 0.3;
+
+        // Keep zero end points exact in some cases
+        if(shape.first == 0.0 && unit(generator) < 0.5)
+            lower = 0.0;
+        if(shape.second == 0.0 && unit(generator) < 0.5)
+            upper = 0.0;
+
+        return { lower, upper };
+    };
+
+    auto randomPoint = [&](double lower, double upper)
+    {
+        double r = unit(generator);
+        if(r < 0.1)
+            return lower;
+        if(r < 0.2)
+            return upper;
+        if(lower < 0.0 && upper > 0.0 && r < 0.25)
+            return 0.0;
+        return lower + unit(generator) * (upper - lower);
+    };
+
+    // A bound that contains the value, sometimes with an infinite or exact end point
+    auto randomTarget = [&](double value)
+    {
+        double scale = 1.0 + std::abs(value);
+        double r1 = unit(generator);
+        double r2 = unit(generator);
+        double lower = (r1 < 0.15) ? -1e50 : ((r1 < 0.3) ? value : value - r1 * scale);
+        double upper = (r2 < 0.15) ? 1e50 : ((r2 < 0.3) ? value : value + r2 * scale);
+        return SHOT::Interval(lower, upper);
+    };
+
+    auto isInside = [](double value, SHOT::VariablePtr V)
+    {
+        double tolerance = 1e-6 * (1.0 + std::abs(value));
+        return (value >= V->lowerBound - tolerance && value <= V->upperBound + tolerance);
+    };
+
+    using Builder = std::function<SHOT::NonlinearExpressionPtr(SHOT::VariablePtr, SHOT::VariablePtr)>;
+
+    auto var = [](SHOT::VariablePtr V) { return (std::make_shared<SHOT::ExpressionVariable>(V)); };
+    auto constant = [](double c) { return (std::make_shared<SHOT::ExpressionConstant>(c)); };
+
+    std::vector<std::pair<std::string, Builder>> expressions = {
+        { "-x", [&](auto x, auto) { return std::make_shared<SHOT::ExpressionNegate>(var(x)); } },
+        { "1/x", [&](auto x, auto) { return std::make_shared<SHOT::ExpressionInvert>(var(x)); } },
+        { "sqrt(x)", [&](auto x, auto) { return std::make_shared<SHOT::ExpressionSquareRoot>(var(x)); } },
+        { "log(x)", [&](auto x, auto) { return std::make_shared<SHOT::ExpressionLog>(var(x)); } },
+        { "exp(x)", [&](auto x, auto) { return std::make_shared<SHOT::ExpressionExp>(var(x)); } },
+        { "sqr(x)", [&](auto x, auto) { return std::make_shared<SHOT::ExpressionSquare>(var(x)); } },
+        { "errorf(x)", [&](auto x, auto) { return std::make_shared<SHOT::ExpressionErrorFunction>(var(x)); } },
+        { "signpower(x,0.5)", [&](auto x, auto) { return std::make_shared<SHOT::ExpressionSignPower>(var(x), 0.5); } },
+        { "signpower(x,1.852)",
+            [&](auto x, auto) { return std::make_shared<SHOT::ExpressionSignPower>(var(x), 1.852); } },
+        { "signpower(x,3)", [&](auto x, auto) { return std::make_shared<SHOT::ExpressionSignPower>(var(x), 3.0); } },
+        { "x/y", [&](auto x, auto y) { return std::make_shared<SHOT::ExpressionDivide>(var(x), var(y)); } },
+        { "3/y", [&](auto, auto y) { return std::make_shared<SHOT::ExpressionDivide>(constant(3.0), var(y)); } },
+        { "-3/y", [&](auto, auto y) { return std::make_shared<SHOT::ExpressionDivide>(constant(-3.0), var(y)); } },
+        { "x/2", [&](auto x, auto) { return std::make_shared<SHOT::ExpressionDivide>(var(x), constant(2.0)); } },
+        { "x/-2", [&](auto x, auto) { return std::make_shared<SHOT::ExpressionDivide>(var(x), constant(-2.0)); } },
+        { "(x-1)/log(y)",
+            [&](auto x, auto y)
+            {
+                return std::make_shared<SHOT::ExpressionDivide>(
+                    std::make_shared<SHOT::ExpressionSum>(var(x), constant(-1.0)),
+                    std::make_shared<SHOT::ExpressionLog>(var(y)));
+            } },
+        { "x*y", [&](auto x, auto y) { return std::make_shared<SHOT::ExpressionProduct>(var(x), var(y)); } },
+        { "-2*x", [&](auto x, auto) { return std::make_shared<SHOT::ExpressionProduct>(constant(-2.0), var(x)); } },
+        { "x*y*x",
+            [&](auto x, auto y)
+            { return std::make_shared<SHOT::ExpressionProduct>(SHOT::NonlinearExpressions { var(x), var(y), var(x) }); } },
+        { "x+y", [&](auto x, auto y) { return std::make_shared<SHOT::ExpressionSum>(var(x), var(y)); } },
+        { "x-y",
+            [&](auto x, auto y)
+            { return std::make_shared<SHOT::ExpressionSum>(var(x), std::make_shared<SHOT::ExpressionNegate>(var(y))); } },
+        { "x+x", [&](auto x, auto) { return std::make_shared<SHOT::ExpressionSum>(var(x), var(x)); } },
+        { "x^y", [&](auto x, auto y) { return std::make_shared<SHOT::ExpressionPower>(var(x), var(y)); } },
+        { "2^x", [&](auto x, auto) { return std::make_shared<SHOT::ExpressionPower>(constant(2.0), var(x)); } },
+        { "0.5^x", [&](auto x, auto) { return std::make_shared<SHOT::ExpressionPower>(constant(0.5), var(x)); } },
+    };
+
+    for(double power : { 2.0, 3.0, 4.0, 5.0, -1.0, -2.0, -3.0, 0.5, 1.5, -0.5, 2.5, 0.0, 1.0 })
+    {
+        expressions.push_back({ fmt::format("x^{}", power),
+            [&, power](auto x, auto) { return std::make_shared<SHOT::ExpressionPower>(var(x), constant(power)); } });
+    }
+
+    const int trialsPerExpression = 400;
+
+    for(auto& [description, build] : expressions)
+    {
+        int failuresForExpression = 0;
+
+        for(int trial = 0; trial < trialsPerExpression; trial++)
+        {
+            auto solver = std::make_unique<SHOT::Solver>();
+            auto problem = std::make_shared<SHOT::Problem>(solver->getEnvironment());
+
+            auto [xl, xu] = randomBounds();
+            auto [yl, yu] = randomBounds();
+
+            auto x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, xl, xu);
+            auto y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Real, yl, yu);
+            problem->add(SHOT::Variables { x, y });
+
+            SHOT::VectorDouble point { randomPoint(xl, xu), randomPoint(yl, yu) };
+
+            auto expression = build(x, y);
+            double value = expression->calculate(point);
+
+            if(!std::isfinite(value) || std::abs(value) > 1e12)
+                continue;
+
+            // A point where the function is not defined, e.g., log(0) or 0^-2, need not be kept
+            static const std::vector<std::string> undefinedInZero = { "1/x", "log(x)", "x/y", "3/y", "-3/y",
+                "(x-1)/log(y)", "x^y", "x^-1", "x^-2", "x^-3", "x^-0.5" };
+
+            if((point[0] == 0.0 || point[1] == 0.0)
+                && std::find(undefinedInZero.begin(), undefinedInZero.end(), description) != undefinedInZero.end())
+                continue;
+
+            auto target = randomTarget(value);
+            numberOfChecks++;
+
+            std::string failure;
+
+            try
+            {
+                expression->tightenBounds(target);
+
+                if(!isInside(point[0], x) || !isInside(point[1], y))
+                    failure = "cut off the point";
+            }
+            catch(std::exception& e)
+            {
+                failure = std::string("threw ") + e.what();
+            }
+            catch(...)
+            {
+                failure = "threw an exception";
+            }
+
+            if(!failure.empty())
+            {
+                failuresForExpression++;
+                numberOfFailures++;
+                passed = false;
+
+                if(failuresForExpression <= 3 && numberOfFailures <= maxPrintedFailures)
+                {
+                    std::cout << fmt::format("  FAILED: {} {} for x in [{}, {}], y in [{}, {}], point ({}, {}), value "
+                                             "{}, bound [{}, {}]; tightened to x in [{}, {}], y in [{}, {}]\n",
+                        description, failure, xl, xu, yl, yu, point[0], point[1], value, target.l(), target.u(),
+                        x->lowerBound, x->upperBound, y->lowerBound, y->upperBound);
+                }
+            }
+        }
+
+        if(failuresForExpression > 0)
+            std::cout << "  " << description << ": " << failuresForExpression << " failures\n";
+    }
+
+    // Whole problems: a constraint with random terms is given a range that contains its value in a random point, and
+    // the point must be within the bounds after the problem has been finalized and bound tightening has been done
+    const int numberOfProblems = 600;
+
+    for(int trial = 0; trial < numberOfProblems; trial++)
+    {
+        auto solver = std::make_unique<SHOT::Solver>();
+        solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+        auto problem = std::make_shared<SHOT::Problem>(solver->getEnvironment());
+
+        SHOT::Variables variables;
+        SHOT::VectorDouble point;
+        std::string bounds;
+
+        for(int i = 0; i < 4; i++)
+        {
+            auto [lower, upper] = randomBounds();
+
+            // The signomial terms need positive variables
+            if(i >= 2)
+            {
+                lower = 0.1 + std::abs(lower) * 0.5;
+                upper = lower + 0.5 + std::abs(upper);
+            }
+
+            auto V = std::make_shared<SHOT::Variable>(
+                fmt::format("x{}", i), SHOT::E_VariableType::Real, lower, upper);
+            variables.push_back(V);
+            point.push_back(randomPoint(lower, upper));
+            bounds += fmt::format(" x{} in [{}, {}]", i, lower, upper);
+        }
+
+        problem->add(variables);
+        problem->add(std::make_shared<SHOT::LinearObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize));
+
+        auto constraint = std::make_shared<SHOT::NonlinearConstraint>("c", SHOT_DBL_MIN, SHOT_DBL_MAX);
+        std::string terms;
+
+        auto coefficient = [&]() { return (unit(generator) < 0.5 ? -1.0 : 1.0) * (0.5 + 2.0 * unit(generator)); };
+
+        int kind = trial % 6;
+
+        if(kind == 0 || kind == 5)
+        {
+            double a = coefficient(), b = coefficient(), c = coefficient();
+            constraint->add(std::make_shared<SHOT::QuadraticTerm>(a, variables[0], variables[1]));
+            constraint->add(std::make_shared<SHOT::QuadraticTerm>(b, variables[0], variables[0]));
+            constraint->add(std::make_shared<SHOT::LinearTerm>(c, variables[2]));
+            terms += fmt::format("{}*x0*x1 + {}*x0^2 + {}*x2", a, b, c);
+        }
+
+        if(kind == 1 || kind == 5)
+        {
+            double a = coefficient(), b = coefficient();
+            constraint->add(std::make_shared<SHOT::MonomialTerm>(a, SHOT::Variables { variables[0], variables[1], variables[3] }));
+            constraint->add(std::make_shared<SHOT::LinearTerm>(b, variables[1]));
+            terms += fmt::format(" + {}*x0*x1*x3 + {}*x1", a, b);
+        }
+
+        if(kind == 2 || kind == 5)
+        {
+            double a = coefficient(), b = coefficient();
+            double p1 = (unit(generator) - 0.5) * 4.0, p2 = (unit(generator) - 0.5) * 4.0;
+            constraint->add(std::make_shared<SHOT::SignomialTerm>(a,
+                SHOT::SignomialElements { std::make_shared<SHOT::SignomialElement>(variables[2], p1),
+                    std::make_shared<SHOT::SignomialElement>(variables[3], p2) }));
+            constraint->add(std::make_shared<SHOT::LinearTerm>(b, variables[0]));
+            terms += fmt::format(" + {}*x2^{}*x3^{} + {}*x0", a, p1, p2, b);
+        }
+
+        if(kind == 3)
+        {
+            // x0/x1 + log(x2) * x0
+            constraint->add(std::make_shared<SHOT::ExpressionSum>(
+                std::make_shared<SHOT::ExpressionDivide>(var(variables[0]), var(variables[1])),
+                std::make_shared<SHOT::ExpressionProduct>(
+                    std::make_shared<SHOT::ExpressionLog>(var(variables[2])), var(variables[0]))));
+            terms += " x0/x1 + log(x2)*x0";
+        }
+
+        if(kind == 4)
+        {
+            // (x2 - x3)/log(x2/x3) + exp(x1) - sqr(x0)
+            constraint->add(std::make_shared<SHOT::ExpressionSum>(SHOT::NonlinearExpressions {
+                std::make_shared<SHOT::ExpressionDivide>(
+                    std::make_shared<SHOT::ExpressionSum>(
+                        var(variables[2]), std::make_shared<SHOT::ExpressionNegate>(var(variables[3]))),
+                    std::make_shared<SHOT::ExpressionLog>(
+                        std::make_shared<SHOT::ExpressionDivide>(var(variables[2]), var(variables[3])))),
+                std::make_shared<SHOT::ExpressionExp>(var(variables[1])),
+                std::make_shared<SHOT::ExpressionNegate>(
+                    std::make_shared<SHOT::ExpressionSquare>(var(variables[0]))) }));
+            terms += " (x2-x3)/log(x2/x3) + exp(x1) - x0^2";
+        }
+
+        double value = constraint->calculateFunctionValue(point);
+
+        if(!std::isfinite(value) || std::abs(value) > 1e12)
+            continue;
+
+        auto target = randomTarget(value);
+        constraint->valueLHS = (target.l() <= -1e49) ? SHOT_DBL_MIN : target.l();
+        constraint->valueRHS = (target.u() >= 1e49) ? SHOT_DBL_MAX : target.u();
+
+        problem->add(constraint);
+
+        std::string failure;
+
+        try
+        {
+            problem->finalize();
+            problem->doFBBT();
+
+            for(size_t i = 0; i < variables.size(); i++)
+            {
+                if(!isInside(point[i], variables[i]))
+                    failure += fmt::format(" x{}={} not in [{}, {}]", i, point[i], variables[i]->lowerBound,
+                        variables[i]->upperBound);
+            }
+        }
+        catch(std::exception& e)
+        {
+            failure = std::string(" threw ") + e.what();
+        }
+        catch(...)
+        {
+            failure = " threw an exception";
+        }
+
+        numberOfChecks++;
+
+        if(!failure.empty())
+        {
+            numberOfFailures++;
+            passed = false;
+
+            if(numberOfFailures <= maxPrintedFailures)
+            {
+                std::cout << fmt::format("  FAILED: problem {} with {} in [{}, {}], value {} and{}:{}\n", trial, terms,
+                    constraint->valueLHS, constraint->valueRHS, value, bounds, failure);
+            }
+        }
+    }
+
+    std::cout << "  " << numberOfChecks << " checks, " << numberOfFailures << " failures.\n";
 
     return passed;
 }

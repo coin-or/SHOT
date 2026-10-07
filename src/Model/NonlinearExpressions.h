@@ -2205,50 +2205,13 @@ public:
             return (firstChild->tightenBounds(Interval(-roots.u(), roots.u())));
         }
 
-        // A negative integer power is only positive for a positive base. An odd one preserves the sign of the base,
-        // so for a negative base the bound is that of the power of -x with the opposite sign, and nothing is known
-        // if the base can have both signs. An even one discards the sign, which is handled below.
-        bool isNegativeIntegerPower = isInteger && power < 0;
-        bool isMirrored = false;
+        if(power == 0.0)
+            return (false);
 
-        if(isNegativeIntegerPower && !isEven)
-        {
-            auto baseBound = firstChild->getBounds();
+        if(power == 1.0)
+            return (firstChild->tightenBounds(bound));
 
-            if(baseBound.u() <= 0)
-            {
-                bound = -bound;
-                isMirrored = true;
-            }
-            else if(baseBound.l() < 0)
-                return (false);
-        }
-
-        if(!isOddPositiveIntegerPower)
-        {
-            if(bound.u() < 0)
-                return (false);
-
-            if(bound.l() <= 0.0)
-            {
-                // The power function below takes the logarithm of the bound, so it must be positive
-                if(bound.u() <= SHOT_DBL_SIG_MIN)
-                    return (false);
-
-                bound.l(SHOT_DBL_SIG_MIN);
-            }
-        }
-
-        Interval interval;
-
-        if(power == -1.0)
-        {
-            interval = 1 / bound;
-
-            if(interval.l() < 1e-10 && interval.u() > 1e-10)
-                interval.l(1e-10);
-        }
-        else if(isOddPositiveIntegerPower)
+        if(isOddPositiveIntegerPower)
         {
             auto nthRoot
                 = [power](double x) { return (x < 0.0 ? -std::pow(-x, 1.0 / power) : std::pow(x, 1.0 / power)); };
@@ -2256,25 +2219,88 @@ public:
             double lower = nthRoot(bound.l());
             double upper = nthRoot(bound.u());
 
-            interval = Interval(std::min(lower, upper), std::max(lower, upper));
+            return (firstChild->tightenBounds(Interval(std::min(lower, upper), std::max(lower, upper))));
         }
-        else
-            interval = pow(bound, 1.0 / power);
 
-        if(isMirrored)
-            interval = -interval;
-
-        if(isNegativeIntegerPower && isEven)
+        // The values y >= 0 with y^power in the bound, or nothing if there is none. The roots are calculated directly,
+        // since the interval power function takes the logarithm of the bound, which may start at zero, and the bound
+        // must not be moved away from zero first: that cut off y = 0 for a positive power, e.g., y >= 4.6e-4 for
+        // y^1.5, and large values of y for a negative power, e.g., y <= 46.4 for y^-3.
+        auto rootsOfNonnegativeBase = [power](Interval powerBound) -> std::optional<Interval>
         {
-            auto baseBound = firstChild->getBounds();
+            double lower = std::max(0.0, powerBound.l());
+            double upper = powerBound.u();
+
+            if(upper < 0.0 || (power < 0 && upper <= 0.0))
+                return (std::nullopt);
+
+            if(power > 0)
+                return (Interval(std::pow(lower, 1.0 / power),
+                    (upper >= SHOT_DBL_MAX) ? SHOT_DBL_MAX : std::pow(upper, 1.0 / power)));
+
+            // A negative power is decreasing, and a power close to zero is given by a large base
+            return (Interval((upper >= SHOT_DBL_MAX) ? 0.0 : std::pow(upper, 1.0 / power),
+                (lower <= 0.0) ? SHOT_DBL_MAX : std::pow(lower, 1.0 / power)));
+        };
+
+        auto baseBound = firstChild->getBounds();
+
+        if(!isInteger)
+        {
+            // A noninteger power is only defined for a nonnegative base
+            if(auto roots = rootsOfNonnegativeBase(bound))
+                return (firstChild->tightenBounds(*roots));
+
+            return (false);
+        }
+
+        // A negative integer power: an even one discards the sign of the base and an odd one preserves it
+        if(isEven)
+        {
+            auto roots = rootsOfNonnegativeBase(bound);
+
+            if(!roots)
+                return (false);
+
+            if(baseBound.l() >= 0)
+                return (firstChild->tightenBounds(*roots));
 
             if(baseBound.u() <= 0)
-                interval = -interval;
-            else if(baseBound.l() < 0)
-                interval = Interval(-interval.u(), interval.u());
+                return (firstChild->tightenBounds(-*roots));
+
+            return (firstChild->tightenBounds(Interval(-roots->u(), roots->u())));
         }
 
-        return (firstChild->tightenBounds(interval));
+        if(baseBound.l() >= 0)
+        {
+            if(auto roots = rootsOfNonnegativeBase(bound))
+                return (firstChild->tightenBounds(*roots));
+
+            return (false);
+        }
+
+        if(baseBound.u() <= 0)
+        {
+            // (-y)^power = -(y^power) for an odd power
+            if(auto roots = rootsOfNonnegativeBase(-bound))
+                return (firstChild->tightenBounds(-*roots));
+
+            return (false);
+        }
+
+        // A base with both signs gives a power with the sign of the base
+        if(bound.l() > 0)
+        {
+            if(auto roots = rootsOfNonnegativeBase(bound))
+                return (firstChild->tightenBounds(*roots));
+        }
+        else if(bound.u() < 0)
+        {
+            if(auto roots = rootsOfNonnegativeBase(-bound))
+                return (firstChild->tightenBounds(-*roots));
+        }
+
+        return (false);
     };
 
     inline FactorableFunction getFactorableFunction() override
