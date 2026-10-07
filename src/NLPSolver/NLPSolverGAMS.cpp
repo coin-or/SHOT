@@ -12,6 +12,7 @@
 
 #include "../Output.h"
 #include "../Settings.h"
+#include "../Timing.h"
 
 #include <cstdio>
 #include <cstring>
@@ -222,8 +223,14 @@ E_NLPSolutionStatus NLPSolverGAMS::solveProblemInstance()
     if(showlog)
         gevSwitchLogStat(modelingEnvironment, 3, nullptr, 0, nullptr, 0, gevwritecallback, &cbdata, &cbdata.orighandle);
 
+    // GAMS' resource limit is relative to this call. Cap it by the time left for the entire SHOT solve as well as
+    // the fixed-NLP and task limits, like the linked Ipopt and Uno interfaces do.
+    const double timeLeft
+        = env->settings->getSetting<double>("Termination.TimeLimit") - env->timing->getElapsedTime("Total");
+    const double solveTimeLimit = std::max(std::min({ timelimit, timeLimit, timeLeft }), 1e-5);
+
     if(gevCallSolver(modelingEnvironment, modelingObject, "", nlpsolver.c_str(), solvelink,
-           showlog ? gevSolverSameStreams : gevSolverQuiet, nullptr, nullptr, std::min(timelimit, timeLimit), iterlimit,
+           showlog ? gevSolverSameStreams : gevSolverQuiet, nullptr, nullptr, solveTimeLimit, iterlimit,
            0, 0.0, 0.0, nullptr, msg)
         != 0)
     {

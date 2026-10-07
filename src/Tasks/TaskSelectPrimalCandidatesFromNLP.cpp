@@ -276,6 +276,11 @@ E_NLPSolutionStatus TaskSelectPrimalCandidatesFromNLP::solveFixedNLPCandidates(
 
     for(auto& CAND : candidates)
     {
+        // This task can process several candidates in one SHOT iteration. Stop before starting another NLP once
+        // the overall deadline has passed; the main iteration's time-limit check has not run yet.
+        if(env->timing->getElapsedTime("Total") >= env->settings->getSetting<double>("Termination.TimeLimit"))
+            return E_NLPSolutionStatus::TimeLimit;
+
         VectorDouble fixedVariableValues(discreteVariableIndexes.size());
 
         int sizeOfVariableVector = sourceProblem->properties.numberOfVariables;
