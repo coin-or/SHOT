@@ -2035,17 +2035,19 @@ public:
         auto firstChildValue = firstChild->calculate(point);
         auto secondChildValue = secondChild->calculate(point);
 
-        if(std::abs(firstChildValue - 0.0) <= 1e-10 * std::abs(firstChildValue))
+        // The exponent is checked first: 0^0 is one, as in pow() and the CppAD function, and a zero base only gives
+        // zero for a positive exponent. A zero base gave zero also for, e.g., 0^-2.
+        if(std::abs(secondChildValue - 0.0) <= 1e-10 * std::abs(firstChildValue))
+        {
+            return 1.0;
+        }
+
+        if(std::abs(firstChildValue - 0.0) <= 1e-10 * std::abs(firstChildValue) && secondChildValue > 0.0)
         {
             return 0.0;
         }
 
         if(std::abs(firstChildValue - 1.0) <= 1e-10 * std::abs(firstChildValue))
-        {
-            return 1.0;
-        }
-
-        if(std::abs(secondChildValue - 0.0) <= 1e-10 * std::abs(firstChildValue))
         {
             return 1.0;
         }
@@ -2065,33 +2067,11 @@ public:
 
         Interval bounds(0.0);
 
+        // A constant power is handled as for a signomial term. Moving a base that reaches zero to a small positive
+        // value gave, e.g., [0.008, 1e15] for x^-3 with x in [-10, 5], although x^-3 then takes every value outside
+        // (-0.001, 0.008).
         if(secondChild->getType() == E_NonlinearExpressionTypes::Constant)
-        {
-            double power = powerBounds.l();
-
-            double intpart;
-            bool isInteger = (std::modf(power, &intpart) == 0.0);
-            int integerValue = (int)round(intpart);
-            bool isEven = (integerValue % 2 == 0);
-
-            if(baseBounds.l() <= 0)
-            {
-                if(!isInteger)
-                    baseBounds.l(SHOT_DBL_EPS);
-                else if(isInteger && power < 0)
-                    baseBounds.l(SHOT_DBL_EPS);
-            }
-
-            if(isInteger)
-                bounds = pow(baseBounds, (int)power);
-            else
-                bounds = pow(baseBounds, power);
-
-            if(isInteger && isEven && bounds.l() <= 0.0)
-                bounds.l(0.0);
-
-            return (bounds);
-        }
+            return (calculateIntervalPower(baseBounds, powerBounds.l()));
 
         // The interval power function takes the logarithm of the base, so its bound must be positive also for a
         // positive power, e.g., in x^2^(1+y^2). The power of a base at zero is then zero.
@@ -2120,33 +2100,11 @@ public:
 
         Interval bounds(0.0);
 
+        // A constant power is handled as for a signomial term. Moving a base that reaches zero to a small positive
+        // value gave, e.g., [0.008, 1e15] for x^-3 with x in [-10, 5], although x^-3 then takes every value outside
+        // (-0.001, 0.008).
         if(secondChild->getType() == E_NonlinearExpressionTypes::Constant)
-        {
-            double power = powerBounds.l();
-
-            double intpart;
-            bool isInteger = (std::modf(power, &intpart) == 0.0);
-            int integerValue = (int)round(intpart);
-            bool isEven = (integerValue % 2 == 0);
-
-            if(baseBounds.l() <= 0)
-            {
-                if(!isInteger)
-                    baseBounds.l(SHOT_DBL_SIG_MIN);
-                else if(isInteger && power < 0)
-                    baseBounds.l(SHOT_DBL_SIG_MIN);
-            }
-
-            if(isInteger)
-                bounds = pow(baseBounds, (int)power);
-            else
-                bounds = pow(baseBounds, power);
-
-            if(isInteger && isEven && bounds.l() <= 0.0)
-                bounds.l(0.0);
-
-            return (bounds);
-        }
+            return (calculateIntervalPower(baseBounds, powerBounds.l()));
 
         // The interval power function takes the logarithm of the base, so its bound must be positive also for a
         // positive power, e.g., in x^2^(1+y^2). The power of a base at zero is then zero.

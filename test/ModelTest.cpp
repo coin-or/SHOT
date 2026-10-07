@@ -9428,9 +9428,17 @@ bool ModelTestBoundTighteningSoundness()
 
             try
             {
+                // The bounds of the expression must contain its value
+                auto expressionBounds = expression->getBounds();
+                double tolerance = 1e-6 * (1.0 + std::abs(value));
+
+                if(value < expressionBounds.l() - tolerance || value > expressionBounds.u() + tolerance)
+                    failure = fmt::format("has bounds [{}, {}] without its value", expressionBounds.l(),
+                        expressionBounds.u());
+
                 expression->tightenBounds(target);
 
-                if(!isInside(point[0], x) || !isInside(point[1], y))
+                if(failure.empty() && (!isInside(point[0], x) || !isInside(point[1], y)))
                     failure = "cut off the point";
             }
             catch(std::exception& e)
@@ -9480,11 +9488,12 @@ bool ModelTestBoundTighteningSoundness()
         {
             auto [lower, upper] = randomBounds();
 
-            // The signomial terms need positive variables
+            // The signomial terms need nonnegative variables, which may reach zero or be small
             if(i >= 2)
             {
-                lower = 0.1 + std::abs(lower) * 0.5;
-                upper = lower + 0.5 + std::abs(upper);
+                double r = unit(generator);
+                lower = (r < 0.3) ? 0.0 : ((r < 0.5) ? 1e-4 * unit(generator) : 0.1 + std::abs(lower) * 0.5);
+                upper = (unit(generator) < 0.3) ? lower + 0.05 * unit(generator) + 1e-6 : lower + 0.5 + std::abs(upper);
             }
 
             auto V = std::make_shared<SHOT::Variable>(
