@@ -8966,6 +8966,54 @@ bool ModelTestErrorFunctionAndSignPower()
     }
 
     {
+        auto v = makeVariable(-5.0, 5.0);
+        SHOT::ExpressionErrorFunction expression(variable(v));
+        if(!expression.tightenBounds(SHOT::Interval(distribution(-1.0), distribution(2.0))))
+        {
+            std::cout << "  FAILED: errorf(x) did not tighten both argument bounds.\n";
+            passed = false;
+        }
+        check("errorf tightened lower bound", v->lowerBound, -1.0);
+        check("errorf tightened upper bound", v->upperBound, 2.0);
+
+        auto lowerOnly = makeVariable(-5.0, 5.0);
+        SHOT::ExpressionErrorFunction lowerExpression(variable(lowerOnly));
+        lowerExpression.tightenBounds(SHOT::Interval(distribution(-2.0), 2.0));
+        check("errorf lower-only bound", lowerOnly->lowerBound, -2.0);
+        check("errorf unrestricted upper bound", lowerOnly->upperBound, 5.0);
+
+        auto upperOnly = makeVariable(-5.0, 5.0);
+        SHOT::ExpressionErrorFunction upperExpression(variable(upperOnly));
+        upperExpression.tightenBounds(SHOT::Interval(-1.0, distribution(1.0)));
+        check("errorf unrestricted lower bound", upperOnly->lowerBound, -5.0);
+        check("errorf upper-only bound", upperOnly->upperBound, 1.0);
+
+        auto unrestricted = makeVariable(-5.0, 5.0);
+        SHOT::ExpressionErrorFunction unrestrictedExpression(variable(unrestricted));
+        if(unrestrictedExpression.tightenBounds(SHOT::Interval(0.0, 1.0)))
+        {
+            std::cout << "  FAILED: the full errorf range tightened the argument.\n";
+            passed = false;
+        }
+    }
+
+    {
+        for(auto [lower, upper, expected] : {
+                std::tuple<double, double, SHOT::E_Convexity> { -3.0, -1.0, SHOT::E_Convexity::Convex },
+                { 1.0, 3.0, SHOT::E_Convexity::Concave },
+                { -1.0, 1.0, SHOT::E_Convexity::Unknown } })
+        {
+            SHOT::ExpressionArcTan expression(variable(makeVariable(lower, upper)));
+            if(expression.getConvexity() != expected)
+            {
+                std::cout << "  FAILED: arctan of a linear argument has wrong convexity on [" << lower << ","
+                          << upper << "].\n";
+                passed = false;
+            }
+        }
+    }
+
+    {
         auto v = makeVariable(-2.0, 3.0);
         SHOT::ExpressionSignPower expression(variable(v), 2.0);
         auto bounds = expression.getBounds();

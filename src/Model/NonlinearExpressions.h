@@ -1353,10 +1353,12 @@ public:
         auto childConvexity = child->getConvexity();
         auto childBounds = child->getBounds();
 
-        if(childConvexity == E_Convexity::Convex && childBounds.u() <= 0.0)
+        if((childConvexity == E_Convexity::Linear || childConvexity == E_Convexity::Convex)
+            && childBounds.u() <= 0.0)
             return E_Convexity::Convex;
 
-        if(childConvexity == E_Convexity::Concave && childBounds.l() >= 0.0)
+        if((childConvexity == E_Convexity::Linear || childConvexity == E_Convexity::Concave)
+            && childBounds.l() >= 0.0)
             return E_Convexity::Concave;
 
         return E_Convexity::Unknown;
@@ -1485,7 +1487,41 @@ public:
         return (Interval(value(childBounds.l()), value(childBounds.u())));
     }
 
-    inline bool tightenBounds([[maybe_unused]] Interval bound) override { return (false); };
+    inline bool tightenBounds(Interval bound) override
+    {
+        // The normal CDF maps the real line monotonically onto (0, 1). Bounds outside that range carry no
+        // information; an upper bound of zero or a lower bound of one is infeasible for every finite argument.
+        if(bound.u() <= 0.0 || bound.l() >= 1.0)
+            return false;
+
+        auto inverseBracket = [](double probability, bool upper)
+        {
+            // Every representable probability strictly between zero and one has a quantile in [-40, 40].
+            // Keep the lower or upper side of the bracket to avoid excluding a feasible argument.
+            double lower = -40.0;
+            double upperBound = 40.0;
+            for(int iteration = 0; iteration < 128; ++iteration)
+            {
+                double middle = lower + (upperBound - lower) / 2.0;
+                if(middle == lower || middle == upperBound)
+                    break;
+
+                double cdf = value(middle);
+                if(cdf < probability || (upper && cdf == probability))
+                    lower = middle;
+                else
+                    upperBound = middle;
+            }
+
+            double result = upper ? upperBound : lower;
+            double margin = 1e-12 * std::max(1.0, std::abs(result));
+            return upper ? result + margin : result - margin;
+        };
+
+        double newLower = bound.l() <= 0.0 ? -SHOT_DBL_INF : inverseBracket(bound.l(), false);
+        double newUpper = bound.u() >= 1.0 ? SHOT_DBL_INF : inverseBracket(bound.u(), true);
+        return child->tightenBounds(Interval(newLower, newUpper));
+    };
 
     inline FactorableFunction getFactorableFunction() override
     {
