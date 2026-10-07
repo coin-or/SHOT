@@ -609,21 +609,7 @@ Interval NonlinearConstraint::getConstraintFunctionBounds()
 
 SparseVariableVector NonlinearConstraint::calculateGradient(const VectorDouble& point, bool eraseZeroes = true)
 {
-    SparseVariableVector gradient = QuadraticConstraint::calculateGradient(point, eraseZeroes);
-
-    SparseVariableVector monomialGradient;
-
-    if(this->properties.hasMonomialTerms)
-    {
-        monomialGradient = monomialTerms.calculateGradient(point);
-    }
-
-    SparseVariableVector signomialGradient;
-
-    if(this->properties.hasSignomialTerms)
-    {
-        signomialGradient = signomialTerms.calculateGradient(point);
-    }
+    SparseVariableVector gradient = calculateGradientWithoutNonlinearExpression(point, false);
 
     if(this->properties.hasNonlinearExpression)
     {
@@ -659,12 +645,34 @@ SparseVariableVector NonlinearConstraint::calculateGradient(const VectorDouble& 
                 auto element = gradient.emplace(VAR, coefficient);
 
                 if(!element.second)
-                {
-                    // Element already exists for the variable
                     element.first->second += coefficient;
-                }
             }
         }
+    }
+
+    if(eraseZeroes)
+        Utilities::erase_if<VariablePtr, double>(gradient, 0.0);
+
+    return gradient;
+}
+
+SparseVariableVector NonlinearConstraint::calculateGradientWithoutNonlinearExpression(
+    const VectorDouble& point, bool eraseZeroes)
+{
+    SparseVariableVector gradient = QuadraticConstraint::calculateGradient(point, false);
+
+    SparseVariableVector monomialGradient;
+
+    if(this->properties.hasMonomialTerms)
+    {
+        monomialGradient = monomialTerms.calculateGradient(point);
+    }
+
+    SparseVariableVector signomialGradient;
+
+    if(this->properties.hasSignomialTerms)
+    {
+        signomialGradient = signomialTerms.calculateGradient(point);
     }
 
     Utilities::addSparseVariableVector(gradient, std::move(monomialGradient));
@@ -753,17 +761,7 @@ void NonlinearConstraint::initializeGradientSparsityPattern()
 
 SparseVariableMatrix NonlinearConstraint::calculateHessian(const VectorDouble& point, bool eraseZeroes = true)
 {
-    SparseVariableMatrix hessian = QuadraticConstraint::calculateHessian(point, eraseZeroes);
-
-    if(properties.hasMonomialTerms)
-    {
-        Utilities::addSparseVariableMatrix(hessian, monomialTerms.calculateHessian(point));
-    }
-
-    if(properties.hasSignomialTerms)
-    {
-        Utilities::addSparseVariableMatrix(hessian, signomialTerms.calculateHessian(point));
-    }
+    SparseVariableMatrix hessian = calculateHessianWithoutNonlinearExpression(point, false);
 
     if(this->properties.hasNonlinearExpression)
     {
@@ -797,10 +795,7 @@ SparseVariableMatrix NonlinearConstraint::calculateHessian(const VectorDouble& p
                 auto element = hessian.emplace(std::make_pair(V1, V2), value);
 
                 if(!element.second)
-                {
-                    // Element already exists for the variable
                     element.first->second += value;
-                }
             };
 
             const size_t dimension = pointNonlinearSubset.size();
@@ -827,6 +822,27 @@ SparseVariableMatrix NonlinearConstraint::calculateHessian(const VectorDouble& p
                     addHessianElement(subset.row()[k], subset.col()[k], subset.val()[k]);
             }
         }
+    }
+
+    if(eraseZeroes)
+        Utilities::erase_if<std::pair<VariablePtr, VariablePtr>, double>(hessian, 0.0);
+
+    return (hessian);
+}
+
+SparseVariableMatrix NonlinearConstraint::calculateHessianWithoutNonlinearExpression(
+    const VectorDouble& point, bool eraseZeroes)
+{
+    SparseVariableMatrix hessian = QuadraticConstraint::calculateHessian(point, false);
+
+    if(properties.hasMonomialTerms)
+    {
+        Utilities::addSparseVariableMatrix(hessian, monomialTerms.calculateHessian(point));
+    }
+
+    if(properties.hasSignomialTerms)
+    {
+        Utilities::addSparseVariableMatrix(hessian, signomialTerms.calculateHessian(point));
     }
 
     if(eraseZeroes)

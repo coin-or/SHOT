@@ -214,6 +214,7 @@ public:
 
     SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) override;
 
+
     // Returns the upper triagonal part of the Hessian matrix is sparse representation
     SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes) override;
 
@@ -417,8 +418,13 @@ public:
 
     SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) override;
 
+    // The remaining terms can be evaluated separately when a solver batches the expression Jacobian.
+    SparseVariableVector calculateGradientWithoutNonlinearExpression(const VectorDouble& point, bool eraseZeroes);
+
     // Returns the upper triagonal part of the Hessian matrix is sparse representation
     SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes) override;
+
+    SparseVariableMatrix calculateHessianWithoutNonlinearExpression(const VectorDouble& point, bool eraseZeroes);
 
     // The nonlinear expression makes the Hessian depend on the point
     const SparseVariableMatrix* getConstantHessian() override { return (nullptr); }
