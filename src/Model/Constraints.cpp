@@ -626,7 +626,7 @@ SparseVariableVector NonlinearConstraint::calculateGradient(const VectorDouble& 
                 pointNonlinearSubset[VAR->properties.nonlinearVariableIndex] = point[VAR->getIndex()];
 
             CppAD::sparse_rcv<std::vector<size_t>, std::vector<double>> subset(nonlinearGradientSparsityPattern);
-            sharedOwnerProblem->ADFunctions.subgraph_jac_rev(pointNonlinearSubset, subset);
+            sharedOwnerProblem->calculateNonlinearJacobian(pointNonlinearSubset, subset);
 
             const std::vector<size_t>& col(subset.col());
             const std::vector<double>& value(subset.val());

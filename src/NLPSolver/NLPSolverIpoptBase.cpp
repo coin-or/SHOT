@@ -450,7 +450,7 @@ bool IpoptProblem::eval_jac_g(Index n, const Number* x, [[maybe_unused]] bool ne
             nonlinearPoint[variable->properties.nonlinearVariableIndex] = vectorPoint[variable->getIndex()];
 
         CppAD::sparse_rcv<std::vector<size_t>, std::vector<double>> subset(nonlinearConstraintJacobianPattern);
-        sourceProblem->ADFunctions.subgraph_jac_rev(nonlinearPoint, subset);
+        sourceProblem->calculateNonlinearJacobian(nonlinearPoint, subset);
 
         const auto& rows = subset.row();
         const auto& columns = subset.col();

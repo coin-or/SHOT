@@ -281,6 +281,8 @@ bool ModelTestDenseNonlinearHessian()
     return true;
 }
 
+bool ModelTestGradientOfConstantExpression();
+
 int ModelTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -455,6 +457,9 @@ int ModelTest(int argc, char* argv[])
         break;
     case 52:
         passed = ModelTestDenseNonlinearHessian();
+        break;
+    case 54:
+        passed = ModelTestGradientOfConstantExpression();
         break;
     default:
         passed = false;
@@ -9088,6 +9093,72 @@ bool ModelTestErrorFunctionAndSignPower()
 
         std::cout << "  Values of the functions in data/errorf_signpower.osil compared in " << points.size()
                   << " points.\n";
+    }
+
+    return passed;
+}
+
+bool ModelTestGradientOfConstantExpression()
+{
+    // A nonlinear expression whose taped function depends on no variable, e.g., z/(0.01 + x) with z fixed to zero,
+    // which is taped as a constant. Its gradient pattern contains x, which is not in the subgraph of the row, and
+    // CppAD's subgraph_jac_rev with a given pattern then read past the end of an empty vector (heatexch_gen2).
+
+    bool passed = true;
+
+    auto solver = std::make_unique<SHOT::Solver>();
+    auto problem = std::make_shared<SHOT::Problem>(solver->getEnvironment());
+
+    auto x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 10.0);
+    auto y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Real, 0.0, 10.0);
+    auto w = std::make_shared<SHOT::Variable>("w", SHOT::E_VariableType::Real, 0.0, 10.0);
+    problem->add(SHOT::Variables { x, y, w });
+    problem->add(std::make_shared<SHOT::LinearObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize));
+
+    // 0/(0.01 + x) <= 1, given directly as a quotient with a constant numerator
+    auto constantConstraint = std::make_shared<SHOT::NonlinearConstraint>("constant", SHOT_DBL_MIN, 1.0);
+    constantConstraint->add(std::make_shared<SHOT::ExpressionDivide>(std::make_shared<SHOT::ExpressionConstant>(0.0),
+        std::make_shared<SHOT::ExpressionSum>(
+            std::make_shared<SHOT::ExpressionConstant>(0.01), std::make_shared<SHOT::ExpressionVariable>(x))));
+    problem->add(constantConstraint);
+
+    // y/(0.01 + w) <= 1, which depends on its variables
+    auto usualConstraint = std::make_shared<SHOT::NonlinearConstraint>("usual", SHOT_DBL_MIN, 1.0);
+    usualConstraint->add(std::make_shared<SHOT::ExpressionDivide>(std::make_shared<SHOT::ExpressionVariable>(y),
+        std::make_shared<SHOT::ExpressionSum>(
+            std::make_shared<SHOT::ExpressionConstant>(0.01), std::make_shared<SHOT::ExpressionVariable>(w))));
+    problem->add(usualConstraint);
+
+    problem->finalize();
+
+    SHOT::VectorDouble point { 2.0, 3.0, 4.0 };
+
+    for(auto& C : problem->numericConstraints)
+    {
+        auto gradient = C->calculateGradient(point, true);
+
+        std::cout << "  Gradient of " << C->name << ":";
+        for(auto& G : gradient)
+            std::cout << " " << G.first->name << "=" << G.second;
+        std::cout << "\n";
+
+        if(C->name == "constant" && !gradient.empty())
+        {
+            std::cout << "  FAILED: the gradient of a constant expression is not zero.\n";
+            passed = false;
+        }
+
+        if(C->name == "usual")
+        {
+            double expectedY = 1.0 / 4.01;
+            double expectedW = -3.0 / (4.01 * 4.01);
+
+            if(std::abs(gradient[y] - expectedY) > 1e-9 || std::abs(gradient[w] - expectedW) > 1e-9)
+            {
+                std::cout << "  FAILED: the gradient of y/(0.01 + w) is wrong.\n";
+                passed = false;
+            }
+        }
     }
 
     return passed;
