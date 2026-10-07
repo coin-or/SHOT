@@ -281,6 +281,7 @@ bool ModelTestDenseNonlinearHessian()
     return true;
 }
 
+bool ModelTestDivideBoundTighteningSigns();
 bool ModelTestGradientOfConstantExpression();
 
 int ModelTest(int argc, char* argv[])
@@ -457,6 +458,9 @@ int ModelTest(int argc, char* argv[])
         break;
     case 52:
         passed = ModelTestDenseNonlinearHessian();
+        break;
+    case 53:
+        passed = ModelTestDivideBoundTighteningSigns();
         break;
     case 54:
         passed = ModelTestGradientOfConstantExpression();
@@ -9093,6 +9097,107 @@ bool ModelTestErrorFunctionAndSignPower()
 
         std::cout << "  Values of the functions in data/errorf_signpower.osil compared in " << points.size()
                   << " points.\n";
+    }
+
+    return passed;
+}
+
+bool ModelTestDivideBoundTighteningSigns()
+{
+    // A quotient of a nonpositive numerator and a negative denominator is nonnegative. Bound tightening regarded it as
+    // negative and replaced the bound [0, 3e9] of the log mean temperature difference (x - 60)/log(x/60) by an empty
+    // interval, which fixed x in [10, 60] to 60 (heatexch_gen2). The bounds must contain every feasible point.
+
+    bool passed = true;
+
+    struct Case
+    {
+        std::string description;
+        double numeratorLowerBound;
+        double numeratorUpperBound;
+        double denominatorLowerBound;
+        double denominatorUpperBound;
+        double quotientLowerBound;
+        double quotientUpperBound;
+        std::vector<std::pair<double, double>> feasiblePoints; // (numerator, denominator)
+    };
+
+    std::vector<Case> cases = {
+        { "y/z, y in [-50,0], z in [-2,-0.5], y/z in [0,10]", -50.0, 0.0, -2.0, -0.5, 0.0, 10.0,
+            { { 0.0, -1.0 }, { -20.0, -2.0 }, { -5.0, -0.5 } } },
+        { "y/z, y in [0,50], z in [0.5,2], y/z in [0,10]", 0.0, 50.0, 0.5, 2.0, 0.0, 10.0,
+            { { 0.0, 1.0 }, { 20.0, 2.0 }, { 5.0, 0.5 } } },
+        { "y/z, y in [-50,0], z in [0.5,2], y/z in [-10,0]", -50.0, 0.0, 0.5, 2.0, -10.0, 0.0,
+            { { 0.0, 1.0 }, { -20.0, 2.0 }, { -5.0, 0.5 } } },
+        { "y/z, y in [0,50], z in [-2,-0.5], y/z in [-10,0]", 0.0, 50.0, -2.0, -0.5, -10.0, 0.0,
+            { { 0.0, -1.0 }, { 20.0, -2.0 }, { 5.0, -0.5 } } },
+    };
+
+    for(auto& C : cases)
+    {
+        auto y = std::make_shared<SHOT::Variable>(
+            "y", SHOT::E_VariableType::Real, C.numeratorLowerBound, C.numeratorUpperBound);
+        auto z = std::make_shared<SHOT::Variable>(
+            "z", SHOT::E_VariableType::Real, C.denominatorLowerBound, C.denominatorUpperBound);
+
+        SHOT::ExpressionDivide quotient(
+            std::make_shared<SHOT::ExpressionVariable>(y), std::make_shared<SHOT::ExpressionVariable>(z));
+
+        try
+        {
+            quotient.tightenBounds(SHOT::Interval(C.quotientLowerBound, C.quotientUpperBound));
+        }
+        catch(...)
+        {
+            std::cout << "  FAILED: " << C.description << " threw an exception.\n";
+            passed = false;
+            continue;
+        }
+
+        std::cout << "  " << C.description << ": y in [" << y->lowerBound << ", " << y->upperBound << "], z in ["
+                  << z->lowerBound << ", " << z->upperBound << "]\n";
+
+        for(auto& [numerator, denominator] : C.feasiblePoints)
+        {
+            if(numerator < y->lowerBound - 1e-9 || numerator > y->upperBound + 1e-9
+                || denominator < z->lowerBound - 1e-9 || denominator > z->upperBound + 1e-9)
+            {
+                std::cout << "  FAILED: the feasible point (" << numerator << ", " << denominator
+                          << ") was cut off.\n";
+                passed = false;
+            }
+        }
+    }
+
+    // The log mean temperature difference of heatexch_gen2: x = 30 and x close to 60 are feasible
+    {
+        auto x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 10.0, 60.0);
+
+        auto numerator = std::make_shared<SHOT::ExpressionSum>(
+            std::make_shared<SHOT::ExpressionConstant>(-60.0), std::make_shared<SHOT::ExpressionVariable>(x));
+        auto denominator = std::make_shared<SHOT::ExpressionLog>(std::make_shared<SHOT::ExpressionProduct>(
+            std::make_shared<SHOT::ExpressionConstant>(0.0166666663888889), std::make_shared<SHOT::ExpressionVariable>(x)));
+
+        SHOT::ExpressionDivide quotient(numerator, denominator);
+
+        try
+        {
+            quotient.tightenBounds(SHOT::Interval(0.0, 3000000106.475167));
+        }
+        catch(...)
+        {
+            std::cout << "  FAILED: the log mean temperature difference threw an exception.\n";
+            passed = false;
+        }
+
+        std::cout << "  (x - 60)/log(x/60) in [0, 3e9], x in [10,60]: x in [" << x->lowerBound << ", "
+                  << x->upperBound << "] (expected [10, 60])\n";
+
+        if(x->lowerBound > 10.0 + 1e-9 || x->upperBound < 59.99)
+        {
+            std::cout << "  FAILED: the bound tightening cut off feasible values of x.\n";
+            passed = false;
+        }
     }
 
     return passed;

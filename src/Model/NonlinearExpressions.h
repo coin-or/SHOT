@@ -1714,23 +1714,33 @@ public:
         auto bounds1 = firstChild->getBounds();
         auto bounds2 = secondChild->getBounds();
 
-        if((bound.l() * bound.u() <= 0 || (bound.l() <= 0 && bound.u() == SHOT_DBL_INF)) && bounds1.l() >= 0
-            && bounds2.l() > 0) // we know everything is positive
-        {
-            bound.l(SHOT_DBL_EPS);
-        }
-        else if((bound.l() * bound.u() <= 0 || (bound.l() == -SHOT_DBL_INF && bound.u() >= 0)) && bounds1.u() <= 0
-            && bounds2.u() < 0) // we know everything is negative
-        {
-            bound.u(-SHOT_DBL_EPS);
-        }
-        else if(bound.l() * bound.u() <= 0)
-        {
-            return (false);
-        }
+        // The sign of the quotient is known if the denominator does not contain zero and the numerator is on one side
+        // of zero. The quotient is nonnegative when they have the same sign, e.g., for a numerator in [-50, 0] and a
+        // denominator in [-1.8, -1e-8]. This case was regarded as a negative quotient, and its bound [0, 3e9] was
+        // replaced by [0, -1e-16], which fixed x69 to 60 in (x69 - 60)/log(x69/60) (heatexch_gen2).
+        bool isQuotientNonnegative = (bounds1.l() >= 0 && bounds2.l() > 0) || (bounds1.u() <= 0 && bounds2.u() < 0);
+        bool isQuotientNonpositive = (bounds1.l() >= 0 && bounds2.u() < 0) || (bounds1.u() <= 0 && bounds2.l() > 0);
 
+        if(isQuotientNonnegative && bound.l() < 0)
+            bound.l(0.0);
+
+        if(isQuotientNonpositive && bound.u() > 0)
+            bound.u(0.0);
+
+        if(bound.l() > bound.u())
+            return (false);
+
+        // Without a known sign, a bound that contains zero gives no bound for either child
+        if(bound.l() <= 0 && bound.u() >= 0 && !isQuotientNonnegative && !isQuotientNonpositive)
+            return (false);
+
+        // The numerator is the denominator times the quotient, which is valid also when the bound of the quotient
+        // contains zero, e.g., when the numerator can be zero
         bool firstTightened = firstChild->tightenBounds(secondChild->getBounds() * bound);
-        bool secondTightened = secondChild->tightenBounds(firstChild->getBounds() / bound);
+
+        // The denominator is the numerator divided by the quotient, which requires that the quotient is not zero
+        bool secondTightened = (bound.l() > 0 || bound.u() < 0)
+            && secondChild->tightenBounds(firstChild->getBounds() / bound);
 
         // The numerator is tightened again with the tightened bounds of the denominator. The call is made first, so
         // that it is not skipped when the numerator has already been tightened.
