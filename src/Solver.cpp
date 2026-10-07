@@ -592,8 +592,12 @@ bool Solver::selectStrategy()
         if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Cbc
             || static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Highs)
         {
-            if(env->problem->properties.numberOfDiscreteVariables == 0
-                && env->problem->properties.numberOfSemicontinuousVariables == 0)
+            // The reformulated problem can have discrete variables also when the original problem has none, e.g., the
+            // binary variables that bound absolute values from above
+            auto problem = (env->reformulatedProblem) ? env->reformulatedProblem : env->problem;
+
+            if(problem->properties.numberOfDiscreteVariables == 0
+                && problem->properties.numberOfSemicontinuousVariables == 0)
             {
                 env->output->outputDebug(" Using continuous problem solution strategy.");
                 solutionStrategy = std::make_unique<SolutionStrategyNLP>(env);
@@ -1241,6 +1245,11 @@ void Solver::initializeSettings()
         enumNonlinearTermPartitioning, 0);
 
     // Reformulations for monomials
+
+    env->settings->createSetting("Model.Reformulation.AbsoluteValue.MaximumBigM", 1e8,
+        "The largest big-M used to bound an absolute value from above with a binary variable; above it, the absolute "
+        "value is only bounded from below",
+        0.0, SHOT_DBL_MAX);
 
     env->settings->createSetting(
         "Model.Reformulation.Monomials.Extract", true, "Extract monomial terms from nonlinear expressions");

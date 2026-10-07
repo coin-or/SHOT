@@ -926,6 +926,10 @@ void Report::outputProblemInstanceReport()
         if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::AbsoluteValue); value > 0)
             env->output->outputInfo(fmt::format(" {:56s}{:d}", " - absolute value reformulation:", value));
 
+        if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::AbsoluteValueSign);
+            value > 0)
+            env->output->outputInfo(fmt::format(" {:56s}{:d}", " - absolute value upper bound (binary):", value));
+
         if(env->reformulatedProblem->antiEpigraphObjectiveVariable)
             env->output->outputInfo(fmt::format(" {:56s}", " - anti-epigraph reformulation"));
 

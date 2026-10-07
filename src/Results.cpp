@@ -852,6 +852,15 @@ std::string Results::getResultsOSrL()
         otherResultsNode->InsertEndChild(otherNode);
     }
 
+    if(auto count = getAuxiliaryVariableCounter(E_AuxiliaryVariableType::AbsoluteValueSign); count > 0)
+    {
+        otherNode = osrlDocument.NewElement("other");
+        otherNode->SetAttribute("name", "NumberOfAbsoluteValueUpperBounds");
+        otherNode->SetAttribute("value", count);
+        otherNode->SetAttribute("description", "Absolute values bounded from above with a binary");
+        otherResultsNode->InsertEndChild(otherNode);
+    }
+
     if(auto count = getAuxiliaryVariableCounter(E_AuxiliaryVariableType::AntiEpigraph); count > 0)
     {
         otherNode = osrlDocument.NewElement("other");

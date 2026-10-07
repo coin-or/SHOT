@@ -287,6 +287,7 @@ bool ModelTestGradientOfConstantExpression();
 bool ModelTestBoundTighteningSoundness();
 
 bool ModelTestHyperbolicFunctions();
+bool ModelTestAbsoluteValueUpperBound();
 
 int ModelTest(int argc, char* argv[])
 {
@@ -474,6 +475,9 @@ int ModelTest(int argc, char* argv[])
         break;
     case 56:
         passed = ModelTestHyperbolicFunctions();
+        break;
+    case 57:
+        passed = ModelTestAbsoluteValueUpperBound();
         break;
     default:
         passed = false;
@@ -9883,3 +9887,183 @@ bool ModelTestHyperbolicFunctions()
     return passed;
 }
 
+bool ModelTestAbsoluteValueUpperBound()
+{
+    // An absolute value w = |f| is reformulated as w >= f and w >= -f. Where the optimum does not push w down, e.g., if
+    // |f| is maximized or occurs in an equality, w <= |f| is added with a binary, and these problems are solved to
+    // their global optimum with every MIP solver. Where |f| is minimized, no binary is added. Quadratic arguments are
+    // not given as quadratic constraints to HiGHS and Cbc, which do not support them.
+
+    bool passed = true;
+
+    auto variable = [](SHOT::VariablePtr V) { return (std::make_shared<SHOT::ExpressionVariable>(V)); };
+    auto constant = [](double value) { return (std::make_shared<SHOT::ExpressionConstant>(value)); };
+    auto abs = [](SHOT::NonlinearExpressionPtr E) { return (std::make_shared<SHOT::ExpressionAbs>(E)); };
+    auto sum = [](SHOT::NonlinearExpressions E) { return (std::make_shared<SHOT::ExpressionSum>(E)); };
+    auto negate = [](SHOT::NonlinearExpressionPtr E) { return (std::make_shared<SHOT::ExpressionNegate>(E)); };
+
+    struct TestProblem
+    {
+        std::string description;
+        double expectedObjective;
+        int expectedBinaries;
+    };
+
+    // Builds the problem with the given number in the given solver's environment
+    auto createProblem = [&](int number, SHOT::EnvironmentPtr env)
+    {
+        auto problem = std::make_shared<SHOT::Problem>(env);
+        auto x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, -1.0, 2.0);
+        auto y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Real, 0.0, 1.0);
+
+        if(number == 2)
+        {
+            x->lowerBound = 0.0;
+            x->upperBound = 2.0;
+            y->upperBound = 2.0;
+        }
+        else if(number == 3)
+        {
+            x->lowerBound = 0.0;
+            x->upperBound = 1.0;
+        }
+
+        problem->add(SHOT::Variables { x, y });
+
+        auto objective = std::make_shared<SHOT::NonlinearObjectiveFunction>();
+
+        if(number == 0 || number == 1)
+        {
+            // max/min |x - 0.5| + |x + y - 1|
+            objective->direction = (number == 0) ? SHOT::E_ObjectiveFunctionDirection::Maximize
+                                                 : SHOT::E_ObjectiveFunctionDirection::Minimize;
+            objective->add(sum(
+                { abs(sum({ variable(x), constant(-0.5) })), abs(sum({ variable(x), variable(y), constant(-1.0) })) }));
+
+            // x + y <= 1.5 when maximizing, x - y >= 0.3 when minimizing
+            auto constraint = std::make_shared<SHOT::LinearConstraint>(
+                "e1", (number == 0) ? SHOT_DBL_MIN : 0.3, (number == 0) ? 1.5 : SHOT_DBL_MAX);
+            constraint->add(std::make_shared<SHOT::LinearTerm>(1.0, x));
+            constraint->add(std::make_shared<SHOT::LinearTerm>((number == 0) ? 1.0 : -1.0, y));
+            problem->add(constraint);
+        }
+        else if(number == 2)
+        {
+            // min x + y s.t. |x - y| = 1 and |x + y - 3| <= 2.5
+            objective->direction = SHOT::E_ObjectiveFunctionDirection::Minimize;
+            objective->add(std::make_shared<SHOT::LinearTerm>(1.0, x));
+            objective->add(std::make_shared<SHOT::LinearTerm>(1.0, y));
+
+            auto equality = std::make_shared<SHOT::NonlinearConstraint>("e1", 1.0, 1.0);
+            equality->add(abs(sum({ variable(x), negate(variable(y)) })));
+            problem->add(equality);
+
+            auto inequality = std::make_shared<SHOT::NonlinearConstraint>("e2", SHOT_DBL_MIN, 2.5);
+            inequality->add(abs(sum({ variable(x), variable(y), constant(-3.0) })));
+            problem->add(inequality);
+        }
+        else
+        {
+            // max |x - x^2| + |x - y^2|
+            objective->direction = SHOT::E_ObjectiveFunctionDirection::Maximize;
+            objective->add(
+                sum({ abs(sum({ variable(x), negate(std::make_shared<SHOT::ExpressionSquare>(variable(x))) })),
+                    abs(sum({ variable(x), negate(std::make_shared<SHOT::ExpressionSquare>(variable(y))) })) }));
+        }
+
+        problem->add(objective);
+        problem->finalize();
+
+        return (problem);
+    };
+
+    std::vector<TestProblem> problems
+        = { { "max |x - 0.5| + |x + y - 1|", 3.5, 2 }, { "min |x - 0.5| + |x + y - 1|", 0.15, 0 },
+              { "min x + y with |x - y| = 1", 1.0, 1 }, { "max |x - x^2| + |x - y^2|", 1.0, 2 } };
+
+    std::vector<SHOT::ES_MIPSolver> mipSolvers;
+#ifdef HAS_CPLEX
+    mipSolvers.push_back(SHOT::ES_MIPSolver::Cplex);
+#endif
+#ifdef HAS_GUROBI
+    mipSolvers.push_back(SHOT::ES_MIPSolver::Gurobi);
+#endif
+#ifdef HAS_CBC
+    mipSolvers.push_back(SHOT::ES_MIPSolver::Cbc);
+#endif
+#ifdef HAS_HIGHS
+    mipSolvers.push_back(SHOT::ES_MIPSolver::Highs);
+#endif
+
+    for(auto mipSolver : mipSolvers)
+    {
+        for(int number = 0; number < (int)problems.size(); number++)
+        {
+            auto& P = problems[number];
+
+            auto solver = std::make_unique<SHOT::Solver>();
+            solver->updateSetting("Output.Console.LogLevel", static_cast<int>(SHOT::E_LogLevel::Error));
+            solver->updateSetting("Dual.MIP.Solver", static_cast<int>(mipSolver));
+            solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+            solver->updateSetting("Termination.TimeLimit", 30.0);
+
+            if(!solver->setProblem(createProblem(number, solver->getEnvironment())) || !solver->solveProblem())
+            {
+                std::cout << "  FAILED: " << P.description << " could not be solved with MIP solver " << (int)mipSolver
+                          << ".\n";
+                passed = false;
+                continue;
+            }
+
+            auto reformulatedProblem = solver->getReformulatedProblem();
+            int numberOfBinaries = 0;
+
+            for(auto& V : reformulatedProblem->auxiliaryVariables)
+                if(V->properties.auxiliaryType == SHOT::E_AuxiliaryVariableType::AbsoluteValueSign)
+                    numberOfBinaries++;
+
+            if(numberOfBinaries != P.expectedBinaries)
+            {
+                std::cout << "  FAILED: " << P.description << " has " << numberOfBinaries << " sign binaries, expected "
+                          << P.expectedBinaries << ".\n";
+                passed = false;
+            }
+
+            if((mipSolver == SHOT::ES_MIPSolver::Cbc || mipSolver == SHOT::ES_MIPSolver::Highs)
+                && reformulatedProblem->properties.numberOfQuadraticConstraints > 0)
+            {
+                std::cout << "  FAILED: " << P.description << " has quadratic constraints with MIP solver "
+                          << (int)mipSolver << ".\n";
+                passed = false;
+            }
+
+            auto primalSolutions = solver->getPrimalSolutions();
+
+            if(primalSolutions.empty() || std::abs(primalSolutions[0].objValue - P.expectedObjective) > 1e-3)
+            {
+                std::cout << "  FAILED: " << P.description << " has the objective "
+                          << (primalSolutions.empty() ? SHOT_DBL_MAX : primalSolutions[0].objValue)
+                          << " with MIP solver " << (int)mipSolver << ", expected " << P.expectedObjective << ".\n";
+                passed = false;
+            }
+
+            // The dual bound proves the optimum, except for the nonconvex quadratic argument, which is only solved to
+            // optimality by a MIP solver that takes nonconvex quadratic constraints
+            if(number < 3)
+            {
+                double dualBound = solver->getEnvironment()->results->getCurrentDualBound();
+
+                if(std::abs(dualBound - P.expectedObjective) > 1e-2)
+                {
+                    std::cout << "  FAILED: " << P.description << " has the dual bound " << dualBound
+                              << " with MIP solver " << (int)mipSolver << ", expected " << P.expectedObjective << ".\n";
+                    passed = false;
+                }
+            }
+
+            std::cout << "  " << P.description << " solved with MIP solver " << (int)mipSolver << ".\n";
+        }
+    }
+
+    return passed;
+}

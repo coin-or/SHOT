@@ -139,6 +139,33 @@ private:
 
     std::pair<AuxiliaryVariablePtr, bool> getAbsoluteValueAuxiliaryVariable(std::shared_ptr<ExpressionAbs> source);
 
+    // The argument f of an absolute value, its auxiliary variable w and the constraints f - w <= 0 and -f - w <= 0
+    struct AbsoluteValueDefinition
+    {
+        AuxiliaryVariablePtr variable;
+        LinearTerms linearTerms;
+        QuadraticTerms quadraticTerms;
+        MonomialTerms monomialTerms;
+        SignomialTerms signomialTerms;
+        NonlinearExpressionPtr nonlinearExpression;
+        double constant = 0.0;
+        Interval argumentBounds;
+        std::vector<NumericConstraintPtr> definingConstraints;
+    };
+
+    std::vector<AbsoluteValueDefinition> absoluteValueDefinitions;
+
+    // The constraint argumentSign * f + variableCoefficient * w + binaryCoefficient * z <= valueRHS
+    NumericConstraintPtr createAbsoluteValueConstraint(const std::string& name,
+        const AbsoluteValueDefinition& definition, double argumentSign, double variableCoefficient,
+        VariablePtr binaryVariable, double binaryCoefficient, double valueRHS);
+
+    // Whether every occurrence of w outside its defining constraints has it bounded from above by the optimum
+    bool isAbsoluteValueBoundedFromAbove(const AbsoluteValueDefinition& definition);
+
+    // Adds w <= |f| for the absolute values that are not bounded from above
+    void addUpperBoundsOfAbsoluteValues();
+
     void createSquareReformulations();
     void createBilinearReformulations();
 
