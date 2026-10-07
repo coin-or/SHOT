@@ -9350,6 +9350,13 @@ bool ModelTestBoundTighteningSoundness()
         { "exp(x)", [&](auto x, auto) { return std::make_shared<SHOT::ExpressionExp>(var(x)); } },
         { "sqr(x)", [&](auto x, auto) { return std::make_shared<SHOT::ExpressionSquare>(var(x)); } },
         { "errorf(x)", [&](auto x, auto) { return std::make_shared<SHOT::ExpressionErrorFunction>(var(x)); } },
+        { "sin(x)", [&](auto x, auto) { return std::make_shared<SHOT::ExpressionSin>(var(x)); } },
+        { "cos(x)", [&](auto x, auto) { return std::make_shared<SHOT::ExpressionCos>(var(x)); } },
+        { "tan(x)", [&](auto x, auto) { return std::make_shared<SHOT::ExpressionTan>(var(x)); } },
+        { "arctan(x)", [&](auto x, auto) { return std::make_shared<SHOT::ExpressionArcTan>(var(x)); } },
+        { "1/cos(x)",
+            [&](auto x, auto)
+            { return std::make_shared<SHOT::ExpressionInvert>(std::make_shared<SHOT::ExpressionCos>(var(x))); } },
         { "signpower(x,0.5)", [&](auto x, auto) { return std::make_shared<SHOT::ExpressionSignPower>(var(x), 0.5); } },
         { "signpower(x,1.852)",
             [&](auto x, auto) { return std::make_shared<SHOT::ExpressionSignPower>(var(x), 1.852); } },
@@ -9500,7 +9507,7 @@ bool ModelTestBoundTighteningSoundness()
                 fmt::format("x{}", i), SHOT::E_VariableType::Real, lower, upper);
             variables.push_back(V);
             point.push_back(randomPoint(lower, upper));
-            bounds += fmt::format(" x{} in [{}, {}]", i, lower, upper);
+            bounds += fmt::format(" x{} = {} in [{}, {}]", i, point.back(), lower, upper);
         }
 
         problem->add(variables);
@@ -9569,6 +9576,10 @@ bool ModelTestBoundTighteningSoundness()
         double value = constraint->calculateFunctionValue(point);
 
         if(!std::isfinite(value) || std::abs(value) > 1e12)
+            continue;
+
+        // log(x2) and log(x2/x3) are not defined for x2 = 0, where the value is only the limit of the formula
+        if((kind == 3 || kind == 4) && point[2] == 0.0)
             continue;
 
         auto target = randomTarget(value);

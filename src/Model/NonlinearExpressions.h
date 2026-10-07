@@ -477,7 +477,13 @@ public:
 
     inline Interval calculate(const IntervalVector& intervalVector) const override
     {
-        return (1.0 / child->calculate(intervalVector));
+        auto denominatorBounds = child->calculate(intervalVector);
+
+        // The interval division throws for a denominator that contains zero
+        if(denominatorBounds.l() * denominatorBounds.u() <= 0)
+            return (Interval(SHOT_DBL_MIN, SHOT_DBL_MAX));
+
+        return (1.0 / denominatorBounds);
     }
 
     inline Interval getBounds() const override
@@ -1149,10 +1155,23 @@ public:
 
     inline Interval calculate(const IntervalVector& intervalVector) const override
     {
-        return (tan(child->calculate(intervalVector)));
+        return (intervalTan(child->calculate(intervalVector)));
     }
 
-    inline Interval getBounds() const override { return (tan(child->getBounds())); }
+    inline Interval getBounds() const override { return (intervalTan(child->getBounds())); }
+
+    // The interval tangent throws for an interval that contains a pole, where the tangent is unbounded
+    static inline Interval intervalTan(Interval childBounds)
+    {
+        try
+        {
+            return (tan(childBounds));
+        }
+        catch(const mc::Interval::Exceptions&)
+        {
+            return (Interval(SHOT_DBL_MIN, SHOT_DBL_MAX));
+        }
+    }
 
     inline bool tightenBounds([[maybe_unused]] Interval bound) override { return (false); };
 
