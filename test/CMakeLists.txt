@@ -101,7 +101,8 @@ if(HAS_GAMS)
       9
       10
       11
-      13)
+      13
+      14)
   set(cpptests ${cpptests} GAMS)
 endif()
 
