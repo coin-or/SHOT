@@ -40,6 +40,11 @@ public:
     void addGeneratedHyperplane(const HyperplanePtr hyperplane);
     bool hasHyperplaneBeenAdded(const VectorDouble& generatedPoint, int constraintIndex);
 
+    // The same with the hashes of the point, which take time linear in the number of variables to calculate, and are
+    // therefore calculated once when the same point is checked for many constraints
+    std::pair<double, double> calculateHashes(const VectorDouble& point);
+    bool hasHyperplaneBeenAdded(const std::pair<double, double>& hashes, int constraintIndex);
+
     // Whether a hyperplane for the same constraint or objective function has been generated in the same point, which
     // is always false for an external hyperplane and in the single-tree strategy
     bool hasHyperplaneBeenAdded(const HyperplanePtr& hyperplane);
@@ -105,10 +110,7 @@ private:
     // worth a warning, but only the first time since the cause is the same for the following ones
     bool invalidDualBoundWarningShown = false;
 
-    std::pair<double, double> calculateHashes(const VectorDouble& point);
     std::pair<double, double> calculateHyperplaneHashes(NumericHyperplanePtr hyperplane);
-
-    bool hasHyperplaneBeenAdded(const std::pair<double, double>& hashes, int constraintIndex);
 
     // The largest magnitude of the hyperplane in the point, and its value in the point to cut off, which is
     // positive when that point is cut off. The terms are the ones the hyperplane is built from, so that a point
