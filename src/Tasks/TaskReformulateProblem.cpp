@@ -2132,21 +2132,23 @@ std::tuple<LinearTerms, QuadraticTerms, double> TaskReformulateProblem::reformul
     auto quadraticDecompositionMethod = (ES_QuadraticDecomposition)env->settings->getSetting<int>(
         "Model.Reformulation.Quadratics.Decomposition.Method");
 
-    // The decompositions do not reverse the signs of the terms, so they are only used when the signs are kept
+    // The decompositions do not reverse the signs of the terms, so they are only used when the signs are kept. If the
+    // decomposition cannot be calculated, the terms are treated as without a decomposition.
+    std::optional<LinearTerms> decomposedTerms;
+
     if(quadraticDecompositionMethod != ES_QuadraticDecomposition::None
         && partitionStrategy <= ES_PartitionNonlinearSums::IfConvex && quadraticSumConvex && !reversedSigns
         && !quadraticTerms.allSquares) // Use one of the quadratic decompositions
     {
         if(quadraticDecompositionMethod == ES_QuadraticDecomposition::EigenValueDecomposition)
-        {
-            auto linearTerms = doEigenvalueDecomposition(quadraticTerms);
-            resultLinearTerms.add(linearTerms);
-        }
+            decomposedTerms = doEigenvalueDecomposition(quadraticTerms);
         else
-        {
-            auto linearTerms = doLDLDecomposition(quadraticTerms);
-            resultLinearTerms.add(linearTerms);
-        }
+            decomposedTerms = doLDLDecomposition(quadraticTerms);
+    }
+
+    if(decomposedTerms)
+    {
+        resultLinearTerms.add(*decomposedTerms);
     }
     else if(partitionStrategy == ES_PartitionNonlinearSums::Always
         || (!reversedSigns && allTermsConvex && partitionStrategy == ES_PartitionNonlinearSums::IfConvex)
@@ -2790,7 +2792,7 @@ void TaskReformulateProblem::addDecompositionComponent(const LinearTerms& compon
     reformulatedProblem->add(std::move(auxConstraint));
 }
 
-LinearTerms TaskReformulateProblem::doEigenvalueDecomposition(QuadraticTerms& quadraticTerms)
+std::optional<LinearTerms> TaskReformulateProblem::doEigenvalueDecomposition(QuadraticTerms& quadraticTerms)
 {
     env->timing->startTimer("ProblemReformulationEigenDecomp");
 
@@ -2800,7 +2802,27 @@ LinearTerms TaskReformulateProblem::doEigenvalueDecomposition(QuadraticTerms& qu
     auto eigenValueTolerance
         = env->settings->getSetting<double>("Model.Reformulation.Quadratics.Decomposition.Tolerance");
 
+    // The eigenvectors are dense, so the decomposition takes O(n^3) time and O(n^2) memory, e.g., 3.2 GB for 20000
+    // variables
+    if(quadraticTerms.variableMap.size() > maximumSizeForEigenvalueDecomposition)
+    {
+        env->output->outputWarning(
+            fmt::format("        The eigenvalue decomposition of quadratic terms in {} variables is "
+                        "not calculated, since there are more than {}.",
+                quadraticTerms.variableMap.size(), maximumSizeForEigenvalueDecomposition));
+        env->timing->stopTimer("ProblemReformulationEigenDecomp");
+        return (std::nullopt);
+    }
+
     quadraticTerms.computeEigenvectors();
+
+    // Without eigenvectors, the terms are reformulated as without a decomposition by the caller
+    if(!quadraticTerms.eigenvectorsComputed)
+    {
+        env->output->outputWarning("        The eigenvalue decomposition of quadratic terms could not be calculated.");
+        env->timing->stopTimer("ProblemReformulationEigenDecomp");
+        return (std::nullopt);
+    }
 
     // The terms are collected and added at once, since add(term) searches every term already added
     std::vector<LinearTermPtr> resultTerms;
@@ -2834,7 +2856,7 @@ LinearTerms TaskReformulateProblem::doEigenvalueDecomposition(QuadraticTerms& qu
     return (resultLinearTerms);
 }
 
-LinearTerms TaskReformulateProblem::doLDLDecomposition(QuadraticTerms& quadraticTerms)
+std::optional<LinearTerms> TaskReformulateProblem::doLDLDecomposition(QuadraticTerms& quadraticTerms)
 {
     env->timing->startTimer("ProblemReformulationLDLDecomp");
 
@@ -2857,6 +2879,19 @@ LinearTerms TaskReformulateProblem::doLDLDecomposition(QuadraticTerms& quadratic
     std::vector<LinearTermPtr> resultTerms;
     resultTerms.reserve(quadraticTerms.variableMap.size());
 
+    // The variables of the terms belong to the original problem, so the ones of the reformulated problem are looked up
+    // by their index. The terms of a component are in the order of variableMap, as when all its variables were
+    // looped over for each column of L, but only the nonzeros of the sparse L are now visited.
+    std::vector<VariablePtr> rowVariables(quadraticTerms.variableMap.size());
+    std::vector<int> rowOrder(quadraticTerms.variableMap.size());
+    int order = 0;
+
+    for(auto [VAR, j] : quadraticTerms.variableMap)
+    {
+        rowVariables[j] = reformulatedProblem->getVariable(VAR->getIndex());
+        rowOrder[j] = order++;
+    }
+
     for(size_t i = 0; i < quadraticTerms.variableMap.size(); i++)
     {
         double diagValue = quadraticTerms.LDLDiag[i];
@@ -2864,16 +2899,22 @@ LinearTerms TaskReformulateProblem::doLDLDecomposition(QuadraticTerms& quadratic
         if(std::abs(diagValue) < eigenValueTolerance)
             continue;
 
+        std::vector<std::pair<int, double>> column;
+
+        for(Eigen::SparseMatrix<double>::InnerIterator it(quadraticTerms.LDLMatrixL, i); it; ++it)
+        {
+            if(it.value() != 0.0)
+                column.emplace_back(it.row(), it.value());
+        }
+
+        std::sort(column.begin(), column.end(),
+            [&rowOrder](const auto& first, const auto& second)
+            { return (rowOrder[first.first] < rowOrder[second.first]); });
+
         LinearTerms componentTerms;
 
-        // The variables of the terms belong to the original problem, so the ones of the reformulated problem
-        // are looked up by their index
-        for(auto [VAR, j] : quadraticTerms.variableMap)
-        {
-            if(quadraticTerms.LDLMatrixL(j, i) != 0.0)
-                componentTerms.push_back(std::make_shared<LinearTerm>(
-                    quadraticTerms.LDLMatrixL(j, i), reformulatedProblem->getVariable(VAR->getIndex())));
-        }
+        for(auto& [j, value] : column)
+            componentTerms.push_back(std::make_shared<LinearTerm>(value, rowVariables[j]));
 
         addDecompositionComponent(
             componentTerms, diagValue, E_AuxiliaryVariableType::LDLDecomposition, "q_ldl", resultTerms);

@@ -290,6 +290,7 @@ bool ModelTestHyperbolicFunctions();
 bool ModelTestAbsoluteValueUpperBound();
 bool ModelTestMinimumAndMaximum();
 bool ModelTestDivideConvexity();
+bool ModelTestLargeQuadraticConvexity();
 
 int ModelTest(int argc, char* argv[])
 {
@@ -486,6 +487,9 @@ int ModelTest(int argc, char* argv[])
         break;
     case 59:
         passed = ModelTestDivideConvexity();
+        break;
+    case 60:
+        passed = ModelTestLargeQuadraticConvexity();
         break;
     default:
         passed = false;
@@ -7441,7 +7445,7 @@ bool ModelTestLDLFactorizationScaling()
             double sum = 0.0;
 
             for(auto [variable, j] : terms.variableMap)
-                sum += terms.LDLMatrixL(j, i) * point[variable->getIndex()];
+                sum += terms.LDLMatrixL.coeff(j, i) * point[variable->getIndex()];
 
             decomposedValue += 0.5 * terms.LDLDiag[i] * sum * sum;
         }
@@ -10269,6 +10273,113 @@ bool ModelTestDivideConvexity()
         {
             std::cout << "  The monotonicity of " << C.description << " is as expected.\n";
         }
+    }
+
+    return passed;
+}
+
+bool ModelTestLargeQuadraticConvexity()
+{
+    // Quadratic terms with more than QuadraticTerms::maximumSizeForDenseConvexityCheck variables are checked for
+    // convexity with sparse LDL factorizations of A + tI and -A + tI instead of the dense eigenvalue computation,
+    // which takes O(n^3) time. The terms are sums of (x_i - x_j)^2 over the edges of a 12 x 12 grid, whose
+    // matrix (a graph Laplacian) is positive semidefinite and singular, with changes that make it definite,
+    // indefinite or negative semidefinite.
+
+    bool passed = true;
+
+    auto solver = std::make_unique<SHOT::Solver>();
+    auto env = solver->getEnvironment();
+    auto problem = std::make_shared<SHOT::Problem>(env);
+
+    const int m = 12;
+    SHOT::Variables variables;
+
+    for(int k = 0; k < m * m; k++)
+        variables.push_back(
+            std::make_shared<SHOT::Variable>("x" + std::to_string(k), SHOT::E_VariableType::Real, -1.0, 1.0));
+
+    problem->add(variables);
+
+    // The sign times the sum of the squared differences, plus the extra square diagonal * x0^2
+    auto createTerms = [&](double sign, double diagonal)
+    {
+        std::vector<SHOT::QuadraticTermPtr> terms;
+
+        for(int i = 0; i < m; i++)
+        {
+            for(int j = 0; j < m; j++)
+            {
+                int k = i * m + j;
+
+                for(int other : { (i + 1 < m) ? k + m : -1, (j + 1 < m) ? k + 1 : -1 })
+                {
+                    if(other < 0)
+                        continue;
+
+                    terms.push_back(std::make_shared<SHOT::QuadraticTerm>(sign, variables[k], variables[k]));
+                    terms.push_back(std::make_shared<SHOT::QuadraticTerm>(-2.0 * sign, variables[k], variables[other]));
+                    terms.push_back(std::make_shared<SHOT::QuadraticTerm>(sign, variables[other], variables[other]));
+                }
+            }
+        }
+
+        if(diagonal != 0.0)
+            terms.push_back(std::make_shared<SHOT::QuadraticTerm>(diagonal, variables[0], variables[0]));
+
+        auto quadraticTerms = std::make_shared<SHOT::QuadraticTerms>(terms);
+        quadraticTerms->takeOwnership(problem);
+        return (quadraticTerms);
+    };
+
+    struct Case
+    {
+        std::string description;
+        double sign;
+        double diagonal;
+        SHOT::E_Convexity expected;
+        bool expectNonnegativeMinimum;
+    };
+
+    std::vector<Case> cases = { { "the Laplacian", 1.0, 0.0, SHOT::E_Convexity::Convex, false },
+        { "the Laplacian + 0.1 x0^2", 1.0, 0.1, SHOT::E_Convexity::Convex, true },
+        { "-(the Laplacian)", -1.0, 0.0, SHOT::E_Convexity::Concave, false },
+        { "the Laplacian - 0.5 x0^2", 1.0, -0.5, SHOT::E_Convexity::Nonconvex, false } };
+
+    for(auto& C : cases)
+    {
+        auto terms = createTerms(C.sign, C.diagonal);
+        auto convexity = terms->getConvexity();
+
+        // A singular matrix has a smallest eigenvalue that is zero up to rounding, which is not reported as
+        // nonnegative, as by the dense eigenvalue computation
+        bool isAsExpected = (convexity == C.expected)
+            && (terms->minEigenValueWithinTolerance == (C.expected == SHOT::E_Convexity::Convex))
+            && (terms->maxEigenValueWithinTolerance == (C.expected == SHOT::E_Convexity::Concave))
+            && ((terms->minEigenValue >= 0.0) == C.expectNonnegativeMinimum);
+
+        if(!isAsExpected)
+        {
+            std::cout << "  FAILED: " << C.description << " has the convexity " << (int)convexity
+                      << " and the smallest eigenvalue bound " << terms->minEigenValue << ".\n";
+            passed = false;
+        }
+        else
+        {
+            std::cout << "  The convexity of " << C.description << " is as expected.\n";
+        }
+    }
+
+    // The eigenvalues are computed on demand, e.g., for the eigenvalue decomposition
+    auto terms = createTerms(1.0, -0.5);
+    terms->getConvexity();
+    terms->computeEigenvectors();
+
+    if(terms->eigenvalues.size() != m * m || !(terms->eigenvalues.minCoeff() < -1e-5)
+        || !(terms->eigenvalues.maxCoeff() > 1e-5))
+    {
+        std::cout << "  FAILED: the eigenvalues computed on demand are wrong.\n";
+        passed = false;
     }
 
     return passed;

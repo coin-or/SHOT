@@ -533,12 +533,17 @@ public:
     bool allNegative = false;
     bool allBilinear = false;
 
+    // Larger matrices are checked for convexity with sparse factorizations instead of their eigenvalues, which are
+    // then only computed if needed, by computeEigenvectors()
+    static constexpr int maximumSizeForDenseConvexityCheck = 100;
+
     Eigen::VectorXd eigenvalues;
 
     // Only computed on demand by computeEigenvectors(), since they are only needed by the eigenvalue decomposition
     Eigen::MatrixXd eigenvectors;
     bool eigenvectorsComputed = false;
-    Eigen::MatrixXd LDLMatrixL;
+    // Sparse, since a dense one takes O(n^2) memory, e.g., 50 GB for 80000 variables
+    Eigen::SparseMatrix<double> LDLMatrixL;
     VectorDouble LDLDiag;
     bool LDLFactorizationPerformed = false;
     bool LDLFactorizationSuccessful = false;

@@ -13,6 +13,7 @@
 
 #include <functional>
 #include <map>
+#include <optional>
 #include <set>
 #include <string>
 #include <tuple>
@@ -119,8 +120,12 @@ private:
     std::tuple<LinearTerms, MonomialTerms> reformulateMonomialSum(
         const MonomialTerms& monomialTerms, bool reversedSigns);
 
-    LinearTerms doEigenvalueDecomposition(QuadraticTerms& quadraticTerms);
-    LinearTerms doLDLDecomposition(QuadraticTerms& quadraticTerms);
+    // The largest number of variables in quadratic terms that are given an eigenvalue decomposition
+    static constexpr size_t maximumSizeForEigenvalueDecomposition = 2000;
+
+    // The terms replacing the quadratic terms, or none if the decomposition could not be calculated
+    std::optional<LinearTerms> doEigenvalueDecomposition(QuadraticTerms& quadraticTerms);
+    std::optional<LinearTerms> doLDLDecomposition(QuadraticTerms& quadraticTerms);
 
     // Adds the term value * y^2 of a decomposition with y given by the linear terms
     void addDecompositionComponent(const LinearTerms& componentTerms, double value,

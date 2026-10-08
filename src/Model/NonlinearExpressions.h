@@ -2895,23 +2895,44 @@ public:
 
     inline bool tightenBounds(Interval bound) override
     {
-        bool tightened = false;
+        // The bounds of the other children are the sum of the bounds of the children before and after the current
+        // one. Summing them for each child took O(n^2) bound calculations, e.g., more than 10^8 subtree walks for a
+        // sum of 20000 terms. Since a tightened child may change the bounds of the others, they are recalculated after
+        // each tightening.
+        size_t numberOfChildren = children.size();
+        std::vector<Interval> childBounds(numberOfChildren, Interval(0.0));
+        std::vector<Interval> suffixSums(numberOfChildren + 1, Interval(0.0));
 
-        for(auto& T : children)
+        auto updateBounds = [&]()
         {
-            Interval newBound = Interval(0.0);
+            for(size_t k = 0; k < numberOfChildren; k++)
+                childBounds[k] = children[k]->getBounds();
 
-            for(auto& T2 : children)
+            for(size_t k = numberOfChildren; k-- > 0;)
+                suffixSums[k] = suffixSums[k + 1] + childBounds[k];
+        };
+
+        updateBounds();
+
+        bool tightened = false;
+        Interval prefixSum = Interval(0.0);
+
+        for(size_t k = 0; k < numberOfChildren; k++)
+        {
+            Interval candidate = bound - (prefixSum + suffixSums[k + 1]);
+
+            if(children[k]->tightenBounds(candidate))
             {
-                if(T2 == T)
-                    continue;
+                tightened = true;
+                updateBounds();
 
-                newBound += T2->getBounds();
+                prefixSum = Interval(0.0);
+
+                for(size_t j = 0; j < k; j++)
+                    prefixSum += childBounds[j];
             }
 
-            Interval candidate = bound - newBound;
-
-            tightened = T->tightenBounds(candidate) || tightened;
+            prefixSum += childBounds[k];
         }
 
         return (tightened);
