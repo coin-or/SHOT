@@ -663,7 +663,7 @@ NonlinearExpressionPtr ModelingSystemOSiL::convertNonlinearNode(tinyxml2::XMLNod
         case 0:
             return std::make_shared<ExpressionConstant>(0.);
         case 1:
-            return terms[1];
+            return terms[0];
         default:
             return std::make_shared<ExpressionSum>(terms);
         }
@@ -722,6 +722,18 @@ NonlinearExpressionPtr ModelingSystemOSiL::convertNonlinearNode(tinyxml2::XMLNod
         default:
             return std::make_shared<ExpressionProduct>(factors);
         }
+    }
+    else if(expressionType.compare("max") == 0 || expressionType.compare("min") == 0)
+    {
+        NonlinearExpressions arguments;
+
+        for(auto C = node->FirstChildElement(); C != nullptr; C = C->NextSiblingElement())
+            arguments.push_back(convertNonlinearNode(C, destination));
+
+        if(arguments.size() == 0)
+            throw OperationNotImplementedException(fmt::format("Error: {} without arguments", expressionType));
+
+        return ((expressionType.compare("max") == 0) ? createMaximum(arguments) : createMinimum(arguments));
     }
     else if(expressionType.compare("abs") == 0)
     {

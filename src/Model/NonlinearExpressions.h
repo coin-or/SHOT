@@ -3612,4 +3612,36 @@ inline NonlinearExpressionPtr createArcTan2(NonlinearExpressionPtr y, NonlinearE
             std::make_shared<ExpressionDivide>(y, std::make_shared<ExpressionSum>(radius, x)))));
 }
 
+// max(a, b) = (a + b + |a - b|)/2 and min(a, b) = (a + b - |a - b|)/2, with more arguments taken pairwise. The
+// reformulation of abs is exact, and needs no binary where the optimum pushes max down or min up.
+inline NonlinearExpressionPtr createMinimumOrMaximum(const NonlinearExpressions& arguments, bool isMaximum)
+{
+    auto result = arguments.at(0);
+
+    for(size_t k = 1; k < arguments.size(); k++)
+    {
+        auto& other = arguments.at(k);
+        NonlinearExpressionPtr absoluteDifference = std::make_shared<ExpressionAbs>(
+            std::make_shared<ExpressionSum>(result, std::make_shared<ExpressionNegate>(other)));
+
+        if(!isMaximum)
+            absoluteDifference = std::make_shared<ExpressionNegate>(absoluteDifference);
+
+        result = std::make_shared<ExpressionProduct>(std::make_shared<ExpressionConstant>(0.5),
+            std::make_shared<ExpressionSum>(NonlinearExpressions { result, other, absoluteDifference }));
+    }
+
+    return (result);
+}
+
+inline NonlinearExpressionPtr createMaximum(const NonlinearExpressions& arguments)
+{
+    return (createMinimumOrMaximum(arguments, true));
+}
+
+inline NonlinearExpressionPtr createMinimum(const NonlinearExpressions& arguments)
+{
+    return (createMinimumOrMaximum(arguments, false));
+}
+
 } // namespace SHOT

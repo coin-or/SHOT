@@ -288,6 +288,7 @@ bool ModelTestBoundTighteningSoundness();
 
 bool ModelTestHyperbolicFunctions();
 bool ModelTestAbsoluteValueUpperBound();
+bool ModelTestMinimumAndMaximum();
 
 int ModelTest(int argc, char* argv[])
 {
@@ -478,6 +479,9 @@ int ModelTest(int argc, char* argv[])
         break;
     case 57:
         passed = ModelTestAbsoluteValueUpperBound();
+        break;
+    case 58:
+        passed = ModelTestMinimumAndMaximum();
         break;
     default:
         passed = false;
@@ -9892,7 +9896,8 @@ bool ModelTestAbsoluteValueUpperBound()
     // An absolute value w = |f| is reformulated as w >= f and w >= -f. Where the optimum does not push w down, e.g., if
     // |f| is maximized or occurs in an equality, w <= |f| is added with a binary, and these problems are solved to
     // their global optimum with every MIP solver. Where |f| is minimized, no binary is added. Quadratic arguments are
-    // not given as quadratic constraints to HiGHS and Cbc, which do not support them.
+    // not given as quadratic constraints to HiGHS and Cbc, which do not support them. Absolute values in the argument
+    // of another are replaced by their auxiliary variables, and the bounds of an argument include all of its terms.
 
     bool passed = true;
 
@@ -9926,6 +9931,12 @@ bool ModelTestAbsoluteValueUpperBound()
         {
             x->lowerBound = 0.0;
             x->upperBound = 1.0;
+        }
+        else if(number == 4)
+        {
+            x->lowerBound = 0.5;
+            y->lowerBound = 0.5;
+            y->upperBound = 2.0;
         }
 
         problem->add(SHOT::Variables { x, y });
@@ -9962,6 +9973,24 @@ bool ModelTestAbsoluteValueUpperBound()
             inequality->add(abs(sum({ variable(x), variable(y), constant(-3.0) })));
             problem->add(inequality);
         }
+        else if(number == 4)
+        {
+            // min z + x + y s.t. z = max(x - y, y - x, 0.2), whose absolute values are nested; the argument of the
+            // outer one, max(x - y, y - x) - 0.2, may be negative
+            auto z = std::make_shared<SHOT::Variable>("z", SHOT::E_VariableType::Real, 0.0, 10.0);
+            problem->add(z);
+
+            objective->direction = SHOT::E_ObjectiveFunctionDirection::Minimize;
+            objective->add(std::make_shared<SHOT::LinearTerm>(1.0, x));
+            objective->add(std::make_shared<SHOT::LinearTerm>(1.0, y));
+            objective->add(std::make_shared<SHOT::LinearTerm>(1.0, z));
+
+            auto equality = std::make_shared<SHOT::NonlinearConstraint>("e1", 0.0, 0.0);
+            equality->add(std::make_shared<SHOT::LinearTerm>(-1.0, z));
+            equality->add(SHOT::createMaximum({ sum({ variable(x), negate(variable(y)) }),
+                sum({ variable(y), negate(variable(x)) }), constant(0.2) }));
+            problem->add(equality);
+        }
         else
         {
             // max |x - x^2| + |x - y^2|
@@ -9977,9 +10006,9 @@ bool ModelTestAbsoluteValueUpperBound()
         return (problem);
     };
 
-    std::vector<TestProblem> problems
-        = { { "max |x - 0.5| + |x + y - 1|", 3.5, 2 }, { "min |x - 0.5| + |x + y - 1|", 0.15, 0 },
-              { "min x + y with |x - y| = 1", 1.0, 1 }, { "max |x - x^2| + |x - y^2|", 1.0, 2 } };
+    std::vector<TestProblem> problems = { { "max |x - 0.5| + |x + y - 1|", 3.5, 2 },
+        { "min |x - 0.5| + |x + y - 1|", 0.15, 0 }, { "min x + y with |x - y| = 1", 1.0, 1 },
+        { "max |x - x^2| + |x - y^2|", 1.0, 2 }, { "min z + x + y with z = max(x - y, y - x, 0.2)", 1.2, 2 } };
 
     std::vector<SHOT::ES_MIPSolver> mipSolvers;
 #ifdef HAS_CPLEX
@@ -10049,7 +10078,7 @@ bool ModelTestAbsoluteValueUpperBound()
 
             // The dual bound proves the optimum, except for the nonconvex quadratic argument, which is only solved to
             // optimality by a MIP solver that takes nonconvex quadratic constraints
-            if(number < 3)
+            if(number != 3)
             {
                 double dualBound = solver->getEnvironment()->results->getCurrentDualBound();
 
@@ -10064,6 +10093,77 @@ bool ModelTestAbsoluteValueUpperBound()
             std::cout << "  " << P.description << " solved with MIP solver " << (int)mipSolver << ".\n";
         }
     }
+
+    return passed;
+}
+
+bool SolveMinimumAndMaximumProblem(const std::string& filename)
+{
+    // The problem in data/minmax.* has max(x, y, 1 - x) <= 1.5 and min(x, y) >= -1, and maximizes
+    // max(x, y) - min(x, y) for x and y in [-2, 2]; the optimum is 2.5 in (1.5, -1). It is solved to optimality with
+    // every MIP solver, and the absolute value |x - y| that all the pairs share is the only one with a binary.
+
+    bool passed = true;
+
+    std::vector<SHOT::ES_MIPSolver> mipSolvers;
+#ifdef HAS_CPLEX
+    mipSolvers.push_back(SHOT::ES_MIPSolver::Cplex);
+#endif
+#ifdef HAS_GUROBI
+    mipSolvers.push_back(SHOT::ES_MIPSolver::Gurobi);
+#endif
+#ifdef HAS_CBC
+    mipSolvers.push_back(SHOT::ES_MIPSolver::Cbc);
+#endif
+#ifdef HAS_HIGHS
+    mipSolvers.push_back(SHOT::ES_MIPSolver::Highs);
+#endif
+
+    for(auto mipSolver : mipSolvers)
+    {
+        auto solver = std::make_unique<SHOT::Solver>();
+        solver->updateSetting("Output.Console.LogLevel", static_cast<int>(SHOT::E_LogLevel::Error));
+        solver->updateSetting("Dual.MIP.Solver", static_cast<int>(mipSolver));
+        solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+        solver->updateSetting("Termination.TimeLimit", 30.0);
+
+        if(!solver->setProblem(filename) || !solver->solveProblem())
+        {
+            std::cout << "  FAILED: " << filename << " could not be solved with MIP solver " << (int)mipSolver << ".\n";
+            passed = false;
+            continue;
+        }
+
+        int numberOfBinaries = 0;
+
+        for(auto& V : solver->getReformulatedProblem()->auxiliaryVariables)
+            if(V->properties.auxiliaryType == SHOT::E_AuxiliaryVariableType::AbsoluteValueSign)
+                numberOfBinaries++;
+
+        auto primalSolutions = solver->getPrimalSolutions();
+        double primalBound = primalSolutions.empty() ? -SHOT_DBL_MAX : primalSolutions[0].objValue;
+        double dualBound = solver->getEnvironment()->results->getCurrentDualBound();
+
+        if(numberOfBinaries != 1 || std::abs(primalBound - 2.5) > 1e-3 || std::abs(dualBound - 2.5) > 1e-2)
+        {
+            std::cout << "  FAILED: " << filename << " with MIP solver " << (int)mipSolver << " has the bounds ["
+                      << primalBound << ", " << dualBound << "] and " << numberOfBinaries
+                      << " sign binaries, expected [2.5, 2.5] and 1.\n";
+            passed = false;
+            continue;
+        }
+
+        std::cout << "  " << filename << " solved with MIP solver " << (int)mipSolver << ".\n";
+    }
+
+    return passed;
+}
+
+bool ModelTestMinimumAndMaximum()
+{
+    // min and max read from OSiL and AMPL files, see SolveMinimumAndMaximumProblem()
+    bool passed = SolveMinimumAndMaximumProblem("data/minmax.osil");
+    passed = SolveMinimumAndMaximumProblem("data/minmax.nl") && passed;
 
     return passed;
 }

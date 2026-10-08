@@ -416,6 +416,25 @@ public:
 
     NonlinearExpressionPtr EndSum(NumericArgHandler handler) { return std::make_shared<ExpressionSum>(handler.terms); }
 
+    // Used for the arguments of min and max
+    struct VarArgHandler
+    {
+        mp::expr::Kind kind;
+        NonlinearExpressions arguments;
+
+        void AddArg(NonlinearExpressionPtr argument) { arguments.add(argument); }
+    };
+
+    VarArgHandler BeginVarArg(mp::expr::Kind kind, int) { return VarArgHandler { kind, NonlinearExpressions() }; }
+
+    NonlinearExpressionPtr EndVarArg(VarArgHandler handler)
+    {
+        if(handler.arguments.size() == 0)
+            throw OperationNotImplementedException("Error: AMPL min or max without arguments");
+
+        return ((handler.kind == mp::expr::MAX) ? createMaximum(handler.arguments) : createMinimum(handler.arguments));
+    }
+
     void OnObj([[maybe_unused]] int objectiveIndex, mp::obj::Type type, NonlinearExpressionPtr nonlinearExpression)
     {
         if(type == mp::obj::Type::MAX)

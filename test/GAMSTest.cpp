@@ -129,6 +129,9 @@ bool TestGamsFunctions(std::string filename)
     return (passed);
 }
 
+// In ModelTest.cpp
+bool SolveMinimumAndMaximumProblem(const std::string& filename);
+
 bool ReadProblemGAMS(std::string filename)
 {
     bool passed = true;
@@ -626,6 +629,11 @@ int GAMSTest(int argc, char* argv[])
         std::cout << "Starting test of the GAMS functions given by other expressions:" << std::endl;
         passed = TestGamsFunctions("data/gamsfunctions.gms");
         std::cout << "Finished test of the GAMS functions given by other expressions." << std::endl;
+        break;
+    case 15:
+        std::cout << "Starting test of the GAMS functions min and max:" << std::endl;
+        passed = SolveMinimumAndMaximumProblem("data/minmax.gms");
+        std::cout << "Finished test of the GAMS functions min and max." << std::endl;
         break;
     default:
         passed = false;

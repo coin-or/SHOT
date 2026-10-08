@@ -2357,9 +2357,28 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
                 break;
             }
 
-            // TODO some more we could handle
             case fnmin:
             case fnmax:
+            {
+                int numberOfArguments
+                    = (opcode == nlCallArg1) ? 1 : ((opcode == nlCallArg2) ? 2 : numberOfFunctionArguments);
+
+                if(numberOfArguments < 1 || (size_t)numberOfArguments > stack.size())
+                    throw OperationNotImplementedException(
+                        "Error: Wrong number of arguments for the GAMS function min or max");
+
+                NonlinearExpressions arguments;
+
+                for(int k = numberOfArguments - 1; k >= 0; k--)
+                    arguments.push_back(stack.rbegin()[k]);
+
+                stack.resize(stack.size() - numberOfArguments);
+                stack.push_back(
+                    (GamsFuncCode(address + 1) == fnmax) ? createMaximum(arguments) : createMinimum(arguments));
+                break;
+            }
+
+            // TODO some more we could handle
             case fnceil:
             case fnfloor:
             case fnround:
