@@ -291,6 +291,7 @@ bool ModelTestAbsoluteValueUpperBound();
 bool ModelTestMinimumAndMaximum();
 bool ModelTestDivideConvexity();
 bool ModelTestLargeQuadraticConvexity();
+bool ModelTestStartingPointAndInfiniteObjective();
 
 int ModelTest(int argc, char* argv[])
 {
@@ -490,6 +491,9 @@ int ModelTest(int argc, char* argv[])
         break;
     case 60:
         passed = ModelTestLargeQuadraticConvexity();
+        break;
+    case 61:
+        passed = ModelTestStartingPointAndInfiniteObjective();
         break;
     default:
         passed = false;
@@ -10381,6 +10385,129 @@ bool ModelTestLargeQuadraticConvexity()
         std::cout << "  FAILED: the eigenvalues computed on demand are wrong.\n";
         passed = false;
     }
+
+    return passed;
+}
+
+bool ModelTestStartingPointAndInfiniteObjective()
+{
+    // Four points on the unit sphere with the smallest sum of 1/|p_i - p_j|, whose optimum is the tetrahedron with
+    // 6/sqrt(8/3) = 3.674234. The objective is infinite where two points coincide, e.g. in the first solution of the
+    // dual problem, which was accepted as a primal solution with an infinite objective, and in which no cut could be
+    // generated. A given starting point is solved from with the NLP solver before the first dual problem.
+
+    bool passed = true;
+
+    auto createProblem = [](SHOT::EnvironmentPtr env, int numberOfPoints, bool allPairs)
+    {
+        auto problem = std::make_shared<SHOT::Problem>(env);
+        std::vector<std::array<SHOT::VariablePtr, 3>> points;
+
+        for(int i = 0; i < numberOfPoints; i++)
+        {
+            std::array<SHOT::VariablePtr, 3> point;
+
+            for(int k = 0; k < 3; k++)
+            {
+                point[k] = std::make_shared<SHOT::Variable>(
+                    "p" + std::to_string(i) + "_" + std::to_string(k), SHOT::E_VariableType::Real, -1.0, 1.0);
+                problem->add(point[k]);
+            }
+
+            points.push_back(point);
+        }
+
+        SHOT::NonlinearExpressions terms;
+
+        for(int i = 0; i < numberOfPoints; i++)
+        {
+            for(int j = i + 1; j < numberOfPoints; j++)
+            {
+                if(!allPairs && j != i + 1)
+                    continue;
+
+                SHOT::NonlinearExpressions squares;
+
+                for(int k = 0; k < 3; k++)
+                    squares.push_back(std::make_shared<SHOT::ExpressionSquare>(
+                        std::make_shared<SHOT::ExpressionSum>(std::make_shared<SHOT::ExpressionVariable>(points[i][k]),
+                            std::make_shared<SHOT::ExpressionNegate>(
+                                std::make_shared<SHOT::ExpressionVariable>(points[j][k])))));
+
+                terms.push_back(std::make_shared<SHOT::ExpressionInvert>(
+                    std::make_shared<SHOT::ExpressionSquareRoot>(std::make_shared<SHOT::ExpressionSum>(squares))));
+            }
+        }
+
+        auto objective
+            = std::make_shared<SHOT::NonlinearObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize);
+        objective->add(std::make_shared<SHOT::ExpressionSum>(terms));
+        problem->add(objective);
+
+        for(int i = 0; i < numberOfPoints; i++)
+        {
+            auto sphere = std::make_shared<SHOT::QuadraticConstraint>("sphere" + std::to_string(i), 1.0, 1.0);
+
+            for(int k = 0; k < 3; k++)
+                sphere->add(std::make_shared<SHOT::QuadraticTerm>(1.0, points[i][k], points[i][k]));
+
+            problem->add(sphere);
+        }
+
+        problem->finalize();
+        return (problem);
+    };
+
+#ifdef HAS_IPOPT
+    for(bool useStartingPoint : { true, false })
+    {
+        auto solver = std::make_unique<SHOT::Solver>();
+        solver->updateSetting("Output.Console.LogLevel", static_cast<int>(SHOT::E_LogLevel::Error));
+        solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+        solver->updateSetting("Termination.TimeLimit", 20.0);
+        solver->updateSetting("Primal.FixedInteger.Solver", static_cast<int>(SHOT::ES_PrimalNLPSolver::Ipopt));
+
+        if(!solver->setProblem(createProblem(solver->getEnvironment(), 4, true)))
+        {
+            std::cout << "  FAILED: the problem could not be set.\n";
+            return (false);
+        }
+
+        // The unit vectors e1, e2, e3 and -e1, whose objective is 5/sqrt(2) + 1/2 = 4.0355
+        if(useStartingPoint)
+        {
+            SHOT::VectorDouble startingPoint = { 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, -1.0, 0.0, 0.0 };
+            solver->getEnvironment()->primalSolver->addPrimalSolutionCandidate(
+                startingPoint, SHOT::E_PrimalSolutionSource::ExternalPrimalSolution, 0);
+        }
+
+        if(!solver->solveProblem())
+        {
+            std::cout << "  FAILED: the problem could not be solved.\n";
+            passed = false;
+            continue;
+        }
+
+        for(auto& S : solver->getPrimalSolutions())
+        {
+            if(!std::isfinite(S.objValue))
+            {
+                std::cout << "  FAILED: a primal solution has the objective " << S.objValue << ".\n";
+                passed = false;
+            }
+        }
+
+        if(useStartingPoint && !(std::abs(solver->getPrimalBound() - 3.674234) < 1e-3))
+        {
+            std::cout << "  FAILED: the primal bound from the starting point is " << solver->getPrimalBound()
+                      << ", expected 3.674234.\n";
+            passed = false;
+        }
+
+        std::cout << "  Solved " << (useStartingPoint ? "with" : "without") << " a starting point, primal bound "
+                  << solver->getPrimalBound() << ".\n";
+    }
+#endif
 
     return passed;
 }

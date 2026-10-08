@@ -365,6 +365,13 @@ bool Solver::setProblem(std::string fileName)
             env->modelingSystem = modelingSystem;
             env->problem = problem;
 
+            // The levels of the variables are a starting point, which is given to the primal solver as when SHOT is
+            // called from GAMS (EntryPointsGAMS.cpp) and as the initial values of an AMPL model
+            VectorDouble variableStarts(gmoN(modelingSystem->modelingObject));
+            gmoGetVarL(modelingSystem->modelingObject, variableStarts.data());
+            env->primalSolver->addPrimalSolutionCandidate(
+                variableStarts, E_PrimalSolutionSource::ExternalPrimalSolution, 0);
+
             env->settings->updateSetting("Input.ModelingSystem", static_cast<int>(ES_ModelingSystem::GAMS));
         }
 #endif

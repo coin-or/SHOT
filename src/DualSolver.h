@@ -12,6 +12,7 @@
 #include "Environment.h"
 #include "Structs.h"
 
+#include <functional>
 #include <map>
 #include <optional>
 #include <utility>
@@ -56,6 +57,10 @@ public:
     // no such point.
     std::optional<VectorDouble> getHyperplaneGenerationPoint(
         const VectorDouble& point, const NumericConstraintPtr& constraint);
+
+    // The same for a cut of the objective function, e.g. a sum of 1/|x_i - x_j|, which is infinite where two points
+    // coincide. Without it, no cut is added in such a point, and the dual problem stops changing.
+    std::optional<VectorDouble> getObjectiveHyperplaneGenerationPoint(const VectorDouble& point);
 
     void addIntegerCut(IntegerCut integerCut);
     void addGeneratedIntegerCut(IntegerCut integerCut);
@@ -116,7 +121,12 @@ private:
     // positive when that point is cut off. The terms are the ones the hyperplane is built from, so that a point
     // accepted here is not rejected by MIPSolverBase::createHyperplane.
     std::optional<std::pair<double, double>> evaluateHyperplaneTerms(
-        const VectorDouble& generationPoint, const VectorDouble& pointToCutOff, const NumericConstraintPtr& constraint);
+        const HyperplanePtr& hyperplane, const VectorDouble& pointToCutOff);
+
+    // Moves the point toward the finite point candidates until the hyperplane created in it is finite. A hyperplane
+    // already generated in a trial point is skipped if the constraint index is given.
+    std::optional<VectorDouble> findHyperplaneGenerationPoint(const VectorDouble& point,
+        const std::function<HyperplanePtr(const VectorDouble&)>& createHyperplane, std::optional<int> constraintIndex);
 
     // The points to move toward, the ones deepest inside the constraints first
     std::vector<VectorDouble> getFinitePointCandidates();

@@ -29,6 +29,9 @@ void PrimalSolver::addPrimalSolutionCandidate(VectorDouble pt, E_PrimalSolutionS
     if((int)pt.size() > env->problem->properties.numberOfVariables)
         pt.resize(env->problem->properties.numberOfVariables);
 
+    if(source == E_PrimalSolutionSource::ExternalPrimalSolution)
+        startingPointsForNLP.push_back(pt);
+
     PrimalSolution sol;
 
     sol.point = pt;
@@ -434,6 +437,16 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
     if(reCalculateObjective)
     {
         tmpObjVal = env->problem->objectiveFunction->calculateValue(tmpPoint);
+    }
+
+    // A point where the objective is not finite, e.g. 1/x in x = 0, is not a solution: it would be the incumbent and
+    // be reported as a feasible solution without a primal bound
+    if(!std::isfinite(tmpObjVal))
+    {
+        env->output->outputDebug(
+            fmt::format("         The objective value {} of the primal solution candidate is not finite.", tmpObjVal));
+
+        return (false);
     }
 
     // For example rootsearches may violate linear constraints

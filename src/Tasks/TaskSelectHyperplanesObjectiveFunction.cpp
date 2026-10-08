@@ -86,7 +86,20 @@ void TaskSelectHyperplanesObjectiveFunction::run(std::vector<SolutionPoint> sour
 
     for(auto& SOLPT : sourcePoints)
     {
-        if(useRootsearch)
+        // The objective can be infinite in the point, e.g. 1/|x_i - x_j| where two points coincide, and the cut is
+        // then generated in a point moved toward one where it is finite
+        auto generationPoint = env->dualSolver->getObjectiveHyperplaneGenerationPoint(SOLPT.point);
+
+        if(!generationPoint)
+        {
+            env->output->outputDebug(
+                "         No point found where a hyperplane can be generated for the objective function.");
+            continue;
+        }
+
+        bool isPointMoved = Utilities::isDifferent(*generationPoint, SOLPT.point);
+
+        if(useRootsearch && !isPointMoved)
         {
             env->timing->startTimer("DualObjectiveRootSearch");
 
@@ -140,7 +153,7 @@ void TaskSelectHyperplanesObjectiveFunction::run(std::vector<SolutionPoint> sour
         }
 
         ObjectiveHyperplanePtr hyperplane = std::make_shared<ObjectiveHyperplane>();
-        hyperplane->generatedPoint = SOLPT.point;
+        hyperplane->generatedPoint = *generationPoint;
         hyperplane->source = E_HyperplaneSource::ObjectiveCuttingPlane;
         hyperplane->isGlobal = isConvex;
 

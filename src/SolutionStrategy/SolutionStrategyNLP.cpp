@@ -125,6 +125,20 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr)
     auto tCheckInitialUserTerm = std::make_shared<TaskCheckUserTermination>(env, "FinalizeSolution", false);
     env->tasks->addTask(tCheckInitialUserTerm, "CheckUserTerminationInitial");
 
+    // An NLP problem is solved from a given starting point, e.g. the levels of the variables of a GAMS model, before
+    // the first dual problem, which can take the remaining time of a nonconvex problem. Without a starting point,
+    // there are no candidates and nothing is solved.
+    if(env->settings->getSetting<bool>("Primal.FixedInteger.Use"))
+    {
+        auto tSolveStartingPointNLP = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env,
+            static_cast<ES_PrimalNLPProblemSource>(env->settings->getSetting<int>("Primal.FixedInteger.SourceProblem"))
+                == ES_PrimalNLPProblemSource::ReformulatedProblem);
+        env->tasks->addTask(tSolveStartingPointNLP, "SolveStartingPointNLP");
+
+        auto tClearStartingPointNLP = std::make_shared<TaskClearFixedPrimalCandidates>(env);
+        env->tasks->addTask(tClearStartingPointNLP, "ClearStartingPointNLP");
+    }
+
     auto tSolveIteration = std::make_shared<TaskSolveIteration>(env);
     env->tasks->addTask(tSolveIteration, "SolveIter");
 

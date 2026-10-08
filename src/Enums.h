@@ -140,7 +140,8 @@ enum class E_PrimalNLPSource
     InfeasibleSolution,
     SmallestDeviationSolution,
     FirstSolutionNewDualBound,
-    Enumeration
+    Enumeration,
+    StartingPoint // Given by the modeling system or the user, e.g., the levels of the variables in GAMS
 };
 
 enum class E_PrimalSolutionSource

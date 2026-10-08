@@ -217,6 +217,17 @@ void TaskSelectPrimalCandidatesFromNLP::run()
     if(!NLPSolver)
         return;
 
+    // A local NLP solver started from a given point, e.g. the starting point of the model, often finds a much better
+    // solution than from the solutions of the dual problem, where e.g. 1/|x_i - x_j| may be infinite
+    for(auto& P : env->primalSolver->startingPointsForNLP)
+    {
+        auto objectiveValue = env->problem->objectiveFunction->calculateValue(P);
+        env->primalSolver->addFixedNLPCandidate(
+            P, E_PrimalNLPSource::StartingPoint, objectiveValue, 0, PairIndexValue(-1, 0.0));
+    }
+
+    env->primalSolver->startingPointsForNLP.clear();
+
     if(env->primalSolver->fixedPrimalNLPCandidates.size() == 0)
     {
         env->solutionStatistics.numberOfIterationsWithoutNLPCallMIP++;
@@ -383,6 +394,10 @@ E_NLPSolutionStatus TaskSelectPrimalCandidatesFromNLP::solveFixedNLPCandidates(
             env->output->outputDebug(
                 "         Source from candidate point is the exhaustive search of the discrete variables.");
             sourceDesc = "ENUM-" + source;
+            break;
+        case E_PrimalNLPSource::StartingPoint:
+            env->output->outputDebug("         Source from candidate point is a given starting point.");
+            sourceDesc = "START-" + source;
             break;
         default:
             break;
