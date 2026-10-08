@@ -1807,7 +1807,23 @@ void Solver::initializeSettings()
         "Ipopt linear subsolver", enumIPOptSolver, 0);
     enumIPOptSolver.clear();
 
+    VectorString enumIpoptHessianApproximation;
+    enumIpoptHessianApproximation.push_back("Exact");
+    enumIpoptHessianApproximation.push_back("Limited memory");
+    enumIpoptHessianApproximation.push_back("Automatic");
+    env->settings->createSetting("Subsolver.Ipopt.HessianApproximation",
+        static_cast<int>(ES_IpoptHessianApproximation::Automatic),
+        "The Hessian of the Lagrangian used by Ipopt. Automatic uses a limited-memory approximation if the exact "
+        "Hessian of a nonlinear expression with at least 64 variables is nearly dense, since it is then expensive",
+        enumIpoptHessianApproximation, 0);
+    enumIpoptHessianApproximation.clear();
+
     env->settings->createSetting("Subsolver.Ipopt.MaxIterations", 1000, "Maximum number of iterations");
+
+    env->settings->createSetting("Subsolver.Ipopt.OptionsFile", std::string(),
+        "An Ipopt options file with any Ipopt options, read instead of ipopt.opt in the working directory. Options "
+        "set by SHOT, e.g. the linear solver, are not changed by it",
+        false);
 
     env->settings->createSetting(
         "Subsolver.Ipopt.RelativeConvergenceTolerance", 1E-8, "Relative convergence tolerance");

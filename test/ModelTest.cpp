@@ -10395,6 +10395,8 @@ bool ModelTestStartingPointAndInfiniteObjective()
     // 6/sqrt(8/3) = 3.674234. The objective is infinite where two points coincide, e.g. in the first solution of the
     // dual problem, which was accepted as a primal solution with an infinite objective, and in which no cut could be
     // generated. A given starting point is solved from with the NLP solver before the first dual problem.
+    // Whether the exact Hessian of the objective is calculated densely, which decides whether Ipopt uses a
+    // limited-memory approximation by default, is checked on larger objectives.
 
     bool passed = true;
 
@@ -10508,6 +10510,30 @@ bool ModelTestStartingPointAndInfiniteObjective()
                   << solver->getPrimalBound() << ".\n";
     }
 #endif
+
+    // 70 points coupled pairwise give a dense Hessian in 210 variables, a chain of them a sparse one, and 3 points
+    // too few variables to be considered expensive
+    struct DenseCase
+    {
+        int numberOfPoints;
+        bool allPairs;
+        bool expectDense;
+    };
+
+    for(auto& C : std::vector<DenseCase> { { 70, true, true }, { 70, false, false }, { 3, true, false } })
+    {
+        auto solver = std::make_unique<SHOT::Solver>();
+        auto problem = createProblem(solver->getEnvironment(), C.numberOfPoints, C.allPairs);
+        auto objective = std::dynamic_pointer_cast<SHOT::NonlinearObjectiveFunction>(problem->objectiveFunction);
+
+        if(!objective || objective->isHessianCalculatedDensely() != C.expectDense)
+        {
+            std::cout << "  FAILED: the Hessian for " << C.numberOfPoints << " points"
+                      << (C.allPairs ? " coupled pairwise" : " in a chain") << " is not classified as "
+                      << (C.expectDense ? "dense" : "sparse") << ".\n";
+            passed = false;
+        }
+    }
 
     return passed;
 }

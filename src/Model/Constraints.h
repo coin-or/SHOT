@@ -334,6 +334,10 @@ public:
     bool nonlinearGradientSparsityMapGenerated = false;
     bool nonlinearHessianSparsityMapGenerated = false;
 
+    // Whether the Hessian of the nonlinear expression is calculated with CppAD's dense method, which takes one
+    // forward and one reverse sweep of the whole expression per variable, since its pattern is nearly dense
+    bool isHessianCalculatedDensely();
+
     Variables variablesInMonomialTerms;
     Variables variablesInSignomialTerms;
     Variables variablesInNonlinearExpression;

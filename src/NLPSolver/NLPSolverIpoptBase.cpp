@@ -1130,7 +1130,35 @@ void NLPSolverIpoptBase::setInitialSettings()
     }
 
     // ipoptApplication->Options()->SetStringValue("fixed_variable_treatment", "make_parameter");
-    // ipoptApplication->Options()->SetStringValue("hessian_approximation", "limited-memory");
+
+    // The exact Hessian of a nonlinear expression in many variables with a nearly dense Hessian takes one sweep of the
+    // whole expression per variable, which can take most of the time of the NLP solution
+    auto hessianApproximation = static_cast<ES_IpoptHessianApproximation>(
+        env->settings->getSetting<int>("Subsolver.Ipopt.HessianApproximation"));
+
+    bool useLimitedMemoryHessian = (hessianApproximation == ES_IpoptHessianApproximation::LimitedMemory);
+
+    if(hessianApproximation == ES_IpoptHessianApproximation::Automatic)
+    {
+        if(auto objective = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(sourceProblem->objectiveFunction))
+            useLimitedMemoryHessian = objective->isHessianCalculatedDensely();
+
+        for(auto& C : sourceProblem->nonlinearConstraints)
+        {
+            if(useLimitedMemoryHessian)
+                break;
+
+            if(auto constraint = std::dynamic_pointer_cast<NonlinearConstraint>(C))
+                useLimitedMemoryHessian = constraint->isHessianCalculatedDensely();
+        }
+    }
+
+    if(useLimitedMemoryHessian)
+        ipoptApplication->Options()->SetStringValue("hessian_approximation", "limited-memory");
+
+    // Read when Ipopt is initialized; without it, Ipopt reads ipopt.opt in the working directory if there is one
+    if(auto optionsFile = env->settings->getSetting<std::string>("Subsolver.Ipopt.OptionsFile"); !optionsFile.empty())
+        ipoptApplication->Options()->SetStringValue("option_file_name", optionsFile);
 
     if(!env->settings->getSetting<bool>("Output.Console.PrimalSolver.Show"))
     {

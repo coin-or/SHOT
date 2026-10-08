@@ -310,6 +310,13 @@ enum class ES_IpoptSolver
     mumps
 };
 
+enum class ES_IpoptHessianApproximation
+{
+    Exact,
+    LimitedMemory,
+    Automatic // Limited memory if the exact Hessian is calculated densely, which is expensive for many variables
+};
+
 enum class ES_UnoPreset
 {
     UnoAuto,

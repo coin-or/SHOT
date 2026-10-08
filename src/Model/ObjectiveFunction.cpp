@@ -879,6 +879,24 @@ void NonlinearObjectiveFunction::initializeGradientSparsityPattern()
     nonlinearGradientSparsityMapGenerated = true;
 }
 
+bool NonlinearObjectiveFunction::isHessianCalculatedDensely()
+{
+    if(!properties.hasNonlinearExpression)
+        return (false);
+
+    auto sharedOwnerProblem = ownerProblem.lock();
+
+    if(!sharedOwnerProblem)
+        return (false);
+
+    if(!nonlinearHessianSparsityMapGenerated)
+        initializeHessianSparsityPattern();
+
+    size_t dimension = sharedOwnerProblem->properties.numberOfVariablesInNonlinearExpressions;
+
+    return (dimension >= 64 && nonlinearHessianSparsityPattern.nnz() > dimension * dimension / 2);
+}
+
 SparseVariableMatrix NonlinearObjectiveFunction::calculateHessian(const VectorDouble& point, bool eraseZeroes = true)
 {
     SparseVariableMatrix hessian = QuadraticObjectiveFunction::calculateHessian(point, eraseZeroes);
@@ -934,7 +952,7 @@ SparseVariableMatrix NonlinearObjectiveFunction::calculateHessian(const VectorDo
             const size_t dimension = pointNonlinearSubset.size();
             const auto& pattern = nonlinearHessianSparsityPattern;
 
-            if(dimension >= 64 && pattern.nnz() > dimension * dimension / 2)
+            if(isHessianCalculatedDensely())
             {
                 // Coloring a dense pattern is much more expensive than the Hessian itself. Use CppAD's direct
                 // dense calculation, then keep only the entries present in the pattern.

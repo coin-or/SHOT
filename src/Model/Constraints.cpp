@@ -759,6 +759,24 @@ void NonlinearConstraint::initializeGradientSparsityPattern()
     nonlinearGradientSparsityMapGenerated = true;
 }
 
+bool NonlinearConstraint::isHessianCalculatedDensely()
+{
+    if(!properties.hasNonlinearExpression)
+        return (false);
+
+    auto sharedOwnerProblem = ownerProblem.lock();
+
+    if(!sharedOwnerProblem)
+        return (false);
+
+    if(!nonlinearHessianSparsityMapGenerated)
+        initializeHessianSparsityPattern();
+
+    size_t dimension = sharedOwnerProblem->properties.numberOfVariablesInNonlinearExpressions;
+
+    return (dimension >= 64 && nonlinearHessianSparsityPattern.nnz() > dimension * dimension / 2);
+}
+
 SparseVariableMatrix NonlinearConstraint::calculateHessian(const VectorDouble& point, bool eraseZeroes = true)
 {
     SparseVariableMatrix hessian = calculateHessianWithoutNonlinearExpression(point, false);
@@ -801,7 +819,7 @@ SparseVariableMatrix NonlinearConstraint::calculateHessian(const VectorDouble& p
             const size_t dimension = pointNonlinearSubset.size();
             const auto& pattern = nonlinearHessianSparsityPattern;
 
-            if(dimension >= 64 && pattern.nnz() > dimension * dimension / 2)
+            if(isHessianCalculatedDensely())
             {
                 // Coloring a dense pattern is more expensive than the Hessian itself. Keep only pattern entries.
                 auto values = sharedOwnerProblem->ADFunctions.Hessian(pointNonlinearSubset, weights);
