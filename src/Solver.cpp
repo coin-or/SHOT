@@ -1494,6 +1494,10 @@ void Solver::initializeSettings()
     env->settings->createSetting(
         "Primal.FixedInteger.TimeLimit", 10.0, "Time limit (s) per NLP problem", 0, SHOT_DBL_MAX);
 
+    env->settings->createSetting("Primal.FixedInteger.UseStartingPoint", false,
+        "Solve an NLP problem from a given starting point, e.g. the levels of the variables in GAMS or the initial "
+        "values in AMPL, before the first dual problem. Off by default until benchmarked on all of MINLPLib");
+
     env->settings->createSetting("Primal.FixedInteger.Use", true, "Use the fixed integer primal strategy");
 
     env->settings->createSetting("Primal.FixedInteger.Warmstart", true, "Warm start the NLP solver");

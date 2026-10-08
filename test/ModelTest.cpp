@@ -10468,6 +10468,7 @@ bool ModelTestStartingPointAndInfiniteObjective()
         solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
         solver->updateSetting("Termination.TimeLimit", 20.0);
         solver->updateSetting("Primal.FixedInteger.Solver", static_cast<int>(SHOT::ES_PrimalNLPSolver::Ipopt));
+        solver->updateSetting("Primal.FixedInteger.UseStartingPoint", true);
 
         if(!solver->setProblem(createProblem(solver->getEnvironment(), 4, true)))
         {

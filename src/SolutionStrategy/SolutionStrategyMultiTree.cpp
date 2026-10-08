@@ -143,7 +143,8 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
     // An NLP problem is solved from a given starting point, e.g. the levels of the variables of a GAMS model, with
     // its discrete variables fixed, before the first dual problem, which can take the remaining time of a nonconvex
     // problem. Without a starting point, there are no candidates and nothing is solved.
-    if(env->settings->getSetting<bool>("Primal.FixedInteger.Use"))
+    if(env->settings->getSetting<bool>("Primal.FixedInteger.Use")
+        && env->settings->getSetting<bool>("Primal.FixedInteger.UseStartingPoint"))
     {
         auto tSolveStartingPointNLP = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env,
             static_cast<ES_PrimalNLPProblemSource>(env->settings->getSetting<int>("Primal.FixedInteger.SourceProblem"))
