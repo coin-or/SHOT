@@ -330,6 +330,81 @@ class TestAbsoluteValues:
             assert sum(1 for name in names if name.startswith("s_abs_")) == expected, (shift, names)
 
 
+
+class TestMinimumAndMaximum:
+    """min and max are given by absolute values, max(a, b) = (a + b + |a - b|)/2, with more arguments taken pairwise."""
+
+    def make_problem(self, solver, as_list):
+        import SHOTpy
+
+        problem = SHOTpy.Problem(solver)
+        x = problem.addVariable("x", SHOTpy.VariableType.Real, -2.0, 2.0)
+        y = problem.addVariable("y", SHOTpy.VariableType.Real, -2.0, 2.0)
+
+        # max(x, y, 1 - x) <= 1.5 and min(x, y) >= -1 are convex, and max(x, y) - min(x, y) = |x - y| is maximized,
+        # so the optimum is 2.5 in (1.5, -1)
+        if as_list:
+            maximum3 = SHOTpy.max([x, y, 1 - x])
+            maximum2, minimum2 = SHOTpy.max([x, y]), SHOTpy.min([x, y])
+        else:
+            maximum3 = SHOTpy.max(x, y, 1 - x)
+            maximum2, minimum2 = SHOTpy.max(x, y), SHOTpy.min(x, y)
+
+        problem.setObjective(maximum2 - minimum2, SHOTpy.ObjectiveDirection.Maximize)
+        problem.addConstraint(maximum3 <= 1.5, "c1")
+        problem.addConstraint(minimum2 >= -1, "c2")
+        problem.finalize()
+        return problem, x, y
+
+    @pytest.mark.parametrize("as_list", [False, True])
+    def test_solve(self, as_list):
+        solver = make_solver({})
+        problem, x, y = self.make_problem(solver, as_list)
+
+        assert solver.setProblem(problem)
+        assert solver.solveProblem()
+
+        assert solver.getPrimalBound() == pytest.approx(2.5, abs=1e-5)
+        assert solver.getCurrentDualBound() == pytest.approx(2.5, abs=1e-4)
+
+        point = list(solver.getPrimalSolution().point)
+        assert point[x.index] == pytest.approx(1.5, abs=1e-5)
+        assert point[y.index] == pytest.approx(-1.0, abs=1e-5)
+
+        # Every pair shares the absolute value |x - y|, which is maximized and needs a binary; the outer absolute
+        # value in c1 is in a convex position
+        names = auxiliary_variable_names(solver)
+        assert sum(1 for name in names if name.startswith("s_absb_")) == 1, names
+
+    def test_values(self):
+        import SHOTpy
+
+        solver = SHOTpy.Solver()
+        problem = SHOTpy.Problem(solver)
+        x = problem.addVariable("x", SHOTpy.VariableType.Real, -5.0, 5.0)
+        y = problem.addVariable("y", SHOTpy.VariableType.Real, -5.0, 5.0)
+
+        problem.setObjective(x)
+        problem.addConstraint(SHOTpy.max(x, y, 0.5) <= 100, "a")
+        problem.addConstraint(SHOTpy.min(x, 2 * y, -1) <= 100, "b")
+        problem.addConstraint(SHOTpy.max(x) <= 100, "c")
+        problem.finalize()
+
+        for point in ([1.0, -2.0], [-3.0, 0.5], [2.0, 2.0]):
+            expected = {"a": max(point[0], point[1], 0.5), "b": min(point[0], 2 * point[1], -1), "c": point[0]}
+
+            for name, value in expected.items():
+                assert problem.getConstraint(name).calculateFunctionValue(point) == pytest.approx(value), name
+
+    def test_wrong_arguments(self):
+        import SHOTpy
+
+        with pytest.raises(ValueError):
+            SHOTpy.max()
+
+        with pytest.raises(TypeError):
+            SHOTpy.min(1.0, "x")
+
 class TestSharedAuxiliaryVariables:
     """Equal partitioned terms share their auxiliary variable."""
 

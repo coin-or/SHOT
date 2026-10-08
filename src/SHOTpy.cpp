@@ -1418,6 +1418,51 @@ PYBIND11_MODULE(SHOTpy, m)
         "The signed power sign(x) * |x|^exponent with a positive constant exponent", py::arg("x"),
         py::arg("exponent"));
 
+    // The arguments of min and max are variables, expressions and numbers, given separately or as one list
+    auto minimumOrMaximumArguments = [](const py::args& args, const std::string& name)
+    {
+        py::sequence items = args;
+
+        if(args.size() == 1 && (py::isinstance<py::list>(args[0]) || py::isinstance<py::tuple>(args[0])))
+            items = args[0].cast<py::sequence>();
+
+        NonlinearExpressions arguments;
+
+        for(auto item : items)
+        {
+            if(py::isinstance<Variable>(item))
+                arguments.push_back(wrapInExpression(item.cast<VariablePtr>()));
+            else if(py::isinstance<NonlinearExpression>(item))
+                arguments.push_back(item.cast<NonlinearExpressionPtr>());
+            else if(py::isinstance<py::float_>(item) || py::isinstance<py::int_>(item))
+                arguments.push_back(wrapInExpression(item.cast<double>()));
+            else
+                throw py::type_error("The arguments of " + name + " must be variables, expressions or numbers, not "
+                    + std::string(py::str(py::type::of(item).attr("__name__"))));
+        }
+
+        if(arguments.size() == 0)
+            throw std::invalid_argument(name + " needs at least one argument");
+
+        return (arguments);
+    };
+
+    m.def(
+        "min",
+        [minimumOrMaximumArguments](const py::args& args) -> NonlinearExpressionPtr
+        { return createMinimum(minimumOrMaximumArguments(args, "min")); },
+        "The minimum of variables, expressions and numbers, given separately or as one list. It is reformulated "
+        "with absolute values, min(a, b) = (a + b - |a - b|)/2, which need a binary variable only where the "
+        "optimum does not push the minimum up");
+
+    m.def(
+        "max",
+        [minimumOrMaximumArguments](const py::args& args) -> NonlinearExpressionPtr
+        { return createMaximum(minimumOrMaximumArguments(args, "max")); },
+        "The maximum of variables, expressions and numbers, given separately or as one list. It is reformulated "
+        "with absolute values, max(a, b) = (a + b + |a - b|)/2, which need a binary variable only where the "
+        "optimum does not push the maximum down");
+
     m.def(
         "square", [](VariablePtr var) -> NonlinearExpressionPtr
         { return std::make_shared<ExpressionSquare>(wrapInExpression(var)); }, "Square function", py::arg("x"));
