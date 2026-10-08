@@ -289,6 +289,7 @@ bool ModelTestBoundTighteningSoundness();
 bool ModelTestHyperbolicFunctions();
 bool ModelTestAbsoluteValueUpperBound();
 bool ModelTestMinimumAndMaximum();
+bool ModelTestDivideConvexity();
 
 int ModelTest(int argc, char* argv[])
 {
@@ -482,6 +483,9 @@ int ModelTest(int argc, char* argv[])
         break;
     case 58:
         passed = ModelTestMinimumAndMaximum();
+        break;
+    case 59:
+        passed = ModelTestDivideConvexity();
         break;
     default:
         passed = false;
@@ -10164,6 +10168,75 @@ bool ModelTestMinimumAndMaximum()
     // min and max read from OSiL and AMPL files, see SolveMinimumAndMaximumProblem()
     bool passed = SolveMinimumAndMaximumProblem("data/minmax.osil");
     passed = SolveMinimumAndMaximumProblem("data/minmax.nl") && passed;
+
+    return passed;
+}
+
+bool ModelTestDivideConvexity()
+{
+    // x/(dx + c) is convex if cd(dx + c) < 0 and concave if it is positive, since its second derivative is
+    // -2cd/(dx + c)^3. With another variable in the denominator, as x/(c + y) in fuzzy, it is neither: this was
+    // classified as concave, cuts on such constraints were regarded as valid, and SHOT claimed global optimality.
+
+    bool passed = true;
+
+    auto x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 2.0, 10.0);
+    auto y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Real, 0.0, 10.0);
+
+    auto number = [](double value) { return std::make_shared<SHOT::ExpressionConstant>(value); };
+    auto variable = [](SHOT::VariablePtr V) { return std::make_shared<SHOT::ExpressionVariable>(V); };
+    auto times = [&](double coefficient, SHOT::VariablePtr V)
+    { return std::make_shared<SHOT::ExpressionProduct>(number(coefficient), variable(V)); };
+    auto divide = [](SHOT::NonlinearExpressionPtr nominator, SHOT::NonlinearExpressionPtr denominator)
+    { return std::make_shared<SHOT::ExpressionDivide>(nominator, denominator); };
+    auto sum = [](SHOT::NonlinearExpressionPtr first, SHOT::NonlinearExpressionPtr second)
+    { return std::make_shared<SHOT::ExpressionSum>(first, second); };
+
+    struct Case
+    {
+        std::string description;
+        SHOT::NonlinearExpressionPtr expression;
+        SHOT::E_Convexity expected;
+    };
+
+    std::vector<Case> cases = {
+        { "x/(80 + y)", divide(variable(x), sum(number(80.0), variable(y))), SHOT::E_Convexity::Unknown },
+        { "x/(y + 80)", divide(variable(x), sum(variable(y), number(80.0))), SHOT::E_Convexity::Unknown },
+        { "x/(80 + 2*y)", divide(variable(x), sum(number(80.0), times(2.0, y))), SHOT::E_Convexity::Unknown },
+        { "-x/(80 + y)", std::make_shared<SHOT::ExpressionNegate>(divide(variable(x), sum(number(80.0), variable(y)))),
+            SHOT::E_Convexity::Unknown },
+        { "x/(80 + y) + y/(80 + x)",
+            sum(divide(variable(x), sum(number(80.0), variable(y))),
+                divide(variable(y), sum(number(80.0), variable(x)))),
+            SHOT::E_Convexity::Unknown },
+        { "x/(x + 1)", divide(variable(x), sum(variable(x), number(1.0))), SHOT::E_Convexity::Concave },
+        { "x/(1 + x)", divide(variable(x), sum(number(1.0), variable(x))), SHOT::E_Convexity::Concave },
+        { "x/(x - 1)", divide(variable(x), sum(variable(x), number(-1.0))), SHOT::E_Convexity::Convex },
+        { "x/(2*x + 1)", divide(variable(x), sum(times(2.0, x), number(1.0))), SHOT::E_Convexity::Concave },
+        { "x/(20 - x)", divide(variable(x), sum(number(20.0), times(-1.0, x))), SHOT::E_Convexity::Convex },
+        { "x/(-20 + x)", divide(variable(x), sum(number(-20.0), variable(x))), SHOT::E_Convexity::Concave },
+    };
+
+    for(auto& C : cases)
+    {
+        auto convexity = C.expression->getConvexity();
+
+        // Unknown and nonconvex both mean that the expression is neither convex nor concave
+        bool isAsExpected = (C.expected == SHOT::E_Convexity::Unknown) ? (convexity != SHOT::E_Convexity::Convex
+                                && convexity != SHOT::E_Convexity::Concave && convexity != SHOT::E_Convexity::Linear)
+                                                                       : (convexity == C.expected);
+
+        if(!isAsExpected)
+        {
+            std::cout << "  FAILED: " << C.description << " has the convexity " << (int)convexity << ", expected "
+                      << (int)C.expected << ".\n";
+            passed = false;
+        }
+        else
+        {
+            std::cout << "  " << C.description << " classified as expected.\n";
+        }
+    }
 
     return passed;
 }

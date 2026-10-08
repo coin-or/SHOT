@@ -2115,23 +2115,32 @@ public:
             ExpressionVariablePtr nominatorVariable = std::dynamic_pointer_cast<ExpressionVariable>(firstChild);
             ExpressionVariablePtr denominatorVariable;
 
-            // x/(x+c)
+            // x/(x+c); the variable in the denominator must be the one in the nominator, since, e.g., x/(y+c) is
+            // neither convex nor concave
             if(sum->children[0]->getType() == E_NonlinearExpressionTypes::Variable
                 && sum->children[1]->getType() == E_NonlinearExpressionTypes::Constant)
             {
                 denominatorVariable = std::dynamic_pointer_cast<ExpressionVariable>(sum->children[0]);
-                constant = std::dynamic_pointer_cast<ExpressionConstant>(sum->children[1])->constant;
-                coefficient = 1.0;
-                isValid = true;
+
+                if(denominatorVariable->variable == nominatorVariable->variable)
+                {
+                    constant = std::dynamic_pointer_cast<ExpressionConstant>(sum->children[1])->constant;
+                    coefficient = 1.0;
+                    isValid = true;
+                }
             }
             // x/(c+x)
             else if(sum->children[1]->getType() == E_NonlinearExpressionTypes::Variable
                 && sum->children[0]->getType() == E_NonlinearExpressionTypes::Constant)
             {
-                denominatorVariable = std::dynamic_pointer_cast<ExpressionVariable>(sum->children[0]);
-                constant = std::dynamic_pointer_cast<ExpressionConstant>(sum->children[0])->constant;
-                coefficient = 1.0;
-                isValid = true;
+                denominatorVariable = std::dynamic_pointer_cast<ExpressionVariable>(sum->children[1]);
+
+                if(denominatorVariable->variable == nominatorVariable->variable)
+                {
+                    constant = std::dynamic_pointer_cast<ExpressionConstant>(sum->children[0])->constant;
+                    coefficient = 1.0;
+                    isValid = true;
+                }
             }
             // x/(d*x+c) or x/(x*d+c)
             else if(sum->children[0]->getType() == E_NonlinearExpressionTypes::Product
@@ -2202,33 +2211,18 @@ public:
                 }
             }
 
+            // The second derivative of x/(dx+c) is -2cd/(dx+c)^3, and the sign of the denominator is known, since
+            // its bounds do not contain zero
             if(isValid)
             {
-                if(constant < 0)
-                {
-                    if(coefficient < 0 && nominatorVariable->variable->getBound().l() > -constant / coefficient)
-                        return E_Convexity::Convex;
-                    if(coefficient > 0 && nominatorVariable->variable->getBound().l() > -constant / coefficient)
-                        return E_Convexity::Convex;
+                double denominatorSign = (bounds2.l() > 0) ? 1.0 : -1.0;
+                double sign = constant * coefficient * denominatorSign;
 
-                    if(coefficient < 0 && nominatorVariable->variable->getBound().l() > -constant / coefficient)
-                        return E_Convexity::Concave;
-                    if(coefficient > 0 && nominatorVariable->variable->getBound().l() < -constant / coefficient)
-                        return E_Convexity::Concave;
-                }
+                if(sign < 0)
+                    return E_Convexity::Convex;
 
-                if(constant > 0)
-                {
-                    if(coefficient < 0 && nominatorVariable->variable->getBound().l() < -constant / coefficient)
-                        return E_Convexity::Convex;
-                    if(coefficient > 0 && nominatorVariable->variable->getBound().l() < -constant / coefficient)
-                        return E_Convexity::Convex;
-
-                    if(coefficient < 0 && nominatorVariable->variable->getBound().l() > -constant / coefficient)
-                        return E_Convexity::Concave;
-                    if(coefficient > 0 && nominatorVariable->variable->getBound().l() > -constant / coefficient)
-                        return E_Convexity::Concave;
-                }
+                if(sign > 0)
+                    return E_Convexity::Concave;
             }
         }
 
