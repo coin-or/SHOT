@@ -10238,5 +10238,38 @@ bool ModelTestDivideConvexity()
         }
     }
 
+    // The monotonicity of f/c follows from that of f and the sign of c, except for c = 0, which was the only constant
+    // denominator with a known monotonicity
+    struct MonotonicityCase
+    {
+        std::string description;
+        SHOT::NonlinearExpressionPtr expression;
+        SHOT::E_Monotonicity expected;
+    };
+
+    std::vector<MonotonicityCase> monotonicityCases = {
+        { "x/2", divide(variable(x), number(2.0)), SHOT::E_Monotonicity::Nondecreasing },
+        { "x/(-2)", divide(variable(x), number(-2.0)), SHOT::E_Monotonicity::Nonincreasing },
+        { "(-x)/2", divide(std::make_shared<SHOT::ExpressionNegate>(variable(x)), number(2.0)),
+            SHOT::E_Monotonicity::Nonincreasing },
+        { "x/0", divide(variable(x), number(0.0)), SHOT::E_Monotonicity::Unknown },
+    };
+
+    for(auto& C : monotonicityCases)
+    {
+        auto monotonicity = C.expression->getMonotonicity();
+
+        if(monotonicity != C.expected)
+        {
+            std::cout << "  FAILED: the monotonicity of " << C.description << " is " << (int)monotonicity
+                      << ", expected " << (int)C.expected << ".\n";
+            passed = false;
+        }
+        else
+        {
+            std::cout << "  The monotonicity of " << C.description << " is as expected.\n";
+        }
+    }
+
     return passed;
 }

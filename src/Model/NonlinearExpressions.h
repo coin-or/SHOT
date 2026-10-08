@@ -2237,7 +2237,8 @@ public:
         auto bounds1 = firstChild->getBounds();
         auto bounds2 = secondChild->getBounds();
 
-        if(child2Monotonicity == E_Monotonicity::Constant && (bounds2.l() == 0.0 || bounds2.u()))
+        // Division by the constant zero
+        if(child2Monotonicity == E_Monotonicity::Constant && (bounds2.l() == 0.0 || bounds2.u() == 0.0))
             return E_Monotonicity::Unknown;
 
         if(child1Monotonicity == E_Monotonicity::Constant && child2Monotonicity == E_Monotonicity::Constant)
