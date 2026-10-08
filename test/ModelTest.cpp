@@ -292,6 +292,7 @@ bool ModelTestMinimumAndMaximum();
 bool ModelTestDivideConvexity();
 bool ModelTestLargeQuadraticConvexity();
 bool ModelTestStartingPointAndInfiniteObjective();
+bool ModelTestPolishFromSeveralPoints();
 
 int ModelTest(int argc, char* argv[])
 {
@@ -494,6 +495,9 @@ int ModelTest(int argc, char* argv[])
         break;
     case 61:
         passed = ModelTestStartingPointAndInfiniteObjective();
+        break;
+    case 62:
+        passed = ModelTestPolishFromSeveralPoints();
         break;
     default:
         passed = false;
@@ -6225,7 +6229,7 @@ static std::pair<std::unique_ptr<SHOT::Solver>, std::shared_ptr<SHOT::Environmen
     solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Warning));
     solver->updateSetting("Termination.TimeLimit", 20.0);
     solver->updateSetting("Dual.MIP.Solver", static_cast<int>(mipSolver));
-    solver->updateSetting("Primal.PolishSolution", polish);
+    solver->updateSetting("Primal.PolishSolution.NumberOfPoints", polish ? 1 : 0);
 
     auto problem = buildProblem(env);
     problem->finalize();
@@ -6338,7 +6342,7 @@ bool ModelTestPolishSolution()
             if(unpolishedEnv->solutionStatistics.numberOfProblemsFixedNLP == 0
                 && polishedEnv->solutionStatistics.numberOfProblemsFixedNLP == 0)
             {
-                std::cout << "  FAILED: enabling Primal.PolishSolution did not result in an NLP problem being "
+                std::cout << "  FAILED: enabling the polish did not result in an NLP problem being "
                              "solved.\n";
                 passed = false;
             }
@@ -6346,7 +6350,7 @@ bool ModelTestPolishSolution()
             if(polishedEnv->solutionStatistics.numberOfProblemsFixedNLP
                 < unpolishedEnv->solutionStatistics.numberOfProblemsFixedNLP)
             {
-                std::cout << "  FAILED: enabling Primal.PolishSolution resulted in fewer NLP problems being "
+                std::cout << "  FAILED: enabling the polish resulted in fewer NLP problems being "
                              "solved.\n";
                 passed = false;
             }
@@ -10535,6 +10539,105 @@ bool ModelTestStartingPointAndInfiniteObjective()
             passed = false;
         }
     }
+
+    return passed;
+}
+
+bool ModelTestPolishFromSeveralPoints()
+{
+    // The final NLP problem is solved from the first solutions of the last Primal.PolishSolution.NumberOfPoints
+    // iterations of the dual problem that have solutions, and not at all if it is zero. Without a starting point, the
+    // polish is the only NLP problem solved for a continuous problem, so the NLP solutions checked as primal candidates
+    // are counted. The problem, min -x1 - ... - x5 s.t. exp(x1) + ... + exp(x5) <= 10, is convex, so the NLP problem is
+    // solved from every point, and needs several iterations of cutting planes. Its optimum is x_i = ln 2, with the
+    // objective -5 ln 2.
+
+    bool passed = true;
+
+#ifdef HAS_IPOPT
+    const int numberOfVariables = 5;
+
+    for(int numberOfPoints : { 0, 1, 3, 5 })
+    {
+        auto solver = std::make_unique<SHOT::Solver>();
+        auto env = solver->getEnvironment();
+        solver->updateSetting("Output.Console.LogLevel", static_cast<int>(SHOT::E_LogLevel::Error));
+        solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+        solver->updateSetting("Termination.TimeLimit", 20.0);
+        solver->updateSetting("Primal.FixedInteger.Solver", static_cast<int>(SHOT::ES_PrimalNLPSolver::Ipopt));
+        solver->updateSetting("Primal.PolishSolution.NumberOfPoints", numberOfPoints);
+
+        auto problem = std::make_shared<SHOT::Problem>(env);
+        auto objective = std::make_shared<SHOT::LinearObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize);
+        auto constraint = std::make_shared<SHOT::NonlinearConstraint>("c", SHOT_DBL_MIN, 10.0);
+        SHOT::NonlinearExpressions exponentials;
+
+        for(int i = 0; i < numberOfVariables; i++)
+        {
+            auto x = std::make_shared<SHOT::Variable>("x" + std::to_string(i), SHOT::E_VariableType::Real, -5.0, 5.0);
+            problem->add(x);
+            objective->add(std::make_shared<SHOT::LinearTerm>(-1.0, x));
+            exponentials.push_back(
+                std::make_shared<SHOT::ExpressionExp>(std::make_shared<SHOT::ExpressionVariable>(x)));
+        }
+
+        constraint->add(std::make_shared<SHOT::ExpressionSum>(exponentials));
+        problem->add(objective);
+        problem->add(constraint);
+        problem->finalize();
+
+        int numberOfNLPSolutions = 0;
+
+        solver->registerCallback<SHOT::PrimalCandidateCheckContext>(
+            [&numberOfNLPSolutions](SHOT::PrimalCandidateCheckContext& context)
+            {
+                if(context.getSource() == SHOT::E_PrimalSolutionSource::NLPFixedIntegers)
+                    numberOfNLPSolutions++;
+            });
+
+        if(!solver->setProblem(problem) || !solver->solveProblem())
+        {
+            std::cout << "  FAILED: the problem could not be solved with " << numberOfPoints << " points.\n";
+            passed = false;
+            continue;
+        }
+
+        // The run must have enough iterations with solutions for every point to be used
+        int numberOfIterationsWithSolutions = 0;
+
+        for(auto& I : env->results->iterations)
+            if(!I->solutionPoints.empty())
+                numberOfIterationsWithSolutions++;
+
+        int expected = std::min(numberOfPoints, numberOfIterationsWithSolutions);
+
+        if(numberOfIterationsWithSolutions < numberOfPoints)
+        {
+            std::cout << "  FAILED: only " << numberOfIterationsWithSolutions
+                      << " iterations have solutions, the test needs " << numberOfPoints << ".\n";
+            passed = false;
+        }
+
+        if(numberOfNLPSolutions != expected)
+        {
+            std::cout << "  FAILED: " << numberOfNLPSolutions << " NLP solutions with " << numberOfPoints
+                      << " points, expected " << expected << ".\n";
+            passed = false;
+        }
+
+        // Without the polish, the primal solution only comes from the search, which need not reach the optimum
+        if(numberOfPoints > 0 && !(std::abs(solver->getPrimalBound() + numberOfVariables * std::log(2.0)) < 1e-4))
+        {
+            std::cout << "  FAILED: the primal bound is " << solver->getPrimalBound() << " with " << numberOfPoints
+                      << " points, expected " << -numberOfVariables * std::log(2.0) << ".\n";
+            passed = false;
+        }
+
+        std::cout << "  " << numberOfPoints << " points: " << numberOfNLPSolutions << " NLP solutions in "
+                  << numberOfIterationsWithSolutions << " iterations with solutions, primal bound "
+                  << solver->getPrimalBound() << ".\n";
+    }
+#endif
 
     return passed;
 }

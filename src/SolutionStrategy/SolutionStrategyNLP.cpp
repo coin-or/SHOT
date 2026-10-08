@@ -173,7 +173,7 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr)
     // often flat, so a converged objective can still sit on a point that is some way off. This is a separate
     // task instance from any used during the search: it must not be paced by the iteration and time heuristics
     // that apply there.
-    if(env->settings->getSetting<bool>("Primal.PolishSolution"))
+    if(env->settings->getSetting<int>("Primal.PolishSolution.NumberOfPoints") > 0)
     {
         auto tPolishPoint = std::make_shared<TaskSelectPrimalFixedNLPPointsFromSolutionPool>(env, true);
         std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tPolishPoint);

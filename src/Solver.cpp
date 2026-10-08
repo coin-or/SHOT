@@ -1502,8 +1502,11 @@ void Solver::initializeSettings()
 
     env->settings->createSetting("Primal.FixedInteger.Warmstart", true, "Warm start the NLP solver");
 
-    env->settings->createSetting(
-        "Primal.PolishSolution", true, "Solve an NLP problem from the final solution to try to improve it");
+    env->settings->createSetting("Primal.PolishSolution.NumberOfPoints", 1,
+        "The number of solutions of the dual problem, from the last iterations, that a final NLP problem is solved "
+        "from to try to improve the solution. More than one can find a better local solution of a nonconvex problem, "
+        "and zero disables it",
+        0, SHOT_INT_MAX);
 
     // Primal settings: rootsearch
 
