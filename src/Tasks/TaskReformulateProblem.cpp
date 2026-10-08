@@ -2988,8 +2988,27 @@ NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(st
     if(!added) // Have already created the auxiliary constraints
         return (std::make_shared<ExpressionVariable>(auxVariable));
 
+    // The bounds are calculated before the terms are extracted, since this removes them from the argument
+    auto argumentBounds = source->child->getBounds();
+
     auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression, tmpConstant]
         = extractTermsAndConstant(source->child, true, true, true, true);
+
+    // The remaining nonlinear part may contain other absolute values, which are replaced by their auxiliary variables;
+    // the terms of the result are then extracted as well
+    if(tmpNonlinearExpression)
+    {
+        auto [innerLinearTerms, innerQuadraticTerms, innerMonomialTerms, innerSignomialTerms, innerNonlinearExpression,
+            innerConstant]
+            = extractTermsAndConstant(reformulateNonlinearExpression(tmpNonlinearExpression), true, true, true, true);
+
+        tmpLinearTerms.add(innerLinearTerms);
+        tmpQuadraticTerms.add(innerQuadraticTerms);
+        tmpMonomialTerms.add(innerMonomialTerms);
+        tmpSignomialTerms.add(innerSignomialTerms);
+        tmpNonlinearExpression = innerNonlinearExpression;
+        tmpConstant += innerConstant;
+    }
 
     AbsoluteValueDefinition definition;
     definition.variable = auxVariable;
@@ -2999,7 +3018,7 @@ NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(st
     definition.signomialTerms = tmpSignomialTerms;
     definition.nonlinearExpression = tmpNonlinearExpression;
     definition.constant = tmpConstant;
-    definition.argumentBounds = source->child->getBounds();
+    definition.argumentBounds = argumentBounds;
 
     // The constraints f(x) - w <= 0 and -f(x) - w <= 0, i.e., w >= |f(x)|. An upper bound on w is added afterwards if
     // the optimum does not bound it, see addUpperBoundsOfAbsoluteValues()
