@@ -501,7 +501,7 @@ class TestSharedAuxiliaryVariables:
             assert problem.getConstraint(name).calculateNumericValue(point).error <= 1e-6
 
     def test_continuous_monomials(self):
-        """Equal monomials share their auxiliary variable, while other coefficients or signs need their own."""
+        """Monomials of the same variables and sign share their auxiliary variable, also with other coefficients."""
         import SHOTpy
 
         solver = make_solver(self.ALWAYS)
@@ -515,9 +515,9 @@ class TestSharedAuxiliaryVariables:
         problem.finalize()
         assert solver.setProblem(problem)
 
-        # x*y*z, 3*x*y*z, -x*y*z, 2*y*z*u, and x*z*u, which is in both c2 and c3
+        # x*y*z, which 3*x*y*z shares, -x*y*z, y*z*u, and x*z*u, which is in both c2 and c3
         names = auxiliary_variable_names(solver)
-        assert self.count(names, "s_pmon_") == 5, names
+        assert self.count(names, "s_pmon_") == 4, names
 
         assert solver.solveProblem()
         point = list(solver.getPrimalSolution().point)

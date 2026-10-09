@@ -1827,9 +1827,14 @@ LinearTerms TaskReformulateProblem::partitionMonomialTerms(const MonomialTerms& 
 
     for(auto& T : sourceTerms)
     {
-        // The auxiliary variable w >= c * x1 * ... * xn, or w >= -c * x1 * ... * xn with the signs reversed, is
-        // shared by equal terms; the coefficient stays in the term, as for the other partitioned terms
-        double coefficient = reversedSigns ? -T->coefficient : T->coefficient;
+        if(T->coefficient == 0.0)
+            continue;
+
+        double coefficient = std::abs(T->coefficient);
+
+        // The auxiliary variable w >= sign * x1 * ... * xn with sign = +-1 is used as |c| * w, so that terms only
+        // differing in their coefficient share the auxiliary variable, as for the signomial terms
+        bool isPositive = ((T->coefficient < 0.0) == reversedSigns);
 
         std::vector<int> variableIndexes;
 
@@ -1838,12 +1843,12 @@ LinearTerms TaskReformulateProblem::partitionMonomialTerms(const MonomialTerms& 
 
         std::sort(variableIndexes.begin(), variableIndexes.end());
 
-        auto key = std::make_pair(coefficient, variableIndexes);
+        auto key = std::make_pair(isPositive, variableIndexes);
         auto auxVariableIterator = monomialAuxVariables.find(key);
 
         if(auxVariableIterator != monomialAuxVariables.end())
         {
-            resultTerms.push_back(std::make_shared<LinearTerm>(1.0, auxVariableIterator->second));
+            resultTerms.push_back(std::make_shared<LinearTerm>(coefficient, auxVariableIterator->second));
             continue;
         }
 
@@ -1851,7 +1856,7 @@ LinearTerms TaskReformulateProblem::partitionMonomialTerms(const MonomialTerms& 
 
         try
         {
-            bounds = T->getBounds();
+            bounds = T->getBounds() / coefficient;
 
             if(reversedSigns)
                 bounds = -1.0 * bounds;
@@ -1869,7 +1874,7 @@ LinearTerms TaskReformulateProblem::partitionMonomialTerms(const MonomialTerms& 
 
         monomialAuxVariables.emplace(key, auxVariable);
 
-        resultTerms.push_back(std::make_shared<LinearTerm>(1.0, auxVariable));
+        resultTerms.push_back(std::make_shared<LinearTerm>(coefficient, auxVariable));
 
         auto auxConstraint = std::make_shared<NonlinearConstraint>(
             "s_pmon_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, 0.0);
@@ -1877,7 +1882,7 @@ LinearTerms TaskReformulateProblem::partitionMonomialTerms(const MonomialTerms& 
         auxConstraintCounter++;
 
         auto monomialTerm = std::make_shared<MonomialTerm>(T.get(), reformulatedProblem);
-        monomialTerm->coefficient = coefficient;
+        monomialTerm->coefficient = isPositive ? 1.0 : -1.0;
 
         auxConstraint->add(monomialTerm);
 
