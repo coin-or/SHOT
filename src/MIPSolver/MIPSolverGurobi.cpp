@@ -1001,6 +1001,37 @@ bool MIPSolverGurobi::repairInfeasibility()
             return (false);
         }
 
+        // The repair must find a solution that is better than the cutoff, or it finds that no constraint needs to be
+        // relaxed. Without a cutoff constraint in the model, e.g. for a quadratic objective function, the cutoff is
+        // only a parameter, which the objective function of the repair replaces, so the objective function is
+        // bounded by a constraint instead
+        double cutOff = gurobiModel->get(GRB_DoubleParam_Cutoff);
+
+        if(!cutOffConstraintDefined && std::abs(cutOff) < GRB_INFINITY)
+        {
+            auto objective = feasModel.getObjective();
+
+            if(objective.size() > 0)
+            {
+                if(isMinimizationProblem)
+                    feasModel.addQConstr(objective <= cutOff, "CUTOFF_REPAIR");
+                else
+                    feasModel.addQConstr(objective >= cutOff, "CUTOFF_REPAIR");
+
+                // A quadratic objective function is not convex in general
+                feasModel.set(GRB_IntParam_NonConvex, 2);
+            }
+            else
+            {
+                if(isMinimizationProblem)
+                    feasModel.addConstr(objective.getLinExpr() <= cutOff, "CUTOFF_REPAIR");
+                else
+                    feasModel.addConstr(objective.getLinExpr() >= cutOff, "CUTOFF_REPAIR");
+            }
+
+            feasModel.update();
+        }
+
         // Gurobi modifies the value when running feasModel.optimize()
         int numConstraintsToRepairOrig = numConstraintsToRepair;
 
