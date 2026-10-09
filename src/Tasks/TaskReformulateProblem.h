@@ -168,6 +168,15 @@ private:
     // Whether every occurrence of w outside its defining constraints has it bounded from above by the optimum
     bool isAbsoluteValueBoundedFromAbove(const AbsoluteValueDefinition& definition);
 
+    // The results of isAbsoluteValueBoundedFromAbove by the index of w, since an absolute value in the argument of
+    // another depends on the result for that one. Cleared when the upper bounds are added.
+    std::map<int, bool> absoluteValueBoundedFromAbove;
+
+    // The coefficient of the variable in the constraint or objective, if it occurs, which is NaN if it occurs in a
+    // nonlinear term
+    std::optional<double> getLinearCoefficientOfVariable(const NumericConstraintPtr& constraint, int index);
+    std::optional<double> getLinearCoefficientOfVariableInObjective(int index);
+
     // Adds w <= |f| for the absolute values that are not bounded from above
     void addUpperBoundsOfAbsoluteValues();
 

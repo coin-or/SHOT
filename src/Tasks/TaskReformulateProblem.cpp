@@ -3235,90 +3235,179 @@ static double getLinearCoefficientInExpression(const NonlinearExpressionPtr& exp
     }
 }
 
+std::optional<double> TaskReformulateProblem::getLinearCoefficientOfVariable(
+    const NumericConstraintPtr& constraint, int index)
+{
+    double coefficient = 0.0;
+    bool found = false;
+
+    if(auto linearConstraint = std::dynamic_pointer_cast<LinearConstraint>(constraint))
+    {
+        for(auto& T : linearConstraint->linearTerms)
+        {
+            if(T->variable->getIndex() == index)
+            {
+                coefficient += T->coefficient;
+                found = true;
+            }
+        }
+    }
+
+    if(auto quadraticConstraint = std::dynamic_pointer_cast<QuadraticConstraint>(constraint))
+    {
+        for(auto& T : quadraticConstraint->quadraticTerms)
+        {
+            if(T->firstVariable->getIndex() == index || T->secondVariable->getIndex() == index)
+                return (std::numeric_limits<double>::quiet_NaN());
+        }
+    }
+
+    if(auto nonlinearConstraint = std::dynamic_pointer_cast<NonlinearConstraint>(constraint))
+    {
+        for(auto& T : nonlinearConstraint->monomialTerms)
+            for(auto& V : T->variables)
+                if(V->getIndex() == index)
+                    return (std::numeric_limits<double>::quiet_NaN());
+
+        for(auto& T : nonlinearConstraint->signomialTerms)
+            for(auto& E : T->elements)
+                if(E->variable->getIndex() == index)
+                    return (std::numeric_limits<double>::quiet_NaN());
+
+        if(nonlinearConstraint->nonlinearExpression)
+        {
+            double expressionCoefficient
+                = getLinearCoefficientInExpression(nonlinearConstraint->nonlinearExpression, index);
+
+            if(std::isnan(expressionCoefficient))
+                return (expressionCoefficient);
+
+            if(expressionCoefficient != 0.0)
+            {
+                coefficient += expressionCoefficient;
+                found = true;
+            }
+        }
+    }
+
+    if(!found)
+        return (std::nullopt);
+
+    return (coefficient);
+}
+
+std::optional<double> TaskReformulateProblem::getLinearCoefficientOfVariableInObjective(int index)
+{
+    auto objective = reformulatedProblem->objectiveFunction;
+    double coefficient = 0.0;
+    bool found = false;
+
+    if(auto linearObjective = std::dynamic_pointer_cast<LinearObjectiveFunction>(objective))
+    {
+        for(auto& T : linearObjective->linearTerms)
+        {
+            if(T->variable->getIndex() == index)
+            {
+                coefficient += T->coefficient;
+                found = true;
+            }
+        }
+    }
+
+    if(auto quadraticObjective = std::dynamic_pointer_cast<QuadraticObjectiveFunction>(objective))
+    {
+        for(auto& T : quadraticObjective->quadraticTerms)
+            if(T->firstVariable->getIndex() == index || T->secondVariable->getIndex() == index)
+                return (std::numeric_limits<double>::quiet_NaN());
+    }
+
+    if(auto nonlinearObjective = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objective))
+    {
+        for(auto& T : nonlinearObjective->monomialTerms)
+            for(auto& V : T->variables)
+                if(V->getIndex() == index)
+                    return (std::numeric_limits<double>::quiet_NaN());
+
+        for(auto& T : nonlinearObjective->signomialTerms)
+            for(auto& E : T->elements)
+                if(E->variable->getIndex() == index)
+                    return (std::numeric_limits<double>::quiet_NaN());
+
+        if(nonlinearObjective->nonlinearExpression)
+        {
+            double expressionCoefficient
+                = getLinearCoefficientInExpression(nonlinearObjective->nonlinearExpression, index);
+
+            if(std::isnan(expressionCoefficient))
+                return (expressionCoefficient);
+
+            if(expressionCoefficient != 0.0)
+            {
+                coefficient += expressionCoefficient;
+                found = true;
+            }
+        }
+    }
+
+    if(!found)
+        return (std::nullopt);
+
+    return (coefficient);
+}
+
 bool TaskReformulateProblem::isAbsoluteValueBoundedFromAbove(const AbsoluteValueDefinition& definition)
 {
     // w >= |f| is exact if every occurrence of w prefers it smaller: a positive coefficient in a <= constraint, a
     // negative one in a >= constraint, or a positive one in a minimized objective. An occurrence in an equality or a
     // range, in a nonlinear term, or with the other sign, needs the upper bound w <= |f| as well.
+    //
+    // An occurrence in the argument f' = alpha w + ... of another absolute value W >= |f'|, e.g. in max(a, b, c) =
+    // max(max(a, b), c), has w with both signs in the constraints defining W. It still prefers w smaller if W is
+    // bounded from above itself and, wherever W occurs with a coefficient beta, w occurs with a coefficient gamma of
+    // the same sign with |gamma| >= |beta alpha|: the sum gamma w + beta |alpha w + ...| is then monotone in w in the
+    // direction that W is pushed. This holds with equality for the nested max and min.
     int index = definition.variable->getIndex();
 
-    auto containsVariable = [index](const NumericConstraintPtr& C) -> std::optional<double>
-    {
-        double coefficient = 0.0;
-        bool found = false;
+    if(auto cached = absoluteValueBoundedFromAbove.find(index); cached != absoluteValueBoundedFromAbove.end())
+        return (cached->second);
 
-        if(auto linearConstraint = std::dynamic_pointer_cast<LinearConstraint>(C))
-        {
-            for(auto& T : linearConstraint->linearTerms)
-            {
-                if(T->variable->getIndex() == index)
-                {
-                    coefficient += T->coefficient;
-                    found = true;
-                }
-            }
-        }
+    // Absolute values in an argument are reformulated before the one they are in, so there are no cycles, but a
+    // result is stored before the outer ones are checked in any case
+    absoluteValueBoundedFromAbove[index] = false;
 
-        if(auto quadraticConstraint = std::dynamic_pointer_cast<QuadraticConstraint>(C))
-        {
-            for(auto& T : quadraticConstraint->quadraticTerms)
-            {
-                if(T->firstVariable->getIndex() == index || T->secondVariable->getIndex() == index)
-                    return (std::numeric_limits<double>::quiet_NaN());
-            }
-        }
-
-        if(auto nonlinearConstraint = std::dynamic_pointer_cast<NonlinearConstraint>(C))
-        {
-            for(auto& T : nonlinearConstraint->monomialTerms)
-                for(auto& V : T->variables)
-                    if(V->getIndex() == index)
-                        return (std::numeric_limits<double>::quiet_NaN());
-
-            for(auto& T : nonlinearConstraint->signomialTerms)
-                for(auto& E : T->elements)
-                    if(E->variable->getIndex() == index)
-                        return (std::numeric_limits<double>::quiet_NaN());
-
-            if(nonlinearConstraint->nonlinearExpression)
-            {
-                double expressionCoefficient
-                    = getLinearCoefficientInExpression(nonlinearConstraint->nonlinearExpression, index);
-
-                if(std::isnan(expressionCoefficient))
-                    return (expressionCoefficient);
-
-                if(expressionCoefficient != 0.0)
-                {
-                    coefficient += expressionCoefficient;
-                    found = true;
-                }
-            }
-        }
-
-        if(!found)
-            return (std::nullopt);
-
-        return (coefficient);
+    auto isDefiningConstraint = [](const AbsoluteValueDefinition& D, const NumericConstraintPtr& C) {
+        return (
+            std::find(D.definingConstraints.begin(), D.definingConstraints.end(), C) != D.definingConstraints.end());
     };
+
+    // The absolute values whose arguments contain w, with the coefficient of w in the argument
+    std::vector<std::pair<const AbsoluteValueDefinition*, double>> outerAbsoluteValues;
 
     for(auto& C : reformulatedProblem->numericConstraints)
     {
-        if(std::find(definition.definingConstraints.begin(), definition.definingConstraints.end(), C)
-            != definition.definingConstraints.end())
+        if(isDefiningConstraint(definition, C))
             continue;
 
-        auto coefficient = containsVariable(C);
+        auto coefficient = getLinearCoefficientOfVariable(C, index);
 
-        if(!coefficient)
+        if(!coefficient || *coefficient == 0.0)
             continue;
 
         // An occurrence in a nonlinear term
         if(std::isnan(*coefficient))
             return (false);
 
-        if(*coefficient == 0.0)
+        auto outer = std::find_if(absoluteValueDefinitions.begin(), absoluteValueDefinitions.end(),
+            [&](const AbsoluteValueDefinition& D) { return (&D != &definition && isDefiningConstraint(D, C)); });
+
+        if(outer != absoluteValueDefinitions.end())
+        {
+            if(std::none_of(outerAbsoluteValues.begin(), outerAbsoluteValues.end(),
+                   [&](const auto& O) { return (O.first == &(*outer)); }))
+                outerAbsoluteValues.emplace_back(&(*outer), std::abs(*coefficient));
+
             continue;
+        }
 
         bool hasLowerSide = (C->valueLHS > SHOT_DBL_MIN);
         bool hasUpperSide = (C->valueRHS < SHOT_DBL_MAX);
@@ -3333,59 +3422,54 @@ bool TaskReformulateProblem::isAbsoluteValueBoundedFromAbove(const AbsoluteValue
             return (false);
     }
 
-    auto objective = reformulatedProblem->objectiveFunction;
-    double objectiveCoefficient = 0.0;
-
-    if(auto linearObjective = std::dynamic_pointer_cast<LinearObjectiveFunction>(objective))
-    {
-        for(auto& T : linearObjective->linearTerms)
-            if(T->variable->getIndex() == index)
-                objectiveCoefficient += T->coefficient;
-    }
-
-    if(auto quadraticObjective = std::dynamic_pointer_cast<QuadraticObjectiveFunction>(objective))
-    {
-        for(auto& T : quadraticObjective->quadraticTerms)
-            if(T->firstVariable->getIndex() == index || T->secondVariable->getIndex() == index)
-                return (false);
-    }
-
-    if(auto nonlinearObjective = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objective))
-    {
-        for(auto& T : nonlinearObjective->monomialTerms)
-            for(auto& V : T->variables)
-                if(V->getIndex() == index)
-                    return (false);
-
-        for(auto& T : nonlinearObjective->signomialTerms)
-            for(auto& E : T->elements)
-                if(E->variable->getIndex() == index)
-                    return (false);
-
-        if(nonlinearObjective->nonlinearExpression)
-        {
-            double expressionCoefficient
-                = getLinearCoefficientInExpression(nonlinearObjective->nonlinearExpression, index);
-
-            if(std::isnan(expressionCoefficient))
-                return (false);
-
-            objectiveCoefficient += expressionCoefficient;
-        }
-    }
-
     // The properties of the objective are not updated until the problem is finalized
-    bool isMinimize = (objective->direction == E_ObjectiveFunctionDirection::Minimize);
+    bool isMinimize = (reformulatedProblem->objectiveFunction->direction == E_ObjectiveFunctionDirection::Minimize);
 
-    if((isMinimize && objectiveCoefficient < 0) || (!isMinimize && objectiveCoefficient > 0))
-        return (false);
+    if(auto coefficient = getLinearCoefficientOfVariableInObjective(index))
+    {
+        if(std::isnan(*coefficient) || (isMinimize && *coefficient < 0) || (!isMinimize && *coefficient > 0))
+            return (false);
+    }
 
+    for(auto& [outer, alpha] : outerAbsoluteValues)
+    {
+        if(!isAbsoluteValueBoundedFromAbove(*outer))
+            return (false);
+
+        int outerIndex = outer->variable->getIndex();
+
+        auto isMonotone = [alpha = alpha](std::optional<double> beta, std::optional<double> gamma)
+        {
+            if(!beta || *beta == 0.0)
+                return (true);
+
+            double gammaValue = gamma.value_or(0.0);
+
+            return (gammaValue * *beta > 0.0 && std::abs(gammaValue) >= (1.0 - 1e-9) * std::abs(*beta) * alpha);
+        };
+
+        for(auto& C : reformulatedProblem->numericConstraints)
+        {
+            if(isDefiningConstraint(*outer, C))
+                continue;
+
+            if(!isMonotone(getLinearCoefficientOfVariable(C, outerIndex), getLinearCoefficientOfVariable(C, index)))
+                return (false);
+        }
+
+        if(!isMonotone(
+               getLinearCoefficientOfVariableInObjective(outerIndex), getLinearCoefficientOfVariableInObjective(index)))
+            return (false);
+    }
+
+    absoluteValueBoundedFromAbove[index] = true;
     return (true);
 }
 
 void TaskReformulateProblem::addUpperBoundsOfAbsoluteValues()
 {
     double maximumBigM = env->settings->getSetting<double>("Model.Reformulation.AbsoluteValue.MaximumBigM");
+    absoluteValueBoundedFromAbove.clear();
 
     for(auto& D : absoluteValueDefinitions)
     {

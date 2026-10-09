@@ -293,6 +293,7 @@ bool ModelTestDivideConvexity();
 bool ModelTestLargeQuadraticConvexity();
 bool ModelTestStartingPointAndInfiniteObjective();
 bool ModelTestPolishFromSeveralPoints();
+bool ModelTestNestedAbsoluteValues();
 
 int ModelTest(int argc, char* argv[])
 {
@@ -498,6 +499,9 @@ int ModelTest(int argc, char* argv[])
         break;
     case 62:
         passed = ModelTestPolishFromSeveralPoints();
+        break;
+    case 63:
+        passed = ModelTestNestedAbsoluteValues();
         break;
     default:
         passed = false;
@@ -10638,6 +10642,122 @@ bool ModelTestPolishFromSeveralPoints()
                   << solver->getPrimalBound() << ".\n";
     }
 #endif
+
+    return passed;
+}
+
+bool ModelTestNestedAbsoluteValues()
+{
+    // max and min of more than two arguments are nested absolute values, e.g. max(a, b, c) = max(max(a, b), c), whose
+    // inner absolute value occurs with both signs in the constraints defining the outer one. In a convex position,
+    // e.g. max(...) <= c, the inner one is still pushed down by the optimum and needs no binary. An absolute value
+    // that only occurs in the argument of another, as |y| in |x - |y|| <= 1, is not: without w <= |y|, any y with
+    // |y| <= x + 1 would be feasible.
+
+    bool passed = true;
+
+    auto variable = [](SHOT::VariablePtr V) { return (std::make_shared<SHOT::ExpressionVariable>(V)); };
+    auto constant = [](double value) { return (std::make_shared<SHOT::ExpressionConstant>(value)); };
+
+    struct Case
+    {
+        std::string description;
+        double expectedObjective;
+        int expectedBinaries;
+    };
+
+    std::vector<Case> cases = { { "max x + 2y + 3w s.t. max(x, y, w, 0.5x + 1) <= 1.5, min(x, y, w) >= -1", 8.5, 0 },
+        { "min z s.t. |x - |y|| <= 1, z >= y, z >= -y, x in [2, 3]", 1.0, 1 } };
+
+    for(int number = 0; number < (int)cases.size(); number++)
+    {
+        auto solver = std::make_unique<SHOT::Solver>();
+        auto env = solver->getEnvironment();
+        solver->updateSetting("Output.Console.LogLevel", static_cast<int>(SHOT::E_LogLevel::Error));
+        solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+        solver->updateSetting("Termination.TimeLimit", 30.0);
+
+        auto problem = std::make_shared<SHOT::Problem>(env);
+        auto objective = std::make_shared<SHOT::LinearObjectiveFunction>();
+
+        if(number == 0)
+        {
+            auto x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, -2.0, 2.0);
+            auto y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Real, -2.0, 2.0);
+            auto w = std::make_shared<SHOT::Variable>("w", SHOT::E_VariableType::Real, -2.0, 2.0);
+            problem->add(SHOT::Variables { x, y, w });
+
+            objective->direction = SHOT::E_ObjectiveFunctionDirection::Maximize;
+            objective->add(std::make_shared<SHOT::LinearTerm>(1.0, x));
+            objective->add(std::make_shared<SHOT::LinearTerm>(2.0, y));
+            objective->add(std::make_shared<SHOT::LinearTerm>(3.0, w));
+
+            auto maximum = std::make_shared<SHOT::NonlinearConstraint>("e1", SHOT_DBL_MIN, 1.5);
+            maximum->add(SHOT::createMaximum({ variable(x), variable(y), variable(w),
+                std::make_shared<SHOT::ExpressionSum>(
+                    std::make_shared<SHOT::ExpressionProduct>(constant(0.5), variable(x)), constant(1.0)) }));
+            problem->add(maximum);
+
+            auto minimum = std::make_shared<SHOT::NonlinearConstraint>("e2", -1.0, SHOT_DBL_MAX);
+            minimum->add(SHOT::createMinimum({ variable(x), variable(y), variable(w) }));
+            problem->add(minimum);
+        }
+        else
+        {
+            auto x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 2.0, 3.0);
+            auto y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Real, -3.0, 3.0);
+            auto z = std::make_shared<SHOT::Variable>("z", SHOT::E_VariableType::Real, -5.0, 5.0);
+            problem->add(SHOT::Variables { x, y, z });
+
+            objective->direction = SHOT::E_ObjectiveFunctionDirection::Minimize;
+            objective->add(std::make_shared<SHOT::LinearTerm>(1.0, z));
+
+            auto nested = std::make_shared<SHOT::NonlinearConstraint>("e1", SHOT_DBL_MIN, 1.0);
+            nested->add(std::make_shared<SHOT::ExpressionAbs>(std::make_shared<SHOT::ExpressionSum>(variable(x),
+                std::make_shared<SHOT::ExpressionNegate>(std::make_shared<SHOT::ExpressionAbs>(variable(y))))));
+            problem->add(nested);
+
+            for(double sign : { 1.0, -1.0 })
+            {
+                auto bound = std::make_shared<SHOT::LinearConstraint>(sign > 0 ? "e2" : "e3", SHOT_DBL_MIN, 0.0);
+                bound->add(std::make_shared<SHOT::LinearTerm>(sign, y));
+                bound->add(std::make_shared<SHOT::LinearTerm>(-1.0, z));
+                problem->add(bound);
+            }
+        }
+
+        problem->add(objective);
+        problem->finalize();
+
+        if(!solver->setProblem(problem) || !solver->solveProblem())
+        {
+            std::cout << "  FAILED: " << cases[number].description << " could not be solved.\n";
+            passed = false;
+            continue;
+        }
+
+        int numberOfBinaries = 0;
+
+        for(auto& V : solver->getReformulatedProblem()->auxiliaryVariables)
+            if(V->properties.auxiliaryType == SHOT::E_AuxiliaryVariableType::AbsoluteValueSign)
+                numberOfBinaries++;
+
+        double primalBound = solver->getPrimalBound();
+        double dualBound = env->results->getCurrentDualBound();
+
+        if(numberOfBinaries != cases[number].expectedBinaries
+            || std::abs(primalBound - cases[number].expectedObjective) > 1e-4
+            || std::abs(dualBound - cases[number].expectedObjective) > 1e-3)
+        {
+            std::cout << "  FAILED: " << cases[number].description << " has the bounds [" << primalBound << ", "
+                      << dualBound << "] and " << numberOfBinaries << " sign binaries, expected "
+                      << cases[number].expectedObjective << " and " << cases[number].expectedBinaries << ".\n";
+            passed = false;
+            continue;
+        }
+
+        std::cout << "  " << cases[number].description << ": as expected.\n";
+    }
 
     return passed;
 }
