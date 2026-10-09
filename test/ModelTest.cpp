@@ -10942,6 +10942,15 @@ bool ModelTestMergedMonomialsAndSignomials()
         std::make_shared<ExpressionProduct>(power(x3, 0.5), power(x3, 1.5)), variable(x4) }));
     problem->add(powers);
 
+    // Terms the constraint already has are merged with the terms extracted from its nonlinear expression, so that a
+    // constraint is linear also when the terms only cancel each other then: x1*x2*x3 is a monomial term of the
+    // constraint, and -x1*x2*x3 is in its nonlinear expression
+    auto acrossExtractions = std::make_shared<NonlinearConstraint>("acrossextractions", SHOT_DBL_MIN, 4.0);
+    acrossExtractions->add(std::make_shared<MonomialTerm>(1.0, Variables({ x1, x2, x3 })));
+    acrossExtractions->add(std::make_shared<LinearTerm>(1.0, x4));
+    acrossExtractions->add(product(-1.0, { x3, x2, x1 }));
+    problem->add(acrossExtractions);
+
     // An objective function where all the nonlinear terms cancel is linear
     auto objective = std::make_shared<NonlinearObjectiveFunction>();
     objective->direction = E_ObjectiveFunctionDirection::Minimize;
@@ -11033,6 +11042,17 @@ bool ModelTestMergedMonomialsAndSignomials()
             std::cout << "  FAILED: the terms should be b*x3*x4, 2*x1^2*y and x1^3.\n";
             passed = false;
         }
+    }
+
+    auto acrossExtractionsAfter = getConstraint("acrossextractions");
+
+    if(std::dynamic_pointer_cast<NonlinearConstraint>(acrossExtractionsAfter)
+        || !std::dynamic_pointer_cast<LinearConstraint>(acrossExtractionsAfter))
+    {
+        std::cout
+            << "  FAILED: the constraint whose monomial term cancels the one of its nonlinear expression should be "
+            << "linear.\n";
+        passed = false;
     }
 
     auto powersAfter = std::dynamic_pointer_cast<NonlinearConstraint>(getConstraint("powers"));
