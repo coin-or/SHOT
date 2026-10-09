@@ -296,6 +296,7 @@ bool ModelTestPolishFromSeveralPoints();
 bool ModelTestNestedAbsoluteValues();
 bool ModelTestInteriorPointNotTrusted();
 bool ModelTestMergedMonomialsAndSignomials();
+bool ModelTestProductTermDerivatives();
 
 int ModelTest(int argc, char* argv[])
 {
@@ -510,6 +511,9 @@ int ModelTest(int argc, char* argv[])
         break;
     case 65:
         passed = ModelTestMergedMonomialsAndSignomials();
+        break;
+    case 66:
+        passed = ModelTestProductTermDerivatives();
         break;
     default:
         passed = false;
@@ -11047,6 +11051,128 @@ bool ModelTestMergedMonomialsAndSignomials()
         std::cout << "  FAILED: the objective function whose monomial terms cancel should be linear.\n";
         passed = false;
     }
+
+    return passed;
+}
+
+bool ModelTestProductTermDerivatives()
+{
+    // The gradient and Hessian of the monomial and signomial terms are compared with finite differences. A repeated
+    // variable, as x in x*x*y, was skipped for every factor it is in instead of once, so the gradient of x*x*y was y
+    // instead of 2xy and its Hessian had no element for x^2. The Hessian of a signomial term divided the value of the
+    // term by the variables, which gives NaN when a variable is zero, e.g. for x^2*y at x = 0.
+
+    bool passed = true;
+
+    auto solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+    auto problem = std::make_shared<Problem>(env);
+
+    auto x = std::make_shared<Variable>("x", E_VariableType::Real, -5.0, 5.0);
+    auto y = std::make_shared<Variable>("y", E_VariableType::Real, -5.0, 5.0);
+    auto z = std::make_shared<Variable>("z", E_VariableType::Real, -5.0, 5.0);
+    problem->add(Variables({ x, y, z }));
+
+    auto element = [](VariablePtr V, double power) { return (std::make_shared<SignomialElement>(V, power)); };
+
+    // The terms with integer powers are defined for all points, the others only where the variables are positive
+    MonomialTerms monomials;
+    monomials.push_back(std::make_shared<MonomialTerm>(2.0, Variables({ x, x, y })));
+    monomials.push_back(std::make_shared<MonomialTerm>(-1.5, Variables({ x, y, z })));
+    monomials.push_back(std::make_shared<MonomialTerm>(0.5, Variables({ z, x, z, z })));
+    monomials.takeOwnership(problem);
+
+    SignomialTerms integerSignomials;
+    integerSignomials.push_back(
+        std::make_shared<SignomialTerm>(2.0, SignomialElements({ element(x, 2.0), element(y, 1.0) })));
+    integerSignomials.push_back(
+        std::make_shared<SignomialTerm>(1.5, SignomialElements({ element(x, 3.0), element(z, 2.0) })));
+    integerSignomials.push_back(std::make_shared<SignomialTerm>(
+        -0.5, SignomialElements({ element(y, 1.0), element(x, 2.0), element(y, 1.0) })));
+    integerSignomials.takeOwnership(problem);
+
+    SignomialTerms fractionalSignomials;
+    fractionalSignomials.push_back(
+        std::make_shared<SignomialTerm>(1.0, SignomialElements({ element(x, 0.5), element(x, 1.5), element(y, 1.0) })));
+    fractionalSignomials.push_back(std::make_shared<SignomialTerm>(
+        0.7, SignomialElements({ element(x, 2.5), element(y, -1.0), element(z, 1.5) })));
+    fractionalSignomials.takeOwnership(problem);
+
+    auto compare
+        = [&passed](const std::string& name, const std::function<double(const VectorDouble&)>& function,
+              const SparseVariableVector& gradient, const SparseVariableMatrix& hessian, const VectorDouble& point)
+    {
+        const double h = 1e-4;
+        int numberOfVariables = (int)point.size();
+
+        auto shifted = [&point](int i, double hi, int j, double hj)
+        {
+            VectorDouble result = point;
+            result[i] += hi;
+            result[j] += hj;
+            return (result);
+        };
+
+        for(int i = 0; i < numberOfVariables; i++)
+        {
+            double expected = (function(shifted(i, h, i, 0.0)) - function(shifted(i, -h, i, 0.0))) / (2.0 * h);
+            double value = 0.0;
+
+            for(auto& [V, G] : gradient)
+                if(V->getIndex() == i)
+                    value = G;
+
+            if(!std::isfinite(value) || std::abs(value - expected) > 1e-5 * (1.0 + std::abs(expected)))
+            {
+                std::cout << "  FAILED: " << name << ": the derivative for variable " << i << " is " << value
+                          << ", expected " << expected << ".\n";
+                passed = false;
+            }
+
+            for(int j = i; j < numberOfVariables; j++)
+            {
+                double expectedSecond = (function(shifted(i, h, j, h)) - function(shifted(i, h, j, -h))
+                                            - function(shifted(i, -h, j, h)) + function(shifted(i, -h, j, -h)))
+                    / (4.0 * h * h);
+                double valueSecond = 0.0;
+
+                for(auto& [VP, H] : hessian)
+                    if(VP.first->getIndex() == i && VP.second->getIndex() == j)
+                        valueSecond += H;
+
+                if(!std::isfinite(valueSecond)
+                    || std::abs(valueSecond - expectedSecond) > 1e-4 * (1.0 + std::abs(expectedSecond)))
+                {
+                    std::cout << "  FAILED: " << name << ": the Hessian element (" << i << ", " << j << ") is "
+                              << valueSecond << ", expected " << expectedSecond << ".\n";
+                    passed = false;
+                }
+            }
+        }
+    };
+
+    for(auto& point :
+        { VectorDouble { 1.3, -0.7, 0.4 }, VectorDouble { 0.0, 0.5, -0.8 }, VectorDouble { 0.0, 0.0, 0.0 } })
+    {
+        compare(
+            "monomials", [&monomials](const VectorDouble& P) { return (monomials.calculate(P)); },
+            monomials.calculateGradient(point), monomials.calculateHessian(point), point);
+
+        compare(
+            "signomials with integer powers",
+            [&integerSignomials](const VectorDouble& P) { return (integerSignomials.calculate(P)); },
+            integerSignomials.calculateGradient(point), integerSignomials.calculateHessian(point), point);
+    }
+
+    VectorDouble positivePoint = { 1.3, 0.6, 0.4 };
+
+    compare(
+        "signomials with fractional powers", [&fractionalSignomials](const VectorDouble& P)
+        { return (fractionalSignomials.calculate(P)); }, fractionalSignomials.calculateGradient(positivePoint),
+        fractionalSignomials.calculateHessian(positivePoint), positivePoint);
+
+    if(passed)
+        std::cout << "  the gradients and Hessians equal the finite differences.\n";
 
     return passed;
 }

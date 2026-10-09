@@ -863,6 +863,87 @@ inline std::ostream& operator<<(std::ostream& stream, MonomialTermPtr term)
     return stream;
 }
 
+// The derivatives of a term c * g_1 * ... * g_n by the product rule, where g_i is a function of one variable, e.g. x
+// or x^p, and a variable may be in several factors, as x in x*x*y. The products of the other factors are formed from
+// prefix and suffix products, since dividing the value of the term by a factor fails when the factor is zero.
+// values, firstDerivatives and secondDerivatives are g_i, g_i' and g_i'' at the point.
+inline void addProductTermGradient(SparseVariableVector& gradient, double coefficient, const Variables& variables,
+    const std::vector<double>& values, const std::vector<double>& firstDerivatives)
+{
+    size_t numberOfFactors = values.size();
+    std::vector<double> suffixProducts(numberOfFactors + 1, 1.0);
+
+    for(size_t i = numberOfFactors; i > 0; i--)
+        suffixProducts[i - 1] = suffixProducts[i] * values[i - 1];
+
+    double prefixProduct = coefficient;
+
+    for(size_t i = 0; i < numberOfFactors; i++)
+    {
+        double value = prefixProduct * firstDerivatives[i] * suffixProducts[i + 1];
+        auto element = gradient.emplace(variables[i], value);
+
+        if(!element.second)
+            element.first->second += value;
+
+        prefixProduct *= values[i];
+    }
+}
+
+inline void addHessianElement(
+    SparseVariableMatrix& hessian, const VariablePtr& firstVariable, const VariablePtr& secondVariable, double value)
+{
+    auto variablePair = (firstVariable->getIndex() <= secondVariable->getIndex())
+        ? std::make_pair(firstVariable, secondVariable)
+        : std::make_pair(secondVariable, firstVariable);
+
+    auto element = hessian.emplace(variablePair, value);
+
+    if(!element.second)
+        element.first->second += value;
+}
+
+// The Hessian is stored as its upper triangle, so an element outside the diagonal is the derivative with respect to
+// both variables once, and a diagonal element is the full second derivative. Two factors of the same variable thus
+// add twice their mixed derivative to the diagonal: x*x*y gives 2y.
+inline void addProductTermHessian(SparseVariableMatrix& hessian, double coefficient, const Variables& variables,
+    const std::vector<double>& values, const std::vector<double>& firstDerivatives,
+    const std::vector<double>& secondDerivatives)
+{
+    size_t numberOfFactors = values.size();
+    std::vector<double> suffixProducts(numberOfFactors + 1, 1.0);
+
+    for(size_t i = numberOfFactors; i > 0; i--)
+        suffixProducts[i - 1] = suffixProducts[i] * values[i - 1];
+
+    double prefixProduct = coefficient;
+
+    for(size_t i = 0; i < numberOfFactors; i++)
+    {
+        if(secondDerivatives[i] != 0.0)
+            addHessianElement(
+                hessian, variables[i], variables[i], prefixProduct * secondDerivatives[i] * suffixProducts[i + 1]);
+
+        // The product of the factors between i and j
+        double middleProduct = 1.0;
+
+        for(size_t j = i + 1; j < numberOfFactors; j++)
+        {
+            double value
+                = prefixProduct * firstDerivatives[i] * middleProduct * firstDerivatives[j] * suffixProducts[j + 1];
+
+            if(variables[i] == variables[j])
+                addHessianElement(hessian, variables[i], variables[i], 2.0 * value);
+            else
+                addHessianElement(hessian, variables[i], variables[j], value);
+
+            middleProduct *= values[j];
+        }
+
+        prefixProduct *= values[i];
+    }
+}
+
 class MonomialTerms : public Terms<MonomialTermPtr>
 {
 private:
@@ -963,27 +1044,15 @@ public:
             if(T->coefficient == 0.0)
                 continue;
 
-            for(auto& V1 : T->variables)
-            {
-                double value = T->coefficient;
+            std::vector<double> values;
+            values.reserve(T->variables.size());
 
-                for(auto& V2 : T->variables)
-                {
-                    if(V1 == V2)
-                        continue;
+            for(auto& V : T->variables)
+                values.push_back(V->calculate(point));
 
-                    value *= V2->calculate(point);
-                }
-
-                auto element = gradient.emplace(V1, value);
-
-                if(!element.second)
-                {
-                    // Element already exists for the variable (e.g. it also appears in another monomial term)
-                    element.first->second += value;
-                }
-            }
-        };
+            addProductTermGradient(
+                gradient, T->coefficient, T->variables, values, std::vector<double>(values.size(), 1.0));
+        }
 
         return gradient;
     };
@@ -994,37 +1063,17 @@ public:
 
         for(auto& T : (*this))
         {
-            if(T->coefficient == 0)
+            if(T->coefficient == 0.0)
                 continue;
 
-            for(auto& V1 : T->variables)
-            {
-                for(auto& V2 : T->variables)
-                {
-                    if(V1->getIndex() >= V2->getIndex())
-                        continue;
+            std::vector<double> values;
+            values.reserve(T->variables.size());
 
-                    double value = T->coefficient;
+            for(auto& V : T->variables)
+                values.push_back(V->calculate(point));
 
-                    for(auto& V3 : T->variables)
-                    {
-                        if(V3 == V1 || V3 == V2)
-                            continue;
-
-                        value *= V3->calculate(point);
-                    }
-
-                    std::pair<VariablePtr, VariablePtr> variablePair = std::make_pair(V1, V2);
-
-                    auto element = hessian.emplace(variablePair, value);
-
-                    if(!element.second)
-                    {
-                        // Element already exists for the variable
-                        element.first->second += value;
-                    }
-                }
-            }
+            addProductTermHessian(hessian, T->coefficient, T->variables, values,
+                std::vector<double>(values.size(), 1.0), std::vector<double>(values.size(), 0.0));
         }
 
         return hessian;
@@ -1561,32 +1610,13 @@ public:
             if(T->coefficient == 0.0)
                 continue;
 
-            for(auto& E1 : T->elements)
-            {
-                double value = 1.0;
+            Variables variables;
+            std::vector<double> values;
+            std::vector<double> firstDerivatives;
+            calculateFactors(*T, point, variables, values, firstDerivatives, nullptr);
 
-                for(auto& E2 : T->elements)
-                {
-                    if(E1 == E2)
-                    {
-                        if(E2->power != 1.0)
-                            value *= E2->power * pow(E2->variable->calculate(point), E2->power - 1.0);
-                    }
-                    else
-                    {
-                        value *= E2->calculate(point);
-                    }
-                }
-
-                auto element = gradient.emplace(E1->variable, T->coefficient * value);
-
-                if(!element.second)
-                {
-                    // Element already exists for the variable
-                    element.first->second += T->coefficient * value;
-                }
-            }
-        };
+            addProductTermGradient(gradient, T->coefficient, variables, values, firstDerivatives);
+        }
 
         return gradient;
     };
@@ -1597,46 +1627,68 @@ public:
 
         for(auto& T : (*this))
         {
-            if(T->coefficient == 0)
+            if(T->coefficient == 0.0)
                 continue;
 
-            auto value = T->calculate(point);
+            Variables variables;
+            std::vector<double> values;
+            std::vector<double> firstDerivatives;
+            std::vector<double> secondDerivatives;
+            calculateFactors(*T, point, variables, values, firstDerivatives, &secondDerivatives);
 
-            for(auto& E1 : T->elements)
-            {
-                for(auto& E2 : T->elements)
-                {
-                    if(E1->variable->getIndex() > E2->variable->getIndex())
-                        continue;
-
-                    double corrFactor;
-
-                    if(E1->variable->getIndex() == E2->variable->getIndex())
-                    {
-                        corrFactor = E1->power * (E1->power - 1.0)
-                            / (E1->variable->calculate(point) * E1->variable->calculate(point));
-                    }
-                    else
-                    {
-                        corrFactor
-                            = E1->power * E2->power / (E1->variable->calculate(point) * E2->variable->calculate(point));
-                    }
-
-                    auto variablePair = std::make_pair(E1->variable, E2->variable);
-
-                    auto element = hessian.emplace(variablePair, corrFactor * value);
-
-                    if(!element.second)
-                    {
-                        // Element already exists for the variable
-                        element.first->second += corrFactor * value;
-                    }
-                }
-            }
+            addProductTermHessian(hessian, T->coefficient, variables, values, firstDerivatives, secondDerivatives);
         }
 
         return hessian;
     };
+
+private:
+    // The factors x^p of a term, with their first and second derivatives. The powers one and two are calculated
+    // without pow, so that e.g. x^2 has the second derivative 2 also at x = 0.
+    static void calculateFactors(const SignomialTerm& term, const VectorDouble& point, Variables& variables,
+        std::vector<double>& values, std::vector<double>& firstDerivatives, std::vector<double>* secondDerivatives)
+    {
+        size_t numberOfFactors = term.elements.size();
+        variables.reserve(numberOfFactors);
+        values.reserve(numberOfFactors);
+        firstDerivatives.reserve(numberOfFactors);
+
+        if(secondDerivatives)
+            secondDerivatives->reserve(numberOfFactors);
+
+        for(auto& E : term.elements)
+        {
+            double x = E->variable->calculate(point);
+            double power = E->power;
+
+            variables.push_back(E->variable);
+
+            if(power == 1.0)
+            {
+                values.push_back(x);
+                firstDerivatives.push_back(1.0);
+
+                if(secondDerivatives)
+                    secondDerivatives->push_back(0.0);
+            }
+            else if(power == 2.0)
+            {
+                values.push_back(x * x);
+                firstDerivatives.push_back(2.0 * x);
+
+                if(secondDerivatives)
+                    secondDerivatives->push_back(2.0);
+            }
+            else
+            {
+                values.push_back(std::pow(x, power));
+                firstDerivatives.push_back(power * std::pow(x, power - 1.0));
+
+                if(secondDerivatives)
+                    secondDerivatives->push_back(power * (power - 1.0) * std::pow(x, power - 2.0));
+            }
+        }
+    }
 };
 
 inline std::ostream& operator<<(std::ostream& stream, const LinearTerms& terms)
