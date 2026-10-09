@@ -935,6 +935,24 @@ endif(HAS_IPOPT)
 # Uno linking
 if(HAS_UNO)
     message("-- Uno include files will be used from: ${UNO_INCLUDE_DIR}")
+
+    # The MUMPS libraries of Ipopt, e.g. Homebrew's, leave most of their symbols to be looked up in all loaded
+    # libraries at runtime. A libuno with MUMPS linked into it exports its own MUMPS symbols, and since libuno is a
+    # direct dependency it is searched before the MUMPS libraries Ipopt depends on, so Ipopt's MUMPS ended up calling
+    # Uno's, which crashed in the analysis of large NLPs. Linking Ipopt's MUMPS libraries before libuno makes them be
+    # found first. libuno binds its own MUMPS symbols directly, so Uno is not affected by the order.
+    if(APPLE AND HAS_IPOPT)
+        foreach(MUMPS_LIBRARY_NAME mumps_common mpiseq pord)
+            find_library(IPOPT_${MUMPS_LIBRARY_NAME}_LIBRARY NAMES ${MUMPS_LIBRARY_NAME}
+                PATHS ${IPOPT_LIBRARY_DIRS} NO_DEFAULT_PATH)
+
+            if(IPOPT_${MUMPS_LIBRARY_NAME}_LIBRARY)
+                target_link_libraries(SHOTPrimalStrategy ${IPOPT_${MUMPS_LIBRARY_NAME}_LIBRARY})
+                message("-- Ipopt's MUMPS library is linked before Uno: ${IPOPT_${MUMPS_LIBRARY_NAME}_LIBRARY}")
+            endif()
+        endforeach()
+    endif()
+
     target_link_libraries(SHOTPrimalStrategy ${UNO_LIBRARIES})
     target_include_directories(SHOTPrimalStrategy SYSTEM PUBLIC "${UNO_INCLUDE_DIR}")
 
