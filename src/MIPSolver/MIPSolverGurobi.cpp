@@ -957,12 +957,6 @@ bool MIPSolverGurobi::repairInfeasibility()
         gurobiModel->update();
         auto feasModel = GRBModel(*gurobiModel);
 
-        // Gurobi copies over the cutoff from the original model
-        if(isMinimizationProblem)
-            feasModel.set(GRB_DoubleParam_Cutoff, SHOT_DBL_MAX);
-        else
-            feasModel.set(GRB_DoubleParam_Cutoff, SHOT_DBL_MIN);
-
         int numOrigConstraints = env->reformulatedProblem->properties.numberOfLinearConstraints;
         int numOrigVariables = gurobiModel->get(GRB_IntAttr_NumVars);
         int numCurrConstraints = feasModel.get(GRB_IntAttr_NumConstrs);
@@ -1001,6 +995,12 @@ bool MIPSolverGurobi::repairInfeasibility()
             Utilities::saveVariablePointVectorToFile(relaxParameters, constraints, filename);
         }
 
+        if(numConstraintsToRepair == 0)
+        {
+            env->output->outputDebug("        No constraints available for repair.");
+            return (false);
+        }
+
         // Gurobi modifies the value when running feasModel.optimize()
         int numConstraintsToRepairOrig = numConstraintsToRepair;
 
@@ -1011,6 +1011,12 @@ bool MIPSolverGurobi::repairInfeasibility()
             env->output->outputDebug("        Could not repair the infeasible dual problem.");
             return (false);
         }
+
+        // Gurobi copies the cutoff of the original model, which must be removed. The relaxation minimizes the
+        // violation of the constraints also for a maximization problem, so the cutoff is removed with plus infinity:
+        // the minus infinity of a maximization problem made every solution worse than the cutoff, and the repair
+        // always failed
+        feasModel.set(GRB_DoubleParam_Cutoff, GRB_INFINITY);
 
         feasModel.optimize();
 
