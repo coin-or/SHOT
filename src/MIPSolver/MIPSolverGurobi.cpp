@@ -1017,13 +1017,14 @@ bool MIPSolverGurobi::repairInfeasibility()
         // Saves the relaxation model to file
         if(env->settings->getSetting<bool>("Output.Debug.Enable"))
         {
-            auto filename = fmt::format("{}/dualiter{}_infeasrelax.lp",
+            auto filename = fmt::format("{}/dualiter{}_infeasrelax",
                 env->settings->getSetting<std::string>("Output.Debug.Path"),
                 env->results->getCurrentIteration()->iterationNumber - 1);
 
             try
             {
-                feasModel.write(filename);
+                feasModel.write(filename + ".lp");
+                feasModel.write(filename + ".mps");
             }
             catch(GRBException& e)
             {
@@ -1063,11 +1064,11 @@ bool MIPSolverGurobi::repairInfeasibility()
 
         if(env->settings->getSetting<bool>("Output.Debug.Enable"))
         {
-            auto filename = fmt::format("{}/dualiter{}_infeasrelax.lp",
+            auto filename = fmt::format("{}/dualiter{}_infeasrelax",
                 env->settings->getSetting<std::string>("Output.Debug.Path"),
                 env->results->getCurrentIteration()->iterationNumber - 1);
 
-            writeProblemToFile(filename);
+            writeProblemToDebugFiles(filename);
         }
 
         if(numRepairs == 0)

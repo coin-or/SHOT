@@ -150,10 +150,10 @@ void TaskPerformConvexBounding::run()
 
     if(env->settings->getSetting<bool>("Output.Debug.Enable"))
     {
-        auto filename = fmt::format("{}/convexbounding_problem{}.lp",
+        auto filename = fmt::format("{}/convexbounding_problem{}",
             env->settings->getSetting<std::string>("Output.Debug.Path"), iterationNumber - 1);
 
-        MIPSolver->writeProblemToFile(filename);
+        MIPSolver->writeProblemToDebugFiles(filename);
     }
 
     auto timeLim = env->settings->getSetting<double>("Termination.TimeLimit") - env->timing->getElapsedTime("Total");

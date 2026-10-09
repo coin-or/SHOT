@@ -54,8 +54,8 @@ void TaskCreateDualProblem::run()
 
         if(env->settings->getSetting<bool>("Output.Debug.Enable"))
         {
-            env->dualSolver->MIPSolver->writeProblemToFile(
-                env->settings->getSetting<std::string>("Output.Debug.Path") + "/lp0.lp");
+            env->dualSolver->MIPSolver->writeProblemToDebugFiles(
+                env->settings->getSetting<std::string>("Output.Debug.Path") + "/lp0");
         }
 
         env->output->outputDebug("        Dual problem recreated");

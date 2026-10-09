@@ -966,13 +966,14 @@ bool MIPSolverHighs::repairInfeasibility()
         // Saves the relaxation model to file (after relaxation)
         if(env->settings->getSetting<bool>("Output.Debug.Enable"))
         {
-            auto filename = fmt::format("{}/dualiter{}_infeasrelax.lp",
+            auto filename = fmt::format("{}/dualiter{}_infeasrelax",
                 env->settings->getSetting<std::string>("Output.Debug.Path"),
                 env->results->getCurrentIteration()->iterationNumber - 1);
 
             try
             {
-                feasModel.writeModel(filename);
+                feasModel.writeModel(filename + ".lp");
+                feasModel.writeModel(filename + ".mps");
             }
             catch(std::exception& e)
             {
@@ -1028,10 +1029,10 @@ bool MIPSolverHighs::repairInfeasibility()
         if(env->settings->getSetting<bool>("Output.Debug.Enable"))
         {
             auto filename
-                = fmt::format("{}/dualiter{}_repaired.lp", env->settings->getSetting<std::string>("Output.Debug.Path"),
+                = fmt::format("{}/dualiter{}_repaired", env->settings->getSetting<std::string>("Output.Debug.Path"),
                     env->results->getCurrentIteration()->iterationNumber - 1);
 
-            writeProblemToFile(filename);
+            writeProblemToDebugFiles(filename);
         }
 
         if(numRepairs == 0)

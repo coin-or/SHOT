@@ -175,9 +175,9 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
         if(env->settings->getSetting<bool>("Output.Debug.Enable"))
         {
             auto filename
-                = fmt::format("{}/minimax{}.lp", env->settings->getSetting<std::string>("Output.Debug.Path"), i);
+                = fmt::format("{}/minimax{}", env->settings->getSetting<std::string>("Output.Debug.Path"), i);
 
-            LPSolver->writeProblemToFile(filename);
+            LPSolver->writeProblemToDebugFiles(filename);
         }
 
         // Updates the time limit for the LP solver with the time remaining of the interior point search

@@ -881,19 +881,11 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
             if(env->settings->getSetting<bool>("Output.Debug.Enable"))
             {
 
-                auto filename = fmt::format("{}/dualiter{}_unbounded.lp",
+                auto filename = fmt::format("{}/dualiter{}_unbounded",
                     env->settings->getSetting<std::string>("Output.Debug.Path"),
                     env->results->getCurrentIteration()->iterationNumber - 1);
 
-                try
-                {
-                    osiInterface->writeLp(filename.c_str(), "", 1e-7, 10, 10, 0.0, true);
-                }
-                catch(std::exception& e)
-                {
-                    env->output->outputError(
-                        "        Error when saving relaxed infesibility model to file in Cbc", e.what());
-                }
+                writeProblemToDebugFiles(filename);
             }
 
             cbcModel = std::make_unique<CbcModel>(*osiInterface);
@@ -1018,13 +1010,14 @@ bool MIPSolverCbc::repairInfeasibility()
 
         if(env->settings->getSetting<bool>("Output.Debug.Enable"))
         {
-            auto filename = fmt::format("{}/dualiter{}_infeasrelax.lp",
+            auto filename = fmt::format("{}/dualiter{}_infeasrelax",
                 env->settings->getSetting<std::string>("Output.Debug.Path"),
                 env->results->getCurrentIteration()->iterationNumber - 1);
 
             try
             {
-                repairedInterface->writeLp(filename.c_str(), "", 1e-7, 10, 10, 0.0, true);
+                repairedInterface->writeLp((filename + ".lp").c_str(), "", 1e-7, 10, 10, 0.0, true);
+                repairedInterface->writeMps((filename + ".mps").c_str(), "");
             }
             catch(std::exception& e)
             {
@@ -1238,11 +1231,11 @@ bool MIPSolverCbc::repairInfeasibility()
 
         if(env->settings->getSetting<bool>("Output.Debug.Enable"))
         {
-            auto filename = fmt::format("{}/dualiter{}_infeasrelax.lp",
+            auto filename = fmt::format("{}/dualiter{}_infeasrelax",
                 env->settings->getSetting<std::string>("Output.Debug.Path"),
                 env->results->getCurrentIteration()->iterationNumber - 1);
 
-            writeProblemToFile(filename);
+            writeProblemToDebugFiles(filename);
         }
 
         delete repairedInterface;
@@ -1383,7 +1376,10 @@ void MIPSolverCbc::writeProblemToFile(std::string filename)
 {
     try
     {
-        osiInterface->writeLp(filename.c_str(), "", 1e-7, 10, 10, 0.0, true);
+        if(filename.size() >= 4 && filename.compare(filename.size() - 4, 4, ".mps") == 0)
+            osiInterface->writeMps(filename.c_str(), "");
+        else
+            osiInterface->writeLp(filename.c_str(), "", 1e-7, 10, 10, 0.0, true);
     }
     catch(std::exception& e)
     {

@@ -150,10 +150,10 @@ void TaskSolveIteration::run()
 
     if(env->settings->getSetting<bool>("Output.Debug.Enable"))
     {
-        auto filename = fmt::format("{}/dualiter{}_problem.lp",
+        auto filename = fmt::format("{}/dualiter{}_problem",
             env->settings->getSetting<std::string>("Output.Debug.Path"), currIter->iterationNumber - 1);
 
-        env->dualSolver->MIPSolver->writeProblemToFile(filename);
+        env->dualSolver->MIPSolver->writeProblemToDebugFiles(filename);
     }
 
     if(env->reformulatedProblem->properties.isLPProblem || env->reformulatedProblem->properties.isMILPProblem

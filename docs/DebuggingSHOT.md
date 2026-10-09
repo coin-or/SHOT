@@ -131,6 +131,12 @@ were found.
 
 ## 5. Debug file reference
 
+Every LP model dump listed below also has an MPS counterpart with the same
+basename (for example, `dualiter0_problem.lp` and `dualiter0_problem.mps`).
+This applies to Cbc, CPLEX, Gurobi, and HiGHS, including interior-point,
+convex-bounding, and infeasibility-repair models. Cbc may append `.gz` to
+its MPS files when its COIN-OR libraries support compression.
+
 ### Whole-problem dumps (written once per run)
 
 | File | Contents | Use it to check |

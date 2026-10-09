@@ -73,6 +73,13 @@ public:
 
     virtual void writeProblemToFile(std::string filename) = 0;
 
+    // All current MIP backends support LP and MPS. The caller supplies a path without an extension.
+    void writeProblemToDebugFiles(const std::string& filename)
+    {
+        writeProblemToFile(filename + ".lp");
+        writeProblemToFile(filename + ".mps");
+    }
+
     virtual std::vector<SolutionPoint> getAllVariableSolutions() = 0;
     virtual int addLinearConstraint(std::map<int, double>& elements, double constant, std::string name) = 0;
     virtual int addLinearConstraint(
