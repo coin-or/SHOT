@@ -39,6 +39,37 @@ struct VariablePairHash
     }
 };
 
+// The variables of a monomial term, and the variables and powers of a signomial term, sorted so that the key is
+// independent of the order of the factors. Used as the key when terms of the same factors are merged.
+using MonomialKey = std::vector<Variable*>;
+using SignomialKey = std::vector<std::pair<Variable*, double>>;
+
+struct MonomialKeyHash
+{
+    size_t operator()(const MonomialKey& key) const
+    {
+        size_t hash = key.size();
+
+        for(auto* V : key)
+            hash = hash * 31 + std::hash<Variable*>()(V);
+
+        return (hash);
+    }
+};
+
+struct SignomialKeyHash
+{
+    size_t operator()(const SignomialKey& key) const
+    {
+        size_t hash = key.size();
+
+        for(auto& [V, power] : key)
+            hash = (hash * 31 + std::hash<Variable*>()(V)) * 31 + std::hash<double>()(power);
+
+        return (hash);
+    }
+};
+
 // The variables in the order that makes the pair independent of the order they are given in
 inline VariablePair getVariablePair(const VariablePtr& firstVariable, const VariablePtr& secondVariable)
 {
@@ -789,6 +820,18 @@ public:
 
 using MonomialTermPtr = std::shared_ptr<MonomialTerm>;
 
+inline MonomialKey getMonomialKey(const MonomialTerm& term)
+{
+    MonomialKey key;
+    key.reserve(term.variables.size());
+
+    for(auto& V : term.variables)
+        key.push_back(V.get());
+
+    std::sort(key.begin(), key.end());
+    return (key);
+}
+
 inline std::ostream& operator<<(std::ostream& stream, MonomialTermPtr term)
 {
     if(term->coefficient == 1.0)
@@ -856,27 +899,59 @@ public:
         monotonicity = E_Monotonicity::NotSet;
     }
 
+    // The terms are merged with the terms of the same variables, in any order, and a term whose coefficient becomes
+    // zero when merged is removed, since a monomial term is nonconvex whatever its coefficient
     void add(const MonomialTerms& terms)
     {
-        // The number of terms and the capacity are taken before the first term is added, so that adding the terms
-        // to themselves neither reallocates the container being read nor reads the terms it has just added
-        size_t numberOfTerms = terms.size();
+        if(terms.size() == 0)
+            return;
+
+        // Adding the terms to themselves would push_back into the container being iterated over, so a copy is added
+        if(&terms == this)
+        {
+            MonomialTerms ownTerms = terms;
+            add(ownTerms);
+            return;
+        }
 
         // The capacity grows geometrically, as it does in push_back, since reserving the exact size in every call
         // copies all terms each time and makes adding many small sets of terms quadratic
-        if(size() + numberOfTerms > (*this).capacity())
-            (*this).reserve(std::max(size() + numberOfTerms, 2 * (*this).capacity()));
+        if(size() + terms.size() > (*this).capacity())
+            (*this).reserve(std::max(size() + terms.size(), 2 * (*this).capacity()));
 
-        for(size_t i = 0; i < numberOfTerms; i++)
+        // The terms are found through a hash map instead of searching all terms for every added term
+        std::unordered_map<MonomialKey, size_t, MonomialKeyHash> termIndexes;
+        termIndexes.reserve(size() + terms.size());
+
+        for(size_t i = 0; i < size(); i++)
+            termIndexes.emplace(getMonomialKey(*(*this)[i]), i);
+
+        bool isMerged = false;
+
+        for(auto& TERM : terms)
         {
-            (*this).push_back(terms[i]);
+            auto [it, isNew] = termIndexes.emplace(getMonomialKey(*TERM), size());
+
+            if(isNew)
+            {
+                (*this).push_back(TERM);
+            }
+            else
+            {
+                (*this)[it->second]->coefficient += TERM->coefficient;
+                isMerged = true;
+            }
         }
 
-        if(numberOfTerms > 0)
+        if(isMerged)
         {
-            convexity = E_Convexity::NotSet;
-            monotonicity = E_Monotonicity::NotSet;
+            (*this).erase(std::remove_if((*this).begin(), (*this).end(),
+                              [](const MonomialTermPtr& term) { return term->coefficient == 0.0; }),
+                (*this).end());
         }
+
+        convexity = E_Convexity::NotSet;
+        monotonicity = E_Monotonicity::NotSet;
     }
 
     SparseVariableVector calculateGradient(const VectorDouble& point) const
@@ -1326,6 +1401,35 @@ public:
 
 using SignomialTermPtr = std::shared_ptr<SignomialTerm>;
 
+// The powers of the same variable are added, and a variable with the power zero is left out, so that e.g.
+// x^0.5*y*x^0.5 has the same key as x*y
+inline SignomialKey getSignomialKey(const SignomialTerm& term)
+{
+    SignomialKey key;
+    key.reserve(term.elements.size());
+
+    for(auto& E : term.elements)
+        key.emplace_back(E->variable.get(), E->power);
+
+    std::sort(key.begin(), key.end());
+
+    size_t numberOfElements = 0;
+
+    for(size_t i = 0; i < key.size(); i++)
+    {
+        if(numberOfElements > 0 && key[numberOfElements - 1].first == key[i].first)
+            key[numberOfElements - 1].second += key[i].second;
+        else
+            key[numberOfElements++] = key[i];
+    }
+
+    key.resize(numberOfElements);
+    key.erase(
+        std::remove_if(key.begin(), key.end(), [](const auto& element) { return (element.second == 0.0); }), key.end());
+
+    return (key);
+}
+
 inline std::ostream& operator<<(std::ostream& stream, SignomialTermPtr term)
 {
     if(term->coefficient == 1.0)
@@ -1393,27 +1497,59 @@ public:
         monotonicity = E_Monotonicity::NotSet;
     }
 
+    // The terms are merged with the terms of the same variables and powers, in any order, and a term whose
+    // coefficient becomes zero when merged is removed
     void add(const SignomialTerms& terms)
     {
-        // The number of terms and the capacity are taken before the first term is added, so that adding the terms
-        // to themselves neither reallocates the container being read nor reads the terms it has just added
-        size_t numberOfTerms = terms.size();
+        if(terms.size() == 0)
+            return;
+
+        // Adding the terms to themselves would push_back into the container being iterated over, so a copy is added
+        if(&terms == this)
+        {
+            SignomialTerms ownTerms = terms;
+            add(ownTerms);
+            return;
+        }
 
         // The capacity grows geometrically, as it does in push_back, since reserving the exact size in every call
         // copies all terms each time and makes adding many small sets of terms quadratic
-        if(size() + numberOfTerms > (*this).capacity())
-            (*this).reserve(std::max(size() + numberOfTerms, 2 * (*this).capacity()));
+        if(size() + terms.size() > (*this).capacity())
+            (*this).reserve(std::max(size() + terms.size(), 2 * (*this).capacity()));
 
-        for(size_t i = 0; i < numberOfTerms; i++)
+        // The terms are found through a hash map instead of searching all terms for every added term
+        std::unordered_map<SignomialKey, size_t, SignomialKeyHash> termIndexes;
+        termIndexes.reserve(size() + terms.size());
+
+        for(size_t i = 0; i < size(); i++)
+            termIndexes.emplace(getSignomialKey(*(*this)[i]), i);
+
+        bool isMerged = false;
+
+        for(auto& TERM : terms)
         {
-            (*this).push_back(terms[i]);
+            auto [it, isNew] = termIndexes.emplace(getSignomialKey(*TERM), size());
+
+            if(isNew)
+            {
+                (*this).push_back(TERM);
+            }
+            else
+            {
+                (*this)[it->second]->coefficient += TERM->coefficient;
+                isMerged = true;
+            }
         }
 
-        if(numberOfTerms > 0)
+        if(isMerged)
         {
-            convexity = E_Convexity::NotSet;
-            monotonicity = E_Monotonicity::NotSet;
+            (*this).erase(std::remove_if((*this).begin(), (*this).end(),
+                              [](const SignomialTermPtr& term) { return term->coefficient == 0.0; }),
+                (*this).end());
         }
+
+        convexity = E_Convexity::NotSet;
+        monotonicity = E_Monotonicity::NotSet;
     }
 
     inline SparseVariableVector calculateGradient(const VectorDouble& point) const

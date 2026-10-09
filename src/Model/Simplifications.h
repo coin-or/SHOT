@@ -1975,8 +1975,12 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
             for(auto& T : tmpQuadraticTerms)
                 quadraticTerms.push_back(T);
 
-            monomialTerms.add(tmpMonomialTerms);
-            signomialTerms.add(tmpSignomialTerms);
+            for(auto& T : tmpMonomialTerms)
+                monomialTerms.push_back(T);
+
+            for(auto& T : tmpSignomialTerms)
+                signomialTerms.push_back(T);
+
             constant += tmpConstant;
 
             if(tmpNonlinearExpression != nullptr)
@@ -2067,15 +2071,62 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
             addQuadraticTerm(QT);
     }
 
+    // The monomial and signomial terms of the same factors are merged as well, so that e.g. x1*x2*x3 - x1*x2*x3
+    // cancels. A term whose coefficient becomes zero is removed below, since a monomial term is nonconvex whatever its
+    // coefficient, and would otherwise keep the function nonlinear and nonconvex.
+    std::unordered_map<MonomialKey, size_t, MonomialKeyHash> monomialTermIndexes;
+    std::unordered_map<SignomialKey, size_t, SignomialKeyHash> signomialTermIndexes;
+
+    monomialTermIndexes.reserve(monomialTerms.size());
+    signomialTermIndexes.reserve(signomialTerms.size());
+
+    auto addMonomialTerm = [&newMonomialTerms, &monomialTermIndexes](MonomialTermPtr term)
+    {
+        auto [it, isNew] = monomialTermIndexes.emplace(getMonomialKey(*term), newMonomialTerms.size());
+
+        if(isNew)
+            newMonomialTerms.push_back(term);
+        else
+            newMonomialTerms[it->second]->coefficient += term->coefficient;
+    };
+
+    auto addSignomialTerm = [&newSignomialTerms, &signomialTermIndexes](SignomialTermPtr term)
+    {
+        auto [it, isNew] = signomialTermIndexes.emplace(getSignomialKey(*term), newSignomialTerms.size());
+
+        if(isNew)
+            newSignomialTerms.push_back(term);
+        else
+            newSignomialTerms[it->second]->coefficient += term->coefficient;
+    };
+
+    // A variable repeated in a monomial term, e.g. x in x*x*y, is a power, so the term is turned into the signomial
+    // term x^2*y, which is processed with the other signomial terms below. A binary variable is its own power, so a
+    // repeated one is only kept once.
+    auto hasRepeatedVariable = [](const Variables& variables)
+    {
+        for(size_t i = 1; i < variables.size(); i++)
+        {
+            for(size_t j = 0; j < i; j++)
+            {
+                if(variables[i] == variables[j])
+                    return (true);
+            }
+        }
+
+        return (false);
+    };
+
     for(auto& MT : monomialTerms)
     {
-        // A term with no fixed variables is already in its final form. Reusing it avoids
+        // A term with no fixed or repeated variables is already in its final form. Reusing it avoids
         // allocating another variable vector and monomial for every term in a large sum.
         bool hasFixedVariable = std::any_of(MT->variables.begin(), MT->variables.end(),
             [](const VariablePtr& variable) { return variable->lowerBound == variable->upperBound; });
-        if(!hasFixedVariable)
+
+        if(!hasFixedVariable && !hasRepeatedVariable(MT->variables))
         {
-            newMonomialTerms.add(MT);
+            addMonomialTerm(MT);
             continue;
         }
 
@@ -2086,16 +2137,34 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
         {
             if(V->lowerBound == V->upperBound)
                 coefficient *= V->lowerBound;
-            else
+            else if(V->properties.type != E_VariableType::Binary
+                || std::find(variables.begin(), variables.end(), V) == variables.end())
                 variables.push_back(V);
         }
 
-        if(variables.size() == 0)
+        if(extractSignomials && hasRepeatedVariable(variables))
+        {
+            SignomialElements elements;
+
+            for(auto& V : variables)
+            {
+                auto element = std::find_if(elements.begin(), elements.end(),
+                    [&V](const SignomialElementPtr& E) { return (E->variable == V); });
+
+                if(element != elements.end())
+                    (*element)->power += 1.0;
+                else
+                    elements.push_back(std::make_shared<SignomialElement>(V, 1.0));
+            }
+
+            signomialTerms.push_back(std::make_shared<SignomialTerm>(coefficient, elements));
+        }
+        else if(variables.size() == 0)
             newConstant += coefficient;
         else if(variables.size() == 1)
             addLinearTerm(std::make_shared<LinearTerm>(coefficient, variables[0]));
         else
-            newMonomialTerms.add(std::make_shared<MonomialTerm>(coefficient, variables));
+            addMonomialTerm(std::make_shared<MonomialTerm>(coefficient, variables));
     }
 
     for(auto& ST : signomialTerms)
@@ -2103,11 +2172,28 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
         double coefficient = ST->coefficient;
         SignomialElements elements;
 
+        // The powers of the same variable are added, e.g. x^0.5*x^-0.5 is x^0, and a variable with the power zero is
+        // removed. The elements are not changed, since they may be shared with another term.
         for(auto& E : ST->elements)
+        {
             if(E->variable->lowerBound == E->variable->upperBound)
+            {
                 coefficient *= std::pow(E->variable->lowerBound, E->power);
-            else
+                continue;
+            }
+
+            auto element = std::find_if(elements.begin(), elements.end(),
+                [&E](const SignomialElementPtr& other) { return (other->variable == E->variable); });
+
+            if(element == elements.end())
                 elements.push_back(E);
+            else
+                *element = std::make_shared<SignomialElement>(E->variable, (*element)->power + E->power);
+        }
+
+        elements.erase(std::remove_if(elements.begin(), elements.end(),
+                           [](const SignomialElementPtr& E) { return (E->power == 0.0); }),
+            elements.end());
 
         if(elements.size() == 0)
             newConstant += coefficient;
@@ -2119,11 +2205,19 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
                 addQuadraticTerm(
                     std::make_shared<QuadraticTerm>(coefficient, elements[0]->variable, elements[0]->variable));
             else
-                newSignomialTerms.add(std::make_shared<SignomialTerm>(coefficient, elements));
+                addSignomialTerm(std::make_shared<SignomialTerm>(coefficient, elements));
         }
         else
-            newSignomialTerms.add(std::make_shared<SignomialTerm>(coefficient, elements));
+            addSignomialTerm(std::make_shared<SignomialTerm>(coefficient, elements));
     }
+
+    newMonomialTerms.erase(std::remove_if(newMonomialTerms.begin(), newMonomialTerms.end(),
+                               [](const MonomialTermPtr& term) { return term->coefficient == 0.0; }),
+        newMonomialTerms.end());
+
+    newSignomialTerms.erase(std::remove_if(newSignomialTerms.begin(), newSignomialTerms.end(),
+                                [](const SignomialTermPtr& term) { return term->coefficient == 0.0; }),
+        newSignomialTerms.end());
 
     if(nonlinearExpression != nullptr && !alreadySimplified)
         nonlinearExpression = simplify(nonlinearExpression);

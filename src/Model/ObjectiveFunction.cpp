@@ -491,18 +491,9 @@ std::ostream& QuadraticObjectiveFunction::print(std::ostream& stream) const
 
 void NonlinearObjectiveFunction::add(const MonomialTerms& terms)
 {
-    if(monomialTerms.size() == 0)
-    {
-        monomialTerms = terms;
-        properties.isValid = false;
-    }
-    else
-    {
-        for(auto& T : terms)
-        {
-            add(T);
-        }
-    }
+    // Merges the terms with the terms of the same factors, also the terms given with each other
+    monomialTerms.add(terms);
+    properties.isValid = false;
 }
 
 void NonlinearObjectiveFunction::add(MonomialTermPtr term)
@@ -513,18 +504,9 @@ void NonlinearObjectiveFunction::add(MonomialTermPtr term)
 
 void NonlinearObjectiveFunction::add(const SignomialTerms& terms)
 {
-    if(signomialTerms.size() == 0)
-    {
-        signomialTerms = terms;
-        properties.isValid = false;
-    }
-    else
-    {
-        for(auto& T : terms)
-        {
-            add(T);
-        }
-    }
+    // Merges the terms with the terms of the same factors, also the terms given with each other
+    signomialTerms.add(terms);
+    properties.isValid = false;
 }
 
 void NonlinearObjectiveFunction::add(SignomialTermPtr term)
