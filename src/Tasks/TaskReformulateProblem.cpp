@@ -148,6 +148,24 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
         default:
             break;
         }
+
+        // CPLEX solves a dual problem with a nonconvex quadratic objective function to global optimality
+        // (OptimalityTarget = 3), but not one that also has quadratic constraints, which it rejects with "objective is
+        // not convex". The quadratic objective function of a nonconvex problem keeps its nonconvex terms when it is
+        // regarded as nonlinear, so the convex quadratic constraints are considered as nonlinear instead, which keeps
+        // the objective function exact and the cuts of the constraints valid.
+        auto& objective = env->problem->objectiveFunction;
+
+        if((useConvexQuadraticObjective || useNonconvexQuadraticObjective)
+            && objective->properties.classification == E_ObjectiveFunctionClassification::Quadratic
+            && objective->properties.convexity != E_Convexity::Convex
+            && static_cast<ES_ObjectiveEpigraphStrategy>(
+                   env->settings->getSetting<int>("Model.Reformulation.ObjectiveFunction.EpigraphStrategy"))
+                != ES_ObjectiveEpigraphStrategy::EpigraphConstraint)
+        {
+            useConvexQuadraticConstraints = false;
+            useConvexQuadraticConstraintsWithinTolerance = false;
+        }
     }
     else if(env->settings->getSetting<int>("Dual.MIP.Solver") == (int)ES_MIPSolver::Gurobi)
     {
@@ -314,8 +332,23 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
         assert(C->valueLHS == SHOT_DBL_MIN);
 #endif
 
+    // CPLEX cannot solve a dual problem with both a nonconvex quadratic objective function and quadratic constraints,
+    // which the choice of the constraints above avoids in general. Should both remain, the objective function is
+    // regarded as nonlinear.
+    bool isQuadraticObjectiveUnsupported = false;
+
+    if(env->settings->getSetting<int>("Dual.MIP.Solver") == (int)ES_MIPSolver::Cplex
+        && reformulatedProblem->quadraticConstraints.size() > 0)
+    {
+        if(auto objective
+            = std::dynamic_pointer_cast<QuadraticObjectiveFunction>(reformulatedProblem->objectiveFunction);
+            objective && objective->quadraticTerms.getConvexity() != E_Convexity::Convex
+            && objective->quadraticTerms.getConvexity() != E_Convexity::Linear)
+            isQuadraticObjectiveUnsupported = true;
+    }
+
     // Fixing that a quadratic objective changed into a nonlinear objective is correctly identified
-    if(!(useConvexQuadraticObjective || useNonconvexQuadraticObjective)
+    if((!(useConvexQuadraticObjective || useNonconvexQuadraticObjective) || isQuadraticObjectiveUnsupported)
         && reformulatedProblem->objectiveFunction->properties.classification
             == E_ObjectiveFunctionClassification::Quadratic)
     {
