@@ -51,11 +51,31 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
 
     auto allSolutions = sourceIter->solutionPoints;
 
+    // The polish also starts from the best primal solution, after the points of the dual problem. These can be far
+    // from any solution, e.g. 1e14 for a free variable in an unbounded dual problem, where the NLP solver fails,
+    // while the primal solution may be a starting point given with the model. A solution of an NLP problem is
+    // already a local solution, and is not solved from again.
+    auto addPrimalSolutionForPolish = [&]()
+    {
+        if(!isFinalPolish || !env->results->hasPrimalSolution())
+            return;
+
+        auto& primalSolution = env->results->primalSolutions.at(0);
+
+        if(primalSolution.sourceType == E_PrimalSolutionSource::NLPFixedIntegers)
+            return;
+        env->primalSolver->addFixedNLPCandidate(primalSolution.point, E_PrimalNLPSource::FeasibleSolution,
+            primalSolution.objValue, primalSolution.iterFound, primalSolution.maxDeviatingConstraintNonlinear);
+    };
+
     bool callNLPSolver = false;
     bool useFeasibleSolutionExtra = false;
 
     if((!sourceIter->isMIP() && env->reformulatedProblem->properties.isDiscrete) || allSolutions.empty())
+    {
+        addPrimalSolutionForPolish();
         return;
+    }
 
     if(!isFinalPolish && currIter->MIPSolutionLimitUpdated
         && currIter->solutionStatus != E_ProblemSolutionStatus::Optimal)
@@ -135,6 +155,8 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
                     solution.objectiveValue, solution.iterFound, solution.maxDeviation);
                 numberOfPoints--;
             }
+
+            addPrimalSolutionForPolish();
         }
     }
     else if(callNLPSolver && userSetting == static_cast<int>(ES_PrimalNLPFixedPoint::SmallestDeviationSolution))

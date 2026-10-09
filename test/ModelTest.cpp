@@ -10550,7 +10550,8 @@ bool ModelTestStartingPointAndInfiniteObjective()
 bool ModelTestPolishFromSeveralPoints()
 {
     // The final NLP problem is solved from the first solutions of the last Primal.PolishSolution.NumberOfPoints
-    // iterations of the dual problem that have solutions, and not at all if it is zero. Without a starting point, the
+    // iterations of the dual problem that have solutions, and from the best primal solution, and not at all if it is
+    // zero. Without a starting point, the
     // polish is the only NLP problem solved for a continuous problem, so the NLP solutions checked as primal candidates
     // are counted. The problem, min -x1 - ... - x5 s.t. exp(x1) + ... + exp(x5) <= 10, is convex, so the NLP problem is
     // solved from every point, and needs several iterations of cutting planes. Its optimum is x_i = ln 2, with the
@@ -10613,7 +10614,11 @@ bool ModelTestPolishFromSeveralPoints()
             if(!I->solutionPoints.empty())
                 numberOfIterationsWithSolutions++;
 
+        // The best primal solution is one more point to start from
         int expected = std::min(numberOfPoints, numberOfIterationsWithSolutions);
+
+        if(numberOfPoints > 0 && solver->getEnvironment()->results->hasPrimalSolution())
+            expected++;
 
         if(numberOfIterationsWithSolutions < numberOfPoints)
         {
@@ -10640,6 +10645,50 @@ bool ModelTestPolishFromSeveralPoints()
         std::cout << "  " << numberOfPoints << " points: " << numberOfNLPSolutions << " NLP solutions in "
                   << numberOfIterationsWithSolutions << " iterations with solutions, primal bound "
                   << solver->getPrimalBound() << ".\n";
+    }
+
+    // The polish also starts from the best primal solution. In nlp_009_010, max min(0.75 + (x - 0.5)^3,
+    // 0.75 - (x - 0.5)^2) with a free x, the dual problem is unbounded and its points have e.g. x = 1e14, where the NLP
+    // solver fails, while the starting point x = 0 of the model, with the objective 0.5, leads to the optimum 0.75.
+    std::vector<SHOT::ES_MIPSolver> mipSolvers;
+#ifdef HAS_CPLEX
+    mipSolvers.push_back(SHOT::ES_MIPSolver::Cplex);
+#endif
+#ifdef HAS_GUROBI
+    mipSolvers.push_back(SHOT::ES_MIPSolver::Gurobi);
+#endif
+#ifdef HAS_CBC
+    mipSolvers.push_back(SHOT::ES_MIPSolver::Cbc);
+#endif
+#ifdef HAS_HIGHS
+    mipSolvers.push_back(SHOT::ES_MIPSolver::Highs);
+#endif
+
+    for(auto mipSolver : mipSolvers)
+    {
+        auto solver = std::make_unique<SHOT::Solver>();
+        solver->updateSetting("Output.Console.LogLevel", static_cast<int>(SHOT::E_LogLevel::Error));
+        solver->updateSetting("Dual.MIP.Solver", static_cast<int>(mipSolver));
+        solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+        solver->updateSetting("Termination.TimeLimit", 20.0);
+        solver->updateSetting("Primal.FixedInteger.Solver", static_cast<int>(SHOT::ES_PrimalNLPSolver::Ipopt));
+
+        if(!solver->setProblem("data/instances/minlp_tests_jl/nlp_009_010.jl.nl") || !solver->solveProblem())
+        {
+            std::cout << "  FAILED: nlp_009_010 could not be solved with MIP solver " << (int)mipSolver << ".\n";
+            passed = false;
+            continue;
+        }
+
+        if(!(std::abs(solver->getPrimalBound() - 0.75) < 1e-5))
+        {
+            std::cout << "  FAILED: nlp_009_010 has the primal bound " << solver->getPrimalBound()
+                      << " with MIP solver " << (int)mipSolver << ", expected 0.75.\n";
+            passed = false;
+            continue;
+        }
+
+        std::cout << "  nlp_009_010 polished to 0.75 with MIP solver " << (int)mipSolver << ".\n";
     }
 #endif
 
