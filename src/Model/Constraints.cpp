@@ -609,21 +609,7 @@ Interval NonlinearConstraint::getConstraintFunctionBounds()
 
 SparseVariableVector NonlinearConstraint::calculateGradient(const VectorDouble& point, bool eraseZeroes = true)
 {
-    SparseVariableVector gradient = QuadraticConstraint::calculateGradient(point, eraseZeroes);
-
-    SparseVariableVector monomialGradient;
-
-    if(this->properties.hasMonomialTerms)
-    {
-        monomialGradient = monomialTerms.calculateGradient(point);
-    }
-
-    SparseVariableVector signomialGradient;
-
-    if(this->properties.hasSignomialTerms)
-    {
-        signomialGradient = signomialTerms.calculateGradient(point);
-    }
+    SparseVariableVector gradient = calculateGradientWithoutNonlinearExpression(point, false);
 
     if(this->properties.hasNonlinearExpression)
     {
@@ -640,7 +626,7 @@ SparseVariableVector NonlinearConstraint::calculateGradient(const VectorDouble& 
                 pointNonlinearSubset[VAR->properties.nonlinearVariableIndex] = point[VAR->getIndex()];
 
             CppAD::sparse_rcv<std::vector<size_t>, std::vector<double>> subset(nonlinearGradientSparsityPattern);
-            sharedOwnerProblem->ADFunctions.subgraph_jac_rev(pointNonlinearSubset, subset);
+            sharedOwnerProblem->calculateNonlinearJacobian(pointNonlinearSubset, subset);
 
             const std::vector<size_t>& col(subset.col());
             const std::vector<double>& value(subset.val());
@@ -659,12 +645,34 @@ SparseVariableVector NonlinearConstraint::calculateGradient(const VectorDouble& 
                 auto element = gradient.emplace(VAR, coefficient);
 
                 if(!element.second)
-                {
-                    // Element already exists for the variable
                     element.first->second += coefficient;
-                }
             }
         }
+    }
+
+    if(eraseZeroes)
+        Utilities::erase_if<VariablePtr, double>(gradient, 0.0);
+
+    return gradient;
+}
+
+SparseVariableVector NonlinearConstraint::calculateGradientWithoutNonlinearExpression(
+    const VectorDouble& point, bool eraseZeroes)
+{
+    SparseVariableVector gradient = QuadraticConstraint::calculateGradient(point, false);
+
+    SparseVariableVector monomialGradient;
+
+    if(this->properties.hasMonomialTerms)
+    {
+        monomialGradient = monomialTerms.calculateGradient(point);
+    }
+
+    SparseVariableVector signomialGradient;
+
+    if(this->properties.hasSignomialTerms)
+    {
+        signomialGradient = signomialTerms.calculateGradient(point);
     }
 
     Utilities::addSparseVariableVector(gradient, std::move(monomialGradient));
@@ -720,20 +728,16 @@ void NonlinearConstraint::initializeGradientSparsityPattern()
             assert((size_t)sharedOwnerProblem->properties.numberOfNonlinearExpressions
                 == sharedOwnerProblem->ADFunctions.Range());
 
-            // For some reason we need to have all nonlinear variables activated, otherwise not all nonzero elements
-            // of the gradient may be detected
-            auto nonlinearVariablesInExpressionMap
-                = std::vector<bool>(sharedOwnerProblem->properties.numberOfVariablesInNonlinearExpressions, true);
-
-            auto nonlinearFunctionMap
-                = std::vector<bool>(sharedOwnerProblem->properties.numberOfNonlinearExpressions, false);
-
-            nonlinearFunctionMap[this->nonlinearExpressionIndex] = true;
-
             CppAD::sparse_rc<std::vector<size_t>> pattern;
+            // Every derivative of this expression can only involve a variable in the expression tree. Building
+            // this conservative pattern avoids traversing the shared AD tape once per constraint.
+            pattern.resize(sharedOwnerProblem->properties.numberOfNonlinearExpressions,
+                sharedOwnerProblem->properties.numberOfVariablesInNonlinearExpressions,
+                variablesInNonlinearExpression.size());
 
-            sharedOwnerProblem->ADFunctions.subgraph_sparsity(
-                nonlinearVariablesInExpressionMap, nonlinearFunctionMap, false, pattern);
+            for(size_t i = 0; i < variablesInNonlinearExpression.size(); ++i)
+                pattern.set(i, this->nonlinearExpressionIndex,
+                    variablesInNonlinearExpression[i]->properties.nonlinearVariableIndex);
 
             // Save for later use when calculating gradients
             nonlinearGradientSparsityPattern = pattern;
@@ -755,19 +759,27 @@ void NonlinearConstraint::initializeGradientSparsityPattern()
     nonlinearGradientSparsityMapGenerated = true;
 }
 
+bool NonlinearConstraint::isHessianCalculatedDensely()
+{
+    if(!properties.hasNonlinearExpression)
+        return (false);
+
+    auto sharedOwnerProblem = ownerProblem.lock();
+
+    if(!sharedOwnerProblem)
+        return (false);
+
+    if(!nonlinearHessianSparsityMapGenerated)
+        initializeHessianSparsityPattern();
+
+    size_t dimension = sharedOwnerProblem->properties.numberOfVariablesInNonlinearExpressions;
+
+    return (dimension >= 64 && nonlinearHessianSparsityPattern.nnz() > dimension * dimension / 2);
+}
+
 SparseVariableMatrix NonlinearConstraint::calculateHessian(const VectorDouble& point, bool eraseZeroes = true)
 {
-    SparseVariableMatrix hessian = QuadraticConstraint::calculateHessian(point, eraseZeroes);
-
-    if(properties.hasMonomialTerms)
-    {
-        Utilities::addSparseVariableMatrix(hessian, monomialTerms.calculateHessian(point));
-    }
-
-    if(properties.hasSignomialTerms)
-    {
-        Utilities::addSparseVariableMatrix(hessian, signomialTerms.calculateHessian(point));
-    }
+    SparseVariableMatrix hessian = calculateHessianWithoutNonlinearExpression(point, false);
 
     if(this->properties.hasNonlinearExpression)
     {
@@ -786,41 +798,69 @@ SparseVariableMatrix NonlinearConstraint::calculateHessian(const VectorDouble& p
             for(auto& VAR : sharedOwnerProblem->nonlinearExpressionVariables)
                 pointNonlinearSubset[VAR->properties.nonlinearVariableIndex] = point[VAR->getIndex()];
 
-            // The elements of the sparsity pattern are calculated, instead of using SparseHessian, which
-            // recalculates the sparsity pattern and returns the whole dense Hessian at every call. The work of the
-            // coloring is kept between the calls.
-            CppAD::sparse_rcv<std::vector<size_t>, std::vector<double>> subset(nonlinearHessianSparsityPattern);
-
-            sharedOwnerProblem->ADFunctions.sparse_hes(pointNonlinearSubset, weights, subset,
-                nonlinearHessianSparsityPattern, "cppad.symmetric", nonlinearHessianWork);
-
-            const std::vector<size_t>& rowIndices(subset.row());
-            const std::vector<size_t>& columnIndices(subset.col());
-            const std::vector<double>& values(subset.val());
-
-            for(size_t k = 0; k < subset.nnz(); k++)
+            auto addHessianElement = [&](size_t row, size_t column, double value)
             {
-                double hessianValue = values[k];
+                if(value == 0.0)
+                    return;
 
-                if(hessianValue == 0.0)
-                    continue;
-
-                auto& V1 = sharedOwnerProblem->nonlinearExpressionVariables[rowIndices[k]];
-                auto& V2 = sharedOwnerProblem->nonlinearExpressionVariables[columnIndices[k]];
+                auto& V1 = sharedOwnerProblem->nonlinearExpressionVariables[row];
+                auto& V2 = sharedOwnerProblem->nonlinearExpressionVariables[column];
 
                 // Only save elements above the diagonal since the Hessian is symmetric
                 if(V1->getIndex() > V2->getIndex())
-                    continue;
+                    return;
 
-                auto element = hessian.emplace(std::make_pair(V1, V2), hessianValue);
+                auto element = hessian.emplace(std::make_pair(V1, V2), value);
 
                 if(!element.second)
-                {
-                    // Element already exists for the variable
-                    element.first->second += hessianValue;
-                }
+                    element.first->second += value;
+            };
+
+            const size_t dimension = pointNonlinearSubset.size();
+            const auto& pattern = nonlinearHessianSparsityPattern;
+
+            if(isHessianCalculatedDensely())
+            {
+                // Coloring a dense pattern is more expensive than the Hessian itself. Keep only pattern entries.
+                auto values = sharedOwnerProblem->ADFunctions.Hessian(pointNonlinearSubset, weights);
+
+                for(size_t k = 0; k < pattern.nnz(); ++k)
+                    addHessianElement(pattern.row()[k], pattern.col()[k],
+                        values[pattern.row()[k] * dimension + pattern.col()[k]]);
+            }
+            else
+            {
+                // The work object keeps the sparse coloring between calls.
+                CppAD::sparse_rcv<std::vector<size_t>, std::vector<double>> subset(pattern);
+
+                sharedOwnerProblem->ADFunctions.sparse_hes(
+                    pointNonlinearSubset, weights, subset, pattern, "cppad.symmetric", nonlinearHessianWork);
+
+                for(size_t k = 0; k < subset.nnz(); ++k)
+                    addHessianElement(subset.row()[k], subset.col()[k], subset.val()[k]);
             }
         }
+    }
+
+    if(eraseZeroes)
+        Utilities::erase_if<std::pair<VariablePtr, VariablePtr>, double>(hessian, 0.0);
+
+    return (hessian);
+}
+
+SparseVariableMatrix NonlinearConstraint::calculateHessianWithoutNonlinearExpression(
+    const VectorDouble& point, bool eraseZeroes)
+{
+    SparseVariableMatrix hessian = QuadraticConstraint::calculateHessian(point, false);
+
+    if(properties.hasMonomialTerms)
+    {
+        Utilities::addSparseVariableMatrix(hessian, monomialTerms.calculateHessian(point));
+    }
+
+    if(properties.hasSignomialTerms)
+    {
+        Utilities::addSparseVariableMatrix(hessian, signomialTerms.calculateHessian(point));
     }
 
     if(eraseZeroes)
@@ -883,20 +923,33 @@ void NonlinearConstraint::initializeHessianSparsityPattern()
     {
         if(auto sharedOwnerProblem = ownerProblem.lock())
         {
-            // For some reason we need to have all nonlinear variables activated, otherwise not all nonzero elements of
-            // the hessian may be detected
-            auto nonlinearVariablesInExpressionMap
-                = std::vector<bool>(sharedOwnerProblem->properties.numberOfVariablesInNonlinearExpressions, true);
-
-            auto nonlinearFunctionMap
-                = std::vector<bool>(sharedOwnerProblem->properties.numberOfNonlinearExpressions, false);
-
-            nonlinearFunctionMap[this->nonlinearExpressionIndex] = true;
-
             CppAD::sparse_rc<std::vector<size_t>> pattern;
+            if(variablesInNonlinearExpression.size() <= 10)
+            {
+                // Any Hessian entry must involve two variables from this expression. For small supports, a
+                // conservative pattern is cheaper than another sweep over the shared AD tape.
+                const size_t count = variablesInNonlinearExpression.size();
+                const size_t dimension = sharedOwnerProblem->properties.numberOfVariablesInNonlinearExpressions;
+                pattern.resize(dimension, dimension, count * count);
 
-            sharedOwnerProblem->ADFunctions.for_hes_sparsity(
-                nonlinearVariablesInExpressionMap, nonlinearFunctionMap, false, pattern);
+                size_t entry = 0;
+                for(auto& rowVariable : variablesInNonlinearExpression)
+                    for(auto& columnVariable : variablesInNonlinearExpression)
+                        pattern.set(entry++, rowVariable->properties.nonlinearVariableIndex,
+                            columnVariable->properties.nonlinearVariableIndex);
+            }
+            else
+            {
+                // For larger expressions, avoid storing the square of the number of variables as possible entries.
+                auto nonlinearVariablesInExpressionMap = std::vector<bool>(
+                    sharedOwnerProblem->properties.numberOfVariablesInNonlinearExpressions, true);
+                auto nonlinearFunctionMap
+                    = std::vector<bool>(sharedOwnerProblem->properties.numberOfNonlinearExpressions, false);
+                nonlinearFunctionMap[this->nonlinearExpressionIndex] = true;
+
+                sharedOwnerProblem->ADFunctions.for_hes_sparsity(
+                    nonlinearVariablesInExpressionMap, nonlinearFunctionMap, false, pattern);
+            }
 
             nonlinearHessianSparsityPattern = pattern;
 

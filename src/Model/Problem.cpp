@@ -63,6 +63,56 @@ static SHOTCppADErrorHandlerRegistrar shot_cppad_error_handler_registrar;
 namespace SHOT
 {
 
+void Problem::calculateNonlinearJacobian(
+    const std::vector<double>& point, CppAD::sparse_rcv<std::vector<size_t>, std::vector<double>>& subset)
+{
+    // The variant of subgraph_jac_rev that takes the elements to calculate reads past the end of the derivatives of a
+    // row when an element is not in the subgraph of the row, after the last element that is (CppAD 20210000.6). This
+    // crashes for a row that depends on no variable, e.g., for 0/(0.01 + x) when the numerator is a variable fixed to
+    // zero (heatexch_gen2), and can otherwise give a wrong value. The variant that selects rows and columns only
+    // returns the elements in the subgraphs, which are then matched to the requested ones; both are in row-major order.
+    size_t numberOfRows = ADFunctions.Range();
+    size_t numberOfColumns = ADFunctions.Domain();
+
+    const auto& rows = subset.row();
+    const auto& columns = subset.col();
+
+    std::vector<bool> selectRange(numberOfRows, false);
+    std::vector<bool> selectDomain(numberOfColumns, false);
+
+    for(size_t k = 0; k < subset.nnz(); k++)
+    {
+        selectRange[rows[k]] = true;
+        selectDomain[columns[k]] = true;
+    }
+
+    CppAD::sparse_rcv<std::vector<size_t>, std::vector<double>> calculated;
+    ADFunctions.subgraph_jac_rev(selectDomain, selectRange, point, calculated);
+
+    auto requestedOrder = subset.row_major();
+    auto calculatedOrder = calculated.row_major();
+
+    const auto& calculatedRows = calculated.row();
+    const auto& calculatedColumns = calculated.col();
+    const auto& calculatedValues = calculated.val();
+
+    size_t c = 0;
+
+    for(auto k : requestedOrder)
+    {
+        while(c < calculatedOrder.size()
+            && (calculatedRows[calculatedOrder[c]] < rows[k]
+                || (calculatedRows[calculatedOrder[c]] == rows[k] && calculatedColumns[calculatedOrder[c]] < columns[k])))
+            c++;
+
+        if(c < calculatedOrder.size() && calculatedRows[calculatedOrder[c]] == rows[k]
+            && calculatedColumns[calculatedOrder[c]] == columns[k])
+            subset.set(k, calculatedValues[calculatedOrder[c]]);
+        else
+            subset.set(k, 0.0);
+    }
+}
+
 void Problem::updateConstraints()
 {
     // A constraint with both a lower and an upper bound, e.g. an equality constraint, is kept as it is. The dual
@@ -154,7 +204,9 @@ void Problem::updateConstraints()
             C->signomialTerms.invalidateProperties();
 
             if(C->nonlinearExpression)
-                C->nonlinearExpression = simplify(std::make_shared<ExpressionNegate>(C->nonlinearExpression));
+                // finalize() simplifies the expression when it extracts its terms. Avoid walking a large
+                // expression tree here as well just to standardize the constraint's bounds.
+                C->nonlinearExpression = std::make_shared<ExpressionNegate>(C->nonlinearExpression);
 
             C->constant *= -1.0;
         }

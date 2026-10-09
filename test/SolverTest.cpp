@@ -1105,26 +1105,26 @@ static std::pair<std::unique_ptr<SHOT::Solver>, std::shared_ptr<SHOT::Environmen
 static double maxConstraintError(const PrimalSolution& sol)
 {
     double err = SHOT_DBL_MIN;
-    if(sol.maxDevatingConstraintLinear.index >= 0)
-        err = std::max(err, sol.maxDevatingConstraintLinear.value);
-    if(sol.maxDevatingConstraintQuadratic.index >= 0)
-        err = std::max(err, sol.maxDevatingConstraintQuadratic.value);
-    if(sol.maxDevatingConstraintNonlinear.index >= 0)
-        err = std::max(err, sol.maxDevatingConstraintNonlinear.value);
+    if(sol.maxDeviatingConstraintLinear.index >= 0)
+        err = std::max(err, sol.maxDeviatingConstraintLinear.value);
+    if(sol.maxDeviatingConstraintQuadratic.index >= 0)
+        err = std::max(err, sol.maxDeviatingConstraintQuadratic.value);
+    if(sol.maxDeviatingConstraintNonlinear.index >= 0)
+        err = std::max(err, sol.maxDeviatingConstraintNonlinear.value);
     return err;
 }
 
 static void printPrimalSolutionConstraintErrors(const PrimalSolution& sol)
 {
-    if(sol.maxDevatingConstraintLinear.index >= 0)
-        std::cout << "  max linear constraint error:    constraint " << sol.maxDevatingConstraintLinear.index
-                  << "  error = " << sol.maxDevatingConstraintLinear.value << "\n";
-    if(sol.maxDevatingConstraintQuadratic.index >= 0)
-        std::cout << "  max quadratic constraint error: constraint " << sol.maxDevatingConstraintQuadratic.index
-                  << "  error = " << sol.maxDevatingConstraintQuadratic.value << "\n";
-    if(sol.maxDevatingConstraintNonlinear.index >= 0)
-        std::cout << "  max nonlinear constraint error: constraint " << sol.maxDevatingConstraintNonlinear.index
-                  << "  error = " << sol.maxDevatingConstraintNonlinear.value << "\n";
+    if(sol.maxDeviatingConstraintLinear.index >= 0)
+        std::cout << "  max linear constraint error:    constraint " << sol.maxDeviatingConstraintLinear.index
+                  << "  error = " << sol.maxDeviatingConstraintLinear.value << "\n";
+    if(sol.maxDeviatingConstraintQuadratic.index >= 0)
+        std::cout << "  max quadratic constraint error: constraint " << sol.maxDeviatingConstraintQuadratic.index
+                  << "  error = " << sol.maxDeviatingConstraintQuadratic.value << "\n";
+    if(sol.maxDeviatingConstraintNonlinear.index >= 0)
+        std::cout << "  max nonlinear constraint error: constraint " << sol.maxDeviatingConstraintNonlinear.index
+                  << "  error = " << sol.maxDeviatingConstraintNonlinear.value << "\n";
 }
 
 bool TestCallbackESHExternalInteriorPointFromAuxProblem()
@@ -1662,9 +1662,9 @@ bool TestPrimalSolutionPool()
 
     // A solution with the same objective value as the incumbent but a smaller constraint error replaces it
     auto moreAccurate = makeSolution(9.0, 6.0);
-    moreAccurate.maxDevatingConstraintLinear = PairIndexValue(-1, 0.0);
-    moreAccurate.maxDevatingConstraintQuadratic = PairIndexValue(-1, 0.0);
-    moreAccurate.maxDevatingConstraintNonlinear = PairIndexValue(-1, 0.0);
+    moreAccurate.maxDeviatingConstraintLinear = PairIndexValue(-1, 0.0);
+    moreAccurate.maxDeviatingConstraintQuadratic = PairIndexValue(-1, 0.0);
+    moreAccurate.maxDeviatingConstraintNonlinear = PairIndexValue(-1, 0.0);
     env->results->addPrimalSolution(moreAccurate);
     check("More accurate solution", { 9.0, 9.0, 10.0 }, 6.0);
 
@@ -1679,9 +1679,9 @@ bool TestPrimalSolutionPool()
     auto withError = [&makeSolution](double objectiveValue, double firstValue, double error)
     {
         auto solution = makeSolution(objectiveValue, firstValue);
-        solution.maxDevatingConstraintLinear = PairIndexValue(-1, error);
-        solution.maxDevatingConstraintQuadratic = PairIndexValue(-1, error);
-        solution.maxDevatingConstraintNonlinear = PairIndexValue(-1, error);
+        solution.maxDeviatingConstraintLinear = PairIndexValue(-1, error);
+        solution.maxDeviatingConstraintQuadratic = PairIndexValue(-1, error);
+        solution.maxDeviatingConstraintNonlinear = PairIndexValue(-1, error);
         return (solution);
     };
 

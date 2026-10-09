@@ -18,10 +18,12 @@
 #include "../Results.h"
 #include "../Settings.h"
 #include "../Solver.h"
+#include "../Timing.h"
 #include "../MIPSolver/IMIPSolver.h"
 #include "../Model/ObjectiveFunction.h"
 #include "../Model/Problem.h"
 
+#include <algorithm>
 #include <unordered_map>
 
 #ifdef HAS_STD_FILESYSTEM
@@ -216,6 +218,15 @@ E_NLPSolutionStatus NLPSolverSHOT::solveProblemInstance()
     {
         solver->updateSetting("Dual.MIP.CutOff.InitialValue", env->dualSolver->cutOffToUse);
         solver->updateSetting("Dual.MIP.CutOff.UseInitialValue", true);
+    }
+
+    // The timer of the nested solver is not restarted between the solves, so a limit for this solve is given from
+    // its elapsed time
+    if(timeLimit < SHOT_DBL_MAX)
+    {
+        solver->updateSetting("Termination.TimeLimit",
+            solver->getEnvironment()->timing->getElapsedTime("Total")
+                + std::min(env->settings->getSetting<double>("Primal.FixedInteger.TimeLimit"), timeLimit));
     }
 
     if(!problemInfoPrinted)

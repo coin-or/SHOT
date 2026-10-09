@@ -405,13 +405,8 @@ bool DualSolver::isHyperplaneInGeneratedList(const std::pair<double, double>& ha
 }
 
 std::optional<std::pair<double, double>> DualSolver::evaluateHyperplaneTerms(
-    const VectorDouble& generationPoint, const VectorDouble& pointToCutOff, const NumericConstraintPtr& constraint)
+    const HyperplanePtr& hyperplane, const VectorDouble& pointToCutOff)
 {
-    auto hyperplane = std::make_shared<ConstraintHyperplane>();
-    hyperplane->sourceConstraint = constraint;
-    hyperplane->generatedPoint = generationPoint;
-    hyperplane->isGlobal = (constraint->properties.convexity <= E_Convexity::Convex);
-
     auto terms = MIPSolver->createHyperplaneTerms(hyperplane);
 
     if(!terms)
@@ -453,6 +448,37 @@ std::vector<VectorDouble> DualSolver::getFinitePointCandidates()
 std::optional<VectorDouble> DualSolver::getHyperplaneGenerationPoint(
     const VectorDouble& point, const NumericConstraintPtr& constraint)
 {
+    auto createHyperplane = [&constraint](const VectorDouble& generationPoint) -> HyperplanePtr
+    {
+        auto hyperplane = std::make_shared<ConstraintHyperplane>();
+        hyperplane->sourceConstraint = constraint;
+        hyperplane->generatedPoint = generationPoint;
+        hyperplane->isGlobal = (constraint->properties.convexity <= E_Convexity::Convex);
+        return (hyperplane);
+    };
+
+    return (findHyperplaneGenerationPoint(point, createHyperplane, constraint->getIndex()));
+}
+
+std::optional<VectorDouble> DualSolver::getObjectiveHyperplaneGenerationPoint(const VectorDouble& point)
+{
+    auto objective = env->reformulatedProblem->objectiveFunction;
+
+    auto createHyperplane = [&objective](const VectorDouble& generationPoint) -> HyperplanePtr
+    {
+        auto hyperplane = std::make_shared<ObjectiveHyperplane>();
+        hyperplane->generatedPoint = generationPoint;
+        hyperplane->objectiveFunctionValue = objective->calculateValue(generationPoint);
+        return (hyperplane);
+    };
+
+    // The hashes of an objective hyperplane include the objective value, so generated ones are not skipped
+    return (findHyperplaneGenerationPoint(point, createHyperplane, std::nullopt));
+}
+
+std::optional<VectorDouble> DualSolver::findHyperplaneGenerationPoint(const VectorDouble& point,
+    const std::function<HyperplanePtr(const VectorDouble&)>& createHyperplane, std::optional<int> constraintIndex)
+{
     // The largest magnitude accepted of a hyperplane generated in a point that has been moved. A hyperplane whose
     // largest value is above 1e9 is rescaled by MIPSolverBase::createHyperplane, so this keeps the generated
     // constraint within a few orders of magnitude of the rest of the dual problem, where the MIP solvers behave.
@@ -460,11 +486,10 @@ std::optional<VectorDouble> DualSolver::getHyperplaneGenerationPoint(
     const double fractionMultiplier = 10.0;
     const int maximumNumberOfTrials = 10;
 
-    if(auto terms = evaluateHyperplaneTerms(point, point, constraint); terms && std::isfinite(terms->first))
+    if(auto terms = evaluateHyperplaneTerms(createHyperplane(point), point); terms && std::isfinite(terms->first))
         return (point);
 
     double smallestFraction = env->settings->getSetting<double>("Dual.HyperplaneCuts.NonfinitePointRetreatFactor");
-    int constraintIndex = constraint->getIndex();
 
     for(auto& target : getFinitePointCandidates())
     {
@@ -477,19 +502,21 @@ std::optional<VectorDouble> DualSolver::getHyperplaneGenerationPoint(
         for(int i = 0; i < maximumNumberOfTrials && fraction <= 0.5; i++, fraction *= fractionMultiplier)
         {
             auto trialPoint = Utilities::getPointOnSegment(point, target, fraction);
-            auto terms = evaluateHyperplaneTerms(trialPoint, point, constraint);
+            auto terms = evaluateHyperplaneTerms(createHyperplane(trialPoint), point);
 
-            // The constraint is still outside its domain in the point, or a hyperplane has already been generated
+            // The function is still outside its domain in the point, or a hyperplane has already been generated
             // there, which would only repeat a cut that did not help
-            if(!terms || !std::isfinite(terms->first) || hasHyperplaneBeenAdded(trialPoint, constraintIndex))
+            if(!terms || !std::isfinite(terms->first)
+                || (constraintIndex && hasHyperplaneBeenAdded(trialPoint, *constraintIndex)))
                 continue;
 
             if(!firstFinitePoint)
                 firstFinitePoint = trialPoint;
 
             // The hyperplanes get flatter the further away the point is, so the first one that is both usable by
-            // the MIP solver and cuts the point off is the tightest one of those
-            if(terms->first <= maximumMagnitude && terms->second > 0.0)
+            // the MIP solver and cuts the point off is the tightest one of those. Whether an objective cut cuts the
+            // point off depends on the value of the objective variable, which is not in the point.
+            if(terms->first <= maximumMagnitude && (!constraintIndex || terms->second > 0.0))
                 return (trialPoint);
         }
 

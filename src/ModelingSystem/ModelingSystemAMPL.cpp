@@ -339,6 +339,24 @@ public:
         case mp::expr::ATAN:
             return std::make_shared<ExpressionArcTan>(child);
 
+        case mp::expr::SINH:
+            return std::make_shared<ExpressionSinh>(child);
+
+        case mp::expr::COSH:
+            return std::make_shared<ExpressionCosh>(child);
+
+        case mp::expr::TANH:
+            return std::make_shared<ExpressionTanh>(child);
+
+        case mp::expr::ASINH:
+            return createArcSinh(child);
+
+        case mp::expr::ACOSH:
+            return createArcCosh(child);
+
+        case mp::expr::ATANH:
+            return createArcTanh(child);
+
         default:
             throw OperationNotImplementedException(
                 fmt::format("Error: Unsupported AMPL function {}", static_cast<int>(kind)));
@@ -374,6 +392,9 @@ public:
         case mp::expr::POW_CONST_EXP:
             return std::make_shared<ExpressionPower>(firstChild, secondChild);
 
+        case mp::expr::ATAN2: // atan2(y, x)
+            return createArcTan2(firstChild, secondChild);
+
         default:
             throw OperationNotImplementedException(
                 fmt::format("Error: Unsupported AMPL function {}", static_cast<int>(kind)));
@@ -394,6 +415,25 @@ public:
     NumericArgHandler BeginSum(int) { return NumericArgHandler(); }
 
     NonlinearExpressionPtr EndSum(NumericArgHandler handler) { return std::make_shared<ExpressionSum>(handler.terms); }
+
+    // Used for the arguments of min and max
+    struct VarArgHandler
+    {
+        mp::expr::Kind kind;
+        NonlinearExpressions arguments;
+
+        void AddArg(NonlinearExpressionPtr argument) { arguments.add(argument); }
+    };
+
+    VarArgHandler BeginVarArg(mp::expr::Kind kind, int) { return VarArgHandler { kind, NonlinearExpressions() }; }
+
+    NonlinearExpressionPtr EndVarArg(VarArgHandler handler)
+    {
+        if(handler.arguments.size() == 0)
+            throw OperationNotImplementedException("Error: AMPL min or max without arguments");
+
+        return ((handler.kind == mp::expr::MAX) ? createMaximum(handler.arguments) : createMinimum(handler.arguments));
+    }
 
     void OnObj([[maybe_unused]] int objectiveIndex, mp::obj::Type type, NonlinearExpressionPtr nonlinearExpression)
     {

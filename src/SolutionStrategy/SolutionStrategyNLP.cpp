@@ -58,6 +58,7 @@
 #include "../Tasks/TaskSelectPrimalCandidatesFromSolutionPool.h"
 #include "../Tasks/TaskSelectPrimalCandidatesFromRootsearch.h"
 #include "../Tasks/TaskSelectPrimalFixedNLPPointsFromSolutionPool.h"
+#include "../Tasks/TaskEnumerateFixedIntegerCombinations.h"
 #include "../Tasks/TaskSelectPrimalCandidatesFromNLP.h"
 #include "../Tasks/TaskClearFixedPrimalCandidates.h"
 #include "../Tasks/TaskSelectPrimalCandidatesFromExternalSource.h"
@@ -124,6 +125,21 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr)
     auto tCheckInitialUserTerm = std::make_shared<TaskCheckUserTermination>(env, "FinalizeSolution", false);
     env->tasks->addTask(tCheckInitialUserTerm, "CheckUserTerminationInitial");
 
+    // An NLP problem is solved from a given starting point, e.g. the levels of the variables of a GAMS model, before
+    // the first dual problem, which can take the remaining time of a nonconvex problem. Without a starting point,
+    // there are no candidates and nothing is solved.
+    if(env->settings->getSetting<bool>("Primal.FixedInteger.Use")
+        && env->settings->getSetting<bool>("Primal.FixedInteger.UseStartingPoint"))
+    {
+        auto tSolveStartingPointNLP = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env,
+            static_cast<ES_PrimalNLPProblemSource>(env->settings->getSetting<int>("Primal.FixedInteger.SourceProblem"))
+                == ES_PrimalNLPProblemSource::ReformulatedProblem);
+        env->tasks->addTask(tSolveStartingPointNLP, "SolveStartingPointNLP");
+
+        auto tClearStartingPointNLP = std::make_shared<TaskClearFixedPrimalCandidates>(env);
+        env->tasks->addTask(tClearStartingPointNLP, "ClearStartingPointNLP");
+    }
+
     auto tSolveIteration = std::make_shared<TaskSolveIteration>(env);
     env->tasks->addTask(tSolveIteration, "SolveIter");
 
@@ -143,12 +159,21 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr)
     env->tasks->addTask(tSelectPrimExternal, "SelectPrimExternal");
     std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tSelectPrimExternal);
 
+    // If the objective gap could not be closed, e.g., since the cuts of nonconvex constraints made the dual problem
+    // infeasible, the NLP problem is solved without the starting point from the dual strategy
+    if(env->settings->getSetting<bool>("Primal.FixedInteger.Use")
+        && env->settings->getSetting<bool>("Primal.FixedInteger.Enumeration.UseAsFallback"))
+    {
+        auto tEnumerateFixedIntegerFallback = std::make_shared<TaskEnumerateFixedIntegerCombinations>(env, true);
+        std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tEnumerateFixedIntegerFallback);
+    }
+
     // Once the search has finished, solve an NLP problem starting from the solution found to try to improve it.
     // The dual solver's own tolerances bound how accurate its point is, and near an optimum the objective is
     // often flat, so a converged objective can still sit on a point that is some way off. This is a separate
     // task instance from any used during the search: it must not be paced by the iteration and time heuristics
     // that apply there.
-    if(env->settings->getSetting<bool>("Primal.PolishSolution"))
+    if(env->settings->getSetting<int>("Primal.PolishSolution.NumberOfPoints") > 0)
     {
         auto tPolishPoint = std::make_shared<TaskSelectPrimalFixedNLPPointsFromSolutionPool>(env, true);
         std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tPolishPoint);

@@ -55,6 +55,7 @@
 
 #include "../Tasks/TaskSelectPrimalCandidatesFromSolutionPool.h"
 #include "../Tasks/TaskSelectPrimalCandidatesFromRootsearch.h"
+#include "../Tasks/TaskEnumerateFixedIntegerCombinations.h"
 #include "../Tasks/TaskSelectPrimalCandidatesFromNLP.h"
 #include "../Tasks/TaskSelectPrimalFixedNLPPointsFromSolutionPool.h"
 #include "../Tasks/TaskSelectPrimalCandidatesFromExternalSource.h"
@@ -95,6 +96,20 @@ SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(EnvironmentPtr envPtr)
 
     auto tInitializeIteration = std::make_shared<TaskInitializeIteration>(env);
     env->tasks->addTask(tInitializeIteration, "InitIter");
+
+    // NLP problems are solved for all combinations of the discrete variables before the dual problem is solved, if
+    // there are few enough of them
+    if(env->settings->getSetting<bool>("Primal.FixedInteger.Use")
+        && env->settings->getSetting<bool>("Primal.FixedInteger.Enumeration.UseInitially")
+        && env->reformulatedProblem->properties.isDiscrete)
+    {
+        auto tEnumerateFixedInteger = std::make_shared<TaskEnumerateFixedIntegerCombinations>(env, false);
+        env->tasks->addTask(tEnumerateFixedInteger, "EnumerateFixedInteger");
+
+        // A termination requested by a callback during this stops the solution process here
+        auto tCheckInitialUserTerm = std::make_shared<TaskCheckUserTermination>(env, "FinalizeSolution", false);
+        env->tasks->addTask(tCheckInitialUserTerm, "CheckUserTerminationInitial");
+    }
 
     auto tSolveIteration = std::make_shared<TaskSolveIteration>(env);
     env->tasks->addTask(tSolveIteration, "SolveIter");
@@ -152,6 +167,17 @@ SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(EnvironmentPtr envPtr)
         env->tasks->addTask(tCheckRelGap, "CheckRelGap2");
     }
 
+    // If the objective gap could not be closed, e.g., due to numerical issues in the dual strategy, NLP problems are
+    // solved for all combinations of the discrete variables, if this has not been done and there are few enough of
+    // them
+    if(env->settings->getSetting<bool>("Primal.FixedInteger.Use")
+        && env->settings->getSetting<bool>("Primal.FixedInteger.Enumeration.UseAsFallback")
+        && env->reformulatedProblem->properties.isDiscrete)
+    {
+        auto tEnumerateFixedIntegerFallback = std::make_shared<TaskEnumerateFixedIntegerCombinations>(env, true);
+        std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tEnumerateFixedIntegerFallback);
+    }
+
     // Once the search has finished, solve an NLP problem starting from the solution found to try to improve it.
     // The dual solver's own tolerances bound how accurate its point is -- for a MIQCQP solver those are its
     // internal (barrier) tolerances, which SHOT's termination settings do not control -- and near an optimum the
@@ -159,7 +185,7 @@ SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(EnvironmentPtr envPtr)
     // variables, when there are any, are fixed at the values found, so the NLP solved is the continuous problem
     // that remains. This is a separate task instance from any used during the search: it must not be paced by
     // the iteration and time heuristics that apply there.
-    if(env->settings->getSetting<bool>("Primal.PolishSolution"))
+    if(env->settings->getSetting<int>("Primal.PolishSolution.NumberOfPoints") > 0)
     {
         auto tPolishPoint = std::make_shared<TaskSelectPrimalFixedNLPPointsFromSolutionPool>(env, true);
         std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tPolishPoint);

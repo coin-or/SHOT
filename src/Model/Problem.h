@@ -168,6 +168,12 @@ public:
     std::vector<CppAD::AD<double>> factorableFunctions;
     CppAD::ADFun<double> ADFunctions;
 
+    // Calculates the elements of the Jacobian of the nonlinear expressions given in subset, in the point of the
+    // variables in nonlinear expressions. An element may be outside the sparsity pattern of the taped functions, e.g.,
+    // for a variable that the expression no longer depends on, and is then zero.
+    void calculateNonlinearJacobian(
+        const std::vector<double>& point, CppAD::sparse_rcv<std::vector<size_t>, std::vector<double>>& subset);
+
     void updateProperties();
 
     // This also updates the problem properties

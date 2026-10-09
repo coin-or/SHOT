@@ -69,7 +69,9 @@ ProblemPtr createMinimizationProblem(EnvironmentPtr env)
     problem->add(objectiveFunction);
 
     LinearTerms linearTerms;
-    linearTerms.add(std::make_shared<LinearTerm>(1.0, var_x));
+    // Keep two terms for x in the constructor to exercise accumulation of duplicate linear Jacobian entries.
+    linearTerms.push_back(std::make_shared<LinearTerm>(0.25, var_x));
+    linearTerms.push_back(std::make_shared<LinearTerm>(0.75, var_x));
     linearTerms.add(std::make_shared<LinearTerm>(1.0, var_y));
     // The constructor already stores the terms, so they must not be added a second time
     auto linearConstraint = std::make_shared<LinearConstraint>("linconstr", linearTerms, 3.0, 3.0);

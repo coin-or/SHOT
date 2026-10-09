@@ -49,6 +49,11 @@ enum class E_NonlinearExpressionTypes
     ArcSin,
     ArcTan,
     Abs,
+    ErrorFunction,
+    SignPower,
+    Sinh,
+    Cosh,
+    Tanh,
     Divide,
     Power,
     Sum,
@@ -475,7 +480,13 @@ public:
 
     inline Interval calculate(const IntervalVector& intervalVector) const override
     {
-        return (1.0 / child->calculate(intervalVector));
+        auto denominatorBounds = child->calculate(intervalVector);
+
+        // The interval division throws for a denominator that contains zero
+        if(denominatorBounds.l() * denominatorBounds.u() <= 0)
+            return (Interval(SHOT_DBL_MIN, SHOT_DBL_MAX));
+
+        return (1.0 / denominatorBounds);
     }
 
     inline Interval getBounds() const override
@@ -1147,10 +1158,23 @@ public:
 
     inline Interval calculate(const IntervalVector& intervalVector) const override
     {
-        return (tan(child->calculate(intervalVector)));
+        return (intervalTan(child->calculate(intervalVector)));
     }
 
-    inline Interval getBounds() const override { return (tan(child->getBounds())); }
+    inline Interval getBounds() const override { return (intervalTan(child->getBounds())); }
+
+    // The interval tangent throws for an interval that contains a pole, where the tangent is unbounded
+    static inline Interval intervalTan(Interval childBounds)
+    {
+        try
+        {
+            return (tan(childBounds));
+        }
+        catch(const mc::Interval::Exceptions&)
+        {
+            return (Interval(SHOT_DBL_MIN, SHOT_DBL_MAX));
+        }
+    }
 
     inline bool tightenBounds([[maybe_unused]] Interval bound) override { return (false); };
 
@@ -1351,10 +1375,12 @@ public:
         auto childConvexity = child->getConvexity();
         auto childBounds = child->getBounds();
 
-        if(childConvexity == E_Convexity::Convex && childBounds.u() <= 0.0)
+        if((childConvexity == E_Convexity::Linear || childConvexity == E_Convexity::Convex)
+            && childBounds.u() <= 0.0)
             return E_Convexity::Convex;
 
-        if(childConvexity == E_Convexity::Concave && childBounds.l() >= 0.0)
+        if((childConvexity == E_Convexity::Linear || childConvexity == E_Convexity::Concave)
+            && childBounds.l() >= 0.0)
             return E_Convexity::Concave;
 
         return E_Convexity::Unknown;
@@ -1457,6 +1483,474 @@ public:
     };
 };
 
+// The integral of the standard normal distribution from minus infinity to x, 0.5 * (1 + erf(x / sqrt(2))), as errorf(x)
+
+// The values of sinh, cosh and tanh, with infinite values replaced by the largest finite ones, so that intervals stay
+// valid for large arguments
+inline double clampToFinite(double value)
+{
+    if(value >= SHOT_DBL_MAX)
+        return (SHOT_DBL_MAX);
+
+    if(value <= SHOT_DBL_MIN)
+        return (SHOT_DBL_MIN);
+
+    return (value);
+}
+
+// The hyperbolic sine. It is increasing, convex for x >= 0 and concave for x <= 0.
+class ExpressionSinh : public ExpressionUnary
+{
+private:
+    static inline Interval valueBounds(Interval childBounds)
+    {
+        return (Interval(clampToFinite(std::sinh(childBounds.l())), clampToFinite(std::sinh(childBounds.u()))));
+    }
+
+public:
+    ExpressionSinh() = default;
+
+    ExpressionSinh(NonlinearExpressionPtr childExpression) { child = childExpression; }
+
+    inline double calculate(const VectorDouble& point) const override { return (std::sinh(child->calculate(point))); }
+
+    inline Interval calculate(const IntervalVector& intervalVector) const override
+    {
+        return (valueBounds(child->calculate(intervalVector)));
+    }
+
+    inline Interval getBounds() const override { return (valueBounds(child->getBounds())); }
+
+    inline bool tightenBounds(Interval bound) override
+    {
+        return (child->tightenBounds(Interval(std::asinh(bound.l()), std::asinh(bound.u()))));
+    };
+
+    inline FactorableFunction getFactorableFunction() override { return (CppAD::sinh(child->getFactorableFunction())); }
+
+    inline std::ostream& print(std::ostream& stream) const override
+    {
+        stream << "sinh(" << child << ')';
+        return stream;
+    }
+
+    inline E_NonlinearExpressionTypes getType() const override { return E_NonlinearExpressionTypes::Sinh; }
+
+    inline E_Convexity getConvexity() const override
+    {
+        auto childConvexity = child->getConvexity();
+        auto childBounds = child->getBounds();
+
+        if((childConvexity == E_Convexity::Linear || childConvexity == E_Convexity::Convex) && childBounds.l() >= 0.0)
+            return E_Convexity::Convex;
+
+        if((childConvexity == E_Convexity::Linear || childConvexity == E_Convexity::Concave)
+            && childBounds.u() <= 0.0)
+            return E_Convexity::Concave;
+
+        return E_Convexity::Unknown;
+    };
+
+    inline E_Monotonicity getMonotonicity() const override { return (child->getMonotonicity()); };
+
+    inline bool operator==(const NonlinearExpression& rhs) const override
+    {
+        if(rhs.getType() != getType())
+            return (false);
+
+        return (dynamic_cast<const ExpressionSinh&>(rhs).child.get() == child.get());
+    };
+};
+
+// The hyperbolic cosine. It is convex, decreasing for x <= 0 and increasing for x >= 0, with the minimum one in zero.
+class ExpressionCosh : public ExpressionUnary
+{
+private:
+    static inline Interval valueBounds(Interval childBounds)
+    {
+        double atLower = clampToFinite(std::cosh(childBounds.l()));
+        double atUpper = clampToFinite(std::cosh(childBounds.u()));
+
+        if(childBounds.l() >= 0.0)
+            return (Interval(atLower, atUpper));
+
+        if(childBounds.u() <= 0.0)
+            return (Interval(atUpper, atLower));
+
+        return (Interval(1.0, std::max(atLower, atUpper)));
+    }
+
+public:
+    ExpressionCosh() = default;
+
+    ExpressionCosh(NonlinearExpressionPtr childExpression) { child = childExpression; }
+
+    inline double calculate(const VectorDouble& point) const override { return (std::cosh(child->calculate(point))); }
+
+    inline Interval calculate(const IntervalVector& intervalVector) const override
+    {
+        return (valueBounds(child->calculate(intervalVector)));
+    }
+
+    inline Interval getBounds() const override { return (valueBounds(child->getBounds())); }
+
+    inline bool tightenBounds(Interval bound) override
+    {
+        // cosh discards the sign of its argument, so the magnitude is bounded, and the sign is decided by the bounds
+        // the argument already has, as for a square
+        if(bound.u() < 1.0)
+            return (false);
+
+        double magnitudeUpper = std::acosh(bound.u());
+        double magnitudeLower = (bound.l() > 1.0) ? std::acosh(bound.l()) : 0.0;
+
+        auto childBounds = child->getBounds();
+
+        if(childBounds.l() >= 0.0)
+            return (child->tightenBounds(Interval(magnitudeLower, magnitudeUpper)));
+
+        if(childBounds.u() <= 0.0)
+            return (child->tightenBounds(Interval(-magnitudeUpper, -magnitudeLower)));
+
+        return (child->tightenBounds(Interval(-magnitudeUpper, magnitudeUpper)));
+    };
+
+    inline FactorableFunction getFactorableFunction() override { return (CppAD::cosh(child->getFactorableFunction())); }
+
+    inline std::ostream& print(std::ostream& stream) const override
+    {
+        stream << "cosh(" << child << ')';
+        return stream;
+    }
+
+    inline E_NonlinearExpressionTypes getType() const override { return E_NonlinearExpressionTypes::Cosh; }
+
+    inline E_Convexity getConvexity() const override
+    {
+        auto childConvexity = child->getConvexity();
+        auto childBounds = child->getBounds();
+
+        if(childConvexity == E_Convexity::Linear)
+            return E_Convexity::Convex;
+
+        // A convex function that is increasing (decreasing) of a convex (concave) function is convex
+        if(childConvexity == E_Convexity::Convex && childBounds.l() >= 0.0)
+            return E_Convexity::Convex;
+
+        if(childConvexity == E_Convexity::Concave && childBounds.u() <= 0.0)
+            return E_Convexity::Convex;
+
+        return E_Convexity::Unknown;
+    };
+
+    inline E_Monotonicity getMonotonicity() const override
+    {
+        auto childMonotonicity = child->getMonotonicity();
+        auto childBounds = child->getBounds();
+
+        if(childMonotonicity == E_Monotonicity::Constant)
+            return E_Monotonicity::Constant;
+
+        if(childBounds.l() >= 0.0)
+            return childMonotonicity;
+
+        if(childBounds.u() <= 0.0)
+            return negateMonotonicity(childMonotonicity);
+
+        return E_Monotonicity::Unknown;
+    };
+
+    inline bool operator==(const NonlinearExpression& rhs) const override
+    {
+        if(rhs.getType() != getType())
+            return (false);
+
+        return (dynamic_cast<const ExpressionCosh&>(rhs).child.get() == child.get());
+    };
+};
+
+// The hyperbolic tangent. It is increasing from -1 to 1, convex for x <= 0 and concave for x >= 0.
+class ExpressionTanh : public ExpressionUnary
+{
+private:
+    static inline Interval valueBounds(Interval childBounds)
+    {
+        return (Interval(std::tanh(childBounds.l()), std::tanh(childBounds.u())));
+    }
+
+public:
+    ExpressionTanh() = default;
+
+    ExpressionTanh(NonlinearExpressionPtr childExpression) { child = childExpression; }
+
+    inline double calculate(const VectorDouble& point) const override { return (std::tanh(child->calculate(point))); }
+
+    inline Interval calculate(const IntervalVector& intervalVector) const override
+    {
+        return (valueBounds(child->calculate(intervalVector)));
+    }
+
+    inline Interval getBounds() const override { return (valueBounds(child->getBounds())); }
+
+    inline bool tightenBounds(Interval bound) override
+    {
+        // tanh maps the real line onto (-1, 1), so a bound outside this range carries no information
+        if(bound.u() <= -1.0 || bound.l() >= 1.0)
+            return (false);
+
+        double lower = (bound.l() > -1.0) ? std::atanh(bound.l()) : SHOT_DBL_MIN;
+        double upper = (bound.u() < 1.0) ? std::atanh(bound.u()) : SHOT_DBL_MAX;
+
+        return (child->tightenBounds(Interval(lower, upper)));
+    };
+
+    inline FactorableFunction getFactorableFunction() override { return (CppAD::tanh(child->getFactorableFunction())); }
+
+    inline std::ostream& print(std::ostream& stream) const override
+    {
+        stream << "tanh(" << child << ')';
+        return stream;
+    }
+
+    inline E_NonlinearExpressionTypes getType() const override { return E_NonlinearExpressionTypes::Tanh; }
+
+    inline E_Convexity getConvexity() const override
+    {
+        auto childConvexity = child->getConvexity();
+        auto childBounds = child->getBounds();
+
+        if((childConvexity == E_Convexity::Linear || childConvexity == E_Convexity::Convex) && childBounds.u() <= 0.0)
+            return E_Convexity::Convex;
+
+        if((childConvexity == E_Convexity::Linear || childConvexity == E_Convexity::Concave)
+            && childBounds.l() >= 0.0)
+            return E_Convexity::Concave;
+
+        return E_Convexity::Unknown;
+    };
+
+    inline E_Monotonicity getMonotonicity() const override { return (child->getMonotonicity()); };
+
+    inline bool operator==(const NonlinearExpression& rhs) const override
+    {
+        if(rhs.getType() != getType())
+            return (false);
+
+        return (dynamic_cast<const ExpressionTanh&>(rhs).child.get() == child.get());
+    };
+};
+
+// in GAMS. It is increasing, convex for x <= 0 and concave for x >= 0.
+class ExpressionErrorFunction : public ExpressionUnary
+{
+private:
+    static inline double value(double x) { return (0.5 * std::erfc(-x / std::sqrt(2.0))); }
+
+public:
+    ExpressionErrorFunction() = default;
+
+    ExpressionErrorFunction(NonlinearExpressionPtr childExpression) { child = childExpression; }
+
+    inline double calculate(const VectorDouble& point) const override { return (value(child->calculate(point))); }
+
+    inline Interval calculate(const IntervalVector& intervalVector) const override
+    {
+        auto childBounds = child->calculate(intervalVector);
+        return (Interval(value(childBounds.l()), value(childBounds.u())));
+    }
+
+    inline Interval getBounds() const override
+    {
+        auto childBounds = child->getBounds();
+        return (Interval(value(childBounds.l()), value(childBounds.u())));
+    }
+
+    inline bool tightenBounds(Interval bound) override
+    {
+        // The normal CDF maps the real line monotonically onto (0, 1). Bounds outside that range carry no
+        // information; an upper bound of zero or a lower bound of one is infeasible for every finite argument.
+        if(bound.u() <= 0.0 || bound.l() >= 1.0)
+            return false;
+
+        auto inverseBracket = [](double probability, bool upper)
+        {
+            // Every representable probability strictly between zero and one has a quantile in [-40, 40].
+            // Keep the lower or upper side of the bracket to avoid excluding a feasible argument.
+            double lower = -40.0;
+            double upperBound = 40.0;
+            for(int iteration = 0; iteration < 128; ++iteration)
+            {
+                double middle = lower + (upperBound - lower) / 2.0;
+                if(middle == lower || middle == upperBound)
+                    break;
+
+                double cdf = value(middle);
+                if(cdf < probability || (upper && cdf == probability))
+                    lower = middle;
+                else
+                    upperBound = middle;
+            }
+
+            double result = upper ? upperBound : lower;
+            double margin = 1e-12 * std::max(1.0, std::abs(result));
+            return upper ? result + margin : result - margin;
+        };
+
+        double newLower = bound.l() <= 0.0 ? -SHOT_DBL_INF : inverseBracket(bound.l(), false);
+        double newUpper = bound.u() >= 1.0 ? SHOT_DBL_INF : inverseBracket(bound.u(), true);
+        return child->tightenBounds(Interval(newLower, newUpper));
+    };
+
+    inline FactorableFunction getFactorableFunction() override
+    {
+        return (0.5 * (1.0 + CppAD::erf(child->getFactorableFunction() / std::sqrt(2.0))));
+    }
+
+    inline std::ostream& print(std::ostream& stream) const override
+    {
+        stream << "errorf(" << child << ')';
+        return stream;
+    }
+
+    inline E_NonlinearExpressionTypes getType() const override { return E_NonlinearExpressionTypes::ErrorFunction; }
+
+    inline E_Convexity getConvexity() const override
+    {
+        auto childConvexity = child->getConvexity();
+        auto childBounds = child->getBounds();
+
+        if((childConvexity == E_Convexity::Linear || childConvexity == E_Convexity::Convex) && childBounds.u() <= 0.0)
+            return E_Convexity::Convex;
+
+        if((childConvexity == E_Convexity::Linear || childConvexity == E_Convexity::Concave)
+            && childBounds.l() >= 0.0)
+            return E_Convexity::Concave;
+
+        return E_Convexity::Unknown;
+    };
+
+    inline E_Monotonicity getMonotonicity() const override { return (child->getMonotonicity()); };
+
+    inline bool operator==(const NonlinearExpression& rhs) const override
+    {
+        if(rhs.getType() != getType())
+            return (false);
+
+        return (dynamic_cast<const ExpressionErrorFunction&>(rhs).child.get() == child.get());
+    };
+};
+
+// The signed power sign(x) * |x|^c with a constant exponent c > 0, as signpower(x, c) in GAMS. It is increasing, and
+// for c > 1 it is convex for x >= 0 and concave for x <= 0, while it is the opposite for c < 1.
+class ExpressionSignPower : public ExpressionUnary
+{
+private:
+    inline double value(double x) const { return (x >= 0.0 ? std::pow(x, exponent) : -std::pow(-x, exponent)); }
+
+public:
+    double exponent = 1.0;
+
+    ExpressionSignPower() = default;
+
+    ExpressionSignPower(NonlinearExpressionPtr childExpression, double exponent) : exponent(exponent)
+    {
+        child = childExpression;
+    }
+
+    inline double calculate(const VectorDouble& point) const override { return (value(child->calculate(point))); }
+
+    inline Interval calculate(const IntervalVector& intervalVector) const override
+    {
+        auto childBounds = child->calculate(intervalVector);
+        return (Interval(value(childBounds.l()), value(childBounds.u())));
+    }
+
+    inline Interval getBounds() const override
+    {
+        auto childBounds = child->getBounds();
+        return (Interval(value(childBounds.l()), value(childBounds.u())));
+    }
+
+    inline bool tightenBounds(Interval bound) override
+    {
+        // The inverse is the signed power with the exponent 1/c
+        auto inverse = [this](double x) {
+            return (x >= 0.0 ? std::pow(x, 1.0 / exponent) : -std::pow(-x, 1.0 / exponent));
+        };
+
+        return (child->tightenBounds(Interval(inverse(bound.l()), inverse(bound.u()))));
+    };
+
+    inline FactorableFunction getFactorableFunction() override
+    {
+        // The function is sign(x) * |x|^c. The derivative of the power is not finite in zero, so one is added to the
+        // base there, which gives the value and the derivative zero since sign(0) is zero. The conditional expression
+        // only selects between constants: the sparse derivatives of CppAD (subgraph_jac_rev and the sparsity pattern
+        // of the Hessian) do not follow a variable through the branches of a conditional expression, which gave
+        // gradients of zero for a negative x when the branches were sign(x) * |x|^c for each sign.
+        FactorableFunction x = child->getFactorableFunction();
+        FactorableFunction zero = 0.0;
+        FactorableFunction one = 1.0;
+
+        FactorableFunction absoluteValue = CppAD::abs(x);
+        FactorableFunction base = absoluteValue + CppAD::CondExpEq(absoluteValue, zero, one, zero);
+
+        return (CppAD::sign(x) * CppAD::pow(base, exponent));
+    }
+
+    inline std::ostream& print(std::ostream& stream) const override
+    {
+        stream << "signpower(" << child << ',' << exponent << ')';
+        return stream;
+    }
+
+    inline E_NonlinearExpressionTypes getType() const override { return E_NonlinearExpressionTypes::SignPower; }
+
+    inline E_Convexity getConvexity() const override
+    {
+        auto childConvexity = child->getConvexity();
+
+        if(exponent == 1.0)
+            return (childConvexity);
+
+        auto childBounds = child->getBounds();
+
+        bool isChildConvex = (childConvexity == E_Convexity::Linear || childConvexity == E_Convexity::Convex);
+        bool isChildConcave = (childConvexity == E_Convexity::Linear || childConvexity == E_Convexity::Concave);
+
+        if(exponent > 1.0)
+        {
+            if(isChildConvex && childBounds.l() >= 0.0)
+                return E_Convexity::Convex;
+
+            if(isChildConcave && childBounds.u() <= 0.0)
+                return E_Convexity::Concave;
+        }
+        else
+        {
+            if(isChildConcave && childBounds.l() >= 0.0)
+                return E_Convexity::Concave;
+
+            if(isChildConvex && childBounds.u() <= 0.0)
+                return E_Convexity::Convex;
+        }
+
+        return E_Convexity::Unknown;
+    };
+
+    inline E_Monotonicity getMonotonicity() const override { return (child->getMonotonicity()); };
+
+    inline bool operator==(const NonlinearExpression& rhs) const override
+    {
+        if(rhs.getType() != getType())
+            return (false);
+
+        auto& other = dynamic_cast<const ExpressionSignPower&>(rhs);
+
+        return (other.child.get() == child.get() && other.exponent == exponent);
+    };
+};
+
 // End unary operations
 
 // Begin binary operations
@@ -1498,23 +1992,33 @@ public:
         auto bounds1 = firstChild->getBounds();
         auto bounds2 = secondChild->getBounds();
 
-        if((bound.l() * bound.u() <= 0 || (bound.l() <= 0 && bound.u() == SHOT_DBL_INF)) && bounds1.l() >= 0
-            && bounds2.l() > 0) // we know everything is positive
-        {
-            bound.l(SHOT_DBL_EPS);
-        }
-        else if((bound.l() * bound.u() <= 0 || (bound.l() == -SHOT_DBL_INF && bound.u() >= 0)) && bounds1.u() <= 0
-            && bounds2.u() < 0) // we know everything is negative
-        {
-            bound.u(-SHOT_DBL_EPS);
-        }
-        else if(bound.l() * bound.u() <= 0)
-        {
-            return (false);
-        }
+        // The sign of the quotient is known if the denominator does not contain zero and the numerator is on one side
+        // of zero. The quotient is nonnegative when they have the same sign, e.g., for a numerator in [-50, 0] and a
+        // denominator in [-1.8, -1e-8]. This case was regarded as a negative quotient, and its bound [0, 3e9] was
+        // replaced by [0, -1e-16], which fixed x69 to 60 in (x69 - 60)/log(x69/60) (heatexch_gen2).
+        bool isQuotientNonnegative = (bounds1.l() >= 0 && bounds2.l() > 0) || (bounds1.u() <= 0 && bounds2.u() < 0);
+        bool isQuotientNonpositive = (bounds1.l() >= 0 && bounds2.u() < 0) || (bounds1.u() <= 0 && bounds2.l() > 0);
 
+        if(isQuotientNonnegative && bound.l() < 0)
+            bound.l(0.0);
+
+        if(isQuotientNonpositive && bound.u() > 0)
+            bound.u(0.0);
+
+        if(bound.l() > bound.u())
+            return (false);
+
+        // Without a known sign, a bound that contains zero gives no bound for either child
+        if(bound.l() <= 0 && bound.u() >= 0 && !isQuotientNonnegative && !isQuotientNonpositive)
+            return (false);
+
+        // The numerator is the denominator times the quotient, which is valid also when the bound of the quotient
+        // contains zero, e.g., when the numerator can be zero
         bool firstTightened = firstChild->tightenBounds(secondChild->getBounds() * bound);
-        bool secondTightened = secondChild->tightenBounds(firstChild->getBounds() / bound);
+
+        // The denominator is the numerator divided by the quotient, which requires that the quotient is not zero
+        bool secondTightened = (bound.l() > 0 || bound.u() < 0)
+            && secondChild->tightenBounds(firstChild->getBounds() / bound);
 
         // The numerator is tightened again with the tightened bounds of the denominator. The call is made first, so
         // that it is not skipped when the numerator has already been tightened.
@@ -1611,23 +2115,32 @@ public:
             ExpressionVariablePtr nominatorVariable = std::dynamic_pointer_cast<ExpressionVariable>(firstChild);
             ExpressionVariablePtr denominatorVariable;
 
-            // x/(x+c)
+            // x/(x+c); the variable in the denominator must be the one in the nominator, since, e.g., x/(y+c) is
+            // neither convex nor concave
             if(sum->children[0]->getType() == E_NonlinearExpressionTypes::Variable
                 && sum->children[1]->getType() == E_NonlinearExpressionTypes::Constant)
             {
                 denominatorVariable = std::dynamic_pointer_cast<ExpressionVariable>(sum->children[0]);
-                constant = std::dynamic_pointer_cast<ExpressionConstant>(sum->children[1])->constant;
-                coefficient = 1.0;
-                isValid = true;
+
+                if(denominatorVariable->variable == nominatorVariable->variable)
+                {
+                    constant = std::dynamic_pointer_cast<ExpressionConstant>(sum->children[1])->constant;
+                    coefficient = 1.0;
+                    isValid = true;
+                }
             }
             // x/(c+x)
             else if(sum->children[1]->getType() == E_NonlinearExpressionTypes::Variable
                 && sum->children[0]->getType() == E_NonlinearExpressionTypes::Constant)
             {
-                denominatorVariable = std::dynamic_pointer_cast<ExpressionVariable>(sum->children[0]);
-                constant = std::dynamic_pointer_cast<ExpressionConstant>(sum->children[0])->constant;
-                coefficient = 1.0;
-                isValid = true;
+                denominatorVariable = std::dynamic_pointer_cast<ExpressionVariable>(sum->children[1]);
+
+                if(denominatorVariable->variable == nominatorVariable->variable)
+                {
+                    constant = std::dynamic_pointer_cast<ExpressionConstant>(sum->children[0])->constant;
+                    coefficient = 1.0;
+                    isValid = true;
+                }
             }
             // x/(d*x+c) or x/(x*d+c)
             else if(sum->children[0]->getType() == E_NonlinearExpressionTypes::Product
@@ -1698,33 +2211,18 @@ public:
                 }
             }
 
+            // The second derivative of x/(dx+c) is -2cd/(dx+c)^3, and the sign of the denominator is known, since
+            // its bounds do not contain zero
             if(isValid)
             {
-                if(constant < 0)
-                {
-                    if(coefficient < 0 && nominatorVariable->variable->getBound().l() > -constant / coefficient)
-                        return E_Convexity::Convex;
-                    if(coefficient > 0 && nominatorVariable->variable->getBound().l() > -constant / coefficient)
-                        return E_Convexity::Convex;
+                double denominatorSign = (bounds2.l() > 0) ? 1.0 : -1.0;
+                double sign = constant * coefficient * denominatorSign;
 
-                    if(coefficient < 0 && nominatorVariable->variable->getBound().l() > -constant / coefficient)
-                        return E_Convexity::Concave;
-                    if(coefficient > 0 && nominatorVariable->variable->getBound().l() < -constant / coefficient)
-                        return E_Convexity::Concave;
-                }
+                if(sign < 0)
+                    return E_Convexity::Convex;
 
-                if(constant > 0)
-                {
-                    if(coefficient < 0 && nominatorVariable->variable->getBound().l() < -constant / coefficient)
-                        return E_Convexity::Convex;
-                    if(coefficient > 0 && nominatorVariable->variable->getBound().l() < -constant / coefficient)
-                        return E_Convexity::Convex;
-
-                    if(coefficient < 0 && nominatorVariable->variable->getBound().l() > -constant / coefficient)
-                        return E_Convexity::Concave;
-                    if(coefficient > 0 && nominatorVariable->variable->getBound().l() > -constant / coefficient)
-                        return E_Convexity::Concave;
-                }
+                if(sign > 0)
+                    return E_Convexity::Concave;
             }
         }
 
@@ -1739,7 +2237,8 @@ public:
         auto bounds1 = firstChild->getBounds();
         auto bounds2 = secondChild->getBounds();
 
-        if(child2Monotonicity == E_Monotonicity::Constant && (bounds2.l() == 0.0 || bounds2.u()))
+        // Division by the constant zero
+        if(child2Monotonicity == E_Monotonicity::Constant && (bounds2.l() == 0.0 || bounds2.u() == 0.0))
             return E_Monotonicity::Unknown;
 
         if(child1Monotonicity == E_Monotonicity::Constant && child2Monotonicity == E_Monotonicity::Constant)
@@ -1809,17 +2308,19 @@ public:
         auto firstChildValue = firstChild->calculate(point);
         auto secondChildValue = secondChild->calculate(point);
 
-        if(std::abs(firstChildValue - 0.0) <= 1e-10 * std::abs(firstChildValue))
+        // The exponent is checked first: 0^0 is one, as in pow() and the CppAD function, and a zero base only gives
+        // zero for a positive exponent. A zero base gave zero also for, e.g., 0^-2.
+        if(std::abs(secondChildValue - 0.0) <= 1e-10 * std::abs(firstChildValue))
+        {
+            return 1.0;
+        }
+
+        if(std::abs(firstChildValue - 0.0) <= 1e-10 * std::abs(firstChildValue) && secondChildValue > 0.0)
         {
             return 0.0;
         }
 
         if(std::abs(firstChildValue - 1.0) <= 1e-10 * std::abs(firstChildValue))
-        {
-            return 1.0;
-        }
-
-        if(std::abs(secondChildValue - 0.0) <= 1e-10 * std::abs(firstChildValue))
         {
             return 1.0;
         }
@@ -1839,48 +2340,30 @@ public:
 
         Interval bounds(0.0);
 
+        // A constant power is handled as for a signomial term. Moving a base that reaches zero to a small positive
+        // value gave, e.g., [0.008, 1e15] for x^-3 with x in [-10, 5], although x^-3 then takes every value outside
+        // (-0.001, 0.008).
         if(secondChild->getType() == E_NonlinearExpressionTypes::Constant)
+            return (calculateIntervalPower(baseBounds, powerBounds.l()));
+
+        // The interval power function takes the logarithm of the base, so its bound must be positive also for a
+        // positive power, e.g., in x^2^(1+y^2). The power of a base at zero is then zero.
+        bool isBaseAtZero = (baseBounds.l() <= 0);
+
+        if(isBaseAtZero)
         {
-            double power = powerBounds.l();
+            baseBounds.l(SHOT_DBL_EPS);
 
-            double intpart;
-            bool isInteger = (std::modf(power, &intpart) == 0.0);
-            int integerValue = (int)round(intpart);
-            bool isEven = (integerValue % 2 == 0);
-
-            if(baseBounds.l() <= 0)
-            {
-                if(!isInteger)
-                    baseBounds.l(SHOT_DBL_EPS);
-                else if(isInteger && power < 0)
-                    baseBounds.l(SHOT_DBL_EPS);
-            }
-
-            if(isInteger)
-                bounds = pow(baseBounds, (int)power);
-            else
-                bounds = pow(baseBounds, power);
-
-            if(isInteger && isEven && bounds.l() <= 0.0)
-                bounds.l(0.0);
-
-            return (bounds);
+            if(baseBounds.u() < SHOT_DBL_EPS)
+                baseBounds.u(SHOT_DBL_EPS);
         }
 
-        if(powerBounds.l() < 0)
-        {
-            if(baseBounds.l() <= 0)
-                baseBounds.l(SHOT_DBL_EPS);
-        }
-        else if(powerBounds.l() == 0.0)
-        {
-            if(baseBounds.l() < 0)
-                baseBounds.l(0.0);
-            if(baseBounds.l() <= 0)
-                baseBounds.l(SHOT_DBL_EPS);
-        }
+        bounds = pow(baseBounds, powerBounds);
 
-        return (pow(baseBounds, powerBounds));
+        if(isBaseAtZero && powerBounds.l() > 0)
+            bounds.l(0.0);
+
+        return (bounds);
     }
 
     inline Interval getBounds() const override
@@ -1890,48 +2373,30 @@ public:
 
         Interval bounds(0.0);
 
+        // A constant power is handled as for a signomial term. Moving a base that reaches zero to a small positive
+        // value gave, e.g., [0.008, 1e15] for x^-3 with x in [-10, 5], although x^-3 then takes every value outside
+        // (-0.001, 0.008).
         if(secondChild->getType() == E_NonlinearExpressionTypes::Constant)
+            return (calculateIntervalPower(baseBounds, powerBounds.l()));
+
+        // The interval power function takes the logarithm of the base, so its bound must be positive also for a
+        // positive power, e.g., in x^2^(1+y^2). The power of a base at zero is then zero.
+        bool isBaseAtZero = (baseBounds.l() <= 0);
+
+        if(isBaseAtZero)
         {
-            double power = powerBounds.l();
+            baseBounds.l(SHOT_DBL_SIG_MIN);
 
-            double intpart;
-            bool isInteger = (std::modf(power, &intpart) == 0.0);
-            int integerValue = (int)round(intpart);
-            bool isEven = (integerValue % 2 == 0);
-
-            if(baseBounds.l() <= 0)
-            {
-                if(!isInteger)
-                    baseBounds.l(SHOT_DBL_SIG_MIN);
-                else if(isInteger && power < 0)
-                    baseBounds.l(SHOT_DBL_SIG_MIN);
-            }
-
-            if(isInteger)
-                bounds = pow(baseBounds, (int)power);
-            else
-                bounds = pow(baseBounds, power);
-
-            if(isInteger && isEven && bounds.l() <= 0.0)
-                bounds.l(0.0);
-
-            return (bounds);
+            if(baseBounds.u() < SHOT_DBL_SIG_MIN)
+                baseBounds.u(SHOT_DBL_SIG_MIN);
         }
 
-        if(powerBounds.l() < 0)
-        {
-            if(baseBounds.l() <= 0)
-                baseBounds.l(SHOT_DBL_SIG_MIN);
-        }
-        else if(powerBounds.l() == 0.0)
-        {
-            if(baseBounds.l() < 0)
-                baseBounds.l(0.0);
-            if(baseBounds.l() <= 0)
-                baseBounds.l(SHOT_DBL_SIG_MIN);
-        }
+        bounds = pow(baseBounds, powerBounds);
 
-        return (pow(baseBounds, powerBounds));
+        if(isBaseAtZero && powerBounds.l() > 0)
+            bounds.l(0.0);
+
+        return (bounds);
     }
 
     inline bool tightenBounds(Interval bound) override
@@ -1951,25 +2416,33 @@ public:
         // recovered via a signed n-th root rather than pow()/sqrt()
         bool isOddPositiveIntegerPower = isInteger && !isEven && power > 0;
 
-        if(isInteger && isEven && power > 0 && bound.l() <= 0.0)
-            bound.l(0.0);
-        else if(!isOddPositiveIntegerPower && bound.l() <= 0.0 && bound.u() > SHOT_DBL_SIG_MIN)
-            bound.l(SHOT_DBL_SIG_MIN);
-        else if(!isOddPositiveIntegerPower && bound.u() < 0)
+        if(isInteger && isEven && power > 0)
+        {
+            if(bound.u() < 0)
+                return (false);
+
+            // An even power discards the sign of the base, as a square does, so the roots only give the base if its
+            // domain is on one side of zero. Otherwise only the upper bound can be used. The roots are calculated
+            // directly, since the interval power function takes the logarithm of the bound, which may start at zero.
+            Interval roots(std::pow(std::max(0.0, bound.l()), 1.0 / power), std::pow(bound.u(), 1.0 / power));
+            auto baseBound = firstChild->getBounds();
+
+            if(baseBound.l() >= 0)
+                return (firstChild->tightenBounds(roots));
+
+            if(baseBound.u() <= 0)
+                return (firstChild->tightenBounds(-roots));
+
+            return (firstChild->tightenBounds(Interval(-roots.u(), roots.u())));
+        }
+
+        if(power == 0.0)
             return (false);
 
-        Interval interval;
+        if(power == 1.0)
+            return (firstChild->tightenBounds(bound));
 
-        if(power == 2.0)
-            interval = sqrt(bound);
-        else if(power == -1.0)
-        {
-            interval = 1 / bound;
-
-            if(interval.l() < 1e-10 && interval.u() > 1e-10)
-                interval.l(1e-10);
-        }
-        else if(isOddPositiveIntegerPower)
+        if(isOddPositiveIntegerPower)
         {
             auto nthRoot
                 = [power](double x) { return (x < 0.0 ? -std::pow(-x, 1.0 / power) : std::pow(x, 1.0 / power)); };
@@ -1977,12 +2450,88 @@ public:
             double lower = nthRoot(bound.l());
             double upper = nthRoot(bound.u());
 
-            interval = Interval(std::min(lower, upper), std::max(lower, upper));
+            return (firstChild->tightenBounds(Interval(std::min(lower, upper), std::max(lower, upper))));
         }
-        else
-            interval = pow(bound, 1.0 / power);
 
-        return (firstChild->tightenBounds(interval));
+        // The values y >= 0 with y^power in the bound, or nothing if there is none. The roots are calculated directly,
+        // since the interval power function takes the logarithm of the bound, which may start at zero, and the bound
+        // must not be moved away from zero first: that cut off y = 0 for a positive power, e.g., y >= 4.6e-4 for
+        // y^1.5, and large values of y for a negative power, e.g., y <= 46.4 for y^-3.
+        auto rootsOfNonnegativeBase = [power](Interval powerBound) -> std::optional<Interval>
+        {
+            double lower = std::max(0.0, powerBound.l());
+            double upper = powerBound.u();
+
+            if(upper < 0.0 || (power < 0 && upper <= 0.0))
+                return (std::nullopt);
+
+            if(power > 0)
+                return (Interval(std::pow(lower, 1.0 / power),
+                    (upper >= SHOT_DBL_MAX) ? SHOT_DBL_MAX : std::pow(upper, 1.0 / power)));
+
+            // A negative power is decreasing, and a power close to zero is given by a large base
+            return (Interval((upper >= SHOT_DBL_MAX) ? 0.0 : std::pow(upper, 1.0 / power),
+                (lower <= 0.0) ? SHOT_DBL_MAX : std::pow(lower, 1.0 / power)));
+        };
+
+        auto baseBound = firstChild->getBounds();
+
+        if(!isInteger)
+        {
+            // A noninteger power is only defined for a nonnegative base
+            if(auto roots = rootsOfNonnegativeBase(bound))
+                return (firstChild->tightenBounds(*roots));
+
+            return (false);
+        }
+
+        // A negative integer power: an even one discards the sign of the base and an odd one preserves it
+        if(isEven)
+        {
+            auto roots = rootsOfNonnegativeBase(bound);
+
+            if(!roots)
+                return (false);
+
+            if(baseBound.l() >= 0)
+                return (firstChild->tightenBounds(*roots));
+
+            if(baseBound.u() <= 0)
+                return (firstChild->tightenBounds(-*roots));
+
+            return (firstChild->tightenBounds(Interval(-roots->u(), roots->u())));
+        }
+
+        if(baseBound.l() >= 0)
+        {
+            if(auto roots = rootsOfNonnegativeBase(bound))
+                return (firstChild->tightenBounds(*roots));
+
+            return (false);
+        }
+
+        if(baseBound.u() <= 0)
+        {
+            // (-y)^power = -(y^power) for an odd power
+            if(auto roots = rootsOfNonnegativeBase(-bound))
+                return (firstChild->tightenBounds(-*roots));
+
+            return (false);
+        }
+
+        // A base with both signs gives a power with the sign of the base
+        if(bound.l() > 0)
+        {
+            if(auto roots = rootsOfNonnegativeBase(bound))
+                return (firstChild->tightenBounds(*roots));
+        }
+        else if(bound.u() < 0)
+        {
+            if(auto roots = rootsOfNonnegativeBase(-bound))
+                return (firstChild->tightenBounds(-*roots));
+        }
+
+        return (false);
     };
 
     inline FactorableFunction getFactorableFunction() override
@@ -2346,23 +2895,44 @@ public:
 
     inline bool tightenBounds(Interval bound) override
     {
-        bool tightened = false;
+        // The bounds of the other children are the sum of the bounds of the children before and after the current
+        // one. Summing them for each child took O(n^2) bound calculations, e.g., more than 10^8 subtree walks for a
+        // sum of 20000 terms. Since a tightened child may change the bounds of the others, they are recalculated after
+        // each tightening.
+        size_t numberOfChildren = children.size();
+        std::vector<Interval> childBounds(numberOfChildren, Interval(0.0));
+        std::vector<Interval> suffixSums(numberOfChildren + 1, Interval(0.0));
 
-        for(auto& T : children)
+        auto updateBounds = [&]()
         {
-            Interval newBound = Interval(0.0);
+            for(size_t k = 0; k < numberOfChildren; k++)
+                childBounds[k] = children[k]->getBounds();
 
-            for(auto& T2 : children)
+            for(size_t k = numberOfChildren; k-- > 0;)
+                suffixSums[k] = suffixSums[k + 1] + childBounds[k];
+        };
+
+        updateBounds();
+
+        bool tightened = false;
+        Interval prefixSum = Interval(0.0);
+
+        for(size_t k = 0; k < numberOfChildren; k++)
+        {
+            Interval candidate = bound - (prefixSum + suffixSums[k + 1]);
+
+            if(children[k]->tightenBounds(candidate))
             {
-                if(T2 == T)
-                    continue;
+                tightened = true;
+                updateBounds();
 
-                newBound += T2->getBounds();
+                prefixSum = Interval(0.0);
+
+                for(size_t j = 0; j < k; j++)
+                    prefixSum += childBounds[j];
             }
 
-            Interval candidate = bound - newBound;
-
-            tightened = T->tightenBounds(candidate) || tightened;
+            prefixSum += childBounds[k];
         }
 
         return (tightened);
@@ -3014,5 +3584,80 @@ public:
     }
 };
 // End general operations
+
+
+// Functions without expressions of their own, given by other expressions. An argument used several times is the same
+// node, which Problem::finalize() copies.
+
+// asinh(x) = ln(x + sqrt(x^2 + 1))
+inline NonlinearExpressionPtr createArcSinh(NonlinearExpressionPtr x)
+{
+    return (std::make_shared<ExpressionLog>(std::make_shared<ExpressionSum>(x,
+        std::make_shared<ExpressionSquareRoot>(std::make_shared<ExpressionSum>(
+            std::make_shared<ExpressionSquare>(x), std::make_shared<ExpressionConstant>(1.0))))));
+}
+
+// acosh(x) = ln(x + sqrt(x^2 - 1)), defined for x >= 1
+inline NonlinearExpressionPtr createArcCosh(NonlinearExpressionPtr x)
+{
+    return (std::make_shared<ExpressionLog>(std::make_shared<ExpressionSum>(x,
+        std::make_shared<ExpressionSquareRoot>(std::make_shared<ExpressionSum>(
+            std::make_shared<ExpressionSquare>(x), std::make_shared<ExpressionConstant>(-1.0))))));
+}
+
+// atanh(x) = ln((1 + x)/(1 - x))/2, defined for -1 < x < 1
+inline NonlinearExpressionPtr createArcTanh(NonlinearExpressionPtr x)
+{
+    return (std::make_shared<ExpressionProduct>(std::make_shared<ExpressionConstant>(0.5),
+        std::make_shared<ExpressionLog>(std::make_shared<ExpressionDivide>(
+            std::make_shared<ExpressionSum>(std::make_shared<ExpressionConstant>(1.0), x),
+            std::make_shared<ExpressionSum>(
+                std::make_shared<ExpressionConstant>(1.0), std::make_shared<ExpressionNegate>(x))))));
+}
+
+// atan2(y, x) = 2*arctan(y/(sqrt(x^2 + y^2) + x)), the angle of (x, y), except on the negative x-axis, where the
+// denominator is zero. CppAD's atan2 is not used, since it consists of conditional expressions, through which CppAD's
+// sparse derivatives do not follow the variables.
+inline NonlinearExpressionPtr createArcTan2(NonlinearExpressionPtr y, NonlinearExpressionPtr x)
+{
+    auto radius = std::make_shared<ExpressionSquareRoot>(
+        std::make_shared<ExpressionSum>(std::make_shared<ExpressionSquare>(x), std::make_shared<ExpressionSquare>(y)));
+
+    return (std::make_shared<ExpressionProduct>(std::make_shared<ExpressionConstant>(2.0),
+        std::make_shared<ExpressionArcTan>(
+            std::make_shared<ExpressionDivide>(y, std::make_shared<ExpressionSum>(radius, x)))));
+}
+
+// max(a, b) = (a + b + |a - b|)/2 and min(a, b) = (a + b - |a - b|)/2, with more arguments taken pairwise. The
+// reformulation of abs is exact, and needs no binary where the optimum pushes max down or min up.
+inline NonlinearExpressionPtr createMinimumOrMaximum(const NonlinearExpressions& arguments, bool isMaximum)
+{
+    auto result = arguments.at(0);
+
+    for(size_t k = 1; k < arguments.size(); k++)
+    {
+        auto& other = arguments.at(k);
+        NonlinearExpressionPtr absoluteDifference = std::make_shared<ExpressionAbs>(
+            std::make_shared<ExpressionSum>(result, std::make_shared<ExpressionNegate>(other)));
+
+        if(!isMaximum)
+            absoluteDifference = std::make_shared<ExpressionNegate>(absoluteDifference);
+
+        result = std::make_shared<ExpressionProduct>(std::make_shared<ExpressionConstant>(0.5),
+            std::make_shared<ExpressionSum>(NonlinearExpressions { result, other, absoluteDifference }));
+    }
+
+    return (result);
+}
+
+inline NonlinearExpressionPtr createMaximum(const NonlinearExpressions& arguments)
+{
+    return (createMinimumOrMaximum(arguments, true));
+}
+
+inline NonlinearExpressionPtr createMinimum(const NonlinearExpressions& arguments)
+{
+    return (createMinimumOrMaximum(arguments, false));
+}
 
 } // namespace SHOT

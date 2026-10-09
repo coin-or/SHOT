@@ -16,6 +16,10 @@ namespace SHOT
 {
 double AuxiliaryVariable::calculate(const VectorDouble& point) const
 {
+    // The sign binary of an absolute value is one if the argument is nonnegative and zero otherwise
+    if(properties.auxiliaryType == E_AuxiliaryVariableType::AbsoluteValueSign && nonlinearExpression)
+        return (nonlinearExpression->calculate(point) >= 0.0 ? 1.0 : 0.0);
+
     double value = constant;
 
     value += linearTerms.calculate(point);
@@ -31,6 +35,9 @@ double AuxiliaryVariable::calculate(const VectorDouble& point) const
 
 Interval AuxiliaryVariable::calculate(const IntervalVector& intervalVector) const
 {
+    if(properties.auxiliaryType == E_AuxiliaryVariableType::AbsoluteValueSign)
+        return (Interval(0.0, 1.0));
+
     Interval interval = constant;
 
     interval += linearTerms.calculate(intervalVector);
@@ -170,6 +177,10 @@ std::ostream& operator<<(std::ostream& stream, AuxiliaryVariablePtr var)
 
     case E_AuxiliaryVariableType::AbsoluteValue:
         auxtype << "abs. value ref.";
+        break;
+
+    case E_AuxiliaryVariableType::AbsoluteValueSign:
+        auxtype << "abs. value sign";
         break;
 
     case E_AuxiliaryVariableType::AntiEpigraph:

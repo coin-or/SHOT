@@ -588,23 +588,25 @@ void MIPSolverHighs::activateDiscreteVariables(bool activate)
             if(variableTypes.at(i) == E_VariableType::Integer || variableTypes.at(i) == E_VariableType::Binary)
             {
                 this->variableTypesHighs.at(i) = HighsVarType::kInteger;
-                highsInstance.changeColIntegrality(i, HighsVarType::kInteger);
             }
             else if(variableTypes.at(i) == E_VariableType::Semicontinuous)
             {
                 // Restore kSemiContinuous type and the original semicontinuous lower bound
                 this->variableTypesHighs.at(i) = HighsVarType::kSemiContinuous;
-                highsInstance.changeColIntegrality(i, HighsVarType::kSemiContinuous);
                 highsInstance.changeColBounds(i, variableLowerBounds.at(i), variableUpperBounds.at(i));
             }
             else if(variableTypes.at(i) == E_VariableType::Semiinteger)
             {
                 // Restore kSemiInteger type and the original semiinteger lower bound
                 this->variableTypesHighs.at(i) = HighsVarType::kSemiInteger;
-                highsInstance.changeColIntegrality(i, HighsVarType::kSemiInteger);
                 highsInstance.changeColBounds(i, variableLowerBounds.at(i), variableUpperBounds.at(i));
             }
         }
+
+        // The types are changed in one call, since HiGHS invalidates its solver data for every call, which takes
+        // long for a problem with many variables
+        if(numberOfVariables > 0)
+            highsInstance.changeColsIntegrality(0, numberOfVariables - 1, variableTypesHighs.data());
 
         discreteVariablesActivated = true;
     }
@@ -616,17 +618,20 @@ void MIPSolverHighs::activateDiscreteVariables(bool activate)
             if(variableTypes.at(i) == E_VariableType::Integer || variableTypes.at(i) == E_VariableType::Binary)
             {
                 this->variableTypesHighs.at(i) = HighsVarType::kContinuous;
-                highsInstance.changeColIntegrality(i, HighsVarType::kContinuous);
             }
             else if(variableTypes.at(i) == E_VariableType::Semicontinuous
                 || variableTypes.at(i) == E_VariableType::Semiinteger)
             {
                 // x=0 must be feasible, so reset lower bound to 0
                 this->variableTypesHighs.at(i) = HighsVarType::kContinuous;
-                highsInstance.changeColIntegrality(i, HighsVarType::kContinuous);
                 highsInstance.changeColBounds(i, 0.0, variableUpperBounds.at(i));
             }
         }
+
+        // The types are changed in one call, since HiGHS invalidates its solver data for every call, which takes
+        // long for a problem with many variables
+        if(numberOfVariables > 0)
+            highsInstance.changeColsIntegrality(0, numberOfVariables - 1, variableTypesHighs.data());
 
         discreteVariablesActivated = false;
     }
@@ -734,6 +739,23 @@ E_ProblemSolutionStatus MIPSolverHighs::solveProblem()
             "        The MIP solver did not return a solution, solving again from a clean state.");
         highsInstance.clearSolver();
         highsReturnStatus = highsInstance.run();
+    }
+
+    // HiGHS also changes the status of a MIP problem it has solved to a solve error if the solution violates a row by
+    // more than the feasibility tolerance when it is transformed back from the presolved problem, and it then gives
+    // neither the solution nor the bound. This is not affected by the state of the solver, but solving without
+    // presolve gives a solution of the problem as it was given.
+    if(highsInstance.getModelStatus() == HighsModelStatus::kSolveError)
+    {
+        env->output->outputDebug("        The MIP solver did not return a solution, solving again without presolve.");
+
+        std::string presolve;
+        highsInstance.getOptionValue("presolve", presolve);
+        highsInstance.setOptionValue("presolve", "off");
+        currentSolutions.clear();
+        highsInstance.clearSolver();
+        highsReturnStatus = highsInstance.run();
+        highsInstance.setOptionValue("presolve", presolve);
     }
 
     MIPSolutionStatus = getSolutionStatus();
@@ -1448,11 +1470,16 @@ int MIPSolverHighs::getNumberOfSolutions()
         {
         case E_ProblemSolutionStatus::Optimal:
         case E_ProblemSolutionStatus::Feasible:
+            numSols = 1;
+            break;
         case E_ProblemSolutionStatus::TimeLimit:
         case E_ProblemSolutionStatus::IterationLimit:
         case E_ProblemSolutionStatus::SolutionLimit:
         case E_ProblemSolutionStatus::CutOff:
-            numSols = 1;
+            // An LP problem that ended on a limit only has a point if HiGHS reports it as primal feasible. The dual
+            // simplex method has otherwise not reached a feasible point, and col_value is then, e.g., all zeros,
+            // which would be trusted to fulfill the linear constraints as a primal solution candidate.
+            numSols = (highsInstance.getInfo().primal_solution_status == kSolutionStatusFeasible) ? 1 : 0;
             break;
         default:
             numSols = 0;

@@ -217,6 +217,20 @@ void TaskSelectPrimalCandidatesFromNLP::run()
     if(!NLPSolver)
         return;
 
+    // A local NLP solver started from a given point, e.g. the starting point of the model, often finds a much better
+    // solution than from the solutions of the dual problem, where e.g. 1/|x_i - x_j| may be infinite
+    if(env->settings->getSetting<bool>("Primal.FixedInteger.UseStartingPoint"))
+    {
+        for(auto& P : env->primalSolver->startingPointsForNLP)
+        {
+            auto objectiveValue = env->problem->objectiveFunction->calculateValue(P);
+            env->primalSolver->addFixedNLPCandidate(
+                P, E_PrimalNLPSource::StartingPoint, objectiveValue, 0, PairIndexValue(-1, 0.0));
+        }
+    }
+
+    env->primalSolver->startingPointsForNLP.clear();
+
     if(env->primalSolver->fixedPrimalNLPCandidates.size() == 0)
     {
         env->solutionStatistics.numberOfIterationsWithoutNLPCallMIP++;
@@ -251,10 +265,6 @@ std::string TaskSelectPrimalCandidatesFromNLP::getType()
 
 bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
 {
-    auto currIter = env->results->getCurrentIteration();
-
-    std::vector<PrimalFixedNLPCandidate> testPts;
-
     env->output->outputDebug("        Solving fixed NLP problem:");
 
     if(env->primalSolver->fixedPrimalNLPCandidates.size() == 0)
@@ -264,10 +274,27 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
         return (false);
     }
 
+    solveFixedNLPCandidates(env->primalSolver->fixedPrimalNLPCandidates);
+
+    return (true);
+}
+
+E_NLPSolutionStatus TaskSelectPrimalCandidatesFromNLP::solveFixedNLPCandidates(
+    const std::vector<PrimalFixedNLPCandidate>& candidates, bool isEnumeration, double timeLimit)
+{
+    auto currIter = env->results->getCurrentIteration();
+
+    auto solvestatus = E_NLPSolutionStatus::Error;
+
     int counter = 0;
 
-    for(auto& CAND : env->primalSolver->fixedPrimalNLPCandidates)
+    for(auto& CAND : candidates)
     {
+        // This task can process several candidates in one SHOT iteration. Stop before starting another NLP once
+        // the overall deadline has passed; the main iteration's time-limit check has not run yet.
+        if(env->timing->getElapsedTime("Total") >= env->settings->getSetting<double>("Termination.TimeLimit"))
+            return E_NLPSolutionStatus::TimeLimit;
+
         VectorDouble fixedVariableValues(discreteVariableIndexes.size());
 
         int sizeOfVariableVector = sourceProblem->properties.numberOfVariables;
@@ -285,14 +312,21 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
             fixedVariableValues.at(k) = tmpSolPt;
 
             // Sets the starting point to the fixed value
-            if(env->settings->getSetting<bool>("Primal.FixedInteger.Warmstart"))
+            if(!isEnumeration && env->settings->getSetting<bool>("Primal.FixedInteger.Warmstart"))
             {
                 startingPointIndexes.at(currVarIndex) = currVarIndex;
                 startingPointValues.at(currVarIndex) = tmpSolPt;
             }
         }
 
-        if(env->settings->getSetting<bool>("Primal.FixedInteger.Warmstart"))
+        if(isEnumeration)
+        {
+            // Only the discrete variables have a starting point, so that the solution does not depend on the
+            // previous NLP problem solved
+            NLPSolver->clearStartingPoint();
+            NLPSolver->setStartingPoint(discreteVariableIndexes, fixedVariableValues);
+        }
+        else if(env->settings->getSetting<bool>("Primal.FixedInteger.Warmstart"))
         {
             env->output->outputDebug(
                 "         Setting warm start for continuous variable to candidate solution value.");
@@ -325,7 +359,9 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
             NLPSolver->saveOptionsToFile(filename + ".osrl");
         }
 
-        auto solvestatus = NLPSolver->solveProblem();
+        NLPSolver->setTimeLimit(timeLimit);
+
+        solvestatus = NLPSolver->solveProblem();
 
         NLPSolver->unfixVariables();
         env->solutionStatistics.numberOfProblemsFixedNLP++;
@@ -356,6 +392,15 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
             env->output->outputDebug(
                 "         Source from candidate point is first MIP solution point which gave dual bound update.");
             sourceDesc = "NEWDB-" + source;
+            break;
+        case E_PrimalNLPSource::Enumeration:
+            env->output->outputDebug(
+                "         Source from candidate point is the exhaustive search of the discrete variables.");
+            sourceDesc = "ENUM-" + source;
+            break;
+        case E_PrimalNLPSource::StartingPoint:
+            env->output->outputDebug("         Source from candidate point is a given starting point.");
+            sourceDesc = "START-" + source;
             break;
         default:
             break;
@@ -444,11 +489,11 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
             }
 
             // Add integer cut.
-            if(env->settings->getSetting<bool>("Dual.HyperplaneCuts.UseIntegerCuts")
+            if(!isEnumeration && env->settings->getSetting<bool>("Dual.HyperplaneCuts.UseIntegerCuts")
                 && sourceProblem->properties.numberOfDiscreteVariables > 0)
                 createIntegerCut(CAND.point);
 
-            if(env->settings->getSetting<bool>("Primal.FixedInteger.CreateInfeasibilityCut"))
+            if(!isEnumeration && env->settings->getSetting<bool>("Primal.FixedInteger.CreateInfeasibilityCut"))
                 createInfeasibilityCut(variableSolution);
         }
         else if(solvestatus == E_NLPSolutionStatus::Error || solvestatus == E_NLPSolutionStatus::Unbounded
@@ -471,7 +516,7 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
             {
                 auto mostDevConstr = sourceProblem->getMostDeviatingNonlinearOrQuadraticConstraint(variableSolution);
 
-                if(env->settings->getSetting<bool>("Primal.FixedInteger.CreateInfeasibilityCut"))
+                if(!isEnumeration && env->settings->getSetting<bool>("Primal.FixedInteger.CreateInfeasibilityCut"))
                     createInfeasibilityCut(variableSolution);
 
                 env->report->outputIterationDetail(env->solutionStatistics.numberOfProblemsFixedNLP,
@@ -503,6 +548,14 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
                     env->results->getAbsoluteGlobalObjectiveGap(), env->results->getRelativeGlobalObjectiveGap(), NAN,
                     -1, NAN, E_IterationLineType::PrimalNLP);
             }
+        }
+
+        // The exhaustive search is not a call of the fixed-integer strategy, so it does not change when this is called
+        // the next time, and it decides itself which candidates have been used
+        if(isEnumeration)
+        {
+            counter++;
+            continue;
         }
 
         if(env->settings->getSetting<bool>("Primal.FixedInteger.Frequency.Dynamic"))
@@ -549,7 +602,7 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
         env->primalSolver->usedPrimalNLPCandidates.push_back(CAND);
     }
 
-    return (true);
+    return (solvestatus);
 }
 
 void TaskSelectPrimalCandidatesFromNLP::createInfeasibilityCut(const VectorDouble variableSolution)

@@ -70,8 +70,8 @@ void Results::addPrimalSolution(PrimalSolution solution)
 
     auto maxError = [](const PrimalSolution& S)
     {
-        return (std::max({ S.maxDevatingConstraintLinear.value, S.maxDevatingConstraintQuadratic.value,
-            S.maxDevatingConstraintNonlinear.value }));
+        return (std::max({ S.maxDeviatingConstraintLinear.value, S.maxDeviatingConstraintQuadratic.value,
+            S.maxDeviatingConstraintNonlinear.value }));
     };
 
     // Whether the solution has the same objective value as another one but a smaller constraint error
@@ -849,6 +849,15 @@ std::string Results::getResultsOSrL()
         otherNode->SetAttribute("name", "NumberOfAbsoluteValueReformulations");
         otherNode->SetAttribute("value", count);
         otherNode->SetAttribute("description", "Absolute value reformulations");
+        otherResultsNode->InsertEndChild(otherNode);
+    }
+
+    if(auto count = getAuxiliaryVariableCounter(E_AuxiliaryVariableType::AbsoluteValueSign); count > 0)
+    {
+        otherNode = osrlDocument.NewElement("other");
+        otherNode->SetAttribute("name", "NumberOfAbsoluteValueUpperBounds");
+        otherNode->SetAttribute("value", count);
+        otherNode->SetAttribute("description", "Absolute values bounded from above with a binary");
         otherResultsNode->InsertEndChild(otherNode);
     }
 
@@ -1670,12 +1679,12 @@ void Results::savePrimalSolutionToFile(
     str << "Objective value: " << Utilities::toStringFormat(solution.objValue, "{:.8f}", false);
     str << '\n';
 
-    str << "Largest nonlinear error (in constraint " << solution.maxDevatingConstraintNonlinear.index
-        << "): " << Utilities::toStringFormat(solution.maxDevatingConstraintNonlinear.value, "{:.8f}", false);
+    str << "Largest nonlinear error (in constraint " << solution.maxDeviatingConstraintNonlinear.index
+        << "): " << Utilities::toStringFormat(solution.maxDeviatingConstraintNonlinear.value, "{:.8f}", false);
     str << '\n';
 
-    str << "Largest linear error (in constraint " << solution.maxDevatingConstraintLinear.index
-        << "): " << Utilities::toStringFormat(solution.maxDevatingConstraintLinear.value, "{:.8f}", false);
+    str << "Largest linear error (in constraint " << solution.maxDeviatingConstraintLinear.index
+        << "): " << Utilities::toStringFormat(solution.maxDeviatingConstraintLinear.value, "{:.8f}", false);
     str << '\n';
 
     str << "Projection to variable bounds performed: " << (solution.boundProjectionPerformed ? "true" : "false");
@@ -1720,12 +1729,12 @@ void Results::savePrimalSolutionToFile(
     str << "Objective value: " << Utilities::toStringFormat(solution.objValue, "{:.8f}", false);
     str << '\n';
 
-    str << "Largest nonlinear error (in constraint " << solution.maxDevatingConstraintNonlinear.index
-        << "): " << Utilities::toStringFormat(solution.maxDevatingConstraintNonlinear.value, "{:.8f}", false);
+    str << "Largest nonlinear error (in constraint " << solution.maxDeviatingConstraintNonlinear.index
+        << "): " << Utilities::toStringFormat(solution.maxDeviatingConstraintNonlinear.value, "{:.8f}", false);
     str << '\n';
 
-    str << "Largest linear error (in constraint " << solution.maxDevatingConstraintLinear.index
-        << "): " << Utilities::toStringFormat(solution.maxDevatingConstraintLinear.value, "{:.8f}", false);
+    str << "Largest linear error (in constraint " << solution.maxDeviatingConstraintLinear.index
+        << "): " << Utilities::toStringFormat(solution.maxDeviatingConstraintLinear.value, "{:.8f}", false);
     str << '\n';
 
     str << "Projection to variable bounds performed: " << (solution.boundProjectionPerformed ? "true" : "false");

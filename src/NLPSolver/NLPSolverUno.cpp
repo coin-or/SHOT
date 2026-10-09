@@ -218,14 +218,44 @@ void NLPSolverUno::createModel()
     std::vector<uno_int> jacobianColumns;
 
     jacobianCounterPlacement.clear();
+    constantJacobianElements.clear();
+
+    // Linear rows never need a lookup in the evaluation callback. Accumulate their coefficients by variable index
+    // and record them while the sparsity pattern is built, avoiding a gradient map and a second lookup for each entry.
+    std::vector<double> linearCoefficients(numberOfVariables, 0.0);
+    std::vector<int> coefficientRow(numberOfVariables, -1);
 
     for(auto& C : sourceProblem->numericConstraints)
     {
+        auto linearConstraint = C->properties.classification == E_ConstraintClassification::Linear
+            ? std::dynamic_pointer_cast<LinearConstraint>(C)
+            : nullptr;
+
+        if(linearConstraint)
+        {
+            for(const auto& term : linearConstraint->linearTerms)
+            {
+                if(term->coefficient == 0.0)
+                    continue;
+
+                int index = term->variable->getIndex();
+                if(coefficientRow[index] != C->getIndex())
+                {
+                    coefficientRow[index] = C->getIndex();
+                    linearCoefficients[index] = term->coefficient;
+                }
+                else
+                    linearCoefficients[index] += term->coefficient;
+            }
+        }
+
         for(auto& G : *C->getGradientSparsityPattern())
         {
-            jacobianCounterPlacement.emplace(
-                std::make_pair(C->getIndex(), G->getIndex()),
-                static_cast<int>(jacobianRows.size()));
+            int location = static_cast<int>(jacobianRows.size());
+            if(linearConstraint)
+                constantJacobianElements.emplace_back(location, linearCoefficients[G->getIndex()]);
+            else
+                jacobianCounterPlacement.emplace(std::make_pair(C->getIndex(), G->getIndex()), location);
 
             jacobianRows.push_back(C->getIndex());
             jacobianColumns.push_back(G->getIndex());
@@ -262,33 +292,7 @@ void NLPSolverUno::createModel()
     uno_set_lagrangian_hessian(unoModel, numberOfHessianNonzeros, UNO_UPPER_TRIANGLE, hessianRows.data(),
         hessianColumns.data(), lagrangianHessianCallback);
 
-    calculateConstantJacobianElements();
-
     // Uno copies the bounds and the sparsity patterns, so the local arrays do not need to be kept alive.
-}
-
-/* The Jacobian of a linear constraint is the same in every point, so it is calculated once here and every evaluation
-   only writes the values into the array Uno is given. Requires jacobianCounterPlacement to be built. */
-void NLPSolverUno::calculateConstantJacobianElements()
-{
-    int numberOfVariables = sourceProblem->properties.numberOfVariables;
-
-    constantJacobianElements.clear();
-
-    VectorDouble emptyPoint(numberOfVariables, 0.0);
-
-    for(auto& C : sourceProblem->numericConstraints)
-    {
-        if(C->properties.classification != E_ConstraintClassification::Linear)
-            continue;
-
-        for(auto& G : C->calculateGradient(emptyPoint, false))
-        {
-            int location = jacobianCounterPlacement[std::make_pair(C->getIndex(), G.first->getIndex())];
-
-            constantJacobianElements.emplace_back(location, G.second);
-        }
-    }
 }
 
 void NLPSolverUno::setInitialSettings()
@@ -632,7 +636,9 @@ E_NLPSolutionStatus NLPSolverUno::solveProblemInstance()
         double timeLeft
             = env->settings->getSetting<double>("Termination.TimeLimit") - env->timing->getElapsedTime("Total");
         uno_set_solver_double_option(unoSolver, "time_limit",
-            std::max(std::min(env->settings->getSetting<double>("Primal.FixedInteger.TimeLimit"), timeLeft), 1e-5));
+            std::max(
+                std::min({ env->settings->getSetting<double>("Primal.FixedInteger.TimeLimit"), timeLeft, timeLimit }),
+                1e-5));
 
         uno_optimize(unoSolver, unoModel);
 

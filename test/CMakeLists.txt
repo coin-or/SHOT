@@ -56,7 +56,22 @@ set(Model_parts
     46
     47
     48
-    49) # The different parts of each test (if any)
+    49
+    50
+    51
+    52
+    53
+    54
+    55
+    56
+    57
+    58
+    59
+    60
+    61
+    62
+    63
+    64) # The different parts of each test (if any)
 
 set(Settings_parts 1 2 3 4 5 6 7 8 9)
 
@@ -66,7 +81,7 @@ if(HAS_CBC)
 endif()
 
 if(HAS_CPLEX)
-  set(Cplex_parts 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15)
+  set(Cplex_parts 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18)
   set(cpptests ${cpptests} Cplex)
 endif()
 
@@ -94,7 +109,9 @@ if(HAS_GAMS)
       9
       10
       11
-      13)
+      13
+      14
+      15)
   set(cpptests ${cpptests} GAMS)
 endif()
 
@@ -161,9 +178,24 @@ endif()
 
 set(cpptests ${cpptests} EqualityConstraint)
 
+# The exhaustive search in the fixed-integer primal strategy, which needs an NLP solver
+if(HAS_HIGHS AND HAS_IPOPT)
+  set(Enumeration_parts 1 2 3 4 5 6 7)
+
+  if(HAS_GUROBI)
+    list(APPEND Enumeration_parts 8)
+  endif()
+
+  if(HAS_CPLEX)
+    list(APPEND Enumeration_parts 9)
+  endif()
+
+  set(cpptests ${cpptests} Enumeration)
+endif()
+
 if(HAS_IPOPT)
   set(cpptests ${cpptests} Ipopt)
-  set(Ipopt_parts 1 2)
+  set(Ipopt_parts 1 2 3)
 endif()
 
 if(HAS_UNO)
@@ -430,6 +462,7 @@ if(TARGET SHOTpy)
         test_modeling_systems
         test_gradients_hessians
         test_callbacks
+        test_enumeration
         test_constraint_expressions
         test_equality_constraints
         test_api_safety

@@ -164,6 +164,67 @@ void QuadraticTerms::updateConvexity()
 
     // std::cout << matrix.toDense() << std::endl;
 
+    double eigenvalueTolerance = 0.0;
+
+    if(auto sharedOwnerProblem = ownerProblem.lock())
+    {
+        if(sharedOwnerProblem->env->settings)
+        {
+            eigenvalueTolerance = sharedOwnerProblem->env->settings->getSetting<double>(
+                "Model.Convexity.Quadratics.EigenValueTolerance");
+        }
+        else
+        {
+            eigenvalueTolerance = 1e-5;
+        }
+    }
+
+    // The dense eigenvalue computation takes O(n^3) time and O(n^2) memory, e.g., minutes and 800 MB for 10000
+    // variables. For a larger matrix, the convexity is instead given by sparse LDL factorizations: the
+    // matrix A + tI, where t is the tolerance, is positive definite, and the factorization succeeds with a positive D,
+    // if and only if the smallest eigenvalue of A is larger than -t, and correspondingly for -A and the largest
+    // eigenvalue. The eigenvalues themselves are then only bounded, and are computed if needed by
+    // computeEigenvectors().
+    if(numberOfVariables > maximumSizeForDenseConvexityCheck)
+    {
+        Eigen::SparseMatrix<double> identity(numberOfVariables, numberOfVariables);
+        identity.setIdentity();
+
+        auto isPositiveDefinite = [&](double sign, double shift)
+        {
+            Eigen::SparseMatrix<double> shifted = sign * matrix + shift * identity;
+            Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>, Eigen::Lower> factorization(shifted);
+
+            return (factorization.info() == Eigen::Success && (factorization.vectorD().array() > 0.0).all());
+        };
+
+        if(auto sharedOwnerProblem = ownerProblem.lock())
+            sharedOwnerProblem->env->timing->startTimer("EigenvalueComputation");
+
+        minEigenValueWithinTolerance = isPositiveDefinite(1.0, eigenvalueTolerance);
+        maxEigenValueWithinTolerance = isPositiveDefinite(-1.0, eigenvalueTolerance);
+
+        // The bounds known for the extreme eigenvalues; a value beyond the tolerance is not known
+        minEigenValue = minEigenValueWithinTolerance ? (isPositiveDefinite(1.0, 0.0) ? 0.0 : -eigenvalueTolerance)
+                                                     : SHOT::SHOT_DBL_MIN;
+        maxEigenValue = maxEigenValueWithinTolerance ? (isPositiveDefinite(-1.0, 0.0) ? 0.0 : eigenvalueTolerance)
+                                                     : SHOT::SHOT_DBL_MAX;
+
+        if(auto sharedOwnerProblem = ownerProblem.lock())
+            sharedOwnerProblem->env->timing->stopTimer("EigenvalueComputation");
+
+        eigenvalues.resize(0);
+
+        if(minEigenValueWithinTolerance)
+            convexity = E_Convexity::Convex;
+        else if(maxEigenValueWithinTolerance)
+            convexity = E_Convexity::Concave;
+        else
+            convexity = E_Convexity::Nonconvex;
+
+        return;
+    }
+
     if(auto sharedOwnerProblem = ownerProblem.lock())
     {
         sharedOwnerProblem->env->timing->startTimer("EigenvalueComputation");
@@ -196,21 +257,6 @@ void QuadraticTerms::updateConvexity()
 
     bool areAllPositiveOrZero = true;
     bool areAllNegativeOrZero = true;
-
-    double eigenvalueTolerance = 0.0;
-
-    if(auto sharedOwnerProblem = ownerProblem.lock())
-    {
-        if(sharedOwnerProblem->env->settings)
-        {
-            eigenvalueTolerance = sharedOwnerProblem->env->settings->getSetting<double>(
-                "Model.Convexity.Quadratics.EigenValueTolerance");
-        }
-        else
-        {
-            eigenvalueTolerance = 1e-5;
-        }
-    }
 
     for(int i = 0; i < numberOfVariables; i++)
     {
@@ -361,13 +407,20 @@ void QuadraticTerms::performLDLFactorization()
     original += Eigen::SparseMatrix<double>(matrix.transpose());
     original -= Eigen::SparseMatrix<double>(matrix.diagonal().asDiagonal());
 
-    Eigen::MatrixXd error = LDLMatrixL * diagonalD.asDiagonal() * LDLMatrixL.transpose() - original;
+    // The matrices are kept sparse, since dense ones take O(n^2) memory, e.g., 50 GB each for 80000 variables
+    Eigen::SparseMatrix<double> error
+        = Eigen::SparseMatrix<double>(LDLMatrixL * diagonalD.asDiagonal()) * LDLMatrixL.transpose() - original;
+    error.makeCompressed();
+    original.makeCompressed();
+
+    auto largestElement = [](const Eigen::SparseMatrix<double>& sparseMatrix)
+    { return (sparseMatrix.nonZeros() > 0 ? sparseMatrix.coeffs().cwiseAbs().maxCoeff() : 0.0); };
 
     // The error to the reconstructed matrix is too large, will not use the decomposition. The tolerance is relative to
     // the largest element, since the round-off error grows with the elements, but not smaller than for elements of 1.
-    double errorTolerance = 1e-12 * std::max(1.0, Eigen::MatrixXd(original).cwiseAbs().maxCoeff());
+    double errorTolerance = 1e-12 * std::max(1.0, largestElement(original));
 
-    if(error.cwiseAbs().maxCoeff() > errorTolerance)
+    if(largestElement(error) > errorTolerance)
     {
         LDLFactorizationPerformed = true;
         LDLFactorizationSuccessful = false;

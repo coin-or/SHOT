@@ -268,7 +268,7 @@ bool MIPSolverGurobi::addQuadraticTermToConstraint(double coefficient, int first
         return (false);
     }
 
-    hasQudraticConstraint = true;
+    hasQuadraticConstraint = true;
 
     return (true);
 }

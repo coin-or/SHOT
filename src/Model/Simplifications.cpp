@@ -32,7 +32,7 @@ void checkAndConvertObjectivesAndConstraints(
             auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression,
                 tmpConstant]
                 = extractTermsAndConstant(
-                    nonlinearExpression, extractMonomials, extractSignomials, extractQuadratics, true);
+                    nonlinearExpression, extractMonomials, extractSignomials, extractQuadratics, true, true);
 
             if(tmpMonomialTerms.size() == 0 && tmpSignomialTerms.size() == 0 && !tmpNonlinearExpression
                 && nonlinearObjective->monomialTerms.size() == 0 && nonlinearObjective->signomialTerms.size() == 0)
@@ -126,7 +126,7 @@ void checkAndConvertObjectivesAndConstraints(
         auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression,
             tmpConstant]
             = extractTermsAndConstant(
-                nonlinearExpression, extractMonomials, extractSignomials, extractQuadratics, true);
+                nonlinearExpression, extractMonomials, extractSignomials, extractQuadratics, true, true);
 
         bool isQuadratic = (tmpQuadraticTerms.size() > 0 || nonlinearConstraint->quadraticTerms.size() > 0);
 
@@ -607,6 +607,32 @@ NonlinearExpressionPtr copyNonlinearExpression(NonlinearExpression* expression, 
     {
         return std::make_shared<ExpressionArcTan>(
             copyNonlinearExpression((((ExpressionArcTan*)expression)->child).get(), destination));
+    }
+    case E_NonlinearExpressionTypes::Sinh:
+    {
+        return std::make_shared<ExpressionSinh>(
+            copyNonlinearExpression((((ExpressionSinh*)expression)->child).get(), destination));
+    }
+    case E_NonlinearExpressionTypes::Cosh:
+    {
+        return std::make_shared<ExpressionCosh>(
+            copyNonlinearExpression((((ExpressionCosh*)expression)->child).get(), destination));
+    }
+    case E_NonlinearExpressionTypes::Tanh:
+    {
+        return std::make_shared<ExpressionTanh>(
+            copyNonlinearExpression((((ExpressionTanh*)expression)->child).get(), destination));
+    }
+    case E_NonlinearExpressionTypes::ErrorFunction:
+    {
+        return std::make_shared<ExpressionErrorFunction>(
+            copyNonlinearExpression((((ExpressionErrorFunction*)expression)->child).get(), destination));
+    }
+    case E_NonlinearExpressionTypes::SignPower:
+    {
+        return std::make_shared<ExpressionSignPower>(
+            copyNonlinearExpression((((ExpressionSignPower*)expression)->child).get(), destination),
+            ((ExpressionSignPower*)expression)->exponent);
     }
     case E_NonlinearExpressionTypes::Constant:
     {

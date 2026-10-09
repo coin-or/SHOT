@@ -145,6 +145,13 @@ private:
 
     // The Jacobian elements of the linear constraints, which are the same in every evaluation
     std::vector<std::pair<int, double>> constantJacobianElements;
+
+    // Batch derivatives of constraint expressions on the shared CppAD tape.
+    CppAD::sparse_rc<std::vector<size_t>> nonlinearConstraintJacobianPattern;
+    std::vector<int> nonlinearExpressionConstraintIndexes;
+
+    CppAD::sparse_rc<std::vector<size_t>> nonlinearConstraintHessianPattern;
+    CppAD::sparse_hes_work nonlinearConstraintHessianWork;
 };
 
 class NLPSolverIpoptBase : virtual public INLPSolver

@@ -365,6 +365,13 @@ bool Solver::setProblem(std::string fileName)
             env->modelingSystem = modelingSystem;
             env->problem = problem;
 
+            // The levels of the variables are a starting point, which is given to the primal solver as when SHOT is
+            // called from GAMS (EntryPointsGAMS.cpp) and as the initial values of an AMPL model
+            VectorDouble variableStarts(gmoN(modelingSystem->modelingObject));
+            gmoGetVarL(modelingSystem->modelingObject, variableStarts.data());
+            env->primalSolver->addPrimalSolutionCandidate(
+                variableStarts, E_PrimalSolutionSource::ExternalPrimalSolution, 0);
+
             env->settings->updateSetting("Input.ModelingSystem", static_cast<int>(ES_ModelingSystem::GAMS));
         }
 #endif
@@ -592,8 +599,12 @@ bool Solver::selectStrategy()
         if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Cbc
             || static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Highs)
         {
-            if(env->problem->properties.numberOfDiscreteVariables == 0
-                && env->problem->properties.numberOfSemicontinuousVariables == 0)
+            // The reformulated problem can have discrete variables also when the original problem has none, e.g., the
+            // binary variables that bound absolute values from above
+            auto problem = (env->reformulatedProblem) ? env->reformulatedProblem : env->problem;
+
+            if(problem->properties.numberOfDiscreteVariables == 0
+                && problem->properties.numberOfSemicontinuousVariables == 0)
             {
                 env->output->outputDebug(" Using continuous problem solution strategy.");
                 solutionStrategy = std::make_unique<SolutionStrategyNLP>(env);
@@ -1242,6 +1253,11 @@ void Solver::initializeSettings()
 
     // Reformulations for monomials
 
+    env->settings->createSetting("Model.Reformulation.AbsoluteValue.MaximumBigM", 1e8,
+        "The largest big-M used to bound an absolute value from above with a binary variable; above it, the absolute "
+        "value is only bounded from below",
+        0.0, SHOT_DBL_MAX);
+
     env->settings->createSetting(
         "Model.Reformulation.Monomials.Extract", true, "Extract monomial terms from nonlinear expressions");
 
@@ -1408,6 +1424,19 @@ void Solver::initializeSettings()
     env->settings->createSetting(
         "Primal.FixedInteger.CreateInfeasibilityCut", false, "Create a cut from an infeasible solution point");
 
+    env->settings->createSetting("Primal.FixedInteger.Enumeration.MaxCombinations", 50,
+        "Max number of combinations of the discrete variables for the exhaustive search to be performed", 1,
+        SHOT_INT_MAX);
+
+    env->settings->createSetting("Primal.FixedInteger.Enumeration.TimeLimit", 20.0,
+        "Time limit (s) for all NLP problems in the exhaustive search", 0, SHOT_DBL_MAX);
+
+    env->settings->createSetting("Primal.FixedInteger.Enumeration.UseInitially", false,
+        "Solve NLP problems for all combinations of the discrete variables before the dual strategy");
+
+    env->settings->createSetting("Primal.FixedInteger.Enumeration.UseAsFallback", true,
+        "Solve NLP problems for all combinations of the discrete variables if the objective gap could not be closed");
+
     env->settings->createSetting(
         "Primal.FixedInteger.Frequency.Dynamic", true, "Dynamically update the call frequency based on success");
 
@@ -1465,12 +1494,19 @@ void Solver::initializeSettings()
     env->settings->createSetting(
         "Primal.FixedInteger.TimeLimit", 10.0, "Time limit (s) per NLP problem", 0, SHOT_DBL_MAX);
 
+    env->settings->createSetting("Primal.FixedInteger.UseStartingPoint", false,
+        "Solve an NLP problem from a given starting point, e.g. the levels of the variables in GAMS or the initial "
+        "values in AMPL, before the first dual problem. Off by default until benchmarked on all of MINLPLib");
+
     env->settings->createSetting("Primal.FixedInteger.Use", true, "Use the fixed integer primal strategy");
 
     env->settings->createSetting("Primal.FixedInteger.Warmstart", true, "Warm start the NLP solver");
 
-    env->settings->createSetting(
-        "Primal.PolishSolution", true, "Solve an NLP problem from the final solution to try to improve it");
+    env->settings->createSetting("Primal.PolishSolution.NumberOfPoints", 1,
+        "The number of solutions of the dual problem, from the last iterations, that a final NLP problem is solved "
+        "from to try to improve the solution. More than one can find a better local solution of a nonconvex problem, "
+        "and zero disables it",
+        0, SHOT_INT_MAX);
 
     // Primal settings: rootsearch
 
@@ -1667,6 +1703,9 @@ void Solver::initializeSettings()
     env->settings->createSetting("Subsolver.Cbc.AutoScale", false,
         "Whether to scale objective, rhs and bounds of problem if they look odd (experimental)");
 
+    env->settings->createSetting("Subsolver.Cbc.Cuts", false,
+        "Use the cut generators of Cbc, which can give a wrong optimal value for a MILP problem");
+
     VectorString enumCbcNodeStrategy;
     enumCbcNodeStrategy.push_back("depth");
     enumCbcNodeStrategy.push_back("downdepth");
@@ -1688,7 +1727,7 @@ void Solver::initializeSettings()
     enumCbcScaling.push_back("geometric");
     enumCbcScaling.push_back("off");
     enumCbcScaling.push_back("rowsonly");
-    env->settings->createSetting("Subsolver.Cbc.Scaling", 4, "Whether to scale problem", enumCbcScaling, 0);
+    env->settings->createSetting("Subsolver.Cbc.Scaling", 0, "Whether to scale problem", enumCbcScaling, 0);
     enumCbcScaling.clear();
 
     VectorString enumStrategy;
@@ -1775,7 +1814,23 @@ void Solver::initializeSettings()
         "Ipopt linear subsolver", enumIPOptSolver, 0);
     enumIPOptSolver.clear();
 
+    VectorString enumIpoptHessianApproximation;
+    enumIpoptHessianApproximation.push_back("Exact");
+    enumIpoptHessianApproximation.push_back("Limited memory");
+    enumIpoptHessianApproximation.push_back("Automatic");
+    env->settings->createSetting("Subsolver.Ipopt.HessianApproximation",
+        static_cast<int>(ES_IpoptHessianApproximation::Automatic),
+        "The Hessian of the Lagrangian used by Ipopt. Automatic uses a limited-memory approximation if the exact "
+        "Hessian of a nonlinear expression with at least 64 variables is nearly dense, since it is then expensive",
+        enumIpoptHessianApproximation, 0);
+    enumIpoptHessianApproximation.clear();
+
     env->settings->createSetting("Subsolver.Ipopt.MaxIterations", 1000, "Maximum number of iterations");
+
+    env->settings->createSetting("Subsolver.Ipopt.OptionsFile", std::string(),
+        "An Ipopt options file with any Ipopt options, read instead of ipopt.opt in the working directory. Options "
+        "set by SHOT, e.g. the linear solver, are not changed by it",
+        false);
 
     env->settings->createSetting(
         "Subsolver.Ipopt.RelativeConvergenceTolerance", 1E-8, "Relative convergence tolerance");
@@ -2254,6 +2309,8 @@ void Solver::setConvexityBasedSettings()
             env->settings->updateSetting("Primal.FixedInteger.CallStrategy", 0, E_SettingPriority::RecommendedInternal);
             env->settings->updateSetting(
                 "Primal.FixedInteger.CreateInfeasibilityCut", false, E_SettingPriority::RecommendedInternal);
+            env->settings->updateSetting(
+                "Primal.FixedInteger.Enumeration.UseInitially", true, E_SettingPriority::RecommendedInternal);
             env->settings->updateSetting("Primal.FixedInteger.Source", 0, E_SettingPriority::RecommendedInternal);
 
             env->settings->updateSetting(

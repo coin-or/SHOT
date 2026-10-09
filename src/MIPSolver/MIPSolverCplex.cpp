@@ -63,20 +63,14 @@ MIPSolverCplex::MIPSolverCplex(EnvironmentPtr envPtr)
 
 MIPSolverCplex::~MIPSolverCplex()
 {
-
+    // End the solver before its model; otherwise Concert removes each extracted row and column from CPLEX,
+    // which can take much longer than the solve itself for large models.
+    cplexInstance.end();
     cplexVarConvers.clear();
     cplexModel.end();
     cplexVars.end();
     cplexConstrs.end();
-    cplexInstance.end();
     cplexEnv.end();
-
-    if(callbacksInitialized)
-    {
-        cplexInstance.remove(infoCallback);
-        delete infoCallback;
-        callbacksInitialized = false;
-    }
 }
 bool MIPSolverCplex::initializeProblem()
 {
@@ -84,11 +78,11 @@ bool MIPSolverCplex::initializeProblem()
 
     if(alreadyInitialized)
     {
+        cplexInstance.end();
         cplexVarConvers.clear();
         cplexModel.end();
         cplexVars.end();
         cplexConstrs.end();
-        cplexInstance.end();
     }
     else
     {
@@ -308,7 +302,7 @@ bool MIPSolverCplex::addQuadraticTermToConstraint(double coefficient, int firstV
         return (false);
     }
 
-    hasQudraticConstraint = true;
+    hasQuadraticConstraint = true;
 
     return (true);
 }
@@ -352,6 +346,11 @@ bool MIPSolverCplex::finalizeProblem()
 {
     try
     {
+        // TaskCreateMIPProblem may finalize the same model more than once. End the previous extractor before
+        // replacing its handle, so the environment does not retain an active CPLEX instance for the old model.
+        if(cplexInstance.getImpl())
+            cplexInstance.end();
+
         if(env->settings->getSetting<bool>("Dual.TreeStrategy.Multi.Reinitialize"))
         {
             int setSolLimit;
@@ -634,40 +633,17 @@ void MIPSolverCplex::activateDiscreteVariables(bool activate)
         if(activate)
         {
             env->output->outputDebug("        Activating MIP strategy.");
-
-            for(int i = 0; i < numberOfVariables; i++)
-            {
-                if(variableTypes.at(i) == E_VariableType::Integer)
-                {
-                    auto tmpVar = cplexVars[i];
-                    auto tmpConv = IloConversion(cplexEnv, tmpVar, ILOINT);
-                    cplexModel.add(tmpConv);
-                    cplexVarConvers.push_back(tmpConv);
-                }
-                else if(variableTypes.at(i) == E_VariableType::Binary)
-                {
-                    auto tmpVar = cplexVars[i];
-                    auto tmpConv = IloConversion(cplexEnv, tmpVar, ILOBOOL);
-                    cplexModel.add(tmpConv);
-                    cplexVarConvers.push_back(tmpConv);
-                }
-            }
-
+            // Discrete variables were created as integers; ending the LP conversion restores those types.
             discreteVariablesActivated = true;
         }
         else
         {
             env->output->outputDebug("        Activating LP strategy.");
-            for(int i = 0; i < numberOfVariables; i++)
-            {
-                if(variableTypes.at(i) == E_VariableType::Integer || variableTypes.at(i) == E_VariableType::Binary)
-                {
-                    auto tmpVar = cplexVars[i];
-                    auto tmpConv = IloConversion(cplexEnv, tmpVar, ILOFLOAT);
-                    cplexModel.add(tmpConv);
-                    cplexVarConvers.push_back(tmpConv);
-                }
-            }
+            // One conversion over the array avoids ending thousands of individual Concert extractables when
+            // switching back to the MIP strategy. Continuous variables already have this type.
+            auto conversion = IloConversion(cplexEnv, cplexVars, ILOFLOAT);
+            cplexModel.add(conversion);
+            cplexVarConvers.push_back(conversion);
 
             discreteVariablesActivated = false;
         }
@@ -766,6 +742,18 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
     E_ProblemSolutionStatus MIPSolutionStatus;
     cachedSolutionHasChanged = true;
 
+    // Keep the callback within this solve, including exception paths. It must be detached before a retry
+    // replaces it, and while the CPLEX instance and environment are still alive.
+    bool callbackAttached = false;
+    auto removeCallback = [&](UserTerminationCallbackI* callback)
+    {
+        if(callbackAttached)
+            cplexInstance.remove(callback);
+        delete callback;
+        callbackAttached = false;
+    };
+    std::unique_ptr<UserTerminationCallbackI, decltype(removeCallback)> infoCallback(nullptr, removeCallback);
+
     try
     {
         // If we in previous iteration solved a feasibility problem since the objective was unbounded, the original
@@ -800,10 +788,9 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
         }
         else
         {
-            infoCallback = new(cplexEnv) UserTerminationCallbackI(env, cplexEnv);
-            callbacksInitialized = true;
-
-            cplexInstance.use(infoCallback);
+            infoCallback.reset(new(cplexEnv) UserTerminationCallbackI(env, cplexEnv));
+            cplexInstance.use(infoCallback.get());
+            callbackAttached = true;
 
             // Fixes a deadlock bug in Cplex 12.7 and 12.8
             cplexEnv.setNormalizer(false);
@@ -860,17 +847,11 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
             MIPSolutionStatus = E_ProblemSolutionStatus::Unbounded;
             env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed = true;
         }
-
-        if(callbacksInitialized)
-        {
-            cplexInstance.remove(infoCallback);
-            delete infoCallback;
-            callbacksInitialized = false;
-        }
     }
 
     catch(IloException& e)
     {
+        infoCallback.reset();
         std::string errorString = e.getMessage();
 
         // Retry once if the problem is nonconvex. The optimality target only helps for nonconvex objectives, so a

@@ -70,6 +70,12 @@ void TaskSelectHyperplanesECP::run(std::vector<SolutionPoint> solPoints)
 
         numberOfDeviatingValues += numericConstraintValues.size();
 
+        if(numericConstraintValues.size() == 0)
+            continue;
+
+        // Calculated once, since the point is checked for every deviating constraint
+        auto pointHashes = env->dualSolver->calculateHashes(solPoints.at(i).point);
+
         for(auto& NCV : numericConstraintValues)
         {
             if(addedHyperplanes >= maxHyperplanesPerIter)
@@ -96,7 +102,7 @@ void TaskSelectHyperplanesECP::run(std::vector<SolutionPoint> solPoints)
                 continue;
             }
 
-            if(env->dualSolver->hasHyperplaneBeenAdded(solPoints.at(i).point, NCV.constraint->getIndex()))
+            if(env->dualSolver->hasHyperplaneBeenAdded(pointHashes, NCV.constraint->getIndex()))
             {
                 env->output->outputDebug(fmt::format(
                     "         Hyperplane already added for constraint {} in this point.", NCV.constraint->name));
@@ -114,8 +120,19 @@ void TaskSelectHyperplanesECP::run(std::vector<SolutionPoint> solPoints)
         }
     }
 
+    // A hyperplane is added for every deviating convex constraint, which gives the best dual bounds, unless their
+    // points would take too much memory, since each has a copy of the point: then at most
+    // Dual.HyperplaneCuts.MaxPerIteration, or as many as fit, are added. The limit cannot be checked while the
+    // constraints are selected above, since no hyperplanes have been added then.
+    size_t numberOfVariables = solPoints.empty() ? 1 : std::max<size_t>(1, solPoints.at(0).point.size());
+    int maximumConvexHyperplanes
+        = (int)std::max<size_t>(maxHyperplanesPerIter, maximumNumberOfHyperplanePointValues / numberOfVariables);
+
     for(auto& values : selectedNumericValues)
     {
+        if(addedHyperplanes >= maximumConvexHyperplanes)
+            break;
+
         int i = std::get<0>(values);
         auto NCV = std::get<1>(values);
 

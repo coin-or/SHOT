@@ -1635,6 +1635,9 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
     std::vector<NonlinearExpressionPtr> stack;
     stack.reserve(20);
 
+    // The number of arguments of the next call of a function with a variable number of arguments, e.g., poly
+    int numberOfFunctionArguments = 0;
+
     for(int i = 0; i < codelen; ++i)
     {
         auto opcode = (GamsOpCode)opcodes[i];
@@ -2014,6 +2017,7 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
 
         case nlFuncArgN: // number of function arguments
         {
+            numberOfFunctionArguments = address + 1;
             break;
         }
 
@@ -2032,6 +2036,191 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
                 auto expression = std::make_shared<ExpressionSquare>(std::move(stack.rbegin()[0]));
                 stack.pop_back();
                 stack.push_back(std::move(expression));
+                break;
+            }
+
+            case fnarcsin:
+            {
+                auto expression = std::make_shared<ExpressionArcSin>(std::move(stack.rbegin()[0]));
+                stack.pop_back();
+                stack.push_back(std::move(expression));
+                break;
+            }
+
+            case fnarccos:
+            {
+                auto expression = std::make_shared<ExpressionArcCos>(std::move(stack.rbegin()[0]));
+                stack.pop_back();
+                stack.push_back(std::move(expression));
+                break;
+            }
+
+            case fnarctan:
+            {
+                auto expression = std::make_shared<ExpressionArcTan>(std::move(stack.rbegin()[0]));
+                stack.pop_back();
+                stack.push_back(std::move(expression));
+                break;
+            }
+
+            case fnsinh:
+            {
+                auto expression = std::make_shared<ExpressionSinh>(std::move(stack.rbegin()[0]));
+                stack.pop_back();
+                stack.push_back(std::move(expression));
+                break;
+            }
+
+            case fncosh:
+            {
+                auto expression = std::make_shared<ExpressionCosh>(std::move(stack.rbegin()[0]));
+                stack.pop_back();
+                stack.push_back(std::move(expression));
+                break;
+            }
+
+            case fntanh:
+            {
+                auto expression = std::make_shared<ExpressionTanh>(std::move(stack.rbegin()[0]));
+                stack.pop_back();
+                stack.push_back(std::move(expression));
+                break;
+            }
+
+            case fnsigmoid: // 1/(1 + exp(-x))
+            {
+                auto expression = std::make_shared<ExpressionDivide>(std::make_shared<ExpressionConstant>(1.0),
+                    std::make_shared<ExpressionSum>(std::make_shared<ExpressionConstant>(1.0),
+                        std::make_shared<ExpressionExp>(
+                            std::make_shared<ExpressionNegate>(std::move(stack.rbegin()[0])))));
+                stack.pop_back();
+                stack.push_back(std::move(expression));
+                break;
+            }
+
+            case fnentropy:
+            {
+                // -x*ln(x), which GAMS defines as zero for x = 0. The term 1e-20 is the one GAMS adds in centropy;
+                // it keeps the value and the derivative finite in zero and changes the value by at most 1e-20. The
+                // argument is used twice, as the same node, which Problem::finalize() copies.
+                auto x = std::move(stack.rbegin()[0]);
+                auto expression = std::make_shared<ExpressionNegate>(std::make_shared<ExpressionProduct>(x,
+                    std::make_shared<ExpressionLog>(
+                        std::make_shared<ExpressionSum>(x, std::make_shared<ExpressionConstant>(1e-20)))));
+                stack.pop_back();
+                stack.push_back(std::move(expression));
+                break;
+            }
+
+            case fncentropy:
+            {
+                // x*ln((x + Z)/(y + Z)), where the constant Z is the optional third argument, by default 1e-20
+                int numberOfArguments = (opcode == nlCallArgN) ? numberOfFunctionArguments : 2;
+
+                if(numberOfArguments < 2 || numberOfArguments > 3)
+                    throw OperationNotImplementedException(
+                        "Error: The GAMS function centropy needs two or three arguments");
+
+                double z = 1e-20;
+
+                if(numberOfArguments == 3)
+                {
+                    if(stack.rbegin()[0]->getType() != E_NonlinearExpressionTypes::Constant)
+                        throw OperationNotImplementedException(
+                            "Error: The third argument of the GAMS function centropy must be a constant");
+
+                    z = std::static_pointer_cast<ExpressionConstant>(stack.rbegin()[0])->constant;
+                    stack.pop_back();
+                }
+
+                auto x = std::move(stack.rbegin()[1]);
+                auto y = std::move(stack.rbegin()[0]);
+
+                auto expression = std::make_shared<ExpressionProduct>(x,
+                    std::make_shared<ExpressionLog>(std::make_shared<ExpressionDivide>(
+                        std::make_shared<ExpressionSum>(x, std::make_shared<ExpressionConstant>(z)),
+                        std::make_shared<ExpressionSum>(y, std::make_shared<ExpressionConstant>(z)))));
+                stack.pop_back();
+                stack.pop_back();
+                stack.push_back(std::move(expression));
+                break;
+            }
+
+            case fnarctan2:
+            {
+                auto expression = createArcTan2(std::move(stack.rbegin()[1]), std::move(stack.rbegin()[0]));
+                stack.pop_back();
+                stack.pop_back();
+                stack.push_back(std::move(expression));
+                break;
+            }
+
+            case fnedist: // sqrt(x1^2 + x2^2 + ...)
+            {
+                int numberOfArguments
+                    = (opcode == nlCallArg1) ? 1 : ((opcode == nlCallArg2) ? 2 : numberOfFunctionArguments);
+
+                if(numberOfArguments < 1 || (size_t)numberOfArguments > stack.size())
+                    throw OperationNotImplementedException(
+                        "Error: Wrong number of arguments for the GAMS function edist");
+
+                NonlinearExpressions squares;
+
+                for(int k = numberOfArguments - 1; k >= 0; k--)
+                    squares.push_back(std::make_shared<ExpressionSquare>(stack.rbegin()[k]));
+
+                stack.resize(stack.size() - numberOfArguments);
+                stack.push_back(std::make_shared<ExpressionSquareRoot>(std::make_shared<ExpressionSum>(squares)));
+                break;
+            }
+
+            case fnpoly:
+            {
+                // poly(x, a0, a1, ..., an) = a0 + a1*x + ... + an*x^n with constant coefficients
+                int numberOfArguments
+                    = (opcode == nlCallArg1) ? 1 : ((opcode == nlCallArg2) ? 2 : numberOfFunctionArguments);
+
+                if(numberOfArguments < 2 || (size_t)numberOfArguments > stack.size())
+                    throw OperationNotImplementedException(
+                        "Error: Wrong number of arguments for the GAMS function poly");
+
+                auto x = stack.rbegin()[numberOfArguments - 1];
+                NonlinearExpressions terms;
+
+                for(int k = 1; k < numberOfArguments; k++)
+                {
+                    auto coefficientExpression = stack.rbegin()[numberOfArguments - 1 - k];
+
+                    if(coefficientExpression->getType() != E_NonlinearExpressionTypes::Constant)
+                        throw OperationNotImplementedException(
+                            "Error: The coefficients of the GAMS function poly must be constants");
+
+                    double coefficient = std::static_pointer_cast<ExpressionConstant>(coefficientExpression)->constant;
+
+                    if(coefficient == 0.0)
+                        continue;
+
+                    if(k == 1)
+                        terms.push_back(std::make_shared<ExpressionConstant>(coefficient));
+                    else if(k == 2)
+                        terms.push_back(
+                            std::make_shared<ExpressionProduct>(std::make_shared<ExpressionConstant>(coefficient), x));
+                    else
+                        terms.push_back(
+                            std::make_shared<ExpressionProduct>(std::make_shared<ExpressionConstant>(coefficient),
+                                std::make_shared<ExpressionPower>(
+                                    x, std::make_shared<ExpressionConstant>((double)(k - 1)))));
+                }
+
+                stack.resize(stack.size() - numberOfArguments);
+
+                if(terms.size() == 0)
+                    stack.push_back(std::make_shared<ExpressionConstant>(0.0));
+                else if(terms.size() == 1)
+                    stack.push_back(terms[0]);
+                else
+                    stack.push_back(std::make_shared<ExpressionSum>(terms));
+
                 break;
             }
 
@@ -2083,6 +2272,33 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
             case fnabs:
             {
                 auto expression = std::make_shared<ExpressionAbs>(std::move(stack.rbegin()[0]));
+                stack.pop_back();
+                stack.push_back(expression);
+                break;
+            }
+
+            case fnerrf:
+            {
+                auto expression = std::make_shared<ExpressionErrorFunction>(std::move(stack.rbegin()[0]));
+                stack.pop_back();
+                stack.push_back(expression);
+                break;
+            }
+
+            case fnsignpower: // sign(x) * abs(x)^c
+            {
+                if(stack.rbegin()[0]->getType() != E_NonlinearExpressionTypes::Constant)
+                    throw OperationNotImplementedException(
+                        "Error: The GAMS function signpower is only supported with a constant exponent");
+
+                double exponent = std::static_pointer_cast<ExpressionConstant>(stack.rbegin()[0])->constant;
+
+                if(!(exponent > 0.0))
+                    throw OperationNotImplementedException(
+                        "Error: The GAMS function signpower is only supported with a positive exponent");
+
+                auto expression = std::make_shared<ExpressionSignPower>(std::move(stack.rbegin()[1]), exponent);
+                stack.pop_back();
                 stack.pop_back();
                 stack.push_back(expression);
                 break;
@@ -2141,18 +2357,34 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
                 break;
             }
 
-            // TODO some more we could handle
-            case fnpoly:
             case fnmin:
             case fnmax:
-            case fnerrf:
+            {
+                int numberOfArguments
+                    = (opcode == nlCallArg1) ? 1 : ((opcode == nlCallArg2) ? 2 : numberOfFunctionArguments);
+
+                if(numberOfArguments < 1 || (size_t)numberOfArguments > stack.size())
+                    throw OperationNotImplementedException(
+                        "Error: Wrong number of arguments for the GAMS function min or max");
+
+                NonlinearExpressions arguments;
+
+                for(int k = numberOfArguments - 1; k >= 0; k--)
+                    arguments.push_back(stack.rbegin()[k]);
+
+                stack.resize(stack.size() - numberOfArguments);
+                stack.push_back(
+                    (GamsFuncCode(address + 1) == fnmax) ? createMaximum(arguments) : createMinimum(arguments));
+                break;
+            }
+
+            // TODO some more we could handle
             case fnceil:
             case fnfloor:
             case fnround:
             case fnmod:
             case fntrunc:
             case fnsign:
-            case fnarctan:
             case fndunfm:
             case fndnorm:
             case fnerror:
@@ -2162,8 +2394,6 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
             case fnunfmi /* uniform random number */:
             case fnncpf /* fischer: sqrt(x1^2+x2^2+2*x3) */:
             case fnncpcm /* chen-mangasarian: x1-x3*ln(1+exp((x1-x2)/x3))*/:
-            case fnentropy /* x*ln(x) */:
-            case fnsigmoid /* 1/(1+exp(-x)) */:
             case fnboolnot:
             case fnbooland:
             case fnboolor:
@@ -2177,24 +2407,15 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
             case fnrelople:
             case fnrelopne:
             case fnifthen:
-            case fnedist /* euclidian distance */:
-            case fncentropy /* x*ln((x+d)/(y+d))*/:
             case fngamma:
             case fnloggamma:
             case fnbeta:
             case fnlogbeta:
             case fngammareg:
             case fnbetareg:
-            case fnsinh:
-            case fncosh:
-            case fntanh:
-            case fnsignpower /* sign(x)*abs(x)^c */:
             case fnncpvusin /* veelken-ulbrich */:
             case fnncpvupow /* veelken-ulbrich */:
             case fnbinomial:
-            case fnarccos:
-            case fnarcsin:
-            case fnarctan2 /* arctan(x2/x1) */:
             {
                 debugout << "nr. " << address + 1 << " - unsupported. Error." << std::endl;
                 char buffer[256];

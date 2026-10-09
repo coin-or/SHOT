@@ -51,11 +51,31 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
 
     auto allSolutions = sourceIter->solutionPoints;
 
+    // The polish also starts from the best primal solution, after the points of the dual problem. These can be far
+    // from any solution, e.g. 1e14 for a free variable in an unbounded dual problem, where the NLP solver fails,
+    // while the primal solution may be a starting point given with the model. A solution of an NLP problem is
+    // already a local solution, and is not solved from again.
+    auto addPrimalSolutionForPolish = [&]()
+    {
+        if(!isFinalPolish || !env->results->hasPrimalSolution())
+            return;
+
+        auto& primalSolution = env->results->primalSolutions.at(0);
+
+        if(primalSolution.sourceType == E_PrimalSolutionSource::NLPFixedIntegers)
+            return;
+        env->primalSolver->addFixedNLPCandidate(primalSolution.point, E_PrimalNLPSource::FeasibleSolution,
+            primalSolution.objValue, primalSolution.iterFound, primalSolution.maxDeviatingConstraintNonlinear);
+    };
+
     bool callNLPSolver = false;
     bool useFeasibleSolutionExtra = false;
 
     if((!sourceIter->isMIP() && env->reformulatedProblem->properties.isDiscrete) || allSolutions.empty())
+    {
+        addPrimalSolutionForPolish();
         return;
+    }
 
     if(!isFinalPolish && currIter->MIPSolutionLimitUpdated
         && currIter->solutionStatus != E_ProblemSolutionStatus::Optimal)
@@ -115,6 +135,29 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
         auto tmpSol = allSolutions.at(0);
         env->primalSolver->addFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::FirstSolutionNewDualBound,
             tmpSol.objectiveValue, tmpSol.iterFound, tmpSol.maxDeviation);
+
+        // Which local solution the NLP solver finds depends on the point, and the last dual solution of a nonconvex
+        // problem is not necessarily the best one to start from, so the polish can also start from the first
+        // solutions of the iterations before it
+        if(isFinalPolish)
+        {
+            int numberOfPoints = env->settings->getSetting<int>("Primal.PolishSolution.NumberOfPoints") - 1;
+
+            for(auto it = env->results->iterations.rbegin();
+                it != env->results->iterations.rend() && numberOfPoints > 0; ++it)
+            {
+                if(*it == sourceIter || (*it)->solutionPoints.empty()
+                    || (!(*it)->isMIP() && env->reformulatedProblem->properties.isDiscrete))
+                    continue;
+
+                auto& solution = (*it)->solutionPoints.at(0);
+                env->primalSolver->addFixedNLPCandidate(solution.point, E_PrimalNLPSource::FirstSolutionNewDualBound,
+                    solution.objectiveValue, solution.iterFound, solution.maxDeviation);
+                numberOfPoints--;
+            }
+
+            addPrimalSolutionForPolish();
+        }
     }
     else if(callNLPSolver && userSetting == static_cast<int>(ES_PrimalNLPFixedPoint::SmallestDeviationSolution))
     {

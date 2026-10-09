@@ -1266,6 +1266,11 @@ PYBIND11_MODULE(SHOTpy, m)
         .value("ArcSin", E_NonlinearExpressionTypes::ArcSin)
         .value("ArcTan", E_NonlinearExpressionTypes::ArcTan)
         .value("Abs", E_NonlinearExpressionTypes::Abs)
+        .value("ErrorFunction", E_NonlinearExpressionTypes::ErrorFunction)
+        .value("Sinh", E_NonlinearExpressionTypes::Sinh)
+        .value("Cosh", E_NonlinearExpressionTypes::Cosh)
+        .value("Tanh", E_NonlinearExpressionTypes::Tanh)
+        .value("SignPower", E_NonlinearExpressionTypes::SignPower)
         .value("Divide", E_NonlinearExpressionTypes::Divide)
         .value("Power", E_NonlinearExpressionTypes::Power)
         .value("Sum", E_NonlinearExpressionTypes::Sum)
@@ -1352,6 +1357,111 @@ PYBIND11_MODULE(SHOTpy, m)
     m.def(
         "abs", [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr
         { return std::make_shared<ExpressionAbs>(expr); }, "Absolute value", py::arg("x"));
+
+    m.def(
+        "sinh", [](VariablePtr var) -> NonlinearExpressionPtr
+        { return std::make_shared<ExpressionSinh>(wrapInExpression(var)); }, "Hyperbolic sine", py::arg("x"));
+
+    m.def(
+        "sinh", [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr
+        { return std::make_shared<ExpressionSinh>(expr); }, "Hyperbolic sine", py::arg("x"));
+
+    m.def(
+        "cosh", [](VariablePtr var) -> NonlinearExpressionPtr
+        { return std::make_shared<ExpressionCosh>(wrapInExpression(var)); }, "Hyperbolic cosine", py::arg("x"));
+
+    m.def(
+        "cosh", [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr
+        { return std::make_shared<ExpressionCosh>(expr); }, "Hyperbolic cosine", py::arg("x"));
+
+    m.def(
+        "tanh", [](VariablePtr var) -> NonlinearExpressionPtr
+        { return std::make_shared<ExpressionTanh>(wrapInExpression(var)); }, "Hyperbolic tangent", py::arg("x"));
+
+    m.def(
+        "tanh", [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr
+        { return std::make_shared<ExpressionTanh>(expr); }, "Hyperbolic tangent", py::arg("x"));
+
+    m.def(
+        "errorf", [](VariablePtr var) -> NonlinearExpressionPtr
+        { return std::make_shared<ExpressionErrorFunction>(wrapInExpression(var)); },
+        "The integral of the standard normal distribution from minus infinity to x, 0.5 * (1 + erf(x / sqrt(2)))",
+        py::arg("x"));
+
+    m.def(
+        "errorf", [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr
+        { return std::make_shared<ExpressionErrorFunction>(expr); },
+        "The integral of the standard normal distribution from minus infinity to x, 0.5 * (1 + erf(x / sqrt(2)))",
+        py::arg("x"));
+
+    m.def(
+        "signpower",
+        [](VariablePtr var, double exponent) -> NonlinearExpressionPtr
+        {
+            if(!(exponent > 0.0))
+                throw std::invalid_argument("The exponent of signpower must be positive");
+
+            return std::make_shared<ExpressionSignPower>(wrapInExpression(var), exponent);
+        },
+        "The signed power sign(x) * |x|^exponent with a positive constant exponent", py::arg("x"),
+        py::arg("exponent"));
+
+    m.def(
+        "signpower",
+        [](NonlinearExpressionPtr expr, double exponent) -> NonlinearExpressionPtr
+        {
+            if(!(exponent > 0.0))
+                throw std::invalid_argument("The exponent of signpower must be positive");
+
+            return std::make_shared<ExpressionSignPower>(expr, exponent);
+        },
+        "The signed power sign(x) * |x|^exponent with a positive constant exponent", py::arg("x"),
+        py::arg("exponent"));
+
+    // The arguments of min and max are variables, expressions and numbers, given separately or as one list
+    auto minimumOrMaximumArguments = [](const py::args& args, const std::string& name)
+    {
+        py::sequence items = args;
+
+        if(args.size() == 1 && (py::isinstance<py::list>(args[0]) || py::isinstance<py::tuple>(args[0])))
+            items = args[0].cast<py::sequence>();
+
+        NonlinearExpressions arguments;
+
+        for(auto item : items)
+        {
+            if(py::isinstance<Variable>(item))
+                arguments.push_back(wrapInExpression(item.cast<VariablePtr>()));
+            else if(py::isinstance<NonlinearExpression>(item))
+                arguments.push_back(item.cast<NonlinearExpressionPtr>());
+            else if(py::isinstance<py::float_>(item) || py::isinstance<py::int_>(item))
+                arguments.push_back(wrapInExpression(item.cast<double>()));
+            else
+                throw py::type_error("The arguments of " + name + " must be variables, expressions or numbers, not "
+                    + std::string(py::str(py::type::of(item).attr("__name__"))));
+        }
+
+        if(arguments.size() == 0)
+            throw std::invalid_argument(name + " needs at least one argument");
+
+        return (arguments);
+    };
+
+    m.def(
+        "min",
+        [minimumOrMaximumArguments](const py::args& args) -> NonlinearExpressionPtr
+        { return createMinimum(minimumOrMaximumArguments(args, "min")); },
+        "The minimum of variables, expressions and numbers, given separately or as one list. It is reformulated "
+        "with absolute values, min(a, b) = (a + b - |a - b|)/2, which need a binary variable only where the "
+        "optimum does not push the minimum up");
+
+    m.def(
+        "max",
+        [minimumOrMaximumArguments](const py::args& args) -> NonlinearExpressionPtr
+        { return createMaximum(minimumOrMaximumArguments(args, "max")); },
+        "The maximum of variables, expressions and numbers, given separately or as one list. It is reformulated "
+        "with absolute values, max(a, b) = (a + b + |a - b|)/2, which need a binary variable only where the "
+        "optimum does not push the maximum down");
 
     m.def(
         "square", [](VariablePtr var) -> NonlinearExpressionPtr
@@ -2858,20 +2968,20 @@ PYBIND11_MODULE(SHOTpy, m)
             "sourceDescription", &PrimalSolution::sourceDescription, "A description of where the solution comes from")
         .def_readwrite("objValue", &PrimalSolution::objValue, "The objective value of the solution")
         .def_readwrite("iterFound", &PrimalSolution::iterFound, "The iteration in which the solution was found")
-        .def_readwrite("maxDeviatingConstraintLinear", &PrimalSolution::maxDevatingConstraintLinear,
+        .def_readwrite("maxDeviatingConstraintLinear", &PrimalSolution::maxDeviatingConstraintLinear,
             "The index of the linear constraint the solution violates the most and the violation, index -1 if\n"
             "there is none")
-        .def_readwrite("maxDevatingConstraintLinear", &PrimalSolution::maxDevatingConstraintLinear,
+        .def_readwrite("maxDevatingConstraintLinear", &PrimalSolution::maxDeviatingConstraintLinear,
             "The same as maxDeviatingConstraintLinear; the misspelled name is kept for existing code")
-        .def_readwrite("maxDeviatingConstraintQuadratic", &PrimalSolution::maxDevatingConstraintQuadratic,
+        .def_readwrite("maxDeviatingConstraintQuadratic", &PrimalSolution::maxDeviatingConstraintQuadratic,
             "The index of the quadratic constraint the solution violates the most and the violation, index -1 if\n"
             "there is none")
-        .def_readwrite("maxDevatingConstraintQuadratic", &PrimalSolution::maxDevatingConstraintQuadratic,
+        .def_readwrite("maxDevatingConstraintQuadratic", &PrimalSolution::maxDeviatingConstraintQuadratic,
             "The same as maxDeviatingConstraintQuadratic; the misspelled name is kept for existing code")
-        .def_readwrite("maxDeviatingConstraintNonlinear", &PrimalSolution::maxDevatingConstraintNonlinear,
+        .def_readwrite("maxDeviatingConstraintNonlinear", &PrimalSolution::maxDeviatingConstraintNonlinear,
             "The index of the nonlinear constraint the solution violates the most and the violation, index -1 if\n"
             "there is none")
-        .def_readwrite("maxDevatingConstraintNonlinear", &PrimalSolution::maxDevatingConstraintNonlinear,
+        .def_readwrite("maxDevatingConstraintNonlinear", &PrimalSolution::maxDeviatingConstraintNonlinear,
             "The same as maxDeviatingConstraintNonlinear; the misspelled name is kept for existing code")
         .def_readwrite("maxIntegerToleranceError", &PrimalSolution::maxIntegerToleranceError,
             "The largest distance of an integer variable from an integer value before rounding")
@@ -2901,9 +3011,9 @@ PYBIND11_MODULE(SHOTpy, m)
             "The number of MIQCQP problems solved until a feasible solution was found")
         .def_readwrite("numberOfProblemsOptimalMIQCQP", &SolutionStatistics::numberOfProblemsOptimalMIQCQP,
             "The number of MIQCQP problems solved to optimality")
-        .def_readwrite("numberOfFunctionEvaluations", &SolutionStatistics::numberOfFunctionEvalutions,
+        .def_readwrite("numberOfFunctionEvaluations", &SolutionStatistics::numberOfFunctionEvaluations,
             "The number of evaluations of nonlinear functions")
-        .def_readwrite("numberOfFunctionEvalutions", &SolutionStatistics::numberOfFunctionEvalutions,
+        .def_readwrite("numberOfFunctionEvalutions", &SolutionStatistics::numberOfFunctionEvaluations,
             "The same as numberOfFunctionEvaluations; the misspelled name is kept for existing code")
         .def_readwrite("numberOfGradientEvaluations", &SolutionStatistics::numberOfGradientEvaluations,
             "The number of evaluations of gradients of nonlinear functions")
@@ -2911,6 +3021,26 @@ PYBIND11_MODULE(SHOTpy, m)
             "The number of LP problems solved in the search for an interior point")
         .def_readwrite("numberOfProblemsFixedNLP", &SolutionStatistics::numberOfProblemsFixedNLP,
             "The number of NLP problems with fixed integer variables solved to find primal solutions")
+        .def_readwrite("hasFixedIntegerEnumerationBeenRun", &SolutionStatistics::hasFixedIntegerEnumerationBeenRun,
+            "Whether NLP problems have been solved for all combinations of the discrete variables")
+        .def_readwrite("hasFixedIntegerEnumerationFallbackBeenRun",
+            &SolutionStatistics::hasFixedIntegerEnumerationFallbackBeenRun,
+            "Whether this has been done as a fallback when the objective gap could not be closed")
+        .def_readwrite("numberOfFixedIntegerEnumerationCombinations",
+            &SolutionStatistics::numberOfFixedIntegerEnumerationCombinations,
+            "The number of combinations of the discrete variables in the exhaustive search")
+        .def_readwrite("numberOfFixedIntegerEnumerationCombinationsFeasible",
+            &SolutionStatistics::numberOfFixedIntegerEnumerationCombinationsFeasible,
+            "The number of combinations whose NLP problem gave a solution")
+        .def_readwrite("numberOfFixedIntegerEnumerationCombinationsInfeasible",
+            &SolutionStatistics::numberOfFixedIntegerEnumerationCombinationsInfeasible,
+            "The number of combinations whose NLP problem was infeasible")
+        .def_readwrite("numberOfFixedIntegerEnumerationCombinationsUnresolved",
+            &SolutionStatistics::numberOfFixedIntegerEnumerationCombinationsUnresolved,
+            "The number of combinations whose NLP problem ended at a limit or with an error")
+        .def_readwrite("numberOfFixedIntegerEnumerationCombinationsSkipped",
+            &SolutionStatistics::numberOfFixedIntegerEnumerationCombinationsSkipped,
+            "The number of combinations not solved since they had been used in the fixed-integer strategy")
         .def_readwrite("numberOfHyperplanesWithConvexSource", &SolutionStatistics::numberOfHyperplanesWithConvexSource,
             "The number of cuts generated for convex functions")
         .def_readwrite("numberOfHyperplanesWithNonconvexSource",

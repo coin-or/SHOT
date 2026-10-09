@@ -188,10 +188,6 @@ public:
 
     std::unique_ptr<OutputStream> cplexOutputStream;
 
-private:
-    UserTerminationCallbackI* infoCallback;
-    bool callbacksInitialized = false;
-
 protected:
     IloEnv cplexEnv;
 

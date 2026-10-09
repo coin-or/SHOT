@@ -533,12 +533,17 @@ public:
     bool allNegative = false;
     bool allBilinear = false;
 
+    // Larger matrices are checked for convexity with sparse factorizations instead of their eigenvalues, which are
+    // then only computed if needed, by computeEigenvectors()
+    static constexpr int maximumSizeForDenseConvexityCheck = 100;
+
     Eigen::VectorXd eigenvalues;
 
     // Only computed on demand by computeEigenvectors(), since they are only needed by the eigenvalue decomposition
     Eigen::MatrixXd eigenvectors;
     bool eigenvectorsComputed = false;
-    Eigen::MatrixXd LDLMatrixL;
+    // Sparse, since a dense one takes O(n^2) memory, e.g., 50 GB for 80000 variables
+    Eigen::SparseMatrix<double> LDLMatrixL;
     VectorDouble LDLDiag;
     bool LDLFactorizationPerformed = false;
     bool LDLFactorizationSuccessful = false;
@@ -856,7 +861,11 @@ public:
         // The number of terms and the capacity are taken before the first term is added, so that adding the terms
         // to themselves neither reallocates the container being read nor reads the terms it has just added
         size_t numberOfTerms = terms.size();
-        (*this).reserve(size() + numberOfTerms);
+
+        // The capacity grows geometrically, as it does in push_back, since reserving the exact size in every call
+        // copies all terms each time and makes adding many small sets of terms quadratic
+        if(size() + numberOfTerms > (*this).capacity())
+            (*this).reserve(std::max(size() + numberOfTerms, 2 * (*this).capacity()));
 
         for(size_t i = 0; i < numberOfTerms; i++)
         {
@@ -959,92 +968,7 @@ public:
     inline double calculate(const VectorDouble& point) const { return pow(variable->calculate(point), power); }
 
     // Evaluates base^power over an interval. Shared by both evaluations below
-    inline Interval calculatePower(Interval base) const
-    {
-        if(power == 0.0)
-            return (Interval(1.0));
-
-        if(power == 1.0)
-            return (base);
-
-        double intpart;
-        bool isInteger = (std::modf(power, &intpart) == 0.0);
-        int integerValue = (int)round(intpart);
-        bool isEven = (integerValue % 2 == 0);
-
-        if(isInteger)
-        {
-            // An integer power is defined for a negative base as well, so a wholly negative domain needs no
-            // adjustment at all. Only a base containing zero is a problem, and then only for a negative power,
-            // where the expression grows without bound as the base approaches zero.
-            if(power < 0.0 && base.l() <= 0.0 && base.u() >= 0.0)
-            {
-                // Only the end nearest zero is unbounded, so a domain lying on one side of zero still has a
-                // bound on its other end, attained at the endpoint furthest from zero. A domain with values on
-                // both sides gives a disconnected range whose hull is everything.
-                if(base.l() == 0.0 && base.u() > 0.0)
-                    return (Interval(std::pow(base.u(), power), SHOT_DBL_MAX));
-
-                if(base.u() == 0.0 && base.l() < 0.0)
-                {
-                    double valueAtEndpoint = std::pow(base.l(), power);
-
-                    return (isEven ? Interval(valueAtEndpoint, SHOT_DBL_MAX) : Interval(SHOT_DBL_MIN, valueAtEndpoint));
-                }
-
-                return (Interval(SHOT_DBL_MIN, SHOT_DBL_MAX));
-            }
-        }
-        bool baseReachesZero = false;
-
-        if(!isInteger)
-        {
-            // A non-integer power has no real value for a negative base, so there is nothing to return if the
-            // domain is wholly negative, and the negative part is cut away otherwise.
-            if(base.u() < 0.0)
-                return (Interval(SHOT_DBL_MIN, SHOT_DBL_MAX));
-
-            // base^power grows without bound as the base approaches zero from above when the power is negative,
-            // but is still bounded at the upper end of the domain. Only the non-negative part of the domain
-            // contributes, so there is no real value at all if the domain does not extend above zero.
-            if(power < 0.0 && base.l() <= 0.0)
-            {
-                if(base.u() <= 0.0)
-                    return (Interval(SHOT_DBL_MIN, SHOT_DBL_MAX));
-
-                return (Interval(std::pow(base.u(), power), SHOT_DBL_MAX));
-            }
-
-            // The power is positive here, so the expression tends to zero as the base does. The base is still
-            // moved off zero before evaluating, since the interval library raises to a non-integer power via a
-            // logarithm and rejects a base reaching zero.
-            if(base.l() <= 0.0)
-            {
-                baseReachesZero = true;
-                base.l(SHOT_DBL_EPS);
-            }
-        }
-
-        Interval bounds;
-
-        try
-        {
-            bounds = isInteger ? pow(base, integerValue) : pow(base, power);
-        }
-        catch(const mc::Interval::Exceptions&)
-        {
-            return (Interval(SHOT_DBL_MIN, SHOT_DBL_MAX));
-        }
-
-        if(baseReachesZero)
-            bounds.l(0.0);
-
-        // An even integer power cannot be negative; guards against rounding in the interval library.
-        if(isInteger && isEven && bounds.l() < 0.0)
-            bounds.l(0.0);
-
-        return (bounds);
-    }
+    inline Interval calculatePower(Interval base) const { return (calculateIntervalPower(base, power)); }
 
     inline Interval calculate(const IntervalVector& intervalVector) const
     {
@@ -1055,8 +979,9 @@ public:
 
     inline bool tightenBounds(Interval bound)
     {
+        // x^0 is one for every x, so it gives no bound for x. It fixed x to one.
         if(power == 0.0)
-            return (variable->tightenBounds(Interval(1.0)));
+            return (false);
 
         if(power == 1.0)
             return (variable->tightenBounds(bound));
@@ -1104,11 +1029,11 @@ public:
         bool needsNonNegativeBase = (isInteger && isEven) || !isInteger;
 
         if(needsNonNegativeBase && bound.l() <= 0.0)
-            bound.l(!isInteger ? SHOT_DBL_SIG_MIN : 0.0);
+            bound.l(0.0);
 
         Interval interval;
 
-        if(needsNonNegativeBase && bound.l() < 0.0)
+        if(needsNonNegativeBase && bound.u() < 0.0)
             return (false);
 
         if(isInteger && power > 0)
@@ -1149,9 +1074,11 @@ public:
             return (variable->tightenBounds(Interval(std::min(lower, upper), std::max(lower, upper))));
         }
 
-        interval = pow(bound, 1.0 / power);
-
-        return (variable->tightenBounds(interval));
+        // A positive noninteger power of a nonnegative base. The roots are calculated directly, since the interval
+        // power function takes the logarithm of the bound, and the lower bound must not be moved away from zero:
+        // moving it to 1e-5 cut off small bases, e.g., x >= 0.0088 for x^2.435 (waternd_shamir).
+        return (variable->tightenBounds(Interval(std::pow(bound.l(), 1.0 / power),
+            (bound.u() >= SHOT_DBL_MAX) ? SHOT_DBL_MAX : std::pow(bound.u(), 1.0 / power))));
     }
 };
 
@@ -1471,7 +1398,11 @@ public:
         // The number of terms and the capacity are taken before the first term is added, so that adding the terms
         // to themselves neither reallocates the container being read nor reads the terms it has just added
         size_t numberOfTerms = terms.size();
-        (*this).reserve(size() + numberOfTerms);
+
+        // The capacity grows geometrically, as it does in push_back, since reserving the exact size in every call
+        // copies all terms each time and makes adding many small sets of terms quadratic
+        if(size() + numberOfTerms > (*this).capacity())
+            (*this).reserve(std::max(size() + numberOfTerms, 2 * (*this).capacity()));
 
         for(size_t i = 0; i < numberOfTerms; i++)
         {

@@ -11,10 +11,13 @@
 #pragma once
 #include "TaskBase.h"
 
+#include <functional>
 #include <map>
+#include <optional>
 #include <set>
 #include <string>
 #include <tuple>
+#include <unordered_map>
 
 #include "../Model/AuxiliaryVariables.h"
 #include "../Model/Constraints.h"
@@ -117,8 +120,12 @@ private:
     std::tuple<LinearTerms, MonomialTerms> reformulateMonomialSum(
         const MonomialTerms& monomialTerms, bool reversedSigns);
 
-    LinearTerms doEigenvalueDecomposition(QuadraticTerms& quadraticTerms);
-    LinearTerms doLDLDecomposition(QuadraticTerms& quadraticTerms);
+    // The largest number of variables in quadratic terms that are given an eigenvalue decomposition
+    static constexpr size_t maximumSizeForEigenvalueDecomposition = 2000;
+
+    // The terms replacing the quadratic terms, or none if the decomposition could not be calculated
+    std::optional<LinearTerms> doEigenvalueDecomposition(QuadraticTerms& quadraticTerms);
+    std::optional<LinearTerms> doLDLDecomposition(QuadraticTerms& quadraticTerms);
 
     // Adds the term value * y^2 of a decomposition with y given by the linear terms
     void addDecompositionComponent(const LinearTerms& componentTerms, double value,
@@ -136,6 +143,42 @@ private:
         VariablePtr firstVariable, VariablePtr secondVariable);
 
     std::pair<AuxiliaryVariablePtr, bool> getAbsoluteValueAuxiliaryVariable(std::shared_ptr<ExpressionAbs> source);
+
+    // The argument f of an absolute value, its auxiliary variable w and the constraints f - w <= 0 and -f - w <= 0
+    struct AbsoluteValueDefinition
+    {
+        AuxiliaryVariablePtr variable;
+        LinearTerms linearTerms;
+        QuadraticTerms quadraticTerms;
+        MonomialTerms monomialTerms;
+        SignomialTerms signomialTerms;
+        NonlinearExpressionPtr nonlinearExpression;
+        double constant = 0.0;
+        Interval argumentBounds;
+        std::vector<NumericConstraintPtr> definingConstraints;
+    };
+
+    std::vector<AbsoluteValueDefinition> absoluteValueDefinitions;
+
+    // The constraint argumentSign * f + variableCoefficient * w + binaryCoefficient * z <= valueRHS
+    NumericConstraintPtr createAbsoluteValueConstraint(const std::string& name,
+        const AbsoluteValueDefinition& definition, double argumentSign, double variableCoefficient,
+        VariablePtr binaryVariable, double binaryCoefficient, double valueRHS);
+
+    // Whether every occurrence of w outside its defining constraints has it bounded from above by the optimum
+    bool isAbsoluteValueBoundedFromAbove(const AbsoluteValueDefinition& definition);
+
+    // The results of isAbsoluteValueBoundedFromAbove by the index of w, since an absolute value in the argument of
+    // another depends on the result for that one. Cleared when the upper bounds are added.
+    std::map<int, bool> absoluteValueBoundedFromAbove;
+
+    // The coefficient of the variable in the constraint or objective, if it occurs, which is NaN if it occurs in a
+    // nonlinear term
+    std::optional<double> getLinearCoefficientOfVariable(const NumericConstraintPtr& constraint, int index);
+    std::optional<double> getLinearCoefficientOfVariableInObjective(int index);
+
+    // Adds w <= |f| for the absolute values that are not bounded from above
+    void addUpperBoundsOfAbsoluteValues();
 
     void createSquareReformulations();
     void createBilinearReformulations();
@@ -164,8 +207,16 @@ private:
     std::map<std::pair<VariablePtr, double>, AuxiliaryVariablePtr, VariableIndexComparator> squareAuxVariables;
     std::map<int, int> squareAuxVariableCounts; // The number of square auxiliary variables of each variable
 
-    std::map<std::tuple<VariablePtr, VariablePtr>, AuxiliaryVariablePtr, VariableIndexComparator>
-        bilinearAuxVariables;
+    struct BilinearKeyHash
+    {
+        size_t operator()(const std::pair<int, int>& key) const noexcept
+        {
+            size_t hash = std::hash<int> {}(key.first);
+            return hash * 1315423911U + std::hash<int> {}(key.second);
+        }
+    };
+
+    std::unordered_map<std::pair<int, int>, AuxiliaryVariablePtr, BilinearKeyHash> bilinearAuxVariables;
 
     std::map<std::string, AuxiliaryVariablePtr> absoluteExpressionsAuxVariables;
 
@@ -175,8 +226,19 @@ private:
     std::map<std::pair<double, std::vector<int>>, AuxiliaryVariablePtr> monomialAuxVariables;
     std::map<std::pair<bool, std::vector<std::pair<int, double>>>, AuxiliaryVariablePtr> signomialAuxVariables;
 
+    struct BinaryMonomialKeyHash
+    {
+        size_t operator()(const std::vector<int>& indexes) const noexcept
+        {
+            size_t hash = indexes.size();
+            for(int index : indexes)
+                hash = hash * 1315423911U + std::hash<int> {}(index);
+            return hash;
+        }
+    };
+
     // The auxiliary variables w = b1 * ... * bn of the products of binary variables, found by the variable indexes
-    std::map<std::vector<int>, AuxiliaryVariablePtr> binaryMonomialAuxVariables;
+    std::unordered_map<std::vector<int>, AuxiliaryVariablePtr, BinaryMonomialKeyHash> binaryMonomialAuxVariables;
 
     ProblemPtr reformulatedProblem;
 };
