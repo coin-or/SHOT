@@ -320,6 +320,7 @@ struct SolutionStatistics
 
     int numberOfPrimalReductionCutsUpdatesWithoutEffect = 0;
     int numberOfDualRepairsSinceLastPrimalUpdate = 0;
+    int numberOfCutResetsSinceLastPrimalUpdate = 0;
 
     int numberOfPrimalReductionsPerformed = 0;
     int numberOfSuccessfulDualRepairsPerformed = 0;

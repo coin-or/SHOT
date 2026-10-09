@@ -89,6 +89,14 @@ public:
     // reformulated problem has the objective variable itself, and its value is already in the point.
     bool hasObjectiveVariableOnlyInMIPSolver();
 
+    // The cuts of nonconvex constraints may cut off feasible solutions. A cut that a known primal solution violates is
+    // relaxed so that the solution fulfills it, and returns how many cuts were relaxed
+    int relaxCutsViolatedByPrimalSolutions();
+
+    // Removes the cuts of nonconvex constraints, so that the dual problem only consists of valid constraints and the
+    // cuts are generated anew, and returns how many source constraints the cuts were of
+    int removeCutsOfNonconvexConstraints();
+
     // Removes the bounds that have replaced missing bounds of the variables when the problem was read, in the problem,
     // the reformulated problem and the MIP solver. The dual bounds found so far may be too strong since they are
     // bounds for the problem with the artificial bounds, so they are reset.
@@ -110,6 +118,11 @@ private:
     // problem is not making progress
     int numberOfRepeatedHyperplanes = 0;
     bool repeatedHyperplaneWarningShown = false;
+
+    // The number of cuts of nonconvex constraints that all the primal solutions in checkedPrimalSolutionHashes have
+    // been checked against in relaxCutsViolatedByPrimalSolutions()
+    size_t numberOfCheckedRepairableCuts = 0;
+    std::vector<double> checkedPrimalSolutionHashes;
 
     // A dual bound that passes the primal bound by more than the tolerance is not valid for the problem, which is
     // worth a warning, but only the first time since the cause is the same for the following ones

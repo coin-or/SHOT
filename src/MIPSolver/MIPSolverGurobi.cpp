@@ -47,6 +47,7 @@ MIPSolverGurobi::~MIPSolverGurobi()
 bool MIPSolverGurobi::initializeProblem()
 {
     discreteVariablesActivated = true;
+    repairableCuts.clear();
 
     if(alreadyInitialized)
     {
@@ -958,7 +959,6 @@ bool MIPSolverGurobi::repairInfeasibility()
         auto feasModel = GRBModel(*gurobiModel);
 
         int numOrigConstraints = env->reformulatedProblem->properties.numberOfLinearConstraints;
-        int numOrigVariables = gurobiModel->get(GRB_IntAttr_NumVars);
         int numCurrConstraints = feasModel.get(GRB_IntAttr_NumConstrs);
 
         std::vector<GRBConstr> repairConstraints;
@@ -1050,15 +1050,31 @@ bool MIPSolverGurobi::repairInfeasibility()
 
         for(int i = 0; i < numConstraintsToRepairOrig; i++)
         {
-            auto variable = feasModel.getVar(numOrigVariables + i);
-            double slackValue = variable.get(GRB_DoubleAttr_X);
+            auto constraint = originalConstraints.at(i);
+            std::string name = constraint.get(GRB_StringAttr_ConstrName);
+            char sense = constraint.get(GRB_CharAttr_Sense);
 
-            if(slackValue == 0.0)
+            // feasRelax relaxes a <= constraint with the artificial variable ArtN_<name> and a >= constraint with
+            // ArtP_<name>, which are found by name
+            double slackValue = 0.0;
+
+            try
+            {
+                slackValue = feasModel.getVarByName((sense == GRB_GREATER_EQUAL ? "ArtP_" : "ArtN_") + name)
+                                 .get(GRB_DoubleAttr_X);
+            }
+            catch(GRBException&)
+            {
+                continue;
+            }
+
+            if(slackValue <= 0.0)
                 continue;
 
-            auto constraint = originalConstraints.at(i);
+            // A >= constraint, e.g. an integer cut, is relaxed by decreasing its right-hand side
             double oldRHS = constraint.get(GRB_DoubleAttr_RHS);
-            constraint.set(GRB_DoubleAttr_RHS, oldRHS + 1.5 * slackValue);
+            constraint.set(
+                GRB_DoubleAttr_RHS, sense == GRB_GREATER_EQUAL ? oldRHS - 1.5 * slackValue : oldRHS + 1.5 * slackValue);
 
             numRepairs++;
 
@@ -1518,4 +1534,34 @@ void GurobiCallbackMultiTree::callback()
         env->output->outputError("        Gurobi error when running main callback method");
     }
 }
+double MIPSolverGurobi::getConstraintUpperBound(int constraintIndex)
+{
+    try
+    {
+        return (gurobiModel->getConstr(constraintIndex).get(GRB_DoubleAttr_RHS));
+    }
+    catch(GRBException& e)
+    {
+        env->output->outputError("        Error when getting the upper bound of a constraint", e.getMessage());
+    }
+
+    return (SHOT_DBL_MAX);
+}
+
+bool MIPSolverGurobi::setConstraintUpperBound(int constraintIndex, double upperBound)
+{
+    try
+    {
+        gurobiModel->getConstr(constraintIndex).set(GRB_DoubleAttr_RHS, upperBound >= 1e20 ? GRB_INFINITY : upperBound);
+        gurobiModel->update();
+        return (true);
+    }
+    catch(GRBException& e)
+    {
+        env->output->outputError("        Error when setting the upper bound of a constraint", e.getMessage());
+    }
+
+    return (false);
+}
+
 } // namespace SHOT

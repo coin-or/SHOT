@@ -1875,9 +1875,15 @@ bool TestAuxiliaryVariablesOfMonomials()
 
             auto& primalPoint = env->results->primalSolution;
 
+            // A primal solution is accepted when it fulfills the linear constraints within the linear tolerance and
+            // the others within the nonlinear one
             for(auto& C : problem->numericConstraints)
             {
-                if(C->calculateNumericValue(primalPoint).error > 1e-6)
+                double tolerance = (C->properties.classification == E_ConstraintClassification::Linear)
+                    ? env->settings->getSetting<double>("Primal.Tolerance.LinearConstraint")
+                    : env->settings->getSetting<double>("Primal.Tolerance.NonlinearConstraint");
+
+                if(C->calculateNumericValue(primalPoint).error > tolerance)
                 {
                     std::cout << "The solution violates " << C->name << '\n';
                     passed = false;

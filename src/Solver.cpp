@@ -966,10 +966,18 @@ void Solver::initializeSettings()
         SHOT_DBL_MAX);
 
     env->settings->createSetting(
-        "Dual.MIP.InfeasibilityRepair.IntegerCuts", true, "Allow feasibility repair of integer cuts");
+        "Dual.MIP.InfeasibilityRepair.IntegerCuts", false, "Allow feasibility repair of integer cuts");
+
+    env->settings->createSetting("Dual.MIP.InfeasibilityRepair.CutResetLimit", 3,
+        "Max number of times the cuts of nonconvex constraints are removed without primal objective value improvement "
+        "when the infeasibility repair loops",
+        0, SHOT_INT_MAX);
 
     env->settings->createSetting("Dual.MIP.InfeasibilityRepair.IterationLimit", 100,
         "Max number of infeasible problems repaired without primal objective value improvement", 0, SHOT_INT_MAX);
+
+    env->settings->createSetting("Dual.MIP.InfeasibilityRepair.RelaxCutsViolatedByPrimal", true,
+        "Relax the cuts of nonconvex constraints that cut off a known primal solution");
 
     env->settings->createSetting(
         "Dual.MIP.InfeasibilityRepair.TimeLimit", 10.0, "Time limit when reparing infeasible problem", 0, SHOT_DBL_MAX);

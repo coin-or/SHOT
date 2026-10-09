@@ -1571,6 +1571,7 @@ void Results::setPrimalBound(double value, bool resetStagnationCounters)
         env->solutionStatistics.lastIterationWithSignificantPrimalUpdate = getNumberOfIterations() - 1;
         env->solutionStatistics.numberOfPrimalReductionCutsUpdatesWithoutEffect = 0;
         env->solutionStatistics.numberOfDualRepairsSinceLastPrimalUpdate = 0;
+        env->solutionStatistics.numberOfCutResetsSinceLastPrimalUpdate = 0;
     }
 }
 

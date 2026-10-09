@@ -80,6 +80,14 @@ public:
 
     virtual bool createHyperplane(HyperplanePtr hyperplane);
 
+    int relaxRepairableCutsViolatedByPoint(const VectorDouble& point, size_t firstCut);
+    VectorInteger removeRepairableCuts();
+    size_t getNumberOfRepairableCuts() { return (repairableCuts.size()); }
+
+    // The upper bound of a constraint; a value of at least 1e20 removes it
+    virtual double getConstraintUpperBound(int constraintIndex) = 0;
+    virtual bool setConstraintUpperBound(int constraintIndex, double upperBound) = 0;
+
     virtual bool createInteriorHyperplane(HyperplanePtr hyperplane);
 
     std::optional<std::pair<std::map<int, double>, double>> createHyperplaneTerms(HyperplanePtr hyperplane);
@@ -196,6 +204,17 @@ public:
 
     std::vector<int> integerCuts; // Contains the constraint indexes that are integerCuts
     std::vector<bool> allowRepairOfConstraint; // Whether to allow the added cuts to be relaxed
+
+    // A cut of a nonconvex constraint, sum(elements) <= upper bound, which may be relaxed or removed
+    struct RepairableCut
+    {
+        int constraintIndex;
+        std::map<int, double> elements;
+        int sourceConstraintIndex; // -1 for the objective function
+        bool isRemoved = false;
+    };
+
+    std::vector<RepairableCut> repairableCuts;
 
     int prevSolutionLimit = 1;
 
