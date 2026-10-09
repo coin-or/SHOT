@@ -294,6 +294,7 @@ bool ModelTestLargeQuadraticConvexity();
 bool ModelTestStartingPointAndInfiniteObjective();
 bool ModelTestPolishFromSeveralPoints();
 bool ModelTestNestedAbsoluteValues();
+bool ModelTestInteriorPointNotTrusted();
 
 int ModelTest(int argc, char* argv[])
 {
@@ -502,6 +503,9 @@ int ModelTest(int argc, char* argv[])
         break;
     case 63:
         passed = ModelTestNestedAbsoluteValues();
+        break;
+    case 64:
+        passed = ModelTestInteriorPointNotTrusted();
         break;
     default:
         passed = false;
@@ -10807,6 +10811,50 @@ bool ModelTestNestedAbsoluteValues()
 
         std::cout << "  " << cases[number].description << ": as expected.\n";
     }
+
+    return passed;
+}
+
+bool ModelTestInteriorPointNotTrusted()
+{
+    // When the minimax problem of the interior point search gives no usable point, a point moved toward the center of
+    // the variable bounds is used, which need not fulfill the linear constraints. It was posted as a primal candidate
+    // whose linear constraints were trusted, like those of a subsolver. In stockcycle (optimum 119948.7) with SHOT as
+    // the NLP solver, the center of the box (x = 79.5) violates sum x <= 300 in the nested solver, was returned as its
+    // solution with the objective 16468.6, and the dual bound was then set to that value. The bounds must enclose the
+    // optimum.
+
+    bool passed = true;
+
+#ifdef HAS_HIGHS
+    auto solver = std::make_unique<SHOT::Solver>();
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(SHOT::E_LogLevel::Error));
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(SHOT::ES_MIPSolver::Highs));
+    solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+    solver->updateSetting("Termination.TimeLimit", 10.0);
+    solver->updateSetting("Primal.FixedInteger.Solver", static_cast<int>(SHOT::ES_PrimalNLPSolver::SHOT));
+
+    if(!solver->setProblem("data/instances/MINLP-convex/stockcycle.osil") || !solver->solveProblem())
+    {
+        std::cout << "  FAILED: stockcycle could not be solved.\n";
+        return (false);
+    }
+
+    const double optimum = 119948.6888;
+    double primalBound = solver->getPrimalBound();
+    double dualBound = solver->getEnvironment()->results->getGlobalDualBound();
+
+    if(dualBound > optimum + 1e-3 * optimum || primalBound < optimum - 1e-3 * optimum)
+    {
+        std::cout << "  FAILED: stockcycle has the bounds [" << dualBound << ", " << primalBound
+                  << "], which do not enclose the optimum " << optimum << ".\n";
+        passed = false;
+    }
+    else
+    {
+        std::cout << "  stockcycle has the bounds [" << dualBound << ", " << primalBound << "].\n";
+    }
+#endif
 
     return passed;
 }
