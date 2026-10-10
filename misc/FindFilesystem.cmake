@@ -33,31 +33,26 @@ string(CONFIGURE [[
     }
 ]] code @ONLY)
 
-check_cxx_source_compiles("${code}" CAN_COMPILE_FS_WITHOUT_LINK)
+if(have_fs)
+    check_cxx_source_compiles("${code}" CAN_COMPILE_FS_WITHOUT_LINK)
 
-if(NOT CAN_COMPILE_FS_WITHOUT_LINK)
-    set(CMAKE_REQUIRED_FLAGS  "-std=c++17")
-    set(CMAKE_REQUIRED_LIBRARIES  stdc++fs)
-    check_cxx_source_compiles("${code}" CAN_COMPILE_FS_WITH_LINK)
+    if(NOT CAN_COMPILE_FS_WITHOUT_LINK)
+        set(CMAKE_REQUIRED_LIBRARIES stdc++fs)
+        check_cxx_source_compiles("${code}" CAN_COMPILE_FS_WITH_LINK)
+    endif()
 endif()
 
 cmake_pop_check_state()
 
-if(have_fs)
+if(have_fs AND (CAN_COMPILE_FS_WITHOUT_LINK OR CAN_COMPILE_FS_WITH_LINK))
     add_library(CXX::Filesystem INTERFACE IMPORTED)
-    set_property(TARGET CXX::Filesystem APPEND PROPERTY 
-        INTERFACE_COMPILE_DEFINITIONS FOO_BAR STD_FS_IS_EXPERIMENTAL=$<NOT:$<BOOL:${HAVE_STD_FILESYSTEM}>>)
-    if(CAN_COMPILE_FS_WITHOUT_LINK)
-        # Nothing to add...
-    elseif(CAN_COMPILE_FS_WITH_LINK)
-        set_property(TARGET CXX::Filesystem APPEND PROPERTY INTERFACE_LINK_LIBRARIES  -lstdc++fs)
-    else()
-        message(WARNING "Failed to link a filesystem library, although we found the headers...?")
+    if(NOT CAN_COMPILE_FS_WITHOUT_LINK)
+        target_link_libraries(CXX::Filesystem INTERFACE stdc++fs)
     endif()
     set(Filesystem_FOUND TRUE CACHE BOOL "" FORCE)
 else()
     set(Filesystem_FOUND FALSE CACHE BOOL "" FORCE)
     if(Filesystem_FIND_REQUIRED)
-        message(FATAL_ERROR "No C++ support for std::filesystem")
+        message(FATAL_ERROR "No linkable C++17 filesystem implementation found (also tried stdc++fs).")
     endif()
 endif()

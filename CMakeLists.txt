@@ -109,11 +109,6 @@ file(TO_CMAKE_PATH "${GUROBI_DIR}" ${GUROBI_DIR})
 file(TO_CMAKE_PATH "${HIGHS_EXTERNAL_DIR}" ${HIGHS_EXTERNAL_DIR})
 file(TO_CMAKE_PATH "${IPOPT_DIR}" ${IPOPT_DIR})
 
-# Check if a MIP solver is defined
-if(NOT (HAS_CPLEX OR HAS_GUROBI OR HAS_CBC OR HAS_HIGHS))
-    message(FATAL_ERROR "No MIP solver defined. SHOT needs at least one!")
-endif()
-
 # Try to find Git (used to get the hash shown by the console program)
 find_program(GIT git)
 
@@ -368,6 +363,12 @@ if(HAS_HIGHS AND USE_EXTERNAL_HIGHS)
         set(DUAL_SOURCES ${DUAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverHighs.cpp")
         set(DUAL_HEADERS ${DUAL_HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverHighs.h")
     endif()
+endif()
+
+# Check the backends that were actually found, after optional solvers may
+# have been disabled by their discovery steps.
+if(NOT (HAS_CPLEX OR HAS_GUROBI OR HAS_CBC OR HAS_HIGHS))
+    message(FATAL_ERROR "No MIP solver available. Enable HiGHS or install Cbc, CPLEX, or Gurobi.")
 endif()
 
 # Ipopt
@@ -1023,8 +1024,8 @@ target_link_libraries(SHOTSolver SHOTSolutionStrategies)
 # Link CppAD library
 target_link_libraries(SHOTSolver ${CPPAD_LIBRARY})
 
-# Link the standard library required for std::filesystem (if needed)
-#target_link_libraries(SHOTSolver CXX::Filesystem)
+# Link stdc++fs on toolchains that need it, including consumers of SHOTSolver.
+target_link_libraries(SHOTSolver CXX::Filesystem)
 
 # Generates the SHOT executable
 if(GENERATE_EXE)
