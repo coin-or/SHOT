@@ -266,18 +266,10 @@ endforeach()
 set_property(GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS ON)
 set(Boost_USE_STATIC_LIBS OFF)
 
-if(HAS_CPLEX) # To make CPLEX build
-  add_definitions(-DIL_STD)
-  add_definitions(-LDFLAGS="-Wl,--no-as-needed")
-endif(HAS_CPLEX)
-
-# nlohmann/json header-only library for InstanceTest
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../ThirdParty)
-
 # Creates the test executable
 create_test_sourcelist(srclist test_runner.cpp ${cpptestsrc})
 add_executable(${TEST_EXE_NAME} ${srclist})
-target_link_libraries(${TEST_EXE_NAME} ${libs})
+target_link_libraries(${TEST_EXE_NAME} ${libs} SHOTBuildSettings)
 
 target_include_directories(${TEST_EXE_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../ThirdParty)
@@ -309,9 +301,6 @@ if(HAS_CPLEX)
     message("   ${CPLEX_INCLUDE_DIR}")
     message("   ${CPLEX_CONCERT_INCLUDE_DIR}")
     message("   ${CPLEX_ILOCPLEX_INCLUDE_DIR}")
-    include_directories(SYSTEM "${CPLEX_INCLUDE_DIR}")
-    include_directories(SYSTEM "${CPLEX_CONCERT_INCLUDE_DIR}")
-    include_directories(SYSTEM "${CPLEX_ILOCPLEX_INCLUDE_DIR}")
 
     message("-- The following CPLEX libraries will be used:")
     if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -339,7 +328,6 @@ if(HAS_GUROBI)
     message("-- Gurobi libraries could not be found!")
   else()
     message("-- Gurobi include files will be used from: ${GUROBI_INCLUDE_DIR}")
-    include_directories(SYSTEM "${GUROBI_INCLUDE_DIR}")
 
     message("-- The following Gurobi libraries will be used:")
     if(CMAKE_BUILD_TYPE STREQUAL "Debug")
