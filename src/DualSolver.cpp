@@ -658,4 +658,67 @@ bool DualSolver::isDualProblemExact()
             <= E_ObjectiveFunctionClassification::Quadratic);
 }
 
+int DualSolver::relaxCutsViolatedByPrimalSolutions()
+{
+    if(isSingleTree || !env->settings->getSetting<bool>("Dual.MIP.InfeasibilityRepair.RelaxCutsViolatedByPrimal"))
+        return (0);
+
+    size_t numberOfCuts = MIPSolver->getNumberOfRepairableCuts();
+
+    double objectiveSignFactor
+        = (env->reformulatedProblem->objectiveFunction->direction == env->problem->objectiveFunction->direction) ? 1.0
+                                                                                                                 : -1.0;
+
+    // Not all solutions are in the pool any longer, so only those that are are kept
+    std::vector<double> primalSolutionHashes;
+    int numberOfRelaxedCuts = 0;
+
+    for(auto& S : env->results->primalSolutions)
+    {
+        double hash = Utilities::calculateHash(S.point);
+        primalSolutionHashes.push_back(hash);
+
+        // A solution checked before is only checked against the cuts added since
+        bool isChecked = std::find(checkedPrimalSolutionHashes.begin(), checkedPrimalSolutionHashes.end(), hash)
+            != checkedPrimalSolutionHashes.end();
+        size_t firstCut = isChecked ? numberOfCheckedRepairableCuts : 0;
+
+        if(firstCut >= numberOfCuts)
+            continue;
+
+        VectorDouble point = S.point;
+
+        if((int)point.size() < env->reformulatedProblem->properties.numberOfVariables)
+            env->reformulatedProblem->augmentAuxiliaryVariableValues(point);
+
+        // The objective variable of the MIP solver has the value of the reformulated objective function, whose
+        // direction may differ from that of the original problem
+        if(hasObjectiveVariableOnlyInMIPSolver())
+            point.push_back(objectiveSignFactor * S.objValue);
+
+        numberOfRelaxedCuts += MIPSolver->relaxRepairableCutsViolatedByPoint(point, firstCut);
+    }
+
+    checkedPrimalSolutionHashes = primalSolutionHashes;
+    numberOfCheckedRepairableCuts = numberOfCuts;
+
+    if(numberOfRelaxedCuts > 0)
+        env->output->outputDebug(
+            fmt::format("        {} cuts of nonconvex constraints relaxed, since primal solutions violate them.",
+                numberOfRelaxedCuts));
+
+    return (numberOfRelaxedCuts);
+}
+
+int DualSolver::removeCutsOfNonconvexConstraints()
+{
+    auto sourceConstraintIndexes = MIPSolver->removeRepairableCuts();
+
+    // The cuts can then be generated again in the same points
+    for(auto& I : sourceConstraintIndexes)
+        generatedHyperplaneHashes.erase(I);
+
+    return ((int)sourceConstraintIndexes.size());
+}
+
 } // namespace SHOT

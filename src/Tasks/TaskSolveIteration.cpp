@@ -70,6 +70,8 @@ void TaskSolveIteration::run()
         ? 1.0
         : -1.0;
 
+    env->dualSolver->relaxCutsViolatedByPrimalSolutions();
+
     // Sets the iteration time limit
     auto timeLim = env->settings->getSetting<double>("Termination.TimeLimit") - env->timing->getElapsedTime("Total");
     env->dualSolver->MIPSolver->setTimeLimit(timeLim);

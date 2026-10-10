@@ -141,6 +141,7 @@ MIPSolverHighs::~MIPSolverHighs() = default;
 bool MIPSolverHighs::initializeProblem()
 {
     discreteVariablesActivated = true;
+    repairableCuts.clear();
 
     aMatrixStart.push_back(0);
 
@@ -1556,4 +1557,18 @@ std::string MIPSolverHighs::getSolverVersion()
 {
     return (fmt::format("{}.{}.{}", HIGHS_VERSION_MAJOR, HIGHS_VERSION_MINOR, HIGHS_VERSION_PATCH));
 }
+double MIPSolverHighs::getConstraintUpperBound(int constraintIndex)
+{
+    return (highsInstance.getLp().row_upper_[constraintIndex]);
+}
+
+bool MIPSolverHighs::setConstraintUpperBound(int constraintIndex, double upperBound)
+{
+    double lowerBound = highsInstance.getLp().row_lower_[constraintIndex];
+
+    return (highsInstance.changeRowBounds(
+                constraintIndex, lowerBound, upperBound >= 1e20 ? highsInstance.getInfinity() : upperBound)
+        == HighsStatus::kOk);
+}
+
 } // namespace SHOT

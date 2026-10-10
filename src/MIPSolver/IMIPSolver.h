@@ -118,6 +118,14 @@ public:
     virtual bool createInteriorHyperplane(HyperplanePtr hyperplane) = 0;
     virtual bool createIntegerCut(IntegerCut& integerCut) = 0;
 
+    // The cuts of nonconvex constraints are not valid in general, and may be relaxed. Relaxes those from the cut with
+    // index firstCut on that the point violates, so that the point fulfills them, and returns how many were relaxed
+    virtual int relaxRepairableCutsViolatedByPoint(const VectorDouble& point, size_t firstCut) = 0;
+    // Removes all the cuts that may be relaxed, and returns the indexes of their source constraints, where the
+    // objective function is -1
+    virtual VectorInteger removeRepairableCuts() = 0;
+    virtual size_t getNumberOfRepairableCuts() = 0;
+
     virtual std::optional<std::pair<std::map<int, double>, double>> createHyperplaneTerms(HyperplanePtr hyperplane) = 0;
 
     virtual bool supportsQuadraticObjective() = 0;

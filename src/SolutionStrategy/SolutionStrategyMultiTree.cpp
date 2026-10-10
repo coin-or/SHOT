@@ -251,7 +251,14 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
         = std::make_shared<TaskCheckMaxNumberOfPrimalReductionCuts>(env, "FinalizeSolution");
     env->tasks->addTask(tCheckMaxNumberOfObjectiveCuts, "CheckMaxObjectiveCuts");
 
-    if(env->settings->getSetting<bool>("Primal.FixedInteger.Use") && env->reformulatedProblem->properties.isDiscrete)
+    // A nonconvex problem without discrete variables otherwise only gets primal solutions from the final polish, which
+    // is not reached when the time limit ends the search, so the NLP problem is also solved from its dual solutions
+    bool useFixedNLPOnContinuousProblem = !env->reformulatedProblem->properties.isDiscrete
+        && env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex
+        && env->settings->getSetting<bool>("Primal.FixedInteger.UseOnContinuousProblems");
+
+    if(env->settings->getSetting<bool>("Primal.FixedInteger.Use")
+        && (env->reformulatedProblem->properties.isDiscrete || useFixedNLPOnContinuousProblem))
     {
         auto tSelectPrimFixedNLPSolPool = std::make_shared<TaskSelectPrimalFixedNLPPointsFromSolutionPool>(env);
         env->tasks->addTask(tSelectPrimFixedNLPSolPool, "SelectPrimFixedNLPSolPool");

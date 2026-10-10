@@ -461,17 +461,8 @@ void NonlinearConstraint::add(QuadraticTermPtr term) { QuadraticConstraint::add(
 
 void NonlinearConstraint::add(const MonomialTerms& terms)
 {
-    if(monomialTerms.size() == 0)
-    {
-        monomialTerms = terms;
-    }
-    else
-    {
-        for(auto& T : terms)
-        {
-            add(T);
-        }
-    }
+    // Merges the terms with the terms of the same factors, also the terms given with each other
+    monomialTerms.add(terms);
 
     properties.hasMonomialTerms = true;
     properties.classification = E_ConstraintClassification::Nonlinear;
@@ -486,17 +477,8 @@ void NonlinearConstraint::add(MonomialTermPtr term)
 
 void NonlinearConstraint::add(const SignomialTerms& terms)
 {
-    if(signomialTerms.size() == 0)
-    {
-        signomialTerms = terms;
-    }
-    else
-    {
-        for(auto& T : terms)
-        {
-            add(T);
-        }
-    }
+    // Merges the terms with the terms of the same factors, also the terms given with each other
+    signomialTerms.add(terms);
 
     properties.hasSignomialTerms = true;
     properties.classification = E_ConstraintClassification::Nonlinear;
@@ -772,9 +754,12 @@ bool NonlinearConstraint::isHessianCalculatedDensely()
     if(!nonlinearHessianSparsityMapGenerated)
         initializeHessianSparsityPattern();
 
-    size_t dimension = sharedOwnerProblem->properties.numberOfVariablesInNonlinearExpressions;
+    // The density is relative to the variables of this nonlinear expression, not of all of them in the problem, since a
+    // dense Hessian of a part of the variables would otherwise be colored, which can take minutes
+    size_t numberOfVariables = variablesInNonlinearExpression.size();
 
-    return (dimension >= 64 && nonlinearHessianSparsityPattern.nnz() > dimension * dimension / 2);
+    return (
+        numberOfVariables >= 64 && nonlinearHessianSparsityPattern.nnz() > numberOfVariables * numberOfVariables / 2);
 }
 
 SparseVariableMatrix NonlinearConstraint::calculateHessian(const VectorDouble& point, bool eraseZeroes = true)

@@ -99,6 +99,18 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
         callNLPSolver = true;
         useFeasibleSolutionExtra = true;
     }
+    else if(!env->reformulatedProblem->properties.isDiscrete)
+    {
+        // Without discrete variables the dual problems are LP problems, solved to optimality in every iteration, so
+        // the NLP problem is solved the first time there is a dual solution and then with the iteration and time
+        // frequencies, instead of after every dual problem
+        if(env->solutionStatistics.timeLastFixedNLPCall == 0.0
+            || env->solutionStatistics.numberOfIterationsWithoutNLPCallMIP
+                >= env->settings->getSetting<int>("Primal.FixedInteger.Frequency.Iteration")
+            || env->timing->getElapsedTime("Total") - env->solutionStatistics.timeLastFixedNLPCall
+                > env->settings->getSetting<double>("Primal.FixedInteger.Frequency.Time"))
+            callNLPSolver = true;
+    }
     else if(currIter->solutionStatus == E_ProblemSolutionStatus::Optimal
         && std::abs(allSolutions.at(0).objectiveValue - env->results->getCurrentDualBound())
                 / ((1e-10) + std::abs(dualBound))

@@ -221,9 +221,9 @@ private:
     std::map<std::string, AuxiliaryVariablePtr> absoluteExpressionsAuxVariables;
 
     // The auxiliary variables w >= f(x) or w >= -f(x) of the partitioned terms, found by whether the sign is positive
-    // and a key of the term built from the indexes of its variables, or by the coefficient of a monomial
+    // and a key of the term built from the indexes of its variables
     std::map<std::pair<bool, std::string>, AuxiliaryVariablePtr> nonlinearExpressionAuxVariables;
-    std::map<std::pair<double, std::vector<int>>, AuxiliaryVariablePtr> monomialAuxVariables;
+    std::map<std::pair<bool, std::vector<int>>, AuxiliaryVariablePtr> monomialAuxVariables;
     std::map<std::pair<bool, std::vector<std::pair<int, double>>>, AuxiliaryVariablePtr> signomialAuxVariables;
 
     struct BinaryMonomialKeyHash

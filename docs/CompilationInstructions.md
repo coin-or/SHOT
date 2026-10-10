@@ -118,6 +118,34 @@ locates the HiGHS library and its headers independently. On macOS, a Homebrew
 GCC also needs `-DCMAKE_SHARED_LINKER_FLAGS=-L$(brew --prefix gcc)/lib/gcc/current`
 so that the linker finds `libgfortran`.
 
+**Uno with MUMPS and Ipopt in the same build.** When MUMPS (or BQPD) is given to
+Uno as static archives, a shared `libuno` exports all their symbols. Ipopt
+usually has its own MUMPS, and the MUMPS libraries of e.g. Homebrew's Ipopt
+leave most of their symbols to be looked up in all loaded libraries at runtime.
+Since SHOT loads `libuno` before them, Ipopt's MUMPS then calls into Uno's copy,
+which is another MUMPS version. This crashes Ipopt on larger NLPs, either with a
+segmentation fault in `mumps_ginp94_elim_tree_` or with
+`Internal error 3 in DMUMPS_ANA_DRIVER` and `MPI_ABORT called`, after which SHOT
+exits without a result. Build Uno so that it does not export the symbols of the
+archives:
+
+```bash
+# macOS: list the symbols of the archives and leave them out of libuno's exports
+nm -gUj <MUMPS and BQPD archives> | grep -v -E ':$|^$' | sort -u > hidden-symbols.txt
+cmake ... "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-unexported_symbols_list,$PWD/hidden-symbols.txt"
+
+# Linux (GNU ld): hide the symbols of all static archives
+cmake ... "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,--exclude-libs,ALL"
+```
+
+where the archives are e.g. `libdmumps.a`, `libmumps_common.a`, `libmpiseq.a`,
+`libpord.a` and `libbqpd.a`, and the flags are added to any other linker flags,
+such as the `-L` for `libgfortran` above. Uno's own symbols, including its
+`uno::MUMPSSolver`, stay exported, and `nm -gUj libuno.dylib | grep -c dmumps`
+should then print 0. On macOS, SHOT also links Ipopt's MUMPS libraries before
+`libuno` when it finds them next to Ipopt, which avoids the crash with a `libuno`
+built without these flags.
+
 ### macOS (Homebrew)
 
 ```bash

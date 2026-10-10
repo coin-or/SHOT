@@ -608,7 +608,9 @@ PrimalFixedNLPCandidate PrimalSolver::createFixedNLPCandidate(
 
     PairDouble pointHashes;
 
-    if(env->settings->getSetting<bool>("Primal.FixedInteger.OnlyUniqueIntegerCombinations"))
+    // Without discrete variables, every point would have the same integer combination
+    if(env->settings->getSetting<bool>("Primal.FixedInteger.OnlyUniqueIntegerCombinations")
+        && !discreteVariableValues.empty())
     {
         pointHashes = Utilities::calculateHashes(discreteVariableValues);
     }

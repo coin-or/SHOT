@@ -491,18 +491,9 @@ std::ostream& QuadraticObjectiveFunction::print(std::ostream& stream) const
 
 void NonlinearObjectiveFunction::add(const MonomialTerms& terms)
 {
-    if(monomialTerms.size() == 0)
-    {
-        monomialTerms = terms;
-        properties.isValid = false;
-    }
-    else
-    {
-        for(auto& T : terms)
-        {
-            add(T);
-        }
-    }
+    // Merges the terms with the terms of the same factors, also the terms given with each other
+    monomialTerms.add(terms);
+    properties.isValid = false;
 }
 
 void NonlinearObjectiveFunction::add(MonomialTermPtr term)
@@ -513,18 +504,9 @@ void NonlinearObjectiveFunction::add(MonomialTermPtr term)
 
 void NonlinearObjectiveFunction::add(const SignomialTerms& terms)
 {
-    if(signomialTerms.size() == 0)
-    {
-        signomialTerms = terms;
-        properties.isValid = false;
-    }
-    else
-    {
-        for(auto& T : terms)
-        {
-            add(T);
-        }
-    }
+    // Merges the terms with the terms of the same factors, also the terms given with each other
+    signomialTerms.add(terms);
+    properties.isValid = false;
 }
 
 void NonlinearObjectiveFunction::add(SignomialTermPtr term)
@@ -892,9 +874,12 @@ bool NonlinearObjectiveFunction::isHessianCalculatedDensely()
     if(!nonlinearHessianSparsityMapGenerated)
         initializeHessianSparsityPattern();
 
-    size_t dimension = sharedOwnerProblem->properties.numberOfVariablesInNonlinearExpressions;
+    // The density is relative to the variables of this nonlinear expression, not of all of them in the problem, since a
+    // dense Hessian of a part of the variables would otherwise be colored, which can take minutes
+    size_t numberOfVariables = variablesInNonlinearExpression.size();
 
-    return (dimension >= 64 && nonlinearHessianSparsityPattern.nnz() > dimension * dimension / 2);
+    return (
+        numberOfVariables >= 64 && nonlinearHessianSparsityPattern.nnz() > numberOfVariables * numberOfVariables / 2);
 }
 
 SparseVariableMatrix NonlinearObjectiveFunction::calculateHessian(const VectorDouble& point, bool eraseZeroes = true)

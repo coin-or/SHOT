@@ -295,6 +295,8 @@ bool ModelTestStartingPointAndInfiniteObjective();
 bool ModelTestPolishFromSeveralPoints();
 bool ModelTestNestedAbsoluteValues();
 bool ModelTestInteriorPointNotTrusted();
+bool ModelTestMergedMonomialsAndSignomials();
+bool ModelTestProductTermDerivatives();
 
 int ModelTest(int argc, char* argv[])
 {
@@ -506,6 +508,12 @@ int ModelTest(int argc, char* argv[])
         break;
     case 64:
         passed = ModelTestInteriorPointNotTrusted();
+        break;
+    case 65:
+        passed = ModelTestMergedMonomialsAndSignomials();
+        break;
+    case 66:
+        passed = ModelTestProductTermDerivatives();
         break;
     default:
         passed = false;
@@ -8615,14 +8623,14 @@ bool ModelTestBulkTermAdding()
         passed = false;
     }
 
-    // The monomial and signomial terms are not merged, so the terms are repeated instead
+    // The monomial and signomial terms are merged as well
     MonomialTerms selfAddedMonomials(
         std::vector<MonomialTermPtr> { std::make_shared<MonomialTerm>(1.0, Variables({ x0, x1 })),
             std::make_shared<MonomialTerm>(2.0, Variables({ x2 })) });
     selfAddedMonomials.add(selfAddedMonomials);
 
-    if(selfAddedMonomials.size() != 4 || selfAddedMonomials[2]->coefficient != 1.0
-        || selfAddedMonomials[3]->coefficient != 2.0)
+    if(selfAddedMonomials.size() != 2 || selfAddedMonomials[0]->coefficient != 2.0
+        || selfAddedMonomials[1]->coefficient != 4.0)
     {
         std::cout << "  FAILED: adding the monomial terms to themselves gave " << selfAddedMonomials.size()
                   << " terms.\n";
@@ -10855,6 +10863,336 @@ bool ModelTestInteriorPointNotTrusted()
         std::cout << "  stockcycle has the bounds [" << dualBound << ", " << primalBound << "].\n";
     }
 #endif
+
+    return passed;
+}
+
+bool ModelTestMergedMonomialsAndSignomials()
+{
+    // The monomial and signomial terms extracted from a nonlinear expression are merged when they have the same
+    // factors, in any order, and a term whose coefficient becomes zero is removed. A monomial term is nonconvex
+    // whatever its coefficient, so x1*x2*x3 - x3*x2*x1 kept the constraint nonlinear and nonconvex, and the
+    // reformulation gave each of the two terms an auxiliary variable of its own.
+
+    bool passed = true;
+
+    auto solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+    auto problem = std::make_shared<Problem>(env);
+
+    auto x1 = std::make_shared<Variable>("x1", E_VariableType::Real, 0.5, 2.0);
+    auto x2 = std::make_shared<Variable>("x2", E_VariableType::Real, 0.5, 2.0);
+    auto x3 = std::make_shared<Variable>("x3", E_VariableType::Real, 0.5, 2.0);
+    auto x4 = std::make_shared<Variable>("x4", E_VariableType::Real, 0.5, 2.0);
+    auto y = std::make_shared<Variable>("y", E_VariableType::Real, -1.0, 1.0);
+    auto b = std::make_shared<Variable>("b", E_VariableType::Binary, 0.0, 1.0);
+    problem->add(Variables({ x1, x2, x3, x4, y, b }));
+
+    auto variable = [](VariablePtr V) { return (std::make_shared<ExpressionVariable>(V)); };
+    auto constant = [](double value) { return (std::make_shared<ExpressionConstant>(value)); };
+
+    auto product = [&](double coefficient, Variables variables)
+    {
+        NonlinearExpressions children { constant(coefficient) };
+
+        for(auto& V : variables)
+            children.push_back(variable(V));
+
+        return (std::make_shared<ExpressionProduct>(children));
+    };
+
+    auto power = [&](VariablePtr V, double exponent)
+    { return (std::make_shared<ExpressionPower>(variable(V), constant(exponent))); };
+
+    // In x1*x2*x3 - x3*x2*x1 + 2*x1*x2*x4 - 2*x4*x1*x2 + x1 all the monomial terms cancel, and in
+    // x1*x2*x3 + 2*x3*x1*x2 + x1*x2*x4 the first two are merged
+    auto cancelled = std::make_shared<NonlinearConstraint>("cancelled", SHOT_DBL_MIN, 4.0);
+    cancelled->add(std::make_shared<ExpressionSum>(NonlinearExpressions { product(1.0, { x1, x2, x3 }),
+        product(-1.0, { x3, x2, x1 }), product(2.0, { x1, x2, x4 }), product(-2.0, { x4, x1, x2 }), variable(x1) }));
+    problem->add(cancelled);
+
+    auto merged = std::make_shared<NonlinearConstraint>("merged", SHOT_DBL_MIN, 4.0);
+    merged->add(std::make_shared<ExpressionSum>(NonlinearExpressions {
+        product(1.0, { x1, x2, x3 }), product(2.0, { x3, x1, x2 }), product(1.0, { x1, x2, x4 }) }));
+    problem->add(merged);
+
+    // x1^0.5*x2^1.5 - x2^1.5*x1^0.5 cancels, while x1^1.5*x2^0.5 and x1^0.5*x3^1.5 share variables with it but are
+    // other terms
+    auto signomials = std::make_shared<NonlinearConstraint>("signomials", SHOT_DBL_MIN, 4.0);
+    signomials->add(std::make_shared<ExpressionSum>(
+        NonlinearExpressions { std::make_shared<ExpressionProduct>(power(x1, 0.5), power(x2, 1.5)),
+            std::make_shared<ExpressionProduct>(
+                constant(-1.0), std::make_shared<ExpressionProduct>(power(x2, 1.5), power(x1, 0.5))),
+            std::make_shared<ExpressionProduct>(power(x1, 1.5), power(x2, 0.5)),
+            std::make_shared<ExpressionProduct>(power(x1, 0.5), power(x3, 1.5)) }));
+    problem->add(signomials);
+
+    // A repeated variable is a power: x1*x1*y + y*x1*x1 is the signomial term 2*x1^2*y, also with y negative, and
+    // x1*x1*x1 is x1^3. A binary variable is its own power, so b*b*x3*x4 is the monomial term b*x3*x4.
+    auto repeated = std::make_shared<NonlinearConstraint>("repeated", SHOT_DBL_MIN, 4.0);
+    repeated->add(std::make_shared<ExpressionSum>(NonlinearExpressions { product(1.0, { x1, x1, y }),
+        product(1.0, { y, x1, x1 }), product(1.0, { b, b, x3, x4 }), product(1.0, { x1, x1, x1 }) }));
+    problem->add(repeated);
+
+    // The powers of the same variable are added: x1^0.5*x1^-0.5*x2^1.5 is x2^1.5, and x3^0.5*x3^1.5 is the
+    // quadratic term x3^2
+    auto powers = std::make_shared<NonlinearConstraint>("powers", SHOT_DBL_MIN, 4.0);
+    powers->add(std::make_shared<ExpressionSum>(NonlinearExpressions {
+        std::make_shared<ExpressionProduct>(NonlinearExpressions { power(x1, 0.5), power(x1, -0.5), power(x2, 1.5) }),
+        std::make_shared<ExpressionProduct>(power(x3, 0.5), power(x3, 1.5)), variable(x4) }));
+    problem->add(powers);
+
+    // Terms the constraint already has are merged with the terms extracted from its nonlinear expression, so that a
+    // constraint is linear also when the terms only cancel each other then: x1*x2*x3 is a monomial term of the
+    // constraint, and -x1*x2*x3 is in its nonlinear expression
+    auto acrossExtractions = std::make_shared<NonlinearConstraint>("acrossextractions", SHOT_DBL_MIN, 4.0);
+    acrossExtractions->add(std::make_shared<MonomialTerm>(1.0, Variables({ x1, x2, x3 })));
+    acrossExtractions->add(std::make_shared<LinearTerm>(1.0, x4));
+    acrossExtractions->add(product(-1.0, { x3, x2, x1 }));
+    problem->add(acrossExtractions);
+
+    // An objective function where all the nonlinear terms cancel is linear
+    auto objective = std::make_shared<NonlinearObjectiveFunction>();
+    objective->direction = E_ObjectiveFunctionDirection::Minimize;
+    objective->add(std::make_shared<ExpressionSum>(
+        NonlinearExpressions { product(3.0, { x2, x3, x4 }), product(-3.0, { x4, x3, x2 }), variable(x4) }));
+    problem->add(objective);
+
+    problem->finalize();
+
+    auto getConstraint = [&problem](const std::string& name)
+    {
+        for(auto& C : problem->numericConstraints)
+            if(C->name == name)
+                return (C);
+
+        return (NumericConstraintPtr());
+    };
+
+    auto cancelledAfter = getConstraint("cancelled");
+
+    if(std::dynamic_pointer_cast<NonlinearConstraint>(cancelledAfter)
+        || !std::dynamic_pointer_cast<LinearConstraint>(cancelledAfter))
+    {
+        std::cout << "  FAILED: the constraint whose monomial terms cancel should be linear.\n";
+        passed = false;
+    }
+
+    auto mergedAfter = std::dynamic_pointer_cast<NonlinearConstraint>(getConstraint("merged"));
+
+    if(!mergedAfter || mergedAfter->monomialTerms.size() != 2)
+    {
+        std::cout << "  FAILED: x1*x2*x3 + 2*x3*x1*x2 + x1*x2*x4 should have two monomial terms, it has "
+                  << (mergedAfter ? (int)mergedAfter->monomialTerms.size() : -1) << ".\n";
+        passed = false;
+    }
+    else
+    {
+        for(auto& T : mergedAfter->monomialTerms)
+            std::cout << " " << T;
+
+        std::cout << "\n";
+
+        if(mergedAfter->monomialTerms[0]->coefficient != 3.0 || mergedAfter->monomialTerms[1]->coefficient != 1.0)
+        {
+            std::cout << "  FAILED: the merged monomial term should have the coefficient 3.\n";
+            passed = false;
+        }
+    }
+
+    auto signomialsAfter = std::dynamic_pointer_cast<NonlinearConstraint>(getConstraint("signomials"));
+
+    if(!signomialsAfter || signomialsAfter->signomialTerms.size() != 2)
+    {
+        std::cout << "  FAILED: the signomial constraint should have two signomial terms, it has "
+                  << (signomialsAfter ? (int)signomialsAfter->signomialTerms.size() : -1) << ".\n";
+        passed = false;
+    }
+    else
+    {
+        for(auto& T : signomialsAfter->signomialTerms)
+            std::cout << " " << T;
+
+        std::cout << "\n";
+    }
+
+    auto repeatedAfter = std::dynamic_pointer_cast<NonlinearConstraint>(getConstraint("repeated"));
+
+    if(!repeatedAfter || repeatedAfter->monomialTerms.size() != 1 || repeatedAfter->signomialTerms.size() != 2)
+    {
+        std::cout << "  FAILED: x1*x1*y + y*x1*x1 + b*b*x3*x4 + x1*x1*x1 should have one monomial and two signomial "
+                  << "terms.\n";
+        passed = false;
+    }
+    else
+    {
+        std::cout << " " << repeatedAfter->monomialTerms[0];
+
+        for(auto& T : repeatedAfter->signomialTerms)
+            std::cout << " " << T;
+
+        std::cout << "\n";
+
+        auto& firstSignomial = repeatedAfter->signomialTerms[0];
+
+        if(repeatedAfter->monomialTerms[0]->variables.size() != 3 || firstSignomial->coefficient != 2.0
+            || firstSignomial->elements.size() != 2 || repeatedAfter->signomialTerms[1]->elements.size() != 1
+            || repeatedAfter->signomialTerms[1]->elements[0]->power != 3.0)
+        {
+            std::cout << "  FAILED: the terms should be b*x3*x4, 2*x1^2*y and x1^3.\n";
+            passed = false;
+        }
+    }
+
+    auto acrossExtractionsAfter = getConstraint("acrossextractions");
+
+    if(std::dynamic_pointer_cast<NonlinearConstraint>(acrossExtractionsAfter)
+        || !std::dynamic_pointer_cast<LinearConstraint>(acrossExtractionsAfter))
+    {
+        std::cout
+            << "  FAILED: the constraint whose monomial term cancels the one of its nonlinear expression should be "
+            << "linear.\n";
+        passed = false;
+    }
+
+    auto powersAfter = std::dynamic_pointer_cast<NonlinearConstraint>(getConstraint("powers"));
+
+    if(!powersAfter || powersAfter->signomialTerms.size() != 1 || powersAfter->quadraticTerms.size() != 1
+        || powersAfter->signomialTerms[0]->elements.size() != 1
+        || powersAfter->signomialTerms[0]->elements[0]->variable != x2)
+    {
+        std::cout << "  FAILED: x1^0.5*x1^-0.5*x2^1.5 + x3^0.5*x3^1.5 + x4 should have the signomial term x2^1.5 and "
+                  << "the quadratic term x3^2.\n";
+        passed = false;
+    }
+
+    if(problem->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Linear)
+    {
+        std::cout << "  FAILED: the objective function whose monomial terms cancel should be linear.\n";
+        passed = false;
+    }
+
+    return passed;
+}
+
+bool ModelTestProductTermDerivatives()
+{
+    // The gradient and Hessian of the monomial and signomial terms are compared with finite differences. A repeated
+    // variable, as x in x*x*y, was skipped for every factor it is in instead of once, so the gradient of x*x*y was y
+    // instead of 2xy and its Hessian had no element for x^2. The Hessian of a signomial term divided the value of the
+    // term by the variables, which gives NaN when a variable is zero, e.g. for x^2*y at x = 0.
+
+    bool passed = true;
+
+    auto solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+    auto problem = std::make_shared<Problem>(env);
+
+    auto x = std::make_shared<Variable>("x", E_VariableType::Real, -5.0, 5.0);
+    auto y = std::make_shared<Variable>("y", E_VariableType::Real, -5.0, 5.0);
+    auto z = std::make_shared<Variable>("z", E_VariableType::Real, -5.0, 5.0);
+    problem->add(Variables({ x, y, z }));
+
+    auto element = [](VariablePtr V, double power) { return (std::make_shared<SignomialElement>(V, power)); };
+
+    // The terms with integer powers are defined for all points, the others only where the variables are positive
+    MonomialTerms monomials;
+    monomials.push_back(std::make_shared<MonomialTerm>(2.0, Variables({ x, x, y })));
+    monomials.push_back(std::make_shared<MonomialTerm>(-1.5, Variables({ x, y, z })));
+    monomials.push_back(std::make_shared<MonomialTerm>(0.5, Variables({ z, x, z, z })));
+    monomials.takeOwnership(problem);
+
+    SignomialTerms integerSignomials;
+    integerSignomials.push_back(
+        std::make_shared<SignomialTerm>(2.0, SignomialElements({ element(x, 2.0), element(y, 1.0) })));
+    integerSignomials.push_back(
+        std::make_shared<SignomialTerm>(1.5, SignomialElements({ element(x, 3.0), element(z, 2.0) })));
+    integerSignomials.push_back(std::make_shared<SignomialTerm>(
+        -0.5, SignomialElements({ element(y, 1.0), element(x, 2.0), element(y, 1.0) })));
+    integerSignomials.takeOwnership(problem);
+
+    SignomialTerms fractionalSignomials;
+    fractionalSignomials.push_back(
+        std::make_shared<SignomialTerm>(1.0, SignomialElements({ element(x, 0.5), element(x, 1.5), element(y, 1.0) })));
+    fractionalSignomials.push_back(std::make_shared<SignomialTerm>(
+        0.7, SignomialElements({ element(x, 2.5), element(y, -1.0), element(z, 1.5) })));
+    fractionalSignomials.takeOwnership(problem);
+
+    auto compare
+        = [&passed](const std::string& name, const std::function<double(const VectorDouble&)>& function,
+              const SparseVariableVector& gradient, const SparseVariableMatrix& hessian, const VectorDouble& point)
+    {
+        const double h = 1e-4;
+        int numberOfVariables = (int)point.size();
+
+        auto shifted = [&point](int i, double hi, int j, double hj)
+        {
+            VectorDouble result = point;
+            result[i] += hi;
+            result[j] += hj;
+            return (result);
+        };
+
+        for(int i = 0; i < numberOfVariables; i++)
+        {
+            double expected = (function(shifted(i, h, i, 0.0)) - function(shifted(i, -h, i, 0.0))) / (2.0 * h);
+            double value = 0.0;
+
+            for(auto& [V, G] : gradient)
+                if(V->getIndex() == i)
+                    value = G;
+
+            if(!std::isfinite(value) || std::abs(value - expected) > 1e-5 * (1.0 + std::abs(expected)))
+            {
+                std::cout << "  FAILED: " << name << ": the derivative for variable " << i << " is " << value
+                          << ", expected " << expected << ".\n";
+                passed = false;
+            }
+
+            for(int j = i; j < numberOfVariables; j++)
+            {
+                double expectedSecond = (function(shifted(i, h, j, h)) - function(shifted(i, h, j, -h))
+                                            - function(shifted(i, -h, j, h)) + function(shifted(i, -h, j, -h)))
+                    / (4.0 * h * h);
+                double valueSecond = 0.0;
+
+                for(auto& [VP, H] : hessian)
+                    if(VP.first->getIndex() == i && VP.second->getIndex() == j)
+                        valueSecond += H;
+
+                if(!std::isfinite(valueSecond)
+                    || std::abs(valueSecond - expectedSecond) > 1e-4 * (1.0 + std::abs(expectedSecond)))
+                {
+                    std::cout << "  FAILED: " << name << ": the Hessian element (" << i << ", " << j << ") is "
+                              << valueSecond << ", expected " << expectedSecond << ".\n";
+                    passed = false;
+                }
+            }
+        }
+    };
+
+    for(auto& point :
+        { VectorDouble { 1.3, -0.7, 0.4 }, VectorDouble { 0.0, 0.5, -0.8 }, VectorDouble { 0.0, 0.0, 0.0 } })
+    {
+        compare(
+            "monomials", [&monomials](const VectorDouble& P) { return (monomials.calculate(P)); },
+            monomials.calculateGradient(point), monomials.calculateHessian(point), point);
+
+        compare(
+            "signomials with integer powers",
+            [&integerSignomials](const VectorDouble& P) { return (integerSignomials.calculate(P)); },
+            integerSignomials.calculateGradient(point), integerSignomials.calculateHessian(point), point);
+    }
+
+    VectorDouble positivePoint = { 1.3, 0.6, 0.4 };
+
+    compare(
+        "signomials with fractional powers", [&fractionalSignomials](const VectorDouble& P)
+        { return (fractionalSignomials.calculate(P)); }, fractionalSignomials.calculateGradient(positivePoint),
+        fractionalSignomials.calculateHessian(positivePoint), positivePoint);
+
+    if(passed)
+        std::cout << "  the gradients and Hessians equal the finite differences.\n";
 
     return passed;
 }

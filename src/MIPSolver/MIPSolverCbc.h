@@ -102,6 +102,17 @@ public:
 
     bool createIntegerCut(IntegerCut& integerCut) override;
 
+    int relaxRepairableCutsViolatedByPoint(const VectorDouble& point, size_t firstCut) override
+    {
+        return (MIPSolverBase::relaxRepairableCutsViolatedByPoint(point, firstCut));
+    }
+
+    VectorInteger removeRepairableCuts() override { return (MIPSolverBase::removeRepairableCuts()); }
+    size_t getNumberOfRepairableCuts() override { return (MIPSolverBase::getNumberOfRepairableCuts()); }
+
+    double getConstraintUpperBound(int constraintIndex) override;
+    bool setConstraintUpperBound(int constraintIndex, double upperBound) override;
+
     bool createInteriorHyperplane(HyperplanePtr hyperplane) override
     {
         return (MIPSolverBase::createInteriorHyperplane(hyperplane));

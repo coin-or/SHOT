@@ -77,6 +77,7 @@ MIPSolverCbc::~MIPSolverCbc() = default;
 bool MIPSolverCbc::initializeProblem()
 {
     discreteVariablesActivated = true;
+    repairableCuts.clear();
 
     this->cutOff = 1e100;
 
@@ -1846,4 +1847,15 @@ int CbcMessageHandler::print()
 
     return 0;
 }
+double MIPSolverCbc::getConstraintUpperBound(int constraintIndex)
+{
+    return (osiInterface->getRowUpper()[constraintIndex]);
+}
+
+bool MIPSolverCbc::setConstraintUpperBound(int constraintIndex, double upperBound)
+{
+    osiInterface->setRowUpper(constraintIndex, upperBound >= 1e20 ? osiInterface->getInfinity() : upperBound);
+    return (true);
+}
+
 } // namespace SHOT

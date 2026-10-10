@@ -79,6 +79,30 @@ void TaskRepairInfeasibleDualProblem::run()
 
         if(noNewSolutions)
         {
+            // The repair relaxes the cuts that are cheapest to relax, which are often those just generated in the
+            // solution the dual problem then gives again, so that it loops between the same solutions. The cuts of
+            // the nonconvex constraints are then removed, so that the dual problem is solved with the valid
+            // constraints only and the cuts are generated anew
+            if(env->solutionStatistics.numberOfCutResetsSinceLastPrimalUpdate
+                    < env->settings->getSetting<int>("Dual.MIP.InfeasibilityRepair.CutResetLimit")
+                && env->dualSolver->removeCutsOfNonconvexConstraints() > 0)
+            {
+                env->solutionStatistics.numberOfCutResetsSinceLastPrimalUpdate++;
+                env->solutionStatistics.numberOfDualRepairsSinceLastPrimalUpdate = 0;
+                env->solutionStatistics.hasInfeasibilityRepairBeenPerformedSincePrimalImprovement = true;
+                env->results->solutionIsGlobal = false;
+                env->tasks->setNextTask(taskIDIfTrue);
+
+                totRepairTries++;
+
+                env->report->outputIterationDetail(totRepairTries, "REP-RESET", env->timing->getElapsedTime("Total"), 0,
+                    0, 0, env->dualSolver->cutOffToUse, 0, 0, 0, 0, currIter->maxDeviation,
+                    E_IterationLineType::DualRepair, true);
+
+                env->timing->stopTimer("DualStrategy");
+                return;
+            }
+
             currIter->forceObjectiveReductionCut = true;
             env->tasks->setNextTask(taskIDIfFalse);
 

@@ -75,6 +75,7 @@ MIPSolverCplex::~MIPSolverCplex()
 bool MIPSolverCplex::initializeProblem()
 {
     discreteVariablesActivated = true;
+    repairableCuts.clear();
 
     if(alreadyInitialized)
     {
@@ -1714,4 +1715,34 @@ std::string MIPSolverCplex::getSolverVersion()
 
     return (fmt::format("{}.{}", major, minor));
 }
+double MIPSolverCplex::getConstraintUpperBound(int constraintIndex)
+{
+    try
+    {
+        return (cplexConstrs[constraintIndex].getUB());
+    }
+    catch(IloException& e)
+    {
+        env->output->outputError("        Error when getting the upper bound of a constraint", e.getMessage());
+    }
+
+    return (SHOT_DBL_MAX);
+}
+
+bool MIPSolverCplex::setConstraintUpperBound(int constraintIndex, double upperBound)
+{
+    try
+    {
+        cplexConstrs[constraintIndex].setUB(upperBound >= 1e20 ? IloInfinity : upperBound);
+        modelUpdated = true;
+        return (true);
+    }
+    catch(IloException& e)
+    {
+        env->output->outputError("        Error when setting the upper bound of a constraint", e.getMessage());
+    }
+
+    return (false);
+}
+
 } // namespace SHOT

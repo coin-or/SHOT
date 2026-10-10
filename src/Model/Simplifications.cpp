@@ -34,8 +34,15 @@ void checkAndConvertObjectivesAndConstraints(
                 = extractTermsAndConstant(
                     nonlinearExpression, extractMonomials, extractSignomials, extractQuadratics, true, true);
 
-            if(tmpMonomialTerms.size() == 0 && tmpSignomialTerms.size() == 0 && !tmpNonlinearExpression
-                && nonlinearObjective->monomialTerms.size() == 0 && nonlinearObjective->signomialTerms.size() == 0)
+            // The extracted terms are merged with the terms the objective function already has before its type is
+            // decided, since they may cancel each other
+            MonomialTerms monomialTerms = nonlinearObjective->monomialTerms;
+            monomialTerms.add(tmpMonomialTerms);
+
+            SignomialTerms signomialTerms = nonlinearObjective->signomialTerms;
+            signomialTerms.add(tmpSignomialTerms);
+
+            if(monomialTerms.size() == 0 && signomialTerms.size() == 0 && !tmpNonlinearExpression)
             {
                 // The objective is no longer nonlinear
 
@@ -86,11 +93,9 @@ void checkAndConvertObjectivesAndConstraints(
                 if(tmpQuadraticTerms.size() > 0)
                     nonlinearObjective->add(tmpQuadraticTerms);
 
-                if(tmpMonomialTerms.size() > 0)
-                    nonlinearObjective->add(std::move(tmpMonomialTerms));
-
-                if(tmpSignomialTerms.size() > 0)
-                    nonlinearObjective->add(std::move(tmpSignomialTerms));
+                nonlinearObjective->monomialTerms = std::move(monomialTerms);
+                nonlinearObjective->signomialTerms = std::move(signomialTerms);
+                nonlinearObjective->properties.isValid = false;
 
                 nonlinearObjective->nonlinearExpression = tmpNonlinearExpression;
 
@@ -130,8 +135,15 @@ void checkAndConvertObjectivesAndConstraints(
 
         bool isQuadratic = (tmpQuadraticTerms.size() > 0 || nonlinearConstraint->quadraticTerms.size() > 0);
 
-        if(tmpMonomialTerms.size() == 0 && tmpSignomialTerms.size() == 0 && !tmpNonlinearExpression
-            && nonlinearConstraint->monomialTerms.size() == 0 && nonlinearConstraint->signomialTerms.size() == 0
+        // The extracted terms are merged with the terms the constraint already has before its type is decided, since
+        // they may cancel each other
+        MonomialTerms monomialTerms = nonlinearConstraint->monomialTerms;
+        monomialTerms.add(tmpMonomialTerms);
+
+        SignomialTerms signomialTerms = nonlinearConstraint->signomialTerms;
+        signomialTerms.add(tmpSignomialTerms);
+
+        if(monomialTerms.size() == 0 && signomialTerms.size() == 0 && !tmpNonlinearExpression
             && !(isQuadratic && keepQuadraticConstraintsNonlinear))
         {
             // The constraint is no longer nonlinear
@@ -189,11 +201,14 @@ void checkAndConvertObjectivesAndConstraints(
             if(tmpQuadraticTerms.size() > 0)
                 nonlinearConstraint->add(tmpQuadraticTerms);
 
-            if(tmpMonomialTerms.size() > 0)
-                nonlinearConstraint->add(std::move(tmpMonomialTerms));
+            nonlinearConstraint->monomialTerms = std::move(monomialTerms);
+            nonlinearConstraint->signomialTerms = std::move(signomialTerms);
 
-            if(tmpSignomialTerms.size() > 0)
-                nonlinearConstraint->add(std::move(tmpSignomialTerms));
+            if(nonlinearConstraint->monomialTerms.size() > 0)
+                nonlinearConstraint->properties.hasMonomialTerms = true;
+
+            if(nonlinearConstraint->signomialTerms.size() > 0)
+                nonlinearConstraint->properties.hasSignomialTerms = true;
 
             if(tmpNonlinearExpression)
                 nonlinearConstraint->nonlinearExpression = tmpNonlinearExpression;

@@ -148,6 +148,24 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
         default:
             break;
         }
+
+        // CPLEX solves a dual problem with a nonconvex quadratic objective function to global optimality
+        // (OptimalityTarget = 3), but not one that also has quadratic constraints, which it rejects with "objective is
+        // not convex". The quadratic objective function of a nonconvex problem keeps its nonconvex terms when it is
+        // regarded as nonlinear, so the convex quadratic constraints are considered as nonlinear instead, which keeps
+        // the objective function exact and the cuts of the constraints valid.
+        auto& objective = env->problem->objectiveFunction;
+
+        if((useConvexQuadraticObjective || useNonconvexQuadraticObjective)
+            && objective->properties.classification == E_ObjectiveFunctionClassification::Quadratic
+            && objective->properties.convexity != E_Convexity::Convex
+            && static_cast<ES_ObjectiveEpigraphStrategy>(
+                   env->settings->getSetting<int>("Model.Reformulation.ObjectiveFunction.EpigraphStrategy"))
+                != ES_ObjectiveEpigraphStrategy::EpigraphConstraint)
+        {
+            useConvexQuadraticConstraints = false;
+            useConvexQuadraticConstraintsWithinTolerance = false;
+        }
     }
     else if(env->settings->getSetting<int>("Dual.MIP.Solver") == (int)ES_MIPSolver::Gurobi)
     {
@@ -314,8 +332,23 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
         assert(C->valueLHS == SHOT_DBL_MIN);
 #endif
 
+    // CPLEX cannot solve a dual problem with both a nonconvex quadratic objective function and quadratic constraints,
+    // which the choice of the constraints above avoids in general. Should both remain, the objective function is
+    // regarded as nonlinear.
+    bool isQuadraticObjectiveUnsupported = false;
+
+    if(env->settings->getSetting<int>("Dual.MIP.Solver") == (int)ES_MIPSolver::Cplex
+        && reformulatedProblem->quadraticConstraints.size() > 0)
+    {
+        if(auto objective
+            = std::dynamic_pointer_cast<QuadraticObjectiveFunction>(reformulatedProblem->objectiveFunction);
+            objective && objective->quadraticTerms.getConvexity() != E_Convexity::Convex
+            && objective->quadraticTerms.getConvexity() != E_Convexity::Linear)
+            isQuadraticObjectiveUnsupported = true;
+    }
+
     // Fixing that a quadratic objective changed into a nonlinear objective is correctly identified
-    if(!(useConvexQuadraticObjective || useNonconvexQuadraticObjective)
+    if((!(useConvexQuadraticObjective || useNonconvexQuadraticObjective) || isQuadraticObjectiveUnsupported)
         && reformulatedProblem->objectiveFunction->properties.classification
             == E_ObjectiveFunctionClassification::Quadratic)
     {
@@ -1827,9 +1860,14 @@ LinearTerms TaskReformulateProblem::partitionMonomialTerms(const MonomialTerms& 
 
     for(auto& T : sourceTerms)
     {
-        // The auxiliary variable w >= c * x1 * ... * xn, or w >= -c * x1 * ... * xn with the signs reversed, is
-        // shared by equal terms; the coefficient stays in the term, as for the other partitioned terms
-        double coefficient = reversedSigns ? -T->coefficient : T->coefficient;
+        if(T->coefficient == 0.0)
+            continue;
+
+        double coefficient = std::abs(T->coefficient);
+
+        // The auxiliary variable w >= sign * x1 * ... * xn with sign = +-1 is used as |c| * w, so that terms only
+        // differing in their coefficient share the auxiliary variable, as for the signomial terms
+        bool isPositive = ((T->coefficient < 0.0) == reversedSigns);
 
         std::vector<int> variableIndexes;
 
@@ -1838,12 +1876,12 @@ LinearTerms TaskReformulateProblem::partitionMonomialTerms(const MonomialTerms& 
 
         std::sort(variableIndexes.begin(), variableIndexes.end());
 
-        auto key = std::make_pair(coefficient, variableIndexes);
+        auto key = std::make_pair(isPositive, variableIndexes);
         auto auxVariableIterator = monomialAuxVariables.find(key);
 
         if(auxVariableIterator != monomialAuxVariables.end())
         {
-            resultTerms.push_back(std::make_shared<LinearTerm>(1.0, auxVariableIterator->second));
+            resultTerms.push_back(std::make_shared<LinearTerm>(coefficient, auxVariableIterator->second));
             continue;
         }
 
@@ -1851,7 +1889,7 @@ LinearTerms TaskReformulateProblem::partitionMonomialTerms(const MonomialTerms& 
 
         try
         {
-            bounds = T->getBounds();
+            bounds = T->getBounds() / coefficient;
 
             if(reversedSigns)
                 bounds = -1.0 * bounds;
@@ -1869,7 +1907,7 @@ LinearTerms TaskReformulateProblem::partitionMonomialTerms(const MonomialTerms& 
 
         monomialAuxVariables.emplace(key, auxVariable);
 
-        resultTerms.push_back(std::make_shared<LinearTerm>(1.0, auxVariable));
+        resultTerms.push_back(std::make_shared<LinearTerm>(coefficient, auxVariable));
 
         auto auxConstraint = std::make_shared<NonlinearConstraint>(
             "s_pmon_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, 0.0);
@@ -1877,7 +1915,7 @@ LinearTerms TaskReformulateProblem::partitionMonomialTerms(const MonomialTerms& 
         auxConstraintCounter++;
 
         auto monomialTerm = std::make_shared<MonomialTerm>(T.get(), reformulatedProblem);
-        monomialTerm->coefficient = coefficient;
+        monomialTerm->coefficient = isPositive ? 1.0 : -1.0;
 
         auxConstraint->add(monomialTerm);
 
