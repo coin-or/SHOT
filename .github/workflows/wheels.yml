@@ -25,9 +25,12 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: build
-          key: shotpy-${{ runner.os }}-${{ hashFiles('CMakeLists.txt', 'pyproject.toml', 'ThirdParty/HiGHS/**') }}
+          key: shotpy-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('CMakeLists.txt', 'pyproject.toml', 'ThirdParty/versions.json', '.github/workflows/wheels.yml') }}
 
-      - uses: pypa/cibuildwheel@v3.1
+      - name: Verify dependency pins
+        run: python3 misc/check-dependencies.py
+
+      - uses: pypa/cibuildwheel@v4.3.1
 
       - uses: actions/upload-artifact@v4
         with:

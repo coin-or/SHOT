@@ -1,0 +1,75 @@
+name: Dependency compatibility
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'ThirdParty/**'
+      - 'src/**'
+      - 'CMakeLists.txt'
+      - 'misc/**'
+      - '.github/workflows/dependencies.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            cxx: g++
+            cc: gcc
+            type: Release
+            cmake: '3.20.5'
+          - os: ubuntu-24.04
+            cxx: clang++
+            cc: clang
+            type: Debug
+            cmake: '4.1.2'
+          - os: macos-14
+            cxx: clang++
+            cc: clang
+            type: Release
+            cmake: '4.1.2'
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install build tools
+        run: python -m pip install 'cmake==${{ matrix.cmake }}' ninja pytest numpy pybind11-stubgen
+      - name: Install Linux solvers
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y coinor-libcbc-dev coinor-libipopt-dev pkg-config
+      - name: Install macOS solvers
+        if: runner.os == 'macOS'
+        run: brew install cbc ipopt pkg-config
+      - name: Verify dependency pins
+        run: python misc/check-dependencies.py
+      - name: Configure
+        env:
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
+        run: >-
+          cmake -S . -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=${{ matrix.type }}
+          -DHAS_GAMS=OFF -DHAS_CPLEX=OFF -DHAS_GUROBI=OFF
+          -DHAS_PYTHON=ON -DCOMPILE_TESTS=ON -DBUILD_DOCUMENTATION=OFF
+      - name: Build
+        run: cmake --build build --parallel 3
+      - name: Test
+        run: ctest --test-dir build --output-on-failure --timeout 300 -E 'FullInstance|Python_API_Tests'
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-tests-${{ matrix.os }}-${{ matrix.cc }}
+          path: |
+            build/CMakeCache.txt
+            build/Testing/Temporary/

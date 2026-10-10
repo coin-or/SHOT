@@ -27,6 +27,14 @@ rest (`ampl`, `argh`, `boost` — a trimmed header subset, not full Boost —
 `mc++`, `tinyxml2`, `nlohmann`) are committed directly in the main repo, so
 there's nothing extra to fetch for those.
 
+Exact release pins, source checksums, and licenses are recorded in
+[`ThirdParty/versions.json`](../ThirdParty/versions.json). See
+[`ThirdParty/README.md`](../ThirdParty/README.md) for the vendoring procedures.
+Boost is a coherent 1.92.0 header subset, and MC++ contains only its 5.0.4
+interval arithmetic headers. The AMPL `.nl` reader uses selected AMPL MP 4.1.0
+sources. CppAD's headers are installed into the build directory together with
+its matching shared library; do not substitute a system CppAD header tree.
+
 **Note on HiGHS**: HiGHS is **not always included** — it's controlled like
 any other solver by the `HAS_HIGHS` option (default `ON`, see section 3).
 When it's on (the default), CMake compiles HiGHS from source from the
@@ -70,8 +78,8 @@ build them from source with [coinbrew](https://github.com/coin-or/coinbrew):
 ```bash
 git clone https://github.com/coin-or/coinbrew
 cd coinbrew
-./coinbrew build Ipopt --prefix=<SHOT>/ThirdParty/Ipopt --no-prompt --tests none
-./coinbrew build Cbc --prefix=<SHOT>/ThirdParty/Cbc --no-prompt --tests none --no-third-party
+./coinbrew build Ipopt@releases/3.14.20 --prefix=<SHOT>/ThirdParty/Ipopt --no-prompt --tests none
+./coinbrew build Cbc@releases/2.10.13 --prefix=<SHOT>/ThirdParty/Cbc --no-prompt --tests none --no-third-party
 ```
 
 then point CMake at them with `-DCBC_DIR=<SHOT>/ThirdParty/Cbc
@@ -204,7 +212,7 @@ Key options (all `option(...)` declarations live at the top of the root
 | `HAS_IPOPT` | `ON` | Ipopt NLP solver |
 | `HAS_UNO` | `OFF` | Uno NLP solver (see section 2) — off by default because building Uno needs a Fortran compiler |
 | `HAS_GAMS` | `ON` | GAMS interface (modeling system + NLP solver) |
-| `HAS_AMPL` | `ON` | AMPL/ASL `.nl` file interface |
+| `HAS_AMPL` | `ON` | AMPL MP `.nl` file interface |
 | `HAS_PYTHON` | `OFF` | Build the `SHOTpy` Python bindings (needs Python3 dev headers; pybind11 comes from the submodule) |
 | `COMPILE_TESTS` | `OFF` | Build the `test_runner` test suite (section 5) |
 | `GENERATE_EXE` | `ON` | Build the `./SHOT` console executable |
