@@ -1179,6 +1179,11 @@ void NLPSolverIpoptBase::setInitialSettings()
     ipoptApplication->Options()->SetNumericValue("gamma_phi", 1e-8, true, true);
     ipoptApplication->Options()->SetNumericValue("gamma_theta", 1e-4, true, true);
     ipoptApplication->Options()->SetNumericValue("required_infeasibility_reduction", 0.1, true, true);
+
+    // A derivative that is infinite or NaN at the starting point, e.g. of a square root at zero, was passed on to the
+    // linear solver, and MUMPS then crashed with a bus error in dmumps_mtransw_ (maxmin). Ipopt now stops with an
+    // invalid number instead.
+    ipoptApplication->Options()->SetStringValue("check_derivatives_for_naninf", "yes", true, true);
     // ipoptApplication->Options()->SetStringValue("nlp_scaling_method", "none", true, true);
     ipoptApplication->Options()->SetNumericValue(
         "obj_scaling_factor", sourceProblem->objectiveFunction->properties.isMinimize ? 1.0 : -1.0, true, true);
