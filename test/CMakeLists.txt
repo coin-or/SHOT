@@ -1,6 +1,5 @@
 # The name of the test executable file
 set(TEST_EXE_NAME test_runner)
-set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_CXX_STANDARD 17)
 
 # The main groups of tests, there should be a file matching the name +"test".cpp

@@ -30,13 +30,9 @@ else()
     message(SEND_ERROR "SHOT needs support for C++17 filesystem.")
 endif()
 
-# Sets the release types, e.g. Release, Debug:
-# set(CMAKE_BUILD_TYPE Debug)
-
-# Asserts enabled in CppAD otherwise
-if(NOT CMAKE_BUILD_TYPE MATCHES Debug)
-    add_definitions(-DNDEBUG)
-endif()
+# CMake's configuration-specific compiler flags define NDEBUG for optimized
+# configurations. Do not set it directory-wide: multi-config generators also
+# build Debug targets from this directory.
 
 option(COMPILE_TESTS "Should the automated tests be compiled" OFF)
 option(SIMPLE_OUTPUT_CHARS "Whether to avoid using special characters in the console output (for example on MinGW)" OFF)
