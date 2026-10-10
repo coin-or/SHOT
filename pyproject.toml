@@ -1,6 +1,6 @@
 [build-system]
 # pybind11-stubgen generates the type stubs SHOTpy.pyi that are installed next to the module
-requires = ["scikit-build-core>=0.10", "pybind11-stubgen"]
+requires = ["scikit-build-core==1.1.1", "pybind11-stubgen==3.0.0; python_version >= '3.10'"]
 build-backend = "scikit_build_core.build"
 
 [project]
@@ -9,7 +9,18 @@ dynamic = ["version"]
 description = "Python bindings for the SHOT MINLP solver"
 readme = "README.md"
 license = "EPL-2.0"
-license-files = ["LICENSE", "AUTHORS"]
+license-files = [
+    "LICENSE", "AUTHORS",
+    "ThirdParty/boost/LICENSE_1_0.txt",
+    "ThirdParty/CppAD/COPYING", "ThirdParty/CppAD/epl-2.0.txt",
+    "ThirdParty/HiGHS/LICENSE.txt", "ThirdParty/eigen/COPYING.*",
+    "ThirdParty/pybind11/LICENSE", "ThirdParty/spdlog/LICENSE",
+    "ThirdParty/ampl/LICENSE.rst",
+    "ThirdParty/ampl/thirdparty/gharveymn/small_vector/LICENSE",
+    "ThirdParty/argh/LICENSE", "ThirdParty/mc++/LICENSE",
+    "ThirdParty/mc++/LICENSES/*", "ThirdParty/nlohmann/LICENSE.MIT",
+    "ThirdParty/tinyxml2/LICENSE.txt",
+]
 requires-python = ">=3.9"
 authors = [{ name = "The SHOT contributors" }]
 classifiers = [
@@ -49,14 +60,28 @@ cmake.args = [
 ]
 wheel.packages = []
 install.components = ["Python"]
+# Build an sdist from reviewed project paths so local files in the checkout
+# cannot enter a release archive.
+sdist.inclusion-mode = "explicit"
 sdist.include = [
-    "ThirdParty/CppAD/**",
-    "ThirdParty/HiGHS/**",
-    "ThirdParty/eigen/**",
-    "ThirdParty/pybind11/**",
-    "ThirdParty/spdlog/**",
+    "/CMakeLists.txt", "/pyproject.toml", "/README.md", "/README",
+    "/INSTALL", "/LICENSE", "/AUTHORS",
+    "/src/**", "/test/**", "/misc/**",
+    "/ThirdParty/README.md", "/ThirdParty/versions.json",
+    "/ThirdParty/CppAD/**", "/ThirdParty/HiGHS/**", "/ThirdParty/eigen/**",
+    "/ThirdParty/pybind11/**", "/ThirdParty/spdlog/**",
+    "/ThirdParty/ampl/**", "/ThirdParty/argh/**", "/ThirdParty/boost/**",
+    "/ThirdParty/mc++/**", "/ThirdParty/nlohmann/**", "/ThirdParty/tinyxml2/**",
+    "/docs/Callbacks.md", "/docs/CommandLineUsage.md",
+    "/docs/CompilationInstructions.md", "/docs/DebuggingSHOT.md",
+    "/docs/SHOTpy_Tutorial.ipynb",
+    "/docs/ThirdPartyUpgradePlan.md", "/docs/ThirdPartyUpgradeReport.md",
 ]
-sdist.exclude = ["ThirdParty/**/.git"]
+sdist.exclude = [
+    "ThirdParty/**/.git", "ThirdParty/**/.git/**", "ThirdParty/**/build/**",
+    "ThirdParty/Uno*", "ThirdParty/Cbc/**", "ThirdParty/Ipopt/**",
+    ".claude/**", ".codex/**", ".agents/**",
+]
 
 [tool.cibuildwheel]
 build = "cp39-* cp310-* cp311-* cp312-* cp313-*"

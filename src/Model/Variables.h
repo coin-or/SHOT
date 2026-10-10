@@ -129,7 +129,7 @@ inline Interval calculateIntervalPower(Interval base, double power)
         if(base.l() <= 0.0)
         {
             baseReachesZero = true;
-            base.l(SHOT_DBL_EPS);
+            base.l() = SHOT_DBL_EPS;
         }
     }
 
@@ -145,11 +145,11 @@ inline Interval calculateIntervalPower(Interval base, double power)
     }
 
     if(baseReachesZero)
-        bounds.l(0.0);
+        bounds.l() = 0.0;
 
     // An even integer power cannot be negative; guards against rounding in the interval library.
     if(isInteger && isEven && bounds.l() < 0.0)
-        bounds.l(0.0);
+        bounds.l() = 0.0;
 
     return (bounds);
 }

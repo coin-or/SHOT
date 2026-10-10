@@ -105,6 +105,8 @@ env:
   GRB_LICENSE_FILE: ${{ github.workspace }}/gurobi.lic
   GUROBI_VERSION: ${{ inputs.gurobi_version }}
   GAMS_VERSION: ${{ inputs.gams_version }}
+  CBC_VERSION: releases/2.10.13
+  IPOPT_VERSION: releases/3.14.20
 
 jobs:
   build:
@@ -134,6 +136,9 @@ jobs:
       - name: Checkout submodules
         run: git submodule update --init --recursive
 
+      - name: Verify dependency pins
+        run: python3 misc/check-dependencies.py
+
       - name: Create Build Environment
         # Some projects don't allow in-source building, so create a separate build directory
         # We'll use this as our working directory for all subsequent commands
@@ -143,19 +148,24 @@ jobs:
         shell: bash
         run: sudo apt-get update ; sudo apt-get install -y libc6-dev libbz2-dev zlib1g-dev liblapack-dev libnauty2-dev libopenblas-base libopenblas-dev libmumps-dev pkgconf
 
+      - name: Identify compiler for dependency caches
+        id: toolchain
+        shell: bash
+        run: echo "compiler=$(c++ --version | sha256sum | cut -d ' ' -f1)" >> "$GITHUB_OUTPUT"
+
       - name: Cache Cbc
         id: cache-cbc
         uses: actions/cache@v4
         with:
           path: ${{github.workspace}}/ThirdParty/Cbc
-          key: ${{ runner.os }}-cbc
+          key: ${{ runner.os }}-${{ runner.arch }}-cbc-${{ env.CBC_VERSION }}-${{ env.BUILD_TYPE }}-${{ steps.toolchain.outputs.compiler }}-${{ hashFiles('ThirdParty/versions.json', '.github/workflows/build-workflow.yml') }}
 
       - name: Cache Ipopt
         id: cache-ipopt
         uses: actions/cache@v4
         with:
           path: ${{github.workspace}}/ThirdParty/Ipopt
-          key: ${{ runner.os }}-ipopt
+          key: ${{ runner.os }}-${{ runner.arch }}-ipopt-${{ env.IPOPT_VERSION }}-${{ env.BUILD_TYPE }}-${{ steps.toolchain.outputs.compiler }}-${{ hashFiles('ThirdParty/versions.json', '.github/workflows/build-workflow.yml') }}
 
       - name: Setup Coinbrew
         if: steps.cache-ipopt.outputs.cache-hit != 'true' || steps.cache-cbc.outputs.cache-hit != 'true'
@@ -167,13 +177,13 @@ jobs:
         if: steps.cache-ipopt.outputs.cache-hit != 'true'
         shell: bash
         working-directory: ${{github.workspace}}/build/coinbrew
-        run: ./coinbrew build Ipopt --verbosity 2 --prefix=${{github.workspace}}/ThirdParty/Ipopt -j $JOB_COUNT --no-prompt --tests none
+        run: ./coinbrew build "Ipopt@$IPOPT_VERSION" --verbosity 2 --prefix=${{github.workspace}}/ThirdParty/Ipopt -j $JOB_COUNT --no-prompt --tests none
 
       - name: Download and build Cbc
         if: steps.cache-cbc.outputs.cache-hit != 'true'
         shell: bash
         working-directory: ${{github.workspace}}/build/coinbrew
-        run: rm -rf build dist ; ./coinbrew build Cbc@stable/2.10 --verbosity 2 -j $JOB_COUNT --prefix=${{github.workspace}}/ThirdParty/Cbc --no-prompt --tests none --no-third-party
+        run: rm -rf build dist ; ./coinbrew build "Cbc@$CBC_VERSION" --verbosity 2 -j $JOB_COUNT --prefix=${{github.workspace}}/ThirdParty/Cbc --no-prompt --tests none --no-third-party
 
       # Proprietary software setup happens here (GAMS and Gurobi)
       # First we create the license files from the base64 encoded secrets.

@@ -19,6 +19,8 @@
 #include "boost/math/tools/roots.hpp"
 #include "boost/cstdint.hpp"
 
+#include <cmath>
+
 namespace SHOT
 {
 std::vector<NumericConstraint*> activeConstraints;
@@ -170,8 +172,13 @@ std::pair<VectorDouble, VectorDouble> RootsearchMethodBoost::findZero(const Vect
 
     PairDouble r1;
 
+    // TOMS748 can lose the bracket when a nonlinear constraint evaluates to
+    // infinity at an endpoint (for example, a perspective at zero denominator).
+    // Bisection retains that endpoint and finds a finite point inside the box.
+    const bool infiniteEndpoint = std::isinf(test->valFirstPt) || std::isinf(test->valSecondPt);
     if(static_cast<ES_RootsearchMethod>(env->settings->getSetting<int>("Subsolver.Rootsearch.Method"))
-        == ES_RootsearchMethod::BoostTOMS748)
+            == ES_RootsearchMethod::BoostTOMS748
+        && !infiniteEndpoint)
     {
         r1 = boost::math::tools::toms748_solve(*test, 0.0, 1.0, TerminationCondition(lambdaTol), max_iter);
     }

@@ -1,0 +1,134 @@
+{
+  "schema_version": 1,
+  "verified_on": "2026-10-10",
+  "dependencies": {
+    "CppAD": {
+      "version": "20260000.0",
+      "source": "https://github.com/coin-or/CppAD",
+      "kind": "submodule",
+      "commit": "5d51b2aa6d6874c8d561da298a90b3721550d45d",
+      "license": "EPL-2.0 OR GPL-2.0-or-later",
+      "patches": []
+    },
+    "pybind11": {
+      "version": "3.1.0",
+      "source": "https://github.com/pybind/pybind11",
+      "kind": "submodule",
+      "commit": "97bf890db679505a14dfe547a5e77bb2bd05dc90",
+      "license": "BSD-3-Clause",
+      "patches": []
+    },
+    "HiGHS": {
+      "version": "1.15.1",
+      "source": "https://github.com/ERGO-Code/HiGHS",
+      "kind": "submodule",
+      "commit": "04024d701f79feb8e2f18bc3df0dffc04ef05088",
+      "license": "MIT",
+      "patches": []
+    },
+    "eigen": {
+      "version": "5.0.1",
+      "source": "https://gitlab.com/libeigen/eigen",
+      "kind": "submodule",
+      "commit": "bc3b39870ecb690a623a3f49149a358b95c5781d",
+      "license": "MPL-2.0",
+      "patches": []
+    },
+    "spdlog": {
+      "version": "1.17.0",
+      "source": "https://github.com/gabime/spdlog",
+      "kind": "submodule",
+      "commit": "79524ddd08a4ec981b7fea76afd08ee05f83755d",
+      "license": "MIT",
+      "patches": [],
+      "bundled": {
+        "fmt": "12.1.0 (upstream bundled copy)"
+      }
+    },
+    "boost": {
+      "version": "1.92.0",
+      "source": "https://archives.boost.io/release/1.92.0/source/boost_1_92_0.tar.bz2",
+      "kind": "vendored",
+      "source_sha256": "5c1d40cb8e19adbf740a4ec2da35b3e58f3f5804b1dce44deb53df72193cbc6c",
+      "license": "BSL-1.0",
+      "patches": [],
+      "tree_sha256": "d71dde77dd3558491b14ed95bc6b8c962733878d46bf3be4480118d8be1df140"
+    },
+    "ampl": {
+      "version": "4.1.0",
+      "source": "https://codeload.github.com/ampl/mp/tar.gz/refs/tags/v4.1.0",
+      "kind": "vendored",
+      "source_sha256": "c75274fe2ef8b61f67826267e3c2cb339021c62d724659ab89a5b63c3959067d",
+      "license": "See ampl/LICENSE.rst",
+      "patches": [
+        "Rename legacy fmt namespace to fmtold and FMT_ macros to FMTOLD_ to coexist with spdlog."
+      ],
+      "notes": "Selected MP reader sources and transitive headers; upstream gen-expr-info executable is not compiled into SHOT.",
+      "bundled": {
+        "small_vector": "upstream MP copy; MIT license included",
+        "fmt": "legacy upstream MP copy, namespace-isolated"
+      },
+      "tree_sha256": "99d0c9e2c19468bbbfc51ad4fe89309239b8a1699f57bb5da02348b5db8ac176"
+    },
+    "mc++": {
+      "version": "5.0.4",
+      "source": "https://codeload.github.com/omega-icl/mcpp/tar.gz/refs/tags/v5.0.4",
+      "kind": "vendored",
+      "source_sha256": "9b5fed3d80ed8a026ae0d7680a99adacf6a80bf252a0e350e014fba43f1d2a75",
+      "license": "EPL-2.0 OR GPL-2.0-or-later",
+      "patches": [],
+      "notes": "Only interval.hpp, mcfunc.hpp and mcop.hpp; optional MC__USE_FADBAD is not supported. Unused bundled cpplapack/FADBAD++ removed.",
+      "tree_sha256": "98f40e23e52c10c95132ebfc94970ed1f3f0019eb2b832e4831787b8ab457522"
+    },
+    "nlohmann": {
+      "version": "3.12.0",
+      "source": "https://raw.githubusercontent.com/nlohmann/json/v3.12.0/single_include/nlohmann/json.hpp",
+      "kind": "vendored",
+      "source_sha256": "aaf127c04cb31c406e5b04a63f1ae89369fccde6d8fa7cdda1ed4f32dfc5de63",
+      "license": "MIT",
+      "patches": [],
+      "tree_sha256": "5d889ee1bab6b54d3bcc004afa96b51e9fe956d41ec9f1251e5dc960fc750f94"
+    },
+    "argh": {
+      "version": "1.3.2",
+      "kind": "vendored",
+      "source": "https://github.com/adishavit/argh/tree/v1.3.2",
+      "license": "BSD-3-Clause",
+      "patches": [
+        "Normalize CRLF to LF."
+      ],
+      "verification": "argh.h matches tagged source after newline normalization.",
+      "tree_sha256": "6263a03cfbd377594fcdb7b9a61ab9b51ae84b55bbb85b9687be4c625b2e6ba0"
+    },
+    "tinyxml2": {
+      "version": "11.0.0",
+      "kind": "vendored",
+      "source": "https://github.com/leethomason/tinyxml2/tree/11.0.0",
+      "license": "Zlib",
+      "patches": [
+        "Normalize CRLF to LF."
+      ],
+      "tree_sha256": "79ed93bea6c5c72d3ffdfe3cdd93c84c4a9cced746fdacd2563504451d69188a"
+    }
+  },
+  "external_solvers": {
+    "Cbc": {
+      "release": "releases/2.10.13"
+    },
+    "Ipopt": {
+      "release": "releases/3.14.20"
+    },
+    "Uno": {
+      "release": "v2.8.0",
+      "optional": true
+    }
+  },
+  "baseline": {
+    "shot_commit": "aec4056cec9a0ca86de897479403ce8f33a99e70"
+  },
+  "python_build_tools": {
+    "scikit-build-core": "1.1.1",
+    "pybind11-stubgen": "3.0.0 (Python >=3.10 only)",
+    "cibuildwheel": "4.3.1"
+  }
+}
