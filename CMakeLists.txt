@@ -421,11 +421,12 @@ if(HAS_AMPL)
         "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemAMPL.cpp"
         "${AMPL_DIR}/src/expr-info.cc"
         "${AMPL_DIR}/src/format.cc"
-        "${AMPL_DIR}/src/gen-expr-info.cc"
+        "${AMPL_DIR}/src/expr.cc"
         "${AMPL_DIR}/src/nl-reader.cc"
         "${AMPL_DIR}/src/posix.cc"
         "${AMPL_DIR}/src/problem.cc"
         "${AMPL_DIR}/src/os.cc"
+        "${AMPL_DIR}/src/sol.cc"
     )
     set(MODELING_HEADERS "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemAMPL.h" "${AMPL_DIR}/include/mp/*.h")
 endif(HAS_AMPL)
@@ -487,11 +488,11 @@ include_directories(${INCLUDE_DIRS})
 include_directories(SYSTEM "${AMPL_DIR}/include")
 include_directories(SYSTEM "${ARGH_DIR}")
 include_directories(SYSTEM "${BOOST_DIR}")
-include_directories(SYSTEM "${CPPAD_DIR}/include/")
+# Consume the headers installed by the same ExternalProject as cppad_lib.
+# In particular, configure.hpp must match that library's build configuration.
+include_directories(SYSTEM "${PROJECT_BINARY_DIR}/CppAD/include")
 include_directories(SYSTEM "${EIGEN_DIR}")
 include_directories(SYSTEM "${MCPP_DIR}/include")
-#include_directories(SYSTEM "${MCPP_DIR}/3rdparty/cpplapack/include")
-#include_directories(SYSTEM "${MCPP_DIR}/3rdparty/fadbad++")
 include_directories(SYSTEM "${PYBIND11_DIR}/include")
 include_directories(SYSTEM "${SPDLOG_DIR}/include")
 
@@ -512,7 +513,7 @@ ExternalProject_Add(spdlog
     CMAKE_ARGS -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
     -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
     -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
-    -DCMAKE_INSTALL_PREFIX=""
+    -DCMAKE_INSTALL_PREFIX=${PROJECT_BINARY_DIR}/spdlog-install
     -DSPDLOG_BUILD_SHARED=OFF
 )
 

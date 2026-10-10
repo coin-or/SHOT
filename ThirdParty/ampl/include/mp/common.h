@@ -23,8 +23,12 @@
 #ifndef MP_COMMON_H_
 #define MP_COMMON_H_
 
-#include "mp/error.h"  // for MP_ASSERT
+#include <cmath>
 #include <cstddef>     // for std::size_t
+
+#include "mp/arrayref.h"
+#include "mp/error.h"  // for MP_ASSERT
+#include "mp/nl-header.h"
 
 /** The mp namespace. */
 namespace mp {
@@ -64,7 +68,7 @@ class ComplInfo {
   int flags_;
 
  public:
-  // Flags for the constructor.
+  /// Flags for the constructor.
   enum {
     /** Constraint upper bound is  infinity (finite variable lower bound). */
     INF_UB = 1,
@@ -85,12 +89,13 @@ class ComplInfo {
   /** Constraint lower bound. */
   double con_lb() const {
     return (flags_ & INF_LB) != 0 ?
-          -std::numeric_limits<double>::infinity() : 0;
+          -INFINITY : 0;
   }
 
   /** Constraint upper bound. */
   double con_ub() const {
-    return (flags_ & INF_UB) != 0 ? std::numeric_limits<double>::infinity() : 0;
+    return (flags_ & INF_UB) != 0 ?
+          INFINITY : 0;
   }
 };
 
@@ -102,7 +107,14 @@ enum Kind {
   CON     =    1,  /**< Applies to constraints. */
   OBJ     =    2,  /**< Applies to objectives. */
   PROBLEM =    3   /**< Applies to problems. */
+  ,
+  VAR_BIT = 0x80, // for building a bit mask
+  CON_BIT = 0x100,
+  OBJ_BIT = 0x200,
+  PROB_BIT= 0x400
 };
+
+constexpr int KIND_MASK = Kind::VAR | Kind::CON | Kind::OBJ | Kind ::PROBLEM;
 
 // Suffix flags.
 enum {
@@ -114,6 +126,8 @@ enum {
 };
 }
 
+
+/// MP low-level stuff
 namespace internal {
 enum {
   SUFFIX_KIND_MASK = 3,  // Mask for suffix kinds.
@@ -122,36 +136,253 @@ enum {
 }
 
 namespace sol {
-/** Solution status. */
-enum Status {
-  /** Unknown status. */
+
+/**
+ *  Solution status.
+ *
+ *  For printing solve result codes with the `-!` command-line switch,
+ *  every solution driver should register its solve_result codes
+ *  via BasicSolver::AddSolveResults(). Only non-major codes
+ *  should normally be registered (those with _LAST defined
+ *  are pre-registered automatically.)
+ *
+ *  The meaning ideally should be the same for existing codes
+ *  (use description from the comment.) For extra codes, use
+ *  passing ranges (e.g., for stopping with a feasible solution
+ *  on a limit, use 400-449), otherwise SPECIFIC+ codes.
+ */
+enum Status {  
+  /** If not touched. Don't register this code. */
+  NOT_SET = -200,
+
+  /** Unknown status. Don't register this code. */
   UNKNOWN     =  -1,
 
   /**
-    An optimal solution found for an optimization problem or a feasible
-    solution found for a satisfaction problem.
+   *  Solved.
+   *  An optimal solution found for an optimization problem or a feasible
+   *  solution found for a satisfaction problem.
+   *  Codes 0-99.
    */
   SOLVED      =   0,
+  /** End of the 'solved' range. */
+  SOLVED_LAST =  99,
 
-  /** Solution returned but it can be non-optimal or even infeasible. */
+  /** Solved?
+      Solution candidate returned but error likely.
+      Codes 100-199. */
   UNCERTAIN   = 100,
+  /** Locally optimal solution. */
+  OPTIMAL_LOCALLY = UNCERTAIN + 20,
+  /** MP Solution check failed. Codes 150-159. */
+  MP_SOLUTION_CHECK = UNCERTAIN + 50,
+  /** End of the 'mp-solution-check' range. */
+  MP_SOLUTION_CHECK_LAST     = UNCERTAIN + 59,
+  /** End of the 'uncertain' range. */
+  UNCERTAIN_LAST = 199,
 
-  /** Problem is infeasible. */
+  /** Problem is infeasible. Codes 200-299. */
   INFEASIBLE  = 200,
+  /** Problem is infeasible, IIS computation not attempted. */
+  INFEASIBLE_NO_IIS  = INFEASIBLE + 1,
+  /** Problem is infeasible, IIS returned. */
+  INFEASIBLE_IIS  = INFEASIBLE + 2,
+  /** Problem is infeasible, IIS finder failed. */
+  INFEASIBLE_IIS_FAILED  = INFEASIBLE + 3,
+  /** End of the 'infeasible' range. */
+  INFEASIBLE_LAST = 299,
 
-  /** Problem is unbounded. */
-  UNBOUNDED   = 300,
+  /** Unbounded, both feasible or not. */
+  UNBOUNDED           = 300,
+  /** Problem is unbounded, feasible solution returned.
+      Codes 300-349. */
+  UNBOUNDED_FEAS      = UNBOUNDED,
+  /** End of the 'unbounded-feas' range. */
+  UNBOUNDED_FEAS_LAST = 349,
+  /** Problem is unbounded, no feasible solution returned.
+      Codes 350-399.
+      For undecidedly inf/unb, use LIMIT_INF_UNB. */
+  UNBOUNDED_NO_FEAS      = 350,
+  /** End of the 'unbounded-no-feas' range. */
+  UNBOUNDED_NO_FEAS_LAST = 399,
+  /** Last 'unbounded'. */
+  UNBOUNDED_LAST = UNBOUNDED_NO_FEAS_LAST,
 
-  /** Stopped by a limit, e.g. on iterations or time. */
-  LIMIT       = 400,
+  /** Stopped by limit. */
+  LIMIT = 400,
+  /** Limit.
+   *  Feasible solution, stopped by a limit, e.g., on iterations or Ctrl-C.
+   *  Codes 400-449.
+   *  For new custom codes, start from LIMIT_FEAS_NEW, LIMIT_NO_FEAS_NEW.
+   */
+  LIMIT_FEAS       = LIMIT,
+  /** Start of custom LIMIT_FEAS codes. */
+  LIMIT_FEAS_NEW   = LIMIT_FEAS + 30,
+  /** User interrupt, feasible solution. */
+  LIMIT_FEAS_INTERRUPT = LIMIT_FEAS + 1,
+  /** Time limit, feasible solution. */
+  LIMIT_FEAS_TIME = LIMIT_FEAS + 2,
+  /** Iteration limit, feasible solution. */
+  LIMIT_FEAS_ITER = LIMIT_FEAS + 3,
+  /** Node limit, feasible solution. */
+  LIMIT_FEAS_NODES = LIMIT_FEAS + 4,
+  /** Best obj/bound reached, feasible solution. */
+  LIMIT_FEAS_BESTOBJ_BESTBND = LIMIT_FEAS + 5,
+  /** Gap reached, feasible solution. */
+  LIMIT_FEAS_GAP = LIMIT_FEAS_BESTOBJ_BESTBND,
+  /** Best obj reached, feasible solution. */
+  LIMIT_FEAS_BESTOBJ = LIMIT_FEAS + 6,
+  /** Best bound reached, feasible solution. */
+  LIMIT_FEAS_BESTBND = LIMIT_FEAS + 7,
+  /** Solution number bound reached. */
+  LIMIT_FEAS_NUMSOLS = LIMIT_FEAS + 8,
+  /** Work limit reached, feasible solution. */
+  LIMIT_FEAS_WORK = LIMIT_FEAS + 9,
+  /** Soft memory limit reached, feasible solution. */
+  LIMIT_FEAS_SOFTMEM = LIMIT_FEAS + 10,
+  /** Unrecoverable failure, feasible solution found. */
+  LIMIT_FEAS_FAILURE = LIMIT_FEAS + 20,
+  /** End of the 'limit_feas' range.  */
+  LIMIT_FEAS_LAST  = 449,
 
-  /** A solver error. */
+  /** Limit.
+      Problem is infeasible or unbounded.
+      Codes 450-469.  */
+  LIMIT_INF_UNB  = LIMIT_FEAS + 50,
+  /** End of the 'limit inf/unb' range.  */
+  LIMIT_INF_UNB_LAST = LIMIT_FEAS + 69,
+  /** Deprecated. */
+  INF_OR_UNB  = LIMIT_INF_UNB,
+
+  /** Limit.
+      No feasible solution returned.
+      Codes 470-499.  */
+  LIMIT_NO_FEAS  = LIMIT_FEAS + 70,
+  /** Start of custom LIMIT_FEAS codes. */
+  LIMIT_NO_FEAS_NEW = LIMIT_NO_FEAS + 20,
+  /** User interrupt, no feasible solution. */
+  LIMIT_NO_FEAS_INTERRUPT = LIMIT_NO_FEAS + 1,
+  /** Time limit, no feasible solution. */
+  LIMIT_NO_FEAS_TIME = LIMIT_NO_FEAS + 2,
+  /** Iteration limit, no feasible solution. */
+  LIMIT_NO_FEAS_ITER = LIMIT_NO_FEAS + 3,
+  /** Node limit, no feasible solution. */
+  LIMIT_NO_FEAS_NODES = LIMIT_NO_FEAS + 4,
+  /** Objective cutoff, no feasible solution. */
+  LIMIT_NO_FEAS_CUTOFF = LIMIT_NO_FEAS + 5,
+  /** Best bound reached, no feasible solution. */
+  LIMIT_NO_FEAS_BESTBND = LIMIT_NO_FEAS + 7,
+  /** Work limit reached, no feasible solution. */
+  LIMIT_NO_FEAS_WORK = LIMIT_NO_FEAS + 9,
+  /** Soft memory limit reached, no feasible solution. */
+  LIMIT_NO_FEAS_SOFTMEM = LIMIT_NO_FEAS + 10,
+  /** Locally infeasible. */
+  LIMIT_NO_FEAS_LOCALLY = LIMIT_NO_FEAS + 11,
+  /** End of the 'limit-no-feas' range.  */
+  LIMIT_NO_FEAS_LAST  = LIMIT_FEAS + 99,
+  /** End of the 'limit' range.  */
+  LIMIT_LAST  = LIMIT + 99,
+
+  /** Failure, without a feasible solution.
+      Codes 500-999.
+      With a feasible solution, use LIMIT_FEAS_FAILURE. */
   FAILURE     = 500,
+  /** End of the 'failure' range. */
+  FAILURE_LAST     = 999,
 
-  /** Interrupted by the user. */
-  INTERRUPTED = 600
+  /** Failure. A numeric issue without a feasible solution.
+   *  With a feasible solution, use UNCERTAIN. */
+  NUMERIC     = FAILURE + 50,
+
+  /** Specific.
+   *  Use SPECIFIC++ for specific fail codes. */
+  SPECIFIC = 600,
+  /** Deprecated.
+   *  Use LIMIT_FEAS_INTERRUPT, LIMIT_NOFEAS_INTERRUPT instead.
+   */
+  INTERRUPTED = SPECIFIC
 };
+
+/// Status string ("solved", ...).
+/// Major status only.
+const char* GetStatusName(sol::Status stt);
+
+/// Problem status unknown
+inline bool IsProblemStatusUnknown(sol::Status status) {
+  return sol::UNKNOWN==status;
 }
+
+/** Following the taxonomy of the enum sol::Status, returns true if
+      we have an optimal solution or a feasible solution for a
+      satisfaction problem */
+inline bool IsProblemSolved(sol::Status status) {
+  return sol::SOLVED<=status
+         && status<=sol::SOLVED_LAST;
+}
+
+/// Maybe solved
+inline bool IsProblemMaybeSolved(sol::Status status) {
+  return sol::UNCERTAIN<=status
+         && status<=sol::UNCERTAIN_LAST;
+}
+
+/// Solved or feasible
+inline bool IsProblemSolvedOrFeasible(sol::Status status) {
+  return
+      IsProblemSolved(status)
+      ||
+      (sol::LIMIT_FEAS<=status &&
+       sol::LIMIT_FEAS_LAST>=status)
+      ||
+      (sol::UNBOUNDED_FEAS<=status &&
+       sol::UNBOUNDED_FEAS_LAST>=status);
+}
+
+/// Infeasible?
+inline bool IsProblemInfeasible(sol::Status status) {
+  return sol::INFEASIBLE<=status
+         && status<=sol::INFEASIBLE_LAST;
+}
+
+/// Unbounded?
+inline bool IsProblemUnbounded(sol::Status status) {
+  return sol::UNBOUNDED<=status
+         && sol::UNBOUNDED_LAST>=status;
+}
+
+/// Undecidedly infeas or unbnd
+inline bool IsProblemIndiffInfOrUnb(sol::Status status) {
+  return sol::LIMIT_INF_UNB<=status
+         && status<=sol::LIMIT_INF_UNB_LAST;
+}
+
+/// Infeasible or unbounded (known which one or not)
+inline bool IsProblemInfOrUnb(sol::Status status) {
+  return
+      IsProblemInfeasible(status)
+      || IsProblemUnbounded(status)
+      || IsProblemIndiffInfOrUnb(status);
+}
+
+inline bool IsSolStatusSet(sol::Status status) {
+  return sol::NOT_SET!=status;
+}
+
+}  // namespace sol
+
+
+/// Solution (usually postsolved / unpresolved)
+struct Solution {
+  /// primal
+  std::vector<double> primal;
+  /// dual
+  std::vector<double> dual;
+  /// objective values
+  std::vector<double> objvals;
+  /// Sparsity of primal initial guess, if solver wants it
+  ArrayRef<int> spars_primal;
+};
+
 
 /** Expression information. */
 namespace expr {
@@ -869,12 +1100,18 @@ const char *str(expr::Kind kind);
 int nl_opcode(expr::Kind kind);
 }  // namespace expr
 
+#define MP_CONST_DISPATCH(call) static_cast<const Impl*>(this)->call
+#define MPCD(call) MP_CONST_DISPATCH(call)
 #define MP_DISPATCH(call) static_cast<Impl*>(this)->call
+#define MPD(call) MP_DISPATCH(call)
+#define MP_DISPATCH_STATIC(call) Impl::call
+#define MPDS(call) MP_DISPATCH_STATIC(call)
 
 namespace internal {
 
 // Suppresses warnings about unused variables.
-inline void Unused(...) {}
+template <typename... T>
+  inline void Unused(const T&...) {}
 
 // Returns true if ExprType is of kind k.
 template <typename ExprType>
@@ -903,7 +1140,7 @@ class ExprInfo {
   const char *str;
 };
 
-// Maximum NL opcode.
+/// Maximum NL opcode.
 enum { MAX_OPCODE = 82 };
 
 class OpCodeInfo {
@@ -933,176 +1170,31 @@ inline const char *expr::str(expr::Kind kind) {
   return internal::ExprInfo::INFO[kind].str;
 }
 
-/** Information about an optimization problem. */
-struct ProblemInfo {
-  /** Total number of variables. */
-  int num_vars;
 
-  /**
-    Number of algebraic constraints including ranges and equality constraints.
-    It doesn't include logical constraints.
-   */
-  int num_algebraic_cons;
-
-  /** Total number of objectives. */
-  int num_objs;
-
-  /** Number of ranges (constraints with -Infinity < LHS < RHS < Infinity). */
-  int num_ranges;
-
-  /**
-    Number of equality constraints or -1 if unknown (AMPL prior to 19970627).
-   */
-  int num_eqns;
-
-  /** Number of logical constraints. */
-  int num_logical_cons;
-
-  /** Returns the number of integer variables (includes binary variable). */
-  int num_integer_vars() const {
-    return num_linear_binary_vars + num_linear_integer_vars +
-        num_nl_integer_vars_in_both + num_nl_integer_vars_in_cons +
-        num_nl_integer_vars_in_objs;
-  }
-
-  /** Returns the number of continuous variables. */
-  int num_continuous_vars() const { return num_vars - num_integer_vars(); }
-
-  // Nonlinear and complementarity information
-  // -----------------------------------------
-
-  /** Total number of nonlinear constraints. */
-  int num_nl_cons;
-
-  /** Total number of nonlinear objectives. */
-  int num_nl_objs;
-
-  /** Total number of complementarity conditions. */
-  int num_compl_conds;
-
-  /** Number of nonlinear complementarity conditions. */
-  int num_nl_compl_conds;
-
-  /** Number of complementarities involving double inequalities. */
-  int num_compl_dbl_ineqs;
-
-  /** Number of complemented variables with a nonzero lower bound. */
-  int num_compl_vars_with_nz_lb;
-
-  // Information about network constraints
-  // -------------------------------------
-
-  /** Number of nonlinear network constraints. */
-  int num_nl_net_cons;
-
-  /** Number of linear network constraints. */
-  int num_linear_net_cons;
-
-  // Information about nonlinear variables
-  // -------------------------------------
-
-  /**
-    Number of nonlinear variables in constraints including nonlinear
-    variables in both constraints and objectives.
-   */
-  int num_nl_vars_in_cons;
-
-  /**
-    Number of nonlinear variables in objectives including nonlinear
-    variables in both constraints and objectives.
-   */
-  int num_nl_vars_in_objs;
-
-  /** Number of nonlinear variables in both constraints and objectives. */
-  int num_nl_vars_in_both;
-
-  // Miscellaneous
-  // -------------
-
-  /** Number of linear network variables (arcs). */
-  int num_linear_net_vars;
-
-  /** Number of functions. */
-  int num_funcs;
-
-  // Information about discrete variables
-  // ------------------------------------
-
-  /** Number of linear binary variables. */
-  int num_linear_binary_vars;
-
-  /** Number of linear non-binary integer variables. */
-  int num_linear_integer_vars;
-
-  /**
-    Number of integer nonlinear variables in both constraints and objectives.
-   */
-  int num_nl_integer_vars_in_both;
-
-  /** Number of integer nonlinear variables just in constraints. */
-  int num_nl_integer_vars_in_cons;
-
-  /** Number of integer nonlinear variables just in objectives. */
-  int num_nl_integer_vars_in_objs;
-
-  // Information about nonzeros
-  // --------------------------
-
-  /** Number of nonzeros in constraints' Jacobian. */
-  std::size_t num_con_nonzeros;
-
-  /** Number of nonzeros in all objective gradients. */
-  std::size_t num_obj_nonzeros;
-
-  // Information about names
-  // -----------------------
-
-  /** Length of longest constraint name if names are available. */
-  int max_con_name_len;
-
-  /** Length of longest variable name if names are available. */
-  int max_var_name_len;
-
-  // Information about common expressions
-  // ------------------------------------
-
-  /**
-    Number of common expressions that appear both in constraints
-    and objectives.
-   */
-  int num_common_exprs_in_both;
-
-  /**
-    Number of common expressions that appear in multiple constraints
-    and don't appear in objectives.
-   */
-  int num_common_exprs_in_cons;
-
-  /**
-    Number of common expressions that appear in multiple objective
-    and don't appear in constraints.
-   */
-  int num_common_exprs_in_objs;
-
-  /**
-    Number of common expressions that only appear in a single constraint
-    and don't appear in objectives.
-   */
-  int num_common_exprs_in_single_cons;
-
-  /**
-    Number of common expressions that only appear in a single objective
-    and don't appear in constraints.
-   */
-  int num_common_exprs_in_single_objs;
-
-  /** Returns the total number of common expressions. */
-  int num_common_exprs() const {
-    return num_common_exprs_in_both + num_common_exprs_in_cons +
-        num_common_exprs_in_objs + num_common_exprs_in_single_cons +
-        num_common_exprs_in_single_objs;
-  }
+/// .iis suffix values
+enum class IISStatus {
+  non = 0,
+  low = 1,
+  fix = 2,    // both bounds in IIS
+  upp = 3,
+  mem = 4,
+  pmem = 5,   // 'possibly member'
+  plow = 6,
+  pupp = 7,
+  bug = 8
 };
+
+/// Basic status values (suffix .sstatus)
+enum class BasicStatus {
+  none= 0,  // 'not set'
+  bas = 1,
+  sup = 2,
+  low = 3,
+  upp = 4,
+  equ = 5,
+  btw = 6
+};
+
 }  // namespace mp
 
 #endif  // MP_COMMON_H_

@@ -502,10 +502,10 @@ public:
     inline bool tightenBounds(Interval bound) override
     {
         if(bound.l() == 0.0 && bound.u() > SHOT_DBL_EPS)
-            bound.l(SHOT_DBL_EPS);
+            bound.l() = SHOT_DBL_EPS;
 
         if(bound.u() == 0.0 && bound.l() < -SHOT_DBL_EPS)
-            bound.u(-SHOT_DBL_EPS);
+            bound.u() = -SHOT_DBL_EPS;
 
         if(bound.l() <= 0.0 && bound.u() >= 0.0)
             return (false);
@@ -591,7 +591,7 @@ public:
         auto childBounds = child->getBounds();
 
         if(childBounds.l() < 0.0)
-            childBounds.l(0.0);
+            childBounds.l() = 0.0;
 
         return (sqrt(childBounds));
     }
@@ -604,7 +604,7 @@ public:
         // sqrt(child) is never negative, so a negative lower part of the candidate is vacuous -- clamp it away
         // instead of letting it inflate pow(bound, 2)'s upper bound to infinity.
         if(bound.l() < 0.0)
-            bound.l(0.0);
+            bound.l() = 0.0;
 
         auto interval = pow(bound, 2);
 
@@ -720,7 +720,7 @@ public:
         auto childValue = child->calculate(intervalVector);
 
         if(childValue.l() <= 0)
-            childValue.l(SHOT_DBL_EPS);
+            childValue.l() = SHOT_DBL_EPS;
 
         return (log(childValue));
     }
@@ -730,7 +730,7 @@ public:
         auto childValue = child->getBounds();
 
         if(childValue.l() <= 0)
-            childValue.l(SHOT_DBL_EPS);
+            childValue.l() = SHOT_DBL_EPS;
 
         return (log(childValue));
     }
@@ -2000,10 +2000,10 @@ public:
         bool isQuotientNonpositive = (bounds1.l() >= 0 && bounds2.u() < 0) || (bounds1.u() <= 0 && bounds2.l() > 0);
 
         if(isQuotientNonnegative && bound.l() < 0)
-            bound.l(0.0);
+            bound.l() = 0.0;
 
         if(isQuotientNonpositive && bound.u() > 0)
-            bound.u(0.0);
+            bound.u() = 0.0;
 
         if(bound.l() > bound.u())
             return (false);
@@ -2352,16 +2352,16 @@ public:
 
         if(isBaseAtZero)
         {
-            baseBounds.l(SHOT_DBL_EPS);
+            baseBounds.l() = SHOT_DBL_EPS;
 
             if(baseBounds.u() < SHOT_DBL_EPS)
-                baseBounds.u(SHOT_DBL_EPS);
+                baseBounds.u() = SHOT_DBL_EPS;
         }
 
         bounds = pow(baseBounds, powerBounds);
 
         if(isBaseAtZero && powerBounds.l() > 0)
-            bounds.l(0.0);
+            bounds.l() = 0.0;
 
         return (bounds);
     }
@@ -2385,16 +2385,16 @@ public:
 
         if(isBaseAtZero)
         {
-            baseBounds.l(SHOT_DBL_SIG_MIN);
+            baseBounds.l() = SHOT_DBL_SIG_MIN;
 
             if(baseBounds.u() < SHOT_DBL_SIG_MIN)
-                baseBounds.u(SHOT_DBL_SIG_MIN);
+                baseBounds.u() = SHOT_DBL_SIG_MIN;
         }
 
         bounds = pow(baseBounds, powerBounds);
 
         if(isBaseAtZero && powerBounds.l() > 0)
-            bounds.l(0.0);
+            bounds.l() = 0.0;
 
         return (bounds);
     }

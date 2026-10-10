@@ -1153,7 +1153,7 @@ public:
         bool needsNonNegativeBase = (isInteger && isEven) || !isInteger;
 
         if(needsNonNegativeBase && bound.l() <= 0.0)
-            bound.l(0.0);
+            bound.l() = 0.0;
 
         Interval interval;
 
