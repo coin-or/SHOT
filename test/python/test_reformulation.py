@@ -497,8 +497,10 @@ class TestSharedAuxiliaryVariables:
 
         assert solver.solveProblem()
         point = list(solver.getPrimalSolution().point)
+        # The solution may come from an NLP problem, and a nonlinear constraint is accepted within
+        # Primal.Tolerance.NonlinearConstraint
         for name in ("c1", "c2"):
-            assert problem.getConstraint(name).calculateNumericValue(point).error <= 1e-6
+            assert problem.getConstraint(name).calculateNumericValue(point).error <= 1e-5
 
     def test_continuous_monomials(self):
         """Monomials of the same variables and sign share their auxiliary variable, also with other coefficients."""

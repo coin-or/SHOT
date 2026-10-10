@@ -1508,6 +1508,9 @@ void Solver::initializeSettings()
 
     env->settings->createSetting("Primal.FixedInteger.Use", true, "Use the fixed integer primal strategy");
 
+    env->settings->createSetting("Primal.FixedInteger.UseOnContinuousProblems", true,
+        "Also solve the NLP problem from the dual solutions of a nonconvex problem without discrete variables");
+
     env->settings->createSetting("Primal.FixedInteger.Warmstart", true, "Warm start the NLP solver");
 
     env->settings->createSetting("Primal.PolishSolution.NumberOfPoints", 1,
