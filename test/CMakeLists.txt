@@ -275,6 +275,15 @@ target_include_directories(${TEST_EXE_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../ThirdParty)
 
 target_link_libraries(${TEST_EXE_NAME} SHOTSolver)
+if(HAS_HIGHS)
+  target_link_libraries(${TEST_EXE_NAME} highs::highs)
+endif()
+if(HAS_CBC)
+  target_link_libraries(${TEST_EXE_NAME} CBC::CBC)
+endif()
+if(HAS_IPOPT)
+  target_link_libraries(${TEST_EXE_NAME} PkgConfig::IPOPT)
+endif()
 
 # Set rpath for finding dynamic libraries on macOS
 if(APPLE)

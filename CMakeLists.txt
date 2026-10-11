@@ -13,6 +13,8 @@ project(SHOT VERSION 1.1.0
                   DESCRIPTION "The Supporting Hyperplane Optimization Toolkit (SHOT) for Mixed-Integer Nonlinear Optimization"
                   LANGUAGES CXX C)
 
+include(GNUInstallDirs)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
@@ -974,15 +976,22 @@ file(
 
 # Creates the SHOT library that is linked to the executable
 add_library(SHOTSolver SHARED ${SOURCES})
-target_link_libraries(SHOTSolver SHOTBuildSettings)
+target_link_libraries(SHOTSolver PRIVATE SHOTBuildSettings)
+target_compile_features(SHOTSolver PUBLIC cxx_std_17)
+target_include_directories(SHOTSolver PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>
+    $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/SHOT/thirdparty>)
 add_dependencies(SHOTSolver cppad)
 
+if(APPLE)
+    set_target_properties(SHOTSolver PROPERTIES INSTALL_RPATH "@loader_path")
+elseif(UNIX)
+    set_target_properties(SHOTSolver PROPERTIES INSTALL_RPATH "$ORIGIN")
+endif()
+
 if(HAS_PYTHON)
-    if(APPLE)
-        set_target_properties(SHOTSolver PROPERTIES INSTALL_RPATH "@loader_path")
-    elseif(UNIX)
-        set_target_properties(SHOTSolver PROPERTIES INSTALL_RPATH "$ORIGIN")
-    endif()
     install(TARGETS SHOTSolver
         LIBRARY DESTINATION . COMPONENT Python
         RUNTIME DESTINATION . COMPONENT Python)
@@ -1000,38 +1009,39 @@ elseif(UNIX)
 endif()
 
 # Links the compiled libraries
-target_link_libraries(SHOTSolver SHOTHelper)
-target_link_libraries(SHOTSolver SHOTModel)
-target_link_libraries(SHOTSolver SHOTResults)
-target_link_libraries(SHOTSolver SHOTDualStrategy)
-target_link_libraries(SHOTSolver SHOTPrimalStrategy)
-target_link_libraries(SHOTSolver SHOTTasks)
+target_link_libraries(SHOTSolver PRIVATE SHOTHelper)
+target_link_libraries(SHOTSolver PRIVATE SHOTModel)
+target_link_libraries(SHOTSolver PRIVATE SHOTResults)
+target_link_libraries(SHOTSolver PRIVATE SHOTDualStrategy)
+target_link_libraries(SHOTSolver PRIVATE SHOTPrimalStrategy)
+target_link_libraries(SHOTSolver PRIVATE SHOTTasks)
 
 if(MSYS OR MINGW)
     # MinGW cross compilation will not work if "-Wl,--whole-archive" is defined below
-    target_link_libraries(SHOTSolver SHOTModelingInterfaces)
+    target_link_libraries(SHOTSolver PRIVATE SHOTModelingInterfaces)
 elseif(APPLE)
     # need these all-load flags to ensure that EntryPointGAMS symbols will be present in library
-    target_link_libraries(SHOTSolver "-Wl,-all_load" SHOTModelingInterfaces)
+    target_link_libraries(SHOTSolver PRIVATE "-Wl,-all_load" SHOTModelingInterfaces)
 else()
     # need these whole-archive flags to ensure that EntryPointGAMS symbols will be present in library
-    target_link_libraries(SHOTSolver "-Wl,--whole-archive" SHOTModelingInterfaces "-Wl,--no-whole-archive")
+    target_link_libraries(SHOTSolver PRIVATE "-Wl,--whole-archive" SHOTModelingInterfaces "-Wl,--no-whole-archive")
 endif()
 
-target_link_libraries(SHOTSolver SHOTSolutionStrategies)
+target_link_libraries(SHOTSolver PRIVATE SHOTSolutionStrategies)
 
 # Link CppAD library
-target_link_libraries(SHOTSolver ${CPPAD_LIBRARY})
+target_link_libraries(SHOTSolver PRIVATE ${CPPAD_LIBRARY})
 
-# Link stdc++fs on toolchains that need it, including consumers of SHOTSolver.
-target_link_libraries(SHOTSolver CXX::Filesystem)
+# Link stdc++fs into SHOTSolver on toolchains that need it.
+target_link_libraries(SHOTSolver PRIVATE CXX::Filesystem)
 
 # Generates the SHOT executable
 if(GENERATE_EXE)
     add_executable(${PROJECT_NAME} "${PROJECT_SOURCE_DIR}/src/SHOT.cpp")
     target_link_libraries(${PROJECT_NAME} SHOTSolver SHOTBuildSettings)
 
-    # Set rpath for finding dynamic libraries on macOS
+    # Keep build-tree solver libraries discoverable while using the installed
+    # lib directory after installation.
     if(APPLE)
         set(RPATH_DIRS "${CPPAD_LIB_DIR}")
         
@@ -1041,7 +1051,10 @@ if(GENERATE_EXE)
         
         set_target_properties(${PROJECT_NAME} PROPERTIES
             BUILD_RPATH "${RPATH_DIRS}"
-            INSTALL_RPATH "${RPATH_DIRS}")
+            INSTALL_RPATH "@loader_path/../${CMAKE_INSTALL_LIBDIR}")
+    elseif(UNIX)
+        set_target_properties(${PROJECT_NAME} PROPERTIES
+            INSTALL_RPATH "$ORIGIN/../${CMAKE_INSTALL_LIBDIR}")
     endif()
 
     # Extra linking necessary for GAMS
@@ -1072,54 +1085,93 @@ else()
     )
 endif()
 
-# For making the installation package
+# Install the command-line program, shared library, and CMake package.
 include(CMakePackageConfigHelpers)
+set(SHOT_CMAKE_INSTALL_DIR "${CMAKE_INSTALL_LIBDIR}/cmake/SHOT")
+configure_package_config_file(
+    "${PROJECT_SOURCE_DIR}/misc/SHOTConfig.cmake.in"
+    "${PROJECT_BINARY_DIR}/SHOTConfig.cmake"
+    INSTALL_DESTINATION "${SHOT_CMAKE_INSTALL_DIR}")
 write_basic_package_version_file(
-    MyLibConfigVersion.cmake
-    VERSION ${PACKAGE_VERSION}
-    COMPATIBILITY AnyNewerVersion
+    "${PROJECT_BINARY_DIR}/SHOTConfigVersion.cmake"
+    VERSION "${PROJECT_VERSION}"
+    COMPATIBILITY SameMajorVersion
 )
 
 if(GENERATE_EXE)
     install(
         TARGETS ${PROJECT_NAME}
         EXPORT SHOTTargets
-        LIBRARY DESTINATION lib
-        ARCHIVE DESTINATION lib
-        RUNTIME DESTINATION bin
-        INCLUDES DESTINATION include
+        RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT Runtime
     )
 endif()
 
-# Copy some additional files
 install(
     FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/AUTHORS
     ${CMAKE_CURRENT_SOURCE_DIR}/INSTALL
     ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE
     ${CMAKE_CURRENT_SOURCE_DIR}/README
-    DESTINATION bin
+    DESTINATION "${CMAKE_INSTALL_DOCDIR}"
+    COMPONENT Runtime
 )
 
-# Need to install the library as well
-install(TARGETS SHOTSolver DESTINATION lib)
+install(TARGETS SHOTSolver EXPORT SHOTTargets
+    LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT Runtime
+    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT Runtime
+    ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT Development)
 
-if(GENERATE_EXE)
-    install(
-        EXPORT SHOTTargets
-        FILE SHOTTargets.cmake
-        NAMESPACE SHOT::
-        DESTINATION lib/cmake/SHOT
-    )
+# CppAD is built with ExternalProject, so it has no install target in this
+# CMake tree. Install the versioned library and its symlinks together.
+install(DIRECTORY "${CPPAD_LIB_DIR}/"
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+    COMPONENT Runtime
+    FILES_MATCHING
+    PATTERN "libcppad_lib*.so*"
+    PATTERN "libcppad_lib*.dylib")
+
+# HiGHS' FAST_BUILD target does not install its shared library itself.
+if(HAS_HIGHS AND NOT USE_EXTERNAL_HIGHS)
+    install(TARGETS highs
+        LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT Runtime
+        RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT Runtime
+        ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT Development)
 endif()
 
-# Copy all header files including directory structure
-install(
-    DIRECTORY "${CMAKE_SOURCE_DIR}/src/" # source directory
-    DESTINATION "include" # target directory
-    FILES_MATCHING # install only matched files
-    PATTERN  "*.h" # select header files
-)
+install(EXPORT SHOTTargets
+    FILE SHOTTargets.cmake
+    NAMESPACE SHOT::
+    DESTINATION "${SHOT_CMAKE_INSTALL_DIR}"
+    COMPONENT Development)
+install(FILES
+    "${PROJECT_BINARY_DIR}/SHOTConfig.cmake"
+    "${PROJECT_BINARY_DIR}/SHOTConfigVersion.cmake"
+    DESTINATION "${SHOT_CMAKE_INSTALL_DIR}"
+    COMPONENT Development)
+
+# Public headers refer to these bundled header-only dependencies. The CppAD
+# headers come from its build output so configure.hpp matches cppad_lib.
+install(DIRECTORY "${PROJECT_SOURCE_DIR}/src/"
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+    COMPONENT Development
+    FILES_MATCHING PATTERN "*.h")
+install(FILES "${PROJECT_BINARY_DIR}/SHOTConfig.h"
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+    COMPONENT Development)
+install(DIRECTORY
+    "${PROJECT_SOURCE_DIR}/${BOOST_DIR}/boost"
+    "${PROJECT_SOURCE_DIR}/${EIGEN_DIR}/Eigen"
+    "${PROJECT_SOURCE_DIR}/${EIGEN_DIR}/unsupported"
+    "${PROJECT_SOURCE_DIR}/${SPDLOG_DIR}/include/spdlog"
+    "${PROJECT_BINARY_DIR}/CppAD/include/cppad"
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/SHOT/thirdparty"
+    COMPONENT Development)
+install(FILES "${PROJECT_SOURCE_DIR}/${TINYXML2_DIR}/tinyxml2.h"
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/SHOT/thirdparty"
+    COMPONENT Development)
+install(DIRECTORY "${PROJECT_SOURCE_DIR}/${MCPP_DIR}/include/"
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/SHOT/thirdparty"
+    COMPONENT Development)
 
 # Setting CPack metadata
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Andreas Lundell")
