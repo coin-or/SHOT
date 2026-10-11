@@ -1097,6 +1097,60 @@ class TestHyperplaneGradientCuts:
         assert set(name_log) <= {"c1", "c2"}, f"Lookup returned wrong constraints: {set(name_log)}"
 
 
+@pytest.mark.parametrize("backend,available,tree_strategy", [
+    (2, "HAS_CBC", 0),
+    (3, "HAS_HIGHS", 0),
+    (1, "HAS_GUROBI", 0),
+    (0, "HAS_CPLEX", 0),
+    (1, "HAS_GUROBI", 1),
+    (0, "HAS_CPLEX", 1),
+])
+def test_external_dual_bound_uses_original_maximize_direction(backend, available, tree_strategy):
+    """An external upper bound must tighten a maximization problem even if its MIP minimizes."""
+    import SHOTpy
+
+    if not getattr(SHOTpy, available):
+        pytest.skip(f"SHOT is not built with {available[4:]}")
+
+    solver = SHOTpy.Solver()
+    solver.updateSetting("Output.Console.LogLevel", 6)
+    solver.updateSetting("Dual.MIP.Solver", backend)
+    solver.updateSetting("Dual.TreeStrategy", tree_strategy)
+
+    problem = SHOTpy.Problem(solver)
+    x = problem.addVariable("x", SHOTpy.VariableType.Real, 0.0, 3.0)
+    binary = problem.addVariable("binary", SHOTpy.VariableType.Binary)
+    problem.setObjective(SHOTpy.log(1 + x) - 0.05 * binary, SHOTpy.ObjectiveDirection.Maximize)
+    problem.addConstraint(x <= 1 + 2 * binary, "link")
+    problem.finalize()
+    assert solver.setProblem(problem)
+    assert solver.getReformulatedProblem().objectiveFunction.direction == SHOTpy.ObjectiveDirection.Minimize
+
+    seen = []
+    recorded_bounds = []
+
+    def propose_bound(ctx):
+        assert not ctx.isMinimization
+        seen.append(ctx.dualBound)
+        if len(seen) == 2:
+            ctx.setDualBound(1.37)  # Valid and tighter than the current upper bound log(4).
+        elif len(seen) == 3:
+            ctx.setDualBound(1.38)  # Valid but weaker than 1.37.
+
+    solver.registerCallback(SHOTpy.CallbackLocation.DualBoundUpdate, propose_bound)
+    solver.registerCallback(SHOTpy.CallbackLocation.BoundsUpdated,
+                            lambda ctx: recorded_bounds.append(ctx.dualBound))
+    assert solver.solveProblem()
+
+    assert len(seen) >= 3
+    assert seen[0] == math.inf
+    assert seen[1] == pytest.approx(math.log(4))
+    assert seen[2] == pytest.approx(1.37)
+    assert any(bound == pytest.approx(1.37) for bound in recorded_bounds)
+    assert not any(bound == pytest.approx(1.38) for bound in recorded_bounds)
+    assert solver.getPrimalBound() == pytest.approx(math.log(4) - 0.05, abs=1e-4)
+
+
 class TestDirectMIQCQPCallbacks:
     @pytest.mark.parametrize("backend,available", [(0, "HAS_CPLEX"), (1, "HAS_GUROBI")])
     @pytest.mark.parametrize("maximize", [False, True])

@@ -128,7 +128,8 @@ std::optional<double> MIPSolverCallbackBase::queryAndUpdateExternalDualBound()
     if(!externalDualBound.has_value())
         return std::nullopt;
 
-    bool isMin = env->reformulatedProblem->objectiveFunction->properties.isMinimize;
+    // Callback bounds and Results are expressed in the original objective's direction.
+    bool isMin = env->problem->objectiveFunction->properties.isMinimize;
     double currentDualBound = env->results->getCurrentDualBound();
     double newBound = *externalDualBound;
 

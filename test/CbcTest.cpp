@@ -247,7 +247,7 @@ bool CbcExternalDualBoundCallbackTest(std::string filename, double dualBoundToTe
     solver->updateSetting("Termination.TimeLimit", 60.0);
 
     solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Info));
-    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Gurobi));
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cbc));
     solver->updateSetting("Dual.TreeStrategy", static_cast<int>(treeStrategy));
 
     std::cout << "Reading problem:  " << filename << '\n';
@@ -262,7 +262,8 @@ bool CbcExternalDualBoundCallbackTest(std::string filename, double dualBoundToTe
     solver->registerCallback<DualBoundUpdateContext>(
         [dualBoundToTest](DualBoundUpdateContext& context)
         {
-            if(context.getDualBound() >= dualBoundToTest)
+            if(context.isMinimization() ? context.getDualBound() >= dualBoundToTest
+                                        : context.getDualBound() <= dualBoundToTest)
                 return;
 
             std::cout << "Current dual bound is " << context.getDualBound()

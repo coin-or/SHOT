@@ -74,6 +74,12 @@ whether the interior-point search failed.
 For direct MIQCQP, `DualBoundUpdate` changes SHOT's bound and gap calculations. It does not pass the bound to
 CPLEX or Gurobi as a bound for their internal search.
 
+`DualBoundUpdate` always uses the **original problem's objective direction and objective values**, even when SHOT
+reformulates a maximization objective as a minimization problem internally. For minimization, supply a valid lower
+bound; a larger value tightens it. For maximization, supply a valid upper bound; a smaller value tightens it. Do not
+negate the value to match the reformulated MIP objective. SHOT ignores a proposed bound that does not improve its
+current dual bound. The user is responsible for the validity of a proposed bound.
+
 `BoundsUpdated` reports changes to SHOT's recorded bounds, including an externally supplied dual bound, a primal
 solution that improves the incumbent, and a dual bound reset when an artificial bound or primal reduction cut
 invalidates it. The context's `getPreviousPrimalBound()`, `getPreviousDualBound()` and
