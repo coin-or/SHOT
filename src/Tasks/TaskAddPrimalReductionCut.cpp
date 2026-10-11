@@ -157,16 +157,7 @@ void TaskAddPrimalReductionCut::run()
 
     env->dualSolver->cutOffToUse = cutOffToUse;
 
-    // currentDualBound is in the original problem's sense, so resetting it to the "no bound found yet"
-    // must use the original direction too
-    if(env->problem->objectiveFunction->properties.isMinimize)
-    {
-        env->results->currentDualBound = SHOT_DBL_MIN;
-    }
-    else
-    {
-        env->results->currentDualBound = SHOT_DBL_MAX;
-    }
+    env->results->resetDualBounds(false);
 
     std::stringstream tmpType;
     tmpType << "REDCUT-" << env->solutionStatistics.numberOfPrimalReductionCutsUpdatesWithoutEffect + 1;

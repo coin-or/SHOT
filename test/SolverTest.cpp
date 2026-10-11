@@ -1458,6 +1458,8 @@ bool TestCallbackGenericContext()
 
     std::set<E_CallbackLocation> locations;
     bool contextClassesMatch = true;
+    bool boundContextMatches = true;
+    int boundEvents = 0;
 
     solver->registerCallback(E_CallbackLocation::PrimalCandidateCheck | E_CallbackLocation::TerminationCheck,
         [&locations, &contextClassesMatch](CallbackContext& context)
@@ -1478,6 +1480,18 @@ bool TestCallbackGenericContext()
                 contextClassesMatch = false;
         });
 
+    solver->registerCallback<BoundsUpdatedContext>([&](BoundsUpdatedContext& context)
+        {
+            boundEvents++;
+            if(context.getLocation() != E_CallbackLocation::BoundsUpdated || !context.hasChanged()
+                || context.isPrimalBoundChanged()
+                    != (context.getPreviousPrimalBound() != context.getPrimalBound())
+                || context.isDualBoundChanged() != (context.getPreviousDualBound() != context.getDualBound())
+                || context.isGlobalDualBoundChanged()
+                    != (context.getPreviousGlobalDualBound() != context.getGlobalDualBound()))
+                boundContextMatches = false;
+        });
+
     solver->solveProblem();
 
     std::set<E_CallbackLocation> expectedLocations
@@ -1492,6 +1506,12 @@ bool TestCallbackGenericContext()
     if(!contextClassesMatch)
     {
         std::cout << "The class of a context was not that of its location\n";
+        passed = false;
+    }
+
+    if(boundEvents == 0 || !boundContextMatches)
+    {
+        std::cout << "The bound update callback did not report the changed bounds correctly\n";
         passed = false;
     }
 

@@ -10,6 +10,7 @@ class for the location, which has the state of the solver and the actions availa
   - CallbackLocation.NewPrimalSolution      NewPrimalSolutionContext
   - CallbackLocation.TerminationCheck       TerminationCheckContext
   - CallbackLocation.HyperplaneSelection    HyperplaneSelectionContext
+  - CallbackLocation.BoundsUpdated          BoundsUpdatedContext
 """
 
 import pytest
@@ -207,6 +208,7 @@ class TestCallbackLocationEnum:
         "NewPrimalSolution",
         "TerminationCheck",
         "HyperplaneSelection",
+        "BoundsUpdated",
     ]
 
     def test_location_values(self):
@@ -264,6 +266,8 @@ class TestContextClasses:
             "HyperplaneSelectionContext": ["solutionPoints", "addHyperplane", "addedHyperplanes"],
             "InteriorPointSearchContext": ["interiorPoints", "setInteriorPoints", "replacementInteriorPoints"],
             "TerminationCheckContext": [],
+            "BoundsUpdatedContext": ["previousPrimalBound", "previousDualBound", "previousGlobalDualBound",
+                                     "primalBoundChanged", "dualBoundChanged", "globalDualBoundChanged"],
         }
         for name, attrs in expected.items():
             cls = getattr(SHOTpy, name)
@@ -1129,11 +1133,17 @@ class TestDirectMIQCQPCallbacks:
         search_calls = []
         submitted = []
         accepted = []
+        bound_events = []
+        saved_contexts = []
+        events_at_second_bound_call = []
 
         def bound(ctx):
             bound_calls.append(ctx.dualBound)
             if len(bound_calls) == 1:
                 ctx.setDualBound(1.0 if maximize else -1.0)
+            else:
+                events_at_second_bound_call.append(len(bound_events))
+                ctx.setDualBound(ctx.dualBound)  # An unchanged proposal must not emit an event.
 
         def search(ctx):
             search_calls.append(ctx.dualBound)
@@ -1149,6 +1159,15 @@ class TestDirectMIQCQPCallbacks:
             if ctx.source == SHOTpy.PrimalSolutionSource.ExternalPrimalSolution:
                 accepted.append(ctx.point)
 
+        def bounds_updated(ctx):
+            saved_contexts.append(ctx)
+            bound_events.append((ctx.previousPrimalBound, ctx.primalBound,
+                                 ctx.previousDualBound, ctx.dualBound,
+                                 ctx.previousGlobalDualBound, ctx.globalDualBound,
+                                 ctx.primalBoundChanged, ctx.dualBoundChanged,
+                                 ctx.globalDualBoundChanged))
+
+        solver.registerCallback(SHOTpy.CallbackLocation.BoundsUpdated, bounds_updated)
         solver.registerCallback(SHOTpy.CallbackLocation.PrimalCandidateCheck, candidate)
         solver.registerCallback(SHOTpy.CallbackLocation.NewPrimalSolution, new_solution)
         solver.solveProblem()
@@ -1160,6 +1179,18 @@ class TestDirectMIQCQPCallbacks:
         assert submitted == [[2.0, 0.0], [1.0, 0.0]]
         assert [2.0, 0.0] in accepted
         assert bound_calls[1] == 0.0
+        assert events_at_second_bound_call == [len(bound_events)]
+        assert len(bound_events) >= 2
+        first, second = bound_events[:2]
+        assert math.isinf(first[2]) and first[3] == (1.0 if maximize else -1.0)
+        assert first[6:] == (False, True, True)
+        assert math.isinf(second[0]) and second[1] == (-2.0 if maximize else 2.0)
+        assert second[6:] == (True, False, False)
+        assert all(any(event[6:]) for event in bound_events)
+        assert any(event[3] == 0.0 and event[7] for event in bound_events[2:])
+        assert not saved_contexts[0].isValid
+        with pytest.raises(SHOTpy.CallbackContextExpired):
+            _ = saved_contexts[0].previousDualBound
 
 
 class TestDualBoundAndPrimalSearchCallbacks:

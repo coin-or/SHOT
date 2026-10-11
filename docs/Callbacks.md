@@ -63,6 +63,7 @@ callback receives the context class of the location, and its return value is ign
 | `PrimalCandidateSearch` | `PrimalCandidateSearchContext` | `TaskSelectPrimalCandidatesFromExternalSource`, once per iteration and when the solution is finalized; before and after the direct MIQCQP solve; the CPLEX and Gurobi single-tree callbacks | Multi-tree, single-tree, NLP, direct MIQCQP | – | `addPrimalSolution(point)` |
 | `PrimalCandidateCheck` | `PrimalCandidateCheckContext` | `PrimalSolver::checkPrimalSolutionCandidates`, for each candidate before it is checked | All | `getPoint()`: original | `rejectCandidate()` |
 | `NewPrimalSolution` | `NewPrimalSolutionContext` | `Results::addPrimalSolution`, after a solution has been stored | All | `getPoint()`: original | – |
+| `BoundsUpdated` | `BoundsUpdatedContext` | After a primal, current dual, or global dual bound changes during the solve | All | – | – |
 | `TerminationCheck` | `TerminationCheckContext` | `TaskCheckUserTermination`, once per iteration; the termination checks inside the MIP solvers (Cbc, CPLEX, Gurobi, HiGHS) and the single-tree callbacks | All | – | – |
 | `HyperplaneSelection` | `HyperplaneSelectionContext` | `TaskSelectHyperplanesExternal`, after SHOT has selected its own hyperplanes; the single-tree callbacks | Multi-tree, single-tree, NLP | `getSolutionPoints()`: reformulated | `addHyperplane(hyperplane)` |
 
@@ -72,6 +73,17 @@ whether the interior-point search failed.
 
 For direct MIQCQP, `DualBoundUpdate` changes SHOT's bound and gap calculations. It does not pass the bound to
 CPLEX or Gurobi as a bound for their internal search.
+
+`BoundsUpdated` reports changes to SHOT's recorded bounds, including an externally supplied dual bound, a primal
+solution that improves the incumbent, and a dual bound reset when an artificial bound or primal reduction cut
+invalidates it. The context's `getPreviousPrimalBound()`, `getPreviousDualBound()` and
+`getPreviousGlobalDualBound()` give the values before the update; the inherited bound getters give the values after it.
+`isPrimalBoundChanged()`, `isDualBoundChanged()` and `isGlobalDualBoundChanged()` identify the changed values. One
+primal update can also cap a dual bound, and that produces one callback with both changes. Unchanged or rejected
+updates and bound initialization during `setProblem()` produce no event. Backend MIP bound changes are reported when
+SHOT receives and records them. A missing previous bound is infinite, as in
+the common context getters. The callback runs before `NewPrimalSolution` for an improving primal solution. It is a
+notification: only the common `terminate()` action is available.
 
 The points are in the variables of the original problem ("original") or of the reformulated problem
 ("reformulated"). The reformulated problem has the variables of the original problem first, followed by the auxiliary

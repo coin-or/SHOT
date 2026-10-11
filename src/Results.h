@@ -47,6 +47,8 @@ public:
     double getCurrentDualBound();
     double getGlobalDualBound();
     void setDualBound(double value, bool forceGlobal = false);
+    /// Forget the current dual bound, and optionally the global one, when their validity is lost
+    void resetDualBounds(bool resetGlobal);
 
     // For minimization problems, the lower bound is the dual while the upper bound is the primal objective value
     // for maximization problems, the lower bound is the primal while the upper bound is the dual objective value
@@ -102,6 +104,8 @@ public:
     int getAuxiliaryVariableCounter(E_AuxiliaryVariableType type);
 
 private:
+    void notifyBoundsUpdated(double previousPrimalBound, double previousDualBound, double previousGlobalDualBound);
+
     EnvironmentPtr env;
 };
 
