@@ -58,13 +58,17 @@ callback receives the context class of the location, and its return value is ign
 
 | Location | Context class | Where it is called | Strategies | Points | Actions |
 |---|---|---|---|---|---|
-| `InteriorPointSearch` | `InteriorPointSearchContext` | `TaskFindInteriorPoint`, after the internal interior point search, or instead of it with `Dual.ESH.InteriorPoint.Strategy` = OnlyExternal | Multi-tree, single-tree, NLP; ESH cut strategy and nonlinear constraints only | `getInteriorPoints()`: reformulated | `setInteriorPoints(points)` |
+| `InteriorPointSearch` | `InteriorPointSearchContext` | `TaskFindInteriorPoint`, after checking existing points or completing the internal search (including failure to find a point), or instead of it with `Dual.ESH.InteriorPoint.Strategy` = OnlyExternal | Multi-tree, single-tree, NLP; ESH cut strategy and nonlinear constraints only | `getInteriorPoints()`: reformulated | `setInteriorPoints(points)` |
 | `DualBoundUpdate` | `DualBoundUpdateContext` | `TaskUpdateExternalDualBound`, before the first dual problem and once per iteration; the CPLEX and Gurobi single-tree callbacks | Multi-tree, single-tree, NLP | – | `setDualBound(value)` |
 | `PrimalCandidateSearch` | `PrimalCandidateSearchContext` | `TaskSelectPrimalCandidatesFromExternalSource`, once per iteration and when the solution is finalized; the CPLEX and Gurobi single-tree callbacks | Multi-tree, single-tree, NLP | – | `addPrimalSolution(point)` |
 | `PrimalCandidateCheck` | `PrimalCandidateCheckContext` | `PrimalSolver::checkPrimalSolutionCandidates`, for each candidate before it is checked | All | `getPoint()`: original | `rejectCandidate()` |
 | `NewPrimalSolution` | `NewPrimalSolutionContext` | `Results::addPrimalSolution`, after a solution has been stored | All | `getPoint()`: original | – |
 | `TerminationCheck` | `TerminationCheckContext` | `TaskCheckUserTermination`, once per iteration; the termination checks inside the MIP solvers (Cbc, CPLEX, Gurobi, HiGHS) and the single-tree callbacks | All | – | – |
 | `HyperplaneSelection` | `HyperplaneSelectionContext` | `TaskSelectHyperplanesExternal`, after SHOT has selected its own hyperplanes; the single-tree callbacks | Multi-tree, single-tree, NLP | `getSolutionPoints()`: reformulated | `addHyperplane(hyperplane)` |
+
+`InteriorPointSearch` receives an empty `getInteriorPoints()` when neither the existing points nor the internal search
+produced a usable point. A callback can supply replacement points at that stage; SHOT validates them before deciding
+whether the interior-point search failed.
 
 The points are in the variables of the original problem ("original") or of the reformulated problem
 ("reformulated"). The reformulated problem has the variables of the original problem first, followed by the auxiliary
