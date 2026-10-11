@@ -1,7 +1,12 @@
 set(CBC_FOUND false)
 
-set(ENV{PKG_CONFIG_PATH} "${CBC_DIR}/lib/pkgconfig")
-pkg_search_module(CBC cbc)
+# FindPkgConfig adds CMAKE_PREFIX_PATH to its own search path without changing
+# the caller's PKG_CONFIG_PATH.
+set(_CBC_ORIGINAL_PREFIX_PATH "${CMAKE_PREFIX_PATH}")
+list(PREPEND CMAKE_PREFIX_PATH "${CBC_DIR}")
+pkg_search_module(CBC IMPORTED_TARGET cbc)
+set(CMAKE_PREFIX_PATH "${_CBC_ORIGINAL_PREFIX_PATH}")
+unset(_CBC_ORIGINAL_PREFIX_PATH)
 
 if(CBC_FOUND)
   message("-- Cbc found using Pkg-config:")
@@ -91,4 +96,16 @@ if(NOT (CBC_FOUND))
                                     Cgl_LIBRARY)
   mark_as_advanced(CBC_LIBRARIES CBC_INCLUDE_DIR CBC_LIB_DIR)
 
+endif()
+
+if(CBC_FOUND AND NOT TARGET CBC::CBC)
+  add_library(CBC::CBC INTERFACE IMPORTED)
+  if(TARGET PkgConfig::CBC)
+    target_link_libraries(CBC::CBC INTERFACE PkgConfig::CBC)
+  else()
+    set_target_properties(CBC::CBC PROPERTIES
+      INTERFACE_INCLUDE_DIRECTORIES "${CBC_INCLUDE_DIRS}"
+      INTERFACE_LINK_LIBRARIES "${CBC_LIBRARIES}"
+      INTERFACE_LINK_DIRECTORIES "${CBC_LIBRARY_DIRS}")
+  endif()
 endif()

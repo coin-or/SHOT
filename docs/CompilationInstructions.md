@@ -214,7 +214,7 @@ Key options (all `option(...)` declarations live at the top of the root
 | `HAS_GAMS` | `ON` | GAMS interface (modeling system + NLP solver) |
 | `HAS_AMPL` | `ON` | AMPL MP `.nl` file interface |
 | `HAS_PYTHON` | `OFF` | Build the `SHOTpy` Python bindings (needs Python3 dev headers; pybind11 comes from the submodule) |
-| `COMPILE_TESTS` | `OFF` | Build the `test_runner` test suite (section 5) |
+| `COMPILE_TESTS` | `OFF` | Build the `test_runner` test suite (section 6) |
 | `GENERATE_EXE` | `ON` | Build the `./SHOT` console executable |
 | `BUILD_DOCUMENTATION` | on if Doxygen found | Build the HTML API docs |
 
@@ -267,7 +267,43 @@ classes, signatures and docstrings of `SHOTpy`. A signature that cannot be
 written as a Python type, e.g., one that shows a C++ type name, then fails
 the build.
 
-## 5. Running the tests
+## 5. Installing SHOT
+
+After building, install to a writable prefix:
+
+```bash
+cmake --install build --prefix "$HOME/.local"
+"$HOME/.local/bin/SHOT" --help
+```
+
+The command-line program is installed in `bin`, while `libSHOTSolver` and the
+CppAD library built with SHOT are installed in the platform's CMake library
+directory (usually `lib` or `lib64`). A HiGHS library built
+from the bundled submodule is installed there too. Dependencies supplied
+externally, such as Ipopt, Cbc, CPLEX, Gurobi, GAMS, or an external HiGHS,
+must remain available on the target system. `-DGENERATE_EXE=off` installs the
+library without the command-line program. When `HAS_PYTHON=on`, use
+`--component Runtime` followed by `--component Development` to install only
+the native command-line program and C++ package; the Python component remains
+separate.
+
+The installation also contains a CMake package for C++ applications. In a
+separate project's `CMakeLists.txt`:
+
+```cmake
+find_package(SHOT 1.1 CONFIG REQUIRED)
+add_executable(my_solver main.cpp)
+target_link_libraries(my_solver PRIVATE SHOT::SHOTSolver)
+```
+
+Configure that project with `-DCMAKE_PREFIX_PATH="$HOME/.local"` if the
+prefix is not in CMake's default search paths. The imported target supplies
+SHOT's include directories and C++17 requirement. Public headers that expose
+CppAD, Eigen, spdlog, Boost, MC++, or tinyxml2 use the matching bundled headers
+installed with SHOT. Code that includes an optional solver's own headers
+still needs that solver's development package.
+
+## 6. Running the tests
 
 Tests must be enabled at configure time, i.e. add `-DCOMPILE_TESTS=on` to
 whichever `cmake` configure command from section 3 you used, then rebuild

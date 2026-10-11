@@ -1,6 +1,5 @@
 # The name of the test executable file
 set(TEST_EXE_NAME test_runner)
-set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_CXX_STANDARD 17)
 
 # The main groups of tests, there should be a file matching the name +"test".cpp
@@ -267,23 +266,24 @@ endforeach()
 set_property(GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS ON)
 set(Boost_USE_STATIC_LIBS OFF)
 
-if(HAS_CPLEX) # To make CPLEX build
-  add_definitions(-DIL_STD)
-  add_definitions(-LDFLAGS="-Wl,--no-as-needed")
-endif(HAS_CPLEX)
-
-# nlohmann/json header-only library for InstanceTest
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../ThirdParty)
-
 # Creates the test executable
 create_test_sourcelist(srclist test_runner.cpp ${cpptestsrc})
 add_executable(${TEST_EXE_NAME} ${srclist})
-target_link_libraries(${TEST_EXE_NAME} ${libs})
+target_link_libraries(${TEST_EXE_NAME} ${libs} SHOTBuildSettings)
 
 target_include_directories(${TEST_EXE_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../ThirdParty)
 
 target_link_libraries(${TEST_EXE_NAME} SHOTSolver)
+if(HAS_HIGHS)
+  target_link_libraries(${TEST_EXE_NAME} highs::highs)
+endif()
+if(HAS_CBC)
+  target_link_libraries(${TEST_EXE_NAME} CBC::CBC)
+endif()
+if(HAS_IPOPT)
+  target_link_libraries(${TEST_EXE_NAME} PkgConfig::IPOPT)
+endif()
 
 # Set rpath for finding dynamic libraries on macOS
 if(APPLE)
@@ -310,9 +310,6 @@ if(HAS_CPLEX)
     message("   ${CPLEX_INCLUDE_DIR}")
     message("   ${CPLEX_CONCERT_INCLUDE_DIR}")
     message("   ${CPLEX_ILOCPLEX_INCLUDE_DIR}")
-    include_directories(SYSTEM "${CPLEX_INCLUDE_DIR}")
-    include_directories(SYSTEM "${CPLEX_CONCERT_INCLUDE_DIR}")
-    include_directories(SYSTEM "${CPLEX_ILOCPLEX_INCLUDE_DIR}")
 
     message("-- The following CPLEX libraries will be used:")
     if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -340,7 +337,6 @@ if(HAS_GUROBI)
     message("-- Gurobi libraries could not be found!")
   else()
     message("-- Gurobi include files will be used from: ${GUROBI_INCLUDE_DIR}")
-    include_directories(SYSTEM "${GUROBI_INCLUDE_DIR}")
 
     message("-- The following Gurobi libraries will be used:")
     if(CMAKE_BUILD_TYPE STREQUAL "Debug")

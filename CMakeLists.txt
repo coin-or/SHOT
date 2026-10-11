@@ -13,6 +13,8 @@ project(SHOT VERSION 1.1.0
                   DESCRIPTION "The Supporting Hyperplane Optimization Toolkit (SHOT) for Mixed-Integer Nonlinear Optimization"
                   LANGUAGES CXX C)
 
+include(GNUInstallDirs)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
@@ -22,21 +24,13 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/misc")
 # Find std::filesystem or std::experimental::filesystem
 find_package(Filesystem REQUIRED)
 
-if(HAVE_STD_FILESYSTEM)
-    add_definitions(-DHAS_STD_FILESYSTEM)
-elseif(HAVE_STD_EXPERIMENTAL_FILESYSTEM)
-    add_definitions(-DHAS_STD_EXPERIMENTAL_FILESYSTEM)
-else()
+if(NOT HAVE_STD_FILESYSTEM AND NOT HAVE_STD_EXPERIMENTAL_FILESYSTEM)
     message(SEND_ERROR "SHOT needs support for C++17 filesystem.")
 endif()
 
-# Sets the release types, e.g. Release, Debug:
-# set(CMAKE_BUILD_TYPE Debug)
-
-# Asserts enabled in CppAD otherwise
-if(NOT CMAKE_BUILD_TYPE MATCHES Debug)
-    add_definitions(-DNDEBUG)
-endif()
+# CMake's configuration-specific compiler flags define NDEBUG for optimized
+# configurations. Do not set it directory-wide: multi-config generators also
+# build Debug targets from this directory.
 
 option(COMPILE_TESTS "Should the automated tests be compiled" OFF)
 option(SIMPLE_OUTPUT_CHARS "Whether to avoid using special characters in the console output (for example on MinGW)" OFF)
@@ -113,11 +107,6 @@ file(TO_CMAKE_PATH "${GUROBI_DIR}" ${GUROBI_DIR})
 file(TO_CMAKE_PATH "${HIGHS_EXTERNAL_DIR}" ${HIGHS_EXTERNAL_DIR})
 file(TO_CMAKE_PATH "${IPOPT_DIR}" ${IPOPT_DIR})
 
-# Check if a MIP solver is defined
-if(NOT (HAS_CPLEX OR HAS_GUROBI OR HAS_CBC OR HAS_HIGHS))
-    message(FATAL_ERROR "No MIP solver defined. SHOT needs at least one!")
-endif()
-
 # Try to find Git (used to get the hash shown by the console program)
 find_program(GIT git)
 
@@ -154,8 +143,6 @@ message(STATUS "Git hash: " ${GITHASH})
 mark_as_advanced(GITHASH)
 
 configure_file("${PROJECT_SOURCE_DIR}/src/SHOTConfig.h.in" "${PROJECT_BINARY_DIR}/SHOTConfig.h")
-
-include_directories("${PROJECT_BINARY_DIR}")
 
 set_property(GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS ON)
 
@@ -274,14 +261,7 @@ if(HAS_CBC)
     endif()
 
     if(CBC_FOUND)
-        link_directories(${CBC_LIBRARY_DIRS})
-        include_directories(SYSTEM ${CBC_INCLUDE_DIRS})
-        add_definitions(-DHAS_CBC)
-    endif(CBC_FOUND)
-
-    if(CBC_FOUND)
         set(DUAL_SOURCES ${DUAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCbc.cpp")
-        set(DUAL_SOURCES ${DUAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.cpp")
         set(DUAL_HEADERS ${DUAL_HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCbc.h")
         set(DUAL_HEADERS ${DUAL_HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.h")
     endif(CBC_FOUND)
@@ -298,10 +278,6 @@ if(HAS_CPLEX)
     endif()
 
     if(CPLEX_FOUND)
-        add_definitions(-DIL_STD)
-        add_definitions(-DHAS_CPLEX)
-
-        set(DUAL_SOURCES ${DUAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.cpp")
         set(DUAL_SOURCES ${DUAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplex.cpp")
 
         set(DUAL_SOURCES ${DUAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplexSingleTree.cpp")
@@ -325,9 +301,6 @@ if(HAS_GUROBI)
     endif()
 
     if(GUROBI_FOUND)
-        add_definitions(-DHAS_GUROBI)
-
-        set(DUAL_SOURCES ${DUAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.cpp")
         set(DUAL_SOURCES ${DUAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverGurobi.cpp")
         set(DUAL_SOURCES ${DUAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverGurobiSingleTree.cpp")
         set(DUAL_HEADERS ${DUAL_HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.h")
@@ -346,7 +319,6 @@ if(HAS_HIGHS AND NOT USE_EXTERNAL_HIGHS)
                              "or configure with -DUSE_EXTERNAL_HIGHS=on to use a precompiled HiGHS instead.")
     endif()
 
-    add_definitions(-DHAS_HIGHS)
     set(DUAL_SOURCES ${DUAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverHighs.cpp")
     set(DUAL_HEADERS ${DUAL_HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverHighs.h")
 
@@ -368,24 +340,26 @@ if(HAS_HIGHS AND USE_EXTERNAL_HIGHS)
     endif()
     
     if(highs_FOUND)
-        add_definitions(-DHAS_HIGHS)
         set(DUAL_SOURCES ${DUAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverHighs.cpp")
         set(DUAL_HEADERS ${DUAL_HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverHighs.h")
     endif()
 endif()
 
+# Check the backends that were actually found, after optional solvers may
+# have been disabled by their discovery steps.
+if(NOT (HAS_CPLEX OR HAS_GUROBI OR HAS_CBC OR HAS_HIGHS))
+    message(FATAL_ERROR "No MIP solver available. Enable HiGHS or install Cbc, CPLEX, or Gurobi.")
+endif()
+
 # Ipopt
 
 if(HAS_IPOPT)
-    find_package(PkgConfig)
-    if(PkgConfig_FOUND)
-        include(FindPkgConfig)
-    endif()
-    set(ENV{PKG_CONFIG_PATH} "${IPOPT_DIR}/lib/pkgconfig")
-
-    pkg_search_module(IPOPT REQUIRED ipopt)
-    link_directories(${IPOPT_LIBRARY_DIRS})
-    include_directories(SYSTEM ${IPOPT_INCLUDE_DIRS})
+    find_package(PkgConfig REQUIRED)
+    set(_IPOPT_ORIGINAL_PREFIX_PATH "${CMAKE_PREFIX_PATH}")
+    list(PREPEND CMAKE_PREFIX_PATH "${IPOPT_DIR}")
+    pkg_search_module(IPOPT REQUIRED IMPORTED_TARGET ipopt)
+    set(CMAKE_PREFIX_PATH "${_IPOPT_ORIGINAL_PREFIX_PATH}")
+    unset(_IPOPT_ORIGINAL_PREFIX_PATH)
 
     set(PRIMAL_SOURCES "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverIpoptBase.cpp")
     set(PRIMAL_SOURCES ${PRIMAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverIpoptRelaxed.cpp")
@@ -402,10 +376,6 @@ if(HAS_UNO)
     endif()
 
     if(UNO_FOUND)
-        # Defined here rather than in the linking section further down so that the definition reaches every
-        # target declared after this point, including the test executables.
-        add_definitions(-DHAS_UNO)
-
         set(PRIMAL_SOURCES ${PRIMAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverUno.cpp")
         set(PRIMAL_HEADERS ${PRIMAL_HEADERS} "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverUno.h")
     endif()
@@ -414,7 +384,6 @@ endif(HAS_UNO)
 # AMPL interface
 
 if(HAS_AMPL)
-    add_definitions(-DHAS_AMPL)
     set(
         MODELING_SOURCES
         ${MODELING_SOURCES}
@@ -434,8 +403,6 @@ endif(HAS_AMPL)
 # GAMS interface
 
 if(HAS_GAMS)
-    add_definitions(-DHAS_GAMS)
-
     set(PRIMAL_SOURCES ${PRIMAL_SOURCES} "${GAMS_DIR}/apifiles/C/api/gmomcc.c")
     set(PRIMAL_SOURCES ${PRIMAL_SOURCES} "${GAMS_DIR}/apifiles/C/api/gevmcc.c")
     set(PRIMAL_SOURCES ${PRIMAL_SOURCES} "${GAMS_DIR}/apifiles/C/api/palmcc.c")
@@ -482,19 +449,60 @@ foreach(_headerFile ${MODELING_HEADERS})
 endforeach()
 
 list(REMOVE_DUPLICATES INCLUDE_DIRS)
-include_directories(${INCLUDE_DIRS})
+# Shared usage requirements for SHOT-owned targets, including tests.
+add_library(SHOTBuildSettings INTERFACE)
+target_include_directories(SHOTBuildSettings INTERFACE "${PROJECT_BINARY_DIR}" ${INCLUDE_DIRS})
+target_include_directories(SHOTBuildSettings SYSTEM INTERFACE
+    "${AMPL_DIR}/include"
+    "${ARGH_DIR}"
+    "${BOOST_DIR}"
+    # Consume headers installed by the same ExternalProject as cppad_lib.
+    # configure.hpp must match that library's build configuration.
+    "${PROJECT_BINARY_DIR}/CppAD/include"
+    "${EIGEN_DIR}"
+    "${MCPP_DIR}/include"
+    "${PYBIND11_DIR}/include"
+    "${SPDLOG_DIR}/include")
 
-# Add the third party include directories
-include_directories(SYSTEM "${AMPL_DIR}/include")
-include_directories(SYSTEM "${ARGH_DIR}")
-include_directories(SYSTEM "${BOOST_DIR}")
-# Consume the headers installed by the same ExternalProject as cppad_lib.
-# In particular, configure.hpp must match that library's build configuration.
-include_directories(SYSTEM "${PROJECT_BINARY_DIR}/CppAD/include")
-include_directories(SYSTEM "${EIGEN_DIR}")
-include_directories(SYSTEM "${MCPP_DIR}/include")
-include_directories(SYSTEM "${PYBIND11_DIR}/include")
-include_directories(SYSTEM "${SPDLOG_DIR}/include")
+foreach(_backend CBC CPLEX GUROBI HIGHS IPOPT UNO AMPL GAMS)
+    if(HAS_${_backend})
+        target_compile_definitions(SHOTBuildSettings INTERFACE HAS_${_backend})
+    endif()
+endforeach()
+if(HAVE_STD_FILESYSTEM)
+    target_compile_definitions(SHOTBuildSettings INTERFACE HAS_STD_FILESYSTEM)
+else()
+    target_compile_definitions(SHOTBuildSettings INTERFACE HAS_STD_EXPERIMENTAL_FILESYSTEM)
+endif()
+if(HAS_CPLEX)
+    target_compile_definitions(SHOTBuildSettings INTERFACE IL_STD)
+    target_include_directories(SHOTBuildSettings SYSTEM INTERFACE
+        "${CPLEX_INCLUDE_DIR}" "${CPLEX_CONCERT_INCLUDE_DIR}" "${CPLEX_ILOCPLEX_INCLUDE_DIR}")
+endif()
+if(HAS_GUROBI)
+    target_include_directories(SHOTBuildSettings SYSTEM INTERFACE "${GUROBI_INCLUDE_DIR}")
+endif()
+if(HAS_CBC)
+    target_include_directories(SHOTBuildSettings SYSTEM INTERFACE ${CBC_INCLUDE_DIRS})
+    target_compile_options(SHOTBuildSettings INTERFACE ${CBC_CFLAGS_OTHER})
+endif()
+if(HAS_IPOPT)
+    target_include_directories(SHOTBuildSettings SYSTEM INTERFACE ${IPOPT_INCLUDE_DIRS})
+    target_compile_options(SHOTBuildSettings INTERFACE ${IPOPT_CFLAGS_OTHER})
+endif()
+if(HAS_UNO)
+    target_include_directories(SHOTBuildSettings SYSTEM INTERFACE "${UNO_INCLUDE_DIR}")
+endif()
+if(HAS_GAMS)
+    target_include_directories(SHOTBuildSettings SYSTEM INTERFACE "${GAMS_DIR}/apifiles/C/api")
+    target_compile_definitions(SHOTBuildSettings INTERFACE "GAMSDIR=\"${GAMS_DIR}\"")
+endif()
+if(MSVC)
+    target_compile_definitions(SHOTBuildSettings INTERFACE _USE_MATH_DEFINES)
+endif()
+if(MSVC OR MSYS OR MINGW)
+    target_compile_definitions(SHOTBuildSettings INTERFACE SIMPLE_OUTPUT_CHARS)
+endif()
 
 # Make sure the source file lists are in the correct format
 file(TO_CMAKE_PATH "${SOURCES}" SOURCES)
@@ -570,7 +578,7 @@ add_library(
     ${PROJECT_SOURCE_DIR}/src/TaskHandler.h
     ${PROJECT_SOURCE_DIR}/src/TaskHandler.cpp
 )
-target_link_libraries(SHOTHelper tinyxml2)
+target_link_libraries(SHOTHelper tinyxml2 SHOTBuildSettings)
 
 add_dependencies(SHOTHelper spdlog)
 add_dependencies(SHOTHelper cppad)
@@ -595,7 +603,7 @@ add_library(
     ${PROJECT_SOURCE_DIR}/src/Model/Simplifications.h
     ${PROJECT_SOURCE_DIR}/src/Model/Simplifications.cpp
 )
-target_link_libraries(SHOTModel SHOTHelper)
+target_link_libraries(SHOTModel SHOTHelper SHOTBuildSettings)
 
 # Creates the results library
 add_library(
@@ -606,7 +614,7 @@ add_library(
     ${PROJECT_SOURCE_DIR}/src/Iteration.cpp
     ${PROJECT_SOURCE_DIR}/src/Timing.h
 )
-target_link_libraries(SHOTResults SHOTModel)
+target_link_libraries(SHOTResults SHOTModel SHOTBuildSettings)
 
 if(HAS_PYTHON)
     # Find Python before adding pybind11 to ensure correct paths are used
@@ -616,7 +624,7 @@ if(HAS_PYTHON)
     add_subdirectory(${PYBIND11_DIR})
     pybind11_add_module(SHOTpy src/SHOTpy.cpp)
     add_dependencies(SHOTpy cppad)
-    target_link_libraries(SHOTpy PRIVATE SHOTSolver ${CPPAD_LIBRARY})
+    target_link_libraries(SHOTpy PRIVATE SHOTSolver SHOTBuildSettings ${CPPAD_LIBRARY})
 
     # Set rpath for finding dynamic libraries. In the build directory they are found where they were built, which the
     # type stubs generated after the build rely on, and when installed, e.g., in a wheel, next to the module, where
@@ -694,7 +702,7 @@ add_library(
     ${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverCuttingPlaneMinimax.cpp
     ${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverSHOT.cpp
 )
-target_link_libraries(SHOTPrimalStrategy SHOTModel)
+target_link_libraries(SHOTPrimalStrategy SHOTModel SHOTBuildSettings)
 
 # Creates the dual strategy library
 add_library(
@@ -702,6 +710,7 @@ add_library(
     ${DUAL_SOURCES}
     ${PROJECT_SOURCE_DIR}/src/DualSolver.h
     ${PROJECT_SOURCE_DIR}/src/DualSolver.cpp
+    ${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.cpp
     ${PROJECT_SOURCE_DIR}/src/MIPSolver/IMIPSolutionLimitStrategy.h
     ${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyAdaptive.h
     ${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyAdaptive.cpp
@@ -718,7 +727,7 @@ add_library(
     ${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyStandard.h
     ${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyStandard.cpp
 )
-target_link_libraries(SHOTDualStrategy SHOTModel)
+target_link_libraries(SHOTDualStrategy SHOTModel SHOTBuildSettings)
 
 
 # Creates the tasks library
@@ -823,18 +832,18 @@ add_library(
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskUpdateExternalDualBound.h
 )
 
-target_link_libraries(SHOTTasks SHOTPrimalStrategy)
+target_link_libraries(SHOTTasks SHOTPrimalStrategy SHOTBuildSettings)
 target_link_libraries(SHOTTasks SHOTDualStrategy)
 
 # Creates the solution strategies library
 file(GLOB_RECURSE STRATEGIES_SOURCES "${PROJECT_SOURCE_DIR}/src/SolutionStrategy/*.cpp")
 add_library(SHOTSolutionStrategies STATIC ${STRATEGIES_SOURCES})
-target_link_libraries(SHOTSolutionStrategies SHOTTasks)
+target_link_libraries(SHOTSolutionStrategies SHOTTasks SHOTBuildSettings)
 
 # Creates the modeling interfaces library
 set(MODELING_SOURCES ${MODELING_SOURCES} ${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemOSiL.cpp)
 add_library(SHOTModelingInterfaces STATIC ${MODELING_SOURCES})
-target_link_libraries(SHOTModelingInterfaces SHOTModel)
+target_link_libraries(SHOTModelingInterfaces SHOTModel SHOTBuildSettings)
 
 # Cplex linking
 if(HAS_CPLEX)
@@ -846,9 +855,6 @@ if(HAS_CPLEX)
         message("   ${CPLEX_INCLUDE_DIR}")
         message("   ${CPLEX_CONCERT_INCLUDE_DIR}")
         message("   ${CPLEX_ILOCPLEX_INCLUDE_DIR}")
-        include_directories(SYSTEM "${CPLEX_INCLUDE_DIR}")
-        include_directories(SYSTEM "${CPLEX_CONCERT_INCLUDE_DIR}")
-        include_directories(SYSTEM "${CPLEX_ILOCPLEX_INCLUDE_DIR}")
 
         message("-- The following CPLEX libraries will be used:")
         if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -877,7 +883,6 @@ if(HAS_GUROBI)
         message("-- Gurobi libraries could not be found!")
     else()
         message("-- Gurobi include files will be used from: ${GUROBI_INCLUDE_DIR}")
-        include_directories(SYSTEM "${GUROBI_INCLUDE_DIR}")
 
         message("-- The following Gurobi libraries will be used:")
         if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -902,10 +907,7 @@ if(HAS_CBC)
         message("-- Cbc libraries could not be found!")
     else()
         message("-- Cbc include files will be used from: ${CBC_INCLUDE_DIRS}")
-        target_include_directories(SHOTDualStrategy PUBLIC "${CBC_INCLUDE_DIRS}")
-
-        target_link_libraries(SHOTDualStrategy ${CBC_LIBRARIES})
-        target_compile_options(SHOTDualStrategy PUBLIC ${CBC_CFLAGS_OTHER})
+        target_link_libraries(SHOTDualStrategy CBC::CBC)
 
         message("-- The following Cbc libraries will be used from: ${CBC_LIBRARY_DIRS}")
         message("   ${CBC_LIBRARIES}")
@@ -923,11 +925,8 @@ endif(HAS_HIGHS)
 
 # Ipopt linking
 if(HAS_IPOPT)
-    message("-- Ipopt include files will be used from: ${IPOPT_DIR}/include/coin")
-    target_link_libraries(SHOTPrimalStrategy ${IPOPT_LIBRARIES})
-    target_include_directories(SHOTPrimalStrategy PUBLIC "${IPOPT_DIR}/include/coin")
-    target_compile_options(SHOTPrimalStrategy PUBLIC ${IPOPT_CFLAGS_OTHER})
-    add_definitions(-DHAS_IPOPT)
+    message("-- Ipopt include files will be used from: ${IPOPT_INCLUDE_DIRS}")
+    target_link_libraries(SHOTPrimalStrategy PkgConfig::IPOPT)
 
     message("-- The following Ipopt libraries will be used from: ${IPOPT_LIBRARY_DIRS}")
     message("   ${IPOPT_LIBRARIES}")
@@ -964,9 +963,7 @@ endif(HAS_UNO)
 # GAMS linking
 if(HAS_GAMS)
     message("-- GAMS include files will be used from: ${GAMS_DIR}/apifiles/C/api")
-    include_directories(SYSTEM "${GAMS_DIR}/apifiles/C/api")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DGAMSDIR=\\\"${GAMS_DIR}\\\"")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DGC_NO_MUTEX")
+    target_compile_definitions(SHOTPrimalStrategy PRIVATE GC_NO_MUTEX)
 endif(HAS_GAMS)
 
 file(
@@ -979,14 +976,22 @@ file(
 
 # Creates the SHOT library that is linked to the executable
 add_library(SHOTSolver SHARED ${SOURCES})
+target_link_libraries(SHOTSolver PRIVATE SHOTBuildSettings)
+target_compile_features(SHOTSolver PUBLIC cxx_std_17)
+target_include_directories(SHOTSolver PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>
+    $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/SHOT/thirdparty>)
 add_dependencies(SHOTSolver cppad)
 
+if(APPLE)
+    set_target_properties(SHOTSolver PROPERTIES INSTALL_RPATH "@loader_path")
+elseif(UNIX)
+    set_target_properties(SHOTSolver PROPERTIES INSTALL_RPATH "$ORIGIN")
+endif()
+
 if(HAS_PYTHON)
-    if(APPLE)
-        set_target_properties(SHOTSolver PROPERTIES INSTALL_RPATH "@loader_path")
-    elseif(UNIX)
-        set_target_properties(SHOTSolver PROPERTIES INSTALL_RPATH "$ORIGIN")
-    endif()
     install(TARGETS SHOTSolver
         LIBRARY DESTINATION . COMPONENT Python
         RUNTIME DESTINATION . COMPONENT Python)
@@ -1004,38 +1009,39 @@ elseif(UNIX)
 endif()
 
 # Links the compiled libraries
-target_link_libraries(SHOTSolver SHOTHelper)
-target_link_libraries(SHOTSolver SHOTModel)
-target_link_libraries(SHOTSolver SHOTResults)
-target_link_libraries(SHOTSolver SHOTDualStrategy)
-target_link_libraries(SHOTSolver SHOTPrimalStrategy)
-target_link_libraries(SHOTSolver SHOTTasks)
+target_link_libraries(SHOTSolver PRIVATE SHOTHelper)
+target_link_libraries(SHOTSolver PRIVATE SHOTModel)
+target_link_libraries(SHOTSolver PRIVATE SHOTResults)
+target_link_libraries(SHOTSolver PRIVATE SHOTDualStrategy)
+target_link_libraries(SHOTSolver PRIVATE SHOTPrimalStrategy)
+target_link_libraries(SHOTSolver PRIVATE SHOTTasks)
 
 if(MSYS OR MINGW)
     # MinGW cross compilation will not work if "-Wl,--whole-archive" is defined below
-    target_link_libraries(SHOTSolver SHOTModelingInterfaces)
+    target_link_libraries(SHOTSolver PRIVATE SHOTModelingInterfaces)
 elseif(APPLE)
     # need these all-load flags to ensure that EntryPointGAMS symbols will be present in library
-    target_link_libraries(SHOTSolver "-Wl,-all_load" SHOTModelingInterfaces)
+    target_link_libraries(SHOTSolver PRIVATE "-Wl,-all_load" SHOTModelingInterfaces)
 else()
     # need these whole-archive flags to ensure that EntryPointGAMS symbols will be present in library
-    target_link_libraries(SHOTSolver "-Wl,--whole-archive" SHOTModelingInterfaces "-Wl,--no-whole-archive")
+    target_link_libraries(SHOTSolver PRIVATE "-Wl,--whole-archive" SHOTModelingInterfaces "-Wl,--no-whole-archive")
 endif()
 
-target_link_libraries(SHOTSolver SHOTSolutionStrategies)
+target_link_libraries(SHOTSolver PRIVATE SHOTSolutionStrategies)
 
 # Link CppAD library
-target_link_libraries(SHOTSolver ${CPPAD_LIBRARY})
+target_link_libraries(SHOTSolver PRIVATE ${CPPAD_LIBRARY})
 
-# Link the standard library required for std::filesystem (if needed)
-#target_link_libraries(SHOTSolver CXX::Filesystem)
+# Link stdc++fs into SHOTSolver on toolchains that need it.
+target_link_libraries(SHOTSolver PRIVATE CXX::Filesystem)
 
 # Generates the SHOT executable
 if(GENERATE_EXE)
     add_executable(${PROJECT_NAME} "${PROJECT_SOURCE_DIR}/src/SHOT.cpp")
-    target_link_libraries(${PROJECT_NAME} SHOTSolver)
+    target_link_libraries(${PROJECT_NAME} SHOTSolver SHOTBuildSettings)
 
-    # Set rpath for finding dynamic libraries on macOS
+    # Keep build-tree solver libraries discoverable while using the installed
+    # lib directory after installation.
     if(APPLE)
         set(RPATH_DIRS "${CPPAD_LIB_DIR}")
         
@@ -1045,7 +1051,10 @@ if(GENERATE_EXE)
         
         set_target_properties(${PROJECT_NAME} PROPERTIES
             BUILD_RPATH "${RPATH_DIRS}"
-            INSTALL_RPATH "${RPATH_DIRS}")
+            INSTALL_RPATH "@loader_path/../${CMAKE_INSTALL_LIBDIR}")
+    elseif(UNIX)
+        set_target_properties(${PROJECT_NAME} PROPERTIES
+            INSTALL_RPATH "$ORIGIN/../${CMAKE_INSTALL_LIBDIR}")
     endif()
 
     # Extra linking necessary for GAMS
@@ -1062,17 +1071,6 @@ if(GENERATE_EXE)
 endif(GENERATE_EXE)
 
 
-# Extra flags for Visual Studio compilers
-if(MSVC)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++17")
-    add_definitions(-D_USE_MATH_DEFINES)
-endif(MSVC)
-
-# Extra flags for MinGW
-if (MSVC OR MSYS OR MINGW)
-    add_definitions(-DSIMPLE_OUTPUT_CHARS)
-endif()
-
 # Set compiler warnings levels
 if(MSVC)
     target_compile_options(SHOTSolver PRIVATE /W4 /WX)
@@ -1087,54 +1085,93 @@ else()
     )
 endif()
 
-# For making the installation package
+# Install the command-line program, shared library, and CMake package.
 include(CMakePackageConfigHelpers)
+set(SHOT_CMAKE_INSTALL_DIR "${CMAKE_INSTALL_LIBDIR}/cmake/SHOT")
+configure_package_config_file(
+    "${PROJECT_SOURCE_DIR}/misc/SHOTConfig.cmake.in"
+    "${PROJECT_BINARY_DIR}/SHOTConfig.cmake"
+    INSTALL_DESTINATION "${SHOT_CMAKE_INSTALL_DIR}")
 write_basic_package_version_file(
-    MyLibConfigVersion.cmake
-    VERSION ${PACKAGE_VERSION}
-    COMPATIBILITY AnyNewerVersion
+    "${PROJECT_BINARY_DIR}/SHOTConfigVersion.cmake"
+    VERSION "${PROJECT_VERSION}"
+    COMPATIBILITY SameMajorVersion
 )
 
 if(GENERATE_EXE)
     install(
         TARGETS ${PROJECT_NAME}
         EXPORT SHOTTargets
-        LIBRARY DESTINATION lib
-        ARCHIVE DESTINATION lib
-        RUNTIME DESTINATION bin
-        INCLUDES DESTINATION include
+        RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT Runtime
     )
 endif()
 
-# Copy some additional files
 install(
     FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/AUTHORS
     ${CMAKE_CURRENT_SOURCE_DIR}/INSTALL
     ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE
     ${CMAKE_CURRENT_SOURCE_DIR}/README
-    DESTINATION bin
+    DESTINATION "${CMAKE_INSTALL_DOCDIR}"
+    COMPONENT Runtime
 )
 
-# Need to install the library as well
-install(TARGETS SHOTSolver DESTINATION lib)
+install(TARGETS SHOTSolver EXPORT SHOTTargets
+    LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT Runtime
+    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT Runtime
+    ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT Development)
 
-if(GENERATE_EXE)
-    install(
-        EXPORT SHOTTargets
-        FILE SHOTTargets.cmake
-        NAMESPACE SHOT::
-        DESTINATION lib/cmake/SHOT
-    )
+# CppAD is built with ExternalProject, so it has no install target in this
+# CMake tree. Install the versioned library and its symlinks together.
+install(DIRECTORY "${CPPAD_LIB_DIR}/"
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+    COMPONENT Runtime
+    FILES_MATCHING
+    PATTERN "libcppad_lib*.so*"
+    PATTERN "libcppad_lib*.dylib")
+
+# HiGHS' FAST_BUILD target does not install its shared library itself.
+if(HAS_HIGHS AND NOT USE_EXTERNAL_HIGHS)
+    install(TARGETS highs
+        LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT Runtime
+        RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT Runtime
+        ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT Development)
 endif()
 
-# Copy all header files including directory structure
-install(
-    DIRECTORY "${CMAKE_SOURCE_DIR}/src/" # source directory
-    DESTINATION "include" # target directory
-    FILES_MATCHING # install only matched files
-    PATTERN  "*.h" # select header files
-)
+install(EXPORT SHOTTargets
+    FILE SHOTTargets.cmake
+    NAMESPACE SHOT::
+    DESTINATION "${SHOT_CMAKE_INSTALL_DIR}"
+    COMPONENT Development)
+install(FILES
+    "${PROJECT_BINARY_DIR}/SHOTConfig.cmake"
+    "${PROJECT_BINARY_DIR}/SHOTConfigVersion.cmake"
+    DESTINATION "${SHOT_CMAKE_INSTALL_DIR}"
+    COMPONENT Development)
+
+# Public headers refer to these bundled header-only dependencies. The CppAD
+# headers come from its build output so configure.hpp matches cppad_lib.
+install(DIRECTORY "${PROJECT_SOURCE_DIR}/src/"
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+    COMPONENT Development
+    FILES_MATCHING PATTERN "*.h")
+install(FILES "${PROJECT_BINARY_DIR}/SHOTConfig.h"
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+    COMPONENT Development)
+install(DIRECTORY
+    "${PROJECT_SOURCE_DIR}/${BOOST_DIR}/boost"
+    "${PROJECT_SOURCE_DIR}/${EIGEN_DIR}/Eigen"
+    "${PROJECT_SOURCE_DIR}/${EIGEN_DIR}/unsupported"
+    "${PROJECT_SOURCE_DIR}/${SPDLOG_DIR}/include/spdlog"
+    "${PROJECT_BINARY_DIR}/CppAD/include/cppad"
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/SHOT/thirdparty"
+    COMPONENT Development)
+install(FILES "${PROJECT_SOURCE_DIR}/${TINYXML2_DIR}/tinyxml2.h"
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/SHOT/thirdparty"
+    COMPONENT Development)
+install(DIRECTORY "${PROJECT_SOURCE_DIR}/${MCPP_DIR}/include/"
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/SHOT/thirdparty"
+    COMPONENT Development)
 
 # Setting CPack metadata
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Andreas Lundell")
