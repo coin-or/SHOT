@@ -1093,6 +1093,75 @@ class TestHyperplaneGradientCuts:
         assert set(name_log) <= {"c1", "c2"}, f"Lookup returned wrong constraints: {set(name_log)}"
 
 
+class TestDirectMIQCQPCallbacks:
+    @pytest.mark.parametrize("backend,available", [(0, "HAS_CPLEX"), (1, "HAS_GUROBI")])
+    @pytest.mark.parametrize("maximize", [False, True])
+    def test_external_bounds_and_candidates_before_and_after_solve(self, backend, available, maximize):
+        import SHOTpy
+
+        if not getattr(SHOTpy, available):
+            pytest.skip(f"SHOT is not built with {available[4:]}")
+
+        solver = SHOTpy.Solver()
+        solver.updateSetting("Output.Console.LogLevel", 6)
+        solver.updateSetting("Dual.MIP.Solver", backend)
+        solver.updateSetting("Model.Reformulation.Quadratics.Strategy", 2)
+        problem = SHOTpy.Problem(solver.getEnvironment())
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Integer, 0.0, 2.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Integer, 0.0, 2.0)
+        problem.addVariable(x)
+        problem.addVariable(y)
+        objective = SHOTpy.LinearTerms()
+        coefficient = -1.0 if maximize else 1.0
+        objective.add(SHOTpy.LinearTerm(coefficient, x))
+        objective.add(SHOTpy.LinearTerm(coefficient, y))
+        direction = SHOTpy.ObjectiveDirection.Maximize if maximize else SHOTpy.ObjectiveDirection.Minimize
+        problem.setObjective(SHOTpy.LinearObjectiveFunction(direction, objective, 0.0))
+        circle = SHOTpy.QuadraticConstraint("circle", -SHOTpy.SHOT_DBL_MAX, 5.0)
+        circle.add(SHOTpy.QuadraticTerm(1.0, x, x))
+        circle.add(SHOTpy.QuadraticTerm(1.0, y, y))
+        problem.addConstraint(circle)
+        problem.finalize()
+        solver.setProblem(problem)
+        assert solver.getReformulatedProblem().properties.isMIQCQPProblem
+
+        bound_calls = []
+        search_calls = []
+        submitted = []
+        accepted = []
+
+        def bound(ctx):
+            bound_calls.append(ctx.dualBound)
+            if len(bound_calls) == 1:
+                ctx.setDualBound(1.0 if maximize else -1.0)
+
+        def search(ctx):
+            search_calls.append(ctx.dualBound)
+            ctx.addPrimalSolution([2.0, 0.0] if len(search_calls) == 1 else [1.0, 0.0])
+
+        def candidate(ctx):
+            if ctx.source == SHOTpy.PrimalSolutionSource.ExternalPrimalSolution:
+                submitted.append(ctx.point)
+
+        solver.registerCallback(SHOTpy.CallbackLocation.DualBoundUpdate, bound)
+        solver.registerCallback(SHOTpy.CallbackLocation.PrimalCandidateSearch, search)
+        def new_solution(ctx):
+            if ctx.source == SHOTpy.PrimalSolutionSource.ExternalPrimalSolution:
+                accepted.append(ctx.point)
+
+        solver.registerCallback(SHOTpy.CallbackLocation.PrimalCandidateCheck, candidate)
+        solver.registerCallback(SHOTpy.CallbackLocation.NewPrimalSolution, new_solution)
+        solver.solveProblem()
+
+        assert len(bound_calls) == 2
+        assert len(search_calls) == 2
+        assert (bound_calls[0] > 1.0) if maximize else (bound_calls[0] < -1.0)
+        assert search_calls[0] == (1.0 if maximize else -1.0)
+        assert submitted == [[2.0, 0.0], [1.0, 0.0]]
+        assert [2.0, 0.0] in accepted
+        assert bound_calls[1] == 0.0
+
+
 class TestDualBoundAndPrimalSearchCallbacks:
     """CallbackLocation.DualBoundUpdate and CallbackLocation.PrimalCandidateSearch on shot_ex_jogo.
 

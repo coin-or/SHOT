@@ -97,6 +97,12 @@ SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(EnvironmentPtr envPtr)
     auto tInitializeIteration = std::make_shared<TaskInitializeIteration>(env);
     env->tasks->addTask(tInitializeIteration, "InitIter");
 
+    auto tUpdateExternalDualBound = std::make_shared<TaskUpdateExternalDualBound>(env);
+    env->tasks->addTask(tUpdateExternalDualBound, "UpdateExternalDualBoundInitial");
+
+    auto tSelectPrimExternalInitial = std::make_shared<TaskSelectPrimalCandidatesFromExternalSource>(env);
+    env->tasks->addTask(tSelectPrimExternalInitial, "SelectPrimExternalInitial");
+
     // NLP problems are solved for all combinations of the discrete variables before the dual problem is solved, if
     // there are few enough of them
     if(env->settings->getSetting<bool>("Primal.FixedInteger.Use")
@@ -105,11 +111,11 @@ SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(EnvironmentPtr envPtr)
     {
         auto tEnumerateFixedInteger = std::make_shared<TaskEnumerateFixedIntegerCombinations>(env, false);
         env->tasks->addTask(tEnumerateFixedInteger, "EnumerateFixedInteger");
-
-        // A termination requested by a callback during this stops the solution process here
-        auto tCheckInitialUserTerm = std::make_shared<TaskCheckUserTermination>(env, "FinalizeSolution", false);
-        env->tasks->addTask(tCheckInitialUserTerm, "CheckUserTerminationInitial");
     }
+
+    // The initial callbacks and enumeration can request termination before the MIP solver starts.
+    auto tCheckInitialUserTerm = std::make_shared<TaskCheckUserTermination>(env, "FinalizeSolution", false);
+    env->tasks->addTask(tCheckInitialUserTerm, "CheckUserTerminationInitial");
 
     auto tSolveIteration = std::make_shared<TaskSolveIteration>(env);
     env->tasks->addTask(tSolveIteration, "SolveIter");
@@ -117,6 +123,11 @@ SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(EnvironmentPtr envPtr)
     auto tSelectPrimSolPool = std::make_shared<TaskSelectPrimalCandidatesFromSolutionPool>(env);
     env->tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
     std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
+
+    env->tasks->addTask(tUpdateExternalDualBound, "UpdateExternalDualBoundFinal");
+
+    auto tSelectPrimExternalFinal = std::make_shared<TaskSelectPrimalCandidatesFromExternalSource>(env);
+    env->tasks->addTask(tSelectPrimExternalFinal, "SelectPrimExternalFinal");
 
     auto tPrintIterReport = std::make_shared<TaskPrintIterationReport>(env);
     env->tasks->addTask(tPrintIterReport, "PrintIterReport");
