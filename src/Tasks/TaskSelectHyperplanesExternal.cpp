@@ -23,7 +23,8 @@
 namespace SHOT
 {
 
-TaskSelectHyperplanesExternal::TaskSelectHyperplanesExternal(EnvironmentPtr envPtr) : TaskBase(envPtr)
+TaskSelectHyperplanesExternal::TaskSelectHyperplanesExternal(EnvironmentPtr envPtr, bool useCurrentIteration)
+    : TaskBase(envPtr), useCurrentIteration(useCurrentIteration)
 {
     env->timing->startTimer("CallbackExternalHyperplaneGeneration");
     env->timing->stopTimer("CallbackExternalHyperplaneGeneration");
@@ -31,7 +32,14 @@ TaskSelectHyperplanesExternal::TaskSelectHyperplanesExternal(EnvironmentPtr envP
 
 TaskSelectHyperplanesExternal::~TaskSelectHyperplanesExternal() = default;
 
-void TaskSelectHyperplanesExternal::run() { this->run(env->results->getPreviousIteration()->solutionPoints); }
+void TaskSelectHyperplanesExternal::run()
+{
+    if(!env->callbacks->isActive(E_CallbackLocation::HyperplaneSelection))
+        return;
+
+    auto iteration = useCurrentIteration ? env->results->getCurrentIteration() : env->results->getPreviousIteration();
+    this->run(iteration->solutionPoints);
+}
 
 void TaskSelectHyperplanesExternal::run(std::vector<SolutionPoint> solutionPoints)
 {

@@ -155,6 +155,21 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
         env->tasks->addTask(tClearStartingPointNLP, "ClearStartingPointNLP");
     }
 
+    // Review externally supplied primal candidates before solving the first dual problem, so approved points
+    // can be used as MIP starts and a callback can stop after a solution has been stored.
+    auto tSelectPrimExternalInitial = std::make_shared<TaskSelectPrimalCandidatesFromExternalSource>(env);
+    env->tasks->addTask(tSelectPrimExternalInitial, "SelectPrimExternalInitial");
+
+    // An exact MILP needs no outer approximation. Let user cuts queued by seed review reach the model before
+    // solving, and process cuts queued by later primal reviews before a gap check can finalize the solution.
+    bool externalCutsBeforeTermination = env->reformulatedProblem->properties.isMILPProblem;
+    auto tSelectExternalHPs = std::make_shared<TaskSelectHyperplanesExternal>(env, externalCutsBeforeTermination);
+    if(externalCutsBeforeTermination)
+    {
+        env->tasks->addTask(tSelectExternalHPs, "SelectExternalHPsInitial");
+        env->tasks->addTask(tAddHPs, "AddExternalHPsInitial");
+    }
+
     // A termination requested by a callback before the first dual problem is solved, e.g., at the interior point
     // search, stops the solution process here
     auto tCheckInitialUserTerm = std::make_shared<TaskCheckUserTermination>(env, "FinalizeSolution", false);
@@ -193,6 +208,12 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
     auto tSelectPrimExternal = std::make_shared<TaskSelectPrimalCandidatesFromExternalSource>(env);
     env->tasks->addTask(tSelectPrimExternal, "SelectPrimExternal");
     std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tSelectPrimExternal);
+
+    if(externalCutsBeforeTermination)
+    {
+        env->tasks->addTask(tSelectExternalHPs, "SelectExternalHPs");
+        env->tasks->addTask(tAddHPs, "AddExternalHPs");
+    }
 
     auto tPrintIterReport = std::make_shared<TaskPrintIterationReport>(env);
     env->tasks->addTask(tPrintIterReport, "PrintIterReport");
@@ -369,8 +390,8 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
         env->tasks->addTask(tSelectObjectiveHPPts, "SelectObjectiveHPPts");
     }
 
-    auto tSelectExternalHPs = std::make_shared<TaskSelectHyperplanesExternal>(env);
-    env->tasks->addTask(tSelectExternalHPs, "SelectExternalHPs");
+    if(!externalCutsBeforeTermination)
+        env->tasks->addTask(tSelectExternalHPs, "SelectExternalHPs");
 
     env->tasks->addTask(tAddHPs, "AddHPs");
 

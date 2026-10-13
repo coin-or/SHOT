@@ -60,12 +60,12 @@ callback receives the context class of the location, and its return value is ign
 |---|---|---|---|---|---|
 | `InteriorPointSearch` | `InteriorPointSearchContext` | `TaskFindInteriorPoint`, after checking existing points or completing the internal search (including failure to find a point), or instead of it with `Dual.ESH.InteriorPoint.Strategy` = OnlyExternal | Multi-tree, single-tree, NLP; ESH cut strategy and nonlinear constraints only | `getInteriorPoints()`: reformulated | `setInteriorPoints(points)` |
 | `DualBoundUpdate` | `DualBoundUpdateContext` | `TaskUpdateExternalDualBound`, before the first dual problem and once per iteration; before and after the direct MIQCQP solve; the CPLEX and Gurobi single-tree callbacks | Multi-tree, single-tree, NLP, direct MIQCQP | – | `setDualBound(value)` |
-| `PrimalCandidateSearch` | `PrimalCandidateSearchContext` | `TaskSelectPrimalCandidatesFromExternalSource`, once per iteration and when the solution is finalized; before and after the direct MIQCQP solve; the CPLEX and Gurobi single-tree callbacks | Multi-tree, single-tree, NLP, direct MIQCQP | – | `addPrimalSolution(point)` |
+| `PrimalCandidateSearch` | `PrimalCandidateSearchContext` | `TaskSelectPrimalCandidatesFromExternalSource`, before the first dual solve, once per iteration and when the solution is finalized; before and after the direct MIQCQP solve; the CPLEX and Gurobi single-tree callbacks | Multi-tree, single-tree, NLP, direct MIQCQP | – | `addPrimalSolution(point)` |
 | `PrimalCandidateCheck` | `PrimalCandidateCheckContext` | `PrimalSolver::checkPrimalSolutionCandidates`, for each candidate before it is checked | All | `getPoint()`: original | `rejectCandidate()` |
 | `NewPrimalSolution` | `NewPrimalSolutionContext` | `Results::addPrimalSolution`, after a solution has been stored | All | `getPoint()`: original | – |
 | `BoundsUpdated` | `BoundsUpdatedContext` | After a primal, current dual, or global dual bound changes during the solve | All | – | – |
 | `TerminationCheck` | `TerminationCheckContext` | `TaskCheckUserTermination`, once per iteration; the termination checks inside the MIP solvers (Cbc, CPLEX, Gurobi, HiGHS) and the single-tree callbacks | All | – | – |
-| `HyperplaneSelection` | `HyperplaneSelectionContext` | `TaskSelectHyperplanesExternal`, after SHOT has selected its own hyperplanes; the single-tree callbacks | Multi-tree, single-tree, NLP | `getSolutionPoints()`: reformulated | `addHyperplane(hyperplane)` |
+| `HyperplaneSelection` | `HyperplaneSelectionContext` | `TaskSelectHyperplanesExternal`, before the first dual solve and before gap checks for multi-tree MILPs; after SHOT selects its own hyperplanes for other iterative models; the single-tree callbacks | Multi-tree, single-tree, NLP | `getSolutionPoints()`: reformulated | `addHyperplane(hyperplane)` |
 
 `InteriorPointSearch` receives an empty `getInteriorPoints()` when neither the existing points nor the internal search
 produced a usable point. A callback can supply replacement points at that stage; SHOT validates them before deciding
@@ -76,6 +76,12 @@ multi-tree or single-tree strategy for CPLEX and Gurobi. This also applies to li
 models. Continuous linear problems use the continuous (NLP) strategy. The direct MIQCQP strategy is reserved for
 quadratic problems supported by CPLEX or Gurobi and enabled by `Model.Reformulation.Quadratics.Strategy`;
 `HyperplaneSelection` is unavailable in that direct strategy.
+
+For reformulated MILPs, multi-tree invokes `HyperplaneSelection` after the initial `PrimalCandidateSearch`, with
+an empty solution-point list, and after each iteration's primal reviews, using that iteration's solution points.
+SHOT adds the returned cuts before checking the objective gap, so a rejected seed can be excluded before the first
+solve and a closed gap does not skip the callback. Nonlinear multi-tree models retain cut selection after SHOT's
+own hyperplane generation. The initial call is specific to multi-tree MILPs.
 
 For direct MIQCQP, `DualBoundUpdate` changes SHOT's bound and gap calculations. It does not pass the bound to
 CPLEX or Gurobi as a bound for their internal search.
