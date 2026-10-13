@@ -144,15 +144,18 @@ void HCallbackI::main() // Called at each node...
 
         solutionPoints.at(0) = tmpSolPt;
 
-        if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("Dual.CutStrategy"))
-            == ES_HyperplaneCutStrategy::ESH)
+        if(env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
         {
-            static_cast<TaskSelectHyperplanesESH*>(taskSelectHPPts.get())->run(solutionPoints);
-        }
-        else if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("Dual.CutStrategy"))
-            == ES_HyperplaneCutStrategy::ECP)
-        {
-            static_cast<TaskSelectHyperplanesECP*>(taskSelectHPPts.get())->run(solutionPoints);
+            if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("Dual.CutStrategy"))
+                == ES_HyperplaneCutStrategy::ESH)
+            {
+                static_cast<TaskSelectHyperplanesESH*>(taskSelectHPPts.get())->run(solutionPoints);
+            }
+            else if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("Dual.CutStrategy"))
+                == ES_HyperplaneCutStrategy::ECP)
+            {
+                static_cast<TaskSelectHyperplanesECP*>(taskSelectHPPts.get())->run(solutionPoints);
+            }
         }
 
         taskSelectExternalHPs->run(solutionPoints);

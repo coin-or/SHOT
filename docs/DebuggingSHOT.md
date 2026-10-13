@@ -85,17 +85,17 @@ different sequence of tasks — based on the (reformulated) problem's
 detected type and settings. This matters for debugging because it
 determines which debug files you should expect to see at all:
 
-- **MIQCQP strategy** — used for convex MILP/QP/MIQP/QCQP/MIQCQP problems
-  (i.e. problems the MIP solver can handle natively, quadratics included).
+- **MIQCQP strategy** — used for convex QP/MIQP/QCQP/MIQCQP problems supported by CPLEX or Gurobi
+  (the reformulated model must still contain quadratic terms).
   Solves directly via the MIP solver plus primal heuristics; no
   outer-approximation cutting-plane loop, so no `dualiter{N}_mostdev.txt`-
   style constraint-deviation files (there's nothing nonlinear to cut
   against).
-- **NLP strategy** — used for convex, purely continuous (non-discrete) NLP
-  problems. No MIP solver involved at all, so no `dualiter*` files; look at
-  the NLP solve output/log instead.
+- **NLP strategy** — used for convex, purely continuous (non-discrete) LP/NLP
+  problems. Solves continuous dual problems and can use NLP primal heuristics;
+  inspect the dual problem files and any NLP solve output/log.
 - **Multi-tree strategy** — the classical SHOT algorithm for general convex
-  MINLP: repeatedly solves a MIP relaxation to completion, adds
+  MINLP and MILP models: repeatedly solves a MIP relaxation to completion, adds
   supporting-hyperplane/ECP cuts, and resolves. This is what generates the
   full `dualiter{N}_*` sequence described below.
 - **Single-tree strategy** — solves one branch-and-cut MIP tree, adding

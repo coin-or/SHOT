@@ -338,16 +338,19 @@ void GurobiCallbackSingleTree::callback()
 
                 std::vector<SolutionPoint> solutionPoints = { solutionRelaxed };
 
-                if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("Dual.CutStrategy"))
-                    == ES_HyperplaneCutStrategy::ESH)
+                if(env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
                 {
-                    tUpdateInteriorPoint->run();
-                    static_cast<TaskSelectHyperplanesESH*>(taskSelectHPPts.get())->run(solutionPoints);
-                }
-                else if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("Dual.CutStrategy"))
-                    == ES_HyperplaneCutStrategy::ECP)
-                {
-                    static_cast<TaskSelectHyperplanesECP*>(taskSelectHPPts.get())->run(solutionPoints);
+                    if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("Dual.CutStrategy"))
+                        == ES_HyperplaneCutStrategy::ESH)
+                    {
+                        tUpdateInteriorPoint->run();
+                        static_cast<TaskSelectHyperplanesESH*>(taskSelectHPPts.get())->run(solutionPoints);
+                    }
+                    else if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("Dual.CutStrategy"))
+                        == ES_HyperplaneCutStrategy::ECP)
+                    {
+                        static_cast<TaskSelectHyperplanesECP*>(taskSelectHPPts.get())->run(solutionPoints);
+                    }
                 }
 
                 if(env->reformulatedProblem->objectiveFunction->properties.classification

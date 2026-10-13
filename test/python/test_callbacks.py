@@ -2092,3 +2092,104 @@ class TestCallbackESHInteriorPoint:
         assert abs(phase2_obj - 4.579582) < 0.01, (
             f"Phase 2 objective {phase2_obj:.6f} differs from known optimum 4.5796"
         )
+
+
+@pytest.mark.parametrize("backend,available,tree,generic", [
+    (2, "HAS_CBC", 0, False), (3, "HAS_HIGHS", 0, False),
+    (0, "HAS_CPLEX", 0, False), (1, "HAS_GUROBI", 0, False),
+    (0, "HAS_CPLEX", 1, False), (0, "HAS_CPLEX", 1, True),
+    (1, "HAS_GUROBI", 1, False),
+])
+def test_linear_tree_hyperplane_callback(backend, available, tree, generic):
+    """An external linear restriction must be applied by the requested tree strategy on a MILP."""
+    import SHOTpy
+
+    if not getattr(SHOTpy, available):
+        pytest.skip(f"SHOT is not built with {available[4:]}")
+    solver = SHOTpy.Solver()
+    solver.updateSetting("Output.Console.LogLevel", 6)
+    solver.updateSetting("Dual.MIP.Solver", backend)
+    solver.updateSetting("Dual.TreeStrategy", tree)
+    solver.updateSetting("Dual.Relaxation.Use", False)
+    solver.updateSetting("Primal.FixedInteger.Use", False)
+    solver.updateSetting("Primal.PolishSolution.NumberOfPoints", 0)
+    solver.updateSetting("Termination.IterationLimit", 10)
+    if backend == 0:
+        solver.updateSetting("Subsolver.Cplex.UseGenericCallback", generic)
+    problem = SHOTpy.Problem(solver)
+    x = problem.addVariable("x", SHOTpy.VariableType.Integer, 0, 4)
+    problem.setObjective(x, SHOTpy.ObjectiveDirection.Minimize)
+    problem.finalize()
+    assert solver.setProblem(problem)
+    calls, bounds = [], []
+
+    def review(ctx):
+        # External cuts are restrictions on the dual model. Primal screening must enforce them too.
+        if ctx.point[0] < 2.0 - 1e-6:
+            ctx.rejectCandidate()
+
+    def cut(ctx):
+        calls.append(ctx.iterationNumber)
+        hp = SHOTpy.ExternalHyperplane()
+        hp.variableIndexes = [0]
+        hp.variableCoefficients = [-1.0]
+        hp.rhsValue = -2.0
+        hp.isGlobal = True
+        hp.description = "user_minimum_x"
+        ctx.addHyperplane(hp)
+
+    solver.registerCallback(SHOTpy.CallbackLocation.PrimalCandidateCheck, review)
+    solver.registerCallback(SHOTpy.CallbackLocation.HyperplaneSelection, cut)
+    solver.registerCallback(SHOTpy.CallbackLocation.BoundsUpdated,
+                            lambda ctx: bounds.append(ctx.dualBound))
+    assert solver.solveProblem()
+    assert calls, "MILP bypassed the tree strategy's hyperplane callback"
+    assert solver.getPrimalSolution().objValue == pytest.approx(2.0)
+    assert bounds[-1] == pytest.approx(2.0)
+
+
+@pytest.mark.parametrize("backend,available,generic", [
+    (0, "HAS_CPLEX", False), (0, "HAS_CPLEX", True), (1, "HAS_GUROBI", False),
+])
+@pytest.mark.parametrize("cut_strategy", [0, 1])
+def test_linear_single_tree_relaxation_callback(backend, available, generic, cut_strategy):
+    """Relaxed MILP nodes must skip nonexistent ESH/ECP tasks while still invoking external cuts."""
+    import random
+    import SHOTpy
+
+    if not getattr(SHOTpy, available):
+        pytest.skip(f"SHOT is not built with {available[4:]}")
+    solver = SHOTpy.Solver()
+    for name, value in [("Output.Console.LogLevel", 6), ("Dual.MIP.Solver", backend),
+                        ("Dual.TreeStrategy", 1),
+                        ("Dual.CutStrategy", cut_strategy), ("Dual.Relaxation.Use", False),
+                        ("Dual.Relaxation.MaxLazyConstraints", 10), ("Dual.MIP.NumberOfThreads", 1),
+                        ("Primal.FixedInteger.Use", False),
+                        ("Primal.PolishSolution.NumberOfPoints", 0), ("Termination.TimeLimit", 10.0)]:
+        solver.updateSetting(name, value)
+    if backend == 0:
+        solver.updateSetting("Subsolver.Cplex.UseGenericCallback", generic)
+    else:
+        solver.updateSetting("Subsolver.Gurobi.Heuristics", 0.0)
+    problem = SHOTpy.Problem(solver)
+    variables = [problem.addVariable(f"x{i}", SHOTpy.VariableType.Binary) for i in range(30)]
+    problem.setObjective(sum((i + 1) * x for i, x in enumerate(variables)), SHOTpy.ObjectiveDirection.Minimize)
+    # A deterministic covering model whose root relaxation has fractional solutions.
+    rng = random.Random(123)
+    for i in range(45):
+        problem.addConstraint(sum(rng.sample(variables, 8)) >= 3, f"cover{i}")
+    problem.finalize()
+    assert solver.setProblem(problem)
+    relaxed = []
+
+    def inspect(ctx):
+        relaxed.extend(point.point for point in ctx.solutionPoints if point.isRelaxedPoint)
+        if relaxed:
+            ctx.terminate()
+
+    # Keep the SHOT gap open until the relaxation callback has been reached.
+    solver.registerCallback(SHOTpy.CallbackLocation.PrimalCandidateCheck, lambda ctx: ctx.rejectCandidate())
+    solver.registerCallback(SHOTpy.CallbackLocation.HyperplaneSelection, inspect)
+    assert solver.solveProblem()
+    assert relaxed, "The single-tree MILP relaxation callback was not reached"
+    assert solver.getTerminationReason() == SHOTpy.TerminationReason.UserAbort

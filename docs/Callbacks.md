@@ -71,6 +71,12 @@ callback receives the context class of the location, and its return value is ign
 produced a usable point. A callback can supply replacement points at that stage; SHOT validates them before deciding
 whether the interior-point search failed.
 
+Linear mixed-integer problems use `Dual.TreeStrategy`: multi-tree for Cbc and HiGHS, and the requested
+multi-tree or single-tree strategy for CPLEX and Gurobi. This also applies to linear reformulations of nonlinear
+models. Continuous linear problems use the continuous (NLP) strategy. The direct MIQCQP strategy is reserved for
+quadratic problems supported by CPLEX or Gurobi and enabled by `Model.Reformulation.Quadratics.Strategy`;
+`HyperplaneSelection` is unavailable in that direct strategy.
+
 For direct MIQCQP, `DualBoundUpdate` changes SHOT's bound and gap calculations. It does not pass the bound to
 CPLEX or Gurobi as a bound for their internal search.
 
