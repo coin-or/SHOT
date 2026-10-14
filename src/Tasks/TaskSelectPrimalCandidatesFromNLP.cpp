@@ -257,6 +257,26 @@ void TaskSelectPrimalCandidatesFromNLP::run()
     return;
 }
 
+bool TaskSelectPrimalCandidatesFromNLP::hasFiniteFunctionValues(const VectorDouble& point)
+{
+    if(!std::isfinite(sourceProblem->objectiveFunction->calculateValue(point)))
+        return (false);
+
+    for(auto& C : sourceProblem->quadraticConstraints)
+    {
+        if(!std::isfinite(C->calculateFunctionValue(point)))
+            return (false);
+    }
+
+    for(auto& C : sourceProblem->nonlinearConstraints)
+    {
+        if(!std::isfinite(C->calculateFunctionValue(point)))
+            return (false);
+    }
+
+    return (true);
+}
+
 std::string TaskSelectPrimalCandidatesFromNLP::getType()
 {
     std::string type = typeid(this).name();
@@ -319,14 +339,34 @@ E_NLPSolutionStatus TaskSelectPrimalCandidatesFromNLP::solveFixedNLPCandidates(
             }
         }
 
-        if(isEnumeration)
+        bool useContinuousWarmstart
+            = !isEnumeration && env->settings->getSetting<bool>("Primal.FixedInteger.Warmstart");
+
+        // The continuous values of a MIP solution can be so large, e.g., at the artificial bounds of unbounded
+        // variables, that the functions cannot be evaluated in the point, and the NLP solver would fail immediately
+        if(useContinuousWarmstart)
+        {
+            VectorDouble warmstartPoint(CAND.point);
+
+            for(size_t k = 0; k < discreteVariableIndexes.size(); k++)
+                warmstartPoint.at(discreteVariableIndexes.at(k)) = fixedVariableValues.at(k);
+
+            if(!hasFiniteFunctionValues(warmstartPoint))
+            {
+                env->output->outputDebug("         Not using warm start for continuous variables, since the "
+                                         "functions do not have finite values in the candidate solution.");
+                useContinuousWarmstart = false;
+            }
+        }
+
+        if(isEnumeration || !useContinuousWarmstart)
         {
             // Only the discrete variables have a starting point, so that the solution does not depend on the
             // previous NLP problem solved
             NLPSolver->clearStartingPoint();
             NLPSolver->setStartingPoint(discreteVariableIndexes, fixedVariableValues);
         }
-        else if(env->settings->getSetting<bool>("Primal.FixedInteger.Warmstart"))
+        else
         {
             env->output->outputDebug(
                 "         Setting warm start for continuous variable to candidate solution value.");
@@ -367,8 +407,7 @@ E_NLPSolutionStatus TaskSelectPrimalCandidatesFromNLP::solveFixedNLPCandidates(
         // The continuous values of a MIP solution can be far from where the NLP solver is able to converge, e.g., at
         // the artificial bounds of unbounded variables, so a failure is retried with only the discrete variables in
         // the starting point
-        if(solvestatus == E_NLPSolutionStatus::Error && !isEnumeration
-            && env->settings->getSetting<bool>("Primal.FixedInteger.Warmstart")
+        if(solvestatus == E_NLPSolutionStatus::Error && useContinuousWarmstart
             && env->timing->getElapsedTime("Total") < env->settings->getSetting<double>("Termination.TimeLimit"))
         {
             env->output->outputDebug("         Retrying fixed NLP problem without warm start for continuous variables.");

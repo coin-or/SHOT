@@ -48,6 +48,9 @@ private:
 
     virtual bool solveFixedNLP();
 
+    // Whether the objective function and the nonlinear constraints have finite values in the point
+    bool hasFiniteFunctionValues(const VectorDouble& point);
+
     void createInfeasibilityCut(const VectorDouble point);
     void createIntegerCut(VectorDouble point);
 
