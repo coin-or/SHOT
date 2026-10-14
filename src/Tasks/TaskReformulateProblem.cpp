@@ -911,7 +911,7 @@ void TaskReformulateProblem::createEpigraphConstraint()
     {
         objectiveBound = env->problem->objectiveFunction->getBounds();
     }
-    catch(mc::Interval::Exceptions&)
+    catch(IntervalError&)
     {
         objectiveBound = Interval(-objVarBound, objVarBound);
     }
@@ -1752,7 +1752,7 @@ LinearTerms TaskReformulateProblem::partitionNonlinearSum(
             {
                 bounds = sign * expression->getBounds();
             }
-            catch(mc::Interval::Exceptions&)
+            catch(IntervalError&)
             {
                 bounds = Interval(varLowerBound, varUpperBound);
             }
@@ -1894,7 +1894,7 @@ LinearTerms TaskReformulateProblem::partitionMonomialTerms(const MonomialTerms& 
             if(reversedSigns)
                 bounds = -1.0 * bounds;
         }
-        catch(mc::Interval::Exceptions&)
+        catch(IntervalError&)
         {
             bounds = Interval(varLowerBound, varUpperBound);
         }
@@ -1980,7 +1980,7 @@ LinearTerms TaskReformulateProblem::partitionSignomialTerms(const SignomialTerms
             if(reversedSigns)
                 bounds = -1.0 * bounds;
         }
-        catch(mc::Interval::Exceptions&)
+        catch(IntervalError&)
         {
             bounds = Interval(varLowerBound, varUpperBound);
         }

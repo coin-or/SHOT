@@ -72,7 +72,10 @@ set(Model_parts
     63
     64
     65
-    66) # The different parts of each test (if any)
+    66
+    67
+    68
+    69) # The different parts of each test (if any)
 
 set(Settings_parts 1 2 3 4 5 6 7 8 9)
 
@@ -464,6 +467,8 @@ if(TARGET SHOTpy)
         test_constraint_expressions
         test_equality_constraints
         test_api_safety
+        test_interval_evaluation
+        test_interval_derivatives
         test_tutorial
       )
       

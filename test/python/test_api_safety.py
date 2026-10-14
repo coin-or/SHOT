@@ -116,6 +116,15 @@ class TestEvaluation:
         with pytest.raises(ValueError):
             objective.calculateValue([0.5])
 
+    def test_expression_of_variables_not_in_a_problem_cannot_be_evaluated(self):
+        import SHOTpy
+
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Real, 0.0, 1.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Real, 0.0, 1.0)
+
+        with pytest.raises(ValueError):
+            (x * y + SHOTpy.exp(x)).calculate([0.5, 0.5])
+
 
 class TestModelChanges:
     def test_bound_change_after_finalize_updates_the_bound_vectors(self):

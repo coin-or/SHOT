@@ -66,10 +66,12 @@ callback receives the context class of the location, and its return value is ign
 | `TerminationCheck` | `TerminationCheckContext` | `TaskCheckUserTermination`, once per iteration; the termination checks inside the MIP solvers (Cbc, CPLEX, Gurobi, HiGHS) and the single-tree callbacks | All | – | – |
 | `HyperplaneSelection` | `HyperplaneSelectionContext` | `TaskSelectHyperplanesExternal`, after SHOT has selected its own hyperplanes; the single-tree callbacks | Multi-tree, single-tree, NLP | `getSolutionPoints()`: reformulated | `addHyperplane(hyperplane)` |
 
-The points are in the variables of the original problem ("original") or of the reformulated problem
-("reformulated"). The reformulated problem has the variables of the original problem first, followed by the auxiliary
-variables of the reformulations. Use `getOriginalProblem()` and `getReformulatedProblem()` to evaluate functions in
-them. The problems must not be modified.
+The points are in the variables of the original problem ("original") or of the reformulated problem ("reformulated").
+The reformulated problem has the variables of the original problem first, followed by the auxiliary variables of the
+reformulations. Use `getOriginalProblem()` and `getReformulatedProblem()` to evaluate the values, gradients and Hessians
+of their functions at the points; a Hessian only has its upper triangle. The functions and their gradients and Hessians
+can also be bounded over a box of variable bounds with interval arithmetic. A point of the reformulated problem can also
+be used for the functions of the original problem. The problems must not be modified.
 
 ## Information available everywhere
 

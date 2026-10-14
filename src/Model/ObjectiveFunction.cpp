@@ -40,6 +40,16 @@ Interval ObjectiveFunction::getBounds()
     return (calculateValue(IntervalVector()));
 }
 
+IntervalDerivatives ObjectiveFunction::calculateIntervalDerivatives(const IntervalVector& box, int order)
+{
+    checkIntervalDerivativeOrder(order);
+
+    // Each class adds its terms with addIntervalDerivatives, which leaves the derivatives finished
+    IntervalDerivatives derivatives;
+    addTermIntervalDerivatives(derivatives, box, order);
+    return (derivatives);
+}
+
 bool ObjectiveFunction::isUnbounded()
 {
     auto bounds = getBounds();
@@ -265,6 +275,13 @@ Interval LinearObjectiveFunction::calculateValue(const IntervalVector& intervalV
     return value;
 }
 
+void LinearObjectiveFunction::addTermIntervalDerivatives(
+    IntervalDerivatives& derivatives, const IntervalVector& box, int order)
+{
+    derivatives.value = derivatives.value + Interval(constant);
+    addIntervalDerivatives(derivatives, SHOT::calculateIntervalDerivatives(linearTerms, box, order), order);
+}
+
 SparseVariableVector LinearObjectiveFunction::calculateGradient(
     [[maybe_unused]] const VectorDouble& point, [[maybe_unused]] bool eraseZeroes = true)
 {
@@ -412,6 +429,13 @@ Interval QuadraticObjectiveFunction::calculateValue(const IntervalVector& interv
     Interval value = LinearObjectiveFunction::calculateValue(intervalVector);
     value += quadraticTerms.calculate(intervalVector);
     return value;
+}
+
+void QuadraticObjectiveFunction::addTermIntervalDerivatives(
+    IntervalDerivatives& derivatives, const IntervalVector& box, int order)
+{
+    LinearObjectiveFunction::addTermIntervalDerivatives(derivatives, box, order);
+    addIntervalDerivatives(derivatives, SHOT::calculateIntervalDerivatives(quadraticTerms, box, order), order);
 }
 
 SparseVariableVector QuadraticObjectiveFunction::calculateGradient(const VectorDouble& point, bool eraseZeroes = true)
@@ -574,7 +598,7 @@ void NonlinearObjectiveFunction::updateProperties()
             auto convexity = nonlinearExpression->getConvexity();
             properties.convexity = Utilities::combineConvexity(convexity, properties.convexity);
         }
-        catch(const mc::Interval::Exceptions&)
+        catch(const IntervalError&)
         {
             properties.convexity = E_Convexity::Unknown;
         }
@@ -670,12 +694,26 @@ Interval NonlinearObjectiveFunction::calculateValue(const IntervalVector& interv
         if(this->properties.hasNonlinearExpression)
             value += nonlinearExpression->calculate(intervalVector);
     }
-    catch(const mc::Interval::Exceptions&)
+    catch(const IntervalError&)
     {
         return (Interval(SHOT_DBL_MIN, SHOT_DBL_MAX));
     }
 
+    if(!isValidInterval(value))
+        return (Interval(SHOT_DBL_MIN, SHOT_DBL_MAX));
+
     return value;
+}
+
+void NonlinearObjectiveFunction::addTermIntervalDerivatives(
+    IntervalDerivatives& derivatives, const IntervalVector& box, int order)
+{
+    QuadraticObjectiveFunction::addTermIntervalDerivatives(derivatives, box, order);
+    addIntervalDerivatives(derivatives, SHOT::calculateIntervalDerivatives(monomialTerms, box, order), order);
+    addIntervalDerivatives(derivatives, SHOT::calculateIntervalDerivatives(signomialTerms, box, order), order);
+
+    if(this->properties.hasNonlinearExpression && nonlinearExpression)
+        addIntervalDerivatives(derivatives, SHOT::calculateIntervalDerivatives(nonlinearExpression, box, order), order);
 }
 
 SparseVariableVector NonlinearObjectiveFunction::calculateGradient(const VectorDouble& point, bool eraseZeroes = true)

@@ -2080,7 +2080,7 @@ private:
             leaf = terms[termIndex]->getBounds();
             failedTerms.erase(termIndex);
         }
-        catch(mc::Interval::Exceptions&)
+        catch(IntervalError&)
         {
             leaf = Interval(0.0);
             failedTerms[termIndex] = std::current_exception();
@@ -2439,7 +2439,7 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint, double timeEnd
             }
         }
     }
-    catch(mc::Interval::Exceptions& e)
+    catch(IntervalError& e)
     {
         env->output->outputDebug(
             fmt::format("  error when tightening bound in constraint {}: {}", constraint->name, e.what()));
