@@ -1079,8 +1079,6 @@ bool NLPSolverIpoptBase::isLinearSolverAvailable(ES_IpoptSolver solver)
 
 void NLPSolverIpoptBase::setInitialSettings()
 {
-    std::string subsolver = "";
-
     auto linearSolver = static_cast<ES_IpoptSolver>(env->settings->getSetting<int>("Subsolver.Ipopt.LinearSolver"));
 
     if(!isLinearSolverAvailable(linearSolver))

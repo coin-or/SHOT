@@ -791,7 +791,6 @@ E_ProblemCreationStatus ModelingSystemAMPL::createProblem(ProblemPtr& problem, c
     env->timing->startTimer("ProblemInitialization");
 
     fs::filesystem::path problemFile(filename);
-    fs::filesystem::path problemPath = problemFile.parent_path();
 
     VectorDouble initialValues;
 

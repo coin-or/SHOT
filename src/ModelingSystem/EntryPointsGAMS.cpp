@@ -117,8 +117,6 @@ extern "C"
         if(*Cptr == NULL)
         {
             snprintf(msgBuf, msgBufLen, "Out of memory when creating gamsshot object.\n");
-            if(msgBufLen > 0)
-                msgBuf[msgBufLen] = '\0';
             return 0;
         }
 

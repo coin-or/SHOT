@@ -1111,8 +1111,10 @@ bool ModelTestCreateProblem()
     std::cout << "\nValue for nonlinear constraint is: ";
     std::cout << nonlinearIntervalValue << '\n';
 
-    if(std::abs(nonlinearIntervalValue.l() - 31.4) > (1.0e-12)
-        || std::abs(nonlinearIntervalValue.u() - 72.6) > (1.0e-12))
+    // The x in z + x is moved to the linear part when finalizing, where it cancels -x, so the interval is that of
+    // 1.2*y + z^3 + z
+    if(std::abs(nonlinearIntervalValue.l() - 32.4) > (1.0e-12)
+        || std::abs(nonlinearIntervalValue.u() - 71.6) > (1.0e-12))
     {
         std::cout << "Interval is not correct.\n";
         passed = false;
@@ -1169,7 +1171,6 @@ bool ModelTestCreateProblem()
     if(!mostDevConstraint2)
     {
         std::cout << "Constraint not found, everything ok\n";
-        passed = true;
     }
     else
     {

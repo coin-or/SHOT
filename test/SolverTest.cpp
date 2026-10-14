@@ -96,7 +96,6 @@ bool SolveProblem(std::string filename)
     if(solver->getPrimalSolutions().size() > 0)
     {
         std::cout << std::endl << "Objective value: " << solver->getPrimalSolution().objValue << std::endl;
-        passed = true;
     }
     else
     {

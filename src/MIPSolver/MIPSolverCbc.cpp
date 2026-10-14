@@ -1839,8 +1839,6 @@ int CbcMessageHandler::print()
     if(!env->settings->getSetting<bool>("Output.Console.DualSolver.Show"))
         return 0;
 
-    std::string message(CoinMessageHandler::messageBuffer());
-
     auto lines = Utilities::splitStringByCharacter(CoinMessageHandler::messageBuffer(), '\n');
 
     for(auto const& line : lines)
