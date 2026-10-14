@@ -29,8 +29,6 @@ namespace SHOT
 
 using FactorableFunction = CppAD::AD<double>;
 using FactorableFunctionPtr = std::shared_ptr<FactorableFunction>;
-using Interval = mc::Interval;
-using IntervalVector = std::vector<Interval>;
 
 enum class E_NonlinearExpressionTypes
 {
@@ -1170,7 +1168,7 @@ public:
         {
             return (tan(childBounds));
         }
-        catch(const mc::Interval::Exceptions&)
+        catch(const IntervalError&)
         {
             return (Interval(SHOT_DBL_MIN, SHOT_DBL_MAX));
         }
@@ -2996,7 +2994,7 @@ public:
                     return (false);
             }
         }
-        catch(const mc::Interval::Exceptions&)
+        catch(const IntervalError&)
         {
             return (false);
         }

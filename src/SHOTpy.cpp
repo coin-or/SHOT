@@ -449,32 +449,40 @@ template <typename Self, typename Class> void addComparisonOperators(Class& pyth
         .def("__hash__", [](Self self) { return std::hash<const void*>()(self.get()); });
 }
 
-// Throws ValueError if the point does not have a value for every variable of the problem, since the functions index the
-// point by the indexes of the variables without checking it. A longer point is allowed: the reformulated problem has
-// the variables of the original problem first, so a function of the original problem can be evaluated at its points
-void checkPointSize(const Problem& problem, const VectorDouble& point)
+// Throws ValueError if the point, or the box of intervals, does not have a value for every variable of the problem,
+// since the functions index it by the indexes of the variables without checking it. A longer point is allowed: the
+// reformulated problem has the variables of the original problem first, so a function of the original problem can be
+// evaluated at its points
+template <typename T> void checkPointSize(const Problem& problem, const std::vector<T>& point)
 {
     if(point.size() < problem.allVariables.size())
     {
-        throw py::value_error("The point has " + std::to_string(point.size()) + " values, but the problem has "
+        throw py::value_error(std::string(std::is_same_v<T, Interval> ? "The box" : "The point") + " has "
+            + std::to_string(point.size()) + " values, but the problem has "
             + std::to_string(problem.allVariables.size()) + " variables.");
     }
 }
 
-// The variables of a constraint or objective function that has not been added to a problem have no indexes in the point
-void checkPointSize(const std::weak_ptr<Problem>& ownerProblem, const VectorDouble& point)
+// The variables of a constraint or objective function that has not been added to a problem have no indexes, and their
+// bounds are those of the problem
+ProblemPtr getOwnerProblem(const std::weak_ptr<Problem>& ownerProblem)
 {
     auto problem = ownerProblem.lock();
 
     if(!problem)
         throw py::value_error("The function cannot be evaluated before it has been added to a problem.");
 
-    checkPointSize(*problem, point);
+    return (problem);
+}
+
+template <typename T> void checkPointSize(const std::weak_ptr<Problem>& ownerProblem, const std::vector<T>& point)
+{
+    checkPointSize(*getOwnerProblem(ownerProblem), point);
 }
 
 // An expression can be evaluated without being in a constraint or the objective function, so it is checked through its
 // variables instead, which have indexes once they have been added to a problem
-void checkPointSize(NonlinearExpression& expression, const VectorDouble& point)
+template <typename T> void checkPointSize(NonlinearExpression& expression, const std::vector<T>& point)
 {
     Variables variables;
     expression.appendNonlinearVariables(variables);
@@ -491,6 +499,38 @@ void checkPointSize(NonlinearExpression& expression, const VectorDouble& point)
 
         checkPointSize(*problem, point);
     }
+}
+
+// The interval implementation sorts reversed bounds, which would hide a mistake, and has no NaN checks
+Interval createInterval(double lower, double upper)
+{
+    if(std::isnan(lower) || std::isnan(upper))
+        throw py::value_error("The bounds of an interval cannot be NaN.");
+
+    if(lower > upper)
+    {
+        throw py::value_error("The lower bound " + py::repr(py::float_(lower)).cast<std::string>()
+            + " of the interval is larger than its upper bound " + py::repr(py::float_(upper)).cast<std::string>()
+            + ".");
+    }
+
+    return (Interval(lower, upper));
+}
+
+// SHOTpy.IntervalError, which is created with the module
+py::handle intervalErrorType;
+
+// An expression is bounded over the part of the box where it is defined, so a box entirely outside its domain, e.g.,
+// only negative values for a logarithm, gives an interval that is not valid
+Interval checkExpressionBounds(const Interval& bounds)
+{
+    if(!isValidInterval(bounds))
+    {
+        py::set_error(intervalErrorType, "The expression is not defined anywhere in the box.");
+        throw py::error_already_set();
+    }
+
+    return (bounds);
 }
 
 // finalize() decides the classes of the constraints and the objective function and rewrites the model, and it is not
@@ -765,6 +805,10 @@ PYBIND11_MODULE(SHOTpy, m)
     py::enum_<E_ModelReturnStatus> modelReturnStatusEnum(m, "ModelReturnStatus", py::arithmetic());
     py::enum_<E_TerminationReason> terminationReasonEnum(m, "TerminationReason", py::arithmetic());
 
+    py::class_<Interval> intervalClass(m, "Interval",
+        "A closed interval [lower, upper], e.g., the bounds of a function over a box of variable bounds. A tuple\n"
+        "(lower, upper) or a number can be used where an Interval is expected. The bounds are not rounded outwards,\n"
+        "so the interval is not a verified enclosure of the floating-point calculations.");
     py::class_<Variable, std::shared_ptr<Variable>> variableClass(m, "Variable");
     py::class_<VariableProperties> variablePropertiesClass(m, "VariableProperties");
     py::class_<Variables> variablesClass(m, "Variables");
@@ -786,6 +830,82 @@ PYBIND11_MODULE(SHOTpy, m)
     // ===== Constants =====
     m.attr("SHOT_DBL_MAX") = SHOT_DBL_MAX;
     m.attr("SHOT_DBL_MIN") = SHOT_DBL_MIN;
+
+    // ===== Interval Class =====
+    // Only the construction, l(), u() and the arithmetic operators are used, so that the class does not depend on the
+    // interval implementation
+    intervalErrorType = py::exception<IntervalError>(m, "IntervalError", PyExc_ArithmeticError).release();
+
+    py::register_exception_translator(
+        [](std::exception_ptr exception)
+        {
+            try
+            {
+                if(exception)
+                    std::rethrow_exception(exception);
+            }
+            catch(IntervalError& error)
+            {
+                py::set_error(intervalErrorType, getIntervalErrorMessage(error).c_str());
+            }
+        });
+
+    intervalClass
+        .def(py::init([](double lower, double upper) { return (createInterval(lower, upper)); }), py::arg("lower"),
+            py::arg("upper"), "The interval [lower, upper]")
+        .def(py::init([](double value) { return (createInterval(value, value)); }), py::arg("value"),
+            "The interval [value, value]")
+        .def(py::init(
+                 [](const py::tuple& bounds)
+                 {
+                     if(bounds.size() != 2)
+                         throw py::value_error("An interval is given as a tuple (lower, upper).");
+
+                     return (createInterval(bounds[0].cast<double>(), bounds[1].cast<double>()));
+                 }),
+            py::arg("bounds"), "The interval [lower, upper] given as a tuple (lower, upper)")
+        .def_property_readonly(
+            "lower", [](const Interval& self) { return (self.l()); }, "The lower bound")
+        .def_property_readonly(
+            "upper", [](const Interval& self) { return (self.u()); }, "The upper bound")
+        .def_property_readonly(
+            "width", [](const Interval& self) { return (self.u() - self.l()); }, "upper - lower")
+        .def_property_readonly(
+            "midpoint", [](const Interval& self) { return (0.5 * self.l() + 0.5 * self.u()); },
+            "(lower + upper) / 2")
+        .def(
+            "contains", [](const Interval& self, double value) { return (self.l() <= value && value <= self.u()); },
+            py::arg("value"), "Whether lower <= value <= upper")
+        .def("__contains__",
+            [](const Interval& self, double value) { return (self.l() <= value && value <= self.u()); })
+        .def("__iter__", [](const Interval& self) { return (py::iter(py::make_tuple(self.l(), self.u()))); })
+        .def(
+            "__eq__", [](const Interval& self, const Interval& other)
+            { return (self.l() == other.l() && self.u() == other.u()); }, py::is_operator())
+        .def("__hash__", [](const Interval& self) { return (py::hash(py::make_tuple(self.l(), self.u()))); })
+        .def("__repr__",
+            [](const Interval& self)
+            {
+                return ("Interval(" + py::repr(py::float_(self.l())).cast<std::string>() + ", "
+                    + py::repr(py::float_(self.u())).cast<std::string>() + ")");
+            })
+        .def(py::self + py::self)
+        .def(py::self + double())
+        .def(double() + py::self)
+        .def(py::self - py::self)
+        .def(py::self - double())
+        .def(double() - py::self)
+        .def(py::self * py::self)
+        .def(py::self * double())
+        .def(double() * py::self)
+        .def(py::self / py::self)
+        .def(py::self / double())
+        .def(double() / py::self)
+        .def(-py::self);
+
+    py::implicitly_convertible<py::tuple, Interval>();
+    py::implicitly_convertible<py::float_, Interval>();
+    py::implicitly_convertible<py::int_, Interval>();
 
     // ===== Modeling System Availability =====
     // These constants indicate which modeling systems are available in this build
@@ -1005,6 +1125,7 @@ PYBIND11_MODULE(SHOTpy, m)
             },
             "The upper bound; inf is stored as SHOT_DBL_MAX, i.e., no bound. Changing it after finalize()\n"
             "updates the bounds of the problem")
+        .def("getBound", &Variable::getBound, "The bounds of the variable as an Interval")
         .def_readwrite("semiBound", &Variable::semiBound,
             "For a semicontinuous or semiinteger variable, the value is 0 or between semiBound and upperBound (or\n"
             "between lowerBound and semiBound if semiBound is negative)")
@@ -1143,6 +1264,21 @@ PYBIND11_MODULE(SHOTpy, m)
                 return (self.calculate(point));
             },
             py::arg("point"), "Calculate the value of the expression at the point, which has a value for each variable")
+        .def(
+            "calculate",
+            [](NonlinearExpression& self, const std::vector<Interval>& box)
+            {
+                checkPointSize(self, box);
+                return (checkExpressionBounds(self.calculate(box)));
+            },
+            py::arg("box"),
+            "Calculate the bounds of the expression over the box, which has an Interval for each variable. The\n"
+            "arguments of functions such as log and sqrt are restricted to their domains, and IntervalError is\n"
+            "raised if the expression is not defined anywhere in the box")
+        .def(
+            "getBounds", [](NonlinearExpression& self) { return (checkExpressionBounds(self.getBounds())); },
+            "The bounds of the expression over the bounds of its variables, as calculate(box). Raises IntervalError\n"
+            "if the expression is not defined anywhere in the bounds")
         .def("__repr__",
             [](NonlinearExpressionPtr self)
             {
@@ -1812,6 +1948,26 @@ PYBIND11_MODULE(SHOTpy, m)
             },
             py::arg("point"), "Calculate the value of f(x) of the constraint L <= f(x) <= U at the point")
         .def(
+            "calculateFunctionValue",
+            [](NumericConstraint& self, const std::vector<Interval>& box)
+            {
+                checkPointSize(self.ownerProblem, box);
+                return (self.calculateFunctionValue(box));
+            },
+            py::arg("box"),
+            "Calculate the bounds of f(x) of the constraint L <= f(x) <= U over the box, which has an Interval for\n"
+            "each variable. The arguments of functions such as log and sqrt are restricted to their domains, and the\n"
+            "bounds are [SHOT_DBL_MIN, SHOT_DBL_MAX] if they cannot be calculated")
+        .def(
+            "getConstraintFunctionBounds",
+            [](NumericConstraint& self)
+            {
+                getOwnerProblem(self.ownerProblem);
+                return (self.getConstraintFunctionBounds());
+            },
+            "The bounds of f(x) of the constraint L <= f(x) <= U over the variable bounds of the problem. They are\n"
+            "[SHOT_DBL_MIN, SHOT_DBL_MAX] if they cannot be calculated")
+        .def(
             "calculateNumericValue",
             [](NumericConstraint& self, const std::vector<double>& point)
             {
@@ -2029,6 +2185,25 @@ PYBIND11_MODULE(SHOTpy, m)
                 return (self.calculateValue(point));
             },
             py::arg("point"), "Calculate the value of the objective function, including its constant, at the point")
+        .def(
+            "calculateValue",
+            [](ObjectiveFunction& self, const std::vector<Interval>& box)
+            {
+                checkPointSize(self.ownerProblem, box);
+                return (self.calculateValue(box));
+            },
+            py::arg("box"),
+            "Calculate the bounds of the objective function, including its constant, over the box, which has an\n"
+            "Interval for each variable. They are [SHOT_DBL_MIN, SHOT_DBL_MAX] if they cannot be calculated")
+        .def(
+            "getBounds",
+            [](ObjectiveFunction& self)
+            {
+                getOwnerProblem(self.ownerProblem);
+                return (self.getBounds());
+            },
+            "The bounds of the objective function over the variable bounds of the problem. They are\n"
+            "[SHOT_DBL_MIN, SHOT_DBL_MAX] if they cannot be calculated")
         .def(
             "calculateGradient",
             [](ObjectiveFunction& self, const std::vector<double>& point)
@@ -2620,6 +2795,9 @@ PYBIND11_MODULE(SHOTpy, m)
             "The lower bounds of all the variables, in the order of their indexes")
         .def("getVariableUpperBounds", &Problem::getVariableUpperBounds,
             "The upper bounds of all the variables, in the order of their indexes")
+        .def("getVariableBounds", &Problem::getVariableBounds,
+            "The bounds of all the variables as Intervals, in the order of their indexes. It can be used as the box\n"
+            "for the interval evaluation of the functions")
         .def(
             "getMostDeviatingNumericConstraint",
             [](Problem& self, const std::vector<double>& point)

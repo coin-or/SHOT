@@ -297,6 +297,7 @@ bool ModelTestNestedAbsoluteValues();
 bool ModelTestInteriorPointNotTrusted();
 bool ModelTestMergedMonomialsAndSignomials();
 bool ModelTestProductTermDerivatives();
+bool ModelTestIntervalEvaluation();
 
 int ModelTest(int argc, char* argv[])
 {
@@ -514,6 +515,9 @@ int ModelTest(int argc, char* argv[])
         break;
     case 66:
         passed = ModelTestProductTermDerivatives();
+        break;
+    case 67:
+        passed = ModelTestIntervalEvaluation();
         break;
     default:
         passed = false;
@@ -7760,7 +7764,7 @@ bool tightenConstraint(ProblemPtr problem, NumericConstraintPtr constraint)
                 boundsUpdated = true;
         }
     }
-    catch(mc::Interval::Exceptions&)
+    catch(IntervalError&)
     {
     }
 
@@ -11193,6 +11197,152 @@ bool ModelTestProductTermDerivatives()
 
     if(passed)
         std::cout << "  the gradients and Hessians equal the finite differences.\n";
+
+    return passed;
+}
+
+bool ModelTestIntervalEvaluation()
+{
+    // The bounds of a constraint and of the objective function over a box must contain their values at the points of
+    // the box, and equal the value when the box is a point. When the bounds cannot be calculated, e.g., when the
+    // function is not defined anywhere in the box or a denominator can be zero, they are [SHOT_DBL_MIN, SHOT_DBL_MAX].
+
+    bool passed = true;
+
+    auto solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+    auto problem = std::make_shared<Problem>(env);
+
+    auto x = std::make_shared<Variable>("x", E_VariableType::Real, -5.0, 5.0);
+    auto y = std::make_shared<Variable>("y", E_VariableType::Real, 0.1, 5.0);
+    auto z = std::make_shared<Variable>("z", E_VariableType::Real, 0.1, 5.0);
+    problem->add(Variables({ x, y, z }));
+
+    auto element = [](VariablePtr V, double power) { return (std::make_shared<SignomialElement>(V, power)); };
+    auto variable = [](VariablePtr V) { return (std::make_shared<ExpressionVariable>(V)); };
+
+    // 2x - y + xy + 3yz + 2xyz - xz^2 + 1.5z^0.5 y + 0.5z^1.5 y^2 + exp(x)y + log(z) + sin(xz)
+    auto addTerms = [&](auto& function)
+    {
+        function->add(std::make_shared<LinearTerm>(2.0, x));
+        function->add(std::make_shared<LinearTerm>(-1.0, y));
+        function->add(std::make_shared<QuadraticTerm>(1.0, x, y));
+        function->add(std::make_shared<QuadraticTerm>(3.0, y, z));
+        function->add(std::make_shared<MonomialTerm>(2.0, Variables({ x, y, z })));
+        function->add(std::make_shared<MonomialTerm>(-1.0, Variables({ x, z, z })));
+        function->add(std::make_shared<SignomialTerm>(1.5, SignomialElements({ element(z, 0.5), element(y, 1.0) })));
+        function->add(std::make_shared<SignomialTerm>(0.5, SignomialElements({ element(z, 1.5), element(y, 2.0) })));
+        function->add(std::make_shared<ExpressionSum>(NonlinearExpressions(
+            { std::make_shared<ExpressionProduct>(std::make_shared<ExpressionExp>(variable(x)), variable(y)),
+                std::make_shared<ExpressionLog>(variable(z)),
+                std::make_shared<ExpressionSin>(std::make_shared<ExpressionProduct>(variable(x), variable(z))) })));
+    };
+
+    auto constraint = std::make_shared<NonlinearConstraint>("c", SHOT_DBL_MIN, 10.0);
+    addTerms(constraint);
+    problem->add(constraint);
+
+    auto divideConstraint = std::make_shared<NonlinearConstraint>("divide",
+        std::make_shared<ExpressionDivide>(std::make_shared<ExpressionExp>(variable(y)), variable(x)), SHOT_DBL_MIN,
+        10.0);
+    problem->add(divideConstraint);
+
+    auto objective = std::make_shared<NonlinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    addTerms(objective);
+    problem->add(objective);
+
+    problem->finalize();
+
+    auto finalConstraint = getConstraintAfterFinalize(problem, "c");
+    auto finalDivideConstraint = getConstraintAfterFinalize(problem, "divide");
+    auto finalObjective = problem->objectiveFunction;
+
+    auto checkContains = [&passed](const std::string& name, Interval bounds, double value)
+    {
+        const double tolerance = 1e-9 * (1.0 + std::abs(value));
+
+        if(!(bounds.l() - tolerance <= value && value <= bounds.u() + tolerance))
+        {
+            std::cout << "  FAILED: " << name << ": the value " << value << " is not in [" << bounds.l() << ", "
+                      << bounds.u() << "].\n";
+            passed = false;
+        }
+    };
+
+    auto checkEqual = [&passed](const std::string& name, Interval bounds, Interval expected)
+    {
+        if(bounds.l() != expected.l() || bounds.u() != expected.u())
+        {
+            std::cout << "  FAILED: " << name << ": the bounds are [" << bounds.l() << ", " << bounds.u()
+                      << "], expected [" << expected.l() << ", " << expected.u() << "].\n";
+            passed = false;
+        }
+    };
+
+    // The bounds over the box contain the values at a grid of points in it
+    IntervalVector box = { Interval(-1.0, 2.0), Interval(1.0, 3.0), Interval(0.5, 2.0) };
+    auto constraintBounds = finalConstraint->calculateFunctionValue(box);
+    auto objectiveBounds = finalObjective->calculateValue(box);
+
+    std::cout << "  constraint bounds over the box: [" << constraintBounds.l() << ", " << constraintBounds.u() << "]\n";
+
+    for(int i = 0; i <= 4; i++)
+    {
+        for(int j = 0; j <= 4; j++)
+        {
+            for(int k = 0; k <= 4; k++)
+            {
+                VectorDouble point = { box[0].l() + i * (box[0].u() - box[0].l()) / 4.0,
+                    box[1].l() + j * (box[1].u() - box[1].l()) / 4.0,
+                    box[2].l() + k * (box[2].u() - box[2].l()) / 4.0 };
+
+                checkContains("constraint", constraintBounds, finalConstraint->calculateFunctionValue(point));
+                checkContains("objective", objectiveBounds, finalObjective->calculateValue(point));
+            }
+        }
+    }
+
+    // A box that is a point gives the value at the point
+    VectorDouble point = { 0.7, 2.2, 1.3 };
+    IntervalVector pointBox = { Interval(0.7), Interval(2.2), Interval(1.3) };
+
+    for(auto& [name, bounds, value] : { std::make_tuple(std::string("constraint"),
+                                            finalConstraint->calculateFunctionValue(pointBox),
+                                            finalConstraint->calculateFunctionValue(point)),
+             std::make_tuple(std::string("objective"), finalObjective->calculateValue(pointBox),
+                 finalObjective->calculateValue(point)) })
+    {
+        if(std::abs(bounds.l() - value) > 1e-9 * (1.0 + std::abs(value))
+            || std::abs(bounds.u() - value) > 1e-9 * (1.0 + std::abs(value)))
+        {
+            std::cout << "  FAILED: " << name << ": the bounds over a point are [" << bounds.l() << ", " << bounds.u()
+                      << "], expected " << value << ".\n";
+            passed = false;
+        }
+    }
+
+    // The bounds over the variable bounds are the bounds over the box of the variable bounds
+    checkEqual("constraint over the variable bounds", finalConstraint->getConstraintFunctionBounds(),
+        finalConstraint->calculateFunctionValue(problem->getVariableBounds()));
+    checkEqual("objective over the variable bounds", finalObjective->getBounds(),
+        finalObjective->calculateValue(problem->getVariableBounds()));
+
+    // log(z) is not defined anywhere in a box with only negative values of z
+    IntervalVector outsideDomain = { Interval(-1.0, 2.0), Interval(1.0, 3.0), Interval(-2.0, -1.0) };
+    Interval unbounded(SHOT_DBL_MIN, SHOT_DBL_MAX);
+    checkEqual("constraint outside the domain", finalConstraint->calculateFunctionValue(outsideDomain), unbounded);
+    checkEqual("objective outside the domain", finalObjective->calculateValue(outsideDomain), unbounded);
+
+    // exp(y) / x where x can be zero
+    checkEqual("division by an interval with zero", finalDivideConstraint->calculateFunctionValue(box), unbounded);
+
+    IntervalVector positiveBox = { Interval(1.0, 2.0), Interval(1.0, 3.0), Interval(0.5, 2.0) };
+    auto divideBounds = finalDivideConstraint->calculateFunctionValue(positiveBox);
+    checkContains("division", divideBounds, std::exp(1.0) / 2.0);
+    checkContains("division", divideBounds, std::exp(3.0));
+
+    if(passed)
+        std::cout << "  the interval bounds contain the function values.\n";
 
     return passed;
 }

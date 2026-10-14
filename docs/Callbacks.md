@@ -69,8 +69,9 @@ callback receives the context class of the location, and its return value is ign
 The points are in the variables of the original problem ("original") or of the reformulated problem
 ("reformulated"). The reformulated problem has the variables of the original problem first, followed by the auxiliary
 variables of the reformulations. Use `getOriginalProblem()` and `getReformulatedProblem()` to evaluate the values,
-gradients and Hessians of their functions at the points; a Hessian only has its upper triangle. A point of the
-reformulated problem can also be used for the functions of the original problem. The problems must not be modified.
+gradients and Hessians of their functions at the points; a Hessian only has its upper triangle. The functions can also
+be bounded over a box of variable bounds with interval arithmetic. A point of the reformulated problem can also be used
+for the functions of the original problem. The problems must not be modified.
 
 ## Information available everywhere
 

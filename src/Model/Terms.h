@@ -24,9 +24,6 @@
 namespace SHOT
 {
 
-using Interval = mc::Interval;
-using IntervalVector = std::vector<Interval>;
-
 // The variables of e.g. a quadratic term, used as the key when terms of the same variables are merged. The pointers
 // are used directly, since a variable is represented by one object in a problem.
 using VariablePair = std::pair<Variable*, Variable*>;

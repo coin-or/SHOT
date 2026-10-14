@@ -20,18 +20,13 @@
 #include <ostream>
 #include <string>
 
-#include "interval.hpp"
+#include "Interval.h"
 #include "cppad/cppad.hpp"
 
 namespace SHOT
 {
-using Interval = mc::Interval;
-using IntervalVector = std::vector<Interval>;
-
 using FactorableFunction = CppAD::AD<double>;
 using FactorableFunctionPtr = std::shared_ptr<FactorableFunction>;
-using Interval = mc::Interval;
-using IntervalVector = std::vector<Interval>;
 
 struct VariableProperties
 {
@@ -139,7 +134,7 @@ inline Interval calculateIntervalPower(Interval base, double power)
     {
         bounds = isInteger ? pow(base, integerValue) : pow(base, power);
     }
-    catch(const mc::Interval::Exceptions&)
+    catch(const IntervalError&)
     {
         return (Interval(SHOT_DBL_MIN, SHOT_DBL_MAX));
     }

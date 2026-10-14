@@ -154,6 +154,7 @@ file(
     "${PROJECT_SOURCE_DIR}/src/Structs.h"
     "${PROJECT_SOURCE_DIR}/src/Environment.h"
     "${PROJECT_SOURCE_DIR}/src/Callback.h"
+    "${PROJECT_SOURCE_DIR}/src/Model/Interval.h"
     "${PROJECT_SOURCE_DIR}/src/Model/Variables.h"
     "${PROJECT_SOURCE_DIR}/src/Model/Terms.h"
     "${PROJECT_SOURCE_DIR}/src/Model/AuxiliaryVariables.h"
@@ -596,6 +597,7 @@ add_library(
     ${PROJECT_SOURCE_DIR}/src/Model/Terms.cpp
     ${PROJECT_SOURCE_DIR}/src/Model/NonlinearExpressions.h
     ${PROJECT_SOURCE_DIR}/src/Model/NonlinearExpressions.cpp
+    ${PROJECT_SOURCE_DIR}/src/Model/Interval.h
     ${PROJECT_SOURCE_DIR}/src/Model/Variables.h
     ${PROJECT_SOURCE_DIR}/src/Model/Variables.cpp
     ${PROJECT_SOURCE_DIR}/src/Model/AuxiliaryVariables.h

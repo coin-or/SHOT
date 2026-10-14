@@ -72,7 +72,7 @@ bool TaskCreateMIPProblem::createProblem(MIPSolverPtr destination, ProblemPtr so
         {
             objectiveBound = sourceProblem->objectiveFunction->getBounds();
         }
-        catch(mc::Interval::Exceptions&)
+        catch(IntervalError&)
         {
             objectiveBound = Interval(-objVarBound, objVarBound);
         }

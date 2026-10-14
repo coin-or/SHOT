@@ -23,9 +23,6 @@
 namespace SHOT
 {
 
-using Interval = mc::Interval;
-using IntervalVector = std::vector<Interval>;
-
 enum class E_ObjectiveFunctionDirection
 {
     Maximize,

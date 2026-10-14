@@ -574,7 +574,7 @@ void NonlinearObjectiveFunction::updateProperties()
             auto convexity = nonlinearExpression->getConvexity();
             properties.convexity = Utilities::combineConvexity(convexity, properties.convexity);
         }
-        catch(const mc::Interval::Exceptions&)
+        catch(const IntervalError&)
         {
             properties.convexity = E_Convexity::Unknown;
         }
@@ -670,10 +670,13 @@ Interval NonlinearObjectiveFunction::calculateValue(const IntervalVector& interv
         if(this->properties.hasNonlinearExpression)
             value += nonlinearExpression->calculate(intervalVector);
     }
-    catch(const mc::Interval::Exceptions&)
+    catch(const IntervalError&)
     {
         return (Interval(SHOT_DBL_MIN, SHOT_DBL_MAX));
     }
+
+    if(!isValidInterval(value))
+        return (Interval(SHOT_DBL_MIN, SHOT_DBL_MAX));
 
     return value;
 }

@@ -307,7 +307,7 @@ void simplifyNonlinearExpressions(
             {
                 childBounds = child->getBounds();
             }
-            catch(const mc::Interval::Exceptions&)
+            catch(const IntervalError&)
             {
                 continue;
             }
