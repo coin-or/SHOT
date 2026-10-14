@@ -14,6 +14,7 @@
 #include "Variables.h"
 #include "Terms.h"
 #include "NonlinearExpressions.h"
+#include "IntervalDerivatives.h"
 
 #include <vector>
 
@@ -91,6 +92,14 @@ public:
     virtual Interval calculateValue(const IntervalVector& intervalVector) = 0;
 
     virtual Interval getBounds();
+
+    // The bounds over the box of the value of the objective function, including its constant, and of its gradient and
+    // Hessian, up to the order (0, 1 or 2), calculated with interval arithmetic. IntervalDerivatives describes when
+    // they enclose the derivatives.
+    IntervalDerivatives calculateIntervalDerivatives(const IntervalVector& box, int order = 2);
+
+    // Adds the bounds of the terms of the objective function to the derivatives
+    virtual void addTermIntervalDerivatives(IntervalDerivatives& derivatives, const IntervalVector& box, int order) = 0;
 
     // Whether the objective function's value range (per getBounds(), i.e. accounting for term coefficients/signs
     // and, for a nonlinear objective, the full expression tree -- not just linear/quadratic terms) extends beyond
@@ -173,6 +182,7 @@ public:
 
     double calculateValue(const VectorDouble& point) override;
     Interval calculateValue(const IntervalVector& intervalVector) override;
+    void addTermIntervalDerivatives(IntervalDerivatives& derivatives, const IntervalVector& box, int order) override;
 
     SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) override;
 
@@ -252,6 +262,7 @@ public:
 
     double calculateValue(const VectorDouble& point) override;
     Interval calculateValue(const IntervalVector& intervalVector) override;
+    void addTermIntervalDerivatives(IntervalDerivatives& derivatives, const IntervalVector& box, int order) override;
 
     void takeOwnership(ProblemPtr owner) override;
 
@@ -397,6 +408,7 @@ public:
 
     double calculateValue(const VectorDouble& point) override;
     Interval calculateValue(const IntervalVector& intervalVector) override;
+    void addTermIntervalDerivatives(IntervalDerivatives& derivatives, const IntervalVector& box, int order) override;
 
     SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) override;
     SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes) override;

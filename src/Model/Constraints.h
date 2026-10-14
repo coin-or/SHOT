@@ -19,6 +19,7 @@
 #include "Variables.h"
 #include "Terms.h"
 #include "NonlinearExpressions.h"
+#include "IntervalDerivatives.h"
 
 #include "cppad/cppad.hpp"
 #include "cppad/utility.hpp"
@@ -150,6 +151,14 @@ public:
 
     virtual Interval getConstraintFunctionBounds() = 0;
 
+    // The bounds over the box of the value of f(x) of the constraint L <= f(x) <= U and of its gradient and Hessian, up
+    // to the order (0, 1 or 2), calculated with interval arithmetic. IntervalDerivatives describes when they enclose
+    // the derivatives.
+    IntervalDerivatives calculateIntervalDerivatives(const IntervalVector& box, int order = 2);
+
+    // Adds the bounds of the terms of f(x) to the derivatives
+    virtual void addTermIntervalDerivatives(IntervalDerivatives& derivatives, const IntervalVector& box, int order) = 0;
+
     // The gradient at the point, without the elements that are zero if eraseZeroes is true. The point is indexed by
     // the indexes of the variables, so a point of the reformulated problem, which has the variables of the original
     // problem first, can also be used for a constraint of the original problem
@@ -211,6 +220,7 @@ public:
     Interval calculateFunctionValue(const IntervalVector& intervalVector) override;
 
     Interval getConstraintFunctionBounds() override;
+    void addTermIntervalDerivatives(IntervalDerivatives& derivatives, const IntervalVector& box, int order) override;
 
     bool isFulfilled(const VectorDouble& point) override;
 
@@ -286,6 +296,7 @@ public:
     Interval calculateFunctionValue(const IntervalVector& intervalVector) override;
 
     Interval getConstraintFunctionBounds() override;
+    void addTermIntervalDerivatives(IntervalDerivatives& derivatives, const IntervalVector& box, int order) override;
 
     bool isFulfilled(const VectorDouble& point) override;
 
@@ -423,6 +434,7 @@ public:
     double calculateFunctionValue(const VectorDouble& point) override;
 
     Interval getConstraintFunctionBounds() override;
+    void addTermIntervalDerivatives(IntervalDerivatives& derivatives, const IntervalVector& box, int order) override;
 
     SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) override;
 

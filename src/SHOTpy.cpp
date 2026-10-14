@@ -517,6 +517,32 @@ Interval createInterval(double lower, double upper)
     return (Interval(lower, upper));
 }
 
+// The interval derivatives in Python. The gradient and the Hessian are converted to dicts once, when the derivatives
+// are calculated, since a property that converted them would rebuild the whole dict for each access, e.g., for each
+// element read in a loop over d.hessian[(i, j)].
+struct PythonIntervalDerivatives
+{
+    Interval value;
+    py::typing::Dict<py::int_, Interval> gradient;
+    py::typing::Dict<py::typing::Tuple<py::int_, py::int_>, Interval> hessian;
+    bool isDefinedOnBox;
+    int differentiableOrder;
+    bool isBounded;
+
+    explicit PythonIntervalDerivatives(const IntervalDerivatives& derivatives)
+        : value(derivatives.value)
+        , isDefinedOnBox(derivatives.isDefinedOnBox)
+        , differentiableOrder(derivatives.differentiableOrder)
+        , isBounded(derivatives.isBounded)
+    {
+        for(auto& [V, G] : derivatives.gradient)
+            gradient[py::int_(V->getIndex())] = py::cast(G);
+
+        for(auto& [K, H] : derivatives.hessian)
+            hessian[py::make_tuple(K.first->getIndex(), K.second->getIndex())] = py::cast(H);
+    }
+};
+
 // SHOTpy.IntervalError, which is created with the module
 py::handle intervalErrorType;
 
@@ -809,6 +835,12 @@ PYBIND11_MODULE(SHOTpy, m)
         "A closed interval [lower, upper], e.g., the bounds of a function over a box of variable bounds. A tuple\n"
         "(lower, upper) or a number can be used where an Interval is expected. The bounds are not rounded outwards,\n"
         "so the interval is not a verified enclosure of the floating-point calculations.");
+    py::class_<PythonIntervalDerivatives> intervalDerivativesClass(m, "IntervalDerivatives",
+        "Bounds of the value, the gradient and the Hessian of a function over a box, calculated with interval\n"
+        "arithmetic. The bounds enclose the derivatives only when isDefinedOnBox is True and differentiableOrder is\n"
+        "at least the order of the derivative; otherwise they are not reliable, e.g., the gradient of |x| is [-1, 1]\n"
+        "when x = 0 is in the box. The bounds are not rounded outwards, so they are numerical bounds, not verified\n"
+        "enclosures of the floating-point calculations.");
     py::class_<Variable, std::shared_ptr<Variable>> variableClass(m, "Variable");
     py::class_<VariableProperties> variablePropertiesClass(m, "VariableProperties");
     py::class_<Variables> variablesClass(m, "Variables");
@@ -906,6 +938,31 @@ PYBIND11_MODULE(SHOTpy, m)
     py::implicitly_convertible<py::tuple, Interval>();
     py::implicitly_convertible<py::float_, Interval>();
     py::implicitly_convertible<py::int_, Interval>();
+
+    // ===== IntervalDerivatives Class =====
+    intervalDerivativesClass
+        .def_readonly("value", &PythonIntervalDerivatives::value, "The bounds of the value")
+        .def_readonly("gradient", &PythonIntervalDerivatives::gradient,
+            "The bounds of the gradient as a dict {variable index: Interval}, without the elements that are zero")
+        .def_readonly("hessian", &PythonIntervalDerivatives::hessian,
+            "The bounds of the upper triangle of the Hessian as a dict {(index1, index2): Interval} with\n"
+            "index1 <= index2, without the elements that are zero")
+        .def_readonly("isDefinedOnBox", &PythonIntervalDerivatives::isDefinedOnBox,
+            "Whether the function is defined everywhere in the box, e.g., not if the argument of a logarithm can be 0")
+        .def_readonly("differentiableOrder", &PythonIntervalDerivatives::differentiableOrder,
+            "The order (0, 1 or 2) up to which the function is continuously differentiable everywhere in the box,\n"
+            "e.g., 0 for |x| or sqrt(x) when x = 0 is in the box")
+        .def_readonly("isBounded", &PythonIntervalDerivatives::isBounded,
+            "Whether the bounds of the value and of the calculated derivatives are finite, i.e., not SHOT_DBL_MIN or\n"
+            "SHOT_DBL_MAX")
+        .def("__repr__",
+            [](const PythonIntervalDerivatives& self)
+            {
+                return ("<IntervalDerivatives: value " + py::repr(py::cast(self.value)).cast<std::string>()
+                    + ", isDefinedOnBox " + (self.isDefinedOnBox ? "True" : "False") + ", differentiableOrder "
+                    + std::to_string(self.differentiableOrder) + ", isBounded " + (self.isBounded ? "True" : "False")
+                    + ">");
+            });
 
     // ===== Modeling System Availability =====
     // These constants indicate which modeling systems are available in this build
@@ -1279,6 +1336,18 @@ PYBIND11_MODULE(SHOTpy, m)
             "getBounds", [](NonlinearExpression& self) { return (checkExpressionBounds(self.getBounds())); },
             "The bounds of the expression over the bounds of its variables, as calculate(box). Raises IntervalError\n"
             "if the expression is not defined anywhere in the bounds")
+        .def(
+            "calculateIntervalDerivatives",
+            [](NonlinearExpressionPtr self, const std::vector<Interval>& box, int order)
+            {
+                checkIntervalDerivativeOrder(order);
+                checkPointSize(*self, box);
+                return (PythonIntervalDerivatives(calculateIntervalDerivatives(self, box, order)));
+            },
+            py::arg("box"), py::arg("order") = 2,
+            "Calculate bounds over the box, which has an Interval for each variable, of the value and the\n"
+            "derivatives up to the order (0, 1 or 2) with interval arithmetic. See IntervalDerivatives for when they\n"
+            "enclose them")
         .def("__repr__",
             [](NonlinearExpressionPtr self)
             {
@@ -1968,6 +2037,17 @@ PYBIND11_MODULE(SHOTpy, m)
             "The bounds of f(x) of the constraint L <= f(x) <= U over the variable bounds of the problem. They are\n"
             "[SHOT_DBL_MIN, SHOT_DBL_MAX] if they cannot be calculated")
         .def(
+            "calculateIntervalDerivatives",
+            [](NumericConstraint& self, const std::vector<Interval>& box, int order)
+            {
+                checkPointSize(self.ownerProblem, box);
+                return (PythonIntervalDerivatives(self.calculateIntervalDerivatives(box, order)));
+            },
+            py::arg("box"), py::arg("order") = 2,
+            "Calculate bounds over the box, which has an Interval for each variable, of the value and the\n"
+            "derivatives up to the order (0, 1 or 2) with interval arithmetic. See IntervalDerivatives for when they\n"
+            "enclose them")
+        .def(
             "calculateNumericValue",
             [](NumericConstraint& self, const std::vector<double>& point)
             {
@@ -2204,6 +2284,17 @@ PYBIND11_MODULE(SHOTpy, m)
             },
             "The bounds of the objective function over the variable bounds of the problem. They are\n"
             "[SHOT_DBL_MIN, SHOT_DBL_MAX] if they cannot be calculated")
+        .def(
+            "calculateIntervalDerivatives",
+            [](ObjectiveFunction& self, const std::vector<Interval>& box, int order)
+            {
+                checkPointSize(self.ownerProblem, box);
+                return (PythonIntervalDerivatives(self.calculateIntervalDerivatives(box, order)));
+            },
+            py::arg("box"), py::arg("order") = 2,
+            "Calculate bounds over the box, which has an Interval for each variable, of the value and the\n"
+            "derivatives up to the order (0, 1 or 2) with interval arithmetic. See IntervalDerivatives for when they\n"
+            "enclose them")
         .def(
             "calculateGradient",
             [](ObjectiveFunction& self, const std::vector<double>& point)

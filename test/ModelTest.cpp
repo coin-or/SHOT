@@ -298,6 +298,8 @@ bool ModelTestInteriorPointNotTrusted();
 bool ModelTestMergedMonomialsAndSignomials();
 bool ModelTestProductTermDerivatives();
 bool ModelTestIntervalEvaluation();
+bool ModelTestIntervalDerivatives();
+bool ModelTestIntervalDerivativeStatus();
 
 int ModelTest(int argc, char* argv[])
 {
@@ -518,6 +520,12 @@ int ModelTest(int argc, char* argv[])
         break;
     case 67:
         passed = ModelTestIntervalEvaluation();
+        break;
+    case 68:
+        passed = ModelTestIntervalDerivatives();
+        break;
+    case 69:
+        passed = ModelTestIntervalDerivativeStatus();
         break;
     default:
         passed = false;
@@ -11343,6 +11351,559 @@ bool ModelTestIntervalEvaluation()
 
     if(passed)
         std::cout << "  the interval bounds contain the function values.\n";
+
+    return passed;
+}
+
+// Whether the interval contains the value, up to a tolerance for the rounding of the interval arithmetic
+static bool intervalContains(const Interval& interval, double value)
+{
+    double tolerance = 1e-8 * (1.0 + std::abs(value));
+    return (interval.l() - tolerance <= value && value <= interval.u() + tolerance);
+}
+
+static bool intervalIsInside(const Interval& inner, const Interval& outer)
+{
+    return (intervalContains(outer, inner.l()) && intervalContains(outer, inner.u()));
+}
+
+bool ModelTestIntervalDerivatives()
+{
+    // The interval derivatives of a constraint over a box must contain the derivatives that CppAD and the terms
+    // calculate at the points in the box, equal them over a box that is a point, and be inside those of a larger box.
+    // Each case is a function of the products of variables, so that the product and chain rules are used together.
+
+    bool passed = true;
+
+    auto solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+
+    using Builder = std::function<void(std::shared_ptr<NonlinearConstraint>, VariablePtr, VariablePtr, VariablePtr)>;
+
+    auto expression =
+        [](std::function<NonlinearExpressionPtr(NonlinearExpressionPtr, NonlinearExpressionPtr, NonlinearExpressionPtr)>
+                create) -> Builder
+    {
+        return [create](std::shared_ptr<NonlinearConstraint> C, VariablePtr x, VariablePtr y, VariablePtr z)
+        {
+            C->add(create(std::make_shared<ExpressionVariable>(x), std::make_shared<ExpressionVariable>(y),
+                std::make_shared<ExpressionVariable>(z)));
+        };
+    };
+
+    auto times = [](NonlinearExpressionPtr a, NonlinearExpressionPtr b)
+    { return (std::make_shared<ExpressionProduct>(a, b)); };
+    auto plus
+        = [](NonlinearExpressionPtr a, NonlinearExpressionPtr b) { return (std::make_shared<ExpressionSum>(a, b)); };
+    auto number = [](double value) { return (std::make_shared<ExpressionConstant>(value)); };
+
+    // xy + z and 0.3(xy + z)
+    auto argument = [&](auto x, auto y, auto z) { return (plus(times(x, y), z)); };
+    auto small = [&](auto x, auto y, auto z) { return (times(number(0.3), argument(x, y, z))); };
+
+    Interval negative(-1.0, 1.0);
+    Interval positive(1.0, 2.0);
+
+    struct Case
+    {
+        std::string name;
+        Builder build;
+        Interval box;
+    };
+
+    std::vector<Case> cases = {
+        { "negate",
+            expression([&](auto x, auto y, auto z) { return (std::make_shared<ExpressionNegate>(argument(x, y, z))); }),
+            negative },
+        { "invert",
+            expression([&](auto x, auto y, auto z) { return (std::make_shared<ExpressionInvert>(argument(x, y, z))); }),
+            positive },
+        { "square root",
+            expression(
+                [&](auto x, auto y, auto z) { return (std::make_shared<ExpressionSquareRoot>(argument(x, y, z))); }),
+            positive },
+        { "log",
+            expression([&](auto x, auto y, auto z) { return (std::make_shared<ExpressionLog>(argument(x, y, z))); }),
+            positive },
+        { "exp",
+            expression([&](auto x, auto y, auto z) { return (std::make_shared<ExpressionExp>(argument(x, y, z))); }),
+            negative },
+        { "square",
+            expression([&](auto x, auto y, auto z) { return (std::make_shared<ExpressionSquare>(argument(x, y, z))); }),
+            negative },
+        { "sin",
+            expression([&](auto x, auto y, auto z) { return (std::make_shared<ExpressionSin>(argument(x, y, z))); }),
+            negative },
+        { "cos",
+            expression([&](auto x, auto y, auto z) { return (std::make_shared<ExpressionCos>(argument(x, y, z))); }),
+            negative },
+        { "tan", expression([&](auto x, auto y, auto z) { return (std::make_shared<ExpressionTan>(small(x, y, z))); }),
+            negative },
+        { "arcsin",
+            expression([&](auto x, auto y, auto z) { return (std::make_shared<ExpressionArcSin>(small(x, y, z))); }),
+            negative },
+        { "arccos",
+            expression([&](auto x, auto y, auto z) { return (std::make_shared<ExpressionArcCos>(small(x, y, z))); }),
+            negative },
+        { "arctan",
+            expression([&](auto x, auto y, auto z) { return (std::make_shared<ExpressionArcTan>(argument(x, y, z))); }),
+            negative },
+        { "abs",
+            expression([&](auto x, auto y, auto z) { return (std::make_shared<ExpressionAbs>(argument(x, y, z))); }),
+            positive },
+        { "error function",
+            expression(
+                [&](auto x, auto y, auto z) { return (std::make_shared<ExpressionErrorFunction>(argument(x, y, z))); }),
+            negative },
+        { "signpower 2.5",
+            expression([&](auto x, auto y, auto z)
+                { return (std::make_shared<ExpressionSignPower>(argument(x, y, z), 2.5)); }),
+            negative },
+        { "signpower 1.5",
+            expression([&](auto x, auto y, auto z)
+                { return (std::make_shared<ExpressionSignPower>(argument(x, y, z), 1.5)); }),
+            positive },
+        { "sinh",
+            expression([&](auto x, auto y, auto z) { return (std::make_shared<ExpressionSinh>(argument(x, y, z))); }),
+            negative },
+        { "cosh",
+            expression([&](auto x, auto y, auto z) { return (std::make_shared<ExpressionCosh>(argument(x, y, z))); }),
+            negative },
+        { "tanh",
+            expression([&](auto x, auto y, auto z) { return (std::make_shared<ExpressionTanh>(argument(x, y, z))); }),
+            negative },
+        { "divide",
+            expression([&](auto x, auto y, auto z)
+                { return (std::make_shared<ExpressionDivide>(times(x, y), plus(z, number(2.0)))); }),
+            negative },
+        { "power 3",
+            expression([&](auto x, auto y, auto z)
+                { return (std::make_shared<ExpressionPower>(argument(x, y, z), number(3.0))); }),
+            negative },
+        { "power 2.5",
+            expression([&](auto x, auto y, auto z)
+                { return (std::make_shared<ExpressionPower>(argument(x, y, z), number(2.5))); }),
+            positive },
+        { "power -1.5",
+            expression([&](auto x, auto y, auto z)
+                { return (std::make_shared<ExpressionPower>(argument(x, y, z), number(-1.5))); }),
+            positive },
+        { "variable power",
+            expression(
+                [&](auto x, auto y, auto z) { return (std::make_shared<ExpressionPower>(plus(x, y), times(z, y))); }),
+            positive },
+        { "product and sum",
+            expression([&](auto x, auto y, auto z)
+                { return (plus(times(times(x, y), z), times(std::make_shared<ExpressionExp>(x), y))); }),
+            negative },
+        { "terms",
+            [](std::shared_ptr<NonlinearConstraint> C, VariablePtr x, VariablePtr y, VariablePtr z)
+            {
+                auto element
+                    = [](VariablePtr V, double power) { return (std::make_shared<SignomialElement>(V, power)); };
+
+                C->add(std::make_shared<LinearTerm>(2.0, x));
+                C->add(std::make_shared<LinearTerm>(-1.0, y));
+                C->add(std::make_shared<QuadraticTerm>(1.5, x, y));
+                C->add(std::make_shared<QuadraticTerm>(-0.5, y, y));
+                C->add(std::make_shared<MonomialTerm>(2.0, Variables({ x, x, y })));
+                C->add(std::make_shared<MonomialTerm>(-1.0, Variables({ x, y, z })));
+                C->add(std::make_shared<SignomialTerm>(1.0, SignomialElements({ element(x, 0.5), element(y, 1.0) })));
+                C->add(std::make_shared<SignomialTerm>(0.7, SignomialElements({ element(y, -1.5), element(z, 2.5) })));
+            },
+            Interval(0.5, 2.0) },
+    };
+
+    std::mt19937 generator(20261014);
+
+    for(auto& C : cases)
+    {
+        auto problem = std::make_shared<Problem>(env);
+        auto x = std::make_shared<Variable>("x", E_VariableType::Real, -10.0, 10.0);
+        auto y = std::make_shared<Variable>("y", E_VariableType::Real, -10.0, 10.0);
+        auto z = std::make_shared<Variable>("z", E_VariableType::Real, -10.0, 10.0);
+        problem->add(Variables({ x, y, z }));
+
+        auto constraint = std::make_shared<NonlinearConstraint>("c", SHOT_DBL_MIN, 1e10);
+        C.build(constraint, x, y, z);
+        problem->add(constraint);
+        problem->add(std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize));
+        problem->finalize();
+
+        auto finalConstraint = getConstraintAfterFinalize(problem, "c");
+        IntervalVector box(3, C.box);
+        auto derivatives = finalConstraint->calculateIntervalDerivatives(box);
+
+        auto fail = [&](const std::string& message)
+        {
+            std::cout << "  FAILED: " << C.name << ": " << message << "\n";
+            passed = false;
+        };
+
+        if(!derivatives.isDefinedOnBox || derivatives.differentiableOrder != 2 || !derivatives.isBounded)
+        {
+            fail("the function is smooth and bounded on the box, but the status is "
+                + std::to_string(derivatives.isDefinedOnBox) + ", " + std::to_string(derivatives.differentiableOrder)
+                + ", " + std::to_string(derivatives.isBounded));
+            continue;
+        }
+
+        // The Hessian only has the upper triangle, inside the sparsity pattern of CppAD and the terms
+        auto pattern = finalConstraint->getHessianSparsityPattern();
+
+        for(auto& [K, H] : derivatives.hessian)
+        {
+            if(K.first->getIndex() > K.second->getIndex())
+                fail("the Hessian has an element below the diagonal");
+
+            if(std::find(pattern->begin(), pattern->end(), K) == pattern->end())
+                fail("the Hessian has an element outside the sparsity pattern");
+        }
+
+        // The derivatives at grid and random points in the box are in the interval derivatives
+        std::vector<VectorDouble> points;
+        std::uniform_real_distribution<double> distribution(C.box.l(), C.box.u());
+
+        for(int i = 0; i < 27; i++)
+        {
+            points.push_back({ C.box.l() + (i % 3) * (C.box.u() - C.box.l()) / 2.0,
+                C.box.l() + (i / 3 % 3) * (C.box.u() - C.box.l()) / 2.0,
+                C.box.l() + (i / 9) * (C.box.u() - C.box.l()) / 2.0 });
+        }
+
+        for(int i = 0; i < 20; i++)
+            points.push_back({ distribution(generator), distribution(generator), distribution(generator) });
+
+        auto checkPoint = [&](const IntervalDerivatives& bounds, const VectorDouble& point, const std::string& where)
+        {
+            if(!intervalContains(bounds.value, finalConstraint->calculateFunctionValue(point)))
+                fail("the value is not in the bounds " + where);
+
+            for(auto& [V, G] : finalConstraint->calculateGradient(point, false))
+            {
+                auto element = bounds.gradient.find(V);
+                Interval interval = (element == bounds.gradient.end()) ? Interval(0.0) : element->second;
+
+                if(!intervalContains(interval, G))
+                    fail("the derivative for " + V->name + " is not in the bounds " + where);
+            }
+
+            for(auto& [K, H] : finalConstraint->calculateHessian(point, false))
+            {
+                auto element = bounds.hessian.find(K);
+                Interval interval = (element == bounds.hessian.end()) ? Interval(0.0) : element->second;
+
+                if(!intervalContains(interval, H))
+                    fail("the Hessian element (" + K.first->name + ", " + K.second->name + ") is not in the bounds "
+                        + where);
+            }
+        };
+
+        for(auto& P : points)
+            checkPoint(derivatives, P, "over the box");
+
+        // A box that is a point gives the derivatives at the point
+        for(size_t i = 27; i < 30; i++)
+        {
+            IntervalVector pointBox = { Interval(points[i][0]), Interval(points[i][1]), Interval(points[i][2]) };
+            auto pointDerivatives = finalConstraint->calculateIntervalDerivatives(pointBox);
+
+            auto isNarrow = [](const Interval& interval)
+            { return (interval.u() - interval.l() <= 1e-8 * (1.0 + std::abs(interval.l()))); };
+
+            bool isPoint = isNarrow(pointDerivatives.value);
+
+            for(auto& [V, G] : pointDerivatives.gradient)
+                isPoint = isPoint && isNarrow(G);
+
+            for(auto& [K, H] : pointDerivatives.hessian)
+                isPoint = isPoint && isNarrow(H);
+
+            if(!isPoint)
+                fail("the bounds over a point are not narrow");
+
+            checkPoint(pointDerivatives, points[i], "over a point");
+        }
+
+        // The bounds over a smaller box are inside those over the box
+        double quarter = (C.box.u() - C.box.l()) / 4.0;
+        IntervalVector smallerBox(3, Interval(C.box.l() + quarter, C.box.u() - quarter));
+        auto smaller = finalConstraint->calculateIntervalDerivatives(smallerBox);
+
+        if(!intervalIsInside(smaller.value, derivatives.value))
+            fail("the value over a smaller box is not inside the value over the box");
+
+        for(auto& [V, G] : smaller.gradient)
+        {
+            if(!derivatives.gradient.count(V) || !intervalIsInside(G, derivatives.gradient.at(V)))
+                fail("the gradient over a smaller box is not inside the gradient over the box");
+        }
+
+        for(auto& [K, H] : smaller.hessian)
+        {
+            if(!derivatives.hessian.count(K) || !intervalIsInside(H, derivatives.hessian.at(K)))
+                fail("the Hessian over a smaller box is not inside the Hessian over the box");
+        }
+    }
+
+    if(passed)
+        std::cout << "  the interval derivatives contain the derivatives at the points of the boxes.\n";
+
+    return passed;
+}
+
+bool ModelTestIntervalDerivativeStatus()
+{
+    // The status of the interval derivatives tells whether the function is defined and differentiable on the box, and
+    // the derivatives are never NaN, also when they are not finite or the arithmetic overflows.
+
+    bool passed = true;
+
+    auto solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+    auto problem = std::make_shared<Problem>(env);
+
+    auto x = std::make_shared<Variable>("x", E_VariableType::Real, -10.0, 10.0);
+    auto y = std::make_shared<Variable>("y", E_VariableType::Real, -10.0, 10.0);
+    problem->add(Variables({ x, y }));
+
+    auto X = std::make_shared<ExpressionVariable>(x);
+    auto Y = std::make_shared<ExpressionVariable>(y);
+    auto number = [](double value) { return (std::make_shared<ExpressionConstant>(value)); };
+
+    auto hasNaN = [](const IntervalDerivatives& derivatives)
+    {
+        auto isNaN = [](const Interval& interval) { return (std::isnan(interval.l()) || std::isnan(interval.u())); };
+        bool result = isNaN(derivatives.value);
+
+        for(auto& [V, G] : derivatives.gradient)
+            result = result || isNaN(G);
+
+        for(auto& [K, H] : derivatives.hessian)
+            result = result || isNaN(H);
+
+        return (result);
+    };
+
+    auto calculate = [&](NonlinearExpressionPtr expression, Interval xBounds, Interval yBounds)
+    { return (calculateIntervalDerivatives(expression, IntervalVector({ xBounds, yBounds }), 2)); };
+
+    struct Case
+    {
+        std::string name;
+        NonlinearExpressionPtr expression;
+        Interval xBounds;
+        bool isDefinedOnBox;
+        int differentiableOrder;
+        bool isBounded;
+    };
+
+    std::vector<Case> cases = {
+        { "abs(x) with zero inside", std::make_shared<ExpressionAbs>(X), Interval(-1.0, 2.0), true, 0, false },
+        // |x| is not differentiable in zero, also when zero is an end of the box
+        { "abs(x) on [0, 2]", std::make_shared<ExpressionAbs>(X), Interval(0.0, 2.0), true, 0, false },
+        { "abs(x) on [-1, 0]", std::make_shared<ExpressionAbs>(X), Interval(-1.0, 0.0), true, 0, false },
+        { "abs(x) on [0, 0]", std::make_shared<ExpressionAbs>(X), Interval(0.0), true, 0, false },
+        { "abs(x) on positive values", std::make_shared<ExpressionAbs>(X), Interval(0.5, 2.0), true, 2, true },
+        { "sqrt(x) at zero", std::make_shared<ExpressionSquareRoot>(X), Interval(0.0, 2.0), true, 0, false },
+        { "sqrt(x) crossing zero", std::make_shared<ExpressionSquareRoot>(X), Interval(-1.0, 2.0), false, 0, false },
+        { "x^1.5 at zero", std::make_shared<ExpressionPower>(X, number(1.5)), Interval(0.0, 2.0), true, 1, false },
+        { "x^2.5 at zero", std::make_shared<ExpressionPower>(X, number(2.5)), Interval(0.0, 2.0), true, 2, true },
+        { "x^0.5 crossing zero", std::make_shared<ExpressionPower>(X, number(0.5)), Interval(-1.0, 2.0), false, 0,
+            false },
+        { "x^-2 with zero inside", std::make_shared<ExpressionPower>(X, number(-2.0)), Interval(-1.0, 2.0), false, 0,
+            false },
+        { "x^3 with zero inside", std::make_shared<ExpressionPower>(X, number(3.0)), Interval(-1.0, 2.0), true, 2,
+            true },
+        { "signpower(x, 1.5) at zero", std::make_shared<ExpressionSignPower>(X, 1.5), Interval(-1.0, 2.0), true, 1,
+            false },
+        { "signpower(x, 2) at zero", std::make_shared<ExpressionSignPower>(X, 2.0), Interval(-1.0, 2.0), true, 1,
+            true },
+        { "signpower(x, 3) at zero", std::make_shared<ExpressionSignPower>(X, 3.0), Interval(-1.0, 2.0), true, 2,
+            true },
+        { "signpower(x, 0.5) at zero", std::make_shared<ExpressionSignPower>(X, 0.5), Interval(-1.0, 2.0), true, 0,
+            false },
+        { "log(x) crossing zero", std::make_shared<ExpressionLog>(X), Interval(-1.0, 2.0), false, 0, false },
+        { "log(x) on negative values", std::make_shared<ExpressionLog>(X), Interval(-2.0, -1.0), false, 0, false },
+        { "arcsin(x) touching one", std::make_shared<ExpressionArcSin>(X), Interval(0.0, 1.0), true, 0, false },
+        { "arcsin(x) beyond one", std::make_shared<ExpressionArcSin>(X), Interval(0.0, 2.0), false, 0, false },
+        { "tan(x) across a pole", std::make_shared<ExpressionTan>(X), Interval(1.0, 2.0), false, 0, false },
+        { "1/x with zero inside", std::make_shared<ExpressionInvert>(X), Interval(-1.0, 2.0), false, 0, false },
+        { "y/x with zero inside", std::make_shared<ExpressionDivide>(Y, X), Interval(-1.0, 2.0), false, 0, false },
+        { "x^y with zero in the base", std::make_shared<ExpressionPower>(X, Y), Interval(0.0, 2.0), false, 0, false },
+        { "exp(exp(x)) overflowing", std::make_shared<ExpressionExp>(std::make_shared<ExpressionExp>(X)),
+            Interval(0.0, 10.0), true, 2, false },
+        { "exp(x) of an unbounded x", std::make_shared<ExpressionExp>(X), Interval(SHOT_DBL_MIN, SHOT_DBL_MAX), true, 2,
+            false },
+        { "log(x) of an unbounded x", std::make_shared<ExpressionLog>(X), Interval(1.0, SHOT_DBL_MAX), true, 2, false },
+    };
+
+    for(auto& C : cases)
+    {
+        auto derivatives = calculate(C.expression, C.xBounds, Interval(1.0, 2.0));
+
+        std::cout << "  " << C.name << ": defined " << derivatives.isDefinedOnBox << ", differentiable order "
+                  << derivatives.differentiableOrder << ", bounded " << derivatives.isBounded << "\n";
+
+        if(derivatives.isDefinedOnBox != C.isDefinedOnBox || derivatives.differentiableOrder != C.differentiableOrder
+            || derivatives.isBounded != C.isBounded)
+        {
+            std::cout << "  FAILED: " << C.name << ": expected defined " << C.isDefinedOnBox
+                      << ", differentiable order " << C.differentiableOrder << ", bounded " << C.isBounded << "\n";
+            passed = false;
+        }
+
+        if(hasNaN(derivatives))
+        {
+            std::cout << "  FAILED: " << C.name << ": a bound is NaN.\n";
+            passed = false;
+        }
+    }
+
+    // An exact zero times an unbounded interval is zero: x * (1/y) with x = 0 and zero in y
+    auto zeroTimesUnbounded = calculate(std::make_shared<ExpressionProduct>(X, std::make_shared<ExpressionInvert>(Y)),
+        Interval(0.0), Interval(-1.0, 1.0));
+
+    if(zeroTimesUnbounded.value.l() != 0.0 || zeroTimesUnbounded.value.u() != 0.0 || hasNaN(zeroTimesUnbounded))
+    {
+        std::cout << "  FAILED: zero times an unbounded interval is [" << zeroTimesUnbounded.value.l() << ", "
+                  << zeroTimesUnbounded.value.u() << "], expected zero.\n";
+        passed = false;
+    }
+
+    // The derivatives of x - x cancel to an exact zero, which is removed
+    auto cancellation = calculate(std::make_shared<ExpressionSum>(X, std::make_shared<ExpressionNegate>(X)),
+        Interval(-1.0, 2.0), Interval(1.0, 2.0));
+
+    if(!cancellation.gradient.empty() || !cancellation.hessian.empty())
+    {
+        std::cout << "  FAILED: the derivatives of x - x are not zero.\n";
+        passed = false;
+    }
+
+    // A subexpression used twice, e + e, gives the same bounds as 2e
+    NonlinearExpressionPtr shared = std::make_shared<ExpressionExp>(std::make_shared<ExpressionProduct>(X, Y));
+    auto twice = calculate(std::make_shared<ExpressionSum>(shared, shared), Interval(0.0, 1.0), Interval(1.0, 2.0));
+    auto doubled
+        = calculate(std::make_shared<ExpressionProduct>(number(2.0), shared), Interval(0.0, 1.0), Interval(1.0, 2.0));
+
+    auto isSame = [](const Interval& first, const Interval& second)
+    { return (std::abs(first.l() - second.l()) < 1e-10 && std::abs(first.u() - second.u()) < 1e-10); };
+
+    bool isSameAsDoubled = isSame(twice.value, doubled.value) && twice.gradient.size() == doubled.gradient.size()
+        && twice.hessian.size() == doubled.hessian.size();
+
+    for(auto& [V, G] : twice.gradient)
+        isSameAsDoubled = isSameAsDoubled && doubled.gradient.count(V) && isSame(G, doubled.gradient.at(V));
+
+    for(auto& [K, H] : twice.hessian)
+        isSameAsDoubled = isSameAsDoubled && doubled.hessian.count(K) && isSame(H, doubled.hessian.at(K));
+
+    if(!isSameAsDoubled)
+    {
+        std::cout << "  FAILED: e + e for a shared e does not give the same bounds as 2e.\n";
+        passed = false;
+    }
+
+    // Analytic bounds: exp(x) + exp(y) + xy on [1, 2]^2
+    auto analytic = calculate(std::make_shared<ExpressionSum>(NonlinearExpressions({ std::make_shared<ExpressionExp>(X),
+                                  std::make_shared<ExpressionExp>(Y), std::make_shared<ExpressionProduct>(X, Y) })),
+        Interval(1.0, 2.0), Interval(1.0, 2.0));
+    double e = std::exp(1.0);
+    double e2 = std::exp(2.0);
+
+    auto checkAnalytic = [&passed](const std::string& name, const Interval& interval, double lower, double upper)
+    {
+        if(std::abs(interval.l() - lower) > 1e-12 || std::abs(interval.u() - upper) > 1e-12)
+        {
+            std::cout << "  FAILED: " << name << " is [" << interval.l() << ", " << interval.u() << "], expected ["
+                      << lower << ", " << upper << "].\n";
+            passed = false;
+        }
+    };
+
+    checkAnalytic("the value", analytic.value, 2.0 * e + 1.0, 2.0 * e2 + 4.0);
+    checkAnalytic("the derivative for x", analytic.gradient.at(x), e + 1.0, e2 + 2.0);
+    checkAnalytic("the Hessian element (x, x)", analytic.hessian.at({ x, x }), e, e2);
+    checkAnalytic("the Hessian element (x, y)", analytic.hessian.at({ x, y }), 1.0, 1.0);
+
+    // Derivatives that are small but representable are not lost by cancellation, overflow or underflow. Each case is
+    // compared relatively with the derivative at a point, since an absolute tolerance would accept zero.
+    auto checkRelative = [&passed](const std::string& name, const Interval& interval, double expected)
+    {
+        double tolerance = 1e-10 * std::abs(expected);
+
+        if(!(std::abs(interval.l() - expected) <= tolerance && std::abs(interval.u() - expected) <= tolerance))
+        {
+            std::cout << "  FAILED: " << name << " is [" << interval.l() << ", " << interval.u() << "], expected "
+                      << expected << ".\n";
+            passed = false;
+        }
+    };
+
+    auto elementOrZero = [](const auto& map, const auto& key)
+    {
+        auto element = map.find(key);
+        return (element == map.end() ? Interval(0.0) : element->second);
+    };
+
+    {
+        // tanh(x) at x = 20, where tanh(x) is rounded to one, so that 1 - tanh^2(x) is zero
+        auto tanhPoint = calculate(std::make_shared<ExpressionTanh>(X), Interval(20.0), Interval(1.0));
+        double sech2 = 4.0 * std::exp(-40.0) / ((1.0 + std::exp(-40.0)) * (1.0 + std::exp(-40.0)));
+        checkRelative("the derivative of tanh(x) at 20", elementOrZero(tanhPoint.gradient, x), sech2);
+        checkRelative("the second derivative of tanh(x) at 20", elementOrZero(tanhPoint.hessian, std::make_pair(x, x)),
+            -2.0 * std::tanh(20.0) * sech2);
+
+        // Over [20, 21], tanh(x) is concave, so the second derivative is negative
+        auto tanhBox = calculate(std::make_shared<ExpressionTanh>(X), Interval(20.0, 21.0), Interval(1.0));
+        auto secondDerivative = elementOrZero(tanhBox.hessian, std::make_pair(x, x));
+
+        if(!(secondDerivative.u() < 0.0) || !(elementOrZero(tanhBox.gradient, x).l() > 0.0))
+        {
+            std::cout << "  FAILED: the derivatives of tanh(x) over [20, 21] do not have their signs.\n";
+            passed = false;
+        }
+
+        // arctan(x) for a large x, where 1 + x^2 overflows or (1/x)^2 is squared before being multiplied by x
+        auto atanLarge = calculate(std::make_shared<ExpressionArcTan>(X), Interval(1e155), Interval(1.0));
+        checkRelative("the derivative of arctan(x) at 1e155", elementOrZero(atanLarge.gradient, x), 1e-310);
+
+        auto atanHundred = calculate(std::make_shared<ExpressionArcTan>(X), Interval(1e100), Interval(1.0));
+        checkRelative("the second derivative of arctan(x) at 1e100",
+            elementOrZero(atanHundred.hessian, std::make_pair(x, x)), -2e-300);
+
+        // arctan(x) over [-1, 1], where the second derivative has its extrema in -1/sqrt(3) and 1/sqrt(3)
+        auto atanBox = calculate(std::make_shared<ExpressionArcTan>(X), Interval(-1.0, 1.0), Interval(1.0));
+        double extremum = 3.0 * std::sqrt(3.0) / 8.0;
+        auto atanSecond = elementOrZero(atanBox.hessian, std::make_pair(x, x));
+        checkRelative(
+            "the lower bound of the second derivative of arctan(x) over [-1, 1]", Interval(atanSecond.l()), -extremum);
+        checkRelative(
+            "the upper bound of the second derivative of arctan(x) over [-1, 1]", Interval(atanSecond.u()), extremum);
+
+        // x^2.5 near zero, where the base is not moved away from zero
+        auto smallPower
+            = calculate(std::make_shared<ExpressionPower>(X, number(2.5)), Interval(0.0, 1e-20), Interval(1.0));
+        checkRelative("the upper bound of x^2.5 over [0, 1e-20]", Interval(smallPower.value.u()), 1e-50);
+        checkRelative("the upper bound of the second derivative of x^2.5 over [0, 1e-20]",
+            Interval(elementOrZero(smallPower.hessian, std::make_pair(x, x)).u()), 3.75e-10);
+    }
+
+    // The public functions check the order
+    try
+    {
+        calculateIntervalDerivatives(X, IntervalVector({ Interval(1.0), Interval(1.0) }), 3);
+        std::cout << "  FAILED: the order 3 was accepted.\n";
+        passed = false;
+    }
+    catch(const std::invalid_argument&)
+    {
+    }
+
+    if(passed)
+        std::cout << "  the status of the interval derivatives is correct and no bound is NaN.\n";
 
     return passed;
 }

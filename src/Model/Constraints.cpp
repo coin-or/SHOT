@@ -158,6 +158,16 @@ std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> NumericConstra
     return (hessianSparsityPattern);
 }
 
+IntervalDerivatives NumericConstraint::calculateIntervalDerivatives(const IntervalVector& box, int order)
+{
+    checkIntervalDerivativeOrder(order);
+
+    // Each class adds its terms with addIntervalDerivatives, which leaves the derivatives finished
+    IntervalDerivatives derivatives;
+    addTermIntervalDerivatives(derivatives, box, order);
+    return (derivatives);
+}
+
 NumericConstraintValue NumericConstraint::calculateNumericValue(const VectorDouble& point, double correction)
 {
     double value = calculateFunctionValue(point) - correction;
@@ -223,6 +233,13 @@ Interval LinearConstraint::getConstraintFunctionBounds()
     Interval value = linearTerms.getBounds();
     value += Interval(constant);
     return value;
+}
+
+void LinearConstraint::addTermIntervalDerivatives(
+    IntervalDerivatives& derivatives, const IntervalVector& box, int order)
+{
+    derivatives.value = derivatives.value + Interval(constant);
+    addIntervalDerivatives(derivatives, SHOT::calculateIntervalDerivatives(linearTerms, box, order), order);
 }
 
 bool LinearConstraint::isFulfilled(const VectorDouble& point) { return NumericConstraint::isFulfilled(point); }
@@ -338,6 +355,13 @@ Interval QuadraticConstraint::getConstraintFunctionBounds()
     Interval value = LinearConstraint::getConstraintFunctionBounds();
     value += quadraticTerms.getBounds();
     return value;
+}
+
+void QuadraticConstraint::addTermIntervalDerivatives(
+    IntervalDerivatives& derivatives, const IntervalVector& box, int order)
+{
+    LinearConstraint::addTermIntervalDerivatives(derivatives, box, order);
+    addIntervalDerivatives(derivatives, SHOT::calculateIntervalDerivatives(quadraticTerms, box, order), order);
 }
 
 bool QuadraticConstraint::isFulfilled(const VectorDouble& point) { return NumericConstraint::isFulfilled(point); }
@@ -600,6 +624,17 @@ Interval NonlinearConstraint::getConstraintFunctionBounds()
         return (Interval(SHOT_DBL_MIN, SHOT_DBL_MAX));
 
     return value;
+}
+
+void NonlinearConstraint::addTermIntervalDerivatives(
+    IntervalDerivatives& derivatives, const IntervalVector& box, int order)
+{
+    QuadraticConstraint::addTermIntervalDerivatives(derivatives, box, order);
+    addIntervalDerivatives(derivatives, SHOT::calculateIntervalDerivatives(monomialTerms, box, order), order);
+    addIntervalDerivatives(derivatives, SHOT::calculateIntervalDerivatives(signomialTerms, box, order), order);
+
+    if(this->properties.hasNonlinearExpression && nonlinearExpression)
+        addIntervalDerivatives(derivatives, SHOT::calculateIntervalDerivatives(nonlinearExpression, box, order), order);
 }
 
 SparseVariableVector NonlinearConstraint::calculateGradient(const VectorDouble& point, bool eraseZeroes = true)
