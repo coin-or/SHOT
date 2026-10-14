@@ -1379,10 +1379,40 @@ std::string Results::getResultsSol()
         status = "0";
         description = "Solved to global optimality";
     }
-    else if(this->hasPrimalSolution())
+    // AMPL reserves 400-499 for stopping at a limit. MathOptInterface reads "time limit, feasible solution" in the
+    // message as a time limit with a feasible point, but other limits in 400-499 lose the point, so they are given as
+    // 100-199, i.e., solved but with something that may be wrong
+    else if(this->hasPrimalSolution() && this->terminationReason == E_TerminationReason::TimeLimit)
+    {
+        status = "400";
+        description = "Time limit, feasible solution found";
+    }
+    else if(this->hasPrimalSolution() && this->terminationReason == E_TerminationReason::ConstraintTolerance)
     {
         status = "100";
         description = "Solved to local optimality";
+    }
+    else if(this->hasPrimalSolution() && this->terminationReason == E_TerminationReason::IterationLimit)
+    {
+        status = "101";
+        description = "Iteration limit reached, feasible solution found";
+    }
+    else if(this->hasPrimalSolution() && this->terminationReason == E_TerminationReason::UserAbort)
+    {
+        status = "102";
+        description = "User abort, feasible solution found";
+    }
+    else if(this->hasPrimalSolution()
+        && (this->terminationReason == E_TerminationReason::Error
+            || this->terminationReason == E_TerminationReason::NumericIssues))
+    {
+        status = "103";
+        description = "Error occurred, feasible solution found";
+    }
+    else if(this->hasPrimalSolution())
+    {
+        status = "104";
+        description = "Feasible solution found, optimality not guaranteed";
     }
     else if(this->terminationReason == E_TerminationReason::InfeasibleProblem)
     {
