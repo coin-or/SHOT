@@ -182,7 +182,8 @@ find_cplex_library(CPLEX_CONCERT_LIBRARY concert ${CPLEX_CONCERT_DIR})
 # Handle the QUIETLY and REQUIRED arguments and set CPLEX_CONCERT_FOUND to TRUE
 # if all listed variables are TRUE.
 find_package_handle_standard_args(CPLEX_CONCERT
-                                  DEFAULT_MSG
+                                  NAME_MISMATCHED
+                                  REQUIRED_VARS
                                   CPLEX_CONCERT_LIBRARY
                                   CPLEX_CONCERT_LIBRARY_DEBUG
                                   CPLEX_CONCERT_INCLUDE_DIR)
@@ -211,7 +212,8 @@ find_cplex_library(CPLEX_ILOCPLEX_LIBRARY ilocplex ${CPLEX_DIR})
 # Handle the QUIETLY and REQUIRED arguments and set CPLEX_ILOCPLEX_FOUND to TRUE
 # if all listed variables are TRUE.
 find_package_handle_standard_args(CPLEX_ILOCPLEX
-                                  DEFAULT_MSG
+                                  NAME_MISMATCHED
+                                  REQUIRED_VARS
                                   CPLEX_ILOCPLEX_LIBRARY
                                   CPLEX_ILOCPLEX_LIBRARY_DEBUG
                                   CPLEX_ILOCPLEX_INCLUDE_DIR

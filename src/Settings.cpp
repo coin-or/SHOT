@@ -380,8 +380,6 @@ std::string Settings::getSettingsAsOSoL()
     auto solverOptionsNode = osolDocument.NewElement("solverOptions");
     int numberOfIncludedOptions = 0;
 
-    solverOptionsNode->SetAttribute("numberOfSolverOptions", numberOfIncludedOptions);
-
     for(auto& T : settingTypes)
     {
         auto key = T.first;
@@ -436,7 +434,7 @@ std::string Settings::getSettingsAsOSoL()
         solverOptionNode->SetAttribute("type", type.str().c_str());
         solverOptionNode->SetAttribute("description", desc.str().c_str());
         solverOptionsNode->InsertEndChild(solverOptionNode);
-        solverOptionNode++;
+        numberOfIncludedOptions++;
 
         output->outputDebug(" Setting <" + category + "," + name + "> converted.");
 
@@ -444,6 +442,7 @@ std::string Settings::getSettingsAsOSoL()
         desc.clear();
     }
 
+    solverOptionsNode->SetAttribute("numberOfSolverOptions", numberOfIncludedOptions);
     optimizationNode->InsertEndChild(solverOptionsNode);
     osolNode->InsertEndChild(optimizationNode);
 
@@ -493,17 +492,12 @@ std::string Settings::getSettingsAsString(bool hideUnchanged = false, bool hideD
         {
             std::string name = T.first.second;
             std::string category = T.first.first;
-            std::string fullname = fmt::format("{}.{}", category, name);
             std::string subCategory = "";
 
             size_t firstPeriod = name.find('.');
 
             if(firstPeriod != std::string::npos)
                 subCategory = name.substr(0, firstPeriod);
-
-            std::string description;
-            std::string validValues;
-            std::string defaultValue;
 
             if(category != currentCategory)
             {
@@ -845,8 +839,6 @@ VectorPairString Settings::getSettingSplitIdentifiers(E_SettingType type)
     for(auto& T : settingTypes)
     {
         auto key = T.first;
-        std::string name = T.first.second;
-        std::string category = T.first.first;
 
         if(settingIsPrivate[key])
             continue; // Do not include an internal setting

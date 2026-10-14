@@ -173,7 +173,7 @@ int OutputStream::overflow(int c)
 {
     if(std::istream::traits_type::to_char_type(c) != '\n')
     {
-        ss.put(c);
+        ss.put(std::istream::traits_type::to_char_type(c));
     }
     else
     {

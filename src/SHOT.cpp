@@ -521,7 +521,7 @@ int main(int argc, char* argv[])
 
     for(auto& ARG : cmdl.pos_args())
     {
-        int equalLocation = ARG.find('=');
+        auto equalLocation = ARG.find('=');
 
         if(equalLocation == std::string::npos)
             continue;

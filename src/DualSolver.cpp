@@ -124,8 +124,6 @@ void DualSolver::checkDualSolutionCandidates()
             else
                 env->solutionStatistics.iterationLastDualBoundUpdate = 0;
 
-            env->solutionStatistics.iterationLastDualBoundUpdate = env->timing->getElapsedTime("Total");
-
             if(C.sourceType == E_DualSolutionSource::MIPSolutionOptimal
                 || C.sourceType == E_DualSolutionSource::LPSolution
                 || C.sourceType == E_DualSolutionSource::MIPSolverBound

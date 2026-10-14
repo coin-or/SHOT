@@ -33,7 +33,7 @@ template class CppAD::ADFun<double>;
 // This is needed because CppAD's thread_alloc has ODR issues with shared libraries
 namespace
 {
-void shot_cppad_error_handler(bool known, int line, const char* file, const char* exp, const char* msg)
+void shot_cppad_error_handler(bool /*known*/, int line, const char* file, const char* exp, const char* msg)
 {
     // Check if this is the known cleanup error in thread_alloc
     std::string fileStr(file ? file : "");
@@ -3144,7 +3144,7 @@ void Problem::augmentAuxiliaryVariableValues(VectorDouble& point)
     if(!this->properties.isReformulated)
         return;
 
-    assert(point.size() == this->properties.numberOfVariables - this->properties.numberOfAuxiliaryVariables);
+    assert(point.size() == static_cast<size_t>(this->properties.numberOfVariables - this->properties.numberOfAuxiliaryVariables));
 
     for(auto& V : this->auxiliaryVariables)
     {
@@ -3165,7 +3165,7 @@ void Problem::augmentAuxiliaryVariableValues(VectorDouble& point)
     if(this->antiEpigraphObjectiveVariable)
         point.at(this->antiEpigraphObjectiveVariable->getIndex()) = this->objectiveFunction->calculateValue(point);
 
-    assert(point.size() == this->properties.numberOfVariables);
+    assert(point.size() == static_cast<size_t>(this->properties.numberOfVariables));
 
 #ifndef NDEBUG
     for(auto& PT : point)

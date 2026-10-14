@@ -57,8 +57,9 @@ jobs:
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
         run: >-
-          cmake -S . -B build -G Ninja
+          cmake -S . -B build -G Ninja -Werror=dev -Werror=deprecated
           -DCMAKE_BUILD_TYPE=${{ matrix.type }}
+          -DSHOT_WARNINGS_AS_ERRORS=ON
           -DHAS_GAMS=OFF -DHAS_CPLEX=OFF -DHAS_GUROBI=OFF
           -DHAS_PYTHON=ON -DCOMPILE_TESTS=ON -DBUILD_DOCUMENTATION=OFF
       - name: Build

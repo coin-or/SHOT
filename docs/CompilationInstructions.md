@@ -200,6 +200,35 @@ a partial/broken install can still be *found* but fail later in the build.
 
 ## 3. Configuring with CMake
 
+SHOT requires standard C++17, with compiler extensions disabled. All SHOT C++
+targets (including tests and Python bindings) use `-Wall -Wextra -Wpedantic
+-pedantic-errors -Wformat=2 -Wimplicit-fallthrough` on GCC/Clang, or `/W4
+/permissive- /Zc:__cplusplus` on MSVC. Third-party targets do not inherit these
+warning flags.
+
+For a strict development build, using the solver options appropriate to your installation:
+
+```bash
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DCOMPILE_TESTS=ON \
+  -DSHOT_WARNINGS_AS_ERRORS=ON -Werror=dev -Werror=deprecated
+cmake --build build --parallel
+ctest --test-dir build --output-on-failure --timeout 300 -E FullInstance
+```
+
+`SHOT_WARNINGS_AS_ERRORS` defaults to `OFF`; enabling it makes SHOT compiler
+warnings fatal. C++ standard violations diagnosed by `-pedantic-errors` are
+fatal regardless. The CMake `-Werror` switches separately make developer and
+deprecation warnings fatal during configuration.
+
+For a broader GCC/Clang audit, add `-DSHOT_EXTRA_WARNINGS=ON` to enable
+`-Wconversion -Wsign-conversion -Wshadow -Wnon-virtual-dtor -Woverloaded-virtual`.
+This optional mode may produce substantial diagnostics in existing code; use
+`-DSHOT_WARNINGS_AS_ERRORS=OFF` to collect them all before addressing them.
+There is no portable "all relevant warnings" switch, and a successful build
+checks only the enabled backends and code paths. Validate both Debug and Release
+with GCC and Clang when changing portability-sensitive code.
+
+
 Key options (all `option(...)` declarations live at the top of the root
 `CMakeLists.txt`):
 
@@ -214,6 +243,8 @@ Key options (all `option(...)` declarations live at the top of the root
 | `HAS_GAMS` | `ON` | GAMS interface (modeling system + NLP solver) |
 | `HAS_AMPL` | `ON` | AMPL MP `.nl` file interface |
 | `HAS_PYTHON` | `OFF` | Build the `SHOTpy` Python bindings (needs Python3 dev headers; pybind11 comes from the submodule) |
+| `SHOT_WARNINGS_AS_ERRORS` | `OFF` | Treat SHOT C++ warnings as errors |
+| `SHOT_EXTRA_WARNINGS` | `OFF` | Additional GCC/Clang conversion, shadowing, and virtual-function diagnostics |
 | `COMPILE_TESTS` | `OFF` | Build the `test_runner` test suite (section 6) |
 | `GENERATE_EXE` | `ON` | Build the `./SHOT` console executable |
 | `BUILD_DOCUMENTATION` | on if Doxygen found | Build the HTML API docs |

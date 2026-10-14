@@ -76,7 +76,7 @@ protected:
     }
 
 public:
-    ~MIPSolverBase();
+    virtual ~MIPSolverBase();
 
     virtual bool createHyperplane(HyperplanePtr hyperplane);
 

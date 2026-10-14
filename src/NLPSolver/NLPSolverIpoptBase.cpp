@@ -29,7 +29,7 @@ namespace SHOT
 
 using namespace Ipopt;
 
-void IpoptJournal::PrintImpl(Ipopt::EJournalCategory category, Ipopt::EJournalLevel level, const char* str)
+void IpoptJournal::PrintImpl(Ipopt::EJournalCategory /*category*/, Ipopt::EJournalLevel level, const char* str)
 {
     auto lines = Utilities::splitStringByCharacter(str, '\n');
 
@@ -1079,8 +1079,6 @@ bool NLPSolverIpoptBase::isLinearSolverAvailable(ES_IpoptSolver solver)
 
 void NLPSolverIpoptBase::setInitialSettings()
 {
-    std::string subsolver = "";
-
     auto linearSolver = static_cast<ES_IpoptSolver>(env->settings->getSetting<int>("Subsolver.Ipopt.LinearSolver"));
 
     if(!isLinearSolverAvailable(linearSolver))

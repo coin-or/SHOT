@@ -204,7 +204,7 @@ void GurobiCallbackSingleTree::callback()
                 if((int)primalSol.size() < env->reformulatedProblem->properties.numberOfVariables)
                     env->reformulatedProblem->augmentAuxiliaryVariableValues(primalSol);
 
-                assert(env->reformulatedProblem->properties.numberOfVariables == primalSol.size());
+                assert(static_cast<size_t>(env->reformulatedProblem->properties.numberOfVariables) == primalSol.size());
 
                 if(env->dualSolver->hasObjectiveVariableOnlyInMIPSolver())
                     primalSol.push_back(env->reformulatedProblem->objectiveFunction->calculateValue(primalSol));

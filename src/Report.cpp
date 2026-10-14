@@ -944,8 +944,6 @@ void Report::outputProblemInstanceReport()
 
 void Report::outputSolutionReport()
 {
-    std::stringstream report;
-
     env->output->outputInfo("");
 
 #ifdef SIMPLE_OUTPUT_CHARS

@@ -49,13 +49,8 @@ bool MIPSolverGurobi::initializeProblem()
     discreteVariablesActivated = true;
     repairableCuts.clear();
 
-    if(alreadyInitialized)
+    if(!alreadyInitialized)
     {
-        std::shared_ptr<GRBModel> gurobiModel;
-    }
-    else
-    {
-
         prevSolutionLimit = 1;
         alreadyInitialized = true;
     }
@@ -1288,7 +1283,7 @@ void MIPSolverGurobi::setCutOffAsConstraint(double cutOff)
 
 void MIPSolverGurobi::addMIPStart(VectorDouble point)
 {
-    assert(point.size() == this->numberOfVariables - numberOfIntegerCutVariables);
+    assert(point.size() == static_cast<size_t>(this->numberOfVariables - numberOfIntegerCutVariables));
 
     try
     {

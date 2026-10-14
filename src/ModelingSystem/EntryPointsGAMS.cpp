@@ -117,8 +117,6 @@ extern "C"
         if(*Cptr == NULL)
         {
             snprintf(msgBuf, msgBufLen, "Out of memory when creating gamsshot object.\n");
-            if(msgBufLen > 0)
-                msgBuf[msgBufLen] = '\0';
             return 0;
         }
 
@@ -284,7 +282,7 @@ extern "C"
 
     // old API
     DllExport int STDCALL C__shtReadyAPI(void* Cptr, struct gmoRec* Gptr, struct optRec* Optr);
-    DllExport int STDCALL C__shtReadyAPI(void* Cptr, struct gmoRec* Gptr, struct optRec* Optr)
+    DllExport int STDCALL C__shtReadyAPI(void* Cptr, struct gmoRec* Gptr, struct optRec* /*Optr*/)
     {
         return shtReadyAPI(Cptr, Gptr);
     }

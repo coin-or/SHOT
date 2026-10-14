@@ -679,7 +679,7 @@ void TaskSelectPrimalCandidatesFromNLP::createInfeasibilityCut(const VectorDoubl
         if((int)tmpSolPt.point.size() < env->reformulatedProblem->properties.numberOfVariables)
             env->reformulatedProblem->augmentAuxiliaryVariableValues(tmpSolPt.point);
 
-        assert(tmpSolPt.point.size() == env->reformulatedProblem->properties.numberOfVariables);
+        assert(tmpSolPt.point.size() == static_cast<size_t>(env->reformulatedProblem->properties.numberOfVariables));
     }
 
     std::vector<SolutionPoint> solutionPoints(1);

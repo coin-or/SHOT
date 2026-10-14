@@ -25,7 +25,7 @@ extern template class CppAD::ADFun<double>;
 // This is needed because CppAD's thread_alloc has ODR issues with shared libraries
 namespace
 {
-void cppad_python_error_handler(bool known, int line, const char* file, const char* exp, const char* msg)
+void cppad_python_error_handler(bool /*known*/, int line, const char* file, const char* exp, const char* msg)
 {
     // Check if this is the known cleanup error in thread_alloc
     std::string fileStr(file ? file : "");

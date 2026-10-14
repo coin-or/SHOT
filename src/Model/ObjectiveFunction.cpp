@@ -262,7 +262,7 @@ double LinearObjectiveFunction::calculateValue(const VectorDouble& point)
     {
         // TODO: Should be == instead of >=, but for now we allow the solution vector to contain auxiliary variable
         // values that are not used in the objective function
-        assert(point.size() >= sharedOwnerProblem->properties.numberOfVariables);
+        assert(point.size() >= static_cast<size_t>(sharedOwnerProblem->properties.numberOfVariables));
     }
     double value = constant + linearTerms.calculate(point);
     return value;
