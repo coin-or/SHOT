@@ -437,7 +437,6 @@ bool TestCallbackUserTermination()
     // Track termination
     int iterationCount = 0;
     bool terminationRequested = false;
-    bool solverWasTerminated = false;
 
     // Register user termination check
     solver->registerCallback<TerminationCheckContext>(
@@ -1101,19 +1100,6 @@ static std::pair<std::unique_ptr<SHOT::Solver>, std::shared_ptr<SHOT::Environmen
     return { std::move(solver), env };
 }
 
-// Returns the worst (most positive) constraint error across all constraint types for a primal solution.
-static double maxConstraintError(const PrimalSolution& sol)
-{
-    double err = SHOT_DBL_MIN;
-    if(sol.maxDeviatingConstraintLinear.index >= 0)
-        err = std::max(err, sol.maxDeviatingConstraintLinear.value);
-    if(sol.maxDeviatingConstraintQuadratic.index >= 0)
-        err = std::max(err, sol.maxDeviatingConstraintQuadratic.value);
-    if(sol.maxDeviatingConstraintNonlinear.index >= 0)
-        err = std::max(err, sol.maxDeviatingConstraintNonlinear.value);
-    return err;
-}
-
 static void printPrimalSolutionConstraintErrors(const PrimalSolution& sol)
 {
     if(sol.maxDeviatingConstraintLinear.index >= 0)
@@ -1604,7 +1590,7 @@ bool TestPrimalSolutionPool()
         return (solution);
     };
 
-    auto check = [&passed, &env](const std::string& step, std::vector<double> expectedObjectives,
+    auto check = [&passed, &env = env](const std::string& step, std::vector<double> expectedObjectives,
                      double expectedIncumbentFirstValue)
     {
         auto& pool = env->results->primalSolutions;

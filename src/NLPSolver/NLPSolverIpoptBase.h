@@ -44,6 +44,9 @@ public:
 protected:
     void PrintImpl(Ipopt::EJournalCategory category, Ipopt::EJournalLevel level, const char* str);
 
+#if defined(__GNUC__) || defined(__clang__)
+    __attribute__((format(printf, 4, 0)))
+#endif
     void PrintfImpl(Ipopt::EJournalCategory category, Ipopt::EJournalLevel level, const char* pformat, va_list ap);
 
     void FlushBufferImpl();

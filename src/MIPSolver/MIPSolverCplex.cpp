@@ -1284,7 +1284,7 @@ void MIPSolverCplex::setCutOffAsConstraint(double cutOff)
 
 void MIPSolverCplex::addMIPStart(VectorDouble point)
 {
-    assert(point.size() == this->numberOfVariables - numberOfIntegerCutVariables);
+    assert(point.size() == static_cast<size_t>(this->numberOfVariables - numberOfIntegerCutVariables));
 
     IloNumArray startVal(cplexEnv);
 
@@ -1297,7 +1297,7 @@ void MIPSolverCplex::addMIPStart(VectorDouble point)
     for(int i = 0; i < startVal.getSize(); i++)
         startVars.add(cplexVars[i]);
 
-    assert(variableNames.size() == startVal.getSize());
+    assert(variableNames.size() == static_cast<size_t>(startVal.getSize()));
     assert(startVars.getSize() == startVal.getSize());
 
     try

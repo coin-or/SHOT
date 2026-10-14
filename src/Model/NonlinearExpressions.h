@@ -546,7 +546,7 @@ public:
         auto childMonotonicity = child->getMonotonicity();
         auto bounds = child->getBounds();
 
-        if(childMonotonicity == E_Monotonicity::Constant && (bounds.l() == 0.0 || bounds.u()))
+        if(childMonotonicity == E_Monotonicity::Constant && (bounds.l() == 0.0 || bounds.u() == 0.0))
             return E_Monotonicity::Unknown;
 
         if(childMonotonicity == E_Monotonicity::Constant)

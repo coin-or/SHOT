@@ -16,6 +16,8 @@ project(SHOT VERSION 1.1.0
 include(GNUInstallDirs)
 
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # Location of extra CMake scripts
@@ -32,6 +34,8 @@ endif()
 # configurations. Do not set it directory-wide: multi-config generators also
 # build Debug targets from this directory.
 
+option(SHOT_WARNINGS_AS_ERRORS "Treat warnings in SHOT C++ code as errors" OFF)
+option(SHOT_EXTRA_WARNINGS "Enable additional, potentially noisy conversion and shadowing diagnostics" OFF)
 option(COMPILE_TESTS "Should the automated tests be compiled" OFF)
 option(SIMPLE_OUTPUT_CHARS "Whether to avoid using special characters in the console output (for example on MinGW)" OFF)
 
@@ -329,6 +333,9 @@ if(HAS_HIGHS AND NOT USE_EXTERNAL_HIGHS)
     # Disable HiGHS assertions even in debug builds, since some of its internal consistency checks abort on badly
     # scaled problems that release builds get through
     target_compile_definitions(highs PRIVATE NDEBUG)
+    # Keep third-party header diagnostics out of SHOT's warning policy (also on CMake 3.20).
+    set_property(TARGET highs APPEND PROPERTY INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
+        "$<TARGET_PROPERTY:highs,INTERFACE_INCLUDE_DIRECTORIES>")
 endif()
 
 # Case 2: Use external HiGHS
@@ -386,10 +393,8 @@ endif(HAS_UNO)
 # AMPL interface
 
 if(HAS_AMPL)
-    set(
-        MODELING_SOURCES
-        ${MODELING_SOURCES}
-        "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemAMPL.cpp"
+    list(APPEND MODELING_SOURCES "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemAMPL.cpp")
+    set(AMPL_SOURCES
         "${AMPL_DIR}/src/expr-info.cc"
         "${AMPL_DIR}/src/format.cc"
         "${AMPL_DIR}/src/expr.cc"
@@ -453,6 +458,25 @@ endforeach()
 list(REMOVE_DUPLICATES INCLUDE_DIRS)
 # Shared usage requirements for SHOT-owned targets, including tests.
 add_library(SHOTBuildSettings INTERFACE)
+# Apply diagnostics to all SHOT targets, not bundled dependencies or consumers.
+if(MSVC)
+    target_compile_options(SHOTBuildSettings INTERFACE
+        "$<$<COMPILE_LANGUAGE:CXX>:/W4;/permissive-;/Zc:__cplusplus>")
+    if(SHOT_WARNINGS_AS_ERRORS)
+        target_compile_options(SHOTBuildSettings INTERFACE "$<$<COMPILE_LANGUAGE:CXX>:/WX>")
+    endif()
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    if(SHOT_EXTRA_WARNINGS)
+        target_compile_options(SHOTBuildSettings INTERFACE
+            "$<$<COMPILE_LANGUAGE:CXX>:-Wconversion;-Wsign-conversion;-Wshadow;-Wnon-virtual-dtor;-Woverloaded-virtual>")
+    endif()
+    target_compile_options(SHOTBuildSettings INTERFACE
+        "$<$<COMPILE_LANGUAGE:CXX>:-Wall;-Wextra;-Wpedantic;-pedantic-errors;-Wformat=2;-Wimplicit-fallthrough>")
+    if(SHOT_WARNINGS_AS_ERRORS)
+        target_compile_options(SHOTBuildSettings INTERFACE "$<$<COMPILE_LANGUAGE:CXX>:-Werror>")
+    endif()
+endif()
+
 target_include_directories(SHOTBuildSettings INTERFACE "${PROJECT_BINARY_DIR}" ${INCLUDE_DIRS})
 target_include_directories(SHOTBuildSettings SYSTEM INTERFACE
     "${AMPL_DIR}/include"
@@ -849,6 +873,14 @@ target_link_libraries(SHOTSolutionStrategies SHOTTasks SHOTBuildSettings)
 set(MODELING_SOURCES ${MODELING_SOURCES} ${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemOSiL.cpp)
 add_library(SHOTModelingInterfaces STATIC ${MODELING_SOURCES})
 target_link_libraries(SHOTModelingInterfaces SHOTModel SHOTBuildSettings)
+if(HAS_AMPL)
+    # Compile bundled AMPL code separately so it does not inherit SHOT warnings.
+    # Embed its objects in the same archive to preserve whole-archive linking.
+    add_library(SHOTAMPL OBJECT ${AMPL_SOURCES})
+    target_include_directories(SHOTAMPL SYSTEM PRIVATE "${AMPL_DIR}/include")
+    target_sources(SHOTModelingInterfaces PRIVATE $<TARGET_OBJECTS:SHOTAMPL>)
+endif()
+
 
 # Cplex linking
 if(HAS_CPLEX)
@@ -1013,13 +1045,10 @@ elseif(UNIX)
     target_link_options(SHOTSolver PRIVATE "-Wl,--export-dynamic")
 endif()
 
-# Links the compiled libraries
-target_link_libraries(SHOTSolver PRIVATE SHOTHelper)
-target_link_libraries(SHOTSolver PRIVATE SHOTModel)
-target_link_libraries(SHOTSolver PRIVATE SHOTResults)
-target_link_libraries(SHOTSolver PRIVATE SHOTDualStrategy)
-target_link_libraries(SHOTSolver PRIVATE SHOTPrimalStrategy)
-target_link_libraries(SHOTSolver PRIVATE SHOTTasks)
+# List static libraries before their dependencies to avoid redundant archive
+# entries (and duplicate-library warnings from Apple's linker).
+target_link_libraries(SHOTSolver PRIVATE
+    SHOTSolutionStrategies SHOTTasks SHOTDualStrategy SHOTPrimalStrategy SHOTResults)
 
 if(MSYS OR MINGW)
     # MinGW cross compilation will not work if "-Wl,--whole-archive" is defined below
@@ -1032,7 +1061,7 @@ else()
     target_link_libraries(SHOTSolver PRIVATE "-Wl,--whole-archive" SHOTModelingInterfaces "-Wl,--no-whole-archive")
 endif()
 
-target_link_libraries(SHOTSolver PRIVATE SHOTSolutionStrategies)
+target_link_libraries(SHOTSolver PRIVATE SHOTModel SHOTHelper)
 
 # Link CppAD library
 target_link_libraries(SHOTSolver PRIVATE ${CPPAD_LIBRARY})
@@ -1075,20 +1104,6 @@ if(GENERATE_EXE)
     endif(HAS_GAMS)
 endif(GENERATE_EXE)
 
-
-# Set compiler warnings levels
-if(MSVC)
-    target_compile_options(SHOTSolver PRIVATE /W4 /WX)
-else()
-    target_compile_options(
-        SHOTSolver
-        PRIVATE
-            -Wall
-            -Wextra
-            -pedantic
-            -Wno-unused-local-typedefs
-    )
-endif()
 
 # Install the command-line program, shared library, and CMake package.
 include(CMakePackageConfigHelpers)

@@ -88,7 +88,7 @@ std::vector<SolutionPoint> MIPSolverBase::getAllVariableSolutions()
 
     int numSol = getNumberOfSolutions();
 
-    std::vector<SolutionPoint> lastSolutions(numSol);
+    lastSolutions.assign(numSol, SolutionPoint());
 
     for(int i = 0; i < numSol; i++)
     {

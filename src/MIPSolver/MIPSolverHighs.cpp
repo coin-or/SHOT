@@ -79,7 +79,8 @@ HighsCallbackFunctionType highsCallback
     }
 
     // Solution limit only applies to MIP solves
-    if(callback_type == kCallbackMipInterrupt && MIPSolver->currentSolutions.size() >= MIPSolver->getSolutionLimit())
+    if(callback_type == kCallbackMipInterrupt
+        && MIPSolver->currentSolutions.size() >= static_cast<size_t>(MIPSolver->getSolutionLimit()))
     {
         env->output->outputDebug(fmt::format("      | solution limit reached "));
         MIPSolver->interruptedBySolutionLimit = true;
@@ -568,7 +569,8 @@ int MIPSolverHighs::addLinearConstraint(
     return (highsInstance.getNumRow() - 1);
 }
 
-bool MIPSolverHighs::addSpecialOrderedSet(E_SOSType type, VectorInteger variableIndexes, VectorDouble variableWeights)
+bool MIPSolverHighs::addSpecialOrderedSet(
+    E_SOSType /*type*/, VectorInteger /*variableIndexes*/, VectorDouble /*variableWeights*/)
 {
     // TODO: Not implemented
     throw OperationNotImplementedException(
@@ -1159,7 +1161,7 @@ void MIPSolverHighs::setCutOffAsConstraint(double cutOff)
 
 void MIPSolverHighs::addMIPStart(VectorDouble point)
 {
-    assert(point.size() == this->numberOfVariables - numberOfIntegerCutVariables);
+    assert(point.size() == static_cast<size_t>(this->numberOfVariables - numberOfIntegerCutVariables));
 
     // Clamp to the live column bounds: a warm-start value that is (even marginally) outside a variable's current
     // bound, e.g. due to a bound having been tightened since this point was found, is rejected by HiGHS's own

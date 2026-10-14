@@ -95,7 +95,7 @@ void TaskFindInteriorPoint::run()
             if((int)tmpIP->point.size() < env->reformulatedProblem->properties.numberOfVariables)
                 env->reformulatedProblem->augmentAuxiliaryVariableValues(tmpIP->point);
 
-            assert(tmpIP->point.size() == env->reformulatedProblem->properties.numberOfVariables);
+            assert(tmpIP->point.size() == static_cast<size_t>(env->reformulatedProblem->properties.numberOfVariables));
 
             auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
                 tmpIP->point, env->reformulatedProblem->nonlinearConstraints);
@@ -211,7 +211,7 @@ void TaskFindInteriorPoint::run()
         auto tmpIP = std::make_shared<InteriorPoint>();
 
         tmpIP->point = NLPSolvers.at(i)->getSolution();
-        assert((int)tmpIP->point.size() == env->reformulatedProblem->properties.numberOfVariables);
+        assert(tmpIP->point.size() == static_cast<size_t>(env->reformulatedProblem->properties.numberOfVariables));
 
         auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
             tmpIP->point, env->reformulatedProblem->nonlinearConstraints);

@@ -127,6 +127,7 @@ bool MIPSolverCbc::addVariable(
 
         case E_VariableType::Semiinteger:
             coinModel->setInteger(index);
+            [[fallthrough]];
         case E_VariableType::Semicontinuous:
         {
             // variable is either {0} or in [semiBound,upperBound]
@@ -1363,7 +1364,7 @@ void MIPSolverCbc::setCutOffAsConstraint([[maybe_unused]] double cutOff)
 
 void MIPSolverCbc::addMIPStart(VectorDouble point)
 {
-    assert(point.size() == this->numberOfVariables - numberOfIntegerCutVariables);
+    assert(point.size() == static_cast<size_t>(this->numberOfVariables - numberOfIntegerCutVariables));
 
     MIPStart.clear();
 

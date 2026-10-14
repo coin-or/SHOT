@@ -29,7 +29,7 @@ namespace SHOT
 
 using namespace Ipopt;
 
-void IpoptJournal::PrintImpl(Ipopt::EJournalCategory category, Ipopt::EJournalLevel level, const char* str)
+void IpoptJournal::PrintImpl(Ipopt::EJournalCategory /*category*/, Ipopt::EJournalLevel level, const char* str)
 {
     auto lines = Utilities::splitStringByCharacter(str, '\n');
 

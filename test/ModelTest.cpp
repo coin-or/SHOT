@@ -1993,7 +1993,7 @@ bool ModelTestMeanvarxscWithSolver(ES_MIPSolver mipSolver)
     problem->add(ce1);
 
     auto makeBalance
-        = [&](int idx, const std::string& name, VariablePtr xi, VariablePtr scs, VariablePtr scb, double rhs)
+        = [&](int /*idx*/, const std::string& name, VariablePtr xi, VariablePtr scs, VariablePtr scb, double rhs)
     {
         auto c = std::make_shared<LinearConstraint>(name, rhs, rhs);
         c->add(std::make_shared<LinearTerm>(1.0, xi));
@@ -7046,7 +7046,7 @@ bool ModelTestPolishWithoutPrimal()
     // A solution-limited iteration with a point, but no primal solution
     env->results->createIteration();
     auto iteration = env->results->getCurrentIteration();
-    iteration->solutionPoints.push_back(SHOT::SolutionPoint { { -1.0 }, 0.0, 1, { 0, 1.0 } });
+    iteration->solutionPoints.push_back(SHOT::SolutionPoint { { -1.0 }, 0.0, 1, { 0, 1.0 }, false, 0.0 });
     iteration->MIPSolutionLimitUpdated = true;
     iteration->solutionStatus = SHOT::E_ProblemSolutionStatus::SolutionLimit;
 

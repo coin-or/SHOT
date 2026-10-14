@@ -131,7 +131,7 @@ void TaskSolveIteration::run()
     if(env->dualSolver->MIPSolver->getDiscreteVariableStatus() && env->results->hasPrimalSolution())
     {
         auto primalSol = env->results->primalSolution;
-        assert(primalSol.size() == env->problem->properties.numberOfVariables);
+        assert(primalSol.size() == static_cast<size_t>(env->problem->properties.numberOfVariables));
 
         env->reformulatedProblem->augmentAuxiliaryVariableValues(primalSol);
 

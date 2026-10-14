@@ -123,7 +123,7 @@ void NLPSolverSHOT::initializeMIPProblem()
         throw Exception("Could not initialize the nested SHOT solver for the fixed-integer NLP problem.");
 }
 
-void NLPSolverSHOT::setStartingPoint(VectorInteger variableIndexes, VectorDouble variableValues) { }
+void NLPSolverSHOT::setStartingPoint(VectorInteger /*variableIndexes*/, VectorDouble /*variableValues*/) { }
 
 void NLPSolverSHOT::clearStartingPoint() { }
 

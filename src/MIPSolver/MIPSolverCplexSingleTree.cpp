@@ -416,7 +416,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
             if(env->dualSolver->hasObjectiveVariableOnlyInMIPSolver())
                 primalSol.push_back(env->reformulatedProblem->objectiveFunction->calculateValue(primalSol));
 
-            assert(cplexVars.getSize() == primalSol.size());
+            assert(static_cast<size_t>(cplexVars.getSize()) == primalSol.size());
 
             for(double S : primalSol)
                 tmpVals.add(S);

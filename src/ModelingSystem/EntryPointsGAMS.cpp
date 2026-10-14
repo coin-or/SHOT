@@ -284,7 +284,7 @@ extern "C"
 
     // old API
     DllExport int STDCALL C__shtReadyAPI(void* Cptr, struct gmoRec* Gptr, struct optRec* Optr);
-    DllExport int STDCALL C__shtReadyAPI(void* Cptr, struct gmoRec* Gptr, struct optRec* Optr)
+    DllExport int STDCALL C__shtReadyAPI(void* Cptr, struct gmoRec* Gptr, struct optRec* /*Optr*/)
     {
         return shtReadyAPI(Cptr, Gptr);
     }

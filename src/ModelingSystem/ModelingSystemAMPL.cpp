@@ -531,7 +531,7 @@ public:
     void OnInitialValue(int var_index, double value) { initialValues[var_index] = value; }
 
     /** initial dual values are ignored */
-    void OnInitialDualValue(int con_index, double value) { }
+    void OnInitialDualValue(int /*con_index*/, double /*value*/) { }
 
     /** Jacobian column sizes are ignored */
     ColumnSizeHandler OnColumnSizes()
@@ -605,6 +605,9 @@ public:
                 amplph.env->output->outputInfo(fmtold::format("Unknown problem suffix {}. Ignoring.\n", name));
                 break;
             }
+            default:
+                // Kind also contains bit flags, which are not suffix targets.
+                break;
             }
         }
 

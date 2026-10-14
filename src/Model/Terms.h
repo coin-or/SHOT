@@ -191,6 +191,8 @@ protected:
     };
 
 public:
+    virtual ~Terms() = default;
+
     using std::vector<T>::operator[];
 
     using std::vector<T>::at;
@@ -204,6 +206,10 @@ public:
     using std::vector<T>::size;
 
     Terms() = default;
+    Terms(const Terms&) = default;
+    Terms(Terms&&) = default;
+    Terms& operator=(const Terms&) = default;
+    Terms& operator=(Terms&&) = default;
     Terms(std::initializer_list<T> terms)
     {
         for(auto& TE : terms)
