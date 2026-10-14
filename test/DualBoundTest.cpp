@@ -693,15 +693,23 @@ bool testIntegerCutsDifferingInSmallVariables(ES_MIPSolver mipSolver)
 
     env->dualSolver->addGeneratedIntegerCut(first);
 
-    check(env->dualSolver->hasIntegerCutBeenAdded(first.pointHashes), "an integer cut was not found again");
+    check(env->dualSolver->hasIntegerCutBeenAdded(first), "an integer cut was not found again");
 
     // The same point except for one variable of small magnitude, which is a different integer combination
     IntegerCut second = first;
     second.variableValues = { 1000000000, 0, 0 };
     second.pointHashes = Utilities::calculateHashes(second.variableValues);
 
-    check(!env->dualSolver->hasIntegerCutBeenAdded(second.pointHashes),
+    check(!env->dualSolver->hasIntegerCutBeenAdded(second),
         "an integer cut differing in a variable of small magnitude was taken for one already added");
+
+    // The same point except for a difference of one in the variable of large magnitude, which the hashes do not see
+    IntegerCut third = first;
+    third.variableValues = { 999999999, 1, 0 };
+    third.pointHashes = Utilities::calculateHashes(third.variableValues);
+
+    check(!env->dualSolver->hasIntegerCutBeenAdded(third),
+        "an integer cut differing in a variable of large magnitude was taken for one already added");
 
     // A fixed integer candidate is compared in the same way
     PrimalFixedNLPCandidate candidate;

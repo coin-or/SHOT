@@ -546,7 +546,7 @@ void DualSolver::addIntegerCut(IntegerCut integerCut)
 
     integerCut.pointHashes = Utilities::calculateHashes(integerCut.variableValues);
 
-    if(!hasIntegerCutBeenAdded(integerCut.pointHashes))
+    if(!hasIntegerCutBeenAdded(integerCut))
         this->integerCutWaitingList.push_back(integerCut);
     else
         env->output->outputDebug(
@@ -589,11 +589,15 @@ void DualSolver::addGeneratedIntegerCut(IntegerCut integerCut)
     env->output->outputDebug("        Integer cut generated from: " + source);
 }
 
-bool DualSolver::hasIntegerCutBeenAdded(const PairDouble& hashes)
+bool DualSolver::hasIntegerCutBeenAdded(const IntegerCut& integerCut)
 {
+    // The hashes map each value v to v / (1 + |v|) so that values of small magnitude are not lost next to large ones,
+    // but then they cannot tell apart integer values of large magnitude, e.g., near an artificial bound. Matching
+    // hashes are therefore not enough, and the values must be the same as well
     for(auto& IC : generatedIntegerCuts)
     {
-        if(Utilities::haveSameHashes(IC.pointHashes, hashes))
+        if(Utilities::haveSameHashes(IC.pointHashes, integerCut.pointHashes)
+            && IC.variableIndexes == integerCut.variableIndexes && IC.variableValues == integerCut.variableValues)
         {
             return (true);
         }

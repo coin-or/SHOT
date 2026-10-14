@@ -905,11 +905,20 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
 
         if(problemUpdated)
         {
+            // The cutoff applies to the objective function value, which no longer contains the removed terms, so it
+            // could cut off all points
+            double cutOff = gurobiModel->get(GRB_DoubleParam_Cutoff);
+
+            if(originalObjectiveCoefficients.size() > 0)
+                gurobiModel->set(GRB_DoubleParam_Cutoff, isMinimizationProblem ? GRB_INFINITY : -GRB_INFINITY);
+
             gurobiModel->update();
             gurobiModel->setCallback(gurobiCallback.get());
             gurobiModel->optimize();
 
             MIPSolutionStatus = getSolutionStatus();
+
+            gurobiModel->set(GRB_DoubleParam_Cutoff, cutOff);
 
             // The point is only feasible since the objective has been changed
             if(MIPSolutionStatus == E_ProblemSolutionStatus::Optimal)

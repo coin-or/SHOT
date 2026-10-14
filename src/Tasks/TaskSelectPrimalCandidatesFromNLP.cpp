@@ -362,9 +362,25 @@ E_NLPSolutionStatus TaskSelectPrimalCandidatesFromNLP::solveFixedNLPCandidates(
         NLPSolver->setTimeLimit(timeLimit);
 
         solvestatus = NLPSolver->solveProblem();
+        env->solutionStatistics.numberOfProblemsFixedNLP++;
+
+        // The continuous values of a MIP solution can be far from where the NLP solver is able to converge, e.g., at
+        // the artificial bounds of unbounded variables, so a failure is retried with only the discrete variables in
+        // the starting point
+        if(solvestatus == E_NLPSolutionStatus::Error && !isEnumeration
+            && env->settings->getSetting<bool>("Primal.FixedInteger.Warmstart")
+            && env->timing->getElapsedTime("Total") < env->settings->getSetting<double>("Termination.TimeLimit"))
+        {
+            env->output->outputDebug("         Retrying fixed NLP problem without warm start for continuous variables.");
+
+            NLPSolver->clearStartingPoint();
+            NLPSolver->setStartingPoint(discreteVariableIndexes, fixedVariableValues);
+
+            solvestatus = NLPSolver->solveProblem();
+            env->solutionStatistics.numberOfProblemsFixedNLP++;
+        }
 
         NLPSolver->unfixVariables();
-        env->solutionStatistics.numberOfProblemsFixedNLP++;
 
         std::string source = (sourceIsReformulatedProblem) ? "R" : "O";
 
