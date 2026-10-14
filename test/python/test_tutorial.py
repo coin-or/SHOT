@@ -14,6 +14,10 @@ from pathlib import Path
 
 import pytest
 
+# The figures of the tutorial are drawn without a window, which would otherwise wait for it to be closed
+os.environ.setdefault("MPLBACKEND", "Agg")
+pytestmark = pytest.mark.filterwarnings("ignore:FigureCanvasAgg is non-interactive")
+
 
 def notebookPath():
     # CMake copies the tests to the build directory and gives the path in the source directory
