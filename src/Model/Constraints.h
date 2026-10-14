@@ -150,10 +150,14 @@ public:
 
     virtual Interval getConstraintFunctionBounds() = 0;
 
+    // The gradient at the point, without the elements that are zero if eraseZeroes is true. The point is indexed by
+    // the indexes of the variables, so a point of the reformulated problem, which has the variables of the original
+    // problem first, can also be used for a constraint of the original problem
     virtual SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) = 0;
     virtual std::shared_ptr<Variables> getGradientSparsityPattern();
 
-    // Returns the upper triagonal part of the Hessian matrix is sparse representation
+    // The upper triangle of the symmetric Hessian at the point, i.e., the elements (V1, V2) with
+    // V1->getIndex() <= V2->getIndex(), without the elements that are zero if eraseZeroes is true
     virtual SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes) = 0;
 
     // The Hessian when it does not depend on the point, and can be used without being recalculated or copied,

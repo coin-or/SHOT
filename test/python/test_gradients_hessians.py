@@ -1340,3 +1340,77 @@ class TestFunctionValues:
 
         assert abs(constraints["lin"].calculateFunctionValue([2.0, 1.0, 7.0]) - 4.0) < 1e-10
         assert abs(problem.objectiveFunction.calculateValue([2.0, 1.0, 7.0]) - 9.0) < 1e-10
+
+
+class TestHessianUpperTriangle:
+    """Tests that the Hessians only have the upper triangle, also when the variables are used in reverse order."""
+
+    def test_nonlinear_constraint_and_objective(self, problem):
+        """The Hessian of exp(y*x) + y^3*x has the elements (0, 0), (0, 1) and (1, 1), but no (1, 0)."""
+        import SHOTpy
+
+        x = problem.addVariable("x", SHOTpy.VariableType.Real, 0.0, 2.0)
+        y = problem.addVariable("y", SHOTpy.VariableType.Real, 0.0, 2.0)
+
+        problem.addConstraint(SHOTpy.exp(y * x) + y**3 * x <= 10, "nl")
+        problem.setObjective(SHOTpy.exp(y * x) + y**3 * x, SHOTpy.ObjectiveDirection.Minimize)
+        problem.finalize()
+
+        constraints = {c.name: c for c in problem.numericConstraints}
+        point = [0.5, 1.5]
+        xv, yv = point
+        expected = {
+            (0, 0): yv**2 * math.exp(xv * yv),
+            (0, 1): (1.0 + xv * yv) * math.exp(xv * yv) + 3.0 * yv**2,
+            (1, 1): xv**2 * math.exp(xv * yv) + 6.0 * yv * xv,
+        }
+
+        for hessian in (constraints["nl"].calculateHessian(point), problem.objectiveFunction.calculateHessian(point)):
+            assert set(hessian.keys()) == set(expected.keys())
+            for key, value in expected.items():
+                assert abs(hessian[key] - value) < 1e-8
+
+
+class TestExpressionValues:
+    """Tests for evaluating expressions directly."""
+
+    def test_expression_value(self, problem):
+        """x*y + exp(x) - 2*log(y) at (2, 3)."""
+        import SHOTpy
+
+        x = problem.addVariable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = problem.addVariable("y", SHOTpy.VariableType.Real, 0.1, 10.0)
+
+        expression = x * y + SHOTpy.exp(x) - 2 * SHOTpy.log(y)
+        expected = 6.0 + math.exp(2.0) - 2.0 * math.log(3.0)
+
+        assert abs(expression.calculate([2.0, 3.0]) - expected) < 1e-10
+
+        # A longer point, e.g., one of the reformulated problem, can also be used
+        assert abs(expression.calculate([2.0, 3.0, 7.0]) - expected) < 1e-10
+
+    def test_expression_in_a_constraint_equals_the_constraint_value(self, problem):
+        """An expression and the constraint it is used in have the same value before finalize()."""
+        import SHOTpy
+
+        x = problem.addVariable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = problem.addVariable("y", SHOTpy.VariableType.Real, 0.1, 10.0)
+
+        expression = SHOTpy.sin(x) * y + SHOTpy.sqrt(y)
+        problem.addConstraint(expression <= 5, "nl")
+        problem.setObjective(x + y, SHOTpy.ObjectiveDirection.Minimize)
+        problem.finalize()
+
+        constraints = {c.name: c for c in problem.numericConstraints}
+        point = [1.2, 2.5]
+
+        assert abs(expression.calculate(point) - constraints["nl"].calculateFunctionValue(point)) < 1e-10
+
+    def test_point_of_the_wrong_size_raises(self, problem):
+        import SHOTpy
+
+        x = problem.addVariable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+        y = problem.addVariable("y", SHOTpy.VariableType.Real, 0.1, 10.0)
+
+        with pytest.raises(ValueError):
+            (x * y).calculate([1.0])

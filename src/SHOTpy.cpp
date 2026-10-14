@@ -472,6 +472,27 @@ void checkPointSize(const std::weak_ptr<Problem>& ownerProblem, const VectorDoub
     checkPointSize(*problem, point);
 }
 
+// An expression can be evaluated without being in a constraint or the objective function, so it is checked through its
+// variables instead, which have indexes once they have been added to a problem
+void checkPointSize(NonlinearExpression& expression, const VectorDouble& point)
+{
+    Variables variables;
+    expression.appendNonlinearVariables(variables);
+
+    for(auto& V : variables)
+    {
+        auto problem = V->ownerProblem.lock();
+
+        if(!problem)
+        {
+            throw py::value_error("The expression cannot be evaluated before its variable " + V->name
+                + " has been added to a problem.");
+        }
+
+        checkPointSize(*problem, point);
+    }
+}
+
 // finalize() decides the classes of the constraints and the objective function and rewrites the model, and it is not
 // run again, so what is added after it would not be part of the model that is solved
 void checkCanAdd(const Problem& problem)
@@ -1114,6 +1135,14 @@ PYBIND11_MODULE(SHOTpy, m)
         .def("getType", &NonlinearExpression::getType, "The type of the expression node, e.g., ExpressionType.Sum")
         .def("getConvexity", &NonlinearExpression::getConvexity,
             "The convexity of the expression as far as SHOT can determine it from its structure")
+        .def(
+            "calculate",
+            [](NonlinearExpression& self, const std::vector<double>& point)
+            {
+                checkPointSize(self, point);
+                return (self.calculate(point));
+            },
+            py::arg("point"), "Calculate the value of the expression at the point, which has a value for each variable")
         .def("__repr__",
             [](NonlinearExpressionPtr self)
             {
@@ -1810,7 +1839,10 @@ PYBIND11_MODULE(SHOTpy, m)
                     result[G.first->getIndex()] = G.second;
                 return result;
             },
-            py::arg("point"), "Calculate gradient at point, returns dict of {var_index: value}")
+            py::arg("point"),
+            "Calculate the gradient at the point as a dict {variable index: value} of its nonzeros. A point of the "
+            "reformulated problem can be used for a function of the original problem, since it has the variables of "
+            "the original problem first")
         .def(
             "calculateHessian",
             [](NumericConstraint& self, const std::vector<double>& point)
@@ -1822,7 +1854,11 @@ PYBIND11_MODULE(SHOTpy, m)
                     result[std::make_pair(H.first.first->getIndex(), H.first.second->getIndex())] = H.second;
                 return result;
             },
-            py::arg("point"), "Calculate Hessian at point, returns dict of {(var1_index, var2_index): value}")
+            py::arg("point"),
+            "Calculate the Hessian at the point as a dict {(index1, index2): value} of the nonzeros in its upper "
+            "triangle, i.e., index1 <= index2. The Hessian is symmetric, so the element (index2, index1) has the same "
+            "value. A point of the reformulated problem can be used for a function of the original problem, since it "
+            "has the variables of the original problem first")
         .def(
             "getGradientSparsityPattern",
             [](NumericConstraint& self)
@@ -2004,7 +2040,10 @@ PYBIND11_MODULE(SHOTpy, m)
                     result[G.first->getIndex()] = G.second;
                 return result;
             },
-            py::arg("point"), "Calculate gradient at point, returns dict of {var_index: value}")
+            py::arg("point"),
+            "Calculate the gradient at the point as a dict {variable index: value} of its nonzeros. A point of the "
+            "reformulated problem can be used for a function of the original problem, since it has the variables of "
+            "the original problem first")
         .def(
             "calculateHessian",
             [](ObjectiveFunction& self, const std::vector<double>& point)
@@ -2016,7 +2055,11 @@ PYBIND11_MODULE(SHOTpy, m)
                     result[std::make_pair(H.first.first->getIndex(), H.first.second->getIndex())] = H.second;
                 return result;
             },
-            py::arg("point"), "Calculate Hessian at point, returns dict of {(var1_index, var2_index): value}")
+            py::arg("point"),
+            "Calculate the Hessian at the point as a dict {(index1, index2): value} of the nonzeros in its upper "
+            "triangle, i.e., index1 <= index2. The Hessian is symmetric, so the element (index2, index1) has the same "
+            "value. A point of the reformulated problem can be used for a function of the original problem, since it "
+            "has the variables of the original problem first")
         .def(
             "getGradientSparsityPattern",
             [](ObjectiveFunction& self)
