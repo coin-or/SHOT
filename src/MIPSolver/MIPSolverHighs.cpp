@@ -10,6 +10,7 @@
 
 #include "MIPSolverHighs.h"
 
+#include <fstream>
 #include <mutex>
 #include "MIPSolverCallbackBase.h"
 
@@ -1189,6 +1190,13 @@ void MIPSolverHighs::addMIPStart(VectorDouble point)
 
 void MIPSolverHighs::writeProblemToFile(std::string filename)
 {
+    // HiGHS does not check whether the file could be opened, and crashes if it cannot
+    if(std::ofstream file(filename); !file)
+    {
+        env->output->outputError("        Could not open the file " + filename + " to save the model in HiGHS");
+        return;
+    }
+
     try
     {
         highsInstance.writeModel(filename.c_str());

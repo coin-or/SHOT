@@ -774,7 +774,9 @@ void IpoptProblem::finalize_solution(SolverReturn status, [[maybe_unused]] Index
         break;
 
     case CPUTIME_EXCEEDED:
+#if IPOPT_VERSION_MAJOR > 3 || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR >= 14)
     case WALLTIME_EXCEEDED:
+#endif
         solutionDescription = "Time limit exceeded.";
 
         solutionStatus = E_NLPSolutionStatus::TimeLimit;
@@ -913,7 +915,9 @@ E_NLPSolutionStatus NLPSolverIpoptBase::solveProblemInstance()
             break;
 
         case Ipopt::ApplicationReturnStatus::Maximum_CpuTime_Exceeded:
+#if IPOPT_VERSION_MAJOR > 3 || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR >= 14)
         case Ipopt::ApplicationReturnStatus::Maximum_WallTime_Exceeded:
+#endif
             status = E_NLPSolutionStatus::TimeLimit;
             env->output->outputDebug("        No solution found to problem with Ipopt: Time limit exceeded.");
             break;
@@ -1027,7 +1031,7 @@ VectorDouble NLPSolverIpoptBase::getSolution() { return (ipoptProblem->variableS
 // An HSL linear solver that is not linked into Ipopt is loaded from the library given by the option hsllib, and if it
 // cannot be loaded, every solve fails, and Ipopt 3.14.13 even crashes when it destroys the interface to MA97. Ipopt
 // reports all the solvers it can load as available, so whether the library can be loaded is checked here
-bool NLPSolverIpoptBase::isLinearSolverAvailable(ES_IpoptSolver solver)
+bool NLPSolverIpoptBase::isLinearSolverAvailable([[maybe_unused]] ES_IpoptSolver solver)
 {
 #if IPOPT_VERSION_MAJOR > 3 || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR >= 14)
     IpoptLinearSolver flag;

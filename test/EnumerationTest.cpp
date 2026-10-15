@@ -443,7 +443,7 @@ bool EnumerationTestFallback()
     return (passed);
 }
 
-bool EnumerationTestMIQCQP([[maybe_unused]] ES_MIPSolver mipSolver)
+[[maybe_unused]] bool EnumerationTestMIQCQP([[maybe_unused]] ES_MIPSolver mipSolver)
 {
     bool passed = true;
 

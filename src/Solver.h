@@ -40,6 +40,7 @@ private:
     void setConvexityBasedSettingsPreReformulation();
     void setConvexityBasedSettings();
 
+    bool setDebugPath();
     void initializeDebugMode();
 
     bool selectStrategy();

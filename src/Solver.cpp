@@ -234,20 +234,8 @@ bool Solver::setProblem(std::string fileName)
     env->settings->updateSetting("Input.ProblemName", problemName.string());
     env->settings->updateSetting("Input.ProblemFile", fs::filesystem::absolute(problemFile).string());
 
-    // Sets the debug path if not already set
-    if(env->settings->getSetting<bool>("Output.Debug.Enable")
-        && env->settings->getSetting<std::string>("Output.Debug.Path") == "")
-    {
-        if(auto debugPath = Utilities::createTemporaryDirectory("SHOT_debug_"); debugPath == "")
-        {
-            env->output->outputError(" Could not create debug directory.");
-            return (false);
-        }
-        else
-        {
-            env->settings->updateSetting("Output.Debug.Path", debugPath);
-        }
-    }
+    if(!setDebugPath())
+        return (false);
 
     // Sets the result path
     if(static_cast<ES_OutputDirectory>(env->settings->getSetting<int>("Output.OutputDirectory"))
@@ -470,20 +458,8 @@ bool Solver::setProblem(
 
     env->settings->updateSetting("Input.ProblemName", problem->name);
 
-    // Sets the debug path if not already set
-    if(env->settings->getSetting<bool>("Output.Debug.Enable")
-        && env->settings->getSetting<std::string>("Output.Debug.Path") == "")
-    {
-        if(auto debugPath = Utilities::createTemporaryDirectory("SHOT_debug_"); debugPath == "")
-        {
-            env->output->outputError(" Could not create debug directory.");
-            return (false);
-        }
-        else
-        {
-            env->settings->updateSetting("Output.Debug.Path", debugPath);
-        }
-    }
+    if(!setDebugPath())
+        return (false);
 
     if(env->settings->getSetting<bool>("Output.Debug.Enable"))
     {
@@ -737,6 +713,16 @@ bool Solver::solveProblem()
 
     // Verify settings in case they were changed after setProblem() was called
     verifySettings();
+
+    // The debug mode can also be enabled, or its directory changed, after setProblem() was called
+    if(env->settings->getSetting<bool>("Output.Debug.Enable")
+        && !fs::filesystem::exists(env->settings->getSetting<std::string>("Output.Debug.Path")))
+    {
+        if(!setDebugPath())
+            return (false);
+
+        initializeDebugMode();
+    }
 
     if(env->settings->getSetting<bool>("Output.Debug.Enable"))
     {
@@ -1984,6 +1970,25 @@ void Solver::initializeSettings()
     env->settings->settingsInitialized = true;
 
     env->output->outputDebug(" Initialization of settings complete.");
+}
+
+// Creates a temporary debug directory if the debug mode is enabled and no directory is given
+bool Solver::setDebugPath()
+{
+    if(!env->settings->getSetting<bool>("Output.Debug.Enable")
+        || env->settings->getSetting<std::string>("Output.Debug.Path") != "")
+        return (true);
+
+    auto debugPath = Utilities::createTemporaryDirectory("SHOT_debug_");
+
+    if(debugPath == "")
+    {
+        env->output->outputError(" Could not create debug directory.");
+        return (false);
+    }
+
+    env->settings->updateSetting("Output.Debug.Path", debugPath);
+    return (true);
 }
 
 void Solver::initializeDebugMode()
