@@ -128,7 +128,7 @@
   },
   "python_build_tools": {
     "scikit-build-core": "1.1.1",
-    "pybind11-stubgen": "3.0.0 (Python >=3.10 only)",
+    "pybind11-stubgen": "3.0.0",
     "cibuildwheel": "4.3.1"
   }
 }

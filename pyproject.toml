@@ -90,17 +90,17 @@ build = "cp311-* cp312-* cp313-* cp314-* cp315-*"
 skip = "*-musllinux_*"
 test-requires = ["pytest", "numpy"]
 test-command = [
-    "pytest {project}/test/python",
+    "pytest -v {project}/test/python",
     "python -c \"import numpy; import SHOTpy; s = SHOTpy.Solver(); assert s.getEnvironment() is not None\"",
 ]
 
 [tool.cibuildwheel.linux]
 archs = ["x86_64"]
 manylinux-x86_64-image = "manylinux_2_28"
-before-all = "curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xj -C /usr/local/bin --strip-components=1 bin/micromamba && micromamba create -y -p /opt/shot-deps -c conda-forge coincbc ipopt pkg-config"
-environment = { CBC_DIR = "/opt/shot-deps", IPOPT_DIR = "/opt/shot-deps", LD_LIBRARY_PATH = "/opt/shot-deps/lib" }
+before-all = "bash {project}/misc/build-wheel-dependencies.sh /opt/shot-deps"
+environment = { CBC_DIR = "/opt/shot-deps", IPOPT_DIR = "/opt/shot-deps", PKG_CONFIG_PATH = "/opt/shot-deps/lib/pkgconfig", LD_LIBRARY_PATH = "/opt/shot-deps/lib" }
 
 [tool.cibuildwheel.macos]
 archs = ["arm64"]
-before-all = "brew install cbc ipopt openblas"
-environment = { CBC_DIR = "/opt/homebrew/opt/cbc", IPOPT_DIR = "/opt/homebrew/opt/ipopt", PKG_CONFIG_PATH = "/opt/homebrew/opt/cbc/lib/pkgconfig:/opt/homebrew/opt/ipopt/lib/pkgconfig", DYLD_LIBRARY_PATH = "/opt/homebrew/opt/cbc/lib:/opt/homebrew/opt/ipopt/lib:/opt/homebrew/opt/openblas/lib", MACOSX_DEPLOYMENT_TARGET = "14.0" }
+before-all = "bash {project}/misc/build-wheel-dependencies.sh $HOME/shot-deps"
+environment = { CBC_DIR = "$HOME/shot-deps", IPOPT_DIR = "$HOME/shot-deps", PKG_CONFIG_PATH = "$HOME/shot-deps/lib/pkgconfig", DYLD_LIBRARY_PATH = "$HOME/shot-deps/lib", MACOSX_DEPLOYMENT_TARGET = "14.0" }
