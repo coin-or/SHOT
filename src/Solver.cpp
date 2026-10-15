@@ -1355,6 +1355,11 @@ void Solver::initializeSettings()
         "Terms with corresponding eigenvalues or diagonal elements in D-matrix smaller than this value will be ignored",
         0.0, SHOT_DBL_MAX);
 
+    env->settings->createSetting("Model.Reformulation.Quadratics.Decomposition.LDLMaximumFill", 100.0,
+        "Skip the LDL decomposition if L would have more than this times the nonzeros of the quadratic matrix, and over "
+        "a million (0 = no limit)",
+        0.0, SHOT_DBL_MAX);
+
     // Modeling system settings
 
     env->settings->createSettingGroup("ModelingSystem", "", "Modeling system",

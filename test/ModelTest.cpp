@@ -172,6 +172,7 @@ bool ModelTestArtificialIntegerBounds();
 bool ModelTestVariableBoundCache();
 bool ModelTestMaximizePartitionedSquares();
 bool ModelTestLDLFactorizationScaling();
+bool ModelTestLDLFactorizationFillLimit();
 bool ModelTestBoundTighteningMatchesReference();
 bool ModelTestBoundTighteningMatchesReferenceOnInstances();
 bool ModelTestBoundTighteningPropagation();
@@ -526,6 +527,9 @@ int ModelTest(int argc, char* argv[])
         break;
     case 69:
         passed = ModelTestIntervalDerivativeStatus();
+        break;
+    case 70:
+        passed = ModelTestLDLFactorizationFillLimit();
         break;
     default:
         passed = false;
@@ -7395,6 +7399,83 @@ bool ModelTestMaximizePartitionedSquares()
         {
             std::cout << "  FAILED: the dual bound " << dualBound << " is not a valid and tight bound for the optimum "
                       << expectedObjective << ".\n";
+            passed = false;
+        }
+    }
+
+    return passed;
+}
+
+bool ModelTestLDLFactorizationFillLimit()
+{
+    // A chain x_0 - x_1 - ... with squares, where every x_i also has a bilinear term with a tiny coefficient with a
+    // variable y_i without a square. Eigen's AMD ordering places the y_i last, since they have no diagonal element,
+    // and their block of L becomes dense, since they are coupled through the chain. The factorization must then be
+    // skipped. With squares of the y_i, L is sparse, and the factorization must be performed.
+
+    bool passed = true;
+
+    const int chainLength = 1500;
+
+    for(bool withSquaresOfLeaves : { false, true })
+    {
+        auto solver = std::make_unique<Solver>();
+        auto env = solver->getEnvironment();
+        auto problem = std::make_shared<Problem>(env);
+
+        Variables chain, leaves;
+
+        for(int i = 0; i < chainLength; i++)
+        {
+            chain.push_back(std::make_shared<Variable>("x" + std::to_string(i), E_VariableType::Real, -1.0, 1.0));
+            leaves.push_back(std::make_shared<Variable>("y" + std::to_string(i), E_VariableType::Real, -1.0, 1.0));
+        }
+
+        problem->add(chain);
+        problem->add(leaves);
+
+        // Collected first, since add(term) searches every term already added
+        QuadraticTerms collectedTerms;
+
+        for(int i = 0; i < chainLength; i++)
+        {
+            collectedTerms.push_back(std::make_shared<QuadraticTerm>(2.0, chain[i], chain[i]));
+            collectedTerms.push_back(std::make_shared<QuadraticTerm>(1e-9, chain[i], leaves[i]));
+
+            if(i + 1 < chainLength)
+                collectedTerms.push_back(std::make_shared<QuadraticTerm>(-1.0, chain[i], chain[i + 1]));
+
+            if(withSquaresOfLeaves)
+                collectedTerms.push_back(std::make_shared<QuadraticTerm>(1.0, leaves[i], leaves[i]));
+        }
+
+        QuadraticTerms terms;
+        terms.add(collectedTerms);
+        terms.takeOwnership(problem);
+
+        std::cout << "\nWith squares of the leaves: " << withSquaresOfLeaves << "\n";
+
+        if(terms.getConvexity() != E_Convexity::Convex)
+        {
+            std::cout << "  FAILED: the quadratic terms should be convex.\n";
+            passed = false;
+            continue;
+        }
+
+        terms.performLDLFactorization(100.0);
+
+        std::cout << "  nonzeros in L: " << terms.LDLFactorNonzeros
+                  << ", factorization successful: " << terms.LDLFactorizationSuccessful
+                  << ", too dense: " << terms.LDLFactorizationTooDense << "\n";
+
+        if(withSquaresOfLeaves && (!terms.LDLFactorizationSuccessful || terms.LDLFactorizationTooDense))
+        {
+            std::cout << "  FAILED: the sparse factorization should be performed.\n";
+            passed = false;
+        }
+        else if(!withSquaresOfLeaves && (terms.LDLFactorizationSuccessful || !terms.LDLFactorizationTooDense))
+        {
+            std::cout << "  FAILED: the dense factorization should be skipped.\n";
             passed = false;
         }
     }

@@ -582,6 +582,15 @@ public:
     bool LDLFactorizationPerformed = false;
     bool LDLFactorizationSuccessful = false;
 
+    // The number of nonzeros below the diagonal of L, known from the symbolic factorization, and whether the
+    // factorization was skipped since L would have been too dense
+    Eigen::Index LDLFactorNonzeros = 0;
+    bool LDLFactorizationTooDense = false;
+
+    // The fill limit of performLDLFactorization() only applies to factors with more nonzeros than this, since smaller
+    // ones are fast to calculate even if they are dense
+    static constexpr Eigen::Index minimumNonzerosForLDLFillLimit = 1000000;
+
     std::vector<Eigen::Triplet<double>> elements;
     std::map<VariablePtr, int, VariableIndexComparator> variableMap;
 
@@ -736,7 +745,9 @@ public:
         return (cachedHessian);
     }
 
-    void performLDLFactorization();
+    // The factorization is skipped if L would have more than maximumFill times as many nonzeros as the lower
+    // triangle of the matrix, and more than minimumNonzerosForLDLFillLimit; 0 means no limit
+    void performLDLFactorization(double maximumFill = 0.0);
 
     // Computes the eigenvectors, and the eigenvalues if they are not computed yet
     void computeEigenvectors();

@@ -340,7 +340,15 @@ void QuadraticTerms::createGradientStructure()
     gradientStructureCreated = true;
 }
 
-void QuadraticTerms::performLDLFactorization()
+// Eigen only gives access to L after the numerical factorization, but its number of nonzeros is already known from
+// the symbolic one, which takes time proportional to that number
+class SimplicialLDLTWithFactorSize : public Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>>
+{
+public:
+    Eigen::Index factorNonzeros() const { return (m_matrix.outerIndexPtr()[m_matrix.outerSize()]); }
+};
+
+void QuadraticTerms::performLDLFactorization(double maximumFill)
 {
     if(LDLFactorizationPerformed)
         return;
@@ -375,9 +383,32 @@ void QuadraticTerms::performLDLFactorization()
     Eigen::SparseMatrix<double> matrix(numberOfVariables, numberOfVariables);
     matrix.setFromTriplets(elements.begin(), elements.end());
 
-    Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> eigenSolverLDL;
+    SimplicialLDLTWithFactorSize eigenSolverLDL;
 
-    eigenSolverLDL.compute(matrix);
+    eigenSolverLDL.analyzePattern(matrix);
+
+    if(eigenSolverLDL.info() != Eigen::Success)
+    {
+        LDLFactorizationPerformed = true;
+        LDLFactorizationSuccessful = false;
+        return;
+    }
+
+    // The fill-reducing ordering cannot prevent a dense L in all cases, e.g., Eigen's AMD ordering places variables
+    // without a diagonal element last, and their block then becomes dense if they are coupled through the other
+    // variables. Calculating a dense L takes O(n^3) time.
+    LDLFactorNonzeros = eigenSolverLDL.factorNonzeros();
+
+    if(maximumFill > 0.0 && LDLFactorNonzeros > minimumNonzerosForLDLFillLimit
+        && LDLFactorNonzeros > maximumFill * matrix.nonZeros())
+    {
+        LDLFactorizationPerformed = true;
+        LDLFactorizationSuccessful = false;
+        LDLFactorizationTooDense = true;
+        return;
+    }
+
+    eigenSolverLDL.factorize(matrix);
 
     switch(eigenSolverLDL.info())
     {

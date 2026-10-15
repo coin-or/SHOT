@@ -2904,11 +2904,19 @@ std::optional<LinearTerms> TaskReformulateProblem::doLDLDecomposition(QuadraticT
     LinearTerms resultLinearTerms;
     resultLinearTerms.takeOwnership(reformulatedProblem);
 
-    quadraticTerms.performLDLFactorization();
+    quadraticTerms.performLDLFactorization(
+        env->settings->getSetting<double>("Model.Reformulation.Quadratics.Decomposition.LDLMaximumFill"));
 
     // The decomposition was not successful, using the eigenvalue decomposition instead
     if(!quadraticTerms.LDLFactorizationSuccessful)
     {
+        if(quadraticTerms.LDLFactorizationTooDense)
+        {
+            env->output->outputWarning(fmt::format("        The LDL decomposition of quadratic terms in {} variables is "
+                                                   "not calculated, since L would have {} nonzeros.",
+                quadraticTerms.variableMap.size(), quadraticTerms.LDLFactorNonzeros));
+        }
+
         env->timing->stopTimer("ProblemReformulationLDLDecomp");
         return (doEigenvalueDecomposition(quadraticTerms));
     }
