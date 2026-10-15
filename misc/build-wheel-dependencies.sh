@@ -35,5 +35,8 @@ git clone --depth 1 https://github.com/coin-or/coinbrew "$work/coinbrew"
 cd "$work/coinbrew"
 "$shell" ./coinbrew build "Ipopt@$ipopt" --prefix="$prefix" -j "$jobs" --no-prompt --tests none --verbosity 2
 rm -rf build
+# The installations of the Cbc projects run in parallel, and the install-sh of CoinUtils fails when two of them
+# create the same directory at the same time
+mkdir -p "$prefix/include/coin" "$prefix/lib/pkgconfig" "$prefix/share/coin/doc"
 "$shell" ./coinbrew build "Cbc@$cbc" --prefix="$prefix" -j "$jobs" --no-prompt --tests none --verbosity 4 --no-third-party
 rm -rf "$work"
