@@ -410,10 +410,13 @@ class TestReformulationSettings:
             solver, problem = self.solve({"Model.Reformulation.ObjectiveFunction.EpigraphStrategy": 2,
                                           "Dual.TreeStrategy": treeStrategy})
 
+            # A primal solution is accepted with a constraint error up to the tolerance, and e.g. HiGHS gives a
+            # solution with an error above 1e-6
+            tolerance = solver.getDoubleSetting("Primal.Tolerance.NonlinearConstraint")
             point = list(solver.getPrimalSolution().point)
             assert len(point) == 3
-            assert problem.getConstraint("c").calculateNumericValue(point).error <= 1e-6
-            assert problem.getConstraint("d").calculateNumericValue(point).error <= 1e-6
+            assert problem.getConstraint("c").calculateNumericValue(point).error <= tolerance
+            assert problem.getConstraint("d").calculateNumericValue(point).error <= tolerance
 
 
 class TestIpoptLinearSolver:

@@ -511,6 +511,12 @@ def build_sos2a(env, problem):
     return problem
 
 
+def skip_if_mip_solver_has_no_sos(solver):
+    """HiGHS does not support special ordered sets, and it is the default MIP solver without Gurobi or CPLEX."""
+    if solver.getIntSetting("Dual.MIP.Solver") == int(SHOTpy.MIPSolver.Highs):
+        pytest.skip("Special ordered sets are not supported with HiGHS")
+
+
 class TestSOS1(OptimizationTestBase):
     """Tests for the sos1a problem (SOS1 constraint)."""
 
@@ -520,6 +526,7 @@ class TestSOS1(OptimizationTestBase):
     def test_sos1_solve_exact(self):
         """Test solving sos1a and verify optimal objective."""
         solver, env, problem = self.create_solver_and_problem()
+        skip_if_mip_solver_has_no_sos(solver)
         build_sos1a(env, problem)
         self.solve_and_verify(
             solver, problem,
@@ -547,6 +554,7 @@ class TestSOS2(OptimizationTestBase):
     def test_sos2_solve_exact(self):
         """Test solving sos2a and verify optimal objective."""
         solver, env, problem = self.create_solver_and_problem()
+        skip_if_mip_solver_has_no_sos(solver)
         build_sos2a(env, problem)
         self.solve_and_verify(
             solver, problem,
