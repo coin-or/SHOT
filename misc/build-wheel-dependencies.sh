@@ -33,7 +33,7 @@ fi
 work="$(mktemp -d)"
 git clone --depth 1 https://github.com/coin-or/coinbrew "$work/coinbrew"
 cd "$work/coinbrew"
-"$shell" ./coinbrew build "Ipopt@$ipopt" --prefix="$prefix" -j "$jobs" --no-prompt --tests none
+"$shell" ./coinbrew build "Ipopt@$ipopt" --prefix="$prefix" -j "$jobs" --no-prompt --tests none --verbosity 2
 rm -rf build
-"$shell" ./coinbrew build "Cbc@$cbc" --prefix="$prefix" -j "$jobs" --no-prompt --tests none --no-third-party
+"$shell" ./coinbrew build "Cbc@$cbc" --prefix="$prefix" -j "$jobs" --no-prompt --tests none --verbosity 2 --no-third-party
 rm -rf "$work"
