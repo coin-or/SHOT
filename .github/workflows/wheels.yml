@@ -1,7 +1,16 @@
 name: Build and publish Python distributions
 
+# A tag v<version>[-<a|b|rc><n>] publishes that release; it must match the
+# version and SHOT_VERSION_SUFFIX in CMakeLists.txt. A manual run builds a
+# development version <version>.dev<run number> and publishes it from master
+# when 'publish' is checked. See misc/set-python-version.py.
 on:
   workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish the development build to PyPI (master only)
+        type: boolean
+        default: false
   push:
     tags:
       - "v*"
@@ -30,6 +39,9 @@ jobs:
       - name: Verify dependency pins
         run: python3 misc/check-dependencies.py
 
+      - name: Set package version
+        run: python3 misc/set-python-version.py
+
       - uses: pypa/cibuildwheel@v4.3.1
 
       - uses: actions/upload-artifact@v4
@@ -49,6 +61,9 @@ jobs:
         with:
           python-version: "3.13"
 
+      - name: Set package version
+        run: python misc/set-python-version.py
+
       - run: python -m pip install build
       - run: python -m build --sdist
 
@@ -59,7 +74,9 @@ jobs:
 
   publish:
     name: Publish to PyPI
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    if: >-
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) ||
+      (github.event_name == 'workflow_dispatch' && inputs.publish && github.ref == 'refs/heads/master')
     needs: [wheels, sdist]
     runs-on: ubuntu-latest
     environment:

@@ -282,7 +282,7 @@ std::string Results::getResultsOSrL()
 
     std::stringstream ssSolver;
     ssSolver << "Supporting Hyperplane Optimization Toolkit, version ";
-    ssSolver << SHOT_VERSION_MAJOR << "." << SHOT_VERSION_MINOR << "." << SHOT_VERSION_PATCH;
+    ssSolver << SHOT_VERSION_MAJOR << "." << SHOT_VERSION_MINOR << "." << SHOT_VERSION_PATCH << SHOT_VERSION_SUFFIX;
     auto solver = ssSolver.str();
 
     auto solverInvoked = osrlDocument.NewElement("solverInvoked");

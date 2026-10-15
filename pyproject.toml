@@ -1,6 +1,6 @@
 [build-system]
 # pybind11-stubgen generates the type stubs SHOTpy.pyi that are installed next to the module
-requires = ["scikit-build-core==1.1.1", "pybind11-stubgen==3.0.0; python_version >= '3.10'"]
+requires = ["scikit-build-core==1.1.1", "pybind11-stubgen==3.0.0"]
 build-backend = "scikit_build_core.build"
 
 [project]
@@ -21,7 +21,7 @@ license-files = [
     "ThirdParty/mc++/LICENSES/*", "ThirdParty/nlohmann/LICENSE.MIT",
     "ThirdParty/tinyxml2/LICENSE.txt",
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 authors = [{ name = "The SHOT contributors" }]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -41,7 +41,9 @@ Issues = "https://github.com/coin-or/SHOT/issues"
 provider = "scikit_build_core.metadata.regex"
 field = "version"
 input = "CMakeLists.txt"
-regex = "project\\(SHOT VERSION (?P<value>[0-9.]+)"
+# The version is project(SHOT VERSION ...) followed by SHOT_VERSION_SUFFIX
+regex = "project\\(SHOT VERSION (?P<value>[0-9.]+)[\\s\\S]*?set\\(SHOT_VERSION_SUFFIX \"(?P<suffix>[^\"]*)\"\\)"
+result = "{value}{suffix}"
 
 [tool.scikit-build]
 cmake.build-type = "Release"
@@ -84,7 +86,7 @@ sdist.exclude = [
 ]
 
 [tool.cibuildwheel]
-build = "cp39-* cp310-* cp311-* cp312-* cp313-*"
+build = "cp311-* cp312-* cp313-* cp314-* cp315-*"
 skip = "*-musllinux_*"
 test-requires = ["pytest", "numpy"]
 test-command = [

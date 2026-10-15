@@ -318,13 +318,13 @@ void Report::outputSolverHeader()
 
     if(SHOT_VERSION_PATCH[0] != '0')
     {
-        env->output->outputInfo(fmt::format(" Version: {}.{}.{}. Git hash: {}. Released: {}.", SHOT_VERSION_MAJOR,
-            SHOT_VERSION_MINOR, SHOT_VERSION_PATCH, SHOT_GITHASH, __DATE__));
+        env->output->outputInfo(fmt::format(" Version: {}.{}.{}{}. Git hash: {}. Released: {}.", SHOT_VERSION_MAJOR,
+            SHOT_VERSION_MINOR, SHOT_VERSION_PATCH, SHOT_VERSION_SUFFIX, SHOT_GITHASH, __DATE__));
     }
     else
     {
-        env->output->outputInfo(fmt::format(" Version: {}.{}. Git hash: {}. Released: {}.", SHOT_VERSION_MAJOR,
-            SHOT_VERSION_MINOR, SHOT_GITHASH, __DATE__));
+        env->output->outputInfo(fmt::format(" Version: {}.{}{}. Git hash: {}. Released: {}.", SHOT_VERSION_MAJOR,
+            SHOT_VERSION_MINOR, SHOT_VERSION_SUFFIX, SHOT_GITHASH, __DATE__));
     }
 
     env->output->outputInfo("");
