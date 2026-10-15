@@ -123,6 +123,11 @@ private:
     // The largest number of variables in quadratic terms that are given an eigenvalue decomposition
     static constexpr size_t maximumSizeForEigenvalueDecomposition = 2000;
 
+    // The elements of a decomposition component, relative to its largest one, below which they are round-off errors
+    // and left out. The dense eigenvectors have many such elements, and they make Clp's presolve declare a feasible
+    // dual problem infeasible.
+    static constexpr double decompositionCoefficientTolerance = 1e-12;
+
     // The terms replacing the quadratic terms, or none if the decomposition could not be calculated
     std::optional<LinearTerms> doEigenvalueDecomposition(QuadraticTerms& quadraticTerms);
     std::optional<LinearTerms> doLDLDecomposition(QuadraticTerms& quadraticTerms);

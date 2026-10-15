@@ -2875,11 +2875,14 @@ std::optional<LinearTerms> TaskReformulateProblem::doEigenvalueDecomposition(Qua
 
         LinearTerms componentTerms;
 
+        double coefficientTolerance
+            = decompositionCoefficientTolerance * quadraticTerms.eigenvectors.col(i).cwiseAbs().maxCoeff();
+
         // The variables of the terms belong to the original problem, so the ones of the reformulated problem
         // are looked up by their index
         for(auto [VAR, j] : quadraticTerms.variableMap)
         {
-            if(quadraticTerms.eigenvectors(j, i) != 0.0)
+            if(std::abs(quadraticTerms.eigenvectors(j, i)) > coefficientTolerance)
                 componentTerms.push_back(std::make_shared<LinearTerm>(
                     quadraticTerms.eigenvectors(j, i), reformulatedProblem->getVariable(VAR->getIndex())));
         }
@@ -2938,10 +2941,14 @@ std::optional<LinearTerms> TaskReformulateProblem::doLDLDecomposition(QuadraticT
             continue;
 
         std::vector<std::pair<int, double>> column;
+        double largestElement = 0.0;
+
+        for(Eigen::SparseMatrix<double>::InnerIterator it(quadraticTerms.LDLMatrixL, i); it; ++it)
+            largestElement = std::max(largestElement, std::abs(it.value()));
 
         for(Eigen::SparseMatrix<double>::InnerIterator it(quadraticTerms.LDLMatrixL, i); it; ++it)
         {
-            if(it.value() != 0.0)
+            if(std::abs(it.value()) > decompositionCoefficientTolerance * largestElement)
                 column.emplace_back(it.row(), it.value());
         }
 
