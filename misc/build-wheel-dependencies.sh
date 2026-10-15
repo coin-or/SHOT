@@ -20,17 +20,20 @@ if [ "$(uname)" = "Linux" ]; then
     # manylinux_2_28 (AlmaLinux 8): gfortran comes with the gcc toolset, BLAS and LAPACK from PowerTools
     dnf install -y --enablerepo=powertools blas-devel lapack-devel pkgconf-pkg-config
     jobs="$(nproc)"
+    shell=bash
 else
-    # Ipopt uses LAPACK from the Accelerate framework; MUMPS needs gfortran from Homebrew's gcc
-    brew install gcc pkgconf
+    # Ipopt uses LAPACK from the Accelerate framework; MUMPS needs gfortran from Homebrew's gcc, and
+    # coinbrew needs a newer bash than the one in macOS
+    brew install gcc pkgconf bash
     export MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-14.0}"
     jobs="$(sysctl -n hw.ncpu)"
+    shell="$(brew --prefix)/bin/bash"
 fi
 
 work="$(mktemp -d)"
 git clone --depth 1 https://github.com/coin-or/coinbrew "$work/coinbrew"
 cd "$work/coinbrew"
-./coinbrew build "Ipopt@$ipopt" --prefix="$prefix" -j "$jobs" --no-prompt --tests none
+"$shell" ./coinbrew build "Ipopt@$ipopt" --prefix="$prefix" -j "$jobs" --no-prompt --tests none
 rm -rf build
-./coinbrew build "Cbc@$cbc" --prefix="$prefix" -j "$jobs" --no-prompt --tests none --no-third-party
+"$shell" ./coinbrew build "Cbc@$cbc" --prefix="$prefix" -j "$jobs" --no-prompt --tests none --no-third-party
 rm -rf "$work"
