@@ -383,12 +383,6 @@ bool SolveProblemWithStartingPointGAMS(std::string filename)
                  "that the starting-point solution is accepted as a primal solution via callback.\n";
 
     auto solver = std::make_unique<SHOT::Solver>();
-    auto env = solver->getEnvironment();
-
-    if(!solver->setProblem(filename))
-    {
-        return (false);
-    }
 
     bool startingPointAccepted = false;
     bool startingPointPosted = false;
@@ -417,15 +411,11 @@ bool SolveProblemWithStartingPointGAMS(std::string filename)
             }
         });
 
-    // Read the .l (level) values from the GAMS modeling object and post them as a primal candidate,
-    // mirroring what EntryPointsGAMS.cpp does before solveProblem(). Without this step the starting
-    // point is never submitted when setProblem(filename) is used directly.
-    auto gamsModelingSystem = std::dynamic_pointer_cast<ModelingSystemGAMS>(env->modelingSystem);
-    if(gamsModelingSystem)
+    // setProblem() submits the GAMS variable levels and can accept the starting
+    // point immediately, so both callbacks must be registered before loading.
+    if(!solver->setProblem(filename))
     {
-        VectorDouble variableStarts = gamsModelingSystem->getVariableLevels();
-        env->primalSolver->addPrimalSolutionCandidate(
-            variableStarts, E_PrimalSolutionSource::ExternalPrimalSolution, 0);
+        return (false);
     }
 
     if(!solver->solveProblem())

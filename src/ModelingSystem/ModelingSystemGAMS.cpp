@@ -58,13 +58,6 @@ ModelingSystemGAMS::ModelingSystemGAMS(EnvironmentPtr envPtr)
 {
 }
 
-VectorDouble ModelingSystemGAMS::getVariableLevels() const
-{
-    VectorDouble levels(gmoN(modelingObject));
-    gmoGetVarL(modelingObject, levels.data());
-    return levels;
-}
-
 void ModelingSystemGAMS::setModelingObject(gmoHandle_t gmo)
 {
     modelingObject = gmo;
