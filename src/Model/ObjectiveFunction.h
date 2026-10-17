@@ -18,7 +18,7 @@
 
 #include <vector>
 
-#include "cppad/cppad.hpp"
+#include "CppAD.h"
 #include "cppad/utility.hpp"
 
 namespace SHOT

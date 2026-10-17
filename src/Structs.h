@@ -24,7 +24,11 @@
 #define STDCALL __stdcall
 #endif
 #if !defined(DllExport)
+#if !defined(_MSC_VER) || defined(SHOT_BUILDING_LIBRARY)
 #define DllExport __declspec(dllexport)
+#else
+#define DllExport __declspec(dllimport)
+#endif
 #endif
 #else
 #if !defined(STDCALL)

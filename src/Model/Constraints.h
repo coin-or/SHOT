@@ -21,7 +21,7 @@
 #include "NonlinearExpressions.h"
 #include "IntervalDerivatives.h"
 
-#include "cppad/cppad.hpp"
+#include "CppAD.h"
 #include "cppad/utility.hpp"
 
 namespace SHOT
