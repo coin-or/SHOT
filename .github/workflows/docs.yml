@@ -20,12 +20,14 @@ jobs:
           python-version: '3.11'
       - name: Install build dependencies
         run: sudo apt-get update && sudo apt-get install -y doxygen coinor-libipopt-dev libopenblas-dev ninja-build
-      - name: Build matching SHOTpy and install documentation tools
+      - name: Install documentation tools
+        run: python -m pip install -r docs/requirements.txt
+      - name: Compile and install matching SHOTpy
+        timeout-minutes: 45
         env:
           CMAKE_BUILD_PARALLEL_LEVEL: '2'
-        run: |
-          python -m pip install -r docs/requirements.txt
-          python -m pip install . --config-settings=cmake.define.HAS_CBC=off
+        # Verbose pip streams native build progress instead of buffering it until completion.
+        run: python -m pip install --verbose . --config-settings=cmake.define.HAS_CBC=off
       - name: Build documentation
         run: python docs/build.py --source-ref "$GITHUB_SHA"
       - uses: actions/upload-artifact@v4
