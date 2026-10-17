@@ -1,0 +1,28 @@
+{% extends "!page.html" %}
+{% block body %}
+{% set home = pathto(master_doc).replace('index.html', '').replace('#', '') ~ '../../' %}
+<header class="shot-docs-header">
+  <div class="shot-docs-nav">
+    <a class="shot-docs-logo" href="{{ home }}" aria-label="SHOT home">
+      <img class="shot-logo-light" src="{{ pathto('_static/shot-logo.png', 1) }}" width="112" height="41" alt="SHOT">
+      <img class="shot-logo-dark" src="{{ pathto('_static/shot-logo-dark.png', 1) }}" width="112" height="41" alt="SHOT">
+    </a>
+    <button class="shot-nav-toggle" aria-controls="shot-site-links" aria-expanded="false" aria-label="Toggle website navigation">☰</button>
+    <nav id="shot-site-links" aria-label="SHOT website">
+      <a href="{{ home }}">Home</a>
+      <a href="{{ home }}getting-started/">Get started</a>
+      <a href="{{ home }}docs/" aria-current="page">Documentation</a>
+      <a href="{{ home }}news/">News</a>
+      <a href="{{ home }}publications/">Publications</a>
+      <a href="{{ home }}team/">Team</a>
+      <a href="https://github.com/coin-or/SHOT"><span class="shot-github-icon" aria-hidden="true"></span>GitHub</a>
+    </nav>
+  </div>
+</header>
+{{ super() }}
+{% include "site-footer.html" %}
+{% endblock %}
+{% block content %}
+<p class="label shot-eyebrow shot-docs-eyebrow">{% if pagename.startswith('reference/') %}Reference{% elif pagename == 'index' %}Documentation{% else %}User guide{% endif %} · {{ release }}</p>
+{{ super() }}
+{% endblock %}

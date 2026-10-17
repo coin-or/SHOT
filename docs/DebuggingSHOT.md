@@ -9,7 +9,7 @@ For general CLI usage and the full options reference, see
 https://www.shotsolver.dev/shot/using-shot/getting-started and `./SHOT --docs`
 (below). This document only covers the debug-output mechanism.
 
-## 1. Enabling debug mode
+## Enabling debug mode
 
 ```bash
 ./SHOT problemfile.osil --debug=<directory>
@@ -36,7 +36,7 @@ https://www.shotsolver.dev/shot/using-shot/getting-started and `./SHOT --docs`
   given build supports) are documented in
   [docs/CommandLineUsage.md](CommandLineUsage.md).
 
-## 2. Make the console output verbose while debugging
+## Make the console output verbose while debugging
 
 SHOT's console/log output is itself a primary debugging tool, complementary
 to the debug directory — it shows what the solver is doing iteration by
@@ -78,7 +78,7 @@ Example for a maximally verbose debugging run:
   Termination.IterationLimit=50
 ```
 
-## 3. Solution strategies
+## Solution strategies
 
 SHOT picks one of a small number of **solution strategies** — each a
 different sequence of tasks — based on the (reformulated) problem's
@@ -114,7 +114,7 @@ line (e.g. "Using single-tree solution strategy.") when
 above) — check this first if the debug directory doesn't contain the files
 you expected.
 
-## 4. Why the output looks the way it does
+## Why the output looks the way it does
 
 SHOT's solver loop is task-based: a `TaskHandler` runs a sequence of task
 objects (each a `run()` implementation) against a shared `Environment`
@@ -129,7 +129,7 @@ rather than one single "iteration" concept. `N` is the dual/MIP iteration
 counter; it does not necessarily line up 1:1 with how many primal solutions
 were found.
 
-## 5. Debug file reference
+## Debug file reference
 
 Every LP model dump listed below also has an MPS counterpart with the same
 basename (for example, `dualiter0_problem.lp` and `dualiter0_problem.mps`).
@@ -199,10 +199,10 @@ run:
   subproblem itself and its solver options (only written by NLP backends
   that support dumping their problem).
 
-## 6. A practical debugging workflow
+## A practical debugging workflow
 
 1. Reproduce with `./SHOT problemfile --debug=<dir>`, adding the console
-   verbosity settings from section 2 (at minimum
+   verbosity settings from “Make the console output verbose while debugging” (at minimum
    `Output.Console.Iteration.Detail=0`) and either `--timelimit=<n>` or
    `Termination.IterationLimit=<n>` if you only need to see the first
    several iterations. Note which solution strategy was selected (section
@@ -226,7 +226,7 @@ run:
    directory from the live source of truth — prefer that over guessing
    setting names from this doc.
 
-## 7. Automated tests as a debugging aid
+## Automated tests as a debugging aid
 
 SHOT has a C++ test suite (optional at build time: configure with
 `-DCOMPILE_TESTS=on`) that can help pin down when/where a regression was
@@ -247,7 +247,7 @@ introduced, or reproduce a failure in isolation instead of debugging a full
   `Solver` 1–25, `Settings` 1–9). `EqualityConstraintTest.cpp` has the tests
   of how equality constraints and ranges are kept in the original problem
   and rewritten in the reformulated one (see "Equality constraints and
-  ranges" in section 8).
+  ranges" in “Lessons from real debugging sessions”).
 - **Running the full suite**: `ctest --output-on-failure` from the build
   directory (this is what CI does). If you're on a build configured before
   this doc's revision that fixed `test/CMakeLists.txt`'s `add_test()` call
@@ -279,7 +279,7 @@ introduced, or reproduce a failure in isolation instead of debugging a full
   `3`=Cplex+Ipopt, `4`=Cbc+Ipopt, `5`=HiGHS+SHOT-as-NLP,
   `6`=Gurobi+SHOT-as-NLP, `7`=Cplex+SHOT-as-NLP, `8`=Cbc+SHOT-as-NLP — this
   is a fixed, hand-registered list in a `switch` statement, not every
-  theoretically valid pairing; see section 9 below). Add `-v` for verbose
+  theoretically valid pairing; see “If this doc is stale” below). Add `-v` for verbose
   per-instance solver output:
 
   ```bash
@@ -290,7 +290,7 @@ introduced, or reproduce a failure in isolation instead of debugging a full
   minimal repro: rerun the same file directly,
   `./SHOT test/data/instances/<group>/<file> --debug=<dir>
   Output.Console.Iteration.Detail=0`, and work through the debugging
-  workflow in section 6 above.
+  workflow in “A practical debugging workflow” above.
 - **`InstanceTest` only fails on wrong results for strict instances**:
   otherwise only a crash fails it. A missing primal solution or an objective
   outside the `[dual, primal]` range only warns, and a solve that ends with a
@@ -367,7 +367,7 @@ introduced, or reproduce a failure in isolation instead of debugging a full
   core solve algorithm, so they're more useful for API-layer bugs than
   solver-behavior ones.
 
-## 8. Lessons from real debugging sessions
+## Lessons from real debugging sessions
 
 These are specific, non-obvious traps encountered while actually chasing bugs
 in this codebase — add to this list as you find more.
@@ -426,7 +426,7 @@ in this codebase — add to this list as you find more.
   `make VERBOSE=1 SHOT`, then reuse those flags for the new file. `Output.Debug.Enable=true`
   / `Output.Debug.Path=<dir>` work as `solver->updateSetting(...)` calls in
   such a program exactly like the CLI flags, so you get the full debug-file
-  dump (section 5) without touching the CLI at all.
+  dump (“Debug file reference”) without touching the CLI at all.
 
 ### CppAD / numerical domain errors
 
@@ -700,7 +700,7 @@ in this codebase — add to this list as you find more.
   targeted change that "fixes" one instance can silently break others.
 - SHOT routes the same logical problem through materially different code
   paths depending on `Dual.MIP.Solver`'s capabilities (native quadratics
-  support, single-tree callback support, etc. — see section 3). A bug
+  support, single-tree callback support, etc. — see “Solution strategies”). A bug
   confined to one path is completely invisible if you only ever test with
   the default solver. When a fix "doesn't seem to help," or a suspected bug
   "won't reproduce," try it under each of Cbc/HiGHS/Gurobi/Cplex (whichever
@@ -765,7 +765,7 @@ in this codebase — add to this list as you find more.
   crash but could still silently produce a worse or wrong result — but it
   changes how urgently the assert failure needs to block shipping.
 
-## 9. If this doc is stale
+## If this doc is stale
 
 File names and which task writes them are derived from the source and can
 drift as SHOT evolves. If a described file is missing or looks different,

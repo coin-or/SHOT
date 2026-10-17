@@ -1,0 +1,125 @@
+/* SHOT — generated from tokens.json by tools/build_tokens.py. Do not edit by hand. */
+/* Fonts: <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:ital,wght@0,400;0,500;1,400&family=Space+Grotesk:wght@400;500;600&display=swap"> */
+
+:root, [data-theme="light"] {
+  --shot-red: #E21F25;
+  --shot-ink: #18181B;
+  --shot-ink-soft: #222227;
+  --shot-red-light: #FF5A4F;
+  --shot-paper-dim: #B9B5AE;
+  --shot-ink-line: #3A3A41;
+  --shot-paper: #F4F2ED;
+  --shot-paper-deep: #EAE7E0;
+  --shot-white: #FFFFFF;
+  --shot-blue: #2F6DB5;
+  --logo-grey: #434342;
+  --surface: #F4F2ED;
+  --surface-raised: #EAE7E0;
+  --surface-inverse: #18181B;
+  --ink: #18181B;
+  --ink-inverse: #F4F2ED;
+  --ink-body: #4A4743;
+  --ink-muted: #6B6762;
+  --accent-text: #C8191F;
+  --rule: #BDB8AE;
+  --rule-strong: var(--ink);
+  --data-blue: #2F6DB5;
+  --figure-set: #CFCAC1;
+  --figure-ground: var(--surface-raised);
+  --figure-frame: #DAD6CD;
+  --lattice-dot: #DAD6CD;
+  --lattice-dot-in: #B5B0A6;
+  --level-line: #DAD6CD;
+  --focus-ring: var(--accent-text);
+  --on-red: #FFF8F5;
+  --on-red-strong: #FFFFFF;
+  --code-bg: #1E1E22;
+  --code-border: #2E2E34;
+  --code-fg: #E8E5DF;
+  --code-keyword: #FF7A6B;
+  --code-string: #E9B872;
+  --code-function: #8CB4E0;
+  --code-comment: #8A867F;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --surface: #18181B;
+    --surface-raised: #222227;
+    --surface-inverse: #F4F2ED;
+    --ink: #F4F2ED;
+    --ink-inverse: #18181B;
+    --ink-body: #B9B5AE;
+    --ink-muted: #8F8B84;
+    --accent-text: #FF5A4F;
+    --rule: #3A3A41;
+    --data-blue: #8CB4E0;
+    --figure-set: #3A3A41;
+    --figure-frame: #3A3A41;
+    --lattice-dot: #2A2A30;
+    --lattice-dot-in: #55555E;
+    --level-line: #34343B;
+    --rule-strong: var(--ink);
+    --figure-ground: var(--surface-raised);
+    --focus-ring: var(--accent-text);
+    color-scheme: dark;
+  }
+}
+
+[data-theme="dark"] {
+  --surface: #18181B;
+  --surface-raised: #222227;
+  --surface-inverse: #F4F2ED;
+  --ink: #F4F2ED;
+  --ink-inverse: #18181B;
+  --ink-body: #B9B5AE;
+  --ink-muted: #8F8B84;
+  --accent-text: #FF5A4F;
+  --rule: #3A3A41;
+  --data-blue: #8CB4E0;
+  --figure-set: #3A3A41;
+  --figure-frame: #3A3A41;
+  --lattice-dot: #2A2A30;
+  --lattice-dot-in: #55555E;
+  --level-line: #34343B;
+  --rule-strong: var(--ink);
+  --figure-ground: var(--surface-raised);
+  --focus-ring: var(--accent-text);
+  color-scheme: dark;
+}
+
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --space-9: 96px;
+  --space-10: 128px;
+  --radius-0: 0px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-full: 9999px;
+  --stroke-hairline: 1px;
+  --stroke-strong: 2px;
+  --stroke-accent: 4px;
+  --page-max: 1200px;
+  --measure: 680px;
+  --gutter: 24px;
+  --font-display: "Space Grotesk", "IBM Plex Sans", Arial, sans-serif;
+  --font-sans: "IBM Plex Sans", Arial, sans-serif;
+  --font-mono: "JetBrains Mono", "IBM Plex Mono", "Courier New", monospace;
+}
+
+.display { font-family: var(--font-display); font-size: 72px; line-height: 72px; font-weight: 500; letter-spacing: -0.025em; }
+.title { font-family: var(--font-display); font-size: 36px; line-height: 40px; font-weight: 500; letter-spacing: -0.015em; }
+.heading { font-family: var(--font-display); font-size: 22px; line-height: 28px; font-weight: 500; letter-spacing: -0.005em; }
+.lead { font-family: var(--font-display); font-size: 22px; line-height: 30px; font-weight: 400; }
+.numeral { font-family: var(--font-display); font-size: 160px; line-height: 160px; font-weight: 500; letter-spacing: -0.03em; }
+.body { font-family: var(--font-sans); font-size: 17px; line-height: 27px; font-weight: 400; }
+.small { font-family: var(--font-sans); font-size: 14px; line-height: 21px; font-weight: 400; }
+.label { font-family: var(--font-mono); font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: 0.12em; }
+.code { font-family: var(--font-mono); font-size: 14px; line-height: 21px; font-weight: 400; }

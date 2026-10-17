@@ -13,7 +13,7 @@ those files first.
 > `misc/toolchain-mingw.cmake` if you want to attempt reviving it), but this
 > is unmaintained and untested — don't rely on it. If you want to use SHOT on Windows, consider using Windows Subsystem for Linux (WSL). 
 
-## 1. Getting the source
+## Getting the source
 
 ```bash
 git clone https://github.com/coin-or/SHOT.git
@@ -36,7 +36,7 @@ sources. CppAD's headers are installed into the build directory together with
 its matching shared library; do not substitute a system CppAD header tree.
 
 **Note on HiGHS**: HiGHS is **not always included** — it's controlled like
-any other solver by the `HAS_HIGHS` option (default `ON`, see section 3).
+any other solver by the `HAS_HIGHS` option (default `ON`, see “Configuring with CMake”).
 When it's on (the default), CMake compiles HiGHS from source from the
 local `ThirdParty/HiGHS` submodule, so run
 `git submodule update --init --recursive` first. If that submodule
@@ -48,7 +48,7 @@ since HiGHS is compiled from scratch. To use a pre-built HiGHS instead of
 compiling the submodule, configure with `-DUSE_EXTERNAL_HIGHS=on
 -DHIGHS_EXTERNAL_DIR=<path>`.
 
-## 2. Installing dependencies
+## Installing dependencies
 
 SHOT needs at least one MIP solver (Cbc, CPLEX, Gurobi, or HiGHS) and an NLP
 solver (Ipopt or GAMS) to be useful. 
@@ -83,7 +83,7 @@ cd coinbrew
 ```
 
 then point CMake at them with `-DCBC_DIR=<SHOT>/ThirdParty/Cbc
--DIPOPT_DIR=<SHOT>/ThirdParty/Ipopt` (see section 3).
+-DIPOPT_DIR=<SHOT>/ThirdParty/Ipopt` (see “Configuring with CMake”).
 
 #### Uno (optional)
 
@@ -198,7 +198,7 @@ If you don't have one of these, just turn it off explicitly (see below) —
 don't leave it on `ON` (the default) and hope it's silently skipped, since
 a partial/broken install can still be *found* but fail later in the build.
 
-## 3. Configuring with CMake
+## Configuring with CMake
 
 SHOT requires standard C++17, with compiler extensions disabled. All SHOT C++
 targets (including tests and Python bindings) use `-Wall -Wextra -Wpedantic
@@ -237,21 +237,21 @@ Key options (all `option(...)` declarations live at the top of the root
 | `HAS_CBC` | `ON` | Cbc MIP solver |
 | `HAS_CPLEX` | `ON` | CPLEX MIP solver |
 | `HAS_GUROBI` | `ON` | Gurobi MIP solver |
-| `HAS_HIGHS` | `ON` | HiGHS MIP solver — like the others, optional; turn off with `-DHAS_HIGHS=off` (see section 1 re: `USE_EXTERNAL_HIGHS`) |
+| `HAS_HIGHS` | `ON` | HiGHS MIP solver — like the others, optional; turn off with `-DHAS_HIGHS=off` (see “Getting the source” re: `USE_EXTERNAL_HIGHS`) |
 | `HAS_IPOPT` | `ON` | Ipopt NLP solver |
-| `HAS_UNO` | `OFF` | Uno NLP solver (see section 2) — off by default because building Uno needs a Fortran compiler |
+| `HAS_UNO` | `OFF` | Uno NLP solver (see “Installing dependencies”) — off by default because building Uno needs a Fortran compiler |
 | `HAS_GAMS` | `ON` | GAMS interface (modeling system + NLP solver) |
 | `HAS_AMPL` | `ON` | AMPL MP `.nl` file interface |
 | `HAS_PYTHON` | `OFF` | Build the `SHOTpy` Python bindings (needs Python3 dev headers; pybind11 comes from the submodule) |
 | `SHOT_WARNINGS_AS_ERRORS` | `OFF` | Treat SHOT C++ warnings as errors |
 | `SHOT_EXTRA_WARNINGS` | `OFF` | Additional GCC/Clang conversion, shadowing, and virtual-function diagnostics |
-| `COMPILE_TESTS` | `OFF` | Build the `test_runner` test suite (section 6) |
+| `COMPILE_TESTS` | `OFF` | Build the `test_runner` test suite (“Running the tests”) |
 | `GENERATE_EXE` | `ON` | Build the `./SHOT` console executable |
 | `BUILD_DOCUMENTATION` | on if Doxygen found | Build the HTML API docs |
 
 `<SOLVER>_DIR` cache variables (`CBC_DIR`, `CPLEX_DIR`, `GUROBI_DIR`,
 `IPOPT_DIR`, `GAMS_DIR`, `HIGHS_EXTERNAL_DIR`) override where each
-dependency is searched for, as described in section 2.
+dependency is searched for, as described in “Installing dependencies”.
 
 Also set `-DCMAKE_BUILD_TYPE=<Release|Debug|RelWithDebInfo>` explicitly —
 it isn't set by default. Note that leaving it unset still disables
@@ -278,7 +278,7 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
   -DCOMPILE_TESTS=on
 ```
 
-## 4. Building
+## Building
 
 ```bash
 cmake --build build -j<N>
@@ -298,7 +298,7 @@ classes, signatures and docstrings of `SHOTpy`. A signature that cannot be
 written as a Python type, e.g., one that shows a C++ type name, then fails
 the build.
 
-## 5. Installing SHOT
+## Installing SHOT
 
 After building, install to a writable prefix:
 
@@ -334,10 +334,10 @@ CppAD, Eigen, spdlog, Boost, MC++, or tinyxml2 use the matching bundled headers
 installed with SHOT. Code that includes an optional solver's own headers
 still needs that solver's development package.
 
-## 6. Running the tests
+## Running the tests
 
 Tests must be enabled at configure time, i.e. add `-DCOMPILE_TESTS=on` to
-whichever `cmake` configure command from section 3 you used, then rebuild
+whichever `cmake` configure command from “Configuring with CMake” you used, then rebuild
 and run from the build directory:
 
 ```bash
@@ -353,9 +353,9 @@ expected objectives — a fast way to check whether a change regressed
 solver behavior. For the full breakdown of test structure, how to run a
 single failing test in isolation, and how to use `InstanceTest` results to
 drive a `--debug` investigation, see
-[docs/DebuggingSHOT.md](DebuggingSHOT.md), section 7.
+[Automated tests as a debugging aid](DebuggingSHOT.md#automated-tests-as-a-debugging-aid).
 
-## 6. Next steps
+## Next steps
 
 - Running the compiled solver: [docs/CommandLineUsage.md](CommandLineUsage.md).
 - Debugging solver behavior: [docs/DebuggingSHOT.md](DebuggingSHOT.md).
