@@ -606,13 +606,19 @@ else()
     set(CPPAD_LIBRARY "${CPPAD_LIB_DIR}/libcppad_lib.so")
 endif()
 
-# The library is declared as a byproduct so that generators such as Ninja know that it is created by the external
-# project, otherwise a clean build fails since no rule creates it
+# cppad_lib is copied to CPPAD_LIBRARY by installation, not by compilation.
+# Associate it with that step so Ninja has a producer in a clean build.
+set(CPPAD_BYPRODUCT_ARGS BUILD_BYPRODUCTS "${CPPAD_LIBRARY}")
+if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.26)
+    set(CPPAD_BYPRODUCT_ARGS INSTALL_BYPRODUCTS "${CPPAD_LIBRARY}")
+endif()
 ExternalProject_Add(cppad
-    PREFIX cppad
+    # Keep the external project's work directory distinct from the CppAD
+    # installation directory on case-insensitive Windows filesystems.
+    PREFIX cppad-project
     SOURCE_DIR ${CPPAD_SOURCE_DIR}
     CMAKE_ARGS ${CPPAD_CMAKE_ARGS}
-    BUILD_BYPRODUCTS ${CPPAD_LIBRARY}
+    ${CPPAD_BYPRODUCT_ARGS}
 )
 
 # Creates the helper library
