@@ -9,9 +9,14 @@ import sys
 
 def tree_sha256(directory):
     digest = hashlib.sha256()
-    for path in sorted(p for p in directory.rglob("*") if p.is_file()):
+    for path in sorted((p for p in directory.rglob("*") if p.is_file()), key=lambda p: p.as_posix()):
         digest.update(path.relative_to(directory).as_posix().encode() + b"\0")
-        digest.update(hashlib.sha256(path.read_bytes()).digest())
+        contents = path.read_bytes()
+        # Git may check text out with CRLF on Windows. Compare the canonical
+        # LF contents used by the manifest without changing binary files.
+        if b"\0" not in contents:
+            contents = contents.replace(b"\r\n", b"\n")
+        digest.update(hashlib.sha256(contents).digest())
     return digest.hexdigest()
 
 

@@ -4,6 +4,9 @@
 license for each dependency. Release builds use these fixed inputs. Update
 the manifest and run the C++/Python tests whenever an input changes.
 
+Vendored tree hashes use case-sensitive POSIX path order and normalize text
+line endings to LF, so dependency verification also works on Windows checkouts.
+
 The five Git submodules remain pinned by the parent repository. Initialize
 them with `git submodule update --init --recursive`; do not use `--remote`
 when reproducing a release.

@@ -173,8 +173,8 @@ This configuration builds the bundled HiGHS and CppAD with `cl`; it needs
 neither WSL nor pkg-config. AMPL `.nl` and OSiL input remain enabled. No
 external NLP solver is included; NLP subproblems use SHOT's built-in fallback.
 To add Cbc and Ipopt, use the release packages described below.
-GAMS 54 is supported as described below. Windows builds with CPLEX, Gurobi,
-and Python bindings have not been validated.
+GAMS 54 and Python bindings are supported as described below. Windows builds
+with CPLEX and Gurobi have not been validated.
 
 On MSVC, CMake stages CppAD's sources in the build directory and disables
 its optional Eigen discovery there, avoiding upstream's unconditional
@@ -216,6 +216,29 @@ CMake discovers the libraries directly without pkg-config and copies package
 DLLs, including Ipopt's Fortran and math runtimes, beside SHOT. It also installs
 those DLLs into the installation's `bin` directory. Source-built libraries can
 be used through the same directory options, with their matching MSVC runtime.
+
+#### Building SHOTpy wheels
+
+Windows x64 wheels use the bundled HiGHS and the official Cbc/Ipopt binary
+packages pinned, with SHA-256 checksums, in `ThirdParty/versions.json`.
+The wheel workflow downloads these through `misc/prepare-wheel-dependencies.ps1`;
+no Fortran compiler is required. SHOT and its bundled dependencies use `/MD`
+to match the Cbc 2.10.13 static libraries. This differs from the Cbc 2.10.12
+archive described above, which requires `/MT`.
+
+With x64 Python installed, build and test a single wheel from an x64 Native
+Tools Command Prompt (replace `cp312` with the desired supported Python version):
+
+```bat
+python -m pip install cibuildwheel==4.3.1
+python -m cibuildwheel --only cp312-win_amd64 --output-dir wheelhouse
+```
+
+CMake installs SHOTSolver and the solver runtime DLLs into the Python wheel.
+cibuildwheel repairs the wheel with delvewheel and runs `test/python` in an
+isolated environment, including a check that NumPy can be imported first.
+The GitHub wheel workflow includes Windows x64 alongside Linux and macOS.
+GAMS, CPLEX, Gurobi, and Uno are excluded from these wheels.
 
 #### Adding Uno
 
