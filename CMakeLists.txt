@@ -268,12 +268,7 @@ file(
 # Cbc
 
 if(HAS_CBC)
-    find_package(PkgConfig)
-
-    if(PkgConfig_FOUND)
-        include(FindPkgConfig)
-        find_package(CBC)
-    endif()
+    find_package(CBC)
 
     if(NOT CBC_FOUND)
         message(WARNING "Cbc not found, setting HAS_CBC to OFF")
@@ -377,12 +372,7 @@ endif()
 # Ipopt
 
 if(HAS_IPOPT)
-    find_package(PkgConfig REQUIRED)
-    set(_IPOPT_ORIGINAL_PREFIX_PATH "${CMAKE_PREFIX_PATH}")
-    list(PREPEND CMAKE_PREFIX_PATH "${IPOPT_DIR}")
-    pkg_search_module(IPOPT REQUIRED IMPORTED_TARGET ipopt)
-    set(CMAKE_PREFIX_PATH "${_IPOPT_ORIGINAL_PREFIX_PATH}")
-    unset(_IPOPT_ORIGINAL_PREFIX_PATH)
+    find_package(IPOPT REQUIRED)
 
     set(PRIMAL_SOURCES "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverIpoptBase.cpp")
     set(PRIMAL_SOURCES ${PRIMAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverIpoptRelaxed.cpp")
@@ -1008,7 +998,7 @@ endif(HAS_HIGHS)
 # Ipopt linking
 if(HAS_IPOPT)
     message("-- Ipopt include files will be used from: ${IPOPT_INCLUDE_DIRS}")
-    target_link_libraries(SHOTPrimalStrategy PkgConfig::IPOPT)
+    target_link_libraries(SHOTPrimalStrategy IPOPT::IPOPT)
 
     message("-- The following Ipopt libraries will be used from: ${IPOPT_LIBRARY_DIRS}")
     message("   ${IPOPT_LIBRARIES}")
@@ -1058,6 +1048,33 @@ file(
 
 # Creates the SHOT library that is linked to the executable
 add_library(SHOTSolver SHARED ${SOURCES})
+if(WIN32)
+    # Copy the selected packages' DLLs, including their Fortran/math runtimes,
+    # beside SHOT so running from the build tree needs no PATH modifications.
+    set(SHOT_RUNTIME_DLLS "")
+    foreach(_backend CBC IPOPT)
+        if(HAS_${_backend})
+            set(_runtime_dirs "${${_backend}_DIR}/bin")
+            foreach(_libdir IN LISTS ${_backend}_LIBRARY_DIRS)
+                list(APPEND _runtime_dirs "${_libdir}/../bin")
+            endforeach()
+            foreach(_runtime_dir IN LISTS _runtime_dirs)
+                get_filename_component(_runtime_dir "${_runtime_dir}" ABSOLUTE)
+                file(GLOB _runtime_dlls CONFIGURE_DEPENDS "${_runtime_dir}/*.dll")
+                list(APPEND SHOT_RUNTIME_DLLS ${_runtime_dlls})
+            endforeach()
+        endif()
+    endforeach()
+    if(SHOT_RUNTIME_DLLS)
+        list(REMOVE_DUPLICATES SHOT_RUNTIME_DLLS)
+        add_custom_command(TARGET SHOTSolver POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                ${SHOT_RUNTIME_DLLS} $<TARGET_FILE_DIR:SHOTSolver>
+            COMMAND_EXPAND_LISTS VERBATIM)
+        install(FILES ${SHOT_RUNTIME_DLLS}
+            DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT Runtime)
+    endif()
+endif()
 if(MSVC)
     set_target_properties(SHOTSolver PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
     if(HAS_AMPL)

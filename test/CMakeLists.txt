@@ -291,7 +291,7 @@ if(HAS_CBC)
   target_link_libraries(${TEST_EXE_NAME} CBC::CBC)
 endif()
 if(HAS_IPOPT)
-  target_link_libraries(${TEST_EXE_NAME} PkgConfig::IPOPT)
+  target_link_libraries(${TEST_EXE_NAME} IPOPT::IPOPT)
 endif()
 
 # Set rpath for finding dynamic libraries on macOS
