@@ -109,6 +109,6 @@ environment = { CBC_DIR = "$HOME/shot-deps", IPOPT_DIR = "$HOME/shot-deps", PKG_
 [tool.cibuildwheel.windows]
 archs = ["AMD64"]
 before-all = 'pwsh -NoProfile -ExecutionPolicy Bypass -File "{project}/misc/prepare-wheel-dependencies.ps1"'
-environment = { CBC_DIR = "build/wheel-deps/Cbc", IPOPT_DIR = "build/wheel-deps/Ipopt/Ipopt-3.14.20-win64-msvs2022-md", CMAKE_GENERATOR = "Ninja", CMAKE_ARGS = "-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL" }
+environment = { CBC_DIR = "build/wheel-deps/Cbc", IPOPT_DIR = "build/wheel-deps/Ipopt/Ipopt-3.14.20-win64-msvs2022-md", CC = "cl", CXX = "cl", CMAKE_GENERATOR = "Ninja", CMAKE_ARGS = "-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL" }
 # Inspect bundled DLLs too, so dependencies of SHOTSolver/Ipopt are repaired.
 repair-wheel-command = 'delvewheel repair --ignore-existing --analyze-existing -w "{dest_dir}" "{wheel}"'

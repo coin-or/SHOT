@@ -46,6 +46,12 @@ jobs:
       - name: Set package version
         run: python misc/set-python-version.py
 
+      - name: Set up MSVC
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
       - uses: pypa/cibuildwheel@v4.3.1
 
       - uses: actions/upload-artifact@v4
