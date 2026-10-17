@@ -147,12 +147,23 @@ bool ReadProblemGAMS(std::string filename)
     return passed;
 }
 
-bool SolveProblemGAMS(std::string filename)
+bool SolveProblemGAMS(std::string filename, bool requiresSOS = false)
 {
     bool passed = true;
 
     auto solver = std::make_unique<SHOT::Solver>();
     auto env = solver->getEnvironment();
+
+    if(requiresSOS)
+    {
+#if defined(HAS_CBC)
+        solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cbc));
+#elif defined(HAS_CPLEX)
+        solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cplex));
+#elif defined(HAS_GUROBI)
+        solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Gurobi));
+#endif
+    }
 
     if(!solver->setProblem(filename))
     {
@@ -412,8 +423,7 @@ bool SolveProblemWithStartingPointGAMS(std::string filename)
     auto gamsModelingSystem = std::dynamic_pointer_cast<ModelingSystemGAMS>(env->modelingSystem);
     if(gamsModelingSystem)
     {
-        VectorDouble variableStarts(gmoN(gamsModelingSystem->modelingObject));
-        gmoGetVarL(gamsModelingSystem->modelingObject, variableStarts.data());
+        VectorDouble variableStarts = gamsModelingSystem->getVariableLevels();
         env->primalSolver->addPrimalSolutionCandidate(
             variableStarts, E_PrimalSolutionSource::ExternalPrimalSolution, 0);
     }
@@ -593,17 +603,17 @@ int GAMSTest(int argc, char* argv[])
         break;
     case 8:
         std::cout << "Starting test to solve problem sos1a with SOS1 constraints in GAMS syntax:" << std::endl;
-        passed = SolveProblemGAMS("data/sos1a.gms");
+        passed = SolveProblemGAMS("data/sos1a.gms", true);
         std::cout << "Finished test to solve problem sos1a with SOS1 constraints in GAMS syntax." << std::endl;
         break;
     case 9:
         std::cout << "Starting test to solve problem sos2a with SOS2 constraints in GAMS syntax:" << std::endl;
-        passed = SolveProblemGAMS("data/sos2a.gms");
+        passed = SolveProblemGAMS("data/sos2a.gms", true);
         std::cout << "Finished test to solve problem sos2a with SOS2 constraints in GAMS syntax." << std::endl;
         break;
     case 10:
         std::cout << "Starting test to solve problem sos3 with SOS1 and SOS2 constraints in GAMS syntax:" << std::endl;
-        passed = SolveProblemGAMS("data/sos3.gms");
+        passed = SolveProblemGAMS("data/sos3.gms", true);
         std::cout << "Finished test to solve problem sos3 with SOS1 and SOS2 constraints in GAMS syntax." << std::endl;
         break;
     case 11:

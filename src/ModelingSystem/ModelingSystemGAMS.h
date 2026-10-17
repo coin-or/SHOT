@@ -41,6 +41,7 @@ public:
     ~ModelingSystemGAMS() override;
 
     void setModelingObject(gmoHandle_t gmo);
+    VectorDouble getVariableLevels() const;
 
     // Adds modeling system specific settings
     static void augmentSettings(SettingsPtr settings);
