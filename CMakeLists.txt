@@ -106,7 +106,7 @@ set(SPDLOG_DIR "ThirdParty/spdlog")
 set(TINYXML2_DIR "ThirdParty/tinyxml2")
 
 # Makes sure the provided directories are in CMake format
-foreach(_directory AMPL_DIR BOOST_DIR CBC_DIR CPLEX_DIR GAMS_DIR GUROBI_DIR HIGHS_EXTERNAL_DIR IPOPT_DIR)
+foreach(_directory AMPL_DIR BOOST_DIR CBC_DIR CPLEX_DIR GAMS_DIR GUROBI_DIR HIGHS_EXTERNAL_DIR IPOPT_DIR UNO_DIR)
     file(TO_CMAKE_PATH "${${_directory}}" ${_directory})
 endforeach()
 
@@ -1052,9 +1052,12 @@ if(WIN32)
     # Copy the selected packages' DLLs, including their Fortran/math runtimes,
     # beside SHOT so running from the build tree needs no PATH modifications.
     set(SHOT_RUNTIME_DLLS "")
-    foreach(_backend CBC IPOPT)
+    foreach(_backend CBC IPOPT UNO)
         if(HAS_${_backend})
             set(_runtime_dirs "${${_backend}_DIR}/bin")
+            if(_backend STREQUAL "UNO")
+                list(APPEND _runtime_dirs "${UNO_DIR}/deps")
+            endif()
             foreach(_libdir IN LISTS ${_backend}_LIBRARY_DIRS)
                 list(APPEND _runtime_dirs "${_libdir}/../bin")
             endforeach()

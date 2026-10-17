@@ -217,6 +217,27 @@ DLLs, including Ipopt's Fortran and math runtimes, beside SHOT. It also installs
 those DLLs into the installation's `bin` directory. Source-built libraries can
 be used through the same directory options, with their matching MSVC runtime.
 
+#### Adding Uno
+
+Download the Windows x64 bundle from [Uno 2.9.1](https://github.com/cvanaret/Uno/releases/tag/v2.9.1):
+`Uno_binaries.v2.9.1.x86_64-w64-mingw32-cxx11.zip`. Extract it to, for example,
+`C:/solvers/uno`, preserving its `bin`, `deps`, `include`, and `lib` directories.
+Enable Uno in an existing MSVC build:
+
+```bat
+cmake -S . -B build-msvc-coin -DHAS_UNO=ON -DUNO_DIR=C:/solvers/uno
+cmake --build build-msvc-coin --parallel 4
+ctest --test-dir build-msvc-coin --output-on-failure -R "^(Uno_|EqualityConstraint_11$)"
+build-msvc-coin\SHOT.exe test\data\alan.osil --mip=highs --nlp=uno
+```
+
+Although the bundle is built with MinGW, SHOT calls Uno through its C API.
+CMake uses MSVC's `dumpbin` and librarian to generate an import library from
+`bin/libuno.dll` in the build directory. It copies that DLL and the runtime
+DLLs in `deps` beside SHOT and installs them into `bin`. No MinGW or Fortran
+compiler is needed to use this bundle. The bundled GNU static libraries
+cannot be linked directly into an MSVC build.
+
 #### Adding GAMS
 
 With GAMS installed at `C:/gams/54`, enable its interface in an existing
@@ -332,7 +353,7 @@ Key options (all `option(...)` declarations live at the top of the root
 | `BUILD_DOCUMENTATION` | on if Doxygen found | Build the HTML API docs |
 
 `<SOLVER>_DIR` cache variables (`CBC_DIR`, `CPLEX_DIR`, `GUROBI_DIR`,
-`IPOPT_DIR`, `GAMS_DIR`, `HIGHS_EXTERNAL_DIR`) override where each
+`IPOPT_DIR`, `UNO_DIR`, `GAMS_DIR`, `HIGHS_EXTERNAL_DIR`) override where each
 dependency is searched for, as described in section 2.
 
 Also set `-DCMAKE_BUILD_TYPE=<Release|Debug|RelWithDebInfo>` explicitly —
