@@ -38,3 +38,6 @@ build/*
 /out/build
 /.cache/
 .DS_Store
+
+# Documentation environment
+.venv-docs/
