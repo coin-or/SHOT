@@ -81,7 +81,7 @@ set(Model_parts
 set(Settings_parts 1 2 3 4 5 6 7 8 9)
 
 if(HAS_CBC)
-  set(Cbc_parts 1 2 3 4 5 6 7 8 9 10 11)
+  set(Cbc_parts 1 2 3 4 5 6 7 8 9 10 11 12)
   set(cpptests ${cpptests} Cbc)
 endif()
 

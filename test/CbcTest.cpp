@@ -18,6 +18,7 @@
 #include "../src/TaskHandler.h"
 
 #include "../src/MIPSolver/IMIPSolver.h"
+#include "../src/MIPSolver/MIPSolverCbc.h"
 
 #include "../src/Model/Problem.h"
 #include "../src/Model/ObjectiveFunction.h"
@@ -320,6 +321,54 @@ bool CbcExternalDualBoundCallbackTest(std::string filename, double dualBoundToTe
     return (true);
 }
 
+bool CbcRepairDisabledCutsTest()
+{
+    for(bool isGreaterThan : { false, true })
+    {
+        Solver solver;
+        auto env = solver.getEnvironment();
+        env->reformulatedProblem = std::make_shared<Problem>(env);
+        env->results->createIteration();
+        // The repair entry point requires a generated cut to have been recorded.
+        env->dualSolver->generatedHyperplanes.push_back(std::make_shared<GeneratedHyperplane>());
+
+        MIPSolverCbc mip(env);
+        mip.initializeProblem();
+        mip.addVariable("x", E_VariableType::Real, 0.0, 1.0, 0.0);
+        mip.initializeObjective();
+        mip.addLinearTermToObjective(1.0, 0);
+        mip.finalizeObjective(true);
+        mip.finalizeProblem();
+        mip.setSolutionLimit(2100000000);
+        mip.setTimeLimit(10.0);
+
+        // Removed cuts retain their repair flag, but must not consume a slack
+        // index. Put several before an active infeasible cut to expose a mismatch.
+        std::map<int, double> terms = { { 0, 1.0 } };
+        for(int i = 0; i < 32; ++i)
+        {
+            int row = mip.addLinearConstraint(terms, 1.0, "disabled_" + std::to_string(i), false, true);
+            mip.setConstraintUpperBound(row, 1e100);
+        }
+        if(mip.repairInfeasibility())
+            return false;
+
+        // x <= -1 or x >= 2 contradicts the variable bounds. The repair must
+        // relax the appropriate side and leave all disabled cuts inactive.
+        int activeRow = mip.addLinearConstraint(terms, isGreaterThan ? -2.0 : 1.0, "active", isGreaterThan, true);
+        if(!mip.repairInfeasibility())
+            return false;
+        for(int i = 0; i < 32; ++i)
+            if(mip.getConstraintUpperBound(i) < 1e20)
+                return false;
+        if(!isGreaterThan && std::abs(mip.getConstraintUpperBound(activeRow) - 0.5) > 1e-6)
+            return false;
+        if(mip.solveProblem() != E_ProblemSolutionStatus::Optimal)
+            return false;
+    }
+    return true;
+}
+
 int CbcTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -396,6 +445,10 @@ int CbcTest(int argc, char* argv[])
         std::cout << "Starting test to solve ex1252a.osil with Cbc." << std::endl;
         passed = CbcTestNocrash("data/ex1252a.osil");
         std::cout << "Finished test to solve ex1252a.osil with Cbc." << std::endl;
+        break;
+    case 12:
+        std::cout << "Testing Cbc infeasibility repair with disabled cuts." << std::endl;
+        passed = CbcRepairDisabledCutsTest();
         break;
     default:
         passed = false;
