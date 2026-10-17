@@ -1,6 +1,7 @@
 # Compiling SHOT
 
-SHOT compiles on **Linux and macOS**. This guide covers getting the source,
+SHOT compiles on **Linux and macOS**, and natively on **Windows with MSVC**
+using HiGHS or Cbc, with optional Ipopt support. This guide covers getting the source,
 installing dependencies, configuring with CMake, building, and running the
 test suite. It's derived directly from the root `CMakeLists.txt`,
 `test/CMakeLists.txt`, and the CI recipe in
@@ -8,10 +9,8 @@ test suite. It's derived directly from the root `CMakeLists.txt`,
 as those are the source of truth — if a command here stops working, check
 those files first.
 
-> **Windows is no longer supported.** SHOT previously could be
-> cross-compiled for Windows from Linux using mingw (see
-> `misc/toolchain-mingw.cmake` if you want to attempt reviving it), but this
-> is unmaintained and untested — don't rely on it. If you want to use SHOT on Windows, consider using Windows Subsystem for Linux (WSL). 
+> For a native Windows build with HiGHS, see the MSVC instructions below.
+> WSL remains an alternative for Linux solver dependencies.
 
 ## 1. Getting the source
 
@@ -153,6 +152,89 @@ such as the `-L` for `libgfortran` above. Uno's own symbols, including its
 should then print 0. On macOS, SHOT also links Ipopt's MUMPS libraries before
 `libuno` when it finds them next to Ipopt, which avoids the crash with a `libuno`
 built without these flags.
+
+### Windows (MSVC)
+
+Install Visual Studio Build Tools with the C++ build tools, Windows SDK,
+and CMake/Ninja components. Open an **x64 Native Tools Command Prompt** and
+run these commands from the SHOT source directory:
+
+```bat
+cmake -S . -B build-msvc -G Ninja -DCMAKE_BUILD_TYPE=Release ^
+  -DHAS_HIGHS=ON -DHAS_CBC=OFF -DHAS_CPLEX=OFF -DHAS_GUROBI=OFF ^
+  -DHAS_GAMS=OFF -DHAS_IPOPT=OFF -DHAS_UNO=OFF -DHAS_PYTHON=OFF ^
+  -DCOMPILE_TESTS=ON
+cmake --build build-msvc --parallel 4
+ctest --test-dir build-msvc --output-on-failure --timeout 300 -E FullInstance
+build-msvc\SHOT.exe test\data\alan.osil --mip=highs
+```
+
+This configuration builds the bundled HiGHS and CppAD with `cl`; it needs
+neither WSL nor pkg-config. AMPL `.nl` and OSiL input remain enabled. No
+external NLP solver is included; NLP subproblems use SHOT's built-in fallback.
+To add Cbc and Ipopt, use the release packages described below.
+GAMS 54 is supported as described below. Windows builds with CPLEX, Gurobi,
+and Python bindings have not been validated.
+
+On MSVC, CMake stages CppAD's sources in the build directory and disables
+its optional Eigen discovery there, avoiding upstream's unconditional
+pkg-config requirement without changing the submodule. SHOT still uses its
+bundled Eigen headers directly. CppAD is linked statically on Windows.
+CMake generates `CppAD.h` in the build directory and installs it with the
+public headers to keep the DLL's CppAD tape registry shared with C++ clients.
+
+#### Adding Cbc and Ipopt
+
+Download and extract these x64 MSVC release packages:
+
+- [Ipopt 3.14.20](https://github.com/coin-or/Ipopt/releases/tag/releases%2F3.14.20):
+  `Ipopt-3.14.20-win64-msvs2022-md.zip`.
+- [Cbc 2.10.12](https://github.com/coin-or/Cbc/releases/tag/releases%2F2.10.12):
+  `Cbc-releases.2.10.12-w64-msvc17-md.zip`.
+
+`IPOPT_DIR` and `CBC_DIR` must point to the extracted directories containing
+`include`, `lib`, and `bin`. Ipopt's archive has an extra enclosing directory.
+The Cbc archive contains **static libraries built with `/MT`**, despite the
+`md` in its filename. Select the matching runtime for SHOT and its bundled
+dependencies with `CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded`:
+
+```bat
+cmake -S . -B build-msvc-coin -G Ninja -DCMAKE_BUILD_TYPE=Release ^
+  -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded ^
+  -DHAS_HIGHS=ON -DHAS_CBC=ON -DHAS_IPOPT=ON ^
+  -DCBC_DIR=C:/solvers/cbc ^
+  -DIPOPT_DIR=C:/solvers/Ipopt-3.14.20-win64-msvs2022-md ^
+  -DHAS_CPLEX=OFF -DHAS_GUROBI=OFF -DHAS_GAMS=OFF ^
+  -DHAS_UNO=OFF -DHAS_PYTHON=OFF -DCOMPILE_TESTS=ON
+cmake --build build-msvc-coin --parallel 4
+ctest --test-dir build-msvc-coin --output-on-failure --timeout 300 -E FullInstance
+build-msvc-coin\SHOT.exe test\data\alan.osil --mip=cbc --nlp=ipopt
+```
+
+These are Release packages; a Debug build needs matching Debug solver libraries.
+CMake discovers the libraries directly without pkg-config and copies package
+DLLs, including Ipopt's Fortran and math runtimes, beside SHOT. It also installs
+those DLLs into the installation's `bin` directory. Source-built libraries can
+be used through the same directory options, with their matching MSVC runtime.
+
+#### Adding GAMS
+
+With GAMS installed at `C:/gams/54`, enable its interface in an existing
+MSVC build (retaining that build's MIP solvers and runtime settings):
+
+```bat
+cmake -S . -B build-msvc-coin -DHAS_GAMS=ON -DGAMS_DIR=C:/gams/54
+cmake --build build-msvc-coin --parallel 4
+set "PATH=C:\gams\54;%PATH%"
+ctest --test-dir build-msvc-coin --output-on-failure --timeout 300 -R "^GAMS_"
+build-msvc-coin\SHOT.exe test\data\alan.gms --mip=highs --nlp=gams ^
+  Subsolver.GAMS.NLP.Solver=ipopt
+```
+
+The build compiles the C API loaders from GAMS's `apifiles/C/api` directory.
+GAMS is loaded at runtime; its directory must be on `PATH` so Windows can
+resolve the dependent DLLs. Use a working GAMS license, with network access
+to its license service when required. 
 
 ### macOS (Homebrew)
 
