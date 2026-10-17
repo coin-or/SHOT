@@ -712,8 +712,7 @@ if(HAS_PYTHON)
 
     if(NOT PYBIND11_STUBGEN_MISSING)
         add_custom_command(TARGET SHOTpy POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E env "PYTHONPATH=$<TARGET_FILE_DIR:SHOTpy>"
-                ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/misc/GenerateSHOTpyStubs.py $<TARGET_FILE_DIR:SHOTpy>
+            COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/misc/GenerateSHOTpyStubs.py" "$<TARGET_FILE_DIR:SHOTpy>"
             COMMENT "Generating type stubs for SHOTpy"
         )
 
