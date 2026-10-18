@@ -52,6 +52,7 @@ callback receives the context class of the location, and its return value is ign
 
 - Callbacks can be registered before or after `setProblem()`, but not while `solveProblem()` runs: registering or
   removing a callback then throws (`RuntimeError` in Python).
+- Register callbacks before `setProblem()` to observe starting-point candidates and solutions accepted during model loading.
 - Several callbacks can be registered for the same location. They are called in the order they were registered.
 
 ## Locations

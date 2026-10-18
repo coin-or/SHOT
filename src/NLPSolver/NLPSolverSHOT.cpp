@@ -51,6 +51,12 @@ void NLPSolverSHOT::initializeMIPProblem()
 {
     solver = std::make_shared<Solver>();
 
+    // A SHOT NLP subsolver must not create another fixed-integer or polishing
+    // NLP subsolver. With no external NLP backend, that would recurse during
+    // strategy construction before any optimization can take place.
+    solver->updateSetting("Primal.FixedInteger.Use", false);
+    solver->updateSetting("Primal.PolishSolution.NumberOfPoints", 0);
+
     solver->getEnvironment()->output->setPrefix("      | ");
 
     if(env->settings->getSetting<bool>("Output.Console.PrimalSolver.Show"))

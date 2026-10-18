@@ -21,7 +21,7 @@
 #include <string>
 
 #include "Interval.h"
-#include "cppad/cppad.hpp"
+#include "CppAD.h"
 
 namespace SHOT
 {

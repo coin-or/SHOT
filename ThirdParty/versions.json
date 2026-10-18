@@ -52,7 +52,7 @@
       "source_sha256": "5c1d40cb8e19adbf740a4ec2da35b3e58f3f5804b1dce44deb53df72193cbc6c",
       "license": "BSL-1.0",
       "patches": [],
-      "tree_sha256": "d71dde77dd3558491b14ed95bc6b8c962733878d46bf3be4480118d8be1df140"
+      "tree_sha256": "2e48fcc3e53620c78cad37e3c473d5bd149ffda62ee9ae0f96a8865abf555f89"
     },
     "ampl": {
       "version": "4.1.0",
@@ -113,10 +113,20 @@
   },
   "external_solvers": {
     "Cbc": {
-      "release": "releases/2.10.13"
+      "release": "releases/2.10.13",
+      "windows": {
+        "archive": "Cbc-releases.2.10.13-w64-msvc17-md.zip",
+        "sha256": "b9702ad7501b4249a9721984ce3c6dc8fb9b6cfb995f42d493a5bd54b8f42a74",
+        "directory": "."
+      }
     },
     "Ipopt": {
-      "release": "releases/3.14.20"
+      "release": "releases/3.14.20",
+      "windows": {
+        "archive": "Ipopt-3.14.20-win64-msvs2022-md.zip",
+        "sha256": "1fd1de97d3e8e48c298f6ccf5ac91cbfc417b42c61262c08d193fd14117e9098",
+        "directory": "Ipopt-3.14.20-win64-msvs2022-md"
+      }
     },
     "Uno": {
       "release": "v2.8.0",

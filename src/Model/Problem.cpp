@@ -26,8 +26,13 @@
 
 // Explicit template instantiation for CppAD::AD<double>
 // This ensures the template is instantiated here and not duplicated in SHOTpy.so
+#ifdef _MSC_VER
+template class __declspec(dllexport) CppAD::AD<double>;
+template class __declspec(dllexport) CppAD::ADFun<double>;
+#else
 template class CppAD::AD<double>;
 template class CppAD::ADFun<double>;
+#endif
 
 // Custom CppAD error handler to avoid abort on cleanup errors
 // This is needed because CppAD's thread_alloc has ODR issues with shared libraries

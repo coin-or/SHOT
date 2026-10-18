@@ -17,7 +17,7 @@
 
 #include "../Utilities.h"
 
-#include "cppad/cppad.hpp"
+#include "CppAD.h"
 
 #include <memory>
 #include <optional>

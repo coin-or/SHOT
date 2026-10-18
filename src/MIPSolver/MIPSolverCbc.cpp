@@ -962,12 +962,20 @@ bool MIPSolverCbc::repairInfeasibility()
 
         for(int i = numOrigConstraints; i < numCurrConstraints; i++)
         {
-            if(allowRepairOfConstraint[i])
+            // Disabled cuts have two infinite bounds (sense N), so they need no
+            // slack column. Count only rows for which a column is actually added.
+            if(allowRepairOfConstraint[i] && (rowSense[i] == 'L' || rowSense[i] == 'G'))
             {
                 repairConstraints.push_back(i);
                 relaxParameters.push_back(1 / (((double)i) - numOrigConstraints + 1.0));
                 numConstraintsToRepair++;
             }
+        }
+
+        if(numConstraintsToRepair == 0)
+        {
+            delete repairedInterface;
+            return (false);
         }
 
         // Saves the relaxation weights to a file
@@ -1206,24 +1214,24 @@ bool MIPSolverCbc::repairInfeasibility()
 
         for(int i = 0; i < numConstraintsToRepair; i++)
         {
-            double slackValue = solution[numOrigVariables + i];
+            double slackValue = solution.at(numOrigVariables + i);
 
             if(slackValue == 0.0)
                 continue;
 
-            double oldRHS = osiInterface->getRowUpper()[repairConstraints[i]];
-
             if(rowSense[repairConstraints.at(i)] == 'L')
             {
+                double oldRHS = osiInterface->getRowUpper()[repairConstraints[i]];
                 osiInterface->setRowUpper(repairConstraints[i], oldRHS + 1.5 * slackValue);
                 env->output->outputDebug("        Constraint: " + osiInterface->getRowName(repairConstraints[i])
                     + " repaired with infeasibility = " + std::to_string(1.5 * slackValue));
             }
             else if(rowSense[repairConstraints.at(i)] == 'G')
             {
+                double oldRHS = osiInterface->getRowLower()[repairConstraints[i]];
                 env->output->outputDebug("        Constraint: " + osiInterface->getRowName(repairConstraints[i])
                     + " repaired with infeasibility = " + std::to_string(-1.5 * slackValue));
-                osiInterface->setRowUpper(repairConstraints[i], oldRHS - 1.5 * slackValue);
+                osiInterface->setRowLower(repairConstraints[i], oldRHS - 1.5 * slackValue);
             }
 
             numRepairs++;

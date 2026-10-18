@@ -24,12 +24,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-14]
+        os: [ubuntu-latest, macos-14, windows-2022]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
 
       - uses: actions/cache@v4
         with:
@@ -37,10 +41,16 @@ jobs:
           key: shotpy-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('CMakeLists.txt', 'pyproject.toml', 'ThirdParty/versions.json', '.github/workflows/wheels.yml') }}
 
       - name: Verify dependency pins
-        run: python3 misc/check-dependencies.py
+        run: python misc/check-dependencies.py
 
       - name: Set package version
-        run: python3 misc/set-python-version.py
+        run: python misc/set-python-version.py
+
+      - name: Set up MSVC
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
 
       - uses: pypa/cibuildwheel@v4.3.1
 

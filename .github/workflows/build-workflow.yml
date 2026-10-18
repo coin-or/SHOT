@@ -367,7 +367,7 @@ jobs:
           echo "library=shot-libraries-${{ env.VERSION }}${{ env.ARTIFACT_SUFFIX }}" >> $GITHUB_OUTPUT
 
       - name: Output test artifacts
-        if: ${{ inputs.upload_artifacts }} != true && steps.output-artifacts.outcome != 'success'
+        if: ${{ inputs.upload_artifacts != true && steps.output-artifacts.outcome != 'success' }}
         shell: bash
         run: echo "test=test-logs-${{ env.VERSION }}" >> $GITHUB_OUTPUT
 

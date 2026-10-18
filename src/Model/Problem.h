@@ -24,7 +24,7 @@
 #include <string>
 #include <vector>
 
-#include "cppad/cppad.hpp"
+#include "CppAD.h"
 
 namespace SHOT
 {

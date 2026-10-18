@@ -58,6 +58,7 @@ cmake.args = [
     "-DHAS_CBC=on",
     "-DHAS_IPOPT=on",
     "-DHAS_HIGHS=on",
+    "-DHAS_UNO=off",
     "-DBUILD_SHARED_LIBS=off",
 ]
 wheel.packages = []
@@ -104,3 +105,10 @@ environment = { CBC_DIR = "/opt/shot-deps", IPOPT_DIR = "/opt/shot-deps", PKG_CO
 archs = ["arm64"]
 before-all = "bash {project}/misc/build-wheel-dependencies.sh $HOME/shot-deps"
 environment = { CBC_DIR = "$HOME/shot-deps", IPOPT_DIR = "$HOME/shot-deps", PKG_CONFIG_PATH = "$HOME/shot-deps/lib/pkgconfig", DYLD_LIBRARY_PATH = "$HOME/shot-deps/lib", MACOSX_DEPLOYMENT_TARGET = "14.0" }
+
+[tool.cibuildwheel.windows]
+archs = ["AMD64"]
+before-all = 'pwsh -NoProfile -ExecutionPolicy Bypass -File "{project}/misc/prepare-wheel-dependencies.ps1"'
+environment = { CBC_DIR = "build/wheel-deps/Cbc", IPOPT_DIR = "build/wheel-deps/Ipopt/Ipopt-3.14.20-win64-msvs2022-md", CC = "cl", CXX = "cl", CMAKE_GENERATOR = "Ninja", CMAKE_ARGS = "-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL" }
+# Inspect bundled DLLs too, so dependencies of SHOTSolver/Ipopt are repaired.
+repair-wheel-command = 'delvewheel repair --ignore-existing --analyze-existing -w "{dest_dir}" "{wheel}"'

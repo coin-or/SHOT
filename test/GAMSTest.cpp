@@ -147,12 +147,23 @@ bool ReadProblemGAMS(std::string filename)
     return passed;
 }
 
-bool SolveProblemGAMS(std::string filename)
+bool SolveProblemGAMS(std::string filename, bool requiresSOS = false)
 {
     bool passed = true;
 
     auto solver = std::make_unique<SHOT::Solver>();
     auto env = solver->getEnvironment();
+
+    if(requiresSOS)
+    {
+#if defined(HAS_CBC)
+        solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cbc));
+#elif defined(HAS_CPLEX)
+        solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cplex));
+#elif defined(HAS_GUROBI)
+        solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Gurobi));
+#endif
+    }
 
     if(!solver->setProblem(filename))
     {
@@ -372,12 +383,6 @@ bool SolveProblemWithStartingPointGAMS(std::string filename)
                  "that the starting-point solution is accepted as a primal solution via callback.\n";
 
     auto solver = std::make_unique<SHOT::Solver>();
-    auto env = solver->getEnvironment();
-
-    if(!solver->setProblem(filename))
-    {
-        return (false);
-    }
 
     bool startingPointAccepted = false;
     bool startingPointPosted = false;
@@ -406,16 +411,11 @@ bool SolveProblemWithStartingPointGAMS(std::string filename)
             }
         });
 
-    // Read the .l (level) values from the GAMS modeling object and post them as a primal candidate,
-    // mirroring what EntryPointsGAMS.cpp does before solveProblem(). Without this step the starting
-    // point is never submitted when setProblem(filename) is used directly.
-    auto gamsModelingSystem = std::dynamic_pointer_cast<ModelingSystemGAMS>(env->modelingSystem);
-    if(gamsModelingSystem)
+    // setProblem() submits the GAMS variable levels and can accept the starting
+    // point immediately, so both callbacks must be registered before loading.
+    if(!solver->setProblem(filename))
     {
-        VectorDouble variableStarts(gmoN(gamsModelingSystem->modelingObject));
-        gmoGetVarL(gamsModelingSystem->modelingObject, variableStarts.data());
-        env->primalSolver->addPrimalSolutionCandidate(
-            variableStarts, E_PrimalSolutionSource::ExternalPrimalSolution, 0);
+        return (false);
     }
 
     if(!solver->solveProblem())
@@ -593,17 +593,17 @@ int GAMSTest(int argc, char* argv[])
         break;
     case 8:
         std::cout << "Starting test to solve problem sos1a with SOS1 constraints in GAMS syntax:" << std::endl;
-        passed = SolveProblemGAMS("data/sos1a.gms");
+        passed = SolveProblemGAMS("data/sos1a.gms", true);
         std::cout << "Finished test to solve problem sos1a with SOS1 constraints in GAMS syntax." << std::endl;
         break;
     case 9:
         std::cout << "Starting test to solve problem sos2a with SOS2 constraints in GAMS syntax:" << std::endl;
-        passed = SolveProblemGAMS("data/sos2a.gms");
+        passed = SolveProblemGAMS("data/sos2a.gms", true);
         std::cout << "Finished test to solve problem sos2a with SOS2 constraints in GAMS syntax." << std::endl;
         break;
     case 10:
         std::cout << "Starting test to solve problem sos3 with SOS1 and SOS2 constraints in GAMS syntax:" << std::endl;
-        passed = SolveProblemGAMS("data/sos3.gms");
+        passed = SolveProblemGAMS("data/sos3.gms", true);
         std::cout << "Finished test to solve problem sos3 with SOS1 and SOS2 constraints in GAMS syntax." << std::endl;
         break;
     case 11:

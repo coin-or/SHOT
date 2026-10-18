@@ -81,7 +81,7 @@ set(Model_parts
 set(Settings_parts 1 2 3 4 5 6 7 8 9)
 
 if(HAS_CBC)
-  set(Cbc_parts 1 2 3 4 5 6 7 8 9 10 11)
+  set(Cbc_parts 1 2 3 4 5 6 7 8 9 10 11 12)
   set(cpptests ${cpptests} Cbc)
 endif()
 
@@ -114,9 +114,14 @@ if(HAS_GAMS)
       9
       10
       11
+      12
       13
       14
       15)
+  # HiGHS does not implement SHOT's SOS interface.
+  if(NOT (HAS_CBC OR HAS_CPLEX OR HAS_GUROBI))
+    list(REMOVE_ITEM GAMS_parts 8 9 10)
+  endif()
   set(cpptests ${cpptests} GAMS)
 endif()
 
@@ -279,6 +284,11 @@ target_include_directories(${TEST_EXE_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../ThirdParty)
 
 target_link_libraries(${TEST_EXE_NAME} SHOTSolver)
+if(WIN32)
+  # Keep the runner beside the DLL, including after incremental DLL rebuilds.
+  set_target_properties(${TEST_EXE_NAME} PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}")
+endif()
 if(HAS_HIGHS)
   target_link_libraries(${TEST_EXE_NAME} highs::highs)
 endif()
@@ -286,7 +296,7 @@ if(HAS_CBC)
   target_link_libraries(${TEST_EXE_NAME} CBC::CBC)
 endif()
 if(HAS_IPOPT)
-  target_link_libraries(${TEST_EXE_NAME} PkgConfig::IPOPT)
+  target_link_libraries(${TEST_EXE_NAME} IPOPT::IPOPT)
 endif()
 
 # Set rpath for finding dynamic libraries on macOS
@@ -359,14 +369,12 @@ if(HAS_GUROBI)
   endif()
 endif(HAS_GUROBI)
 
-target_link_libraries(${TEST_EXE_NAME} pthread)
-target_link_libraries(${TEST_EXE_NAME} m)
-target_link_libraries(${TEST_EXE_NAME} z)
-target_link_libraries(${TEST_EXE_NAME} lapack)
-target_link_libraries(${TEST_EXE_NAME} blas)
+if(NOT WIN32)
+  target_link_libraries(${TEST_EXE_NAME} pthread m z lapack blas)
+endif()
 
 # Platform-specific libraries
-if(NOT APPLE)
+if(UNIX AND NOT APPLE)
   target_link_libraries(${TEST_EXE_NAME} dl)
   target_link_libraries(${TEST_EXE_NAME} gomp)
 endif()

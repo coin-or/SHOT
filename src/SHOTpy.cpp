@@ -17,7 +17,7 @@
 // Prevent CppAD template instantiation in this compilation unit
 // to avoid ODR violations with libSHOTSolver.so
 // The templates are explicitly instantiated in Problem.cpp
-#include "cppad/cppad.hpp"
+#include "CppAD.h"
 extern template class CppAD::AD<double>;
 extern template class CppAD::ADFun<double>;
 

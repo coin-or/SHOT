@@ -8,6 +8,10 @@
 
 ## Python installation
 
+SHOT builds on Linux, macOS, and natively on Windows x64 with MSVC. See the
+[compilation instructions](docs/CompilationInstructions.md) for supported
+solver configurations and platform-specific setup.
+
 Install the open-source solver build (Cbc, Ipopt, and HiGHS) from PyPI:
 
 ```bash
@@ -65,7 +69,7 @@ Originally SHOT was intended for convex MINLP problems only, but as of version 1
 - through its own Python API ([SHOTpy](docs/SHOTpy_Tutorial.ipynb)) — install with `pip install SHOTpy` or build with `-DHAS_PYTHON=on` (see [docs/CompilationInstructions.md](docs/CompilationInstructions.md)), or
 - using its API implemented in C++, both of which support callbacks for customizing SHOT's behavior (e.g. injecting primal solutions, warm-starting, or adding custom cuts).
 
-SHOT requires a MILP solver: [Cplex](https://www.ibm.com/analytics/cplex-optimizer), [Gurobi](https://www.gurobi.com), [Cbc](https://www.github.com/coin-or/Cbc) or [HiGHS](https://highs.dev). In addition an NLP solver is required; currently only [Ipopt](https://www.github.com/coin-or/Ipopt) is supported. If SHOT is interfaced with GAMS, any licensed NLP solver can be used.
+SHOT requires a MILP solver: [Cplex](https://www.ibm.com/analytics/cplex-optimizer), [Gurobi](https://www.gurobi.com), [Cbc](https://www.github.com/coin-or/Cbc) or [HiGHS](https://highs.dev). NLP subproblems can use [Ipopt](https://www.github.com/coin-or/Ipopt), [Uno](https://github.com/cvanaret/Uno), or SHOT's built-in NLP solver. If SHOT is interfaced with GAMS, any licensed NLP solver can be used.
 
 The documentation is provided at the project website at https://www.shotsolver.dev.
 

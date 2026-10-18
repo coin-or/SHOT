@@ -34,6 +34,7 @@ __pycache__/
 
 .vscode/*
 build/*
+/build-msvc*/
 /.vs
 /out/build
 /.cache/
