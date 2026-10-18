@@ -156,29 +156,29 @@ std::shared_ptr<NLPSolverSHOT> TaskPerformBoundTightening::createPOASolver(Probl
     // The objective function of the relaxation is not the one of the source problem, so its cutoff does not apply
     solver->useCutOff = false;
 
-    solver->solver->updateSetting("Termination.ConstraintTolerance",
+    solver->updateSetting("Termination.ConstraintTolerance",
         env->settings->getSetting<double>("Model.BoundTightening.InitialPOA.ConstraintTolerance"));
-    solver->solver->updateSetting("Termination.ObjectiveConstraintTolerance",
+    solver->updateSetting("Termination.ObjectiveConstraintTolerance",
         env->settings->getSetting<double>("Model.BoundTightening.InitialPOA.ObjectiveConstraintTolerance"));
 
-    solver->solver->updateSetting("Termination.DualStagnation.ConstraintTolerance",
+    solver->updateSetting("Termination.DualStagnation.ConstraintTolerance",
         env->settings->getSetting<double>("Model.BoundTightening.InitialPOA.StagnationConstraintTolerance"));
-    solver->solver->updateSetting("Termination.DualStagnation.IterationLimit",
+    solver->updateSetting("Termination.DualStagnation.IterationLimit",
         env->settings->getSetting<int>("Model.BoundTightening.InitialPOA.StagnationIterationLimit"));
 
-    solver->solver->updateSetting("Termination.IterationLimit",
+    solver->updateSetting("Termination.IterationLimit",
         env->settings->getSetting<int>("Model.BoundTightening.InitialPOA.IterationLimit"));
 
-    solver->solver->updateSetting("Termination.ObjectiveGap.Absolute",
+    solver->updateSetting("Termination.ObjectiveGap.Absolute",
         env->settings->getSetting<double>("Model.BoundTightening.InitialPOA.ObjectiveGapAbsolute"));
-    solver->solver->updateSetting("Termination.ObjectiveGap.Relative",
+    solver->updateSetting("Termination.ObjectiveGap.Relative",
         env->settings->getSetting<double>("Model.BoundTightening.InitialPOA.ObjectiveGapRelative"));
 
-    solver->solver->updateSetting(
+    solver->updateSetting(
         "Dual.CutStrategy", env->settings->getSetting<int>("Model.BoundTightening.InitialPOA.CutStrategy"));
 
-    solver->solver->updateSetting("Dual.ESH.InteriorPoint.UsePrimalSolution",
-        static_cast<int>(ES_AddPrimalPointAsInteriorPoint::KeepOriginal));
+    solver->updateSetting(
+        "Dual.ESH.InteriorPoint.UsePrimalSolution", static_cast<int>(ES_AddPrimalPointAsInteriorPoint::KeepOriginal));
 
     return (solver);
 }
@@ -192,7 +192,7 @@ void TaskPerformBoundTightening::solvePOAProblem(std::shared_ptr<NLPSolverSHOT> 
     }
 
     // The time limit is shared by all the problems solved for the outer approximation
-    solver->solver->updateSetting("Termination.TimeLimit",
+    solver->updateSetting("Termination.TimeLimit",
         std::max(0.0,
             env->settings->getSetting<double>("Model.BoundTightening.InitialPOA.TimeLimit")
                 - env->timing->getElapsedTime("BoundTighteningPOA")));

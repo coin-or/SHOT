@@ -42,14 +42,20 @@ namespace SHOT
 NLPSolverSHOT::NLPSolverSHOT(EnvironmentPtr envPtr, ProblemPtr source) : INLPSolver(envPtr)
 {
     sourceProblem = source;
+    variableLowerBounds = sourceProblem->getVariableLowerBounds();
+    variableUpperBounds = sourceProblem->getVariableUpperBounds();
     initializeMIPProblem();
 }
 
 NLPSolverSHOT::~NLPSolverSHOT() = default;
 
+// A nested solver cannot solve another problem: its task loop has terminated, and its results, bounds and cuts are
+// those of the previous problem, of which the cuts for nonconvex constraints are not valid for another fixing of the
+// discrete variables. A new nested solver is therefore created for each solve after the first.
 void NLPSolverSHOT::initializeMIPProblem()
 {
     solver = std::make_shared<Solver>();
+    isNestedSolverUsed = false;
 
     // A SHOT NLP subsolver must not create another fixed-integer or polishing
     // NLP subsolver. With no external NLP backend, that would recurse during
@@ -77,6 +83,7 @@ void NLPSolverSHOT::initializeMIPProblem()
     solver->updateSetting("Dual.CutStrategy", 0);
     solver->updateSetting("Dual.TreeStrategy", 1);
     solver->updateSetting("Dual.MIP.Solver", env->settings->getSetting<int>("Dual.MIP.Solver"));
+    solver->updateSetting("Dual.MIP.NumberOfThreads", env->settings->getSetting<int>("Dual.MIP.NumberOfThreads"));
 
     solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
     solver->updateSetting("Model.BoundTightening.FeasibilityBased.MaxIterations", 0);
@@ -118,7 +125,14 @@ void NLPSolverSHOT::initializeMIPProblem()
     subproblemDebugPath /= ("SHOT_fixedNLP");
     solver->updateSetting("Output.Debug.Path", subproblemDebugPath.string());
 
+    for(auto& S : settingUpdates)
+        std::visit([&](auto value) { solver->updateSetting(S.first, value); }, S.second);
+
     relaxedProblem = sourceProblem->createCopy(solver->getEnvironment(), true, false, false);
+
+    for(auto& VAR : relaxedProblem->allVariables)
+        relaxedProblem->setVariableBounds(
+            VAR->getIndex(), variableLowerBounds[VAR->getIndex()], variableUpperBounds[VAR->getIndex()]);
 
     // Solver::selectStrategy() (called by setProblem()) catches its own initialization exceptions and returns
     // false rather than propagating them, so a failure here would otherwise be silently swallowed: this object
@@ -141,16 +155,16 @@ void NLPSolverSHOT::fixVariables(VectorInteger variableIndexes, VectorDouble var
 
 void NLPSolverSHOT::unfixVariables()
 {
+    variableLowerBounds = sourceProblem->getVariableLowerBounds();
+    variableUpperBounds = sourceProblem->getVariableUpperBounds();
+
+    // The bounds are set in the nested solver for the next solve
     for(auto& VAR : sourceProblem->allVariables)
     {
         relaxedProblem->setVariableBounds(VAR->getIndex(), VAR->lowerBound, VAR->upperBound);
         VAR->properties.hasLowerBoundBeenTightened = false;
         VAR->properties.hasUpperBoundBeenTightened = false;
     }
-
-    for(auto& VAR : relaxedProblem->allVariables)
-        solver->getEnvironment()->dualSolver->MIPSolver->updateVariableBound(
-            VAR->getIndex(), VAR->lowerBound, VAR->upperBound);
 
     fixedVariableIndexes.clear();
     fixedVariableValues.clear();
@@ -191,6 +205,21 @@ double NLPSolverSHOT::getObjectiveValue()
 
 E_NLPSolutionStatus NLPSolverSHOT::solveProblemInstance()
 {
+    if(isNestedSolverUsed)
+    {
+        try
+        {
+            initializeMIPProblem();
+        }
+        catch(const std::exception& e)
+        {
+            env->output->outputError(fmt::format("        Cannot solve fixed NLP problem with SHOT: {}", e.what()));
+            return E_NLPSolutionStatus::Error;
+        }
+    }
+
+    isNestedSolverUsed = true;
+
     solver->getEnvironment()->output->outputInfo("");
 
 #ifdef SIMPLE_OUTPUT_CHARS
@@ -226,13 +255,10 @@ E_NLPSolutionStatus NLPSolverSHOT::solveProblemInstance()
         solver->updateSetting("Dual.MIP.CutOff.UseInitialValue", true);
     }
 
-    // The timer of the nested solver is not restarted between the solves, so a limit for this solve is given from
-    // its elapsed time
     if(timeLimit < SHOT_DBL_MAX)
     {
         solver->updateSetting("Termination.TimeLimit",
-            solver->getEnvironment()->timing->getElapsedTime("Total")
-                + std::min(env->settings->getSetting<double>("Primal.FixedInteger.TimeLimit"), timeLimit));
+            std::min(env->settings->getSetting<double>("Primal.FixedInteger.TimeLimit"), timeLimit));
     }
 
     if(!problemInfoPrinted)
@@ -241,6 +267,10 @@ E_NLPSolutionStatus NLPSolverSHOT::solveProblemInstance()
         solver->getEnvironment()->report->outputOptionsReport();
         problemInfoPrinted = true;
     }
+
+    // The nested solver can have been created long before it is used, e.g., for the final polish, and its time limit
+    // is for this solve
+    solver->getEnvironment()->timing->restartTimer("Total");
 
     if(!solver->solveProblem())
         return E_NLPSolutionStatus::Error;
@@ -374,12 +404,32 @@ VectorDouble NLPSolverSHOT::getVariableUpperBounds() { return (relaxedProblem->g
 
 void NLPSolverSHOT::updateVariableLowerBound(int variableIndex, double bound)
 {
+    variableLowerBounds[variableIndex] = bound;
     relaxedProblem->setVariableLowerBound(variableIndex, bound);
 }
 
 void NLPSolverSHOT::updateVariableUpperBound(int variableIndex, double bound)
 {
+    variableUpperBounds[variableIndex] = bound;
     relaxedProblem->setVariableUpperBound(variableIndex, bound);
+}
+
+void NLPSolverSHOT::updateSetting(const std::string& name, int value)
+{
+    settingUpdates.emplace_back(name, value);
+    solver->updateSetting(name, value);
+}
+
+void NLPSolverSHOT::updateSetting(const std::string& name, double value)
+{
+    settingUpdates.emplace_back(name, value);
+    solver->updateSetting(name, value);
+}
+
+void NLPSolverSHOT::updateSetting(const std::string& name, bool value)
+{
+    settingUpdates.emplace_back(name, value);
+    solver->updateSetting(name, value);
 }
 
 std::string NLPSolverSHOT::getSolverDescription()

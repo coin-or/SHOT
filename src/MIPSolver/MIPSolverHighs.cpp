@@ -30,6 +30,34 @@
 namespace SHOT
 {
 
+// HiGHS has one scheduler of threads for the process, which keeps the number of threads it was created with. A solve
+// that asks for another number fails, while a solve with the automatic number (0) uses the scheduler there is. The
+// scheduler is therefore reset before a solve that asks for another number than the one it was created with, which
+// another solver in the process can have changed after this one was set up, e.g., a nested SHOT solver or another
+// solver in the same Python program.
+static void prepareGlobalScheduler(int numberOfThreads)
+{
+    static std::mutex schedulerMutex;
+
+    // The number of threads the scheduler was created with, 0 if automatic and -1 if it has not been created
+    static int schedulerThreads = -1;
+
+    std::lock_guard<std::mutex> lock(schedulerMutex);
+
+    if(numberOfThreads == 0)
+    {
+        if(schedulerThreads == -1)
+            schedulerThreads = 0;
+
+        return;
+    }
+
+    if(schedulerThreads != -1 && schedulerThreads != numberOfThreads)
+        Highs::resetGlobalScheduler(true);
+
+    schedulerThreads = numberOfThreads;
+}
+
 // Callback that correctly indents Highs log messages and prints them using SHOT's logging functionality
 HighsCallbackFunctionType highsCallback
     = [](int callback_type, const std::string& message, const HighsCallbackOutput* data_out,
@@ -414,23 +442,8 @@ void MIPSolverHighs::initializeSolverSettings()
         break;
     }
 
-    // HiGHS has one scheduler of threads for the process, which keeps the number of threads it was created with, and a
-    // solve that asks for another number fails. The scheduler is therefore reset when the number differs from the one
-    // of the previous solve in the process, e.g., between solvers with different settings in the same Python program
     int numberOfThreads = env->settings->getSetting<int>("Dual.MIP.NumberOfThreads");
-
-    {
-        static std::mutex schedulerMutex;
-        static int schedulerThreads = -1;
-
-        std::lock_guard<std::mutex> lock(schedulerMutex);
-
-        if(schedulerThreads != -1 && schedulerThreads != numberOfThreads)
-            Highs::resetGlobalScheduler(true);
-
-        schedulerThreads = numberOfThreads;
-    }
-
+    prepareGlobalScheduler(numberOfThreads);
     highsInstance.setOptionValue("threads", numberOfThreads);
 
     // The random seed is only set when it is not left at the default of the solver
@@ -732,7 +745,7 @@ E_ProblemSolutionStatus MIPSolverHighs::solveProblem()
 
     variableBoundsToRestore.clear();
 
-    highsReturnStatus = highsInstance.run();
+    highsReturnStatus = runSolver();
 
     // HiGHS gives no status, or a solve error, when it runs into numerical trouble, which it does e.g. when a warm
     // started simplex does not converge on a badly scaled problem. Solving again from a clean state, which lets it
@@ -742,7 +755,7 @@ E_ProblemSolutionStatus MIPSolverHighs::solveProblem()
         env->output->outputDebug(
             "        The MIP solver did not return a solution, solving again from a clean state.");
         highsInstance.clearSolver();
-        highsReturnStatus = highsInstance.run();
+        highsReturnStatus = runSolver();
     }
 
     // HiGHS also changes the status of a MIP problem it has solved to a solve error if the solution violates a row by
@@ -758,7 +771,7 @@ E_ProblemSolutionStatus MIPSolverHighs::solveProblem()
         highsInstance.setOptionValue("presolve", "off");
         currentSolutions.clear();
         highsInstance.clearSolver();
-        highsReturnStatus = highsInstance.run();
+        highsReturnStatus = runSolver();
         highsInstance.setOptionValue("presolve", presolve);
     }
 
@@ -823,7 +836,7 @@ E_ProblemSolutionStatus MIPSolverHighs::solveProblem()
         if(problemUpdated)
         {
             currentSolutions.clear();
-            highsReturnStatus = highsInstance.run();
+            highsReturnStatus = runSolver();
             MIPSolutionStatus = getSolutionStatus();
 
             // The point is only feasible since the problem has been changed
@@ -838,6 +851,15 @@ E_ProblemSolutionStatus MIPSolverHighs::solveProblem()
     return (MIPSolutionStatus);
 }
 
+HighsStatus MIPSolverHighs::runSolver()
+{
+    int numberOfThreads = 0;
+    highsInstance.getOptionValue("threads", numberOfThreads);
+    prepareGlobalScheduler(numberOfThreads);
+
+    return (highsInstance.run());
+}
+
 E_ProblemSolutionStatus MIPSolverHighs::resolveInfeasibleOrUnbounded(E_ProblemSolutionStatus status)
 {
     if(highsInstance.getModelStatus() != HighsModelStatus::kUnboundedOrInfeasible)
@@ -847,7 +869,7 @@ E_ProblemSolutionStatus MIPSolverHighs::resolveInfeasibleOrUnbounded(E_ProblemSo
     highsInstance.getOptionValue("presolve", presolve);
 
     highsInstance.setOptionValue("presolve", "off");
-    highsReturnStatus = highsInstance.run();
+    highsReturnStatus = runSolver();
     status = getSolutionStatus();
     highsInstance.setOptionValue("presolve", presolve);
 

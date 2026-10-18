@@ -76,7 +76,8 @@ set(Model_parts
     67
     68
     69
-    70) # The different parts of each test (if any)
+    70
+    71) # The different parts of each test (if any)
 
 set(Settings_parts 1 2 3 4 5 6 7 8 9)
 
@@ -96,7 +97,7 @@ if(HAS_GUROBI)
 endif()
 
 if(HAS_HIGHS)
-  set(Highs_parts 1 2 3 4 5 6 7 8 9 10 11)
+  set(Highs_parts 1 2 3 4 5 6 7 8 9 10 11 12)
   set(cpptests ${cpptests} Highs)
 endif()
 

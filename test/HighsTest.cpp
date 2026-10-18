@@ -322,6 +322,69 @@ bool HighsExternalDualBoundCallbackTest(std::string filename, double dualBoundTo
     return (true);
 }
 
+bool HighsSchedulerChangedDuringSolveTest(std::string filename, std::string otherFilename, double correctObjectiveValue)
+{
+    // HiGHS has one scheduler of threads for the process, and a solve that asks for another number of threads than it
+    // was created with fails. A solver whose number of threads was set when its problem was set up therefore failed
+    // when another solver in the process, e.g., a nested SHOT solver for the fixed-integer NLP problems, used another
+    // number of threads while it was solving: its next MIP problem was reported as a numerical issue. Here another
+    // solver with two threads is run from a callback of the solver with one thread.
+
+    auto solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Error));
+    solver->updateSetting("Termination.TimeLimit", 60.0);
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Highs));
+    solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+    solver->updateSetting("Primal.FixedInteger.Use", false);
+
+    if(!solver->setProblem(filename))
+    {
+        std::cout << "Error while reading problem " << filename << '\n';
+        return (false);
+    }
+
+    bool isOtherSolved = false;
+
+    solver->registerCallback<TerminationCheckContext>(
+        [&](TerminationCheckContext& context)
+        {
+            if(isOtherSolved || context.getIterationNumber() < 2)
+                return;
+
+            auto otherSolver = std::make_unique<Solver>();
+            otherSolver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+            otherSolver->updateSetting("Termination.TimeLimit", 10.0);
+            otherSolver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Highs));
+            otherSolver->updateSetting("Dual.MIP.NumberOfThreads", 2);
+
+            isOtherSolved = otherSolver->setProblem(otherFilename) && otherSolver->solveProblem();
+        });
+
+    solver->solveProblem();
+
+    if(!isOtherSolved)
+    {
+        std::cout << "The other problem " << otherFilename << " was not solved from the callback.\n";
+        return (false);
+    }
+
+    if(!solver->hasPrimalSolution()
+        || std::abs(solver->getPrimalSolution().objValue - correctObjectiveValue)
+            > 1e-3 * std::abs(correctObjectiveValue))
+    {
+        std::cout << "The problem was not solved to the objective " << correctObjectiveValue
+                  << ", terminated with: " << env->results->terminationReasonDescription << '\n';
+        return (false);
+    }
+
+    std::cout << "Solved to the objective " << solver->getPrimalSolution().objValue << " with the problem "
+              << otherFilename << " solved in between.\n";
+
+    return (true);
+}
+
 int HighsTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -398,6 +461,11 @@ int HighsTest(int argc, char* argv[])
         std::cout << "Finished test for callbacks getting and setting primal solutions and dual bounds through a "
                      "callback with multi-tree strategy."
                   << std::endl;
+        break;
+    case 12:
+        std::cout << "Starting test with another number of threads in HiGHS during a solve." << std::endl;
+        passed = HighsSchedulerChangedDuringSolveTest("data/synthes1.osil", "data/tls2.osil", 6.00976);
+        std::cout << "Finished test with another number of threads in HiGHS during a solve." << std::endl;
         break;
     default:
         passed = false;

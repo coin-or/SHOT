@@ -193,6 +193,9 @@ private:
     Highs highsInstance;
     HighsStatus highsReturnStatus;
     HighsMipData highsCallbackData;
+
+    // Solves the problem, after making sure that the scheduler of HiGHS has the number of threads of this solver
+    HighsStatus runSolver();
     std::unique_ptr<HighsTerminationHelper> terminationHelper;
 
     long int solutionLimit;
