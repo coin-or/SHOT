@@ -27,6 +27,7 @@
 #include "../src/ModelingSystem/ModelingSystemOSiL.h"
 #include "../src/Tasks/TaskSelectPrimalFixedNLPPointsFromSolutionPool.h"
 #include "../src/PrimalSolver.h"
+#include "../src/NLPSolver/NLPSolverSHOT.h"
 
 #include <algorithm>
 #include <cmath>
@@ -173,6 +174,7 @@ bool ModelTestVariableBoundCache();
 bool ModelTestMaximizePartitionedSquares();
 bool ModelTestLDLFactorizationScaling();
 bool ModelTestLDLFactorizationFillLimit();
+bool ModelTestSHOTFixedNLPResolve();
 bool ModelTestBoundTighteningMatchesReference();
 bool ModelTestBoundTighteningMatchesReferenceOnInstances();
 bool ModelTestBoundTighteningPropagation();
@@ -530,6 +532,9 @@ int ModelTest(int argc, char* argv[])
         break;
     case 70:
         passed = ModelTestLDLFactorizationFillLimit();
+        break;
+    case 71:
+        passed = ModelTestSHOTFixedNLPResolve();
         break;
     default:
         passed = false;
@@ -11986,6 +11991,104 @@ bool ModelTestIntervalDerivativeStatus()
 
     if(passed)
         std::cout << "  the status of the interval derivatives is correct and no bound is NaN.\n";
+
+    return passed;
+}
+
+bool ModelTestSHOTFixedNLPResolve()
+{
+    // SHOT as the fixed-integer NLP solver is solved once for each fixing of the discrete variables. The nested solver
+    // could only solve one problem: in later solves its task loop had already terminated, and the solution of the
+    // first fixing was returned again. Its time limit was also measured from when it was created, so a solver created
+    // long before its first solve, as for the final polish, terminated on the time limit directly.
+    //
+    // minimize (x-3)^2 + (y-3)^2 + 2b  s.t.  x^2 + y^2 - 16b <= 2,  x, y in [0, 4]
+    //
+    // gives the objective 8 for b = 0 (x = y = 1) and 2 for b = 1 (x = y = 3).
+
+    bool passed = true;
+
+#ifdef HAS_HIGHS
+    auto solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Error));
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Highs));
+    solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+    solver->updateSetting("Primal.FixedInteger.TimeLimit", 1.0);
+
+    auto problem = std::make_shared<Problem>(env);
+
+    auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.0, 4.0);
+    auto y = std::make_shared<Variable>("y", E_VariableType::Real, 0.0, 4.0);
+    auto b = std::make_shared<Variable>("b", E_VariableType::Binary, 0.0, 1.0);
+    problem->add({ x, y, b });
+
+    auto objective = std::make_shared<NonlinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<ExpressionSquare>(std::make_shared<ExpressionSum>(
+        std::make_shared<ExpressionConstant>(-3.0), std::make_shared<ExpressionVariable>(x))));
+    objective->add(std::make_shared<ExpressionSquare>(std::make_shared<ExpressionSum>(
+        std::make_shared<ExpressionConstant>(-3.0), std::make_shared<ExpressionVariable>(y))));
+    objective->add(std::make_shared<LinearTerm>(2.0, b));
+    problem->add(objective);
+
+    auto constraint = std::make_shared<QuadraticConstraint>("c", SHOT_DBL_MIN, 2.0);
+    constraint->add(std::make_shared<QuadraticTerm>(1.0, x, x));
+    constraint->add(std::make_shared<QuadraticTerm>(1.0, y, y));
+    constraint->add(std::make_shared<LinearTerm>(-16.0, b));
+    problem->add(constraint);
+
+    problem->finalize();
+
+    if(!solver->setProblem(problem))
+    {
+        std::cout << "  FAILED: the problem could not be set.\n";
+        return (false);
+    }
+
+    auto sourceProblem = env->reformulatedProblem;
+
+    int binaryIndex = -1;
+
+    for(auto& V : sourceProblem->allVariables)
+    {
+        if(V->name == "b")
+            binaryIndex = V->getIndex();
+    }
+
+    if(binaryIndex < 0)
+    {
+        std::cout << "  FAILED: the binary variable is not in the reformulated problem.\n";
+        return (false);
+    }
+
+    auto nlpSolver = std::make_shared<NLPSolverSHOT>(env, sourceProblem);
+    nlpSolver->reuseHyperplanes = false;
+    nlpSolver->useCutOff = false;
+
+    // The first solve is after the time limit of a solve, counted from when the solver was created
+    std::this_thread::sleep_for(std::chrono::milliseconds(1500));
+
+    std::vector<std::pair<double, double>> fixings { { 0.0, 8.0 }, { 1.0, 2.0 }, { 0.0, 8.0 } };
+
+    for(auto& [value, expectedObjective] : fixings)
+    {
+        nlpSolver->fixVariables({ binaryIndex }, { value });
+        auto status = nlpSolver->solveProblem();
+        double objective = nlpSolver->getObjectiveValue();
+        nlpSolver->unfixVariables();
+
+        if(status != E_NLPSolutionStatus::Optimal || std::abs(objective - expectedObjective) > 1e-4)
+        {
+            std::cout << "  FAILED: with b = " << value << " the status is " << static_cast<int>(status)
+                      << " and the objective " << objective << ", expected optimal and " << expectedObjective << ".\n";
+            passed = false;
+        }
+        else
+        {
+            std::cout << "  with b = " << value << " the objective is " << objective << " as expected.\n";
+        }
+    }
+#endif
 
     return passed;
 }
