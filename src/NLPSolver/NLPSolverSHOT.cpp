@@ -83,6 +83,7 @@ void NLPSolverSHOT::initializeMIPProblem()
     solver->updateSetting("Dual.CutStrategy", 0);
     solver->updateSetting("Dual.TreeStrategy", 1);
     solver->updateSetting("Dual.MIP.Solver", env->settings->getSetting<int>("Dual.MIP.Solver"));
+    solver->updateSetting("Dual.MIP.NumberOfThreads", env->settings->getSetting<int>("Dual.MIP.NumberOfThreads"));
 
     solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
     solver->updateSetting("Model.BoundTightening.FeasibilityBased.MaxIterations", 0);
