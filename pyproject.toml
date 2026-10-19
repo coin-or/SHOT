@@ -69,7 +69,7 @@ sdist.inclusion-mode = "explicit"
 sdist.include = [
     "/CMakeLists.txt", "/pyproject.toml", "/README.md", "/README",
     "/INSTALL", "/LICENSE", "/AUTHORS",
-    "/src/**", "/test/**", "/misc/**",
+    "/src/**", "/test/**", "/misc/**", "/examples/**",
     "/ThirdParty/README.md", "/ThirdParty/versions.json",
     "/ThirdParty/CppAD/**", "/ThirdParty/HiGHS/**", "/ThirdParty/eigen/**",
     "/ThirdParty/pybind11/**", "/ThirdParty/spdlog/**",
