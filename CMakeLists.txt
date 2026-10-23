@@ -791,6 +791,16 @@ add_library(
 target_link_libraries(SHOTPrimalStrategy SHOTModel SHOTBuildSettings)
 if(HAS_CONOPT)
     target_link_libraries(SHOTPrimalStrategy CONOPT::CONOPT)
+    if(WIN32)
+        # Delay-load CONOPT, which SHOT then loads from the SDK's lib directory (see NLPSolverConopt.cpp).
+        get_filename_component(_conopt_cpp_dll "${CONOPT_CPP_LIBRARY}" NAME_WE)
+        get_filename_component(_conopt_dll "${CONOPT_LIBRARY}" NAME_WE)
+        target_compile_definitions(SHOTPrimalStrategy PRIVATE
+            SHOT_CONOPT_DLL="${_conopt_cpp_dll}.dll" SHOT_CONOPT_LIBRARY_DIR="${CONOPT_LIBRARY_DIR}")
+        set_property(TARGET CONOPT::CONOPT APPEND PROPERTY INTERFACE_LINK_LIBRARIES delayimp)
+        set_property(TARGET CONOPT::CONOPT APPEND PROPERTY INTERFACE_LINK_OPTIONS
+            "/DELAYLOAD:${_conopt_cpp_dll}.dll" "/DELAYLOAD:${_conopt_dll}.dll")
+    endif()
 endif()
 
 # Creates the dual strategy library

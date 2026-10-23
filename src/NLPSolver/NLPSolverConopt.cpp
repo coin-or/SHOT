@@ -9,6 +9,7 @@
 #include "../Settings.h"
 #include "../TaskHandler.h"
 #include "../Timing.h"
+#include "../Utilities.h"
 #include <conopt.hpp>
 #include <algorithm>
 #include <chrono>
@@ -21,12 +22,48 @@
 #include <optional>
 #include <set>
 #include <stdexcept>
-#include <unistd.h>
+#include <system_error>
+
+#ifdef HAS_STD_FILESYSTEM
+#include <filesystem>
+namespace fs = std;
+#endif
+
+#ifdef HAS_STD_EXPERIMENTAL_FILESYSTEM
+#include <experimental/filesystem>
+namespace fs = std::experimental;
+#endif
+
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+#endif
 
 namespace SHOT
 {
 namespace
 {
+#ifdef _WIN32
+    // CONOPT is delay-loaded on Windows. Load it from the configured SDK, as rpaths do elsewhere, since
+    // Python does not search PATH for the dependencies of SHOTpy. Otherwise use the default DLL search.
+    bool loadConopt()
+    {
+        static const bool loaded = []
+        {
+            if(GetModuleHandleA(SHOT_CONOPT_DLL))
+                return true;
+            // LOAD_WITH_ALTERED_SEARCH_PATH requires backslashes
+            auto path = (fs::filesystem::path(SHOT_CONOPT_LIBRARY_DIR) / SHOT_CONOPT_DLL).make_preferred();
+            return LoadLibraryExW(path.wstring().c_str(), nullptr, LOAD_WITH_ALTERED_SEARCH_PATH) != nullptr
+                || LoadLibraryA(SHOT_CONOPT_DLL) != nullptr;
+        }();
+        return loaded;
+    }
+#else
+    bool loadConopt() { return true; }
+#endif
+
     bool userTerminated(const EnvironmentPtr& env)
     {
         if(!env->tasks->isTerminated() && env->callbacks->isActive(E_CallbackLocation::TerminationCheck))
@@ -578,14 +615,18 @@ namespace
     public:
         OptionFile()
         {
-            char path[] = "/tmp/shot-conopt-XXXXXX";
-            int fd = mkstemp(path);
-            if(fd < 0)
+            // A new private directory avoids races on the file name, also on Windows
+            directory = Utilities::createTemporaryDirectory("shot-conopt-");
+            if(directory.empty())
                 throw std::runtime_error("Cannot create CONOPT option file");
-            close(fd);
-            name = path;
+            name = (fs::filesystem::path(directory) / "conopt.opt").string();
         }
-        ~OptionFile() { std::remove(name.c_str()); }
+        ~OptionFile()
+        {
+            std::error_code error;
+            fs::filesystem::remove_all(directory, error);
+        }
+        std::string directory;
         std::string name;
     };
 } // namespace
@@ -601,6 +642,9 @@ NLPSolverConopt::NLPSolverConopt(EnvironmentPtr envPtr, ProblemPtr source)
     , lowerBounds(source->getVariableLowerBounds())
     , upperBounds(source->getVariableUpperBounds())
 {
+    if(!loadConopt())
+        throw std::runtime_error("Cannot load the CONOPT library; keep the SDK lib directory at its configured "
+                                 "location or on PATH");
 }
 
 void NLPSolverConopt::setStartingPoint(VectorInteger indexes, VectorDouble values)

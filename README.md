@@ -62,7 +62,7 @@ Replace `GUROBI_DIR` with your local installation path. Verify the resulting
 build with `python -c "import SHOTpy; print(SHOTpy.HAS_GUROBI)"`; it should print
 `True`.
 
-For CONOPT on Linux or macOS, download and extract the
+For CONOPT on Linux, macOS, or Windows x64, download and extract the
 [CONOPT C++ SDK](https://conopt.gams.com/download/), then rebuild from this
 checkout (which includes the CONOPT integration):
 
@@ -87,7 +87,11 @@ solver.updateSetting(
 This builds a local wheel linked to your external SDK. Keep the SDK at its
 configured location; CONOPT libraries are not installed into the wheel by this
 build. Do not run wheel repair tools (`auditwheel`, `delocate`, or `delvewheel`)
-on this local wheel, since they can copy external libraries into it. The public
+on this local wheel, since they can copy external libraries into it. On Windows,
+build from an x64 Native Tools Command Prompt with the `CBC_DIR`, `IPOPT_DIR`,
+and `CMAKE_ARGS=-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL` settings used
+for the [Windows wheels](docs/CompilationInstructions.md#building-shotpy-wheels);
+SHOTpy then loads CONOPT from the configured SDK, without `PATH` changes. The public
 wheel build keeps CONOPT disabled. See the
 [CONOPT instructions](docs/CompilationInstructions.md#conopt-primal-nlp-solver)
 for licensing, demo limits, and solver settings.

@@ -1,7 +1,8 @@
 # CONOPT 4.39 C++ SDK, shipped with a compiled wrapper and core library.
+# The Windows SDK names its import libraries conoptcpp4.lib and conopt4.lib.
 find_path(CONOPT_INCLUDE_DIR NAMES conopt.hpp HINTS "${CONOPT_DIR}" PATH_SUFFIXES include)
-find_library(CONOPT_CPP_LIBRARY NAMES conoptcpp HINTS "${CONOPT_DIR}" PATH_SUFFIXES lib lib64)
-find_library(CONOPT_LIBRARY NAMES conopt HINTS "${CONOPT_DIR}" PATH_SUFFIXES lib lib64)
+find_library(CONOPT_CPP_LIBRARY NAMES conoptcpp conoptcpp4 HINTS "${CONOPT_DIR}" PATH_SUFFIXES lib lib64)
+find_library(CONOPT_LIBRARY NAMES conopt conopt4 HINTS "${CONOPT_DIR}" PATH_SUFFIXES lib lib64)
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(CONOPT DEFAULT_MSG
     CONOPT_INCLUDE_DIR CONOPT_CPP_LIBRARY CONOPT_LIBRARY)

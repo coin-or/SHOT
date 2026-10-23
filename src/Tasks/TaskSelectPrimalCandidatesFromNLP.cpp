@@ -112,7 +112,19 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(
 #ifdef HAS_CONOPT
     case ES_PrimalNLPSolver::Conopt:
         env->results->usedPrimalNLPSolver = ES_PrimalNLPSolver::Conopt;
-        NLPSolver = std::make_shared<NLPSolverConopt>(env, sourceProblem);
+
+        try
+        {
+            NLPSolver = std::make_shared<NLPSolverConopt>(env, sourceProblem);
+        }
+        catch(const std::exception& e)
+        {
+            env->output->outputWarning(fmt::format(
+                " Could not initialize CONOPT as the fixed-integer NLP solver, disabling this primal heuristic: {}",
+                e.what()));
+            NLPSolver = nullptr;
+        }
+
         break;
 #endif
 #ifdef HAS_UNO

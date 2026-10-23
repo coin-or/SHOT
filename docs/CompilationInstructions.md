@@ -244,6 +244,34 @@ use the `/MD` Cbc 2.10.13 package described in the wheel section; the Cbc
 Keep Gurobi's `bin` directory on `PATH` so Windows can load `gurobi130.dll`.
 Gurobi is not included in the public SHOTpy wheels.
 
+#### Adding CONOPT
+
+The native MSVC build has been tested with CONOPT 4.39.3. Extract
+`conopt-4_39_3-win-x86_64.zip` from the [CONOPT download page](https://conopt.gams.com/download/),
+for example to `C:/solvers/conopt`, and point `CONOPT_DIR` at the directory
+containing `include` and `lib`:
+
+```bat
+cmake -S . -B build-msvc-conopt -G Ninja -DCMAKE_BUILD_TYPE=Release ^
+  -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL ^
+  -DHAS_CONOPT=ON -DCONOPT_DIR=C:/solvers/conopt/conopt-win-x86_64 ^
+  -DHAS_HIGHS=ON -DHAS_CBC=OFF -DHAS_IPOPT=OFF ^
+  -DHAS_CPLEX=OFF -DHAS_GUROBI=OFF -DHAS_GAMS=OFF -DHAS_UNO=OFF ^
+  -DHAS_PYTHON=OFF -DCOMPILE_TESTS=ON
+cmake --build build-msvc-conopt --parallel 4
+ctest --test-dir build-msvc-conopt --output-on-failure -R "^(Conopt_|Instance_11$)"
+build-msvc-conopt\SHOT.exe test\data\alan.osil --mip=highs --nlp=conopt
+```
+
+The CONOPT C++ library uses `/MD`, so select `MultiThreadedDLL` as shown (and
+the `/MD` Cbc package if Cbc is also enabled). SHOT delay-loads
+`conoptcpp4.dll` and `conopt4.dll`: when a CONOPT solver is created, they are
+loaded from the configured SDK `lib` directory, so neither `PATH` changes nor
+copies of the DLLs are needed. If the SDK has moved, SHOT falls back to the
+standard DLL search, including `PATH`; if CONOPT still cannot be loaded, SHOT
+warns and disables the fixed-integer NLP heuristic. CONOPT DLLs are not copied
+beside SHOT or installed.
+
 #### Building SHOTpy wheels
 
 Windows x64 wheels are built and tested for CPython 3.11 through 3.15.
@@ -535,7 +563,8 @@ cmake --build build -j
 `HAS_CONOPT` defaults to `OFF`. If requested but the SDK is not found, CMake warns
 and disables it. Keep the SDK's `lib` directory, including its bundled runtime
 libraries, available at runtime. The SDK library directory is included in build
-and install rpaths; binaries do not bundle or redistribute CONOPT.
+and install rpaths; binaries do not bundle or redistribute CONOPT. For Windows,
+see [Adding CONOPT](#adding-conopt) in the MSVC instructions.
 
 On Linux, install into a chosen prefix with `cmake --install build --prefix /path/to/prefix`.
 The executable in `bin` finds SHOT and its built CppAD runtime in the prefix's
