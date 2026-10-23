@@ -725,6 +725,10 @@ void NLPSolverConopt::saveOptionsToFile(std::string filename)
     file << std::scientific << std::uppercase << std::setprecision(8);
     file << "Rtnwma " << env->settings->getSetting<double>("Subsolver.Conopt.FeasibilityTolerance") << '\n'
          << "Rtredg " << env->settings->getSetting<double>("Subsolver.Conopt.OptimalityTolerance") << '\n';
+
+    // CONOPT stops with an error if the derivatives differ from the numerical ones
+    if(int check = env->settings->getSetting<int>("Subsolver.Conopt.DerivativeCheck"); check != 0)
+        file << "Lkdebg " << check << '\n' << "Lkdeb2 " << check << '\n';
     if(!file)
         throw std::runtime_error("Cannot write CONOPT options");
 }

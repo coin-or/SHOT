@@ -83,6 +83,8 @@ int ConoptTest(int argc, char* argv[])
         int part = argc > 1 ? std::stoi(argv[1]) : 1;
         Solver solver;
         auto env = solver.getEnvironment();
+        // CONOPT checks the derivatives in every iteration, and stops with an error if they are wrong
+        solver.updateSetting("Subsolver.Conopt.DerivativeCheck", 1);
         if(argc > 2)
         {
             solver.updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Trace));

@@ -1799,6 +1799,10 @@ void Solver::initializeSettings()
         "CONOPT feasibility tolerance (Rtnwma)", 1e-12, 1e-2);
     env->settings->createSetting("Subsolver.Conopt.OptimalityTolerance", 1e-9,
         "CONOPT reduced-gradient tolerance (Rtredg)", 1e-12, 1e-2);
+    env->settings->createSetting("Subsolver.Conopt.DerivativeCheck", 0,
+        "CONOPT compares the first and second derivatives with numerical ones (Lkdebg, Lkdeb2): 0 = never, -1 = at "
+        "the initial point, n = every n-th iteration",
+        -1, SHOT_INT_MAX);
 #endif
 
     // Subsolver settings: Ipopt
