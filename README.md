@@ -52,6 +52,11 @@ pip install SHOTpy --no-binary SHOTpy \
 ```
 
 Use the same pattern with `HAS_CPLEX`/`CPLEX_DIR` or `HAS_GAMS`/`GAMS_DIR`.
+
+Replace `GUROBI_DIR` with your local installation path. Verify the resulting
+build with `python -c "import SHOTpy; print(SHOTpy.HAS_GUROBI)"`; it should print
+`True`.
+
 The compiler toolchain and open-source dependencies described in the
 [compilation instructions](docs/CompilationInstructions.md) are still required
 for a source build.
