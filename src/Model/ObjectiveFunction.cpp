@@ -722,8 +722,10 @@ SparseVariableVector NonlinearObjectiveFunction::calculateGradient(const VectorD
 
     if(this->properties.hasNonlinearExpression)
     {
+        // The getter also sorts the pattern and removes duplicates, e.g., of a variable in both a linear term and the
+        // nonlinear expression
         if(!nonlinearGradientSparsityMapGenerated)
-            initializeGradientSparsityPattern();
+            getGradientSparsityPattern();
 
         if(auto sharedOwnerProblem = ownerProblem.lock())
         {

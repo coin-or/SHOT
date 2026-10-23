@@ -14,6 +14,20 @@
 
 namespace SHOT
 {
+void AuxiliaryVariable::takeOwnership(ProblemPtr owner)
+{
+    Variable::takeOwnership(owner);
+
+    // The terms and the expression defining the value belong to the same problem
+    linearTerms.takeOwnership(owner);
+    quadraticTerms.takeOwnership(owner);
+    monomialTerms.takeOwnership(owner);
+    signomialTerms.takeOwnership(owner);
+
+    if(nonlinearExpression)
+        nonlinearExpression->takeOwnership(owner);
+}
+
 double AuxiliaryVariable::calculate(const VectorDouble& point) const
 {
     // The sign binary of an absolute value is one if the argument is nonnegative and zero otherwise

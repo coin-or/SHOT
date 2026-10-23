@@ -979,9 +979,11 @@ void TaskReformulateProblem::createEpigraphConstraint()
 
     if(env->problem->objectiveFunction->properties.hasNonlinearExpression)
     {
-        objectiveVariable->nonlinearExpression
-            = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->problem->objectiveFunction)
-                  ->nonlinearExpression;
+        // Copied, since the expression belongs to the original problem
+        objectiveVariable->nonlinearExpression = copyNonlinearExpression(
+            std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->problem->objectiveFunction)
+                ->nonlinearExpression.get(),
+            reformulatedProblem);
     }
 
     double signfactor = (env->problem->objectiveFunction->properties.isMinimize) ? 1.0 : -1.0;
@@ -1239,8 +1241,10 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
     {
         LinearTerms copiedTerms;
 
+        // The terms refer to the variables of the original problem
         for(auto& T : std::dynamic_pointer_cast<LinearConstraint>(C)->linearTerms)
-            copiedTerms.push_back(std::make_shared<LinearTerm>(T->coefficient, T->variable));
+            copiedTerms.push_back(std::make_shared<LinearTerm>(
+                T->coefficient, reformulatedProblem->getVariable(T->variable->getIndex())));
 
         destinationLinearTerms.add(copiedTerms);
     }
@@ -2374,10 +2378,12 @@ std::tuple<LinearTerms, MonomialTerms> TaskReformulateProblem::reformulateMonomi
             auxConstraint1->add(std::make_shared<LinearTerm>(N, auxbVar));
             auxConstraint2->add(std::make_shared<LinearTerm>(-1.0, auxbVar));
 
+            // The variables of the term belong to the original problem
             for(auto& V : T->variables)
             {
-                auto negativeTerm = std::make_shared<LinearTerm>(-1.0, V);
-                auto positiveTerm = std::make_shared<LinearTerm>(1.0, V);
+                auto variable = reformulatedProblem->getVariable(V->getIndex());
+                auto negativeTerm = std::make_shared<LinearTerm>(-1.0, variable);
+                auto positiveTerm = std::make_shared<LinearTerm>(1.0, variable);
 
                 // The usual case has one copy of each binary variable. Then the terms are already
                 // distinct and the per-term search in add() is unnecessary. Keep add() for powers

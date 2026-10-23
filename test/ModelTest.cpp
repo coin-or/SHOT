@@ -175,6 +175,8 @@ bool ModelTestMaximizePartitionedSquares();
 bool ModelTestLDLFactorizationScaling();
 bool ModelTestLDLFactorizationFillLimit();
 bool ModelTestSHOTFixedNLPResolve();
+bool ModelTestReformulatedLinearTermVariables();
+bool ModelTestEpigraphObjectiveExpressionCopied();
 bool ModelTestBoundTighteningMatchesReference();
 bool ModelTestBoundTighteningMatchesReferenceOnInstances();
 bool ModelTestBoundTighteningPropagation();
@@ -535,6 +537,12 @@ int ModelTest(int argc, char* argv[])
         break;
     case 71:
         passed = ModelTestSHOTFixedNLPResolve();
+        break;
+    case 72:
+        passed = ModelTestReformulatedLinearTermVariables();
+        break;
+    case 73:
+        passed = ModelTestEpigraphObjectiveExpressionCopied();
         break;
     default:
         passed = false;
@@ -12089,6 +12097,249 @@ bool ModelTestSHOTFixedNLPResolve()
         }
     }
 #endif
+
+    return passed;
+}
+
+bool ModelTestReformulatedLinearTermVariables()
+{
+    // The linear terms of a reformulated nonlinear constraint referred to the variables of the original problem. A
+    // variable in both a linear term and the nonlinear expression was then two different objects in the gradient
+    // sparsity pattern, which was also not made unique when a gradient was calculated before the pattern was
+    // requested. A Jacobian built from the pattern had the same column twice, which CONOPT rejects. The linear
+    // constraints of the simple binary monomial reformulation also referred to the original variables.
+    //
+    // minimize -x - y + b  s.t.  exp(x) + 2x + b <= 10,  exp(y) + x + 3y - b <= 12,  bcd + cde + x <= 3
+
+    bool passed = true;
+
+    auto buildProblem = [](EnvironmentPtr env)
+    {
+        auto problem = std::make_shared<Problem>(env);
+
+        auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.1, 4.0);
+        auto y = std::make_shared<Variable>("y", E_VariableType::Real, 0.1, 4.0);
+        auto b = std::make_shared<Variable>("b", E_VariableType::Binary, 0.0, 1.0);
+        auto c = std::make_shared<Variable>("c", E_VariableType::Binary, 0.0, 1.0);
+        auto d = std::make_shared<Variable>("d", E_VariableType::Binary, 0.0, 1.0);
+        auto e = std::make_shared<Variable>("e", E_VariableType::Binary, 0.0, 1.0);
+        problem->add({ x, y, b, c, d, e });
+
+        auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+        objective->add(std::make_shared<LinearTerm>(-1.0, x));
+        objective->add(std::make_shared<LinearTerm>(-1.0, y));
+        objective->add(std::make_shared<LinearTerm>(1.0, b));
+        problem->add(objective);
+
+        auto first = std::make_shared<NonlinearConstraint>("first", SHOT_DBL_MIN, 10.0);
+        first->add(std::make_shared<ExpressionExp>(std::make_shared<ExpressionVariable>(x)));
+        first->add(std::make_shared<LinearTerm>(2.0, x));
+        first->add(std::make_shared<LinearTerm>(1.0, b));
+        problem->add(first);
+
+        auto second = std::make_shared<NonlinearConstraint>("second", SHOT_DBL_MIN, 12.0);
+        second->add(std::make_shared<ExpressionExp>(std::make_shared<ExpressionVariable>(y)));
+        second->add(std::make_shared<LinearTerm>(1.0, x));
+        second->add(std::make_shared<LinearTerm>(3.0, y));
+        second->add(std::make_shared<LinearTerm>(-1.0, b));
+        problem->add(second);
+
+        auto monomials = std::make_shared<NonlinearConstraint>("monomials", SHOT_DBL_MIN, 3.0);
+        monomials->add(std::make_shared<MonomialTerm>(1.0, Variables { b, c, d }));
+        monomials->add(std::make_shared<MonomialTerm>(1.0, Variables { c, d, e }));
+        monomials->add(std::make_shared<LinearTerm>(1.0, x));
+        problem->add(monomials);
+
+        problem->finalize();
+        return (problem);
+    };
+
+    auto hasUniquePattern = [](const NumericConstraintPtr& constraint)
+    {
+        std::set<int> indexes;
+
+        for(auto& V : *constraint->getGradientSparsityPattern())
+        {
+            if(!indexes.insert(V->getIndex()).second)
+            {
+                std::cout << "  FAILED: " << constraint->name << " has variable " << V->name
+                          << " twice in its gradient sparsity pattern.\n";
+                return (false);
+            }
+        }
+
+        return (true);
+    };
+
+    {
+        // A gradient calculated before the pattern is requested must still give a unique pattern
+        auto env = std::make_unique<Solver>()->getEnvironment();
+        auto problem = buildProblem(env);
+        VectorDouble point(problem->allVariables.size(), 1.0);
+
+        for(auto& C : problem->nonlinearConstraints)
+        {
+            C->calculateGradient(point, false);
+            passed = hasUniquePattern(C) && passed;
+        }
+    }
+
+    auto solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Error));
+
+    if(!solver->setProblem(buildProblem(env)))
+    {
+        std::cout << "  FAILED: the problem could not be set.\n";
+        return (false);
+    }
+
+    auto reformulatedProblem = env->reformulatedProblem;
+
+    if(reformulatedProblem->nonlinearConstraints.size() < 2)
+    {
+        std::cout << "  FAILED: expected two nonlinear constraints in the reformulated problem, got "
+                  << reformulatedProblem->nonlinearConstraints.size() << ".\n";
+        return (false);
+    }
+
+    for(auto& C : reformulatedProblem->nonlinearConstraints)
+    {
+        if(C->linearTerms.size() == 0)
+        {
+            std::cout << "  FAILED: " << C->name << " has no linear terms after reformulation.\n";
+            passed = false;
+        }
+    }
+
+    for(auto& NC : reformulatedProblem->numericConstraints)
+    {
+        auto C = std::dynamic_pointer_cast<LinearConstraint>(NC);
+
+        if(!C)
+            continue;
+
+        for(auto& T : C->linearTerms)
+        {
+            if(T->variable != reformulatedProblem->getVariable(T->variable->getIndex()))
+            {
+                std::cout << "  FAILED: a linear term of " << C->name << " refers to variable " << T->variable->name
+                          << " of another problem.\n";
+                passed = false;
+            }
+        }
+
+        passed = hasUniquePattern(C) && passed;
+    }
+
+    // The terms defining an auxiliary variable belong to the problem of the variable
+    for(auto& A : reformulatedProblem->auxiliaryVariables)
+    {
+        for(auto& T : A->monomialTerms)
+        {
+            if(T->ownerProblem.lock() != reformulatedProblem)
+            {
+                std::cout << "  FAILED: a monomial term defining " << A->name << " has another owner.\n";
+                passed = false;
+            }
+        }
+    }
+
+    return passed;
+}
+
+bool ModelTestEpigraphObjectiveExpressionCopied()
+{
+    // With an epigraph constraint, the definition of the auxiliary objective variable in the reformulated problem was
+    // the nonlinear expression of the original objective, i.e., both problems shared the expression and its variables
+    // were those of the original problem. The terms defining an auxiliary variable also had no owner.
+    //
+    // minimize exp(x) + exp(y) + x  s.t.  x + y >= 1
+
+    auto solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Error));
+    solver->updateSetting("Model.Reformulation.ObjectiveFunction.EpigraphStrategy",
+        static_cast<int>(ES_ObjectiveEpigraphStrategy::EpigraphConstraint));
+
+    auto problem = std::make_shared<Problem>(env);
+
+    auto x = std::make_shared<Variable>("x", E_VariableType::Real, -2.0, 2.0);
+    auto y = std::make_shared<Variable>("y", E_VariableType::Real, -2.0, 2.0);
+    problem->add({ x, y });
+
+    auto objective = std::make_shared<NonlinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(
+        std::make_shared<ExpressionSum>(std::make_shared<ExpressionExp>(std::make_shared<ExpressionVariable>(x)),
+            std::make_shared<ExpressionExp>(std::make_shared<ExpressionVariable>(y))));
+    objective->add(std::make_shared<LinearTerm>(1.0, x));
+    problem->add(objective);
+
+    auto constraint = std::make_shared<LinearConstraint>("c", 1.0, SHOT_DBL_MAX);
+    constraint->add(std::make_shared<LinearTerm>(1.0, x));
+    constraint->add(std::make_shared<LinearTerm>(1.0, y));
+    problem->add(constraint);
+
+    problem->finalize();
+
+    if(!solver->setProblem(problem))
+    {
+        std::cout << "  FAILED: the problem could not be set.\n";
+        return (false);
+    }
+
+    auto reformulatedProblem = env->reformulatedProblem;
+    auto objectiveVariable = reformulatedProblem->auxiliaryObjectiveVariable;
+
+    if(!objectiveVariable || !objectiveVariable->nonlinearExpression)
+    {
+        std::cout << "  FAILED: the reformulated problem has no objective variable defined by an expression.\n";
+        return (false);
+    }
+
+    bool passed = true;
+
+    if(objectiveVariable->nonlinearExpression
+        == std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->problem->objectiveFunction)->nonlinearExpression)
+    {
+        std::cout << "  FAILED: the objective variable is defined by the expression of the original problem.\n";
+        passed = false;
+    }
+
+    // The terms and the expression defining the objective variable belong to the reformulated problem
+    if(objectiveVariable->nonlinearExpression->ownerProblem.lock() != reformulatedProblem)
+    {
+        std::cout << "  FAILED: the expression defining the objective variable has another owner.\n";
+        passed = false;
+    }
+
+    if(objectiveVariable->linearTerms.size() == 0)
+    {
+        std::cout << "  FAILED: the objective variable is not defined by a linear term.\n";
+        passed = false;
+    }
+
+    for(auto& T : objectiveVariable->linearTerms)
+    {
+        if(T->ownerProblem.lock() != reformulatedProblem)
+        {
+            std::cout << "  FAILED: a linear term defining the objective variable has another owner.\n";
+            passed = false;
+        }
+    }
+
+    Variables variables;
+    objectiveVariable->nonlinearExpression->appendNonlinearVariables(variables);
+
+    for(auto& V : variables)
+    {
+        if(V != reformulatedProblem->getVariable(V->getIndex()))
+        {
+            std::cout << "  FAILED: the definition of the objective variable refers to variable " << V->name
+                      << " of another problem.\n";
+            passed = false;
+        }
+    }
 
     return passed;
 }

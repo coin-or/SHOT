@@ -234,7 +234,10 @@ public:
 
     bool isUnbounded();
 
-    void takeOwnership(ProblemPtr owner);
+    virtual ~Variable() = default;
+
+    // Virtual, since an auxiliary variable also gives the terms and expression defining it to the owner
+    virtual void takeOwnership(ProblemPtr owner);
 };
 
 using VariablePtr = std::shared_ptr<Variable>;
