@@ -52,8 +52,9 @@ namespace
         return value;
     }
 
-    // Constant derivatives can live inside expression trees. Conservatively retain every
-    // expression variable as nonlinear; use structural Hessians for algebraic terms.
+    // A variable is a nonlinear Jacobian entry exactly when it is in the Hessian sparsity pattern of the row, which
+    // also contains the expression. Any other derivative is constant, also of a variable in an expression or of a row
+    // with an expression, and the entry is linear. CONOPT rejects a nonlinear entry without second derivatives.
     template <class Function>
     void rowStructure(Function& function, VectorInteger& columns, VectorDouble& coefficients, VectorInteger& nonlinear,
         const VectorDouble& point)
@@ -72,7 +73,7 @@ namespace
         for(const auto& variable : *function.getGradientSparsityPattern())
         {
             int index = variable->getIndex();
-            bool nl = function.properties.hasNonlinearExpression || nonlinearVariables.count(index);
+            bool nl = nonlinearVariables.count(index);
             columns.push_back(index);
             nonlinear.push_back(nl ? 1 : 0);
 
