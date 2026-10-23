@@ -29,6 +29,8 @@ protected:
     E_NLPSolutionStatus solveProblemInstance() override;
 
 private:
+    struct ModelCache;
+    std::shared_ptr<ModelCache> modelCache;
     ProblemPtr sourceProblem;
     VectorDouble lowerBounds, upperBounds, lowerBeforeFix, upperBeforeFix, start, solution;
     bool invalidFix = false;

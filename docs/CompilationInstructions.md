@@ -563,5 +563,12 @@ Logging honors `Output.Console.PrimalSolver.Show`. Callback evaluations run
 serially. Debug output includes the source model/current bounds and CONOPT
 option values.
 
+The adapter retains the finalized model structure between fixed-integer NLP
+solves, refreshing bounds and starting values for each solve. Quadratic Hessians
+are reused, linear rows are skipped in Hessian evaluation, and nonlinear
+constraint derivatives are batched where CONOPT's evaluation requests permit it.
+The source model must remain structurally unchanged for the lifetime of its
+`NLPSolverConopt` instance; create a new instance after changing its structure.
+
 Enable `COMPILE_TESTS` and run `ctest --test-dir build -R '^Conopt_' --output-on-failure` for the backend tests. `Instance_11` uses HiGHS with CONOPT
 when both are enabled; larger instance collections may exceed demo limits.

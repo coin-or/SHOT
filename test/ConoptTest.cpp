@@ -16,6 +16,20 @@ using namespace SHOT;
 
 namespace
 {
+class CountedQuadraticObjective : public QuadraticObjectiveFunction
+{
+public:
+    CountedQuadraticObjective() : QuadraticObjectiveFunction(E_ObjectiveFunctionDirection::Minimize) { }
+
+    SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes) override
+    {
+        ++hessianEvaluations;
+        return QuadraticObjectiveFunction::calculateHessian(point, eraseZeroes);
+    }
+
+    int hessianEvaluations = 0;
+};
+
 void require(bool condition, const char* message)
 {
     if(!condition)
@@ -176,6 +190,7 @@ int ConoptTest(int argc, char* argv[])
             auto objective = std::make_shared<NonlinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
             objective->add(expression);
             large->add(objective);
+
             for(int i = 0; i < 1000; ++i)
                 large->add(std::make_shared<NonlinearConstraint>("c" + std::to_string(i), expression, 1.0, 4.0));
             large->finalize();
@@ -226,20 +241,57 @@ int ConoptTest(int argc, char* argv[])
             auto x = std::make_shared<Variable>("x", E_VariableType::Real, -3.0, 3.0);
             auto y = std::make_shared<Variable>("y", E_VariableType::Real, -3.0, 3.0);
             coupled->add(Variables { x, y });
-            auto objective = std::make_shared<QuadraticObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+            auto objective = std::make_shared<CountedQuadraticObjective>();
             objective->add(std::make_shared<QuadraticTerm>(1.0, x, x));
             objective->add(std::make_shared<QuadraticTerm>(2.0, x, y));
             objective->add(std::make_shared<QuadraticTerm>(2.0, y, y));
             objective->add(std::make_shared<LinearTerm>(-4.0, x));
             objective->add(std::make_shared<LinearTerm>(-6.0, y));
             objective->constant = 5.0;
-            coupled->add(objective);
+            coupled->add(std::static_pointer_cast<QuadraticObjectiveFunction>(objective));
             coupled->finalize();
+            objective->hessianEvaluations = 0;
             NLPSolverConopt cross(env, coupled);
             expect(cross, 0.0);
             require(std::abs(cross.getSolution(0) - 1.0) < 1e-5, "Incorrect cross derivative optimum");
             cross.fixVariables({ 0 }, { 2.0 });
             expect(cross, 0.5);
+            require(objective->hessianEvaluations == 0, "Constant quadratic Hessian recalculated");
+        }
+        else if(part == 13)
+        {
+            // Two expression rows share the AD tape. The objective has a constant
+            // quadratic Hessian; the linear row must not contribute a Hessian.
+            auto batched = std::make_shared<Problem>(env);
+            auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.5, 3.0);
+            auto y = std::make_shared<Variable>("y", E_VariableType::Real, 0.0, 4.0);
+            batched->add(Variables { x, y });
+            auto objective = std::make_shared<QuadraticObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+            objective->add(std::make_shared<QuadraticTerm>(1.0, x, x));
+            objective->add(std::make_shared<QuadraticTerm>(1.0, y, y));
+            batched->add(objective);
+            auto ex = std::make_shared<ExpressionVariable>(x);
+            auto ey = std::make_shared<ExpressionVariable>(y);
+            batched->add(
+                std::make_shared<NonlinearConstraint>("square", std::make_shared<ExpressionSquare>(ex), 1.0, 9.0));
+            auto difference = std::make_shared<ExpressionSum>(ey, std::make_shared<ExpressionNegate>(ex));
+            batched->add(std::make_shared<NonlinearConstraint>(
+                "exponential", std::make_shared<ExpressionExp>(difference), std::exp(1.0), SHOT_DBL_MAX));
+            auto linear = std::make_shared<LinearConstraint>("linear", SHOT_DBL_MIN, 4.0);
+            linear->add(std::make_shared<LinearTerm>(1.0, y));
+            batched->add(linear);
+            batched->finalize();
+            NLPSolverConopt repeated(env, batched);
+            repeated.setStartingPoint({ 0, 1 }, { 1.5, 3.0 });
+            expect(repeated, 5.0);
+            repeated.fixVariables({ 0 }, { 2.0 });
+            expect(repeated, 13.0);
+            repeated.unfixVariables();
+            repeated.updateVariableUpperBound(1, 2.5);
+            repeated.setStartingPoint({ 0, 1 }, { 1.1, 2.2 });
+            expect(repeated, 5.0);
+            repeated.updateVariableLowerBound(0, 1.5);
+            expect(repeated, 8.5);
         }
         else if(part == 9)
         {

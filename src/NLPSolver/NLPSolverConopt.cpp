@@ -56,18 +56,29 @@ namespace
         const VectorDouble& point)
     {
         std::set<int> nonlinearVariables;
+
         for(const auto& entry : *function.getHessianSparsityPattern())
         {
             nonlinearVariables.insert(entry.first->getIndex());
             nonlinearVariables.insert(entry.second->getIndex());
         }
-        auto gradient = function.calculateGradient(point, false);
+
+        SparseVariableVector gradient;
+        bool gradientCalculated = false;
+
         for(const auto& variable : *function.getGradientSparsityPattern())
         {
             int index = variable->getIndex();
             bool nl = function.properties.hasNonlinearExpression || nonlinearVariables.count(index);
             columns.push_back(index);
             nonlinear.push_back(nl ? 1 : 0);
+
+            if(!nl && !gradientCalculated)
+            {
+                gradient = function.calculateGradient(point, false);
+                gradientCalculated = true;
+            }
+
             double coefficient = nl ? 0.0 : gradient[variable];
             if(!std::isfinite(coefficient))
                 throw std::runtime_error("Non-finite linear coefficient");
@@ -84,6 +95,7 @@ namespace
         {
             for(size_t i = 0; i < n; ++i)
                 addVariable(conoptBound(lower[i]), conoptBound(upper[i]), initial[i]);
+
             for(const auto& constraint : problem->numericConstraints)
             {
                 VectorInteger columns, nonlinear;
@@ -93,6 +105,7 @@ namespace
                 if(std::none_of(nonlinear.begin(), nonlinear.end(), [](int nl) { return nl != 0; }))
                 {
                     offset = constraint->calculateFunctionValue(initial);
+
                     for(size_t i = 0; i < columns.size(); ++i)
                         offset -= coefficients[i] * initial[columns[i]];
                 }
@@ -133,6 +146,7 @@ namespace
             if(std::none_of(nonlinear.begin(), nonlinear.end(), [](int nl) { return nl != 0; }))
             {
                 objectiveOffset = problem->objectiveFunction->calculateValue(initial);
+
                 for(size_t i = 0; i < columns.size(); ++i)
                     objectiveOffset -= coefficients[i] * initial[columns[i]];
             }
@@ -153,6 +167,7 @@ namespace
                     ? ConoptSense::Minimize
                     : ConoptSense::Maximize);
             VectorInteger rows, cols;
+
             for(const auto& entry : *problem->getLagrangianHessianSparsityPattern())
             {
                 int i = entry.first->getIndex(), j = entry.second->getIndex();
@@ -165,6 +180,143 @@ namespace
             }
             if(!rows.empty())
                 setSDLagrangianStructure(rows, cols);
+
+            // Combine expression Hessians on the shared AD tape, as in the Ipopt adapter.
+            size_t expressionRows = 0;
+            std::set<std::pair<size_t, size_t>> entries;
+
+            for(const auto& constraint : problem->nonlinearConstraints)
+            {
+                if(!constraint->properties.hasNonlinearExpression)
+                    continue;
+                ++expressionRows;
+                const auto& pattern = constraint->nonlinearHessianSparsityPattern;
+
+                for(size_t k = 0; k < pattern.nnz(); ++k)
+                    entries.emplace(pattern.row()[k], pattern.col()[k]);
+            }
+
+            if(expressionRows > 1)
+            {
+                const size_t dimension = problem->nonlinearExpressionVariables.size();
+                expressionHessianPattern.resize(dimension, dimension, entries.size());
+                size_t k = 0;
+
+                for(const auto& entry : entries)
+                    expressionHessianPattern.set(k++, entry.first, entry.second);
+            }
+
+            evaluationPoint.resize(n);
+            batchGradients.resize(slacks.size());
+        }
+
+        // The source model is finalized and structurally fixed for this NLP solver's lifetime.
+        // A fresh CONOPT solve reads this retained matrix with the new bounds and initial point.
+        void update(const VectorDouble& lower, const VectorDouble& upper, const VectorDouble& initial)
+        {
+            batchReady = false;
+
+            for(size_t i = 0; i < n; ++i)
+            {
+                auto& variable = getVariable(i);
+                variable.lower = conoptBound(lower[i]);
+                variable.upper = conoptBound(upper[i]);
+                variable.curr = initial[i];
+            }
+
+            for(size_t row = 0; row < slacks.size(); ++row)
+            {
+                if(slacks[row] < 0)
+                    continue;
+                auto& slack = getVariable(slacks[row]);
+                double value = problem->numericConstraints[row]->calculateFunctionValue(initial) - offsets[row];
+                slack.curr = std::clamp(std::isfinite(value) ? value : 0.0, slack.lower, slack.upper);
+            }
+        }
+
+        int FDEvalIni(
+            const double x[], const int rowlist[], int mode, int listsize, int, int, int* errors, int) override
+        {
+            *errors = 0;
+            batchReady = false;
+            if(mode != 2 && mode != 3)
+                return 0;
+            try
+            {
+                VectorInteger requested;
+
+                for(int k = 0; k < listsize; ++k)
+                {
+                    int row = rowlist[k];
+                    if(row >= 0 && row < static_cast<int>(slacks.size())
+                        && problem->numericConstraints[row]->properties.hasNonlinearExpression)
+                        requested.push_back(row);
+                }
+
+                std::sort(requested.begin(), requested.end());
+                requested.erase(std::unique(requested.begin(), requested.end()), requested.end());
+
+                if(requested.size() < 2)
+                    return 0;
+
+                if(requested != batchRows)
+                {
+                    batchRows = requested;
+                    size_t nonzeros = 0;
+
+                    for(int row : batchRows)
+                        nonzeros += std::static_pointer_cast<NonlinearConstraint>(problem->numericConstraints[row])
+                                        ->nonlinearGradientSparsityPattern.nnz();
+                    expressionJacobianPattern.resize(
+                        problem->ADFunctions.Range(), problem->nonlinearExpressionVariables.size(), nonzeros);
+                    expressionConstraintRows.assign(problem->ADFunctions.Range(), -1);
+                    size_t entry = 0;
+
+                    for(int row : batchRows)
+                    {
+                        auto constraint
+                            = std::static_pointer_cast<NonlinearConstraint>(problem->numericConstraints[row]);
+                        expressionConstraintRows[constraint->nonlinearExpressionIndex] = row;
+
+                        for(size_t col : constraint->nonlinearGradientSparsityPattern.col())
+                            expressionJacobianPattern.set(entry++, constraint->nonlinearExpressionIndex, col);
+                    }
+                }
+                batchPoint.resize(problem->nonlinearExpressionVariables.size());
+
+                for(const auto& variable : problem->nonlinearExpressionVariables)
+                    batchPoint[variable->properties.nonlinearVariableIndex] = x[variable->getIndex()];
+                CppAD::sparse_rcv<std::vector<size_t>, std::vector<double>> subset(expressionJacobianPattern);
+                problem->calculateNonlinearJacobian(batchPoint, subset);
+
+                for(int row : batchRows)
+                    batchGradients[row].clear();
+
+                for(size_t k = 0; k < subset.nnz(); ++k)
+                {
+                    const int row = expressionConstraintRows.at(subset.row()[k]);
+                    if(row < 0)
+                        throw std::runtime_error("Missing batched CONOPT Jacobian row");
+                    batchGradients[row].emplace_back(
+                        problem->nonlinearExpressionVariables[subset.col()[k]], subset.val()[k]);
+                }
+                batchReady = true;
+            }
+            catch(...)
+            {
+                batchRows.clear();
+                // Let individual row evaluation handle domain errors; a batch must not turn
+                // one failing row into an error for every requested constraint.
+                batchReady = false;
+            }
+            return 0;
+        }
+
+        int FDEvalEnd(int, int* errors) override
+        {
+            *errors = 0;
+            batchReady = false;
+            return 0;
         }
 
         int FDEval(const double x[], double* value, double jac[], int row, const int jacnum[], int mode, int,
@@ -174,7 +326,8 @@ namespace
             try
             {
                 // Use the callback point directly: linear variables can change between batches.
-                VectorDouble point(x, x + n);
+                evaluationPoint.assign(x, x + n);
+                const auto& point = evaluationPoint;
                 bool objective = row == static_cast<int>(slacks.size());
                 if(mode == 1 || mode == 3)
                 {
@@ -188,8 +341,29 @@ namespace
                 }
                 if(mode == 2 || mode == 3)
                 {
-                    auto gradient = objective ? problem->objectiveFunction->calculateGradient(point, false)
-                                              : problem->numericConstraints.at(row)->calculateGradient(point, false);
+                    bool useBatch
+                        = !objective && batchReady && std::binary_search(batchRows.begin(), batchRows.end(), row);
+                    if(useBatch)
+
+                        for(const auto& variable : problem->nonlinearExpressionVariables)
+                            if(x[variable->getIndex()] != batchPoint[variable->properties.nonlinearVariableIndex])
+                            {
+                                useBatch = false;
+                                break;
+                            }
+                    SparseVariableVector gradient;
+                    if(useBatch)
+                    {
+                        gradient = std::static_pointer_cast<NonlinearConstraint>(problem->numericConstraints.at(row))
+                                       ->calculateGradientWithoutNonlinearExpression(point, false);
+
+                        for(const auto& entry : batchGradients[row])
+                            gradient[entry.first] += entry.second;
+                    }
+                    else
+                        gradient = objective ? problem->objectiveFunction->calculateGradient(point, false)
+                                             : problem->numericConstraints.at(row)->calculateGradient(point, false);
+
                     for(int k = 0; k < numjac; ++k)
                     {
                         int index = jacnum[k];
@@ -214,20 +388,70 @@ namespace
             try
             {
                 VectorDouble point(x, x + n);
+
                 for(size_t row = 0; row <= slacks.size(); ++row)
                 {
                     if(u[row] == 0.0)
                         continue;
-                    auto hessian = row == slacks.size()
-                        ? problem->objectiveFunction->calculateHessian(point, false)
-                        : problem->numericConstraints[row]->calculateHessian(point, false);
-                    for(const auto& entry : hessian)
+                    if(row < slacks.size()
+                        && problem->numericConstraints[row]->properties.classification
+                            == E_ConstraintClassification::Linear)
+                        continue;
+                    auto constantHessian = row == slacks.size()
+                        ? problem->objectiveFunction->getConstantHessian()
+                        : problem->numericConstraints[row]->getConstantHessian();
+                    SparseVariableMatrix calculatedHessian;
+                    if(!constantHessian)
+                        calculatedHessian = row == slacks.size()
+                            ? problem->objectiveFunction->calculateHessian(point, false)
+                            : (expressionHessianPattern.nnz() > 0
+                                          && problem->numericConstraints[row]->properties.hasNonlinearExpression
+                                      ? std::static_pointer_cast<NonlinearConstraint>(problem->numericConstraints[row])
+                                            ->calculateHessianWithoutNonlinearExpression(point, false)
+                                      : problem->numericConstraints[row]->calculateHessian(point, false));
+
+                    for(const auto& entry : (constantHessian ? *constantHessian : calculatedHessian))
                     {
                         int i = entry.first.first->getIndex(), j = entry.first.second->getIndex();
                         auto key = std::make_pair(std::min(i, j), std::max(i, j));
                         values[hessianPositions.at(key)] += u[row] * entry.second;
                     }
                 }
+                if(expressionHessianPattern.nnz() > 0)
+                {
+                    VectorDouble weights(problem->ADFunctions.Range(), 0.0);
+                    bool anyWeight = false;
+
+                    for(size_t row = 0; row < slacks.size(); ++row)
+                    {
+                        const auto& constraint = problem->numericConstraints[row];
+                        if(constraint->properties.hasNonlinearExpression)
+                        {
+                            weights[std::static_pointer_cast<NonlinearConstraint>(constraint)->nonlinearExpressionIndex]
+                                = u[row];
+                            anyWeight |= u[row] != 0.0;
+                        }
+                    }
+                    if(anyWeight)
+                    {
+                        VectorDouble nonlinearPoint(problem->nonlinearExpressionVariables.size());
+
+                        for(const auto& variable : problem->nonlinearExpressionVariables)
+                            nonlinearPoint[variable->properties.nonlinearVariableIndex] = point[variable->getIndex()];
+                        CppAD::sparse_rcv<std::vector<size_t>, std::vector<double>> subset(expressionHessianPattern);
+                        problem->ADFunctions.sparse_hes(nonlinearPoint, weights, subset, expressionHessianPattern,
+                            "cppad.symmetric", expressionHessianWork);
+
+                        for(size_t k = 0; k < subset.nnz(); ++k)
+                        {
+                            int i = problem->nonlinearExpressionVariables[subset.row()[k]]->getIndex();
+                            int j = problem->nonlinearExpressionVariables[subset.col()[k]]->getIndex();
+                            if(i <= j)
+                                values[hessianPositions.at({ i, j })] += subset.val()[k];
+                        }
+                    }
+                }
+
                 for(int i = 0; i < count; ++i)
                     if(!std::isfinite(values[i]))
                         *nodrv = 1;
@@ -246,6 +470,12 @@ namespace
         VectorDouble offsets;
         double objectiveOffset = 0.0;
         std::map<std::pair<int, int>, int> hessianPositions;
+        VectorDouble evaluationPoint, batchPoint;
+        VectorInteger batchRows, expressionConstraintRows;
+        std::vector<std::vector<std::pair<VariablePtr, double>>> batchGradients;
+        bool batchReady = false;
+        CppAD::sparse_rc<std::vector<size_t>> expressionJacobianPattern, expressionHessianPattern;
+        CppAD::sparse_hes_work expressionHessianWork;
     };
 
     class ConoptOutput : public ConoptMessageHandler
@@ -310,6 +540,11 @@ namespace
     };
 } // namespace
 
+struct NLPSolverConopt::ModelCache
+{
+    std::shared_ptr<ConoptProblem> model;
+};
+
 NLPSolverConopt::NLPSolverConopt(EnvironmentPtr envPtr, ProblemPtr source)
     : INLPSolver(envPtr)
     , sourceProblem(source)
@@ -323,6 +558,7 @@ void NLPSolverConopt::setStartingPoint(VectorInteger indexes, VectorDouble value
     if(indexes.size() != values.size())
         throw std::invalid_argument("Starting point sizes differ");
     start.assign(lowerBounds.size(), 0.0);
+
     for(size_t i = 0; i < indexes.size(); ++i)
         start.at(indexes[i]) = values[i];
 }
@@ -335,6 +571,7 @@ void NLPSolverConopt::fixVariables(VectorInteger indexes, VectorDouble values)
     invalidFix = indexes.size() != values.size();
     if(invalidFix)
         return;
+
     for(size_t i = 0; i < indexes.size(); ++i)
     {
         int index = indexes[i];
@@ -382,6 +619,7 @@ void NLPSolverConopt::saveProblemToFile(std::string filename)
     std::ofstream file(filename);
     file.precision(17);
     file << sourceProblem;
+
     for(size_t i = 0; i < lowerBounds.size(); ++i)
         file << "\nNLP bounds " << i << ": " << lowerBounds[i] << " " << upperBounds[i];
 }
@@ -406,6 +644,7 @@ E_NLPSolutionStatus NLPSolverConopt::solveProblemInstance()
         if(userTerminated(env))
             return E_NLPSolutionStatus::Error;
         VectorDouble initial = start.empty() ? VectorDouble(lowerBounds.size(), 0.0) : start;
+
         for(size_t i = 0; i < initial.size(); ++i)
         {
             if(lowerBounds[i] > upperBounds[i])
@@ -418,13 +657,18 @@ E_NLPSolutionStatus NLPSolverConopt::solveProblemInstance()
             env->settings->getSetting<double>("Termination.TimeLimit") - env->timing->getElapsedTime("Total"));
         if(seconds <= 0.0)
             return E_NLPSolutionStatus::TimeLimit;
-        ConoptProblem model(sourceProblem, lowerBounds, upperBounds, initial);
+        if(!modelCache)
+            modelCache = std::make_shared<ModelCache>();
+        if(!modelCache->model)
+            modelCache->model = std::make_shared<ConoptProblem>(sourceProblem, lowerBounds, upperBounds, initial);
+        else
+            modelCache->model->update(lowerBounds, upperBounds, initial);
         ConoptOutput output(env, seconds);
         OptionFile options;
         saveOptionsToFile(options.name);
         Conopt solver;
         solver.setMessageHandler(output);
-        solver.loadModel(model);
+        solver.loadModel(*modelCache->model);
         auto check = [](int rc)
         {
             if(rc)
@@ -443,6 +687,7 @@ E_NLPSolutionStatus NLPSolverConopt::solveProblemInstance()
         const char* license[] = { std::getenv("CONOPT_LICENSE_INT_1"), std::getenv("CONOPT_LICENSE_INT_2"),
             std::getenv("CONOPT_LICENSE_INT_3"), std::getenv("CONOPT_LICENSE_TEXT") };
         int count = 0;
+
         for(auto value : license)
             if(value)
                 ++count;
@@ -503,8 +748,10 @@ E_NLPSolutionStatus NLPSolverConopt::solveProblemInstance()
             solution.assign(point.begin(), point.begin() + lowerBounds.size());
         bool feasible = !solution.empty() && std::isfinite(getObjectiveValue());
         double boundTol = env->settings->getSetting<double>("Primal.Tolerance.LinearConstraint");
+
         for(size_t i = 0; feasible && i < solution.size(); ++i)
             feasible = solution[i] >= lowerBounds[i] - boundTol && solution[i] <= upperBounds[i] + boundTol;
+
         for(const auto& constraint : sourceProblem->numericConstraints)
         {
             if(!feasible)
