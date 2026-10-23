@@ -635,9 +635,7 @@ void DualSolver::removeArtificialBounds(const std::vector<VariablePtr>& variable
     }
 
     // The dual bounds may only be valid with the artificial bounds
-    bool isMinimize = env->problem->objectiveFunction->properties.isMinimize;
-    env->results->currentDualBound = isMinimize ? SHOT_DBL_MIN : SHOT_DBL_MAX;
-    env->results->globalDualBound = isMinimize ? SHOT_DBL_MIN : SHOT_DBL_MAX;
+    env->results->resetDualBounds(true);
 
     if(MIPSolver->hasDualAuxiliaryObjectiveVariable())
     {

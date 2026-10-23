@@ -10,6 +10,7 @@ class for the location, which has the state of the solver and the actions availa
   - CallbackLocation.NewPrimalSolution      NewPrimalSolutionContext
   - CallbackLocation.TerminationCheck       TerminationCheckContext
   - CallbackLocation.HyperplaneSelection    HyperplaneSelectionContext
+  - CallbackLocation.BoundsUpdated          BoundsUpdatedContext
 """
 
 import pytest
@@ -207,6 +208,7 @@ class TestCallbackLocationEnum:
         "NewPrimalSolution",
         "TerminationCheck",
         "HyperplaneSelection",
+        "BoundsUpdated",
     ]
 
     def test_location_values(self):
@@ -264,6 +266,8 @@ class TestContextClasses:
             "HyperplaneSelectionContext": ["solutionPoints", "addHyperplane", "addedHyperplanes"],
             "InteriorPointSearchContext": ["interiorPoints", "setInteriorPoints", "replacementInteriorPoints"],
             "TerminationCheckContext": [],
+            "BoundsUpdatedContext": ["previousPrimalBound", "previousDualBound", "previousGlobalDualBound",
+                                     "primalBoundChanged", "dualBoundChanged", "globalDualBoundChanged"],
         }
         for name, attrs in expected.items():
             cls = getattr(SHOTpy, name)
@@ -1091,6 +1095,206 @@ class TestHyperplaneGradientCuts:
         assert name_log, "Callback never found a violated nonlinear constraint"
         # The names must be those of the nonlinear constraints, not the linear one
         assert set(name_log) <= {"c1", "c2"}, f"Lookup returned wrong constraints: {set(name_log)}"
+
+
+@pytest.mark.parametrize("backend,available,tree_strategy", [
+    (2, "HAS_CBC", 0),
+    (3, "HAS_HIGHS", 0),
+    (1, "HAS_GUROBI", 0),
+    (0, "HAS_CPLEX", 0),
+    (1, "HAS_GUROBI", 1),
+    (0, "HAS_CPLEX", 1),
+])
+def test_external_dual_bound_uses_original_maximize_direction(backend, available, tree_strategy):
+    """An external upper bound must tighten a maximization problem even if its MIP minimizes."""
+    import SHOTpy
+
+    if not getattr(SHOTpy, available):
+        pytest.skip(f"SHOT is not built with {available[4:]}")
+
+    solver = SHOTpy.Solver()
+    solver.updateSetting("Output.Console.LogLevel", 6)
+    solver.updateSetting("Dual.MIP.Solver", backend)
+    solver.updateSetting("Dual.TreeStrategy", tree_strategy)
+
+    problem = SHOTpy.Problem(solver)
+    x = problem.addVariable("x", SHOTpy.VariableType.Real, 0.0, 3.0)
+    binary = problem.addVariable("binary", SHOTpy.VariableType.Binary)
+    problem.setObjective(SHOTpy.log(1 + x) - 0.05 * binary, SHOTpy.ObjectiveDirection.Maximize)
+    problem.addConstraint(x <= 1 + 2 * binary, "link")
+    problem.finalize()
+    assert solver.setProblem(problem)
+    assert solver.getReformulatedProblem().objectiveFunction.direction == SHOTpy.ObjectiveDirection.Minimize
+
+    seen = []
+    recorded_bounds = []
+
+    def propose_bound(ctx):
+        assert not ctx.isMinimization
+        seen.append(ctx.dualBound)
+        if len(seen) == 2:
+            ctx.setDualBound(1.37)  # Valid and tighter than the current upper bound log(4).
+        elif len(seen) == 3:
+            ctx.setDualBound(1.38)  # Valid but weaker than 1.37.
+
+    solver.registerCallback(SHOTpy.CallbackLocation.DualBoundUpdate, propose_bound)
+    solver.registerCallback(SHOTpy.CallbackLocation.BoundsUpdated,
+                            lambda ctx: recorded_bounds.append(ctx.dualBound))
+    assert solver.solveProblem()
+
+    assert len(seen) >= 3
+    assert seen[0] == math.inf
+    assert seen[1] == pytest.approx(math.log(4))
+    assert seen[2] == pytest.approx(1.37)
+    assert any(bound == pytest.approx(1.37) for bound in recorded_bounds)
+    assert not any(bound == pytest.approx(1.38) for bound in recorded_bounds)
+    assert solver.getPrimalBound() == pytest.approx(math.log(4) - 0.05, abs=1e-4)
+
+
+class TestInitialMultiTreePrimalCandidates:
+    @pytest.mark.parametrize("backend,available", [(0, "HAS_CPLEX"), (1, "HAS_GUROBI"),
+                                                   (2, "HAS_CBC"), (3, "HAS_HIGHS")])
+    def test_candidate_is_stored_before_the_first_dual_solve(self, backend, available):
+        import SHOTpy
+
+        if not getattr(SHOTpy, available):
+            pytest.skip(f"SHOT is not built with {available[4:]}")
+        solver = SHOTpy.Solver()
+        solver.updateSetting("Output.Console.LogLevel", 6)
+        solver.updateSetting("Dual.MIP.Solver", backend)
+        solver.updateSetting("Dual.TreeStrategy", int(SHOTpy.TreeStrategy.MultiTree))
+        solver.updateSetting("Primal.FixedInteger.Use", False)
+        solver.updateSetting("Primal.PolishSolution.NumberOfPoints", 0)
+        solver.updateSetting("Model.Reformulation.Quadratics.Strategy", 0)
+        # A convex MINLP forces the multi-tree strategy for all four backends.
+        problem = SHOTpy.Problem(solver)
+        x = problem.addVariable("x", SHOTpy.VariableType.Integer, 0.0, 4.0)
+        problem.setObjective(x, SHOTpy.ObjectiveDirection.Minimize)
+        # Use a convex nonlinear inequality with a suboptimal feasible seed.
+        problem.addConstraint(SHOTpy.exp(x) <= 100, "convex")
+        problem.finalize()
+        assert solver.setProblem(problem)
+        searches, stored = [], []
+
+        def supply(ctx):
+            searches.append((ctx.dualBound, ctx.isFinalizing))
+            if len(searches) == 1:
+                ctx.addPrimalSolution([2.0])
+
+        def accepted(ctx):
+            stored.append((ctx.point, ctx.dualBound))
+            ctx.terminate()
+
+        def candidate(ctx):
+            # The interior-point search may also offer a feasible point before the first dual solve.
+            # This test isolates approval and storage of the externally supplied seed.
+            if ctx.source != SHOTpy.PrimalSolutionSource.ExternalPrimalSolution:
+                ctx.rejectCandidate()
+
+        solver.registerCallback(SHOTpy.CallbackLocation.PrimalCandidateSearch, supply)
+        solver.registerCallback(SHOTpy.CallbackLocation.PrimalCandidateCheck, candidate)
+        solver.registerCallback(SHOTpy.CallbackLocation.NewPrimalSolution, accepted)
+        assert solver.solveProblem()
+        assert searches[0] == (-math.inf, False)
+        assert stored == [([2.0], -math.inf)]
+        assert solver.getPrimalSolution().point == [2.0]
+        assert solver.getTerminationReason() == SHOTpy.TerminationReason.UserAbort
+
+
+class TestDirectMIQCQPCallbacks:
+    @pytest.mark.parametrize("backend,available", [(0, "HAS_CPLEX"), (1, "HAS_GUROBI")])
+    @pytest.mark.parametrize("maximize", [False, True])
+    def test_external_bounds_and_candidates_before_and_after_solve(self, backend, available, maximize):
+        import SHOTpy
+
+        if not getattr(SHOTpy, available):
+            pytest.skip(f"SHOT is not built with {available[4:]}")
+
+        solver = SHOTpy.Solver()
+        solver.updateSetting("Output.Console.LogLevel", 6)
+        solver.updateSetting("Dual.MIP.Solver", backend)
+        solver.updateSetting("Model.Reformulation.Quadratics.Strategy", 2)
+        problem = SHOTpy.Problem(solver.getEnvironment())
+        x = SHOTpy.Variable("x", SHOTpy.VariableType.Integer, 0.0, 2.0)
+        y = SHOTpy.Variable("y", SHOTpy.VariableType.Integer, 0.0, 2.0)
+        problem.addVariable(x)
+        problem.addVariable(y)
+        objective = SHOTpy.LinearTerms()
+        coefficient = -1.0 if maximize else 1.0
+        objective.add(SHOTpy.LinearTerm(coefficient, x))
+        objective.add(SHOTpy.LinearTerm(coefficient, y))
+        direction = SHOTpy.ObjectiveDirection.Maximize if maximize else SHOTpy.ObjectiveDirection.Minimize
+        problem.setObjective(SHOTpy.LinearObjectiveFunction(direction, objective, 0.0))
+        circle = SHOTpy.QuadraticConstraint("circle", -SHOTpy.SHOT_DBL_MAX, 5.0)
+        circle.add(SHOTpy.QuadraticTerm(1.0, x, x))
+        circle.add(SHOTpy.QuadraticTerm(1.0, y, y))
+        problem.addConstraint(circle)
+        problem.finalize()
+        solver.setProblem(problem)
+        assert solver.getReformulatedProblem().properties.isMIQCQPProblem
+
+        bound_calls = []
+        search_calls = []
+        submitted = []
+        accepted = []
+        bound_events = []
+        saved_contexts = []
+        events_at_second_bound_call = []
+
+        def bound(ctx):
+            bound_calls.append(ctx.dualBound)
+            if len(bound_calls) == 1:
+                ctx.setDualBound(1.0 if maximize else -1.0)
+            else:
+                events_at_second_bound_call.append(len(bound_events))
+                ctx.setDualBound(ctx.dualBound)  # An unchanged proposal must not emit an event.
+
+        def search(ctx):
+            search_calls.append(ctx.dualBound)
+            ctx.addPrimalSolution([2.0, 0.0] if len(search_calls) == 1 else [1.0, 0.0])
+
+        def candidate(ctx):
+            if ctx.source == SHOTpy.PrimalSolutionSource.ExternalPrimalSolution:
+                submitted.append(ctx.point)
+
+        solver.registerCallback(SHOTpy.CallbackLocation.DualBoundUpdate, bound)
+        solver.registerCallback(SHOTpy.CallbackLocation.PrimalCandidateSearch, search)
+        def new_solution(ctx):
+            if ctx.source == SHOTpy.PrimalSolutionSource.ExternalPrimalSolution:
+                accepted.append(ctx.point)
+
+        def bounds_updated(ctx):
+            saved_contexts.append(ctx)
+            bound_events.append((ctx.previousPrimalBound, ctx.primalBound,
+                                 ctx.previousDualBound, ctx.dualBound,
+                                 ctx.previousGlobalDualBound, ctx.globalDualBound,
+                                 ctx.primalBoundChanged, ctx.dualBoundChanged,
+                                 ctx.globalDualBoundChanged))
+
+        solver.registerCallback(SHOTpy.CallbackLocation.BoundsUpdated, bounds_updated)
+        solver.registerCallback(SHOTpy.CallbackLocation.PrimalCandidateCheck, candidate)
+        solver.registerCallback(SHOTpy.CallbackLocation.NewPrimalSolution, new_solution)
+        solver.solveProblem()
+
+        assert len(bound_calls) == 2
+        assert len(search_calls) == 2
+        assert (bound_calls[0] > 1.0) if maximize else (bound_calls[0] < -1.0)
+        assert search_calls[0] == (1.0 if maximize else -1.0)
+        assert submitted == [[2.0, 0.0], [1.0, 0.0]]
+        assert [2.0, 0.0] in accepted
+        assert bound_calls[1] == 0.0
+        assert events_at_second_bound_call == [len(bound_events)]
+        assert len(bound_events) >= 2
+        first, second = bound_events[:2]
+        assert math.isinf(first[2]) and first[3] == (1.0 if maximize else -1.0)
+        assert first[6:] == (False, True, True)
+        assert math.isinf(second[0]) and second[1] == (-2.0 if maximize else 2.0)
+        assert second[6:] == (True, False, False)
+        assert all(any(event[6:]) for event in bound_events)
+        assert any(event[3] == 0.0 and event[7] for event in bound_events[2:])
+        assert not saved_contexts[0].isValid
+        with pytest.raises(SHOTpy.CallbackContextExpired):
+            _ = saved_contexts[0].previousDualBound
 
 
 class TestDualBoundAndPrimalSearchCallbacks:
@@ -1938,3 +2142,199 @@ class TestCallbackESHInteriorPoint:
         assert abs(phase2_obj - 4.579582) < 0.01, (
             f"Phase 2 objective {phase2_obj:.6f} differs from known optimum 4.5796"
         )
+
+
+@pytest.mark.parametrize("backend,available,tree,generic", [
+    (2, "HAS_CBC", 0, False), (3, "HAS_HIGHS", 0, False),
+    (0, "HAS_CPLEX", 0, False), (1, "HAS_GUROBI", 0, False),
+    (0, "HAS_CPLEX", 1, False), (0, "HAS_CPLEX", 1, True),
+    (1, "HAS_GUROBI", 1, False),
+])
+def test_linear_tree_hyperplane_callback(backend, available, tree, generic):
+    """An external linear restriction must be applied by the requested tree strategy on a MILP."""
+    import SHOTpy
+
+    if not getattr(SHOTpy, available):
+        pytest.skip(f"SHOT is not built with {available[4:]}")
+    solver = SHOTpy.Solver()
+    solver.updateSetting("Output.Console.LogLevel", 6)
+    solver.updateSetting("Dual.MIP.Solver", backend)
+    solver.updateSetting("Dual.TreeStrategy", tree)
+    solver.updateSetting("Dual.Relaxation.Use", False)
+    solver.updateSetting("Primal.FixedInteger.Use", False)
+    solver.updateSetting("Primal.PolishSolution.NumberOfPoints", 0)
+    solver.updateSetting("Termination.IterationLimit", 10)
+    if backend == 0:
+        solver.updateSetting("Subsolver.Cplex.UseGenericCallback", generic)
+    problem = SHOTpy.Problem(solver)
+    x = problem.addVariable("x", SHOTpy.VariableType.Integer, 0, 4)
+    problem.setObjective(x, SHOTpy.ObjectiveDirection.Minimize)
+    problem.finalize()
+    assert solver.setProblem(problem)
+    calls, bounds = [], []
+
+    def review(ctx):
+        # External cuts are restrictions on the dual model. Primal screening must enforce them too.
+        if ctx.point[0] < 2.0 - 1e-6:
+            ctx.rejectCandidate()
+
+    def cut(ctx):
+        calls.append(ctx.iterationNumber)
+        hp = SHOTpy.ExternalHyperplane()
+        hp.variableIndexes = [0]
+        hp.variableCoefficients = [-1.0]
+        hp.rhsValue = -2.0
+        hp.isGlobal = True
+        hp.description = "user_minimum_x"
+        ctx.addHyperplane(hp)
+
+    solver.registerCallback(SHOTpy.CallbackLocation.PrimalCandidateCheck, review)
+    solver.registerCallback(SHOTpy.CallbackLocation.HyperplaneSelection, cut)
+    solver.registerCallback(SHOTpy.CallbackLocation.BoundsUpdated,
+                            lambda ctx: bounds.append(ctx.dualBound))
+    assert solver.solveProblem()
+    assert calls, "MILP bypassed the tree strategy's hyperplane callback"
+    assert solver.getPrimalSolution().objValue == pytest.approx(2.0)
+    assert bounds[-1] == pytest.approx(2.0)
+
+
+@pytest.mark.parametrize("backend,available,tree", [
+    (2, "HAS_CBC", 0), (3, "HAS_HIGHS", 0),
+    (0, "HAS_CPLEX", 0), (1, "HAS_GUROBI", 0),
+    (0, "HAS_CPLEX", 1), (1, "HAS_GUROBI", 1),
+])
+@pytest.mark.parametrize("discrete", [False, True])
+def test_linear_initial_candidate(backend, available, tree, discrete):
+    """Routing LP/MILP through tree/continuous strategies preserves pre-solve candidate review and stop."""
+    import SHOTpy
+
+    if not getattr(SHOTpy, available):
+        pytest.skip(f"SHOT is not built with {available[4:]}")
+    solver = SHOTpy.Solver()
+    solver.updateSetting("Output.Console.LogLevel", 6)
+    solver.updateSetting("Dual.MIP.Solver", backend)
+    solver.updateSetting("Dual.TreeStrategy", tree)
+    solver.updateSetting("Primal.FixedInteger.Use", False)
+    solver.updateSetting("Primal.PolishSolution.NumberOfPoints", 0)
+    problem = SHOTpy.Problem(solver)
+    x = problem.addVariable("x", SHOTpy.VariableType.Integer if discrete else SHOTpy.VariableType.Real, 0, 4)
+    problem.setObjective(x, SHOTpy.ObjectiveDirection.Minimize)
+    problem.finalize()
+    assert solver.setProblem(problem)
+    stored = []
+
+    def supply(ctx):
+        if not ctx.isFinalizing:
+            assert ctx.dualBound == -math.inf
+            ctx.addPrimalSolution([2.0])
+
+    def accept(ctx):
+        stored.append((ctx.point, ctx.dualBound))
+        ctx.terminate()
+
+    solver.registerCallback(SHOTpy.CallbackLocation.PrimalCandidateSearch, supply)
+    solver.registerCallback(SHOTpy.CallbackLocation.NewPrimalSolution, accept)
+    assert solver.solveProblem()
+    assert stored == [([2.0], -math.inf)]
+    assert solver.getTerminationReason() == SHOTpy.TerminationReason.UserAbort
+
+
+@pytest.mark.parametrize("backend,available,generic", [
+    (0, "HAS_CPLEX", False), (0, "HAS_CPLEX", True), (1, "HAS_GUROBI", False),
+])
+@pytest.mark.parametrize("cut_strategy", [0, 1])
+def test_linear_single_tree_relaxation_callback(backend, available, generic, cut_strategy):
+    """Relaxed MILP nodes must skip nonexistent ESH/ECP tasks while still invoking external cuts."""
+    import random
+    import SHOTpy
+
+    if not getattr(SHOTpy, available):
+        pytest.skip(f"SHOT is not built with {available[4:]}")
+    solver = SHOTpy.Solver()
+    for name, value in [("Output.Console.LogLevel", 6), ("Dual.MIP.Solver", backend),
+                        ("Dual.TreeStrategy", 1),
+                        ("Dual.CutStrategy", cut_strategy), ("Dual.Relaxation.Use", False),
+                        ("Dual.Relaxation.MaxLazyConstraints", 10), ("Dual.MIP.NumberOfThreads", 1),
+                        ("Primal.FixedInteger.Use", False),
+                        ("Primal.PolishSolution.NumberOfPoints", 0), ("Termination.TimeLimit", 10.0)]:
+        solver.updateSetting(name, value)
+    if backend == 0:
+        solver.updateSetting("Subsolver.Cplex.UseGenericCallback", generic)
+    else:
+        solver.updateSetting("Subsolver.Gurobi.Heuristics", 0.0)
+    problem = SHOTpy.Problem(solver)
+    variables = [problem.addVariable(f"x{i}", SHOTpy.VariableType.Binary) for i in range(30)]
+    problem.setObjective(sum((i + 1) * x for i, x in enumerate(variables)), SHOTpy.ObjectiveDirection.Minimize)
+    # A deterministic covering model whose root relaxation has fractional solutions.
+    rng = random.Random(123)
+    for i in range(45):
+        problem.addConstraint(sum(rng.sample(variables, 8)) >= 3, f"cover{i}")
+    problem.finalize()
+    assert solver.setProblem(problem)
+    relaxed = []
+
+    def inspect(ctx):
+        relaxed.extend(point.point for point in ctx.solutionPoints if point.isRelaxedPoint)
+        if relaxed:
+            ctx.terminate()
+
+    # Keep the SHOT gap open until the relaxation callback has been reached.
+    solver.registerCallback(SHOTpy.CallbackLocation.PrimalCandidateCheck, lambda ctx: ctx.rejectCandidate())
+    solver.registerCallback(SHOTpy.CallbackLocation.HyperplaneSelection, inspect)
+    assert solver.solveProblem()
+    assert relaxed, "The single-tree MILP relaxation callback was not reached"
+    assert solver.getTerminationReason() == SHOTpy.TerminationReason.UserAbort
+
+
+@pytest.mark.parametrize("backend,available", [
+    (0, "HAS_CPLEX"), (1, "HAS_GUROBI"), (2, "HAS_CBC"), (3, "HAS_HIGHS"),
+])
+def test_milp_hyperplanes_before_first_solve_and_gap_checks(backend, available):
+    """A seed rejection reaches the model immediately, and the final iteration still invokes cut selection."""
+    import SHOTpy
+
+    if not getattr(SHOTpy, available):
+        pytest.skip(f"SHOT was not built with {available[4:]}")
+    solver = SHOTpy.Solver()
+    for setting, value in [("Output.Console.LogLevel", 6), ("Dual.MIP.Solver", backend),
+                           ("Dual.TreeStrategy", 0), ("Dual.Relaxation.Use", False),
+                           ("Primal.FixedInteger.Use", False), ("Primal.PolishSolution.NumberOfPoints", 0)]:
+        solver.updateSetting(setting, value)
+    problem = SHOTpy.Problem(solver)
+    x = problem.addVariable("x", SHOTpy.VariableType.Integer, 0, 4)
+    problem.setObjective(x, SHOTpy.ObjectiveDirection.Minimize)
+    problem.finalize()
+    assert solver.setProblem(problem)
+    pending, submitted, calls = [], [], []
+
+    def seed(ctx):
+        if not ctx.isFinalizing and not submitted and not pending:
+            ctx.addPrimalSolution([0.0])
+
+    def review(ctx):
+        if ctx.point[0] < 2:
+            ctx.rejectCandidate()
+            pending.append(True)
+
+    def hyperplanes(ctx):
+        calls.append((len(ctx.solutionPoints), ctx.dualBound, ctx.primalBound))
+        if pending:
+            cut = SHOTpy.ExternalHyperplane()
+            cut.variableIndexes = [0]
+            cut.variableCoefficients = [-1.0]
+            cut.rhsValue = -2.0
+            cut.isGlobal = True
+            ctx.addHyperplane(cut)
+            pending.clear()
+            submitted.append(ctx.iterationNumber)
+
+    solver.registerCallback(SHOTpy.CallbackLocation.PrimalCandidateSearch, seed)
+    solver.registerCallback(SHOTpy.CallbackLocation.PrimalCandidateCheck, review)
+    solver.registerCallback(SHOTpy.CallbackLocation.HyperplaneSelection, hyperplanes)
+    assert solver.solveProblem()
+    assert submitted == [1]
+    assert calls[0][0] == 0  # No backend solution exists yet.
+    assert any(n > 0 and dual == pytest.approx(2.0) and primal == pytest.approx(2.0)
+               for n, dual, primal in calls)  # A closed gap must not skip the final cut callback.
+    assert solver.getSolutionStatistics().numberOfIterations == 1
+    assert solver.getPrimalSolution().objValue == pytest.approx(2.0)

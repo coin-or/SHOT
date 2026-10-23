@@ -18,7 +18,7 @@ namespace SHOT
 class TaskSelectHyperplanesExternal : public TaskBase
 {
 public:
-    TaskSelectHyperplanesExternal(EnvironmentPtr envPtr);
+    TaskSelectHyperplanesExternal(EnvironmentPtr envPtr, bool useCurrentIteration = false);
     ~TaskSelectHyperplanesExternal() override;
 
     void run() override;
@@ -27,5 +27,6 @@ public:
     std::string getType() override;
 
 private:
+    bool useCurrentIteration;
 };
 } // namespace SHOT

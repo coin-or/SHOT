@@ -31,7 +31,8 @@ void TaskUpdateExternalDualBound::run()
 {
     if(env->callbacks->isActive(E_CallbackLocation::DualBoundUpdate))
     {
-        bool isMinimization = (env->reformulatedProblem->objectiveFunction->properties.isMinimize);
+        // Callback bounds and Results are expressed in the original objective's direction.
+        bool isMinimization = env->problem->objectiveFunction->properties.isMinimize;
 
         auto context = std::make_shared<DualBoundUpdateContext>(env);
         env->callbacks->invoke(*context);

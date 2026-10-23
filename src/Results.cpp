@@ -1544,6 +1544,10 @@ double Results::getPrimalBound()
 
 void Results::setPrimalBound(double value, bool resetStagnationCounters)
 {
+    const double previousPrimalBound = currentPrimalBound;
+    const double previousDualBound = currentDualBound;
+    const double previousGlobalDualBound = globalDualBound;
+
     this->currentPrimalBound = value;
 
     bool isMinimize = env->problem->objectiveFunction->direction == E_ObjectiveFunctionDirection::Minimize;
@@ -1603,6 +1607,8 @@ void Results::setPrimalBound(double value, bool resetStagnationCounters)
         env->solutionStatistics.numberOfDualRepairsSinceLastPrimalUpdate = 0;
         env->solutionStatistics.numberOfCutResetsSinceLastPrimalUpdate = 0;
     }
+
+    notifyBoundsUpdated(previousPrimalBound, previousDualBound, previousGlobalDualBound);
 }
 
 double Results::getCurrentDualBound() { return (this->currentDualBound); }
@@ -1611,6 +1617,10 @@ double Results::getGlobalDualBound() { return (globalDualBound); }
 
 void Results::setDualBound(double value, bool forceGlobal)
 {
+    const double previousPrimalBound = currentPrimalBound;
+    const double previousDualBound = currentDualBound;
+    const double previousGlobalDualBound = globalDualBound;
+
     double primalBound = this->getPrimalBound();
     bool isMinimize = env->problem->objectiveFunction->direction == E_ObjectiveFunctionDirection::Minimize;
 
@@ -1644,6 +1654,37 @@ void Results::setDualBound(double value, bool forceGlobal)
     env->solutionStatistics.numberOfIterationsWithDualStagnation = 0;
 
     env->solutionStatistics.lastIterationWithSignificantDualUpdate = getNumberOfIterations() - 1;
+
+    notifyBoundsUpdated(previousPrimalBound, previousDualBound, previousGlobalDualBound);
+}
+
+void Results::resetDualBounds(bool resetGlobal)
+{
+    const double previousPrimalBound = currentPrimalBound;
+    const double previousDualBound = currentDualBound;
+    const double previousGlobalDualBound = globalDualBound;
+    const bool isMinimization = env->problem->objectiveFunction->properties.isMinimize;
+
+    currentDualBound = isMinimization ? SHOT_DBL_MIN : SHOT_DBL_MAX;
+    if(resetGlobal)
+        globalDualBound = currentDualBound;
+
+    notifyBoundsUpdated(previousPrimalBound, previousDualBound, previousGlobalDualBound);
+}
+
+void Results::notifyBoundsUpdated(
+    double previousPrimalBound, double previousDualBound, double previousGlobalDualBound)
+{
+    // setProblem() initializes the bounds before the first iteration. That is not a solve event.
+    if(getNumberOfIterations() == 0 || !env->callbacks
+        || !env->callbacks->isActive(E_CallbackLocation::BoundsUpdated))
+        return;
+
+    auto context = std::make_shared<BoundsUpdatedContext>(
+        env, previousPrimalBound, previousDualBound, previousGlobalDualBound);
+    if(context->hasChanged())
+        env->callbacks->invoke(*context);
+    context->invalidate();
 }
 
 double Results::getAbsoluteGlobalObjectiveGap()

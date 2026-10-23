@@ -157,7 +157,8 @@ set(Solver_parts
     22
     23
     24
-    25)
+    25
+    26)
 set(cpptests ${cpptests} Solver)
 
 # Equality constraints and ranges in the original and the reformulated problem

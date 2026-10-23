@@ -603,9 +603,11 @@ bool Solver::selectStrategy()
         bool useQuadraticObjective
             = (useQuadraticConstraints || quadraticStrategy == ES_QuadraticProblemStrategy::QuadraticObjective);
 
-        bool isConvex = env->reformulatedProblem->properties.convexity == E_ProblemConvexity::Convex;
+        // Select from the model we actually solve: quadratic terms can disappear during linearization.
+        const auto& properties = env->reformulatedProblem->properties;
+        bool isConvex = properties.convexity == E_ProblemConvexity::Convex;
 
-        if(isConvex && (useQuadraticObjective || useQuadraticConstraints) && env->problem->properties.isMIQPProblem)
+        if(isConvex && (useQuadraticObjective || useQuadraticConstraints) && properties.isMIQPProblem)
         // Convex MIQP problem
         {
             env->settings->updateSetting("Output.Console.DualSolver.Show", true);
@@ -613,7 +615,7 @@ bool Solver::selectStrategy()
             solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
             env->results->usedSolutionStrategy = E_SolutionStrategy::MIQP;
         }
-        else if(isConvex && (useQuadraticObjective || useQuadraticConstraints) && env->problem->properties.isQPProblem)
+        else if(isConvex && (useQuadraticObjective || useQuadraticConstraints) && properties.isQPProblem)
         // Convex QP problem
         {
             env->output->outputDebug(" Using convex QP solution strategy.");
@@ -622,7 +624,7 @@ bool Solver::selectStrategy()
             env->results->usedSolutionStrategy = E_SolutionStrategy::MIQP;
         }
         // Convex MIQCQP problem
-        else if(isConvex && useQuadraticConstraints && env->problem->properties.isMIQCQPProblem)
+        else if(isConvex && useQuadraticConstraints && properties.isMIQCQPProblem)
         {
             env->output->outputDebug(" Using convex MIQCQP solution strategy.");
             env->settings->updateSetting("Output.Console.DualSolver.Show", true);
@@ -630,32 +632,24 @@ bool Solver::selectStrategy()
             env->results->usedSolutionStrategy = E_SolutionStrategy::MIQCQP;
         }
         // Convex QCQP problem
-        else if(isConvex && (useQuadraticConstraints || useQuadraticConstraints)
-            && env->problem->properties.isQCQPProblem)
+        else if(isConvex && useQuadraticConstraints && properties.isQCQPProblem)
         {
             env->output->outputDebug(" Using convex QCQP solution strategy.");
             env->settings->updateSetting("Output.Console.DualSolver.Show", true);
             solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
             env->results->usedSolutionStrategy = E_SolutionStrategy::MIQCQP;
         }
-        // MILP problem
-        else if(env->problem->properties.isMILPProblem || env->problem->properties.isLPProblem)
+        // Continuous linear and convex nonlinear problems use the continuous strategy. Linear mixed-integer
+        // problems follow Dual.TreeStrategy below; the direct MIQCQP strategy is reserved for quadratic problems.
+        else if(isConvex && (properties.isLPProblem || properties.isNLPProblem))
         {
-            env->output->outputDebug(" Using MILP solution strategy.");
-            env->settings->updateSetting("Output.Console.DualSolver.Show", true);
-            solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
-            env->results->usedSolutionStrategy = E_SolutionStrategy::MIQP;
-        }
-        // NLP problem
-        else if(isConvex && (env->problem->properties.isNLPProblem))
-        {
-            env->output->outputDebug(" Using continous solution strategy.");
+            env->output->outputDebug(" Using continuous solution strategy.");
             solutionStrategy = std::make_unique<SolutionStrategyNLP>(env);
             env->results->usedSolutionStrategy = E_SolutionStrategy::NLP;
         }
         else
         {
-            if(!env->problem->properties.isDiscrete)
+            if(!properties.isDiscrete)
             {
                 env->output->outputDebug(" Using multi-tree solution strategy.");
                 solutionStrategy = std::make_unique<SolutionStrategyMultiTree>(env);
@@ -685,8 +679,8 @@ bool Solver::selectStrategy()
         // Want to show the output from Gurobi if Gurobi handles the whole problem
         if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Gurobi
             && ((useQuadraticObjective || useQuadraticConstraints)
-                && (env->problem->properties.isMIQPProblem || env->problem->properties.isMIQCQPProblem
-                    || env->problem->properties.isQCQPProblem || env->problem->properties.isQPProblem)))
+                && (properties.isMIQPProblem || properties.isMIQCQPProblem
+                    || properties.isQCQPProblem || properties.isQPProblem)))
         {
             env->settings->updateSetting("Output.Console.DualSolver.Show", true);
         }

@@ -59,13 +59,50 @@ callback receives the context class of the location, and its return value is ign
 
 | Location | Context class | Where it is called | Strategies | Points | Actions |
 |---|---|---|---|---|---|
-| `InteriorPointSearch` | `InteriorPointSearchContext` | `TaskFindInteriorPoint`, after the internal interior point search, or instead of it with `Dual.ESH.InteriorPoint.Strategy` = OnlyExternal | Multi-tree, single-tree, NLP; ESH cut strategy and nonlinear constraints only | `getInteriorPoints()`: reformulated | `setInteriorPoints(points)` |
-| `DualBoundUpdate` | `DualBoundUpdateContext` | `TaskUpdateExternalDualBound`, before the first dual problem and once per iteration; the CPLEX and Gurobi single-tree callbacks | Multi-tree, single-tree, NLP | – | `setDualBound(value)` |
-| `PrimalCandidateSearch` | `PrimalCandidateSearchContext` | `TaskSelectPrimalCandidatesFromExternalSource`, once per iteration and when the solution is finalized; the CPLEX and Gurobi single-tree callbacks | Multi-tree, single-tree, NLP | – | `addPrimalSolution(point)` |
+| `InteriorPointSearch` | `InteriorPointSearchContext` | `TaskFindInteriorPoint`, after checking existing points or completing the internal search (including failure to find a point), or instead of it with `Dual.ESH.InteriorPoint.Strategy` = OnlyExternal | Multi-tree, single-tree, NLP; ESH cut strategy and nonlinear constraints only | `getInteriorPoints()`: reformulated | `setInteriorPoints(points)` |
+| `DualBoundUpdate` | `DualBoundUpdateContext` | `TaskUpdateExternalDualBound`, before the first dual problem and once per iteration; before and after the direct MIQCQP solve; the CPLEX and Gurobi single-tree callbacks | Multi-tree, single-tree, NLP, direct MIQCQP | – | `setDualBound(value)` |
+| `PrimalCandidateSearch` | `PrimalCandidateSearchContext` | `TaskSelectPrimalCandidatesFromExternalSource`, before the first dual solve, once per iteration and when the solution is finalized; before and after the direct MIQCQP solve; the CPLEX and Gurobi single-tree callbacks | Multi-tree, single-tree, NLP, direct MIQCQP | – | `addPrimalSolution(point)` |
 | `PrimalCandidateCheck` | `PrimalCandidateCheckContext` | `PrimalSolver::checkPrimalSolutionCandidates`, for each candidate before it is checked | All | `getPoint()`: original | `rejectCandidate()` |
 | `NewPrimalSolution` | `NewPrimalSolutionContext` | `Results::addPrimalSolution`, after a solution has been stored | All | `getPoint()`: original | – |
+| `BoundsUpdated` | `BoundsUpdatedContext` | After a primal, current dual, or global dual bound changes during the solve | All | – | – |
 | `TerminationCheck` | `TerminationCheckContext` | `TaskCheckUserTermination`, once per iteration; the termination checks inside the MIP solvers (Cbc, CPLEX, Gurobi, HiGHS) and the single-tree callbacks | All | – | – |
-| `HyperplaneSelection` | `HyperplaneSelectionContext` | `TaskSelectHyperplanesExternal`, after SHOT has selected its own hyperplanes; the single-tree callbacks | Multi-tree, single-tree, NLP | `getSolutionPoints()`: reformulated | `addHyperplane(hyperplane)` |
+| `HyperplaneSelection` | `HyperplaneSelectionContext` | `TaskSelectHyperplanesExternal`, before the first dual solve and before gap checks for multi-tree MILPs; after SHOT selects its own hyperplanes for other iterative models; the single-tree callbacks | Multi-tree, single-tree, NLP | `getSolutionPoints()`: reformulated | `addHyperplane(hyperplane)` |
+
+`InteriorPointSearch` receives an empty `getInteriorPoints()` when neither the existing points nor the internal search
+produced a usable point. A callback can supply replacement points at that stage; SHOT validates them before deciding
+whether the interior-point search failed.
+
+Linear mixed-integer problems use `Dual.TreeStrategy`: multi-tree for Cbc and HiGHS, and the requested
+multi-tree or single-tree strategy for CPLEX and Gurobi. This also applies to linear reformulations of nonlinear
+models. Continuous linear problems use the continuous (NLP) strategy. The direct MIQCQP strategy is reserved for
+quadratic problems supported by CPLEX or Gurobi and enabled by `Model.Reformulation.Quadratics.Strategy`;
+`HyperplaneSelection` is unavailable in that direct strategy.
+
+For reformulated MILPs, multi-tree invokes `HyperplaneSelection` after the initial `PrimalCandidateSearch`, with
+an empty solution-point list, and after each iteration's primal reviews, using that iteration's solution points.
+SHOT adds the returned cuts before checking the objective gap, so a rejected seed can be excluded before the first
+solve and a closed gap does not skip the callback. Nonlinear multi-tree models retain cut selection after SHOT's
+own hyperplane generation. The initial call is specific to multi-tree MILPs.
+
+For direct MIQCQP, `DualBoundUpdate` changes SHOT's bound and gap calculations. It does not pass the bound to
+CPLEX or Gurobi as a bound for their internal search.
+
+`DualBoundUpdate` always uses the **original problem's objective direction and objective values**, even when SHOT
+reformulates a maximization objective as a minimization problem internally. For minimization, supply a valid lower
+bound; a larger value tightens it. For maximization, supply a valid upper bound; a smaller value tightens it. Do not
+negate the value to match the reformulated MIP objective. SHOT ignores a proposed bound that does not improve its
+current dual bound. The user is responsible for the validity of a proposed bound.
+
+`BoundsUpdated` reports changes to SHOT's recorded bounds, including an externally supplied dual bound, a primal
+solution that improves the incumbent, and a dual bound reset when an artificial bound or primal reduction cut
+invalidates it. The context's `getPreviousPrimalBound()`, `getPreviousDualBound()` and
+`getPreviousGlobalDualBound()` give the values before the update; the inherited bound getters give the values after it.
+`isPrimalBoundChanged()`, `isDualBoundChanged()` and `isGlobalDualBoundChanged()` identify the changed values. One
+primal update can also cap a dual bound, and that produces one callback with both changes. Unchanged or rejected
+updates and bound initialization during `setProblem()` produce no event. Backend MIP bound changes are reported when
+SHOT receives and records them. A missing previous bound is infinite, as in
+the common context getters. The callback runs before `NewPrimalSolution` for an improving primal solution. It is a
+notification: only the common `terminate()` action is available.
 
 The points are in the variables of the original problem ("original") or of the reformulated problem ("reformulated").
 The reformulated problem has the variables of the original problem first, followed by the auxiliary variables of the

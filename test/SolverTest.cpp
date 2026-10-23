@@ -1443,6 +1443,8 @@ bool TestCallbackGenericContext()
 
     std::set<E_CallbackLocation> locations;
     bool contextClassesMatch = true;
+    bool boundContextMatches = true;
+    int boundEvents = 0;
 
     solver->registerCallback(E_CallbackLocation::PrimalCandidateCheck | E_CallbackLocation::TerminationCheck,
         [&locations, &contextClassesMatch](CallbackContext& context)
@@ -1463,6 +1465,18 @@ bool TestCallbackGenericContext()
                 contextClassesMatch = false;
         });
 
+    solver->registerCallback<BoundsUpdatedContext>([&](BoundsUpdatedContext& context)
+        {
+            boundEvents++;
+            if(context.getLocation() != E_CallbackLocation::BoundsUpdated || !context.hasChanged()
+                || context.isPrimalBoundChanged()
+                    != (context.getPreviousPrimalBound() != context.getPrimalBound())
+                || context.isDualBoundChanged() != (context.getPreviousDualBound() != context.getDualBound())
+                || context.isGlobalDualBoundChanged()
+                    != (context.getPreviousGlobalDualBound() != context.getGlobalDualBound()))
+                boundContextMatches = false;
+        });
+
     solver->solveProblem();
 
     std::set<E_CallbackLocation> expectedLocations
@@ -1477,6 +1491,12 @@ bool TestCallbackGenericContext()
     if(!contextClassesMatch)
     {
         std::cout << "The class of a context was not that of its location\n";
+        passed = false;
+    }
+
+    if(boundEvents == 0 || !boundContextMatches)
+    {
+        std::cout << "The bound update callback did not report the changed bounds correctly\n";
         passed = false;
     }
 
@@ -2278,6 +2298,107 @@ bool TestPrimalSolutionSlightlyOutsideBounds()
     return (passed);
 }
 
+// Linear problems must honor the tree setting, while genuine convex quadratic problems retain direct solves.
+bool TestStrategySelectionForLinearAndQuadraticProblems()
+{
+    std::vector<ES_MIPSolver> backends;
+#ifdef HAS_CBC
+    backends.push_back(ES_MIPSolver::Cbc);
+#endif
+#ifdef HAS_HIGHS
+    backends.push_back(ES_MIPSolver::Highs);
+#endif
+#ifdef HAS_CPLEX
+    backends.push_back(ES_MIPSolver::Cplex);
+#endif
+#ifdef HAS_GUROBI
+    backends.push_back(ES_MIPSolver::Gurobi);
+#endif
+    for(auto backend : backends)
+    {
+        bool supportsQuadratics = backend == ES_MIPSolver::Cplex || backend == ES_MIPSolver::Gurobi;
+        for(bool discrete : { false, true })
+        {
+            for(int quadraticType : { 0, 1, 2, 3, 4 }) // Linear, QP, QCQP, both, or a linearized integer product
+            {
+                if((quadraticType != 0 && !supportsQuadratics) || (quadraticType == 4 && !discrete))
+                    continue;
+                for(auto tree : { ES_TreeStrategy::MultiTree, ES_TreeStrategy::SingleTree })
+                {
+                    auto solver = std::make_unique<SHOT::Solver>();
+                    auto env = solver->getEnvironment();
+                    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+                    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(backend));
+                    solver->updateSetting("Dual.TreeStrategy", static_cast<int>(tree));
+                    solver->updateSetting("Model.Reformulation.Quadratics.Strategy",
+                        static_cast<int>(ES_QuadraticProblemStrategy::ConvexQuadraticallyConstrained));
+
+                    auto problem = std::make_shared<Problem>(env);
+                    problem->name = "strategyselection";
+                    auto x = std::make_shared<Variable>("x",
+                        discrete ? E_VariableType::Integer : E_VariableType::Real, 0.0, 4.0);
+                    problem->add(x);
+                    if((quadraticType & 1) || quadraticType == 4)
+                    {
+                        auto objective = std::make_shared<QuadraticObjectiveFunction>(
+                            E_ObjectiveFunctionDirection::Minimize);
+                        if(quadraticType == 4)
+                        {
+                            solver->updateSetting("Model.Reformulation.Bilinear.IntegerFormulation",
+                                static_cast<int>(ES_ReformulateBilinearInteger::Yes));
+                            auto y = std::make_shared<Variable>("y", E_VariableType::Integer, 0.0, 3.0);
+                            problem->add(y);
+                            objective->add(std::make_shared<QuadraticTerm>(1.0, x, y));
+                        }
+                        else
+                            objective->add(std::make_shared<QuadraticTerm>(1.0, x, x));
+                        problem->add(objective);
+                    }
+                    else
+                    {
+                        auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+                        objective->add(std::make_shared<LinearTerm>(1.0, x));
+                        problem->add(objective);
+                    }
+                    if(quadraticType & 2)
+                    {
+                        auto constraint = std::make_shared<QuadraticConstraint>("quadratic", SHOT_DBL_MIN, 9.0);
+                        constraint->add(std::make_shared<QuadraticTerm>(1.0, x, x));
+                        problem->add(constraint);
+                    }
+                    problem->finalize();
+                    if(!solver->setProblem(problem))
+                        return false;
+
+                    auto expected = quadraticType & 2 ? E_SolutionStrategy::MIQCQP : E_SolutionStrategy::MIQP;
+                    if(quadraticType == 4 && !env->reformulatedProblem->properties.isMILPProblem)
+                    {
+                        std::cout << "Integer product was not reformulated to MILP" << std::endl;
+                        return false;
+                    }
+                    if(quadraticType == 0 || quadraticType == 4)
+                    {
+                        if(!discrete)
+                            expected = E_SolutionStrategy::NLP;
+                        else if(supportsQuadratics && tree == ES_TreeStrategy::SingleTree)
+                            expected = E_SolutionStrategy::SingleTree;
+                        else
+                            expected = E_SolutionStrategy::MultiTree;
+                    }
+                    if(env->results->usedSolutionStrategy != expected)
+                    {
+                        std::cout << "Incorrect strategy for backend " << static_cast<int>(backend)
+                                  << ", discrete " << discrete << ", quadratic type " << quadraticType
+                                  << ", tree " << static_cast<int>(tree) << std::endl;
+                        return false;
+                    }
+                }
+            }
+        }
+    }
+    return true;
+}
+
 int SolverTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -2425,6 +2546,9 @@ int SolverTest(int argc, char* argv[])
         std::cout << "Starting test for primal solutions slightly outside the variable bounds" << std::endl;
         passed = TestPrimalSolutionSlightlyOutsideBounds();
         std::cout << "Finished test for primal solutions slightly outside the variable bounds." << std::endl;
+        break;
+    case 26:
+        passed = TestStrategySelectionForLinearAndQuadraticProblems();
         break;
     default:
         passed = false;

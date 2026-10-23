@@ -134,6 +134,10 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
         env->tasks->addTask(tEnumerateFixedInteger, "EnumerateFixedInteger");
     }
 
+    // Review external candidates before the first dual solve, including MIP starts for linear problems.
+    auto tSelectPrimExternalInitial = std::make_shared<TaskSelectPrimalCandidatesFromExternalSource>(env);
+    env->tasks->addTask(tSelectPrimExternalInitial, "SelectPrimExternalInitial");
+
     // A termination requested by a callback before the first dual problem is solved, e.g., at the interior point
     // search, stops the solution process here
     auto tCheckInitialUserTerm = std::make_shared<TaskCheckUserTermination>(env, "FinalizeSolution", false);

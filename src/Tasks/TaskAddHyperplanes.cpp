@@ -37,7 +37,7 @@ void TaskAddHyperplanes::run()
 {
     env->timing->startTimer("DualStrategy");
 
-    auto currIter = env->results->getCurrentIteration(); // The unsolved new iteration
+    auto currIter = env->results->getCurrentIteration();
 
     if(!currIter->isMIP() || !env->settings->getSetting<bool>("Dual.HyperplaneCuts.Delay")
         || !currIter->MIPSolutionLimitUpdated || itersWithoutAddedHPs > 5)

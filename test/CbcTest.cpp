@@ -263,7 +263,8 @@ bool CbcExternalDualBoundCallbackTest(std::string filename, double dualBoundToTe
     solver->registerCallback<DualBoundUpdateContext>(
         [dualBoundToTest](DualBoundUpdateContext& context)
         {
-            if(context.getDualBound() >= dualBoundToTest)
+            if(context.isMinimization() ? context.getDualBound() >= dualBoundToTest
+                                        : context.getDualBound() <= dualBoundToTest)
                 return;
 
             std::cout << "Current dual bound is " << context.getDualBound()
