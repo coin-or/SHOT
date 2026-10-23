@@ -41,7 +41,7 @@ settings, file input, and callbacks.
 
 ### Building with proprietary solvers
 
-Public wheels cannot redistribute the CPLEX, Gurobi, or GAMS SDKs. If one of
+Public wheels do not include the CPLEX, Gurobi, GAMS, or CONOPT SDKs. If one of
 these products is installed and licensed locally, force an sdist build and pass
 its existing SHOT CMake options through pip. For example:
 
@@ -61,6 +61,36 @@ of settings.
 Replace `GUROBI_DIR` with your local installation path. Verify the resulting
 build with `python -c "import SHOTpy; print(SHOTpy.HAS_GUROBI)"`; it should print
 `True`.
+
+For CONOPT on Linux or macOS, download and extract the
+[CONOPT C++ SDK](https://conopt.gams.com/download/), then rebuild from this
+checkout (which includes the CONOPT integration):
+
+```bash
+python -m pip install . --no-cache-dir --force-reinstall \
+    --config-settings=cmake.define.HAS_CONOPT=on \
+    --config-settings=cmake.define.CONOPT_DIR=/absolute/path/to/conopt-sdk
+python -c "import SHOTpy; assert SHOTpy.HAS_CONOPT"
+```
+
+`CONOPT_DIR` must contain `include/conopt.hpp` and the SDK's `lib` directory.
+Once a release containing this integration is available on PyPI, the same
+options can be passed to `pip install SHOTpy --no-binary SHOTpy` as above.
+Select CONOPT in Python with:
+
+```python
+solver.updateSetting(
+    "Primal.FixedInteger.Solver", int(SHOTpy.PrimalNLPSolver.Conopt)
+)
+```
+
+This builds a local wheel linked to your external SDK. Keep the SDK at its
+configured location; CONOPT libraries are not installed into the wheel by this
+build. Do not run wheel repair tools (`auditwheel`, `delocate`, or `delvewheel`)
+on this local wheel, since they can copy external libraries into it. The public
+wheel build keeps CONOPT disabled. See the
+[CONOPT instructions](docs/CompilationInstructions.md#conopt-primal-nlp-solver)
+for licensing, demo limits, and solver settings.
 
 The compiler toolchain and open-source dependencies described in the
 [compilation instructions](docs/CompilationInstructions.md) are still required

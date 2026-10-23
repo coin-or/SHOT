@@ -268,7 +268,7 @@ CMake installs SHOTSolver and the solver runtime DLLs into the Python wheel.
 cibuildwheel repairs the wheel with delvewheel and runs `test/python` in an
 isolated environment, including a check that NumPy can be imported first.
 The GitHub wheel workflow includes Windows x64 alongside Linux and macOS.
-GAMS, CPLEX, Gurobi, and Uno are excluded from these wheels.
+GAMS, CPLEX, Gurobi, CONOPT, and Uno are excluded from these wheels.
 
 #### Adding Uno
 
