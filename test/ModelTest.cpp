@@ -6897,9 +6897,24 @@ bool ModelTestInitialPOAConvexRelaxation()
             continue;
 
         if(C->name.rfind("initPOA_c_convex_", 0) == 0)
+        {
             convexCuts++;
-        else
+            continue;
+        }
+
+        // A cut is named initPOA_<constraint>_<counter>. Without a MIP solver supporting quadratic terms, the square
+        // in the objective function is partitioned into a convex auxiliary constraint, and cuts for it are valid.
+        std::string source = C->name.substr(8, C->name.rfind('_') - 8);
+        auto sourceConstraint = std::find_if(env->reformulatedProblem->numericConstraints.begin(),
+            env->reformulatedProblem->numericConstraints.end(),
+            [&](const NumericConstraintPtr& N) { return (N->name == source); });
+
+        if(sourceConstraint == env->reformulatedProblem->numericConstraints.end()
+            || (*sourceConstraint)->properties.convexity > E_Convexity::Convex)
+        {
+            std::cout << "  Cut " << C->name << " is not for a convex constraint.\n";
             otherCuts++;
+        }
     }
 
     std::cout << "  Initial POA cuts for the convex constraint: " << convexCuts << ", for others: " << otherCuts

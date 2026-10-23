@@ -526,7 +526,8 @@ class TestSolve:
         for build in (with_comparisons, with_classes):
             objective, x_value, y_value = self._solve(build)
             assert abs(objective - self.OPTIMUM) < 1e-5
-            assert y_value == 3.0
+            # y is integer within the integer tolerance, not necessarily exactly
+            assert abs(y_value - 3.0) < 1e-6
             assert abs(x_value - self.X) < 1e-5
 
 
