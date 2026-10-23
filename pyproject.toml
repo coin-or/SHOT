@@ -48,19 +48,6 @@ result = "{value}{suffix}"
 [tool.scikit-build]
 cmake.build-type = "Release"
 build-dir = "build/{wheel_tag}"
-cmake.args = [
-    "-DHAS_PYTHON=on",
-    "-DGENERATE_EXE=off",
-    "-DCOMPILE_TESTS=off",
-    "-DHAS_GAMS=off",
-    "-DHAS_CPLEX=off",
-    "-DHAS_GUROBI=off",
-    "-DHAS_CBC=on",
-    "-DHAS_IPOPT=on",
-    "-DHAS_HIGHS=on",
-    "-DHAS_UNO=off",
-    "-DBUILD_SHARED_LIBS=off",
-]
 wheel.packages = []
 install.components = ["Python"]
 # Build an sdist from reviewed project paths so local files in the checkout
@@ -85,6 +72,20 @@ sdist.exclude = [
     "ThirdParty/Uno*", "ThirdParty/Cbc/**", "ThirdParty/Ipopt/**",
     ".claude/**", ".codex/**", ".agents/**",
 ]
+
+# Keep defaults overridable through pip --config-settings=cmake.define.<NAME>=<value>.
+[tool.scikit-build.cmake.define]
+HAS_PYTHON = "on"
+GENERATE_EXE = "off"
+COMPILE_TESTS = "off"
+HAS_GAMS = "off"
+HAS_CPLEX = "off"
+HAS_GUROBI = "off"
+HAS_CBC = "on"
+HAS_IPOPT = "on"
+HAS_HIGHS = "on"
+HAS_UNO = "off"
+BUILD_SHARED_LIBS = "off"
 
 [tool.cibuildwheel]
 build = "cp311-* cp312-* cp313-* cp314-* cp315-*"

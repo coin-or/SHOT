@@ -7,8 +7,7 @@ value named None, which pybind11-stubgen writes as an attribute None.
 """
 
 import ast
-import os
-import subprocess
+import runpy
 import sys
 from pathlib import Path
 
@@ -16,14 +15,10 @@ from pathlib import Path
 def main():
     directory = Path(sys.argv[1]).resolve()
 
-    # pip exposes isolated build dependencies through PYTHONPATH/sitecustomize.
-    # Keep that path while making the newly built extension importable.
-    environment = os.environ.copy()
-    pythonPath = environment.get("PYTHONPATH")
-    environment["PYTHONPATH"] = str(directory) + (os.pathsep + pythonPath if pythonPath else "")
-
-    subprocess.run([sys.executable, "-m", "pybind11_stubgen", "SHOTpy", "--exit-code", "-o", str(directory)],
-                   check=True, env=environment)
+    # Use this process's import path, including pip's isolated build dependencies.
+    sys.path.insert(0, str(directory))
+    sys.argv = ["pybind11_stubgen", "SHOTpy", "--exit-code", "-o", str(directory)]
+    runpy.run_module("pybind11_stubgen", run_name="__main__")
 
     stubFile = directory / "SHOTpy.pyi"
     ast.parse(stubFile.read_text(encoding="utf-8"), filename=str(stubFile))
