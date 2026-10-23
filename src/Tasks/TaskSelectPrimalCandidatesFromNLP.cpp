@@ -27,6 +27,10 @@
 #include "../Tasks/TaskSelectHyperplanesESH.h"
 #include "../Tasks/TaskSelectHyperplanesECP.h"
 
+#ifdef HAS_CONOPT
+#include "../NLPSolver/NLPSolverConopt.h"
+#endif
+
 #ifdef HAS_IPOPT
 #include "../NLPSolver/NLPSolverIpoptRelaxed.h"
 #endif
@@ -105,6 +109,24 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(
     }
 #endif
 
+#ifdef HAS_CONOPT
+    case ES_PrimalNLPSolver::Conopt:
+        env->results->usedPrimalNLPSolver = ES_PrimalNLPSolver::Conopt;
+
+        try
+        {
+            NLPSolver = std::make_shared<NLPSolverConopt>(env, sourceProblem);
+        }
+        catch(const std::exception& e)
+        {
+            env->output->outputWarning(fmt::format(
+                " Could not initialize CONOPT as the fixed-integer NLP solver, disabling this primal heuristic: {}",
+                e.what()));
+            NLPSolver = nullptr;
+        }
+
+        break;
+#endif
 #ifdef HAS_UNO
     case(ES_PrimalNLPSolver::Uno):
     {

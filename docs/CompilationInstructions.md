@@ -244,6 +244,34 @@ use the `/MD` Cbc 2.10.13 package described in the wheel section; the Cbc
 Keep Gurobi's `bin` directory on `PATH` so Windows can load `gurobi130.dll`.
 Gurobi is not included in the public SHOTpy wheels.
 
+#### Adding CONOPT
+
+The native MSVC build has been tested with CONOPT 4.39.3. Extract
+`conopt-4_39_3-win-x86_64.zip` from the [CONOPT download page](https://conopt.gams.com/download/),
+for example to `C:/solvers/conopt`, and point `CONOPT_DIR` at the directory
+containing `include` and `lib`:
+
+```bat
+cmake -S . -B build-msvc-conopt -G Ninja -DCMAKE_BUILD_TYPE=Release ^
+  -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL ^
+  -DHAS_CONOPT=ON -DCONOPT_DIR=C:/solvers/conopt/conopt-win-x86_64 ^
+  -DHAS_HIGHS=ON -DHAS_CBC=OFF -DHAS_IPOPT=OFF ^
+  -DHAS_CPLEX=OFF -DHAS_GUROBI=OFF -DHAS_GAMS=OFF -DHAS_UNO=OFF ^
+  -DHAS_PYTHON=OFF -DCOMPILE_TESTS=ON
+cmake --build build-msvc-conopt --parallel 4
+ctest --test-dir build-msvc-conopt --output-on-failure -R "^(Conopt_|Instance_11$)"
+build-msvc-conopt\SHOT.exe test\data\alan.osil --mip=highs --nlp=conopt
+```
+
+The CONOPT C++ library uses `/MD`, so select `MultiThreadedDLL` as shown (and
+the `/MD` Cbc package if Cbc is also enabled). SHOT delay-loads
+`conoptcpp4.dll` and `conopt4.dll`: when a CONOPT solver is created, they are
+loaded from the configured SDK `lib` directory, so neither `PATH` changes nor
+copies of the DLLs are needed. If the SDK has moved, SHOT falls back to the
+standard DLL search, including `PATH`; if CONOPT still cannot be loaded, SHOT
+warns and disables the fixed-integer NLP heuristic. CONOPT DLLs are not copied
+beside SHOT or installed.
+
 #### Building SHOTpy wheels
 
 Windows x64 wheels are built and tested for CPython 3.11 through 3.15.
@@ -268,7 +296,7 @@ CMake installs SHOTSolver and the solver runtime DLLs into the Python wheel.
 cibuildwheel repairs the wheel with delvewheel and runs `test/python` in an
 isolated environment, including a check that NumPy can be imported first.
 The GitHub wheel workflow includes Windows x64 alongside Linux and macOS.
-GAMS, CPLEX, Gurobi, and Uno are excluded from these wheels.
+GAMS, CPLEX, Gurobi, CONOPT, and Uno are excluded from these wheels.
 
 #### Adding Uno
 
@@ -516,3 +544,69 @@ drive a `--debug` investigation, see
 
 - Running the compiled solver: [docs/CommandLineUsage.md](CommandLineUsage.md).
 - Debugging solver behavior: [docs/DebuggingSHOT.md](DebuggingSHOT.md).
+
+
+## CONOPT primal NLP solver
+
+CONOPT is an optional commercial NLP backend for fixed-integer subproblems from
+AMPL, OSiL, GAMS, and API models. Download
+and extract the [CONOPT SDK](https://conopt.gams.com/download/) for your platform.
+The 4.39.2 SDK provides `include/conopt.hpp`, `libconoptcpp`, and `libconopt`.
+The compiled C++ wrapper is used directly; Ipopt is not required by this backend.
+
+```sh
+cmake -S . -B build -DHAS_CONOPT=ON -DCONOPT_DIR=/path/to/conopt-sdk
+cmake --build build -j
+./build/SHOT problem.nl --nlp=conopt
+```
+
+`HAS_CONOPT` defaults to `OFF`. If requested but the SDK is not found, CMake warns
+and disables it. Keep the SDK's `lib` directory, including its bundled runtime
+libraries, available at runtime. The SDK library directory is included in build
+and install rpaths; binaries do not bundle or redistribute CONOPT. For Windows,
+see [Adding CONOPT](#adding-conopt) in the MSVC instructions.
+
+On Linux, install into a chosen prefix with `cmake --install build --prefix /path/to/prefix`.
+The executable in `bin` finds SHOT and its built CppAD runtime in the prefix's
+`lib` directory. External solver SDKs must remain at their configured locations.
+When `HAS_PYTHON=ON`, the installation also includes `lib/SHOTpy*.so`; add that
+directory to `PYTHONPATH` to import the installed module. No `LD_LIBRARY_PATH`
+setting is needed for these installed targets.
+
+For a full license, set all four environment variables before starting SHOT:
+`CONOPT_LICENSE_INT_1`, `CONOPT_LICENSE_INT_2`, `CONOPT_LICENSE_INT_3`, and
+`CONOPT_LICENSE_TEXT`. SHOT does not persist license values in model or option files.
+With no license configuration, CONOPT uses demo mode. Incomplete configuration
+produces a warning. See [CONOPT licensing](https://conopt.gams.com/licensing/)
+for demo and academic eligibility and usage terms. The NLP demo limit is 1000
+variables and 1000 rows, counting generated ranged-constraint slacks and the
+objective row (a constant objective also uses a fixed auxiliary column). A license or size failure skips that primal NLP attempt; it does
+not switch the running heuristic to another backend.
+
+CONOPT uses `Primal.FixedInteger.IterationLimit` and
+`Primal.FixedInteger.TimeLimit`. As for Ipopt, bounds with an absolute value of
+at least 1e20, including the artificial bounds SHOT gives unbounded variables,
+are infinite. `Subsolver.Conopt.FeasibilityTolerance` (Rtnwma)
+and `Subsolver.Conopt.OptimalityTolerance` (Rtredg) default to `1e-9`.
+`Subsolver.Conopt.DerivativeCheck` makes CONOPT compare the first and second
+derivatives with numerical ones (Lkdebg, Lkdeb2), at the initial point (`-1`)
+or every n-th iteration (`n`); CONOPT stops with an error if they differ. The
+CONOPT tests run with it. Solutions
+are checked against SHOT's bounds and linear/nonlinear feasibility tolerances
+before submission, including feasible solutions at an iteration or time limit.
+Logging honors `Output.Console.PrimalSolver.Show`. Callback evaluations run
+serially. Debug output includes the source model/current bounds and CONOPT
+option values.
+
+The adapter retains the finalized model structure between fixed-integer NLP
+solves, refreshing bounds and starting values for each solve. Quadratic Hessians
+are reused, linear rows are skipped in Hessian evaluation, and nonlinear
+constraint derivatives are batched where CONOPT's evaluation requests permit it.
+A Jacobian entry is nonlinear only if its variable is in the Hessian sparsity
+pattern of the row; all other entries, also in rows with a nonlinear
+expression, are passed to CONOPT as constants.
+The source model must remain structurally unchanged for the lifetime of its
+`NLPSolverConopt` instance; create a new instance after changing its structure.
+
+Enable `COMPILE_TESTS` and run `ctest --test-dir build -R '^Conopt_' --output-on-failure` for the backend tests. `Instance_11` uses HiGHS with CONOPT
+when both are enabled; larger instance collections may exceed demo limits.

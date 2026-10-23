@@ -17,6 +17,9 @@
 #if IPOPT_VERSION_MAJOR > 3 || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR >= 14)
 #include "IpLibraryLoader.hpp"
 #include "IpLinearSolvers.h"
+#elif __has_include("HSLLoader.h")
+#include "HSLLoader.h"
+#define SHOT_IPOPT_HAS_HSL_LOADER
 #endif
 
 #include "../Output.h"
@@ -126,10 +129,8 @@ bool IpoptProblem::get_bounds_info(Index n, Number* x_l, Number* x_u, Index m, N
     std::memcpy(x_l, lowerBounds.data(), n * sizeof(Number));
     std::memcpy(x_u, upperBounds.data(), n * sizeof(Number));
 
-    // Ipopt interprets any number greater than nlp_upper_bound_inf as
-    // infinity. The default value of nlp_upper_bound_inf and nlp_lower_bound_inf
-    // is 1e19 and can be changed through ipopt options.
-    // e.g. g_u[0] = 2e19;
+    // Ipopt interprets any bound at least nlp_upper_bound_inf, or at most nlp_lower_bound_inf, as infinite. These are
+    // set to INLPSolver::infinity.
 
     for(int i = 0; i < m; i++)
     {
@@ -427,8 +428,8 @@ bool IpoptProblem::eval_jac_g(Index n, const Number* x, [[maybe_unused]] bool ne
 
         SparseVariableVector jacobian;
         if(nonlinearConstraintJacobianPattern.nnz() > 0 && C->properties.hasNonlinearExpression)
-            jacobian = std::static_pointer_cast<NonlinearConstraint>(C)
-                           ->calculateGradientWithoutNonlinearExpression(vectorPoint, false);
+            jacobian = std::static_pointer_cast<NonlinearConstraint>(C)->calculateGradientWithoutNonlinearExpression(
+                vectorPoint, false);
         else
             jacobian = C->calculateGradient(vectorPoint, false);
 
@@ -559,8 +560,9 @@ bool IpoptProblem::eval_h(Index n, const Number* x, [[maybe_unused]] bool new_x,
         if(!constantHessian)
         {
             if(nonlinearConstraintHessianPattern.nnz() > 0 && C->properties.hasNonlinearExpression)
-                calculatedHessian = std::static_pointer_cast<NonlinearConstraint>(C)
-                                        ->calculateHessianWithoutNonlinearExpression(vectorPoint, false);
+                calculatedHessian
+                    = std::static_pointer_cast<NonlinearConstraint>(C)->calculateHessianWithoutNonlinearExpression(
+                        vectorPoint, false);
             else
                 calculatedHessian = C->calculateHessian(vectorPoint, false);
         }
@@ -596,8 +598,8 @@ bool IpoptProblem::eval_h(Index n, const Number* x, [[maybe_unused]] bool new_x,
                 nonlinearPoint[variable->properties.nonlinearVariableIndex] = vectorPoint[variable->getIndex()];
 
             CppAD::sparse_rcv<std::vector<size_t>, std::vector<double>> subset(nonlinearConstraintHessianPattern);
-            sourceProblem->ADFunctions.sparse_hes(nonlinearPoint, weights, subset,
-                nonlinearConstraintHessianPattern, "cppad.symmetric", nonlinearConstraintHessianWork);
+            sourceProblem->ADFunctions.sparse_hes(nonlinearPoint, weights, subset, nonlinearConstraintHessianPattern,
+                "cppad.symmetric", nonlinearConstraintHessianWork);
 
             for(size_t k = 0; k < subset.nnz(); ++k)
             {
@@ -1076,6 +1078,36 @@ bool NLPSolverIpoptBase::isLinearSolverAvailable([[maybe_unused]] ES_IpoptSolver
     {
         return (false);
     }
+#elif defined(SHOT_IPOPT_HAS_HSL_LOADER)
+    // Before Ipopt 3.14, an HSL solver that cannot be loaded ends the process. An Ipopt with
+    // HSL linked instead of loaded is not recognized here, and the default linear solver is then used.
+    int (*isAvailable)() = nullptr;
+
+    switch(solver)
+    {
+    case(ES_IpoptSolver::ma27):
+        isAvailable = LSL_isMA27available;
+        break;
+    case(ES_IpoptSolver::ma57):
+        isAvailable = LSL_isMA57available;
+        break;
+    case(ES_IpoptSolver::ma86):
+        isAvailable = LSL_isMA86available;
+        break;
+    case(ES_IpoptSolver::ma97):
+        isAvailable = LSL_isMA97available;
+        break;
+    default:
+        return (true);
+    }
+
+    // These versions have no option for the library, so the default one is loaded
+    char message[512];
+
+    if(!LSL_isHSLLoaded() && LSL_loadHSL(nullptr, message, sizeof(message)) != 0)
+        return (false);
+
+    return (isAvailable() != 0);
 #else
     return (true);
 #endif
@@ -1181,6 +1213,9 @@ void NLPSolverIpoptBase::setInitialSettings()
     ipoptApplication->Options()->SetNumericValue("gamma_phi", 1e-8, true, true);
     ipoptApplication->Options()->SetNumericValue("gamma_theta", 1e-4, true, true);
     ipoptApplication->Options()->SetNumericValue("required_infeasibility_reduction", 0.1, true, true);
+
+    ipoptApplication->Options()->SetNumericValue("nlp_upper_bound_inf", INLPSolver::infinity, true, true);
+    ipoptApplication->Options()->SetNumericValue("nlp_lower_bound_inf", -INLPSolver::infinity, true, true);
 
     // A derivative that is infinite or NaN at the starting point, e.g. of a square root at zero, was passed on to the
     // linear solver, and MUMPS could then crash with a bus error in dmumps_mtransw_. Ipopt now stops with an invalid

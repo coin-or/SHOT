@@ -402,6 +402,7 @@ enum class ES_PrimalNLPSolver
     GAMS,
     SHOT,
     Uno,
+    Conopt,
     NotUsed // No NLP solver has been used
 };
 

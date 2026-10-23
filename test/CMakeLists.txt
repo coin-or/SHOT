@@ -77,7 +77,9 @@ set(Model_parts
     68
     69
     70
-    71) # The different parts of each test (if any)
+    71
+    72
+    73) # The different parts of each test (if any)
 
 set(Settings_parts 1 2 3 4 5 6 7 8 9)
 
@@ -161,6 +163,11 @@ set(Solver_parts
     26)
 set(cpptests ${cpptests} Solver)
 
+if(HAS_CONOPT)
+  list(APPEND cpptests Conopt)
+  set(Conopt_parts 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16)
+endif()
+
 # Equality constraints and ranges in the original and the reformulated problem
 set(EqualityConstraint_parts 1 2 3 4 5)
 
@@ -218,6 +225,9 @@ endif()
 # Instance tests: one case per (MIP solver x NLP solver) combination
 # Format support (.nl, .gms) is checked at runtime; guards here are MIP+NLP only
 set(Instance_parts)
+if(HAS_HIGHS AND HAS_CONOPT)
+  list(APPEND Instance_parts 11)
+endif()
 if(HAS_HIGHS AND HAS_IPOPT)
   list(APPEND Instance_parts 1)
 endif()
@@ -303,7 +313,7 @@ endif()
 
 # Set rpath for finding dynamic libraries on macOS
 if(APPLE)
-    set(RPATH_DIRS "${CPPAD_LIB_DIR}")
+    set(RPATH_DIRS "${CPPAD_LIB_DIR};${CONOPT_LIBRARY_DIR}")
     
     if(HAS_GUROBI AND GUROBI_FOUND)
         list(APPEND RPATH_DIRS "${GUROBI_LIB_DIR}")

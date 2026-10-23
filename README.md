@@ -41,7 +41,7 @@ settings, file input, and callbacks.
 
 ### Building with proprietary solvers
 
-Public wheels cannot redistribute the CPLEX, Gurobi, or GAMS SDKs. If one of
+Public wheels do not include the CPLEX, Gurobi, GAMS, or CONOPT SDKs. If one of
 these products is installed and licensed locally, force an sdist build and pass
 its existing SHOT CMake options through pip. For example:
 
@@ -62,6 +62,40 @@ Replace `GUROBI_DIR` with your local installation path. Verify the resulting
 build with `python -c "import SHOTpy; print(SHOTpy.HAS_GUROBI)"`; it should print
 `True`.
 
+For CONOPT on Linux, macOS, or Windows x64, download and extract the
+[CONOPT C++ SDK](https://conopt.gams.com/download/), then rebuild from this
+checkout (which includes the CONOPT integration):
+
+```bash
+python -m pip install . --no-cache-dir --force-reinstall \
+    --config-settings=cmake.define.HAS_CONOPT=on \
+    --config-settings=cmake.define.CONOPT_DIR=/absolute/path/to/conopt-sdk
+python -c "import SHOTpy; assert SHOTpy.HAS_CONOPT"
+```
+
+`CONOPT_DIR` must contain `include/conopt.hpp` and the SDK's `lib` directory.
+Once a release containing this integration is available on PyPI, the same
+options can be passed to `pip install SHOTpy --no-binary SHOTpy` as above.
+Select CONOPT in Python with:
+
+```python
+solver.updateSetting(
+    "Primal.FixedInteger.Solver", int(SHOTpy.PrimalNLPSolver.Conopt)
+)
+```
+
+This builds a local wheel linked to your external SDK. Keep the SDK at its
+configured location; CONOPT libraries are not installed into the wheel by this
+build. Do not run wheel repair tools (`auditwheel`, `delocate`, or `delvewheel`)
+on this local wheel, since they can copy external libraries into it. On Windows,
+build from an x64 Native Tools Command Prompt with the `CBC_DIR`, `IPOPT_DIR`,
+and `CMAKE_ARGS=-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL` settings used
+for the [Windows wheels](docs/CompilationInstructions.md#building-shotpy-wheels);
+SHOTpy then loads CONOPT from the configured SDK, without `PATH` changes. The public
+wheel build keeps CONOPT disabled. See the
+[CONOPT instructions](docs/CompilationInstructions.md#conopt-primal-nlp-solver)
+for licensing, demo limits, and solver settings.
+
 The compiler toolchain and open-source dependencies described in the
 [compilation instructions](docs/CompilationInstructions.md) are still required
 for a source build.
@@ -79,7 +113,7 @@ Originally SHOT was intended for convex MINLP problems only, but as of version 1
 - through its own Python API ([SHOTpy](docs/SHOTpy_Tutorial.ipynb)) — install with `pip install SHOTpy` or build with `-DHAS_PYTHON=on` (see [docs/CompilationInstructions.md](docs/CompilationInstructions.md)), or
 - using its API implemented in C++, both of which support callbacks for customizing SHOT's behavior (e.g. injecting primal solutions, warm-starting, or adding custom cuts).
 
-SHOT requires a MILP solver: [Cplex](https://www.ibm.com/analytics/cplex-optimizer), [Gurobi](https://www.gurobi.com), [Cbc](https://www.github.com/coin-or/Cbc) or [HiGHS](https://highs.dev). NLP subproblems can use [Ipopt](https://www.github.com/coin-or/Ipopt), [Uno](https://github.com/cvanaret/Uno), or SHOT's built-in NLP solver. If SHOT is interfaced with GAMS, any licensed NLP solver can be used.
+SHOT requires a MILP solver: [Cplex](https://www.ibm.com/analytics/cplex-optimizer), [Gurobi](https://www.gurobi.com), [Cbc](https://www.github.com/coin-or/Cbc) or [HiGHS](https://highs.dev). NLP subproblems can use [Ipopt](https://www.github.com/coin-or/Ipopt), [Uno](https://github.com/cvanaret/Uno), the optional [CONOPT](https://conopt.gams.com) C++ API, or SHOT's built-in NLP solver. If SHOT is interfaced with GAMS, any licensed NLP solver can be used.
 
 The documentation is provided at the project website at https://www.shotsolver.dev.
 

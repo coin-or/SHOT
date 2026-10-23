@@ -81,6 +81,9 @@ set(IPOPT_DIR "${IPOPT_DEFAULT_DIR}" CACHE STRING "The base directory where Ipop
 option(HAS_UNO "Is Uno available" OFF)
 set(UNO_DIR "/opt/uno" CACHE STRING "The base directory where Uno is located (if available).")
 
+option(HAS_CONOPT "Enable the CONOPT primal NLP solver" OFF)
+set(CONOPT_DIR "/opt/conopt" CACHE PATH "CONOPT SDK directory")
+
 # Python
 option(HAS_PYTHON "Is Python available" OFF)
 
@@ -380,6 +383,20 @@ if(HAS_IPOPT)
     set(PRIMAL_HEADERS ${PRIMAL_HEADERS} "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverIpoptRelaxed.h")
 endif(HAS_IPOPT)
 
+if(HAS_CONOPT)
+    find_package(CONOPT QUIET)
+    if(CONOPT_FOUND)
+        list(APPEND PRIMAL_SOURCES "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverConopt.cpp")
+        list(APPEND PRIMAL_HEADERS "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverConopt.h")
+        get_filename_component(CONOPT_LIBRARY_DIR "${CONOPT_CPP_LIBRARY}" DIRECTORY)
+        list(APPEND CMAKE_BUILD_RPATH "${CONOPT_LIBRARY_DIR}")
+        list(APPEND CMAKE_INSTALL_RPATH "${CONOPT_LIBRARY_DIR}")
+    else()
+        message(WARNING "CONOPT C++ SDK not found; disabling HAS_CONOPT")
+        set(HAS_CONOPT OFF)
+    endif()
+endif()
+
 if(HAS_UNO)
     find_package(Uno)
 
@@ -494,7 +511,7 @@ target_include_directories(SHOTBuildSettings SYSTEM INTERFACE
     "${PYBIND11_DIR}/include"
     "${SPDLOG_DIR}/include")
 
-foreach(_backend CBC CPLEX GUROBI HIGHS IPOPT UNO AMPL GAMS)
+foreach(_backend CBC CPLEX GUROBI HIGHS IPOPT UNO CONOPT AMPL GAMS)
     if(HAS_${_backend})
         target_compile_definitions(SHOTBuildSettings INTERFACE HAS_${_backend})
     endif()
@@ -772,6 +789,19 @@ add_library(
     ${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverSHOT.cpp
 )
 target_link_libraries(SHOTPrimalStrategy SHOTModel SHOTBuildSettings)
+if(HAS_CONOPT)
+    target_link_libraries(SHOTPrimalStrategy CONOPT::CONOPT)
+    if(WIN32)
+        # Delay-load CONOPT, which SHOT then loads from the SDK's lib directory (see NLPSolverConopt.cpp).
+        get_filename_component(_conopt_cpp_dll "${CONOPT_CPP_LIBRARY}" NAME_WE)
+        get_filename_component(_conopt_dll "${CONOPT_LIBRARY}" NAME_WE)
+        target_compile_definitions(SHOTPrimalStrategy PRIVATE
+            SHOT_CONOPT_DLL="${_conopt_cpp_dll}.dll" SHOT_CONOPT_LIBRARY_DIR="${CONOPT_LIBRARY_DIR}")
+        set_property(TARGET CONOPT::CONOPT APPEND PROPERTY INTERFACE_LINK_LIBRARIES delayimp)
+        set_property(TARGET CONOPT::CONOPT APPEND PROPERTY INTERFACE_LINK_OPTIONS
+            "/DELAYLOAD:${_conopt_cpp_dll}.dll" "/DELAYLOAD:${_conopt_dll}.dll")
+    endif()
+endif()
 
 # Creates the dual strategy library
 add_library(
@@ -1117,9 +1147,9 @@ target_include_directories(SHOTSolver PUBLIC
 add_dependencies(SHOTSolver cppad)
 
 if(APPLE)
-    set_target_properties(SHOTSolver PROPERTIES INSTALL_RPATH "@loader_path")
+    set_target_properties(SHOTSolver PROPERTIES INSTALL_RPATH "@loader_path;${CONOPT_LIBRARY_DIR}")
 elseif(UNIX)
-    set_target_properties(SHOTSolver PROPERTIES INSTALL_RPATH "$ORIGIN")
+    set_target_properties(SHOTSolver PROPERTIES INSTALL_RPATH "$ORIGIN;${CONOPT_LIBRARY_DIR}")
 endif()
 
 if(HAS_PYTHON)
@@ -1171,7 +1201,7 @@ if(GENERATE_EXE)
     # Keep build-tree solver libraries discoverable while using the installed
     # lib directory after installation.
     if(APPLE)
-        set(RPATH_DIRS "${CPPAD_LIB_DIR}")
+        set(RPATH_DIRS "${CPPAD_LIB_DIR};${CONOPT_LIBRARY_DIR}")
         
         if(HAS_GUROBI AND GUROBI_FOUND)
             list(APPEND RPATH_DIRS "${GUROBI_LIB_DIR}")
