@@ -18,6 +18,7 @@
 #include <fstream>
 #include <iomanip>
 #include <limits>
+#include <optional>
 #include <set>
 #include <stdexcept>
 #include <unistd.h>
@@ -206,6 +207,48 @@ namespace
                     expressionHessianPattern.set(k++, entry.first, entry.second);
             }
 
+            // Output positions of the combined expression Hessian; entries below the diagonal are skipped.
+            expressionHessianPositions.assign(expressionHessianPattern.nnz(), -1);
+
+            for(size_t k = 0; k < expressionHessianPattern.nnz(); ++k)
+            {
+                int i = problem->nonlinearExpressionVariables[expressionHessianPattern.row()[k]]->getIndex();
+                int j = problem->nonlinearExpressionVariables[expressionHessianPattern.col()[k]]->getIndex();
+                if(i <= j)
+                    expressionHessianPositions[k] = hessianPositions.at({ i, j });
+            }
+
+            // Rows whose Hessian, apart from a batched expression, is constant get their entries at fixed positions.
+            constantHessians.resize(slacks.size() + 1);
+
+            for(size_t row = 0; row <= slacks.size(); ++row)
+            {
+                const SparseVariableMatrix* hessian = nullptr;
+
+                if(row == slacks.size())
+                    hessian = problem->objectiveFunction->getConstantHessian();
+                else if(auto constraint = problem->numericConstraints[row]; constraint->getConstantHessian())
+                    hessian = constraint->getConstantHessian();
+                else if(expressionHessianPattern.nnz() > 0 && constraint->properties.hasNonlinearExpression
+                    && !constraint->properties.hasMonomialTerms && !constraint->properties.hasSignomialTerms)
+                    hessian = std::static_pointer_cast<NonlinearConstraint>(constraint)
+                                  ->QuadraticConstraint::getConstantHessian();
+
+                if(!hessian)
+                    continue;
+                constantHessians[row].emplace();
+
+                for(const auto& entry : *hessian)
+                {
+                    // Terms with zero coefficients are not in the sparsity pattern
+                    if(entry.second == 0.0)
+                        continue;
+                    int i = entry.first.first->getIndex(), j = entry.first.second->getIndex();
+                    constantHessians[row]->emplace_back(
+                        hessianPositions.at({ std::min(i, j), std::max(i, j) }), entry.second);
+                }
+            }
+
             evaluationPoint.resize(n);
             batchGradients.resize(slacks.size());
         }
@@ -343,14 +386,19 @@ namespace
                 {
                     bool useBatch
                         = !objective && batchReady && std::binary_search(batchRows.begin(), batchRows.end(), row);
+                    // The batched gradient of a row depends only on the variables in its expression.
                     if(useBatch)
+                    {
+                        auto constraint
+                            = std::static_pointer_cast<NonlinearConstraint>(problem->numericConstraints[row]);
 
-                        for(const auto& variable : problem->nonlinearExpressionVariables)
-                            if(x[variable->getIndex()] != batchPoint[variable->properties.nonlinearVariableIndex])
+                        for(size_t col : constraint->nonlinearGradientSparsityPattern.col())
+                            if(x[problem->nonlinearExpressionVariables[col]->getIndex()] != batchPoint[col])
                             {
                                 useBatch = false;
                                 break;
                             }
+                    }
                     SparseVariableVector gradient;
                     if(useBatch)
                     {
@@ -397,20 +445,21 @@ namespace
                         && problem->numericConstraints[row]->properties.classification
                             == E_ConstraintClassification::Linear)
                         continue;
-                    auto constantHessian = row == slacks.size()
-                        ? problem->objectiveFunction->getConstantHessian()
-                        : problem->numericConstraints[row]->getConstantHessian();
-                    SparseVariableMatrix calculatedHessian;
-                    if(!constantHessian)
-                        calculatedHessian = row == slacks.size()
-                            ? problem->objectiveFunction->calculateHessian(point, false)
-                            : (expressionHessianPattern.nnz() > 0
-                                          && problem->numericConstraints[row]->properties.hasNonlinearExpression
-                                      ? std::static_pointer_cast<NonlinearConstraint>(problem->numericConstraints[row])
-                                            ->calculateHessianWithoutNonlinearExpression(point, false)
-                                      : problem->numericConstraints[row]->calculateHessian(point, false));
+                    if(constantHessians[row])
+                    {
+                        for(const auto& [position, value] : *constantHessians[row])
+                            values[position] += u[row] * value;
+                        continue;
+                    }
+                    auto calculatedHessian = row == slacks.size()
+                        ? problem->objectiveFunction->calculateHessian(point, false)
+                        : (expressionHessianPattern.nnz() > 0
+                                      && problem->numericConstraints[row]->properties.hasNonlinearExpression
+                                  ? std::static_pointer_cast<NonlinearConstraint>(problem->numericConstraints[row])
+                                        ->calculateHessianWithoutNonlinearExpression(point, false)
+                                  : problem->numericConstraints[row]->calculateHessian(point, false));
 
-                    for(const auto& entry : (constantHessian ? *constantHessian : calculatedHessian))
+                    for(const auto& entry : calculatedHessian)
                     {
                         int i = entry.first.first->getIndex(), j = entry.first.second->getIndex();
                         auto key = std::make_pair(std::min(i, j), std::max(i, j));
@@ -442,13 +491,10 @@ namespace
                         problem->ADFunctions.sparse_hes(nonlinearPoint, weights, subset, expressionHessianPattern,
                             "cppad.symmetric", expressionHessianWork);
 
+                        // The subset has the entries of the pattern in the same order
                         for(size_t k = 0; k < subset.nnz(); ++k)
-                        {
-                            int i = problem->nonlinearExpressionVariables[subset.row()[k]]->getIndex();
-                            int j = problem->nonlinearExpressionVariables[subset.col()[k]]->getIndex();
-                            if(i <= j)
-                                values[hessianPositions.at({ i, j })] += subset.val()[k];
-                        }
+                            if(expressionHessianPositions[k] >= 0)
+                                values[expressionHessianPositions[k]] += subset.val()[k];
                     }
                 }
 
@@ -476,6 +522,8 @@ namespace
         bool batchReady = false;
         CppAD::sparse_rc<std::vector<size_t>> expressionJacobianPattern, expressionHessianPattern;
         CppAD::sparse_hes_work expressionHessianWork;
+        VectorInteger expressionHessianPositions;
+        std::vector<std::optional<std::vector<std::pair<int, double>>>> constantHessians;
     };
 
     class ConoptOutput : public ConoptMessageHandler

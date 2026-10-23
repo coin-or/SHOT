@@ -293,6 +293,43 @@ int ConoptTest(int argc, char* argv[])
             repeated.updateVariableLowerBound(0, 1.5);
             expect(repeated, 8.5);
         }
+        else if(part == 14)
+        {
+            // Both rows combine a quadratic term with a batched expression, so their
+            // quadratic Hessians are added at precomputed positions.
+            auto mixed = std::make_shared<Problem>(env);
+            Variables variables;
+
+            for(auto name : { "x", "y", "z", "w" })
+                variables.push_back(std::make_shared<Variable>(name, E_VariableType::Real, -3.0, 3.0));
+            mixed->add(variables);
+            auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+
+            for(auto& variable : variables)
+                objective->add(std::make_shared<LinearTerm>(-1.0, variable));
+            mixed->add(objective);
+            NonlinearConstraints rows;
+
+            for(int k = 0; k < 2; ++k)
+            {
+                auto row = std::make_shared<NonlinearConstraint>("mixed" + std::to_string(k),
+                    std::make_shared<ExpressionSquare>(std::make_shared<ExpressionVariable>(variables[2 * k + 1])),
+                    SHOT_DBL_MIN, 2.0);
+                row->add(std::make_shared<QuadraticTerm>(1.0, variables[2 * k], variables[2 * k]));
+                mixed->add(row);
+                rows.push_back(row);
+            }
+            mixed->finalize();
+
+            for(auto& row : rows)
+                require(row->properties.hasNonlinearExpression && row->properties.hasQuadraticTerms,
+                    "Mixed row lost its quadratic term or expression");
+            NLPSolverConopt solver(env, mixed);
+            solver.setStartingPoint({ 0, 1, 2, 3 }, { 0.5, 0.5, 0.5, 0.5 });
+            expect(solver, -4.0);
+            solver.fixVariables({ 0 }, { 0.0 });
+            expect(solver, -2.0 - std::sqrt(2.0));
+        }
         else if(part == 9)
         {
             int calls = 0;
