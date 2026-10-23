@@ -22,6 +22,10 @@ public:
 
     virtual ~INLPSolver() = default;
 
+    // Bounds with at least this absolute value are infinite for the NLP solvers. SHOT gives unbounded continuous
+    // variables artificial bounds of 1e20 or 1e50, depending on the MIP solver.
+    static constexpr double infinity = 1e20;
+
     EnvironmentPtr env;
 
     virtual void setStartingPoint(VectorInteger variableIndexes, VectorDouble variableValues) = 0;

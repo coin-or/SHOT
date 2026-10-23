@@ -38,15 +38,17 @@ namespace
         return env->tasks->isTerminated();
     }
 
+    static_assert(INLPSolver::infinity <= Conopt::Infinity, "Finite bounds must be below CONOPT's infinity");
+
     double conoptBound(double value)
     {
-        if(value <= SHOT_DBL_MIN)
+        if(std::isnan(value))
+            throw std::runtime_error("NaN bound");
+        // The same bounds are infinite as for Ipopt, e.g. the artificial bounds of unbounded variables
+        if(value <= -INLPSolver::infinity)
             return -Conopt::Infinity;
-        if(value >= SHOT_DBL_MAX)
+        if(value >= INLPSolver::infinity)
             return Conopt::Infinity;
-        // Do not silently turn a finite bound into CONOPT infinity.
-        if(!std::isfinite(value) || std::abs(value) >= Conopt::Infinity)
-            throw std::runtime_error("Finite bound exceeds CONOPT's supported range");
         return value;
     }
 

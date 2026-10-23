@@ -555,7 +555,9 @@ objective row (a constant objective also uses a fixed auxiliary column). A licen
 not switch the running heuristic to another backend.
 
 CONOPT uses `Primal.FixedInteger.IterationLimit` and
-`Primal.FixedInteger.TimeLimit`. `Subsolver.Conopt.FeasibilityTolerance` (Rtnwma)
+`Primal.FixedInteger.TimeLimit`. As for Ipopt, bounds with an absolute value of
+at least 1e20, including the artificial bounds SHOT gives unbounded variables,
+are infinite. `Subsolver.Conopt.FeasibilityTolerance` (Rtnwma)
 and `Subsolver.Conopt.OptimalityTolerance` (Rtredg) default to `1e-9`. Solutions
 are checked against SHOT's bounds and linear/nonlinear feasibility tolerances
 before submission, including feasible solutions at an iteration or time limit.

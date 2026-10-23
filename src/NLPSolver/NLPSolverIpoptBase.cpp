@@ -126,10 +126,8 @@ bool IpoptProblem::get_bounds_info(Index n, Number* x_l, Number* x_u, Index m, N
     std::memcpy(x_l, lowerBounds.data(), n * sizeof(Number));
     std::memcpy(x_u, upperBounds.data(), n * sizeof(Number));
 
-    // Ipopt interprets any number greater than nlp_upper_bound_inf as
-    // infinity. The default value of nlp_upper_bound_inf and nlp_lower_bound_inf
-    // is 1e19 and can be changed through ipopt options.
-    // e.g. g_u[0] = 2e19;
+    // Ipopt interprets any bound at least nlp_upper_bound_inf, or at most nlp_lower_bound_inf, as infinite. These are
+    // set to INLPSolver::infinity.
 
     for(int i = 0; i < m; i++)
     {
@@ -1181,6 +1179,9 @@ void NLPSolverIpoptBase::setInitialSettings()
     ipoptApplication->Options()->SetNumericValue("gamma_phi", 1e-8, true, true);
     ipoptApplication->Options()->SetNumericValue("gamma_theta", 1e-4, true, true);
     ipoptApplication->Options()->SetNumericValue("required_infeasibility_reduction", 0.1, true, true);
+
+    ipoptApplication->Options()->SetNumericValue("nlp_upper_bound_inf", INLPSolver::infinity, true, true);
+    ipoptApplication->Options()->SetNumericValue("nlp_lower_bound_inf", -INLPSolver::infinity, true, true);
 
     // A derivative that is infinite or NaN at the starting point, e.g. of a square root at zero, was passed on to the
     // linear solver, and MUMPS could then crash with a bus error in dmumps_mtransw_. Ipopt now stops with an invalid

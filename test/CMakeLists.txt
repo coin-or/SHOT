@@ -165,7 +165,7 @@ set(cpptests ${cpptests} Solver)
 
 if(HAS_CONOPT)
   list(APPEND cpptests Conopt)
-  set(Conopt_parts 1 2 3 4 5 6 7 8 9 10 11 12 13 14)
+  set(Conopt_parts 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15)
 endif()
 
 # Equality constraints and ranges in the original and the reformulated problem

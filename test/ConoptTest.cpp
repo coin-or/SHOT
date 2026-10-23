@@ -330,6 +330,26 @@ int ConoptTest(int argc, char* argv[])
             solver.fixVariables({ 0 }, { 0.0 });
             expect(solver, -2.0 - std::sqrt(2.0));
         }
+        else if(part == 15)
+        {
+            // The artificial bounds SHOT gives unbounded variables are infinite, as for Ipopt.
+            auto unbounded = std::make_shared<Problem>(env);
+            auto x = std::make_shared<Variable>("x", E_VariableType::Real, -1e50, 1e50);
+            auto y = std::make_shared<Variable>("y", E_VariableType::Real, -1e20, 1e20);
+            unbounded->add(Variables { x, y });
+            auto objective = std::make_shared<QuadraticObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+            objective->add(std::make_shared<QuadraticTerm>(1.0, x, x));
+            objective->add(std::make_shared<QuadraticTerm>(1.0, y, y));
+            objective->add(std::make_shared<LinearTerm>(-4.0, x));
+            objective->add(std::make_shared<LinearTerm>(2.0, y));
+            objective->constant = 5.0;
+            unbounded->add(objective);
+            unbounded->finalize();
+            NLPSolverConopt solver(env, unbounded);
+            expect(solver, 0.0);
+            require(std::abs(solver.getSolution(0) - 2.0) < 1e-5 && std::abs(solver.getSolution(1) + 1.0) < 1e-5,
+                "Incorrect optimum with artificial bounds");
+        }
         else if(part == 9)
         {
             int calls = 0;
