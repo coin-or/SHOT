@@ -458,9 +458,14 @@ class TestConopt:
 
         if not SHOTpy.HAS_CONOPT:
             pytest.skip("CONOPT not available")
+        if not SHOTpy.HAS_HIGHS:
+            pytest.skip("HiGHS not available")
 
         solver = SHOTpy.Solver()
         solver.updateSetting("Output.Console.LogLevel", 6)
+        # With Gurobi or CPLEX, the solution pool of the MIP solver finds the optimum before the fixed NLP, so the NLP
+        # solution is not added again
+        solver.updateSetting("Dual.MIP.Solver", int(SHOTpy.MIPSolver.Highs))
         solver.updateSetting("Primal.FixedInteger.Solver", int(SHOTpy.PrimalNLPSolver.Conopt))
 
         assert solver.setProblem(str(data_dir / "alan.osil"))
