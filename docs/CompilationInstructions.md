@@ -598,6 +598,9 @@ The adapter retains the finalized model structure between fixed-integer NLP
 solves, refreshing bounds and starting values for each solve. Quadratic Hessians
 are reused, linear rows are skipped in Hessian evaluation, and nonlinear
 constraint derivatives are batched where CONOPT's evaluation requests permit it.
+A Jacobian entry is nonlinear only if its variable is in the Hessian sparsity
+pattern of the row; all other entries, also in rows with a nonlinear
+expression, are passed to CONOPT as constants.
 The source model must remain structurally unchanged for the lifetime of its
 `NLPSolverConopt` instance; create a new instance after changing its structure.
 

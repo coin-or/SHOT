@@ -350,6 +350,47 @@ int ConoptTest(int argc, char* argv[])
             require(std::abs(solver.getSolution(0) - 2.0) < 1e-5 && std::abs(solver.getSolution(1) + 1.0) < 1e-5,
                 "Incorrect optimum with artificial bounds");
         }
+        else if(part == 16)
+        {
+            // The objective and both rows have an expression and a variable that is only in a
+            // linear term, which is a constant Jacobian entry. z is nonlinear in no row, so as a
+            // nonlinear entry it would have no second derivatives, which CONOPT rejects.
+            // min exp(x) + 2y + z s.t. exp(-x) - y + z <= 0, exp(y) + x <= 10 has the optimum
+            // 2 sqrt(2) at x = ln(2) / 2 and z = 0.
+            auto linear = std::make_shared<Problem>(env);
+            auto x = std::make_shared<Variable>("x", E_VariableType::Real, -2.0, 2.0);
+            auto y = std::make_shared<Variable>("y", E_VariableType::Real, 0.0, 3.0);
+            auto z = std::make_shared<Variable>("z", E_VariableType::Real, 0.0, 2.0);
+            linear->add(Variables { x, y, z });
+            auto ex = std::make_shared<ExpressionVariable>(x);
+            auto ey = std::make_shared<ExpressionVariable>(y);
+            auto objective = std::make_shared<NonlinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+            objective->add(std::make_shared<ExpressionExp>(ex));
+            objective->add(std::make_shared<LinearTerm>(2.0, y));
+            objective->add(std::make_shared<LinearTerm>(1.0, z));
+            linear->add(objective);
+            auto lower = std::make_shared<NonlinearConstraint>(
+                "lower", std::make_shared<ExpressionExp>(std::make_shared<ExpressionNegate>(ex)), SHOT_DBL_MIN, 0.0);
+            lower->add(std::make_shared<LinearTerm>(-1.0, y));
+            lower->add(std::make_shared<LinearTerm>(1.0, z));
+            linear->add(lower);
+            auto upper = std::make_shared<NonlinearConstraint>(
+                "upper", std::make_shared<ExpressionExp>(ey), SHOT_DBL_MIN, 10.0);
+            upper->add(std::make_shared<LinearTerm>(1.0, x));
+            linear->add(upper);
+            linear->finalize();
+            require(lower->properties.hasNonlinearExpression && upper->properties.hasNonlinearExpression
+                    && linear->objectiveFunction->properties.hasNonlinearExpression,
+                "Row lost its expression");
+            NLPSolverConopt solver(env, linear);
+            solver.setStartingPoint({ 0, 1, 2 }, { 1.0, 1.0, 0.5 });
+            expect(solver, 2.0 * std::sqrt(2.0));
+            require(
+                std::abs(solver.getSolution(0) - std::log(2.0) / 2.0) < 1e-5 && std::abs(solver.getSolution(2)) < 1e-6,
+                "Incorrect optimum");
+            solver.fixVariables({ 0 }, { 0.0 });
+            expect(solver, 3.0);
+        }
         else if(part == 9)
         {
             int calls = 0;
