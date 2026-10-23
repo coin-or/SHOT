@@ -20,18 +20,13 @@
 #include <ostream>
 #include <string>
 
-#include "interval.hpp"
-#include "cppad/cppad.hpp"
+#include "Interval.h"
+#include "CppAD.h"
 
 namespace SHOT
 {
-using Interval = mc::Interval;
-using IntervalVector = std::vector<Interval>;
-
 using FactorableFunction = CppAD::AD<double>;
 using FactorableFunctionPtr = std::shared_ptr<FactorableFunction>;
-using Interval = mc::Interval;
-using IntervalVector = std::vector<Interval>;
 
 struct VariableProperties
 {
@@ -57,8 +52,102 @@ struct VariableProperties
     bool hasUpperBoundBeenTightened = false;
     bool hasLowerBoundBeenTightened = false;
 
+    // Whether the bound is not the one of the problem given, but the limit it has been replaced with when reading the
+    // problem, e.g. Model.Variables.Integer.MinimumLowerBound for an integer variable without a lower bound
+    bool hasArtificialLowerBound = false;
+    bool hasArtificialUpperBound = false;
+
     int nonlinearVariableIndex = -1;
 };
+
+// The bounds of base^power for a constant power, which may be negative or noninteger. The interval power function
+// takes the logarithm of the base, so a base reaching zero, or one with values of both signs, is handled here.
+inline Interval calculateIntervalPower(Interval base, double power)
+{
+    if(power == 0.0)
+        return (Interval(1.0));
+
+    if(power == 1.0)
+        return (base);
+
+    double intpart;
+    bool isInteger = (std::modf(power, &intpart) == 0.0);
+    int integerValue = (int)round(intpart);
+    bool isEven = (integerValue % 2 == 0);
+
+    if(isInteger)
+    {
+        // An integer power is defined for a negative base as well, so a wholly negative domain needs no
+        // adjustment at all. Only a base containing zero is a problem, and then only for a negative power,
+        // where the expression grows without bound as the base approaches zero.
+        if(power < 0.0 && base.l() <= 0.0 && base.u() >= 0.0)
+        {
+            // Only the end nearest zero is unbounded, so a domain lying on one side of zero still has a
+            // bound on its other end, attained at the endpoint furthest from zero. A domain with values on
+            // both sides gives a disconnected range whose hull is everything.
+            if(base.l() == 0.0 && base.u() > 0.0)
+                return (Interval(std::pow(base.u(), power), SHOT_DBL_MAX));
+
+            if(base.u() == 0.0 && base.l() < 0.0)
+            {
+                double valueAtEndpoint = std::pow(base.l(), power);
+
+                return (isEven ? Interval(valueAtEndpoint, SHOT_DBL_MAX) : Interval(SHOT_DBL_MIN, valueAtEndpoint));
+            }
+
+            return (Interval(SHOT_DBL_MIN, SHOT_DBL_MAX));
+        }
+    }
+    bool baseReachesZero = false;
+
+    if(!isInteger)
+    {
+        // A non-integer power has no real value for a negative base, so there is nothing to return if the
+        // domain is wholly negative, and the negative part is cut away otherwise.
+        if(base.u() < 0.0)
+            return (Interval(SHOT_DBL_MIN, SHOT_DBL_MAX));
+
+        // base^power grows without bound as the base approaches zero from above when the power is negative,
+        // but is still bounded at the upper end of the domain. Only the non-negative part of the domain
+        // contributes, so there is no real value at all if the domain does not extend above zero.
+        if(power < 0.0 && base.l() <= 0.0)
+        {
+            if(base.u() <= 0.0)
+                return (Interval(SHOT_DBL_MIN, SHOT_DBL_MAX));
+
+            return (Interval(std::pow(base.u(), power), SHOT_DBL_MAX));
+        }
+
+        // The power is positive here, so the expression tends to zero as the base does. The base is still
+        // moved off zero before evaluating, since the interval library raises to a non-integer power via a
+        // logarithm and rejects a base reaching zero.
+        if(base.l() <= 0.0)
+        {
+            baseReachesZero = true;
+            base.l() = SHOT_DBL_EPS;
+        }
+    }
+
+    Interval bounds;
+
+    try
+    {
+        bounds = isInteger ? pow(base, integerValue) : pow(base, power);
+    }
+    catch(const IntervalError&)
+    {
+        return (Interval(SHOT_DBL_MIN, SHOT_DBL_MAX));
+    }
+
+    if(baseReachesZero)
+        bounds.l() = 0.0;
+
+    // An even integer power cannot be negative; guards against rounding in the interval library.
+    if(isInteger && isEven && bounds.l() < 0.0)
+        bounds.l() = 0.0;
+
+    return (bounds);
+}
 
 class Variable
 {
@@ -78,6 +167,8 @@ public:
 
     std::weak_ptr<Problem> ownerProblem;
 
+    // Set these through Problem::setVariableBounds or tightenBounds, which also update the bound vectors stored in
+    // the problem, e.g. used when the bounds of the terms are calculated
     double upperBound;
     double lowerBound;
     double semiBound;
@@ -214,6 +305,8 @@ public:
         for(auto& V : variables)
             (*this).push_back(V);
     };
+
+    explicit Variables(std::vector<VariablePtr> variables) : std::vector<VariablePtr>(std::move(variables)) {};
 
     inline void takeOwnership(ProblemPtr owner)
     {

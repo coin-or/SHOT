@@ -27,5 +27,8 @@ public:
     std::string getType() override;
 
 private:
+    // The largest number of values in the points of the hyperplanes added for convex constraints in an iteration,
+    // above which at most Dual.HyperplaneCuts.MaxPerIteration are added (800 MB)
+    static constexpr size_t maximumNumberOfHyperplanePointValues = 100000000;
 };
 } // namespace SHOT

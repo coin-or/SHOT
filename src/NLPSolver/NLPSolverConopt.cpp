@@ -4,8 +4,7 @@
 #include "NLPSolverConopt.h"
 #include "../Model/Problem.h"
 #include "../Output.h"
-#include "../CallbackData.h"
-#include "../EventHandler.h"
+#include "../Callback.h"
 #include "../Results.h"
 #include "../Settings.h"
 #include "../TaskHandler.h"
@@ -29,17 +28,11 @@ namespace
 {
     bool userTerminated(const EnvironmentPtr& env)
     {
-        if(!env->tasks->isTerminated() && env->events->hasDataProvider(E_EventType::UserTerminationCheck))
+        if(!env->tasks->isTerminated() && env->callbacks->isActive(E_CallbackLocation::TerminationCheck))
         {
-            TerminationCallbackData data(env->results->getNumberOfIterations(), env->timing->getElapsedTime("Total"),
-                env->results->getCurrentDualBound(), env->results->getPrimalBound(),
-                env->results->getRelativeCurrentObjectiveGap(), env->results->getAbsoluteCurrentObjectiveGap(),
-                env->solutionStatistics);
-            auto stop = env->events->requestData<bool>(E_EventType::UserTerminationCheck, data);
-            if(!stop.has_value())
-                stop = env->events->requestData<bool>(E_EventType::UserTerminationCheck);
-            if(stop.value_or(false))
-                env->tasks->terminate();
+            auto context = std::make_shared<TerminationCheckContext>(env);
+            env->callbacks->invoke(*context);
+            context->invalidate();
         }
         return env->tasks->isTerminated();
     }

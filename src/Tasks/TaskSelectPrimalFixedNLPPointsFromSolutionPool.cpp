@@ -31,30 +31,61 @@ TaskSelectPrimalFixedNLPPointsFromSolutionPool::~TaskSelectPrimalFixedNLPPointsF
 
 void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
 {
-    env->timing->startTimer("PrimalStrategy");
-    env->timing->startTimer("PrimalBoundStrategyNLP");
-
     auto currIter = env->results->getCurrentIteration();
-    auto allSolutions = env->results->getCurrentIteration()->solutionPoints;
+    auto sourceIter = currIter;
+
+    // The final dual problem may have no solutions, e.g. if it is infeasible, so the polish then uses the latest
+    // iteration with solutions
+    if(isFinalPolish && currIter->solutionPoints.empty())
+    {
+        for(auto it = env->results->iterations.rbegin(); it != env->results->iterations.rend(); ++it)
+        {
+            if(!(*it)->solutionPoints.empty()
+                && ((*it)->isMIP() || !env->reformulatedProblem->properties.isDiscrete))
+            {
+                sourceIter = *it;
+                break;
+            }
+        }
+    }
+
+    auto allSolutions = sourceIter->solutionPoints;
+
+    // The polish also starts from the best primal solution, after the points of the dual problem. These can be far
+    // from any solution, e.g. 1e14 for a free variable in an unbounded dual problem, where the NLP solver fails,
+    // while the primal solution may be a starting point given with the model. A solution of an NLP problem is
+    // already a local solution, and is not solved from again.
+    auto addPrimalSolutionForPolish = [&]()
+    {
+        if(!isFinalPolish || !env->results->hasPrimalSolution())
+            return;
+
+        auto& primalSolution = env->results->primalSolutions.at(0);
+
+        if(primalSolution.sourceType == E_PrimalSolutionSource::NLPFixedIntegers)
+            return;
+        env->primalSolver->addFixedNLPCandidate(primalSolution.point, E_PrimalNLPSource::FeasibleSolution,
+            primalSolution.objValue, primalSolution.iterFound, primalSolution.maxDeviatingConstraintNonlinear);
+    };
 
     bool callNLPSolver = false;
     bool useFeasibleSolutionExtra = false;
 
-    if(!currIter->isMIP() && env->reformulatedProblem->properties.isDiscrete)
+    if((!sourceIter->isMIP() && env->reformulatedProblem->properties.isDiscrete) || allSolutions.empty())
     {
+        addPrimalSolutionForPolish();
         return;
     }
 
-    if(allSolutions.size() == 0)
-    {
-        return;
-    }
-
-    if(currIter->MIPSolutionLimitUpdated && currIter->solutionStatus != E_ProblemSolutionStatus::Optimal)
+    if(!isFinalPolish && currIter->MIPSolutionLimitUpdated
+        && currIter->solutionStatus != E_ProblemSolutionStatus::Optimal)
     {
         env->solutionStatistics.numberOfIterationsWithoutNLPCallMIP++;
         return;
     }
+
+    env->timing->startTimer("PrimalStrategy");
+    env->timing->startTimer("PrimalBoundStrategyNLP");
 
     auto userSettingStrategy = env->settings->getSetting<int>("Primal.FixedInteger.CallStrategy");
     auto userSetting = env->settings->getSetting<int>("Primal.FixedInteger.Source");
@@ -63,17 +94,22 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
 
     if(isFinalPolish)
     {
-        // The polish runs once, after the search, so the iteration- and time-based pacing below does not apply.
-        // There is only something to improve if a primal solution was found at all.
-        if(!env->results->hasPrimalSolution())
-        {
-            env->timing->stopTimer("PrimalBoundStrategyNLP");
-            env->timing->stopTimer("PrimalStrategy");
-            return;
-        }
-
+        // The polish runs once, after the search, so the iteration- and time-based pacing below does not apply. It is
+        // also used without a primal solution, since the NLP solver may find one where the search did not.
         callNLPSolver = true;
         useFeasibleSolutionExtra = true;
+    }
+    else if(!env->reformulatedProblem->properties.isDiscrete)
+    {
+        // Without discrete variables the dual problems are LP problems, solved to optimality in every iteration, so
+        // the NLP problem is solved the first time there is a dual solution and then with the iteration and time
+        // frequencies, instead of after every dual problem
+        if(env->solutionStatistics.timeLastFixedNLPCall == 0.0
+            || env->solutionStatistics.numberOfIterationsWithoutNLPCallMIP
+                >= env->settings->getSetting<int>("Primal.FixedInteger.Frequency.Iteration")
+            || env->timing->getElapsedTime("Total") - env->solutionStatistics.timeLastFixedNLPCall
+                > env->settings->getSetting<double>("Primal.FixedInteger.Frequency.Time"))
+            callNLPSolver = true;
     }
     else if(currIter->solutionStatus == E_ProblemSolutionStatus::Optimal
         && std::abs(allSolutions.at(0).objectiveValue - env->results->getCurrentDualBound())
@@ -111,10 +147,33 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
         auto tmpSol = allSolutions.at(0);
         env->primalSolver->addFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::FirstSolutionNewDualBound,
             tmpSol.objectiveValue, tmpSol.iterFound, tmpSol.maxDeviation);
+
+        // Which local solution the NLP solver finds depends on the point, and the last dual solution of a nonconvex
+        // problem is not necessarily the best one to start from, so the polish can also start from the first
+        // solutions of the iterations before it
+        if(isFinalPolish)
+        {
+            int numberOfPoints = env->settings->getSetting<int>("Primal.PolishSolution.NumberOfPoints") - 1;
+
+            for(auto it = env->results->iterations.rbegin();
+                it != env->results->iterations.rend() && numberOfPoints > 0; ++it)
+            {
+                if(*it == sourceIter || (*it)->solutionPoints.empty()
+                    || (!(*it)->isMIP() && env->reformulatedProblem->properties.isDiscrete))
+                    continue;
+
+                auto& solution = (*it)->solutionPoints.at(0);
+                env->primalSolver->addFixedNLPCandidate(solution.point, E_PrimalNLPSource::FirstSolutionNewDualBound,
+                    solution.objectiveValue, solution.iterFound, solution.maxDeviation);
+                numberOfPoints--;
+            }
+
+            addPrimalSolutionForPolish();
+        }
     }
     else if(callNLPSolver && userSetting == static_cast<int>(ES_PrimalNLPFixedPoint::SmallestDeviationSolution))
     {
-        auto tmpSol = currIter->getSolutionPointWithSmallestDeviation();
+        auto tmpSol = sourceIter->getSolutionPointWithSmallestDeviation();
         env->primalSolver->addFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::SmallestDeviationSolution,
             tmpSol.objectiveValue, tmpSol.iterFound, tmpSol.maxDeviation);
     }
@@ -130,7 +189,7 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
         env->primalSolver->addFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::FirstSolution, tmpSol.objectiveValue,
             tmpSol.iterFound, tmpSol.maxDeviation);
 
-        auto smallestDevSolIdx = currIter->getSolutionPointWithSmallestDeviationIndex();
+        auto smallestDevSolIdx = sourceIter->getSolutionPointWithSmallestDeviationIndex();
 
         if(smallestDevSolIdx != 0)
         {

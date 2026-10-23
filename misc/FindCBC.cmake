@@ -1,7 +1,16 @@
+include(FindPackageHandleStandardArgs)
+find_package(PkgConfig QUIET)
 set(CBC_FOUND false)
 
-set(ENV{PKG_CONFIG_PATH} "${CBC_DIR}/lib/pkgconfig")
-pkg_search_module(CBC cbc)
+# FindPkgConfig adds CMAKE_PREFIX_PATH to its own search path without changing
+# the caller's PKG_CONFIG_PATH.
+set(_CBC_ORIGINAL_PREFIX_PATH "${CMAKE_PREFIX_PATH}")
+list(PREPEND CMAKE_PREFIX_PATH "${CBC_DIR}")
+if(PkgConfig_FOUND AND NOT MSVC)
+  pkg_search_module(CBC IMPORTED_TARGET cbc)
+endif()
+set(CMAKE_PREFIX_PATH "${_CBC_ORIGINAL_PREFIX_PATH}")
+unset(_CBC_ORIGINAL_PREFIX_PATH)
 
 if(CBC_FOUND)
   message("-- Cbc found using Pkg-config:")
@@ -23,38 +32,38 @@ if(NOT (CBC_FOUND))
 
   set(CBC_LIBRARIES "")
 
-  find_library(Cbc_LIBRARY NAMES libCbc.so libCbc.lib HINTS ${CBC_DIR}/lib/)
+  find_library(Cbc_LIBRARY NAMES Cbc libCbc Cbc.dll libCbc.dll HINTS ${CBC_DIR}/lib/)
 
   if(Cbc_LIBRARY)
     message("   Cbc library found at: " ${Cbc_LIBRARY})
     set(CBC_LIBRARIES ${CBC_LIBRARIES} ${Cbc_LIBRARY})
   endif()
 
-  find_library(CbcSolver_LIBRARY NAMES libCbcSolver.so libCbcSolver.lib HINTS ${CBC_DIR}/lib/)
+  find_library(CbcSolver_LIBRARY NAMES CbcSolver libCbcSolver CbcSolver.dll libCbcSolver.dll HINTS ${CBC_DIR}/lib/)
   if(CbcSolver_LIBRARY)
     message("   CbcSolver library found at: " ${CbcSolver_LIBRARY})
     set(CBC_LIBRARIES ${CBC_LIBRARIES} ${CbcSolver_LIBRARY})
   endif()
 
-  find_library(OsiClp_LIBRARY NAMES libOsiClp.so libOsiClp.lib HINTS ${CBC_DIR}/lib/)
+  find_library(OsiClp_LIBRARY NAMES OsiClp libOsiClp OsiClp.dll libOsiClp.dll HINTS ${CBC_DIR}/lib/)
   if(OsiClp_LIBRARY)
     message("   OsiClp library found at: " ${OsiClp_LIBRARY})
     set(CBC_LIBRARIES ${CBC_LIBRARIES} ${OsiClp_LIBRARY})
   endif()
 
-  find_library(Clp_LIBRARY NAMES libClp.so libClp.lib HINTS ${CBC_DIR}/lib/)
+  find_library(Clp_LIBRARY NAMES Clp libClp Clp.dll libClp.dll HINTS ${CBC_DIR}/lib/)
   if(Clp_LIBRARY)
     message("   Clp library found at: " ${Clp_LIBRARY})
     set(CBC_LIBRARIES ${CBC_LIBRARIES} ${Clp_LIBRARY})
   endif()
 
-  find_library(Osi_LIBRARY NAMES libOsi.so libOsi.lib HINTS ${CBC_DIR}/lib/)
+  find_library(Osi_LIBRARY NAMES Osi libOsi Osi.dll libOsi.dll HINTS ${CBC_DIR}/lib/)
   if(Osi_LIBRARY)
     message("   Osi library found at: " ${Osi_LIBRARY})
     set(CBC_LIBRARIES ${CBC_LIBRARIES} ${Osi_LIBRARY})
   endif()
 
-  find_library(CoinUtils_LIBRARY NAMES libCoinUtils.so libCoinUtils.lib HINTS ${CBC_DIR}/lib/)
+  find_library(CoinUtils_LIBRARY NAMES CoinUtils libCoinUtils CoinUtils.dll libCoinUtils.dll HINTS ${CBC_DIR}/lib/)
   if(CoinUtils_LIBRARY)
     message("   CoinUtils library found at: " ${CoinUtils_LIBRARY})
     set(CBC_LIBRARIES ${CBC_LIBRARIES} ${CoinUtils_LIBRARY})
@@ -63,7 +72,7 @@ if(NOT (CBC_FOUND))
   # find_library(ASL_LIBRARY NAMES libcoinasl.so libcoinasl.lib HINTS ${CBC_DIR}/lib/) if(ASL_LIBRARY) message("   ASL
   # library found at: " ${ASL_LIBRARY}) set(CBC_LIBRARIES ${CBC_LIBRARIES} ${ASL_LIBRARY}) endif()
 
-  find_library(Cgl_LIBRARY NAMES libCgl.so libCgl.lib HINTS ${CBC_DIR}/lib/)
+  find_library(Cgl_LIBRARY NAMES Cgl libCgl Cgl.dll libCgl.dll HINTS ${CBC_DIR}/lib/)
   if(Cgl_LIBRARY)
     message("   Cgl library found at: " ${Cgl_LIBRARY})
     set(CBC_LIBRARIES ${CBC_LIBRARIES} ${Cgl_LIBRARY})
@@ -72,6 +81,8 @@ if(NOT (CBC_FOUND))
   find_path(CBC_INCLUDE_DIRS
             NAMES CbcConfig.h
             PATHS "${CBC_DIR}/include/coin"
+                  "${CBC_DIR}/include/coin-or"
+                  "${CBC_DIR}/include"
                   "$ENV{CBC_DIR}/include/coin"
                   "/usr/include/coin"
                   "C:\\libs\\cbc\\include")
@@ -91,4 +102,16 @@ if(NOT (CBC_FOUND))
                                     Cgl_LIBRARY)
   mark_as_advanced(CBC_LIBRARIES CBC_INCLUDE_DIR CBC_LIB_DIR)
 
+endif()
+
+if(CBC_FOUND AND NOT TARGET CBC::CBC)
+  add_library(CBC::CBC INTERFACE IMPORTED)
+  if(TARGET PkgConfig::CBC)
+    target_link_libraries(CBC::CBC INTERFACE PkgConfig::CBC)
+  else()
+    set_target_properties(CBC::CBC PROPERTIES
+      INTERFACE_INCLUDE_DIRECTORIES "${CBC_INCLUDE_DIRS}"
+      INTERFACE_LINK_LIBRARIES "${CBC_LIBRARIES}"
+      INTERFACE_LINK_DIRECTORIES "${CBC_LIBRARY_DIRS}")
+  endif()
 endif()

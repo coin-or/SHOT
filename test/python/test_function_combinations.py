@@ -2084,6 +2084,10 @@ class TestExpressionVsExplicitTerms:
         problem.addConstraint(c)
         
         problem.finalize()
+
+        # finalize() can replace or rewrite the constraint, so it is read back from the problem
+        constraints = {c.name: c for c in problem.numericConstraints}
+        c = constraints["multi_term"]
         
         # Check properties
         assert c.properties.hasLinearTerms, "Should have linear terms"
@@ -2092,7 +2096,7 @@ class TestExpressionVsExplicitTerms:
         assert c.properties.hasMonomialTerms, "Should have monomial terms"
 
     def test_constraint_properties_expression_only(self, solver, env):
-        """Verify constraint properties when using only expressions."""
+        """Verify that finalize() turns a constraint given only as an expression into terms."""
         import SHOTpy
         
         problem = SHOTpy.Problem(env)
@@ -2109,8 +2113,13 @@ class TestExpressionVsExplicitTerms:
         problem.addConstraint(c)
         
         problem.finalize()
-        
-        # Expressions don't set the specific term properties
-        assert not c.properties.hasLinearTerms, "Expression doesn't set hasLinearTerms"
-        assert not c.properties.hasQuadraticTerms, "Expression doesn't set hasQuadraticTerms"
-        assert c.properties.hasNonlinearExpression, "Should have nonlinear expression"
+
+        # finalize() extracts the linear and quadratic terms from the expression. Nothing nonlinear is left, so the
+        # constraint is replaced by a QuadraticConstraint and has to be read back from the problem
+        constraints = {c.name: c for c in problem.numericConstraints}
+        c = constraints["expr_only"]
+
+        assert isinstance(c, SHOTpy.QuadraticConstraint) and not isinstance(c, SHOTpy.NonlinearConstraint)
+        assert c.properties.hasLinearTerms, "2*x should be extracted as a linear term"
+        assert c.properties.hasQuadraticTerms, "x^2 should be extracted as a quadratic term"
+        assert not c.properties.hasNonlinearExpression, "No nonlinear expression should be left"

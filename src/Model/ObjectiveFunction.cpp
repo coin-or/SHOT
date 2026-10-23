@@ -34,16 +34,20 @@ void ObjectiveFunction::updateProperties()
 
 Interval ObjectiveFunction::getBounds()
 {
-    IntervalVector variableBounds;
-
     if(auto sharedOwnerProblem = ownerProblem.lock())
-    {
-        variableBounds = sharedOwnerProblem->getVariableBounds();
-    }
+        return (calculateValue(sharedOwnerProblem->getVariableBounds()));
 
-    auto interval = calculateValue(variableBounds);
+    return (calculateValue(IntervalVector()));
+}
 
-    return (interval);
+IntervalDerivatives ObjectiveFunction::calculateIntervalDerivatives(const IntervalVector& box, int order)
+{
+    checkIntervalDerivativeOrder(order);
+
+    // Each class adds its terms with addIntervalDerivatives, which leaves the derivatives finished
+    IntervalDerivatives derivatives;
+    addTermIntervalDerivatives(derivatives, box, order);
+    return (derivatives);
 }
 
 bool ObjectiveFunction::isUnbounded()
@@ -110,6 +114,10 @@ std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> ObjectiveFunct
 
             return (elementOne.second->getIndex() < elementTwo.second->getIndex());
         });
+
+    // Remove duplicates
+    auto last = std::unique(hessianSparsityPattern->begin(), hessianSparsityPattern->end());
+    hessianSparsityPattern->erase(last, hessianSparsityPattern->end());
 
     return (hessianSparsityPattern);
 }
@@ -203,25 +211,25 @@ std::ostream& operator<<(std::ostream& stream, ObjectiveFunctionPtr objective)
     return stream;
 }
 
-void LinearObjectiveFunction::add(LinearTerms terms)
+void LinearObjectiveFunction::add(const LinearTerms& terms)
 {
-    if(linearTerms.size() == 0)
-    {
-        linearTerms = terms;
-        properties.isValid = false;
-    }
-    else
-    {
-        for(auto& T : terms)
-        {
-            add(T);
-        }
-    }
+    if(terms.size() == 0)
+        return;
+
+    // Merges the terms through a hash map, instead of searching all terms for every added term. The terms given
+    // are merged as well, since they may contain several terms of the same variable.
+    linearTerms.add(terms);
+
+    properties.isValid = false;
 }
 
 void LinearObjectiveFunction::add(LinearTermPtr term)
 {
+    // The term is not merged with a term of the same variable, since searching all terms for every added term is
+    // quadratic in the number of terms, and the duplicates are summed wherever the terms are used. Unlike
+    // LinearConstraint::add, which merges, so the two give a different number of terms for the same function
     linearTerms.push_back(term);
+    linearTerms.invalidateProperties();
     properties.isValid = false;
 }
 
@@ -254,7 +262,7 @@ double LinearObjectiveFunction::calculateValue(const VectorDouble& point)
     {
         // TODO: Should be == instead of >=, but for now we allow the solution vector to contain auxiliary variable
         // values that are not used in the objective function
-        assert(point.size() >= sharedOwnerProblem->properties.numberOfVariables);
+        assert(point.size() >= static_cast<size_t>(sharedOwnerProblem->properties.numberOfVariables));
     }
     double value = constant + linearTerms.calculate(point);
     return value;
@@ -265,6 +273,13 @@ Interval LinearObjectiveFunction::calculateValue(const IntervalVector& intervalV
     Interval value = linearTerms.calculate(intervalVector);
     value += Interval(constant);
     return value;
+}
+
+void LinearObjectiveFunction::addTermIntervalDerivatives(
+    IntervalDerivatives& derivatives, const IntervalVector& box, int order)
+{
+    derivatives.value = derivatives.value + Interval(constant);
+    addIntervalDerivatives(derivatives, SHOT::calculateIntervalDerivatives(linearTerms, box, order), order);
 }
 
 SparseVariableVector LinearObjectiveFunction::calculateGradient(
@@ -297,9 +312,7 @@ void LinearObjectiveFunction::initializeGradientSparsityPattern()
         if(T->coefficient == 0.0)
             continue;
 
-        if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), T->variable)
-            == gradientSparsityPattern->end())
-            gradientSparsityPattern->push_back(T->variable);
+        gradientSparsityPattern->push_back(T->variable);
     }
 }
 
@@ -333,25 +346,24 @@ std::ostream& LinearObjectiveFunction::print(std::ostream& stream) const
     return stream;
 }
 
-void QuadraticObjectiveFunction::add(QuadraticTerms terms)
+void QuadraticObjectiveFunction::add(const QuadraticTerms& terms)
 {
-    if(quadraticTerms.size() == 0)
-    {
-        quadraticTerms = terms;
-        properties.isValid = false;
-    }
-    else
-    {
-        for(auto& T : terms)
-        {
-            add(T);
-        }
-    }
+    if(terms.size() == 0)
+        return;
+
+    // Merges the terms through a hash map, instead of searching all terms for every added term. The terms given
+    // are merged as well, since they may contain several terms of the same variables.
+    quadraticTerms.add(terms);
+
+    properties.isValid = false;
 }
 
 void QuadraticObjectiveFunction::add(QuadraticTermPtr term)
 {
+    // The term is not merged with a term of the same variables, since searching all terms for every added term is
+    // quadratic in the number of terms, and the duplicates are summed wherever the terms are used
     quadraticTerms.push_back(term);
+    quadraticTerms.invalidateProperties();
     properties.isValid = false;
 }
 
@@ -419,44 +431,18 @@ Interval QuadraticObjectiveFunction::calculateValue(const IntervalVector& interv
     return value;
 }
 
+void QuadraticObjectiveFunction::addTermIntervalDerivatives(
+    IntervalDerivatives& derivatives, const IntervalVector& box, int order)
+{
+    LinearObjectiveFunction::addTermIntervalDerivatives(derivatives, box, order);
+    addIntervalDerivatives(derivatives, SHOT::calculateIntervalDerivatives(quadraticTerms, box, order), order);
+}
+
 SparseVariableVector QuadraticObjectiveFunction::calculateGradient(const VectorDouble& point, bool eraseZeroes = true)
 {
     SparseVariableVector gradient = LinearObjectiveFunction::calculateGradient(point, eraseZeroes);
 
-    for(auto& T : quadraticTerms)
-    {
-        if(T->firstVariable == T->secondVariable) // variable squared
-        {
-            auto value = 2 * T->coefficient * point[T->firstVariable->getIndex()];
-            auto element = gradient.emplace(T->firstVariable, value);
-
-            if(!element.second)
-            {
-                // Element already exists for the variable
-                element.first->second += value;
-            }
-        }
-        else
-        {
-            auto value = T->coefficient * point[T->secondVariable->getIndex()];
-            auto element = gradient.emplace(T->firstVariable, value);
-
-            if(!element.second)
-            {
-                // Element already exists for the variable
-                element.first->second += value;
-            }
-
-            value = T->coefficient * point[T->firstVariable->getIndex()];
-            element = gradient.emplace(T->secondVariable, value);
-
-            if(!element.second)
-            {
-                // Element already exists for the variable
-                element.first->second += value;
-            }
-        }
-    }
+    Utilities::addSparseVariableVector(gradient, quadraticTerms.getGradient(point));
 
     if(eraseZeroes)
         Utilities::erase_if<VariablePtr, double>(gradient, 0.0);
@@ -473,66 +459,22 @@ void QuadraticObjectiveFunction::initializeGradientSparsityPattern()
         if(T->coefficient == 0.0)
             continue;
 
-        if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), T->firstVariable)
-            == gradientSparsityPattern->end())
-            gradientSparsityPattern->push_back(T->firstVariable);
+        gradientSparsityPattern->push_back(T->firstVariable);
 
-        if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), T->secondVariable)
-            == gradientSparsityPattern->end())
-            gradientSparsityPattern->push_back(T->secondVariable);
+        gradientSparsityPattern->push_back(T->secondVariable);
     }
 }
 
 SparseVariableMatrix QuadraticObjectiveFunction::calculateHessian(
     [[maybe_unused]] const VectorDouble& point, [[maybe_unused]] bool eraseZeroes = true)
 {
-    SparseVariableMatrix hessian;
+    return (quadraticTerms.getHessian());
+}
 
-    for(auto& T : quadraticTerms)
-    {
-        if(T->coefficient == 0.0)
-            continue;
-
-        if(T->firstVariable == T->secondVariable) // variable squared
-        {
-            auto value = 2 * T->coefficient;
-            auto element = hessian.emplace(std::make_pair(T->firstVariable, T->secondVariable), value);
-
-            if(!element.second)
-            {
-                // Element already exists for the variable
-                element.first->second += value;
-            }
-        }
-        else
-        {
-            // Only save elements above the diagonal since the Hessian is symmetric
-            if(T->firstVariable->getIndex() < T->secondVariable->getIndex())
-            {
-                auto value = T->coefficient;
-                auto element = hessian.emplace(std::make_pair(T->firstVariable, T->secondVariable), value);
-
-                if(!element.second)
-                {
-                    // Element already exists for the variable
-                    element.first->second += value;
-                }
-            }
-            else
-            {
-                auto value = T->coefficient;
-                auto element = hessian.emplace(std::make_pair(T->secondVariable, T->firstVariable), value);
-
-                if(!element.second)
-                {
-                    // Element already exists for the variable
-                    element.first->second += value;
-                }
-            }
-        }
-    }
-
-    return hessian;
+// The Hessian of a quadratic function is constant, and is cached by the terms
+const SparseVariableMatrix* QuadraticObjectiveFunction::getConstantHessian()
+{
+    return (&quadraticTerms.getHessian());
 }
 
 void QuadraticObjectiveFunction::initializeHessianSparsityPattern()
@@ -551,9 +493,7 @@ void QuadraticObjectiveFunction::initializeHessianSparsityPattern()
 
         auto key = std::make_pair(firstVariable, secondVariable);
 
-        if(std::find(hessianSparsityPattern->begin(), hessianSparsityPattern->end(), key)
-            == hessianSparsityPattern->end())
-            hessianSparsityPattern->push_back(key);
+        hessianSparsityPattern->push_back(key);
     }
 }
 
@@ -573,20 +513,11 @@ std::ostream& QuadraticObjectiveFunction::print(std::ostream& stream) const
     return stream;
 }
 
-void NonlinearObjectiveFunction::add(MonomialTerms terms)
+void NonlinearObjectiveFunction::add(const MonomialTerms& terms)
 {
-    if(monomialTerms.size() == 0)
-    {
-        monomialTerms = terms;
-        properties.isValid = false;
-    }
-    else
-    {
-        for(auto& T : terms)
-        {
-            add(T);
-        }
-    }
+    // Merges the terms with the terms of the same factors, also the terms given with each other
+    monomialTerms.add(terms);
+    properties.isValid = false;
 }
 
 void NonlinearObjectiveFunction::add(MonomialTermPtr term)
@@ -595,20 +526,11 @@ void NonlinearObjectiveFunction::add(MonomialTermPtr term)
     properties.isValid = false;
 }
 
-void NonlinearObjectiveFunction::add(SignomialTerms terms)
+void NonlinearObjectiveFunction::add(const SignomialTerms& terms)
 {
-    if(signomialTerms.size() == 0)
-    {
-        signomialTerms = terms;
-        properties.isValid = false;
-    }
-    else
-    {
-        for(auto& T : terms)
-        {
-            add(T);
-        }
-    }
+    // Merges the terms with the terms of the same factors, also the terms given with each other
+    signomialTerms.add(terms);
+    properties.isValid = false;
 }
 
 void NonlinearObjectiveFunction::add(SignomialTermPtr term)
@@ -676,7 +598,7 @@ void NonlinearObjectiveFunction::updateProperties()
             auto convexity = nonlinearExpression->getConvexity();
             properties.convexity = Utilities::combineConvexity(convexity, properties.convexity);
         }
-        catch(const mc::Interval::Exceptions&)
+        catch(const IntervalError&)
         {
             properties.convexity = E_Convexity::Unknown;
         }
@@ -685,6 +607,13 @@ void NonlinearObjectiveFunction::updateProperties()
     {
         properties.hasNonlinearExpression = false;
     }
+
+    // The variables are collected again, and found through a set instead of by searching the ones collected so far
+    variablesInMonomialTerms.clear();
+    variablesInSignomialTerms.clear();
+
+    std::set<Variable*> collectedMonomialVariables;
+    std::set<Variable*> collectedSignomialVariables;
 
     if(monomialTerms.size() > 0)
     {
@@ -695,8 +624,7 @@ void NonlinearObjectiveFunction::updateProperties()
         {
             for(auto& V : T->variables)
             {
-                if(std::find(variablesInMonomialTerms.begin(), variablesInMonomialTerms.end(), V)
-                    == variablesInMonomialTerms.end())
+                if(collectedMonomialVariables.insert(V.get()).second)
                     variablesInMonomialTerms.push_back(V);
             }
         }
@@ -718,8 +646,7 @@ void NonlinearObjectiveFunction::updateProperties()
         {
             for(auto& E : T->elements)
             {
-                if(std::find(variablesInSignomialTerms.begin(), variablesInSignomialTerms.end(), E->variable)
-                    == variablesInSignomialTerms.end())
+                if(collectedSignomialVariables.insert(E->variable.get()).second)
                     variablesInSignomialTerms.push_back(E->variable);
             }
 
@@ -767,12 +694,26 @@ Interval NonlinearObjectiveFunction::calculateValue(const IntervalVector& interv
         if(this->properties.hasNonlinearExpression)
             value += nonlinearExpression->calculate(intervalVector);
     }
-    catch(const mc::Interval::Exceptions&)
+    catch(const IntervalError&)
     {
         return (Interval(SHOT_DBL_MIN, SHOT_DBL_MAX));
     }
 
+    if(!isValidInterval(value))
+        return (Interval(SHOT_DBL_MIN, SHOT_DBL_MAX));
+
     return value;
+}
+
+void NonlinearObjectiveFunction::addTermIntervalDerivatives(
+    IntervalDerivatives& derivatives, const IntervalVector& box, int order)
+{
+    QuadraticObjectiveFunction::addTermIntervalDerivatives(derivatives, box, order);
+    addIntervalDerivatives(derivatives, SHOT::calculateIntervalDerivatives(monomialTerms, box, order), order);
+    addIntervalDerivatives(derivatives, SHOT::calculateIntervalDerivatives(signomialTerms, box, order), order);
+
+    if(this->properties.hasNonlinearExpression && nonlinearExpression)
+        addIntervalDerivatives(derivatives, SHOT::calculateIntervalDerivatives(nonlinearExpression, box, order), order);
 }
 
 SparseVariableVector NonlinearObjectiveFunction::calculateGradient(const VectorDouble& point, bool eraseZeroes = true)
@@ -835,12 +776,14 @@ SparseVariableVector NonlinearObjectiveFunction::calculateGradient(const VectorD
         signomialGradient = signomialTerms.calculateGradient(point);
     }
 
-    auto result = Utilities::combineSparseVariableVectors(gradient, monomialGradient, signomialGradient);
+    Utilities::addSparseVariableVector(gradient, std::move(monomialGradient));
+    Utilities::addSparseVariableVector(gradient, std::move(signomialGradient));
 
+    // The zeroes were previously erased from a copy of the gradient that was not returned
     if(eraseZeroes)
         Utilities::erase_if<VariablePtr, double>(gradient, 0.0);
 
-    return result;
+    return gradient;
 }
 
 void NonlinearObjectiveFunction::initializeGradientSparsityPattern()
@@ -873,14 +816,10 @@ void NonlinearObjectiveFunction::initializeGradientSparsityPattern()
 
             for(auto& V : T->variables)
             {
-                if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), V)
-                    == gradientSparsityPattern->end())
-                {
-                    gradientSparsityPattern->push_back(V);
+                gradientSparsityPattern->push_back(V);
 
-                    if(debug)
-                        stream << "(monomial) " << V->name << '\n';
-                }
+                if(debug)
+                    stream << "(monomial) " << V->name << '\n';
             }
         }
     }
@@ -894,14 +833,10 @@ void NonlinearObjectiveFunction::initializeGradientSparsityPattern()
 
             for(auto& E : T->elements)
             {
-                if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), E->variable)
-                    == gradientSparsityPattern->end())
-                {
-                    gradientSparsityPattern->push_back(E->variable);
+                gradientSparsityPattern->push_back(E->variable);
 
-                    if(debug)
-                        stream << "(signomial) " << E->variable->name << '\n';
-                }
+                if(debug)
+                    stream << "(signomial) " << E->variable->name << '\n';
             }
         }
     }
@@ -934,24 +869,17 @@ void NonlinearObjectiveFunction::initializeGradientSparsityPattern()
 
             const std::vector<size_t>& variableIndices(nonlinearGradientSparsityPattern.col());
 
+            // The nonlinear variable index of a variable is its position in the problem's list of variables in
+            // nonlinear expressions
             for(size_t i = 0; i < nonlinearGradientSparsityPattern.nnz(); i++)
             {
-                for(auto& VAR : variablesInNonlinearExpression)
-                {
-                    if((size_t)VAR->properties.nonlinearVariableIndex == variableIndices[i])
-                    {
-                        if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), VAR)
-                            == gradientSparsityPattern->end())
-                        {
-                            gradientSparsityPattern->push_back(VAR);
+                assert(variableIndices[i] < sharedOwnerProblem->nonlinearExpressionVariables.size());
 
-                            if(debug)
-                                stream << "(nonlinear expr) " << VAR->name << '\n';
-                        }
+                auto& VAR = sharedOwnerProblem->nonlinearExpressionVariables[variableIndices[i]];
+                gradientSparsityPattern->push_back(VAR);
 
-                        break;
-                    }
-                }
+                if(debug)
+                    stream << "(nonlinear expr) " << VAR->name << '\n';
             }
         }
     }
@@ -971,18 +899,39 @@ void NonlinearObjectiveFunction::initializeGradientSparsityPattern()
     nonlinearGradientSparsityMapGenerated = true;
 }
 
+bool NonlinearObjectiveFunction::isHessianCalculatedDensely()
+{
+    if(!properties.hasNonlinearExpression)
+        return (false);
+
+    auto sharedOwnerProblem = ownerProblem.lock();
+
+    if(!sharedOwnerProblem)
+        return (false);
+
+    if(!nonlinearHessianSparsityMapGenerated)
+        initializeHessianSparsityPattern();
+
+    // The density is relative to the variables of this nonlinear expression, not of all of them in the problem, since a
+    // dense Hessian of a part of the variables would otherwise be colored, which can take minutes
+    size_t numberOfVariables = variablesInNonlinearExpression.size();
+
+    return (
+        numberOfVariables >= 64 && nonlinearHessianSparsityPattern.nnz() > numberOfVariables * numberOfVariables / 2);
+}
+
 SparseVariableMatrix NonlinearObjectiveFunction::calculateHessian(const VectorDouble& point, bool eraseZeroes = true)
 {
     SparseVariableMatrix hessian = QuadraticObjectiveFunction::calculateHessian(point, eraseZeroes);
 
     if(properties.hasMonomialTerms)
     {
-        hessian = Utilities::combineSparseVariableMatrices(monomialTerms.calculateHessian(point), hessian);
+        Utilities::addSparseVariableMatrix(hessian, monomialTerms.calculateHessian(point));
     }
 
     if(properties.hasSignomialTerms)
     {
-        hessian = Utilities::combineSparseVariableMatrices(signomialTerms.calculateHessian(point), hessian);
+        Utilities::addSparseVariableMatrix(hessian, signomialTerms.calculateHessian(point));
     }
 
     if(this->properties.hasNonlinearExpression)
@@ -1002,35 +951,50 @@ SparseVariableMatrix NonlinearObjectiveFunction::calculateHessian(const VectorDo
             for(auto& VAR : sharedOwnerProblem->nonlinearExpressionVariables)
                 pointNonlinearSubset[VAR->properties.nonlinearVariableIndex] = point[VAR->getIndex()];
 
-            CppAD::sparse_rcv<std::vector<size_t>, std::vector<double>> subset(nonlinearHessianSparsityPattern);
-
-            auto calculatedHessian = sharedOwnerProblem->ADFunctions.SparseHessian(pointNonlinearSubset, weights);
-
-            for(auto& V1 : variablesInNonlinearExpression)
+            auto addHessianElement = [&](size_t row, size_t column, double value)
             {
-                int v1Index = V1->properties.nonlinearVariableIndex;
-                for(auto& V2 : variablesInNonlinearExpression)
+                if(value == 0.0)
+                    return;
+
+                auto& V1 = sharedOwnerProblem->nonlinearExpressionVariables[row];
+                auto& V2 = sharedOwnerProblem->nonlinearExpressionVariables[column];
+
+                // Only save elements above the diagonal since the Hessian is symmetric
+                if(V1->getIndex() > V2->getIndex())
+                    return;
+
+                auto element = hessian.emplace(std::make_pair(V1, V2), value);
+
+                if(!element.second)
                 {
-                    size_t hessianIndex = v1Index * numberOfNonlinearVariables
-                        + V2->properties.nonlinearVariableIndex;
-
-                    double hessianValue = calculatedHessian[hessianIndex];
-
-                    if(hessianValue == 0.0)
-                        continue;
-
-                    // Only save elements above the diagonal since the Hessian is symmetric
-                    if(V1->getIndex() <= V2->getIndex())
-                    {
-                        auto element = hessian.emplace(std::make_pair(V1, V2), hessianValue);
-
-                        if(!element.second)
-                        {
-                            // Element already exists for the variable
-                            element.first->second += hessianValue;
-                        }
-                    }
+                    // Element already exists for the variable
+                    element.first->second += value;
                 }
+            };
+
+            const size_t dimension = pointNonlinearSubset.size();
+            const auto& pattern = nonlinearHessianSparsityPattern;
+
+            if(isHessianCalculatedDensely())
+            {
+                // Coloring a dense pattern is much more expensive than the Hessian itself. Use CppAD's direct
+                // dense calculation, then keep only the entries present in the pattern.
+                auto values = sharedOwnerProblem->ADFunctions.Hessian(pointNonlinearSubset, weights);
+
+                for(size_t k = 0; k < pattern.nnz(); ++k)
+                    addHessianElement(pattern.row()[k], pattern.col()[k],
+                        values[pattern.row()[k] * dimension + pattern.col()[k]]);
+            }
+            else
+            {
+                // The work object keeps the sparse coloring between calls.
+                CppAD::sparse_rcv<std::vector<size_t>, std::vector<double>> subset(pattern);
+
+                sharedOwnerProblem->ADFunctions.sparse_hes(
+                    pointNonlinearSubset, weights, subset, pattern, "cppad.symmetric", nonlinearHessianWork);
+
+                for(size_t k = 0; k < subset.nnz(); ++k)
+                    addHessianElement(subset.row()[k], subset.col()[k], subset.val()[k]);
             }
         }
     }
@@ -1060,9 +1024,7 @@ void NonlinearObjectiveFunction::initializeHessianSparsityPattern()
                     variablePair = std::make_pair(V2, V1);
                 }
 
-                if(std::find(hessianSparsityPattern->begin(), hessianSparsityPattern->end(), variablePair)
-                    == hessianSparsityPattern->end())
-                    hessianSparsityPattern->push_back(variablePair);
+                hessianSparsityPattern->push_back(variablePair);
             }
         }
     }
@@ -1085,9 +1047,7 @@ void NonlinearObjectiveFunction::initializeHessianSparsityPattern()
                     variablePair = std::make_pair(E2->variable, E1->variable);
                 }
 
-                if(std::find(hessianSparsityPattern->begin(), hessianSparsityPattern->end(), variablePair)
-                    == hessianSparsityPattern->end())
-                    hessianSparsityPattern->push_back(variablePair);
+                hessianSparsityPattern->push_back(variablePair);
             }
         }
     }
@@ -1116,36 +1076,18 @@ void NonlinearObjectiveFunction::initializeHessianSparsityPattern()
             const std::vector<size_t>& rowIndices(nonlinearHessianSparsityPattern.row());
             const std::vector<size_t>& colIndices(nonlinearHessianSparsityPattern.col());
 
+            // The nonlinear variable index of a variable is its position in the problem's list of variables in
+            // nonlinear expressions
             for(size_t i = 0; i < nonlinearHessianSparsityPattern.nnz(); i++)
             {
-                size_t targetRowIndex = rowIndices[i];
-                size_t targetColIndex = colIndices[i];
-                
-                for(auto& V1 : variablesInNonlinearExpression)
-                {
-                    if((size_t)V1->properties.nonlinearVariableIndex != targetRowIndex)
-                        continue;
-                        
-                    for(auto& V2 : variablesInNonlinearExpression)
-                    {
-                        if((size_t)V2->properties.nonlinearVariableIndex == targetColIndex)
-                        {
-                            std::pair<VariablePtr, VariablePtr> variablePair;
+                assert(rowIndices[i] < sharedOwnerProblem->nonlinearExpressionVariables.size());
+                assert(colIndices[i] < sharedOwnerProblem->nonlinearExpressionVariables.size());
 
-                            if(V1->getIndex() < V2->getIndex())
-                                variablePair = std::make_pair(V1, V2);
-                            else
-                                variablePair = std::make_pair(V2, V1);
+                auto& V1 = sharedOwnerProblem->nonlinearExpressionVariables[rowIndices[i]];
+                auto& V2 = sharedOwnerProblem->nonlinearExpressionVariables[colIndices[i]];
 
-                            if(std::find(hessianSparsityPattern->begin(), hessianSparsityPattern->end(), variablePair)
-                                == hessianSparsityPattern->end())
-                                hessianSparsityPattern->push_back(variablePair);
-
-                            goto next_sparsity_element;
-                        }
-                    }
-                }
-                next_sparsity_element:;
+                hessianSparsityPattern->push_back(
+                    (V1->getIndex() < V2->getIndex()) ? std::make_pair(V1, V2) : std::make_pair(V2, V1));
             }
         }
     }

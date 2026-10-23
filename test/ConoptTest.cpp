@@ -4,7 +4,7 @@
 #include "../src/Results.h"
 #include "../src/PrimalSolver.h"
 #include "../src/TaskHandler.h"
-#include "../src/EventHandler.h"
+#include "../src/Callback.h"
 #include <cstdlib>
 #include "../src/Model/Problem.h"
 #include "../src/NLPSolver/NLPSolverConopt.h"
@@ -244,11 +244,11 @@ int ConoptTest(int argc, char* argv[])
         else if(part == 9)
         {
             int calls = 0;
-            env->events->registerCallback(E_EventType::UserTerminationCheck,
-                [&calls]()
+            solver.registerCallback<TerminationCheckContext>(
+                [&calls](TerminationCheckContext& context)
                 {
                     ++calls;
-                    return true;
+                    context.terminate();
                 });
             require(nlp.solveProblem() == E_NLPSolutionStatus::Error, "User callback termination ignored");
             require(calls > 0 && env->tasks->isTerminated(), "Termination callback not called");

@@ -51,7 +51,7 @@ def solveProblem(problemFile, correctObjectiveValue):
         print("\tSource " + str(solution.sourceType))
         print("\tSource description: " + str(solution.sourceDescription))
         print("\tPoint " + str(solution.point))
-        print("\tMax deviation " + str(solution.maxDevatingConstraintNonlinear.value))
+        print("\tMax deviation " + str(solution.maxDeviatingConstraintNonlinear.value))
                 
     objValue = solutions[0].objValue
     

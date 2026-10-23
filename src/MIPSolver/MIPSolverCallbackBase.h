@@ -62,7 +62,7 @@ protected:
 
     bool checkUserTermination();
 
-    /// Queries the ExternalDualBound event and, if an improved bound is returned,
+    /// Invokes the DualBoundUpdate callbacks and, if they propose an improved bound,
     /// updates env->results and solutionStatistics.
     /// Returns the new bound value when an improvement was applied, nullopt otherwise.
     std::optional<double> queryAndUpdateExternalDualBound();

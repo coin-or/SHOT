@@ -6,7 +6,7 @@
    Please see the README and LICENSE files for more information.
 */
 
-#include "../src/CallbackData.h"
+#include "../src/Callback.h"
 #include "../src/DualSolver.h"
 #include "../src/Environment.h"
 #include "../src/Report.h"
@@ -16,9 +16,11 @@
 #include "../src/TaskHandler.h"
 
 #include "../src/MIPSolver/IMIPSolver.h"
+#include "../src/MIPSolver/MIPSolverCplex.h"
 
 #include "../src/Model/Problem.h"
 #include "../src/Model/ObjectiveFunction.h"
+#include "../src/Tasks/TaskCreateMIPProblem.h"
 
 #include <iostream>
 
@@ -142,6 +144,9 @@ bool CplexTerminationCallbackTest(std::string filename)
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
     auto env = solver->getEnvironment();
 
+    // A time limit so that a test that does not converge cannot stop the test suite
+    solver->updateSetting("Termination.TimeLimit", 60.0);
+
     solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Error));
     solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cplex));
     solver->updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::MultiTree));
@@ -155,18 +160,17 @@ bool CplexTerminationCallbackTest(std::string filename)
     }
 
     // Registers a callback that terminates after the third iteration
-    solver->registerCallback(E_EventType::UserTerminationCheck, [](std::any args) -> bool {
-        auto data = std::any_cast<TerminationCallbackData>(args);
-        std::cout << "Termination callback activated with structured data (iteration " << data.iterationNumber << ")\n";
-
-        if(data.iterationNumber > 3)
+    solver->registerCallback<TerminationCheckContext>(
+        [](TerminationCheckContext& context)
         {
-            std::cout << "Terminating after iteration " << data.iterationNumber << "\n";
-            return true;
-        }
+            std::cout << "Termination callback activated (iteration " << context.getIterationNumber() << ")\n";
 
-        return false;
-    });
+            if(context.getIterationNumber() > 3)
+            {
+                std::cout << "Terminating after iteration " << context.getIterationNumber() << "\n";
+                context.terminate();
+            }
+        });
 
     // Solving the problem
     if(!solver->solveProblem())
@@ -189,6 +193,9 @@ bool CplexTerminationCallbackSingleTreeTest(std::string filename)
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
     auto env = solver->getEnvironment();
 
+    // A time limit so that a test that does not converge cannot stop the test suite
+    solver->updateSetting("Termination.TimeLimit", 60.0);
+
     solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Info));
     solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cplex));
     solver->updateSetting("Output.Console.Iteration.Detail", static_cast<int>(ES_IterationOutputDetail::Full));
@@ -200,15 +207,15 @@ bool CplexTerminationCallbackSingleTreeTest(std::string filename)
         return (false);
     }
 
-    solver->registerCallback(E_EventType::UserTerminationCheck, [](std::any args) -> bool {
-        auto data = std::any_cast<TerminationCallbackData>(args);
-        if(data.iterationNumber > 10)
+    solver->registerCallback<TerminationCheckContext>(
+        [](TerminationCheckContext& context)
         {
-            std::cout << "Terminating after iteration " << data.iterationNumber << "\n";
-            return true;
-        }
-        return false;
-    });
+            if(context.getIterationNumber() > 10)
+            {
+                std::cout << "Terminating after iteration " << context.getIterationNumber() << "\n";
+                context.terminate();
+            }
+        });
 
     if(!solver->solveProblem())
     {
@@ -232,6 +239,8 @@ bool CplexExternalPrimalSolutionSingleTreeTest(std::string filename)
 
     {
         std::unique_ptr<Solver> solver = std::make_unique<Solver>();
+    // A time limit so that a test that does not converge cannot stop the test suite
+    solver->updateSetting("Termination.TimeLimit", 60.0);
 
         solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Info));
         solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cplex));
@@ -243,16 +252,8 @@ bool CplexExternalPrimalSolutionSingleTreeTest(std::string filename)
             return (false);
         }
 
-        solver->registerCallback(E_EventType::NewPrimalSolution, [&collectedSolutions](std::any args) {
-            try
-            {
-                auto data = std::any_cast<PrimalSolutionCallbackData>(args);
-                collectedSolutions.push_back(data.solution);
-            }
-            catch(const std::bad_any_cast&)
-            {
-            }
-        });
+        solver->registerCallback<NewPrimalSolutionContext>([&collectedSolutions](NewPrimalSolutionContext& solution)
+            { collectedSolutions.push_back(solution.getPoint()); });
 
         if(!solver->solveProblem())
         {
@@ -273,6 +274,9 @@ bool CplexExternalPrimalSolutionSingleTreeTest(std::string filename)
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
     auto env = solver->getEnvironment();
 
+    // A time limit so that a test that does not converge cannot stop the test suite
+    solver->updateSetting("Termination.TimeLimit", 60.0);
+
     solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Info));
     solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cplex));
     solver->updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::SingleTree));
@@ -283,27 +287,21 @@ bool CplexExternalPrimalSolutionSingleTreeTest(std::string filename)
         return (false);
     }
 
-    solver->registerCallback(
-        E_EventType::ExternalPrimalSolution, [&collectedSolutions, &env](std::any args) -> std::vector<VectorDouble> {
+    solver->registerCallback<PrimalCandidateSearchContext>(
+        [&collectedSolutions, &env](PrimalCandidateSearchContext& context)
+        {
             if(!env->dualSolver->MIPSolver->getDiscreteVariableStatus())
-                return {};
-
-            try
-            {
-                std::any_cast<ExternalPrimalSolutionCallbackData>(args);
-            }
-            catch(const std::bad_any_cast&)
-            {
-                return {};
-            }
+                return;
 
             if(collectedSolutions.empty())
-                return {};
+                return;
 
-            std::vector<VectorDouble> toInject = collectedSolutions;
+            std::cout << "Injecting " << collectedSolutions.size() << " external primal solution(s)\n";
+
+            for(auto& solution : collectedSolutions)
+                context.addPrimalSolution(solution);
+
             collectedSolutions.clear();
-            std::cout << "Injecting " << toInject.size() << " external primal solution(s)\n";
-            return toInject;
         });
 
     if(!solver->solveProblem())
@@ -336,6 +334,9 @@ bool CplexExternalDualBoundLazyConstraintTest(std::string filename, double exter
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
     auto env = solver->getEnvironment();
 
+    // A time limit so that a test that does not converge cannot stop the test suite
+    solver->updateSetting("Termination.TimeLimit", 60.0);
+
     solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Info));
     solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cplex));
     solver->updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::SingleTree));
@@ -352,25 +353,16 @@ bool CplexExternalDualBoundLazyConstraintTest(std::string filename, double exter
     // starting from (externalDualBound - 0.4) up to externalDualBound, exercising the
     // incremental lazy constraint mechanism.
     double currentExternalBound = externalDualBound - 0.4;
-    solver->registerCallback(
-        E_EventType::ExternalDualBound, [externalDualBound, &currentExternalBound](std::any args) {
-            double newDualBound = std::numeric_limits<double>::quiet_NaN();
-            try
+    solver->registerCallback<DualBoundUpdateContext>(
+        [externalDualBound, &currentExternalBound](DualBoundUpdateContext& context)
+        {
+            if(currentExternalBound < externalDualBound)
             {
-                auto data = std::any_cast<DualBoundCallbackData>(args);
-                if(currentExternalBound < externalDualBound)
-                {
-                    currentExternalBound = std::min(currentExternalBound + 0.1, externalDualBound);
-                    newDualBound = currentExternalBound;
-                    std::cout << "Current dual bound is " << data.currentDualBound
-                              << ", providing external dual bound: " << newDualBound << "\n";
-                }
+                currentExternalBound = std::min(currentExternalBound + 0.1, externalDualBound);
+                std::cout << "Current dual bound is " << context.getDualBound()
+                          << ", providing external dual bound: " << currentExternalBound << "\n";
+                context.setDualBound(currentExternalBound);
             }
-            catch(const std::bad_any_cast&)
-            {
-                std::cout << "External dual bound callback executed with no valid structured data\n";
-            }
-            return (newDualBound);
         });
 
     if(!solver->solveProblem())
@@ -409,6 +401,9 @@ bool CplexExternalDualBoundCallbackTest(std::string filename, double dualBoundTo
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
     auto env = solver->getEnvironment();
 
+    // A time limit so that a test that does not converge cannot stop the test suite
+    solver->updateSetting("Termination.TimeLimit", 60.0);
+
     solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Info));
     solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cplex));
     solver->updateSetting("Dual.TreeStrategy", static_cast<int>(treeStrategy));
@@ -425,22 +420,16 @@ bool CplexExternalDualBoundCallbackTest(std::string filename, double dualBoundTo
     std::vector<VectorDouble> foundSolutions;
 
     // Registers a callback that collects all new primal solutions
-    solver->registerCallback(E_EventType::NewPrimalSolution, [&foundSolutions](std::any args) {
-        try
+    solver->registerCallback<NewPrimalSolutionContext>(
+        [&foundSolutions](NewPrimalSolutionContext& solution)
         {
-            auto data = std::any_cast<PrimalSolutionCallbackData>(args);
-            std::cout << "New primal solution found with objective value: " << data.objectiveValue
-                      << " from source: " << static_cast<int>(data.sourceType) << " (iteration " << data.iterationNumber
-                      << ")\n";
+            std::cout << "New primal solution found with objective value: " << solution.getObjectiveValue()
+                      << " from source: " << static_cast<int>(solution.getSource()) << " (iteration "
+                      << solution.getIterationNumber() << ")\n";
 
             // Add the solution to our collection
-            foundSolutions.push_back(data.solution);
-        }
-        catch(const std::bad_any_cast&)
-        {
-            std::cout << "New primal solution callback executed with no valid structured data\n";
-        }
-    });
+            foundSolutions.push_back(solution.getPoint());
+        });
 
     // Solving the problem
     if(!solver->solveProblem())
@@ -456,6 +445,9 @@ bool CplexExternalDualBoundCallbackTest(std::string filename, double dualBoundTo
     solver = std::make_unique<Solver>();
     env = solver->getEnvironment();
 
+    // A time limit so that a test that does not converge cannot stop the test suite
+    solver->updateSetting("Termination.TimeLimit", 60.0);
+
     solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Info));
     solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cplex));
     solver->updateSetting("Dual.TreeStrategy", static_cast<int>(treeStrategy));
@@ -469,66 +461,43 @@ bool CplexExternalDualBoundCallbackTest(std::string filename, double dualBoundTo
     }
 
     // Registers a callback that sets the dual bound to a fixed value
-    solver->registerCallback(E_EventType::ExternalDualBound, [dualBoundToTest](std::any args) {
-        double newDualBound = std::numeric_limits<double>::quiet_NaN();
-
-        try
+    solver->registerCallback<DualBoundUpdateContext>(
+        [dualBoundToTest](DualBoundUpdateContext& context)
         {
-            auto data = std::any_cast<DualBoundCallbackData>(args);
+            if(context.getDualBound() >= dualBoundToTest)
+                return;
 
-            if(data.currentDualBound >= dualBoundToTest)
-                return (newDualBound);
-
-            newDualBound = dualBoundToTest;
-            std::cout << "Current dual bound is " << data.currentDualBound
-                      << ", new external dual bound given as = " << newDualBound << "\n";
-        }
-        catch(const std::bad_any_cast&)
-        {
-            std::cout << "External dual bound callback executed with no valid structured data\n";
-            throw std::runtime_error("Invalid data type for external dual bound callback");
-        }
-
-        return (newDualBound);
-    });
+            std::cout << "Current dual bound is " << context.getDualBound()
+                      << ", new external dual bound given as = " << dualBoundToTest << "\n";
+            context.setDualBound(dualBoundToTest);
+        });
 
     // Registers a callback that provides external primal solutions from our collected solutions
-    solver->registerCallback(
-        E_EventType::ExternalPrimalSolution, [&foundSolutions, &env](std::any args) -> std::vector<VectorDouble> {
+    solver->registerCallback<PrimalCandidateSearchContext>(
+        [&foundSolutions, &env](PrimalCandidateSearchContext& context)
+        {
             if(!env->dualSolver->MIPSolver->getDiscreteVariableStatus())
             {
                 std::cout
                     << "Still waiting to add primal solution candidates until the relaxation strategy is finished.\n";
-                return std::vector<VectorDouble>();
+                return;
             }
 
-            try
+            std::cout << "External primal solution callback requested (iteration " << context.getIterationNumber()
+                      << ", current gap: " << context.getRelativeGap() << ")\n";
+
+            if(!foundSolutions.empty())
             {
-                auto data = std::any_cast<ExternalPrimalSolutionCallbackData>(args);
-                std::cout << "External primal solution callback requested (iteration " << data.iterationNumber
-                          << ", current gap: " << data.relativeGap << ")\n";
+                std::cout << "Providing " << foundSolutions.size() << " collected solutions as external candidates\n";
 
-                if(!foundSolutions.empty())
-                {
-                    std::cout << "Providing " << foundSolutions.size()
-                              << " collected solutions as external candidates\n";
+                for(auto& solution : foundSolutions)
+                    context.addPrimalSolution(solution);
 
-                    // Create a copy of foundSolutions and clear the original
-                    std::vector<VectorDouble> solutionsToAdd = foundSolutions;
-                    foundSolutions.clear();
-
-                    return solutionsToAdd;
-                }
-                else
-                {
-                    std::cout << "No collected solutions available to provide\n";
-                    return std::vector<VectorDouble>();
-                }
+                foundSolutions.clear();
             }
-            catch(const std::bad_any_cast&)
+            else
             {
-                std::cout << "External primal solution callback executed with no valid structured data\n";
-                return std::vector<VectorDouble>();
+                std::cout << "No collected solutions available to provide\n";
             }
         });
 
@@ -551,6 +520,118 @@ bool CplexExternalDualBoundCallbackTest(std::string filename, double dualBoundTo
     }
 
     return (true);
+}
+
+// A nonconvex objective with a quadratic constraint makes CPLEX throw 5002, including on the retry with
+// OptimalityTarget=3. The termination callback must be released before another solve or backend destruction.
+bool CplexCallbackAfterSolveErrorTest(bool quadraticConstraint)
+{
+    auto solver = std::make_unique<Solver>();
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cplex));
+    solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+    auto env = solver->getEnvironment();
+
+    auto problem = std::make_shared<Problem>(env);
+    auto x = std::make_shared<Variable>("x", E_VariableType::Real, -1.0, 1.0);
+    auto b = std::make_shared<Variable>("b", E_VariableType::Binary, 0.0, 1.0);
+    problem->add({ x, b });
+    auto objective = std::make_shared<QuadraticObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<QuadraticTerm>(-1.0, x, x));
+    objective->add(std::make_shared<LinearTerm>(-1.0, b));
+    problem->add(objective);
+
+    if(quadraticConstraint)
+    {
+        auto constraint = std::make_shared<QuadraticConstraint>("ball", SHOT_DBL_MIN, 1.0);
+        constraint->add(std::make_shared<QuadraticTerm>(1.0, x, x));
+        problem->add(constraint);
+    }
+
+    problem->finalize();
+    if(!solver->setProblem(problem))
+        return false;
+
+    auto backend = std::make_shared<MIPSolverCplex>(env);
+    if(!backend->initializeProblem())
+        return false;
+
+    // Give the original quadratic model to CPLEX so SHOT's reformulation does not remove the error trigger.
+    TaskCreateMIPProblem(env, backend, problem).run();
+    backend->setTimeLimit(10.0);
+    backend->setSolutionLimit(2100000000);
+
+    for(int solve = 0; solve < 2; ++solve)
+    {
+        auto status = backend->solveProblem();
+        if(quadraticConstraint)
+        {
+            if(status != E_ProblemSolutionStatus::Error || backend->getDualObjectiveValue() != SHOT_DBL_MIN)
+                return false;
+        }
+        else if(status != E_ProblemSolutionStatus::Optimal || std::abs(backend->getObjectiveValue() + 2.0) > 1e-6
+            || std::abs(backend->getDualObjectiveValue() + 2.0) > 1e-6)
+        {
+            return false;
+        }
+    }
+
+    backend.reset(); // Previously asserted in IloCplex::remove() after the unsuccessful solve.
+    return true;
+}
+
+bool CplexRelaxationConversionTest()
+{
+    auto solver = std::make_unique<Solver>();
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cplex));
+    solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+    auto env = solver->getEnvironment();
+
+    auto problem = std::make_shared<Problem>(env);
+    auto binary = std::make_shared<Variable>("binary", E_VariableType::Binary, 0.0, 1.0);
+    auto integer = std::make_shared<Variable>("integer", E_VariableType::Integer, 0.0, 2.0);
+    auto continuous = std::make_shared<Variable>("continuous", E_VariableType::Real, 0.0, 1.0);
+    problem->add({ binary, integer, continuous });
+
+    auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    for(auto& variable : { binary, integer, continuous })
+        objective->add(std::make_shared<LinearTerm>(1.0, variable));
+    problem->add(objective);
+
+    for(auto& variable : { binary, integer, continuous })
+    {
+        auto constraint = std::make_shared<LinearConstraint>(variable->name + "_lower", 0.5, SHOT_DBL_MAX);
+        constraint->add(std::make_shared<LinearTerm>(1.0, variable));
+        problem->add(constraint);
+    }
+
+    problem->finalize();
+    if(!solver->setProblem(problem))
+        return false;
+
+    auto backend = std::make_shared<MIPSolverCplex>(env);
+    if(!backend->initializeProblem())
+        return false;
+
+    TaskCreateMIPProblem(env, backend, problem).run();
+    backend->setTimeLimit(10.0);
+    backend->setSolutionLimit(2100000000);
+
+    for(int repeat = 0; repeat < 2; ++repeat)
+    {
+        backend->activateDiscreteVariables(false);
+        if(backend->solveProblem() != E_ProblemSolutionStatus::Optimal
+            || std::abs(backend->getObjectiveValue() - 1.5) > 1e-6)
+            return false;
+
+        backend->activateDiscreteVariables(true);
+        if(backend->solveProblem() != E_ProblemSolutionStatus::Optimal
+            || std::abs(backend->getObjectiveValue() - 2.5) > 1e-6)
+            return false;
+    }
+
+    return true;
 }
 
 int CplexTest(int argc, char* argv[])
@@ -652,6 +733,18 @@ int CplexTest(int argc, char* argv[])
         std::cout << "Starting test to solve ex1252a.osil with Cplex." << std::endl;
         passed = CplexTestNocrash("data/ex1252a.osil");
         std::cout << "Finished test to solve ex1252a.osil with Cplex." << std::endl;
+        break;
+    case 16:
+        std::cout << "Testing Cplex callback cleanup after a rejected nonconvex MIQCP.\n";
+        passed = CplexCallbackAfterSolveErrorTest(true);
+        break;
+    case 17:
+        std::cout << "Testing Cplex callback cleanup when retrying a nonconvex MIQP.\n";
+        passed = CplexCallbackAfterSolveErrorTest(false);
+        break;
+    case 18:
+        std::cout << "Testing Cplex LP/MIP conversion for mixed variable types.\n";
+        passed = CplexRelaxationConversionTest();
         break;
     default:
         passed = false;

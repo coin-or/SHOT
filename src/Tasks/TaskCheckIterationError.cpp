@@ -10,6 +10,7 @@
 
 #include "TaskCheckIterationError.h"
 
+#include "../DualSolver.h"
 #include "../Iteration.h"
 #include "../Results.h"
 #include "../Settings.h"
@@ -38,10 +39,36 @@ void TaskCheckIterationError::run()
         env->tasks->setNextTask(taskIDIfTrue);
         env->results->terminationReasonDescription = "Terminated since an error occured when solving the dual problem.";
     }
+    // A dual problem that is infeasible with the cutoff can give a dual bound that closes the gap, and the problem is
+    // then solved instead of infeasible
+    else if(currIter->solutionStatus == E_ProblemSolutionStatus::Infeasible && currIter->solutionPoints.size() == 0
+        && (env->results->isAbsoluteObjectiveGapToleranceMet() || env->results->isRelativeObjectiveGapToleranceMet()))
+    {
+    }
     else if(currIter->solutionStatus == E_ProblemSolutionStatus::Infeasible && currIter->solutionPoints.size() == 0)
     {
-        env->results->terminationReason = E_TerminationReason::InfeasibleProblem;
-        env->results->terminationReasonDescription = "Terminated since the dual problem is infeasible.";
+        // A reduction cut excludes the objective values that are not better than the reduced cutoff, so the dual
+        // problem being infeasible afterwards only means that no better solution was found, not that the problem is
+        // infeasible
+        if(env->solutionStatistics.hasReductionCutBeenAddedSincePrimalImprovement)
+        {
+            env->results->terminationReason = E_TerminationReason::ObjectiveStagnation;
+            env->results->terminationReasonDescription
+                = "Terminated since the dual problem is infeasible after an objective reduction cut.";
+        }
+        // With a primal solution, the problem is not infeasible, but the cuts, e.g., of nonconvex constraints, have
+        // cut away the solutions that are not worse than it
+        else if(env->results->hasPrimalSolution())
+        {
+            env->results->terminationReason = E_TerminationReason::ObjectiveStagnation;
+            env->results->terminationReasonDescription
+                = "Terminated since the dual problem is infeasible, although a primal solution has been found.";
+        }
+        else
+        {
+            env->results->terminationReason = E_TerminationReason::InfeasibleProblem;
+            env->results->terminationReasonDescription = "Terminated since the dual problem is infeasible.";
+        }
 
         // The infeasibility repair loop (TaskRepairInfeasibleDualProblem) sets forceObjectiveReductionCut when it
         // detects it is looping without making progress, i.e. no more repairs can be done. In that situation the
@@ -52,7 +79,10 @@ void TaskCheckIterationError::run()
         else
             env->tasks->setNextTask(taskIDIfTrue);
     }
-    else if(currIter->solutionStatus == E_ProblemSolutionStatus::Unbounded && currIter->solutionPoints.size() == 0)
+    // Solution points of an unbounded relaxation are used to find cuts, while an exact dual problem that is unbounded
+    // shows that the problem is unbounded even if the MIP solver has found solutions to it
+    else if(currIter->solutionStatus == E_ProblemSolutionStatus::Unbounded
+        && (currIter->solutionPoints.size() == 0 || env->dualSolver->isDualProblemExact()))
     {
         env->results->terminationReason = E_TerminationReason::UnboundedProblem;
         env->tasks->setNextTask(taskIDIfTrue);

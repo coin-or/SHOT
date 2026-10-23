@@ -15,6 +15,7 @@
 
 #include "../src/Solver.h"
 #include "../src/DualSolver.h"
+#include "../src/PrimalSolver.h"
 #include "../src/Environment.h"
 #include "../src/Iteration.h"
 #include "../src/Results.h"
@@ -610,6 +611,124 @@ bool testDualBoundPastPrimalBoundIsNotUsed(ES_MIPSolver mipSolver)
     return passed;
 }
 
+bool testGlobalDualBoundIsCappedByThePrimalBound(ES_MIPSolver mipSolver)
+{
+    bool passed = true;
+
+    for(bool minimize : { true, false })
+    {
+        auto solver = makeSolver(mipSolver, ModelKind::Bounded, minimize);
+
+        if(!solver)
+        {
+            std::cout << "Could not create problem for " << name(mipSolver) << '\n';
+            return false;
+        }
+
+        auto env = solver->getEnvironment();
+        env->results->createIteration();
+
+        const double dualValue = minimize ? 5.0 : -5.0;
+        const double primalValue = minimize ? 4.0 : -4.0;
+
+        env->results->setDualBound(dualValue);
+
+        // An integer cut leaves the dual problem without a relaxation of the original problem, so the global dual
+        // bound is no longer updated from it
+        env->results->solutionIsGlobal = false;
+
+        env->results->setPrimalBound(primalValue);
+
+        double globalDualBound = env->results->getGlobalDualBound();
+
+        if(std::abs(globalDualBound - primalValue) > 1e-8)
+        {
+            std::cout << name(mipSolver) << (minimize ? " (min)" : " (max)")
+                      << ": the global dual bound is " << globalDualBound << " although the primal bound "
+                      << primalValue << " has passed it\n";
+            passed = false;
+        }
+
+        if(std::abs(env->results->getCurrentDualBound() - primalValue) > 1e-8)
+        {
+            std::cout << name(mipSolver) << (minimize ? " (min)" : " (max)") << ": the dual bound is "
+                      << env->results->getCurrentDualBound() << " although the primal bound " << primalValue
+                      << " has passed it\n";
+            passed = false;
+        }
+    }
+
+    return passed;
+}
+
+bool testIntegerCutsDifferingInSmallVariables(ES_MIPSolver mipSolver)
+{
+    // Only the model is needed, the problem is never solved
+    auto solver = makeSolver(mipSolver, ModelKind::Infeasible, true);
+
+    if(!solver)
+    {
+        std::cout << "Could not create problem for " << name(mipSolver) << '\n';
+        return false;
+    }
+
+    auto env = solver->getEnvironment();
+    env->results->createIteration();
+
+    bool passed = true;
+
+    auto check = [&](bool condition, const std::string& description) {
+        if(!condition)
+        {
+            std::cout << name(mipSolver) << ": " << description << '\n';
+            passed = false;
+        }
+    };
+
+    // A point holding a variable of large magnitude next to variables of the magnitude of binary ones
+    IntegerCut first;
+    first.variableIndexes = { 0, 1, 2 };
+    first.variableValues = { 1000000000, 1, 0 };
+    first.pointHashes = Utilities::calculateHashes(first.variableValues);
+
+    env->dualSolver->addGeneratedIntegerCut(first);
+
+    check(env->dualSolver->hasIntegerCutBeenAdded(first), "an integer cut was not found again");
+
+    // The same point except for one variable of small magnitude, which is a different integer combination
+    IntegerCut second = first;
+    second.variableValues = { 1000000000, 0, 0 };
+    second.pointHashes = Utilities::calculateHashes(second.variableValues);
+
+    check(!env->dualSolver->hasIntegerCutBeenAdded(second),
+        "an integer cut differing in a variable of small magnitude was taken for one already added");
+
+    // The same point except for a difference of one in the variable of large magnitude, which the hashes do not see
+    IntegerCut third = first;
+    third.variableValues = { 999999999, 1, 0 };
+    third.pointHashes = Utilities::calculateHashes(third.variableValues);
+
+    check(!env->dualSolver->hasIntegerCutBeenAdded(third),
+        "an integer cut differing in a variable of large magnitude was taken for one already added");
+
+    // A fixed integer candidate is compared in the same way
+    PrimalFixedNLPCandidate candidate;
+    candidate.point = { 1000000000.0, 1.0, 0.0 };
+    candidate.discreteVariablePointHashes = Utilities::calculateHashes(candidate.point);
+
+    env->primalSolver->usedPrimalNLPCandidates.push_back(candidate);
+
+    check(env->primalSolver->hasFixedNLPCandidateBeenTested(candidate.discreteVariablePointHashes),
+        "a used candidate for the fixed integer search was not found again");
+
+    VectorDouble otherPoint { 1000000000.0, 0.0, 0.0 };
+
+    check(!env->primalSolver->hasFixedNLPCandidateBeenTested(Utilities::calculateHashes(otherPoint)),
+        "a candidate differing in a variable of small magnitude was taken for one already used");
+
+    return passed;
+}
+
 std::vector<ES_MIPSolver> compiledSolvers()
 {
     std::vector<ES_MIPSolver> solvers;
@@ -691,6 +810,18 @@ int DualBoundTest(int argc, char* argv[])
         for(auto mipSolver : compiledSolvers())
             passed = testDualBoundPastPrimalBoundIsNotUsed(mipSolver) && passed;
         std::cout << "Finished test that a dual bound past the primal bound is not used.\n";
+        break;
+    case 9:
+        std::cout << "Starting test that the global dual bound is capped by the primal bound:\n";
+        for(auto mipSolver : compiledSolvers())
+            passed = testGlobalDualBoundIsCappedByThePrimalBound(mipSolver) && passed;
+        std::cout << "Finished test that the global dual bound is capped by the primal bound.\n";
+        break;
+    case 10:
+        std::cout << "Starting test that integer cuts differing in variables of small magnitude are kept apart:\n";
+        for(auto mipSolver : compiledSolvers())
+            passed = testIntegerCutsDifferingInSmallVariables(mipSolver) && passed;
+        std::cout << "Finished test that integer cuts differing in variables of small magnitude are kept apart.\n";
         break;
     default:
         passed = false;

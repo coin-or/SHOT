@@ -1,0 +1,115 @@
+[build-system]
+# pybind11-stubgen generates the type stubs SHOTpy.pyi that are installed next to the module
+requires = ["scikit-build-core==1.1.1", "pybind11-stubgen==3.0.0"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "SHOTpy"
+dynamic = ["version"]
+description = "Python bindings for the SHOT MINLP solver"
+readme = "README.md"
+license = "EPL-2.0"
+license-files = [
+    "LICENSE", "AUTHORS",
+    "ThirdParty/boost/LICENSE_1_0.txt",
+    "ThirdParty/CppAD/COPYING", "ThirdParty/CppAD/epl-2.0.txt",
+    "ThirdParty/HiGHS/LICENSE.txt", "ThirdParty/eigen/COPYING.*",
+    "ThirdParty/pybind11/LICENSE", "ThirdParty/spdlog/LICENSE",
+    "ThirdParty/ampl/LICENSE.rst",
+    "ThirdParty/ampl/thirdparty/gharveymn/small_vector/LICENSE",
+    "ThirdParty/argh/LICENSE", "ThirdParty/mc++/LICENSE",
+    "ThirdParty/mc++/LICENSES/*", "ThirdParty/nlohmann/LICENSE.MIT",
+    "ThirdParty/tinyxml2/LICENSE.txt",
+]
+requires-python = ">=3.11"
+authors = [{ name = "The SHOT contributors" }]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: C++",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Mathematics",
+]
+
+[project.urls]
+Homepage = "https://shotsolver.dev"
+Documentation = "https://shotsolver.dev/shot/"
+Repository = "https://github.com/coin-or/SHOT"
+Issues = "https://github.com/coin-or/SHOT/issues"
+
+[[tool.dynamic-metadata]]
+provider = "scikit_build_core.metadata.regex"
+field = "version"
+input = "CMakeLists.txt"
+# The version is project(SHOT VERSION ...) followed by SHOT_VERSION_SUFFIX
+regex = "project\\(SHOT VERSION (?P<value>[0-9.]+)[\\s\\S]*?set\\(SHOT_VERSION_SUFFIX \"(?P<suffix>[^\"]*)\"\\)"
+result = "{value}{suffix}"
+
+[tool.scikit-build]
+cmake.build-type = "Release"
+build-dir = "build/{wheel_tag}"
+wheel.packages = []
+install.components = ["Python"]
+# Build an sdist from reviewed project paths so local files in the checkout
+# cannot enter a release archive.
+sdist.inclusion-mode = "explicit"
+sdist.include = [
+    "/CMakeLists.txt", "/pyproject.toml", "/README.md", "/README",
+    "/INSTALL", "/LICENSE", "/AUTHORS",
+    "/src/**", "/test/**", "/misc/**",
+    "/ThirdParty/README.md", "/ThirdParty/versions.json",
+    "/ThirdParty/CppAD/**", "/ThirdParty/HiGHS/**", "/ThirdParty/eigen/**",
+    "/ThirdParty/pybind11/**", "/ThirdParty/spdlog/**",
+    "/ThirdParty/ampl/**", "/ThirdParty/argh/**", "/ThirdParty/boost/**",
+    "/ThirdParty/mc++/**", "/ThirdParty/nlohmann/**", "/ThirdParty/tinyxml2/**",
+    "/docs/Callbacks.md", "/docs/CommandLineUsage.md",
+    "/docs/CompilationInstructions.md", "/docs/DebuggingSHOT.md",
+    "/docs/SHOTpy_Tutorial.ipynb",
+    "/docs/ThirdPartyUpgradePlan.md", "/docs/ThirdPartyUpgradeReport.md",
+]
+sdist.exclude = [
+    "ThirdParty/**/.git", "ThirdParty/**/.git/**", "ThirdParty/**/build/**",
+    "ThirdParty/Uno*", "ThirdParty/Cbc/**", "ThirdParty/Ipopt/**",
+    ".claude/**", ".codex/**", ".agents/**",
+]
+
+# Keep defaults overridable through pip --config-settings=cmake.define.<NAME>=<value>.
+[tool.scikit-build.cmake.define]
+HAS_PYTHON = "on"
+GENERATE_EXE = "off"
+COMPILE_TESTS = "off"
+HAS_GAMS = "off"
+HAS_CPLEX = "off"
+HAS_GUROBI = "off"
+HAS_CBC = "on"
+HAS_IPOPT = "on"
+HAS_HIGHS = "on"
+HAS_UNO = "off"
+BUILD_SHARED_LIBS = "off"
+
+[tool.cibuildwheel]
+build = "cp311-* cp312-* cp313-* cp314-* cp315-*"
+skip = "*-musllinux_*"
+test-requires = ["pytest", "numpy"]
+test-command = [
+    "pytest -v {project}/test/python",
+    "python -c \"import numpy; import SHOTpy; s = SHOTpy.Solver(); assert s.getEnvironment() is not None\"",
+]
+
+[tool.cibuildwheel.linux]
+archs = ["x86_64"]
+manylinux-x86_64-image = "manylinux_2_28"
+before-all = "bash {project}/misc/build-wheel-dependencies.sh /opt/shot-deps"
+environment = { CBC_DIR = "/opt/shot-deps", IPOPT_DIR = "/opt/shot-deps", PKG_CONFIG_PATH = "/opt/shot-deps/lib/pkgconfig", LD_LIBRARY_PATH = "/opt/shot-deps/lib" }
+
+[tool.cibuildwheel.macos]
+archs = ["arm64"]
+before-all = "bash {project}/misc/build-wheel-dependencies.sh $HOME/shot-deps"
+environment = { CBC_DIR = "$HOME/shot-deps", IPOPT_DIR = "$HOME/shot-deps", PKG_CONFIG_PATH = "$HOME/shot-deps/lib/pkgconfig", DYLD_LIBRARY_PATH = "$HOME/shot-deps/lib", MACOSX_DEPLOYMENT_TARGET = "14.0" }
+
+[tool.cibuildwheel.windows]
+archs = ["AMD64"]
+before-all = 'pwsh -NoProfile -ExecutionPolicy Bypass -File "{project}/misc/prepare-wheel-dependencies.ps1"'
+environment = { CBC_DIR = "build/wheel-deps/Cbc", IPOPT_DIR = "build/wheel-deps/Ipopt/Ipopt-3.14.20-win64-msvs2022-md", CC = "cl", CXX = "cl", CMAKE_GENERATOR = "Ninja", CMAKE_ARGS = "-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL" }
+# Inspect bundled DLLs too, so dependencies of SHOTSolver/Ipopt are repaired.
+repair-wheel-command = 'delvewheel repair --ignore-existing --analyze-existing -w "{dest_dir}" "{wheel}"'

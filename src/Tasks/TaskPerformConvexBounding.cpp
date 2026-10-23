@@ -150,10 +150,10 @@ void TaskPerformConvexBounding::run()
 
     if(env->settings->getSetting<bool>("Output.Debug.Enable"))
     {
-        auto filename = fmt::format("{}/convexbounding_problem{}.lp",
+        auto filename = fmt::format("{}/convexbounding_problem{}",
             env->settings->getSetting<std::string>("Output.Debug.Path"), iterationNumber - 1);
 
-        MIPSolver->writeProblemToFile(filename);
+        MIPSolver->writeProblemToDebugFiles(filename);
     }
 
     auto timeLim = env->settings->getSetting<double>("Termination.TimeLimit") - env->timing->getElapsedTime("Total");
@@ -164,7 +164,7 @@ void TaskPerformConvexBounding::run()
         auto primalSol = env->results->primalSolution;
         env->reformulatedProblem->augmentAuxiliaryVariableValues(primalSol);
 
-        if(env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
+        if(env->dualSolver->hasObjectiveVariableOnlyInMIPSolver())
         {
             primalSol.push_back(env->results->getPrimalBound());
         }

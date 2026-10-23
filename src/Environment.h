@@ -36,7 +36,7 @@ public:
     ReportPtr report;
     TaskHandlerPtr tasks;
     TimingPtr timing;
-    EventHandlerPtr events;
+    CallbackHandlerPtr callbacks;
 
     std::shared_ptr<IRootsearchMethod> rootsearchMethod;
 

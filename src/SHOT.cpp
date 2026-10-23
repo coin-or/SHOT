@@ -30,6 +30,17 @@ namespace fs = std::experimental;
 
 using namespace SHOT;
 
+// The exit codes of the executable, which give the outcome of the run and not the model status (e.g. infeasibility),
+// since this is given in the result files
+enum class E_ExitCode : int
+{
+    Success = 0,
+    UsageError = 1, // Invalid command line, e.g. no problem file given
+    InputError = 2, // The problem or options file cannot be found or read
+    SolverError = 3, // The problem could not be solved because of an error
+    OutputError = 4 // A result or options file could not be written
+};
+
 int main(int argc, char* argv[])
 {
     Solver solver;
@@ -143,6 +154,10 @@ int main(int argc, char* argv[])
         env->output->outputCritical("   --nlp=gams               Use primal NLP solver from GAMS");
 #endif
 
+#ifdef HAS_UNO
+        env->output->outputCritical("   --nlp=uno                Sets the primal NLP solver to Uno");
+#endif
+
         env->output->outputCritical("   --nlp=shot               Use SHOT as primal NLP solver");
 
 #ifdef HAS_CPLEX
@@ -157,7 +172,7 @@ int main(int argc, char* argv[])
         env->output->outputCritical("   --timelimit=VALUE        Sets the time-limit in seconds");
         env->output->outputCritical("");
 
-        return (0);
+        return static_cast<int>(E_ExitCode::Success);
     }
 
     // Generate a markup file with the options
@@ -183,7 +198,10 @@ int main(int argc, char* argv[])
 
         auto filepath = fs::filesystem::current_path() / fs::filesystem::path("options.md");
         if(!Utilities::writeStringToFile(filepath.string(), markup))
+        {
             env->output->outputCritical(" Error when writing markup file: " + filepath.string());
+            return static_cast<int>(E_ExitCode::OutputError);
+        }
         else
             env->output->outputInfo(fmt::format(" Default options documentation written to: {}", filepath.string()));
 
@@ -224,7 +242,7 @@ int main(int argc, char* argv[])
             env->output->outputInfo("");
 
             env->output->outputCritical(" Options file not found: " + filepath.string());
-            return 0;
+            return static_cast<int>(E_ExitCode::InputError);
         }
     }
     else if(cmdl["--opt"]) // Create a new opt-file  or read from default file (SHOT.opt)
@@ -259,7 +277,7 @@ int main(int argc, char* argv[])
                 env->output->outputInfo("");
 
                 env->output->outputCritical(" Error when writing options file: " + filepath.string());
-                return 0;
+                return static_cast<int>(E_ExitCode::OutputError);
             }
 
             defaultOptionsGenerated = true;
@@ -296,7 +314,7 @@ int main(int argc, char* argv[])
             env->output->outputInfo("");
 
             env->output->outputCritical(" Options file not found: " + filepath.string());
-            return 0;
+            return static_cast<int>(E_ExitCode::InputError);
         }
     }
     else if(cmdl["--osol"]) // Create a new OSoL-file  or read from default file (SHOT.osol)
@@ -331,7 +349,7 @@ int main(int argc, char* argv[])
                 env->output->outputInfo("");
 
                 env->output->outputCritical(" Error when writing options file: " + filepath.string());
-                return 0;
+                return static_cast<int>(E_ExitCode::OutputError);
             }
 
             defaultOptionsGenerated = true;
@@ -362,7 +380,7 @@ int main(int argc, char* argv[])
             env->output->outputInfo("");
 
             env->output->outputCritical(" Cannot set options from file: " + optionsFile.string());
-            return (0);
+            return static_cast<int>(E_ExitCode::InputError);
         }
     }
 
@@ -429,6 +447,11 @@ int main(int argc, char* argv[])
         if(argValue == "conopt")
             solver.updateSetting(
                 "Primal.FixedInteger.Solver", static_cast<int>(ES_PrimalNLPSolver::Conopt), E_SettingPriority::UserAPI);
+#ifdef HAS_UNO
+        if(argValue == "uno")
+            solver.updateSetting(
+                "Primal.FixedInteger.Solver", static_cast<int>(ES_PrimalNLPSolver::Uno), E_SettingPriority::UserAPI);
+#endif
         if(argValue == "shot")
             solver.updateSetting(
                 "Primal.FixedInteger.Solver", static_cast<int>(ES_PrimalNLPSolver::SHOT), E_SettingPriority::UserAPI);
@@ -504,7 +527,7 @@ int main(int argc, char* argv[])
 
     for(auto& ARG : cmdl.pos_args())
     {
-        int equalLocation = ARG.find('=');
+        auto equalLocation = ARG.find('=');
 
         if(equalLocation == std::string::npos)
             continue;
@@ -639,7 +662,12 @@ int main(int argc, char* argv[])
         env->output->outputCritical(" No problem file specified.");
         env->output->outputCritical("");
         env->output->outputCritical(" Try 'SHOT --help' for more information.");
-        return (0);
+
+        // Generating the options documentation does not require a problem file
+        if(cmdl["--docs"])
+            return static_cast<int>(E_ExitCode::Success);
+
+        return static_cast<int>(E_ExitCode::UsageError);
     }
 
     filename = cmdl[1];
@@ -653,20 +681,26 @@ int main(int argc, char* argv[])
         else
         {
             env->output->outputCritical(" Problem file " + filename + " not found!");
-            return (0);
+            return static_cast<int>(E_ExitCode::InputError);
         }
     }
 
-    if(!solver.setProblem(filename))
+    try
     {
-        return (0);
+        if(!solver.setProblem(filename))
+            return static_cast<int>(E_ExitCode::InputError);
+    }
+    catch(const std::exception& e)
+    {
+        env->output->outputCritical(fmt::format(" Error when reading problem: {}", e.what()));
+        return static_cast<int>(E_ExitCode::InputError);
     }
 
     // Check if we want to use the ASL calling format
     if(useASL && !((ES_ModelingSystem)solver.getSetting<int>("Input.ModelingSystem") == ES_ModelingSystem::AMPL))
     {
         env->output->outputCritical(" Error: Can only use parameter AMPL if the problem is a AMPL (.nl) file.");
-        return (0);
+        return static_cast<int>(E_ExitCode::UsageError);
     }
 
     // Define result file locations
@@ -717,9 +751,15 @@ int main(int argc, char* argv[])
         env->output->outputWarning("");
     }
 
-    if(!solver.solveProblem()) // Solve the problem
+    try
     {
-        return (0);
+        if(!solver.solveProblem()) // Solve the problem
+            return static_cast<int>(E_ExitCode::SolverError);
+    }
+    catch(const std::exception& e) // E.g. the exception of a failed callback
+    {
+        env->output->outputCritical(fmt::format(" Error when solving problem: {}", e.what()));
+        return static_cast<int>(E_ExitCode::SolverError);
     }
 
     solver.outputSolutionReport();
@@ -734,6 +774,9 @@ int main(int argc, char* argv[])
 
     env->output->outputInfo("");
 
+    // Failing to write a result file is reported in the exit code, but the remaining files are still written
+    bool outputFailed = false;
+
     std::string osrl = solver.getResultsOSrL();
 
     if(resultFile.empty())
@@ -743,14 +786,20 @@ int main(int argc, char* argv[])
         resultPath = resultPath.replace_extension(".osrl");
 
         if(!Utilities::writeStringToFile(resultPath.string(), osrl))
+        {
             env->output->outputCritical(" Error when writing OSrL file to: " + resultPath.string());
+            outputFailed = true;
+        }
         else
             env->output->outputInfo(" Results written to: " + resultPath.string());
     }
     else
     {
         if(!Utilities::writeStringToFile(resultFile.string(), osrl))
+        {
             env->output->outputCritical(" Error when writing OSrL file to: " + resultFile.string());
+            outputFailed = true;
+        }
         else
             env->output->outputInfo(" Results written to: " + resultFile.string());
     }
@@ -769,14 +818,20 @@ int main(int argc, char* argv[])
             tracePath = tracePath.replace_extension(".trc");
 
             if(!Utilities::writeStringToFile(tracePath.string(), trace))
+            {
                 env->output->outputCritical(" Error when writing trace file: " + tracePath.string());
+                outputFailed = true;
+            }
             else
                 env->output->outputInfo("                     " + tracePath.string());
         }
         else
         {
             if(!Utilities::writeStringToFile(traceFile.string(), trace))
+            {
                 env->output->outputCritical(" Error when writing trace file: " + traceFile.string());
+                outputFailed = true;
+            }
             else
                 env->output->outputInfo("                     " + traceFile.string());
         }
@@ -792,14 +847,20 @@ int main(int argc, char* argv[])
             solPath = solPath.replace_extension(".sol");
 
             if(!Utilities::writeStringToFile(solPath.string(), sol))
+            {
                 env->output->outputCritical(" Error when writing AMPL sol file: " + solPath.string());
+                outputFailed = true;
+            }
             else
                 env->output->outputInfo("                     " + solPath.string());
         }
         else
         {
             if(!Utilities::writeStringToFile(solFile.string(), sol))
+            {
                 env->output->outputCritical(" Error when writing AMPL sol file: " + solFile.string());
+                outputFailed = true;
+            }
             else
                 env->output->outputInfo("                     " + solFile.string());
         }
@@ -824,8 +885,8 @@ int main(int argc, char* argv[])
     env->report = NULL;
     env->tasks = NULL;
     env->timing = NULL;
-    env->events = NULL;
+    env->callbacks = NULL;
     env->rootsearchMethod = NULL;
 
-    return (0);
+    return static_cast<int>(outputFailed ? E_ExitCode::OutputError : E_ExitCode::Success);
 }

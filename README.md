@@ -6,6 +6,66 @@
 
 <img align="right" width="200" src="SHOT.png">*SHOT is a software for solving mathematical optimization problems of the mixed-integer nonlinear programming (MINLP) class. In addition to MINLP problems, SHOT can also be used for subclasses such as NLP and MI(QC)QP.*
 
+## Python installation
+
+SHOT builds on Linux, macOS, and natively on Windows x64 with MSVC. See the
+[compilation instructions](docs/CompilationInstructions.md) for supported
+solver configurations and platform-specific setup.
+
+Install the open-source solver build (Cbc, Ipopt, and HiGHS) from PyPI:
+
+```bash
+pip install SHOTpy
+```
+
+```python
+import SHOTpy
+
+solver = SHOTpy.Solver()
+problem = SHOTpy.Problem(solver)
+
+x = problem.addVariable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
+y = problem.addVariable("y", SHOTpy.VariableType.Integer, 0.0, 10.0)
+
+problem.setObjective(SHOTpy.exp(x) + (y - 2.5)**2)
+problem.addConstraint(x + y >= 3, "c")
+problem.finalize()
+
+solver.setProblem(problem)
+solver.solveProblem()
+print(solver.getModelReturnStatus(), solver.getPrimalSolution().point)
+```
+
+See the [SHOTpy tutorial](docs/SHOTpy_Tutorial.ipynb) for nonlinear expressions,
+settings, file input, and callbacks.
+
+### Building with proprietary solvers
+
+Public wheels cannot redistribute the CPLEX, Gurobi, or GAMS SDKs. If one of
+these products is installed and licensed locally, force an sdist build and pass
+its existing SHOT CMake options through pip. For example:
+
+```bash
+python -m pip install SHOTpy --no-binary SHOTpy --no-cache-dir --force-reinstall \
+    --config-settings=cmake.define.HAS_GUROBI=on \
+    --config-settings=cmake.define.GUROBI_DIR=/opt/gurobi1103/linux64
+```
+
+Use the same pattern with `HAS_CPLEX`/`CPLEX_DIR` or `HAS_GAMS`/`GAMS_DIR`.
+`CPLEX_DIR` can point to the CPLEX Studio installation root or its `cplex`
+subdirectory. `GAMS_DIR` must contain `apifiles` and the GAMS executable
+(on macOS, use the framework's versioned `Resources` directory).
+Multiple integrations can be enabled in the same build by passing each pair
+of settings.
+
+Replace `GUROBI_DIR` with your local installation path. Verify the resulting
+build with `python -c "import SHOTpy; print(SHOTpy.HAS_GUROBI)"`; it should print
+`True`.
+
+The compiler toolchain and open-source dependencies described in the
+[compilation instructions](docs/CompilationInstructions.md) are still required
+for a source build.
+
 Originally SHOT was intended for convex MINLP problems only, but as of version 1.0 it also has functionality to solve nonconvex MINLP problems as a heuristic method without providing any guarantees of global optimality. SHOT can solve certain nonconvex problem types to global optimality as well, and the bounds for the objective function value are guaranteed for nonconvex problems as well.
 
 **SHOT can be used**
@@ -16,10 +76,10 @@ Originally SHOT was intended for convex MINLP problems only, but as of version 1
   - [Pyomo/Python](https://www.pyomo.org), 
   - [JuMP/Julia](https://github.com/JuliaOpt/AmplNLWriter.jl), and 
   - [AMPL](https://www.ampl.com),
-- through its own Python API ([SHOTpy](docs/SHOTpy_Tutorial.ipynb)) — build with `-DHAS_PYTHON=on` (see [docs/CompilationInstructions.md](docs/CompilationInstructions.md)); a `pip install SHOTpy` package is planned for release, or
+- through its own Python API ([SHOTpy](docs/SHOTpy_Tutorial.ipynb)) — install with `pip install SHOTpy` or build with `-DHAS_PYTHON=on` (see [docs/CompilationInstructions.md](docs/CompilationInstructions.md)), or
 - using its API implemented in C++, both of which support callbacks for customizing SHOT's behavior (e.g. injecting primal solutions, warm-starting, or adding custom cuts).
 
-SHOT requires a MILP solver: [Cplex](https://www.ibm.com/analytics/cplex-optimizer), [Gurobi](https://www.gurobi.com), [Cbc](https://www.github.com/coin-or/Cbc) or [HiGHS](https://highs.dev). For fixed-integer primal NLP subproblems, SHOT supports [Ipopt](https://www.github.com/coin-or/Ipopt), the optional [CONOPT](https://conopt.gams.com) C++ API, and SHOT itself. If SHOT is interfaced with GAMS, licensed GAMS NLP solvers can also be used.
+SHOT requires a MILP solver: [Cplex](https://www.ibm.com/analytics/cplex-optimizer), [Gurobi](https://www.gurobi.com), [Cbc](https://www.github.com/coin-or/Cbc) or [HiGHS](https://highs.dev). NLP subproblems can use [Ipopt](https://www.github.com/coin-or/Ipopt), [Uno](https://github.com/cvanaret/Uno), the optional [CONOPT](https://conopt.gams.com) C++ API, or SHOT's built-in NLP solver. If SHOT is interfaced with GAMS, any licensed NLP solver can be used.
 
 The documentation is provided at the project website at https://www.shotsolver.dev.
 

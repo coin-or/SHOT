@@ -89,12 +89,29 @@ public:
     int addLinearConstraint(const std::map<int, double>& elements, double constant, std::string name,
         bool isGreaterThan, bool allowRepair) override;
 
+    VectorInteger addLinearConstraints(const std::vector<std::map<int, double>>& elements,
+        const VectorDouble& constants, const VectorString& names, bool isGreaterThan, bool allowRepair) override
+    {
+        return (MIPSolverBase::addLinearConstraints(elements, constants, names, isGreaterThan, allowRepair));
+    }
+
     bool addSpecialOrderedSet(
         E_SOSType type, VectorInteger variableIndexes, VectorDouble variableWeights = { }) override;
 
     bool createHyperplane(HyperplanePtr hyperplane) override { return (MIPSolverBase::createHyperplane(hyperplane)); }
 
     bool createIntegerCut(IntegerCut& integerCut) override;
+
+    int relaxRepairableCutsViolatedByPoint(const VectorDouble& point, size_t firstCut) override
+    {
+        return (MIPSolverBase::relaxRepairableCutsViolatedByPoint(point, firstCut));
+    }
+
+    VectorInteger removeRepairableCuts() override { return (MIPSolverBase::removeRepairableCuts()); }
+    size_t getNumberOfRepairableCuts() override { return (MIPSolverBase::getNumberOfRepairableCuts()); }
+
+    double getConstraintUpperBound(int constraintIndex) override;
+    bool setConstraintUpperBound(int constraintIndex, double upperBound) override;
 
     bool createInteriorHyperplane(HyperplanePtr hyperplane) override
     {
@@ -190,6 +207,15 @@ private:
 
     long int solLimit;
     bool forceUnlimitedSolutionLimitNextSolve = false;
+
+    // The solution limit Cbc was given for the latest solve, which may be unlimited even though solLimit is not
+    long int usedSolutionLimit = 2100000000;
+
+    // The offset that makes the objective values and bounds of Cbc include the constant of the objective function.
+    // Cbc subtracts the offset from the objective, and minimizes the objective with its signs changed when the problem
+    // is maximized. The constant was given with the wrong sign, so that the dual bound from Cbc was off by twice the
+    // constant: too weak to close the gap for a positive constant, and invalid for a negative one
+    double getCbcObjectiveOffset() const { return (isMinimizationProblem ? -objectiveConstant : objectiveConstant); }
     double timeLimit = 1e100;
     double cutOff;
     int numberOfThreads = 1;
@@ -199,6 +225,12 @@ private:
 
     std::vector<E_VariableType> variableTypes;
     std::vector<std::pair<int, std::array<double, 4>>> lotsizes;
+
+    // The type (1 or 2), the variable indexes and the weights of the special ordered sets
+    std::vector<std::tuple<int, VectorInteger, VectorDouble>> specialOrderedSets;
+
+    // Adds the lot sizes and the special ordered sets to the Cbc model
+    void addBranchingObjects();
 };
 
 } // namespace SHOT

@@ -37,6 +37,9 @@ public:
     void terminate() { terminated = true; }
     inline bool isTerminated() { return terminated; }
 
+    /// Whether the solution is being finalized, i.e., the FinalizeSolution task or the Terminate task after it runs
+    inline bool isFinalizing() const { return finalizing; }
+
 private:
     std::list<std::pair<std::string, TaskPtr>>::iterator nextTask;
     std::string nextTaskID;
@@ -46,5 +49,6 @@ private:
     EnvironmentPtr env;
 
     bool terminated = false;
+    bool finalizing = false;
 };
 }

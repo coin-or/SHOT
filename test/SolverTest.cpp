@@ -12,12 +12,13 @@
 #include "../src/DualSolver.h"
 #include "../src/Environment.h"
 #include "../src/MIPSolver/IMIPSolver.h"
+#include "../src/PrimalSolver.h"
 #include "../src/Results.h"
 #include "../src/Settings.h"
 #include "../src/Structs.h"
 #include "../src/TaskHandler.h"
 #include "../src/Utilities.h"
-#include "../src/CallbackData.h"
+#include "../src/Callback.h"
 #include "../src/Model/Simplifications.h"
 
 #include "../src/Model/Variables.h"
@@ -33,6 +34,9 @@
 #include "../src/RootsearchMethod/RootsearchMethodBoost.h"
 
 #include "../src/Tasks/TaskReformulateProblem.h"
+
+#include <set>
+#include <stdexcept>
 
 using namespace SHOT;
 
@@ -92,7 +96,6 @@ bool SolveProblem(std::string filename)
     if(solver->getPrimalSolutions().size() > 0)
     {
         std::cout << std::endl << "Objective value: " << solver->getPrimalSolution().objValue << std::endl;
-        passed = true;
     }
     else
     {
@@ -108,6 +111,9 @@ bool TestRootsearch(const std::string& problemFile)
 
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
     auto env = solver->getEnvironment();
+
+    // A time limit so that a test that does not converge cannot stop the test suite
+    solver->updateSetting("Termination.TimeLimit", 60.0);
 
     solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Error));
 
@@ -184,6 +190,9 @@ bool TestGradient(const std::string& problemFile)
 
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
     auto env = solver->getEnvironment();
+
+    // A time limit so that a test that does not converge cannot stop the test suite
+    solver->updateSetting("Termination.TimeLimit", 60.0);
 
     solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Error));
 
@@ -284,37 +293,26 @@ bool CreateAndSolveProblem()
     solver->setProblem(problem, reformulatedProblem);
 
     // Registers a callback that is activated every time a new primal solution is found
-    solver->registerCallback(E_EventType::NewPrimalSolution,
-        [&env, &passed](std::any args)
+    solver->registerCallback<NewPrimalSolutionContext>(
+        [&env, &passed](NewPrimalSolutionContext& solution)
         {
-            try
+            std::cout << "We have a new primal solution: " << solution.getObjectiveValue()
+                      << " found at iteration: " << solution.getIterationNumber() << ". In total we now have "
+                      << env->solutionStatistics.numberOfFoundPrimalSolutions << " solutions.\n";
+
+            std::cout << "Primal solution point:\n";
+            Utilities::displayVector(solution.getPoint());
+
+            if(solution.getObjectiveValue() == env->results->getPrimalBound())
             {
-                auto solution = std::any_cast<PrimalSolutionCallbackData>(args);
-
-                std::cout << "We have a new primal solution: " << solution.objectiveValue
-                          << " found at iteration: " << solution.iterationNumber << ". In total we now have "
-                          << env->solutionStatistics.numberOfFoundPrimalSolutions << " solutions.\n";
-
-                std::cout << "Primal solution point:\n";
-                Utilities::displayVector(solution.solution);
-
-                if(solution.objectiveValue == env->results->getPrimalBound())
-                {
-                    std::cout << "Ok, new primal solution has been saved successfully. " << solution.objectiveValue
-                              << ".\n";
-                    passed = true;
-                }
-                else
-                {
-                    std::cout << "Error: new primal solution not saved successfully!\n";
-                    passed = false;
-                }
+                std::cout << "Ok, new primal solution has been saved successfully. " << solution.getObjectiveValue()
+                          << ".\n";
+                passed = true;
             }
-            catch(const std::bad_any_cast& e)
+            else
             {
-                // If the callback argument is not a PrimalSolutionCallbackData
+                std::cout << "Error: new primal solution not saved successfully!\n";
                 passed = false;
-                std::cout << "Failed to cast callback argument: " << e.what() << std::endl;
             }
         });
 
@@ -354,57 +352,44 @@ bool CreateAndSolveProblem()
     solver->setProblem(problem, reformulatedProblem);
 
     // Registers a callback that is activated every time a new primal solution is found
-    solver->registerCallback(E_EventType::NewPrimalSolution,
-        [&env, &passed](std::any args)
+    solver->registerCallback<NewPrimalSolutionContext>(
+        [&env, &passed](NewPrimalSolutionContext& solution)
         {
-            try
+            std::cout << "We have a new primal solution: " << solution.getObjectiveValue()
+                      << " found at iteration: " << solution.getIterationNumber() << ". In total we now have "
+                      << env->solutionStatistics.numberOfFoundPrimalSolutions << " solutions.\n";
+
+            std::cout << "Primal solution point:\n";
+            Utilities::displayVector(solution.getPoint());
+
+            if(solution.getObjectiveValue() == env->results->getPrimalBound())
             {
-                auto solution = std::any_cast<PrimalSolutionCallbackData>(args);
-
-                std::cout << "We have a new primal solution: " << solution.objectiveValue
-                          << " found at iteration: " << solution.iterationNumber << ". In total we now have "
-                          << env->solutionStatistics.numberOfFoundPrimalSolutions << " solutions.\n";
-
-                std::cout << "Primal solution point:\n";
-                Utilities::displayVector(solution.solution);
-
-                if(solution.objectiveValue == env->results->getPrimalBound())
-                {
-                    std::cout << "Ok, new primal solution has been saved successfully. " << solution.objectiveValue
-                              << ".\n";
-                    passed = true;
-                }
-                else
-                {
-                    std::cout << "Error: new primal solution not saved successfully!\n";
-                    passed = false;
-                }
+                std::cout << "Ok, new primal solution has been saved successfully. " << solution.getObjectiveValue()
+                          << ".\n";
+                passed = true;
             }
-            catch(const std::bad_any_cast& e)
+            else
             {
-                // If the callback argument is not a PrimalSolutionCallbackData
+                std::cout << "Error: new primal solution not saved successfully!\n";
                 passed = false;
-                std::cout << "Failed to cast callback argument: " << e.what() << std::endl;
             }
         });
 
     // Registers a callback that terminates if we have found at least one primal solution
-    solver->registerCallback(E_EventType::UserTerminationCheck,
-        [](std::any args) -> bool
+    solver->registerCallback<TerminationCheckContext>(
+        [](TerminationCheckContext& context)
         {
-            auto data = std::any_cast<TerminationCallbackData>(args);
-            std::cout << "Termination callback with structured data - iteration: " << data.iterationNumber << "\n";
+            std::cout << "Termination callback - iteration: " << context.getIterationNumber() << "\n";
 
             // If we have found one primal solution, we terminate the solver
-            if(data.iterationNumber > 0 && data.solutionStatistics.numberOfFoundPrimalSolutions > 0)
+            if(context.getIterationNumber() > 0 && context.getSolutionStatistics().numberOfFoundPrimalSolutions > 0)
             {
                 std::cout << "Termination callback activated. We have found at least one solution.\n";
-                return true;
+                context.terminate();
             }
             else
             {
                 std::cout << "Termination callback activated. We have not found a primal solution yet.\n";
-                return false;
             }
         });
 
@@ -451,27 +436,23 @@ bool TestCallbackUserTermination()
     // Track termination
     int iterationCount = 0;
     bool terminationRequested = false;
-    bool solverWasTerminated = false;
 
-    // Register user termination check - returns bool
-    solver->registerCallback(E_EventType::UserTerminationCheck,
-        [&iterationCount, &terminationRequested](std::any args) -> bool
+    // Register user termination check
+    solver->registerCallback<TerminationCheckContext>(
+        [&iterationCount, &terminationRequested](TerminationCheckContext& context)
         {
             iterationCount++;
 
-            auto data = std::any_cast<TerminationCallbackData>(args);
-            std::cout << "User termination check called with structured data (call #" << iterationCount
-                      << ", solver iteration " << data.iterationNumber << ")" << std::endl;
+            std::cout << "User termination check called (call #" << iterationCount << ", solver iteration "
+                      << context.getIterationNumber() << ")" << std::endl;
 
             // Terminate after 3 checks
             if(iterationCount >= 3)
             {
                 std::cout << "User termination check requesting termination" << std::endl;
                 terminationRequested = true;
-                return true; // Request termination
+                context.terminate();
             }
-
-            return false; // Continue
         });
 
     // Set high iteration limit so termination comes from our callback
@@ -563,10 +544,6 @@ bool TestCallbackExternalHyperplane()
     e2->add(std::make_shared<ExpressionDivide>(std::make_shared<ExpressionExp>(nl_x1), nl_x2));
     problem->add(e2);
 
-    NonlinearConstraints constraints = { e1, e2 };
-
-    // Add constraints to a vector
-
     // Finalize the problem object (after this no changes should be made)
     problem->updateProperties();
     problem->finalize();
@@ -583,28 +560,29 @@ bool TestCallbackExternalHyperplane()
     std::cout << env->reformulatedProblem << '\n';
 
     // Register external hyperplane callback
-    solver->registerCallback(E_EventType::ExternalHyperplaneSelection,
-        [&env, &constraints](std::any args) -> std::any
+    solver->registerCallback<HyperplaneSelectionContext>(
+        [&env](HyperplaneSelectionContext& context)
         {
-            auto data = std::any_cast<ExternalHyperplaneSelectionCallbackData>(args);
+            std::cout << "External hyperplane callback called at iteration " << context.getIterationNumber()
+                      << std::endl;
+            std::cout << "Current dual bound: " << context.getDualBound() << std::endl;
+            std::cout << "Current primal bound: " << context.getPrimalBound() << std::endl;
+            std::cout << "Number of solution points: " << context.getSolutionPoints().size() << std::endl;
 
-            std::cout << "External hyperplane callback called at iteration " << data.iterationNumber << std::endl;
-            std::cout << "Current dual bound: " << data.currentDualBound << std::endl;
-            std::cout << "Current primal bound: " << data.currentPrimalBound << std::endl;
-            std::cout << "Number of solution points: " << data.solutionPoints.size() << std::endl;
-
-            std::vector<ExternalHyperplane> hyperplanes;
+            int numberOfHyperplanes = 0;
 
             // Example: Add a simple cutting plane if we have solution points
-            if(!data.solutionPoints.empty() && data.iterationNumber > 0)
+            if(!context.getSolutionPoints().empty() && context.getIterationNumber() > 0)
             {
-                for(const auto& solPoint : data.solutionPoints)
+                for(const auto& solPoint : context.getSolutionPoints())
                 {
                     std::cout << "\nSolution point: \n";
                     Utilities::displayVector(solPoint.point);
 
-                    // Constraint with largest error
-                    auto constraint = constraints.at(solPoint.maxDeviation.index);
+                    // The constraint with the largest error, read from the problem, since setProblem() can replace
+                    // or rewrite the constraints it was given
+                    auto constraint = std::dynamic_pointer_cast<NumericConstraint>(
+                        context.getReformulatedProblem()->getConstraint(solPoint.maxDeviation.index));
 
                     double funcValue = constraint->calculateFunctionValue(solPoint.point) - constraint->valueRHS;
                     auto gradient = constraint->calculateGradient(solPoint.point, false);
@@ -622,10 +600,11 @@ bool TestCallbackExternalHyperplane()
                     hyperplane.variableCoefficients.emplace_back() = gradient[env->reformulatedProblem->getVariable(1)];
                     hyperplane.rhsValue = -constant; // RHS
                     hyperplane.isGlobal = true;
-                    hyperplane.description = fmt::format("hyp_{}", data.iterationNumber);
+                    hyperplane.description = fmt::format("hyp_{}", context.getIterationNumber());
                     hyperplane.source = E_HyperplaneSource::External;
 
-                    hyperplanes.push_back(hyperplane);
+                    context.addHyperplane(hyperplane);
+                    numberOfHyperplanes++;
 
                     std::cout << "Generated hyperplane variable coefficients: \n";
                     Utilities::displayVector(hyperplane.variableCoefficients);
@@ -635,8 +614,7 @@ bool TestCallbackExternalHyperplane()
                 }
             }
 
-            std::cout << "Returning " << hyperplanes.size() << " external hyperplanes" << std::endl;
-            return std::make_any<std::vector<ExternalHyperplane>>(hyperplanes);
+            std::cout << "Added " << numberOfHyperplanes << " external hyperplanes" << std::endl;
         });
 
     solver->solveProblem();
@@ -786,19 +764,18 @@ bool TestCallbackPrimalCandidateSelection()
     bool passed = true;
 
     // ── Sub-test 1: callback fires at least once ───────────────────────────
-    std::cout << "\nSub-test 1: PrimalSolutionCandidateSelection callback fires\n";
+    std::cout << "\nSub-test 1: PrimalCandidateCheck callback fires\n";
     {
         auto [solver, env] = MakeEx1223bSolver();
         int candidateCount = 0;
 
-        solver->registerCallback(E_EventType::PrimalSolutionCandidateSelection,
-            [&candidateCount](std::any args) -> bool
+        solver->registerCallback<PrimalCandidateCheckContext>(
+            [&candidateCount](PrimalCandidateCheckContext& candidate)
             {
-                auto data = std::any_cast<PrimalSolutionCallbackData>(args);
                 candidateCount++;
-                std::cout << "  Candidate #" << candidateCount << "  obj=" << data.objectiveValue
-                          << "  iter=" << data.iterationNumber << "\n";
-                return true; // accept
+                std::cout << "  Candidate #" << candidateCount << "  obj=" << candidate.getObjectiveValue()
+                          << "  iter=" << candidate.getIterationNumber() << "\n";
+                // The candidate is accepted since it is not rejected
             });
 
         solver->solveProblem();
@@ -815,20 +792,19 @@ bool TestCallbackPrimalCandidateSelection()
     }
 
     // ── Sub-test 2: returning false prevents all primal solutions ──────────
-    std::cout << "\nSub-test 2: returning false blocks all primal solutions\n";
+    std::cout << "\nSub-test 2: rejecting every candidate blocks all primal solutions\n";
     {
         auto [solver, env] = MakeEx1223bSolver();
         // Cap iterations so the test terminates quickly
         solver->updateSetting("Termination.IterationLimit", 10);
         int rejectedCount = 0;
 
-        solver->registerCallback(E_EventType::PrimalSolutionCandidateSelection,
-            [&rejectedCount](std::any args) -> bool
+        solver->registerCallback<PrimalCandidateCheckContext>(
+            [&rejectedCount](PrimalCandidateCheckContext& candidate)
             {
-                auto data = std::any_cast<PrimalSolutionCallbackData>(args);
                 rejectedCount++;
-                std::cout << "  Rejecting candidate obj=" << data.objectiveValue << "\n";
-                return false; // reject everything
+                std::cout << "  Rejecting candidate obj=" << candidate.getObjectiveValue() << "\n";
+                candidate.rejectCandidate(); // reject everything
             });
 
         solver->solveProblem();
@@ -852,9 +828,9 @@ bool TestCallbackPrimalCandidateSelection()
         int acceptedA = 0;
         {
             auto [solver, env] = MakeEx1223bSolver();
-            solver->registerCallback(
-                E_EventType::PrimalSolutionCandidateSelection, [](std::any) -> bool { return true; });
-            solver->registerCallback(E_EventType::NewPrimalSolution, [&acceptedA](std::any) { acceptedA++; });
+            solver->registerCallback<PrimalCandidateCheckContext>([](PrimalCandidateCheckContext&) { });
+            solver->registerCallback<NewPrimalSolutionContext>(
+                [&acceptedA](NewPrimalSolutionContext&) { acceptedA++; });
             solver->solveProblem();
         }
 
@@ -862,13 +838,14 @@ bool TestCallbackPrimalCandidateSelection()
         int acceptedB = 0;
         {
             auto [solver, env] = MakeEx1223bSolver();
-            solver->registerCallback(E_EventType::PrimalSolutionCandidateSelection,
-                [](std::any args) -> bool
+            solver->registerCallback<PrimalCandidateCheckContext>(
+                [](PrimalCandidateCheckContext& candidate)
                 {
-                    auto data = std::any_cast<PrimalSolutionCallbackData>(args);
-                    return data.objectiveValue <= 5.0;
+                    if(candidate.getObjectiveValue() > 5.0)
+                        candidate.rejectCandidate();
                 });
-            solver->registerCallback(E_EventType::NewPrimalSolution, [&acceptedB](std::any) { acceptedB++; });
+            solver->registerCallback<NewPrimalSolutionContext>(
+                [&acceptedB](NewPrimalSolutionContext&) { acceptedB++; });
             solver->solveProblem();
         }
 
@@ -936,15 +913,13 @@ bool TestCallbackESHInteriorPoint()
         bool callbackFired = false;
         size_t pointsReceived = 0;
 
-        solver->registerCallback(E_EventType::ExternalESHRootsearchPointsSelection,
-            [&](std::any args) -> std::any
+        solver->registerCallback<InteriorPointSearchContext>(
+            [&](InteriorPointSearchContext& context)
             {
-                auto data = std::any_cast<ESHInteriorPointCallbackData>(args);
                 callbackFired = true;
-                pointsReceived = data.currentInteriorPoints.size();
+                pointsReceived = context.getInteriorPoints().size();
                 std::cout << "  ESH interior point callback fired with " << pointsReceived << " current point(s)\n";
-                // Return empty to keep current points unchanged
-                return std::any(std::vector<VectorDouble> {});
+                // No points are set, so the current points are kept
             });
 
         solver->solveProblem();
@@ -975,16 +950,15 @@ bool TestCallbackESHInteriorPoint()
 
         bool callbackFired = false;
 
-        solver->registerCallback(E_EventType::ExternalESHRootsearchPointsSelection,
-            [&](std::any args) -> std::any
+        solver->registerCallback<InteriorPointSearchContext>(
+            [&](InteriorPointSearchContext& context)
             {
-                auto data = std::any_cast<ESHInteriorPointCallbackData>(args);
                 callbackFired = true;
                 std::cout << "  ESH interior point callback fired (OnlyExternal strategy)\n";
-                std::cout << "  currentInteriorPoints size from callback: " << data.currentInteriorPoints.size()
+                std::cout << "  interior points from callback: " << context.getInteriorPoints().size()
                           << " (should be 0)\n";
-                // Return the captured point from Phase 1
-                return std::any(std::vector<VectorDouble> { capturedInteriorPoint });
+                // Use the captured point from Phase 1
+                context.setInteriorPoints({ capturedInteriorPoint });
             });
 
         solver->solveProblem();
@@ -1125,30 +1099,17 @@ static std::pair<std::unique_ptr<SHOT::Solver>, std::shared_ptr<SHOT::Environmen
     return { std::move(solver), env };
 }
 
-// Returns the worst (most positive) constraint error across all constraint types for a primal solution.
-static double maxConstraintError(const PrimalSolution& sol)
-{
-    double err = SHOT_DBL_MIN;
-    if(sol.maxDevatingConstraintLinear.index >= 0)
-        err = std::max(err, sol.maxDevatingConstraintLinear.value);
-    if(sol.maxDevatingConstraintQuadratic.index >= 0)
-        err = std::max(err, sol.maxDevatingConstraintQuadratic.value);
-    if(sol.maxDevatingConstraintNonlinear.index >= 0)
-        err = std::max(err, sol.maxDevatingConstraintNonlinear.value);
-    return err;
-}
-
 static void printPrimalSolutionConstraintErrors(const PrimalSolution& sol)
 {
-    if(sol.maxDevatingConstraintLinear.index >= 0)
-        std::cout << "  max linear constraint error:    constraint " << sol.maxDevatingConstraintLinear.index
-                  << "  error = " << sol.maxDevatingConstraintLinear.value << "\n";
-    if(sol.maxDevatingConstraintQuadratic.index >= 0)
-        std::cout << "  max quadratic constraint error: constraint " << sol.maxDevatingConstraintQuadratic.index
-                  << "  error = " << sol.maxDevatingConstraintQuadratic.value << "\n";
-    if(sol.maxDevatingConstraintNonlinear.index >= 0)
-        std::cout << "  max nonlinear constraint error: constraint " << sol.maxDevatingConstraintNonlinear.index
-                  << "  error = " << sol.maxDevatingConstraintNonlinear.value << "\n";
+    if(sol.maxDeviatingConstraintLinear.index >= 0)
+        std::cout << "  max linear constraint error:    constraint " << sol.maxDeviatingConstraintLinear.index
+                  << "  error = " << sol.maxDeviatingConstraintLinear.value << "\n";
+    if(sol.maxDeviatingConstraintQuadratic.index >= 0)
+        std::cout << "  max quadratic constraint error: constraint " << sol.maxDeviatingConstraintQuadratic.index
+                  << "  error = " << sol.maxDeviatingConstraintQuadratic.value << "\n";
+    if(sol.maxDeviatingConstraintNonlinear.index >= 0)
+        std::cout << "  max nonlinear constraint error: constraint " << sol.maxDeviatingConstraintNonlinear.index
+                  << "  error = " << sol.maxDeviatingConstraintNonlinear.value << "\n";
 }
 
 bool TestCallbackESHExternalInteriorPointFromAuxProblem()
@@ -1206,14 +1167,13 @@ bool TestCallbackESHExternalInteriorPointFromAuxProblem()
 
         bool callbackFired = false;
 
-        solver->registerCallback(E_EventType::ExternalESHRootsearchPointsSelection,
-            [&](std::any args) -> std::any
+        solver->registerCallback<InteriorPointSearchContext>(
+            [&](InteriorPointSearchContext& context)
             {
-                auto data = std::any_cast<ESHInteriorPointCallbackData>(args);
                 callbackFired = true;
                 std::cout << "  ESH interior point callback fired (OnlyExternal strategy)\n";
                 std::cout << "  Injecting Phase 1 interior point\n";
-                return std::any(std::vector<VectorDouble> { interiorPoint });
+                context.setInteriorPoints({ interiorPoint });
             });
 
         solver->solveProblem();
@@ -1321,6 +1281,56 @@ bool TestAMPLInitialValuesOutOfBounds()
 // Verifies that an ordinary solve is never reported as a user abort. The dual solver is interrupted by SHOT itself
 // whenever a termination criterion is met in a callback, and that interruption used to be indistinguishable from a
 // termination requested by the user.
+// The dual bound of a convex problem must be closed even when a constraint is infinite outside its domain. The
+// perspective x^2/z of nlp-cvx_204_010 is infinite where z is zero, and both the interior point search and the
+// generation of the hyperplanes ended up in such a point: no interior point was found, the hyperplanes generated
+// in the solution point had infinite coefficients and were thrown away, and the solve stopped with the dual bound
+// -2 for the optimum -1.207 and the message that no additional dual cuts can be added. Note that the instance
+// tests accept that outcome, since they only require the optimum to lie between the bounds.
+bool TestDualBoundOfPerspectiveConstraint()
+{
+    const double expectedObjective = -1.2071067837918394;
+
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Critical));
+    solver->updateSetting("Termination.TimeLimit", 30.0);
+
+    if(!solver->setProblem("data/instances/minlp_tests_jl/nlp-cvx_204_010.jl.nl"))
+    {
+        std::cout << "Could not set problem!\n";
+        return (false);
+    }
+
+    if(!solver->solveProblem())
+    {
+        std::cout << "Error while solving problem\n";
+        return (false);
+    }
+
+    if(env->results->terminationReason != E_TerminationReason::AbsoluteGap
+        && env->results->terminationReason != E_TerminationReason::RelativeGap)
+    {
+        std::cout << "The objective gap was not closed: " << env->results->terminationReasonDescription << '\n';
+        return (false);
+    }
+
+    double primalBound = solver->getPrimalBound();
+    double dualBound = solver->getGlobalDualBound();
+
+    std::cout << "  Objective bounds are [" << dualBound << ", " << primalBound << "], the optimum is "
+              << expectedObjective << '\n';
+
+    if(std::abs(primalBound - expectedObjective) > 1e-2 || std::abs(dualBound - expectedObjective) > 1e-2)
+    {
+        std::cout << "The bounds do not agree with the optimum.\n";
+        return (false);
+    }
+
+    return (true);
+}
+
 bool TestTerminationReasonOfOrdinarySolve()
 {
     auto [solver, env] = MakeEx1223bSolver();
@@ -1420,6 +1430,973 @@ bool TestConstraintClassesForFixedVariables(const std::string& problemFile)
     }
 
     return passed;
+}
+
+bool TestCallbackGenericContext()
+{
+    bool passed = true;
+
+    // A callback registered for two locations is called at exactly those locations, with the context classes for
+    // them
+    auto [solver, env] = MakeEx1223bSolver();
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+
+    std::set<E_CallbackLocation> locations;
+    bool contextClassesMatch = true;
+    bool boundContextMatches = true;
+    int boundEvents = 0;
+
+    solver->registerCallback(E_CallbackLocation::PrimalCandidateCheck | E_CallbackLocation::TerminationCheck,
+        [&locations, &contextClassesMatch](CallbackContext& context)
+        {
+            locations.insert(context.getLocation());
+
+            auto candidate = context.as<PrimalCandidateCheckContext>();
+            auto termination = context.as<TerminationCheckContext>();
+
+            // Exactly one of the classes is that of the location
+            if((candidate != nullptr) == (termination != nullptr))
+                contextClassesMatch = false;
+
+            if(context.as<NewPrimalSolutionContext>() != nullptr)
+                contextClassesMatch = false;
+
+            if(candidate != nullptr && candidate->getPoint().size() != 7)
+                contextClassesMatch = false;
+        });
+
+    solver->registerCallback<BoundsUpdatedContext>([&](BoundsUpdatedContext& context)
+        {
+            boundEvents++;
+            if(context.getLocation() != E_CallbackLocation::BoundsUpdated || !context.hasChanged()
+                || context.isPrimalBoundChanged()
+                    != (context.getPreviousPrimalBound() != context.getPrimalBound())
+                || context.isDualBoundChanged() != (context.getPreviousDualBound() != context.getDualBound())
+                || context.isGlobalDualBoundChanged()
+                    != (context.getPreviousGlobalDualBound() != context.getGlobalDualBound()))
+                boundContextMatches = false;
+        });
+
+    solver->solveProblem();
+
+    std::set<E_CallbackLocation> expectedLocations
+        = { E_CallbackLocation::PrimalCandidateCheck, E_CallbackLocation::TerminationCheck };
+
+    if(locations != expectedLocations)
+    {
+        std::cout << "The callback was not called at exactly the locations it was registered for\n";
+        passed = false;
+    }
+
+    if(!contextClassesMatch)
+    {
+        std::cout << "The class of a context was not that of its location\n";
+        passed = false;
+    }
+
+    if(boundEvents == 0 || !boundContextMatches)
+    {
+        std::cout << "The bound update callback did not report the changed bounds correctly\n";
+        passed = false;
+    }
+
+    return passed;
+}
+
+bool TestCallbackFailure()
+{
+    bool passed = true;
+
+    // An exception in a callback discards the actions of the callbacks at that location, stops all callbacks and
+    // SHOT, and is rethrown by solveProblem()
+    auto [solver, env] = MakeEx1223bSolver(true); // the nonlinear strategy has the PrimalCandidateSearch location
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+
+    bool failed = false;
+    int callsAfterFailure = 0;
+    int laterCallbackCalls = 0;
+
+    auto locations = E_CallbackLocation::PrimalCandidateSearch | E_CallbackLocation::NewPrimalSolution
+        | E_CallbackLocation::TerminationCheck;
+
+    solver->registerCallback(locations,
+        [&failed, &callsAfterFailure](CallbackContext& context)
+        {
+            if(failed)
+            {
+                callsAfterFailure++;
+                return;
+            }
+
+            if(auto search = context.as<PrimalCandidateSearchContext>())
+            {
+                // A feasible solution is queued, but must be discarded since the callback fails
+                search->addPrimalSolution(VectorDouble(7, 0.0));
+                failed = true;
+                throw std::runtime_error("the callback failed");
+            }
+        });
+
+    solver->registerCallback(locations,
+        [&failed, &callsAfterFailure, &laterCallbackCalls](CallbackContext& context)
+        {
+            if(context.getLocation() == E_CallbackLocation::PrimalCandidateSearch)
+                laterCallbackCalls++;
+
+            if(failed)
+                callsAfterFailure++;
+        });
+
+    bool exceptionRethrown = false;
+
+    try
+    {
+        solver->solveProblem();
+    }
+    catch(const std::runtime_error& e)
+    {
+        exceptionRethrown = (std::string(e.what()) == "the callback failed");
+    }
+
+    if(!failed || !exceptionRethrown)
+    {
+        std::cout << "The exception of the callback was not rethrown by solveProblem()\n";
+        passed = false;
+    }
+
+    if(laterCallbackCalls != 0 || callsAfterFailure != 0)
+    {
+        std::cout << "Callbacks were called after the failure: " << laterCallbackCalls << " at the failing location, "
+                  << callsAfterFailure << " in total\n";
+        passed = false;
+    }
+
+    if(env->results->terminationReason != E_TerminationReason::Error)
+    {
+        std::cout << "The termination reason is not Error\n";
+        passed = false;
+    }
+
+    for(auto& S : env->results->primalSolutions)
+    {
+        if(S.sourceType == E_PrimalSolutionSource::ExternalPrimalSolution)
+        {
+            std::cout << "The solution queued by the failing callback was added\n";
+            passed = false;
+        }
+    }
+
+    return passed;
+}
+
+bool TestPrimalSolutionPool()
+{
+    bool passed = true;
+
+    // The solution pool keeps the best solutions, sorted with the incumbent first, and only a solution better than
+    // the incumbent changes the primal bound
+    auto [solver, env] = MakeEx1223bSolver();
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+    solver->updateSetting("Output.SaveNumberOfSolutions", 3);
+
+    auto makeSolution = [](double objectiveValue, double firstValue)
+    {
+        PrimalSolution solution;
+        solution.point = VectorDouble(7, 0.0);
+        solution.point[0] = firstValue;
+        solution.objValue = objectiveValue;
+        solution.sourceType = E_PrimalSolutionSource::ExternalPrimalSolution;
+        return (solution);
+    };
+
+    auto check = [&passed, &env = env](const std::string& step, std::vector<double> expectedObjectives,
+                     double expectedIncumbentFirstValue)
+    {
+        auto& pool = env->results->primalSolutions;
+
+        std::vector<double> objectives;
+        for(auto& S : pool)
+            objectives.push_back(S.objValue);
+
+        if(objectives != expectedObjectives)
+        {
+            std::cout << step << ": the objective values in the solution pool are not the expected ones\n";
+            passed = false;
+            return;
+        }
+
+        if(env->results->getPrimalBound() != expectedObjectives.front()
+            || env->results->primalSolution.at(0) != expectedIncumbentFirstValue
+            || pool.front().point.at(0) != expectedIncumbentFirstValue)
+        {
+            std::cout << step << ": the incumbent or the primal bound is not the expected one\n";
+            passed = false;
+        }
+    };
+
+    env->results->addPrimalSolution(makeSolution(10.0, 1.0));
+    check("First solution", { 10.0 }, 1.0);
+
+    env->results->addPrimalSolution(makeSolution(12.0, 2.0));
+    check("Worse solution", { 10.0, 12.0 }, 1.0);
+
+    // Better than the worst solution but worse than the incumbent: added to the pool, but not the incumbent
+    env->solutionStatistics.hasReductionCutBeenAddedSincePrimalImprovement = true;
+    env->results->addPrimalSolution(makeSolution(11.0, 3.0));
+    check("Solution between the best and the worst", { 10.0, 11.0, 12.0 }, 1.0);
+
+    if(!env->solutionStatistics.hasReductionCutBeenAddedSincePrimalImprovement)
+    {
+        std::cout << "A solution that is not an improvement was counted as one\n";
+        passed = false;
+    }
+
+    // The pool is full and the solution is worse than all in it
+    env->results->addPrimalSolution(makeSolution(13.0, 4.0));
+    check("Worse solution with a full pool", { 10.0, 11.0, 12.0 }, 1.0);
+
+    // A new incumbent replaces the worst solution
+    env->results->addPrimalSolution(makeSolution(9.0, 5.0));
+    check("Better solution with a full pool", { 9.0, 10.0, 11.0 }, 5.0);
+
+    if(env->solutionStatistics.hasReductionCutBeenAddedSincePrimalImprovement)
+    {
+        std::cout << "An improvement of the primal bound was not counted as one\n";
+        passed = false;
+    }
+
+    // A solution with the same objective value as the incumbent but a smaller constraint error replaces it
+    auto moreAccurate = makeSolution(9.0, 6.0);
+    moreAccurate.maxDeviatingConstraintLinear = PairIndexValue(-1, 0.0);
+    moreAccurate.maxDeviatingConstraintQuadratic = PairIndexValue(-1, 0.0);
+    moreAccurate.maxDeviatingConstraintNonlinear = PairIndexValue(-1, 0.0);
+    env->results->addPrimalSolution(moreAccurate);
+    check("More accurate solution", { 9.0, 9.0, 10.0 }, 6.0);
+
+    // The objective values are only compared up to a relative tolerance of 1e-10. In a full pool of two, the incumbent
+    // has the objective value 9 and the error 5, and the other solution an almost equal objective value and the
+    // error 1. A solution with the same objective value as the other one and the error 3 replaces the incumbent,
+    // although it is neither better nor more accurate than the worst solution in the pool
+    auto [solver2, env2] = MakeEx1223bSolver();
+    solver2->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+    solver2->updateSetting("Output.SaveNumberOfSolutions", 2);
+
+    auto withError = [&makeSolution](double objectiveValue, double firstValue, double error)
+    {
+        auto solution = makeSolution(objectiveValue, firstValue);
+        solution.maxDeviatingConstraintLinear = PairIndexValue(-1, error);
+        solution.maxDeviatingConstraintQuadratic = PairIndexValue(-1, error);
+        solution.maxDeviatingConstraintNonlinear = PairIndexValue(-1, error);
+        return (solution);
+    };
+
+    double almostNine = 9.0 + 1e-10;
+
+    env2->results->addPrimalSolution(withError(almostNine, 1.0, 1.0));
+    env2->results->addPrimalSolution(withError(9.0, 2.0, 5.0));
+    env2->results->addPrimalSolution(withError(almostNine, 3.0, 3.0));
+
+    auto& pool = env2->results->primalSolutions;
+
+    if(pool.size() != 2 || pool.front().point.at(0) != 3.0 || env2->results->primalSolution.at(0) != 3.0
+        || pool.back().point.at(0) != 2.0)
+    {
+        std::cout << "A more accurate solution with an almost equal objective value did not replace the incumbent in "
+                     "a full pool\n";
+        passed = false;
+    }
+
+    return passed;
+}
+
+// Checks a reformulated problem at points of the original problem: the values of the auxiliary variables are
+// calculated from the point, the constraints added by the reformulation must then be fulfilled, and every original
+// constraint must have the same value as the constraints with its name in the reformulated problem
+static bool CheckAuxiliaryVariableValues(
+    ProblemPtr problem, ProblemPtr reformulatedProblem, const std::vector<VectorDouble>& points)
+{
+    bool passed = true;
+
+    for(auto& originalPoint : points)
+    {
+        auto point = originalPoint;
+        reformulatedProblem->augmentAuxiliaryVariableValues(point);
+
+        for(auto& C : reformulatedProblem->numericConstraints)
+        {
+            bool isOriginalConstraint = std::any_of(problem->numericConstraints.begin(),
+                problem->numericConstraints.end(), [&C](auto& O) { return (O->name == C->name); });
+
+            if(isOriginalConstraint)
+                continue;
+
+            auto value = C->calculateNumericValue(point);
+
+            if(value.error > 1e-8)
+            {
+                std::cout << "The auxiliary constraint " << C->name << " is violated by " << value.error
+                          << " at the calculated values of the auxiliary variables\n";
+                passed = false;
+            }
+        }
+
+        for(auto& O : problem->numericConstraints)
+        {
+            double originalValue = O->calculateNumericValue(originalPoint).normalizedValue;
+            double reformulatedValue = SHOT_DBL_MIN;
+
+            for(auto& C : reformulatedProblem->numericConstraints)
+            {
+                if(C->name == O->name)
+                    reformulatedValue = std::max(reformulatedValue, C->calculateNumericValue(point).normalizedValue);
+            }
+
+            if(std::abs(originalValue - reformulatedValue) > 1e-8)
+            {
+                std::cout << "The constraint " << O->name << " has the value " << originalValue
+                          << " in the original problem but " << reformulatedValue << " in the reformulated one\n";
+                passed = false;
+            }
+        }
+
+        if(!passed)
+        {
+            std::cout << "Point:\n";
+            Utilities::displayVector(originalPoint);
+            return (false);
+        }
+    }
+
+    return (passed);
+}
+
+// Binary and continuous monomials sharing variables, in two constraints and the objective
+static ProblemPtr MakeMonomialProblem(EnvironmentPtr env)
+{
+    auto problem = std::make_shared<SHOT::Problem>(env);
+    problem->name = "monomials";
+
+    auto b1 = std::make_shared<Variable>("b1", E_VariableType::Binary);
+    auto b2 = std::make_shared<Variable>("b2", E_VariableType::Binary);
+    auto b3 = std::make_shared<Variable>("b3", E_VariableType::Binary);
+    auto b4 = std::make_shared<Variable>("b4", E_VariableType::Binary);
+    auto x1 = std::make_shared<Variable>("x1", E_VariableType::Real, -1.0, 2.0);
+    auto x2 = std::make_shared<Variable>("x2", E_VariableType::Real, 0.0, 1.0);
+    auto x3 = std::make_shared<Variable>("x3", E_VariableType::Real, 0.0, 1.0);
+    auto y1 = std::make_shared<Variable>("y1", E_VariableType::Real, -2.0, 1.0);
+
+    problem->add({ b1, b2, b3, b4, x1, x2, x3, y1 });
+
+    auto objective = std::make_shared<NonlinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<LinearTerm>(-1.0, b1));
+    objective->add(std::make_shared<LinearTerm>(-1.0, b2));
+    objective->add(std::make_shared<LinearTerm>(-1.0, b3));
+    objective->add(std::make_shared<LinearTerm>(-1.0, b4));
+    objective->add(std::make_shared<MonomialTerm>(1.0, Variables({ x1, x2, x3 })));
+    objective->add(std::make_shared<MonomialTerm>(0.5, Variables({ x2, x3, y1 })));
+    problem->add(objective);
+
+    auto c1 = std::make_shared<NonlinearConstraint>("c1", SHOT_DBL_MIN, 3.5);
+    c1->add(std::make_shared<MonomialTerm>(3.0, Variables({ b1, b2, b3 })));
+    c1->add(std::make_shared<MonomialTerm>(1.0, Variables({ x1, x2, x3 })));
+    c1->add(std::make_shared<MonomialTerm>(-2.0, Variables({ x2, x3, y1 })));
+    problem->add(c1);
+
+    auto c2 = std::make_shared<NonlinearConstraint>("c2", SHOT_DBL_MIN, 1.2);
+    c2->add(std::make_shared<MonomialTerm>(1.0, Variables({ b2, b3, b4 })));
+    c2->add(std::make_shared<MonomialTerm>(-0.5, Variables({ b1, b2, b3 })));
+    c2->add(std::make_shared<MonomialTerm>(2.0, Variables({ x1, x2, y1 })));
+    c2->add(std::make_shared<MonomialTerm>(1.0, Variables({ x1, x3, y1 })));
+    problem->add(c2);
+
+    problem->updateProperties();
+    problem->finalize();
+
+    return (problem);
+}
+
+bool TestAuxiliaryVariablesOfMonomials()
+{
+    bool passed = true;
+
+    // All binary assignments, each combined with continuous values in the interior and at the bounds
+    std::vector<VectorDouble> points;
+
+    for(int i = 0; i < 16; i++)
+    {
+        VectorDouble binaries = { double(i & 1), double((i >> 1) & 1), double((i >> 2) & 1), double((i >> 3) & 1) };
+
+        for(auto continuous : { VectorDouble { 0.3, 0.7, 0.9, -1.5 }, VectorDouble { 2.0, 1.0, 1.0, 1.0 },
+                VectorDouble { -1.0, 0.0, 1.0, -2.0 } })
+        {
+            auto point = binaries;
+            point.insert(point.end(), continuous.begin(), continuous.end());
+            points.push_back(point);
+        }
+    }
+
+    for(auto formulation : { ES_ReformulationBinaryMonomials::Simple, ES_ReformulationBinaryMonomials::CostaLiberti })
+    {
+        for(auto partitioning : { ES_PartitionNonlinearSums::Always, ES_PartitionNonlinearSums::IfConvex,
+                ES_PartitionNonlinearSums::Never })
+        {
+            std::cout << "Binary monomial formulation " << static_cast<int>(formulation)
+                      << " and partitioning strategy " << static_cast<int>(partitioning) << '\n';
+
+            auto solver = std::make_unique<SHOT::Solver>();
+            auto env = solver->getEnvironment();
+            solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+            solver->updateSetting("Model.Reformulation.Monomials.Formulation", static_cast<int>(formulation));
+            solver->updateSetting(
+                "Model.Reformulation.Constraint.PartitionNonlinearTerms", static_cast<int>(partitioning));
+            solver->updateSetting(
+                "Model.Reformulation.ObjectiveFunction.PartitionNonlinearTerms", static_cast<int>(partitioning));
+
+            auto problem = MakeMonomialProblem(env);
+
+            if(!solver->setProblem(problem))
+            {
+                std::cout << "Could not set the problem\n";
+                return (false);
+            }
+
+            if(env->reformulatedProblem->getAuxiliaryVariablesOfType(E_AuxiliaryVariableType::BinaryMonomial).size()
+                == 0)
+            {
+                std::cout << "The binary monomials were not reformulated\n";
+                passed = false;
+            }
+
+            if(!CheckAuxiliaryVariableValues(problem, env->reformulatedProblem, points))
+                passed = false;
+
+            // The monomials are nonconvex, so only the feasibility of the solution is checked
+            if(!solver->solveProblem() || env->results->primalSolution.size() == 0)
+            {
+                std::cout << "Could not solve the problem\n";
+                passed = false;
+                continue;
+            }
+
+            auto& primalPoint = env->results->primalSolution;
+
+            // A primal solution is accepted when it fulfills the linear constraints within the linear tolerance and
+            // the others within the nonlinear one
+            for(auto& C : problem->numericConstraints)
+            {
+                double tolerance = (C->properties.classification == E_ConstraintClassification::Linear)
+                    ? env->settings->getSetting<double>("Primal.Tolerance.LinearConstraint")
+                    : env->settings->getSetting<double>("Primal.Tolerance.NonlinearConstraint");
+
+                if(C->calculateNumericValue(primalPoint).error > tolerance)
+                {
+                    std::cout << "The solution violates " << C->name << '\n';
+                    passed = false;
+                }
+            }
+        }
+    }
+
+    return passed;
+}
+
+// Products of binary, integer and continuous variables sharing variables, in two constraints and the objective; the
+// bounds include L < -U, L > 0 and U < 0
+static ProblemPtr MakeBinaryProductProblem(EnvironmentPtr env)
+{
+    auto problem = std::make_shared<SHOT::Problem>(env);
+    problem->name = "binaryproducts";
+
+    auto b1 = std::make_shared<Variable>("b1", E_VariableType::Binary);
+    auto b2 = std::make_shared<Variable>("b2", E_VariableType::Binary);
+    auto i1 = std::make_shared<Variable>("i1", E_VariableType::Integer, -2.0, 3.0);
+    auto i2 = std::make_shared<Variable>("i2", E_VariableType::Integer, -3.0, -1.0);
+    auto i3 = std::make_shared<Variable>("i3", E_VariableType::Integer, 1.0, 4.0);
+    auto x1 = std::make_shared<Variable>("x1", E_VariableType::Real, -10.0, 1.0);
+    auto x2 = std::make_shared<Variable>("x2", E_VariableType::Real, 2.0, 5.0);
+    auto x3 = std::make_shared<Variable>("x3", E_VariableType::Real, -4.0, -1.0);
+
+    problem->add({ b1, b2, i1, i2, i3, x1, x2, x3 });
+
+    auto objective = std::make_shared<QuadraticObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<LinearTerm>(1.0, x1));
+    objective->add(std::make_shared<LinearTerm>(1.0, x3));
+    objective->add(std::make_shared<QuadraticTerm>(-3.0, b1, x1));
+    objective->add(std::make_shared<QuadraticTerm>(2.0, b2, x1));
+    objective->add(std::make_shared<QuadraticTerm>(-1.0, b1, x2));
+    objective->add(std::make_shared<QuadraticTerm>(1.5, b2, x3));
+    objective->add(std::make_shared<QuadraticTerm>(1.0, i1, b1));
+    objective->add(std::make_shared<QuadraticTerm>(-2.0, b2, i1));
+    objective->add(std::make_shared<QuadraticTerm>(1.0, b1, i2));
+    objective->add(std::make_shared<QuadraticTerm>(0.5, i1, i3));
+    problem->add(objective);
+
+    auto c1 = std::make_shared<QuadraticConstraint>("c1", -3.0, SHOT_DBL_MAX);
+    c1->add(std::make_shared<QuadraticTerm>(1.0, b1, i1));
+    c1->add(std::make_shared<QuadraticTerm>(1.0, b1, i2));
+    c1->add(std::make_shared<QuadraticTerm>(1.0, b2, i1));
+    problem->add(c1);
+
+    auto c2 = std::make_shared<QuadraticConstraint>("c2", SHOT_DBL_MIN, 4.0);
+    c2->add(std::make_shared<QuadraticTerm>(1.0, i1, b2));
+    c2->add(std::make_shared<QuadraticTerm>(-1.0, b2, i3));
+    c2->add(std::make_shared<QuadraticTerm>(1.0, i1, i3));
+    problem->add(c2);
+
+    problem->updateProperties();
+    problem->finalize();
+
+    return (problem);
+}
+
+bool TestAuxiliaryVariablesOfBinaryProducts()
+{
+    auto solver = std::make_unique<SHOT::Solver>();
+    auto env = solver->getEnvironment();
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+    solver->updateSetting(
+        "Model.Reformulation.Quadratics.Strategy", static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear));
+    solver->updateSetting(
+        "Model.Reformulation.Bilinear.IntegerFormulation", static_cast<int>(ES_ReformulateBilinearInteger::Yes));
+
+    auto problem = MakeBinaryProductProblem(env);
+
+    if(!solver->setProblem(problem))
+    {
+        std::cout << "Could not set the problem\n";
+        return (false);
+    }
+
+    // All binary assignments, with integer and continuous values at the bounds and in the interior; x1 = -5 with
+    // b = 0 is below -U for x1 in [-10, 1]
+    std::vector<VectorDouble> points;
+
+    for(int i = 0; i < 4; i++)
+    {
+        for(auto other : { VectorDouble { -2.0, -3.0, 1.0, -5.0, 3.0, -2.0 },
+                VectorDouble { 3.0, -1.0, 4.0, 1.0, 2.0, -4.0 }, VectorDouble { 0.0, -2.0, 2.0, -10.0, 5.0, -1.0 } })
+        {
+            VectorDouble point = { double(i & 1), double((i >> 1) & 1) };
+            point.insert(point.end(), other.begin(), other.end());
+            points.push_back(point);
+        }
+    }
+
+    return (CheckAuxiliaryVariableValues(problem, env->reformulatedProblem, points));
+}
+
+// Exponentials, signomials and monomials that are partitioned, where the same term is in several constraints and the
+// objective with different coefficients and signs, so that the auxiliary variables are shared
+static ProblemPtr MakeSharedPartitioningProblem(EnvironmentPtr env)
+{
+    auto problem = std::make_shared<SHOT::Problem>(env);
+    problem->name = "sharedpartitioning";
+
+    auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.2, 3.0);
+    auto y = std::make_shared<Variable>("y", E_VariableType::Real, 0.2, 3.0);
+    auto z = std::make_shared<Variable>("z", E_VariableType::Real, 0.2, 3.0);
+
+    problem->add({ x, y, z });
+
+    auto exp = [](VariablePtr variable, double factor)
+    {
+        return std::make_shared<ExpressionProduct>(std::make_shared<ExpressionConstant>(factor),
+            std::make_shared<ExpressionExp>(std::make_shared<ExpressionVariable>(variable)));
+    };
+
+    auto signomial
+        = [](double coefficient, VariablePtr first, double firstPower, VariablePtr second, double secondPower)
+    {
+        return std::make_shared<SignomialTerm>(coefficient,
+            SignomialElements({ std::make_shared<SignomialElement>(first, firstPower),
+                std::make_shared<SignomialElement>(second, secondPower) }));
+    };
+
+    auto objective = std::make_shared<NonlinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<LinearTerm>(1.0, x));
+    objective->add(std::make_shared<LinearTerm>(1.0, z));
+    objective->add(std::make_shared<ExpressionSum>(exp(y, 1.0), exp(z, 0.5)));
+    problem->add(objective);
+
+    auto c1 = std::make_shared<NonlinearConstraint>("c1", SHOT_DBL_MIN, 10.0);
+    c1->add(std::make_shared<ExpressionSum>(exp(x, 1.0), exp(y, 1.0)));
+    problem->add(c1);
+
+    auto c2 = std::make_shared<NonlinearConstraint>("c2", SHOT_DBL_MIN, 15.0);
+    c2->add(std::make_shared<ExpressionSum>(exp(x, 2.0), exp(z, 1.0)));
+    problem->add(c2);
+
+    // The negated exponential is in a constraint of the type >=, and needs its own auxiliary variable
+    auto c3 = std::make_shared<NonlinearConstraint>("c3", 3.0, SHOT_DBL_MAX);
+    c3->add(std::make_shared<ExpressionSum>(exp(x, 1.0), exp(z, 1.0)));
+    problem->add(c3);
+
+    auto c4 = std::make_shared<NonlinearConstraint>("c4", SHOT_DBL_MIN, 20.0);
+    c4->add(signomial(3.0, x, -1.0, y, -0.5));
+    c4->add(signomial(1.0, x, -1.0, z, -2.0));
+    problem->add(c4);
+
+    auto c5 = std::make_shared<NonlinearConstraint>("c5", SHOT_DBL_MIN, 12.0);
+    c5->add(signomial(1.0, y, -0.5, x, -1.0));
+    c5->add(signomial(0.5, z, -2.0, x, -1.0));
+    problem->add(c5);
+
+    auto c6 = std::make_shared<NonlinearConstraint>("c6", SHOT_DBL_MIN, 9.0);
+    c6->add(std::make_shared<MonomialTerm>(1.0, Variables({ x, y, z })));
+    c6->add(std::make_shared<MonomialTerm>(2.0, Variables({ y, z, x })));
+    c6->add(std::make_shared<MonomialTerm>(-1.0, Variables({ x, y, x })));
+    problem->add(c6);
+
+    auto c7 = std::make_shared<NonlinearConstraint>("c7", SHOT_DBL_MIN, 6.0);
+    c7->add(std::make_shared<MonomialTerm>(3.0, Variables({ z, x, y })));
+    c7->add(std::make_shared<MonomialTerm>(-2.0, Variables({ x, x, y })));
+    problem->add(c7);
+
+    problem->updateProperties();
+    problem->finalize();
+
+    return (problem);
+}
+
+bool TestAuxiliaryVariablesOfSharedPartitioning()
+{
+    bool passed = true;
+
+    std::vector<VectorDouble> points;
+
+    for(double x : { 0.2, 1.3, 3.0 })
+    {
+        for(double y : { 0.2, 0.7, 3.0 })
+        {
+            for(double z : { 0.2, 2.1, 3.0 })
+                points.push_back({ x, y, z });
+        }
+    }
+
+    for(auto partitioning : { ES_PartitionNonlinearSums::Always, ES_PartitionNonlinearSums::IfConvex })
+    {
+        std::cout << "Partitioning strategy " << static_cast<int>(partitioning) << '\n';
+
+        auto solver = std::make_unique<SHOT::Solver>();
+        auto env = solver->getEnvironment();
+        solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+        solver->updateSetting("Model.Reformulation.Constraint.PartitionNonlinearTerms", static_cast<int>(partitioning));
+        solver->updateSetting(
+            "Model.Reformulation.ObjectiveFunction.PartitionNonlinearTerms", static_cast<int>(partitioning));
+
+        auto problem = MakeSharedPartitioningProblem(env);
+
+        if(!solver->setProblem(problem))
+        {
+            std::cout << "Could not set the problem\n";
+            return (false);
+        }
+
+        if(!CheckAuxiliaryVariableValues(problem, env->reformulatedProblem, points))
+            passed = false;
+    }
+
+    return (passed);
+}
+
+// Two convex quadratic constraints sharing variables, where x3, x4 and b are separate from the other variables, so that
+// their components of the decompositions only have one variable
+static ProblemPtr MakeDecompositionProblem(EnvironmentPtr env)
+{
+    auto problem = std::make_shared<SHOT::Problem>(env);
+    problem->name = "decomposition";
+
+    auto x1 = std::make_shared<Variable>("x1", E_VariableType::Real, -2.0, 3.0);
+    auto x2 = std::make_shared<Variable>("x2", E_VariableType::Real, -2.0, 3.0);
+    auto x3 = std::make_shared<Variable>("x3", E_VariableType::Real, -2.0, 3.0);
+    auto x4 = std::make_shared<Variable>("x4", E_VariableType::Real, -2.0, 3.0);
+    auto x5 = std::make_shared<Variable>("x5", E_VariableType::Real, -2.0, 3.0);
+    auto b = std::make_shared<Variable>("b", E_VariableType::Binary);
+
+    problem->add({ x1, x2, x3, x4, x5, b });
+
+    auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    for(auto& V : { x1, x2, x3, x4, x5 })
+        objective->add(std::make_shared<LinearTerm>(-1.0, V));
+    objective->add(std::make_shared<LinearTerm>(-2.0, b));
+    problem->add(objective);
+
+    auto c1 = std::make_shared<QuadraticConstraint>("c1", SHOT_DBL_MIN, 10.0);
+    c1->add(std::make_shared<QuadraticTerm>(1.0, x1, x1));
+    c1->add(std::make_shared<QuadraticTerm>(1.0, x2, x2));
+    c1->add(std::make_shared<QuadraticTerm>(1.0, x1, x2));
+    c1->add(std::make_shared<QuadraticTerm>(2.0, x3, x3));
+    c1->add(std::make_shared<QuadraticTerm>(1.0, x4, x4));
+    c1->add(std::make_shared<QuadraticTerm>(3.0, b, b));
+    problem->add(c1);
+
+    auto c2 = std::make_shared<QuadraticConstraint>("c2", SHOT_DBL_MIN, 4.0);
+    c2->add(std::make_shared<LinearTerm>(-1.0, x1));
+    c2->add(std::make_shared<QuadraticTerm>(1.0, x3, x3));
+    c2->add(std::make_shared<QuadraticTerm>(1.0, x5, x5));
+    c2->add(std::make_shared<QuadraticTerm>(1.0, x3, x5));
+    c2->add(std::make_shared<QuadraticTerm>(0.5, x4, x4));
+    problem->add(c2);
+
+    problem->updateProperties();
+    problem->finalize();
+
+    return (problem);
+}
+
+bool TestAuxiliaryVariablesOfDecompositions()
+{
+    bool passed = true;
+
+    std::vector<VectorDouble> points;
+
+    for(double x1 : { -2.0, 0.5, 3.0 })
+    {
+        for(double x2 : { -1.5, 2.0 })
+        {
+            for(double x3 : { -2.0, 0.3, 3.0 })
+            {
+                for(double x4 : { -0.7, 2.5 })
+                {
+                    for(double x5 : { -2.0, 1.1 })
+                    {
+                        for(double b : { 0.0, 1.0 })
+                            points.push_back({ x1, x2, x3, x4, x5, b });
+                    }
+                }
+            }
+        }
+    }
+
+    for(auto method :
+        { ES_QuadraticDecomposition::EigenValueDecomposition, ES_QuadraticDecomposition::LDLDecomposition })
+    {
+        for(auto formulation : { ES_QuadraticDecompositionFormulation::CoefficientReformulated,
+                ES_QuadraticDecompositionFormulation::CoefficientRemains })
+        {
+            std::cout << "Decomposition " << static_cast<int>(method) << " with formulation "
+                      << static_cast<int>(formulation) << '\n';
+
+            auto solver = std::make_unique<SHOT::Solver>();
+            auto env = solver->getEnvironment();
+            solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+            solver->updateSetting(
+                "Model.Reformulation.Quadratics.Strategy", static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear));
+            solver->updateSetting("Model.Reformulation.Quadratics.Decomposition.Method", static_cast<int>(method));
+            solver->updateSetting(
+                "Model.Reformulation.Quadratics.Decomposition.Formulation", static_cast<int>(formulation));
+
+            auto problem = MakeDecompositionProblem(env);
+
+            if(!solver->setProblem(problem))
+            {
+                std::cout << "Could not set the problem\n";
+                return (false);
+            }
+
+            // The components of x3 and x4 in c1 have only one variable, and get no variable for the component
+            int numberOfComponents = 0;
+
+            for(auto& V : env->reformulatedProblem->auxiliaryVariables)
+            {
+                if(V->name.rfind("q_evd_", 0) == 0 || V->name.rfind("q_ldl_", 0) == 0)
+                    numberOfComponents++;
+            }
+
+            if(numberOfComponents > 4)
+            {
+                std::cout << "Expected at most four components with several variables, got " << numberOfComponents
+                          << '\n';
+                passed = false;
+            }
+
+            if(!CheckAuxiliaryVariableValues(problem, env->reformulatedProblem, points))
+                passed = false;
+        }
+    }
+
+    return (passed);
+}
+
+// A point from Ipopt can exceed the variable bounds by its bound relaxation, and projecting it to the bounds can then
+// violate a linear constraint with large coefficients, as in oil2 in MINLPLib
+bool TestPrimalSolutionSlightlyOutsideBounds()
+{
+    bool passed = true;
+
+    auto solver = std::make_unique<SHOT::Solver>();
+    auto env = solver->getEnvironment();
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+
+    // The bound tightening would give a the upper bound 3.9 from e1, after which a would be projected as well
+    solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+
+    auto problem = std::make_shared<SHOT::Problem>(env);
+    problem->name = "boundrelaxation";
+
+    auto a = std::make_shared<Variable>("a", E_VariableType::Real, 0.0, 10.0);
+    auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.0, 1.95);
+    auto z = std::make_shared<Variable>("z", E_VariableType::Real, 0.1, 3.0);
+    problem->add({ a, x, z });
+
+    auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<LinearTerm>(-1.0, x));
+    objective->add(std::make_shared<LinearTerm>(1.0, z));
+    problem->add(objective);
+
+    // x is in both linear constraints, and a in the linear and the nonlinear one
+    auto e1 = std::make_shared<LinearConstraint>("e1", 0.0, 0.0);
+    e1->add(std::make_shared<LinearTerm>(-500.0, a));
+    e1->add(std::make_shared<LinearTerm>(1000.0, x));
+    problem->add(e1);
+
+    auto e2 = std::make_shared<LinearConstraint>("e2", SHOT_DBL_MIN, 5.0);
+    e2->add(std::make_shared<LinearTerm>(1.0, x));
+    e2->add(std::make_shared<LinearTerm>(1.0, z));
+    problem->add(e2);
+
+    // z^2 + exp(a) = 1 + exp(3.9) = 50.4 at the points
+    auto c1 = std::make_shared<NonlinearConstraint>("c1", SHOT_DBL_MIN, 60.0);
+    c1->add(std::make_shared<ExpressionSum>(std::make_shared<ExpressionSquare>(std::make_shared<ExpressionVariable>(z)),
+        std::make_shared<ExpressionExp>(std::make_shared<ExpressionVariable>(a))));
+    problem->add(c1);
+
+    problem->updateProperties();
+    problem->finalize();
+
+    if(!solver->setProblem(problem))
+    {
+        std::cout << "Could not set the problem\n";
+        return (false);
+    }
+
+    auto makeSolution = [](double excess)
+    {
+        PrimalSolution solution;
+        double xValue = 1.95 + excess;
+        solution.point = { 2.0 * xValue, xValue, 1.0 };
+        solution.sourceType = E_PrimalSolutionSource::NLPFixedIntegers;
+        solution.objValue = -xValue + 1.0;
+        solution.iterFound = 1;
+        return (solution);
+    };
+
+    // 1e-8 is the bound relaxation of Ipopt, and projecting x would violate e1 by 1000 * 1e-8 = 1e-5
+    if(!env->primalSolver->checkPrimalSolutionPoint(makeSolution(1.95e-8)))
+    {
+        std::cout << "A point exceeding a bound by the bound relaxation of Ipopt was not accepted\n";
+        passed = false;
+    }
+
+    // A larger excess is still projected, after which e1 is violated
+    if(env->primalSolver->checkPrimalSolutionPoint(makeSolution(1e-3)))
+    {
+        std::cout << "A point exceeding a bound by 1e-3 was accepted, although its projection violates e1\n";
+        passed = false;
+    }
+
+    return (passed);
+}
+
+// Linear problems must honor the tree setting, while genuine convex quadratic problems retain direct solves.
+bool TestStrategySelectionForLinearAndQuadraticProblems()
+{
+    std::vector<ES_MIPSolver> backends;
+#ifdef HAS_CBC
+    backends.push_back(ES_MIPSolver::Cbc);
+#endif
+#ifdef HAS_HIGHS
+    backends.push_back(ES_MIPSolver::Highs);
+#endif
+#ifdef HAS_CPLEX
+    backends.push_back(ES_MIPSolver::Cplex);
+#endif
+#ifdef HAS_GUROBI
+    backends.push_back(ES_MIPSolver::Gurobi);
+#endif
+    for(auto backend : backends)
+    {
+        bool supportsQuadratics = backend == ES_MIPSolver::Cplex || backend == ES_MIPSolver::Gurobi;
+        for(bool discrete : { false, true })
+        {
+            for(int quadraticType : { 0, 1, 2, 3, 4 }) // Linear, QP, QCQP, both, or a linearized integer product
+            {
+                if((quadraticType != 0 && !supportsQuadratics) || (quadraticType == 4 && !discrete))
+                    continue;
+                for(auto tree : { ES_TreeStrategy::MultiTree, ES_TreeStrategy::SingleTree })
+                {
+                    auto solver = std::make_unique<SHOT::Solver>();
+                    auto env = solver->getEnvironment();
+                    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+                    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(backend));
+                    solver->updateSetting("Dual.TreeStrategy", static_cast<int>(tree));
+                    solver->updateSetting("Model.Reformulation.Quadratics.Strategy",
+                        static_cast<int>(ES_QuadraticProblemStrategy::ConvexQuadraticallyConstrained));
+
+                    auto problem = std::make_shared<Problem>(env);
+                    problem->name = "strategyselection";
+                    auto x = std::make_shared<Variable>("x",
+                        discrete ? E_VariableType::Integer : E_VariableType::Real, 0.0, 4.0);
+                    problem->add(x);
+                    if((quadraticType & 1) || quadraticType == 4)
+                    {
+                        auto objective = std::make_shared<QuadraticObjectiveFunction>(
+                            E_ObjectiveFunctionDirection::Minimize);
+                        if(quadraticType == 4)
+                        {
+                            solver->updateSetting("Model.Reformulation.Bilinear.IntegerFormulation",
+                                static_cast<int>(ES_ReformulateBilinearInteger::Yes));
+                            auto y = std::make_shared<Variable>("y", E_VariableType::Integer, 0.0, 3.0);
+                            problem->add(y);
+                            objective->add(std::make_shared<QuadraticTerm>(1.0, x, y));
+                        }
+                        else
+                            objective->add(std::make_shared<QuadraticTerm>(1.0, x, x));
+                        problem->add(objective);
+                    }
+                    else
+                    {
+                        auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+                        objective->add(std::make_shared<LinearTerm>(1.0, x));
+                        problem->add(objective);
+                    }
+                    if(quadraticType & 2)
+                    {
+                        auto constraint = std::make_shared<QuadraticConstraint>("quadratic", SHOT_DBL_MIN, 9.0);
+                        constraint->add(std::make_shared<QuadraticTerm>(1.0, x, x));
+                        problem->add(constraint);
+                    }
+                    problem->finalize();
+                    if(!solver->setProblem(problem))
+                        return false;
+
+                    auto expected = quadraticType & 2 ? E_SolutionStrategy::MIQCQP : E_SolutionStrategy::MIQP;
+                    if(quadraticType == 4 && !env->reformulatedProblem->properties.isMILPProblem)
+                    {
+                        std::cout << "Integer product was not reformulated to MILP" << std::endl;
+                        return false;
+                    }
+                    if(quadraticType == 0 || quadraticType == 4)
+                    {
+                        if(!discrete)
+                            expected = E_SolutionStrategy::NLP;
+                        else if(supportsQuadratics && tree == ES_TreeStrategy::SingleTree)
+                            expected = E_SolutionStrategy::SingleTree;
+                        else
+                            expected = E_SolutionStrategy::MultiTree;
+                    }
+                    if(env->results->usedSolutionStrategy != expected)
+                    {
+                        std::cout << "Incorrect strategy for backend " << static_cast<int>(backend)
+                                  << ", discrete " << discrete << ", quadratic type " << quadraticType
+                                  << ", tree " << static_cast<int>(tree) << std::endl;
+                        return false;
+                    }
+                }
+            }
+        }
+    }
+    return true;
 }
 
 int SolverTest(int argc, char* argv[])
@@ -1522,6 +2499,56 @@ int SolverTest(int argc, char* argv[])
         std::cout << "Starting test for constraint classes with fixed variables (osil format)" << std::endl;
         passed = TestConstraintClassesForFixedVariables("data/fixedvars.osil");
         std::cout << "Finished test for constraint classes with fixed variables (osil format)." << std::endl;
+        break;
+    case 17:
+        std::cout << "Starting test for the dual bound of a constraint that is infinite outside its domain"
+                  << std::endl;
+        passed = TestDualBoundOfPerspectiveConstraint();
+        std::cout << "Finished test for the dual bound of a constraint that is infinite outside its domain."
+                  << std::endl;
+        break;
+    case 18:
+        std::cout << "Starting test for callback system - generic callback context" << std::endl;
+        passed = TestCallbackGenericContext();
+        std::cout << "Finished test for callback system - generic callback context." << std::endl;
+        break;
+    case 19:
+        std::cout << "Starting test for callback system - failing callback" << std::endl;
+        passed = TestCallbackFailure();
+        std::cout << "Finished test for callback system - failing callback." << std::endl;
+        break;
+    case 20:
+        std::cout << "Starting test for the primal solution pool" << std::endl;
+        passed = TestPrimalSolutionPool();
+        std::cout << "Finished test for the primal solution pool." << std::endl;
+        break;
+    case 21:
+        std::cout << "Starting test for the auxiliary variables of reformulated monomials" << std::endl;
+        passed = TestAuxiliaryVariablesOfMonomials();
+        std::cout << "Finished test for the auxiliary variables of reformulated monomials." << std::endl;
+        break;
+    case 22:
+        std::cout << "Starting test for the auxiliary variables of reformulated binary products" << std::endl;
+        passed = TestAuxiliaryVariablesOfBinaryProducts();
+        std::cout << "Finished test for the auxiliary variables of reformulated binary products." << std::endl;
+        break;
+    case 23:
+        std::cout << "Starting test for the shared auxiliary variables of partitioned terms" << std::endl;
+        passed = TestAuxiliaryVariablesOfSharedPartitioning();
+        std::cout << "Finished test for the shared auxiliary variables of partitioned terms." << std::endl;
+        break;
+    case 24:
+        std::cout << "Starting test for the auxiliary variables of quadratic decompositions" << std::endl;
+        passed = TestAuxiliaryVariablesOfDecompositions();
+        std::cout << "Finished test for the auxiliary variables of quadratic decompositions." << std::endl;
+        break;
+    case 25:
+        std::cout << "Starting test for primal solutions slightly outside the variable bounds" << std::endl;
+        passed = TestPrimalSolutionSlightlyOutsideBounds();
+        std::cout << "Finished test for primal solutions slightly outside the variable bounds." << std::endl;
+        break;
+    case 26:
+        passed = TestStrategySelectionForLinearAndQuadraticProblems();
         break;
     default:
         passed = false;

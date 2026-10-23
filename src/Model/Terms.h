@@ -18,13 +18,62 @@
 
 #include <Eigen/Eigenvalues>
 #include <Eigen/Sparse>
+#include <unordered_map>
 #include <vector>
 
 namespace SHOT
 {
 
-using Interval = mc::Interval;
-using IntervalVector = std::vector<Interval>;
+// The variables of e.g. a quadratic term, used as the key when terms of the same variables are merged. The pointers
+// are used directly, since a variable is represented by one object in a problem.
+using VariablePair = std::pair<Variable*, Variable*>;
+
+struct VariablePairHash
+{
+    size_t operator()(const VariablePair& pair) const
+    {
+        return (std::hash<Variable*>()(pair.first) * 31 + std::hash<Variable*>()(pair.second));
+    }
+};
+
+// The variables of a monomial term, and the variables and powers of a signomial term, sorted so that the key is
+// independent of the order of the factors. Used as the key when terms of the same factors are merged.
+using MonomialKey = std::vector<Variable*>;
+using SignomialKey = std::vector<std::pair<Variable*, double>>;
+
+struct MonomialKeyHash
+{
+    size_t operator()(const MonomialKey& key) const
+    {
+        size_t hash = key.size();
+
+        for(auto* V : key)
+            hash = hash * 31 + std::hash<Variable*>()(V);
+
+        return (hash);
+    }
+};
+
+struct SignomialKeyHash
+{
+    size_t operator()(const SignomialKey& key) const
+    {
+        size_t hash = key.size();
+
+        for(auto& [V, power] : key)
+            hash = (hash * 31 + std::hash<Variable*>()(V)) * 31 + std::hash<double>()(power);
+
+        return (hash);
+    }
+};
+
+// The variables in the order that makes the pair independent of the order they are given in
+inline VariablePair getVariablePair(const VariablePtr& firstVariable, const VariablePtr& secondVariable)
+{
+    return (std::less<Variable*>()(firstVariable.get(), secondVariable.get())
+            ? VariablePair(firstVariable.get(), secondVariable.get())
+            : VariablePair(secondVariable.get(), firstVariable.get()));
+}
 
 class Term
 {
@@ -142,6 +191,8 @@ protected:
     };
 
 public:
+    virtual ~Terms() = default;
+
     using std::vector<T>::operator[];
 
     using std::vector<T>::at;
@@ -155,11 +206,20 @@ public:
     using std::vector<T>::size;
 
     Terms() = default;
+    Terms(const Terms&) = default;
+    Terms(Terms&&) = default;
+    Terms& operator=(const Terms&) = default;
+    Terms& operator=(Terms&&) = default;
     Terms(std::initializer_list<T> terms)
     {
         for(auto& TE : terms)
             (*this).push_back(TE);
     };
+
+    // The terms are taken as they are, as push_back does, so several terms of the same variables are kept. They are
+    // merged when the container is given to the add(Terms) of another container, which is what such a container is
+    // built for
+    explicit Terms(std::vector<T> terms) : std::vector<T>(std::move(terms)) {};
 
     double calculate(const VectorDouble& point) const
     {
@@ -221,6 +281,13 @@ public:
         return (monotonicity);
     }
 
+    // Marks the convexity and monotonicity as not calculated, for when a term is added without add()
+    inline void invalidateProperties()
+    {
+        convexity = E_Convexity::NotSet;
+        monotonicity = E_Monotonicity::NotSet;
+    }
+
     inline bool checkAllForConvexityType(E_Convexity convexityType)
     {
         for(auto& TERM : (*this))
@@ -252,6 +319,7 @@ public:
     using std::vector<LinearTermPtr>::size;
 
     LinearTerms() = default;
+    explicit LinearTerms(std::vector<LinearTermPtr> terms) : Terms<LinearTermPtr>(std::move(terms)) {};
 
     void add(LinearTermPtr term)
     {
@@ -269,17 +337,37 @@ public:
         monotonicity = E_Monotonicity::NotSet;
     }
 
-    void add(LinearTerms terms)
+    void add(const LinearTerms& terms)
     {
-        for(auto& TERM : terms)
+        if(terms.size() == 0)
+            return;
+
+        // Adding the terms to themselves would push_back into the container being iterated over, so a copy is added
+        if(&terms == this)
         {
-            add(TERM);
+            LinearTerms ownTerms = terms;
+            add(ownTerms);
+            return;
         }
 
-        if(terms.size() > 0)
+        // The terms are found through a hash map instead of the linear search in add(term)
+        std::unordered_map<Variable*, size_t> termIndexes;
+        termIndexes.reserve(size() + terms.size());
+
+        for(size_t i = 0; i < size(); i++)
+            termIndexes.emplace((*this)[i]->variable.get(), i);
+
+        for(auto& TERM : terms)
         {
-            monotonicity = E_Monotonicity::NotSet;
+            auto [it, isNew] = termIndexes.emplace(TERM->variable.get(), size());
+
+            if(isNew)
+                (*this).push_back(TERM);
+            else
+                (*this)[it->second]->coefficient += TERM->coefficient;
         }
+
+        monotonicity = E_Monotonicity::NotSet;
     }
 
     SparseVariableVector calculateGradient([[maybe_unused]] const VectorDouble& point) const
@@ -447,6 +535,27 @@ class QuadraticTerms : public Terms<QuadraticTermPtr>
 private:
     void updateConvexity() override;
 
+    // Where a term adds its values in the gradient of the terms
+    struct GradientElement
+    {
+        QuadraticTerm* term;
+        double* firstElement;
+        double* secondElement; // Is nullptr when the variable of the term is squared, since there is only one then
+    };
+
+    // The Hessian, which does not depend on the point since the function is quadratic
+    SparseVariableMatrix cachedHessian;
+    bool hessianCalculated = false;
+
+    // The gradient and, for each term, where in it the term adds its values. The structure only depends on the
+    // variables of the terms, so it is kept and only the values are updated in the following points.
+    SparseVariableVector cachedGradient;
+    std::vector<GradientElement> gradientElements;
+    bool gradientStructureCreated = false;
+
+    // Creates the map of the gradient and finds the elements of it that each term adds to
+    void createGradientStructure();
+
 public:
     double minEigenValue = SHOT::SHOT_DBL_MAX;
     double maxEigenValue = SHOT::SHOT_DBL_MIN;
@@ -458,12 +567,29 @@ public:
     bool allNegative = false;
     bool allBilinear = false;
 
-    Eigen::VectorXcd eigenvalues;
-    Eigen::MatrixXcd eigenvectors;
-    Eigen::MatrixXd LDLMatrixL;
+    // Larger matrices are checked for convexity with sparse factorizations instead of their eigenvalues, which are
+    // then only computed if needed, by computeEigenvectors()
+    static constexpr int maximumSizeForDenseConvexityCheck = 100;
+
+    Eigen::VectorXd eigenvalues;
+
+    // Only computed on demand by computeEigenvectors(), since they are only needed by the eigenvalue decomposition
+    Eigen::MatrixXd eigenvectors;
+    bool eigenvectorsComputed = false;
+    // Sparse, since a dense one takes O(n^2) memory, e.g., 50 GB for 80000 variables
+    Eigen::SparseMatrix<double> LDLMatrixL;
     VectorDouble LDLDiag;
     bool LDLFactorizationPerformed = false;
     bool LDLFactorizationSuccessful = false;
+
+    // The number of nonzeros below the diagonal of L, known from the symbolic factorization, and whether the
+    // factorization was skipped since L would have been too dense
+    Eigen::Index LDLFactorNonzeros = 0;
+    bool LDLFactorizationTooDense = false;
+
+    // The fill limit of performLDLFactorization() only applies to factors with more nonzeros than this, since smaller
+    // ones are fast to calculate even if they are dense
+    static constexpr Eigen::Index minimumNonzerosForLDLFillLimit = 1000000;
 
     std::vector<Eigen::Triplet<double>> elements;
     std::map<VariablePtr, int, VariableIndexComparator> variableMap;
@@ -481,6 +607,22 @@ public:
     using std::vector<QuadraticTermPtr>::size;
 
     QuadraticTerms() = default;
+    explicit QuadraticTerms(std::vector<QuadraticTermPtr> terms) : Terms<QuadraticTermPtr>(std::move(terms)) {};
+
+    // Also marks the values calculated from the terms as not valid
+    inline void invalidateProperties()
+    {
+        Terms<QuadraticTermPtr>::invalidateProperties();
+        invalidateCachedValues();
+    }
+
+    // The cached Hessian and the structure of the cached gradient are only valid as long as the terms and their
+    // coefficients are unchanged
+    inline void invalidateCachedValues()
+    {
+        hessianCalculated = false;
+        gradientStructureCreated = false;
+    }
 
     void add(QuadraticTermPtr term)
     {
@@ -506,69 +648,109 @@ public:
 
         convexity = E_Convexity::NotSet;
         monotonicity = E_Monotonicity::NotSet;
+        invalidateCachedValues();
     }
 
-    void add(QuadraticTerms terms)
+    void add(const QuadraticTerms& terms)
     {
+        if(terms.size() == 0)
+            return;
+
+        // Adding the terms to themselves would push_back into the container being iterated over, so a copy is added
+        if(&terms == this)
+        {
+            QuadraticTerms ownTerms = terms;
+            add(ownTerms);
+            return;
+        }
+
+        // The terms are found through a hash map instead of the linear search in add(term)
+        std::unordered_map<VariablePair, size_t, VariablePairHash> termIndexes;
+        termIndexes.reserve(size() + terms.size());
+
+        for(size_t i = 0; i < size(); i++)
+            termIndexes.emplace(getVariablePair((*this)[i]->firstVariable, (*this)[i]->secondVariable), i);
+
         for(auto& TERM : terms)
         {
-            add(TERM);
+            auto [it, isNew] = termIndexes.emplace(getVariablePair(TERM->firstVariable, TERM->secondVariable), size());
+
+            if(isNew)
+                (*this).push_back(TERM);
+            else
+                (*this)[it->second]->coefficient += TERM->coefficient;
         }
 
-        if(terms.size() > 0)
-        {
-            convexity = E_Convexity::NotSet;
-            monotonicity = E_Monotonicity::NotSet;
-        }
+        convexity = E_Convexity::NotSet;
+        monotonicity = E_Monotonicity::NotSet;
+        invalidateCachedValues();
     }
 
-    SparseVariableVector calculateGradient(const VectorDouble& point) const
+    SparseVariableVector calculateGradient(const VectorDouble& point) { return (getGradient(point)); }
+
+    // The gradient has the same structure in every point, since it only depends on the variables of the terms, so
+    // the map and the elements each term adds to are only created once. Invalidated by invalidateProperties().
+    const SparseVariableVector& getGradient(const VectorDouble& point)
     {
-        SparseVariableVector gradient;
+        if(!gradientStructureCreated)
+            createGradientStructure();
+
+        for(auto& E : cachedGradient)
+            E.second = 0.0;
+
+        for(auto& E : gradientElements)
+        {
+            if(E.secondElement == nullptr) // variable squared
+            {
+                *E.firstElement += 2 * E.term->coefficient * point[E.term->firstVariable->getIndex()];
+            }
+            else
+            {
+                *E.firstElement += E.term->coefficient * point[E.term->secondVariable->getIndex()];
+                *E.secondElement += E.term->coefficient * point[E.term->firstVariable->getIndex()];
+            }
+        }
+
+        return (cachedGradient);
+    }
+
+    // The Hessian does not depend on the point, since the function is quadratic, so it is only calculated once.
+    // Invalidated by invalidateProperties(), which is called when a term is added or changed.
+    const SparseVariableMatrix& getHessian()
+    {
+        if(hessianCalculated)
+            return (cachedHessian);
+
+        cachedHessian.clear();
 
         for(auto& T : (*this))
         {
             if(T->coefficient == 0.0)
                 continue;
 
-            if(T->firstVariable == T->secondVariable) // variable squared
-            {
-                auto value = 2 * T->coefficient * point[T->firstVariable->getIndex()];
-                auto element = gradient.emplace(T->firstVariable, value);
+            auto value = (T->firstVariable == T->secondVariable) ? 2 * T->coefficient : T->coefficient;
 
-                if(!element.second)
-                {
-                    // Element already exists for the variable
-                    element.first->second += value;
-                }
-            }
-            else
-            {
-                auto value = T->coefficient * point[T->secondVariable->getIndex()];
-                auto element = gradient.emplace(T->firstVariable, value);
+            // Only the elements above the diagonal are saved, since the Hessian is symmetric
+            auto key = (T->firstVariable->getIndex() <= T->secondVariable->getIndex())
+                ? std::make_pair(T->firstVariable, T->secondVariable)
+                : std::make_pair(T->secondVariable, T->firstVariable);
 
-                if(!element.second)
-                {
-                    // Element already exists for the variable
-                    element.first->second += value;
-                }
+            auto element = cachedHessian.emplace(key, value);
 
-                value = T->coefficient * point[T->firstVariable->getIndex()];
-
-                element = gradient.emplace(T->secondVariable, value);
-
-                if(!element.second)
-                {
-                    // Element already exists for the variable
-                    element.first->second += value;
-                }
-            }
+            if(!element.second)
+                element.first->second += value;
         }
 
-        return gradient;
-    };
+        hessianCalculated = true;
+        return (cachedHessian);
+    }
 
-    void performLDLFactorization();
+    // The factorization is skipped if L would have more than maximumFill times as many nonzeros as the lower
+    // triangle of the matrix, and more than minimumNonzerosForLDLFillLimit; 0 means no limit
+    void performLDLFactorization(double maximumFill = 0.0);
+
+    // Computes the eigenvectors, and the eigenvalues if they are not computed yet
+    void computeEigenvectors();
 };
 
 class MonomialTerm : public Term
@@ -652,6 +834,18 @@ public:
 
 using MonomialTermPtr = std::shared_ptr<MonomialTerm>;
 
+inline MonomialKey getMonomialKey(const MonomialTerm& term)
+{
+    MonomialKey key;
+    key.reserve(term.variables.size());
+
+    for(auto& V : term.variables)
+        key.push_back(V.get());
+
+    std::sort(key.begin(), key.end());
+    return (key);
+}
+
 inline std::ostream& operator<<(std::ostream& stream, MonomialTermPtr term)
 {
     if(term->coefficient == 1.0)
@@ -683,6 +877,87 @@ inline std::ostream& operator<<(std::ostream& stream, MonomialTermPtr term)
     return stream;
 }
 
+// The derivatives of a term c * g_1 * ... * g_n by the product rule, where g_i is a function of one variable, e.g. x
+// or x^p, and a variable may be in several factors, as x in x*x*y. The products of the other factors are formed from
+// prefix and suffix products, since dividing the value of the term by a factor fails when the factor is zero.
+// values, firstDerivatives and secondDerivatives are g_i, g_i' and g_i'' at the point.
+inline void addProductTermGradient(SparseVariableVector& gradient, double coefficient, const Variables& variables,
+    const std::vector<double>& values, const std::vector<double>& firstDerivatives)
+{
+    size_t numberOfFactors = values.size();
+    std::vector<double> suffixProducts(numberOfFactors + 1, 1.0);
+
+    for(size_t i = numberOfFactors; i > 0; i--)
+        suffixProducts[i - 1] = suffixProducts[i] * values[i - 1];
+
+    double prefixProduct = coefficient;
+
+    for(size_t i = 0; i < numberOfFactors; i++)
+    {
+        double value = prefixProduct * firstDerivatives[i] * suffixProducts[i + 1];
+        auto element = gradient.emplace(variables[i], value);
+
+        if(!element.second)
+            element.first->second += value;
+
+        prefixProduct *= values[i];
+    }
+}
+
+inline void addHessianElement(
+    SparseVariableMatrix& hessian, const VariablePtr& firstVariable, const VariablePtr& secondVariable, double value)
+{
+    auto variablePair = (firstVariable->getIndex() <= secondVariable->getIndex())
+        ? std::make_pair(firstVariable, secondVariable)
+        : std::make_pair(secondVariable, firstVariable);
+
+    auto element = hessian.emplace(variablePair, value);
+
+    if(!element.second)
+        element.first->second += value;
+}
+
+// The Hessian is stored as its upper triangle, so an element outside the diagonal is the derivative with respect to
+// both variables once, and a diagonal element is the full second derivative. Two factors of the same variable thus
+// add twice their mixed derivative to the diagonal: x*x*y gives 2y.
+inline void addProductTermHessian(SparseVariableMatrix& hessian, double coefficient, const Variables& variables,
+    const std::vector<double>& values, const std::vector<double>& firstDerivatives,
+    const std::vector<double>& secondDerivatives)
+{
+    size_t numberOfFactors = values.size();
+    std::vector<double> suffixProducts(numberOfFactors + 1, 1.0);
+
+    for(size_t i = numberOfFactors; i > 0; i--)
+        suffixProducts[i - 1] = suffixProducts[i] * values[i - 1];
+
+    double prefixProduct = coefficient;
+
+    for(size_t i = 0; i < numberOfFactors; i++)
+    {
+        if(secondDerivatives[i] != 0.0)
+            addHessianElement(
+                hessian, variables[i], variables[i], prefixProduct * secondDerivatives[i] * suffixProducts[i + 1]);
+
+        // The product of the factors between i and j
+        double middleProduct = 1.0;
+
+        for(size_t j = i + 1; j < numberOfFactors; j++)
+        {
+            double value
+                = prefixProduct * firstDerivatives[i] * middleProduct * firstDerivatives[j] * suffixProducts[j + 1];
+
+            if(variables[i] == variables[j])
+                addHessianElement(hessian, variables[i], variables[i], 2.0 * value);
+            else
+                addHessianElement(hessian, variables[i], variables[j], value);
+
+            middleProduct *= values[j];
+        }
+
+        prefixProduct *= values[i];
+    }
+}
+
 class MonomialTerms : public Terms<MonomialTermPtr>
 {
 private:
@@ -710,6 +985,7 @@ public:
     using std::vector<MonomialTermPtr>::size;
 
     MonomialTerms() = default;
+    explicit MonomialTerms(std::vector<MonomialTermPtr> terms) : Terms<MonomialTermPtr>(std::move(terms)) {};
 
     void add(MonomialTermPtr term)
     {
@@ -718,18 +994,59 @@ public:
         monotonicity = E_Monotonicity::NotSet;
     }
 
-    void add(MonomialTerms terms)
+    // The terms are merged with the terms of the same variables, in any order, and a term whose coefficient becomes
+    // zero when merged is removed, since a monomial term is nonconvex whatever its coefficient
+    void add(const MonomialTerms& terms)
     {
-        for(auto& TERM : terms)
+        if(terms.size() == 0)
+            return;
+
+        // Adding the terms to themselves would push_back into the container being iterated over, so a copy is added
+        if(&terms == this)
         {
-            (*this).push_back(TERM);
+            MonomialTerms ownTerms = terms;
+            add(ownTerms);
+            return;
         }
 
-        if(terms.size() > 0)
+        // The capacity grows geometrically, as it does in push_back, since reserving the exact size in every call
+        // copies all terms each time and makes adding many small sets of terms quadratic
+        if(size() + terms.size() > (*this).capacity())
+            (*this).reserve(std::max(size() + terms.size(), 2 * (*this).capacity()));
+
+        // The terms are found through a hash map instead of searching all terms for every added term
+        std::unordered_map<MonomialKey, size_t, MonomialKeyHash> termIndexes;
+        termIndexes.reserve(size() + terms.size());
+
+        for(size_t i = 0; i < size(); i++)
+            termIndexes.emplace(getMonomialKey(*(*this)[i]), i);
+
+        bool isMerged = false;
+
+        for(auto& TERM : terms)
         {
-            convexity = E_Convexity::NotSet;
-            monotonicity = E_Monotonicity::NotSet;
+            auto [it, isNew] = termIndexes.emplace(getMonomialKey(*TERM), size());
+
+            if(isNew)
+            {
+                (*this).push_back(TERM);
+            }
+            else
+            {
+                (*this)[it->second]->coefficient += TERM->coefficient;
+                isMerged = true;
+            }
         }
+
+        if(isMerged)
+        {
+            (*this).erase(std::remove_if((*this).begin(), (*this).end(),
+                              [](const MonomialTermPtr& term) { return term->coefficient == 0.0; }),
+                (*this).end());
+        }
+
+        convexity = E_Convexity::NotSet;
+        monotonicity = E_Monotonicity::NotSet;
     }
 
     SparseVariableVector calculateGradient(const VectorDouble& point) const
@@ -741,27 +1058,15 @@ public:
             if(T->coefficient == 0.0)
                 continue;
 
-            for(auto& V1 : T->variables)
-            {
-                double value = T->coefficient;
+            std::vector<double> values;
+            values.reserve(T->variables.size());
 
-                for(auto& V2 : T->variables)
-                {
-                    if(V1 == V2)
-                        continue;
+            for(auto& V : T->variables)
+                values.push_back(V->calculate(point));
 
-                    value *= V2->calculate(point);
-                }
-
-                auto element = gradient.emplace(V1, value);
-
-                if(!element.second)
-                {
-                    // Element already exists for the variable (e.g. it also appears in another monomial term)
-                    element.first->second += value;
-                }
-            }
-        };
+            addProductTermGradient(
+                gradient, T->coefficient, T->variables, values, std::vector<double>(values.size(), 1.0));
+        }
 
         return gradient;
     };
@@ -772,37 +1077,17 @@ public:
 
         for(auto& T : (*this))
         {
-            if(T->coefficient == 0)
+            if(T->coefficient == 0.0)
                 continue;
 
-            for(auto& V1 : T->variables)
-            {
-                for(auto& V2 : T->variables)
-                {
-                    if(V1->getIndex() >= V2->getIndex())
-                        continue;
+            std::vector<double> values;
+            values.reserve(T->variables.size());
 
-                    double value = T->coefficient;
+            for(auto& V : T->variables)
+                values.push_back(V->calculate(point));
 
-                    for(auto& V3 : T->variables)
-                    {
-                        if(V3 == V1 || V3 == V2)
-                            continue;
-
-                        value *= V3->calculate(point);
-                    }
-
-                    std::pair<VariablePtr, VariablePtr> variablePair = std::make_pair(V1, V2);
-
-                    auto element = hessian.emplace(variablePair, value);
-
-                    if(!element.second)
-                    {
-                        // Element already exists for the variable
-                        element.first->second += value;
-                    }
-                }
-            }
+            addProductTermHessian(hessian, T->coefficient, T->variables, values,
+                std::vector<double>(values.size(), 1.0), std::vector<double>(values.size(), 0.0));
         }
 
         return hessian;
@@ -821,92 +1106,7 @@ public:
     inline double calculate(const VectorDouble& point) const { return pow(variable->calculate(point), power); }
 
     // Evaluates base^power over an interval. Shared by both evaluations below
-    inline Interval calculatePower(Interval base) const
-    {
-        if(power == 0.0)
-            return (Interval(1.0));
-
-        if(power == 1.0)
-            return (base);
-
-        double intpart;
-        bool isInteger = (std::modf(power, &intpart) == 0.0);
-        int integerValue = (int)round(intpart);
-        bool isEven = (integerValue % 2 == 0);
-
-        if(isInteger)
-        {
-            // An integer power is defined for a negative base as well, so a wholly negative domain needs no
-            // adjustment at all. Only a base containing zero is a problem, and then only for a negative power,
-            // where the expression grows without bound as the base approaches zero.
-            if(power < 0.0 && base.l() <= 0.0 && base.u() >= 0.0)
-            {
-                // Only the end nearest zero is unbounded, so a domain lying on one side of zero still has a
-                // bound on its other end, attained at the endpoint furthest from zero. A domain with values on
-                // both sides gives a disconnected range whose hull is everything.
-                if(base.l() == 0.0 && base.u() > 0.0)
-                    return (Interval(std::pow(base.u(), power), SHOT_DBL_MAX));
-
-                if(base.u() == 0.0 && base.l() < 0.0)
-                {
-                    double valueAtEndpoint = std::pow(base.l(), power);
-
-                    return (isEven ? Interval(valueAtEndpoint, SHOT_DBL_MAX) : Interval(SHOT_DBL_MIN, valueAtEndpoint));
-                }
-
-                return (Interval(SHOT_DBL_MIN, SHOT_DBL_MAX));
-            }
-        }
-        bool baseReachesZero = false;
-
-        if(!isInteger)
-        {
-            // A non-integer power has no real value for a negative base, so there is nothing to return if the
-            // domain is wholly negative, and the negative part is cut away otherwise.
-            if(base.u() < 0.0)
-                return (Interval(SHOT_DBL_MIN, SHOT_DBL_MAX));
-
-            // base^power grows without bound as the base approaches zero from above when the power is negative,
-            // but is still bounded at the upper end of the domain. Only the non-negative part of the domain
-            // contributes, so there is no real value at all if the domain does not extend above zero.
-            if(power < 0.0 && base.l() <= 0.0)
-            {
-                if(base.u() <= 0.0)
-                    return (Interval(SHOT_DBL_MIN, SHOT_DBL_MAX));
-
-                return (Interval(std::pow(base.u(), power), SHOT_DBL_MAX));
-            }
-
-            // The power is positive here, so the expression tends to zero as the base does. The base is still
-            // moved off zero before evaluating, since the interval library raises to a non-integer power via a
-            // logarithm and rejects a base reaching zero.
-            if(base.l() <= 0.0)
-            {
-                baseReachesZero = true;
-                base.l(SHOT_DBL_EPS);
-            }
-        }
-
-        Interval bounds;
-
-        try
-        {
-            bounds = isInteger ? pow(base, integerValue) : pow(base, power);
-        }
-        catch(const mc::Interval::Exceptions&)
-        {
-            return (Interval(SHOT_DBL_MIN, SHOT_DBL_MAX));
-        }
-
-        if(baseReachesZero)
-            bounds.l(0.0);
-
-        // An even integer power cannot be negative; guards against rounding in the interval library.
-        if(isInteger && isEven && bounds.l() < 0.0)
-            bounds.l(0.0);
-
-        return (bounds);
-    }
+    inline Interval calculatePower(Interval base) const { return (calculateIntervalPower(base, power)); }
 
     inline Interval calculate(const IntervalVector& intervalVector) const
     {
@@ -917,8 +1117,9 @@ public:
 
     inline bool tightenBounds(Interval bound)
     {
+        // x^0 is one for every x, so it gives no bound for x. It fixed x to one.
         if(power == 0.0)
-            return (variable->tightenBounds(Interval(1.0)));
+            return (false);
 
         if(power == 1.0)
             return (variable->tightenBounds(bound));
@@ -966,11 +1167,11 @@ public:
         bool needsNonNegativeBase = (isInteger && isEven) || !isInteger;
 
         if(needsNonNegativeBase && bound.l() <= 0.0)
-            bound.l(!isInteger ? SHOT_DBL_SIG_MIN : 0.0);
+            bound.l() = 0.0;
 
         Interval interval;
 
-        if(needsNonNegativeBase && bound.l() < 0.0)
+        if(needsNonNegativeBase && bound.u() < 0.0)
             return (false);
 
         if(isInteger && power > 0)
@@ -1011,9 +1212,11 @@ public:
             return (variable->tightenBounds(Interval(std::min(lower, upper), std::max(lower, upper))));
         }
 
-        interval = pow(bound, 1.0 / power);
-
-        return (variable->tightenBounds(interval));
+        // A positive noninteger power of a nonnegative base. The roots are calculated directly, since the interval
+        // power function takes the logarithm of the bound, and the lower bound must not be moved away from zero:
+        // moving it to 1e-5 cut off small bases, e.g., x >= 0.0088 for x^2.435 (waternd_shamir).
+        return (variable->tightenBounds(Interval(std::pow(bound.l(), 1.0 / power),
+            (bound.u() >= SHOT_DBL_MAX) ? SHOT_DBL_MAX : std::pow(bound.u(), 1.0 / power))));
     }
 };
 
@@ -1100,7 +1303,18 @@ public:
 
             sumPowers += E->power;
 
-            if(E->variable->lowerBound < 0.0)
+            // A base raised to an even positive integer power discards the sign of the variable, so the term has the
+            // same value as the one where the variable is replaced by its absolute value. That term is nondecreasing
+            // in the replaced variable, since the power is positive, so composing it with the absolute value keeps it
+            // convex, and the rules for the non-negative orthant hold although the variable can be negative. The
+            // power must be positive: an even negative power, e.g. x^-2, is not defined in zero, and the rules would
+            // then be used over a domain the term is not even continuous on.
+            bool signDiscardedByPower = false;
+
+            if(double intpart; E->power > 0.0 && std::modf(E->power, &intpart) == 0.0)
+                signDiscardedByPower = (((int)round(intpart)) % 2 == 0);
+
+            if(E->variable->lowerBound < 0.0 && !signDiscardedByPower)
                 allVariablesNonNegative = false;
 
             if(E->variable->upperBound >= 0.0)
@@ -1250,6 +1464,35 @@ public:
 
 using SignomialTermPtr = std::shared_ptr<SignomialTerm>;
 
+// The powers of the same variable are added, and a variable with the power zero is left out, so that e.g.
+// x^0.5*y*x^0.5 has the same key as x*y
+inline SignomialKey getSignomialKey(const SignomialTerm& term)
+{
+    SignomialKey key;
+    key.reserve(term.elements.size());
+
+    for(auto& E : term.elements)
+        key.emplace_back(E->variable.get(), E->power);
+
+    std::sort(key.begin(), key.end());
+
+    size_t numberOfElements = 0;
+
+    for(size_t i = 0; i < key.size(); i++)
+    {
+        if(numberOfElements > 0 && key[numberOfElements - 1].first == key[i].first)
+            key[numberOfElements - 1].second += key[i].second;
+        else
+            key[numberOfElements++] = key[i];
+    }
+
+    key.resize(numberOfElements);
+    key.erase(
+        std::remove_if(key.begin(), key.end(), [](const auto& element) { return (element.second == 0.0); }), key.end());
+
+    return (key);
+}
+
 inline std::ostream& operator<<(std::ostream& stream, SignomialTermPtr term)
 {
     if(term->coefficient == 1.0)
@@ -1308,6 +1551,7 @@ public:
     using std::vector<SignomialTermPtr>::size;
 
     SignomialTerms() = default;
+    explicit SignomialTerms(std::vector<SignomialTermPtr> terms) : Terms<SignomialTermPtr>(std::move(terms)) {};
 
     void add(SignomialTermPtr term)
     {
@@ -1316,18 +1560,59 @@ public:
         monotonicity = E_Monotonicity::NotSet;
     }
 
-    void add(SignomialTerms terms)
+    // The terms are merged with the terms of the same variables and powers, in any order, and a term whose
+    // coefficient becomes zero when merged is removed
+    void add(const SignomialTerms& terms)
     {
-        for(auto& TERM : terms)
+        if(terms.size() == 0)
+            return;
+
+        // Adding the terms to themselves would push_back into the container being iterated over, so a copy is added
+        if(&terms == this)
         {
-            (*this).push_back(TERM);
+            SignomialTerms ownTerms = terms;
+            add(ownTerms);
+            return;
         }
 
-        if(terms.size() > 0)
+        // The capacity grows geometrically, as it does in push_back, since reserving the exact size in every call
+        // copies all terms each time and makes adding many small sets of terms quadratic
+        if(size() + terms.size() > (*this).capacity())
+            (*this).reserve(std::max(size() + terms.size(), 2 * (*this).capacity()));
+
+        // The terms are found through a hash map instead of searching all terms for every added term
+        std::unordered_map<SignomialKey, size_t, SignomialKeyHash> termIndexes;
+        termIndexes.reserve(size() + terms.size());
+
+        for(size_t i = 0; i < size(); i++)
+            termIndexes.emplace(getSignomialKey(*(*this)[i]), i);
+
+        bool isMerged = false;
+
+        for(auto& TERM : terms)
         {
-            convexity = E_Convexity::NotSet;
-            monotonicity = E_Monotonicity::NotSet;
+            auto [it, isNew] = termIndexes.emplace(getSignomialKey(*TERM), size());
+
+            if(isNew)
+            {
+                (*this).push_back(TERM);
+            }
+            else
+            {
+                (*this)[it->second]->coefficient += TERM->coefficient;
+                isMerged = true;
+            }
         }
+
+        if(isMerged)
+        {
+            (*this).erase(std::remove_if((*this).begin(), (*this).end(),
+                              [](const SignomialTermPtr& term) { return term->coefficient == 0.0; }),
+                (*this).end());
+        }
+
+        convexity = E_Convexity::NotSet;
+        monotonicity = E_Monotonicity::NotSet;
     }
 
     inline SparseVariableVector calculateGradient(const VectorDouble& point) const
@@ -1339,32 +1624,13 @@ public:
             if(T->coefficient == 0.0)
                 continue;
 
-            for(auto& E1 : T->elements)
-            {
-                double value = 1.0;
+            Variables variables;
+            std::vector<double> values;
+            std::vector<double> firstDerivatives;
+            calculateFactors(*T, point, variables, values, firstDerivatives, nullptr);
 
-                for(auto& E2 : T->elements)
-                {
-                    if(E1 == E2)
-                    {
-                        if(E2->power != 1.0)
-                            value *= E2->power * pow(E2->variable->calculate(point), E2->power - 1.0);
-                    }
-                    else
-                    {
-                        value *= E2->calculate(point);
-                    }
-                }
-
-                auto element = gradient.emplace(E1->variable, T->coefficient * value);
-
-                if(!element.second)
-                {
-                    // Element already exists for the variable
-                    element.first->second += value;
-                }
-            }
-        };
+            addProductTermGradient(gradient, T->coefficient, variables, values, firstDerivatives);
+        }
 
         return gradient;
     };
@@ -1375,49 +1641,71 @@ public:
 
         for(auto& T : (*this))
         {
-            if(T->coefficient == 0)
+            if(T->coefficient == 0.0)
                 continue;
 
-            auto value = T->calculate(point);
+            Variables variables;
+            std::vector<double> values;
+            std::vector<double> firstDerivatives;
+            std::vector<double> secondDerivatives;
+            calculateFactors(*T, point, variables, values, firstDerivatives, &secondDerivatives);
 
-            for(auto& E1 : T->elements)
-            {
-                for(auto& E2 : T->elements)
-                {
-                    if(E1->variable->getIndex() > E2->variable->getIndex())
-                        continue;
-
-                    double corrFactor;
-
-                    if(E1->variable->getIndex() == E2->variable->getIndex())
-                    {
-                        corrFactor = E1->power * (E1->power - 1.0)
-                            / (E1->variable->calculate(point) * E1->variable->calculate(point));
-                    }
-                    else
-                    {
-                        corrFactor
-                            = E1->power * E2->power / (E1->variable->calculate(point) * E2->variable->calculate(point));
-                    }
-
-                    auto variablePair = std::make_pair(E1->variable, E2->variable);
-
-                    auto element = hessian.emplace(variablePair, corrFactor * value);
-
-                    if(!element.second)
-                    {
-                        // Element already exists for the variable
-                        element.first->second += corrFactor * value;
-                    }
-                }
-            }
+            addProductTermHessian(hessian, T->coefficient, variables, values, firstDerivatives, secondDerivatives);
         }
 
         return hessian;
     };
+
+private:
+    // The factors x^p of a term, with their first and second derivatives. The powers one and two are calculated
+    // without pow, so that e.g. x^2 has the second derivative 2 also at x = 0.
+    static void calculateFactors(const SignomialTerm& term, const VectorDouble& point, Variables& variables,
+        std::vector<double>& values, std::vector<double>& firstDerivatives, std::vector<double>* secondDerivatives)
+    {
+        size_t numberOfFactors = term.elements.size();
+        variables.reserve(numberOfFactors);
+        values.reserve(numberOfFactors);
+        firstDerivatives.reserve(numberOfFactors);
+
+        if(secondDerivatives)
+            secondDerivatives->reserve(numberOfFactors);
+
+        for(auto& E : term.elements)
+        {
+            double x = E->variable->calculate(point);
+            double power = E->power;
+
+            variables.push_back(E->variable);
+
+            if(power == 1.0)
+            {
+                values.push_back(x);
+                firstDerivatives.push_back(1.0);
+
+                if(secondDerivatives)
+                    secondDerivatives->push_back(0.0);
+            }
+            else if(power == 2.0)
+            {
+                values.push_back(x * x);
+                firstDerivatives.push_back(2.0 * x);
+
+                if(secondDerivatives)
+                    secondDerivatives->push_back(2.0);
+            }
+            else
+            {
+                values.push_back(std::pow(x, power));
+                firstDerivatives.push_back(power * std::pow(x, power - 1.0));
+
+                if(secondDerivatives)
+                    secondDerivatives->push_back(power * (power - 1.0) * std::pow(x, power - 2.0));
+            }
+        }
+    }
 };
 
-inline std::ostream& operator<<(std::ostream& stream, LinearTerms terms)
+inline std::ostream& operator<<(std::ostream& stream, const LinearTerms& terms)
 {
     if(terms.size() == 0)
         return stream;
@@ -1432,7 +1720,7 @@ inline std::ostream& operator<<(std::ostream& stream, LinearTerms terms)
     return stream;
 }
 
-inline std::ostream& operator<<(std::ostream& stream, QuadraticTerms terms)
+inline std::ostream& operator<<(std::ostream& stream, const QuadraticTerms& terms)
 {
     if(terms.size() == 0)
         return stream;
@@ -1447,7 +1735,7 @@ inline std::ostream& operator<<(std::ostream& stream, QuadraticTerms terms)
     return stream;
 }
 
-inline std::ostream& operator<<(std::ostream& stream, MonomialTerms terms)
+inline std::ostream& operator<<(std::ostream& stream, const MonomialTerms& terms)
 {
     if(terms.size() == 0)
         return stream;
@@ -1462,7 +1750,7 @@ inline std::ostream& operator<<(std::ostream& stream, MonomialTerms terms)
     return stream;
 }
 
-inline std::ostream& operator<<(std::ostream& stream, SignomialTerms terms)
+inline std::ostream& operator<<(std::ostream& stream, const SignomialTerms& terms)
 {
     if(terms.size() == 0)
         return stream;

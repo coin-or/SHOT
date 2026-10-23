@@ -36,6 +36,6 @@ private:
     // The point the hyperplane for the constraint is generated in, which is the point from the root search unless
     // the hyperplane there does not cut off the solution point
     VectorDouble selectHyperplanePoint(
-        const VectorDouble& externalPoint, const VectorDouble& solutionPoint, NumericConstraint* constraint);
+        const VectorDouble& externalPoint, const VectorDouble& solutionPoint, const NumericConstraintPtr& constraint);
 };
 } // namespace SHOT

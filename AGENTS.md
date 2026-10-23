@@ -5,8 +5,8 @@ SHOT is an open-source MINLP solver written in C++ (COIN-OR project). See
 
 ## Building SHOT
 
-SHOT compiles on Linux and macOS. Windows is supported through Windows Subsystem 
-for Linux (WSL). For cloning/submodules, dependency installation 
+SHOT compiles on Linux and macOS, and natively on Windows x64 with MSVC.
+WSL remains an alternative on Windows. For cloning/submodules, dependency installation
 (Cbc/Ipopt/HiGHS/GAMS/CPLEX/Gurobi), CMake options, and building, see
 [docs/CompilationInstructions.md](docs/CompilationInstructions.md).
 
@@ -19,6 +19,14 @@ for Linux (WSL). For cloning/submodules, dependency installation
 For the full set of command-line switches (including which problem file
 formats a given build supports), see
 [docs/CommandLineUsage.md](docs/CommandLineUsage.md).
+
+## Callbacks
+
+SHOT calls user callbacks (C++ and Python) at locations in the solution
+process given by `E_CallbackLocation`. Each location has its own context class
+in `src/Callback.h`. For the locations, the rules for actions, termination and
+failures, and the checklist for adding a location, see
+[docs/Callbacks.md](docs/Callbacks.md).
 
 ## Debugging SHOT
 

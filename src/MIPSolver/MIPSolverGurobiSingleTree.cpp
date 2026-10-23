@@ -10,8 +10,8 @@
 
 #include "MIPSolverGurobiSingleTree.h"
 
+#include "../Callback.h"
 #include "../DualSolver.h"
-#include "../EventHandler.h"
 #include "../Iteration.h"
 #include "../Output.h"
 #include "../PrimalSolver.h"
@@ -107,8 +107,13 @@ E_ProblemSolutionStatus MIPSolverGurobiSingleTree::solveProblem()
         MIPSolutionStatus = E_ProblemSolutionStatus::Error;
     }
 
+    // An unbounded exact dual problem means that the problem is unbounded, so no point is needed
+    if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded && env->dualSolver->isDualProblemExact())
+    {
+        MIPSolutionStatus = resolveInfeasibleOrUnbounded(MIPSolutionStatus);
+    }
     // To find a feasible point for an unbounded dual problem
-    if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
+    else if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
     {
         bool variableBoundsUpdated = false;
 
@@ -199,9 +204,9 @@ void GurobiCallbackSingleTree::callback()
                 if((int)primalSol.size() < env->reformulatedProblem->properties.numberOfVariables)
                     env->reformulatedProblem->augmentAuxiliaryVariableValues(primalSol);
 
-                assert(env->reformulatedProblem->properties.numberOfVariables == primalSol.size());
+                assert(static_cast<size_t>(env->reformulatedProblem->properties.numberOfVariables) == primalSol.size());
 
-                if(env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
+                if(env->dualSolver->hasObjectiveVariableOnlyInMIPSolver())
                     primalSol.push_back(env->reformulatedProblem->objectiveFunction->calculateValue(primalSol));
 
                 for(size_t i = 0; i < primalSol.size(); i++)
@@ -234,8 +239,10 @@ void GurobiCallbackSingleTree::callback()
                 break;
             }
 
-            if((isMinimization && tmpDualObjBound > env->results->getCurrentDualBound())
-                || (!isMinimization && tmpDualObjBound < env->results->getCurrentDualBound()))
+            // Gurobi gives a missing bound as GRB_INFINITY or -GRB_INFINITY, which is a finite value to SHOT
+            if(std::abs(tmpDualObjBound) < GRB_INFINITY
+                && ((isMinimization && tmpDualObjBound > env->results->getCurrentDualBound())
+                    || (!isMinimization && tmpDualObjBound < env->results->getCurrentDualBound())))
             {
                 VectorDouble doubleSolution; // Empty since we have no point
 
@@ -300,9 +307,8 @@ void GurobiCallbackSingleTree::callback()
                 int numModelVars = static_cast<MIPSolverGurobiSingleTree*>(env->dualSolver->MIPSolver.get())
                                        ->gurobiModel->get(GRB_IntAttr_NumVars);
 
-                int numberOfVariables = (env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
-                    ? numModelVars - 1
-                    : numModelVars;
+                int numberOfVariables
+                    = (env->dualSolver->hasObjectiveVariableOnlyInMIPSolver()) ? numModelVars - 1 : numModelVars;
 
                 VectorDouble solution(numberOfVariables);
 
@@ -332,16 +338,19 @@ void GurobiCallbackSingleTree::callback()
 
                 std::vector<SolutionPoint> solutionPoints = { solutionRelaxed };
 
-                if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("Dual.CutStrategy"))
-                    == ES_HyperplaneCutStrategy::ESH)
+                if(env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
                 {
-                    tUpdateInteriorPoint->run();
-                    static_cast<TaskSelectHyperplanesESH*>(taskSelectHPPts.get())->run(solutionPoints);
-                }
-                else if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("Dual.CutStrategy"))
-                    == ES_HyperplaneCutStrategy::ECP)
-                {
-                    static_cast<TaskSelectHyperplanesECP*>(taskSelectHPPts.get())->run(solutionPoints);
+                    if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("Dual.CutStrategy"))
+                        == ES_HyperplaneCutStrategy::ESH)
+                    {
+                        tUpdateInteriorPoint->run();
+                        static_cast<TaskSelectHyperplanesESH*>(taskSelectHPPts.get())->run(solutionPoints);
+                    }
+                    else if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("Dual.CutStrategy"))
+                        == ES_HyperplaneCutStrategy::ECP)
+                    {
+                        static_cast<TaskSelectHyperplanesECP*>(taskSelectHPPts.get())->run(solutionPoints);
+                    }
                 }
 
                 if(env->reformulatedProblem->objectiveFunction->properties.classification
@@ -373,13 +382,22 @@ void GurobiCallbackSingleTree::callback()
                                    ->gurobiModel->get(GRB_IntAttr_NumVars);
 
             int numberOfVariables
-                = (env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable()) ? numModelVars - 1 : numModelVars;
+                = (env->dualSolver->hasObjectiveVariableOnlyInMIPSolver()) ? numModelVars - 1 : numModelVars;
 
             VectorDouble solution(numberOfVariables);
 
             for(int i = 0; i < numberOfVariables; i++)
             {
                 solution.at(i) = getSolution(vars[i]);
+            }
+
+            // The bounds cannot be changed in the callback, so the MIP solver is interrupted and the artificial
+            // bounds are removed before it solves again
+            if(auto variables = env->problem->getVariablesAtArtificialBounds(solution); variables.size() > 0)
+            {
+                env->dualSolver->variablesAtArtificialBounds = variables;
+                abort();
+                return;
             }
 
             SolutionPoint solutionCandidate;
@@ -450,7 +468,7 @@ void GurobiCallbackSingleTree::callback()
                 env->primalSolver->checkPrimalSolutionCandidates();
             }
 
-            if(env->events->hasDataProvider(E_EventType::ExternalPrimalSolution))
+            if(env->callbacks->isActive(E_CallbackLocation::PrimalCandidateSearch))
             {
                 taskSelectPrimalSolutionFromExternal->run();
             }
@@ -632,7 +650,7 @@ GurobiCallbackSingleTree::GurobiCallbackSingleTree(GRBVar* xvars, EnvironmentPtr
         taskSelectPrimalSolutionFromRootsearch = std::make_shared<TaskSelectPrimalCandidatesFromRootsearch>(env);
     }
 
-    if(env->events->hasDataProvider(E_EventType::ExternalPrimalSolution))
+    if(env->callbacks->isActive(E_CallbackLocation::PrimalCandidateSearch))
     {
         taskSelectPrimalSolutionFromExternal = std::make_shared<TaskSelectPrimalCandidatesFromExternalSource>(env);
     }

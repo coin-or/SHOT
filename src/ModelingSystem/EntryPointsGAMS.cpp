@@ -117,8 +117,6 @@ extern "C"
         if(*Cptr == NULL)
         {
             snprintf(msgBuf, msgBufLen, "Out of memory when creating gamsshot object.\n");
-            if(msgBufLen > 0)
-                msgBuf[msgBufLen] = '\0';
             return 0;
         }
 
@@ -219,12 +217,11 @@ extern "C"
             env->settings->updateSetting("Input.ModelingSystem", static_cast<int>(ES_ModelingSystem::GAMS));
             env->timing->stopTimer("ProblemInitialization");
 
-            solver.registerCallback(
-                E_EventType::UserTerminationCheck, [gev = (gevHandle_t)gmoEnvironment(gs->gmo)](std::any args) -> bool {
+            solver.registerCallback<TerminationCheckContext>(
+                [gev = (gevHandle_t)gmoEnvironment(gs->gmo)](TerminationCheckContext& context)
+                {
                     if(gevTerminateGet(gev))
-                        return (true);
-
-                    return (false);
+                        context.terminate();
                 });
 
             if(!solver.setProblem(problem, modelingSystem))
@@ -285,7 +282,7 @@ extern "C"
 
     // old API
     DllExport int STDCALL C__shtReadyAPI(void* Cptr, struct gmoRec* Gptr, struct optRec* Optr);
-    DllExport int STDCALL C__shtReadyAPI(void* Cptr, struct gmoRec* Gptr, struct optRec* Optr)
+    DllExport int STDCALL C__shtReadyAPI(void* Cptr, struct gmoRec* Gptr, struct optRec* /*Optr*/)
     {
         return shtReadyAPI(Cptr, Gptr);
     }

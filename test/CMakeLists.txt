@@ -1,6 +1,5 @@
 # The name of the test executable file
 set(TEST_EXE_NAME test_runner)
-set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_CXX_STANDARD 17)
 
 # The main groups of tests, there should be a file matching the name +"test".cpp
@@ -40,17 +39,55 @@ set(Model_parts
     30
     31
     32
-    33) # The different parts of each test (if any)
+    33
+    34
+    35
+    36
+    37
+    38
+    39
+    40
+    41
+    42
+    43
+    44
+    45
+    46
+    47
+    48
+    49
+    50
+    51
+    52
+    53
+    54
+    55
+    56
+    57
+    58
+    59
+    60
+    61
+    62
+    63
+    64
+    65
+    66
+    67
+    68
+    69
+    70
+    71) # The different parts of each test (if any)
 
 set(Settings_parts 1 2 3 4 5 6 7 8 9)
 
 if(HAS_CBC)
-  set(Cbc_parts 1 2 3 4 5 6 7 8 9 10 11)
+  set(Cbc_parts 1 2 3 4 5 6 7 8 9 10 11 12)
   set(cpptests ${cpptests} Cbc)
 endif()
 
 if(HAS_CPLEX)
-  set(Cplex_parts 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15)
+  set(Cplex_parts 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18)
   set(cpptests ${cpptests} Cplex)
 endif()
 
@@ -60,7 +97,7 @@ if(HAS_GUROBI)
 endif()
 
 if(HAS_HIGHS)
-  set(Highs_parts 1 2 3 4 5 6 7 8 9 10 11)
+  set(Highs_parts 1 2 3 4 5 6 7 8 9 10 11 12)
   set(cpptests ${cpptests} Highs)
 endif()
 
@@ -78,11 +115,18 @@ if(HAS_GAMS)
       9
       10
       11
-      13)
+      12
+      13
+      14
+      15)
+  # HiGHS does not implement SHOT's SOS interface.
+  if(NOT (HAS_CBC OR HAS_CPLEX OR HAS_GUROBI))
+    list(REMOVE_ITEM GAMS_parts 8 9 10)
+  endif()
   set(cpptests ${cpptests} GAMS)
 endif()
 
-set(DualBound_parts 1 2 3 4 5 6 7 8)
+set(DualBound_parts 1 2 3 4 5 6 7 8 9 10)
 set(cpptests ${cpptests} DualBound)
 
 set(Determinism_parts 1 2 3)
@@ -104,7 +148,17 @@ set(Solver_parts
     13
     14
     15
-    16)
+    16
+    17
+    18
+    19
+    20
+    21
+    22
+    23
+    24
+    25
+    26)
 set(cpptests ${cpptests} Solver)
 
 if(HAS_CONOPT)
@@ -112,16 +166,65 @@ if(HAS_CONOPT)
   set(Conopt_parts 1 2 3 4 5 6 7 8 9 10 11 12)
 endif()
 
+# Equality constraints and ranges in the original and the reformulated problem
+set(EqualityConstraint_parts 1 2 3 4 5)
+
+if(HAS_HIGHS)
+  list(APPEND EqualityConstraint_parts 6)
+endif()
+
+if(HAS_CBC)
+  list(APPEND EqualityConstraint_parts 7)
+endif()
+
+if(HAS_GUROBI)
+  list(APPEND EqualityConstraint_parts 8)
+endif()
+
+if(HAS_CPLEX)
+  list(APPEND EqualityConstraint_parts 9)
+endif()
+
+if(HAS_IPOPT)
+  list(APPEND EqualityConstraint_parts 10)
+endif()
+
+if(HAS_UNO)
+  list(APPEND EqualityConstraint_parts 11)
+endif()
+
+set(cpptests ${cpptests} EqualityConstraint)
+
+# The exhaustive search in the fixed-integer primal strategy, which needs an NLP solver
+if(HAS_HIGHS AND HAS_IPOPT)
+  set(Enumeration_parts 1 2 3 4 5 6 7)
+
+  if(HAS_GUROBI)
+    list(APPEND Enumeration_parts 8)
+  endif()
+
+  if(HAS_CPLEX)
+    list(APPEND Enumeration_parts 9)
+  endif()
+
+  set(cpptests ${cpptests} Enumeration)
+endif()
+
 if(HAS_IPOPT)
   set(cpptests ${cpptests} Ipopt)
-  set(Ipopt_parts 1 2)
+  set(Ipopt_parts 1 2 3)
+endif()
+
+if(HAS_UNO)
+  set(cpptests ${cpptests} Uno)
+  set(Uno_parts 1 2 3)
 endif()
 
 # Instance tests: one case per (MIP solver x NLP solver) combination
 # Format support (.nl, .gms) is checked at runtime; guards here are MIP+NLP only
 set(Instance_parts)
 if(HAS_HIGHS AND HAS_CONOPT)
-  list(APPEND Instance_parts 9)
+  list(APPEND Instance_parts 11)
 endif()
 if(HAS_HIGHS AND HAS_IPOPT)
   list(APPEND Instance_parts 1)
@@ -140,6 +243,12 @@ if(HAS_HIGHS)
 endif()
 if(HAS_GUROBI)
   list(APPEND Instance_parts 6)
+endif()
+if(HAS_CPLEX)
+  list(APPEND Instance_parts 7)
+endif()
+if(HAS_CBC)
+  list(APPEND Instance_parts 8)
 endif()
 if(Instance_parts)
   set(cpptests ${cpptests} Instance)
@@ -176,23 +285,29 @@ endforeach()
 set_property(GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS ON)
 set(Boost_USE_STATIC_LIBS OFF)
 
-if(HAS_CPLEX) # To make CPLEX build
-  add_definitions(-DIL_STD)
-  add_definitions(-LDFLAGS="-Wl,--no-as-needed")
-endif(HAS_CPLEX)
-
-# nlohmann/json header-only library for InstanceTest
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../ThirdParty)
-
 # Creates the test executable
 create_test_sourcelist(srclist test_runner.cpp ${cpptestsrc})
 add_executable(${TEST_EXE_NAME} ${srclist})
-target_link_libraries(${TEST_EXE_NAME} ${libs})
+target_link_libraries(${TEST_EXE_NAME} ${libs} SHOTBuildSettings)
 
 target_include_directories(${TEST_EXE_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../ThirdParty)
 
 target_link_libraries(${TEST_EXE_NAME} SHOTSolver)
+if(WIN32)
+  # Keep the runner beside the DLL, including after incremental DLL rebuilds.
+  set_target_properties(${TEST_EXE_NAME} PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}")
+endif()
+if(HAS_HIGHS)
+  target_link_libraries(${TEST_EXE_NAME} highs::highs)
+endif()
+if(HAS_CBC)
+  target_link_libraries(${TEST_EXE_NAME} CBC::CBC)
+endif()
+if(HAS_IPOPT)
+  target_link_libraries(${TEST_EXE_NAME} IPOPT::IPOPT)
+endif()
 
 # Set rpath for finding dynamic libraries on macOS
 if(APPLE)
@@ -219,9 +334,6 @@ if(HAS_CPLEX)
     message("   ${CPLEX_INCLUDE_DIR}")
     message("   ${CPLEX_CONCERT_INCLUDE_DIR}")
     message("   ${CPLEX_ILOCPLEX_INCLUDE_DIR}")
-    include_directories(SYSTEM "${CPLEX_INCLUDE_DIR}")
-    include_directories(SYSTEM "${CPLEX_CONCERT_INCLUDE_DIR}")
-    include_directories(SYSTEM "${CPLEX_ILOCPLEX_INCLUDE_DIR}")
 
     message("-- The following CPLEX libraries will be used:")
     if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -249,7 +361,6 @@ if(HAS_GUROBI)
     message("-- Gurobi libraries could not be found!")
   else()
     message("-- Gurobi include files will be used from: ${GUROBI_INCLUDE_DIR}")
-    include_directories(SYSTEM "${GUROBI_INCLUDE_DIR}")
 
     message("-- The following Gurobi libraries will be used:")
     if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -268,14 +379,12 @@ if(HAS_GUROBI)
   endif()
 endif(HAS_GUROBI)
 
-target_link_libraries(${TEST_EXE_NAME} pthread)
-target_link_libraries(${TEST_EXE_NAME} m)
-target_link_libraries(${TEST_EXE_NAME} z)
-target_link_libraries(${TEST_EXE_NAME} lapack)
-target_link_libraries(${TEST_EXE_NAME} blas)
+if(NOT WIN32)
+  target_link_libraries(${TEST_EXE_NAME} pthread m z lapack blas)
+endif()
 
 # Platform-specific libraries
-if(NOT APPLE)
+if(UNIX AND NOT APPLE)
   target_link_libraries(${TEST_EXE_NAME} dl)
   target_link_libraries(${TEST_EXE_NAME} gomp)
 endif()
@@ -353,7 +462,7 @@ if(TARGET SHOTpy)
       
       # Set environment so pytest can find SHOTpy module
       set_tests_properties(Python_API_Tests PROPERTIES
-        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}"
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR};SHOT_TUTORIAL_NOTEBOOK=${PROJECT_SOURCE_DIR}/docs/SHOTpy_Tutorial.ipynb"
         FAIL_REGULAR_EXPRESSION "FAILED;ERROR"
         TIMEOUT 300
       )
@@ -367,10 +476,19 @@ if(TARGET SHOTpy)
         test_settings
         test_problem_io
         test_create_and_solve_problems
+        test_reformulation
+        test_bound_tightening
         test_optimization_problems
         test_modeling_systems
         test_gradients_hessians
         test_callbacks
+        test_enumeration
+        test_constraint_expressions
+        test_equality_constraints
+        test_api_safety
+        test_interval_evaluation
+        test_interval_derivatives
+        test_tutorial
       )
       
       foreach(pytest_file ${PYTHON_TEST_FILES})
@@ -383,7 +501,7 @@ if(TARGET SHOTpy)
           WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
         )
         set_tests_properties(Python_${pytest_file} PROPERTIES
-          ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}"
+          ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR};SHOT_TUTORIAL_NOTEBOOK=${PROJECT_SOURCE_DIR}/docs/SHOTpy_Tutorial.ipynb"
           FAIL_REGULAR_EXPRESSION "FAILED;ERROR"
           TIMEOUT 300
         )

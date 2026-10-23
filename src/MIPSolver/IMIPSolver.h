@@ -73,12 +73,25 @@ public:
 
     virtual void writeProblemToFile(std::string filename) = 0;
 
+    // All current MIP backends support LP and MPS. The caller supplies a path without an extension.
+    void writeProblemToDebugFiles(const std::string& filename)
+    {
+        writeProblemToFile(filename + ".lp");
+        writeProblemToFile(filename + ".mps");
+    }
+
     virtual std::vector<SolutionPoint> getAllVariableSolutions() = 0;
     virtual int addLinearConstraint(std::map<int, double>& elements, double constant, std::string name) = 0;
     virtual int addLinearConstraint(
         const std::map<int, double>& elements, double constant, std::string name, bool isGreaterThan) = 0;
     virtual int addLinearConstraint(const std::map<int, double>& elements, double constant, std::string name,
         bool isGreaterThan, bool allowRepair) = 0;
+
+    // Adds several linear constraints at once, which is faster in solvers that copy the matrix for every added
+    // constraint. Returns the index of each added constraint, or -1 for the ones that were not added.
+    virtual VectorInteger addLinearConstraints(const std::vector<std::map<int, double>>& elements,
+        const VectorDouble& constants, const VectorString& names, bool isGreaterThan, bool allowRepair)
+        = 0;
 
     virtual bool addSpecialOrderedSet(E_SOSType type, VectorInteger variableIndexes, VectorDouble variableWeights = { })
         = 0;
@@ -104,6 +117,14 @@ public:
     virtual bool createHyperplane(HyperplanePtr hyperplane) = 0;
     virtual bool createInteriorHyperplane(HyperplanePtr hyperplane) = 0;
     virtual bool createIntegerCut(IntegerCut& integerCut) = 0;
+
+    // The cuts of nonconvex constraints are not valid in general, and may be relaxed. Relaxes those from the cut with
+    // index firstCut on that the point violates, so that the point fulfills them, and returns how many were relaxed
+    virtual int relaxRepairableCutsViolatedByPoint(const VectorDouble& point, size_t firstCut) = 0;
+    // Removes all the cuts that may be relaxed, and returns the indexes of their source constraints, where the
+    // objective function is -1
+    virtual VectorInteger removeRepairableCuts() = 0;
+    virtual size_t getNumberOfRepairableCuts() = 0;
 
     virtual std::optional<std::pair<std::map<int, double>, double>> createHyperplaneTerms(HyperplanePtr hyperplane) = 0;
 

@@ -10,8 +10,8 @@
 
 #include "MIPSolverCplexSingleTreeLegacy.h"
 
+#include "../Callback.h"
 #include "../DualSolver.h"
-#include "../EventHandler.h"
 #include "../Iteration.h"
 #include "../Output.h"
 #include "../PrimalSolver.h"
@@ -77,9 +77,9 @@ void HCallbackI::main() // Called at each node...
         if((int)primalSol.size() < env->reformulatedProblem->properties.numberOfVariables)
             env->reformulatedProblem->augmentAuxiliaryVariableValues(primalSol);
 
-        assert(env->reformulatedProblem->properties.numberOfVariables == primalSol.size());
+        assert(static_cast<size_t>(env->reformulatedProblem->properties.numberOfVariables) == primalSol.size());
 
-        if(env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
+        if(env->dualSolver->hasObjectiveVariableOnlyInMIPSolver())
             primalSol.push_back(env->reformulatedProblem->objectiveFunction->calculateValue(primalSol));
 
         for(double P : primalSol)
@@ -144,15 +144,18 @@ void HCallbackI::main() // Called at each node...
 
         solutionPoints.at(0) = tmpSolPt;
 
-        if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("Dual.CutStrategy"))
-            == ES_HyperplaneCutStrategy::ESH)
+        if(env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
         {
-            static_cast<TaskSelectHyperplanesESH*>(taskSelectHPPts.get())->run(solutionPoints);
-        }
-        else if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("Dual.CutStrategy"))
-            == ES_HyperplaneCutStrategy::ECP)
-        {
-            static_cast<TaskSelectHyperplanesECP*>(taskSelectHPPts.get())->run(solutionPoints);
+            if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("Dual.CutStrategy"))
+                == ES_HyperplaneCutStrategy::ESH)
+            {
+                static_cast<TaskSelectHyperplanesESH*>(taskSelectHPPts.get())->run(solutionPoints);
+            }
+            else if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("Dual.CutStrategy"))
+                == ES_HyperplaneCutStrategy::ECP)
+            {
+                static_cast<TaskSelectHyperplanesECP*>(taskSelectHPPts.get())->run(solutionPoints);
+            }
         }
 
         taskSelectExternalHPs->run(solutionPoints);
@@ -270,7 +273,7 @@ CtCallbackI::CtCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx
         taskSelectPrimalSolutionFromRootsearch = std::make_unique<TaskSelectPrimalCandidatesFromRootsearch>(env);
     }
 
-    if(env->events->hasDataProvider(E_EventType::ExternalPrimalSolution))
+    if(env->callbacks->isActive(E_CallbackLocation::PrimalCandidateSearch))
     {
         taskSelectPrimalSolutionFromExternal = std::make_shared<TaskSelectPrimalCandidatesFromExternalSource>(env);
     }
@@ -300,7 +303,7 @@ void CtCallbackI::main()
     this->getValues(tmpVals, cplexVars);
 
     int numberOfVariables
-        = (env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable()) ? tmpVals.getSize() - 1 : tmpVals.getSize();
+        = (env->dualSolver->hasObjectiveVariableOnlyInMIPSolver()) ? tmpVals.getSize() - 1 : tmpVals.getSize();
 
     VectorDouble solution(numberOfVariables);
 
@@ -310,6 +313,15 @@ void CtCallbackI::main()
     }
 
     tmpVals.end();
+
+    // The bounds cannot be changed in the callback, so the MIP solver is interrupted and the artificial bounds are
+    // removed before it solves again
+    if(auto variables = env->problem->getVariablesAtArtificialBounds(solution); variables.size() > 0)
+    {
+        env->dualSolver->variablesAtArtificialBounds = variables;
+        this->abort();
+        return;
+    }
 
     SolutionPoint solutionCandidate;
 
@@ -331,9 +343,10 @@ void CtCallbackI::main()
     solutionCandidate.objectiveValue = getObjValue();
     solutionCandidate.iterFound = env->results->getCurrentIteration()->iterationNumber;
 
-    // Check if better dual bound
-    if((isMinimization && tmpDualObjBound > env->results->getCurrentDualBound())
-        || (!isMinimization && tmpDualObjBound < env->results->getCurrentDualBound()))
+    // Check if better dual bound. CPLEX gives a missing bound as 1e75 or -1e75, which is a finite value to SHOT
+    if(std::abs(tmpDualObjBound) < 1e75
+        && ((isMinimization && tmpDualObjBound > env->results->getCurrentDualBound())
+            || (!isMinimization && tmpDualObjBound < env->results->getCurrentDualBound())))
     {
         DualSolution sol = { solution, E_DualSolutionSource::MIPSolverBound, tmpDualObjBound,
             env->results->getCurrentIteration()->iterationNumber, false };
@@ -441,7 +454,7 @@ void CtCallbackI::main()
         taskSelectPrimalSolutionFromRootsearch->run(candidatePoints);
     }
 
-    if(env->events->hasDataProvider(E_EventType::ExternalPrimalSolution))
+    if(env->callbacks->isActive(E_CallbackLocation::PrimalCandidateSearch))
     {
         taskSelectPrimalSolutionFromExternal->run();
     }
@@ -752,8 +765,15 @@ E_ProblemSolutionStatus MIPSolverCplexSingleTreeLegacy::solveProblem()
         cplexInstance.solve();
         MIPSolutionStatus = getSolutionStatus();
 
+        // An unbounded exact dual problem means that the problem is unbounded, so no point is needed
+        bool isUnboundedExactDualProblem
+            = MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded && env->dualSolver->isDualProblemExact();
+
+        if(isUnboundedExactDualProblem)
+            MIPSolutionStatus = resolveInfeasibleOrUnbounded(MIPSolutionStatus);
+
         // Try to solve a feasibility problem to get a valid solution point if unbounded
-        if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
+        if(!isUnboundedExactDualProblem && MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
         {
             cplexModel.remove(cplexInstance.getObjective());
 
@@ -773,7 +793,7 @@ E_ProblemSolutionStatus MIPSolverCplexSingleTreeLegacy::solveProblem()
             modelUpdated = true;
         }
 
-        if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
+        if(!isUnboundedExactDualProblem && MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
         {
             repairInfeasibility();
             MIPSolutionStatus = E_ProblemSolutionStatus::Unbounded;

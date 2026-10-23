@@ -11,7 +11,6 @@
 #include "MIPSolverGurobi.h"
 
 #include "../DualSolver.h"
-#include "../EventHandler.h"
 #include "../Iteration.h"
 #include "../Output.h"
 #include "../PrimalSolver.h"
@@ -48,14 +47,10 @@ MIPSolverGurobi::~MIPSolverGurobi()
 bool MIPSolverGurobi::initializeProblem()
 {
     discreteVariablesActivated = true;
+    repairableCuts.clear();
 
-    if(alreadyInitialized)
+    if(!alreadyInitialized)
     {
-        std::shared_ptr<GRBModel> gurobiModel;
-    }
-    else
-    {
-
         prevSolutionLimit = 1;
         alreadyInitialized = true;
     }
@@ -269,7 +264,7 @@ bool MIPSolverGurobi::addQuadraticTermToConstraint(double coefficient, int first
         return (false);
     }
 
-    hasQudraticConstraint = true;
+    hasQuadraticConstraint = true;
 
     return (true);
 }
@@ -832,6 +827,14 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
 
     try
     {
+        for(auto& P : objectiveCoefficientsToRestore)
+        {
+            gurobiModel->getVar(P.index).set(GRB_DoubleAttr_Obj, P.value);
+            modelUpdated = true;
+        }
+
+        objectiveCoefficientsToRestore.clear();
+
         if(modelUpdated)
         {
             gurobiModel->update();
@@ -848,8 +851,14 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
         MIPSolutionStatus = E_ProblemSolutionStatus::Error;
     }
 
+    // An unbounded exact dual problem means that the problem is unbounded, so no point is needed
+    if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded && env->results->getNumberOfIterations() > 0
+        && env->dualSolver->isDualProblemExact())
+    {
+        MIPSolutionStatus = resolveInfeasibleOrUnbounded(MIPSolutionStatus);
+    }
     // To find a feasible point for an unbounded dual problem and not when solving the minimax-problem
-    if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded && env->results->getNumberOfIterations() > 0)
+    else if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded && env->results->getNumberOfIterations() > 0)
     {
         std::vector<PairIndexValue> originalObjectiveCoefficients;
         bool problemUpdated = false;
@@ -891,16 +900,26 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
 
         if(problemUpdated)
         {
+            // The cutoff applies to the objective function value, which no longer contains the removed terms, so it
+            // could cut off all points
+            double cutOff = gurobiModel->get(GRB_DoubleParam_Cutoff);
+
+            if(originalObjectiveCoefficients.size() > 0)
+                gurobiModel->set(GRB_DoubleParam_Cutoff, isMinimizationProblem ? GRB_INFINITY : -GRB_INFINITY);
+
             gurobiModel->update();
             gurobiModel->setCallback(gurobiCallback.get());
             gurobiModel->optimize();
 
             MIPSolutionStatus = getSolutionStatus();
 
-            for(auto& P : originalObjectiveCoefficients)
-                gurobiModel->getVar(P.index).set(GRB_DoubleAttr_Obj, P.value);
+            gurobiModel->set(GRB_DoubleParam_Cutoff, cutOff);
 
-            gurobiModel->update();
+            // The point is only feasible since the objective has been changed
+            if(MIPSolutionStatus == E_ProblemSolutionStatus::Optimal)
+                MIPSolutionStatus = E_ProblemSolutionStatus::Feasible;
+
+            objectiveCoefficientsToRestore = originalObjectiveCoefficients;
 
             if(env->results->iterations.size() > 0) // Might not have iterations if we are using the minimax solver
                 env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed = true;
@@ -908,6 +927,29 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
     }
 
     return (MIPSolutionStatus);
+}
+
+E_ProblemSolutionStatus MIPSolverGurobi::resolveInfeasibleOrUnbounded(E_ProblemSolutionStatus status)
+{
+    try
+    {
+        if(gurobiModel->get(GRB_IntAttr_Status) != GRB_INF_OR_UNBD)
+            return (status);
+
+        int dualReductions = gurobiModel->get(GRB_IntParam_DualReductions);
+
+        gurobiModel->set(GRB_IntParam_DualReductions, 0);
+        gurobiModel->optimize();
+        status = getSolutionStatus();
+        gurobiModel->set(GRB_IntParam_DualReductions, dualReductions);
+    }
+    catch(GRBException& e)
+    {
+        env->output->outputError("        Error when solving MIP/LP problem without dual reductions", e.getMessage());
+        status = E_ProblemSolutionStatus::Error;
+    }
+
+    return (status);
 }
 
 bool MIPSolverGurobi::repairInfeasibility()
@@ -920,14 +962,7 @@ bool MIPSolverGurobi::repairInfeasibility()
         gurobiModel->update();
         auto feasModel = GRBModel(*gurobiModel);
 
-        // Gurobi copies over the cutoff from the original model
-        if(isMinimizationProblem)
-            feasModel.set(GRB_DoubleParam_Cutoff, SHOT_DBL_MAX);
-        else
-            feasModel.set(GRB_DoubleParam_Cutoff, SHOT_DBL_MIN);
-
         int numOrigConstraints = env->reformulatedProblem->properties.numberOfLinearConstraints;
-        int numOrigVariables = gurobiModel->get(GRB_IntAttr_NumVars);
         int numCurrConstraints = feasModel.get(GRB_IntAttr_NumConstrs);
 
         std::vector<GRBConstr> repairConstraints;
@@ -964,6 +999,43 @@ bool MIPSolverGurobi::repairInfeasibility()
             Utilities::saveVariablePointVectorToFile(relaxParameters, constraints, filename);
         }
 
+        if(numConstraintsToRepair == 0)
+        {
+            env->output->outputDebug("        No constraints available for repair.");
+            return (false);
+        }
+
+        // The repair must find a solution that is better than the cutoff, or it finds that no constraint needs to be
+        // relaxed. Without a cutoff constraint in the model, e.g. for a quadratic objective function, the cutoff is
+        // only a parameter, which the objective function of the repair replaces, so the objective function is
+        // bounded by a constraint instead
+        double cutOff = gurobiModel->get(GRB_DoubleParam_Cutoff);
+
+        if(!cutOffConstraintDefined && std::abs(cutOff) < GRB_INFINITY)
+        {
+            auto objective = feasModel.getObjective();
+
+            if(objective.size() > 0)
+            {
+                if(isMinimizationProblem)
+                    feasModel.addQConstr(objective <= cutOff, "CUTOFF_REPAIR");
+                else
+                    feasModel.addQConstr(objective >= cutOff, "CUTOFF_REPAIR");
+
+                // A quadratic objective function is not convex in general
+                feasModel.set(GRB_IntParam_NonConvex, 2);
+            }
+            else
+            {
+                if(isMinimizationProblem)
+                    feasModel.addConstr(objective.getLinExpr() <= cutOff, "CUTOFF_REPAIR");
+                else
+                    feasModel.addConstr(objective.getLinExpr() >= cutOff, "CUTOFF_REPAIR");
+            }
+
+            feasModel.update();
+        }
+
         // Gurobi modifies the value when running feasModel.optimize()
         int numConstraintsToRepairOrig = numConstraintsToRepair;
 
@@ -975,18 +1047,25 @@ bool MIPSolverGurobi::repairInfeasibility()
             return (false);
         }
 
+        // Gurobi copies the cutoff of the original model, which must be removed. The relaxation minimizes the
+        // violation of the constraints also for a maximization problem, so the cutoff is removed with plus infinity:
+        // the minus infinity of a maximization problem made every solution worse than the cutoff, and the repair
+        // always failed
+        feasModel.set(GRB_DoubleParam_Cutoff, GRB_INFINITY);
+
         feasModel.optimize();
 
         // Saves the relaxation model to file
         if(env->settings->getSetting<bool>("Output.Debug.Enable"))
         {
-            auto filename = fmt::format("{}/dualiter{}_infeasrelax.lp",
+            auto filename = fmt::format("{}/dualiter{}_infeasrelax",
                 env->settings->getSetting<std::string>("Output.Debug.Path"),
                 env->results->getCurrentIteration()->iterationNumber - 1);
 
             try
             {
-                feasModel.write(filename);
+                feasModel.write(filename + ".lp");
+                feasModel.write(filename + ".mps");
             }
             catch(GRBException& e)
             {
@@ -1006,15 +1085,31 @@ bool MIPSolverGurobi::repairInfeasibility()
 
         for(int i = 0; i < numConstraintsToRepairOrig; i++)
         {
-            auto variable = feasModel.getVar(numOrigVariables + i);
-            double slackValue = variable.get(GRB_DoubleAttr_X);
+            auto constraint = originalConstraints.at(i);
+            std::string name = constraint.get(GRB_StringAttr_ConstrName);
+            char sense = constraint.get(GRB_CharAttr_Sense);
 
-            if(slackValue == 0.0)
+            // feasRelax relaxes a <= constraint with the artificial variable ArtN_<name> and a >= constraint with
+            // ArtP_<name>, which are found by name
+            double slackValue = 0.0;
+
+            try
+            {
+                slackValue = feasModel.getVarByName((sense == GRB_GREATER_EQUAL ? "ArtP_" : "ArtN_") + name)
+                                 .get(GRB_DoubleAttr_X);
+            }
+            catch(GRBException&)
+            {
+                continue;
+            }
+
+            if(slackValue <= 0.0)
                 continue;
 
-            auto constraint = originalConstraints.at(i);
+            // A >= constraint, e.g. an integer cut, is relaxed by decreasing its right-hand side
             double oldRHS = constraint.get(GRB_DoubleAttr_RHS);
-            constraint.set(GRB_DoubleAttr_RHS, oldRHS + 1.5 * slackValue);
+            constraint.set(
+                GRB_DoubleAttr_RHS, sense == GRB_GREATER_EQUAL ? oldRHS - 1.5 * slackValue : oldRHS + 1.5 * slackValue);
 
             numRepairs++;
 
@@ -1026,11 +1121,11 @@ bool MIPSolverGurobi::repairInfeasibility()
 
         if(env->settings->getSetting<bool>("Output.Debug.Enable"))
         {
-            auto filename = fmt::format("{}/dualiter{}_infeasrelax.lp",
+            auto filename = fmt::format("{}/dualiter{}_infeasrelax",
                 env->settings->getSetting<std::string>("Output.Debug.Path"),
                 env->results->getCurrentIteration()->iterationNumber - 1);
 
-            writeProblemToFile(filename);
+            writeProblemToDebugFiles(filename);
         }
 
         if(numRepairs == 0)
@@ -1188,7 +1283,7 @@ void MIPSolverGurobi::setCutOffAsConstraint(double cutOff)
 
 void MIPSolverGurobi::addMIPStart(VectorDouble point)
 {
-    assert(point.size() == this->numberOfVariables - numberOfIntegerCutVariables);
+    assert(point.size() == static_cast<size_t>(this->numberOfVariables - numberOfIntegerCutVariables));
 
     try
     {
@@ -1403,14 +1498,11 @@ double MIPSolverGurobi::getDualObjectiveValue()
 
     try
     {
-        if(isMIP)
-        {
-            objVal = gurobiModel->get(GRB_DoubleAttr_ObjBound);
-        }
-        else
-        {
-            objVal = gurobiModel->get(GRB_DoubleAttr_ObjVal);
-        }
+        double bound = isMIP ? gurobiModel->get(GRB_DoubleAttr_ObjBound) : gurobiModel->get(GRB_DoubleAttr_ObjVal);
+
+        // Gurobi gives a missing bound as GRB_INFINITY or -GRB_INFINITY, which is a finite value to SHOT
+        if(std::abs(bound) < GRB_INFINITY)
+            objVal = bound;
     }
     catch(GRBException& e)
     {
@@ -1477,4 +1569,34 @@ void GurobiCallbackMultiTree::callback()
         env->output->outputError("        Gurobi error when running main callback method");
     }
 }
+double MIPSolverGurobi::getConstraintUpperBound(int constraintIndex)
+{
+    try
+    {
+        return (gurobiModel->getConstr(constraintIndex).get(GRB_DoubleAttr_RHS));
+    }
+    catch(GRBException& e)
+    {
+        env->output->outputError("        Error when getting the upper bound of a constraint", e.getMessage());
+    }
+
+    return (SHOT_DBL_MAX);
+}
+
+bool MIPSolverGurobi::setConstraintUpperBound(int constraintIndex, double upperBound)
+{
+    try
+    {
+        gurobiModel->getConstr(constraintIndex).set(GRB_DoubleAttr_RHS, upperBound >= 1e20 ? GRB_INFINITY : upperBound);
+        gurobiModel->update();
+        return (true);
+    }
+    catch(GRBException& e)
+    {
+        env->output->outputError("        Error when setting the upper bound of a constraint", e.getMessage());
+    }
+
+    return (false);
+}
+
 } // namespace SHOT

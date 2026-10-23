@@ -66,7 +66,16 @@ else()
 endif()
 
 if(NOT CPLEX_STUDIO_DIR)
+  # CPLEX_DIR may name a Studio installation directly, as documented for pip builds.
+  if(EXISTS "${CPLEX_DIR}/cplex/include/ilcplex/cplex.h")
+    set(CPLEX_STUDIO_DIR_ "${CPLEX_DIR}")
+  elseif(EXISTS "${CPLEX_DIR}/include/ilcplex/cplex.h" AND EXISTS "${CPLEX_DIR}/../concert/include/ilconcert/ilosys.h")
+    get_filename_component(CPLEX_STUDIO_DIR_ "${CPLEX_DIR}/.." ABSOLUTE)
+  endif()
   foreach(dir ${CPLEX_ILOG_DIRS})
+    if(CPLEX_STUDIO_DIR_)
+      break()
+    endif()
     file(GLOB CPLEX_STUDIO_DIRS "${dir}/CPLEX_Studio*")
     list(SORT CPLEX_STUDIO_DIRS)
     if(CPLEX_STUDIO_DIRS)
@@ -182,7 +191,8 @@ find_cplex_library(CPLEX_CONCERT_LIBRARY concert ${CPLEX_CONCERT_DIR})
 # Handle the QUIETLY and REQUIRED arguments and set CPLEX_CONCERT_FOUND to TRUE
 # if all listed variables are TRUE.
 find_package_handle_standard_args(CPLEX_CONCERT
-                                  DEFAULT_MSG
+                                  NAME_MISMATCHED
+                                  REQUIRED_VARS
                                   CPLEX_CONCERT_LIBRARY
                                   CPLEX_CONCERT_LIBRARY_DEBUG
                                   CPLEX_CONCERT_INCLUDE_DIR)
@@ -211,7 +221,8 @@ find_cplex_library(CPLEX_ILOCPLEX_LIBRARY ilocplex ${CPLEX_DIR})
 # Handle the QUIETLY and REQUIRED arguments and set CPLEX_ILOCPLEX_FOUND to TRUE
 # if all listed variables are TRUE.
 find_package_handle_standard_args(CPLEX_ILOCPLEX
-                                  DEFAULT_MSG
+                                  NAME_MISMATCHED
+                                  REQUIRED_VARS
                                   CPLEX_ILOCPLEX_LIBRARY
                                   CPLEX_ILOCPLEX_LIBRARY_DEBUG
                                   CPLEX_ILOCPLEX_INCLUDE_DIR

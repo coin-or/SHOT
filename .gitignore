@@ -34,7 +34,11 @@ __pycache__/
 
 .vscode/*
 build/*
+/build-msvc*/
 /.vs
 /out/build
 /.cache/
 .DS_Store
+
+# Documentation environment
+.venv-docs/

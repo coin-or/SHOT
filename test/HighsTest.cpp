@@ -8,7 +8,7 @@
    Please see the README and LICENSE files for more information.
 */
 
-#include "../src/CallbackData.h"
+#include "../src/Callback.h"
 #include "../src/DualSolver.h"
 #include "../src/Environment.h"
 #include "../src/Report.h"
@@ -32,6 +32,9 @@ bool HighsTest1(std::string filename, double correctObjectiveValue)
 
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
     auto env = solver->getEnvironment();
+
+    // A time limit so that a test that does not converge cannot stop the test suite
+    solver->updateSetting("Termination.TimeLimit", 60.0);
 
     solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Highs));
 
@@ -121,6 +124,9 @@ bool HighsTestNocrash(std::string filename)
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
     auto env = solver->getEnvironment();
 
+    // A time limit so that a test that does not converge cannot stop the test suite
+    solver->updateSetting("Termination.TimeLimit", 60.0);
+
     solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Highs));
 
     try
@@ -144,6 +150,9 @@ bool HighsTerminationCallbackTest(std::string filename)
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
     auto env = solver->getEnvironment();
 
+    // A time limit so that a test that does not converge cannot stop the test suite
+    solver->updateSetting("Termination.TimeLimit", 60.0);
+
     solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Error));
     solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Highs));
     solver->updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::MultiTree));
@@ -157,24 +166,15 @@ bool HighsTerminationCallbackTest(std::string filename)
     }
 
     // Registers a callback that terminates in the third iteration
-    solver->registerCallback(E_EventType::UserTerminationCheck,
-        [](std::any args) -> bool
+    solver->registerCallback<TerminationCheckContext>(
+        [](TerminationCheckContext& context)
         {
-            try
+            std::cout << "Callback activated at iteration " << context.getIterationNumber() << ".\n";
+            if(context.getIterationNumber() == 3)
             {
-                auto data = std::any_cast<TerminationCallbackData>(args);
-                std::cout << "Callback activated at iteration " << data.iterationNumber << ".\n";
-                if(data.iterationNumber == 3)
-                {
-                    std::cout << "Terminating.\n";
-                    return true;
-                }
+                std::cout << "Terminating.\n";
+                context.terminate();
             }
-            catch(const std::bad_any_cast&)
-            {
-                std::cout << "Termination callback executed with no valid structured data\n";
-            }
-            return false;
         });
 
     // Solving the problem
@@ -204,6 +204,9 @@ bool HighsExternalDualBoundCallbackTest(std::string filename, double dualBoundTo
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
     auto env = solver->getEnvironment();
 
+    // A time limit so that a test that does not converge cannot stop the test suite
+    solver->updateSetting("Termination.TimeLimit", 60.0);
+
     solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Info));
     solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Highs));
     solver->updateSetting("Dual.TreeStrategy", static_cast<int>(treeStrategy));
@@ -220,22 +223,14 @@ bool HighsExternalDualBoundCallbackTest(std::string filename, double dualBoundTo
     std::vector<VectorDouble> foundSolutions;
 
     // Registers a callback that collects all new primal solutions
-    solver->registerCallback(E_EventType::NewPrimalSolution,
-        [&foundSolutions](std::any args)
+    solver->registerCallback<NewPrimalSolutionContext>(
+        [&foundSolutions](NewPrimalSolutionContext& solution)
         {
-            try
-            {
-                auto data = std::any_cast<PrimalSolutionCallbackData>(args);
-                std::cout << "New primal solution found with objective value: " << data.objectiveValue
-                          << " from source: " << static_cast<int>(data.sourceType) << " (iteration "
-                          << data.iterationNumber << ")\n";
+            std::cout << "New primal solution found with objective value: " << solution.getObjectiveValue()
+                      << " from source: " << static_cast<int>(solution.getSource()) << " (iteration "
+                      << solution.getIterationNumber() << ")\n";
 
-                foundSolutions.push_back(data.solution);
-            }
-            catch(const std::bad_any_cast&)
-            {
-                std::cout << "New primal solution callback executed with no valid structured data\n";
-            }
+            foundSolutions.push_back(solution.getPoint());
         });
 
     if(!solver->solveProblem())
@@ -250,6 +245,9 @@ bool HighsExternalDualBoundCallbackTest(std::string filename, double dualBoundTo
     solver = std::make_unique<Solver>();
     env = solver->getEnvironment();
 
+    // A time limit so that a test that does not converge cannot stop the test suite
+    solver->updateSetting("Termination.TimeLimit", 60.0);
+
     solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Info));
     solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Highs));
     solver->updateSetting("Dual.TreeStrategy", static_cast<int>(treeStrategy));
@@ -263,68 +261,44 @@ bool HighsExternalDualBoundCallbackTest(std::string filename, double dualBoundTo
     }
 
     // Registers a callback that sets the dual bound to a fixed value
-    solver->registerCallback(E_EventType::ExternalDualBound,
-        [dualBoundToTest](std::any args)
+    solver->registerCallback<DualBoundUpdateContext>(
+        [dualBoundToTest](DualBoundUpdateContext& context)
         {
-            double newDualBound = std::numeric_limits<double>::quiet_NaN();
+            if(context.isMinimization() ? context.getDualBound() >= dualBoundToTest
+                                        : context.getDualBound() <= dualBoundToTest)
+                return;
 
-            try
-            {
-                auto data = std::any_cast<DualBoundCallbackData>(args);
-
-                if(data.currentDualBound >= dualBoundToTest)
-                    return (newDualBound);
-
-                newDualBound = dualBoundToTest;
-                std::cout << "Current dual bound is " << data.currentDualBound
-                          << ", new external dual bound given as = " << newDualBound << "\n";
-            }
-            catch(const std::bad_any_cast&)
-            {
-                std::cout << "External dual bound callback executed with no valid structured data\n";
-                throw std::runtime_error("Invalid data type for external dual bound callback");
-            }
-
-            return (newDualBound);
+            std::cout << "Current dual bound is " << context.getDualBound()
+                      << ", new external dual bound given as = " << dualBoundToTest << "\n";
+            context.setDualBound(dualBoundToTest);
         });
 
     // Registers a callback that provides external primal solutions from our collected solutions
-    solver->registerCallback(E_EventType::ExternalPrimalSolution,
-        [&foundSolutions, &env](std::any args) -> std::vector<VectorDouble>
+    solver->registerCallback<PrimalCandidateSearchContext>(
+        [&foundSolutions, &env](PrimalCandidateSearchContext& context)
         {
             if(!env->dualSolver->MIPSolver->getDiscreteVariableStatus())
             {
                 std::cout
                     << "Still waiting to add primal solution candidates until the relaxation strategy is finished.\n";
-                return std::vector<VectorDouble>();
+                return;
             }
 
-            try
+            std::cout << "External primal solution callback requested (iteration " << context.getIterationNumber()
+                      << ", current gap: " << context.getRelativeGap() << ")\n";
+
+            if(!foundSolutions.empty())
             {
-                auto data = std::any_cast<ExternalPrimalSolutionCallbackData>(args);
-                std::cout << "External primal solution callback requested (iteration " << data.iterationNumber
-                          << ", current gap: " << data.relativeGap << ")\n";
+                std::cout << "Providing " << foundSolutions.size() << " collected solutions as external candidates\n";
 
-                if(!foundSolutions.empty())
-                {
-                    std::cout << "Providing " << foundSolutions.size()
-                              << " collected solutions as external candidates\n";
+                for(auto& solution : foundSolutions)
+                    context.addPrimalSolution(solution);
 
-                    std::vector<VectorDouble> solutionsToAdd = foundSolutions;
-                    foundSolutions.clear();
-
-                    return solutionsToAdd;
-                }
-                else
-                {
-                    std::cout << "No collected solutions available to provide\n";
-                    return std::vector<VectorDouble>();
-                }
+                foundSolutions.clear();
             }
-            catch(const std::bad_any_cast&)
+            else
             {
-                std::cout << "External primal solution callback executed with no valid structured data\n";
-                return std::vector<VectorDouble>();
+                std::cout << "No collected solutions available to provide\n";
             }
         });
 
@@ -345,6 +319,69 @@ bool HighsExternalDualBoundCallbackTest(std::string filename, double dualBoundTo
         std::cout << "External dual bound callback was not executed as expected.\n";
         return (false);
     }
+
+    return (true);
+}
+
+bool HighsSchedulerChangedDuringSolveTest(std::string filename, std::string otherFilename, double correctObjectiveValue)
+{
+    // HiGHS has one scheduler of threads for the process, and a solve that asks for another number of threads than it
+    // was created with fails. A solver whose number of threads was set when its problem was set up therefore failed
+    // when another solver in the process, e.g., a nested SHOT solver for the fixed-integer NLP problems, used another
+    // number of threads while it was solving: its next MIP problem was reported as a numerical issue. Here another
+    // solver with two threads is run from a callback of the solver with one thread.
+
+    auto solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Error));
+    solver->updateSetting("Termination.TimeLimit", 60.0);
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Highs));
+    solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+    solver->updateSetting("Primal.FixedInteger.Use", false);
+
+    if(!solver->setProblem(filename))
+    {
+        std::cout << "Error while reading problem " << filename << '\n';
+        return (false);
+    }
+
+    bool isOtherSolved = false;
+
+    solver->registerCallback<TerminationCheckContext>(
+        [&](TerminationCheckContext& context)
+        {
+            if(isOtherSolved || context.getIterationNumber() < 2)
+                return;
+
+            auto otherSolver = std::make_unique<Solver>();
+            otherSolver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+            otherSolver->updateSetting("Termination.TimeLimit", 10.0);
+            otherSolver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Highs));
+            otherSolver->updateSetting("Dual.MIP.NumberOfThreads", 2);
+
+            isOtherSolved = otherSolver->setProblem(otherFilename) && otherSolver->solveProblem();
+        });
+
+    solver->solveProblem();
+
+    if(!isOtherSolved)
+    {
+        std::cout << "The other problem " << otherFilename << " was not solved from the callback.\n";
+        return (false);
+    }
+
+    if(!solver->hasPrimalSolution()
+        || std::abs(solver->getPrimalSolution().objValue - correctObjectiveValue)
+            > 1e-3 * std::abs(correctObjectiveValue))
+    {
+        std::cout << "The problem was not solved to the objective " << correctObjectiveValue
+                  << ", terminated with: " << env->results->terminationReasonDescription << '\n';
+        return (false);
+    }
+
+    std::cout << "Solved to the objective " << solver->getPrimalSolution().objValue << " with the problem "
+              << otherFilename << " solved in between.\n";
 
     return (true);
 }
@@ -425,6 +462,11 @@ int HighsTest(int argc, char* argv[])
         std::cout << "Finished test for callbacks getting and setting primal solutions and dual bounds through a "
                      "callback with multi-tree strategy."
                   << std::endl;
+        break;
+    case 12:
+        std::cout << "Starting test with another number of threads in HiGHS during a solve." << std::endl;
+        passed = HighsSchedulerChangedDuringSolveTest("data/synthes1.osil", "data/tls2.osil", 6.00976);
+        std::cout << "Finished test with another number of threads in HiGHS during a solve." << std::endl;
         break;
     default:
         passed = false;

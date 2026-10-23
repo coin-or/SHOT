@@ -17,6 +17,8 @@
 
 #include "../Model/Problem.h"
 
+#include <unordered_map>
+
 namespace SHOT
 {
 
@@ -42,6 +44,9 @@ public:
 protected:
     void PrintImpl(Ipopt::EJournalCategory category, Ipopt::EJournalLevel level, const char* str);
 
+#if defined(__GNUC__) || defined(__clang__)
+    __attribute__((format(printf, 4, 0)))
+#endif
     void PrintfImpl(Ipopt::EJournalCategory category, Ipopt::EJournalLevel level, const char* pformat, va_list ap);
 
     void FlushBufferImpl();
@@ -136,8 +141,20 @@ private:
 
     ProblemPtr sourceProblem;
 
-    std::map<std::pair<int, int>, int> lagrangianHessianCounterPlacement;
-    std::map<std::pair<int, int>, int> jacobianCounterPlacement;
+    // The position in the Jacobian and Hessian of Ipopt of a (row, column) pair, keyed on row * numberOfVariables +
+    // column, since these are looked up for every nonzero in every evaluation
+    std::unordered_map<long, int> lagrangianHessianCounterPlacement;
+    std::unordered_map<long, int> jacobianCounterPlacement;
+
+    // The Jacobian elements of the linear constraints, which are the same in every evaluation
+    std::vector<std::pair<int, double>> constantJacobianElements;
+
+    // Batch derivatives of constraint expressions on the shared CppAD tape.
+    CppAD::sparse_rc<std::vector<size_t>> nonlinearConstraintJacobianPattern;
+    std::vector<int> nonlinearExpressionConstraintIndexes;
+
+    CppAD::sparse_rc<std::vector<size_t>> nonlinearConstraintHessianPattern;
+    CppAD::sparse_hes_work nonlinearConstraintHessianWork;
 };
 
 class NLPSolverIpoptBase : virtual public INLPSolver
@@ -158,6 +175,9 @@ protected:
     void unfixVariables() override;
 
     virtual void setInitialSettings();
+
+    // Whether Ipopt can use the linear solver given by Subsolver.Ipopt.LinearSolver
+    bool isLinearSolverAvailable(ES_IpoptSolver solver);
     virtual void setSolverSpecificInitialSettings() = 0;
     virtual void updateSettings();
 

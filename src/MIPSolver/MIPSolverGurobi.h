@@ -73,12 +73,29 @@ public:
     int addLinearConstraint(const std::map<int, double>& elements, double constant, std::string name,
         bool isGreaterThan, bool allowRepair) override;
 
+    VectorInteger addLinearConstraints(const std::vector<std::map<int, double>>& elements,
+        const VectorDouble& constants, const VectorString& names, bool isGreaterThan, bool allowRepair) override
+    {
+        return (MIPSolverBase::addLinearConstraints(elements, constants, names, isGreaterThan, allowRepair));
+    }
+
     bool addSpecialOrderedSet(
         E_SOSType type, VectorInteger variableIndexes, VectorDouble variableWeights = { }) override;
 
     bool createHyperplane(HyperplanePtr hyperplane) override { return (MIPSolverBase::createHyperplane(hyperplane)); }
 
     bool createIntegerCut(IntegerCut& integerCut) override;
+
+    int relaxRepairableCutsViolatedByPoint(const VectorDouble& point, size_t firstCut) override
+    {
+        return (MIPSolverBase::relaxRepairableCutsViolatedByPoint(point, firstCut));
+    }
+
+    VectorInteger removeRepairableCuts() override { return (MIPSolverBase::removeRepairableCuts()); }
+    size_t getNumberOfRepairableCuts() override { return (MIPSolverBase::getNumberOfRepairableCuts()); }
+
+    double getConstraintUpperBound(int constraintIndex) override;
+    bool setConstraintUpperBound(int constraintIndex, double upperBound) override;
 
     bool createInteriorHyperplane(HyperplanePtr hyperplane) override
     {
@@ -172,7 +189,14 @@ public:
     GRBLinExpr constraintLinearExpression;
     GRBQuadExpr constraintQuadraticExpression;
 
+    // Gurobi can only tell whether a problem is infeasible or unbounded if dual reductions are not used in presolve,
+    // so such a problem is solved again without them
+    E_ProblemSolutionStatus resolveInfeasibleOrUnbounded(E_ProblemSolutionStatus status);
+
 private:
+    // The objective coefficients removed to find a feasible point of an unbounded dual problem. They are restored
+    // before the next solve, since changing the model discards the point found.
+    std::vector<PairIndexValue> objectiveCoefficientsToRestore;
 };
 
 } // namespace SHOT

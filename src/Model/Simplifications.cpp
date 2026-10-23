@@ -10,6 +10,7 @@
 */
 
 #include "Simplifications.h"
+#include "../Settings.h"
 
 #include <unordered_set>
 #include "spdlog/fmt/fmt.h"
@@ -31,10 +32,17 @@ void checkAndConvertObjectivesAndConstraints(
             auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression,
                 tmpConstant]
                 = extractTermsAndConstant(
-                    nonlinearExpression, extractMonomials, extractSignomials, extractQuadratics, true);
+                    nonlinearExpression, extractMonomials, extractSignomials, extractQuadratics, true, true);
 
-            if(tmpMonomialTerms.size() == 0 && tmpSignomialTerms.size() == 0 && !tmpNonlinearExpression
-                && nonlinearObjective->monomialTerms.size() == 0 && nonlinearObjective->signomialTerms.size() == 0)
+            // The extracted terms are merged with the terms the objective function already has before its type is
+            // decided, since they may cancel each other
+            MonomialTerms monomialTerms = nonlinearObjective->monomialTerms;
+            monomialTerms.add(tmpMonomialTerms);
+
+            SignomialTerms signomialTerms = nonlinearObjective->signomialTerms;
+            signomialTerms.add(tmpSignomialTerms);
+
+            if(monomialTerms.size() == 0 && signomialTerms.size() == 0 && !tmpNonlinearExpression)
             {
                 // The objective is no longer nonlinear
 
@@ -85,11 +93,9 @@ void checkAndConvertObjectivesAndConstraints(
                 if(tmpQuadraticTerms.size() > 0)
                     nonlinearObjective->add(tmpQuadraticTerms);
 
-                if(tmpMonomialTerms.size() > 0)
-                    nonlinearObjective->add(std::move(tmpMonomialTerms));
-
-                if(tmpSignomialTerms.size() > 0)
-                    nonlinearObjective->add(std::move(tmpSignomialTerms));
+                nonlinearObjective->monomialTerms = std::move(monomialTerms);
+                nonlinearObjective->signomialTerms = std::move(signomialTerms);
+                nonlinearObjective->properties.isValid = false;
 
                 nonlinearObjective->nonlinearExpression = tmpNonlinearExpression;
 
@@ -100,6 +106,15 @@ void checkAndConvertObjectivesAndConstraints(
     }
 
     std::vector<std::pair<NumericConstraintPtr, NumericConstraintPtr>> changedConstraints; // old, new
+
+    // The reformulated problem is given to the MIP solver, which is only given quadratic constraints if the quadratic
+    // strategy allows them, e.g., not with Cbc. A constraint whose nonlinear expression turns out to be quadratic is
+    // then kept nonlinear with its quadratic terms extracted, as the reformulation creates such constraints; replacing
+    // it with a quadratic constraint made the solve fail, e.g., for a maximization problem with a sum of squares
+    bool keepQuadraticConstraintsNonlinear = problem->properties.isReformulated
+        && static_cast<ES_QuadraticProblemStrategy>(
+               problem->env->settings->getSetting<int>("Model.Reformulation.Quadratics.Strategy"))
+            < ES_QuadraticProblemStrategy::ConvexQuadraticallyConstrained;
 
     for(auto& C : problem->numericConstraints)
     {
@@ -116,10 +131,20 @@ void checkAndConvertObjectivesAndConstraints(
         auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression,
             tmpConstant]
             = extractTermsAndConstant(
-                nonlinearExpression, extractMonomials, extractSignomials, extractQuadratics, true);
+                nonlinearExpression, extractMonomials, extractSignomials, extractQuadratics, true, true);
 
-        if(tmpMonomialTerms.size() == 0 && tmpSignomialTerms.size() == 0 && !tmpNonlinearExpression
-            && nonlinearConstraint->monomialTerms.size() == 0 && nonlinearConstraint->signomialTerms.size() == 0)
+        bool isQuadratic = (tmpQuadraticTerms.size() > 0 || nonlinearConstraint->quadraticTerms.size() > 0);
+
+        // The extracted terms are merged with the terms the constraint already has before its type is decided, since
+        // they may cancel each other
+        MonomialTerms monomialTerms = nonlinearConstraint->monomialTerms;
+        monomialTerms.add(tmpMonomialTerms);
+
+        SignomialTerms signomialTerms = nonlinearConstraint->signomialTerms;
+        signomialTerms.add(tmpSignomialTerms);
+
+        if(monomialTerms.size() == 0 && signomialTerms.size() == 0 && !tmpNonlinearExpression
+            && !(isQuadratic && keepQuadraticConstraintsNonlinear))
         {
             // The constraint is no longer nonlinear
 
@@ -176,11 +201,14 @@ void checkAndConvertObjectivesAndConstraints(
             if(tmpQuadraticTerms.size() > 0)
                 nonlinearConstraint->add(tmpQuadraticTerms);
 
-            if(tmpMonomialTerms.size() > 0)
-                nonlinearConstraint->add(std::move(tmpMonomialTerms));
+            nonlinearConstraint->monomialTerms = std::move(monomialTerms);
+            nonlinearConstraint->signomialTerms = std::move(signomialTerms);
 
-            if(tmpSignomialTerms.size() > 0)
-                nonlinearConstraint->add(std::move(tmpSignomialTerms));
+            if(nonlinearConstraint->monomialTerms.size() > 0)
+                nonlinearConstraint->properties.hasMonomialTerms = true;
+
+            if(nonlinearConstraint->signomialTerms.size() > 0)
+                nonlinearConstraint->properties.hasSignomialTerms = true;
 
             if(tmpNonlinearExpression)
                 nonlinearConstraint->nonlinearExpression = tmpNonlinearExpression;
@@ -236,49 +264,73 @@ void simplifyNonlinearExpressions(
     // Apply reformulations
     for(auto& C : problem->nonlinearConstraints)
     {
-        if(C->properties.hasNonlinearExpression
-            && C->nonlinearExpression->getType() == E_NonlinearExpressionTypes::SquareRoot && C->linearTerms.size() == 0
-            && C->quadraticTerms.size() == 0 && C->monomialTerms.size() == 0 && C->signomialTerms.size() == 0)
+        // The following rewrites are for constraints L <= f(x) <= U, where f only consists of the nonlinear expression
+        if(!C->properties.hasNonlinearExpression || C->linearTerms.size() > 0 || C->quadraticTerms.size() > 0
+            || C->monomialTerms.size() > 0 || C->signomialTerms.size() > 0 || C->constant != 0.0)
+            continue;
+
+        bool hasLowerBound = (C->valueLHS != SHOT_DBL_MIN);
+        bool hasUpperBound = (C->valueRHS != SHOT_DBL_MAX);
+
+        // The constraint is infeasible if the upper bound is negative, and it must not become feasible when the
+        // bound is squared
+        if(hasUpperBound && C->valueRHS < 0.0)
+            continue;
+
+        if(C->nonlinearExpression->getType() == E_NonlinearExpressionTypes::SquareRoot)
         {
-            // Can take the square of both sides
+            // Can take the square of both sides: L <= sqrt(g(x)) <= U is max(L,0)^2 <= g(x) <= U^2. A lower bound
+            // that is not positive is redundant, but then g(x) >= 0 is kept since it is required by the square root.
 
             C->nonlinearExpression = std::dynamic_pointer_cast<ExpressionSquareRoot>(C->nonlinearExpression)->child;
-            if(abs(C->valueLHS) < SHOT_DBL_MAX)
-                C->valueLHS = C->valueLHS * C->valueLHS;
-            if(abs(C->valueRHS) < SHOT_DBL_MAX)
+
+            if(hasLowerBound)
+                C->valueLHS = (C->valueLHS > 0.0) ? C->valueLHS * C->valueLHS : 0.0;
+
+            if(hasUpperBound)
                 C->valueRHS = C->valueRHS * C->valueRHS;
 
             continue;
         }
 
-        if(C->properties.hasNonlinearExpression
-            && C->nonlinearExpression->getType() == E_NonlinearExpressionTypes::Square && C->linearTerms.size() == 0
-            && C->quadraticTerms.size() == 0 && C->monomialTerms.size() == 0 && C->signomialTerms.size() == 0
-            && C->valueLHS >= 0.0)
+        if(C->nonlinearExpression->getType() == E_NonlinearExpressionTypes::Square)
         {
-            // Can take the square root of both sides
+            // Can take the square root of both sides if the sign of g(x) is known: L <= g(x)^2 <= U is
+            // sqrt(L) <= g(x) <= sqrt(U) if g(x) > 0, and -sqrt(U) <= g(x) <= -sqrt(L) if g(x) < 0. A lower bound that
+            // is not positive is redundant.
 
-            C->nonlinearExpression = std::dynamic_pointer_cast<ExpressionSquare>(C->nonlinearExpression)->child;
-            C->valueLHS = std::sqrt(C->valueLHS);
+            auto child = std::dynamic_pointer_cast<ExpressionSquare>(C->nonlinearExpression)->child;
 
-            if(abs(C->valueRHS) < SHOT_DBL_MAX)
-                C->valueRHS = std::sqrt(C->valueRHS);
+            Interval childBounds;
 
-            continue;
-        }
+            try
+            {
+                childBounds = child->getBounds();
+            }
+            catch(const IntervalError&)
+            {
+                continue;
+            }
 
-        if(C->properties.hasNonlinearExpression
-            && C->nonlinearExpression->getType() == E_NonlinearExpressionTypes::Square && C->linearTerms.size() == 0
-            && C->quadraticTerms.size() == 0 && C->monomialTerms.size() == 0 && C->signomialTerms.size() == 0
-            && C->getConstraintFunctionBounds().l() > 0.0)
-        {
-            // Can take the square root of both sides
+            bool hasPositiveLowerBound = (hasLowerBound && C->valueLHS > 0.0);
 
-            C->nonlinearExpression = std::dynamic_pointer_cast<ExpressionSquare>(C->nonlinearExpression)->child;
-            // C->valueLHS = std::sqrt(C->getConstraintFunctionBounds().l());
+            if(!hasPositiveLowerBound && !hasUpperBound)
+                continue;
 
-            if(abs(C->valueRHS) < SHOT_DBL_MAX)
-                C->valueRHS = std::sqrt(C->valueRHS);
+            if(childBounds.l() > 0.0)
+            {
+                C->nonlinearExpression = child;
+                C->valueLHS = hasPositiveLowerBound ? std::sqrt(C->valueLHS) : SHOT_DBL_MIN;
+                C->valueRHS = hasUpperBound ? std::sqrt(C->valueRHS) : SHOT_DBL_MAX;
+            }
+            else if(childBounds.u() < 0.0)
+            {
+                double valueLHS = C->valueLHS;
+
+                C->nonlinearExpression = child;
+                C->valueLHS = hasUpperBound ? -std::sqrt(C->valueRHS) : SHOT_DBL_MIN;
+                C->valueRHS = hasPositiveLowerBound ? -std::sqrt(valueLHS) : SHOT_DBL_MAX;
+            }
 
             continue;
         }
@@ -290,6 +342,11 @@ void simplifyNonlinearExpressions(
         {
             // Removes linear terms, quadratics and constants
             auto sumExpression = std::dynamic_pointer_cast<ExpressionSum>(C->nonlinearExpression);
+
+            // The extracted terms are added to the constraint all at once, since adding them one by one searches
+            // the terms of the constraint for every added term
+            LinearTerms extractedLinearTerms;
+            QuadraticTerms extractedQuadraticTerms;
 
             for(auto& T : sumExpression->children)
             {
@@ -303,7 +360,7 @@ void simplifyNonlinearExpressions(
                 {
                     auto variable = std::dynamic_pointer_cast<ExpressionVariable>(T);
 
-                    C->linearTerms.add(std::make_shared<LinearTerm>(1.0, variable->variable));
+                    extractedLinearTerms.push_back(std::make_shared<LinearTerm>(1.0, variable->variable));
                     T = std::make_shared<ExpressionConstant>(0.0); // Will be removed during simplification later on
                 }
                 else if(T->getType() == E_NonlinearExpressionTypes::Product && T->getNumberOfChildren() == 2)
@@ -320,7 +377,7 @@ void simplifyNonlinearExpressions(
                         double constant = std::dynamic_pointer_cast<ExpressionConstant>(child0)->constant;
                         auto variable = std::dynamic_pointer_cast<ExpressionVariable>(child1)->variable;
 
-                        C->linearTerms.add(std::make_shared<LinearTerm>(constant, variable));
+                        extractedLinearTerms.push_back(std::make_shared<LinearTerm>(constant, variable));
                         T = std::make_shared<ExpressionConstant>(0.0); // Will be removed during simplification later on
                     }
                     else if(child1Type == E_NonlinearExpressionTypes::Constant
@@ -329,7 +386,7 @@ void simplifyNonlinearExpressions(
                         double constant = std::dynamic_pointer_cast<ExpressionConstant>(child1)->constant;
                         auto variable = std::dynamic_pointer_cast<ExpressionVariable>(child0)->variable;
 
-                        C->linearTerms.add(std::make_shared<LinearTerm>(constant, variable));
+                        extractedLinearTerms.push_back(std::make_shared<LinearTerm>(constant, variable));
                         T = std::make_shared<ExpressionConstant>(0.0); // Will be removed during simplification later on
                     }
                     else if(child1Type == E_NonlinearExpressionTypes::Variable
@@ -338,7 +395,7 @@ void simplifyNonlinearExpressions(
                         auto firstVariable = std::dynamic_pointer_cast<ExpressionVariable>(child0)->variable;
                         auto secondVariable = std::dynamic_pointer_cast<ExpressionVariable>(child1)->variable;
 
-                        C->quadraticTerms.add(std::make_shared<QuadraticTerm>(1.0, firstVariable, secondVariable));
+                        extractedQuadraticTerms.push_back(std::make_shared<QuadraticTerm>(1.0, firstVariable, secondVariable));
                         T = std::make_shared<ExpressionConstant>(0.0); // Will be removed during simplification later on
                     }
                 }
@@ -372,18 +429,24 @@ void simplifyNonlinearExpressions(
 
                     if(numVariables == 1)
                     {
-                        C->linearTerms.add(std::make_shared<LinearTerm>(constant, variables.at(0)));
+                        extractedLinearTerms.push_back(std::make_shared<LinearTerm>(constant, variables.at(0)));
                     }
 
                     if(numVariables == 2)
                     {
-                        C->quadraticTerms.add(
+                        extractedQuadraticTerms.push_back(
                             std::make_shared<QuadraticTerm>(constant, variables.at(0), variables.at(1)));
                     }
 
                     T = std::make_shared<ExpressionConstant>(0.0); // Will be removed during simplification later on
                 }
             }
+
+            if(extractedLinearTerms.size() > 0)
+                C->add(extractedLinearTerms);
+
+            if(extractedQuadraticTerms.size() > 0)
+                C->add(extractedQuadraticTerms);
         }
     }
 
@@ -398,6 +461,29 @@ void simplifyNonlinearExpressions(
 
     // After reformulations, re-check if objective and constraints are now linear or quadratic
     checkAndConvertObjectivesAndConstraints(problem, extractMonomials, extractSignomials, extractQuadratics);
+}
+
+bool isSharedExpression(const NonlinearExpressionPtr& expression)
+{
+    if(expression.use_count() > 1)
+        return (true);
+
+    if(auto unary = std::dynamic_pointer_cast<ExpressionUnary>(expression))
+        return (isSharedExpression(unary->child));
+
+    if(auto binary = std::dynamic_pointer_cast<ExpressionBinary>(expression))
+        return (isSharedExpression(binary->firstChild) || isSharedExpression(binary->secondChild));
+
+    if(auto general = std::dynamic_pointer_cast<ExpressionGeneral>(expression))
+    {
+        for(auto& C : general->children)
+        {
+            if(isSharedExpression(C))
+                return (true);
+        }
+    }
+
+    return (false);
 }
 
 NonlinearExpressionPtr copyNonlinearExpression(NonlinearExpression* expression, const ProblemPtr destination)
@@ -521,6 +607,47 @@ NonlinearExpressionPtr copyNonlinearExpression(NonlinearExpression* expression, 
     {
         return std::make_shared<ExpressionTan>(
             copyNonlinearExpression((((ExpressionTan*)expression)->child).get(), destination));
+    }
+    case E_NonlinearExpressionTypes::ArcSin:
+    {
+        return std::make_shared<ExpressionArcSin>(
+            copyNonlinearExpression((((ExpressionArcSin*)expression)->child).get(), destination));
+    }
+    case E_NonlinearExpressionTypes::ArcCos:
+    {
+        return std::make_shared<ExpressionArcCos>(
+            copyNonlinearExpression((((ExpressionArcCos*)expression)->child).get(), destination));
+    }
+    case E_NonlinearExpressionTypes::ArcTan:
+    {
+        return std::make_shared<ExpressionArcTan>(
+            copyNonlinearExpression((((ExpressionArcTan*)expression)->child).get(), destination));
+    }
+    case E_NonlinearExpressionTypes::Sinh:
+    {
+        return std::make_shared<ExpressionSinh>(
+            copyNonlinearExpression((((ExpressionSinh*)expression)->child).get(), destination));
+    }
+    case E_NonlinearExpressionTypes::Cosh:
+    {
+        return std::make_shared<ExpressionCosh>(
+            copyNonlinearExpression((((ExpressionCosh*)expression)->child).get(), destination));
+    }
+    case E_NonlinearExpressionTypes::Tanh:
+    {
+        return std::make_shared<ExpressionTanh>(
+            copyNonlinearExpression((((ExpressionTanh*)expression)->child).get(), destination));
+    }
+    case E_NonlinearExpressionTypes::ErrorFunction:
+    {
+        return std::make_shared<ExpressionErrorFunction>(
+            copyNonlinearExpression((((ExpressionErrorFunction*)expression)->child).get(), destination));
+    }
+    case E_NonlinearExpressionTypes::SignPower:
+    {
+        return std::make_shared<ExpressionSignPower>(
+            copyNonlinearExpression((((ExpressionSignPower*)expression)->child).get(), destination),
+            ((ExpressionSignPower*)expression)->exponent);
     }
     case E_NonlinearExpressionTypes::Constant:
     {

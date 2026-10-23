@@ -47,13 +47,19 @@ public:
     double getCurrentDualBound();
     double getGlobalDualBound();
     void setDualBound(double value, bool forceGlobal = false);
+    /// Forget the current dual bound, and optionally the global one, when their validity is lost
+    void resetDualBounds(bool resetGlobal);
 
     // For minimization problems, the lower bound is the dual while the upper bound is the primal objective value
     // for maximization problems, the lower bound is the primal while the upper bound is the dual objective value
     double currentDualBound = NAN;
     double currentPrimalBound = NAN;
 
-    double globalDualBound;
+    double globalDualBound = NAN;
+
+    // Whether the best primal solution has a variable at a bound that has replaced a missing bound when the problem was
+    // read, in which case the gap is not considered closed
+    bool isPrimalSolutionAtArtificialBound();
 
     bool isRelativeObjectiveGapToleranceMet();
     bool isAbsoluteObjectiveGapToleranceMet();
@@ -71,7 +77,7 @@ public:
     std::vector<IterationPtr> iterations;
     int getNumberOfIterations();
 
-    E_TerminationReason terminationReason = E_TerminationReason::None;
+    E_TerminationReason terminationReason = E_TerminationReason::NotTerminated;
     std::string terminationReasonDescription;
 
     E_ModelReturnStatus getModelReturnStatus();
@@ -79,8 +85,8 @@ public:
 
     E_SolutionStrategy usedSolutionStrategy = E_SolutionStrategy::None;
 
-    ES_MIPSolver usedMIPSolver = ES_MIPSolver::None;
-    ES_PrimalNLPSolver usedPrimalNLPSolver = ES_PrimalNLPSolver::None;
+    ES_MIPSolver usedMIPSolver = ES_MIPSolver::NotUsed;
+    ES_PrimalNLPSolver usedPrimalNLPSolver = ES_PrimalNLPSolver::NotUsed;
     std::string usedPrimalNLPSolverDescription = "";
 
     bool solutionIsGlobal = true;
@@ -98,6 +104,8 @@ public:
     int getAuxiliaryVariableCounter(E_AuxiliaryVariableType type);
 
 private:
+    void notifyBoundsUpdated(double previousPrimalBound, double previousDualBound, double previousGlobalDualBound);
+
     EnvironmentPtr env;
 };
 

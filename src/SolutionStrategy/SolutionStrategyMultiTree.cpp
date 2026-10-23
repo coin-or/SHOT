@@ -60,6 +60,7 @@
 
 #include "../Tasks/TaskSelectPrimalCandidatesFromSolutionPool.h"
 #include "../Tasks/TaskSelectPrimalCandidatesFromRootsearch.h"
+#include "../Tasks/TaskEnumerateFixedIntegerCombinations.h"
 #include "../Tasks/TaskSelectPrimalCandidatesFromNLP.h"
 #include "../Tasks/TaskSelectPrimalFixedNLPPointsFromSolutionPool.h"
 #include "../Tasks/TaskSelectPrimalCandidatesFromExternalSource.h"
@@ -129,6 +130,51 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
     auto tUpdateExternalDualBound = std::make_shared<TaskUpdateExternalDualBound>(env);
     env->tasks->addTask(tUpdateExternalDualBound, "UpdateExternalDualBound");
 
+    // NLP problems are solved for all combinations of the discrete variables before the dual problem is solved, if
+    // there are few enough of them. A termination requested by a callback during this is handled by the check below
+    if(env->settings->getSetting<bool>("Primal.FixedInteger.Use")
+        && env->settings->getSetting<bool>("Primal.FixedInteger.Enumeration.UseInitially")
+        && env->reformulatedProblem->properties.isDiscrete)
+    {
+        auto tEnumerateFixedInteger = std::make_shared<TaskEnumerateFixedIntegerCombinations>(env, false);
+        env->tasks->addTask(tEnumerateFixedInteger, "EnumerateFixedInteger");
+    }
+
+    // An NLP problem is solved from a given starting point, e.g. the levels of the variables of a GAMS model, with
+    // its discrete variables fixed, before the first dual problem, which can take the remaining time of a nonconvex
+    // problem. Without a starting point, there are no candidates and nothing is solved.
+    if(env->settings->getSetting<bool>("Primal.FixedInteger.Use")
+        && env->settings->getSetting<bool>("Primal.FixedInteger.UseStartingPoint"))
+    {
+        auto tSolveStartingPointNLP = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env,
+            static_cast<ES_PrimalNLPProblemSource>(env->settings->getSetting<int>("Primal.FixedInteger.SourceProblem"))
+                == ES_PrimalNLPProblemSource::ReformulatedProblem);
+        env->tasks->addTask(tSolveStartingPointNLP, "SolveStartingPointNLP");
+
+        auto tClearStartingPointNLP = std::make_shared<TaskClearFixedPrimalCandidates>(env);
+        env->tasks->addTask(tClearStartingPointNLP, "ClearStartingPointNLP");
+    }
+
+    // Review externally supplied primal candidates before solving the first dual problem, so approved points
+    // can be used as MIP starts and a callback can stop after a solution has been stored.
+    auto tSelectPrimExternalInitial = std::make_shared<TaskSelectPrimalCandidatesFromExternalSource>(env);
+    env->tasks->addTask(tSelectPrimExternalInitial, "SelectPrimExternalInitial");
+
+    // An exact MILP needs no outer approximation. Let user cuts queued by seed review reach the model before
+    // solving, and process cuts queued by later primal reviews before a gap check can finalize the solution.
+    bool externalCutsBeforeTermination = env->reformulatedProblem->properties.isMILPProblem;
+    auto tSelectExternalHPs = std::make_shared<TaskSelectHyperplanesExternal>(env, externalCutsBeforeTermination);
+    if(externalCutsBeforeTermination)
+    {
+        env->tasks->addTask(tSelectExternalHPs, "SelectExternalHPsInitial");
+        env->tasks->addTask(tAddHPs, "AddExternalHPsInitial");
+    }
+
+    // A termination requested by a callback before the first dual problem is solved, e.g., at the interior point
+    // search, stops the solution process here
+    auto tCheckInitialUserTerm = std::make_shared<TaskCheckUserTermination>(env, "FinalizeSolution", false);
+    env->tasks->addTask(tCheckInitialUserTerm, "CheckUserTerminationInitial");
+
     if(env->settings->getSetting<bool>("Dual.Relaxation.Use")
         && env->reformulatedProblem->properties.numberOfSemicontinuousVariables == 0
         && env->reformulatedProblem->properties.numberOfSemiintegerVariables == 0)
@@ -162,6 +208,12 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
     auto tSelectPrimExternal = std::make_shared<TaskSelectPrimalCandidatesFromExternalSource>(env);
     env->tasks->addTask(tSelectPrimExternal, "SelectPrimExternal");
     std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tSelectPrimExternal);
+
+    if(externalCutsBeforeTermination)
+    {
+        env->tasks->addTask(tSelectExternalHPs, "SelectExternalHPs");
+        env->tasks->addTask(tAddHPs, "AddExternalHPs");
+    }
 
     auto tPrintIterReport = std::make_shared<TaskPrintIterationReport>(env);
     env->tasks->addTask(tPrintIterReport, "PrintIterReport");
@@ -220,7 +272,14 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
         = std::make_shared<TaskCheckMaxNumberOfPrimalReductionCuts>(env, "FinalizeSolution");
     env->tasks->addTask(tCheckMaxNumberOfObjectiveCuts, "CheckMaxObjectiveCuts");
 
-    if(env->settings->getSetting<bool>("Primal.FixedInteger.Use") && env->reformulatedProblem->properties.isDiscrete)
+    // A nonconvex problem without discrete variables otherwise only gets primal solutions from the final polish, which
+    // is not reached when the time limit ends the search, so the NLP problem is also solved from its dual solutions
+    bool useFixedNLPOnContinuousProblem = !env->reformulatedProblem->properties.isDiscrete
+        && env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex
+        && env->settings->getSetting<bool>("Primal.FixedInteger.UseOnContinuousProblems");
+
+    if(env->settings->getSetting<bool>("Primal.FixedInteger.Use")
+        && (env->reformulatedProblem->properties.isDiscrete || useFixedNLPOnContinuousProblem))
     {
         auto tSelectPrimFixedNLPSolPool = std::make_shared<TaskSelectPrimalFixedNLPPointsFromSolutionPool>(env);
         env->tasks->addTask(tSelectPrimFixedNLPSolPool, "SelectPrimFixedNLPSolPool");
@@ -253,6 +312,17 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
         env->tasks->addTask(tCheckRelGap, "CheckRelGap");
     }
 
+    // If the objective gap could not be closed, e.g., due to numerical issues in the dual strategy, NLP problems are
+    // solved for all combinations of the discrete variables, if this has not been done and there are few enough of
+    // them
+    if(env->settings->getSetting<bool>("Primal.FixedInteger.Use")
+        && env->settings->getSetting<bool>("Primal.FixedInteger.Enumeration.UseAsFallback")
+        && env->reformulatedProblem->properties.isDiscrete)
+    {
+        auto tEnumerateFixedIntegerFallback = std::make_shared<TaskEnumerateFixedIntegerCombinations>(env, true);
+        std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tEnumerateFixedIntegerFallback);
+    }
+
     // Once the search has finished, solve an NLP problem starting from the solution found to try to improve it.
     // The dual solver's own tolerances bound how accurate its point is -- for a MIQCQP solver those are its
     // internal (barrier) tolerances, which SHOT's termination settings do not control -- and near an optimum the
@@ -260,7 +330,7 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
     // variables, when there are any, are fixed at the values found, so the NLP solved is the continuous problem
     // that remains. This is a separate task instance from any used during the search: it must not be paced by
     // the iteration and time heuristics that apply there.
-    if(env->settings->getSetting<bool>("Primal.PolishSolution"))
+    if(env->settings->getSetting<int>("Primal.PolishSolution.NumberOfPoints") > 0)
     {
         auto tPolishPoint = std::make_shared<TaskSelectPrimalFixedNLPPointsFromSolutionPool>(env, true);
         std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tPolishPoint);
@@ -320,8 +390,8 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
         env->tasks->addTask(tSelectObjectiveHPPts, "SelectObjectiveHPPts");
     }
 
-    auto tSelectExternalHPs = std::make_shared<TaskSelectHyperplanesExternal>(env);
-    env->tasks->addTask(tSelectExternalHPs, "SelectExternalHPs");
+    if(!externalCutsBeforeTermination)
+        env->tasks->addTask(tSelectExternalHPs, "SelectExternalHPs");
 
     env->tasks->addTask(tAddHPs, "AddHPs");
 

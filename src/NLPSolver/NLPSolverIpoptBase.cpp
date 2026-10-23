@@ -10,11 +10,18 @@
 
 #include "NLPSolverIpoptBase.h"
 
+#include <algorithm>
 #include <cstdio>
 #include <cstring>
 
+#if IPOPT_VERSION_MAJOR > 3 || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR >= 14)
+#include "IpLibraryLoader.hpp"
+#include "IpLinearSolvers.h"
+#endif
+
 #include "../Output.h"
 #include "../Settings.h"
+#include "../Timing.h"
 #include "../Utilities.h"
 
 namespace SHOT
@@ -22,7 +29,7 @@ namespace SHOT
 
 using namespace Ipopt;
 
-void IpoptJournal::PrintImpl(Ipopt::EJournalCategory category, Ipopt::EJournalLevel level, const char* str)
+void IpoptJournal::PrintImpl(Ipopt::EJournalCategory /*category*/, Ipopt::EJournalLevel level, const char* str)
 {
     auto lines = Utilities::splitStringByCharacter(str, '\n');
 
@@ -276,29 +283,22 @@ bool IpoptProblem::get_starting_point(Index n, [[maybe_unused]] bool init_x, [[m
         double variableLB = sourceProblem->getVariableLowerBound(k);
         double variableUB = sourceProblem->getVariableUpperBound(k);
 
-        if(variableUB == SHOT_DBL_MAX)
-        {
-            if(defaultInitValue > variableLB)
-                x[k] = variableLB;
-            else
-                x[k] = defaultInitValue;
-        }
-        else if(variableLB == SHOT_DBL_MIN)
-        {
-            if(defaultInitValue > variableUB)
-                x[k] = variableUB;
-            else
-                x[k] = defaultInitValue;
-        }
-        else if(variableLB <= defaultInitValue && defaultInitValue <= variableUB)
-            x[k] = variableUB;
-        else if(variableLB > defaultInitValue)
+        // The default value if it is within the bounds, and otherwise the bound closest to it
+        if(variableLB > defaultInitValue)
             x[k] = variableLB;
-        else
+        else if(variableUB < defaultInitValue)
             x[k] = variableUB;
+        else
+            x[k] = defaultInitValue;
     }
 
     return (true);
+}
+
+// The key of a (row, column) pair in the Jacobian and Hessian placement maps
+static inline long getElementKey(int row, int column, int numberOfVariables)
+{
+    return ((long)row * numberOfVariables + column);
 }
 
 // Returns the value of the objective function
@@ -345,6 +345,7 @@ bool IpoptProblem::eval_jac_g(Index n, const Number* x, [[maybe_unused]] bool ne
         int counter = 0;
 
         jacobianCounterPlacement.clear();
+        constantJacobianElements.clear();
 
         for(auto& C : sourceProblem->numericConstraints)
         {
@@ -355,11 +356,56 @@ bool IpoptProblem::eval_jac_g(Index n, const Number* x, [[maybe_unused]] bool ne
                 iRow[counter] = C->getIndex();
                 jCol[counter] = G->getIndex();
 
-                jacobianCounterPlacement.emplace(std::make_pair(C->getIndex(), G->getIndex()), counter);
+                jacobianCounterPlacement.emplace(getElementKey(C->getIndex(), G->getIndex(), n), counter);
                 counter++;
             }
 
             assert(counter <= nele_jac);
+        }
+
+        // The gradients of the linear constraints do not depend on the point, so they are calculated once here
+        VectorDouble emptyPoint(n, 0.0);
+
+        for(auto& C : sourceProblem->numericConstraints)
+        {
+            if(C->properties.classification != E_ConstraintClassification::Linear)
+                continue;
+
+            for(auto& G : C->calculateGradient(emptyPoint, false))
+            {
+                int location = jacobianCounterPlacement[getElementKey(C->getIndex(), G.first->getIndex(), n)];
+                constantJacobianElements.emplace_back(location, G.second);
+            }
+        }
+
+        size_t expressionNonzeros = 0;
+        size_t expressionConstraints = 0;
+        nonlinearExpressionConstraintIndexes.assign(sourceProblem->ADFunctions.Range(), -1);
+        for(const auto& C : sourceProblem->nonlinearConstraints)
+        {
+            if(!C->properties.hasNonlinearExpression)
+                continue;
+
+            expressionNonzeros += C->nonlinearGradientSparsityPattern.nnz();
+            nonlinearExpressionConstraintIndexes[C->nonlinearExpressionIndex] = C->getIndex();
+            ++expressionConstraints;
+        }
+
+        // One reverse subgraph sweep can cover all requested rows of the shared tape.
+        if(expressionConstraints > 1)
+        {
+            nonlinearConstraintJacobianPattern.resize(sourceProblem->ADFunctions.Range(),
+                sourceProblem->nonlinearExpressionVariables.size(), expressionNonzeros);
+            size_t entry = 0;
+            for(const auto& C : sourceProblem->nonlinearConstraints)
+            {
+                if(!C->properties.hasNonlinearExpression)
+                    continue;
+
+                const auto& columns = C->nonlinearGradientSparsityPattern.col();
+                for(size_t column : columns)
+                    nonlinearConstraintJacobianPattern.set(entry++, C->nonlinearExpressionIndex, column);
+            }
         }
 
         return (true);
@@ -371,18 +417,50 @@ bool IpoptProblem::eval_jac_g(Index n, const Number* x, [[maybe_unused]] bool ne
 
     std::memset(values, 0, nele_jac * sizeof(Number));
 
+    for(auto& E : constantJacobianElements)
+        values[E.first] += E.second;
+
     for(auto& C : sourceProblem->numericConstraints)
     {
-        auto jacobian = C->calculateGradient(vectorPoint, false);
+        if(C->properties.classification == E_ConstraintClassification::Linear)
+            continue;
+
+        SparseVariableVector jacobian;
+        if(nonlinearConstraintJacobianPattern.nnz() > 0 && C->properties.hasNonlinearExpression)
+            jacobian = std::static_pointer_cast<NonlinearConstraint>(C)
+                           ->calculateGradientWithoutNonlinearExpression(vectorPoint, false);
+        else
+            jacobian = C->calculateGradient(vectorPoint, false);
 
         for(auto& G : jacobian)
         {
-            int location = jacobianCounterPlacement[std::make_pair(C->getIndex(), G.first->getIndex())];
+            int location = jacobianCounterPlacement[getElementKey(C->getIndex(), G.first->getIndex(), n)];
 
             values[location] += G.second;
 
             assert(location < nele_jac);
             assert(location >= 0);
+        }
+    }
+
+    if(nonlinearConstraintJacobianPattern.nnz() > 0)
+    {
+        std::vector<double> nonlinearPoint(sourceProblem->nonlinearExpressionVariables.size());
+        for(const auto& variable : sourceProblem->nonlinearExpressionVariables)
+            nonlinearPoint[variable->properties.nonlinearVariableIndex] = vectorPoint[variable->getIndex()];
+
+        CppAD::sparse_rcv<std::vector<size_t>, std::vector<double>> subset(nonlinearConstraintJacobianPattern);
+        sourceProblem->calculateNonlinearJacobian(nonlinearPoint, subset);
+
+        const auto& rows = subset.row();
+        const auto& columns = subset.col();
+        const auto& derivatives = subset.val();
+        for(size_t k = 0; k < subset.nnz(); ++k)
+        {
+            const int constraintIndex = nonlinearExpressionConstraintIndexes[rows[k]];
+            const int variableIndex = sourceProblem->nonlinearExpressionVariables[columns[k]]->getIndex();
+            const auto location = jacobianCounterPlacement.at(getElementKey(constraintIndex, variableIndex, n));
+            values[location] += derivatives[k];
         }
     }
 
@@ -408,9 +486,33 @@ bool IpoptProblem::eval_h(Index n, const Number* x, [[maybe_unused]] bool new_x,
             jCol[counter] = E.second->getIndex();
 
             lagrangianHessianCounterPlacement.emplace(
-                std::make_pair(E.first->getIndex(), E.second->getIndex()), counter);
+                getElementKey(E.first->getIndex(), E.second->getIndex(), n), counter);
 
             counter++;
+        }
+
+        size_t expressionConstraints = 0;
+        for(const auto& C : sourceProblem->nonlinearConstraints)
+            expressionConstraints += C->properties.hasNonlinearExpression;
+
+        if(expressionConstraints > 1)
+        {
+            const size_t dimension = sourceProblem->nonlinearExpressionVariables.size();
+            std::vector<size_t> entries;
+            for(const auto& C : sourceProblem->nonlinearConstraints)
+            {
+                if(!C->properties.hasNonlinearExpression)
+                    continue;
+                const auto& pattern = C->nonlinearHessianSparsityPattern;
+                for(size_t k = 0; k < pattern.nnz(); ++k)
+                    entries.push_back(pattern.row()[k] * dimension + pattern.col()[k]);
+            }
+
+            std::sort(entries.begin(), entries.end());
+            entries.erase(std::unique(entries.begin(), entries.end()), entries.end());
+            nonlinearConstraintHessianPattern.resize(dimension, dimension, entries.size());
+            for(size_t k = 0; k < entries.size(); ++k)
+                nonlinearConstraintHessianPattern.set(k, entries[k] / dimension, entries[k] % dimension);
         }
 
         return (true);
@@ -424,10 +526,17 @@ bool IpoptProblem::eval_h(Index n, const Number* x, [[maybe_unused]] bool new_x,
 
     if(obj_factor != 0.0)
     {
-        for(auto& E : sourceProblem->objectiveFunction->calculateHessian(vectorPoint, false))
+        // A constant Hessian, e.g. of a quadratic objective function, is used as it is instead of being copied
+        auto constantHessian = sourceProblem->objectiveFunction->getConstantHessian();
+        SparseVariableMatrix calculatedHessian;
+
+        if(!constantHessian)
+            calculatedHessian = sourceProblem->objectiveFunction->calculateHessian(vectorPoint, false);
+
+        for(auto& E : (constantHessian ? *constantHessian : calculatedHessian))
         {
-            int location = lagrangianHessianCounterPlacement[std::make_pair(
-                E.first.first->getIndex(), E.first.second->getIndex())];
+            int location = lagrangianHessianCounterPlacement[getElementKey(
+                E.first.first->getIndex(), E.first.second->getIndex(), n)];
 
             assert(location < nele_hess);
             assert(location >= 0);
@@ -444,15 +553,63 @@ bool IpoptProblem::eval_h(Index n, const Number* x, [[maybe_unused]] bool new_x,
         if(lambda[C->getIndex()] == 0.0)
             continue;
 
-        for(auto& E : C->calculateHessian(vectorPoint, false))
+        auto constantHessian = C->getConstantHessian();
+        SparseVariableMatrix calculatedHessian;
+
+        if(!constantHessian)
         {
-            int location = lagrangianHessianCounterPlacement[std::make_pair(
-                E.first.first->getIndex(), E.first.second->getIndex())];
+            if(nonlinearConstraintHessianPattern.nnz() > 0 && C->properties.hasNonlinearExpression)
+                calculatedHessian = std::static_pointer_cast<NonlinearConstraint>(C)
+                                        ->calculateHessianWithoutNonlinearExpression(vectorPoint, false);
+            else
+                calculatedHessian = C->calculateHessian(vectorPoint, false);
+        }
+
+        for(auto& E : (constantHessian ? *constantHessian : calculatedHessian))
+        {
+            int location = lagrangianHessianCounterPlacement[getElementKey(
+                E.first.first->getIndex(), E.first.second->getIndex(), n)];
 
             assert(location < nele_hess);
             assert(location >= 0);
 
             values[location] += lambda[C->getIndex()] * E.second;
+        }
+    }
+
+    if(nonlinearConstraintHessianPattern.nnz() > 0)
+    {
+        std::vector<double> weights(sourceProblem->ADFunctions.Range(), 0.0);
+        bool anyWeight = false;
+        for(const auto& C : sourceProblem->nonlinearConstraints)
+        {
+            if(!C->properties.hasNonlinearExpression)
+                continue;
+            weights[C->nonlinearExpressionIndex] = lambda[C->getIndex()];
+            anyWeight |= lambda[C->getIndex()] != 0.0;
+        }
+
+        if(anyWeight)
+        {
+            std::vector<double> nonlinearPoint(sourceProblem->nonlinearExpressionVariables.size());
+            for(const auto& variable : sourceProblem->nonlinearExpressionVariables)
+                nonlinearPoint[variable->properties.nonlinearVariableIndex] = vectorPoint[variable->getIndex()];
+
+            CppAD::sparse_rcv<std::vector<size_t>, std::vector<double>> subset(nonlinearConstraintHessianPattern);
+            sourceProblem->ADFunctions.sparse_hes(nonlinearPoint, weights, subset,
+                nonlinearConstraintHessianPattern, "cppad.symmetric", nonlinearConstraintHessianWork);
+
+            for(size_t k = 0; k < subset.nnz(); ++k)
+            {
+                const auto& rowVariable = sourceProblem->nonlinearExpressionVariables[subset.row()[k]];
+                const auto& columnVariable = sourceProblem->nonlinearExpressionVariables[subset.col()[k]];
+                if(rowVariable->getIndex() > columnVariable->getIndex())
+                    continue;
+
+                const auto location = lagrangianHessianCounterPlacement.at(
+                    getElementKey(rowVariable->getIndex(), columnVariable->getIndex(), n));
+                values[location] += subset.val()[k];
+            }
         }
     }
 
@@ -551,6 +708,28 @@ void IpoptProblem::finalize_solution(SolverReturn status, [[maybe_unused]] Index
 
         break;
 
+    case FEASIBLE_POINT_FOUND:
+        // A problem with as many equality constraints as free variables, which e.g. a problem with equality
+        // constraints can be after its integer variables have been fixed, is solved by Ipopt as a system of
+        // equations. The point returned is then only known to be feasible.
+        solutionDescription = "Algorithm found a feasible point for a problem with as many equality constraints as "
+                              "free variables.";
+
+        solutionStatus = E_NLPSolutionStatus::Feasible;
+
+        if(x != nullptr)
+        {
+            hasSolution = true;
+            variableSolution = VectorDouble(numberOfVariables);
+
+            for(int i = 0; i < numberOfVariables; i++)
+                variableSolution[i] = x[i];
+
+            objectiveValue = obj_value;
+        }
+
+        break;
+
     case LOCAL_INFEASIBILITY:
         solutionDescription = "Algorithm converged to a point of local infeasibility. Problem may be infeasible.";
 
@@ -591,6 +770,16 @@ void IpoptProblem::finalize_solution(SolverReturn status, [[maybe_unused]] Index
 
             objectiveValue = obj_value;
         }
+
+        break;
+
+    case CPUTIME_EXCEEDED:
+#if IPOPT_VERSION_MAJOR > 3 || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR >= 14)
+    case WALLTIME_EXCEEDED:
+#endif
+        solutionDescription = "Time limit exceeded.";
+
+        solutionStatus = E_NLPSolutionStatus::TimeLimit;
 
         break;
 
@@ -682,6 +871,12 @@ E_NLPSolutionStatus NLPSolverIpoptBase::solveProblemInstance()
     E_NLPSolutionStatus status;
     ipoptProblem->variableSolution.clear();
 
+    // Ipopt is given the time left of the time limit of SHOT, since it otherwise solves without any limit of its
+    // own: a single NLP problem could then take longer than the whole solution time allowed, e.g. when its linear
+    // solver runs into difficulties. The limit is kept positive, since a nonpositive one is rejected.
+    double timeLeft = env->settings->getSetting<double>("Termination.TimeLimit") - env->timing->getElapsedTime("Total");
+    ipoptApplication->Options()->SetNumericValue("max_wall_time", std::max(std::min(timeLeft, timeLimit), 0.00001));
+
     try
     {
         Ipopt::ApplicationReturnStatus ipoptStatus;
@@ -720,6 +915,9 @@ E_NLPSolutionStatus NLPSolverIpoptBase::solveProblemInstance()
             break;
 
         case Ipopt::ApplicationReturnStatus::Maximum_CpuTime_Exceeded:
+#if IPOPT_VERSION_MAJOR > 3 || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR >= 14)
+        case Ipopt::ApplicationReturnStatus::Maximum_WallTime_Exceeded:
+#endif
             status = E_NLPSolutionStatus::TimeLimit;
             env->output->outputDebug("        No solution found to problem with Ipopt: Time limit exceeded.");
             break;
@@ -830,12 +1028,79 @@ VectorDouble NLPSolverIpoptBase::getVariableUpperBounds() { return (ipoptProblem
 
 VectorDouble NLPSolverIpoptBase::getSolution() { return (ipoptProblem->variableSolution); }
 
+// An HSL linear solver that is not linked into Ipopt is loaded from the library given by the option hsllib, and if it
+// cannot be loaded, every solve fails, and Ipopt 3.14.13 even crashes when it destroys the interface to MA97. Ipopt
+// reports all the solvers it can load as available, so whether the library can be loaded is checked here
+bool NLPSolverIpoptBase::isLinearSolverAvailable([[maybe_unused]] ES_IpoptSolver solver)
+{
+#if IPOPT_VERSION_MAJOR > 3 || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR >= 14)
+    IpoptLinearSolver flag;
+
+    switch(solver)
+    {
+    case(ES_IpoptSolver::ma27):
+        flag = IPOPTLINEARSOLVER_MA27;
+        break;
+    case(ES_IpoptSolver::ma57):
+        flag = IPOPTLINEARSOLVER_MA57;
+        break;
+    case(ES_IpoptSolver::ma86):
+        flag = IPOPTLINEARSOLVER_MA86;
+        break;
+    case(ES_IpoptSolver::ma97):
+        flag = IPOPTLINEARSOLVER_MA97;
+        break;
+    case(ES_IpoptSolver::mumps):
+        flag = IPOPTLINEARSOLVER_MUMPS;
+        break;
+    default:
+        return (true);
+    }
+
+    if(IpoptGetAvailableLinearSolvers(1) & flag)
+        return (true);
+
+    if(!(IpoptGetAvailableLinearSolvers(0) & flag))
+        return (false);
+
+    std::string library;
+    ipoptApplication->Options()->GetStringValue("hsllib", library, "");
+
+    try
+    {
+        Ipopt::LibraryLoader loader(library);
+        loader.loadLibrary();
+        return (true);
+    }
+    catch(Ipopt::DYNAMIC_LIBRARY_FAILURE&)
+    {
+        return (false);
+    }
+#else
+    return (true);
+#endif
+}
+
 void NLPSolverIpoptBase::setInitialSettings()
 {
-    std::string subsolver = "";
+    auto linearSolver = static_cast<ES_IpoptSolver>(env->settings->getSetting<int>("Subsolver.Ipopt.LinearSolver"));
+
+    if(!isLinearSolverAvailable(linearSolver))
+    {
+        const char* names[] = { "default", "MA27", "MA57", "MA86", "MA97", "MUMPS" };
+
+        env->output->outputWarning(fmt::format(
+            " The linear solver {} is not available to Ipopt. Using the default linear solver of Ipopt instead.",
+            names[static_cast<int>(linearSolver)]));
+
+        env->settings->updateSetting("Subsolver.Ipopt.LinearSolver", static_cast<int>(ES_IpoptSolver::IpoptDefault),
+            E_SettingPriority::SolverCompatibility);
+
+        linearSolver = ES_IpoptSolver::IpoptDefault;
+    }
 
     // Sets the linear solver used
-    switch(static_cast<ES_IpoptSolver>(env->settings->getSetting<int>("Subsolver.Ipopt.LinearSolver")))
+    switch(linearSolver)
     {
     case(ES_IpoptSolver::ma27):
         ipoptApplication->Options()->SetStringValue("linear_solver", "ma27");
@@ -867,7 +1132,35 @@ void NLPSolverIpoptBase::setInitialSettings()
     }
 
     // ipoptApplication->Options()->SetStringValue("fixed_variable_treatment", "make_parameter");
-    // ipoptApplication->Options()->SetStringValue("hessian_approximation", "limited-memory");
+
+    // The exact Hessian of a nonlinear expression in many variables with a nearly dense Hessian takes one sweep of the
+    // whole expression per variable, which can take most of the time of the NLP solution
+    auto hessianApproximation = static_cast<ES_IpoptHessianApproximation>(
+        env->settings->getSetting<int>("Subsolver.Ipopt.HessianApproximation"));
+
+    bool useLimitedMemoryHessian = (hessianApproximation == ES_IpoptHessianApproximation::LimitedMemory);
+
+    if(hessianApproximation == ES_IpoptHessianApproximation::Automatic)
+    {
+        if(auto objective = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(sourceProblem->objectiveFunction))
+            useLimitedMemoryHessian = objective->isHessianCalculatedDensely();
+
+        for(auto& C : sourceProblem->nonlinearConstraints)
+        {
+            if(useLimitedMemoryHessian)
+                break;
+
+            if(auto constraint = std::dynamic_pointer_cast<NonlinearConstraint>(C))
+                useLimitedMemoryHessian = constraint->isHessianCalculatedDensely();
+        }
+    }
+
+    if(useLimitedMemoryHessian)
+        ipoptApplication->Options()->SetStringValue("hessian_approximation", "limited-memory");
+
+    // Read when Ipopt is initialized; without it, Ipopt reads ipopt.opt in the working directory if there is one
+    if(auto optionsFile = env->settings->getSetting<std::string>("Subsolver.Ipopt.OptionsFile"); !optionsFile.empty())
+        ipoptApplication->Options()->SetStringValue("option_file_name", optionsFile);
 
     if(!env->settings->getSetting<bool>("Output.Console.PrimalSolver.Show"))
     {
@@ -888,6 +1181,11 @@ void NLPSolverIpoptBase::setInitialSettings()
     ipoptApplication->Options()->SetNumericValue("gamma_phi", 1e-8, true, true);
     ipoptApplication->Options()->SetNumericValue("gamma_theta", 1e-4, true, true);
     ipoptApplication->Options()->SetNumericValue("required_infeasibility_reduction", 0.1, true, true);
+
+    // A derivative that is infinite or NaN at the starting point, e.g. of a square root at zero, was passed on to the
+    // linear solver, and MUMPS could then crash with a bus error in dmumps_mtransw_. Ipopt now stops with an invalid
+    // number instead.
+    ipoptApplication->Options()->SetStringValue("check_derivatives_for_naninf", "yes", true, true);
     // ipoptApplication->Options()->SetStringValue("nlp_scaling_method", "none", true, true);
     ipoptApplication->Options()->SetNumericValue(
         "obj_scaling_factor", sourceProblem->objectiveFunction->properties.isMinimize ? 1.0 : -1.0, true, true);

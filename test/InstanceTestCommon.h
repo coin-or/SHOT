@@ -56,7 +56,7 @@ enum class E_InstanceResult
 // bare/unfiltered `ctest` run (e.g. CI). Any data/instances/ subfolder NOT listed here defaults to
 // "full" (opt-in only, see FullInstanceTest.cpp) -- this is deliberate so future benchmark folders
 // default to opt-in exercise rather than silently getting no coverage.
-static const std::vector<std::string> kCoreInstanceFolders = { "minlp_tests_jl", "MINLP-convex-small" };
+static const std::vector<std::string> kCoreInstanceFolders = { "minlp_tests_jl", "MINLP-convex-small", "ampl_mp" };
 
 enum class InstanceTestScope
 {
@@ -69,6 +69,9 @@ struct InstanceEntry
     std::string file;
     double expectedObjective = 0.0;
     bool isInfeasible = false;
+    // A strict instance must be solved to its objective, otherwise the test fails instead of only warning. Use it for
+    // instances that SHOT has failed on, so that they work as regression tests.
+    bool isStrict = false;
     std::string description;
 };
 
@@ -98,6 +101,9 @@ static std::vector<InstanceEntry> parseInstancesJson(const std::string& director
             {
                 e.expectedObjective = inst["objective"].get<double>();
             }
+
+            if(inst.contains("strict"))
+                e.isStrict = inst["strict"].get<bool>();
 
             if(inst.contains("description"))
                 e.description = inst["description"].get<std::string>();
@@ -246,6 +252,10 @@ static E_InstanceResult solveInstance(const InstanceEntry& entry, const std::str
     bool withinBounds = isMin ? (obj <= primal + tolerance && obj >= dual - tolerance)
                               : (obj >= primal - tolerance && obj <= dual + tolerance);
 
+    // Any primal solution below the objective is accepted for other instances, since not all are solved to optimality
+    if(entry.isStrict && std::abs(primal - obj) > tolerance)
+        withinBounds = false;
+
     if(withinBounds)
     {
         detailOut = fmt::format(
@@ -336,8 +346,17 @@ static bool runInstanceTests(ES_MIPSolver mipSolver, ES_PrimalNLPSolver nlpSolve
             case E_InstanceResult::WarnObjective:
             case E_InstanceResult::WarnNoSolution:
             case E_InstanceResult::WarnFeasibility:
-                warn++;
-                warnList.emplace_back(entry.file, detail);
+                if(entry.isStrict)
+                {
+                    std::cout << fmt::format("  [FAIL] {}: strict instance not solved\n", entry.file);
+                    fail++;
+                    failList.emplace_back(entry.file, detail);
+                }
+                else
+                {
+                    warn++;
+                    warnList.emplace_back(entry.file, detail);
+                }
                 break;
             case E_InstanceResult::Skipped:
                 skip++;
@@ -422,22 +441,32 @@ static int runInstanceTestMain(int argc, char* argv[], InstanceTestScope scope, 
         std::cout << label << " tests: Cplex + SHOT (NLP)\n";
         passed = runInstanceTests(ES_MIPSolver::Cplex, ES_PrimalNLPSolver::SHOT, verbose, "Cplex + SHOT", scope);
         break;
-    case 9:
+    case 11:
         passed = runInstanceTests(ES_MIPSolver::Highs, ES_PrimalNLPSolver::Conopt, verbose, "HiGHS + CONOPT", scope);
         break;
     case 8:
         std::cout << label << " tests: Cbc + SHOT (NLP)\n";
         passed = runInstanceTests(ES_MIPSolver::Cbc, ES_PrimalNLPSolver::SHOT, verbose, "Cbc + SHOT", scope);
         break;
+#ifdef HAS_UNO
+    case 9:
+        std::cout << label << " tests: HiGHS + Uno\n";
+        passed = runInstanceTests(ES_MIPSolver::Highs, ES_PrimalNLPSolver::Uno, verbose, "HiGHS + Uno", scope);
+        break;
+    case 10:
+        std::cout << label << " tests: Gurobi + Uno\n";
+        passed = runInstanceTests(ES_MIPSolver::Gurobi, ES_PrimalNLPSolver::Uno, verbose, "Gurobi + Uno", scope);
+        break;
+#endif
     default:
         std::cout << "Test #" << choice << " does not exist!\n";
         return -1;
     }
 
     if(!passed)
-        std::cout << "\n" << label << " tests FAILED (crashes occurred)\n";
+        std::cout << "\n" << label << " tests FAILED (crashes occurred or strict instances not solved)\n";
     else
-        std::cout << "\n" << label << " tests PASSED (no crashes)\n";
+        std::cout << "\n" << label << " tests PASSED (no crashes, strict instances solved)\n";
 
     return passed ? 0 : -1;
 }

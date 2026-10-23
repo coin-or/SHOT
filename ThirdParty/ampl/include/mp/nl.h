@@ -23,78 +23,66 @@
 #ifndef MP_NL_
 #define MP_NL_
 
-#include "mp/error.h" // MP_ASSERT
-#include "mp/format.h" // fmtold::CStringRef
+#include "mp/error.h"   // MP_ASSERT
+#include "mp/format.h"  // fmtold::CStringRef
 
-#include <cstring> // std::strlen, std::size_t
-#include <string> // std::string
+#include <cstring>  // std::strlen, std::size_t
+#include <string>   // std::string
 
-namespace mp
-{
+namespace mp {
 
 /** A reference to a null-terminated string with size. */
-class NLStringRef
-{
-private:
-    const char* data_;
-    std::size_t size_;
+class NLStringRef {
+ private:
+  const char *data_;
+  std::size_t size_;
 
-public:
-    /**
-      \rst
-      Constructs a string reference object from a C string computing
-      the size with ``std::strlen``.
-      \endrst
-     */
-    NLStringRef(const char* s) : data_(s), size_(std::strlen(s)) {}
+ public:
+  /**
+    \rst
+    Constructs a string reference object from a C string computing
+    the size with ``std::strlen``.
+    \endrst
+   */
+  NLStringRef(const char *s) : data_(s), size_(std::strlen(s)) {}
 
-    /** Constructs a string reference object from a C string and a size. */
-    NLStringRef(const char* s, std::size_t size) : data_(s), size_(size)
-    {
-        MP_ASSERT(!s[size], "string not null-terminated");
-    }
+  /** Constructs a string reference object from a C string and a size. */
+  NLStringRef(const char *s, std::size_t size) : data_(s), size_(size) {
+    MP_ASSERT(!s[size], "string not null-terminated");
+  }
 
-    /**
-      \rst
-      Constructs a string reference from an ``std::string`` object.
-      \endrst
-     */
-    NLStringRef(const std::string& s) : data_(s.c_str()), size_(s.size()) {}
+  /**
+    \rst
+    Constructs a string reference from an ``std::string`` object.
+    \endrst
+   */
+  NLStringRef(const std::string &s) : data_(s.c_str()), size_(s.size()) {}
 
-    /** Returns the pointer to a C string. */
-    const char* c_str() const { return data_; }
+  /** Returns the pointer to a C string. */
+  const char *c_str() const { return data_; }
 
-    /** Returns the string size. */
-    std::size_t size() const { return size_; }
+  /** Returns the string size. */
+  std::size_t size() const { return size_; }
 };
 
-// Flags for ReadNLFile and ReadNLString.
-enum
-{
-    /** Read variable bounds before anything else. */
-    READ_BOUNDS_FIRST = 1
+/// Flags for ReadNLFile and ReadNLString.
+enum {
+  /** Read variable bounds before anything else. */
+  READ_BOUNDS_FIRST = 1
 };
 
 /**
   \rst
   Reads an optimization problem in the NL format from the string *str*
   and sends notifications of the problem components to the *handler* object.
-  The handler class can be one of the following
-
-  * derived from `mp::NLHandler` or `mp::NullNLHandler`,
-  * `mp::Problem`,
-  * provide an interface compatible with one of the above.
-
+  See `mp::ReadNLFile` for description of *handler* and *flags*.
   Both *str* and *name* can be C strings or ``std::string`` objects.
   The *name* argument is used as the name of the input when reporting errors.
-  *flags* can be either 0, which is the default, to read all constructs in
-  the order they appear in the input, or `mp::READ_BOUNDS_FIRST` to read
-  variable bounds after the NL header and before other constructs such as
-  nonlinear expressions.
   \endrst
  */
 template <typename Handler>
-void ReadNLString(NLStringRef str, Handler& handler, fmtold::CStringRef name = "(input)", int flags = 0);
+void ReadNLString(NLStringRef str, Handler &handler,
+                  fmtold::CStringRef name = "(input)", int flags = 0);
 
 /**
   \rst
@@ -128,7 +116,9 @@ void ReadNLString(NLStringRef str, Handler& handler, fmtold::CStringRef name = "
     fmtold::print("The number of variable references is {}.", counter.num_vars);
   \endrst
  */
-template <typename Handler> void ReadNLFile(fmtold::CStringRef filename, Handler& handler, int flags = 0);
+template <typename Handler>
+void ReadNLFile(fmtold::CStringRef filename, Handler &handler, int flags = 0);
+
 } // namespace mp
 
-#endif // MP_NL_
+#endif  // MP_NL_

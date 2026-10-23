@@ -24,7 +24,11 @@
 #define STDCALL __stdcall
 #endif
 #if !defined(DllExport)
+#if !defined(_MSC_VER) || defined(SHOT_BUILDING_LIBRARY)
 #define DllExport __declspec(dllexport)
+#else
+#define DllExport __declspec(dllimport)
+#endif
 #endif
 #else
 #if !defined(STDCALL)
@@ -69,7 +73,7 @@ class IMIPSolver;
 class Output;
 class Report;
 class TaskHandler;
-class EventHandler;
+class CallbackHandler;
 class Timing;
 class Iteration;
 class DualSolver;
@@ -89,7 +93,7 @@ using ReformulatedProblemPtr = std::shared_ptr<ReformulatedProblem>;
 using ModelingSystemPtr = std::shared_ptr<IModelingSystem>;
 using MIPSolverPtr = std::shared_ptr<IMIPSolver>;
 using OutputPtr = std::shared_ptr<Output>;
-using EventHandlerPtr = std::shared_ptr<EventHandler>;
+using CallbackHandlerPtr = std::shared_ptr<CallbackHandler>;
 using ReportPtr = std::shared_ptr<Report>;
 using TaskHandlerPtr = std::shared_ptr<TaskHandler>;
 using TimingPtr = std::shared_ptr<Timing>;
@@ -141,7 +145,15 @@ struct SolutionPoint
 struct InteriorPoint
 {
     VectorDouble point;
-    PairIndexValue maxDevatingConstraint;
+    PairIndexValue maxDeviatingConstraint;
+
+    // A point is only usable as an interior point when it is strictly inside every nonlinear constraint. A
+    // nonfinite deviation compares false against any bound, so a test that only looks for a value that is too
+    // large lets a point on the boundary of the domain of a function, where it is infinite, through.
+    static bool isUsableDeviation(double maxDeviation)
+    {
+        return (std::isfinite(maxDeviation) && maxDeviation < 0);
+    }
 };
 
 struct PrimalSolution
@@ -151,9 +163,9 @@ struct PrimalSolution
     std::string sourceDescription;
     double objValue;
     int iterFound;
-    PairIndexValue maxDevatingConstraintLinear { -1, SHOT_DBL_INF };
-    PairIndexValue maxDevatingConstraintQuadratic { -1, SHOT_DBL_INF };
-    PairIndexValue maxDevatingConstraintNonlinear { -1, SHOT_DBL_INF };
+    PairIndexValue maxDeviatingConstraintLinear { -1, SHOT_DBL_INF };
+    PairIndexValue maxDeviatingConstraintQuadratic { -1, SHOT_DBL_INF };
+    PairIndexValue maxDeviatingConstraintNonlinear { -1, SHOT_DBL_INF };
     double maxIntegerToleranceError; // The maximum integer error before rounding
     bool boundProjectionPerformed = false; // Has the variable bounds been corrected to either upper or lower bounds?
     bool integerRoundingPerformed = false; // Has the integers been rounded?
@@ -166,8 +178,8 @@ struct PrimalFixedNLPCandidate
     E_PrimalNLPSource sourceType;
     double objValue;
     int iterFound;
-    PairIndexValue maxDevatingConstraint;
-    double discreteVariablePointHash;
+    PairIndexValue maxDeviatingConstraint;
+    PairDouble discreteVariablePointHashes;
 };
 
 struct DualSolution
@@ -250,7 +262,7 @@ struct IntegerCut
     E_IntegerCutSource source = E_IntegerCutSource::None;
     bool areAllVariablesBinary = false;
     int iterationGenerated = -1;
-    double pointHash;
+    PairDouble pointHashes;
 };
 
 struct SolutionStatistics
@@ -266,12 +278,24 @@ struct SolutionStatistics
     int numberOfProblemsFeasibleMIQCQP = 0;
     int numberOfProblemsOptimalMIQCQP = 0;
 
-    int numberOfFunctionEvalutions = 0;
+    int numberOfFunctionEvaluations = 0;
     int numberOfGradientEvaluations = 0;
 
     int numberOfProblemsMinimaxLP = 0;
 
     int numberOfProblemsFixedNLP = 0;
+
+    // The exhaustive search of the combinations of the discrete variables in the fixed-integer strategy. A combination
+    // is feasible if a solution was returned for its NLP problem, infeasible if the NLP problem was returned as
+    // infeasible, and otherwise unresolved. The skipped ones had already been used in the fixed-integer strategy
+    // The numbers are those of the last search, if it has been run both before the dual strategy and as a fallback
+    bool hasFixedIntegerEnumerationBeenRun = false;
+    bool hasFixedIntegerEnumerationFallbackBeenRun = false;
+    int numberOfFixedIntegerEnumerationCombinations = 0;
+    int numberOfFixedIntegerEnumerationCombinationsFeasible = 0;
+    int numberOfFixedIntegerEnumerationCombinationsInfeasible = 0;
+    int numberOfFixedIntegerEnumerationCombinationsUnresolved = 0;
+    int numberOfFixedIntegerEnumerationCombinationsSkipped = 0;
 
     int numberOfHyperplanesWithConvexSource = 0;
     int numberOfHyperplanesWithNonconvexSource = 0;
@@ -300,6 +324,7 @@ struct SolutionStatistics
 
     int numberOfPrimalReductionCutsUpdatesWithoutEffect = 0;
     int numberOfDualRepairsSinceLastPrimalUpdate = 0;
+    int numberOfCutResetsSinceLastPrimalUpdate = 0;
 
     int numberOfPrimalReductionsPerformed = 0;
     int numberOfSuccessfulDualRepairsPerformed = 0;

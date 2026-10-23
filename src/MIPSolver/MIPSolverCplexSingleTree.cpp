@@ -10,8 +10,8 @@
 
 #include "MIPSolverCplexSingleTree.h"
 
+#include "../Callback.h"
 #include "../DualSolver.h"
-#include "../EventHandler.h"
 #include "../Iteration.h"
 #include "../Output.h"
 #include "../PrimalSolver.h"
@@ -77,7 +77,7 @@ CplexCallback::CplexCallback(EnvironmentPtr envPtr, const IloNumVarArray& vars, 
         taskSelectPrimalSolutionFromRootsearch = std::make_shared<TaskSelectPrimalCandidatesFromRootsearch>(env);
     }
 
-    if(env->events->hasDataProvider(E_EventType::ExternalPrimalSolution))
+    if(env->callbacks->isActive(E_CallbackLocation::PrimalCandidateSearch))
     {
         taskSelectPrimalSolutionFromExternal = std::make_shared<TaskSelectPrimalCandidatesFromExternalSource>(env);
     }
@@ -94,8 +94,10 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
         // Check if better dual bound
         double tmpDualObjBound = context.getDoubleInfo(IloCplex::Callback::Context::Info::BestBound);
 
-        if((isMinimization && tmpDualObjBound > env->results->getCurrentDualBound())
-            || (!isMinimization && tmpDualObjBound < env->results->getCurrentDualBound()))
+        // CPLEX gives a missing bound as 1e75 or -1e75, which is a finite value to SHOT
+        if(std::abs(tmpDualObjBound) < 1e75
+            && ((isMinimization && tmpDualObjBound > env->results->getCurrentDualBound())
+                || (!isMinimization && tmpDualObjBound < env->results->getCurrentDualBound())))
         {
             std::lock_guard<std::mutex> lock(callbackMutex);
             VectorDouble doubleSolution; // Empty since we have no point
@@ -179,9 +181,8 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
 
                 context.getRelaxationPoint(cplexVars, tmpVals);
 
-                int numberOfVariables = (env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
-                    ? tmpVals.getSize() - 1
-                    : tmpVals.getSize();
+                int numberOfVariables = (env->dualSolver->hasObjectiveVariableOnlyInMIPSolver()) ? tmpVals.getSize() - 1
+                                                                                                 : tmpVals.getSize();
 
                 VectorDouble solution(numberOfVariables);
 
@@ -215,16 +216,19 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
 
                 {
                     std::lock_guard<std::mutex> lock(callbackMutex);
-                    if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("Dual.CutStrategy"))
-                        == ES_HyperplaneCutStrategy::ESH)
+                    if(env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
                     {
-                        tUpdateInteriorPoint->run();
-                        static_cast<TaskSelectHyperplanesESH*>(taskSelectHPPts.get())->run(solutionPoints);
-                    }
-                    else if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("Dual.CutStrategy"))
-                        == ES_HyperplaneCutStrategy::ECP)
-                    {
-                        static_cast<TaskSelectHyperplanesECP*>(taskSelectHPPts.get())->run(solutionPoints);
+                        if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("Dual.CutStrategy"))
+                            == ES_HyperplaneCutStrategy::ESH)
+                        {
+                            tUpdateInteriorPoint->run();
+                            static_cast<TaskSelectHyperplanesESH*>(taskSelectHPPts.get())->run(solutionPoints);
+                        }
+                        else if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("Dual.CutStrategy"))
+                            == ES_HyperplaneCutStrategy::ECP)
+                        {
+                            static_cast<TaskSelectHyperplanesECP*>(taskSelectHPPts.get())->run(solutionPoints);
+                        }
                     }
 
                     if(env->reformulatedProblem->objectiveFunction->properties.classification
@@ -266,9 +270,8 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
 
             context.getCandidatePoint(cplexVars, tmpVals);
 
-            int numberOfVariables = (env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
-                ? tmpVals.getSize() - 1
-                : tmpVals.getSize();
+            int numberOfVariables
+                = (env->dualSolver->hasObjectiveVariableOnlyInMIPSolver()) ? tmpVals.getSize() - 1 : tmpVals.getSize();
 
             VectorDouble solution(numberOfVariables);
 
@@ -278,6 +281,15 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
             }
 
             tmpVals.end();
+
+            // The bounds cannot be changed in the callback, so the MIP solver is interrupted and the artificial
+            // bounds are removed before it solves again
+            if(auto variables = env->problem->getVariablesAtArtificialBounds(solution); variables.size() > 0)
+            {
+                env->dualSolver->variablesAtArtificialBounds = variables;
+                context.abort();
+                return;
+            }
 
             SolutionPoint solutionCandidate;
 
@@ -323,7 +335,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
                 env->primalSolver->checkPrimalSolutionCandidates();
             }
 
-            if(env->events->hasDataProvider(E_EventType::ExternalPrimalSolution))
+            if(env->callbacks->isActive(E_CallbackLocation::PrimalCandidateSearch))
             {
                 taskSelectPrimalSolutionFromExternal->run();
             }
@@ -333,7 +345,18 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
             auto threadId = std::to_string(context.getIntInfo(IloCplex::Callback::Context::Info::ThreadId));
             printIterationReport(candidatePoints.at(0), threadId);
 
-            if(checkFixedNLPStrategy(candidatePoints.at(0)))
+            // Cplex reports every candidate in the Candidate context, also those that are not better than the best
+            // solution found so far and those it reports again after a lazy constraint has cut one off, while e.g.
+            // Gurobi only reports new incumbents. The fixed NLP problem is therefore only solved for a candidate
+            // that improves the primal bound, so that how often the heuristic is called does not depend on how
+            // often the solver reports candidates. The lazy constraints are still added for every candidate.
+            double candidateObjective = context.getCandidateObjective();
+
+            bool candidateImprovesPrimalBound = (candidateObjective < 1e74)
+                && ((isMinimization && candidateObjective < env->results->getPrimalBound())
+                    || (!isMinimization && candidateObjective > env->results->getPrimalBound()));
+
+            if(candidateImprovesPrimalBound && checkFixedNLPStrategy(candidatePoints.at(0)))
             {
 
                 if(taskSelectPrimNLPOriginal)
@@ -393,10 +416,10 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
             if((int)primalSol.size() < env->reformulatedProblem->properties.numberOfVariables)
                 env->reformulatedProblem->augmentAuxiliaryVariableValues(primalSol);
 
-            if(env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
+            if(env->dualSolver->hasObjectiveVariableOnlyInMIPSolver())
                 primalSol.push_back(env->reformulatedProblem->objectiveFunction->calculateValue(primalSol));
 
-            assert(cplexVars.getSize() == primalSol.size());
+            assert(static_cast<size_t>(cplexVars.getSize()) == primalSol.size());
 
             for(double S : primalSol)
                 tmpVals.add(S);
@@ -755,8 +778,15 @@ E_ProblemSolutionStatus MIPSolverCplexSingleTree::solveProblem()
             MIPSolutionStatus = MIPSolverCplex::getSolutionStatus();
         }
 
+        // An unbounded exact dual problem means that the problem is unbounded, so no point is needed
+        bool isUnboundedExactDualProblem
+            = MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded && env->dualSolver->isDualProblemExact();
+
+        if(isUnboundedExactDualProblem)
+            MIPSolutionStatus = resolveInfeasibleOrUnbounded(MIPSolutionStatus);
+
         // Try to solve a feasibility problem to get a valid solution point if unbounded
-        if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
+        if(!isUnboundedExactDualProblem && MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
         {
             cplexModel.remove(cplexInstance.getObjective());
 
@@ -778,7 +808,7 @@ E_ProblemSolutionStatus MIPSolverCplexSingleTree::solveProblem()
         }
 
         // If the previous repair failed, we can try this
-        if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
+        if(!isUnboundedExactDualProblem && MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
         {
             repairInfeasibility();
             MIPSolutionStatus = E_ProblemSolutionStatus::Unbounded;

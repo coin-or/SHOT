@@ -5,13 +5,13 @@ command-line switches, derived from the actual CLI parsing in
 `src/SHOT.cpp` (the `--help` output is generated directly from that code,
 so running `./SHOT --help` on your build is always the authoritative,
 build-specific answer — it also lists which problem formats *this*
-compiled binary supports, see section 2).
+compiled binary supports, see “Supported problem file formats”).
 
 For the debug-output mechanism specifically (`--debug`, intermediate
 problem/solution files), see
 [docs/DebuggingSHOT.md](DebuggingSHOT.md).
 
-## 1. Basic usage
+## Basic usage
 
 ```bash
 ./SHOT PROBLEMFILE [ARGUMENTS] [OPTIONS]
@@ -20,7 +20,7 @@ problem/solution files), see
 `PROBLEMFILE` is the only required positional argument. Everything else is
 optional. Run `./SHOT --help` for the built-in usage summary.
 
-## 2. Supported problem file formats
+## Supported problem file formats
 
 SHOT always supports:
 
@@ -43,14 +43,14 @@ When using `.nl` files through the AMPL Solver Library calling convention,
 pass `--AMPL` (or `-AMPL`) in addition to the problem file (only valid for
 `.nl` files; requires `HAS_AMPL`).
 
-## 3. Shorthand flags
+## Shorthand flags
 
 | Flag | Effect |
 |---|---|
 | `--convex` | Assumes the problem is convex (sets `Model.Convexity.AssumeConvex=true`) |
 | `--debug` / `--debug=<directory>` | Enables debug-output mode; see [DebuggingSHOT.md](DebuggingSHOT.md) |
 | `--mip=<cbc\|highs\|cplex\|gurobi>` | Selects the MIP (dual) solver — only the ones the build was compiled with are available |
-| `--nlp=<ipopt\|conopt\|gams\|shot>` | Selects the primal NLP solver |
+| `--nlp=<ipopt\|gams\|shot\|uno\|conopt>` | Selects the primal NLP solver |
 | `--tree=<single\|multi>` | Selects single-tree (branch-and-cut) vs. multi-tree dual strategy — single-tree requires solver callback support, currently only available with CPLEX or Gurobi; Cbc and HiGHS are always forced to multi-tree |
 | `--threads=<n>` | Maximum number of threads (`Dual.MIP.NumberOfThreads`) |
 | `--absgap=<value>` | Absolute objective gap termination tolerance (`Termination.ObjectiveGap.Absolute`) |
@@ -58,11 +58,11 @@ pass `--AMPL` (or `-AMPL`) in addition to the problem file (only valid for
 | `--timelimit=<value>` | Time limit in seconds (`Termination.TimeLimit`) |
 
 There is no shorthand flag for the iteration limit — set it directly as
-`Termination.IterationLimit=<n>` (see section 4). It's often more useful
+`Termination.IterationLimit=<n>` (see “Setting any option directly”). It's often more useful
 than `--timelimit` when you want a reproducible, machine-speed-independent
 stopping point (e.g. while debugging).
 
-## 4. Setting any option directly
+## Setting any option directly
 
 Beyond the shorthand flags above, **any** SHOT setting can be set directly
 as a positional `KEY=VALUE` argument (case-sensitive, no spaces around the
@@ -77,7 +77,7 @@ string, boolean, integer, enum, then double settings) and parses `VALUE`
 accordingly — booleans must be literally `true`/`false`, enums accept
 their integer value. Unrecognized keys are silently ignored, so typos in a
 setting name will not produce an error — double check the name (e.g. via
-`--docs`, section 6) if a `KEY=VALUE` argument doesn't seem to take effect.
+`--docs`, “Full/current options reference”) if a `KEY=VALUE` argument doesn't seem to take effect.
 
 Options can also be read from a file instead of (or in addition to) inline
 arguments:
@@ -88,7 +88,7 @@ arguments:
 - `--osol [FILE]` — same idea but in OSoL (XML) format; defaults to
   `SHOT.osol`.
 
-## 5. Output/result files
+## Output/result files
 
 - `--log FILE` — sets the log file name (default: `SHOT.log` in the
   current directory). See [DebuggingSHOT.md](DebuggingSHOT.md) for the
@@ -103,7 +103,21 @@ arguments:
   `<problemfile with .sol extension>`); written automatically when running
   in `--AMPL` mode.
 
-## 6. Full/current options reference
+## Exit codes
+
+The exit code tells whether the run itself succeeded. It does not give the
+model status: an infeasible or unbounded problem, or a run stopped by a
+limit, still exits with 0, and the status is written to the result files.
+
+| Code | Meaning |
+|------|---------|
+| 0 | The problem was solved (whatever the model status), or `--help`/`--docs` was run |
+| 1 | Invalid command line, e.g. no problem file given, or `--AMPL` with a problem that is not an AMPL (`.nl`) file |
+| 2 | The problem file or the options file given by `--opt`/`--osol` cannot be found or read |
+| 3 | An error occurred while solving the problem, e.g. a callback failed |
+| 4 | A result file (OSrL, trace, `.sol`), the options file or `options.md` could not be written |
+
+## Full/current options reference
 
 ```bash
 ./SHOT --docs
@@ -115,7 +129,7 @@ allowed enum values). This is the authoritative settings reference —
 prefer it over guessing a setting name, since settings can be added,
 renamed, or have their defaults changed between versions.
 
-## 7. Quick reference
+## Quick reference
 
 ```bash
 ./SHOT --help

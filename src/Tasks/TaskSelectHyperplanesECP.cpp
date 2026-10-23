@@ -59,10 +59,22 @@ void TaskSelectHyperplanesECP::run(std::vector<SolutionPoint> solPoints)
     std::vector<std::tuple<int, NumericConstraintValue>> selectedNumericValues;
     std::vector<std::tuple<int, NumericConstraintValue>> nonconvexSelectedNumericValues;
 
+    // Used to explain why no cuts were added
+    size_t numberOfDeviatingValues = 0;
+    size_t numberOfValuesAlreadyCut = 0;
+
     for(size_t i = 0; i < solPoints.size(); i++)
     {
         auto numericConstraintValues = env->reformulatedProblem->getFractionOfDeviatingNonlinearConstraints(
             solPoints.at(i).point, 0.0, constraintSelectionFactor);
+
+        numberOfDeviatingValues += numericConstraintValues.size();
+
+        if(numericConstraintValues.size() == 0)
+            continue;
+
+        // Calculated once, since the point is checked for every deviating constraint
+        auto pointHashes = env->dualSolver->calculateHashes(solPoints.at(i).point);
 
         for(auto& NCV : numericConstraintValues)
         {
@@ -90,10 +102,11 @@ void TaskSelectHyperplanesECP::run(std::vector<SolutionPoint> solPoints)
                 continue;
             }
 
-            if(env->dualSolver->hasHyperplaneBeenAdded(solPoints.at(i).point, NCV.constraint->getIndex()))
+            if(env->dualSolver->hasHyperplaneBeenAdded(pointHashes, NCV.constraint->getIndex()))
             {
-                env->output->outputDebug("         Hyperplane already added for constraint "
-                    + std::to_string(NCV.constraint->getIndex()));
+                env->output->outputDebug(fmt::format(
+                    "         Hyperplane already added for constraint {} in this point.", NCV.constraint->name));
+                numberOfValuesAlreadyCut++;
                 continue;
             }
 
@@ -107,14 +120,38 @@ void TaskSelectHyperplanesECP::run(std::vector<SolutionPoint> solPoints)
         }
     }
 
+    // A hyperplane is added for every deviating convex constraint, which gives the best dual bounds, unless their
+    // points would take too much memory, since each has a copy of the point: then at most
+    // Dual.HyperplaneCuts.MaxPerIteration, or as many as fit, are added. The limit cannot be checked while the
+    // constraints are selected above, since no hyperplanes have been added then.
+    size_t numberOfVariables = solPoints.empty() ? 1 : std::max<size_t>(1, solPoints.at(0).point.size());
+    int maximumConvexHyperplanes
+        = (int)std::max<size_t>(maxHyperplanesPerIter, maximumNumberOfHyperplanePointValues / numberOfVariables);
+
     for(auto& values : selectedNumericValues)
     {
+        if(addedHyperplanes >= maximumConvexHyperplanes)
+            break;
+
         int i = std::get<0>(values);
         auto NCV = std::get<1>(values);
 
+        // The constraint can be infinite in the solution point, e.g. a perspective outside its domain, and no
+        // hyperplane can then be generated there. A point a short distance toward one where the constraint is
+        // finite is used instead, which still cuts the solution point off.
+        auto generationPoint = env->dualSolver->getHyperplaneGenerationPoint(solPoints.at(i).point, NCV.constraint);
+
+        if(!generationPoint)
+        {
+            env->output->outputDebug(
+                fmt::format("         No point found where a hyperplane can be generated for constraint {}.",
+                    NCV.constraint->name));
+            continue;
+        }
+
         auto hyperplane = std::make_shared<ConstraintHyperplane>();
         hyperplane->sourceConstraint = NCV.constraint;
-        hyperplane->generatedPoint = solPoints.at(i).point;
+        hyperplane->generatedPoint = *generationPoint;
         hyperplane->isGlobal = (NCV.constraint->properties.convexity <= E_Convexity::Convex);
 
         if(solPoints.at(i).isRelaxedPoint)
@@ -148,8 +185,10 @@ void TaskSelectHyperplanesECP::run(std::vector<SolutionPoint> solPoints)
 
     if(addedHyperplanes == 0)
     {
-        env->output->outputDebug("         Could not add hyperplane for convex constraints, number of nonconvex: "
-            + std::to_string(nonconvexSelectedNumericValues.size()));
+        env->output->outputDebug(
+            fmt::format("         No cutting planes added for convex constraints, {} candidates from nonconvex "
+                        "constraints.",
+                nonconvexSelectedNumericValues.size()));
 
         for(auto& values : nonconvexSelectedNumericValues)
         {
@@ -159,9 +198,23 @@ void TaskSelectHyperplanesECP::run(std::vector<SolutionPoint> solPoints)
             int i = std::get<0>(values);
             auto NCV = std::get<1>(values);
 
+            // As for the convex constraints, no hyperplane can be generated in a point where the constraint is
+            // not finite, and the point is then moved toward one where it is. The check below that the hyperplane
+            // does not cut away a primal solution is made for the hyperplane of the point that is used.
+            auto generationPoint
+                = env->dualSolver->getHyperplaneGenerationPoint(solPoints.at(i).point, NCV.constraint);
+
+            if(!generationPoint)
+            {
+                env->output->outputDebug(
+                    fmt::format("         No point found where a hyperplane can be generated for constraint {}.",
+                        NCV.constraint->name));
+                continue;
+            }
+
             auto hyperplane = std::make_shared<ConstraintHyperplane>();
             hyperplane->sourceConstraint = NCV.constraint;
-            hyperplane->generatedPoint = solPoints.at(i).point;
+            hyperplane->generatedPoint = *generationPoint;
             hyperplane->isGlobal = (NCV.constraint->properties.convexity <= E_Convexity::Convex);
 
             if(solPoints.at(i).isRelaxedPoint)
@@ -237,9 +290,20 @@ void TaskSelectHyperplanesECP::run(std::vector<SolutionPoint> solPoints)
         }
     }
 
-    if(addedHyperplanes == 0)
+    if(addedHyperplanes == 0 && solPoints.size() == 0)
+    {
+        env->output->outputDebug("         No solution points to generate constraint cuts in.");
+    }
+    else if(addedHyperplanes == 0 && numberOfDeviatingValues == 0)
     {
         env->output->outputDebug("         All nonlinear constraints fulfilled, so no constraint cuts added.");
+    }
+    else if(addedHyperplanes == 0)
+    {
+        env->output->outputDebug(fmt::format("         No constraint cuts added although {} constraint values "
+                                             "deviate in the solution points, {} of them already cut in the same "
+                                             "point.",
+            numberOfDeviatingValues, numberOfValuesAlreadyCut));
     }
 
     env->timing->stopTimer("DualCutGenerationRootSearch");

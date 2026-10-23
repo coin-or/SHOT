@@ -10,20 +10,17 @@
 
 #include "TaskCheckUserTermination.h"
 
-#include "../CallbackData.h"
-#include "../EventHandler.h"
+#include "../Callback.h"
 #include "../Output.h"
 #include "../Results.h"
 #include "../TaskHandler.h"
 #include "../Timing.h"
 
-#include <any>
-
 namespace SHOT
 {
 
-TaskCheckUserTermination::TaskCheckUserTermination(EnvironmentPtr envPtr, std::string taskIDTrue)
-    : TaskBase(envPtr), taskIDIfTrue(taskIDTrue)
+TaskCheckUserTermination::TaskCheckUserTermination(EnvironmentPtr envPtr, std::string taskIDTrue, bool invokeCallbacks)
+    : TaskBase(envPtr), taskIDIfTrue(taskIDTrue), invokeCallbacks(invokeCallbacks)
 {
 }
 
@@ -31,27 +28,12 @@ TaskCheckUserTermination::~TaskCheckUserTermination() = default;
 
 void TaskCheckUserTermination::run()
 {
-    // Check if user termination was requested by data provider callbacks
-    if(!env->tasks->isTerminated() && env->events->hasDataProvider(E_EventType::UserTerminationCheck))
+    // A termination requested by a callback is passed on to the task handler when the callbacks are invoked
+    if(invokeCallbacks && !env->tasks->isTerminated() && env->callbacks->isActive(E_CallbackLocation::TerminationCheck))
     {
-        // Create termination callback data only when needed
-        int iterationNumber = env->results->getNumberOfIterations();
-        double timeElapsed = env->timing->getElapsedTime("Total");
-        double currentDualBound = env->results->getCurrentDualBound();
-        double currentPrimalBound = env->results->getPrimalBound();
-        double relativeGap = env->results->getRelativeCurrentObjectiveGap();
-        double absoluteGap = env->results->getAbsoluteCurrentObjectiveGap();
-
-        TerminationCallbackData callbackData(iterationNumber, timeElapsed, currentDualBound, currentPrimalBound,
-            relativeGap, absoluteGap, env->solutionStatistics);
-
-        auto shouldTerminate = env->events->requestData<bool>(E_EventType::UserTerminationCheck, callbackData);
-
-        if(shouldTerminate.has_value() && *shouldTerminate)
-        {
-            env->output->outputInfo("        User termination check requested termination");
-            env->tasks->terminate();
-        }
+        auto context = std::make_shared<TerminationCheckContext>(env);
+        env->callbacks->invoke(*context);
+        context->invalidate();
     }
 
     if(env->tasks->isTerminated())
@@ -60,7 +42,7 @@ void TaskCheckUserTermination::run()
         env->tasks->setNextTask(taskIDIfTrue);
         env->results->terminationReasonDescription = "Terminated by user.";
     }
-    else if(env->results->getCurrentIteration()->solutionStatus == E_ProblemSolutionStatus::Abort)
+    else if(invokeCallbacks && env->results->getCurrentIteration()->solutionStatus == E_ProblemSolutionStatus::Abort)
     {
         // The dual solver was interrupted, but not because SHOT asked it to: the preceding gap, iteration and time
         // limit checks have all been passed. Since the solver will keep returning the same interrupted status there

@@ -318,13 +318,13 @@ void Report::outputSolverHeader()
 
     if(SHOT_VERSION_PATCH[0] != '0')
     {
-        env->output->outputInfo(fmt::format(" Version: {}.{}.{}. Git hash: {}. Released: {}.", SHOT_VERSION_MAJOR,
-            SHOT_VERSION_MINOR, SHOT_VERSION_PATCH, SHOT_GITHASH, __DATE__));
+        env->output->outputInfo(fmt::format(" Version: {}.{}.{}{}. Git hash: {}. Released: {}.", SHOT_VERSION_MAJOR,
+            SHOT_VERSION_MINOR, SHOT_VERSION_PATCH, SHOT_VERSION_SUFFIX, SHOT_GITHASH, __DATE__));
     }
     else
     {
-        env->output->outputInfo(fmt::format(" Version: {}.{}. Git hash: {}. Released: {}.", SHOT_VERSION_MAJOR,
-            SHOT_VERSION_MINOR, SHOT_GITHASH, __DATE__));
+        env->output->outputInfo(fmt::format(" Version: {}.{}{}. Git hash: {}. Released: {}.", SHOT_VERSION_MAJOR,
+            SHOT_VERSION_MINOR, SHOT_VERSION_SUFFIX, SHOT_GITHASH, __DATE__));
     }
 
     env->output->outputInfo("");
@@ -440,7 +440,7 @@ void Report::outputOptionsReport()
     env->output->outputInfo("");
 
     env->output->outputInfo(fmt::format(" Primal NLP solver:          {}",
-        (static_cast<ES_PrimalNLPSolver>(env->results->usedPrimalNLPSolver) == ES_PrimalNLPSolver::None)
+        (static_cast<ES_PrimalNLPSolver>(env->results->usedPrimalNLPSolver) == ES_PrimalNLPSolver::NotUsed)
             ? "none"
             : env->results->usedPrimalNLPSolverDescription));
 
@@ -476,7 +476,7 @@ void Report::outputModelingSystemReport(ES_ModelingSystem system, std::string fi
     case(ES_ModelingSystem::AMPL):
         env->output->outputInfo(" Modeling system:            AMPL");
         break;
-    case(ES_ModelingSystem::None):
+    case(ES_ModelingSystem::API):
         env->output->outputInfo(" Modeling system:            SHOT API");
         break;
 
@@ -926,6 +926,10 @@ void Report::outputProblemInstanceReport()
         if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::AbsoluteValue); value > 0)
             env->output->outputInfo(fmt::format(" {:56s}{:d}", " - absolute value reformulation:", value));
 
+        if(auto value = env->results->getAuxiliaryVariableCounter(E_AuxiliaryVariableType::AbsoluteValueSign);
+            value > 0)
+            env->output->outputInfo(fmt::format(" {:56s}{:d}", " - absolute value upper bound (binary):", value));
+
         if(env->reformulatedProblem->antiEpigraphObjectiveVariable)
             env->output->outputInfo(fmt::format(" {:56s}", " - anti-epigraph reformulation"));
 
@@ -940,8 +944,6 @@ void Report::outputProblemInstanceReport()
 
 void Report::outputSolutionReport()
 {
-    std::stringstream report;
-
     env->output->outputInfo("");
 
 #ifdef SIMPLE_OUTPUT_CHARS
@@ -998,7 +1000,7 @@ void Report::outputSolutionReport()
     case E_ModelReturnStatus::ErrorUnknown:
         env->output->outputInfo(" An error occurred, but a primal solution was found.");
         break;
-    case E_ModelReturnStatus::None:
+    case E_ModelReturnStatus::NotSet:
     case E_ModelReturnStatus::ErrorNoSolution:
         env->output->outputInfo(" An error occurred, and no primal solution was found.");
     };

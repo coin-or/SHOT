@@ -10,12 +10,10 @@
 
 #include "Results.h"
 
-#include <any>
 #include <algorithm>
 #include <limits>
 
-#include "CallbackData.h"
-#include "EventHandler.h"
+#include "Callback.h"
 #include "Iteration.h"
 #include "Output.h"
 #include "Results.h"
@@ -65,88 +63,91 @@ void Results::addPrimalSolution(PrimalSolution solution)
         return;
     }
 
-    if(this->primalSolutions.size() == 0)
-    {
-        // This is the first solution, save it
-        this->primalSolutions.push_back(solution);
-        this->primalSolution = solution.point;
-        this->setPrimalBound(solution.objValue);
+    bool isMinimize = env->problem->objectiveFunction->properties.isMinimize;
 
-        env->output->outputDebug(fmt::format(
-            "        First primal solution {} from {} found.", solution.objValue, solution.sourceDescription));
+    auto isBetter
+        = [isMinimize](double first, double second) { return (isMinimize ? first < second : first > second); };
+
+    auto maxError = [](const PrimalSolution& S)
+    {
+        return (std::max({ S.maxDeviatingConstraintLinear.value, S.maxDeviatingConstraintQuadratic.value,
+            S.maxDeviatingConstraintNonlinear.value }));
+    };
+
+    // Whether the solution has the same objective value as another one but a smaller constraint error
+    auto isMoreAccurateThan = [&solution, &maxError](const PrimalSolution& S)
+    { return (Utilities::isAlmostEqual(solution.objValue, S.objValue, 1e-10) && maxError(solution) < maxError(S)); };
+
+    // The solutions are sorted with the best one first, so the first one is the incumbent and the last one is the
+    // worst one in the solution pool
+    bool isIncumbent
+        = this->primalSolutions.empty() || isBetter(solution.objValue, this->primalSolutions.front().objValue);
+
+    // A solution similar to the incumbent but with a smaller constraint error replaces it. This is not a genuine
+    // objective improvement, so it must not reset the primal-stagnation / reduction-cut-without-effect counters, or
+    // repeatedly finding near-duplicate points with shrinking numerical error would perpetually reset those counters
+    // and prevent the stagnation-based termination criteria from ever triggering.
+    bool replacesIncumbent = !isIncumbent && isMoreAccurateThan(this->primalSolutions.front());
+
+    // A solution that is only added to the solution pool is not an improvement of the primal bound
+    bool isPrimalImprovement = isIncumbent || replacesIncumbent;
+
+    int poolSize = std::max(1, env->settings->getSetting<int>("Output.SaveNumberOfSolutions"));
+
+    if((int)this->primalSolutions.size() >= poolSize)
+    {
+        // A new incumbent is always saved. Since the objective values are only compared up to a tolerance, it can
+        // replace an incumbent whose objective value is the same but which is better than the worst one in the pool
+        if(!isPrimalImprovement && !isBetter(solution.objValue, this->primalSolutions.back().objValue)
+            && !isMoreAccurateThan(this->primalSolutions.back()))
+        {
+            env->output->outputDebug(fmt::format(
+                "        Primal solution {} from {} is not better than the solutions in the full solution pool, so it "
+                "will not be saved.",
+                solution.objValue, solution.sourceDescription));
+            return;
+        }
+
+        // The solution replaces the worst one in the solution pool
+        this->primalSolutions.pop_back();
     }
-    else if(auto primalsol = this->primalSolutions.back();
-            (env->problem->objectiveFunction->properties.isMinimize && solution.objValue < primalsol.objValue)
-            || (!env->problem->objectiveFunction->properties.isMinimize && solution.objValue > primalsol.objValue))
+
+    // The solution is put after those that are at least as good, except that a new incumbent is put first
+    auto position = isPrimalImprovement
+        ? this->primalSolutions.begin()
+        : std::upper_bound(this->primalSolutions.begin(), this->primalSolutions.end(), solution,
+              [&isBetter](const PrimalSolution& first, const PrimalSolution& second)
+              { return (isBetter(first.objValue, second.objValue)); });
+
+    this->primalSolutions.insert(position, solution);
+
+    if(isPrimalImprovement)
     {
-        // Have a solution which is better than the worst one in the solution pool
-        this->primalSolutions.back() = solution;
         this->primalSolution = solution.point;
-        this->setPrimalBound(solution.objValue);
+        this->setPrimalBound(solution.objValue, isIncumbent);
 
-        env->output->outputDebug(fmt::format("        New (currently best) primal solution {} from {} found.",
-            solution.objValue, solution.sourceDescription));
+        if(this->primalSolutions.size() == 1)
+            env->output->outputDebug(fmt::format(
+                "        First primal solution {} from {} found.", solution.objValue, solution.sourceDescription));
+        else
+            env->output->outputDebug(fmt::format("        New (currently best) primal solution {} from {} found.",
+                solution.objValue, solution.sourceDescription));
     }
-    else if(Utilities::isAlmostEqual(solution.objValue, primalsol.objValue, 1e-10)
-        && (std::max({ solution.maxDevatingConstraintLinear.value, solution.maxDevatingConstraintQuadratic.value,
-                solution.maxDevatingConstraintNonlinear.value })
-            < std::max({ primalsol.maxDevatingConstraintLinear.value, primalsol.maxDevatingConstraintQuadratic.value,
-                primalsol.maxDevatingConstraintNonlinear.value })))
+    else
     {
-        // Have a solution which is similar to the best known, but with smaller constraint error. This is not a
-        // genuine objective improvement, so it must not reset the primal-stagnation / reduction-cut-without-effect
-        // counters, or repeatedly finding near-duplicate points with shrinking numerical error would perpetually
-        // reset those counters and prevent the stagnation-based termination criteria from ever triggering.
-        this->primalSolutions.back() = solution;
-        this->primalSolution = solution.point;
-        this->setPrimalBound(solution.objValue, false);
-
-        env->output->outputDebug(fmt::format("        New (currently best) primal solution {} from {} found.",
-            solution.objValue, solution.sourceDescription));
-    }
-    else if((int)this->primalSolutions.size() < env->settings->getSetting<int>("Output.SaveNumberOfSolutions"))
-    {
-        // The solution pool is not yet full, save the solution
-        this->primalSolutions.push_back(solution);
-
         env->output->outputDebug(fmt::format("        New primal solution {} from {} found and added to solution pool.",
             solution.objValue, solution.sourceDescription));
-    }
-    else
-    {
-        env->output->outputDebug(fmt::format(
-            "        Primal solution {} from {} is not an improvement of the current value {} or the solution "
-            "pool is full, so it will not be saved.",
-            solution.objValue, solution.sourceDescription, primalsol.objValue));
-        // Will not save this solution
-        return;
-    }
-
-    // Sorts the solutions so that the best one is at the first position
-    if(env->problem->objectiveFunction->properties.isMinimize)
-    {
-        std::sort(this->primalSolutions.begin(), this->primalSolutions.end(),
-            [](const PrimalSolution& firstSolution, const PrimalSolution& secondSolution) {
-                return (firstSolution.objValue < secondSolution.objValue);
-            });
-    }
-    else
-    {
-        std::sort(this->primalSolutions.begin(), this->primalSolutions.end(),
-            [](const PrimalSolution& firstSolution, const PrimalSolution& secondSolution) {
-                return (firstSolution.objValue > secondSolution.objValue);
-            });
     }
 
     env->solutionStatistics.numberOfFoundPrimalSolutions++;
 
-    if(env->solutionStatistics.hasInfeasibilityRepairBeenPerformedSincePrimalImprovement)
+    if(isPrimalImprovement && env->solutionStatistics.hasInfeasibilityRepairBeenPerformedSincePrimalImprovement)
     {
         env->solutionStatistics.numberOfPrimalImprovementsAfterInfeasibilityRepair++;
         env->solutionStatistics.hasInfeasibilityRepairBeenPerformedSincePrimalImprovement = false;
     }
 
-    if(env->solutionStatistics.hasReductionCutBeenAddedSincePrimalImprovement)
+    if(isPrimalImprovement && env->solutionStatistics.hasReductionCutBeenAddedSincePrimalImprovement)
     {
         env->solutionStatistics.numberOfPrimalImprovementsAfterReductionCut++;
         env->solutionStatistics.hasReductionCutBeenAddedSincePrimalImprovement = false;
@@ -202,25 +203,26 @@ void Results::addPrimalSolution(PrimalSolution solution)
         env->output->outputCritical("        Primal objective cut added.");
     }*/
 
-    // Only create callback data and notify if there are registered data provider callbacks
-    if(env->events->hasNotificationCallbacks(E_EventType::NewPrimalSolution))
+    if(env->callbacks->isActive(E_CallbackLocation::NewPrimalSolution))
     {
-        // Create structured callback data for the new primal solution
-        bool isMinimization = (env->reformulatedProblem->objectiveFunction->properties.isMinimize);
-        double currentDualBound = getCurrentDualBound();
-        double relativeGap = getRelativeCurrentObjectiveGap();
-        double absoluteGap = getAbsoluteCurrentObjectiveGap();
-        int iterationNumber = env->results->getNumberOfIterations();
-
-        PrimalSolutionCallbackData callbackData(isMinimization, solution.point, solution.objValue, currentDualBound,
-            relativeGap, absoluteGap, iterationNumber, solution.sourceType, env->solutionStatistics);
-
-        env->events->notify(E_EventType::NewPrimalSolution, callbackData);
+        auto context = std::make_shared<NewPrimalSolutionContext>(
+            env, solution.point, solution.objValue, solution.sourceType, isIncumbent);
+        env->callbacks->invoke(*context);
+        context->invalidate();
     }
+}
+
+bool Results::isPrimalSolutionAtArtificialBound()
+{
+    return (hasPrimalSolution() && env->problem->getVariablesAtArtificialBounds(primalSolution).size() > 0);
 }
 
 bool Results::isRelativeObjectiveGapToleranceMet()
 {
+    // The dual bound may only be valid with the artificial bounds, beyond which there may be better solutions
+    if(isPrimalSolutionAtArtificialBound())
+        return (false);
+
     if(this->getRelativeGlobalObjectiveGap()
         <= env->settings->getSetting<double>("Termination.ObjectiveGap.Relative"))
     {
@@ -234,6 +236,9 @@ bool Results::isRelativeObjectiveGapToleranceMet()
 
 bool Results::isAbsoluteObjectiveGapToleranceMet()
 {
+    if(isPrimalSolutionAtArtificialBound())
+        return (false);
+
     if(this->getAbsoluteGlobalObjectiveGap()
         <= env->settings->getSetting<double>("Termination.ObjectiveGap.Absolute"))
     {
@@ -277,7 +282,7 @@ std::string Results::getResultsOSrL()
 
     std::stringstream ssSolver;
     ssSolver << "Supporting Hyperplane Optimization Toolkit, version ";
-    ssSolver << SHOT_VERSION_MAJOR << "." << SHOT_VERSION_MINOR << "." << SHOT_VERSION_PATCH;
+    ssSolver << SHOT_VERSION_MAJOR << "." << SHOT_VERSION_MINOR << "." << SHOT_VERSION_PATCH << SHOT_VERSION_SUFFIX;
     auto solver = ssSolver.str();
 
     auto solverInvoked = osrlDocument.NewElement("solverInvoked");
@@ -847,6 +852,15 @@ std::string Results::getResultsOSrL()
         otherResultsNode->InsertEndChild(otherNode);
     }
 
+    if(auto count = getAuxiliaryVariableCounter(E_AuxiliaryVariableType::AbsoluteValueSign); count > 0)
+    {
+        otherNode = osrlDocument.NewElement("other");
+        otherNode->SetAttribute("name", "NumberOfAbsoluteValueUpperBounds");
+        otherNode->SetAttribute("value", count);
+        otherNode->SetAttribute("description", "Absolute values bounded from above with a binary");
+        otherResultsNode->InsertEndChild(otherNode);
+    }
+
     if(auto count = getAuxiliaryVariableCounter(E_AuxiliaryVariableType::AntiEpigraph); count > 0)
     {
         otherNode = osrlDocument.NewElement("other");
@@ -1212,7 +1226,7 @@ std::string Results::getResultsTrace()
 
     switch(static_cast<ES_PrimalNLPSolver>(this->usedPrimalNLPSolver))
     {
-    case(ES_PrimalNLPSolver::None):
+    case(ES_PrimalNLPSolver::NotUsed):
         ss << "NONE";
         break;
     case(ES_PrimalNLPSolver::GAMS):
@@ -1223,6 +1237,12 @@ std::string Results::getResultsTrace()
         break;
     case(ES_PrimalNLPSolver::Ipopt):
         ss << "Ipopt";
+        break;
+    case(ES_PrimalNLPSolver::SHOT):
+        ss << "SHOT";
+        break;
+    case(ES_PrimalNLPSolver::Uno):
+        ss << "Uno";
         break;
     default:
         ss << "NONE";
@@ -1241,6 +1261,9 @@ std::string Results::getResultsTrace()
         break;
     case(ES_MIPSolver::Cbc):
         ss << "CBC";
+        break;
+    case(ES_MIPSolver::Highs):
+        ss << "HIGHS";
         break;
     default:
         ss << "NONE";
@@ -1290,7 +1313,7 @@ std::string Results::getResultsTrace()
     case E_TerminationReason::NumericIssues:
         solverStatus = "10";
         break;
-    case E_TerminationReason::None:
+    case E_TerminationReason::NotTerminated:
         solverStatus = "1";
         break;
     }
@@ -1325,7 +1348,7 @@ std::string Results::getResultsTrace()
     case E_ModelReturnStatus::ErrorUnknown:
         modelStatus = "12";
         break;
-    case E_ModelReturnStatus::None:
+    case E_ModelReturnStatus::NotSet:
     case E_ModelReturnStatus::ErrorNoSolution:
         modelStatus = "13";
     };
@@ -1359,10 +1382,40 @@ std::string Results::getResultsSol()
         status = "0";
         description = "Solved to global optimality";
     }
-    else if(this->hasPrimalSolution())
+    // AMPL reserves 400-499 for stopping at a limit. MathOptInterface reads "time limit, feasible solution" in the
+    // message as a time limit with a feasible point, but other limits in 400-499 lose the point, so they are given as
+    // 100-199, i.e., solved but with something that may be wrong
+    else if(this->hasPrimalSolution() && this->terminationReason == E_TerminationReason::TimeLimit)
+    {
+        status = "400";
+        description = "Time limit, feasible solution found";
+    }
+    else if(this->hasPrimalSolution() && this->terminationReason == E_TerminationReason::ConstraintTolerance)
     {
         status = "100";
         description = "Solved to local optimality";
+    }
+    else if(this->hasPrimalSolution() && this->terminationReason == E_TerminationReason::IterationLimit)
+    {
+        status = "101";
+        description = "Iteration limit reached, feasible solution found";
+    }
+    else if(this->hasPrimalSolution() && this->terminationReason == E_TerminationReason::UserAbort)
+    {
+        status = "102";
+        description = "User abort, feasible solution found";
+    }
+    else if(this->hasPrimalSolution()
+        && (this->terminationReason == E_TerminationReason::Error
+            || this->terminationReason == E_TerminationReason::NumericIssues))
+    {
+        status = "103";
+        description = "Error occurred, feasible solution found";
+    }
+    else if(this->hasPrimalSolution())
+    {
+        status = "104";
+        description = "Feasible solution found, optimality not guaranteed";
     }
     else if(this->terminationReason == E_TerminationReason::InfeasibleProblem)
     {
@@ -1483,6 +1536,9 @@ double Results::getPrimalBound()
 {
     if(!std::isnan(this->currentPrimalBound))
         return (this->currentPrimalBound);
+    // Before a problem has been set, e.g., when the results are asked for before setProblem()
+    else if(!env->problem || !env->problem->objectiveFunction)
+        return (SHOT_DBL_MAX);
     else if(env->problem->objectiveFunction->direction == E_ObjectiveFunctionDirection::Minimize)
         return (SHOT_DBL_MAX);
     else
@@ -1491,25 +1547,43 @@ double Results::getPrimalBound()
 
 void Results::setPrimalBound(double value, bool resetStagnationCounters)
 {
+    const double previousPrimalBound = currentPrimalBound;
+    const double previousDualBound = currentDualBound;
+    const double previousGlobalDualBound = globalDualBound;
+
     this->currentPrimalBound = value;
 
-    // In case we have crossover
-    if(env->problem->objectiveFunction->direction == E_ObjectiveFunctionDirection::Minimize)
-    {
-        if(value < this->globalDualBound && this->solutionIsGlobal)
-            this->globalDualBound = value;
+    bool isMinimize = env->problem->objectiveFunction->direction == E_ObjectiveFunctionDirection::Minimize;
 
-        if(value < this->currentDualBound)
-            this->currentDualBound = value;
-    }
-    else
-    {
-        if(value > this->globalDualBound && this->solutionIsGlobal)
-            this->globalDualBound = value;
+    // The optimal value lies between the dual and the primal bound, so a primal bound can only pass the dual
+    // bound by numerical error, and the dual bound is then set to it. A primal bound that has passed it by more
+    // comes from a feasible solution the dual bound excluded, so that bound was never one for the problem. It is
+    // still set to the primal bound to keep the two consistent, but since that closes the objective gap and the
+    // solution is reported as optimal, it is reported.
+    double crossoverTolerance = 1e-10 * std::max(1.0, std::abs(value));
 
-        if(value > this->currentDualBound)
-            this->currentDualBound = value;
+    auto hasPassed = [&isMinimize](double primalBound, double dualBound) {
+        return (isMinimize ? (primalBound < dualBound) : (primalBound > dualBound));
+    };
+
+    if(hasPassed(value, this->currentDualBound))
+    {
+        if(hasPassed(value, isMinimize ? this->currentDualBound - crossoverTolerance
+                                       : this->currentDualBound + crossoverTolerance))
+        {
+            env->output->outputDebug(
+                fmt::format("        Dual bound {} set to the primal bound {}, which has passed it.",
+                    this->currentDualBound, value));
+        }
+
+        this->currentDualBound = value;
     }
+
+    // The global dual bound is capped whether or not the dual problem is still a relaxation of the original
+    // problem, since a primal bound comes from a point that is feasible in it either way, and a global dual bound
+    // that a feasible solution has passed is reported together with a negative objective gap
+    if(hasPassed(value, this->globalDualBound))
+        this->globalDualBound = value;
 
     if(env->problem->objectiveFunction->properties.isMinimize)
     {
@@ -1534,7 +1608,10 @@ void Results::setPrimalBound(double value, bool resetStagnationCounters)
         env->solutionStatistics.lastIterationWithSignificantPrimalUpdate = getNumberOfIterations() - 1;
         env->solutionStatistics.numberOfPrimalReductionCutsUpdatesWithoutEffect = 0;
         env->solutionStatistics.numberOfDualRepairsSinceLastPrimalUpdate = 0;
+        env->solutionStatistics.numberOfCutResetsSinceLastPrimalUpdate = 0;
     }
+
+    notifyBoundsUpdated(previousPrimalBound, previousDualBound, previousGlobalDualBound);
 }
 
 double Results::getCurrentDualBound() { return (this->currentDualBound); }
@@ -1543,6 +1620,10 @@ double Results::getGlobalDualBound() { return (globalDualBound); }
 
 void Results::setDualBound(double value, bool forceGlobal)
 {
+    const double previousPrimalBound = currentPrimalBound;
+    const double previousDualBound = currentDualBound;
+    const double previousGlobalDualBound = globalDualBound;
+
     double primalBound = this->getPrimalBound();
     bool isMinimize = env->problem->objectiveFunction->direction == E_ObjectiveFunctionDirection::Minimize;
 
@@ -1576,34 +1657,65 @@ void Results::setDualBound(double value, bool forceGlobal)
     env->solutionStatistics.numberOfIterationsWithDualStagnation = 0;
 
     env->solutionStatistics.lastIterationWithSignificantDualUpdate = getNumberOfIterations() - 1;
+
+    notifyBoundsUpdated(previousPrimalBound, previousDualBound, previousGlobalDualBound);
+}
+
+void Results::resetDualBounds(bool resetGlobal)
+{
+    const double previousPrimalBound = currentPrimalBound;
+    const double previousDualBound = currentDualBound;
+    const double previousGlobalDualBound = globalDualBound;
+    const bool isMinimization = env->problem->objectiveFunction->properties.isMinimize;
+
+    currentDualBound = isMinimization ? SHOT_DBL_MIN : SHOT_DBL_MAX;
+    if(resetGlobal)
+        globalDualBound = currentDualBound;
+
+    notifyBoundsUpdated(previousPrimalBound, previousDualBound, previousGlobalDualBound);
+}
+
+void Results::notifyBoundsUpdated(
+    double previousPrimalBound, double previousDualBound, double previousGlobalDualBound)
+{
+    // setProblem() initializes the bounds before the first iteration. That is not a solve event.
+    if(getNumberOfIterations() == 0 || !env->callbacks
+        || !env->callbacks->isActive(E_CallbackLocation::BoundsUpdated))
+        return;
+
+    auto context = std::make_shared<BoundsUpdatedContext>(
+        env, previousPrimalBound, previousDualBound, previousGlobalDualBound);
+    if(context->hasChanged())
+        env->callbacks->invoke(*context);
+    context->invalidate();
 }
 
 double Results::getAbsoluteGlobalObjectiveGap()
 {
-    double gap = std::abs(getGlobalDualBound() - getPrimalBound());
-
-    return (gap);
+    if(std::abs(getGlobalDualBound()) == SHOT_DBL_MAX || std::abs(getPrimalBound()) == SHOT_DBL_MAX)
+        return SHOT_DBL_MAX;
+    return std::abs(getGlobalDualBound() - getPrimalBound());
 }
 
 double Results::getRelativeGlobalObjectiveGap()
 {
-    double gap = std::abs(getGlobalDualBound() - getPrimalBound()) / ((1e-10) + std::abs(getPrimalBound()));
-
-    return (gap);
+    if(std::abs(getGlobalDualBound()) == SHOT_DBL_MAX || std::abs(getPrimalBound()) == SHOT_DBL_MAX)
+        return SHOT_DBL_MAX;
+    return std::abs(getGlobalDualBound() - getPrimalBound()) / ((1e-10) + std::abs(getPrimalBound()));
 }
 
 double Results::getAbsoluteCurrentObjectiveGap()
 {
-    double gap = std::abs(getCurrentDualBound() - getPrimalBound());
-
-    return (gap);
+    if(std::abs(getCurrentDualBound()) == SHOT_DBL_MAX || std::abs(getPrimalBound()) == SHOT_DBL_MAX)
+        return SHOT_DBL_MAX;
+    return std::abs(getCurrentDualBound() - getPrimalBound());
 }
 
 double Results::getRelativeCurrentObjectiveGap()
 {
-    double gap = std::abs(getCurrentDualBound() - getPrimalBound()) / ((1e-10) + std::abs(getPrimalBound()));
-
-    return (gap);
+    if(std::abs(getCurrentDualBound()) == SHOT_DBL_MAX || std::abs(getPrimalBound()) == SHOT_DBL_MAX)
+        return SHOT_DBL_MAX;
+    return std::abs(getCurrentDualBound() - getPrimalBound()) / ((1e-10) + std::abs(getPrimalBound()));
 }
 
 E_ModelReturnStatus Results::getModelReturnStatus()
@@ -1642,12 +1754,12 @@ void Results::savePrimalSolutionToFile(
     str << "Objective value: " << Utilities::toStringFormat(solution.objValue, "{:.8f}", false);
     str << '\n';
 
-    str << "Largest nonlinear error (in constraint " << solution.maxDevatingConstraintNonlinear.index
-        << "): " << Utilities::toStringFormat(solution.maxDevatingConstraintNonlinear.value, "{:.8f}", false);
+    str << "Largest nonlinear error (in constraint " << solution.maxDeviatingConstraintNonlinear.index
+        << "): " << Utilities::toStringFormat(solution.maxDeviatingConstraintNonlinear.value, "{:.8f}", false);
     str << '\n';
 
-    str << "Largest linear error (in constraint " << solution.maxDevatingConstraintLinear.index
-        << "): " << Utilities::toStringFormat(solution.maxDevatingConstraintLinear.value, "{:.8f}", false);
+    str << "Largest linear error (in constraint " << solution.maxDeviatingConstraintLinear.index
+        << "): " << Utilities::toStringFormat(solution.maxDeviatingConstraintLinear.value, "{:.8f}", false);
     str << '\n';
 
     str << "Projection to variable bounds performed: " << (solution.boundProjectionPerformed ? "true" : "false");
@@ -1692,12 +1804,12 @@ void Results::savePrimalSolutionToFile(
     str << "Objective value: " << Utilities::toStringFormat(solution.objValue, "{:.8f}", false);
     str << '\n';
 
-    str << "Largest nonlinear error (in constraint " << solution.maxDevatingConstraintNonlinear.index
-        << "): " << Utilities::toStringFormat(solution.maxDevatingConstraintNonlinear.value, "{:.8f}", false);
+    str << "Largest nonlinear error (in constraint " << solution.maxDeviatingConstraintNonlinear.index
+        << "): " << Utilities::toStringFormat(solution.maxDeviatingConstraintNonlinear.value, "{:.8f}", false);
     str << '\n';
 
-    str << "Largest linear error (in constraint " << solution.maxDevatingConstraintLinear.index
-        << "): " << Utilities::toStringFormat(solution.maxDevatingConstraintLinear.value, "{:.8f}", false);
+    str << "Largest linear error (in constraint " << solution.maxDeviatingConstraintLinear.index
+        << "): " << Utilities::toStringFormat(solution.maxDeviatingConstraintLinear.value, "{:.8f}", false);
     str << '\n';
 
     str << "Projection to variable bounds performed: " << (solution.boundProjectionPerformed ? "true" : "false");

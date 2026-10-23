@@ -96,7 +96,7 @@ inline int fmt_snprintf(char *buffer, size_t size, const char *format, ...) {
   va_end(args);
   return result;
 }
-# define FMTOLD_SNPRINTF fmt_snprintf
+# define FMTOLD_SNPRINTF fmtold::fmt_snprintf
 #endif  // _MSC_VER
 
 #if defined(_WIN32) && defined(__MINGW32__) && !defined(__NO_ISOCEXT)
@@ -752,7 +752,7 @@ unsigned fmtold::internal::PrintfFormatter<Char>::parse_header(
     spec.width_ = parse_nonnegative_int(s);
   } else if (*s == '*') {
     ++s;
-    spec.width_ = WidthHandler(spec).visit(get_arg(s));
+    spec.width_ = fmtold::WidthHandler(spec).visit(get_arg(s));
   }
   return arg_index;
 }
@@ -785,12 +785,12 @@ void fmtold::internal::PrintfFormatter<Char>::format(
         spec.precision_ = static_cast<int>(parse_nonnegative_int(s));
       } else if (*s == '*') {
         ++s;
-        spec.precision_ = PrecisionHandler().visit(get_arg(s));
+        spec.precision_ = fmtold::PrecisionHandler().visit(get_arg(s));
       }
     }
 
     Arg arg = get_arg(s, arg_index);
-    if (spec.flag(HASH_FLAG) && IsZeroInt().visit(arg))
+    if (spec.flag(HASH_FLAG) && fmtold::IsZeroInt().visit(arg))
       spec.flags_ &= ~to_unsigned<int>(HASH_FLAG);
     if (spec.fill_ == '0') {
       if (arg.type <= Arg::LAST_NUMERIC_TYPE)
@@ -803,24 +803,24 @@ void fmtold::internal::PrintfFormatter<Char>::format(
     switch (*s++) {
     case 'h':
       if (*s == 'h')
-        ArgConverter<signed char>(arg, *++s).visit(arg);
+        fmtold::ArgConverter<signed char>(arg, *++s).visit(arg);
       else
-        ArgConverter<short>(arg, *s).visit(arg);
+        fmtold::ArgConverter<short>(arg, *s).visit(arg);
       break;
     case 'l':
       if (*s == 'l')
-        ArgConverter<fmtold::LongLong>(arg, *++s).visit(arg);
+        fmtold::ArgConverter<fmtold::LongLong>(arg, *++s).visit(arg);
       else
-        ArgConverter<long>(arg, *s).visit(arg);
+        fmtold::ArgConverter<long>(arg, *s).visit(arg);
       break;
     case 'j':
-      ArgConverter<intmax_t>(arg, *s).visit(arg);
+      fmtold::ArgConverter<intmax_t>(arg, *s).visit(arg);
       break;
     case 'z':
-      ArgConverter<std::size_t>(arg, *s).visit(arg);
+      fmtold::ArgConverter<std::size_t>(arg, *s).visit(arg);
       break;
     case 't':
-      ArgConverter<std::ptrdiff_t>(arg, *s).visit(arg);
+      fmtold::ArgConverter<std::ptrdiff_t>(arg, *s).visit(arg);
       break;
     case 'L':
       // printf produces garbage when 'L' is omitted for long double, no
@@ -828,7 +828,7 @@ void fmtold::internal::PrintfFormatter<Char>::format(
       break;
     default:
       --s;
-      ArgConverter<void>(arg, *s).visit(arg);
+      fmtold::ArgConverter<void>(arg, *s).visit(arg);
     }
 
     // Parse type.
@@ -843,7 +843,7 @@ void fmtold::internal::PrintfFormatter<Char>::format(
         break;
       case 'c':
         // TODO: handle wchar_t
-        CharConverter(arg).visit(arg);
+        fmtold::CharConverter(arg).visit(arg);
         break;
       }
     }
@@ -873,7 +873,7 @@ FMTOLD_FUNC void fmtold::report_windows_error(
 FMTOLD_FUNC void fmtold::print(std::FILE *f, CStringRef format_str, ArgList args) {
   MemoryWriter w;
   w.write(format_str, args);
-  std::fwrite(w.data(), 1, w.size(), f);
+  std::fwrite(w.data(), w.size(), 1, f);
 }
 
 FMTOLD_FUNC void fmtold::print(CStringRef format_str, ArgList args) {
@@ -892,7 +892,7 @@ FMTOLD_FUNC int fmtold::fprintf(std::FILE *f, CStringRef format, ArgList args) {
   MemoryWriter w;
   printf(w, format, args);
   std::size_t size = w.size();
-  return std::fwrite(w.data(), 1, size, f) < size ? -1 : static_cast<int>(size);
+  return !std::fwrite(w.data(), size, 1, f) ? -1 : static_cast<int>(size);
 }
 
 #ifndef FMTOLD_HEADER_ONLY

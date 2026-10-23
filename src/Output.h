@@ -34,6 +34,17 @@ public:
     void outputDebug(std::string message);
     void outputTrace(std::string message);
 
+    // Whether trace output is written at all, so that the messages are not built when they are not used. Trace
+    // output is compiled out in release builds.
+    inline bool isTraceActive() const
+    {
+#ifdef NDEBUG
+        return (false);
+#else
+        return (logger->should_log(spdlog::level::trace));
+#endif
+    }
+
     void setLogLevels(E_LogLevel consoleLogLevel, E_LogLevel fileLogLevel);
 
     void setConsoleSink(std::shared_ptr<spdlog::sinks::sink> newSink);

@@ -19,8 +19,9 @@
 #include "Variables.h"
 #include "Terms.h"
 #include "NonlinearExpressions.h"
+#include "IntervalDerivatives.h"
 
-#include "cppad/cppad.hpp"
+#include "CppAD.h"
 #include "cppad/utility.hpp"
 
 namespace SHOT
@@ -46,10 +47,22 @@ enum class E_ConstraintSignType
     LessThanAndGreaterThan
 };
 
+// The sides of a constraint L <= f(x) <= U
+enum class E_ConstraintSide
+{
+    Lower, // L <= f(x)
+    Upper // f(x) <= U
+};
+
 struct ConstraintProperties
 {
     E_ConstraintClassification classification = E_ConstraintClassification::None;
     E_Convexity convexity = E_Convexity::NotSet;
+
+    // The convexity of the function f(x) in L <= f(x) <= U, regardless of the bounds. The convexity above is that
+    // of the constraint, so a constraint with a convex function is nonconvex if it has a lower bound
+    E_Convexity functionConvexity = E_Convexity::NotSet;
+
     E_ConstraintSignType type = E_ConstraintSignType::None;
     E_Monotonicity monotonicity = E_Monotonicity::NotSet;
 
@@ -138,11 +151,27 @@ public:
 
     virtual Interval getConstraintFunctionBounds() = 0;
 
+    // The bounds over the box of the value of f(x) of the constraint L <= f(x) <= U and of its gradient and Hessian, up
+    // to the order (0, 1 or 2), calculated with interval arithmetic. IntervalDerivatives describes when they enclose
+    // the derivatives.
+    IntervalDerivatives calculateIntervalDerivatives(const IntervalVector& box, int order = 2);
+
+    // Adds the bounds of the terms of f(x) to the derivatives
+    virtual void addTermIntervalDerivatives(IntervalDerivatives& derivatives, const IntervalVector& box, int order) = 0;
+
+    // The gradient at the point, without the elements that are zero if eraseZeroes is true. The point is indexed by
+    // the indexes of the variables, so a point of the reformulated problem, which has the variables of the original
+    // problem first, can also be used for a constraint of the original problem
     virtual SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) = 0;
     virtual std::shared_ptr<Variables> getGradientSparsityPattern();
 
-    // Returns the upper triagonal part of the Hessian matrix is sparse representation
+    // The upper triangle of the symmetric Hessian at the point, i.e., the elements (V1, V2) with
+    // V1->getIndex() <= V2->getIndex(), without the elements that are zero if eraseZeroes is true
     virtual SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes) = 0;
+
+    // The Hessian when it does not depend on the point, and can be used without being recalculated or copied,
+    // otherwise nullptr
+    virtual const SparseVariableMatrix* getConstantHessian() { return (nullptr); }
     virtual std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> getHessianSparsityPattern();
 
     virtual NumericConstraintValue calculateNumericValue(const VectorDouble& point, double correction = 0.0);
@@ -184,19 +213,21 @@ public:
         properties.hasLinearTerms = linearTerms.size() > 0 ? true : false;
     };
 
-    void add(LinearTerms terms);
+    void add(const LinearTerms& terms);
     void add(LinearTermPtr term);
 
     double calculateFunctionValue(const VectorDouble& point) override;
     Interval calculateFunctionValue(const IntervalVector& intervalVector) override;
 
     Interval getConstraintFunctionBounds() override;
+    void addTermIntervalDerivatives(IntervalDerivatives& derivatives, const IntervalVector& box, int order) override;
 
     bool isFulfilled(const VectorDouble& point) override;
 
     void takeOwnership(ProblemPtr owner) override;
 
     SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) override;
+
 
     // Returns the upper triagonal part of the Hessian matrix is sparse representation
     SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes) override;
@@ -256,15 +287,16 @@ public:
         properties.hasQuadraticTerms = quadraticTerms.size() > 0 ? true : false;
     };
 
-    void add(LinearTerms terms);
+    void add(const LinearTerms& terms);
     void add(LinearTermPtr term);
-    void add(QuadraticTerms terms);
+    void add(const QuadraticTerms& terms);
     void add(QuadraticTermPtr term);
 
     double calculateFunctionValue(const VectorDouble& point) override;
     Interval calculateFunctionValue(const IntervalVector& intervalVector) override;
 
     Interval getConstraintFunctionBounds() override;
+    void addTermIntervalDerivatives(IntervalDerivatives& derivatives, const IntervalVector& box, int order) override;
 
     bool isFulfilled(const VectorDouble& point) override;
 
@@ -275,11 +307,17 @@ public:
     // Returns the upper triagonal part of the Hessian matrix is sparse representation
     SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes) override;
 
+    // The quadratic terms have a constant Hessian, which they cache
+    const SparseVariableMatrix* getConstantHessian() override;
+
     NumericConstraintValue calculateNumericValue(const VectorDouble& point, double correction = 0.0) override;
 
     std::shared_ptr<NumericConstraint> getPointer() override;
 
     void updateProperties() override;
+
+    // Sets the convexity of the constraint from the convexity of its function and its bounds
+    void updateConvexityFromBounds();
 
     std::ostream& print(std::ostream& stream) const override;
 
@@ -305,8 +343,15 @@ public:
     CppAD::sparse_rc<std::vector<size_t>> nonlinearGradientSparsityPattern;
     CppAD::sparse_rc<std::vector<size_t>> nonlinearHessianSparsityPattern;
 
+    // Reused between the Hessian evaluations, since it holds the coloring of the sparsity pattern
+    CppAD::sparse_hes_work nonlinearHessianWork;
+
     bool nonlinearGradientSparsityMapGenerated = false;
     bool nonlinearHessianSparsityMapGenerated = false;
+
+    // Whether the Hessian of the nonlinear expression is calculated with CppAD's dense method, which takes one
+    // forward and one reverse sweep of the whole expression per variable, since its pattern is nearly dense
+    bool isHessianCalculatedDensely();
 
     Variables variablesInMonomialTerms;
     Variables variablesInSignomialTerms;
@@ -374,13 +419,13 @@ public:
         properties.hasNonlinearExpression = true;
     };
 
-    void add(LinearTerms terms);
+    void add(const LinearTerms& terms);
     void add(LinearTermPtr term);
-    void add(QuadraticTerms terms);
+    void add(const QuadraticTerms& terms);
     void add(QuadraticTermPtr term);
-    void add(MonomialTerms terms);
+    void add(const MonomialTerms& terms);
     void add(MonomialTermPtr term);
-    void add(SignomialTerms terms);
+    void add(const SignomialTerms& terms);
     void add(SignomialTermPtr term);
     void add(NonlinearExpressionPtr expression);
 
@@ -389,11 +434,20 @@ public:
     double calculateFunctionValue(const VectorDouble& point) override;
 
     Interval getConstraintFunctionBounds() override;
+    void addTermIntervalDerivatives(IntervalDerivatives& derivatives, const IntervalVector& box, int order) override;
 
     SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) override;
 
+    // The remaining terms can be evaluated separately when a solver batches the expression Jacobian.
+    SparseVariableVector calculateGradientWithoutNonlinearExpression(const VectorDouble& point, bool eraseZeroes);
+
     // Returns the upper triagonal part of the Hessian matrix is sparse representation
     SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes) override;
+
+    SparseVariableMatrix calculateHessianWithoutNonlinearExpression(const VectorDouble& point, bool eraseZeroes);
+
+    // The nonlinear expression makes the Hessian depend on the point
+    const SparseVariableMatrix* getConstantHessian() override { return (nullptr); }
 
     Interval calculateFunctionValue(const IntervalVector& intervalVector) override;
 

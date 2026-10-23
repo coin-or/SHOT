@@ -29,93 +29,102 @@
 
 #include <cstdio>
 #include <cstring>
+#include <algorithm>
 
 #include "mp/common.h"
 #include "mp/posix.h"
 
-namespace mp
-{
+namespace mp {
 
-namespace internal
-{
+namespace internal {
 
-    void WriteMessage(fmtold::BufferedFile& file, const char* message);
+/// Write message into a fmtold::BufferedFile
+void WriteMessage(fmtold::BufferedFile &file, const char *message);
 
-    // Suffix value visitor that counts values.
-    class SuffixValueCounter
-    {
-    private:
-        int num_values_;
+/// Suffix value visitor that counts values
+class SuffixValueCounter {
+ private:
+  int num_values_;
 
-    public:
-        SuffixValueCounter() : num_values_(0) {}
+ public:
+  SuffixValueCounter() : num_values_(0) {}
 
-        int num_values() const { return num_values_; }
+  int num_values() const { return num_values_; }
 
-        template <typename T> void Visit(int, T) { ++num_values_; }
-    };
+  template <typename T>
+  void Visit(int, T) { ++num_values_; }
+};
 
-    // Suffix value visitor that writes values to a file.
-    class SuffixValueWriter
-    {
-    private:
-        fmtold::BufferedFile& file_;
+/// Suffix value visitor that writes values to a file
+class SuffixValueWriter {
+ private:
+  fmtold::BufferedFile &file_;
 
-    public:
-        explicit SuffixValueWriter(fmtold::BufferedFile& file) : file_(file) {}
+ public:
+  explicit SuffixValueWriter(fmtold::BufferedFile &file) : file_(file) {}
 
-        template <typename T> void Visit(int index, T value) { file_.print("{} {}\n", index, value); }
-    };
+  template <typename T>
+  void Visit(int index, T value) { file_.print("{} {}\n", index, value); }
 
-    template <typename SuffixMap> void WriteSuffixes(fmtold::BufferedFile& file, const SuffixMap* suffixes)
-    {
-        if(!suffixes)
-            return;
-        for(typename SuffixMap::iterator i = suffixes->begin(), e = suffixes->end(); i != e; ++i)
-        {
-            if((i->kind() & suf::OUTPUT) == 0)
-                continue;
-            SuffixValueCounter counter;
-            i->VisitValues(counter);
-            int num_values = counter.num_values();
-            if(num_values == 0)
-                continue;
-            const char* name = i->name();
-            int mask = internal::SUFFIX_KIND_MASK | suf::FLOAT | suf::IODECL;
-            file.print("suffix {} {} {} {} {}\n{}\n", i->kind() & mask, num_values, std::strlen(name) + 1, 0, 0, name);
-            // TODO: write table
-            SuffixValueWriter writer(file);
-            i->VisitValues(writer);
-        }
-    }
-} // namespace internal
+  void Visit(int index, double value)
+  { file_.print("{} {:.16}\n", index, value); }
+};
 
-// Writes a solution to a .sol file.
-template <typename Solution> void WriteSolFile(fmtold::CStringRef filename, const Solution& sol)
-{
-    fmtold::BufferedFile file(filename, "w");
-    internal::WriteMessage(file, sol.message());
-    // Write options.
-    file.print("Options\n");
-    if(int num_options = sol.num_options())
-    {
-        file.print("{}\n", num_options);
-        for(int i = 0; i < num_options; ++i)
-            file.print("{}\n", sol.option(i));
-    }
-    // TODO: check precision
-    int num_values = sol.num_values(), num_dual_values = sol.num_dual_values();
-    file.print("{0}\n{0}\n{1}\n{1}\n", num_dual_values, num_values);
-    for(int i = 0; i < num_values; ++i)
-        file.print("{}\n", sol.value(i));
-    for(int i = 0, n = num_dual_values; i < n; ++i)
-        file.print("{}\n", sol.dual_value(i));
-    file.print("objno 0 {}\n", sol.status());
-    suf::Kind kinds[] = { suf::VAR, suf::CON, suf::OBJ, suf::PROBLEM };
-    for(std::size_t i = 0, n = sizeof(kinds) / sizeof(*kinds); i < n; ++i)
-        internal::WriteSuffixes(file, sol.suffixes(kinds[i]));
-    // TODO: test
+/// Write suffixes to a file
+template <typename SuffixMap>
+void WriteSuffixes(fmtold::BufferedFile &file, const SuffixMap *suffixes) {
+  if (!suffixes)
+    return;
+  for (typename SuffixMap::iterator
+       i = suffixes->begin(), e = suffixes->end(); i != e; ++i) {
+    if ((i->kind() & suf::OUTPUT) == 0)
+      continue;
+    SuffixValueCounter counter;
+    i->VisitValues(counter);
+    int num_values = counter.num_values();
+    const char *name = i->name();
+    int mask = internal::SUFFIX_KIND_MASK | suf::FLOAT | suf::IODECL;
+    const auto& table = i->table();
+    int tablen = table.size() ? table.size()+1 : 0;
+    int tabNlines = table.empty()? 0 :
+                                   1+std::count(table.begin(), table.end(), '\n');
+    file.print("suffix {} {} {} {} {}\n{}\n",
+               i->kind() & mask, num_values, std::strlen(name) + 1,
+               tablen, tabNlines, name);
+    if (tablen)
+      file.print("{}\n", table);
+    SuffixValueWriter writer(file);
+    i->VisitValues(writer);
+  }
 }
-} // namepace mp
+}  // namespace internal
 
-#endif // MP_SOL_H_
+/// Writes a solution to a .sol file
+template <typename Solution>
+void WriteSolFile(fmtold::CStringRef filename, const Solution &sol) {
+  fmtold::BufferedFile file(filename, "wb");
+  internal::WriteMessage(file, sol.message());
+  // Write options.
+  file.print("Options\n");
+  if (int num_options = sol.num_options()) {
+    file.print("{}\n", num_options);
+    for (int i = 0; i < num_options; ++i)
+      file.print("{}\n", sol.option(i));
+  }
+  int num_values = sol.num_values(), num_dual_values = sol.num_dual_values(),
+    num_vars = sol.num_vars(), num_constraints = sol.num_algebraic_cons();
+  file.print("{0}\n{1}\n{2}\n{3}\n",
+    num_constraints, num_dual_values, num_vars, num_values);
+  for (int i = 0, n = num_dual_values; i < n; ++i)
+    file.print("{:.16}\n", sol.dual_value(i));
+  for (int i = 0; i < num_values; ++i)
+    file.print("{:.16}\n", sol.value(i));
+  file.print("objno {} {}\n", sol.objno()-1, sol.status());
+  suf::Kind kinds[] = {suf::VAR, suf::CON, suf::OBJ, suf::PROBLEM};
+  for (std::size_t i = 0, n = sizeof(kinds) / sizeof(*kinds); i < n; ++i)
+    internal::WriteSuffixes(file, sol.suffixes(kinds[i]));
+}
+
+}  // namepace mp
+
+#endif  // MP_SOL_H_

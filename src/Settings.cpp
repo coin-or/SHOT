@@ -115,13 +115,50 @@ void Settings::updateSetting(std::string name, std::string category, T value, E_
 
     PairString key = make_pair(category, name);
 
+    // Checked before the bounds, since settingBounds[key] would otherwise create bounds [0,0] for an unknown setting
+    auto type = settingTypes.find(key);
+
+    if(type == settingTypes.end())
+    {
+        output->outputError("Cannot update setting " + category + "." + name + " since it has not been defined.");
+
+        throw SettingKeyNotFoundException(name, category);
+    }
+
+    // An integer is a valid value of a double setting, e.g., a time limit of 10
+    if constexpr(std::is_same_v<T, int>)
+    {
+        if(type->second == E_SettingType::Double)
+        {
+            updateSetting(name, category, (double)value, priority);
+            return;
+        }
+    }
+
     typename std::map<PairString, T>::iterator oldValue;
-    typename std::map<PairString, T>::iterator end;
+
+    bool isOfType;
+
+    if constexpr(std::is_same_v<T, std::string>)
+        isOfType = (type->second == E_SettingType::String);
+    else if constexpr(std::is_same_v<T, int>)
+        isOfType = (type->second == E_SettingType::Integer || type->second == E_SettingType::Enum);
+    else if constexpr(std::is_same_v<T, double>)
+        isOfType = (type->second == E_SettingType::Double);
+    else if constexpr(std::is_same_v<T, bool>)
+        isOfType = (type->second == E_SettingType::Boolean);
+
+    if(!isOfType)
+    {
+        output->outputError(
+            "Cannot update setting " + category + "." + name + " since the value is of the wrong type.");
+
+        throw SettingSetWrongTypeException(name, category);
+    }
 
     if constexpr(std::is_same_v<T, std::string>)
     {
         oldValue = stringSettings.find(key);
-        end = stringSettings.end();
     }
     else if constexpr(std::is_same_v<T, int>)
     {
@@ -135,7 +172,6 @@ void Settings::updateSetting(std::string name, std::string category, T value, E_
         }
 
         oldValue = integerSettings.find(key);
-        end = integerSettings.end();
     }
     else if constexpr(std::is_same_v<T, double>)
     {
@@ -149,19 +185,10 @@ void Settings::updateSetting(std::string name, std::string category, T value, E_
         }
 
         oldValue = doubleSettings.find(key);
-        end = doubleSettings.end();
     }
     else if constexpr(std::is_same_v<T, bool>)
     {
         oldValue = booleanSettings.find(key);
-        end = booleanSettings.end();
-    }
-
-    if(oldValue == end)
-    {
-        output->outputError("Cannot update setting " + category + "." + name + " since it has not been defined.");
-
-        throw SettingKeyNotFoundException(name, category);
     }
 
     int prio = static_cast<int>(priority);
@@ -353,8 +380,6 @@ std::string Settings::getSettingsAsOSoL()
     auto solverOptionsNode = osolDocument.NewElement("solverOptions");
     int numberOfIncludedOptions = 0;
 
-    solverOptionsNode->SetAttribute("numberOfSolverOptions", numberOfIncludedOptions);
-
     for(auto& T : settingTypes)
     {
         auto key = T.first;
@@ -409,7 +434,7 @@ std::string Settings::getSettingsAsOSoL()
         solverOptionNode->SetAttribute("type", type.str().c_str());
         solverOptionNode->SetAttribute("description", desc.str().c_str());
         solverOptionsNode->InsertEndChild(solverOptionNode);
-        solverOptionNode++;
+        numberOfIncludedOptions++;
 
         output->outputDebug(" Setting <" + category + "," + name + "> converted.");
 
@@ -417,6 +442,7 @@ std::string Settings::getSettingsAsOSoL()
         desc.clear();
     }
 
+    solverOptionsNode->SetAttribute("numberOfSolverOptions", numberOfIncludedOptions);
     optimizationNode->InsertEndChild(solverOptionsNode);
     osolNode->InsertEndChild(optimizationNode);
 
@@ -466,17 +492,12 @@ std::string Settings::getSettingsAsString(bool hideUnchanged = false, bool hideD
         {
             std::string name = T.first.second;
             std::string category = T.first.first;
-            std::string fullname = fmt::format("{}.{}", category, name);
             std::string subCategory = "";
 
             size_t firstPeriod = name.find('.');
 
             if(firstPeriod != std::string::npos)
                 subCategory = name.substr(0, firstPeriod);
-
-            std::string description;
-            std::string validValues;
-            std::string defaultValue;
 
             if(category != currentCategory)
             {
@@ -818,8 +839,6 @@ VectorPairString Settings::getSettingSplitIdentifiers(E_SettingType type)
     for(auto& T : settingTypes)
     {
         auto key = T.first;
-        std::string name = T.first.second;
-        std::string category = T.first.first;
 
         if(settingIsPrivate[key])
             continue; // Do not include an internal setting

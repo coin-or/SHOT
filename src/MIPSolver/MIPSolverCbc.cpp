@@ -28,6 +28,7 @@
 #include "CbcModel.hpp"
 #include "CbcSolver.hpp"
 #include "CbcBranchLotsize.hpp"
+#include "CbcSOS.hpp"
 #include "OsiClpSolverInterface.hpp"
 
 namespace SHOT
@@ -76,6 +77,7 @@ MIPSolverCbc::~MIPSolverCbc() = default;
 bool MIPSolverCbc::initializeProblem()
 {
     discreteVariablesActivated = true;
+    repairableCuts.clear();
 
     this->cutOff = 1e100;
 
@@ -125,6 +127,7 @@ bool MIPSolverCbc::addVariable(
 
         case E_VariableType::Semiinteger:
             coinModel->setInteger(index);
+            [[fallthrough]];
         case E_VariableType::Semicontinuous:
         {
             // variable is either {0} or in [semiBound,upperBound]
@@ -294,7 +297,7 @@ bool MIPSolverCbc::finalizeProblem()
             osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
         }
 
-        osiInterface->setDblParam(OsiObjOffset, this->objectiveConstant);
+        osiInterface->setDblParam(OsiObjOffset, getCbcObjectiveOffset());
 
         setSolutionLimit(1);
     }
@@ -329,13 +332,15 @@ void MIPSolverCbc::initializeSolverSettings()
     // Set solution pool settings
     if(forceUnlimitedSolutionLimitNextSolve)
     {
-        cbcModel->setMaximumSolutions(2100000000);
+        usedSolutionLimit = 2100000000;
         forceUnlimitedSolutionLimitNextSolve = false;
     }
     else
     {
-        cbcModel->setMaximumSolutions(solLimit);
+        usedSolutionLimit = solLimit;
     }
+
+    cbcModel->setMaximumSolutions(usedSolutionLimit);
     cbcModel->setMaximumSavedSolutions(env->settings->getSetting<int>("Dual.MIP.SolutionPool.Capacity"));
 
     // Set number of threads
@@ -402,6 +407,40 @@ int MIPSolverCbc::addLinearConstraint(
     return (osiInterface->getNumRows() - 1);
 }
 
+void MIPSolverCbc::addBranchingObjects()
+{
+    // The objects are given to the Cbc model and not to the solver interface. Cbc creates its own objects from those
+    // of the solver interface only after it has preprocessed the problem, and the special ordered sets then referred
+    // to the columns of the problem before the preprocessing, i.e., to other variables or to columns that did not
+    // exist. Cbc updates the column indexes of the objects of its model.
+    std::vector<CbcObject*> cbcobjects;
+    cbcobjects.reserve(lotsizes.size() + specialOrderedSets.size());
+
+    for(const auto& l : lotsizes)
+    {
+        if(l.second[2] == l.second[3]) // special case where second interval is singleton, too
+            cbcobjects.push_back(new CbcLotsize(cbcModel.get(), l.first, 2, l.second.data() + 1, false));
+        else
+            cbcobjects.push_back(new CbcLotsize(cbcModel.get(), l.first, 2, l.second.data(), true));
+    }
+
+    int identifier = 0;
+
+    for(const auto& [type, variableIndexes, variableWeights] : specialOrderedSets)
+    {
+        cbcobjects.push_back(new CbcSOS(cbcModel.get(), (int)variableIndexes.size(), variableIndexes.data(),
+            variableWeights.data(), identifier++, type));
+    }
+
+    if(cbcobjects.empty())
+        return;
+
+    cbcModel->addObjects(cbcobjects.size(), cbcobjects.data());
+
+    for(CbcObject* o : cbcobjects)
+        delete o;
+}
+
 bool MIPSolverCbc::addSpecialOrderedSet(E_SOSType type, VectorInteger variableIndexes, VectorDouble variableWeights)
 {
     try
@@ -416,12 +455,8 @@ bool MIPSolverCbc::addSpecialOrderedSet(E_SOSType type, VectorInteger variableIn
 
         assert(variableWeights.size() == variableIndexes.size());
 
-        OsiObject* object = new OsiSOS(osiInterface.get(), variableIndexes.size(), &variableIndexes[0],
-            &variableWeights[0], (type == E_SOSType::One) ? 1 : 2);
-
-        osiInterface->addObjects(1, &object);
-
-        delete object;
+        // The sets are added to the Cbc model before it is solved, see addBranchingObjects()
+        specialOrderedSets.emplace_back((type == E_SOSType::One) ? 1 : 2, variableIndexes, variableWeights);
     }
     catch(std::exception& e)
     {
@@ -484,9 +519,26 @@ E_ProblemSolutionStatus MIPSolverCbc::getSolutionStatus()
 {
     E_ProblemSolutionStatus MIPSolutionStatus;
 
+    // When the time limit is reached while the LP relaxation in the root node is solved, Cbc regards the relaxation
+    // as not solved to optimality and reports the problem as proven infeasible, which it does when a problem is
+    // started with very little time left. The LP solver of the model then has no infeasible problem, and its limit
+    // has expired.
+    bool isInfeasibleDueToTimeLimit = false;
+
+    if(cbcModel->isProvenInfeasible() || (cbcModel->status() == 0 && cbcModel->secondaryStatus() == 1))
+    {
+        if(auto clpInterface = dynamic_cast<OsiClpSolverInterface*>(cbcModel->solver()))
+            isInfeasibleDueToTimeLimit = !clpInterface->isProvenPrimalInfeasible()
+                && clpInterface->getModelPtr()->hitMaximumIterations();
+    }
+
     if(cbcModel->isProvenOptimal() && cbcModel->numberSavedSolutions() > 0)
     {
         MIPSolutionStatus = E_ProblemSolutionStatus::Optimal;
+    }
+    else if(isInfeasibleDueToTimeLimit)
+    {
+        MIPSolutionStatus = E_ProblemSolutionStatus::TimeLimit;
     }
     else if(cbcModel->isProvenInfeasible())
     {
@@ -522,12 +574,29 @@ E_ProblemSolutionStatus MIPSolverCbc::getSolutionStatus()
         // Stopped by the event handler, i.e. interrupted
         MIPSolutionStatus = E_ProblemSolutionStatus::Abort;
     }
+    // A finished search that has not proven anything is explained by the secondary status. Cbc stops as soon as the
+    // gap between its bound and the cutoff is within the gap tolerance, which can happen already in the root node
+    // and without a solution, since the cutoff of SHOT is the best solution found so far.
+    else if(cbcModel->status() == 0 && cbcModel->secondaryStatus() == 2)
+    {
+        MIPSolutionStatus = E_ProblemSolutionStatus::CutOff;
+    }
+    else if(cbcModel->status() == 0 && cbcModel->secondaryStatus() == 1)
+    {
+        MIPSolutionStatus = E_ProblemSolutionStatus::Infeasible;
+    }
+    else if(cbcModel->status() == 0 && cbcModel->secondaryStatus() == 7)
+    {
+        MIPSolutionStatus = E_ProblemSolutionStatus::Unbounded;
+    }
     else
     {
-        auto status = cbcModel->status();
         MIPSolutionStatus = E_ProblemSolutionStatus::Error;
         env->output->outputError(
-            fmt::format("        MIP solver return status unknown (Cbc returned status {}).", status));
+            fmt::format("        MIP solver return status unknown (Cbc returned status {} and secondary status {}, "
+                        "with {} solutions and {} nodes).",
+                cbcModel->status(), cbcModel->secondaryStatus(), cbcModel->numberSavedSolutions(),
+                cbcModel->getNodeCount()));
     }
 
     return (MIPSolutionStatus);
@@ -539,7 +608,7 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
     cachedSolutionHasChanged = true;
 
     // The arguments are counted as they are added, since some of them are only passed on conditionally
-    const int maxArguments = 21;
+    const int maxArguments = 25;
     char* argv[maxArguments];
     int numArguments = 0;
     std::string arg;
@@ -629,21 +698,28 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
     arg = std::to_string(env->settings->getSetting<int>("Subsolver.Cbc.Strategy"));
     argv[numArguments++] = strdup(arg.c_str());
 
-    /*
-        TODO: Adding cutoffs seems to have stability-issues (status changes from unbounded -> infeasible in some
-        cases, cf. https://github.com/coin-or/SHOT/issues/133). As the cutoff is added as a constraint, this can be
-        deactivated here.
+    // Cbc fathoms nodes with a fast dual simplex method below a depth it selects for small problems, and this ends
+    // in an invalid memory access in Clp (ClpSimplex::fastDual2) when the time limit is reached during it. The value
+    // -999 is the one Cbc changes to no fast fathoming, while -1 lets it select the depth.
+    argv[numArguments++] = strdup("-depthMiniBab");
+    argv[numArguments++] = strdup("-999");
 
+    // The cut generators of Cbc can together give cuts that are not valid, after which Cbc returns a solution that is
+    // not optimal as the optimal one, e.g., with the objective value 7530 instead of 6545 for a dual problem of
+    // clay0204hfsg. Each generator alone has not been seen to do this.
+    if(!env->settings->getSetting<bool>("Subsolver.Cbc.Cuts"))
+    {
+        argv[numArguments++] = strdup("-cuts");
+        argv[numArguments++] = strdup("off");
+    }
+
+    // The cutoff is in the sense of the objective Cbc minimizes, see setCutOff
+    if(std::abs(this->cutOff) < 1e100)
+    {
         argv[numArguments++] = strdup("-cutoff");
-
-        if(this->cutOff > 1e100)
-            arg = "1e100";
-        else if(this->cutOff < -1e100)
-            arg = "-1e100";
-        else
-            arg = fmt::format("{}", this->cutOff);
-
-        argv[numArguments++] = strdup(arg.c_str());*/
+        arg = fmt::format("{}", this->cutOff);
+        argv[numArguments++] = strdup(arg.c_str());
+    }
 
     argv[numArguments++] = strdup("-sec");
     arg = fmt::format("{}", this->timeLimit);
@@ -686,25 +762,7 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
                 == 0))
             cbcModel->setMIPStart(MIPStart);
 
-        // Create and add lotsize objects
-        if(!lotsizes.empty())
-        {
-            std::vector<CbcObject*> cbcobjects;
-            cbcobjects.reserve(lotsizes.size());
-
-            for(const auto& l : lotsizes)
-            {
-                if(l.second[2] == l.second[3]) // special case where second interval is singleton, too
-                    cbcobjects.push_back(new CbcLotsize(cbcModel.get(), l.first, 2, l.second.data() + 1, false));
-                else
-                    cbcobjects.push_back(new CbcLotsize(cbcModel.get(), l.first, 2, l.second.data(), true));
-            }
-
-            cbcModel->addObjects(cbcobjects.size(), cbcobjects.data());
-
-            for(CbcObject* o : cbcobjects)
-                delete o;
-        }
+        addBranchingObjects();
 
         CbcSolverUsefulData solverData;
         CbcMain0(*cbcModel, solverData);
@@ -715,7 +773,7 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
             osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
         }
 
-        osiInterface->setDblParam(OsiObjOffset, this->objectiveConstant);
+        osiInterface->setDblParam(OsiObjOffset, getCbcObjectiveOffset());
 
         TerminationEventHandler eventHandler(env);
         cbcModel->passInEventHandler(&eventHandler);
@@ -727,8 +785,10 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
         // Cbc's own optimality proof cannot be fully trusted when a finite solution-count cap was active for
         // this solve (see investigation): downgrade the status so this iteration's incumbent isn't used as a
         // rigorous dual bound, and force the next solve to use an unlimited solution cap so it gets a chance
-        // to correct course on the (by-then cut-augmented) problem.
-        if(MIPSolutionStatus == E_ProblemSolutionStatus::Optimal && solLimit < 2100000000)
+        // to correct course on the (by-then cut-augmented) problem. The limit is the one this solve was given:
+        // testing solLimit instead also downgraded the unlimited solve, so no solve was ever optimal and the
+        // dual bound stagnated
+        if(MIPSolutionStatus == E_ProblemSolutionStatus::Optimal && usedSolutionLimit < 2100000000)
         {
             MIPSolutionStatus = E_ProblemSolutionStatus::SolutionLimit;
             forceUnlimitedSolutionLimitNextSolve = true;
@@ -752,6 +812,8 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
 
             initializeSolverSettings();
 
+            addBranchingObjects();
+
             CbcSolverUsefulData solverData;
             CbcMain0(*cbcModel, solverData);
 
@@ -761,7 +823,7 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
                 osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
             }
 
-            osiInterface->setDblParam(OsiObjOffset, this->objectiveConstant);
+            osiInterface->setDblParam(OsiObjOffset, getCbcObjectiveOffset());
 
             CbcMain1(numArguments, const_cast<const char**>(argv), *cbcModel, dummyCallback, solverData);
 
@@ -794,8 +856,13 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
             {
                 if(V->isUnbounded())
                 {
-                    // Temporarily introduce bounds [-1e20,1e20] for unbounded variables in objective
-                    updateVariableBound(V->getIndex(), -1e20, 1e20);
+                    // The primal solution only contains the variables of the original problem
+                    double center = (V->getIndex() < (int)env->results->primalSolution.size())
+                        ? env->results->primalSolution[V->getIndex()]
+                        : 0.0;
+
+                    auto bounds = getTemporaryBoundsForUnboundedVariable(V->lowerBound, V->upperBound, center);
+                    updateVariableBound(V->getIndex(), bounds.first, bounds.second);
                     variablesWithChangedBounds.push_back(V->getIndex());
                     problemUpdated = true;
                 }
@@ -816,24 +883,18 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
             if(env->settings->getSetting<bool>("Output.Debug.Enable"))
             {
 
-                auto filename = fmt::format("{}/dualiter{}_unbounded.lp",
+                auto filename = fmt::format("{}/dualiter{}_unbounded",
                     env->settings->getSetting<std::string>("Output.Debug.Path"),
                     env->results->getCurrentIteration()->iterationNumber - 1);
 
-                try
-                {
-                    osiInterface->writeLp(filename.c_str(), "", 1e-7, 10, 10, 0.0, true);
-                }
-                catch(std::exception& e)
-                {
-                    env->output->outputError(
-                        "        Error when saving relaxed infesibility model to file in Cbc", e.what());
-                }
+                writeProblemToDebugFiles(filename);
             }
 
             cbcModel = std::make_unique<CbcModel>(*osiInterface);
 
             initializeSolverSettings();
+
+            addBranchingObjects();
 
             CbcSolverUsefulData solverData;
             CbcMain0(*cbcModel, solverData);
@@ -844,7 +905,7 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
                 osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
             }
 
-            osiInterface->setDblParam(OsiObjOffset, this->objectiveConstant);
+            osiInterface->setDblParam(OsiObjOffset, getCbcObjectiveOffset());
 
             CbcMain1(numArguments, const_cast<const char**>(argv), *cbcModel, dummyCallback, solverData);
 
@@ -857,6 +918,15 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
             {
                 updateVariableBound(I, env->reformulatedProblem->getVariableLowerBound(I),
                     env->reformulatedProblem->getVariableUpperBound(I));
+            }
+
+            // Cbc reports an unbounded continuous relaxation, so for an exact dual problem the bounded one only shows
+            // whether the problem is feasible. A feasible MILP with an unbounded continuous relaxation is unbounded.
+            if(env->dualSolver->isDualProblemExact()
+                && (MIPSolutionStatus == E_ProblemSolutionStatus::Feasible
+                    || MIPSolutionStatus == E_ProblemSolutionStatus::SolutionLimit))
+            {
+                MIPSolutionStatus = E_ProblemSolutionStatus::Unbounded;
             }
 
             env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed = true;
@@ -892,12 +962,20 @@ bool MIPSolverCbc::repairInfeasibility()
 
         for(int i = numOrigConstraints; i < numCurrConstraints; i++)
         {
-            if(allowRepairOfConstraint[i])
+            // Disabled cuts have two infinite bounds (sense N), so they need no
+            // slack column. Count only rows for which a column is actually added.
+            if(allowRepairOfConstraint[i] && (rowSense[i] == 'L' || rowSense[i] == 'G'))
             {
                 repairConstraints.push_back(i);
                 relaxParameters.push_back(1 / (((double)i) - numOrigConstraints + 1.0));
                 numConstraintsToRepair++;
             }
+        }
+
+        if(numConstraintsToRepair == 0)
+        {
+            delete repairedInterface;
+            return (false);
         }
 
         // Saves the relaxation weights to a file
@@ -942,13 +1020,14 @@ bool MIPSolverCbc::repairInfeasibility()
 
         if(env->settings->getSetting<bool>("Output.Debug.Enable"))
         {
-            auto filename = fmt::format("{}/dualiter{}_infeasrelax.lp",
+            auto filename = fmt::format("{}/dualiter{}_infeasrelax",
                 env->settings->getSetting<std::string>("Output.Debug.Path"),
                 env->results->getCurrentIteration()->iterationNumber - 1);
 
             try
             {
-                repairedInterface->writeLp(filename.c_str(), "", 1e-7, 10, 10, 0.0, true);
+                repairedInterface->writeLp((filename + ".lp").c_str(), "", 1e-7, 10, 10, 0.0, true);
+                repairedInterface->writeMps((filename + ".mps").c_str(), "");
             }
             catch(std::exception& e)
             {
@@ -961,6 +1040,8 @@ bool MIPSolverCbc::repairInfeasibility()
 
         initializeSolverSettings();
 
+        addBranchingObjects();
+
         CbcSolverUsefulData solverData;
         CbcMain0(*cbcModel, solverData);
 
@@ -970,12 +1051,12 @@ bool MIPSolverCbc::repairInfeasibility()
             osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
         }
 
-        osiInterface->setDblParam(OsiObjOffset, this->objectiveConstant);
+        osiInterface->setDblParam(OsiObjOffset, getCbcObjectiveOffset());
 
         cachedSolutionHasChanged = true;
 
         // The arguments are counted as they are added, since some of them are only passed on conditionally
-        const int maxArguments = 21;
+        const int maxArguments = 25;
         char* argv[maxArguments];
         int numArguments = 0;
         std::string arg;
@@ -1065,6 +1146,16 @@ bool MIPSolverCbc::repairInfeasibility()
         arg = std::to_string(env->settings->getSetting<int>("Subsolver.Cbc.Strategy"));
         argv[numArguments++] = strdup(arg.c_str());
 
+        // See the comments in solveProblem()
+        argv[numArguments++] = strdup("-depthMiniBab");
+        argv[numArguments++] = strdup("-999");
+
+        if(!env->settings->getSetting<bool>("Subsolver.Cbc.Cuts"))
+        {
+            argv[numArguments++] = strdup("-cuts");
+            argv[numArguments++] = strdup("off");
+        }
+
         /*
         argv[numArguments++] = strdup("-cutoff");
 
@@ -1123,24 +1214,24 @@ bool MIPSolverCbc::repairInfeasibility()
 
         for(int i = 0; i < numConstraintsToRepair; i++)
         {
-            double slackValue = solution[numOrigVariables + i];
+            double slackValue = solution.at(numOrigVariables + i);
 
             if(slackValue == 0.0)
                 continue;
 
-            double oldRHS = osiInterface->getRowUpper()[repairConstraints[i]];
-
             if(rowSense[repairConstraints.at(i)] == 'L')
             {
+                double oldRHS = osiInterface->getRowUpper()[repairConstraints[i]];
                 osiInterface->setRowUpper(repairConstraints[i], oldRHS + 1.5 * slackValue);
                 env->output->outputDebug("        Constraint: " + osiInterface->getRowName(repairConstraints[i])
                     + " repaired with infeasibility = " + std::to_string(1.5 * slackValue));
             }
             else if(rowSense[repairConstraints.at(i)] == 'G')
             {
+                double oldRHS = osiInterface->getRowLower()[repairConstraints[i]];
                 env->output->outputDebug("        Constraint: " + osiInterface->getRowName(repairConstraints[i])
                     + " repaired with infeasibility = " + std::to_string(-1.5 * slackValue));
-                osiInterface->setRowUpper(repairConstraints[i], oldRHS - 1.5 * slackValue);
+                osiInterface->setRowLower(repairConstraints[i], oldRHS - 1.5 * slackValue);
             }
 
             numRepairs++;
@@ -1150,11 +1241,11 @@ bool MIPSolverCbc::repairInfeasibility()
 
         if(env->settings->getSetting<bool>("Output.Debug.Enable"))
         {
-            auto filename = fmt::format("{}/dualiter{}_infeasrelax.lp",
+            auto filename = fmt::format("{}/dualiter{}_infeasrelax",
                 env->settings->getSetting<std::string>("Output.Debug.Path"),
                 env->results->getCurrentIteration()->iterationNumber - 1);
 
-            writeProblemToFile(filename);
+            writeProblemToDebugFiles(filename);
         }
 
         delete repairedInterface;
@@ -1200,6 +1291,11 @@ void MIPSolverCbc::setTimeLimit(double seconds)
         timeLimit = 0.00001;
     else
         timeLimit = seconds;
+
+    // The time limit given to Cbc as -sec only applies to the branch and bound, so it is given to Clp as well,
+    // which otherwise solves the LP problems without any time limit
+    if(osiInterface)
+        osiInterface->getModelPtr()->setMaximumSeconds(timeLimit);
 }
 
 void MIPSolverCbc::setCutOff(double cutOff)
@@ -1207,20 +1303,12 @@ void MIPSolverCbc::setCutOff(double cutOff)
     if(cutOff == SHOT_DBL_MAX || cutOff == SHOT_DBL_MIN)
         return;
 
-    double cutOffTol = env->settings->getSetting<double>("Dual.MIP.CutOff.Tolerance");
+    // Cbc minimizes also when the problem is maximized, with the signs of the objective changed, and the cutoff is
+    // on the objective it minimizes. The cutoff given already includes the tolerance Dual.MIP.CutOff.Tolerance
+    this->cutOff = isMinimizationProblem ? cutOff : -cutOff;
 
-    if(isMinimizationProblem)
-    {
-        this->cutOff = cutOff + cutOffTol;
-
-        env->output->outputDebug(fmt::format("        Setting cutoff value to {} for minimization.", this->cutOff));
-    }
-    else
-    {
-        this->cutOff = -1 * (cutOff + cutOffTol);
-
-        env->output->outputDebug(fmt::format("        Setting cutoff value to {} for maximization.", this->cutOff));
-    }
+    env->output->outputDebug(fmt::format("        Setting cutoff value to {} for {}.", cutOff,
+        isMinimizationProblem ? "minimization" : "maximization"));
 }
 
 void MIPSolverCbc::setCutOffAsConstraint([[maybe_unused]] double cutOff)
@@ -1284,7 +1372,7 @@ void MIPSolverCbc::setCutOffAsConstraint([[maybe_unused]] double cutOff)
 
 void MIPSolverCbc::addMIPStart(VectorDouble point)
 {
-    assert(point.size() == this->numberOfVariables - numberOfIntegerCutVariables);
+    assert(point.size() == static_cast<size_t>(this->numberOfVariables - numberOfIntegerCutVariables));
 
     MIPStart.clear();
 
@@ -1298,7 +1386,10 @@ void MIPSolverCbc::writeProblemToFile(std::string filename)
 {
     try
     {
-        osiInterface->writeLp(filename.c_str(), "", 1e-7, 10, 10, 0.0, true);
+        if(filename.size() >= 4 && filename.compare(filename.size() - 4, 4, ".mps") == 0)
+            osiInterface->writeMps(filename.c_str(), "");
+        else
+            osiInterface->writeLp(filename.c_str(), "", 1e-7, 10, 10, 0.0, true);
     }
     catch(std::exception& e)
     {
@@ -1351,7 +1442,7 @@ void MIPSolverCbc::deleteMIPStarts() { MIPStart.clear(); }
 bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
 {
     // Not necessarily all discrete variables in the reformulated problem: e.g. an NLP-sourced cut built against the
-    // original problem (Primal.FixedInteger.SourceProblem = OriginalProblem, the default) only lists the original
+    // original problem (Primal.FixedInteger.SourceProblem = OriginalProblem) only lists the original
     // problem's discrete variables, while reformulation may have added auxiliary discrete variables.
     assert(integerCut.variableValues.size() == integerCut.variableIndexes.size());
     bool allowIntegerCutRepair = env->settings->getSetting<bool>("Dual.MIP.InfeasibilityRepair.IntegerCuts");
@@ -1699,6 +1790,12 @@ double MIPSolverCbc::getDualObjectiveValue()
     if(!isDualBoundAvailable(getSolutionStatus(), isMIP))
         return (objVal);
 
+    // When the time limit is reached before the first node has been solved, the best possible objective value of Cbc
+    // can be the objective value of an LP relaxation that was not solved, e.g., 2.8e12 for a problem with the optimal
+    // value 8092.5, so it is not a bound
+    if(cbcModel->isSecondsLimitReached() && cbcModel->getNodeCount() == 0)
+        return (objVal);
+
     try
     {
         if(isMIP)
@@ -1750,8 +1847,6 @@ int CbcMessageHandler::print()
     if(!env->settings->getSetting<bool>("Output.Console.DualSolver.Show"))
         return 0;
 
-    std::string message(CoinMessageHandler::messageBuffer());
-
     auto lines = Utilities::splitStringByCharacter(CoinMessageHandler::messageBuffer(), '\n');
 
     for(auto const& line : lines)
@@ -1759,4 +1854,15 @@ int CbcMessageHandler::print()
 
     return 0;
 }
+double MIPSolverCbc::getConstraintUpperBound(int constraintIndex)
+{
+    return (osiInterface->getRowUpper()[constraintIndex]);
+}
+
+bool MIPSolverCbc::setConstraintUpperBound(int constraintIndex, double upperBound)
+{
+    osiInterface->setRowUpper(constraintIndex, upperBound >= 1e20 ? osiInterface->getInfinity() : upperBound);
+    return (true);
+}
+
 } // namespace SHOT

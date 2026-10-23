@@ -74,12 +74,26 @@ public:
     int addLinearConstraint(const std::map<int, double>& elements, double constant, std::string name,
         bool isGreaterThan, bool allowRepair) override;
 
+    VectorInteger addLinearConstraints(const std::vector<std::map<int, double>>& elements,
+        const VectorDouble& constants, const VectorString& names, bool isGreaterThan, bool allowRepair) override;
+
     bool addSpecialOrderedSet(
         E_SOSType type, VectorInteger variableIndexes, VectorDouble variableWeights = { }) override;
 
     bool createHyperplane(HyperplanePtr hyperplane) override { return (MIPSolverBase::createHyperplane(hyperplane)); }
 
     bool createIntegerCut(IntegerCut& integerCut) override;
+
+    int relaxRepairableCutsViolatedByPoint(const VectorDouble& point, size_t firstCut) override
+    {
+        return (MIPSolverBase::relaxRepairableCutsViolatedByPoint(point, firstCut));
+    }
+
+    VectorInteger removeRepairableCuts() override { return (MIPSolverBase::removeRepairableCuts()); }
+    size_t getNumberOfRepairableCuts() override { return (MIPSolverBase::getNumberOfRepairableCuts()); }
+
+    double getConstraintUpperBound(int constraintIndex) override;
+    bool setConstraintUpperBound(int constraintIndex, double upperBound) override;
 
     bool createInteriorHyperplane(HyperplanePtr hyperplane) override
     {
@@ -117,6 +131,8 @@ public:
     bool repairInfeasibility() override;
 
     E_ProblemSolutionStatus getSolutionStatus() override;
+
+    static bool isFailedSolve(HighsModelStatus modelStatus);
     int getNumberOfSolutions() override;
     VectorDouble getVariableSolution(int solIdx) override;
     std::vector<SolutionPoint> getAllVariableSolutions() override { return (MIPSolverBase::getAllVariableSolutions()); }
@@ -177,6 +193,9 @@ private:
     Highs highsInstance;
     HighsStatus highsReturnStatus;
     HighsMipData highsCallbackData;
+
+    // Solves the problem, after making sure that the scheduler of HiGHS has the number of threads of this solver
+    HighsStatus runSolver();
     std::unique_ptr<HighsTerminationHelper> terminationHelper;
 
     long int solutionLimit;
@@ -199,6 +218,14 @@ private:
 
     ObjSense objectiveSense;
     VectorDouble variableCosts;
+
+    // The variables temporarily bounded to find a feasible point of an unbounded dual problem. Their bounds are
+    // restored before the next solve, since changing the model discards the point found.
+    VectorInteger variableBoundsToRestore;
+
+    // HiGHS can only tell whether a problem is infeasible or unbounded if presolve is not used, so such a problem is
+    // solved again without it
+    E_ProblemSolutionStatus resolveInfeasibleOrUnbounded(E_ProblemSolutionStatus status);
 
 protected:
     std::vector<HighsVarType> variableTypesHighs;

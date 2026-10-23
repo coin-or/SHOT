@@ -34,6 +34,25 @@ void DualSolver::addDualSolutionCandidate(DualSolution solution)
     this->checkDualSolutionCandidates();
 }
 
+// A dual bound that passes the primal bound by more than the tolerance is not valid for the problem: the cuts of the
+// dual problem have then cut off the optimal solution, or the problem is so badly scaled that the bound is
+// meaningless. The bound is ignored, which is only visible as an objective gap that does not close, so it is reported.
+void DualSolver::warnAboutInvalidDualBound(double dualBound, double primalBound, double tolerance)
+{
+    auto message = fmt::format("        Dual bound {} passes the primal bound {} by more than the tolerance {}, so it "
+                               "is not a valid bound for the problem and is ignored.",
+        dualBound, primalBound, tolerance);
+
+    if(invalidDualBoundWarningShown)
+    {
+        env->output->outputDebug(message);
+        return;
+    }
+
+    env->output->outputWarning(message);
+    invalidDualBoundWarningShown = true;
+}
+
 void DualSolver::checkDualSolutionCandidates()
 {
     double currDualBound = env->results->getCurrentDualBound();
@@ -43,7 +62,15 @@ void DualSolver::checkDualSolutionCandidates()
     // bound by numerical error. Such a candidate is accepted as the primal bound, but only when it is within this
     // tolerance; passing the primal bound by more means that the candidate is not a valid bound for the problem,
     // and it is then ignored instead of closing the objective gap by force.
-    double crossoverTolerance = 1e-10 * std::max(1.0, std::abs(currPrimalBound));
+    //
+    // The error is the one the primal solutions are accepted with: a primal solution whose constraint violations are
+    // within the primal tolerances can have an objective value slightly better than the optimum of the problem,
+    // while the dual bound is valid for the problem itself. How large the difference in the objective value is
+    // depends on the problem, so the violation is scaled by the magnitude of the bound.
+    double primalTolerance = std::max(env->settings->getSetting<double>("Primal.Tolerance.NonlinearConstraint"),
+        env->settings->getSetting<double>("Primal.Tolerance.LinearConstraint"));
+
+    double crossoverTolerance = primalTolerance * std::max(1.0, std::abs(currPrimalBound));
 
     for(auto& C : this->dualSolutionCandidates)
     {
@@ -60,6 +87,10 @@ void DualSolver::checkDualSolutionCandidates()
             {
                 updateDual = true;
             }
+            else if(C.objValue > currPrimalBound + crossoverTolerance)
+            {
+                warnAboutInvalidDualBound(C.objValue, currPrimalBound, crossoverTolerance);
+            }
         }
         else
         {
@@ -71,6 +102,10 @@ void DualSolver::checkDualSolutionCandidates()
             else if(C.objValue < currDualBound && (C.objValue >= currPrimalBound))
             {
                 updateDual = true;
+            }
+            else if(C.objValue < currPrimalBound - crossoverTolerance)
+            {
+                warnAboutInvalidDualBound(C.objValue, currPrimalBound, crossoverTolerance);
             }
         }
 
@@ -88,8 +123,6 @@ void DualSolver::checkDualSolutionCandidates()
                     = env->results->getCurrentIteration()->iterationNumber;
             else
                 env->solutionStatistics.iterationLastDualBoundUpdate = 0;
-
-            env->solutionStatistics.iterationLastDualBoundUpdate = env->timing->getElapsedTime("Total");
 
             if(C.sourceType == E_DualSolutionSource::MIPSolutionOptimal
                 || C.sourceType == E_DualSolutionSource::LPSolution
@@ -118,6 +151,9 @@ void DualSolver::checkDualSolutionCandidates()
             case E_DualSolutionSource::ConvexBounding:
                 sourceDesc = "Convex MIP bounding";
                 break;
+            case E_DualSolutionSource::InfeasibleWithCutOff:
+                sourceDesc = "infeasible dual problem with cutoff";
+                break;
             default:
                 break;
             }
@@ -136,41 +172,9 @@ void DualSolver::checkDualSolutionCandidates()
     this->dualSolutionCandidates.clear();
 }
 
-void DualSolver::extendHashCoefficients(size_t length)
-{
-    if(hashCoefficients[0].size() >= length)
-        return;
-
-    // The coefficients are generated from the position rather than drawn from a randomly seeded engine, so that
-    // two runs of the same problem detect the same hyperplanes as duplicates and follow the same search path
-    for(size_t stream = 0; stream < 2; stream++)
-    {
-        auto& coefficients = hashCoefficients[stream];
-
-        while(coefficients.size() < length)
-            coefficients.push_back(Utilities::fixedPseudoRandomNumber(coefficients.size(), stream, 1.0, 101.0));
-    }
-}
-
 std::pair<double, double> DualSolver::calculateHashes(const VectorDouble& point)
 {
-    extendHashCoefficients(point.size());
-
-    double first = 0.0;
-    double second = 0.0;
-
-    for(size_t i = 0; i < point.size(); i++)
-    {
-        // The value is mapped into (-1, 1) before it is hashed, so that a variable of large magnitude does not
-        // dominate the hash. Otherwise a change in a variable of small magnitude, e.g. a binary one, is lost next
-        // to it, and two points differing in such variables are taken for the same point.
-        double value = point[i] / (1.0 + std::abs(point[i]));
-
-        first += hashCoefficients[0][i] * value;
-        second += hashCoefficients[1][i] * value;
-    }
-
-    return (std::make_pair(first, second));
+    return (Utilities::calculateHashes(point));
 }
 
 std::pair<double, double> DualSolver::calculateHyperplaneHashes(NumericHyperplanePtr hyperplane)
@@ -321,11 +325,20 @@ void DualSolver::addGeneratedHyperplane(const HyperplanePtr hyperplane)
 
             if(numberOfRepeatedHyperplanes == 100 && !repeatedHyperplaneWarningShown)
             {
+                bool isMultiTree = env->settings->getSetting<int>("Dual.TreeStrategy")
+                    == static_cast<int>(ES_TreeStrategy::MultiTree);
+
                 env->output->outputWarning(
                     fmt::format("        {} hyperplanes have been generated in points they were already generated "
-                                "in, the last one for constraint {}. The dual problem is not making progress.",
-                        numberOfRepeatedHyperplanes, constraintIndex));
+                                "in, the last one for constraint {}. The dual problem is not making progress.{}",
+                        numberOfRepeatedHyperplanes, constraintIndex,
+                        isMultiTree ? " Solving the remaining MIP problems to optimality." : ""));
                 repeatedHyperplaneWarningShown = true;
+
+                // Solutions found at the solution limit do not give new cuts, so the remaining MIP problems are solved
+                // to optimality
+                if(isMultiTree)
+                    MIPSolver->setSolutionLimit(2100000000);
             }
         }
     }
@@ -353,6 +366,18 @@ bool DualSolver::hasHyperplaneBeenAdded(const std::pair<double, double>& hashes,
     return (isHyperplaneInGeneratedList(hashes, constraintIndex));
 }
 
+bool DualSolver::hasHyperplaneBeenAdded(const HyperplanePtr& hyperplane)
+{
+    if(auto objectiveHP = std::dynamic_pointer_cast<ObjectiveHyperplane>(hyperplane))
+        return (hasHyperplaneBeenAdded(calculateHyperplaneHashes(objectiveHP), -1));
+
+    if(auto constraintHP = std::dynamic_pointer_cast<ConstraintHyperplane>(hyperplane))
+        return (hasHyperplaneBeenAdded(
+            calculateHyperplaneHashes(constraintHP), constraintHP->sourceConstraint->getIndex()));
+
+    return (false);
+}
+
 bool DualSolver::isHyperplaneInGeneratedList(const std::pair<double, double>& hashes, int constraintIndex)
 {
     auto generated = generatedHyperplaneHashes.find(constraintIndex);
@@ -377,6 +402,129 @@ bool DualSolver::isHyperplaneInGeneratedList(const std::pair<double, double>& ha
     return (false);
 }
 
+std::optional<std::pair<double, double>> DualSolver::evaluateHyperplaneTerms(
+    const HyperplanePtr& hyperplane, const VectorDouble& pointToCutOff)
+{
+    auto terms = MIPSolver->createHyperplaneTerms(hyperplane);
+
+    if(!terms)
+        return (std::nullopt);
+
+    double magnitude = std::abs(terms->second);
+    double valueInPointToCutOff = terms->second;
+
+    for(auto& E : terms->first)
+    {
+        magnitude = std::max(magnitude, std::abs(E.second));
+
+        // The objective variable of the dual problem is after the variables of the problem, and the point does not
+        // contain a value for it, so its term is left out of the value. A hyperplane for a constraint does not
+        // contain it, and the value is only used to see whether the point is cut off.
+        if(E.first < (int)pointToCutOff.size())
+            valueInPointToCutOff += E.second * pointToCutOff.at(E.first);
+    }
+
+    return (std::make_pair(magnitude, valueInPointToCutOff));
+}
+
+std::vector<VectorDouble> DualSolver::getFinitePointCandidates()
+{
+    std::vector<VectorDouble> candidates;
+
+    for(auto& IP : interiorPts)
+        candidates.push_back(IP->point);
+
+    if(env->results->hasPrimalSolution())
+        candidates.push_back(env->results->primalSolution);
+
+    candidates.push_back(Utilities::calculateBoxCenterPoint(
+        env->reformulatedProblem->getVariableLowerBounds(), env->reformulatedProblem->getVariableUpperBounds()));
+
+    return (candidates);
+}
+
+std::optional<VectorDouble> DualSolver::getHyperplaneGenerationPoint(
+    const VectorDouble& point, const NumericConstraintPtr& constraint)
+{
+    auto createHyperplane = [&constraint](const VectorDouble& generationPoint) -> HyperplanePtr
+    {
+        auto hyperplane = std::make_shared<ConstraintHyperplane>();
+        hyperplane->sourceConstraint = constraint;
+        hyperplane->generatedPoint = generationPoint;
+        hyperplane->isGlobal = (constraint->properties.convexity <= E_Convexity::Convex);
+        return (hyperplane);
+    };
+
+    return (findHyperplaneGenerationPoint(point, createHyperplane, constraint->getIndex()));
+}
+
+std::optional<VectorDouble> DualSolver::getObjectiveHyperplaneGenerationPoint(const VectorDouble& point)
+{
+    auto objective = env->reformulatedProblem->objectiveFunction;
+
+    auto createHyperplane = [&objective](const VectorDouble& generationPoint) -> HyperplanePtr
+    {
+        auto hyperplane = std::make_shared<ObjectiveHyperplane>();
+        hyperplane->generatedPoint = generationPoint;
+        hyperplane->objectiveFunctionValue = objective->calculateValue(generationPoint);
+        return (hyperplane);
+    };
+
+    // The hashes of an objective hyperplane include the objective value, so generated ones are not skipped
+    return (findHyperplaneGenerationPoint(point, createHyperplane, std::nullopt));
+}
+
+std::optional<VectorDouble> DualSolver::findHyperplaneGenerationPoint(const VectorDouble& point,
+    const std::function<HyperplanePtr(const VectorDouble&)>& createHyperplane, std::optional<int> constraintIndex)
+{
+    // The largest magnitude accepted of a hyperplane generated in a point that has been moved. A hyperplane whose
+    // largest value is above 1e9 is rescaled by MIPSolverBase::createHyperplane, so this keeps the generated
+    // constraint within a few orders of magnitude of the rest of the dual problem, where the MIP solvers behave.
+    const double maximumMagnitude = 1e6;
+    const double fractionMultiplier = 10.0;
+    const int maximumNumberOfTrials = 10;
+
+    if(auto terms = evaluateHyperplaneTerms(createHyperplane(point), point); terms && std::isfinite(terms->first))
+        return (point);
+
+    double smallestFraction = env->settings->getSetting<double>("Dual.HyperplaneCuts.NonfinitePointRetreatFactor");
+
+    for(auto& target : getFinitePointCandidates())
+    {
+        if(target.size() != point.size())
+            continue;
+
+        std::optional<VectorDouble> firstFinitePoint;
+        double fraction = smallestFraction;
+
+        for(int i = 0; i < maximumNumberOfTrials && fraction <= 0.5; i++, fraction *= fractionMultiplier)
+        {
+            auto trialPoint = Utilities::getPointOnSegment(point, target, fraction);
+            auto terms = evaluateHyperplaneTerms(createHyperplane(trialPoint), point);
+
+            // The function is still outside its domain in the point, or a hyperplane has already been generated
+            // there, which would only repeat a cut that did not help
+            if(!terms || !std::isfinite(terms->first)
+                || (constraintIndex && hasHyperplaneBeenAdded(trialPoint, *constraintIndex)))
+                continue;
+
+            if(!firstFinitePoint)
+                firstFinitePoint = trialPoint;
+
+            // The hyperplanes get flatter the further away the point is, so the first one that is both usable by
+            // the MIP solver and cuts the point off is the tightest one of those. Whether an objective cut cuts the
+            // point off depends on the value of the objective variable, which is not in the point.
+            if(terms->first <= maximumMagnitude && (!constraintIndex || terms->second > 0.0))
+                return (trialPoint);
+        }
+
+        if(firstFinitePoint)
+            return (firstFinitePoint);
+    }
+
+    return (std::nullopt);
+}
+
 bool DualSolver::hasHyperplaneBeenAdded(const VectorDouble& generatedPoint, int constraintIndex)
 {
     return (hasHyperplaneBeenAdded(calculateHashes(generatedPoint), constraintIndex));
@@ -394,13 +542,13 @@ void DualSolver::addIntegerCut(IntegerCut integerCut)
         integerCut.areAllVariablesBinary = true;
     }
 
-    integerCut.pointHash = Utilities::calculateHash(integerCut.variableValues);
+    integerCut.pointHashes = Utilities::calculateHashes(integerCut.variableValues);
 
-    if(!hasIntegerCutBeenAdded(integerCut.pointHash))
+    if(!hasIntegerCutBeenAdded(integerCut))
         this->integerCutWaitingList.push_back(integerCut);
     else
         env->output->outputDebug(
-            fmt::format("        Integer cut with hash {} has been added already.", integerCut.pointHash));
+            fmt::format("        Integer cut with hash {} has been added already.", integerCut.pointHashes.first));
 }
 
 void DualSolver::addGeneratedIntegerCut(IntegerCut integerCut)
@@ -425,7 +573,8 @@ void DualSolver::addGeneratedIntegerCut(IntegerCut integerCut)
         env->output->outputInfo("        Solution is no longer global since integer cut has been added.");
     }
 
-    env->output->outputDebug(fmt::format("        Added integer cut with hash {}", integerCut.pointHash));
+    env->output->outputDebug(
+        fmt::format("        Added integer cut with hash {}", integerCut.pointHashes.first));
 
     generatedIntegerCuts.push_back(integerCut);
 
@@ -438,17 +587,138 @@ void DualSolver::addGeneratedIntegerCut(IntegerCut integerCut)
     env->output->outputDebug("        Integer cut generated from: " + source);
 }
 
-bool DualSolver::hasIntegerCutBeenAdded(double hash)
+bool DualSolver::hasIntegerCutBeenAdded(const IntegerCut& integerCut)
 {
+    // The hashes map each value v to v / (1 + |v|) so that values of small magnitude are not lost next to large ones,
+    // but then they cannot tell apart integer values of large magnitude, e.g., near an artificial bound. Matching
+    // hashes are therefore not enough, and the values must be the same as well
     for(auto& IC : generatedIntegerCuts)
     {
-        if(Utilities::isAlmostEqual(IC.pointHash, hash, 1e-8))
+        if(Utilities::haveSameHashes(IC.pointHashes, integerCut.pointHashes)
+            && IC.variableIndexes == integerCut.variableIndexes && IC.variableValues == integerCut.variableValues)
         {
             return (true);
         }
     }
 
     return (false);
+}
+
+void DualSolver::removeArtificialBounds(const std::vector<VariablePtr>& variables)
+{
+    if(variables.size() == 0)
+        return;
+
+    double lowerLimit = env->settings->getSetting<double>("Model.Variables.Continuous.MinimumLowerBound");
+    double upperLimit = env->settings->getSetting<double>("Model.Variables.Continuous.MaximumUpperBound");
+    double unboundedValue = MIPSolver->getUnboundedVariableBoundValue();
+
+    for(auto& V : variables)
+    {
+        if(!V->properties.hasArtificialLowerBound && !V->properties.hasArtificialUpperBound)
+            continue;
+
+        env->output->outputDebug(fmt::format("        Removing the artificial bounds of variable {}.", V->name));
+
+        env->problem->setVariableBounds(V->getIndex(), V->properties.hasArtificialLowerBound ? lowerLimit : V->lowerBound,
+            V->properties.hasArtificialUpperBound ? upperLimit : V->upperBound);
+
+        if(env->reformulatedProblem)
+            env->reformulatedProblem->setVariableBounds(V->getIndex(), V->lowerBound, V->upperBound);
+
+        MIPSolver->updateVariableBound(V->getIndex(),
+            V->properties.hasArtificialLowerBound ? -unboundedValue : V->lowerBound,
+            V->properties.hasArtificialUpperBound ? unboundedValue : V->upperBound);
+
+        V->properties.hasArtificialLowerBound = false;
+        V->properties.hasArtificialUpperBound = false;
+    }
+
+    // The dual bounds may only be valid with the artificial bounds
+    env->results->resetDualBounds(true);
+
+    if(MIPSolver->hasDualAuxiliaryObjectiveVariable())
+    {
+        auto bounds = MIPSolver->getCurrentVariableBounds(MIPSolver->getDualAuxiliaryObjectiveVariableIndex());
+        MIPSolver->updateVariableBound(
+            MIPSolver->getDualAuxiliaryObjectiveVariableIndex(), -unboundedValue, bounds.second);
+    }
+}
+
+bool DualSolver::hasObjectiveVariableOnlyInMIPSolver()
+{
+    return (MIPSolver->hasDualAuxiliaryObjectiveVariable() && !env->reformulatedProblem->auxiliaryObjectiveVariable);
+}
+
+bool DualSolver::isDualProblemExact()
+{
+    // Nonlinear constraints and nonlinear objectives are only represented by cuts in the dual problem
+    return (env->reformulatedProblem->properties.numberOfNonlinearConstraints == 0
+        && env->reformulatedProblem->objectiveFunction->properties.classification
+            <= E_ObjectiveFunctionClassification::Quadratic);
+}
+
+int DualSolver::relaxCutsViolatedByPrimalSolutions()
+{
+    if(isSingleTree || !env->settings->getSetting<bool>("Dual.MIP.InfeasibilityRepair.RelaxCutsViolatedByPrimal"))
+        return (0);
+
+    size_t numberOfCuts = MIPSolver->getNumberOfRepairableCuts();
+
+    double objectiveSignFactor
+        = (env->reformulatedProblem->objectiveFunction->direction == env->problem->objectiveFunction->direction) ? 1.0
+                                                                                                                 : -1.0;
+
+    // Not all solutions are in the pool any longer, so only those that are are kept
+    std::vector<double> primalSolutionHashes;
+    int numberOfRelaxedCuts = 0;
+
+    for(auto& S : env->results->primalSolutions)
+    {
+        double hash = Utilities::calculateHash(S.point);
+        primalSolutionHashes.push_back(hash);
+
+        // A solution checked before is only checked against the cuts added since
+        bool isChecked = std::find(checkedPrimalSolutionHashes.begin(), checkedPrimalSolutionHashes.end(), hash)
+            != checkedPrimalSolutionHashes.end();
+        size_t firstCut = isChecked ? numberOfCheckedRepairableCuts : 0;
+
+        if(firstCut >= numberOfCuts)
+            continue;
+
+        VectorDouble point = S.point;
+
+        if((int)point.size() < env->reformulatedProblem->properties.numberOfVariables)
+            env->reformulatedProblem->augmentAuxiliaryVariableValues(point);
+
+        // The objective variable of the MIP solver has the value of the reformulated objective function, whose
+        // direction may differ from that of the original problem
+        if(hasObjectiveVariableOnlyInMIPSolver())
+            point.push_back(objectiveSignFactor * S.objValue);
+
+        numberOfRelaxedCuts += MIPSolver->relaxRepairableCutsViolatedByPoint(point, firstCut);
+    }
+
+    checkedPrimalSolutionHashes = primalSolutionHashes;
+    numberOfCheckedRepairableCuts = numberOfCuts;
+
+    if(numberOfRelaxedCuts > 0)
+        env->output->outputDebug(
+            fmt::format("        {} cuts of nonconvex constraints relaxed, since primal solutions violate them.",
+                numberOfRelaxedCuts));
+
+    return (numberOfRelaxedCuts);
+}
+
+int DualSolver::removeCutsOfNonconvexConstraints()
+{
+    auto sourceConstraintIndexes = MIPSolver->removeRepairableCuts();
+
+    // The cuts can then be generated again in the same points
+    for(auto& I : sourceConstraintIndexes)
+        generatedHyperplaneHashes.erase(I);
+
+    return ((int)sourceConstraintIndexes.size());
 }
 
 } // namespace SHOT

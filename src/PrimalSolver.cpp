@@ -10,8 +10,7 @@
 
 #include "PrimalSolver.h"
 
-#include "CallbackData.h"
-#include "EventHandler.h"
+#include "Callback.h"
 #include "Output.h"
 #include "Results.h"
 #include "Settings.h"
@@ -30,6 +29,9 @@ void PrimalSolver::addPrimalSolutionCandidate(VectorDouble pt, E_PrimalSolutionS
     if((int)pt.size() > env->problem->properties.numberOfVariables)
         pt.resize(env->problem->properties.numberOfVariables);
 
+    if(source == E_PrimalSolutionSource::ExternalPrimalSolution)
+        startingPointsForNLP.push_back(pt);
+
     PrimalSolution sol;
 
     sol.point = pt;
@@ -40,14 +42,14 @@ void PrimalSolver::addPrimalSolutionCandidate(VectorDouble pt, E_PrimalSolutionS
     if(env->problem->properties.numberOfNonlinearConstraints > 0)
     {
         auto maxDevNonlinear = env->problem->getMaxNumericConstraintValue(pt, env->problem->nonlinearConstraints);
-        sol.maxDevatingConstraintNonlinear
+        sol.maxDeviatingConstraintNonlinear
             = PairIndexValue(maxDevNonlinear.constraint->getIndex(), maxDevNonlinear.normalizedValue);
     }
 
     if(env->problem->properties.numberOfLinearConstraints > 0)
     {
         auto maxDevLinear = env->problem->getMaxNumericConstraintValue(pt, env->problem->linearConstraints);
-        sol.maxDevatingConstraintLinear
+        sol.maxDeviatingConstraintLinear
             = PairIndexValue(maxDevLinear.constraint->getIndex(), maxDevLinear.normalizedValue);
     }
 
@@ -98,30 +100,20 @@ void PrimalSolver::checkPrimalSolutionCandidates()
     {
         bool checkCandidate = true;
 
-        if(env->events->hasDataProvider(E_EventType::PrimalSolutionCandidateSelection))
+        if(env->callbacks->isActive(E_CallbackLocation::PrimalCandidateCheck))
         {
-            bool isMinimization = env->reformulatedProblem->objectiveFunction->properties.isMinimize;
-            double currentDualBound = env->results->getCurrentDualBound();
-            double relativeGap = env->results->getRelativeCurrentObjectiveGap();
-            double absoluteGap = env->results->getAbsoluteCurrentObjectiveGap();
-            int iterationNumber = env->results->getNumberOfIterations();
+            VectorDouble candidatePoint(cand.point.begin(),
+                cand.point.begin() + std::min((int)cand.point.size(), env->problem->properties.numberOfVariables));
 
-            VectorDouble candidatePoint(
-                cand.point.begin(),
-                cand.point.begin()
-                    + std::min((int)cand.point.size(),
-                        env->problem->properties.numberOfVariables));
+            auto context = std::make_shared<PrimalCandidateCheckContext>(
+                env, std::move(candidatePoint), cand.objValue, cand.sourceType);
+            env->callbacks->invoke(*context);
 
-            PrimalSolutionCallbackData callbackData(isMinimization, candidatePoint, cand.objValue,
-                currentDualBound, relativeGap, absoluteGap, iterationNumber, cand.sourceType,
-                env->solutionStatistics);
-
-            auto result = env->events->requestData<bool>(
-                E_EventType::PrimalSolutionCandidateSelection, callbackData);
-
-            // Check if solution has been rejected by the callback
-            if(result.has_value() && !result.value())
+            // Check if the candidate has been rejected by a callback
+            if(context->isCandidateRejected())
                 checkCandidate = false;
+
+            context->invalidate();
         }
 
         if(checkCandidate)
@@ -187,16 +179,20 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
     // Check that solution fulfills bounds, project back otherwise
     bool reCalculateObjective = false;
 
+    // A continuous variable may exceed its bounds by as much as Ipopt relaxes them (bound_relax_factor), since
+    // projecting it to the bound can violate a linear constraint with a large coefficient, e.g., 1000 * 1e-8 > 1e-6
+    auto boundTolerance = [](double bound) { return (1e-8 * std::max(1.0, std::abs(bound))); };
+
     for(auto& V : env->problem->realVariables)
     {
         auto value = V->calculate(tmpPoint);
 
-        if(value > V->upperBound)
+        if(value > V->upperBound + boundTolerance(V->upperBound))
         {
             isVariableBoundsFulfilled = false;
             tmpPoint.at(V->getIndex()) = V->upperBound;
         }
-        else if(value < V->lowerBound)
+        else if(value < V->lowerBound - boundTolerance(V->lowerBound))
         {
             isVariableBoundsFulfilled = false;
             tmpPoint.at(V->getIndex()) = V->lowerBound;
@@ -443,12 +439,23 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
         tmpObjVal = env->problem->objectiveFunction->calculateValue(tmpPoint);
     }
 
+    // A point where the objective is not finite, e.g. 1/x in x = 0, is not a solution: it would be the incumbent and
+    // be reported as a feasible solution without a primal bound
+    if(!std::isfinite(tmpObjVal))
+    {
+        env->output->outputDebug(
+            fmt::format("         The objective value {} of the primal solution candidate is not finite.", tmpObjVal));
+
+        return (false);
+    }
+
     // For example rootsearches may violate linear constraints
+    // An interior point is not trusted, since it can be a point moved toward the center of the variable bounds when
+    // the minimax problem gave no usable one (TaskFindInteriorPoint), which need not fulfill any linear constraint
     bool acceptableType = (primalSol.sourceType == E_PrimalSolutionSource::MIPSolutionPool
         || primalSol.sourceType == E_PrimalSolutionSource::NLPFixedIntegers
         || primalSol.sourceType == E_PrimalSolutionSource::LPFixedIntegers
-        || primalSol.sourceType == E_PrimalSolutionSource::MIPCallback
-        || primalSol.sourceType == E_PrimalSolutionSource::InteriorPointSearch);
+        || primalSol.sourceType == E_PrimalSolutionSource::MIPCallback);
 
     if(!primalSol.integerRoundingPerformed && !primalSol.boundProjectionPerformed && acceptableType
         && env->settings->getSetting<bool>("Primal.Tolerance.TrustLinearConstraintValues"))
@@ -486,7 +493,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
             }
         }
 
-        primalSol.maxDevatingConstraintLinear = mostDevLinearConstraints;
+        primalSol.maxDeviatingConstraintLinear = mostDevLinearConstraints;
     }
 
     // Check if quadratic constraints are fulfilled
@@ -517,7 +524,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
             env->output->outputDebug(tmpLine);
         }
 
-        primalSol.maxDevatingConstraintQuadratic = mostDevQuadraticConstraints;
+        primalSol.maxDeviatingConstraintQuadratic = mostDevQuadraticConstraints;
     }
 
     // Check if nonlinear constraints are fulfilled
@@ -548,7 +555,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
             env->output->outputDebug(tmpLine);
         }
 
-        primalSol.maxDevatingConstraintNonlinear = mostDevNonlinearConstraints;
+        primalSol.maxDeviatingConstraintNonlinear = mostDevNonlinearConstraints;
     }
 
     primalSol.objValue = tmpObjVal;
@@ -567,6 +574,21 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
 void PrimalSolver::addFixedNLPCandidate(
     VectorDouble pt, E_PrimalNLPSource source, double objVal, int iter, PairIndexValue maxConstrDev)
 {
+    auto candidate = createFixedNLPCandidate(pt, source, objVal, iter, maxConstrDev);
+
+    if(!hasFixedNLPCandidateBeenTested(candidate.discreteVariablePointHashes))
+    {
+        fixedPrimalNLPCandidates.push_back(candidate);
+    }
+    else
+        env->output->outputDebug(
+            fmt::format("        Candidate for fixed integer search with hash {} has been used already.",
+                candidate.discreteVariablePointHashes.first));
+}
+
+PrimalFixedNLPCandidate PrimalSolver::createFixedNLPCandidate(
+    VectorDouble pt, E_PrimalNLPSource source, double objVal, int iter, PairIndexValue maxConstrDev)
+{
     VectorDouble candidate(pt);
 
     if((int)candidate.size() < env->reformulatedProblem->properties.numberOfVariables)
@@ -574,42 +596,37 @@ void PrimalSolver::addFixedNLPCandidate(
 
     assert((int)candidate.size() == env->reformulatedProblem->properties.numberOfVariables);
 
-    VectorInteger discretVariableValues;
-    discretVariableValues.reserve(env->reformulatedProblem->properties.numberOfDiscreteVariables);
+    VectorInteger discreteVariableValues;
+    discreteVariableValues.reserve(env->reformulatedProblem->properties.numberOfDiscreteVariables);
 
     for(auto& VAR : env->reformulatedProblem->allVariables)
     {
         if(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer
             || VAR->properties.type == E_VariableType::Semiinteger)
-            discretVariableValues.push_back(candidate[VAR->getIndex()]);
+            discreteVariableValues.push_back(candidate[VAR->getIndex()]);
     }
 
-    double pointHash;
+    PairDouble pointHashes;
 
-    if(env->settings->getSetting<bool>("Primal.FixedInteger.OnlyUniqueIntegerCombinations"))
+    // Without discrete variables, every point would have the same integer combination
+    if(env->settings->getSetting<bool>("Primal.FixedInteger.OnlyUniqueIntegerCombinations")
+        && !discreteVariableValues.empty())
     {
-        pointHash = Utilities::calculateHash(discretVariableValues);
+        pointHashes = Utilities::calculateHashes(discreteVariableValues);
     }
     else
     {
-        pointHash = Utilities::calculateHash(candidate);
+        pointHashes = Utilities::calculateHashes(candidate);
     }
 
-    if(!hasFixedNLPCandidateBeenTested(pointHash))
-    {
-        fixedPrimalNLPCandidates.push_back(
-            PrimalFixedNLPCandidate { candidate, source, objVal, iter, maxConstrDev, pointHash });
-    }
-    else
-        env->output->outputDebug(
-            fmt::format("        Candidate for fixed integer search with hash {} has been used already.", pointHash));
+    return (PrimalFixedNLPCandidate { candidate, source, objVal, iter, maxConstrDev, pointHashes });
 }
 
-bool PrimalSolver::hasFixedNLPCandidateBeenTested(double hash)
+bool PrimalSolver::hasFixedNLPCandidateBeenTested(const PairDouble& hashes)
 {
     for(auto& IC : usedPrimalNLPCandidates)
     {
-        if(Utilities::isAlmostEqual(IC.discreteVariablePointHash, hash, 1e-8))
+        if(Utilities::haveSameHashes(IC.discreteVariablePointHashes, hashes))
         {
             return (true);
         }

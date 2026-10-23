@@ -53,15 +53,40 @@ protected:
     int cutOffConstraintIndex;
 
     bool hasQuadraticObjective = false;
-    bool hasQudraticConstraint = false;
+    bool hasQuadraticConstraint = false;
 
     // Whether a solve with the given status provides a bound that is valid for the dual problem
     bool isDualBoundAvailable(E_ProblemSolutionStatus status, bool isMIP);
 
+    // The finite bounds temporarily given to an unbounded variable to find a point of an unbounded dual problem. The
+    // point is only used to generate cuts, so it is kept at a moderate magnitude: LP solvers treat values from 1e20 as
+    // infinite, and cuts for, e.g., square terms generated far away are badly scaled. The bounds also contain the
+    // center, which is the value of the variable in the best known solution, if any, since the cutoff from that
+    // solution may otherwise make the problem with the temporary bounds infeasible. They are not only placed around
+    // the center, since a poor solution, e.g. with a huge objective variable value from the interior point, would then
+    // give points where all nonlinear constraints are fulfilled, and no cuts can be generated.
+    static PairDouble getTemporaryBoundsForUnboundedVariable(double lowerBound, double upperBound, double center = 0.0)
+    {
+        const double maxDistance = 1e4;
+
+        center = std::min(std::max(center, lowerBound), upperBound);
+
+        return (PairDouble(std::max(lowerBound, std::min(center, 0.0) - maxDistance),
+            std::min(upperBound, std::max(center, 0.0) + maxDistance)));
+    }
+
 public:
-    ~MIPSolverBase();
+    virtual ~MIPSolverBase();
 
     virtual bool createHyperplane(HyperplanePtr hyperplane);
+
+    int relaxRepairableCutsViolatedByPoint(const VectorDouble& point, size_t firstCut);
+    VectorInteger removeRepairableCuts();
+    size_t getNumberOfRepairableCuts() { return (repairableCuts.size()); }
+
+    // The upper bound of a constraint; a value of at least 1e20 removes it
+    virtual double getConstraintUpperBound(int constraintIndex) = 0;
+    virtual bool setConstraintUpperBound(int constraintIndex, double upperBound) = 0;
 
     virtual bool createInteriorHyperplane(HyperplanePtr hyperplane);
 
@@ -92,6 +117,11 @@ public:
         const std::map<int, double>& elements, double constant, std::string name, bool isGreaterThan) = 0;
     virtual int addLinearConstraint(const std::map<int, double>& elements, double constant, std::string name,
         bool isGreaterThan, bool allowRepair) = 0;
+
+    // Adds several linear constraints at once, which is faster in solvers that copy the matrix for every added
+    // constraint. Returns the index of each added constraint, or -1 for the ones that were not added.
+    virtual VectorInteger addLinearConstraints(const std::vector<std::map<int, double>>& elements,
+        const VectorDouble& constants, const VectorString& names, bool isGreaterThan, bool allowRepair);
 
     virtual bool addSpecialOrderedSet(E_SOSType type, VectorInteger variableIndexes, VectorDouble variableWeights = { })
         = 0;
@@ -174,6 +204,17 @@ public:
 
     std::vector<int> integerCuts; // Contains the constraint indexes that are integerCuts
     std::vector<bool> allowRepairOfConstraint; // Whether to allow the added cuts to be relaxed
+
+    // A cut of a nonconvex constraint, sum(elements) <= upper bound, which may be relaxed or removed
+    struct RepairableCut
+    {
+        int constraintIndex;
+        std::map<int, double> elements;
+        int sourceConstraintIndex; // -1 for the objective function
+        bool isRemoved = false;
+    };
+
+    std::vector<RepairableCut> repairableCuts;
 
     int prevSolutionLimit = 1;
 

@@ -8,7 +8,7 @@
    Please see the README and LICENSE files for more information.
 */
 
-#include "../src/CallbackData.h"
+#include "../src/Callback.h"
 #include "../src/Environment.h"
 #include "../src/PrimalSolver.h"
 #include "../src/Results.h"
@@ -27,6 +27,111 @@
 
 using namespace SHOT;
 
+bool TestGamsFunctions(std::string filename)
+{
+    // arcsin, arccos, arctan, sinh, cosh, tanh, arctan2, entropy, centropy (with and without its third argument),
+    // sigmoid, poly and edist are read as expressions SHOT has. Their values are compared with the definitions in the GAMS
+    // documentation, also where an argument is zero, and their gradients with central differences.
+
+    bool passed = true;
+
+    auto solver = std::make_unique<Solver>();
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Error));
+
+    if(!solver->setProblem(filename))
+    {
+        std::cout << "  FAILED: could not read " << filename << ".\n";
+        return (false);
+    }
+
+    auto problem = solver->getOriginalProblem();
+
+    auto index = [&](const std::string& name)
+    {
+        for(auto& V : problem->allVariables)
+            if(V->name == name)
+                return (V->getIndex());
+        return (-1);
+    };
+
+    std::vector<std::array<double, 3>> points = { { 0.7, -1.3, 2.5 }, { 0.0, 2.0, 0.1 }, { 0.3, 0.0, 1.0 } };
+
+    for(auto& [x, y, z] : points)
+    {
+        VectorDouble point(problem->allVariables.size(), 0.0);
+        point[index("x")] = x;
+        point[index("y")] = y;
+        point[index("z")] = z;
+
+        std::map<std::string, double> expected = { { "e1", std::asin(x) }, { "e2", std::acos(x) },
+            { "e3", std::atan(y) }, { "e4", std::sinh(y) }, { "e5", std::cosh(y) }, { "e6", std::tanh(y) },
+            { "e7", std::atan2(y, x) }, { "e8", -z * std::log(z) }, { "e9", x > 0 ? x * std::log(x / z) : 0.0 },
+            { "e10", x * std::log((x + 0.1) / (z + 0.1)) }, { "e11", 1.0 / (1.0 + std::exp(-y)) },
+            { "e12", 1 + 2 * y + 3 * y * y + 4 * y * y * y }, { "e13", std::atan2(x, y) },
+            { "e14", std::sqrt(x * x + y * y + z * z) + y } };
+
+        int numberOfChecked = 0;
+
+        for(auto& C : problem->numericConstraints)
+        {
+            if(expected.count(C->name) == 0)
+                continue;
+
+            numberOfChecked++;
+
+            double value = C->calculateFunctionValue(point);
+            double reference = expected[C->name];
+
+            if(std::abs(value - reference) > 1e-9 * std::max(1.0, std::abs(reference)))
+            {
+                std::cout << "  FAILED: " << C->name << " is " << value << " in (" << x << ", " << y << ", " << z
+                          << "), expected " << reference << ".\n";
+                passed = false;
+            }
+
+            // The gradient is compared with central differences where every argument is inside its domain
+            if(x <= 0.0 || y == 0.0)
+                continue;
+
+            auto gradient = C->calculateGradient(point, false);
+
+            for(auto& V : problem->allVariables)
+            {
+                if(V->name != "x" && V->name != "y" && V->name != "z")
+                    continue;
+
+                double step = 1e-6;
+                VectorDouble forward(point), backward(point);
+                forward[V->getIndex()] += step;
+                backward[V->getIndex()] -= step;
+                double difference
+                    = (C->calculateFunctionValue(forward) - C->calculateFunctionValue(backward)) / (2 * step);
+                double derivative = gradient.count(V) ? gradient[V] : 0.0;
+
+                if(std::abs(derivative - difference) > 1e-5 * std::max(1.0, std::abs(difference)))
+                {
+                    std::cout << "  FAILED: the derivative of " << C->name << " with respect to " << V->name
+                              << " is " << derivative << ", expected " << difference << ".\n";
+                    passed = false;
+                }
+            }
+        }
+
+        std::cout << "  Checked " << numberOfChecked << " functions in (" << x << ", " << y << ", " << z << ").\n";
+
+        if(numberOfChecked != 14)
+        {
+            std::cout << "  FAILED: expected 14 functions.\n";
+            passed = false;
+        }
+    }
+
+    return (passed);
+}
+
+// In ModelTest.cpp
+bool SolveMinimumAndMaximumProblem(const std::string& filename);
+
 bool ReadProblemGAMS(std::string filename)
 {
     bool passed = true;
@@ -42,12 +147,23 @@ bool ReadProblemGAMS(std::string filename)
     return passed;
 }
 
-bool SolveProblemGAMS(std::string filename)
+bool SolveProblemGAMS(std::string filename, bool requiresSOS = false)
 {
     bool passed = true;
 
     auto solver = std::make_unique<SHOT::Solver>();
     auto env = solver->getEnvironment();
+
+    if(requiresSOS)
+    {
+#if defined(HAS_CBC)
+        solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cbc));
+#elif defined(HAS_CPLEX)
+        solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cplex));
+#elif defined(HAS_GUROBI)
+        solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Gurobi));
+#endif
+    }
 
     if(!solver->setProblem(filename))
     {
@@ -267,64 +383,39 @@ bool SolveProblemWithStartingPointGAMS(std::string filename)
                  "that the starting-point solution is accepted as a primal solution via callback.\n";
 
     auto solver = std::make_unique<SHOT::Solver>();
-    auto env = solver->getEnvironment();
-
-    if(!solver->setProblem(filename))
-    {
-        return (false);
-    }
 
     bool startingPointAccepted = false;
     bool startingPointPosted = false;
 
-    // Subscribe to PrimalSolutionCandidateSelection to verify the starting point is posted as a candidate
-    solver->registerCallback(E_EventType::PrimalSolutionCandidateSelection,
-        [&startingPointPosted](std::any args) -> bool
+    // Subscribe to PrimalCandidateCheck to verify the starting point is posted as a candidate
+    solver->registerCallback<PrimalCandidateCheckContext>(
+        [&startingPointPosted](PrimalCandidateCheckContext& candidate)
         {
-            try
+            if(candidate.getSource() == E_PrimalSolutionSource::ExternalPrimalSolution)
             {
-                auto data = std::any_cast<PrimalSolutionCallbackData>(args);
-                if(data.sourceType == E_PrimalSolutionSource::ExternalPrimalSolution)
-                {
-                    std::cout << "Starting point posted as candidate: objective = " << data.objectiveValue << '\n';
-                    startingPointPosted = true;
-                }
+                std::cout << "Starting point posted as candidate: objective = " << candidate.getObjectiveValue()
+                          << '\n';
+                startingPointPosted = true;
             }
-            catch(const std::bad_any_cast&)
-            {
-            }
-            return true; // accept all candidates
         });
 
     // Subscribe to NewPrimalSolution to verify the starting point is accepted
-    solver->registerCallback(E_EventType::NewPrimalSolution,
-        [&startingPointAccepted](std::any args)
+    solver->registerCallback<NewPrimalSolutionContext>(
+        [&startingPointAccepted](NewPrimalSolutionContext& solution)
         {
-            try
+            if(solution.getSource() == E_PrimalSolutionSource::ExternalPrimalSolution)
             {
-                auto data = std::any_cast<PrimalSolutionCallbackData>(args);
-                if(data.sourceType == E_PrimalSolutionSource::ExternalPrimalSolution)
-                {
-                    std::cout << "Starting point accepted as primal solution: objective = " << data.objectiveValue
-                              << '\n';
-                    startingPointAccepted = true;
-                }
-            }
-            catch(const std::bad_any_cast&)
-            {
+                std::cout << "Starting point accepted as primal solution: objective = " << solution.getObjectiveValue()
+                          << '\n';
+                startingPointAccepted = true;
             }
         });
 
-    // Read the .l (level) values from the GAMS modeling object and post them as a primal candidate,
-    // mirroring what EntryPointsGAMS.cpp does before solveProblem(). Without this step the starting
-    // point is never submitted when setProblem(filename) is used directly.
-    auto gamsModelingSystem = std::dynamic_pointer_cast<ModelingSystemGAMS>(env->modelingSystem);
-    if(gamsModelingSystem)
+    // setProblem() submits the GAMS variable levels and can accept the starting
+    // point immediately, so both callbacks must be registered before loading.
+    if(!solver->setProblem(filename))
     {
-        VectorDouble variableStarts(gmoN(gamsModelingSystem->modelingObject));
-        gmoGetVarL(gamsModelingSystem->modelingObject, variableStarts.data());
-        env->primalSolver->addPrimalSolutionCandidate(
-            variableStarts, E_PrimalSolutionSource::ExternalPrimalSolution, 0);
+        return (false);
     }
 
     if(!solver->solveProblem())
@@ -372,20 +463,19 @@ bool TestCallbackGAMS(std::string filename)
     }
 
     // Registers a callback that terminates when a primal solution has been found
-    solver->registerCallback(E_EventType::UserTerminationCheck,
-        [&env](std::any args) -> bool
+    solver->registerCallback<TerminationCheckContext>(
+        [](TerminationCheckContext& context)
         {
             std::cout << "Checking whether to terminate SHOT... ";
 
-            if(env->results->hasPrimalSolution())
+            if(context.hasPrimalSolution())
             {
                 std::cout << "Sure, do it.\n";
-                return (true);
+                context.terminate();
             }
             else
             {
                 std::cout << "Not yet!\n";
-                return (false);
             }
         });
 
@@ -503,17 +593,17 @@ int GAMSTest(int argc, char* argv[])
         break;
     case 8:
         std::cout << "Starting test to solve problem sos1a with SOS1 constraints in GAMS syntax:" << std::endl;
-        passed = SolveProblemGAMS("data/sos1a.gms");
+        passed = SolveProblemGAMS("data/sos1a.gms", true);
         std::cout << "Finished test to solve problem sos1a with SOS1 constraints in GAMS syntax." << std::endl;
         break;
     case 9:
         std::cout << "Starting test to solve problem sos2a with SOS2 constraints in GAMS syntax:" << std::endl;
-        passed = SolveProblemGAMS("data/sos2a.gms");
+        passed = SolveProblemGAMS("data/sos2a.gms", true);
         std::cout << "Finished test to solve problem sos2a with SOS2 constraints in GAMS syntax." << std::endl;
         break;
     case 10:
         std::cout << "Starting test to solve problem sos3 with SOS1 and SOS2 constraints in GAMS syntax:" << std::endl;
-        passed = SolveProblemGAMS("data/sos3.gms");
+        passed = SolveProblemGAMS("data/sos3.gms", true);
         std::cout << "Finished test to solve problem sos3 with SOS1 and SOS2 constraints in GAMS syntax." << std::endl;
         break;
     case 11:
@@ -534,6 +624,16 @@ int GAMSTest(int argc, char* argv[])
         std::cout << "Starting test for constraint classes with fixed variables in GAMS syntax:" << std::endl;
         passed = TestConstraintClassesForFixedVariablesGAMS("data/fixedvars.gms");
         std::cout << "Finished test for constraint classes with fixed variables in GAMS syntax." << std::endl;
+        break;
+    case 14:
+        std::cout << "Starting test of the GAMS functions given by other expressions:" << std::endl;
+        passed = TestGamsFunctions("data/gamsfunctions.gms");
+        std::cout << "Finished test of the GAMS functions given by other expressions." << std::endl;
+        break;
+    case 15:
+        std::cout << "Starting test of the GAMS functions min and max:" << std::endl;
+        passed = SolveMinimumAndMaximumProblem("data/minmax.gms");
+        std::cout << "Finished test of the GAMS functions min and max." << std::endl;
         break;
     default:
         passed = false;

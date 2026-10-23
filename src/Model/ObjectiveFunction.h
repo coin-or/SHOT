@@ -14,17 +14,15 @@
 #include "Variables.h"
 #include "Terms.h"
 #include "NonlinearExpressions.h"
+#include "IntervalDerivatives.h"
 
 #include <vector>
 
-#include "cppad/cppad.hpp"
+#include "CppAD.h"
 #include "cppad/utility.hpp"
 
 namespace SHOT
 {
-
-using Interval = mc::Interval;
-using IntervalVector = std::vector<Interval>;
 
 enum class E_ObjectiveFunctionDirection
 {
@@ -95,15 +93,32 @@ public:
 
     virtual Interval getBounds();
 
+    // The bounds over the box of the value of the objective function, including its constant, and of its gradient and
+    // Hessian, up to the order (0, 1 or 2), calculated with interval arithmetic. IntervalDerivatives describes when
+    // they enclose the derivatives.
+    IntervalDerivatives calculateIntervalDerivatives(const IntervalVector& box, int order = 2);
+
+    // Adds the bounds of the terms of the objective function to the derivatives
+    virtual void addTermIntervalDerivatives(IntervalDerivatives& derivatives, const IntervalVector& box, int order) = 0;
+
     // Whether the objective function's value range (per getBounds(), i.e. accounting for term coefficients/signs
     // and, for a nonlinear objective, the full expression tree -- not just linear/quadratic terms) extends beyond
     // what the active solver treats as practically infinite.
     bool isUnbounded();
 
+    // The gradient at the point, without the elements that are zero if eraseZeroes is true. The point is indexed by
+    // the indexes of the variables, so a point of the reformulated problem, which has the variables of the original
+    // problem first, can also be used for the objective function of the original problem
     virtual SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) = 0;
     virtual std::shared_ptr<Variables> getGradientSparsityPattern();
 
+    // The upper triangle of the symmetric Hessian at the point, i.e., the elements (V1, V2) with
+    // V1->getIndex() <= V2->getIndex(), without the elements that are zero if eraseZeroes is true
     virtual SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes) = 0;
+
+    // The Hessian when it does not depend on the point, and can be used without being recalculated or copied,
+    // otherwise nullptr
+    virtual const SparseVariableMatrix* getConstantHessian() { return (nullptr); }
     virtual std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> getHessianSparsityPattern();
 
     virtual std::ostream& print(std::ostream&) const = 0;
@@ -158,7 +173,7 @@ public:
 
     LinearTerms linearTerms;
 
-    void add(LinearTerms terms);
+    void add(const LinearTerms& terms);
 
     void add(LinearTermPtr term);
     void updateProperties() override;
@@ -167,6 +182,7 @@ public:
 
     double calculateValue(const VectorDouble& point) override;
     Interval calculateValue(const IntervalVector& intervalVector) override;
+    void addTermIntervalDerivatives(IntervalDerivatives& derivatives, const IntervalVector& box, int order) override;
 
     SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) override;
 
@@ -235,22 +251,26 @@ public:
 
     QuadraticTerms quadraticTerms;
 
-    void add(LinearTerms terms) { LinearObjectiveFunction::add(terms); }
+    void add(const LinearTerms& terms) { LinearObjectiveFunction::add(terms); }
 
     void add(LinearTermPtr term) { LinearObjectiveFunction::add(term); }
 
-    void add(QuadraticTerms terms);
+    void add(const QuadraticTerms& terms);
     void add(QuadraticTermPtr term);
 
     void updateProperties() override;
 
     double calculateValue(const VectorDouble& point) override;
     Interval calculateValue(const IntervalVector& intervalVector) override;
+    void addTermIntervalDerivatives(IntervalDerivatives& derivatives, const IntervalVector& box, int order) override;
 
     void takeOwnership(ProblemPtr owner) override;
 
     SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) override;
     SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes) override;
+
+    // The quadratic terms have a constant Hessian, which they cache
+    const SparseVariableMatrix* getConstantHessian() override;
 
     std::ostream& print(std::ostream& stream) const override;
 
@@ -348,8 +368,15 @@ public:
     CppAD::sparse_rc<std::vector<size_t>> nonlinearGradientSparsityPattern;
     CppAD::sparse_rc<std::vector<size_t>> nonlinearHessianSparsityPattern;
 
+    // Reused between the Hessian evaluations, since it holds the coloring of the sparsity pattern
+    CppAD::sparse_hes_work nonlinearHessianWork;
+
     bool nonlinearGradientSparsityMapGenerated = false;
     bool nonlinearHessianSparsityMapGenerated = false;
+
+    // Whether the Hessian of the nonlinear expression is calculated with CppAD's dense method, which takes one
+    // forward and one reverse sweep of the whole expression per variable, since its pattern is nearly dense
+    bool isHessianCalculatedDensely();
 
     Variables variablesInMonomialTerms;
     Variables variablesInSignomialTerms;
@@ -357,18 +384,18 @@ public:
 
     int nonlinearExpressionIndex = -1;
 
-    void add(LinearTerms terms) { LinearObjectiveFunction::add(terms); }
+    void add(const LinearTerms& terms) { LinearObjectiveFunction::add(terms); }
 
     void add(LinearTermPtr term) { LinearObjectiveFunction::add(term); }
 
-    void add(QuadraticTerms terms) { QuadraticObjectiveFunction::add(terms); }
+    void add(const QuadraticTerms& terms) { QuadraticObjectiveFunction::add(terms); }
 
     void add(QuadraticTermPtr term) { QuadraticObjectiveFunction::add(term); }
 
-    void add(MonomialTerms terms);
+    void add(const MonomialTerms& terms);
     void add(MonomialTermPtr term);
 
-    void add(SignomialTerms terms);
+    void add(const SignomialTerms& terms);
     void add(SignomialTermPtr term);
 
     void add(NonlinearExpressionPtr expression);
@@ -381,9 +408,13 @@ public:
 
     double calculateValue(const VectorDouble& point) override;
     Interval calculateValue(const IntervalVector& intervalVector) override;
+    void addTermIntervalDerivatives(IntervalDerivatives& derivatives, const IntervalVector& box, int order) override;
 
     SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) override;
     SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes) override;
+
+    // The nonlinear expression makes the Hessian depend on the point
+    const SparseVariableMatrix* getConstantHessian() override { return (nullptr); }
 
     std::ostream& print(std::ostream& stream) const override;
 

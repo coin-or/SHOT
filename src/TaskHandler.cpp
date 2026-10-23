@@ -44,6 +44,11 @@ bool TaskHandler::getNextTask(TaskPtr& task)
         return (false);
 
     task = (nextTask->second);
+
+    // The solution is finalized from the FinalizeSolution task until SHOT terminates, unless a final reduction cut in
+    // it returns to the main loop
+    finalizing = (nextTask->first == "FinalizeSolution" || (finalizing && nextTask->first == "Terminate"));
+
     nextTask++;
 
     return (true);
@@ -75,6 +80,7 @@ void TaskHandler::clearTasks()
 {
     taskIDMap.clear();
     nextTask = taskIDMap.end();
+    finalizing = false;
 }
 
 TaskPtr TaskHandler::getTask(std::string taskID)

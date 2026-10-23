@@ -1,0 +1,24 @@
+{
+    "source": "AMPL MP",
+    "url": "https://github.com/ampl/mp/tree/develop/test/end2end/cases/categorized/fast/qp",
+    "description": "Small problems from the end-to-end tests of the AMPL MP library (osil format, converted from the .mod files with GAMS CONVERT). Objectives from modellist.json in the same directory. Each file's description tells what makes it difficult.",
+    "instances": [
+        {
+            "file": "ellipse_max.osil",
+            "objective": 1.4928017587112605,
+            "strict": true,
+            "description": "Free variables only bounded through squares in a quadratic constraint"
+        },
+        {
+            "file": "ellipse_min_rot.osil",
+            "objective": -4.0909618,
+            "strict": true,
+            "description": "Free variables and a bilinear term, so the first dual problem is unbounded"
+        },
+        {
+            "file": "unify_quad_expr_01.osil",
+            "objective": 20.08553692214343,
+            "description": "Nonconvex, a cut for the trigonometric constraint excludes the whole domain. Not strict, since SHOT as the NLP solver does not find a primal solution with Gurobi"
+        }
+    ]
+}

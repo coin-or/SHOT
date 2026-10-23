@@ -12,11 +12,15 @@
 #include "Environment.h"
 #include "Structs.h"
 
+#include <functional>
 #include <map>
+#include <optional>
 #include <utility>
 
 namespace SHOT
 {
+class Variable;
+
 class DualSolver
 {
 public:
@@ -30,13 +34,37 @@ public:
     void addDualSolutionCandidate(DualSolution solution);
     void checkDualSolutionCandidates();
 
+    // Reports a dual bound that is not valid for the problem, the first time at warning level
+    void warnAboutInvalidDualBound(double dualBound, double primalBound, double tolerance);
+
     void addHyperplane(HyperplanePtr hyperplane);
     void addGeneratedHyperplane(const HyperplanePtr hyperplane);
     bool hasHyperplaneBeenAdded(const VectorDouble& generatedPoint, int constraintIndex);
 
+    // The same with the hashes of the point, which take time linear in the number of variables to calculate, and are
+    // therefore calculated once when the same point is checked for many constraints
+    std::pair<double, double> calculateHashes(const VectorDouble& point);
+    bool hasHyperplaneBeenAdded(const std::pair<double, double>& hashes, int constraintIndex);
+
+    // Whether a hyperplane for the same constraint or objective function has been generated in the same point, which
+    // is always false for an external hyperplane and in the single-tree strategy
+    bool hasHyperplaneBeenAdded(const HyperplanePtr& hyperplane);
+
+    // Where to generate the hyperplane for the constraint, which is the given point unless the constraint is not
+    // finite there: x^2/s is infinite where s is zero, although it is convex, and neither its value nor its
+    // gradient can be used. The point is then moved toward one where the constraint is finite, which a convex
+    // constraint allows, since its linearization is valid wherever it is defined. Returns nothing when there is
+    // no such point.
+    std::optional<VectorDouble> getHyperplaneGenerationPoint(
+        const VectorDouble& point, const NumericConstraintPtr& constraint);
+
+    // The same for a cut of the objective function, e.g. a sum of 1/|x_i - x_j|, which is infinite where two points
+    // coincide. Without it, no cut is added in such a point, and the dual problem stops changing.
+    std::optional<VectorDouble> getObjectiveHyperplaneGenerationPoint(const VectorDouble& point);
+
     void addIntegerCut(IntegerCut integerCut);
     void addGeneratedIntegerCut(IntegerCut integerCut);
-    bool hasIntegerCutBeenAdded(double hash);
+    bool hasIntegerCutBeenAdded(const IntegerCut& integerCut);
 
     std::vector<GeneratedHyperplanePtr> generatedHyperplanes;
     std::vector<HyperplanePtr> hyperplaneWaitingList;
@@ -51,6 +79,33 @@ public:
     bool useCutOff = false;
     bool isSingleTree = false;
 
+    // Whether the dual problem contains the whole reformulated problem instead of only being a relaxation of it. What
+    // is added to it while solving, e.g. the cutoff constraint and integer cuts, only restricts it, so the problem is
+    // unbounded if the dual problem is.
+    bool isDualProblemExact();
+
+    // Whether the MIP solver has added a variable for the objective function that is not in the reformulated problem,
+    // so that a point of the reformulated problem needs its value appended. With an epigraph constraint, the
+    // reformulated problem has the objective variable itself, and its value is already in the point.
+    bool hasObjectiveVariableOnlyInMIPSolver();
+
+    // The cuts of nonconvex constraints may cut off feasible solutions. A cut that a known primal solution violates is
+    // relaxed so that the solution fulfills it, and returns how many cuts were relaxed
+    int relaxCutsViolatedByPrimalSolutions();
+
+    // Removes the cuts of nonconvex constraints, so that the dual problem only consists of valid constraints and the
+    // cuts are generated anew, and returns how many source constraints the cuts were of
+    int removeCutsOfNonconvexConstraints();
+
+    // Removes the bounds that have replaced missing bounds of the variables when the problem was read, in the problem,
+    // the reformulated problem and the MIP solver. The dual bounds found so far may be too strong since they are
+    // bounds for the problem with the artificial bounds, so they are reset.
+    void removeArtificialBounds(const std::vector<std::shared_ptr<Variable>>& variables);
+
+    // The variables found at artificial bounds in a callback, where the bounds cannot be changed. The MIP solver is
+    // then interrupted, and the bounds are removed before solving again.
+    std::vector<std::shared_ptr<Variable>> variablesAtArtificialBounds;
+
 private:
     EnvironmentPtr env;
 
@@ -59,20 +114,35 @@ private:
     // when both of them match.
     std::map<int, std::multimap<double, double>> generatedHyperplaneHashes;
 
-    // The coefficients of the two hashes, generated from their position so that they are the same in every run
-    VectorDouble hashCoefficients[2];
-
     // Counts hyperplanes generated again for a point they have already been generated in, to detect that the dual
     // problem is not making progress
     int numberOfRepeatedHyperplanes = 0;
     bool repeatedHyperplaneWarningShown = false;
 
-    void extendHashCoefficients(size_t length);
+    // The number of cuts of nonconvex constraints that all the primal solutions in checkedPrimalSolutionHashes have
+    // been checked against in relaxCutsViolatedByPrimalSolutions()
+    size_t numberOfCheckedRepairableCuts = 0;
+    std::vector<double> checkedPrimalSolutionHashes;
 
-    std::pair<double, double> calculateHashes(const VectorDouble& point);
+    // A dual bound that passes the primal bound by more than the tolerance is not valid for the problem, which is
+    // worth a warning, but only the first time since the cause is the same for the following ones
+    bool invalidDualBoundWarningShown = false;
+
     std::pair<double, double> calculateHyperplaneHashes(NumericHyperplanePtr hyperplane);
 
-    bool hasHyperplaneBeenAdded(const std::pair<double, double>& hashes, int constraintIndex);
+    // The largest magnitude of the hyperplane in the point, and its value in the point to cut off, which is
+    // positive when that point is cut off. The terms are the ones the hyperplane is built from, so that a point
+    // accepted here is not rejected by MIPSolverBase::createHyperplane.
+    std::optional<std::pair<double, double>> evaluateHyperplaneTerms(
+        const HyperplanePtr& hyperplane, const VectorDouble& pointToCutOff);
+
+    // Moves the point toward the finite point candidates until the hyperplane created in it is finite. A hyperplane
+    // already generated in a trial point is skipped if the constraint index is given.
+    std::optional<VectorDouble> findHyperplaneGenerationPoint(const VectorDouble& point,
+        const std::function<HyperplanePtr(const VectorDouble&)>& createHyperplane, std::optional<int> constraintIndex);
+
+    // The points to move toward, the ones deepest inside the constraints first
+    std::vector<VectorDouble> getFinitePointCandidates();
 
     // Whether the hyperplane is in the list of generated ones, regardless of the solution strategy used
     bool isHyperplaneInGeneratedList(const std::pair<double, double>& hashes, int constraintIndex);

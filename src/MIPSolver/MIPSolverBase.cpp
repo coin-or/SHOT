@@ -17,8 +17,22 @@
 #include "../Settings.h"
 #include "../Utilities.h"
 
+#include <set>
+
 namespace SHOT
 {
+
+VectorInteger MIPSolverBase::addLinearConstraints(const std::vector<std::map<int, double>>& elements,
+    const VectorDouble& constants, const VectorString& names, bool isGreaterThan, bool allowRepair)
+{
+    VectorInteger constraintIndexes;
+    constraintIndexes.reserve(elements.size());
+
+    for(size_t i = 0; i < elements.size(); i++)
+        constraintIndexes.push_back(addLinearConstraint(elements[i], constants[i], names[i], isGreaterThan, allowRepair));
+
+    return (constraintIndexes);
+}
 
 MIPSolverBase::~MIPSolverBase() { lastSolutions.clear(); }
 
@@ -32,11 +46,11 @@ E_DualProblemClass MIPSolverBase::getProblemClass()
 {
     bool isMIP = getDiscreteVariableStatus();
 
-    if(hasQuadraticObjective && hasQudraticConstraint)
+    if(hasQuadraticObjective && hasQuadraticConstraint)
         return (isMIP ? E_DualProblemClass::MIQCQP : E_DualProblemClass::QCQP);
     else if(hasQuadraticObjective)
         return (isMIP ? E_DualProblemClass::MIQP : E_DualProblemClass::QP);
-    else if(hasQudraticConstraint)
+    else if(hasQuadraticConstraint)
         return (isMIP ? E_DualProblemClass::MIQCQP : E_DualProblemClass::QCQP);
     else
         return (isMIP ? E_DualProblemClass::MIP : E_DualProblemClass::LP);
@@ -74,7 +88,7 @@ std::vector<SolutionPoint> MIPSolverBase::getAllVariableSolutions()
 
     int numSol = getNumberOfSolutions();
 
-    std::vector<SolutionPoint> lastSolutions(numSol);
+    lastSolutions.assign(numSol, SolutionPoint());
 
     for(int i = 0; i < numSol; i++)
     {
@@ -201,10 +215,90 @@ bool MIPSolverBase::createHyperplane(HyperplanePtr hyperplane)
         }
     }
 
-    if(addLinearConstraint(tmpPair.first, tmpPair.second, identifier, false, !hyperplane->isGlobal) < 0)
+    int constraintIndex = addLinearConstraint(tmpPair.first, tmpPair.second, identifier, false, !hyperplane->isGlobal);
+
+    if(constraintIndex < 0)
         return (false);
 
+    // A cut that is not global, i.e. of a nonconvex constraint, is recorded so that it can be relaxed or removed later
+    if(!hyperplane->isGlobal)
+    {
+        int sourceConstraintIndex = -1;
+
+        if(auto constraintHyperplane = std::dynamic_pointer_cast<ConstraintHyperplane>(hyperplane))
+            sourceConstraintIndex = constraintHyperplane->sourceConstraint->getIndex();
+
+        repairableCuts.push_back({ constraintIndex, tmpPair.first, sourceConstraintIndex });
+    }
+
     return (true);
+}
+
+int MIPSolverBase::relaxRepairableCutsViolatedByPoint(const VectorDouble& point, size_t firstCut)
+{
+    int numberOfRelaxedCuts = 0;
+
+    for(size_t i = firstCut; i < repairableCuts.size(); i++)
+    {
+        auto& cut = repairableCuts[i];
+
+        if(cut.isRemoved)
+            continue;
+
+        double value = 0.0;
+        bool isPointComplete = true;
+
+        for(auto& [variableIndex, coefficient] : cut.elements)
+        {
+            if(variableIndex < 0 || variableIndex >= (int)point.size())
+            {
+                isPointComplete = false;
+                break;
+            }
+
+            value += coefficient * point[variableIndex];
+        }
+
+        if(!isPointComplete)
+            continue;
+
+        double upperBound = getConstraintUpperBound(cut.constraintIndex);
+        double tolerance = 1e-6 * std::max(1.0, std::abs(upperBound));
+
+        if(value <= upperBound + tolerance)
+            continue;
+
+        // The cut is moved so that the point fulfills it, which keeps it as a cut of the other points
+        if(setConstraintUpperBound(cut.constraintIndex, value + tolerance))
+        {
+            numberOfRelaxedCuts++;
+
+            env->output->outputDebug(
+                fmt::format("        Cut {} relaxed from {} to {}, since a primal solution violates it.",
+                    cut.constraintIndex, upperBound, value + tolerance));
+        }
+    }
+
+    return (numberOfRelaxedCuts);
+}
+
+VectorInteger MIPSolverBase::removeRepairableCuts()
+{
+    std::set<int> sourceConstraintIndexes;
+
+    for(auto& cut : repairableCuts)
+    {
+        if(cut.isRemoved)
+            continue;
+
+        if(setConstraintUpperBound(cut.constraintIndex, SHOT_DBL_MAX))
+        {
+            cut.isRemoved = true;
+            sourceConstraintIndexes.insert(cut.sourceConstraintIndex);
+        }
+    }
+
+    return (VectorInteger(sourceConstraintIndexes.begin(), sourceConstraintIndexes.end()));
 }
 
 std::optional<std::pair<std::map<int, double>, double>> MIPSolverBase::createHyperplaneTerms(HyperplanePtr hyperplane)

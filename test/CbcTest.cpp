@@ -8,7 +8,7 @@
    Please see the README and LICENSE files for more information.
 */
 
-#include "../src/CallbackData.h"
+#include "../src/Callback.h"
 #include "../src/DualSolver.h"
 #include "../src/Environment.h"
 #include "../src/Report.h"
@@ -18,6 +18,7 @@
 #include "../src/TaskHandler.h"
 
 #include "../src/MIPSolver/IMIPSolver.h"
+#include "../src/MIPSolver/MIPSolverCbc.h"
 
 #include "../src/Model/Problem.h"
 #include "../src/Model/ObjectiveFunction.h"
@@ -32,6 +33,9 @@ bool CbcTest1(std::string filename, double correctObjectiveValue)
 
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
     auto env = solver->getEnvironment();
+
+    // A time limit so that a test that does not converge cannot stop the test suite
+    solver->updateSetting("Termination.TimeLimit", 60.0);
 
     solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cbc));
 
@@ -121,6 +125,9 @@ bool CbcTestNocrash(std::string filename)
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
     auto env = solver->getEnvironment();
 
+    // A time limit so that a test that does not converge cannot stop the test suite
+    solver->updateSetting("Termination.TimeLimit", 60.0);
+
     solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cbc));
 
     try
@@ -144,6 +151,9 @@ bool CbcTerminationCallbackTest(std::string filename)
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
     auto env = solver->getEnvironment();
 
+    // A time limit so that a test that does not converge cannot stop the test suite
+    solver->updateSetting("Termination.TimeLimit", 60.0);
+
     solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Error));
     solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cbc));
     solver->updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::MultiTree));
@@ -157,18 +167,17 @@ bool CbcTerminationCallbackTest(std::string filename)
     }
 
     // Registers a callback that terminates after the third iteration
-    solver->registerCallback(E_EventType::UserTerminationCheck, [](std::any args) -> bool {
-        auto data = std::any_cast<TerminationCallbackData>(args);
-        std::cout << "Termination callback activated with structured data (iteration " << data.iterationNumber << ")\n";
-
-        if(data.iterationNumber > 3)
+    solver->registerCallback<TerminationCheckContext>(
+        [](TerminationCheckContext& context)
         {
-            std::cout << "Terminating after iteration " << data.iterationNumber << "\n";
-            return true;
-        }
+            std::cout << "Termination callback activated (iteration " << context.getIterationNumber() << ")\n";
 
-        return false;
-    });
+            if(context.getIterationNumber() > 3)
+            {
+                std::cout << "Terminating after iteration " << context.getIterationNumber() << "\n";
+                context.terminate();
+            }
+        });
 
     // Solving the problem
     if(!solver->solveProblem())
@@ -191,6 +200,9 @@ bool CbcExternalDualBoundCallbackTest(std::string filename, double dualBoundToTe
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
     auto env = solver->getEnvironment();
 
+    // A time limit so that a test that does not converge cannot stop the test suite
+    solver->updateSetting("Termination.TimeLimit", 60.0);
+
     solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Info));
     solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cbc));
     solver->updateSetting("Dual.TreeStrategy", static_cast<int>(treeStrategy));
@@ -207,22 +219,16 @@ bool CbcExternalDualBoundCallbackTest(std::string filename, double dualBoundToTe
     std::vector<VectorDouble> foundSolutions;
 
     // Registers a callback that collects all new primal solutions
-    solver->registerCallback(E_EventType::NewPrimalSolution, [&foundSolutions](std::any args) {
-        try
+    solver->registerCallback<NewPrimalSolutionContext>(
+        [&foundSolutions](NewPrimalSolutionContext& solution)
         {
-            auto data = std::any_cast<PrimalSolutionCallbackData>(args);
-            std::cout << "New primal solution found with objective value: " << data.objectiveValue
-                      << " from source: " << static_cast<int>(data.sourceType) << " (iteration " << data.iterationNumber
-                      << ")\n";
+            std::cout << "New primal solution found with objective value: " << solution.getObjectiveValue()
+                      << " from source: " << static_cast<int>(solution.getSource()) << " (iteration "
+                      << solution.getIterationNumber() << ")\n";
 
             // Add the solution to our collection
-            foundSolutions.push_back(data.solution);
-        }
-        catch(const std::bad_any_cast&)
-        {
-            std::cout << "New primal solution callback executed with no valid structured data\n";
-        }
-    });
+            foundSolutions.push_back(solution.getPoint());
+        });
 
     // Solving the problem
     if(!solver->solveProblem())
@@ -238,8 +244,11 @@ bool CbcExternalDualBoundCallbackTest(std::string filename, double dualBoundToTe
     solver = std::make_unique<Solver>();
     env = solver->getEnvironment();
 
+    // A time limit so that a test that does not converge cannot stop the test suite
+    solver->updateSetting("Termination.TimeLimit", 60.0);
+
     solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Info));
-    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Gurobi));
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cbc));
     solver->updateSetting("Dual.TreeStrategy", static_cast<int>(treeStrategy));
 
     std::cout << "Reading problem:  " << filename << '\n';
@@ -251,66 +260,44 @@ bool CbcExternalDualBoundCallbackTest(std::string filename, double dualBoundToTe
     }
 
     // Registers a callback that sets the dual bound to a fixed value
-    solver->registerCallback(E_EventType::ExternalDualBound, [dualBoundToTest](std::any args) {
-        double newDualBound = std::numeric_limits<double>::quiet_NaN();
-
-        try
+    solver->registerCallback<DualBoundUpdateContext>(
+        [dualBoundToTest](DualBoundUpdateContext& context)
         {
-            auto data = std::any_cast<DualBoundCallbackData>(args);
+            if(context.isMinimization() ? context.getDualBound() >= dualBoundToTest
+                                        : context.getDualBound() <= dualBoundToTest)
+                return;
 
-            if(data.currentDualBound >= dualBoundToTest)
-                return (newDualBound);
-
-            newDualBound = dualBoundToTest;
-            std::cout << "Current dual bound is " << data.currentDualBound
-                      << ", new external dual bound given as = " << newDualBound << "\n";
-        }
-        catch(const std::bad_any_cast&)
-        {
-            std::cout << "External dual bound callback executed with no valid structured data\n";
-            throw std::runtime_error("Invalid data type for external dual bound callback");
-        }
-
-        return (newDualBound);
-    });
+            std::cout << "Current dual bound is " << context.getDualBound()
+                      << ", new external dual bound given as = " << dualBoundToTest << "\n";
+            context.setDualBound(dualBoundToTest);
+        });
 
     // Registers a callback that provides external primal solutions from our collected solutions
-    solver->registerCallback(
-        E_EventType::ExternalPrimalSolution, [&foundSolutions, &env](std::any args) -> std::vector<VectorDouble> {
+    solver->registerCallback<PrimalCandidateSearchContext>(
+        [&foundSolutions, &env](PrimalCandidateSearchContext& context)
+        {
             if(!env->dualSolver->MIPSolver->getDiscreteVariableStatus())
             {
                 std::cout
                     << "Still waiting to add primal solution candidates until the relaxation strategy is finished.\n";
-                return std::vector<VectorDouble>();
+                return;
             }
 
-            try
+            std::cout << "External primal solution callback requested (iteration " << context.getIterationNumber()
+                      << ", current gap: " << context.getRelativeGap() << ")\n";
+
+            if(!foundSolutions.empty())
             {
-                auto data = std::any_cast<ExternalPrimalSolutionCallbackData>(args);
-                std::cout << "External primal solution callback requested (iteration " << data.iterationNumber
-                          << ", current gap: " << data.relativeGap << ")\n";
+                std::cout << "Providing " << foundSolutions.size() << " collected solutions as external candidates\n";
 
-                if(!foundSolutions.empty())
-                {
-                    std::cout << "Providing " << foundSolutions.size()
-                              << " collected solutions as external candidates\n";
+                for(auto& solution : foundSolutions)
+                    context.addPrimalSolution(solution);
 
-                    // Create a copy of foundSolutions and clear the original
-                    std::vector<VectorDouble> solutionsToAdd = foundSolutions;
-                    foundSolutions.clear();
-
-                    return solutionsToAdd;
-                }
-                else
-                {
-                    std::cout << "No collected solutions available to provide\n";
-                    return std::vector<VectorDouble>();
-                }
+                foundSolutions.clear();
             }
-            catch(const std::bad_any_cast&)
+            else
             {
-                std::cout << "External primal solution callback executed with no valid structured data\n";
-                return std::vector<VectorDouble>();
+                std::cout << "No collected solutions available to provide\n";
             }
         });
 
@@ -333,6 +320,54 @@ bool CbcExternalDualBoundCallbackTest(std::string filename, double dualBoundToTe
     }
 
     return (true);
+}
+
+bool CbcRepairDisabledCutsTest()
+{
+    for(bool isGreaterThan : { false, true })
+    {
+        Solver solver;
+        auto env = solver.getEnvironment();
+        env->reformulatedProblem = std::make_shared<Problem>(env);
+        env->results->createIteration();
+        // The repair entry point requires a generated cut to have been recorded.
+        env->dualSolver->generatedHyperplanes.push_back(std::make_shared<GeneratedHyperplane>());
+
+        MIPSolverCbc mip(env);
+        mip.initializeProblem();
+        mip.addVariable("x", E_VariableType::Real, 0.0, 1.0, 0.0);
+        mip.initializeObjective();
+        mip.addLinearTermToObjective(1.0, 0);
+        mip.finalizeObjective(true);
+        mip.finalizeProblem();
+        mip.setSolutionLimit(2100000000);
+        mip.setTimeLimit(10.0);
+
+        // Removed cuts retain their repair flag, but must not consume a slack
+        // index. Put several before an active infeasible cut to expose a mismatch.
+        std::map<int, double> terms = { { 0, 1.0 } };
+        for(int i = 0; i < 32; ++i)
+        {
+            int row = mip.addLinearConstraint(terms, 1.0, "disabled_" + std::to_string(i), false, true);
+            mip.setConstraintUpperBound(row, 1e100);
+        }
+        if(mip.repairInfeasibility())
+            return false;
+
+        // x <= -1 or x >= 2 contradicts the variable bounds. The repair must
+        // relax the appropriate side and leave all disabled cuts inactive.
+        int activeRow = mip.addLinearConstraint(terms, isGreaterThan ? -2.0 : 1.0, "active", isGreaterThan, true);
+        if(!mip.repairInfeasibility())
+            return false;
+        for(int i = 0; i < 32; ++i)
+            if(mip.getConstraintUpperBound(i) < 1e20)
+                return false;
+        if(!isGreaterThan && std::abs(mip.getConstraintUpperBound(activeRow) - 0.5) > 1e-6)
+            return false;
+        if(mip.solveProblem() != E_ProblemSolutionStatus::Optimal)
+            return false;
+    }
+    return true;
 }
 
 int CbcTest(int argc, char* argv[])
@@ -411,6 +446,10 @@ int CbcTest(int argc, char* argv[])
         std::cout << "Starting test to solve ex1252a.osil with Cbc." << std::endl;
         passed = CbcTestNocrash("data/ex1252a.osil");
         std::cout << "Finished test to solve ex1252a.osil with Cbc." << std::endl;
+        break;
+    case 12:
+        std::cout << "Testing Cbc infeasibility repair with disabled cuts." << std::endl;
+        passed = CbcRepairDisabledCutsTest();
         break;
     default:
         passed = false;

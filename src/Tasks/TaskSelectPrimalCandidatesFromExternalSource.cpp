@@ -10,8 +10,7 @@
 
 #include "TaskSelectPrimalCandidatesFromExternalSource.h"
 
-#include "../CallbackData.h"
-#include "../EventHandler.h"
+#include "../Callback.h"
 #include "../Iteration.h"
 #include "../Model/Problem.h"
 #include "../Results.h"
@@ -31,38 +30,19 @@ TaskSelectPrimalCandidatesFromExternalSource::~TaskSelectPrimalCandidatesFromExt
 
 void TaskSelectPrimalCandidatesFromExternalSource::run()
 {
-    auto currIter = env->results->getCurrentIteration();
-
     env->timing->startTimer("PrimalStrategy");
 
-    // Check if there are data providers for external primal solutions
-    if(env->events->hasDataProvider(E_EventType::ExternalPrimalSolution))
+    if(env->callbacks->isActive(E_CallbackLocation::PrimalCandidateSearch))
     {
-        // Create callback data with current optimization state
-        bool isMinimization = (env->reformulatedProblem->objectiveFunction->properties.isMinimize);
-        double currentDualBound = env->results->getCurrentDualBound();
-        double currentPrimalBound = env->results->getPrimalBound();
-        double relativeGap = env->results->getRelativeCurrentObjectiveGap();
-        double absoluteGap = env->results->getAbsoluteCurrentObjectiveGap();
-        int iterationNumber = env->results->getNumberOfIterations();
+        auto context = std::make_shared<PrimalCandidateSearchContext>(env);
+        env->callbacks->invoke(*context);
+        auto externalPrimalSolutions = context->getAddedPrimalSolutions();
+        context->invalidate();
 
-        // Get current best solution if available
-        VectorDouble currentSolution;
-        if(env->results->hasPrimalSolution())
+        if(!externalPrimalSolutions.empty())
         {
-            currentSolution = env->results->primalSolution;
-        }
-
-        ExternalPrimalSolutionCallbackData callbackData(isMinimization, currentDualBound, currentPrimalBound,
-            relativeGap, absoluteGap, iterationNumber, currentSolution, env->solutionStatistics);
-
-        auto externalPrimalSolution
-            = env->events->requestData<std::vector<VectorDouble>>(E_EventType::ExternalPrimalSolution, callbackData);
-
-        if(externalPrimalSolution.has_value())
-        {
-            env->primalSolver->addPrimalSolutionCandidates(
-                *externalPrimalSolution, E_PrimalSolutionSource::ExternalPrimalSolution, iterationNumber);
+            env->primalSolver->addPrimalSolutionCandidates(externalPrimalSolutions,
+                E_PrimalSolutionSource::ExternalPrimalSolution, env->results->getNumberOfIterations());
         }
     }
 

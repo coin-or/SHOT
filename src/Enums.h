@@ -27,6 +27,7 @@ enum class E_AuxiliaryVariableType
     IntegerBilinear, // From linearizing a bilinear term i1 * x2, where i1 is integer and x2 is continuous or discrete
     BinaryMonomial, // Fram linearizing a monomial term b1 * b2 * ... * bn, where bi are binary
     AbsoluteValue, // From rewriting an absolute value
+    AbsoluteValueSign, // The binary that tells the sign of the argument of an absolute value (one if nonnegative)
     AntiEpigraph, // For rewriting an epigraph formulation as objective
     EigenvalueDecomposition, // From performing an eigenvalue decomposition on quadratic sums
     LDLDecomposition // From performing an LDL decomposition on quadratic sums
@@ -48,23 +49,13 @@ enum class E_DualSolutionSource
     MIPSolutionOptimal,
     ObjectiveConstraint,
     MIPSolverBound,
-    ConvexBounding
-};
-
-enum class E_EventType
-{
-    ExternalDualBound,
-    ExternalHyperplaneSelection,
-    ExternalPrimalSolution,
-    NewPrimalSolution,
-    PrimalSolutionCandidateSelection,
-    UserTerminationCheck,
-    ExternalESHRootsearchPointsSelection
+    ConvexBounding,
+    InfeasibleWithCutOff
 };
 
 enum class E_HyperplaneSource
 {
-    None,
+    Unknown, // The source is not known
     MIPOptimalRootsearch,
     MIPSolutionPoolRootsearch,
     LPRelaxedRootsearch,
@@ -120,7 +111,7 @@ enum class E_LogLevel
 
 enum class E_ModelReturnStatus
 {
-    None,
+    NotSet, // No status has been set
     OptimalGlobal,
     // OptimalLocal,
     Unbounded,
@@ -148,7 +139,9 @@ enum class E_PrimalNLPSource
     FeasibleSolution,
     InfeasibleSolution,
     SmallestDeviationSolution,
-    FirstSolutionNewDualBound
+    FirstSolutionNewDualBound,
+    Enumeration,
+    StartingPoint // Given by the modeling system or the user, e.g., the levels of the variables in GAMS
 };
 
 enum class E_PrimalSolutionSource
@@ -273,7 +266,7 @@ enum class E_TerminationReason
     NumericIssues,
     UserAbort,
     NoDualCutsAdded,
-    None
+    NotTerminated // SHOT has not terminated
 };
 
 enum class E_VariableType
@@ -317,6 +310,27 @@ enum class ES_IpoptSolver
     mumps
 };
 
+enum class ES_IpoptHessianApproximation
+{
+    Exact,
+    LimitedMemory,
+    Automatic // Limited memory if the exact Hessian is calculated densely, which is expensive for many variables
+};
+
+enum class ES_UnoPreset
+{
+    UnoAuto,
+    ipopt,
+    filtersqp
+};
+
+enum class ES_UnoHessianModel
+{
+    exact,
+    LBFGS,
+    LSR1
+};
+
 enum class ES_IterationOutputDetail
 {
     Full,
@@ -329,7 +343,7 @@ enum class ES_ModelingSystem
     OSiL,
     GAMS,
     AMPL,
-    None
+    API // The problem is built through the API, not read from a file
 };
 
 enum class ES_ObjectiveRootsearch
@@ -357,7 +371,7 @@ enum class ES_MIPSolver
     Gurobi,
     Cbc,
     Highs,
-    None
+    NotUsed // No MIP solver has been used
 };
 
 enum class ES_OutputDirectory
@@ -387,8 +401,9 @@ enum class ES_PrimalNLPSolver
     Ipopt,
     GAMS,
     SHOT,
+    Uno,
     Conopt,
-    None
+    NotUsed // No NLP solver has been used
 };
 
 enum class ES_PrimalNLPStrategy
