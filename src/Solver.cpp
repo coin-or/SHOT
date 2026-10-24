@@ -877,7 +877,7 @@ void Solver::initializeSettings()
     enumAddPrimalPointAsInteriorPoint.push_back("No");
     enumAddPrimalPointAsInteriorPoint.push_back("Add as new");
     enumAddPrimalPointAsInteriorPoint.push_back("Replace old");
-    enumAddPrimalPointAsInteriorPoint.push_back("Use avarage");
+    enumAddPrimalPointAsInteriorPoint.push_back("Use average");
     env->settings->createSetting("Dual.ESH.InteriorPoint.UsePrimalSolution",
         static_cast<int>(ES_AddPrimalPointAsInteriorPoint::KeepBoth), "Utilize primal solution as interior point",
         enumAddPrimalPointAsInteriorPoint, 0);
@@ -959,8 +959,8 @@ void Solver::initializeSettings()
     env->settings->createSetting("Dual.MIP.InfeasibilityRepair.RelaxCutsViolatedByPrimal", true,
         "Relax the cuts of nonconvex constraints that cut off a known primal solution");
 
-    env->settings->createSetting(
-        "Dual.MIP.InfeasibilityRepair.TimeLimit", 10.0, "Time limit when reparing infeasible problem", 0, SHOT_DBL_MAX);
+    env->settings->createSetting("Dual.MIP.InfeasibilityRepair.TimeLimit", 10.0,
+        "Time limit when repairing infeasible problem", 0, SHOT_DBL_MAX);
 
     env->settings->createSetting(
         "Dual.MIP.InfeasibilityRepair.Use", true, "Enable the infeasibility repair strategy for nonconvex problems");
@@ -1038,11 +1038,11 @@ void Solver::initializeSettings()
         "nonconvexities, 1 = Every second iteration, etc.",
         0, SHOT_INT_MAX);
 
-    // Primal settings: reduction cuts for nonconvex problems
+    // Dual strategy settings: reduction cuts for nonconvex problems
 
     env->settings->createSettingGroup("Dual", "ReductionCut", "Dual reduction cut",
         "These settings control the added dual reduction cuts from the primal solution that will try to force a better "
-        "primal solution. This functionality is only used if SHOT cannot deduce that the problem is convex .");
+        "primal solution. This functionality is only used if SHOT cannot deduce that the problem is convex.");
 
     env->settings->createSetting(
         "Dual.ReductionCut.Use", true, "Enable the dual reduction cut strategy for nonconvex problems");
@@ -1061,7 +1061,7 @@ void Solver::initializeSettings()
     enumReductionCutStrategy.clear();
 
     env->settings->createSetting("Dual.ReductionCut.MaxIterations", 20,
-        "Max number of primal cut reduction without primal improvement", 0, SHOT_INT_MAX);
+        "Maximum number of reduction cuts without primal improvement", 0, SHOT_INT_MAX);
 
     env->settings->createSetting(
         "Dual.ReductionCut.ReductionFactor", 0.001, "The factor used to reduce the cutoff value", 0, 1.0);
@@ -1069,7 +1069,7 @@ void Solver::initializeSettings()
     // Dual strategy settings: Relaxation strategies
 
     env->settings->createSettingGroup("Dual", "Relaxation", "Relaxation strategies",
-        "These settings contorl various aspects regarding integer-relaxation of the dual problem.");
+        "These settings control various aspects regarding integer-relaxation of the dual problem.");
 
     env->settings->createSetting("Dual.Relaxation.Use", true, "Initially solve continuous dual relaxations");
 
@@ -1108,7 +1108,7 @@ void Solver::initializeSettings()
     // Optimization model settings
 
     env->settings->createSettingGroup("Model", "", "Optimization model",
-        "These settings control various aspects of SHOT's representation  for and handling of the provided "
+        "These settings control various aspects of SHOT's representation for and handling of the provided "
         "optimization model.");
 
     // Bound tightening
@@ -1126,10 +1126,10 @@ void Solver::initializeSettings()
         "Model.BoundTightening.FeasibilityBased.TimeLimit", 2.0, "Time limit for bound tightening", 0.0, SHOT_DBL_MAX);
 
     env->settings->createSetting(
-        "Model.BoundTightening.FeasibilityBased.Use", true, "Peform feasibility-based bound tightening");
+        "Model.BoundTightening.FeasibilityBased.Use", true, "Perform feasibility-based bound tightening");
 
     env->settings->createSetting("Model.BoundTightening.FeasibilityBased.UseNonlinear", true,
-        "Peform feasibility-based bound tightening on nonlinear expressions");
+        "Perform feasibility-based bound tightening on nonlinear expressions");
 
     // Bound tightening: initial POA
 
@@ -1338,8 +1338,8 @@ void Solver::initializeSettings()
 
     env->settings->createSetting("Model.Reformulation.Quadratics.Decomposition.Formulation",
         static_cast<int>(ES_QuadraticDecompositionFormulation::CoefficientReformulated),
-        "Placement of the original term cofficient when decomposing a quadratic term", enumQuadraticDecompCoeffStrategy,
-        0);
+        "Placement of the original term coefficient when decomposing a quadratic term",
+        enumQuadraticDecompCoeffStrategy, 0);
     enumQuadraticDecompCoeffStrategy.clear();
 
     env->settings->createSetting("Model.Reformulation.Quadratics.Decomposition.Tolerance", 1e-7,
