@@ -182,6 +182,8 @@ public:
 
     std::string getSolverVersion() override;
 
+    int getNumberOfThreads() override;
+
     std::shared_ptr<GRBModel> gurobiModel;
     std::unique_ptr<GurobiCallbackMultiTree> gurobiCallback;
     GRBLinExpr objectiveLinearExpression;

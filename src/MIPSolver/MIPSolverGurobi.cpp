@@ -1528,6 +1528,8 @@ int MIPSolverGurobi::getNumberOfExploredNodes()
     }
 }
 
+int MIPSolverGurobi::getNumberOfThreads() { return (env->settings->getSetting<int>("Dual.MIP.NumberOfThreads")); }
+
 std::string MIPSolverGurobi::getSolverVersion()
 {
     return (fmt::format("{}.{}", std::to_string(GRB_VERSION_MAJOR), std::to_string(GRB_VERSION_MINOR)));

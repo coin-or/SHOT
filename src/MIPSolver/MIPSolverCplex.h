@@ -194,6 +194,8 @@ public:
 
     std::string getSolverVersion() override;
 
+    int getNumberOfThreads() override;
+
     IloModel cplexModel;
     IloCplex cplexInstance;
 

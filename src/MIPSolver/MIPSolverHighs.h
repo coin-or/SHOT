@@ -181,6 +181,8 @@ public:
 
     std::string getSolverVersion() override;
 
+    int getNumberOfThreads() override;
+
     // Objective value, solution point has, solution point
     std::vector<SolutionPoint> currentSolutions;
 

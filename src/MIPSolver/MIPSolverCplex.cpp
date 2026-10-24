@@ -1704,6 +1704,8 @@ int MIPSolverCplex::getNumberOfOpenNodes()
     }
 }
 
+int MIPSolverCplex::getNumberOfThreads() { return (env->settings->getSetting<int>("Dual.MIP.NumberOfThreads")); }
+
 std::string MIPSolverCplex::getSolverVersion()
 {
     std::string version = std::to_string(cplexInstance.getVersionNumber());

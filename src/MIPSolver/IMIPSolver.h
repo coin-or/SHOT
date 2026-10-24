@@ -146,6 +146,9 @@ public:
 
     virtual std::string getSolverVersion() = 0;
 
+    // The number of threads the solver uses, where 0 means that the solver chooses automatically
+    virtual int getNumberOfThreads() = 0;
+
 protected:
 };
 } // namespace SHOT

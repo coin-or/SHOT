@@ -434,8 +434,13 @@ void Report::outputOptionsReport()
         break;
     }
 
-    env->output->outputInfo(
-        fmt::format("  - solver:                  {} {}", dualSolver, env->dualSolver->MIPSolver->getSolverVersion()));
+    int numberOfMIPThreads = env->dualSolver->MIPSolver->getNumberOfThreads();
+    std::string threadDescription = (numberOfMIPThreads == 0) ? "automatic number of threads"
+        : (numberOfMIPThreads == 1)                           ? "1 thread"
+                                                              : fmt::format("{} threads", numberOfMIPThreads);
+
+    env->output->outputInfo(fmt::format("  - solver:                  {} {} with {}", dualSolver,
+        env->dualSolver->MIPSolver->getSolverVersion(), threadDescription));
 
     env->output->outputInfo("");
 

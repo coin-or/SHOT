@@ -1589,6 +1589,8 @@ void MIPSolverHighs::checkParameters() { }
 
 int MIPSolverHighs::getNumberOfExploredNodes() { return (highsInstance.getInfo().mip_node_count); }
 
+int MIPSolverHighs::getNumberOfThreads() { return (env->settings->getSetting<int>("Dual.MIP.NumberOfThreads")); }
+
 std::string MIPSolverHighs::getSolverVersion()
 {
     return (fmt::format("{}.{}.{}", HIGHS_VERSION_MAJOR, HIGHS_VERSION_MINOR, HIGHS_VERSION_PATCH));

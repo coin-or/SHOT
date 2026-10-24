@@ -353,7 +353,19 @@ void MIPSolverCbc::initializeSolverSettings()
             numberOfThreads = env->settings->getSetting<int>("Dual.MIP.NumberOfThreads");
     }
     else
+    {
         numberOfThreads = 1;
+
+        // Only warned for the main dual MIP solver, not for the other Cbc instances used for auxiliary problems
+        if(!threadSupportWarningShown && env->dualSolver && env->dualSolver->MIPSolver.get() == this
+            && env->settings->getSetting<int>("Dual.MIP.NumberOfThreads") > 1)
+        {
+            env->output->outputWarning(" Cbc has been compiled without thread support, so it runs single-threaded and "
+                                       "Dual.MIP.NumberOfThreads is ignored. Rebuild Cbc with --enable-cbc-parallel "
+                                       "to use multiple threads.");
+            threadSupportWarningShown = true;
+        }
+    }
 
     cbcModel->passInMessageHandler(messageHandler.get());
 }
@@ -1841,6 +1853,15 @@ int MIPSolverCbc::getNumberOfExploredNodes()
 }
 
 std::string MIPSolverCbc::getSolverVersion() { return (CBC_VERSION); }
+
+int MIPSolverCbc::getNumberOfThreads()
+{
+    if(!cbcModel || !cbcModel->haveMultiThreadSupport())
+        return (1);
+
+    // Cbc runs serially, and not with an automatic number of threads, if zero threads are given
+    return (std::max(1, env->settings->getSetting<int>("Dual.MIP.NumberOfThreads")));
+}
 
 int CbcMessageHandler::print()
 {

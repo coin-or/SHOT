@@ -197,6 +197,8 @@ public:
 
     std::string getSolverVersion() override;
 
+    int getNumberOfThreads() override;
+
 private:
     std::unique_ptr<OsiClpSolverInterface> osiInterface;
     std::unique_ptr<CbcModel> cbcModel;
@@ -219,6 +221,7 @@ private:
     double timeLimit = 1e100;
     double cutOff;
     int numberOfThreads = 1;
+    bool threadSupportWarningShown = false;
     double objectiveConstant = 0.0;
 
     std::vector<std::pair<std::string, double>> MIPStart;
