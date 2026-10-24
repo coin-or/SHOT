@@ -1520,22 +1520,13 @@ std::string Results::getResultsSol()
 
     ss << env->settings->getSetting<std::string>("ModelingSystem.AMPL.OptionsHeader");
 
+    // The number of variable values is zero if there is no solution, so that no point is loaded by the interface
     ss << fmt::format("{0}\n{1}\n{2}\n{3}\n",
         env->settings->getSetting<int>("ModelingSystem.AMPL.NumberOfOriginalConstraints"), 0,
-        env->problem->properties.numberOfVariables, env->problem->properties.numberOfVariables);
+        env->problem->properties.numberOfVariables, this->primalSolution.size());
 
-    if(this->primalSolution.size() > 0)
-    {
-        for(auto const& V : this->primalSolution)
-            ss << fmt::format("{}\n", V);
-    }
-    else
-    {
-        {
-            for(int i = 0; i < env->problem->properties.numberOfVariables; i++)
-                ss << fmt::format("{}\n", 0);
-        }
-    }
+    for(auto const& V : this->primalSolution)
+        ss << fmt::format("{}\n", V);
 
     ss << fmt::format("objno 0 {}", status);
 

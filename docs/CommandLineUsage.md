@@ -41,7 +41,12 @@ malformed. OSiL is the safe fallback that's always available.
 
 When using `.nl` files through the AMPL Solver Library calling convention,
 pass `--AMPL` (or `-AMPL`) in addition to the problem file (only valid for
-`.nl` files; requires `HAS_AMPL`).
+`.nl` files; requires `HAS_AMPL`). In this mode SHOT also reads options from
+the environment variable `shot_options`, which AMPL sets with
+`option shot_options '...';`. The options are given as `KEY=VALUE`
+separated by whitespace, and a value with spaces can be put in quotes, e.g.
+`option shot_options 'Termination.TimeLimit=60 Output.Debug.Path="my dir"';`.
+Options on the command line take precedence over those in `shot_options`.
 
 ## Shorthand flags
 
@@ -74,10 +79,11 @@ as a positional `KEY=VALUE` argument (case-sensitive, no spaces around the
 
 SHOT matches `KEY` against its known setting identifiers (checked in order:
 string, boolean, integer, enum, then double settings) and parses `VALUE`
-accordingly — booleans must be literally `true`/`false`, enums accept
-their integer value. Unrecognized keys are silently ignored, so typos in a
-setting name will not produce an error — double check the name (e.g. via
-`--docs`, “Full/current options reference”) if a `KEY=VALUE` argument doesn't seem to take effect.
+accordingly — booleans are `true`/`false` in any case, or `1`/`0` (the
+same holds in options files), enums accept their integer value. Unrecognized keys are ignored: they are listed under
+“Unrecognized options” in the log, but do not produce an error — double
+check the name (e.g. via `--docs`, “Full/current options reference”) if a
+`KEY=VALUE` argument doesn't seem to take effect.
 
 Options can also be read from a file instead of (or in addition to) inline
 arguments:
@@ -116,6 +122,78 @@ limit, still exits with 0, and the status is written to the result files.
 | 2 | The problem file or the options file given by `--opt`/`--osol` cannot be found or read |
 | 3 | An error occurred while solving the problem, e.g. a callback failed |
 | 4 | A result file (OSrL, trace, `.sol`), the options file or `options.md` could not be written |
+
+## Using SHOT from Pyomo
+
+[Pyomo](https://www.pyomo.org) calls SHOT through the AMPL Solver Library
+interface: it writes the model to an `.nl` file, runs the `SHOT` executable
+in `-AMPL` mode and reads the solution back from the `.sol` file. This needs
+a `SHOT` executable built with `HAS_AMPL` (see “Supported problem file
+formats”). The SHOTpy pip package does not include the executable, so build
+SHOT from source as described in the
+[compilation instructions](CompilationInstructions.md).
+
+Pyomo has no built-in `shot` solver, so use its generic `asl:` interface and
+give the path to the executable, unless `SHOT` is on your `PATH`:
+
+```python
+import pyomo.environ as pyo
+from pyomo.opt import TerminationCondition
+
+m = pyo.ConcreteModel()
+m.x = pyo.Var(domain=pyo.Integers, bounds=(0, 5))
+m.y = pyo.Var(bounds=(0, 5))
+m.obj = pyo.Objective(expr=(m.x - 2.3)**2 + (m.y - 1.7)**2)
+m.c = pyo.Constraint(expr=m.x**2 + m.y**2 <= 9)
+
+opt = pyo.SolverFactory('asl:shot', executable='/path/to/SHOT')
+opt.options['Termination.TimeLimit'] = 60
+opt.options['Dual.MIP.NumberOfThreads'] = 1
+opt.options['Primal.FixedInteger.Use'] = True
+
+results = opt.solve(m, tee=True)
+
+if results.solver.termination_condition == TerminationCondition.optimal:
+    print(pyo.value(m.obj), m.x.value, m.y.value)
+```
+
+**Options.** Each entry in `opt.options` is passed to SHOT both as a
+`KEY=VALUE` argument and in the environment variable `shot_options`, so the
+rules in “Setting any option directly” apply. Use the full, case-sensitive
+setting names. Booleans can be given as Python's `True`/`False`, and enum
+settings take their integer value. With `tee=True`, SHOT's log lists the
+options it received under “Non-default options”, marked `[user]`, and any
+names it does not recognize under “Unrecognized options”.
+
+**Results.** The solution values are loaded into the model, and
+`results.solver.message` holds SHOT's solve message. Its first part is the
+status, e.g. `SHOT 2.0.0: Solved to global optimality`. The rest names the
+problem types and the MIP and NLP solvers used. Pyomo writes `:` in the
+message as `\x3a`.
+
+Pyomo turns SHOT's AMPL status code into a termination condition by code
+range, so different outcomes can map to the same condition. The exact code is
+available in `results.solver.id`:
+
+| Code | SHOT status | Pyomo termination condition / solver status |
+|------|-------------|---------------------------------------------|
+| 0 | Solved to global optimality | `optimal` / `ok` |
+| 100 | Solved to local optimality | `optimal` / `warning` |
+| 101 | Iteration limit reached, feasible solution found | `optimal` / `warning` |
+| 102 | User abort, feasible solution found | `optimal` / `warning` |
+| 103 | Error occurred, feasible solution found | `optimal` / `warning` |
+| 104 | Feasible solution found, optimality not guaranteed (e.g. nonconvex problems) | `optimal` / `warning` |
+| 200 | No solution found since dual problem is infeasible | `infeasible` / `warning` |
+| 300 | No solution found since dual problem is unbounded | `unbounded` / `warning` |
+| 400 | Time limit, feasible solution found; or a limit was reached with no solution | `maxIterations` / `warning` |
+| 500 | No solution found since an error occurred | `internalSolverError` / `error` |
+| 600 | No solution found due to user abort | `unknown` / `ok` |
+
+So `optimal` only means a global optimum when the solver status is `ok`
+(code 0). A time limit is reported as `maxIterations`. When SHOT has no
+solution it returns no variable values, so the variables in the model keep
+the values they had before the solve. Check the termination condition before
+using the variable values.
 
 ## Full/current options reference
 

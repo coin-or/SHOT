@@ -925,8 +925,14 @@ bool Settings::readSettingsFromOSoL(std::string osol)
                 break;
             case E_SettingType::Boolean:
             {
-                bool convertedValue = (value != "false");
-                updateSetting(name, category, convertedValue, E_SettingPriority::OptionsFile);
+                auto convertedValue = Utilities::parseBoolean(value);
+
+                if(convertedValue)
+                    updateSetting(name, category, *convertedValue, E_SettingPriority::OptionsFile);
+                else
+                    output->outputError("  Cannot update setting <" + category + "," + name
+                        + "> since the value is of the wrong format.");
+
                 break;
             }
             case E_SettingType::Double:
@@ -1024,8 +1030,14 @@ bool Settings::readSettingsFromString(std::string options)
             break;
         case E_SettingType::Boolean:
         {
-            bool convertedValue = (value != "false");
-            updateSetting(name, category, convertedValue, E_SettingPriority::OptionsFile);
+            auto convertedValue = Utilities::parseBoolean(value);
+
+            if(convertedValue)
+                updateSetting(name, category, *convertedValue, E_SettingPriority::OptionsFile);
+            else
+                output->outputError("  Cannot update setting <" + category + "," + name
+                    + "> since the value is of the wrong format.");
+
             break;
         }
         case E_SettingType::Double:

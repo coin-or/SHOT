@@ -9,6 +9,7 @@
 */
 
 #include <chrono>
+#include <cctype>
 #include <cmath>
 #include <cstdint>
 #include <fstream>
@@ -861,6 +862,63 @@ std::vector<std::string> splitStringByCharacter(const std::string& source, char 
         result.push_back(line);
 
     return result;
+}
+
+std::optional<bool> parseBoolean(const std::string& value)
+{
+    std::string lowerCaseValue = value;
+    std::transform(lowerCaseValue.begin(), lowerCaseValue.end(), lowerCaseValue.begin(),
+        [](unsigned char c) { return std::tolower(c); });
+
+    if(lowerCaseValue == "true" || lowerCaseValue == "1")
+        return (true);
+
+    if(lowerCaseValue == "false" || lowerCaseValue == "0")
+        return (false);
+
+    return (std::nullopt);
+}
+
+VectorString splitOptionsString(const std::string& options)
+{
+    VectorString result;
+    std::string current;
+    bool inOption = false;
+    char quote = '\0';
+
+    for(char c : options)
+    {
+        if(quote != '\0')
+        {
+            if(c == quote)
+                quote = '\0';
+            else
+                current += c;
+        }
+        else if(c == '"' || c == '\'')
+        {
+            quote = c;
+            inOption = true;
+        }
+        else if(std::isspace(static_cast<unsigned char>(c)))
+        {
+            if(inOption)
+                result.push_back(current);
+
+            current.clear();
+            inOption = false;
+        }
+        else
+        {
+            current += c;
+            inOption = true;
+        }
+    }
+
+    if(inOption)
+        result.push_back(current);
+
+    return (result);
 }
 
 std::string createTemporaryDirectory(std::string filePrefix, std::string folder)
