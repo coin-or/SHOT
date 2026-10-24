@@ -20,6 +20,12 @@ problem/solution files), see
 `PROBLEMFILE` is the only required positional argument. Everything else is
 optional. Run `./SHOT --help` for the built-in usage summary.
 
+The SHOTpy pip package (`pip install SHOTpy`, or `pipx install SHOTpy` /
+`uv tool install SHOTpy` for only the command) contains the executable, built
+with Cbc, Ipopt and HiGHS, and installs it as the command `SHOT`, which takes
+the same arguments. In Python, `SHOTpy_bin.executable()` gives the path of the
+executable itself.
+
 ## Supported problem file formats
 
 SHOT always supports:
@@ -129,12 +135,13 @@ limit, still exits with 0, and the status is written to the result files.
 interface: it writes the model to an `.nl` file, runs the `SHOT` executable
 in `-AMPL` mode and reads the solution back from the `.sol` file. This needs
 a `SHOT` executable built with `HAS_AMPL` (see “Supported problem file
-formats”). The SHOTpy pip package does not include the executable, so build
-SHOT from source as described in the
+formats”). The SHOTpy pip package contains such an executable (see “Basic
+usage”); otherwise build SHOT from source as described in the
 [compilation instructions](CompilationInstructions.md).
 
 Pyomo has no built-in `shot` solver, so use its generic `asl:` interface and
-give the path to the executable, unless `SHOT` is on your `PATH`:
+give the path to the executable, unless `SHOT` is on your `PATH`. With the
+pip package, `executable=SHOTpy_bin.executable()` works in any environment:
 
 ```python
 import pyomo.environ as pyo
