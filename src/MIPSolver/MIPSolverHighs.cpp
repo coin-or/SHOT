@@ -1509,7 +1509,10 @@ int MIPSolverHighs::getNumberOfSolutions()
 
     if(isProblemDiscrete && isMIP)
     {
-        numSols = currentSolutions.size();
+        // All solutions found are kept, since the solution limit counts them, but only the best ones are used. They
+        // are sorted with the best one first.
+        numSols = std::min(static_cast<int>(currentSolutions.size()),
+            env->settings->getSetting<int>("Dual.MIP.SolutionPool.Capacity"));
     }
     else
     {

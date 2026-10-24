@@ -991,8 +991,8 @@ void Solver::initializeSettings()
     env->settings->createSetting("Dual.MIP.SolutionLimit.UpdateTolerance", 0.001,
         "The constraint tolerance for when to update MIP solution limit", 0, SHOT_DBL_MAX);
 
-    env->settings->createSetting(
-        "Dual.MIP.SolutionPool.Capacity", 100, "The maximum number of solutions in the solution pool", 0, SHOT_INT_MAX);
+    env->settings->createSetting("Dual.MIP.SolutionPool.Capacity", 100,
+        "The maximum number of solutions in the solution pool of the MIP solver", 1, SHOT_INT_MAX);
 
     VectorString enumMIPSolver;
     enumMIPSolver.push_back("Cplex");
@@ -1699,9 +1699,6 @@ void Solver::initializeSettings()
     env->settings->createSetting(
         "Subsolver.Gurobi.PoolSearchMode", 0, "Finds extra solutions", enumGurobiPoolSearchMode, 0);
     enumGurobiPoolSearchMode.clear();
-
-    env->settings->createSetting(
-        "Subsolver.Gurobi.PoolSolutions", 10, "Determines how many MIP solutions are stored", 1, 2000000000);
 
     VectorString enumGurobiScaleFlag;
     enumGurobiScaleFlag.push_back("Automatic");

@@ -405,10 +405,9 @@ void MIPSolverGurobi::initializeSolverSettings()
         // Set solution pool settings
         gurobiModel->set(GRB_IntParam_SolutionLimit, GRB_MAXINT);
         gurobiModel->set(
-            GRB_IntParam_SolutionNumber, env->settings->getSetting<int>("Dual.MIP.SolutionPool.Capacity") + 1);
-        gurobiModel->set(
             GRB_IntParam_PoolSearchMode, env->settings->getSetting<int>("Subsolver.Gurobi.PoolSearchMode"));
-        gurobiModel->set(GRB_IntParam_PoolSolutions, env->settings->getSetting<int>("Subsolver.Gurobi.PoolSolutions"));
+        gurobiModel->set(GRB_IntParam_PoolSolutions,
+            std::min(env->settings->getSetting<int>("Dual.MIP.SolutionPool.Capacity"), 2000000000));
 
         // Set solver emphasis
         gurobiModel->set(GRB_IntParam_NumericFocus, env->settings->getSetting<int>("Subsolver.Gurobi.NumericFocus"));
