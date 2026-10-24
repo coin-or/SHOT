@@ -25,6 +25,8 @@ namespace fs = std;
 namespace fs = std::experimental;
 #endif
 
+#include <algorithm>
+#include <cstdlib>
 #include <iostream>
 #include <string>
 
@@ -525,12 +527,23 @@ int main(int argc, char* argv[])
         }
     }
 
-    for(auto& ARG : cmdl.pos_args())
+    // An option can be given both in shot_options and on the command line, as Pyomo does
+    auto rejectOption = [&](const std::string& name)
+    {
+        if(std::find(rejectedOptions.begin(), rejectedOptions.end(), name) == rejectedOptions.end())
+            rejectedOptions.push_back(name);
+    };
+
+    // Sets an option given as KEY=VALUE
+    auto applyOption = [&](const std::string& ARG)
     {
         auto equalLocation = ARG.find('=');
 
         if(equalLocation == std::string::npos)
-            continue;
+        {
+            rejectOption(ARG);
+            return;
+        }
 
         auto settingName = ARG.substr(0, equalLocation);
         auto value = ARG.substr(equalLocation + 1, ARG.size());
@@ -548,7 +561,7 @@ int main(int argc, char* argv[])
         }
 
         if(found)
-            continue;
+            return;
 
         for(auto& S : solver.getSettingIdentifiers(E_SettingType::Boolean))
         {
@@ -565,7 +578,7 @@ int main(int argc, char* argv[])
         }
 
         if(found)
-            continue;
+            return;
 
         for(auto& S : solver.getSettingIdentifiers(E_SettingType::Integer))
         {
@@ -586,7 +599,7 @@ int main(int argc, char* argv[])
         }
 
         if(found)
-            continue;
+            return;
 
         for(auto& S : solver.getSettingIdentifiers(E_SettingType::Enum))
         {
@@ -607,7 +620,7 @@ int main(int argc, char* argv[])
         }
 
         if(found)
-            continue;
+            return;
 
         for(auto& S : solver.getSettingIdentifiers(E_SettingType::Double))
         {
@@ -628,9 +641,27 @@ int main(int argc, char* argv[])
         }
 
         if(!found)
+            rejectOption(settingName);
+    };
+
+#if HAS_AMPL
+    // AMPL, and other interfaces using ASL such as Pyomo, pass the options in the environment variable shot_options.
+    // These are read before the ones on the command line, so that the latter take precedence.
+    if(useASL)
+    {
+        if(const char* AMPLOptions = std::getenv("shot_options"))
         {
-            rejectedOptions.push_back(settingName);
+            for(auto& option : Utilities::splitOptionsString(AMPLOptions))
+                applyOption(option);
         }
+    }
+#endif
+
+    for(auto& ARG : cmdl.pos_args())
+    {
+        // The positional arguments without '=' are the executable and problem file names
+        if(ARG.find('=') != std::string::npos)
+            applyOption(ARG);
     }
 
     // Need to set the log levels after we have read the options from file and console

@@ -170,6 +170,10 @@ std::vector<std::string> splitStringByCharacter(const std::string& source, char 
 // Parses the value of a boolean option: true or false in any case, or 1 or 0. Returns no value otherwise.
 std::optional<bool> DllExport parseBoolean(const std::string& value);
 
+// Splits a string of options separated by whitespace, e.g., "KEY=VALUE KEY=\"VALUE WITH SPACES\"". Whitespace inside
+// single or double quotes is kept and the quotes are removed.
+VectorString DllExport splitOptionsString(const std::string& options);
+
 // Creates a unique directory in the specified folder (or system temporary folder if folder is an empty string).
 // Returns an empty string if the directory could not be created.
 std::string createTemporaryDirectory(std::string filePrefix, std::string folder = "");
