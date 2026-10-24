@@ -39,6 +39,17 @@ print(solver.getModelReturnStatus(), solver.getPrimalSolution().point)
 See the [SHOTpy tutorial](docs/SHOTpy_Tutorial.ipynb) for nonlinear expressions,
 settings, file input, and callbacks.
 
+The package also installs the SHOT executable as the command `SHOT`, which
+solves problem files and can be used as an AMPL solver, e.g., from Pyomo,
+JuMP, or AMPL (see [command-line usage](docs/CommandLineUsage.md)). To get only
+the command, install it as a tool with `pipx install SHOTpy` or
+`uv tool install SHOTpy`:
+
+```bash
+SHOT problem.nl -AMPL
+SHOT problem.osil Termination.TimeLimit=60
+```
+
 ### Building with proprietary solvers
 
 Public wheels do not include the CPLEX, Gurobi, GAMS, or CONOPT SDKs. If one of
@@ -60,7 +71,8 @@ of settings.
 
 Replace `GUROBI_DIR` with your local installation path. Verify the resulting
 build with `python -c "import SHOTpy; print(SHOTpy.HAS_GUROBI)"`; it should print
-`True`.
+`True`. The `SHOT` command installed by this build has the same solvers, e.g.,
+`SHOT problem.nl --mip=gurobi`.
 
 For CONOPT on Linux, macOS, or Windows x64, download and extract the
 [CONOPT C++ SDK](https://conopt.gams.com/download/), then rebuild from this

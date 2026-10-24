@@ -1149,7 +1149,11 @@ add_dependencies(SHOTSolver cppad)
 if(APPLE)
     set_target_properties(SHOTSolver PROPERTIES INSTALL_RPATH "@loader_path;${CONOPT_LIBRARY_DIR}")
 elseif(UNIX)
-    set_target_properties(SHOTSolver PROPERTIES INSTALL_RPATH "$ORIGIN;${CONOPT_LIBRARY_DIR}")
+    # The external solver libraries, e.g., Gurobi or Cbc in their own directories, are found where they were linked,
+    # since on Linux they are referred to only by name. auditwheel removes these paths when it bundles the libraries
+    set_target_properties(SHOTSolver PROPERTIES
+        INSTALL_RPATH "$ORIGIN;${CONOPT_LIBRARY_DIR}"
+        INSTALL_RPATH_USE_LINK_PATH ON)
 endif()
 
 if(HAS_PYTHON)
@@ -1215,6 +1219,16 @@ if(GENERATE_EXE)
             INSTALL_RPATH "$ORIGIN/../${CMAKE_INSTALL_LIBDIR}")
     endif()
 
+    # In the Python package the executable is in the package SHOTpy_bin, and the libraries are one level up next to
+    # the SHOTpy module (see the HAS_PYTHON block above)
+    if(HAS_PYTHON AND SKBUILD)
+        if(APPLE)
+            set_target_properties(${PROJECT_NAME} PROPERTIES INSTALL_RPATH "@loader_path/..")
+        elseif(UNIX)
+            set_target_properties(${PROJECT_NAME} PROPERTIES INSTALL_RPATH "$ORIGIN/..")
+        endif()
+    endif()
+
     # Extra linking necessary for GAMS
     if(HAS_GAMS)
         if(UNIX)
@@ -1248,6 +1262,18 @@ if(GENERATE_EXE)
         EXPORT SHOTTargets
         RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT Runtime
     )
+
+    # The Python package contains the executable, which is run by the console script SHOT in pyproject.toml through
+    # the package SHOTpy_bin. On Windows, which has no rpath, it is next to the SHOT and solver DLLs instead
+    if(HAS_PYTHON)
+        if(WIN32)
+            install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION . COMPONENT Python)
+        else()
+            install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION SHOTpy_bin COMPONENT Python)
+        endif()
+        install(FILES "${PROJECT_SOURCE_DIR}/src/SHOTpy_bin/__init__.py" "${PROJECT_SOURCE_DIR}/src/SHOTpy_bin/__main__.py"
+            DESTINATION SHOTpy_bin COMPONENT Python)
+    endif()
 endif()
 
 install(
