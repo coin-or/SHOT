@@ -75,6 +75,9 @@ struct ProblemProperties
     std::string name = "";
     std::string description = "";
     bool isReformulated = false; // True if this is the reformulated problem
+
+    // The problem type and convexity, e.g., "MINLP, nonconvex"
+    std::string getClassification() const;
 };
 
 struct SpecialOrderedSet

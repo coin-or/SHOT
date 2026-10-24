@@ -1470,7 +1470,51 @@ std::string Results::getResultsSol()
 
     std::stringstream ss;
 
-    ss << fmt::format("SHOT: {}\n", description);
+    // The lines before the empty line form the solve message, which AMPL shows as solve_message; the first line is
+    // kept as "<solver> <version>: <description>" since that is what interfaces parse the status from
+    ss << fmt::format("SHOT {}.{}.{}{}: {}\n", SHOT_VERSION_MAJOR, SHOT_VERSION_MINOR, SHOT_VERSION_PATCH,
+        SHOT_VERSION_SUFFIX, description);
+
+    auto getClassification = [](ProblemPtr problem)
+    {
+        std::string classification = problem ? problem->properties.getClassification() : "";
+        return (classification.empty() ? std::string("unknown") : classification);
+    };
+
+    ss << fmt::format("Original problem: {}\n", getClassification(env->problem));
+    ss << fmt::format("Reformulated problem: {}\n", getClassification(env->reformulatedProblem));
+
+    std::string MIPSolverName;
+
+    switch(this->usedMIPSolver)
+    {
+    case(ES_MIPSolver::Cplex):
+        MIPSolverName = "CPLEX";
+        break;
+    case(ES_MIPSolver::Gurobi):
+        MIPSolverName = "Gurobi";
+        break;
+    case(ES_MIPSolver::Cbc):
+        MIPSolverName = "Cbc";
+        break;
+    case(ES_MIPSolver::Highs):
+        MIPSolverName = "HiGHS";
+        break;
+    default:
+        break;
+    }
+
+    if(MIPSolverName.empty() || !env->dualSolver || !env->dualSolver->MIPSolver)
+        ss << "MIP solver: none\n";
+    else
+        ss << fmt::format("MIP solver: {} {}\n", MIPSolverName, env->dualSolver->MIPSolver->getSolverVersion());
+
+    // The NLP solver is created when the primal strategy is set up, so it is only stated if an NLP problem was solved
+    ss << fmt::format("NLP solver: {}\n",
+        (this->usedPrimalNLPSolver == ES_PrimalNLPSolver::NotUsed || this->usedPrimalNLPSolverDescription.empty()
+            || env->solutionStatistics.numberOfProblemsFixedNLP == 0)
+            ? "none"
+            : this->usedPrimalNLPSolverDescription);
 
     ss << "\nOptions\n";
 

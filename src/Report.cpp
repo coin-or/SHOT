@@ -520,55 +520,9 @@ void Report::outputProblemInstanceReport()
 
     env->output->outputInfo("");
 
-    std::string problemClassificationOrig;
-    std::string problemClassificationRef = "";
-
-    if(env->problem->properties.isLPProblem)
-        problemClassificationOrig = "LP";
-    else if(env->problem->properties.isMILPProblem)
-        problemClassificationOrig = "MILP";
-    else if(env->problem->properties.isQPProblem)
-        problemClassificationOrig = "QP";
-    else if(env->problem->properties.isQCQPProblem)
-        problemClassificationOrig = "QCQP";
-    else if(env->problem->properties.isMIQPProblem)
-        problemClassificationOrig = "MIQP";
-    else if(env->problem->properties.isMIQCQPProblem)
-        problemClassificationOrig = "MIQCQP";
-    else if(env->problem->properties.isNLPProblem)
-        problemClassificationOrig = "NLP";
-    else if(env->problem->properties.isMINLPProblem)
-        problemClassificationOrig = "MINLP";
-
-    if(env->problem->properties.convexity == E_ProblemConvexity::Convex)
-        problemClassificationOrig += ", convex";
-    else if(env->problem->properties.convexity == E_ProblemConvexity::Nonconvex)
-        problemClassificationOrig += ", nonconvex";
-
-    if(isReformulated)
-    {
-        if(env->reformulatedProblem->properties.isLPProblem)
-            problemClassificationRef = "LP";
-        else if(env->reformulatedProblem->properties.isMILPProblem)
-            problemClassificationRef = "MILP";
-        else if(env->reformulatedProblem->properties.isQPProblem)
-            problemClassificationRef = "QP";
-        else if(env->reformulatedProblem->properties.isQCQPProblem)
-            problemClassificationRef = "QCQP";
-        else if(env->reformulatedProblem->properties.isMIQPProblem)
-            problemClassificationRef = "MIQP";
-        else if(env->reformulatedProblem->properties.isMIQCQPProblem)
-            problemClassificationRef = "MIQCQP";
-        else if(env->reformulatedProblem->properties.isNLPProblem)
-            problemClassificationRef = "NLP";
-        else if(env->reformulatedProblem->properties.isMINLPProblem)
-            problemClassificationRef = "MINLP";
-
-        if(env->reformulatedProblem->properties.convexity == E_ProblemConvexity::Convex)
-            problemClassificationRef += ", convex";
-        else if(env->reformulatedProblem->properties.convexity == E_ProblemConvexity::Nonconvex)
-            problemClassificationRef += ", nonconvex";
-    }
+    std::string problemClassificationOrig = env->problem->properties.getClassification();
+    std::string problemClassificationRef
+        = isReformulated ? env->reformulatedProblem->properties.getClassification() : "";
 
     env->output->outputInfo(fmt::format(
         " {:35s}{:21s}{:s}", "Problem classification:", problemClassificationOrig, problemClassificationRef));

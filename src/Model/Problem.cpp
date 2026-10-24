@@ -68,6 +68,35 @@ static SHOTCppADErrorHandlerRegistrar shot_cppad_error_handler_registrar;
 namespace SHOT
 {
 
+std::string ProblemProperties::getClassification() const
+{
+    std::string classification;
+
+    if(isLPProblem)
+        classification = "LP";
+    else if(isMILPProblem)
+        classification = "MILP";
+    else if(isQPProblem)
+        classification = "QP";
+    else if(isQCQPProblem)
+        classification = "QCQP";
+    else if(isMIQPProblem)
+        classification = "MIQP";
+    else if(isMIQCQPProblem)
+        classification = "MIQCQP";
+    else if(isNLPProblem)
+        classification = "NLP";
+    else if(isMINLPProblem)
+        classification = "MINLP";
+
+    if(convexity == E_ProblemConvexity::Convex)
+        classification += ", convex";
+    else if(convexity == E_ProblemConvexity::Nonconvex)
+        classification += ", nonconvex";
+
+    return (classification);
+}
+
 void Problem::calculateNonlinearJacobian(
     const std::vector<double>& point, CppAD::sparse_rcv<std::vector<size_t>, std::vector<double>>& subset)
 {
