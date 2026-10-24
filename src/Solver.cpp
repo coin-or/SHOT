@@ -1186,20 +1186,24 @@ void Solver::initializeSettings()
         "These settings control the maximum variable bounds allowed in SHOT. Projection will be performed onto these "
         "intervals. Note that the MIP solvers may have stricter requirements, in which case those may be used.");
 
+    // The variable bounds are projected onto these limits, so a positive minimum lower bound or a negative maximum
+    // upper bound would cut off feasible points
     env->settings->createSetting("Model.Variables.Continuous.MinimumLowerBound", -1e50,
-        "Minimum lower bound for continuous variables", SHOT_DBL_MIN, SHOT_DBL_MAX);
+        "Minimum lower bound for continuous variables", SHOT_DBL_MIN, 0.0);
 
     env->settings->createSetting("Model.Variables.Continuous.MaximumUpperBound", 1e50,
-        "Maximum upper bound for continuous variables", SHOT_DBL_MIN, SHOT_DBL_MAX);
+        "Maximum upper bound for continuous variables", 0.0, SHOT_DBL_MAX);
 
     env->settings->createSetting("Model.Variables.Integer.MinimumLowerBound", -2.0e9,
-        "Minimum lower bound for integer variables", SHOT_DBL_MIN, SHOT_DBL_MAX);
+        "Minimum lower bound for integer variables", SHOT_DBL_MIN, 0.0);
 
     env->settings->createSetting("Model.Variables.Integer.MaximumUpperBound", 2.0e9,
-        "Maximum upper bound for integer variables", SHOT_DBL_MIN, SHOT_DBL_MAX);
+        "Maximum upper bound for integer variables", 0.0, SHOT_DBL_MAX);
 
     env->settings->createSetting("Model.Variables.NonlinearObjectiveVariable.Bound", 1e12,
-        "Max absolute bound for the auxiliary nonlinear objective variable", SHOT_DBL_MIN, SHOT_DBL_MAX);
+        "Absolute bound for the auxiliary nonlinear objective variable, used when the bounds of the objective function "
+        "cannot be calculated with interval arithmetic",
+        0.0, SHOT_DBL_MAX);
 
     // Reformulation settings
 
