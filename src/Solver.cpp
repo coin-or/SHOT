@@ -969,10 +969,10 @@ void Solver::initializeSettings()
         "The reduced-cost tolerance for optimality in the MIP solver", 1e-9, 1e-2);
 
     env->settings->createSetting("Dual.MIP.NodeLimit", SHOT_DBL_MAX,
-        "Node limit to use for MIP solver in single-tree strategy", 0.0, SHOT_DBL_MAX);
+        "Node limit for each solve of the MIP solver: 0: No limit", 0.0, SHOT_DBL_MAX);
 
-    env->settings->createSetting(
-        "Dual.MIP.NumberOfThreads", 0, "Number of threads to use in MIP solver: 0: Automatic", 0, 999);
+    env->settings->createSetting("Dual.MIP.NumberOfThreads", 0,
+        "Number of threads to use in MIP solver: 0: Automatic (one thread with Cbc)", 0, 999);
 
     env->settings->createSetting("Dual.MIP.RandomSeed", 0,
         "Random seed for the pseudorandom choices in the MIP solver: 0: The default of the solver used", 0,
@@ -1368,7 +1368,9 @@ void Solver::initializeSettings()
     enumIterationDetail.push_back("On objective gap update");
     enumIterationDetail.push_back("On objective gap update and all primal NLP calls");
     env->settings->createSetting("Output.Console.Iteration.Detail",
-        static_cast<int>(ES_IterationOutputDetail::ObjectiveGapUpdates), "When should the fixed strategy be used",
+        static_cast<int>(ES_IterationOutputDetail::ObjectiveGapUpdates),
+        "Which iterations are shown on the console: all, or only those that update the objective gap (and those with "
+        "a primal NLP call). Some iterations are shown regardless after 100 hidden ones or 2 s",
         enumIterationDetail, 0);
     enumIterationDetail.clear();
 
@@ -1612,7 +1614,8 @@ void Solver::initializeSettings()
     enumCplexParallelMode.push_back("Automatic");
     enumCplexParallelMode.push_back("Deterministic");
     env->settings->createSetting("Subsolver.Cplex.ParallelMode", 0,
-        "Controls how much time and memory should be used when filling the solution pool", enumCplexParallelMode, -1);
+        "Parallel mode in CPLEX, i.e., whether it runs deterministically when using several threads",
+        enumCplexParallelMode, -1);
     enumCplexParallelMode.clear();
 
     VectorString enumCplexProbe;
@@ -1679,7 +1682,8 @@ void Solver::initializeSettings()
     enumGurobiNumericFocus.push_back("Mild");
     enumGurobiNumericFocus.push_back("Moderate");
     enumGurobiNumericFocus.push_back("Aggressive");
-    env->settings->createSetting("Subsolver.Gurobi.NumericFocus", 1, "MIP focus", enumGurobiNumericFocus, 0);
+    env->settings->createSetting("Subsolver.Gurobi.NumericFocus", 1,
+        "How much effort Gurobi spends on detecting and managing numerical issues", enumGurobiNumericFocus, 0);
     enumGurobiNumericFocus.clear();
 
     VectorString enumGurobiPoolSearchMode;
