@@ -428,8 +428,8 @@ void MIPSolverCplex::initializeSolverSettings()
         // Adds a user-provided node limit
         if(auto nodeLimit = env->settings->getSetting<double>("Dual.MIP.NodeLimit"); nodeLimit > 0)
         {
-            if(nodeLimit > CPX_BIGINT)
-                cplexInstance.setParam(IloCplex::Param::MIP::Limits::Nodes, CPX_BIGINT);
+            cplexInstance.setParam(IloCplex::Param::MIP::Limits::Nodes,
+                nodeLimit > CPX_BIGINT ? static_cast<CPXLONG>(CPX_BIGINT) : static_cast<CPXLONG>(nodeLimit));
         }
 
         // Set solution pool settings

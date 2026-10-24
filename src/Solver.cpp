@@ -1576,9 +1576,11 @@ void Solver::initializeSettings()
                                    "phase to find optimum among minimal relaxations");
     enumCplexFeasOptMode.push_back("Minimize the number of constraints and bounds requiring relaxation in first "
                                    "phase only");
+    enumCplexFeasOptMode.push_back("Minimize the number of constraints and bounds requiring relaxation in first "
+                                   "phase and execute second phase to find optimum among minimal relaxations");
     enumCplexFeasOptMode.push_back("Minimize the sum of squares of required "
                                    "relaxations in first phase only");
-    enumCplexFeasOptMode.push_back(" Minimize the sum of squares of required relaxations in first phase and execute "
+    enumCplexFeasOptMode.push_back("Minimize the sum of squares of required relaxations in first phase and execute "
                                    "second phase to find optimum among minimal relaxations");
     env->settings->createSetting(
         "Subsolver.Cplex.FeasOptMode", 0, "Strategy to use for the feasibility repair", enumCplexFeasOptMode, 0);
