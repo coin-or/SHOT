@@ -77,9 +77,22 @@ build them from source with [coinbrew](https://github.com/coin-or/coinbrew):
 ```bash
 git clone https://github.com/coin-or/coinbrew
 cd coinbrew
+./coinbrew fetch Ipopt@releases/3.14.20 --no-prompt
 ./coinbrew build Ipopt@releases/3.14.20 --prefix=<SHOT>/ThirdParty/Ipopt --no-prompt --tests none
-./coinbrew build Cbc@releases/2.10.13 --prefix=<SHOT>/ThirdParty/Cbc --no-prompt --tests none --no-third-party
+rm -rf build dist
+./coinbrew fetch Cbc@releases/2.10.13 --no-prompt --no-third-party
+./coinbrew build Cbc@releases/2.10.13 --prefix=<SHOT>/ThirdParty/Cbc --no-prompt --tests none --no-third-party --enable-cbc-parallel
 ```
+
+`--enable-cbc-parallel` builds Cbc with thread support; without it Cbc ignores
+`Dual.MIP.NumberOfThreads` and always runs single-threaded.
+
+The `rm -rf build dist` between the two builds is required: coinbrew caches
+the configure options in `build/`, and without removing it the Cbc build
+reuses Ipopt's options (ASL and MUMPS enabled). Clp then installs a `clp.pc`
+that requires `coinasl` and `coinmumps`, which `--no-third-party` never
+builds, so the install step fails. For the same reason, delete `build/` and
+`dist/` before rebuilding if a coinbrew build fails partway.
 
 then point CMake at them with `-DCBC_DIR=<SHOT>/ThirdParty/Cbc
 -DIPOPT_DIR=<SHOT>/ThirdParty/Ipopt` (see “Configuring with CMake”).
