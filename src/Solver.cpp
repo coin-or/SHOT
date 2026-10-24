@@ -1226,6 +1226,17 @@ void Solver::initializeSettings()
         "values",
         2, SHOT_INT_MAX);
 
+    // Reformulation of constraints c - a*x1*x2 <= 0 with positive variables to the convex c/(a*x1) - x2 <= 0
+    VectorString enumBilinearInverseReformulation;
+    enumBilinearInverseReformulation.push_back("None");
+    enumBilinearInverseReformulation.push_back("One constraint");
+    enumBilinearInverseReformulation.push_back("Both constraints");
+    env->settings->createSetting("Model.Reformulation.Bilinear.InverseFormulation",
+        static_cast<int>(ES_ReformulateBilinearInverse::BothConstraints),
+        "Reformulate constraints a*x1*x2 >= c with positive variables as c/(a*x1) - x2 <= 0 (and c/(a*x2) - x1 <= 0)",
+        enumBilinearInverseReformulation, 0);
+    enumBilinearInverseReformulation.clear();
+
     // Reformulations for constraints
     VectorString enumNonlinearTermPartitioning;
     enumNonlinearTermPartitioning.push_back("Always");
