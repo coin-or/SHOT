@@ -554,8 +554,8 @@ int main(int argc, char* argv[])
         {
             if(settingName == S)
             {
-                if(value == "true" || value == "false")
-                    solver.updateSetting(settingName, (value == "true" ? true : false), E_SettingPriority::UserAPI);
+                if(auto booleanValue = Utilities::parseBoolean(value))
+                    solver.updateSetting(settingName, *booleanValue, E_SettingPriority::UserAPI);
                 else
                     env->output->outputCritical(" Cannot read boolean option in " + ARG);
 

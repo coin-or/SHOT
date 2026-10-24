@@ -9,6 +9,7 @@
 */
 
 #include <chrono>
+#include <cctype>
 #include <cmath>
 #include <cstdint>
 #include <fstream>
@@ -861,6 +862,21 @@ std::vector<std::string> splitStringByCharacter(const std::string& source, char 
         result.push_back(line);
 
     return result;
+}
+
+std::optional<bool> parseBoolean(const std::string& value)
+{
+    std::string lowerCaseValue = value;
+    std::transform(lowerCaseValue.begin(), lowerCaseValue.end(), lowerCaseValue.begin(),
+        [](unsigned char c) { return std::tolower(c); });
+
+    if(lowerCaseValue == "true" || lowerCaseValue == "1")
+        return (true);
+
+    if(lowerCaseValue == "false" || lowerCaseValue == "0")
+        return (false);
+
+    return (std::nullopt);
 }
 
 std::string createTemporaryDirectory(std::string filePrefix, std::string folder)
