@@ -171,13 +171,6 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
         if(numericConstraintValues.size() == 0)
             continue;
 
-        if(addedHyperplanes >= maxHyperplanesPerIter)
-        {
-            env->output->outputDebug("        Not generating hyperplane using ESH: Max number already added.");
-            env->timing->stopTimer("DualCutGenerationRootSearch");
-            break;
-        }
-
         if(useMaxFunction)
         {
             for(size_t j = 0; j < env->dualSolver->interiorPts.size(); j++)
@@ -272,7 +265,7 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
         int solutionPtIndex = std::get<0>(values);
         int interiorPtIndex = std::get<1>(values);
 
-        if(addedHyperplanes > maxHyperplanesPerIter)
+        if(addedHyperplanes >= maxHyperplanesPerIter)
             break;
 
         if(useMaxFunction)
@@ -511,7 +504,7 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
             int solutionPtIndex = std::get<0>(values);
             int interiorPtIndex = std::get<1>(values);
 
-            if(addedHyperplanes > maxHyperplanesPerIter)
+            if(addedHyperplanes >= maxHyperplanesPerIter)
                 break;
 
             if(useMaxFunction)
@@ -623,8 +616,6 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
                         env->output->outputDebug(
                             "         Postponing hyperplane since it cuts away a primal solution.");
                     }
-
-                    addedHyperplanes++;
                 }
                 else
                 {
@@ -782,9 +773,7 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
                                                  "previous primal solution with error {}",
                 HP.first->sourceConstraint->getIndex(), HP.second));
 
-            addedHyperplanes++;
-
-            if(addedHyperplanes > maxHyperplanesPerIter)
+            if(addedHyperplanes >= maxHyperplanesPerIter)
                 break;
         }
     }
