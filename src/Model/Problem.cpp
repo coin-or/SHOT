@@ -1889,12 +1889,13 @@ void Problem::doFBBT()
     int numberOfTightenedVariablesBefore = std::count_if(allVariables.begin(), allVariables.end(),
         [](auto V) { return (V->properties.hasLowerBoundBeenTightened || V->properties.hasUpperBoundBeenTightened); });
 
-    int i = 0;
+    int numberOfPasses = 0;
     bool anyBoundsUpdated = false;
 
-    for(i = 0; i < numberOfIterations; i++)
+    for(int i = 0; i < numberOfIterations; i++)
     {
         bool boundsUpdated = false;
+        numberOfPasses++;
 
         env->output->outputDebug(fmt::format("  Bound tightening pass {} of {}.", i + 1, numberOfIterations));
 
@@ -1973,14 +1974,14 @@ void Problem::doFBBT()
         env->timing->stopTimer("BoundTighteningFBBTReformulated");
         env->output->outputInfo(fmt::format("  - Bounds for {} variables tightened in {:.2f} s and {} passes.",
             numberOfTightenedVariablesAfter - numberOfTightenedVariablesBefore,
-            env->timing->getElapsedTime("BoundTighteningFBBTReformulated"), i + 1));
+            env->timing->getElapsedTime("BoundTighteningFBBTReformulated"), numberOfPasses));
     }
     else
     {
         env->timing->stopTimer("BoundTighteningFBBTOriginal");
         env->output->outputInfo(fmt::format("  - Bounds for {} variables tightened in {:.2f} s and {} passes.",
             numberOfTightenedVariablesAfter - numberOfTightenedVariablesBefore,
-            env->timing->getElapsedTime("BoundTighteningFBBTOriginal"), i + 1));
+            env->timing->getElapsedTime("BoundTighteningFBBTOriginal"), numberOfPasses));
     }
 
     env->timing->stopTimer("BoundTightening");

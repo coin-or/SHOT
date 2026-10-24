@@ -141,6 +141,13 @@ void NLPSolverSHOT::initializeMIPProblem()
     // solver instead.
     if(!solver->setProblem(relaxedProblem, relaxedProblem))
         throw Exception("Could not initialize the nested SHOT solver for the fixed-integer NLP problem.");
+
+    // No bound tightening is done when the problem is set above, since the bounds have already been tightened in the
+    // main solver, but only when the discrete variables have been fixed in solveProblemInstance(). That uses the
+    // settings of the nested solver, so it gets the number of passes of the main solver here.
+    if(env->settings->getSetting<bool>("Subsolver.SHOT.UseFBBT"))
+        solver->updateSetting("Model.BoundTightening.FeasibilityBased.MaxIterations",
+            env->settings->getSetting<int>("Model.BoundTightening.FeasibilityBased.MaxIterations"));
 }
 
 void NLPSolverSHOT::setStartingPoint(VectorInteger /*variableIndexes*/, VectorDouble /*variableValues*/) { }
