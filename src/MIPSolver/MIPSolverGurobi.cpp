@@ -391,9 +391,10 @@ void MIPSolverGurobi::initializeSolverSettings()
             GRB_DoubleParam_MIPGap, env->settings->getSetting<double>("Termination.ObjectiveGap.Relative") / 1.0);
         gurobiModel->set(
             GRB_DoubleParam_MIPGapAbs, env->settings->getSetting<double>("Termination.ObjectiveGap.Absolute") / 1.0);
+        gurobiModel->set(GRB_DoubleParam_FeasibilityTol,
+            getToleranceForSolver("Primal.Tolerance.LinearConstraint", 1e-9, 1e-2, "FeasibilityTol"));
         gurobiModel->set(
-            GRB_DoubleParam_FeasibilityTol, env->settings->getSetting<double>("Primal.Tolerance.LinearConstraint"));
-        gurobiModel->set(GRB_DoubleParam_IntFeasTol, env->settings->getSetting<double>("Primal.Tolerance.Integer"));
+            GRB_DoubleParam_IntFeasTol, getToleranceForSolver("Primal.Tolerance.Integer", 1e-9, 1e-1, "IntFeasTol"));
         gurobiModel->set(
             GRB_DoubleParam_OptimalityTol, env->settings->getSetting<double>("Dual.MIP.OptimalityTolerance"));
 

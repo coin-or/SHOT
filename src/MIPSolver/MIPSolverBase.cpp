@@ -554,6 +554,43 @@ void MIPSolverBase::unfixVariables()
 
 int MIPSolverBase::getNumberOfOpenNodes() { return (env->solutionStatistics.numberOfOpenNodes); }
 
+bool MIPSolverBase::isMainDualMIPSolver()
+{
+    return (env->dualSolver && dynamic_cast<MIPSolverBase*>(env->dualSolver->MIPSolver.get()) == this);
+}
+
+double MIPSolverBase::getToleranceForSolver(
+    const std::string& settingName, double minValue, double maxValue, const std::string& solverParameter)
+{
+    double value = env->settings->getSetting<double>(settingName);
+    double usedValue = std::min(std::max(value, minValue), maxValue);
+
+    if(usedValue != value && !toleranceSettingsWarned.count(settingName) && isMainDualMIPSolver())
+    {
+        auto range = (maxValue == SHOT_DBL_MAX) ? fmt::format("values of at least {}", minValue)
+                                                : fmt::format("values in [{},{}]", minValue, maxValue);
+
+        env->output->outputWarning(fmt::format(" The MIP solver only accepts {} for {}, so {} is used instead of the "
+                                               "value {} of {} there.",
+            range, solverParameter, usedValue, value, settingName));
+        toleranceSettingsWarned.insert(settingName);
+    }
+
+    return (usedValue);
+}
+
+void MIPSolverBase::warnToleranceNotAccepted(const std::string& settingName, const std::string& solverParameter)
+{
+    if(toleranceSettingsWarned.count(settingName) || !isMainDualMIPSolver())
+        return;
+
+    env->output->outputWarning(
+        fmt::format(" The MIP solver does not accept the value {} of {} for {}, so its own value "
+                    "is used there.",
+            env->settings->getSetting<double>(settingName), settingName, solverParameter));
+    toleranceSettingsWarned.insert(settingName);
+}
+
 bool MIPSolverBase::isDualBoundAvailable(E_ProblemSolutionStatus status, bool isMIP)
 {
     switch(status)

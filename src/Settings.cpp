@@ -164,8 +164,8 @@ void Settings::updateSetting(std::string name, std::string category, T value, E_
     {
         if(settingBounds[key].first > value || settingBounds[key].second < value)
         {
-            output->outputError(" Cannot update setting " + category + "." + name + ": Not in interval ["
-                + std::to_string(settingBounds[key].first) + "," + std::to_string(settingBounds[key].second) + "].");
+            output->outputError(fmt::format(" Cannot update setting {}.{}: Not in interval [{},{}].", category, name,
+                settingBounds[key].first, settingBounds[key].second));
 
             throw SettingOutsideBoundsException(
                 name, category, (double)value, settingBounds[key].first, settingBounds[key].second);
@@ -177,8 +177,8 @@ void Settings::updateSetting(std::string name, std::string category, T value, E_
     {
         if(settingBounds[key].first > value || settingBounds[key].second < value)
         {
-            output->outputError(" Cannot update setting " + category + "." + name + ": Not in interval ["
-                + std::to_string(settingBounds[key].first) + "," + std::to_string(settingBounds[key].second) + "].");
+            output->outputError(fmt::format(" Cannot update setting {}.{}: Not in interval [{},{}].", category, name,
+                settingBounds[key].first, settingBounds[key].second));
 
             throw SettingOutsideBoundsException(
                 name, category, (double)value, settingBounds[key].first, settingBounds[key].second);

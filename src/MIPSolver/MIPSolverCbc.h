@@ -46,7 +46,7 @@ public:
     virtual int print();
 };
 
-class MIPSolverCbc : public IMIPSolver, MIPSolverBase
+class MIPSolverCbc : public IMIPSolver, public MIPSolverBase
 {
 public:
     MIPSolverCbc(EnvironmentPtr envPtr);

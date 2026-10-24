@@ -419,9 +419,9 @@ void MIPSolverCplex::initializeSolverSettings()
         cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::AbsMIPGap,
             env->settings->getSetting<double>("Termination.ObjectiveGap.Absolute") / 1.0);
         cplexInstance.setParam(IloCplex::Param::Simplex::Tolerances::Feasibility,
-            env->settings->getSetting<double>("Primal.Tolerance.LinearConstraint"));
+            getToleranceForSolver("Primal.Tolerance.LinearConstraint", 1e-9, 1e-1, "Simplex.Tolerances.Feasibility"));
         cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::Integrality,
-            env->settings->getSetting<double>("Primal.Tolerance.Integer"));
+            getToleranceForSolver("Primal.Tolerance.Integer", 0.0, 0.5, "MIP.Tolerances.Integrality"));
         cplexInstance.setParam(IloCplex::Param::Simplex::Tolerances::Optimality,
             env->settings->getSetting<double>("Dual.MIP.OptimalityTolerance"));
 

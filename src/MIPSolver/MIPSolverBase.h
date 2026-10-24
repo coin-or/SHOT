@@ -20,6 +20,8 @@
 
 #include <map>
 #include <optional>
+#include <set>
+#include <string>
 #include <utility>
 #include <cassert>
 #include <iostream>
@@ -37,6 +39,12 @@ private:
     int constraintCounter = 0;
 
     bool warningMessageShownLargeRHS = false;
+
+    // The tolerance settings that have been moved into the range of the MIP solver and warned about
+    std::set<std::string> toleranceSettingsWarned;
+
+    // Whether this is the main dual MIP solver, and not one of the instances used for auxiliary problems
+    bool isMainDualMIPSolver();
 
 protected:
     int numberOfVariables = 0; // These include auxiliary variables added for integer cuts
@@ -57,6 +65,19 @@ protected:
 
     // Whether a solve with the given status provides a bound that is valid for the dual problem
     bool isDualBoundAvailable(E_ProblemSolutionStatus status, bool isMIP);
+
+    // The value of a SHOT tolerance setting that is also used as a MIP solver parameter, i.e.,
+    // Primal.Tolerance.Integer or Primal.Tolerance.LinearConstraint, moved into the range [minValue, maxValue] that
+    // the solver parameter accepts. The settings are SHOT's own tolerances for accepting primal solutions, so they
+    // allow values outside the range of a specific solver. A solver that is given a value outside its range may
+    // reject the rest of the parameters as well. A warning is shown the first time the value of a setting is changed,
+    // and only for the main dual MIP solver.
+    double getToleranceForSolver(
+        const std::string& settingName, double minValue, double maxValue, const std::string& solverParameter);
+
+    // Warns once, and only for the main dual MIP solver, that the solver parameter did not accept the value of a
+    // tolerance setting, for solvers that check the values themselves
+    void warnToleranceNotAccepted(const std::string& settingName, const std::string& solverParameter);
 
     // The finite bounds temporarily given to an unbounded variable to find a point of an unbounded dual problem. The
     // point is only used to generate cuts, so it is kept at a moderate magnitude: LP solvers treat values from 1e20 as

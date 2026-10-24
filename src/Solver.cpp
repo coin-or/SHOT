@@ -942,8 +942,7 @@ void Solver::initializeSettings()
     env->settings->createSetting("Dual.MIP.CutOff.UseInitialValue", false, "Use the initial cutoff value");
 
     env->settings->createSetting("Dual.MIP.CutOff.Tolerance", 0.00001,
-        "An extra tolerance for the objective cutoff value (to prevent infeasible subproblems)", SHOT_DBL_MIN,
-        SHOT_DBL_MAX);
+        "An extra tolerance for the objective cutoff value (to prevent infeasible subproblems)", 0.0, SHOT_DBL_MAX);
 
     env->settings->createSetting(
         "Dual.MIP.InfeasibilityRepair.IntegerCuts", false, "Allow feasibility repair of integer cuts");
@@ -1083,7 +1082,7 @@ void Solver::initializeSettings()
         "Max number of lazy constraints to add in relaxed solutions in single-tree strategy", 0, SHOT_INT_MAX);
 
     env->settings->createSetting("Dual.Relaxation.TerminationTolerance", 0.5,
-        "Stop solving relaxed problems when the maximum constraint deviation is at most this value");
+        "Stop solving relaxed problems when the maximum constraint deviation is at most this value", 0.0, SHOT_DBL_MAX);
 
     env->settings->createSetting(
         "Dual.Relaxation.TimeLimit", 30.0, "Time limit (s) when solving LP problems initially", 0, SHOT_DBL_MAX);
@@ -1534,13 +1533,16 @@ void Solver::initializeSettings()
     env->settings->createSetting("Primal.Tolerance.TrustLinearConstraintValues", true,
         "Trust that subsolvers (NLP, MIP) give primal solutions that respect linear constraints");
 
-    env->settings->createSetting("Primal.Tolerance.Integer", 1e-5, "Integer tolerance for accepting primal solutions");
-
+    // The integer and linear constraint tolerances are also used as MIP solver tolerances, and the MIP solver
+    // interfaces move them into the range each solver accepts. With an integer tolerance of 0.5, any value is integral.
     env->settings->createSetting(
-        "Primal.Tolerance.LinearConstraint", 1e-6, "Linear constraint tolerance for accepting primal solutions");
+        "Primal.Tolerance.Integer", 1e-5, "Integer tolerance for accepting primal solutions", 0.0, 0.5);
 
-    env->settings->createSetting(
-        "Primal.Tolerance.NonlinearConstraint", 1e-5, "Nonlinear constraint tolerance for accepting primal solutions");
+    env->settings->createSetting("Primal.Tolerance.LinearConstraint", 1e-6,
+        "Linear constraint tolerance for accepting primal solutions", 0.0, SHOT_DBL_MAX);
+
+    env->settings->createSetting("Primal.Tolerance.NonlinearConstraint", 1e-5,
+        "Nonlinear constraint tolerance for accepting primal solutions", 0.0, SHOT_DBL_MAX);
 
     // Strategy settings
 
@@ -1828,7 +1830,7 @@ void Solver::initializeSettings()
     env->settings->createSettingGroup("Subsolver", "Ipopt", "Ipopt", "");
 
     env->settings->createSetting("Subsolver.Ipopt.ConstraintViolationTolerance", 1E-8,
-        "Constraint violation tolerance in Ipopt", SHOT_DBL_MIN, SHOT_DBL_MAX);
+        "Constraint violation tolerance in Ipopt", 0.0, SHOT_DBL_MAX);
 
     VectorString enumIPOptSolver;
     enumIPOptSolver.push_back("Default");
@@ -1860,7 +1862,7 @@ void Solver::initializeSettings()
         false);
 
     env->settings->createSetting(
-        "Subsolver.Ipopt.RelativeConvergenceTolerance", 1E-8, "Relative convergence tolerance");
+        "Subsolver.Ipopt.RelativeConvergenceTolerance", 1E-8, "Relative convergence tolerance", 0.0, SHOT_DBL_MAX);
 
 #endif
 
@@ -1873,8 +1875,8 @@ void Solver::initializeSettings()
     /* These default to Uno's own tolerances rather than to the tighter ones used for Ipopt. Uno reports an
        algorithmic error, rather than the point it reached, when it cannot certify stationarity to the requested
        tolerance, and the accuracy of SHOT's function evaluations does not always allow 1e-8 to be reached. */
-    env->settings->createSetting("Subsolver.Uno.ConstraintViolationTolerance", 1E-6,
-        "Constraint violation tolerance in Uno", SHOT_DBL_MIN, SHOT_DBL_MAX);
+    env->settings->createSetting(
+        "Subsolver.Uno.ConstraintViolationTolerance", 1E-6, "Constraint violation tolerance in Uno", 0.0, SHOT_DBL_MAX);
 
     VectorString enumUnoHessianModel;
     enumUnoHessianModel.push_back("Exact");
@@ -1897,7 +1899,8 @@ void Solver::initializeSettings()
         "Subsolver.Uno.Preset", static_cast<int>(ES_UnoPreset::UnoAuto), "The Uno algorithm to use", enumUnoPreset, 0);
     enumUnoPreset.clear();
 
-    env->settings->createSetting("Subsolver.Uno.RelativeConvergenceTolerance", 1E-6, "Relative convergence tolerance");
+    env->settings->createSetting(
+        "Subsolver.Uno.RelativeConvergenceTolerance", 1E-6, "Relative convergence tolerance", 0.0, SHOT_DBL_MAX);
 
 #endif
 

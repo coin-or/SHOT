@@ -31,7 +31,7 @@ struct HighsMipData
     HighsTerminationHelper* terminationHandler = nullptr;
 };
 
-class MIPSolverHighs : public IMIPSolver, MIPSolverBase
+class MIPSolverHighs : public IMIPSolver, public MIPSolverBase
 {
 public:
     MIPSolverHighs(EnvironmentPtr envPtr);

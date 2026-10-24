@@ -315,9 +315,13 @@ void MIPSolverCbc::initializeSolverSettings()
     // Set termination tolerances
     cbcModel->setAllowableGap(env->settings->getSetting<double>("Termination.ObjectiveGap.Absolute") / 1.0);
     cbcModel->setAllowableFractionGap(env->settings->getSetting<double>("Termination.ObjectiveGap.Relative") / 1.0);
-    osiInterface->setDblParam(
-        OsiPrimalTolerance, env->settings->getSetting<double>("Primal.Tolerance.LinearConstraint"));
-    cbcModel->setIntegerTolerance(env->settings->getSetting<double>("Primal.Tolerance.Integer"));
+    // Clp and Cbc reject values outside their ranges, e.g. a primal tolerance of zero, and keep their own values
+    if(!osiInterface->setDblParam(
+           OsiPrimalTolerance, env->settings->getSetting<double>("Primal.Tolerance.LinearConstraint")))
+        warnToleranceNotAccepted("Primal.Tolerance.LinearConstraint", "OsiPrimalTolerance");
+
+    if(!cbcModel->setIntegerTolerance(env->settings->getSetting<double>("Primal.Tolerance.Integer")))
+        warnToleranceNotAccepted("Primal.Tolerance.Integer", "CbcIntegerTolerance");
     osiInterface->setDblParam(OsiDualTolerance, env->settings->getSetting<double>("Dual.MIP.OptimalityTolerance"));
 
     // Adds a user-provided node limit
