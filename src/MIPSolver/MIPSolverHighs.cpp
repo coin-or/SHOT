@@ -397,22 +397,30 @@ void MIPSolverHighs::initializeSolverSettings()
     // highsInstance.setOptionValue("mip_improving_solution_save", true);
     // highsInstance.setOptionValue("mip_improving_solution_file", "higssol.sol");
 
-    /*
+    std::string mipIpmSolver;
+
     switch(env->settings->getSetting<int>("Subsolver.Highs.MIPIPMSolver"))
     {
-    case 0:
-        highsInstance.setOptionValue("mip_ipm_solver", "choose");
-        break;
     case 1:
-        highsInstance.setOptionValue("mip_ipm_solver", "ipx");
+        mipIpmSolver = "ipx";
         break;
     case 2:
-        highsInstance.setOptionValue("mip_ipm_solver", "hipo");
+        mipIpmSolver = "hipo";
         break;
     default:
-        highsInstance.setOptionValue("mip_ipm_solver", "choose");
+        mipIpmSolver = "choose";
         break;
-    }*/
+    }
+
+    // HiPO is only available if HiGHS has been built with it, otherwise HiGHS keeps its own choice. Only warned for the
+    // main dual MIP solver, not for the other HiGHS instances used for auxiliary problems.
+    if(highsInstance.setOptionValue("mip_ipm_solver", mipIpmSolver) != HighsStatus::kOk && !mipIpmSolverWarningShown
+        && env->dualSolver && env->dualSolver->MIPSolver.get() == this)
+    {
+        env->output->outputWarning(fmt::format(
+            " HiGHS cannot use the MIP IPM solver {}, so Subsolver.Highs.MIPIPMSolver is ignored.", mipIpmSolver));
+        mipIpmSolverWarningShown = true;
+    }
 
     switch(env->settings->getSetting<int>("Subsolver.Highs.Parallel"))
     {

@@ -195,6 +195,7 @@ private:
     Highs highsInstance;
     HighsStatus highsReturnStatus;
     HighsMipData highsCallbackData;
+    bool mipIpmSolverWarningShown = false;
 
     // Solves the problem, after making sure that the scheduler of HiGHS has the number of threads of this solver
     HighsStatus runSolver();

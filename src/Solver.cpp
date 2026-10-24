@@ -1783,14 +1783,14 @@ void Solver::initializeSettings()
         "Subsolver.Highs.DebugLevel", 0, "Debug level for HiGHS internal assertions", enumHighsDebugLevel, 0);
     enumHighsDebugLevel.clear();
 
-    /*
     VectorString enumHighsMIPIPMSolver;
     enumHighsMIPIPMSolver.push_back("choose");
     enumHighsMIPIPMSolver.push_back("ipx");
-    enumHighsMIPIPMSolver.push_back("hipo");
-    env->settings->createSetting("Subsolver.Highs.MIPIPMSolver", 1, "MIP IPM solver", enumHighsMIPIPMSolver, 0);
+    enumHighsMIPIPMSolver.push_back("hipo (only if HiGHS has been built with HiPO)");
+    env->settings->createSetting("Subsolver.Highs.MIPIPMSolver", 0,
+        "Interior point solver that HiGHS uses in the MIP solver, e.g., for the analytic center", enumHighsMIPIPMSolver,
+        0);
     enumHighsMIPIPMSolver.clear();
-    */
 
     VectorString enumHighsParallel;
     enumHighsParallel.push_back("off");
