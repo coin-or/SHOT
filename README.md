@@ -107,7 +107,7 @@ Originally SHOT was intended for convex MINLP problems only, but as of version 1
 - from [GAMS](https://www.gams.com) — the easiest way to use SHOT is through [GAMSPy](https://gamspy.readthedocs.io),
 - on the [NEOS Server](https://neos-server.org/neos/solvers/minco:SHOT/GAMS.html),
 - from any modeling system that can use ASL, such as
-  - [Pyomo/Python](https://www.pyomo.org), 
+  - [Pyomo/Python](https://www.pyomo.org) (see [Using SHOT from Pyomo](docs/CommandLineUsage.md#using-shot-from-pyomo)), 
   - [JuMP/Julia](https://github.com/JuliaOpt/AmplNLWriter.jl), and 
   - [AMPL](https://www.ampl.com),
 - through its own Python API ([SHOTpy](docs/SHOTpy_Tutorial.ipynb)) — install with `pip install SHOTpy` or build with `-DHAS_PYTHON=on` (see [docs/CompilationInstructions.md](docs/CompilationInstructions.md)), or
