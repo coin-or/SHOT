@@ -143,8 +143,8 @@ bool TestRootsearch(const std::string& problemFile)
 
     auto rootsearch = std::make_unique<RootsearchMethodBoost>(env);
 
-    auto root = rootsearch->findZero(
-        interiorPoint, exteriorPoint, 100, 10e-13, 10e-3, env->problem->nonlinearConstraints, false);
+    auto root
+        = rootsearch->findZero(interiorPoint, exteriorPoint, 100, 10e-13, env->problem->nonlinearConstraints, false);
 
     std::cout << "Root found:\n";
     Utilities::displayVector(root.first, root.second);
@@ -159,8 +159,7 @@ bool TestRootsearch(const std::string& problemFile)
     std::cout << "Exterior point:\n";
     Utilities::displayVector(exteriorPoint);
 
-    root = rootsearch->findZero(
-        interiorPoint, exteriorPoint, 100, 10e-13, 10e-3, env->problem->nonlinearConstraints, false);
+    root = rootsearch->findZero(interiorPoint, exteriorPoint, 100, 10e-13, env->problem->nonlinearConstraints, false);
 
     std::cout << "Root found:\n";
     Utilities::displayVector(root.first, root.second);
@@ -175,8 +174,7 @@ bool TestRootsearch(const std::string& problemFile)
     std::cout << "Exterior point:\n";
     Utilities::displayVector(exteriorPoint);
 
-    root = rootsearch->findZero(
-        interiorPoint, exteriorPoint, 100, 10e-13, 10e-3, env->problem->nonlinearConstraints, false);
+    root = rootsearch->findZero(interiorPoint, exteriorPoint, 100, 10e-13, env->problem->nonlinearConstraints, false);
 
     std::cout << "Root found:\n";
     Utilities::displayVector(root.first, root.second);

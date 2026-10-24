@@ -1922,9 +1922,6 @@ void Solver::initializeSettings()
     env->settings->createSettingGroup(
         "Subsolver", "Rootsearch", "Root search solver", "Settings for the Boost rootsearch functionality.");
 
-    env->settings->createSetting("Subsolver.Rootsearch.ActiveConstraintTolerance", 0.0,
-        "Epsilon constraint tolerance for root search", 0.0, SHOT_DBL_MAX);
-
     env->settings->createSetting(
         "Subsolver.Rootsearch.MaxIterations", 100, "Maximal root search iterations", 0, SHOT_INT_MAX);
 

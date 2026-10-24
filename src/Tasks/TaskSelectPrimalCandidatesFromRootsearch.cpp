@@ -88,7 +88,7 @@ void TaskSelectPrimalCandidatesFromRootsearch::run(std::vector<SolutionPoint> so
                         env->timing->startTimer("PrimalBoundStrategyRootSearch");
                         xNewc = env->rootsearchMethod->findZero(xNLP, P.point,
                             env->settings->getSetting<int>("Subsolver.Rootsearch.MaxIterations"),
-                            env->settings->getSetting<double>("Subsolver.Rootsearch.TerminationTolerance"), 0,
+                            env->settings->getSetting<double>("Subsolver.Rootsearch.TerminationTolerance"),
                             env->reformulatedProblem->nonlinearConstraints, false);
 
                         env->timing->stopTimer("PrimalBoundStrategyRootSearch");

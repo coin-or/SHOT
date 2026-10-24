@@ -75,14 +75,13 @@ public:
     ~RootsearchMethodBoost() override;
 
     std::pair<VectorDouble, VectorDouble> findZero(const VectorDouble& ptA, const VectorDouble& ptB, int Nmax,
-        double lambdaTol, double constrTol, const NonlinearConstraints constraints, bool addPrimalCandidate) override;
+        double lambdaTol, const NonlinearConstraints constraints, bool addPrimalCandidate) override;
 
     std::pair<VectorDouble, VectorDouble> findZero(const VectorDouble& ptA, const VectorDouble& ptB, int Nmax,
-        double lambdaTol, double constrTol, const std::vector<NumericConstraint*> constraints,
-        bool addPrimalCandidate) override;
+        double lambdaTol, const std::vector<NumericConstraint*> constraints, bool addPrimalCandidate) override;
 
     std::pair<double, double> findZero(const VectorDouble& pt, double objectiveLB, double objectiveUB, int Nmax,
-        double lambdaTol, double constrTol, ObjectiveFunctionPtr objectiveFunction) override;
+        double lambdaTol, ObjectiveFunctionPtr objectiveFunction) override;
 
 private:
     std::unique_ptr<Test> test;
