@@ -433,6 +433,13 @@ enum class ES_ReformulateBilinearInteger
     Yes
 };
 
+enum class ES_ReformulateBilinearInverse
+{
+    None,
+    OneConstraint,
+    BothConstraints
+};
+
 enum class ES_PartitionNonlinearSums
 {
     Always,

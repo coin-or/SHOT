@@ -177,6 +177,7 @@ bool ModelTestLDLFactorizationFillLimit();
 bool ModelTestSHOTFixedNLPResolve();
 bool ModelTestReformulatedLinearTermVariables();
 bool ModelTestEpigraphObjectiveExpressionCopied();
+bool ModelTestBilinearInverseReformulation();
 bool ModelTestBoundTighteningMatchesReference();
 bool ModelTestBoundTighteningMatchesReferenceOnInstances();
 bool ModelTestBoundTighteningPropagation();
@@ -543,6 +544,9 @@ int ModelTest(int argc, char* argv[])
         break;
     case 73:
         passed = ModelTestEpigraphObjectiveExpressionCopied();
+        break;
+    case 74:
+        passed = ModelTestBilinearInverseReformulation();
         break;
     default:
         passed = false;
@@ -12352,6 +12356,183 @@ bool ModelTestEpigraphObjectiveExpressionCopied()
         {
             std::cout << "  FAILED: the definition of the objective variable refers to variable " << V->name
                       << " of another problem.\n";
+            passed = false;
+        }
+    }
+
+    return passed;
+}
+
+bool ModelTestBilinearInverseReformulation()
+{
+    // A constraint a*x1*x2 >= c with c/a > 0 and x1 > 0 is equivalent to the convex c/(a*x1) - x2 <= 0, and to
+    // c/(a*x2) - x1 <= 0 if also x2 > 0. Only constraints with a single bilinear term and a constant qualify.
+    //
+    // minimize x1 + x2 + x3 + z + w + y
+    // s.t.  x1*x2 >= 2,  3 - 1.5*x2*x3 <= 0                (reformulated)
+    //       z*w >= 1 with z,w in [-5,10]                   (not positive)
+    //       x1*x3 + x1 >= 1,  x1*x2 + x2*x3 >= 4,  x1*x3 >= -1,  y*y >= 1  (other terms or nonpositive constant)
+
+    bool passed = true;
+
+    auto buildProblem = [](EnvironmentPtr env, bool onlyReformulated)
+    {
+        auto problem = std::make_shared<Problem>(env);
+
+        auto x1 = std::make_shared<Variable>("x1", E_VariableType::Real, 0.5, 10.0);
+        auto x2 = std::make_shared<Variable>("x2", E_VariableType::Real, 1.0, 10.0);
+        auto x3 = std::make_shared<Variable>("x3", E_VariableType::Real, 0.5, 10.0);
+        problem->add({ x1, x2, x3 });
+
+        auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+        objective->add(std::make_shared<LinearTerm>(1.0, x1));
+        objective->add(std::make_shared<LinearTerm>(1.0, x2));
+        objective->add(std::make_shared<LinearTerm>(1.0, x3));
+
+        auto first = std::make_shared<QuadraticConstraint>("first", 2.0, SHOT_DBL_MAX);
+        first->add(std::make_shared<QuadraticTerm>(1.0, x1, x2));
+        problem->add(first);
+
+        auto second = std::make_shared<QuadraticConstraint>("second", SHOT_DBL_MIN, 0.0);
+        second->add(std::make_shared<QuadraticTerm>(-1.5, x2, x3));
+        second->constant = 3.0;
+        problem->add(second);
+
+        if(!onlyReformulated)
+        {
+            auto z = std::make_shared<Variable>("z", E_VariableType::Real, -5.0, 10.0);
+            auto w = std::make_shared<Variable>("w", E_VariableType::Real, -5.0, 10.0);
+            auto y = std::make_shared<Variable>("y", E_VariableType::Real, 0.5, 10.0);
+            problem->add({ z, w, y });
+
+            objective->add(std::make_shared<LinearTerm>(1.0, z));
+            objective->add(std::make_shared<LinearTerm>(1.0, w));
+            objective->add(std::make_shared<LinearTerm>(1.0, y));
+
+            auto notPositive = std::make_shared<QuadraticConstraint>("notpositive", 1.0, SHOT_DBL_MAX);
+            notPositive->add(std::make_shared<QuadraticTerm>(1.0, z, w));
+            problem->add(notPositive);
+
+            auto withLinearTerm = std::make_shared<QuadraticConstraint>("withlinearterm", 1.0, SHOT_DBL_MAX);
+            withLinearTerm->add(std::make_shared<QuadraticTerm>(1.0, x1, x3));
+            withLinearTerm->add(std::make_shared<LinearTerm>(1.0, x1));
+            problem->add(withLinearTerm);
+
+            auto twoTerms = std::make_shared<QuadraticConstraint>("twoterms", 4.0, SHOT_DBL_MAX);
+            twoTerms->add(std::make_shared<QuadraticTerm>(1.0, x1, x2));
+            twoTerms->add(std::make_shared<QuadraticTerm>(1.0, x2, x3));
+            problem->add(twoTerms);
+
+            auto negativeConstant = std::make_shared<QuadraticConstraint>("negativeconstant", -1.0, SHOT_DBL_MAX);
+            negativeConstant->add(std::make_shared<QuadraticTerm>(1.0, x1, x3));
+            problem->add(negativeConstant);
+
+            auto square = std::make_shared<QuadraticConstraint>("square", 1.0, SHOT_DBL_MAX);
+            square->add(std::make_shared<QuadraticTerm>(1.0, y, y));
+            problem->add(square);
+        }
+
+        problem->add(objective);
+        problem->finalize();
+        return (problem);
+    };
+
+    auto isInverse = [](const NumericConstraintPtr& constraint)
+    {
+        auto C = std::dynamic_pointer_cast<NonlinearConstraint>(constraint);
+
+        return (C && C->nonlinearExpression && C->nonlinearExpression->getType() == E_NonlinearExpressionTypes::Divide
+            && C->quadraticTerms.size() == 0 && C->linearTerms.size() == 1 && C->constant == 0.0);
+    };
+
+    for(auto strategy : { ES_ReformulateBilinearInverse::None, ES_ReformulateBilinearInverse::OneConstraint,
+            ES_ReformulateBilinearInverse::BothConstraints })
+    {
+        std::cout << "Strategy " << static_cast<int>(strategy) << ":\n";
+
+        auto solver = std::make_unique<Solver>();
+        auto env = solver->getEnvironment();
+        solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Error));
+        solver->updateSetting("Model.Reformulation.Bilinear.InverseFormulation", static_cast<int>(strategy));
+
+        if(!solver->setProblem(buildProblem(env, false)))
+        {
+            std::cout << "  FAILED: the problem could not be set.\n";
+            return (false);
+        }
+
+        std::set<std::string> inverseConstraints;
+
+        for(auto& C : env->reformulatedProblem->numericConstraints)
+        {
+            if(!isInverse(C))
+                continue;
+
+            inverseConstraints.insert(C->name);
+
+            if(C->properties.convexity != E_Convexity::Convex)
+            {
+                std::cout << "  FAILED: " << C->name << " is not convex.\n";
+                passed = false;
+            }
+
+            // The constraint k / x1 - x2 <= 0 is to be satisfied at x1 * x2 = k
+            auto divide = std::dynamic_pointer_cast<ExpressionDivide>(
+                std::dynamic_pointer_cast<NonlinearConstraint>(C)->nonlinearExpression);
+            double k = std::dynamic_pointer_cast<ExpressionConstant>(divide->firstChild)->constant;
+
+            if(k != 2.0)
+            {
+                std::cout << "  FAILED: " << C->name << " has the constant " << k << " instead of 2.\n";
+                passed = false;
+            }
+        }
+
+        std::set<std::string> expected;
+
+        if(strategy != ES_ReformulateBilinearInverse::None)
+            expected = { "first", "second" };
+
+        size_t expectedSize = (strategy == ES_ReformulateBilinearInverse::BothConstraints) ? 4 : expected.size();
+
+        for(auto& name : expected)
+        {
+            if(inverseConstraints.count(name) == 0)
+            {
+                std::cout << "  FAILED: " << name << " was not reformulated.\n";
+                passed = false;
+            }
+        }
+
+        if(inverseConstraints.size() != expectedSize)
+        {
+            std::cout << "  FAILED: expected " << expectedSize << " reformulated constraints, got "
+                      << inverseConstraints.size() << ":";
+
+            for(auto& name : inverseConstraints)
+                std::cout << " " << name;
+
+            std::cout << "\n";
+            passed = false;
+        }
+
+        // Solving the problem with only the reformulated constraints gives the optimum 4 at (1, 2, 1)
+        auto solveSolver = std::make_unique<Solver>();
+        auto solveEnv = solveSolver->getEnvironment();
+        solveSolver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Error));
+        solveSolver->updateSetting("Model.Reformulation.Bilinear.InverseFormulation", static_cast<int>(strategy));
+
+        if(!solveSolver->setProblem(buildProblem(solveEnv, true)) || !solveSolver->solveProblem())
+        {
+            std::cout << "  FAILED: the problem could not be solved.\n";
+            passed = false;
+            continue;
+        }
+
+        if(std::abs(solveSolver->getPrimalBound() - 4.0) > 1e-3 || solveSolver->getCurrentDualBound() > 4.0 + 1e-3)
+        {
+            std::cout << "  FAILED: the bounds are " << solveSolver->getCurrentDualBound() << " and "
+                      << solveSolver->getPrimalBound() << " instead of 4.\n";
             passed = false;
         }
     }

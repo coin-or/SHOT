@@ -1427,7 +1427,67 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
     NumericConstraints resultingConstraints;
     NumericConstraintPtr constraint;
 
-    if(copyOriginalNonlinearExpression || destinationMonomialTerms.size() > 0)
+    bool isBilinearInverseReformulated = false;
+
+    auto bilinearInverseStrategy = static_cast<ES_ReformulateBilinearInverse>(
+        env->settings->getSetting<int>("Model.Reformulation.Bilinear.InverseFormulation"));
+
+    if(bilinearInverseStrategy != ES_ReformulateBilinearInverse::None && !copyOriginalNonlinearExpression
+        && destinationMonomialTerms.size() == 0 && destinationSignomialTerms.size() == 0
+        && destinationLinearTerms.size() == 0 && destinationQuadraticTerms.size() == 1
+        && destinationQuadraticTerms[0]->coefficient < 0.0
+        && destinationQuadraticTerms[0]->firstVariable != destinationQuadraticTerms[0]->secondVariable
+        && valueLHS == SHOT_DBL_MIN && valueRHS - constant < 0.0)
+    // We can perhaps use the transformation for terms of the type  q * x1 * x2 <= d, q,d < 0
+    {
+        auto firstVariable = reformulatedProblem->getVariable(destinationQuadraticTerms[0]->firstVariable->getIndex());
+        auto secondVariable
+            = reformulatedProblem->getVariable(destinationQuadraticTerms[0]->secondVariable->getIndex());
+
+        if(firstVariable->lowerBound > 0.0 || secondVariable->lowerBound > 0.0)
+        {
+            // The constraint is x1 * x2 >= k with k > 0, which for x1 > 0 is k / x1 - x2 <= 0. This is convex and
+            // gives the same feasible set. Then also x2 >= k / x1 > 0, so x1 and x2 can be swapped if x2 > 0. With
+            // one constraint, the variable with the largest lower bound is the denominator, as its gradients are
+            // the smallest.
+            double k = (valueRHS - constant) / destinationQuadraticTerms[0]->coefficient;
+
+            auto createInverseConstraint = [&](std::string name, VariablePtr denominator, VariablePtr other)
+            {
+                auto inverseConstraint = std::make_shared<NonlinearConstraint>(name, SHOT_DBL_MIN, 0.0);
+                inverseConstraint->properties.classification = E_ConstraintClassification::Nonlinear;
+                inverseConstraint->ownerProblem = reformulatedProblem;
+                inverseConstraint->add(std::make_shared<LinearTerm>(-1.0, other));
+                inverseConstraint->add(std::make_shared<ExpressionDivide>(
+                    std::make_shared<ExpressionConstant>(k), std::make_shared<ExpressionVariable>(denominator)));
+
+                return (inverseConstraint);
+            };
+
+            if(secondVariable->lowerBound > firstVariable->lowerBound)
+                std::swap(firstVariable, secondVariable);
+
+            constraint = createInverseConstraint(C->name, firstVariable, secondVariable);
+
+            if(bilinearInverseStrategy == ES_ReformulateBilinearInverse::BothConstraints
+                && secondVariable->lowerBound > 0.0)
+            {
+                resultingConstraints.push_back(createInverseConstraint(
+                    "s_rbilinv_" + std::to_string(auxConstraintCounter), secondVariable, firstVariable));
+                auxConstraintCounter++;
+            }
+
+            destinationQuadraticTerms.clear();
+            constant = 0.0;
+            isBilinearInverseReformulated = true;
+        }
+    }
+
+    if(isBilinearInverseReformulated)
+    {
+        // The constraint has already been created
+    }
+    else if(copyOriginalNonlinearExpression || destinationMonomialTerms.size() > 0)
     // We have a nonlinear constraint
     {
         constraint = std::make_shared<NonlinearConstraint>(C->name, valueLHS, valueRHS);
