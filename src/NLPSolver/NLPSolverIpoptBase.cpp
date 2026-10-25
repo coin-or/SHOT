@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
+#include <fstream>
 
 #if IPOPT_VERSION_MAJOR > 3 || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR >= 14)
 #include "IpLibraryLoader.hpp"
@@ -877,7 +878,14 @@ E_NLPSolutionStatus NLPSolverIpoptBase::solveProblemInstance()
     // own: a single NLP problem could then take longer than the whole solution time allowed, e.g. when its linear
     // solver runs into difficulties. The limit is kept positive, since a nonpositive one is rejected.
     double timeLeft = env->settings->getSetting<double>("Termination.TimeLimit") - env->timing->getElapsedTime("Total");
-    ipoptApplication->Options()->SetNumericValue("max_wall_time", std::max(std::min(timeLeft, timeLimit), 0.00001));
+    // It cannot be set if an options file sets it and Ipopt is older than 3.13, see applyOptionsFile()
+    if(!ipoptApplication->Options()->SetNumericValue("max_wall_time", std::max(std::min(timeLeft, timeLimit), 0.00001))
+        && !maxWallTimeWarningShown)
+    {
+        env->output->outputWarning(" Ipopt does not accept the time limit, since max_wall_time is set in the Ipopt "
+                                   "options file. The time limit of SHOT is then not applied to Ipopt.");
+        maxWallTimeWarningShown = true;
+    }
 
     try
     {
@@ -1231,6 +1239,26 @@ void NLPSolverIpoptBase::setInitialSettings()
         ipoptApplication->Options()->SetStringValue("hessian_constant", "yes", true, true);
 
     setSolverSpecificInitialSettings();
+
+    // The settings are also set again before some solves, e.g. in clearStartingPoint(), so the options file is applied
+    // after them every time
+    applyOptionsFile();
+}
+
+void NLPSolverIpoptBase::applyOptionsFile()
+{
+    // From Ipopt 3.13, the options in the file can be read so that they can still be changed, which is needed for the
+    // time limit that is set before each solve. Before that, Ipopt reads the file in Initialize(), and the options set
+    // in it cannot be changed afterwards, so they override those set by SHOT anyway.
+#if defined(IPOPT_VERSION_MAJOR) && (IPOPT_VERSION_MAJOR > 3 || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR >= 13))
+    // Without a file given, Ipopt uses ipopt.opt in the working directory if there is one
+    auto optionsFile = env->settings->getSetting<std::string>("Subsolver.Ipopt.OptionsFile");
+
+    std::ifstream stream(optionsFile.empty() ? "ipopt.opt" : optionsFile);
+
+    if(stream.is_open())
+        ipoptApplication->Options()->ReadFromStream(*ipoptApplication->Jnlst(), stream, true);
+#endif
 }
 
 void NLPSolverIpoptBase::fixVariables(VectorInteger variableIndexes, VectorDouble variableValues)

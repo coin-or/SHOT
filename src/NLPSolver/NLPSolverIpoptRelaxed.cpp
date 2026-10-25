@@ -39,7 +39,13 @@ NLPSolverIpoptRelaxed::NLPSolverIpoptRelaxed(EnvironmentPtr envPtr, ProblemPtr s
     ipoptProblem->lowerBounds = sourceProblem->getVariableLowerBounds();
     ipoptProblem->upperBounds = sourceProblem->getVariableUpperBounds();
 
+    // From Ipopt 3.13, the options file has already been read in setInitialSettings(), and the options in it must still
+    // be changeable when Ipopt reads it again here, see applyOptionsFile()
+#if defined(IPOPT_VERSION_MAJOR) && (IPOPT_VERSION_MAJOR > 3 || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR >= 13))
+    Ipopt::ApplicationReturnStatus ipoptStatus = ipoptApplication->Initialize(true);
+#else
     Ipopt::ApplicationReturnStatus ipoptStatus = ipoptApplication->Initialize();
+#endif
 
     if(ipoptStatus != Ipopt::Solve_Succeeded)
     {

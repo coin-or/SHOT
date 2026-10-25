@@ -1858,8 +1858,8 @@ void Solver::initializeSettings()
     env->settings->createSetting("Subsolver.Ipopt.MaxIterations", 1000, "Maximum number of iterations");
 
     env->settings->createSetting("Subsolver.Ipopt.OptionsFile", std::string(),
-        "An Ipopt options file with any Ipopt options, read instead of ipopt.opt in the working directory. Options "
-        "set by SHOT, e.g. the linear solver, are not changed by it",
+        "An Ipopt options file with any Ipopt options, read instead of ipopt.opt in the working directory. Its options "
+        "override those set by SHOT, e.g. the linear solver, except the time limit (max_wall_time) of each solve",
         false);
 
     env->settings->createSetting(
