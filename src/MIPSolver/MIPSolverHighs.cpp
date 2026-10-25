@@ -376,6 +376,10 @@ void MIPSolverHighs::initializeSolverSettings()
     highsInstance.setOptionValue("primal_feasibility_tolerance",
         getToleranceForSolver(
             "Primal.Tolerance.LinearConstraint", kMinimumKktTolerance, SHOT_DBL_MAX, "primal_feasibility_tolerance"));
+    // The reduced-cost tolerance, as for the other MIP solvers
+    highsInstance.setOptionValue("dual_feasibility_tolerance",
+        getToleranceForSolver(
+            "Dual.MIP.OptimalityTolerance", kMinimumKktTolerance, SHOT_DBL_MAX, "dual_feasibility_tolerance"));
 
     // Adds a user-provided node limit
     if(auto nodeLimit = env->settings->getSetting<double>("Dual.MIP.NodeLimit"); nodeLimit > 0)
@@ -485,7 +489,6 @@ void MIPSolverHighs::initializeSolverSettings()
     // highsInstance.setOptionValue("simplex_strategy", 0);
     // highsInstance.setOptionValue("solver", "choose");
     // highsInstance.setOptionValue("primal_feasibility_tolerance", 1e-6);
-    // highsInstance.setOptionValue("dual_feasibility_tolerance", 1e-6);
 
     // highsInstance.setOptionValue("mip_report_level", 2);
 
