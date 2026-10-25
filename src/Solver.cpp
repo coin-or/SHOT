@@ -1038,8 +1038,8 @@ void Solver::initializeSettings()
         "Dual.ConvexBounding.Use", true, "Enable the convex bounding strategy for nonconvex problems");
 
     env->settings->createSetting("Dual.ConvexBounding.IdleIterations", 10,
-        "How often the convex bounding strategy should be executed. 0 = Every iteration with generated hyperplanes for "
-        "nonconvexities, 1 = Every second iteration, etc.",
+        "How many iterations with new hyperplanes the convex bounding strategy is skipped before it is performed "
+        "again: 0 = Every iteration with new hyperplanes, 1 = Every second such iteration, etc.",
         0, SHOT_INT_MAX);
 
     // Dual strategy settings: reduction cuts for nonconvex problems
