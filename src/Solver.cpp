@@ -1424,7 +1424,8 @@ void Solver::initializeSettings()
     VectorString enumPrimalNLPStrategy;
     enumPrimalNLPStrategy.push_back("Use each iteration");
     enumPrimalNLPStrategy.push_back("Based on iteration or time");
-    enumPrimalNLPStrategy.push_back("Based on iteration or time, and for all feasible MIP solutions");
+    enumPrimalNLPStrategy.push_back(
+        "Based on iteration or time, and whenever a MIP solution fulfils the nonlinear constraints");
 
     env->settings->createSetting("Primal.FixedInteger.CallStrategy",
         static_cast<int>(ES_PrimalNLPStrategy::IterationOrTimeAndAllFeasibleSolutions),
@@ -1483,7 +1484,7 @@ void Solver::initializeSettings()
     enumPrimalBoundNLPStartingPoint.push_back("All");
     enumPrimalBoundNLPStartingPoint.push_back("First");
     enumPrimalBoundNLPStartingPoint.push_back("All feasible");
-    enumPrimalBoundNLPStartingPoint.push_back("First and all feasible");
+    enumPrimalBoundNLPStartingPoint.push_back("First and the one with the smallest constraint deviation");
     enumPrimalBoundNLPStartingPoint.push_back("With smallest constraint deviation");
     env->settings->createSetting("Primal.FixedInteger.Source",
         static_cast<int>(ES_PrimalNLPFixedPoint::FirstAndFeasibleSolutions), "Source of fixed MIP solution point",
@@ -2279,7 +2280,6 @@ void Solver::setConvexityBasedSettingsPreReformulation()
 
 void Solver::setConvexityBasedSettings()
 {
-    if(env->settings->getSetting<bool>("Strategy.UseRecommendedSettings"))
     // Nonconvex problems are always solved with the multi-tree strategy
     if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex)
     {
@@ -2292,6 +2292,7 @@ void Solver::setConvexityBasedSettings()
             "Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::MultiTree), E_SettingPriority::SolverCompatibility);
     }
 
+    if(env->settings->getSetting<bool>("Strategy.UseRecommendedSettings"))
     {
         if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex)
         {

@@ -102,6 +102,13 @@ bool MIPSolverCallbackBase::checkFixedNLPStrategy(SolutionPoint point)
                 "        Activating fixed NLP primal strategy since max time limit since last call has been reached.");
             callNLPSolver = true;
         }
+        else if(userSettingStrategy == static_cast<int>(ES_PrimalNLPStrategy::IterationOrTimeAndAllFeasibleSolutions)
+            && point.maxDeviation.value <= env->settings->getSetting<double>("Primal.Tolerance.NonlinearConstraint"))
+        {
+            env->output->outputDebug("        Activating fixed NLP primal strategy since the MIP solution fulfils the "
+                                     "nonlinear constraints.");
+            callNLPSolver = true;
+        }
     }
 
     if(!callNLPSolver)

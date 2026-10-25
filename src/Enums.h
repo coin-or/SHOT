@@ -385,7 +385,7 @@ enum class ES_PrimalNLPFixedPoint
     AllSolutions,
     FirstSolution,
     AllFeasibleSolutions,
-    FirstAndFeasibleSolutions,
+    FirstAndFeasibleSolutions, // The first solution and the one with the smallest constraint deviation
     SmallestDeviationSolution
 };
 
