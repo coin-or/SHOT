@@ -210,12 +210,12 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
             break;
 
         case(ES_ReformulateBilinearInteger::NoIfQuadraticSupport):
-#ifdef HAS_GUROBI
-#if GRB_VERSION_MAJOR >= 9
-            useIntegerBilinearTermReformulation = false;
-#elif GRB_VERSION_MAJOR < 9
+            // Gurobi from version 9 supports nonconvex quadratic terms, but they are only passed to it with
+            // Model.Reformulation.Quadratics.Strategy = NonconvexQuadraticallyConstrained
+#if defined(HAS_GUROBI) && GRB_VERSION_MAJOR >= 9
+            useIntegerBilinearTermReformulation = !useNonconvexQuadraticConstraints;
+#else
             useIntegerBilinearTermReformulation = true;
-#endif
 #endif
             break;
         case(ES_ReformulateBilinearInteger::Yes):
