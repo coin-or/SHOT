@@ -792,6 +792,25 @@ E_ProblemSolutionStatus MIPSolverHighs::solveProblem()
 
     MIPSolutionStatus = getSolutionStatus();
 
+    // The solutions of a MIP problem are collected in the callback, but HiGHS does not report a solution there that it
+    // has not found itself. E.g. when presolve shows that no solution is better than the cutoff, HiGHS returns the MIP
+    // start, which is the primal solution, as optimal solution. Without it, the iteration would have no solution.
+    if(isProblemDiscrete && getDiscreteVariableStatus() && currentSolutions.empty()
+        && (MIPSolutionStatus == E_ProblemSolutionStatus::Optimal
+            || MIPSolutionStatus == E_ProblemSolutionStatus::Feasible)
+        && highsInstance.getInfo().primal_solution_status == kSolutionStatusFeasible)
+    {
+        SolutionPoint solution;
+        solution.point = highsInstance.getSolution().col_value;
+        solution.point.resize(env->reformulatedProblem->properties.numberOfVariables);
+        solution.objectiveValue = highsInstance.getInfo().objective_function_value;
+        solution.hashValue = Utilities::calculateHash(solution.point);
+        currentSolutions.push_back(solution);
+
+        env->output->outputDebug("        Using the solution returned by the MIP solver, which was not reported in "
+                                 "the callback.");
+    }
+
     // An unbounded exact dual problem means that the problem is unbounded, so no point is needed
     if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded && env->results->getNumberOfIterations() > 0
         && env->dualSolver->isDualProblemExact())
@@ -1590,6 +1609,12 @@ double MIPSolverHighs::getDualObjectiveValue()
     if(isMIP)
     {
         objVal = highsInstance.getInfo().mip_dual_bound;
+
+        // When presolve shows that no solution is better than the cutoff, HiGHS returns the MIP start as an optimal
+        // solution, but without a dual bound. The objective value of the optimal solution is then the dual bound.
+        if(!std::isfinite(objVal) && getSolutionStatus() == E_ProblemSolutionStatus::Optimal
+            && highsInstance.getInfo().primal_solution_status == kSolutionStatusFeasible)
+            objVal = highsInstance.getInfo().objective_function_value;
     }
     else if(getSolutionStatus() == E_ProblemSolutionStatus::Optimal)
     {
