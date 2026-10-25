@@ -1600,7 +1600,7 @@ void Solver::initializeSettings()
     enumCplexMIPEmphasis.push_back("Optimality");
     enumCplexMIPEmphasis.push_back("Best bound");
     enumCplexMIPEmphasis.push_back("Hidden feasible");
-    env->settings->createSetting("Subsolver.Cplex.MIPEmphasis", 1, "Sets the MIP emphasis", enumCplexMIPEmphasis, 0);
+    env->settings->createSetting("Subsolver.Cplex.MIPEmphasis", 0, "Sets the MIP emphasis", enumCplexMIPEmphasis, 0);
     enumCplexMIPEmphasis.clear();
 
     env->settings->createSetting("Subsolver.Cplex.MemoryEmphasis", 0, "Try to conserve memory when possible", 0, 1);
@@ -1613,7 +1613,7 @@ void Solver::initializeSettings()
     env->settings->createSetting("Subsolver.Cplex.NodeFile", 1, "Where to store the node file", enumCplexNodeFile, 0);
     enumCplexNodeFile.clear();
 
-    env->settings->createSetting("Subsolver.Cplex.NumericalEmphasis", 1, "Emphasis on numerical stability", 0, 1);
+    env->settings->createSetting("Subsolver.Cplex.NumericalEmphasis", 0, "Emphasis on numerical stability", 0, 1);
 
     VectorString enumCplexParallelMode;
     enumCplexParallelMode.push_back("Opportunistic");
@@ -1688,7 +1688,7 @@ void Solver::initializeSettings()
     enumGurobiNumericFocus.push_back("Mild");
     enumGurobiNumericFocus.push_back("Moderate");
     enumGurobiNumericFocus.push_back("Aggressive");
-    env->settings->createSetting("Subsolver.Gurobi.NumericFocus", 1,
+    env->settings->createSetting("Subsolver.Gurobi.NumericFocus", 0,
         "How much effort Gurobi spends on detecting and managing numerical issues", enumGurobiNumericFocus, 0);
     enumGurobiNumericFocus.clear();
 
