@@ -2166,12 +2166,6 @@ void Solver::verifySettings()
     {
         MIPSolverDefined = true;
         unboundedVariableBound = 1e20;
-
-        // TODO: needed
-        if(env->settings->getSetting<int>("Model.Reformulation.Quadratics.ExtractStrategy")
-            > (int)ES_QuadraticTermsExtractStrategy::ExtractTermsToSame)
-            env->settings->updateSetting("Model.Reformulation.Quadratics.ExtractStrategy",
-                (int)ES_QuadraticTermsExtractStrategy::ExtractTermsToSame, E_SettingPriority::RecommendedInternal);
     }
 #endif
 
@@ -2269,61 +2263,14 @@ void Solver::setConvexityBasedSettingsPreReformulation()
     {
         if(env->problem->properties.convexity != E_ProblemConvexity::Convex)
         {
-            env->settings->updateSetting("Model.Reformulation.Constraint.PartitionNonlinearTerms",
-                (int)ES_PartitionNonlinearSums::IfConvex, E_SettingPriority::RecommendedInternal);
-            env->settings->updateSetting("Model.Reformulation.Constraint.PartitionQuadraticTerms",
-                (int)ES_PartitionNonlinearSums::IfConvex, E_SettingPriority::RecommendedInternal);
-            env->settings->updateSetting("Model.Reformulation.ObjectiveFunction.PartitionNonlinearTerms",
-                (int)ES_PartitionNonlinearSums::IfConvex, E_SettingPriority::RecommendedInternal);
-            env->settings->updateSetting("Model.Reformulation.ObjectiveFunction.PartitionQuadraticTerms",
-                (int)ES_PartitionNonlinearSums::IfConvex, E_SettingPriority::RecommendedInternal);
             // env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy", 0);
 
-#ifdef HAS_GUROBI
+#if defined(HAS_GUROBI) && GRB_VERSION_MAJOR >= 9
+            // Activate Gurobi nonconvex MIQCQP solver for all nonconvex quadratic terms by default
             if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Gurobi)
-            {
-#if GRB_VERSION_MAJOR < 9
-                if(env->settings->getSetting<int>("Model.Reformulation.Quadratics.ExtractStrategy")
-                    > (int)ES_QuadraticTermsExtractStrategy::ExtractTermsToSame)
-                    env->settings->updateSetting("Model.Reformulation.Quadratics.ExtractStrategy",
-                        (int)ES_QuadraticTermsExtractStrategy::ExtractTermsToSame,
-                        E_SettingPriority::RecommendedInternal);
-#endif
-
-#if GRB_VERSION_MAJOR >= 9
-
-                if(env->settings->getSetting<bool>("Strategy.UseRecommendedSettings"))
-                {
-                    // Activate Gurobi nonconvex MIQCQP solver for all nonconvex quadratic terms by default
-                    env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy",
-                        (int)ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained,
-                        E_SettingPriority::RecommendedInternal);
-                }
-                else if(env->settings->getSetting<int>("Model.Reformulation.Quadratics.ExtractStrategy")
-                    > (int)ES_QuadraticTermsExtractStrategy::ExtractTermsToSame)
-                {
-                    env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy",
-                        (int)ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained,
-                        E_SettingPriority::RecommendedInternal);
-                }
-#endif
-            }
-#endif
-
-#ifdef HAS_CBC
-            if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Cbc)
-            {
-                env->settings->updateSetting("Model.Reformulation.Quadratics.Decomposition.Method",
-                    (int)ES_QuadraticDecomposition::LDLDecomposition, E_SettingPriority::RecommendedInternal);
-            }
-#endif
-
-#ifdef HAS_HIGHS
-            if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Highs)
-            {
-                env->settings->updateSetting("Model.Reformulation.Quadratics.Decomposition.Method",
-                    (int)ES_QuadraticDecomposition::LDLDecomposition, E_SettingPriority::RecommendedInternal);
-            }
+                env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy",
+                    (int)ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained,
+                    E_SettingPriority::RecommendedInternal);
 #endif
         }
     }
@@ -2338,12 +2285,6 @@ void Solver::setConvexityBasedSettings()
             env->settings->updateSetting(
                 "Dual.ESH.InteriorPoint.CuttingPlane.IterationLimit", 50, E_SettingPriority::RecommendedInternal);
             env->settings->updateSetting(
-                "Dual.ESH.InteriorPoint.UsePrimalSolution", 1, E_SettingPriority::RecommendedInternal);
-
-            env->settings->updateSetting(
-                "Dual.ESH.Rootsearch.UniqueConstraints", false, E_SettingPriority::RecommendedInternal);
-
-            env->settings->updateSetting(
                 "Dual.HyperplaneCuts.ConstraintSelectionFactor", 1.0, E_SettingPriority::RecommendedInternal);
             env->settings->updateSetting(
                 "Dual.HyperplaneCuts.UseIntegerCuts", true, E_SettingPriority::RecommendedInternal);
@@ -2357,29 +2298,13 @@ void Solver::setConvexityBasedSettings()
 
             env->settings->updateSetting("Dual.Relaxation.Use", false, E_SettingPriority::RecommendedInternal);
 
-            env->settings->updateSetting("Model.Reformulation.Constraint.PartitionNonlinearTerms",
-                (int)ES_PartitionNonlinearSums::IfConvex, E_SettingPriority::RecommendedInternal);
-            env->settings->updateSetting("Model.Reformulation.Constraint.PartitionQuadraticTerms",
-                (int)ES_PartitionNonlinearSums::IfConvex, E_SettingPriority::RecommendedInternal);
-            env->settings->updateSetting("Model.Reformulation.ObjectiveFunction.PartitionNonlinearTerms",
-                (int)ES_PartitionNonlinearSums::IfConvex, E_SettingPriority::RecommendedInternal);
-            env->settings->updateSetting("Model.Reformulation.ObjectiveFunction.PartitionQuadraticTerms",
-                (int)ES_PartitionNonlinearSums::IfConvex, E_SettingPriority::RecommendedInternal);
-
             env->settings->updateSetting("Primal.FixedInteger.CallStrategy", 0, E_SettingPriority::RecommendedInternal);
-            env->settings->updateSetting(
-                "Primal.FixedInteger.CreateInfeasibilityCut", false, E_SettingPriority::RecommendedInternal);
             env->settings->updateSetting(
                 "Primal.FixedInteger.Enumeration.UseInitially", true, E_SettingPriority::RecommendedInternal);
             env->settings->updateSetting("Primal.FixedInteger.Source", 0, E_SettingPriority::RecommendedInternal);
 
             env->settings->updateSetting(
                 "Primal.FixedInteger.OnlyUniqueIntegerCombinations", false, E_SettingPriority::RecommendedInternal);
-
-            env->settings->updateSetting("Primal.Rootsearch.Use", true, E_SettingPriority::RecommendedInternal);
-
-            env->settings->updateSetting(
-                "Model.BoundTightening.FeasibilityBased.TimeLimit", 5.0, E_SettingPriority::RecommendedInternal);
 
 #ifdef HAS_CPLEX
 
@@ -2394,26 +2319,6 @@ void Solver::setConvexityBasedSettings()
 
 #endif
         }
-
-#ifdef HAS_CBC
-        if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Cbc)
-        {
-            env->settings->updateSetting("Model.Reformulation.Constraint.PartitionNonlinearTerms",
-                (int)ES_PartitionNonlinearSums::IfConvex, E_SettingPriority::RecommendedInternal);
-            env->settings->updateSetting("Model.Reformulation.ObjectiveFunction.PartitionNonlinearTerms",
-                (int)ES_PartitionNonlinearSums::IfConvex, E_SettingPriority::RecommendedInternal);
-        }
-#endif
-
-#ifdef HAS_HIGHS
-        if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Highs)
-        {
-            env->settings->updateSetting("Model.Reformulation.Constraint.PartitionNonlinearTerms",
-                (int)ES_PartitionNonlinearSums::IfConvex, E_SettingPriority::RecommendedInternal);
-            env->settings->updateSetting("Model.Reformulation.ObjectiveFunction.PartitionNonlinearTerms",
-                (int)ES_PartitionNonlinearSums::IfConvex, E_SettingPriority::RecommendedInternal);
-        }
-#endif
     }
 }
 
