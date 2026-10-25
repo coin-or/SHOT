@@ -874,7 +874,7 @@ void Solver::initializeSettings()
         "Upper bound for minimax objective variable", SHOT_DBL_MIN, SHOT_DBL_MAX);
 
     VectorString enumAddPrimalPointAsInteriorPoint;
-    enumAddPrimalPointAsInteriorPoint.push_back("No");
+    enumAddPrimalPointAsInteriorPoint.push_back("Only if there is no interior point");
     enumAddPrimalPointAsInteriorPoint.push_back("Add as new");
     enumAddPrimalPointAsInteriorPoint.push_back("Replace old");
     enumAddPrimalPointAsInteriorPoint.push_back("Use average");
