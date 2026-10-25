@@ -136,7 +136,7 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
     auto currIter = env->results->getCurrentIteration(); // The unsolved new iteration
 
     auto constraintSelectionFactor = env->settings->getSetting<double>("Dual.HyperplaneCuts.ConstraintSelectionFactor");
-    bool useUniqueConstraints = env->settings->getSetting<bool>("Dual.ESH.Rootsearch.UniqueConstraints");
+    bool useUniqueConstraints = env->settings->getSetting<bool>("Dual.HyperplaneCuts.UniqueConstraints");
 
     int rootMaxIter = env->settings->getSetting<int>("Subsolver.Rootsearch.MaxIterations");
     double rootTerminationTolerance = env->settings->getSetting<double>("Subsolver.Rootsearch.TerminationTolerance");

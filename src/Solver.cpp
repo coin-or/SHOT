@@ -848,7 +848,9 @@ void Solver::initializeSettings()
         "Required termination bit precision for minimization subsolver", 1, 64, true);
 
     env->settings->createSetting("Dual.ESH.InteriorPoint.CuttingPlane.ConstraintSelectionFactor", 0.25,
-        "The fraction of violated constraints to generate cutting planes for", 0.0, 1.0);
+        "Max number of violated nonlinear constraints, the most violated first, to generate cutting planes "
+        "for in the interior point search, as a fraction of the number of nonlinear constraints",
+        0.0, 1.0);
 
     env->settings->createSetting("Dual.ESH.InteriorPoint.CuttingPlane.IterationLimit", 100,
         "Iteration limit for minimax cutting plane solver", 1, SHOT_INT_MAX);
@@ -887,9 +889,6 @@ void Solver::initializeSettings()
     env->settings->createSetting("Dual.ESH.Rootsearch.ConstraintTolerance", 1e-8,
         "Constraint tolerance for when not to add individual hyperplanes", 0, SHOT_DBL_MAX);
 
-    env->settings->createSetting(
-        "Dual.ESH.Rootsearch.UniqueConstraints", false, "Allow only one hyperplane per constraint per iteration");
-
     env->settings->createSetting("Dual.ESH.Rootsearch.UseMaxFunction", false,
         "Perform rootsearch on max function, otherwise on individual constraints");
 
@@ -899,7 +898,9 @@ void Solver::initializeSettings()
         "These settings control how the cutting planes or supporting hyperplanes are generated.");
 
     env->settings->createSetting("Dual.HyperplaneCuts.ConstraintSelectionFactor", 0.5,
-        "The fraction of violated constraints to generate supporting hyperplanes / cutting planes for", 0.0, 1.0);
+        "Max number of violated nonlinear constraints, the most violated first, to generate hyperplanes for "
+        "in each solution point, as a fraction of the number of nonlinear constraints",
+        0.0, 1.0);
 
     env->settings->createSetting(
         "Dual.HyperplaneCuts.Delay", true, "Add hyperplane cuts to model only after optimal MIP solution");
@@ -914,6 +915,9 @@ void Solver::initializeSettings()
         "The smallest fraction of the distance to a point where the constraint is finite that the point a "
         "hyperplane is generated in is moved, when the constraint is not finite in it",
         1e-12, 0.5);
+
+    env->settings->createSetting(
+        "Dual.HyperplaneCuts.UniqueConstraints", false, "Allow only one hyperplane per constraint per iteration");
 
     env->settings->createSetting("Dual.HyperplaneCuts.UseIntegerCuts", false,
         "Add integer cuts for infeasible integer-combinations for binary problems");
@@ -1061,7 +1065,7 @@ void Solver::initializeSettings()
     enumReductionCutStrategy.clear();
 
     env->settings->createSetting("Dual.ReductionCut.MaxIterations", 20,
-        "Maximum number of reduction cuts without primal improvement", 0, SHOT_INT_MAX);
+        "Maximum number of reduction cuts without primal improvement before terminating", 0, SHOT_INT_MAX);
 
     env->settings->createSetting(
         "Dual.ReductionCut.ReductionFactor", 0.001, "The factor used to reduce the cutoff value", 0, 1.0);
@@ -1335,7 +1339,7 @@ void Solver::initializeSettings()
 
     env->settings->createSetting("Model.Reformulation.Quadratics.Decomposition.Method",
         static_cast<int>(ES_QuadraticDecomposition::LDLDecomposition),
-        "Whether to use the eigenvalue decomposition of convex quadratic functions", enumQPDecomposition, 0);
+        "How to decompose convex quadratic functions", enumQPDecomposition, 0);
     enumQPDecomposition.clear();
 
     VectorString enumQuadraticDecompCoeffStrategy;
@@ -1413,7 +1417,7 @@ void Solver::initializeSettings()
     enumOutputDirectory.clear();
 
     env->settings->createSetting(
-        "Output.SaveNumberOfSolutions", 1, "Save max this number of primal solutions to OSrL or GDX file");
+        "Output.SaveNumberOfSolutions", 1, "Max number of primal solutions to keep and to save to OSrL or GDX files");
 
     env->settings->createSettingGroup(
         "Primal", "", "Primal heuristics", "These settings control the primal heuristics used in SHOT.");
@@ -1434,8 +1438,9 @@ void Solver::initializeSettings()
         "When should the fixed strategy be used", enumPrimalNLPStrategy, 0);
     enumPrimalNLPStrategy.clear();
 
-    env->settings->createSetting(
-        "Primal.FixedInteger.CreateInfeasibilityCut", false, "Create a cut from an infeasible solution point");
+    env->settings->createSetting("Primal.FixedInteger.CreateInfeasibilityCut", false,
+        "Create cutting planes in the solution point of the fixed-integer NLP problem for the nonlinear "
+        "constraints it violates");
 
     env->settings->createSetting("Primal.FixedInteger.Enumeration.MaxCombinations", 50,
         "Max number of combinations of the discrete variables for the exhaustive search to be performed", 1,
@@ -1468,8 +1473,8 @@ void Solver::initializeSettings()
         "Primal.FixedInteger.IterationLimit", 10000000, "Max number of iterations per call", 0, SHOT_INT_MAX);
 
     env->settings->createSetting("Primal.FixedInteger.OnlyUniqueIntegerCombinations", true,
-        "Whether to resolve with the same integer combination, e.g. for nonconvex problems with different continuous "
-        "variable starting points");
+        "Solve the NLP problem only once for each combination of the discrete variables. If false, it is "
+        "solved again from different continuous values, e.g. for nonconvex problems");
 
     VectorString enumPrimalNLPSolver;
     enumPrimalNLPSolver.push_back("Ipopt");
@@ -1866,8 +1871,8 @@ void Solver::initializeSettings()
         "override those set by SHOT, e.g. the linear solver, except the time limit (max_wall_time) of each solve",
         false);
 
-    env->settings->createSetting(
-        "Subsolver.Ipopt.RelativeConvergenceTolerance", 1E-8, "Relative convergence tolerance", 0.0, SHOT_DBL_MAX);
+    env->settings->createSetting("Subsolver.Ipopt.RelativeConvergenceTolerance", 1E-8,
+        "Relative convergence tolerance in Ipopt (tol)", 0.0, SHOT_DBL_MAX);
 
 #endif
 
@@ -1904,8 +1909,8 @@ void Solver::initializeSettings()
         "Subsolver.Uno.Preset", static_cast<int>(ES_UnoPreset::UnoAuto), "The Uno algorithm to use", enumUnoPreset, 0);
     enumUnoPreset.clear();
 
-    env->settings->createSetting(
-        "Subsolver.Uno.RelativeConvergenceTolerance", 1E-6, "Relative convergence tolerance", 0.0, SHOT_DBL_MAX);
+    env->settings->createSetting("Subsolver.Uno.RelativeConvergenceTolerance", 1E-6,
+        "Dual (stationarity) tolerance in Uno (dual_tolerance)", 0.0, SHOT_DBL_MAX);
 
 #endif
 
@@ -1965,7 +1970,9 @@ void Solver::initializeSettings()
         "Max number of iterations without significant dual objective value improvement", 0, SHOT_INT_MAX);
 
     env->settings->createSetting("Termination.PrimalStagnation.IterationLimit", 50,
-        "Max number of iterations without significant primal objective value improvement", 0, SHOT_INT_MAX);
+        "Number of iterations without significant primal improvement after which an objective cut is added "
+        "(nonconvex problems with reduction cuts only)",
+        0, SHOT_INT_MAX);
 
     env->settings->createSetting("Termination.TimeLimit", SHOT_DBL_MAX, "Time limit (s) for solver", 0.0, SHOT_DBL_MAX);
 
