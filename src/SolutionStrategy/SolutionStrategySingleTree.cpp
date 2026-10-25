@@ -138,6 +138,34 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
     auto tSelectPrimExternalInitial = std::make_shared<TaskSelectPrimalCandidatesFromExternalSource>(env);
     env->tasks->addTask(tSelectPrimExternalInitial, "SelectPrimExternalInitial");
 
+    // An NLP problem is solved from a given starting point, e.g. the levels of the variables of a GAMS model, with
+    // its discrete variables fixed, before the first dual problem, which can take the remaining time of a nonconvex
+    // problem. Without a starting point, there are no candidates and nothing is solved.
+    if(env->settings->getSetting<bool>("Primal.FixedInteger.Use")
+        && env->settings->getSetting<bool>("Primal.FixedInteger.UseStartingPoint"))
+    {
+        auto NLPProblemSource = static_cast<ES_PrimalNLPProblemSource>(
+            env->settings->getSetting<int>("Primal.FixedInteger.SourceProblem"));
+
+        // With both problems, the points are solved on each, since they are only cleared after the last task
+        if(NLPProblemSource == ES_PrimalNLPProblemSource::Both
+            || NLPProblemSource == ES_PrimalNLPProblemSource::OriginalProblem)
+        {
+            auto tSolveStartingPointNLP = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env, false);
+            env->tasks->addTask(tSolveStartingPointNLP, "SolveStartingPointNLPOriginal");
+        }
+
+        if(NLPProblemSource == ES_PrimalNLPProblemSource::Both
+            || NLPProblemSource == ES_PrimalNLPProblemSource::ReformulatedProblem)
+        {
+            auto tSolveStartingPointNLP = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env, true);
+            env->tasks->addTask(tSolveStartingPointNLP, "SolveStartingPointNLPReformulated");
+        }
+
+        auto tClearStartingPointNLP = std::make_shared<TaskClearFixedPrimalCandidates>(env);
+        env->tasks->addTask(tClearStartingPointNLP, "ClearStartingPointNLP");
+    }
+
     // A termination requested by a callback before the first dual problem is solved, e.g., at the interior point
     // search, stops the solution process here
     auto tCheckInitialUserTerm = std::make_shared<TaskCheckUserTermination>(env, "FinalizeSolution", false);

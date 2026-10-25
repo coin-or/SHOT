@@ -1515,7 +1515,8 @@ void Solver::initializeSettings()
 
     env->settings->createSetting("Primal.FixedInteger.UseStartingPoint", false,
         "Solve an NLP problem from a given starting point, e.g. the levels of the variables in GAMS or the initial "
-        "values in AMPL, before the first dual problem. Off by default until benchmarked on all of MINLPLib");
+        "values in AMPL, before the first dual problem, and from points given by the PrimalCandidateSearch callback "
+        "at the next NLP call. Off by default until benchmarked on all of MINLPLib");
 
     env->settings->createSetting("Primal.FixedInteger.Use", true, "Use the fixed integer primal strategy");
 
