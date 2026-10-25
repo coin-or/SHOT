@@ -145,10 +145,23 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
     if(env->settings->getSetting<bool>("Primal.FixedInteger.Use")
         && env->settings->getSetting<bool>("Primal.FixedInteger.UseStartingPoint"))
     {
-        auto tSolveStartingPointNLP = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env,
-            static_cast<ES_PrimalNLPProblemSource>(env->settings->getSetting<int>("Primal.FixedInteger.SourceProblem"))
-                == ES_PrimalNLPProblemSource::ReformulatedProblem);
-        env->tasks->addTask(tSolveStartingPointNLP, "SolveStartingPointNLP");
+        auto NLPProblemSource = static_cast<ES_PrimalNLPProblemSource>(
+            env->settings->getSetting<int>("Primal.FixedInteger.SourceProblem"));
+
+        // With both problems, the points are solved on each, since they are only cleared after the last task
+        if(NLPProblemSource == ES_PrimalNLPProblemSource::Both
+            || NLPProblemSource == ES_PrimalNLPProblemSource::OriginalProblem)
+        {
+            auto tSolveStartingPointNLP = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env, false);
+            env->tasks->addTask(tSolveStartingPointNLP, "SolveStartingPointNLPOriginal");
+        }
+
+        if(NLPProblemSource == ES_PrimalNLPProblemSource::Both
+            || NLPProblemSource == ES_PrimalNLPProblemSource::ReformulatedProblem)
+        {
+            auto tSolveStartingPointNLP = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env, true);
+            env->tasks->addTask(tSolveStartingPointNLP, "SolveStartingPointNLPReformulated");
+        }
 
         auto tClearStartingPointNLP = std::make_shared<TaskClearFixedPrimalCandidates>(env);
         env->tasks->addTask(tClearStartingPointNLP, "ClearStartingPointNLP");
@@ -330,11 +343,23 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
         auto tPolishPoint = std::make_shared<TaskSelectPrimalFixedNLPPointsFromSolutionPool>(env, true);
         std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tPolishPoint);
 
-        auto tPolishNLP = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env,
-            static_cast<ES_PrimalNLPProblemSource>(env->settings->getSetting<int>("Primal.FixedInteger.SourceProblem"))
-                == ES_PrimalNLPProblemSource::ReformulatedProblem,
-            true);
-        std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tPolishNLP);
+        auto NLPProblemSource = static_cast<ES_PrimalNLPProblemSource>(
+            env->settings->getSetting<int>("Primal.FixedInteger.SourceProblem"));
+
+        // With both problems, the points are solved on each, since they are only cleared after the last task
+        if(NLPProblemSource == ES_PrimalNLPProblemSource::Both
+            || NLPProblemSource == ES_PrimalNLPProblemSource::OriginalProblem)
+        {
+            auto tPolishNLP = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env, false, true);
+            std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tPolishNLP);
+        }
+
+        if(NLPProblemSource == ES_PrimalNLPProblemSource::Both
+            || NLPProblemSource == ES_PrimalNLPProblemSource::ReformulatedProblem)
+        {
+            auto tPolishNLP = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env, true, true);
+            std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tPolishNLP);
+        }
 
         auto tPolishClear = std::make_shared<TaskClearFixedPrimalCandidates>(env);
         std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tPolishClear);
