@@ -109,9 +109,11 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
         // frequencies, instead of after every dual problem
         if(env->solutionStatistics.timeLastFixedNLPCall == 0.0
             || env->solutionStatistics.numberOfIterationsWithoutNLPCallMIP
-                >= env->settings->getSetting<int>("Primal.FixedInteger.Frequency.Iteration")
+                >= env->solutionStatistics.fixedNLPIterationFrequency.value_or(
+                    env->settings->getSetting<int>("Primal.FixedInteger.Frequency.Iteration"))
             || env->timing->getElapsedTime("Total") - env->solutionStatistics.timeLastFixedNLPCall
-                > env->settings->getSetting<double>("Primal.FixedInteger.Frequency.Time"))
+                > env->solutionStatistics.fixedNLPTimeFrequency.value_or(
+                    env->settings->getSetting<double>("Primal.FixedInteger.Frequency.Time")))
             callNLPSolver = true;
     }
     else if(currIter->solutionStatus == E_ProblemSolutionStatus::Optimal
@@ -130,14 +132,16 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
         || userSettingStrategy == static_cast<int>(ES_PrimalNLPStrategy::IterationOrTimeAndAllFeasibleSolutions))
     {
         if(env->solutionStatistics.numberOfIterationsWithoutNLPCallMIP
-            >= env->settings->getSetting<int>("Primal.FixedInteger.Frequency.Iteration"))
+            >= env->solutionStatistics.fixedNLPIterationFrequency.value_or(
+                env->settings->getSetting<int>("Primal.FixedInteger.Frequency.Iteration")))
         {
             env->output->outputDebug(
                 "        Activating fixed NLP primal strategy since max iterations since last call has been reached.");
             callNLPSolver = true;
         }
         else if(env->timing->getElapsedTime("Total") - env->solutionStatistics.timeLastFixedNLPCall
-            > env->settings->getSetting<double>("Primal.FixedInteger.Frequency.Time"))
+            > env->solutionStatistics.fixedNLPTimeFrequency.value_or(
+                env->settings->getSetting<double>("Primal.FixedInteger.Frequency.Time")))
         {
             env->output->outputDebug(
                 "        Activating fixed NLP primal strategy since max time limit since last call has been reached.");

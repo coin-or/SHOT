@@ -46,6 +46,10 @@ public:
 private:
     bool isFinalPolish;
 
+    // Makes the calls of the fixed-integer NLP strategy more frequent after a successful NLP solve and less frequent
+    // otherwise, within 0.1 and 10 times Primal.FixedInteger.Frequency.Iteration and .Time
+    void updateFrequencies(bool isSuccessful);
+
     virtual bool solveFixedNLP();
 
     // Whether the objective function and the nonlinear constraints have finite values in the point
@@ -60,18 +64,12 @@ private:
     std::vector<VectorDouble> testedPoints;
     VectorDouble fixPoint;
 
-    double originalNLPTime;
-    double originalNLPIter;
-
     VectorDouble originalLBs;
     VectorDouble originalUBs;
 
     VectorString variableNames;
 
     std::shared_ptr<TaskBase> taskSelectHPPts;
-
-    int originalIterFrequency;
-    double originalTimeFrequency;
 
     ProblemPtr sourceProblem;
     bool sourceIsReformulatedProblem = false;

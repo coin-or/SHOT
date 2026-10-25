@@ -89,14 +89,16 @@ bool MIPSolverCallbackBase::checkFixedNLPStrategy(SolutionPoint point)
         || userSettingStrategy == static_cast<int>(ES_PrimalNLPStrategy::IterationOrTimeAndAllFeasibleSolutions))
     {
         if(env->solutionStatistics.numberOfIterationsWithoutNLPCallMIP
-            >= env->settings->getSetting<int>("Primal.FixedInteger.Frequency.Iteration"))
+            >= env->solutionStatistics.fixedNLPIterationFrequency.value_or(
+                env->settings->getSetting<int>("Primal.FixedInteger.Frequency.Iteration")))
         {
             env->output->outputDebug(
                 "        Activating fixed NLP primal strategy since max iterations since last call has been reached.");
             callNLPSolver = true;
         }
         else if(env->timing->getElapsedTime("Total") - env->solutionStatistics.timeLastFixedNLPCall
-            > env->settings->getSetting<double>("Primal.FixedInteger.Frequency.Time"))
+            > env->solutionStatistics.fixedNLPTimeFrequency.value_or(
+                env->settings->getSetting<double>("Primal.FixedInteger.Frequency.Time")))
         {
             env->output->outputDebug(
                 "        Activating fixed NLP primal strategy since max time limit since last call has been reached.");
