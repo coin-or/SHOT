@@ -247,9 +247,13 @@ void TaskPerformConvexBounding::run()
 
         env->primalSolver->addPrimalSolutionCandidates(solutionPoints, E_PrimalSolutionSource::ConvexBounding);
 
-        for(auto& SOL : solutionPoints)
-            env->primalSolver->addFixedNLPCandidate(SOL.point, E_PrimalNLPSource::FirstSolutionNewDualBound,
-                SOL.objectiveValue, SOL.iterFound, SOL.maxDeviation);
+        // Without the fixed-integer NLP strategy, nothing would solve or clear the candidates before the final polish
+        if(env->settings->getSetting<bool>("Primal.FixedInteger.Use"))
+        {
+            for(auto& SOL : solutionPoints)
+                env->primalSolver->addFixedNLPCandidate(SOL.point, E_PrimalNLPSource::FirstSolutionNewDualBound,
+                    SOL.objectiveValue, SOL.iterFound, SOL.maxDeviation);
+        }
     }
 
     if(currDual != env->results->getGlobalDualBound())
