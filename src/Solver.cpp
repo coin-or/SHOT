@@ -1937,8 +1937,9 @@ void Solver::initializeSettings()
     env->settings->createSettingGroup(
         "Termination", "", "Termination", "These settings control when SHOT will terminate the solution process.");
 
-    env->settings->createSetting(
-        "Termination.ConstraintTolerance", 1e-8, "Termination tolerance for nonlinear constraints", 0, SHOT_DBL_MAX);
+    env->settings->createSetting("Termination.ConstraintTolerance", 1e-8,
+        "Termination tolerance for nonlinear constraints (not used for termination in the multi-tree strategy)", 0,
+        SHOT_DBL_MAX);
 
     env->settings->createSetting("Termination.ObjectiveConstraintTolerance", 1e-8,
         "Termination tolerance for the nonlinear objective constraint", 0, SHOT_DBL_MAX);

@@ -41,7 +41,6 @@
 #include "../Tasks/TaskCheckIterationLimit.h"
 #include "../Tasks/TaskCheckDualStagnation.h"
 #include "../Tasks/TaskCheckPrimalStagnation.h"
-#include "../Tasks/TaskCheckConstraintTolerance.h"
 #include "../Tasks/TaskCheckRelativeGap.h"
 #include "../Tasks/TaskCheckTimeLimit.h"
 #include "../Tasks/TaskCheckUserTermination.h"
@@ -247,10 +246,6 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
 
     auto tCheckUserTerm = std::make_shared<TaskCheckUserTermination>(env, "FinalizeSolution");
     env->tasks->addTask(tCheckUserTerm, "CheckUserTermination");
-
-    // Remove?
-    auto tCheckConstrTol = std::make_shared<TaskCheckConstraintTolerance>(env, "FinalizeSolution");
-    // env->tasks->addTask(tCheckConstrTol, "CheckConstrTol");
 
     if(useReductionCuts)
     {
