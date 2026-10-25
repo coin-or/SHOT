@@ -2397,6 +2397,181 @@ bool TestStrategySelectionForLinearAndQuadraticProblems()
     return true;
 }
 
+// Squares in the objective function and the constraints, also inside nonlinear expressions, so that the partitioning of
+// the quadratic terms in each is decided by the PartitionQuadraticTerms setting of the constraints or the objective
+// function. The objective function only has squares of u and v, and the constraints only of x, y and z.
+static ProblemPtr MakeQuadraticPartitioningProblem(EnvironmentPtr env)
+{
+    auto problem = std::make_shared<SHOT::Problem>(env);
+    problem->name = "quadraticpartitioning";
+
+    auto x = std::make_shared<Variable>("x", E_VariableType::Real, -2.0, 3.0);
+    auto y = std::make_shared<Variable>("y", E_VariableType::Real, -2.0, 3.0);
+    auto z = std::make_shared<Variable>("z", E_VariableType::Real, -2.0, 3.0);
+    auto u = std::make_shared<Variable>("u", E_VariableType::Real, -2.0, 3.0);
+    auto v = std::make_shared<Variable>("v", E_VariableType::Real, -2.0, 3.0);
+    auto b = std::make_shared<Variable>("b", E_VariableType::Binary, 0.0, 1.0);
+
+    problem->add({ x, y, z, u, v, b });
+
+    auto square = [](VariablePtr variable)
+    {
+        return std::make_shared<ExpressionProduct>(
+            std::make_shared<ExpressionVariable>(variable), std::make_shared<ExpressionVariable>(variable));
+    };
+
+    auto exp = [](VariablePtr variable, double factor)
+    {
+        return std::make_shared<ExpressionProduct>(std::make_shared<ExpressionConstant>(factor),
+            std::make_shared<ExpressionExp>(std::make_shared<ExpressionVariable>(variable)));
+    };
+
+    // The squares of u and v are products in a nonlinear sum of the objective function
+    auto objective = std::make_shared<NonlinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<LinearTerm>(-1.0, x));
+    objective->add(std::make_shared<LinearTerm>(-1.0, y));
+    objective->add(std::make_shared<LinearTerm>(0.3, b));
+    objective->add(std::make_shared<ExpressionSum>(square(u), square(v), exp(z, 0.5)));
+    problem->add(objective);
+
+    // Squares as quadratic terms in a nonlinear constraint
+    auto c1 = std::make_shared<NonlinearConstraint>("c1", SHOT_DBL_MIN, 6.0);
+    c1->add(std::make_shared<QuadraticTerm>(1.0, x, x));
+    c1->add(std::make_shared<QuadraticTerm>(1.0, y, y));
+    c1->add(exp(z, 1.0));
+    problem->add(c1);
+
+    // Squares inside the nonlinear expression of a constraint
+    auto c2 = std::make_shared<NonlinearConstraint>("c2", SHOT_DBL_MIN, 8.0);
+    c2->add(std::make_shared<ExpressionSum>(square(x), square(z), exp(y, 1.0)));
+    problem->add(c2);
+
+    // Squares in a quadratic constraint
+    auto c3 = std::make_shared<QuadraticConstraint>("c3", SHOT_DBL_MIN, 5.0);
+    c3->add(std::make_shared<QuadraticTerm>(1.0, x, x));
+    c3->add(std::make_shared<QuadraticTerm>(2.0, y, y));
+    problem->add(c3);
+
+    auto c4 = std::make_shared<LinearConstraint>("c4", 1.0, SHOT_DBL_MAX);
+    c4->add(std::make_shared<LinearTerm>(1.0, u));
+    c4->add(std::make_shared<LinearTerm>(1.0, v));
+    c4->add(std::make_shared<LinearTerm>(1.0, b));
+    problem->add(c4);
+
+    problem->updateProperties();
+    problem->finalize();
+
+    return (problem);
+}
+
+// Model.Reformulation.Constraint.PartitionQuadraticTerms and ObjectiveFunction.PartitionQuadraticTerms decide
+// independently whether the squares in the constraints and in the objective function are partitioned, also when they
+// are in nonlinear expressions, and all combinations give the same optimal solution. The squares in the nonlinear
+// expressions are extracted as quadratic terms, when the problem is set or when it is reformulated, also with
+// Model.Reformulation.Quadratics.ExtractStrategy = DoNotExtract.
+bool TestQuadraticPartitioningSettings()
+{
+    bool passed = true;
+
+    std::vector<VectorDouble> points
+        = { { 0.5, -1.0, 0.2, 1.0, 0.5, 0.0 }, { -2.0, 3.0, -2.0, 3.0, -2.0, 1.0 }, { 1.2, 0.7, -0.4, 0.0, 1.0, 1.0 } };
+
+    std::optional<double> referenceObjectiveValue;
+
+    for(auto extractStrategy :
+        { ES_QuadraticTermsExtractStrategy::ExtractTermsToSame, ES_QuadraticTermsExtractStrategy::DoNotExtract })
+    {
+        for(auto constraintStrategy : { ES_PartitionNonlinearSums::Always, ES_PartitionNonlinearSums::IfConvex,
+                ES_PartitionNonlinearSums::Never })
+        {
+            for(auto objectiveStrategy : { ES_PartitionNonlinearSums::Always, ES_PartitionNonlinearSums::IfConvex,
+                    ES_PartitionNonlinearSums::Never })
+            {
+                std::cout << "Quadratics.ExtractStrategy " << static_cast<int>(extractStrategy)
+                          << ", Constraint.PartitionQuadraticTerms " << static_cast<int>(constraintStrategy)
+                          << " and ObjectiveFunction.PartitionQuadraticTerms " << static_cast<int>(objectiveStrategy)
+                          << '\n';
+
+                auto solver = std::make_unique<SHOT::Solver>();
+                auto env = solver->getEnvironment();
+                solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+                solver->updateSetting(
+                    "Model.Reformulation.Constraint.PartitionQuadraticTerms", static_cast<int>(constraintStrategy));
+                solver->updateSetting("Model.Reformulation.ObjectiveFunction.PartitionQuadraticTerms",
+                    static_cast<int>(objectiveStrategy));
+                // The nonlinear sums are partitioned, so that their squares are partitioned or kept by the settings
+                // above
+                solver->updateSetting("Model.Reformulation.Constraint.PartitionNonlinearTerms",
+                    static_cast<int>(ES_PartitionNonlinearSums::Always));
+                solver->updateSetting("Model.Reformulation.ObjectiveFunction.PartitionNonlinearTerms",
+                    static_cast<int>(ES_PartitionNonlinearSums::Always));
+
+                auto problem = MakeQuadraticPartitioningProblem(env);
+
+                if(!solver->setProblem(problem))
+                {
+                    std::cout << "Could not set the problem\n";
+                    return (false);
+                }
+
+                auto hasSquareVariable = [&](const std::string& name)
+                {
+                    return (std::any_of(env->reformulatedProblem->auxiliaryVariables.begin(),
+                        env->reformulatedProblem->auxiliaryVariables.end(),
+                        [&](auto& V) { return (V->name == name); }));
+                };
+
+                // The squares are convex, so IfConvex partitions them as well
+                bool constraintSquaresPartitioned = (constraintStrategy != ES_PartitionNonlinearSums::Never);
+                bool objectiveSquaresPartitioned = (objectiveStrategy != ES_PartitionNonlinearSums::Never);
+
+                for(auto& name : { "s_sq_x", "s_sq_y", "s_sq_z" })
+                {
+                    if(hasSquareVariable(name) != constraintSquaresPartitioned)
+                    {
+                        std::cout << "The square variable " << name
+                                  << (constraintSquaresPartitioned ? " is missing" : " exists") << '\n';
+                        passed = false;
+                    }
+                }
+
+                for(auto& name : { "s_sq_u", "s_sq_v" })
+                {
+                    if(hasSquareVariable(name) != objectiveSquaresPartitioned)
+                    {
+                        std::cout << "The square variable " << name
+                                  << (objectiveSquaresPartitioned ? " is missing" : " exists") << '\n';
+                        passed = false;
+                    }
+                }
+
+                if(!CheckAuxiliaryVariableValues(problem, env->reformulatedProblem, points))
+                    passed = false;
+
+                if(!solver->solveProblem() || !env->results->hasPrimalSolution())
+                {
+                    std::cout << "Could not solve the problem\n";
+                    passed = false;
+                    continue;
+                }
+
+                double objectiveValue = env->results->getPrimalBound();
+                std::cout << "  Objective value " << objectiveValue << '\n';
+
+                if(!referenceObjectiveValue)
+                    referenceObjectiveValue = objectiveValue;
+                else if(std::abs(objectiveValue - *referenceObjectiveValue)
+                    > 1e-3 * std::max(1.0, std::abs(objectiveValue)))
+                {
+                    std::cout << "The objective value differs from " << *referenceObjectiveValue << '\n';
+                    passed = false;
+                }
+            }
+        }
+    }
+    return passed;
+}
+
 int SolverTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -2547,6 +2722,9 @@ int SolverTest(int argc, char* argv[])
         break;
     case 26:
         passed = TestStrategySelectionForLinearAndQuadraticProblems();
+        break;
+    case 27:
+        passed = TestQuadraticPartitioningSettings();
         break;
     default:
         passed = false;

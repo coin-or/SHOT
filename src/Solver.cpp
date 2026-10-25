@@ -1251,8 +1251,9 @@ void Solver::initializeSettings()
         enumNonlinearTermPartitioning, 0);
 
     env->settings->createSetting("Model.Reformulation.Constraint.PartitionQuadraticTerms",
-        static_cast<int>(ES_PartitionNonlinearSums::IfConvex), "When to partition quadratic sums in constraints",
-        enumNonlinearTermPartitioning, 0);
+        static_cast<int>(ES_PartitionNonlinearSums::IfConvex),
+        "When to partition quadratic sums in constraints, also in nonlinear constraints", enumNonlinearTermPartitioning,
+        0);
 
     // Reformulations for monomials
 
@@ -1292,7 +1293,8 @@ void Solver::initializeSettings()
         enumNonlinearTermPartitioning, 0);
 
     env->settings->createSetting("Model.Reformulation.ObjectiveFunction.PartitionQuadraticTerms",
-        static_cast<int>(ES_PartitionNonlinearSums::IfConvex), "When to partition quadratic sums in objective function",
+        static_cast<int>(ES_PartitionNonlinearSums::IfConvex),
+        "When to partition quadratic sums in the objective function, also in a nonlinear objective function",
         enumNonlinearTermPartitioning, 0);
 
     enumNonlinearTermPartitioning.clear();
