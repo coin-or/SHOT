@@ -2065,44 +2065,84 @@ void Solver::verifySettings()
 
     // Checking for errors in NLP solver selection
 
-    bool NLPSolverDefined = true;
-#ifndef HAS_CONOPT
-    if(static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("Primal.FixedInteger.Solver"))
-        == ES_PrimalNLPSolver::Conopt)
-    {
-        env->output->outputWarning(" SHOT has not been compiled with support for CONOPT.");
-        NLPSolverDefined = false;
-    }
-#endif
+    // The GAMS NLP solvers can only be used for problems from GAMS. The settings can be verified before the problem is
+    // read, e.g. from an options file, and the modeling system is then not known yet.
+    bool isNonGAMSProblem = env->problem
+        && env->settings->getSetting<int>("Input.ModelingSystem") != static_cast<int>(ES_ModelingSystem::GAMS);
 
-#ifndef HAS_IPOPT
-    if(static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("Primal.FixedInteger.Solver"))
-        == ES_PrimalNLPSolver::Ipopt)
+    // Returns why the NLP solver cannot be used, or an empty string if it can
+    auto getReasonNLPSolverUnavailable = [&](ES_PrimalNLPSolver solver) -> std::string
     {
-        env->output->outputWarning(" SHOT has not been compiled with support for Ipopt NLP solver.");
-        NLPSolverDefined = false;
-    }
+        switch(solver)
+        {
+        case ES_PrimalNLPSolver::Ipopt:
+#ifdef HAS_IPOPT
+            return ("");
+#else
+            return ("SHOT has not been compiled with support for the Ipopt NLP solver");
 #endif
+        case ES_PrimalNLPSolver::Conopt:
+#ifdef HAS_CONOPT
+            return ("");
+#else
+            return ("SHOT has not been compiled with support for CONOPT");
+#endif
+        case ES_PrimalNLPSolver::GAMS:
+#ifdef HAS_GAMS
+            return (isNonGAMSProblem ? "the GAMS NLP solvers cannot be used for problems not originating from GAMS "
+                                       "(OSiL, nl, or API-built problems)"
+                                     : "");
+#else
+            return ("SHOT has not been compiled with support for GAMS NLP solvers");
+#endif
+        case ES_PrimalNLPSolver::Uno:
+#ifdef HAS_UNO
+            return ("");
+#else
+            return ("SHOT has not been compiled with support for the Uno NLP solver");
+#endif
+        case ES_PrimalNLPSolver::SHOT:
+            return ("");
+        default:
+            return ("the NLP solver is not valid");
+        }
+    };
 
-#ifndef HAS_GAMS
-    if(static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("Primal.FixedInteger.Solver"))
-        == ES_PrimalNLPSolver::GAMS)
-    {
-        env->output->outputWarning(" SHOT has not been compiled with support for GAMS NLP solvers.");
-        NLPSolverDefined = false;
-    }
-#endif
+    auto NLPSolver = static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("Primal.FixedInteger.Solver"));
 
-#ifndef HAS_UNO
-    if(static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("Primal.FixedInteger.Solver"))
-        == ES_PrimalNLPSolver::Uno)
+    if(auto reason = getReasonNLPSolverUnavailable(NLPSolver); !reason.empty())
     {
-        env->output->outputWarning(" SHOT has not been compiled with support for the Uno NLP solver.");
-        NLPSolverDefined = false;
+        // The default solver, Ipopt, is replaced without a warning if it is not available
+        bool isChosenByUser
+            = env->settings->getSettingPriority("Primal.FixedInteger.Solver") > E_SettingPriority::Default;
+
+        for(auto alternative : { ES_PrimalNLPSolver::Ipopt, ES_PrimalNLPSolver::Conopt, ES_PrimalNLPSolver::GAMS,
+                ES_PrimalNLPSolver::Uno, ES_PrimalNLPSolver::SHOT })
+        {
+            if(!getReasonNLPSolverUnavailable(alternative).empty())
+                continue;
+
+            env->settings->updateSetting(
+                "Primal.FixedInteger.Solver", static_cast<int>(alternative), E_SettingPriority::SolverCompatibility);
+
+            std::map<ES_PrimalNLPSolver, std::string> names = { { ES_PrimalNLPSolver::Ipopt, "Ipopt" },
+                { ES_PrimalNLPSolver::Conopt, "CONOPT" }, { ES_PrimalNLPSolver::GAMS, "the GAMS NLP solvers" },
+                { ES_PrimalNLPSolver::Uno, "Uno" }, { ES_PrimalNLPSolver::SHOT, "SHOT" } };
+
+            auto message = fmt::format(
+                " The selected NLP solver cannot be used since {}. Using {} instead.", reason, names[alternative]);
+
+            if(isChosenByUser)
+                env->output->outputWarning(message);
+            else
+                env->output->outputDebug(message);
+
+            break;
+        }
     }
-#endif
 
 #ifdef HAS_GAMS
+    // This is checked after the NLP solver may have been replaced with a GAMS solver above
     if((static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("Primal.FixedInteger.Solver"))
            == ES_PrimalNLPSolver::GAMS)
         && (static_cast<ES_PrimalNLPProblemSource>(env->settings->getSetting<int>("Primal.FixedInteger.SourceProblem"))
@@ -2117,45 +2157,6 @@ void Solver::verifySettings()
             static_cast<int>(ES_PrimalNLPProblemSource::OriginalProblem), E_SettingPriority::SolverCompatibility);
     }
 #endif
-
-    if((env->settings->getSetting<int>("Input.ModelingSystem") == static_cast<int>(ES_ModelingSystem::OSiL)
-           || env->settings->getSetting<int>("Input.ModelingSystem") == static_cast<int>(ES_ModelingSystem::AMPL)
-           || env->settings->getSetting<int>("Input.ModelingSystem") == static_cast<int>(ES_ModelingSystem::API))
-        && static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("Primal.FixedInteger.Solver"))
-            == ES_PrimalNLPSolver::GAMS)
-    {
-        env->output->outputWarning(
-            " Cannot use GAMS NLP solvers with problems not originating from GAMS (OSiL, nl, or API-built problems).");
-        NLPSolverDefined = false;
-    }
-
-    if(!NLPSolverDefined)
-    {
-#ifdef HAS_IPOPT
-        env->settings->updateSetting(
-            "Primal.FixedInteger.Solver", (int)ES_PrimalNLPSolver::Ipopt, E_SettingPriority::SolverCompatibility);
-        env->output->outputWarning(" Using Ipopt as NLP solver instead.");
-
-#elif defined(HAS_CONOPT)
-        env->settings->updateSetting(
-            "Primal.FixedInteger.Solver", (int)ES_PrimalNLPSolver::Conopt, E_SettingPriority::SolverCompatibility);
-        env->output->outputWarning(" Using CONOPT as NLP solver instead.");
-#elif HAS_GAMS
-        env->settings->updateSetting(
-            "Primal.FixedInteger.Solver", (int)ES_PrimalNLPSolver::GAMS, E_SettingPriority::SolverCompatibility);
-        env->output->outputWarning(" Using GAMS NLP solvers instead.");
-
-#elif HAS_UNO
-        env->settings->updateSetting(
-            "Primal.FixedInteger.Solver", (int)ES_PrimalNLPSolver::Uno, E_SettingPriority::SolverCompatibility);
-        env->output->outputWarning(" Using Uno as NLP solver instead.");
-
-#else
-        env->settings->updateSetting(
-            "Primal.FixedInteger.Solver", (int)ES_PrimalNLPSolver::SHOT, E_SettingPriority::SolverCompatibility);
-        env->output->outputWarning(" No external NLP solver available. Using SHOT as NLP solver.");
-#endif
-    }
 
     // Checking for errors in MIP solver selection
 
