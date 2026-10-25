@@ -256,11 +256,11 @@ bool Solver::setProblem(std::string fileName)
     // Do not do convexifying reformulations if the problem is assumed to be convex
     if(env->settings->getSetting<bool>("Model.Convexity.AssumeConvex"))
     {
-        env->settings->updateSetting(
-            "Model.Reformulation.Bilinear.IntegerFormulation", (int)ES_ReformulateBilinearInteger::No);
+        env->settings->updateSetting("Model.Reformulation.Bilinear.IntegerFormulation",
+            (int)ES_ReformulateBilinearInteger::No, E_SettingPriority::RecommendedInternal);
 
-        env->settings->updateSetting(
-            "Model.Reformulation.Monomials.Formulation", (int)ES_ReformulationBinaryMonomials::None);
+        env->settings->updateSetting("Model.Reformulation.Monomials.Formulation",
+            (int)ES_ReformulationBinaryMonomials::None, E_SettingPriority::RecommendedInternal);
     }
 
 #ifndef HAS_GAMS
@@ -469,11 +469,11 @@ bool Solver::setProblem(
     // Do not do convexifying reformulations if the problem is assumed to be convex
     if(env->settings->getSetting<bool>("Model.Convexity.AssumeConvex"))
     {
-        env->settings->updateSetting(
-            "Model.Reformulation.Bilinear.IntegerFormulation", (int)ES_ReformulateBilinearInteger::No);
+        env->settings->updateSetting("Model.Reformulation.Bilinear.IntegerFormulation",
+            (int)ES_ReformulateBilinearInteger::No, E_SettingPriority::RecommendedInternal);
 
-        env->settings->updateSetting(
-            "Model.Reformulation.Monomials.Formulation", (int)ES_ReformulationBinaryMonomials::None);
+        env->settings->updateSetting("Model.Reformulation.Monomials.Formulation",
+            (int)ES_ReformulationBinaryMonomials::None, E_SettingPriority::RecommendedInternal);
     }
 
 #ifdef HAS_CBC
@@ -610,7 +610,8 @@ bool Solver::selectStrategy()
         if(isConvex && (useQuadraticObjective || useQuadraticConstraints) && properties.isMIQPProblem)
         // Convex MIQP problem
         {
-            env->settings->updateSetting("Output.Console.DualSolver.Show", true);
+            env->settings->updateSetting(
+                "Output.Console.DualSolver.Show", true, E_SettingPriority::RecommendedInternal);
             env->output->outputDebug(" Using convex MIQP solution strategy.");
             solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
             env->results->usedSolutionStrategy = E_SolutionStrategy::MIQP;
@@ -619,7 +620,7 @@ bool Solver::selectStrategy()
         // Convex QP problem
         {
             env->output->outputDebug(" Using convex QP solution strategy.");
-            env->settings->updateSetting("Output.Console.DualSolver.Show", true);
+            env->settings->updateSetting("Output.Console.DualSolver.Show", true, E_SettingPriority::RecommendedInternal);
             solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
             env->results->usedSolutionStrategy = E_SolutionStrategy::MIQP;
         }
@@ -627,7 +628,7 @@ bool Solver::selectStrategy()
         else if(isConvex && useQuadraticConstraints && properties.isMIQCQPProblem)
         {
             env->output->outputDebug(" Using convex MIQCQP solution strategy.");
-            env->settings->updateSetting("Output.Console.DualSolver.Show", true);
+            env->settings->updateSetting("Output.Console.DualSolver.Show", true, E_SettingPriority::RecommendedInternal);
             solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
             env->results->usedSolutionStrategy = E_SolutionStrategy::MIQCQP;
         }
@@ -635,7 +636,7 @@ bool Solver::selectStrategy()
         else if(isConvex && useQuadraticConstraints && properties.isQCQPProblem)
         {
             env->output->outputDebug(" Using convex QCQP solution strategy.");
-            env->settings->updateSetting("Output.Console.DualSolver.Show", true);
+            env->settings->updateSetting("Output.Console.DualSolver.Show", true, E_SettingPriority::RecommendedInternal);
             solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
             env->results->usedSolutionStrategy = E_SolutionStrategy::MIQCQP;
         }
@@ -682,7 +683,7 @@ bool Solver::selectStrategy()
                 && (properties.isMIQPProblem || properties.isMIQCQPProblem
                     || properties.isQCQPProblem || properties.isQPProblem)))
         {
-            env->settings->updateSetting("Output.Console.DualSolver.Show", true);
+            env->settings->updateSetting("Output.Console.DualSolver.Show", true, E_SettingPriority::RecommendedInternal);
         }
         isProblemInitialized = true;
     }
@@ -2279,6 +2280,18 @@ void Solver::setConvexityBasedSettingsPreReformulation()
 void Solver::setConvexityBasedSettings()
 {
     if(env->settings->getSetting<bool>("Strategy.UseRecommendedSettings"))
+    // Nonconvex problems are always solved with the multi-tree strategy
+    if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex)
+    {
+        if(env->settings->getSetting<int>("Dual.TreeStrategy") == static_cast<int>(ES_TreeStrategy::SingleTree)
+            && env->settings->getSettingPriority("Dual.TreeStrategy") > E_SettingPriority::Default)
+            env->output->outputWarning(
+                " The problem is nonconvex, so the multi-tree strategy is used instead of the single-tree strategy.");
+
+        env->settings->updateSetting(
+            "Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::MultiTree), E_SettingPriority::SolverCompatibility);
+    }
+
     {
         if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex)
         {
@@ -2288,10 +2301,6 @@ void Solver::setConvexityBasedSettings()
                 "Dual.HyperplaneCuts.ConstraintSelectionFactor", 1.0, E_SettingPriority::RecommendedInternal);
             env->settings->updateSetting(
                 "Dual.HyperplaneCuts.UseIntegerCuts", true, E_SettingPriority::RecommendedInternal);
-
-            // For full nonconvex features multitree needs to be used
-            env->settings->updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::MultiTree),
-                E_SettingPriority::SolverCompatibility);
 
             env->settings->updateSetting(
                 "Dual.MIP.SolutionLimit.Initial", SHOT_INT_MAX, E_SettingPriority::RecommendedInternal);
