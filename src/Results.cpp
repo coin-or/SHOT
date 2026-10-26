@@ -1683,11 +1683,10 @@ void Results::setDualBound(double value, bool forceGlobal)
 
     this->currentDualBound = value;
 
+    // A bound that is valid although the dual problem is not a relaxation, e.g. from convex bounding, does not make the
+    // dual problem a relaxation again, so its later bounds, e.g. from being infeasible with a cutoff, are not global
     if(this->solutionIsGlobal || forceGlobal)
-    {
         this->globalDualBound = value;
-        this->solutionIsGlobal = true;
-    }
 
     env->solutionStatistics.numberOfIterationsWithDualStagnation = 0;
 

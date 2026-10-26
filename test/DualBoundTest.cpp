@@ -30,7 +30,9 @@
 
 #include "../src/MIPSolver/IMIPSolver.h"
 #include "../src/Tasks/TaskCreateMIPProblem.h"
+#include "../src/Tasks/TaskAddPrimalReductionCut.h"
 #include "../src/Tasks/TaskPerformConvexBounding.h"
+#include "../src/TaskHandler.h"
 #include "../src/DualSolver.h"
 #include "../src/Utilities.h"
 
@@ -749,6 +751,95 @@ std::vector<ES_MIPSolver> compiledSolvers()
 
 }
 
+// After cuts of nonconvex constraints, the dual problem is no longer a relaxation. A dual bound from convex bounding is
+// still global, but must not make the dual problem a relaxation again, and when it closes the gap, no reduction cut is
+// added.
+bool testConvexBoundingBoundKeepsDualProblemNonGlobal(ES_MIPSolver mipSolver)
+{
+    bool passed = true;
+
+    for(bool minimize : { true, false })
+    {
+        auto solver = makeSolver(mipSolver, ModelKind::Bounded, minimize);
+
+        if(!solver)
+        {
+            std::cout << "Could not create problem for " << name(mipSolver) << '\n';
+            return false;
+        }
+
+        auto env = solver->getEnvironment();
+        env->results->createIteration();
+        std::string direction = minimize ? " (min)" : " (max)";
+
+        env->results->solutionIsGlobal = false;
+
+        // The objective value of x = -3, b = 1 is -3.75 when minimizing and 3.75 when maximizing
+        env->primalSolver->addPrimalSolutionCandidate({ -3.0, 1.0 }, E_PrimalSolutionSource::NLPFixedIntegers, 0);
+        env->primalSolver->checkPrimalSolutionCandidates();
+
+        if(!env->results->hasPrimalSolution())
+        {
+            std::cout << name(mipSolver) << direction << ": the primal solution was not accepted\n";
+            passed = false;
+            continue;
+        }
+
+        const double convexBound = minimize ? -3.7505 : 3.7505;
+        const double mainBound = minimize ? -3.7502 : 3.7502;
+
+        env->results->setDualBound(convexBound, true);
+
+        if(env->results->solutionIsGlobal)
+        {
+            std::cout << name(mipSolver) << direction
+                      << ": a bound from convex bounding made the dual problem a relaxation again\n";
+            passed = false;
+        }
+
+        // A later bound of the main dual problem is not global
+        env->results->setDualBound(mainBound);
+
+        if(std::abs(env->results->getGlobalDualBound() - convexBound) > 1e-10)
+        {
+            std::cout << name(mipSolver) << direction << ": the global dual bound is "
+                      << env->results->getGlobalDualBound() << " instead of " << convexBound << '\n';
+            passed = false;
+        }
+
+        if(!env->results->isAbsoluteObjectiveGapToleranceMet())
+        {
+            std::cout << name(mipSolver) << direction << ": the gap is not closed by the global dual bound\n";
+            passed = false;
+            continue;
+        }
+
+        auto taskIfTrue = std::make_shared<TaskAddPrimalReductionCut>(env, "True", "False");
+        auto taskIfFalse = std::make_shared<TaskAddPrimalReductionCut>(env, "True", "False");
+        env->tasks->clearTasks();
+        env->tasks->addTask(taskIfTrue, "True");
+        env->tasks->addTask(taskIfFalse, "False");
+
+        double cutOff = env->dualSolver->cutOffToUse;
+        int reductions = env->solutionStatistics.numberOfPrimalReductionsPerformed;
+
+        TaskAddPrimalReductionCut(env, "True", "False").run();
+
+        TaskPtr nextTask;
+        env->tasks->getNextTask(nextTask);
+
+        if(nextTask != taskIfFalse || env->dualSolver->cutOffToUse != cutOff
+            || env->solutionStatistics.numberOfPrimalReductionsPerformed != reductions)
+        {
+            std::cout << name(mipSolver) << direction
+                      << ": a reduction cut was added although the global dual bound closes the gap\n";
+            passed = false;
+        }
+    }
+
+    return passed;
+}
+
 int DualBoundTest(int argc, char* argv[])
 {
     int choice = 1;
@@ -822,6 +913,12 @@ int DualBoundTest(int argc, char* argv[])
         for(auto mipSolver : compiledSolvers())
             passed = testIntegerCutsDifferingInSmallVariables(mipSolver) && passed;
         std::cout << "Finished test that integer cuts differing in variables of small magnitude are kept apart.\n";
+        break;
+    case 11:
+        std::cout << "Starting test that a bound from convex bounding keeps the dual problem non-global:\n";
+        for(auto mipSolver : compiledSolvers())
+            passed = testConvexBoundingBoundKeepsDualProblemNonGlobal(mipSolver) && passed;
+        std::cout << "Finished test that a bound from convex bounding keeps the dual problem non-global.\n";
         break;
     default:
         passed = false;

@@ -61,8 +61,8 @@ void TaskAddPrimalReductionCut::run()
         return;
     }
 
-    if(env->results->solutionIsGlobal
-        && (env->results->isRelativeObjectiveGapToleranceMet() || env->results->isAbsoluteObjectiveGapToleranceMet()))
+    // The gaps are computed with the global dual bound, which is valid also when the dual problem is not a relaxation
+    if(env->results->isRelativeObjectiveGapToleranceMet() || env->results->isAbsoluteObjectiveGapToleranceMet())
     {
         env->tasks->setNextTask(taskIDIfFalse);
         return;
