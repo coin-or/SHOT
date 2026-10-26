@@ -908,6 +908,96 @@ bool testInfeasibleConvexBoundingProvesInfeasibility(ES_MIPSolver mipSolver)
     return passed;
 }
 
+// An integer cut at a value strictly between the bounds of an integer variable adds two auxiliary variables to the dual
+// problem. The relaxation strategy then switches the discrete variables off and on again, which must also handle them.
+bool testIntegerCutVariablesSurviveRelaxation(ES_MIPSolver mipSolver)
+{
+    auto solver = std::make_shared<Solver>();
+    auto env = solver->getEnvironment();
+
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(mipSolver));
+    solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+
+    // Minimize x - z with x in [0, 3] and the integer z in [0, 5], where x >= z / 2, with the optimum -2.5 at z = 5
+    auto problem = std::make_shared<Problem>(env);
+    auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.0, 3.0);
+    auto z = std::make_shared<Variable>("z", E_VariableType::Integer, 0.0, 5.0);
+    problem->add({ x, z });
+
+    auto c1 = std::make_shared<LinearConstraint>("c1", 0.0, SHOT_DBL_MAX);
+    c1->add(std::make_shared<LinearTerm>(1.0, x));
+    c1->add(std::make_shared<LinearTerm>(-0.5, z));
+    problem->add(c1);
+
+    auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<LinearTerm>(1.0, x));
+    objective->add(std::make_shared<LinearTerm>(-1.0, z));
+    problem->add(objective);
+    problem->finalize();
+
+    if(!solver->setProblem(problem))
+    {
+        std::cout << "Could not create problem for " << name(mipSolver) << '\n';
+        return false;
+    }
+
+    env->results->usedMIPSolver = mipSolver;
+    env->results->createIteration();
+
+    auto backend = makeBackend(env, mipSolver);
+
+    if(!backend->initializeProblem())
+    {
+        std::cout << "Could not initialize " << name(mipSolver) << '\n';
+        return false;
+    }
+
+    TaskCreateMIPProblem(env, backend, env->reformulatedProblem).run();
+
+    int zIndex = -1;
+
+    for(auto& V : env->reformulatedProblem->allVariables)
+    {
+        if(V->name == "z")
+            zIndex = V->getIndex();
+    }
+
+    // Excludes z = 2, which is strictly between the bounds of z
+    IntegerCut cut;
+    cut.variableIndexes = { zIndex };
+    cut.variableValues = { 2 };
+
+    try
+    {
+        if(!backend->createIntegerCut(cut))
+        {
+            std::cout << name(mipSolver) << ": the integer cut was not created\n";
+            return false;
+        }
+
+        backend->activateDiscreteVariables(false);
+        backend->activateDiscreteVariables(true);
+        backend->setSolutionLimit(2100000000);
+
+        auto status = backend->solveProblem();
+
+        if(status != E_ProblemSolutionStatus::Optimal || std::abs(backend->getObjectiveValue() + 2.5) > 1e-6)
+        {
+            std::cout << name(mipSolver) << ": the problem with the integer cut was not solved to the optimum -2.5\n";
+            return false;
+        }
+    }
+    catch(std::exception& e)
+    {
+        std::cout << name(mipSolver) << ": switching the discrete variables after an integer cut failed: " << e.what()
+                  << '\n';
+        return false;
+    }
+
+    return true;
+}
+
 int DualBoundTest(int argc, char* argv[])
 {
     int choice = 1;
@@ -993,6 +1083,12 @@ int DualBoundTest(int argc, char* argv[])
         for(auto mipSolver : compiledSolvers())
             passed = testInfeasibleConvexBoundingProvesInfeasibility(mipSolver) && passed;
         std::cout << "Finished test that an infeasible convex bounding problem proves infeasibility.\n";
+        break;
+    case 13:
+        std::cout << "Starting test that the variables of integer cuts survive the relaxation strategy:\n";
+        for(auto mipSolver : compiledSolvers())
+            passed = testIntegerCutVariablesSurviveRelaxation(mipSolver) && passed;
+        std::cout << "Finished test that the variables of integer cuts survive the relaxation strategy.\n";
         break;
     default:
         passed = false;

@@ -129,7 +129,7 @@ if(HAS_GAMS)
   set(cpptests ${cpptests} GAMS)
 endif()
 
-set(DualBound_parts 1 2 3 4 5 6 7 8 9 10 11 12)
+set(DualBound_parts 1 2 3 4 5 6 7 8 9 10 11 12 13)
 set(cpptests ${cpptests} DualBound)
 
 set(Determinism_parts 1 2 3)

@@ -1294,7 +1294,7 @@ void MIPSolverCplex::addMIPStart(VectorDouble point)
     for(int i = 0; i < startVal.getSize(); i++)
         startVars.add(cplexVars[i]);
 
-    assert(variableNames.size() == static_cast<size_t>(startVal.getSize()));
+    assert(variableNames.size() == static_cast<size_t>(this->numberOfVariables));
     assert(startVars.getSize() == startVal.getSize());
 
     try
@@ -1569,6 +1569,18 @@ bool MIPSolverCplex::createIntegerCut(IntegerCut& integerCut)
             {
                 numberOfVariables += 2;
                 numberOfIntegerCutVariables += 2;
+
+                // The data of the variables is indexed up to numberOfVariables, e.g. when the discrete variables are
+                // activated again after the relaxation strategy, so the auxiliary variables w (continuous) and v
+                // (binary) are included
+                variableTypes.push_back(E_VariableType::Real);
+                variableTypes.push_back(E_VariableType::Binary);
+                variableNames.push_back(fmt::format("wIC{}_{}", env->solutionStatistics.numberOfIntegerCuts, index));
+                variableNames.push_back(fmt::format("vIC{}_{}", env->solutionStatistics.numberOfIntegerCuts, index));
+                variableLowerBounds.push_back(0.0);
+                variableLowerBounds.push_back(0.0);
+                variableUpperBounds.push_back(getUnboundedVariableBoundValue());
+                variableUpperBounds.push_back(1.0);
 
                 auto w = IloNumVar(cplexEnv, 0, getUnboundedVariableBoundValue(), ILOFLOAT,
                     fmt::format("wIC{}_{}", env->solutionStatistics.numberOfIntegerCuts, index).c_str());
