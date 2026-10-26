@@ -1142,8 +1142,9 @@ void Solver::initializeSettings()
 
     // Bound tightening: initial POA
 
-    env->settings->createSetting(
-        "Model.BoundTightening.InitialPOA.ConstraintTolerance", 1e-1, "Constraint termination tolerance");
+    // The bounds are those of the Termination settings of the outer approximation solver the values are copied into
+    env->settings->createSetting("Model.BoundTightening.InitialPOA.ConstraintTolerance", 1e-1,
+        "Constraint termination tolerance", 0, SHOT_DBL_MAX);
 
     VectorString enumCutStrategy;
     enumCutStrategy.push_back("ESH");
@@ -1157,28 +1158,29 @@ void Solver::initializeSettings()
         "cuts",
         0, SHOT_INT_MAX);
 
-    env->settings->createSetting("Model.BoundTightening.InitialPOA.IterationLimit", 50, "Iteration limit for POA");
+    env->settings->createSetting(
+        "Model.BoundTightening.InitialPOA.IterationLimit", 50, "Iteration limit for POA", 1, SHOT_INT_MAX);
 
     env->settings->createSetting("Model.BoundTightening.InitialPOA.ObjectiveConstraintTolerance", 1e-3,
-        "Objective constraint termination tolerance");
+        "Objective constraint termination tolerance", 0, SHOT_DBL_MAX);
 
-    env->settings->createSetting(
-        "Model.BoundTightening.InitialPOA.ObjectiveGapAbsolute", 1e-1, "Absolute objective gap termination level");
+    env->settings->createSetting("Model.BoundTightening.InitialPOA.ObjectiveGapAbsolute", 1e-1,
+        "Absolute objective gap termination level", 0, SHOT_DBL_MAX);
 
-    env->settings->createSetting(
-        "Model.BoundTightening.InitialPOA.ObjectiveGapRelative", 1e-1, "Relative objective gap termination level");
+    env->settings->createSetting("Model.BoundTightening.InitialPOA.ObjectiveGapRelative", 1e-1,
+        "Relative objective gap termination level", 0, SHOT_DBL_MAX);
 
     env->settings->createSetting("Model.BoundTightening.InitialPOA.StagnationConstraintTolerance", 1e-2,
-        "Tolerance factor for when no progress is made");
+        "Tolerance factor for when no progress is made", 0, SHOT_DBL_MAX);
 
     env->settings->createSetting("Model.BoundTightening.InitialPOA.StagnationIterationLimit", 5,
-        "Limit for iterations without significant progress");
+        "Limit for iterations without significant progress", 0, SHOT_INT_MAX);
 
     env->settings->createSetting(
         "Model.BoundTightening.InitialPOA.Use", false, "Create an initial polyhedral outer approximation");
 
     env->settings->createSetting("Model.BoundTightening.InitialPOA.TimeLimit", 5.0,
-        "Time limit for all the problems solved for the initial POA");
+        "Time limit for all the problems solved for the initial POA", 0, SHOT_DBL_MAX);
 
     // Convexity settings
 
