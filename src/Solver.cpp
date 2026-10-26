@@ -1469,8 +1469,8 @@ void Solver::initializeSettings()
         "activated",
         0, SHOT_DBL_MAX);
 
-    env->settings->createSetting(
-        "Primal.FixedInteger.IterationLimit", 10000000, "Max number of iterations per call", 0, SHOT_INT_MAX);
+    env->settings->createSetting("Primal.FixedInteger.IterationLimit", 0,
+        "Max number of iterations per call of the NLP solver: 0: The default of the NLP solver", 0, SHOT_INT_MAX);
 
     env->settings->createSetting("Primal.FixedInteger.OnlyUniqueIntegerCombinations", true,
         "Solve the NLP problem only once for each combination of the discrete variables. If false, it is "
@@ -1864,7 +1864,6 @@ void Solver::initializeSettings()
         enumIpoptHessianApproximation, 0);
     enumIpoptHessianApproximation.clear();
 
-    env->settings->createSetting("Subsolver.Ipopt.MaxIterations", 1000, "Maximum number of iterations");
 
     env->settings->createSetting("Subsolver.Ipopt.OptionsFile", std::string(),
         "An Ipopt options file with any Ipopt options, read instead of ipopt.opt in the working directory. Its options "
@@ -1896,7 +1895,6 @@ void Solver::initializeSettings()
         "How Uno models the Hessian", enumUnoHessianModel, 0);
     enumUnoHessianModel.clear();
 
-    env->settings->createSetting("Subsolver.Uno.MaxIterations", 1000, "Maximum number of iterations");
 
     env->settings->createSetting(
         "Subsolver.Uno.OptionsFile", std::string(), "Uno option file to read additional options from");

@@ -324,8 +324,9 @@ void NLPSolverUno::setInitialSettings()
     uno_set_solver_double_option(
         unoSolver, "dual_tolerance", env->settings->getSetting<double>("Subsolver.Uno.RelativeConvergenceTolerance"));
 
-    uno_set_solver_integer_option(
-        unoSolver, "max_iterations", env->settings->getSetting<int>("Subsolver.Uno.MaxIterations"));
+    // Without an iteration limit, Uno's own default is used
+    if(int iterationLimit = env->settings->getSetting<int>("Primal.FixedInteger.IterationLimit"); iterationLimit > 0)
+        uno_set_solver_integer_option(unoSolver, "max_iterations", iterationLimit);
 
     uno_set_solver_double_option(
         unoSolver, "time_limit", env->settings->getSetting<double>("Primal.FixedInteger.TimeLimit"));

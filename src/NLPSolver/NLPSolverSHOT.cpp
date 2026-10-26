@@ -100,8 +100,9 @@ void NLPSolverSHOT::initializeMIPProblem()
 
     solver->updateSetting(
         "Termination.TimeLimit", env->settings->getSetting<double>("Primal.FixedInteger.TimeLimit"));
-    solver->updateSetting(
-        "Termination.IterationLimit", env->settings->getSetting<int>("Primal.FixedInteger.IterationLimit"));
+    // Without an iteration limit, the nested solver uses its default Termination.IterationLimit
+    if(int iterationLimit = env->settings->getSetting<int>("Primal.FixedInteger.IterationLimit"); iterationLimit > 0)
+        solver->updateSetting("Termination.IterationLimit", iterationLimit);
 
     solver->updateSetting("Termination.DualStagnation.IterationLimit", 20);
 

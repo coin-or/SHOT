@@ -217,16 +217,19 @@ int ConoptTest(int argc, char* argv[])
         }
         else if(part == 11 || part == 12)
         {
-            env->settings->updateSetting("Primal.FixedInteger.IterationLimit", 0);
+            // Interrupts CONOPT at the starting point. The iteration limit cannot do this, since 0 means CONOPT's own
+            // default, and one iteration already solves this problem.
+            env->settings->updateSetting("Primal.FixedInteger.TimeLimit", 1e-9);
             nlp.setStartingPoint({ 0, 1 }, { 0.0, part == 11 ? 0.1 : 1.5 });
             auto status = nlp.solveProblem();
             if(part == 11)
             {
-                // Conopt 4.39.2 can report solver status 11 at a zero iteration
-                // limit. Neither that nor an iteration interrupt proves infeasibility.
-                require(status == E_NLPSolutionStatus::IterationLimit || status == E_NLPSolutionStatus::Error,
+                // Conopt 4.39.2 can report solver status 11 at an interrupt. Neither that nor an interrupt by a limit
+                // proves infeasibility.
+                require(status == E_NLPSolutionStatus::IterationLimit || status == E_NLPSolutionStatus::TimeLimit
+                        || status == E_NLPSolutionStatus::Error,
                     "Interrupted solve incorrectly classified as infeasible");
-                require(nlp.getSolution().empty(), "Infeasible iterate exposed after iteration limit");
+                require(nlp.getSolution().empty(), "Infeasible iterate exposed after interrupt");
                 require(std::isnan(nlp.getObjectiveValue()), "Failed solve exposed an objective");
             }
             else
@@ -234,7 +237,7 @@ int ConoptTest(int argc, char* argv[])
                 require(status == E_NLPSolutionStatus::Feasible, "Feasible limit candidate discarded");
                 require(std::abs(nlp.getObjectiveValue() - 7.25) < 1e-5, "Incorrect limit candidate");
             }
-            env->settings->updateSetting("Primal.FixedInteger.IterationLimit", 10000000);
+            env->settings->updateSetting("Primal.FixedInteger.TimeLimit", 10.0);
             expect(nlp, 6.0);
         }
         else if(part == 10)

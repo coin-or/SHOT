@@ -61,8 +61,9 @@ void NLPSolverIpoptRelaxed::setSolverSpecificInitialSettings()
     ipoptApplication->Options()->SetNumericValue(
         "tol", env->settings->getSetting<double>("Subsolver.Ipopt.RelativeConvergenceTolerance") + 1e-12);
 
-    ipoptApplication->Options()->SetIntegerValue(
-        "max_iter", env->settings->getSetting<int>("Subsolver.Ipopt.MaxIterations"));
+    // Without an iteration limit, Ipopt's own default is used
+    if(int iterationLimit = env->settings->getSetting<int>("Primal.FixedInteger.IterationLimit"); iterationLimit > 0)
+        ipoptApplication->Options()->SetIntegerValue("max_iter", iterationLimit);
 
     ipoptApplication->Options()->SetNumericValue(
         "max_cpu_time", env->settings->getSetting<double>("Primal.FixedInteger.TimeLimit"));
