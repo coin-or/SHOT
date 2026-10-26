@@ -1080,8 +1080,10 @@ void Solver::initializeSettings()
 
     env->settings->createSetting("Dual.Relaxation.Use", true, "Initially solve continuous dual relaxations");
 
-    env->settings->createSetting(
-        "Dual.Relaxation.Frequency", 0, "The frequency to solve an LP problem: 0: Disable", 0, SHOT_INT_MAX);
+    env->settings->createSetting("Dual.Relaxation.Frequency", 0,
+        "The frequency to solve an LP problem, if Dual.Relaxation.Use is true (by default not for nonconvex problems): "
+        "0: Disable",
+        0, SHOT_INT_MAX);
 
     env->settings->createSetting("Dual.Relaxation.IterationLimit", 200,
         "The max number of relaxed LP problems to solve initially", 0, SHOT_INT_MAX);
