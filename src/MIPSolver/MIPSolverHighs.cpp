@@ -382,13 +382,8 @@ void MIPSolverHighs::initializeSolverSettings()
             "Dual.MIP.OptimalityTolerance", kMinimumKktTolerance, SHOT_DBL_MAX, "dual_feasibility_tolerance"));
 
     // Adds a user-provided node limit
-    if(auto nodeLimit = env->settings->getSetting<double>("Dual.MIP.NodeLimit"); nodeLimit > 0)
-    {
-        if(nodeLimit > SHOT_INT_MAX)
-            nodeLimit = SHOT_INT_MAX;
-
-        highsInstance.setOptionValue("mip_max_nodes", (int)nodeLimit);
-    }
+    if(int nodeLimit = env->settings->getSetting<int>("Dual.MIP.NodeLimit"); nodeLimit > 0)
+        highsInstance.setOptionValue("mip_max_nodes", nodeLimit);
 
     highsInstance.setOptionValue(
         "mip_allow_restart", env->settings->getSetting<bool>("Subsolver.Highs.MIPAllowRestart"));

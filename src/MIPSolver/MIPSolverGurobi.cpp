@@ -399,8 +399,8 @@ void MIPSolverGurobi::initializeSolverSettings()
             GRB_DoubleParam_OptimalityTol, env->settings->getSetting<double>("Dual.MIP.OptimalityTolerance"));
 
         // Add a user-provided node limit
-        if(auto nodeLimit = env->settings->getSetting<double>("Dual.MIP.NodeLimit"); nodeLimit > 0)
-            gurobiModel->set(GRB_DoubleParam_NodeLimit, nodeLimit);
+        if(int nodeLimit = env->settings->getSetting<int>("Dual.MIP.NodeLimit"); nodeLimit > 0)
+            gurobiModel->set(GRB_DoubleParam_NodeLimit, static_cast<double>(nodeLimit));
 
         // Set solution pool settings
         gurobiModel->set(GRB_IntParam_SolutionLimit, GRB_MAXINT);

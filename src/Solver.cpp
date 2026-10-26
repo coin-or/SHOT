@@ -973,8 +973,8 @@ void Solver::initializeSettings()
     env->settings->createSetting("Dual.MIP.OptimalityTolerance", 1e-6,
         "The reduced-cost tolerance for optimality in the MIP solver", 1e-9, 1e-2);
 
-    env->settings->createSetting("Dual.MIP.NodeLimit", SHOT_DBL_MAX,
-        "Node limit for each solve of the MIP solver: 0: No limit", 0.0, SHOT_DBL_MAX);
+    env->settings->createSetting(
+        "Dual.MIP.NodeLimit", 0, "Node limit for each solve of the MIP solver: 0: No limit", 0, SHOT_INT_MAX);
 
     env->settings->createSetting("Dual.MIP.NumberOfThreads", 0,
         "Number of threads to use in MIP solver: 0: Automatic (one thread with Cbc)", 0, 999);

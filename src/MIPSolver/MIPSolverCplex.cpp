@@ -426,11 +426,8 @@ void MIPSolverCplex::initializeSolverSettings()
             env->settings->getSetting<double>("Dual.MIP.OptimalityTolerance"));
 
         // Adds a user-provided node limit
-        if(auto nodeLimit = env->settings->getSetting<double>("Dual.MIP.NodeLimit"); nodeLimit > 0)
-        {
-            cplexInstance.setParam(IloCplex::Param::MIP::Limits::Nodes,
-                nodeLimit > CPX_BIGINT ? static_cast<CPXLONG>(CPX_BIGINT) : static_cast<CPXLONG>(nodeLimit));
-        }
+        if(int nodeLimit = env->settings->getSetting<int>("Dual.MIP.NodeLimit"); nodeLimit > 0)
+            cplexInstance.setParam(IloCplex::Param::MIP::Limits::Nodes, static_cast<CPXLONG>(nodeLimit));
 
         // Set solution pool settings
         cplexInstance.setParam(IloCplex::Param::MIP::Pool::Intensity,

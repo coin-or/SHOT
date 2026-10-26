@@ -325,13 +325,8 @@ void MIPSolverCbc::initializeSolverSettings()
     osiInterface->setDblParam(OsiDualTolerance, env->settings->getSetting<double>("Dual.MIP.OptimalityTolerance"));
 
     // Adds a user-provided node limit
-    if(auto nodeLimit = env->settings->getSetting<double>("Dual.MIP.NodeLimit"); nodeLimit > 0)
-    {
-        if(nodeLimit > SHOT_INT_MAX)
-            nodeLimit = SHOT_INT_MAX;
-
+    if(int nodeLimit = env->settings->getSetting<int>("Dual.MIP.NodeLimit"); nodeLimit > 0)
         cbcModel->setMaximumNodes(nodeLimit);
-    }
 
     // Set solution pool settings
     if(forceUnlimitedSolutionLimitNextSolve)
