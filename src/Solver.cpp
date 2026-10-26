@@ -1497,7 +1497,9 @@ void Solver::initializeSettings()
     enumPrimalBoundNLPStartingPoint.push_back("First and the one with the smallest constraint deviation");
     enumPrimalBoundNLPStartingPoint.push_back("With smallest constraint deviation");
     env->settings->createSetting("Primal.FixedInteger.Source",
-        static_cast<int>(ES_PrimalNLPFixedPoint::FirstAndFeasibleSolutions), "Source of fixed MIP solution point",
+        static_cast<int>(ES_PrimalNLPFixedPoint::FirstAndFeasibleSolutions),
+        "Which solutions of the dual problem the fixed-integer NLP problem is solved from. In single-tree, the "
+        "callbacks use each new incumbent, and this applies to the solution pool after the search",
         enumPrimalBoundNLPStartingPoint, 0);
     enumPrimalBoundNLPStartingPoint.clear();
 

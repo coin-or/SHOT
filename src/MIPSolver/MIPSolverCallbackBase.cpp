@@ -67,6 +67,15 @@ bool MIPSolverCallbackBase::checkFixedNLPStrategy(SolutionPoint point)
         return (false);
     }
 
+    // The callbacks get a single point, so of the sources only the one for feasible solutions can exclude it
+    if(static_cast<ES_PrimalNLPFixedPoint>(env->settings->getSetting<int>("Primal.FixedInteger.Source"))
+            == ES_PrimalNLPFixedPoint::AllFeasibleSolutions
+        && point.maxDeviation.value > env->settings->getSetting<double>("Primal.Tolerance.NonlinearConstraint"))
+    {
+        env->solutionStatistics.numberOfIterationsWithoutNLPCallMIP++;
+        return (false);
+    }
+
     env->timing->startTimer("PrimalStrategy");
     env->timing->startTimer("PrimalBoundStrategyNLP");
 
