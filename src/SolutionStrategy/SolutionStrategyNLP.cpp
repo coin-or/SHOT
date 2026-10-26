@@ -308,7 +308,9 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr)
     if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex
         && env->settings->getSetting<bool>("Dual.ReductionCut.Use"))
     {
-        auto tAddObjectiveCutFinal = std::make_shared<TaskAddPrimalReductionCut>(env, "InitIter2", "Terminate");
+        // The final reduction cut continues the search below the primal bound whatever stopped it, except a limit
+        auto tAddObjectiveCutFinal
+            = std::make_shared<TaskAddPrimalReductionCut>(env, "InitIter2", "Terminate", true, true);
         std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tAddObjectiveCutFinal);
     }
 

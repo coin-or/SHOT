@@ -26,8 +26,12 @@ namespace SHOT
 {
 
 TaskAddPrimalReductionCut::TaskAddPrimalReductionCut(
-    EnvironmentPtr envPtr, std::string taskIDTrue, std::string taskIDFalse, bool isFinalAttempt)
-    : TaskBase(envPtr), taskIDIfTrue(taskIDTrue), taskIDIfFalse(taskIDFalse), isFinalAttempt(isFinalAttempt)
+    EnvironmentPtr envPtr, std::string taskIDTrue, std::string taskIDFalse, bool isFinalAttempt, bool stopOnlyAtLimits)
+    : TaskBase(envPtr)
+    , taskIDIfTrue(taskIDTrue)
+    , taskIDIfFalse(taskIDFalse)
+    , isFinalAttempt(isFinalAttempt)
+    , stopOnlyAtLimits(stopOnlyAtLimits)
 {
 }
 
@@ -42,14 +46,22 @@ void TaskAddPrimalReductionCut::run()
     }
 
     // isTerminated() only covers user/callback abort. This instance runs as the last step of FinalizeSolution's own
-    // sequence (see SolutionStrategyMultiTree) as a final attempt to reduce the cutoff once more before giving up;
-    // it must not do so if FinalizeSolution was reached because of a time/iteration/gap limit rather than because
-    // this same reduction-cut mechanism ran out of budget, or it would jump back to "InitIter2" and resume solving,
-    // silently overriding whatever criterion had just decided to stop. The main-loop instance (reached via
-    // TaskCheckPrimalStagnation's "AddObjectiveCut" redirect) legitimately runs with terminationReason already set
+    // sequence (see SolutionStrategyMultiTree and SolutionStrategyNLP) as a final attempt to reduce the cutoff once
+    // more before giving up; it must not do so if FinalizeSolution was reached because of a time/iteration/gap limit
+    // rather than because this same reduction-cut mechanism ran out of budget, or it would jump back to "InitIter2" and
+    // resume solving, silently overriding whatever criterion had just decided to stop. The main-loop instance (reached
+    // via TaskCheckPrimalStagnation's "AddObjectiveCut" redirect) legitimately runs with terminationReason already set
     // to ObjectiveStagnation as part of its own normal "try one more reduction cut" signaling, so this check must
-    // not apply there.
-    if(isFinalAttempt && env->results->terminationReason != E_TerminationReason::NotTerminated)
+    // not apply there. With stopOnlyAtLimits, the final attempt only stops after a limit or a termination by the user,
+    // and continues the search below the primal bound whatever else stopped it.
+    // The time limit can also have been passed while finalizing, e.g. in the polish, after another reason stopped it.
+    auto reason = env->results->terminationReason;
+    bool isLimit = reason == E_TerminationReason::TimeLimit || reason == E_TerminationReason::IterationLimit
+        || reason == E_TerminationReason::AbsoluteGap || reason == E_TerminationReason::RelativeGap
+        || reason == E_TerminationReason::UserAbort
+        || env->timing->getElapsedTime("Total") >= env->settings->getSetting<double>("Termination.TimeLimit");
+
+    if(isFinalAttempt && reason != E_TerminationReason::NotTerminated && (!stopOnlyAtLimits || isLimit))
     {
         env->tasks->setNextTask(taskIDIfFalse);
         return;
