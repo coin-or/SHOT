@@ -1947,7 +1947,9 @@ void Solver::initializeSettings()
     enumRootsearchMethod.clear();
 
     env->settings->createSetting("Subsolver.Rootsearch.TerminationTolerance", 1e-16,
-        "Epsilon lambda tolerance for root search", 0.0, SHOT_DBL_MAX);
+        "Termination tolerance for the length of the root search interval for lambda in [0, 1], which also stops when "
+        "the interval cannot be divided further",
+        0.0, SHOT_DBL_MAX);
 
     // Termination settings
 

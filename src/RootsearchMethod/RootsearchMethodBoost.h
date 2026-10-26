@@ -12,6 +12,9 @@
 #include "IRootsearchMethod.h"
 #include "../Environment.h"
 
+#include <algorithm>
+#include <cmath>
+
 namespace SHOT
 {
 class Test
@@ -65,7 +68,15 @@ private:
 public:
     TerminationCondition(double tolerance) { tol = tolerance; }
 
-    bool operator()(double min, double max) { return (abs(min - max) <= tol); }
+    // The interval also cannot be made smaller when there is no double between its ends, e.g., for a small tolerance
+    // and lambda close to 1, where doubles are further apart than the tolerance
+    bool operator()(double min, double max)
+    {
+        double lower = std::min(min, max);
+        double upper = std::max(min, max);
+
+        return (upper - lower <= tol || std::nextafter(lower, upper) >= upper);
+    }
 };
 
 class RootsearchMethodBoost : public IRootsearchMethod
