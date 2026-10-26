@@ -471,14 +471,14 @@ void MIPSolverHighs::initializeSolverSettings()
 
     switch(env->settings->getSetting<int>("Subsolver.Highs.RunCrossover"))
     {
-    case 0:
-        highsInstance.setOptionValue("run_crossover", "off");
-        break;
     case 1:
         highsInstance.setOptionValue("run_crossover", "choose");
         break;
     case 2:
         highsInstance.setOptionValue("run_crossover", "on");
+        break;
+    default:
+        highsInstance.setOptionValue("run_crossover", "off");
         break;
     }
 
