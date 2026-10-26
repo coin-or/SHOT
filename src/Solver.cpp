@@ -983,10 +983,13 @@ void Solver::initializeSettings()
         SHOT_INT_MAX);
 
     env->settings->createSetting("Dual.MIP.SolutionLimit.ForceOptimal.Iteration", 10000,
-        "Iterations without dual bound updates for forcing optimal MIP solution", 0, SHOT_INT_MAX);
+        "Iterations without dual bound updates for forcing optimal MIP solution (multi-tree)", 0, SHOT_INT_MAX);
 
     env->settings->createSetting("Dual.MIP.SolutionLimit.ForceOptimal.Time", 1000.0,
-        "Time (s) without dual bound updates for forcing optimal MIP solution", 0, SHOT_DBL_MAX);
+        "Time (s) without dual bound updates for forcing optimal MIP solution (multi-tree)", 0, SHOT_DBL_MAX);
+
+    env->settings->createSetting("Dual.MIP.SolutionLimit.IncreaseFactor", 2.0,
+        "Factor the MIP solution limit is multiplied by when increased: 1: Increase by one", 1.0, SHOT_DBL_MAX);
 
     env->settings->createSetting("Dual.MIP.SolutionLimit.IncreaseIterations", 50,
         "Max number of iterations between MIP solution limit increases", 0, SHOT_INT_MAX);
