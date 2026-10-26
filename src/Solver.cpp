@@ -845,7 +845,8 @@ void Solver::initializeSettings()
     enumInteriorPointStrategy.clear();
 
     env->settings->createSetting("Dual.ESH.InteriorPoint.CuttingPlane.BitPrecision", 8,
-        "Required termination bit precision for minimization subsolver", 1, 64, true);
+        "Required termination bit precision for minimization subsolver (at most half the digits of a double)", 1, 26,
+        true);
 
     env->settings->createSetting("Dual.ESH.InteriorPoint.CuttingPlane.ConstraintSelectionFactor", 0.25,
         "Max number of violated nonlinear constraints, the most violated first, to generate cutting planes "
