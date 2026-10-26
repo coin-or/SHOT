@@ -652,9 +652,9 @@ bool Solver::selectStrategy()
         {
             if(!properties.isDiscrete)
             {
-                env->output->outputDebug(" Using multi-tree solution strategy.");
-                solutionStrategy = std::make_unique<SolutionStrategyMultiTree>(env);
-                env->results->usedSolutionStrategy = E_SolutionStrategy::MultiTree;
+                env->output->outputDebug(" Using continuous solution strategy.");
+                solutionStrategy = std::make_unique<SolutionStrategyNLP>(env);
+                env->results->usedSolutionStrategy = E_SolutionStrategy::NLP;
             }
             else
             {
@@ -1529,9 +1529,6 @@ void Solver::initializeSettings()
         "at the next NLP call. Off by default until benchmarked on all of MINLPLib");
 
     env->settings->createSetting("Primal.FixedInteger.Use", true, "Use the fixed integer primal strategy");
-
-    env->settings->createSetting("Primal.FixedInteger.UseOnContinuousProblems", true,
-        "Also solve the NLP problem from the dual solutions of a nonconvex problem without discrete variables");
 
     env->settings->createSetting("Primal.FixedInteger.Warmstart", true, "Warm start the NLP solver");
 
