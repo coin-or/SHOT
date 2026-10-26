@@ -13,6 +13,7 @@
 #include "../DualSolver.h"
 #include "../Output.h"
 #include "../Settings.h"
+#include "../TaskHandler.h"
 #include "../Timing.h"
 
 #include "../MIPSolver/IMIPSolver.h"
@@ -206,6 +207,26 @@ void TaskPerformConvexBounding::run()
     case E_ProblemSolutionStatus::NodeLimit:
     case E_ProblemSolutionStatus::Abort:
         break;
+    case E_ProblemSolutionStatus::Infeasible:
+        // The bounding problem is a relaxation of the problem without a cutoff, unless variables have been given
+        // artificial bounds, so it being infeasible proves that the problem is. With a primal solution, it can only be
+        // infeasible because of numerical issues.
+        if(!env->problem->hasArtificialBounds() && !env->reformulatedProblem->hasArtificialBounds()
+            && !env->results->hasPrimalSolution())
+        {
+            env->output->outputInfo(" Convex bounding problem infeasible, so the problem is infeasible.");
+            env->results->isInfeasibilityProven = true;
+            env->results->terminationReason = E_TerminationReason::InfeasibleProblem;
+            env->results->terminationReasonDescription = "Terminated since a convex relaxation is infeasible.";
+            env->tasks->setNextTask("FinalizeSolution");
+        }
+        else
+        {
+            env->output->outputDebug(" Convex bounding problem infeasible, but this does not prove that the problem "
+                                     "is, since there are artificial bounds or a primal solution.");
+        }
+
+        return;
     default:
         env->output->outputDebug(" Convex bounding problem not solved successfully, bound ignored.");
         return;

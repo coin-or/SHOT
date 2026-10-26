@@ -92,7 +92,7 @@ bool TaskEnumerateFixedIntegerCombinations::isFallbackNeeded()
     case E_TerminationReason::InfeasibleProblem:
         // The cuts of nonconvex constraints can make the dual problem infeasible although the problem is feasible
         return (env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex
-            && !env->results->hasPrimalSolution());
+            && !env->results->hasPrimalSolution() && !env->results->isInfeasibilityProven);
     default:
         return (false);
     }

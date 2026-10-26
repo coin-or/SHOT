@@ -1764,7 +1764,8 @@ E_ModelReturnStatus Results::getModelReturnStatus()
         return (hasPrimalSolution() ? E_ModelReturnStatus::Unbounded : E_ModelReturnStatus::UnboundedNoSolution);
 
     if(terminationReason == E_TerminationReason::InfeasibleProblem)
-        return (solutionIsGlobal ? E_ModelReturnStatus::InfeasibleGlobal : E_ModelReturnStatus::InfeasibleLocal);
+        return ((solutionIsGlobal || isInfeasibilityProven) ? E_ModelReturnStatus::InfeasibleGlobal
+                                                            : E_ModelReturnStatus::InfeasibleLocal);
 
     if(terminationReason == E_TerminationReason::Error || terminationReason == E_TerminationReason::NumericIssues)
         return (hasPrimalSolution() ? E_ModelReturnStatus::FeasibleSolution : E_ModelReturnStatus::ErrorNoSolution);

@@ -840,6 +840,74 @@ bool testConvexBoundingBoundKeepsDualProblemNonGlobal(ES_MIPSolver mipSolver)
     return passed;
 }
 
+// The convex bounding problem is a relaxation of the problem without a cutoff, so it being infeasible proves that the
+// problem is infeasible, also when the dual problem is no longer a relaxation, unless variables have artificial bounds.
+bool testInfeasibleConvexBoundingProvesInfeasibility(ES_MIPSolver mipSolver)
+{
+    bool passed = true;
+
+    for(bool hasArtificialBound : { false, true })
+    {
+        auto solver = makeSolver(mipSolver, ModelKind::Infeasible, true);
+
+        if(!solver)
+        {
+            std::cout << "Could not create problem for " << name(mipSolver) << '\n';
+            return false;
+        }
+
+        auto env = solver->getEnvironment();
+        std::string variant = hasArtificialBound ? " (artificial bound)" : "";
+
+        // Satisfy the preconditions of the task without running a full solve
+        env->solutionStatistics.numberOfHyperplanesWithConvexSource = 1;
+        env->solutionStatistics.numberOfHyperplanesWithNonconvexSource = 1;
+        solver->updateSetting("Dual.ConvexBounding.IdleIterations", 0);
+        env->results->createIteration();
+        env->results->solutionIsGlobal = false;
+
+        if(hasArtificialBound)
+            env->problem->allVariables.at(0)->properties.hasArtificialUpperBound = true;
+
+        auto taskFinalize = std::make_shared<TaskAddPrimalReductionCut>(env, "FinalizeSolution", "FinalizeSolution");
+        env->tasks->clearTasks();
+        env->tasks->addTask(taskFinalize, "FinalizeSolution");
+
+        TaskPerformConvexBounding(env).run();
+
+        TaskPtr nextTask;
+        bool hasNextTask = env->tasks->getNextTask(nextTask);
+        bool isProven = env->results->isInfeasibilityProven;
+
+        if(hasArtificialBound)
+        {
+            if(isProven || env->results->terminationReason != E_TerminationReason::NotTerminated)
+            {
+                std::cout << name(mipSolver) << variant
+                          << ": an infeasible bounding problem with artificial bounds proved infeasibility\n";
+                passed = false;
+            }
+
+            continue;
+        }
+
+        if(!isProven || env->results->terminationReason != E_TerminationReason::InfeasibleProblem || !hasNextTask
+            || nextTask != taskFinalize)
+        {
+            std::cout << name(mipSolver) << ": an infeasible bounding problem did not terminate as infeasible\n";
+            passed = false;
+        }
+
+        if(env->results->getModelReturnStatus() != E_ModelReturnStatus::InfeasibleGlobal)
+        {
+            std::cout << name(mipSolver) << ": the problem is not reported as globally infeasible\n";
+            passed = false;
+        }
+    }
+
+    return passed;
+}
+
 int DualBoundTest(int argc, char* argv[])
 {
     int choice = 1;
@@ -919,6 +987,12 @@ int DualBoundTest(int argc, char* argv[])
         for(auto mipSolver : compiledSolvers())
             passed = testConvexBoundingBoundKeepsDualProblemNonGlobal(mipSolver) && passed;
         std::cout << "Finished test that a bound from convex bounding keeps the dual problem non-global.\n";
+        break;
+    case 12:
+        std::cout << "Starting test that an infeasible convex bounding problem proves infeasibility:\n";
+        for(auto mipSolver : compiledSolvers())
+            passed = testInfeasibleConvexBoundingProvesInfeasibility(mipSolver) && passed;
+        std::cout << "Finished test that an infeasible convex bounding problem proves infeasibility.\n";
         break;
     default:
         passed = false;

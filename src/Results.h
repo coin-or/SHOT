@@ -91,6 +91,10 @@ public:
 
     bool solutionIsGlobal = true;
 
+    // Whether a relaxation of the problem, e.g. the convex bounding problem, has been infeasible, which proves that the
+    // problem is infeasible also when the dual problem is no longer a relaxation
+    bool isInfeasibilityProven = false;
+
     std::string getResultsOSrL();
     std::string getResultsTrace();
     std::string getResultsSol();
