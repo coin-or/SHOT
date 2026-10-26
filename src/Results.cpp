@@ -92,7 +92,7 @@ void Results::addPrimalSolution(PrimalSolution solution)
     // A solution that is only added to the solution pool is not an improvement of the primal bound
     bool isPrimalImprovement = isIncumbent || replacesIncumbent;
 
-    int poolSize = std::max(1, env->settings->getSetting<int>("Output.SaveNumberOfSolutions"));
+    int poolSize = env->settings->getSetting<int>("Output.SaveNumberOfSolutions");
 
     if((int)this->primalSolutions.size() >= poolSize)
     {

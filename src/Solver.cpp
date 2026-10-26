@@ -1424,8 +1424,8 @@ void Solver::initializeSettings()
         "Where to save the output files", enumOutputDirectory, 0);
     enumOutputDirectory.clear();
 
-    env->settings->createSetting(
-        "Output.SaveNumberOfSolutions", 1, "Max number of primal solutions to keep and to save to OSrL or GDX files");
+    env->settings->createSetting("Output.SaveNumberOfSolutions", 1,
+        "Max number of primal solutions to keep and to save to OSrL or GDX files", 1, SHOT_INT_MAX);
 
     env->settings->createSettingGroup(
         "Primal", "", "Primal heuristics", "These settings control the primal heuristics used in SHOT.");

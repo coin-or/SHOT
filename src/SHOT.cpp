@@ -835,7 +835,8 @@ int main(int argc, char* argv[])
             env->output->outputInfo(" Results written to: " + resultFile.string());
     }
 
-    if(gdxFilename != "")
+    // The GAMS interface only writes the alternative solutions, i.e., when there is more than one solution
+    if(gdxFilename != "" && solver.getPrimalSolutions().size() > 1 && fs::filesystem::exists(gdxFile))
         env->output->outputInfo("                     " + gdxFile.string());
 
     if(cmdl["--trc"] || cmdl("--trc"))
