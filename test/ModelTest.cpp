@@ -6300,7 +6300,9 @@ bool ModelTestPolishSolution()
     // NLP problem from that point, with any discrete variables fixed at the values found, refines it.
     //
     // Both sub-tests below check the polished point directly rather than the objective, since it is the point
-    // that is imprecise: the objective is already correct to ~1e-10 without any polishing.
+    // that is imprecise: the objective is already correct to ~1e-10 without any polishing. Convex continuous
+    // problems are only polished in the MIQCQP strategy, so with the continuous strategy the sub-test without the
+    // binary variable instead checks that polishing changes nothing.
 
     bool passed = true;
 
@@ -6383,6 +6385,21 @@ bool ModelTestPolishSolution()
             std::cout << "  x without polishing: " << unpolishedEnv->results->primalSolution.at(0) << " (error "
                       << unpolishedError << ", " << unpolishedEnv->solutionStatistics.numberOfProblemsFixedNLP
                       << " NLP problems solved)\n";
+
+            // Convex continuous problems solved with the continuous strategy, i.e. when the MIP solver does not get
+            // the quadratic terms, are not polished, so the setting must not change anything
+            if(polishedEnv->results->usedSolutionStrategy == E_SolutionStrategy::NLP)
+            {
+                if(polishedEnv->solutionStatistics.numberOfProblemsFixedNLP
+                        != unpolishedEnv->solutionStatistics.numberOfProblemsFixedNLP
+                    || polishedEnv->results->primalSolution.at(0) != unpolishedEnv->results->primalSolution.at(0))
+                {
+                    std::cout << "  FAILED: a convex continuous problem was polished in the continuous strategy.\n";
+                    passed = false;
+                }
+
+                continue;
+            }
 
             // Checked directly rather than only through the resulting accuracy, since for a small problem the
             // dual solver may happen to return an accurate point on its own, which would let a silently
@@ -10691,9 +10708,10 @@ bool ModelTestPolishFromSeveralPoints()
     // iterations of the dual problem that have solutions, and from the best primal solution, and not at all if it is
     // zero. Without a starting point, the
     // polish is the only NLP problem solved for a continuous problem, so the NLP solutions checked as primal candidates
-    // are counted. The problem, min -x1 - ... - x5 s.t. exp(x1) + ... + exp(x5) <= 10, is convex, so the NLP problem is
-    // solved from every point, and needs several iterations of cutting planes. Its optimum is x_i = ln 2, with the
-    // objective -5 ln 2.
+    // are counted. The problem, min -x1 - ... - x5 s.t. exp(x1) + ... + exp(x5) <= 10 and x1^2 + x2^2 >= 0.01, needs
+    // several iterations of cutting planes. The second constraint makes it nonconvex, since convex continuous problems
+    // are not polished, but is not active near the optimum x_i = ln 2, with the objective -5 ln 2, so the NLP problem
+    // is solved from every point.
 
     bool passed = true;
 
@@ -10727,6 +10745,18 @@ bool ModelTestPolishFromSeveralPoints()
         constraint->add(std::make_shared<SHOT::ExpressionSum>(exponentials));
         problem->add(objective);
         problem->add(constraint);
+
+        // Excludes a small ball around the origin, far from the optimum, so that the problem is nonconvex: convex
+        // continuous problems are not polished
+        auto nonconvexConstraint = std::make_shared<SHOT::QuadraticConstraint>("nc", SHOT_DBL_MIN, -0.01);
+
+        for(int i = 0; i < 2; i++)
+        {
+            auto x = problem->getVariable(i);
+            nonconvexConstraint->add(std::make_shared<SHOT::QuadraticTerm>(-1.0, x, x));
+        }
+
+        problem->add(nonconvexConstraint);
         problem->finalize();
 
         int numberOfNLPSolutions = 0;
@@ -12529,7 +12559,10 @@ bool ModelTestBilinearInverseReformulation()
             continue;
         }
 
-        if(std::abs(solveSolver->getPrimalBound() - 4.0) > 1e-3 || solveSolver->getCurrentDualBound() > 4.0 + 1e-3)
+        // The problem is convex and continuous, so it is not polished, and the primal bound is only as close to 4 as
+        // the relative gap termination tolerance 1e-3 requires
+        if(solveSolver->getPrimalBound() < 4.0 - 1e-3 || solveSolver->getPrimalBound() > 4.0 + 5e-3
+            || solveSolver->getCurrentDualBound() > 4.0 + 1e-3)
         {
             std::cout << "  FAILED: the bounds are " << solveSolver->getCurrentDualBound() << " and "
                       << solveSolver->getPrimalBound() << " instead of 4.\n";

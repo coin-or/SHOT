@@ -301,7 +301,10 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
     // variables, when there are any, are fixed at the values found, so the NLP solved is the continuous problem
     // that remains. This is a separate task instance from any used during the search: it must not be paced by
     // the iteration and time heuristics that apply there.
-    if(env->settings->getSetting<int>("Primal.PolishSolution.NumberOfPoints") > 0)
+    // Not for MILP problems, where the MIP solver has already solved the LP problem that remains with the discrete
+    // variables fixed.
+    if(env->settings->getSetting<int>("Primal.PolishSolution.NumberOfPoints") > 0
+        && !env->reformulatedProblem->properties.isMILPProblem)
     {
         auto tPolishPoint = std::make_shared<TaskSelectPrimalFixedNLPPointsFromSolutionPool>(env, true);
         std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tPolishPoint);

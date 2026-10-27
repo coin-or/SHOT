@@ -1536,7 +1536,7 @@ void Solver::initializeSettings()
 
     env->settings->createSetting("Primal.PolishSolution.NumberOfPoints", 1,
         "After the search, polish the solution with NLP problems started from the best primal solution and from the "
-        "dual solutions of this many last iterations: 0: Off",
+        "dual solutions of this many last iterations, not for LP, MILP or convex continuous problems: 0: Off",
         0, SHOT_INT_MAX);
 
     // Primal settings: rootsearch
