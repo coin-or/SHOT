@@ -1071,8 +1071,10 @@ void Solver::initializeSettings()
     env->settings->createSetting("Dual.ReductionCut.MaxIterations", 20,
         "Maximum number of reduction cuts without primal improvement before terminating", 0, SHOT_INT_MAX);
 
-    env->settings->createSetting(
-        "Dual.ReductionCut.ReductionFactor", 0.001, "The factor used to reduce the cutoff value", 0, 1.0);
+    env->settings->createSetting("Dual.ReductionCut.ReductionFactor", 0.001,
+        "Reduction of the cutoff per reduction cut, relative to max(1, |cutoff|), in the Fraction strategy when the "
+        "relative gap is at most 0.1 or above 1",
+        0, 1.0);
 
     // Dual strategy settings: Relaxation strategies
 

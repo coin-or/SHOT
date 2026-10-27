@@ -109,24 +109,27 @@ void TaskAddPrimalReductionCut::run()
         // Different logic if gap is large
         if(relativeGap <= 1.0 && relativeGap > 0.1)
         {
-            double factor = ((double)env->solutionStatistics.numberOfPrimalReductionCutsUpdatesWithoutEffect)
+            // The first cut after a primal improvement also moves the cutoff away from the primal bound
+            double factor = (env->solutionStatistics.numberOfPrimalReductionCutsUpdatesWithoutEffect + 1.0)
                 / (maxIterations + 1.0);
 
             cutOffToUse = factor * env->results->currentDualBound + (1 - factor) * env->results->currentPrimalBound;
         }
         else
         {
-            double reductionFactor = env->settings->getSetting<double>("Dual.ReductionCut.ReductionFactor");
+            // Relative to at least 1, so that a cutoff of zero or close to it is also reduced
+            double reduction = env->settings->getSetting<double>("Dual.ReductionCut.ReductionFactor")
+                * std::max(1.0, std::abs(env->dualSolver->cutOffToUse));
 
             // cutOffToUse is always in the original problem's sense, so the direction check must be too (it can
             // differ from the reformulated problem's direction when the objective was sign-reversed).
             if(env->problem->objectiveFunction->properties.isMinimize)
             {
-                cutOffToUse = env->dualSolver->cutOffToUse - reductionFactor * std::abs(env->dualSolver->cutOffToUse);
+                cutOffToUse = env->dualSolver->cutOffToUse - reduction;
             }
             else
             {
-                cutOffToUse = env->dualSolver->cutOffToUse + reductionFactor * std::abs(env->dualSolver->cutOffToUse);
+                cutOffToUse = env->dualSolver->cutOffToUse + reduction;
             }
         }
     }
