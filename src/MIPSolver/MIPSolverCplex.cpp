@@ -415,22 +415,19 @@ void MIPSolverCplex::initializeSolverSettings()
 
         // Set termination tolerances
         cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::MIPGap,
-            env->settings->getSetting<double>("Termination.ObjectiveGap.Relative") / 1.0);
+            getToleranceForSolver("Termination.ObjectiveGap.Relative", 0.0, 1.0, "MIP.Tolerances.MIPGap"));
         cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::AbsMIPGap,
             env->settings->getSetting<double>("Termination.ObjectiveGap.Absolute") / 1.0);
         cplexInstance.setParam(IloCplex::Param::Simplex::Tolerances::Feasibility,
-            env->settings->getSetting<double>("Primal.Tolerance.LinearConstraint"));
+            getToleranceForSolver("Primal.Tolerance.LinearConstraint", 1e-9, 1e-1, "Simplex.Tolerances.Feasibility"));
         cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::Integrality,
-            env->settings->getSetting<double>("Primal.Tolerance.Integer"));
+            getToleranceForSolver("Primal.Tolerance.Integer", 0.0, 0.5, "MIP.Tolerances.Integrality"));
         cplexInstance.setParam(IloCplex::Param::Simplex::Tolerances::Optimality,
             env->settings->getSetting<double>("Dual.MIP.OptimalityTolerance"));
 
         // Adds a user-provided node limit
-        if(auto nodeLimit = env->settings->getSetting<double>("Dual.MIP.NodeLimit"); nodeLimit > 0)
-        {
-            if(nodeLimit > CPX_BIGINT)
-                cplexInstance.setParam(IloCplex::Param::MIP::Limits::Nodes, CPX_BIGINT);
-        }
+        if(int nodeLimit = env->settings->getSetting<int>("Dual.MIP.NodeLimit"); nodeLimit > 0)
+            cplexInstance.setParam(IloCplex::Param::MIP::Limits::Nodes, static_cast<CPXLONG>(nodeLimit));
 
         // Set solution pool settings
         cplexInstance.setParam(IloCplex::Param::MIP::Pool::Intensity,
@@ -1297,7 +1294,7 @@ void MIPSolverCplex::addMIPStart(VectorDouble point)
     for(int i = 0; i < startVal.getSize(); i++)
         startVars.add(cplexVars[i]);
 
-    assert(variableNames.size() == static_cast<size_t>(startVal.getSize()));
+    assert(variableNames.size() == static_cast<size_t>(this->numberOfVariables));
     assert(startVars.getSize() == startVal.getSize());
 
     try
@@ -1572,6 +1569,18 @@ bool MIPSolverCplex::createIntegerCut(IntegerCut& integerCut)
             {
                 numberOfVariables += 2;
                 numberOfIntegerCutVariables += 2;
+
+                // The data of the variables is indexed up to numberOfVariables, e.g. when the discrete variables are
+                // activated again after the relaxation strategy, so the auxiliary variables w (continuous) and v
+                // (binary) are included
+                variableTypes.push_back(E_VariableType::Real);
+                variableTypes.push_back(E_VariableType::Binary);
+                variableNames.push_back(fmt::format("wIC{}_{}", env->solutionStatistics.numberOfIntegerCuts, index));
+                variableNames.push_back(fmt::format("vIC{}_{}", env->solutionStatistics.numberOfIntegerCuts, index));
+                variableLowerBounds.push_back(0.0);
+                variableLowerBounds.push_back(0.0);
+                variableUpperBounds.push_back(getUnboundedVariableBoundValue());
+                variableUpperBounds.push_back(1.0);
 
                 auto w = IloNumVar(cplexEnv, 0, getUnboundedVariableBoundValue(), ILOFLOAT,
                     fmt::format("wIC{}_{}", env->solutionStatistics.numberOfIntegerCuts, index).c_str());

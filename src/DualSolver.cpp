@@ -260,9 +260,6 @@ void DualSolver::addGeneratedHyperplane(const HyperplanePtr hyperplane)
     case E_HyperplaneSource::PrimalSolutionSearch:
         source = "primal heuristic";
         break;
-    case E_HyperplaneSource::PrimalSolutionSearchInteriorObjective:
-        source = "primal heuristic (interior objective)";
-        break;
     case E_HyperplaneSource::InteriorPointSearch:
         source = "interior point search";
         break;

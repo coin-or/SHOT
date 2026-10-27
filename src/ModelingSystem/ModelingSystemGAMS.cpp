@@ -173,7 +173,8 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
         // Sets node limit for dual solver
         if(gevGetIntOpt(modelingEnvironment, gevNodeLim) > 0)
         {
-            env->settings->updateSetting("Dual.MIP.NodeLimit", (double)gevGetIntOpt(modelingEnvironment, gevNodeLim), E_SettingPriority::OptionsFile);
+            env->settings->updateSetting(
+                "Dual.MIP.NodeLimit", gevGetIntOpt(modelingEnvironment, gevNodeLim), E_SettingPriority::OptionsFile);
         }
 
         // Sets the number of threads

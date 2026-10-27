@@ -22,6 +22,8 @@
 
 #include "../Model/Problem.h"
 
+#include <thread>
+
 #include "CoinBuild.hpp"
 #include "CoinModel.hpp"
 #include "CoinPragma.hpp"
@@ -315,19 +317,18 @@ void MIPSolverCbc::initializeSolverSettings()
     // Set termination tolerances
     cbcModel->setAllowableGap(env->settings->getSetting<double>("Termination.ObjectiveGap.Absolute") / 1.0);
     cbcModel->setAllowableFractionGap(env->settings->getSetting<double>("Termination.ObjectiveGap.Relative") / 1.0);
-    osiInterface->setDblParam(
-        OsiPrimalTolerance, env->settings->getSetting<double>("Primal.Tolerance.LinearConstraint"));
-    cbcModel->setIntegerTolerance(env->settings->getSetting<double>("Primal.Tolerance.Integer"));
+    // Clp and Cbc reject values outside their ranges, e.g. a primal tolerance of zero, and keep their own values
+    if(!osiInterface->setDblParam(
+           OsiPrimalTolerance, env->settings->getSetting<double>("Primal.Tolerance.LinearConstraint")))
+        warnToleranceNotAccepted("Primal.Tolerance.LinearConstraint", "OsiPrimalTolerance");
+
+    if(!cbcModel->setIntegerTolerance(env->settings->getSetting<double>("Primal.Tolerance.Integer")))
+        warnToleranceNotAccepted("Primal.Tolerance.Integer", "CbcIntegerTolerance");
     osiInterface->setDblParam(OsiDualTolerance, env->settings->getSetting<double>("Dual.MIP.OptimalityTolerance"));
 
     // Adds a user-provided node limit
-    if(auto nodeLimit = env->settings->getSetting<double>("Dual.MIP.NodeLimit"); nodeLimit > 0)
-    {
-        if(nodeLimit > SHOT_INT_MAX)
-            nodeLimit = SHOT_INT_MAX;
-
+    if(int nodeLimit = env->settings->getSetting<int>("Dual.MIP.NodeLimit"); nodeLimit > 0)
         cbcModel->setMaximumNodes(nodeLimit);
-    }
 
     // Set solution pool settings
     if(forceUnlimitedSolutionLimitNextSolve)
@@ -348,9 +349,9 @@ void MIPSolverCbc::initializeSolverSettings()
     {
         // Cbc runs deterministcally if 100 is added to the number of threads
         if(env->settings->getSetting<bool>("Subsolver.Cbc.DeterministicParallelMode"))
-            numberOfThreads = env->settings->getSetting<int>("Dual.MIP.NumberOfThreads") + 100;
+            numberOfThreads = getNumberOfThreads() + 100;
         else
-            numberOfThreads = env->settings->getSetting<int>("Dual.MIP.NumberOfThreads");
+            numberOfThreads = getNumberOfThreads();
     }
     else
     {
@@ -1541,6 +1542,20 @@ bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
                     numberOfVariables += 2;
                     numberOfIntegerCutVariables += 2;
 
+                    // The data of the variables is indexed up to numberOfVariables, e.g. when the discrete variables
+                    // are activated again after the relaxation strategy, so the auxiliary variables w (continuous) and
+                    // v (binary) are included
+                    variableTypes.push_back(E_VariableType::Real);
+                    variableTypes.push_back(E_VariableType::Binary);
+                    variableNames.push_back(
+                        fmt::format("wIC{}_{}", env->solutionStatistics.numberOfIntegerCuts, index));
+                    variableNames.push_back(
+                        fmt::format("vIC{}_{}", env->solutionStatistics.numberOfIntegerCuts, index));
+                    variableLowerBounds.push_back(0.0);
+                    variableLowerBounds.push_back(0.0);
+                    variableUpperBounds.push_back(getUnboundedVariableBoundValue());
+                    variableUpperBounds.push_back(1.0);
+
                     double M1 = 2 * (variableValue - VAR->lowerBound);
                     double M2 = 2 * (VAR->upperBound - variableValue);
 
@@ -1859,8 +1874,14 @@ int MIPSolverCbc::getNumberOfThreads()
     if(!cbcModel || !cbcModel->haveMultiThreadSupport())
         return (1);
 
-    // Cbc runs serially, and not with an automatic number of threads, if zero threads are given
-    return (std::max(1, env->settings->getSetting<int>("Dual.MIP.NumberOfThreads")));
+    int numberOfThreads = env->settings->getSetting<int>("Dual.MIP.NumberOfThreads");
+
+    // Cbc runs serially if zero threads are given, so the automatic number of threads is one per logical core, as
+    // with the other MIP solvers
+    if(numberOfThreads == 0)
+        numberOfThreads = std::max(1, static_cast<int>(std::thread::hardware_concurrency()));
+
+    return (numberOfThreads);
 }
 
 int CbcMessageHandler::print()

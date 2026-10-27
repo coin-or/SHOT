@@ -81,9 +81,13 @@ int MIPSolutionLimitStrategyIncrease::getNewLimit()
 {
     auto currIter = env->results->getCurrentIteration();
 
-    int newLimit;
+    // Multiplied by the factor, but increased by at least one, and computed as a double to not overflow
+    double currentLimit = env->dualSolver->MIPSolver->getSolutionLimit();
+    double factor = env->settings->getSetting<double>("Dual.MIP.SolutionLimit.IncreaseFactor");
 
-    newLimit = env->dualSolver->MIPSolver->getSolutionLimit() + 1;
+    int newLimit = static_cast<int>(
+        std::min(std::max(std::ceil(factor * currentLimit), currentLimit + 1), static_cast<double>(SHOT_INT_MAX)));
+
     lastIterSolLimIncreased = currIter->iterationNumber;
 
     return (newLimit);

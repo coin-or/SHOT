@@ -256,11 +256,11 @@ bool Solver::setProblem(std::string fileName)
     // Do not do convexifying reformulations if the problem is assumed to be convex
     if(env->settings->getSetting<bool>("Model.Convexity.AssumeConvex"))
     {
-        env->settings->updateSetting(
-            "Model.Reformulation.Bilinear.IntegerFormulation", (int)ES_ReformulateBilinearInteger::No);
+        env->settings->updateSetting("Model.Reformulation.Bilinear.IntegerFormulation",
+            (int)ES_ReformulateBilinearInteger::No, E_SettingPriority::RecommendedInternal);
 
-        env->settings->updateSetting(
-            "Model.Reformulation.Monomials.Formulation", (int)ES_ReformulationBinaryMonomials::None);
+        env->settings->updateSetting("Model.Reformulation.Monomials.Formulation",
+            (int)ES_ReformulationBinaryMonomials::None, E_SettingPriority::RecommendedInternal);
     }
 
 #ifndef HAS_GAMS
@@ -469,11 +469,11 @@ bool Solver::setProblem(
     // Do not do convexifying reformulations if the problem is assumed to be convex
     if(env->settings->getSetting<bool>("Model.Convexity.AssumeConvex"))
     {
-        env->settings->updateSetting(
-            "Model.Reformulation.Bilinear.IntegerFormulation", (int)ES_ReformulateBilinearInteger::No);
+        env->settings->updateSetting("Model.Reformulation.Bilinear.IntegerFormulation",
+            (int)ES_ReformulateBilinearInteger::No, E_SettingPriority::RecommendedInternal);
 
-        env->settings->updateSetting(
-            "Model.Reformulation.Monomials.Formulation", (int)ES_ReformulationBinaryMonomials::None);
+        env->settings->updateSetting("Model.Reformulation.Monomials.Formulation",
+            (int)ES_ReformulationBinaryMonomials::None, E_SettingPriority::RecommendedInternal);
     }
 
 #ifdef HAS_CBC
@@ -610,7 +610,8 @@ bool Solver::selectStrategy()
         if(isConvex && (useQuadraticObjective || useQuadraticConstraints) && properties.isMIQPProblem)
         // Convex MIQP problem
         {
-            env->settings->updateSetting("Output.Console.DualSolver.Show", true);
+            env->settings->updateSetting(
+                "Output.Console.DualSolver.Show", true, E_SettingPriority::RecommendedInternal);
             env->output->outputDebug(" Using convex MIQP solution strategy.");
             solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
             env->results->usedSolutionStrategy = E_SolutionStrategy::MIQP;
@@ -619,7 +620,7 @@ bool Solver::selectStrategy()
         // Convex QP problem
         {
             env->output->outputDebug(" Using convex QP solution strategy.");
-            env->settings->updateSetting("Output.Console.DualSolver.Show", true);
+            env->settings->updateSetting("Output.Console.DualSolver.Show", true, E_SettingPriority::RecommendedInternal);
             solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
             env->results->usedSolutionStrategy = E_SolutionStrategy::MIQP;
         }
@@ -627,7 +628,7 @@ bool Solver::selectStrategy()
         else if(isConvex && useQuadraticConstraints && properties.isMIQCQPProblem)
         {
             env->output->outputDebug(" Using convex MIQCQP solution strategy.");
-            env->settings->updateSetting("Output.Console.DualSolver.Show", true);
+            env->settings->updateSetting("Output.Console.DualSolver.Show", true, E_SettingPriority::RecommendedInternal);
             solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
             env->results->usedSolutionStrategy = E_SolutionStrategy::MIQCQP;
         }
@@ -635,7 +636,7 @@ bool Solver::selectStrategy()
         else if(isConvex && useQuadraticConstraints && properties.isQCQPProblem)
         {
             env->output->outputDebug(" Using convex QCQP solution strategy.");
-            env->settings->updateSetting("Output.Console.DualSolver.Show", true);
+            env->settings->updateSetting("Output.Console.DualSolver.Show", true, E_SettingPriority::RecommendedInternal);
             solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
             env->results->usedSolutionStrategy = E_SolutionStrategy::MIQCQP;
         }
@@ -651,9 +652,9 @@ bool Solver::selectStrategy()
         {
             if(!properties.isDiscrete)
             {
-                env->output->outputDebug(" Using multi-tree solution strategy.");
-                solutionStrategy = std::make_unique<SolutionStrategyMultiTree>(env);
-                env->results->usedSolutionStrategy = E_SolutionStrategy::MultiTree;
+                env->output->outputDebug(" Using continuous solution strategy.");
+                solutionStrategy = std::make_unique<SolutionStrategyNLP>(env);
+                env->results->usedSolutionStrategy = E_SolutionStrategy::NLP;
             }
             else
             {
@@ -682,7 +683,7 @@ bool Solver::selectStrategy()
                 && (properties.isMIQPProblem || properties.isMIQCQPProblem
                     || properties.isQCQPProblem || properties.isQPProblem)))
         {
-            env->settings->updateSetting("Output.Console.DualSolver.Show", true);
+            env->settings->updateSetting("Output.Console.DualSolver.Show", true, E_SettingPriority::RecommendedInternal);
         }
         isProblemInitialized = true;
     }
@@ -844,10 +845,13 @@ void Solver::initializeSettings()
     enumInteriorPointStrategy.clear();
 
     env->settings->createSetting("Dual.ESH.InteriorPoint.CuttingPlane.BitPrecision", 8,
-        "Required termination bit precision for minimization subsolver", 1, 64, true);
+        "Required termination bit precision for minimization subsolver (at most half the digits of a double)", 1, 26,
+        true);
 
     env->settings->createSetting("Dual.ESH.InteriorPoint.CuttingPlane.ConstraintSelectionFactor", 0.25,
-        "The fraction of violated constraints to generate cutting planes for", 0.0, 1.0);
+        "Max number of violated nonlinear constraints, the most violated first, to generate cutting planes "
+        "for in the interior point search, as a fraction of the number of nonlinear constraints",
+        0.0, 1.0);
 
     env->settings->createSetting("Dual.ESH.InteriorPoint.CuttingPlane.IterationLimit", 100,
         "Iteration limit for minimax cutting plane solver", 1, SHOT_INT_MAX);
@@ -874,10 +878,10 @@ void Solver::initializeSettings()
         "Upper bound for minimax objective variable", SHOT_DBL_MIN, SHOT_DBL_MAX);
 
     VectorString enumAddPrimalPointAsInteriorPoint;
-    enumAddPrimalPointAsInteriorPoint.push_back("No");
+    enumAddPrimalPointAsInteriorPoint.push_back("Only if there is no interior point");
     enumAddPrimalPointAsInteriorPoint.push_back("Add as new");
     enumAddPrimalPointAsInteriorPoint.push_back("Replace old");
-    enumAddPrimalPointAsInteriorPoint.push_back("Use avarage");
+    enumAddPrimalPointAsInteriorPoint.push_back("Use average");
     env->settings->createSetting("Dual.ESH.InteriorPoint.UsePrimalSolution",
         static_cast<int>(ES_AddPrimalPointAsInteriorPoint::KeepBoth), "Utilize primal solution as interior point",
         enumAddPrimalPointAsInteriorPoint, 0);
@@ -885,9 +889,6 @@ void Solver::initializeSettings()
 
     env->settings->createSetting("Dual.ESH.Rootsearch.ConstraintTolerance", 1e-8,
         "Constraint tolerance for when not to add individual hyperplanes", 0, SHOT_DBL_MAX);
-
-    env->settings->createSetting(
-        "Dual.ESH.Rootsearch.UniqueConstraints", false, "Allow only one hyperplane per constraint per iteration");
 
     env->settings->createSetting("Dual.ESH.Rootsearch.UseMaxFunction", false,
         "Perform rootsearch on max function, otherwise on individual constraints");
@@ -898,7 +899,9 @@ void Solver::initializeSettings()
         "These settings control how the cutting planes or supporting hyperplanes are generated.");
 
     env->settings->createSetting("Dual.HyperplaneCuts.ConstraintSelectionFactor", 0.5,
-        "The fraction of violated constraints to generate supporting hyperplanes / cutting planes for", 0.0, 1.0);
+        "Max number of violated nonlinear constraints, the most violated first, to generate hyperplanes for "
+        "in each solution point, as a fraction of the number of nonlinear constraints",
+        0.0, 1.0);
 
     env->settings->createSetting(
         "Dual.HyperplaneCuts.Delay", true, "Add hyperplane cuts to model only after optimal MIP solution");
@@ -914,6 +917,9 @@ void Solver::initializeSettings()
         "hyperplane is generated in is moved, when the constraint is not finite in it",
         1e-12, 0.5);
 
+    env->settings->createSetting(
+        "Dual.HyperplaneCuts.UniqueConstraints", false, "Allow only one hyperplane per constraint per iteration");
+
     env->settings->createSetting("Dual.HyperplaneCuts.UseIntegerCuts", false,
         "Add integer cuts for infeasible integer-combinations for binary problems");
 
@@ -925,10 +931,6 @@ void Solver::initializeSettings()
         static_cast<int>(ES_ObjectiveRootsearch::IfConvex), "When to use the objective root search",
         enumObjectiveRootsearch, 0);
     enumObjectiveRootsearch.clear();
-
-    // TODO: activate
-    // env->settings->createSetting(
-    //    "HyperplaneCuts.UsePrimalObjectiveCut", "Dual", true, "Add an objective cut in the primal solution");
 
     // Dual strategy settings: MIP solver
 
@@ -942,8 +944,7 @@ void Solver::initializeSettings()
     env->settings->createSetting("Dual.MIP.CutOff.UseInitialValue", false, "Use the initial cutoff value");
 
     env->settings->createSetting("Dual.MIP.CutOff.Tolerance", 0.00001,
-        "An extra tolerance for the objective cutoff value (to prevent infeasible subproblems)", SHOT_DBL_MIN,
-        SHOT_DBL_MAX);
+        "An extra tolerance for the objective cutoff value (to prevent infeasible subproblems)", 0.0, SHOT_DBL_MAX);
 
     env->settings->createSetting(
         "Dual.MIP.InfeasibilityRepair.IntegerCuts", false, "Allow feasibility repair of integer cuts");
@@ -959,8 +960,8 @@ void Solver::initializeSettings()
     env->settings->createSetting("Dual.MIP.InfeasibilityRepair.RelaxCutsViolatedByPrimal", true,
         "Relax the cuts of nonconvex constraints that cut off a known primal solution");
 
-    env->settings->createSetting(
-        "Dual.MIP.InfeasibilityRepair.TimeLimit", 10.0, "Time limit when reparing infeasible problem", 0, SHOT_DBL_MAX);
+    env->settings->createSetting("Dual.MIP.InfeasibilityRepair.TimeLimit", 10.0,
+        "Time limit when repairing infeasible problem", 0, SHOT_DBL_MAX);
 
     env->settings->createSetting(
         "Dual.MIP.InfeasibilityRepair.Use", true, "Enable the infeasibility repair strategy for nonconvex problems");
@@ -968,8 +969,8 @@ void Solver::initializeSettings()
     env->settings->createSetting("Dual.MIP.OptimalityTolerance", 1e-6,
         "The reduced-cost tolerance for optimality in the MIP solver", 1e-9, 1e-2);
 
-    env->settings->createSetting("Dual.MIP.NodeLimit", SHOT_DBL_MAX,
-        "Node limit to use for MIP solver in single-tree strategy", 0.0, SHOT_DBL_MAX);
+    env->settings->createSetting(
+        "Dual.MIP.NodeLimit", 0, "Node limit for each solve of the MIP solver: 0: No limit", 0, SHOT_INT_MAX);
 
     env->settings->createSetting(
         "Dual.MIP.NumberOfThreads", 0, "Number of threads to use in MIP solver: 0: Automatic", 0, 999);
@@ -979,10 +980,13 @@ void Solver::initializeSettings()
         SHOT_INT_MAX);
 
     env->settings->createSetting("Dual.MIP.SolutionLimit.ForceOptimal.Iteration", 10000,
-        "Iterations without dual bound updates for forcing optimal MIP solution", 0, SHOT_INT_MAX);
+        "Iterations without dual bound updates for forcing optimal MIP solution (multi-tree)", 0, SHOT_INT_MAX);
 
     env->settings->createSetting("Dual.MIP.SolutionLimit.ForceOptimal.Time", 1000.0,
-        "Time (s) without dual bound updates for forcing optimal MIP solution", 0, SHOT_DBL_MAX);
+        "Time (s) without dual bound updates for forcing optimal MIP solution (multi-tree)", 0, SHOT_DBL_MAX);
+
+    env->settings->createSetting("Dual.MIP.SolutionLimit.IncreaseFactor", 2.0,
+        "Factor the MIP solution limit is multiplied by when increased: 1: Increase by one", 1.0, SHOT_DBL_MAX);
 
     env->settings->createSetting("Dual.MIP.SolutionLimit.IncreaseIterations", 50,
         "Max number of iterations between MIP solution limit increases", 0, SHOT_INT_MAX);
@@ -992,8 +996,8 @@ void Solver::initializeSettings()
     env->settings->createSetting("Dual.MIP.SolutionLimit.UpdateTolerance", 0.001,
         "The constraint tolerance for when to update MIP solution limit", 0, SHOT_DBL_MAX);
 
-    env->settings->createSetting(
-        "Dual.MIP.SolutionPool.Capacity", 100, "The maximum number of solutions in the solution pool", 0, SHOT_INT_MAX);
+    env->settings->createSetting("Dual.MIP.SolutionPool.Capacity", 100,
+        "The maximum number of solutions in the solution pool of the MIP solver", 1, SHOT_INT_MAX);
 
     VectorString enumMIPSolver;
     enumMIPSolver.push_back("Cplex");
@@ -1034,15 +1038,15 @@ void Solver::initializeSettings()
         "Dual.ConvexBounding.Use", true, "Enable the convex bounding strategy for nonconvex problems");
 
     env->settings->createSetting("Dual.ConvexBounding.IdleIterations", 10,
-        "How often the convex bounding strategy should be executed. 0 = Every iteration with generated hyperplanes for "
-        "nonconvexities, 1 = Every second iteration, etc.",
+        "How many iterations with new hyperplanes the convex bounding strategy is skipped before it is performed "
+        "again: 0 = Every iteration with new hyperplanes, 1 = Every second such iteration, etc.",
         0, SHOT_INT_MAX);
 
-    // Primal settings: reduction cuts for nonconvex problems
+    // Dual strategy settings: reduction cuts for nonconvex problems
 
     env->settings->createSettingGroup("Dual", "ReductionCut", "Dual reduction cut",
         "These settings control the added dual reduction cuts from the primal solution that will try to force a better "
-        "primal solution. This functionality is only used if SHOT cannot deduce that the problem is convex .");
+        "primal solution. This functionality is only used if SHOT cannot deduce that the problem is convex.");
 
     env->settings->createSetting(
         "Dual.ReductionCut.Use", true, "Enable the dual reduction cut strategy for nonconvex problems");
@@ -1061,20 +1065,24 @@ void Solver::initializeSettings()
     enumReductionCutStrategy.clear();
 
     env->settings->createSetting("Dual.ReductionCut.MaxIterations", 20,
-        "Max number of primal cut reduction without primal improvement", 0, SHOT_INT_MAX);
+        "Maximum number of reduction cuts without primal improvement before terminating", 0, SHOT_INT_MAX);
 
-    env->settings->createSetting(
-        "Dual.ReductionCut.ReductionFactor", 0.001, "The factor used to reduce the cutoff value", 0, 1.0);
+    env->settings->createSetting("Dual.ReductionCut.ReductionFactor", 0.001,
+        "Reduction of the cutoff per reduction cut, relative to max(1, |cutoff|), in the Fraction strategy when the "
+        "relative gap is at most 0.1 or above 1",
+        0, 1.0);
 
     // Dual strategy settings: Relaxation strategies
 
     env->settings->createSettingGroup("Dual", "Relaxation", "Relaxation strategies",
-        "These settings contorl various aspects regarding integer-relaxation of the dual problem.");
+        "These settings control various aspects regarding integer-relaxation of the dual problem.");
 
     env->settings->createSetting("Dual.Relaxation.Use", true, "Initially solve continuous dual relaxations");
 
-    env->settings->createSetting(
-        "Dual.Relaxation.Frequency", 0, "The frequency to solve an LP problem: 0: Disable", 0, SHOT_INT_MAX);
+    env->settings->createSetting("Dual.Relaxation.Frequency", 0,
+        "The frequency to solve an LP problem, if Dual.Relaxation.Use is true (by default not for nonconvex problems): "
+        "0: Disable",
+        0, SHOT_INT_MAX);
 
     env->settings->createSetting("Dual.Relaxation.IterationLimit", 200,
         "The max number of relaxed LP problems to solve initially", 0, SHOT_INT_MAX);
@@ -1083,7 +1091,7 @@ void Solver::initializeSettings()
         "Max number of lazy constraints to add in relaxed solutions in single-tree strategy", 0, SHOT_INT_MAX);
 
     env->settings->createSetting("Dual.Relaxation.TerminationTolerance", 0.5,
-        "Stop solving relaxed problems when the maximum constraint deviation is at most this value");
+        "Stop solving relaxed problems when the maximum constraint deviation is at most this value", 0.0, SHOT_DBL_MAX);
 
     env->settings->createSetting(
         "Dual.Relaxation.TimeLimit", 30.0, "Time limit (s) when solving LP problems initially", 0, SHOT_DBL_MAX);
@@ -1108,7 +1116,7 @@ void Solver::initializeSettings()
     // Optimization model settings
 
     env->settings->createSettingGroup("Model", "", "Optimization model",
-        "These settings control various aspects of SHOT's representation  for and handling of the provided "
+        "These settings control various aspects of SHOT's representation for and handling of the provided "
         "optimization model.");
 
     // Bound tightening
@@ -1126,15 +1134,16 @@ void Solver::initializeSettings()
         "Model.BoundTightening.FeasibilityBased.TimeLimit", 2.0, "Time limit for bound tightening", 0.0, SHOT_DBL_MAX);
 
     env->settings->createSetting(
-        "Model.BoundTightening.FeasibilityBased.Use", true, "Peform feasibility-based bound tightening");
+        "Model.BoundTightening.FeasibilityBased.Use", true, "Perform feasibility-based bound tightening");
 
     env->settings->createSetting("Model.BoundTightening.FeasibilityBased.UseNonlinear", true,
-        "Peform feasibility-based bound tightening on nonlinear expressions");
+        "Perform feasibility-based bound tightening on nonlinear expressions");
 
     // Bound tightening: initial POA
 
-    env->settings->createSetting(
-        "Model.BoundTightening.InitialPOA.ConstraintTolerance", 1e-1, "Constraint termination tolerance");
+    // The bounds are those of the Termination settings of the outer approximation solver the values are copied into
+    env->settings->createSetting("Model.BoundTightening.InitialPOA.ConstraintTolerance", 1e-1,
+        "Constraint termination tolerance", 0, SHOT_DBL_MAX);
 
     VectorString enumCutStrategy;
     enumCutStrategy.push_back("ESH");
@@ -1148,28 +1157,29 @@ void Solver::initializeSettings()
         "cuts",
         0, SHOT_INT_MAX);
 
-    env->settings->createSetting("Model.BoundTightening.InitialPOA.IterationLimit", 50, "Iteration limit for POA");
+    env->settings->createSetting(
+        "Model.BoundTightening.InitialPOA.IterationLimit", 50, "Iteration limit for POA", 1, SHOT_INT_MAX);
 
     env->settings->createSetting("Model.BoundTightening.InitialPOA.ObjectiveConstraintTolerance", 1e-3,
-        "Objective constraint termination tolerance");
+        "Objective constraint termination tolerance", 0, SHOT_DBL_MAX);
 
-    env->settings->createSetting(
-        "Model.BoundTightening.InitialPOA.ObjectiveGapAbsolute", 1e-1, "Absolute objective gap termination level");
+    env->settings->createSetting("Model.BoundTightening.InitialPOA.ObjectiveGapAbsolute", 1e-1,
+        "Absolute objective gap termination level", 0, SHOT_DBL_MAX);
 
-    env->settings->createSetting(
-        "Model.BoundTightening.InitialPOA.ObjectiveGapRelative", 1e-1, "Relative objective gap termination level");
+    env->settings->createSetting("Model.BoundTightening.InitialPOA.ObjectiveGapRelative", 1e-1,
+        "Relative objective gap termination level", 0, SHOT_DBL_MAX);
 
     env->settings->createSetting("Model.BoundTightening.InitialPOA.StagnationConstraintTolerance", 1e-2,
-        "Tolerance factor for when no progress is made");
+        "Tolerance factor for when no progress is made", 0, SHOT_DBL_MAX);
 
     env->settings->createSetting("Model.BoundTightening.InitialPOA.StagnationIterationLimit", 5,
-        "Limit for iterations without significant progress");
+        "Limit for iterations without significant progress", 0, SHOT_INT_MAX);
 
     env->settings->createSetting(
         "Model.BoundTightening.InitialPOA.Use", false, "Create an initial polyhedral outer approximation");
 
     env->settings->createSetting("Model.BoundTightening.InitialPOA.TimeLimit", 5.0,
-        "Time limit for all the problems solved for the initial POA");
+        "Time limit for all the problems solved for the initial POA", 0, SHOT_DBL_MAX);
 
     // Convexity settings
 
@@ -1187,20 +1197,24 @@ void Solver::initializeSettings()
         "These settings control the maximum variable bounds allowed in SHOT. Projection will be performed onto these "
         "intervals. Note that the MIP solvers may have stricter requirements, in which case those may be used.");
 
+    // The variable bounds are projected onto these limits, so a positive minimum lower bound or a negative maximum
+    // upper bound would cut off feasible points
     env->settings->createSetting("Model.Variables.Continuous.MinimumLowerBound", -1e50,
-        "Minimum lower bound for continuous variables", SHOT_DBL_MIN, SHOT_DBL_MAX);
+        "Minimum lower bound for continuous variables", SHOT_DBL_MIN, 0.0);
 
     env->settings->createSetting("Model.Variables.Continuous.MaximumUpperBound", 1e50,
-        "Maximum upper bound for continuous variables", SHOT_DBL_MIN, SHOT_DBL_MAX);
+        "Maximum upper bound for continuous variables", 0.0, SHOT_DBL_MAX);
 
     env->settings->createSetting("Model.Variables.Integer.MinimumLowerBound", -2.0e9,
-        "Minimum lower bound for integer variables", SHOT_DBL_MIN, SHOT_DBL_MAX);
+        "Minimum lower bound for integer variables", SHOT_DBL_MIN, 0.0);
 
     env->settings->createSetting("Model.Variables.Integer.MaximumUpperBound", 2.0e9,
-        "Maximum upper bound for integer variables", SHOT_DBL_MIN, SHOT_DBL_MAX);
+        "Maximum upper bound for integer variables", 0.0, SHOT_DBL_MAX);
 
     env->settings->createSetting("Model.Variables.NonlinearObjectiveVariable.Bound", 1e12,
-        "Max absolute bound for the auxiliary nonlinear objective variable", SHOT_DBL_MIN, SHOT_DBL_MAX);
+        "Absolute bound for the auxiliary nonlinear objective variable, used when the bounds of the objective function "
+        "cannot be calculated with interval arithmetic",
+        0.0, SHOT_DBL_MAX);
 
     // Reformulation settings
 
@@ -1247,8 +1261,9 @@ void Solver::initializeSettings()
         enumNonlinearTermPartitioning, 0);
 
     env->settings->createSetting("Model.Reformulation.Constraint.PartitionQuadraticTerms",
-        static_cast<int>(ES_PartitionNonlinearSums::IfConvex), "When to partition quadratic sums in constraints",
-        enumNonlinearTermPartitioning, 0);
+        static_cast<int>(ES_PartitionNonlinearSums::IfConvex),
+        "When to partition quadratic sums in constraints, also in nonlinear constraints", enumNonlinearTermPartitioning,
+        0);
 
     // Reformulations for monomials
 
@@ -1288,7 +1303,8 @@ void Solver::initializeSettings()
         enumNonlinearTermPartitioning, 0);
 
     env->settings->createSetting("Model.Reformulation.ObjectiveFunction.PartitionQuadraticTerms",
-        static_cast<int>(ES_PartitionNonlinearSums::IfConvex), "When to partition quadratic sums in objective function",
+        static_cast<int>(ES_PartitionNonlinearSums::IfConvex),
+        "When to partition quadratic sums in the objective function, also in a nonlinear objective function",
         enumNonlinearTermPartitioning, 0);
 
     enumNonlinearTermPartitioning.clear();
@@ -1329,7 +1345,7 @@ void Solver::initializeSettings()
 
     env->settings->createSetting("Model.Reformulation.Quadratics.Decomposition.Method",
         static_cast<int>(ES_QuadraticDecomposition::LDLDecomposition),
-        "Whether to use the eigenvalue decomposition of convex quadratic functions", enumQPDecomposition, 0);
+        "How to decompose convex quadratic functions", enumQPDecomposition, 0);
     enumQPDecomposition.clear();
 
     VectorString enumQuadraticDecompCoeffStrategy;
@@ -1338,8 +1354,8 @@ void Solver::initializeSettings()
 
     env->settings->createSetting("Model.Reformulation.Quadratics.Decomposition.Formulation",
         static_cast<int>(ES_QuadraticDecompositionFormulation::CoefficientReformulated),
-        "Placement of the original term cofficient when decomposing a quadratic term", enumQuadraticDecompCoeffStrategy,
-        0);
+        "Placement of the original term coefficient when decomposing a quadratic term",
+        enumQuadraticDecompCoeffStrategy, 0);
     enumQuadraticDecompCoeffStrategy.clear();
 
     env->settings->createSetting("Model.Reformulation.Quadratics.Decomposition.Tolerance", 1e-7,
@@ -1368,7 +1384,9 @@ void Solver::initializeSettings()
     enumIterationDetail.push_back("On objective gap update");
     enumIterationDetail.push_back("On objective gap update and all primal NLP calls");
     env->settings->createSetting("Output.Console.Iteration.Detail",
-        static_cast<int>(ES_IterationOutputDetail::ObjectiveGapUpdates), "When should the fixed strategy be used",
+        static_cast<int>(ES_IterationOutputDetail::ObjectiveGapUpdates),
+        "Which iterations are shown on the console: all, or only those that update the objective gap (and those with "
+        "a primal NLP call). Some iterations are shown regardless after 100 hidden ones or 2 s",
         enumIterationDetail, 0);
     enumIterationDetail.clear();
 
@@ -1404,8 +1422,8 @@ void Solver::initializeSettings()
         "Where to save the output files", enumOutputDirectory, 0);
     enumOutputDirectory.clear();
 
-    env->settings->createSetting(
-        "Output.SaveNumberOfSolutions", 1, "Save max this number of primal solutions to OSrL or GDX file");
+    env->settings->createSetting("Output.SaveNumberOfSolutions", 1,
+        "Max number of primal solutions to keep and to save to OSrL or GDX files", 1, SHOT_INT_MAX);
 
     env->settings->createSettingGroup(
         "Primal", "", "Primal heuristics", "These settings control the primal heuristics used in SHOT.");
@@ -1418,15 +1436,17 @@ void Solver::initializeSettings()
     VectorString enumPrimalNLPStrategy;
     enumPrimalNLPStrategy.push_back("Use each iteration");
     enumPrimalNLPStrategy.push_back("Based on iteration or time");
-    enumPrimalNLPStrategy.push_back("Based on iteration or time, and for all feasible MIP solutions");
+    enumPrimalNLPStrategy.push_back(
+        "Based on iteration or time, and whenever a MIP solution fulfils the nonlinear constraints");
 
     env->settings->createSetting("Primal.FixedInteger.CallStrategy",
         static_cast<int>(ES_PrimalNLPStrategy::IterationOrTimeAndAllFeasibleSolutions),
         "When should the fixed strategy be used", enumPrimalNLPStrategy, 0);
     enumPrimalNLPStrategy.clear();
 
-    env->settings->createSetting(
-        "Primal.FixedInteger.CreateInfeasibilityCut", false, "Create a cut from an infeasible solution point");
+    env->settings->createSetting("Primal.FixedInteger.CreateInfeasibilityCut", false,
+        "Create cutting planes in the solution point of the fixed-integer NLP problem for the nonlinear "
+        "constraints it violates");
 
     env->settings->createSetting("Primal.FixedInteger.Enumeration.MaxCombinations", 50,
         "Max number of combinations of the discrete variables for the exhaustive search to be performed", 1,
@@ -1455,12 +1475,12 @@ void Solver::initializeSettings()
         "activated",
         0, SHOT_DBL_MAX);
 
-    env->settings->createSetting(
-        "Primal.FixedInteger.IterationLimit", 10000000, "Max number of iterations per call", 0, SHOT_INT_MAX);
+    env->settings->createSetting("Primal.FixedInteger.IterationLimit", 0,
+        "Max number of iterations per call of the NLP solver: 0: The default of the NLP solver", 0, SHOT_INT_MAX);
 
     env->settings->createSetting("Primal.FixedInteger.OnlyUniqueIntegerCombinations", true,
-        "Whether to resolve with the same integer combination, e.g. for nonconvex problems with different continuous "
-        "variable starting points");
+        "Solve the NLP problem only once for each combination of the discrete variables. If false, it is "
+        "solved again from different continuous values, e.g. for nonconvex problems");
 
     VectorString enumPrimalNLPSolver;
     enumPrimalNLPSolver.push_back("Ipopt");
@@ -1477,10 +1497,12 @@ void Solver::initializeSettings()
     enumPrimalBoundNLPStartingPoint.push_back("All");
     enumPrimalBoundNLPStartingPoint.push_back("First");
     enumPrimalBoundNLPStartingPoint.push_back("All feasible");
-    enumPrimalBoundNLPStartingPoint.push_back("First and all feasible");
+    enumPrimalBoundNLPStartingPoint.push_back("First and the one with the smallest constraint deviation");
     enumPrimalBoundNLPStartingPoint.push_back("With smallest constraint deviation");
     env->settings->createSetting("Primal.FixedInteger.Source",
-        static_cast<int>(ES_PrimalNLPFixedPoint::FirstAndFeasibleSolutions), "Source of fixed MIP solution point",
+        static_cast<int>(ES_PrimalNLPFixedPoint::FirstAndFeasibleSolutions),
+        "Which solutions of the dual problem the fixed-integer NLP problem is solved from. In single-tree, the "
+        "callbacks use each new incumbent, and this applies to the solution pool after the search",
         enumPrimalBoundNLPStartingPoint, 0);
     enumPrimalBoundNLPStartingPoint.clear();
 
@@ -1501,19 +1523,16 @@ void Solver::initializeSettings()
 
     env->settings->createSetting("Primal.FixedInteger.UseStartingPoint", false,
         "Solve an NLP problem from a given starting point, e.g. the levels of the variables in GAMS or the initial "
-        "values in AMPL, before the first dual problem. Off by default until benchmarked on all of MINLPLib");
+        "values in AMPL, before the first dual problem, and from points given by the PrimalCandidateSearch callback "
+        "at the next NLP call. Off by default until benchmarked on all of MINLPLib");
 
     env->settings->createSetting("Primal.FixedInteger.Use", true, "Use the fixed integer primal strategy");
-
-    env->settings->createSetting("Primal.FixedInteger.UseOnContinuousProblems", true,
-        "Also solve the NLP problem from the dual solutions of a nonconvex problem without discrete variables");
 
     env->settings->createSetting("Primal.FixedInteger.Warmstart", true, "Warm start the NLP solver");
 
     env->settings->createSetting("Primal.PolishSolution.NumberOfPoints", 1,
-        "The number of solutions of the dual problem, from the last iterations, that a final NLP problem is solved "
-        "from to try to improve the solution. More than one can find a better local solution of a nonconvex problem, "
-        "and zero disables it",
+        "After the search, polish the solution with NLP problems started from the best primal solution and from the "
+        "dual solutions of this many last iterations, not for LP, MILP or convex continuous problems: 0: Off",
         0, SHOT_INT_MAX);
 
     // Primal settings: rootsearch
@@ -1532,13 +1551,16 @@ void Solver::initializeSettings()
     env->settings->createSetting("Primal.Tolerance.TrustLinearConstraintValues", true,
         "Trust that subsolvers (NLP, MIP) give primal solutions that respect linear constraints");
 
-    env->settings->createSetting("Primal.Tolerance.Integer", 1e-5, "Integer tolerance for accepting primal solutions");
-
+    // The integer and linear constraint tolerances are also used as MIP solver tolerances, and the MIP solver
+    // interfaces move them into the range each solver accepts. With an integer tolerance of 0.5, any value is integral.
     env->settings->createSetting(
-        "Primal.Tolerance.LinearConstraint", 1e-6, "Linear constraint tolerance for accepting primal solutions");
+        "Primal.Tolerance.Integer", 1e-5, "Integer tolerance for accepting primal solutions", 0.0, 0.5);
 
-    env->settings->createSetting(
-        "Primal.Tolerance.NonlinearConstraint", 1e-5, "Nonlinear constraint tolerance for accepting primal solutions");
+    env->settings->createSetting("Primal.Tolerance.LinearConstraint", 1e-6,
+        "Linear constraint tolerance for accepting primal solutions", 0.0, SHOT_DBL_MAX);
+
+    env->settings->createSetting("Primal.Tolerance.NonlinearConstraint", 1e-5,
+        "Nonlinear constraint tolerance for accepting primal solutions", 0.0, SHOT_DBL_MAX);
 
     // Strategy settings
 
@@ -1576,9 +1598,11 @@ void Solver::initializeSettings()
                                    "phase to find optimum among minimal relaxations");
     enumCplexFeasOptMode.push_back("Minimize the number of constraints and bounds requiring relaxation in first "
                                    "phase only");
+    enumCplexFeasOptMode.push_back("Minimize the number of constraints and bounds requiring relaxation in first "
+                                   "phase and execute second phase to find optimum among minimal relaxations");
     enumCplexFeasOptMode.push_back("Minimize the sum of squares of required "
                                    "relaxations in first phase only");
-    enumCplexFeasOptMode.push_back(" Minimize the sum of squares of required relaxations in first phase and execute "
+    enumCplexFeasOptMode.push_back("Minimize the sum of squares of required relaxations in first phase and execute "
                                    "second phase to find optimum among minimal relaxations");
     env->settings->createSetting(
         "Subsolver.Cplex.FeasOptMode", 0, "Strategy to use for the feasibility repair", enumCplexFeasOptMode, 0);
@@ -1590,7 +1614,7 @@ void Solver::initializeSettings()
     enumCplexMIPEmphasis.push_back("Optimality");
     enumCplexMIPEmphasis.push_back("Best bound");
     enumCplexMIPEmphasis.push_back("Hidden feasible");
-    env->settings->createSetting("Subsolver.Cplex.MIPEmphasis", 1, "Sets the MIP emphasis", enumCplexMIPEmphasis, 0);
+    env->settings->createSetting("Subsolver.Cplex.MIPEmphasis", 0, "Sets the MIP emphasis", enumCplexMIPEmphasis, 0);
     enumCplexMIPEmphasis.clear();
 
     env->settings->createSetting("Subsolver.Cplex.MemoryEmphasis", 0, "Try to conserve memory when possible", 0, 1);
@@ -1603,14 +1627,15 @@ void Solver::initializeSettings()
     env->settings->createSetting("Subsolver.Cplex.NodeFile", 1, "Where to store the node file", enumCplexNodeFile, 0);
     enumCplexNodeFile.clear();
 
-    env->settings->createSetting("Subsolver.Cplex.NumericalEmphasis", 1, "Emphasis on numerical stability", 0, 1);
+    env->settings->createSetting("Subsolver.Cplex.NumericalEmphasis", 0, "Emphasis on numerical stability", 0, 1);
 
     VectorString enumCplexParallelMode;
     enumCplexParallelMode.push_back("Opportunistic");
     enumCplexParallelMode.push_back("Automatic");
     enumCplexParallelMode.push_back("Deterministic");
     env->settings->createSetting("Subsolver.Cplex.ParallelMode", 0,
-        "Controls how much time and memory should be used when filling the solution pool", enumCplexParallelMode, -1);
+        "Parallel mode in CPLEX, i.e., whether it runs deterministically when using several threads",
+        enumCplexParallelMode, -1);
     enumCplexParallelMode.clear();
 
     VectorString enumCplexProbe;
@@ -1677,7 +1702,8 @@ void Solver::initializeSettings()
     enumGurobiNumericFocus.push_back("Mild");
     enumGurobiNumericFocus.push_back("Moderate");
     enumGurobiNumericFocus.push_back("Aggressive");
-    env->settings->createSetting("Subsolver.Gurobi.NumericFocus", 1, "MIP focus", enumGurobiNumericFocus, 0);
+    env->settings->createSetting("Subsolver.Gurobi.NumericFocus", 0,
+        "How much effort Gurobi spends on detecting and managing numerical issues", enumGurobiNumericFocus, 0);
     enumGurobiNumericFocus.clear();
 
     VectorString enumGurobiPoolSearchMode;
@@ -1687,9 +1713,6 @@ void Solver::initializeSettings()
     env->settings->createSetting(
         "Subsolver.Gurobi.PoolSearchMode", 0, "Finds extra solutions", enumGurobiPoolSearchMode, 0);
     enumGurobiPoolSearchMode.clear();
-
-    env->settings->createSetting(
-        "Subsolver.Gurobi.PoolSolutions", 10, "Determines how many MIP solutions are stored", 1, 2000000000);
 
     VectorString enumGurobiScaleFlag;
     enumGurobiScaleFlag.push_back("Automatic");
@@ -1777,14 +1800,14 @@ void Solver::initializeSettings()
         "Subsolver.Highs.DebugLevel", 0, "Debug level for HiGHS internal assertions", enumHighsDebugLevel, 0);
     enumHighsDebugLevel.clear();
 
-    /*
     VectorString enumHighsMIPIPMSolver;
     enumHighsMIPIPMSolver.push_back("choose");
     enumHighsMIPIPMSolver.push_back("ipx");
-    enumHighsMIPIPMSolver.push_back("hipo");
-    env->settings->createSetting("Subsolver.Highs.MIPIPMSolver", 1, "MIP IPM solver", enumHighsMIPIPMSolver, 0);
+    enumHighsMIPIPMSolver.push_back("hipo (only if HiGHS has been built with HiPO)");
+    env->settings->createSetting("Subsolver.Highs.MIPIPMSolver", 0,
+        "Interior point solver that HiGHS uses in the MIP solver, e.g., for the analytic center", enumHighsMIPIPMSolver,
+        0);
     enumHighsMIPIPMSolver.clear();
-    */
 
     VectorString enumHighsParallel;
     enumHighsParallel.push_back("off");
@@ -1822,7 +1845,7 @@ void Solver::initializeSettings()
     env->settings->createSettingGroup("Subsolver", "Ipopt", "Ipopt", "");
 
     env->settings->createSetting("Subsolver.Ipopt.ConstraintViolationTolerance", 1E-8,
-        "Constraint violation tolerance in Ipopt", SHOT_DBL_MIN, SHOT_DBL_MAX);
+        "Constraint violation tolerance in Ipopt", 0.0, SHOT_DBL_MAX);
 
     VectorString enumIPOptSolver;
     enumIPOptSolver.push_back("Default");
@@ -1846,15 +1869,14 @@ void Solver::initializeSettings()
         enumIpoptHessianApproximation, 0);
     enumIpoptHessianApproximation.clear();
 
-    env->settings->createSetting("Subsolver.Ipopt.MaxIterations", 1000, "Maximum number of iterations");
 
     env->settings->createSetting("Subsolver.Ipopt.OptionsFile", std::string(),
-        "An Ipopt options file with any Ipopt options, read instead of ipopt.opt in the working directory. Options "
-        "set by SHOT, e.g. the linear solver, are not changed by it",
+        "An Ipopt options file with any Ipopt options, read instead of ipopt.opt in the working directory. Its options "
+        "override those set by SHOT, e.g. the linear solver, except the time limit (max_wall_time) of each solve",
         false);
 
-    env->settings->createSetting(
-        "Subsolver.Ipopt.RelativeConvergenceTolerance", 1E-8, "Relative convergence tolerance");
+    env->settings->createSetting("Subsolver.Ipopt.RelativeConvergenceTolerance", 1E-8,
+        "Relative convergence tolerance in Ipopt (tol)", 0.0, SHOT_DBL_MAX);
 
 #endif
 
@@ -1867,8 +1889,8 @@ void Solver::initializeSettings()
     /* These default to Uno's own tolerances rather than to the tighter ones used for Ipopt. Uno reports an
        algorithmic error, rather than the point it reached, when it cannot certify stationarity to the requested
        tolerance, and the accuracy of SHOT's function evaluations does not always allow 1e-8 to be reached. */
-    env->settings->createSetting("Subsolver.Uno.ConstraintViolationTolerance", 1E-6,
-        "Constraint violation tolerance in Uno", SHOT_DBL_MIN, SHOT_DBL_MAX);
+    env->settings->createSetting(
+        "Subsolver.Uno.ConstraintViolationTolerance", 1E-6, "Constraint violation tolerance in Uno", 0.0, SHOT_DBL_MAX);
 
     VectorString enumUnoHessianModel;
     enumUnoHessianModel.push_back("Exact");
@@ -1878,7 +1900,6 @@ void Solver::initializeSettings()
         "How Uno models the Hessian", enumUnoHessianModel, 0);
     enumUnoHessianModel.clear();
 
-    env->settings->createSetting("Subsolver.Uno.MaxIterations", 1000, "Maximum number of iterations");
 
     env->settings->createSetting(
         "Subsolver.Uno.OptionsFile", std::string(), "Uno option file to read additional options from");
@@ -1891,7 +1912,8 @@ void Solver::initializeSettings()
         "Subsolver.Uno.Preset", static_cast<int>(ES_UnoPreset::UnoAuto), "The Uno algorithm to use", enumUnoPreset, 0);
     enumUnoPreset.clear();
 
-    env->settings->createSetting("Subsolver.Uno.RelativeConvergenceTolerance", 1E-6, "Relative convergence tolerance");
+    env->settings->createSetting("Subsolver.Uno.RelativeConvergenceTolerance", 1E-6,
+        "Dual (stationarity) tolerance in Uno (dual_tolerance)", 0.0, SHOT_DBL_MAX);
 
 #endif
 
@@ -1909,9 +1931,6 @@ void Solver::initializeSettings()
     env->settings->createSettingGroup(
         "Subsolver", "Rootsearch", "Root search solver", "Settings for the Boost rootsearch functionality.");
 
-    env->settings->createSetting("Subsolver.Rootsearch.ActiveConstraintTolerance", 0.0,
-        "Epsilon constraint tolerance for root search", 0.0, SHOT_DBL_MAX);
-
     env->settings->createSetting(
         "Subsolver.Rootsearch.MaxIterations", 100, "Maximal root search iterations", 0, SHOT_INT_MAX);
 
@@ -1923,15 +1942,18 @@ void Solver::initializeSettings()
     enumRootsearchMethod.clear();
 
     env->settings->createSetting("Subsolver.Rootsearch.TerminationTolerance", 1e-16,
-        "Epsilon lambda tolerance for root search", 0.0, SHOT_DBL_MAX);
+        "Termination tolerance for the length of the root search interval for lambda in [0, 1], which also stops when "
+        "the interval cannot be divided further",
+        0.0, SHOT_DBL_MAX);
 
     // Termination settings
 
     env->settings->createSettingGroup(
         "Termination", "", "Termination", "These settings control when SHOT will terminate the solution process.");
 
-    env->settings->createSetting(
-        "Termination.ConstraintTolerance", 1e-8, "Termination tolerance for nonlinear constraints", 0, SHOT_DBL_MAX);
+    env->settings->createSetting("Termination.ConstraintTolerance", 1e-8,
+        "Termination tolerance for nonlinear constraints (not used for termination in the multi-tree strategy)", 0,
+        SHOT_DBL_MAX);
 
     env->settings->createSetting("Termination.ObjectiveConstraintTolerance", 1e-8,
         "Termination tolerance for the nonlinear objective constraint", 0, SHOT_DBL_MAX);
@@ -1953,7 +1975,9 @@ void Solver::initializeSettings()
         "Max number of iterations without significant dual objective value improvement", 0, SHOT_INT_MAX);
 
     env->settings->createSetting("Termination.PrimalStagnation.IterationLimit", 50,
-        "Max number of iterations without significant primal objective value improvement", 0, SHOT_INT_MAX);
+        "Number of iterations without significant primal improvement after which an objective cut is added "
+        "(nonconvex problems with reduction cuts only)",
+        0, SHOT_INT_MAX);
 
     env->settings->createSetting("Termination.TimeLimit", SHOT_DBL_MAX, "Time limit (s) for solver", 0.0, SHOT_DBL_MAX);
 
@@ -2055,44 +2079,84 @@ void Solver::verifySettings()
 
     // Checking for errors in NLP solver selection
 
-    bool NLPSolverDefined = true;
-#ifndef HAS_CONOPT
-    if(static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("Primal.FixedInteger.Solver"))
-        == ES_PrimalNLPSolver::Conopt)
-    {
-        env->output->outputWarning(" SHOT has not been compiled with support for CONOPT.");
-        NLPSolverDefined = false;
-    }
-#endif
+    // The GAMS NLP solvers can only be used for problems from GAMS. The settings can be verified before the problem is
+    // read, e.g. from an options file, and the modeling system is then not known yet.
+    bool isNonGAMSProblem = env->problem
+        && env->settings->getSetting<int>("Input.ModelingSystem") != static_cast<int>(ES_ModelingSystem::GAMS);
 
-#ifndef HAS_IPOPT
-    if(static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("Primal.FixedInteger.Solver"))
-        == ES_PrimalNLPSolver::Ipopt)
+    // Returns why the NLP solver cannot be used, or an empty string if it can
+    auto getReasonNLPSolverUnavailable = [&](ES_PrimalNLPSolver solver) -> std::string
     {
-        env->output->outputWarning(" SHOT has not been compiled with support for Ipopt NLP solver.");
-        NLPSolverDefined = false;
-    }
+        switch(solver)
+        {
+        case ES_PrimalNLPSolver::Ipopt:
+#ifdef HAS_IPOPT
+            return ("");
+#else
+            return ("SHOT has not been compiled with support for the Ipopt NLP solver");
 #endif
+        case ES_PrimalNLPSolver::Conopt:
+#ifdef HAS_CONOPT
+            return ("");
+#else
+            return ("SHOT has not been compiled with support for CONOPT");
+#endif
+        case ES_PrimalNLPSolver::GAMS:
+#ifdef HAS_GAMS
+            return (isNonGAMSProblem ? "the GAMS NLP solvers cannot be used for problems not originating from GAMS "
+                                       "(OSiL, nl, or API-built problems)"
+                                     : "");
+#else
+            return ("SHOT has not been compiled with support for GAMS NLP solvers");
+#endif
+        case ES_PrimalNLPSolver::Uno:
+#ifdef HAS_UNO
+            return ("");
+#else
+            return ("SHOT has not been compiled with support for the Uno NLP solver");
+#endif
+        case ES_PrimalNLPSolver::SHOT:
+            return ("");
+        default:
+            return ("the NLP solver is not valid");
+        }
+    };
 
-#ifndef HAS_GAMS
-    if(static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("Primal.FixedInteger.Solver"))
-        == ES_PrimalNLPSolver::GAMS)
-    {
-        env->output->outputWarning(" SHOT has not been compiled with support for GAMS NLP solvers.");
-        NLPSolverDefined = false;
-    }
-#endif
+    auto NLPSolver = static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("Primal.FixedInteger.Solver"));
 
-#ifndef HAS_UNO
-    if(static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("Primal.FixedInteger.Solver"))
-        == ES_PrimalNLPSolver::Uno)
+    if(auto reason = getReasonNLPSolverUnavailable(NLPSolver); !reason.empty())
     {
-        env->output->outputWarning(" SHOT has not been compiled with support for the Uno NLP solver.");
-        NLPSolverDefined = false;
+        // The default solver, Ipopt, is replaced without a warning if it is not available
+        bool isChosenByUser
+            = env->settings->getSettingPriority("Primal.FixedInteger.Solver") > E_SettingPriority::Default;
+
+        for(auto alternative : { ES_PrimalNLPSolver::Ipopt, ES_PrimalNLPSolver::Conopt, ES_PrimalNLPSolver::GAMS,
+                ES_PrimalNLPSolver::Uno, ES_PrimalNLPSolver::SHOT })
+        {
+            if(!getReasonNLPSolverUnavailable(alternative).empty())
+                continue;
+
+            env->settings->updateSetting(
+                "Primal.FixedInteger.Solver", static_cast<int>(alternative), E_SettingPriority::SolverCompatibility);
+
+            std::map<ES_PrimalNLPSolver, std::string> names = { { ES_PrimalNLPSolver::Ipopt, "Ipopt" },
+                { ES_PrimalNLPSolver::Conopt, "CONOPT" }, { ES_PrimalNLPSolver::GAMS, "the GAMS NLP solvers" },
+                { ES_PrimalNLPSolver::Uno, "Uno" }, { ES_PrimalNLPSolver::SHOT, "SHOT" } };
+
+            auto message = fmt::format(
+                " The selected NLP solver cannot be used since {}. Using {} instead.", reason, names[alternative]);
+
+            if(isChosenByUser)
+                env->output->outputWarning(message);
+            else
+                env->output->outputDebug(message);
+
+            break;
+        }
     }
-#endif
 
 #ifdef HAS_GAMS
+    // This is checked after the NLP solver may have been replaced with a GAMS solver above
     if((static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("Primal.FixedInteger.Solver"))
            == ES_PrimalNLPSolver::GAMS)
         && (static_cast<ES_PrimalNLPProblemSource>(env->settings->getSetting<int>("Primal.FixedInteger.SourceProblem"))
@@ -2108,45 +2172,6 @@ void Solver::verifySettings()
     }
 #endif
 
-    if((env->settings->getSetting<int>("Input.ModelingSystem") == static_cast<int>(ES_ModelingSystem::OSiL)
-           || env->settings->getSetting<int>("Input.ModelingSystem") == static_cast<int>(ES_ModelingSystem::AMPL)
-           || env->settings->getSetting<int>("Input.ModelingSystem") == static_cast<int>(ES_ModelingSystem::API))
-        && static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("Primal.FixedInteger.Solver"))
-            == ES_PrimalNLPSolver::GAMS)
-    {
-        env->output->outputWarning(
-            " Cannot use GAMS NLP solvers with problems not originating from GAMS (OSiL, nl, or API-built problems).");
-        NLPSolverDefined = false;
-    }
-
-    if(!NLPSolverDefined)
-    {
-#ifdef HAS_IPOPT
-        env->settings->updateSetting(
-            "Primal.FixedInteger.Solver", (int)ES_PrimalNLPSolver::Ipopt, E_SettingPriority::SolverCompatibility);
-        env->output->outputWarning(" Using Ipopt as NLP solver instead.");
-
-#elif defined(HAS_CONOPT)
-        env->settings->updateSetting(
-            "Primal.FixedInteger.Solver", (int)ES_PrimalNLPSolver::Conopt, E_SettingPriority::SolverCompatibility);
-        env->output->outputWarning(" Using CONOPT as NLP solver instead.");
-#elif HAS_GAMS
-        env->settings->updateSetting(
-            "Primal.FixedInteger.Solver", (int)ES_PrimalNLPSolver::GAMS, E_SettingPriority::SolverCompatibility);
-        env->output->outputWarning(" Using GAMS NLP solvers instead.");
-
-#elif HAS_UNO
-        env->settings->updateSetting(
-            "Primal.FixedInteger.Solver", (int)ES_PrimalNLPSolver::Uno, E_SettingPriority::SolverCompatibility);
-        env->output->outputWarning(" Using Uno as NLP solver instead.");
-
-#else
-        env->settings->updateSetting(
-            "Primal.FixedInteger.Solver", (int)ES_PrimalNLPSolver::SHOT, E_SettingPriority::SolverCompatibility);
-        env->output->outputWarning(" No external NLP solver available. Using SHOT as NLP solver.");
-#endif
-    }
-
     // Checking for errors in MIP solver selection
 
     auto solver = static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver"));
@@ -2158,12 +2183,6 @@ void Solver::verifySettings()
     {
         MIPSolverDefined = true;
         unboundedVariableBound = 1e20;
-
-        // TODO: needed
-        if(env->settings->getSetting<int>("Model.Reformulation.Quadratics.ExtractStrategy")
-            > (int)ES_QuadraticTermsExtractStrategy::ExtractTermsToSame)
-            env->settings->updateSetting("Model.Reformulation.Quadratics.ExtractStrategy",
-                (int)ES_QuadraticTermsExtractStrategy::ExtractTermsToSame, E_SettingPriority::RecommendedInternal);
     }
 #endif
 
@@ -2261,61 +2280,14 @@ void Solver::setConvexityBasedSettingsPreReformulation()
     {
         if(env->problem->properties.convexity != E_ProblemConvexity::Convex)
         {
-            env->settings->updateSetting("Model.Reformulation.Constraint.PartitionNonlinearTerms",
-                (int)ES_PartitionNonlinearSums::IfConvex, E_SettingPriority::RecommendedInternal);
-            env->settings->updateSetting("Model.Reformulation.Constraint.PartitionQuadraticTerms",
-                (int)ES_PartitionNonlinearSums::IfConvex, E_SettingPriority::RecommendedInternal);
-            env->settings->updateSetting("Model.Reformulation.ObjectiveFunction.PartitionNonlinearTerms",
-                (int)ES_PartitionNonlinearSums::IfConvex, E_SettingPriority::RecommendedInternal);
-            env->settings->updateSetting("Model.Reformulation.ObjectiveFunction.PartitionQuadraticTerms",
-                (int)ES_PartitionNonlinearSums::IfConvex, E_SettingPriority::RecommendedInternal);
             // env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy", 0);
 
-#ifdef HAS_GUROBI
+#if defined(HAS_GUROBI) && GRB_VERSION_MAJOR >= 9
+            // Activate Gurobi nonconvex MIQCQP solver for all nonconvex quadratic terms by default
             if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Gurobi)
-            {
-#if GRB_VERSION_MAJOR < 9
-                if(env->settings->getSetting<int>("Model.Reformulation.Quadratics.ExtractStrategy")
-                    > (int)ES_QuadraticTermsExtractStrategy::ExtractTermsToSame)
-                    env->settings->updateSetting("Model.Reformulation.Quadratics.ExtractStrategy",
-                        (int)ES_QuadraticTermsExtractStrategy::ExtractTermsToSame,
-                        E_SettingPriority::RecommendedInternal);
-#endif
-
-#if GRB_VERSION_MAJOR >= 9
-
-                if(env->settings->getSetting<bool>("Strategy.UseRecommendedSettings"))
-                {
-                    // Activate Gurobi nonconvex MIQCQP solver for all nonconvex quadratic terms by default
-                    env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy",
-                        (int)ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained,
-                        E_SettingPriority::RecommendedInternal);
-                }
-                else if(env->settings->getSetting<int>("Model.Reformulation.Quadratics.ExtractStrategy")
-                    > (int)ES_QuadraticTermsExtractStrategy::ExtractTermsToSame)
-                {
-                    env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy",
-                        (int)ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained,
-                        E_SettingPriority::RecommendedInternal);
-                }
-#endif
-            }
-#endif
-
-#ifdef HAS_CBC
-            if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Cbc)
-            {
-                env->settings->updateSetting("Model.Reformulation.Quadratics.Decomposition.Method",
-                    (int)ES_QuadraticDecomposition::LDLDecomposition, E_SettingPriority::RecommendedInternal);
-            }
-#endif
-
-#ifdef HAS_HIGHS
-            if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Highs)
-            {
-                env->settings->updateSetting("Model.Reformulation.Quadratics.Decomposition.Method",
-                    (int)ES_QuadraticDecomposition::LDLDecomposition, E_SettingPriority::RecommendedInternal);
-            }
+                env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy",
+                    (int)ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained,
+                    E_SettingPriority::RecommendedInternal);
 #endif
         }
     }
@@ -2323,6 +2295,18 @@ void Solver::setConvexityBasedSettingsPreReformulation()
 
 void Solver::setConvexityBasedSettings()
 {
+    // Nonconvex problems are always solved with the multi-tree strategy
+    if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex)
+    {
+        if(env->settings->getSetting<int>("Dual.TreeStrategy") == static_cast<int>(ES_TreeStrategy::SingleTree)
+            && env->settings->getSettingPriority("Dual.TreeStrategy") > E_SettingPriority::Default)
+            env->output->outputWarning(
+                " The problem is nonconvex, so the multi-tree strategy is used instead of the single-tree strategy.");
+
+        env->settings->updateSetting(
+            "Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::MultiTree), E_SettingPriority::SolverCompatibility);
+    }
+
     if(env->settings->getSetting<bool>("Strategy.UseRecommendedSettings"))
     {
         if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex)
@@ -2330,48 +2314,22 @@ void Solver::setConvexityBasedSettings()
             env->settings->updateSetting(
                 "Dual.ESH.InteriorPoint.CuttingPlane.IterationLimit", 50, E_SettingPriority::RecommendedInternal);
             env->settings->updateSetting(
-                "Dual.ESH.InteriorPoint.UsePrimalSolution", 1, E_SettingPriority::RecommendedInternal);
-
-            env->settings->updateSetting(
-                "Dual.ESH.Rootsearch.UniqueConstraints", false, E_SettingPriority::RecommendedInternal);
-
-            env->settings->updateSetting(
                 "Dual.HyperplaneCuts.ConstraintSelectionFactor", 1.0, E_SettingPriority::RecommendedInternal);
             env->settings->updateSetting(
                 "Dual.HyperplaneCuts.UseIntegerCuts", true, E_SettingPriority::RecommendedInternal);
-
-            // For full nonconvex features multitree needs to be used
-            env->settings->updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::MultiTree),
-                E_SettingPriority::SolverCompatibility);
 
             env->settings->updateSetting(
                 "Dual.MIP.SolutionLimit.Initial", SHOT_INT_MAX, E_SettingPriority::RecommendedInternal);
 
             env->settings->updateSetting("Dual.Relaxation.Use", false, E_SettingPriority::RecommendedInternal);
 
-            env->settings->updateSetting("Model.Reformulation.Constraint.PartitionNonlinearTerms",
-                (int)ES_PartitionNonlinearSums::IfConvex, E_SettingPriority::RecommendedInternal);
-            env->settings->updateSetting("Model.Reformulation.Constraint.PartitionQuadraticTerms",
-                (int)ES_PartitionNonlinearSums::IfConvex, E_SettingPriority::RecommendedInternal);
-            env->settings->updateSetting("Model.Reformulation.ObjectiveFunction.PartitionNonlinearTerms",
-                (int)ES_PartitionNonlinearSums::IfConvex, E_SettingPriority::RecommendedInternal);
-            env->settings->updateSetting("Model.Reformulation.ObjectiveFunction.PartitionQuadraticTerms",
-                (int)ES_PartitionNonlinearSums::IfConvex, E_SettingPriority::RecommendedInternal);
-
             env->settings->updateSetting("Primal.FixedInteger.CallStrategy", 0, E_SettingPriority::RecommendedInternal);
-            env->settings->updateSetting(
-                "Primal.FixedInteger.CreateInfeasibilityCut", false, E_SettingPriority::RecommendedInternal);
             env->settings->updateSetting(
                 "Primal.FixedInteger.Enumeration.UseInitially", true, E_SettingPriority::RecommendedInternal);
             env->settings->updateSetting("Primal.FixedInteger.Source", 0, E_SettingPriority::RecommendedInternal);
 
             env->settings->updateSetting(
                 "Primal.FixedInteger.OnlyUniqueIntegerCombinations", false, E_SettingPriority::RecommendedInternal);
-
-            env->settings->updateSetting("Primal.Rootsearch.Use", true, E_SettingPriority::RecommendedInternal);
-
-            env->settings->updateSetting(
-                "Model.BoundTightening.FeasibilityBased.TimeLimit", 5.0, E_SettingPriority::RecommendedInternal);
 
 #ifdef HAS_CPLEX
 
@@ -2386,26 +2344,6 @@ void Solver::setConvexityBasedSettings()
 
 #endif
         }
-
-#ifdef HAS_CBC
-        if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Cbc)
-        {
-            env->settings->updateSetting("Model.Reformulation.Constraint.PartitionNonlinearTerms",
-                (int)ES_PartitionNonlinearSums::IfConvex, E_SettingPriority::RecommendedInternal);
-            env->settings->updateSetting("Model.Reformulation.ObjectiveFunction.PartitionNonlinearTerms",
-                (int)ES_PartitionNonlinearSums::IfConvex, E_SettingPriority::RecommendedInternal);
-        }
-#endif
-
-#ifdef HAS_HIGHS
-        if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Highs)
-        {
-            env->settings->updateSetting("Model.Reformulation.Constraint.PartitionNonlinearTerms",
-                (int)ES_PartitionNonlinearSums::IfConvex, E_SettingPriority::RecommendedInternal);
-            env->settings->updateSetting("Model.Reformulation.ObjectiveFunction.PartitionNonlinearTerms",
-                (int)ES_PartitionNonlinearSums::IfConvex, E_SettingPriority::RecommendedInternal);
-        }
-#endif
     }
 }
 

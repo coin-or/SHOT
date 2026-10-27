@@ -115,7 +115,6 @@ public:
     virtual PairDouble getCurrentVariableBounds(int varIndex) = 0;
 
     virtual bool createHyperplane(HyperplanePtr hyperplane) = 0;
-    virtual bool createInteriorHyperplane(HyperplanePtr hyperplane) = 0;
     virtual bool createIntegerCut(IntegerCut& integerCut) = 0;
 
     // The cuts of nonconvex constraints are not valid in general, and may be relaxed. Relaxes those from the cut with

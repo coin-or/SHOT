@@ -52,29 +52,18 @@ bool Iteration::isMIP() { return (this->isDualProblemDiscrete); }
 
 SolutionPoint Iteration::getSolutionPointWithSmallestDeviation()
 {
-    double tmpVal = SHOT_DBL_MIN;
-    int tmpIdx = 0;
-
-    for(size_t i = 0; i < solutionPoints.size(); i++)
-    {
-        if(solutionPoints.at(i).maxDeviation.value > tmpVal)
-        {
-            tmpIdx = i;
-            tmpVal = solutionPoints.at(i).maxDeviation.value;
-        }
-    }
-
-    return (solutionPoints.at(tmpIdx));
+    return (solutionPoints.at(getSolutionPointWithSmallestDeviationIndex()));
 }
 
 int Iteration::getSolutionPointWithSmallestDeviationIndex()
 {
-    double tmpVal = SHOT_DBL_MIN;
+    // The deviation is the largest normalized constraint value, so the smallest one is the least violated solution
+    double tmpVal = SHOT_DBL_MAX;
     int tmpIdx = 0;
 
     for(size_t i = 0; i < solutionPoints.size(); i++)
     {
-        if(solutionPoints.at(i).maxDeviation.value > tmpVal)
+        if(solutionPoints.at(i).maxDeviation.value < tmpVal)
         {
             tmpIdx = i;
             tmpVal = solutionPoints.at(i).maxDeviation.value;

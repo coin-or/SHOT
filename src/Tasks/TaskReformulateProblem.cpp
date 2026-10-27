@@ -210,12 +210,12 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
             break;
 
         case(ES_ReformulateBilinearInteger::NoIfQuadraticSupport):
-#ifdef HAS_GUROBI
-#if GRB_VERSION_MAJOR >= 9
-            useIntegerBilinearTermReformulation = false;
-#elif GRB_VERSION_MAJOR < 9
+            // Gurobi from version 9 supports nonconvex quadratic terms, but they are only passed to it with
+            // Model.Reformulation.Quadratics.Strategy = NonconvexQuadraticallyConstrained
+#if defined(HAS_GUROBI) && GRB_VERSION_MAJOR >= 9
+            useIntegerBilinearTermReformulation = !useNonconvexQuadraticConstraints;
+#else
             useIntegerBilinearTermReformulation = true;
-#endif
 #endif
             break;
         case(ES_ReformulateBilinearInteger::Yes):
@@ -793,13 +793,17 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
     {
         auto sourceObjective = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->problem->objectiveFunction);
 
+        auto objectivePartitionQuadraticTermsStrategy = static_cast<ES_PartitionNonlinearSums>(
+            env->settings->getSetting<int>("Model.Reformulation.ObjectiveFunction.PartitionQuadraticTerms"));
+
         if(static_cast<ES_PartitionNonlinearSums>(
                env->settings->getSetting<int>("Model.Reformulation.ObjectiveFunction.PartitionNonlinearTerms"))
                 == ES_PartitionNonlinearSums::Always
             && sourceObjective->nonlinearExpression->getType() == E_NonlinearExpressionTypes::Sum)
         {
-            auto tmpLinearTerms = partitionNonlinearSum(
-                std::dynamic_pointer_cast<ExpressionSum>(sourceObjective->nonlinearExpression), isSignReversed);
+            auto tmpLinearTerms
+                = partitionNonlinearSum(std::dynamic_pointer_cast<ExpressionSum>(sourceObjective->nonlinearExpression),
+                    isSignReversed, objectivePartitionQuadraticTermsStrategy);
             destinationLinearTerms.add(tmpLinearTerms);
         }
         else if(static_cast<ES_PartitionNonlinearSums>(
@@ -817,7 +821,8 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
 
             if(areAllConvex)
             {
-                auto tmpLinearTerms = partitionNonlinearSum(sum, isSignReversed);
+                auto tmpLinearTerms
+                    = partitionNonlinearSum(sum, isSignReversed, objectivePartitionQuadraticTermsStrategy);
                 destinationLinearTerms.add(tmpLinearTerms);
             }
             else
@@ -1386,8 +1391,8 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
                 == ES_PartitionNonlinearSums::Always
             && destinationExpression->getType() == E_NonlinearExpressionTypes::Sum)
         {
-            auto tmpLinearTerms = partitionNonlinearSum(
-                std::dynamic_pointer_cast<ExpressionSum>(destinationExpression), isSignReversed);
+            auto tmpLinearTerms = partitionNonlinearSum(std::dynamic_pointer_cast<ExpressionSum>(destinationExpression),
+                isSignReversed, partitionQuadraticTermsStrategy);
             destinationLinearTerms.add(tmpLinearTerms);
         }
         else if(static_cast<ES_PartitionNonlinearSums>(
@@ -1405,7 +1410,7 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
 
             if(areAllConvex)
             {
-                auto tmpLinearTerms = partitionNonlinearSum(sum, isSignReversed);
+                auto tmpLinearTerms = partitionNonlinearSum(sum, isSignReversed, partitionQuadraticTermsStrategy);
                 destinationLinearTerms.add(tmpLinearTerms);
             }
             else
@@ -1722,8 +1727,8 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
     return (NumericConstraints({ resultingConstraints }));
 }
 
-LinearTerms TaskReformulateProblem::partitionNonlinearSum(
-    const std::shared_ptr<ExpressionSum>& source, bool reversedSigns)
+LinearTerms TaskReformulateProblem::partitionNonlinearSum(const std::shared_ptr<ExpressionSum>& source,
+    bool reversedSigns, ES_PartitionNonlinearSums partitionQuadraticTermsStrategy)
 {
     LinearTerms resultLinearTerms;
     resultLinearTerms.takeOwnership(reformulatedProblem);
@@ -1733,8 +1738,6 @@ LinearTerms TaskReformulateProblem::partitionNonlinearSum(
 
     bool allNonlinearExpressionsReformulated = false;
 
-    auto partitionNonlinearTermsStrategy = static_cast<ES_PartitionNonlinearSums>(
-        env->settings->getSetting<int>("Model.Reformulation.Constraint.PartitionNonlinearTerms"));
     auto monomialFormulation = env->settings->getSetting<int>("Model.Reformulation.Monomials.Formulation");
     double varLowerBound = env->settings->getSetting<double>("Model.Variables.Continuous.MinimumLowerBound");
     double varUpperBound = env->settings->getSetting<double>("Model.Variables.Continuous.MaximumUpperBound");
@@ -1758,7 +1761,7 @@ LinearTerms TaskReformulateProblem::partitionNonlinearSum(
                 quadTerms.add(optionalQuadraticTerm.value());
 
                 auto [tmpLinearTerms, tmpQuadraticTerms, tmpConstant]
-                    = reformulateAndPartitionQuadraticSum(quadTerms, reversedSigns, partitionNonlinearTermsStrategy);
+                    = reformulateAndPartitionQuadraticSum(quadTerms, reversedSigns, partitionQuadraticTermsStrategy);
 
                 // A constant from a fixed variable cannot be returned here, so the term is then partitioned as a
                 // nonlinear term instead; the expressions have been simplified, so this should not happen

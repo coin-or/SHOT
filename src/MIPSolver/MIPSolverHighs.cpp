@@ -368,20 +368,22 @@ void MIPSolverHighs::initializeSolverSettings()
     // HiGHS report a solution as optimal that is not (e.g. with RPOPwCaTC5_100, whose rows have coefficients up to 1e5),
     // so the integer tolerance is only used when it is smaller than the default.
     highsInstance.setOptionValue("mip_feasibility_tolerance",
-        std::min(env->settings->getSetting<double>("Primal.Tolerance.Integer"), kDefaultMipTolerance));
+        std::min(getToleranceForSolver(
+                     "Primal.Tolerance.Integer", kMinimumMipTolerance, SHOT_DBL_MAX, "mip_feasibility_tolerance"),
+            kDefaultMipTolerance));
     // Use SHOT's linear feasibility contract also for LP solves used to complete MIP starts.
     // HiGHS validates postsolve row residuals against this tolerance before its MIP search.
-    highsInstance.setOptionValue(
-        "primal_feasibility_tolerance", env->settings->getSetting<double>("Primal.Tolerance.LinearConstraint"));
+    highsInstance.setOptionValue("primal_feasibility_tolerance",
+        getToleranceForSolver(
+            "Primal.Tolerance.LinearConstraint", kMinimumKktTolerance, SHOT_DBL_MAX, "primal_feasibility_tolerance"));
+    // The reduced-cost tolerance, as for the other MIP solvers
+    highsInstance.setOptionValue("dual_feasibility_tolerance",
+        getToleranceForSolver(
+            "Dual.MIP.OptimalityTolerance", kMinimumKktTolerance, SHOT_DBL_MAX, "dual_feasibility_tolerance"));
 
     // Adds a user-provided node limit
-    if(auto nodeLimit = env->settings->getSetting<double>("Dual.MIP.NodeLimit"); nodeLimit > 0)
-    {
-        if(nodeLimit > SHOT_INT_MAX)
-            nodeLimit = SHOT_INT_MAX;
-
-        highsInstance.setOptionValue("mip_max_nodes", (int)nodeLimit);
-    }
+    if(int nodeLimit = env->settings->getSetting<int>("Dual.MIP.NodeLimit"); nodeLimit > 0)
+        highsInstance.setOptionValue("mip_max_nodes", nodeLimit);
 
     highsInstance.setOptionValue(
         "mip_allow_restart", env->settings->getSetting<bool>("Subsolver.Highs.MIPAllowRestart"));
@@ -397,22 +399,30 @@ void MIPSolverHighs::initializeSolverSettings()
     // highsInstance.setOptionValue("mip_improving_solution_save", true);
     // highsInstance.setOptionValue("mip_improving_solution_file", "higssol.sol");
 
-    /*
+    std::string mipIpmSolver;
+
     switch(env->settings->getSetting<int>("Subsolver.Highs.MIPIPMSolver"))
     {
-    case 0:
-        highsInstance.setOptionValue("mip_ipm_solver", "choose");
-        break;
     case 1:
-        highsInstance.setOptionValue("mip_ipm_solver", "ipx");
+        mipIpmSolver = "ipx";
         break;
     case 2:
-        highsInstance.setOptionValue("mip_ipm_solver", "hipo");
+        mipIpmSolver = "hipo";
         break;
     default:
-        highsInstance.setOptionValue("mip_ipm_solver", "choose");
+        mipIpmSolver = "choose";
         break;
-    }*/
+    }
+
+    // HiPO is only available if HiGHS has been built with it, otherwise HiGHS keeps its own choice. Only warned for the
+    // main dual MIP solver, not for the other HiGHS instances used for auxiliary problems.
+    if(highsInstance.setOptionValue("mip_ipm_solver", mipIpmSolver) != HighsStatus::kOk && !mipIpmSolverWarningShown
+        && env->dualSolver && env->dualSolver->MIPSolver.get() == this)
+    {
+        env->output->outputWarning(fmt::format(
+            " HiGHS cannot use the MIP IPM solver {}, so Subsolver.Highs.MIPIPMSolver is ignored.", mipIpmSolver));
+        mipIpmSolverWarningShown = true;
+    }
 
     switch(env->settings->getSetting<int>("Subsolver.Highs.Parallel"))
     {
@@ -456,14 +466,14 @@ void MIPSolverHighs::initializeSolverSettings()
 
     switch(env->settings->getSetting<int>("Subsolver.Highs.RunCrossover"))
     {
-    case 0:
-        highsInstance.setOptionValue("run_crossover", "off");
-        break;
     case 1:
         highsInstance.setOptionValue("run_crossover", "choose");
         break;
     case 2:
         highsInstance.setOptionValue("run_crossover", "on");
+        break;
+    default:
+        highsInstance.setOptionValue("run_crossover", "off");
         break;
     }
 
@@ -474,7 +484,6 @@ void MIPSolverHighs::initializeSolverSettings()
     // highsInstance.setOptionValue("simplex_strategy", 0);
     // highsInstance.setOptionValue("solver", "choose");
     // highsInstance.setOptionValue("primal_feasibility_tolerance", 1e-6);
-    // highsInstance.setOptionValue("dual_feasibility_tolerance", 1e-6);
 
     // highsInstance.setOptionValue("mip_report_level", 2);
 
@@ -780,6 +789,25 @@ E_ProblemSolutionStatus MIPSolverHighs::solveProblem()
     }
 
     MIPSolutionStatus = getSolutionStatus();
+
+    // The solutions of a MIP problem are collected in the callback, but HiGHS does not report a solution there that it
+    // has not found itself. E.g. when presolve shows that no solution is better than the cutoff, HiGHS returns the MIP
+    // start, which is the primal solution, as optimal solution. Without it, the iteration would have no solution.
+    if(isProblemDiscrete && getDiscreteVariableStatus() && currentSolutions.empty()
+        && (MIPSolutionStatus == E_ProblemSolutionStatus::Optimal
+            || MIPSolutionStatus == E_ProblemSolutionStatus::Feasible)
+        && highsInstance.getInfo().primal_solution_status == kSolutionStatusFeasible)
+    {
+        SolutionPoint solution;
+        solution.point = highsInstance.getSolution().col_value;
+        solution.point.resize(env->reformulatedProblem->properties.numberOfVariables);
+        solution.objectiveValue = highsInstance.getInfo().objective_function_value;
+        solution.hashValue = Utilities::calculateHash(solution.point);
+        currentSolutions.push_back(solution);
+
+        env->output->outputDebug("        Using the solution returned by the MIP solver, which was not reported in "
+                                 "the callback.");
+    }
 
     // An unbounded exact dual problem means that the problem is unbounded, so no point is needed
     if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded && env->results->getNumberOfIterations() > 0
@@ -1360,6 +1388,24 @@ bool MIPSolverHighs::createIntegerCut(IntegerCut& integerCut)
                     numberOfVariables += 2;
                     numberOfIntegerCutVariables += 2;
 
+                    // The data of the variables is indexed up to numberOfVariables, e.g. when the discrete variables
+                    // are activated again after the relaxation strategy, so the auxiliary variables w (continuous) and
+                    // v (binary) are included
+                    variableTypes.push_back(E_VariableType::Real);
+                    variableTypes.push_back(E_VariableType::Binary);
+                    variableNames.push_back(
+                        fmt::format("wIC{}_{}", env->solutionStatistics.numberOfIntegerCuts, index));
+                    variableNames.push_back(
+                        fmt::format("vIC{}_{}", env->solutionStatistics.numberOfIntegerCuts, index));
+                    variableLowerBounds.push_back(0.0);
+                    variableLowerBounds.push_back(0.0);
+                    variableUpperBounds.push_back(getUnboundedVariableBoundValue());
+                    variableUpperBounds.push_back(1.0);
+                    variableCosts.push_back(0.0);
+                    variableCosts.push_back(0.0);
+                    variableTypesHighs.push_back(HighsVarType::kContinuous);
+                    variableTypesHighs.push_back(HighsVarType::kInteger);
+
                     double M1 = 2 * (variableValue - VAR->lowerBound);
                     double M2 = 2 * (VAR->upperBound - variableValue);
 
@@ -1498,7 +1544,10 @@ int MIPSolverHighs::getNumberOfSolutions()
 
     if(isProblemDiscrete && isMIP)
     {
-        numSols = currentSolutions.size();
+        // All solutions found are kept, since the solution limit counts them, but only the best ones are used. They
+        // are sorted with the best one first.
+        numSols = std::min(static_cast<int>(currentSolutions.size()),
+            env->settings->getSetting<int>("Dual.MIP.SolutionPool.Capacity"));
     }
     else
     {
@@ -1576,6 +1625,12 @@ double MIPSolverHighs::getDualObjectiveValue()
     if(isMIP)
     {
         objVal = highsInstance.getInfo().mip_dual_bound;
+
+        // When presolve shows that no solution is better than the cutoff, HiGHS returns the MIP start as an optimal
+        // solution, but without a dual bound. The objective value of the optimal solution is then the dual bound.
+        if(!std::isfinite(objVal) && getSolutionStatus() == E_ProblemSolutionStatus::Optimal
+            && highsInstance.getInfo().primal_solution_status == kSolutionStatusFeasible)
+            objVal = highsInstance.getInfo().objective_function_value;
     }
     else if(getSolutionStatus() == E_ProblemSolutionStatus::Optimal)
     {

@@ -56,9 +56,6 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(
     env->timing->startTimer("PrimalStrategy");
     env->timing->startTimer("PrimalBoundStrategyNLP");
 
-    originalNLPTime = env->settings->getSetting<double>("Primal.FixedInteger.Frequency.Time");
-    originalNLPIter = env->settings->getSetting<int>("Primal.FixedInteger.Frequency.Iteration");
-
     if(useReformulatedProblem)
     {
         sourceProblem = env->reformulatedProblem;
@@ -196,9 +193,6 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(
 
     env->results->usedPrimalNLPSolverDescription = NLPSolver->getSolverDescription();
 
-    this->originalIterFrequency = env->settings->getSetting<int>("Primal.FixedInteger.Frequency.Iteration");
-    this->originalTimeFrequency = env->settings->getSetting<double>("Primal.FixedInteger.Frequency.Time");
-
     for(auto& V : sourceProblem->binaryVariables)
     {
         discreteVariableIndexes.push_back(V->getIndex());
@@ -297,6 +291,33 @@ bool TaskSelectPrimalCandidatesFromNLP::hasFiniteFunctionValues(const VectorDoub
     }
 
     return (true);
+}
+
+void TaskSelectPrimalCandidatesFromNLP::updateFrequencies(bool isSuccessful)
+{
+    int iterationSetting = env->settings->getSetting<int>("Primal.FixedInteger.Frequency.Iteration");
+    double timeSetting = env->settings->getSetting<double>("Primal.FixedInteger.Frequency.Time");
+
+    int iterations = env->solutionStatistics.fixedNLPIterationFrequency.value_or(iterationSetting);
+    double time = env->solutionStatistics.fixedNLPTimeFrequency.value_or(timeSetting);
+
+    if(isSuccessful)
+    {
+        // Rounded down, since the number of iterations would otherwise not decrease below 50
+        iterations = std::max((int)std::floor(0.98 * iterations), std::max(1, (int)std::ceil(0.1 * iterationSetting)));
+        time = std::max(0.9 * time, 0.1 * timeSetting);
+    }
+    else
+    {
+        iterations = std::min((int)std::ceil(1.02 * iterations), 10 * iterationSetting);
+        time = std::min(1.1 * time, 10 * timeSetting);
+    }
+
+    env->solutionStatistics.fixedNLPIterationFrequency = iterations;
+    env->solutionStatistics.fixedNLPTimeFrequency = time;
+
+    env->output->outputDebug(
+        fmt::format("         Iteration frequency updated to {} and time frequency updated to {}", iterations, time));
 }
 
 std::string TaskSelectPrimalCandidatesFromNLP::getType()
@@ -636,41 +657,8 @@ E_NLPSolutionStatus TaskSelectPrimalCandidatesFromNLP::solveFixedNLPCandidates(
         }
 
         if(env->settings->getSetting<bool>("Primal.FixedInteger.Frequency.Dynamic"))
-        {
-            if(solvestatus == E_NLPSolutionStatus::Optimal || solvestatus == E_NLPSolutionStatus::Feasible)
-            {
-                int iters = std::max(
-                    std::ceil(env->settings->getSetting<int>("Primal.FixedInteger.Frequency.Iteration") * 0.98),
-                    originalNLPIter);
-
-                if(iters > std::max(0.1 * this->originalIterFrequency, 1.0))
-                    env->settings->updateSetting("Primal.FixedInteger.Frequency.Iteration", iters);
-
-                double interval = std::max(
-                    0.9 * env->settings->getSetting<double>("Primal.FixedInteger.Frequency.Time"), originalNLPTime);
-
-                if(interval > 0.1 * this->originalTimeFrequency)
-                    env->settings->updateSetting("Primal.FixedInteger.Frequency.Time", interval);
-
-                env->output->outputDebug(fmt::format(
-                    "         Iteration frequency updated to {} and time frequency updated to {} ", iters, interval));
-            }
-            else
-            {
-                int iters = std::ceil(env->settings->getSetting<int>("Primal.FixedInteger.Frequency.Iteration") * 1.02);
-
-                if(iters < 10 * this->originalIterFrequency)
-                    env->settings->updateSetting("Primal.FixedInteger.Frequency.Iteration", iters);
-
-                double interval = 1.1 * env->settings->getSetting<double>("Primal.FixedInteger.Frequency.Time");
-
-                if(interval < 10 * this->originalTimeFrequency)
-                    env->settings->updateSetting("Primal.FixedInteger.Frequency.Time", interval);
-
-                env->output->outputDebug(fmt::format(
-                    "         Iteration frequency updated to {} and time frequency updated to {} ", iters, interval));
-            }
-        }
+            updateFrequencies(
+                solvestatus == E_NLPSolutionStatus::Optimal || solvestatus == E_NLPSolutionStatus::Feasible);
 
         env->solutionStatistics.numberOfIterationsWithoutNLPCallMIP = 0;
         env->solutionStatistics.timeLastFixedNLPCall = env->timing->getElapsedTime("Total");

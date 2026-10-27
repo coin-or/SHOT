@@ -359,25 +359,18 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
             if(candidateImprovesPrimalBound && checkFixedNLPStrategy(candidatePoints.at(0)))
             {
 
-                if(taskSelectPrimNLPOriginal)
-                {
-                    env->primalSolver->addFixedNLPCandidate(candidatePoints.at(0).point,
-                        E_PrimalNLPSource::FirstSolution, context.getCandidateObjective(),
-                        env->results->getCurrentIteration()->iterationNumber, candidatePoints.at(0).maxDeviation);
+                env->primalSolver->addFixedNLPCandidate(candidatePoints.at(0).point, E_PrimalNLPSource::FirstSolution,
+                    context.getCandidateObjective(), env->results->getCurrentIteration()->iterationNumber,
+                    candidatePoints.at(0).maxDeviation);
 
+                // Solved on both problems before it is cleared, since a tested candidate is not added again
+                if(taskSelectPrimNLPOriginal)
                     taskSelectPrimNLPOriginal->run();
-                    env->primalSolver->fixedPrimalNLPCandidates.clear();
-                }
 
                 if(taskSelectPrimNLPReformulated)
-                {
-                    env->primalSolver->addFixedNLPCandidate(candidatePoints.at(0).point,
-                        E_PrimalNLPSource::FirstSolution, context.getCandidateObjective(),
-                        env->results->getCurrentIteration()->iterationNumber, candidatePoints.at(0).maxDeviation);
-
                     taskSelectPrimNLPReformulated->run();
-                    env->primalSolver->fixedPrimalNLPCandidates.clear();
-                }
+
+                env->primalSolver->fixedPrimalNLPCandidates.clear();
 
                 env->primalSolver->checkPrimalSolutionCandidates();
             }

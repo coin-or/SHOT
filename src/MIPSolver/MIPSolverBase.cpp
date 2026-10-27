@@ -441,78 +441,6 @@ std::optional<std::pair<std::map<int, double>, double>> MIPSolverBase::createHyp
     return (optional);
 }
 
-bool MIPSolverBase::createInteriorHyperplane([[maybe_unused]] HyperplanePtr hyperplane)
-{
-    /*
-    auto currIter = env->results->getCurrentIteration(); // The unsolved new iteration
-    std::vector<PairIndexValue> elements;
-
-    double constant =
-    env->model->originalProblem->calculateConstraintFunctionValue(hyperplane.sourceConstraintIndex,
-                                                                                    hyperplane.generatedPoint);
-
-    auto tmpArray = env->model->originalProblem->getProblemInstance()->calculateObjectiveFunctionGradient(
-        &hyperplane.generatedPoint.at(0), -1, true);
-    int number = env->model->originalProblem->getNumberOfVariables();
-    env->solutionStatistics.numberOfGradientEvaluations++;
-
-    for (int i = 0; i < number - 1; i++)
-    {
-        if (tmpArray[i] != 0)
-        {
-            PairIndexValue pair;
-            pair.index = i;
-            pair.value = tmpArray[i];
-
-            elements.push_back(pair);
-            constant += -tmpArray[i] * hyperplane.generatedPoint.at(i);
-        }
-    }
-
-    PairIndexValue pair;
-    pair.index = env->model->originalProblem->getNonlinearObjectiveVariableIdx();
-    pair.value = -1.0;
-
-    elements.push_back(pair);
-    constant += hyperplane.generatedPoint.at(pair.index);
-
-    bool hyperplaneIsOk = true;
-
-    for (auto E : elements)
-    {
-        if (E.value != E.value) //Check for NaN
-        {
-            env->output->outputWarning(
-                "     Warning: hyperplane not generated, NaN found in linear terms!");
-
-            hyperplaneIsOk = false;
-            break;
-        }
-    }
-
-    if (hyperplaneIsOk)
-    {
-        int constrIndex = addLinearConstraint(elements, constant, false);
-        GeneratedHyperplane genHyperplane;
-
-        genHyperplane.generatedConstraintIndex = constrIndex;
-        genHyperplane.sourceConstraintIndex = hyperplane.sourceConstraintIndex;
-        genHyperplane.generatedPoint = hyperplane.generatedPoint;
-        genHyperplane.source = hyperplane.source;
-        genHyperplane.generatedIter = currIter->iterationNumber;
-
-        generatedHyperplanes.push_back(genHyperplane);
-
-        currIter->numHyperplanesAdded++;
-        currIter->totNumHyperplanes++;
-    }
-
-    currIter->totNumHyperplanes = env->results->getPreviousIteration()->totNumHyperplanes +
-    currIter->numHyperplanesAdded;*/
-
-    return (false);
-}
-
 void MIPSolverBase::fixVariables(VectorInteger variableIndexes, VectorDouble variableValues)
 {
     if(isVariablesFixed)
@@ -553,6 +481,43 @@ void MIPSolverBase::unfixVariables()
 }
 
 int MIPSolverBase::getNumberOfOpenNodes() { return (env->solutionStatistics.numberOfOpenNodes); }
+
+bool MIPSolverBase::isMainDualMIPSolver()
+{
+    return (env->dualSolver && dynamic_cast<MIPSolverBase*>(env->dualSolver->MIPSolver.get()) == this);
+}
+
+double MIPSolverBase::getToleranceForSolver(
+    const std::string& settingName, double minValue, double maxValue, const std::string& solverParameter)
+{
+    double value = env->settings->getSetting<double>(settingName);
+    double usedValue = std::min(std::max(value, minValue), maxValue);
+
+    if(usedValue != value && !toleranceSettingsWarned.count(settingName) && isMainDualMIPSolver())
+    {
+        auto range = (maxValue == SHOT_DBL_MAX) ? fmt::format("values of at least {}", minValue)
+                                                : fmt::format("values in [{},{}]", minValue, maxValue);
+
+        env->output->outputWarning(fmt::format(" The MIP solver only accepts {} for {}, so {} is used instead of the "
+                                               "value {} of {} there.",
+            range, solverParameter, usedValue, value, settingName));
+        toleranceSettingsWarned.insert(settingName);
+    }
+
+    return (usedValue);
+}
+
+void MIPSolverBase::warnToleranceNotAccepted(const std::string& settingName, const std::string& solverParameter)
+{
+    if(toleranceSettingsWarned.count(settingName) || !isMainDualMIPSolver())
+        return;
+
+    env->output->outputWarning(
+        fmt::format(" The MIP solver does not accept the value {} of {} for {}, so its own value "
+                    "is used there.",
+            env->settings->getSetting<double>(settingName), settingName, solverParameter));
+    toleranceSettingsWarned.insert(settingName);
+}
 
 bool MIPSolverBase::isDualBoundAvailable(E_ProblemSolutionStatus status, bool isMIP)
 {

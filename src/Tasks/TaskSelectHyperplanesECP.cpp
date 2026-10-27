@@ -46,7 +46,7 @@ void TaskSelectHyperplanesECP::run(std::vector<SolutionPoint> solPoints)
 
     auto constraintSelectionFactor
         = env->settings->getSetting<double>("Dual.HyperplaneCuts.ConstraintSelectionFactor");
-    bool useUniqueConstraints = env->settings->getSetting<bool>("Dual.ESH.Rootsearch.UniqueConstraints");
+    bool useUniqueConstraints = env->settings->getSetting<bool>("Dual.HyperplaneCuts.UniqueConstraints");
 
     int maxHyperplanesPerIter = env->settings->getSetting<int>("Dual.HyperplaneCuts.MaxPerIteration");
     double constraintMaxSelectionFactor
@@ -78,12 +78,6 @@ void TaskSelectHyperplanesECP::run(std::vector<SolutionPoint> solPoints)
 
         for(auto& NCV : numericConstraintValues)
         {
-            if(addedHyperplanes >= maxHyperplanesPerIter)
-            {
-                env->timing->stopTimer("DualCutGenerationRootSearch");
-                break;
-            }
-
             // Do not add hyperplane if one has been added for this constraint already
             if(useUniqueConstraints && hyperplaneAddedToConstraint.at(NCV.constraint->getIndex()))
             {
@@ -120,17 +114,9 @@ void TaskSelectHyperplanesECP::run(std::vector<SolutionPoint> solPoints)
         }
     }
 
-    // A hyperplane is added for every deviating convex constraint, which gives the best dual bounds, unless their
-    // points would take too much memory, since each has a copy of the point: then at most
-    // Dual.HyperplaneCuts.MaxPerIteration, or as many as fit, are added. The limit cannot be checked while the
-    // constraints are selected above, since no hyperplanes have been added then.
-    size_t numberOfVariables = solPoints.empty() ? 1 : std::max<size_t>(1, solPoints.at(0).point.size());
-    int maximumConvexHyperplanes
-        = (int)std::max<size_t>(maxHyperplanesPerIter, maximumNumberOfHyperplanePointValues / numberOfVariables);
-
     for(auto& values : selectedNumericValues)
     {
-        if(addedHyperplanes >= maximumConvexHyperplanes)
+        if(addedHyperplanes >= maxHyperplanesPerIter)
             break;
 
         int i = std::get<0>(values);
@@ -192,7 +178,7 @@ void TaskSelectHyperplanesECP::run(std::vector<SolutionPoint> solPoints)
 
         for(auto& values : nonconvexSelectedNumericValues)
         {
-            if(addedHyperplanes > maxHyperplanesPerIter)
+            if(addedHyperplanes >= maxHyperplanesPerIter)
                 break;
 
             int i = std::get<0>(values);
@@ -283,9 +269,7 @@ void TaskSelectHyperplanesECP::run(std::vector<SolutionPoint> solPoints)
                                                  "previous primal solution with error {}",
                 HP.first->sourceConstraint->getIndex(), HP.second));
 
-            addedHyperplanes++;
-
-            if(addedHyperplanes > maxHyperplanesPerIter)
+            if(addedHyperplanes >= maxHyperplanesPerIter)
                 break;
         }
     }

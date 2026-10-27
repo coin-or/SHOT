@@ -119,14 +119,14 @@ void TaskSelectHyperplanesObjectiveFunction::run(std::vector<SolutionPoint> sour
                 {
                     rootBound = env->rootsearchMethod->findZero(SOLPT.point, objectiveLB, objectiveUB,
                         env->settings->getSetting<int>("Subsolver.Rootsearch.MaxIterations"),
-                        env->settings->getSetting<double>("Subsolver.Rootsearch.TerminationTolerance"), 0,
+                        env->settings->getSetting<double>("Subsolver.Rootsearch.TerminationTolerance"),
                         env->reformulatedProblem->objectiveFunction);
                 }
                 else
                 {
                     rootBound = env->rootsearchMethod->findZero(SOLPT.point, objectiveUB, objectiveLB,
                         env->settings->getSetting<int>("Subsolver.Rootsearch.MaxIterations"),
-                        env->settings->getSetting<double>("Subsolver.Rootsearch.TerminationTolerance"), 0,
+                        env->settings->getSetting<double>("Subsolver.Rootsearch.TerminationTolerance"),
                         env->reformulatedProblem->objectiveFunction);
                 }
 

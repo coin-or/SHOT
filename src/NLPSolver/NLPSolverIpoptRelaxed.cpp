@@ -39,7 +39,13 @@ NLPSolverIpoptRelaxed::NLPSolverIpoptRelaxed(EnvironmentPtr envPtr, ProblemPtr s
     ipoptProblem->lowerBounds = sourceProblem->getVariableLowerBounds();
     ipoptProblem->upperBounds = sourceProblem->getVariableUpperBounds();
 
+    // From Ipopt 3.13, the options file has already been read in setInitialSettings(), and the options in it must still
+    // be changeable when Ipopt reads it again here, see applyOptionsFile()
+#if defined(IPOPT_VERSION_MAJOR) && (IPOPT_VERSION_MAJOR > 3 || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR >= 13))
+    Ipopt::ApplicationReturnStatus ipoptStatus = ipoptApplication->Initialize(true);
+#else
     Ipopt::ApplicationReturnStatus ipoptStatus = ipoptApplication->Initialize();
+#endif
 
     if(ipoptStatus != Ipopt::Solve_Succeeded)
     {
@@ -55,8 +61,9 @@ void NLPSolverIpoptRelaxed::setSolverSpecificInitialSettings()
     ipoptApplication->Options()->SetNumericValue(
         "tol", env->settings->getSetting<double>("Subsolver.Ipopt.RelativeConvergenceTolerance") + 1e-12);
 
-    ipoptApplication->Options()->SetIntegerValue(
-        "max_iter", env->settings->getSetting<int>("Subsolver.Ipopt.MaxIterations"));
+    // Without an iteration limit, Ipopt's own default is used
+    if(int iterationLimit = env->settings->getSetting<int>("Primal.FixedInteger.IterationLimit"); iterationLimit > 0)
+        ipoptApplication->Options()->SetIntegerValue("max_iter", iterationLimit);
 
     ipoptApplication->Options()->SetNumericValue(
         "max_cpu_time", env->settings->getSetting<double>("Primal.FixedInteger.TimeLimit"));

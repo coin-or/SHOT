@@ -391,23 +391,23 @@ void MIPSolverGurobi::initializeSolverSettings()
             GRB_DoubleParam_MIPGap, env->settings->getSetting<double>("Termination.ObjectiveGap.Relative") / 1.0);
         gurobiModel->set(
             GRB_DoubleParam_MIPGapAbs, env->settings->getSetting<double>("Termination.ObjectiveGap.Absolute") / 1.0);
+        gurobiModel->set(GRB_DoubleParam_FeasibilityTol,
+            getToleranceForSolver("Primal.Tolerance.LinearConstraint", 1e-9, 1e-2, "FeasibilityTol"));
         gurobiModel->set(
-            GRB_DoubleParam_FeasibilityTol, env->settings->getSetting<double>("Primal.Tolerance.LinearConstraint"));
-        gurobiModel->set(GRB_DoubleParam_IntFeasTol, env->settings->getSetting<double>("Primal.Tolerance.Integer"));
+            GRB_DoubleParam_IntFeasTol, getToleranceForSolver("Primal.Tolerance.Integer", 1e-9, 1e-1, "IntFeasTol"));
         gurobiModel->set(
             GRB_DoubleParam_OptimalityTol, env->settings->getSetting<double>("Dual.MIP.OptimalityTolerance"));
 
         // Add a user-provided node limit
-        if(auto nodeLimit = env->settings->getSetting<double>("Dual.MIP.NodeLimit"); nodeLimit > 0)
-            gurobiModel->set(GRB_DoubleParam_NodeLimit, nodeLimit);
+        if(int nodeLimit = env->settings->getSetting<int>("Dual.MIP.NodeLimit"); nodeLimit > 0)
+            gurobiModel->set(GRB_DoubleParam_NodeLimit, static_cast<double>(nodeLimit));
 
         // Set solution pool settings
         gurobiModel->set(GRB_IntParam_SolutionLimit, GRB_MAXINT);
         gurobiModel->set(
-            GRB_IntParam_SolutionNumber, env->settings->getSetting<int>("Dual.MIP.SolutionPool.Capacity") + 1);
-        gurobiModel->set(
             GRB_IntParam_PoolSearchMode, env->settings->getSetting<int>("Subsolver.Gurobi.PoolSearchMode"));
-        gurobiModel->set(GRB_IntParam_PoolSolutions, env->settings->getSetting<int>("Subsolver.Gurobi.PoolSolutions"));
+        gurobiModel->set(GRB_IntParam_PoolSolutions,
+            std::min(env->settings->getSetting<int>("Dual.MIP.SolutionPool.Capacity"), 2000000000));
 
         // Set solver emphasis
         gurobiModel->set(GRB_IntParam_NumericFocus, env->settings->getSetting<int>("Subsolver.Gurobi.NumericFocus"));
@@ -563,6 +563,18 @@ bool MIPSolverGurobi::createIntegerCut(IntegerCut& integerCut)
             {
                 numberOfVariables += 2;
                 numberOfIntegerCutVariables += 2;
+
+                // The data of the variables is indexed up to numberOfVariables, e.g. when the discrete variables are
+                // activated again after the relaxation strategy, so the auxiliary variables w (continuous) and v
+                // (binary) are included
+                variableTypes.push_back(E_VariableType::Real);
+                variableTypes.push_back(E_VariableType::Binary);
+                variableNames.push_back(fmt::format("wIC{}_{}", env->solutionStatistics.numberOfIntegerCuts, index));
+                variableNames.push_back(fmt::format("vIC{}_{}", env->solutionStatistics.numberOfIntegerCuts, index));
+                variableLowerBounds.push_back(0.0);
+                variableLowerBounds.push_back(0.0);
+                variableUpperBounds.push_back(getUnboundedVariableBoundValue());
+                variableUpperBounds.push_back(1.0);
 
                 auto w = gurobiModel->addVar(0, getUnboundedVariableBoundValue(), 0.0, GRB_CONTINUOUS,
                     fmt::format("wIC{}_{}", env->solutionStatistics.numberOfIntegerCuts, index));
@@ -1190,22 +1202,10 @@ void MIPSolverGurobi::setCutOff(double cutOff)
 
     try
     {
-        // Gurobi has problems if not an epsilon value is added to the cutoff...
-
-        double cutOffTol = env->settings->getSetting<double>("Dual.MIP.CutOff.Tolerance");
-
-        if(isMinimizationProblem)
-        {
-            gurobiModel->set(GRB_DoubleParam_Cutoff, cutOff + cutOffTol);
-            env->output->outputDebug(
-                fmt::format("        Setting cutoff value to  {} for minimization.", cutOff + cutOffTol));
-        }
-        else
-        {
-            gurobiModel->set(GRB_DoubleParam_Cutoff, cutOff - cutOffTol);
-            env->output->outputDebug(
-                fmt::format("        Setting cutoff value to  {} for maximization.", cutOff - cutOffTol));
-        }
+        // The cutoff given already includes the tolerance Dual.MIP.CutOff.Tolerance
+        gurobiModel->set(GRB_DoubleParam_Cutoff, cutOff);
+        env->output->outputDebug(fmt::format("        Setting cutoff value to {} for {}.", cutOff,
+            isMinimizationProblem ? "minimization" : "maximization"));
     }
     catch(GRBException& e)
     {

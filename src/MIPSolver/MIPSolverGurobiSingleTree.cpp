@@ -23,6 +23,10 @@
 
 #include "../Model/Problem.h"
 
+#include <fstream>
+#include <iomanip>
+#include <sstream>
+
 namespace SHOT
 {
 
@@ -100,6 +104,29 @@ E_ProblemSolutionStatus MIPSolverGurobiSingleTree::solveProblem()
         gurobiModel->optimize();
 
         MIPSolutionStatus = getSolutionStatus();
+
+        // The lazy constraints are not part of the model, so they are added as constraints to a copy of it, which can
+        // then be solved without the callback
+        if(env->settings->getSetting<bool>("Output.Debug.Enable") && !gurobiCallback->lazyConstraints.empty())
+        {
+            GRBModel modelWithLazyConstraints(*gurobiModel);
+            auto variables = modelWithLazyConstraints.getVars();
+
+            for(auto& L : gurobiCallback->lazyConstraints)
+            {
+                GRBLinExpr expr = 0;
+
+                for(auto& T : L.terms)
+                    expr += T.second * variables[T.first];
+
+                modelWithLazyConstraints.addConstr(expr, L.sense, L.rhs, L.name);
+            }
+
+            delete[] variables;
+
+            modelWithLazyConstraints.write(fmt::format(
+                "{}/singletree_problem_with_lazycuts.lp", env->settings->getSetting<std::string>("Output.Debug.Path")));
+        }
     }
     catch(GRBException& e)
     {
@@ -445,25 +472,18 @@ void GurobiCallbackSingleTree::callback()
 
             if(checkFixedNLPStrategy(candidatePoints.at(0)))
             {
-                if(taskSelectPrimNLPOriginal)
-                {
-                    env->primalSolver->addFixedNLPCandidate(candidatePoints.at(0).point,
-                        E_PrimalNLPSource::FirstSolution, getDoubleInfo(GRB_CB_MIPSOL_OBJ),
-                        env->results->getCurrentIteration()->iterationNumber, candidatePoints.at(0).maxDeviation);
+                env->primalSolver->addFixedNLPCandidate(candidatePoints.at(0).point, E_PrimalNLPSource::FirstSolution,
+                    getDoubleInfo(GRB_CB_MIPSOL_OBJ), env->results->getCurrentIteration()->iterationNumber,
+                    candidatePoints.at(0).maxDeviation);
 
+                // Solved on both problems before it is cleared, since a tested candidate is not added again
+                if(taskSelectPrimNLPOriginal)
                     taskSelectPrimNLPOriginal->run();
-                    env->primalSolver->fixedPrimalNLPCandidates.clear();
-                }
 
                 if(taskSelectPrimNLPReformulated)
-                {
-                    env->primalSolver->addFixedNLPCandidate(candidatePoints.at(0).point,
-                        E_PrimalNLPSource::FirstSolution, getDoubleInfo(GRB_CB_MIPSOL_OBJ),
-                        env->results->getCurrentIteration()->iterationNumber, candidatePoints.at(0).maxDeviation);
-
                     taskSelectPrimNLPReformulated->run();
-                    env->primalSolver->fixedPrimalNLPCandidates.clear();
-                }
+
+                env->primalSolver->fixedPrimalNLPCandidates.clear();
 
                 env->primalSolver->checkPrimalSolutionCandidates();
             }
@@ -581,7 +601,7 @@ bool GurobiCallbackSingleTree::createHyperplane(HyperplanePtr hyperplane)
             expr += P.second * vars[P.first];
         }
 
-        addLazy(expr <= -tmpPair.second);
+        addAndRecordLazy(expr, GRB_LESS_EQUAL, -tmpPair.second, "HP");
 
         env->dualSolver->addGeneratedHyperplane(hyperplane);
     }
@@ -694,7 +714,7 @@ bool GurobiCallbackSingleTree::createIntegerCut(IntegerCut& integerCut)
             index++;
         }
 
-        addLazy(expr >= 1);
+        addAndRecordLazy(expr, GRB_GREATER_EQUAL, 1.0, "IC");
     }
     catch(GRBException& e)
     {
@@ -703,6 +723,40 @@ bool GurobiCallbackSingleTree::createIntegerCut(IntegerCut& integerCut)
     }
 
     return (true);
+}
+
+void GurobiCallbackSingleTree::addAndRecordLazy(const GRBLinExpr& expr, char sense, double rhs, const std::string& type)
+{
+    addLazy(expr, sense, rhs);
+
+    if(!env->settings->getSetting<bool>("Output.Debug.Enable"))
+        return;
+
+    LazyConstraint constraint;
+    constraint.sense = sense;
+    constraint.rhs = rhs - expr.getConstant();
+    constraint.name = fmt::format("LAZY{}_{}", lazyConstraints.size(), type);
+
+    std::stringstream line;
+    line << std::setprecision(17) << constraint.name << ":";
+
+    for(unsigned int i = 0; i < expr.size(); i++)
+    {
+        auto variable = expr.getVar(i);
+        constraint.terms.emplace_back(variable.index(), expr.getCoeff(i));
+        line << " " << std::showpos << expr.getCoeff(i) << std::noshowpos << " "
+             << variable.get(GRB_StringAttr_VarName);
+    }
+
+    line << (sense == GRB_LESS_EQUAL ? " <= " : (sense == GRB_GREATER_EQUAL ? " >= " : " = ")) << constraint.rhs
+         << '\n';
+
+    // The cuts are appended as they are added, so that they are also available if the solver stops before the end
+    std::ofstream file(
+        fmt::format("{}/lazycuts.txt", env->settings->getSetting<std::string>("Output.Debug.Path")), std::ios::app);
+    file << line.str();
+
+    lazyConstraints.push_back(constraint);
 }
 
 void GurobiCallbackSingleTree::addLazyConstraint(std::vector<SolutionPoint> candidatePoints)
@@ -782,9 +836,9 @@ void GurobiCallbackSingleTree::addExternalDualBoundLazyConstraint()
         }
 
         if(isMinimization)
-            addLazy(objExpr >= *newBound);
+            addAndRecordLazy(objExpr, GRB_GREATER_EQUAL, *newBound, "DB");
         else
-            addLazy(objExpr <= *newBound);
+            addAndRecordLazy(objExpr, GRB_LESS_EQUAL, *newBound, "DB");
     }
     catch(GRBException& e)
     {

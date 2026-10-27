@@ -780,7 +780,10 @@ E_NLPSolutionStatus NLPSolverConopt::solveProblemInstance()
         check(solver.setThreadF(1));
         check(solver.setThread2D(1));
         check(solver.setErrLim(100));
-        check(solver.setItLim(env->settings->getSetting<int>("Primal.FixedInteger.IterationLimit")));
+        // Without an iteration limit, CONOPT's own default is used
+        if(int iterationLimit = env->settings->getSetting<int>("Primal.FixedInteger.IterationLimit");
+            iterationLimit > 0)
+            check(solver.setItLim(iterationLimit));
         check(solver.setResLim(seconds));
         check(COIDEF_Optfile(solver.controlVector(), options.name.c_str()));
         const char* license[] = { std::getenv("CONOPT_LICENSE_INT_1"), std::getenv("CONOPT_LICENSE_INT_2"),

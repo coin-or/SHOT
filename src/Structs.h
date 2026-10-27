@@ -14,6 +14,7 @@
 
 #include <limits>
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -314,6 +315,11 @@ struct SolutionStatistics
 
     double timeLastDualBoundUpdate = 0;
     double timeLastFixedNLPCall = 0;
+
+    // The number of iterations and the time between the calls of the fixed-integer NLP strategy, when adapted with
+    // Primal.FixedInteger.Frequency.Dynamic; until then, Primal.FixedInteger.Frequency.Iteration and .Time are used
+    std::optional<int> fixedNLPIterationFrequency;
+    std::optional<double> fixedNLPTimeFrequency;
 
     int numberOfOriginalInteriorPoints = 0;
 

@@ -461,23 +461,17 @@ void CtCallbackI::main()
 
     if(checkFixedNLPStrategy(solutionCandidate))
     {
-        if(taskSelectPrimNLPOriginal)
-        {
-            env->primalSolver->addFixedNLPCandidate(solution, E_PrimalNLPSource::FirstSolution, this->getObjValue(),
-                env->results->getCurrentIteration()->iterationNumber, solutionCandidate.maxDeviation);
+        env->primalSolver->addFixedNLPCandidate(solution, E_PrimalNLPSource::FirstSolution, this->getObjValue(),
+            env->results->getCurrentIteration()->iterationNumber, solutionCandidate.maxDeviation);
 
+        // Solved on both problems before it is cleared, since a tested candidate is not added again
+        if(taskSelectPrimNLPOriginal)
             taskSelectPrimNLPOriginal->run();
-            env->primalSolver->fixedPrimalNLPCandidates.clear();
-        }
 
         if(taskSelectPrimNLPReformulated)
-        {
-            env->primalSolver->addFixedNLPCandidate(solution, E_PrimalNLPSource::FirstSolution, this->getObjValue(),
-                env->results->getCurrentIteration()->iterationNumber, solutionCandidate.maxDeviation);
-
             taskSelectPrimNLPReformulated->run();
-            env->primalSolver->fixedPrimalNLPCandidates.clear();
-        }
+
+        env->primalSolver->fixedPrimalNLPCandidates.clear();
 
         env->primalSolver->checkPrimalSolutionCandidates();
 

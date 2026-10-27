@@ -92,7 +92,7 @@ void Results::addPrimalSolution(PrimalSolution solution)
     // A solution that is only added to the solution pool is not an improvement of the primal bound
     bool isPrimalImprovement = isIncumbent || replacesIncumbent;
 
-    int poolSize = std::max(1, env->settings->getSetting<int>("Output.SaveNumberOfSolutions"));
+    int poolSize = env->settings->getSetting<int>("Output.SaveNumberOfSolutions");
 
     if((int)this->primalSolutions.size() >= poolSize)
     {
@@ -171,37 +171,6 @@ void Results::addPrimalSolution(PrimalSolution solution)
 
         savePrimalSolutionToFile(solution, env->problem->allVariables, filename);
     }
-
-    // TODO: Add primal objective cut
-    /*if(env->settings->getSetting<bool>("Dual.HyperplaneCuts.UsePrimalObjectiveCut")
-        && env->reformulatedProblem->objectiveFunction->properties.classification
-            > E_ObjectiveFunctionClassification::Quadratic)
-    {
-        Hyperplane hyperplane;
-        hyperplane.source = E_HyperplaneSource::PrimalSolutionSearchInteriorObjective;
-        hyperplane.isObjectiveHyperplane = true;
-        hyperplane.sourceConstraintIndex = -1;
-        hyperplane.generatedPoint = solution.point;
-
-        if(env->reformulatedProblem->objectiveFunction->properties.hasNonlinearExpression)
-        {
-            hyperplane.objectiveFunctionValue
-                =
-    std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                      ->calculateValue(hyperplane.generatedPoint);
-        }
-        else
-        {
-            hyperplane.objectiveFunctionValue
-                =
-    std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                      ->calculateValue(hyperplane.generatedPoint);
-        }
-
-        env->dualSolver->hyperplaneWaitingList.push_back(hyperplane);
-
-        env->output->outputCritical("        Primal objective cut added.");
-    }*/
 
     if(env->callbacks->isActive(E_CallbackLocation::NewPrimalSolution))
     {
@@ -1683,11 +1652,10 @@ void Results::setDualBound(double value, bool forceGlobal)
 
     this->currentDualBound = value;
 
+    // A bound that is valid although the dual problem is not a relaxation, e.g. from convex bounding, does not make the
+    // dual problem a relaxation again, so its later bounds, e.g. from being infeasible with a cutoff, are not global
     if(this->solutionIsGlobal || forceGlobal)
-    {
         this->globalDualBound = value;
-        this->solutionIsGlobal = true;
-    }
 
     env->solutionStatistics.numberOfIterationsWithDualStagnation = 0;
 
@@ -1765,7 +1733,8 @@ E_ModelReturnStatus Results::getModelReturnStatus()
         return (hasPrimalSolution() ? E_ModelReturnStatus::Unbounded : E_ModelReturnStatus::UnboundedNoSolution);
 
     if(terminationReason == E_TerminationReason::InfeasibleProblem)
-        return (solutionIsGlobal ? E_ModelReturnStatus::InfeasibleGlobal : E_ModelReturnStatus::InfeasibleLocal);
+        return ((solutionIsGlobal || isInfeasibilityProven) ? E_ModelReturnStatus::InfeasibleGlobal
+                                                            : E_ModelReturnStatus::InfeasibleLocal);
 
     if(terminationReason == E_TerminationReason::Error || terminationReason == E_TerminationReason::NumericIssues)
         return (hasPrimalSolution() ? E_ModelReturnStatus::FeasibleSolution : E_ModelReturnStatus::ErrorNoSolution);

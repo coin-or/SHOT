@@ -100,23 +100,14 @@ void NLPSolverSHOT::initializeMIPProblem()
 
     solver->updateSetting(
         "Termination.TimeLimit", env->settings->getSetting<double>("Primal.FixedInteger.TimeLimit"));
-    solver->updateSetting(
-        "Termination.IterationLimit", env->settings->getSetting<int>("Primal.FixedInteger.IterationLimit"));
+    // Without an iteration limit, the nested solver uses its default Termination.IterationLimit
+    if(int iterationLimit = env->settings->getSetting<int>("Primal.FixedInteger.IterationLimit"); iterationLimit > 0)
+        solver->updateSetting("Termination.IterationLimit", iterationLimit);
 
     solver->updateSetting("Termination.DualStagnation.IterationLimit", 20);
 
     solver->updateSetting(
         "Model.BoundTightening.FeasibilityBased.Use", env->settings->getSetting<bool>("Subsolver.SHOT.UseFBBT"));
-
-    // Put more emphasis on numerical stability in the LP solver
-#ifdef HAS_CPLEX
-    solver->updateSetting("Subsolver.Cplex.NumericalEmphasis", 1);
-#endif
-
-    // Put more emphasis on numerical stability in the LP solver
-#ifdef HAS_GUROBI
-    solver->updateSetting("Subsolver.Gurobi.NumericFocus", 3);
-#endif
 
     // Set the debug path for the subsolver
     auto mainDebugPath = env->settings->getSetting<std::string>("Output.Debug.Path");
@@ -141,6 +132,13 @@ void NLPSolverSHOT::initializeMIPProblem()
     // solver instead.
     if(!solver->setProblem(relaxedProblem, relaxedProblem))
         throw Exception("Could not initialize the nested SHOT solver for the fixed-integer NLP problem.");
+
+    // No bound tightening is done when the problem is set above, since the bounds have already been tightened in the
+    // main solver, but only when the discrete variables have been fixed in solveProblemInstance(). That uses the
+    // settings of the nested solver, so it gets the number of passes of the main solver here.
+    if(env->settings->getSetting<bool>("Subsolver.SHOT.UseFBBT"))
+        solver->updateSetting("Model.BoundTightening.FeasibilityBased.MaxIterations",
+            env->settings->getSetting<int>("Model.BoundTightening.FeasibilityBased.MaxIterations"));
 }
 
 void NLPSolverSHOT::setStartingPoint(VectorInteger /*variableIndexes*/, VectorDouble /*variableValues*/) { }
@@ -285,8 +283,9 @@ E_NLPSolutionStatus NLPSolverSHOT::solveProblemInstance()
     {
         auto& subsolverHyperplanes = solver->getEnvironment()->dualSolver->generatedHyperplanes;
 
-        int numHyperplanesToCopy = subsolverHyperplanes.size()
-            * env->settings->getSetting<double>("Subsolver.SHOT.ReuseHyperplanes.Fraction");
+        // Rounded up, so that a positive fraction also reuses hyperplanes when few have been generated
+        int numHyperplanesToCopy = static_cast<int>(std::ceil(subsolverHyperplanes.size()
+            * env->settings->getSetting<double>("Subsolver.SHOT.ReuseHyperplanes.Fraction")));
 
         // The nested solver reformulates its problem again, so its constraint indices do not match the ones in the
         // main reformulated problem. Constraints are matched by name instead, and the cut is then generated from the
