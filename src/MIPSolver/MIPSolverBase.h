@@ -66,12 +66,12 @@ protected:
     // Whether a solve with the given status provides a bound that is valid for the dual problem
     bool isDualBoundAvailable(E_ProblemSolutionStatus status, bool isMIP);
 
-    // The value of a SHOT tolerance setting that is also used as a MIP solver parameter, i.e.,
-    // Primal.Tolerance.Integer or Primal.Tolerance.LinearConstraint, moved into the range [minValue, maxValue] that
-    // the solver parameter accepts. The settings are SHOT's own tolerances for accepting primal solutions, so they
-    // allow values outside the range of a specific solver. A solver that is given a value outside its range may
-    // reject the rest of the parameters as well. A warning is shown the first time the value of a setting is changed,
-    // and only for the main dual MIP solver.
+    // The value of a SHOT tolerance setting that is also used as a MIP solver parameter, e.g.
+    // Primal.Tolerance.Integer or Termination.ObjectiveGap.Relative, moved into the range [minValue, maxValue] that
+    // the solver parameter accepts. The settings are SHOT's own tolerances, so they allow values outside the range of
+    // a specific solver. A solver that is given a value outside its range may reject the rest of the parameters as
+    // well. A warning is shown the first time the value of a setting is changed, and only for the main dual MIP
+    // solver.
     double getToleranceForSolver(
         const std::string& settingName, double minValue, double maxValue, const std::string& solverParameter);
 

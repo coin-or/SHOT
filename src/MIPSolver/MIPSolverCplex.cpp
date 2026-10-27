@@ -415,7 +415,7 @@ void MIPSolverCplex::initializeSolverSettings()
 
         // Set termination tolerances
         cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::MIPGap,
-            env->settings->getSetting<double>("Termination.ObjectiveGap.Relative") / 1.0);
+            getToleranceForSolver("Termination.ObjectiveGap.Relative", 0.0, 1.0, "MIP.Tolerances.MIPGap"));
         cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::AbsMIPGap,
             env->settings->getSetting<double>("Termination.ObjectiveGap.Absolute") / 1.0);
         cplexInstance.setParam(IloCplex::Param::Simplex::Tolerances::Feasibility,
