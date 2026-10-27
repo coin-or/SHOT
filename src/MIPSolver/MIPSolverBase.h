@@ -109,8 +109,6 @@ public:
     virtual double getConstraintUpperBound(int constraintIndex) = 0;
     virtual bool setConstraintUpperBound(int constraintIndex, double upperBound) = 0;
 
-    virtual bool createInteriorHyperplane(HyperplanePtr hyperplane);
-
     std::optional<std::pair<std::map<int, double>, double>> createHyperplaneTerms(HyperplanePtr hyperplane);
 
     virtual void setCutOffAsConstraint(double cutOff) = 0;
@@ -197,9 +195,6 @@ public:
             break;
         case E_HyperplaneSource::PrimalSolutionSearch:
             identifier = "H_PRIM";
-            break;
-        case E_HyperplaneSource::PrimalSolutionSearchInteriorObjective:
-            identifier = "H_PRIM_IO";
             break;
         case E_HyperplaneSource::InteriorPointSearch:
             identifier = "H_IP";

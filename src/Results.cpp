@@ -172,37 +172,6 @@ void Results::addPrimalSolution(PrimalSolution solution)
         savePrimalSolutionToFile(solution, env->problem->allVariables, filename);
     }
 
-    // TODO: Add primal objective cut
-    /*if(env->settings->getSetting<bool>("Dual.HyperplaneCuts.UsePrimalObjectiveCut")
-        && env->reformulatedProblem->objectiveFunction->properties.classification
-            > E_ObjectiveFunctionClassification::Quadratic)
-    {
-        Hyperplane hyperplane;
-        hyperplane.source = E_HyperplaneSource::PrimalSolutionSearchInteriorObjective;
-        hyperplane.isObjectiveHyperplane = true;
-        hyperplane.sourceConstraintIndex = -1;
-        hyperplane.generatedPoint = solution.point;
-
-        if(env->reformulatedProblem->objectiveFunction->properties.hasNonlinearExpression)
-        {
-            hyperplane.objectiveFunctionValue
-                =
-    std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                      ->calculateValue(hyperplane.generatedPoint);
-        }
-        else
-        {
-            hyperplane.objectiveFunctionValue
-                =
-    std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                      ->calculateValue(hyperplane.generatedPoint);
-        }
-
-        env->dualSolver->hyperplaneWaitingList.push_back(hyperplane);
-
-        env->output->outputCritical("        Primal objective cut added.");
-    }*/
-
     if(env->callbacks->isActive(E_CallbackLocation::NewPrimalSolution))
     {
         auto context = std::make_shared<NewPrimalSolutionContext>(

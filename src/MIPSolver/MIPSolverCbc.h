@@ -113,11 +113,6 @@ public:
     double getConstraintUpperBound(int constraintIndex) override;
     bool setConstraintUpperBound(int constraintIndex, double upperBound) override;
 
-    bool createInteriorHyperplane(HyperplanePtr hyperplane) override
-    {
-        return (MIPSolverBase::createInteriorHyperplane(hyperplane));
-    }
-
     std::optional<std::pair<std::map<int, double>, double>> createHyperplaneTerms(HyperplanePtr hyperplane) override
     {
         return (MIPSolverBase::createHyperplaneTerms(hyperplane));

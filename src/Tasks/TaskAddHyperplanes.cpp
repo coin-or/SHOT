@@ -68,23 +68,13 @@ void TaskAddHyperplanes::run()
             // points, and the same hyperplanes are put on the waiting list once per delayed iteration. Only the
             // first one is added, since the others are identical, and adding them would count them as hyperplanes
             // repeated because the dual problem is not making progress.
-            if(!isReinitialized && HP->source != E_HyperplaneSource::PrimalSolutionSearchInteriorObjective
-                && env->dualSolver->hasHyperplaneBeenAdded(HP))
+            if(!isReinitialized && env->dualSolver->hasHyperplaneBeenAdded(HP))
             {
                 env->output->outputTrace("        Hyperplane on the waiting list has been added already.");
                 continue;
             }
 
-            bool cutAddedSuccessfully = false;
-
-            if(HP->source == E_HyperplaneSource::PrimalSolutionSearchInteriorObjective)
-            {
-                cutAddedSuccessfully = env->dualSolver->MIPSolver->createInteriorHyperplane(HP);
-            }
-            else
-            {
-                cutAddedSuccessfully = env->dualSolver->MIPSolver->createHyperplane(HP);
-            }
+            bool cutAddedSuccessfully = env->dualSolver->MIPSolver->createHyperplane(HP);
 
             if(cutAddedSuccessfully)
             {

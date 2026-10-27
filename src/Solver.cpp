@@ -932,10 +932,6 @@ void Solver::initializeSettings()
         enumObjectiveRootsearch, 0);
     enumObjectiveRootsearch.clear();
 
-    // TODO: activate
-    // env->settings->createSetting(
-    //    "HyperplaneCuts.UsePrimalObjectiveCut", "Dual", true, "Add an objective cut in the primal solution");
-
     // Dual strategy settings: MIP solver
 
     env->settings->createSettingGroup("Dual", "MIP", "MIP solver",

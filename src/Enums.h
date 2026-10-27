@@ -64,7 +64,6 @@ enum class E_HyperplaneSource
     LPRelaxedSolutionPoint,
     LPFixedIntegers,
     PrimalSolutionSearch,
-    PrimalSolutionSearchInteriorObjective,
     InteriorPointSearch,
     MIPCallbackRelaxed,
     ObjectiveRootsearch,
