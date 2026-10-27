@@ -768,11 +768,13 @@ void Problem::updateFactorableFunctions()
 
     int nonlinearExpressionCounter = 0;
 
+    // Every nonlinear expression gets an index, also one without variables, i.e., a constant, which CppAD handles: the
+    // gradient and Hessian are evaluated by index, and the expressions must be as many as
+    // properties.numberOfNonlinearExpressions counts
     for(auto& C : nonlinearConstraints)
     {
         if(C->properties.hasNonlinearExpression)
         {
-            assert(C->variablesInNonlinearExpression.size() > 0);
             factorableFunctions.push_back(C->nonlinearExpression->getFactorableFunction());
             constraintsWithNonlinearExpressions.push_back(C);
             C->nonlinearExpressionIndex = nonlinearExpressionCounter;
@@ -782,8 +784,7 @@ void Problem::updateFactorableFunctions()
 
     auto nonlinearObjectiveFunc = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objectiveFunction);
 
-    if(objectiveFunction->properties.hasNonlinearExpression && nonlinearObjectiveFunc
-        && nonlinearObjectiveFunc->variablesInNonlinearExpression.size() > 0)
+    if(objectiveFunction->properties.hasNonlinearExpression && nonlinearObjectiveFunc)
     {
         nonlinearObjectiveFunc->updateFactorableFunction();
         factorableFunctions.push_back(nonlinearObjectiveFunc->nonlinearExpression->getFactorableFunction());
