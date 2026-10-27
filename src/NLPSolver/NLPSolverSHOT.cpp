@@ -283,8 +283,9 @@ E_NLPSolutionStatus NLPSolverSHOT::solveProblemInstance()
     {
         auto& subsolverHyperplanes = solver->getEnvironment()->dualSolver->generatedHyperplanes;
 
-        int numHyperplanesToCopy = subsolverHyperplanes.size()
-            * env->settings->getSetting<double>("Subsolver.SHOT.ReuseHyperplanes.Fraction");
+        // Rounded up, so that a positive fraction also reuses hyperplanes when few have been generated
+        int numHyperplanesToCopy = static_cast<int>(std::ceil(subsolverHyperplanes.size()
+            * env->settings->getSetting<double>("Subsolver.SHOT.ReuseHyperplanes.Fraction")));
 
         // The nested solver reformulates its problem again, so its constraint indices do not match the ones in the
         // main reformulated problem. Constraints are matched by name instead, and the cut is then generated from the
