@@ -22,6 +22,8 @@
 
 #include "../Model/Problem.h"
 
+#include <thread>
+
 #include "CoinBuild.hpp"
 #include "CoinModel.hpp"
 #include "CoinPragma.hpp"
@@ -347,9 +349,9 @@ void MIPSolverCbc::initializeSolverSettings()
     {
         // Cbc runs deterministcally if 100 is added to the number of threads
         if(env->settings->getSetting<bool>("Subsolver.Cbc.DeterministicParallelMode"))
-            numberOfThreads = env->settings->getSetting<int>("Dual.MIP.NumberOfThreads") + 100;
+            numberOfThreads = getNumberOfThreads() + 100;
         else
-            numberOfThreads = env->settings->getSetting<int>("Dual.MIP.NumberOfThreads");
+            numberOfThreads = getNumberOfThreads();
     }
     else
     {
@@ -1872,8 +1874,14 @@ int MIPSolverCbc::getNumberOfThreads()
     if(!cbcModel || !cbcModel->haveMultiThreadSupport())
         return (1);
 
-    // Cbc runs serially, and not with an automatic number of threads, if zero threads are given
-    return (std::max(1, env->settings->getSetting<int>("Dual.MIP.NumberOfThreads")));
+    int numberOfThreads = env->settings->getSetting<int>("Dual.MIP.NumberOfThreads");
+
+    // Cbc runs serially if zero threads are given, so the automatic number of threads is one per logical core, as
+    // with the other MIP solvers
+    if(numberOfThreads == 0)
+        numberOfThreads = std::max(1, static_cast<int>(std::thread::hardware_concurrency()));
+
+    return (numberOfThreads);
 }
 
 int CbcMessageHandler::print()
