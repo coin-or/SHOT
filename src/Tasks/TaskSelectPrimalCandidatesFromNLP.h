@@ -56,6 +56,11 @@ private:
     bool hasFiniteFunctionValues(const VectorDouble& point);
 
     void createInfeasibilityCut(const VectorDouble point);
+
+    // Adds hyperplanes in a feasible solution of the fixed-integer NLP problem for the convex nonlinear constraints
+    // of the reformulated problem that are active in it, ranked by how much they cut away of the dual solution the
+    // integer assignment comes from
+    void createSupportingHyperplanes(const VectorDouble& point, const VectorDouble& dualSolution);
     void createIntegerCut(VectorDouble point);
 
     std::shared_ptr<INLPSolver> NLPSolver;

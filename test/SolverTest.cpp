@@ -2572,6 +2572,94 @@ bool TestQuadraticPartitioningSettings()
     return passed;
 }
 
+// The supporting hyperplanes in the feasible fixed-integer NLP solutions of a convex MINLP problem must not change the
+// optimal solution, and they are only created when the option is on and the limit is positive
+bool TestSupportingHyperplanesInFixedIntegerNLPSolutions()
+{
+    bool passed = true;
+
+    struct Configuration
+    {
+        bool use;
+        bool onlyViolated;
+        int maxPerSolution;
+    };
+
+    std::optional<double> referenceObjectiveValue;
+
+    for(auto configuration : { Configuration { false, false, 50 }, Configuration { true, false, 50 },
+            Configuration { true, true, 50 }, Configuration { true, false, 0 } })
+    {
+        std::cout << "CreateSupportingHyperplanes " << configuration.use << ", OnlyViolated "
+                  << configuration.onlyViolated << " and MaxPerSolution " << configuration.maxPerSolution << '\n';
+
+        auto solver = std::make_unique<SHOT::Solver>();
+        auto env = solver->getEnvironment();
+        solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+        solver->updateSetting("Termination.TimeLimit", 60.0);
+        solver->updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::MultiTree));
+        solver->updateSetting("Primal.FixedInteger.CreateSupportingHyperplanes", configuration.use);
+        solver->updateSetting("Primal.FixedInteger.SupportingHyperplanes.OnlyViolated", configuration.onlyViolated);
+        solver->updateSetting("Primal.FixedInteger.SupportingHyperplanes.MaxPerSolution", configuration.maxPerSolution);
+
+        if(!solver->setProblem("data/synthes1.osil"))
+        {
+            std::cout << "Could not load data/synthes1.osil\n";
+            return (false);
+        }
+
+        if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex)
+        {
+            std::cout << "The problem is not convex\n";
+            return (false);
+        }
+
+        solver->solveProblem();
+
+        if(!solver->hasPrimalSolution() || solver->getModelReturnStatus() != E_ModelReturnStatus::OptimalGlobal)
+        {
+            std::cout << "The problem was not solved to optimality\n";
+            passed = false;
+            continue;
+        }
+
+        auto numberOfHyperplanes = std::count_if(env->dualSolver->generatedHyperplanes.begin(),
+            env->dualSolver->generatedHyperplanes.end(), [](const GeneratedHyperplanePtr& HP)
+            { return (HP->sourceHyperplane->source == E_HyperplaneSource::FixedIntegerNLPSolution); });
+
+        std::cout << "  Objective value " << env->results->getPrimalBound() << ", " << numberOfHyperplanes
+                  << " supporting hyperplanes in fixed-integer NLP solutions\n";
+
+        // Without the filter, the NLP solutions give hyperplanes for the active constraints, at least for the
+        // epigraph or the active nonlinear constraints in the first one
+        bool expectHyperplanes = configuration.use && configuration.maxPerSolution > 0 && !configuration.onlyViolated;
+
+        if((!configuration.use || configuration.maxPerSolution == 0) && numberOfHyperplanes > 0)
+        {
+            std::cout << "Supporting hyperplanes were created, although they are turned off\n";
+            passed = false;
+        }
+        else if(expectHyperplanes && numberOfHyperplanes == 0)
+        {
+            std::cout << "No supporting hyperplanes were created\n";
+            passed = false;
+        }
+
+        double objectiveValue = env->results->getPrimalBound();
+
+        if(!referenceObjectiveValue)
+            referenceObjectiveValue = objectiveValue;
+        else if(std::abs(objectiveValue - *referenceObjectiveValue)
+            > 1e-3 * std::max(1.0, std::abs(*referenceObjectiveValue)))
+        {
+            std::cout << "The objective value differs from " << *referenceObjectiveValue << '\n';
+            passed = false;
+        }
+    }
+
+    return passed;
+}
+
 int SolverTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -2725,6 +2813,11 @@ int SolverTest(int argc, char* argv[])
         break;
     case 27:
         passed = TestQuadraticPartitioningSettings();
+        break;
+    case 28:
+        std::cout << "Starting test for supporting hyperplanes in fixed-integer NLP solutions" << std::endl;
+        passed = TestSupportingHyperplanesInFixedIntegerNLPSolutions();
+        std::cout << "Finished test for supporting hyperplanes in fixed-integer NLP solutions." << std::endl;
         break;
     default:
         passed = false;

@@ -54,10 +54,14 @@ void TaskAddHyperplanes::run()
 
         // Only the first Dual.HyperplaneCuts.MaxPerIteration hyperplanes are added, and the rest are discarded. The
         // objective and external hyperplanes go first, and the constraint hyperplanes keep the order they were
-        // selected in, i.e., those for the best solution points and the most deviating constraints come first.
+        // selected in, i.e., those for the best solution points and the most deviating constraints come first. The
+        // supporting hyperplanes in feasible solutions of the fixed-integer NLP problem go last, since most of them do
+        // not cut away the dual solution, and with many active constraints they would otherwise replace those that do.
         auto& waitingList = env->dualSolver->hyperplaneWaitingList;
         std::stable_partition(waitingList.begin(), waitingList.end(),
             [](const HyperplanePtr& HP) { return (!std::dynamic_pointer_cast<ConstraintHyperplane>(HP)); });
+        std::stable_partition(waitingList.begin(), waitingList.end(),
+            [](const HyperplanePtr& HP) { return (HP->source != E_HyperplaneSource::FixedIntegerNLPSolution); });
 
         for(auto& HP : waitingList)
         {

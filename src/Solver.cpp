@@ -1448,6 +1448,20 @@ void Solver::initializeSettings()
         "Create cutting planes in the solution point of the fixed-integer NLP problem for the nonlinear "
         "constraints it violates");
 
+    env->settings->createSetting("Primal.FixedInteger.CreateSupportingHyperplanes", false,
+        "Create supporting hyperplanes in a feasible solution of the fixed-integer NLP problem for the convex "
+        "nonlinear constraints active in it");
+
+    env->settings->createSetting("Primal.FixedInteger.SupportingHyperplanes.ActiveTolerance", 1e-5,
+        "A constraint with a value within this tolerance of its bound is active in the fixed-integer NLP solution", 0.0,
+        SHOT_DBL_MAX);
+
+    env->settings->createSetting("Primal.FixedInteger.SupportingHyperplanes.MaxPerSolution", 50,
+        "Max number of supporting hyperplanes in each fixed-integer NLP solution", 0, SHOT_INT_MAX);
+
+    env->settings->createSetting("Primal.FixedInteger.SupportingHyperplanes.OnlyViolated", false,
+        "Only create the supporting hyperplanes that cut away the dual solution the integer assignment comes from");
+
     env->settings->createSetting("Primal.FixedInteger.Enumeration.MaxCombinations", 50,
         "Max number of combinations of the discrete variables for the exhaustive search to be performed", 1,
         SHOT_INT_MAX);

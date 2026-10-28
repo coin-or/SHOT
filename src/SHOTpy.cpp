@@ -3235,7 +3235,8 @@ PYBIND11_MODULE(SHOTpy, m)
         .value("MIPCallbackRelaxed", E_HyperplaneSource::MIPCallbackRelaxed)
         .value("ObjectiveRootsearch", E_HyperplaneSource::ObjectiveRootsearch)
         .value("ObjectiveCuttingPlane", E_HyperplaneSource::ObjectiveCuttingPlane)
-        .value("External", E_HyperplaneSource::External);
+        .value("External", E_HyperplaneSource::External)
+        .value("FixedIntegerNLPSolution", E_HyperplaneSource::FixedIntegerNLPSolution);
 
     py::enum_<E_PrimalSolutionSource>(m, "PrimalSolutionSource", py::arithmetic())
         .value("Rootsearch", E_PrimalSolutionSource::Rootsearch)

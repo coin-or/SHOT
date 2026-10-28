@@ -593,6 +593,9 @@ E_NLPSolutionStatus TaskSelectPrimalCandidatesFromNLP::solveFixedNLPCandidates(
 
             if(!isEnumeration && env->settings->getSetting<bool>("Primal.FixedInteger.CreateInfeasibilityCut"))
                 createInfeasibilityCut(variableSolution);
+
+            if(!isEnumeration && env->settings->getSetting<bool>("Primal.FixedInteger.CreateSupportingHyperplanes"))
+                createSupportingHyperplanes(variableSolution, CAND.point);
         }
         else if(solvestatus == E_NLPSolutionStatus::Error || solvestatus == E_NLPSolutionStatus::Unbounded
             || solvestatus == E_NLPSolutionStatus::Infeasible)
@@ -715,6 +718,111 @@ void TaskSelectPrimalCandidatesFromNLP::createInfeasibilityCut(const VectorDoubl
     {
         std::dynamic_pointer_cast<TaskSelectHyperplanesECP>(taskSelectHPPts)->run(solutionPoints);
     }
+}
+
+void TaskSelectPrimalCandidatesFromNLP::createSupportingHyperplanes(
+    const VectorDouble& variableSolution, const VectorDouble& dualSolution)
+{
+    if(env->reformulatedProblem->properties.numberOfNonlinearConstraints == 0 || variableSolution.empty())
+        return;
+
+    VectorDouble point = variableSolution;
+
+    // The auxiliary variables get the values of the terms they replace, so that the constraints defining them, e.g.,
+    // the epigraph constraint of a nonlinear objective, are active in the point
+    if(!sourceIsReformulatedProblem)
+    {
+        if((int)point.size() < env->reformulatedProblem->properties.numberOfVariables)
+            env->reformulatedProblem->augmentAuxiliaryVariableValues(point);
+
+        assert(point.size() == static_cast<size_t>(env->reformulatedProblem->properties.numberOfVariables));
+    }
+
+    // The root search in ESH and the cutting planes in ECP only use the constraints violated in the point. In a
+    // solution of the fixed-integer NLP problem, the constraints that limit it are instead active, and since a
+    // convex constraint is linearized in a point on its boundary, the hyperplane supports its feasible set there.
+    auto activeTolerance
+        = env->settings->getSetting<double>("Primal.FixedInteger.SupportingHyperplanes.ActiveTolerance");
+    bool onlyViolated = env->settings->getSetting<bool>("Primal.FixedInteger.SupportingHyperplanes.OnlyViolated");
+    int maxHyperplanes
+        = std::min(env->settings->getSetting<int>("Primal.FixedInteger.SupportingHyperplanes.MaxPerSolution"),
+            env->settings->getSetting<int>("Dual.HyperplaneCuts.MaxPerIteration"));
+
+    auto constraintValues = env->reformulatedProblem->getAllDeviatingNonlinearConstraints(point, -activeTolerance);
+    std::sort(constraintValues.begin(), constraintValues.end(), std::greater<NumericConstraintValue>());
+
+    auto pointHashes = env->dualSolver->calculateHashes(point);
+
+    // The dual solution the integer assignment comes from is not available for all candidates, e.g., a given
+    // starting point, and the hyperplanes are then kept in the order of the constraint values
+    bool hasDualSolution = dualSolution.size() >= point.size();
+
+    // The hyperplanes are ranked by how much they cut away of the dual solution, since those that do not cut it away
+    // do not change the next dual problem there, and with many active constraints they make it larger
+    std::vector<std::pair<double, ConstraintHyperplanePtr>> hyperplanes;
+
+    for(auto& NCV : constraintValues)
+    {
+        // A linearization of a nonconvex constraint can cut away feasible solutions
+        if(NCV.constraint->properties.convexity > E_Convexity::Convex)
+            continue;
+
+        if(std::isnan(NCV.error) || std::isnan(NCV.normalizedValue))
+            continue;
+
+        if(env->dualSolver->hasHyperplaneBeenAdded(pointHashes, NCV.constraint->getIndex()))
+            continue;
+
+        auto generationPoint = env->dualSolver->getHyperplaneGenerationPoint(point, NCV.constraint);
+
+        if(!generationPoint)
+            continue;
+
+        auto hyperplane = std::make_shared<ConstraintHyperplane>();
+        hyperplane->sourceConstraint = NCV.constraint;
+        hyperplane->generatedPoint = *generationPoint;
+        hyperplane->isGlobal = true;
+        hyperplane->source = E_HyperplaneSource::FixedIntegerNLPSolution;
+
+        double violation = 0.0;
+
+        if(hasDualSolution)
+        {
+            auto terms = env->dualSolver->MIPSolver->createHyperplaneTerms(hyperplane);
+
+            if(!terms)
+                continue;
+
+            violation = terms->second;
+
+            for(auto& T : terms->first)
+                violation += T.second * dualSolution.at(T.first);
+
+            if(!std::isfinite(violation) || (onlyViolated && violation <= 0.0))
+                continue;
+        }
+
+        hyperplanes.emplace_back(violation, hyperplane);
+    }
+
+    if(hasDualSolution)
+        std::stable_sort(hyperplanes.begin(), hyperplanes.end(),
+            [](const auto& first, const auto& second) { return (first.first > second.first); });
+
+    int addedHyperplanes = 0;
+
+    for(auto& HP : hyperplanes)
+    {
+        if(addedHyperplanes >= maxHyperplanes)
+            break;
+
+        env->dualSolver->addHyperplane(HP.second);
+        addedHyperplanes++;
+    }
+
+    env->output->outputDebug(fmt::format("         Added {} supporting hyperplanes in the fixed NLP solution, {} "
+                                         "constraints within the active tolerance, {} candidates.",
+        addedHyperplanes, constraintValues.size(), hyperplanes.size()));
 }
 
 void TaskSelectPrimalCandidatesFromNLP::createIntegerCut(VectorDouble variableSolution)
