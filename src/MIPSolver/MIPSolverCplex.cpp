@@ -1453,13 +1453,30 @@ double MIPSolverCplex::getDualObjectiveValue()
     bool isMIP = getDiscreteVariableStatus();
     double objVal = (isMinimizationProblem ? SHOT_DBL_MIN : SHOT_DBL_MAX);
 
-    if(!isDualBoundAvailable(getSolutionStatus(), isMIP))
+    // With the global optimality target, CPLEX solves a continuous problem with nonconvex quadratic terms with branch
+    // and bound, which has a bound also when it is interrupted, and whose objective value is not a bound when the gap
+    // is not zero. Only then is the best bound available for a continuous problem.
+    bool isBranchAndBound = isMIP;
+
+    if(!isMIP && cplexInstance.getParam(IloCplex::Param::OptimalityTarget) == CPX_OPTIMALITYTARGET_OPTIMALGLOBAL)
+    {
+        try
+        {
+            cplexInstance.getBestObjValue();
+            isBranchAndBound = true;
+        }
+        catch(IloException&)
+        {
+        }
+    }
+
+    if(!isDualBoundAvailable(getSolutionStatus(), isBranchAndBound))
         return (objVal);
 
     try
     {
         // CPLEX gives a missing bound as 1e75 or -1e75, which is a finite value to SHOT
-        if(isMIP)
+        if(isBranchAndBound)
         {
             if(double bound = cplexInstance.getBestObjValue(); std::abs(bound) < 1e75)
                 objVal = bound;
