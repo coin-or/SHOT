@@ -1521,6 +1521,12 @@ void Solver::initializeSettings()
     env->settings->createSetting(
         "Primal.FixedInteger.TimeLimit", 10.0, "Time limit (s) per NLP problem", 0, SHOT_DBL_MAX);
 
+    // Independent of Dual.MIP.NumberOfThreads, so that NLP problems can be solved at the same time as the MIP problem.
+    // The BLAS library, e.g., OpenBLAS used by MUMPS in Ipopt, otherwise uses all cores.
+    env->settings->createSetting("Primal.FixedInteger.NumberOfThreads", 1,
+        "Number of threads for each NLP problem, in the NLP solver and its BLAS and OpenMP libraries: 0: Automatic", 0,
+        SHOT_INT_MAX);
+
     env->settings->createSetting("Primal.FixedInteger.UseStartingPoint", false,
         "Solve an NLP problem from a given starting point, e.g. the levels of the variables in GAMS or the initial "
         "values in AMPL, before the first dual problem, and from points given by the PrimalCandidateSearch callback "
@@ -2341,6 +2347,13 @@ void Solver::setConvexityBasedSettings()
 
 #endif
         }
+
+        // When the reformulated problem is a MILP problem, e.g., when all nonlinear terms are products of binary
+        // variables, the MIP solver has already solved the LP problem that remains with the discrete variables fixed.
+        // Such an NLP problem can also be much larger than the original problem, since it contains the auxiliary
+        // variables and the linearizations.
+        if(env->reformulatedProblem->properties.isMILPProblem)
+            env->settings->updateSetting("Primal.FixedInteger.Use", false, E_SettingPriority::RecommendedInternal);
     }
 }
 

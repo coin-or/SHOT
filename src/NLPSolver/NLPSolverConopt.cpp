@@ -776,7 +776,9 @@ E_NLPSolutionStatus NLPSolverConopt::solveProblemInstance()
         check(solver.fVincLin(1));
         check(solver.allowEmptyRow(1));
         check(solver.allowEmptyCol(1));
-        check(solver.setThreadS(1));
+        // The function and derivative evaluations call SHOT, which is not thread-safe, so only CONOPT itself can use
+        // more threads
+        check(solver.setThreadS(env->settings->getSetting<int>("Primal.FixedInteger.NumberOfThreads")));
         check(solver.setThreadF(1));
         check(solver.setThread2D(1));
         check(solver.setErrLim(100));

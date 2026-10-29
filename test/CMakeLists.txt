@@ -162,7 +162,8 @@ set(Solver_parts
     24
     25
     26
-    27)
+    27
+    28)
 set(cpptests ${cpptests} Solver)
 
 if(HAS_CONOPT)

@@ -646,14 +646,19 @@ GurobiCallbackSingleTree::GurobiCallbackSingleTree(GRBVar* xvars, EnvironmentPtr
     auto NLPProblemSource = static_cast<ES_PrimalNLPProblemSource>(
         env->settings->getSetting<int>("Primal.FixedInteger.SourceProblem"));
 
-    if(NLPProblemSource == ES_PrimalNLPProblemSource::Both
-        || NLPProblemSource == ES_PrimalNLPProblemSource::OriginalProblem)
+    // The tasks create the NLP problem, which is not needed when the fixed-integer NLP strategy is not used
+    bool useFixedNLP = env->settings->getSetting<bool>("Primal.FixedInteger.Use");
+
+    if(useFixedNLP
+        && (NLPProblemSource == ES_PrimalNLPProblemSource::Both
+            || NLPProblemSource == ES_PrimalNLPProblemSource::OriginalProblem))
     {
         taskSelectPrimNLPOriginal = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env, false);
     }
 
-    if(NLPProblemSource == ES_PrimalNLPProblemSource::Both
-        || NLPProblemSource == ES_PrimalNLPProblemSource::ReformulatedProblem)
+    if(useFixedNLP
+        && (NLPProblemSource == ES_PrimalNLPProblemSource::Both
+            || NLPProblemSource == ES_PrimalNLPProblemSource::ReformulatedProblem))
     {
         taskSelectPrimNLPReformulated = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env, true);
     }

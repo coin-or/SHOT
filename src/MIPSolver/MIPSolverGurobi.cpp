@@ -1493,12 +1493,30 @@ double MIPSolverGurobi::getDualObjectiveValue()
     bool isMIP = getDiscreteVariableStatus();
     double objVal = (isMinimizationProblem ? SHOT_DBL_MIN : SHOT_DBL_MAX);
 
-    if(!isDualBoundAvailable(getSolutionStatus(), isMIP))
+    // Gurobi solves a continuous problem with nonconvex quadratic terms with branch and bound, which has a bound also
+    // when it is interrupted, and whose objective value is not a bound when the gap is not zero. Only then is ObjBound
+    // available for a continuous problem.
+    bool isBranchAndBound = isMIP;
+
+    if(!isMIP)
+    {
+        try
+        {
+            gurobiModel->get(GRB_DoubleAttr_ObjBound);
+            isBranchAndBound = true;
+        }
+        catch(GRBException&)
+        {
+        }
+    }
+
+    if(!isDualBoundAvailable(getSolutionStatus(), isBranchAndBound))
         return (objVal);
 
     try
     {
-        double bound = isMIP ? gurobiModel->get(GRB_DoubleAttr_ObjBound) : gurobiModel->get(GRB_DoubleAttr_ObjVal);
+        double bound
+            = isBranchAndBound ? gurobiModel->get(GRB_DoubleAttr_ObjBound) : gurobiModel->get(GRB_DoubleAttr_ObjVal);
 
         // Gurobi gives a missing bound as GRB_INFINITY or -GRB_INFINITY, which is a finite value to SHOT
         if(std::abs(bound) < GRB_INFINITY)
