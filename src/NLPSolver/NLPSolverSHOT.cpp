@@ -174,15 +174,9 @@ void NLPSolverSHOT::saveProblemToFile([[maybe_unused]] std::string fileName) { }
 
 VectorDouble NLPSolverSHOT::getSolution()
 {
+    // The point has the variables of the source problem, as with the other NLP solvers
     if(solver->hasPrimalSolution())
-    {
-        auto solution = solver->getPrimalSolution().point;
-
-        if(sourceProblem->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic)
-            solution.push_back(solver->getPrimalSolution().objValue);
-
-        return (solution);
-    }
+        return (solver->getPrimalSolution().point);
 
     VectorDouble solution;
     return (solution);

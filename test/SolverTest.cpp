@@ -2660,6 +2660,116 @@ bool TestSupportingHyperplanesInFixedIntegerNLPSolutions()
     return passed;
 }
 
+bool TestSupportingHyperplanesForObjectiveAndNonconvexFunctions()
+{
+    bool passed = true;
+
+    struct Configuration
+    {
+        std::string problemFile;
+        bool use;
+        bool useNonconvex;
+    };
+
+    // ex1223 is convex with a nonlinear objective function also in the reformulated problem, and ex1252a is nonconvex
+    // with nonconvex constraints active in the fixed-integer NLP solutions
+    for(auto configuration : { Configuration { "data/instances/MINLP-convex/ex1223.osil", false, false },
+            Configuration { "data/instances/MINLP-convex/ex1223.osil", true, false },
+            Configuration { "data/instances/MINLP-nonconvex/ex1252a.osil", true, false },
+            Configuration { "data/instances/MINLP-nonconvex/ex1252a.osil", true, true } })
+    {
+        std::cout << configuration.problemFile << ": CreateSupportingHyperplanes " << configuration.use
+                  << ", Nonconvex " << configuration.useNonconvex << '\n';
+
+        auto solver = std::make_unique<SHOT::Solver>();
+        auto env = solver->getEnvironment();
+        solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+        solver->updateSetting("Termination.TimeLimit", 10.0);
+        solver->updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::MultiTree));
+        // Otherwise the hyperplanes are not added while the MIP solution limit is used, and the convex problem can be
+        // solved before that with some MIP solvers
+        solver->updateSetting("Dual.HyperplaneCuts.Delay", false);
+        solver->updateSetting("Primal.FixedInteger.CreateSupportingHyperplanes", configuration.use);
+        solver->updateSetting("Primal.FixedInteger.SupportingHyperplanes.Nonconvex", configuration.useNonconvex);
+
+        if(!solver->setProblem(configuration.problemFile))
+        {
+            std::cout << "Could not load " << configuration.problemFile << '\n';
+            return (false);
+        }
+
+        bool isConvex = env->reformulatedProblem->properties.convexity == E_ProblemConvexity::Convex;
+
+        if(isConvex
+            && env->reformulatedProblem->objectiveFunction->properties.classification
+                <= E_ObjectiveFunctionClassification::Quadratic)
+        {
+            std::cout << "The objective function of the reformulated problem is not nonlinear\n";
+            return (false);
+        }
+
+        solver->solveProblem();
+
+        if(!solver->hasPrimalSolution())
+        {
+            std::cout << "No primal solution found\n";
+            passed = false;
+            continue;
+        }
+
+        int objectiveHyperplanes = 0;
+        int nonglobalHyperplanes = 0;
+
+        for(auto& HP : env->dualSolver->generatedHyperplanes)
+        {
+            if(HP->sourceHyperplane->source != E_HyperplaneSource::FixedIntegerNLPSolution)
+                continue;
+
+            if(std::dynamic_pointer_cast<ObjectiveHyperplane>(HP->sourceHyperplane))
+                objectiveHyperplanes++;
+
+            if(!HP->sourceHyperplane->isGlobal)
+                nonglobalHyperplanes++;
+        }
+
+        std::cout << "  Objective value " << env->results->getPrimalBound() << ", " << objectiveHyperplanes
+                  << " objective and " << nonglobalHyperplanes
+                  << " nonglobal hyperplanes in fixed-integer NLP solutions\n";
+
+        if(isConvex && solver->getModelReturnStatus() != E_ModelReturnStatus::OptimalGlobal)
+        {
+            std::cout << "The convex problem was not solved to optimality\n";
+            passed = false;
+        }
+
+        if(isConvex && configuration.use && objectiveHyperplanes == 0)
+        {
+            std::cout << "No hyperplanes for the convex objective function were created\n";
+            passed = false;
+        }
+
+        if(!configuration.use && objectiveHyperplanes > 0)
+        {
+            std::cout << "Hyperplanes were created, although they are turned off\n";
+            passed = false;
+        }
+
+        if(!configuration.useNonconvex && nonglobalHyperplanes > 0)
+        {
+            std::cout << "Hyperplanes for nonconvex functions were created, although they are turned off\n";
+            passed = false;
+        }
+
+        if(!isConvex && configuration.useNonconvex && nonglobalHyperplanes == 0)
+        {
+            std::cout << "No hyperplanes for nonconvex functions were created\n";
+            passed = false;
+        }
+    }
+
+    return passed;
+}
+
 int SolverTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -2818,6 +2928,11 @@ int SolverTest(int argc, char* argv[])
         std::cout << "Starting test for supporting hyperplanes in fixed-integer NLP solutions" << std::endl;
         passed = TestSupportingHyperplanesInFixedIntegerNLPSolutions();
         std::cout << "Finished test for supporting hyperplanes in fixed-integer NLP solutions." << std::endl;
+        break;
+    case 29:
+        std::cout << "Starting test for supporting hyperplanes for objective and nonconvex functions" << std::endl;
+        passed = TestSupportingHyperplanesForObjectiveAndNonconvexFunctions();
+        std::cout << "Finished test for supporting hyperplanes for objective and nonconvex functions." << std::endl;
         break;
     default:
         passed = false;
