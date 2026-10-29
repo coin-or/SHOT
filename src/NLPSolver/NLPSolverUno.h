@@ -64,6 +64,15 @@ private:
        written into the value array by every Jacobian evaluation. Position in the value array and value. */
     std::vector<std::pair<int, double>> constantJacobianElements;
 
+    /* The nonlinear expressions of the constraints share one CppAD tape, so their derivatives are calculated for all
+       constraints at once instead of one sweep of the whole tape per constraint. The Jacobian pattern has a row for
+       each expression, and the constraint of an expression is in nonlinearExpressionConstraintIndexes. */
+    CppAD::sparse_rc<std::vector<size_t>> nonlinearConstraintJacobianPattern;
+    std::vector<int> nonlinearExpressionConstraintIndexes;
+
+    CppAD::sparse_rc<std::vector<size_t>> nonlinearConstraintHessianPattern;
+    CppAD::sparse_hes_work nonlinearConstraintHessianWork;
+
     int numberOfJacobianNonzeros = 0;
     int numberOfHessianNonzeros = 0;
 

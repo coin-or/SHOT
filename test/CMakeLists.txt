@@ -224,7 +224,7 @@ endif()
 
 if(HAS_UNO)
   set(cpptests ${cpptests} Uno)
-  set(Uno_parts 1 2 3)
+  set(Uno_parts 1 2 3 4)
 endif()
 
 # Instance tests: one case per (MIP solver x NLP solver) combination

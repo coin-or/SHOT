@@ -287,6 +287,58 @@ void NLPSolverUno::createModel()
 
     numberOfHessianNonzeros = static_cast<int>(hessianRows.size());
 
+    // With more than one constraint expression on the shared tape, one sweep covers all of them
+    size_t expressionConstraints = 0;
+    size_t expressionJacobianNonzeros = 0;
+    std::vector<size_t> expressionHessianEntries;
+    const size_t dimension = sourceProblem->nonlinearExpressionVariables.size();
+
+    nonlinearExpressionConstraintIndexes.assign(sourceProblem->ADFunctions.Range(), -1);
+
+    for(const auto& C : sourceProblem->nonlinearConstraints)
+    {
+        if(!C->properties.hasNonlinearExpression)
+            continue;
+
+        ++expressionConstraints;
+        expressionJacobianNonzeros += C->nonlinearGradientSparsityPattern.nnz();
+        nonlinearExpressionConstraintIndexes[C->nonlinearExpressionIndex] = C->getIndex();
+
+        const auto& pattern = C->nonlinearHessianSparsityPattern;
+        for(size_t k = 0; k < pattern.nnz(); ++k)
+            expressionHessianEntries.push_back(pattern.row()[k] * dimension + pattern.col()[k]);
+    }
+
+    nonlinearConstraintJacobianPattern = CppAD::sparse_rc<std::vector<size_t>>();
+    nonlinearConstraintHessianPattern = CppAD::sparse_rc<std::vector<size_t>>();
+    nonlinearConstraintHessianWork.clear();
+
+    if(expressionConstraints > 1)
+    {
+        nonlinearConstraintJacobianPattern.resize(
+            sourceProblem->ADFunctions.Range(), dimension, expressionJacobianNonzeros);
+        size_t entry = 0;
+
+        for(const auto& C : sourceProblem->nonlinearConstraints)
+        {
+            if(!C->properties.hasNonlinearExpression)
+                continue;
+
+            for(size_t column : C->nonlinearGradientSparsityPattern.col())
+                nonlinearConstraintJacobianPattern.set(entry++, C->nonlinearExpressionIndex, column);
+        }
+
+        std::sort(expressionHessianEntries.begin(), expressionHessianEntries.end());
+        expressionHessianEntries.erase(
+            std::unique(expressionHessianEntries.begin(), expressionHessianEntries.end()),
+            expressionHessianEntries.end());
+
+        nonlinearConstraintHessianPattern.resize(dimension, dimension, expressionHessianEntries.size());
+        for(size_t k = 0; k < expressionHessianEntries.size(); ++k)
+            nonlinearConstraintHessianPattern.set(
+                k, expressionHessianEntries[k] / dimension, expressionHessianEntries[k] % dimension);
+    }
+
     /* SHOT's Lagrangian Hessian sparsity pattern is stored with the row index not exceeding the column index, so
        it is the upper triangle that is provided. Uno transposes it into its own storage. */
     uno_set_lagrangian_hessian(unoModel, numberOfHessianNonzeros, UNO_UPPER_TRIANGLE, hessianRows.data(),
@@ -510,7 +562,15 @@ bool NLPSolverUno::evaluateJacobian(int numberOfVariables, int numberOfNonzeros,
         if(C->properties.classification == E_ConstraintClassification::Linear)
             continue;
 
-        for(auto& G : C->calculateGradient(vectorPoint, false))
+        SparseVariableVector jacobian;
+
+        if(nonlinearConstraintJacobianPattern.nnz() > 0 && C->properties.hasNonlinearExpression)
+            jacobian = std::static_pointer_cast<NonlinearConstraint>(C)->calculateGradientWithoutNonlinearExpression(
+                vectorPoint, false);
+        else
+            jacobian = C->calculateGradient(vectorPoint, false);
+
+        for(auto& G : jacobian)
         {
             int location = jacobianCounterPlacement[std::make_pair(C->getIndex(), G.first->getIndex())];
 
@@ -518,6 +578,27 @@ bool NLPSolverUno::evaluateJacobian(int numberOfVariables, int numberOfNonzeros,
             assert(location >= 0);
 
             values[location] += G.second;
+        }
+    }
+
+    if(nonlinearConstraintJacobianPattern.nnz() > 0)
+    {
+        std::vector<double> nonlinearPoint(sourceProblem->nonlinearExpressionVariables.size());
+        for(const auto& variable : sourceProblem->nonlinearExpressionVariables)
+            nonlinearPoint[variable->properties.nonlinearVariableIndex] = vectorPoint[variable->getIndex()];
+
+        CppAD::sparse_rcv<std::vector<size_t>, std::vector<double>> subset(nonlinearConstraintJacobianPattern);
+        sourceProblem->calculateNonlinearJacobian(nonlinearPoint, subset);
+
+        for(size_t k = 0; k < subset.nnz(); ++k)
+        {
+            const int constraintIndex = nonlinearExpressionConstraintIndexes[subset.row()[k]];
+            const int variableIndex = sourceProblem->nonlinearExpressionVariables[subset.col()[k]]->getIndex();
+            const int location = jacobianCounterPlacement.at(std::make_pair(constraintIndex, variableIndex));
+
+            assert(location < numberOfNonzeros);
+
+            values[location] += subset.val()[k];
         }
     }
 
@@ -564,7 +645,14 @@ bool NLPSolverUno::evaluateLagrangianHessian(int numberOfVariables, [[maybe_unus
         SparseVariableMatrix calculatedHessian;
 
         if(!constantHessian)
-            calculatedHessian = C->calculateHessian(vectorPoint, false);
+        {
+            if(nonlinearConstraintHessianPattern.nnz() > 0 && C->properties.hasNonlinearExpression)
+                calculatedHessian
+                    = std::static_pointer_cast<NonlinearConstraint>(C)->calculateHessianWithoutNonlinearExpression(
+                        vectorPoint, false);
+            else
+                calculatedHessian = C->calculateHessian(vectorPoint, false);
+        }
 
         for(auto& E : (constantHessian ? *constantHessian : calculatedHessian))
         {
@@ -574,6 +662,50 @@ bool NLPSolverUno::evaluateLagrangianHessian(int numberOfVariables, [[maybe_unus
             assert(location >= 0);
 
             values[location] += multipliers[C->getIndex()] * E.second;
+        }
+    }
+
+    // The Hessians of the constraint expressions, weighted by their multipliers, in one sweep of the shared tape
+    if(nonlinearConstraintHessianPattern.nnz() > 0)
+    {
+        std::vector<double> weights(sourceProblem->ADFunctions.Range(), 0.0);
+        bool anyWeight = false;
+
+        for(const auto& C : sourceProblem->nonlinearConstraints)
+        {
+            if(!C->properties.hasNonlinearExpression)
+                continue;
+
+            weights[C->nonlinearExpressionIndex] = multipliers[C->getIndex()];
+            anyWeight |= multipliers[C->getIndex()] != 0.0;
+        }
+
+        if(anyWeight)
+        {
+            std::vector<double> nonlinearPoint(sourceProblem->nonlinearExpressionVariables.size());
+            for(const auto& variable : sourceProblem->nonlinearExpressionVariables)
+                nonlinearPoint[variable->properties.nonlinearVariableIndex] = vectorPoint[variable->getIndex()];
+
+            CppAD::sparse_rcv<std::vector<size_t>, std::vector<double>> subset(nonlinearConstraintHessianPattern);
+            sourceProblem->ADFunctions.sparse_hes(nonlinearPoint, weights, subset, nonlinearConstraintHessianPattern,
+                "cppad.symmetric", nonlinearConstraintHessianWork);
+
+            for(size_t k = 0; k < subset.nnz(); ++k)
+            {
+                const auto& rowVariable = sourceProblem->nonlinearExpressionVariables[subset.row()[k]];
+                const auto& columnVariable = sourceProblem->nonlinearExpressionVariables[subset.col()[k]];
+
+                // The pattern is symmetric, and Uno is given the upper triangle
+                if(rowVariable->getIndex() > columnVariable->getIndex())
+                    continue;
+
+                const int location = lagrangianHessianCounterPlacement.at(
+                    std::make_pair(rowVariable->getIndex(), columnVariable->getIndex()));
+
+                assert(location < numberOfNonzeros);
+
+                values[location] += subset.val()[k];
+            }
         }
     }
 
