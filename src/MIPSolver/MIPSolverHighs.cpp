@@ -917,9 +917,12 @@ bool MIPSolverHighs::repairInfeasibility()
 
     try
     {
-        // Create a copy of the model for the feasibility relaxation
+        // Create a copy of the model for the feasibility relaxation. The options, e.g., the time limit of the repair
+        // (Dual.MIP.InfeasibilityRepair.TimeLimit), the number of threads and the tolerances, are copied as well, since
+        // the relaxation is a MIP problem that can otherwise take any time
         Highs feasModel;
         feasModel.passModel(highsInstance.getModel());
+        feasModel.passOptions(highsInstance.getOptions());
         feasModel.setOptionValue("output_flag", false);
 
         // Remove cutoff constraint if present (similar to Gurobi's cutoff removal)
@@ -966,6 +969,7 @@ bool MIPSolverHighs::repairInfeasibility()
         {
             Highs feasibilityCheckModel;
             feasibilityCheckModel.passModel(feasModel.getModel());
+            feasibilityCheckModel.passOptions(feasModel.getOptions());
             feasibilityCheckModel.setOptionValue("output_flag", false);
 
             double checkInfinity = feasibilityCheckModel.getInfinity();

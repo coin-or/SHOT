@@ -85,13 +85,10 @@ void TaskSelectPrimalCandidatesFromRootsearch::run(std::vector<SolutionPoint> so
 
                     try
                     {
-                        env->timing->startTimer("PrimalBoundStrategyRootSearch");
                         xNewc = env->rootsearchMethod->findZero(xNLP, P.point,
                             env->settings->getSetting<int>("Subsolver.Rootsearch.MaxIterations"),
                             env->settings->getSetting<double>("Subsolver.Rootsearch.TerminationTolerance"),
                             env->reformulatedProblem->nonlinearConstraints, false);
-
-                        env->timing->stopTimer("PrimalBoundStrategyRootSearch");
 
                         env->primalSolver->addPrimalSolutionCandidate(xNewc.first, E_PrimalSolutionSource::Rootsearch,
                             env->results->getCurrentIteration()->iterationNumber);
@@ -102,10 +99,12 @@ void TaskSelectPrimalCandidatesFromRootsearch::run(std::vector<SolutionPoint> so
                     }
                 }
             }
-
-            env->timing->stopTimer("PrimalStrategy");
-            env->timing->stopTimer("PrimalBoundStrategyRootSearch");
         }
+
+        // Stopped after the loop, since the timers otherwise keep running when there are no solution points, e.g.,
+        // after an infeasible dual problem, and the following repair of the dual problem is counted as root searches
+        env->timing->stopTimer("PrimalStrategy");
+        env->timing->stopTimer("PrimalBoundStrategyRootSearch");
     }
 }
 } // namespace SHOT
