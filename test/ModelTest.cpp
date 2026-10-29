@@ -10706,7 +10706,7 @@ bool ModelTestPolishFromSeveralPoints()
 {
     // The final NLP problem is solved from the first solutions of the last Primal.PolishSolution.NumberOfPoints
     // iterations of the dual problem that have solutions, and from the best primal solution, and not at all if it is
-    // zero. Without a starting point, the
+    // zero. Without a starting point, and without the NLP problems during the search (Primal.FixedInteger.Use), the
     // polish is the only NLP problem solved for a continuous problem, so the NLP solutions checked as primal candidates
     // are counted. The problem, min -x1 - ... - x5 s.t. exp(x1) + ... + exp(x5) <= 10 and x1^2 + x2^2 >= 0.01, needs
     // several iterations of cutting planes. The second constraint makes it nonconvex, since convex continuous problems
@@ -10727,6 +10727,7 @@ bool ModelTestPolishFromSeveralPoints()
         solver->updateSetting("Termination.TimeLimit", 20.0);
         solver->updateSetting("Primal.FixedInteger.Solver", static_cast<int>(SHOT::ES_PrimalNLPSolver::Ipopt));
         solver->updateSetting("Primal.PolishSolution.NumberOfPoints", numberOfPoints);
+        solver->updateSetting("Primal.FixedInteger.Use", false);
 
         auto problem = std::make_shared<SHOT::Problem>(env);
         auto objective = std::make_shared<SHOT::LinearObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize);
