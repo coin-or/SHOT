@@ -2350,6 +2350,13 @@ void Solver::setConvexityBasedSettings()
 
 #endif
         }
+
+        // When the reformulated problem is a MILP problem, e.g., when all nonlinear terms are products of binary
+        // variables, the MIP solver has already solved the LP problem that remains with the discrete variables fixed.
+        // Such an NLP problem can also be much larger than the original problem, since it contains the auxiliary
+        // variables and the linearizations.
+        if(env->reformulatedProblem->properties.isMILPProblem)
+            env->settings->updateSetting("Primal.FixedInteger.Use", false, E_SettingPriority::RecommendedInternal);
     }
 }
 
