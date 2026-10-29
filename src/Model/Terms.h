@@ -571,6 +571,12 @@ public:
     // then only computed if needed, by computeEigenvectors()
     static constexpr int maximumSizeForDenseConvexityCheck = 100;
 
+    // The factorizations are dense for a matrix with at least this share of nonzeros in its lower triangle and at
+    // most this many variables, since the sparse factorization of a dense matrix is many times slower than a dense
+    // one; the dense matrix takes 200 MB for 5000 variables
+    static constexpr double minimumDensityForDenseFactorization = 0.1;
+    static constexpr int maximumSizeForDenseFactorization = 5000;
+
     Eigen::VectorXd eigenvalues;
 
     // Only computed on demand by computeEigenvectors(), since they are only needed by the eigenvalue decomposition

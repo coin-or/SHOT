@@ -13,6 +13,7 @@
 #include "../Settings.h"
 #include "../Timing.h"
 
+#include <Eigen/Cholesky>
 #include <Eigen/Sparse>
 
 namespace SHOT
@@ -190,8 +191,28 @@ void QuadraticTerms::updateConvexity()
         Eigen::SparseMatrix<double> identity(numberOfVariables, numberOfVariables);
         identity.setIdentity();
 
+        double lowerTriangleSize = 0.5 * numberOfVariables * (numberOfVariables + 1.0);
+        bool useDenseFactorization = numberOfVariables <= maximumSizeForDenseFactorization
+            && matrix.nonZeros() >= minimumDensityForDenseFactorization * lowerTriangleSize;
+
+        // Only the lower triangle is set, which is the part the dense Cholesky factorization reads
+        Eigen::MatrixXd denseMatrix;
+
+        if(useDenseFactorization)
+            denseMatrix = Eigen::MatrixXd(matrix);
+
         auto isPositiveDefinite = [&](double sign, double shift)
         {
+            if(useDenseFactorization)
+            {
+                Eigen::MatrixXd shifted = sign * denseMatrix;
+                shifted.diagonal().array() += shift;
+
+                // The Cholesky factorization only succeeds for a positive definite matrix
+                Eigen::LLT<Eigen::MatrixXd, Eigen::Lower> factorization(shifted);
+                return (factorization.info() == Eigen::Success);
+            }
+
             Eigen::SparseMatrix<double> shifted = sign * matrix + shift * identity;
             Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>, Eigen::Lower> factorization(shifted);
 

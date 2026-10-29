@@ -10449,9 +10449,10 @@ bool ModelTestLargeQuadraticConvexity()
 {
     // Quadratic terms with more than QuadraticTerms::maximumSizeForDenseConvexityCheck variables are checked for
     // convexity with sparse LDL factorizations of A + tI and -A + tI instead of the dense eigenvalue computation,
-    // which takes O(n^3) time. The terms are sums of (x_i - x_j)^2 over the edges of a 12 x 12 grid, whose
-    // matrix (a graph Laplacian) is positive semidefinite and singular, with changes that make it definite,
-    // indefinite or negative semidefinite.
+    // which takes O(n^3) time. The terms are sums of (x_i - x_j)^2 over the edges of a graph, whose matrix (a graph
+    // Laplacian) is positive semidefinite and singular, with changes that make it definite, indefinite or negative
+    // semidefinite. The graph is a 12 x 12 grid, whose matrix is sparse, and a complete graph on 120 vertices, whose
+    // matrix is dense and is factorized with dense matrices.
 
     bool passed = true;
 
@@ -10468,27 +10469,41 @@ bool ModelTestLargeQuadraticConvexity()
 
     problem->add(variables);
 
-    // The sign times the sum of the squared differences, plus the extra square diagonal * x0^2
-    auto createTerms = [&](double sign, double diagonal)
+    std::vector<std::pair<int, int>> gridEdges;
+
+    for(int i = 0; i < m; i++)
+    {
+        for(int j = 0; j < m; j++)
+        {
+            int k = i * m + j;
+
+            if(i + 1 < m)
+                gridEdges.emplace_back(k, k + m);
+
+            if(j + 1 < m)
+                gridEdges.emplace_back(k, k + 1);
+        }
+    }
+
+    const int completeGraphSize = 120;
+    std::vector<std::pair<int, int>> completeEdges;
+
+    for(int k = 0; k < completeGraphSize; k++)
+    {
+        for(int other = k + 1; other < completeGraphSize; other++)
+            completeEdges.emplace_back(k, other);
+    }
+
+    // The sign times the sum of the squared differences over the edges, plus the extra square diagonal * x0^2
+    auto createTerms = [&](const std::vector<std::pair<int, int>>& edges, double sign, double diagonal)
     {
         std::vector<SHOT::QuadraticTermPtr> terms;
 
-        for(int i = 0; i < m; i++)
+        for(auto& [k, other] : edges)
         {
-            for(int j = 0; j < m; j++)
-            {
-                int k = i * m + j;
-
-                for(int other : { (i + 1 < m) ? k + m : -1, (j + 1 < m) ? k + 1 : -1 })
-                {
-                    if(other < 0)
-                        continue;
-
-                    terms.push_back(std::make_shared<SHOT::QuadraticTerm>(sign, variables[k], variables[k]));
-                    terms.push_back(std::make_shared<SHOT::QuadraticTerm>(-2.0 * sign, variables[k], variables[other]));
-                    terms.push_back(std::make_shared<SHOT::QuadraticTerm>(sign, variables[other], variables[other]));
-                }
-            }
+            terms.push_back(std::make_shared<SHOT::QuadraticTerm>(sign, variables[k], variables[k]));
+            terms.push_back(std::make_shared<SHOT::QuadraticTerm>(-2.0 * sign, variables[k], variables[other]));
+            terms.push_back(std::make_shared<SHOT::QuadraticTerm>(sign, variables[other], variables[other]));
         }
 
         if(diagonal != 0.0)
@@ -10505,40 +10520,48 @@ bool ModelTestLargeQuadraticConvexity()
         double sign;
         double diagonal;
         SHOT::E_Convexity expected;
+        bool isSingular;
         bool expectNonnegativeMinimum;
     };
 
-    std::vector<Case> cases = { { "the Laplacian", 1.0, 0.0, SHOT::E_Convexity::Convex, false },
-        { "the Laplacian + 0.1 x0^2", 1.0, 0.1, SHOT::E_Convexity::Convex, true },
-        { "-(the Laplacian)", -1.0, 0.0, SHOT::E_Convexity::Concave, false },
-        { "the Laplacian - 0.5 x0^2", 1.0, -0.5, SHOT::E_Convexity::Nonconvex, false } };
+    std::vector<Case> cases = { { "the Laplacian", 1.0, 0.0, SHOT::E_Convexity::Convex, true, false },
+        { "the Laplacian + 0.1 x0^2", 1.0, 0.1, SHOT::E_Convexity::Convex, false, true },
+        { "-(the Laplacian)", -1.0, 0.0, SHOT::E_Convexity::Concave, true, false },
+        { "the Laplacian - 0.5 x0^2", 1.0, -0.5, SHOT::E_Convexity::Nonconvex, false, false } };
 
-    for(auto& C : cases)
+    for(auto& [graph, edges] : std::vector<std::pair<std::string, std::vector<std::pair<int, int>>>> {
+            { "grid", gridEdges }, { "complete graph", completeEdges } })
     {
-        auto terms = createTerms(C.sign, C.diagonal);
-        auto convexity = terms->getConvexity();
-
-        // A singular matrix has a smallest eigenvalue that is zero up to rounding, which is not reported as
-        // nonnegative, as by the dense eigenvalue computation
-        bool isAsExpected = (convexity == C.expected)
-            && (terms->minEigenValueWithinTolerance == (C.expected == SHOT::E_Convexity::Convex))
-            && (terms->maxEigenValueWithinTolerance == (C.expected == SHOT::E_Convexity::Concave))
-            && ((terms->minEigenValue >= 0.0) == C.expectNonnegativeMinimum);
-
-        if(!isAsExpected)
+        for(auto& C : cases)
         {
-            std::cout << "  FAILED: " << C.description << " has the convexity " << (int)convexity
-                      << " and the smallest eigenvalue bound " << terms->minEigenValue << ".\n";
-            passed = false;
-        }
-        else
-        {
-            std::cout << "  The convexity of " << C.description << " is as expected.\n";
+            auto terms = createTerms(edges, C.sign, C.diagonal);
+            auto convexity = terms->getConvexity();
+
+            // A singular matrix has a smallest eigenvalue that is zero up to rounding, which is not reported as
+            // nonnegative by the sparse factorization, as by the dense eigenvalue computation. The dense
+            // factorization can succeed or fail on the rounding, so the bound is only checked for the sparse one.
+            bool checkMinimum = !C.isSingular || graph == "grid";
+
+            bool isAsExpected = (convexity == C.expected)
+                && (terms->minEigenValueWithinTolerance == (C.expected == SHOT::E_Convexity::Convex))
+                && (terms->maxEigenValueWithinTolerance == (C.expected == SHOT::E_Convexity::Concave))
+                && (!checkMinimum || (terms->minEigenValue >= 0.0) == C.expectNonnegativeMinimum);
+
+            if(!isAsExpected)
+            {
+                std::cout << "  FAILED: " << C.description << " of the " << graph << " has the convexity "
+                          << (int)convexity << " and the smallest eigenvalue bound " << terms->minEigenValue << ".\n";
+                passed = false;
+            }
+            else
+            {
+                std::cout << "  The convexity of " << C.description << " of the " << graph << " is as expected.\n";
+            }
         }
     }
 
     // The eigenvalues are computed on demand, e.g., for the eigenvalue decomposition
-    auto terms = createTerms(1.0, -0.5);
+    auto terms = createTerms(gridEdges, 1.0, -0.5);
     terms->getConvexity();
     terms->computeEigenvectors();
 
