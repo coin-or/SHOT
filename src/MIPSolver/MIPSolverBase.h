@@ -40,6 +40,9 @@ private:
 
     bool warningMessageShownLargeRHS = false;
 
+    // The position of a variable among the merged constraint terms, or -1, used by mergeConstraintTerms()
+    VectorInteger constraintTermPositions;
+
     // The tolerance settings that have been moved into the range of the MIP solver and warned about
     std::set<std::string> toleranceSettingsWarned;
 
@@ -62,6 +65,14 @@ protected:
 
     bool hasQuadraticObjective = false;
     bool hasQuadraticConstraint = false;
+
+    // The linear terms of the constraint being created, collected so that the MIP solver can be given the whole row
+    // at once, since adding the terms one at a time through its interface allocates for every term
+    VectorInteger constraintTermIndexes;
+    VectorDouble constraintTermCoefficients;
+
+    // Sums the collected terms of the same variable, in the order in which the variables first appear
+    void mergeConstraintTerms();
 
     // Whether a solve with the given status provides a bound that is valid for the dual problem
     bool isDualBoundAvailable(E_ProblemSolutionStatus status, bool isMIP);
