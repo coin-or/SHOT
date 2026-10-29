@@ -2878,9 +2878,15 @@ void TaskReformulateProblem::addDecompositionComponent(const LinearTerms& compon
     auxVariableCounter++;
     auxQuadVariable->properties.auxiliaryType = auxVariableType;
 
-    // The value of the auxiliary variable is the value of the linear terms
+    // The value of the auxiliary variable is the value of the linear terms, which are added at once since adding them
+    // one at a time searches all the terms added before, e.g., for each of thousands of terms in a dense LDL column
+    std::vector<LinearTermPtr> auxVariableTerms;
+    auxVariableTerms.reserve(componentTerms.size());
+
     for(auto& T : componentTerms)
-        auxQuadVariable->linearTerms.add(std::make_shared<LinearTerm>(T->coefficient, T->variable));
+        auxVariableTerms.push_back(std::make_shared<LinearTerm>(T->coefficient, T->variable));
+
+    auxQuadVariable->linearTerms.add(LinearTerms(std::move(auxVariableTerms)));
 
     reformulatedProblem->add(auxQuadVariable);
 
