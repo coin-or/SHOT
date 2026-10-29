@@ -20,7 +20,6 @@
 #ifdef HAS_CPLEX
 #include "../MIPSolver/MIPSolverCplex.h"
 #include "../MIPSolver/MIPSolverCplexSingleTree.h"
-#include "../MIPSolver/MIPSolverCplexSingleTreeLegacy.h"
 #endif
 
 #ifdef HAS_GUROBI
@@ -52,20 +51,10 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool u
 #ifdef HAS_CPLEX
         if(solver == ES_MIPSolver::Cplex)
         {
-            if(env->settings->getSetting<bool>("Subsolver.Cplex.UseGenericCallback"))
-            {
-                env->dualSolver->MIPSolver = MIPSolverPtr(std::make_shared<MIPSolverCplexSingleTree>(env));
-                env->results->usedMIPSolver = ES_MIPSolver::Cplex;
-                env->output->outputDebug(" Cplex with lazy callbacks selected as MIP solver.");
-                solverSelected = true;
-            }
-            else
-            {
-                env->dualSolver->MIPSolver = MIPSolverPtr(std::make_shared<MIPSolverCplexSingleTreeLegacy>(env));
-                env->results->usedMIPSolver = ES_MIPSolver::Cplex;
-                env->output->outputDebug(" Cplex with original lazy callbacks selected as MIP solver.");
-                solverSelected = true;
-            }
+            env->dualSolver->MIPSolver = MIPSolverPtr(std::make_shared<MIPSolverCplexSingleTree>(env));
+            env->results->usedMIPSolver = ES_MIPSolver::Cplex;
+            env->output->outputDebug(" Cplex with lazy callbacks selected as MIP solver.");
+            solverSelected = true;
         }
 #endif
 
