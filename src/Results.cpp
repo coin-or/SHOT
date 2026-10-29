@@ -1580,6 +1580,23 @@ void Results::setPrimalBound(double value, bool resetStagnationCounters)
                     this->currentDualBound, value));
         }
 
+        // A dual bound that is regarded as global, e.g., for a convex problem, should only be passed within the
+        // objective gap tolerances, so passing it by more is an error that closing the gap would hide
+        double passedBy = std::abs(value - this->currentDualBound);
+
+        if(solutionIsGlobal && !hasPrimalBoundPassedGlobalDualBound
+            && passedBy > env->settings->getSetting<double>("Termination.ObjectiveGap.Absolute")
+            && passedBy / (1e-10 + std::abs(value))
+                > env->settings->getSetting<double>("Termination.ObjectiveGap.Relative"))
+        {
+            hasPrimalBoundPassedGlobalDualBound = true;
+
+            env->output->outputWarning(
+                fmt::format("        The primal bound {} has passed the dual bound {} by more than the objective gap "
+                            "tolerances, so the dual bound is not valid.",
+                    value, this->currentDualBound));
+        }
+
         this->currentDualBound = value;
     }
 

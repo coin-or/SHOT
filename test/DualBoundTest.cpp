@@ -663,6 +663,53 @@ bool testGlobalDualBoundIsCappedByThePrimalBound(ES_MIPSolver mipSolver)
     return passed;
 }
 
+// A primal bound that passes a global dual bound by more than the objective gap tolerances shows that the dual bound
+// was not valid, which is reported, while numerical error and a dual bound that is not global are not reported
+bool testPrimalBoundPassingGlobalDualBoundIsReported(ES_MIPSolver mipSolver)
+{
+    bool passed = true;
+
+    for(bool minimize : { true, false })
+    {
+        for(bool isGlobal : { true, false })
+        {
+            auto solver = makeSolver(mipSolver, ModelKind::Bounded, minimize);
+
+            if(!solver)
+            {
+                std::cout << "Could not create problem for " << name(mipSolver) << '\n';
+                return false;
+            }
+
+            auto env = solver->getEnvironment();
+            env->results->createIteration();
+            env->results->solutionIsGlobal = isGlobal;
+
+            auto check = [&](const std::string& description, bool expected) {
+                if(env->results->hasPrimalBoundPassedGlobalDualBound != expected)
+                {
+                    std::cout << name(mipSolver) << (minimize ? " (min)" : " (max)")
+                              << (isGlobal ? " (global)" : " (not global)") << ": " << description << '\n';
+                    passed = false;
+                }
+            };
+
+            env->results->setDualBound(minimize ? 5.0 : -5.0);
+
+            // Within the objective gap tolerances, the primal bound passes the dual bound by numerical error only
+            env->results->setPrimalBound(minimize ? 5.0 - 1e-6 : -5.0 + 1e-6);
+            check("a primal bound within the gap tolerances was reported", false);
+
+            env->results->setPrimalBound(minimize ? 4.0 : -4.0);
+            check(isGlobal ? "a primal bound past the dual bound was not reported"
+                           : "a primal bound past a dual bound that is not global was reported",
+                isGlobal);
+        }
+    }
+
+    return passed;
+}
+
 bool testIntegerCutsDifferingInSmallVariables(ES_MIPSolver mipSolver)
 {
     // Only the model is needed, the problem is never solved
@@ -1089,6 +1136,12 @@ int DualBoundTest(int argc, char* argv[])
         for(auto mipSolver : compiledSolvers())
             passed = testIntegerCutVariablesSurviveRelaxation(mipSolver) && passed;
         std::cout << "Finished test that the variables of integer cuts survive the relaxation strategy.\n";
+        break;
+    case 14:
+        std::cout << "Starting test that a primal bound past a global dual bound is reported:\n";
+        for(auto mipSolver : compiledSolvers())
+            passed = testPrimalBoundPassingGlobalDualBoundIsReported(mipSolver) && passed;
+        std::cout << "Finished test that a primal bound past a global dual bound is reported.\n";
         break;
     default:
         passed = false;
