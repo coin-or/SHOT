@@ -128,7 +128,6 @@ bool CplexGenericCallbackTest(std::string filename, double correctObjectiveValue
 
     solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cplex));
     solver->updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::SingleTree));
-    solver->updateSetting("Subsolver.Cplex.UseGenericCallback", true);
     solver->updateSetting("Dual.MIP.NumberOfThreads", numberOfThreads);
     solver->updateSetting("Dual.Relaxation.MaxLazyConstraints", maxRelaxedLazyConstraints);
     solver->updateSetting("Subsolver.Cplex.AddRelaxedLazyConstraintsAsLocal", addRelaxedLazyConstraintsAsLocal);
@@ -251,7 +250,7 @@ bool CplexTerminationCallbackTest(std::string filename)
     return (true);
 }
 
-bool CplexTerminationCallbackSingleTreeTest(std::string filename, bool useGenericCallback = false)
+bool CplexTerminationCallbackSingleTreeTest(std::string filename)
 {
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
     auto env = solver->getEnvironment();
@@ -263,7 +262,6 @@ bool CplexTerminationCallbackSingleTreeTest(std::string filename, bool useGeneri
     solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cplex));
     solver->updateSetting("Output.Console.Iteration.Detail", static_cast<int>(ES_IterationOutputDetail::Full));
     solver->updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::SingleTree));
-    solver->updateSetting("Subsolver.Cplex.UseGenericCallback", useGenericCallback);
 
     if(!solver->setProblem(filename))
     {
@@ -393,8 +391,7 @@ bool CplexExternalPrimalSolutionSingleTreeTest(std::string filename)
     return (true);
 }
 
-bool CplexExternalDualBoundLazyConstraintTest(
-    std::string filename, double externalDualBound, bool useGenericCallback = false)
+bool CplexExternalDualBoundLazyConstraintTest(std::string filename, double externalDualBound)
 {
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
     auto env = solver->getEnvironment();
@@ -405,7 +402,6 @@ bool CplexExternalDualBoundLazyConstraintTest(
     solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Info));
     solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cplex));
     solver->updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::SingleTree));
-    solver->updateSetting("Subsolver.Cplex.UseGenericCallback", useGenericCallback);
 
     std::cout << "Reading problem:  " << filename << '\n';
 
@@ -832,14 +828,6 @@ int CplexTest(int argc, char* argv[])
     case 23:
         std::cout << "Testing the generic Cplex callback with local hyperplanes at relaxed points.\n";
         passed = CplexGenericCallbackTest("data/synthes1.osil", 6.00974, 1, 10, true);
-        break;
-    case 24:
-        std::cout << "Testing the termination callback with the generic Cplex callback.\n";
-        passed = CplexTerminationCallbackSingleTreeTest("data/synthes1.osil", true);
-        break;
-    case 25:
-        std::cout << "Testing the external dual bound lazy constraint with the generic Cplex callback.\n";
-        passed = CplexExternalDualBoundLazyConstraintTest("data/fo7_2.osil", 17.4, true);
         break;
     default:
         passed = false;

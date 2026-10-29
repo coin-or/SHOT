@@ -2144,13 +2144,12 @@ class TestCallbackESHInteriorPoint:
         )
 
 
-@pytest.mark.parametrize("backend,available,tree,generic", [
-    (2, "HAS_CBC", 0, False), (3, "HAS_HIGHS", 0, False),
-    (0, "HAS_CPLEX", 0, False), (1, "HAS_GUROBI", 0, False),
-    (0, "HAS_CPLEX", 1, False), (0, "HAS_CPLEX", 1, True),
-    (1, "HAS_GUROBI", 1, False),
+@pytest.mark.parametrize("backend,available,tree", [
+    (2, "HAS_CBC", 0), (3, "HAS_HIGHS", 0),
+    (0, "HAS_CPLEX", 0), (1, "HAS_GUROBI", 0),
+    (0, "HAS_CPLEX", 1), (1, "HAS_GUROBI", 1),
 ])
-def test_linear_tree_hyperplane_callback(backend, available, tree, generic):
+def test_linear_tree_hyperplane_callback(backend, available, tree):
     """An external linear restriction must be applied by the requested tree strategy on a MILP."""
     import SHOTpy
 
@@ -2164,8 +2163,6 @@ def test_linear_tree_hyperplane_callback(backend, available, tree, generic):
     solver.updateSetting("Primal.FixedInteger.Use", False)
     solver.updateSetting("Primal.PolishSolution.NumberOfPoints", 0)
     solver.updateSetting("Termination.IterationLimit", 10)
-    if backend == 0:
-        solver.updateSetting("Subsolver.Cplex.UseGenericCallback", generic)
     problem = SHOTpy.Problem(solver)
     x = problem.addVariable("x", SHOTpy.VariableType.Integer, 0, 4)
     problem.setObjective(x, SHOTpy.ObjectiveDirection.Minimize)
@@ -2239,11 +2236,11 @@ def test_linear_initial_candidate(backend, available, tree, discrete):
     assert solver.getTerminationReason() == SHOTpy.TerminationReason.UserAbort
 
 
-@pytest.mark.parametrize("backend,available,generic", [
-    (0, "HAS_CPLEX", False), (0, "HAS_CPLEX", True), (1, "HAS_GUROBI", False),
+@pytest.mark.parametrize("backend,available", [
+    (0, "HAS_CPLEX"), (1, "HAS_GUROBI"),
 ])
 @pytest.mark.parametrize("cut_strategy", [0, 1])
-def test_linear_single_tree_relaxation_callback(backend, available, generic, cut_strategy):
+def test_linear_single_tree_relaxation_callback(backend, available, cut_strategy):
     """Relaxed MILP nodes must skip nonexistent ESH/ECP tasks while still invoking external cuts."""
     import random
     import SHOTpy
@@ -2258,9 +2255,7 @@ def test_linear_single_tree_relaxation_callback(backend, available, generic, cut
                         ("Primal.FixedInteger.Use", False),
                         ("Primal.PolishSolution.NumberOfPoints", 0), ("Termination.TimeLimit", 10.0)]:
         solver.updateSetting(name, value)
-    if backend == 0:
-        solver.updateSetting("Subsolver.Cplex.UseGenericCallback", generic)
-    else:
+    if backend == 1:
         solver.updateSetting("Subsolver.Gurobi.Heuristics", 0.0)
     problem = SHOTpy.Problem(solver)
     variables = [problem.addVariable(f"x{i}", SHOTpy.VariableType.Binary) for i in range(30)]
