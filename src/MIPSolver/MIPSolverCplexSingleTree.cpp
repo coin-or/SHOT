@@ -56,6 +56,8 @@ CplexCallback::CplexCallback(EnvironmentPtr envPtr, const IloNumVarArray& vars, 
 
     taskSelectExternalHPs = std::make_shared<TaskSelectHyperplanesExternal>(env);
 
+    taskCalculateSolutionChangeNorm = std::make_shared<TaskCalculateSolutionChangeNorm>(env);
+
     auto NLPProblemSource = static_cast<ES_PrimalNLPProblemSource>(
         env->settings->getSetting<int>("Primal.FixedInteger.SourceProblem"));
 
@@ -255,6 +257,10 @@ bool CplexCallback::handleRelaxation(const IloCplex::Callback::Context& context)
     }
 
     taskSelectExternalHPs->run(solutionPoints);
+
+    // The hyperplanes of the iteration have all been generated here, so the distance to the point
+    // of the previous one can be calculated
+    taskCalculateSolutionChangeNorm->run();
 
     env->results->getCurrentIteration()->relaxedLazyHyperplanesAdded
         += (env->dualSolver->hyperplaneWaitingList.size() - waitingListSize);
@@ -798,6 +804,10 @@ void CplexCallback::addLazyConstraint(
         }
 
         taskSelectExternalHPs->run(candidatePoints);
+
+        // The hyperplanes of the iteration have all been generated here, so the distance to the point
+        // of the previous one can be calculated
+        taskCalculateSolutionChangeNorm->run();
 
         // Cplex discards a rejected candidate whether or not the constraints added with it are violated there. The
         // candidate is therefore only rejected if one of the hyperplanes cuts it off by more than the feasibility
