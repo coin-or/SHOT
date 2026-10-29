@@ -90,7 +90,7 @@ if(HAS_CBC)
 endif()
 
 if(HAS_CPLEX)
-  set(Cplex_parts 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18)
+  set(Cplex_parts 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23)
   set(cpptests ${cpptests} Cplex)
 endif()
 
@@ -164,7 +164,8 @@ set(Solver_parts
     26
     27
     28
-    29)
+    29
+    30)
 set(cpptests ${cpptests} Solver)
 
 if(HAS_CONOPT)

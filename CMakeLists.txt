@@ -301,10 +301,8 @@ if(HAS_CPLEX)
         set(DUAL_SOURCES ${DUAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplexSingleTree.cpp")
         set(DUAL_HEADERS ${DUAL_HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplexSingleTree.h")
 
-        set(DUAL_SOURCES ${DUAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplexSingleTreeLegacy.cpp")
         set(DUAL_HEADERS ${DUAL_HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.h")
         set(DUAL_HEADERS ${DUAL_HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplex.h")
-        set(DUAL_HEADERS ${DUAL_HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplexSingleTreeLegacy.h")
     endif(CPLEX_FOUND)
 endif(HAS_CPLEX)
 
@@ -1196,6 +1194,9 @@ target_link_libraries(SHOTSolver PRIVATE ${CPPAD_LIBRARY})
 
 # Link stdc++fs into SHOTSolver on toolchains that need it.
 target_link_libraries(SHOTSolver PRIVATE CXX::Filesystem)
+
+# dlsym, which limits the threads of the BLAS and OpenMP libraries of the NLP solvers, is in libdl on older Linux
+target_link_libraries(SHOTSolver PUBLIC ${CMAKE_DL_LIBS})
 
 # Generates the SHOT executable
 if(GENERATE_EXE)

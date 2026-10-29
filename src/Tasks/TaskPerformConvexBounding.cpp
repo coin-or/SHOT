@@ -21,7 +21,6 @@
 #ifdef HAS_CPLEX
 #include "../MIPSolver/MIPSolverCplex.h"
 #include "../MIPSolver/MIPSolverCplexSingleTree.h"
-#include "../MIPSolver/MIPSolverCplexSingleTreeLegacy.h"
 #endif
 
 #ifdef HAS_GUROBI
