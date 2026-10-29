@@ -95,6 +95,10 @@ public:
     // problem is infeasible also when the dual problem is no longer a relaxation
     bool isInfeasibilityProven = false;
 
+    // Whether a primal bound has passed a dual bound that is regarded as global by more than the objective gap
+    // tolerances, which means that the dual bound was not valid
+    bool hasPrimalBoundPassedGlobalDualBound = false;
+
     std::string getResultsOSrL();
     std::string getResultsTrace();
     std::string getResultsSol();
