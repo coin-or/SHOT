@@ -67,6 +67,7 @@ Solver::Solver()
     env->timing->startTimer("Total");
 
     env->timing->createTimer("ProblemInitialization", "- problem initialization");
+    env->timing->createTimer("ProblemInitializationGAMS", "  - reading the model in GAMS");
     env->timing->createTimer("EigenvalueComputation", "- eigenvalue and eigenvector computation");
     env->timing->createTimer("ProblemReformulation", "- problem reformulation");
     env->timing->createTimer("ProblemReformulationEigenDecomp", "  - eigenvalue decomposition");
@@ -101,6 +102,7 @@ Solver::Solver(std::shared_ptr<spdlog::sinks::sink> consoleSink)
     env->timing->startTimer("Total");
 
     env->timing->createTimer("ProblemInitialization", "- problem initialization");
+    env->timing->createTimer("ProblemInitializationGAMS", "  - reading the model in GAMS");
     env->timing->createTimer("ProblemReformulation", "- problem reformulation");
     env->timing->createTimer("BoundTightening", "- bound tightening");
     env->timing->createTimer("BoundTighteningFBBT", "  - feasibility based");
