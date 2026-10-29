@@ -2572,6 +2572,85 @@ bool TestQuadraticPartitioningSettings()
     return passed;
 }
 
+// When the reformulated problem is a MILP problem, here since the only nonlinear terms are products of binary
+// variables, the fixed-integer NLP problems are not solved, since the MIP solver has solved the LP problem with the
+// discrete variables fixed already
+bool TestNoFixedIntegerNLPForReformulatedMILP()
+{
+    bool passed = true;
+
+    auto solver = std::make_unique<SHOT::Solver>();
+    auto env = solver->getEnvironment();
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+    solver->updateSetting("Termination.TimeLimit", 60.0);
+
+    auto problem = std::make_shared<Problem>(env);
+    problem->name = "binaryproducts";
+
+    auto b1 = std::make_shared<Variable>("b1", E_VariableType::Binary);
+    auto b2 = std::make_shared<Variable>("b2", E_VariableType::Binary);
+    auto b3 = std::make_shared<Variable>("b3", E_VariableType::Binary);
+    auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.0, 10.0);
+    problem->add({ b1, b2, b3, x });
+
+    auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<LinearTerm>(1.0, x));
+    objective->add(std::make_shared<LinearTerm>(1.0, b1));
+    objective->add(std::make_shared<LinearTerm>(1.0, b2));
+    objective->add(std::make_shared<LinearTerm>(1.0, b3));
+    problem->add(objective);
+
+    // b2 is in both products; the constraint needs b2 and at least one of b1 and b3
+    auto e1 = std::make_shared<QuadraticConstraint>("e1", 1.0, SHOT_DBL_MAX);
+    e1->add(std::make_shared<QuadraticTerm>(1.0, b1, b2));
+    e1->add(std::make_shared<QuadraticTerm>(1.0, b2, b3));
+    problem->add(e1);
+
+    auto e2 = std::make_shared<LinearConstraint>("e2", 2.0, SHOT_DBL_MAX);
+    e2->add(std::make_shared<LinearTerm>(1.0, x));
+    e2->add(std::make_shared<LinearTerm>(1.0, b1));
+    e2->add(std::make_shared<LinearTerm>(1.0, b3));
+    problem->add(e2);
+
+    problem->updateProperties();
+    problem->finalize();
+
+    if(!solver->setProblem(problem))
+    {
+        std::cout << "Could not set the problem\n";
+        return (false);
+    }
+
+    if(!env->reformulatedProblem->properties.isMILPProblem)
+    {
+        std::cout << "The reformulated problem is not a MILP problem\n";
+        return (false);
+    }
+
+    if(env->settings->getSetting<bool>("Primal.FixedInteger.Use"))
+    {
+        std::cout << "The fixed-integer NLP strategy is used\n";
+        passed = false;
+    }
+
+    solver->solveProblem();
+
+    if(env->results->usedPrimalNLPSolver != ES_PrimalNLPSolver::NotUsed)
+    {
+        std::cout << "An NLP solver was used\n";
+        passed = false;
+    }
+
+    // b2 = 1 and b1 + b3 + x >= 2 with b1 + b3 >= 1 give the objective value 3
+    if(!solver->hasPrimalSolution() || std::abs(env->results->getPrimalBound() - 3.0) > 1e-6)
+    {
+        std::cout << "The optimal objective value 3 was not found\n";
+        passed = false;
+    }
+
+    return passed;
+}
+
 int SolverTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -2725,6 +2804,13 @@ int SolverTest(int argc, char* argv[])
         break;
     case 27:
         passed = TestQuadraticPartitioningSettings();
+        break;
+    case 28:
+        std::cout << "Starting test for no fixed-integer NLP problems when the reformulated problem is a MILP problem"
+                  << std::endl;
+        passed = TestNoFixedIntegerNLPForReformulatedMILP();
+        std::cout << "Finished test for no fixed-integer NLP problems when the reformulated problem is a MILP problem."
+                  << std::endl;
         break;
     default:
         passed = false;

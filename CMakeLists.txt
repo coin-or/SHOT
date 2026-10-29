@@ -1197,6 +1197,9 @@ target_link_libraries(SHOTSolver PRIVATE ${CPPAD_LIBRARY})
 # Link stdc++fs into SHOTSolver on toolchains that need it.
 target_link_libraries(SHOTSolver PRIVATE CXX::Filesystem)
 
+# dlsym, which limits the threads of the BLAS and OpenMP libraries of the NLP solvers, is in libdl on older Linux
+target_link_libraries(SHOTSolver PUBLIC ${CMAKE_DL_LIBS})
+
 # Generates the SHOT executable
 if(GENERATE_EXE)
     add_executable(${PROJECT_NAME} "${PROJECT_SOURCE_DIR}/src/SHOT.cpp")
