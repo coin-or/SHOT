@@ -176,6 +176,37 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr)
     env->tasks->addTask(tSelectPrimExternal, "SelectPrimExternal");
     std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tSelectPrimExternal);
 
+    // A nonconvex problem otherwise only gets primal solutions from the points of the dual problems, which can improve
+    // very slowly, e.g., with the cuts of a concave objective function, and from the final polish, so the NLP problem
+    // is also solved from the dual solutions during the search, the first time there is one and then with the
+    // iteration and time frequencies
+    if(env->settings->getSetting<bool>("Primal.FixedInteger.Use")
+        && env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex)
+    {
+        auto tSelectPrimFixedNLPSolPool = std::make_shared<TaskSelectPrimalFixedNLPPointsFromSolutionPool>(env);
+        env->tasks->addTask(tSelectPrimFixedNLPSolPool, "SelectPrimFixedNLPSolPool");
+
+        auto NLPProblemSource = static_cast<ES_PrimalNLPProblemSource>(
+            env->settings->getSetting<int>("Primal.FixedInteger.SourceProblem"));
+
+        if(NLPProblemSource == ES_PrimalNLPProblemSource::Both
+            || NLPProblemSource == ES_PrimalNLPProblemSource::OriginalProblem)
+        {
+            auto tSelectPrimNLPCheck = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env, false);
+            env->tasks->addTask(tSelectPrimNLPCheck, "SelectPrimNLPCheckOriginal");
+        }
+
+        if(NLPProblemSource == ES_PrimalNLPProblemSource::Both
+            || NLPProblemSource == ES_PrimalNLPProblemSource::ReformulatedProblem)
+        {
+            auto tSelectPrimNLPCheck = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env, true);
+            env->tasks->addTask(tSelectPrimNLPCheck, "SelectPrimNLPCheckReformulated");
+        }
+
+        auto tClearPrimNLPCands = std::make_shared<TaskClearFixedPrimalCandidates>(env);
+        env->tasks->addTask(tClearPrimNLPCands, "SelectClearNLPCandidates");
+    }
+
     // If the objective gap could not be closed, e.g., since the cuts of nonconvex constraints made the dual problem
     // infeasible, the NLP problem is solved without the starting point from the dual strategy
     if(env->settings->getSetting<bool>("Primal.FixedInteger.Use")
