@@ -2849,6 +2849,66 @@ bool TestSupportingHyperplanesForObjectiveAndNonconvexFunctions()
     return passed;
 }
 
+// When the time limit has been reached before the dual problem is created, e.g., while reading and reformulating a
+// large problem, the MIP problem is neither created nor solved, and the solve ends on the time limit with one
+// iteration, so that the results and the solution files are written as when the limit is reached in an iteration
+bool TestTimeLimitReachedBeforeDualProblem()
+{
+    bool passed = true;
+
+    for(auto treeStrategy : { ES_TreeStrategy::SingleTree, ES_TreeStrategy::MultiTree })
+    {
+        auto solver = std::make_unique<SHOT::Solver>();
+        auto env = solver->getEnvironment();
+        solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+        solver->updateSetting("Dual.TreeStrategy", static_cast<int>(treeStrategy));
+        solver->updateSetting("Termination.TimeLimit", 0.0);
+
+        std::string strategy = (treeStrategy == ES_TreeStrategy::SingleTree) ? "single-tree" : "multi-tree";
+
+        if(!solver->setProblem("data/synthes1.osil") || !solver->solveProblem())
+        {
+            std::cout << "Error while solving problem with the " << strategy << " strategy\n";
+            passed = false;
+            continue;
+        }
+
+        auto& stats = env->solutionStatistics;
+        int solvedDualProblems = stats.numberOfProblemsLP + stats.numberOfProblemsQP + stats.numberOfProblemsQCQP
+            + stats.numberOfProblemsOptimalMILP + stats.numberOfProblemsFeasibleMILP
+            + stats.numberOfProblemsOptimalMIQP + stats.numberOfProblemsFeasibleMIQP
+            + stats.numberOfProblemsOptimalMIQCQP + stats.numberOfProblemsFeasibleMIQCQP;
+
+        if(env->results->terminationReason != E_TerminationReason::TimeLimit)
+        {
+            std::cout << "The " << strategy << " strategy did not end on the time limit: "
+                      << env->results->terminationReasonDescription << '\n';
+            passed = false;
+        }
+
+        if(solvedDualProblems != 0)
+        {
+            std::cout << "The " << strategy << " strategy solved " << solvedDualProblems << " dual problems\n";
+            passed = false;
+        }
+
+        if(env->results->getNumberOfIterations() != 1)
+        {
+            std::cout << "The " << strategy << " strategy has " << env->results->getNumberOfIterations()
+                      << " iterations instead of one\n";
+            passed = false;
+        }
+
+        if(solver->getResultsOSrL().empty() || solver->getResultsTrace().empty())
+        {
+            std::cout << "The " << strategy << " strategy wrote no results\n";
+            passed = false;
+        }
+    }
+
+    return (passed);
+}
+
 int SolverTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -3019,6 +3079,11 @@ int SolverTest(int argc, char* argv[])
         std::cout << "Starting test for supporting hyperplanes for objective and nonconvex functions" << std::endl;
         passed = TestSupportingHyperplanesForObjectiveAndNonconvexFunctions();
         std::cout << "Finished test for supporting hyperplanes for objective and nonconvex functions." << std::endl;
+        break;
+    case 31:
+        std::cout << "Starting test for a time limit reached before the dual problem is created" << std::endl;
+        passed = TestTimeLimitReachedBeforeDualProblem();
+        std::cout << "Finished test for a time limit reached before the dual problem is created." << std::endl;
         break;
     default:
         passed = false;
