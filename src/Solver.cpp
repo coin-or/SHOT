@@ -620,7 +620,8 @@ bool Solver::selectStrategy()
         // Convex QP problem
         {
             env->output->outputDebug(" Using convex QP solution strategy.");
-            env->settings->updateSetting("Output.Console.DualSolver.Show", true, E_SettingPriority::RecommendedInternal);
+            env->settings->updateSetting(
+                "Output.Console.DualSolver.Show", true, E_SettingPriority::RecommendedInternal);
             solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
             env->results->usedSolutionStrategy = E_SolutionStrategy::MIQP;
         }
@@ -628,7 +629,8 @@ bool Solver::selectStrategy()
         else if(isConvex && useQuadraticConstraints && properties.isMIQCQPProblem)
         {
             env->output->outputDebug(" Using convex MIQCQP solution strategy.");
-            env->settings->updateSetting("Output.Console.DualSolver.Show", true, E_SettingPriority::RecommendedInternal);
+            env->settings->updateSetting(
+                "Output.Console.DualSolver.Show", true, E_SettingPriority::RecommendedInternal);
             solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
             env->results->usedSolutionStrategy = E_SolutionStrategy::MIQCQP;
         }
@@ -636,7 +638,8 @@ bool Solver::selectStrategy()
         else if(isConvex && useQuadraticConstraints && properties.isQCQPProblem)
         {
             env->output->outputDebug(" Using convex QCQP solution strategy.");
-            env->settings->updateSetting("Output.Console.DualSolver.Show", true, E_SettingPriority::RecommendedInternal);
+            env->settings->updateSetting(
+                "Output.Console.DualSolver.Show", true, E_SettingPriority::RecommendedInternal);
             solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
             env->results->usedSolutionStrategy = E_SolutionStrategy::MIQCQP;
         }
@@ -680,10 +683,11 @@ bool Solver::selectStrategy()
         // Want to show the output from Gurobi if Gurobi handles the whole problem
         if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Gurobi
             && ((useQuadraticObjective || useQuadraticConstraints)
-                && (properties.isMIQPProblem || properties.isMIQCQPProblem
-                    || properties.isQCQPProblem || properties.isQPProblem)))
+                && (properties.isMIQPProblem || properties.isMIQCQPProblem || properties.isQCQPProblem
+                    || properties.isQPProblem)))
         {
-            env->settings->updateSetting("Output.Console.DualSolver.Show", true, E_SettingPriority::RecommendedInternal);
+            env->settings->updateSetting(
+                "Output.Console.DualSolver.Show", true, E_SettingPriority::RecommendedInternal);
         }
         isProblemInitialized = true;
     }
@@ -1344,8 +1348,8 @@ void Solver::initializeSettings()
     enumQPDecomposition.push_back("LDL decomposition");
 
     env->settings->createSetting("Model.Reformulation.Quadratics.Decomposition.Method",
-        static_cast<int>(ES_QuadraticDecomposition::LDLDecomposition),
-        "How to decompose convex quadratic functions", enumQPDecomposition, 0);
+        static_cast<int>(ES_QuadraticDecomposition::LDLDecomposition), "How to decompose convex quadratic functions",
+        enumQPDecomposition, 0);
     enumQPDecomposition.clear();
 
     VectorString enumQuadraticDecompCoeffStrategy;
@@ -1363,7 +1367,8 @@ void Solver::initializeSettings()
         0.0, SHOT_DBL_MAX);
 
     env->settings->createSetting("Model.Reformulation.Quadratics.Decomposition.LDLMaximumFill", 100.0,
-        "Skip the LDL decomposition if L would have more than this times the nonzeros of the quadratic matrix, and over "
+        "Skip the LDL decomposition if L would have more than this times the nonzeros of the quadratic matrix, and "
+        "over "
         "a million (0 = no limit)",
         0.0, SHOT_DBL_MAX);
 
@@ -1447,6 +1452,25 @@ void Solver::initializeSettings()
     env->settings->createSetting("Primal.FixedInteger.CreateInfeasibilityCut", false,
         "Create cutting planes in the solution point of the fixed-integer NLP problem for the nonlinear "
         "constraints it violates");
+
+    env->settings->createSetting("Primal.FixedInteger.CreateSupportingHyperplanes", true,
+        "Create supporting hyperplanes in a feasible solution of the fixed-integer NLP problem for the convex "
+        "nonlinear "
+        "objective function and the nonlinear constraints active in it.");
+
+    env->settings->createSetting("Primal.FixedInteger.SupportingHyperplanes.ActiveTolerance", 1e-5,
+        "A constraint with a value within this tolerance of its bound is active in the fixed-integer NLP solution", 0.0,
+        SHOT_DBL_MAX);
+
+    env->settings->createSetting("Primal.FixedInteger.SupportingHyperplanes.MaxPerSolution", 50,
+        "Max number of supporting hyperplanes in each fixed-integer NLP solution", 0, SHOT_INT_MAX);
+
+    env->settings->createSetting("Primal.FixedInteger.SupportingHyperplanes.Nonconvex", false,
+        "Also create the supporting hyperplanes for nonconvex constraints and objective functions. As the hyperplanes "
+        "of the dual strategy for these, they are not global and can be relaxed if they cut away a primal solution");
+
+    env->settings->createSetting("Primal.FixedInteger.SupportingHyperplanes.OnlyViolated", false,
+        "Only create the supporting hyperplanes that cut away the dual solution the integer assignment comes from");
 
     env->settings->createSetting("Primal.FixedInteger.Enumeration.MaxCombinations", 50,
         "Max number of combinations of the discrete variables for the exhaustive search to be performed", 1,
@@ -1832,10 +1856,10 @@ void Solver::initializeSettings()
 
 #ifdef HAS_CONOPT
     env->settings->createSettingGroup("Subsolver", "Conopt", "CONOPT settings", "Options for the CONOPT NLP solver");
-    env->settings->createSetting("Subsolver.Conopt.FeasibilityTolerance", 1e-9,
-        "CONOPT feasibility tolerance (Rtnwma)", 1e-12, 1e-2);
-    env->settings->createSetting("Subsolver.Conopt.OptimalityTolerance", 1e-9,
-        "CONOPT reduced-gradient tolerance (Rtredg)", 1e-12, 1e-2);
+    env->settings->createSetting(
+        "Subsolver.Conopt.FeasibilityTolerance", 1e-9, "CONOPT feasibility tolerance (Rtnwma)", 1e-12, 1e-2);
+    env->settings->createSetting(
+        "Subsolver.Conopt.OptimalityTolerance", 1e-9, "CONOPT reduced-gradient tolerance (Rtredg)", 1e-12, 1e-2);
     env->settings->createSetting("Subsolver.Conopt.DerivativeCheck", 0,
         "CONOPT compares the first and second derivatives with numerical ones (Lkdebg, Lkdeb2): 0 = never, -1 = at "
         "the initial point, n = every n-th iteration",
@@ -1872,7 +1896,6 @@ void Solver::initializeSettings()
         enumIpoptHessianApproximation, 0);
     enumIpoptHessianApproximation.clear();
 
-
     env->settings->createSetting("Subsolver.Ipopt.OptionsFile", std::string(),
         "An Ipopt options file with any Ipopt options, read instead of ipopt.opt in the working directory. Its options "
         "override those set by SHOT, e.g. the linear solver, except the time limit (max_wall_time) of each solve",
@@ -1902,7 +1925,6 @@ void Solver::initializeSettings()
     env->settings->createSetting("Subsolver.Uno.HessianModel", static_cast<int>(ES_UnoHessianModel::exact),
         "How Uno models the Hessian", enumUnoHessianModel, 0);
     enumUnoHessianModel.clear();
-
 
     env->settings->createSetting(
         "Subsolver.Uno.OptionsFile", std::string(), "Uno option file to read additional options from");

@@ -810,7 +810,7 @@ int CplexTest(int argc, char* argv[])
         break;
     case 19:
         std::cout << "Testing the generic Cplex callback on a convex MINLP problem.\n";
-        passed = CplexGenericCallbackTest("data/synthes1.osil", 6.00974, 1);
+        passed = CplexGenericCallbackTest("data/synthes1.osil", 6.00975891, 1);
         break;
     case 20:
         // Candidates near the boundary must not be rejected with hyperplanes that only cut them off by rounding errors
@@ -827,7 +827,7 @@ int CplexTest(int argc, char* argv[])
         break;
     case 23:
         std::cout << "Testing the generic Cplex callback with local hyperplanes at relaxed points.\n";
-        passed = CplexGenericCallbackTest("data/synthes1.osil", 6.00974, 1, 10, true);
+        passed = CplexGenericCallbackTest("data/synthes1.osil", 6.00975891, 1, 10, true);
         break;
     default:
         passed = false;

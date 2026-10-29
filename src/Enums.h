@@ -68,7 +68,8 @@ enum class E_HyperplaneSource
     MIPCallbackRelaxed,
     ObjectiveRootsearch,
     ObjectiveCuttingPlane,
-    External
+    External,
+    FixedIntegerNLPSolution // Supporting hyperplane in a feasible solution of the fixed-integer NLP problem
 };
 
 enum class E_IntegerCutSource

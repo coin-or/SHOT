@@ -275,6 +275,9 @@ void DualSolver::addGeneratedHyperplane(const HyperplanePtr hyperplane)
     case E_HyperplaneSource::External:
         source = "external";
         break;
+    case E_HyperplaneSource::FixedIntegerNLPSolution:
+        source = "fixed-integer NLP solution";
+        break;
     default:
         break;
     }

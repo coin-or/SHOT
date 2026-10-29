@@ -211,6 +211,9 @@ public:
         case E_HyperplaneSource::External:
             identifier = "H_EXT";
             break;
+        case E_HyperplaneSource::FixedIntegerNLPSolution:
+            identifier = "H_NLP";
+            break;
         default:
             break;
         }
