@@ -30,6 +30,9 @@ void TaskSequential::run()
 {
     for(auto& T : m_tasks)
     {
+        if(!T->isActive())
+            continue;
+
 #ifdef SIMPLE_OUTPUT_CHARS
         env->output->outputTrace("---- Started task:  " + T->getType());
         T->run();

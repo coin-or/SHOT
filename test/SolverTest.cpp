@@ -35,6 +35,7 @@
 
 #include "../src/Tasks/TaskReformulateProblem.h"
 #include "../src/Tasks/TaskCalculateSolutionChangeNorm.h"
+#include "../src/Tasks/TaskSequential.h"
 #include "../src/Iteration.h"
 
 #include <set>
@@ -2996,6 +2997,90 @@ bool TestTimeLimitReachedBeforeDualProblem()
     return (passed);
 }
 
+// Counts how many times it has been run
+class TaskCountRuns : public TaskBase
+{
+public:
+    TaskCountRuns(EnvironmentPtr envPtr) : TaskBase(envPtr) {}
+
+    void run() override { numberOfRuns++; }
+    std::string getType() override { return "TaskCountRuns"; }
+
+    int numberOfRuns = 0;
+};
+
+// Deactivated tasks are skipped by the task handler, also when it is set to continue from one of them, and by
+// TaskSequential, and they are run again when activated
+bool TestTaskDeactivation()
+{
+    bool passed = true;
+
+    auto solver = std::make_unique<SHOT::Solver>();
+    auto env = solver->getEnvironment();
+
+    auto taskA = std::make_shared<TaskCountRuns>(env);
+    auto taskB = std::make_shared<TaskCountRuns>(env);
+    auto taskC = std::make_shared<TaskCountRuns>(env);
+
+    TaskHandler handler(env);
+    handler.addTask(taskA, "A");
+    handler.addTask(taskB, "B");
+    handler.addTask(taskC, "C");
+
+    auto runAll = [&handler]()
+    {
+        TaskPtr task;
+
+        while(handler.getNextTask(task))
+            task->run();
+    };
+
+    handler.getTask("B")->deactivate();
+    runAll();
+
+    if(taskA->numberOfRuns != 1 || taskB->numberOfRuns != 0 || taskC->numberOfRuns != 1)
+    {
+        std::cout << "The task handler did not skip the deactivated task\n";
+        passed = false;
+    }
+
+    handler.setNextTask("B");
+    runAll();
+
+    if(taskA->numberOfRuns != 1 || taskB->numberOfRuns != 0 || taskC->numberOfRuns != 2)
+    {
+        std::cout << "The task handler did not continue after the deactivated task it was set to\n";
+        passed = false;
+    }
+
+    taskB->activate();
+    handler.setNextTask("A");
+    runAll();
+
+    if(taskA->numberOfRuns != 2 || taskB->numberOfRuns != 1 || taskC->numberOfRuns != 3)
+    {
+        std::cout << "The task handler did not run the activated task\n";
+        passed = false;
+    }
+
+    auto sequence = std::make_shared<TaskSequential>(env);
+    sequence->addTask(taskA);
+    sequence->addTask(taskB);
+    sequence->addTask(taskC);
+
+    taskA->deactivate();
+    taskC->deactivate();
+    sequence->run();
+
+    if(taskA->numberOfRuns != 2 || taskB->numberOfRuns != 2 || taskC->numberOfRuns != 3)
+    {
+        std::cout << "TaskSequential did not skip the deactivated tasks\n";
+        passed = false;
+    }
+
+    return (passed);
+}
+
 int SolverTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -3176,6 +3261,11 @@ int SolverTest(int argc, char* argv[])
         std::cout << "Starting test for a time limit reached before the dual problem is created" << std::endl;
         passed = TestTimeLimitReachedBeforeDualProblem();
         std::cout << "Finished test for a time limit reached before the dual problem is created." << std::endl;
+        break;
+    case 33:
+        std::cout << "Starting test for deactivated tasks" << std::endl;
+        passed = TestTaskDeactivation();
+        std::cout << "Finished test for deactivated tasks." << std::endl;
         break;
     default:
         passed = false;
