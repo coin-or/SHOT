@@ -34,6 +34,8 @@
 #include "../src/RootsearchMethod/RootsearchMethodBoost.h"
 
 #include "../src/Tasks/TaskReformulateProblem.h"
+#include "../src/Tasks/TaskCalculateSolutionChangeNorm.h"
+#include "../src/Iteration.h"
 
 #include <set>
 #include <stdexcept>
@@ -2849,6 +2851,91 @@ bool TestSupportingHyperplanesForObjectiveAndNonconvexFunctions()
     return passed;
 }
 
+bool TestSolutionChangeNorm()
+{
+    bool passed = true;
+
+    auto solver = std::make_unique<Solver>();
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+
+    if(!solver->setProblem("data/tls2.osil"))
+    {
+        std::cout << "  FAILED: could not read the problem.\n";
+        return false;
+    }
+
+    auto env = solver->getEnvironment();
+    auto task = std::make_unique<TaskCalculateSolutionChangeNorm>(env);
+
+    // Three iterations where the dual problem is a relaxation, with the hyperplanes of the last two generated
+    // three units apart, which is 3/4 relative to the last point
+    VectorDouble firstPoint(env->reformulatedProblem->properties.numberOfVariables, 0.0);
+    VectorDouble secondPoint = firstPoint;
+    VectorDouble thirdPoint = firstPoint;
+    secondPoint.at(0) = 1.0;
+    thirdPoint.at(0) = 4.0;
+
+    for(auto& point : { firstPoint, secondPoint, thirdPoint })
+    {
+        env->results->createIteration();
+        auto iteration = env->results->getCurrentIteration();
+        iteration->isDualProblemDiscrete = false;
+        iteration->hyperplanePoints.push_back(point);
+    }
+
+    task->run();
+
+    double distance = env->results->getCurrentIteration()->boundaryDistance;
+
+    if(std::abs(distance - 0.75) > 1e-9)
+    {
+        std::cout << "  FAILED: the distance between the last two hyperplane points is " << distance
+                  << " instead of 0.75.\n";
+        passed = false;
+    }
+
+    // An iteration without hyperplanes is skipped, so the distance is taken to the last one that has any, here
+    // two units relative to a point of norm 6
+    env->results->createIteration();
+    auto emptyIteration = env->results->getCurrentIteration();
+    emptyIteration->isDualProblemDiscrete = false;
+
+    env->results->createIteration();
+    auto lastIteration = env->results->getCurrentIteration();
+    lastIteration->isDualProblemDiscrete = false;
+    VectorDouble lastPoint = firstPoint;
+    lastPoint.at(0) = 6.0;
+    lastIteration->hyperplanePoints.push_back(lastPoint);
+
+    task->run();
+
+    if(std::abs(lastIteration->boundaryDistance - 2.0 / 6.0) > 1e-9)
+    {
+        std::cout << "  FAILED: the iteration without hyperplanes was not skipped, the distance is "
+                  << lastIteration->boundaryDistance << " instead of 1/3.\n";
+        passed = false;
+    }
+
+    // Without any hyperplanes of its own an iteration has no distance
+    env->results->createIteration();
+    auto iterationWithoutPoints = env->results->getCurrentIteration();
+    iterationWithoutPoints->isDualProblemDiscrete = false;
+
+    task->run();
+
+    if(iterationWithoutPoints->boundaryDistance != SHOT_DBL_MAX)
+    {
+        std::cout << "  FAILED: an iteration without hyperplanes was given the distance "
+                  << iterationWithoutPoints->boundaryDistance << ".\n";
+        passed = false;
+    }
+
+    if(passed)
+        std::cout << "  The distance is calculated between the points the hyperplanes were generated in.\n";
+
+    return passed;
+}
+
 // When the time limit has been reached before the dual problem is created, e.g., while reading and reformulating a
 // large problem, the MIP problem is neither created nor solved, and the solve ends on the time limit with one
 // iteration, so that the results and the solution files are written as when the limit is reached in an iteration
@@ -3081,6 +3168,11 @@ int SolverTest(int argc, char* argv[])
         std::cout << "Finished test for supporting hyperplanes for objective and nonconvex functions." << std::endl;
         break;
     case 31:
+        std::cout << "Starting test for the norm of the change between hyperplane points" << std::endl;
+        passed = TestSolutionChangeNorm();
+        std::cout << "Finished test for the norm of the change between hyperplane points." << std::endl;
+        break;
+    case 32:
         std::cout << "Starting test for a time limit reached before the dual problem is created" << std::endl;
         passed = TestTimeLimitReachedBeforeDualProblem();
         std::cout << "Finished test for a time limit reached before the dual problem is created." << std::endl;

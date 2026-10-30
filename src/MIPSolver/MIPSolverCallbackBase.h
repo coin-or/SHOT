@@ -20,6 +20,7 @@
 #include "../Tasks/TaskSelectHyperplanesECP.h"
 #include "../Tasks/TaskSelectHyperplanesExternal.h"
 #include "../Tasks/TaskUpdateInteriorPoint.h"
+#include "../Tasks/TaskCalculateSolutionChangeNorm.h"
 
 #include <memory>
 #include <optional>
@@ -50,6 +51,10 @@ protected:
     std::shared_ptr<TaskBase> taskSelectHPPts;
     std::shared_ptr<TaskSelectHyperplanesObjectiveFunction> taskSelectHPPtsByObjectiveRootsearch;
     std::shared_ptr<TaskSelectHyperplanesExternal> taskSelectExternalHPs;
+
+    // The iterations of the single-tree strategy are created in the callbacks, so the distance between the points
+    // the hyperplanes are generated in is calculated there as well
+    std::shared_ptr<TaskCalculateSolutionChangeNorm> taskCalculateSolutionChangeNorm;
 
     std::shared_ptr<TaskSelectPrimalCandidatesFromNLP> taskSelectPrimNLPOriginal;
     std::shared_ptr<TaskSelectPrimalCandidatesFromNLP> taskSelectPrimNLPReformulated;
