@@ -1,9 +1,11 @@
-name: Build and publish Python distributions
+name: Build and publish distributions
 
 # A tag v<version>[-<a|b|rc><n>] publishes that release; it must match the
 # version and SHOT_VERSION_SUFFIX in CMakeLists.txt. A manual run builds a
 # development version <version>.dev<run number> and publishes it from master
 # when 'publish' is checked. See misc/set-python-version.py.
+# Native archives reuse repaired wheels and are attached to the tagged GitHub
+# release (created as a draft if it does not exist yet).
 on:
   workflow_dispatch:
     inputs:
@@ -24,7 +26,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, ubuntu-24.04-arm, macos-14, windows-2022]
+        include:
+          - os: ubuntu-latest
+            platform: linux-x86_64
+          - os: ubuntu-24.04-arm
+            platform: linux-aarch64
+          - os: macos-14
+            platform: macos-arm64
+          - os: windows-2022
+            platform: windows-x86_64
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -54,10 +64,83 @@ jobs:
 
       - uses: pypa/cibuildwheel@v4.3.1
 
+      - name: Package standalone executable
+        run: |
+          python -m unittest discover -s test -p test_executable_packaging.py -v
+          python misc/package-executable.py --platform ${{ matrix.platform }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: executable-${{ matrix.platform }}
+          path: executables/*
+          if-no-files-found: error
+
       - uses: actions/upload-artifact@v4
         with:
           name: wheels-${{ matrix.os }}
           path: wheelhouse/*.whl
+
+  test-executables:
+    name: Test standalone executable (${{ matrix.os }})
+    needs: wheels
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux-x86_64
+          - os: ubuntu-24.04-arm
+            platform: linux-aarch64
+          - os: macos-14
+            platform: macos-arm64
+          - os: windows-2022
+            platform: windows-x86_64
+    # Fresh runners have none of the dependencies installed by the wheel build.
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@v4
+        with:
+          name: executable-${{ matrix.platform }}
+          path: executables
+      - name: Test extracted archive
+        shell: bash
+        run: |
+          shopt -s nullglob
+          archives=(executables/*.tar.gz executables/*.zip)
+          test "${#archives[@]}" -eq 1
+          python misc/test-executable-archive.py "${archives[0]}"
+
+  release-executables:
+    name: Upload executables to GitHub release
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: test-executables
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: executable-*
+          path: executables
+          merge-multiple: true
+      - name: Attach archives and checksums
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          if ! gh release view "$RELEASE_TAG" > /dev/null 2>&1; then
+            prerelease=()
+            if [[ "$RELEASE_TAG" =~ (a|b|rc)[0-9]+$ ]]; then
+              prerelease=(--prerelease)
+            fi
+            gh release create "$RELEASE_TAG" --verify-tag --draft --generate-notes "${prerelease[@]}"
+          fi
+          gh release upload "$RELEASE_TAG" executables/* --clobber
 
   sdist:
     name: Source distribution

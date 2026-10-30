@@ -1111,19 +1111,24 @@ if(WIN32)
             DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT Runtime)
         if(HAS_PYTHON)
             install(FILES ${SHOT_RUNTIME_DLLS} DESTINATION . COMPONENT Python)
-            set(_solver_license_dir "${CMAKE_INSTALL_DATADIR}/licenses/SHOT")
-            if(SKBUILD_METADATA_DIR)
-                set(_solver_license_dir "${SKBUILD_METADATA_DIR}/licenses/solvers")
-            endif()
-            foreach(_backend CBC IPOPT UNO)
-                if(HAS_${_backend})
-                    install(DIRECTORY "${${_backend}_DIR}/share/"
-                        DESTINATION "${_solver_license_dir}/${_backend}" COMPONENT Python OPTIONAL
-                        FILES_MATCHING PATTERN "LICENSE*" PATTERN "COPYING*" PATTERN "AUTHORS*")
-                endif()
-            endforeach()
         endif()
     endif()
+endif()
+
+# Preserve external solver notices in wheels on every platform, including the
+# standalone archives extracted from them by the release workflow.
+if(HAS_PYTHON)
+    set(_solver_license_dir "${CMAKE_INSTALL_DATADIR}/licenses/SHOT")
+    if(SKBUILD_METADATA_DIR)
+        set(_solver_license_dir "${SKBUILD_METADATA_DIR}/licenses/solvers")
+    endif()
+    foreach(_backend CBC IPOPT UNO)
+        if(HAS_${_backend} AND ${_backend}_DIR)
+            install(DIRECTORY "${${_backend}_DIR}/share/"
+                DESTINATION "${_solver_license_dir}/${_backend}" COMPONENT Python OPTIONAL
+                FILES_MATCHING PATTERN "LICENSE*" PATTERN "COPYING*" PATTERN "AUTHORS*")
+        endif()
+    endforeach()
 endif()
 if(MSVC)
     set_target_properties(SHOTSolver PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)

@@ -12,6 +12,25 @@ those files first.
 > For a native Windows build with HiGHS, see the MSVC instructions below.
 > WSL remains an alternative for Linux solver dependencies.
 
+## Prebuilt command-line packages
+
+Version-tag builds in `.github/workflows/wheels.yml` reuse the native executable
+and shared libraries from the repaired CPython 3.11 wheel. They produce one
+standalone archive for each of Linux x86_64, Linux ARM64, macOS ARM64, and
+Windows x64. Python and pip are not required to run these packages. The solver
+backends are HiGHS, Cbc, and Ipopt; commercial solvers and GAMS are excluded.
+Linux packages require glibc 2.28 or newer, and macOS packages require macOS 14
+or newer. Intel macOS packages are not built.
+
+Download the archive and its `.sha256` checksum from the matching
+[GitHub release](https://github.com/coin-or/SHOT/releases), extract it, and keep
+the entire directory together. Run `./SHOT problem.osil` on Linux/macOS or
+`SHOT.exe problem.osil` on Windows. On Unix, `SHOT` is a shell launcher for
+`SHOTpy_bin/SHOT`; the original wheel library layout is preserved. On Windows,
+all runtime DLLs are placed beside `SHOT.exe`, including the Visual C++ runtime
+DLLs that wheel repair normally leaves to Python. These are copied from the
+build toolchain's redistributable directory. Licenses are in `licenses/`.
+
 ## Getting the source
 
 ```bash
