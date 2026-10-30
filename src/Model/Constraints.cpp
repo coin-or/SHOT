@@ -170,10 +170,21 @@ IntervalDerivatives NumericConstraint::calculateIntervalDerivatives(const Interv
 
 NumericConstraintValue NumericConstraint::calculateNumericValue(const VectorDouble& point, double correction)
 {
+    auto constrValue = calculateValue(point, correction);
+    constrValue.constraint = getPointer();
+    return constrValue;
+}
+
+NumericConstraintValue NumericConstraint::calculateNumericValueWithoutConstraint(const VectorDouble& point)
+{
+    return calculateValue(point, 0.0);
+}
+
+NumericConstraintValue NumericConstraint::calculateValue(const VectorDouble& point, double correction)
+{
     double value = calculateFunctionValue(point) - correction;
 
     NumericConstraintValue constrValue;
-    constrValue.constraint = getPointer();
     constrValue.functionValue = value;
     constrValue.isFulfilledRHS = (value <= valueRHS);
     constrValue.normalizedRHSValue = value - valueRHS;
@@ -191,7 +202,7 @@ NumericConstraintValue NumericConstraint::calculateNumericValue(const VectorDoub
 
 bool NumericConstraint::isFulfilled(const VectorDouble& point)
 {
-    auto constraintValue = calculateNumericValue(point);
+    auto constraintValue = calculateNumericValueWithoutConstraint(point);
 
     return (constraintValue.isFulfilledLHS && constraintValue.isFulfilledRHS);
 }
