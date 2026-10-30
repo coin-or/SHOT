@@ -482,6 +482,39 @@ void MIPSolverBase::unfixVariables()
 
 int MIPSolverBase::getNumberOfOpenNodes() { return (env->solutionStatistics.numberOfOpenNodes); }
 
+void MIPSolverBase::mergeConstraintTerms()
+{
+    size_t numberOfMergedTerms = 0;
+
+    for(size_t i = 0; i < constraintTermIndexes.size(); i++)
+    {
+        int variableIndex = constraintTermIndexes[i];
+
+        if(variableIndex >= static_cast<int>(constraintTermPositions.size()))
+            constraintTermPositions.resize(std::max(variableIndex + 1, numberOfVariables), -1);
+
+        int& position = constraintTermPositions[variableIndex];
+
+        if(position >= 0)
+        {
+            constraintTermCoefficients[position] += constraintTermCoefficients[i];
+        }
+        else
+        {
+            position = static_cast<int>(numberOfMergedTerms);
+            constraintTermIndexes[numberOfMergedTerms] = variableIndex;
+            constraintTermCoefficients[numberOfMergedTerms] = constraintTermCoefficients[i];
+            numberOfMergedTerms++;
+        }
+    }
+
+    constraintTermIndexes.resize(numberOfMergedTerms);
+    constraintTermCoefficients.resize(numberOfMergedTerms);
+
+    for(int variableIndex : constraintTermIndexes)
+        constraintTermPositions[variableIndex] = -1;
+}
+
 bool MIPSolverBase::isMainDualMIPSolver()
 {
     return (env->dualSolver && dynamic_cast<MIPSolverBase*>(env->dualSolver->MIPSolver.get()) == this);

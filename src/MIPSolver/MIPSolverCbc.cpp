@@ -228,23 +228,18 @@ bool MIPSolverCbc::finalizeObjective(bool isMinimize, double constant)
     return (true);
 }
 
-bool MIPSolverCbc::initializeConstraint() { return (true); }
+bool MIPSolverCbc::initializeConstraint()
+{
+    constraintTermIndexes.clear();
+    constraintTermCoefficients.clear();
+
+    return (true);
+}
 
 bool MIPSolverCbc::addLinearTermToConstraint(double coefficient, int variableIndex)
 {
-    try
-    {
-        // In case there is already a linear term  for the variable present in the constraint we need to take this into
-        // consideration
-        double currentValue = coinModel->getElement(numberOfConstraints, variableIndex);
-
-        coinModel->setElement(numberOfConstraints, variableIndex, coefficient + currentValue);
-    }
-    catch(std::exception& e)
-    {
-        env->output->outputError("        Cbc exception caught when adding linear term to constraint: ", e.what());
-        return (false);
-    }
+    constraintTermIndexes.push_back(variableIndex);
+    constraintTermCoefficients.push_back(coefficient);
 
     return (true);
 }
@@ -258,19 +253,17 @@ bool MIPSolverCbc::addQuadraticTermToConstraint([[maybe_unused]] double coeffici
 
 bool MIPSolverCbc::finalizeConstraint(std::string name, double valueLHS, double valueRHS, double constant)
 {
-    int index = numberOfConstraints;
+    assert(coinModel->numberRows() == numberOfConstraints);
+
     try
     {
-        if(valueLHS <= valueRHS)
-        {
-            coinModel->setRowBounds(index, valueLHS - constant, valueRHS - constant);
-        }
-        else
-        {
-            coinModel->setRowBounds(index, valueRHS - constant, valueLHS - constant);
-        }
+        // The row is added at once, since setting the elements one at a time looks each of them up in the model.
+        // The terms of the same variable are summed first, as when they were added to the element.
+        mergeConstraintTerms();
 
-        coinModel->setRowName(index, name.c_str());
+        coinModel->addRow(static_cast<int>(constraintTermIndexes.size()), constraintTermIndexes.data(),
+            constraintTermCoefficients.data(), std::min(valueLHS, valueRHS) - constant,
+            std::max(valueLHS, valueRHS) - constant, name.c_str());
     }
     catch(std::exception& e)
     {
@@ -279,6 +272,7 @@ bool MIPSolverCbc::finalizeConstraint(std::string name, double valueLHS, double 
     }
 
     allowRepairOfConstraint.push_back(false);
+
     numberOfConstraints++;
     return (true);
 }

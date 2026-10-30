@@ -40,8 +40,6 @@ MIPSolverGurobi::~MIPSolverGurobi()
 {
     objectiveLinearExpression.clear();
     objectiveQuadraticExpression.clear();
-    constraintLinearExpression.clear();
-    constraintQuadraticExpression.clear();
 }
 
 bool MIPSolverGurobi::initializeProblem()
@@ -220,32 +218,19 @@ bool MIPSolverGurobi::finalizeObjective(bool isMinimize, double constant)
 
 bool MIPSolverGurobi::initializeConstraint()
 {
-    try
-    {
-        constraintQuadraticExpression = GRBQuadExpr(0);
-        constraintLinearExpression = GRBLinExpr(0);
-    }
-    catch(GRBException& e)
-    {
-        env->output->outputError("        Gurobi exception caught when initializing constraint: ", e.getMessage());
-        return (false);
-    }
+    constraintTermIndexes.clear();
+    constraintTermCoefficients.clear();
+    constraintQuadraticCoefficients.clear();
+    constraintQuadraticFirstVariables.clear();
+    constraintQuadraticSecondVariables.clear();
 
     return (true);
 }
 
 bool MIPSolverGurobi::addLinearTermToConstraint(double coefficient, int variableIndex)
 {
-    try
-    {
-        constraintLinearExpression += coefficient * gurobiModel->getVar(variableIndex);
-    }
-    catch(GRBException& e)
-    {
-        env->output->outputError(
-            "        Gurobi exception caught when adding linear term to constraint: ", e.getMessage());
-        return (false);
-    }
+    constraintTermIndexes.push_back(variableIndex);
+    constraintTermCoefficients.push_back(coefficient);
 
     return (true);
 }
@@ -254,8 +239,9 @@ bool MIPSolverGurobi::addQuadraticTermToConstraint(double coefficient, int first
 {
     try
     {
-        constraintQuadraticExpression
-            += coefficient * gurobiModel->getVar(firstVariableIndex) * gurobiModel->getVar(secondVariableIndex);
+        constraintQuadraticCoefficients.push_back(coefficient);
+        constraintQuadraticFirstVariables.push_back(gurobiModel->getVar(firstVariableIndex));
+        constraintQuadraticSecondVariables.push_back(gurobiModel->getVar(secondVariableIndex));
     }
     catch(GRBException& e)
     {
@@ -273,62 +259,72 @@ bool MIPSolverGurobi::finalizeConstraint(std::string name, double valueLHS, doub
 {
     try
     {
-        if(constant != 0.0)
-            constraintLinearExpression += constant;
+        // The terms are added to the expression at once, since adding them one at a time allocates for every term
+        constraintTermVariables.clear();
 
-        if(constraintQuadraticExpression.size() == 0)
+        for(int variableIndex : constraintTermIndexes)
+            constraintTermVariables.push_back(gurobiModel->getVar(variableIndex));
+
+        GRBLinExpr linearExpression;
+        linearExpression.addTerms(
+            constraintTermCoefficients.data(), constraintTermVariables.data(), constraintTermVariables.size());
+
+        if(constant != 0.0)
+            linearExpression += constant;
+
+        if(constraintQuadraticCoefficients.size() == 0)
         {
             if(valueLHS == valueRHS)
             {
-                gurobiModel->addConstr(constraintLinearExpression == valueRHS, name);
+                gurobiModel->addConstr(linearExpression, GRB_EQUAL, valueRHS, name);
             }
             else if(valueLHS < valueRHS)
             {
                 if(valueLHS > SHOT_DBL_MIN)
-                    gurobiModel->addConstr(valueLHS <= constraintLinearExpression, name + "_a");
+                    gurobiModel->addConstr(linearExpression, GRB_GREATER_EQUAL, valueLHS, name + "_a");
 
                 if(valueRHS < SHOT_DBL_MAX)
-                    gurobiModel->addConstr(constraintLinearExpression <= valueRHS, name + "_b");
+                    gurobiModel->addConstr(linearExpression, GRB_LESS_EQUAL, valueRHS, name + "_b");
             }
             else
             {
                 if(valueLHS < SHOT_DBL_MAX)
-                    gurobiModel->addConstr(valueLHS >= constraintLinearExpression, name + "_a");
+                    gurobiModel->addConstr(linearExpression, GRB_LESS_EQUAL, valueLHS, name + "_a");
 
                 if(valueRHS > SHOT_DBL_MIN)
-                    gurobiModel->addConstr(constraintLinearExpression >= valueRHS, name + "_b");
+                    gurobiModel->addConstr(linearExpression, GRB_GREATER_EQUAL, valueRHS, name + "_b");
             }
         }
         else
         {
+            GRBQuadExpr quadraticExpression(linearExpression);
+            quadraticExpression.addTerms(constraintQuadraticCoefficients.data(),
+                constraintQuadraticFirstVariables.data(), constraintQuadraticSecondVariables.data(),
+                constraintQuadraticCoefficients.size());
+
             if(valueLHS == valueRHS)
             {
-                gurobiModel->addQConstr(constraintLinearExpression + constraintQuadraticExpression == valueRHS, name);
+                gurobiModel->addQConstr(quadraticExpression, GRB_EQUAL, valueRHS, name);
             }
             else if(valueLHS < valueRHS)
             {
                 if(valueLHS > SHOT_DBL_MIN)
-                    gurobiModel->addQConstr(
-                        valueLHS <= constraintLinearExpression + constraintQuadraticExpression, name + "_a");
+                    gurobiModel->addQConstr(quadraticExpression, GRB_GREATER_EQUAL, valueLHS, name + "_a");
 
                 if(valueRHS < SHOT_DBL_MAX)
-                    gurobiModel->addQConstr(
-                        constraintLinearExpression + constraintQuadraticExpression <= valueRHS, name + "_b");
+                    gurobiModel->addQConstr(quadraticExpression, GRB_LESS_EQUAL, valueRHS, name + "_b");
             }
             else
             {
-
                 if(valueLHS < SHOT_DBL_MAX)
-                    gurobiModel->addQConstr(
-                        valueLHS >= constraintLinearExpression + constraintQuadraticExpression, name + "_a");
+                    gurobiModel->addQConstr(quadraticExpression, GRB_LESS_EQUAL, valueLHS, name + "_a");
 
                 if(valueRHS > SHOT_DBL_MIN)
-                    gurobiModel->addQConstr(
-                        constraintLinearExpression + constraintQuadraticExpression >= valueRHS, name + "_b");
+                    gurobiModel->addQConstr(quadraticExpression, GRB_GREATER_EQUAL, valueRHS, name + "_b");
             }
         }
 
-        if(constraintQuadraticExpression.size() == 0)
+        if(constraintQuadraticCoefficients.size() == 0)
             allowRepairOfConstraint.push_back(false);
     }
     catch(GRBException& e)

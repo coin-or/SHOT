@@ -20,8 +20,6 @@
 namespace SHOT
 {
 
-double Variable::calculate(const VectorDouble& point) const { return point[index]; }
-Interval Variable::calculate(const IntervalVector& intervalVector) const { return intervalVector[index]; }
 Interval Variable::getBound() { return Interval(lowerBound, upperBound); }
 
 bool Variable::tightenBounds(const Interval bound)

@@ -225,9 +225,10 @@ public:
         properties.type = variableType;
     };
 
-    double calculate(const VectorDouble& point) const;
+    // Defined here so that they are inlined in the evaluation of the terms, which calls them for every term
+    inline double calculate(const VectorDouble& point) const { return point[index]; }
 
-    Interval calculate(const IntervalVector& intervalVector) const;
+    inline Interval calculate(const IntervalVector& intervalVector) const { return intervalVector[index]; }
     Interval getBound();
 
     bool tightenBounds(const Interval bound);

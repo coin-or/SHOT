@@ -27,6 +27,7 @@
 #endif
 
 #include <cmath>
+#include <map>
 
 using namespace SHOT;
 
@@ -125,6 +126,59 @@ ProblemPtr createMaximizationProblem(EnvironmentPtr env)
     linearTerms.add(std::make_shared<LinearTerm>(1.0, var_x));
     linearTerms.add(std::make_shared<LinearTerm>(1.0, var_y));
     problem->add(std::make_shared<LinearConstraint>("linconstr", linearTerms, 3.0, 3.0));
+
+    problem->finalize();
+
+    return (problem);
+}
+
+/* Builds
+ *
+ *     min  x + y + z
+ *     s.t. exp(x) * y + z <= 10
+ *          x * sin(z) >= 0.5
+ *          exp(y * z) - x <= 5
+ *          0.5 <= x, y, z <= 2
+ *
+ * with three constraints whose nonlinear expressions share variables on the CppAD tape, so that their derivatives
+ * are calculated together for all constraints.
+ */
+ProblemPtr createProblemWithSeveralNonlinearConstraints(EnvironmentPtr env)
+{
+    ProblemPtr problem = std::make_shared<Problem>(env);
+
+    auto var_x = std::make_shared<Variable>("x", E_VariableType::Real, 0.5, 2.0);
+    auto var_y = std::make_shared<Variable>("y", E_VariableType::Real, 0.5, 2.0);
+    auto var_z = std::make_shared<Variable>("z", E_VariableType::Real, 0.5, 2.0);
+
+    Variables variables = { var_x, var_y, var_z };
+    problem->add(variables);
+
+    auto expressionVariable_x = std::make_shared<ExpressionVariable>(var_x);
+    auto expressionVariable_y = std::make_shared<ExpressionVariable>(var_y);
+    auto expressionVariable_z = std::make_shared<ExpressionVariable>(var_z);
+
+    auto objectiveFunction = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objectiveFunction->add(std::make_shared<LinearTerm>(1.0, var_x));
+    objectiveFunction->add(std::make_shared<LinearTerm>(1.0, var_y));
+    objectiveFunction->add(std::make_shared<LinearTerm>(1.0, var_z));
+    problem->add(objectiveFunction);
+
+    LinearTerms linearTerms1;
+    linearTerms1.add(std::make_shared<LinearTerm>(1.0, var_z));
+    NonlinearExpressionPtr expression1 = std::make_shared<ExpressionProduct>(
+        std::make_shared<ExpressionExp>(expressionVariable_x), expressionVariable_y);
+    problem->add(std::make_shared<NonlinearConstraint>("c1", linearTerms1, expression1, SHOT_DBL_MIN, 10.0));
+
+    NonlinearExpressionPtr expression2
+        = std::make_shared<ExpressionProduct>(expressionVariable_x, std::make_shared<ExpressionSin>(expressionVariable_z));
+    problem->add(std::make_shared<NonlinearConstraint>("c2", expression2, 0.5, SHOT_DBL_MAX));
+
+    LinearTerms linearTerms3;
+    linearTerms3.add(std::make_shared<LinearTerm>(-1.0, var_x));
+    NonlinearExpressionPtr expression3 = std::make_shared<ExpressionExp>(
+        std::make_shared<ExpressionProduct>(expressionVariable_y, expressionVariable_z));
+    problem->add(std::make_shared<NonlinearConstraint>("c3", linearTerms3, expression3, SHOT_DBL_MIN, 5.0));
 
     problem->finalize();
 
@@ -336,6 +390,111 @@ bool UnoTest3()
     return (passed);
 }
 
+/* With several constraint expressions, the Jacobian and the Lagrangian Hessian are calculated for all of them in one
+   sweep of the shared CppAD tape. The values the Uno callbacks give must be the same as those of each constraint
+   calculated on its own, placed in the order of the sparsity patterns Uno is given. */
+bool UnoTest4()
+{
+    bool passed = true;
+
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+
+    auto problem = createProblemWithSeveralNonlinearConstraints(env);
+    env->problem = problem;
+
+    auto NLPSolver = std::make_shared<NLPSolverUno>(env, problem);
+
+    int numberOfVariables = problem->properties.numberOfVariables;
+    int numberOfConstraints = problem->properties.numberOfNumericConstraints;
+
+    VectorDouble point = { 1.3, 0.7, 1.1 };
+    VectorDouble multipliers = { 0.4, -1.5, 2.25 };
+
+    std::map<std::pair<int, int>, int> jacobianLocations;
+    for(auto& C : problem->numericConstraints)
+    {
+        for(auto& V : *C->getGradientSparsityPattern())
+            jacobianLocations.emplace(std::make_pair(C->getIndex(), V->getIndex()), jacobianLocations.size());
+    }
+
+    VectorDouble expectedJacobian(jacobianLocations.size(), 0.0);
+    for(auto& C : problem->numericConstraints)
+    {
+        for(auto& G : C->calculateGradient(point, false))
+            expectedJacobian[jacobianLocations.at(std::make_pair(C->getIndex(), G.first->getIndex()))] += G.second;
+    }
+
+    std::map<std::pair<int, int>, int> hessianLocations;
+    for(auto& E : *problem->getLagrangianHessianSparsityPattern())
+        hessianLocations.emplace(std::make_pair(E.first->getIndex(), E.second->getIndex()), hessianLocations.size());
+
+    VectorDouble expectedHessian(hessianLocations.size(), 0.0);
+    for(auto& C : problem->numericConstraints)
+    {
+        for(auto& E : C->calculateHessian(point, false))
+        {
+            expectedHessian[hessianLocations.at(std::make_pair(E.first.first->getIndex(), E.first.second->getIndex()))]
+                += multipliers[C->getIndex()] * E.second;
+        }
+    }
+
+    VectorDouble jacobian(expectedJacobian.size());
+    NLPSolver->evaluateJacobian(numberOfVariables, static_cast<int>(jacobian.size()), point.data(), jacobian.data());
+
+    VectorDouble hessian(expectedHessian.size());
+    NLPSolver->evaluateLagrangianHessian(numberOfVariables, numberOfConstraints, static_cast<int>(hessian.size()),
+        point.data(), 0.0, multipliers.data(), hessian.data());
+
+    for(size_t i = 0; i < jacobian.size(); i++)
+    {
+        if(std::abs(jacobian[i] - expectedJacobian[i]) > 1e-10)
+        {
+            std::cout << "FAILED: Jacobian element " << i << " is " << jacobian[i] << " instead of "
+                      << expectedJacobian[i] << '\n';
+            passed = false;
+        }
+    }
+
+    for(size_t i = 0; i < hessian.size(); i++)
+    {
+        if(std::abs(hessian[i] - expectedHessian[i]) > 1e-10)
+        {
+            std::cout << "FAILED: Hessian element " << i << " is " << hessian[i] << " instead of "
+                      << expectedHessian[i] << '\n';
+            passed = false;
+        }
+    }
+
+    // The derivatives of all three expressions are in the patterns, so a missing one would not be caught otherwise
+    if(expectedHessian.size() < 4)
+    {
+        std::cout << "FAILED: expected at least four Hessian elements, got " << expectedHessian.size() << '\n';
+        passed = false;
+    }
+
+    // min x + y + z with x sin(z) >= 0.5 on [0.5, 2]^3 is solved to a point that satisfies all constraints
+    if(!isSolved(NLPSolver->solveProblem()))
+    {
+        std::cout << "FAILED: Uno did not solve the problem with several nonlinear constraints\n";
+        return (false);
+    }
+
+    auto solution = NLPSolver->getSolution();
+    Utilities::displayVector(solution);
+
+    for(auto& C : problem->numericConstraints)
+    {
+        if(C->calculateNumericValue(solution).normalizedValue > 1e-6)
+        {
+            std::cout << "FAILED: the solution violates constraint " << C->name << '\n';
+            passed = false;
+        }
+    }
+
+    return (passed);
+}
+
 int UnoTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -368,6 +527,11 @@ int UnoTest(int argc, char* argv[])
         std::cout << "Starting test to solve a problem with fixed variables using Uno:" << std::endl;
         passed = UnoTest3();
         std::cout << "Finished test to solve a problem with fixed variables using Uno." << std::endl;
+        break;
+    case 4:
+        std::cout << "Starting test of the derivatives of several nonlinear constraints using Uno:" << std::endl;
+        passed = UnoTest4();
+        std::cout << "Finished test of the derivatives of several nonlinear constraints using Uno." << std::endl;
         break;
     default:
         passed = false;

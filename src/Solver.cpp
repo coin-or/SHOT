@@ -54,6 +54,23 @@ namespace fs = std::experimental;
 namespace SHOT
 {
 
+void Solver::createTimers()
+{
+    env->timing->createTimer("Total", "Total solution time");
+    env->timing->startTimer("Total");
+
+    env->timing->createTimer("ProblemInitialization", "- problem initialization");
+    env->timing->createTimer("ProblemInitializationGAMS", "  - reading the model in GAMS");
+    env->timing->createTimer("EigenvalueComputation", "- eigenvalue and eigenvector computation");
+    env->timing->createTimer("ProblemReformulation", "- problem reformulation");
+    env->timing->createTimer("ProblemReformulationEigenDecomp", "  - eigenvalue decomposition");
+    env->timing->createTimer("ProblemReformulationLDLDecomp", "  - LDL decomposition");
+    env->timing->createTimer("BoundTightening", "- bound tightening");
+    env->timing->createTimer("BoundTighteningPOA", "  - initial outer approximation");
+    env->timing->createTimer("BoundTighteningFBBTOriginal", "  - feasibility based (original problem)");
+    env->timing->createTimer("BoundTighteningFBBTReformulated", "  - feasibility based (reformulated problem)");
+}
+
 Solver::Solver()
 {
     env = std::make_shared<Environment>();
@@ -63,18 +80,7 @@ Solver::Solver()
     env->results = std::make_shared<Results>(env);
     env->timing = std::make_shared<Timing>(env);
 
-    env->timing->createTimer("Total", "Total solution time");
-    env->timing->startTimer("Total");
-
-    env->timing->createTimer("ProblemInitialization", "- problem initialization");
-    env->timing->createTimer("EigenvalueComputation", "- eigenvalue and eigenvector computation");
-    env->timing->createTimer("ProblemReformulation", "- problem reformulation");
-    env->timing->createTimer("ProblemReformulationEigenDecomp", "  - eigenvalue decomposition");
-    env->timing->createTimer("ProblemReformulationLDLDecomp", "  - LDL decomposition");
-    env->timing->createTimer("BoundTightening", "- bound tightening");
-    env->timing->createTimer("BoundTighteningPOA", "  - initial outer approximation");
-    env->timing->createTimer("BoundTighteningFBBTOriginal", "  - feasibility based (original problem)");
-    env->timing->createTimer("BoundTighteningFBBTReformulated", "  - feasibility based (reformulated problem)");
+    createTimers();
 
     env->settings = std::make_shared<Settings>(env->output);
     env->tasks = std::make_shared<TaskHandler>(env);
@@ -97,16 +103,7 @@ Solver::Solver(std::shared_ptr<spdlog::sinks::sink> consoleSink)
     env->results = std::make_shared<Results>(env);
     env->timing = std::make_shared<Timing>(env);
 
-    env->timing->createTimer("Total", "Total solution time");
-    env->timing->startTimer("Total");
-
-    env->timing->createTimer("ProblemInitialization", "- problem initialization");
-    env->timing->createTimer("ProblemReformulation", "- problem reformulation");
-    env->timing->createTimer("BoundTightening", "- bound tightening");
-    env->timing->createTimer("BoundTighteningFBBT", "  - feasibility based");
-    env->timing->createTimer("BoundTighteningFBBTOriginal", "  - feasibility based (original problem");
-    env->timing->createTimer("BoundTighteningFBBTReformulated", "  - feasibility based (reformulated problem");
-    env->timing->createTimer("EigenvalueComputation", "- eigenvalue and eigenvector computation");
+    createTimers();
 
     env->settings = std::make_shared<Settings>(env->output);
     env->tasks = std::make_shared<TaskHandler>(env);
@@ -208,6 +205,10 @@ void Solver::updateLogLevels()
 
 bool Solver::setProblem(std::string fileName)
 {
+    // The solution time starts here and not when the solver was created, since the time in between is spent in the
+    // caller's code, e.g., waiting between the cells of a notebook, and would count against the time limit
+    env->timing->restartTimer("Total");
+
     if(!fs::filesystem::exists(fileName))
     {
         env->output->outputError(" Problem file \"" + fileName + "\" does not exist.");
@@ -435,12 +436,24 @@ bool Solver::setProblem(std::string fileName)
     setConvexityBasedSettings();
     verifySettings();
 
-    return (this->selectStrategy());
+    bool isStrategySelected = selectStrategy();
+
+    // The time until solveProblem() is called, e.g., in another cell of a notebook, is not part of the solution time
+    env->timing->stopTimer("Total");
+
+    return (isStrategySelected);
 }
 
 bool Solver::setProblem(
     SHOT::ProblemPtr problem, SHOT::ProblemPtr reformulatedProblem, SHOT::ModelingSystemPtr modelingSystem)
 {
+    // The solution time starts here for a problem built through the API, e.g. in Python, since the time since the
+    // solver was created is spent in the caller's code, or waiting between the cells of a notebook, and would count
+    // against the time limit. A caller that read the problem itself, as the GAMS entry point does, has timed that as
+    // the problem initialization, which is kept in the solution time as when reading a problem file.
+    if(env->timing->getElapsedTime("ProblemInitialization") == 0.0)
+        env->timing->restartTimer("Total");
+
     env->modelingSystem = modelingSystem;
     env->problem = problem;
 
@@ -565,7 +578,12 @@ bool Solver::setProblem(
     setConvexityBasedSettings();
     verifySettings();
 
-    return (this->selectStrategy());
+    bool isStrategySelected = selectStrategy();
+
+    // The time until solveProblem() is called, e.g., in another cell of a notebook, is not part of the solution time
+    env->timing->stopTimer("Total");
+
+    return (isStrategySelected);
 }
 
 bool Solver::selectStrategy()
@@ -709,6 +727,9 @@ bool Solver::solveProblem()
         env->output->outputCritical(" Cannot solve the problem since it has not been set successfully.");
         return (false);
     }
+
+    // Paused at the end of setProblem()
+    env->timing->startTimer("Total");
 
     // Verify settings in case they were changed after setProblem() was called
     verifySettings();
