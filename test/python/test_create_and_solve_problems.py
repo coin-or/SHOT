@@ -531,6 +531,11 @@ class TestOpenSourceMIPSolvers:
         solver.updateSetting("Output.Console.LogLevel", 6)
         solver.updateSetting("Dual.MIP.Solver", int(getattr(SHOTpy.MIPSolver, mipSolver)))
 
+        # An objective offset of +/-50 permits a relative gap of about 0.05
+        # with the defaults. Request an absolute certificate for this regression.
+        solver.updateSetting("Termination.ObjectiveGap.Absolute", 1e-6)
+        solver.updateSetting("Termination.ObjectiveGap.Relative", 0.0)
+
         problem = SHOTpy.Problem(solver)
         x = problem.addVariable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
         y = problem.addVariable("y", SHOTpy.VariableType.Integer, 0.0, 10.0)
@@ -543,9 +548,12 @@ class TestOpenSourceMIPSolvers:
         assert solver.setProblem(problem)
         assert solver.solveProblem()
 
-        # The optimum is x = 0, y = 3, i.e., 1.36 before the sign and the constant
+        # The optimum is x = 1, y = 2, i.e., 1.36 before the sign and the constant
         optimum = sign * 1.36 + constant
-        assert solver.getModelReturnStatus() == SHOTpy.ModelReturnStatus.OptimalGlobal
+        assert solver.getModelReturnStatus() == SHOTpy.ModelReturnStatus.OptimalGlobal, (
+            f"{solver.getTerminationReason()}: primal={solver.getPrimalBound()}, "
+            f"dual={solver.getGlobalDualBound()}, gap={solver.getAbsoluteObjectiveGap()}"
+        )
         assert solver.getPrimalBound() == pytest.approx(optimum, abs=1e-3)
         assert solver.getSolutionStatistics().numberOfIterations < 100
 

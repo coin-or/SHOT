@@ -300,6 +300,9 @@ class TestAddVariable:
 
         solver = SHOTpy.Solver()
         solver.updateSetting("Output.Console.LogLevel", 6)
+        # The objective assertion below is tighter than the default 1e-3 gaps.
+        solver.updateSetting("Termination.ObjectiveGap.Absolute", 1e-7)
+        solver.updateSetting("Termination.ObjectiveGap.Relative", 1e-7)
         problem = SHOTpy.Problem(solver.getEnvironment())
 
         x = problem.addVariable("x", lowerBound=-10, upperBound=10)

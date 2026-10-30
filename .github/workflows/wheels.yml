@@ -31,7 +31,7 @@ jobs:
             platform: linux-x86_64
           - os: ubuntu-24.04-arm
             platform: linux-aarch64
-          - os: macos-14
+          - os: macos-15
             platform: macos-arm64
           - os: windows-2022
             platform: windows-x86_64
@@ -91,7 +91,7 @@ jobs:
             platform: linux-x86_64
           - os: ubuntu-24.04-arm
             platform: linux-aarch64
-          - os: macos-14
+          - os: macos-15
             platform: macos-arm64
           - os: windows-2022
             platform: windows-x86_64
