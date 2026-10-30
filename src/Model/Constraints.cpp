@@ -693,22 +693,11 @@ SparseVariableVector NonlinearConstraint::calculateGradientWithoutNonlinearExpre
 {
     SparseVariableVector gradient = QuadraticConstraint::calculateGradient(point, false);
 
-    SparseVariableVector monomialGradient;
-
     if(this->properties.hasMonomialTerms)
-    {
-        monomialGradient = monomialTerms.calculateGradient(point);
-    }
-
-    SparseVariableVector signomialGradient;
+        monomialTerms.addGradient(gradient, point);
 
     if(this->properties.hasSignomialTerms)
-    {
-        signomialGradient = signomialTerms.calculateGradient(point);
-    }
-
-    Utilities::addSparseVariableVector(gradient, std::move(monomialGradient));
-    Utilities::addSparseVariableVector(gradient, std::move(signomialGradient));
+        signomialTerms.addGradient(gradient, point);
 
     if(eraseZeroes)
         Utilities::erase_if<VariablePtr, double>(gradient, 0.0);
@@ -889,14 +878,10 @@ SparseVariableMatrix NonlinearConstraint::calculateHessianWithoutNonlinearExpres
     SparseVariableMatrix hessian = QuadraticConstraint::calculateHessian(point, false);
 
     if(properties.hasMonomialTerms)
-    {
-        Utilities::addSparseVariableMatrix(hessian, monomialTerms.calculateHessian(point));
-    }
+        monomialTerms.addHessian(hessian, point);
 
     if(properties.hasSignomialTerms)
-    {
-        Utilities::addSparseVariableMatrix(hessian, signomialTerms.calculateHessian(point));
-    }
+        signomialTerms.addHessian(hessian, point);
 
     if(eraseZeroes)
         Utilities::erase_if<std::pair<VariablePtr, VariablePtr>, double>(hessian, 0.0);
