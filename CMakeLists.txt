@@ -184,7 +184,6 @@ file(
     "${PROJECT_SOURCE_DIR}/src/Model/NonlinearExpressions.h"
     "${PROJECT_SOURCE_DIR}/src/Model/Constraints.h"
     "${PROJECT_SOURCE_DIR}/src/Model/Problem.h"
-    "${PROJECT_SOURCE_DIR}/src/Model/ModelHelperFunctions.h"
     "${PROJECT_SOURCE_DIR}/src/Report.h"
     "${PROJECT_SOURCE_DIR}/src/Iteration.h"
     "${PROJECT_SOURCE_DIR}/src/Timing.h"
@@ -196,21 +195,16 @@ file(
     "${PROJECT_SOURCE_DIR}/src/Solver.h"
     "${PROJECT_SOURCE_DIR}/src/TaskHandler.h"
     "${PROJECT_SOURCE_DIR}/src/Utilities.h"
-    "${PROJECT_SOURCE_DIR}/src/Simplifications.h"
     "${PROJECT_SOURCE_DIR}/src/ModelingSystem/IModelingSystem.h"
     "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemOSiL.h"
-    "${PROJECT_SOURCE_DIR}/src/ConstraintSelectionStrategy/*.h"
     "${PROJECT_SOURCE_DIR}/src/RootsearchMethod/IRootsearchMethod.h"
     "${PROJECT_SOURCE_DIR}/src/RootsearchMethod/RootsearchMethodBoost.h"
     "${PROJECT_SOURCE_DIR}/src/MIPSolver/IMIPSolutionLimitStrategy.h"
     "${PROJECT_SOURCE_DIR}/src/MIPSolver/IMIPSolver.h"
     "${PROJECT_SOURCE_DIR}/src/MIPSolver/IRelaxationStrategy.h"
-    "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyAdaptive.h"
     "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyIncrease.h"
-    "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyUnlimited.h"
     "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverBase.h"
     "${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyBase.h"
-    "${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyNone.h"
     "${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyStandard.h"
     "${PROJECT_SOURCE_DIR}/src/NLPSolver/INLPSolver.h"
     "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverBase.h"
@@ -229,10 +223,8 @@ file(
     "${PROJECT_SOURCE_DIR}/src/Tasks/TaskSelectPrimalFixedNLPPointsFromSolutionPool.h"
     "${PROJECT_SOURCE_DIR}/src/Tasks/TaskPerformBoundTightening.h"
     "${PROJECT_SOURCE_DIR}/src/Tasks/TaskAddPrimalReductionCut.h"
-    "${PROJECT_SOURCE_DIR}/src/Tasks/TaskSimple.h"
     "${PROJECT_SOURCE_DIR}/src/Tasks/TaskPrintIterationReport.h"
     "${PROJECT_SOURCE_DIR}/src/Tasks/TaskSolveIteration.h"
-    "${PROJECT_SOURCE_DIR}/src/Tasks/TaskRepairableBase.h"
     "${PROJECT_SOURCE_DIR}/src/Tasks/TaskBase.h"
     "${PROJECT_SOURCE_DIR}/src/Tasks/TaskCheckIterationLimit.h"
     "${PROJECT_SOURCE_DIR}/src/Tasks/TaskSelectPrimalCandidatesFromSolutionPool.h"
@@ -809,18 +801,12 @@ add_library(
     ${PROJECT_SOURCE_DIR}/src/DualSolver.cpp
     ${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.cpp
     ${PROJECT_SOURCE_DIR}/src/MIPSolver/IMIPSolutionLimitStrategy.h
-    ${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyAdaptive.h
-    ${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyAdaptive.cpp
     ${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyIncrease.h
     ${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyIncrease.cpp
-    ${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyUnlimited.h
-    ${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyUnlimited.cpp
     ${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverBase.h
     ${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverBase.cpp
     ${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyBase.h
     ${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyBase.cpp
-    ${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyNone.h
-    ${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyNone.cpp
     ${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyStandard.h
     ${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyStandard.cpp
 )
@@ -895,8 +881,6 @@ add_library(
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskReformulateProblem.h
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskRepairInfeasibleDualProblem.cpp
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskRepairInfeasibleDualProblem.h
-    ${PROJECT_SOURCE_DIR}/src/Tasks/TaskRepairableBase.cpp
-    ${PROJECT_SOURCE_DIR}/src/Tasks/TaskRepairableBase.h
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskSelectHyperplanesECP.cpp
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskSelectHyperplanesECP.h
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskSelectHyperplanesESH.cpp
@@ -917,8 +901,6 @@ add_library(
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskSelectPrimalFixedNLPPointsFromSolutionPool.h
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskSequential.cpp
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskSequential.h
-    ${PROJECT_SOURCE_DIR}/src/Tasks/TaskSimple.cpp
-    ${PROJECT_SOURCE_DIR}/src/Tasks/TaskSimple.h
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskSolveIteration.cpp
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskSolveIteration.h
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskTerminate.cpp

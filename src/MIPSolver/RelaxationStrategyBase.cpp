@@ -20,23 +20,6 @@
 namespace SHOT
 {
 
-bool RelaxationStrategyBase::isRelaxedSolutionInterior()
-{
-    if(env->results->getNumberOfIterations() < 2)
-    {
-        return false;
-    }
-
-    auto prevIter = env->results->getPreviousIteration();
-
-    if(prevIter->maxDeviation < 0)
-    {
-        return true;
-    }
-
-    return false;
-}
-
 bool RelaxationStrategyBase::isConstraintToleranceReached()
 {
     if(env->results->getNumberOfIterations() < 2)

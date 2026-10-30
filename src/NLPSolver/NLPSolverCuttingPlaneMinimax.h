@@ -26,9 +26,6 @@ public:
     void setStartingPoint(VectorInteger variableIndexes, VectorDouble variableValues) override;
     void clearStartingPoint() override;
 
-    virtual bool isObjectiveFunctionNonlinear();
-    virtual int getObjectiveFunctionVariableIndex();
-
     VectorDouble getVariableLowerBounds() override;
     VectorDouble getVariableUpperBounds() override;
 

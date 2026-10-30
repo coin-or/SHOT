@@ -42,7 +42,6 @@ public:
 
 private:
     std::list<std::pair<std::string, TaskPtr>>::iterator nextTask;
-    std::string nextTaskID;
     std::list<std::pair<std::string, TaskPtr>> taskIDMap;
     std::list<TaskPtr> allTasks;
 

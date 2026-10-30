@@ -35,8 +35,6 @@ public:
     double maxDeviation = 0.0;
     int maxDeviationConstraint = -1;
 
-    double usedConstraintTolerance;
-
     int usedMIPSolutionLimit;
     bool MIPSolutionLimitUpdated;
 
