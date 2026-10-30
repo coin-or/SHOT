@@ -97,7 +97,7 @@ public:
     virtual E_Monotonicity getMonotonicity() const = 0;
 };
 
-class LinearTerm : public Term
+class LinearTerm final : public Term
 {
 private:
 public:
@@ -391,7 +391,7 @@ public:
     };
 };
 
-class QuadraticTerm : public Term
+class QuadraticTerm final : public Term
 {
 public:
     VariablePtr firstVariable;
@@ -759,7 +759,7 @@ public:
     void computeEigenvectors();
 };
 
-class MonomialTerm : public Term
+class MonomialTerm final : public Term
 {
 public:
     Variables variables;
@@ -1278,7 +1278,7 @@ inline std::ostream& operator<<(std::ostream& stream, SignomialElementPtr elemen
     return stream;
 }
 
-class SignomialTerm : public Term
+class SignomialTerm final : public Term
 {
 public:
     SignomialElements elements;
