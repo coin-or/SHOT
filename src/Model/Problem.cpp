@@ -1589,9 +1589,8 @@ NumericConstraintValue Problem::getMaxNumericConstraintValue(
 }
 
 NumericConstraintValue Problem::getMaxNumericConstraintValue(
-    const VectorDouble& point, const NonlinearConstraints& constraintSelection, [[maybe_unused]] double correction)
+    const VectorDouble& point, const NonlinearConstraints& constraintSelection)
 {
-    // The correction is not used, as in calculateNumericValue() of the constraint classes, which ignore it
     return getMaxValueOfConstraints(point, constraintSelection);
 }
 
@@ -1610,10 +1609,9 @@ NumericConstraintValue Problem::getMaxNumericConstraintValue(const VectorDouble&
 }
 
 template <typename T>
-NumericConstraintValues Problem::getAllDeviatingConstraints(const VectorDouble& point, double tolerance,
-    const std::vector<T>& constraintSelection, [[maybe_unused]] double correction)
+NumericConstraintValues Problem::getAllDeviatingConstraints(
+    const VectorDouble& point, double tolerance, const std::vector<T>& constraintSelection)
 {
-    // The correction is not used, as in calculateNumericValue() of the constraint classes, which ignore it
     NumericConstraintValues constraintValues;
     for(auto& C : constraintSelection)
     {
@@ -1629,7 +1627,7 @@ NumericConstraintValues Problem::getAllDeviatingConstraints(const VectorDouble& 
 }
 
 NumericConstraintValues Problem::getFractionOfDeviatingNonlinearConstraints(
-    const VectorDouble& point, double tolerance, double fraction, double correction)
+    const VectorDouble& point, double tolerance, double fraction)
 {
     if(fraction > 1)
         fraction = 1;
@@ -1638,7 +1636,7 @@ NumericConstraintValues Problem::getFractionOfDeviatingNonlinearConstraints(
 
     int fractionNumbers = std::max(1, (int)ceil(fraction * this->nonlinearConstraints.size()));
 
-    auto values = getAllDeviatingConstraints(point, tolerance, this->nonlinearConstraints, correction);
+    auto values = getAllDeviatingConstraints(point, tolerance, this->nonlinearConstraints);
 
     std::sort(values.begin(), values.end(), std::greater<NumericConstraintValue>());
 

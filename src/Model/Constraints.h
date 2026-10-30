@@ -174,11 +174,11 @@ public:
     virtual const SparseVariableMatrix* getConstantHessian() { return (nullptr); }
     virtual std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> getHessianSparsityPattern();
 
-    virtual NumericConstraintValue calculateNumericValue(const VectorDouble& point, double correction = 0.0);
+    virtual NumericConstraintValue calculateNumericValue(const VectorDouble& point);
 
-    // As calculateNumericValue() of the constraint classes, which ignore the correction, but without setting
-    // NumericConstraintValue::constraint. For when only the value is needed, since getPointer() locks the weak pointer
-    // to the constraint, which costs about as much as evaluating a short linear constraint.
+    // As calculateNumericValue(), but without setting NumericConstraintValue::constraint. For when only the value is
+    // needed, since getPointer() locks the weak pointer to the constraint, which costs about as much as evaluating a
+    // short linear constraint.
     NumericConstraintValue calculateNumericValueWithoutConstraint(const VectorDouble& point);
 
     bool isFulfilled(const VectorDouble& point) override;
@@ -192,10 +192,6 @@ public:
 protected:
     virtual void initializeGradientSparsityPattern() = 0;
     virtual void initializeHessianSparsityPattern() = 0;
-
-private:
-    // The value of L <= f(x) - correction <= U, without the pointer to the constraint
-    NumericConstraintValue calculateValue(const VectorDouble& point, double correction);
 };
 
 class LinearConstraint : public NumericConstraint
@@ -240,8 +236,6 @@ public:
 
     // Returns the upper triagonal part of the Hessian matrix is sparse representation
     SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes) override;
-
-    NumericConstraintValue calculateNumericValue(const VectorDouble& point, double correction = 0.0) override;
 
     std::shared_ptr<NumericConstraint> getPointer() override;
 
@@ -318,8 +312,6 @@ public:
 
     // The quadratic terms have a constant Hessian, which they cache
     const SparseVariableMatrix* getConstantHessian() override;
-
-    NumericConstraintValue calculateNumericValue(const VectorDouble& point, double correction = 0.0) override;
 
     std::shared_ptr<NumericConstraint> getPointer() override;
 
@@ -463,8 +455,6 @@ public:
     bool isFulfilled(const VectorDouble& point) override;
 
     void takeOwnership(ProblemPtr owner) override;
-
-    NumericConstraintValue calculateNumericValue(const VectorDouble& point, double correction = 0.0) override;
 
     std::shared_ptr<NumericConstraint> getPointer() override;
 

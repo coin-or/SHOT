@@ -168,21 +168,16 @@ IntervalDerivatives NumericConstraint::calculateIntervalDerivatives(const Interv
     return (derivatives);
 }
 
-NumericConstraintValue NumericConstraint::calculateNumericValue(const VectorDouble& point, double correction)
+NumericConstraintValue NumericConstraint::calculateNumericValue(const VectorDouble& point)
 {
-    auto constrValue = calculateValue(point, correction);
+    auto constrValue = calculateNumericValueWithoutConstraint(point);
     constrValue.constraint = getPointer();
     return constrValue;
 }
 
 NumericConstraintValue NumericConstraint::calculateNumericValueWithoutConstraint(const VectorDouble& point)
 {
-    return calculateValue(point, 0.0);
-}
-
-NumericConstraintValue NumericConstraint::calculateValue(const VectorDouble& point, double correction)
-{
-    double value = calculateFunctionValue(point) - correction;
+    double value = calculateFunctionValue(point);
 
     NumericConstraintValue constrValue;
     constrValue.functionValue = value;
@@ -291,12 +286,6 @@ SparseVariableMatrix LinearConstraint::calculateHessian(
 {
     SparseVariableMatrix hessian;
     return hessian;
-}
-
-NumericConstraintValue LinearConstraint::calculateNumericValue(
-    const VectorDouble& point, [[maybe_unused]] double correction)
-{
-    return NumericConstraint::calculateNumericValue(point);
 }
 
 std::shared_ptr<NumericConstraint> LinearConstraint::getPointer()
@@ -439,12 +428,6 @@ void QuadraticConstraint::initializeHessianSparsityPattern()
 
         hessianSparsityPattern->push_back(key);
     }
-}
-
-NumericConstraintValue QuadraticConstraint::calculateNumericValue(
-    const VectorDouble& point, [[maybe_unused]] double correction)
-{
-    return NumericConstraint::calculateNumericValue(point);
 }
 
 std::shared_ptr<NumericConstraint> QuadraticConstraint::getPointer()
@@ -1015,12 +998,6 @@ void NonlinearConstraint::takeOwnership(ProblemPtr owner)
     signomialTerms.takeOwnership(owner);
     if(nonlinearExpression != nullptr)
         nonlinearExpression->takeOwnership(owner);
-}
-
-NumericConstraintValue NonlinearConstraint::calculateNumericValue(
-    const VectorDouble& point, [[maybe_unused]] double correction)
-{
-    return NumericConstraint::calculateNumericValue(point);
 }
 
 std::shared_ptr<NumericConstraint> NonlinearConstraint::getPointer()

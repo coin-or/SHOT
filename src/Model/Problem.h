@@ -255,7 +255,7 @@ public:
     NumericConstraintValue getMaxNumericConstraintValue(
         const VectorDouble& point, const QuadraticConstraints& constraintSelection);
     NumericConstraintValue getMaxNumericConstraintValue(
-        const VectorDouble& point, const NonlinearConstraints& constraintSelection, double correction = 0.0);
+        const VectorDouble& point, const NonlinearConstraints& constraintSelection);
     NumericConstraintValue getMaxNumericConstraintValue(
         const VectorDouble& point, const NumericConstraints& constraintSelection);
 
@@ -268,10 +268,10 @@ public:
 
     template <typename T>
     NumericConstraintValues getAllDeviatingConstraints(
-        const VectorDouble& point, double tolerance, const std::vector<T>& constraintSelection, double correction = 0.0);
+        const VectorDouble& point, double tolerance, const std::vector<T>& constraintSelection);
 
     NumericConstraintValues getFractionOfDeviatingNonlinearConstraints(
-        const VectorDouble& point, double tolerance, double fraction, double correction = 0.0);
+        const VectorDouble& point, double tolerance, double fraction);
 
     virtual NumericConstraintValues getAllDeviatingNumericConstraints(const VectorDouble& point, double tolerance);
 

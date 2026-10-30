@@ -299,7 +299,7 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
             }
 
             auto externalConstraintValue = env->reformulatedProblem->getMaxNumericConstraintValue(
-                externalPoint, env->reformulatedProblem->nonlinearConstraints, 0.0);
+                externalPoint, env->reformulatedProblem->nonlinearConstraints);
 
             if(externalConstraintValue.normalizedValue >= 0)
             {
@@ -538,7 +538,7 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
                 }
 
                 auto externalConstraintValue = env->reformulatedProblem->getMaxNumericConstraintValue(
-                    externalPoint, env->reformulatedProblem->nonlinearConstraints, 0.0);
+                    externalPoint, env->reformulatedProblem->nonlinearConstraints);
 
                 if(externalConstraintValue.normalizedValue >= 0)
                 {
