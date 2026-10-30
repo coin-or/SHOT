@@ -22,9 +22,7 @@
 #include "../MIPSolver/IMIPSolver.h"
 
 #include "../MIPSolver/IMIPSolutionLimitStrategy.h"
-#include "../MIPSolver/MIPSolutionLimitStrategyUnlimited.h"
 #include "../MIPSolver/MIPSolutionLimitStrategyIncrease.h"
-#include "../MIPSolver/MIPSolutionLimitStrategyAdaptive.h"
 
 namespace SHOT
 {

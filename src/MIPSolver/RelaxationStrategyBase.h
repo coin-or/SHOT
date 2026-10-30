@@ -18,7 +18,6 @@ class RelaxationStrategyBase
 {
 public:
 protected:
-    bool isRelaxedSolutionInterior();
     bool isConstraintToleranceReached();
     bool isGapReached();
 

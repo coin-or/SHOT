@@ -40,10 +40,6 @@ protected:
     int lastNumAddedHyperplanes = 0;
     double lastUpdatedPrimal;
 
-    int lastSummaryIter = 0;
-    double lastSummaryTimeStamp = 0.0;
-    int lastHeaderIter = 0;
-
     bool warningMessageShownLargeRHS = false;
 
     std::shared_ptr<TaskUpdateInteriorPoint> tUpdateInteriorPoint;
