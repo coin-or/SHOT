@@ -554,10 +554,6 @@ void NLPSolverCuttingPlaneMinimax::setStartingPoint(
 {
 }
 
-bool NLPSolverCuttingPlaneMinimax::isObjectiveFunctionNonlinear() { return (false); }
-
-int NLPSolverCuttingPlaneMinimax::getObjectiveFunctionVariableIndex() { return (SHOT_INT_MAX); }
-
 VectorDouble NLPSolverCuttingPlaneMinimax::getVariableLowerBounds()
 {
     return (sourceProblem->getVariableLowerBounds());

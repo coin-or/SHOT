@@ -205,7 +205,6 @@ file(
     "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyIncrease.h"
     "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverBase.h"
     "${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyBase.h"
-    "${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyNone.h"
     "${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyStandard.h"
     "${PROJECT_SOURCE_DIR}/src/NLPSolver/INLPSolver.h"
     "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverBase.h"
@@ -808,8 +807,6 @@ add_library(
     ${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverBase.cpp
     ${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyBase.h
     ${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyBase.cpp
-    ${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyNone.h
-    ${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyNone.cpp
     ${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyStandard.h
     ${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyStandard.cpp
 )

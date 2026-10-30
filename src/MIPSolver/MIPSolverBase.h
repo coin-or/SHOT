@@ -16,7 +16,6 @@
 
 #include "IRelaxationStrategy.h"
 #include "RelaxationStrategyStandard.h"
-#include "RelaxationStrategyNone.h"
 
 #include <map>
 #include <optional>
