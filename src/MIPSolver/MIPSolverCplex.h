@@ -209,6 +209,11 @@ protected:
 
     bool objectiveFunctionReplacedWithZero = false;
 
+    // Extracts the model again after it has been updated, keeping the MIP starts that the extraction removes
+    void extractModel();
+
+    void deleteMIPStartsWithName(const char* name);
+
     // CPLEX can only tell whether a problem is infeasible or unbounded if presolve reductions are not used, so such a
     // problem is solved again without them
     E_ProblemSolutionStatus resolveInfeasibleOrUnbounded(E_ProblemSolutionStatus status);

@@ -934,8 +934,7 @@ E_ProblemSolutionStatus MIPSolverCplexSingleTree::solveProblem()
         if(modelUpdated)
         {
             // Extract the model if we have updated the constraints
-            cplexInstance.extract(cplexModel);
-            modelUpdated = false;
+            extractModel();
         }
 
         if(objectiveFunctionReplacedWithZero || !getDiscreteVariableStatus())
@@ -988,7 +987,7 @@ E_ProblemSolutionStatus MIPSolverCplexSingleTree::solveProblem()
             else
                 cplexModel.add(IloMaximize(cplexEnv, SHOT_DBL_MAX));
 
-            cplexInstance.extract(cplexModel);
+            extractModel();
 
             cplexInstance.solve();
             MIPSolutionStatus = getSolutionStatus();
