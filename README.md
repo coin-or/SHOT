@@ -1,10 +1,13 @@
 [![Build and Test](https://github.com/coin-or/SHOT/actions/workflows/build-workflow.yml/badge.svg)](https://github.com/coin-or/SHOT/actions/workflows/build-workflow.yml)
+[![Documentation](https://github.com/coin-or/SHOT/actions/workflows/docs.yml/badge.svg)](https://shotsolver.dev/docs/)
+[![PyPI](https://img.shields.io/pypi/v/SHOTpy)](https://pypi.org/project/SHOTpy/)
+[![GitHub release](https://img.shields.io/github/v/release/coin-or/SHOT)](https://github.com/coin-or/SHOT/releases)
 [![License](https://img.shields.io/badge/License-EPL%202.0-red.svg)](https://opensource.org/licenses/EPL-2.0)
 
 
 # The Supporting Hyperplane Optimization Toolkit
 
-<img align="right" width="200" alt="SHOT logo" src="https://raw.githubusercontent.com/coin-or/SHOT/master/SHOT.png">*SHOT is a software for solving mathematical optimization problems of the mixed-integer nonlinear programming (MINLP) class. In addition to MINLP problems, SHOT can also be used for subclasses such as NLP and MI(QC)QP.*
+<picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/coin-or/SHOT/master/docs/site/_static/shot-logo-dark.png"><img align="right" width="200" alt="SHOT logo" src="https://raw.githubusercontent.com/coin-or/SHOT/master/docs/site/_static/shot-logo.png"></picture>*SHOT is a software for solving mathematical optimization problems of the mixed-integer nonlinear programming (MINLP) class. In addition to MINLP problems, SHOT can also be used for subclasses such as NLP and MI(QC)QP.*
 
 SHOT is global for convex MINLP, and mainly a heuristic for nonconvex MINLP, where the bounds on the objective value are still guaranteed. A reformulation engine rewrites each problem into a form that suits the method, and some nonconvex problem types are reformulated into convex ones and solved to global optimality.
 
@@ -22,7 +25,7 @@ The project website [shotsolver.dev](https://shotsolver.dev) contains:
   - [Debugging](https://shotsolver.dev/docs/dev/DebuggingSHOT.html): investigating solver behavior
 - [Publications](https://shotsolver.dev/publications/) and [news](https://shotsolver.dev/news/)
 
-## Python installation
+## Installation
 
 Install SHOTpy, built with the open-source solvers Cbc, Ipopt and HiGHS, from PyPI:
 
@@ -57,6 +60,11 @@ JuMP, or AMPL. To get only the command, install it as a tool with
 SHOT problem.nl -AMPL
 SHOT problem.osil Termination.TimeLimit=60
 ```
+
+The same executable, with the same solvers, can also be downloaded without
+Python from the [GitHub releases](https://github.com/coin-or/SHOT/releases) as an archive for
+Linux x86_64 and ARM64, macOS ARM64 and Windows x64. Extract the whole
+archive and run `./SHOT` (or `SHOT.exe` on Windows) in its directory.
 
 The public wheels do not include CPLEX, Gurobi, GAMS or CONOPT. To use them,
 build SHOTpy from source as described in

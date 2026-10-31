@@ -26,6 +26,12 @@ with Cbc, Ipopt and HiGHS, and installs it as the command `SHOT`, which takes
 the same arguments. In Python, `SHOTpy_bin.executable()` gives the path of the
 executable itself.
 
+Without Python, download the archive for your platform (Linux x86_64 or ARM64,
+macOS ARM64, or Windows x64) and its `.sha256` checksum from the
+[GitHub releases](https://github.com/coin-or/SHOT/releases). It contains the same executable and
+solvers as the pip package. Extract it, keep the directory together, and run
+`./SHOT` on Linux and macOS or `SHOT.exe` on Windows.
+
 ## Supported problem file formats
 
 SHOT always supports:

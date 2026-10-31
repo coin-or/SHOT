@@ -29,4 +29,4 @@ if solver.hasPrimalSolution():
 
 The model minimizes an exponential term plus a quadratic penalty, subject to a demand constraint. The second variable must take an integer value. Always inspect the returned model status and check that a feasible solution exists before reading it: a time limit or infeasible model need not produce a solution.
 
-Continue with the [Python tutorial](SHOTpy_Tutorial.md) for nonlinear expressions, settings, file input, and callbacks. For file-based workflows, see [command-line usage](CommandLineUsage.md).
+Continue with the [Python tutorial](SHOTpy_Tutorial.md) for nonlinear expressions, settings, file input, and callbacks. For file-based workflows, see [command-line usage](CommandLineUsage.md). The command-line program is also available without Python as a download for Linux, macOS and Windows from the [GitHub releases](https://github.com/coin-or/SHOT/releases).

@@ -9,6 +9,11 @@ test suite. It's derived directly from the root `CMakeLists.txt`,
 as those are the source of truth — if a command here stops working, check
 those files first.
 
+You do not need to compile SHOT to use it with the open-source solvers
+HiGHS, Cbc and Ipopt: install SHOTpy with `pip install SHOTpy`, or download
+the command-line program for Linux, macOS or Windows from the
+[GitHub releases](https://github.com/coin-or/SHOT/releases).
+
 > For a native Windows build with HiGHS, see the MSVC instructions below.
 > WSL remains an alternative for Linux solver dependencies.
 

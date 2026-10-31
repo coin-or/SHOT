@@ -90,16 +90,18 @@ together with `SHOT_VERSION_SUFFIX` (empty, `a<n>`, `b<n>` or `rc<n>`) in
 `CMakeLists.txt`; version `2.0.0` with suffix `rc1` is tagged `v2.0.0-rc1` and
 gives the Python version `2.0.0rc1`.
 
-**Pushing a `v*` tag publishes SHOTpy to PyPI.** Only the project manager
-decides on releases and pushes tags.
+**Pushing a `v*` tag publishes SHOTpy to PyPI** and attaches the executable
+archives to the GitHub release, which is created as a draft if it does not
+exist. Only the project manager decides on releases and pushes tags.
 
 1. In a release PR, set the version and suffix, rename `## Unreleased` in
-   the changelog to `## X.Y.Z — YYYY-MM-DD`, update `version`,
-   `date-released` and `url` in `CITATION.cff`, and point the documentation
+   the changelog to `## X.Y.Z — YYYY-MM-DD`, update `version`
+   and `date-released` in `CITATION.cff`, and point the documentation
    links in `README.md` and `README` from `docs/dev/` to the release.
 2. Run the regression tests and test the built wheels and executables.
-3. After merging, tag the merge commit with an annotated tag, and publish the
-   GitHub release notes from the changelog and the documentation
-   ([docs/README.md](docs/README.md)).
+3. After merging, tag the merge commit with an annotated tag. Check that the
+   executable archives and their checksums are attached to the draft release,
+   then publish it with release notes from the changelog, and publish the
+   documentation ([docs/README.md](docs/README.md)).
 4. Check that the published packages install. Never move a published tag; fix
    mistakes in a new release.
