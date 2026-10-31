@@ -4,14 +4,33 @@ authors:
 - given-names: Andreas
   family-names: Lundell
   email: andreas.lundell@abo.fi
+  affiliation: Åbo Akademi University
 - given-names: Jan
   family-names: Kronqvist
-- given-names: Tapio
-  family-names: Westerlund
-title: "SHOT"
-version: 1.1
-date-released: 2021-10-20
-url: "https://github.com/coin-or/SHOT/releases/tag/releases%2F1.1.0"
+  affiliation: KTH Royal Institute of Technology
+- given-names: Joakim
+  family-names: Blomqvist
+  affiliation: Åbo Akademi University
+- given-names: Stefan
+  family-names: Vigerske
+  affiliation: GAMS Development Corp.
+title: "SHOT: The Supporting Hyperplane Optimization Toolkit"
+version: 2.0.0
+date-released: 2026-10-31
+url: "https://shotsolver.dev"
+repository-code: "https://github.com/coin-or/SHOT"
+license: EPL-2.0
+abstract: >-
+  SHOT is an open-source solver for mixed-integer nonlinear programming
+  (MINLP), written in C++. It is global for convex MINLP, and mainly a
+  heuristic for nonconvex MINLP, where the bounds on the objective value
+  are still guaranteed.
+keywords:
+  - mixed-integer nonlinear programming
+  - MINLP
+  - outer approximation
+  - extended supporting hyperplane
+  - optimization solver
 preferred-citation:
   type: article
   authors:

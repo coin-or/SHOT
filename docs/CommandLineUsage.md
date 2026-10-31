@@ -1,11 +1,8 @@
 # Running the SHOT Console Application
 
-This describes how to invoke the standalone `SHOT` executable and its
-command-line switches, derived from the actual CLI parsing in
-`src/SHOT.cpp` (the `--help` output is generated directly from that code,
-so running `./SHOT --help` on your build is always the authoritative,
-build-specific answer — it also lists which problem formats *this*
-compiled binary supports, see “Supported problem file formats”).
+This describes how to run the `SHOT` executable and its command-line
+switches. `./SHOT --help` lists the switches and problem formats that your
+build supports.
 
 For the debug-output mechanism specifically (`--debug`, intermediate
 problem/solution files), see
@@ -25,6 +22,12 @@ The SHOTpy pip package (`pip install SHOTpy`, or `pipx install SHOTpy` /
 with Cbc, Ipopt and HiGHS, and installs it as the command `SHOT`, which takes
 the same arguments. In Python, `SHOTpy_bin.executable()` gives the path of the
 executable itself.
+
+Without Python, download the archive for your platform (Linux x86_64 or ARM64,
+macOS ARM64, or Windows x64) and its `.sha256` checksum from the
+[GitHub releases](https://github.com/coin-or/SHOT/releases). It contains the same executable and
+solvers as the pip package. Extract it, keep the directory together, and run
+`./SHOT` on Linux and macOS or `SHOT.exe` on Windows.
 
 ## Supported problem file formats
 
