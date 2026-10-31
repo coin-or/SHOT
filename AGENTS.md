@@ -43,3 +43,10 @@ This writes per-iteration intermediate problems and solution points to
 workflow — including how to use the automated test suite (`test_runner`,
 `InstanceTest`) to reproduce/isolate a regression — see
 [docs/DebuggingSHOT.md](docs/DebuggingSHOT.md).
+
+## Contributing
+
+Follow [CONTRIBUTING.md](CONTRIBUTING.md) for branch names, PR titles and
+validation. Ask for explicit approval before each commit or amend. An
+instruction to implement a change is not approval to merge, push tags or
+publish packages.

@@ -25,7 +25,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # Location of extra CMake scripts
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/misc")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake")
 
 # Find std::filesystem or std::experimental::filesystem
 find_package(Filesystem REQUIRED)
@@ -756,7 +756,7 @@ if(HAS_PYTHON)
 
     if(NOT PYBIND11_STUBGEN_MISSING)
         add_custom_command(TARGET SHOTpy POST_BUILD
-            COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/misc/GenerateSHOTpyStubs.py" "$<TARGET_FILE_DIR:SHOTpy>"
+            COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/scripts/GenerateSHOTpyStubs.py" "$<TARGET_FILE_DIR:SHOTpy>"
             COMMENT "Generating type stubs for SHOTpy"
         )
 
@@ -1230,7 +1230,7 @@ endif(GENERATE_EXE)
 include(CMakePackageConfigHelpers)
 set(SHOT_CMAKE_INSTALL_DIR "${CMAKE_INSTALL_LIBDIR}/cmake/SHOT")
 configure_package_config_file(
-    "${PROJECT_SOURCE_DIR}/misc/SHOTConfig.cmake.in"
+    "${PROJECT_SOURCE_DIR}/cmake/SHOTConfig.cmake.in"
     "${PROJECT_BINARY_DIR}/SHOTConfig.cmake"
     INSTALL_DESTINATION "${SHOT_CMAKE_INSTALL_DIR}")
 write_basic_package_version_file(
@@ -1345,7 +1345,7 @@ if(BUILD_DOCUMENTATION)
         message(FATAL_ERROR "Doxygen is needed to build the documentation.")
     endif()
 
-    set(doxyfile_in ${CMAKE_CURRENT_SOURCE_DIR}/doxydoc/doxygen.conf.in)
+    set(doxyfile_in ${CMAKE_CURRENT_SOURCE_DIR}/docs/doxygen.conf.in)
     set(doxyfile ${CMAKE_CURRENT_BINARY_DIR}/doc/Doxyfile)
 
     configure_file(${doxyfile_in} ${doxyfile} @ONLY)

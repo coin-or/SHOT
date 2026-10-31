@@ -7,7 +7,8 @@ on:
       - 'ThirdParty/**'
       - 'src/**'
       - 'CMakeLists.txt'
-      - 'misc/**'
+      - 'cmake/**'
+      - 'scripts/**'
       - '.github/workflows/dependencies.yml'
 
 permissions:
@@ -51,7 +52,7 @@ jobs:
         if: runner.os == 'macOS'
         run: brew install cbc ipopt pkg-config
       - name: Verify dependency pins
-        run: python misc/check-dependencies.py
+        run: python scripts/check-dependencies.py
       - name: Configure
         env:
           CC: ${{ matrix.cc }}

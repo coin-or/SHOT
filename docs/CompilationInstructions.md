@@ -119,7 +119,7 @@ frequently produces. BQPD, or an interior-point build with MUMPS or HSL, is the
 better fit.
 
 Uno installs neither a CMake package configuration file nor a pkg-config file,
-so SHOT locates it with `misc/FindUno.cmake` and the `UNO_DIR` cache variable.
+so SHOT locates it with `cmake/FindUno.cmake` and the `UNO_DIR` cache variable.
 A shared build is easiest, since a static `libuno.a` has to be linked together
 with BLAS/LAPACK and the Fortran runtime.
 
@@ -292,7 +292,7 @@ Windows ARM64, 32-bit, and free-threaded Python wheels are not currently built.
 
 Windows x64 wheels use the bundled HiGHS and the official Cbc/Ipopt binary
 packages pinned, with SHA-256 checksums, in `ThirdParty/versions.json`.
-The wheel workflow downloads these through `misc/prepare-wheel-dependencies.ps1`;
+The wheel workflow downloads these through `scripts/prepare-wheel-dependencies.ps1`;
 no Fortran compiler is required. SHOT and its bundled dependencies use `/MD`
 to match the Cbc 2.10.13 static libraries. This differs from the Cbc 2.10.12
 archive described above, which requires `/MT`.
@@ -380,12 +380,12 @@ but SHOT only needs their SDK/headers+libraries at compile time:
 
 - **GAMS**: point CMake at the install with `-DGAMS_DIR=<path>` (default
   `/opt/gams`). No auto-detection.
-- **CPLEX**: auto-detected (`misc/FindCPLEX.cmake`) under
+- **CPLEX**: auto-detected (`cmake/FindCPLEX.cmake`) under
   `/opt/ibm/ILOG`, `/opt/IBM/ILOG`, `$HOME/Applications/IBM/ILOG`, and
   `$HOME/Applications` (this is how a Mac install under
   `~/Applications/CPLEX_Studio<version>` gets found); override with
   `-DCPLEX_DIR=<path>/cplex` if installed elsewhere.
-- **Gurobi**: auto-detected (`misc/FindGUROBI.cmake`) under
+- **Gurobi**: auto-detected (`cmake/FindGUROBI.cmake`) under
   `/opt/gurobi*/linux64` (Linux) or `/Library/gurobi*/mac64`,
   `/Library/gurobi*/macos_universal2`, `/Library/gurobi*/macos_arm64`
   (macOS) — these are Gurobi's own standard installer locations; override
