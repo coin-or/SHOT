@@ -537,7 +537,7 @@ endif()
 if(MSVC)
     target_compile_definitions(SHOTBuildSettings INTERFACE _USE_MATH_DEFINES NOMINMAX _CRT_SECURE_NO_WARNINGS)
 endif()
-if(MSVC OR MSYS OR MINGW)
+if(SIMPLE_OUTPUT_CHARS OR MSVC OR MSYS OR MINGW)
     target_compile_definitions(SHOTBuildSettings INTERFACE SIMPLE_OUTPUT_CHARS)
 endif()
 
@@ -1335,32 +1335,11 @@ set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
 set(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/INSTALL")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
 set(CPACK_GENERATOR "STGZ;ZIP")
-include(CPack)
-
-# Add a target to generate API documentation with Doxygen
-option(BUILD_DOCUMENTATION "Create and install the HTML based API documentation(requires Doxygen)" ${DOXYGEN_FOUND})
-
-if(BUILD_DOCUMENTATION)
-    find_package(Doxygen)
-    if(NOT DOXYGEN_FOUND)
-        message(FATAL_ERROR "Doxygen is needed to build the documentation.")
-    endif()
-
-    set(doxyfile_in ${CMAKE_CURRENT_SOURCE_DIR}/docs/doxygen.conf.in)
-    set(doxyfile ${CMAKE_CURRENT_BINARY_DIR}/doc/Doxyfile)
-
-    configure_file(${doxyfile_in} ${doxyfile} @ONLY)
-
-    add_custom_target(
-        doc
-        COMMAND ${DOXYGEN_EXECUTABLE} ${doxyfile}
-        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-        COMMENT "Generating API documentation with Doxygen"
-        VERBATIM
-    )
-
-    install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doxydoc/html DESTINATION docs)
+# Name pre-release packages like their tags, e.g., 2.0.0-rc1
+if(SHOT_VERSION_SUFFIX)
+    set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}-${SHOT_VERSION_SUFFIX}")
 endif()
+include(CPack)
 
 if(COMPILE_TESTS)
     # For performing automated tests

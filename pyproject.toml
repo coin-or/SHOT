@@ -33,9 +33,10 @@ classifiers = [
 
 [project.urls]
 Homepage = "https://shotsolver.dev"
-Documentation = "https://shotsolver.dev/shot/"
+Documentation = "https://shotsolver.dev/docs/"
 Repository = "https://github.com/coin-or/SHOT"
 Issues = "https://github.com/coin-or/SHOT/issues"
+Changelog = "https://github.com/coin-or/SHOT/blob/master/CHANGELOG.md"
 
 # Runs the SHOT executable in the package SHOTpy_bin, see src/SHOTpy_bin/__init__.py
 [project.scripts]

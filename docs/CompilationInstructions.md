@@ -3,11 +3,8 @@
 SHOT compiles on **Linux and macOS**, and natively on **Windows with MSVC**
 using HiGHS or Cbc, with optional Ipopt support. This guide covers getting the source,
 installing dependencies, configuring with CMake, building, and running the
-test suite. It's derived directly from the root `CMakeLists.txt`,
-`test/CMakeLists.txt`, and the CI recipe in
-`.github/workflows/build-workflow.yml`, so it should stay accurate as long
-as those are the source of truth — if a command here stops working, check
-those files first.
+test suite. The CI workflow `.github/workflows/build-workflow.yml` shows a
+complete, tested build.
 
 You do not need to compile SHOT to use it with the open-source solvers
 HiGHS, Cbc and Ipopt: install SHOTpy with `pip install SHOTpy`, or download
@@ -411,7 +408,7 @@ its existing SHOT CMake options through pip. For example:
 ```bash
 python -m pip install SHOTpy --no-binary SHOTpy --no-cache-dir --force-reinstall \
     --config-settings=cmake.define.HAS_GUROBI=on \
-    --config-settings=cmake.define.GUROBI_DIR=/opt/gurobi1103/linux64
+    --config-settings=cmake.define.GUROBI_DIR=/opt/gurobi1303/linux64
 ```
 
 Use the same pattern with `HAS_CPLEX`/`CPLEX_DIR` or `HAS_GAMS`/`GAMS_DIR`.
@@ -507,15 +504,17 @@ Key options (all `option(...)` declarations live at the top of the root
 | `HAS_UNO` | `OFF` | Uno NLP solver (see “Installing dependencies”) — off by default because building Uno needs a Fortran compiler |
 | `HAS_GAMS` | `ON` | GAMS interface (modeling system + NLP solver) |
 | `HAS_AMPL` | `ON` | AMPL MP `.nl` file interface |
+| `HAS_CONOPT` | `OFF` | CONOPT NLP solver (see “CONOPT primal NLP solver”) |
+| `USE_EXTERNAL_HIGHS` | `OFF` | Use a pre-built HiGHS from `HIGHS_EXTERNAL_DIR` instead of the submodule |
 | `HAS_PYTHON` | `OFF` | Build the `SHOTpy` Python bindings (needs Python3 dev headers; pybind11 comes from the submodule) |
 | `SHOT_WARNINGS_AS_ERRORS` | `OFF` | Treat SHOT C++ warnings as errors |
 | `SHOT_EXTRA_WARNINGS` | `OFF` | Additional GCC/Clang conversion, shadowing, and virtual-function diagnostics |
 | `COMPILE_TESTS` | `OFF` | Build the `test_runner` test suite (“Running the tests”) |
 | `GENERATE_EXE` | `ON` | Build the `./SHOT` console executable |
-| `BUILD_DOCUMENTATION` | on if Doxygen found | Build the HTML API docs |
+| `SIMPLE_OUTPUT_CHARS` | `OFF` | Use only ASCII characters in the console output (always on for MSVC and MinGW) |
 
 `<SOLVER>_DIR` cache variables (`CBC_DIR`, `CPLEX_DIR`, `GUROBI_DIR`,
-`IPOPT_DIR`, `GAMS_DIR`, `HIGHS_EXTERNAL_DIR`) override where each
+`IPOPT_DIR`, `GAMS_DIR`, `CONOPT_DIR`, `UNO_DIR`, `HIGHS_EXTERNAL_DIR`) override where each
 dependency is searched for, as described in “Installing dependencies”.
 
 Also set `-DCMAKE_BUILD_TYPE=<Release|Debug|RelWithDebInfo>` explicitly —

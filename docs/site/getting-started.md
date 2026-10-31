@@ -6,7 +6,7 @@ Install SHOTpy in a Python 3.11 or newer environment:
 python -m pip install SHOTpy
 ```
 
-The public package includes open-source solver backends. For a development checkout, or to enable proprietary solver integrations, follow the [compilation instructions](CompilationInstructions.md). The installed package version may differ from this development documentation.
+The public package includes open-source solver backends. For a development checkout, or to enable proprietary solver integrations, follow the [compilation instructions](CompilationInstructions.md). Check that the installed package version matches the version of this documentation.
 
 ## Build and solve a model
 

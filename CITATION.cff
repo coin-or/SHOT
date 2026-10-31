@@ -4,12 +4,16 @@ authors:
 - given-names: Andreas
   family-names: Lundell
   email: andreas.lundell@abo.fi
+  affiliation: Åbo Akademi University
 - given-names: Jan
   family-names: Kronqvist
+  affiliation: KTH Royal Institute of Technology
 - given-names: Joakim
   family-names: Blomqvist
+  affiliation: Åbo Akademi University
 - given-names: Stefan
   family-names: Vigerske
+  affiliation: GAMS Development Corp.
 title: "SHOT: The Supporting Hyperplane Optimization Toolkit"
 version: 2.0.0
 date-released: 2026-10-31
