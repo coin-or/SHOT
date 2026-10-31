@@ -274,9 +274,13 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
             VectorDouble internalPoint;
 
             std::vector<NumericConstraint*> currentConstraints;
+            NumericConstraints convexConstraints;
 
             for(auto& NCV : std::get<2>(values))
+            {
                 currentConstraints.push_back(NCV.constraint.get());
+                convexConstraints.push_back(NCV.constraint);
+            }
 
             try
             {
@@ -298,8 +302,10 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
                     "         Cannot find solution with rootsearch, using solution point instead.");
             }
 
-            auto externalConstraintValue = env->reformulatedProblem->getMaxNumericConstraintValue(
-                externalPoint, env->reformulatedProblem->nonlinearConstraints);
+            // Only the convex constraints used in the rootsearch are considered, since a nonconvex constraint can have
+            // a larger value in the external point, and its linearization is not globally valid
+            auto externalConstraintValue
+                = env->reformulatedProblem->getMaxNumericConstraintValue(externalPoint, convexConstraints);
 
             if(externalConstraintValue.normalizedValue >= 0)
             {
