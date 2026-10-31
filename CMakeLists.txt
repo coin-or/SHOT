@@ -1123,6 +1123,7 @@ target_include_directories(SHOTSolver PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>
     $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/SHOT>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/SHOT/thirdparty>)
 add_dependencies(SHOTSolver cppad)
 
@@ -1303,14 +1304,17 @@ install(FILES
     DESTINATION "${SHOT_CMAKE_INSTALL_DIR}"
     COMPONENT Development)
 
-# Public headers refer to these bundled header-only dependencies. The CppAD
-# headers come from its build output so configure.hpp matches cppad_lib.
+# SHOT's headers have generic names, e.g., Solver.h, so they are installed in
+# include/SHOT. Public headers refer to these bundled header-only dependencies.
+# The CppAD headers come from its build output so configure.hpp matches
+# cppad_lib.
 install(DIRECTORY "${PROJECT_SOURCE_DIR}/src/"
-    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/SHOT"
     COMPONENT Development
-    FILES_MATCHING PATTERN "*.h")
+    FILES_MATCHING PATTERN "*.h"
+    PATTERN "SHOTpy_bin" EXCLUDE)
 install(FILES "${PROJECT_BINARY_DIR}/SHOTConfig.h" "${PROJECT_BINARY_DIR}/CppAD.h"
-    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/SHOT"
     COMPONENT Development)
 install(DIRECTORY
     "${PROJECT_SOURCE_DIR}/${BOOST_DIR}/boost"
