@@ -49,8 +49,9 @@ compiling the submodule, configure with `-DUSE_EXTERNAL_HIGHS=on
 
 ## Installing dependencies
 
-SHOT needs at least one MIP solver (Cbc, CPLEX, Gurobi, or HiGHS) and an NLP
-solver (Ipopt or GAMS) to be useful. 
+SHOT needs at least one MIP solver (Cbc, CPLEX, Gurobi, or HiGHS). Primal NLP
+subproblems use Ipopt, Uno, CONOPT, or a GAMS NLP solver when one is enabled,
+and SHOT's built-in NLP solver otherwise.
 
 Every optional dependency degrades gracefully: if
 CMake can't find it, the corresponding `HAS_*` option is silently forced
@@ -396,6 +397,67 @@ If you don't have one of these, just turn it off explicitly (see below) —
 don't leave it on `ON` (the default) and hope it's silently skipped, since
 a partial/broken install can still be *found* but fail later in the build.
 
+### SHOTpy with proprietary solvers
+
+Public wheels do not include the CPLEX, Gurobi, GAMS, or CONOPT SDKs. If one of
+these products is installed and licensed locally, force an sdist build and pass
+its existing SHOT CMake options through pip. For example:
+
+```bash
+python -m pip install SHOTpy --no-binary SHOTpy --no-cache-dir --force-reinstall \
+    --config-settings=cmake.define.HAS_GUROBI=on \
+    --config-settings=cmake.define.GUROBI_DIR=/opt/gurobi1103/linux64
+```
+
+Use the same pattern with `HAS_CPLEX`/`CPLEX_DIR` or `HAS_GAMS`/`GAMS_DIR`.
+`CPLEX_DIR` can point to the CPLEX Studio installation root or its `cplex`
+subdirectory. `GAMS_DIR` must contain `apifiles` and the GAMS executable
+(on macOS, use the framework's versioned `Resources` directory).
+Multiple integrations can be enabled in the same build by passing each pair
+of settings.
+
+Replace `GUROBI_DIR` with your local installation path. Verify the resulting
+build with `python -c "import SHOTpy; print(SHOTpy.HAS_GUROBI)"`; it should print
+`True`. The `SHOT` command installed by this build has the same solvers, e.g.,
+`SHOT problem.nl --mip=gurobi`.
+
+For CONOPT on Linux, macOS, or Windows x64, download and extract the
+[CONOPT C++ SDK](https://conopt.gams.com/download/), then rebuild from this
+checkout (which includes the CONOPT integration):
+
+```bash
+python -m pip install . --no-cache-dir --force-reinstall \
+    --config-settings=cmake.define.HAS_CONOPT=on \
+    --config-settings=cmake.define.CONOPT_DIR=/absolute/path/to/conopt-sdk
+python -c "import SHOTpy; assert SHOTpy.HAS_CONOPT"
+```
+
+`CONOPT_DIR` must contain `include/conopt.hpp` and the SDK's `lib` directory.
+Once a release containing this integration is available on PyPI, the same
+options can be passed to `pip install SHOTpy --no-binary SHOTpy` as above.
+Select CONOPT in Python with:
+
+```python
+solver.updateSetting(
+    "Primal.FixedInteger.Solver", int(SHOTpy.PrimalNLPSolver.Conopt)
+)
+```
+
+This builds a local wheel linked to your external SDK. Keep the SDK at its
+configured location; CONOPT libraries are not installed into the wheel by this
+build. Do not run wheel repair tools (`auditwheel`, `delocate`, or `delvewheel`)
+on this local wheel, since they can copy external libraries into it. On Windows,
+build from an x64 Native Tools Command Prompt with the `CBC_DIR`, `IPOPT_DIR`,
+and `CMAKE_ARGS=-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL` settings used
+for the [Windows wheels](#building-shotpy-wheels);
+SHOTpy then loads CONOPT from the configured SDK, without `PATH` changes. The public
+wheel build keeps CONOPT disabled. See the
+[CONOPT instructions](#conopt-primal-nlp-solver)
+for licensing, demo limits, and solver settings.
+
+The compiler toolchain and open-source dependencies described in this guide
+are still required for a source build.
+
 ## Configuring with CMake
 
 SHOT requires standard C++17, with compiler extensions disabled. All SHOT C++
@@ -520,7 +582,7 @@ The installation also contains a CMake package for C++ applications. In a
 separate project's `CMakeLists.txt`:
 
 ```cmake
-find_package(SHOT 1.1 CONFIG REQUIRED)
+find_package(SHOT 2.0 CONFIG REQUIRED)
 add_executable(my_solver main.cpp)
 target_link_libraries(my_solver PRIVATE SHOT::SHOTSolver)
 ```
@@ -552,12 +614,6 @@ solver behavior. For the full breakdown of test structure, how to run a
 single failing test in isolation, and how to use `InstanceTest` results to
 drive a `--debug` investigation, see
 [Automated tests as a debugging aid](DebuggingSHOT.md#automated-tests-as-a-debugging-aid).
-
-## Next steps
-
-- Running the compiled solver: [docs/CommandLineUsage.md](CommandLineUsage.md).
-- Debugging solver behavior: [docs/DebuggingSHOT.md](DebuggingSHOT.md).
-
 
 ## CONOPT primal NLP solver
 
@@ -623,3 +679,8 @@ The source model must remain structurally unchanged for the lifetime of its
 
 Enable `COMPILE_TESTS` and run `ctest --test-dir build -R '^Conopt_' --output-on-failure` for the backend tests. `Instance_11` uses HiGHS with CONOPT
 when both are enabled; larger instance collections may exceed demo limits.
+
+## Next steps
+
+- Running the compiled solver: [docs/CommandLineUsage.md](CommandLineUsage.md).
+- Debugging solver behavior: [docs/DebuggingSHOT.md](DebuggingSHOT.md).

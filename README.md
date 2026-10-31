@@ -1,18 +1,30 @@
-![CMake](https://github.com/coin-or/SHOT/workflows/CMake/badge.svg)
-[![License](https://img.shields.io/badge/License-EPL%202.0-red.svg)](https://opensource.org/licenses/EPL-1.0)
+[![Build and Test](https://github.com/coin-or/SHOT/actions/workflows/build-workflow.yml/badge.svg)](https://github.com/coin-or/SHOT/actions/workflows/build-workflow.yml)
+[![License](https://img.shields.io/badge/License-EPL%202.0-red.svg)](https://opensource.org/licenses/EPL-2.0)
 
 
 # The Supporting Hyperplane Optimization Toolkit
 
-<img align="right" width="200" src="SHOT.png">*SHOT is a software for solving mathematical optimization problems of the mixed-integer nonlinear programming (MINLP) class. In addition to MINLP problems, SHOT can also be used for subclasses such as NLP and MI(QC)QP.*
+<img align="right" width="200" alt="SHOT logo" src="https://raw.githubusercontent.com/coin-or/SHOT/master/SHOT.png">*SHOT is a software for solving mathematical optimization problems of the mixed-integer nonlinear programming (MINLP) class. In addition to MINLP problems, SHOT can also be used for subclasses such as NLP and MI(QC)QP.*
+
+SHOT is global for convex MINLP, and mainly a heuristic for nonconvex MINLP, where the bounds on the objective value are still guaranteed. A reformulation engine rewrites each problem into a form that suits the method, and some nonconvex problem types are reformulated into convex ones and solved to global optimality.
+
+## Documentation
+
+The project website [shotsolver.dev](https://shotsolver.dev) contains:
+
+- [Getting started](https://shotsolver.dev/getting-started/): installation and examples for Python, GAMS, Pyomo, JuMP, AMPL, the command line and C++
+- [Documentation](https://shotsolver.dev/docs/): the guides and references below
+  - [SHOTpy tutorial](https://shotsolver.dev/docs/dev/SHOTpy_Tutorial.html): modeling, settings, file input and callbacks in Python
+  - [Command-line usage](https://shotsolver.dev/docs/dev/CommandLineUsage.html): problem formats, options and use as an AMPL solver
+  - [C++ integration](https://shotsolver.dev/docs/dev/cpp.html) and [callbacks](https://shotsolver.dev/docs/dev/Callbacks.html)
+  - [Solver settings](https://shotsolver.dev/docs/dev/reference/settings.html): all settings with their defaults
+  - [Installation](https://shotsolver.dev/docs/dev/CompilationInstructions.html): building from source and with proprietary solvers
+  - [Debugging](https://shotsolver.dev/docs/dev/DebuggingSHOT.html): investigating solver behavior
+- [Publications](https://shotsolver.dev/publications/) and [news](https://shotsolver.dev/news/)
 
 ## Python installation
 
-SHOT builds on Linux, macOS, and natively on Windows x64 with MSVC. See the
-[compilation instructions](docs/CompilationInstructions.md) for supported
-solver configurations and platform-specific setup.
-
-Install the open-source solver build (Cbc, Ipopt, and HiGHS) from PyPI:
+Install SHOTpy, built with the open-source solvers Cbc, Ipopt and HiGHS, from PyPI:
 
 ```bash
 pip install SHOTpy
@@ -36,100 +48,37 @@ solver.solveProblem()
 print(solver.getModelReturnStatus(), solver.getPrimalSolution().point)
 ```
 
-See the [SHOTpy tutorial](docs/SHOTpy_Tutorial.ipynb) for nonlinear expressions,
-settings, file input, and callbacks.
-
 The package also installs the SHOT executable as the command `SHOT`, which
 solves problem files and can be used as an AMPL solver, e.g., from Pyomo,
-JuMP, or AMPL (see [command-line usage](docs/CommandLineUsage.md)). To get only
-the command, install it as a tool with `pipx install SHOTpy` or
-`uv tool install SHOTpy`:
+JuMP, or AMPL. To get only the command, install it as a tool with
+`pipx install SHOTpy` or `uv tool install SHOTpy`:
 
 ```bash
 SHOT problem.nl -AMPL
 SHOT problem.osil Termination.TimeLimit=60
 ```
 
-### Building with proprietary solvers
+The public wheels do not include CPLEX, Gurobi, GAMS or CONOPT. To use them,
+build SHOTpy from source as described in
+[SHOTpy with proprietary solvers](https://shotsolver.dev/docs/dev/CompilationInstructions.html#shotpy-with-proprietary-solvers).
+SHOT builds on Linux, macOS, and natively on Windows x64 with MSVC.
 
-Public wheels do not include the CPLEX, Gurobi, GAMS, or CONOPT SDKs. If one of
-these products is installed and licensed locally, force an sdist build and pass
-its existing SHOT CMake options through pip. For example:
-
-```bash
-python -m pip install SHOTpy --no-binary SHOTpy --no-cache-dir --force-reinstall \
-    --config-settings=cmake.define.HAS_GUROBI=on \
-    --config-settings=cmake.define.GUROBI_DIR=/opt/gurobi1103/linux64
-```
-
-Use the same pattern with `HAS_CPLEX`/`CPLEX_DIR` or `HAS_GAMS`/`GAMS_DIR`.
-`CPLEX_DIR` can point to the CPLEX Studio installation root or its `cplex`
-subdirectory. `GAMS_DIR` must contain `apifiles` and the GAMS executable
-(on macOS, use the framework's versioned `Resources` directory).
-Multiple integrations can be enabled in the same build by passing each pair
-of settings.
-
-Replace `GUROBI_DIR` with your local installation path. Verify the resulting
-build with `python -c "import SHOTpy; print(SHOTpy.HAS_GUROBI)"`; it should print
-`True`. The `SHOT` command installed by this build has the same solvers, e.g.,
-`SHOT problem.nl --mip=gurobi`.
-
-For CONOPT on Linux, macOS, or Windows x64, download and extract the
-[CONOPT C++ SDK](https://conopt.gams.com/download/), then rebuild from this
-checkout (which includes the CONOPT integration):
-
-```bash
-python -m pip install . --no-cache-dir --force-reinstall \
-    --config-settings=cmake.define.HAS_CONOPT=on \
-    --config-settings=cmake.define.CONOPT_DIR=/absolute/path/to/conopt-sdk
-python -c "import SHOTpy; assert SHOTpy.HAS_CONOPT"
-```
-
-`CONOPT_DIR` must contain `include/conopt.hpp` and the SDK's `lib` directory.
-Once a release containing this integration is available on PyPI, the same
-options can be passed to `pip install SHOTpy --no-binary SHOTpy` as above.
-Select CONOPT in Python with:
-
-```python
-solver.updateSetting(
-    "Primal.FixedInteger.Solver", int(SHOTpy.PrimalNLPSolver.Conopt)
-)
-```
-
-This builds a local wheel linked to your external SDK. Keep the SDK at its
-configured location; CONOPT libraries are not installed into the wheel by this
-build. Do not run wheel repair tools (`auditwheel`, `delocate`, or `delvewheel`)
-on this local wheel, since they can copy external libraries into it. On Windows,
-build from an x64 Native Tools Command Prompt with the `CBC_DIR`, `IPOPT_DIR`,
-and `CMAKE_ARGS=-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL` settings used
-for the [Windows wheels](docs/CompilationInstructions.md#building-shotpy-wheels);
-SHOTpy then loads CONOPT from the configured SDK, without `PATH` changes. The public
-wheel build keeps CONOPT disabled. See the
-[CONOPT instructions](docs/CompilationInstructions.md#conopt-primal-nlp-solver)
-for licensing, demo limits, and solver settings.
-
-The compiler toolchain and open-source dependencies described in the
-[compilation instructions](docs/CompilationInstructions.md) are still required
-for a source build.
-
-Originally SHOT was intended for convex MINLP problems only, but as of version 1.0 it also has functionality to solve nonconvex MINLP problems as a heuristic method without providing any guarantees of global optimality. SHOT can solve certain nonconvex problem types to global optimality as well, and the bounds for the objective function value are guaranteed for nonconvex problems as well.
+## Using SHOT
 
 **SHOT can be used**
-- as a console application,
+- as a console application ([command-line usage](https://shotsolver.dev/docs/dev/CommandLineUsage.html)),
 - from [GAMS](https://www.gams.com) — the easiest way to use SHOT is through [GAMSPy](https://gamspy.readthedocs.io),
 - on the [NEOS Server](https://neos-server.org/neos/solvers/minco:SHOT/GAMS.html),
 - from any modeling system that can use ASL, such as
-  - [Pyomo/Python](https://www.pyomo.org) (see [Using SHOT from Pyomo](docs/CommandLineUsage.md#using-shot-from-pyomo)), 
-  - [JuMP/Julia](https://github.com/JuliaOpt/AmplNLWriter.jl), and 
+  - [Pyomo/Python](https://www.pyomo.org) (see [Using SHOT from Pyomo](https://shotsolver.dev/docs/dev/CommandLineUsage.html#using-shot-from-pyomo)),
+  - [JuMP/Julia](https://github.com/jump-dev/AmplNLWriter.jl), and
   - [AMPL](https://www.ampl.com),
-- through its own Python API ([SHOTpy](docs/SHOTpy_Tutorial.ipynb)) — install with `pip install SHOTpy` or build with `-DHAS_PYTHON=on` (see [docs/CompilationInstructions.md](docs/CompilationInstructions.md)), or
-- using its API implemented in C++, both of which support callbacks for customizing SHOT's behavior (e.g. injecting primal solutions, warm-starting, or adding custom cuts).
+- through its own Python API ([SHOTpy](https://shotsolver.dev/docs/dev/SHOTpy_Tutorial.html)), or
+- using its API implemented in C++ ([C++ integration](https://shotsolver.dev/docs/dev/cpp.html)), both of which support [callbacks](https://shotsolver.dev/docs/dev/Callbacks.html) for customizing SHOT's behavior (e.g. injecting primal solutions, warm-starting, or adding custom cuts).
 
-SHOT requires a MILP solver: [Cplex](https://www.ibm.com/analytics/cplex-optimizer), [Gurobi](https://www.gurobi.com), [Cbc](https://www.github.com/coin-or/Cbc) or [HiGHS](https://highs.dev). NLP subproblems can use [Ipopt](https://www.github.com/coin-or/Ipopt), [Uno](https://github.com/cvanaret/Uno), the optional [CONOPT](https://conopt.gams.com) C++ API, or SHOT's built-in NLP solver. If SHOT is interfaced with GAMS, any licensed NLP solver can be used.
+SHOT requires a MILP solver: [Cplex](https://www.ibm.com/products/ilog-cplex-optimization-studio), [Gurobi](https://www.gurobi.com), [Cbc](https://www.github.com/coin-or/Cbc) or [HiGHS](https://highs.dev). NLP subproblems can use [Ipopt](https://www.github.com/coin-or/Ipopt), [Uno](https://github.com/cvanaret/Uno), the optional [CONOPT](https://conopt.gams.com) C++ API, or SHOT's built-in NLP solver. If SHOT is interfaced with GAMS, any licensed NLP solver can be used.
 
-The documentation is provided at the project website at https://www.shotsolver.dev.
-
-SHOT is a [COIN-OR project](https://www.coin-or.org), and won the [COIN-OR Cup 2018](https://www.coin-or.org/2018-coin-or-cup-winner/). Project manager is [Andreas Lundell](https://www.researchgate.net/profile/Andreas_Lundell). A full list of contributors is available on the [project website](https://shotsolver.dev/shot/about-shot/contributors).
+SHOT is a [COIN-OR project](https://www.coin-or.org), and won the [COIN-OR Cup 2018](https://web.archive.org/web/20191206234504/https://www.coin-or.org/2018-coin-or-cup-winner/). Project manager is Andreas Lundell. A full list of contributors is available on the [project website](https://shotsolver.dev/team/).
 
 ## Dual bound through polyhedral (outer) approximation
 
@@ -150,7 +99,7 @@ The problem types that can be solved to global optimality depend on which MIP so
 
 ## Primal bound using heuristics
 
-The solution to the outer approximation problem provides a lower (dual) bound (when solving a minimization problem) to the original problem if the problem is convex. If the problem is nonconvex, convergence to the global optimal solution cannot be guaranteed (but might be achieved for certain classes of problems, cf. [this paper](http://www.optimization-online.org/DB_HTML/2020/03/7691.html). 
+The solution to the outer approximation problem provides a lower (dual) bound (when solving a minimization problem) to the original problem if the problem is convex. If the problem is nonconvex, convergence to the global optimal solution cannot be guaranteed (but might be achieved for certain classes of problems, cf. [this paper](https://optimization-online.org/2020/03/7691/)).
 
 To get an upper (primal) bound (when solving a minimization problem) on the optimal solution SHOT utilizes the following heuristics:
 - Solving nonlinear programming (NLP) problems where the integer variables have been fixed to valid values. This is done by calling an external NLP solver (e.g. Ipopt).
@@ -161,13 +110,9 @@ To get an upper (primal) bound (when solving a minimization problem) on the opti
 
 When the relative or absolute difference (objective gap) between the primal and dual bounds is less than a user-specified value, SHOT terminates with the current primal solution. If the original problem is convex, this is a global solution to the problem. If it is nonconvex, there is normally no guarantee that such a solution can be found, however SHOT will always in addition to the primal solution give a valid lower bound on the solution. 
 
-## Compilation instructions
+## Contributing
 
-Instructions for compiling SHOT are available in [docs/CompilationInstructions.md](docs/CompilationInstructions.md), and also at the [project website](https://shotsolver.dev/shot/about-shot/compiling).
-
-## Solver manual
-
-Instructions for how to use SHOT, e.g. call it from different environments, are provided in [docs/CommandLineUsage.md](docs/CommandLineUsage.md) and on the [project website](https://shotsolver.dev/shot/using-shot/getting-started). For troubleshooting solver behavior, see [docs/DebuggingSHOT.md](docs/DebuggingSHOT.md).
+Bug reports and pull requests are welcome on [GitHub](https://github.com/coin-or/SHOT/issues). See [CONTRIBUTING.md](https://github.com/coin-or/SHOT/blob/master/CONTRIBUTING.md) for the conventions and [CHANGELOG.md](https://github.com/coin-or/SHOT/blob/master/CHANGELOG.md) for recent changes.
 
 ## Publications
 
@@ -184,3 +129,5 @@ Lundell, A. and Kronqvist, J. *On Solving Nonconvex MINLP Problems with SHOT* (2
 **Reformulation of nonseparable convex quadratic expressions (preprint):**
 
 Blomqvist, J., Tamm, E., Kronqvist, J. and Lundell, A. *Decomposition-Based Reformulation of Nonseparable Quadratic Expressions in Convex MINLP*. Optimization Online (2026). https://optimization-online.org/?p=34367
+
+All publications are listed on the [project website](https://shotsolver.dev/publications/).

@@ -93,8 +93,10 @@ gives the Python version `2.0.0rc1`.
 **Pushing a `v*` tag publishes SHOTpy to PyPI.** Only the project manager
 decides on releases and pushes tags.
 
-1. In a release PR, set the version and suffix, and rename `## Unreleased` in
-   the changelog to `## X.Y.Z — YYYY-MM-DD`.
+1. In a release PR, set the version and suffix, rename `## Unreleased` in
+   the changelog to `## X.Y.Z — YYYY-MM-DD`, update `version`,
+   `date-released` and `url` in `CITATION.cff`, and point the documentation
+   links in `README.md` and `README` from `docs/dev/` to the release.
 2. Run the regression tests and test the built wheels and executables.
 3. After merging, tag the merge commit with an annotated tag, and publish the
    GitHub release notes from the changelog and the documentation

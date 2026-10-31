@@ -69,7 +69,6 @@ sdist.include = [
     "/docs/Callbacks.md", "/docs/CommandLineUsage.md",
     "/docs/CompilationInstructions.md", "/docs/DebuggingSHOT.md",
     "/docs/SHOTpy_Tutorial.ipynb",
-    "/docs/ThirdPartyUpgradePlan.md", "/docs/ThirdPartyUpgradeReport.md",
 ]
 sdist.exclude = [
     "ThirdParty/**/.git", "ThirdParty/**/.git/**", "ThirdParty/**/build/**",
