@@ -19,7 +19,7 @@ and shared libraries from the repaired CPython 3.11 wheel. They produce one
 standalone archive for each of Linux x86_64, Linux ARM64, macOS ARM64, and
 Windows x64. Python and pip are not required to run these packages. The solver
 backends are HiGHS, Cbc, and Ipopt; commercial solvers and GAMS are excluded.
-Linux packages require glibc 2.28 or newer, and macOS packages require macOS 14
+Linux packages require glibc 2.28 or newer, and macOS packages require macOS 15
 or newer. Intel macOS packages are not built.
 
 Download the archive and its `.sha256` checksum from the matching

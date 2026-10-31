@@ -514,6 +514,38 @@ class TestDualBounds:
         assert abs(solver.getGlobalDualBound() - solver.getPrimalBound()) < 1e-3
 
 
+class TestESHBoundaryCuts:
+    @pytest.mark.parametrize("use_max_function", [False, True], ids=["individual", "maximum"])
+    def test_rounded_boundary_point_does_not_stop_cut_generation(self, use_max_function):
+        """On ARM64, the circle root search rounded its external point inside
+        and dropped the cut, leaving a feasible point without closing the gap."""
+        import SHOTpy
+
+        solver = SHOTpy.Solver()
+        solver.updateSetting("Output.Console.LogLevel", 6)
+        solver.updateSetting("Dual.MIP.NumberOfThreads", 1)
+        solver.updateSetting("Dual.ESH.Rootsearch.UseMaxFunction", use_max_function)
+        solver.updateSetting("Primal.Tolerance.NonlinearConstraint", 1e-8)
+        solver.updateSetting("Termination.ObjectiveGap.Absolute", 1e-6)
+        solver.updateSetting("Termination.ObjectiveGap.Relative", 0.0)
+        solver.updateSetting("Termination.IterationLimit", 100)
+        solver.updateSetting("Termination.TimeLimit", 10.0)
+
+        problem = SHOTpy.Problem(solver)
+        x = problem.addVariable("x", lowerBound=-10.0, upperBound=10.0)
+        y = problem.addVariable("y", lowerBound=-10.0, upperBound=10.0)
+        problem.setObjective(x + y)
+        problem.addConstraint(x**2 + y**2 <= 4, "circle")
+        problem.finalize()
+        assert solver.setProblem(problem)
+        assert solver.solveProblem()
+        assert solver.getModelReturnStatus() == SHOTpy.ModelReturnStatus.OptimalGlobal, (
+            f"{solver.getTerminationReason()}: gap={solver.getAbsoluteObjectiveGap()}"
+        )
+        assert solver.getPrimalBound() == pytest.approx(-2 * math.sqrt(2), abs=1e-6)
+        assert solver.getAbsoluteObjectiveGap() <= 1e-6
+
+
 class TestOpenSourceMIPSolvers:
     @pytest.mark.parametrize("mipSolver", ["Cbc", "Highs"])
     @pytest.mark.parametrize("direction", ["Minimize", "Maximize"])

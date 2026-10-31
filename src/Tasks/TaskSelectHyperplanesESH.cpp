@@ -301,6 +301,20 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
             auto externalConstraintValue = env->reformulatedProblem->getMaxNumericConstraintValue(
                 externalPoint, env->reformulatedProblem->nonlinearConstraints, 0.0);
 
+            // Interpolation at a root can round both bracket points into the
+            // feasible region. The dual point still violates a selected convex
+            // constraint, so generate its cutting plane instead of dropping the
+            // cut and eventually terminating with NoDualCutsAdded.
+            if(externalConstraintValue.normalizedValue < 0.0)
+            {
+                externalPoint = solPoints.at(solutionPtIndex).point;
+                std::vector<NumericConstraint*> activeConstraints;
+                externalConstraintValue = env->reformulatedProblem->getMaxNumericConstraintValue(
+                    externalPoint, currentConstraints, activeConstraints);
+                env->output->outputDebug("         Rootsearch point rounded inside the feasible region, "
+                                         "using the solution point instead.");
+            }
+
             if(externalConstraintValue.normalizedValue >= 0)
             {
                 auto& solutionPoint = solPoints.at(solutionPtIndex).point;
@@ -409,6 +423,16 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
                 }
 
                 auto externalConstraintValue = NCV.constraint->calculateNumericValue(externalPoint);
+
+                // As for the maximum-function search, a rounded boundary point
+                // must not suppress the cut for a violated convex constraint.
+                if(externalConstraintValue.normalizedValue < 0.0)
+                {
+                    externalPoint = solPoints.at(solutionPtIndex).point;
+                    externalConstraintValue = NCV.constraint->calculateNumericValue(externalPoint);
+                    env->output->outputDebug("         Rootsearch point rounded inside the feasible region, "
+                                             "using the solution point instead.");
+                }
 
                 if(externalConstraintValue.normalizedValue >= 0)
                 {

@@ -512,6 +512,8 @@ class TestSharedAuxiliaryVariables:
         import SHOTpy
 
         solver = make_solver(self.ALWAYS)
+        # The feasibility assertion below is tighter than the default 1e-5.
+        solver.updateSetting("Primal.Tolerance.NonlinearConstraint", 1e-8)
         problem = SHOTpy.Problem(solver)
         x, y, z, u = (problem.addVariable(name, SHOTpy.VariableType.Real, 0.5, 2.0) for name in "xyzu")
 

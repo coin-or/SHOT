@@ -111,7 +111,7 @@ environment = { CBC_DIR = "/opt/shot-deps", IPOPT_DIR = "/opt/shot-deps", PKG_CO
 [tool.cibuildwheel.macos]
 archs = ["arm64"]
 before-all = "bash {project}/misc/build-wheel-dependencies.sh $HOME/shot-deps"
-environment = { CBC_DIR = "$HOME/shot-deps", IPOPT_DIR = "$HOME/shot-deps", PKG_CONFIG_PATH = "$HOME/shot-deps/lib/pkgconfig", DYLD_LIBRARY_PATH = "$HOME/shot-deps/lib", MACOSX_DEPLOYMENT_TARGET = "14.0" }
+environment = { CBC_DIR = "$HOME/shot-deps", IPOPT_DIR = "$HOME/shot-deps", PKG_CONFIG_PATH = "$HOME/shot-deps/lib/pkgconfig", DYLD_LIBRARY_PATH = "$HOME/shot-deps/lib", MACOSX_DEPLOYMENT_TARGET = "15.0" }
 
 [tool.cibuildwheel.windows]
 archs = ["AMD64"]

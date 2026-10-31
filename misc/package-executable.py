@@ -83,7 +83,7 @@ def package(wheel, platform, output, msvc_runtime=None):
             "Keep the entire extracted directory together; its libraries are required.\n"
             "Python and pip are not required. Includes HiGHS, Cbc, and Ipopt.\n"
             "Commercial solvers and GAMS are not included.\n"
-            "Linux requires glibc 2.28 or newer; macOS requires 14 or newer.\n\n"
+            "Linux requires glibc 2.28 or newer; macOS requires 15 or newer.\n\n"
             "Documentation: https://shotsolver.dev/shot/\n"
             "Source and dependency versions: https://github.com/coin-or/SHOT\n"
             "Licenses are provided in licenses/.\n"
