@@ -79,8 +79,11 @@ State in the PR which checks were run and which were skipped.
 
 `CHANGELOG.md` records user-visible changes. A PR with such a change adds a
 bullet under `## Unreleased`, in an `Added`, `Changed`, `Fixed` or `Removed`
-group, describing the effect for users. Internal refactoring and tests need
-no entry.
+group, describing the effect for users. A change that requires users to
+update their code, options files or builds goes in the `Breaking changes`
+group, first in the section, and is not repeated in the other groups;
+removals always go in `Removed`.
+Internal refactoring and tests need no entry.
 
 ## Versions and releases
 
