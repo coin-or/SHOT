@@ -81,6 +81,9 @@ Changes since SHOT 1.1.
   on the website ([06f753cd], [#206], [#220], [#240]).
 - Contribution guidelines (`CONTRIBUTING.md`) and this changelog ([#240]),
   and `AGENTS.md` with instructions for AI coding agents ([06f753cd]).
+- The settings reference lists the settings of all MIP and NLP solvers and of
+  GAMS with the solver each requires, also when SHOT is built without them,
+  and the recommended values for nonconvex problems.
 
 ### Changed
 
@@ -100,6 +103,10 @@ Changes since SHOT 1.1.
 - Updated bundled third-party libraries ([#213]).
 - New repository layout, and the documentation is on the website ([#220],
   [#240]).
+- Settings of a MIP or NLP solver or of GAMS that SHOT is not compiled with
+  are accepted instead of giving an error, so that the same options files
+  work with all builds; a warning tells that they are ignored if they are
+  changed from their defaults.
 
 ### Fixed
 

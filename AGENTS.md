@@ -54,6 +54,11 @@ workflow — including how to use the automated test suite (`test_runner`,
   in the C++ and Python API, an error that stops SHOT in an options file,
   and a warning on the command line. Keep this rather than matching names
   case-insensitively or having the API return a status.
+- Define public settings in `src/SolverSettings.cpp`, in every build, also
+  for backends that are not compiled in; `verifySettings()` warns when these
+  are set to another value than the default. Register recommended values,
+  e.g., for nonconvex problems, with `Settings::addConditionalValue()` beside
+  the setting.
 - When testing a reformulation, use at least two terms of the reformulated
   kind that share variables, so that merging terms and sharing auxiliary
   variables are tested too.
