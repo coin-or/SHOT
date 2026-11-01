@@ -515,7 +515,7 @@ int MIPSolverCplex::addLinearConstraint(
             tmpRange.setName(name.c_str());
 
             cplexModel.add(tmpRange);
-            cplexInstance.extract(cplexModel);
+            extractModel();
 
             // Make sure that Cplex actually has added the constraint
             if(cplexInstance.getNrows() > numConstraintsBefore)
@@ -536,7 +536,7 @@ int MIPSolverCplex::addLinearConstraint(
             tmpRange.setName(name.c_str());
 
             cplexModel.add(tmpRange);
-            cplexInstance.extract(cplexModel);
+            extractModel();
 
             // Make sure that Cplex actually has added the constraint
             if(cplexInstance.getNrows() > numConstraintsBefore)
@@ -770,8 +770,7 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
 
         if(modelUpdated)
         {
-            cplexInstance.extract(cplexModel);
-            modelUpdated = false;
+            extractModel();
         }
 
         if(objectiveFunctionReplacedWithZero || !getDiscreteVariableStatus())
@@ -816,7 +815,7 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
             else
                 cplexModel.add(IloMaximize(cplexEnv, 0.0));
 
-            cplexInstance.extract(cplexModel);
+            extractModel();
 
             // The cutoff applies to the objective function value, which is now zero, so it would cut off all points
             auto cutOffParameter = isMinimizationProblem ? IloCplex::Param::MIP::Tolerances::UpperCutoff
@@ -901,8 +900,7 @@ bool MIPSolverCplex::repairInfeasibility()
     {
         if(modelUpdated)
         {
-            cplexInstance.extract(cplexModel);
-            modelUpdated = false;
+            extractModel();
         }
 
         IloNumArray relax(cplexEnv);
@@ -979,7 +977,7 @@ bool MIPSolverCplex::repairInfeasibility()
                 }
             }
 
-            cplexInstance.extract(cplexModel);
+            extractModel();
 
             env->results->getCurrentIteration()->numberOfInfeasibilityRepairedConstraints = numRepairs;
 
@@ -1299,7 +1297,9 @@ void MIPSolverCplex::addMIPStart(VectorDouble point)
 
     try
     {
-        cplexInstance.addMIPStart(startVars, startVal, IloCplex::MIPStartAuto);
+        // A new primal solution is at least as good as the previous ones, so only the latest one is kept
+        deleteMIPStartsWithName("shot_primalstart");
+        cplexInstance.addMIPStart(startVars, startVal, IloCplex::MIPStartAuto, "shot_primalstart");
     }
     catch(IloException& e)
     {
@@ -1331,6 +1331,116 @@ void MIPSolverCplex::deleteMIPStarts()
     }
 }
 
+void MIPSolverCplex::deleteMIPStartsWithName(const char* name)
+{
+    for(int i = cplexInstance.getNMIPStarts() - 1; i >= 0; i--)
+    {
+        auto startName = cplexInstance.getMIPStartName(i);
+
+        if(startName != nullptr && std::strcmp(startName, name) == 0)
+            cplexInstance.deleteMIPStarts(i);
+    }
+}
+
+void MIPSolverCplex::extractModel()
+{
+    struct MIPStart
+    {
+        VectorInteger variableIndexes;
+        VectorDouble values;
+        IloCplex::MIPStartEffort effort;
+        std::string name;
+    };
+
+    std::vector<MIPStart> starts;
+
+    // The starts can only be read when the problem is a MIP, e.g. not when the discrete variables are relaxed. The
+    // model must be extracted also if this fails, since the callers rely on it.
+    try
+    {
+        int numStarts = cplexInstance.isMIP() ? cplexInstance.getNMIPStarts() : 0;
+
+        // Only the variables in the previously extracted model can be queried
+        auto extractedVars = IloNumVarArray(cplexEnv);
+        VectorInteger extractedIndexes;
+
+        if(numStarts > 0)
+        {
+            for(int i = 0; i < cplexVars.getSize(); i++)
+            {
+                if(cplexInstance.isExtracted(cplexVars[i]))
+                {
+                    extractedVars.add(cplexVars[i]);
+                    extractedIndexes.push_back(i);
+                }
+            }
+        }
+
+        for(int i = 0; i < numStarts; i++)
+        {
+            IloNumArray values(cplexEnv);
+            IloBoolArray isSet(cplexEnv);
+
+            MIPStart start;
+            start.effort = cplexInstance.getMIPStart(i, extractedVars, values, isSet);
+
+            auto name = cplexInstance.getMIPStartName(i);
+            start.name = (name != nullptr) ? name : "";
+
+            for(int j = 0; j < values.getSize(); j++)
+            {
+                if(isSet[j])
+                {
+                    start.variableIndexes.push_back(extractedIndexes[j]);
+                    start.values.push_back(values[j]);
+                }
+            }
+
+            starts.push_back(start);
+
+            values.end();
+            isSet.end();
+        }
+
+        extractedVars.end();
+    }
+    catch(IloException& e)
+    {
+        starts.clear();
+        env->output->outputDebug(fmt::format("        Could not keep the MIP starts in Cplex: {}", e.getMessage()));
+    }
+
+    cplexInstance.extract(cplexModel);
+    modelUpdated = false;
+
+    if(starts.empty() || !cplexInstance.isMIP())
+        return;
+
+    try
+    {
+        for(auto& S : starts)
+        {
+            auto startVars = IloNumVarArray(cplexEnv);
+            IloNumArray startVal(cplexEnv);
+
+            for(size_t j = 0; j < S.variableIndexes.size(); j++)
+            {
+                startVars.add(cplexVars[S.variableIndexes[j]]);
+                startVal.add(S.values[j]);
+            }
+
+            cplexInstance.addMIPStart(startVars, startVal, S.effort, S.name.empty() ? nullptr : S.name.c_str());
+
+            startVars.end();
+            startVal.end();
+        }
+    }
+    catch(IloException& e)
+    {
+        env->output->outputDebug(fmt::format("        Could not add back the MIP starts in Cplex: {}", e.getMessage()));
+    }
+}
+
 void MIPSolverCplex::writeProblemToFile(std::string filename)
 {
     try
@@ -1351,8 +1461,7 @@ void MIPSolverCplex::writeProblemToFile(std::string filename)
         if(modelUpdated)
         {
             // Extract the model if we have updated the constraints
-            cplexInstance.extract(cplexModel);
-            modelUpdated = false;
+            extractModel();
         }
 
         cplexInstance.exportModel(filename.c_str());
@@ -1621,7 +1730,7 @@ bool MIPSolverCplex::createIntegerCut(IntegerCut& integerCut)
 
                 if(cplexInstance.getNrows() > tmpNumConstraints)
                 {
-                    cplexInstance.extract(cplexModel);
+                    extractModel();
                     integerCuts.push_back(numConstraintsBefore + index);
                     cplexConstrs.add(cut1);
                     allowRepairOfConstraint.push_back(false);
@@ -1634,7 +1743,7 @@ bool MIPSolverCplex::createIntegerCut(IntegerCut& integerCut)
 
                 if(cplexInstance.getNrows() > tmpNumConstraints)
                 {
-                    cplexInstance.extract(cplexModel);
+                    extractModel();
                     integerCuts.push_back(numConstraintsBefore + index);
                     cplexConstrs.add(cut2);
                     allowRepairOfConstraint.push_back(false);
@@ -1647,7 +1756,7 @@ bool MIPSolverCplex::createIntegerCut(IntegerCut& integerCut)
 
                 if(cplexInstance.getNrows() > tmpNumConstraints)
                 {
-                    cplexInstance.extract(cplexModel);
+                    extractModel();
                     integerCuts.push_back(numConstraintsBefore + index);
                     cplexConstrs.add(cut3);
                     allowRepairOfConstraint.push_back(false);
@@ -1660,7 +1769,7 @@ bool MIPSolverCplex::createIntegerCut(IntegerCut& integerCut)
 
                 if(cplexInstance.getNrows() > tmpNumConstraints)
                 {
-                    cplexInstance.extract(cplexModel);
+                    extractModel();
                     integerCuts.push_back(numConstraintsBefore + index);
                     cplexConstrs.add(cut4);
                     allowRepairOfConstraint.push_back(false);
@@ -1677,7 +1786,7 @@ bool MIPSolverCplex::createIntegerCut(IntegerCut& integerCut)
 
         if(cplexInstance.getNrows() > tmpNumConstraints)
         {
-            cplexInstance.extract(cplexModel);
+            extractModel();
             integerCuts.push_back(numConstraintsBefore + index);
             cplexConstrs.add(cut5);
             allowRepairOfConstraint.push_back(allowIntegerCutRepair);
