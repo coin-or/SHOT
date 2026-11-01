@@ -794,6 +794,8 @@ void Solver::initializeSettings()
         static_cast<int>(ES_PrimalNLPProblemSource::ReformulatedProblem),
         "Which problem formulation to use for NLP problem", enumPrimalBoundNLPProblemSource, 0);
     enumPrimalBoundNLPProblemSource.clear();
+    env->settings->addConditionalValue(
+        "Primal.FixedInteger.SourceProblem", nonconvex, static_cast<int>(ES_PrimalNLPProblemSource::Both));
 
     env->settings->createSetting(
         "Primal.FixedInteger.TimeLimit", 10.0, "Time limit (s) per NLP problem", 0, SHOT_DBL_MAX);

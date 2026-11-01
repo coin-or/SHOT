@@ -629,8 +629,9 @@ in this codebase — add to this list as you find more.
   they get the two inequality constraints instead: with equality
   constraints, Ipopt found much worse local solutions for, e.g., pooling
   problems (and better ones for a few others, so the setting is worth
-  trying when the primal solutions are poor). NLP solvers in GAMS always use
-  the original problem.
+  trying when the primal solutions are poor). For nonconvex problems, the
+  recommended value solves the NLP problem on both. NLP solvers in GAMS
+  always use the original problem.
 - In the reformulated problem (`reformulatedproblem.txt`) a nonlinear
   constraint with both bounds is two constraints: `<name>` is `f(x) <= U`
   and `<name>_rf` is `-f(x) <= -L`. The `_rf` constraints come after the
