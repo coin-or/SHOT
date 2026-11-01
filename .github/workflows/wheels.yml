@@ -3,7 +3,7 @@ name: Build and publish distributions
 # A tag v<version>[-<a|b|rc><n>] publishes that release; it must match the
 # version and SHOT_VERSION_SUFFIX in CMakeLists.txt. A manual run builds a
 # development version <version>.dev<run number> and publishes it from master
-# when 'publish' is checked. See misc/set-python-version.py.
+# when 'publish' is checked. See scripts/set-python-version.py.
 # Native archives reuse repaired wheels and are attached to the tagged GitHub
 # release (created as a draft if it does not exist yet).
 on:
@@ -51,10 +51,10 @@ jobs:
           key: shotpy-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('CMakeLists.txt', 'pyproject.toml', 'ThirdParty/versions.json', '.github/workflows/wheels.yml') }}
 
       - name: Verify dependency pins
-        run: python misc/check-dependencies.py
+        run: python scripts/check-dependencies.py
 
       - name: Set package version
-        run: python misc/set-python-version.py
+        run: python scripts/set-python-version.py
 
       - name: Set up MSVC
         if: runner.os == 'Windows'
@@ -88,7 +88,7 @@ jobs:
       - name: Package standalone executable
         run: |
           python -m unittest discover -s test -p test_executable_packaging.py -v
-          python misc/package-executable.py --platform ${{ matrix.platform }}
+          python scripts/package-executable.py --platform ${{ matrix.platform }}
 
       - uses: actions/upload-artifact@v6
         with:
@@ -133,7 +133,7 @@ jobs:
           shopt -s nullglob
           archives=(executables/*.tar.gz executables/*.zip)
           test "${#archives[@]}" -eq 1
-          python misc/test-executable-archive.py "${archives[0]}"
+          python scripts/test-executable-archive.py "${archives[0]}"
 
   release-executables:
     name: Upload executables to GitHub release
@@ -176,7 +176,7 @@ jobs:
           python-version: "3.13"
 
       - name: Set package version
-        run: python misc/set-python-version.py
+        run: python scripts/set-python-version.py
 
       - run: python -m pip install build
       - run: python -m build --sdist

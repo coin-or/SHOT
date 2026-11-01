@@ -36,8 +36,8 @@ The documentation uses relative internal links, so both `/SHOT-website/docs/dev/
 and `/docs/dev/` work. The homepage's `../../` link returns to the website root.
 Add a `/docs/` entry page linking to `dev/` and, when released, `2.0/`.
 
-For a release, build the matching tag/module into `dist/docs/2.0/`, set
-`SHOT_DOCS_VERSION=2.0`, and replace the development notice in that release's source.
+For a release, build the matching tag/module into `dist/docs/2.0/` and set
+`SHOT_DOCS_VERSION=2.0`; this also replaces the development notice on the start page.
 Build every retained version on each deployment (or restore its archived build);
 Pages deployments replace the entire published site. Do not label development
 builds as stable or build release documentation from a moving branch.

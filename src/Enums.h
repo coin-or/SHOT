@@ -176,15 +176,6 @@ enum class E_NLPSolutionStatus
     Error
 };
 
-enum class E_ObjectiveFunctionType
-{
-    Linear,
-    Quadratic,
-    Nonlinear,
-    QuadraticConsideredAsNonlinear,
-    None
-};
-
 enum class E_ProblemSolutionStatus
 {
     Feasible,
@@ -199,19 +190,6 @@ enum class E_ProblemSolutionStatus
     CutOff,
     NodeLimit,
     Abort,
-    None
-};
-
-enum class E_ProblemType
-{
-    LP,
-    QP,
-    NLP,
-    QCQP,
-    MILP,
-    MIQP,
-    MIQCQP,
-    MINLP,
     None
 };
 
@@ -351,12 +329,6 @@ enum class ES_ObjectiveRootsearch
     Always,
     IfConvex,
     Never
-};
-
-enum class ES_RootsearchConstraintStrategy
-{
-    AllAsMaxFunct,
-    IndividualConstraints
 };
 
 enum class ES_RootsearchMethod

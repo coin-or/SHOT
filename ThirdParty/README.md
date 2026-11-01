@@ -16,7 +16,7 @@ when reproducing a release.
 Download the archive URL recorded in `versions.json`, then run:
 
 ```sh
-bash misc/vendor-boost.sh /path/to/boost_1_92_0.tar.bz2
+bash scripts/vendor-boost.sh /path/to/boost_1_92_0.tar.bz2
 ```
 
 The script verifies the official archive SHA256, builds that release's `bcp`,
@@ -30,8 +30,8 @@ does not change SHOT to Boost interval arithmetic.
 Download the respective pinned archives from `versions.json`, then run:
 
 ```sh
-python3 misc/vendor-reader-dependencies.py ampl /path/to/mp-4.1.0.tar.gz
-python3 misc/vendor-reader-dependencies.py mc++ /path/to/mcpp-5.0.4.tar.gz
+python3 scripts/vendor-reader-dependencies.py ampl /path/to/mp-4.1.0.tar.gz
+python3 scripts/vendor-reader-dependencies.py mc++ /path/to/mcpp-5.0.4.tar.gz
 ```
 
 The importer verifies the checksum before replacing either directory. MP

@@ -23,6 +23,7 @@
 #include "../src/Structs.h"
 
 #include "../src/Model/Constraints.h"
+#include "../src/Model/NonlinearExpressions.h"
 #include "../src/Model/ObjectiveFunction.h"
 #include "../src/Model/Problem.h"
 #include "../src/Model/Terms.h"
@@ -30,8 +31,11 @@
 
 #include "../src/MIPSolver/IMIPSolver.h"
 #include "../src/Tasks/TaskCreateMIPProblem.h"
+#include "../src/Tasks/TaskInitializeRootsearch.h"
 #include "../src/Tasks/TaskAddPrimalReductionCut.h"
 #include "../src/Tasks/TaskPerformConvexBounding.h"
+#include "../src/Tasks/TaskSelectHyperplanesECP.h"
+#include "../src/Tasks/TaskSelectHyperplanesESH.h"
 #include "../src/TaskHandler.h"
 #include "../src/DualSolver.h"
 #include "../src/Utilities.h"
@@ -1045,6 +1049,149 @@ bool testIntegerCutVariablesSurviveRelaxation(ES_MIPSolver mipSolver)
     return true;
 }
 
+enum class CutStrategy
+{
+    ESHMaxFunction,
+    ESHIndividualConstraints,
+    ECP
+};
+
+// A cut of a convex constraint is globally valid in any point, but a cut of a nonconvex constraint is not. ESH and ECP
+// first generate cuts for the convex constraints only, and for the nonconvex ones only if that gives no cuts. With the
+// root search on the max function, a nonconvex constraint can have a larger value than the convex ones in the external
+// point, and its linearization must then not be selected as a global cut, or the dual bound is reported as valid and
+// the solution as globally optimal. The interior and solution points are given directly, so the test does not depend
+// on the solution path of a MIP solver.
+bool testCutsAreGlobalOnlyForConvexConstraints(CutStrategy strategy, bool violateConvexConstraint)
+{
+    auto solver = std::make_shared<Solver>();
+    auto env = solver->getEnvironment();
+
+    std::string description;
+
+    switch(strategy)
+    {
+    case CutStrategy::ESHMaxFunction:
+        description = "ESH, max function";
+        break;
+    case CutStrategy::ESHIndividualConstraints:
+        description = "ESH, individual constraints";
+        break;
+    case CutStrategy::ECP:
+        description = "ECP";
+        break;
+    }
+
+    description += violateConvexConstraint ? ", convex constraint violated" : ", only nonconvex constraints violated";
+
+    solver->updateSetting("Dual.ESH.Rootsearch.UseMaxFunction", strategy == CutStrategy::ESHMaxFunction);
+    solver->updateSetting(
+        "Model.Reformulation.Constraint.PartitionNonlinearTerms", static_cast<int>(ES_PartitionNonlinearSums::Never));
+    // Bound tightening on the nonconvex constraints would move the solution points below outside the variable bounds
+    solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+
+    // Maximize x + y with x, y in [0, 3] subject to the convex exp(x) + exp(y) <= 4 and the nonconvex x * exp(y) <= 0.5
+    // and y * exp(x) <= 0.5
+    auto problem = std::make_shared<Problem>(env);
+    auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.0, 3.0);
+    auto y = std::make_shared<Variable>("y", E_VariableType::Real, 0.0, 3.0);
+    problem->add({ x, y });
+
+    auto variable = [](const VariablePtr& V) { return std::make_shared<ExpressionVariable>(V); };
+    auto exponential = [&](const VariablePtr& V) { return std::make_shared<ExpressionExp>(variable(V)); };
+
+    problem->add(std::make_shared<NonlinearConstraint>(
+        "convex", std::make_shared<ExpressionSum>(exponential(x), exponential(y)), SHOT_DBL_MIN, 4.0));
+    problem->add(std::make_shared<NonlinearConstraint>(
+        "nonconvex1", std::make_shared<ExpressionProduct>(variable(x), exponential(y)), SHOT_DBL_MIN, 0.5));
+    problem->add(std::make_shared<NonlinearConstraint>(
+        "nonconvex2", std::make_shared<ExpressionProduct>(variable(y), exponential(x)), SHOT_DBL_MIN, 0.5));
+
+    auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Maximize);
+    objective->add(std::make_shared<LinearTerm>(1.0, x));
+    objective->add(std::make_shared<LinearTerm>(1.0, y));
+    problem->add(objective);
+    problem->finalize();
+
+    if(!solver->setProblem(problem))
+    {
+        std::cout << description << ": could not create problem\n";
+        return false;
+    }
+
+    // The points below are given in x and y only
+    if(env->reformulatedProblem->properties.numberOfVariables != 2)
+    {
+        std::cout << description << ": the reformulated problem has "
+                  << env->reformulatedProblem->properties.numberOfVariables << " variables instead of 2\n";
+        return false;
+    }
+
+    env->results->createIteration();
+
+    // All three constraints are violated in (1.5, 1.5). The root search on the convex constraint ends near
+    // (ln 2, ln 2), where the value of both nonconvex constraints is about 0.89 and that of the convex one about 0.
+    // In (1, 0.2) only the nonconvex constraints are violated, and the convex one is fulfilled on the whole line
+    // segment from the origin.
+    SolutionPoint solutionPoint;
+    solutionPoint.point = violateConvexConstraint ? VectorDouble { 1.5, 1.5 } : VectorDouble { 1.0, 0.2 };
+
+    if(strategy == CutStrategy::ECP)
+    {
+        TaskSelectHyperplanesECP(env).run({ solutionPoint });
+    }
+    else
+    {
+        TaskInitializeRootsearch(env).run();
+
+        // The origin is strictly inside all three constraints
+        auto interiorPoint = std::make_shared<InteriorPoint>();
+        interiorPoint->point = { 0.0, 0.0 };
+        env->dualSolver->interiorPts.push_back(interiorPoint);
+
+        TaskSelectHyperplanesESH(env).run({ solutionPoint });
+    }
+
+    bool passed = true;
+    int numberOfHyperplanes = 0;
+
+    for(auto& HP : env->dualSolver->hyperplaneWaitingList)
+    {
+        auto hyperplane = std::dynamic_pointer_cast<ConstraintHyperplane>(HP);
+
+        if(!hyperplane)
+            continue;
+
+        numberOfHyperplanes++;
+
+        bool isConvex = hyperplane->sourceConstraint->properties.convexity <= E_Convexity::Convex;
+
+        if(isConvex != violateConvexConstraint)
+        {
+            std::cout << description << ": a cut of the " << (isConvex ? "convex" : "nonconvex") << " constraint "
+                      << hyperplane->sourceConstraint->name << " was generated\n";
+            passed = false;
+        }
+
+        if(hyperplane->isGlobal != isConvex)
+        {
+            std::cout << description << ": a cut of the " << (isConvex ? "convex" : "nonconvex") << " constraint "
+                      << hyperplane->sourceConstraint->name << " is " << (hyperplane->isGlobal ? "" : "not ")
+                      << "marked as global\n";
+            passed = false;
+        }
+    }
+
+    if(numberOfHyperplanes == 0)
+    {
+        std::cout << description << ": no cuts were generated\n";
+        passed = false;
+    }
+
+    return passed;
+}
+
 int DualBoundTest(int argc, char* argv[])
 {
     int choice = 1;
@@ -1142,6 +1289,15 @@ int DualBoundTest(int argc, char* argv[])
         for(auto mipSolver : compiledSolvers())
             passed = testPrimalBoundPassingGlobalDualBoundIsReported(mipSolver) && passed;
         std::cout << "Finished test that a primal bound past a global dual bound is reported.\n";
+        break;
+    case 15:
+        std::cout << "Starting test that cuts are global only for convex constraints:\n";
+        for(auto strategy : { CutStrategy::ESHMaxFunction, CutStrategy::ESHIndividualConstraints, CutStrategy::ECP })
+        {
+            for(bool violateConvexConstraint : { true, false })
+                passed = testCutsAreGlobalOnlyForConvexConstraints(strategy, violateConvexConstraint) && passed;
+        }
+        std::cout << "Finished test that cuts are global only for convex constraints.\n";
         break;
     default:
         passed = false;

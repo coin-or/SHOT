@@ -129,7 +129,7 @@ if(HAS_GAMS)
   set(cpptests ${cpptests} GAMS)
 endif()
 
-set(DualBound_parts 1 2 3 4 5 6 7 8 9 10 11 12 13 14)
+set(DualBound_parts 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15)
 set(cpptests ${cpptests} DualBound)
 
 set(Determinism_parts 1 2 3)
@@ -165,7 +165,10 @@ set(Solver_parts
     27
     28
     29
-    30)
+    30
+    31
+    32
+    33)
 set(cpptests ${cpptests} Solver)
 
 if(HAS_CONOPT)
@@ -224,7 +227,7 @@ endif()
 
 if(HAS_UNO)
   set(cpptests ${cpptests} Uno)
-  set(Uno_parts 1 2 3)
+  set(Uno_parts 1 2 3 4)
 endif()
 
 # Instance tests: one case per (MIP solver x NLP solver) combination
@@ -467,11 +470,12 @@ if(TARGET SHOTpy)
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
       )
       
-      # Set environment so pytest can find SHOTpy module
+      # Set environment so pytest can find SHOTpy module. All Python tests take about three minutes on their own,
+      # and longer when run in parallel with the other tests
       set_tests_properties(Python_API_Tests PROPERTIES
         ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR};SHOT_TUTORIAL_NOTEBOOK=${PROJECT_SOURCE_DIR}/docs/SHOTpy_Tutorial.ipynb"
         FAIL_REGULAR_EXPRESSION "FAILED;ERROR"
-        TIMEOUT 300
+        TIMEOUT 1200
       )
       
       # Individual Python test files (for more granular testing)
@@ -513,6 +517,10 @@ if(TARGET SHOTpy)
           TIMEOUT 300
         )
       endforeach()
+
+      # Solving with GAMS as the NLP solver takes several seconds per problem, since GAMS is started for every NLP
+      # problem, so these tests take about as long as all the others together
+      set_tests_properties(Python_test_optimization_problems PROPERTIES TIMEOUT 900)
       
     else()
       message(STATUS "pytest not found - Python API tests will be skipped")

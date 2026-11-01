@@ -57,9 +57,6 @@ private:
 
     bool useConvexQuadraticObjective = false;
     bool useNonconvexQuadraticObjective = false;
-    bool quadraticObjectiveRegardedAsNonlinear = false;
-    bool partitionQuadraticTermsInObjective = false;
-    bool partitionQuadraticTermsInConstraint = false;
 
     bool extractQuadraticTermsFromNonconvexExpressions = false;
     bool extractQuadraticTermsFromConvexExpressions = false;
@@ -101,12 +98,6 @@ private:
 
     template <class T>
     void copyQuadraticTermsToObjectiveFunction(const QuadraticTerms& terms, T destination, bool reversedSigns = false);
-
-    template <class T>
-    void copyMonomialTermsToObjectiveFunction(const MonomialTerms& terms, T destination, bool reversedSigns = false);
-
-    template <class T>
-    void copySignomialTermsToObjectiveFunction(const SignomialTerms& terms, T destination, bool reversedSigns = false);
 
     // Quadratic terms in the sum are partitioned with partitionQuadraticTermsStrategy, i.e., the
     // PartitionQuadraticTerms setting of the constraint or objective function

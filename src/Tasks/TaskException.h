@@ -39,24 +39,6 @@ private:
     std::string message;
 };
 
-class TaskExceptionFunctionNotDefined : public std::runtime_error
-{
-public:
-    TaskExceptionFunctionNotDefined(EnvironmentPtr envPtr [[maybe_unused]], std::string task)
-        : std::runtime_error(""), taskName(task)
-    {
-        std::stringstream message;
-        message << "Exception: task function in ";
-        message << taskName;
-        message << " not defined!";
-
-        static_cast<std::exception&>(*this) = std::runtime_error(message.str());
-    }
-
-private:
-    std::string taskName;
-};
-
 class TaskExceptionNotFound : public std::runtime_error
 {
 public:

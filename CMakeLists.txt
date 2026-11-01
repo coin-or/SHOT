@@ -25,7 +25,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # Location of extra CMake scripts
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/misc")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake")
 
 # Find std::filesystem or std::experimental::filesystem
 find_package(Filesystem REQUIRED)
@@ -184,7 +184,6 @@ file(
     "${PROJECT_SOURCE_DIR}/src/Model/NonlinearExpressions.h"
     "${PROJECT_SOURCE_DIR}/src/Model/Constraints.h"
     "${PROJECT_SOURCE_DIR}/src/Model/Problem.h"
-    "${PROJECT_SOURCE_DIR}/src/Model/ModelHelperFunctions.h"
     "${PROJECT_SOURCE_DIR}/src/Report.h"
     "${PROJECT_SOURCE_DIR}/src/Iteration.h"
     "${PROJECT_SOURCE_DIR}/src/Timing.h"
@@ -196,21 +195,16 @@ file(
     "${PROJECT_SOURCE_DIR}/src/Solver.h"
     "${PROJECT_SOURCE_DIR}/src/TaskHandler.h"
     "${PROJECT_SOURCE_DIR}/src/Utilities.h"
-    "${PROJECT_SOURCE_DIR}/src/Simplifications.h"
     "${PROJECT_SOURCE_DIR}/src/ModelingSystem/IModelingSystem.h"
     "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemOSiL.h"
-    "${PROJECT_SOURCE_DIR}/src/ConstraintSelectionStrategy/*.h"
     "${PROJECT_SOURCE_DIR}/src/RootsearchMethod/IRootsearchMethod.h"
     "${PROJECT_SOURCE_DIR}/src/RootsearchMethod/RootsearchMethodBoost.h"
     "${PROJECT_SOURCE_DIR}/src/MIPSolver/IMIPSolutionLimitStrategy.h"
     "${PROJECT_SOURCE_DIR}/src/MIPSolver/IMIPSolver.h"
     "${PROJECT_SOURCE_DIR}/src/MIPSolver/IRelaxationStrategy.h"
-    "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyAdaptive.h"
     "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyIncrease.h"
-    "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyUnlimited.h"
     "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverBase.h"
     "${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyBase.h"
-    "${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyNone.h"
     "${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyStandard.h"
     "${PROJECT_SOURCE_DIR}/src/NLPSolver/INLPSolver.h"
     "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverBase.h"
@@ -229,10 +223,8 @@ file(
     "${PROJECT_SOURCE_DIR}/src/Tasks/TaskSelectPrimalFixedNLPPointsFromSolutionPool.h"
     "${PROJECT_SOURCE_DIR}/src/Tasks/TaskPerformBoundTightening.h"
     "${PROJECT_SOURCE_DIR}/src/Tasks/TaskAddPrimalReductionCut.h"
-    "${PROJECT_SOURCE_DIR}/src/Tasks/TaskSimple.h"
     "${PROJECT_SOURCE_DIR}/src/Tasks/TaskPrintIterationReport.h"
     "${PROJECT_SOURCE_DIR}/src/Tasks/TaskSolveIteration.h"
-    "${PROJECT_SOURCE_DIR}/src/Tasks/TaskRepairableBase.h"
     "${PROJECT_SOURCE_DIR}/src/Tasks/TaskBase.h"
     "${PROJECT_SOURCE_DIR}/src/Tasks/TaskCheckIterationLimit.h"
     "${PROJECT_SOURCE_DIR}/src/Tasks/TaskSelectPrimalCandidatesFromSolutionPool.h"
@@ -545,7 +537,7 @@ endif()
 if(MSVC)
     target_compile_definitions(SHOTBuildSettings INTERFACE _USE_MATH_DEFINES NOMINMAX _CRT_SECURE_NO_WARNINGS)
 endif()
-if(MSVC OR MSYS OR MINGW)
+if(SIMPLE_OUTPUT_CHARS OR MSVC OR MSYS OR MINGW)
     target_compile_definitions(SHOTBuildSettings INTERFACE SIMPLE_OUTPUT_CHARS)
 endif()
 
@@ -764,7 +756,7 @@ if(HAS_PYTHON)
 
     if(NOT PYBIND11_STUBGEN_MISSING)
         add_custom_command(TARGET SHOTpy POST_BUILD
-            COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/misc/GenerateSHOTpyStubs.py" "$<TARGET_FILE_DIR:SHOTpy>"
+            COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/scripts/GenerateSHOTpyStubs.py" "$<TARGET_FILE_DIR:SHOTpy>"
             COMMENT "Generating type stubs for SHOTpy"
         )
 
@@ -809,18 +801,12 @@ add_library(
     ${PROJECT_SOURCE_DIR}/src/DualSolver.cpp
     ${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.cpp
     ${PROJECT_SOURCE_DIR}/src/MIPSolver/IMIPSolutionLimitStrategy.h
-    ${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyAdaptive.h
-    ${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyAdaptive.cpp
     ${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyIncrease.h
     ${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyIncrease.cpp
-    ${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyUnlimited.h
-    ${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyUnlimited.cpp
     ${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverBase.h
     ${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverBase.cpp
     ${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyBase.h
     ${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyBase.cpp
-    ${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyNone.h
-    ${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyNone.cpp
     ${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyStandard.h
     ${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyStandard.cpp
 )
@@ -895,8 +881,6 @@ add_library(
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskReformulateProblem.h
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskRepairInfeasibleDualProblem.cpp
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskRepairInfeasibleDualProblem.h
-    ${PROJECT_SOURCE_DIR}/src/Tasks/TaskRepairableBase.cpp
-    ${PROJECT_SOURCE_DIR}/src/Tasks/TaskRepairableBase.h
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskSelectHyperplanesECP.cpp
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskSelectHyperplanesECP.h
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskSelectHyperplanesESH.cpp
@@ -917,8 +901,6 @@ add_library(
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskSelectPrimalFixedNLPPointsFromSolutionPool.h
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskSequential.cpp
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskSequential.h
-    ${PROJECT_SOURCE_DIR}/src/Tasks/TaskSimple.cpp
-    ${PROJECT_SOURCE_DIR}/src/Tasks/TaskSimple.h
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskSolveIteration.cpp
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskSolveIteration.h
     ${PROJECT_SOURCE_DIR}/src/Tasks/TaskTerminate.cpp
@@ -1146,6 +1128,7 @@ target_include_directories(SHOTSolver PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>
     $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/SHOT>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/SHOT/thirdparty>)
 add_dependencies(SHOTSolver cppad)
 
@@ -1253,7 +1236,7 @@ endif(GENERATE_EXE)
 include(CMakePackageConfigHelpers)
 set(SHOT_CMAKE_INSTALL_DIR "${CMAKE_INSTALL_LIBDIR}/cmake/SHOT")
 configure_package_config_file(
-    "${PROJECT_SOURCE_DIR}/misc/SHOTConfig.cmake.in"
+    "${PROJECT_SOURCE_DIR}/cmake/SHOTConfig.cmake.in"
     "${PROJECT_BINARY_DIR}/SHOTConfig.cmake"
     INSTALL_DESTINATION "${SHOT_CMAKE_INSTALL_DIR}")
 write_basic_package_version_file(
@@ -1288,6 +1271,7 @@ install(
     ${CMAKE_CURRENT_SOURCE_DIR}/INSTALL
     ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE
     ${CMAKE_CURRENT_SOURCE_DIR}/README
+    ${CMAKE_CURRENT_SOURCE_DIR}/README.md
     DESTINATION "${CMAKE_INSTALL_DOCDIR}"
     COMPONENT Runtime
 )
@@ -1325,14 +1309,17 @@ install(FILES
     DESTINATION "${SHOT_CMAKE_INSTALL_DIR}"
     COMPONENT Development)
 
-# Public headers refer to these bundled header-only dependencies. The CppAD
-# headers come from its build output so configure.hpp matches cppad_lib.
+# SHOT's headers have generic names, e.g., Solver.h, so they are installed in
+# include/SHOT. Public headers refer to these bundled header-only dependencies.
+# The CppAD headers come from its build output so configure.hpp matches
+# cppad_lib.
 install(DIRECTORY "${PROJECT_SOURCE_DIR}/src/"
-    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/SHOT"
     COMPONENT Development
-    FILES_MATCHING PATTERN "*.h")
+    FILES_MATCHING PATTERN "*.h"
+    PATTERN "SHOTpy_bin" EXCLUDE)
 install(FILES "${PROJECT_BINARY_DIR}/SHOTConfig.h" "${PROJECT_BINARY_DIR}/CppAD.h"
-    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/SHOT"
     COMPONENT Development)
 install(DIRECTORY
     "${PROJECT_SOURCE_DIR}/${BOOST_DIR}/boost"
@@ -1353,36 +1340,15 @@ install(DIRECTORY "${PROJECT_SOURCE_DIR}/${MCPP_DIR}/include/"
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Andreas Lundell")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "The Supporting Hyperplane Optimization Toolkit (SHOT)")
 set(CPACK_PACKAGE_VENDOR "Åbo Akademi University")
-set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/README")
+set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
 set(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/INSTALL")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
 set(CPACK_GENERATOR "STGZ;ZIP")
-include(CPack)
-
-# Add a target to generate API documentation with Doxygen
-option(BUILD_DOCUMENTATION "Create and install the HTML based API documentation(requires Doxygen)" ${DOXYGEN_FOUND})
-
-if(BUILD_DOCUMENTATION)
-    find_package(Doxygen)
-    if(NOT DOXYGEN_FOUND)
-        message(FATAL_ERROR "Doxygen is needed to build the documentation.")
-    endif()
-
-    set(doxyfile_in ${CMAKE_CURRENT_SOURCE_DIR}/doxydoc/doxygen.conf.in)
-    set(doxyfile ${CMAKE_CURRENT_BINARY_DIR}/doc/Doxyfile)
-
-    configure_file(${doxyfile_in} ${doxyfile} @ONLY)
-
-    add_custom_target(
-        doc
-        COMMAND ${DOXYGEN_EXECUTABLE} ${doxyfile}
-        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-        COMMENT "Generating API documentation with Doxygen"
-        VERBATIM
-    )
-
-    install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/doxydoc/html DESTINATION docs)
+# Name pre-release packages like their tags, e.g., 2.0.0-rc1
+if(SHOT_VERSION_SUFFIX)
+    set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}-${SHOT_VERSION_SUFFIX}")
 endif()
+include(CPack)
 
 if(COMPILE_TESTS)
     # For performing automated tests

@@ -33,9 +33,10 @@ classifiers = [
 
 [project.urls]
 Homepage = "https://shotsolver.dev"
-Documentation = "https://shotsolver.dev/shot/"
+Documentation = "https://shotsolver.dev/docs/"
 Repository = "https://github.com/coin-or/SHOT"
 Issues = "https://github.com/coin-or/SHOT/issues"
+Changelog = "https://github.com/coin-or/SHOT/blob/master/CHANGELOG.md"
 
 # Runs the SHOT executable in the package SHOTpy_bin, see src/SHOTpy_bin/__init__.py
 [project.scripts]
@@ -60,7 +61,7 @@ sdist.inclusion-mode = "explicit"
 sdist.include = [
     "/CMakeLists.txt", "/pyproject.toml", "/README.md", "/README",
     "/INSTALL", "/LICENSE", "/AUTHORS",
-    "/src/**", "/test/**", "/misc/**",
+    "/src/**", "/test/**", "/cmake/**", "/scripts/**",
     "/ThirdParty/README.md", "/ThirdParty/versions.json",
     "/ThirdParty/CppAD/**", "/ThirdParty/HiGHS/**", "/ThirdParty/eigen/**",
     "/ThirdParty/pybind11/**", "/ThirdParty/spdlog/**",
@@ -69,7 +70,6 @@ sdist.include = [
     "/docs/Callbacks.md", "/docs/CommandLineUsage.md",
     "/docs/CompilationInstructions.md", "/docs/DebuggingSHOT.md",
     "/docs/SHOTpy_Tutorial.ipynb",
-    "/docs/ThirdPartyUpgradePlan.md", "/docs/ThirdPartyUpgradeReport.md",
 ]
 sdist.exclude = [
     "ThirdParty/**/.git", "ThirdParty/**/.git/**", "ThirdParty/**/build/**",
@@ -105,17 +105,17 @@ test-command = [
 archs = ["auto64"]
 manylinux-x86_64-image = "manylinux_2_28"
 manylinux-aarch64-image = "manylinux_2_28"
-before-all = "bash {project}/misc/build-wheel-dependencies.sh /opt/shot-deps"
+before-all = "bash {project}/scripts/build-wheel-dependencies.sh /opt/shot-deps"
 environment = { CBC_DIR = "/opt/shot-deps", IPOPT_DIR = "/opt/shot-deps", PKG_CONFIG_PATH = "/opt/shot-deps/lib/pkgconfig", LD_LIBRARY_PATH = "/opt/shot-deps/lib" }
 
 [tool.cibuildwheel.macos]
 archs = ["arm64"]
-before-all = "bash {project}/misc/build-wheel-dependencies.sh $HOME/shot-deps"
+before-all = "bash {project}/scripts/build-wheel-dependencies.sh $HOME/shot-deps"
 environment = { CBC_DIR = "$HOME/shot-deps", IPOPT_DIR = "$HOME/shot-deps", PKG_CONFIG_PATH = "$HOME/shot-deps/lib/pkgconfig", DYLD_LIBRARY_PATH = "$HOME/shot-deps/lib", MACOSX_DEPLOYMENT_TARGET = "15.0" }
 
 [tool.cibuildwheel.windows]
 archs = ["AMD64"]
-before-all = 'pwsh -NoProfile -ExecutionPolicy Bypass -File "{project}/misc/prepare-wheel-dependencies.ps1"'
+before-all = 'pwsh -NoProfile -ExecutionPolicy Bypass -File "{project}/scripts/prepare-wheel-dependencies.ps1"'
 environment = { CBC_DIR = "build/wheel-deps/Cbc", IPOPT_DIR = "build/wheel-deps/Ipopt/Ipopt-3.14.20-win64-msvs2022-md", CC = "cl", CXX = "cl", CMAKE_GENERATOR = "Ninja", CMAKE_ARGS = "-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL" }
 # Inspect bundled DLLs and the SHOT executable too, so dependencies of SHOTSolver/Ipopt/SHOT.exe are repaired.
 repair-wheel-command = 'delvewheel repair --ignore-existing --analyze-existing --analyze-existing-exes -w "{dest_dir}" "{wheel}"'

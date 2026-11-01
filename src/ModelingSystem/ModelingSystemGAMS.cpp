@@ -249,6 +249,12 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(
         return (E_ProblemCreationStatus::FileDoesNotExist);
     }
 
+    // Reading the model, which for a problem file includes compiling it and checking the license in GAMS, is part of
+    // the problem initialization as in the other modeling systems, but timed separately as well since it is mostly
+    // spent in GAMS and can take a large part of the time limit
+    env->timing->startTimer("ProblemInitialization");
+    env->timing->startTimer("ProblemInitializationGAMS");
+
     try
     {
         if(inputSource == E_GAMSInputSource::ProblemFile)
@@ -268,9 +274,14 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(
     {
         env->output->outputError(fmt::format(" Error when reading GAMS model from \"{}\".\n {}", filename, e.what()));
 
+        env->timing->stopTimer("ProblemInitializationGAMS");
+        env->timing->stopTimer("ProblemInitialization");
         return (E_ProblemCreationStatus::Error);
     }
 
+    env->timing->stopTimer("ProblemInitializationGAMS");
+
+    // The problem initialization timer is still running, and is stopped when the problem has been created
     return createProblem(problem);
 }
 

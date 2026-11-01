@@ -840,6 +840,8 @@ E_ProblemCreationStatus ModelingSystemAMPL::createProblem(ProblemPtr& problem, c
         {
             env->output->outputError(fmt::format(
                 "Error when reading AMPL model (variable names in col-file \"{}\" does not match).", colFile.string()));
+
+            env->timing->stopTimer("ProblemInitialization");
             return (E_ProblemCreationStatus::Error);
         }
 
@@ -857,7 +859,9 @@ E_ProblemCreationStatus ModelingSystemAMPL::createProblem(ProblemPtr& problem, c
         {
             env->output->outputError(
                 fmt::format("Error when reading AMPL model (constraint names in row-file \"{}\" does not match).",
-                    colFile.string()));
+                    rowFile.string()));
+
+            env->timing->stopTimer("ProblemInitialization");
             return (E_ProblemCreationStatus::Error);
         }
 

@@ -4,7 +4,7 @@
 # declares "EXPORT UnoTargets" but never calls install(EXPORT ...), so
 # find_package(Uno CONFIG) cannot work. Neither does it install a pkg-config
 # file, so this module locates the library and the installed C API header by
-# hand, in the same spirit as misc/FindCBC.cmake and misc/FindGUROBI.cmake.
+# hand, in the same spirit as cmake/FindCBC.cmake and cmake/FindGUROBI.cmake.
 #
 # Uno installs
 #   ${prefix}/lib/libuno.{a,so,dylib}

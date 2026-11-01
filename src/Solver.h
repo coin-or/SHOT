@@ -34,6 +34,9 @@ class DllExport Solver
 private:
     std::unique_ptr<ISolutionStrategy> solutionStrategy;
 
+    // Creates the timers of the timing report, in the order they are reported
+    void createTimers();
+
     void initializeSettings();
     void verifySettings();
 

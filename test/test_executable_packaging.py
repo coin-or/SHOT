@@ -13,7 +13,7 @@ import zipfile
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SPEC = importlib.util.spec_from_file_location("package_executable", ROOT / "misc/package-executable.py")
+SPEC = importlib.util.spec_from_file_location("package_executable", ROOT / "scripts/package-executable.py")
 PACKAGER = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(PACKAGER)
 

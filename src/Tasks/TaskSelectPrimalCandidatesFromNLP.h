@@ -68,10 +68,6 @@ private:
 
     VectorInteger discreteVariableIndexes;
     std::vector<VectorDouble> testedPoints;
-    VectorDouble fixPoint;
-
-    VectorDouble originalLBs;
-    VectorDouble originalUBs;
 
     VectorString variableNames;
 

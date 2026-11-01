@@ -664,11 +664,6 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
         return;
     }
 
-    if(env->problem->objectiveFunction->properties.classification == E_ObjectiveFunctionClassification::Quadratic)
-    {
-        quadraticObjectiveRegardedAsNonlinear = true;
-    }
-
     // Objective is to be regarded as nonlinear
 
     bool copyOriginalLinearTerms = false;
@@ -2788,53 +2783,6 @@ void TaskReformulateProblem::copyQuadraticTermsToObjectiveFunction(
         quadraticObjective->add(copiedQuadraticTerms);
 }
 
-template <class T>
-void TaskReformulateProblem::copyMonomialTermsToObjectiveFunction(
-    const MonomialTerms& terms, T destination, bool reversedSigns)
-{
-    double signCoefficient = (reversedSigns) ? -1.0 : 1.0;
-
-    for(auto& MT : terms)
-    {
-        double coefficient = MT->coefficient;
-        Variables variables;
-
-        for(auto& V : MT->variables)
-        {
-            if(V->lowerBound == V->upperBound)
-                coefficient *= V->lowerBound;
-            else
-                variables.push_back(reformulatedProblem->getVariable(V->getIndex()));
-        }
-
-        std::dynamic_pointer_cast<NonlinearObjectiveFunction>(destination)
-            ->add(std::make_shared<MonomialTerm>(signCoefficient * coefficient, variables));
-    }
-}
-
-template <class T>
-void TaskReformulateProblem::copySignomialTermsToObjectiveFunction(
-    const SignomialTerms& terms, T destination, bool reversedSigns)
-{
-    double signCoefficient = (reversedSigns) ? -1.0 : 1.0;
-
-    for(auto& ST : terms)
-    {
-        double coefficient = ST->coefficient;
-        SignomialElements elements;
-
-        for(auto& E : ST->elements)
-            if(E->variable->lowerBound == E->variable->upperBound)
-                coefficient *= std::pow(E->variable->lowerBound, E->power);
-            else
-                elements.push_back(std::make_shared<SignomialElement>(
-                    reformulatedProblem->getVariable(E->variable->getIndex()), E->power));
-
-        std::dynamic_pointer_cast<NonlinearObjectiveFunction>(destination)
-            ->add(std::make_shared<SignomialTerm>(signCoefficient * coefficient, elements));
-    }
-}
-
 void TaskReformulateProblem::addDecompositionComponent(const LinearTerms& componentTerms, double value,
     E_AuxiliaryVariableType auxVariableType, const std::string& name, std::vector<LinearTermPtr>& resultTerms)
 {
@@ -2878,9 +2826,15 @@ void TaskReformulateProblem::addDecompositionComponent(const LinearTerms& compon
     auxVariableCounter++;
     auxQuadVariable->properties.auxiliaryType = auxVariableType;
 
-    // The value of the auxiliary variable is the value of the linear terms
+    // The value of the auxiliary variable is the value of the linear terms, which are added at once since adding them
+    // one at a time searches all the terms added before, e.g., for each of thousands of terms in a dense LDL column
+    std::vector<LinearTermPtr> auxVariableTerms;
+    auxVariableTerms.reserve(componentTerms.size());
+
     for(auto& T : componentTerms)
-        auxQuadVariable->linearTerms.add(std::make_shared<LinearTerm>(T->coefficient, T->variable));
+        auxVariableTerms.push_back(std::make_shared<LinearTerm>(T->coefficient, T->variable));
+
+    auxQuadVariable->linearTerms.add(LinearTerms(std::move(auxVariableTerms)));
 
     reformulatedProblem->add(auxQuadVariable);
 

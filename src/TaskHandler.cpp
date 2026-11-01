@@ -40,6 +40,9 @@ void TaskHandler::addTask(TaskPtr task, std::string taskID)
 
 bool TaskHandler::getNextTask(TaskPtr& task)
 {
+    while(nextTask != taskIDMap.end() && !nextTask->second->isActive())
+        nextTask++;
+
     if(nextTask == taskIDMap.end())
         return (false);
 
