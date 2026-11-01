@@ -36,6 +36,10 @@ bool TestIsSettingAtDefault();
 bool TestReadSettingsFromStringPriority();
 bool TestSolverWrapperPriorityRouting();
 bool TestUserOverridesConvexityRecommendation();
+bool TestConditionalValues();
+bool TestConditionalValueRegistration();
+bool TestRecommendedSettingsForProblems();
+bool TestSettingsOfAllBackends();
 
 int SettingsTest(int argc, char* argv[])
 {
@@ -86,6 +90,18 @@ int SettingsTest(int argc, char* argv[])
         break;
     case 9:
         passed = TestUserOverridesConvexityRecommendation();
+        break;
+    case 10:
+        passed = TestConditionalValues();
+        break;
+    case 11:
+        passed = TestConditionalValueRegistration();
+        break;
+    case 12:
+        passed = TestRecommendedSettingsForProblems();
+        break;
+    case 13:
+        passed = TestSettingsOfAllBackends();
         break;
     default:
         passed = false;
@@ -458,6 +474,294 @@ bool TestUserOverridesConvexityRecommendation()
     std::cout << "Finished user-override-of-convexity-recommendation test." << std::endl;
     return passed;
 #endif
+}
+
+// Conditional values of settings: which values apply, the most specific value, the group prefix and the priorities
+bool TestConditionalValues()
+{
+    bool passed = true;
+    std::cout << "Starting conditional values test:" << std::endl;
+
+    auto settings = std::make_shared<Settings>(std::make_shared<Output>());
+
+    VectorString enumStrategy { "Zero", "One", "Two", "Three" };
+    settings->createSetting("Test.Group.Strategy", 1, "A test enum setting", enumStrategy, 0);
+    settings->createSetting("Test.Group.Limit", 10, "A test integer setting", 0.0, 1000.0);
+    settings->createSetting("Test.GroupX.Use", true, "A test Boolean setting outside the group");
+    settings->createSetting("Test.Other.Factor", 0.5, "A test double setting", 0.0, 1.0);
+
+    // Two settings share the condition Nonconvex, and one of them also has a more specific value
+    settings->addConditionalValue("Test.Group.Strategy", { E_SettingCondition::Nonconvex }, 2);
+    settings->addConditionalValue(
+        "Test.Group.Strategy", { E_SettingCondition::MIPSolverGurobi, E_SettingCondition::Nonconvex }, 3);
+    settings->addConditionalValue("Test.Group.Limit", { E_SettingCondition::Nonconvex }, 50);
+    settings->addConditionalValue("Test.GroupX.Use", { E_SettingCondition::Nonconvex }, false);
+    settings->addConditionalValue("Test.Other.Factor", { E_SettingCondition::MIPSolverHighs }, 1);
+
+    // Registering does not change the values
+    if(settings->getSetting<int>("Test.Group.Strategy") != 1 || settings->getSetting<int>("Test.Group.Limit") != 10
+        || !settings->isSettingAtDefault("Test.Group.Strategy"))
+    {
+        std::cout << "  FAIL: Registering conditional values changed the settings." << std::endl;
+        passed = false;
+    }
+
+    // A value set by the user wins over the conditional values
+    settings->updateSetting("Test.Group.Limit", 20, E_SettingPriority::UserAPI);
+
+    // Inside the group, with the conditions Nonconvex and Gurobi: the most specific value of Strategy is used, and
+    // the setting Test.GroupX.Use is not inside the group Test.Group
+    settings->applyConditionalValues({ E_SettingCondition::Nonconvex, E_SettingCondition::MIPSolverGurobi },
+        E_SettingPriority::RecommendedInternal, "Test.Group", true);
+
+    if(settings->getSetting<int>("Test.Group.Strategy") != 3
+        || settings->getSettingPriority("Test.Group.Strategy") != E_SettingPriority::RecommendedInternal)
+    {
+        std::cout << "  FAIL: The most specific conditional value was not used at the given priority." << std::endl;
+        passed = false;
+    }
+
+    if(settings->getSetting<int>("Test.Group.Limit") != 20
+        || settings->getSettingPriority("Test.Group.Limit") != E_SettingPriority::UserAPI
+        || settings->getSettingAtPriority<int>("Group.Limit", "Test", E_SettingPriority::RecommendedInternal) != 50)
+    {
+        std::cout << "  FAIL: The conditional value should be stored but not override the user's value." << std::endl;
+        passed = false;
+    }
+
+    if(!settings->getSetting<bool>("Test.GroupX.Use") || !settings->isSettingAtDefault("Test.GroupX.Use"))
+    {
+        std::cout << "  FAIL: A setting outside the group prefix was changed." << std::endl;
+        passed = false;
+    }
+
+    // Outside the group, with only the condition Nonconvex: Use changes, but not Factor, which needs HiGHS
+    settings->applyConditionalValues(
+        { E_SettingCondition::Nonconvex }, E_SettingPriority::RecommendedInternal, "Test.Group", false);
+
+    if(settings->getSetting<bool>("Test.GroupX.Use"))
+    {
+        std::cout << "  FAIL: The conditional value of a setting outside the group prefix was not used." << std::endl;
+        passed = false;
+    }
+
+    if(settings->getSetting<double>("Test.Other.Factor") != 0.5)
+    {
+        std::cout << "  FAIL: A conditional value whose condition does not hold was used." << std::endl;
+        passed = false;
+    }
+
+    // A second settings object only with the condition Nonconvex uses the less specific value
+    auto otherSettings = std::make_shared<Settings>(std::make_shared<Output>());
+    otherSettings->createSetting("Test.Group.Strategy", 1, "A test enum setting", enumStrategy, 0);
+    otherSettings->addConditionalValue("Test.Group.Strategy", { E_SettingCondition::Nonconvex }, 2);
+    otherSettings->addConditionalValue(
+        "Test.Group.Strategy", { E_SettingCondition::MIPSolverGurobi, E_SettingCondition::Nonconvex }, 3);
+    otherSettings->applyConditionalValues({ E_SettingCondition::Nonconvex, E_SettingCondition::MIPSolverCplex },
+        E_SettingPriority::RecommendedInternal, "Test.Group", true);
+
+    if(otherSettings->getSetting<int>("Test.Group.Strategy") != 2)
+    {
+        std::cout << "  FAIL: The value for only the condition Nonconvex was not used." << std::endl;
+        passed = false;
+    }
+
+    // The values are documented in the setting descriptions
+    auto markup = settings->getSettingsAsMarkup();
+
+    if(markup.find("<br>Nonconvex default: 2 (Two)<br>Nonconvex default with Gurobi: 3 (Three)") == std::string::npos
+        || markup.find("<br>Default with HiGHS: 1|") == std::string::npos)
+    {
+        std::cout << "  FAIL: The conditional values are not described correctly in the Markdown." << std::endl;
+        passed = false;
+    }
+
+    if(passed)
+        std::cout << "  PASS: Conditional values work correctly." << std::endl;
+    std::cout << "Finished conditional values test." << std::endl;
+    return passed;
+}
+
+// Invalid conditional values are rejected when they are registered
+bool TestConditionalValueRegistration()
+{
+    bool passed = true;
+    std::cout << "Starting conditional value registration test:" << std::endl;
+
+    auto settings = std::make_shared<Settings>(std::make_shared<Output>());
+
+    VectorString enumStrategy { "Zero", "One" };
+    settings->createSetting("Test.Strategy", 0, "A test enum setting", enumStrategy, 0);
+    settings->createSetting("Test.Use", true, "A test Boolean setting");
+    settings->addConditionalValue("Test.Strategy", { E_SettingCondition::Nonconvex }, 1);
+
+    auto isRejected = [&](const std::string& testCase, auto addValue)
+    {
+        try
+        {
+            addValue();
+        }
+        catch(std::exception&)
+        {
+            return;
+        }
+
+        std::cout << "  FAIL: " << testCase << " was not rejected." << std::endl;
+        passed = false;
+    };
+
+    isRejected("An undefined setting",
+        [&]() { settings->addConditionalValue("Test.Unknown", { E_SettingCondition::Nonconvex }, 1); });
+    isRejected("A value of the wrong type",
+        [&]() { settings->addConditionalValue("Test.Use", { E_SettingCondition::Nonconvex }, 1); });
+    isRejected("An enum value that is not a choice",
+        [&]() { settings->addConditionalValue("Test.Strategy", { E_SettingCondition::MIPSolverCbc }, 2); });
+    isRejected("A second value for the same conditions",
+        [&]()
+        {
+            settings->addConditionalValue(
+                "Test.Strategy", { E_SettingCondition::Nonconvex, E_SettingCondition::Nonconvex }, 0);
+        });
+
+    if(settings->getSetting<int>("Test.Strategy") != 0 || !settings->isSettingAtDefault("Test.Strategy"))
+    {
+        std::cout << "  FAIL: A rejected conditional value changed the setting." << std::endl;
+        passed = false;
+    }
+
+    if(passed)
+        std::cout << "  PASS: Invalid conditional values are rejected." << std::endl;
+    std::cout << "Finished conditional value registration test." << std::endl;
+    return passed;
+}
+
+// The recommended values for nonconvex problems are applied after reading a problem, at the recommended priority, and
+// not for a problem that the reformulation makes convex or with Strategy.UseRecommendedSettings = false
+bool TestRecommendedSettingsForProblems()
+{
+    bool passed = true;
+    std::cout << "Starting recommended settings test:" << std::endl;
+
+#ifndef HAS_AMPL
+    std::cout << "  SKIP: AMPL (.nl) support not compiled in." << std::endl;
+    return true;
+#else
+    auto readProblem = [&](const std::string& problemFile, bool useRecommendedSettings)
+    {
+        auto solver = std::make_unique<Solver>();
+
+        if(!useRecommendedSettings)
+            solver->updateSetting("Strategy.UseRecommendedSettings", false);
+
+        // Otherwise, nonconvex quadratic terms are kept with Gurobi, and the reformulation does not make the problem
+        // convex
+        solver->updateSetting("Model.Reformulation.Quadratics.Strategy",
+            static_cast<int>(ES_QuadraticProblemStrategy::ConvexQuadraticallyConstrained));
+
+        if(!solver->setProblem(problemFile))
+        {
+            std::cout << "  FAIL: Could not load " << problemFile << "." << std::endl;
+            passed = false;
+        }
+
+        return solver;
+    };
+
+    // A nonconvex problem
+    auto solver = readProblem("data/ncvx_min_div.nl", true);
+
+    if(solver->getSetting<bool>("Dual.Relaxation.Use")
+        || solver->getSettingPriority("Dual.Relaxation.Use") != E_SettingPriority::RecommendedInternal
+        || solver->getSetting<int>("Dual.MIP.SolutionLimit.Initial") != SHOT_INT_MAX
+        || solver->getSetting<int>("Primal.FixedInteger.CallStrategy")
+            != static_cast<int>(ES_PrimalNLPStrategy::AlwaysUse))
+    {
+        std::cout << "  FAIL: The recommended values for a nonconvex problem were not used." << std::endl;
+        passed = false;
+    }
+
+    // Without recommended settings, only the compatibility override of the tree strategy is applied
+    solver = readProblem("data/ncvx_min_div.nl", false);
+
+    if(!solver->getSetting<bool>("Dual.Relaxation.Use")
+        || solver->getSettingPriority("Dual.Relaxation.Use") != E_SettingPriority::Default
+        || solver->getSetting<int>("Dual.TreeStrategy") != static_cast<int>(ES_TreeStrategy::MultiTree)
+        || solver->getSettingPriority("Dual.TreeStrategy") != E_SettingPriority::SolverCompatibility)
+    {
+        std::cout << "  FAIL: With Strategy.UseRecommendedSettings = false, only the compatibility override should "
+                     "be applied."
+                  << std::endl;
+        passed = false;
+    }
+
+    // A nonconvex problem that the reformulation makes convex keeps the defaults for convex problems
+    solver = readProblem("data/instances/MINLP-nonconvex/tln2.osil", true);
+
+    if(solver->getEnvironment()->problem->properties.convexity == E_ProblemConvexity::Convex
+        || solver->getEnvironment()->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex)
+    {
+        std::cout << "  FAIL: Expected a nonconvex problem that the reformulation makes convex." << std::endl;
+        passed = false;
+    }
+    else if(!solver->getSetting<bool>("Dual.Relaxation.Use")
+        || solver->getSettingPriority("Dual.Relaxation.Use") != E_SettingPriority::Default)
+    {
+        std::cout << "  FAIL: The recommended values for nonconvex problems were used for a convex reformulation."
+                  << std::endl;
+        passed = false;
+    }
+
+    if(passed)
+        std::cout << "  PASS: The recommended settings are applied correctly." << std::endl;
+    std::cout << "Finished recommended settings test." << std::endl;
+    return passed;
+#endif
+}
+
+// The settings of all backends are defined, also if SHOT is not compiled with them, but misspelled settings are not
+bool TestSettingsOfAllBackends()
+{
+    bool passed = true;
+    std::cout << "Starting test of the settings of all backends:" << std::endl;
+
+    auto solver = std::make_unique<Solver>();
+    auto markup = solver->getSettingsAsMarkup();
+
+    for(auto& name : { "Subsolver.Cplex.MIPEmphasis", "Subsolver.Gurobi.MIPFocus", "Subsolver.Cbc.Strategy",
+            "Subsolver.Highs.Presolve", "Subsolver.Conopt.FeasibilityTolerance", "Subsolver.Ipopt.LinearSolver",
+            "Subsolver.Uno.Preset", "Subsolver.GAMS.NLP.Solver", "ModelingSystem.GAMS.QExtractAlg" })
+    {
+        if(markup.find(fmt::format("**{}**", name)) == std::string::npos)
+        {
+            std::cout << "  FAIL: The setting " << name << " is not documented." << std::endl;
+            passed = false;
+        }
+    }
+
+    try
+    {
+        solver->updateSetting("Subsolver.Gurobi.MIPFocus", 1);
+    }
+    catch(std::exception& e)
+    {
+        std::cout << "  FAIL: Setting a Gurobi setting raised an exception: " << e.what() << std::endl;
+        passed = false;
+    }
+
+    try
+    {
+        solver->updateSetting("Subsolver.Gurobi.MIPFokus", 1);
+        std::cout << "  FAIL: A misspelled setting was accepted." << std::endl;
+        passed = false;
+    }
+    catch(std::exception&)
+    {
+    }
+
+    if(passed)
+        std::cout << "  PASS: The settings of all backends are defined." << std::endl;
+    std::cout << "Finished test of the settings of all backends." << std::endl;
+    return passed;
 }
 
 // Test the writing and reading of options files

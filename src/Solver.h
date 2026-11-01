@@ -11,6 +11,7 @@
 #pragma once
 
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -40,6 +41,9 @@ private:
     void initializeSettings();
     void verifySettings();
 
+    // The conditions of the conditional setting values that hold for the problem and the selected MIP solver
+    std::set<E_SettingCondition> getSettingConditions(ProblemPtr problem);
+
     void setConvexityBasedSettingsPreReformulation();
     void setConvexityBasedSettings();
 
@@ -53,6 +57,9 @@ private:
     bool isProblemInitialized = false;
     bool isProblemSolved = false;
     bool isSolving = false;
+
+    // The setting groups of backends that are not compiled in, which a warning has been given about
+    std::set<std::string> warnedUnavailableSettingGroups;
 
     EnvironmentPtr env;
 

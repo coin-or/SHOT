@@ -1058,6 +1058,7 @@ file(
     SOURCES
     "${PROJECT_SOURCE_DIR}/src/Report.cpp"
     "${PROJECT_SOURCE_DIR}/src/Solver.cpp"
+    "${PROJECT_SOURCE_DIR}/src/SolverSettings.cpp"
     "${PROJECT_SOURCE_DIR}/src/RootsearchMethod/RootsearchMethodBoost.cpp"
 )
 
