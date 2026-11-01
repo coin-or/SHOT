@@ -11,6 +11,7 @@
 #pragma once
 
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -53,6 +54,9 @@ private:
     bool isProblemInitialized = false;
     bool isProblemSolved = false;
     bool isSolving = false;
+
+    // The setting groups of backends that are not compiled in, which a warning has been given about
+    std::set<std::string> warnedUnavailableSettingGroups;
 
     EnvironmentPtr env;
 

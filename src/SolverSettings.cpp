@@ -13,13 +13,9 @@
 #include "Output.h"
 #include "Settings.h"
 
-#ifdef HAS_GAMS
-#include "ModelingSystem/ModelingSystemGAMS.h"
-#endif
 #ifdef HAS_AMPL
 #include "ModelingSystem/ModelingSystemAMPL.h"
 #endif
-#include "ModelingSystem/ModelingSystemOSiL.h"
 
 namespace SHOT
 {
@@ -225,7 +221,8 @@ void Solver::initializeSettings()
     enumMIPSolver.push_back("Cbc");
     enumMIPSolver.push_back("Highs");
 
-    ES_MIPSolver usedMIPSolver;
+    // Without any MIP solver, this value is never used, since no problem can be solved
+    ES_MIPSolver usedMIPSolver = ES_MIPSolver::Cbc;
 
 #ifdef HAS_GUROBI
     usedMIPSolver = ES_MIPSolver::Gurobi;
@@ -240,8 +237,8 @@ void Solver::initializeSettings()
     env->output->outputCritical(" SHOT has not been compiled with support for any MIP solver.");
 #endif
 
-    env->settings->createSetting(
-        "Dual.MIP.Solver", static_cast<int>(usedMIPSolver), "Which MIP solver to use", enumMIPSolver, 0);
+    env->settings->createSetting("Dual.MIP.Solver", static_cast<int>(usedMIPSolver),
+        "Which MIP solver to use. Default: the first available of Gurobi, Cplex, Highs and Cbc", enumMIPSolver, 0);
     enumMIPSolver.clear();
 
     env->settings->createSetting(
@@ -593,6 +590,25 @@ void Solver::initializeSettings()
     env->settings->createSettingGroup("ModelingSystem", "", "Modeling system",
         "These settings control functionality used in the interfaces to different modeling environments.");
 
+    env->settings->createSettingGroup("ModelingSystem", "GAMS", "GAMS interface",
+        "These settings control functionality used in the GAMS interface. Requires SHOT compiled with GAMS (API 21 "
+        "or newer).");
+
+    VectorString enumQExtractAlg;
+    enumQExtractAlg.push_back("automatic");
+    enumQExtractAlg.push_back("threepass");
+    enumQExtractAlg.push_back("doubleforward");
+    enumQExtractAlg.push_back("concurrent (GAMS API 25 or newer)");
+    env->settings->createSetting("ModelingSystem.GAMS.QExtractAlg", 0,
+        "Extraction algorithm for quadratic equations in GAMS interface", enumQExtractAlg);
+    enumQExtractAlg.clear();
+
+    env->settings->createSetting("ModelingSystem.GAMS.QExtractDenseSwitchFactor", 0.008,
+        "Sparse/dense factor for quadratic extraction algorithm in GAMS interface (GAMS API 28 or newer).", 0.0);
+    env->settings->createSetting("ModelingSystem.GAMS.QExtractDenseSwitchLog", false,
+        "Whether to print additional information about sparse/dense factor choice in quadratic extraction algorithm "
+        "in GAMS interface (GAMS API 28 or newer).");
+
     // Logging and output settings
 
     env->settings->createSettingGroup("Output", "", "Solver output",
@@ -730,7 +746,9 @@ void Solver::initializeSettings()
     enumPrimalNLPSolver.push_back("Conopt");
 
     env->settings->createSetting("Primal.FixedInteger.Solver", static_cast<int>(ES_PrimalNLPSolver::Ipopt),
-        "NLP solver to use", enumPrimalNLPSolver, 0);
+        "NLP solver to use. Default: Ipopt. If it is not available, the first available of CONOPT, the GAMS NLP "
+        "solvers (only for GAMS models), Uno and SHOT is used",
+        enumPrimalNLPSolver, 0);
     enumPrimalNLPSolver.clear();
 
     VectorString enumPrimalBoundNLPStartingPoint;
@@ -820,9 +838,7 @@ void Solver::initializeSettings()
     env->settings->createSettingGroup("Subsolver", "", "Subsolver functionality",
         "These settings allow for more direct control of the  different subsolvers utilized in SHOT.");
 
-#ifdef HAS_CPLEX
-
-    env->settings->createSettingGroup("Subsolver", "Cplex", "Cplex", "");
+    env->settings->createSettingGroup("Subsolver", "Cplex", "Cplex", "Requires SHOT compiled with CPLEX.");
 
     env->settings->createSetting("Subsolver.Cplex.AddRelaxedLazyConstraintsAsLocal", false,
         "Whether to add lazy constraints generated in relaxed points as local or global");
@@ -921,13 +937,9 @@ void Solver::initializeSettings()
     env->settings->createSetting(
         "Subsolver.Cplex.WorkMemory", 0.0, "Memory limit for when to start swapping to disk", 0.0, 1.0e+75);
 
-#endif
-
     // Subsolver settings: Gurobi
 
-#ifdef HAS_GUROBI
-
-    env->settings->createSettingGroup("Subsolver", "Gurobi", "Gurobi", "");
+    env->settings->createSettingGroup("Subsolver", "Gurobi", "Gurobi", "Requires SHOT compiled with Gurobi.");
 
     env->settings->createSetting(
         "Subsolver.Gurobi.Heuristics", 0.05, "The relative amount of time spent in MIP heuristics.", 0.0, 1.0);
@@ -966,13 +978,9 @@ void Solver::initializeSettings()
     env->settings->createSetting("Subsolver.Gurobi.ScaleFlag", -1, "Controls model scaling", enumGurobiScaleFlag, -1);
     enumGurobiScaleFlag.clear();
 
-#endif
-
     // Subsolver settings: Cbc
 
-#ifdef HAS_CBC
-
-    env->settings->createSettingGroup("Subsolver", "Cbc", "Cbc", "");
+    env->settings->createSettingGroup("Subsolver", "Cbc", "Cbc", "Requires SHOT compiled with Cbc.");
 
     env->settings->createSetting("Subsolver.Cbc.AutoScale", false,
         "Whether to scale objective, rhs and bounds of problem if they look odd (experimental)");
@@ -1011,11 +1019,9 @@ void Solver::initializeSettings()
     env->settings->createSetting("Subsolver.Cbc.Strategy", 1, "This turns on newer features", enumStrategy, 0);
     enumStrategy.clear();
 
-#endif
+    // Subsolver settings: HiGHS
 
-#ifdef HAS_HIGHS
-
-    env->settings->createSettingGroup("Subsolver", "Highs", "Highs", "");
+    env->settings->createSettingGroup("Subsolver", "Highs", "Highs", "Requires SHOT compiled with HiGHS.");
 
     env->settings->createSetting("Subsolver.Highs.MIPAllowRestart", true, "Whether MIP restart is permitted");
 
@@ -1066,12 +1072,11 @@ void Solver::initializeSettings()
     env->settings->createSetting("Subsolver.Highs.Presolve", 1, "Use presolve", enumHighsPresolve, 0);
     enumHighsPresolve.clear();
 
-#endif
-
     // Subsolver settings: CONOPT
 
-#ifdef HAS_CONOPT
-    env->settings->createSettingGroup("Subsolver", "Conopt", "CONOPT settings", "Options for the CONOPT NLP solver");
+    env->settings->createSettingGroup("Subsolver", "Conopt", "CONOPT settings",
+        "Options for the CONOPT NLP solver. Requires SHOT compiled with CONOPT.");
+
     env->settings->createSetting(
         "Subsolver.Conopt.FeasibilityTolerance", 1e-9, "CONOPT feasibility tolerance (Rtnwma)", 1e-12, 1e-2);
     env->settings->createSetting(
@@ -1080,12 +1085,10 @@ void Solver::initializeSettings()
         "CONOPT compares the first and second derivatives with numerical ones (Lkdebg, Lkdeb2): 0 = never, -1 = at "
         "the initial point, n = every n-th iteration",
         -1, SHOT_INT_MAX);
-#endif
 
     // Subsolver settings: Ipopt
-#ifdef HAS_IPOPT
 
-    env->settings->createSettingGroup("Subsolver", "Ipopt", "Ipopt", "");
+    env->settings->createSettingGroup("Subsolver", "Ipopt", "Ipopt", "Requires SHOT compiled with Ipopt.");
 
     env->settings->createSetting("Subsolver.Ipopt.ConstraintViolationTolerance", 1E-8,
         "Constraint violation tolerance in Ipopt", 0.0, SHOT_DBL_MAX);
@@ -1120,13 +1123,9 @@ void Solver::initializeSettings()
     env->settings->createSetting("Subsolver.Ipopt.RelativeConvergenceTolerance", 1E-8,
         "Relative convergence tolerance in Ipopt (tol)", 0.0, SHOT_DBL_MAX);
 
-#endif
-
     // Subsolver settings: Uno
 
-#ifdef HAS_UNO
-
-    env->settings->createSettingGroup("Subsolver", "Uno", "Uno", "");
+    env->settings->createSettingGroup("Subsolver", "Uno", "Uno", "Requires SHOT compiled with Uno.");
 
     /* These default to Uno's own tolerances rather than to the tighter ones used for Ipopt. Uno reports an
        algorithmic error, rather than the point it reached, when it cannot certify stationarity to the requested
@@ -1156,7 +1155,16 @@ void Solver::initializeSettings()
     env->settings->createSetting("Subsolver.Uno.RelativeConvergenceTolerance", 1E-6,
         "Dual (stationarity) tolerance in Uno (dual_tolerance)", 0.0, SHOT_DBL_MAX);
 
-#endif
+    // Subsolver settings: GAMS NLP
+
+    env->settings->createSettingGroup(
+        "Subsolver", "GAMS", "GAMS", "Settings for the GAMS NLP solvers. Requires SHOT compiled with GAMS.");
+
+    env->settings->createSetting(
+        "Subsolver.GAMS.NLP.OptionsFilename", std::string(), "Options file for the NLP solver in GAMS");
+
+    env->settings->createSetting(
+        "Subsolver.GAMS.NLP.Solver", std::string("auto"), "NLP solver to use in GAMS (auto: SHOT chooses)");
 
     env->settings->createSettingGroup("Subsolver", "SHOT", "SHOT primal NLP solver", "");
 
@@ -1241,14 +1249,8 @@ void Solver::initializeSettings()
 
     env->settings->createSetting("Output.ResultPath", empty, "The path where to save the result information", true);
 
-    ModelingSystemOSiL::augmentSettings(env->settings);
-
 #ifdef HAS_AMPL
-    ModelingSystemAMPL::augmentSettings(env->settings);
-#endif
-
-#ifdef HAS_GAMS
-    ModelingSystemGAMS::augmentSettings(env->settings);
+    ModelingSystemAMPL::augmentPrivateSettings(env->settings);
 #endif
 
     env->settings->settingsInitialized = true;

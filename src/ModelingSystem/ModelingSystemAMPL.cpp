@@ -768,7 +768,7 @@ ModelingSystemAMPL::ModelingSystemAMPL(EnvironmentPtr envPtr) : IModelingSystem(
 
 ModelingSystemAMPL::~ModelingSystemAMPL() = default;
 
-void ModelingSystemAMPL::augmentSettings(SettingsPtr settings)
+void ModelingSystemAMPL::augmentPrivateSettings(SettingsPtr settings)
 {
     settings->createSetting(
         "ModelingSystem.AMPL.OptionsHeader", std::string("0\n"), "The AMPL options header for the solution file", true);

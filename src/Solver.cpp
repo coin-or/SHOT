@@ -891,6 +891,74 @@ void Solver::verifySettings()
     env->output->setLogLevels(static_cast<E_LogLevel>(env->settings->getSetting<int>("Output.Console.LogLevel")),
         static_cast<E_LogLevel>(env->settings->getSetting<int>("Output.File.LogLevel")));
 
+    // The settings of all backends are defined in every build, so that options files work with all builds, but they
+    // only have an effect if SHOT has been compiled with the backend
+    std::vector<std::pair<std::string, std::string>> unavailableSettingGroups;
+#ifndef HAS_CPLEX
+    unavailableSettingGroups.emplace_back("Subsolver.Cplex", "CPLEX");
+#endif
+#ifndef HAS_GUROBI
+    unavailableSettingGroups.emplace_back("Subsolver.Gurobi", "Gurobi");
+#endif
+#ifndef HAS_CBC
+    unavailableSettingGroups.emplace_back("Subsolver.Cbc", "Cbc");
+#endif
+#ifndef HAS_HIGHS
+    unavailableSettingGroups.emplace_back("Subsolver.Highs", "HiGHS");
+#endif
+#ifndef HAS_CONOPT
+    unavailableSettingGroups.emplace_back("Subsolver.Conopt", "CONOPT");
+#endif
+#ifndef HAS_IPOPT
+    unavailableSettingGroups.emplace_back("Subsolver.Ipopt", "Ipopt");
+#endif
+#ifndef HAS_UNO
+    unavailableSettingGroups.emplace_back("Subsolver.Uno", "Uno");
+#endif
+#ifndef HAS_GAMS
+    unavailableSettingGroups.emplace_back("Subsolver.GAMS", "GAMS");
+    unavailableSettingGroups.emplace_back("ModelingSystem.GAMS", "GAMS");
+#endif
+
+    for(auto type : { E_SettingType::String, E_SettingType::Integer, E_SettingType::Double, E_SettingType::Enum,
+            E_SettingType::Boolean })
+    {
+        for(auto& name : env->settings->getSettingIdentifiers(type))
+        {
+            // Only settings given by the user with another value than the default, since an options file written by
+            // SHOT contains all settings with their default values
+            if(env->settings->getSettingPriority(name) < E_SettingPriority::OptionsFile)
+                continue;
+
+            bool isDefaultValue;
+
+            if(type == E_SettingType::String)
+                isDefaultValue = env->settings->getSetting<std::string>(name)
+                    == env->settings->getSettingAtPriority<std::string>(name, E_SettingPriority::Default);
+            else if(type == E_SettingType::Double)
+                isDefaultValue = env->settings->getSetting<double>(name)
+                    == env->settings->getSettingAtPriority<double>(name, E_SettingPriority::Default);
+            else if(type == E_SettingType::Boolean)
+                isDefaultValue = env->settings->getSetting<bool>(name)
+                    == env->settings->getSettingAtPriority<bool>(name, E_SettingPriority::Default);
+            else
+                isDefaultValue = env->settings->getSetting<int>(name)
+                    == env->settings->getSettingAtPriority<int>(name, E_SettingPriority::Default);
+
+            if(isDefaultValue)
+                continue;
+
+            for(auto& [group, backend] : unavailableSettingGroups)
+            {
+                if(name.rfind(group + ".", 0) == 0 && warnedUnavailableSettingGroups.insert(group).second)
+                {
+                    env->output->outputWarning(fmt::format(
+                        " The settings in {} are ignored, since SHOT has not been compiled with {}.", group, backend));
+                }
+            }
+        }
+    }
+
     // Checking for errors in NLP solver selection
 
     // The GAMS NLP solvers can only be used for problems from GAMS. The settings can be verified before the problem is
