@@ -14,6 +14,7 @@
 #include "tinyxml2.h"
 
 #include <algorithm>
+#include <cassert>
 #include <set>
 #include <sstream>
 
@@ -312,6 +313,178 @@ void Settings::createSetting(
     }
 
     settingEnums[make_pair(category, name)] = true;
+}
+
+template <typename T>
+void Settings::addConditionalValue(std::string settingName, std::set<E_SettingCondition> conditions, T value)
+{
+    using value_type [[maybe_unused]] = typename std::enable_if<
+        std::is_same<double, T>::value || std::is_same<int, T>::value || std::is_same<bool, T>::value, T>::type;
+
+    auto [category, name] = splitKey(settingName);
+    PairString key = make_pair(category, name);
+
+    auto type = settingTypes.find(key);
+
+    if(type == settingTypes.end())
+        throw SettingKeyNotFoundException(name, category);
+
+    // An integer is a valid value of a double setting, as in updateSetting
+    if constexpr(std::is_same_v<T, int>)
+    {
+        if(type->second == E_SettingType::Double)
+        {
+            addConditionalValue(settingName, conditions, (double)value);
+            return;
+        }
+    }
+
+    bool isOfType;
+
+    if constexpr(std::is_same_v<T, int>)
+        isOfType = (type->second == E_SettingType::Integer || type->second == E_SettingType::Enum);
+    else if constexpr(std::is_same_v<T, double>)
+        isOfType = (type->second == E_SettingType::Double);
+    else if constexpr(std::is_same_v<T, bool>)
+        isOfType = (type->second == E_SettingType::Boolean);
+
+    if(!isOfType)
+        throw SettingSetWrongTypeException(name, category);
+
+    if constexpr(!std::is_same_v<T, bool>)
+    {
+        if(settingBounds[key].first > value || settingBounds[key].second < value)
+        {
+            throw SettingOutsideBoundsException(
+                name, category, (double)value, settingBounds[key].first, settingBounds[key].second);
+        }
+    }
+
+    auto& values = conditionalValues[key];
+
+    for(auto& V : values)
+    {
+        if(V.conditions == conditions)
+        {
+            throw std::logic_error(
+                fmt::format("Setting {}.{} already has a conditional value for the same conditions!", category, name));
+        }
+    }
+
+    // Kept ordered by the number of conditions, so that the most specific value is found last
+    auto position = std::find_if(values.begin(), values.end(),
+        [&](const ConditionalValue& V) { return V.conditions.size() > conditions.size(); });
+
+    values.insert(position, ConditionalValue { conditions, value });
+}
+
+template void Settings::addConditionalValue(
+    std::string settingName, std::set<E_SettingCondition> conditions, int value);
+template void Settings::addConditionalValue(
+    std::string settingName, std::set<E_SettingCondition> conditions, double value);
+template void Settings::addConditionalValue(
+    std::string settingName, std::set<E_SettingCondition> conditions, bool value);
+
+void Settings::applyConditionalValues(const std::set<E_SettingCondition>& activeConditions, E_SettingPriority priority,
+    const std::string& prefix, bool insidePrefix)
+{
+    for(auto& [settingKey, values] : conditionalValues)
+    {
+        // Copied, since structured bindings cannot be captured by the lambda below in C++17
+        PairString key = settingKey;
+        std::string fullName = fmt::format("{}.{}", key.first, key.second);
+
+        // Matches whole name parts, so that e.g. Model.Reformulation does not match Model.ReformulationX
+        bool isInsidePrefix = (fullName.rfind(prefix + ".", 0) == 0);
+
+        if(isInsidePrefix != insidePrefix)
+            continue;
+
+        const ConditionalValue* applied = nullptr;
+
+        for(auto& V : values)
+        {
+            if(!std::includes(
+                   activeConditions.begin(), activeConditions.end(), V.conditions.begin(), V.conditions.end()))
+                continue;
+
+            // Two values with the same number of conditions that both apply must be equal, since the order of
+            // registration should not decide which one is used
+            assert(applied == nullptr || applied->conditions.size() < V.conditions.size() || applied->value == V.value);
+
+            applied = &V;
+        }
+
+        if(applied != nullptr)
+            std::visit([&](auto value) { updateSetting(key.second, key.first, value, priority); }, applied->value);
+    }
+}
+
+// The conditional values of a setting as sentences, e.g., "Nonconvex default with Gurobi: 2"
+std::string Settings::getConditionalValuesMarkup(const PairString& key)
+{
+    auto values = conditionalValues.find(key);
+
+    if(values == conditionalValues.end())
+        return ("");
+
+    std::stringstream ss;
+
+    for(auto& V : values->second)
+    {
+        std::string problem;
+        VectorString solvers;
+
+        for(auto& C : V.conditions)
+        {
+            switch(C)
+            {
+            case E_SettingCondition::Nonconvex:
+                problem = "Nonconvex";
+                break;
+            case E_SettingCondition::MIPSolverCplex:
+                solvers.push_back("CPLEX");
+                break;
+            case E_SettingCondition::MIPSolverGurobi:
+                solvers.push_back("Gurobi");
+                break;
+            case E_SettingCondition::MIPSolverCbc:
+                solvers.push_back("Cbc");
+                break;
+            case E_SettingCondition::MIPSolverHighs:
+                solvers.push_back("HiGHS");
+                break;
+            }
+        }
+
+        std::string label = problem.empty() ? "Default" : problem + " default";
+
+        for(size_t i = 0; i < solvers.size(); i++)
+            label += (i == 0 ? " with " : " and ") + solvers[i];
+
+        std::string value;
+
+        if(auto intValue = std::get_if<int>(&V.value))
+        {
+            value = (*intValue == SHOT_INT_MAX) ? "∞" : std::to_string(*intValue);
+
+            if(auto enumDescription = enumDescriptions.find(make_tuple(key.first, key.second, *intValue));
+                enumDescription != enumDescriptions.end())
+                value += fmt::format(" ({})", enumDescription->second);
+        }
+        else if(auto doubleValue = std::get_if<double>(&V.value))
+        {
+            value = fmt::format("{}", *doubleValue);
+        }
+        else
+        {
+            value = std::get<bool>(V.value) ? "true" : "false";
+        }
+
+        ss << fmt::format("<br>{}: {}", label, value);
+    }
+
+    return (ss.str());
 }
 
 std::string Settings::getEnumDescriptionList(std::string name, std::string category)
@@ -674,6 +847,8 @@ std::string Settings::getSettingsAsMarkup()
         {
             description = fmt::format("**{}**<br>{}", fullname, settingDescriptions[key]);
         }
+
+        description += getConditionalValuesMarkup(key);
 
         PairDouble bounds;
 

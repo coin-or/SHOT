@@ -30,6 +30,9 @@ void Solver::initializeSettings()
 
     std::string empty; // Used to create empty string options
 
+    // For settings with another recommended value for nonconvex problems, see Strategy.UseRecommendedSettings
+    const std::set<E_SettingCondition> nonconvex { E_SettingCondition::Nonconvex };
+
     env->output->outputDebug(" Starting initialization of settings:");
 
     env->settings->createSettingGroup("Dual", "", "Dual strategy",
@@ -71,6 +74,7 @@ void Solver::initializeSettings()
 
     env->settings->createSetting("Dual.ESH.InteriorPoint.CuttingPlane.IterationLimit", 100,
         "Iteration limit for minimax cutting plane solver", 1, SHOT_INT_MAX);
+    env->settings->addConditionalValue("Dual.ESH.InteriorPoint.CuttingPlane.IterationLimit", nonconvex, 50);
 
     env->settings->createSetting("Dual.ESH.InteriorPoint.CuttingPlane.IterationLimitSubsolver", 100,
         "Iteration limit for minimization subsolver", 0, SHOT_INT_MAX);
@@ -118,6 +122,7 @@ void Solver::initializeSettings()
         "Max number of violated nonlinear constraints, the most violated first, to generate hyperplanes for "
         "in each solution point, as a fraction of the number of nonlinear constraints",
         0.0, 1.0);
+    env->settings->addConditionalValue("Dual.HyperplaneCuts.ConstraintSelectionFactor", nonconvex, 1.0);
 
     env->settings->createSetting(
         "Dual.HyperplaneCuts.Delay", true, "Add hyperplane cuts to model only after optimal MIP solution");
@@ -138,6 +143,7 @@ void Solver::initializeSettings()
 
     env->settings->createSetting("Dual.HyperplaneCuts.UseIntegerCuts", false,
         "Add integer cuts for infeasible integer-combinations for binary problems");
+    env->settings->addConditionalValue("Dual.HyperplaneCuts.UseIntegerCuts", nonconvex, true);
 
     VectorString enumObjectiveRootsearch;
     enumObjectiveRootsearch.push_back("Always");
@@ -208,6 +214,7 @@ void Solver::initializeSettings()
         "Max number of iterations between MIP solution limit increases", 0, SHOT_INT_MAX);
 
     env->settings->createSetting("Dual.MIP.SolutionLimit.Initial", 1, "Initial MIP solution limit", 1, SHOT_INT_MAX);
+    env->settings->addConditionalValue("Dual.MIP.SolutionLimit.Initial", nonconvex, SHOT_INT_MAX);
 
     env->settings->createSetting("Dual.MIP.SolutionLimit.UpdateTolerance", 0.001,
         "The constraint tolerance for when to update MIP solution limit", 0, SHOT_DBL_MAX);
@@ -295,6 +302,7 @@ void Solver::initializeSettings()
         "These settings control various aspects regarding integer-relaxation of the dual problem.");
 
     env->settings->createSetting("Dual.Relaxation.Use", true, "Initially solve continuous dual relaxations");
+    env->settings->addConditionalValue("Dual.Relaxation.Use", nonconvex, false);
 
     env->settings->createSetting("Dual.Relaxation.Frequency", 0,
         "The frequency to solve an LP problem, if Dual.Relaxation.Use is true (by default not for nonconvex problems): "
@@ -555,6 +563,11 @@ void Solver::initializeSettings()
         "How to treat quadratic functions", enumQPStrategy, 0);
     enumQPStrategy.clear();
 
+    // Gurobi solves problems with nonconvex quadratic terms
+    env->settings->addConditionalValue("Model.Reformulation.Quadratics.Strategy",
+        { E_SettingCondition::Nonconvex, E_SettingCondition::MIPSolverGurobi },
+        static_cast<int>(ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained));
+
     VectorString enumQPDecomposition;
     enumQPDecomposition.push_back("No decomposition");
     enumQPDecomposition.push_back("Eigenvalue decomposition");
@@ -680,6 +693,8 @@ void Solver::initializeSettings()
         static_cast<int>(ES_PrimalNLPStrategy::IterationOrTimeAndAllFeasibleSolutions),
         "When should the fixed strategy be used", enumPrimalNLPStrategy, 0);
     enumPrimalNLPStrategy.clear();
+    env->settings->addConditionalValue(
+        "Primal.FixedInteger.CallStrategy", nonconvex, static_cast<int>(ES_PrimalNLPStrategy::AlwaysUse));
 
     env->settings->createSetting("Primal.FixedInteger.CreateInfeasibilityCut", false,
         "Create cutting planes in the solution point of the fixed-integer NLP problem for the nonlinear "
@@ -713,6 +728,7 @@ void Solver::initializeSettings()
 
     env->settings->createSetting("Primal.FixedInteger.Enumeration.UseInitially", false,
         "Solve NLP problems for all combinations of the discrete variables before the dual strategy");
+    env->settings->addConditionalValue("Primal.FixedInteger.Enumeration.UseInitially", nonconvex, true);
 
     env->settings->createSetting("Primal.FixedInteger.Enumeration.UseAsFallback", true,
         "Solve NLP problems for all combinations of the discrete variables if the objective gap could not be closed");
@@ -737,6 +753,7 @@ void Solver::initializeSettings()
     env->settings->createSetting("Primal.FixedInteger.OnlyUniqueIntegerCombinations", true,
         "Solve the NLP problem only once for each combination of the discrete variables. If false, it is "
         "solved again from different continuous values, e.g. for nonconvex problems");
+    env->settings->addConditionalValue("Primal.FixedInteger.OnlyUniqueIntegerCombinations", nonconvex, false);
 
     VectorString enumPrimalNLPSolver;
     enumPrimalNLPSolver.push_back("Ipopt");
@@ -763,6 +780,8 @@ void Solver::initializeSettings()
         "callbacks use each new incumbent, and this applies to the solution pool after the search",
         enumPrimalBoundNLPStartingPoint, 0);
     enumPrimalBoundNLPStartingPoint.clear();
+    env->settings->addConditionalValue(
+        "Primal.FixedInteger.Source", nonconvex, static_cast<int>(ES_PrimalNLPFixedPoint::AllSolutions));
 
     VectorString enumPrimalBoundNLPProblemSource;
     enumPrimalBoundNLPProblemSource.push_back("Original problem");
@@ -831,7 +850,8 @@ void Solver::initializeSettings()
     env->settings->createSettingGroup("Strategy", "", "Strategy", "Overall strategy parameters used in SHOT.");
 
     env->settings->createSetting("Strategy.UseRecommendedSettings", true,
-        "Modifies some settings to their recommended values based on the strategy");
+        "Use the recommended defaults for nonconvex problems and MIP solvers, shown in the setting descriptions, and "
+        "the solver-specific adjustments");
 
     // Subsolver settings: Cplex
 

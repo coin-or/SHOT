@@ -41,6 +41,9 @@ private:
     void initializeSettings();
     void verifySettings();
 
+    // The conditions of the conditional setting values that hold for the problem and the selected MIP solver
+    std::set<E_SettingCondition> getSettingConditions(ProblemPtr problem);
+
     void setConvexityBasedSettingsPreReformulation();
     void setConvexityBasedSettings();
 

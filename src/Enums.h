@@ -214,6 +214,18 @@ enum class E_SettingPriority : int
     SolverCompatibility = 50 // Highest: hard override due to subsolver capability or compile-time limitations
 };
 
+// Conditions under which a setting has another default value, see Settings::addConditionalValue
+enum class E_SettingCondition
+{
+    // The problem is not convex. The settings in Model.Reformulation use the original problem, since they decide the
+    // reformulation, and the other settings use the reformulated problem
+    Nonconvex,
+    MIPSolverCplex,
+    MIPSolverGurobi,
+    MIPSolverCbc,
+    MIPSolverHighs
+};
+
 enum class E_SolutionStrategy
 {
     SingleTree,

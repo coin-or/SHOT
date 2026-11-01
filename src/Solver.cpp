@@ -1156,23 +1156,43 @@ void Solver::verifySettings()
             static_cast<int>(ES_IterationOutputDetail::Full), E_SettingPriority::RecommendedInternal);
 }
 
+std::set<E_SettingCondition> Solver::getSettingConditions(ProblemPtr problem)
+{
+    std::set<E_SettingCondition> conditions;
+
+    if(problem->properties.convexity != E_ProblemConvexity::Convex)
+        conditions.insert(E_SettingCondition::Nonconvex);
+
+    switch(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")))
+    {
+    case ES_MIPSolver::Cplex:
+        conditions.insert(E_SettingCondition::MIPSolverCplex);
+        break;
+    case ES_MIPSolver::Gurobi:
+#if defined(HAS_GUROBI) && GRB_VERSION_MAJOR >= 9
+        // The recommended values for Gurobi assume version 9 or newer, which supports nonconvex quadratic terms
+        conditions.insert(E_SettingCondition::MIPSolverGurobi);
+#endif
+        break;
+    case ES_MIPSolver::Cbc:
+        conditions.insert(E_SettingCondition::MIPSolverCbc);
+        break;
+    case ES_MIPSolver::Highs:
+        conditions.insert(E_SettingCondition::MIPSolverHighs);
+        break;
+    default:
+        break;
+    }
+
+    return (conditions);
+}
+
 void Solver::setConvexityBasedSettingsPreReformulation()
 {
+    // The reformulation settings use the original problem, since they decide the reformulation
     if(env->settings->getSetting<bool>("Strategy.UseRecommendedSettings"))
-    {
-        if(env->problem->properties.convexity != E_ProblemConvexity::Convex)
-        {
-            // env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy", 0);
-
-#if defined(HAS_GUROBI) && GRB_VERSION_MAJOR >= 9
-            // Activate Gurobi nonconvex MIQCQP solver for all nonconvex quadratic terms by default
-            if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Gurobi)
-                env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy",
-                    (int)ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained,
-                    E_SettingPriority::RecommendedInternal);
-#endif
-        }
-    }
+        env->settings->applyConditionalValues(
+            getSettingConditions(env->problem), E_SettingPriority::RecommendedInternal, "Model.Reformulation", true);
 }
 
 void Solver::setConvexityBasedSettings()
@@ -1191,28 +1211,13 @@ void Solver::setConvexityBasedSettings()
 
     if(env->settings->getSetting<bool>("Strategy.UseRecommendedSettings"))
     {
+        // The other settings use the reformulated problem, so that a problem that the reformulation makes convex keeps
+        // the defaults for convex problems
+        env->settings->applyConditionalValues(getSettingConditions(env->reformulatedProblem),
+            E_SettingPriority::RecommendedInternal, "Model.Reformulation", false);
+
         if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex)
         {
-            env->settings->updateSetting(
-                "Dual.ESH.InteriorPoint.CuttingPlane.IterationLimit", 50, E_SettingPriority::RecommendedInternal);
-            env->settings->updateSetting(
-                "Dual.HyperplaneCuts.ConstraintSelectionFactor", 1.0, E_SettingPriority::RecommendedInternal);
-            env->settings->updateSetting(
-                "Dual.HyperplaneCuts.UseIntegerCuts", true, E_SettingPriority::RecommendedInternal);
-
-            env->settings->updateSetting(
-                "Dual.MIP.SolutionLimit.Initial", SHOT_INT_MAX, E_SettingPriority::RecommendedInternal);
-
-            env->settings->updateSetting("Dual.Relaxation.Use", false, E_SettingPriority::RecommendedInternal);
-
-            env->settings->updateSetting("Primal.FixedInteger.CallStrategy", 0, E_SettingPriority::RecommendedInternal);
-            env->settings->updateSetting(
-                "Primal.FixedInteger.Enumeration.UseInitially", true, E_SettingPriority::RecommendedInternal);
-            env->settings->updateSetting("Primal.FixedInteger.Source", 0, E_SettingPriority::RecommendedInternal);
-
-            env->settings->updateSetting(
-                "Primal.FixedInteger.OnlyUniqueIntegerCombinations", false, E_SettingPriority::RecommendedInternal);
-
 #ifdef HAS_CPLEX
 
             if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Cplex)
