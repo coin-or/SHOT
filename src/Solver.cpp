@@ -254,15 +254,7 @@ bool Solver::setProblem(std::string fileName)
         initializeDebugMode();
     }
 
-    // Do not do convexifying reformulations if the problem is assumed to be convex
-    if(env->settings->getSetting<bool>("Model.Convexity.AssumeConvex"))
-    {
-        env->settings->updateSetting("Model.Reformulation.Bilinear.IntegerFormulation",
-            (int)ES_ReformulateBilinearInteger::No, E_SettingPriority::RecommendedInternal);
-
-        env->settings->updateSetting("Model.Reformulation.Monomials.Formulation",
-            (int)ES_ReformulationBinaryMonomials::None, E_SettingPriority::RecommendedInternal);
-    }
+    setReformulationSettings();
 
 #ifndef HAS_GAMS
     if(problemExtension == ".gms")
@@ -277,22 +269,6 @@ bool Solver::setProblem(std::string fileName)
     {
         env->output->outputError(" SHOT has not been compiled with support for AMPL .nl files.");
         return (false);
-    }
-#endif
-
-#ifdef HAS_CBC
-    if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Cbc)
-    {
-        env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy",
-            (int)ES_QuadraticProblemStrategy::Nonlinear, E_SettingPriority::SolverCompatibility);
-    }
-#endif
-
-#ifdef HAS_HIGHS
-    if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Highs)
-    {
-        env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy",
-            (int)ES_QuadraticProblemStrategy::Nonlinear, E_SettingPriority::SolverCompatibility);
     }
 #endif
 
@@ -479,31 +455,7 @@ bool Solver::setProblem(
         initializeDebugMode();
     }
 
-    // Do not do convexifying reformulations if the problem is assumed to be convex
-    if(env->settings->getSetting<bool>("Model.Convexity.AssumeConvex"))
-    {
-        env->settings->updateSetting("Model.Reformulation.Bilinear.IntegerFormulation",
-            (int)ES_ReformulateBilinearInteger::No, E_SettingPriority::RecommendedInternal);
-
-        env->settings->updateSetting("Model.Reformulation.Monomials.Formulation",
-            (int)ES_ReformulationBinaryMonomials::None, E_SettingPriority::RecommendedInternal);
-    }
-
-#ifdef HAS_CBC
-    if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Cbc)
-    {
-        env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy",
-            (int)ES_QuadraticProblemStrategy::Nonlinear, E_SettingPriority::SolverCompatibility);
-    }
-#endif
-
-#ifdef HAS_HIGHS
-    if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Highs)
-    {
-        env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy",
-            (int)ES_QuadraticProblemStrategy::Nonlinear, E_SettingPriority::SolverCompatibility);
-    }
-#endif
+    setReformulationSettings();
 
     // The cutoff the dual solver starts from, as in the overload reading the problem from a file. Without this
     // Dual.MIP.CutOff.InitialValue would silently have no effect on this path.
@@ -584,6 +536,37 @@ bool Solver::setProblem(
     env->timing->stopTimer("Total");
 
     return (isStrategySelected);
+}
+
+// Called before the problem is read and bound tightening is performed, since these use the reformulation settings
+void Solver::setReformulationSettings()
+{
+    // Do not do convexifying reformulations if the problem is assumed to be convex
+    if(env->settings->getSetting<bool>("Model.Convexity.AssumeConvex"))
+    {
+        env->settings->updateSetting("Model.Reformulation.Bilinear.IntegerFormulation",
+            (int)ES_ReformulateBilinearInteger::No, E_SettingPriority::RecommendedInternal);
+
+        env->settings->updateSetting("Model.Reformulation.Monomials.Formulation",
+            (int)ES_ReformulationBinaryMonomials::None, E_SettingPriority::RecommendedInternal);
+    }
+
+    // Cbc and HiGHS are not given quadratic terms
+#ifdef HAS_CBC
+    if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Cbc)
+    {
+        env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy",
+            (int)ES_QuadraticProblemStrategy::Nonlinear, E_SettingPriority::SolverCompatibility);
+    }
+#endif
+
+#ifdef HAS_HIGHS
+    if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Highs)
+    {
+        env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy",
+            (int)ES_QuadraticProblemStrategy::Nonlinear, E_SettingPriority::SolverCompatibility);
+    }
+#endif
 }
 
 bool Solver::selectStrategy()

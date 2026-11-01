@@ -44,6 +44,9 @@ private:
     // The conditions of the conditional setting values that hold for the problem and the selected MIP solver
     std::set<E_SettingCondition> getSettingConditions(ProblemPtr problem);
 
+    // Sets the reformulation settings given by Model.Convexity.AssumeConvex and the MIP solver
+    void setReformulationSettings();
+
     void setConvexityBasedSettingsPreReformulation();
     void setConvexityBasedSettings();
 
