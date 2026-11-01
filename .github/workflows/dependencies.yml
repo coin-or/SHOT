@@ -7,7 +7,8 @@ on:
       - 'ThirdParty/**'
       - 'src/**'
       - 'CMakeLists.txt'
-      - 'misc/**'
+      - 'cmake/**'
+      - 'scripts/**'
       - '.github/workflows/dependencies.yml'
 
 permissions:
@@ -51,7 +52,7 @@ jobs:
         if: runner.os == 'macOS'
         run: brew install cbc ipopt pkg-config
       - name: Verify dependency pins
-        run: python misc/check-dependencies.py
+        run: python scripts/check-dependencies.py
       - name: Configure
         env:
           CC: ${{ matrix.cc }}
@@ -61,7 +62,7 @@ jobs:
           -DCMAKE_BUILD_TYPE=${{ matrix.type }}
           -DSHOT_WARNINGS_AS_ERRORS=ON
           -DHAS_GAMS=OFF -DHAS_CPLEX=OFF -DHAS_GUROBI=OFF
-          -DHAS_PYTHON=ON -DCOMPILE_TESTS=ON -DBUILD_DOCUMENTATION=OFF
+          -DHAS_PYTHON=ON -DCOMPILE_TESTS=ON
       - name: Build
         run: cmake --build build --parallel 3
       - name: Test

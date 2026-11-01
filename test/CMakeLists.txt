@@ -82,7 +82,7 @@ set(Model_parts
     73
     74) # The different parts of each test (if any)
 
-set(Settings_parts 1 2 3 4 5 6 7 8 9)
+set(Settings_parts 1 2 3 4 5 6 7 8 9 10 11 12 13)
 
 if(HAS_CBC)
   set(Cbc_parts 1 2 3 4 5 6 7 8 9 10 11 12)
@@ -129,7 +129,7 @@ if(HAS_GAMS)
   set(cpptests ${cpptests} GAMS)
 endif()
 
-set(DualBound_parts 1 2 3 4 5 6 7 8 9 10 11 12 13 14)
+set(DualBound_parts 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15)
 set(cpptests ${cpptests} DualBound)
 
 set(Determinism_parts 1 2 3)

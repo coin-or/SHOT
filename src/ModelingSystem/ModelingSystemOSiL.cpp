@@ -36,8 +36,6 @@ ModelingSystemOSiL::ModelingSystemOSiL(EnvironmentPtr envPtr) : IModelingSystem(
 
 ModelingSystemOSiL::~ModelingSystemOSiL() = default;
 
-void ModelingSystemOSiL::augmentSettings([[maybe_unused]] SettingsPtr settings) { }
-
 void ModelingSystemOSiL::updateSettings([[maybe_unused]] SettingsPtr settings) { }
 
 E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, const std::string& filename)

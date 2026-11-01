@@ -34,8 +34,8 @@ public:
     IModelingSystem(EnvironmentPtr envPtr) : env(envPtr) {};
     virtual ~IModelingSystem() = default;
 
-    // Adds modeling system specific settings
-    static void augmentSettings([[maybe_unused]] SettingsPtr settings) {};
+    // Adds modeling system specific private settings; public settings are defined in SolverSettings.cpp
+    static void augmentPrivateSettings([[maybe_unused]] SettingsPtr settings) { };
 
     // Get specific settings from modeling system
     virtual void updateSettings(SettingsPtr settings) = 0;
