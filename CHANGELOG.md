@@ -83,7 +83,7 @@ Changes since SHOT 1.1.
   and `AGENTS.md` with instructions for AI coding agents ([06f753cd]).
 - The settings reference lists the settings of all MIP and NLP solvers and of
   GAMS with the solver each requires, also when SHOT is built without them,
-  and the recommended values for nonconvex problems.
+  and the recommended values for nonconvex problems ([#242]).
 
 ### Changed
 
@@ -106,7 +106,7 @@ Changes since SHOT 1.1.
 - Settings of a MIP or NLP solver or of GAMS that SHOT is not compiled with
   are accepted instead of giving an error, so that the same options files
   work with all builds; a warning tells that they are ignored if they are
-  changed from their defaults.
+  changed from their defaults ([#242]).
 
 ### Fixed
 
@@ -197,6 +197,7 @@ Changes since SHOT 1.1.
 [#239]: https://github.com/coin-or/SHOT/pull/239
 [#240]: https://github.com/coin-or/SHOT/pull/240
 [#241]: https://github.com/coin-or/SHOT/pull/241
+[#242]: https://github.com/coin-or/SHOT/pull/242
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e
