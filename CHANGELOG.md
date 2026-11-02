@@ -98,7 +98,7 @@ Changes since SHOT 1.1.
   solution are given to the MIP solver as a partial start, which it completes
   by solving the LP with these values fixed. This is on for convex problems
   (setting `Dual.MIP.UseDualSolutionStart`), where it mainly helps HiGHS and
-  Cbc find primal solutions.
+  Cbc find primal solutions ([#248]).
 
 ### Changed
 
@@ -217,6 +217,7 @@ Changes since SHOT 1.1.
 [#242]: https://github.com/coin-or/SHOT/pull/242
 [#245]: https://github.com/coin-or/SHOT/pull/245
 [#246]: https://github.com/coin-or/SHOT/pull/246
+[#248]: https://github.com/coin-or/SHOT/pull/248
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e
