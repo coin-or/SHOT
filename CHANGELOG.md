@@ -145,7 +145,9 @@ Changes since SHOT 1.1.
   large problem uses up most of it.
 - The OSrL results name HiGHS as the dual solver, where the name was empty,
   and give the NLP solver used for the fixed-integer NLP problems as
-  `FixedNLPSolver`, which gave the dual solver ([c95eba1d]).
+  `FixedNLPSolver`, which gave the dual solver ([c95eba1d]). The trace file
+  gives the NLP solver only if an NLP problem was solved, and the GAMS NLP
+  solver called instead of the setting, e.g., `CONOPT` instead of `auto`.
 
 ### Removed
 

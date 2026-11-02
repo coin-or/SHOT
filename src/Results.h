@@ -88,6 +88,7 @@ public:
     ES_MIPSolver usedMIPSolver = ES_MIPSolver::NotUsed;
     ES_PrimalNLPSolver usedPrimalNLPSolver = ES_PrimalNLPSolver::NotUsed;
     std::string usedPrimalNLPSolverDescription = "";
+    std::string usedPrimalGAMSNLPSolver = "";
 
     bool solutionIsGlobal = true;
 

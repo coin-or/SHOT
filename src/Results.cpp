@@ -1204,13 +1204,15 @@ std::string Results::getResultsTrace()
     ss << "SHOT"
        << ",";
 
-    switch(static_cast<ES_PrimalNLPSolver>(this->usedPrimalNLPSolver))
+    // The NLP solver is created when the primal strategy is set up, so it is only stated if an NLP problem was solved
+    switch(
+        env->solutionStatistics.numberOfProblemsFixedNLP == 0 ? ES_PrimalNLPSolver::NotUsed : this->usedPrimalNLPSolver)
     {
     case(ES_PrimalNLPSolver::NotUsed):
         ss << "NONE";
         break;
     case(ES_PrimalNLPSolver::GAMS):
-        ss << env->settings->getSetting<std::string>("Subsolver.GAMS.NLP.Solver");
+        ss << this->usedPrimalGAMSNLPSolver;
         break;
     case ES_PrimalNLPSolver::Conopt:
         ss << "CONOPT";

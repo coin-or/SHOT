@@ -108,9 +108,11 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(
         sourceIsReformulatedProblem = false;
 
         env->results->usedPrimalNLPSolver = ES_PrimalNLPSolver::GAMS;
-        NLPSolver = std::make_shared<NLPSolverGAMS>(env,
+        auto GAMSSolver = std::make_shared<NLPSolverGAMS>(env,
             (std::dynamic_pointer_cast<ModelingSystemGAMS>(env->modelingSystem))->modelingObject,
             (std::dynamic_pointer_cast<ModelingSystemGAMS>(env->modelingSystem))->auditLicensing);
+        env->results->usedPrimalGAMSNLPSolver = GAMSSolver->getSelectedSolverName();
+        NLPSolver = GAMSSolver;
 
         break;
     }
