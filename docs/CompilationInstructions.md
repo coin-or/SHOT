@@ -593,10 +593,11 @@ target_link_libraries(my_solver PRIVATE SHOT::SHOTSolver)
 
 Configure that project with `-DCMAKE_PREFIX_PATH="$HOME/.local"` if the
 prefix is not in CMake's default search paths. The imported target supplies
-SHOT's include directories and C++17 requirement. Public headers that expose
-CppAD, Eigen, spdlog, Boost, MC++, or tinyxml2 use the matching bundled headers
-installed with SHOT. Code that includes an optional solver's own headers
-still needs that solver's development package.
+SHOT's include directories and C++17 requirement. The headers are installed in
+`include/SHOT`; include them as, e.g., `#include <SHOT/Solver.h>`. Public
+headers that expose CppAD, Eigen, spdlog, Boost, MC++, or tinyxml2 use the
+matching bundled headers installed with SHOT. Code that includes an optional
+solver's own headers still needs that solver's development package.
 
 ## Running the tests
 
