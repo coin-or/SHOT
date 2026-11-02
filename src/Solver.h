@@ -215,6 +215,10 @@ public:
     E_TerminationReason getTerminationReason();
     E_ModelReturnStatus getModelReturnStatus();
 
+    // A message that the convexity of the problem, the objective function or some constraints has been specified by
+    // the user instead of detected, empty otherwise
+    std::string getUserSpecifiedConvexityDescription();
+
     // Static methods to query available solvers and modeling systems
     static std::vector<ES_ModelingSystem> getSupportedModelingSystems();
     static std::vector<ES_MIPSolver> getSupportedMIPSolvers();

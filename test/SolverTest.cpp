@@ -3441,6 +3441,275 @@ bool TestStartingPoint()
     return passed;
 }
 
+// A problem with the constraints exp(y1)/y2 + exp(y2)/y1 <= 8 and -10 <= -exp(y2)/y1 - y1^2, which share variables.
+// Both are convex, the second one since its function is concave and it only has a lower bound, but their convexity
+// is not detected.
+static std::pair<std::unique_ptr<SHOT::Solver>, std::shared_ptr<SHOT::Environment>> MakeUserConvexitySolver(
+    bool specifyConvexity, bool assumeConvex)
+{
+    auto solver = std::make_unique<SHOT::Solver>();
+    auto env = solver->getEnvironment();
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+    solver->updateSetting("Model.Convexity.AssumeConvex", assumeConvex);
+
+    // Partitioning the sums would introduce auxiliary constraints whose convexity is not known
+    solver->updateSetting(
+        "Model.Reformulation.Constraint.PartitionNonlinearTerms", static_cast<int>(ES_PartitionNonlinearSums::Always));
+
+    auto problem = std::make_shared<SHOT::Problem>(env);
+    problem->name = "userconvexity";
+
+    auto y1 = std::make_shared<Variable>("y1", E_VariableType::Real, 0.5, 2.0);
+    auto y2 = std::make_shared<Variable>("y2", E_VariableType::Integer, 1.0, 3.0);
+    problem->add({ y1, y2 });
+
+    auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<LinearTerm>(-1.0, y1));
+    objective->add(std::make_shared<LinearTerm>(-2.0, y2));
+    problem->add(objective);
+
+    auto nl_y1 = std::make_shared<ExpressionVariable>(y1);
+    auto nl_y2 = std::make_shared<ExpressionVariable>(y2);
+
+    auto c1 = std::make_shared<NonlinearConstraint>("c1", SHOT_DBL_MIN, 8.0);
+    c1->add(std::make_shared<ExpressionSum>(
+        std::make_shared<ExpressionDivide>(std::make_shared<ExpressionExp>(nl_y1), nl_y2),
+        std::make_shared<ExpressionDivide>(std::make_shared<ExpressionExp>(nl_y2), nl_y1)));
+
+    auto c2 = std::make_shared<NonlinearConstraint>("c2", -10.0, SHOT_DBL_MAX);
+    c2->add(std::make_shared<QuadraticTerm>(-1.0, y1, y1));
+    c2->add(std::make_shared<ExpressionNegate>(
+        std::make_shared<ExpressionDivide>(std::make_shared<ExpressionExp>(nl_y2), nl_y1)));
+
+    if(specifyConvexity)
+    {
+        c1->setFunctionConvexity(E_Convexity::Convex);
+        c2->setFunctionConvexity(E_Convexity::Concave);
+    }
+
+    problem->add(c1);
+    problem->add(c2);
+
+    problem->updateProperties();
+    problem->finalize();
+    solver->setProblem(problem);
+
+    return { std::move(solver), env };
+}
+
+bool TestUserSpecifiedConvexity()
+{
+    bool passed = true;
+
+    auto expect = [&](bool condition, const std::string& message)
+    {
+        if(!condition)
+        {
+            std::cout << "  " << message << '\n';
+            passed = false;
+        }
+    };
+
+    auto [detectedSolver, detectedEnv] = MakeUserConvexitySolver(false, false);
+
+    // Otherwise the test does not show that the specified convexity is used
+    expect(detectedEnv->problem->properties.convexity == E_ProblemConvexity::Nonconvex,
+        "The convexity of the constraints is detected, so the test problem must be changed");
+    expect(detectedSolver->getUserSpecifiedConvexityDescription().empty(),
+        "There is a message about user-specified convexity, although none has been specified");
+
+    detectedSolver->solveProblem();
+
+    expect(detectedEnv->reformulatedProblem->properties.numberOfAuxiliaryVariables > 0,
+        "The constraints are not partitioned, so the test problem must be changed");
+
+    auto [solver, env] = MakeUserConvexitySolver(true, false);
+
+    for(auto& C : env->problem->numericConstraints)
+    {
+        expect(C->properties.convexity == E_Convexity::Convex, fmt::format("Constraint {} is not convex", C->name));
+    }
+
+    // The lower bound of c2 has been moved to the right-hand side by negating its function
+    auto c2 = *std::find_if(env->problem->numericConstraints.begin(), env->problem->numericConstraints.end(),
+        [](const NumericConstraintPtr& C) { return (C->name == "c2"); });
+    expect(c2->properties.userFunctionConvexity == E_Convexity::Convex
+            && c2->properties.functionConvexity == E_Convexity::Convex,
+        "The specified convexity of the function of c2 has not been negated with the function");
+
+    expect(env->problem->properties.convexity == E_ProblemConvexity::Convex, "The problem is not convex");
+    expect(env->problem->properties.numberOfUserSpecifiedConvexConstraints == 2,
+        "The number of constraints with user-specified convexity is not 2");
+
+    solver->solveProblem();
+
+    expect(env->reformulatedProblem->properties.convexity == E_ProblemConvexity::Convex,
+        "The reformulated problem is not convex");
+    expect(env->reformulatedProblem->properties.numberOfAuxiliaryVariables == 0,
+        "The constraints with user-specified convexity have been partitioned");
+
+    for(auto& C : env->reformulatedProblem->numericConstraints)
+    {
+        expect(C->properties.convexity == E_Convexity::Convex,
+            fmt::format("Constraint {} of the reformulated problem is not convex", C->name));
+    }
+
+    expect(
+        solver->getModelReturnStatus() == E_ModelReturnStatus::OptimalGlobal, "The solution is not globally optimal");
+    expect(std::abs(solver->getPrimalBound() - detectedSolver->getPrimalBound()) < 1e-4,
+        fmt::format("The primal bound {} differs from the one without the specified convexity, {}",
+            solver->getPrimalBound(), detectedSolver->getPrimalBound()));
+
+    auto description = solver->getUserSpecifiedConvexityDescription();
+    expect(description.find("2 constraints") != std::string::npos,
+        fmt::format("The message about user-specified convexity is wrong: '{}'", description));
+    expect(solver->getResultsOSrL().find("UserSpecifiedConvexity") != std::string::npos,
+        "The OSrL results do not tell that the convexity has been specified by the user");
+
+    auto [assumedSolver, assumedEnv] = MakeUserConvexitySolver(false, true);
+    expect(assumedSolver->getUserSpecifiedConvexityDescription().find("whole problem") != std::string::npos,
+        "The message does not tell that the whole problem has been assumed to be convex");
+
+    try
+    {
+        std::make_shared<NonlinearConstraint>("c", SHOT_DBL_MIN, 0.0)->setFunctionConvexity(E_Convexity::Linear);
+        expect(false, "Specifying a linear function convexity did not throw");
+    }
+    catch(const std::invalid_argument&)
+    {
+    }
+
+    return passed;
+}
+
+// A problem with the objective function exp(y1)/y2 + exp(y2)/y1 - y1 - 2*y2, whose terms share variables, and a linear
+// constraint. The objective function is convex, but its convexity is not detected. When maximizing, its negation is.
+static std::pair<std::unique_ptr<SHOT::Solver>, std::shared_ptr<SHOT::Environment>> MakeUserObjectiveConvexitySolver(
+    bool specifyConvexity, bool maximize, ES_ObjectiveEpigraphStrategy epigraphStrategy)
+{
+    auto solver = std::make_unique<SHOT::Solver>();
+    auto env = solver->getEnvironment();
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+    solver->updateSetting("Model.Reformulation.ObjectiveFunction.EpigraphStrategy", static_cast<int>(epigraphStrategy));
+
+    // Partitioning the sums would introduce auxiliary constraints whose convexity is not known
+    solver->updateSetting("Model.Reformulation.ObjectiveFunction.PartitionNonlinearTerms",
+        static_cast<int>(ES_PartitionNonlinearSums::Always));
+    solver->updateSetting(
+        "Model.Reformulation.Constraint.PartitionNonlinearTerms", static_cast<int>(ES_PartitionNonlinearSums::Always));
+
+    auto problem = std::make_shared<SHOT::Problem>(env);
+    problem->name = "userobjectiveconvexity";
+
+    auto y1 = std::make_shared<Variable>("y1", E_VariableType::Real, 0.5, 2.0);
+    auto y2 = std::make_shared<Variable>("y2", E_VariableType::Integer, 1.0, 3.0);
+    problem->add({ y1, y2 });
+
+    double sign = maximize ? -1.0 : 1.0;
+
+    auto objective = std::make_shared<NonlinearObjectiveFunction>(
+        maximize ? E_ObjectiveFunctionDirection::Maximize : E_ObjectiveFunctionDirection::Minimize);
+
+    if(specifyConvexity)
+        objective->setFunctionConvexity(maximize ? E_Convexity::Concave : E_Convexity::Convex);
+
+    auto nl_y1 = std::make_shared<ExpressionVariable>(y1);
+    auto nl_y2 = std::make_shared<ExpressionVariable>(y2);
+
+    objective->add(std::make_shared<LinearTerm>(-sign, y1));
+    objective->add(std::make_shared<LinearTerm>(-2.0 * sign, y2));
+    objective->add(std::make_shared<ExpressionSum>(
+        std::make_shared<ExpressionProduct>(std::make_shared<ExpressionConstant>(sign),
+            std::make_shared<ExpressionDivide>(std::make_shared<ExpressionExp>(nl_y1), nl_y2)),
+        std::make_shared<ExpressionProduct>(std::make_shared<ExpressionConstant>(sign),
+            std::make_shared<ExpressionDivide>(std::make_shared<ExpressionExp>(nl_y2), nl_y1))));
+    problem->add(objective);
+
+    auto c1 = std::make_shared<LinearConstraint>("c1", SHOT_DBL_MIN, 4.0);
+    c1->add(std::make_shared<LinearTerm>(1.0, y1));
+    c1->add(std::make_shared<LinearTerm>(1.0, y2));
+    problem->add(c1);
+
+    problem->updateProperties();
+    problem->finalize();
+    solver->setProblem(problem);
+
+    return { std::move(solver), env };
+}
+
+bool TestUserSpecifiedObjectiveConvexity()
+{
+    bool passed = true;
+
+    auto expect = [&](bool condition, const std::string& message)
+    {
+        if(!condition)
+        {
+            std::cout << "  " << message << '\n';
+            passed = false;
+        }
+    };
+
+    for(bool maximize : { false, true })
+    {
+        for(auto epigraphStrategy :
+            { ES_ObjectiveEpigraphStrategy::Unchanged, ES_ObjectiveEpigraphStrategy::EpigraphConstraint })
+        {
+            auto description = fmt::format(
+                "{}, epigraph strategy {}: ", maximize ? "Maximize" : "Minimize", static_cast<int>(epigraphStrategy));
+
+            auto [detectedSolver, detectedEnv] = MakeUserObjectiveConvexitySolver(false, maximize, epigraphStrategy);
+
+            // Otherwise the test does not show that the specified convexity is used
+            expect(detectedEnv->problem->properties.convexity == E_ProblemConvexity::Nonconvex,
+                description + "The convexity of the objective function is detected, so the test must be changed");
+
+            detectedSolver->solveProblem();
+
+            // One auxiliary variable is the objective variable of the epigraph constraint
+            int numberOfAuxiliaryVariables
+                = (epigraphStrategy == ES_ObjectiveEpigraphStrategy::EpigraphConstraint) ? 1 : 0;
+
+            expect(detectedEnv->reformulatedProblem->properties.numberOfAuxiliaryVariables > numberOfAuxiliaryVariables,
+                description + "The objective function is not partitioned, so the test must be changed");
+
+            auto [solver, env] = MakeUserObjectiveConvexitySolver(true, maximize, epigraphStrategy);
+
+            expect(env->problem->properties.convexity == E_ProblemConvexity::Convex,
+                description + "The problem is not convex");
+            expect(env->problem->properties.isObjectiveConvexityUserSpecified,
+                description + "The objective function is not regarded as convex since specified by the user");
+
+            solver->solveProblem();
+
+            expect(env->reformulatedProblem->properties.convexity == E_ProblemConvexity::Convex,
+                description + "The reformulated problem is not convex");
+            expect(env->reformulatedProblem->properties.numberOfAuxiliaryVariables == numberOfAuxiliaryVariables,
+                description + "The objective function with user-specified convexity has been partitioned");
+            expect(solver->getModelReturnStatus() == E_ModelReturnStatus::OptimalGlobal,
+                description + "The solution is not globally optimal");
+            expect(std::abs(solver->getPrimalBound() - detectedSolver->getPrimalBound()) < 1e-4,
+                description
+                    + fmt::format("The primal bound {} differs from the one without the specified convexity, {}",
+                        solver->getPrimalBound(), detectedSolver->getPrimalBound()));
+            expect(solver->getUserSpecifiedConvexityDescription().find("the objective function") != std::string::npos,
+                description + "The message does not tell that the convexity of the objective function is specified");
+        }
+    }
+
+    try
+    {
+        std::make_shared<NonlinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize)
+            ->setFunctionConvexity(E_Convexity::Unknown);
+        expect(false, "Specifying an unknown convexity of the objective function did not throw");
+    }
+    catch(const std::invalid_argument&)
+    {
+    }
+
+    return passed;
+}
+
 int SolverTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -3636,6 +3905,16 @@ int SolverTest(int argc, char* argv[])
         std::cout << "Starting test for callback system - bound tightening" << std::endl;
         passed = TestCallbackBoundTightening();
         std::cout << "Finished test for callback system - bound tightening." << std::endl;
+        break;
+    case 36:
+        std::cout << "Starting test for constraints with user-specified convexity" << std::endl;
+        passed = TestUserSpecifiedConvexity();
+        std::cout << "Finished test for constraints with user-specified convexity." << std::endl;
+        break;
+    case 37:
+        std::cout << "Starting test for an objective function with user-specified convexity" << std::endl;
+        passed = TestUserSpecifiedObjectiveConvexity();
+        std::cout << "Finished test for an objective function with user-specified convexity." << std::endl;
         break;
     default:
         passed = false;

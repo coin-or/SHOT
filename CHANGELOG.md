@@ -73,6 +73,13 @@ Changes since SHOT 1.1.
   `Model.BoundTightening.FeasibilityBased.Use` off, only these are used.
   `Model.BoundTightening.FeasibilityBased.UseAfterCallback` propagates them
   with another bound tightening pass ([#247]).
+- `setFunctionConvexity()` on quadratic and nonlinear constraints and
+  objective functions in C++ and SHOTpy, and the `functionConvexity`
+  argument of SHOTpy's `Problem.addConstraint()` and `Problem.setObjective()`,
+  specify the convexity of a function, which is then used instead of
+  detected. The solution report, the OSrL results and
+  `getUserSpecifiedConvexityDescription()` tell when global optimality
+  depends on such functions or on `Model.Convexity.AssumeConvex`.
 - The AMPL solve message gives the SHOT version, the problem types and the
   subsolvers; the status text is unchanged ([d9db1155]).
 - The options report shows the number of MIP solver threads, and a warning
