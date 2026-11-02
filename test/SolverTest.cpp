@@ -33,11 +33,13 @@
 
 #include "../src/RootsearchMethod/RootsearchMethodBoost.h"
 
+#include "../src/Tasks/TaskPerformBoundTightening.h"
 #include "../src/Tasks/TaskReformulateProblem.h"
 #include "../src/Tasks/TaskCalculateSolutionChangeNorm.h"
 #include "../src/Tasks/TaskSequential.h"
 #include "../src/Iteration.h"
 
+#include <functional>
 #include <optional>
 #include <set>
 #include <stdexcept>
@@ -235,7 +237,7 @@ bool TestGradient(const std::string& problemFile)
 
 // Forward declarations — defined later in this file
 static std::pair<std::unique_ptr<SHOT::Solver>, std::shared_ptr<SHOT::Environment>> MakeEx1223bSolver(
-    bool forceNonlinear = false);
+    bool forceNonlinear = false, const std::function<void(SHOT::Solver&)>& beforeSetProblem = nullptr);
 
 bool TestCallbackESHInteriorPoint();
 
@@ -652,18 +654,9 @@ bool TestCallbackExternalHyperplane()
     return passed;
 }
 
-// Build the ex1223b MINLP instance inline and return a ready-to-use solver + environment.
-// Reused by multiple tests.
-static std::pair<std::unique_ptr<SHOT::Solver>, std::shared_ptr<SHOT::Environment>> MakeEx1223bSolver(
-    bool forceNonlinear)
+// The ex1223b MINLP instance, finalized but not given to a solver
+static ProblemPtr MakeEx1223bProblem(EnvironmentPtr env)
 {
-    auto solver = std::make_unique<SHOT::Solver>();
-    auto env = solver->getEnvironment();
-    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Info));
-    if(forceNonlinear)
-        solver->updateSetting(
-            "Model.Reformulation.Quadratics.Strategy", static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear));
-
     auto problem = std::make_shared<SHOT::Problem>(env);
     problem->name = "ex1223b";
 
@@ -756,6 +749,28 @@ static std::pair<std::unique_ptr<SHOT::Solver>, std::shared_ptr<SHOT::Environmen
     simplifyNonlinearExpressions(problem, true, true, true);
     problem->updateProperties();
     problem->finalize();
+
+    return (problem);
+}
+
+// Build the ex1223b MINLP instance inline and return a ready-to-use solver + environment.
+// Reused by multiple tests.
+static std::pair<std::unique_ptr<SHOT::Solver>, std::shared_ptr<SHOT::Environment>> MakeEx1223bSolver(
+    bool forceNonlinear, const std::function<void(SHOT::Solver&)>& beforeSetProblem)
+{
+    auto solver = std::make_unique<SHOT::Solver>();
+    auto env = solver->getEnvironment();
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Info));
+    if(forceNonlinear)
+        solver->updateSetting(
+            "Model.Reformulation.Quadratics.Strategy", static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear));
+
+    auto problem = MakeEx1223bProblem(env);
+
+    // E.g., registering callbacks that are called in setProblem()
+    if(beforeSetProblem)
+        beforeSetProblem(*solver);
+
     solver->setProblem(problem);
 
     return { std::move(solver), env };
@@ -1620,6 +1635,237 @@ bool TestCallbackFailure()
         if(S.sourceType == E_PrimalSolutionSource::ExternalPrimalSolution)
         {
             std::cout << "The solution queued by the failing callback was added\n";
+            passed = false;
+        }
+    }
+
+    return passed;
+}
+
+// The variables of the model are x1, x2, x3 in [0, 10] and the binaries b4, ..., b7. Bound tightening gives x1 <= 1.2,
+// x2 <= 1.8 and x3 <= 2.5, and the optimum 4.5796 is at x = (0.2, 0.8, 1.908) and b = (1, 1, 0, 1).
+bool TestCallbackBoundTightening()
+{
+    bool passed = true;
+
+    auto silence = [](SHOT::Solver& solver)
+    { solver.updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off)); };
+
+    // The callback is called once for the original and once for the reformulated problem, with SHOT's bounds
+    {
+        std::vector<bool> isReformulated;
+        std::vector<VectorDouble> upperBounds;
+        bool problemsMatch = true;
+
+        auto [solver, env] = MakeEx1223bSolver(false,
+            [&](SHOT::Solver& solver)
+            {
+                silence(solver);
+                solver.registerCallback<BoundTighteningContext>(
+                    [&](BoundTighteningContext& context)
+                    {
+                        isReformulated.push_back(context.isReformulatedProblem());
+                        upperBounds.push_back(context.getVariableUpperBounds());
+
+                        auto expected = context.isReformulatedProblem() ? context.getReformulatedProblem()
+                                                                        : context.getOriginalProblem();
+
+                        if(!expected || context.getProblem() != expected
+                            || (!context.isReformulatedProblem() && context.getReformulatedProblem())
+                            || (int)context.getVariableLowerBounds().size() != expected->properties.numberOfVariables)
+                            problemsMatch = false;
+                    });
+            });
+
+        if(isReformulated != std::vector<bool> { false, true } || !problemsMatch)
+        {
+            std::cout << "  The callback was not called for the original and then the reformulated problem\n";
+            passed = false;
+        }
+        else if(std::abs(upperBounds[0][0] - 1.2) > 1e-8 || std::abs(upperBounds[1][0] - 1.2) > 1e-8)
+        {
+            std::cout << "  The callback did not get the bounds from SHOT's bound tightening\n";
+            passed = false;
+        }
+    }
+
+    // Without SHOT's bound tightening, the callback gets the bounds of the model, and only its own bounds are used.
+    // The bounds of x1, x2 and x3, which share constraints, cut off the optimum
+    {
+        double modelUpperBound = 0.0;
+        VectorDouble reformulatedLowerBounds;
+        VectorDouble reformulatedUpperBounds;
+        VectorDouble proposedLowerBounds;
+
+        auto [solver, env] = MakeEx1223bSolver(false,
+            [&](SHOT::Solver& solver)
+            {
+                silence(solver);
+                solver.updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+                solver.registerCallback<BoundTighteningContext>(
+                    [&](BoundTighteningContext& context)
+                    {
+                        if(context.isReformulatedProblem())
+                        {
+                            reformulatedLowerBounds = context.getVariableLowerBounds();
+                            reformulatedUpperBounds = context.getVariableUpperBounds();
+                            context.setVariableBounds(1, 0.0, 0.5); // also a bound in the original problem
+                            return;
+                        }
+
+                        modelUpperBound = context.getVariableUpperBounds()[0];
+                        context.setVariableBounds(0, -std::numeric_limits<double>::infinity(), 0.5);
+                        context.setVariableBounds(2, 0.2, 1.5);
+                        context.setVariableBounds(2, 0.0, 1.4); // intersected with the bounds proposed before
+                        context.setVariableBounds(3, 0.3, 1.0); // rounded to [1, 1]
+                        proposedLowerBounds = context.getProposedVariableLowerBounds();
+                    });
+            });
+
+        if(modelUpperBound != 10.0)
+        {
+            std::cout << "  The callback did not get the bounds of the model without bound tightening\n";
+            passed = false;
+        }
+
+        if(proposedLowerBounds.size() != 7 || proposedLowerBounds[2] != 0.2 || proposedLowerBounds[3] != 1.0)
+        {
+            std::cout << "  The proposed bounds were not intersected or rounded\n";
+            passed = false;
+        }
+
+        if(reformulatedUpperBounds.size() < 7 || reformulatedLowerBounds[0] != 0.0 || reformulatedUpperBounds[0] != 0.5
+            || reformulatedLowerBounds[2] != 0.2 || reformulatedUpperBounds[2] != 1.4
+            || reformulatedLowerBounds[3] != 1.0)
+        {
+            std::cout << "  The reformulated problem does not have the bounds given by the callback\n";
+            passed = false;
+        }
+
+        if(env->problem->getVariableUpperBound(1) != 0.5 || env->reformulatedProblem->getVariableUpperBound(1) != 0.5)
+        {
+            std::cout << "  The bound given for the reformulated problem is not in both problems\n";
+            passed = false;
+        }
+
+        solver->solveProblem();
+
+        if(!solver->hasPrimalSolution())
+        {
+            std::cout << "  No primal solution was found with the bounds given by the callback\n";
+            passed = false;
+        }
+        else
+        {
+            auto solution = solver->getPrimalSolution().point;
+
+            if(solution[0] > 0.5 + 1e-6 || solution[1] > 0.5 + 1e-6 || solution[2] > 1.4 + 1e-6
+                || solution[2] < 0.2 - 1e-6 || solution[3] < 1.0 - 1e-6 || solver->getPrimalBound() < 4.58)
+            {
+                std::cout << fmt::format(
+                    "  The solution with the primal bound {} is not in the bounds given by the callback\n",
+                    solver->getPrimalBound());
+                passed = false;
+            }
+        }
+    }
+
+    // The objective bounds over the bounds given by the callback are used also without SHOT's bound tightening: the
+    // objective is 20 with all variables fixed to zero
+    {
+        auto [solver, env] = MakeEx1223bSolver(false,
+            [&](SHOT::Solver& solver)
+            {
+                silence(solver);
+                solver.updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+                solver.registerCallback<BoundTighteningContext>(
+                    [&](BoundTighteningContext& context)
+                    {
+                        if(!context.isReformulatedProblem())
+                            context.setVariableBounds(VectorDouble(7, 0.0), VectorDouble(7, 0.0));
+                    });
+            });
+
+        if(std::abs(env->dualSolver->cutOffToUse - 20.0) > 1e-8)
+        {
+            std::cout << fmt::format(
+                "  The cutoff is {}, not the objective bound 20 given by the bounds\n", env->dualSolver->cutOffToUse);
+            passed = false;
+        }
+    }
+
+    // Bound tightening is repeated after the callback only with UseAfterCallback: with b4 = 1, the constraint
+    // x1 + b4 <= 1.2 gives x1 <= 0.2. Only the original problem is tightened, since the bound tightening of the
+    // reformulated problem would find the bound as well
+    for(bool useAfterCallback : { false, true })
+    {
+        SHOT::Solver solver;
+        auto env = solver.getEnvironment();
+        silence(solver);
+        solver.updateSetting("Model.BoundTightening.FeasibilityBased.UseAfterCallback", useAfterCallback);
+        solver.registerCallback<BoundTighteningContext>(
+            [](BoundTighteningContext& context) { context.setVariableBounds(3, 1.0, 1.0); });
+
+        env->problem = MakeEx1223bProblem(env);
+        TaskPerformBoundTightening(env, env->problem).run();
+
+        double expectedUpperBound = useAfterCallback ? 0.2 : 1.2;
+
+        if(std::abs(env->problem->getVariableUpperBound(0) - expectedUpperBound) > 1e-8)
+        {
+            std::cout << fmt::format("  The upper bound of x1 is {}, expected {} with UseAfterCallback = {}\n",
+                env->problem->getVariableUpperBound(0), expectedUpperBound, useAfterCallback);
+            passed = false;
+        }
+    }
+
+    // Invalid bounds throw, and so does setProblem() if the callback does not catch the exception
+    {
+        int numberOfInvalidBoundsRejected = 0;
+        bool exceptionRethrown = false;
+
+        try
+        {
+            MakeEx1223bSolver(false,
+                [&](SHOT::Solver& solver)
+                {
+                    silence(solver);
+                    solver.registerCallback<BoundTighteningContext>(
+                        [&](BoundTighteningContext& context)
+                        {
+                            auto rejects = [&](const std::function<void()>& action)
+                            {
+                                try
+                                {
+                                    action();
+                                }
+                                catch(const std::invalid_argument&)
+                                {
+                                    numberOfInvalidBoundsRejected++;
+                                }
+                            };
+
+                            rejects([&]() { context.setVariableBounds(0, 1.0, 0.5); });
+                            rejects([&]() { context.setVariableBounds(0, std::nan(""), 0.5); });
+                            rejects([&]() { context.setVariableBounds(7, 0.0, 0.5); });
+                            rejects([&]() { context.setVariableBounds(VectorDouble(6, 0.0), VectorDouble(6, 0.0)); });
+                            rejects([&]() { context.setVariableBounds(3, 0.2, 0.8); }); // empty after rounding
+
+                            // Does not intersect the bounds after bound tightening, x1 <= 1.2
+                            context.setVariableBounds(0, 2.0, 3.0);
+                        });
+                });
+        }
+        catch(const std::invalid_argument&)
+        {
+            exceptionRethrown = true;
+        }
+
+        if(numberOfInvalidBoundsRejected != 5 || !exceptionRethrown)
+        {
+            std::cout << fmt::format(
+                "  {} of 5 invalid bounds were rejected, and the exception was {}rethrown by setProblem()\n",
+                numberOfInvalidBoundsRejected, exceptionRethrown ? "" : "not ");
             passed = false;
         }
     }
@@ -3385,6 +3631,11 @@ int SolverTest(int argc, char* argv[])
         std::cout << "Starting test for a starting point given to the solver" << std::endl;
         passed = TestStartingPoint();
         std::cout << "Finished test for a starting point given to the solver." << std::endl;
+        break;
+    case 35:
+        std::cout << "Starting test for callback system - bound tightening" << std::endl;
+        passed = TestCallbackBoundTightening();
+        std::cout << "Finished test for callback system - bound tightening." << std::endl;
         break;
     default:
         passed = false;

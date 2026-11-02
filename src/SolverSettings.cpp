@@ -361,6 +361,9 @@ void Solver::initializeSettings()
     env->settings->createSetting(
         "Model.BoundTightening.FeasibilityBased.Use", true, "Perform feasibility-based bound tightening");
 
+    env->settings->createSetting("Model.BoundTightening.FeasibilityBased.UseAfterCallback", false,
+        "Perform feasibility-based bound tightening again after a BoundTightening callback has tightened bounds");
+
     env->settings->createSetting("Model.BoundTightening.FeasibilityBased.UseNonlinear", true,
         "Perform feasibility-based bound tightening on nonlinear expressions");
 
