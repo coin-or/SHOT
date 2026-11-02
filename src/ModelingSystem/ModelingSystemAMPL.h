@@ -38,7 +38,11 @@ public:
     // Move the solution and statistics from SHOT to the modeling system
     void finalizeSolution() override;
 
+    VectorDouble getStartingPoint() override { return (startingPoint); }
+
 protected:
 private:
+    // The initial values in the .nl file, or empty if it has none
+    VectorDouble startingPoint;
 };
 } // namespace SHOT

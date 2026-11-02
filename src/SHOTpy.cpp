@@ -3120,6 +3120,16 @@ PYBIND11_MODULE(SHOTpy, m)
             "setProblem", [](Solver& self, ProblemPtr problem, ProblemPtr reformulatedProblem)
             { return self.setProblem(problem, reformulatedProblem, nullptr); }, "Set problem with reformulated problem",
             py::arg("problem"), py::arg("reformulatedProblem"))
+        .def("setStartingPoint", &Solver::setStartingPoint, py::arg("point"),
+            "Set a starting point, with a value for each variable of the original problem in its order, after\n"
+            "setProblem(), which replaces it with the starting point in the problem file, e.g., the initial values\n"
+            "in an AMPL .nl file. A feasible point is the first primal solution and the MIP start of the dual\n"
+            "problems. It is also the starting point of an NLP problem with the discrete variables fixed to their\n"
+            "rounded values if Primal.FixedInteger.UseStartingPoint is True. An empty list removes the starting\n"
+            "point. Returns False if no problem has been set, or if the point has the wrong size or a value that\n"
+            "is not finite")
+        .def("getStartingPoint", &Solver::getStartingPoint,
+            "The starting point given to setStartingPoint() or in the problem file, or an empty list if there is none")
         // The GIL is released while the problem is solved, so that the MIP solver can call Python callbacks from its
         // own threads
         .def("solveProblem", &Solver::solveProblem, py::call_guard<py::gil_scoped_release>(),
@@ -3186,7 +3196,7 @@ PYBIND11_MODULE(SHOTpy, m)
             "e.g., a PrimalCandidateCheckContext at CallbackLocation.PrimalCandidateCheck, and has the\n"
             "state of the solver and the actions available at the location. The context can only be used\n"
             "while the callback runs. If the callback raises an exception, SHOT terminates and\n"
-            "solveProblem() raises it.\n\n"
+            "solveProblem() raises it, or setProblem() for CallbackLocation.BoundTightening.\n\n"
             "Returns a handle for removeCallback().",
             py::arg("locations"), py::arg("callback"))
         .def("removeCallback", &Solver::removeCallback,
@@ -3202,6 +3212,7 @@ PYBIND11_MODULE(SHOTpy, m)
         .value("TerminationCheck", E_CallbackLocation::TerminationCheck)
         .value("HyperplaneSelection", E_CallbackLocation::HyperplaneSelection)
         .value("BoundsUpdated", E_CallbackLocation::BoundsUpdated)
+        .value("BoundTightening", E_CallbackLocation::BoundTightening)
         .def(
             "__or__", [](E_CallbackLocation first, E_CallbackLocation second)
             { return (static_cast<std::uint64_t>(first) | static_cast<std::uint64_t>(second)); }, py::is_operator())
@@ -3599,6 +3610,39 @@ PYBIND11_MODULE(SHOTpy, m)
             "Replace the interior points with at least one point in the variables of the original or the\n"
             "reformulated problem",
             py::arg("points"));
+
+    py::class_<BoundTighteningContext, CallbackContext, std::shared_ptr<BoundTighteningContext>>(
+        m, "BoundTighteningContext")
+        .def_property_readonly("problem", &BoundTighteningContext::getProblem,
+            "The problem whose bounds can be tightened: the original or the reformulated problem")
+        .def_property_readonly("isReformulatedProblem", &BoundTighteningContext::isReformulatedProblem,
+            "Whether the problem is the reformulated problem; reformulatedProblem is None in the call for the\n"
+            "original problem, since it has not been created yet")
+        .def_property_readonly(
+            "variableLowerBounds",
+            [](const BoundTighteningContext& self) { return (VectorDouble(self.getVariableLowerBounds())); },
+            "SHOT's lower bounds of the variables of the problem, -inf if there is none")
+        .def_property_readonly(
+            "variableUpperBounds",
+            [](const BoundTighteningContext& self) { return (VectorDouble(self.getVariableUpperBounds())); },
+            "SHOT's upper bounds of the variables of the problem, inf if there is none")
+        .def_property_readonly(
+            "proposedVariableLowerBounds",
+            [](const BoundTighteningContext& self) { return (VectorDouble(self.getProposedVariableLowerBounds())); },
+            "The lower bounds proposed in this context, intersected with SHOT's bounds")
+        .def_property_readonly(
+            "proposedVariableUpperBounds",
+            [](const BoundTighteningContext& self) { return (VectorDouble(self.getProposedVariableUpperBounds())); },
+            "The upper bounds proposed in this context, intersected with SHOT's bounds")
+        .def("setVariableBounds", py::overload_cast<int, double, double>(&BoundTighteningContext::setVariableBounds),
+            "Propose bounds for the variable with the index in the problem; they are intersected with SHOT's\n"
+            "bounds, and inf or -inf keeps a bound. Raises ValueError if the bounds are not valid or the\n"
+            "intersection is empty",
+            py::arg("variableIndex"), py::arg("lowerBound"), py::arg("upperBound"))
+        .def("setVariableBounds",
+            py::overload_cast<const VectorDouble&, const VectorDouble&>(&BoundTighteningContext::setVariableBounds),
+            "Propose bounds for all variables of the problem, as setVariableBounds() for each variable",
+            py::arg("lowerBounds"), py::arg("upperBounds"));
 
     py::class_<TerminationCheckContext, CallbackContext, std::shared_ptr<TerminationCheckContext>>(
         m, "TerminationCheckContext");

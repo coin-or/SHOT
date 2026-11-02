@@ -10,6 +10,7 @@
 
 #include "TaskPerformBoundTightening.h"
 
+#include "../Callback.h"
 #include "../DualSolver.h"
 #include "../MIPSolver/IMIPSolver.h"
 #include "../Output.h"
@@ -50,94 +51,147 @@ void TaskPerformBoundTightening::run()
                 > E_ObjectiveFunctionClassification::Quadratic))
         createPOA();
 
-    if(env->settings->getSetting<bool>("Model.BoundTightening.FeasibilityBased.Use"))
+    bool performBoundTightening = env->settings->getSetting<bool>("Model.BoundTightening.FeasibilityBased.Use");
+
+    auto quadraticStrategy = static_cast<ES_QuadraticProblemStrategy>(
+        env->settings->getSetting<int>("Model.Reformulation.Quadratics.Strategy"));
+
+    // Do not do bound tightening on problems solved by MIP solver
+    if(sourceProblem->properties.isLPProblem || sourceProblem->properties.isMILPProblem)
+        performBoundTightening = false;
+    else if(sourceProblem->properties.isMIQPProblem && quadraticStrategy != ES_QuadraticProblemStrategy::Nonlinear)
+        performBoundTightening = false;
+    else if(sourceProblem->properties.isMIQCQPProblem && quadraticStrategy != ES_QuadraticProblemStrategy::Nonlinear)
+        performBoundTightening = false;
+
+    if(performBoundTightening)
     {
-        bool performBoundTightening = true;
+        // Updating implicit variable bounds from signomials and nonlinear expressions
 
-        auto quadraticStrategy = static_cast<ES_QuadraticProblemStrategy>(
-            env->settings->getSetting<int>("Model.Reformulation.Quadratics.Strategy"));
+        auto infiniteInterval = Interval(-SHOT_DBL_MAX, SHOT_DBL_MAX);
 
-        // Do not do bound tightening on problems solved by MIP solver
-        if(sourceProblem->properties.isLPProblem || sourceProblem->properties.isMILPProblem)
-            performBoundTightening = false;
-        else if(sourceProblem->properties.isMIQPProblem && quadraticStrategy != ES_QuadraticProblemStrategy::Nonlinear)
-            performBoundTightening = false;
-        else if(sourceProblem->properties.isMIQCQPProblem
-            && quadraticStrategy != ES_QuadraticProblemStrategy::Nonlinear)
-            performBoundTightening = false;
-
-        if(performBoundTightening)
+        if(sourceProblem->objectiveFunction->properties.hasSignomialTerms)
         {
-            auto objectiveBoundsBefore = sourceProblem->objectiveFunction->getBounds();
-
-            // Updating implicit variable bounds from signomials and nonlinear expressions
-
-            auto infiniteInterval = Interval(-SHOT_DBL_MAX, SHOT_DBL_MAX);
-
-            if(sourceProblem->objectiveFunction->properties.hasSignomialTerms)
+            for(auto& ST :
+                std::dynamic_pointer_cast<NonlinearObjectiveFunction>(sourceProblem->objectiveFunction)->signomialTerms)
             {
-                for(auto& ST : std::dynamic_pointer_cast<NonlinearObjectiveFunction>(sourceProblem->objectiveFunction)
-                                   ->signomialTerms)
-                {
-                    for(auto& SE : ST->elements)
-                        SE->tightenBounds(infiniteInterval);
-                }
+                for(auto& SE : ST->elements)
+                    SE->tightenBounds(infiniteInterval);
             }
+        }
 
-            if(sourceProblem->objectiveFunction->properties.hasNonlinearExpression)
-            {
-                std::dynamic_pointer_cast<NonlinearObjectiveFunction>(sourceProblem->objectiveFunction)
-                    ->nonlinearExpression->tightenBounds(infiniteInterval);
-            }
+        if(sourceProblem->objectiveFunction->properties.hasNonlinearExpression)
+        {
+            std::dynamic_pointer_cast<NonlinearObjectiveFunction>(sourceProblem->objectiveFunction)
+                ->nonlinearExpression->tightenBounds(infiniteInterval);
+        }
 
-            sourceProblem->doFBBT();
+        sourceProblem->doFBBT();
+    }
 
-            auto objectiveBoundsAfter
-                = sourceProblem->objectiveFunction->getBounds(); // To get objecive variable bounds
-            env->output->outputInfo(fmt::format(
-                "  - Objective bounds are: [{:g}, {:g}]", objectiveBoundsAfter.l(), objectiveBoundsAfter.u()));
+    bool isTightenedByCallback = applyBoundsFromCallbacks();
 
-            // sourceProblem is either env->problem or env->reformulatedProblem, and the latter's objective can
-            // have a different direction than env->problem's (e.g. a maximize objective reformulated into an
-            // equivalent minimize one, with its expression negated to match). objectiveBoundsAfter is then an
-            // interval of the *negated* function, so translate it back to env->problem's sense (negating and
-            // swapping l()/u()) before using it as a DualSolution value or cutoff, both of which are always
-            // interpreted in env->problem's sense.
-            bool sourceIsSignReversed
-                = sourceProblem->objectiveFunction->direction != env->problem->objectiveFunction->direction;
+    if(isTightenedByCallback && performBoundTightening
+        && env->settings->getSetting<bool>("Model.BoundTightening.FeasibilityBased.UseAfterCallback"))
+        sourceProblem->doFBBT();
 
-            Interval originalSenseBounds = sourceIsSignReversed
-                ? Interval(-objectiveBoundsAfter.u(), -objectiveBoundsAfter.l())
-                : objectiveBoundsAfter;
+    // The objective bounds also follow from the bounds given by a callback when SHOT's bound tightening is disabled
+    if(performBoundTightening || isTightenedByCallback)
+        updateObjectiveBounds();
 
-            if(env->problem->objectiveFunction->properties.isMinimize)
-            {
-                DualSolution sol
-                    = { {}, E_DualSolutionSource::MIPSolverBound, originalSenseBounds.l(), 0, false };
-                env->dualSolver->addDualSolutionCandidate(sol);
+    env->timing->stopTimer("BoundTightening");
+}
 
-                if(originalSenseBounds.u() < env->dualSolver->cutOffToUse) // Update MIP cutoff
-                {
-                    env->dualSolver->cutOffToUse = originalSenseBounds.u();
-                    env->dualSolver->useCutOff = true;
-                }
-            }
-            else if(env->problem->objectiveFunction->properties.isMaximize)
-            {
-                DualSolution sol
-                    = { {}, E_DualSolutionSource::MIPSolverBound, originalSenseBounds.u(), 0, false };
-                env->dualSolver->addDualSolutionCandidate(sol);
+bool TaskPerformBoundTightening::applyBoundsFromCallbacks()
+{
+    if(!env->callbacks->isActive(E_CallbackLocation::BoundTightening))
+        return (false);
 
-                if(originalSenseBounds.l() > env->dualSolver->cutOffToUse) // Update MIP cutoff
-                {
-                    env->dualSolver->cutOffToUse = originalSenseBounds.l();
-                    env->dualSolver->useCutOff = true;
-                }
-            }
+    auto context = std::make_shared<BoundTighteningContext>(env, sourceProblem);
+    env->callbacks->invoke(*context);
+
+    // The actions have been discarded if a callback failed
+    auto& lowerBounds = context->getProposedVariableLowerBounds();
+    auto& upperBounds = context->getProposedVariableUpperBounds();
+
+    int numberOfTightenedVariables = 0;
+
+    // The context reports a missing bound as infinite, which SHOT stores as the largest double
+    for(size_t i = 0; i < lowerBounds.size(); i++)
+    {
+        auto bound = Interval(std::max(lowerBounds[i], SHOT_DBL_MIN), std::min(upperBounds[i], SHOT_DBL_MAX));
+
+        if(sourceProblem->allVariables[i]->tightenBounds(bound))
+            numberOfTightenedVariables++;
+    }
+
+    context->invalidate();
+
+    if(numberOfTightenedVariables == 0)
+        return (false);
+
+    env->output->outputInfo(
+        fmt::format("  - Bounds for {} variables tightened by a callback.", numberOfTightenedVariables));
+
+    // As in the bound tightening of the reformulated problem, the bounds of its original variables are also bounds in
+    // the original problem
+    if(sourceProblem->properties.isReformulated)
+    {
+        for(size_t k = 0; k < env->problem->allVariables.size(); k++)
+        {
+            auto& original = env->problem->allVariables[k];
+
+            double lowerBound = std::max(original->lowerBound, sourceProblem->allVariables[k]->lowerBound);
+            double upperBound = std::min(original->upperBound, sourceProblem->allVariables[k]->upperBound);
+
+            if(lowerBound != original->lowerBound || upperBound != original->upperBound)
+                env->problem->setVariableBounds(k, lowerBound, upperBound);
         }
     }
 
-    env->timing->stopTimer("BoundTightening");
+    return (true);
+}
+
+void TaskPerformBoundTightening::updateObjectiveBounds()
+{
+    auto objectiveBoundsAfter = sourceProblem->objectiveFunction->getBounds(); // To get objecive variable bounds
+    env->output->outputInfo(
+        fmt::format("  - Objective bounds are: [{:g}, {:g}]", objectiveBoundsAfter.l(), objectiveBoundsAfter.u()));
+
+    // sourceProblem is either env->problem or env->reformulatedProblem, and the latter's objective can
+    // have a different direction than env->problem's (e.g. a maximize objective reformulated into an
+    // equivalent minimize one, with its expression negated to match). objectiveBoundsAfter is then an
+    // interval of the *negated* function, so translate it back to env->problem's sense (negating and
+    // swapping l()/u()) before using it as a DualSolution value or cutoff, both of which are always
+    // interpreted in env->problem's sense.
+    bool sourceIsSignReversed
+        = sourceProblem->objectiveFunction->direction != env->problem->objectiveFunction->direction;
+
+    Interval originalSenseBounds
+        = sourceIsSignReversed ? Interval(-objectiveBoundsAfter.u(), -objectiveBoundsAfter.l()) : objectiveBoundsAfter;
+
+    if(env->problem->objectiveFunction->properties.isMinimize)
+    {
+        DualSolution sol = { { }, E_DualSolutionSource::MIPSolverBound, originalSenseBounds.l(), 0, false };
+        env->dualSolver->addDualSolutionCandidate(sol);
+
+        if(originalSenseBounds.u() < env->dualSolver->cutOffToUse) // Update MIP cutoff
+        {
+            env->dualSolver->cutOffToUse = originalSenseBounds.u();
+            env->dualSolver->useCutOff = true;
+        }
+    }
+    else if(env->problem->objectiveFunction->properties.isMaximize)
+    {
+        DualSolution sol = { { }, E_DualSolutionSource::MIPSolverBound, originalSenseBounds.u(), 0, false };
+        env->dualSolver->addDualSolutionCandidate(sol);
+
+        if(originalSenseBounds.l() > env->dualSolver->cutOffToUse) // Update MIP cutoff
+        {
+            env->dualSolver->cutOffToUse = originalSenseBounds.l();
+            env->dualSolver->useCutOff = true;
+        }
+    }
 }
 
 std::string TaskPerformBoundTightening::getType()

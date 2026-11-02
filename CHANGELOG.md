@@ -63,6 +63,16 @@ Changes since SHOT 1.1.
 - Starting points from GAMS ([#190]) and AMPL ([1b054e3e]), the
   `shot_options` environment variable in AMPL mode ([#227]), and the `tan`
   function in GAMS ([#189]).
+- `Solver::setStartingPoint()` and `getStartingPoint()` in C++ and SHOTpy to
+  give a starting point after `setProblem()`, as AMPL and GAMS can. A feasible
+  point is the first primal solution and the MIP start of the dual problems
+  ([#246]).
+- A `BoundTightening` callback location, called in `setProblem()` after the
+  bound tightening of the original and of the reformulated problem, where
+  bounds from other techniques can tighten the variable bounds; with
+  `Model.BoundTightening.FeasibilityBased.Use` off, only these are used.
+  `Model.BoundTightening.FeasibilityBased.UseAfterCallback` propagates them
+  with another bound tightening pass.
 - The AMPL solve message gives the SHOT version, the problem types and the
   subsolvers; the status text is unchanged ([d9db1155]).
 - The options report shows the number of MIP solver threads, and a warning
@@ -206,6 +216,7 @@ Changes since SHOT 1.1.
 [#241]: https://github.com/coin-or/SHOT/pull/241
 [#242]: https://github.com/coin-or/SHOT/pull/242
 [#245]: https://github.com/coin-or/SHOT/pull/245
+[#246]: https://github.com/coin-or/SHOT/pull/246
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e

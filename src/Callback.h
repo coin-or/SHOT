@@ -46,11 +46,12 @@ enum class E_CallbackLocation : std::uint64_t
     NewPrimalSolution = 1ull << 4, ///< After a primal solution has been stored
     TerminationCheck = 1ull << 5, ///< When SHOT checks whether to terminate
     HyperplaneSelection = 1ull << 6, ///< When SHOT selects the hyperplanes to add to the dual problem
-    BoundsUpdated = 1ull << 7 ///< After a primal, current dual, or global dual bound has changed
+    BoundsUpdated = 1ull << 7, ///< After a primal, current dual, or global dual bound has changed
+    BoundTightening = 1ull << 8 ///< After the bound tightening of the original and of the reformulated problem
 };
 
 /// All the locations, for registering a callback that is called everywhere
-constexpr E_CallbackLocation AllCallbackLocations = static_cast<E_CallbackLocation>((1ull << 8) - 1);
+constexpr E_CallbackLocation AllCallbackLocations = static_cast<E_CallbackLocation>((1ull << 9) - 1);
 
 constexpr E_CallbackLocation operator|(E_CallbackLocation first, E_CallbackLocation second)
 {
@@ -384,6 +385,56 @@ protected:
 private:
     std::vector<VectorDouble> interiorPoints;
     std::optional<std::vector<VectorDouble>> replacementInteriorPoints;
+};
+
+/**
+ * @brief Called in setProblem() after the bound tightening of the original problem, and again after that of the
+ * reformulated problem; the variable bounds can be tightened
+ *
+ * The bounds are those after SHOT's own bound tightening, or those of the model if it is disabled. The proposed
+ * bounds are intersected with them, so a bound is never loosened, and the bounds of discrete variables are rounded
+ * inward. Infinite values mean that there is no bound.
+ */
+class DllExport BoundTighteningContext : public CallbackContext
+{
+public:
+    static constexpr E_CallbackLocation Location = E_CallbackLocation::BoundTightening;
+
+    BoundTighteningContext(EnvironmentPtr envPtr, ProblemPtr problem);
+
+    /// The problem whose bounds can be tightened: the original or the reformulated problem
+    ProblemPtr getProblem() const;
+
+    /// Whether the problem is the reformulated problem; getReformulatedProblem() is empty in the call for the
+    /// original problem, since it has not been created yet
+    bool isReformulatedProblem() const;
+
+    /// SHOT's bounds of the variables of the problem
+    const VectorDouble& getVariableLowerBounds() const;
+    const VectorDouble& getVariableUpperBounds() const;
+
+    /// Proposes bounds for the variable with the index in the problem. Throws std::invalid_argument if the bounds are
+    /// NaN, if lowerBound > upperBound, or if they do not intersect SHOT's bounds and the bounds proposed before
+    void setVariableBounds(int variableIndex, double lowerBound, double upperBound);
+
+    /// Proposes bounds for all variables of the problem, as setVariableBounds() for each variable
+    void setVariableBounds(const VectorDouble& lowerBounds, const VectorDouble& upperBounds);
+
+    /// The bounds proposed in this context, intersected with SHOT's bounds; equal to these if none have been
+    const VectorDouble& getProposedVariableLowerBounds() const;
+    const VectorDouble& getProposedVariableUpperBounds() const;
+
+    void discardActions() override;
+
+protected:
+    void releaseData() override;
+
+private:
+    ProblemPtr boundedProblem;
+    VectorDouble variableLowerBounds;
+    VectorDouble variableUpperBounds;
+    VectorDouble proposedVariableLowerBounds;
+    VectorDouble proposedVariableUpperBounds;
 };
 
 /// Called when SHOT checks whether to terminate; no actions except terminate()

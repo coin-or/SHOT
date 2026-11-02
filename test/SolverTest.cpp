@@ -33,11 +33,14 @@
 
 #include "../src/RootsearchMethod/RootsearchMethodBoost.h"
 
+#include "../src/Tasks/TaskPerformBoundTightening.h"
 #include "../src/Tasks/TaskReformulateProblem.h"
 #include "../src/Tasks/TaskCalculateSolutionChangeNorm.h"
 #include "../src/Tasks/TaskSequential.h"
 #include "../src/Iteration.h"
 
+#include <functional>
+#include <optional>
 #include <set>
 #include <stdexcept>
 
@@ -234,7 +237,7 @@ bool TestGradient(const std::string& problemFile)
 
 // Forward declarations — defined later in this file
 static std::pair<std::unique_ptr<SHOT::Solver>, std::shared_ptr<SHOT::Environment>> MakeEx1223bSolver(
-    bool forceNonlinear = false);
+    bool forceNonlinear = false, const std::function<void(SHOT::Solver&)>& beforeSetProblem = nullptr);
 
 bool TestCallbackESHInteriorPoint();
 
@@ -651,18 +654,9 @@ bool TestCallbackExternalHyperplane()
     return passed;
 }
 
-// Build the ex1223b MINLP instance inline and return a ready-to-use solver + environment.
-// Reused by multiple tests.
-static std::pair<std::unique_ptr<SHOT::Solver>, std::shared_ptr<SHOT::Environment>> MakeEx1223bSolver(
-    bool forceNonlinear)
+// The ex1223b MINLP instance, finalized but not given to a solver
+static ProblemPtr MakeEx1223bProblem(EnvironmentPtr env)
 {
-    auto solver = std::make_unique<SHOT::Solver>();
-    auto env = solver->getEnvironment();
-    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Info));
-    if(forceNonlinear)
-        solver->updateSetting(
-            "Model.Reformulation.Quadratics.Strategy", static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear));
-
     auto problem = std::make_shared<SHOT::Problem>(env);
     problem->name = "ex1223b";
 
@@ -755,6 +749,28 @@ static std::pair<std::unique_ptr<SHOT::Solver>, std::shared_ptr<SHOT::Environmen
     simplifyNonlinearExpressions(problem, true, true, true);
     problem->updateProperties();
     problem->finalize();
+
+    return (problem);
+}
+
+// Build the ex1223b MINLP instance inline and return a ready-to-use solver + environment.
+// Reused by multiple tests.
+static std::pair<std::unique_ptr<SHOT::Solver>, std::shared_ptr<SHOT::Environment>> MakeEx1223bSolver(
+    bool forceNonlinear, const std::function<void(SHOT::Solver&)>& beforeSetProblem)
+{
+    auto solver = std::make_unique<SHOT::Solver>();
+    auto env = solver->getEnvironment();
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Info));
+    if(forceNonlinear)
+        solver->updateSetting(
+            "Model.Reformulation.Quadratics.Strategy", static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear));
+
+    auto problem = MakeEx1223bProblem(env);
+
+    // E.g., registering callbacks that are called in setProblem()
+    if(beforeSetProblem)
+        beforeSetProblem(*solver);
+
     solver->setProblem(problem);
 
     return { std::move(solver), env };
@@ -1205,6 +1221,31 @@ bool TestCallbackESHExternalInteriorPointFromAuxProblem()
     return passed;
 }
 
+struct FirstPrimalSolution
+{
+    VectorDouble point;
+    double objectiveValue;
+    E_PrimalSolutionSource source;
+};
+
+// The first primal solution found while solving, which is the starting point if it is feasible
+static std::optional<FirstPrimalSolution> SolveAndGetFirstPrimalSolution(SHOT::Solver& solver)
+{
+    std::optional<FirstPrimalSolution> firstSolution;
+
+    solver.registerCallback<NewPrimalSolutionContext>(
+        [&firstSolution](NewPrimalSolutionContext& context)
+        {
+            if(!firstSolution)
+                firstSolution = FirstPrimalSolution { context.getPoint(), context.getObjectiveValue(),
+                    context.getSource() };
+        });
+
+    solver.solveProblem();
+
+    return (firstSolution);
+}
+
 bool TestAMPLInitialValues()
 {
     auto solver = std::make_unique<SHOT::Solver>();
@@ -1218,22 +1259,39 @@ bool TestAMPLInitialValues()
     }
 
     // ncvx_min_div.nl: x1 segment gives var 2 = 1.0; vars 0,1 have no initial value so get lb (0.5, 0.1)
-    // 0 constraints => initial point is always feasible and accepted as a primal solution
-    auto sols = solver->getPrimalSolutions();
-    if(sols.empty())
+    auto startingPoint = solver->getStartingPoint();
+
+    if(startingPoint.size() != 3)
     {
-        std::cout << "  No primal solution found from initial values\n";
+        std::cout << fmt::format("  The starting point has {} values, expected 3\n", startingPoint.size());
         return false;
     }
 
-    auto& pt = sols.back().point;
-    bool passed = std::abs(pt[0] - 0.5) < 1e-10 && std::abs(pt[1] - 0.1) < 1e-10 && std::abs(pt[2] - 1.0) < 1e-10;
+    bool passed = std::abs(startingPoint[0] - 0.5) < 1e-10 && std::abs(startingPoint[1] - 0.1) < 1e-10
+        && std::abs(startingPoint[2] - 1.0) < 1e-10;
 
-    std::cout << fmt::format("  Initial point: ({}, {}, {})", pt[0], pt[1], pt[2]);
+    std::cout << fmt::format("  Starting point: ({}, {}, {})", startingPoint[0], startingPoint[1], startingPoint[2]);
     if(passed)
         std::cout << " - correct\n";
     else
         std::cout << fmt::format(" - FAILED, expected (0.5, 0.1, 1.0)\n");
+
+    // 0 constraints => initial point is always feasible and accepted as the first primal solution
+    auto firstSolution = SolveAndGetFirstPrimalSolution(*solver);
+
+    if(!firstSolution || firstSolution->source != E_PrimalSolutionSource::ExternalPrimalSolution)
+    {
+        std::cout << "  The first primal solution is not the starting point\n";
+        return false;
+    }
+
+    auto& pt = firstSolution->point;
+    if(std::abs(pt[0] - 0.5) > 1e-10 || std::abs(pt[1] - 0.1) > 1e-10 || std::abs(pt[2] - 1.0) > 1e-10)
+    {
+        std::cout << fmt::format("  First primal solution ({}, {}, {}) - FAILED, expected (0.5, 0.1, 1.0)\n", pt[0],
+            pt[1], pt[2]);
+        passed = false;
+    }
 
     return passed;
 }
@@ -1251,22 +1309,16 @@ bool TestAMPLInitialValuesOutOfBounds()
     }
 
     // x3 segment: var 0=0.8 (ub=0.6), var 1=0.05 (lb=0.1), var 2=2.0 (ub=1.0)
-    // all three are out of bounds and should be projected to {0.6, 0.1, 1.0}
-    auto sols = solver->getPrimalSolutions();
-    if(sols.empty())
+    // all three are out of bounds and should be projected to {0.6, 0.1, 1.0} when the point is added as a solution
+    auto firstSolution = SolveAndGetFirstPrimalSolution(*solver);
+
+    if(!firstSolution || firstSolution->source != E_PrimalSolutionSource::ExternalPrimalSolution)
     {
         std::cout << "  No primal solution found from out-of-bounds initial values\n";
         return false;
     }
 
-    auto& sol = sols.back();
-    if(!sol.boundProjectionPerformed)
-    {
-        std::cout << "  Expected bound projection to be performed\n";
-        return false;
-    }
-
-    auto& pt = sol.point;
+    auto& pt = firstSolution->point;
     bool passed = std::abs(pt[0] - 0.6) < 1e-10 && std::abs(pt[1] - 0.1) < 1e-10 && std::abs(pt[2] - 1.0) < 1e-10;
 
     std::cout << fmt::format("  Raw initial values: (0.8, 0.05, 2.0)\n");
@@ -1583,6 +1635,237 @@ bool TestCallbackFailure()
         if(S.sourceType == E_PrimalSolutionSource::ExternalPrimalSolution)
         {
             std::cout << "The solution queued by the failing callback was added\n";
+            passed = false;
+        }
+    }
+
+    return passed;
+}
+
+// The variables of the model are x1, x2, x3 in [0, 10] and the binaries b4, ..., b7. Bound tightening gives x1 <= 1.2,
+// x2 <= 1.8 and x3 <= 2.5, and the optimum 4.5796 is at x = (0.2, 0.8, 1.908) and b = (1, 1, 0, 1).
+bool TestCallbackBoundTightening()
+{
+    bool passed = true;
+
+    auto silence = [](SHOT::Solver& solver)
+    { solver.updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off)); };
+
+    // The callback is called once for the original and once for the reformulated problem, with SHOT's bounds
+    {
+        std::vector<bool> isReformulated;
+        std::vector<VectorDouble> upperBounds;
+        bool problemsMatch = true;
+
+        auto [solver, env] = MakeEx1223bSolver(false,
+            [&](SHOT::Solver& solver)
+            {
+                silence(solver);
+                solver.registerCallback<BoundTighteningContext>(
+                    [&](BoundTighteningContext& context)
+                    {
+                        isReformulated.push_back(context.isReformulatedProblem());
+                        upperBounds.push_back(context.getVariableUpperBounds());
+
+                        auto expected = context.isReformulatedProblem() ? context.getReformulatedProblem()
+                                                                        : context.getOriginalProblem();
+
+                        if(!expected || context.getProblem() != expected
+                            || (!context.isReformulatedProblem() && context.getReformulatedProblem())
+                            || (int)context.getVariableLowerBounds().size() != expected->properties.numberOfVariables)
+                            problemsMatch = false;
+                    });
+            });
+
+        if(isReformulated != std::vector<bool> { false, true } || !problemsMatch)
+        {
+            std::cout << "  The callback was not called for the original and then the reformulated problem\n";
+            passed = false;
+        }
+        else if(std::abs(upperBounds[0][0] - 1.2) > 1e-8 || std::abs(upperBounds[1][0] - 1.2) > 1e-8)
+        {
+            std::cout << "  The callback did not get the bounds from SHOT's bound tightening\n";
+            passed = false;
+        }
+    }
+
+    // Without SHOT's bound tightening, the callback gets the bounds of the model, and only its own bounds are used.
+    // The bounds of x1, x2 and x3, which share constraints, cut off the optimum
+    {
+        double modelUpperBound = 0.0;
+        VectorDouble reformulatedLowerBounds;
+        VectorDouble reformulatedUpperBounds;
+        VectorDouble proposedLowerBounds;
+
+        auto [solver, env] = MakeEx1223bSolver(false,
+            [&](SHOT::Solver& solver)
+            {
+                silence(solver);
+                solver.updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+                solver.registerCallback<BoundTighteningContext>(
+                    [&](BoundTighteningContext& context)
+                    {
+                        if(context.isReformulatedProblem())
+                        {
+                            reformulatedLowerBounds = context.getVariableLowerBounds();
+                            reformulatedUpperBounds = context.getVariableUpperBounds();
+                            context.setVariableBounds(1, 0.0, 0.5); // also a bound in the original problem
+                            return;
+                        }
+
+                        modelUpperBound = context.getVariableUpperBounds()[0];
+                        context.setVariableBounds(0, -std::numeric_limits<double>::infinity(), 0.5);
+                        context.setVariableBounds(2, 0.2, 1.5);
+                        context.setVariableBounds(2, 0.0, 1.4); // intersected with the bounds proposed before
+                        context.setVariableBounds(3, 0.3, 1.0); // rounded to [1, 1]
+                        proposedLowerBounds = context.getProposedVariableLowerBounds();
+                    });
+            });
+
+        if(modelUpperBound != 10.0)
+        {
+            std::cout << "  The callback did not get the bounds of the model without bound tightening\n";
+            passed = false;
+        }
+
+        if(proposedLowerBounds.size() != 7 || proposedLowerBounds[2] != 0.2 || proposedLowerBounds[3] != 1.0)
+        {
+            std::cout << "  The proposed bounds were not intersected or rounded\n";
+            passed = false;
+        }
+
+        if(reformulatedUpperBounds.size() < 7 || reformulatedLowerBounds[0] != 0.0 || reformulatedUpperBounds[0] != 0.5
+            || reformulatedLowerBounds[2] != 0.2 || reformulatedUpperBounds[2] != 1.4
+            || reformulatedLowerBounds[3] != 1.0)
+        {
+            std::cout << "  The reformulated problem does not have the bounds given by the callback\n";
+            passed = false;
+        }
+
+        if(env->problem->getVariableUpperBound(1) != 0.5 || env->reformulatedProblem->getVariableUpperBound(1) != 0.5)
+        {
+            std::cout << "  The bound given for the reformulated problem is not in both problems\n";
+            passed = false;
+        }
+
+        solver->solveProblem();
+
+        if(!solver->hasPrimalSolution())
+        {
+            std::cout << "  No primal solution was found with the bounds given by the callback\n";
+            passed = false;
+        }
+        else
+        {
+            auto solution = solver->getPrimalSolution().point;
+
+            if(solution[0] > 0.5 + 1e-6 || solution[1] > 0.5 + 1e-6 || solution[2] > 1.4 + 1e-6
+                || solution[2] < 0.2 - 1e-6 || solution[3] < 1.0 - 1e-6 || solver->getPrimalBound() < 4.58)
+            {
+                std::cout << fmt::format(
+                    "  The solution with the primal bound {} is not in the bounds given by the callback\n",
+                    solver->getPrimalBound());
+                passed = false;
+            }
+        }
+    }
+
+    // The objective bounds over the bounds given by the callback are used also without SHOT's bound tightening: the
+    // objective is 20 with all variables fixed to zero
+    {
+        auto [solver, env] = MakeEx1223bSolver(false,
+            [&](SHOT::Solver& solver)
+            {
+                silence(solver);
+                solver.updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+                solver.registerCallback<BoundTighteningContext>(
+                    [&](BoundTighteningContext& context)
+                    {
+                        if(!context.isReformulatedProblem())
+                            context.setVariableBounds(VectorDouble(7, 0.0), VectorDouble(7, 0.0));
+                    });
+            });
+
+        if(std::abs(env->dualSolver->cutOffToUse - 20.0) > 1e-8)
+        {
+            std::cout << fmt::format(
+                "  The cutoff is {}, not the objective bound 20 given by the bounds\n", env->dualSolver->cutOffToUse);
+            passed = false;
+        }
+    }
+
+    // Bound tightening is repeated after the callback only with UseAfterCallback: with b4 = 1, the constraint
+    // x1 + b4 <= 1.2 gives x1 <= 0.2. Only the original problem is tightened, since the bound tightening of the
+    // reformulated problem would find the bound as well
+    for(bool useAfterCallback : { false, true })
+    {
+        SHOT::Solver solver;
+        auto env = solver.getEnvironment();
+        silence(solver);
+        solver.updateSetting("Model.BoundTightening.FeasibilityBased.UseAfterCallback", useAfterCallback);
+        solver.registerCallback<BoundTighteningContext>(
+            [](BoundTighteningContext& context) { context.setVariableBounds(3, 1.0, 1.0); });
+
+        env->problem = MakeEx1223bProblem(env);
+        TaskPerformBoundTightening(env, env->problem).run();
+
+        double expectedUpperBound = useAfterCallback ? 0.2 : 1.2;
+
+        if(std::abs(env->problem->getVariableUpperBound(0) - expectedUpperBound) > 1e-8)
+        {
+            std::cout << fmt::format("  The upper bound of x1 is {}, expected {} with UseAfterCallback = {}\n",
+                env->problem->getVariableUpperBound(0), expectedUpperBound, useAfterCallback);
+            passed = false;
+        }
+    }
+
+    // Invalid bounds throw, and so does setProblem() if the callback does not catch the exception
+    {
+        int numberOfInvalidBoundsRejected = 0;
+        bool exceptionRethrown = false;
+
+        try
+        {
+            MakeEx1223bSolver(false,
+                [&](SHOT::Solver& solver)
+                {
+                    silence(solver);
+                    solver.registerCallback<BoundTighteningContext>(
+                        [&](BoundTighteningContext& context)
+                        {
+                            auto rejects = [&](const std::function<void()>& action)
+                            {
+                                try
+                                {
+                                    action();
+                                }
+                                catch(const std::invalid_argument&)
+                                {
+                                    numberOfInvalidBoundsRejected++;
+                                }
+                            };
+
+                            rejects([&]() { context.setVariableBounds(0, 1.0, 0.5); });
+                            rejects([&]() { context.setVariableBounds(0, std::nan(""), 0.5); });
+                            rejects([&]() { context.setVariableBounds(7, 0.0, 0.5); });
+                            rejects([&]() { context.setVariableBounds(VectorDouble(6, 0.0), VectorDouble(6, 0.0)); });
+                            rejects([&]() { context.setVariableBounds(3, 0.2, 0.8); }); // empty after rounding
+
+                            // Does not intersect the bounds after bound tightening, x1 <= 1.2
+                            context.setVariableBounds(0, 2.0, 3.0);
+                        });
+                });
+        }
+        catch(const std::invalid_argument&)
+        {
+            exceptionRethrown = true;
+        }
+
+        if(numberOfInvalidBoundsRejected != 5 || !exceptionRethrown)
+        {
+            std::cout << fmt::format(
+                "  {} of 5 invalid bounds were rejected, and the exception was {}rethrown by setProblem()\n",
+                numberOfInvalidBoundsRejected, exceptionRethrown ? "" : "not ");
             passed = false;
         }
     }
@@ -3081,6 +3364,83 @@ bool TestTaskDeactivation()
     return (passed);
 }
 
+// A starting point given with Solver::setStartingPoint() is checked when it is set and is the first primal
+// solution when the problem is solved. The point given last is used, and setProblem() removes it.
+bool TestStartingPoint()
+{
+    bool passed = true;
+
+    SHOT::Solver solverWithoutProblem;
+    solverWithoutProblem.updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+
+    if(solverWithoutProblem.setStartingPoint(VectorDouble(7, 0.0)))
+    {
+        std::cout << "  A starting point was accepted before a problem was set\n";
+        passed = false;
+    }
+
+    auto [solver, env] = MakeEx1223bSolver();
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+
+    if(solver->setStartingPoint(VectorDouble(6, 0.0)))
+    {
+        std::cout << "  A starting point with the wrong number of values was accepted\n";
+        passed = false;
+    }
+
+    VectorDouble pointWithNaN(7, 0.0);
+    pointWithNaN[2] = std::numeric_limits<double>::quiet_NaN();
+
+    if(solver->setStartingPoint(pointWithNaN))
+    {
+        std::cout << "  A starting point with a NaN value was accepted\n";
+        passed = false;
+    }
+
+    // The point with all values zero is feasible with the objective value 1 + 4 + 1 + 1 + 4 + 9 = 20, which is
+    // worse than the optimum 4.58, so it is only the first primal solution if it is given to the solver
+    VectorDouble replacedPoint(7, 0.0);
+    replacedPoint[0] = 0.5;
+
+    if(!solver->setStartingPoint(replacedPoint) || !solver->setStartingPoint(VectorDouble(7, 0.0)))
+    {
+        std::cout << "  A valid starting point was not accepted\n";
+        passed = false;
+    }
+
+    if(solver->getStartingPoint() != VectorDouble(7, 0.0))
+    {
+        std::cout << "  The starting point is not the one given last\n";
+        passed = false;
+    }
+
+    auto firstSolution = SolveAndGetFirstPrimalSolution(*solver);
+
+    if(!firstSolution || firstSolution->source != E_PrimalSolutionSource::ExternalPrimalSolution
+        || firstSolution->point != VectorDouble(7, 0.0) || std::abs(firstSolution->objectiveValue - 20.0) > 1e-8)
+    {
+        std::cout << "  The first primal solution is not the starting point\n";
+        passed = false;
+    }
+
+    if(std::abs(solver->getPrimalBound() - 4.5796) > 1e-3)
+    {
+        std::cout << fmt::format("  The primal bound is {}, expected 4.5796\n", solver->getPrimalBound());
+        passed = false;
+    }
+
+    // A problem without a modeling system has no starting point of its own
+    auto [otherSolver, otherEnv] = MakeEx1223bSolver();
+
+    if(!otherSolver->getStartingPoint().empty())
+    {
+        std::cout << "  A problem without a modeling system has a starting point\n";
+        passed = false;
+    }
+
+    return passed;
+}
+
 int SolverTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -3266,6 +3626,16 @@ int SolverTest(int argc, char* argv[])
         std::cout << "Starting test for deactivated tasks" << std::endl;
         passed = TestTaskDeactivation();
         std::cout << "Finished test for deactivated tasks." << std::endl;
+        break;
+    case 34:
+        std::cout << "Starting test for a starting point given to the solver" << std::endl;
+        passed = TestStartingPoint();
+        std::cout << "Finished test for a starting point given to the solver." << std::endl;
+        break;
+    case 35:
+        std::cout << "Starting test for callback system - bound tightening" << std::endl;
+        passed = TestCallbackBoundTightening();
+        std::cout << "Finished test for callback system - bound tightening." << std::endl;
         break;
     default:
         passed = false;
