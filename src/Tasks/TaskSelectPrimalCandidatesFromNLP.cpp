@@ -67,6 +67,16 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(
         sourceIsReformulatedProblem = false;
     }
 
+    // The task is created when the problem is set, and creating the NLP solver, e.g., the Ipopt problem, takes time on
+    // a large problem. No NLP problem is solved when the time limit has been reached, so the solver is not created
+    if(env->timing->getElapsedTime("Total") >= env->settings->getSetting<double>("Termination.TimeLimit"))
+    {
+        env->output->outputDebug(" NLP solver not created since the time limit has been reached");
+        env->timing->stopTimer("PrimalBoundStrategyNLP");
+        env->timing->stopTimer("PrimalStrategy");
+        return;
+    }
+
     switch(static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("Primal.FixedInteger.Solver")))
     {
 

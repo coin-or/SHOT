@@ -128,3 +128,31 @@ class TestFixedVariablesInObjective:
         assert solver.getPrimalBound() == pytest.approx(expected, abs=1e-4)
         assert solver.getCurrentDualBound() <= expected + 1e-4
         assert solver.getCurrentDualBound() >= expected - 1e-2
+
+
+class TestTimeLimit:
+    """The bound tightening is performed when the problem is set, and stops at the time limit of the solver."""
+
+    def test_no_tightening_after_time_limit(self):
+        """Setting a large problem could run far over the time limit before the solution started."""
+        import SHOTpy
+
+        solver = make_solver()
+        solver.updateSetting("Termination.TimeLimit", 0.0)
+        problem = SHOTpy.Problem(solver)
+        i1 = problem.addVariable("i1", SHOTpy.VariableType.Integer, -10.0, 10.0)
+        i2 = problem.addVariable("i2", SHOTpy.VariableType.Integer, -10.0, 10.0)
+        x = problem.addVariable("x", SHOTpy.VariableType.Real, 0.1, 5.0)
+
+        # The bounds of i1 and i2 are tightened without a time limit, see test_integer_bounds_are_still_tightened
+        problem.setObjective(i1 - i2 + SHOTpy.exp(x))
+        problem.addConstraint(2 * i1 >= 3, "c1")
+        problem.addConstraint(i1 + 3 * i2 <= 4.5, "c2")
+        problem.finalize()
+
+        assert solver.setProblem(problem)
+        assert problem.getVariableLowerBound(0) == -10.0
+        assert problem.getVariableUpperBound(1) == 10.0
+
+        solver.solveProblem()
+        assert solver.getTerminationReason() == SHOTpy.TerminationReason.TimeLimit

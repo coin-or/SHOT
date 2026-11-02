@@ -139,6 +139,10 @@ Changes since SHOT 1.1.
   times spent in the MIP solver; they measured the whole LP step and the time
   from the end of the LP step to the end of the run, and the time for MIP
   problems was zero without an LP step ([46affef9], [a49ecf75]).
+- The bound tightening, the initial outer approximation and the creation of
+  the primal NLP solvers, performed when the problem is set, stop at the time
+  limit, so that the solution time runs less over the limit when reading a
+  large problem uses up most of it.
 - The OSrL results name HiGHS as the dual solver; the name was empty when
   HiGHS solved the MIP problems.
 
