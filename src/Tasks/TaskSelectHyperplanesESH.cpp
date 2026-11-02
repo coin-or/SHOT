@@ -307,6 +307,21 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
             auto externalConstraintValue
                 = env->reformulatedProblem->getMaxNumericConstraintValue(externalPoint, convexConstraints);
 
+            // When the interior point is on the boundary, e.g., a primal solution, the rootsearch can return a point on
+            // the boundary where the constraint value is rounded to slightly below zero, and nothing would be added.
+            // The solution point, where the constraints are violated, is used instead.
+            if(externalConstraintValue.normalizedValue < 0)
+            {
+                auto solutionConstraintValue = env->reformulatedProblem->getMaxNumericConstraintValue(
+                    solPoints.at(solutionPtIndex).point, convexConstraints);
+
+                if(solutionConstraintValue.normalizedValue > 0)
+                {
+                    externalPoint = solPoints.at(solutionPtIndex).point;
+                    externalConstraintValue = solutionConstraintValue;
+                }
+            }
+
             if(externalConstraintValue.normalizedValue >= 0)
             {
                 auto& solutionPoint = solPoints.at(solutionPtIndex).point;
@@ -415,6 +430,15 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
                 }
 
                 auto externalConstraintValue = NCV.constraint->calculateNumericValue(externalPoint);
+
+                // When the interior point is on the boundary, e.g., a primal solution, the rootsearch can return a
+                // point on the boundary where the constraint value is rounded to slightly below zero, and nothing
+                // would be added. The solution point, where the constraint is violated, is used instead.
+                if(externalConstraintValue.normalizedValue < 0)
+                {
+                    externalPoint = solPoints.at(solutionPtIndex).point;
+                    externalConstraintValue = NCV.constraint->calculateNumericValue(externalPoint);
+                }
 
                 if(externalConstraintValue.normalizedValue >= 0)
                 {
