@@ -160,7 +160,6 @@ static std::string formatBounds(Solver& solver)
 static E_InstanceResult solveInstance(const InstanceEntry& entry, const std::string& filepath, ES_MIPSolver mipSolver,
     ES_PrimalNLPSolver nlpSolver, bool verbose, const std::string& solverDesc, std::string& detailOut)
 {
-    constexpr double tolerance = 1e-2;
     constexpr double timeLimit = 10.0;
 
     std::cout << fmt::format("  Solving {} [{}]...\n", entry.file, solverDesc);
@@ -247,6 +246,10 @@ static E_InstanceResult solveInstance(const InstanceEntry& entry, const std::str
     double primal = solver->getPrimalBound();
     double dual = solver->getGlobalDualBound();
     double obj = entry.expectedObjective;
+
+    // Relative for large objective values, since the expected objectives are rounded and SHOT terminates on the
+    // relative gap
+    double tolerance = std::max(1e-2, 1e-6 * std::abs(obj));
 
     bool isMin = solver->getOriginalProblem()->objectiveFunction->properties.isMinimize;
     bool withinBounds = isMin ? (obj <= primal + tolerance && obj >= dual - tolerance)
