@@ -207,8 +207,25 @@ void TaskSolveIteration::run()
         env->dualSolver->MIPSolver->setSolutionLimit(2100000000);
     }
 
+    // Only the time spent in the MIP solver is measured, not the time of the LP step or of the rest of the iteration
+    bool isDualProblemMIP
+        = env->dualSolver->MIPSolver->getDiscreteVariableStatus() && env->reformulatedProblem->properties.isDiscrete;
+
+    auto solveDualProblem = [&]()
+    {
+        if(isDualProblemMIP)
+            env->timing->startTimer("DualProblemsDiscrete");
+
+        auto status = env->dualSolver->MIPSolver->solveProblem();
+
+        if(isDualProblemMIP)
+            env->timing->stopTimer("DualProblemsDiscrete");
+
+        return (status);
+    };
+
     env->output->outputDebug("        Solving dual problem.");
-    auto solStatus = env->dualSolver->MIPSolver->solveProblem();
+    auto solStatus = solveDualProblem();
 
     // Must update the pointer to the current iteration if we use the lazy
     // strategy since new iterations have been created when solving
@@ -236,7 +253,7 @@ void TaskSolveIteration::run()
     // becomes larger. In a single-tree solve, the callback has interrupted the MIP solver and recorded the variables.
     auto resolveProblem = [&]()
     {
-        solStatus = env->dualSolver->MIPSolver->solveProblem();
+        solStatus = solveDualProblem();
 
         if(static_cast<ES_TreeStrategy>(env->settings->getSetting<int>("Dual.TreeStrategy"))
             == ES_TreeStrategy::SingleTree)

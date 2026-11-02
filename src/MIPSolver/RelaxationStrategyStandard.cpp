@@ -87,7 +87,6 @@ void RelaxationStrategyStandard::setActive()
 {
     if(env->dualSolver->MIPSolver->getDiscreteVariableStatus() && env->results->getNumberOfIterations() > 0)
     {
-        env->timing->stopTimer("DualProblemsDiscrete");
         env->timing->startTimer("DualProblemsRelaxed");
         env->dualSolver->MIPSolver->activateDiscreteVariables(false);
 
@@ -101,7 +100,6 @@ void RelaxationStrategyStandard::setInactive()
     if(!env->dualSolver->MIPSolver->getDiscreteVariableStatus())
     {
         env->timing->stopTimer("DualProblemsRelaxed");
-        env->timing->startTimer("DualProblemsDiscrete");
         env->dualSolver->MIPSolver->activateDiscreteVariables(true);
 
         env->results->getCurrentIteration()->isDualProblemDiscrete = true;

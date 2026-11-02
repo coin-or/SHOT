@@ -135,6 +135,9 @@ Changes since SHOT 1.1.
   [15695f16], [7f2b2af7], [bca3b691]).
 - CPLEX now uses the MIP start in the multi-tree strategy; it was deleted
   whenever cuts were added to the model ([#245]).
+- The time for solving MIP problems in the time report is the time spent in
+  the MIP solver; it measured from the end of the LP step to the end of the
+  run, and was zero without an LP step.
 
 ### Removed
 
