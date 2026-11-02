@@ -138,7 +138,7 @@ Changes since SHOT 1.1.
 - The times for solving relaxed and MIP problems in the time report are the
   times spent in the MIP solver; they measured the whole LP step and the time
   from the end of the LP step to the end of the run, and the time for MIP
-  problems was zero without an LP step.
+  problems was zero without an LP step ([46affef9], [a49ecf75]).
 
 ### Removed
 
@@ -226,6 +226,7 @@ Changes since SHOT 1.1.
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e
 [46404779]: https://github.com/coin-or/SHOT/commit/46404779
+[46affef9]: https://github.com/coin-or/SHOT/commit/46affef9
 [4f096597]: https://github.com/coin-or/SHOT/commit/4f096597
 [5a82942f]: https://github.com/coin-or/SHOT/commit/5a82942f
 [64b10f44]: https://github.com/coin-or/SHOT/commit/64b10f44
@@ -233,6 +234,7 @@ Changes since SHOT 1.1.
 [7f2b2af7]: https://github.com/coin-or/SHOT/commit/7f2b2af7
 [801c7809]: https://github.com/coin-or/SHOT/commit/801c7809
 [8c4a2bb8]: https://github.com/coin-or/SHOT/commit/8c4a2bb8
+[a49ecf75]: https://github.com/coin-or/SHOT/commit/a49ecf75
 [bca3b691]: https://github.com/coin-or/SHOT/commit/bca3b691
 [bf3f7447]: https://github.com/coin-or/SHOT/commit/bf3f7447
 [cf408fbd]: https://github.com/coin-or/SHOT/commit/cf408fbd
