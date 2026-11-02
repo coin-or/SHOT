@@ -87,7 +87,7 @@ void RelaxationStrategyStandard::setActive()
 {
     if(env->dualSolver->MIPSolver->getDiscreteVariableStatus() && env->results->getNumberOfIterations() > 0)
     {
-        env->timing->startTimer("DualProblemsRelaxed");
+        LPStepTimer.start();
         env->dualSolver->MIPSolver->activateDiscreteVariables(false);
 
         env->results->getCurrentIteration()->isDualProblemDiscrete = false;
@@ -99,7 +99,7 @@ void RelaxationStrategyStandard::setInactive()
 {
     if(!env->dualSolver->MIPSolver->getDiscreteVariableStatus())
     {
-        env->timing->stopTimer("DualProblemsRelaxed");
+        LPStepTimer.stop();
         env->dualSolver->MIPSolver->activateDiscreteVariables(true);
 
         env->results->getCurrentIteration()->isDualProblemDiscrete = true;
@@ -128,8 +128,7 @@ bool RelaxationStrategyStandard::isIterationLimitReached()
 
 bool RelaxationStrategyStandard::isTimeLimitReached()
 {
-    if(env->timing->getElapsedTime("DualProblemsRelaxed")
-        < env->settings->getSetting<double>("Dual.Relaxation.TimeLimit"))
+    if(LPStepTimer.elapsed() < env->settings->getSetting<double>("Dual.Relaxation.TimeLimit"))
     {
         return (false);
     }

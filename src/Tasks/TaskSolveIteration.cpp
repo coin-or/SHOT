@@ -207,19 +207,17 @@ void TaskSolveIteration::run()
         env->dualSolver->MIPSolver->setSolutionLimit(2100000000);
     }
 
-    // Only the time spent in the MIP solver is measured, not the time of the LP step or of the rest of the iteration
-    bool isDualProblemMIP
-        = env->dualSolver->MIPSolver->getDiscreteVariableStatus() && env->reformulatedProblem->properties.isDiscrete;
+    // Only the time spent in the MIP solver is measured, separately for MIP problems and for relaxed or continuous ones
+    std::string solverTimer
+        = (env->dualSolver->MIPSolver->getDiscreteVariableStatus() && env->reformulatedProblem->properties.isDiscrete)
+        ? "DualProblemsDiscrete"
+        : "DualProblemsRelaxed";
 
     auto solveDualProblem = [&]()
     {
-        if(isDualProblemMIP)
-            env->timing->startTimer("DualProblemsDiscrete");
-
+        env->timing->startTimer(solverTimer);
         auto status = env->dualSolver->MIPSolver->solveProblem();
-
-        if(isDualProblemMIP)
-            env->timing->stopTimer("DualProblemsDiscrete");
+        env->timing->stopTimer(solverTimer);
 
         return (status);
     };

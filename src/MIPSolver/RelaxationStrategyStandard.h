@@ -12,6 +12,7 @@
 #include "RelaxationStrategyBase.h"
 #include "../Environment.h"
 #include "../Enums.h"
+#include "../Timer.h"
 
 namespace SHOT
 {
@@ -36,6 +37,9 @@ private:
     bool isObjectiveStagnant();
 
     bool LPFinished;
+
+    // The time of the LP step, which is compared with the time limit for it
+    Timer LPStepTimer{"LPStep"};
 };
 
 } // namespace SHOT
