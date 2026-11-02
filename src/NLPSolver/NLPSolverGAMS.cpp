@@ -333,4 +333,12 @@ std::string NLPSolverGAMS::getSolverDescription()
 
     return (description);
 };
+
+std::string NLPSolverGAMS::getSelectedSolverName()
+{
+    std::string name = nlpsolver;
+    std::transform(name.begin(), name.end(), name.begin(), ::toupper);
+
+    return (name);
+};
 } // namespace SHOT

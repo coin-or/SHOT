@@ -660,8 +660,12 @@ std::string Results::getResultsOSrL()
 
     otherNode = osrlDocument.NewElement("other");
     otherNode->SetAttribute("name", "FixedNLPSolver");
-    otherNode->SetAttribute("value", (dualSolverName + " " + env->dualSolver->MIPSolver->getSolverVersion()).c_str());
-    otherNode->SetAttribute("description", "The dual solver used");
+    otherNode->SetAttribute("value",
+        (this->usedPrimalNLPSolver == ES_PrimalNLPSolver::NotUsed || this->usedPrimalNLPSolverDescription.empty()
+            || env->solutionStatistics.numberOfProblemsFixedNLP == 0)
+            ? "none"
+            : this->usedPrimalNLPSolverDescription.c_str());
+    otherNode->SetAttribute("description", "The NLP solver used for the fixed-integer NLP problems");
     otherResultsNode->InsertEndChild(otherNode);
 
     for(auto& S : this->primalSolutionSourceStatistics)
@@ -1200,13 +1204,15 @@ std::string Results::getResultsTrace()
     ss << "SHOT"
        << ",";
 
-    switch(static_cast<ES_PrimalNLPSolver>(this->usedPrimalNLPSolver))
+    // The NLP solver is created when the primal strategy is set up, so it is only stated if an NLP problem was solved
+    switch(
+        env->solutionStatistics.numberOfProblemsFixedNLP == 0 ? ES_PrimalNLPSolver::NotUsed : this->usedPrimalNLPSolver)
     {
     case(ES_PrimalNLPSolver::NotUsed):
         ss << "NONE";
         break;
     case(ES_PrimalNLPSolver::GAMS):
-        ss << env->settings->getSetting<std::string>("Subsolver.GAMS.NLP.Solver");
+        ss << this->usedPrimalGAMSNLPSolver;
         break;
     case ES_PrimalNLPSolver::Conopt:
         ss << "CONOPT";

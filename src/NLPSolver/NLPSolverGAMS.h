@@ -56,6 +56,9 @@ public:
 
     std::string getSolverDescription() override;
 
+    // The name of the GAMS NLP solver called, also when it has been selected automatically
+    std::string getSelectedSolverName();
+
 protected:
     E_NLPSolutionStatus solveProblemInstance() override;
 

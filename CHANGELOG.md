@@ -143,8 +143,11 @@ Changes since SHOT 1.1.
   the primal NLP solvers, performed when the problem is set, stop at the time
   limit, so that the solution time runs less over the limit when reading a
   large problem uses up most of it.
-- The OSrL results name HiGHS as the dual solver; the name was empty when
-  HiGHS solved the MIP problems.
+- The OSrL results name HiGHS as the dual solver, where the name was empty,
+  and give the NLP solver used for the fixed-integer NLP problems as
+  `FixedNLPSolver`, which gave the dual solver ([c95eba1d]). The trace file
+  gives the NLP solver only if an NLP problem was solved, and the GAMS NLP
+  solver called instead of the setting, e.g., `CONOPT` instead of `auto`.
 
 ### Removed
 
@@ -243,6 +246,7 @@ Changes since SHOT 1.1.
 [a49ecf75]: https://github.com/coin-or/SHOT/commit/a49ecf75
 [bca3b691]: https://github.com/coin-or/SHOT/commit/bca3b691
 [bf3f7447]: https://github.com/coin-or/SHOT/commit/bf3f7447
+[c95eba1d]: https://github.com/coin-or/SHOT/commit/c95eba1d
 [cf408fbd]: https://github.com/coin-or/SHOT/commit/cf408fbd
 [d9db1155]: https://github.com/coin-or/SHOT/commit/d9db1155
 [ec55766b]: https://github.com/coin-or/SHOT/commit/ec55766b
