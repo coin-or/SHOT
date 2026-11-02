@@ -79,6 +79,7 @@ SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(EnvironmentPtr envPtr)
     env->timing->createTimer("InteriorPointSearch", "- interior point search");
 
     env->timing->createTimer("DualStrategy", "- dual strategy");
+    env->timing->createTimer("DualProblemsRelaxed", "  - solving relaxed problems");
     env->timing->createTimer("DualProblemsDiscrete", "  - solving MIP problems");
 
     env->timing->createTimer("PrimalStrategy", "- primal strategy");
