@@ -660,8 +660,12 @@ std::string Results::getResultsOSrL()
 
     otherNode = osrlDocument.NewElement("other");
     otherNode->SetAttribute("name", "FixedNLPSolver");
-    otherNode->SetAttribute("value", (dualSolverName + " " + env->dualSolver->MIPSolver->getSolverVersion()).c_str());
-    otherNode->SetAttribute("description", "The dual solver used");
+    otherNode->SetAttribute("value",
+        (this->usedPrimalNLPSolver == ES_PrimalNLPSolver::NotUsed || this->usedPrimalNLPSolverDescription.empty()
+            || env->solutionStatistics.numberOfProblemsFixedNLP == 0)
+            ? "none"
+            : this->usedPrimalNLPSolverDescription.c_str());
+    otherNode->SetAttribute("description", "The NLP solver used for the fixed-integer NLP problems");
     otherResultsNode->InsertEndChild(otherNode);
 
     for(auto& S : this->primalSolutionSourceStatistics)
