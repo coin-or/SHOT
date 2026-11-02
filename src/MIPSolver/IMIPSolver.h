@@ -102,6 +102,12 @@ public:
     virtual void setCutOffAsConstraint(double cutOff) = 0;
 
     virtual void addMIPStart(VectorDouble point) = 0;
+
+    // Adds a start that gives values only to some variables, in addition to the one from addMIPStart; the MIP solver
+    // completes it, e.g. by solving the LP with these values fixed. Replaces the previous partial start. Solvers that
+    // keep only one start (HiGHS, Cbc) use it instead of the one from addMIPStart.
+    virtual void addPartialMIPStart(VectorInteger variableIndexes, VectorDouble variableValues) = 0;
+
     virtual void deleteMIPStarts() = 0;
 
     virtual void fixVariable(int varIndex, double value) = 0;

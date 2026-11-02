@@ -934,6 +934,22 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
         }
     }
 
+    // Removes the partial start, which is start number 1
+    if(partialMIPStartAdded)
+    {
+        try
+        {
+            gurobiModel->set(GRB_IntAttr_NumStart, 1);
+            gurobiModel->update();
+        }
+        catch(GRBException& e)
+        {
+            env->output->outputError("        Error when removing partial MIP starting point", e.getMessage());
+        }
+
+        partialMIPStartAdded = false;
+    }
+
     return (MIPSolutionStatus);
 }
 
@@ -1300,6 +1316,42 @@ void MIPSolverGurobi::addMIPStart(VectorDouble point)
     }
 
     env->output->outputDebug("        Added MIP starting point.");
+}
+
+void MIPSolverGurobi::addPartialMIPStart(VectorInteger variableIndexes, VectorDouble variableValues)
+{
+    assert(variableIndexes.size() == variableValues.size());
+
+    try
+    {
+        // The start from addMIPStart is number 0 and the partial start number 1; the variables not in the partial
+        // start are undefined, so that Gurobi completes it
+        if(gurobiModel->get(GRB_IntAttr_NumStart) < 2)
+        {
+            gurobiModel->set(GRB_IntAttr_NumStart, 2);
+            gurobiModel->update();
+        }
+
+        gurobiModel->set(GRB_IntParam_StartNumber, 1);
+
+        int numVar = gurobiModel->get(GRB_IntAttr_NumVars);
+
+        for(int i = 0; i < numVar; i++)
+            gurobiModel->getVar(i).set(GRB_DoubleAttr_Start, GRB_UNDEFINED);
+
+        for(size_t i = 0; i < variableIndexes.size(); i++)
+            gurobiModel->getVar(variableIndexes[i]).set(GRB_DoubleAttr_Start, variableValues[i]);
+
+        gurobiModel->update();
+        gurobiModel->set(GRB_IntParam_StartNumber, 0);
+        partialMIPStartAdded = true;
+    }
+    catch(GRBException& e)
+    {
+        env->output->outputError("        Error when adding partial MIP starting point", e.getMessage());
+    }
+
+    env->output->outputDebug("        Added partial MIP starting point.");
 }
 
 void MIPSolverGurobi::writeProblemToFile(std::string filename)

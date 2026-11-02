@@ -767,7 +767,21 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
                     + env->reformulatedProblem->properties.numberOfSemicontinuousVariables
                     + env->reformulatedProblem->properties.numberOfSpecialOrderedSets
                 == 0))
+        {
             cbcModel->setMIPStart(MIPStart);
+
+            // Cbc counts the completed partial start as a solution, so the solve would otherwise stop at the start
+            // when the limit is one
+            if(partialMIPStartAdded && usedSolutionLimit < 2100000000)
+                cbcModel->setMaximumSolutions(usedSolutionLimit + 1);
+        }
+
+        // The partial start is only for this solve, the primal start is given again in the next iteration
+        if(partialMIPStartAdded)
+        {
+            MIPStart.clear();
+            partialMIPStartAdded = false;
+        }
 
         addBranchingObjects();
 
@@ -1381,12 +1395,32 @@ void MIPSolverCbc::addMIPStart(VectorDouble point)
 {
     assert(point.size() == static_cast<size_t>(this->numberOfVariables - numberOfIntegerCutVariables));
 
+    if(partialMIPStartAdded)
+    {
+        env->output->outputDebug("        MIP start not added in Cbc, since it keeps only the partial start.");
+        return;
+    }
+
     MIPStart.clear();
 
     for(size_t i = 0; i < point.size(); i++)
     {
         MIPStart.emplace_back(variableNames.at(i).c_str(), point.at(i));
     }
+}
+
+void MIPSolverCbc::addPartialMIPStart(VectorInteger variableIndexes, VectorDouble variableValues)
+{
+    assert(variableIndexes.size() == variableValues.size());
+
+    // Cbc fixes the discrete variables in the start and solves the LP for the others
+    MIPStart.clear();
+
+    for(size_t i = 0; i < variableIndexes.size(); i++)
+        MIPStart.emplace_back(variableNames.at(variableIndexes[i]).c_str(), variableValues[i]);
+
+    partialMIPStartAdded = true;
+    env->output->outputDebug("        Added partial MIP starting point.");
 }
 
 void MIPSolverCbc::writeProblemToFile(std::string filename)

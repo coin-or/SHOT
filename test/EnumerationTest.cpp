@@ -356,7 +356,8 @@ bool EnumerationTestConvex(ES_TreeStrategy treeStrategy, ES_PrimalNLPProblemSour
 
 bool EnumerationTestFallback()
 {
-    // The dual stagnation limit terminates the solution process of the convex problem with an open gap
+    // The dual stagnation limit terminates the solution process of the convex problem with an open gap. The start from
+    // the previous MIP solution is not used, since the gap is then closed before the dual bound stagnates
 
     bool passed = true;
 
@@ -366,6 +367,7 @@ bool EnumerationTestFallback()
         auto env = solver->getEnvironment();
         solver->updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::MultiTree));
         solver->updateSetting("Termination.DualStagnation.IterationLimit", 0);
+        solver->updateSetting("Dual.MIP.UseDualSolutionStart", false);
         solver->updateSetting("Primal.FixedInteger.Enumeration.UseAsFallback", useFallback);
 
         if(!solver->setProblem("data/synthes1.osil"))
@@ -407,6 +409,7 @@ bool EnumerationTestFallback()
         auto env = solver->getEnvironment();
         solver->updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::MultiTree));
         solver->updateSetting("Termination.DualStagnation.IterationLimit", 0);
+        solver->updateSetting("Dual.MIP.UseDualSolutionStart", false);
         solver->updateSetting("Primal.FixedInteger.Enumeration.UseInitially", true);
 
         if(!hasTimeInitially)
