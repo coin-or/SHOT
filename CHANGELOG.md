@@ -32,7 +32,7 @@ Changes since SHOT 1.1.
   clash with other packages. Projects using the CMake target
   `SHOT::SHOTSolver` need no change; include headers as `<SHOT/Solver.h>` or,
   as before, `"Solver.h"`. Projects that do not use the CMake package must add
-  `<prefix>/include/SHOT` to their include path ([#241]).
+  `<prefix>/include/SHOT` to their include path ([#241], [#250]).
 - C++17 is required ([#217]).
 
 ### Added
@@ -72,7 +72,7 @@ Changes since SHOT 1.1.
   bounds from other techniques can tighten the variable bounds; with
   `Model.BoundTightening.FeasibilityBased.Use` off, only these are used.
   `Model.BoundTightening.FeasibilityBased.UseAfterCallback` propagates them
-  with another bound tightening pass.
+  with another bound tightening pass ([#247]).
 - The AMPL solve message gives the SHOT version, the problem types and the
   subsolvers; the status text is unchanged ([d9db1155]).
 - The options report shows the number of MIP solver threads, and a warning
@@ -142,12 +142,13 @@ Changes since SHOT 1.1.
 - The bound tightening, the initial outer approximation and the creation of
   the primal NLP solvers, performed when the problem is set, stop at the time
   limit, so that the solution time runs less over the limit when reading a
-  large problem uses up most of it.
+  large problem uses up most of it ([#251]).
 - The OSrL results name HiGHS as the dual solver, where the name was empty,
   and give the NLP solver used for the fixed-integer NLP problems as
-  `FixedNLPSolver`, which gave the dual solver ([c95eba1d]). The trace file
-  gives the NLP solver only if an NLP problem was solved, and the GAMS NLP
-  solver called instead of the setting, e.g., `CONOPT` instead of `auto`.
+  `FixedNLPSolver`, which gave the dual solver ([c95eba1d], [#252]). The
+  trace file gives the NLP solver only if an NLP problem was solved, and the
+  GAMS NLP solver called instead of the setting, e.g., `CONOPT` instead of
+  `auto` ([#252]).
 
 ### Removed
 
@@ -230,7 +231,11 @@ Changes since SHOT 1.1.
 [#242]: https://github.com/coin-or/SHOT/pull/242
 [#245]: https://github.com/coin-or/SHOT/pull/245
 [#246]: https://github.com/coin-or/SHOT/pull/246
+[#247]: https://github.com/coin-or/SHOT/pull/247
 [#248]: https://github.com/coin-or/SHOT/pull/248
+[#250]: https://github.com/coin-or/SHOT/pull/250
+[#251]: https://github.com/coin-or/SHOT/pull/251
+[#252]: https://github.com/coin-or/SHOT/pull/252
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e
