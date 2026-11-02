@@ -367,6 +367,18 @@ void QuadraticObjectiveFunction::add(QuadraticTermPtr term)
     properties.isValid = false;
 }
 
+void QuadraticObjectiveFunction::setFunctionConvexity(E_Convexity convexity)
+{
+    if(convexity != E_Convexity::Convex && convexity != E_Convexity::Concave && convexity != E_Convexity::Nonconvex
+        && convexity != E_Convexity::NotSet)
+    {
+        throw std::invalid_argument("The convexity of the objective function can only be specified as Convex, Concave "
+                                    "or Nonconvex, or as NotSet to detect it.");
+    }
+
+    properties.userFunctionConvexity = convexity;
+}
+
 void QuadraticObjectiveFunction::updateProperties()
 {
     LinearObjectiveFunction::updateProperties();
@@ -402,13 +414,20 @@ void QuadraticObjectiveFunction::updateProperties()
             }
         }
 
-        auto convexity = quadraticTerms.getConvexity();
-        properties.convexity = Utilities::combineConvexity(convexity, properties.convexity);
+        if(properties.userFunctionConvexity == E_Convexity::NotSet)
+        {
+            auto convexity = quadraticTerms.getConvexity();
+            properties.convexity = Utilities::combineConvexity(convexity, properties.convexity);
+        }
     }
     else
     {
         properties.hasQuadraticTerms = false;
     }
+
+    // Not detected, also not for the other terms of a nonlinear objective function
+    if(properties.userFunctionConvexity != E_Convexity::NotSet)
+        properties.convexity = properties.userFunctionConvexity;
 }
 
 void QuadraticObjectiveFunction::takeOwnership(ProblemPtr owner)
@@ -587,20 +606,26 @@ void NonlinearObjectiveFunction::updateProperties()
     properties.classification = E_ObjectiveFunctionClassification::Nonlinear;
     variablesInNonlinearExpression.clear();
 
+    // The convexity has then already been set by QuadraticObjectiveFunction::updateProperties()
+    bool isFunctionConvexityUserSpecified = properties.userFunctionConvexity != E_Convexity::NotSet;
+
     if(nonlinearExpression != nullptr)
     {
         properties.hasNonlinearExpression = true;
 
         nonlinearExpression->appendNonlinearVariables(variablesInNonlinearExpression);
 
-        try
+        if(!isFunctionConvexityUserSpecified)
         {
-            auto convexity = nonlinearExpression->getConvexity();
-            properties.convexity = Utilities::combineConvexity(convexity, properties.convexity);
-        }
-        catch(const IntervalError&)
-        {
-            properties.convexity = E_Convexity::Unknown;
+            try
+            {
+                auto convexity = nonlinearExpression->getConvexity();
+                properties.convexity = Utilities::combineConvexity(convexity, properties.convexity);
+            }
+            catch(const IntervalError&)
+            {
+                properties.convexity = E_Convexity::Unknown;
+            }
         }
     }
     else
@@ -629,8 +654,11 @@ void NonlinearObjectiveFunction::updateProperties()
             }
         }
 
-        auto convexity = monomialTerms.getConvexity();
-        properties.convexity = Utilities::combineConvexity(convexity, properties.convexity);
+        if(!isFunctionConvexityUserSpecified)
+        {
+            auto convexity = monomialTerms.getConvexity();
+            properties.convexity = Utilities::combineConvexity(convexity, properties.convexity);
+        }
     }
     else
     {
@@ -649,7 +677,10 @@ void NonlinearObjectiveFunction::updateProperties()
                 if(collectedSignomialVariables.insert(E->variable.get()).second)
                     variablesInSignomialTerms.push_back(E->variable);
             }
+        }
 
+        if(!isFunctionConvexityUserSpecified)
+        {
             auto convexity = signomialTerms.getConvexity();
             properties.convexity = Utilities::combineConvexity(convexity, properties.convexity);
         }

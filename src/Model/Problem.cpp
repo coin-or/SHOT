@@ -201,6 +201,8 @@ void Problem::updateConstraints()
 
             C->quadraticTerms.invalidateProperties();
 
+            C->properties.userFunctionConvexity = Utilities::negateConvexity(C->properties.userFunctionConvexity);
+
             C->constant *= -1.0;
         }
     }
@@ -237,6 +239,8 @@ void Problem::updateConstraints()
 
             C->signomialTerms.invalidateProperties();
 
+            C->properties.userFunctionConvexity = Utilities::negateConvexity(C->properties.userFunctionConvexity);
+
             if(C->nonlinearExpression)
                 // finalize() simplifies the expression when it extracts its terms. Avoid walking a large
                 // expression tree here as well just to standardize the constraint's bounds.
@@ -264,10 +268,20 @@ void Problem::updateConvexity()
         objectiveFunction->properties.convexity
             = (objectiveFunction->properties.isMinimize) ? E_Convexity::Convex : E_Convexity::Concave;
 
+    properties.isObjectiveConvexityUserSpecified
+        = objectiveFunction->properties.userFunctionConvexity != E_Convexity::NotSet
+        && objectiveFunction->properties.convexity
+            == (objectiveFunction->properties.isMinimize ? E_Convexity::Convex : E_Convexity::Concave);
+
+    properties.numberOfUserSpecifiedConvexConstraints = 0;
+
     for(auto& C : numericConstraints)
     {
         if(assumeConvex && C->properties.convexity != E_Convexity::Linear)
             C->properties.convexity = E_Convexity::Convex;
+
+        if(C->properties.userFunctionConvexity != E_Convexity::NotSet && C->properties.convexity == E_Convexity::Convex)
+            properties.numberOfUserSpecifiedConvexConstraints++;
     }
 
     if(assumeConvex)
@@ -2862,6 +2876,11 @@ ProblemPtr Problem::createCopy(
         std::dynamic_pointer_cast<NonlinearObjectiveFunction>(destinationObjective)
             ->add(copyNonlinearExpression(NE.get(), destinationProblem));
 
+    // A relaxed objective function has other terms, whose convexity is detected
+    if(auto destinationQuadratic = std::dynamic_pointer_cast<QuadraticObjectiveFunction>(destinationObjective);
+        destinationQuadratic && !isObjectiveRelaxed)
+        destinationQuadratic->setFunctionConvexity(this->objectiveFunction->properties.userFunctionConvexity);
+
     destinationProblem->add(std::move(destinationObjective));
 
     // Copying constraints
@@ -2994,6 +3013,9 @@ ProblemPtr Problem::createCopy(
                     ->add(copyNonlinearExpression(
                         std::dynamic_pointer_cast<NonlinearConstraint>(C)->nonlinearExpression.get(),
                         destinationProblem));
+
+            if(auto destinationQuadratic = std::dynamic_pointer_cast<QuadraticConstraint>(destinationConstraint))
+                destinationQuadratic->setFunctionConvexity(C->properties.userFunctionConvexity);
         }
 
         destinationProblem->add(std::move(destinationConstraint));
@@ -3106,6 +3128,14 @@ NumericConstraintPtr Problem::createConstraintSide(const NumericConstraintPtr& s
             else
                 nonlinearConstraint->add(simplify(std::make_shared<ExpressionNegate>(expression)));
         }
+    }
+
+    if(sourceQuadratic)
+    {
+        auto userConvexity = source->properties.userFunctionConvexity;
+
+        std::dynamic_pointer_cast<QuadraticConstraint>(constraint)
+            ->setFunctionConvexity(isUpper ? userConvexity : Utilities::negateConvexity(userConvexity));
     }
 
     constraint->takeOwnership(shared_from_this());

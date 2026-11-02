@@ -63,6 +63,10 @@ struct ConstraintProperties
     // of the constraint, so a constraint with a convex function is nonconvex if it has a lower bound
     E_Convexity functionConvexity = E_Convexity::NotSet;
 
+    // The convexity of f(x) specified by the user with setFunctionConvexity(), which is used as functionConvexity
+    // instead of detecting it. NotSet if it has not been specified.
+    E_Convexity userFunctionConvexity = E_Convexity::NotSet;
+
     E_ConstraintSignType type = E_ConstraintSignType::None;
     E_Monotonicity monotonicity = E_Monotonicity::NotSet;
 
@@ -316,6 +320,11 @@ public:
     std::shared_ptr<NumericConstraint> getPointer() override;
 
     void updateProperties() override;
+
+    // Specifies the convexity of the function f(x) in L <= f(x) <= U (Convex, Concave or Nonconvex), which is then used
+    // instead of the detected one; NotSet detects it again. The convexity of the constraint follows from it and the
+    // bounds, e.g., L <= f(x) is convex for a concave function.
+    void setFunctionConvexity(E_Convexity convexity);
 
     // Sets the convexity of the constraint from the convexity of its function and its bounds
     void updateConvexityFromBounds();

@@ -83,6 +83,11 @@ public:
     E_ModelReturnStatus getModelReturnStatus();
     bool hasPrimalSolution();
 
+    // A message that the convexity of the problem, or of its objective function or some of its constraints, has been
+    // specified by the user instead of detected, in which case the global optimality of a solution depends on it. Empty
+    // otherwise.
+    std::string getUserSpecifiedConvexityDescription();
+
     E_SolutionStrategy usedSolutionStrategy = E_SolutionStrategy::None;
 
     ES_MIPSolver usedMIPSolver = ES_MIPSolver::NotUsed;

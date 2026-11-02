@@ -52,6 +52,10 @@ struct ObjectiveFunctionProperties
 
     E_Convexity convexity = E_Convexity::Convex;
 
+    // The convexity of the objective function specified by the user with setFunctionConvexity(), which is used as
+    // convexity instead of detecting it. NotSet if it has not been specified.
+    E_Convexity userFunctionConvexity = E_Convexity::NotSet;
+
     bool isReformulated = false;
 
     E_ObjectiveFunctionClassification classification = E_ObjectiveFunctionClassification::None;
@@ -257,6 +261,11 @@ public:
 
     void add(const QuadraticTerms& terms);
     void add(QuadraticTermPtr term);
+
+    // Specifies the convexity of the objective function (Convex, Concave or Nonconvex), which is then used instead of
+    // the detected one; NotSet detects it again. A minimized convex or maximized concave function gives a convex
+    // problem.
+    void setFunctionConvexity(E_Convexity convexity);
 
     void updateProperties() override;
 
