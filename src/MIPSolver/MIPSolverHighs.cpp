@@ -778,14 +778,20 @@ E_ProblemSolutionStatus MIPSolverHighs::solveProblem()
 
     // HiGHS also changes the status of a MIP problem it has solved to a solve error if the solution violates a row by
     // more than the feasibility tolerance when it is transformed back from the presolved problem, and it then gives
-    // neither the solution nor the bound. This is not affected by the state of the solver, but solving without
-    // presolve gives a solution of the problem as it was given.
-    if(highsInstance.getModelStatus() == HighsModelStatus::kSolveError)
-    {
-        env->output->outputDebug("        The MIP solver did not return a solution, solving again without presolve.");
+    // neither the solution nor the bound. When this happens to every solution found, it instead reports a feasible MIP
+    // problem as infeasible. This is not affected by the state of the solver, but solving without presolve gives a
+    // solution of the problem as it was given.
+    std::string presolve;
+    highsInstance.getOptionValue("presolve", presolve);
 
-        std::string presolve;
-        highsInstance.getOptionValue("presolve", presolve);
+    if(presolve != "off"
+        && (highsInstance.getModelStatus() == HighsModelStatus::kSolveError
+            || (highsInstance.getModelStatus() == HighsModelStatus::kInfeasible && highsInstance.getLp().isMip())))
+    {
+        env->output->outputDebug(fmt::format("        The MIP solver returned the status {}, solving again without "
+                                             "presolve.",
+            highsInstance.modelStatusToString(highsInstance.getModelStatus())));
+
         highsInstance.setOptionValue("presolve", "off");
         currentSolutions.clear();
         highsInstance.clearSolver();

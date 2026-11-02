@@ -154,6 +154,11 @@ Changes since SHOT 1.1.
   to slightly below zero. Convex problems, e.g., with quadratic terms and
   Cbc or HiGHS, could otherwise stop with a gap since no additional cuts
   could be added.
+- A MIP problem that HiGHS reports as infeasible is solved again without
+  presolve, since HiGHS can reject every solution of a feasible problem when
+  they violate a row after the presolve is undone. The dual problem could
+  then be taken as infeasible, and the solution stop without a primal
+  solution.
 
 ### Removed
 
