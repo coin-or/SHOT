@@ -620,6 +620,17 @@ void ModelingSystemGAMS::createAuditLicensing()
         gmoNLNZ(modelingObject), gmoNDisc(modelingObject));
 }
 
+VectorDouble ModelingSystemGAMS::getStartingPoint()
+{
+    if(modelingObject == nullptr)
+        return {};
+
+    // The levels of the variables
+    VectorDouble point(gmoN(modelingObject));
+    gmoGetVarL(modelingObject, point.data());
+    return (point);
+}
+
 void ModelingSystemGAMS::finalizeSolution()
 {
     ResultsPtr r = env->results;

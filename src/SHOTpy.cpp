@@ -3114,6 +3114,16 @@ PYBIND11_MODULE(SHOTpy, m)
             "setProblem", [](Solver& self, ProblemPtr problem, ProblemPtr reformulatedProblem)
             { return self.setProblem(problem, reformulatedProblem, nullptr); }, "Set problem with reformulated problem",
             py::arg("problem"), py::arg("reformulatedProblem"))
+        .def("setStartingPoint", &Solver::setStartingPoint, py::arg("point"),
+            "Set a starting point, with a value for each variable of the original problem in its order, after\n"
+            "setProblem(), which replaces it with the starting point in the problem file, e.g., the initial values\n"
+            "in an AMPL .nl file. A feasible point is the first primal solution and the MIP start of the dual\n"
+            "problems. It is also the starting point of an NLP problem with the discrete variables fixed to their\n"
+            "rounded values if Primal.FixedInteger.UseStartingPoint is True. An empty list removes the starting\n"
+            "point. Returns False if no problem has been set, or if the point has the wrong size or a value that\n"
+            "is not finite")
+        .def("getStartingPoint", &Solver::getStartingPoint,
+            "The starting point given to setStartingPoint() or in the problem file, or an empty list if there is none")
         // The GIL is released while the problem is solved, so that the MIP solver can call Python callbacks from its
         // own threads
         .def("solveProblem", &Solver::solveProblem, py::call_guard<py::gil_scoped_release>(),

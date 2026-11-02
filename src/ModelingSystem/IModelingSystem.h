@@ -43,6 +43,10 @@ public:
     // Move the solution and statistics from SHOT to the modeling system
     virtual void finalizeSolution() = 0;
 
+    // The starting point given in the model, e.g., the levels of the variables in GAMS, or an empty vector if there
+    // is none. Solver::setProblem() passes it to Solver::setStartingPoint()
+    virtual VectorDouble getStartingPoint() { return {}; }
+
 protected:
     EnvironmentPtr env;
 };

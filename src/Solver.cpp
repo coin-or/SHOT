@@ -208,6 +208,8 @@ void Solver::updateLogLevels()
 
 bool Solver::setProblem(std::string fileName)
 {
+    startingPoint.clear();
+
     if(!fs::filesystem::exists(fileName))
     {
         env->output->outputError(" Problem file \"" + fileName + "\" does not exist.");
@@ -353,13 +355,6 @@ bool Solver::setProblem(std::string fileName)
             env->modelingSystem = modelingSystem;
             env->problem = problem;
 
-            // The levels of the variables are a starting point, which is given to the primal solver as when SHOT is
-            // called from GAMS (EntryPointsGAMS.cpp) and as the initial values of an AMPL model
-            VectorDouble variableStarts(gmoN(modelingSystem->modelingObject));
-            gmoGetVarL(modelingSystem->modelingObject, variableStarts.data());
-            env->primalSolver->addPrimalSolutionCandidate(
-                variableStarts, E_PrimalSolutionSource::ExternalPrimalSolution, 0);
-
             env->settings->updateSetting("Input.ModelingSystem", static_cast<int>(ES_ModelingSystem::GAMS));
         }
 #endif
@@ -432,6 +427,10 @@ bool Solver::setProblem(std::string fileName)
         return (false);
     }
 
+    // The starting point in the model, e.g., the initial values in an AMPL .nl file
+    if(env->modelingSystem)
+        setStartingPoint(env->modelingSystem->getStartingPoint());
+
     setConvexityBasedSettings();
     verifySettings();
 
@@ -441,6 +440,8 @@ bool Solver::setProblem(std::string fileName)
 bool Solver::setProblem(
     SHOT::ProblemPtr problem, SHOT::ProblemPtr reformulatedProblem, SHOT::ModelingSystemPtr modelingSystem)
 {
+    startingPoint.clear();
+
     env->modelingSystem = modelingSystem;
     env->problem = problem;
 
@@ -562,10 +563,43 @@ bool Solver::setProblem(
         Utilities::writeStringToFile(filename.string(), problemText.str());
     }
 
+    // The starting point in the model, e.g., the levels of the variables when SHOT is called from GAMS
+    if(modelingSystem)
+        setStartingPoint(modelingSystem->getStartingPoint());
+
     setConvexityBasedSettings();
     verifySettings();
 
     return (this->selectStrategy());
+}
+
+bool Solver::setStartingPoint(const VectorDouble& point)
+{
+    if(!env->problem)
+    {
+        env->output->outputError(" Cannot set a starting point before a problem has been set.");
+        return (false);
+    }
+
+    if(point.size() > 0 && point.size() != static_cast<size_t>(env->problem->properties.numberOfVariables))
+    {
+        env->output->outputError(fmt::format(" The starting point has {} values, but the problem has {} variables.",
+            point.size(), env->problem->properties.numberOfVariables));
+        return (false);
+    }
+
+    for(size_t i = 0; i < point.size(); i++)
+    {
+        if(!std::isfinite(point[i]))
+        {
+            env->output->outputError(fmt::format(" The starting point has the value {} for variable {}.", point[i],
+                env->problem->allVariables[i]->name));
+            return (false);
+        }
+    }
+
+    startingPoint = point;
+    return (true);
 }
 
 bool Solver::selectStrategy()
@@ -741,6 +775,11 @@ bool Solver::solveProblem()
         SolvingGuard(bool& flag) : isSolving(flag) { isSolving = true; }
         ~SolvingGuard() { isSolving = false; }
     } solvingGuard(isSolving);
+
+    // Added here rather than in setStartingPoint(), so that the point can be replaced until the problem is solved.
+    // A feasible point is the first primal solution and the MIP start of the dual problems
+    if(!startingPoint.empty())
+        env->primalSolver->addPrimalSolutionCandidate(startingPoint, E_PrimalSolutionSource::ExternalPrimalSolution, 0);
 
     isProblemSolved = solutionStrategy->solveProblem();
 

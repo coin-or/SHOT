@@ -58,6 +58,8 @@ public:
     // Move the solution and statistics from SHOT to the modeling system
     void finalizeSolution() override;
 
+    VectorDouble getStartingPoint() override;
+
     gmoHandle_t modelingObject;
     gevHandle_t modelingEnvironment;
     palHandle_t auditLicensing;
