@@ -475,7 +475,8 @@ class TestSharedAuxiliaryVariables:
                 assert problem.getConstraint(name).calculateNumericValue(point).error <= 1e-6
             results.append(solver.getPrimalBound())
 
-        assert results[0] == pytest.approx(results[1], abs=1e-3)
+        # Each primal bound is within the relative objective gap tolerance, 1e-3 by default, of the optimum
+        assert results[0] == pytest.approx(results[1], rel=2e-3)
 
     def test_opposite_signs_are_not_shared(self):
         """exp(x) <= ... needs w >= exp(x), while exp(x) >= ... needs w >= -exp(x), so they cannot be shared."""

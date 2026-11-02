@@ -10741,6 +10741,9 @@ bool ModelTestPolishFromSeveralPoints()
         solver->updateSetting("Termination.TimeLimit", 20.0);
         solver->updateSetting("Primal.FixedInteger.Solver", static_cast<int>(SHOT::ES_PrimalNLPSolver::Ipopt));
         solver->updateSetting("Primal.PolishSolution.NumberOfPoints", numberOfPoints);
+        // The final reduction cut continues the search while the objective gap is open, e.g., with a MIP solver
+        // without quadratic constraints, and the solution is then polished again
+        solver->updateSetting("Dual.ReductionCut.Use", false);
         solver->updateSetting("Primal.FixedInteger.Use", false);
         solver->updateSetting("Primal.FixedInteger.SourceProblem",
             static_cast<int>(SHOT::ES_PrimalNLPProblemSource::ReformulatedProblem));
