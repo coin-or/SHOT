@@ -153,12 +153,12 @@ Changes since SHOT 1.1.
   root search ends on the boundary, where the constraint value can be rounded
   to slightly below zero. Convex problems, e.g., with quadratic terms and
   Cbc or HiGHS, could otherwise stop with a gap since no additional cuts
-  could be added.
+  could be added ([#255]).
 - A MIP problem that HiGHS reports as infeasible is solved again without
   presolve, since HiGHS can reject every solution of a feasible problem when
   they violate a row after the presolve is undone. The dual problem could
   then be taken as infeasible, and the solution stop without a primal
-  solution.
+  solution ([#255]).
 
 ### Removed
 
@@ -246,6 +246,7 @@ Changes since SHOT 1.1.
 [#250]: https://github.com/coin-or/SHOT/pull/250
 [#251]: https://github.com/coin-or/SHOT/pull/251
 [#252]: https://github.com/coin-or/SHOT/pull/252
+[#255]: https://github.com/coin-or/SHOT/pull/255
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e
