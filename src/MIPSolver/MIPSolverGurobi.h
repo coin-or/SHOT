@@ -145,6 +145,7 @@ public:
     void setCutOffAsConstraint(double cutOff) override;
 
     void addMIPStart(VectorDouble point) override;
+    void addPartialMIPStart(VectorInteger variableIndexes, VectorDouble variableValues) override;
     void deleteMIPStarts() override;
 
     bool supportsQuadraticObjective() override;
@@ -200,6 +201,9 @@ private:
     // The objective coefficients removed to find a feasible point of an unbounded dual problem. They are restored
     // before the next solve, since changing the model discards the point found.
     std::vector<PairIndexValue> objectiveCoefficientsToRestore;
+
+    // The partial start is only for the next solve, so that an old one is not tried again when no new one is given
+    bool partialMIPStartAdded = false;
 };
 
 } // namespace SHOT

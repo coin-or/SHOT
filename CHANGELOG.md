@@ -94,6 +94,11 @@ Changes since SHOT 1.1.
 - The settings reference lists the settings of all MIP and NLP solvers and of
   GAMS with the solver each requires, also when SHOT is built without them,
   and the recommended values for nonconvex problems ([#242]).
+- In the multi-tree strategy, the discrete values of the previous MIP
+  solution are given to the MIP solver as a partial start, which it completes
+  by solving the LP with these values fixed. This is on for convex problems
+  (setting `Dual.MIP.UseDualSolutionStart`), where it mainly helps HiGHS and
+  Cbc find primal solutions.
 
 ### Changed
 
@@ -128,6 +133,8 @@ Changes since SHOT 1.1.
   [#198], [#227], [46404779], [801c7809]) and in the Gurobi, Cbc, HiGHS and
   Ipopt interfaces ([#151], [#155], [#170], [#172], [#218], [#232],
   [15695f16], [7f2b2af7], [bca3b691]).
+- CPLEX now uses the MIP start in the multi-tree strategy; it was deleted
+  whenever cuts were added to the model ([#245]).
 
 ### Removed
 
@@ -208,6 +215,7 @@ Changes since SHOT 1.1.
 [#240]: https://github.com/coin-or/SHOT/pull/240
 [#241]: https://github.com/coin-or/SHOT/pull/241
 [#242]: https://github.com/coin-or/SHOT/pull/242
+[#245]: https://github.com/coin-or/SHOT/pull/245
 [#246]: https://github.com/coin-or/SHOT/pull/246
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16

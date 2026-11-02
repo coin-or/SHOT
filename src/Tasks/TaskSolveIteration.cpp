@@ -128,6 +128,49 @@ void TaskSolveIteration::run()
         }
     }
 
+    // The previous MIP solution is cut off by the hyperplanes added since, but with its discrete values fixed the LP
+    // over the current cuts often is feasible, and then gives an incumbent with an objective value close to the
+    // previous dual bound. Added before the primal start, since Gurobi may change the number of starts.
+    if(env->settings->getSetting<bool>("Dual.MIP.UseDualSolutionStart")
+        && static_cast<ES_TreeStrategy>(env->settings->getSetting<int>("Dual.TreeStrategy"))
+            == ES_TreeStrategy::MultiTree
+        && env->dualSolver->MIPSolver->getDiscreteVariableStatus() && env->results->getNumberOfIterations() > 1)
+    {
+        auto prevIter = env->results->getPreviousIteration();
+
+        if(prevIter->isMIP() && !prevIter->solutionPoints.empty())
+        {
+            auto& prevPoint = prevIter->solutionPoints.at(0).point;
+
+            VectorInteger startIndexes;
+            VectorDouble startValues;
+            VectorString startNames;
+
+            for(auto& VARS : { env->reformulatedProblem->binaryVariables, env->reformulatedProblem->integerVariables,
+                    env->reformulatedProblem->semiintegerVariables })
+            {
+                for(auto& V : VARS)
+                {
+                    startIndexes.push_back(V->getIndex());
+                    startValues.push_back(std::round(prevPoint.at(V->getIndex())));
+                    startNames.push_back(V->name);
+                }
+            }
+
+            if(!startIndexes.empty())
+            {
+                env->dualSolver->MIPSolver->addPartialMIPStart(startIndexes, startValues);
+
+                if(env->settings->getSetting<bool>("Output.Debug.Enable"))
+                {
+                    auto filename = fmt::format("{}/dualiter{}_mipstart_dual.txt",
+                        env->settings->getSetting<std::string>("Output.Debug.Path"), currIter->iterationNumber - 1);
+                    Utilities::saveVariablePointVectorToFile(startValues, startNames, filename);
+                }
+            }
+        }
+    }
+
     if(env->dualSolver->MIPSolver->getDiscreteVariableStatus() && env->results->hasPrimalSolution())
     {
         auto primalSol = env->results->primalSolution;

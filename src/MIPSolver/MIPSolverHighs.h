@@ -144,6 +144,7 @@ public:
     void setCutOff(double cutOff) override;
     void setCutOffAsConstraint(double cutOff) override;
     void addMIPStart(VectorDouble point) override;
+    void addPartialMIPStart(VectorInteger variableIndexes, VectorDouble variableValues) override;
     void deleteMIPStarts() override;
 
     bool supportsQuadraticObjective() override;
@@ -184,6 +185,15 @@ public:
     // HiGHS reports the same status regardless of why the callback interrupted it, so the cause is recorded here
     bool interruptedBySolutionLimit = false;
     bool interruptedByTermination = false;
+
+    // HiGHS only keeps one start, so a partial start replaces the start from addMIPStart until the next solve. HiGHS
+    // reports the completed start as a solution, which is not counted towards the solution limit, since the solve
+    // would otherwise stop at the start when the limit is one.
+    VectorInteger partialMIPStartIndexes;
+    VectorDouble partialMIPStartValues;
+    int numberOfPartialMIPStartSolutions = 0;
+
+    bool isPartialMIPStart(const VectorDouble& point);
 
 private:
     HighsModel highsModel;

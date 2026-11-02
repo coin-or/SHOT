@@ -160,6 +160,7 @@ public:
     void setCutOff(double cutOff) override;
     void setCutOffAsConstraint(double cutOff) override;
     void addMIPStart(VectorDouble point) override;
+    void addPartialMIPStart(VectorInteger variableIndexes, VectorDouble variableValues) override;
     void deleteMIPStarts() override;
 
     bool supportsQuadraticObjective() override;
@@ -220,6 +221,9 @@ private:
     double objectiveConstant = 0.0;
 
     std::vector<std::pair<std::string, double>> MIPStart;
+
+    // Cbc only keeps one start, so a partial start replaces the start from addMIPStart in the next solve
+    bool partialMIPStartAdded = false;
 
     std::vector<E_VariableType> variableTypes;
     std::vector<std::pair<int, std::array<double, 4>>> lotsizes;

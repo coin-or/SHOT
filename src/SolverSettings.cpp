@@ -168,6 +168,11 @@ void Solver::initializeSettings()
     env->settings->createSetting("Dual.MIP.CutOff.Tolerance", 0.00001,
         "An extra tolerance for the objective cutoff value (to prevent infeasible subproblems)", 0.0, SHOT_DBL_MAX);
 
+    env->settings->createSetting("Dual.MIP.UseDualSolutionStart", true,
+        "Give the discrete values of the previous MIP solution as a partial MIP start in the multi-tree strategy; "
+        "Cplex and Gurobi get it in addition to the primal solution, HiGHS and Cbc instead of it");
+    env->settings->addConditionalValue("Dual.MIP.UseDualSolutionStart", nonconvex, false);
+
     env->settings->createSetting(
         "Dual.MIP.InfeasibilityRepair.IntegerCuts", false, "Allow feasibility repair of integer cuts");
 

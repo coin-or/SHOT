@@ -1312,6 +1312,38 @@ void MIPSolverCplex::addMIPStart(VectorDouble point)
     env->output->outputDebug("        Added MIP starting point.");
 }
 
+void MIPSolverCplex::addPartialMIPStart(VectorInteger variableIndexes, VectorDouble variableValues)
+{
+    assert(variableIndexes.size() == variableValues.size());
+
+    IloNumArray startVal(cplexEnv);
+    auto startVars = IloNumVarArray(cplexEnv);
+
+    for(size_t i = 0; i < variableIndexes.size(); i++)
+    {
+        startVars.add(cplexVars[variableIndexes[i]]);
+        startVal.add(variableValues[i]);
+    }
+
+    try
+    {
+        // Cplex tries all stored starts in each solve, so only the latest partial start is kept
+        deleteMIPStartsWithName("shot_partialstart");
+
+        // The values are fixed and the LP solved for the other variables
+        cplexInstance.addMIPStart(startVars, startVal, IloCplex::MIPStartSolveFixed, "shot_partialstart");
+    }
+    catch(IloException& e)
+    {
+        env->output->outputError("        Error when adding partial MIP starting point", e.getMessage());
+    }
+
+    startVal.end();
+    startVars.end();
+
+    env->output->outputDebug("        Added partial MIP starting point.");
+}
+
 void MIPSolverCplex::deleteMIPStarts()
 {
     int numStarts = cplexInstance.getNMIPStarts();

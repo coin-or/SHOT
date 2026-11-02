@@ -109,7 +109,8 @@ HighsCallbackFunctionType highsCallback
 
     // Solution limit only applies to MIP solves
     if(callback_type == kCallbackMipInterrupt
-        && MIPSolver->currentSolutions.size() >= static_cast<size_t>(MIPSolver->getSolutionLimit()))
+        && MIPSolver->currentSolutions.size() - static_cast<size_t>(MIPSolver->numberOfPartialMIPStartSolutions)
+            >= static_cast<size_t>(MIPSolver->getSolutionLimit()))
     {
         env->output->outputDebug(fmt::format("      | solution limit reached "));
         MIPSolver->interruptedBySolutionLimit = true;
@@ -142,6 +143,9 @@ HighsCallbackFunctionType highsCallback
         currentSolution.point = solution;
         currentSolution.hashValue = hashValue;
         MIPSolver->currentSolutions.push_back(currentSolution);
+
+        if(MIPSolver->isPartialMIPStart(solution))
+            MIPSolver->numberOfPartialMIPStartSolutions++;
 
         env->output->outputDebug(fmt::format("      | #sols: {} \t obj.val: {:.4f} \t gap: {:.4f} ",
             MIPSolver->currentSolutions.size(), data_out->objective_function_value, data_out->mip_gap));
@@ -752,6 +756,7 @@ E_ProblemSolutionStatus MIPSolverHighs::solveProblem()
 
     interruptedBySolutionLimit = false;
     interruptedByTermination = false;
+    numberOfPartialMIPStartSolutions = 0;
 
     for(auto& I : variableBoundsToRestore)
         highsInstance.changeColBounds(I, variableLowerBounds[I], variableUpperBounds[I]);
@@ -789,6 +794,9 @@ E_ProblemSolutionStatus MIPSolverHighs::solveProblem()
     }
 
     MIPSolutionStatus = getSolutionStatus();
+
+    partialMIPStartIndexes.clear();
+    partialMIPStartValues.clear();
 
     // The solutions of a MIP problem are collected in the callback, but HiGHS does not report a solution there that it
     // has not found itself. E.g. when presolve shows that no solution is better than the cutoff, HiGHS returns the MIP
@@ -1222,6 +1230,12 @@ void MIPSolverHighs::addMIPStart(VectorDouble point)
 {
     assert(point.size() == static_cast<size_t>(this->numberOfVariables - numberOfIntegerCutVariables));
 
+    if(!partialMIPStartIndexes.empty())
+    {
+        env->output->outputDebug("        MIP start not added in Highs, since it keeps only the partial start.");
+        return;
+    }
+
     // Clamp to the live column bounds: a warm-start value that is (even marginally) outside a variable's current
     // bound, e.g. due to a bound having been tightened since this point was found, is rejected by HiGHS's own
     // internal consistency check (an assert in debug builds of HiGHS) rather than just being treated as infeasible.
@@ -1244,6 +1258,48 @@ void MIPSolverHighs::addMIPStart(VectorDouble point)
 
     if(return_status != HighsStatus::kOk)
         env->output->outputDebug("        Could not add MIP start in Highs.");
+}
+
+void MIPSolverHighs::addPartialMIPStart(VectorInteger variableIndexes, VectorDouble variableValues)
+{
+    assert(variableIndexes.size() == variableValues.size());
+
+    // Clamped to the live column bounds, as in addMIPStart
+    const auto& colLower = highsInstance.getLp().col_lower_;
+    const auto& colUpper = highsInstance.getLp().col_upper_;
+
+    std::vector<HighsInt> indices(variableIndexes.begin(), variableIndexes.end());
+
+    for(size_t i = 0; i < variableValues.size(); i++)
+        variableValues[i] = std::clamp(variableValues[i], colLower[indices[i]], colUpper[indices[i]]);
+
+    // Before the solve, HiGHS fixes the discrete variables to these values and solves the LP for the others
+    auto return_status
+        = highsInstance.setSolution(static_cast<HighsInt>(indices.size()), indices.data(), variableValues.data());
+
+    if(return_status == HighsStatus::kError)
+    {
+        env->output->outputDebug("        Could not add partial MIP start in Highs.");
+        return;
+    }
+
+    partialMIPStartIndexes = variableIndexes;
+    partialMIPStartValues = variableValues;
+    env->output->outputDebug("        Added partial MIP starting point.");
+}
+
+bool MIPSolverHighs::isPartialMIPStart(const VectorDouble& point)
+{
+    if(partialMIPStartIndexes.empty())
+        return (false);
+
+    for(size_t i = 0; i < partialMIPStartIndexes.size(); i++)
+    {
+        if(std::abs(point.at(partialMIPStartIndexes[i]) - partialMIPStartValues[i]) > 0.5)
+            return (false);
+    }
+
+    return (true);
 }
 
 void MIPSolverHighs::writeProblemToFile(std::string filename)

@@ -158,6 +158,7 @@ public:
     void setCutOffAsConstraint(double cutOff) override;
 
     void addMIPStart(VectorDouble point) override;
+    void addPartialMIPStart(VectorInteger variableIndexes, VectorDouble variableValues) override;
     void deleteMIPStarts() override;
 
     bool supportsQuadraticObjective() override;
