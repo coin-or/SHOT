@@ -79,7 +79,7 @@ Changes since SHOT 1.1.
   specify the convexity of a function, which is then used instead of
   detected. The solution report, the OSrL results and
   `getUserSpecifiedConvexityDescription()` tell when global optimality
-  depends on such functions or on `Model.Convexity.AssumeConvex`.
+  depends on such functions or on `Model.Convexity.AssumeConvex` ([#256]).
 - The AMPL solve message gives the SHOT version, the problem types and the
   subsolvers; the status text is unchanged ([d9db1155]).
 - The options report shows the number of MIP solver threads, and a warning
@@ -254,6 +254,7 @@ Changes since SHOT 1.1.
 [#251]: https://github.com/coin-or/SHOT/pull/251
 [#252]: https://github.com/coin-or/SHOT/pull/252
 [#255]: https://github.com/coin-or/SHOT/pull/255
+[#256]: https://github.com/coin-or/SHOT/pull/256
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e
