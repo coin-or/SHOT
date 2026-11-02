@@ -143,6 +143,8 @@ Changes since SHOT 1.1.
   the primal NLP solvers, performed when the problem is set, stop at the time
   limit, so that the solution time runs less over the limit when reading a
   large problem uses up most of it.
+- The OSrL results name HiGHS as the dual solver; the name was empty when
+  HiGHS solved the MIP problems.
 
 ### Removed
 

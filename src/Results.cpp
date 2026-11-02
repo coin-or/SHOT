@@ -645,6 +645,13 @@ std::string Results::getResultsOSrL()
     }
 #endif
 
+#ifdef HAS_HIGHS
+    if(dualSolver == ES_MIPSolver::Highs)
+    {
+        dualSolverName = "HiGHS";
+    }
+#endif
+
     otherNode = osrlDocument.NewElement("other");
     otherNode->SetAttribute("name", "DualSolver");
     otherNode->SetAttribute("value", (dualSolverName + " " + env->dualSolver->MIPSolver->getSolverVersion()).c_str());

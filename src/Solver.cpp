@@ -998,8 +998,10 @@ void Solver::verifySettings()
 
     // The GAMS NLP solvers can only be used for problems from GAMS. The settings can be verified before the problem is
     // read, e.g. from an options file, and the modeling system is then not known yet.
+#ifdef HAS_GAMS
     bool isNonGAMSProblem = env->problem
         && env->settings->getSetting<int>("Input.ModelingSystem") != static_cast<int>(ES_ModelingSystem::GAMS);
+#endif
 
     // Returns why the NLP solver cannot be used, or an empty string if it can
     auto getReasonNLPSolverUnavailable = [&](ES_PrimalNLPSolver solver) -> std::string
