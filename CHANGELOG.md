@@ -149,6 +149,11 @@ Changes since SHOT 1.1.
   trace file gives the NLP solver only if an NLP problem was solved, and the
   GAMS NLP solver called instead of the setting, e.g., `CONOPT` instead of
   `auto` ([#252]).
+- The ESH method adds a cut for a violated convex constraint also when the
+  root search ends on the boundary, where the constraint value can be rounded
+  to slightly below zero. Convex problems, e.g., with quadratic terms and
+  Cbc or HiGHS, could otherwise stop with a gap since no additional cuts
+  could be added.
 
 ### Removed
 
