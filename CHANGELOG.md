@@ -63,6 +63,10 @@ Changes since SHOT 1.1.
 - Starting points from GAMS ([#190]) and AMPL ([1b054e3e]), the
   `shot_options` environment variable in AMPL mode ([#227]), and the `tan`
   function in GAMS ([#189]).
+- `Solver::setStartingPoint()` and `getStartingPoint()` in C++ and SHOTpy to
+  give a starting point after `setProblem()`, as AMPL and GAMS can. A feasible
+  point is the first primal solution and the MIP start of the dual problems
+  ([#246]).
 - The AMPL solve message gives the SHOT version, the problem types and the
   subsolvers; the status text is unchanged ([d9db1155]).
 - The options report shows the number of MIP solver threads, and a warning
@@ -198,6 +202,7 @@ Changes since SHOT 1.1.
 [#240]: https://github.com/coin-or/SHOT/pull/240
 [#241]: https://github.com/coin-or/SHOT/pull/241
 [#242]: https://github.com/coin-or/SHOT/pull/242
+[#246]: https://github.com/coin-or/SHOT/pull/246
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e
