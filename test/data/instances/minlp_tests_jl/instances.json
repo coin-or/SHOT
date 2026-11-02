@@ -340,13 +340,13 @@
         },
         {
             "file": "nlp-cvx_501_010.jl.nl",
-            "objective": -1.0,
-            "description": "nD convex NLP mathematical property test; only one NL file available for parametric family"
+            "objective": -4.47213595499958,
+            "description": "nD convex NLP mathematical property test; only one NL file available for parametric family (n = 20)"
         },
         {
             "file": "nlp-cvx_501_011.jl.nl",
-            "objective": -1.0,
-            "description": "nD convex NLP mathematical property test (variant); only one NL file available for parametric family"
+            "objective": -4.47213595499958,
+            "description": "nD convex NLP mathematical property test (variant); only one NL file available for parametric family (n = 20)"
         },
         {
             "file": "nlp-mi_001_010.jl.nl",
