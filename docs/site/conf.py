@@ -16,7 +16,11 @@ breathe_default_project = "SHOT"
 autodoc_member_order = "bysource"
 autodoc_typehints = "description"
 nb_execution_mode = "off"
-myst_enable_extensions = ["colon_fence", "dollarmath", "amsmath"]
+myst_enable_extensions = ["colon_fence", "dollarmath", "amsmath", "substitution"]
+# A release build sets SHOT_DOCS_VERSION, e.g., 2.0; other builds describe the development version.
+myst_substitutions = {"version_notice": (
+    f"They describe **SHOT {release}**; interfaces may change before release." if "development" in release
+    else f"They describe **SHOT {release}**.")}
 exclude_patterns = ["_assets/**"]
 html_extra_path = []
 myst_heading_anchors = 4

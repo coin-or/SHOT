@@ -426,8 +426,11 @@ class TestAliases:
             if isinstance(value, type) and hasattr(value, "__members__"):
                 assert "None" not in value.__members__, name
 
-        assert SHOTpy.MIPSolver.NotUsed.value == 4
-        assert SHOTpy.PrimalNLPSolver.NotUsed.value == 4
+        # NotUsed follows the solvers, so it stays valid when a solver is added
+        for solverEnum in (SHOTpy.MIPSolver, SHOTpy.PrimalNLPSolver):
+            solvers = [member for name, member in solverEnum.__members__.items() if name != "NotUsed"]
+            assert solverEnum.NotUsed.value == max(member.value for member in solvers) + 1, solverEnum.__name__
+
         assert SHOTpy.ModelingSystem.API.value == 3
         assert SHOTpy.TerminationReason.NotTerminated.name == "NotTerminated"
         assert SHOTpy.ModelReturnStatus.NotSet.value == 0

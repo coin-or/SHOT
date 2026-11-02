@@ -16,8 +16,8 @@ namespace SHOT
 class TaskAddPrimalReductionCut : public TaskBase
 {
 public:
-    TaskAddPrimalReductionCut(
-        EnvironmentPtr envPtr, std::string taskIDTrue, std::string taskIDFalse, bool isFinalAttempt = false);
+    TaskAddPrimalReductionCut(EnvironmentPtr envPtr, std::string taskIDTrue, std::string taskIDFalse,
+        bool isFinalAttempt = false, bool stopOnlyAtLimits = false);
     ~TaskAddPrimalReductionCut() override;
 
     void run() override;
@@ -29,6 +29,9 @@ private:
     std::string taskIDIfFalse;
 
     bool isFinalAttempt;
+
+    // Whether the final attempt runs whatever the search stopped for, except a time, iteration or gap limit or the user
+    bool stopOnlyAtLimits;
     int totalReductionCutUpdates = 0;
     double currentLowerBoundForReductionCut = SHOT_DBL_INF;
 };

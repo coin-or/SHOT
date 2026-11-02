@@ -67,6 +67,15 @@ bool MIPSolverCallbackBase::checkFixedNLPStrategy(SolutionPoint point)
         return (false);
     }
 
+    // The callbacks get a single point, so of the sources only the one for feasible solutions can exclude it
+    if(static_cast<ES_PrimalNLPFixedPoint>(env->settings->getSetting<int>("Primal.FixedInteger.Source"))
+            == ES_PrimalNLPFixedPoint::AllFeasibleSolutions
+        && point.maxDeviation.value > env->settings->getSetting<double>("Primal.Tolerance.NonlinearConstraint"))
+    {
+        env->solutionStatistics.numberOfIterationsWithoutNLPCallMIP++;
+        return (false);
+    }
+
     env->timing->startTimer("PrimalStrategy");
     env->timing->startTimer("PrimalBoundStrategyNLP");
 
@@ -89,17 +98,26 @@ bool MIPSolverCallbackBase::checkFixedNLPStrategy(SolutionPoint point)
         || userSettingStrategy == static_cast<int>(ES_PrimalNLPStrategy::IterationOrTimeAndAllFeasibleSolutions))
     {
         if(env->solutionStatistics.numberOfIterationsWithoutNLPCallMIP
-            >= env->settings->getSetting<int>("Primal.FixedInteger.Frequency.Iteration"))
+            >= env->solutionStatistics.fixedNLPIterationFrequency.value_or(
+                env->settings->getSetting<int>("Primal.FixedInteger.Frequency.Iteration")))
         {
             env->output->outputDebug(
                 "        Activating fixed NLP primal strategy since max iterations since last call has been reached.");
             callNLPSolver = true;
         }
         else if(env->timing->getElapsedTime("Total") - env->solutionStatistics.timeLastFixedNLPCall
-            > env->settings->getSetting<double>("Primal.FixedInteger.Frequency.Time"))
+            > env->solutionStatistics.fixedNLPTimeFrequency.value_or(
+                env->settings->getSetting<double>("Primal.FixedInteger.Frequency.Time")))
         {
             env->output->outputDebug(
                 "        Activating fixed NLP primal strategy since max time limit since last call has been reached.");
+            callNLPSolver = true;
+        }
+        else if(userSettingStrategy == static_cast<int>(ES_PrimalNLPStrategy::IterationOrTimeAndAllFeasibleSolutions)
+            && point.maxDeviation.value <= env->settings->getSetting<double>("Primal.Tolerance.NonlinearConstraint"))
+        {
+            env->output->outputDebug("        Activating fixed NLP primal strategy since the MIP solution fulfils the "
+                                     "nonlinear constraints.");
             callNLPSolver = true;
         }
     }
@@ -128,7 +146,8 @@ std::optional<double> MIPSolverCallbackBase::queryAndUpdateExternalDualBound()
     if(!externalDualBound.has_value())
         return std::nullopt;
 
-    bool isMin = env->reformulatedProblem->objectiveFunction->properties.isMinimize;
+    // Callback bounds and Results are expressed in the original objective's direction.
+    bool isMin = env->problem->objectiveFunction->properties.isMinimize;
     double currentDualBound = env->results->getCurrentDualBound();
     double newBound = *externalDualBound;
 

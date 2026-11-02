@@ -50,8 +50,12 @@ def namespace():
 
 @pytest.mark.skipif(not CELLS, reason="The tutorial notebook was not found")
 @pytest.mark.parametrize("index,source", CELLS, ids=[f"cell{index}" for index, _ in CELLS])
-def test_tutorial_cell(index, source, namespace):
+def test_tutorial_cell(index, source, namespace, monkeypatch):
     output = io.StringIO()
+
+    # The notebook finds its benchmark problem from the working directory, which is run from the repository as the
+    # notebook says, also when the tests of a wheel are run from another directory
+    monkeypatch.chdir(notebookPath().resolve().parent.parent)
 
     try:
         with contextlib.redirect_stdout(output):

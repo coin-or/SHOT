@@ -133,7 +133,6 @@ void TaskRepairInfeasibleDualProblem::run()
     if(env->dualSolver->MIPSolver->repairInfeasibility())
     {
         env->tasks->setNextTask(taskIDIfTrue);
-        iterLastRepair = currIter->iterationNumber;
         env->solutionStatistics.hasInfeasibilityRepairBeenPerformedSincePrimalImprovement = true;
         env->solutionStatistics.numberOfSuccessfulDualRepairsPerformed++;
 

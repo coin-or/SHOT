@@ -22,6 +22,8 @@
 
 #include "../Model/Problem.h"
 
+#include <thread>
+
 #include "CoinBuild.hpp"
 #include "CoinModel.hpp"
 #include "CoinPragma.hpp"
@@ -226,23 +228,18 @@ bool MIPSolverCbc::finalizeObjective(bool isMinimize, double constant)
     return (true);
 }
 
-bool MIPSolverCbc::initializeConstraint() { return (true); }
+bool MIPSolverCbc::initializeConstraint()
+{
+    constraintTermIndexes.clear();
+    constraintTermCoefficients.clear();
+
+    return (true);
+}
 
 bool MIPSolverCbc::addLinearTermToConstraint(double coefficient, int variableIndex)
 {
-    try
-    {
-        // In case there is already a linear term  for the variable present in the constraint we need to take this into
-        // consideration
-        double currentValue = coinModel->getElement(numberOfConstraints, variableIndex);
-
-        coinModel->setElement(numberOfConstraints, variableIndex, coefficient + currentValue);
-    }
-    catch(std::exception& e)
-    {
-        env->output->outputError("        Cbc exception caught when adding linear term to constraint: ", e.what());
-        return (false);
-    }
+    constraintTermIndexes.push_back(variableIndex);
+    constraintTermCoefficients.push_back(coefficient);
 
     return (true);
 }
@@ -256,19 +253,17 @@ bool MIPSolverCbc::addQuadraticTermToConstraint([[maybe_unused]] double coeffici
 
 bool MIPSolverCbc::finalizeConstraint(std::string name, double valueLHS, double valueRHS, double constant)
 {
-    int index = numberOfConstraints;
+    assert(coinModel->numberRows() == numberOfConstraints);
+
     try
     {
-        if(valueLHS <= valueRHS)
-        {
-            coinModel->setRowBounds(index, valueLHS - constant, valueRHS - constant);
-        }
-        else
-        {
-            coinModel->setRowBounds(index, valueRHS - constant, valueLHS - constant);
-        }
+        // The row is added at once, since setting the elements one at a time looks each of them up in the model.
+        // The terms of the same variable are summed first, as when they were added to the element.
+        mergeConstraintTerms();
 
-        coinModel->setRowName(index, name.c_str());
+        coinModel->addRow(static_cast<int>(constraintTermIndexes.size()), constraintTermIndexes.data(),
+            constraintTermCoefficients.data(), std::min(valueLHS, valueRHS) - constant,
+            std::max(valueLHS, valueRHS) - constant, name.c_str());
     }
     catch(std::exception& e)
     {
@@ -277,6 +272,7 @@ bool MIPSolverCbc::finalizeConstraint(std::string name, double valueLHS, double 
     }
 
     allowRepairOfConstraint.push_back(false);
+
     numberOfConstraints++;
     return (true);
 }
@@ -315,19 +311,18 @@ void MIPSolverCbc::initializeSolverSettings()
     // Set termination tolerances
     cbcModel->setAllowableGap(env->settings->getSetting<double>("Termination.ObjectiveGap.Absolute") / 1.0);
     cbcModel->setAllowableFractionGap(env->settings->getSetting<double>("Termination.ObjectiveGap.Relative") / 1.0);
-    osiInterface->setDblParam(
-        OsiPrimalTolerance, env->settings->getSetting<double>("Primal.Tolerance.LinearConstraint"));
-    cbcModel->setIntegerTolerance(env->settings->getSetting<double>("Primal.Tolerance.Integer"));
+    // Clp and Cbc reject values outside their ranges, e.g. a primal tolerance of zero, and keep their own values
+    if(!osiInterface->setDblParam(
+           OsiPrimalTolerance, env->settings->getSetting<double>("Primal.Tolerance.LinearConstraint")))
+        warnToleranceNotAccepted("Primal.Tolerance.LinearConstraint", "OsiPrimalTolerance");
+
+    if(!cbcModel->setIntegerTolerance(env->settings->getSetting<double>("Primal.Tolerance.Integer")))
+        warnToleranceNotAccepted("Primal.Tolerance.Integer", "CbcIntegerTolerance");
     osiInterface->setDblParam(OsiDualTolerance, env->settings->getSetting<double>("Dual.MIP.OptimalityTolerance"));
 
     // Adds a user-provided node limit
-    if(auto nodeLimit = env->settings->getSetting<double>("Dual.MIP.NodeLimit"); nodeLimit > 0)
-    {
-        if(nodeLimit > SHOT_INT_MAX)
-            nodeLimit = SHOT_INT_MAX;
-
+    if(int nodeLimit = env->settings->getSetting<int>("Dual.MIP.NodeLimit"); nodeLimit > 0)
         cbcModel->setMaximumNodes(nodeLimit);
-    }
 
     // Set solution pool settings
     if(forceUnlimitedSolutionLimitNextSolve)
@@ -348,12 +343,24 @@ void MIPSolverCbc::initializeSolverSettings()
     {
         // Cbc runs deterministcally if 100 is added to the number of threads
         if(env->settings->getSetting<bool>("Subsolver.Cbc.DeterministicParallelMode"))
-            numberOfThreads = env->settings->getSetting<int>("Dual.MIP.NumberOfThreads") + 100;
+            numberOfThreads = getNumberOfThreads() + 100;
         else
-            numberOfThreads = env->settings->getSetting<int>("Dual.MIP.NumberOfThreads");
+            numberOfThreads = getNumberOfThreads();
     }
     else
+    {
         numberOfThreads = 1;
+
+        // Only warned for the main dual MIP solver, not for the other Cbc instances used for auxiliary problems
+        if(!threadSupportWarningShown && env->dualSolver && env->dualSolver->MIPSolver.get() == this
+            && env->settings->getSetting<int>("Dual.MIP.NumberOfThreads") > 1)
+        {
+            env->output->outputWarning(" Cbc has been compiled without thread support, so it runs single-threaded and "
+                                       "Dual.MIP.NumberOfThreads is ignored. Rebuild Cbc with --enable-cbc-parallel "
+                                       "to use multiple threads.");
+            threadSupportWarningShown = true;
+        }
+    }
 
     cbcModel->passInMessageHandler(messageHandler.get());
 }
@@ -1529,6 +1536,20 @@ bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
                     numberOfVariables += 2;
                     numberOfIntegerCutVariables += 2;
 
+                    // The data of the variables is indexed up to numberOfVariables, e.g. when the discrete variables
+                    // are activated again after the relaxation strategy, so the auxiliary variables w (continuous) and
+                    // v (binary) are included
+                    variableTypes.push_back(E_VariableType::Real);
+                    variableTypes.push_back(E_VariableType::Binary);
+                    variableNames.push_back(
+                        fmt::format("wIC{}_{}", env->solutionStatistics.numberOfIntegerCuts, index));
+                    variableNames.push_back(
+                        fmt::format("vIC{}_{}", env->solutionStatistics.numberOfIntegerCuts, index));
+                    variableLowerBounds.push_back(0.0);
+                    variableLowerBounds.push_back(0.0);
+                    variableUpperBounds.push_back(getUnboundedVariableBoundValue());
+                    variableUpperBounds.push_back(1.0);
+
                     double M1 = 2 * (variableValue - VAR->lowerBound);
                     double M2 = 2 * (VAR->upperBound - variableValue);
 
@@ -1841,6 +1862,21 @@ int MIPSolverCbc::getNumberOfExploredNodes()
 }
 
 std::string MIPSolverCbc::getSolverVersion() { return (CBC_VERSION); }
+
+int MIPSolverCbc::getNumberOfThreads()
+{
+    if(!cbcModel || !cbcModel->haveMultiThreadSupport())
+        return (1);
+
+    int numberOfThreads = env->settings->getSetting<int>("Dual.MIP.NumberOfThreads");
+
+    // Cbc runs serially if zero threads are given, so the automatic number of threads is one per logical core, as
+    // with the other MIP solvers
+    if(numberOfThreads == 0)
+        numberOfThreads = std::max(1, static_cast<int>(std::thread::hardware_concurrency()));
+
+    return (numberOfThreads);
+}
 
 int CbcMessageHandler::print()
 {

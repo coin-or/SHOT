@@ -97,11 +97,6 @@ public:
     double getConstraintUpperBound(int constraintIndex) override;
     bool setConstraintUpperBound(int constraintIndex, double upperBound) override;
 
-    bool createInteriorHyperplane(HyperplanePtr hyperplane) override
-    {
-        return (MIPSolverBase::createInteriorHyperplane(hyperplane));
-    }
-
     std::optional<std::pair<std::map<int, double>, double>> createHyperplaneTerms(HyperplanePtr hyperplane) override
     {
         return (MIPSolverBase::createHyperplaneTerms(hyperplane));
@@ -182,12 +177,20 @@ public:
 
     std::string getSolverVersion() override;
 
+    int getNumberOfThreads() override;
+
     std::shared_ptr<GRBModel> gurobiModel;
     std::unique_ptr<GurobiCallbackMultiTree> gurobiCallback;
     GRBLinExpr objectiveLinearExpression;
     GRBQuadExpr objectiveQuadraticExpression;
-    GRBLinExpr constraintLinearExpression;
-    GRBQuadExpr constraintQuadraticExpression;
+
+    // The quadratic terms of the constraint being created; the linear ones are in MIPSolverBase
+    VectorDouble constraintQuadraticCoefficients;
+    std::vector<GRBVar> constraintQuadraticFirstVariables;
+    std::vector<GRBVar> constraintQuadraticSecondVariables;
+
+    // The variables of the linear terms of the constraint being created, reused between constraints
+    std::vector<GRBVar> constraintTermVariables;
 
     // Gurobi can only tell whether a problem is infeasible or unbounded if dual reductions are not used in presolve,
     // so such a problem is solved again without them

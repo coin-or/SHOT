@@ -3,11 +3,13 @@
 SHOT compiles on **Linux and macOS**, and natively on **Windows with MSVC**
 using HiGHS or Cbc, with optional Ipopt support. This guide covers getting the source,
 installing dependencies, configuring with CMake, building, and running the
-test suite. It's derived directly from the root `CMakeLists.txt`,
-`test/CMakeLists.txt`, and the CI recipe in
-`.github/workflows/build-workflow.yml`, so it should stay accurate as long
-as those are the source of truth — if a command here stops working, check
-those files first.
+test suite. The CI workflow `.github/workflows/build-workflow.yml` shows a
+complete, tested build.
+
+You do not need to compile SHOT to use it with the open-source solvers
+HiGHS, Cbc and Ipopt: install SHOTpy with `pip install SHOTpy`, or download
+the command-line program for Linux, macOS or Windows from the
+[GitHub releases](https://github.com/coin-or/SHOT/releases).
 
 > For a native Windows build with HiGHS, see the MSVC instructions below.
 > WSL remains an alternative for Linux solver dependencies.
@@ -49,8 +51,9 @@ compiling the submodule, configure with `-DUSE_EXTERNAL_HIGHS=on
 
 ## Installing dependencies
 
-SHOT needs at least one MIP solver (Cbc, CPLEX, Gurobi, or HiGHS) and an NLP
-solver (Ipopt or GAMS) to be useful. 
+SHOT needs at least one MIP solver (Cbc, CPLEX, Gurobi, or HiGHS). Primal NLP
+subproblems use Ipopt, Uno, CONOPT, or a GAMS NLP solver when one is enabled,
+and SHOT's built-in NLP solver otherwise.
 
 Every optional dependency degrades gracefully: if
 CMake can't find it, the corresponding `HAS_*` option is silently forced
@@ -77,9 +80,22 @@ build them from source with [coinbrew](https://github.com/coin-or/coinbrew):
 ```bash
 git clone https://github.com/coin-or/coinbrew
 cd coinbrew
+./coinbrew fetch Ipopt@releases/3.14.20 --no-prompt
 ./coinbrew build Ipopt@releases/3.14.20 --prefix=<SHOT>/ThirdParty/Ipopt --no-prompt --tests none
-./coinbrew build Cbc@releases/2.10.13 --prefix=<SHOT>/ThirdParty/Cbc --no-prompt --tests none --no-third-party
+rm -rf build dist
+./coinbrew fetch Cbc@releases/2.10.13 --no-prompt --no-third-party
+./coinbrew build Cbc@releases/2.10.13 --prefix=<SHOT>/ThirdParty/Cbc --no-prompt --tests none --no-third-party --enable-cbc-parallel
 ```
+
+`--enable-cbc-parallel` builds Cbc with thread support; without it Cbc ignores
+`Dual.MIP.NumberOfThreads` and always runs single-threaded.
+
+The `rm -rf build dist` between the two builds is required: coinbrew caches
+the configure options in `build/`, and without removing it the Cbc build
+reuses Ipopt's options (ASL and MUMPS enabled). Clp then installs a `clp.pc`
+that requires `coinasl` and `coinmumps`, which `--no-third-party` never
+builds, so the install step fails. For the same reason, delete `build/` and
+`dist/` before rebuilding if a coinbrew build fails partway.
 
 then point CMake at them with `-DCBC_DIR=<SHOT>/ThirdParty/Cbc
 -DIPOPT_DIR=<SHOT>/ThirdParty/Ipopt` (see “Configuring with CMake”).
@@ -106,7 +122,7 @@ frequently produces. BQPD, or an interior-point build with MUMPS or HSL, is the
 better fit.
 
 Uno installs neither a CMake package configuration file nor a pkg-config file,
-so SHOT locates it with `misc/FindUno.cmake` and the `UNO_DIR` cache variable.
+so SHOT locates it with `cmake/FindUno.cmake` and the `UNO_DIR` cache variable.
 A shared build is easiest, since a static `libuno.a` has to be linked together
 with BLAS/LAPACK and the Fortran runtime.
 
@@ -244,6 +260,34 @@ use the `/MD` Cbc 2.10.13 package described in the wheel section; the Cbc
 Keep Gurobi's `bin` directory on `PATH` so Windows can load `gurobi130.dll`.
 Gurobi is not included in the public SHOTpy wheels.
 
+#### Adding CONOPT
+
+The native MSVC build has been tested with CONOPT 4.39.3. Extract
+`conopt-4_39_3-win-x86_64.zip` from the [CONOPT download page](https://conopt.gams.com/download/),
+for example to `C:/solvers/conopt`, and point `CONOPT_DIR` at the directory
+containing `include` and `lib`:
+
+```bat
+cmake -S . -B build-msvc-conopt -G Ninja -DCMAKE_BUILD_TYPE=Release ^
+  -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL ^
+  -DHAS_CONOPT=ON -DCONOPT_DIR=C:/solvers/conopt/conopt-win-x86_64 ^
+  -DHAS_HIGHS=ON -DHAS_CBC=OFF -DHAS_IPOPT=OFF ^
+  -DHAS_CPLEX=OFF -DHAS_GUROBI=OFF -DHAS_GAMS=OFF -DHAS_UNO=OFF ^
+  -DHAS_PYTHON=OFF -DCOMPILE_TESTS=ON
+cmake --build build-msvc-conopt --parallel 4
+ctest --test-dir build-msvc-conopt --output-on-failure -R "^(Conopt_|Instance_11$)"
+build-msvc-conopt\SHOT.exe test\data\alan.osil --mip=highs --nlp=conopt
+```
+
+The CONOPT C++ library uses `/MD`, so select `MultiThreadedDLL` as shown (and
+the `/MD` Cbc package if Cbc is also enabled). SHOT delay-loads
+`conoptcpp4.dll` and `conopt4.dll`: when a CONOPT solver is created, they are
+loaded from the configured SDK `lib` directory, so neither `PATH` changes nor
+copies of the DLLs are needed. If the SDK has moved, SHOT falls back to the
+standard DLL search, including `PATH`; if CONOPT still cannot be loaded, SHOT
+warns and disables the fixed-integer NLP heuristic. CONOPT DLLs are not copied
+beside SHOT or installed.
+
 #### Building SHOTpy wheels
 
 Windows x64 wheels are built and tested for CPython 3.11 through 3.15.
@@ -251,7 +295,7 @@ Windows ARM64, 32-bit, and free-threaded Python wheels are not currently built.
 
 Windows x64 wheels use the bundled HiGHS and the official Cbc/Ipopt binary
 packages pinned, with SHA-256 checksums, in `ThirdParty/versions.json`.
-The wheel workflow downloads these through `misc/prepare-wheel-dependencies.ps1`;
+The wheel workflow downloads these through `scripts/prepare-wheel-dependencies.ps1`;
 no Fortran compiler is required. SHOT and its bundled dependencies use `/MD`
 to match the Cbc 2.10.13 static libraries. This differs from the Cbc 2.10.12
 archive described above, which requires `/MT`.
@@ -268,7 +312,7 @@ CMake installs SHOTSolver and the solver runtime DLLs into the Python wheel.
 cibuildwheel repairs the wheel with delvewheel and runs `test/python` in an
 isolated environment, including a check that NumPy can be imported first.
 The GitHub wheel workflow includes Windows x64 alongside Linux and macOS.
-GAMS, CPLEX, Gurobi, and Uno are excluded from these wheels.
+GAMS, CPLEX, Gurobi, CONOPT, and Uno are excluded from these wheels.
 
 #### Adding Uno
 
@@ -339,12 +383,12 @@ but SHOT only needs their SDK/headers+libraries at compile time:
 
 - **GAMS**: point CMake at the install with `-DGAMS_DIR=<path>` (default
   `/opt/gams`). No auto-detection.
-- **CPLEX**: auto-detected (`misc/FindCPLEX.cmake`) under
+- **CPLEX**: auto-detected (`cmake/FindCPLEX.cmake`) under
   `/opt/ibm/ILOG`, `/opt/IBM/ILOG`, `$HOME/Applications/IBM/ILOG`, and
   `$HOME/Applications` (this is how a Mac install under
   `~/Applications/CPLEX_Studio<version>` gets found); override with
   `-DCPLEX_DIR=<path>/cplex` if installed elsewhere.
-- **Gurobi**: auto-detected (`misc/FindGUROBI.cmake`) under
+- **Gurobi**: auto-detected (`cmake/FindGUROBI.cmake`) under
   `/opt/gurobi*/linux64` (Linux) or `/Library/gurobi*/mac64`,
   `/Library/gurobi*/macos_universal2`, `/Library/gurobi*/macos_arm64`
   (macOS) — these are Gurobi's own standard installer locations; override
@@ -354,6 +398,67 @@ but SHOT only needs their SDK/headers+libraries at compile time:
 If you don't have one of these, just turn it off explicitly (see below) —
 don't leave it on `ON` (the default) and hope it's silently skipped, since
 a partial/broken install can still be *found* but fail later in the build.
+
+### SHOTpy with proprietary solvers
+
+Public wheels do not include the CPLEX, Gurobi, GAMS, or CONOPT SDKs. If one of
+these products is installed and licensed locally, force an sdist build and pass
+its existing SHOT CMake options through pip. For example:
+
+```bash
+python -m pip install SHOTpy --no-binary SHOTpy --no-cache-dir --force-reinstall \
+    --config-settings=cmake.define.HAS_GUROBI=on \
+    --config-settings=cmake.define.GUROBI_DIR=/opt/gurobi1303/linux64
+```
+
+Use the same pattern with `HAS_CPLEX`/`CPLEX_DIR` or `HAS_GAMS`/`GAMS_DIR`.
+`CPLEX_DIR` can point to the CPLEX Studio installation root or its `cplex`
+subdirectory. `GAMS_DIR` must contain `apifiles` and the GAMS executable
+(on macOS, use the framework's versioned `Resources` directory).
+Multiple integrations can be enabled in the same build by passing each pair
+of settings.
+
+Replace `GUROBI_DIR` with your local installation path. Verify the resulting
+build with `python -c "import SHOTpy; print(SHOTpy.HAS_GUROBI)"`; it should print
+`True`. The `SHOT` command installed by this build has the same solvers, e.g.,
+`SHOT problem.nl --mip=gurobi`.
+
+For CONOPT on Linux, macOS, or Windows x64, download and extract the
+[CONOPT C++ SDK](https://conopt.gams.com/download/), then rebuild from this
+checkout (which includes the CONOPT integration):
+
+```bash
+python -m pip install . --no-cache-dir --force-reinstall \
+    --config-settings=cmake.define.HAS_CONOPT=on \
+    --config-settings=cmake.define.CONOPT_DIR=/absolute/path/to/conopt-sdk
+python -c "import SHOTpy; assert SHOTpy.HAS_CONOPT"
+```
+
+`CONOPT_DIR` must contain `include/conopt.hpp` and the SDK's `lib` directory.
+Once a release containing this integration is available on PyPI, the same
+options can be passed to `pip install SHOTpy --no-binary SHOTpy` as above.
+Select CONOPT in Python with:
+
+```python
+solver.updateSetting(
+    "Primal.FixedInteger.Solver", int(SHOTpy.PrimalNLPSolver.Conopt)
+)
+```
+
+This builds a local wheel linked to your external SDK. Keep the SDK at its
+configured location; CONOPT libraries are not installed into the wheel by this
+build. Do not run wheel repair tools (`auditwheel`, `delocate`, or `delvewheel`)
+on this local wheel, since they can copy external libraries into it. On Windows,
+build from an x64 Native Tools Command Prompt with the `CBC_DIR`, `IPOPT_DIR`,
+and `CMAKE_ARGS=-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL` settings used
+for the [Windows wheels](#building-shotpy-wheels);
+SHOTpy then loads CONOPT from the configured SDK, without `PATH` changes. The public
+wheel build keeps CONOPT disabled. See the
+[CONOPT instructions](#conopt-primal-nlp-solver)
+for licensing, demo limits, and solver settings.
+
+The compiler toolchain and open-source dependencies described in this guide
+are still required for a source build.
 
 ## Configuring with CMake
 
@@ -399,15 +504,17 @@ Key options (all `option(...)` declarations live at the top of the root
 | `HAS_UNO` | `OFF` | Uno NLP solver (see “Installing dependencies”) — off by default because building Uno needs a Fortran compiler |
 | `HAS_GAMS` | `ON` | GAMS interface (modeling system + NLP solver) |
 | `HAS_AMPL` | `ON` | AMPL MP `.nl` file interface |
+| `HAS_CONOPT` | `OFF` | CONOPT NLP solver (see “CONOPT primal NLP solver”) |
+| `USE_EXTERNAL_HIGHS` | `OFF` | Use a pre-built HiGHS from `HIGHS_EXTERNAL_DIR` instead of the submodule |
 | `HAS_PYTHON` | `OFF` | Build the `SHOTpy` Python bindings (needs Python3 dev headers; pybind11 comes from the submodule) |
 | `SHOT_WARNINGS_AS_ERRORS` | `OFF` | Treat SHOT C++ warnings as errors |
 | `SHOT_EXTRA_WARNINGS` | `OFF` | Additional GCC/Clang conversion, shadowing, and virtual-function diagnostics |
 | `COMPILE_TESTS` | `OFF` | Build the `test_runner` test suite (“Running the tests”) |
 | `GENERATE_EXE` | `ON` | Build the `./SHOT` console executable |
-| `BUILD_DOCUMENTATION` | on if Doxygen found | Build the HTML API docs |
+| `SIMPLE_OUTPUT_CHARS` | `OFF` | Use only ASCII characters in the console output (always on for MSVC and MinGW) |
 
 `<SOLVER>_DIR` cache variables (`CBC_DIR`, `CPLEX_DIR`, `GUROBI_DIR`,
-`IPOPT_DIR`, `GAMS_DIR`, `HIGHS_EXTERNAL_DIR`) override where each
+`IPOPT_DIR`, `GAMS_DIR`, `CONOPT_DIR`, `UNO_DIR`, `HIGHS_EXTERNAL_DIR`) override where each
 dependency is searched for, as described in “Installing dependencies”.
 
 Also set `-DCMAKE_BUILD_TYPE=<Release|Debug|RelWithDebInfo>` explicitly —
@@ -479,7 +586,7 @@ The installation also contains a CMake package for C++ applications. In a
 separate project's `CMakeLists.txt`:
 
 ```cmake
-find_package(SHOT 1.1 CONFIG REQUIRED)
+find_package(SHOT 2.0 CONFIG REQUIRED)
 add_executable(my_solver main.cpp)
 target_link_libraries(my_solver PRIVATE SHOT::SHOTSolver)
 ```
@@ -511,6 +618,71 @@ solver behavior. For the full breakdown of test structure, how to run a
 single failing test in isolation, and how to use `InstanceTest` results to
 drive a `--debug` investigation, see
 [Automated tests as a debugging aid](DebuggingSHOT.md#automated-tests-as-a-debugging-aid).
+
+## CONOPT primal NLP solver
+
+CONOPT is an optional commercial NLP backend for fixed-integer subproblems from
+AMPL, OSiL, GAMS, and API models. Download
+and extract the [CONOPT SDK](https://conopt.gams.com/download/) for your platform.
+The 4.39.2 SDK provides `include/conopt.hpp`, `libconoptcpp`, and `libconopt`.
+The compiled C++ wrapper is used directly; Ipopt is not required by this backend.
+
+```sh
+cmake -S . -B build -DHAS_CONOPT=ON -DCONOPT_DIR=/path/to/conopt-sdk
+cmake --build build -j
+./build/SHOT problem.nl --nlp=conopt
+```
+
+`HAS_CONOPT` defaults to `OFF`. If requested but the SDK is not found, CMake warns
+and disables it. Keep the SDK's `lib` directory, including its bundled runtime
+libraries, available at runtime. The SDK library directory is included in build
+and install rpaths; binaries do not bundle or redistribute CONOPT. For Windows,
+see [Adding CONOPT](#adding-conopt) in the MSVC instructions.
+
+On Linux, install into a chosen prefix with `cmake --install build --prefix /path/to/prefix`.
+The executable in `bin` finds SHOT and its built CppAD runtime in the prefix's
+`lib` directory. External solver SDKs must remain at their configured locations.
+When `HAS_PYTHON=ON`, the installation also includes `lib/SHOTpy*.so`; add that
+directory to `PYTHONPATH` to import the installed module. No `LD_LIBRARY_PATH`
+setting is needed for these installed targets.
+
+For a full license, set all four environment variables before starting SHOT:
+`CONOPT_LICENSE_INT_1`, `CONOPT_LICENSE_INT_2`, `CONOPT_LICENSE_INT_3`, and
+`CONOPT_LICENSE_TEXT`. SHOT does not persist license values in model or option files.
+With no license configuration, CONOPT uses demo mode. Incomplete configuration
+produces a warning. See [CONOPT licensing](https://conopt.gams.com/licensing/)
+for demo and academic eligibility and usage terms. The NLP demo limit is 1000
+variables and 1000 rows, counting generated ranged-constraint slacks and the
+objective row (a constant objective also uses a fixed auxiliary column). A license or size failure skips that primal NLP attempt; it does
+not switch the running heuristic to another backend.
+
+CONOPT uses `Primal.FixedInteger.IterationLimit` and
+`Primal.FixedInteger.TimeLimit`. As for Ipopt, bounds with an absolute value of
+at least 1e20, including the artificial bounds SHOT gives unbounded variables,
+are infinite. `Subsolver.Conopt.FeasibilityTolerance` (Rtnwma)
+and `Subsolver.Conopt.OptimalityTolerance` (Rtredg) default to `1e-9`.
+`Subsolver.Conopt.DerivativeCheck` makes CONOPT compare the first and second
+derivatives with numerical ones (Lkdebg, Lkdeb2), at the initial point (`-1`)
+or every n-th iteration (`n`); CONOPT stops with an error if they differ. The
+CONOPT tests run with it. Solutions
+are checked against SHOT's bounds and linear/nonlinear feasibility tolerances
+before submission, including feasible solutions at an iteration or time limit.
+Logging honors `Output.Console.PrimalSolver.Show`. Callback evaluations run
+serially. Debug output includes the source model/current bounds and CONOPT
+option values.
+
+The adapter retains the finalized model structure between fixed-integer NLP
+solves, refreshing bounds and starting values for each solve. Quadratic Hessians
+are reused, linear rows are skipped in Hessian evaluation, and nonlinear
+constraint derivatives are batched where CONOPT's evaluation requests permit it.
+A Jacobian entry is nonlinear only if its variable is in the Hessian sparsity
+pattern of the row; all other entries, also in rows with a nonlinear
+expression, are passed to CONOPT as constants.
+The source model must remain structurally unchanged for the lifetime of its
+`NLPSolverConopt` instance; create a new instance after changing its structure.
+
+Enable `COMPILE_TESTS` and run `ctest --test-dir build -R '^Conopt_' --output-on-failure` for the backend tests. `Instance_11` uses HiGHS with CONOPT
+when both are enabled; larger instance collections may exceed demo limits.
 
 ## Next steps
 

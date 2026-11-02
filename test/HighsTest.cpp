@@ -264,7 +264,8 @@ bool HighsExternalDualBoundCallbackTest(std::string filename, double dualBoundTo
     solver->registerCallback<DualBoundUpdateContext>(
         [dualBoundToTest](DualBoundUpdateContext& context)
         {
-            if(context.getDualBound() >= dualBoundToTest)
+            if(context.isMinimization() ? context.getDualBound() >= dualBoundToTest
+                                        : context.getDualBound() <= dualBoundToTest)
                 return;
 
             std::cout << "Current dual bound is " << context.getDualBound()

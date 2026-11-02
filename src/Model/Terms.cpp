@@ -13,6 +13,7 @@
 #include "../Settings.h"
 #include "../Timing.h"
 
+#include <Eigen/Cholesky>
 #include <Eigen/Sparse>
 
 namespace SHOT
@@ -190,8 +191,28 @@ void QuadraticTerms::updateConvexity()
         Eigen::SparseMatrix<double> identity(numberOfVariables, numberOfVariables);
         identity.setIdentity();
 
+        double lowerTriangleSize = 0.5 * numberOfVariables * (numberOfVariables + 1.0);
+        bool useDenseFactorization = numberOfVariables <= maximumSizeForDenseFactorization
+            && matrix.nonZeros() >= minimumDensityForDenseFactorization * lowerTriangleSize;
+
+        // Only the lower triangle is set, which is the part the dense Cholesky factorization reads
+        Eigen::MatrixXd denseMatrix;
+
+        if(useDenseFactorization)
+            denseMatrix = Eigen::MatrixXd(matrix);
+
         auto isPositiveDefinite = [&](double sign, double shift)
         {
+            if(useDenseFactorization)
+            {
+                Eigen::MatrixXd shifted = sign * denseMatrix;
+                shifted.diagonal().array() += shift;
+
+                // The Cholesky factorization only succeeds for a positive definite matrix
+                Eigen::LLT<Eigen::MatrixXd, Eigen::Lower> factorization(shifted);
+                return (factorization.info() == Eigen::Success);
+            }
+
             Eigen::SparseMatrix<double> shifted = sign * matrix + shift * identity;
             Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>, Eigen::Lower> factorization(shifted);
 
@@ -438,20 +459,46 @@ void QuadraticTerms::performLDLFactorization(double maximumFill)
     original += Eigen::SparseMatrix<double>(matrix.transpose());
     original -= Eigen::SparseMatrix<double>(matrix.diagonal().asDiagonal());
 
-    // The matrices are kept sparse, since dense ones take O(n^2) memory, e.g., 50 GB each for 80000 variables
-    Eigen::SparseMatrix<double> error
-        = Eigen::SparseMatrix<double>(LDLMatrixL * diagonalD.asDiagonal()) * LDLMatrixL.transpose() - original;
-    error.makeCompressed();
     original.makeCompressed();
 
     auto largestElement = [](const Eigen::SparseMatrix<double>& sparseMatrix)
     { return (sparseMatrix.nonZeros() > 0 ? sparseMatrix.coeffs().cwiseAbs().maxCoeff() : 0.0); };
 
+    double largestError;
+
+    // The product of a dense L is many times faster with dense matrices, which are used under the same conditions as
+    // for the convexity check, while the matrices are otherwise kept sparse, since dense ones take O(n^2) memory,
+    // e.g., 50 GB each for 80000 variables
+    double lowerTriangleSize = 0.5 * numberOfVariables * (numberOfVariables + 1.0);
+
+    if(numberOfVariables <= maximumSizeForDenseFactorization
+        && LDLMatrixL.nonZeros() >= minimumDensityForDenseFactorization * lowerTriangleSize)
+    {
+        Eigen::MatrixXd denseL(LDLMatrixL);
+        Eigen::MatrixXd error = (denseL * diagonalD.asDiagonal()) * denseL.transpose();
+
+        for(int k = 0; k < original.outerSize(); ++k)
+        {
+            for(Eigen::SparseMatrix<double>::InnerIterator it(original, k); it; ++it)
+                error(it.row(), it.col()) -= it.value();
+        }
+
+        largestError = error.cwiseAbs().maxCoeff();
+    }
+    else
+    {
+        Eigen::SparseMatrix<double> error
+            = Eigen::SparseMatrix<double>(LDLMatrixL * diagonalD.asDiagonal()) * LDLMatrixL.transpose() - original;
+        error.makeCompressed();
+
+        largestError = largestElement(error);
+    }
+
     // The error to the reconstructed matrix is too large, will not use the decomposition. The tolerance is relative to
     // the largest element, since the round-off error grows with the elements, but not smaller than for elements of 1.
     double errorTolerance = 1e-12 * std::max(1.0, largestElement(original));
 
-    if(largestElement(error) > errorTolerance)
+    if(largestError > errorTolerance)
     {
         LDLFactorizationPerformed = true;
         LDLFactorizationSuccessful = false;

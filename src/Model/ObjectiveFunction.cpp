@@ -722,8 +722,10 @@ SparseVariableVector NonlinearObjectiveFunction::calculateGradient(const VectorD
 
     if(this->properties.hasNonlinearExpression)
     {
+        // The getter also sorts the pattern and removes duplicates, e.g., of a variable in both a linear term and the
+        // nonlinear expression
         if(!nonlinearGradientSparsityMapGenerated)
-            initializeGradientSparsityPattern();
+            getGradientSparsityPattern();
 
         if(auto sharedOwnerProblem = ownerProblem.lock())
         {
@@ -762,22 +764,11 @@ SparseVariableVector NonlinearObjectiveFunction::calculateGradient(const VectorD
         }
     }
 
-    SparseVariableVector monomialGradient;
-
     if(this->properties.hasMonomialTerms)
-    {
-        monomialGradient = monomialTerms.calculateGradient(point);
-    }
-
-    SparseVariableVector signomialGradient;
+        monomialTerms.addGradient(gradient, point);
 
     if(this->properties.hasSignomialTerms)
-    {
-        signomialGradient = signomialTerms.calculateGradient(point);
-    }
-
-    Utilities::addSparseVariableVector(gradient, std::move(monomialGradient));
-    Utilities::addSparseVariableVector(gradient, std::move(signomialGradient));
+        signomialTerms.addGradient(gradient, point);
 
     // The zeroes were previously erased from a copy of the gradient that was not returned
     if(eraseZeroes)
@@ -925,14 +916,10 @@ SparseVariableMatrix NonlinearObjectiveFunction::calculateHessian(const VectorDo
     SparseVariableMatrix hessian = QuadraticObjectiveFunction::calculateHessian(point, eraseZeroes);
 
     if(properties.hasMonomialTerms)
-    {
-        Utilities::addSparseVariableMatrix(hessian, monomialTerms.calculateHessian(point));
-    }
+        monomialTerms.addHessian(hessian, point);
 
     if(properties.hasSignomialTerms)
-    {
-        Utilities::addSparseVariableMatrix(hessian, signomialTerms.calculateHessian(point));
-    }
+        signomialTerms.addHessian(hessian, point);
 
     if(this->properties.hasNonlinearExpression)
     {

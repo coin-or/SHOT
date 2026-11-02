@@ -468,19 +468,52 @@ bool isSharedExpression(const NonlinearExpressionPtr& expression)
     if(expression.use_count() > 1)
         return (true);
 
-    if(auto unary = std::dynamic_pointer_cast<ExpressionUnary>(expression))
-        return (isSharedExpression(unary->child));
-
-    if(auto binary = std::dynamic_pointer_cast<ExpressionBinary>(expression))
-        return (isSharedExpression(binary->firstChild) || isSharedExpression(binary->secondChild));
-
-    if(auto general = std::dynamic_pointer_cast<ExpressionGeneral>(expression))
+    // The type gives the class of the expression, so it is cast without a dynamic cast or a copy of the pointer,
+    // which is much faster for large expressions. All types are listed so that a new one is not missed.
+    switch(expression->getType())
     {
-        for(auto& C : general->children)
+    case E_NonlinearExpressionTypes::Constant:
+    case E_NonlinearExpressionTypes::Variable:
+        return (false);
+
+    case E_NonlinearExpressionTypes::Negate:
+    case E_NonlinearExpressionTypes::Invert:
+    case E_NonlinearExpressionTypes::SquareRoot:
+    case E_NonlinearExpressionTypes::Log:
+    case E_NonlinearExpressionTypes::Exp:
+    case E_NonlinearExpressionTypes::Square:
+    case E_NonlinearExpressionTypes::Cos:
+    case E_NonlinearExpressionTypes::Sin:
+    case E_NonlinearExpressionTypes::Tan:
+    case E_NonlinearExpressionTypes::ArcCos:
+    case E_NonlinearExpressionTypes::ArcSin:
+    case E_NonlinearExpressionTypes::ArcTan:
+    case E_NonlinearExpressionTypes::Abs:
+    case E_NonlinearExpressionTypes::ErrorFunction:
+    case E_NonlinearExpressionTypes::SignPower:
+    case E_NonlinearExpressionTypes::Sinh:
+    case E_NonlinearExpressionTypes::Cosh:
+    case E_NonlinearExpressionTypes::Tanh:
+        return (isSharedExpression(static_cast<ExpressionUnary*>(expression.get())->child));
+
+    case E_NonlinearExpressionTypes::Divide:
+    case E_NonlinearExpressionTypes::Power:
+    {
+        auto binary = static_cast<ExpressionBinary*>(expression.get());
+        return (isSharedExpression(binary->firstChild) || isSharedExpression(binary->secondChild));
+    }
+
+    case E_NonlinearExpressionTypes::Sum:
+    case E_NonlinearExpressionTypes::Product:
+    {
+        for(auto& C : static_cast<ExpressionGeneral*>(expression.get())->children)
         {
             if(isSharedExpression(C))
                 return (true);
         }
+
+        return (false);
+    }
     }
 
     return (false);

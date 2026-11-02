@@ -57,9 +57,6 @@ private:
 
     bool useConvexQuadraticObjective = false;
     bool useNonconvexQuadraticObjective = false;
-    bool quadraticObjectiveRegardedAsNonlinear = false;
-    bool partitionQuadraticTermsInObjective = false;
-    bool partitionQuadraticTermsInConstraint = false;
 
     bool extractQuadraticTermsFromNonconvexExpressions = false;
     bool extractQuadraticTermsFromConvexExpressions = false;
@@ -102,13 +99,10 @@ private:
     template <class T>
     void copyQuadraticTermsToObjectiveFunction(const QuadraticTerms& terms, T destination, bool reversedSigns = false);
 
-    template <class T>
-    void copyMonomialTermsToObjectiveFunction(const MonomialTerms& terms, T destination, bool reversedSigns = false);
-
-    template <class T>
-    void copySignomialTermsToObjectiveFunction(const SignomialTerms& terms, T destination, bool reversedSigns = false);
-
-    LinearTerms partitionNonlinearSum(const std::shared_ptr<ExpressionSum>& source, bool reversedSigns);
+    // Quadratic terms in the sum are partitioned with partitionQuadraticTermsStrategy, i.e., the
+    // PartitionQuadraticTerms setting of the constraint or objective function
+    LinearTerms partitionNonlinearSum(const std::shared_ptr<ExpressionSum>& source, bool reversedSigns,
+        ES_PartitionNonlinearSums partitionQuadraticTermsStrategy);
     LinearTerms partitionMonomialTerms(const MonomialTerms& sourceTerms, bool reversedSigns);
     LinearTerms partitionSignomialTerms(const SignomialTerms& sourceTerms, bool reversedSigns);
 

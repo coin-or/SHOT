@@ -64,12 +64,12 @@ enum class E_HyperplaneSource
     LPRelaxedSolutionPoint,
     LPFixedIntegers,
     PrimalSolutionSearch,
-    PrimalSolutionSearchInteriorObjective,
     InteriorPointSearch,
     MIPCallbackRelaxed,
     ObjectiveRootsearch,
     ObjectiveCuttingPlane,
-    External
+    External,
+    FixedIntegerNLPSolution // Supporting hyperplane in a feasible solution of the fixed-integer NLP problem
 };
 
 enum class E_IntegerCutSource
@@ -176,15 +176,6 @@ enum class E_NLPSolutionStatus
     Error
 };
 
-enum class E_ObjectiveFunctionType
-{
-    Linear,
-    Quadratic,
-    Nonlinear,
-    QuadraticConsideredAsNonlinear,
-    None
-};
-
 enum class E_ProblemSolutionStatus
 {
     Feasible,
@@ -199,19 +190,6 @@ enum class E_ProblemSolutionStatus
     CutOff,
     NodeLimit,
     Abort,
-    None
-};
-
-enum class E_ProblemType
-{
-    LP,
-    QP,
-    NLP,
-    QCQP,
-    MILP,
-    MIQP,
-    MIQCQP,
-    MINLP,
     None
 };
 
@@ -234,6 +212,18 @@ enum class E_SettingPriority : int
     UserAPI = 30, // Value set via the public C++/Python API or command-line arguments
     SolverInternal = 40, // Value set during the normal solution process inside SHOT
     SolverCompatibility = 50 // Highest: hard override due to subsolver capability or compile-time limitations
+};
+
+// Conditions under which a setting has another default value, see Settings::addConditionalValue
+enum class E_SettingCondition
+{
+    // The problem is not convex. The settings in Model.Reformulation use the original problem, since they decide the
+    // reformulation, and the other settings use the reformulated problem
+    Nonconvex,
+    MIPSolverCplex,
+    MIPSolverGurobi,
+    MIPSolverCbc,
+    MIPSolverHighs
 };
 
 enum class E_SolutionStrategy
@@ -353,12 +343,6 @@ enum class ES_ObjectiveRootsearch
     Never
 };
 
-enum class ES_RootsearchConstraintStrategy
-{
-    AllAsMaxFunct,
-    IndividualConstraints
-};
-
 enum class ES_RootsearchMethod
 {
     BoostTOMS748,
@@ -385,7 +369,7 @@ enum class ES_PrimalNLPFixedPoint
     AllSolutions,
     FirstSolution,
     AllFeasibleSolutions,
-    FirstAndFeasibleSolutions,
+    FirstAndFeasibleSolutions, // The first solution and the one with the smallest constraint deviation
     SmallestDeviationSolution
 };
 
@@ -402,6 +386,7 @@ enum class ES_PrimalNLPSolver
     GAMS,
     SHOT,
     Uno,
+    Conopt,
     NotUsed // No NLP solver has been used
 };
 
@@ -430,6 +415,13 @@ enum class ES_ReformulateBilinearInteger
     No,
     NoIfQuadraticSupport,
     Yes
+};
+
+enum class ES_ReformulateBilinearInverse
+{
+    None,
+    OneConstraint,
+    BothConstraints
 };
 
 enum class ES_PartitionNonlinearSums

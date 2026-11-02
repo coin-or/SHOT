@@ -23,6 +23,7 @@
 #include "../src/Structs.h"
 
 #include "../src/Model/Constraints.h"
+#include "../src/Model/NonlinearExpressions.h"
 #include "../src/Model/ObjectiveFunction.h"
 #include "../src/Model/Problem.h"
 #include "../src/Model/Terms.h"
@@ -30,7 +31,12 @@
 
 #include "../src/MIPSolver/IMIPSolver.h"
 #include "../src/Tasks/TaskCreateMIPProblem.h"
+#include "../src/Tasks/TaskInitializeRootsearch.h"
+#include "../src/Tasks/TaskAddPrimalReductionCut.h"
 #include "../src/Tasks/TaskPerformConvexBounding.h"
+#include "../src/Tasks/TaskSelectHyperplanesECP.h"
+#include "../src/Tasks/TaskSelectHyperplanesESH.h"
+#include "../src/TaskHandler.h"
 #include "../src/DualSolver.h"
 #include "../src/Utilities.h"
 
@@ -661,6 +667,53 @@ bool testGlobalDualBoundIsCappedByThePrimalBound(ES_MIPSolver mipSolver)
     return passed;
 }
 
+// A primal bound that passes a global dual bound by more than the objective gap tolerances shows that the dual bound
+// was not valid, which is reported, while numerical error and a dual bound that is not global are not reported
+bool testPrimalBoundPassingGlobalDualBoundIsReported(ES_MIPSolver mipSolver)
+{
+    bool passed = true;
+
+    for(bool minimize : { true, false })
+    {
+        for(bool isGlobal : { true, false })
+        {
+            auto solver = makeSolver(mipSolver, ModelKind::Bounded, minimize);
+
+            if(!solver)
+            {
+                std::cout << "Could not create problem for " << name(mipSolver) << '\n';
+                return false;
+            }
+
+            auto env = solver->getEnvironment();
+            env->results->createIteration();
+            env->results->solutionIsGlobal = isGlobal;
+
+            auto check = [&](const std::string& description, bool expected) {
+                if(env->results->hasPrimalBoundPassedGlobalDualBound != expected)
+                {
+                    std::cout << name(mipSolver) << (minimize ? " (min)" : " (max)")
+                              << (isGlobal ? " (global)" : " (not global)") << ": " << description << '\n';
+                    passed = false;
+                }
+            };
+
+            env->results->setDualBound(minimize ? 5.0 : -5.0);
+
+            // Within the objective gap tolerances, the primal bound passes the dual bound by numerical error only
+            env->results->setPrimalBound(minimize ? 5.0 - 1e-6 : -5.0 + 1e-6);
+            check("a primal bound within the gap tolerances was reported", false);
+
+            env->results->setPrimalBound(minimize ? 4.0 : -4.0);
+            check(isGlobal ? "a primal bound past the dual bound was not reported"
+                           : "a primal bound past a dual bound that is not global was reported",
+                isGlobal);
+        }
+    }
+
+    return passed;
+}
+
 bool testIntegerCutsDifferingInSmallVariables(ES_MIPSolver mipSolver)
 {
     // Only the model is needed, the problem is never solved
@@ -749,6 +802,396 @@ std::vector<ES_MIPSolver> compiledSolvers()
 
 }
 
+// After cuts of nonconvex constraints, the dual problem is no longer a relaxation. A dual bound from convex bounding is
+// still global, but must not make the dual problem a relaxation again, and when it closes the gap, no reduction cut is
+// added.
+bool testConvexBoundingBoundKeepsDualProblemNonGlobal(ES_MIPSolver mipSolver)
+{
+    bool passed = true;
+
+    for(bool minimize : { true, false })
+    {
+        auto solver = makeSolver(mipSolver, ModelKind::Bounded, minimize);
+
+        if(!solver)
+        {
+            std::cout << "Could not create problem for " << name(mipSolver) << '\n';
+            return false;
+        }
+
+        auto env = solver->getEnvironment();
+        env->results->createIteration();
+        std::string direction = minimize ? " (min)" : " (max)";
+
+        env->results->solutionIsGlobal = false;
+
+        // The objective value of x = -3, b = 1 is -3.75 when minimizing and 3.75 when maximizing
+        env->primalSolver->addPrimalSolutionCandidate({ -3.0, 1.0 }, E_PrimalSolutionSource::NLPFixedIntegers, 0);
+        env->primalSolver->checkPrimalSolutionCandidates();
+
+        if(!env->results->hasPrimalSolution())
+        {
+            std::cout << name(mipSolver) << direction << ": the primal solution was not accepted\n";
+            passed = false;
+            continue;
+        }
+
+        const double convexBound = minimize ? -3.7505 : 3.7505;
+        const double mainBound = minimize ? -3.7502 : 3.7502;
+
+        env->results->setDualBound(convexBound, true);
+
+        if(env->results->solutionIsGlobal)
+        {
+            std::cout << name(mipSolver) << direction
+                      << ": a bound from convex bounding made the dual problem a relaxation again\n";
+            passed = false;
+        }
+
+        // A later bound of the main dual problem is not global
+        env->results->setDualBound(mainBound);
+
+        if(std::abs(env->results->getGlobalDualBound() - convexBound) > 1e-10)
+        {
+            std::cout << name(mipSolver) << direction << ": the global dual bound is "
+                      << env->results->getGlobalDualBound() << " instead of " << convexBound << '\n';
+            passed = false;
+        }
+
+        if(!env->results->isAbsoluteObjectiveGapToleranceMet())
+        {
+            std::cout << name(mipSolver) << direction << ": the gap is not closed by the global dual bound\n";
+            passed = false;
+            continue;
+        }
+
+        auto taskIfTrue = std::make_shared<TaskAddPrimalReductionCut>(env, "True", "False");
+        auto taskIfFalse = std::make_shared<TaskAddPrimalReductionCut>(env, "True", "False");
+        env->tasks->clearTasks();
+        env->tasks->addTask(taskIfTrue, "True");
+        env->tasks->addTask(taskIfFalse, "False");
+
+        double cutOff = env->dualSolver->cutOffToUse;
+        int reductions = env->solutionStatistics.numberOfPrimalReductionsPerformed;
+
+        TaskAddPrimalReductionCut(env, "True", "False").run();
+
+        TaskPtr nextTask;
+        env->tasks->getNextTask(nextTask);
+
+        if(nextTask != taskIfFalse || env->dualSolver->cutOffToUse != cutOff
+            || env->solutionStatistics.numberOfPrimalReductionsPerformed != reductions)
+        {
+            std::cout << name(mipSolver) << direction
+                      << ": a reduction cut was added although the global dual bound closes the gap\n";
+            passed = false;
+        }
+    }
+
+    return passed;
+}
+
+// The convex bounding problem is a relaxation of the problem without a cutoff, so it being infeasible proves that the
+// problem is infeasible, also when the dual problem is no longer a relaxation, unless variables have artificial bounds.
+bool testInfeasibleConvexBoundingProvesInfeasibility(ES_MIPSolver mipSolver)
+{
+    bool passed = true;
+
+    for(bool hasArtificialBound : { false, true })
+    {
+        auto solver = makeSolver(mipSolver, ModelKind::Infeasible, true);
+
+        if(!solver)
+        {
+            std::cout << "Could not create problem for " << name(mipSolver) << '\n';
+            return false;
+        }
+
+        auto env = solver->getEnvironment();
+        std::string variant = hasArtificialBound ? " (artificial bound)" : "";
+
+        // Satisfy the preconditions of the task without running a full solve
+        env->solutionStatistics.numberOfHyperplanesWithConvexSource = 1;
+        env->solutionStatistics.numberOfHyperplanesWithNonconvexSource = 1;
+        solver->updateSetting("Dual.ConvexBounding.IdleIterations", 0);
+        env->results->createIteration();
+        env->results->solutionIsGlobal = false;
+
+        if(hasArtificialBound)
+            env->problem->allVariables.at(0)->properties.hasArtificialUpperBound = true;
+
+        auto taskFinalize = std::make_shared<TaskAddPrimalReductionCut>(env, "FinalizeSolution", "FinalizeSolution");
+        env->tasks->clearTasks();
+        env->tasks->addTask(taskFinalize, "FinalizeSolution");
+
+        TaskPerformConvexBounding(env).run();
+
+        TaskPtr nextTask;
+        bool hasNextTask = env->tasks->getNextTask(nextTask);
+        bool isProven = env->results->isInfeasibilityProven;
+
+        if(hasArtificialBound)
+        {
+            if(isProven || env->results->terminationReason != E_TerminationReason::NotTerminated)
+            {
+                std::cout << name(mipSolver) << variant
+                          << ": an infeasible bounding problem with artificial bounds proved infeasibility\n";
+                passed = false;
+            }
+
+            continue;
+        }
+
+        if(!isProven || env->results->terminationReason != E_TerminationReason::InfeasibleProblem || !hasNextTask
+            || nextTask != taskFinalize)
+        {
+            std::cout << name(mipSolver) << ": an infeasible bounding problem did not terminate as infeasible\n";
+            passed = false;
+        }
+
+        if(env->results->getModelReturnStatus() != E_ModelReturnStatus::InfeasibleGlobal)
+        {
+            std::cout << name(mipSolver) << ": the problem is not reported as globally infeasible\n";
+            passed = false;
+        }
+    }
+
+    return passed;
+}
+
+// An integer cut at a value strictly between the bounds of an integer variable adds two auxiliary variables to the dual
+// problem. The relaxation strategy then switches the discrete variables off and on again, which must also handle them.
+bool testIntegerCutVariablesSurviveRelaxation(ES_MIPSolver mipSolver)
+{
+    auto solver = std::make_shared<Solver>();
+    auto env = solver->getEnvironment();
+
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(mipSolver));
+    solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+
+    // Minimize x - z with x in [0, 3] and the integer z in [0, 5], where x >= z / 2, with the optimum -2.5 at z = 5
+    auto problem = std::make_shared<Problem>(env);
+    auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.0, 3.0);
+    auto z = std::make_shared<Variable>("z", E_VariableType::Integer, 0.0, 5.0);
+    problem->add({ x, z });
+
+    auto c1 = std::make_shared<LinearConstraint>("c1", 0.0, SHOT_DBL_MAX);
+    c1->add(std::make_shared<LinearTerm>(1.0, x));
+    c1->add(std::make_shared<LinearTerm>(-0.5, z));
+    problem->add(c1);
+
+    auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<LinearTerm>(1.0, x));
+    objective->add(std::make_shared<LinearTerm>(-1.0, z));
+    problem->add(objective);
+    problem->finalize();
+
+    if(!solver->setProblem(problem))
+    {
+        std::cout << "Could not create problem for " << name(mipSolver) << '\n';
+        return false;
+    }
+
+    env->results->usedMIPSolver = mipSolver;
+    env->results->createIteration();
+
+    auto backend = makeBackend(env, mipSolver);
+
+    if(!backend->initializeProblem())
+    {
+        std::cout << "Could not initialize " << name(mipSolver) << '\n';
+        return false;
+    }
+
+    TaskCreateMIPProblem(env, backend, env->reformulatedProblem).run();
+
+    int zIndex = -1;
+
+    for(auto& V : env->reformulatedProblem->allVariables)
+    {
+        if(V->name == "z")
+            zIndex = V->getIndex();
+    }
+
+    // Excludes z = 2, which is strictly between the bounds of z
+    IntegerCut cut;
+    cut.variableIndexes = { zIndex };
+    cut.variableValues = { 2 };
+
+    try
+    {
+        if(!backend->createIntegerCut(cut))
+        {
+            std::cout << name(mipSolver) << ": the integer cut was not created\n";
+            return false;
+        }
+
+        backend->activateDiscreteVariables(false);
+        backend->activateDiscreteVariables(true);
+        backend->setSolutionLimit(2100000000);
+
+        auto status = backend->solveProblem();
+
+        if(status != E_ProblemSolutionStatus::Optimal || std::abs(backend->getObjectiveValue() + 2.5) > 1e-6)
+        {
+            std::cout << name(mipSolver) << ": the problem with the integer cut was not solved to the optimum -2.5\n";
+            return false;
+        }
+    }
+    catch(std::exception& e)
+    {
+        std::cout << name(mipSolver) << ": switching the discrete variables after an integer cut failed: " << e.what()
+                  << '\n';
+        return false;
+    }
+
+    return true;
+}
+
+enum class CutStrategy
+{
+    ESHMaxFunction,
+    ESHIndividualConstraints,
+    ECP
+};
+
+// A cut of a convex constraint is globally valid in any point, but a cut of a nonconvex constraint is not. ESH and ECP
+// first generate cuts for the convex constraints only, and for the nonconvex ones only if that gives no cuts. With the
+// root search on the max function, a nonconvex constraint can have a larger value than the convex ones in the external
+// point, and its linearization must then not be selected as a global cut, or the dual bound is reported as valid and
+// the solution as globally optimal. The interior and solution points are given directly, so the test does not depend
+// on the solution path of a MIP solver.
+bool testCutsAreGlobalOnlyForConvexConstraints(CutStrategy strategy, bool violateConvexConstraint)
+{
+    auto solver = std::make_shared<Solver>();
+    auto env = solver->getEnvironment();
+
+    std::string description;
+
+    switch(strategy)
+    {
+    case CutStrategy::ESHMaxFunction:
+        description = "ESH, max function";
+        break;
+    case CutStrategy::ESHIndividualConstraints:
+        description = "ESH, individual constraints";
+        break;
+    case CutStrategy::ECP:
+        description = "ECP";
+        break;
+    }
+
+    description += violateConvexConstraint ? ", convex constraint violated" : ", only nonconvex constraints violated";
+
+    solver->updateSetting("Dual.ESH.Rootsearch.UseMaxFunction", strategy == CutStrategy::ESHMaxFunction);
+    solver->updateSetting(
+        "Model.Reformulation.Constraint.PartitionNonlinearTerms", static_cast<int>(ES_PartitionNonlinearSums::Never));
+    // Bound tightening on the nonconvex constraints would move the solution points below outside the variable bounds
+    solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+
+    // Maximize x + y with x, y in [0, 3] subject to the convex exp(x) + exp(y) <= 4 and the nonconvex x * exp(y) <= 0.5
+    // and y * exp(x) <= 0.5
+    auto problem = std::make_shared<Problem>(env);
+    auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.0, 3.0);
+    auto y = std::make_shared<Variable>("y", E_VariableType::Real, 0.0, 3.0);
+    problem->add({ x, y });
+
+    auto variable = [](const VariablePtr& V) { return std::make_shared<ExpressionVariable>(V); };
+    auto exponential = [&](const VariablePtr& V) { return std::make_shared<ExpressionExp>(variable(V)); };
+
+    problem->add(std::make_shared<NonlinearConstraint>(
+        "convex", std::make_shared<ExpressionSum>(exponential(x), exponential(y)), SHOT_DBL_MIN, 4.0));
+    problem->add(std::make_shared<NonlinearConstraint>(
+        "nonconvex1", std::make_shared<ExpressionProduct>(variable(x), exponential(y)), SHOT_DBL_MIN, 0.5));
+    problem->add(std::make_shared<NonlinearConstraint>(
+        "nonconvex2", std::make_shared<ExpressionProduct>(variable(y), exponential(x)), SHOT_DBL_MIN, 0.5));
+
+    auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Maximize);
+    objective->add(std::make_shared<LinearTerm>(1.0, x));
+    objective->add(std::make_shared<LinearTerm>(1.0, y));
+    problem->add(objective);
+    problem->finalize();
+
+    if(!solver->setProblem(problem))
+    {
+        std::cout << description << ": could not create problem\n";
+        return false;
+    }
+
+    // The points below are given in x and y only
+    if(env->reformulatedProblem->properties.numberOfVariables != 2)
+    {
+        std::cout << description << ": the reformulated problem has "
+                  << env->reformulatedProblem->properties.numberOfVariables << " variables instead of 2\n";
+        return false;
+    }
+
+    env->results->createIteration();
+
+    // All three constraints are violated in (1.5, 1.5). The root search on the convex constraint ends near
+    // (ln 2, ln 2), where the value of both nonconvex constraints is about 0.89 and that of the convex one about 0.
+    // In (1, 0.2) only the nonconvex constraints are violated, and the convex one is fulfilled on the whole line
+    // segment from the origin.
+    SolutionPoint solutionPoint;
+    solutionPoint.point = violateConvexConstraint ? VectorDouble { 1.5, 1.5 } : VectorDouble { 1.0, 0.2 };
+
+    if(strategy == CutStrategy::ECP)
+    {
+        TaskSelectHyperplanesECP(env).run({ solutionPoint });
+    }
+    else
+    {
+        TaskInitializeRootsearch(env).run();
+
+        // The origin is strictly inside all three constraints
+        auto interiorPoint = std::make_shared<InteriorPoint>();
+        interiorPoint->point = { 0.0, 0.0 };
+        env->dualSolver->interiorPts.push_back(interiorPoint);
+
+        TaskSelectHyperplanesESH(env).run({ solutionPoint });
+    }
+
+    bool passed = true;
+    int numberOfHyperplanes = 0;
+
+    for(auto& HP : env->dualSolver->hyperplaneWaitingList)
+    {
+        auto hyperplane = std::dynamic_pointer_cast<ConstraintHyperplane>(HP);
+
+        if(!hyperplane)
+            continue;
+
+        numberOfHyperplanes++;
+
+        bool isConvex = hyperplane->sourceConstraint->properties.convexity <= E_Convexity::Convex;
+
+        if(isConvex != violateConvexConstraint)
+        {
+            std::cout << description << ": a cut of the " << (isConvex ? "convex" : "nonconvex") << " constraint "
+                      << hyperplane->sourceConstraint->name << " was generated\n";
+            passed = false;
+        }
+
+        if(hyperplane->isGlobal != isConvex)
+        {
+            std::cout << description << ": a cut of the " << (isConvex ? "convex" : "nonconvex") << " constraint "
+                      << hyperplane->sourceConstraint->name << " is " << (hyperplane->isGlobal ? "" : "not ")
+                      << "marked as global\n";
+            passed = false;
+        }
+    }
+
+    if(numberOfHyperplanes == 0)
+    {
+        std::cout << description << ": no cuts were generated\n";
+        passed = false;
+    }
+
+    return passed;
+}
+
 int DualBoundTest(int argc, char* argv[])
 {
     int choice = 1;
@@ -822,6 +1265,39 @@ int DualBoundTest(int argc, char* argv[])
         for(auto mipSolver : compiledSolvers())
             passed = testIntegerCutsDifferingInSmallVariables(mipSolver) && passed;
         std::cout << "Finished test that integer cuts differing in variables of small magnitude are kept apart.\n";
+        break;
+    case 11:
+        std::cout << "Starting test that a bound from convex bounding keeps the dual problem non-global:\n";
+        for(auto mipSolver : compiledSolvers())
+            passed = testConvexBoundingBoundKeepsDualProblemNonGlobal(mipSolver) && passed;
+        std::cout << "Finished test that a bound from convex bounding keeps the dual problem non-global.\n";
+        break;
+    case 12:
+        std::cout << "Starting test that an infeasible convex bounding problem proves infeasibility:\n";
+        for(auto mipSolver : compiledSolvers())
+            passed = testInfeasibleConvexBoundingProvesInfeasibility(mipSolver) && passed;
+        std::cout << "Finished test that an infeasible convex bounding problem proves infeasibility.\n";
+        break;
+    case 13:
+        std::cout << "Starting test that the variables of integer cuts survive the relaxation strategy:\n";
+        for(auto mipSolver : compiledSolvers())
+            passed = testIntegerCutVariablesSurviveRelaxation(mipSolver) && passed;
+        std::cout << "Finished test that the variables of integer cuts survive the relaxation strategy.\n";
+        break;
+    case 14:
+        std::cout << "Starting test that a primal bound past a global dual bound is reported:\n";
+        for(auto mipSolver : compiledSolvers())
+            passed = testPrimalBoundPassingGlobalDualBoundIsReported(mipSolver) && passed;
+        std::cout << "Finished test that a primal bound past a global dual bound is reported.\n";
+        break;
+    case 15:
+        std::cout << "Starting test that cuts are global only for convex constraints:\n";
+        for(auto strategy : { CutStrategy::ESHMaxFunction, CutStrategy::ESHIndividualConstraints, CutStrategy::ECP })
+        {
+            for(bool violateConvexConstraint : { true, false })
+                passed = testCutsAreGlobalOnlyForConvexConstraints(strategy, violateConvexConstraint) && passed;
+        }
+        std::cout << "Finished test that cuts are global only for convex constraints.\n";
         break;
     default:
         passed = false;

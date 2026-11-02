@@ -11,6 +11,7 @@
 #pragma once
 
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -34,8 +35,17 @@ class DllExport Solver
 private:
     std::unique_ptr<ISolutionStrategy> solutionStrategy;
 
+    // Creates the timers of the timing report, in the order they are reported
+    void createTimers();
+
     void initializeSettings();
     void verifySettings();
+
+    // The conditions of the conditional setting values that hold for the problem and the selected MIP solver
+    std::set<E_SettingCondition> getSettingConditions(ProblemPtr problem);
+
+    // Sets the reformulation settings given by Model.Convexity.AssumeConvex and the MIP solver
+    void setReformulationSettings();
 
     void setConvexityBasedSettingsPreReformulation();
     void setConvexityBasedSettings();
@@ -53,6 +63,9 @@ private:
 
     // Given to the primal solver when solveProblem() is called, see setStartingPoint()
     VectorDouble startingPoint;
+
+    // The setting groups of backends that are not compiled in, which a warning has been given about
+    std::set<std::string> warnedUnavailableSettingGroups;
 
     EnvironmentPtr env;
 

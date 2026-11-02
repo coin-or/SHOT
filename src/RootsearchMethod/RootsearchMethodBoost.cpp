@@ -98,8 +98,7 @@ RootsearchMethodBoost::RootsearchMethodBoost(EnvironmentPtr envPtr) : env(envPtr
 RootsearchMethodBoost::~RootsearchMethodBoost() { activeConstraints.clear(); }
 
 std::pair<VectorDouble, VectorDouble> RootsearchMethodBoost::findZero(const VectorDouble& ptA, const VectorDouble& ptB,
-    int Nmax, double lambdaTol, double constrTol, const NonlinearConstraints constraints,
-    bool addPrimalCandidate = true)
+    int Nmax, double lambdaTol, const NonlinearConstraints constraints, bool addPrimalCandidate = true)
 {
     std::vector<NumericConstraint*> tmpConstraints;
     tmpConstraints.reserve(size(constraints));
@@ -109,12 +108,11 @@ std::pair<VectorDouble, VectorDouble> RootsearchMethodBoost::findZero(const Vect
         tmpConstraints.push_back(std::dynamic_pointer_cast<NumericConstraint>(C).get());
     }
 
-    return (RootsearchMethodBoost::findZero(ptA, ptB, Nmax, lambdaTol, constrTol, tmpConstraints, addPrimalCandidate));
+    return (RootsearchMethodBoost::findZero(ptA, ptB, Nmax, lambdaTol, tmpConstraints, addPrimalCandidate));
 }
 
 std::pair<VectorDouble, VectorDouble> RootsearchMethodBoost::findZero(const VectorDouble& ptA, const VectorDouble& ptB,
-    int Nmax, double lambdaTol, [[maybe_unused]] double constrTol, const std::vector<NumericConstraint*> constraints,
-    bool addPrimalCandidate = true)
+    int Nmax, double lambdaTol, const std::vector<NumericConstraint*> constraints, bool addPrimalCandidate = true)
 {
     if(ptA.size() != ptB.size())
     {
@@ -232,8 +230,7 @@ std::pair<VectorDouble, VectorDouble> RootsearchMethodBoost::findZero(const Vect
 }
 
 std::pair<double, double> RootsearchMethodBoost::findZero(const VectorDouble& pt, double objectiveLB,
-    double objectiveUB, int Nmax, double lambdaTol, [[maybe_unused]] double constrTol,
-    ObjectiveFunctionPtr objectiveFunction)
+    double objectiveUB, int Nmax, double lambdaTol, ObjectiveFunctionPtr objectiveFunction)
 {
     testObjective->solutionPoint = pt;
     testObjective->firstPt = objectiveLB;

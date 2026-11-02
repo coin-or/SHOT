@@ -26,8 +26,8 @@ public:
     ModelingSystemAMPL(EnvironmentPtr envPtr);
     ~ModelingSystemAMPL() override;
 
-    // Adds modeling system specific settings
-    static void augmentSettings(SettingsPtr settings);
+    // Adds modeling system specific private settings
+    static void augmentPrivateSettings(SettingsPtr settings);
 
     // Get specific settings from modeling system
     void updateSettings(SettingsPtr settings) override;

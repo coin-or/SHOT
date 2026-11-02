@@ -138,12 +138,11 @@ void TaskFindInteriorPoint::run()
             env->solutionStatistics.numberOfOriginalInteriorPoints++;
         }
 
-        env->timing->stopTimer("InteriorPointSearch");
     }
 
     if(env->dualSolver->interiorPts.size() > 0)
     {
-        env->timing->stopTimer("InteriorPointSearch");
+        finalizeInteriorPoints();
         return;
     }
 
@@ -152,30 +151,9 @@ void TaskFindInteriorPoint::run()
         == ES_ESHInteriorPointStrategy::OnlyExternal)
     {
         if(!env->callbacks->isActive(E_CallbackLocation::InteriorPointSearch))
-        {
-            env->output->outputWarning(
-                " ESH.InteriorPoint.Strategy is OnlyExternal but no callback is registered. "
-                "No interior point will be available.");
-            env->timing->stopTimer("InteriorPointSearch");
-            return;
-        }
+            env->output->outputWarning(" ESH.InteriorPoint.Strategy is OnlyExternal but no callback is registered.");
 
-        // The callbacks are given an empty set of interior points
-        auto callbackPoints = invokeInteriorPointCallbacks();
-
-        if(!callbackPoints.has_value())
-        {
-            env->output->outputWarning(" ESH interior point callback set no points. No interior point available.");
-            env->timing->stopTimer("InteriorPointSearch");
-            return;
-        }
-
-        setCallbackInteriorPoints(*callbackPoints);
-
-        for(auto& IP : env->dualSolver->interiorPts)
-            env->primalSolver->addPrimalSolutionCandidate(IP->point, E_PrimalSolutionSource::InteriorPointSearch, 0);
-
-        env->timing->stopTimer("InteriorPointSearch");
+        finalizeInteriorPoints();
         return;
     }
 
@@ -294,25 +272,14 @@ void TaskFindInteriorPoint::run()
         }
     }
 
-    if(!foundNLPPoint)
-    {
-        env->output->outputError("");
-        env->output->outputError(" No interior point found!                            ");
-        env->timing->stopTimer("InteriorPointSearch");
+    if(foundNLPPoint)
+        env->output->outputDebug(" Finished solving NLP problem.");
+    finalizeInteriorPoints();
+}
 
-        return;
-    }
-
-    env->output->outputDebug(" Finished solving NLP problem.");
-
-    env->solutionStatistics.numberOfOriginalInteriorPoints = env->dualSolver->interiorPts.size();
-
-    for(auto IP : env->dualSolver->interiorPts)
-    {
-        env->primalSolver->addPrimalSolutionCandidate(IP->point, E_PrimalSolutionSource::InteriorPointSearch, 0);
-    }
-
-    // The callbacks can inspect, filter, or replace the interior points found by the internal search
+void TaskFindInteriorPoint::finalizeInteriorPoints()
+{
+    // Give the callbacks a chance to supply points even when the internal search found none.
     if(env->callbacks->isActive(E_CallbackLocation::InteriorPointSearch))
     {
         if(auto callbackPoints = invokeInteriorPointCallbacks(); callbackPoints.has_value())
@@ -321,6 +288,14 @@ void TaskFindInteriorPoint::run()
             setCallbackInteriorPoints(*callbackPoints);
         }
     }
+
+    env->solutionStatistics.numberOfOriginalInteriorPoints = env->dualSolver->interiorPts.size();
+
+    if(env->dualSolver->interiorPts.empty())
+        env->output->outputError(" No interior point found!");
+
+    for(auto& IP : env->dualSolver->interiorPts)
+        env->primalSolver->addPrimalSolutionCandidate(IP->point, E_PrimalSolutionSource::InteriorPointSearch, 0);
 
     env->timing->stopTimer("InteriorPointSearch");
 }
@@ -359,7 +334,7 @@ void TaskFindInteriorPoint::setCallbackInteriorPoints(const std::vector<VectorDo
             tmpIP->point, env->reformulatedProblem->nonlinearConstraints);
         tmpIP->maxDeviatingConstraint = PairIndexValue(maxDev.constraint->getIndex(), maxDev.normalizedValue);
 
-        if(maxDev.normalizedValue >= 0)
+        if(!InteriorPoint::isUsableDeviation(maxDev.normalizedValue))
         {
             env->output->outputWarning(" Callback-provided interior point " + std::to_string(i)
                 + " has constraint deviation too large: " + Utilities::toString(maxDev.normalizedValue)

@@ -97,7 +97,7 @@ public:
     virtual E_Monotonicity getMonotonicity() const = 0;
 };
 
-class LinearTerm : public Term
+class LinearTerm final : public Term
 {
 private:
 public:
@@ -391,7 +391,7 @@ public:
     };
 };
 
-class QuadraticTerm : public Term
+class QuadraticTerm final : public Term
 {
 public:
     VariablePtr firstVariable;
@@ -570,6 +570,12 @@ public:
     // Larger matrices are checked for convexity with sparse factorizations instead of their eigenvalues, which are
     // then only computed if needed, by computeEigenvectors()
     static constexpr int maximumSizeForDenseConvexityCheck = 100;
+
+    // The factorizations are dense for a matrix with at least this share of nonzeros in its lower triangle and at
+    // most this many variables, since the sparse factorization of a dense matrix is many times slower than a dense
+    // one; the dense matrix takes 200 MB for 5000 variables
+    static constexpr double minimumDensityForDenseFactorization = 0.1;
+    static constexpr int maximumSizeForDenseFactorization = 5000;
 
     Eigen::VectorXd eigenvalues;
 
@@ -753,7 +759,7 @@ public:
     void computeEigenvectors();
 };
 
-class MonomialTerm : public Term
+class MonomialTerm final : public Term
 {
 public:
     Variables variables;
@@ -880,15 +886,36 @@ inline std::ostream& operator<<(std::ostream& stream, MonomialTermPtr term)
 // The derivatives of a term c * g_1 * ... * g_n by the product rule, where g_i is a function of one variable, e.g. x
 // or x^p, and a variable may be in several factors, as x in x*x*y. The products of the other factors are formed from
 // prefix and suffix products, since dividing the value of the term by a factor fails when the factor is zero.
-// values, firstDerivatives and secondDerivatives are g_i, g_i' and g_i'' at the point.
-inline void addProductTermGradient(SparseVariableVector& gradient, double coefficient, const Variables& variables,
-    const std::vector<double>& values, const std::vector<double>& firstDerivatives)
+// values, firstDerivatives and secondDerivatives are g_i, g_i' and g_i'' at the point. The vectors are kept between the
+// terms of a gradient or Hessian, so that they are not allocated again for every term.
+struct ProductTermFactors
 {
-    size_t numberOfFactors = values.size();
-    std::vector<double> suffixProducts(numberOfFactors + 1, 1.0);
+    Variables variables; // Only used for signomial terms, since a monomial term has the variables itself
+    std::vector<double> values;
+    std::vector<double> firstDerivatives;
+    std::vector<double> secondDerivatives;
+    std::vector<double> suffixProducts;
 
-    for(size_t i = numberOfFactors; i > 0; i--)
-        suffixProducts[i - 1] = suffixProducts[i] * values[i - 1];
+    // The products of the values from factor i onwards, with suffixProducts[numberOfFactors] = 1
+    inline void calculateSuffixProducts()
+    {
+        size_t numberOfFactors = values.size();
+        suffixProducts.assign(numberOfFactors + 1, 1.0);
+
+        for(size_t i = numberOfFactors; i > 0; i--)
+            suffixProducts[i - 1] = suffixProducts[i] * values[i - 1];
+    }
+};
+
+inline void addProductTermGradient(
+    SparseVariableVector& gradient, double coefficient, const Variables& variables, ProductTermFactors& factors)
+{
+    const auto& values = factors.values;
+    const auto& firstDerivatives = factors.firstDerivatives;
+    const auto& suffixProducts = factors.suffixProducts;
+
+    size_t numberOfFactors = values.size();
+    factors.calculateSuffixProducts();
 
     double prefixProduct = coefficient;
 
@@ -920,15 +947,16 @@ inline void addHessianElement(
 // The Hessian is stored as its upper triangle, so an element outside the diagonal is the derivative with respect to
 // both variables once, and a diagonal element is the full second derivative. Two factors of the same variable thus
 // add twice their mixed derivative to the diagonal: x*x*y gives 2y.
-inline void addProductTermHessian(SparseVariableMatrix& hessian, double coefficient, const Variables& variables,
-    const std::vector<double>& values, const std::vector<double>& firstDerivatives,
-    const std::vector<double>& secondDerivatives)
+inline void addProductTermHessian(
+    SparseVariableMatrix& hessian, double coefficient, const Variables& variables, ProductTermFactors& factors)
 {
-    size_t numberOfFactors = values.size();
-    std::vector<double> suffixProducts(numberOfFactors + 1, 1.0);
+    const auto& values = factors.values;
+    const auto& firstDerivatives = factors.firstDerivatives;
+    const auto& secondDerivatives = factors.secondDerivatives;
+    const auto& suffixProducts = factors.suffixProducts;
 
-    for(size_t i = numberOfFactors; i > 0; i--)
-        suffixProducts[i - 1] = suffixProducts[i] * values[i - 1];
+    size_t numberOfFactors = values.size();
+    factors.calculateSuffixProducts();
 
     double prefixProduct = coefficient;
 
@@ -1052,46 +1080,61 @@ public:
     SparseVariableVector calculateGradient(const VectorDouble& point) const
     {
         SparseVariableVector gradient;
+        addGradient(gradient, point);
+        return gradient;
+    };
+
+    // Adds the gradient to one with other terms, e.g. of a constraint, instead of to a map of its own
+    void addGradient(SparseVariableVector& gradient, const VectorDouble& point) const
+    {
+        ProductTermFactors factors;
 
         for(auto& T : (*this))
         {
             if(T->coefficient == 0.0)
                 continue;
 
-            std::vector<double> values;
-            values.reserve(T->variables.size());
-
-            for(auto& V : T->variables)
-                values.push_back(V->calculate(point));
-
-            addProductTermGradient(
-                gradient, T->coefficient, T->variables, values, std::vector<double>(values.size(), 1.0));
+            calculateFactors(*T, point, factors);
+            addProductTermGradient(gradient, T->coefficient, T->variables, factors);
         }
-
-        return gradient;
     };
 
     SparseVariableMatrix calculateHessian(const VectorDouble& point) const
     {
         SparseVariableMatrix hessian;
+        addHessian(hessian, point);
+        return hessian;
+    };
+
+    // Adds the Hessian to one with other terms, e.g. of a constraint, instead of to a map of its own
+    void addHessian(SparseVariableMatrix& hessian, const VectorDouble& point) const
+    {
+        ProductTermFactors factors;
 
         for(auto& T : (*this))
         {
             if(T->coefficient == 0.0)
                 continue;
 
-            std::vector<double> values;
-            values.reserve(T->variables.size());
-
-            for(auto& V : T->variables)
-                values.push_back(V->calculate(point));
-
-            addProductTermHessian(hessian, T->coefficient, T->variables, values,
-                std::vector<double>(values.size(), 1.0), std::vector<double>(values.size(), 0.0));
+            calculateFactors(*T, point, factors);
+            addProductTermHessian(hessian, T->coefficient, T->variables, factors);
         }
-
-        return hessian;
     };
+
+private:
+    // The factors of a monomial term are its variables, so their derivatives are one and zero
+    static void calculateFactors(const MonomialTerm& term, const VectorDouble& point, ProductTermFactors& factors)
+    {
+        size_t numberOfFactors = term.variables.size();
+
+        factors.values.clear();
+
+        for(auto& V : term.variables)
+            factors.values.push_back(V->calculate(point));
+
+        factors.firstDerivatives.assign(numberOfFactors, 1.0);
+        factors.secondDerivatives.assign(numberOfFactors, 0.0);
+    }
 };
 
 class SignomialElement
@@ -1235,7 +1278,7 @@ inline std::ostream& operator<<(std::ostream& stream, SignomialElementPtr elemen
     return stream;
 }
 
-class SignomialTerm : public Term
+class SignomialTerm final : public Term
 {
 public:
     SignomialElements elements;
@@ -1618,57 +1661,62 @@ public:
     inline SparseVariableVector calculateGradient(const VectorDouble& point) const
     {
         SparseVariableVector gradient;
+        addGradient(gradient, point);
+        return gradient;
+    };
+
+    // Adds the gradient to one with other terms, e.g. of a constraint, instead of to a map of its own
+    void addGradient(SparseVariableVector& gradient, const VectorDouble& point) const
+    {
+        ProductTermFactors factors;
 
         for(auto& T : (*this))
         {
             if(T->coefficient == 0.0)
                 continue;
 
-            Variables variables;
-            std::vector<double> values;
-            std::vector<double> firstDerivatives;
-            calculateFactors(*T, point, variables, values, firstDerivatives, nullptr);
-
-            addProductTermGradient(gradient, T->coefficient, variables, values, firstDerivatives);
+            calculateFactors(*T, point, factors, false);
+            addProductTermGradient(gradient, T->coefficient, factors.variables, factors);
         }
-
-        return gradient;
     };
 
     SparseVariableMatrix calculateHessian(const VectorDouble& point) const
     {
         SparseVariableMatrix hessian;
+        addHessian(hessian, point);
+        return hessian;
+    };
+
+    // Adds the Hessian to one with other terms, e.g. of a constraint, instead of to a map of its own
+    void addHessian(SparseVariableMatrix& hessian, const VectorDouble& point) const
+    {
+        ProductTermFactors factors;
 
         for(auto& T : (*this))
         {
             if(T->coefficient == 0.0)
                 continue;
 
-            Variables variables;
-            std::vector<double> values;
-            std::vector<double> firstDerivatives;
-            std::vector<double> secondDerivatives;
-            calculateFactors(*T, point, variables, values, firstDerivatives, &secondDerivatives);
-
-            addProductTermHessian(hessian, T->coefficient, variables, values, firstDerivatives, secondDerivatives);
+            calculateFactors(*T, point, factors, true);
+            addProductTermHessian(hessian, T->coefficient, factors.variables, factors);
         }
-
-        return hessian;
     };
 
 private:
     // The factors x^p of a term, with their first and second derivatives. The powers one and two are calculated
     // without pow, so that e.g. x^2 has the second derivative 2 also at x = 0.
-    static void calculateFactors(const SignomialTerm& term, const VectorDouble& point, Variables& variables,
-        std::vector<double>& values, std::vector<double>& firstDerivatives, std::vector<double>* secondDerivatives)
+    static void calculateFactors(
+        const SignomialTerm& term, const VectorDouble& point, ProductTermFactors& factors, bool withSecondDerivatives)
     {
-        size_t numberOfFactors = term.elements.size();
-        variables.reserve(numberOfFactors);
-        values.reserve(numberOfFactors);
-        firstDerivatives.reserve(numberOfFactors);
+        auto& variables = factors.variables;
+        auto& values = factors.values;
+        auto& firstDerivatives = factors.firstDerivatives;
+        auto* secondDerivatives = withSecondDerivatives ? &factors.secondDerivatives : nullptr;
 
-        if(secondDerivatives)
-            secondDerivatives->reserve(numberOfFactors);
+        variables.clear();
+        values.clear();
+        firstDerivatives.clear();
+        factors.secondDerivatives.clear();
 
         for(auto& E : term.elements)
         {

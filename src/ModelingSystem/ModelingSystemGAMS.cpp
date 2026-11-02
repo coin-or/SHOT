@@ -78,42 +78,6 @@ ModelingSystemGAMS::~ModelingSystemGAMS()
     }
 }
 
-void ModelingSystemGAMS::augmentSettings([[maybe_unused]] SettingsPtr settings)
-{
-    // Subsolver settings: GAMS NLP
-
-    settings->createSettingGroup("Subsolver", "GAMS", "GAMS", "Settings for the GAMS NLP solvers.");
-
-    std::string optfile = "";
-    settings->createSetting(
-        "Subsolver.GAMS.NLP.OptionsFilename", optfile, "Options file for the NLP solver in GAMS");
-
-    std::string solver = "auto";
-    settings->createSetting("Subsolver.GAMS.NLP.Solver", solver, "NLP solver to use in GAMS (auto: SHOT chooses)");
-
-#if GMOAPIVERSION >= 21
-    settings->createSettingGroup(
-        "ModelingSystem", "GAMS", "GAMS interface", "These settings control functionality used in the GAMS interface.");
-
-    VectorString enumQExtractAlg;
-    enumQExtractAlg.push_back("automatic");
-    enumQExtractAlg.push_back("threepass");
-    enumQExtractAlg.push_back("doubleforward");
-#if GMOAPIVERSION >= 25
-    enumQExtractAlg.push_back("concurrent");
-#endif
-    settings->createSetting("ModelingSystem.GAMS.QExtractAlg", 0,
-        "Extraction algorithm for quadratic equations in GAMS interface", enumQExtractAlg);
-
-#if GMOAPIVERSION >= 28
-    settings->createSetting("ModelingSystem.GAMS.QExtractDenseSwitchFactor", 0.008,
-        "Sparse/dense factor for quadratic extraction algorithm in GAMS interface.", 0.0);
-    settings->createSetting("ModelingSystem.GAMS.QExtractDenseSwitchLog", false,
-        "Whether to print additional information about sparse/dense factor choice in quadratic extraction algorithm in GAMS interface.");
-#endif
-#endif
-}
-
 void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
 {
     assert(modelingEnvironment != nullptr);
@@ -173,7 +137,8 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
         // Sets node limit for dual solver
         if(gevGetIntOpt(modelingEnvironment, gevNodeLim) > 0)
         {
-            env->settings->updateSetting("Dual.MIP.NodeLimit", (double)gevGetIntOpt(modelingEnvironment, gevNodeLim), E_SettingPriority::OptionsFile);
+            env->settings->updateSetting(
+                "Dual.MIP.NodeLimit", gevGetIntOpt(modelingEnvironment, gevNodeLim), E_SettingPriority::OptionsFile);
         }
 
         // Sets the number of threads
@@ -248,6 +213,12 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(
         return (E_ProblemCreationStatus::FileDoesNotExist);
     }
 
+    // Reading the model, which for a problem file includes compiling it and checking the license in GAMS, is part of
+    // the problem initialization as in the other modeling systems, but timed separately as well since it is mostly
+    // spent in GAMS and can take a large part of the time limit
+    env->timing->startTimer("ProblemInitialization");
+    env->timing->startTimer("ProblemInitializationGAMS");
+
     try
     {
         if(inputSource == E_GAMSInputSource::ProblemFile)
@@ -267,9 +238,14 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(
     {
         env->output->outputError(fmt::format(" Error when reading GAMS model from \"{}\".\n {}", filename, e.what()));
 
+        env->timing->stopTimer("ProblemInitializationGAMS");
+        env->timing->stopTimer("ProblemInitialization");
         return (E_ProblemCreationStatus::Error);
     }
 
+    env->timing->stopTimer("ProblemInitializationGAMS");
+
+    // The problem initialization timer is still running, and is stopped when the problem has been created
     return createProblem(problem);
 }
 
@@ -289,6 +265,15 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem)
 
 #if GMOAPIVERSION >= 21
     int qextractalg = env->settings->getSetting<int>("ModelingSystem.GAMS.QExtractAlg");
+#if GMOAPIVERSION < 25
+    // The concurrent extraction algorithm is only available in newer GAMS versions
+    if(qextractalg == 3)
+    {
+        env->output->outputWarning(" The concurrent quadratic extraction algorithm requires a newer GAMS version. "
+                                   "Using the automatic choice instead.");
+        qextractalg = 0;
+    }
+#endif
     gmoQExtractAlgSet(modelingObject, qextractalg);
 #endif
 #if GMOAPIVERSION >= 28

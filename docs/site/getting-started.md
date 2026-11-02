@@ -6,7 +6,7 @@ Install SHOTpy in a Python 3.11 or newer environment:
 python -m pip install SHOTpy
 ```
 
-The public package includes open-source solver backends. For a development checkout, or to enable proprietary solver integrations, follow the [compilation instructions](CompilationInstructions.md). The installed package version may differ from this development documentation.
+The public package includes open-source solver backends. For a development checkout, or to enable proprietary solver integrations, follow the [compilation instructions](CompilationInstructions.md). Check that the installed package version matches the version of this documentation.
 
 ## Build and solve a model
 
@@ -31,4 +31,4 @@ The model minimizes an exponential term plus a quadratic penalty, subject to a d
 
 To start from a known point, call `solver.setStartingPoint([1.0, 2.0])` between `setProblem()` and `solveProblem()`, with a value for each variable in the order they were added. A feasible point is the first primal solution and the MIP start of the dual problems.
 
-Continue with the [Python tutorial](SHOTpy_Tutorial.md) for nonlinear expressions, settings, file input, and callbacks. For file-based workflows, see [command-line usage](CommandLineUsage.md).
+Continue with the [Python tutorial](SHOTpy_Tutorial.md) for nonlinear expressions, settings, file input, and callbacks. For file-based workflows, see [command-line usage](CommandLineUsage.md). The command-line program is also available without Python as a download for Linux, macOS and Windows from the [GitHub releases](https://github.com/coin-or/SHOT/releases).

@@ -70,6 +70,14 @@ void TaskUpdateInteriorPoint::run()
         return;
     }
 
+    // With Dual.ESH.InteriorPoint.UsePrimalSolution = 0, a primal solution is only used without an interior point
+    if(env->settings->getSetting<int>("Dual.ESH.InteriorPoint.UsePrimalSolution")
+        == static_cast<int>(ES_AddPrimalPointAsInteriorPoint::KeepOriginal))
+    {
+        env->timing->stopTimer("InteriorPointSearch");
+        return;
+    }
+
     // Need to calculate the value for the point in the reformulated problem
     auto tmpIP = std::make_shared<InteriorPoint>();
 

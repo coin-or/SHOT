@@ -68,6 +68,35 @@ static SHOTCppADErrorHandlerRegistrar shot_cppad_error_handler_registrar;
 namespace SHOT
 {
 
+std::string ProblemProperties::getClassification() const
+{
+    std::string classification;
+
+    if(isLPProblem)
+        classification = "LP";
+    else if(isMILPProblem)
+        classification = "MILP";
+    else if(isQPProblem)
+        classification = "QP";
+    else if(isQCQPProblem)
+        classification = "QCQP";
+    else if(isMIQPProblem)
+        classification = "MIQP";
+    else if(isMIQCQPProblem)
+        classification = "MIQCQP";
+    else if(isNLPProblem)
+        classification = "NLP";
+    else if(isMINLPProblem)
+        classification = "MINLP";
+
+    if(convexity == E_ProblemConvexity::Convex)
+        classification += ", convex";
+    else if(convexity == E_ProblemConvexity::Nonconvex)
+        classification += ", nonconvex";
+
+    return (classification);
+}
+
 void Problem::calculateNonlinearJacobian(
     const std::vector<double>& point, CppAD::sparse_rcv<std::vector<size_t>, std::vector<double>>& subset)
 {
@@ -739,11 +768,13 @@ void Problem::updateFactorableFunctions()
 
     int nonlinearExpressionCounter = 0;
 
+    // Every nonlinear expression gets an index, also one without variables, i.e., a constant, which CppAD handles: the
+    // gradient and Hessian are evaluated by index, and the expressions must be as many as
+    // properties.numberOfNonlinearExpressions counts
     for(auto& C : nonlinearConstraints)
     {
         if(C->properties.hasNonlinearExpression)
         {
-            assert(C->variablesInNonlinearExpression.size() > 0);
             factorableFunctions.push_back(C->nonlinearExpression->getFactorableFunction());
             constraintsWithNonlinearExpressions.push_back(C);
             C->nonlinearExpressionIndex = nonlinearExpressionCounter;
@@ -753,8 +784,7 @@ void Problem::updateFactorableFunctions()
 
     auto nonlinearObjectiveFunc = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objectiveFunction);
 
-    if(objectiveFunction->properties.hasNonlinearExpression && nonlinearObjectiveFunc
-        && nonlinearObjectiveFunc->variablesInNonlinearExpression.size() > 0)
+    if(objectiveFunction->properties.hasNonlinearExpression && nonlinearObjectiveFunc)
     {
         nonlinearObjectiveFunc->updateFactorableFunction();
         factorableFunctions.push_back(nonlinearObjectiveFunc->nonlinearExpression->getFactorableFunction());
@@ -1391,6 +1421,72 @@ std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> Problem::getLa
     return (lagrangianHessianSparsityPattern);
 }
 
+// The values of the constraints below are calculated without the pointer to the constraint, which is only set for the
+// value that is returned, since getPointer() locks the weak pointer to the constraint in every evaluation
+
+// The largest value of the constraints, the first one if several are equal. If activeConstraints is given, the
+// constraints with positive values are added to it.
+template <typename T>
+static NumericConstraintValue getMaxValueOfConstraints(const VectorDouble& point,
+    const std::vector<T>& constraintSelection, std::vector<NumericConstraint*>* activeConstraints = nullptr)
+{
+    assert(constraintSelection.size() > 0);
+
+    auto value = constraintSelection[0]->calculateNumericValueWithoutConstraint(point);
+    size_t index = 0;
+
+    if(activeConstraints && value.normalizedValue > 0)
+        activeConstraints->push_back(&*constraintSelection[0]);
+
+    for(size_t i = 1; i < constraintSelection.size(); i++)
+    {
+        auto tmpValue = constraintSelection[i]->calculateNumericValueWithoutConstraint(point);
+
+        if(tmpValue.normalizedValue > value.normalizedValue)
+        {
+            value = tmpValue;
+            index = i;
+        }
+
+        if(activeConstraints && tmpValue.normalizedValue > 0)
+            activeConstraints->push_back(&*constraintSelection[i]);
+    }
+
+    value.constraint = constraintSelection[index]->getPointer();
+    return value;
+}
+
+// The value of the constraint with the largest error among those that are not fulfilled, the first one if several are
+// equal, or none if all are fulfilled. The constraints that are not fulfilled are passed to addActiveConstraint.
+template <typename T, typename AddActiveConstraint>
+static std::optional<NumericConstraintValue> getMostDeviatingValueOfConstraints(
+    const VectorDouble& point, const std::vector<T>& constraintSelection, AddActiveConstraint addActiveConstraint)
+{
+    std::optional<NumericConstraintValue> optional;
+    size_t index = 0;
+
+    for(size_t i = 0; i < constraintSelection.size(); i++)
+    {
+        auto constraintValue = constraintSelection[i]->calculateNumericValueWithoutConstraint(point);
+
+        if(constraintValue.isFulfilled)
+            continue;
+
+        addActiveConstraint(constraintSelection[i]);
+
+        if(!optional || constraintValue.error > optional->error)
+        {
+            optional = constraintValue;
+            index = i;
+        }
+    }
+
+    if(optional)
+        optional->constraint = constraintSelection[index]->getPointer();
+
+    return optional;
+}
+
 std::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstraint(const VectorDouble& point)
 {
     return (this->getMostDeviatingNumericConstraint(point, numericConstraints));
@@ -1429,29 +1525,7 @@ template <typename T>
 std::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstraint(
     const VectorDouble& point, const std::vector<T>& constraintSelection)
 {
-    std::optional<NumericConstraintValue> optional;
-    double error = 0;
-
-    for(auto& C : constraintSelection)
-    {
-        auto constraintValue = C->calculateNumericValue(point);
-
-        if(constraintValue.isFulfilled)
-            continue;
-
-        if(!optional) // No constraint with error found yet
-        {
-            optional = constraintValue;
-            error = constraintValue.error;
-        }
-        else if(constraintValue.error > error)
-        {
-            optional = constraintValue;
-            error = constraintValue.error;
-        }
-    }
-
-    return optional;
+    return getMostDeviatingValueOfConstraints(point, constraintSelection, [](const T&) { });
 }
 
 template <typename T>
@@ -1460,31 +1534,8 @@ std::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstraint
 {
     assert(activeConstraints.size() == 0);
 
-    std::optional<NumericConstraintValue> optional;
-    double error = -1;
-
-    for(auto& C : constraintSelection)
-    {
-        auto constraintValue = C->calculateNumericValue(point);
-
-        if(constraintValue.isFulfilled)
-            continue;
-        else
-            activeConstraints.push_back(C.get());
-
-        if(!optional) // No constraint with error found yet
-        {
-            optional = constraintValue;
-            error = constraintValue.error;
-        }
-        else if(constraintValue.error > error)
-        {
-            optional = constraintValue;
-            error = constraintValue.error;
-        }
-    }
-
-    return optional;
+    return getMostDeviatingValueOfConstraints(point, constraintSelection,
+        [&activeConstraints](const std::shared_ptr<T>& constraint) { activeConstraints.push_back(constraint.get()); });
 }
 
 template <typename T>
@@ -1493,31 +1544,8 @@ std::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstraint
 {
     assert(activeConstraints.size() == 0);
 
-    std::optional<NumericConstraintValue> optional;
-    double error = -1;
-
-    for(auto& C : constraintSelection)
-    {
-        auto constraintValue = C->calculateNumericValue(point);
-
-        if(constraintValue.isFulfilled)
-            continue;
-        else
-            activeConstraints.push_back(C);
-
-        if(!optional) // No constraint with error found yet
-        {
-            optional = constraintValue;
-            error = constraintValue.error;
-        }
-        else if(constraintValue.error > error)
-        {
-            optional = constraintValue;
-            error = constraintValue.error;
-        }
-    }
-
-    return optional;
+    return getMostDeviatingValueOfConstraints(point, constraintSelection,
+        [&activeConstraints](const std::shared_ptr<T>& constraint) { activeConstraints.push_back(constraint); });
 }
 
 template <typename T>
@@ -1551,127 +1579,55 @@ NumericConstraintValue getMaxNumericConstraintValue(const VectorDouble& point,
 NumericConstraintValue Problem::getMaxNumericConstraintValue(
     const VectorDouble& point, const LinearConstraints& constraintSelection)
 {
-    assert(constraintSelection.size() > 0);
-
-    auto value = constraintSelection[0]->calculateNumericValue(point);
-
-    for(size_t i = 1; i < constraintSelection.size(); i++)
-    {
-        auto tmpValue = constraintSelection[i]->calculateNumericValue(point);
-
-        if(tmpValue.normalizedValue > value.normalizedValue)
-        {
-            value = tmpValue;
-        }
-    }
-
-    return value;
+    return getMaxValueOfConstraints(point, constraintSelection);
 }
 
 NumericConstraintValue Problem::getMaxNumericConstraintValue(
     const VectorDouble& point, const QuadraticConstraints& constraintSelection)
 {
-    assert(constraintSelection.size() > 0);
-
-    auto value = constraintSelection[0]->calculateNumericValue(point);
-
-    for(size_t i = 1; i < constraintSelection.size(); i++)
-    {
-        auto tmpValue = constraintSelection[i]->calculateNumericValue(point);
-
-        if(tmpValue.normalizedValue > value.normalizedValue)
-        {
-            value = tmpValue;
-        }
-    }
-
-    return value;
+    return getMaxValueOfConstraints(point, constraintSelection);
 }
 
 NumericConstraintValue Problem::getMaxNumericConstraintValue(
-    const VectorDouble& point, const NonlinearConstraints& constraintSelection, double correction)
+    const VectorDouble& point, const NonlinearConstraints& constraintSelection)
 {
-    assert(constraintSelection.size() > 0);
-
-    auto value = constraintSelection[0]->calculateNumericValue(point, correction);
-
-    for(size_t i = 1; i < constraintSelection.size(); i++)
-    {
-        auto tmpValue = constraintSelection[i]->calculateNumericValue(point, correction);
-
-        if(tmpValue.normalizedValue > value.normalizedValue)
-        {
-            value = tmpValue;
-        }
-    }
-
-    return value;
+    return getMaxValueOfConstraints(point, constraintSelection);
 }
 
 NumericConstraintValue Problem::getMaxNumericConstraintValue(
     const VectorDouble& point, const NumericConstraints& constraintSelection)
 {
-    assert(constraintSelection.size() > 0);
-
-    auto value = constraintSelection[0]->calculateNumericValue(point);
-
-    for(size_t i = 1; i < constraintSelection.size(); i++)
-    {
-        auto tmpValue = constraintSelection[i]->calculateNumericValue(point);
-
-        if(tmpValue.normalizedValue > value.normalizedValue)
-        {
-            value = tmpValue;
-        }
-    }
-
-    return value;
+    return getMaxValueOfConstraints(point, constraintSelection);
 }
 
 NumericConstraintValue Problem::getMaxNumericConstraintValue(const VectorDouble& point,
     const std::vector<NumericConstraint*>& constraintSelection, std::vector<NumericConstraint*>& activeConstraints)
 {
     assert(activeConstraints.size() == 0);
-    assert(constraintSelection.size() > 0);
 
-    auto value = constraintSelection[0]->calculateNumericValue(point);
-
-    if(value.normalizedValue > 0)
-        activeConstraints.push_back(constraintSelection[0]);
-
-    for(size_t i = 1; i < constraintSelection.size(); i++)
-    {
-        auto tmpValue = constraintSelection[i]->calculateNumericValue(point);
-
-        if(tmpValue.normalizedValue > value.normalizedValue)
-        {
-            value = tmpValue;
-        }
-
-        if(tmpValue.normalizedValue > 0)
-            activeConstraints.push_back(constraintSelection[i]);
-    }
-
-    return value;
+    return getMaxValueOfConstraints(point, constraintSelection, &activeConstraints);
 }
 
 template <typename T>
 NumericConstraintValues Problem::getAllDeviatingConstraints(
-    const VectorDouble& point, double tolerance, const std::vector<T>& constraintSelection, double correction)
+    const VectorDouble& point, double tolerance, const std::vector<T>& constraintSelection)
 {
     NumericConstraintValues constraintValues;
     for(auto& C : constraintSelection)
     {
-        NumericConstraintValue constraintValue = C->calculateNumericValue(point, correction);
+        NumericConstraintValue constraintValue = C->calculateNumericValueWithoutConstraint(point);
         if(constraintValue.normalizedValue > tolerance)
+        {
+            constraintValue.constraint = C;
             constraintValues.push_back(constraintValue);
+        }
     }
 
     return constraintValues;
 }
 
 NumericConstraintValues Problem::getFractionOfDeviatingNonlinearConstraints(
-    const VectorDouble& point, double tolerance, double fraction, double correction)
+    const VectorDouble& point, double tolerance, double fraction)
 {
     if(fraction > 1)
         fraction = 1;
@@ -1680,7 +1636,7 @@ NumericConstraintValues Problem::getFractionOfDeviatingNonlinearConstraints(
 
     int fractionNumbers = std::max(1, (int)ceil(fraction * this->nonlinearConstraints.size()));
 
-    auto values = getAllDeviatingConstraints(point, tolerance, this->nonlinearConstraints, correction);
+    auto values = getAllDeviatingConstraints(point, tolerance, this->nonlinearConstraints);
 
     std::sort(values.begin(), values.end(), std::greater<NumericConstraintValue>());
 
@@ -1713,28 +1669,38 @@ NumericConstraintValues Problem::getAllDeviatingNonlinearConstraints(const Vecto
     return getAllDeviatingConstraints(point, tolerance, nonlinearConstraints);
 }
 
+// Whether no constraint deviates by more than the tolerance, as getAllDeviatingConstraints() returning no constraints
+template <typename T>
+static bool areConstraintsFulfilled(
+    const VectorDouble& point, double tolerance, const std::vector<T>& constraintSelection)
+{
+    for(auto& C : constraintSelection)
+    {
+        if(C->calculateNumericValueWithoutConstraint(point).normalizedValue > tolerance)
+            return (false);
+    }
+
+    return (true);
+}
+
 bool Problem::areLinearConstraintsFulfilled(const VectorDouble& point, double tolerance)
 {
-    auto deviatingConstraints = getAllDeviatingLinearConstraints(point, tolerance);
-    return (deviatingConstraints.size() == 0);
+    return (areConstraintsFulfilled(point, tolerance, linearConstraints));
 }
 
 bool Problem::areQuadraticConstraintsFulfilled(const VectorDouble& point, double tolerance)
 {
-    auto deviatingConstraints = getAllDeviatingQuadraticConstraints(point, tolerance);
-    return (deviatingConstraints.size() == 0);
+    return (areConstraintsFulfilled(point, tolerance, quadraticConstraints));
 }
 
 bool Problem::areNonlinearConstraintsFulfilled(const VectorDouble& point, double tolerance)
 {
-    auto deviatingConstraints = getAllDeviatingNonlinearConstraints(point, tolerance);
-    return (deviatingConstraints.size() == 0);
+    return (areConstraintsFulfilled(point, tolerance, nonlinearConstraints));
 }
 
 bool Problem::areNumericConstraintsFulfilled(const VectorDouble& point, double tolerance)
 {
-    auto deviatingConstraints = getAllDeviatingNumericConstraints(point, tolerance);
-    return (deviatingConstraints.size() == 0);
+    return (areConstraintsFulfilled(point, tolerance, numericConstraints));
 }
 
 bool Problem::areIntegralityConstraintsFulfilled(const VectorDouble& point, double tolerance)
@@ -1860,12 +1826,13 @@ void Problem::doFBBT()
     int numberOfTightenedVariablesBefore = std::count_if(allVariables.begin(), allVariables.end(),
         [](auto V) { return (V->properties.hasLowerBoundBeenTightened || V->properties.hasUpperBoundBeenTightened); });
 
-    int i = 0;
+    int numberOfPasses = 0;
     bool anyBoundsUpdated = false;
 
-    for(i = 0; i < numberOfIterations; i++)
+    for(int i = 0; i < numberOfIterations; i++)
     {
         bool boundsUpdated = false;
+        numberOfPasses++;
 
         env->output->outputDebug(fmt::format("  Bound tightening pass {} of {}.", i + 1, numberOfIterations));
 
@@ -1944,14 +1911,14 @@ void Problem::doFBBT()
         env->timing->stopTimer("BoundTighteningFBBTReformulated");
         env->output->outputInfo(fmt::format("  - Bounds for {} variables tightened in {:.2f} s and {} passes.",
             numberOfTightenedVariablesAfter - numberOfTightenedVariablesBefore,
-            env->timing->getElapsedTime("BoundTighteningFBBTReformulated"), i + 1));
+            env->timing->getElapsedTime("BoundTighteningFBBTReformulated"), numberOfPasses));
     }
     else
     {
         env->timing->stopTimer("BoundTighteningFBBTOriginal");
         env->output->outputInfo(fmt::format("  - Bounds for {} variables tightened in {:.2f} s and {} passes.",
             numberOfTightenedVariablesAfter - numberOfTightenedVariablesBefore,
-            env->timing->getElapsedTime("BoundTighteningFBBTOriginal"), i + 1));
+            env->timing->getElapsedTime("BoundTighteningFBBTOriginal"), numberOfPasses));
     }
 
     env->timing->stopTimer("BoundTightening");

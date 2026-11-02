@@ -192,6 +192,17 @@ std::pair<double, double> DualSolver::calculateHyperplaneHashes(NumericHyperplan
 
 void DualSolver::addHyperplane(HyperplanePtr hyperplane)
 {
+    // The point the hyperplane is generated in is kept, so that the distance the points move between iterations
+    // can be calculated. Only the first point of an iteration is kept, since that is the one the distance is
+    // calculated from, and keeping every point would grow with the number of hyperplanes generated.
+    if(auto numericHP = std::dynamic_pointer_cast<NumericHyperplane>(hyperplane))
+    {
+        auto currentIteration = env->results->getCurrentIteration();
+
+        if(currentIteration->hyperplanePoints.size() == 0)
+            currentIteration->hyperplanePoints.push_back(numericHP->generatedPoint);
+    }
+
     if(auto objectiveHP = std::dynamic_pointer_cast<ObjectiveHyperplane>(hyperplane))
     {
         assert((int)objectiveHP->generatedPoint.size() == env->reformulatedProblem->properties.numberOfVariables);
@@ -260,9 +271,6 @@ void DualSolver::addGeneratedHyperplane(const HyperplanePtr hyperplane)
     case E_HyperplaneSource::PrimalSolutionSearch:
         source = "primal heuristic";
         break;
-    case E_HyperplaneSource::PrimalSolutionSearchInteriorObjective:
-        source = "primal heuristic (interior objective)";
-        break;
     case E_HyperplaneSource::InteriorPointSearch:
         source = "interior point search";
         break;
@@ -277,6 +285,9 @@ void DualSolver::addGeneratedHyperplane(const HyperplanePtr hyperplane)
         break;
     case E_HyperplaneSource::External:
         source = "external";
+        break;
+    case E_HyperplaneSource::FixedIntegerNLPSolution:
+        source = "fixed-integer NLP solution";
         break;
     default:
         break;
@@ -635,9 +646,7 @@ void DualSolver::removeArtificialBounds(const std::vector<VariablePtr>& variable
     }
 
     // The dual bounds may only be valid with the artificial bounds
-    bool isMinimize = env->problem->objectiveFunction->properties.isMinimize;
-    env->results->currentDualBound = isMinimize ? SHOT_DBL_MIN : SHOT_DBL_MAX;
-    env->results->globalDualBound = isMinimize ? SHOT_DBL_MIN : SHOT_DBL_MAX;
+    env->results->resetDualBounds(true);
 
     if(MIPSolver->hasDualAuxiliaryObjectiveVariable())
     {

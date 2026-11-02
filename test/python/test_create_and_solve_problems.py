@@ -451,6 +451,31 @@ class TestIpoptLinearSolver:
         assert max(objectives) - min(objectives) < 1e-4
 
 
+class TestConopt:
+    def test_conopt_solves_fixed_integer_problems(self, data_dir):
+        """CONOPT is loaded from its configured SDK, also by the Python module, and provides a primal solution."""
+        import SHOTpy
+
+        if not SHOTpy.HAS_CONOPT:
+            pytest.skip("CONOPT not available")
+        if not SHOTpy.HAS_HIGHS:
+            pytest.skip("HiGHS not available")
+
+        solver = SHOTpy.Solver()
+        solver.updateSetting("Output.Console.LogLevel", 6)
+        # With Gurobi or CPLEX, the solution pool of the MIP solver finds the optimum before the fixed NLP, so the NLP
+        # solution is not added again
+        solver.updateSetting("Dual.MIP.Solver", int(SHOTpy.MIPSolver.Highs))
+        solver.updateSetting("Primal.FixedInteger.Solver", int(SHOTpy.PrimalNLPSolver.Conopt))
+
+        assert solver.setProblem(str(data_dir / "alan.osil"))
+        assert solver.solveProblem()
+        assert solver.getModelReturnStatus() == SHOTpy.ModelReturnStatus.OptimalGlobal
+        assert ",CONOPT," in solver.getResultsTrace()
+        assert any(s.sourceType == SHOTpy.PrimalSolutionSource.NLPFixedIntegers for s in solver.getPrimalSolutions())
+        assert abs(solver.getPrimalBound() - 2.925) < 1e-3
+
+
 class TestDualBounds:
     def test_global_dual_bound_of_nonconvex_problem_is_valid(self):
         """For a nonconvex problem the dual bound of the current dual problem is not valid, but the global one is."""

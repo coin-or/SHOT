@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Reproduce the AMPL MP or MC++ subset from a checksum-pinned archive.
 
-Usage: python3 misc/vendor-reader-dependencies.py {ampl,mc++} archive.tar.gz
+Usage: python3 scripts/vendor-reader-dependencies.py {ampl,mc++} archive.tar.gz
 Downloads are deliberately separate; source URLs/checksums are in versions.json.
 """
 import argparse

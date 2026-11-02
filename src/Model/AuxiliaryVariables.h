@@ -62,6 +62,8 @@ public:
 
     double calculate(const VectorDouble& point) const;
     Interval calculate(const IntervalVector& intervalVector) const;
+
+    void takeOwnership(ProblemPtr owner) override;
 };
 
 using AuxiliaryVariablePtr = std::shared_ptr<AuxiliaryVariable>;

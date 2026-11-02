@@ -20,9 +20,10 @@ namespace SHOT
 class TaskBase
 {
 public:
-    virtual bool isActive();
-    virtual void activate();
-    virtual void deactivate();
+    // A deactivated task is skipped by the task handler and by TaskSequential
+    bool isActive() const { return active; }
+    void activate() { active = true; }
+    void deactivate() { active = false; }
 
     virtual void initialize();
 
@@ -37,7 +38,7 @@ protected:
     EnvironmentPtr env;
 
 private:
-    bool m_isActive;
+    bool active = true;
 };
 
 using TaskPtr =std::shared_ptr<TaskBase> ;

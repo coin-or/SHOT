@@ -225,16 +225,20 @@ public:
         properties.type = variableType;
     };
 
-    double calculate(const VectorDouble& point) const;
+    // Defined here so that they are inlined in the evaluation of the terms, which calls them for every term
+    inline double calculate(const VectorDouble& point) const { return point[index]; }
 
-    Interval calculate(const IntervalVector& intervalVector) const;
+    inline Interval calculate(const IntervalVector& intervalVector) const { return intervalVector[index]; }
     Interval getBound();
 
     bool tightenBounds(const Interval bound);
 
     bool isUnbounded();
 
-    void takeOwnership(ProblemPtr owner);
+    virtual ~Variable() = default;
+
+    // Virtual, since an auxiliary variable also gives the terms and expression defining it to the owner
+    virtual void takeOwnership(ProblemPtr owner);
 };
 
 using VariablePtr = std::shared_ptr<Variable>;

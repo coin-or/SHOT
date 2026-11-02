@@ -162,6 +162,7 @@ class NLPSolverIpoptBase : virtual public INLPSolver
 
 private:
     bool hasBeenSolved = false;
+    bool maxWallTimeWarningShown = false;
 
 protected:
     Ipopt::SmartPtr<IpoptProblem> ipoptProblem;
@@ -175,6 +176,9 @@ protected:
     void unfixVariables() override;
 
     virtual void setInitialSettings();
+
+    // Reads the Ipopt options file, so that its options override those set by SHOT, see setInitialSettings()
+    void applyOptionsFile();
 
     // Whether Ipopt can use the linear solver given by Subsolver.Ipopt.LinearSolver
     bool isLinearSolverAvailable(ES_IpoptSolver solver);

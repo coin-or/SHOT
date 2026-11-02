@@ -34,6 +34,9 @@
 #include "../src/RootsearchMethod/RootsearchMethodBoost.h"
 
 #include "../src/Tasks/TaskReformulateProblem.h"
+#include "../src/Tasks/TaskCalculateSolutionChangeNorm.h"
+#include "../src/Tasks/TaskSequential.h"
+#include "../src/Iteration.h"
 
 #include <optional>
 #include <set>
@@ -144,8 +147,8 @@ bool TestRootsearch(const std::string& problemFile)
 
     auto rootsearch = std::make_unique<RootsearchMethodBoost>(env);
 
-    auto root = rootsearch->findZero(
-        interiorPoint, exteriorPoint, 100, 10e-13, 10e-3, env->problem->nonlinearConstraints, false);
+    auto root
+        = rootsearch->findZero(interiorPoint, exteriorPoint, 100, 10e-13, env->problem->nonlinearConstraints, false);
 
     std::cout << "Root found:\n";
     Utilities::displayVector(root.first, root.second);
@@ -160,8 +163,7 @@ bool TestRootsearch(const std::string& problemFile)
     std::cout << "Exterior point:\n";
     Utilities::displayVector(exteriorPoint);
 
-    root = rootsearch->findZero(
-        interiorPoint, exteriorPoint, 100, 10e-13, 10e-3, env->problem->nonlinearConstraints, false);
+    root = rootsearch->findZero(interiorPoint, exteriorPoint, 100, 10e-13, env->problem->nonlinearConstraints, false);
 
     std::cout << "Root found:\n";
     Utilities::displayVector(root.first, root.second);
@@ -176,8 +178,7 @@ bool TestRootsearch(const std::string& problemFile)
     std::cout << "Exterior point:\n";
     Utilities::displayVector(exteriorPoint);
 
-    root = rootsearch->findZero(
-        interiorPoint, exteriorPoint, 100, 10e-13, 10e-3, env->problem->nonlinearConstraints, false);
+    root = rootsearch->findZero(interiorPoint, exteriorPoint, 100, 10e-13, env->problem->nonlinearConstraints, false);
 
     std::cout << "Root found:\n";
     Utilities::displayVector(root.first, root.second);
@@ -1480,6 +1481,8 @@ bool TestCallbackGenericContext()
 
     std::set<E_CallbackLocation> locations;
     bool contextClassesMatch = true;
+    bool boundContextMatches = true;
+    int boundEvents = 0;
 
     solver->registerCallback(E_CallbackLocation::PrimalCandidateCheck | E_CallbackLocation::TerminationCheck,
         [&locations, &contextClassesMatch](CallbackContext& context)
@@ -1500,6 +1503,18 @@ bool TestCallbackGenericContext()
                 contextClassesMatch = false;
         });
 
+    solver->registerCallback<BoundsUpdatedContext>([&](BoundsUpdatedContext& context)
+        {
+            boundEvents++;
+            if(context.getLocation() != E_CallbackLocation::BoundsUpdated || !context.hasChanged()
+                || context.isPrimalBoundChanged()
+                    != (context.getPreviousPrimalBound() != context.getPrimalBound())
+                || context.isDualBoundChanged() != (context.getPreviousDualBound() != context.getDualBound())
+                || context.isGlobalDualBoundChanged()
+                    != (context.getPreviousGlobalDualBound() != context.getGlobalDualBound()))
+                boundContextMatches = false;
+        });
+
     solver->solveProblem();
 
     std::set<E_CallbackLocation> expectedLocations
@@ -1514,6 +1529,12 @@ bool TestCallbackGenericContext()
     if(!contextClassesMatch)
     {
         std::cout << "The class of a context was not that of its location\n";
+        passed = false;
+    }
+
+    if(boundEvents == 0 || !boundContextMatches)
+    {
+        std::cout << "The bound update callback did not report the changed bounds correctly\n";
         passed = false;
     }
 
@@ -2315,6 +2336,788 @@ bool TestPrimalSolutionSlightlyOutsideBounds()
     return (passed);
 }
 
+// Linear problems must honor the tree setting, while genuine convex quadratic problems retain direct solves.
+bool TestStrategySelectionForLinearAndQuadraticProblems()
+{
+    std::vector<ES_MIPSolver> backends;
+#ifdef HAS_CBC
+    backends.push_back(ES_MIPSolver::Cbc);
+#endif
+#ifdef HAS_HIGHS
+    backends.push_back(ES_MIPSolver::Highs);
+#endif
+#ifdef HAS_CPLEX
+    backends.push_back(ES_MIPSolver::Cplex);
+#endif
+#ifdef HAS_GUROBI
+    backends.push_back(ES_MIPSolver::Gurobi);
+#endif
+    for(auto backend : backends)
+    {
+        bool supportsQuadratics = backend == ES_MIPSolver::Cplex || backend == ES_MIPSolver::Gurobi;
+        for(bool discrete : { false, true })
+        {
+            for(int quadraticType : { 0, 1, 2, 3, 4 }) // Linear, QP, QCQP, both, or a linearized integer product
+            {
+                if((quadraticType != 0 && !supportsQuadratics) || (quadraticType == 4 && !discrete))
+                    continue;
+                for(auto tree : { ES_TreeStrategy::MultiTree, ES_TreeStrategy::SingleTree })
+                {
+                    auto solver = std::make_unique<SHOT::Solver>();
+                    auto env = solver->getEnvironment();
+                    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+                    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(backend));
+                    solver->updateSetting("Dual.TreeStrategy", static_cast<int>(tree));
+                    solver->updateSetting("Model.Reformulation.Quadratics.Strategy",
+                        static_cast<int>(ES_QuadraticProblemStrategy::ConvexQuadraticallyConstrained));
+
+                    auto problem = std::make_shared<Problem>(env);
+                    problem->name = "strategyselection";
+                    auto x = std::make_shared<Variable>("x",
+                        discrete ? E_VariableType::Integer : E_VariableType::Real, 0.0, 4.0);
+                    problem->add(x);
+                    if((quadraticType & 1) || quadraticType == 4)
+                    {
+                        auto objective = std::make_shared<QuadraticObjectiveFunction>(
+                            E_ObjectiveFunctionDirection::Minimize);
+                        if(quadraticType == 4)
+                        {
+                            solver->updateSetting("Model.Reformulation.Bilinear.IntegerFormulation",
+                                static_cast<int>(ES_ReformulateBilinearInteger::Yes));
+                            auto y = std::make_shared<Variable>("y", E_VariableType::Integer, 0.0, 3.0);
+                            problem->add(y);
+                            objective->add(std::make_shared<QuadraticTerm>(1.0, x, y));
+                        }
+                        else
+                            objective->add(std::make_shared<QuadraticTerm>(1.0, x, x));
+                        problem->add(objective);
+                    }
+                    else
+                    {
+                        auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+                        objective->add(std::make_shared<LinearTerm>(1.0, x));
+                        problem->add(objective);
+                    }
+                    if(quadraticType & 2)
+                    {
+                        auto constraint = std::make_shared<QuadraticConstraint>("quadratic", SHOT_DBL_MIN, 9.0);
+                        constraint->add(std::make_shared<QuadraticTerm>(1.0, x, x));
+                        problem->add(constraint);
+                    }
+                    problem->finalize();
+                    if(!solver->setProblem(problem))
+                        return false;
+
+                    auto expected = quadraticType & 2 ? E_SolutionStrategy::MIQCQP : E_SolutionStrategy::MIQP;
+                    if(quadraticType == 4 && !env->reformulatedProblem->properties.isMILPProblem)
+                    {
+                        std::cout << "Integer product was not reformulated to MILP" << std::endl;
+                        return false;
+                    }
+                    if(quadraticType == 0 || quadraticType == 4)
+                    {
+                        if(!discrete)
+                            expected = E_SolutionStrategy::NLP;
+                        else if(supportsQuadratics && tree == ES_TreeStrategy::SingleTree)
+                            expected = E_SolutionStrategy::SingleTree;
+                        else
+                            expected = E_SolutionStrategy::MultiTree;
+                    }
+                    if(env->results->usedSolutionStrategy != expected)
+                    {
+                        std::cout << "Incorrect strategy for backend " << static_cast<int>(backend)
+                                  << ", discrete " << discrete << ", quadratic type " << quadraticType
+                                  << ", tree " << static_cast<int>(tree) << std::endl;
+                        return false;
+                    }
+                }
+            }
+        }
+    }
+    return true;
+}
+
+// Squares in the objective function and the constraints, also inside nonlinear expressions, so that the partitioning of
+// the quadratic terms in each is decided by the PartitionQuadraticTerms setting of the constraints or the objective
+// function. The objective function only has squares of u and v, and the constraints only of x, y and z.
+static ProblemPtr MakeQuadraticPartitioningProblem(EnvironmentPtr env)
+{
+    auto problem = std::make_shared<SHOT::Problem>(env);
+    problem->name = "quadraticpartitioning";
+
+    auto x = std::make_shared<Variable>("x", E_VariableType::Real, -2.0, 3.0);
+    auto y = std::make_shared<Variable>("y", E_VariableType::Real, -2.0, 3.0);
+    auto z = std::make_shared<Variable>("z", E_VariableType::Real, -2.0, 3.0);
+    auto u = std::make_shared<Variable>("u", E_VariableType::Real, -2.0, 3.0);
+    auto v = std::make_shared<Variable>("v", E_VariableType::Real, -2.0, 3.0);
+    auto b = std::make_shared<Variable>("b", E_VariableType::Binary, 0.0, 1.0);
+
+    problem->add({ x, y, z, u, v, b });
+
+    auto square = [](VariablePtr variable)
+    {
+        return std::make_shared<ExpressionProduct>(
+            std::make_shared<ExpressionVariable>(variable), std::make_shared<ExpressionVariable>(variable));
+    };
+
+    auto exp = [](VariablePtr variable, double factor)
+    {
+        return std::make_shared<ExpressionProduct>(std::make_shared<ExpressionConstant>(factor),
+            std::make_shared<ExpressionExp>(std::make_shared<ExpressionVariable>(variable)));
+    };
+
+    // The squares of u and v are products in a nonlinear sum of the objective function
+    auto objective = std::make_shared<NonlinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<LinearTerm>(-1.0, x));
+    objective->add(std::make_shared<LinearTerm>(-1.0, y));
+    objective->add(std::make_shared<LinearTerm>(0.3, b));
+    objective->add(std::make_shared<ExpressionSum>(square(u), square(v), exp(z, 0.5)));
+    problem->add(objective);
+
+    // Squares as quadratic terms in a nonlinear constraint
+    auto c1 = std::make_shared<NonlinearConstraint>("c1", SHOT_DBL_MIN, 6.0);
+    c1->add(std::make_shared<QuadraticTerm>(1.0, x, x));
+    c1->add(std::make_shared<QuadraticTerm>(1.0, y, y));
+    c1->add(exp(z, 1.0));
+    problem->add(c1);
+
+    // Squares inside the nonlinear expression of a constraint
+    auto c2 = std::make_shared<NonlinearConstraint>("c2", SHOT_DBL_MIN, 8.0);
+    c2->add(std::make_shared<ExpressionSum>(square(x), square(z), exp(y, 1.0)));
+    problem->add(c2);
+
+    // Squares in a quadratic constraint
+    auto c3 = std::make_shared<QuadraticConstraint>("c3", SHOT_DBL_MIN, 5.0);
+    c3->add(std::make_shared<QuadraticTerm>(1.0, x, x));
+    c3->add(std::make_shared<QuadraticTerm>(2.0, y, y));
+    problem->add(c3);
+
+    auto c4 = std::make_shared<LinearConstraint>("c4", 1.0, SHOT_DBL_MAX);
+    c4->add(std::make_shared<LinearTerm>(1.0, u));
+    c4->add(std::make_shared<LinearTerm>(1.0, v));
+    c4->add(std::make_shared<LinearTerm>(1.0, b));
+    problem->add(c4);
+
+    problem->updateProperties();
+    problem->finalize();
+
+    return (problem);
+}
+
+// Model.Reformulation.Constraint.PartitionQuadraticTerms and ObjectiveFunction.PartitionQuadraticTerms decide
+// independently whether the squares in the constraints and in the objective function are partitioned, also when they
+// are in nonlinear expressions, and all combinations give the same optimal solution. The squares in the nonlinear
+// expressions are extracted as quadratic terms, when the problem is set or when it is reformulated, also with
+// Model.Reformulation.Quadratics.ExtractStrategy = DoNotExtract.
+bool TestQuadraticPartitioningSettings()
+{
+    bool passed = true;
+
+    std::vector<VectorDouble> points
+        = { { 0.5, -1.0, 0.2, 1.0, 0.5, 0.0 }, { -2.0, 3.0, -2.0, 3.0, -2.0, 1.0 }, { 1.2, 0.7, -0.4, 0.0, 1.0, 1.0 } };
+
+    std::optional<double> referenceObjectiveValue;
+
+    for(auto extractStrategy :
+        { ES_QuadraticTermsExtractStrategy::ExtractTermsToSame, ES_QuadraticTermsExtractStrategy::DoNotExtract })
+    {
+        for(auto constraintStrategy : { ES_PartitionNonlinearSums::Always, ES_PartitionNonlinearSums::IfConvex,
+                ES_PartitionNonlinearSums::Never })
+        {
+            for(auto objectiveStrategy : { ES_PartitionNonlinearSums::Always, ES_PartitionNonlinearSums::IfConvex,
+                    ES_PartitionNonlinearSums::Never })
+            {
+                std::cout << "Quadratics.ExtractStrategy " << static_cast<int>(extractStrategy)
+                          << ", Constraint.PartitionQuadraticTerms " << static_cast<int>(constraintStrategy)
+                          << " and ObjectiveFunction.PartitionQuadraticTerms " << static_cast<int>(objectiveStrategy)
+                          << '\n';
+
+                auto solver = std::make_unique<SHOT::Solver>();
+                auto env = solver->getEnvironment();
+                solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+                solver->updateSetting(
+                    "Model.Reformulation.Constraint.PartitionQuadraticTerms", static_cast<int>(constraintStrategy));
+                solver->updateSetting("Model.Reformulation.ObjectiveFunction.PartitionQuadraticTerms",
+                    static_cast<int>(objectiveStrategy));
+                // The nonlinear sums are partitioned, so that their squares are partitioned or kept by the settings
+                // above
+                solver->updateSetting("Model.Reformulation.Constraint.PartitionNonlinearTerms",
+                    static_cast<int>(ES_PartitionNonlinearSums::Always));
+                solver->updateSetting("Model.Reformulation.ObjectiveFunction.PartitionNonlinearTerms",
+                    static_cast<int>(ES_PartitionNonlinearSums::Always));
+
+                auto problem = MakeQuadraticPartitioningProblem(env);
+
+                if(!solver->setProblem(problem))
+                {
+                    std::cout << "Could not set the problem\n";
+                    return (false);
+                }
+
+                auto hasSquareVariable = [&](const std::string& name)
+                {
+                    return (std::any_of(env->reformulatedProblem->auxiliaryVariables.begin(),
+                        env->reformulatedProblem->auxiliaryVariables.end(),
+                        [&](auto& V) { return (V->name == name); }));
+                };
+
+                // The squares are convex, so IfConvex partitions them as well
+                bool constraintSquaresPartitioned = (constraintStrategy != ES_PartitionNonlinearSums::Never);
+                bool objectiveSquaresPartitioned = (objectiveStrategy != ES_PartitionNonlinearSums::Never);
+
+                for(auto& name : { "s_sq_x", "s_sq_y", "s_sq_z" })
+                {
+                    if(hasSquareVariable(name) != constraintSquaresPartitioned)
+                    {
+                        std::cout << "The square variable " << name
+                                  << (constraintSquaresPartitioned ? " is missing" : " exists") << '\n';
+                        passed = false;
+                    }
+                }
+
+                for(auto& name : { "s_sq_u", "s_sq_v" })
+                {
+                    if(hasSquareVariable(name) != objectiveSquaresPartitioned)
+                    {
+                        std::cout << "The square variable " << name
+                                  << (objectiveSquaresPartitioned ? " is missing" : " exists") << '\n';
+                        passed = false;
+                    }
+                }
+
+                if(!CheckAuxiliaryVariableValues(problem, env->reformulatedProblem, points))
+                    passed = false;
+
+                if(!solver->solveProblem() || !env->results->hasPrimalSolution())
+                {
+                    std::cout << "Could not solve the problem\n";
+                    passed = false;
+                    continue;
+                }
+
+                double objectiveValue = env->results->getPrimalBound();
+                std::cout << "  Objective value " << objectiveValue << '\n';
+
+                if(!referenceObjectiveValue)
+                    referenceObjectiveValue = objectiveValue;
+                else if(std::abs(objectiveValue - *referenceObjectiveValue)
+                    > 1e-3 * std::max(1.0, std::abs(objectiveValue)))
+                {
+                    std::cout << "The objective value differs from " << *referenceObjectiveValue << '\n';
+                    passed = false;
+                }
+            }
+        }
+    }
+    return passed;
+}
+
+// When the reformulated problem is a MILP problem, here since the only nonlinear terms are products of binary
+// variables, the fixed-integer NLP problems are not solved, since the MIP solver has solved the LP problem with the
+// discrete variables fixed already
+bool TestNoFixedIntegerNLPForReformulatedMILP()
+{
+    bool passed = true;
+
+    auto solver = std::make_unique<SHOT::Solver>();
+    auto env = solver->getEnvironment();
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+    solver->updateSetting("Termination.TimeLimit", 60.0);
+
+    auto problem = std::make_shared<Problem>(env);
+    problem->name = "binaryproducts";
+
+    auto b1 = std::make_shared<Variable>("b1", E_VariableType::Binary);
+    auto b2 = std::make_shared<Variable>("b2", E_VariableType::Binary);
+    auto b3 = std::make_shared<Variable>("b3", E_VariableType::Binary);
+    auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.0, 10.0);
+    problem->add({ b1, b2, b3, x });
+
+    auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<LinearTerm>(1.0, x));
+    objective->add(std::make_shared<LinearTerm>(1.0, b1));
+    objective->add(std::make_shared<LinearTerm>(1.0, b2));
+    objective->add(std::make_shared<LinearTerm>(1.0, b3));
+    problem->add(objective);
+
+    // b2 is in both products; the constraint needs b2 and at least one of b1 and b3
+    auto e1 = std::make_shared<QuadraticConstraint>("e1", 1.0, SHOT_DBL_MAX);
+    e1->add(std::make_shared<QuadraticTerm>(1.0, b1, b2));
+    e1->add(std::make_shared<QuadraticTerm>(1.0, b2, b3));
+    problem->add(e1);
+
+    auto e2 = std::make_shared<LinearConstraint>("e2", 2.0, SHOT_DBL_MAX);
+    e2->add(std::make_shared<LinearTerm>(1.0, x));
+    e2->add(std::make_shared<LinearTerm>(1.0, b1));
+    e2->add(std::make_shared<LinearTerm>(1.0, b3));
+    problem->add(e2);
+
+    problem->updateProperties();
+    problem->finalize();
+
+    if(!solver->setProblem(problem))
+    {
+        std::cout << "Could not set the problem\n";
+        return (false);
+    }
+
+    if(!env->reformulatedProblem->properties.isMILPProblem)
+    {
+        std::cout << "The reformulated problem is not a MILP problem\n";
+        return (false);
+    }
+
+    if(env->settings->getSetting<bool>("Primal.FixedInteger.Use"))
+    {
+        std::cout << "The fixed-integer NLP strategy is used\n";
+        passed = false;
+    }
+
+    solver->solveProblem();
+
+    if(env->results->usedPrimalNLPSolver != ES_PrimalNLPSolver::NotUsed)
+    {
+        std::cout << "An NLP solver was used\n";
+        passed = false;
+    }
+
+    // b2 = 1 and b1 + b3 + x >= 2 with b1 + b3 >= 1 give the objective value 3
+    if(!solver->hasPrimalSolution() || std::abs(env->results->getPrimalBound() - 3.0) > 1e-6)
+    {
+        std::cout << "The optimal objective value 3 was not found\n";
+        passed = false;
+    }
+
+    return passed;
+}
+
+// The supporting hyperplanes in the feasible fixed-integer NLP solutions of a convex MINLP problem must not change the
+// optimal solution, and they are only created when the option is on and the limit is positive
+bool TestSupportingHyperplanesInFixedIntegerNLPSolutions()
+{
+    bool passed = true;
+
+    struct Configuration
+    {
+        bool use;
+        bool onlyViolated;
+        int maxPerSolution;
+    };
+
+    std::optional<double> referenceObjectiveValue;
+
+    for(auto configuration : { Configuration { false, false, 50 }, Configuration { true, false, 50 },
+            Configuration { true, true, 50 }, Configuration { true, false, 0 } })
+    {
+        std::cout << "CreateSupportingHyperplanes " << configuration.use << ", OnlyViolated "
+                  << configuration.onlyViolated << " and MaxPerSolution " << configuration.maxPerSolution << '\n';
+
+        auto solver = std::make_unique<SHOT::Solver>();
+        auto env = solver->getEnvironment();
+        solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+        solver->updateSetting("Termination.TimeLimit", 60.0);
+        solver->updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::MultiTree));
+        solver->updateSetting("Primal.FixedInteger.CreateSupportingHyperplanes", configuration.use);
+        solver->updateSetting("Primal.FixedInteger.SupportingHyperplanes.OnlyViolated", configuration.onlyViolated);
+        solver->updateSetting("Primal.FixedInteger.SupportingHyperplanes.MaxPerSolution", configuration.maxPerSolution);
+
+        if(!solver->setProblem("data/synthes1.osil"))
+        {
+            std::cout << "Could not load data/synthes1.osil\n";
+            return (false);
+        }
+
+        if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex)
+        {
+            std::cout << "The problem is not convex\n";
+            return (false);
+        }
+
+        solver->solveProblem();
+
+        if(!solver->hasPrimalSolution() || solver->getModelReturnStatus() != E_ModelReturnStatus::OptimalGlobal)
+        {
+            std::cout << "The problem was not solved to optimality\n";
+            passed = false;
+            continue;
+        }
+
+        auto numberOfHyperplanes = std::count_if(env->dualSolver->generatedHyperplanes.begin(),
+            env->dualSolver->generatedHyperplanes.end(), [](const GeneratedHyperplanePtr& HP)
+            { return (HP->sourceHyperplane->source == E_HyperplaneSource::FixedIntegerNLPSolution); });
+
+        std::cout << "  Objective value " << env->results->getPrimalBound() << ", " << numberOfHyperplanes
+                  << " supporting hyperplanes in fixed-integer NLP solutions\n";
+
+        // Without the filter, the NLP solutions give hyperplanes for the active constraints, at least for the
+        // epigraph or the active nonlinear constraints in the first one
+        bool expectHyperplanes = configuration.use && configuration.maxPerSolution > 0 && !configuration.onlyViolated;
+
+        if((!configuration.use || configuration.maxPerSolution == 0) && numberOfHyperplanes > 0)
+        {
+            std::cout << "Supporting hyperplanes were created, although they are turned off\n";
+            passed = false;
+        }
+        else if(expectHyperplanes && numberOfHyperplanes == 0)
+        {
+            std::cout << "No supporting hyperplanes were created\n";
+            passed = false;
+        }
+
+        double objectiveValue = env->results->getPrimalBound();
+
+        if(!referenceObjectiveValue)
+            referenceObjectiveValue = objectiveValue;
+        else if(std::abs(objectiveValue - *referenceObjectiveValue)
+            > 1e-3 * std::max(1.0, std::abs(*referenceObjectiveValue)))
+        {
+            std::cout << "The objective value differs from " << *referenceObjectiveValue << '\n';
+            passed = false;
+        }
+    }
+
+    return passed;
+}
+
+bool TestSupportingHyperplanesForObjectiveAndNonconvexFunctions()
+{
+    bool passed = true;
+
+    struct Configuration
+    {
+        std::string problemFile;
+        bool use;
+        bool useNonconvex;
+    };
+
+    // ex1223 is convex with a nonlinear objective function also in the reformulated problem, and ex1252a is nonconvex
+    // with nonconvex constraints active in the fixed-integer NLP solutions
+    for(auto configuration : { Configuration { "data/instances/MINLP-convex/ex1223.osil", false, false },
+            Configuration { "data/instances/MINLP-convex/ex1223.osil", true, false },
+            Configuration { "data/instances/MINLP-nonconvex/ex1252a.osil", true, false },
+            Configuration { "data/instances/MINLP-nonconvex/ex1252a.osil", true, true } })
+    {
+        std::cout << configuration.problemFile << ": CreateSupportingHyperplanes " << configuration.use
+                  << ", Nonconvex " << configuration.useNonconvex << '\n';
+
+        auto solver = std::make_unique<SHOT::Solver>();
+        auto env = solver->getEnvironment();
+        solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+        solver->updateSetting("Termination.TimeLimit", 10.0);
+        solver->updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::MultiTree));
+        // Otherwise the hyperplanes are not added while the MIP solution limit is used, and the convex problem can be
+        // solved before that with some MIP solvers
+        solver->updateSetting("Dual.HyperplaneCuts.Delay", false);
+        solver->updateSetting("Primal.FixedInteger.CreateSupportingHyperplanes", configuration.use);
+        solver->updateSetting("Primal.FixedInteger.SupportingHyperplanes.Nonconvex", configuration.useNonconvex);
+
+        if(!solver->setProblem(configuration.problemFile))
+        {
+            std::cout << "Could not load " << configuration.problemFile << '\n';
+            return (false);
+        }
+
+        bool isConvex = env->reformulatedProblem->properties.convexity == E_ProblemConvexity::Convex;
+
+        if(isConvex
+            && env->reformulatedProblem->objectiveFunction->properties.classification
+                <= E_ObjectiveFunctionClassification::Quadratic)
+        {
+            std::cout << "The objective function of the reformulated problem is not nonlinear\n";
+            return (false);
+        }
+
+        solver->solveProblem();
+
+        if(!solver->hasPrimalSolution())
+        {
+            std::cout << "No primal solution found\n";
+            passed = false;
+            continue;
+        }
+
+        int objectiveHyperplanes = 0;
+        int nonglobalHyperplanes = 0;
+
+        for(auto& HP : env->dualSolver->generatedHyperplanes)
+        {
+            if(HP->sourceHyperplane->source != E_HyperplaneSource::FixedIntegerNLPSolution)
+                continue;
+
+            if(std::dynamic_pointer_cast<ObjectiveHyperplane>(HP->sourceHyperplane))
+                objectiveHyperplanes++;
+
+            if(!HP->sourceHyperplane->isGlobal)
+                nonglobalHyperplanes++;
+        }
+
+        std::cout << "  Objective value " << env->results->getPrimalBound() << ", " << objectiveHyperplanes
+                  << " objective and " << nonglobalHyperplanes
+                  << " nonglobal hyperplanes in fixed-integer NLP solutions\n";
+
+        if(isConvex && solver->getModelReturnStatus() != E_ModelReturnStatus::OptimalGlobal)
+        {
+            std::cout << "The convex problem was not solved to optimality\n";
+            passed = false;
+        }
+
+        if(isConvex && configuration.use && objectiveHyperplanes == 0)
+        {
+            std::cout << "No hyperplanes for the convex objective function were created\n";
+            passed = false;
+        }
+
+        if(!configuration.use && objectiveHyperplanes > 0)
+        {
+            std::cout << "Hyperplanes were created, although they are turned off\n";
+            passed = false;
+        }
+
+        if(!configuration.useNonconvex && nonglobalHyperplanes > 0)
+        {
+            std::cout << "Hyperplanes for nonconvex functions were created, although they are turned off\n";
+            passed = false;
+        }
+
+        if(!isConvex && configuration.useNonconvex && nonglobalHyperplanes == 0)
+        {
+            std::cout << "No hyperplanes for nonconvex functions were created\n";
+            passed = false;
+        }
+    }
+
+    return passed;
+}
+
+bool TestSolutionChangeNorm()
+{
+    bool passed = true;
+
+    auto solver = std::make_unique<Solver>();
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+
+    if(!solver->setProblem("data/tls2.osil"))
+    {
+        std::cout << "  FAILED: could not read the problem.\n";
+        return false;
+    }
+
+    auto env = solver->getEnvironment();
+    auto task = std::make_unique<TaskCalculateSolutionChangeNorm>(env);
+
+    // Three iterations where the dual problem is a relaxation, with the hyperplanes of the last two generated
+    // three units apart, which is 3/4 relative to the last point
+    VectorDouble firstPoint(env->reformulatedProblem->properties.numberOfVariables, 0.0);
+    VectorDouble secondPoint = firstPoint;
+    VectorDouble thirdPoint = firstPoint;
+    secondPoint.at(0) = 1.0;
+    thirdPoint.at(0) = 4.0;
+
+    for(auto& point : { firstPoint, secondPoint, thirdPoint })
+    {
+        env->results->createIteration();
+        auto iteration = env->results->getCurrentIteration();
+        iteration->isDualProblemDiscrete = false;
+        iteration->hyperplanePoints.push_back(point);
+    }
+
+    task->run();
+
+    double distance = env->results->getCurrentIteration()->boundaryDistance;
+
+    if(std::abs(distance - 0.75) > 1e-9)
+    {
+        std::cout << "  FAILED: the distance between the last two hyperplane points is " << distance
+                  << " instead of 0.75.\n";
+        passed = false;
+    }
+
+    // An iteration without hyperplanes is skipped, so the distance is taken to the last one that has any, here
+    // two units relative to a point of norm 6
+    env->results->createIteration();
+    auto emptyIteration = env->results->getCurrentIteration();
+    emptyIteration->isDualProblemDiscrete = false;
+
+    env->results->createIteration();
+    auto lastIteration = env->results->getCurrentIteration();
+    lastIteration->isDualProblemDiscrete = false;
+    VectorDouble lastPoint = firstPoint;
+    lastPoint.at(0) = 6.0;
+    lastIteration->hyperplanePoints.push_back(lastPoint);
+
+    task->run();
+
+    if(std::abs(lastIteration->boundaryDistance - 2.0 / 6.0) > 1e-9)
+    {
+        std::cout << "  FAILED: the iteration without hyperplanes was not skipped, the distance is "
+                  << lastIteration->boundaryDistance << " instead of 1/3.\n";
+        passed = false;
+    }
+
+    // Without any hyperplanes of its own an iteration has no distance
+    env->results->createIteration();
+    auto iterationWithoutPoints = env->results->getCurrentIteration();
+    iterationWithoutPoints->isDualProblemDiscrete = false;
+
+    task->run();
+
+    if(iterationWithoutPoints->boundaryDistance != SHOT_DBL_MAX)
+    {
+        std::cout << "  FAILED: an iteration without hyperplanes was given the distance "
+                  << iterationWithoutPoints->boundaryDistance << ".\n";
+        passed = false;
+    }
+
+    if(passed)
+        std::cout << "  The distance is calculated between the points the hyperplanes were generated in.\n";
+
+    return passed;
+}
+
+// When the time limit has been reached before the dual problem is created, e.g., while reading and reformulating a
+// large problem, the MIP problem is neither created nor solved, and the solve ends on the time limit with one
+// iteration, so that the results and the solution files are written as when the limit is reached in an iteration
+bool TestTimeLimitReachedBeforeDualProblem()
+{
+    bool passed = true;
+
+    for(auto treeStrategy : { ES_TreeStrategy::SingleTree, ES_TreeStrategy::MultiTree })
+    {
+        auto solver = std::make_unique<SHOT::Solver>();
+        auto env = solver->getEnvironment();
+        solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+        solver->updateSetting("Dual.TreeStrategy", static_cast<int>(treeStrategy));
+        solver->updateSetting("Termination.TimeLimit", 0.0);
+
+        std::string strategy = (treeStrategy == ES_TreeStrategy::SingleTree) ? "single-tree" : "multi-tree";
+
+        if(!solver->setProblem("data/synthes1.osil") || !solver->solveProblem())
+        {
+            std::cout << "Error while solving problem with the " << strategy << " strategy\n";
+            passed = false;
+            continue;
+        }
+
+        auto& stats = env->solutionStatistics;
+        int solvedDualProblems = stats.numberOfProblemsLP + stats.numberOfProblemsQP + stats.numberOfProblemsQCQP
+            + stats.numberOfProblemsOptimalMILP + stats.numberOfProblemsFeasibleMILP
+            + stats.numberOfProblemsOptimalMIQP + stats.numberOfProblemsFeasibleMIQP
+            + stats.numberOfProblemsOptimalMIQCQP + stats.numberOfProblemsFeasibleMIQCQP;
+
+        if(env->results->terminationReason != E_TerminationReason::TimeLimit)
+        {
+            std::cout << "The " << strategy << " strategy did not end on the time limit: "
+                      << env->results->terminationReasonDescription << '\n';
+            passed = false;
+        }
+
+        if(solvedDualProblems != 0)
+        {
+            std::cout << "The " << strategy << " strategy solved " << solvedDualProblems << " dual problems\n";
+            passed = false;
+        }
+
+        if(env->results->getNumberOfIterations() != 1)
+        {
+            std::cout << "The " << strategy << " strategy has " << env->results->getNumberOfIterations()
+                      << " iterations instead of one\n";
+            passed = false;
+        }
+
+        if(solver->getResultsOSrL().empty() || solver->getResultsTrace().empty())
+        {
+            std::cout << "The " << strategy << " strategy wrote no results\n";
+            passed = false;
+        }
+    }
+
+    return (passed);
+}
+
+// Counts how many times it has been run
+class TaskCountRuns : public TaskBase
+{
+public:
+    TaskCountRuns(EnvironmentPtr envPtr) : TaskBase(envPtr) {}
+
+    void run() override { numberOfRuns++; }
+    std::string getType() override { return "TaskCountRuns"; }
+
+    int numberOfRuns = 0;
+};
+
+// Deactivated tasks are skipped by the task handler, also when it is set to continue from one of them, and by
+// TaskSequential, and they are run again when activated
+bool TestTaskDeactivation()
+{
+    bool passed = true;
+
+    auto solver = std::make_unique<SHOT::Solver>();
+    auto env = solver->getEnvironment();
+
+    auto taskA = std::make_shared<TaskCountRuns>(env);
+    auto taskB = std::make_shared<TaskCountRuns>(env);
+    auto taskC = std::make_shared<TaskCountRuns>(env);
+
+    TaskHandler handler(env);
+    handler.addTask(taskA, "A");
+    handler.addTask(taskB, "B");
+    handler.addTask(taskC, "C");
+
+    auto runAll = [&handler]()
+    {
+        TaskPtr task;
+
+        while(handler.getNextTask(task))
+            task->run();
+    };
+
+    handler.getTask("B")->deactivate();
+    runAll();
+
+    if(taskA->numberOfRuns != 1 || taskB->numberOfRuns != 0 || taskC->numberOfRuns != 1)
+    {
+        std::cout << "The task handler did not skip the deactivated task\n";
+        passed = false;
+    }
+
+    handler.setNextTask("B");
+    runAll();
+
+    if(taskA->numberOfRuns != 1 || taskB->numberOfRuns != 0 || taskC->numberOfRuns != 2)
+    {
+        std::cout << "The task handler did not continue after the deactivated task it was set to\n";
+        passed = false;
+    }
+
+    taskB->activate();
+    handler.setNextTask("A");
+    runAll();
+
+    if(taskA->numberOfRuns != 2 || taskB->numberOfRuns != 1 || taskC->numberOfRuns != 3)
+    {
+        std::cout << "The task handler did not run the activated task\n";
+        passed = false;
+    }
+
+    auto sequence = std::make_shared<TaskSequential>(env);
+    sequence->addTask(taskA);
+    sequence->addTask(taskB);
+    sequence->addTask(taskC);
+
+    taskA->deactivate();
+    taskC->deactivate();
+    sequence->run();
+
+    if(taskA->numberOfRuns != 2 || taskB->numberOfRuns != 2 || taskC->numberOfRuns != 3)
+    {
+        std::cout << "TaskSequential did not skip the deactivated tasks\n";
+        passed = false;
+    }
+
+    return (passed);
+}
+
 // A starting point given with Solver::setStartingPoint() is checked when it is set and is the first primal
 // solution when the problem is solved. The point given last is used, and setProblem() removes it.
 bool TestStartingPoint()
@@ -2541,6 +3344,44 @@ int SolverTest(int argc, char* argv[])
         std::cout << "Finished test for primal solutions slightly outside the variable bounds." << std::endl;
         break;
     case 26:
+        passed = TestStrategySelectionForLinearAndQuadraticProblems();
+        break;
+    case 27:
+        passed = TestQuadraticPartitioningSettings();
+        break;
+    case 28:
+        std::cout << "Starting test for no fixed-integer NLP problems when the reformulated problem is a MILP problem"
+                  << std::endl;
+        passed = TestNoFixedIntegerNLPForReformulatedMILP();
+        std::cout << "Finished test for no fixed-integer NLP problems when the reformulated problem is a MILP problem."
+                  << std::endl;
+        break;
+    case 29:
+        std::cout << "Starting test for supporting hyperplanes in fixed-integer NLP solutions" << std::endl;
+        passed = TestSupportingHyperplanesInFixedIntegerNLPSolutions();
+        std::cout << "Finished test for supporting hyperplanes in fixed-integer NLP solutions." << std::endl;
+        break;
+    case 30:
+        std::cout << "Starting test for supporting hyperplanes for objective and nonconvex functions" << std::endl;
+        passed = TestSupportingHyperplanesForObjectiveAndNonconvexFunctions();
+        std::cout << "Finished test for supporting hyperplanes for objective and nonconvex functions." << std::endl;
+        break;
+    case 31:
+        std::cout << "Starting test for the norm of the change between hyperplane points" << std::endl;
+        passed = TestSolutionChangeNorm();
+        std::cout << "Finished test for the norm of the change between hyperplane points." << std::endl;
+        break;
+    case 32:
+        std::cout << "Starting test for a time limit reached before the dual problem is created" << std::endl;
+        passed = TestTimeLimitReachedBeforeDualProblem();
+        std::cout << "Finished test for a time limit reached before the dual problem is created." << std::endl;
+        break;
+    case 33:
+        std::cout << "Starting test for deactivated tasks" << std::endl;
+        passed = TestTaskDeactivation();
+        std::cout << "Finished test for deactivated tasks." << std::endl;
+        break;
+    case 34:
         std::cout << "Starting test for a starting point given to the solver" << std::endl;
         passed = TestStartingPoint();
         std::cout << "Finished test for a starting point given to the solver." << std::endl;

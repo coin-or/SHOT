@@ -35,7 +35,9 @@ NLPSolverGAMS::NLPSolverGAMS(EnvironmentPtr envPtr, gmoHandle_t modelingObject, 
     nlpsolveropt = env->settings->getSetting<std::string>("Subsolver.GAMS.NLP.OptionsFilename");
 
     timelimit = env->settings->getSetting<double>("Primal.FixedInteger.TimeLimit");
-    iterlimit = env->settings->getSetting<int>("Primal.FixedInteger.IterationLimit");
+    // Without an iteration limit, the GAMS NLP solver has none
+    if(int iterationLimit = env->settings->getSetting<int>("Primal.FixedInteger.IterationLimit"); iterationLimit > 0)
+        iterlimit = iterationLimit;
 
     // by default we want the fast solvelink=5; but if SHOT is build with Ipopt (and is not build by GAMS for GAMS),
     // then there can be conflicts between the Ipopt library linked to SHOT and the one in GAMS;

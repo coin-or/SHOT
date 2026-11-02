@@ -85,17 +85,17 @@ different sequence of tasks — based on the (reformulated) problem's
 detected type and settings. This matters for debugging because it
 determines which debug files you should expect to see at all:
 
-- **MIQCQP strategy** — used for convex MILP/QP/MIQP/QCQP/MIQCQP problems
-  (i.e. problems the MIP solver can handle natively, quadratics included).
+- **MIQCQP strategy** — used for convex QP/MIQP/QCQP/MIQCQP problems supported by CPLEX or Gurobi
+  (the reformulated model must still contain quadratic terms).
   Solves directly via the MIP solver plus primal heuristics; no
   outer-approximation cutting-plane loop, so no `dualiter{N}_mostdev.txt`-
   style constraint-deviation files (there's nothing nonlinear to cut
   against).
-- **NLP strategy** — used for convex, purely continuous (non-discrete) NLP
-  problems. No MIP solver involved at all, so no `dualiter*` files; look at
-  the NLP solve output/log instead.
+- **NLP strategy** — used for convex, purely continuous (non-discrete) LP/NLP
+  problems. Solves continuous dual problems and can use NLP primal heuristics;
+  inspect the dual problem files and any NLP solve output/log.
 - **Multi-tree strategy** — the classical SHOT algorithm for general convex
-  MINLP: repeatedly solves a MIP relaxation to completion, adds
+  MINLP and MILP models: repeatedly solves a MIP relaxation to completion, adds
   supporting-hyperplane/ECP cuts, and resolves. This is what generates the
   full `dualiter{N}_*` sequence described below.
 - **Single-tree strategy** — solves one branch-and-cut MIP tree, adding
@@ -198,6 +198,14 @@ run:
 - `primalnlp{N}_{k}.txt` + matching `.osrl` — the fixed-integer NLP
   subproblem itself and its solver options (only written by NLP backends
   that support dumping their problem).
+- `lazycuts.txt` and `singletree_problem_with_lazycuts.lp` — single-tree
+  strategy with Gurobi only. The cuts added as lazy constraints in the
+  callback are not part of `dualiter{N}_problem.lp`; `lazycuts.txt` lists each
+  one in LP syntax as it is added (`LAZY{i}_HP` hyperplanes, `_IC` integer
+  cuts, `_DB` external dual bounds), and after the tree search the model is
+  written once more with all of them as ordinary constraints. Solving that
+  file with `gurobi_cl` shows whether the cuts themselves cut off a known
+  solution, or whether a wrong bound only arises in the callback.
 
 ## A practical debugging workflow
 
@@ -621,8 +629,9 @@ in this codebase — add to this list as you find more.
   they get the two inequality constraints instead: with equality
   constraints, Ipopt found much worse local solutions for, e.g., pooling
   problems (and better ones for a few others, so the setting is worth
-  trying when the primal solutions are poor). NLP solvers in GAMS always use
-  the original problem.
+  trying when the primal solutions are poor). For nonconvex problems, the
+  recommended value solves the NLP problem on both. NLP solvers in GAMS
+  always use the original problem.
 - In the reformulated problem (`reformulatedproblem.txt`) a nonlinear
   constraint with both bounds is two constraints: `<name>` is `f(x) <= U`
   and `<name>_rf` is `-f(x) <= -L`. The `_rf` constraints come after the
@@ -677,6 +686,20 @@ in this codebase — add to this list as you find more.
   quadratic constraints and is given to the MIP solver ("Quadratic
   constraints not yet implemented in HiGHS interface"). Add it through its
   own pointer type, or set the classification first.
+
+### Invalid single-tree bounds that are not caused by invalid cuts
+
+On sssd15-08 (convex), Gurobi single-tree with ESH and
+`Subsolver.Gurobi.NumericFocus=1` ends "optimal" at 568530 (optimum
+562618). Checking every cut against a near-optimal feasible point showed
+none that cuts it off, and solving `singletree_problem_with_lazycuts.lp`
+offline gave valid bounds with NumericFocus 0 and 1 (562601 and 561881). So
+the wrong bound only arises when the same cuts are added as lazy constraints
+in Gurobi's tree search. The model is badly scaled (cut coefficients from
+3e-13 to 9e4, a cutoff right-hand side of 7.5e55), and NumericFocus alone
+shifts the optimum of the same model by 0.13 %. When a single-tree bound is
+invalid, first rule out the cuts this way, before looking for a bug in the
+cut generation.
 
 ### Verification discipline
 

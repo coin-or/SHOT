@@ -92,7 +92,7 @@ void Results::addPrimalSolution(PrimalSolution solution)
     // A solution that is only added to the solution pool is not an improvement of the primal bound
     bool isPrimalImprovement = isIncumbent || replacesIncumbent;
 
-    int poolSize = std::max(1, env->settings->getSetting<int>("Output.SaveNumberOfSolutions"));
+    int poolSize = env->settings->getSetting<int>("Output.SaveNumberOfSolutions");
 
     if((int)this->primalSolutions.size() >= poolSize)
     {
@@ -171,37 +171,6 @@ void Results::addPrimalSolution(PrimalSolution solution)
 
         savePrimalSolutionToFile(solution, env->problem->allVariables, filename);
     }
-
-    // TODO: Add primal objective cut
-    /*if(env->settings->getSetting<bool>("Dual.HyperplaneCuts.UsePrimalObjectiveCut")
-        && env->reformulatedProblem->objectiveFunction->properties.classification
-            > E_ObjectiveFunctionClassification::Quadratic)
-    {
-        Hyperplane hyperplane;
-        hyperplane.source = E_HyperplaneSource::PrimalSolutionSearchInteriorObjective;
-        hyperplane.isObjectiveHyperplane = true;
-        hyperplane.sourceConstraintIndex = -1;
-        hyperplane.generatedPoint = solution.point;
-
-        if(env->reformulatedProblem->objectiveFunction->properties.hasNonlinearExpression)
-        {
-            hyperplane.objectiveFunctionValue
-                =
-    std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                      ->calculateValue(hyperplane.generatedPoint);
-        }
-        else
-        {
-            hyperplane.objectiveFunctionValue
-                =
-    std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                      ->calculateValue(hyperplane.generatedPoint);
-        }
-
-        env->dualSolver->hyperplaneWaitingList.push_back(hyperplane);
-
-        env->output->outputCritical("        Primal objective cut added.");
-    }*/
 
     if(env->callbacks->isActive(E_CallbackLocation::NewPrimalSolution))
     {
@@ -1232,6 +1201,9 @@ std::string Results::getResultsTrace()
     case(ES_PrimalNLPSolver::GAMS):
         ss << env->settings->getSetting<std::string>("Subsolver.GAMS.NLP.Solver");
         break;
+    case ES_PrimalNLPSolver::Conopt:
+        ss << "CONOPT";
+        break;
     case(ES_PrimalNLPSolver::Ipopt):
         ss << "Ipopt";
         break;
@@ -1467,28 +1439,63 @@ std::string Results::getResultsSol()
 
     std::stringstream ss;
 
-    ss << fmt::format("SHOT: {}\n", description);
+    // The lines before the empty line form the solve message, which AMPL shows as solve_message; the first line is
+    // kept as "<solver> <version>: <description>" since that is what interfaces parse the status from
+    ss << fmt::format("SHOT {}.{}.{}{}: {}\n", SHOT_VERSION_MAJOR, SHOT_VERSION_MINOR, SHOT_VERSION_PATCH,
+        SHOT_VERSION_SUFFIX, description);
+
+    auto getClassification = [](ProblemPtr problem)
+    {
+        std::string classification = problem ? problem->properties.getClassification() : "";
+        return (classification.empty() ? std::string("unknown") : classification);
+    };
+
+    ss << fmt::format("Original problem: {}\n", getClassification(env->problem));
+    ss << fmt::format("Reformulated problem: {}\n", getClassification(env->reformulatedProblem));
+
+    std::string MIPSolverName;
+
+    switch(this->usedMIPSolver)
+    {
+    case(ES_MIPSolver::Cplex):
+        MIPSolverName = "CPLEX";
+        break;
+    case(ES_MIPSolver::Gurobi):
+        MIPSolverName = "Gurobi";
+        break;
+    case(ES_MIPSolver::Cbc):
+        MIPSolverName = "Cbc";
+        break;
+    case(ES_MIPSolver::Highs):
+        MIPSolverName = "HiGHS";
+        break;
+    default:
+        break;
+    }
+
+    if(MIPSolverName.empty() || !env->dualSolver || !env->dualSolver->MIPSolver)
+        ss << "MIP solver: none\n";
+    else
+        ss << fmt::format("MIP solver: {} {}\n", MIPSolverName, env->dualSolver->MIPSolver->getSolverVersion());
+
+    // The NLP solver is created when the primal strategy is set up, so it is only stated if an NLP problem was solved
+    ss << fmt::format("NLP solver: {}\n",
+        (this->usedPrimalNLPSolver == ES_PrimalNLPSolver::NotUsed || this->usedPrimalNLPSolverDescription.empty()
+            || env->solutionStatistics.numberOfProblemsFixedNLP == 0)
+            ? "none"
+            : this->usedPrimalNLPSolverDescription);
 
     ss << "\nOptions\n";
 
     ss << env->settings->getSetting<std::string>("ModelingSystem.AMPL.OptionsHeader");
 
+    // The number of variable values is zero if there is no solution, so that no point is loaded by the interface
     ss << fmt::format("{0}\n{1}\n{2}\n{3}\n",
         env->settings->getSetting<int>("ModelingSystem.AMPL.NumberOfOriginalConstraints"), 0,
-        env->problem->properties.numberOfVariables, env->problem->properties.numberOfVariables);
+        env->problem->properties.numberOfVariables, this->primalSolution.size());
 
-    if(this->primalSolution.size() > 0)
-    {
-        for(auto const& V : this->primalSolution)
-            ss << fmt::format("{}\n", V);
-    }
-    else
-    {
-        {
-            for(int i = 0; i < env->problem->properties.numberOfVariables; i++)
-                ss << fmt::format("{}\n", 0);
-        }
-    }
+    for(auto const& V : this->primalSolution)
+        ss << fmt::format("{}\n", V);
 
     ss << fmt::format("objno 0 {}", status);
 
@@ -1544,6 +1551,10 @@ double Results::getPrimalBound()
 
 void Results::setPrimalBound(double value, bool resetStagnationCounters)
 {
+    const double previousPrimalBound = currentPrimalBound;
+    const double previousDualBound = currentDualBound;
+    const double previousGlobalDualBound = globalDualBound;
+
     this->currentPrimalBound = value;
 
     bool isMinimize = env->problem->objectiveFunction->direction == E_ObjectiveFunctionDirection::Minimize;
@@ -1567,6 +1578,23 @@ void Results::setPrimalBound(double value, bool resetStagnationCounters)
             env->output->outputDebug(
                 fmt::format("        Dual bound {} set to the primal bound {}, which has passed it.",
                     this->currentDualBound, value));
+        }
+
+        // A dual bound that is regarded as global, e.g., for a convex problem, should only be passed within the
+        // objective gap tolerances, so passing it by more is an error that closing the gap would hide
+        double passedBy = std::abs(value - this->currentDualBound);
+
+        if(solutionIsGlobal && !hasPrimalBoundPassedGlobalDualBound
+            && passedBy > env->settings->getSetting<double>("Termination.ObjectiveGap.Absolute")
+            && passedBy / (1e-10 + std::abs(value))
+                > env->settings->getSetting<double>("Termination.ObjectiveGap.Relative"))
+        {
+            hasPrimalBoundPassedGlobalDualBound = true;
+
+            env->output->outputWarning(
+                fmt::format("        The primal bound {} has passed the dual bound {} by more than the objective gap "
+                            "tolerances, so the dual bound is not valid.",
+                    value, this->currentDualBound));
         }
 
         this->currentDualBound = value;
@@ -1603,6 +1631,8 @@ void Results::setPrimalBound(double value, bool resetStagnationCounters)
         env->solutionStatistics.numberOfDualRepairsSinceLastPrimalUpdate = 0;
         env->solutionStatistics.numberOfCutResetsSinceLastPrimalUpdate = 0;
     }
+
+    notifyBoundsUpdated(previousPrimalBound, previousDualBound, previousGlobalDualBound);
 }
 
 double Results::getCurrentDualBound() { return (this->currentDualBound); }
@@ -1611,6 +1641,10 @@ double Results::getGlobalDualBound() { return (globalDualBound); }
 
 void Results::setDualBound(double value, bool forceGlobal)
 {
+    const double previousPrimalBound = currentPrimalBound;
+    const double previousDualBound = currentDualBound;
+    const double previousGlobalDualBound = globalDualBound;
+
     double primalBound = this->getPrimalBound();
     bool isMinimize = env->problem->objectiveFunction->direction == E_ObjectiveFunctionDirection::Minimize;
 
@@ -1635,15 +1669,45 @@ void Results::setDualBound(double value, bool forceGlobal)
 
     this->currentDualBound = value;
 
+    // A bound that is valid although the dual problem is not a relaxation, e.g. from convex bounding, does not make the
+    // dual problem a relaxation again, so its later bounds, e.g. from being infeasible with a cutoff, are not global
     if(this->solutionIsGlobal || forceGlobal)
-    {
         this->globalDualBound = value;
-        this->solutionIsGlobal = true;
-    }
 
     env->solutionStatistics.numberOfIterationsWithDualStagnation = 0;
 
     env->solutionStatistics.lastIterationWithSignificantDualUpdate = getNumberOfIterations() - 1;
+
+    notifyBoundsUpdated(previousPrimalBound, previousDualBound, previousGlobalDualBound);
+}
+
+void Results::resetDualBounds(bool resetGlobal)
+{
+    const double previousPrimalBound = currentPrimalBound;
+    const double previousDualBound = currentDualBound;
+    const double previousGlobalDualBound = globalDualBound;
+    const bool isMinimization = env->problem->objectiveFunction->properties.isMinimize;
+
+    currentDualBound = isMinimization ? SHOT_DBL_MIN : SHOT_DBL_MAX;
+    if(resetGlobal)
+        globalDualBound = currentDualBound;
+
+    notifyBoundsUpdated(previousPrimalBound, previousDualBound, previousGlobalDualBound);
+}
+
+void Results::notifyBoundsUpdated(
+    double previousPrimalBound, double previousDualBound, double previousGlobalDualBound)
+{
+    // setProblem() initializes the bounds before the first iteration. That is not a solve event.
+    if(getNumberOfIterations() == 0 || !env->callbacks
+        || !env->callbacks->isActive(E_CallbackLocation::BoundsUpdated))
+        return;
+
+    auto context = std::make_shared<BoundsUpdatedContext>(
+        env, previousPrimalBound, previousDualBound, previousGlobalDualBound);
+    if(context->hasChanged())
+        env->callbacks->invoke(*context);
+    context->invalidate();
 }
 
 double Results::getAbsoluteGlobalObjectiveGap()
@@ -1686,7 +1750,8 @@ E_ModelReturnStatus Results::getModelReturnStatus()
         return (hasPrimalSolution() ? E_ModelReturnStatus::Unbounded : E_ModelReturnStatus::UnboundedNoSolution);
 
     if(terminationReason == E_TerminationReason::InfeasibleProblem)
-        return (solutionIsGlobal ? E_ModelReturnStatus::InfeasibleGlobal : E_ModelReturnStatus::InfeasibleLocal);
+        return ((solutionIsGlobal || isInfeasibilityProven) ? E_ModelReturnStatus::InfeasibleGlobal
+                                                            : E_ModelReturnStatus::InfeasibleLocal);
 
     if(terminationReason == E_TerminationReason::Error || terminationReason == E_TerminationReason::NumericIssues)
         return (hasPrimalSolution() ? E_ModelReturnStatus::FeasibleSolution : E_ModelReturnStatus::ErrorNoSolution);

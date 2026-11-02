@@ -97,6 +97,12 @@ SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(EnvironmentPtr envPtr)
     auto tInitializeIteration = std::make_shared<TaskInitializeIteration>(env);
     env->tasks->addTask(tInitializeIteration, "InitIter");
 
+    auto tUpdateExternalDualBound = std::make_shared<TaskUpdateExternalDualBound>(env);
+    env->tasks->addTask(tUpdateExternalDualBound, "UpdateExternalDualBoundInitial");
+
+    auto tSelectPrimExternalInitial = std::make_shared<TaskSelectPrimalCandidatesFromExternalSource>(env);
+    env->tasks->addTask(tSelectPrimExternalInitial, "SelectPrimExternalInitial");
+
     // NLP problems are solved for all combinations of the discrete variables before the dual problem is solved, if
     // there are few enough of them
     if(env->settings->getSetting<bool>("Primal.FixedInteger.Use")
@@ -105,11 +111,39 @@ SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(EnvironmentPtr envPtr)
     {
         auto tEnumerateFixedInteger = std::make_shared<TaskEnumerateFixedIntegerCombinations>(env, false);
         env->tasks->addTask(tEnumerateFixedInteger, "EnumerateFixedInteger");
-
-        // A termination requested by a callback during this stops the solution process here
-        auto tCheckInitialUserTerm = std::make_shared<TaskCheckUserTermination>(env, "FinalizeSolution", false);
-        env->tasks->addTask(tCheckInitialUserTerm, "CheckUserTerminationInitial");
     }
+
+    // An NLP problem is solved from a given starting point, e.g. the levels of the variables of a GAMS model, with
+    // its discrete variables fixed, before the first dual problem, which can take the remaining time of a nonconvex
+    // problem. Without a starting point, there are no candidates and nothing is solved.
+    if(env->settings->getSetting<bool>("Primal.FixedInteger.Use")
+        && env->settings->getSetting<bool>("Primal.FixedInteger.UseStartingPoint"))
+    {
+        auto NLPProblemSource = static_cast<ES_PrimalNLPProblemSource>(
+            env->settings->getSetting<int>("Primal.FixedInteger.SourceProblem"));
+
+        // With both problems, the points are solved on each, since they are only cleared after the last task
+        if(NLPProblemSource == ES_PrimalNLPProblemSource::Both
+            || NLPProblemSource == ES_PrimalNLPProblemSource::OriginalProblem)
+        {
+            auto tSolveStartingPointNLP = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env, false);
+            env->tasks->addTask(tSolveStartingPointNLP, "SolveStartingPointNLPOriginal");
+        }
+
+        if(NLPProblemSource == ES_PrimalNLPProblemSource::Both
+            || NLPProblemSource == ES_PrimalNLPProblemSource::ReformulatedProblem)
+        {
+            auto tSolveStartingPointNLP = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env, true);
+            env->tasks->addTask(tSolveStartingPointNLP, "SolveStartingPointNLPReformulated");
+        }
+
+        auto tClearStartingPointNLP = std::make_shared<TaskClearFixedPrimalCandidates>(env);
+        env->tasks->addTask(tClearStartingPointNLP, "ClearStartingPointNLP");
+    }
+
+    // The initial callbacks and enumeration can request termination before the MIP solver starts.
+    auto tCheckInitialUserTerm = std::make_shared<TaskCheckUserTermination>(env, "FinalizeSolution", false);
+    env->tasks->addTask(tCheckInitialUserTerm, "CheckUserTerminationInitial");
 
     auto tSolveIteration = std::make_shared<TaskSolveIteration>(env);
     env->tasks->addTask(tSolveIteration, "SolveIter");
@@ -117,6 +151,11 @@ SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(EnvironmentPtr envPtr)
     auto tSelectPrimSolPool = std::make_shared<TaskSelectPrimalCandidatesFromSolutionPool>(env);
     env->tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
     std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
+
+    env->tasks->addTask(tUpdateExternalDualBound, "UpdateExternalDualBoundFinal");
+
+    auto tSelectPrimExternalFinal = std::make_shared<TaskSelectPrimalCandidatesFromExternalSource>(env);
+    env->tasks->addTask(tSelectPrimExternalFinal, "SelectPrimExternalFinal");
 
     auto tPrintIterReport = std::make_shared<TaskPrintIterationReport>(env);
     env->tasks->addTask(tPrintIterReport, "PrintIterReport");
@@ -190,11 +229,23 @@ SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(EnvironmentPtr envPtr)
         auto tPolishPoint = std::make_shared<TaskSelectPrimalFixedNLPPointsFromSolutionPool>(env, true);
         std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tPolishPoint);
 
-        auto tPolishNLP = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env,
-            static_cast<ES_PrimalNLPProblemSource>(env->settings->getSetting<int>("Primal.FixedInteger.SourceProblem"))
-                == ES_PrimalNLPProblemSource::ReformulatedProblem,
-            true);
-        std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tPolishNLP);
+        auto NLPProblemSource = static_cast<ES_PrimalNLPProblemSource>(
+            env->settings->getSetting<int>("Primal.FixedInteger.SourceProblem"));
+
+        // With both problems, the points are solved on each, since they are only cleared after the last task
+        if(NLPProblemSource == ES_PrimalNLPProblemSource::Both
+            || NLPProblemSource == ES_PrimalNLPProblemSource::OriginalProblem)
+        {
+            auto tPolishNLP = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env, false, true);
+            std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tPolishNLP);
+        }
+
+        if(NLPProblemSource == ES_PrimalNLPProblemSource::Both
+            || NLPProblemSource == ES_PrimalNLPProblemSource::ReformulatedProblem)
+        {
+            auto tPolishNLP = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env, true, true);
+            std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tPolishNLP);
+        }
 
         auto tPolishClear = std::make_shared<TaskClearFixedPrimalCandidates>(env);
         std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tPolishClear);

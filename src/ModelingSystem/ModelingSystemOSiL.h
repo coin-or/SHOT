@@ -35,9 +35,6 @@ public:
     ModelingSystemOSiL(EnvironmentPtr envPtr);
     ~ModelingSystemOSiL() override;
 
-    // Adds modeling system specific settings
-    static void augmentSettings(SettingsPtr settings);
-
     // Get specific settings from modeling system
     void updateSettings(SettingsPtr settings) override;
 

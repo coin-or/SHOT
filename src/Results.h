@@ -47,6 +47,8 @@ public:
     double getCurrentDualBound();
     double getGlobalDualBound();
     void setDualBound(double value, bool forceGlobal = false);
+    /// Forget the current dual bound, and optionally the global one, when their validity is lost
+    void resetDualBounds(bool resetGlobal);
 
     // For minimization problems, the lower bound is the dual while the upper bound is the primal objective value
     // for maximization problems, the lower bound is the primal while the upper bound is the dual objective value
@@ -89,6 +91,14 @@ public:
 
     bool solutionIsGlobal = true;
 
+    // Whether a relaxation of the problem, e.g. the convex bounding problem, has been infeasible, which proves that the
+    // problem is infeasible also when the dual problem is no longer a relaxation
+    bool isInfeasibilityProven = false;
+
+    // Whether a primal bound has passed a dual bound that is regarded as global by more than the objective gap
+    // tolerances, which means that the dual bound was not valid
+    bool hasPrimalBoundPassedGlobalDualBound = false;
+
     std::string getResultsOSrL();
     std::string getResultsTrace();
     std::string getResultsSol();
@@ -102,6 +112,8 @@ public:
     int getAuxiliaryVariableCounter(E_AuxiliaryVariableType type);
 
 private:
+    void notifyBoundsUpdated(double previousPrimalBound, double previousDualBound, double previousGlobalDualBound);
+
     EnvironmentPtr env;
 };
 

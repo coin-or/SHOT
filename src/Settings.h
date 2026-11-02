@@ -11,7 +11,9 @@
 #pragma once
 
 #include <memory>
+#include <set>
 #include <string>
+#include <variant>
 #include <vector>
 
 #include <map>
@@ -110,6 +112,17 @@ private:
 
     using TupleStringPairInt = std::tuple<std::string, std::string, int>;
     std::map<TupleStringPairInt, std::string> enumDescriptions;
+
+    struct ConditionalValue
+    {
+        std::set<E_SettingCondition> conditions;
+        std::variant<int, double, bool> value;
+    };
+
+    // The conditional values of each setting, ordered by the number of conditions
+    std::map<PairString, std::vector<ConditionalValue>> conditionalValues;
+
+    std::string getConditionalValuesMarkup(const PairString& key);
 
 public:
     bool settingsInitialized = false;
@@ -221,6 +234,16 @@ public:
         VectorString enumDesc, int startValue = 0, bool isPrivate = false);
 
     void createSetting(std::string settingName, bool value, std::string description, bool isPrivate = false);
+
+    // Adds another default value of a setting, used if all the conditions hold, see applyConditionalValues. It does not
+    // change the value of the setting.
+    template <typename T>
+    void addConditionalValue(std::string settingName, std::set<E_SettingCondition> conditions, T value);
+
+    // Sets the conditional values whose conditions all hold, of the settings inside or outside the group prefix, e.g.,
+    // "Model.Reformulation". If several values of a setting apply, the one with the most conditions is used.
+    void applyConditionalValues(const std::set<E_SettingCondition>& activeConditions, E_SettingPriority priority,
+        const std::string& prefix, bool insidePrefix);
 
     void createSettingGroup(std::string mainLevel, std::string subLevel, std::string header, std::string description)
     {

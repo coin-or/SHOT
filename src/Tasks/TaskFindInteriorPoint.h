@@ -37,6 +37,9 @@ private:
     // A usable interior point found by moving from a candidate toward the center of the variable box
     std::shared_ptr<InteriorPoint> retreatToUsableInteriorPoint(const VectorDouble& candidatePoint);
 
+    // Applies callbacks on every normal search path, then records and submits the final points
+    void finalizeInteriorPoints();
+
     // Calls the InteriorPointSearch callbacks with the current interior points; returns the points they replace them
     // with, or nullopt if they keep them
     std::optional<std::vector<VectorDouble>> invokeInteriorPointCallbacks();

@@ -31,7 +31,7 @@ struct HighsMipData
     HighsTerminationHelper* terminationHandler = nullptr;
 };
 
-class MIPSolverHighs : public IMIPSolver, MIPSolverBase
+class MIPSolverHighs : public IMIPSolver, public MIPSolverBase
 {
 public:
     MIPSolverHighs(EnvironmentPtr envPtr);
@@ -94,11 +94,6 @@ public:
 
     double getConstraintUpperBound(int constraintIndex) override;
     bool setConstraintUpperBound(int constraintIndex, double upperBound) override;
-
-    bool createInteriorHyperplane(HyperplanePtr hyperplane) override
-    {
-        return (MIPSolverBase::createInteriorHyperplane(hyperplane));
-    }
 
     std::optional<std::pair<std::map<int, double>, double>> createHyperplaneTerms(HyperplanePtr hyperplane) override
     {
@@ -181,6 +176,8 @@ public:
 
     std::string getSolverVersion() override;
 
+    int getNumberOfThreads() override;
+
     // Objective value, solution point has, solution point
     std::vector<SolutionPoint> currentSolutions;
 
@@ -193,6 +190,7 @@ private:
     Highs highsInstance;
     HighsStatus highsReturnStatus;
     HighsMipData highsCallbackData;
+    bool mipIpmSolverWarningShown = false;
 
     // Solves the problem, after making sure that the scheduler of HiGHS has the number of threads of this solver
     HighsStatus runSolver();

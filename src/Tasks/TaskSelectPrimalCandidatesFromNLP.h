@@ -46,32 +46,32 @@ public:
 private:
     bool isFinalPolish;
 
+    // Makes the calls of the fixed-integer NLP strategy more frequent after a successful NLP solve and less frequent
+    // otherwise, within 0.1 and 10 times Primal.FixedInteger.Frequency.Iteration and .Time
+    void updateFrequencies(bool isSuccessful);
+
     virtual bool solveFixedNLP();
 
     // Whether the objective function and the nonlinear constraints have finite values in the point
     bool hasFiniteFunctionValues(const VectorDouble& point);
 
     void createInfeasibilityCut(const VectorDouble point);
+
+    // Adds hyperplanes in a feasible solution of the fixed-integer NLP problem for the convex nonlinear constraints
+    // of the reformulated problem that are active in it, ranked by how much they cut away of the dual solution the
+    // integer assignment comes from
+    void createSupportingHyperplanes(
+        const VectorDouble& point, const VectorDouble& dualSolution, double dualObjectiveValue);
     void createIntegerCut(VectorDouble point);
 
     std::shared_ptr<INLPSolver> NLPSolver;
 
     VectorInteger discreteVariableIndexes;
     std::vector<VectorDouble> testedPoints;
-    VectorDouble fixPoint;
-
-    double originalNLPTime;
-    double originalNLPIter;
-
-    VectorDouble originalLBs;
-    VectorDouble originalUBs;
 
     VectorString variableNames;
 
     std::shared_ptr<TaskBase> taskSelectHPPts;
-
-    int originalIterFrequency;
-    double originalTimeFrequency;
 
     ProblemPtr sourceProblem;
     bool sourceIsReformulatedProblem = false;

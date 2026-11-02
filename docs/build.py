@@ -83,8 +83,11 @@ def main():
         settings = SHOTpy.Solver().getSettingsAsMarkup()
         settings = re.sub(r'^(#+) ', r'\1# ', settings, flags=re.MULTILINE)
         (source / 'reference/settings.md').write_text(
-            '# Solver settings\n\nGenerated from the SHOTpy build used for this documentation. '
-            'Backend availability and defaults can depend on build configuration.\n' + settings)
+            '# Solver settings\n\nAll settings of SHOT, including those of the MIP and NLP solvers and of GAMS. '
+            'These only have an effect if SHOT is built with them, as noted in the descriptions; a build without '
+            'them warns when they are changed. Some settings have another default for nonconvex problems, applied '
+            'unless `Strategy.UseRecommendedSettings` is false, and the default MIP solver depends on the build.\n'
+            + settings)
         doxy = work / 'Doxyfile'
         headers = ['Solver.h', 'Settings.h', 'Results.h', 'Callback.h', 'Enums.h', 'Structs.h']
         doxy.write_text('\n'.join([

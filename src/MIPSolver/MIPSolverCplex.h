@@ -109,11 +109,6 @@ public:
     virtual bool createHyperplane(
         HyperplanePtr hyperplane, std::function<IloConstraint(IloRange)> addConstraintFunction);
 
-    bool createInteriorHyperplane(HyperplanePtr hyperplane) override
-    {
-        return (MIPSolverBase::createInteriorHyperplane(hyperplane));
-    }
-
     std::optional<std::pair<std::map<int, double>, double>> createHyperplaneTerms(HyperplanePtr hyperplane) override
     {
         return (MIPSolverBase::createHyperplaneTerms(hyperplane));
@@ -194,6 +189,8 @@ public:
 
     std::string getSolverVersion() override;
 
+    int getNumberOfThreads() override;
+
     IloModel cplexModel;
     IloCplex cplexInstance;
 
@@ -211,6 +208,11 @@ protected:
     IloExpr constrExpression;
 
     bool objectiveFunctionReplacedWithZero = false;
+
+    // Extracts the model again after it has been updated, keeping the MIP starts that the extraction removes
+    void extractModel();
+
+    void deleteMIPStartsWithName(const char* name);
 
     // CPLEX can only tell whether a problem is infeasible or unbounded if presolve reductions are not used, so such a
     // problem is solved again without them

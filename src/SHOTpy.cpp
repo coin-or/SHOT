@@ -1024,6 +1024,11 @@ PYBIND11_MODULE(SHOTpy, m)
 
     // ===== NLP Solver Availability =====
     // These constants indicate which NLP solvers are available in this build
+#ifdef HAS_CONOPT
+    m.attr("HAS_CONOPT") = true;
+#else
+    m.attr("HAS_CONOPT") = false;
+#endif
 #ifdef HAS_IPOPT
     m.attr("HAS_IPOPT") = true;
 #else
@@ -1110,6 +1115,7 @@ PYBIND11_MODULE(SHOTpy, m)
 
     // NLP solver selection
     nlpSolverEnum.value("Ipopt", ES_PrimalNLPSolver::Ipopt)
+        .value("Conopt", ES_PrimalNLPSolver::Conopt)
         .value("GAMS", ES_PrimalNLPSolver::GAMS)
         .value("SHOT", ES_PrimalNLPSolver::SHOT)
         .value("Uno", ES_PrimalNLPSolver::Uno)
@@ -3205,6 +3211,7 @@ PYBIND11_MODULE(SHOTpy, m)
         .value("NewPrimalSolution", E_CallbackLocation::NewPrimalSolution)
         .value("TerminationCheck", E_CallbackLocation::TerminationCheck)
         .value("HyperplaneSelection", E_CallbackLocation::HyperplaneSelection)
+        .value("BoundsUpdated", E_CallbackLocation::BoundsUpdated)
         .def(
             "__or__", [](E_CallbackLocation first, E_CallbackLocation second)
             { return (static_cast<std::uint64_t>(first) | static_cast<std::uint64_t>(second)); }, py::is_operator())
@@ -3234,12 +3241,12 @@ PYBIND11_MODULE(SHOTpy, m)
         .value("LPRelaxedSolutionPoint", E_HyperplaneSource::LPRelaxedSolutionPoint)
         .value("LPFixedIntegers", E_HyperplaneSource::LPFixedIntegers)
         .value("PrimalSolutionSearch", E_HyperplaneSource::PrimalSolutionSearch)
-        .value("PrimalSolutionSearchInteriorObjective", E_HyperplaneSource::PrimalSolutionSearchInteriorObjective)
         .value("InteriorPointSearch", E_HyperplaneSource::InteriorPointSearch)
         .value("MIPCallbackRelaxed", E_HyperplaneSource::MIPCallbackRelaxed)
         .value("ObjectiveRootsearch", E_HyperplaneSource::ObjectiveRootsearch)
         .value("ObjectiveCuttingPlane", E_HyperplaneSource::ObjectiveCuttingPlane)
-        .value("External", E_HyperplaneSource::External);
+        .value("External", E_HyperplaneSource::External)
+        .value("FixedIntegerNLPSolution", E_HyperplaneSource::FixedIntegerNLPSolution);
 
     py::enum_<E_PrimalSolutionSource>(m, "PrimalSolutionSource", py::arithmetic())
         .value("Rootsearch", E_PrimalSolutionSource::Rootsearch)
@@ -3547,6 +3554,18 @@ PYBIND11_MODULE(SHOTpy, m)
             "Where the solution comes from, e.g., PrimalSolutionSource.NLPFixedIntegers")
         .def_property_readonly("isIncumbent", &NewPrimalSolutionContext::isIncumbent,
             "Whether the solution is better than the best one SHOT had before it");
+
+    py::class_<BoundsUpdatedContext, CallbackContext, std::shared_ptr<BoundsUpdatedContext>>(
+        m, "BoundsUpdatedContext")
+        .def_property_readonly("previousPrimalBound", &BoundsUpdatedContext::getPreviousPrimalBound,
+            "The primal bound before this update")
+        .def_property_readonly("previousDualBound", &BoundsUpdatedContext::getPreviousDualBound,
+            "The current dual bound before this update")
+        .def_property_readonly("previousGlobalDualBound", &BoundsUpdatedContext::getPreviousGlobalDualBound,
+            "The global dual bound before this update")
+        .def_property_readonly("primalBoundChanged", &BoundsUpdatedContext::isPrimalBoundChanged)
+        .def_property_readonly("dualBoundChanged", &BoundsUpdatedContext::isDualBoundChanged)
+        .def_property_readonly("globalDualBoundChanged", &BoundsUpdatedContext::isGlobalDualBoundChanged);
 
     py::class_<DualBoundUpdateContext, CallbackContext, std::shared_ptr<DualBoundUpdateContext>>(
         m, "DualBoundUpdateContext")

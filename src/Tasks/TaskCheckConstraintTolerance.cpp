@@ -40,6 +40,7 @@ void TaskCheckConstraintTolerance::run()
         return;
 
     auto constraintTolerance = env->settings->getSetting<double>("Termination.ConstraintTolerance") + 1e-10;
+    auto objectiveTolerance = env->settings->getSetting<double>("Termination.ObjectiveConstraintTolerance") + 1e-10;
 
     auto objectiveValueDifference
         = std::abs(env->problem->objectiveFunction->calculateValue(currIter->solutionPoints.at(0).point)
@@ -47,18 +48,18 @@ void TaskCheckConstraintTolerance::run()
 
     // Checks it the nonlinear objective is fulfilled
     if(env->problem->objectiveFunction->properties.classification >= E_ObjectiveFunctionClassification::Quadratic
-        && objectiveValueDifference > constraintTolerance)
+        && objectiveValueDifference > objectiveTolerance)
     {
         env->output->outputDebug(
             fmt::format("        Nonlinear objective termination tolerance not fulfilled. Deviation {} > {}.",
-                objectiveValueDifference, constraintTolerance));
+                objectiveValueDifference, objectiveTolerance));
         return;
     }
     else
     {
         env->output->outputDebug(
             fmt::format("        Nonlinear objective termination tolerance fulfilled. Deviation {} <= {}.",
-                objectiveValueDifference, constraintTolerance));
+                objectiveValueDifference, objectiveTolerance));
     }
 
     // Checks if the quadratic constraints are fulfilled to tolerance

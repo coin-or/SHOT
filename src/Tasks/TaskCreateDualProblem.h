@@ -26,5 +26,8 @@ public:
 
 private:
     std::shared_ptr<TaskCreateMIPProblem> taskCreateMIPProblem;
+
+    // Whether the time limit had been reached before the dual problem was created, so that it was not created
+    bool isTimeLimitReachedBeforeCreation = false;
 };
 } // namespace SHOT

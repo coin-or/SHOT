@@ -20,6 +20,8 @@
 #include "../Settings.h"
 #include "../Timing.h"
 
+#include <algorithm>
+
 namespace SHOT
 {
 
@@ -37,7 +39,7 @@ void TaskAddHyperplanes::run()
 {
     env->timing->startTimer("DualStrategy");
 
-    auto currIter = env->results->getCurrentIteration(); // The unsolved new iteration
+    auto currIter = env->results->getCurrentIteration();
 
     if(!currIter->isMIP() || !env->settings->getSetting<bool>("Dual.HyperplaneCuts.Delay")
         || !currIter->MIPSolutionLimitUpdated || itersWithoutAddedHPs > 5)
@@ -48,34 +50,35 @@ void TaskAddHyperplanes::run()
         // generated already
         bool isReinitialized = env->settings->getSetting<bool>("Dual.TreeStrategy.Multi.Reinitialize");
 
-        for(auto k = env->dualSolver->hyperplaneWaitingList.size(); k > 0; k--)
-        {
-            if(addedHyperplanes >= env->settings->getSetting<int>("Dual.HyperplaneCuts.MaxPerIteration"))
-                break;
+        int maxHyperplanesPerIter = env->settings->getSetting<int>("Dual.HyperplaneCuts.MaxPerIteration");
 
-            auto HP = env->dualSolver->hyperplaneWaitingList.at(k - 1);
+        // Only the first Dual.HyperplaneCuts.MaxPerIteration hyperplanes are added, and the rest are discarded. The
+        // objective and external hyperplanes go first, and the constraint hyperplanes keep the order they were
+        // selected in, i.e., those for the best solution points and the most deviating constraints come first. The
+        // supporting hyperplanes in feasible solutions of the fixed-integer NLP problem go last, since most of them do
+        // not cut away the dual solution, and with many active constraints they would otherwise replace those that do.
+        auto& waitingList = env->dualSolver->hyperplaneWaitingList;
+        std::stable_partition(waitingList.begin(), waitingList.end(),
+            [](const HyperplanePtr& HP) { return (!std::dynamic_pointer_cast<ConstraintHyperplane>(HP)); });
+        std::stable_partition(waitingList.begin(), waitingList.end(),
+            [](const HyperplanePtr& HP) { return (HP->source != E_HyperplaneSource::FixedIntegerNLPSolution); });
+
+        for(auto& HP : waitingList)
+        {
+            if(addedHyperplanes >= maxHyperplanesPerIter)
+                break;
 
             // While the hyperplanes are delayed the dual problem is not changed, so it returns the same solution
             // points, and the same hyperplanes are put on the waiting list once per delayed iteration. Only the
             // first one is added, since the others are identical, and adding them would count them as hyperplanes
             // repeated because the dual problem is not making progress.
-            if(!isReinitialized && HP->source != E_HyperplaneSource::PrimalSolutionSearchInteriorObjective
-                && env->dualSolver->hasHyperplaneBeenAdded(HP))
+            if(!isReinitialized && env->dualSolver->hasHyperplaneBeenAdded(HP))
             {
                 env->output->outputTrace("        Hyperplane on the waiting list has been added already.");
                 continue;
             }
 
-            bool cutAddedSuccessfully = false;
-
-            if(HP->source == E_HyperplaneSource::PrimalSolutionSearchInteriorObjective)
-            {
-                cutAddedSuccessfully = env->dualSolver->MIPSolver->createInteriorHyperplane(HP);
-            }
-            else
-            {
-                cutAddedSuccessfully = env->dualSolver->MIPSolver->createHyperplane(HP);
-            }
+            bool cutAddedSuccessfully = env->dualSolver->MIPSolver->createHyperplane(HP);
 
             if(cutAddedSuccessfully)
             {

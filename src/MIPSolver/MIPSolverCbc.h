@@ -46,7 +46,7 @@ public:
     virtual int print();
 };
 
-class MIPSolverCbc : public IMIPSolver, MIPSolverBase
+class MIPSolverCbc : public IMIPSolver, public MIPSolverBase
 {
 public:
     MIPSolverCbc(EnvironmentPtr envPtr);
@@ -112,11 +112,6 @@ public:
 
     double getConstraintUpperBound(int constraintIndex) override;
     bool setConstraintUpperBound(int constraintIndex, double upperBound) override;
-
-    bool createInteriorHyperplane(HyperplanePtr hyperplane) override
-    {
-        return (MIPSolverBase::createInteriorHyperplane(hyperplane));
-    }
 
     std::optional<std::pair<std::map<int, double>, double>> createHyperplaneTerms(HyperplanePtr hyperplane) override
     {
@@ -197,6 +192,8 @@ public:
 
     std::string getSolverVersion() override;
 
+    int getNumberOfThreads() override;
+
 private:
     std::unique_ptr<OsiClpSolverInterface> osiInterface;
     std::unique_ptr<CbcModel> cbcModel;
@@ -219,6 +216,7 @@ private:
     double timeLimit = 1e100;
     double cutOff;
     int numberOfThreads = 1;
+    bool threadSupportWarningShown = false;
     double objectiveConstant = 0.0;
 
     std::vector<std::pair<std::string, double>> MIPStart;

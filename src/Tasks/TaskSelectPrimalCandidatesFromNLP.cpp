@@ -27,6 +27,10 @@
 #include "../Tasks/TaskSelectHyperplanesESH.h"
 #include "../Tasks/TaskSelectHyperplanesECP.h"
 
+#ifdef HAS_CONOPT
+#include "../NLPSolver/NLPSolverConopt.h"
+#endif
+
 #ifdef HAS_IPOPT
 #include "../NLPSolver/NLPSolverIpoptRelaxed.h"
 #endif
@@ -51,9 +55,6 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(
 {
     env->timing->startTimer("PrimalStrategy");
     env->timing->startTimer("PrimalBoundStrategyNLP");
-
-    originalNLPTime = env->settings->getSetting<double>("Primal.FixedInteger.Frequency.Time");
-    originalNLPIter = env->settings->getSetting<int>("Primal.FixedInteger.Frequency.Iteration");
 
     if(useReformulatedProblem)
     {
@@ -105,6 +106,24 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(
     }
 #endif
 
+#ifdef HAS_CONOPT
+    case ES_PrimalNLPSolver::Conopt:
+        env->results->usedPrimalNLPSolver = ES_PrimalNLPSolver::Conopt;
+
+        try
+        {
+            NLPSolver = std::make_shared<NLPSolverConopt>(env, sourceProblem);
+        }
+        catch(const std::exception& e)
+        {
+            env->output->outputWarning(fmt::format(
+                " Could not initialize CONOPT as the fixed-integer NLP solver, disabling this primal heuristic: {}",
+                e.what()));
+            NLPSolver = nullptr;
+        }
+
+        break;
+#endif
 #ifdef HAS_UNO
     case(ES_PrimalNLPSolver::Uno):
     {
@@ -173,9 +192,6 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(
     }
 
     env->results->usedPrimalNLPSolverDescription = NLPSolver->getSolverDescription();
-
-    this->originalIterFrequency = env->settings->getSetting<int>("Primal.FixedInteger.Frequency.Iteration");
-    this->originalTimeFrequency = env->settings->getSetting<double>("Primal.FixedInteger.Frequency.Time");
 
     for(auto& V : sourceProblem->binaryVariables)
     {
@@ -275,6 +291,33 @@ bool TaskSelectPrimalCandidatesFromNLP::hasFiniteFunctionValues(const VectorDoub
     }
 
     return (true);
+}
+
+void TaskSelectPrimalCandidatesFromNLP::updateFrequencies(bool isSuccessful)
+{
+    int iterationSetting = env->settings->getSetting<int>("Primal.FixedInteger.Frequency.Iteration");
+    double timeSetting = env->settings->getSetting<double>("Primal.FixedInteger.Frequency.Time");
+
+    int iterations = env->solutionStatistics.fixedNLPIterationFrequency.value_or(iterationSetting);
+    double time = env->solutionStatistics.fixedNLPTimeFrequency.value_or(timeSetting);
+
+    if(isSuccessful)
+    {
+        // Rounded down, since the number of iterations would otherwise not decrease below 50
+        iterations = std::max((int)std::floor(0.98 * iterations), std::max(1, (int)std::ceil(0.1 * iterationSetting)));
+        time = std::max(0.9 * time, 0.1 * timeSetting);
+    }
+    else
+    {
+        iterations = std::min((int)std::ceil(1.02 * iterations), 10 * iterationSetting);
+        time = std::min(1.1 * time, 10 * timeSetting);
+    }
+
+    env->solutionStatistics.fixedNLPIterationFrequency = iterations;
+    env->solutionStatistics.fixedNLPTimeFrequency = time;
+
+    env->output->outputDebug(
+        fmt::format("         Iteration frequency updated to {} and time frequency updated to {}", iterations, time));
 }
 
 std::string TaskSelectPrimalCandidatesFromNLP::getType()
@@ -550,6 +593,9 @@ E_NLPSolutionStatus TaskSelectPrimalCandidatesFromNLP::solveFixedNLPCandidates(
 
             if(!isEnumeration && env->settings->getSetting<bool>("Primal.FixedInteger.CreateInfeasibilityCut"))
                 createInfeasibilityCut(variableSolution);
+
+            if(!isEnumeration && env->settings->getSetting<bool>("Primal.FixedInteger.CreateSupportingHyperplanes"))
+                createSupportingHyperplanes(variableSolution, CAND.point, CAND.objValue);
         }
         else if(solvestatus == E_NLPSolutionStatus::Error || solvestatus == E_NLPSolutionStatus::Unbounded
             || solvestatus == E_NLPSolutionStatus::Infeasible)
@@ -614,41 +660,8 @@ E_NLPSolutionStatus TaskSelectPrimalCandidatesFromNLP::solveFixedNLPCandidates(
         }
 
         if(env->settings->getSetting<bool>("Primal.FixedInteger.Frequency.Dynamic"))
-        {
-            if(solvestatus == E_NLPSolutionStatus::Optimal || solvestatus == E_NLPSolutionStatus::Feasible)
-            {
-                int iters = std::max(
-                    std::ceil(env->settings->getSetting<int>("Primal.FixedInteger.Frequency.Iteration") * 0.98),
-                    originalNLPIter);
-
-                if(iters > std::max(0.1 * this->originalIterFrequency, 1.0))
-                    env->settings->updateSetting("Primal.FixedInteger.Frequency.Iteration", iters);
-
-                double interval = std::max(
-                    0.9 * env->settings->getSetting<double>("Primal.FixedInteger.Frequency.Time"), originalNLPTime);
-
-                if(interval > 0.1 * this->originalTimeFrequency)
-                    env->settings->updateSetting("Primal.FixedInteger.Frequency.Time", interval);
-
-                env->output->outputDebug(fmt::format(
-                    "         Iteration frequency updated to {} and time frequency updated to {} ", iters, interval));
-            }
-            else
-            {
-                int iters = std::ceil(env->settings->getSetting<int>("Primal.FixedInteger.Frequency.Iteration") * 1.02);
-
-                if(iters < 10 * this->originalIterFrequency)
-                    env->settings->updateSetting("Primal.FixedInteger.Frequency.Iteration", iters);
-
-                double interval = 1.1 * env->settings->getSetting<double>("Primal.FixedInteger.Frequency.Time");
-
-                if(interval < 10 * this->originalTimeFrequency)
-                    env->settings->updateSetting("Primal.FixedInteger.Frequency.Time", interval);
-
-                env->output->outputDebug(fmt::format(
-                    "         Iteration frequency updated to {} and time frequency updated to {} ", iters, interval));
-            }
-        }
+            updateFrequencies(
+                solvestatus == E_NLPSolutionStatus::Optimal || solvestatus == E_NLPSolutionStatus::Feasible);
 
         env->solutionStatistics.numberOfIterationsWithoutNLPCallMIP = 0;
         env->solutionStatistics.timeLastFixedNLPCall = env->timing->getElapsedTime("Total");
@@ -705,6 +718,158 @@ void TaskSelectPrimalCandidatesFromNLP::createInfeasibilityCut(const VectorDoubl
     {
         std::dynamic_pointer_cast<TaskSelectHyperplanesECP>(taskSelectHPPts)->run(solutionPoints);
     }
+}
+
+void TaskSelectPrimalCandidatesFromNLP::createSupportingHyperplanes(
+    const VectorDouble& variableSolution, const VectorDouble& dualSolution, double dualObjectiveValue)
+{
+    auto objective = env->reformulatedProblem->objectiveFunction;
+
+    // As in the dual strategy, only an objective function that is not quadratic is linearized
+    bool isObjectiveNonlinear = objective->properties.classification > E_ObjectiveFunctionClassification::Quadratic;
+
+    if((env->reformulatedProblem->properties.numberOfNonlinearConstraints == 0 && !isObjectiveNonlinear)
+        || variableSolution.empty())
+        return;
+
+    VectorDouble point = variableSolution;
+
+    // The auxiliary variables get the values of the terms they replace, so that the constraints defining them, e.g.,
+    // the epigraph constraint of a nonlinear objective, are active in the point
+    if(!sourceIsReformulatedProblem)
+    {
+        if((int)point.size() < env->reformulatedProblem->properties.numberOfVariables)
+            env->reformulatedProblem->augmentAuxiliaryVariableValues(point);
+
+        assert(point.size() == static_cast<size_t>(env->reformulatedProblem->properties.numberOfVariables));
+    }
+
+    // The root search in ESH and the cutting planes in ECP only use the constraints violated in the point. In a
+    // solution of the fixed-integer NLP problem, the constraints that limit it are instead active, and since a
+    // convex constraint is linearized in a point on its boundary, the hyperplane supports its feasible set there.
+    auto activeTolerance
+        = env->settings->getSetting<double>("Primal.FixedInteger.SupportingHyperplanes.ActiveTolerance");
+    bool onlyViolated = env->settings->getSetting<bool>("Primal.FixedInteger.SupportingHyperplanes.OnlyViolated");
+    bool useNonconvex = env->settings->getSetting<bool>("Primal.FixedInteger.SupportingHyperplanes.Nonconvex");
+    int maxHyperplanes
+        = std::min(env->settings->getSetting<int>("Primal.FixedInteger.SupportingHyperplanes.MaxPerSolution"),
+            env->settings->getSetting<int>("Dual.HyperplaneCuts.MaxPerIteration"));
+
+    auto constraintValues = env->reformulatedProblem->getAllDeviatingNonlinearConstraints(point, -activeTolerance);
+    std::sort(constraintValues.begin(), constraintValues.end(), std::greater<NumericConstraintValue>());
+
+    auto pointHashes = env->dualSolver->calculateHashes(point);
+
+    // The dual solution the integer assignment comes from is not available for all candidates, e.g., a given
+    // starting point, and the hyperplanes are then kept in the order of the constraint values
+    bool hasDualSolution = dualSolution.size() >= point.size();
+
+    // How much a hyperplane cuts away of the dual solution; the dual solution does not contain the auxiliary
+    // objective variable of the dual problem, whose value is the objective value of the dual solution
+    auto calculateViolation = [&](const HyperplanePtr& hyperplane) -> std::optional<double>
+    {
+        auto terms = env->dualSolver->MIPSolver->createHyperplaneTerms(hyperplane);
+
+        if(!terms)
+            return (std::nullopt);
+
+        double violation = terms->second;
+
+        for(auto& T : terms->first)
+            violation
+                += T.second * ((size_t)T.first < dualSolution.size() ? dualSolution[T.first] : dualObjectiveValue);
+
+        if(!std::isfinite(violation))
+            return (std::nullopt);
+
+        return (violation);
+    };
+
+    // The hyperplanes are ranked by how much they cut away of the dual solution, since those that do not cut it away
+    // do not change the next dual problem there, and with many active constraints they make it larger
+    std::vector<std::pair<double, HyperplanePtr>> hyperplanes;
+
+    for(auto& NCV : constraintValues)
+    {
+        // A linearization of a nonconvex constraint can cut away feasible solutions, so it is only used when
+        // requested, and as the hyperplanes of the dual strategy, it is then not global and can be relaxed later
+        bool isConvex = NCV.constraint->properties.convexity <= E_Convexity::Convex;
+
+        if(!isConvex && !useNonconvex)
+            continue;
+
+        if(std::isnan(NCV.error) || std::isnan(NCV.normalizedValue))
+            continue;
+
+        if(env->dualSolver->hasHyperplaneBeenAdded(pointHashes, NCV.constraint->getIndex()))
+            continue;
+
+        auto generationPoint = env->dualSolver->getHyperplaneGenerationPoint(point, NCV.constraint);
+
+        if(!generationPoint)
+            continue;
+
+        auto hyperplane = std::make_shared<ConstraintHyperplane>();
+        hyperplane->sourceConstraint = NCV.constraint;
+        hyperplane->generatedPoint = *generationPoint;
+        hyperplane->isGlobal = isConvex;
+        hyperplane->source = E_HyperplaneSource::FixedIntegerNLPSolution;
+
+        double violation = 0.0;
+
+        if(hasDualSolution)
+        {
+            auto hyperplaneViolation = calculateViolation(hyperplane);
+
+            if(!hyperplaneViolation || (onlyViolated && *hyperplaneViolation <= 0.0))
+                continue;
+
+            violation = *hyperplaneViolation;
+        }
+
+        hyperplanes.emplace_back(violation, hyperplane);
+    }
+
+    if(hasDualSolution)
+        std::stable_sort(hyperplanes.begin(), hyperplanes.end(),
+            [](const auto& first, const auto& second) { return (first.first > second.first); });
+
+    // The objective function is always active in the solution, so its hyperplane goes first
+    bool isObjectiveConvex = objective->properties.convexity == E_Convexity::Linear
+        || (objective->properties.isMinimize && objective->properties.convexity == E_Convexity::Convex)
+        || (objective->properties.isMaximize && objective->properties.convexity == E_Convexity::Concave);
+
+    if(isObjectiveNonlinear && (isObjectiveConvex || useNonconvex))
+    {
+        if(auto generationPoint = env->dualSolver->getObjectiveHyperplaneGenerationPoint(point))
+        {
+            auto hyperplane = std::make_shared<ObjectiveHyperplane>();
+            hyperplane->generatedPoint = *generationPoint;
+            hyperplane->objectiveFunctionValue = objective->calculateValue(*generationPoint);
+            hyperplane->isGlobal = isObjectiveConvex;
+            hyperplane->source = E_HyperplaneSource::FixedIntegerNLPSolution;
+
+            auto violation = hasDualSolution ? calculateViolation(hyperplane) : std::optional<double>(0.0);
+
+            if(violation && (!onlyViolated || !hasDualSolution || *violation > 0.0))
+                hyperplanes.insert(hyperplanes.begin(), { *violation, hyperplane });
+        }
+    }
+
+    int addedHyperplanes = 0;
+
+    for(auto& HP : hyperplanes)
+    {
+        if(addedHyperplanes >= maxHyperplanes)
+            break;
+
+        env->dualSolver->addHyperplane(HP.second);
+        addedHyperplanes++;
+    }
+
+    env->output->outputDebug(fmt::format("         Added {} supporting hyperplanes in the fixed NLP solution, {} "
+                                         "constraints within the active tolerance, {} candidates.",
+        addedHyperplanes, constraintValues.size(), hyperplanes.size()));
 }
 
 void TaskSelectPrimalCandidatesFromNLP::createIntegerCut(VectorDouble variableSolution)

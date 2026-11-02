@@ -41,7 +41,6 @@
 #include "../Tasks/TaskCheckIterationLimit.h"
 #include "../Tasks/TaskCheckDualStagnation.h"
 #include "../Tasks/TaskCheckPrimalStagnation.h"
-#include "../Tasks/TaskCheckConstraintTolerance.h"
 #include "../Tasks/TaskCheckRelativeGap.h"
 #include "../Tasks/TaskCheckTimeLimit.h"
 #include "../Tasks/TaskCheckUserTermination.h"
@@ -52,6 +51,7 @@
 #include "../Tasks/TaskSelectHyperplanesObjectiveFunction.h"
 #include "../Tasks/TaskSelectHyperplanesExternal.h"
 #include "../Tasks/TaskAddHyperplanes.h"
+#include "../Tasks/TaskCalculateSolutionChangeNorm.h"
 
 #include "../Tasks/TaskAddIntegerCuts.h"
 
@@ -146,13 +146,41 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
     if(env->settings->getSetting<bool>("Primal.FixedInteger.Use")
         && env->settings->getSetting<bool>("Primal.FixedInteger.UseStartingPoint"))
     {
-        auto tSolveStartingPointNLP = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env,
-            static_cast<ES_PrimalNLPProblemSource>(env->settings->getSetting<int>("Primal.FixedInteger.SourceProblem"))
-                == ES_PrimalNLPProblemSource::ReformulatedProblem);
-        env->tasks->addTask(tSolveStartingPointNLP, "SolveStartingPointNLP");
+        auto NLPProblemSource = static_cast<ES_PrimalNLPProblemSource>(
+            env->settings->getSetting<int>("Primal.FixedInteger.SourceProblem"));
+
+        // With both problems, the points are solved on each, since they are only cleared after the last task
+        if(NLPProblemSource == ES_PrimalNLPProblemSource::Both
+            || NLPProblemSource == ES_PrimalNLPProblemSource::OriginalProblem)
+        {
+            auto tSolveStartingPointNLP = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env, false);
+            env->tasks->addTask(tSolveStartingPointNLP, "SolveStartingPointNLPOriginal");
+        }
+
+        if(NLPProblemSource == ES_PrimalNLPProblemSource::Both
+            || NLPProblemSource == ES_PrimalNLPProblemSource::ReformulatedProblem)
+        {
+            auto tSolveStartingPointNLP = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env, true);
+            env->tasks->addTask(tSolveStartingPointNLP, "SolveStartingPointNLPReformulated");
+        }
 
         auto tClearStartingPointNLP = std::make_shared<TaskClearFixedPrimalCandidates>(env);
         env->tasks->addTask(tClearStartingPointNLP, "ClearStartingPointNLP");
+    }
+
+    // Review externally supplied primal candidates before solving the first dual problem, so approved points
+    // can be used as MIP starts and a callback can stop after a solution has been stored.
+    auto tSelectPrimExternalInitial = std::make_shared<TaskSelectPrimalCandidatesFromExternalSource>(env);
+    env->tasks->addTask(tSelectPrimExternalInitial, "SelectPrimExternalInitial");
+
+    // An exact MILP needs no outer approximation. Let user cuts queued by seed review reach the model before
+    // solving, and process cuts queued by later primal reviews before a gap check can finalize the solution.
+    bool externalCutsBeforeTermination = env->reformulatedProblem->properties.isMILPProblem;
+    auto tSelectExternalHPs = std::make_shared<TaskSelectHyperplanesExternal>(env, externalCutsBeforeTermination);
+    if(externalCutsBeforeTermination)
+    {
+        env->tasks->addTask(tSelectExternalHPs, "SelectExternalHPsInitial");
+        env->tasks->addTask(tAddHPs, "AddExternalHPsInitial");
     }
 
     // A termination requested by a callback before the first dual problem is solved, e.g., at the interior point
@@ -194,6 +222,12 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
     env->tasks->addTask(tSelectPrimExternal, "SelectPrimExternal");
     std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tSelectPrimExternal);
 
+    if(externalCutsBeforeTermination)
+    {
+        env->tasks->addTask(tSelectExternalHPs, "SelectExternalHPs");
+        env->tasks->addTask(tAddHPs, "AddExternalHPs");
+    }
+
     auto tPrintIterReport = std::make_shared<TaskPrintIterationReport>(env);
     env->tasks->addTask(tPrintIterReport, "PrintIterReport");
 
@@ -227,10 +261,6 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
     auto tCheckUserTerm = std::make_shared<TaskCheckUserTermination>(env, "FinalizeSolution");
     env->tasks->addTask(tCheckUserTerm, "CheckUserTermination");
 
-    // Remove?
-    auto tCheckConstrTol = std::make_shared<TaskCheckConstraintTolerance>(env, "FinalizeSolution");
-    // env->tasks->addTask(tCheckConstrTol, "CheckConstrTol");
-
     if(useReductionCuts)
     {
         auto tCheckMaxNumberOfObjectiveCuts
@@ -251,14 +281,7 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
         = std::make_shared<TaskCheckMaxNumberOfPrimalReductionCuts>(env, "FinalizeSolution");
     env->tasks->addTask(tCheckMaxNumberOfObjectiveCuts, "CheckMaxObjectiveCuts");
 
-    // A nonconvex problem without discrete variables otherwise only gets primal solutions from the final polish, which
-    // is not reached when the time limit ends the search, so the NLP problem is also solved from its dual solutions
-    bool useFixedNLPOnContinuousProblem = !env->reformulatedProblem->properties.isDiscrete
-        && env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex
-        && env->settings->getSetting<bool>("Primal.FixedInteger.UseOnContinuousProblems");
-
-    if(env->settings->getSetting<bool>("Primal.FixedInteger.Use")
-        && (env->reformulatedProblem->properties.isDiscrete || useFixedNLPOnContinuousProblem))
+    if(env->settings->getSetting<bool>("Primal.FixedInteger.Use") && env->reformulatedProblem->properties.isDiscrete)
     {
         auto tSelectPrimFixedNLPSolPool = std::make_shared<TaskSelectPrimalFixedNLPPointsFromSolutionPool>(env);
         env->tasks->addTask(tSelectPrimFixedNLPSolPool, "SelectPrimFixedNLPSolPool");
@@ -309,16 +332,31 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
     // variables, when there are any, are fixed at the values found, so the NLP solved is the continuous problem
     // that remains. This is a separate task instance from any used during the search: it must not be paced by
     // the iteration and time heuristics that apply there.
-    if(env->settings->getSetting<int>("Primal.PolishSolution.NumberOfPoints") > 0)
+    // Not for MILP problems, where the MIP solver has already solved the LP problem that remains with the discrete
+    // variables fixed.
+    if(env->settings->getSetting<int>("Primal.PolishSolution.NumberOfPoints") > 0
+        && !env->reformulatedProblem->properties.isMILPProblem)
     {
         auto tPolishPoint = std::make_shared<TaskSelectPrimalFixedNLPPointsFromSolutionPool>(env, true);
         std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tPolishPoint);
 
-        auto tPolishNLP = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env,
-            static_cast<ES_PrimalNLPProblemSource>(env->settings->getSetting<int>("Primal.FixedInteger.SourceProblem"))
-                == ES_PrimalNLPProblemSource::ReformulatedProblem,
-            true);
-        std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tPolishNLP);
+        auto NLPProblemSource = static_cast<ES_PrimalNLPProblemSource>(
+            env->settings->getSetting<int>("Primal.FixedInteger.SourceProblem"));
+
+        // With both problems, the points are solved on each, since they are only cleared after the last task
+        if(NLPProblemSource == ES_PrimalNLPProblemSource::Both
+            || NLPProblemSource == ES_PrimalNLPProblemSource::OriginalProblem)
+        {
+            auto tPolishNLP = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env, false, true);
+            std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tPolishNLP);
+        }
+
+        if(NLPProblemSource == ES_PrimalNLPProblemSource::Both
+            || NLPProblemSource == ES_PrimalNLPProblemSource::ReformulatedProblem)
+        {
+            auto tPolishNLP = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env, true, true);
+            std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tPolishNLP);
+        }
 
         auto tPolishClear = std::make_shared<TaskClearFixedPrimalCandidates>(env);
         std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tPolishClear);
@@ -369,10 +407,18 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
         env->tasks->addTask(tSelectObjectiveHPPts, "SelectObjectiveHPPts");
     }
 
-    auto tSelectExternalHPs = std::make_shared<TaskSelectHyperplanesExternal>(env);
-    env->tasks->addTask(tSelectExternalHPs, "SelectExternalHPs");
+    if(!externalCutsBeforeTermination)
+        env->tasks->addTask(tSelectExternalHPs, "SelectExternalHPs");
 
     env->tasks->addTask(tAddHPs, "AddHPs");
+
+    // The distance between the points the hyperplanes are generated in is calculated once they have been
+    // generated, and is used by the relaxation strategy in the next iteration
+    if(env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
+    {
+        auto tCalculateSolutionChangeNorm = std::make_shared<TaskCalculateSolutionChangeNorm>(env);
+        env->tasks->addTask(tCalculateSolutionChangeNorm, "CalculateSolutionChangeNorm");
+    }
 
     if(env->settings->getSetting<bool>("Dual.HyperplaneCuts.UseIntegerCuts"))
     {

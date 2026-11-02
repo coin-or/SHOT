@@ -67,6 +67,8 @@ std::string getCallbackLocationName(E_CallbackLocation location)
         return ("TerminationCheck");
     case E_CallbackLocation::HyperplaneSelection:
         return ("HyperplaneSelection");
+    case E_CallbackLocation::BoundsUpdated:
+        return ("BoundsUpdated");
     }
 
     return ("Unknown");
@@ -359,6 +361,66 @@ bool NewPrimalSolutionContext::isIncumbent() const
 }
 
 void NewPrimalSolutionContext::releaseData() { VectorDouble().swap(point); }
+
+BoundsUpdatedContext::BoundsUpdatedContext(
+    EnvironmentPtr envPtr, double previousPrimal, double previousDual, double previousGlobalDual)
+    : CallbackContext(envPtr, Location)
+{
+    const bool isMinimization = envPtr->problem->objectiveFunction->properties.isMinimize;
+    const double infinity = std::numeric_limits<double>::infinity();
+    auto unavailable = [](double value) { return (std::isnan(value) || std::abs(value) >= SHOT_DBL_MAX); };
+
+    previousPrimalBound = unavailable(previousPrimal) ? (isMinimization ? infinity : -infinity) : previousPrimal;
+    previousDualBound = unavailable(previousDual) ? (isMinimization ? -infinity : infinity) : previousDual;
+    previousGlobalDualBound
+        = unavailable(previousGlobalDual) ? (isMinimization ? -infinity : infinity) : previousGlobalDual;
+
+    primalBoundChanged = (previousPrimalBound != getPrimalBound());
+    dualBoundChanged = (previousDualBound != getDualBound());
+    globalDualBoundChanged = (previousGlobalDualBound != getGlobalDualBound());
+}
+
+double BoundsUpdatedContext::getPreviousPrimalBound() const
+{
+    checkValid();
+    return (previousPrimalBound);
+}
+
+double BoundsUpdatedContext::getPreviousDualBound() const
+{
+    checkValid();
+    return (previousDualBound);
+}
+
+double BoundsUpdatedContext::getPreviousGlobalDualBound() const
+{
+    checkValid();
+    return (previousGlobalDualBound);
+}
+
+bool BoundsUpdatedContext::isPrimalBoundChanged() const
+{
+    checkValid();
+    return (primalBoundChanged);
+}
+
+bool BoundsUpdatedContext::isDualBoundChanged() const
+{
+    checkValid();
+    return (dualBoundChanged);
+}
+
+bool BoundsUpdatedContext::isGlobalDualBoundChanged() const
+{
+    checkValid();
+    return (globalDualBoundChanged);
+}
+
+bool BoundsUpdatedContext::hasChanged() const
+{
+    checkValid();
+    return (primalBoundChanged || dualBoundChanged || globalDualBoundChanged);
+}
 
 DualBoundUpdateContext::DualBoundUpdateContext(EnvironmentPtr envPtr) : CallbackContext(envPtr, Location) { }
 

@@ -114,6 +114,68 @@ bool CplexTest1(std::string filename, double correctObjectiveValue)
     return passed;
 }
 
+// Solves a problem in the single-tree strategy with the generic callback of Cplex, and checks that the bounds enclose
+// the optimal objective value and that the gap is closed. With several threads, a bound of one thread taken as the
+// global bound would not enclose it, and Cplex discarding the optimal solutions would leave a gap.
+bool CplexGenericCallbackTest(std::string filename, double correctObjectiveValue, int numberOfThreads,
+    int maxRelaxedLazyConstraints = 0, bool addRelaxedLazyConstraintsAsLocal = false)
+{
+    auto solver = std::make_unique<SHOT::Solver>();
+    auto env = solver->getEnvironment();
+
+    // A time limit so that a test that does not converge cannot stop the test suite
+    solver->updateSetting("Termination.TimeLimit", 60.0);
+
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cplex));
+    solver->updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::SingleTree));
+    solver->updateSetting("Dual.MIP.NumberOfThreads", numberOfThreads);
+    solver->updateSetting("Dual.Relaxation.MaxLazyConstraints", maxRelaxedLazyConstraints);
+    solver->updateSetting("Subsolver.Cplex.AddRelaxedLazyConstraintsAsLocal", addRelaxedLazyConstraintsAsLocal);
+
+    if(!solver->setProblem(filename))
+    {
+        std::cout << "Error while reading problem\n";
+        return (false);
+    }
+
+    if(!solver->solveProblem())
+    {
+        std::cout << "Error while solving problem\n";
+        return (false);
+    }
+
+    if(solver->getPrimalSolutions().empty())
+    {
+        std::cout << "No primal solution found\n";
+        return (false);
+    }
+
+    double primalBound = solver->getPrimalBound();
+    double dualBound = solver->getCurrentDualBound();
+
+    std::cout << "Dual bound: " << dualBound << ", primal bound: " << primalBound
+              << ", optimal objective value: " << correctObjectiveValue << "\n";
+
+    bool isMinimize = solver->getOriginalProblem()->objectiveFunction->properties.isMinimize;
+    double lowerBound = isMinimize ? dualBound : primalBound;
+    double upperBound = isMinimize ? primalBound : dualBound;
+
+    if(correctObjectiveValue < lowerBound - 1e-5 || correctObjectiveValue > upperBound + 1e-5)
+    {
+        std::cout << "The optimal objective value is not within the bounds\n";
+        return (false);
+    }
+
+    if(env->results->terminationReason != E_TerminationReason::AbsoluteGap
+        && env->results->terminationReason != E_TerminationReason::RelativeGap)
+    {
+        std::cout << "The solver did not terminate since the objective gap was closed\n";
+        return (false);
+    }
+
+    return (true);
+}
+
 // For nonconvex problems where finding a primal solution is not guaranteed;
 // only verifies the solver terminates without crashing.
 bool CplexTestNocrash(std::string filename)
@@ -745,6 +807,27 @@ int CplexTest(int argc, char* argv[])
     case 18:
         std::cout << "Testing Cplex LP/MIP conversion for mixed variable types.\n";
         passed = CplexRelaxationConversionTest();
+        break;
+    case 19:
+        std::cout << "Testing the generic Cplex callback on a convex MINLP problem.\n";
+        passed = CplexGenericCallbackTest("data/synthes1.osil", 6.00975891, 1);
+        break;
+    case 20:
+        // Candidates near the boundary must not be rejected with hyperplanes that only cut them off by rounding errors
+        std::cout << "Testing the generic Cplex callback on a minimization problem with a nonlinear objective.\n";
+        passed = CplexGenericCallbackTest("data/constant_synthes2_min.osil", 73.0353126, 1);
+        break;
+    case 21:
+        std::cout << "Testing the generic Cplex callback on a maximization problem with a nonlinear objective.\n";
+        passed = CplexGenericCallbackTest("data/constant_synthes2_max.osil", -73.0353126, 1);
+        break;
+    case 22:
+        std::cout << "Testing the generic Cplex callback with several threads.\n";
+        passed = CplexGenericCallbackTest("data/fo7_2.osil", 17.7493, 4);
+        break;
+    case 23:
+        std::cout << "Testing the generic Cplex callback with local hyperplanes at relaxed points.\n";
+        passed = CplexGenericCallbackTest("data/synthes1.osil", 6.00975891, 1, 10, true);
         break;
     default:
         passed = false;

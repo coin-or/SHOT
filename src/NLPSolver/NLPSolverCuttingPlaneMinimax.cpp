@@ -286,9 +286,10 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             break;
         }
 
-        // Gets the most deviated constraints
-        auto constraintValues = sourceProblem->getFractionOfDeviatingNonlinearConstraints(
-            currSol, SHOT_DBL_MIN, constrSelFactor, LPObjVar);
+        // Gets the most deviated constraints. The values are those of the constraints themselves, not corrected by
+        // the objective variable, since that is a variable in the cuts: g(x0) + grad g(x0) (x - x0) - mu <= 0.
+        auto constraintValues
+            = sourceProblem->getFractionOfDeviatingNonlinearConstraints(currSol, SHOT_DBL_MIN, constrSelFactor);
 
         numHyperAdded = 0;
 
@@ -552,10 +553,6 @@ void NLPSolverCuttingPlaneMinimax::setStartingPoint(
     [[maybe_unused]] VectorInteger variableIndexes, [[maybe_unused]] VectorDouble variableValues)
 {
 }
-
-bool NLPSolverCuttingPlaneMinimax::isObjectiveFunctionNonlinear() { return (false); }
-
-int NLPSolverCuttingPlaneMinimax::getObjectiveFunctionVariableIndex() { return (SHOT_INT_MAX); }
 
 VectorDouble NLPSolverCuttingPlaneMinimax::getVariableLowerBounds()
 {

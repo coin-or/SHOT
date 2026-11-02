@@ -12,6 +12,9 @@
 #include "IRootsearchMethod.h"
 #include "../Environment.h"
 
+#include <algorithm>
+#include <cmath>
+
 namespace SHOT
 {
 class Test
@@ -65,7 +68,15 @@ private:
 public:
     TerminationCondition(double tolerance) { tol = tolerance; }
 
-    bool operator()(double min, double max) { return (abs(min - max) <= tol); }
+    // The interval also cannot be made smaller when there is no double between its ends, e.g., for a small tolerance
+    // and lambda close to 1, where doubles are further apart than the tolerance
+    bool operator()(double min, double max)
+    {
+        double lower = std::min(min, max);
+        double upper = std::max(min, max);
+
+        return (upper - lower <= tol || std::nextafter(lower, upper) >= upper);
+    }
 };
 
 class RootsearchMethodBoost : public IRootsearchMethod
@@ -75,14 +86,13 @@ public:
     ~RootsearchMethodBoost() override;
 
     std::pair<VectorDouble, VectorDouble> findZero(const VectorDouble& ptA, const VectorDouble& ptB, int Nmax,
-        double lambdaTol, double constrTol, const NonlinearConstraints constraints, bool addPrimalCandidate) override;
+        double lambdaTol, const NonlinearConstraints constraints, bool addPrimalCandidate) override;
 
     std::pair<VectorDouble, VectorDouble> findZero(const VectorDouble& ptA, const VectorDouble& ptB, int Nmax,
-        double lambdaTol, double constrTol, const std::vector<NumericConstraint*> constraints,
-        bool addPrimalCandidate) override;
+        double lambdaTol, const std::vector<NumericConstraint*> constraints, bool addPrimalCandidate) override;
 
     std::pair<double, double> findZero(const VectorDouble& pt, double objectiveLB, double objectiveUB, int Nmax,
-        double lambdaTol, double constrTol, ObjectiveFunctionPtr objectiveFunction) override;
+        double lambdaTol, ObjectiveFunctionPtr objectiveFunction) override;
 
 private:
     std::unique_ptr<Test> test;

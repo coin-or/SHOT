@@ -45,11 +45,12 @@ enum class E_CallbackLocation : std::uint64_t
     PrimalCandidateCheck = 1ull << 3, ///< Before a primal solution candidate is checked
     NewPrimalSolution = 1ull << 4, ///< After a primal solution has been stored
     TerminationCheck = 1ull << 5, ///< When SHOT checks whether to terminate
-    HyperplaneSelection = 1ull << 6 ///< When SHOT selects the hyperplanes to add to the dual problem
+    HyperplaneSelection = 1ull << 6, ///< When SHOT selects the hyperplanes to add to the dual problem
+    BoundsUpdated = 1ull << 7 ///< After a primal, current dual, or global dual bound has changed
 };
 
 /// All the locations, for registering a callback that is called everywhere
-constexpr E_CallbackLocation AllCallbackLocations = static_cast<E_CallbackLocation>((1ull << 7) - 1);
+constexpr E_CallbackLocation AllCallbackLocations = static_cast<E_CallbackLocation>((1ull << 8) - 1);
 
 constexpr E_CallbackLocation operator|(E_CallbackLocation first, E_CallbackLocation second)
 {
@@ -258,6 +259,33 @@ private:
     double objectiveValue;
     E_PrimalSolutionSource sourceType;
     bool incumbent;
+};
+
+/// Called after a bound changes; the inherited bound getters return the new values
+class DllExport BoundsUpdatedContext : public CallbackContext
+{
+public:
+    static constexpr E_CallbackLocation Location = E_CallbackLocation::BoundsUpdated;
+
+    BoundsUpdatedContext(
+        EnvironmentPtr envPtr, double previousPrimalBound, double previousDualBound, double previousGlobalDualBound);
+
+    double getPreviousPrimalBound() const;
+    double getPreviousDualBound() const;
+    double getPreviousGlobalDualBound() const;
+
+    bool isPrimalBoundChanged() const;
+    bool isDualBoundChanged() const;
+    bool isGlobalDualBoundChanged() const;
+    bool hasChanged() const;
+
+private:
+    double previousPrimalBound;
+    double previousDualBound;
+    double previousGlobalDualBound;
+    bool primalBoundChanged;
+    bool dualBoundChanged;
+    bool globalDualBoundChanged;
 };
 
 /// Called when SHOT can accept a dual bound from the user

@@ -21,8 +21,5 @@ public:
 
     void run() override;
     std::string getType() override;
-
-private:
-    int lastNumHyperplane;
 };
 } // namespace SHOT

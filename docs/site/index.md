@@ -2,7 +2,7 @@
 
 SHOT is an open-source solver for mixed-integer nonlinear programming (MINLP).
 These guides explain how to build a model, configure the solver, and understand
-its results. They describe **SHOT 2.0 development**; interfaces may change before release.
+its results. {{ version_notice }}
 
 Choose an interface to get started, or use the reference pages when you need a
 specific setting or API detail.
