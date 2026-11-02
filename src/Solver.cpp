@@ -365,11 +365,16 @@ bool Solver::setProblem(std::string fileName)
         auto taskPerformBoundTightening = std::make_unique<TaskPerformBoundTightening>(env, env->problem);
         taskPerformBoundTightening->run();
 
+        // The exception of a failed BoundTightening callback is passed on to the caller, as from solveProblem()
+        env->callbacks->rethrowFailure();
+
         setConvexityBasedSettingsPreReformulation();
         verifySettings();
 
         auto taskReformulateProblem = std::make_unique<TaskReformulateProblem>(env);
         taskReformulateProblem->run();
+
+        env->callbacks->rethrowFailure();
 
         if(env->problem->objectiveFunction->properties.isMinimize)
         {
@@ -399,6 +404,9 @@ bool Solver::setProblem(std::string fileName)
     }
     catch(const std::exception& e)
     {
+        if(env->callbacks->hasFailed())
+            throw;
+
         env->output->outputError(fmt::format(" Error when reading problem from \"{0}\"", e.what()));
 
         return (false);
@@ -485,6 +493,9 @@ bool Solver::setProblem(
     {
         auto taskPerformBoundTightening = std::make_unique<TaskPerformBoundTightening>(env, env->problem);
         taskPerformBoundTightening->run();
+
+        // The exception of a failed BoundTightening callback is passed on to the caller, as from solveProblem()
+        env->callbacks->rethrowFailure();
     }
 
     setConvexityBasedSettingsPreReformulation();
@@ -498,6 +509,8 @@ bool Solver::setProblem(
     {
         auto taskReformulateProblem = std::make_unique<TaskReformulateProblem>(env);
         taskReformulateProblem->run();
+
+        env->callbacks->rethrowFailure();
     }
 
     if(env->problem->objectiveFunction->properties.isMinimize)

@@ -21,6 +21,8 @@
 #include "Model/ObjectiveFunction.h"
 #include "Model/Problem.h"
 
+#include "spdlog/fmt/fmt.h"
+
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -69,6 +71,8 @@ std::string getCallbackLocationName(E_CallbackLocation location)
         return ("HyperplaneSelection");
     case E_CallbackLocation::BoundsUpdated:
         return ("BoundsUpdated");
+    case E_CallbackLocation::BoundTightening:
+        return ("BoundTightening");
     }
 
     return ("Unknown");
@@ -592,6 +596,152 @@ void InteriorPointSearchContext::releaseData()
 {
     std::vector<VectorDouble>().swap(interiorPoints);
     replacementInteriorPoints.reset();
+}
+
+BoundTighteningContext::BoundTighteningContext(EnvironmentPtr envPtr, ProblemPtr problem)
+    : CallbackContext(envPtr, Location), boundedProblem(problem)
+{
+    const double infinity = std::numeric_limits<double>::infinity();
+
+    // SHOT stores a missing bound as the largest double, which is reported as infinite as the other missing values
+    for(auto& V : problem->allVariables)
+    {
+        variableLowerBounds.push_back(V->lowerBound <= SHOT_DBL_MIN ? -infinity : V->lowerBound);
+        variableUpperBounds.push_back(V->upperBound >= SHOT_DBL_MAX ? infinity : V->upperBound);
+    }
+
+    proposedVariableLowerBounds = variableLowerBounds;
+    proposedVariableUpperBounds = variableUpperBounds;
+}
+
+ProblemPtr BoundTighteningContext::getProblem() const
+{
+    checkValid();
+    return (boundedProblem);
+}
+
+bool BoundTighteningContext::isReformulatedProblem() const
+{
+    checkValid();
+    return (boundedProblem->properties.isReformulated);
+}
+
+const VectorDouble& BoundTighteningContext::getVariableLowerBounds() const
+{
+    checkValid();
+    return (variableLowerBounds);
+}
+
+const VectorDouble& BoundTighteningContext::getVariableUpperBounds() const
+{
+    checkValid();
+    return (variableUpperBounds);
+}
+
+void BoundTighteningContext::setVariableBounds(int variableIndex, double lowerBound, double upperBound)
+{
+    checkValid();
+
+    int numberOfVariables = boundedProblem->allVariables.size();
+
+    if(variableIndex < 0 || variableIndex >= numberOfVariables)
+    {
+        throw std::invalid_argument("The variable index " + std::to_string(variableIndex) + " is not in the problem, "
+            + "which has " + std::to_string(numberOfVariables) + " variables.");
+    }
+
+    auto& variable = boundedProblem->allVariables[variableIndex];
+
+    if(std::isnan(lowerBound) || std::isnan(upperBound) || lowerBound > upperBound
+        || lowerBound == std::numeric_limits<double>::infinity()
+        || upperBound == -std::numeric_limits<double>::infinity())
+    {
+        throw std::invalid_argument(fmt::format(
+            "The bounds [{}, {}] of the variable {} are not valid.", lowerBound, upperBound, variable->name));
+    }
+
+    // As in Variable::tightenBounds(), a bound of a discrete variable is only rounded to the next integer when it
+    // exceeds an integer by more than a tolerance
+    double integerTolerance = 1e-5;
+    bool isDiscrete
+        = (variable->properties.type == E_VariableType::Binary || variable->properties.type == E_VariableType::Integer
+            || variable->properties.type == E_VariableType::Semiinteger);
+
+    if(isDiscrete)
+    {
+        lowerBound = std::ceil(lowerBound - integerTolerance) + 0.0;
+        upperBound = std::floor(upperBound + integerTolerance) + 0.0;
+    }
+
+    double newLowerBound = std::max(proposedVariableLowerBounds[variableIndex], lowerBound);
+    double newUpperBound = std::min(proposedVariableUpperBounds[variableIndex], upperBound);
+
+    if(newLowerBound > newUpperBound)
+    {
+        throw std::invalid_argument(fmt::format("The bounds [{}, {}] of the variable {} do not intersect its bounds "
+                                                "[{}, {}], so the problem would be infeasible.",
+            lowerBound, upperBound, variable->name, proposedVariableLowerBounds[variableIndex],
+            proposedVariableUpperBounds[variableIndex]));
+    }
+
+    proposedVariableLowerBounds[variableIndex] = newLowerBound;
+    proposedVariableUpperBounds[variableIndex] = newUpperBound;
+}
+
+void BoundTighteningContext::setVariableBounds(const VectorDouble& lowerBounds, const VectorDouble& upperBounds)
+{
+    checkValid();
+
+    if(lowerBounds.size() != variableLowerBounds.size() || upperBounds.size() != variableUpperBounds.size())
+    {
+        throw std::invalid_argument("There are " + std::to_string(lowerBounds.size()) + " lower and "
+            + std::to_string(upperBounds.size()) + " upper bounds, but the problem has "
+            + std::to_string(variableLowerBounds.size()) + " variables.");
+    }
+
+    // Validated before any is set, so that invalid bounds of one variable do not leave the others half set
+    auto lowerBefore = proposedVariableLowerBounds;
+    auto upperBefore = proposedVariableUpperBounds;
+
+    try
+    {
+        for(size_t i = 0; i < lowerBounds.size(); i++)
+            setVariableBounds(i, lowerBounds[i], upperBounds[i]);
+    }
+    catch(...)
+    {
+        proposedVariableLowerBounds = std::move(lowerBefore);
+        proposedVariableUpperBounds = std::move(upperBefore);
+        throw;
+    }
+}
+
+const VectorDouble& BoundTighteningContext::getProposedVariableLowerBounds() const
+{
+    checkValid();
+    return (proposedVariableLowerBounds);
+}
+
+const VectorDouble& BoundTighteningContext::getProposedVariableUpperBounds() const
+{
+    checkValid();
+    return (proposedVariableUpperBounds);
+}
+
+void BoundTighteningContext::discardActions()
+{
+    CallbackContext::discardActions();
+    proposedVariableLowerBounds = variableLowerBounds;
+    proposedVariableUpperBounds = variableUpperBounds;
+}
+
+void BoundTighteningContext::releaseData()
+{
+    boundedProblem.reset();
+    VectorDouble().swap(variableLowerBounds);
+    VectorDouble().swap(variableUpperBounds);
+    VectorDouble().swap(proposedVariableLowerBounds);
+    VectorDouble().swap(proposedVariableUpperBounds);
 }
 
 TerminationCheckContext::TerminationCheckContext(EnvironmentPtr envPtr) : CallbackContext(envPtr, Location) { }
