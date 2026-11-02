@@ -38,6 +38,7 @@
 #include "../src/Tasks/TaskSequential.h"
 #include "../src/Iteration.h"
 
+#include <optional>
 #include <set>
 #include <stdexcept>
 
@@ -1205,6 +1206,31 @@ bool TestCallbackESHExternalInteriorPointFromAuxProblem()
     return passed;
 }
 
+struct FirstPrimalSolution
+{
+    VectorDouble point;
+    double objectiveValue;
+    E_PrimalSolutionSource source;
+};
+
+// The first primal solution found while solving, which is the starting point if it is feasible
+static std::optional<FirstPrimalSolution> SolveAndGetFirstPrimalSolution(SHOT::Solver& solver)
+{
+    std::optional<FirstPrimalSolution> firstSolution;
+
+    solver.registerCallback<NewPrimalSolutionContext>(
+        [&firstSolution](NewPrimalSolutionContext& context)
+        {
+            if(!firstSolution)
+                firstSolution = FirstPrimalSolution { context.getPoint(), context.getObjectiveValue(),
+                    context.getSource() };
+        });
+
+    solver.solveProblem();
+
+    return (firstSolution);
+}
+
 bool TestAMPLInitialValues()
 {
     auto solver = std::make_unique<SHOT::Solver>();
@@ -1218,22 +1244,39 @@ bool TestAMPLInitialValues()
     }
 
     // ncvx_min_div.nl: x1 segment gives var 2 = 1.0; vars 0,1 have no initial value so get lb (0.5, 0.1)
-    // 0 constraints => initial point is always feasible and accepted as a primal solution
-    auto sols = solver->getPrimalSolutions();
-    if(sols.empty())
+    auto startingPoint = solver->getStartingPoint();
+
+    if(startingPoint.size() != 3)
     {
-        std::cout << "  No primal solution found from initial values\n";
+        std::cout << fmt::format("  The starting point has {} values, expected 3\n", startingPoint.size());
         return false;
     }
 
-    auto& pt = sols.back().point;
-    bool passed = std::abs(pt[0] - 0.5) < 1e-10 && std::abs(pt[1] - 0.1) < 1e-10 && std::abs(pt[2] - 1.0) < 1e-10;
+    bool passed = std::abs(startingPoint[0] - 0.5) < 1e-10 && std::abs(startingPoint[1] - 0.1) < 1e-10
+        && std::abs(startingPoint[2] - 1.0) < 1e-10;
 
-    std::cout << fmt::format("  Initial point: ({}, {}, {})", pt[0], pt[1], pt[2]);
+    std::cout << fmt::format("  Starting point: ({}, {}, {})", startingPoint[0], startingPoint[1], startingPoint[2]);
     if(passed)
         std::cout << " - correct\n";
     else
         std::cout << fmt::format(" - FAILED, expected (0.5, 0.1, 1.0)\n");
+
+    // 0 constraints => initial point is always feasible and accepted as the first primal solution
+    auto firstSolution = SolveAndGetFirstPrimalSolution(*solver);
+
+    if(!firstSolution || firstSolution->source != E_PrimalSolutionSource::ExternalPrimalSolution)
+    {
+        std::cout << "  The first primal solution is not the starting point\n";
+        return false;
+    }
+
+    auto& pt = firstSolution->point;
+    if(std::abs(pt[0] - 0.5) > 1e-10 || std::abs(pt[1] - 0.1) > 1e-10 || std::abs(pt[2] - 1.0) > 1e-10)
+    {
+        std::cout << fmt::format("  First primal solution ({}, {}, {}) - FAILED, expected (0.5, 0.1, 1.0)\n", pt[0],
+            pt[1], pt[2]);
+        passed = false;
+    }
 
     return passed;
 }
@@ -1251,22 +1294,16 @@ bool TestAMPLInitialValuesOutOfBounds()
     }
 
     // x3 segment: var 0=0.8 (ub=0.6), var 1=0.05 (lb=0.1), var 2=2.0 (ub=1.0)
-    // all three are out of bounds and should be projected to {0.6, 0.1, 1.0}
-    auto sols = solver->getPrimalSolutions();
-    if(sols.empty())
+    // all three are out of bounds and should be projected to {0.6, 0.1, 1.0} when the point is added as a solution
+    auto firstSolution = SolveAndGetFirstPrimalSolution(*solver);
+
+    if(!firstSolution || firstSolution->source != E_PrimalSolutionSource::ExternalPrimalSolution)
     {
         std::cout << "  No primal solution found from out-of-bounds initial values\n";
         return false;
     }
 
-    auto& sol = sols.back();
-    if(!sol.boundProjectionPerformed)
-    {
-        std::cout << "  Expected bound projection to be performed\n";
-        return false;
-    }
-
-    auto& pt = sol.point;
+    auto& pt = firstSolution->point;
     bool passed = std::abs(pt[0] - 0.6) < 1e-10 && std::abs(pt[1] - 0.1) < 1e-10 && std::abs(pt[2] - 1.0) < 1e-10;
 
     std::cout << fmt::format("  Raw initial values: (0.8, 0.05, 2.0)\n");
@@ -3081,6 +3118,83 @@ bool TestTaskDeactivation()
     return (passed);
 }
 
+// A starting point given with Solver::setStartingPoint() is checked when it is set and is the first primal
+// solution when the problem is solved. The point given last is used, and setProblem() removes it.
+bool TestStartingPoint()
+{
+    bool passed = true;
+
+    SHOT::Solver solverWithoutProblem;
+    solverWithoutProblem.updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+
+    if(solverWithoutProblem.setStartingPoint(VectorDouble(7, 0.0)))
+    {
+        std::cout << "  A starting point was accepted before a problem was set\n";
+        passed = false;
+    }
+
+    auto [solver, env] = MakeEx1223bSolver();
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+
+    if(solver->setStartingPoint(VectorDouble(6, 0.0)))
+    {
+        std::cout << "  A starting point with the wrong number of values was accepted\n";
+        passed = false;
+    }
+
+    VectorDouble pointWithNaN(7, 0.0);
+    pointWithNaN[2] = std::numeric_limits<double>::quiet_NaN();
+
+    if(solver->setStartingPoint(pointWithNaN))
+    {
+        std::cout << "  A starting point with a NaN value was accepted\n";
+        passed = false;
+    }
+
+    // The point with all values zero is feasible with the objective value 1 + 4 + 1 + 1 + 4 + 9 = 20, which is
+    // worse than the optimum 4.58, so it is only the first primal solution if it is given to the solver
+    VectorDouble replacedPoint(7, 0.0);
+    replacedPoint[0] = 0.5;
+
+    if(!solver->setStartingPoint(replacedPoint) || !solver->setStartingPoint(VectorDouble(7, 0.0)))
+    {
+        std::cout << "  A valid starting point was not accepted\n";
+        passed = false;
+    }
+
+    if(solver->getStartingPoint() != VectorDouble(7, 0.0))
+    {
+        std::cout << "  The starting point is not the one given last\n";
+        passed = false;
+    }
+
+    auto firstSolution = SolveAndGetFirstPrimalSolution(*solver);
+
+    if(!firstSolution || firstSolution->source != E_PrimalSolutionSource::ExternalPrimalSolution
+        || firstSolution->point != VectorDouble(7, 0.0) || std::abs(firstSolution->objectiveValue - 20.0) > 1e-8)
+    {
+        std::cout << "  The first primal solution is not the starting point\n";
+        passed = false;
+    }
+
+    if(std::abs(solver->getPrimalBound() - 4.5796) > 1e-3)
+    {
+        std::cout << fmt::format("  The primal bound is {}, expected 4.5796\n", solver->getPrimalBound());
+        passed = false;
+    }
+
+    // A problem without a modeling system has no starting point of its own
+    auto [otherSolver, otherEnv] = MakeEx1223bSolver();
+
+    if(!otherSolver->getStartingPoint().empty())
+    {
+        std::cout << "  A problem without a modeling system has a starting point\n";
+        passed = false;
+    }
+
+    return passed;
+}
+
 int SolverTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -3266,6 +3380,11 @@ int SolverTest(int argc, char* argv[])
         std::cout << "Starting test for deactivated tasks" << std::endl;
         passed = TestTaskDeactivation();
         std::cout << "Finished test for deactivated tasks." << std::endl;
+        break;
+    case 34:
+        std::cout << "Starting test for a starting point given to the solver" << std::endl;
+        passed = TestStartingPoint();
+        std::cout << "Finished test for a starting point given to the solver." << std::endl;
         break;
     default:
         passed = false;

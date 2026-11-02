@@ -168,7 +168,8 @@ set(Solver_parts
     30
     31
     32
-    33)
+    33
+    34)
 set(cpptests ${cpptests} Solver)
 
 if(HAS_CONOPT)

@@ -61,6 +61,9 @@ private:
     bool isProblemSolved = false;
     bool isSolving = false;
 
+    // Given to the primal solver when solveProblem() is called, see setStartingPoint()
+    VectorDouble startingPoint;
+
     // The setting groups of backends that are not compiled in, which a warning has been given about
     std::set<std::string> warnedUnavailableSettingGroups;
 
@@ -92,6 +95,26 @@ public:
 
     ProblemPtr getOriginalProblem() { return (env->problem); };
     ProblemPtr getReformulatedProblem() { return (env->reformulatedProblem); };
+
+    /**
+     * @brief Sets a starting point, i.e., a value for each variable of the original problem
+     *
+     * The point is given to SHOT when solveProblem() is called. If it is feasible, it is the first primal solution,
+     * so it is the cutoff and the MIP start of the dual problems with discrete variables. It is also the starting
+     * point of an NLP problem with the discrete variables fixed to their rounded values if
+     * Primal.FixedInteger.UseStartingPoint is true, also if the point is not feasible.
+     *
+     * Must be called after setProblem(), which replaces the starting point with the one of the modeling system,
+     * e.g., the initial values in an AMPL .nl file or the levels of the variables in GAMS, or removes it.
+     *
+     * @param point The values of the variables in the order of the variables of the original problem, or an empty
+     * vector to remove the starting point
+     * @return False if no problem has been set, or if the point has the wrong size or a value that is not finite
+     */
+    bool setStartingPoint(const VectorDouble& point);
+
+    // The starting point given to setStartingPoint() or by the modeling system, or an empty vector if there is none
+    VectorDouble getStartingPoint() { return (startingPoint); };
 
     bool solveProblem();
 

@@ -235,11 +235,6 @@ extern "C"
             env->report->outputProblemInstanceReport();
             env->report->outputOptionsReport();
 
-            // pass initial variable levels as starting point
-            VectorDouble variableStarts(gmoN(gs->gmo));
-            gmoGetVarL(gs->gmo, variableStarts.data());
-            env->primalSolver->addPrimalSolutionCandidate(variableStarts, E_PrimalSolutionSource::ExternalPrimalSolution, 0);
-
             if(!solver.solveProblem()) // solve problem
             {
                 env->output->outputError(" Error when solving problem.");
