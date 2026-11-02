@@ -1821,7 +1821,10 @@ void Problem::doFBBT()
 
     bool stopTightening = false;
 
-    double timeEnd = startTime + timeLimit;
+    // The bound tightening is also stopped by the time limit of the solver, since it is performed when the problem is
+    // set, and the solution time would otherwise run over the limit before the solution has even started
+    double timeLeft = env->settings->getSetting<double>("Termination.TimeLimit") - env->timing->getElapsedTime("Total");
+    double timeEnd = startTime + std::min(timeLimit, std::max(timeLeft, 0.0));
 
     int numberOfTightenedVariablesBefore = std::count_if(allVariables.begin(), allVariables.end(),
         [](auto V) { return (V->properties.hasLowerBoundBeenTightened || V->properties.hasUpperBoundBeenTightened); });

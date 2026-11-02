@@ -237,6 +237,18 @@ std::shared_ptr<NLPSolverSHOT> TaskPerformBoundTightening::createPOASolver(Probl
     return (solver);
 }
 
+double TaskPerformBoundTightening::getPOATimeLeft()
+{
+    double timeLeft = env->settings->getSetting<double>("Model.BoundTightening.InitialPOA.TimeLimit")
+        - env->timing->getElapsedTime("BoundTighteningPOA");
+
+    // The outer approximation is generated when the problem is set, so it also stops at the time limit of the solver
+    timeLeft = std::min(
+        timeLeft, env->settings->getSetting<double>("Termination.TimeLimit") - env->timing->getElapsedTime("Total"));
+
+    return (std::max(0.0, timeLeft));
+}
+
 void TaskPerformBoundTightening::solvePOAProblem(std::shared_ptr<NLPSolverSHOT> solver)
 {
     for(auto& V : sourceProblem->allVariables)
@@ -246,10 +258,7 @@ void TaskPerformBoundTightening::solvePOAProblem(std::shared_ptr<NLPSolverSHOT> 
     }
 
     // The time limit is shared by all the problems solved for the outer approximation
-    solver->updateSetting("Termination.TimeLimit",
-        std::max(0.0,
-            env->settings->getSetting<double>("Model.BoundTightening.InitialPOA.TimeLimit")
-                - env->timing->getElapsedTime("BoundTighteningPOA")));
+    solver->updateSetting("Termination.TimeLimit", getPOATimeLeft());
 
     // TODO handle return code?
     solver->solveProblem();
@@ -350,6 +359,15 @@ void TaskPerformBoundTightening::createPOA()
 {
     env->timing->startTimer("BoundTighteningPOA");
 
+    // Copying the problem and creating the solver is not worth it when no time is left to solve it
+    if(getPOATimeLeft() <= 0.0)
+    {
+        env->output->outputInfo(" Initial polyhedral outer approximation not generated since the time limit has been "
+                                "reached.");
+        env->timing->stopTimer("BoundTighteningPOA");
+        return;
+    }
+
     env->output->outputInfo(" Generating initial polyhedral outer approximation of nonlinear feasible set.");
 
     std::set<std::string> constraintsWithCuts;
@@ -431,15 +449,13 @@ void TaskPerformBoundTightening::createPOA()
     }
 
     int maxDirectionalSolves = env->settings->getSetting<int>("Model.BoundTightening.InitialPOA.DirectionalSolves");
-    double timeLimit = env->settings->getSetting<double>("Model.BoundTightening.InitialPOA.TimeLimit");
     int numberOfDirectionalSolves = 0;
 
     for(int variableIndex : directionalVariables)
     {
         for(auto direction : { E_ObjectiveFunctionDirection::Minimize, E_ObjectiveFunctionDirection::Maximize })
         {
-            if(numberOfDirectionalSolves >= maxDirectionalSolves
-                || env->timing->getElapsedTime("BoundTighteningPOA") >= timeLimit)
+            if(numberOfDirectionalSolves >= maxDirectionalSolves || getPOATimeLeft() <= 0.0)
                 break;
 
             // The variable is skipped if the constraints it is in have gotten cuts from the previous solves
