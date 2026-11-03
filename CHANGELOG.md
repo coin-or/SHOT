@@ -149,6 +149,11 @@ Changes since SHOT 1.1.
   trace file gives the NLP solver only if an NLP problem was solved, and the
   GAMS NLP solver called instead of the setting, e.g., `CONOPT` instead of
   `auto` ([#252]).
+- With `Dual.HyperplaneCuts.UseIntegerCuts`, the default for nonconvex
+  problems, an integer combination for which the fixed-integer NLP problem is
+  infeasible is also excluded with an integer cut. SHOT could otherwise stop
+  without a primal solution when the MIP solver returned the same combination
+  again.
 
 ### Removed
 

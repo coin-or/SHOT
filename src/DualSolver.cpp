@@ -555,7 +555,11 @@ void DualSolver::addIntegerCut(IntegerCut integerCut)
 
     integerCut.pointHashes = Utilities::calculateHashes(integerCut.variableValues);
 
-    if(!hasIntegerCutBeenAdded(integerCut))
+    // Several fixed NLP problems can have the same integer combination, e.g., with different continuous starting points
+    bool isWaiting = std::any_of(integerCutWaitingList.begin(), integerCutWaitingList.end(),
+        [&](const IntegerCut& IC) { return (IC.variableValues == integerCut.variableValues); });
+
+    if(!isWaiting && !hasIntegerCutBeenAdded(integerCut))
         this->integerCutWaitingList.push_back(integerCut);
     else
         env->output->outputDebug(
