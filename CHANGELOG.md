@@ -34,6 +34,12 @@ Changes since SHOT 1.1.
   as before, `"Solver.h"`. Projects that do not use the CMake package must add
   `<prefix>/include/SHOT` to their include path ([#241], [#250]).
 - C++17 is required ([#217]).
+- The results and problems of an environment are only available while its
+  solver exists: a solver frees them when it is destroyed, so that the
+  environment is freed. A problem used afterwards keeps the environment with
+  its settings and output. The environment was never freed, since its
+  components refer back to it, so creating many solvers, e.g., in a loop in
+  SHOTpy, used about 0.3 MB more memory per solver.
 
 ### Added
 

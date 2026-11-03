@@ -3710,6 +3710,61 @@ bool TestUserSpecifiedObjectiveConvexity()
     return passed;
 }
 
+// The components of an environment refer back to it, so the environment is only freed if the solver breaks these
+// references when it is destroyed
+bool TestEnvironmentReleased()
+{
+    bool passed = true;
+
+    auto expect = [&](bool condition, const std::string& message)
+    {
+        if(!condition)
+        {
+            std::cout << "  " << message << '\n';
+            passed = false;
+        }
+    };
+
+    std::weak_ptr<Environment> withoutProblem;
+    {
+        auto solver = std::make_unique<SHOT::Solver>();
+        withoutProblem = solver->getEnvironment();
+    }
+    expect(withoutProblem.expired(), "The environment of a solver without a problem is not freed");
+
+    std::weak_ptr<Environment> notSolved;
+    {
+        auto [solver, env] = MakeUserConvexitySolver(false, false);
+        notSolved = env;
+    }
+    expect(notSolved.expired(), "The environment of a solver whose problem has not been solved is not freed");
+
+    std::weak_ptr<Environment> solved;
+    {
+        auto [solver, env] = MakeUserConvexitySolver(false, false);
+        solver->solveProblem();
+        solved = env;
+    }
+    expect(solved.expired(), "The environment of a solver that has solved its problem is not freed");
+
+    // A problem used after its solver has been destroyed keeps its environment until the problem is freed
+    std::weak_ptr<Environment> keptByProblem;
+    ProblemPtr problem;
+    {
+        auto [solver, env] = MakeUserConvexitySolver(false, false);
+        solver->solveProblem();
+        problem = env->problem;
+        keptByProblem = env;
+    }
+    expect(!keptByProblem.expired(), "The environment of a problem that is still used has been freed");
+    expect(problem->getVariable(0)->name == "y1", "The problem cannot be used after its solver has been destroyed");
+
+    problem.reset();
+    expect(keptByProblem.expired(), "The environment of a problem is not freed with the problem");
+
+    return passed;
+}
+
 int SolverTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -3915,6 +3970,11 @@ int SolverTest(int argc, char* argv[])
         std::cout << "Starting test for an objective function with user-specified convexity" << std::endl;
         passed = TestUserSpecifiedObjectiveConvexity();
         std::cout << "Finished test for an objective function with user-specified convexity." << std::endl;
+        break;
+    case 38:
+        std::cout << "Starting test for freeing the environment with the solver" << std::endl;
+        passed = TestEnvironmentReleased();
+        std::cout << "Finished test for freeing the environment with the solver." << std::endl;
         break;
     default:
         passed = false;
