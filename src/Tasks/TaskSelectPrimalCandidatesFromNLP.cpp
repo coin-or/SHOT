@@ -617,6 +617,13 @@ E_NLPSolutionStatus TaskSelectPrimalCandidatesFromNLP::solveFixedNLPCandidates(
                 env->results->getCurrentDualBound(), env->results->getPrimalBound(),
                 env->results->getAbsoluteGlobalObjectiveGap(), env->results->getRelativeGlobalObjectiveGap(), NAN, -1,
                 NAN, E_IterationLineType::PrimalNLP);
+
+            // Add integer cut. Otherwise the MIP solver can return the same infeasible integer combination again, e.g.,
+            // when the cuts of a nonconvex constraint in it cannot cut off the solution point.
+            if(solvestatus == E_NLPSolutionStatus::Infeasible && !isEnumeration
+                && env->settings->getSetting<bool>("Dual.HyperplaneCuts.UseIntegerCuts")
+                && sourceProblem->properties.numberOfDiscreteVariables > 0)
+                createIntegerCut(CAND.point);
         }
         else if(sourceProblem->properties.numberOfNonlinearConstraints > 0
             || sourceProblem->properties.numberOfQuadraticConstraints > 0)
