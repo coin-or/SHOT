@@ -1906,7 +1906,7 @@ void Problem::doFBBT()
     }
 
     // The bounds of the original variables tightened in the reformulated problem are also bounds in the original problem
-    if(anyBoundsUpdated && properties.isReformulated)
+    if(anyBoundsUpdated && properties.isReformulated && env->problem)
     {
         for(size_t k = 0; k < env->problem->allVariables.size(); k++)
         {

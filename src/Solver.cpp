@@ -78,7 +78,7 @@ Solver::Solver()
     env->output = std::make_shared<Output>();
 
     env->results = std::make_shared<Results>(env);
-    env->timing = std::make_shared<Timing>(env);
+    env->timing = std::make_shared<Timing>();
 
     createTimers();
 
@@ -101,7 +101,7 @@ Solver::Solver(std::shared_ptr<spdlog::sinks::sink> consoleSink)
         env->output->setConsoleSink(consoleSink);
 
     env->results = std::make_shared<Results>(env);
-    env->timing = std::make_shared<Timing>(env);
+    env->timing = std::make_shared<Timing>();
 
     createTimers();
 
@@ -124,7 +124,21 @@ Solver::Solver(EnvironmentPtr envPtr) : env(envPtr)
     initializeSettings();
 }
 
-Solver::~Solver() = default;
+// Most components of the environment refer back to it, so the environment would never be freed with them. A problem
+// that is still used keeps the environment, with the settings, output and timing that the problem uses.
+Solver::~Solver()
+{
+    env->tasks.reset();
+    env->dualSolver.reset();
+    env->primalSolver.reset();
+    env->rootsearchMethod.reset();
+    env->modelingSystem.reset();
+    env->report.reset();
+    env->results.reset();
+    env->callbacks.reset();
+    env->reformulatedProblem.reset();
+    env->problem.reset();
+}
 
 EnvironmentPtr Solver::getEnvironment() { return env; }
 

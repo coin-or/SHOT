@@ -21,7 +21,7 @@ namespace SHOT
 class Timing
 {
 public:
-    inline Timing(EnvironmentPtr envPtr) { env = envPtr; };
+    inline Timing() = default;
 
     inline ~Timing() { timers.clear(); }
 
@@ -80,9 +80,6 @@ public:
     }
 
     std::vector<Timer> timers;
-
-private:
-    EnvironmentPtr env;
 };
 
 } // namespace SHOT

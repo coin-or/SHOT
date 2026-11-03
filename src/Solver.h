@@ -73,6 +73,9 @@ public:
     Solver();
     Solver(std::shared_ptr<spdlog::sinks::sink> consoleSink);
     Solver(EnvironmentPtr environment);
+
+    // Frees the components of the environment, e.g., the results and the problems, which are only available while the
+    // solver exists. A problem that is still used keeps its environment, with the settings and output.
     ~Solver();
 
     EnvironmentPtr getEnvironment();
