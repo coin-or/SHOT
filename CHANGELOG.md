@@ -160,7 +160,7 @@ Changes since SHOT 1.1.
   problems, an integer combination for which the fixed-integer NLP problem is
   infeasible is also excluded with an integer cut. SHOT could otherwise stop
   without a primal solution when the MIP solver returned the same combination
-  again.
+  again ([#257]).
 - The ESH method adds a cut for a violated convex constraint also when the
   root search ends on the boundary, where the constraint value can be rounded
   to slightly below zero. Convex problems, e.g., with quadratic terms and
@@ -260,6 +260,7 @@ Changes since SHOT 1.1.
 [#252]: https://github.com/coin-or/SHOT/pull/252
 [#255]: https://github.com/coin-or/SHOT/pull/255
 [#256]: https://github.com/coin-or/SHOT/pull/256
+[#257]: https://github.com/coin-or/SHOT/pull/257
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e
