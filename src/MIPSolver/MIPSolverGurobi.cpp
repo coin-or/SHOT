@@ -859,9 +859,11 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
         MIPSolutionStatus = E_ProblemSolutionStatus::Error;
     }
 
-    // An unbounded exact dual problem means that the problem is unbounded, so no point is needed
-    if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded && env->results->getNumberOfIterations() > 0
-        && env->dualSolver->isDualProblemExact())
+    // An unbounded exact dual problem means that the problem is unbounded, so no point is needed. Gurobi's presolve
+    // can report a bounded problem as infeasible or unbounded, e.g., the minimax problem, whose objective variable has
+    // a large lower bound, so this and the problems solved before the main iterations are solved again to find out
+    if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded
+        && (env->results->getNumberOfIterations() == 0 || env->dualSolver->isDualProblemExact()))
     {
         MIPSolutionStatus = resolveInfeasibleOrUnbounded(MIPSolutionStatus);
     }

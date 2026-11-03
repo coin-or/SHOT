@@ -2047,6 +2047,30 @@ class TestCallbackESHInteriorPoint:
             "Callback fired but received no interior points from the internal strategy"
         )
 
+    @pytest.mark.parametrize("backend,available", [
+        (0, "HAS_CPLEX"), (1, "HAS_GUROBI"), (2, "HAS_CBC"), (3, "HAS_HIGHS"),
+    ])
+    def test_internal_strategy_finds_point_with_each_mip_solver(self, backend, available):
+        """The minimax problem of shot_ex_jogo, which Gurobi's presolve reports as infeasible or unbounded since its
+        objective variable has a lower bound of -1e12, gives an interior point with every MIP solver."""
+        import SHOTpy
+
+        if not getattr(SHOTpy, available):
+            pytest.skip(f"SHOT was not built with {available[4:]}")
+
+        solver = SHOTpy.Solver()
+        solver.updateSetting("Output.Console.LogLevel", 6)
+        solver.updateSetting("Dual.MIP.Solver", backend)
+        solver.setProblem(build_shot_ex_jogo(solver.getEnvironment()))
+
+        points_received = []
+        solver.registerCallback(SHOTpy.CallbackLocation.InteriorPointSearch,
+                                lambda ctx: points_received.append(len(ctx.interiorPoints)))
+        assert solver.solveProblem()
+
+        assert points_received and points_received[0] > 0, "The internal strategy found no interior point"
+        assert abs(solver.getPrimalBound() - JOGO_KNOWN_OBJ) < 1e-3
+
     def test_callback_only_external_strategy(self):
         """Two-phase test: extract interior point, then inject via OnlyExternal strategy.
 

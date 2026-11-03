@@ -177,6 +177,12 @@ Changes since SHOT 1.1.
   they violate a row after the presolve is undone. The dual problem could
   then be taken as infeasible, and the solution stop without a primal
   solution ([#255]).
+- With Gurobi, the ESH interior point search finds a point also when Gurobi's
+  presolve reports the minimax problem as infeasible or unbounded, which it
+  can do because of the large lower bound of the objective variable. The
+  problem is solved again without dual reductions, as are the other problems
+  solved before the main iterations; the search could otherwise end without
+  an interior point ([#259]).
 
 ### Removed
 
@@ -268,6 +274,7 @@ Changes since SHOT 1.1.
 [#256]: https://github.com/coin-or/SHOT/pull/256
 [#257]: https://github.com/coin-or/SHOT/pull/257
 [#258]: https://github.com/coin-or/SHOT/pull/258
+[#259]: https://github.com/coin-or/SHOT/pull/259
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e
