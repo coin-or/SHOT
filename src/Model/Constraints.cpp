@@ -447,6 +447,20 @@ void QuadraticConstraint::updateConvexityFromBounds()
         properties.convexity = E_Convexity::Nonconvex;
 }
 
+void QuadraticConstraint::setFunctionConvexity(E_Convexity convexity)
+{
+    if(convexity != E_Convexity::Convex && convexity != E_Convexity::Concave && convexity != E_Convexity::Nonconvex
+        && convexity != E_Convexity::NotSet)
+    {
+        throw std::invalid_argument(fmt::format(
+            "The convexity of the function in constraint {} can only be specified as Convex, Concave or Nonconvex, "
+            "or as NotSet to detect it.",
+            name));
+    }
+
+    properties.userFunctionConvexity = convexity;
+}
+
 void QuadraticConstraint::updateProperties()
 {
     LinearConstraint::updateProperties();
@@ -461,8 +475,16 @@ void QuadraticConstraint::updateProperties()
         properties.hasQuadraticTerms = false;
     }
 
-    auto convexity = quadraticTerms.getConvexity();
-    properties.functionConvexity = Utilities::combineConvexity(convexity, properties.functionConvexity);
+    if(properties.userFunctionConvexity == E_Convexity::NotSet)
+    {
+        auto convexity = quadraticTerms.getConvexity();
+        properties.functionConvexity = Utilities::combineConvexity(convexity, properties.functionConvexity);
+    }
+    else
+    {
+        // Not detected, also not for the other terms of a nonlinear constraint
+        properties.functionConvexity = properties.userFunctionConvexity;
+    }
 
     updateConvexityFromBounds();
 
@@ -1011,6 +1033,9 @@ void NonlinearConstraint::updateProperties()
 
     properties.classification = E_ConstraintClassification::Nonlinear;
 
+    // The function convexity has then already been set by QuadraticConstraint::updateProperties()
+    bool isFunctionConvexityUserSpecified = properties.userFunctionConvexity != E_Convexity::NotSet;
+
     variablesInNonlinearExpression.clear();
 
     if(nonlinearExpression != nullptr)
@@ -1023,14 +1048,17 @@ void NonlinearConstraint::updateProperties()
             || nonlinearExpression->getType() == E_NonlinearExpressionTypes::Constant
             || nonlinearExpression->getBounds().l() == nonlinearExpression->getBounds().u());
 
-        try
+        if(!isFunctionConvexityUserSpecified)
         {
-            auto convexity = nonlinearExpression->getConvexity();
-            properties.functionConvexity = Utilities::combineConvexity(convexity, properties.functionConvexity);
-        }
-        catch(const IntervalError&)
-        {
-            properties.functionConvexity = E_Convexity::Unknown;
+            try
+            {
+                auto convexity = nonlinearExpression->getConvexity();
+                properties.functionConvexity = Utilities::combineConvexity(convexity, properties.functionConvexity);
+            }
+            catch(const IntervalError&)
+            {
+                properties.functionConvexity = E_Convexity::Unknown;
+            }
         }
     }
     else
@@ -1060,8 +1088,11 @@ void NonlinearConstraint::updateProperties()
             }
         }
 
-        auto convexity = monomialTerms.getConvexity();
-        properties.functionConvexity = Utilities::combineConvexity(convexity, properties.functionConvexity);
+        if(!isFunctionConvexityUserSpecified)
+        {
+            auto convexity = monomialTerms.getConvexity();
+            properties.functionConvexity = Utilities::combineConvexity(convexity, properties.functionConvexity);
+        }
     }
     else
     {
@@ -1080,7 +1111,10 @@ void NonlinearConstraint::updateProperties()
                 if(collectedSignomialVariables.insert(E->variable.get()).second)
                     variablesInSignomialTerms.push_back(E->variable);
             }
+        }
 
+        if(!isFunctionConvexityUserSpecified)
+        {
             auto convexity = signomialTerms.getConvexity();
             properties.functionConvexity = Utilities::combineConvexity(convexity, properties.functionConvexity);
         }

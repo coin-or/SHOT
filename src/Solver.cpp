@@ -1306,6 +1306,11 @@ E_TerminationReason Solver::getTerminationReason() { return (env->results->termi
 
 E_ModelReturnStatus Solver::getModelReturnStatus() { return (env->results->getModelReturnStatus()); }
 
+std::string Solver::getUserSpecifiedConvexityDescription()
+{
+    return (env->results->getUserSpecifiedConvexityDescription());
+}
+
 std::vector<ES_ModelingSystem> Solver::getSupportedModelingSystems()
 {
     std::vector<ES_ModelingSystem> systems;

@@ -73,6 +73,13 @@ Changes since SHOT 1.1.
   `Model.BoundTightening.FeasibilityBased.Use` off, only these are used.
   `Model.BoundTightening.FeasibilityBased.UseAfterCallback` propagates them
   with another bound tightening pass ([#247]).
+- `setFunctionConvexity()` on quadratic and nonlinear constraints and
+  objective functions in C++ and SHOTpy, and the `functionConvexity`
+  argument of SHOTpy's `Problem.addConstraint()` and `Problem.setObjective()`,
+  specify the convexity of a function, which is then used instead of
+  detected. The solution report, the OSrL results and
+  `getUserSpecifiedConvexityDescription()` tell when global optimality
+  depends on such functions or on `Model.Convexity.AssumeConvex` ([#256]).
 - The AMPL solve message gives the SHOT version, the problem types and the
   subsolvers; the status text is unchanged ([d9db1155]).
 - The options report shows the number of MIP solver threads, and a warning
@@ -154,6 +161,16 @@ Changes since SHOT 1.1.
   infeasible is also excluded with an integer cut. SHOT could otherwise stop
   without a primal solution when the MIP solver returned the same combination
   again.
+- The ESH method adds a cut for a violated convex constraint also when the
+  root search ends on the boundary, where the constraint value can be rounded
+  to slightly below zero. Convex problems, e.g., with quadratic terms and
+  Cbc or HiGHS, could otherwise stop with a gap since no additional cuts
+  could be added ([#255]).
+- A MIP problem that HiGHS reports as infeasible is solved again without
+  presolve, since HiGHS can reject every solution of a feasible problem when
+  they violate a row after the presolve is undone. The dual problem could
+  then be taken as infeasible, and the solution stop without a primal
+  solution ([#255]).
 
 ### Removed
 
@@ -241,6 +258,8 @@ Changes since SHOT 1.1.
 [#250]: https://github.com/coin-or/SHOT/pull/250
 [#251]: https://github.com/coin-or/SHOT/pull/251
 [#252]: https://github.com/coin-or/SHOT/pull/252
+[#255]: https://github.com/coin-or/SHOT/pull/255
+[#256]: https://github.com/coin-or/SHOT/pull/256
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e

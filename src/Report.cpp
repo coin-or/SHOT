@@ -964,6 +964,9 @@ void Report::outputSolutionReport()
         env->output->outputInfo(" An error occurred, and no primal solution was found.");
     };
 
+    if(auto convexityDescription = env->results->getUserSpecifiedConvexityDescription(); convexityDescription != "")
+        env->output->outputInfo(fmt::format(" {}.", convexityDescription));
+
     env->output->outputInfo("");
 
     // Warn the user if variables are at maximum bound limits

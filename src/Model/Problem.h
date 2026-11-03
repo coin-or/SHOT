@@ -68,6 +68,13 @@ struct ProblemProperties
     int numberOfNonconvexNonlinearConstraints = 0;
     int numberOfNonlinearExpressions = 0; // This includes a possible nonlinear objective
 
+    // The constraints that are convex since the convexity of their functions has been specified by the user
+    int numberOfUserSpecifiedConvexConstraints = 0;
+
+    // Whether the objective function is convex when minimized, or concave when maximized, since its convexity has been
+    // specified by the user
+    bool isObjectiveConvexityUserSpecified = false;
+
     int numberOfSpecialOrderedSets = 0;
 
     int numberOfAddedLinearizations = 0; // In the initial POA step

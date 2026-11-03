@@ -642,9 +642,28 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
         return;
     }
 
+    bool isFunctionConvexityUserSpecified
+        = env->problem->objectiveFunction->properties.userFunctionConvexity != E_Convexity::NotSet;
+
+    // The eigenvalues are not calculated when the convexity is specified by the user, but a MIP solver that only
+    // supports convex quadratic objective functions must not be given another one
+    bool isQuadraticObjectiveSupported = true;
+
+    if(isFunctionConvexityUserSpecified
+        && env->problem->objectiveFunction->properties.classification == E_ObjectiveFunctionClassification::Quadratic
+        && !useNonconvexQuadraticObjective)
+    {
+        auto convexity = std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->problem->objectiveFunction)
+                             ->quadraticTerms.getConvexity();
+
+        isQuadraticObjectiveSupported = convexity
+            == (env->problem->objectiveFunction->properties.isMinimize ? E_Convexity::Convex : E_Convexity::Concave);
+    }
+
     if(((env->problem->properties.convexity == E_ProblemConvexity::Convex && useConvexQuadraticObjective)
            || useNonconvexQuadraticObjective)
-        && env->problem->objectiveFunction->properties.classification == E_ObjectiveFunctionClassification::Quadratic)
+        && env->problem->objectiveFunction->properties.classification == E_ObjectiveFunctionClassification::Quadratic
+        && isQuadraticObjectiveSupported)
     {
         // Quadratic objective function
         auto destinationObjective = std::make_shared<QuadraticObjectiveFunction>();
@@ -659,8 +678,16 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
         // The constant already contains the terms of the fixed variables, which were added when copying the terms
         destinationObjective->constant += env->problem->objectiveFunction->constant;
 
+        destinationObjective->setFunctionConvexity(env->problem->objectiveFunction->properties.userFunctionConvexity);
+
         reformulatedProblem->add(std::move(destinationObjective));
 
+        return;
+    }
+
+    if(isFunctionConvexityUserSpecified)
+    {
+        copyObjectiveFunctionWithUserSpecifiedConvexity();
         return;
     }
 
@@ -1027,24 +1054,25 @@ void TaskReformulateProblem::createEpigraphConstraint()
             constraint, isSignReversed);
     }
 
+    // The constraint is not reformulated if the convexity of the objective function has been specified by the user,
+    // as a constraint with a specified convexity
+    auto userConvexity = env->problem->objectiveFunction->properties.userFunctionConvexity;
+
     if(env->problem->objectiveFunction->properties.hasNonlinearExpression)
     {
+        auto expression = copyNonlinearExpression(
+            std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->problem->objectiveFunction)
+                ->nonlinearExpression.get(),
+            reformulatedProblem);
+
         if(isSignReversed)
-        {
-            constraint->add(
-                reformulateNonlinearExpression(simplify(std::make_shared<ExpressionNegate>(copyNonlinearExpression(
-                    std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->problem->objectiveFunction)
-                        ->nonlinearExpression.get(),
-                    reformulatedProblem)))));
-        }
-        else
-        {
-            constraint->add(reformulateNonlinearExpression(copyNonlinearExpression(
-                std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->problem->objectiveFunction)
-                    ->nonlinearExpression.get(),
-                reformulatedProblem)));
-        }
+            expression = simplify(std::make_shared<ExpressionNegate>(expression));
+
+        constraint->add(
+            (userConvexity == E_Convexity::NotSet) ? reformulateNonlinearExpression(expression) : expression);
     }
+
+    constraint->setFunctionConvexity(isSignReversed ? Utilities::negateConvexity(userConvexity) : userConvexity);
 
     reformulatedProblem->add(objectiveVariable);
     constraint->add(std::make_shared<LinearTerm>(-1.0, std::dynamic_pointer_cast<Variable>(objectiveVariable)));
@@ -1128,6 +1156,7 @@ void TaskReformulateProblem::reformulateConstraints()
             copyLinearTermsToConstraint(sourceConstraint->linearTerms, constraint);
             copyQuadraticTermsToConstraint(sourceConstraint->quadraticTerms, constraint);
             constraint->constant += C->constant;
+            constraint->setFunctionConvexity(C->properties.userFunctionConvexity);
 
             reformulatedConstraints.push_back(constraint);
         }
@@ -1186,6 +1215,13 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
         || (!C->properties.hasNonlinearExpression && !C->properties.hasMonomialTerms
             && !C->properties.hasSignomialTerms);
 
+    bool isFunctionConvexityUserSpecified = C->properties.userFunctionConvexity != E_Convexity::NotSet;
+
+    // The eigenvalues are not calculated when the convexity is specified by the user, but they are needed below to
+    // decide whether the MIP solver can be given the quadratic terms
+    if(isQuadraticConstraint && isFunctionConvexityUserSpecified)
+        std::dynamic_pointer_cast<QuadraticConstraint>(C)->quadraticTerms.getConvexity();
+
     if(isQuadraticConstraint
         && (C->properties.convexity == E_Convexity::Convex
             && ((useConvexQuadraticConstraints
@@ -1204,9 +1240,13 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
         copyQuadraticTermsToConstraint(sourceConstraint->quadraticTerms, constraint);
 
         constraint->constant += constant;
+        constraint->setFunctionConvexity(C->properties.userFunctionConvexity);
 
         return (NumericConstraints({ constraint }));
     }
+
+    if(isFunctionConvexityUserSpecified)
+        return (NumericConstraints({ copyConstraintWithUserSpecifiedConvexity(C) }));
 
     // Constraint is to be regarded as nonlinear
 
@@ -1720,6 +1760,87 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
     resultingConstraints.insert(resultingConstraints.begin(), constraint);
 
     return (NumericConstraints({ resultingConstraints }));
+}
+
+void TaskReformulateProblem::copyObjectiveFunctionWithUserSpecifiedConvexity()
+{
+    auto sourceObjective = std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->problem->objectiveFunction);
+    auto sourceNonlinear = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->problem->objectiveFunction);
+
+    // The reformulated objective function is minimized, as in reformulateObjectiveFunction()
+    bool isSignReversed = sourceObjective->properties.isMaximize;
+
+    // Also an objective function with only quadratic terms is nonlinear, since it could not be given to the MIP solver
+    auto objective = std::make_shared<NonlinearObjectiveFunction>();
+    objective->ownerProblem = reformulatedProblem;
+    objective->direction = E_ObjectiveFunctionDirection::Minimize;
+
+    copyLinearTermsToObjectiveFunction(sourceObjective->linearTerms, objective, isSignReversed);
+    copyQuadraticTermsToObjectiveFunction(sourceObjective->quadraticTerms, objective, isSignReversed);
+
+    if(sourceNonlinear)
+    {
+        for(auto& T : sourceNonlinear->monomialTerms)
+        {
+            auto monomialTerm = std::make_shared<MonomialTerm>(T.get(), reformulatedProblem);
+
+            if(isSignReversed)
+                monomialTerm->coefficient *= -1.0;
+
+            objective->add(monomialTerm);
+        }
+
+        for(auto& T : sourceNonlinear->signomialTerms)
+            objective->add(copySignomialTerm(T, isSignReversed, reformulatedProblem));
+
+        if(sourceNonlinear->nonlinearExpression)
+        {
+            auto expression = copyNonlinearExpression(sourceNonlinear->nonlinearExpression.get(), reformulatedProblem);
+
+            if(isSignReversed)
+                expression = simplify(std::make_shared<ExpressionNegate>(expression));
+
+            objective->add(expression);
+        }
+    }
+
+    // The constant already contains the terms of the fixed variables, which were added when copying the terms
+    objective->constant += isSignReversed ? -sourceObjective->constant : sourceObjective->constant;
+
+    auto userConvexity = sourceObjective->properties.userFunctionConvexity;
+    objective->setFunctionConvexity(isSignReversed ? Utilities::negateConvexity(userConvexity) : userConvexity);
+
+    reformulatedProblem->add(std::move(objective));
+}
+
+NumericConstraintPtr TaskReformulateProblem::copyConstraintWithUserSpecifiedConvexity(const NumericConstraintPtr& C)
+{
+    auto sourceQuadratic = std::dynamic_pointer_cast<QuadraticConstraint>(C);
+    auto sourceNonlinear = std::dynamic_pointer_cast<NonlinearConstraint>(C);
+
+    auto constraint = std::make_shared<NonlinearConstraint>(C->name, C->valueLHS, C->valueRHS);
+    constraint->properties.classification
+        = (C->properties.hasNonlinearExpression || C->properties.hasMonomialTerms || C->properties.hasSignomialTerms)
+        ? E_ConstraintClassification::Nonlinear
+        : E_ConstraintClassification::QuadraticConsideredAsNonlinear;
+    constraint->ownerProblem = reformulatedProblem;
+
+    copyLinearTermsToConstraint(sourceQuadratic->linearTerms, constraint);
+    copyQuadraticTermsToConstraint(sourceQuadratic->quadraticTerms, constraint);
+
+    if(sourceNonlinear)
+    {
+        copyMonomialTermsToConstraint(sourceNonlinear->monomialTerms, constraint);
+        copySignomialTermsToConstraint(sourceNonlinear->signomialTerms, constraint);
+
+        if(sourceNonlinear->nonlinearExpression)
+            constraint->add(copyNonlinearExpression(sourceNonlinear->nonlinearExpression.get(), reformulatedProblem));
+    }
+
+    constraint->constant += C->constant;
+    constraint->setFunctionConvexity(C->properties.userFunctionConvexity);
+
+    return (constraint);
 }
 
 LinearTerms TaskReformulateProblem::partitionNonlinearSum(const std::shared_ptr<ExpressionSum>& source,
@@ -2680,7 +2801,7 @@ void TaskReformulateProblem::copyMonomialTermsToConstraint(const MonomialTerms& 
                 variables.push_back(reformulatedProblem->getVariable(V->getIndex()));
         }
 
-        std::dynamic_pointer_cast<NonlinearObjectiveFunction>(destination)
+        std::dynamic_pointer_cast<NonlinearConstraint>(destination)
             ->add(std::make_shared<MonomialTerm>(signCoefficient * coefficient, variables));
     }
 }

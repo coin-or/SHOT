@@ -310,6 +310,15 @@ std::string Results::getResultsOSrL()
         otherResultsNode->InsertEndChild(otherNode);
     }
 
+    if(auto convexityDescription = getUserSpecifiedConvexityDescription(); convexityDescription != "")
+    {
+        otherNode = osrlDocument.NewElement("other");
+        otherNode->SetAttribute("name", "UserSpecifiedConvexity");
+        otherNode->SetAttribute("value", convexityDescription.c_str());
+        otherNode->SetAttribute("description", "Convexity specified by the user instead of detected");
+        otherResultsNode->InsertEndChild(otherNode);
+    }
+
     // Reformulated problem classification
     if(isReformulated)
     {
@@ -1102,6 +1111,13 @@ std::string Results::getResultsOSrL()
             fmt::format(" Unknown return code {} obtained from solver.", static_cast<int>(this->terminationReason)));
     }
 
+    if(auto convexityDescription = getUserSpecifiedConvexityDescription(); convexityDescription != "")
+    {
+        std::string description = statusNode->Attribute("description") ? statusNode->Attribute("description") : "";
+        description += (description == "") ? convexityDescription : ". " + convexityDescription;
+        statusNode->SetAttribute("description", description.c_str());
+    }
+
     solutionNode->InsertFirstChild(statusNode);
 
     for(int i = 0; i < numSaveSolutions; i++)
@@ -1770,6 +1786,34 @@ E_ModelReturnStatus Results::getModelReturnStatus()
         return (hasPrimalSolution() ? E_ModelReturnStatus::FeasibleSolution : E_ModelReturnStatus::ErrorNoSolution);
 
     return (E_ModelReturnStatus::NoSolutionReturned);
+}
+
+std::string Results::getUserSpecifiedConvexityDescription()
+{
+    if(env->settings->getSetting<bool>("Model.Convexity.AssumeConvex"))
+        return ("The whole problem has been assumed to be convex by the user (Model.Convexity.AssumeConvex)");
+
+    if(!env->problem)
+        return ("");
+
+    // The parts of the problem that are convex only since their convexity has been specified
+    std::vector<std::string> parts;
+
+    if(env->problem->properties.isObjectiveConvexityUserSpecified)
+        parts.push_back("the objective function");
+
+    int numberOfConstraints = env->problem->properties.numberOfUserSpecifiedConvexConstraints;
+
+    if(numberOfConstraints == 1)
+        parts.push_back("one constraint");
+    else if(numberOfConstraints > 1)
+        parts.push_back(fmt::format("{} constraints", numberOfConstraints));
+
+    if(parts.empty())
+        return ("");
+
+    return (fmt::format("The convexity of {} has been specified by the user instead of detected",
+        (parts.size() == 2) ? parts[0] + " and " + parts[1] : parts[0]));
 }
 
 bool Results::hasPrimalSolution() { return (primalSolutions.size() > 0); }

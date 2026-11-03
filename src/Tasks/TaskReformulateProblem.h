@@ -82,6 +82,14 @@ private:
     // Reformulates the lower side -f(x) <= -L of a constraint of the original problem, and adds it to the problem
     void reformulateLowerSide(const NumericConstraintPtr& constraint, std::set<std::string>& usedNames);
 
+    // Copies a nonlinear constraint whose function convexity is specified by the user without reformulating it, since
+    // the convexity of the parts of the function, e.g., of the auxiliary constraints from partitioning it, is not known
+    NumericConstraintPtr copyConstraintWithUserSpecifiedConvexity(const NumericConstraintPtr& constraint);
+
+    // Copies an objective function whose convexity is specified by the user without reformulating it, for the same
+    // reason. It is regarded as nonlinear, and minimized.
+    void copyObjectiveFunctionWithUserSpecifiedConvexity();
+
     template <class T> void copyLinearTermsToConstraint(const LinearTerms& terms, T destination, bool reversedSigns = false);
 
     template <class T>

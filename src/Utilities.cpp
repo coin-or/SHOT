@@ -831,6 +831,17 @@ E_Convexity combineConvexity(const E_Convexity first, const E_Convexity second)
     return E_Convexity::Linear;
 }
 
+E_Convexity negateConvexity(const E_Convexity convexity)
+{
+    if(convexity == E_Convexity::Convex)
+        return E_Convexity::Concave;
+
+    if(convexity == E_Convexity::Concave)
+        return E_Convexity::Convex;
+
+    return convexity;
+}
+
 E_Monotonicity combineMonotonicity(const E_Monotonicity first, const E_Monotonicity second)
 {
     if(first == E_Monotonicity::NotSet && second == E_Monotonicity::NotSet)
