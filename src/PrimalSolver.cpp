@@ -466,7 +466,8 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
     }
     else
     {
-        PairIndexValue mostDevLinearConstraints;
+        // Without linear constraints, the default value of the solution is kept
+        PairIndexValue mostDevLinearConstraints = primalSol.maxDeviatingConstraintLinear;
 
         if(env->problem->properties.numberOfLinearConstraints > 0)
         {

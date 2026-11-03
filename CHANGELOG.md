@@ -211,6 +211,15 @@ Changes since SHOT 1.1.
   A maximization problem was reported as infeasible, since the bounds of the
   maximized objective were given to the minimized objective variable, and
   the bounds were loosened when there was no primal or dual bound yet.
+- When selecting cuts for nonconvex constraints, the check whether a cut
+  would cut away a primal solution read the values of auxiliary variables
+  from outside the primal solution, which only has the variables of the
+  original problem. It now uses the values of the auxiliary variables, so
+  that cuts are not postponed, or added, because of arbitrary values.
+- The largest error of the linear constraints of a primal solution of a
+  problem without linear constraints was undefined, and could be reported in
+  the output and the OSrL results and used as the largest constraint error of
+  the solution.
 
 ### Removed
 
