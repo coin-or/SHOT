@@ -327,9 +327,9 @@ void TaskPerformBoundTightening::addPOACuts(std::shared_ptr<NLPSolverSHOT> solve
 
             // Small fix to fix badly scaled cuts.
             // TODO: this should be made so it also takes into account small/large coefficients of the linear terms
-            if(abs(tmpPair.second) > 1e15)
+            if(std::abs(tmpPair.second) > 1e15)
             {
-                double scalingFactor = abs(tmpPair.second) - 1e15;
+                double scalingFactor = std::abs(tmpPair.second) - 1e15;
 
                 for(auto& E : tmpPair.first)
                     E.second /= scalingFactor;

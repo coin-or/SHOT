@@ -14,6 +14,43 @@ import subprocess
 import tempfile
 
 
+# MC++'s interval cosine and tangent shift the lower bound into the first period
+# with an int multiple of the period, which overflows for bounds beyond about
+# 1e9, and the shift loses the position in the period for large bounds anyway.
+MCPP_INTERVAL_PATCHES = [
+    ("""inline Interval
+cos(Interval const& I)
+{
+""", """inline Interval
+cos(Interval const& I)
+{
+  // A period or more contains the whole range, and for large bounds, k does not
+  // fit in an int and the shift by 2*k*pi loses the position in the period
+  if (I._u - I._l >= 2. * PI || std::fabs(I._l) > 1e9 || std::fabs(I._u) > 1e9)
+    return Interval(-1., 1.);
+"""),
+    ("""inline Interval
+tan(Interval const& I)
+{
+""", """inline Interval
+tan(Interval const& I)
+{
+  // For large bounds, k does not fit in an int and the shift by k*pi loses the
+  // position in the period, so whether the interval contains a pole is unknown
+  if (std::fabs(I._l) > 1e9 || std::fabs(I._u) > 1e9)
+    throw Interval::Exceptions(Interval::Exceptions::TAN);
+"""),
+]
+
+
+def patch_mcpp_interval(text):
+    for old, new in MCPP_INTERVAL_PATCHES:
+        if text.count(old) != 1:
+            raise SystemExit("MC++ interval.hpp does not match SHOT's patch: " + old.splitlines()[0])
+        text = text.replace(old, new)
+    return text
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("dependency", choices=["ampl", "mc++"])
@@ -37,6 +74,8 @@ def main():
                 shutil.copyfile(source / "src/mc" / name, stage / "include" / name)
             shutil.copyfile(source / "LICENSE", stage / "LICENSE")
             shutil.copytree(source / "LICENSES", stage / "LICENSES")
+            interval = stage / "include/interval.hpp"
+            interval.write_text(patch_mcpp_interval(interval.read_text()))
         else:
             seeds = ["src/" + name for name in (
                 "expr-info.cc", "format.cc", "nl-reader.cc", "posix.cc",

@@ -661,6 +661,28 @@ bool DualSolver::hasObjectiveVariableOnlyInMIPSolver()
     return (MIPSolver->hasDualAuxiliaryObjectiveVariable() && !env->reformulatedProblem->auxiliaryObjectiveVariable);
 }
 
+VectorDouble DualSolver::getPrimalPointInDualProblem(const PrimalSolution& solution)
+{
+    VectorDouble point = solution.point;
+
+    if((int)point.size() < env->reformulatedProblem->properties.numberOfVariables)
+        env->reformulatedProblem->augmentAuxiliaryVariableValues(point);
+
+    // The objective variable of the MIP solver has the value of the reformulated objective function, whose
+    // direction may differ from that of the original problem
+    if(hasObjectiveVariableOnlyInMIPSolver())
+    {
+        double objectiveSignFactor
+            = (env->reformulatedProblem->objectiveFunction->direction == env->problem->objectiveFunction->direction)
+            ? 1.0
+            : -1.0;
+
+        point.push_back(objectiveSignFactor * solution.objValue);
+    }
+
+    return (point);
+}
+
 bool DualSolver::isDualProblemExact()
 {
     // Nonlinear constraints and nonlinear objectives are only represented by cuts in the dual problem
@@ -675,10 +697,6 @@ int DualSolver::relaxCutsViolatedByPrimalSolutions()
         return (0);
 
     size_t numberOfCuts = MIPSolver->getNumberOfRepairableCuts();
-
-    double objectiveSignFactor
-        = (env->reformulatedProblem->objectiveFunction->direction == env->problem->objectiveFunction->direction) ? 1.0
-                                                                                                                 : -1.0;
 
     // Not all solutions are in the pool any longer, so only those that are are kept
     std::vector<double> primalSolutionHashes;
@@ -697,17 +715,7 @@ int DualSolver::relaxCutsViolatedByPrimalSolutions()
         if(firstCut >= numberOfCuts)
             continue;
 
-        VectorDouble point = S.point;
-
-        if((int)point.size() < env->reformulatedProblem->properties.numberOfVariables)
-            env->reformulatedProblem->augmentAuxiliaryVariableValues(point);
-
-        // The objective variable of the MIP solver has the value of the reformulated objective function, whose
-        // direction may differ from that of the original problem
-        if(hasObjectiveVariableOnlyInMIPSolver())
-            point.push_back(objectiveSignFactor * S.objValue);
-
-        numberOfRelaxedCuts += MIPSolver->relaxRepairableCutsViolatedByPoint(point, firstCut);
+        numberOfRelaxedCuts += MIPSolver->relaxRepairableCutsViolatedByPoint(getPrimalPointInDualProblem(S), firstCut);
     }
 
     checkedPrimalSolutionHashes = primalSolutionHashes;

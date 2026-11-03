@@ -166,6 +166,22 @@ Changes since SHOT 1.1.
   they violate a row after the presolve is undone. The dual problem could
   then be taken as infeasible, and the solution stop without a primal
   solution ([#255]).
+- SHOT builds with `CMAKE_BUILD_TYPE=RelWithDebInfo`; configuring the bundled
+  CppAD failed for this build type.
+- A fixed-integer NLP candidate whose integer values are integral only within
+  the tolerance, e.g., 0.9999999, is compared with the candidates already
+  tested after rounding these values. They were truncated, so the candidate
+  could be skipped as a duplicate of another integer combination.
+- With GCC, the checks whether a power of a variable is linear or quadratic
+  could use the integer `abs`, depending on the included headers, and treat,
+  e.g., a power 1.5 as linear and 2.5 as quadratic.
+- The ESH and ECP methods check whether a new cut removes a known primal
+  solution with the solution's values of the auxiliary variables of the
+  reformulation; they read past the end of the solution point instead.
+- The convexity of the tangent of an interval containing a pole is unknown;
+  the interval error was not caught. The cosine and sine of intervals with
+  bounds beyond 1e9 are [-1, 1], and the tangent is unbounded; the bounds
+  overflowed an integer.
 
 ### Removed
 

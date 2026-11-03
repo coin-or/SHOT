@@ -365,10 +365,10 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             // even when the RHS itself is modest.
             if(cutHasNoNaNsorInfs)
             {
-                double maxAbsCutValue = abs(constant);
+                double maxAbsCutValue = std::abs(constant);
 
                 for(auto& E : elements)
-                    maxAbsCutValue = std::max(maxAbsCutValue, abs(E.second));
+                    maxAbsCutValue = std::max(maxAbsCutValue, std::abs(E.second));
 
                 if(maxAbsCutValue > 1e9)
                 {

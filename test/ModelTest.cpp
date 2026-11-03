@@ -3536,7 +3536,7 @@ bool ModelTestSquareRootReformulation()
             }
 
             // Check bounds were squared correctly (5^2 = 25)
-            if(abs(linConstr->valueRHS - 25.0) > 1e-6)
+            if(std::abs(linConstr->valueRHS - 25.0) > 1e-6)
             {
                 std::cout << "FAILED: Expected RHS=25 after squaring in 'sqrtlinearconstr', got " << linConstr->valueRHS
                           << '\n';
@@ -3597,7 +3597,7 @@ bool ModelTestSquareRootReformulation()
         }
 
         // Check bounds were squared correctly (10^2 = 100)
-        if(abs(mainQuadConstraint->valueRHS - 100.0) > 1e-6)
+        if(std::abs(mainQuadConstraint->valueRHS - 100.0) > 1e-6)
         {
             std::cout << "FAILED: Expected RHS=100 after squaring, got " << mainQuadConstraint->valueRHS << '\n';
             passed = false;

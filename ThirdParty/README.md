@@ -47,7 +47,10 @@ MC++ contains `interval.hpp`, `mcfunc.hpp`, and `mcop.hpp`. SHOT does not use
 MC++'s relaxation, polynomial, linear algebra, or automatic differentiation
 facilities. The old unused cpplapack/FADBAD++ trees were removed. Optional
 `MC__USE_FADBAD` is not supported by this subset. MC++ interval arithmetic
-remains non-verified (it does not account for rounding error).
+remains non-verified (it does not account for rounding error). The importer
+patches the interval cosine (also used for the sine) and tangent, which
+overflow an `int` for bounds beyond about 1e9: the cosine of such an interval
+is [-1, 1], and the tangent throws as for an interval containing a pole.
 
 ## Other vendored files
 

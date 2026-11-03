@@ -192,10 +192,10 @@ bool MIPSolverBase::createHyperplane(HyperplanePtr hyperplane)
     // gradient evaluated far out on a loosely bounded nonlinear term (e.g. exp() of a large argument) can have
     // large coefficients even when the RHS itself is modest, and handing such a cut to the MIP solver as-is
     // can crash or numerically break it.
-    double maxAbsCutValue = abs(tmpPair.second);
+    double maxAbsCutValue = std::abs(tmpPair.second);
 
     for(auto& E : tmpPair.first)
-        maxAbsCutValue = std::max(maxAbsCutValue, abs(E.second));
+        maxAbsCutValue = std::max(maxAbsCutValue, std::abs(E.second));
 
     if(maxAbsCutValue > 1e9)
     {

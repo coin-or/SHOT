@@ -1295,7 +1295,7 @@ inline std::optional<LinearTermPtr> convertPowerToLinearTerm(std::shared_ptr<Exp
 
     double powerValue = std::dynamic_pointer_cast<ExpressionConstant>(power->secondChild)->constant;
 
-    if(abs(powerValue - 1.0) > 1e-6)
+    if(std::abs(powerValue - 1.0) > 1e-6)
         return resultingLinearTerm;
 
     // Now know we have a linear term
@@ -1457,7 +1457,7 @@ inline std::optional<QuadraticTermPtr> convertPowerToQuadraticTerm(std::shared_p
 
     double powerValue = std::dynamic_pointer_cast<ExpressionConstant>(power->secondChild)->constant;
 
-    if(abs(powerValue - 2.0) > 1e-6)
+    if(std::abs(powerValue - 2.0) > 1e-6)
         return resultingQuadraticTerm;
 
     // Now know we have a quadratic term

@@ -596,14 +596,16 @@ PrimalFixedNLPCandidate PrimalSolver::createFixedNLPCandidate(
 
     assert((int)candidate.size() == env->reformulatedProblem->properties.numberOfVariables);
 
-    VectorInteger discreteVariableValues;
+    VectorDouble discreteVariableValues;
     discreteVariableValues.reserve(env->reformulatedProblem->properties.numberOfDiscreteVariables);
 
     for(auto& VAR : env->reformulatedProblem->allVariables)
     {
         if(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer
             || VAR->properties.type == E_VariableType::Semiinteger)
-            discreteVariableValues.push_back(candidate[VAR->getIndex()]);
+            // Rounded, since MIP solutions are only integral within a tolerance, and kept as doubles, since the values
+            // of integer variables need not fit in an int
+            discreteVariableValues.push_back(std::round(candidate[VAR->getIndex()]));
     }
 
     PairDouble pointHashes;

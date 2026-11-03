@@ -521,6 +521,12 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
 
     std::vector<std::pair<ConstraintHyperplanePtr, double>> hyperplanesCuttingAwayPrimals;
 
+    // The primal solutions are in the variables of the original problem, and the cuts in those of the dual problem
+    std::vector<VectorDouble> primalPoints;
+
+    for(auto& P : env->results->primalSolutions)
+        primalPoints.push_back(env->dualSolver->getPrimalPointInDualProblem(P));
+
     // If no hyperplanes added, do rootsearch also on nonconvex constraints
     if(addedHyperplanes == 0 && nonconvexSelectedNumericValues.size() > 0)
     {
@@ -612,7 +618,7 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
 
                     bool cutsAwayPrimalSolution = false;
 
-                    for(auto& P : env->results->primalSolutions)
+                    for(auto& point : primalPoints)
                     {
                         if(auto terms = env->dualSolver->MIPSolver->createHyperplaneTerms(hyperplane))
                         {
@@ -620,7 +626,7 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
 
                             for(auto& T : terms->first)
                             {
-                                constraintValue += T.second * P.point[T.first];
+                                constraintValue += T.second * point[T.first];
                             }
 
                             if(constraintValue > 0)
@@ -731,7 +737,7 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
 
                         bool cutsAwayPrimalSolution = false;
 
-                        for(auto& P : env->results->primalSolutions)
+                        for(auto& point : primalPoints)
                         {
                             if(auto terms = env->dualSolver->MIPSolver->createHyperplaneTerms(hyperplane))
                             {
@@ -739,7 +745,7 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
 
                                 for(auto& T : terms->first)
                                 {
-                                    constraintValue += T.second * P.point[T.first];
+                                    constraintValue += T.second * point[T.first];
                                 }
 
                                 if(constraintValue > 0)
