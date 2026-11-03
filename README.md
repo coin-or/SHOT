@@ -17,7 +17,7 @@ The project website [shotsolver.dev](https://shotsolver.dev) contains:
 
 - [Getting started](https://shotsolver.dev/getting-started/): installation and examples for Python, GAMS, Pyomo, JuMP, AMPL, the command line and C++
 - [Documentation](https://shotsolver.dev/docs/): the guides and references below
-  - [SHOTpy tutorial](https://shotsolver.dev/docs/dev/SHOTpy_Tutorial.html): modeling, settings, file input and callbacks in Python
+  - [SHOTpy tutorial](https://shotsolver.dev/docs/dev/SHOTpy_Tutorial.html): notebooks on modeling, settings, file input, callbacks and Python workflows
   - [Command-line usage](https://shotsolver.dev/docs/dev/CommandLineUsage.html): problem formats, options and use as an AMPL solver
   - [C++ integration](https://shotsolver.dev/docs/dev/cpp.html) and [callbacks](https://shotsolver.dev/docs/dev/Callbacks.html)
   - [Solver settings](https://shotsolver.dev/docs/dev/reference/settings.html): all settings with their defaults

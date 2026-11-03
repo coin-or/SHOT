@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osil xmlns="os.optimizationservices.org" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="os.optimizationservices.org http://www.optimizationservices.org/schemas/2.0/OSiL.xsd">
+  <instanceHeader>
+    <name>shot_ex_jogo</name>
+    <description>
+      min  -x1 - x2
+      s.t. c1: 0.15*(x1 - 8)^2 + 0.1*(x2 - 6)^2 + 0.025*exp(x1)/x2^2 &lt;= 5
+           c2: 1/x1 + 1/x2 - x1^0.5*x2^0.5 &lt;= -4
+           l:  2*x1 - 3*x2 &lt;= 2
+           1 &lt;= x1 &lt;= 20 (continuous), 1 &lt;= x2 &lt;= 20 (integer)
+    </description>
+  </instanceHeader>
+  <instanceData>
+    <variables numberOfVariables="2">
+      <var name="x1" type="C" lb="1" ub="20"/>
+      <var name="x2" type="I" lb="1" ub="20"/>
+    </variables>
+    <objectives numberOfObjectives="1">
+      <obj maxOrMin="min" name="objvar" numberOfObjCoef="2">
+        <coef idx="0">-1</coef>
+        <coef idx="1">-1</coef>
+      </obj>
+    </objectives>
+    <constraints numberOfConstraints="3">
+      <con name="c1" ub="5"/>
+      <con name="c2" ub="-4"/>
+      <con name="l" ub="2"/>
+    </constraints>
+    <linearConstraintCoefficients numberOfValues="2">
+      <start><el>0</el><el>0</el><el>0</el><el>2</el></start>
+      <colIdx><el>0</el><el>1</el></colIdx>
+      <value><el>2</el><el>-3</el></value>
+    </linearConstraintCoefficients>
+    <nonlinearExpressions numberOfNonlinearExpressions="2">
+      <nl idx="0"><sum><times><number value="0.15"/><square><minus><variable idx="0"/><number value="8"/></minus></square></times><times><number value="0.1"/><square><minus><variable idx="1"/><number value="6"/></minus></square></times><divide><times><number value="0.025"/><exp><variable idx="0"/></exp></times><square><variable idx="1"/></square></divide></sum></nl>
+      <nl idx="1"><sum><divide><number value="1"/><variable idx="0"/></divide><divide><number value="1"/><variable idx="1"/></divide><negate><times><power><variable idx="0"/><number value="0.5"/></power><power><variable idx="1"/><number value="0.5"/></power></times></negate></sum></nl>
+    </nonlinearExpressions>
+  </instanceData>
+</osil>

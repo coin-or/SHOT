@@ -55,9 +55,13 @@ Update the vendored tokens and components together from SHOT-branding; do not
 edit the generated token file. Website-specific layouts remain in the website
 repository. No deploy credentials are needed by SHOT's validation workflow.
 
-The SHOTpy notebook remains the single tutorial source. The builder splits its
-numbered sections into `tutorial/*.ipynb` and creates a chapter overview and a
-complete-notebook download. Fix prose and equations in the source notebook.
+The SHOTpy tutorial is the series of notebooks in `docs/tutorial`. The builder
+publishes each notebook as a page, with the outputs stored in it, after an
+overview made from `docs/tutorial/README.md`, whose numbered links give the
+chapters and their order, and offers the folder as a zip download. The stored
+outputs, including the figures, are what readers see on the site and on GitHub,
+so execute the notebooks again, from their folder and with a Release build,
+after changing them.
 
 The settings page is progressively enhanced by `shot.js`: local filtering,
 category navigation, collapsible groups, and copy controls. Without JavaScript,

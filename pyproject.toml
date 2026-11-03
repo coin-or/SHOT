@@ -69,7 +69,7 @@ sdist.include = [
     "/ThirdParty/mc++/**", "/ThirdParty/nlohmann/**", "/ThirdParty/tinyxml2/**",
     "/docs/Callbacks.md", "/docs/CommandLineUsage.md",
     "/docs/CompilationInstructions.md", "/docs/DebuggingSHOT.md",
-    "/docs/SHOTpy_Tutorial.ipynb",
+    "/docs/tutorial/**",
 ]
 sdist.exclude = [
     "ThirdParty/**/.git", "ThirdParty/**/.git/**", "ThirdParty/**/build/**",
@@ -94,7 +94,7 @@ BUILD_SHARED_LIBS = "off"
 [tool.cibuildwheel]
 build = "cp311-* cp312-* cp313-* cp314-* cp315-*"
 skip = "*-musllinux_*"
-test-requires = ["pytest", "numpy", "matplotlib", "ipython"]
+test-requires = ["pytest", "numpy", "matplotlib", "ipython", "pandas"]
 test-command = [
     "pytest -v {project}/test/python",
     "python -c \"import numpy; import SHOTpy; s = SHOTpy.Solver(); assert s.getEnvironment() is not None\"",

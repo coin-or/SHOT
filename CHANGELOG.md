@@ -94,8 +94,9 @@ Changes since SHOT 1.1.
   the MINLPTests.jl problems, and Python tests of SHOTpy ([#192], [#197],
   [#204]).
 - Documentation of the command-line usage, compilation, callbacks and
-  debugging of SHOT, a SHOTpy tutorial, and a C++ and Python API reference
-  on the website ([06f753cd], [#206], [#220], [#240]).
+  debugging of SHOT, a SHOTpy tutorial of four notebooks in `docs/tutorial`,
+  from getting started to callbacks and Python workflows, and a C++ and Python
+  API reference on the website ([06f753cd], [#206], [#220], [#240]).
 - Contribution guidelines (`CONTRIBUTING.md`) and this changelog ([#240]),
   and `AGENTS.md` with instructions for AI coding agents ([06f753cd]).
 - The settings reference lists the settings of all MIP and NLP solvers and of

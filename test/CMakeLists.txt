@@ -477,7 +477,7 @@ if(TARGET SHOTpy)
       # Set environment so pytest can find SHOTpy module. All Python tests take about three minutes on their own,
       # and longer when run in parallel with the other tests
       set_tests_properties(Python_API_Tests PROPERTIES
-        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR};SHOT_TUTORIAL_NOTEBOOK=${PROJECT_SOURCE_DIR}/docs/SHOTpy_Tutorial.ipynb"
+        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR};SHOT_TUTORIAL_FOLDER=${PROJECT_SOURCE_DIR}/docs/tutorial"
         FAIL_REGULAR_EXPRESSION "FAILED;ERROR"
         TIMEOUT 1200
       )
@@ -516,7 +516,7 @@ if(TARGET SHOTpy)
           WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
         )
         set_tests_properties(Python_${pytest_file} PROPERTIES
-          ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR};SHOT_TUTORIAL_NOTEBOOK=${PROJECT_SOURCE_DIR}/docs/SHOTpy_Tutorial.ipynb"
+          ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR};SHOT_TUTORIAL_FOLDER=${PROJECT_SOURCE_DIR}/docs/tutorial"
           FAIL_REGULAR_EXPRESSION "FAILED;ERROR"
           TIMEOUT 300
         )

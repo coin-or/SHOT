@@ -738,12 +738,12 @@ if(HAS_PYTHON)
         target_link_options(SHOTpy PRIVATE "LINKER:--export-dynamic")
     endif()
     
-    # Copy the SHOTpy tutorial notebook to the same directory as the SHOTpy module
+    # Copy the SHOTpy tutorial notebooks and their data files to the directory of the SHOTpy module
     add_custom_command(TARGET SHOTpy POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy
-            ${CMAKE_SOURCE_DIR}/docs/SHOTpy_Tutorial.ipynb
-            $<TARGET_FILE_DIR:SHOTpy>/SHOTpy_Tutorial.ipynb
-        COMMENT "Copying SHOTpy tutorial notebook to module directory"
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${CMAKE_SOURCE_DIR}/docs/tutorial
+            $<TARGET_FILE_DIR:SHOTpy>/tutorial
+        COMMENT "Copying the SHOTpy tutorial to the module directory"
     )
 
     # Type stubs (SHOTpy.pyi) next to the module, so that editors and type checkers know the classes and signatures
