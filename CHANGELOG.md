@@ -39,7 +39,7 @@ Changes since SHOT 1.1.
   environment is freed. A problem used afterwards keeps the environment with
   its settings and output. The environment was never freed, since its
   components refer back to it, so creating many solvers, e.g., in a loop in
-  SHOTpy, used about 0.3 MB more memory per solver.
+  SHOTpy, used about 0.3 MB more memory per solver ([#258]).
 
 ### Added
 
@@ -267,6 +267,7 @@ Changes since SHOT 1.1.
 [#255]: https://github.com/coin-or/SHOT/pull/255
 [#256]: https://github.com/coin-or/SHOT/pull/256
 [#257]: https://github.com/coin-or/SHOT/pull/257
+[#258]: https://github.com/coin-or/SHOT/pull/258
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e
