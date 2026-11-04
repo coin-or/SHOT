@@ -194,8 +194,11 @@ void DualSolver::addHyperplane(HyperplanePtr hyperplane)
 {
     // The point the hyperplane is generated in is kept, so that the distance the points move between iterations
     // can be calculated. Only the first point of an iteration is kept, since that is the one the distance is
-    // calculated from, and keeping every point would grow with the number of hyperplanes generated.
-    if(auto numericHP = std::dynamic_pointer_cast<NumericHyperplane>(hyperplane))
+    // calculated from, and keeping every point would grow with the number of hyperplanes generated. Hyperplanes
+    // reused from the interior point search are added before the first iteration, and then there is no iteration
+    // to keep the point in.
+    if(auto numericHP = std::dynamic_pointer_cast<NumericHyperplane>(hyperplane);
+        numericHP && env->results->getNumberOfIterations() > 0)
     {
         auto currentIteration = env->results->getCurrentIteration();
 
