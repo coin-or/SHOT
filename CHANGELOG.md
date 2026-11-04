@@ -196,6 +196,10 @@ Changes since SHOT 1.1.
   otherwise be reported with an objective value better than that of any
   feasible solution when the objective is sensitive to the constraint
   violation ([#265]).
+- With Gurobi in the single-tree strategy, SHOT no longer crashes when an
+  integer cut of nonbinary variables has been added, which adds variables
+  to the MIP problem. The callback read the values of the new variables
+  outside the variables it got before the first solve.
 
 ### Removed
 
