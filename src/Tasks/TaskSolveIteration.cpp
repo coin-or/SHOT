@@ -76,12 +76,9 @@ void TaskSolveIteration::run()
     auto timeLim = env->settings->getSetting<double>("Termination.TimeLimit") - env->timing->getElapsedTime("Total");
     env->dualSolver->MIPSolver->setTimeLimit(timeLim);
 
-    // The cutoff in the original problem's sense, if one is used when solving
-    std::optional<double> usedCutOff;
-
     if(env->dualSolver->useCutOff && !currIter->MIPSolutionLimitUpdated)
     {
-        usedCutOff = env->dualSolver->cutOffToUse;
+        env->dualSolver->cutOffInMIPSolver = env->dualSolver->cutOffToUse;
 
         double cutOffValue;
         double cutOffValueConstraint;
@@ -109,6 +106,10 @@ void TaskSolveIteration::run()
             != E_ObjectiveFunctionClassification::Quadratic)
             env->dualSolver->MIPSolver->setCutOffAsConstraint(cutOffValueConstraint);
     }
+
+    // The cutoff in the original problem's sense, if one is used when solving. It is not set again when only the
+    // solution limit has been updated, but the one set in an earlier iteration is still used by the MIP solver
+    std::optional<double> usedCutOff = env->dualSolver->cutOffInMIPSolver;
 
     if(env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable()
         && env->settings->getSetting<bool>("Dual.MIP.UpdateObjectiveBounds") && !currIter->MIPSolutionLimitUpdated)

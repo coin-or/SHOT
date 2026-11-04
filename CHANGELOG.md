@@ -185,6 +185,10 @@ Changes since SHOT 1.1.
   problem is solved again without dual reductions, as are the other problems
   solved before the main iterations; the search could otherwise end without
   an interior point ([#259]).
+- A dual problem that is infeasible because of the cutoff gives the cutoff as
+  dual bound also when only the solution limit was updated since the cutoff
+  was set. The solution could otherwise stop with a gap, e.g., on a convex
+  problem, since the dual problem was taken as infeasible ([#263]).
 
 ### Removed
 
@@ -279,6 +283,7 @@ Changes since SHOT 1.1.
 [#259]: https://github.com/coin-or/SHOT/pull/259
 [#261]: https://github.com/coin-or/SHOT/pull/261
 [#262]: https://github.com/coin-or/SHOT/pull/262
+[#263]: https://github.com/coin-or/SHOT/pull/263
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e

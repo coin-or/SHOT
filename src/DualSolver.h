@@ -77,6 +77,10 @@ public:
 
     double cutOffToUse = SHOT_DBL_INF;
     bool useCutOff = false;
+
+    // The cutoff, in the original problem's sense, last given to the MIP solver, which keeps it until it is set again
+    std::optional<double> cutOffInMIPSolver;
+
     bool isSingleTree = false;
 
     // Whether the dual problem contains the whole reformulated problem instead of only being a relaxation of it. What
