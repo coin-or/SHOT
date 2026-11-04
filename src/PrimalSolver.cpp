@@ -466,7 +466,8 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
     }
     else
     {
-        PairIndexValue mostDevLinearConstraints;
+        // Without linear constraints, the default value of the solution is kept
+        PairIndexValue mostDevLinearConstraints = primalSol.maxDeviatingConstraintLinear;
 
         if(env->problem->properties.numberOfLinearConstraints > 0)
         {
@@ -597,14 +598,16 @@ PrimalFixedNLPCandidate PrimalSolver::createFixedNLPCandidate(
 
     assert((int)candidate.size() == env->reformulatedProblem->properties.numberOfVariables);
 
-    VectorInteger discreteVariableValues;
+    // The values are rounded rather than truncated, so that values on either side of an integer within the tolerance
+    // give the same combination; they are kept as doubles since they may be outside the range of an int
+    VectorDouble discreteVariableValues;
     discreteVariableValues.reserve(env->reformulatedProblem->properties.numberOfDiscreteVariables);
 
     for(auto& VAR : env->reformulatedProblem->allVariables)
     {
         if(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer
             || VAR->properties.type == E_VariableType::Semiinteger)
-            discreteVariableValues.push_back(candidate[VAR->getIndex()]);
+            discreteVariableValues.push_back(std::round(candidate[VAR->getIndex()]));
     }
 
     PairDouble pointHashes;
