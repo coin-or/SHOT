@@ -105,7 +105,7 @@ public:
      * The point is given to SHOT when solveProblem() is called. If it is feasible, it is the first primal solution,
      * so it is the cutoff and the MIP start of the dual problems with discrete variables. It is also the starting
      * point of an NLP problem with the discrete variables fixed to their rounded values if
-     * Primal.FixedInteger.UseStartingPoint is true, also if the point is not feasible.
+     * Primal.FixedInteger.UseStartingPoint is true and the point is not feasible.
      *
      * Must be called after setProblem(), which replaces the starting point with the one of the modeling system,
      * e.g., the initial values in an AMPL .nl file or the levels of the variables in GAMS, or removes it.
