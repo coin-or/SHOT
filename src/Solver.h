@@ -203,7 +203,11 @@ public:
 
     VectorString getSettingIdentifiers(E_SettingType type);
 
+    // The dual bound of the current dual problem. For a nonconvex problem, it is not a valid bound for the problem once
+    // cuts have been added to nonconvex functions; getGlobalDualBound() is a valid bound.
     double getCurrentDualBound();
+    // The best dual bound that is valid for the problem, also when it is nonconvex. The objective gaps are calculated
+    // from it.
     double getGlobalDualBound();
     double getPrimalBound();
     double getAbsoluteObjectiveGap();
