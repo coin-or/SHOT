@@ -1227,6 +1227,35 @@ bool testInitialPOACutsWithLargeCoefficients(ES_MIPSolver mipSolver)
     return true;
 }
 
+// With Dual.MIP.UpdateObjectiveBounds, the bounds of the objective variable in the dual problem, which is minimized,
+// are updated with the dual and primal bounds, which for a maximization problem are those of the maximized objective
+bool testUpdatedObjectiveBounds(ES_MIPSolver mipSolver, const std::string& filename, double expectedObjective)
+{
+    auto solver = std::make_unique<Solver>();
+
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+    solver->updateSetting("Termination.TimeLimit", 30.0);
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(mipSolver));
+    solver->updateSetting("Dual.MIP.UpdateObjectiveBounds", true);
+
+    if(!solver->setProblem(filename) || !solver->solveProblem())
+    {
+        std::cout << name(mipSolver) << ", " << filename << ": could not solve the problem\n";
+        return false;
+    }
+
+    double primalBound = solver->getPrimalBound();
+
+    if(std::abs(primalBound - expectedObjective) > 1e-2)
+    {
+        std::cout << name(mipSolver) << ", " << filename << ": the primal bound " << primalBound
+                  << " is not the optimum " << expectedObjective << '\n';
+        return false;
+    }
+
+    return true;
+}
+
 int DualBoundTest(int argc, char* argv[])
 {
     int choice = 1;
@@ -1339,6 +1368,19 @@ int DualBoundTest(int argc, char* argv[])
         for(auto mipSolver : compiledSolvers())
             passed = testInitialPOACutsWithLargeCoefficients(mipSolver) && passed;
         std::cout << "Finished test that initial outer approximation cuts with large coefficients are scaled.\n";
+        break;
+    case 17:
+        std::cout << "Starting test that the objective bounds are updated in the sense of the dual problem:\n";
+        for(auto mipSolver : compiledSolvers())
+        {
+            passed = testUpdatedObjectiveBounds(
+                         mipSolver, "data/instances/minlp_tests_jl/nlp-cvx_109_010.jl.nl", 0.6931471805599453)
+                && passed;
+            passed = testUpdatedObjectiveBounds(
+                         mipSolver, "data/instances/minlp_tests_jl/nlp-cvx_204_010.jl.nl", -1.2071067837918394)
+                && passed;
+        }
+        std::cout << "Finished test that the objective bounds are updated in the sense of the dual problem.\n";
         break;
     default:
         passed = false;

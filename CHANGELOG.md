@@ -206,6 +206,11 @@ Changes since SHOT 1.1.
   e.g., of `x^2/y` for `y` close to zero, could have coefficients so large
   that Gurobi returned a solution of the dual problem that was not optimal,
   and SHOT took a suboptimal solution as globally optimal.
+- With `Dual.MIP.UpdateObjectiveBounds`, the bounds of the objective
+  variable are updated in the sense of the dual problem, and only tightened.
+  A maximization problem was reported as infeasible, since the bounds of the
+  maximized objective were given to the minimized objective variable, and
+  the bounds were loosened when there was no primal or dual bound yet.
 
 ### Removed
 
