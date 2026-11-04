@@ -3857,6 +3857,43 @@ bool TestEnvironmentReleased()
     return passed;
 }
 
+// The cutting planes of the interior point search are added to the dual problem before its first iteration
+bool TestReuseOfInteriorPointCuttingPlanes()
+{
+    const double expectedObjective = 6.00975909;
+
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Critical));
+    solver->updateSetting("Termination.TimeLimit", 30.0);
+    solver->updateSetting("Dual.ESH.InteriorPoint.CuttingPlane.Reuse", true);
+
+    if(!solver->setProblem("data/synthes1.osil"))
+    {
+        std::cout << "Could not set problem!\n";
+        return (false);
+    }
+
+    if(!solver->solveProblem())
+    {
+        std::cout << "Error while solving problem\n";
+        return (false);
+    }
+
+    double primalBound = solver->getPrimalBound();
+
+    std::cout << "  The primal bound is " << primalBound << ", the optimum is " << expectedObjective << '\n';
+
+    if(std::abs(primalBound - expectedObjective) > 1e-2)
+    {
+        std::cout << "The primal bound does not agree with the optimum.\n";
+        return (false);
+    }
+
+    return (true);
+}
+
 int SolverTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -4072,6 +4109,11 @@ int SolverTest(int argc, char* argv[])
         std::cout << "Starting test for reporting the primal solution that fulfils the constraints" << std::endl;
         passed = TestAccuratePrimalSolution();
         std::cout << "Finished test for reporting the primal solution that fulfils the constraints." << std::endl;
+        break;
+    case 40:
+        std::cout << "Starting test for reusing the cutting planes of the interior point search" << std::endl;
+        passed = TestReuseOfInteriorPointCuttingPlanes();
+        std::cout << "Finished test for reusing the cutting planes of the interior point search." << std::endl;
         break;
     default:
         passed = false;
