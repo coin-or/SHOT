@@ -538,8 +538,8 @@ VectorInteger MIPSolverHighs::addLinearConstraints(const std::vector<std::map<in
 
     int numConstraintsBefore = highsInstance.getNumRow();
 
-    highsInstance.addRows(elements.size(), &lowerBounds[0], &upperBounds[0], variableIndexes.size(), &rowStarts[0],
-        &variableIndexes[0], &coefficients[0]);
+    highsInstance.addRows(elements.size(), lowerBounds.data(), upperBounds.data(), variableIndexes.size(),
+        rowStarts.data(), variableIndexes.data(), coefficients.data());
 
     if(highsInstance.getNumRow() != numConstraintsBefore + (int)elements.size())
     {
@@ -577,13 +577,13 @@ int MIPSolverHighs::addLinearConstraint(
     // Adds the cutting plane
     if(isGreaterThan)
     {
-        highsInstance.addRow(
-            -constant, highsInstance.getInfinity(), variableIndexes.size(), &variableIndexes[0], &coefficients[0]);
+        highsInstance.addRow(-constant, highsInstance.getInfinity(), variableIndexes.size(), variableIndexes.data(),
+            coefficients.data());
     }
     else
     {
-        highsInstance.addRow(
-            -highsInstance.getInfinity(), -constant, variableIndexes.size(), &variableIndexes[0], &coefficients[0]);
+        highsInstance.addRow(-highsInstance.getInfinity(), -constant, variableIndexes.size(), variableIndexes.data(),
+            coefficients.data());
     }
 
     if(highsInstance.getNumRow() > numConstraintsBefore)
@@ -1193,14 +1193,14 @@ void MIPSolverHighs::setCutOffAsConstraint(double cutOff)
         if(isMinimizationProblem)
         {
             highsInstance.addRow(-highsInstance.getInfinity(), (cutOff - this->objectiveConstant),
-                variableIndexes.size(), &variableIndexes[0], &coefficients[0]);
+                variableIndexes.size(), variableIndexes.data(), coefficients.data());
             env->output->outputDebug(
                 "        Setting cutoff constraint to " + Utilities::toString(cutOff) + " for minimization.");
         }
         else
         {
             highsInstance.addRow(cutOff - this->objectiveConstant, highsInstance.getInfinity(), variableIndexes.size(),
-                &variableIndexes[0], &coefficients[0]);
+                variableIndexes.data(), coefficients.data());
             env->output->outputDebug(
                 "        Setting cutoff constraint value to " + Utilities::toString(cutOff) + " for maximization.");
         }
