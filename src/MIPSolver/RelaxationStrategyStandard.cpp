@@ -77,6 +77,10 @@ void RelaxationStrategyStandard::executeStrategy()
     {
         this->setInactive();
     }
+    else if(hasNumericalTrouble())
+    {
+        this->setInactive();
+    }
     else
     {
         this->setActive();
@@ -159,5 +163,17 @@ bool RelaxationStrategyStandard::isObjectiveStagnant()
         return (true);
 
     return (false);
+}
+
+// The relaxation can get numerically difficult, e.g., after cuts with large coefficients have been added, while the
+// problem with the discrete variables can still be solved, so the relaxation then ends
+bool RelaxationStrategyStandard::hasNumericalTrouble()
+{
+    if(env->results->getNumberOfIterations() < 2)
+        return (false);
+
+    auto prevIter = env->results->getPreviousIteration();
+
+    return (prevIter->solutionStatus == E_ProblemSolutionStatus::Numeric && prevIter->solutionPoints.empty());
 }
 } // namespace SHOT

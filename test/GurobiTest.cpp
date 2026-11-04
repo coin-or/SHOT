@@ -26,6 +26,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
+#include <functional>
 #include <iostream>
 #include <sstream>
 
@@ -282,6 +283,46 @@ bool GurobiLazyCutScalingTest()
     if(std::abs(solver->getPrimalBound() - 2.0) > 1e-3)
     {
         std::cout << "The primal bound " << solver->getPrimalBound() << " is not the optimum 2." << std::endl;
+        return false;
+    }
+
+    return true;
+}
+
+// Solves a problem with Gurobi and checks that a primal solution is found, and if requested, that the objective gap is
+// closed
+bool GurobiDualProblemTest(
+    std::string filename, bool gapClosed, const std::function<void(Solver&)>& configure = nullptr)
+{
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+    solver->updateSetting("Termination.TimeLimit", 60.0);
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Gurobi));
+    solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+
+    if(configure)
+        configure(*solver);
+
+    if(!solver->setProblem(filename))
+        return false;
+
+    solver->solveProblem();
+
+    std::cout << "  " << env->results->terminationReasonDescription << " Dual bound " << solver->getCurrentDualBound()
+              << ", primal bound " << solver->getPrimalBound() << "." << std::endl;
+
+    if(!env->results->hasPrimalSolution())
+    {
+        std::cout << "No primal solution was found." << std::endl;
+        return false;
+    }
+
+    if(gapClosed && !env->results->isAbsoluteObjectiveGapToleranceMet()
+        && !env->results->isRelativeObjectiveGapToleranceMet())
+    {
+        std::cout << "The objective gap is not closed." << std::endl;
         return false;
     }
 
@@ -782,6 +823,32 @@ int GurobiTest(int argc, char* argv[])
         std::cout << "Starting test for scaling the lazy cuts in single-tree strategy" << std::endl;
         passed = GurobiLazyCutScalingTest();
         std::cout << "Finished test for scaling the lazy cuts in single-tree strategy." << std::endl;
+        break;
+    case 18:
+        // Gurobi solves the convex problem with quadratic constraints directly, and its objective value is the bound
+        std::cout << "Starting test for the dual bound of a continuous convex problem with quadratic constraints"
+                  << std::endl;
+        passed = GurobiDualProblemTest("data/instances/minlp_tests_jl/nlp-cvx_202_010.jl.nl", true);
+        std::cout << "Finished test for the dual bound of a continuous convex problem with quadratic constraints."
+                  << std::endl;
+        break;
+    case 19:
+        // The barrier method has numerical trouble on the degenerate convex problem with quadratic constraints
+        std::cout << "Starting test for solving the dual problem again after numerical trouble" << std::endl;
+        passed = GurobiDualProblemTest("data/instances/minlp_tests_jl/nlp-cvx_202_011.jl.nl", true);
+        std::cout << "Finished test for solving the dual problem again after numerical trouble." << std::endl;
+        break;
+    case 20:
+        // The relaxation gets numerical trouble after a repair, also when Gurobi uses its most careful numerics, and
+        // the primal solutions are only found in the problem with the discrete variables
+        std::cout << "Starting test for ending the relaxation after numerical trouble" << std::endl;
+        passed = GurobiDualProblemTest("data/instances/MINLP-nonconvex/nvs05.osil", false,
+            [](Solver& solver)
+            {
+                solver.updateSetting("Strategy.UseRecommendedSettings", false);
+                solver.updateSetting("Subsolver.Gurobi.NumericFocus", 3);
+            });
+        std::cout << "Finished test for ending the relaxation after numerical trouble." << std::endl;
         break;
     default:
         passed = false;

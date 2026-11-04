@@ -216,6 +216,17 @@ Changes since SHOT 1.1.
   their RHS was larger than 1e15, so a cut generated close to a singularity,
   e.g., of `x^2/y` for `y` close to zero, could be given to the MIP solver
   with coefficients of the order 1e20.
+- With Gurobi, a continuous convex problem with quadratic constraints that
+  Gurobi solves to optimality gets its objective value as dual bound. Gurobi
+  reports an infinite `ObjBound` for such a problem, so the dual bound was
+  missing and the solution could not be proven optimal.
+- When Gurobi stops with numerical trouble, the dual problem is solved again
+  with `NumericFocus` 3, unless `Subsolver.Gurobi.NumericFocus` is already 3.
+  SHOT otherwise stopped, e.g., on a degenerate convex problem with
+  quadratic constraints.
+- Numerical trouble in the relaxation of a problem with discrete variables
+  (`Dual.Relaxation.Use`) ends the relaxation instead of the solution, so the
+  problem with the discrete variables is still solved.
 
 ### Removed
 

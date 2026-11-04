@@ -859,6 +859,9 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
         MIPSolutionStatus = E_ProblemSolutionStatus::Error;
     }
 
+    if(MIPSolutionStatus == E_ProblemSolutionStatus::Numeric)
+        MIPSolutionStatus = resolveWithNumericFocus(MIPSolutionStatus);
+
     // An unbounded exact dual problem means that the problem is unbounded, so no point is needed. Gurobi's presolve
     // can report a bounded problem as infeasible or unbounded, e.g., the minimax problem, whose objective variable has
     // a large lower bound, so this and the problems solved before the main iterations are solved again to find out
@@ -972,6 +975,32 @@ E_ProblemSolutionStatus MIPSolverGurobi::resolveInfeasibleOrUnbounded(E_ProblemS
     catch(GRBException& e)
     {
         env->output->outputError("        Error when solving MIP/LP problem without dual reductions", e.getMessage());
+        status = E_ProblemSolutionStatus::Error;
+    }
+
+    return (status);
+}
+
+E_ProblemSolutionStatus MIPSolverGurobi::resolveWithNumericFocus(E_ProblemSolutionStatus status)
+{
+    try
+    {
+        int numericFocus = gurobiModel->get(GRB_IntParam_NumericFocus);
+
+        if(numericFocus == 3)
+            return (status);
+
+        env->output->outputDebug(
+            "        Numerical trouble in Gurobi, so the problem is solved again with NumericFocus 3.");
+
+        gurobiModel->set(GRB_IntParam_NumericFocus, 3);
+        gurobiModel->optimize();
+        status = getSolutionStatus();
+        gurobiModel->set(GRB_IntParam_NumericFocus, numericFocus);
+    }
+    catch(GRBException& e)
+    {
+        env->output->outputError("        Error when solving MIP/LP problem with NumericFocus 3", e.getMessage());
         status = E_ProblemSolutionStatus::Error;
     }
 
@@ -1544,16 +1573,16 @@ double MIPSolverGurobi::getDualObjectiveValue()
     double objVal = (isMinimizationProblem ? SHOT_DBL_MIN : SHOT_DBL_MAX);
 
     // Gurobi solves a continuous problem with nonconvex quadratic terms with branch and bound, which has a bound also
-    // when it is interrupted, and whose objective value is not a bound when the gap is not zero. Only then is ObjBound
-    // available for a continuous problem.
+    // when it is interrupted, and whose objective value is not a bound when the gap is not zero. Only then does
+    // ObjBound have a finite value for a continuous problem; for a convex problem with quadratic constraints, it is
+    // available but infinite, and the objective value of the optimal solution is then the bound.
     bool isBranchAndBound = isMIP;
 
     if(!isMIP)
     {
         try
         {
-            gurobiModel->get(GRB_DoubleAttr_ObjBound);
-            isBranchAndBound = true;
+            isBranchAndBound = std::abs(gurobiModel->get(GRB_DoubleAttr_ObjBound)) < GRB_INFINITY;
         }
         catch(GRBException&)
         {

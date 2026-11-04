@@ -35,6 +35,7 @@ private:
     bool isTimeLimitReached();
     bool isLPStepFinished();
     bool isObjectiveStagnant();
+    bool hasNumericalTrouble();
 
     bool LPFinished;
 
