@@ -88,18 +88,18 @@ bool GurobiTest1(std::string filename, double correctObjectiveValue)
     if(solver->getOriginalProblem()->objectiveFunction->properties.isMinimize)
     {
         if(correctObjectiveValue <= solver->getPrimalBound() + 1e-5
-            && correctObjectiveValue >= solver->getCurrentDualBound() - 1e-5)
+            && correctObjectiveValue >= solver->getGlobalDualBound() - 1e-5)
         {
             std::cout << std::endl
                       << "Given objective value (" << correctObjectiveValue << ") is within dual ("
-                      << solver->getCurrentDualBound() << ") and primal (" << solver->getPrimalBound()
+                      << solver->getGlobalDualBound() << ") and primal (" << solver->getPrimalBound()
                       << ") for minimization problem." << std::endl;
         }
         else
         {
             std::cout << std::endl
                       << "Given objective value (" << correctObjectiveValue << ") is not within dual ("
-                      << solver->getCurrentDualBound() << ") and primal (" << solver->getPrimalBound()
+                      << solver->getGlobalDualBound() << ") and primal (" << solver->getPrimalBound()
                       << ") for minimization problem." << std::endl;
             passed = false;
         }
@@ -107,18 +107,18 @@ bool GurobiTest1(std::string filename, double correctObjectiveValue)
     else
     {
         if(correctObjectiveValue >= solver->getPrimalBound() - 1e-5
-            && correctObjectiveValue <= solver->getCurrentDualBound() + 1e-5)
+            && correctObjectiveValue <= solver->getGlobalDualBound() + 1e-5)
         {
             std::cout << std::endl
                       << "Given objective value (" << correctObjectiveValue << ") is within primal ("
-                      << solver->getPrimalBound() << ") and dual (" << solver->getCurrentDualBound()
+                      << solver->getPrimalBound() << ") and dual (" << solver->getGlobalDualBound()
                       << ") for maximization problem." << std::endl;
         }
         else
         {
             std::cout << std::endl
                       << "Given objective value (" << correctObjectiveValue << ") is not within primal ("
-                      << solver->getPrimalBound() << ") and dual (" << solver->getCurrentDualBound()
+                      << solver->getPrimalBound() << ") and dual (" << solver->getGlobalDualBound()
                       << ") for maximization problem." << std::endl;
             passed = false;
         }
@@ -310,7 +310,7 @@ bool GurobiDualProblemTest(
 
     solver->solveProblem();
 
-    std::cout << "  " << env->results->terminationReasonDescription << " Dual bound " << solver->getCurrentDualBound()
+    std::cout << "  " << env->results->terminationReasonDescription << " Dual bound " << solver->getGlobalDualBound()
               << ", primal bound " << solver->getPrimalBound() << "." << std::endl;
 
     if(!env->results->hasPrimalSolution())

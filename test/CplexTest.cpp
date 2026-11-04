@@ -79,7 +79,7 @@ bool CplexTest1(std::string filename, double correctObjectiveValue)
     if(solver->getOriginalProblem()->objectiveFunction->properties.isMinimize)
     {
         if(correctObjectiveValue <= solver->getPrimalBound() + 1e-5
-            && correctObjectiveValue >= solver->getCurrentDualBound() - 1e-5)
+            && correctObjectiveValue >= solver->getGlobalDualBound() - 1e-5)
         {
             std::cout << std::endl
                       << "Global objective value is within dual and primal bounds for minimization problem."
@@ -96,7 +96,7 @@ bool CplexTest1(std::string filename, double correctObjectiveValue)
     else
     {
         if(correctObjectiveValue >= solver->getPrimalBound() - 1e-5
-            && correctObjectiveValue <= solver->getCurrentDualBound() + 1e-5)
+            && correctObjectiveValue <= solver->getGlobalDualBound() + 1e-5)
         {
             std::cout << std::endl
                       << "Global objective value " << correctObjectiveValue
@@ -151,7 +151,7 @@ bool CplexGenericCallbackTest(std::string filename, double correctObjectiveValue
     }
 
     double primalBound = solver->getPrimalBound();
-    double dualBound = solver->getCurrentDualBound();
+    double dualBound = solver->getGlobalDualBound();
 
     std::cout << "Dual bound: " << dualBound << ", primal bound: " << primalBound
               << ", optimal objective value: " << correctObjectiveValue << "\n";
