@@ -373,7 +373,9 @@ introduced, or reproduce a failure in isolation instead of debugging a full
   `pytest` is importable; they cover the Python/SHOTpy binding surface
   (modeling, constraints, callbacks, gradients/Hessians) rather than the
   core solve algorithm, so they're more useful for API-layer bugs than
-  solver-behavior ones.
+  solver-behavior ones. `Python_test_tutorial` runs the cells of the SHOTpy
+  tutorial notebook and also needs `numpy`, `matplotlib` and `ipython`, the
+  `test-requires` of the wheels in `pyproject.toml`.
 
 ## Lessons from real debugging sessions
 
