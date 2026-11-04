@@ -211,6 +211,11 @@ Changes since SHOT 1.1.
   A maximization problem was reported as infeasible, since the bounds of the
   maximized objective were given to the minimized objective variable, and
   the bounds were loosened when there was no primal or dual bound yet.
+- The lazy cuts of the Gurobi and Cplex single-tree strategy are scaled by
+  their largest coefficient, as the other cuts. They were only scaled when
+  their RHS was larger than 1e15, so a cut generated close to a singularity,
+  e.g., of `x^2/y` for `y` close to zero, could be given to the MIP solver
+  with coefficients of the order 1e20.
 
 ### Removed
 
