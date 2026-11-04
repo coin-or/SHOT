@@ -681,24 +681,13 @@ bool CplexCallback::createHyperplane(HyperplanePtr hyperplane, bool isNodeCandid
         }
     }
 
-    // Small fix to fix badly scaled cuts.
-    // TODO: this should be made so it also takes into account small/large coefficients of the linear terms
-    if(abs(tmpPair.second) > 1e15)
+    // The lazy cuts are scaled as the cuts added to the dual problem between the solves
+    if(MIPSolverBase::scaleHyperplaneTerms(tmpPair) && !warningMessageShownLargeRHS)
     {
-        double scalingFactor = abs(tmpPair.second) - 1e15;
-
-        for(auto& E : tmpPair.first)
-            E.second /= scalingFactor;
-
-        tmpPair.second /= scalingFactor;
-
-        if(!warningMessageShownLargeRHS)
-        {
-            env->output->outputWarning(
-                "        Large values found in RHS of cut, you might want to consider reducing the "
-                "bounds of the nonlinear variables.");
-            warningMessageShownLargeRHS = true;
-        }
+        env->output->outputWarning(
+            "        Large values found in RHS or coefficients of cut, you might want to consider reducing the "
+            "bounds of the nonlinear variables.");
+        warningMessageShownLargeRHS = true;
     }
 
     try

@@ -23,7 +23,11 @@
 #include "../src/Model/ObjectiveFunction.h"
 
 #include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <fstream>
 #include <iostream>
+#include <sstream>
 
 using namespace SHOT;
 
@@ -179,6 +183,105 @@ bool GurobiIntegerCutsSingleTreeTest(std::string filename, double correctObjecti
     {
         std::cout << "The primal bound " << solver->getPrimalBound() << " is not the optimum " << correctObjectiveValue
                   << "." << std::endl;
+        return false;
+    }
+
+    return true;
+}
+
+// A cut of x^2/y generated where y is close to zero has coefficients of the order 1/y^2, and the lazy cuts in the
+// single-tree strategy are scaled as the other cuts so that the largest value is 1e9. The lazy cuts are read from the
+// file they are written to in debug mode.
+bool GurobiLazyCutScalingTest()
+{
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+
+    std::string debugPath = "debug_gurobi_lazy_cut_scaling";
+    std::remove((debugPath + "/lazycuts.txt").c_str());
+
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+    solver->updateSetting("Output.Debug.Enable", true);
+    solver->updateSetting("Output.Debug.Path", debugPath);
+    solver->updateSetting("Termination.TimeLimit", 60.0);
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Gurobi));
+    solver->updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::SingleTree));
+    // The cutting planes are generated in the solution points of the MIP problem, where y is at first at its lower
+    // bound, and without the relaxation first solved without integer variables, the first cuts are lazy cuts
+    solver->updateSetting("Dual.CutStrategy", static_cast<int>(ES_HyperplaneCutStrategy::ECP));
+    solver->updateSetting("Dual.Relaxation.Use", false);
+    solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+
+    // min t + y + b s.t. x^2/y <= t, which has the optimum 2 in x = y = 1, b = 0
+    auto problem = std::make_shared<Problem>(env);
+    auto x = std::make_shared<Variable>("x", E_VariableType::Real, 1.0, 2.0);
+    auto y = std::make_shared<Variable>("y", E_VariableType::Real, 1e-10, 10.0);
+    auto t = std::make_shared<Variable>("t", E_VariableType::Real, 0.0, 1e3);
+    auto b = std::make_shared<Variable>("b", E_VariableType::Binary, 0.0, 1.0);
+    problem->add(Variables { x, y, t, b });
+
+    auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<LinearTerm>(1.0, t));
+    objective->add(std::make_shared<LinearTerm>(1.0, y));
+    objective->add(std::make_shared<LinearTerm>(1.0, b));
+    problem->add(objective);
+
+    auto constraint = std::make_shared<NonlinearConstraint>("quotient", SHOT_DBL_MIN, 0.0);
+    constraint->add(std::make_shared<LinearTerm>(-1.0, t));
+    constraint->add(
+        std::make_shared<ExpressionDivide>(std::make_shared<ExpressionSquare>(std::make_shared<ExpressionVariable>(x)),
+            std::make_shared<ExpressionVariable>(y)));
+    problem->add(constraint);
+    problem->finalize();
+
+    if(!solver->setProblem(problem))
+        return false;
+
+    solver->solveProblem();
+
+    std::ifstream file(debugPath + "/lazycuts.txt");
+    std::string line;
+    int numberOfCuts = 0;
+    double largestValue = 0.0;
+
+    while(std::getline(file, line))
+    {
+        if(line.find("_HP:") == std::string::npos)
+            continue;
+
+        numberOfCuts++;
+
+        // The line is name: coefficient variable ... sense rhs, and the values are the tokens that are numbers
+        std::istringstream tokens(line.substr(line.find(':') + 1));
+        std::string token;
+
+        while(tokens >> token)
+        {
+            char* end;
+            double value = std::strtod(token.c_str(), &end);
+
+            if(*end == '\0')
+                largestValue = std::max(largestValue, std::abs(value));
+        }
+    }
+
+    std::cout << "  " << numberOfCuts << " lazy cuts with the largest value " << largestValue << std::endl;
+
+    if(numberOfCuts == 0)
+    {
+        std::cout << "No lazy cuts were added." << std::endl;
+        return false;
+    }
+
+    if(largestValue > 1e9 * (1 + 1e-6))
+    {
+        std::cout << "A lazy cut has a value larger than 1e9." << std::endl;
+        return false;
+    }
+
+    if(std::abs(solver->getPrimalBound() - 2.0) > 1e-3)
+    {
+        std::cout << "The primal bound " << solver->getPrimalBound() << " is not the optimum 2." << std::endl;
         return false;
     }
 
@@ -674,6 +777,11 @@ int GurobiTest(int argc, char* argv[])
         std::cout << "Starting test for integer cuts of nonbinary variables in single-tree strategy" << std::endl;
         passed = GurobiIntegerCutsSingleTreeTest("data/instances/MINLP-convex/tls4.osil", 8.3);
         std::cout << "Finished test for integer cuts of nonbinary variables in single-tree strategy." << std::endl;
+        break;
+    case 17:
+        std::cout << "Starting test for scaling the lazy cuts in single-tree strategy" << std::endl;
+        passed = GurobiLazyCutScalingTest();
+        std::cout << "Finished test for scaling the lazy cuts in single-tree strategy." << std::endl;
         break;
     default:
         passed = false;

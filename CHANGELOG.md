@@ -225,6 +225,11 @@ Changes since SHOT 1.1.
   has been tested before. A value just below an integer was taken as the
   integer below, so the same combination could be solved again, or a new one
   skipped; values outside the range of an `int` were undefined.
+- The lazy cuts of the Gurobi and Cplex single-tree strategy are scaled by
+  their largest coefficient, as the other cuts. They were only scaled when
+  their RHS was larger than 1e15, so a cut generated close to a singularity,
+  e.g., of `x^2/y` for `y` close to zero, could be given to the MIP solver
+  with coefficients of the order 1e20.
 
 ### Removed
 
