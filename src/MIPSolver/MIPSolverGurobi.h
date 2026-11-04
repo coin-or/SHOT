@@ -197,6 +197,10 @@ public:
     // so such a problem is solved again without them
     E_ProblemSolutionStatus resolveInfeasibleOrUnbounded(E_ProblemSolutionStatus status);
 
+    // Gurobi can stop with numerical trouble, e.g., in the barrier method for a degenerate problem with quadratic
+    // constraints, so such a problem is solved again with the most careful numerical settings
+    E_ProblemSolutionStatus resolveWithNumericFocus(E_ProblemSolutionStatus status);
+
 private:
     // The objective coefficients removed to find a feasible point of an unbounded dual problem. They are restored
     // before the next solve, since changing the model discards the point found.

@@ -12,10 +12,13 @@
 
 #include "../DualSolver.h"
 #include "../Iteration.h"
+#include "../Output.h"
 #include "../Results.h"
 #include "../Settings.h"
 #include "../TaskHandler.h"
 #include "../Timing.h"
+
+#include "../Model/Problem.h"
 
 namespace SHOT
 {
@@ -87,6 +90,13 @@ void TaskCheckIterationError::run()
         env->results->terminationReason = E_TerminationReason::UnboundedProblem;
         env->tasks->setNextTask(taskIDIfTrue);
         env->results->terminationReasonDescription = "Terminated since the dual problem is unbounded.";
+    }
+    // The relaxation of a problem with discrete variables only gives cuts and bounds, so numerical trouble in it ends
+    // the relaxation in the next iteration (RelaxationStrategyStandard) instead of the solution
+    else if(currIter->solutionStatus == E_ProblemSolutionStatus::Numeric && currIter->solutionPoints.size() == 0
+        && env->problem->properties.isDiscrete && !currIter->isMIP())
+    {
+        env->output->outputDebug("        Numerical trouble in the relaxed dual problem, so the relaxation is ended.");
     }
     else if(currIter->solutionStatus == E_ProblemSolutionStatus::Numeric && currIter->solutionPoints.size() == 0)
     {
