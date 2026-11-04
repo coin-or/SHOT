@@ -137,6 +137,10 @@ Changes since SHOT 1.1.
   are accepted instead of giving an error, so that the same options files
   work with all builds; a warning tells that they are ignored if they are
   changed from their defaults ([#242]).
+- The C++ API documents, as the Python API, that
+  `Solver::getCurrentDualBound()` is not a valid bound for a nonconvex
+  problem once cuts have been added to nonconvex functions, and that
+  `Solver::getGlobalDualBound()` is.
 
 ### Fixed
 
