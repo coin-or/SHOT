@@ -114,13 +114,18 @@ void TaskSolveIteration::run()
     if(env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable()
         && env->settings->getSetting<bool>("Dual.MIP.UpdateObjectiveBounds") && !currIter->MIPSolutionLimitUpdated)
     {
-        auto newLB = env->results->getCurrentDualBound();
-        auto newUB = env->results->getPrimalBound();
+        // The bounds are in the original problem's sense, and the objective variable in the reformulated problem's
+        double dualBound = objectiveSignFactor * env->results->getCurrentDualBound();
+        double primalBound = objectiveSignFactor * env->results->getPrimalBound();
 
         auto currBounds = env->dualSolver->MIPSolver->getCurrentVariableBounds(
             env->dualSolver->MIPSolver->getDualAuxiliaryObjectiveVariableIndex());
 
-        if(newLB > currBounds.first || newUB < currBounds.second)
+        // The bounds are only tightened, also when there is no dual or primal bound yet
+        auto newLB = std::max(isMinimization ? dualBound : primalBound, currBounds.first);
+        auto newUB = std::min(isMinimization ? primalBound : dualBound, currBounds.second);
+
+        if(newLB <= newUB && (newLB > currBounds.first || newUB < currBounds.second))
         {
             env->dualSolver->MIPSolver->updateVariableBound(
                 env->dualSolver->MIPSolver->getDualAuxiliaryObjectiveVariableIndex(), newLB, newUB);
