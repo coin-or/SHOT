@@ -350,8 +350,8 @@
         },
         {
             "file": "nlp-mi_001_010.jl.nl",
-            "objective": -1.35787195018718,
-            "description": "Nonconvex MINLP with integer variables and partial starting values"
+            "objective": -1.3678794411714423,
+            "description": "Nonconvex MINLP with integer variables and partial starting values. The objective is the infimum -1/e - 1, which cos(i) approaches over the integers; MINLPTests.jl gives the local optimum -1.35787195018718 at i = 3"
         },
         {
             "file": "nlp-mi_002_010.jl.nl",
