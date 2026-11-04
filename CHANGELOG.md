@@ -211,6 +211,20 @@ Changes since SHOT 1.1.
   A maximization problem was reported as infeasible, since the bounds of the
   maximized objective were given to the minimized objective variable, and
   the bounds were loosened when there was no primal or dual bound yet.
+- When selecting cuts for nonconvex constraints, the check whether a cut
+  would cut away a primal solution read the values of auxiliary variables
+  from outside the primal solution, which only has the variables of the
+  original problem. It now uses the values of the auxiliary variables, so
+  that cuts are not postponed, or added, because of arbitrary values.
+- The largest error of the linear constraints of a primal solution of a
+  problem without linear constraints was undefined, and could be reported in
+  the output and the OSrL results and used as the largest constraint error of
+  the solution.
+- The values of the discrete variables of a fixed-integer NLP candidate are
+  rounded rather than truncated when checking whether the integer combination
+  has been tested before. A value just below an integer was taken as the
+  integer below, so the same combination could be solved again, or a new one
+  skipped; values outside the range of an `int` were undefined.
 - The lazy cuts of the Gurobi and Cplex single-tree strategy are scaled by
   their largest coefficient, as the other cuts. They were only scaled when
   their RHS was larger than 1e15, so a cut generated close to a singularity,
