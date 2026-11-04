@@ -173,6 +173,9 @@ static E_InstanceResult solveInstance(const InstanceEntry& entry, const std::str
     solver->updateSetting("Dual.MIP.Solver", static_cast<int>(mipSolver));
     solver->updateSetting("Primal.FixedInteger.Solver", static_cast<int>(nlpSolver));
     solver->updateSetting("Termination.TimeLimit", timeLimit);
+    // One thread, since the instances are small and the tests are run in parallel: with all cores, the MIP solver
+    // competes with the other tests, which made the Cplex combinations several times slower
+    solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
 
     std::string convexityDesc = "convexity not set";
     std::string boundsDesc = "bound: [n/a, n/a]";

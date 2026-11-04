@@ -21,6 +21,7 @@
 
 #include "../src/Model/Problem.h"
 #include "../src/Model/ObjectiveFunction.h"
+#include "IntegerCutTestCommon.h"
 
 #include <cmath>
 #include <cstdio>
@@ -125,34 +126,6 @@ bool GurobiTest1(std::string filename, double correctObjectiveValue)
     }
 
     return passed;
-}
-
-// For nonconvex problems where finding a primal solution is not guaranteed;
-// only verifies the solver terminates without crashing.
-bool GurobiTestNocrash(std::string filename)
-{
-    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
-    auto env = solver->getEnvironment();
-
-    // A time limit so that a test that does not converge cannot stop the test suite
-    solver->updateSetting("Termination.TimeLimit", 60.0);
-
-    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Gurobi));
-
-    try
-    {
-        if(!solver->setProblem(filename))
-            return false;
-    }
-    catch(Exception& e)
-    {
-        std::cout << "Error: " << e.what() << std::endl;
-        return false;
-    }
-
-    solver->solveProblem();
-
-    return true;
 }
 
 // Integer cuts of nonbinary variables add variables to the model between the solves in the single-tree strategy,
@@ -801,17 +774,17 @@ int GurobiTest(int argc, char* argv[])
         break;
     case 13:
         std::cout << "Starting test to solve gear.osil with Gurobi." << std::endl;
-        passed = GurobiTestNocrash("data/gear.osil");
+        passed = solveWithIntegerCuts(ES_MIPSolver::Gurobi, "data/gear.osil", 0.0);
         std::cout << "Finished test to solve gear.osil with Gurobi." << std::endl;
         break;
     case 14:
         std::cout << "Starting test to solve windfac.osil with Gurobi." << std::endl;
-        passed = GurobiTestNocrash("data/windfac.osil");
+        passed = solveWithIntegerCuts(ES_MIPSolver::Gurobi, "data/windfac.osil", 0.254487);
         std::cout << "Finished test to solve windfac.osil with Gurobi." << std::endl;
         break;
     case 15:
         std::cout << "Starting test to solve ex1252a.osil with Gurobi." << std::endl;
-        passed = GurobiTestNocrash("data/ex1252a.osil");
+        passed = solveWithIntegerCuts(ES_MIPSolver::Gurobi, "data/ex1252a.osil", 128893.741);
         std::cout << "Finished test to solve ex1252a.osil with Gurobi." << std::endl;
         break;
     case 16:

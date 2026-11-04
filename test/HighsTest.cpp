@@ -21,6 +21,7 @@
 
 #include "../src/Model/Problem.h"
 #include "../src/Model/ObjectiveFunction.h"
+#include "IntegerCutTestCommon.h"
 
 #include <iostream>
 
@@ -115,34 +116,6 @@ bool HighsTest1(std::string filename, double correctObjectiveValue)
     }
 
     return passed;
-}
-
-// For nonconvex problems where finding a primal solution is not guaranteed;
-// only verifies the solver terminates without crashing.
-bool HighsTestNocrash(std::string filename)
-{
-    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
-    auto env = solver->getEnvironment();
-
-    // A time limit so that a test that does not converge cannot stop the test suite
-    solver->updateSetting("Termination.TimeLimit", 60.0);
-
-    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Highs));
-
-    try
-    {
-        if(!solver->setProblem(filename))
-            return false;
-    }
-    catch(Exception& e)
-    {
-        std::cout << "Error: " << e.what() << std::endl;
-        return false;
-    }
-
-    solver->solveProblem();
-
-    return true;
 }
 
 bool HighsTerminationCallbackTest(std::string filename)
@@ -417,17 +390,17 @@ int HighsTest(int argc, char* argv[])
         break;
     case 3:
         std::cout << "Starting test to solve gear.osil with Highs." << std::endl;
-        passed = HighsTestNocrash("data/gear.osil");
+        passed = solveWithIntegerCuts(ES_MIPSolver::Highs, "data/gear.osil", 0.0);
         std::cout << "Finished test to solve gear.osil with Highs." << std::endl;
         break;
     case 4:
         std::cout << "Starting test to solve windfac.osil with Highs." << std::endl;
-        passed = HighsTestNocrash("data/windfac.osil");
+        passed = solveWithIntegerCuts(ES_MIPSolver::Highs, "data/windfac.osil", 0.254487);
         std::cout << "Finished test to solve windfac.osil with Highs." << std::endl;
         break;
     case 5:
         std::cout << "Starting test to solve ex1252a.osil with Highs." << std::endl;
-        passed = HighsTestNocrash("data/ex1252a.osil");
+        passed = solveWithIntegerCuts(ES_MIPSolver::Highs, "data/ex1252a.osil", 128893.741);
         std::cout << "Finished test to solve ex1252a.osil with Highs." << std::endl;
         break;
     case 6:
