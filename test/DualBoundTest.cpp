@@ -1300,6 +1300,55 @@ bool testUpdatedObjectiveBounds(ES_MIPSolver mipSolver, const std::string& filen
     return true;
 }
 
+// A MIP solver may return a value slightly below a lower bound of zero, within its feasibility tolerance. When the
+// variable is the denominator of a nonlinear constraint, the constraint is then fulfilled by a large margin, so the
+// point would be accepted as a primal solution and no cut would be generated. Projected onto the bounds, it violates
+// the constraint.
+bool testPointsAreProjectedOntoVariableBounds()
+{
+    auto solver = std::make_unique<Solver>();
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+
+    if(!solver->setProblem("data/instances/minlp_tests_jl/nlp-cvx_204_010.jl.nl"))
+    {
+        std::cout << "Could not read the problem\n";
+        return false;
+    }
+
+    auto problem = solver->getEnvironment()->reformulatedProblem;
+
+    bool passed = true;
+
+    auto check = [&](bool condition, const std::string& description) {
+        if(!condition)
+        {
+            std::cout << description << '\n';
+            passed = false;
+        }
+    };
+
+    // The point of the relaxation where the variable in the denominator is below its lower bound of zero
+    VectorDouble point { 0.707105225075729, 0.707108337327129, -7.9853901269189e-11 };
+
+    auto unprojected = problem->getMaxNumericConstraintValue(point, problem->nonlinearConstraints);
+
+    check(unprojected.normalizedValue < 0.0,
+        "the nonlinear constraint is not fulfilled before the projection, so the test does not cover the case");
+
+    problem->projectOntoVariableBounds(point);
+
+    check(point[0] == 0.707105225075729 && point[1] == 0.707108337327129,
+        "values within the variable bounds were changed by the projection");
+    check(point[2] == 0.0, "the value below the lower bound was not projected onto the bound");
+
+    auto projected = problem->getMaxNumericConstraintValue(point, problem->nonlinearConstraints);
+
+    // The constraint is infinite at the bound, which also fails a test for fulfillment if it is NaN
+    check(!(projected.normalizedValue <= 0.0), "the projected point fulfills the nonlinear constraint");
+
+    return passed;
+}
+
 int DualBoundTest(int argc, char* argv[])
 {
     int choice = 1;
@@ -1431,6 +1480,11 @@ int DualBoundTest(int argc, char* argv[])
         for(auto mipSolver : compiledSolvers())
             passed = testFixedNLPCandidatesRoundDiscreteValues(mipSolver) && passed;
         std::cout << "Finished test that fixed integer candidates round the values of discrete variables.\n";
+        break;
+    case 19:
+        std::cout << "Starting test that points are projected onto the variable bounds:\n";
+        passed = testPointsAreProjectedOntoVariableBounds();
+        std::cout << "Finished test that points are projected onto the variable bounds.\n";
         break;
     default:
         passed = false;

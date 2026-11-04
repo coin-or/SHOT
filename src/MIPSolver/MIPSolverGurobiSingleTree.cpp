@@ -302,6 +302,8 @@ void GurobiCallbackSingleTree::callback()
                     primalSolution.at(i) = getSolution(vars[i]);
                 }
 
+                env->problem->projectOntoVariableBounds(primalSolution);
+
                 SolutionPoint tmpPt;
 
                 if(env->problem->properties.numberOfNonlinearConstraints > 0)
@@ -349,6 +351,8 @@ void GurobiCallbackSingleTree::callback()
                 {
                     solution.at(i) = getNodeRel(vars[i]);
                 }
+
+                env->reformulatedProblem->projectOntoVariableBounds(solution);
 
                 SolutionPoint solutionRelaxed;
 
@@ -427,6 +431,8 @@ void GurobiCallbackSingleTree::callback()
             {
                 solution.at(i) = getSolution(vars[i]);
             }
+
+            env->reformulatedProblem->projectOntoVariableBounds(solution);
 
             // The bounds cannot be changed in the callback, so the MIP solver is interrupted and the artificial
             // bounds are removed before it solves again
