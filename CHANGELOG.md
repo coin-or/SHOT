@@ -252,6 +252,9 @@ Changes since SHOT 1.1.
   that the constraint was fulfilled by a large margin. With Cplex, an
   infeasible point was then accepted as the optimal solution, and no cut
   was generated for the constraint.
+- The OSrL result file has the values of the variables, the objective and
+  the constraints with all significant digits. They were written with six
+  decimals, so that, e.g., a value of `1.5e-7` was written as `0.000000`.
 
 ### Removed
 

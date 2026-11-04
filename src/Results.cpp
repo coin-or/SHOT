@@ -1222,7 +1222,8 @@ std::string Results::getResultsOSrL()
 
         auto objectiveSolutionNode = osrlDocument.NewElement("obj");
         objectiveSolutionNode->SetAttribute("idx", -1);
-        objectiveSolutionNode->SetText(std::to_string(primalSolutions.at(i).objValue).c_str());
+        // SetText writes a double with all significant digits, while std::to_string has six decimals
+        objectiveSolutionNode->SetText(primalSolutions.at(i).objValue);
         objectiveValueNode->InsertFirstChild(objectiveSolutionNode);
 
         objectivesNode->InsertFirstChild(objectiveValueNode);
@@ -1238,7 +1239,7 @@ std::string Results::getResultsOSrL()
             auto variableSolutionNode = osrlDocument.NewElement("var");
             variableSolutionNode->SetAttribute("idx", (int)j);
             variableSolutionNode->SetAttribute("name", env->problem->allVariables.at(j)->name.c_str());
-            variableSolutionNode->SetText(std::to_string(primalSolutions.at(i).point.at(j)).c_str());
+            variableSolutionNode->SetText(primalSolutions.at(i).point.at(j));
             variableValueNode->InsertEndChild(variableSolutionNode);
         }
 
@@ -1255,10 +1256,9 @@ std::string Results::getResultsOSrL()
             auto dualValueNode = osrlDocument.NewElement("con");
             dualValueNode->SetAttribute("idx", (int)j);
             dualValueNode->SetAttribute("name", env->problem->numericConstraints.at(j)->name.c_str());
-            dualValueNode->SetText(std::to_string(env->problem->numericConstraints.at(j)
-                                                      ->calculateNumericValue(primalSolutions.at(i).point)
-                                                      .normalizedValue)
-                                       .c_str());
+            dualValueNode->SetText(env->problem->numericConstraints.at(j)
+                    ->calculateNumericValue(primalSolutions.at(i).point)
+                    .normalizedValue);
             dualValuesNode->InsertEndChild(dualValueNode);
         }
 

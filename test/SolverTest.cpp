@@ -3894,6 +3894,71 @@ bool TestReuseOfInteriorPointCuttingPlanes()
     return (true);
 }
 
+// The values in the OSrL file must be written with all significant digits, so that a solution with a value smaller
+// than 1e-6 is not written as zero
+bool TestPrecisionOfOSrLSolution()
+{
+    const double lowerBound = 1.2345678912345e-7;
+
+    auto solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+
+    auto problem = std::make_shared<Problem>(env);
+    problem->name = "osrlprecision";
+    auto x = std::make_shared<Variable>("x", E_VariableType::Real, lowerBound, 1.0);
+    auto y = std::make_shared<Variable>("y", E_VariableType::Integer, 0.0, 3.0);
+    problem->add(Variables { x, y });
+
+    auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<LinearTerm>(1.0, x));
+    objective->add(std::make_shared<LinearTerm>(1.0, y));
+    problem->add(objective);
+    problem->finalize();
+
+    if(!solver->setProblem(problem) || !solver->solveProblem() || !solver->hasPrimalSolution())
+    {
+        std::cout << "The problem could not be solved\n";
+        return (false);
+    }
+
+    auto solution = solver->getPrimalSolution();
+    std::string osrl = solver->getResultsOSrL();
+
+    // The value of the first element with the given start tag, e.g., <var idx="0" name="x">
+    auto valueOf = [&](const std::string& startTag) -> std::optional<double>
+    {
+        auto start = osrl.find(startTag);
+
+        if(start == std::string::npos)
+            return (std::nullopt);
+
+        start += startTag.size();
+        return (std::stod(osrl.substr(start, osrl.find('<', start) - start)));
+    };
+
+    auto variableValue = valueOf("name=\"x\">");
+    auto objectiveValue = valueOf("<obj idx=\"-1\">");
+
+    std::cout << "  The solution has x = " << solution.point[0] << " and objective value " << solution.objValue
+              << ", the OSrL file " << variableValue.value_or(NAN) << " and " << objectiveValue.value_or(NAN) << '\n';
+
+    if(!variableValue || std::abs(*variableValue - solution.point[0]) > 1e-12 * std::abs(solution.point[0]))
+    {
+        std::cout << "The value of x in the OSrL file is not the one of the solution\n";
+        return (false);
+    }
+
+    if(!objectiveValue || std::abs(*objectiveValue - solution.objValue) > 1e-12 * std::abs(solution.objValue))
+    {
+        std::cout << "The objective value in the OSrL file is not the one of the solution\n";
+        return (false);
+    }
+
+    return (true);
+}
+
 int SolverTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -4114,6 +4179,11 @@ int SolverTest(int argc, char* argv[])
         std::cout << "Starting test for reusing the cutting planes of the interior point search" << std::endl;
         passed = TestReuseOfInteriorPointCuttingPlanes();
         std::cout << "Finished test for reusing the cutting planes of the interior point search." << std::endl;
+        break;
+    case 41:
+        std::cout << "Starting test for the precision of the solution in the OSrL file" << std::endl;
+        passed = TestPrecisionOfOSrLSolution();
+        std::cout << "Finished test for the precision of the solution in the OSrL file." << std::endl;
         break;
     default:
         passed = false;
