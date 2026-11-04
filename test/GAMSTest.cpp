@@ -131,6 +131,7 @@ bool TestGamsFunctions(std::string filename)
 
 // In ModelTest.cpp
 bool SolveMinimumAndMaximumProblem(const std::string& filename);
+bool SolveProblemWithInfeasibleDualProblemAfterSolutionLimitGAMS(const std::string& filename);
 
 bool ReadProblemGAMS(std::string filename)
 {
@@ -543,6 +544,45 @@ bool TestConstraintClassesForFixedVariablesGAMS(const std::string& problemFile)
     return passed;
 }
 
+// With HiGHS, the starting point gives the NLP solution first, the next MIP problem stops at the solution limit, and
+// the one after it, with only the solution limit updated and the cutoff not set again, is infeasible because of the
+// cutoff set before. That cutoff must then close the gap, instead of the dual problem being taken as infeasible.
+bool SolveProblemWithInfeasibleDualProblemAfterSolutionLimitGAMS(const std::string& filename)
+{
+#ifdef HAS_HIGHS
+    auto solver = std::make_unique<SHOT::Solver>();
+
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Highs));
+    solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+    solver->updateSetting("Primal.FixedInteger.UseStartingPoint", true);
+    solver->updateSetting("Termination.TimeLimit", 60.0);
+
+    if(!solver->setProblem(filename))
+        return (false);
+
+    solver->solveProblem();
+
+    auto env = solver->getEnvironment();
+    bool isGapClosed
+        = env->results->isAbsoluteObjectiveGapToleranceMet() || env->results->isRelativeObjectiveGapToleranceMet();
+
+    std::cout << "Termination: " << env->results->terminationReasonDescription << '\n'
+              << "Primal bound: " << solver->getPrimalBound() << ", dual bound: " << env->results->getCurrentDualBound()
+              << '\n';
+
+    if(!isGapClosed || std::abs(solver->getPrimalBound() - 1296.12) > 1e-2)
+    {
+        std::cout << "FAILED: expected the gap to be closed with the primal bound 1296.12.\n";
+        return (false);
+    }
+
+    return (true);
+#else
+    std::cout << "Skipped, since the test needs HiGHS.\n";
+    return (true);
+#endif
+}
+
 int GAMSTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -632,6 +672,11 @@ int GAMSTest(int argc, char* argv[])
         std::cout << "Starting test of the GAMS functions min and max:" << std::endl;
         passed = SolveMinimumAndMaximumProblem("data/minmax.gms");
         std::cout << "Finished test of the GAMS functions min and max." << std::endl;
+        break;
+    case 16:
+        std::cout << "Starting test of an infeasible dual problem after a solution limit update:" << std::endl;
+        passed = SolveProblemWithInfeasibleDualProblemAfterSolutionLimitGAMS("data/rsyn0805m_sp.gms");
+        std::cout << "Finished test of an infeasible dual problem after a solution limit update." << std::endl;
         break;
     default:
         passed = false;
