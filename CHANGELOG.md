@@ -230,6 +230,13 @@ Changes since SHOT 1.1.
   their RHS was larger than 1e15, so a cut generated close to a singularity,
   e.g., of `x^2/y` for `y` close to zero, could be given to the MIP solver
   with coefficients of the order 1e20.
+- The values of the solutions of the MIP solver are projected onto the
+  variable bounds before they are used. A value slightly outside a bound,
+  within the feasibility tolerance of the MIP solver, could be outside the
+  domain of a nonlinear function, e.g., `y < 0` in `x^2/y` with `y >= 0`, so
+  that the constraint was fulfilled by a large margin. With Cplex, an
+  infeasible point was then accepted as the optimal solution, and no cut
+  was generated for the constraint.
 
 ### Removed
 

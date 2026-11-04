@@ -101,6 +101,8 @@ std::vector<SolutionPoint> MIPSolverBase::getAllVariableSolutions()
             tmpPt.pop_back();
         }
 
+        env->reformulatedProblem->projectOntoVariableBounds(tmpPt);
+
         tmpSolPt.point = tmpPt;
         tmpSolPt.hashValue = Utilities::calculateHash(tmpPt);
 
