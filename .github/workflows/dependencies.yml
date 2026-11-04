@@ -66,7 +66,7 @@ jobs:
       - name: Build
         run: cmake --build build --parallel 3
       - name: Test
-        run: ctest --test-dir build --output-on-failure --timeout 300 -E 'FullInstance|Python_API_Tests'
+        run: ctest --test-dir build --output-on-failure --timeout 300 -E 'FullInstance'
       - name: Upload diagnostics
         if: always()
         uses: actions/upload-artifact@v4

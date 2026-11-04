@@ -468,49 +468,13 @@ if(TARGET SHOTpy)
                               ${CMAKE_CURRENT_SOURCE_DIR}/python
                               ${CMAKE_CURRENT_BINARY_DIR}/python)
       
-      # Add a single test that runs all Python tests via pytest
-      add_test(
-        NAME Python_API_Tests
-        COMMAND ${Python3_EXECUTABLE} -m pytest 
-                ${CMAKE_CURRENT_BINARY_DIR}/python
-                -v
-                --tb=short
-        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-      )
-      
-      # Set environment so pytest can find SHOTpy module. All Python tests take about three minutes on their own,
-      # and longer when run in parallel with the other tests
-      set_tests_properties(Python_API_Tests PROPERTIES
-        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR};SHOT_TUTORIAL_NOTEBOOK=${PROJECT_SOURCE_DIR}/docs/SHOTpy_Tutorial.ipynb"
-        FAIL_REGULAR_EXPRESSION "FAILED;ERROR"
-        TIMEOUT 1200
-      )
-      
-      # Individual Python test files (for more granular testing)
-      set(PYTHON_TEST_FILES
-        test_module_api
-        test_variables_expressions
-        test_constraints
-        test_objectives
-        test_settings
-        test_problem_io
-        test_create_and_solve_problems
-        test_reformulation
-        test_bound_tightening
-        test_optimization_problems
-        test_modeling_systems
-        test_gradients_hessians
-        test_callbacks
-        test_enumeration
-        test_constraint_expressions
-        test_equality_constraints
-        test_api_safety
-        test_interval_evaluation
-        test_interval_derivatives
-        test_tutorial
-      )
-      
-      foreach(pytest_file ${PYTHON_TEST_FILES})
+      # One test per Python test file. The files are found rather than listed, so that a new file cannot be left out;
+      # as the copy above, a new file is added when CMake configures again
+      file(GLOB PYTHON_TEST_PATHS ${CMAKE_CURRENT_SOURCE_DIR}/python/test_*.py)
+      list(SORT PYTHON_TEST_PATHS)
+
+      foreach(pytest_path ${PYTHON_TEST_PATHS})
+        get_filename_component(pytest_file ${pytest_path} NAME_WE)
         add_test(
           NAME Python_${pytest_file}
           COMMAND ${Python3_EXECUTABLE} -m pytest 
@@ -519,9 +483,12 @@ if(TARGET SHOTpy)
                   --tb=short
           WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
         )
+        # pytest returns 5 when no test was collected, e.g., when a file is skipped since it only applies to an
+        # installed SHOTpy package
         set_tests_properties(Python_${pytest_file} PROPERTIES
           ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR};SHOT_TUTORIAL_NOTEBOOK=${PROJECT_SOURCE_DIR}/docs/SHOTpy_Tutorial.ipynb"
           FAIL_REGULAR_EXPRESSION "FAILED;ERROR"
+          SKIP_RETURN_CODE 5
           TIMEOUT 300
         )
       endforeach()
