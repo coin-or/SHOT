@@ -22,6 +22,7 @@
 #include "../src/Model/Problem.h"
 #include "../src/Model/ObjectiveFunction.h"
 
+#include <cmath>
 #include <iostream>
 
 using namespace SHOT;
@@ -145,6 +146,41 @@ bool GurobiTestNocrash(std::string filename)
     }
 
     solver->solveProblem();
+
+    return true;
+}
+
+// Integer cuts of nonbinary variables add variables to the model between the solves in the single-tree strategy,
+// which the callback must also read the values of
+bool GurobiIntegerCutsSingleTreeTest(std::string filename, double correctObjectiveValue)
+{
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+
+    solver->updateSetting("Termination.TimeLimit", 60.0);
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Gurobi));
+    solver->updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::SingleTree));
+    solver->updateSetting("Dual.HyperplaneCuts.UseIntegerCuts", true);
+    // With the max function in the root search, the problem gets integer cuts of nonbinary variables
+    solver->updateSetting("Dual.ESH.Rootsearch.UseMaxFunction", true);
+
+    if(!solver->setProblem(filename))
+        return false;
+
+    solver->solveProblem();
+
+    if(env->solutionStatistics.numberOfIntegerCuts == 0)
+    {
+        std::cout << "No integer cuts were added." << std::endl;
+        return false;
+    }
+
+    if(std::abs(solver->getPrimalBound() - correctObjectiveValue) > 1e-3)
+    {
+        std::cout << "The primal bound " << solver->getPrimalBound() << " is not the optimum " << correctObjectiveValue
+                  << "." << std::endl;
+        return false;
+    }
 
     return true;
 }
@@ -633,6 +669,11 @@ int GurobiTest(int argc, char* argv[])
         std::cout << "Starting test to solve ex1252a.osil with Gurobi." << std::endl;
         passed = GurobiTestNocrash("data/ex1252a.osil");
         std::cout << "Finished test to solve ex1252a.osil with Gurobi." << std::endl;
+        break;
+    case 16:
+        std::cout << "Starting test for integer cuts of nonbinary variables in single-tree strategy" << std::endl;
+        passed = GurobiIntegerCutsSingleTreeTest("data/instances/MINLP-convex/tls4.osil", 8.3);
+        std::cout << "Finished test for integer cuts of nonbinary variables in single-tree strategy." << std::endl;
         break;
     default:
         passed = false;

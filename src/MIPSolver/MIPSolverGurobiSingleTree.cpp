@@ -97,6 +97,12 @@ E_ProblemSolutionStatus MIPSolverGurobiSingleTree::solveProblem()
             gurobiCallback = std::make_unique<GurobiCallbackSingleTree>(gurobiModel->getVars(), env);
             isCallbackInitialized = true;
         }
+        else
+        {
+            // Integer cuts of nonbinary variables add variables to the model between the solves, and the callback
+            // reads the solution values of all variables in the model
+            gurobiCallback->updateVariables(gurobiModel->getVars());
+        }
 
         gurobiModel->set(GRB_IntParam_LazyConstraints, 1);
         gurobiModel->setCallback(gurobiCallback.get());
@@ -690,6 +696,12 @@ GurobiCallbackSingleTree::GurobiCallbackSingleTree(GRBVar* xvars, EnvironmentPtr
 }
 
 GurobiCallbackSingleTree::~GurobiCallbackSingleTree() { delete[] vars; }
+
+void GurobiCallbackSingleTree::updateVariables(GRBVar* xvars)
+{
+    delete[] vars;
+    vars = xvars;
+}
 
 bool GurobiCallbackSingleTree::createIntegerCut(IntegerCut& integerCut)
 {
