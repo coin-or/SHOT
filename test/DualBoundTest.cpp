@@ -782,6 +782,50 @@ bool testIntegerCutsDifferingInSmallVariables(ES_MIPSolver mipSolver)
     return passed;
 }
 
+bool testFixedNLPCandidatesRoundDiscreteValues(ES_MIPSolver mipSolver)
+{
+    auto solver = makeSolver(mipSolver, ModelKind::Bounded, true);
+
+    if(!solver)
+    {
+        std::cout << "Could not create problem for " << name(mipSolver) << '\n';
+        return false;
+    }
+
+    auto env = solver->getEnvironment();
+    env->results->createIteration();
+
+    bool passed = true;
+
+    auto check = [&](bool condition, const std::string& description) {
+        if(!condition)
+        {
+            std::cout << name(mipSolver) << ": " << description << '\n';
+            passed = false;
+        }
+    };
+
+    // The binary variable is just below one, within the integer tolerance of a MIP solver
+    auto used = env->primalSolver->createFixedNLPCandidate(
+        { 0.5, 0.9999999 }, E_PrimalNLPSource::FirstSolution, 0.0, 0, PairIndexValue { -1, 0.0 });
+
+    env->primalSolver->usedPrimalNLPCandidates.push_back(used);
+
+    auto same = env->primalSolver->createFixedNLPCandidate(
+        { 0.5, 1.0 }, E_PrimalNLPSource::FirstSolution, 0.0, 0, PairIndexValue { -1, 0.0 });
+
+    check(env->primalSolver->hasFixedNLPCandidateBeenTested(same.discreteVariablePointHashes),
+        "a candidate with a binary value just below one was not taken for the same integer combination as one");
+
+    auto other = env->primalSolver->createFixedNLPCandidate(
+        { 0.5, 0.0 }, E_PrimalNLPSource::FirstSolution, 0.0, 0, PairIndexValue { -1, 0.0 });
+
+    check(!env->primalSolver->hasFixedNLPCandidateBeenTested(other.discreteVariablePointHashes),
+        "a candidate with a binary value of zero was taken for the same integer combination as one");
+
+    return passed;
+}
+
 std::vector<ES_MIPSolver> compiledSolvers()
 {
     std::vector<ES_MIPSolver> solvers;
@@ -1381,6 +1425,12 @@ int DualBoundTest(int argc, char* argv[])
                 && passed;
         }
         std::cout << "Finished test that the objective bounds are updated in the sense of the dual problem.\n";
+        break;
+    case 18:
+        std::cout << "Starting test that fixed integer candidates round the values of discrete variables:\n";
+        for(auto mipSolver : compiledSolvers())
+            passed = testFixedNLPCandidatesRoundDiscreteValues(mipSolver) && passed;
+        std::cout << "Finished test that fixed integer candidates round the values of discrete variables.\n";
         break;
     default:
         passed = false;

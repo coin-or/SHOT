@@ -220,6 +220,11 @@ Changes since SHOT 1.1.
   problem without linear constraints was undefined, and could be reported in
   the output and the OSrL results and used as the largest constraint error of
   the solution.
+- The values of the discrete variables of a fixed-integer NLP candidate are
+  rounded rather than truncated when checking whether the integer combination
+  has been tested before. A value just below an integer was taken as the
+  integer below, so the same combination could be solved again, or a new one
+  skipped; values outside the range of an `int` were undefined.
 
 ### Removed
 
