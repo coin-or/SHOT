@@ -812,6 +812,7 @@ bool Solver::solveProblem()
         env->primalSolver->addPrimalSolutionCandidate(startingPoint, E_PrimalSolutionSource::ExternalPrimalSolution, 0);
 
     isProblemSolved = solutionStrategy->solveProblem();
+    env->results->useAccuratePrimalSolution();
 
     // A failed callback overrides the reason SHOT terminated for, and its exception is passed on to the caller
     if(env->callbacks->hasFailed())

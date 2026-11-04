@@ -189,6 +189,13 @@ Changes since SHOT 1.1.
   dual bound also when only the solution limit was updated since the cutoff
   was set. The solution could otherwise stop with a gap, e.g., on a convex
   problem, since the dual problem was taken as infeasible ([#263]).
+- A primal solution that fulfils the constraints to
+  `Termination.ConstraintTolerance` is reported instead of an incumbent that
+  only fulfils them to the larger primal tolerances, if its objective value is
+  within the termination gap tolerances. A point from a relaxation could
+  otherwise be reported with an objective value better than that of any
+  feasible solution when the objective is sensitive to the constraint
+  violation ([#265]).
 
 ### Removed
 
@@ -284,6 +291,7 @@ Changes since SHOT 1.1.
 [#261]: https://github.com/coin-or/SHOT/pull/261
 [#262]: https://github.com/coin-or/SHOT/pull/262
 [#263]: https://github.com/coin-or/SHOT/pull/263
+[#265]: https://github.com/coin-or/SHOT/pull/265
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e

@@ -3712,6 +3712,98 @@ bool TestUserSpecifiedObjectiveConvexity()
 
 // The components of an environment refer back to it, so the environment is only freed if the solver breaks these
 // references when it is destroyed
+// A point that violates the constraint x1^2 + x2^2 <= 2 by 1e-6 is accepted with the primal tolerances and has a
+// better objective value than the feasible optimum (1, 1) of min -x1 - x2. After the search, the solution that fulfils
+// the constraints to Termination.ConstraintTolerance replaces it if the objective values are within the termination
+// gap tolerances, and is otherwise put back in the solution pool of two solutions, from which two better points that
+// violate the constraint have removed it.
+bool TestAccuratePrimalSolution()
+{
+    bool passed = true;
+
+    auto makeSolver = []()
+    {
+        auto solver = std::make_unique<SHOT::Solver>();
+        auto env = solver->getEnvironment();
+        solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+        solver->updateSetting("Output.SaveNumberOfSolutions", 2);
+
+        auto problem = std::make_shared<SHOT::Problem>(env);
+        problem->name = "accurateprimal";
+
+        auto x1 = std::make_shared<Variable>("x1", E_VariableType::Real, 0.0, 2.0);
+        auto x2 = std::make_shared<Variable>("x2", E_VariableType::Real, 0.0, 2.0);
+        problem->add({ x1, x2 });
+
+        auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+        objective->add(std::make_shared<LinearTerm>(-1.0, x1));
+        objective->add(std::make_shared<LinearTerm>(-1.0, x2));
+        problem->add(objective);
+
+        auto constraint = std::make_shared<QuadraticConstraint>("c", SHOT_DBL_MIN, 2.0);
+        constraint->add(std::make_shared<QuadraticTerm>(1.0, x1, x1));
+        constraint->add(std::make_shared<QuadraticTerm>(1.0, x2, x2));
+        problem->add(constraint);
+
+        problem->updateProperties();
+        problem->finalize();
+        solver->setProblem(problem);
+
+        return std::make_pair(std::move(solver), env);
+    };
+
+    double inaccurateValue = 1.0 + 2.5e-7;
+    double inaccurateObjective = -2.0 * inaccurateValue;
+
+    for(double accurateValue : { 1.0, 0.5 })
+    {
+        auto [solver, env] = makeSolver();
+
+        env->primalSolver->addPrimalSolutionCandidate(
+            VectorDouble { accurateValue, accurateValue }, E_PrimalSolutionSource::NLPFixedIntegers, 0);
+        env->primalSolver->addPrimalSolutionCandidate(
+            VectorDouble { 1.0 + 1e-7, 1.0 + 1e-7 }, E_PrimalSolutionSource::MIPSolutionPool, 0);
+        env->primalSolver->addPrimalSolutionCandidate(
+            VectorDouble { inaccurateValue, inaccurateValue }, E_PrimalSolutionSource::MIPSolutionPool, 0);
+
+        if(std::abs(solver->getPrimalBound() - inaccurateObjective) > 1e-12)
+        {
+            std::cout << fmt::format("  The point violating the constraint by 1e-6 is not the incumbent, the primal "
+                                     "bound is {}\n",
+                solver->getPrimalBound());
+            passed = false;
+            continue;
+        }
+
+        env->results->useAccuratePrimalSolution();
+
+        // The objective value -1 of (0.5, 0.5) is not within the gap tolerances of the incumbent
+        double expected = (accurateValue == 1.0) ? -2.0 : inaccurateObjective;
+
+        if(std::abs(solver->getPrimalBound() - expected) > 1e-12
+            || std::abs(env->results->primalSolutions.front().objValue - expected) > 1e-12)
+        {
+            std::cout << fmt::format("  With the feasible point ({0}, {0}), the primal bound is {1}, expected {2}\n",
+                accurateValue, solver->getPrimalBound(), expected);
+            passed = false;
+        }
+
+        auto& pool = env->results->primalSolutions;
+
+        if(pool.size() != 2
+            || std::none_of(pool.begin(), pool.end(), [accurateValue](const PrimalSolution& S)
+                { return (S.point == VectorDouble { accurateValue, accurateValue }); }))
+        {
+            std::cout << fmt::format(
+                "  With the feasible point ({0}, {0}), it is not in the solution pool of two solutions\n",
+                accurateValue);
+            passed = false;
+        }
+    }
+
+    return passed;
+}
+
 bool TestEnvironmentReleased()
 {
     bool passed = true;
@@ -3975,6 +4067,11 @@ int SolverTest(int argc, char* argv[])
         std::cout << "Starting test for freeing the environment with the solver" << std::endl;
         passed = TestEnvironmentReleased();
         std::cout << "Finished test for freeing the environment with the solver." << std::endl;
+        break;
+    case 39:
+        std::cout << "Starting test for reporting the primal solution that fulfils the constraints" << std::endl;
+        passed = TestAccuratePrimalSolution();
+        std::cout << "Finished test for reporting the primal solution that fulfils the constraints." << std::endl;
         break;
     default:
         passed = false;

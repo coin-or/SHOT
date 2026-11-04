@@ -10743,6 +10743,11 @@ bool ModelTestPolishFromSeveralPoints()
         solver->updateSetting("Termination.TimeLimit", 20.0);
         solver->updateSetting("Primal.FixedInteger.Solver", static_cast<int>(SHOT::ES_PrimalNLPSolver::Ipopt));
         solver->updateSetting("Primal.PolishSolution.NumberOfPoints", numberOfPoints);
+        // The primal bound is checked to 1e-4, so a solution from the search that fulfils the constraints exactly must
+        // not be reported instead of the polished one, which the NLP solver gives with an error of about 6e-8, since
+        // the objective values are within the default gap tolerances
+        solver->updateSetting("Termination.ObjectiveGap.Absolute", 1e-5);
+        solver->updateSetting("Termination.ObjectiveGap.Relative", 1e-5);
         // The final reduction cut continues the search while the objective gap is open, e.g., with a MIP solver
         // without quadratic constraints, and the solution is then polished again
         solver->updateSetting("Dual.ReductionCut.Use", false);
