@@ -1637,55 +1637,6 @@ double MIPSolverCplex::getDualObjectiveValue()
 
 void MIPSolverCplex::checkParameters() { }
 
-bool MIPSolverCplex::createHyperplane(
-    HyperplanePtr hyperplane, std::function<IloConstraint(IloRange)> addConstraintFunction)
-{
-    auto currIter = env->results->getCurrentIteration(); // The unsolved new iteration
-
-    auto optional = createHyperplaneTerms(hyperplane);
-
-    if(!optional)
-    {
-        return (false);
-    }
-
-    auto tmpPair = optional.value();
-
-    for(auto& E : tmpPair.first)
-    {
-        if(E.second != E.second) // Check for NaN
-        {
-            env->output->outputError("     Warning: hyperplane not generated, NaN found in linear terms for variable "
-                + env->problem->getVariable(E.first)->name);
-            return (false);
-        }
-    }
-
-    try
-    {
-        IloExpr expr(cplexEnv);
-
-        for(auto& P : tmpPair.first)
-        {
-            expr += P.second * cplexVars[P.first];
-        }
-
-        IloRange tmpRange(cplexEnv, -IloInfinity, expr, -tmpPair.second);
-
-        addConstraintFunction(tmpRange);
-
-        tmpRange.end();
-        expr.end();
-    }
-    catch(IloException& e)
-    {
-        env->output->outputError("        Error when creating hyperplane in Cplex", e.getMessage());
-        return (false);
-    }
-
-    return (true);
-}
-
 bool MIPSolverCplex::createIntegerCut(IntegerCut& integerCut)
 {
     bool allowIntegerCutRepair = env->settings->getSetting<bool>("Dual.MIP.InfeasibilityRepair.IntegerCuts");

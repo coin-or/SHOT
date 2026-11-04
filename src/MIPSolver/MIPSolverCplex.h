@@ -21,8 +21,6 @@
 #pragma GCC diagnostic warning "-Wignored-attributes"
 #endif
 
-#include <functional>
-
 namespace SHOT
 {
 class OutputStream;
@@ -105,9 +103,6 @@ public:
 
     double getConstraintUpperBound(int constraintIndex) override;
     bool setConstraintUpperBound(int constraintIndex, double upperBound) override;
-
-    virtual bool createHyperplane(
-        HyperplanePtr hyperplane, std::function<IloConstraint(IloRange)> addConstraintFunction);
 
     std::optional<std::pair<std::map<int, double>, double>> createHyperplaneTerms(HyperplanePtr hyperplane) override
     {
