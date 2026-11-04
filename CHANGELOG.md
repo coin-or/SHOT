@@ -200,6 +200,12 @@ Changes since SHOT 1.1.
   integer cut of nonbinary variables has been added, which adds variables
   to the MIP problem. The callback read the values of the new variables
   outside the variables it got before the first solve.
+- The cuts of the initial polyhedral outer approximation
+  (`Model.BoundTightening.InitialPOA.Use`) are scaled by their largest
+  coefficient, as the other cuts. A cut generated close to a singularity,
+  e.g., of `x^2/y` for `y` close to zero, could have coefficients so large
+  that Gurobi returned a solution of the dual problem that was not optimal,
+  and SHOT took a suboptimal solution as globally optimal.
 
 ### Removed
 

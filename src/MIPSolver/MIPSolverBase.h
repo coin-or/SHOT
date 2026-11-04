@@ -121,6 +121,10 @@ public:
 
     std::optional<std::pair<std::map<int, double>, double>> createHyperplaneTerms(HyperplanePtr hyperplane);
 
+    // Scales a cut with large values in the RHS or coefficients, so that the largest is 1e9. Returns whether the cut
+    // was scaled.
+    static bool scaleHyperplaneTerms(std::pair<std::map<int, double>, double>& terms);
+
     virtual void setCutOffAsConstraint(double cutOff) = 0;
 
     virtual E_DualProblemClass getProblemClass();
