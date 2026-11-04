@@ -188,31 +188,12 @@ bool MIPSolverBase::createHyperplane(HyperplanePtr hyperplane)
         return (false);
     }
 
-    // Small fix to fix badly scaled cuts. Considers both the RHS and the linear term coefficients, since a cut
-    // gradient evaluated far out on a loosely bounded nonlinear term (e.g. exp() of a large argument) can have
-    // large coefficients even when the RHS itself is modest, and handing such a cut to the MIP solver as-is
-    // can crash or numerically break it.
-    double maxAbsCutValue = abs(tmpPair.second);
-
-    for(auto& E : tmpPair.first)
-        maxAbsCutValue = std::max(maxAbsCutValue, abs(E.second));
-
-    if(maxAbsCutValue > 1e9)
+    if(scaleHyperplaneTerms(tmpPair) && !warningMessageShownLargeRHS)
     {
-        double scalingFactor = maxAbsCutValue / 1e9;
-
-        for(auto& E : tmpPair.first)
-            E.second /= scalingFactor;
-
-        tmpPair.second /= scalingFactor;
-
-        if(!warningMessageShownLargeRHS)
-        {
-            env->output->outputWarning(
-                "        Large values found in RHS or coefficients of cut, you might want to consider reducing the "
-                "bounds of the nonlinear variables.");
-            warningMessageShownLargeRHS = true;
-        }
+        env->output->outputWarning(
+            "        Large values found in RHS or coefficients of cut, you might want to consider reducing the "
+            "bounds of the nonlinear variables.");
+        warningMessageShownLargeRHS = true;
     }
 
     int constraintIndex = addLinearConstraint(tmpPair.first, tmpPair.second, identifier, false, !hyperplane->isGlobal);
@@ -299,6 +280,29 @@ VectorInteger MIPSolverBase::removeRepairableCuts()
     }
 
     return (VectorInteger(sourceConstraintIndexes.begin(), sourceConstraintIndexes.end()));
+}
+
+bool MIPSolverBase::scaleHyperplaneTerms(std::pair<std::map<int, double>, double>& terms)
+{
+    // Considers both the RHS and the linear term coefficients, since a cut gradient evaluated far out on a loosely
+    // bounded nonlinear term (e.g. exp() of a large argument) can have large coefficients even when the RHS itself is
+    // modest, and handing such a cut to the MIP solver as-is can crash or numerically break it.
+    double maxAbsCutValue = abs(terms.second);
+
+    for(auto& E : terms.first)
+        maxAbsCutValue = std::max(maxAbsCutValue, abs(E.second));
+
+    if(maxAbsCutValue <= 1e9)
+        return (false);
+
+    double scalingFactor = maxAbsCutValue / 1e9;
+
+    for(auto& E : terms.first)
+        E.second /= scalingFactor;
+
+    terms.second /= scalingFactor;
+
+    return (true);
 }
 
 std::optional<std::pair<std::map<int, double>, double>> MIPSolverBase::createHyperplaneTerms(HyperplanePtr hyperplane)

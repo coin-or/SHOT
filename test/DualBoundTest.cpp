@@ -1192,6 +1192,41 @@ bool testCutsAreGlobalOnlyForConvexConstraints(CutStrategy strategy, bool violat
     return passed;
 }
 
+// Without bound tightening, the initial polyhedral outer approximation of x^2/y <= z generates cuts close to y = 0,
+// where their coefficients are very large. Unless they are scaled, the MIP solver can return a solution of the first
+// dual problem that is not optimal, and the solution is then taken as globally optimal.
+bool testInitialPOACutsWithLargeCoefficients(ES_MIPSolver mipSolver)
+{
+    const double expectedObjective = -1.2071067837918394;
+
+    auto solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+    solver->updateSetting("Termination.TimeLimit", 30.0);
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(mipSolver));
+    solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+    solver->updateSetting("Model.BoundTightening.InitialPOA.Use", true);
+
+    if(!solver->setProblem("data/instances/minlp_tests_jl/nlp-cvx_204_010.jl.nl") || !solver->solveProblem())
+    {
+        std::cout << name(mipSolver) << ": could not solve the problem\n";
+        return false;
+    }
+
+    double primalBound = solver->getPrimalBound();
+    double dualBound = solver->getGlobalDualBound();
+
+    if(dualBound > expectedObjective + 1e-3 || std::abs(primalBound - expectedObjective) > 1e-2)
+    {
+        std::cout << name(mipSolver) << ": the bounds [" << dualBound << ", " << primalBound
+                  << "] do not agree with the optimum " << expectedObjective << '\n';
+        return false;
+    }
+
+    return true;
+}
+
 int DualBoundTest(int argc, char* argv[])
 {
     int choice = 1;
@@ -1298,6 +1333,12 @@ int DualBoundTest(int argc, char* argv[])
                 passed = testCutsAreGlobalOnlyForConvexConstraints(strategy, violateConvexConstraint) && passed;
         }
         std::cout << "Finished test that cuts are global only for convex constraints.\n";
+        break;
+    case 16:
+        std::cout << "Starting test that initial outer approximation cuts with large coefficients are scaled:\n";
+        for(auto mipSolver : compiledSolvers())
+            passed = testInitialPOACutsWithLargeCoefficients(mipSolver) && passed;
+        std::cout << "Finished test that initial outer approximation cuts with large coefficients are scaled.\n";
         break;
     default:
         passed = false;
