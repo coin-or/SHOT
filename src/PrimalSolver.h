@@ -51,9 +51,9 @@ public:
     std::vector<PrimalFixedNLPCandidate> fixedPrimalNLPCandidates;
     std::vector<PrimalFixedNLPCandidate> usedPrimalNLPCandidates;
 
-    // The points given as external solutions, e.g., the starting point of the model. They are also starting points
-    // for the NLP solver, which a local solver may improve, and are added to its candidates once the reformulated
-    // problem exists.
+    // The points given as external solutions, e.g., the starting point of the model, that are not primal solutions.
+    // They are starting points for the NLP solver, which may repair them, and are added to its candidates once the
+    // reformulated problem exists.
     std::vector<VectorDouble> startingPointsForNLP;
 
     // The hashes of the combinations of the discrete variables whose NLP problems have been solved in the exhaustive

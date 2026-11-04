@@ -29,9 +29,6 @@ void PrimalSolver::addPrimalSolutionCandidate(VectorDouble pt, E_PrimalSolutionS
     if((int)pt.size() > env->problem->properties.numberOfVariables)
         pt.resize(env->problem->properties.numberOfVariables);
 
-    if(source == E_PrimalSolutionSource::ExternalPrimalSolution)
-        startingPointsForNLP.push_back(pt);
-
     PrimalSolution sol;
 
     sol.point = pt;
@@ -116,8 +113,12 @@ void PrimalSolver::checkPrimalSolutionCandidates()
             context->invalidate();
         }
 
-        if(checkCandidate)
-            this->checkPrimalSolutionPoint(cand);
+        bool isAccepted = checkCandidate && this->checkPrimalSolutionPoint(cand);
+
+        // An external point, e.g., the starting point of the model, is a starting point for the NLP solver only if it
+        // is not a primal solution itself, so that the NLP problem can repair a point that is almost feasible
+        if(!isAccepted && cand.sourceType == E_PrimalSolutionSource::ExternalPrimalSolution)
+            startingPointsForNLP.push_back(cand.point);
     }
 
     env->primalSolver->primalSolutionCandidates.clear();

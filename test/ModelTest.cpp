@@ -10571,7 +10571,8 @@ bool ModelTestStartingPointAndInfiniteObjective()
     // Four points on the unit sphere with the smallest sum of 1/|p_i - p_j|, whose optimum is the tetrahedron with
     // 6/sqrt(8/3) = 3.674234. The objective is infinite where two points coincide, e.g. in the first solution of the
     // dual problem, which was accepted as a primal solution with an infinite objective, and in which no cut could be
-    // generated. A given starting point is solved from with the NLP solver before the first dual problem.
+    // generated. A given starting point that is not feasible is solved from with the NLP solver before the first
+    // dual problem.
     // Whether the exact Hessian of the objective is calculated densely, which decides whether Ipopt uses a
     // limited-memory approximation by default, is checked on larger objectives.
 
@@ -10653,10 +10654,11 @@ bool ModelTestStartingPointAndInfiniteObjective()
             return (false);
         }
 
-        // The unit vectors e1, e2, e3 and -e1, whose objective is 5/sqrt(2) + 1/2 = 4.0355
+        // The unit vectors e1, e2, e3 and -e1 scaled by 1.2, outside the sphere, so that the point is not a primal
+        // solution and the NLP problem is solved from it
         if(useStartingPoint)
         {
-            SHOT::VectorDouble startingPoint = { 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, -1.0, 0.0, 0.0 };
+            SHOT::VectorDouble startingPoint = { 1.2, 0.0, 0.0, 0.0, 1.2, 0.0, 0.0, 0.0, 1.2, -1.2, 0.0, 0.0 };
             solver->getEnvironment()->primalSolver->addPrimalSolutionCandidate(
                 startingPoint, SHOT::E_PrimalSolutionSource::ExternalPrimalSolution, 0);
         }

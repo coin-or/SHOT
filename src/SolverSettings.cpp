@@ -815,9 +815,9 @@ void Solver::initializeSettings()
         SHOT_INT_MAX);
 
     env->settings->createSetting("Primal.FixedInteger.UseStartingPoint", false,
-        "Solve an NLP problem from a given starting point, e.g. the levels of the variables in GAMS or the initial "
-        "values in AMPL, before the first dual problem, and from points given by the PrimalCandidateSearch callback "
-        "at the next NLP call. Off by default until benchmarked on all of MINLPLib");
+        "Solve an NLP problem from a given starting point that is not feasible, e.g. the levels of the variables in "
+        "GAMS or the initial values in AMPL, before the first dual problem, and from such points given by the "
+        "PrimalCandidateSearch callback at the next NLP call. Off by default until benchmarked on all of MINLPLib");
 
     env->settings->createSetting("Primal.FixedInteger.Use", true, "Use the fixed integer primal strategy");
 

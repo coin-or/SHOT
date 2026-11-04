@@ -72,7 +72,9 @@ Changes since SHOT 1.1.
 - `Solver::setStartingPoint()` and `getStartingPoint()` in C++ and SHOTpy to
   give a starting point after `setProblem()`, as AMPL and GAMS can. A feasible
   point is the first primal solution and the MIP start of the dual problems
-  ([#246]).
+  ([#246]). With `Primal.FixedInteger.UseStartingPoint` (off by default), an
+  NLP problem with the discrete variables fixed is solved from a starting
+  point that is not feasible, which may repair it ([#261]).
 - A `BoundTightening` callback location, called in `setProblem()` after the
   bound tightening of the original and of the reformulated problem, where
   bounds from other techniques can tighten the variable bounds; with
@@ -275,6 +277,7 @@ Changes since SHOT 1.1.
 [#257]: https://github.com/coin-or/SHOT/pull/257
 [#258]: https://github.com/coin-or/SHOT/pull/258
 [#259]: https://github.com/coin-or/SHOT/pull/259
+[#261]: https://github.com/coin-or/SHOT/pull/261
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e
