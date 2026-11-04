@@ -25,7 +25,7 @@ The input formats available depend on your build. A successful solver call does 
 
 ## Give a starting point
 
-Call `setStartingPoint()` after `setProblem()` with a value for each variable of the original problem, in its order. If the point is feasible, it is the first primal solution, which gives the cutoff and the MIP start of the dual problems. If it is not feasible and `Primal.FixedInteger.UseStartingPoint=true`, an NLP problem with the discrete variables fixed is solved from it before the first dual problem instead, which may repair it. `setProblem()` replaces the starting point with the one in the problem file (the initial values in an AMPL `.nl` file or the levels of the variables in GAMS), so a point given afterwards takes precedence. `getStartingPoint()` returns the point that will be used.
+Call `setStartingPoint()` after `setProblem()` with a value for each variable of the original problem, in its order. If the point is feasible, it is the first primal solution, which gives the cutoff and the MIP start of the dual problems. If it is not feasible, an NLP problem with the discrete variables fixed is solved from it before the first dual problem instead, which may repair it (`Primal.FixedInteger.UseStartingPoint`, on by default). `setProblem()` replaces the starting point with the one in the problem file (the initial values in an AMPL `.nl` file or the levels of the variables in GAMS), so a point given afterwards takes precedence. `getStartingPoint()` returns the point that will be used.
 
 ```cpp
 solver.setProblem(problem);
