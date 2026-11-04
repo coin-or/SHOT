@@ -21,6 +21,7 @@
 #include "../src/Model/Problem.h"
 #include "../src/Model/ObjectiveFunction.h"
 #include "../src/Tasks/TaskCreateMIPProblem.h"
+#include "IntegerCutTestCommon.h"
 
 #include <iostream>
 
@@ -174,31 +175,6 @@ bool CplexGenericCallbackTest(std::string filename, double correctObjectiveValue
     }
 
     return (true);
-}
-
-// For nonconvex problems where finding a primal solution is not guaranteed;
-// only verifies the solver terminates without crashing.
-bool CplexTestNocrash(std::string filename)
-{
-    auto solver = std::make_unique<SHOT::Solver>();
-    auto env = solver->getEnvironment();
-
-    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cplex));
-
-    try
-    {
-        if(!solver->setProblem(filename))
-            return false;
-    }
-    catch(SHOT::Exception& e)
-    {
-        std::cout << "Error: " << e.what() << std::endl;
-        return false;
-    }
-
-    solver->solveProblem();
-
-    return true;
 }
 
 bool CplexTerminationCallbackTest(std::string filename)
@@ -783,17 +759,17 @@ int CplexTest(int argc, char* argv[])
         break;
     case 13:
         std::cout << "Starting test to solve gear.osil with Cplex." << std::endl;
-        passed = CplexTestNocrash("data/gear.osil");
+        passed = solveWithIntegerCuts(ES_MIPSolver::Cplex, "data/gear.osil", 0.0);
         std::cout << "Finished test to solve gear.osil with Cplex." << std::endl;
         break;
     case 14:
         std::cout << "Starting test to solve windfac.osil with Cplex." << std::endl;
-        passed = CplexTestNocrash("data/windfac.osil");
+        passed = solveWithIntegerCuts(ES_MIPSolver::Cplex, "data/windfac.osil", 0.254487);
         std::cout << "Finished test to solve windfac.osil with Cplex." << std::endl;
         break;
     case 15:
         std::cout << "Starting test to solve ex1252a.osil with Cplex." << std::endl;
-        passed = CplexTestNocrash("data/ex1252a.osil");
+        passed = solveWithIntegerCuts(ES_MIPSolver::Cplex, "data/ex1252a.osil", 128893.741);
         std::cout << "Finished test to solve ex1252a.osil with Cplex." << std::endl;
         break;
     case 16:
