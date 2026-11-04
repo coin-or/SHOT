@@ -215,6 +215,8 @@ bool CplexCallback::handleRelaxation(const IloCplex::Callback::Context& context)
 
     tmpVals.end();
 
+    env->reformulatedProblem->projectOntoVariableBounds(solution);
+
     SolutionPoint solutionRelaxed;
 
     if(env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
@@ -382,6 +384,8 @@ bool CplexCallback::handleCandidate(const IloCplex::Callback::Context& context)
         VectorDouble primalSolution(
             candidatePoint.begin(), candidatePoint.begin() + env->problem->properties.numberOfVariables);
 
+        env->problem->projectOntoVariableBounds(primalSolution);
+
         SolutionPoint tmpPt;
 
         if(env->problem->properties.numberOfNonlinearConstraints > 0)
@@ -419,6 +423,8 @@ bool CplexCallback::handleCandidate(const IloCplex::Callback::Context& context)
         = (env->dualSolver->hasObjectiveVariableOnlyInMIPSolver()) ? candidatePoint.size() - 1 : candidatePoint.size();
 
     VectorDouble solution(candidatePoint.begin(), candidatePoint.begin() + numberOfVariables);
+
+    env->reformulatedProblem->projectOntoVariableBounds(solution);
 
     // The bounds cannot be changed in the callback, so the MIP solver is interrupted and the artificial
     // bounds are removed before it solves again

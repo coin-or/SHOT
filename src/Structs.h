@@ -136,11 +136,11 @@ struct PairCoordinateValue
 struct SolutionPoint
 {
     VectorDouble point;
-    double objectiveValue;
-    int iterFound;
+    double objectiveValue = NAN;
+    int iterFound = -1;
     PairIndexValue maxDeviation;
     bool isRelaxedPoint = false;
-    double hashValue;
+    double hashValue = NAN;
 };
 
 struct InteriorPoint
@@ -162,12 +162,12 @@ struct PrimalSolution
     VectorDouble point;
     E_PrimalSolutionSource sourceType;
     std::string sourceDescription;
-    double objValue;
-    int iterFound;
+    double objValue = NAN;
+    int iterFound = -1;
     PairIndexValue maxDeviatingConstraintLinear { -1, SHOT_DBL_INF };
     PairIndexValue maxDeviatingConstraintQuadratic { -1, SHOT_DBL_INF };
     PairIndexValue maxDeviatingConstraintNonlinear { -1, SHOT_DBL_INF };
-    double maxIntegerToleranceError; // The maximum integer error before rounding
+    double maxIntegerToleranceError = 0.0; // The maximum integer error before rounding
     bool boundProjectionPerformed = false; // Has the variable bounds been corrected to either upper or lower bounds?
     bool integerRoundingPerformed = false; // Has the integers been rounded?
     bool displayed = false; // Has the primal solution been displayed on console?
@@ -177,8 +177,8 @@ struct PrimalFixedNLPCandidate
 {
     VectorDouble point;
     E_PrimalNLPSource sourceType;
-    double objValue;
-    int iterFound;
+    double objValue = NAN;
+    int iterFound = -1;
     PairIndexValue maxDeviatingConstraint;
     PairDouble discreteVariablePointHashes;
 };
@@ -188,8 +188,8 @@ struct DualSolution
     VectorDouble point;
     E_DualSolutionSource sourceType;
     double objValue = SHOT_DBL_INF;
-    int iterFound;
-    bool displayed; // Has the dual solution been displayed on console?
+    int iterFound = -1;
+    bool displayed = false; // Has the dual solution been displayed on console?
 };
 
 struct Hyperplane

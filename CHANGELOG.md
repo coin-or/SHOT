@@ -241,6 +241,13 @@ Changes since SHOT 1.1.
 - Numerical trouble in the relaxation of a problem with discrete variables
   (`Dual.Relaxation.Use`) ends the relaxation instead of the solution, so the
   problem with the discrete variables is still solved.
+- The values of the solutions of the MIP solver are projected onto the
+  variable bounds before they are used. A value slightly outside a bound,
+  within the feasibility tolerance of the MIP solver, could be outside the
+  domain of a nonlinear function, e.g., `y < 0` in `x^2/y` with `y >= 0`, so
+  that the constraint was fulfilled by a large margin. With Cplex, an
+  infeasible point was then accepted as the optimal solution, and no cut
+  was generated for the constraint.
 
 ### Removed
 

@@ -1173,6 +1173,18 @@ std::vector<VariablePtr> Problem::getVariablesAtArtificialBounds(const VectorDou
     return (variables);
 }
 
+void Problem::projectOntoVariableBounds(VectorDouble& point)
+{
+    for(auto& V : allVariables)
+    {
+        if(V->getIndex() >= (int)point.size())
+            continue;
+
+        double& value = point[V->getIndex()];
+        value = std::max(V->lowerBound, std::min(V->upperBound, value));
+    }
+}
+
 bool Problem::hasArtificialBounds()
 {
     return (std::any_of(allVariables.begin(), allVariables.end(),

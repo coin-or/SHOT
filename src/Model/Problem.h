@@ -215,6 +215,12 @@ public:
     // VariableProperties::hasArtificialLowerBound, in a point whose first values are the values of the variables
     std::vector<VariablePtr> getVariablesAtArtificialBounds(const VectorDouble& point);
 
+    // Projects the values of the variables in a point, whose first values are the values of the variables, onto the
+    // variable bounds. A MIP solver may return values slightly outside the bounds, within its feasibility tolerance,
+    // and the bounds can be the domain of a nonlinear function, e.g., x >= 0 in x^(-1), outside of which the
+    // constraints are evaluated wrongly
+    void projectOntoVariableBounds(VectorDouble& point);
+
     // Whether a variable still has a bound that has replaced a missing bound when the problem was read
     bool hasArtificialBounds();
     ConstraintPtr getConstraint(int constraintIndex);
