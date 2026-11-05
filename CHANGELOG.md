@@ -162,7 +162,7 @@ Changes since SHOT 1.1.
   problem are added only when the NLP status is optimal and its point is
   accepted as a primal solution. Rejected or merely feasible points no
   longer exclude an integer combination that may contain a better solution
-  and lead to a false optimality claim.
+  and lead to a false optimality claim ([#285]).
 - Primal candidates from MIP solution pools and callbacks are checked
   against the original linear constraints even when
   `Primal.Tolerance.TrustLinearConstraintValues` is enabled. Numerically
@@ -420,6 +420,7 @@ Changes since SHOT 1.1.
 [#282]: https://github.com/coin-or/SHOT/pull/282
 [#283]: https://github.com/coin-or/SHOT/pull/283
 [#284]: https://github.com/coin-or/SHOT/pull/284
+[#285]: https://github.com/coin-or/SHOT/pull/285
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e
