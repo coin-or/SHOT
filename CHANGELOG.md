@@ -141,6 +141,19 @@ Changes since SHOT 1.1.
   `Solver::getCurrentDualBound()` is not a valid bound for a nonconvex
   problem once cuts have been added to nonconvex functions, and that
   `Solver::getGlobalDualBound()` is.
+- `Model.Reformulation.Bilinear.IntegerFormulation.MaxDomain` is 250 instead
+  of 100, so that integer variables with domains such as 0..200 are
+  discretized in bilinear terms. On the MINLPLib instances where this
+  matters (nvs01–nvs24, primary), HiGHS, Cbc and CPLEX solve more of them,
+  e.g., nvs02 and nvs14 within seconds instead of not at all in 60 s. The
+  limit now also applies to bilinear terms that are extracted to auxiliary
+  variables, e.g., with `Model.Reformulation.Quadratics.ExtractStrategy=2`,
+  whose integer variables were discretized regardless of their domain.
+- SHOT tells how many bilinear terms with integer variables are not
+  discretized because of their bounds or the limit, and warns when bilinear
+  terms get nonconvex auxiliary constraints although
+  `Model.Convexity.AssumeConvex` is true, since the solution may then not be
+  optimal.
 
 ### Fixed
 

@@ -4146,6 +4146,8 @@ bool TestIntegerBilinearTermArtificialBounds()
     solver->updateSetting("Termination.TimeLimit", 30.0);
     solver->updateSetting("Model.Reformulation.Quadratics.ExtractStrategy",
         static_cast<int>(ES_QuadraticTermsExtractStrategy::ExtractToEqualityConstraintIfNonconvex));
+    solver->updateSetting(
+        "Model.Reformulation.Bilinear.IntegerFormulation", static_cast<int>(ES_ReformulateBilinearInteger::Yes));
     solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
 
     if(!solver->setProblem(MakeIntegerBilinearArtificialBoundsProblem(env)))
