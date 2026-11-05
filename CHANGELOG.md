@@ -148,12 +148,13 @@ Changes since SHOT 1.1.
   e.g., nvs02 and nvs14 within seconds instead of not at all in 60 s. The
   limit now also applies to bilinear terms that are extracted to auxiliary
   variables, e.g., with `Model.Reformulation.Quadratics.ExtractStrategy=2`,
-  whose integer variables were discretized regardless of their domain.
+  whose integer variables were discretized regardless of their domain
+  ([#282]).
 - SHOT tells how many bilinear terms with integer variables are not
   discretized because of their bounds or the limit, and warns when bilinear
   terms get nonconvex auxiliary constraints although
   `Model.Convexity.AssumeConvex` is true, since the solution may then not be
-  optimal.
+  optimal ([#282]).
 
 ### Fixed
 
@@ -299,7 +300,7 @@ Changes since SHOT 1.1.
   variable, e.g., with `Model.Reformulation.Quadratics.ExtractStrategy=2`;
   the term is reformulated as a continuous bilinear term instead. The
   discretization has one binary variable for each value of the variable, so
-  SHOT used up all memory.
+  SHOT used up all memory ([#282]).
 
 ### Removed
 
@@ -398,6 +399,7 @@ Changes since SHOT 1.1.
 [#265]: https://github.com/coin-or/SHOT/pull/265
 [#280]: https://github.com/coin-or/SHOT/pull/280
 [#281]: https://github.com/coin-or/SHOT/pull/281
+[#282]: https://github.com/coin-or/SHOT/pull/282
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e
