@@ -1076,6 +1076,11 @@ void TaskReformulateProblem::createEpigraphConstraint()
 
     reformulatedProblem->add(objectiveVariable);
     constraint->add(std::make_shared<LinearTerm>(-1.0, std::dynamic_pointer_cast<Variable>(objectiveVariable)));
+
+    // The constraint is reformulated before it is added to the problem, but the bounds of its terms, e.g., when
+    // monomial or signomial terms are partitioned, are calculated from the bounds of the variables in their problem
+    constraint->takeOwnership(reformulatedProblem);
+
     auto reformulatedConstraints = reformulateConstraint(constraint);
 
     for(auto& RC : reformulatedConstraints)
