@@ -468,7 +468,7 @@ void Solver::initializeSettings()
         enumBilinearIntegerReformulation, 0);
     enumBilinearIntegerReformulation.clear();
 
-    env->settings->createSetting("Model.Reformulation.Bilinear.IntegerFormulation.MaxDomain", 100,
+    env->settings->createSetting("Model.Reformulation.Bilinear.IntegerFormulation.MaxDomain", 250,
         "Do not reformulate integer variables in bilinear terms which can assume more than this number of discrete "
         "values",
         2, SHOT_INT_MAX);

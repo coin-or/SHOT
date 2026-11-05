@@ -312,6 +312,8 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
     // Creating expressions for the bilinear reformulations
     createBilinearReformulations();
 
+    reportBilinearReformulations();
+
     reformulatedProblem->properties.isReformulated = true;
     reformulatedProblem->properties.numberOfAddedLinearizations = env->problem->properties.numberOfAddedLinearizations;
 
@@ -2299,6 +2301,8 @@ std::tuple<LinearTerms, QuadraticTerms, double> TaskReformulateProblem::reformul
     {
         for(auto& T : quadraticTerms)
         {
+            noteNonDiscretizedIntegerBilinearTerm(T->firstVariable, T->secondVariable);
+
             if(!T->isSquare
                 && (T->firstVariable->upperBound > 1e15 || T->secondVariable->upperBound > 1e15
                     || T->firstVariable->lowerBound < -1e15 || T->secondVariable->lowerBound < -1e15))
@@ -2326,14 +2330,8 @@ std::tuple<LinearTerms, QuadraticTerms, double> TaskReformulateProblem::reformul
             {
             }
             else if(useIntegerBilinearTermReformulation && T->isBilinear
-                && (((T->firstVariable->properties.type == E_VariableType::Integer
-                         || T->firstVariable->properties.type == E_VariableType::Semiinteger)
-                        && (T->firstVariable->upperBound - T->firstVariable->lowerBound
-                            < maxBilinearIntegerReformulationDomain))
-                    || ((T->secondVariable->properties.type == E_VariableType::Integer
-                            || T->secondVariable->properties.type == E_VariableType::Semiinteger)
-                        && (T->secondVariable->upperBound - T->secondVariable->lowerBound
-                            < maxBilinearIntegerReformulationDomain))))
+                && (isDiscretizableInBilinearTerm(T->firstVariable)
+                    || isDiscretizableInBilinearTerm(T->secondVariable)))
             // bilinear term i1*i2 or i1*x2
             {
             }
@@ -2399,6 +2397,8 @@ std::tuple<LinearTerms, QuadraticTerms, double> TaskReformulateProblem::reformul
             auto firstVariable = reformulatedProblem->getVariable(T->firstVariable->getIndex());
             auto secondVariable = reformulatedProblem->getVariable(T->secondVariable->getIndex());
 
+            noteNonDiscretizedIntegerBilinearTerm(firstVariable, secondVariable);
+
             if(T->isSquare && T->isBinary) // Square term b^2 -> b
             {
                 resultTerms.push_back(std::make_shared<LinearTerm>(signfactor * T->coefficient, firstVariable));
@@ -2426,14 +2426,7 @@ std::tuple<LinearTerms, QuadraticTerms, double> TaskReformulateProblem::reformul
                 resultTerms.push_back(std::make_shared<LinearTerm>(signfactor * T->coefficient, auxVariable));
             }
             else if(useIntegerBilinearTermReformulation && T->isBilinear
-                && (((firstVariable->properties.type == E_VariableType::Integer
-                         || firstVariable->properties.type == E_VariableType::Semiinteger)
-                        && (firstVariable->upperBound - firstVariable->lowerBound
-                            < maxBilinearIntegerReformulationDomain))
-                    || ((secondVariable->properties.type == E_VariableType::Integer
-                            || secondVariable->properties.type == E_VariableType::Semiinteger)
-                        && (secondVariable->upperBound - secondVariable->lowerBound
-                            < maxBilinearIntegerReformulationDomain))))
+                && (isDiscretizableInBilinearTerm(firstVariable) || isDiscretizableInBilinearTerm(secondVariable)))
             // bilinear term i1*i2 or i1*x2
             {
                 auto [auxVariable, newVariable] = getBilinearAuxiliaryVariable(firstVariable, secondVariable);
@@ -3975,6 +3968,78 @@ void TaskReformulateProblem::createSquareReformulations()
     }
 }
 
+void TaskReformulateProblem::noteNonDiscretizedIntegerBilinearTerm(
+    const VariablePtr& firstVariable, const VariablePtr& secondVariable)
+{
+    // Only terms that would be discretized if the domain limit allowed it
+    if(!useIntegerBilinearTermReformulation || firstVariable == secondVariable)
+        return;
+
+    auto isType = [](const VariablePtr& V, E_VariableType type) { return (V->properties.type == type); };
+    auto isInteger = [&](const VariablePtr& V)
+    { return (isType(V, E_VariableType::Integer) || isType(V, E_VariableType::Semiinteger)); };
+
+    if(isType(firstVariable, E_VariableType::Binary) || isType(secondVariable, E_VariableType::Binary)
+        || (!isInteger(firstVariable) && !isInteger(secondVariable)))
+        return;
+
+    if(isDiscretizableInBilinearTerm(firstVariable) || isDiscretizableInBilinearTerm(secondVariable))
+        return;
+
+    nonDiscretizedIntegerBilinearTerms.emplace(std::min(firstVariable->getIndex(), secondVariable->getIndex()),
+        std::max(firstVariable->getIndex(), secondVariable->getIndex()));
+}
+
+void TaskReformulateProblem::reportBilinearReformulations()
+{
+    if(nonDiscretizedIntegerBilinearTerms.size() > 0)
+    {
+        env->output->outputInfo(fmt::format(
+            " {} integer bilinear terms not discretized: unbounded or domain over IntegerFormulation.MaxDomain "
+            "= {}.",
+            nonDiscretizedIntegerBilinearTerms.size(), maxBilinearIntegerReformulationDomain));
+    }
+
+    // The continuous formulation of a bilinear term, x * y = w, is nonconvex, which the assumption of convexity does
+    // not hold for, so cuts of these constraints can cut off solutions
+    if(env->settings->getSetting<bool>("Model.Convexity.AssumeConvex"))
+    {
+        if(auto numberOfTerms
+            = reformulatedProblem->getAuxiliaryVariablesOfType(E_AuxiliaryVariableType::ContinuousBilinear).size();
+            numberOfTerms > 0)
+        {
+            env->output->outputWarning(
+                fmt::format(" {} bilinear terms have nonconvex reformulations despite AssumeConvex; the result may be "
+                            "wrong.",
+                    numberOfTerms));
+        }
+    }
+}
+
+bool TaskReformulateProblem::isDiscretizableInBilinearTerm(const VariablePtr& variable)
+{
+    if(variable->properties.type != E_VariableType::Integer && variable->properties.type != E_VariableType::Semiinteger)
+        return (false);
+
+    if(variable->lowerBound <= SHOT_DBL_MIN || variable->upperBound >= SHOT_DBL_MAX)
+        return (false);
+
+    if(variable->upperBound - variable->lowerBound >= maxBilinearIntegerReformulationDomain)
+        return (false);
+
+    // The variables of the reformulated problem do not have the flags for artificial bounds, but those of the original
+    // problem have the same indexes
+    if(variable->getIndex() < env->problem->properties.numberOfVariables)
+    {
+        auto originalVariable = env->problem->getVariable(variable->getIndex());
+
+        if(originalVariable->properties.hasArtificialLowerBound || originalVariable->properties.hasArtificialUpperBound)
+            return (false);
+    }
+
+    return (true);
+}
+
 void TaskReformulateProblem::createBilinearReformulations()
 {
     // Preserve the original index order of generated constraints despite hash-table lookup during construction.
@@ -4013,11 +4078,21 @@ void TaskReformulateProblem::createBilinearReformulations()
             reformulateBinaryContinuousBilinearTerm(firstVariable, secondVariable, AUXVAR);
             AUXVAR->properties.auxiliaryType = E_AuxiliaryVariableType::IntegerBilinear;
         }
-        else if(firstVariableType == E_VariableType::Integer || firstVariableType == E_VariableType::Semiinteger
-            || secondVariableType == E_VariableType::Integer || secondVariableType == E_VariableType::Semiinteger)
+        // Terms extracted from nonlinear expressions also get here, so the domain limit is checked again. The
+        // discretization has one binary variable for each value of the integer variable. It is used regardless of
+        // Model.Reformulation.Bilinear.IntegerFormulation, since the alternative for an extracted term is the
+        // nonconvex continuous formulation below, not keeping the quadratic term.
+        else if(isDiscretizableInBilinearTerm(firstVariable) || isDiscretizableInBilinearTerm(secondVariable))
         {
             reformulateIntegerBilinearTerm(firstVariable, secondVariable, AUXVAR);
             AUXVAR->properties.auxiliaryType = E_AuxiliaryVariableType::IntegerBilinear;
+        }
+        else if(firstVariableType == E_VariableType::Integer || firstVariableType == E_VariableType::Semiinteger
+            || secondVariableType == E_VariableType::Integer || secondVariableType == E_VariableType::Semiinteger)
+        {
+            nonDiscretizedIntegerBilinearTerms.emplace(key);
+            reformulateRealBilinearTerm(firstVariable, secondVariable, AUXVAR);
+            AUXVAR->properties.auxiliaryType = E_AuxiliaryVariableType::ContinuousBilinear;
         }
         else if(firstVariableType == E_VariableType::Real && secondVariableType == E_VariableType::Real)
         {

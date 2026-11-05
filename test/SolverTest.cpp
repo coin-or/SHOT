@@ -4094,6 +4094,109 @@ bool TestEpigraphOfPartitionedObjectiveTerms()
     return passed;
 }
 
+// A problem with the bilinear terms x1*i + x2*i - x1*j in a nonlinear objective function, where the integer variable i
+// has artificial bounds, as a problem reader gives an integer variable without bounds, and j has bounds. With the
+// extraction of quadratic terms to auxiliary variables, i was discretized with one binary variable for each value
+// between its artificial bounds, which used up all memory with the default bounds of +-2e9. Here they are +-1000.
+static ProblemPtr MakeIntegerBilinearArtificialBoundsProblem(EnvironmentPtr env)
+{
+    auto problem = std::make_shared<Problem>(env);
+    problem->name = "integerbilinearartificialbounds";
+
+    auto x1 = std::make_shared<Variable>("x1", E_VariableType::Real, 0.0, 1.0);
+    auto x2 = std::make_shared<Variable>("x2", E_VariableType::Real, 0.0, 1.0);
+    auto i = std::make_shared<Variable>("i", E_VariableType::Integer, -1000.0, 1000.0);
+    i->properties.hasArtificialLowerBound = true;
+    i->properties.hasArtificialUpperBound = true;
+    auto j = std::make_shared<Variable>("j", E_VariableType::Integer, 0.0, 3.0);
+    problem->add(Variables { x1, x2, i, j });
+
+    // x1*i + x2*i - x1*j + 0.1*exp(x1)
+    auto objective = std::make_shared<NonlinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<QuadraticTerm>(1.0, x1, i));
+    objective->add(std::make_shared<QuadraticTerm>(1.0, x2, i));
+    objective->add(std::make_shared<QuadraticTerm>(-1.0, x1, j));
+    objective->add(std::make_shared<ExpressionProduct>(std::make_shared<ExpressionConstant>(0.1),
+        std::make_shared<ExpressionExp>(std::make_shared<ExpressionVariable>(x1))));
+    problem->add(objective);
+
+    // i >= -2 as a constraint, so that i keeps its artificial bounds without bound tightening
+    auto c1 = std::make_shared<LinearConstraint>("c1", -2.0, SHOT_DBL_MAX);
+    c1->add(std::make_shared<LinearTerm>(1.0, i));
+    problem->add(c1);
+
+    auto c2 = std::make_shared<LinearConstraint>("c2", 1.0, SHOT_DBL_MAX);
+    c2->add(std::make_shared<LinearTerm>(1.0, x1));
+    c2->add(std::make_shared<LinearTerm>(1.0, x2));
+    problem->add(c2);
+
+    problem->updateProperties();
+    problem->finalize();
+
+    return (problem);
+}
+
+bool TestIntegerBilinearTermArtificialBounds()
+{
+    bool passed = true;
+
+    auto solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+    solver->updateSetting("Termination.TimeLimit", 30.0);
+    solver->updateSetting("Model.Reformulation.Quadratics.ExtractStrategy",
+        static_cast<int>(ES_QuadraticTermsExtractStrategy::ExtractToEqualityConstraintIfNonconvex));
+    solver->updateSetting(
+        "Model.Reformulation.Bilinear.IntegerFormulation", static_cast<int>(ES_ReformulateBilinearInteger::Yes));
+    solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+
+    if(!solver->setProblem(MakeIntegerBilinearArtificialBoundsProblem(env)))
+    {
+        std::cout << "The problem could not be set.\n";
+        return false;
+    }
+
+    auto integerBilinear
+        = env->reformulatedProblem->getAuxiliaryVariablesOfType(E_AuxiliaryVariableType::IntegerBilinear);
+    auto continuousBilinear
+        = env->reformulatedProblem->getAuxiliaryVariablesOfType(E_AuxiliaryVariableType::ContinuousBilinear);
+
+    // Only x1*j is discretized, through j, and x1*i and x2*i get the continuous formulation, since i has artificial
+    // bounds
+    if(integerBilinear.size() != 1 || continuousBilinear.size() != 2)
+    {
+        std::cout << "There are " << integerBilinear.size() << " integer and " << continuousBilinear.size()
+                  << " continuous bilinear auxiliary variables instead of 1 and 2.\n";
+        passed = false;
+    }
+
+    if(env->reformulatedProblem->properties.numberOfBinaryVariables > 4)
+    {
+        std::cout << "The reformulated problem has " << env->reformulatedProblem->properties.numberOfBinaryVariables
+                  << " binary variables, so the integer variable with artificial bounds has been discretized.\n";
+        passed = false;
+    }
+
+    solver->solveProblem();
+
+    // The optimum is at x1 = x2 = 1, i = -2 and j = 3
+    double optimum = -7.0 + 0.1 * std::exp(1.0);
+
+    if(!env->results->hasPrimalSolution() || std::abs(solver->getPrimalBound() - optimum) > 1e-4)
+    {
+        std::cout << "The primal bound " << solver->getPrimalBound() << " is not the optimum " << optimum << ".\n";
+        passed = false;
+    }
+
+    if(solver->getGlobalDualBound() > optimum + 1e-4)
+    {
+        std::cout << "The dual bound " << solver->getGlobalDualBound() << " is past the optimum " << optimum << ".\n";
+        passed = false;
+    }
+
+    return passed;
+}
+
 int SolverTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -4324,6 +4427,11 @@ int SolverTest(int argc, char* argv[])
         std::cout << "Starting test for partitioning the terms of an epigraph constraint" << std::endl;
         passed = TestEpigraphOfPartitionedObjectiveTerms();
         std::cout << "Finished test for partitioning the terms of an epigraph constraint." << std::endl;
+        break;
+    case 43:
+        std::cout << "Starting test for integer variables with artificial bounds in bilinear terms" << std::endl;
+        passed = TestIntegerBilinearTermArtificialBounds();
+        std::cout << "Finished test for integer variables with artificial bounds in bilinear terms." << std::endl;
         break;
     default:
         passed = false;

@@ -141,6 +141,20 @@ Changes since SHOT 1.1.
   `Solver::getCurrentDualBound()` is not a valid bound for a nonconvex
   problem once cuts have been added to nonconvex functions, and that
   `Solver::getGlobalDualBound()` is.
+- `Model.Reformulation.Bilinear.IntegerFormulation.MaxDomain` is 250 instead
+  of 100, so that integer variables with domains such as 0..200 are
+  discretized in bilinear terms. On the MINLPLib instances where this
+  matters (nvs01–nvs24, primary), HiGHS, Cbc and CPLEX solve more of them,
+  e.g., nvs02 and nvs14 within seconds instead of not at all in 60 s. The
+  limit now also applies to bilinear terms that are extracted to auxiliary
+  variables, e.g., with `Model.Reformulation.Quadratics.ExtractStrategy=2`,
+  whose integer variables were discretized regardless of their domain
+  ([#282]).
+- SHOT tells how many bilinear terms with integer variables are not
+  discretized because of their bounds or the limit, and warns when bilinear
+  terms get nonconvex auxiliary constraints although
+  `Model.Convexity.AssumeConvex` is true, since the solution may then not be
+  optimal ([#282]).
 
 ### Fixed
 
@@ -255,7 +269,7 @@ Changes since SHOT 1.1.
 - The OSrL result file has the values of the variables, the objective and
   the constraints with all significant digits. They were written with six
   decimals, so that, e.g., a value of `1.5e-7` was written as `0.000000`.
-- Fixes in the CPLEX interface:
+- Fixes in the CPLEX interface ([#280]):
   - The cutoff constraint of a minimization problem with a constant in the
     objective function lost the constant when the cutoff was updated, so
     that it cut off solutions better than the cutoff and SHOT could report a
@@ -279,7 +293,14 @@ Changes since SHOT 1.1.
   `Model.Reformulation.ObjectiveFunction.EpigraphStrategy=2` and
   `Model.Reformulation.Constraint.PartitionNonlinearTerms=0`: the bounds of
   the terms of the epigraph constraint were calculated before the constraint
-  belonged to the reformulated problem.
+  belonged to the reformulated problem ([#281]).
+- An integer variable without bounds, or with the artificial bounds from
+  `Model.Variables.Integer.MinimumLowerBound` and `MaximumUpperBound`, is no
+  longer discretized in a bilinear term that is extracted to an auxiliary
+  variable, e.g., with `Model.Reformulation.Quadratics.ExtractStrategy=2`;
+  the term is reformulated as a continuous bilinear term instead. The
+  discretization has one binary variable for each value of the variable, so
+  SHOT used up all memory ([#282]).
 
 ### Removed
 
@@ -376,6 +397,9 @@ Changes since SHOT 1.1.
 [#262]: https://github.com/coin-or/SHOT/pull/262
 [#263]: https://github.com/coin-or/SHOT/pull/263
 [#265]: https://github.com/coin-or/SHOT/pull/265
+[#280]: https://github.com/coin-or/SHOT/pull/280
+[#281]: https://github.com/coin-or/SHOT/pull/281
+[#282]: https://github.com/coin-or/SHOT/pull/282
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e

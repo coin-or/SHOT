@@ -63,6 +63,20 @@ private:
 
     int maxBilinearIntegerReformulationDomain = 2;
 
+    // Whether an integer variable in a bilinear term can be discretized: it must have bounds, not the artificial ones
+    // from Model.Variables.Integer, and their difference must be less than
+    // Model.Reformulation.Bilinear.IntegerFormulation.MaxDomain
+    bool isDiscretizableInBilinearTerm(const VariablePtr& variable);
+
+    // The bilinear terms, as pairs of variable indexes, whose integer variables are not discretized because of their
+    // bounds or Model.Reformulation.Bilinear.IntegerFormulation.MaxDomain
+    std::set<std::pair<int, int>> nonDiscretizedIntegerBilinearTerms;
+    void noteNonDiscretizedIntegerBilinearTerm(const VariablePtr& firstVariable, const VariablePtr& secondVariable);
+
+    // Tells about the bilinear terms that are not discretized, and warns about the nonconvex auxiliary constraints of
+    // bilinear terms when the problem is assumed to be convex
+    void reportBilinearReformulations();
+
     bool useIntegerBilinearTermReformulation = false; // integer term i1*i2 or i1*x2
 
     void reformulateObjectiveFunction();
