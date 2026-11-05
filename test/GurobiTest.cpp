@@ -686,6 +686,59 @@ bool GurobiExternalDualBoundCallbackTest(std::string filename, double dualBoundT
     return (true);
 }
 
+// Bounding a free auxiliary objective after an unbounded LP can give a numerically infeasible point. It must not
+// become the incumbent and close the objective gap at an infeasible objective value.
+bool GurobiPrimalValidationAfterUnboundedLPTest(const std::string& filename)
+{
+    bool passed = true;
+
+    for(auto treeStrategy : { ES_TreeStrategy::MultiTree, ES_TreeStrategy::SingleTree })
+    {
+        auto solver = std::make_unique<Solver>();
+        auto env = solver->getEnvironment();
+        solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+        solver->updateSetting("Termination.TimeLimit", 30.0);
+        solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Gurobi));
+        solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+        solver->updateSetting("Dual.TreeStrategy", static_cast<int>(treeStrategy));
+        solver->updateSetting("Dual.CutStrategy", static_cast<int>(ES_HyperplaneCutStrategy::ECP));
+        solver->updateSetting(
+            "Model.Reformulation.Quadratics.Strategy", static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear));
+        solver->updateSetting("Model.Reformulation.ObjectiveFunction.EpigraphStrategy", 2);
+        solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+        solver->updateSetting("Primal.Tolerance.TrustLinearConstraintValues", true);
+
+        if(!solver->setProblem(filename) || !solver->solveProblem())
+            return false;
+
+        bool hasCorrectBounds = std::abs(solver->getPrimalBound() - 2.925) <= 1e-3
+            && std::abs(solver->getGlobalDualBound() - 2.925) <= 1e-3;
+
+        if(!solver->hasPrimalSolution() || !hasCorrectBounds
+            || solver->getModelReturnStatus() != E_ModelReturnStatus::OptimalGlobal)
+        {
+            std::cout << "Tree strategy " << static_cast<int>(treeStrategy)
+                      << ": expected optimal bounds of 2.925, got [" << solver->getGlobalDualBound() << ", "
+                      << solver->getPrimalBound() << "]\n";
+            passed = false;
+        }
+
+        for(auto& solution : solver->getPrimalSolutions())
+        {
+            auto deviation
+                = env->problem->getMaxNumericConstraintValue(solution.point, env->problem->linearConstraints);
+            if(deviation.error > 1e-6)
+            {
+                std::cout << "Accepted a solution violating " << deviation.constraint->name << " by " << deviation.error
+                          << '\n';
+                passed = false;
+            }
+        }
+    }
+
+    return passed;
+}
+
 int GurobiTest(int argc, char* argv[])
 {
 
@@ -822,6 +875,11 @@ int GurobiTest(int argc, char* argv[])
                 solver.updateSetting("Subsolver.Gurobi.NumericFocus", 3);
             });
         std::cout << "Finished test for ending the relaxation after numerical trouble." << std::endl;
+        break;
+    case 21:
+        std::cout << "Starting test for primal feasibility after an unbounded LP" << std::endl;
+        passed = GurobiPrimalValidationAfterUnboundedLPTest("data/instances/MIQCQP-convex/alan.osil");
+        std::cout << "Finished test for primal feasibility after an unbounded LP." << std::endl;
         break;
     default:
         passed = false;

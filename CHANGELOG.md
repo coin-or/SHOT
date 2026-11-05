@@ -158,6 +158,11 @@ Changes since SHOT 1.1.
 
 ### Fixed
 
+- Primal candidates from MIP solution pools and callbacks are checked
+  against the original linear constraints even when
+  `Primal.Tolerance.TrustLinearConstraintValues` is enabled. Numerically
+  infeasible points, e.g., after bounding an unbounded dual objective, can
+  no longer become the incumbent and produce a false optimality claim.
 - Many fixes for wrong results, invalid dual bounds, crashes and
   non-termination, mainly on nonconvex problems, found by running the
   MINLPLib and MINLPTests instances with several MIP and NLP solvers
