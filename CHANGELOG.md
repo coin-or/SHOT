@@ -255,6 +255,25 @@ Changes since SHOT 1.1.
 - The OSrL result file has the values of the variables, the objective and
   the constraints with all significant digits. They were written with six
   decimals, so that, e.g., a value of `1.5e-7` was written as `0.000000`.
+- Fixes in the CPLEX interface:
+  - The cutoff constraint of a minimization problem with a constant in the
+    objective function lost the constant when the cutoff was updated, so
+    that it cut off solutions better than the cutoff and SHOT could report a
+    wrong optimum.
+  - The cuts are found by their position among all constraints, also when the
+    problem has quadratic constraints. Their positions were counted among the
+    linear constraints only, so that repairing or removing cuts changed the
+    bounds of other constraints, e.g., removed a quadratic constraint.
+  - In the single-tree strategy, the callback uses only the variables of the
+    problem after integer cuts of nonbinary variables have added variables
+    to the MIP problem, and gives CPLEX primal solutions for these variables
+    only. SHOT crashed in this case.
+  - When CPLEX fails, e.g., because of numerical trouble, the dual problem is
+    solved again with numerical emphasis, and the solutions are used if it
+    fails again. SHOT stopped with an error.
+  - A dual problem that CPLEX reports as infeasible before a primal solution
+    is found is solved again without presolve, since CPLEX's presolve can
+    report a feasible problem with quadratic constraints as infeasible.
 
 ### Removed
 

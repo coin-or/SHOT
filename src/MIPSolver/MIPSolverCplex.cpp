@@ -558,7 +558,9 @@ int MIPSolverCplex::addLinearConstraint(
         return (-1);
     }
 
-    return (cplexInstance.getNrows() - 1);
+    // The index is used for cplexConstrs, which also contains the quadratic constraints, while CPLEX only counts the
+    // linear rows
+    return (cplexConstrs.getSize() - 1);
 }
 
 bool MIPSolverCplex::addSpecialOrderedSet(E_SOSType type, VectorInteger variableIndexes, VectorDouble variableWeights)
@@ -720,6 +722,13 @@ E_ProblemSolutionStatus MIPSolverCplex::getSolutionStatus()
         {
             MIPSolutionStatus = E_ProblemSolutionStatus::Abort;
         }
+        // CPLEX stopped because of a failure, e.g., numerical trouble, with or without an integer solution. The
+        // solutions are used, but the bound is not.
+        else if(status == IloCplex::CplexStatus::FailFeas || status == IloCplex::CplexStatus::FailInfeas
+            || status == IloCplex::CplexStatus::FailFeasNoTree || status == IloCplex::CplexStatus::FailInfeasNoTree)
+        {
+            MIPSolutionStatus = E_ProblemSolutionStatus::Numeric;
+        }
         else
         {
             env->output->outputError("        MIP solver return status " + std::to_string(status));
@@ -795,6 +804,15 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
             cplexInstance.solve();
             MIPSolutionStatus = getSolutionStatus();
         }
+
+        if(MIPSolutionStatus == E_ProblemSolutionStatus::Numeric)
+            MIPSolutionStatus = resolveWithNumericalEmphasis(MIPSolutionStatus);
+
+        // CPLEX's presolve can report a feasible problem with quadratic constraints as infeasible. Without a primal
+        // solution, an infeasible dual problem makes SHOT report the problem as infeasible, so it is solved again
+        // without presolve first
+        if(MIPSolutionStatus == E_ProblemSolutionStatus::Infeasible && !env->results->hasPrimalSolution())
+            MIPSolutionStatus = resolveInfeasibleWithoutPresolve(MIPSolutionStatus);
 
         // An unbounded exact dual problem means that the problem is unbounded, so no point is needed
         bool isUnboundedExactDualProblem = MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded
@@ -885,6 +903,64 @@ E_ProblemSolutionStatus MIPSolverCplex::resolveInfeasibleOrUnbounded(E_ProblemSo
     {
         env->output->outputError(
             "        Error when solving MIP/LP problem without presolve reductions", e.getMessage());
+        status = E_ProblemSolutionStatus::Error;
+    }
+
+    return (status);
+}
+
+E_ProblemSolutionStatus MIPSolverCplex::resolveInfeasibleWithoutPresolve(E_ProblemSolutionStatus status)
+{
+    try
+    {
+        if(!cplexInstance.getParam(IloCplex::Param::Preprocessing::Presolve))
+            return (status);
+
+        env->output->outputDebug("        CPLEX reports the problem as infeasible, so it is solved again without "
+                                 "presolve.");
+
+        // Without turning off the advanced start, CPLEX reuses the infeasibility found in the previous solve
+        auto advance = cplexInstance.getParam(IloCplex::Param::Advance);
+
+        cplexInstance.setParam(IloCplex::Param::Preprocessing::Presolve, false);
+        cplexInstance.setParam(IloCplex::Param::Advance, 0);
+        cplexInstance.solve();
+        status = MIPSolverCplex::getSolutionStatus();
+        cplexInstance.setParam(IloCplex::Param::Preprocessing::Presolve, true);
+        cplexInstance.setParam(IloCplex::Param::Advance, advance);
+    }
+    catch(IloException& e)
+    {
+        env->output->outputError("        Error when solving MIP/LP problem without presolve", e.getMessage());
+        status = E_ProblemSolutionStatus::Error;
+    }
+
+    return (status);
+}
+
+E_ProblemSolutionStatus MIPSolverCplex::resolveWithNumericalEmphasis(E_ProblemSolutionStatus status)
+{
+    try
+    {
+        if(cplexInstance.getParam(IloCplex::Param::Emphasis::Numerical))
+            return (status);
+
+        env->output->outputDebug(
+            "        Numerical trouble in CPLEX, so the problem is solved again with numerical emphasis.");
+
+        // The advanced start is turned off, so that CPLEX does not reuse the state of the failed solve
+        auto advance = cplexInstance.getParam(IloCplex::Param::Advance);
+
+        cplexInstance.setParam(IloCplex::Param::Emphasis::Numerical, true);
+        cplexInstance.setParam(IloCplex::Param::Advance, 0);
+        cplexInstance.solve();
+        status = MIPSolverCplex::getSolutionStatus();
+        cplexInstance.setParam(IloCplex::Param::Emphasis::Numerical, false);
+        cplexInstance.setParam(IloCplex::Param::Advance, advance);
+    }
+    catch(IloException& e)
+    {
+        env->output->outputError("        Error when solving MIP/LP problem with numerical emphasis", e.getMessage());
         status = E_ProblemSolutionStatus::Error;
     }
 
@@ -1263,7 +1339,6 @@ void MIPSolverCplex::setCutOffAsConstraint(double cutOff)
                     cplexConstrs[cutOffConstraintIndex].setUB(
                         cutOff - env->reformulatedProblem->objectiveFunction->constant);
 
-                cplexConstrs[cutOffConstraintIndex].setUB(cutOff);
                 env->output->outputDebug(
                     "        Setting cutoff constraint to " + Utilities::toString(cutOff) + " for minimization.");
             }

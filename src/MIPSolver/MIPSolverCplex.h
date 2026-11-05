@@ -213,5 +213,12 @@ protected:
     // CPLEX can only tell whether a problem is infeasible or unbounded if presolve reductions are not used, so such a
     // problem is solved again without them
     E_ProblemSolutionStatus resolveInfeasibleOrUnbounded(E_ProblemSolutionStatus status);
+
+    // After a failure of CPLEX, e.g., numerical trouble, the problem is solved again with numerical emphasis, unless
+    // it is already used
+    E_ProblemSolutionStatus resolveWithNumericalEmphasis(E_ProblemSolutionStatus status);
+
+    // CPLEX's presolve can report a feasible problem as infeasible, so such a problem is solved again without it
+    E_ProblemSolutionStatus resolveInfeasibleWithoutPresolve(E_ProblemSolutionStatus status);
 };
 } // namespace SHOT

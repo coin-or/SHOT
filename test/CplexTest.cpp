@@ -23,6 +23,8 @@
 #include "../src/Tasks/TaskCreateMIPProblem.h"
 #include "IntegerCutTestCommon.h"
 
+#include <cmath>
+#include <functional>
 #include <iostream>
 
 using namespace SHOT;
@@ -672,6 +674,56 @@ bool CplexRelaxationConversionTest()
     return true;
 }
 
+// Solves the problem with Cplex and the settings given by the function, and checks that the solution does not end with
+// an error, that there is a primal solution and that the primal bound is the optimum
+bool CplexSettingsTest(std::string filename, double correctObjectiveValue, std::function<void(Solver&)> setSettings,
+    bool requireIntegerCuts = false)
+{
+    auto solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cplex));
+    solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+    solver->updateSetting("Termination.TimeLimit", 60.0);
+    setSettings(*solver);
+
+    if(!solver->setProblem(filename))
+        return false;
+
+    solver->solveProblem();
+
+    if(env->results->terminationReason == E_TerminationReason::Error
+        || env->results->terminationReason == E_TerminationReason::NumericIssues)
+    {
+        std::cout << "The solution ended with an error: " << env->results->terminationReasonDescription << std::endl;
+        return false;
+    }
+
+    if(requireIntegerCuts && env->solutionStatistics.numberOfIntegerCuts == 0)
+    {
+        std::cout << "No integer cuts were added." << std::endl;
+        return false;
+    }
+
+    if(!env->results->hasPrimalSolution())
+    {
+        std::cout << "No primal solution was found." << std::endl;
+        return false;
+    }
+
+    // NaN when the problem is nonconvex and only a primal solution is required
+    if(!std::isnan(correctObjectiveValue)
+        && std::abs(solver->getPrimalBound() - correctObjectiveValue)
+            > 1e-4 * std::max(1.0, std::abs(correctObjectiveValue)))
+    {
+        std::cout << "The primal bound " << solver->getPrimalBound() << " is not the optimum " << correctObjectiveValue
+                  << "." << std::endl;
+        return false;
+    }
+
+    return true;
+}
+
 int CplexTest(int argc, char* argv[])
 {
 
@@ -804,6 +856,52 @@ int CplexTest(int argc, char* argv[])
     case 23:
         std::cout << "Testing the generic Cplex callback with local hyperplanes at relaxed points.\n";
         passed = CplexGenericCallbackTest("data/synthes1.osil", 6.00975891, 1, 10, true);
+        break;
+    case 24:
+        // The cutoff is a constraint in the LP relaxation, and the objective function has a constant
+        std::cout << "Testing the Cplex cutoff constraint with a constant in the objective function.\n";
+        passed = CplexSettingsTest("data/instances/minlp_tests_jl/nlp-mi_003_016.jl.nl", 6.141592653589793,
+            [](Solver& solver) { solver.updateSetting("Strategy.UseRecommendedSettings", false); });
+        break;
+    case 25:
+        // Cuts are added after the quadratic constraints and later removed when the dual problem is repaired
+        std::cout << "Testing the removal of Cplex cuts in a problem with quadratic constraints.\n";
+        passed = CplexSettingsTest("data/instances/minlp_tests_jl/nlp-cvx_108_012.jl.nl", 0.5927195136970647,
+            [](Solver& solver)
+            {
+                solver.updateSetting("Model.Reformulation.ObjectiveFunction.EpigraphStrategy",
+                    static_cast<int>(ES_ObjectiveEpigraphStrategy::EpigraphConstraint));
+            });
+        break;
+    case 26:
+        // Integer cuts of nonbinary variables add variables to the MIP problem in the single-tree strategy
+        std::cout << "Testing the Cplex single-tree callback after integer cuts of nonbinary variables.\n";
+        passed = CplexSettingsTest(
+            "data/instances/MINLP-convex/cvxnonsep_psig20r.osil", 95.89738736,
+            [](Solver& solver)
+            {
+                solver.updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::SingleTree));
+                solver.updateSetting("Dual.CutStrategy", static_cast<int>(ES_HyperplaneCutStrategy::ECP));
+                solver.updateSetting("Dual.HyperplaneCuts.UseIntegerCuts", true);
+                solver.updateSetting("Subsolver.Cplex.NumericalEmphasis", 1);
+                solver.updateSetting("Subsolver.Cplex.MIPEmphasis", 4);
+            },
+            true);
+        break;
+    case 27:
+        // Cplex fails with numerical trouble (status FailFeas) in a dual problem
+        std::cout << "Testing that numerical trouble in Cplex does not end the solution.\n";
+        passed = CplexSettingsTest("data/instances/MINLP-nonconvex/nvs05.osil", NAN, [](Solver&) { });
+        break;
+    case 28:
+        // Cplex's presolve reports the first dual problem, with convex quadratic constraints, as infeasible
+        std::cout << "Testing a feasible problem that Cplex's presolve reports as infeasible.\n";
+        passed = CplexSettingsTest("data/instances/MINLP-convex-small/nvs11.osil", -431.0,
+            [](Solver& solver)
+            {
+                solver.updateSetting("Model.Reformulation.ObjectiveFunction.EpigraphStrategy",
+                    static_cast<int>(ES_ObjectiveEpigraphStrategy::EpigraphConstraint));
+            });
         break;
     default:
         passed = false;
