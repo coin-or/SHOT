@@ -419,8 +419,10 @@ bool CplexCallback::handleCandidate(const IloCplex::Callback::Context& context)
         currIter->dualProblemClass = env->dualSolver->MIPSolver->getProblemClass();
     }
 
+    // The MIP problem can have more variables than the reformulated problem: the objective variable that is only in
+    // the MIP solver, and the variables added by integer cuts of nonbinary variables after it
     int numberOfVariables
-        = (env->dualSolver->hasObjectiveVariableOnlyInMIPSolver()) ? candidatePoint.size() - 1 : candidatePoint.size();
+        = std::min((int)candidatePoint.size(), env->reformulatedProblem->properties.numberOfVariables);
 
     VectorDouble solution(candidatePoint.begin(), candidatePoint.begin() + numberOfVariables);
 
@@ -561,7 +563,7 @@ std::optional<std::pair<VectorDouble, double>> CplexCallback::getPrimalSolutionT
     if(env->dualSolver->hasObjectiveVariableOnlyInMIPSolver())
         primalSol.push_back(env->reformulatedProblem->objectiveFunction->calculateValue(primalSol));
 
-    assert(static_cast<size_t>(cplexVars.getSize()) == primalSol.size());
+    assert(static_cast<size_t>(cplexVars.getSize()) >= primalSol.size());
 
     // Updated here, so that only one thread posts the solution
     lastUpdatedPrimal = primalBound;
@@ -573,14 +575,23 @@ void CplexCallback::postPrimalSolution(
     const IloCplex::Callback::Context& context, const VectorDouble& solution, double objectiveValue)
 {
     IloNumArray tmpVals(context.getEnv());
+    IloNumVarArray tmpVars(context.getEnv());
 
-    for(double S : solution)
-        tmpVals.add(S);
+    // Integer cuts of nonbinary variables add variables to the MIP problem after the variables of the solution, so the
+    // solution only gives values for some of the variables. CPLEX then completes it by solving for the others.
+    for(size_t i = 0; i < solution.size() && i < static_cast<size_t>(cplexVars.getSize()); i++)
+    {
+        tmpVals.add(solution[i]);
+        tmpVars.add(cplexVars[i]);
+    }
+
+    auto strategy = (tmpVars.getSize() < cplexVars.getSize())
+        ? IloCplex::Callback::Context::SolutionStrategy::Solve
+        : IloCplex::Callback::Context::SolutionStrategy::CheckFeasible;
 
     try
     {
-        context.postHeuristicSolution(
-            cplexVars, tmpVals, objectiveValue, IloCplex::Callback::Context::SolutionStrategy::CheckFeasible);
+        context.postHeuristicSolution(tmpVars, tmpVals, objectiveValue, strategy);
     }
     catch(IloException& e)
     {
@@ -588,6 +599,7 @@ void CplexCallback::postPrimalSolution(
             "        Error when setting primal solution as starting point in heuristic callback:", e.getMessage());
     }
 
+    tmpVars.end();
     tmpVals.end();
 }
 
