@@ -568,7 +568,7 @@ E_NLPSolutionStatus TaskSelectPrimalCandidatesFromNLP::solveFixedNLPCandidates(
                     = sourceProblem->objectiveFunction->calculateValue(variableSolution);
             }
 
-            env->primalSolver->addPrimalSolutionCandidate(
+            bool isAccepted = env->primalSolver->addPrimalSolutionCandidate(
                 variableSolution, E_PrimalSolutionSource::NLPFixedIntegers, currIter->iterationNumber);
 
             if(sourceProblem->properties.numberOfNonlinearConstraints > 0
@@ -598,10 +598,18 @@ E_NLPSolutionStatus TaskSelectPrimalCandidatesFromNLP::solveFixedNLPCandidates(
                     E_IterationLineType::PrimalNLP);
             }
 
-            // Add integer cut.
+            // A convex fixed-integer problem can still contain a better solution if the NLP point was only feasible,
+            // or if its optimum was rejected as a primal solution. Nonconvex problems keep the cut to avoid cycling.
             if(!isEnumeration && env->settings->getSetting<bool>("Dual.HyperplaneCuts.UseIntegerCuts")
                 && sourceProblem->properties.numberOfDiscreteVariables > 0)
-                createIntegerCut(CAND.point);
+            {
+                if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex
+                    || (solvestatus == E_NLPSolutionStatus::Optimal && isAccepted))
+                    createIntegerCut(CAND.point);
+                else
+                    env->output->outputDebug(
+                        "         No integer cut: the convex fixed NLP has no accepted optimal solution.");
+            }
 
             if(!isEnumeration && env->settings->getSetting<bool>("Primal.FixedInteger.CreateInfeasibilityCut"))
                 createInfeasibilityCut(variableSolution);

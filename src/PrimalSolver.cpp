@@ -23,7 +23,7 @@
 namespace SHOT
 {
 
-void PrimalSolver::addPrimalSolutionCandidate(VectorDouble pt, E_PrimalSolutionSource source, int iter)
+bool PrimalSolver::addPrimalSolutionCandidate(VectorDouble pt, E_PrimalSolutionSource source, int iter)
 {
     // Only keep variables from the original problem (remove auxiliary variables from reformulated problem)
     if((int)pt.size() > env->problem->properties.numberOfVariables)
@@ -52,7 +52,7 @@ void PrimalSolver::addPrimalSolutionCandidate(VectorDouble pt, E_PrimalSolutionS
 
     env->primalSolver->primalSolutionCandidates.push_back(sol);
 
-    this->checkPrimalSolutionCandidates();
+    return this->checkPrimalSolutionCandidates();
 }
 
 void PrimalSolver::addPrimalSolutionCandidates(std::vector<VectorDouble> pts, E_PrimalSolutionSource source, int iter)
@@ -63,7 +63,7 @@ void PrimalSolver::addPrimalSolutionCandidates(std::vector<VectorDouble> pts, E_
     }
 }
 
-void PrimalSolver::addPrimalSolutionCandidate(SolutionPoint pt, E_PrimalSolutionSource source)
+bool PrimalSolver::addPrimalSolutionCandidate(SolutionPoint pt, E_PrimalSolutionSource source)
 {
     // Only keep variables from the original problem (remove auxiliary variables from reformulated problem)
     if((int)pt.point.size() > env->problem->properties.numberOfVariables)
@@ -78,7 +78,7 @@ void PrimalSolver::addPrimalSolutionCandidate(SolutionPoint pt, E_PrimalSolution
 
     env->primalSolver->primalSolutionCandidates.push_back(sol);
 
-    this->checkPrimalSolutionCandidates();
+    return this->checkPrimalSolutionCandidates();
 }
 
 void PrimalSolver::addPrimalSolutionCandidates(std::vector<SolutionPoint> pts, E_PrimalSolutionSource source)
@@ -89,9 +89,11 @@ void PrimalSolver::addPrimalSolutionCandidates(std::vector<SolutionPoint> pts, E
     }
 }
 
-void PrimalSolver::checkPrimalSolutionCandidates()
+bool PrimalSolver::checkPrimalSolutionCandidates()
 {
     env->timing->startTimer("PrimalStrategy");
+
+    bool isAccepted = false;
 
     for(auto& cand : env->primalSolver->primalSolutionCandidates)
     {
@@ -113,7 +115,7 @@ void PrimalSolver::checkPrimalSolutionCandidates()
             context->invalidate();
         }
 
-        bool isAccepted = checkCandidate && this->checkPrimalSolutionPoint(cand);
+        isAccepted = checkCandidate && this->checkPrimalSolutionPoint(cand);
 
         // An external point, e.g., the starting point of the model, is a starting point for the NLP solver only if it
         // is not a primal solution itself, so that the NLP problem can repair a point that is almost feasible
@@ -124,6 +126,8 @@ void PrimalSolver::checkPrimalSolutionCandidates()
     env->primalSolver->primalSolutionCandidates.clear();
 
     env->timing->stopTimer("PrimalStrategy");
+
+    return isAccepted;
 }
 
 bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)

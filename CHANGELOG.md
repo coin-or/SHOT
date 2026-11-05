@@ -158,6 +158,11 @@ Changes since SHOT 1.1.
 
 ### Fixed
 
+- Integer cuts after a feasible fixed-integer NLP solve of a convex
+  problem are added only when the NLP status is optimal and its point is
+  accepted as a primal solution. Rejected or merely feasible points no
+  longer exclude an integer combination that may contain a better solution
+  and lead to a false optimality claim.
 - Primal candidates from MIP solution pools and callbacks are checked
   against the original linear constraints even when
   `Primal.Tolerance.TrustLinearConstraintValues` is enabled. Numerically

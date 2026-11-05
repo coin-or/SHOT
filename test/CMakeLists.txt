@@ -182,6 +182,9 @@ set(Solver_parts
     43
     44
     45)
+if(HAS_IPOPT)
+  list(APPEND Solver_parts 46)
+endif()
 set(cpptests ${cpptests} Solver)
 
 if(HAS_CONOPT)
