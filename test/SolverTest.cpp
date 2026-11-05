@@ -4281,6 +4281,93 @@ bool TestTrigonometricIntervalsWithLargeBounds()
     return passed;
 }
 
+// MIP recovery and its callbacks can return points that violate the original linear constraints, even before the
+// iteration is marked repaired. Check both candidate entry points without relying on a particular backend's numerics.
+bool TestMIPPrimalLinearConstraintValidation()
+{
+    bool passed = true;
+
+    for(auto source : { E_PrimalSolutionSource::MIPSolutionPool, E_PrimalSolutionSource::MIPCallback })
+    {
+        // No iteration, an unrepaired iteration (including callbacks during recovery), and a repaired iteration.
+        for(int iterationState : { 0, 1, 2 })
+        {
+            auto solver = std::make_unique<Solver>();
+            auto env = solver->getEnvironment();
+            solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+            solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+
+            auto problem = std::make_shared<Problem>(env);
+            problem->name = "mipprimalvalidation";
+            auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.0, 10.0);
+            auto y = std::make_shared<Variable>("y", E_VariableType::Real, 0.0, 10.0);
+            problem->add(Variables { x, y });
+
+            auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+            objective->add(std::make_shared<LinearTerm>(1.0, x));
+            objective->add(std::make_shared<LinearTerm>(1.0, y));
+            problem->add(objective);
+
+            auto equality = std::make_shared<LinearConstraint>("equality", 10.0, 10.0);
+            equality->add(std::make_shared<LinearTerm>(1.0, x));
+            equality->add(std::make_shared<LinearTerm>(1.0, y));
+            problem->add(equality);
+
+            auto inequality = std::make_shared<LinearConstraint>("inequality", SHOT_DBL_MIN, 0.0);
+            inequality->add(std::make_shared<LinearTerm>(1.0, x));
+            inequality->add(std::make_shared<LinearTerm>(-1.0, y));
+            problem->add(inequality);
+            problem->updateProperties();
+            problem->finalize();
+
+            if(!solver->setProblem(problem))
+                return false;
+
+            // Some backends disable trust while setting the problem. Exercise the bypass explicitly.
+            solver->updateSetting("Primal.Tolerance.TrustLinearConstraintValues", true);
+            if(iterationState > 0)
+            {
+                env->results->createIteration();
+                env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed = (iterationState == 2);
+            }
+
+            auto expect = [&](bool condition, const std::string& message)
+            {
+                if(!condition)
+                {
+                    std::cout << "  Source " << static_cast<int>(source) << ", iteration state " << iterationState
+                              << ": " << message << '\n';
+                    passed = false;
+                }
+            };
+
+            env->primalSolver->addPrimalSolutionCandidate(VectorDouble { 0.0, 0.0 }, source, 1);
+            expect(!env->results->hasPrimalSolution(), "Accepted a point violating the linear equality");
+
+            SolutionPoint candidate;
+            candidate.point = { 10.0, 0.0 };
+            candidate.iterFound = 1;
+            env->primalSolver->addPrimalSolutionCandidate(candidate, source);
+            expect(!env->results->hasPrimalSolution(), "Accepted a point violating the linear inequality");
+            expect(env->solutionStatistics.numberOfFoundPrimalSolutions == 0,
+                "An infeasible candidate updated the primal solution statistics");
+
+            env->primalSolver->addPrimalSolutionCandidate(VectorDouble { 4.0, 6.0 }, source, 1);
+            expect(env->results->hasPrimalSolution() && env->results->getPrimalBound() == 10.0,
+                "A feasible candidate did not become the incumbent");
+
+            candidate.point = { 0.0, 0.0 };
+            env->primalSolver->addPrimalSolutionCandidate(candidate, source);
+            expect(env->results->getPrimalBound() == 10.0 && env->results->primalSolution == VectorDouble({ 4.0, 6.0 }),
+                "An infeasible candidate replaced the incumbent or its bound");
+            expect(env->solutionStatistics.numberOfFoundPrimalSolutions == 1,
+                "An infeasible candidate was added to the solution pool");
+        }
+    }
+
+    return passed;
+}
+
 int SolverTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -4521,6 +4608,11 @@ int SolverTest(int argc, char* argv[])
         std::cout << "Starting test for trigonometric intervals with large bounds" << std::endl;
         passed = TestTrigonometricIntervalsWithLargeBounds();
         std::cout << "Finished test for trigonometric intervals with large bounds." << std::endl;
+        break;
+    case 45:
+        std::cout << "Starting test for linear feasibility of MIP primal candidates" << std::endl;
+        passed = TestMIPPrimalLinearConstraintValidation();
+        std::cout << "Finished test for linear feasibility of MIP primal candidates." << std::endl;
         break;
     default:
         passed = false;

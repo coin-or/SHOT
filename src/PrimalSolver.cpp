@@ -453,10 +453,10 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
     // For example rootsearches may violate linear constraints
     // An interior point is not trusted, since it can be a point moved toward the center of the variable bounds when
     // the minimax problem gave no usable one (TaskFindInteriorPoint), which need not fulfill any linear constraint
-    bool acceptableType = (primalSol.sourceType == E_PrimalSolutionSource::MIPSolutionPool
-        || primalSol.sourceType == E_PrimalSolutionSource::NLPFixedIntegers
-        || primalSol.sourceType == E_PrimalSolutionSource::LPFixedIntegers
-        || primalSol.sourceType == E_PrimalSolutionSource::MIPCallback);
+    // MIP solutions can violate the original linear constraints after numerical recovery. Callbacks may run before
+    // the iteration is marked repaired, so these points must always be checked, regardless of the repair flag.
+    bool acceptableType = (primalSol.sourceType == E_PrimalSolutionSource::NLPFixedIntegers
+        || primalSol.sourceType == E_PrimalSolutionSource::LPFixedIntegers);
 
     if(!primalSol.integerRoundingPerformed && !primalSol.boundProjectionPerformed && acceptableType
         && env->settings->getSetting<bool>("Primal.Tolerance.TrustLinearConstraintValues"))

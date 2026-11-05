@@ -158,6 +158,12 @@ Changes since SHOT 1.1.
 
 ### Fixed
 
+- Primal candidates from MIP solution pools and callbacks are checked
+  against the original linear constraints even when
+  `Primal.Tolerance.TrustLinearConstraintValues` is enabled. Numerically
+  infeasible points, e.g., after bounding an unbounded dual objective, can
+  no longer become the incumbent and produce a false optimality claim
+  ([#284]).
 - Many fixes for wrong results, invalid dual bounds, crashes and
   non-termination, mainly on nonconvex problems, found by running the
   MINLPLib and MINLPTests instances with several MIP and NLP solvers
@@ -408,6 +414,7 @@ Changes since SHOT 1.1.
 [#281]: https://github.com/coin-or/SHOT/pull/281
 [#282]: https://github.com/coin-or/SHOT/pull/282
 [#283]: https://github.com/coin-or/SHOT/pull/283
+[#284]: https://github.com/coin-or/SHOT/pull/284
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e

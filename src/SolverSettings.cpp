@@ -842,7 +842,7 @@ void Solver::initializeSettings()
         "These settings sets various tolerances for accepting primal solutions.");
 
     env->settings->createSetting("Primal.Tolerance.TrustLinearConstraintValues", true,
-        "Trust that subsolvers (NLP, MIP) give primal solutions that respect linear constraints");
+        "Trust that fixed-integer NLP and LP solvers respect linear constraints; MIP candidates are always checked");
 
     // The integer and linear constraint tolerances are also used as MIP solver tolerances, and the MIP solver
     // interfaces move them into the range each solver accepts. With an integer tolerance of 0.5, any value is integral.
