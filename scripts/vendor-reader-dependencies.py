@@ -14,6 +14,31 @@ import subprocess
 import tempfile
 
 
+# SHOT's changes to MC++, applied after each import. cos() and tan() convert the number of periods to an int, which
+# overflows (undefined behavior) for bounds above about 6.7e9, e.g. SHOT's artificial bounds, and then give wrong
+# intervals. For large bounds a double cannot resolve the period anyway, so cos() returns [-1, 1] and tan() throws, as
+# for an interval that contains a pole.
+MCPP_PATCHES = [
+    ("  const int k    = std::ceil(-(1. + I._l / PI) / 2.);  // -pi <= xL+2*k*pi < pi\n",
+     "  if (!(std::fabs(I._l) <= 1e8 && std::fabs(I._u) <= 1e8)) return Interval(-1., 1.);  // SHOT\n"
+     "  const double k = std::ceil(-(1. + I._l / PI) / 2.);  // -pi <= xL+2*k*pi < pi\n"),
+    ("  const int k    = std::ceil(-0.5 - I._l / PI);  // -pi/2 <= xL+k*pi < pi/2\n",
+     "  if (!(std::fabs(I._l) <= 1e8 && std::fabs(I._u) <= 1e8))  // SHOT\n"
+     "    throw Interval::Exceptions(Interval::Exceptions::TAN);\n"
+     "  const double k = std::ceil(-0.5 - I._l / PI);  // -pi/2 <= xL+k*pi < pi/2\n"),
+]
+
+
+def patch_mcpp(include):
+    path = include / "interval.hpp"
+    text = path.read_text()
+    for old, new in MCPP_PATCHES:
+        if text.count(old) != 1:
+            raise SystemExit(f"MC++ patch does not apply to {path}: {old.strip()}")
+        text = text.replace(old, new)
+    path.write_text(text)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("dependency", choices=["ampl", "mc++"])
@@ -37,6 +62,7 @@ def main():
                 shutil.copyfile(source / "src/mc" / name, stage / "include" / name)
             shutil.copyfile(source / "LICENSE", stage / "LICENSE")
             shutil.copytree(source / "LICENSES", stage / "LICENSES")
+            patch_mcpp(stage / "include")
         else:
             seeds = ["src/" + name for name in (
                 "expr-info.cc", "format.cc", "nl-reader.cc", "posix.cc",

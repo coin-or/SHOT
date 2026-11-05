@@ -49,6 +49,13 @@ facilities. The old unused cpplapack/FADBAD++ trees were removed. Optional
 `MC__USE_FADBAD` is not supported by this subset. MC++ interval arithmetic
 remains non-verified (it does not account for rounding error).
 
+The importer patches `interval.hpp` (`MCPP_PATCHES` in the script): `cos()`
+and `tan()` convert the number of periods to an `int`, which overflows for
+bounds larger than about 6.7e9, e.g. SHOT's artificial bounds, and gives
+wrong intervals. For bounds larger than 1e8 in magnitude, `cos()` (and so
+`sin()`) returns [-1, 1] and `tan()` throws, as for an interval with a pole.
+The patched lines are marked with `// SHOT`.
+
 ## Other vendored files
 
 JSON's single header is copied verbatim from the manifest URL, with its MIT

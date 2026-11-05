@@ -4197,6 +4197,90 @@ bool TestIntegerBilinearTermArtificialBounds()
     return passed;
 }
 
+// MC++ converted the number of periods in the interval cosine and tangent to an int, which overflowed for bounds larger
+// than about 6.7e9 and gave wrong intervals: on arm64, e.g., cos([-1e12, -1e11]) in [0.37, 0.88], and on x86-64 also
+// cos([-1e20, 1]) in [-0.99, 0.54]. Bound tightening then used them, and SHOT reported a wrong optimum.
+bool TestTrigonometricIntervalsWithLargeBounds()
+{
+    bool passed = true;
+
+    auto expect = [&](bool condition, const std::string& message)
+    {
+        if(!condition)
+        {
+            std::cout << "  " << message << '\n';
+            passed = false;
+        }
+    };
+
+    for(auto [lowerBound, upperBound] : { std::pair(-1e12, -1e11), std::pair(-1e20, 1.0) })
+    {
+        auto y = std::make_shared<Variable>("y", E_VariableType::Real, lowerBound, upperBound);
+        auto description = fmt::format("y in [{}, {}]: ", lowerBound, upperBound);
+
+        for(auto [name, bounds] :
+            { std::pair("cos", std::make_shared<ExpressionCos>(std::make_shared<ExpressionVariable>(y))->getBounds()),
+                std::pair(
+                    "sin", std::make_shared<ExpressionSin>(std::make_shared<ExpressionVariable>(y))->getBounds()) })
+        {
+            expect(bounds.l() == -1.0 && bounds.u() == 1.0,
+                description
+                    + fmt::format("{}(y) has the bounds [{}, {}] instead of [-1, 1]", name, bounds.l(), bounds.u()));
+        }
+
+        auto tangent = std::make_shared<ExpressionTan>(std::make_shared<ExpressionVariable>(y))->getBounds();
+        expect(tangent.l() == SHOT_DBL_MIN && tangent.u() == SHOT_DBL_MAX,
+            description
+                + fmt::format("tan(y) has the bounds [{}, {}] instead of being unbounded", tangent.l(), tangent.u()));
+    }
+
+    // min z s.t. z >= cos(y) + 0.5 * sin(y), whose minimum is -sqrt(1.25)
+    auto solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+    solver->updateSetting("Termination.TimeLimit", 30.0);
+
+    auto problem = std::make_shared<Problem>(env);
+    problem->name = "trigonometriclargebounds";
+
+    auto y = std::make_shared<Variable>("y", E_VariableType::Real, -1e12, -1e11);
+    auto z = std::make_shared<Variable>("z", E_VariableType::Real, -10.0, 10.0);
+    problem->add(Variables { y, z });
+
+    auto constraint = std::make_shared<NonlinearConstraint>("c1", SHOT_DBL_MIN, 0.0);
+    constraint->add(std::make_shared<LinearTerm>(-1.0, z));
+    constraint->add(
+        std::make_shared<ExpressionSum>(std::make_shared<ExpressionCos>(std::make_shared<ExpressionVariable>(y)),
+            std::make_shared<ExpressionProduct>(std::make_shared<ExpressionConstant>(0.5),
+                std::make_shared<ExpressionSin>(std::make_shared<ExpressionVariable>(y)))));
+    problem->add(constraint);
+
+    auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<LinearTerm>(1.0, z));
+    problem->add(objective);
+
+    problem->updateProperties();
+    problem->finalize();
+
+    if(!solver->setProblem(problem))
+    {
+        std::cout << "  The problem could not be set.\n";
+        return false;
+    }
+
+    // Bound tightening on the problem gives z >= the lower bound of cos(y) + 0.5 * sin(y)
+    expect(env->problem->getVariable(1)->lowerBound <= -std::sqrt(1.25) + 1e-6,
+        fmt::format("Bound tightening gives z >= {}, which cuts off the optimum {}",
+            env->problem->getVariable(1)->lowerBound, -std::sqrt(1.25)));
+
+    solver->solveProblem();
+
+    expect(solver->getGlobalDualBound() <= -std::sqrt(1.25) + 1e-4,
+        fmt::format("The dual bound {} is past the optimum {}", solver->getGlobalDualBound(), -std::sqrt(1.25)));
+
+    return passed;
+}
+
 int SolverTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -4432,6 +4516,11 @@ int SolverTest(int argc, char* argv[])
         std::cout << "Starting test for integer variables with artificial bounds in bilinear terms" << std::endl;
         passed = TestIntegerBilinearTermArtificialBounds();
         std::cout << "Finished test for integer variables with artificial bounds in bilinear terms." << std::endl;
+        break;
+    case 44:
+        std::cout << "Starting test for trigonometric intervals with large bounds" << std::endl;
+        passed = TestTrigonometricIntervalsWithLargeBounds();
+        std::cout << "Finished test for trigonometric intervals with large bounds." << std::endl;
         break;
     default:
         passed = false;
