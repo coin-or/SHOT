@@ -24,6 +24,8 @@ Interval Term::getBounds()
     if(auto sharedOwnerProblem = ownerProblem.lock())
         return (calculate(sharedOwnerProblem->getVariableBounds()));
 
+    // The bounds of the variables are taken from the problem, so a term with variables must have one
+    assert(false && "Term::getBounds() needs the owner problem of the term");
     return (calculate(IntervalVector()));
 }
 

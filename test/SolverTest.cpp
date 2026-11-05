@@ -3959,6 +3959,141 @@ bool TestPrecisionOfOSrLSolution()
     return (true);
 }
 
+// A problem whose objective function has two monomial terms or two signomial terms that share variables, and a linear
+// constraint. With the epigraph constraint, the terms of the objective function are partitioned in a constraint that
+// has not been added to the problem, which crashed when the bounds of the terms were calculated.
+static ProblemPtr MakeObjectiveTermsProblem(EnvironmentPtr env, bool signomial)
+{
+    auto problem = std::make_shared<Problem>(env);
+    problem->name = signomial ? "epigraphsignomials" : "epigraphmonomials";
+
+    auto objective = std::make_shared<NonlinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    auto constraint = std::make_shared<LinearConstraint>("c1", 3.0, SHOT_DBL_MAX);
+
+    if(signomial)
+    {
+        auto x1 = std::make_shared<Variable>("x1", E_VariableType::Real, 1.0, 4.0);
+        auto x2 = std::make_shared<Variable>("x2", E_VariableType::Real, 1.0, 2.0);
+        problem->add(Variables { x1, x2 });
+
+        // x1^1.5 * x2^0.5 + 2 * x1^0.5 / x2
+        objective->add(std::make_shared<SignomialTerm>(1.0,
+            SignomialElements(
+                { std::make_shared<SignomialElement>(x1, 1.5), std::make_shared<SignomialElement>(x2, 0.5) })));
+        objective->add(std::make_shared<SignomialTerm>(2.0,
+            SignomialElements(
+                { std::make_shared<SignomialElement>(x1, 0.5), std::make_shared<SignomialElement>(x2, -1.0) })));
+
+        constraint->add(std::make_shared<LinearTerm>(1.0, x1));
+        constraint->add(std::make_shared<LinearTerm>(1.0, x2));
+    }
+    else
+    {
+        auto x1 = std::make_shared<Variable>("x1", E_VariableType::Real, -1.0, 2.0);
+        auto x2 = std::make_shared<Variable>("x2", E_VariableType::Real, 0.0, 1.0);
+        auto x3 = std::make_shared<Variable>("x3", E_VariableType::Real, 0.0, 1.0);
+        auto y1 = std::make_shared<Variable>("y1", E_VariableType::Integer, -2.0, 1.0);
+        problem->add(Variables { x1, x2, x3, y1 });
+
+        // x1*x2*x3 + 0.5*x2*x3*y1
+        objective->add(std::make_shared<MonomialTerm>(1.0, Variables({ x1, x2, x3 })));
+        objective->add(std::make_shared<MonomialTerm>(0.5, Variables({ x2, x3, y1 })));
+
+        constraint->add(std::make_shared<LinearTerm>(1.0, x2));
+        constraint->add(std::make_shared<LinearTerm>(2.0, x3));
+    }
+
+    problem->add(objective);
+    problem->add(constraint);
+
+    problem->updateProperties();
+    problem->finalize();
+
+    return (problem);
+}
+
+bool TestEpigraphOfPartitionedObjectiveTerms()
+{
+    bool passed = true;
+
+    for(bool signomial : { false, true })
+    {
+        auto partitioningType = signomial ? E_AuxiliaryVariableType::SignomialTermsPartitioning
+                                          : E_AuxiliaryVariableType::MonomialTermsPartitioning;
+
+        // Solved without the epigraph constraint for the reference objective value
+        auto referenceSolver = std::make_unique<Solver>();
+        referenceSolver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+        referenceSolver->updateSetting("Termination.TimeLimit", 30.0);
+        referenceSolver->setProblem(MakeObjectiveTermsProblem(referenceSolver->getEnvironment(), signomial));
+        referenceSolver->solveProblem();
+
+        auto solver = std::make_unique<Solver>();
+        auto env = solver->getEnvironment();
+        solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+        solver->updateSetting("Termination.TimeLimit", 30.0);
+        solver->updateSetting("Model.Reformulation.ObjectiveFunction.EpigraphStrategy",
+            static_cast<int>(ES_ObjectiveEpigraphStrategy::EpigraphConstraint));
+        solver->updateSetting("Model.Reformulation.Constraint.PartitionNonlinearTerms",
+            static_cast<int>(ES_PartitionNonlinearSums::Always));
+
+        if(!solver->setProblem(MakeObjectiveTermsProblem(env, signomial)))
+        {
+            std::cout << "The problem could not be set.\n";
+            return false;
+        }
+
+        // The auxiliary variables of the two terms have the bounds of the terms divided by their coefficients
+        std::vector<Interval> expectedBounds = signomial
+            ? std::vector<Interval> { Interval(1.0, 8.0 * std::sqrt(2.0)), Interval(0.5, 2.0) }
+            : std::vector<Interval> { Interval(-1.0, 2.0), Interval(-2.0, 1.0) };
+
+        auto auxiliaryVariables = env->reformulatedProblem->getAuxiliaryVariablesOfType(partitioningType);
+
+        if(auxiliaryVariables.size() != expectedBounds.size())
+        {
+            std::cout << "The objective function has " << auxiliaryVariables.size()
+                      << " partitioning variables instead of " << expectedBounds.size() << ".\n";
+            passed = false;
+        }
+        else
+        {
+            for(size_t i = 0; i < expectedBounds.size(); i++)
+            {
+                if(std::abs(auxiliaryVariables[i]->lowerBound - expectedBounds[i].l()) > 1e-8
+                    || std::abs(auxiliaryVariables[i]->upperBound - expectedBounds[i].u()) > 1e-8)
+                {
+                    std::cout << "The bounds [" << auxiliaryVariables[i]->lowerBound << ", "
+                              << auxiliaryVariables[i]->upperBound << "] of " << auxiliaryVariables[i]->name
+                              << " are not the bounds [" << expectedBounds[i].l() << ", " << expectedBounds[i].u()
+                              << "] of its term.\n";
+                    passed = false;
+                }
+            }
+        }
+
+        solver->solveProblem();
+
+        if(!env->results->hasPrimalSolution()
+            || std::abs(solver->getPrimalBound() - referenceSolver->getPrimalBound()) > 1e-4)
+        {
+            std::cout << "The primal bound " << solver->getPrimalBound()
+                      << " is not the one without the epigraph constraint, " << referenceSolver->getPrimalBound()
+                      << ".\n";
+            passed = false;
+        }
+
+        if(solver->getGlobalDualBound() > solver->getPrimalBound() + 1e-4)
+        {
+            std::cout << "The dual bound " << solver->getGlobalDualBound() << " is past the primal bound "
+                      << solver->getPrimalBound() << ".\n";
+            passed = false;
+        }
+    }
+
+    return passed;
+}
+
 int SolverTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -4184,6 +4319,11 @@ int SolverTest(int argc, char* argv[])
         std::cout << "Starting test for the precision of the solution in the OSrL file" << std::endl;
         passed = TestPrecisionOfOSrLSolution();
         std::cout << "Finished test for the precision of the solution in the OSrL file." << std::endl;
+        break;
+    case 42:
+        std::cout << "Starting test for partitioning the terms of an epigraph constraint" << std::endl;
+        passed = TestEpigraphOfPartitionedObjectiveTerms();
+        std::cout << "Finished test for partitioning the terms of an epigraph constraint." << std::endl;
         break;
     default:
         passed = false;

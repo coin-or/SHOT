@@ -274,6 +274,12 @@ Changes since SHOT 1.1.
   - A dual problem that CPLEX reports as infeasible before a primal solution
     is found is solved again without presolve, since CPLEX's presolve can
     report a feasible problem with quadratic constraints as infeasible.
+- SHOT crashed when reading a problem with several monomial or signomial
+  terms in the objective function with
+  `Model.Reformulation.ObjectiveFunction.EpigraphStrategy=2` and
+  `Model.Reformulation.Constraint.PartitionNonlinearTerms=0`: the bounds of
+  the terms of the epigraph constraint were calculated before the constraint
+  belonged to the reformulated problem.
 
 ### Removed
 
