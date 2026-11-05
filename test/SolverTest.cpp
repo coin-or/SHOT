@@ -35,6 +35,7 @@
 
 #include "../src/Tasks/TaskPerformBoundTightening.h"
 #include "../src/Tasks/TaskReformulateProblem.h"
+#include "../src/Tasks/TaskSelectPrimalCandidatesFromNLP.h"
 #include "../src/Tasks/TaskCalculateSolutionChangeNorm.h"
 #include "../src/Tasks/TaskSequential.h"
 #include "../src/Iteration.h"
@@ -4341,32 +4342,129 @@ bool TestMIPPrimalLinearConstraintValidation()
                 }
             };
 
-            env->primalSolver->addPrimalSolutionCandidate(VectorDouble { 0.0, 0.0 }, source, 1);
+            expect(!env->primalSolver->addPrimalSolutionCandidate(VectorDouble { 0.0, 0.0 }, source, 1),
+                "An infeasible candidate was reported accepted");
             expect(!env->results->hasPrimalSolution(), "Accepted a point violating the linear equality");
 
             SolutionPoint candidate;
             candidate.point = { 10.0, 0.0 };
             candidate.iterFound = 1;
-            env->primalSolver->addPrimalSolutionCandidate(candidate, source);
+            expect(!env->primalSolver->addPrimalSolutionCandidate(candidate, source),
+                "An infeasible solution point was reported accepted");
             expect(!env->results->hasPrimalSolution(), "Accepted a point violating the linear inequality");
             expect(env->solutionStatistics.numberOfFoundPrimalSolutions == 0,
                 "An infeasible candidate updated the primal solution statistics");
 
-            env->primalSolver->addPrimalSolutionCandidate(VectorDouble { 4.0, 6.0 }, source, 1);
+            expect(env->primalSolver->addPrimalSolutionCandidate(VectorDouble { 4.0, 6.0 }, source, 1),
+                "A feasible candidate was reported rejected");
             expect(env->results->hasPrimalSolution() && env->results->getPrimalBound() == 10.0,
                 "A feasible candidate did not become the incumbent");
 
             candidate.point = { 0.0, 0.0 };
-            env->primalSolver->addPrimalSolutionCandidate(candidate, source);
+            expect(!env->primalSolver->addPrimalSolutionCandidate(candidate, source),
+                "An infeasible replacement was reported accepted");
             expect(env->results->getPrimalBound() == 10.0 && env->results->primalSolution == VectorDouble({ 4.0, 6.0 }),
                 "An infeasible candidate replaced the incumbent or its bound");
             expect(env->solutionStatistics.numberOfFoundPrimalSolutions == 1,
                 "An infeasible candidate was added to the solution pool");
+            candidate.point = { 4.0, 6.0 };
+            expect(env->primalSolver->addPrimalSolutionCandidate(candidate, source),
+                "An already known feasible point was reported rejected");
         }
     }
 
     return passed;
 }
+
+#ifdef HAS_IPOPT
+// Rejecting a fixed-NLP point must not exclude its integer combination from a convex problem. A merely feasible
+// NLP point is also insufficient, while nonconvex problems retain the cuts that prevent repeated combinations.
+bool TestIntegerCutsAfterFixedNLPCandidateCheck()
+{
+    bool passed = true;
+    auto optionsFile = Utilities::createTemporaryDirectory("SHOT_fixed_nlp_cuts_") + "/feasible.opt";
+    if(!Utilities::writeStringToFile(optionsFile, "acceptable_iter 1\nacceptable_tol 1e20\ntol 1e-14\n"))
+        return false;
+
+    for(bool convex : { true, false })
+    {
+        for(bool feasibleOnly : { false, true })
+        {
+            for(bool reject : { false, true })
+            {
+                auto solver = std::make_unique<Solver>();
+                auto env = solver->getEnvironment();
+                solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+                solver->updateSetting("Termination.TimeLimit", 10.0);
+                solver->updateSetting("Primal.FixedInteger.Solver", static_cast<int>(ES_PrimalNLPSolver::Ipopt));
+                solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+                solver->updateSetting("Model.BoundTightening.InitialPOA.Use", false);
+                solver->updateSetting("Model.Reformulation.Quadratics.Strategy",
+                    static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear));
+                solver->updateSetting("Dual.HyperplaneCuts.UseIntegerCuts", true);
+                solver->updateSetting("Primal.FixedInteger.CreateInfeasibilityCut", false);
+                solver->updateSetting("Primal.FixedInteger.CreateSupportingHyperplanes", false);
+                if(feasibleOnly)
+                    solver->updateSetting("Subsolver.Ipopt.OptionsFile", optionsFile);
+
+                auto problem = std::make_shared<Problem>(env);
+                problem->name = "fixednlpintegercuts";
+                auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.25, 2.0);
+                auto b = std::make_shared<Variable>("b", E_VariableType::Binary, 0.0, 1.0);
+                problem->add(Variables { x, b });
+                auto objective = std::make_shared<QuadraticObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+                objective->add(std::make_shared<QuadraticTerm>(convex ? 1.0 : -1.0, x, x));
+                objective->add(std::make_shared<LinearTerm>(1.0, b));
+                problem->add(objective);
+                problem->updateProperties();
+                problem->finalize();
+
+                if(!solver->setProblem(problem))
+                    return false;
+
+                int candidateChecks = 0;
+                solver->registerCallback<PrimalCandidateCheckContext>(
+                    [&](PrimalCandidateCheckContext& context)
+                    {
+                        candidateChecks++;
+                        if(reject)
+                            context.rejectCandidate();
+                    });
+
+                env->results->createIteration();
+                TaskSelectPrimalCandidatesFromNLP task(env, false);
+                auto candidate = env->primalSolver->createFixedNLPCandidate(
+                    { 1.0, 0.0 }, E_PrimalNLPSource::FirstSolution, convex ? 1.0 : -1.0, 1, PairIndexValue(-1, 0.0));
+                auto status = task.solveFixedNLPCandidates({ candidate });
+
+                auto expect = [&](bool condition, const std::string& message)
+                {
+                    if(!condition)
+                    {
+                        std::cout << "  Convex=" << convex << ", feasible only=" << feasibleOnly
+                                  << ", reject=" << reject << ": " << message << '\n';
+                        passed = false;
+                    }
+                };
+
+                expect(status == (feasibleOnly ? E_NLPSolutionStatus::Feasible : E_NLPSolutionStatus::Optimal),
+                    "Unexpected fixed-NLP status " + std::to_string(static_cast<int>(status)));
+                expect(candidateChecks == 1, "The candidate-check callback did not run exactly once");
+                expect(
+                    env->results->hasPrimalSolution() == !reject, "The point was not accepted/rejected as requested");
+                expect((env->reformulatedProblem->properties.convexity == E_ProblemConvexity::Convex) == convex,
+                    "Unexpected reformulated convexity");
+                size_t expectedCuts = (!convex || (!reject && !feasibleOnly)) ? 1 : 0;
+                expect(env->dualSolver->integerCutWaitingList.size() == expectedCuts,
+                    "Expected " + std::to_string(expectedCuts) + " integer cuts, got "
+                        + std::to_string(env->dualSolver->integerCutWaitingList.size()));
+            }
+        }
+    }
+
+    return passed;
+}
+#endif
 
 int SolverTest(int argc, char* argv[])
 {
@@ -4614,6 +4712,13 @@ int SolverTest(int argc, char* argv[])
         passed = TestMIPPrimalLinearConstraintValidation();
         std::cout << "Finished test for linear feasibility of MIP primal candidates." << std::endl;
         break;
+#ifdef HAS_IPOPT
+    case 46:
+        std::cout << "Starting test for integer cuts after fixed-NLP candidate checks" << std::endl;
+        passed = TestIntegerCutsAfterFixedNLPCandidateCheck();
+        std::cout << "Finished test for integer cuts after fixed-NLP candidate checks." << std::endl;
+        break;
+#endif
     default:
         passed = false;
         std::cout << "Test #" << choice << " does not exist!\n";

@@ -27,13 +27,15 @@ public:
         fixedPrimalNLPCandidates.clear();
     }
 
-    void addPrimalSolutionCandidate(VectorDouble pt, E_PrimalSolutionSource source, int iter);
+    // Returns whether the candidate passed callbacks and feasibility checks, also for an already known point.
+    bool addPrimalSolutionCandidate(VectorDouble pt, E_PrimalSolutionSource source, int iter);
     void addPrimalSolutionCandidates(std::vector<VectorDouble> pts, E_PrimalSolutionSource source, int iter);
 
-    void addPrimalSolutionCandidate(SolutionPoint pt, E_PrimalSolutionSource source);
+    bool addPrimalSolutionCandidate(SolutionPoint pt, E_PrimalSolutionSource source);
     void addPrimalSolutionCandidates(std::vector<SolutionPoint> pts, E_PrimalSolutionSource source);
 
-    void checkPrimalSolutionCandidates();
+    // Returns whether the last queued candidate was accepted, or false if there were no candidates.
+    bool checkPrimalSolutionCandidates();
 
     bool checkPrimalSolutionPoint(PrimalSolution primalSol);
 
