@@ -307,7 +307,7 @@ Changes since SHOT 1.1.
   overflowed and gave wrong intervals, so that bound tightening could cut
   off the optimum and SHOT reported a wrong optimal solution. On x86-64 this
   happened already for, e.g., a variable in [-1e20, 1], on arm64 for bounds
-  such as [-1e12, -1e11].
+  such as [-1e12, -1e11] ([#283]).
 
 ### Removed
 
@@ -407,6 +407,7 @@ Changes since SHOT 1.1.
 [#280]: https://github.com/coin-or/SHOT/pull/280
 [#281]: https://github.com/coin-or/SHOT/pull/281
 [#282]: https://github.com/coin-or/SHOT/pull/282
+[#283]: https://github.com/coin-or/SHOT/pull/283
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e
