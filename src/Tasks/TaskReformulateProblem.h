@@ -63,6 +63,10 @@ private:
 
     int maxBilinearIntegerReformulationDomain = 2;
 
+    // Whether an integer variable in a bilinear term of an auxiliary variable can be discretized: it must have bounds,
+    // and not the artificial ones from Model.Variables.Integer
+    bool isDiscretizableInBilinearTerm(const VariablePtr& variable);
+
     bool useIntegerBilinearTermReformulation = false; // integer term i1*i2 or i1*x2
 
     void reformulateObjectiveFunction();

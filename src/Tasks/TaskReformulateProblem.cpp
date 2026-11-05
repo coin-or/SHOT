@@ -3975,6 +3975,27 @@ void TaskReformulateProblem::createSquareReformulations()
     }
 }
 
+bool TaskReformulateProblem::isDiscretizableInBilinearTerm(const VariablePtr& variable)
+{
+    if(variable->properties.type != E_VariableType::Integer && variable->properties.type != E_VariableType::Semiinteger)
+        return (false);
+
+    if(variable->lowerBound <= SHOT_DBL_MIN || variable->upperBound >= SHOT_DBL_MAX)
+        return (false);
+
+    // The variables of the reformulated problem do not have the flags for artificial bounds, but those of the original
+    // problem have the same indexes
+    if(variable->getIndex() < env->problem->properties.numberOfVariables)
+    {
+        auto originalVariable = env->problem->getVariable(variable->getIndex());
+
+        if(originalVariable->properties.hasArtificialLowerBound || originalVariable->properties.hasArtificialUpperBound)
+            return (false);
+    }
+
+    return (true);
+}
+
 void TaskReformulateProblem::createBilinearReformulations()
 {
     // Preserve the original index order of generated constraints despite hash-table lookup during construction.
@@ -4013,11 +4034,18 @@ void TaskReformulateProblem::createBilinearReformulations()
             reformulateBinaryContinuousBilinearTerm(firstVariable, secondVariable, AUXVAR);
             AUXVAR->properties.auxiliaryType = E_AuxiliaryVariableType::IntegerBilinear;
         }
-        else if(firstVariableType == E_VariableType::Integer || firstVariableType == E_VariableType::Semiinteger
-            || secondVariableType == E_VariableType::Integer || secondVariableType == E_VariableType::Semiinteger)
+        // The discretization has one binary variable for each value of the integer variable, so a variable without
+        // bounds, or with the artificial bounds from Model.Variables.Integer, is not discretized
+        else if(isDiscretizableInBilinearTerm(firstVariable) || isDiscretizableInBilinearTerm(secondVariable))
         {
             reformulateIntegerBilinearTerm(firstVariable, secondVariable, AUXVAR);
             AUXVAR->properties.auxiliaryType = E_AuxiliaryVariableType::IntegerBilinear;
+        }
+        else if(firstVariableType == E_VariableType::Integer || firstVariableType == E_VariableType::Semiinteger
+            || secondVariableType == E_VariableType::Integer || secondVariableType == E_VariableType::Semiinteger)
+        {
+            reformulateRealBilinearTerm(firstVariable, secondVariable, AUXVAR);
+            AUXVAR->properties.auxiliaryType = E_AuxiliaryVariableType::ContinuousBilinear;
         }
         else if(firstVariableType == E_VariableType::Real && secondVariableType == E_VariableType::Real)
         {
