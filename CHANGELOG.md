@@ -158,6 +158,9 @@ Changes since SHOT 1.1.
 
 ### Fixed
 
+- Single-tree integer-cut regression tests for Gurobi and CPLEX trigger
+  cuts deterministically, avoiding failures caused by solver search behavior
+  ([#290]).
 - Binary and integer bilinear products stay in their original expressions
   when linearization would require big-M values of 1e15 or larger. A warning
   reports the skipped linearizations. This avoids rejected or poorly scaled
@@ -447,6 +450,7 @@ Changes since SHOT 1.1.
 [#287]: https://github.com/coin-or/SHOT/pull/287
 [#288]: https://github.com/coin-or/SHOT/pull/288
 [#289]: https://github.com/coin-or/SHOT/pull/289
+[#290]: https://github.com/coin-or/SHOT/pull/290
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e
