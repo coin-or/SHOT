@@ -2400,6 +2400,13 @@ std::tuple<LinearTerms, QuadraticTerms, double> TaskReformulateProblem::reformul
 
             noteNonDiscretizedIntegerBilinearTerm(firstVariable, secondVariable);
 
+            if(T->isBilinear && !hasSafeBilinearLinearizationBounds(firstVariable, secondVariable))
+            {
+                remainingTerms.push_back(
+                    std::make_shared<QuadraticTerm>(signfactor * T->coefficient, firstVariable, secondVariable));
+                continue;
+            }
+
             if(T->isSquare && T->isBinary) // Square term b^2 -> b
             {
                 resultTerms.push_back(std::make_shared<LinearTerm>(signfactor * T->coefficient, firstVariable));
@@ -3742,8 +3749,21 @@ NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(st
 
             for(auto& T : tmpQuadraticTerms)
             {
-                auto [auxVariable, newVariable] = getBilinearAuxiliaryVariable(T->firstVariable, T->secondVariable);
-                sum->children.push_back(std::make_shared<ExpressionVariable>(auxVariable));
+                if(!hasSafeBilinearLinearizationBounds(T->firstVariable, T->secondVariable))
+                {
+                    auto product = std::make_shared<ExpressionProduct>();
+                    product->children = { std::make_shared<ExpressionConstant>(T->coefficient),
+                        std::make_shared<ExpressionVariable>(
+                            reformulatedProblem->getVariable(T->firstVariable->getIndex())),
+                        std::make_shared<ExpressionVariable>(
+                            reformulatedProblem->getVariable(T->secondVariable->getIndex())) };
+                    sum->children.push_back(product);
+                }
+                else
+                {
+                    auto [auxVariable, newVariable] = getBilinearAuxiliaryVariable(T->firstVariable, T->secondVariable);
+                    sum->children.push_back(std::make_shared<ExpressionVariable>(auxVariable));
+                }
             }
 
             if(tmpNonlinearExpression)
@@ -3776,8 +3796,21 @@ NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(st
 
             for(auto& T : tmpQuadraticTerms)
             {
-                auto [auxVariable, newVariable] = getBilinearAuxiliaryVariable(T->firstVariable, T->secondVariable);
-                sum->children.push_back(std::make_shared<ExpressionVariable>(auxVariable));
+                if(!hasSafeBilinearLinearizationBounds(T->firstVariable, T->secondVariable))
+                {
+                    auto product = std::make_shared<ExpressionProduct>();
+                    product->children = { std::make_shared<ExpressionConstant>(T->coefficient),
+                        std::make_shared<ExpressionVariable>(
+                            reformulatedProblem->getVariable(T->firstVariable->getIndex())),
+                        std::make_shared<ExpressionVariable>(
+                            reformulatedProblem->getVariable(T->secondVariable->getIndex())) };
+                    sum->children.push_back(product);
+                }
+                else
+                {
+                    auto [auxVariable, newVariable] = getBilinearAuxiliaryVariable(T->firstVariable, T->secondVariable);
+                    sum->children.push_back(std::make_shared<ExpressionVariable>(auxVariable));
+                }
             }
 
             if(tmpNonlinearExpression)
@@ -4004,6 +4037,12 @@ void TaskReformulateProblem::noteNonDiscretizedIntegerBilinearTerm(
 
 void TaskReformulateProblem::reportBilinearReformulations()
 {
+    if(!unsafeBilinearLinearizations.empty())
+    {
+        env->output->outputWarning(fmt::format(" {} bilinear terms could not be linearized: unsafe big-M values",
+            unsafeBilinearLinearizations.size()));
+    }
+
     if(nonDiscretizedIntegerBilinearTerms.size() > 0)
     {
         env->output->outputInfo(fmt::format(
@@ -4050,6 +4089,31 @@ bool TaskReformulateProblem::isDiscretizableInBilinearTerm(const VariablePtr& va
     }
 
     return (true);
+}
+
+bool TaskReformulateProblem::hasSafeBilinearLinearizationBounds(
+    const VariablePtr& firstVariable, const VariablePtr& secondVariable)
+{
+    if(firstVariable == secondVariable)
+        return true;
+
+    bool hasDiscreteFactor = firstVariable->properties.type == E_VariableType::Binary
+        || secondVariable->properties.type == E_VariableType::Binary || isDiscretizableInBilinearTerm(firstVariable)
+        || isDiscretizableInBilinearTerm(secondVariable);
+
+    if(!hasDiscreteFactor)
+        return true;
+
+    double firstMagnitude = std::max(std::abs(firstVariable->lowerBound), std::abs(firstVariable->upperBound));
+    double secondMagnitude = std::max(std::abs(secondVariable->lowerBound), std::abs(secondVariable->upperBound));
+    double bigM = 2.0 * firstMagnitude * secondMagnitude;
+
+    if(std::isfinite(bigM) && bigM < MIPSolverBase::largeAuxiliaryBound)
+        return true;
+
+    unsafeBilinearLinearizations.emplace(std::min(firstVariable->getIndex(), secondVariable->getIndex()),
+        std::max(firstVariable->getIndex(), secondVariable->getIndex()));
+    return false;
 }
 
 void TaskReformulateProblem::createBilinearReformulations()

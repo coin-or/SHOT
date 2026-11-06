@@ -4771,6 +4771,90 @@ bool TestScaledDualInfeasibilityRecovery()
     return true;
 }
 
+bool TestBilinearLinearizationWithHugeBounds()
+{
+    for(bool binary : { false, true })
+        for(bool assumeConvex : { false, true })
+            for(int extraction : { 2, 3 })
+                for(double bound : { 10.0, 1e50 })
+                {
+                    auto solver = std::make_unique<Solver>();
+                    auto env = solver->getEnvironment();
+                    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+                    solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+                    solver->updateSetting("Model.Reformulation.Quadratics.ExtractStrategy", extraction);
+                    solver->updateSetting("Model.Convexity.AssumeConvex", assumeConvex);
+                    solver->updateSetting("Model.Reformulation.ObjectiveFunction.EpigraphStrategy", 0);
+                    solver->updateSetting("Model.Reformulation.Constraint.PartitionQuadraticTerms", 0);
+                    solver->updateSetting("Model.Reformulation.ObjectiveFunction.PartitionQuadraticTerms", 0);
+
+                    auto problem = std::make_shared<Problem>(env);
+                    auto i = std::make_shared<Variable>(
+                        "i", binary ? E_VariableType::Binary : E_VariableType::Integer, 0.0, binary ? 1.0 : 3.0);
+                    auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.0, bound);
+                    auto y = std::make_shared<Variable>("y", E_VariableType::Real, 0.0, bound);
+                    auto z = std::make_shared<Variable>("z", E_VariableType::Real, 0.0, 1.0);
+                    problem->add(Variables { i, x, y, z });
+
+                    // Two products share the discrete factor and recur in both polynomial and nested nonlinear
+                    // expressions.
+                    auto objective
+                        = std::make_shared<NonlinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+                    objective->add(std::make_shared<QuadraticTerm>(2.0, i, x));
+                    objective->add(std::make_shared<QuadraticTerm>(-3.0, i, y));
+                    objective->add(std::make_shared<ExpressionExp>(std::make_shared<ExpressionVariable>(z)));
+                    problem->add(objective);
+                    auto constraint = std::make_shared<NonlinearConstraint>("polynomial", SHOT_DBL_MIN, 100.0);
+                    constraint->add(std::make_shared<QuadraticTerm>(1.0, i, x));
+                    constraint->add(std::make_shared<QuadraticTerm>(1.0, i, y));
+                    constraint->add(std::make_shared<ExpressionExp>(std::make_shared<ExpressionVariable>(z)));
+                    problem->add(constraint);
+                    auto sum = std::make_shared<ExpressionSum>();
+                    sum->children = { std::make_shared<ExpressionConstant>(1.0),
+                        std::make_shared<ExpressionProduct>(
+                            std::make_shared<ExpressionVariable>(i), std::make_shared<ExpressionVariable>(x)),
+                        std::make_shared<ExpressionProduct>(
+                            std::make_shared<ExpressionVariable>(i), std::make_shared<ExpressionVariable>(y)) };
+                    auto nested = std::make_shared<NonlinearConstraint>("nested", 0.0, SHOT_DBL_MAX);
+                    nested->add(std::make_shared<ExpressionLog>(sum));
+                    problem->add(nested);
+                    problem->finalize();
+                    if(!solver->setProblem(problem))
+                        return false;
+
+                    auto reformulated = solver->getReformulatedProblem();
+                    auto linearized
+                        = reformulated->getAuxiliaryVariablesOfType(E_AuxiliaryVariableType::IntegerBilinear).size()
+                        + reformulated->getAuxiliaryVariablesOfType(E_AuxiliaryVariableType::BinaryContinuousBilinear)
+                              .size();
+                    if((bound > 1e15
+                           && (linearized != 0
+                               || reformulated->getAuxiliaryVariablesOfType(E_AuxiliaryVariableType::ContinuousBilinear)
+                                       .size()
+                                   != 0))
+                        || (bound < 1e15 && linearized != 2))
+                    {
+                        std::cout << "Unexpected bilinear auxiliary count " << linearized << " for bound " << bound
+                                  << ", binary " << binary << ", extraction " << extraction << ", AssumeConvex "
+                                  << assumeConvex << '\n';
+                        return false;
+                    }
+
+                    VectorDouble point { binary ? 1.0 : 2.0, 2.0, 3.0, 0.25 };
+                    double originalObjective = solver->getOriginalProblem()->objectiveFunction->calculateValue(point);
+                    reformulated->augmentAuxiliaryVariableValues(point);
+                    if(std::abs(reformulated->objectiveFunction->calculateValue(point) - originalObjective) > 1e-6
+                        || !reformulated->areNumericConstraintsFulfilled(point, 1e-6))
+                        return false;
+
+                    for(auto& row : reformulated->linearConstraints)
+                        for(auto& term : row->linearTerms)
+                            if(!std::isfinite(term->coefficient) || std::abs(term->coefficient) >= 1e15)
+                                return false;
+                }
+    return true;
+}
+
 int SolverTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -5038,6 +5122,10 @@ int SolverTest(int argc, char* argv[])
         std::cout << "Starting test for infeasibility recovery of badly scaled dual problems" << std::endl;
         passed = TestScaledDualInfeasibilityRecovery();
         std::cout << "Finished test for infeasibility recovery of badly scaled dual problems." << std::endl;
+        break;
+    case 50:
+        std::cout << "Testing bilinear products with unsafe big-M bounds" << std::endl;
+        passed = TestBilinearLinearizationWithHugeBounds();
         break;
     default:
         passed = false;

@@ -100,7 +100,7 @@ if(HAS_GUROBI)
 endif()
 
 if(HAS_HIGHS)
-  set(Highs_parts 1 2 3 4 5 6 7 8 9 10 11 12)
+  set(Highs_parts 1 2 3 4 5 6 7 8 9 10 11 12 13 14)
   set(cpptests ${cpptests} Highs)
 endif()
 
@@ -184,7 +184,8 @@ set(Solver_parts
     45
     47
     48
-    49)
+    49
+    50)
 if(HAS_IPOPT)
   list(APPEND Solver_parts 46)
 endif()
