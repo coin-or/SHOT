@@ -739,6 +739,54 @@ bool GurobiPrimalValidationAfterUnboundedLPTest(const std::string& filename)
     return passed;
 }
 
+bool GurobiQuadraticObjectiveWithoutRecommendedSettingsTest()
+{
+    bool passed = true;
+
+    for(auto strategy :
+        { ES_QuadraticProblemStrategy::QuadraticObjective, ES_QuadraticProblemStrategy::ConvexQuadraticallyConstrained,
+            ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained })
+    {
+        auto solver = std::make_unique<Solver>();
+        solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+        solver->updateSetting("Strategy.UseRecommendedSettings", false);
+        solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Gurobi));
+        solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+        solver->updateSetting("Termination.TimeLimit", 10.0);
+        solver->updateSetting("Model.Reformulation.Quadratics.Strategy", static_cast<int>(strategy));
+
+        if(!solver->setProblem("data/instances/minlp_tests_jl/nlp-mi_003_014.jl.nl") || !solver->solveProblem())
+            return false;
+
+        // The fixed-integer fallback can find the optimum even after a MIP error. Require an error-free solve and
+        // valid bounds, without requiring a global proof for this nonconvex cutting-plane problem.
+        if(solver->getTerminationReason() == E_TerminationReason::Error || !solver->hasPrimalSolution()
+            || std::abs(solver->getPrimalBound() - 11.0) > 1e-5 || !std::isfinite(solver->getGlobalDualBound())
+            || solver->getGlobalDualBound() < 11.0 - 1e-5)
+        {
+            std::cout << "Quadratic strategy " << static_cast<int>(strategy)
+                      << ": expected an error-free solve with primal value 11 and a valid dual bound, got ["
+                      << solver->getPrimalBound() << ", " << solver->getGlobalDualBound() << "], termination reason "
+                      << static_cast<int>(solver->getTerminationReason()) << '\n';
+            passed = false;
+        }
+
+        if(solver->hasPrimalSolution())
+        {
+            auto problem = solver->getOriginalProblem();
+            auto deviation
+                = problem->getMaxNumericConstraintValue(solver->getPrimalSolution().point, problem->numericConstraints);
+            if(!std::isfinite(deviation.error) || deviation.error > 1e-5)
+            {
+                std::cout << "Returned point violates the original constraints by " << deviation.error << '\n';
+                passed = false;
+            }
+        }
+    }
+
+    return passed;
+}
+
 int GurobiTest(int argc, char* argv[])
 {
 
@@ -880,6 +928,11 @@ int GurobiTest(int argc, char* argv[])
         std::cout << "Starting test for primal feasibility after an unbounded LP" << std::endl;
         passed = GurobiPrimalValidationAfterUnboundedLPTest("data/instances/MIQCQP-convex/alan.osil");
         std::cout << "Finished test for primal feasibility after an unbounded LP." << std::endl;
+        break;
+    case 22:
+        std::cout << "Starting test for quadratic objectives without recommended settings" << std::endl;
+        passed = GurobiQuadraticObjectiveWithoutRecommendedSettingsTest();
+        std::cout << "Finished test for quadratic objectives without recommended settings." << std::endl;
         break;
     default:
         passed = false;

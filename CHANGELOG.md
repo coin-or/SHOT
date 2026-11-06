@@ -158,6 +158,9 @@ Changes since SHOT 1.1.
 
 ### Fixed
 
+- Gurobi accepts nonconvex quadratic objectives when recommended settings
+  are disabled, including with quadratic strategies 1 and 2, instead of
+  stopping with an "Objective Q not PSD" error.
 - Large negative lower bounds and positive upper bounds of auxiliary
   variables are treated as infinite in MIP models (threshold 1e15), with
   fixed values preserved. Oversized square and product auxiliaries use
