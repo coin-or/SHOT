@@ -864,7 +864,9 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
         MIPSolutionStatus = E_ProblemSolutionStatus::Error;
     }
 
-    if(MIPSolutionStatus == E_ProblemSolutionStatus::Numeric)
+    if(MIPSolutionStatus == E_ProblemSolutionStatus::Numeric
+        || (MIPSolutionStatus == E_ProblemSolutionStatus::Infeasible
+            && gurobiModel->get(GRB_IntAttr_Status) == GRB_INFEASIBLE))
         MIPSolutionStatus = resolveWithNumericFocus(MIPSolutionStatus);
 
     // An unbounded exact dual problem means that the problem is unbounded, so no point is needed. Gurobi's presolve
@@ -988,15 +990,43 @@ E_ProblemSolutionStatus MIPSolverGurobi::resolveWithNumericFocus(E_ProblemSoluti
     {
         int numericFocus = gurobiModel->get(GRB_IntParam_NumericFocus);
 
-        if(numericFocus == 3)
-            return (status);
+        int presolve = gurobiModel->get(GRB_IntParam_Presolve);
+        double timeLimit = gurobiModel->get(GRB_DoubleParam_TimeLimit);
+        double remainingTime = timeLimit;
 
-        env->output->outputDebug(
-            "        Numerical trouble in Gurobi, so the problem is solved again with NumericFocus 3.");
+        auto optimize = [&]()
+        {
+            remainingTime -= gurobiModel->get(GRB_DoubleAttr_Runtime);
+            if(remainingTime <= 0.0)
+                return E_ProblemSolutionStatus::TimeLimit;
 
-        gurobiModel->set(GRB_IntParam_NumericFocus, 3);
-        gurobiModel->optimize();
-        status = getSolutionStatus();
+            gurobiModel->set(GRB_DoubleParam_TimeLimit, remainingTime);
+            // Discard the previous infeasibility result so parameter changes cause a fresh solve.
+            gurobiModel->reset();
+            gurobiModel->optimize();
+            return getSolutionStatus();
+        };
+
+        if(numericFocus != 3)
+        {
+            env->output->outputDebug("        Numerical trouble or infeasibility in Gurobi, so the problem is solved "
+                                     "again with NumericFocus 3.");
+
+            gurobiModel->set(GRB_IntParam_NumericFocus, 3);
+            status = optimize();
+        }
+
+        if(status == E_ProblemSolutionStatus::Infeasible && gurobiModel->get(GRB_IntAttr_Status) == GRB_INFEASIBLE
+            && presolve != 0)
+        {
+            env->output->outputDebug(
+                "        Gurobi reports infeasibility, so the problem is solved again without presolve.");
+            gurobiModel->set(GRB_IntParam_Presolve, 0);
+            status = optimize();
+        }
+
+        gurobiModel->set(GRB_DoubleParam_TimeLimit, timeLimit);
+        gurobiModel->set(GRB_IntParam_Presolve, presolve);
         gurobiModel->set(GRB_IntParam_NumericFocus, numericFocus);
     }
     catch(GRBException& e)
@@ -1649,7 +1679,7 @@ void GurobiCallbackMultiTree::callback()
             message.erase(std::remove(message.begin(), message.end(), '\n'), message.end());
             env->output->outputInfo(fmt::format("      | {} ", message));
         }
-        else if(where == GRB_CB_MIP)
+        else if(where == GRB_CB_MIP && env->results->getNumberOfIterations() > 0)
         // Used to get the number of open nodes
         {
             auto currIter = env->results->getCurrentIteration();

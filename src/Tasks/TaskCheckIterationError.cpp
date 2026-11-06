@@ -67,6 +67,12 @@ void TaskCheckIterationError::run()
             env->results->terminationReasonDescription
                 = "Terminated since the dual problem is infeasible, although a primal solution has been found.";
         }
+        else if(env->problem->hasArtificialBounds())
+        {
+            env->results->terminationReason = E_TerminationReason::NumericIssues;
+            env->results->terminationReasonDescription
+                = "Terminated since the dual problem is infeasible while artificial variable bounds remain.";
+        }
         else
         {
             env->results->terminationReason = E_TerminationReason::InfeasibleProblem;

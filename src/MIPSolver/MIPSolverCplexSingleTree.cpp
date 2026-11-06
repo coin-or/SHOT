@@ -944,6 +944,8 @@ E_ProblemSolutionStatus MIPSolverCplexSingleTree::solveProblem()
             extractModel();
         }
 
+        auto solveStarted = cplexInstance.getCplexTime();
+
         if(objectiveFunctionReplacedWithZero || !getDiscreteVariableStatus())
         {
             objectiveFunctionReplacedWithZero = false;
@@ -953,6 +955,7 @@ E_ProblemSolutionStatus MIPSolverCplexSingleTree::solveProblem()
 
             cplexInstance.solve();
             MIPSolutionStatus = MIPSolverCplex::getSolutionStatus();
+            MIPSolutionStatus = resolveWithNumericalEmphasis(MIPSolutionStatus, solveStarted);
         }
         else
         {
@@ -974,6 +977,8 @@ E_ProblemSolutionStatus MIPSolverCplexSingleTree::solveProblem()
 
             MIPSolutionStatus = MIPSolverCplex::getSolutionStatus();
 
+            // Keep the lazy-constraint callback registered throughout recovery, so retries solve the same problem.
+            MIPSolutionStatus = resolveWithNumericalEmphasis(MIPSolutionStatus, solveStarted);
             cCallback.outputStatistics();
         }
 

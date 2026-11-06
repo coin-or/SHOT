@@ -142,6 +142,11 @@ E_ProblemSolutionStatus MIPSolverGurobiSingleTree::solveProblem()
         MIPSolutionStatus = E_ProblemSolutionStatus::Error;
     }
 
+    if(MIPSolutionStatus == E_ProblemSolutionStatus::Numeric
+        || (MIPSolutionStatus == E_ProblemSolutionStatus::Infeasible
+            && gurobiModel->get(GRB_IntAttr_Status) == GRB_INFEASIBLE))
+        MIPSolutionStatus = resolveWithNumericFocus(MIPSolutionStatus);
+
     // An unbounded exact dual problem means that the problem is unbounded, so no point is needed
     if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded && env->dualSolver->isDualProblemExact())
     {

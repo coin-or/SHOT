@@ -158,6 +158,11 @@ Changes since SHOT 1.1.
 
 ### Fixed
 
+- Gurobi, CPLEX and Cbc retry apparently infeasible dual problems with more
+  robust numerical settings, avoiding false infeasibility from badly scaled cuts.
+  Artificial variable bounds are removed before accepting infeasibility of
+  an unrepaired global relaxation, also without an incumbent or cutoff.
+  If such bounds remain, SHOT stops without claiming infeasibility ([#288]).
 - Gurobi accepts nonconvex quadratic objectives when recommended settings
   are disabled, including with quadratic strategies 1 and 2, instead of
   stopping with an "Objective Q not PSD" error ([#287]).
@@ -432,6 +437,7 @@ Changes since SHOT 1.1.
 [#285]: https://github.com/coin-or/SHOT/pull/285
 [#286]: https://github.com/coin-or/SHOT/pull/286
 [#287]: https://github.com/coin-or/SHOT/pull/287
+[#288]: https://github.com/coin-or/SHOT/pull/288
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e

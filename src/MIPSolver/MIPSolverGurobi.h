@@ -197,8 +197,8 @@ public:
     // so such a problem is solved again without them
     E_ProblemSolutionStatus resolveInfeasibleOrUnbounded(E_ProblemSolutionStatus status);
 
-    // Gurobi can stop with numerical trouble, e.g., in the barrier method for a degenerate problem with quadratic
-    // constraints, so such a problem is solved again with the most careful numerical settings
+    // Numerical trouble and apparent infeasibility can be caused by badly scaled cuts. Retry with careful numerical
+    // settings and, if still infeasible, without presolve, within the remaining time of the solve.
     E_ProblemSolutionStatus resolveWithNumericFocus(E_ProblemSolutionStatus status);
 
 protected:

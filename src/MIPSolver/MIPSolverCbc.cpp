@@ -22,6 +22,7 @@
 
 #include "../Model/Problem.h"
 
+#include <chrono>
 #include <thread>
 
 #include "CoinBuild.hpp"
@@ -555,9 +556,12 @@ E_ProblemSolutionStatus MIPSolverCbc::getSolutionStatus()
     {
         MIPSolutionStatus = E_ProblemSolutionStatus::Unbounded;
     }
-    else if(cbcModel->isSolutionLimitReached() && cbcModel->numberSavedSolutions() > 0)
+    else if(cbcModel->isSolutionLimitReached())
     {
         MIPSolutionStatus = E_ProblemSolutionStatus::SolutionLimit;
+        // Cbc can count a start or heuristic point toward the limit without retaining a feasible solution.
+        if(cbcModel->numberSavedSolutions() == 0)
+            forceUnlimitedSolutionLimitNextSolve = true;
     }
     else if(cbcModel->isSecondsLimitReached())
     {
@@ -615,7 +619,7 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
     cachedSolutionHasChanged = true;
 
     // The arguments are counted as they are added, since some of them are only passed on conditionally
-    const int maxArguments = 25;
+    const int maxArguments = 29;
     char* argv[maxArguments];
     int numArguments = 0;
     std::string arg;
@@ -754,71 +758,116 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
     argv[numArguments++] = strdup("-solve");
     argv[numArguments++] = strdup("-quit");
 
-    try
+    auto solveModel = [&]()
     {
-        cbcModel = std::make_unique<CbcModel>(*osiInterface);
-
-        initializeSolverSettings();
-
-        // Adding the MIP start provided, so far only if there are no special variable types included, since the MIP
-        // start functionality in Cbc version 2 is unstable
-        if(MIPStart.size() > 0
-            && (env->reformulatedProblem->properties.numberOfSemiintegerVariables
-                    + env->reformulatedProblem->properties.numberOfSemicontinuousVariables
-                    + env->reformulatedProblem->properties.numberOfSpecialOrderedSets
-                == 0))
+        try
         {
-            cbcModel->setMIPStart(MIPStart);
+            cbcModel = std::make_unique<CbcModel>(*osiInterface);
 
-            // Cbc counts the completed partial start as a solution, so the solve would otherwise stop at the start
-            // when the limit is one
-            if(partialMIPStartAdded && usedSolutionLimit < 2100000000)
-                cbcModel->setMaximumSolutions(usedSolutionLimit + 1);
+            initializeSolverSettings();
+
+            // Adding the MIP start provided, so far only if there are no special variable types included, since the MIP
+            // start functionality in Cbc version 2 is unstable
+            if(MIPStart.size() > 0
+                && (env->reformulatedProblem->properties.numberOfSemiintegerVariables
+                        + env->reformulatedProblem->properties.numberOfSemicontinuousVariables
+                        + env->reformulatedProblem->properties.numberOfSpecialOrderedSets
+                    == 0))
+            {
+                cbcModel->setMIPStart(MIPStart);
+
+                // Cbc counts the completed partial start as a solution, so the solve would otherwise stop at the start
+                // when the limit is one
+                if(partialMIPStartAdded && usedSolutionLimit < 2100000000)
+                    cbcModel->setMaximumSolutions(usedSolutionLimit + 1);
+            }
+
+            // The partial start is only for this solve, the primal start is given again in the next iteration
+            if(partialMIPStartAdded)
+            {
+                MIPStart.clear();
+                partialMIPStartAdded = false;
+            }
+
+            addBranchingObjects();
+
+            CbcSolverUsefulData solverData;
+            CbcMain0(*cbcModel, solverData);
+
+            if(!env->settings->getSetting<bool>("Output.Console.DualSolver.Show"))
+            {
+                cbcModel->setLogLevel(0);
+                osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
+            }
+
+            osiInterface->setDblParam(OsiObjOffset, getCbcObjectiveOffset());
+
+            TerminationEventHandler eventHandler(env);
+            cbcModel->passInEventHandler(&eventHandler);
+
+            CbcMain1(numArguments, const_cast<const char**>(argv), *cbcModel, dummyCallback, solverData);
+
+            MIPSolutionStatus = getSolutionStatus();
+
+            // Cbc's own optimality proof cannot be fully trusted when a finite solution-count cap was active for
+            // this solve (see investigation): downgrade the status so this iteration's incumbent isn't used as a
+            // rigorous dual bound, and force the next solve to use an unlimited solution cap so it gets a chance
+            // to correct course on the (by-then cut-augmented) problem. The limit is the one this solve was given:
+            // testing solLimit instead also downgraded the unlimited solve, so no solve was ever optimal and the
+            // dual bound stagnated
+            if(MIPSolutionStatus == E_ProblemSolutionStatus::Optimal && usedSolutionLimit < 2100000000)
+            {
+                MIPSolutionStatus = E_ProblemSolutionStatus::SolutionLimit;
+                forceUnlimitedSolutionLimitNextSolve = true;
+            }
         }
-
-        // The partial start is only for this solve, the primal start is given again in the next iteration
-        if(partialMIPStartAdded)
+        catch(std::exception& e)
         {
-            MIPStart.clear();
-            partialMIPStartAdded = false;
+            env->output->outputError("        Error when solving subproblem with Cbc", e.what());
+            MIPSolutionStatus = E_ProblemSolutionStatus::Error;
         }
+    };
 
-        addBranchingObjects();
+    auto solveStarted = std::chrono::steady_clock::now();
+    solveModel();
 
-        CbcSolverUsefulData solverData;
-        CbcMain0(*cbcModel, solverData);
-
-        if(!env->settings->getSetting<bool>("Output.Console.DualSolver.Show"))
-        {
-            cbcModel->setLogLevel(0);
-            osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
-        }
-
-        osiInterface->setDblParam(OsiObjOffset, getCbcObjectiveOffset());
-
-        TerminationEventHandler eventHandler(env);
-        cbcModel->passInEventHandler(&eventHandler);
-
-        CbcMain1(numArguments, const_cast<const char**>(argv), *cbcModel, dummyCallback, solverData);
-
-        MIPSolutionStatus = getSolutionStatus();
-
-        // Cbc's own optimality proof cannot be fully trusted when a finite solution-count cap was active for
-        // this solve (see investigation): downgrade the status so this iteration's incumbent isn't used as a
-        // rigorous dual bound, and force the next solve to use an unlimited solution cap so it gets a chance
-        // to correct course on the (by-then cut-augmented) problem. The limit is the one this solve was given:
-        // testing solLimit instead also downgraded the unlimited solve, so no solve was ever optimal and the
-        // dual bound stagnated
-        if(MIPSolutionStatus == E_ProblemSolutionStatus::Optimal && usedSolutionLimit < 2100000000)
-        {
-            MIPSolutionStatus = E_ProblemSolutionStatus::SolutionLimit;
-            forceUnlimitedSolutionLimitNextSolve = true;
-        }
-    }
-    catch(std::exception& e)
+    if(MIPSolutionStatus == E_ProblemSolutionStatus::Infeasible)
     {
-        env->output->outputError("        Error when solving subproblem with Cbc", e.what());
-        MIPSolutionStatus = E_ProblemSolutionStatus::Error;
+        double remainingTime
+            = timeLimit - std::chrono::duration<double>(std::chrono::steady_clock::now() - solveStarted).count();
+
+        if(remainingTime <= 0.0)
+            MIPSolutionStatus = E_ProblemSolutionStatus::TimeLimit;
+        else
+        {
+            env->output->outputDebug("        Cbc reports infeasibility, so the problem is solved again without "
+                                     "presolve, preprocessing or scaling.");
+
+            // Put the recovery options before -solve, retaining every other option of this solve.
+            argv[numArguments + 2] = argv[numArguments - 2];
+            argv[numArguments + 3] = argv[numArguments - 1];
+            argv[numArguments - 2] = strdup("-presolve");
+            argv[numArguments - 1] = strdup("off");
+            argv[numArguments] = strdup("-preprocess");
+            argv[numArguments + 1] = strdup("off");
+            numArguments += 4;
+
+            for(int i = 0; i < numArguments - 1; ++i)
+            {
+                if(std::string(argv[i]) == "-sec")
+                {
+                    free(argv[i + 1]);
+                    argv[i + 1] = strdup(fmt::format("{}", remainingTime).c_str());
+                }
+                else if(std::string(argv[i]) == "-scaling" || std::string(argv[i]) == "-autoscale")
+                {
+                    free(argv[i + 1]);
+                    argv[i + 1] = strdup("off");
+                }
+            }
+
+            solveModel();
+        }
     }
 
     if(MIPSolutionStatus == E_ProblemSolutionStatus::Infeasible)

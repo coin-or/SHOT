@@ -782,6 +782,8 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
             extractModel();
         }
 
+        auto solveStarted = cplexInstance.getCplexTime();
+
         if(objectiveFunctionReplacedWithZero || !getDiscreteVariableStatus())
         {
             objectiveFunctionReplacedWithZero = false;
@@ -805,14 +807,7 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
             MIPSolutionStatus = getSolutionStatus();
         }
 
-        if(MIPSolutionStatus == E_ProblemSolutionStatus::Numeric)
-            MIPSolutionStatus = resolveWithNumericalEmphasis(MIPSolutionStatus);
-
-        // CPLEX's presolve can report a feasible problem with quadratic constraints as infeasible. Without a primal
-        // solution, an infeasible dual problem makes SHOT report the problem as infeasible, so it is solved again
-        // without presolve first
-        if(MIPSolutionStatus == E_ProblemSolutionStatus::Infeasible && !env->results->hasPrimalSolution())
-            MIPSolutionStatus = resolveInfeasibleWithoutPresolve(MIPSolutionStatus);
+        MIPSolutionStatus = resolveWithNumericalEmphasis(MIPSolutionStatus, solveStarted);
 
         // An unbounded exact dual problem means that the problem is unbounded, so no point is needed
         bool isUnboundedExactDualProblem = MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded
@@ -938,25 +933,66 @@ E_ProblemSolutionStatus MIPSolverCplex::resolveInfeasibleWithoutPresolve(E_Probl
     return (status);
 }
 
-E_ProblemSolutionStatus MIPSolverCplex::resolveWithNumericalEmphasis(E_ProblemSolutionStatus status)
+E_ProblemSolutionStatus MIPSolverCplex::resolveWithNumericalEmphasis(
+    E_ProblemSolutionStatus status, double solveStarted)
 {
+    // A cutoff or another stopping condition must not trigger infeasibility recovery.
+    if(status != E_ProblemSolutionStatus::Numeric
+        && !(status == E_ProblemSolutionStatus::Infeasible
+            && cplexInstance.getCplexStatus() == IloCplex::CplexStatus::Infeasible))
+        return status;
+
     try
     {
-        if(cplexInstance.getParam(IloCplex::Param::Emphasis::Numerical))
-            return (status);
-
-        env->output->outputDebug(
-            "        Numerical trouble in CPLEX, so the problem is solved again with numerical emphasis.");
-
-        // The advanced start is turned off, so that CPLEX does not reuse the state of the failed solve
+        auto numericalEmphasis = cplexInstance.getParam(IloCplex::Param::Emphasis::Numerical);
         auto advance = cplexInstance.getParam(IloCplex::Param::Advance);
+        auto presolve = cplexInstance.getParam(IloCplex::Param::Preprocessing::Presolve);
+        auto timeLimit = cplexInstance.getParam(IloCplex::Param::TimeLimit);
 
-        cplexInstance.setParam(IloCplex::Param::Emphasis::Numerical, true);
-        cplexInstance.setParam(IloCplex::Param::Advance, 0);
-        cplexInstance.solve();
-        status = MIPSolverCplex::getSolutionStatus();
-        cplexInstance.setParam(IloCplex::Param::Emphasis::Numerical, false);
+        auto solve = [&](bool withoutPresolve)
+        {
+            double remainingTime = timeLimit - (cplexInstance.getCplexTime() - solveStarted);
+            if(remainingTime <= 0.0)
+                return E_ProblemSolutionStatus::TimeLimit;
+
+            cplexInstance.setParam(IloCplex::Param::TimeLimit, remainingTime);
+            if(withoutPresolve)
+                return resolveInfeasibleWithoutPresolve(status);
+
+            cplexInstance.setParam(IloCplex::Param::Emphasis::Numerical, true);
+            // Discard the failed state rather than reusing its basis or search tree.
+            cplexInstance.setParam(IloCplex::Param::Advance, 0);
+            cplexInstance.solve();
+            return MIPSolverCplex::getSolutionStatus();
+        };
+
+        // Restore the original settings also if a retry throws.
+        try
+        {
+            if(!numericalEmphasis)
+            {
+                env->output->outputDebug("        Numerical trouble or infeasibility in CPLEX, so the problem is "
+                                         "solved again with numerical emphasis.");
+                status = solve(false);
+            }
+
+            if(status == E_ProblemSolutionStatus::Infeasible
+                && cplexInstance.getCplexStatus() == IloCplex::CplexStatus::Infeasible && presolve)
+                status = solve(true);
+        }
+        catch(...)
+        {
+            cplexInstance.setParam(IloCplex::Param::TimeLimit, timeLimit);
+            cplexInstance.setParam(IloCplex::Param::Emphasis::Numerical, numericalEmphasis);
+            cplexInstance.setParam(IloCplex::Param::Advance, advance);
+            cplexInstance.setParam(IloCplex::Param::Preprocessing::Presolve, presolve);
+            throw;
+        }
+
+        cplexInstance.setParam(IloCplex::Param::TimeLimit, timeLimit);
+        cplexInstance.setParam(IloCplex::Param::Emphasis::Numerical, numericalEmphasis);
         cplexInstance.setParam(IloCplex::Param::Advance, advance);
+        cplexInstance.setParam(IloCplex::Param::Preprocessing::Presolve, presolve);
     }
     catch(IloException& e)
     {

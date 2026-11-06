@@ -724,6 +724,68 @@ bool CplexSettingsTest(std::string filename, double correctObjectiveValue, std::
     return true;
 }
 
+class CplexRecoveryProbe : public MIPSolverCplex
+{
+public:
+    using MIPSolverCplex::MIPSolverCplex;
+
+    E_ProblemSolutionStatus recoverWithExpiredBudget()
+    {
+        return resolveWithNumericalEmphasis(E_ProblemSolutionStatus::Infeasible,
+            cplexInstance.getCplexTime() - cplexInstance.getParam(IloCplex::Param::TimeLimit) - 1.0);
+    }
+};
+
+bool CplexInfeasibilityRecoverySettingsTest()
+{
+    for(int emphasis : { 0, 1 })
+    {
+        auto solver = std::make_unique<Solver>();
+        solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cplex));
+        solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+        solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+        solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+        auto env = solver->getEnvironment();
+        auto problem = std::make_shared<Problem>(env);
+        auto x = std::make_shared<Variable>("x", E_VariableType::Integer, 0.0, 1.0);
+        problem->add(x);
+        auto constraint = std::make_shared<LinearConstraint>("infeasible", 2.0, SHOT_DBL_MAX);
+        constraint->add(std::make_shared<LinearTerm>(1.0, x));
+        problem->add(constraint);
+        auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+        objective->add(std::make_shared<LinearTerm>(1.0, x));
+        problem->add(objective);
+        problem->finalize();
+        if(!solver->setProblem(problem))
+            return false;
+        auto backend = std::make_shared<CplexRecoveryProbe>(env);
+        if(!backend->initializeProblem())
+            return false;
+        TaskCreateMIPProblem(env, backend, problem).run();
+        backend->setTimeLimit(10.0);
+        backend->cplexInstance.setParam(IloCplex::Param::Emphasis::Numerical, emphasis);
+        backend->cplexInstance.setParam(IloCplex::Param::Advance, 2);
+
+        auto settingsRestored = [&]()
+        {
+            return backend->cplexInstance.getParam(IloCplex::Param::Emphasis::Numerical) == emphasis
+                && backend->cplexInstance.getParam(IloCplex::Param::Preprocessing::Presolve)
+                && backend->cplexInstance.getParam(IloCplex::Param::Advance) == 2
+                && backend->cplexInstance.getParam(IloCplex::Param::TimeLimit) == 10.0;
+        };
+
+        if(backend->solveProblem() != E_ProblemSolutionStatus::Infeasible || !settingsRestored()
+            || backend->getDualObjectiveValue() != SHOT_DBL_MIN)
+            return false;
+
+        // Once the budget is exhausted, do not start another solve or publish a bound from the failed one.
+        if(backend->recoverWithExpiredBudget() != E_ProblemSolutionStatus::TimeLimit || !settingsRestored()
+            || backend->getDualObjectiveValue() != SHOT_DBL_MIN)
+            return false;
+    }
+    return true;
+}
+
 int CplexTest(int argc, char* argv[])
 {
 
@@ -896,12 +958,19 @@ int CplexTest(int argc, char* argv[])
     case 28:
         // Cplex's presolve reports the first dual problem, with convex quadratic constraints, as infeasible
         std::cout << "Testing a feasible problem that Cplex's presolve reports as infeasible.\n";
-        passed = CplexSettingsTest("data/instances/MINLP-convex-small/nvs11.osil", -431.0,
-            [](Solver& solver)
-            {
-                solver.updateSetting("Model.Reformulation.ObjectiveFunction.EpigraphStrategy",
-                    static_cast<int>(ES_ObjectiveEpigraphStrategy::EpigraphConstraint));
-            });
+        for(auto treeStrategy : { ES_TreeStrategy::MultiTree, ES_TreeStrategy::SingleTree })
+            passed = CplexSettingsTest("data/instances/MINLP-convex-small/nvs11.osil", -431.0,
+                         [treeStrategy](Solver& solver)
+                         {
+                             solver.updateSetting("Dual.TreeStrategy", static_cast<int>(treeStrategy));
+                             solver.updateSetting("Model.Reformulation.ObjectiveFunction.EpigraphStrategy",
+                                 static_cast<int>(ES_ObjectiveEpigraphStrategy::EpigraphConstraint));
+                         })
+                && passed;
+        break;
+    case 29:
+        std::cout << "Testing Cplex recovery settings and remaining time.\n";
+        passed = CplexInfeasibilityRecoverySettingsTest();
         break;
     default:
         passed = false;
