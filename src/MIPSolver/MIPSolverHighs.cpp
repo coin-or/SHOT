@@ -834,21 +834,17 @@ E_ProblemSolutionStatus MIPSolverHighs::solveProblem()
     {
         bool problemUpdated = false;
 
-        if((env->reformulatedProblem->objectiveFunction->properties.classification
-                   == E_ObjectiveFunctionClassification::Linear
-               && std::dynamic_pointer_cast<LinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                   ->isUnbounded())
-            || (env->reformulatedProblem->objectiveFunction->properties.classification
-                    == E_ObjectiveFunctionClassification::Quadratic
-                && std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                    ->isUnbounded()))
+        auto objectiveClass = env->reformulatedProblem->objectiveFunction->properties.classification;
+        if((objectiveClass == E_ObjectiveFunctionClassification::Linear
+               || objectiveClass == E_ObjectiveFunctionClassification::Quadratic)
+            && (env->reformulatedProblem->objectiveFunction->isUnbounded() || hasUnboundedObjectiveVariableInSolver()))
         {
             for(auto& V : env->reformulatedProblem->allVariables)
             {
                 if(!V->properties.inObjectiveFunction)
                     continue;
 
-                if(V->isUnbounded())
+                if(V->isUnbounded() || isVariableUnboundedInSolver(V->getIndex()))
                 {
                     // Temporarily bound the variable, keeping the objective so that the point found is in the
                     // direction of improvement

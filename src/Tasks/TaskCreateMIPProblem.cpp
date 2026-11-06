@@ -16,6 +16,7 @@
 #include "../Timing.h"
 
 #include "../MIPSolver/IMIPSolver.h"
+#include "../MIPSolver/MIPSolverBase.h"
 #include "../Model/Problem.h"
 
 namespace SHOT
@@ -50,9 +51,13 @@ bool TaskCreateMIPProblem::createProblem(MIPSolverPtr destination, ProblemPtr so
 
     for(auto& V : sourceProblem->allVariables)
     {
+        PairDouble bounds { V->lowerBound, V->upperBound };
+        if(V->properties.isAuxiliary)
+            bounds = MIPSolverBase::getAuxiliaryVariableBoundsForSolver(
+                bounds.first, bounds.second, destination->getUnboundedVariableBoundValue());
+
         variablesInitialized = variablesInitialized
-            && destination->addVariable(
-                V->name.c_str(), V->properties.type, V->lowerBound, V->upperBound, V->semiBound);
+            && destination->addVariable(V->name.c_str(), V->properties.type, bounds.first, bounds.second, V->semiBound);
     }
 
     if(!variablesInitialized)
@@ -79,11 +84,13 @@ bool TaskCreateMIPProblem::createProblem(MIPSolverPtr destination, ProblemPtr so
 
         destination->setDualAuxiliaryObjectiveVariableIndex(sourceProblem->properties.numberOfVariables);
 
-        destination->addVariable("shot_dual_objvar", E_VariableType::Real, objectiveBound.l(), objectiveBound.u(), 0.0);
+        auto bounds = MIPSolverBase::getAuxiliaryVariableBoundsForSolver(
+            objectiveBound.l(), objectiveBound.u(), destination->getUnboundedVariableBoundValue());
+        destination->addVariable("shot_dual_objvar", E_VariableType::Real, bounds.first, bounds.second, 0.0);
 
         env->output->outputDebug(fmt::format(
             "         SHOT internal dual objective variable created with index {} and bounds [{},{}] created.",
-            sourceProblem->properties.numberOfVariables, objectiveBound.l(), objectiveBound.u()));
+            sourceProblem->properties.numberOfVariables, bounds.first, bounds.second));
     }
 
     // Now creating the objective function

@@ -12,6 +12,7 @@
 #include "../src/DualSolver.h"
 #include "../src/Environment.h"
 #include "../src/MIPSolver/IMIPSolver.h"
+#include "../src/NLPSolver/NLPSolverSHOT.h"
 #include "../src/PrimalSolver.h"
 #include "../src/Results.h"
 #include "../src/Settings.h"
@@ -4466,6 +4467,263 @@ bool TestIntegerCutsAfterFixedNLPCandidateCheck()
 }
 #endif
 
+// The same squares occur in the objective and a constraint, so their auxiliary variables are shared. Their interval
+// bounds can be huge even though the optimum is small; those bounds must not destabilize the MIP relaxation.
+bool TestLargeAuxiliaryBounds()
+{
+    bool passed = true;
+    std::vector<ES_MIPSolver> backends;
+#ifdef HAS_CPLEX
+    backends.push_back(ES_MIPSolver::Cplex);
+#endif
+#ifdef HAS_HIGHS
+    backends.push_back(ES_MIPSolver::Highs);
+#endif
+#ifdef HAS_GUROBI
+    backends.push_back(ES_MIPSolver::Gurobi);
+#endif
+#ifdef HAS_CBC
+    backends.push_back(ES_MIPSolver::Cbc);
+#endif
+
+    for(auto backend : backends)
+    {
+        auto solver = std::make_unique<Solver>();
+        auto env = solver->getEnvironment();
+        solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+        solver->updateSetting("Dual.MIP.Solver", static_cast<int>(backend));
+        solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+        solver->updateSetting("Termination.TimeLimit", 10.0);
+        solver->updateSetting("Termination.ObjectiveGap.Relative", 1e-6);
+        solver->updateSetting("Termination.ObjectiveGap.Absolute", 1e-6);
+        solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+        solver->updateSetting("Model.BoundTightening.InitialPOA.Use", false);
+        solver->updateSetting("Model.Reformulation.Quadratics.Strategy", 1);
+        solver->updateSetting("Model.Reformulation.ObjectiveFunction.EpigraphStrategy", 2);
+        solver->updateSetting("Subsolver.SHOT.UseFBBT", false);
+
+        auto problem = std::make_shared<Problem>(env);
+        problem->name = "largeauxiliarybounds";
+        auto x = std::make_shared<Variable>("x", E_VariableType::Integer, 0.0, 2e9);
+        auto y = std::make_shared<Variable>("y", E_VariableType::Integer, 0.0, 2e9);
+        problem->add(Variables { x, y });
+
+        auto objective = std::make_shared<QuadraticObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+        objective->add(std::make_shared<QuadraticTerm>(2.0, x, x));
+        objective->add(std::make_shared<QuadraticTerm>(2.0, y, y));
+        objective->add(std::make_shared<LinearTerm>(-8.0, x));
+        objective->add(std::make_shared<LinearTerm>(-4.0, y));
+        problem->add(objective);
+
+        auto constraint = std::make_shared<QuadraticConstraint>("c1", SHOT_DBL_MIN, 16.0);
+        constraint->add(std::make_shared<QuadraticTerm>(1.0, x, x));
+        constraint->add(std::make_shared<QuadraticTerm>(3.0, y, y));
+        problem->add(constraint);
+        problem->updateProperties();
+        problem->finalize();
+
+        if(!solver->setProblem(problem))
+            return false;
+
+        auto expect = [&](bool condition, const std::string& message)
+        {
+            if(!condition)
+            {
+                std::cout << "  Backend " << static_cast<int>(backend) << ": " << message << '\n';
+                passed = false;
+            }
+        };
+
+        bool hasUnsafeBound = false;
+        int largeAuxiliaries = 0;
+        double infinity = env->dualSolver->MIPSolver->getUnboundedVariableBoundValue();
+        for(auto& variable : env->reformulatedProblem->allVariables)
+        {
+            auto bounds = env->dualSolver->MIPSolver->getCurrentVariableBounds(variable->getIndex());
+            if(!variable->properties.isAuxiliary)
+            {
+                expect(bounds.first == variable->lowerBound && bounds.second == variable->upperBound,
+                    "An original variable's bounds were changed");
+                continue;
+            }
+
+            if(variable->upperBound >= 1e15 && variable->lowerBound != variable->upperBound)
+            {
+                largeAuxiliaries++;
+                if(bounds.second < infinity)
+                {
+                    hasUnsafeBound = true;
+                    expect(false,
+                        fmt::format("Unsafe finite upper bound {} on {} (infinity {})", bounds.second, variable->name,
+                            infinity));
+                }
+                expect(bounds.first == variable->lowerBound, "A useful auxiliary lower bound was changed");
+            }
+        }
+        expect(largeAuxiliaries >= 2, "The test did not create multiple large auxiliary bounds");
+        expect(env->reformulatedProblem->getAuxiliaryVariablesOfType(E_AuxiliaryVariableType::SquareTermsPartitioning)
+                    .size()
+                == 2,
+            "The square auxiliaries were not shared between the objective and constraint");
+        expect(x->upperBound == 2e9 && y->upperBound == 2e9, "The problem's original bounds were changed");
+
+        if(hasUnsafeBound)
+            continue;
+
+        solver->solveProblem();
+        // The objective is 2*(x-2)^2 + 2*(y-1)^2 - 10, and (2,1) fulfills the quadratic constraint.
+        expect(solver->hasPrimalSolution() && std::abs(solver->getPrimalBound() + 10.0) <= 1e-4,
+            "The optimum was not found");
+        expect(std::abs(solver->getGlobalDualBound() + 10.0) <= 1e-3,
+            "The global dual bound is incorrect: " + std::to_string(solver->getGlobalDualBound()));
+        expect(solver->getModelReturnStatus() == E_ModelReturnStatus::OptimalGlobal,
+            "The result was not proved globally optimal");
+
+        // A fixed-NLP solve updates all column bounds after model creation. Its large auxiliary bounds must stay
+        // relaxed as well, including when the subsolver's bound tightening is disabled.
+        NLPSolverSHOT nested(env, env->reformulatedProblem);
+        nested.reuseHyperplanes = false;
+        nested.useCutOff = false;
+        nested.fixVariables({ x->getIndex(), y->getIndex() }, { 2.0, 1.0 });
+        auto status = nested.solveProblem();
+        expect(status == E_NLPSolutionStatus::Optimal && std::abs(nested.getObjectiveValue() + 10.0) <= 1e-4,
+            "The nested SHOT solver did not find the fixed problem's optimum");
+        auto nestedEnv = nested.solver->getEnvironment();
+        for(auto& variable : nestedEnv->reformulatedProblem->allVariables)
+        {
+            if(variable->properties.isAuxiliary && variable->upperBound >= 1e15
+                && variable->lowerBound != variable->upperBound)
+            {
+                auto bounds = nestedEnv->dualSolver->MIPSolver->getCurrentVariableBounds(variable->getIndex());
+                expect(bounds.second >= infinity, "A nested solve restored a large finite auxiliary bound");
+            }
+        }
+
+        // Two products share an integer factor. Feasible graph points with products beyond the solver's exact
+        // integer range must remain representable on both sides of zero.
+        auto productSolver = std::make_unique<Solver>();
+        auto productEnv = productSolver->getEnvironment();
+        productSolver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+        productSolver->updateSetting("Dual.MIP.Solver", static_cast<int>(backend));
+        productSolver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+        productSolver->updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::MultiTree));
+        productSolver->updateSetting("Termination.TimeLimit", 5.0);
+        productSolver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+        productSolver->updateSetting("Model.BoundTightening.InitialPOA.Use", false);
+        productSolver->updateSetting("Model.Reformulation.Quadratics.Strategy", 0);
+        productSolver->updateSetting("Model.Reformulation.Quadratics.ExtractStrategy", 2);
+        productSolver->updateSetting("Model.Reformulation.ObjectiveFunction.EpigraphStrategy", 2);
+
+        auto productProblem = std::make_shared<Problem>(productEnv);
+        auto px = std::make_shared<Variable>("x", E_VariableType::Integer, -2e9, 2e9);
+        auto py = std::make_shared<Variable>("y", E_VariableType::Integer, 1.0, 2e9);
+        auto pz = std::make_shared<Variable>("z", E_VariableType::Integer, 1.0, 2e9);
+        auto fixed = std::make_shared<Variable>("fixed", E_VariableType::Real, 1e16, 1e16);
+        productProblem->add(Variables { px, py, pz, fixed });
+        auto productObjective = std::make_shared<QuadraticObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+        productObjective->add(std::make_shared<QuadraticTerm>(1.0, px, py));
+        productObjective->add(std::make_shared<QuadraticTerm>(1.0, px, pz));
+        productProblem->add(productObjective);
+        productProblem->updateProperties();
+        productProblem->finalize();
+        if(!productSolver->setProblem(productProblem))
+            return false;
+
+        auto fixedBounds = productEnv->dualSolver->MIPSolver->getCurrentVariableBounds(fixed->getIndex());
+        expect(fixedBounds.first == 1e16 && fixedBounds.second == 1e16, "A large original fixed value was relaxed");
+        int products = 0;
+        for(auto& variable : productEnv->reformulatedProblem->auxiliaryVariables)
+        {
+            if(variable->properties.auxiliaryType == E_AuxiliaryVariableType::ContinuousBilinear)
+            {
+                products++;
+                expect(variable->properties.type == E_VariableType::Real, "A large product kept explicit integrality");
+                auto bounds = productEnv->dualSolver->MIPSolver->getCurrentVariableBounds(variable->getIndex());
+                expect(bounds.first <= -infinity && bounds.second >= infinity,
+                    "Large positive or negative product bounds were retained");
+                for(double sign : { -1.0, 1.0 })
+                {
+                    double value = variable->calculate(VectorDouble { sign * 1e9, 1e9, 2e9, 1e16 });
+                    expect(value >= bounds.first && value <= bounds.second,
+                        "A feasible large product was excluded by solver bounds");
+                }
+            }
+        }
+        expect(products == 2, "The test did not extract both shared bilinear products");
+
+        // This first relaxation is unbounded because its product/objective columns have no outer cuts yet. Recovery
+        // must use the solver's relaxed bounds, rather than the finite interval bounds still stored in the problem.
+        productEnv->results->createIteration();
+        productEnv->dualSolver->MIPSolver->setTimeLimit(2.0);
+        auto recoveryStatus = productEnv->dualSolver->MIPSolver->solveProblem();
+        expect(recoveryStatus == E_ProblemSolutionStatus::Feasible || recoveryStatus == E_ProblemSolutionStatus::Optimal
+                || recoveryStatus == E_ProblemSolutionStatus::SolutionLimit,
+            "The unbounded relaxation did not produce a recovery point");
+        expect(productEnv->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed,
+            "The unbounded relaxation was not marked repaired");
+    }
+
+    return passed;
+}
+
+bool TestLargeAuxiliaryBoundInstances()
+{
+    bool passed = true;
+    std::vector<ES_MIPSolver> backends;
+#ifdef HAS_CPLEX
+    backends.push_back(ES_MIPSolver::Cplex);
+#endif
+#ifdef HAS_HIGHS
+    backends.push_back(ES_MIPSolver::Highs);
+#endif
+
+    for(auto backend : backends)
+    {
+        for(bool useFBBT : { false, true })
+        {
+            for(auto name : { "st_test3", "st_test4" })
+            {
+                auto solver = std::make_unique<Solver>();
+                auto env = solver->getEnvironment();
+                solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+                solver->updateSetting("Dual.MIP.Solver", static_cast<int>(backend));
+                solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+                solver->updateSetting("Termination.TimeLimit", 10.0);
+                solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", useFBBT);
+                solver->updateSetting("Model.Reformulation.ObjectiveFunction.EpigraphStrategy", 2);
+                if(std::string(name) == "st_test3")
+                    solver->updateSetting("Model.Reformulation.Quadratics.Strategy", 1);
+
+                if(!solver->setProblem(std::string("data/instances/MIQCQP-convex/") + name + ".osil")
+                    || !solver->solveProblem())
+                    return false;
+
+                if(!solver->hasPrimalSolution() || std::abs(solver->getPrimalBound() + 7.0) > 1e-4
+                    || !(std::abs(solver->getGlobalDualBound() + 7.0) <= 1e-3)
+                    || solver->getModelReturnStatus() != E_ModelReturnStatus::OptimalGlobal)
+                {
+                    std::cout << "  " << name << ", backend " << static_cast<int>(backend) << ", FBBT=" << useFBBT
+                              << ": expected optimal bounds of -7, got [" << solver->getGlobalDualBound() << ", "
+                              << solver->getPrimalBound() << "]\n";
+                    passed = false;
+                }
+                for(auto& solution : solver->getPrimalSolutions())
+                {
+                    auto deviation
+                        = env->problem->getMaxNumericConstraintValue(solution.point, env->problem->linearConstraints);
+                    if(deviation.error > 1e-6)
+                    {
+                        std::cout << "  " << name << ": infeasible primal point\n";
+                        passed = false;
+                    }
+                }
+            }
+        }
+    }
+
+    return passed;
+}
+
 int SolverTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -4719,6 +4977,16 @@ int SolverTest(int argc, char* argv[])
         std::cout << "Finished test for integer cuts after fixed-NLP candidate checks." << std::endl;
         break;
 #endif
+    case 47:
+        std::cout << "Starting test for large auxiliary bounds in the MIP relaxation" << std::endl;
+        passed = TestLargeAuxiliaryBounds();
+        std::cout << "Finished test for large auxiliary bounds in the MIP relaxation." << std::endl;
+        break;
+    case 48:
+        std::cout << "Starting test for wrong optima caused by large auxiliary bounds" << std::endl;
+        passed = TestLargeAuxiliaryBoundInstances();
+        std::cout << "Finished test for wrong optima caused by large auxiliary bounds." << std::endl;
+        break;
     default:
         passed = false;
         std::cout << "Test #" << choice << " does not exist!\n";

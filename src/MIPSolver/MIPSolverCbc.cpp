@@ -861,30 +861,28 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
     // To find a feasible point for an unbounded dual problem and not when solving the minimax-problem
     if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded && env->results->getNumberOfIterations() > 0)
     {
-        VectorInteger variablesWithChangedBounds;
+        std::vector<std::pair<int, PairDouble>> variablesWithChangedBounds;
         bool problemUpdated = false;
 
-        if((env->reformulatedProblem->objectiveFunction->properties.classification
-                   == E_ObjectiveFunctionClassification::Linear
-               && std::dynamic_pointer_cast<LinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                   ->isUnbounded())
-            || (env->reformulatedProblem->objectiveFunction->properties.classification
-                    == E_ObjectiveFunctionClassification::Quadratic
-                && std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                    ->isUnbounded()))
+        auto objectiveClass = env->reformulatedProblem->objectiveFunction->properties.classification;
+        if((objectiveClass == E_ObjectiveFunctionClassification::Linear
+               || objectiveClass == E_ObjectiveFunctionClassification::Quadratic)
+            && (env->reformulatedProblem->objectiveFunction->isUnbounded() || hasUnboundedObjectiveVariableInSolver()))
         {
             for(auto& V : env->reformulatedProblem->allVariables)
             {
-                if(V->isUnbounded())
+                if(V->isUnbounded() || isVariableUnboundedInSolver(V->getIndex()))
                 {
                     // The primal solution only contains the variables of the original problem
                     double center = (V->getIndex() < (int)env->results->primalSolution.size())
                         ? env->results->primalSolution[V->getIndex()]
                         : 0.0;
 
-                    auto bounds = getTemporaryBoundsForUnboundedVariable(V->lowerBound, V->upperBound, center);
+                    auto originalBounds = getCurrentVariableBounds(V->getIndex());
+                    auto bounds
+                        = getTemporaryBoundsForUnboundedVariable(originalBounds.first, originalBounds.second, center);
                     updateVariableBound(V->getIndex(), bounds.first, bounds.second);
-                    variablesWithChangedBounds.push_back(V->getIndex());
+                    variablesWithChangedBounds.emplace_back(V->getIndex(), originalBounds);
                     problemUpdated = true;
                 }
             }
@@ -935,10 +933,9 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
             if(MIPSolutionStatus == E_ProblemSolutionStatus::Optimal)
                 MIPSolutionStatus = E_ProblemSolutionStatus::Feasible;
 
-            for(auto& I : variablesWithChangedBounds)
+            for(auto& [index, bounds] : variablesWithChangedBounds)
             {
-                updateVariableBound(I, env->reformulatedProblem->getVariableLowerBound(I),
-                    env->reformulatedProblem->getVariableUpperBound(I));
+                updateVariableBound(index, bounds.first, bounds.second);
             }
 
             // Cbc reports an unbounded continuous relaxation, so for an exact dual problem the bounded one only shows

@@ -12,6 +12,7 @@
 
 #include "../DualSolver.h"
 #include "../MIPSolver/IMIPSolver.h"
+#include "../MIPSolver/MIPSolverBase.h"
 #include "../Output.h"
 #include "../Results.h"
 #include "../Settings.h"
@@ -3831,7 +3832,12 @@ std::pair<AuxiliaryVariablePtr, bool> TaskReformulateProblem::getSquareAuxiliary
     else if(variable->properties.type == E_VariableType::Integer
         || variable->properties.type == E_VariableType::Semiinteger)
     {
-        variableType = E_VariableType::Integer;
+        // The defining relation determines the auxiliary's value, so its integrality is redundant. Very large
+        // integer columns have implicit solver limits even when given infinite bounds, so keep these real.
+        variableType
+            = (lowerBound <= -MIPSolverBase::largeAuxiliaryBound || upperBound >= MIPSolverBase::largeAuxiliaryBound)
+            ? E_VariableType::Real
+            : E_VariableType::Integer;
     }
     else
     {
@@ -3914,6 +3920,12 @@ std::pair<AuxiliaryVariablePtr, bool> TaskReformulateProblem::getBilinearAuxilia
         variableType = E_VariableType::Real;
         auxVariableType = E_AuxiliaryVariableType::ContinuousBilinear;
     }
+
+    // As for a square, explicit integrality is unnecessary for the value of a product and can impose implicit limits
+    // on a column whose bounds are too large for the solver's integer representation.
+    if(variableType == E_VariableType::Integer
+        && (lowerBound <= -MIPSolverBase::largeAuxiliaryBound || upperBound >= MIPSolverBase::largeAuxiliaryBound))
+        variableType = E_VariableType::Real;
 
     auto auxVariable = std::make_shared<AuxiliaryVariable>(
         "s_bl_" + firstVariable->name + "_" + secondVariable->name, variableType, lowerBound, upperBound);

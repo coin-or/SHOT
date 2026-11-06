@@ -22,6 +22,33 @@
 namespace SHOT
 {
 
+PairDouble MIPSolverBase::getAuxiliaryVariableBoundsForSolver(double lowerBound, double upperBound, double infinity)
+{
+    if(lowerBound == upperBound)
+        return { lowerBound, upperBound };
+
+    // Even bounds below the solvers' infinity thresholds can destabilize presolve, e.g. a square bounded by 4e18.
+    return { lowerBound <= -largeAuxiliaryBound ? -infinity : lowerBound,
+        upperBound >= largeAuxiliaryBound ? infinity : upperBound };
+}
+
+bool MIPSolverBase::isVariableUnboundedInSolver(int variableIndex)
+{
+    auto bounds = getCurrentVariableBounds(variableIndex);
+    double infinity = getUnboundedVariableBoundValue();
+    return bounds.first <= -infinity || bounds.second >= infinity;
+}
+
+bool MIPSolverBase::hasUnboundedObjectiveVariableInSolver()
+{
+    for(auto& variable : env->reformulatedProblem->allVariables)
+    {
+        if(variable->properties.inObjectiveFunction && isVariableUnboundedInSolver(variable->getIndex()))
+            return true;
+    }
+    return false;
+}
+
 VectorInteger MIPSolverBase::addLinearConstraints(const std::vector<std::map<int, double>>& elements,
     const VectorDouble& constants, const VectorString& names, bool isGreaterThan, bool allowRepair)
 {

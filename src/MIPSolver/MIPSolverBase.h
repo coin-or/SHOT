@@ -76,6 +76,10 @@ protected:
     // Whether a solve with the given status provides a bound that is valid for the dual problem
     bool isDualBoundAvailable(E_ProblemSolutionStatus status, bool isMIP);
 
+    // The MIP model can have relaxed auxiliary bounds even when the interval bounds in the problem are finite.
+    bool isVariableUnboundedInSolver(int variableIndex);
+    bool hasUnboundedObjectiveVariableInSolver();
+
     // The value of a SHOT tolerance setting that is also used as a MIP solver parameter, e.g.
     // Primal.Tolerance.Integer or Termination.ObjectiveGap.Relative, moved into the range [minValue, maxValue] that
     // the solver parameter accepts. The settings are SHOT's own tolerances, so they allow values outside the range of
@@ -107,6 +111,12 @@ protected:
     }
 
 public:
+    static constexpr double largeAuxiliaryBound = 1e15;
+
+    // Huge interval bounds of auxiliary variables can give incorrect MIP results. Widen only their large outer
+    // bounds in the solver model, retaining useful sign bounds, fixed values and the bounds stored in the problem.
+    static PairDouble getAuxiliaryVariableBoundsForSolver(double lowerBound, double upperBound, double infinity);
+
     virtual ~MIPSolverBase();
 
     virtual bool createHyperplane(HyperplanePtr hyperplane);
@@ -139,6 +149,7 @@ public:
     virtual double getObjectiveValue();
 
     virtual PairDouble getCurrentVariableBounds(int varIndex) = 0;
+    virtual double getUnboundedVariableBoundValue() = 0;
 
     virtual void fixVariable(int varIndex, double value) = 0;
     virtual void fixVariables(VectorInteger variableIndexes, VectorDouble variableValues);
