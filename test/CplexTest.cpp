@@ -676,8 +676,7 @@ bool CplexRelaxationConversionTest()
 
 // Solves the problem with Cplex and the settings given by the function, and checks that the solution does not end with
 // an error, that there is a primal solution and that the primal bound is the optimum
-bool CplexSettingsTest(std::string filename, double correctObjectiveValue, std::function<void(Solver&)> setSettings,
-    bool requireIntegerCuts = false)
+bool CplexSettingsTest(std::string filename, double correctObjectiveValue, std::function<void(Solver&)> setSettings)
 {
     auto solver = std::make_unique<Solver>();
     auto env = solver->getEnvironment();
@@ -696,12 +695,6 @@ bool CplexSettingsTest(std::string filename, double correctObjectiveValue, std::
         || env->results->terminationReason == E_TerminationReason::NumericIssues)
     {
         std::cout << "The solution ended with an error: " << env->results->terminationReasonDescription << std::endl;
-        return false;
-    }
-
-    if(requireIntegerCuts && env->solutionStatistics.numberOfIntegerCuts == 0)
-    {
-        std::cout << "No integer cuts were added." << std::endl;
         return false;
     }
 
@@ -938,17 +931,7 @@ int CplexTest(int argc, char* argv[])
     case 26:
         // Integer cuts of nonbinary variables add variables to the MIP problem in the single-tree strategy
         std::cout << "Testing the Cplex single-tree callback after integer cuts of nonbinary variables.\n";
-        passed = CplexSettingsTest(
-            "data/instances/MINLP-convex/cvxnonsep_psig20r.osil", 95.89738736,
-            [](Solver& solver)
-            {
-                solver.updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::SingleTree));
-                solver.updateSetting("Dual.CutStrategy", static_cast<int>(ES_HyperplaneCutStrategy::ECP));
-                solver.updateSetting("Dual.HyperplaneCuts.UseIntegerCuts", true);
-                solver.updateSetting("Subsolver.Cplex.NumericalEmphasis", 1);
-                solver.updateSetting("Subsolver.Cplex.MIPEmphasis", 4);
-            },
-            true);
+        passed = integerCutsBetweenSingleTreeSolves(ES_MIPSolver::Cplex);
         break;
     case 27:
         // Cplex fails with numerical trouble (status FailFeas) in a dual problem
