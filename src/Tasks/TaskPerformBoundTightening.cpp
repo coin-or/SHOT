@@ -168,8 +168,12 @@ void TaskPerformBoundTightening::updateObjectiveBounds()
     bool sourceIsSignReversed
         = sourceProblem->objectiveFunction->direction != env->problem->objectiveFunction->direction;
 
-    Interval originalSenseBounds
-        = sourceIsSignReversed ? Interval(-objectiveBoundsAfter.u(), -objectiveBoundsAfter.l()) : objectiveBoundsAfter;
+    // A huge interval upper bound is also an unsafe cutoff row, even when the objective variable itself is unbounded
+    // in the MIP model. Keep the interval in the problem, but only pass its numerically useful sides to the solver.
+    auto boundsForSolver = MIPSolverBase::getAuxiliaryVariableBoundsForSolver(
+        objectiveBoundsAfter.l(), objectiveBoundsAfter.u(), SHOT_DBL_MAX);
+    Interval originalSenseBounds = sourceIsSignReversed ? Interval(-boundsForSolver.second, -boundsForSolver.first)
+                                                        : Interval(boundsForSolver.first, boundsForSolver.second);
 
     if(env->problem->objectiveFunction->properties.isMinimize)
     {

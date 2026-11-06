@@ -828,6 +828,16 @@ E_ProblemSolutionStatus MIPSolverGurobi::getSolutionStatus()
     return (MIPSolutionStatus);
 }
 
+void MIPSolverGurobi::restoreObjectiveCoefficients()
+{
+    for(auto& coefficient : objectiveCoefficientsToRestore)
+    {
+        gurobiModel->getVar(coefficient.index).set(GRB_DoubleAttr_Obj, coefficient.value);
+        modelUpdated = true;
+    }
+    objectiveCoefficientsToRestore.clear();
+}
+
 E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
 {
     E_ProblemSolutionStatus MIPSolutionStatus;
@@ -835,13 +845,7 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
 
     try
     {
-        for(auto& P : objectiveCoefficientsToRestore)
-        {
-            gurobiModel->getVar(P.index).set(GRB_DoubleAttr_Obj, P.value);
-            modelUpdated = true;
-        }
-
-        objectiveCoefficientsToRestore.clear();
+        restoreObjectiveCoefficients();
 
         if(modelUpdated)
         {
@@ -876,21 +880,17 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
         std::vector<PairIndexValue> originalObjectiveCoefficients;
         bool problemUpdated = false;
 
-        if((env->reformulatedProblem->objectiveFunction->properties.classification
-                   == E_ObjectiveFunctionClassification::Linear
-               && std::dynamic_pointer_cast<LinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                   ->isUnbounded())
-            || (env->reformulatedProblem->objectiveFunction->properties.classification
-                    == E_ObjectiveFunctionClassification::Quadratic
-                && std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                    ->isUnbounded()))
+        auto objectiveClass = env->reformulatedProblem->objectiveFunction->properties.classification;
+        if((objectiveClass == E_ObjectiveFunctionClassification::Linear
+               || objectiveClass == E_ObjectiveFunctionClassification::Quadratic)
+            && (env->reformulatedProblem->objectiveFunction->isUnbounded() || hasUnboundedObjectiveVariableInSolver()))
         {
             for(auto& V : env->reformulatedProblem->allVariables)
             {
                 if(!V->properties.inObjectiveFunction)
                     continue;
 
-                if(V->isUnbounded())
+                if(V->isUnbounded() || isVariableUnboundedInSolver(V->getIndex()))
                 {
                     // Temporarily remove unbounded terms from objective
                     originalObjectiveCoefficients.emplace_back(

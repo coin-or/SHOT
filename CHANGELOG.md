@@ -158,6 +158,12 @@ Changes since SHOT 1.1.
 
 ### Fixed
 
+- Large negative lower bounds and positive upper bounds of auxiliary
+  variables are treated as infinite in MIP models (threshold 1e15), with
+  fixed values preserved. Oversized square and product auxiliaries use
+  continuous columns, and very loose interval objective bounds are not used
+  as cutoffs. This prevents incorrect optimality claims from poorly scaled
+  dual problems while preserving original variable bounds.
 - Integer cuts after a feasible fixed-integer NLP solve of a convex
   problem are added only when the NLP status is optimal and its point is
   accepted as a primal solution. Rejected or merely feasible points no

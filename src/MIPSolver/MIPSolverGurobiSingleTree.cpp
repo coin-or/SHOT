@@ -92,6 +92,8 @@ E_ProblemSolutionStatus MIPSolverGurobiSingleTree::solveProblem()
 
     try
     {
+        restoreObjectiveCoefficients();
+
         if(!isCallbackInitialized)
         {
             gurobiCallback = std::make_unique<GurobiCallbackSingleTree>(gurobiModel->getVars(), env);
@@ -145,65 +147,11 @@ E_ProblemSolutionStatus MIPSolverGurobiSingleTree::solveProblem()
     {
         MIPSolutionStatus = resolveInfeasibleOrUnbounded(MIPSolutionStatus);
     }
-    // To find a feasible point for an unbounded dual problem
+    // Recovery only needs a point for generating cuts, not an optimal solution. Use the shared feasibility solve
+    // rather than huge temporary bounds, whose values can destroy the constant of a cut through cancellation.
     else if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
     {
-        bool variableBoundsUpdated = false;
-
-        if((env->reformulatedProblem->objectiveFunction->properties.classification
-                   == E_ObjectiveFunctionClassification::Linear
-               && std::dynamic_pointer_cast<LinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                      ->isUnbounded())
-            || (env->reformulatedProblem->objectiveFunction->properties.classification
-                    == E_ObjectiveFunctionClassification::Quadratic
-                && std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                       ->isUnbounded()))
-        {
-            for(auto& V : env->reformulatedProblem->allVariables)
-            {
-                if(V->isUnbounded())
-                {
-                    updateVariableBound(
-                        V->getIndex(), -getUnboundedVariableBoundValue() / 1.1, getUnboundedVariableBoundValue() / 1.1);
-                    variableBoundsUpdated = true;
-                }
-            }
-        }
-        else if(env->reformulatedProblem->objectiveFunction->properties.classification
-                >= E_ObjectiveFunctionClassification::QuadraticConsideredAsNonlinear
-            && hasDualAuxiliaryObjectiveVariable())
-        {
-            // The auxiliary variable in the dual problem is unbounded
-            updateVariableBound(getDualAuxiliaryObjectiveVariableIndex(), -getUnboundedVariableBoundValue() / 1.1,
-                getUnboundedVariableBoundValue() / 1.1);
-            variableBoundsUpdated = true;
-        }
-
-        if(variableBoundsUpdated)
-        {
-            gurobiModel->update();
-
-            if(!isCallbackInitialized)
-            {
-                gurobiCallback = std::make_unique<GurobiCallbackSingleTree>(gurobiModel->getVars(), env);
-                isCallbackInitialized = true;
-            }
-
-            gurobiModel->set(GRB_IntParam_LazyConstraints, 1);
-            gurobiModel->setCallback(gurobiCallback.get());
-
-            gurobiModel->optimize();
-
-            MIPSolutionStatus = getSolutionStatus();
-
-            for(auto& V : env->reformulatedProblem->allVariables)
-            {
-                if(V->isUnbounded())
-                    updateVariableBound(V->getIndex(), V->lowerBound, V->upperBound);
-            }
-
-            env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed = true;
-        }
+        MIPSolutionStatus = MIPSolverGurobi::solveProblem();
     }
 
     return (MIPSolutionStatus);

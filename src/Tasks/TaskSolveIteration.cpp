@@ -20,6 +20,7 @@
 #include "../Utilities.h"
 
 #include "../MIPSolver/IMIPSolver.h"
+#include "../MIPSolver/MIPSolverBase.h"
 
 #include "../Model/Problem.h"
 
@@ -125,12 +126,15 @@ void TaskSolveIteration::run()
         auto newLB = std::max(isMinimization ? dualBound : primalBound, currBounds.first);
         auto newUB = std::min(isMinimization ? primalBound : dualBound, currBounds.second);
 
-        if(newLB <= newUB && (newLB > currBounds.first || newUB < currBounds.second))
+        auto bounds = MIPSolverBase::getAuxiliaryVariableBoundsForSolver(
+            newLB, newUB, env->dualSolver->MIPSolver->getUnboundedVariableBoundValue());
+
+        if(newLB <= newUB && (bounds.first > currBounds.first || bounds.second < currBounds.second))
         {
             env->dualSolver->MIPSolver->updateVariableBound(
-                env->dualSolver->MIPSolver->getDualAuxiliaryObjectiveVariableIndex(), newLB, newUB);
-            env->output->outputDebug(
-                fmt::format("        Bounds for nonlinear objective function updated to {} and {}", newLB, newUB));
+                env->dualSolver->MIPSolver->getDualAuxiliaryObjectiveVariableIndex(), bounds.first, bounds.second);
+            env->output->outputDebug(fmt::format(
+                "        Bounds for nonlinear objective function updated to {} and {}", bounds.first, bounds.second));
         }
     }
 

@@ -201,6 +201,10 @@ public:
     // constraints, so such a problem is solved again with the most careful numerical settings
     E_ProblemSolutionStatus resolveWithNumericFocus(E_ProblemSolutionStatus status);
 
+protected:
+    // Restores the objective after a feasibility solve, also before a single-tree solve.
+    void restoreObjectiveCoefficients();
+
 private:
     // The objective coefficients removed to find a feasible point of an unbounded dual problem. They are restored
     // before the next solve, since changing the model discards the point found.
